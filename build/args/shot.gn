@@ -1,0 +1,165 @@
+# Copyright 2026 The Chromium Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# GN args template for //shot:shot.
+#
+# Add an import to args.gn in the output directory and run gn gen on it:
+#   echo 'import("//build/args/shot.gn")' > out/Shot/args.gn
+#   gn gen out/Shot
+#
+# This deliberately does NOT import //build/args/headless.gn. That template is
+# written for Linux and sets use_ozone = true unconditionally. On Windows
+# use_aura is already true, and the two together create a GN dependency cycle
+# that fails the configure step outright:
+#
+#   ui/base/clipboard/BUILD.gn: if (use_aura && use_ozone)
+#                                 deps += [ "//ui/base", "//ui/ozone" ]
+#   ui/base/BUILD.gn:           if (is_mac || is_win)
+#                                 deps += [ "//ui/base/clipboard" ]
+#
+# //headless has since been deleted outright, so none of the headless_* args
+# exist any more and setting them would only produce "build argument has no
+# effect" warnings.
+
+is_debug = false
+is_component_build = false
+symbol_level = 0
+
+# Embed ICU data so the executable stays self-contained. The companion
+# v8_use_external_startup_data is gone with //v8: no declare_args block
+# declares it any more, and setting it would be a "build argument has no
+# effect" error.
+icu_use_data_file = false
+
+# //media's software codec dependencies. third_party/ffmpeg, third_party/libvpx
+# and third_party/dav1d were deleted, but the buildflags they gate defaulted to
+# true, so media/base/media.cc still tried to include ffmpeg_features.h and
+# supported_types.cc still asked libvpx which VP9 profiles it was built with.
+#
+# Turning the args off is the fix rather than editing those files: the #if
+# blocks are exactly the mechanism upstream provides for a build without these
+# codecs, and IsDecoderVp9ProfileSupported() answering "no" is then true rather
+# than assumed. A screenshot of a static page decodes no video.
+media_use_ffmpeg = false
+media_use_libvpx = false
+media_use_symphonia = false
+
+# AVIF still images. blink's AVIFImageDecoder is written against crabbyavif, and
+# third_party/crabbyavif is not in this checkout. enable_dav1d_decoder defaults
+# to use_blink, so the decoder was compiling with no library behind it.
+#
+# Every reference to it in image_decoder.cc -- the include, the signature sniff,
+# the "image/avif" branch of Create() -- is already inside
+# BUILDFLAG(ENABLE_DAV1D_DECODER), so turning the arg off removes the format
+# cleanly. The corpus is PNG and JPEG; those decoders are unaffected.
+enable_dav1d_decoder = false
+
+# base::TraceLog's protobuf-to-legacy-JSON converter. This is perfetto's trace
+# processor -- a SQLite-backed query engine for trace files -- and it is in
+# base only so that a tracing session can be handed back as legacy JSON.
+#
+# Same reasoning as the codec args above: the code in trace_log.cc that builds
+# a TraceProcessorStorage, parses into it and calls json::ExportJson() is
+# already inside BUILDFLAG(USE_PERFETTO_TRACE_PROCESSOR), so turning the arg
+# off is the supported way to build without it rather than editing trace_log.cc
+# around the parts we cannot link. It supplied five of the binary's undefined
+# symbols and, had it linked, a query engine's worth of bytes.
+#
+# Tracing itself is unaffected: the proto path is untouched, and shot starts no
+# tracing session in the first place.
+use_perfetto_trace_processor = false
+
+# WebRTC's P2P sockets in //services/network. is_p2p_enabled defaults to
+# use_blink, and every P2P declaration in NetworkContext, NetworkService and
+# services/network/p2p is already behind BUILDFLAG(IS_P2P_ENABLED) -- upstream's
+# own switch for a build without WebRTC, added for iOS.
+#
+# It has to be off here because these headers include
+# third_party/webrtc/rtc_base/*, and third_party/webrtc is a gclient dependency
+# that is not in this checkout. Turning the flag off is the supported way to say
+# that; deleting the eighteen files under services/network/p2p and unpicking
+# their references from network_context, network_service and content would be
+# the unsupported way to say the same thing.
+#
+# A screenshot of a static page opens no peer connections.
+is_p2p_enabled = false
+
+# ---------------------------------------------------------------------------
+# Size. Everything below was chosen from measured bytes, not from the
+# dependency graph -- see section 17 of docs/cut-progress.md for the table and
+# tools/shot/size_report.py for how it was produced.
+# ---------------------------------------------------------------------------
+
+# The largest lever by a wide margin, and it deletes no code at all: full
+# optimisation, ThinLTO's cross-module dead-code elimination, and DCHECKs
+# compiled out. dcheck_always_on was true, so every DCHECK in blink, base and
+# skia was in the binary along with its message strings.
+#
+# chrome_pgo_phase = 0 because an official build otherwise wants a downloaded
+# PGO profile that this checkout has no reason to carry.
+is_official_build = true
+chrome_pgo_phase = 0
+dcheck_always_on = false
+
+# raw_ptr's BackupRefPtr instrumentation. Every raw_ptr<T> dereference,
+# assignment and destructor carries a refcount check against PartitionAlloc's
+# metadata; turning it off makes raw_ptr<T> a plain pointer again. This is a
+# use-after-free mitigation for a browser that runs untrusted code in-process.
+# shot renders one static document and exits, with no renderer to sandbox and
+# no script engine at all, so the threat it defends against does not exist
+# here. The dangling-pointer and expensive-DCHECK checks go with it; they are
+# build-time diagnostics, not behaviour.
+enable_backup_ref_ptr_support = false
+enable_dangling_raw_ptr_checks = false
+enable_expensive_dchecks = false
+
+# ICU's data table was 10.73 MB of .rdata -- 16% of the whole binary -- because
+# icu_use_data_file = false embeds third_party/icu/common/icudtl.dat. The
+# checkout already ships nine prebuilt filtered data sets.
+#
+# flutter_desktop (1.72 MB) was tried first and is too small: blink's own
+# build-time character_property_data_generator calls ulocdata_getCLDRVersion(),
+# which needs the CLDR supplementalData bundle that flutter's "misc" includelist
+# drops, and it died on the CHECK before emitting a line.
+#
+# cast (4.98 MB) is the filter Chromecast uses, which is to say the filter
+# written for blink rendering web pages. Its "misc" excludes only
+# currencyNumericCodes and windowsZones, it keeps the full break-iterator rule
+# set rather than just the normal ones, and it keeps conversion_mappings with an
+# explicit includelist of the WHATWG html encodings -- so TextCodecIcu still
+# registers ISO-8859-2..16, windows-1250..1258 and KOI8, and no page stops
+# decoding.
+#
+# What it drops against common is what a screenshot has no consumer for now that
+# V8 is gone: most of the collation tables, unit and number spellout data,
+# confusables, stringprep, character names, and the bulk of the currency,
+# language and region display names that only Intl ever read.
+icu_data_dir_override = "cast"
+
+# JPEG XL. 2.82 MB across the jxl, jxl_transforms and jxl_rs Rust crates,
+# measured, for a format no page in the corpus uses and that ships disabled in
+# Chrome itself.
+enable_jxl_decoder = false
+
+# //net's two paths to //sql, and through it to //third_party/sqlite: the
+# device-bound session store and the SQL disk cache backend. Together they were
+# 1.06 MB of sqlite, //sql and //components/sqlite_vfs. shot has no disk cache
+# and no session storage -- it loads one file:// URL and exits.
+enable_device_bound_sessions = false
+enable_disk_cache_sql_backend = false
+
+# The rest of //net that a static screenshot cannot reach: the Reporting and
+# Network Error Logging endpoints, WebSockets, multicast DNS discovery, and
+# Kerberos/Negotiate HTTP auth.
+enable_reporting = false
+enable_websockets = false
+enable_mdns = false
+use_kerberos = false
+
+# -Os rather than -O2. Chromium turns this on for Android, CastOS, iOS and
+# ChromeOS -- every target where the binary's size costs more than the last few
+# percent of throughput. shot rasterises one page per process launch, so it is
+# in the same category: the time is dominated by process startup and layout,
+# not by the inner loops -Os gives up.
+optimize_for_size = true

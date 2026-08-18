@@ -1,0 +1,34 @@
+# Copyright 2026 The Chromium Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# core/url_pattern was cut along with the URLPattern JS API and is back because
+# CSS needs it: `url-pattern()` inside a <navigation-location>, and the
+# `pattern`/`protocol`/`hostname`/... descriptors of `@location`, both compile
+# to a blink::URLPattern during ordinary style resolution. See url_pattern.h
+# for what was dropped from the class itself.
+#
+# Not restored: url_pattern_fuzzer.cc and its seed corpus (the fuzzer target
+# went with the rest of the fuzzers), and url_pattern_test.cc. Upstream's
+# build.gni held only `blink_core_tests_url_pattern`; with the test gone this
+# file carries the source list instead, the way core/inspector/build.gni does.
+#
+# url_pattern_regexp.{h,cc} is new: it is the ICU-backed replacement for
+# platform/bindings/script_regexp.h, which url_pattern::Component used to
+# compile the regular expression liburlpattern generates for a pattern that
+# cannot be matched directly.
+blink_core_sources_url_pattern = [
+  "url_pattern.cc",
+  "url_pattern.h",
+  "url_pattern_canon.cc",
+  "url_pattern_canon.h",
+  "url_pattern_component.cc",
+  "url_pattern_component.h",
+  "url_pattern_dummy_url_canon.cc",
+  "url_pattern_dummy_url_canon.h",
+  "url_pattern_options.h",
+  "url_pattern_regexp.cc",
+  "url_pattern_regexp.h",
+  "url_pattern_utils.cc",
+  "url_pattern_utils.h",
+]

@@ -1,0 +1,13 @@
+// Copyright 2026 The Chromium Authors
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// Extracted from navigate_event_init.idl. The Navigation API itself is cut;
+// this enum is kept because core/timing's soft-navigation heuristics classify
+// each navigation with V8NavigationType.
+enum NavigationType {
+  "reload",
+  "push",
+  "replace",
+  "traverse"
+};

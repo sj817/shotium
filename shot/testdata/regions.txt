@@ -1,0 +1,46 @@
+# Regions of render_corpus.html at 1248x1320, for tools/shot/diff_report.py.
+#
+# name:x,y,w,h
+#
+# The bands follow the corpus's own sections, so a number here points at one
+# feature rather than at "the page". The items below them isolate the single
+# element in a section that a band would otherwise average away -- a gradient
+# swatch next to three flat-coloured boxes, say.
+
+# --- section bands -----------------------------------------------------------
+title:23,28,1200,44
+s1_text:23,82,1200,118
+s2_flexbox:23,222,1200,96
+s3_grid:23,332,1200,146
+s4_paint:23,492,1200,156
+s5_transforms:23,656,1200,156
+s6_webfont:23,846,1200,96
+s7_svg:23,950,1200,166
+s8_images:23,1130,1200,152
+
+# --- individual elements -----------------------------------------------------
+# Section 4, left to right: a bordered box with a radius, a box with a
+# box-shadow, a linear-gradient fill, two overlapping radial gradients.
+s4_border_radius:23,528,168,106
+s4_box_shadow:203,528,170,106
+s4_linear_gradient:382,528,160,100
+s4_radial_gradient:558,522,162,118
+
+# Section 5: rotate, skew, scale, and a perspective/rotateY.
+s5_rotate:16,712,110,92
+s5_skew:140,724,110,68
+s5_scale:255,736,118,44
+s5_3d:392,724,80,68
+
+# Section 6: two runs of Ahem, whose glyphs are solid blocks, so any difference
+# here is geometry rather than glyph rasterisation.
+s6_ahem:30,888,296,38
+
+# Section 7: an SVG rect with a linear gradient, a stroked circle, a polygon.
+s7_gradient_rect:28,988,112,120
+s7_circle:146,988,116,120
+s7_triangle:264,988,100,120
+
+# Section 8: the decoded bitmaps themselves, without their captions.
+s8_png:180,1140,120,120
+s8_jpeg:313,1140,172,120

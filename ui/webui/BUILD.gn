@@ -1,0 +1,22 @@
+# Copyright 2018 The Chromium Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# WebUI is browser chrome: chrome://settings, the NTP, the internals pages and
+# the TypeScript build machinery behind them. None of it participates in
+# HTML -> layout -> paint -> PNG, so the "webui" static library, its test
+# support, the examples app and the whole ui/webui/resources tree have been
+# deleted. Only the buildflag header survives, because unrelated targets
+# include it unconditionally.
+
+import("//build/buildflag_header.gni")
+import("//ui/webui/webui_features.gni")
+
+buildflag_header("buildflags") {
+  header = "buildflags.h"
+  flags = [
+    "ENABLE_WEBUI_GENERATE_CODE_CACHE=$enable_webui_generate_code_cache",
+    "ENABLE_WEBUI_NTP=$enable_webui_ntp",
+    "ENABLE_WEBUI_CONTEXTUAL_TASKS_COMPOSEBOX=$enable_webui_contextual_tasks_composebox",
+  ]
+}

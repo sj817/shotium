@@ -1,0 +1,41 @@
+[
+  {
+    "name": "basic",
+    "file": "cases/basic.html",
+    "width": 800,
+    "height": 600,
+    "scale": 1,
+    "max_changed_fraction": 0,
+    "max_channel_delta": 0
+  },
+  {
+    "name": "layout",
+    "file": "cases/layout.html",
+    "width": 1024,
+    "height": 768,
+    "scale": 1,
+    "max_changed_fraction": 0,
+    "max_channel_delta": 0
+  },
+  {
+    "name": "paint",
+    "file": "cases/paint.html",
+    "width": 900,
+    "height": 640,
+    "scale": 1,
+    "max_changed_fraction": 0,
+    "max_channel_delta": 0
+  },
+  {
+    "name": "text",
+    "file": "cases/text.html",
+    "resources": [
+      "../../third_party/blink/web_tests/resources/Ahem.woff2"
+    ],
+    "width": 960,
+    "height": 540,
+    "scale": 1,
+    "max_changed_fraction": 0,
+    "max_channel_delta": 0
+  }
+]

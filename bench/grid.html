@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Shot benchmark: grid</title><link rel="stylesheet" href="assets/base.css">
+<style>
+  .dashboard { display:grid; grid-template-columns:repeat(12,minmax(0,1fr)); grid-template-rows:106px 165px 165px; gap:14px; margin-top:24px; }
+  .tile { min-width:0; overflow:hidden; padding:18px; border:1px solid var(--line); border-radius:14px; background:white; box-shadow:0 8px 20px rgba(28,45,75,.07); }
+  .wide { grid-column:span 5; } .metric { grid-column:span 2; } .metric.last { grid-column:span 3; }
+  .chart { grid-column:span 7; grid-row:span 2; } .feed { grid-column:span 5; } .map { grid-column:span 5; }
+  .tile h2 { margin:0 0 10px; font-size:15px; } .value { font-size:29px; font-weight:750; }
+  .bars { display:grid; grid-template-columns:repeat(16,1fr); align-items:end; gap:7px; height:242px; padding-top:12px; }
+  .bars i { height:var(--h); border-radius:4px 4px 0 0; background:linear-gradient(#60a5fa,#2563eb); }
+  .feed ol { display:grid; gap:9px; margin:0; padding:0; list-style:none; } .feed li { display:grid; grid-template-columns:66px 1fr 40px; gap:8px; border-bottom:1px solid #e5eaf0; padding-bottom:8px; }
+  .map { display:grid; grid-template-columns:repeat(5,1fr); grid-template-rows:repeat(3,1fr); gap:6px; }
+  .map i { border-radius:6px; background:color-mix(in srgb,#0f9f75 var(--p),#e8f5f1); }
+</style>
+<main class="page"><span class="eyebrow">Grid fixture</span><h1>Track sizing and placement</h1><p class="lede">Spans, fractional tracks, minmax(), implicit placement, nested grids, and aligned content.</p>
+<section class="dashboard">
+  <article class="tile wide"><h2>Rendering throughput</h2><span class="value">142.8</span> captures/minute</article><article class="tile metric"><h2>p50</h2><span class="value">82</span> ms</article><article class="tile metric"><h2>p95</h2><span class="value">114</span> ms</article><article class="tile metric last"><h2>Peak RSS</h2><span class="value">96</span> MiB</article>
+  <article class="tile chart"><h2>Process-per-capture samples</h2><div class="bars"><i style="--h:32%"></i><i style="--h:48%"></i><i style="--h:38%"></i><i style="--h:65%"></i><i style="--h:54%"></i><i style="--h:76%"></i><i style="--h:61%"></i><i style="--h:83%"></i><i style="--h:71%"></i><i style="--h:91%"></i><i style="--h:68%"></i><i style="--h:79%"></i><i style="--h:57%"></i><i style="--h:87%"></i><i style="--h:73%"></i><i style="--h:96%"></i></div></article>
+  <article class="tile feed"><h2>Pipeline stages</h2><ol><li><b>Network</b><span>resources ready</span><em>14</em></li><li><b>Style</b><span>cascade clean</span><em>23</em></li><li><b>Layout</b><span>fragments built</span><em>31</em></li><li><b>Paint</b><span>display list</span><em>18</em></li></ol></article>
+  <article class="tile map"><i style="--p:15%"></i><i style="--p:30%"></i><i style="--p:55%"></i><i style="--p:72%"></i><i style="--p:90%"></i><i style="--p:42%"></i><i style="--p:68%"></i><i style="--p:24%"></i><i style="--p:80%"></i><i style="--p:34%"></i><i style="--p:95%"></i><i style="--p:57%"></i><i style="--p:76%"></i><i style="--p:48%"></i><i style="--p:63%"></i></article>
+</section></main></html>

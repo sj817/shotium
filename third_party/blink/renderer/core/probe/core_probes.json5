@@ -1,0 +1,54 @@
+{
+  settings: {
+    export_header: "third_party/blink/renderer/core/core_export.h",
+    export_symbol: "CORE_EXPORT",
+    include_path: "third_party/blink/renderer/core/inspector",
+    includes: [
+      "base/containers/span_or_size.h",
+      "third_party/blink/public/mojom/loader/same_document_navigation_type.mojom-shared.h",
+      "third_party/blink/public/web/web_media_inspector.h",
+      "third_party/blink/renderer/core/animation/animation.h",
+      "third_party/blink/renderer/core/core_probe_sink.h",
+      "third_party/blink/renderer/core/dom/character_data.h",
+      "third_party/blink/renderer/core/dom/pseudo_element.h",
+      "third_party/blink/renderer/core/frame/csp/content_security_policy.h",
+      "third_party/blink/renderer/core/html/html_slot_element.h",
+      "third_party/blink/renderer/core/loader/frame_loader_types.h",
+      "third_party/blink/renderer/core/page/chrome_client.h",
+      "third_party/blink/renderer/core/probe/core_probes.h",
+      "third_party/blink/renderer/platform/loader/fetch/resource.h",
+    ],
+  },
+  observers: {
+    // EvaluateScriptBlock, ExecuteScript, InvokeCallback, InvokeEventHandler,
+    // WillHandlePromise and UserEntryPoint were dropped from this list: they
+    // took ScriptState/v8::Local handles and were deleted from core_probes.pidl
+    // along with V8. AnimationFrameTimingMonitor never actually implemented
+    // Will()/Did() overloads for them (see animation_frame_timing_monitor.h),
+    // so removing them here only stops the generator from trying to call
+    // methods that were never there.
+    AnimationFrameTimingMonitor: {
+      include_path: "third_party/blink/renderer/core/frame",
+      probes: [
+        "DidFinishSyncXHR",
+        "DidRunJavaScriptDialog",
+        "RecalculateStyle",
+        "UpdateLayout",
+        "FrameRelatedTask",
+      ]
+    },
+    // CallFunction and ExecuteScript were dropped from this list for the same
+    // reason (V8 handles, probe deleted). PerformanceMonitor's Will/Did
+    // overloads for them are removed in performance_monitor.h/.cc.
+    PerformanceMonitor: {
+      include_path: "third_party/blink/renderer/core/frame",
+      probes: [
+        "RecalculateStyle",
+        "UpdateLayout",
+        "UserCallback",
+        "V8Compile",
+        "DocumentWriteFetchScript",
+      ]
+    },
+  }
+}

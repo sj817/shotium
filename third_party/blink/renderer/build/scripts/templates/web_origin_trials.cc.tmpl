@@ -1,0 +1,35 @@
+{% from 'templates/macros.tmpl' import license, source_files_for_generated_file %}
+{{license()}}
+
+{{source_files_for_generated_file(template_file, input_files)}}
+
+#include "third_party/blink/public/web/web_origin_trials.h"
+
+#include "third_party/blink/renderer/core/dom/document.h"
+#include "third_party/blink/renderer/core/execution_context/execution_context.h"
+#include "third_party/blink/public/mojom/origin_trials/origin_trial_feature.mojom-shared.h"
+#include "third_party/blink/public/common/origin_trials/origin_trials.h"
+#include "third_party/blink/public/platform/web_string.h"
+#include "third_party/blink/public/web/web_document.h"
+
+namespace blink {
+
+{% for feature in features %}
+{% if feature.public and feature.in_origin_trial %}
+// static
+bool WebOriginTrials::Is{{feature.name}}Enabled(const WebDocument* web_document) {
+  if (!web_document) return false;
+  Document* document = *web_document;
+  return RuntimeEnabledFeatures::{{feature.name}}Enabled(document->GetExecutionContext());
+}
+
+// The v8::Local<v8::Context> overload used to be defined here via
+// ExecutionContext::From(context), which walked V8's per-context embedder
+// data to recover the blink::ExecutionContext. There is no V8 context to
+// walk anymore, so that overload -- and its ExecutionContext::From(v8
+// context) dependency -- is gone; only the WebDocument-based lookup above
+// remains.
+
+{% endif %}
+{% endfor %}
+} // namespace blink

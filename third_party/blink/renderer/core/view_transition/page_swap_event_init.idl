@@ -1,0 +1,14 @@
+// Copyright 2024 The Chromium Authors
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// https://html.spec.whatwg.org/multipage/nav-history-apis.html#pageswapeventinit
+
+// The `ViewTransition? viewTransition` member was here. It handed script the
+// DOMViewTransition object -- the `.ready` / `.finished` / `.updateCallbackDone`
+// promise wrapper around a running view transition -- and DOMViewTransition was
+// deleted with the rest of the script-facing bindings. The transition itself
+// (core/view_transition/view_transition.h) is untouched; what is gone is the
+// handle script used to observe it, and view_transition.idl with it.
+dictionary PageSwapEventInit : EventInit {
+};

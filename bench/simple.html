@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Shot benchmark: simple</title>
+<link rel="stylesheet" href="assets/base.css">
+<style>
+  .hero { display: flex; align-items: center; justify-content: space-between; margin-top: 28px; padding: 34px; }
+  .hero div { max-width: 650px; }
+  .mark { display: grid; place-items: center; width: 180px; height: 180px; border-radius: 32px; color: white; background: #2563eb; font-size: 54px; font-weight: 800; box-shadow: 0 18px 36px rgba(37,99,235,.28); }
+  .stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 18px; margin-top: 20px; }
+  .stat { padding: 22px; }
+  .stat b { display: block; font-size: 28px; }
+  .stat span { color: var(--muted); }
+</style>
+<main class="page">
+  <span class="eyebrow">Simple fixture</span><h1>Static screenshot engine</h1><p class="lede">A small baseline for startup-dominated captures.</p>
+  <section class="hero panel"><div><h2>URL → DOM → CSS → layout → paint → PNG</h2><p>No scripts, dynamic state, or remote dependencies. The result is stable at a 1280 × 720 viewport.</p></div><aside class="mark">S</aside></section>
+  <section class="stats"><article class="stat panel"><b>01</b><span>document</span></article><article class="stat panel"><b>12</b><span>elements</span></article><article class="stat panel"><b>0</b><span>scripts</span></article><article class="stat panel"><b>1×</b><span>scale</span></article></section>
+</main>
+</html>

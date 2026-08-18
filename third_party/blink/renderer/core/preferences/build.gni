@@ -1,0 +1,14 @@
+# Copyright 2023 The Chromium Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Only preference_overrides.{h,cc} survives the shot-engine cut: it's the
+# pure-data (no V8) storage for CSS media-feature preference overrides that
+# core/css/media_values.cc and core/css/style_engine.cc read through
+# Page::GetPreferenceOverrides(). The rest of the Web Preferences API
+# (navigator.preferences, PreferenceManager, PreferenceObject) was a
+# script-facing surface with no caller left and stays deleted.
+blink_core_sources_preferences = [
+  "preference_overrides.cc",
+  "preference_overrides.h",
+]

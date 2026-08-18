@@ -1,0 +1,102 @@
+# Copyright 2014 The Chromium Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//content/public/common/features.gni")
+import("//media/media_options.gni")
+
+# See //content/BUILD.gn for how this works.
+group("renderer") {
+  if (is_component_build) {
+    public_deps = [ "//content" ]
+  } else {
+    public_deps = [
+      ":render_frame_media_playback_options",
+      ":renderer_sources",
+    ]
+  }
+}
+
+if (is_component_build) {
+  link_target_type = "source_set"
+} else {
+  link_target_type = "static_library"
+}
+target(link_target_type, "renderer_sources") {
+  # External code should depend on via ":renderer" above.
+  visibility = [ "//content/*" ]
+
+  sources = [
+    "content_renderer_client.cc",
+    "content_renderer_client.h",
+    "render_accessibility.h",
+    "render_frame.h",
+    "render_frame_observer.cc",
+    "render_frame_observer.h",
+    "render_frame_observer_tracker.h",
+    "render_frame_visitor.h",
+    "render_thread.cc",
+    "render_thread.h",
+    "render_thread_observer.h",
+    "window_features_converter.cc",
+    "window_features_converter.h",
+    "worker_thread.h",
+  ]
+
+  configs += [ "//content:content_implementation" ]
+
+  public_deps = [
+    "//build:chromecast_buildflags",
+    "//media",
+  ]
+
+  deps = [
+    "//content/public/child:child_sources",
+    "//content/public/common:common_sources",
+    "//content/renderer",
+    "//net",
+    "//skia",
+    "//third_party/blink/public:blink_headers",
+    "//third_party/blink/public/common",
+    "//ui/base",
+    "//ui/base/ime",
+    "//ui/gfx",
+  ]
+
+  allow_circular_includes_from = [
+    # This target is a pair with content/renderer. They always go together and
+    # include headers from each other.
+    "//content/renderer",
+  ]
+
+  if (enable_plugins) {
+    sources += [ "plugin_ax_tree_action_target_adapter.h" ]
+  }
+
+  if (is_android) {
+    sources += [ "seccomp_sandbox_status_android.h" ]
+
+    # For seccomp_sandbox_status_android.h.
+    deps += [ "//sandbox" ]
+  }
+
+}
+
+source_set("render_frame_media_playback_options") {
+  # External code should depend on via ":renderer" above.
+  visibility = [ "//content/*" ]
+
+  sources = [
+    "render_frame_media_playback_options.cc",
+    "render_frame_media_playback_options.h",
+  ]
+
+  configs += [ "//content:content_implementation" ]
+
+  public_deps = [
+    "//content:export",
+    "//content/public/common:renderer_type",
+  ]
+
+  deps = [ "//content/public/common:common_sources" ]
+}

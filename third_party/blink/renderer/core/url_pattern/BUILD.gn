@@ -1,0 +1,21 @@
+# Copyright 2020 The Chromium Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//third_party/blink/renderer/core/core.gni")
+import("//third_party/blink/renderer/core/url_pattern/build.gni")
+
+blink_core_sources("url_pattern") {
+  sources = blink_core_sources_url_pattern
+
+  public_deps = [
+    "//components/url_pattern",
+    "//third_party/blink/renderer/platform",
+    "//third_party/liburlpattern",
+  ]
+
+  deps = [ "//third_party/abseil-cpp:absl" ]
+}
+
+# The blink_fuzzer_test("url_pattern_fuzzer") target was here, along with the
+# blink_fuzzer_test.gni import it needed. The fuzzers are cut.

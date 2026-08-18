@@ -1,0 +1,143 @@
+# Copyright 2026 The Chromium Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//tools/grit/repack.gni")
+
+assert(!is_android && !is_ios)
+
+# Shot's data resources.
+#
+# blink_resources.pak is the one that matters: it carries the user-agent
+# stylesheet, which ShotPlatform::GetDataResourceString hands to
+# CSSDefaultStyleSheets. A document laid out without it is not a smaller
+# rendering, it is a wrong one.
+repack("shot_data") {
+  sources = [
+    "$root_gen_dir/third_party/blink/public/resources/blink_resources.pak",
+    "$root_gen_dir/third_party/blink/public/resources/blink_scaled_resources_100_percent.pak",
+    "$root_gen_dir/ui/resources/ui_resources_100_percent.pak",
+  ]
+
+  deps = [
+    "//third_party/blink/public:resources",
+    "//third_party/blink/public:scaled_resources_100_percent",
+    "//ui/resources",
+  ]
+
+  output = "$root_out_dir/shot_data.pak"
+}
+
+# Shot's string resources.
+#
+# These are the strings blink itself looks up: form control labels, the "this
+# plugin is not supported" placeholder, and so on. A missing resource id is a
+# runtime CHECK rather than a link error, which is why the pack stays even
+# though most of it is never reached by a static page.
+repack("shot_strings") {
+  sources = [
+    "$root_gen_dir/third_party/blink/public/strings/blink_strings_en-US.pak",
+    "$root_gen_dir/ui/strings/app_locale_settings_en-US.pak",
+    "$root_gen_dir/ui/strings/ui_strings_en-US.pak",
+  ]
+
+  deps = [
+    "//third_party/blink/public/strings",
+    "//ui/strings",
+  ]
+
+  output = "$root_out_dir/shot_strings.pak"
+}
+
+# shot.exe.
+#
+# Note what is *not* here: //content, //ui/aura, //ui/compositor, //components/
+# viz, //gpu, //sandbox, //services/network. //net is here and //services/
+# network is not on purpose: that service is the mojo wrapper multi-process
+# Chrome puts around //net so a sandboxed renderer can reach it, and a shot
+# worker is already its own process. shot does not start a browser. It
+# builds a blink Page with an EmptyChromeClient, installs one document into it
+# synchronously, runs the document lifecycle to paint-clean and replays the
+# resulting cc::PaintRecord onto a CPU SkSurface. See shot_renderer.h and
+# docs/cut-progress.md section 14.
+#
+# `inside_blink` is required: shot_renderer.cc uses blink's internal types
+# (Page, LocalFrame, LocalFrameView) rather than the public Web* API, because
+# the public API is the surface //content talks to and it is on its way out.
+executable("shot") {
+  sources = [
+    "main.cc",
+    "shot_capture.cc",
+    "shot_capture.h",
+    "shot_fetch.cc",
+    "shot_fetch.h",
+    "shot_network.cc",
+    "shot_network.h",
+    "shot_options.cc",
+    "shot_options.h",
+    "shot_platform.cc",
+    "shot_platform.h",
+    "shot_renderer.cc",
+    "shot_renderer.h",
+    "shot_request.cc",
+    "shot_request.h",
+    "shot_runtime.cc",
+    "shot_runtime.h",
+    "shot_server.cc",
+    "shot_server.h",
+    "shot_url_loader.cc",
+    "shot_url_loader.h",
+  ]
+
+  deps = [
+    "//base",
+    "//base:i18n",
+    "//cc/paint",
+    # base::DiscardableMemoryAllocator has no default; skia's blur-mask
+    # cache is the first thing that asks for one.
+    "//components/discardable_memory/service",
+    # mojo::core::Init(). blink's object graph is wired with mojo types even
+    # when nothing leaves the process -- an empty PolicyContainer is an
+    # AssociatedRemote over a pipe with nothing on the far end.
+    "//mojo/core/embedder",
+    "//mojo/public/cpp/bindings",
+    "//net",
+    "//services/network/public/cpp",
+    "//skia",
+    "//third_party/blink/public:blink",
+    "//third_party/blink/renderer/core",
+    "//third_party/blink/renderer/platform",
+    "//ui/base",
+    # display::ScreenInfo, which is how the page is told its device scale
+    # factor -- the thing resolution media queries and srcset are decided on.
+    "//ui/display",
+    "//ui/gfx",
+    # gfx::PNGCodec, which is how the rendered bitmap becomes a PNG. It is the
+    # wrapper that knows which encoder skia was actually built with -- this
+    # build has the rust one, not libpng, so SkPngEncoder is a header with
+    # nothing behind it.
+    "//ui/gfx/codec",
+    "//ui/gfx/geometry",
+    "//url",
+  ]
+
+  configs += [
+    "//third_party/blink/renderer:config",
+    "//third_party/blink/renderer:inside_blink",
+    "//build/config/compiler:wexit_time_destructors",
+  ]
+
+  data_deps = [
+    ":shot_data",
+    ":shot_strings",
+  ]
+
+  data = [
+    "$root_out_dir/shot_data.pak",
+    "$root_out_dir/shot_strings.pak",
+  ]
+
+  if (is_win) {
+    deps += [ "//build/win:default_exe_manifest" ]
+  }
+}

@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>shot render corpus</title>
+<style>
+  /* A web font, embedded as a data: URI so the page has no network
+     dependencies and renders identically in the oracle and in shot. This is
+     Ahem, the test font used by the web platform tests: every glyph is a solid
+     box, which makes a text-shaping regression a large, obvious pixel
+     difference instead of a subtle one. */
+  @font-face {
+    font-family: "corpus-ahem";
+    src: url(ahem.ttf) format("truetype");
+  }
+
+  :root { --accent: #2b6cb0; }
+
+  body {
+    margin: 0;
+    padding: 24px;
+    width: 1200px;
+    background: #f7fafc;
+    font: 16px/1.5 "Segoe UI", sans-serif;
+    color: #1a202c;
+  }
+
+  h1 { font-size: 28px; margin: 0 0 16px; }
+  section { margin-bottom: 24px; }
+  h2 { font-size: 18px; margin: 0 0 8px; color: var(--accent); }
+
+  /* Block, inline and inline-block flow. */
+  .flow p { margin: 0 0 6px; }
+  .flow .inline-box {
+    display: inline-block;
+    width: 60px; height: 20px;
+    background: #fbd38d;
+    vertical-align: middle;
+  }
+  .flow em { font-style: italic; }
+  .flow strong { font-weight: 700; }
+
+  /* Flexbox. */
+  .flex {
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+  }
+  .flex > div {
+    flex: 1;
+    padding: 12px;
+    background: #bee3f8;
+    border: 2px solid var(--accent);
+  }
+  .flex > div:nth-child(2) { flex: 2; background: #90cdf4; }
+
+  /* Grid. */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: 48px 48px;
+    gap: 8px;
+  }
+  .grid > div {
+    background: #c6f6d5;
+    border: 1px solid #38a169;
+    display: grid;
+    place-items: center;
+  }
+  .grid > div.span2 { grid-column: span 2; background: #9ae6b4; }
+
+  /* Backgrounds, borders, radii, shadows, opacity, gradients. */
+  .paint { display: flex; gap: 16px; }
+  .paint > div { width: 160px; height: 100px; }
+  .radius {
+    background: #fed7d7;
+    border: 3px solid #e53e3e;
+    border-radius: 18px 4px 18px 4px;
+  }
+  .shadow {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, .35), 0 1px 2px rgba(0, 0, 0, .2);
+  }
+  .alpha {
+    background: linear-gradient(135deg, #805ad5, #3182ce);
+    opacity: .55;
+  }
+  .blend {
+    background:
+      radial-gradient(circle at 30% 30%, rgba(237, 100, 166, .9), transparent 60%),
+      radial-gradient(circle at 70% 70%, rgba(56, 178, 172, .9), transparent 60%),
+      #fff;
+    border-radius: 50%;
+  }
+
+  /* 2D and 3D transforms. */
+  .transforms { display: flex; gap: 32px; height: 130px; align-items: center; }
+  .transforms > div {
+    width: 90px; height: 60px;
+    background: var(--accent);
+    color: #fff;
+    display: grid;
+    place-items: center;
+  }
+  .rotate { transform: rotate(-12deg); }
+  .skew { transform: skewX(18deg); background: #dd6b20; }
+  .scale { transform: scale(1.25, .8); background: #38a169; }
+  .persp { transform: perspective(300px) rotateY(35deg); background: #805ad5; }
+
+  /* The Ahem block below is a shaping and baseline check. */
+  .ahem {
+    font-family: "corpus-ahem", monospace;
+    font-size: 32px;
+    line-height: 1;
+    color: #2d3748;
+    background: #edf2f7;
+    padding: 8px;
+  }
+
+  .images { display: flex; gap: 16px; align-items: flex-start; }
+  .images figure { margin: 0; }
+  .images img { display: block; border: 1px solid #cbd5e0; }
+  figcaption { font-size: 12px; color: #4a5568; }
+</style>
+</head>
+<body>
+<h1>shot render corpus</h1>
+
+<section class="flow">
+  <h2>1. Text and inline flow</h2>
+  <p>Block-level paragraph with <strong>bold</strong>, <em>italic</em>, and an
+     <span class="inline-box"></span> inline-block box on the baseline.</p>
+  <p>Justified wrapping text so that line breaking is exercised across a known
+     width: the quick brown fox jumps over the lazy dog, and then keeps running
+     until the line has to break somewhere sensible.</p>
+</section>
+
+<section>
+  <h2>2. Flexbox</h2>
+  <div class="flex">
+    <div>flex: 1</div>
+    <div>flex: 2</div>
+    <div>flex: 1</div>
+  </div>
+</section>
+
+<section>
+  <h2>3. Grid</h2>
+  <div class="grid">
+    <div class="span2">span 2</div><div>c</div><div>d</div>
+    <div>e</div><div>f</div><div class="span2">span 2</div>
+  </div>
+</section>
+
+<section>
+  <h2>4. Backgrounds, borders, radii, shadow, opacity</h2>
+  <div class="paint">
+    <div class="radius"></div>
+    <div class="shadow"></div>
+    <div class="alpha"></div>
+    <div class="blend"></div>
+  </div>
+</section>
+
+<section>
+  <h2>5. Transforms</h2>
+  <div class="transforms">
+    <div class="rotate">rotate</div>
+    <div class="skew">skew</div>
+    <div class="scale">scale</div>
+    <div class="persp">3D</div>
+  </div>
+</section>
+
+<section>
+  <h2>6. Web font (Ahem)</h2>
+  <div class="ahem">AHEM pqxy</div>
+</section>
+
+<section>
+  <h2>7. SVG</h2>
+  <svg width="360" height="120" viewBox="0 0 360 120" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#f6ad55"/>
+        <stop offset="1" stop-color="#c53030"/>
+      </linearGradient>
+    </defs>
+    <rect x="4" y="4" width="112" height="112" rx="16" fill="url(#g)"/>
+    <circle cx="180" cy="60" r="52" fill="none" stroke="#2b6cb0" stroke-width="8"/>
+    <path d="M240 108 L288 12 L336 108 Z" fill="#38a169" stroke="#22543d"
+          stroke-width="4" stroke-linejoin="round"/>
+    <text x="180" y="68" text-anchor="middle" font-size="20" fill="#2d3748">SVG</text>
+  </svg>
+</section>
+
+<section class="images">
+  <h2>8. Raster images</h2>
+  <figure>
+    <img src="checker.png" width="120" height="120" alt="">
+    <figcaption>PNG, 8-bit RGBA</figcaption>
+  </figure>
+  <figure>
+    <img src="gradient.jpg" width="160" height="120" alt="">
+    <figcaption>JPEG, 4:2:0</figcaption>
+  </figure>
+</section>
+</body>
+</html>

@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Shot benchmark: CSS heavy</title>
+<link rel="stylesheet" href="assets/base.css">
+<style>
+  :root { --unit: 9px; }
+  .matrix { display: grid; grid-template-columns: repeat(12,1fr); gap: 7px; margin-top: 24px; padding: 18px; }
+  .cell { position: relative; min-width: 0; height: 61px; overflow: hidden; border: 1px solid color-mix(in srgb, var(--tone) 52%, white); border-radius: calc(5px + var(--r)); background: color-mix(in srgb, var(--tone) 13%, white); box-shadow: inset 0 -8px 18px rgba(18,31,55,.06); }
+  .cell::before { content: attr(data-i); position: absolute; left: 8px; top: 7px; color: color-mix(in srgb, var(--tone) 65%, #152238); font-size: 10px; font-weight: 700; }
+  .cell::after { content: ""; position: absolute; width: var(--unit); height: calc(var(--unit) * 3); right: 9px; bottom: 8px; border-radius: 999px; background: var(--tone); transform: rotate(calc(var(--i) * 3deg)); opacity: .82; }
+  .cell:nth-child(4n+1) { --tone:#2563eb; --r:2px; } .cell:nth-child(4n+2) { --tone:#0f9f75; --r:7px; }
+  .cell:nth-child(4n+3) { --tone:#d97706; --r:12px; } .cell:nth-child(4n) { --tone:#9333ea; --r:17px; }
+  .cell:nth-child(3n) { border-style:dashed; } .cell:nth-child(5n) { filter:saturate(1.25); }
+  .cell:nth-child(7n)::after { width:calc(var(--unit)*3); height:var(--unit); }
+  .summary { display:flex; gap:12px; margin-top:18px; }
+  .summary span { flex:1; padding:15px; border:1px solid var(--line); border-radius:10px; background:white; }
+  @media (min-width:1100px) { .matrix { outline: 2px solid rgba(37,99,235,.15); outline-offset:4px; } }
+</style>
+<main class="page"><span class="eyebrow">CSS-heavy fixture</span><h1>Selector, cascade, and computed-style pressure</h1><p class="lede">Nesting-free CSS with custom properties, color-mix(), calc(), pseudo-elements, structural selectors, media queries, and filters.</p>
+<section class="matrix panel">
+  <i class="cell" style="--i:1" data-i="01"></i><i class="cell" style="--i:2" data-i="02"></i><i class="cell" style="--i:3" data-i="03"></i><i class="cell" style="--i:4" data-i="04"></i><i class="cell" style="--i:5" data-i="05"></i><i class="cell" style="--i:6" data-i="06"></i><i class="cell" style="--i:7" data-i="07"></i><i class="cell" style="--i:8" data-i="08"></i><i class="cell" style="--i:9" data-i="09"></i><i class="cell" style="--i:10" data-i="10"></i><i class="cell" style="--i:11" data-i="11"></i><i class="cell" style="--i:12" data-i="12"></i>
+  <i class="cell" style="--i:13" data-i="13"></i><i class="cell" style="--i:14" data-i="14"></i><i class="cell" style="--i:15" data-i="15"></i><i class="cell" style="--i:16" data-i="16"></i><i class="cell" style="--i:17" data-i="17"></i><i class="cell" style="--i:18" data-i="18"></i><i class="cell" style="--i:19" data-i="19"></i><i class="cell" style="--i:20" data-i="20"></i><i class="cell" style="--i:21" data-i="21"></i><i class="cell" style="--i:22" data-i="22"></i><i class="cell" style="--i:23" data-i="23"></i><i class="cell" style="--i:24" data-i="24"></i>
+  <i class="cell" style="--i:25" data-i="25"></i><i class="cell" style="--i:26" data-i="26"></i><i class="cell" style="--i:27" data-i="27"></i><i class="cell" style="--i:28" data-i="28"></i><i class="cell" style="--i:29" data-i="29"></i><i class="cell" style="--i:30" data-i="30"></i><i class="cell" style="--i:31" data-i="31"></i><i class="cell" style="--i:32" data-i="32"></i><i class="cell" style="--i:33" data-i="33"></i><i class="cell" style="--i:34" data-i="34"></i><i class="cell" style="--i:35" data-i="35"></i><i class="cell" style="--i:36" data-i="36"></i>
+  <i class="cell" style="--i:37" data-i="37"></i><i class="cell" style="--i:38" data-i="38"></i><i class="cell" style="--i:39" data-i="39"></i><i class="cell" style="--i:40" data-i="40"></i><i class="cell" style="--i:41" data-i="41"></i><i class="cell" style="--i:42" data-i="42"></i><i class="cell" style="--i:43" data-i="43"></i><i class="cell" style="--i:44" data-i="44"></i><i class="cell" style="--i:45" data-i="45"></i><i class="cell" style="--i:46" data-i="46"></i><i class="cell" style="--i:47" data-i="47"></i><i class="cell" style="--i:48" data-i="48"></i>
+  <i class="cell" style="--i:49" data-i="49"></i><i class="cell" style="--i:50" data-i="50"></i><i class="cell" style="--i:51" data-i="51"></i><i class="cell" style="--i:52" data-i="52"></i><i class="cell" style="--i:53" data-i="53"></i><i class="cell" style="--i:54" data-i="54"></i><i class="cell" style="--i:55" data-i="55"></i><i class="cell" style="--i:56" data-i="56"></i><i class="cell" style="--i:57" data-i="57"></i><i class="cell" style="--i:58" data-i="58"></i><i class="cell" style="--i:59" data-i="59"></i><i class="cell" style="--i:60" data-i="60"></i>
+  <i class="cell" style="--i:61" data-i="61"></i><i class="cell" style="--i:62" data-i="62"></i><i class="cell" style="--i:63" data-i="63"></i><i class="cell" style="--i:64" data-i="64"></i><i class="cell" style="--i:65" data-i="65"></i><i class="cell" style="--i:66" data-i="66"></i><i class="cell" style="--i:67" data-i="67"></i><i class="cell" style="--i:68" data-i="68"></i><i class="cell" style="--i:69" data-i="69"></i><i class="cell" style="--i:70" data-i="70"></i><i class="cell" style="--i:71" data-i="71"></i><i class="cell" style="--i:72" data-i="72"></i>
+ </section><div class="summary"><span>72 styled nodes</span><span>pseudo-element paint</span><span>custom-property cascade</span></div></main>
+</html>

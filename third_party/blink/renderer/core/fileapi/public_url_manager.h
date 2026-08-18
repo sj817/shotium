@@ -1,0 +1,118 @@
+/*
+ * Copyright (C) 2012 Motorola Mobility Inc.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ * 1.  Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ * 2.  Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer in the
+ *     documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL APPLE OR ITS CONTRIBUTORS BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#ifndef THIRD_PARTY_BLINK_RENDERER_CORE_FILEAPI_PUBLIC_URL_MANAGER_H_
+#define THIRD_PARTY_BLINK_RENDERER_CORE_FILEAPI_PUBLIC_URL_MANAGER_H_
+
+#include <utility>
+
+#include "mojo/public/cpp/bindings/pending_receiver.h"
+#include "services/network/public/mojom/url_loader_factory.mojom-blink-forward.h"
+#include "third_party/blink/public/mojom/blob/blob_url_store.mojom-blink.h"
+#include "third_party/blink/renderer/core/core_export.h"
+#include "third_party/blink/renderer/core/execution_context/execution_context_lifecycle_observer.h"
+#include "third_party/blink/renderer/platform/heap/garbage_collected.h"
+#include "third_party/blink/renderer/platform/mojo/heap_mojo_associated_remote.h"
+#include "third_party/blink/renderer/platform/wtf/hash_map.h"
+#include "third_party/blink/renderer/platform/wtf/hash_set.h"
+#include "third_party/blink/renderer/platform/wtf/text/string_hash.h"
+#include "third_party/blink/renderer/platform/wtf/text/wtf_string.h"
+
+namespace blink {
+
+class Blob;
+class ExecutionContext;
+class KURL;
+class URLRegistry;
+class URLRegistrable;
+
+class CORE_EXPORT PublicURLManager final
+    : public GarbageCollected<PublicURLManager>,
+      public ExecutionContextLifecycleObserver {
+ public:
+  explicit PublicURLManager(ExecutionContext*);
+  // The PassKey<GlobalStorageAccessHandle> constructor used to let the
+  // Storage Access API hand this class an already-connected BlobURLStore
+  // remote from a worker context. GlobalStorageAccessHandle and workers are
+  // both gone in this single-threaded screenshot process, so that entry
+  // point (and its only caller) no longer exists; deleted along with it.
+
+  // Returns a serialized new Blob URL and registers the Blob with the
+  // BlobURLStore.
+  String RegisterUrl(Blob*);
+  // Returns a serialized new Blob URL and registers the URLRegistrable with its
+  // URLRegistry.
+  String RegisterUrl(URLRegistrable*);
+  // Revokes the given URL.
+  void Revoke(const KURL&);
+  // Resolves the provided URL to a factory capable of creating loaders for
+  // the specific URL.
+  void Resolve(const KURL&,
+               mojo::PendingReceiver<network::mojom::blink::URLLoaderFactory>);
+  // Resolves the provided URL to a mojom BlobURLToken. This token can be used
+  // by the browser process to securely look up what blob a URL used to refer
+  // to, even after the URL is revoked.
+  // If the URL fails to resolve the request will simply be disconnected.
+  void ResolveAsBlobURLToken(const KURL&,
+                             mojo::PendingReceiver<mojom::blink::BlobURLToken>,
+                             bool is_top_level_navigation);
+
+  // ExecutionContextLifecycleObserver interface.
+  void ContextDestroyed() override;
+
+  void Trace(Visitor*) const override;
+
+  void SetURLStoreForTesting(
+      HeapMojoAssociatedRemote<mojom::blink::BlobURLStore> frame_url_store) {
+    frame_url_store_ = std::move(frame_url_store);
+  }
+
+  // Returns a reference to the BlobURLStore in `frame_url_store_`.
+  mojom::blink::BlobURLStore& GetBlobURLStore();
+
+ private:
+  KURL GenerateUrl() const;
+  String CompleteRegistration(const KURL&);
+
+  typedef String URLString;
+  // Map from URLs to the URLRegistry they are registered with.
+  typedef HashMap<URLString, URLRegistry*> URLToRegistryMap;
+  URLToRegistryMap url_to_registry_;
+  HashSet<URLString> mojo_urls_;
+
+  bool is_stopped_ = false;
+
+  // A navigation-associated interface is used to preserve message ordering.
+  // Remotes corresponding to that interface get stored in `frame_url_store_`.
+  // (Workers and worklets used to reach this via a plain
+  // `BrowserInterfaceBroker`-bound `worker_url_store_` remote instead, but
+  // there are no workers or worklets in this single-threaded screenshot
+  // process, so that remote and the branch that bound it are gone.)
+  HeapMojoAssociatedRemote<mojom::blink::BlobURLStore> frame_url_store_;
+};
+
+}  // namespace blink
+
+#endif  // THIRD_PARTY_BLINK_RENDERER_CORE_FILEAPI_PUBLIC_URL_MANAGER_H_

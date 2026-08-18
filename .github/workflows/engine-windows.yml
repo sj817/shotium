@@ -1,0 +1,159 @@
+# Builds shot.exe on Windows, then runs the checks that need it.
+#
+# READ THIS BEFORE RUNNING IT.
+#
+# This is an experiment, not a green tick. A GitHub-hosted runner gives 4 cores
+# and a six-hour job limit, and a from-scratch build of this tree takes a night
+# on four cores. So the first run is expected to be killed by the time limit.
+#
+# It is still worth running, for two reasons. It reports exactly where it dies,
+# which is the only honest way to find out whether the disk, the toolchain fetch
+# or the clock is the binding constraint. And the sccache is saved even when the
+# job fails, so a second run starts warm and gets further -- the build bootstraps
+# across several runs rather than needing one long one. Once the cache is full a
+# run is minutes.
+#
+# If you want it green in one go, point `runs-on` at a self-hosted Windows
+# runner, or at a larger GitHub runner. Nothing else needs to change.
+#
+# The checkout is a fork, so gclient must not manage `src`: a managed sync would
+# reset the tree to upstream and undo everything this repository is. That is
+# what "managed": False below is for, and it is not optional.
+
+name: engine (windows)
+
+on:
+  workflow_dispatch:
+    inputs:
+      jobs:
+        description: 'ninja -j (4 cores; blink layout TUs peak at ~1.2 GB each)'
+        default: '4'
+      run_checks:
+        description: 'run the check suites if the build finishes'
+        type: boolean
+        default: true
+
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 350   # just under GitHub's six-hour ceiling, so the
+                           # "save the cache" step still gets to run
+
+    env:
+      DEPOT_TOOLS_WIN_TOOLCHAIN: '0'   # use the locally installed Visual Studio
+      DEPOT_TOOLS_UPDATE: '0'
+      GYP_MSVS_VERSION: '2022'
+      SCCACHE_GHA_ENABLED: 'true'
+
+    steps:
+      - name: free up disk
+        shell: pwsh
+        # A Windows runner ships with several toolchains this build has no use
+        # for, and the checkout plus toolchains plus object files do not fit
+        # around them.
+        run: |
+          Get-PSDrive C | Select-Object Used,Free
+          $junk = @(
+            "$env:ProgramFiles\dotnet",
+            "${env:ProgramFiles(x86)}\Android",
+            "$env:ProgramFiles\Microsoft SDKs\Azure",
+            "$env:AGENT_TOOLSDIRECTORY\Ruby",
+            "$env:AGENT_TOOLSDIRECTORY\go",
+            "$env:AGENT_TOOLSDIRECTORY\PyPy",
+            "C:\hostedtoolcache\windows\Java_Temurin-Hotspot_jdk"
+          )
+          foreach ($p in $junk) {
+            if (Test-Path $p) { Remove-Item $p -Recurse -Force -ErrorAction SilentlyContinue }
+          }
+          Get-PSDrive C | Select-Object Used,Free
+
+      - name: checkout (shallow -- history is not a build input)
+        uses: actions/checkout@v4
+        with:
+          path: src
+          fetch-depth: 1
+          submodules: false   # gclient fetches the DEPS-managed ones itself
+
+      - name: depot_tools
+        shell: pwsh
+        run: |
+          git clone --depth 1 https://chromium.googlesource.com/chromium/tools/depot_tools.git C:\depot_tools
+          "C:\depot_tools" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: gclient solution
+        shell: pwsh
+        # "managed": False is the whole point -- see the note at the top.
+        # checkout_configuration=small drops the parts of DEPS that only tests
+        # and the Android build need.
+        run: |
+          @'
+          solutions = [{
+            "name": "src",
+            "url": "https://github.com/${{ github.repository }}.git",
+            "managed": False,
+            "custom_deps": {},
+            "custom_vars": {"checkout_configuration": "small"},
+          }]
+          target_os = ["win"]
+          '@ | Out-File -FilePath .gclient -Encoding ascii
+
+      - name: gclient sync
+        shell: pwsh
+        run: |
+          gclient sync --nohooks --no-history --shallow --verbose
+          gclient runhooks
+          Get-PSDrive C | Select-Object Used,Free
+
+      - name: sccache
+        uses: mozilla-actions/sccache-action@v0.0.6
+
+      - name: gn gen
+        shell: pwsh
+        working-directory: src
+        # cc_wrapper routes every compile through sccache, which is what makes a
+        # killed run useful to the next one.
+        run: |
+          $shotArgs = (Get-Content build/args/shot.gn -Raw)
+          $shotArgs += "`ncc_wrapper = ""sccache"""
+          $shotArgs | Out-File -FilePath shot-ci.gn -Encoding ascii
+          gn gen out/Shot "--args=$(Get-Content shot-ci.gn -Raw)"
+
+      - name: ninja
+        shell: pwsh
+        working-directory: src
+        run: |
+          ninja -C out/Shot shot -j ${{ github.event.inputs.jobs }}
+
+      - name: sccache stats
+        if: always()
+        run: sccache --show-stats
+
+      - name: package
+        if: success()
+        shell: pwsh
+        working-directory: src
+        run: |
+          New-Item -ItemType Directory dist | Out-Null
+          Copy-Item out/Shot/shot.exe,out/Shot/icudtl.dat,out/Shot/shot_data.pak,out/Shot/shot_strings.pak dist/
+          Get-ChildItem dist | Select-Object Name,Length
+
+      - name: upload
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shot-windows-x64
+          path: src/dist/
+          if-no-files-found: error
+
+      - name: checks
+        if: success() && github.event.inputs.run_checks == 'true'
+        shell: pwsh
+        working-directory: src
+        # The three suites, in the order they cost: protocol and geometry first
+        # because they are seconds, then the network one, then the pool. Any
+        # failure fails the job -- there is no point publishing an engine that
+        # does not pass its own checks.
+        run: |
+          python tools/shot/serve_check.py out/Shot/shot.exe
+          python tools/shot/net_check.py out/Shot/shot.exe
+          node tools/shot/node_check.cjs out/Shot/shot.exe

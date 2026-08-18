@@ -1,0 +1,90 @@
+# Copyright 2014 The Chromium Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//mojo/public/tools/bindings/mojom.gni")
+
+source_set("utility") {
+  # Only the public target should depend on this. All other targets (even
+  # internal content ones other than test) should depend on the public one.
+  visibility = [
+    ":for_content_tests",
+    "//content/app:*",
+    "//content/public/utility:utility_sources",
+  ]
+
+  sources = [
+    "browser_exposed_utility_interfaces.cc",
+    "browser_exposed_utility_interfaces.h",
+    "in_process_utility_thread.cc",
+    "in_process_utility_thread.h",
+    "services.cc",
+    "services.h",
+    "utility_blink_platform_with_sandbox_support_impl.cc",
+    "utility_blink_platform_with_sandbox_support_impl.h",
+    "utility_main.cc",
+    "utility_thread_impl.cc",
+    "utility_thread_impl.h",
+  ]
+
+  configs += [ "//content:content_implementation" ]
+
+  deps = [
+    "//base",
+    "//content:export",
+    "//content/child",
+    "//content/public/child:child_sources",
+    "//content/public/common:common_sources",
+    "//content/public/common:content_descriptor_keys",
+    "//media:media_buildflags",
+    "//mojo/public/cpp/bindings",
+    "//net",
+    "//sandbox",
+    "//services/network:network_service",
+    "//services/service_manager/public/cpp",
+    "//services/service_manager/public/mojom",
+    "//third_party/blink/public:blink_headers",
+    "//url",
+  ]
+
+  if (is_chromeos) {
+    deps += [
+      "//chromeos/ash/components/assistant:buildflags",
+      "//chromeos/ash/services/ime:sandbox_hook",
+      "//chromeos/services/tts:sandbox_hook",
+    ]
+  }
+
+  if (is_linux || is_chromeos) {
+    deps += [
+      "//services/network:network_sandbox_hook",
+    ]
+  }
+
+  # PAC execution is done in process on Android.
+  if (!is_android) {
+  }
+
+
+
+  if (is_win) {
+    deps += [ ":delegate_data" ]
+  }
+}
+
+if (is_win) {
+  mojom("delegate_data") {
+    disable_variants = true
+
+    sources = [ "sandbox_delegate_data.mojom" ]
+    public_deps = [ "//mojo/public/mojom/base" ]
+  }
+}
+
+# See comment at the top of //content/BUILD.gn for how this works.
+group("for_content_tests") {
+  visibility = [ "//content/test/*" ]
+  if (!is_component_build) {
+    public_deps = [ ":utility" ]
+  }
+}

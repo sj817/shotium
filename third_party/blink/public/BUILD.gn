@@ -1,0 +1,524 @@
+# Copyright 2014 The Chromium Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/buildflag_header.gni")
+import("//build/config/devtools.gni")
+import("//mojo/public/tools/bindings/mojom.gni")
+import("//third_party/blink/public/public_features.gni")
+import("//third_party/blink/renderer/build/scripts/scripts.gni")
+import("//third_party/blink/renderer/config.gni")
+import("//third_party/blink/renderer/core/core.gni")
+import("//tools/grit/grit_rule.gni")
+import("//tools/grit/repack.gni")
+
+if (is_android) {
+  import("//build/config/android/config.gni")
+  import("//build/config/android/rules.gni")
+}
+
+blink_public_output_dir = "$root_gen_dir/third_party/blink/public"
+
+group("blink") {
+  public_deps = [ ":blink_headers" ]
+  deps = [
+    "//third_party/blink/renderer/controller",
+    "//third_party/blink/renderer/core",
+    "//third_party/blink/renderer/modules",
+    "//third_party/blink/renderer/platform",
+  ]
+}
+
+group("test_support") {
+  testonly = true
+  public_deps = [
+    ":test_headers",
+    "//third_party/blink/common:test_support",
+    "//third_party/blink/renderer/core/exported:test_support",
+    "//third_party/blink/renderer/platform:test_support",
+  ]
+}
+
+group("all_blink") {
+  # This includes some test targets. Don't link into production!
+  testonly = true
+
+  public_deps = [
+    "//third_party/blink/common",
+    "//third_party/blink/common:blink_common_unittests",
+    "//third_party/blink/renderer/controller",
+    "//third_party/blink/renderer/core",
+    "//third_party/blink/renderer/modules",
+    "//third_party/blink/renderer/platform:blink_platform_unittests",
+    "//third_party/blink/renderer/platform/heap:blink_heap_unittests",
+    "//third_party/blink/renderer/platform/wtf:wtf_unittests",
+  ]
+}
+
+config("blink_headers_config") {
+  # Allow :blink_headers to include v8.h without linking to it.
+}
+
+# Public feature flags used outside of Blink.
+buildflag_header("buildflags") {
+  header = "public_buildflags.h"
+  flags = [
+    "USE_MINIKIN_HYPHENATION=$use_minikin_hyphenation",
+    "ENABLE_UNHANDLED_TAP=$enable_unhandled_tap",
+    # cppgc_enable_object_names was declared by //v8/gni/v8.gni, which is gone.
+    "VERBOSE_PERSISTENT=false",
+  ]
+}
+
+if (is_android) {
+  java_cpp_enum("blink_headers_java_enums_srcjar") {
+    sources = [
+      "./common/context_menu_data/context_menu_data.h",
+      "./common/input/web_input_event.h",
+      "./mojom/context_menu/context_menu.mojom",
+      "./mojom/input/input_handler.mojom",
+      "./platform/web_text_input_mode.h",
+      "./platform/web_text_input_type.h",
+    ]
+  }
+
+  android_library("blink_headers_java") {
+    deps = [
+      "//services/network/public/mojom:mojom_java",
+      "//third_party/androidx:androidx_annotation_annotation_java",
+    ]
+    srcjar_deps = [ ":blink_headers_java_enums_srcjar" ]
+  }
+}
+
+source_set("test_headers") {
+  testonly = true
+  sources = [
+    "common/origin_trials/scoped_test_origin_trial_policy.h",
+    "platform/scheduler/test/renderer_scheduler_test_support.h",
+    "platform/scheduler/test/web_mock_thread_scheduler.h",
+    "test/frame_widget_test_helper.h",
+    "test/test_web_frame_content_dumper.h",
+    "test/test_web_frame_helper.h",
+  ]
+  public_deps = [ ":blink_headers" ]
+  deps = [
+    "//base",
+    "//cc",
+    "//testing/gmock",
+  ]
+}
+
+# See public/common/BUILD.gn for the headers that can be referenced both from
+# the browser- and renderer-side components.
+source_set("blink_headers") {
+  sources = [
+    "platform/browser_interface_broker_proxy.h",
+    "platform/child_url_loader_factory_bundle.h",
+    "platform/cross_variant_mojo_util.h",
+    "platform/file_path_conversion.h",
+    "platform/interface_registry.h",
+    "platform/platform.h",
+    "platform/resource_load_info_notifier_wrapper.h",
+    "platform/scheduler/web_agent_group_scheduler.h",
+    "platform/scheduler/web_renderer_process_type.h",
+    "platform/scheduler/web_scoped_virtual_time_pauser.h",
+    "platform/scheduler/web_thread_scheduler.h",
+    "platform/task_type.h",
+    "platform/tracked_child_url_loader_factory_bundle.h",
+    "platform/url_conversion.h",
+    "platform/url_loader_throttle_provider.h",
+    "platform/user_metrics_action.h",
+    "platform/weak_wrapper_resource_load_info_notifier.h",
+    "platform/web_audio_device.h",
+    "platform/web_audio_latency_hint.h",
+    "platform/web_audio_sink_descriptor.h",
+    "platform/web_audio_source_provider.h",
+    "platform/web_audio_source_provider_impl.h",
+    "platform/web_background_resource_fetch_assets.h",
+    "platform/web_blob_info.h",
+    "platform/web_cache.h",
+    "platform/web_callbacks.h",
+    "platform/web_common.h",
+    "platform/web_connection_type.h",
+    "platform/web_content_decryption_module.h",
+    "platform/web_content_decryption_module_access.h",
+    "platform/web_content_decryption_module_exception.h",
+    "platform/web_content_decryption_module_result.h",
+    "platform/web_content_decryption_module_session.h",
+    "platform/web_content_security_policy_struct.h",
+    "platform/web_content_settings_client.h",
+    "platform/web_crypto.h",
+    "platform/web_crypto_algorithm.h",
+    "platform/web_crypto_algorithm_params.h",
+    "platform/web_crypto_key.h",
+    "platform/web_crypto_key_algorithm.h",
+    "platform/web_crypto_key_algorithm_params.h",
+    "platform/web_data.h",
+    "platform/web_dedicated_or_shared_worker_global_scope_context.h",
+    "platform/web_dedicated_worker.h",
+    "platform/web_dedicated_worker_host_factory_client.h",
+    "platform/web_distillability.h",
+    "platform/web_drag_data.h",
+    "platform/web_effective_connection_type.h",
+    "platform/web_encoding_data.h",
+    "platform/web_encrypted_media_client.h",
+    "platform/web_encrypted_media_key_information.h",
+    "platform/web_encrypted_media_request.h",
+    "platform/web_encrypted_media_types.h",
+    "platform/web_fetch_client_settings_object.h",
+    "platform/web_file_system_type.h",
+    "platform/web_font_description.h",
+    "platform/web_font_render_style.h",
+    "platform/web_gesture_curve.h",
+    "platform/web_graphics_context_3d_provider.h",
+    "platform/web_graphics_shared_image_interface_provider.h",
+    "platform/web_http_body.h",
+    "platform/web_http_header_visitor.h",
+    "platform/web_icon_sizes_parser.h",
+    "platform/web_image_generator.h",
+    "platform/web_input_event_result.h",
+    "platform/web_loader_freeze_mode.h",
+    "platform/web_media_key_system_configuration.h",
+    "platform/web_media_key_system_media_capability.h",
+    "platform/web_media_player.h",
+    "platform/web_media_player_client.h",
+    "platform/web_media_player_encrypted_media_client.h",
+    "platform/web_media_player_source.h",
+    "platform/web_media_source.h",
+    "platform/web_navigation_body_loader.h",
+    "platform/web_network_state_notifier.h",
+    "platform/web_policy_container.h",
+    "platform/web_prescient_networking.h",
+    "platform/web_private_ptr.h",
+    "platform/web_runtime_features.h",
+    "platform/web_scoped_page_pauser.h",
+    "platform/web_scroll_anchor_data.h",
+    "platform/web_security_origin.h",
+    "platform/web_set_sink_id_callbacks.h",
+    "platform/web_source_buffer.h",
+    "platform/web_source_buffer_client.h",
+    "platform/web_spell_check_panel_host_client.h",
+    "platform/web_string.h",
+    "platform/web_surface_layer_bridge.h",
+    "platform/web_text_input_info.h",
+    "platform/web_text_input_mode.h",
+    "platform/web_text_input_type.h",
+    "platform/web_theme_engine.h",
+    "platform/web_thread_safe_data.h",
+    "platform/web_time_range.h",
+    "platform/web_touch_action.h",
+    "platform/web_url.h",
+    "platform/web_url_error.h",
+    "platform/web_url_request.h",
+    "platform/web_url_request_extra_data.h",
+    "platform/web_url_request_util.h",
+    "platform/web_url_response.h",
+    "platform/web_worker_fetch_context.h",
+    "platform/websocket_handshake_throttle.h",
+    "platform/websocket_handshake_throttle_provider.h",
+    "web/blink.h",
+    "web/web_agent_cluster_key.h",
+    "web/web_array_buffer.h",
+    "web/web_associated_url_loader.h",
+    "web/web_associated_url_loader_client.h",
+    "web/web_associated_url_loader_options.h",
+    "web/web_autofill_client.h",
+    "web/web_autofill_state.h",
+    "web/web_console_message.h",
+    "web/web_crypto_histograms.h",
+    "web/web_css_origin.h",
+    "web/web_custom_element.h",
+    "web/web_disallow_transition_scope.h",
+    "web/web_document.h",
+    "web/web_document_loader.h",
+    "web/web_dom_event.h",
+    "web/web_drag_status.h",
+    "web/web_draggable_region.h",
+    "web/web_element.h",
+    "web/web_element_collection.h",
+    "web/web_embedded_worker.h",
+    "web/web_embedded_worker_start_data.h",
+    "web/web_form_control_element.h",
+    "web/web_form_element.h",
+    "web/web_form_related_change_type.h",
+    "web/web_frame.h",
+    "web/web_frame_content_dumper.h",
+    "web/web_frame_load_type.h",
+    "web/web_frame_owner_properties.h",
+    "web/web_frame_serializer.h",
+    "web/web_frame_serializer_client.h",
+    "web/web_frame_widget.h",
+    "web/web_heap.h",
+    "web/web_history_commit_type.h",
+    "web/web_history_item.h",
+    "web/web_hit_test_result.h",
+    "web/web_image.h",
+    "web/web_image_cache.h",
+    "web/web_input_element.h",
+    "web/web_input_method_controller.h",
+    "web/web_interaction_effects_monitor.h",
+    "web/web_interaction_effects_monitor_observer.h",
+    "web/web_label_element.h",
+    "web/web_language_detection_details.h",
+    "web/web_lifecycle_update.h",
+    "web/web_local_frame.h",
+    "web/web_local_frame_client.h",
+    "web/web_local_frame_observer.h",
+    "web/web_manifest_manager.h",
+    "web/web_meaningful_layout.h",
+    "web/web_media_inspector.h",
+    "web/web_meta_element.h",
+    "web/web_navigation_control.h",
+    "web/web_navigation_params.h",
+    "web/web_navigation_policy.h",
+    "web/web_navigation_type.h",
+    "web/web_no_state_prefetch_client.h",
+    "web/web_node.h",
+    "web/web_non_composited_widget_client.h",
+    "web/web_option_element.h",
+    "web/web_page_popup.h",
+    "web/web_performance_metrics_for_nested_contexts.h",
+    "web/web_performance_metrics_for_reporting.h",
+    "web/web_picture_in_picture_window_options.h",
+    "web/web_plugin.h",
+    "web/web_plugin_container.h",
+    "web/web_plugin_document.h",
+    "web/web_plugin_params.h",
+    "web/web_plugin_script_forbidden_scope.h",
+    "web/web_popup_menu_info.h",
+    "web/web_print_client.h",
+    "web/web_print_page_description.h",
+    "web/web_print_params.h",
+    "web/web_print_preset_options.h",
+    "web/web_range.h",
+    "web/web_record_replay_client.h",
+    "web/web_remote_frame.h",
+    "web/web_render_theme.h",
+    "web/web_savable_resources_test_support.h",
+    "web/web_scoped_window_focus_allowed_indicator.h",
+    "web/web_script_source.h",
+    "web/web_searchable_form_data.h",
+    "web/web_security_policy.h",
+    "web/web_select_element.h",
+    "web/web_selector.h",
+    "web/web_settings.h",
+    "web/web_spelling_marker.h",
+    "web/web_text_check_client.h",
+    "web/web_text_checking_completion.h",
+    "web/web_text_checking_result.h",
+    "web/web_text_decoration_type.h",
+    "web/web_user_level_memory_pressure_signal_generator.h",
+    "web/web_view.h",
+    "web/web_view_client.h",
+    "web/web_view_observer.h",
+    "web/web_widget.h",
+    "web/web_window_features.h",
+  ]
+
+  if (is_mac) {
+    sources += [
+    ]
+  }
+
+  if (is_linux || is_chromeos) {
+    sources += [ "platform/linux/web_sandbox_support.h" ]
+  }
+
+  if (is_win) {
+    sources += [
+      "platform/web_font_prewarmer.h",
+      "platform/web_font_rendering_client.h",
+      "platform/win/web_sandbox_support.h",
+      "web/win/web_font_family_names.h",
+      "web/win/web_font_rendering.h",
+    ]
+  }
+
+  public_configs = [
+    ":blink_headers_config",
+
+    # Blink exposes icu headers in the public API.
+    "//third_party/icu:icu_config",
+  ]
+
+  public_deps = [
+    ":resources_grit",
+    ":runtime_features_for_public",
+    "//net",
+    "//services/network/public/mojom:mojom_shared",
+    "//services/service_manager/public/cpp",
+    "//skia",
+    "//printing/mojom",
+    "//third_party/blink/public/common",
+    "//third_party/blink/public/common:headers",
+
+    # web_node.h includes v8/include/cppgc/source-location.h for the
+    # SourceLocation that WebNode's persistent handles are stamped with.
+    "//third_party/cppgc",
+    "//third_party/blink/renderer/platform:make_platform_generated",
+    "//ui/base/dragdrop/mojom:mojom_shared",
+    "//ui/base/ime",
+    "//ui/base/ime/mojom",
+    "//ui/base/prediction",
+    "//url",
+  ]
+
+  if (is_mac) {
+    public_deps += [ "//ui/gfx" ]
+  }
+
+  deps = [
+    "//base",
+    "//cc",
+    "//cc/paint",
+    "//components/viz/common",
+    "//mojo/public/cpp/bindings",
+    "//mojo/public/cpp/system",
+    "//services/network/public/cpp",
+    "//services/network/public/mojom",
+    "//third_party/blink/renderer/platform/wtf",
+    "//ui/base",
+  ]
+}
+
+blink_python_runner("runtime_features_for_public") {
+  script = "../renderer/build/scripts/make_runtime_features_for_public.py"
+
+  runtime_enabled_features_json5 =
+      "../renderer/platform/runtime_enabled_features.json5"
+  inputs =
+      scripts_for_json5_files + [
+        runtime_enabled_features_json5,
+        "../renderer/platform/runtime_enabled_features.override.json5",
+        "../renderer/build/scripts/make_runtime_features_utilities.py",
+        "../renderer/build/scripts/make_runtime_features.py",
+        "../renderer/build/scripts/templates/features_generated.h.tmpl",
+        "../renderer/build/scripts/templates/web_origin_trials.h.tmpl",
+        "../renderer/build/scripts/templates/web_runtime_features_base.h.tmpl",
+      ]
+
+  outputs = [
+    "$blink_public_output_dir/common/features_generated.h",
+    "$blink_public_output_dir/platform/web_runtime_features_base.h",
+    "$blink_public_output_dir/web/web_origin_trials.h",
+  ]
+
+  args = [
+    rebase_path(runtime_enabled_features_json5, root_build_dir),
+    "--output_dir",
+    rebase_path(blink_public_output_dir, root_build_dir),
+  ]
+}
+
+# Every forwarding group to //third_party/devtools-frontend has been deleted:
+# blink_devtools_frontend_resources, blink_devtools_inspector_resources,
+# blink_devtools_frontend_resources_files and blink_generate_devtools_grd.
+# Together with the devtools_inspector_resources grit target below, these were
+# the only edges from the Chromium build into the DevTools frontend checkout.
+
+resources_out_dir = "$blink_public_output_dir/resources"
+
+grit("resources") {
+  output_dir = resources_out_dir
+  source = "blink_resources.grd"
+  inputs = [
+    "//third_party/blink/renderer/core/css/fullscreen.css",
+    "//third_party/blink/renderer/core/css/fullscreenAndroid.css",
+    "//third_party/blink/renderer/core/css/json-document.css",
+    "//third_party/blink/renderer/core/css/marker.css",
+    "//third_party/blink/renderer/core/css/mathml.css",
+    "//third_party/blink/renderer/core/css/overscroll.css",
+    "//third_party/blink/renderer/core/css/scroll_button.css",
+    "//third_party/blink/renderer/core/css/scroll_marker.css",
+    "//third_party/blink/renderer/core/css/svg.css",
+    "//third_party/blink/renderer/core/css/transition.css",
+    "//third_party/blink/renderer/core/css/view-source.css",
+    "//third_party/blink/renderer/core/html/forms/resources/input_alert.svg",
+    "//third_party/blink/renderer/core/html/forms/resources/validation_bubble.css",
+    "//third_party/blink/renderer/core/html/resources/android.css",
+    "//third_party/blink/renderer/core/html/resources/forced_colors.css",
+    "//third_party/blink/renderer/core/html/resources/html.css",
+    "//third_party/blink/renderer/core/html/resources/images/calendar_icon.svg",
+    "//third_party/blink/renderer/core/html/resources/images/calendar_icon_white.svg",
+    "//third_party/blink/renderer/core/html/resources/images/email_verification_loading.svg",
+    "//third_party/blink/renderer/core/html/resources/images/email_verification_verified.svg",
+    "//third_party/blink/renderer/core/html/resources/images/password_reveal_off.svg",
+    "//third_party/blink/renderer/core/html/resources/images/password_reveal_on.svg",
+    "//third_party/blink/renderer/core/html/resources/images/time_icon.svg",
+    "//third_party/blink/renderer/core/html/resources/images/time_icon_white.svg",
+    "//third_party/blink/renderer/core/html/resources/input_multiple_fields.css",
+    "//third_party/blink/renderer/core/html/resources/linux.css",
+    "//third_party/blink/renderer/core/html/resources/quirks.css",
+  ]
+  if (!is_android) {
+    inputs += [
+      "//third_party/blink/renderer/core/html/forms/resources/calendar_picker.css",
+      "//third_party/blink/renderer/core/html/forms/resources/calendar_picker.js",
+      "//third_party/blink/renderer/core/html/forms/resources/color_picker.css",
+      "//third_party/blink/renderer/core/html/forms/resources/color_picker.js",
+      "//third_party/blink/renderer/core/html/forms/resources/color_picker_common.js",
+      "//third_party/blink/renderer/core/html/forms/resources/color_suggestion_picker.css",
+      "//third_party/blink/renderer/core/html/forms/resources/color_suggestion_picker.js",
+      "//third_party/blink/renderer/core/html/forms/resources/datetimelocal_picker.js",
+      "//third_party/blink/renderer/core/html/forms/resources/list_picker.css",
+      "//third_party/blink/renderer/core/html/forms/resources/list_picker.js",
+      "//third_party/blink/renderer/core/html/forms/resources/month_picker.js",
+      "//third_party/blink/renderer/core/html/forms/resources/picker_common.css",
+      "//third_party/blink/renderer/core/html/forms/resources/picker_common.js",
+      "//third_party/blink/renderer/core/html/forms/resources/suggestion_picker.css",
+      "//third_party/blink/renderer/core/html/forms/resources/suggestion_picker.js",
+      "//third_party/blink/renderer/core/html/forms/resources/time_picker.css",
+      "//third_party/blink/renderer/core/html/forms/resources/time_picker.js",
+    ]
+  }
+  outputs = [
+    "grit/blink_resources.h",
+    "blink_resources.pak",
+  ]
+  use_brotli = true
+}
+
+grit("image_resources") {
+  output_dir = resources_out_dir
+  source = "blink_image_resources.grd"
+  inputs = [
+    "default_100_percent/blink/broken_canvas.png",
+    "default_100_percent/blink/broken_image.png",
+    "default_100_percent/blink/search_cancel.png",
+    "default_100_percent/blink/search_cancel_dark_mode.png",
+    "default_100_percent/blink/search_cancel_hc_light.png",
+    "default_100_percent/blink/search_cancel_pressed.png",
+    "default_100_percent/blink/search_cancel_pressed_dark_mode.png",
+    "default_100_percent/blink/search_cancel_pressed_hc_light.png",
+    "default_200_percent/blink/broken_canvas.png",
+    "default_200_percent/blink/broken_image.png",
+  ]
+  outputs = [
+    "grit/blink_image_resources.h",
+    "blink_image_resources_100_percent.pak",
+    "blink_image_resources_200_percent.pak",
+  ]
+}
+
+group("scaled_resources") {
+  public_deps = [
+    ":image_resources",
+  ]
+}
+
+repack("scaled_resources_100_percent") {
+  output = "$root_gen_dir/third_party/blink/public/resources/blink_scaled_resources_100_percent.pak"
+  sources = [
+    "$root_gen_dir/third_party/blink/public/resources/blink_image_resources_100_percent.pak",
+  ]
+  deps = [ ":scaled_resources" ]
+}
+
+repack("scaled_resources_200_percent") {
+  output = "$root_gen_dir/third_party/blink/public/resources/blink_scaled_resources_200_percent.pak"
+  sources = [
+    "$root_gen_dir/third_party/blink/public/resources/blink_image_resources_200_percent.pak",
+  ]
+  deps = [ ":scaled_resources" ]
+}

@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>text rendering fixture</title>
+<style>
+  @font-face {
+    font-family: AhemFixture;
+    src: url("../../../third_party/blink/web_tests/resources/Ahem.woff2") format("woff2");
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body { padding: 36px; color: #182433; background: #f7f4ed; font-family: Arial, sans-serif; }
+  main { display: grid; grid-template-columns: 1.25fr .75fr; gap: 32px; width: 888px; height: 468px; padding: 30px; border: 1px solid #cabf9d; background: #fffdf7; }
+  h1 { margin: 0 0 14px; font-family: Georgia, serif; font-size: 34px; line-height: 1.1; }
+  .copy { columns: 2; column-gap: 24px; column-rule: 1px solid #d8cfb4; font-size: 14px; line-height: 1.55; text-align: justify; hyphens: none; }
+  .copy p { margin: 0 0 12px; }
+  .ahem { font: 20px/1.5 AhemFixture; letter-spacing: 2px; color: #243f84; overflow-wrap: anywhere; }
+  .rtl { direction: rtl; padding: 14px; border-inline-start: 5px solid #bf5b34; background: #f8e9df; font-size: 18px; }
+  aside { border-left: 1px solid #cabf9d; padding-left: 26px; }
+  aside b { display: block; margin-bottom: 16px; color: #7a3f2c; letter-spacing: 2px; text-transform: uppercase; }
+</style>
+<main>
+  <section><h1>Text shaping and line layout</h1><div class="copy"><p>Static pages still depend on stable inline layout, line breaking, fallback, columns, and decoration. This fixture has no scripts, clocks, network requests, animations, or platform-generated content.</p><p>Every run uses identical markup and viewport geometry. Pixel comparisons therefore expose changes in style, layout, paint, raster, or font loading.</p><p>The compact column is intentionally justified so small shaping changes remain visible.</p></div></section>
+  <aside><b>Bundled test font</b><div class="ahem">ABCDEFGHIJKLM NOPQRSTUVWXYZ 0123456789</div><p class="rtl">مرحبا بالعالم 123</p></aside>
+</main>
+</html>

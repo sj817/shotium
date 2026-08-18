@@ -1,0 +1,13 @@
+@import url("remote-theme.css");
+
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
+body { background: #0d1425; color: #edf4ff; font: 15px/1.5 Arial, sans-serif; }
+.remote-shell { width: 1180px; margin: 0 auto; padding: 36px 0; }
+.remote-hero { display: grid; grid-template-columns: 1.2fr .8fr; gap: 26px; min-height: 295px; padding: 34px; border: 1px solid #35425d; border-radius: 20px; background: var(--remote-panel); }
+.remote-hero h1 { margin: 6px 0 12px; font-size: 38px; }
+.remote-hero p { color: #a9b7cc; }
+.remote-hero img { display: block; width: 100%; height: 226px; object-fit: cover; border-radius: 15px; }
+.remote-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 20px; }
+.remote-grid article { min-height: 185px; padding: 20px; border: 1px solid #35425d; border-radius: 14px; background: #131e35; }
+.remote-grid b { color: var(--remote-accent); }

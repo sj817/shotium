@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Shot benchmark: long page</title><link rel="stylesheet" href="assets/base.css">
+<style>
+  .timeline { position:relative; margin-top:26px; padding-left:54px; }
+  .timeline::before { content:""; position:absolute; left:20px; top:0; bottom:0; width:4px; background:linear-gradient(#2563eb,#0f9f75,#d97706,#9333ea); }
+  .entry { position:relative; min-height:210px; margin-bottom:18px; padding:24px; }
+  .entry::before { content:attr(data-index); position:absolute; left:-54px; top:22px; display:grid; place-items:center; width:42px; height:42px; border:4px solid var(--canvas); border-radius:50%; color:white; background:#2563eb; font-size:11px; font-weight:700; }
+  .entry:nth-child(3n+2)::before { background:#0f9f75; } .entry:nth-child(3n)::before { background:#d97706; }
+  .entry h2 { margin:0 0 9px; } .entry p { max-width:850px; color:#566579; }
+  .tags { display:flex; gap:8px; margin-top:20px; }.tags span { padding:5px 9px; border-radius:999px; background:#e8eef6; font-size:12px; }
+</style>
+<main class="page"><span class="eyebrow">Long-page fixture</span><h1>Full-document lifecycle pressure</h1><p class="lede">The v1 screenshot remains viewport-only, but Blink must style and lay out a tall static document.</p><section class="timeline">
+  <article class="entry panel" data-index="01"><h2>Fetch markup</h2><p>Resolve the top-level URL, redirects, response decoding, and document character encoding before the parser advances.</p><div class="tags"><span>network</span><span>HTML</span><span>ready</span></div></article>
+  <article class="entry panel" data-index="02"><h2>Build the DOM tree</h2><p>Tokenization, insertion modes, attributes, entities, text nodes, and element ownership create the static document model.</p><div class="tags"><span>parser</span><span>DOM</span><span>tree</span></div></article>
+  <article class="entry panel" data-index="03"><h2>Collect stylesheets</h2><p>Linked styles, imports, inline blocks, declarations, selectors, custom properties, and media queries become style inputs.</p><div class="tags"><span>CSS</span><span>cascade</span><span>media</span></div></article>
+  <article class="entry panel" data-index="04"><h2>Load resources</h2><p>Images, SVG, fonts, and CSS URLs reach a terminal loaded or failed state under the configured timeout.</p><div class="tags"><span>font</span><span>image</span><span>timeout</span></div></article>
+  <article class="entry panel" data-index="05"><h2>Resolve computed style</h2><p>Inheritance and cascade produce the style values consumed by layout without script-observable wrappers.</p><div class="tags"><span>selectors</span><span>variables</span><span>style</span></div></article>
+  <article class="entry panel" data-index="06"><h2>Run block layout</h2><p>Containing blocks, margins, sizing constraints, fragmentation, positioning, and overflow establish fragment geometry.</p><div class="tags"><span>block</span><span>flow</span><span>overflow</span></div></article>
+  <article class="entry panel" data-index="07"><h2>Run flex layout</h2><p>Intrinsic contributions, basis calculation, free-space distribution, alignment, and ordered placement produce fragments.</p><div class="tags"><span>flex</span><span>intrinsic</span><span>align</span></div></article>
+  <article class="entry panel" data-index="08"><h2>Run grid layout</h2><p>Explicit and implicit tracks, minmax sizing, fractional units, spans, and placement fill two-dimensional layouts.</p><div class="tags"><span>grid</span><span>tracks</span><span>placement</span></div></article>
+  <article class="entry panel" data-index="09"><h2>Shape text</h2><p>Font fallback, shaping, glyph metrics, bidi ordering, line breaking, and decorations become inline fragments.</p><div class="tags"><span>HarfBuzz</span><span>ICU</span><span>fonts</span></div></article>
+  <article class="entry panel" data-index="10"><h2>Build paint records</h2><p>Backgrounds, borders, text, images, clips, transforms, effects, and stacking order produce display items.</p><div class="tags"><span>paint</span><span>clip</span><span>effect</span></div></article>
+  <article class="entry panel" data-index="11"><h2>Raster the viewport</h2><p>Skia converts display items into pixels using the selected CPU or GPU backend at a fixed device scale.</p><div class="tags"><span>Skia</span><span>raster</span><span>bitmap</span></div></article>
+  <article class="entry panel" data-index="12"><h2>Encode PNG</h2><p>The final bitmap is encoded losslessly and written to the requested output path with verified dimensions.</p><div class="tags"><span>PNG</span><span>SHA-256</span><span>output</span></div></article>
+  <article class="entry panel" data-index="13"><h2>Compare pixels</h2><p>Decoded pixels are compared against the pinned Chromium baseline and a visible diff image records every changed pixel.</p><div class="tags"><span>regression</span><span>delta</span><span>fidelity</span></div></article>
+  <article class="entry panel" data-index="14"><h2>Record metrics</h2><p>Wall time, peak process and thread counts, sampled process-tree RSS, binary size, and runtime footprint remain auditable.</p><div class="tags"><span>wall</span><span>RSS</span><span>footprint</span></div></article>
+  <article class="entry panel" data-index="15"><h2>Repeat after deletion</h2><p>Every subsystem removal must compile, render, compare, benchmark, and remain independently bisectable.</p><div class="tags"><span>delete</span><span>verify</span><span>commit</span></div></article>
+  <article class="entry panel" data-index="16"><h2>Preserve CSS fidelity</h2><p>Reduction stops where a dependency is proven necessary for common static HTML and CSS correctness.</p><div class="tags"><span>minimum</span><span>closure</span><span>correctness</span></div></article>
+  <article class="entry panel" data-index="17"><h2>Measure again</h2><p>Comparable inputs and explicit engine identities keep performance claims scoped to actual built artifacts.</p><div class="tags"><span>repeat</span><span>median</span><span>p95</span></div></article>
+  <article class="entry panel" data-index="18"><h2>Produce one PNG</h2><p>A single-purpose executable completes the static rendering lifecycle and exits without browser state.</p><div class="tags"><span>static</span><span>native</span><span>done</span></div></article>
+</section></main></html>

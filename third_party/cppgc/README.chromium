@@ -1,0 +1,49 @@
+Name: cppgc
+Short Name: cppgc
+URL: https://chromium.googlesource.com/v8/v8.git
+Version: N/A
+Revision: 913d2ab381f8843bb1f918f1a7b40c0aae5ba8f0
+License: BSD-3-Clause
+License File: v8/LICENSE
+Security Critical: yes
+Shipped: yes
+
+Description:
+cppgc is the garbage collector that backs Blink's Oilpan. It lives inside the
+V8 repository, at include/cppgc and src/heap/cppgc-internal, but it is a
+self-contained library that V8's own build can compile standalone.
+
+Why it is vendored here:
+
+This tree deletes V8. That is straightforward for the JavaScript engine, and
+impossible for the collector, because blink::GarbageCollected<T> is a direct
+alias for cppgc::GarbageCollected<T> --
+
+    // third_party/blink/renderer/platform/heap/garbage_collected.h
+    template <typename T>
+    using GarbageCollected = cppgc::GarbageCollected<T>;
+
+-- with no abstraction layer in between, and every DOM node, CSS rule and layout
+object in Blink derives from it. Removing cppgc would mean replacing Blink's
+object model, not removing a dependency.
+
+Splitting the two is cheap. cppgc's entire external surface is two headers,
+v8config.h and v8-platform.h (which pulls v8-source-location.h), plus abseil,
+which Chromium already has. The vendored set is 350 files and 2.2 MiB against
+V8's 147 MiB, and none of it can reach the parser, the interpreter, TurboFan,
+the snapshot or the bindings.
+
+Local modifications:
+
+None to the source. The files are copied verbatim by
+//tools/shot/vendor_cppgc.py, which also generates sources.gni. Implementations
+for platforms other than Windows are not copied, and neither are tests; V8
+selects those with GN conditionals we do not reproduce.
+
+The build differs from V8's in one way that matters, recorded in BUILD.gn:
+CPPGC_IS_STANDALONE is on, and caged heap, young generation and pointer
+compression are off.
+
+To re-vendor at a different revision:
+
+  python3 tools/shot/vendor_cppgc.py <v8-checkout> --revision <sha>

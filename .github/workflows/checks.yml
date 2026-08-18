@@ -1,0 +1,124 @@
+# The checks that do not need an engine binary.
+#
+# Everything worth knowing about shotium needs a built shot.exe, and building
+# one is hours of compute -- see engine-windows.yml. So this workflow covers the
+# half that can be checked in seconds: that the JavaScript parses, that the
+# published types actually typecheck, and that the Python check scripts are not
+# broken. It runs on every push, and it is expected to always be green.
+#
+# What it deliberately does NOT do is claim the engine works. That claim is made
+# by tools/shot/{serve_check.py,net_check.py,node_check.cjs} against a real
+# binary, and engine-windows.yml is where those run.
+
+name: checks
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'shotium/**'
+      - 'tools/shot/**'
+      - '.github/workflows/checks.yml'
+  pull_request:
+    paths:
+      - 'shotium/**'
+      - 'tools/shot/**'
+      - '.github/workflows/checks.yml'
+  workflow_dispatch:
+
+jobs:
+  javascript:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: parse every module
+        working-directory: shotium
+        # --check parses without running, which is the right test for files
+        # whose side effect is spawning processes.
+        run: |
+          for f in index.js lib/*.js; do
+            node --check "$f"
+          done
+
+      - name: the package loads
+        working-directory: shotium
+        # Loading it must not start anything: the pool is created by
+        # runtime.start(), and a require() that spawned workers would make the
+        # library unusable as a dependency.
+        run: |
+          node -e '
+            const s = require("./index.js");
+            if (typeof s.screenshot !== "function") throw new Error("no screenshot()");
+            if (typeof s.runtime.start !== "function") throw new Error("no runtime.start()");
+            if (s.runtime.running) throw new Error("require() started the pool");
+            console.log("ok");
+          '
+
+      - name: options are validated before anything is spawned
+        working-directory: shotium
+        # toRequest() is the only check that can be made without a binary, and
+        # it has to happen before the pool exists -- a malformed request should
+        # not cost four worker processes to discover. `running` staying false is
+        # the half of this that actually needs asserting.
+        run: |
+          node -e '
+            const {Runtime} = require("./index.js");
+            const r = new Runtime();
+            const rejects = async (options, what) => {
+              // screenshot() is async, so a bad request is a rejected promise
+              // rather than a throw.
+              await r.screenshot(options).then(
+                  () => { throw new Error("accepted " + what); },
+                  () => {});
+              if (r.running) throw new Error("started the pool for " + what);
+            };
+            (async () => {
+              await rejects({}, "a request with no file");
+              await rejects({file: "x", fullpage: true}, "a misspelled option");
+              console.log("ok");
+            })().catch((e) => { console.error(e.message); process.exit(1); });
+          '
+
+      # index.d.ts is what every consumer sees, and nothing else in this
+      # repository would notice if it stopped describing index.js.
+      - name: types compile
+        working-directory: shotium
+        run: |
+          npm install --no-audit --no-fund
+          npm run check:types
+
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: compile the check scripts
+        run: python -m compileall -q tools/shot
+
+      - name: the PNG decoder in serve_check agrees with a real PNG
+        # serve_check.py decodes PNGs by hand rather than depending on Pillow.
+        # That is only a good trade while the decoder is right, so it is checked
+        # against a file whose contents are known: shot/testdata/checker.png.
+        run: |
+          python - <<'EOF'
+          import sys
+          sys.path.insert(0, 'tools/shot')
+          from serve_check import png_pixels, png_size
+
+          with open('shot/testdata/checker.png', 'rb') as f:
+              data = f.read()
+          width, height, channels, rows = png_pixels(data)
+          assert (width, height) == png_size(data), 'IHDR and decode disagree'
+          assert len(rows) == height, 'wrong row count'
+          assert all(len(r) == width * channels for r in rows), 'wrong row width'
+          print('ok: %dx%d, %d channels' % (width, height, channels))
+          EOF

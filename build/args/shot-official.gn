@@ -1,0 +1,51 @@
+# Copyright 2026 The Chromium Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Shipping configuration for //shot:shot.
+#
+#   echo 'import("//build/args/shot-official.gn")' > out/ShotOfficial/args.gn
+#   gn gen out/ShotOfficial
+#   ninja -C out/ShotOfficial shot -j 12
+#
+# Why this file exists: every size number recorded in docs/size-attribution.md
+# was measured on out/ShotCheck, which imports build/args/shot.gn only. That
+# configuration is `is_debug = false` but NOT `is_official_build`, and the two
+# are very different binaries:
+#
+#   build/config/dcheck_always_on.gni:
+#     dcheck_always_on = (build_with_chromium && !is_official_build) || ...
+#
+# so the 336 MB baseline has every DCHECK compiled in -- condition, message and
+# call -- and blink's layout and paint code is DCHECK-dense. And:
+#
+#   build/config/compiler/compiler.gni:74
+#     use_thin_lto = is_cfi || (is_clang && is_official_build && ...)
+#
+# so it also has no cross-translation-unit inlining or dead-code elimination.
+# (/OPT:REF and /OPT:ICF *are* already on -- build/config/win/BUILD.gn:196 turns
+# them on for any `!is_debug && !is_component_build` build -- so the baseline is
+# link-time dead-stripped. What is in it is genuinely reachable.)
+#
+# The point of this file is to measure that difference rather than argue about
+# it: build the same tree both ways and diff the two images.
+
+import("//build/args/shot.gn")
+
+is_official_build = true
+
+# Official Windows builds default chrome_pgo_phase to 2, which reads a profile
+# from //chrome/build/pgo_profiles. That profile is a gclient-hook download for
+# a Chrome build and is not in this checkout, and a profile collected on Chrome
+# would describe a workload this binary does not run anyway.
+chrome_pgo_phase = 0
+
+# is_cfi and use_cfi_icall are Linux-x64-only in
+# build/config/sanitizers/sanitizers.gni, so they stay off here and are not
+# worth setting explicitly. Note that is_cfi would *increase* size.
+
+# Deliberately NOT set here: optimize_for_size. It defaults to false on Windows
+# (compiler.gni:98 turns it on only for Android/CastOS/Fuchsia), and it trades
+# -O2 for a size-first pass. It is a separate measurement -- a screenshot tool
+# has no throughput requirement worth defending, so it will probably be turned
+# on, but on evidence rather than assumption.

@@ -1,0 +1,24 @@
+# Copyright 2020 The Chromium Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Only the feature-flag pair survives from //components/webrtc. The rest of the
+# component -- the fake SSL socket, the media stream device enumerator, the
+# thread wrapper -- is built against //third_party/webrtc, which is a gclient
+# dependency that is not in this checkout, and drives the P2P socket stack that
+# is disabled here via is_p2p_enabled=false.
+#
+# features.h stays because services/network/network_service.cc reads
+# kWebRTCBoostMediaIOThreads when deciding whether to raise the IO thread's
+# priority. That is a scheduling decision in the network service, made whether
+# or not a peer connection is ever opened, and the flag is a plain
+# BASE_DECLARE_FEATURE over //base with no WebRTC dependency of its own.
+component("features") {
+  output_name = "components_webrtc_features"
+  sources = [
+    "features.cc",
+    "features.h",
+  ]
+  defines = [ "IS_COMPONENTS_WEBRTC_FEATURES_IMPL" ]
+  deps = [ "//base" ]
+}

@@ -1,0 +1,1609 @@
+# Copyright 2014 The Chromium Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/buildflag_header.gni")
+import("//build/config/arm.gni")
+import("//build/config/compiler/compiler.gni")
+import("//build/config/dcheck_always_on.gni")
+import("//build/config/python.gni")
+import("//build/config/ui.gni")
+import("//build/nocompile.gni")
+import("//build/toolchain/toolchain.gni")
+import("//content/public/common/features.gni")
+import("//media/media_options.gni")
+import("//testing/libfuzzer/fuzzer_test.gni")
+import("//third_party/blink/renderer/build/scripts/scripts.gni")
+import("//third_party/blink/renderer/config.gni")
+import("//third_party/blink/renderer/core/accessibility/build.gni")
+import("//third_party/blink/renderer/core/animation/build.gni")
+import("//third_party/blink/renderer/core/clipboard/build.gni")
+import("//third_party/blink/renderer/core/core.gni")
+import("//third_party/blink/renderer/core/css/build.gni")
+import("//third_party/blink/renderer/core/display_lock/build.gni")
+import("//third_party/blink/renderer/core/dom/build.gni")
+import("//third_party/blink/renderer/core/editing/build.gni")
+import("//third_party/blink/renderer/core/events/build.gni")
+import("//third_party/blink/renderer/core/execution_context/build.gni")
+import("//third_party/blink/renderer/core/exported/build.gni")
+import("//third_party/blink/renderer/core/fetch/build.gni")
+import("//third_party/blink/renderer/core/fileapi/build.gni")
+import("//third_party/blink/renderer/core/frame/build.gni")
+import("//third_party/blink/renderer/core/fullscreen/build.gni")
+import("//third_party/blink/renderer/core/geometry/build.gni")
+import("//third_party/blink/renderer/core/highlight/build.gni")
+import("//third_party/blink/renderer/core/html/build.gni")
+import("//third_party/blink/renderer/core/image_replacement/build.gni")
+import("//third_party/blink/renderer/core/input/build.gni")
+import("//third_party/blink/renderer/core/intersection_observer/build.gni")
+import("//third_party/blink/renderer/core/layout/build.gni")
+import("//third_party/blink/renderer/core/loader/build.gni")
+import("//third_party/blink/renderer/core/mathml/build.gni")
+import("//third_party/blink/renderer/core/origin_trials/build.gni")
+import("//third_party/blink/renderer/core/overscroll/build.gni")
+import("//third_party/blink/renderer/core/page/build.gni")
+import("//third_party/blink/renderer/core/paint/build.gni")
+import("//third_party/blink/renderer/core/permissions_policy/build.gni")
+import("//third_party/blink/renderer/core/preferences/build.gni")
+import("//third_party/blink/renderer/core/resize_observer/build.gni")
+import("//third_party/blink/renderer/core/route_matching/build.gni")
+import("//third_party/blink/renderer/core/sanitizer/build.gni")
+import("//third_party/blink/renderer/core/scheduler/build.gni")
+import("//third_party/blink/renderer/core/script/build.gni")
+import("//third_party/blink/renderer/core/scroll/build.gni")
+import("//third_party/blink/renderer/core/skeleton/build.gni")
+import("//third_party/blink/renderer/core/style/build.gni")
+import("//third_party/blink/renderer/core/svg/build.gni")
+import("//third_party/blink/renderer/core/timing/build.gni")
+import("//third_party/blink/renderer/core/trustedtypes/build.gni")
+import("//third_party/blink/renderer/core/typed_arrays/build.gni")
+import("//third_party/blink/renderer/core/url/build.gni")
+import("//third_party/blink/renderer/core/view_transition/build.gni")
+import("//third_party/blink/renderer/core/xml/build.gni")
+import("//third_party/blink/renderer/platform/blink_fuzzer_test.gni")
+import("//third_party/blink/renderer/platform/platform_generated.gni")
+import("//third_party/protobuf/proto_library.gni")
+
+if (is_ios) {
+  import("//build/config/ios/bundle_data_from_filelist.gni")
+}
+
+visibility = [
+  "//third_party/blink/public/*",
+  "//third_party/blink/renderer/*",
+  # //shot drives Page/LocalFrame/LocalFrameView directly instead of going
+  # through public/web; see third_party/blink/renderer/BUILD.gn.
+  "//shot/*",
+]
+
+rel_blink_core_gen_dir = rebase_path(blink_core_output_dir, root_build_dir)
+
+# arguments for code that builds as part of core.
+declare_args() {
+  # Set to true to enable the clang layout plugin that help you to follow the
+  # layout-related restrictions during compilation.
+  use_layout_plugin = true
+
+  # Use vectorization for fast path HTML parser.
+  enable_vectorized_html_scanning = false
+
+  if (current_cpu == "arm" || current_cpu == "arm64" || current_cpu == "x64") {
+    enable_vectorized_html_scanning = true
+  }
+}
+
+# Config for code that builds as part of core.
+config("config") {
+  cflags = []
+  defines = [ "BLINK_CORE_IMPLEMENTATION=1" ]
+
+  if (is_clang && clang_use_chrome_plugins) {
+    if (use_layout_plugin) {
+      cflags += [
+        "-Xclang",
+        "-plugin-arg-find-bad-constructs",
+        "-Xclang",
+        "check-layout-object-methods",
+      ]
+    }
+  }
+}
+
+config("core_include_dirs") {
+  include_dirs = []
+}
+
+buildflag_header("buildflags") {
+  header = "buildflags.h"
+  flags = [
+    "TARGET_OS_IS_ANDROID=$target_os_is_android",
+    "USE_EXTERNAL_POPUP_MENU=$use_external_popup_menu",
+  ]
+}
+
+import("//build/config/pch.gni")
+
+config("blink_core_pch") {
+  # Add precompiled header (pch) support when enabled, possible and
+  # making sense.
+  if (enable_precompiled_headers) {
+    if (is_win) {
+      # This is a string rather than a file GN knows about. It has to match
+      # exactly what's in the /FI flag below, and what might appear in the
+      # source code in quotes for an #include directive.
+      precompiled_header = rebase_path("precompile_core.h", root_build_dir)
+
+      # This is a file that GN will compile with the above header. It will be
+      # implicitly added to the sources (potentially multiple times, with one
+      # variant for each language used in the target).
+      precompiled_source = "//third_party/blink/renderer/core/precompile_core.h"
+
+      # Force include the header.
+      cflags = [ "/FI$precompiled_header" ]
+    } else if (is_mac || is_linux) {
+      precompiled_source = "//third_party/blink/renderer/core/precompile_core.h"
+    }
+  }
+}
+
+core_config_add += [ ":blink_core_pch" ]
+
+source_set("core_common") {
+  sources = [ "core_export.h" ]
+}
+
+source_set("prerequisites") {
+  public_deps = [
+    "//services/network/public/cpp",
+    "//services/network/public/mojom",
+    "//services/service_manager/public/cpp",
+    "//skia",
+    "//third_party/blink/public/mojom:color_scheme_mojo_bindings",
+    "//third_party/blink/public/mojom:mojom_core_blink",
+    "//third_party/blink/renderer/core/animation:buildflags",
+    "//third_party/blink/renderer/core/probe:generated",
+    "//third_party/blink/renderer/platform",
+    "//third_party/icu",
+    "//third_party/libwebp",
+    "//third_party/libxml",
+    "//third_party/libxslt",
+    "//third_party/ots",
+    "//third_party/zlib",
+
+    # The baseline had //ui/accessibility/mojom:mojom_blink here. That whole
+    # directory is gone -- shot serves no accessibility tree to anyone -- but
+    # the *enums* survive it: the generated ax_utilities_* sources include
+    # ui/accessibility/ax_enums.mojom-blink.h to name the roles and attributes
+    # that CSS and the DOM already carry. So the narrow edge goes back, not the
+    # broad one.
+    #
+    # This only ever failed a from-scratch build. In an incremental output
+    # directory the header was already on disk from an earlier configuration,
+    # which is exactly the class of bug that made a clean build worth doing.
+    "//ui/accessibility:ax_enums_mojo_blink",
+    "//ui/base:features",
+    "//ui/base/ime/mojom",
+    "//ui/color",
+    "//ui/display/mojom:mojom_blink",
+    "//ui/events:dom_keycode_converter",
+    "//ui/gfx/geometry",
+    "//ui/latency",
+    "//ui/native_theme",
+    "//url",
+  ]
+  deps = [ "//third_party/blink/public:scaled_resources" ]
+
+  public_configs = [
+    ":core_include_dirs",
+    "//third_party/blink/renderer:config",
+    "//third_party/blink/renderer:inside_blink",
+  ]
+}
+
+blink_python_runner("make_deprecation_info") {
+  script = "../build/scripts/make_deprecation_info.py"
+
+  inputs = scripts_for_json5_files + [
+             "frame/deprecation/deprecation.json5",
+             "../build/scripts/templates/deprecation_info.cc.tmpl",
+           ]
+
+  outputs = [ "$root_gen_dir/third_party/blink/renderer/core/frame/deprecation/deprecation_info.cc" ]
+
+  args = [
+    rebase_path("frame/deprecation/deprecation.json5", root_build_dir),
+    "--output_dir",
+    rebase_path(
+        "$root_gen_dir/third_party/blink/renderer/core/frame/deprecation",
+        root_build_dir),
+  ]
+}
+
+rust_static_library("xml_ffi") {
+  allow_unsafe = true  # Needed for FFI that underpins the `cxx` crate.
+  crate_root = "xml/parser/xml_ffi.rs"
+  sources = [
+    "xml/parser/entities.rs",
+    crate_root,
+  ]
+  cxx_bindings = [ crate_root ]
+  deps = [
+    "//services/metrics/public/cpp:ukm_builders",
+    "//services/metrics/public/cpp:metrics_cpp",
+    "//services/metrics/public/cpp:ukm_builders",
+    "//services/metrics/public/mojom",
+    "//third_party/blink/renderer/platform/wtf",
+    "//third_party/rust/cxx/v1:lib",
+    "//third_party/rust/xml/v1:lib",
+  ]
+}
+
+component("core") {
+  output_name = "blink_core"
+
+  visibility = []  # Allow re-assignment of list.
+  visibility = [
+    "//third_party/blink/*",
+
+    # //shot drives Page/LocalFrame/LocalFrameView directly instead of going
+    # through public/web; see third_party/blink/renderer/BUILD.gn.
+    "//shot/*",
+  ]
+
+  sources = [
+    "core_initializer.cc",
+    "core_initializer.h",
+  ]
+
+  # blink_core_sources_bindings came from core/bindings/build.gni, deleted
+  # with the V8 binding layer.
+
+  # If you create a new subdirectory 'foo', make 'foo/build.gni' to define
+  # blink_core_sources_foo, and include it here. Add any dependencies in the
+  # deps section below. For unit tests, do the same thing in the "unit_tests"
+  # component. If the directory contains sources that should be compiled with
+  # extra optimization flags, see the "core_hot" target below.
+  sources += rebase_path(blink_core_sources_accessibility, "", "accessibility")
+  sources += rebase_path(blink_core_sources_clipboard, "", "clipboard")
+  sources += rebase_path(blink_core_sources_css, "", "css")
+  sources += rebase_path(blink_core_sources_display_lock, "", "display_lock")
+  sources +=
+      rebase_path(blink_core_sources_view_transition, "", "view_transition")
+  sources += rebase_path(blink_core_sources_dom, "", "dom")
+  sources += rebase_path(blink_core_sources_editing, "", "editing")
+  sources += rebase_path(blink_core_sources_events, "", "events")
+  sources +=
+      rebase_path(blink_core_sources_execution_context, "", "execution_context")
+  sources += rebase_path(blink_core_sources_permissions_policy,
+                         "",
+                         "permissions_policy")
+  sources += rebase_path(blink_core_sources_fetch, "", "fetch")
+  sources += rebase_path(blink_core_sources_fileapi, "", "fileapi")
+  sources += rebase_path(blink_core_sources_frame, "", "frame")
+  sources += get_target_outputs(":make_deprecation_info")
+  sources += rebase_path(blink_core_sources_fullscreen, "", "fullscreen")
+  sources += rebase_path(blink_core_sources_geometry, "", "geometry")
+  sources += rebase_path(blink_core_sources_highlight, "", "highlight")
+  sources += rebase_path(blink_core_sources_html, "", "html")
+  sources += rebase_path(blink_core_sources_image_replacement,
+                         "",
+                         "image_replacement")
+  sources += rebase_path(blink_core_sources_input, "", "input")
+  sources += rebase_path(blink_core_sources_intersection_observer,
+                         "",
+                         "intersection_observer")
+  sources += rebase_path(blink_core_sources_layout, "", "layout")
+  sources += rebase_path(blink_core_sources_loader, "", "loader")
+  sources +=
+      rebase_path(blink_core_sources_route_matching, "", "route_matching")
+  sources += rebase_path(blink_core_sources_sanitizer, "", "sanitizer")
+  sources += rebase_path(blink_core_sources_mathml, "", "mathml")
+  sources += rebase_path(blink_core_sources_origin_trials, "", "origin_trials")
+  sources += rebase_path(blink_core_sources_overscroll, "", "overscroll")
+  sources += rebase_path(blink_core_sources_page, "", "page")
+  sources += rebase_path(blink_core_sources_paint, "", "paint")
+  sources +=
+      rebase_path(blink_core_sources_preferences, "", "preferences")
+  sources +=
+      rebase_path(blink_core_sources_resize_observer, "", "resize_observer")
+  sources += rebase_path(blink_core_sources_scheduler, "", "scheduler")
+  sources += rebase_path(blink_core_sources_script, "", "script")
+  sources += rebase_path(blink_core_sources_scroll, "", "scroll")
+  sources += rebase_path(blink_core_sources_skeleton, "", "skeleton")
+  sources += rebase_path(blink_core_sources_style, "", "style")
+  sources += rebase_path(blink_core_sources_svg, "", "svg")
+  sources += rebase_path(blink_core_sources_timing, "", "timing")
+  sources += rebase_path(blink_core_sources_trustedtypes, "", "trustedtypes")
+  sources += rebase_path(blink_core_sources_typed_arrays, "", "typed_arrays")
+  sources += rebase_path(blink_core_sources_url, "", "url")
+  sources += rebase_path(blink_core_sources_xml, "", "xml")
+
+  configs -= core_config_remove
+  configs += core_config_add
+
+  public_deps = [
+    ":buildflags",
+    ":core_generated",
+    ":core_hot",
+    "//cc",
+    "//skia",
+    "//third_party/blink/public/mojom:mojom_core_blink",
+    "//third_party/blink/renderer/core/animation",
+    "//third_party/blink/renderer/bindings/core/v8:bindings_core_v8",
+    "//third_party/blink/renderer/core/exported",
+    "//third_party/blink/renderer/core/inspector",
+    "//third_party/blink/renderer/core/probe",
+    "//printing/mojom:mojom_blink",
+    "//third_party/blink/renderer/core/sanitizer:generated",
+    "//third_party/blink/renderer/core/url_pattern",
+    "//third_party/blink/renderer/platform",
+
+    # focusgroup_flags.h and the editing code are written in terms of
+    # ax::mojom::blink::Role / Command / InputEventType.
+    "//ui/accessibility:ax_enums_mojo_blink",
+    "//ui/accessibility:ax_base",
+    "//third_party/blink/renderer/platform/wtf",
+    "//third_party/re2",
+    "//ui/base",
+    "//ui/base:ui_data_pack",
+    "//ui/base/cursor",
+    "//ui/base/dragdrop/mojom:mojom_blink_headers",
+    "//ui/base/dragdrop/mojom:mojom_shared",
+    "//ui/base/mojom:ui_base_types_blink",
+    "//url",
+  ]
+
+  if (is_mac) {
+    public_deps += [ "//ui/gfx" ]
+  }
+
+  if (is_win) {
+    public_deps += [ "//third_party/re2" ]
+  }
+
+  deps = [
+    ":make_deprecation_info",
+    ":xml_ffi",
+    "//services/metrics/public/cpp:ukm_builders",
+    "//base",
+    "//gpu/config",
+    "//mojo/public/cpp/bindings",
+    "//mojo/public/cpp/system",
+    "//services/network/public/cpp",
+    "//services/service_manager/public/cpp",
+    "//skia",
+    "//skia:skcms",
+    "//storage/common",
+    "//third_party/blink/public:buildflags",
+    "//third_party/blink/public:image_resources_grit",
+    "//third_party/blink/public:resources",
+    "//third_party/blink/public/common",
+    "//third_party/blink/public/mojom:web_feature_mojo_bindings",
+    "//third_party/blink/public/strings",
+    "//third_party/blink/public/strings:generate_permission_element_strings_mono_grd",
+    "//third_party/blink/public/strings:permission_element_generated_strings",
+    "//third_party/blink/public/strings:permission_element_strings_grit",
+    "//third_party/rust/xml/v1:lib",
+    "//ui/base/cursor/mojom:cursor_type_blink",
+    "//ui/base/dragdrop/mojom:mojom_blink",
+    "//ui/gfx:gfx_skia",
+    "//ui/gfx/geometry",
+    "//ui/gfx/geometry:geometry_skia",
+    "//ui/strings",
+  ]
+
+  if (is_mac) {
+    deps += [ "//ui/base/mojom" ]
+  }
+
+  if (is_win) {
+  }
+
+  allow_circular_includes_from = [
+    ":core_generated",
+    ":core_hot",
+    "//third_party/blink/renderer/core/animation",
+    "//third_party/blink/renderer/bindings/core/v8:bindings_core_v8",
+    "//third_party/blink/renderer/core/exported",
+    "//third_party/blink/renderer/core/inspector",
+    "//third_party/blink/renderer/core/probe",
+    "//third_party/blink/renderer/core/url_pattern",
+  ]
+
+  public_configs = [ ":core_include_dirs" ]
+
+  if (is_mac) {
+    frameworks = [
+      "AppKit.framework",
+      "Carbon.framework",
+    ]
+  }
+}
+
+# Certain sources should be compiled with heavy optimization enabled.
+# Define them in 'foo/build.gni' as blink_core_hot_sources_foo, and include it
+# here.
+blink_core_sources("core_hot") {
+  sources = []
+  sources += rebase_path(blink_core_hot_sources_dom, "", "dom")
+  sources += rebase_path(blink_core_hot_sources_html, "", "html")
+  sources += rebase_path(blink_core_hot_sources_layout, "", "layout")
+  sources += rebase_path(blink_core_hot_sources_css, "", "css")
+
+  defines = []
+
+  # TODO(ajwong) this is of mirror
+  # https://source.chromium.org/chromium/chromium/src/+/master:third_party/blink/renderer/core/core.gni;l=26
+  # to undo the configs which is fragile. Find a better way.
+  #
+  # 'Hot' code should always be compiled for speed in non-debug builds.
+  if (!is_debug) {
+    # Only attempt to remove the 'default_optimization' label if it is already
+    # present in 'configs'.
+    if (filter_include(configs,
+                       [ "//build/config/compiler:default_optimization" ]) !=
+        []) {
+      configs -= [ "//build/config/compiler:default_optimization" ]
+    }
+    configs += [ "//build/config/compiler:optimize_speed" ]
+  }
+
+  deps = [
+    ":buildflags",
+    ":xml_ffi",
+    "//third_party/blink/public:image_resources_grit",
+    "//third_party/blink/public/strings",
+    "//third_party/blink/renderer/core/animation",
+    "//third_party/blink/renderer/core/exported",
+    "//third_party/blink/renderer/core/probe",
+  ]
+
+  if (enable_vectorized_html_scanning) {
+    deps += [ "//third_party/highway:libhwy" ]
+    defines += [ "BLINK_ENABLE_VECTORIZED_HTML_SCANNING=1" ]
+  }
+
+  allow_circular_includes_from = [
+    "//third_party/blink/renderer/core/animation",
+    "//third_party/blink/renderer/core/exported",
+    "//third_party/blink/renderer/core/probe",
+  ]
+}
+
+source_set("testing") {
+  testonly = true
+
+  configs += [
+    ":blink_core_pch",
+    "//third_party/blink/renderer:config",
+    "//third_party/blink/renderer:inside_blink",
+  ]
+
+  deps = [
+    ":core",
+    ":generated_testing_idls",
+    "//third_party/blink/public/test/mojom:core_test_automation_blink",
+    "//third_party/blink/renderer/platform:test_support",
+    "//ui/base/cursor",
+    "//ui/base/cursor/mojom:cursor_type_blink",
+  ]
+
+  sources = [
+    "$blink_core_output_dir/testing/internal_settings_generated.cc",
+    "$blink_core_output_dir/testing/internal_settings_generated.h",
+    "frame/csp/test_util.h",
+  ]
+
+  public_deps = [ "//testing/gmock" ]
+}
+
+if (is_ios) {
+  bundle_data_from_filelist("core_test_bundle_data") {
+    testonly = true
+    filelist_name = "testing/data/core_test_bundle_data.filelist"
+  }
+  bundle_data_from_filelist("animation_test_bundle_data") {
+    testonly = true
+    filelist_name = "animation/test_data/animation_test_bundle_data.filelist"
+  }
+  bundle_data_from_filelist("paint_test_bundle_data") {
+    testonly = true
+    filelist_name = "paint/test_data/paint_test_bundle_data.filelist"
+  }
+}
+
+# generate_event_interfaces ----------------------------------------------------
+
+# generated_testing_idls -------------------------------------------------------
+
+group("generated_testing_idls") {
+  public_deps = [
+    ":generated_testing_idls_internal_runtime_flags",
+    ":generated_testing_idls_settings",
+    ":make_core_generated_settings",
+  ]
+}
+
+blink_python_runner("make_core_generated_settings") {
+  script = "../build/scripts/make_settings.py"
+
+  inputs = scripts_for_json5_files + [
+             "../build/scripts/make_settings.py",
+             "../build/scripts/templates/settings_base.cc.tmpl",
+             "../build/scripts/templates/settings_base.h.tmpl",
+             "frame/settings.json5",
+           ]
+  outputs = [
+    "$blink_core_output_dir/settings_base.cc",
+    "$blink_core_output_dir/settings_base.h",
+  ]
+
+  args = [
+    rebase_path("frame/settings.json5", root_build_dir),
+    "--output_dir",
+    rel_blink_core_gen_dir,
+  ]
+}
+
+blink_python_runner("generated_testing_idls_settings") {
+  script = "../build/scripts/make_internal_settings.py"
+
+  inputs = scripts_for_json5_files + [
+             "../build/scripts/make_settings.py",
+             "../build/scripts/templates/internal_settings_generated.idl.tmpl",
+             "../build/scripts/templates/internal_settings_generated.cc.tmpl",
+             "../build/scripts/templates/internal_settings_generated.h.tmpl",
+             "frame/settings.json5",
+           ]
+
+  args = [
+    rebase_path("frame/settings.json5", root_build_dir),
+    "--output_dir",
+    "$rel_blink_core_gen_dir/testing",
+  ]
+
+  outputs = [
+    "$blink_core_output_dir/testing/internal_settings_generated.idl",
+    "$blink_core_output_dir/testing/internal_settings_generated.cc",
+    "$blink_core_output_dir/testing/internal_settings_generated.h",
+  ]
+}
+
+blink_python_runner("generated_testing_idls_internal_runtime_flags") {
+  script = "../build/scripts/make_internal_runtime_flags.py"
+
+  inputs = scripts_for_json5_files + [
+             "../build/scripts/make_runtime_features_utilities.py",
+             "../build/scripts/make_runtime_features.py",
+             "../build/scripts/templates/internal_runtime_flags.h.tmpl",
+             "../build/scripts/templates/internal_runtime_flags.idl.tmpl",
+             "../platform/runtime_enabled_features.json5",
+             "../platform/runtime_enabled_features.override.json5",
+           ]
+
+  args = [
+    rebase_path("../platform/runtime_enabled_features.json5", root_build_dir),
+    "--output_dir",
+    "$rel_blink_core_gen_dir/testing",
+  ]
+
+  outputs = [
+    "$blink_core_output_dir/testing/internal_runtime_flags.idl",
+    "$blink_core_output_dir/testing/internal_runtime_flags.h",
+  ]
+}
+
+css_properties("make_core_generated_computed_style_initial_values") {
+  script = "../build/scripts/core/style/make_computed_style_initial_values.py"
+  in_files = [ "style/computed_style_extra_fields.json5" ]
+  other_inputs = [ "../build/scripts/core/style/templates/computed_style_initial_values.h.tmpl" ]
+  outputs = [ "$blink_core_output_dir/style/computed_style_initial_values.h" ]
+}
+
+css_properties("make_core_generated_computed_style_base") {
+  script = "../build/scripts/core/style/make_computed_style_base.py"
+  in_files = [
+    "style/computed_style_extra_fields.json5",
+    "css/css_value_keywords.json5",
+    "css/css_group_config.json5",
+  ]
+  other_inputs = [
+    "../build/scripts/core/style/computed_style_fields.py",
+    "../build/scripts/core/style/templates/computed_style_base_constants.cc.tmpl",
+    "../build/scripts/core/style/templates/computed_style_base_constants.h.tmpl",
+    "../build/scripts/core/style/templates/computed_style_base.cc.tmpl",
+    "../build/scripts/core/style/templates/computed_style_base.h.tmpl",
+    "../build/scripts/keyword_utils.py",
+    "../build/scripts/templates/fields/base.tmpl",
+    "../build/scripts/templates/fields/bitset_keyword.tmpl",
+    "../build/scripts/templates/fields/derived_flag.tmpl",
+    "../build/scripts/templates/fields/external.tmpl",
+    "../build/scripts/templates/fields/field.tmpl",
+    "../build/scripts/templates/fields/group.tmpl",
+    "../build/scripts/templates/fields/keyword.tmpl",
+    "../build/scripts/templates/fields/monotonic_flag.tmpl",
+    "../build/scripts/templates/fields/multi_keyword.tmpl",
+    "../build/scripts/templates/fields/pointer.tmpl",
+    "../build/scripts/templates/fields/primitive.tmpl",
+  ]
+  outputs = [
+    "$blink_core_output_dir/style/computed_style_base.cc",
+    "$blink_core_output_dir/style/computed_style_base.h",
+    "$blink_core_output_dir/style/computed_style_base_constants.cc",
+    "$blink_core_output_dir/style/computed_style_base_constants.h",
+  ]
+}
+
+css_properties("make_core_generated_css_value_id_mappings") {
+  script = "../build/scripts/core/css/make_css_value_id_mappings.py"
+  in_files = [ "css/css_value_keywords.json5" ]
+  other_inputs = [
+    "../build/scripts/core/css/templates/css_value_id_mappings_generated.h.tmpl",
+    "../build/scripts/keyword_utils.py",
+    "../build/scripts/make_style_builder.py",
+  ]
+  outputs = [ "$blink_core_output_dir/css/css_value_id_mappings_generated.h" ]
+}
+
+css_properties("make_core_generated_css_property_instances") {
+  script = "../build/scripts/core/css/properties/make_css_property_instances.py"
+  other_inputs = [
+    "../build/scripts/core/css/properties/templates/css_property_instances.cc.tmpl",
+    "../build/scripts/core/css/properties/templates/css_property_instances.h.tmpl",
+  ]
+  outputs = [
+    "$blink_core_output_dir/css/properties/css_property_instances.cc",
+    "$blink_core_output_dir/css/properties/css_property_instances.h",
+  ]
+}
+
+css_properties("make_core_generated_css_subclasses") {
+  script =
+      "../build/scripts/core/css/properties/make_css_property_subclasses.py"
+  in_files = [ "css/properties/css_property_methods.json5" ]
+  other_inputs = [
+    "../build/scripts/core/css/properties/templates/css_properties.h.tmpl",
+    "../build/scripts/core/css/properties/templates/css_properties.cc.tmpl",
+  ]
+  outputs = [
+    "$blink_core_output_dir/css/properties/longhands.cc",
+    "$blink_core_output_dir/css/properties/longhands.h",
+    "$blink_core_output_dir/css/properties/shorthands.cc",
+    "$blink_core_output_dir/css/properties/shorthands.h",
+  ]
+}
+
+css_properties("make_core_generated_css_property_names") {
+  script = "../build/scripts/core/css/make_css_property_names.py"
+  other_inputs = [
+    "../build/scripts/gperf.py",
+    "../build/scripts/core/css/templates/css_property_names.cc.tmpl",
+    "../build/scripts/core/css/templates/css_property_names.h.tmpl",
+  ]
+  outputs = [
+    "$blink_core_output_dir/css/css_property_names.cc",
+    "$blink_core_output_dir/css/css_property_names.h",
+  ]
+}
+
+code_generator("make_core_generated_atrule_names") {
+  script = "../build/scripts/core/css/parser/make_atrule_names.py"
+  json_inputs = [ "css/parser/at_rule_names.json5" ]
+  other_inputs = [ "../build/scripts/gperf.py" ]
+  templates = [
+    "../build/scripts/core/css/parser/templates/at_rule_descriptors.cc.tmpl",
+    "../build/scripts/core/css/parser/templates/at_rule_descriptors.h.tmpl",
+  ]
+  outputs = [
+    "$blink_core_output_dir/css/parser/at_rule_descriptors.cc",
+    "$blink_core_output_dir/css/parser/at_rule_descriptors.h",
+  ]
+  other_args = [
+    "--gperf",
+    rebase_path(gperf_exe, root_build_dir),
+  ]
+  sources = [ gperf_exe ]
+}
+
+code_generator("make_core_generated_media_features") {
+  script = "../build/scripts/core/css/make_media_features.py"
+  json_inputs = [ "css/media_feature_names.json5" ]
+  other_inputs =
+      scripts_for_json5_files + [ "../build/scripts/media_feature_symbol.py" ]
+  templates = [ "../build/scripts/core/css/templates/media_features.h.tmpl" ]
+  outputs = [ "$blink_core_output_dir/css/media_features.h" ]
+}
+
+css_properties("make_core_generated_style_property_shorthand") {
+  script = "../build/scripts/core/css/make_style_shorthands.py"
+  other_inputs = [
+    "../build/scripts/core/css/templates/style_property_shorthand.cc.tmpl",
+    "../build/scripts/core/css/templates/style_property_shorthand.h.tmpl",
+  ]
+  outputs = [
+    "$blink_core_output_dir/style_property_shorthand.cc",
+    "$blink_core_output_dir/style_property_shorthand.h",
+  ]
+}
+
+css_properties("make_core_generated_cssom_types") {
+  script = "../build/scripts/core/css/make_cssom_types.py"
+  other_inputs = [
+    "../build/scripts/core/css/templates/cssom_keywords.cc.tmpl",
+    "../build/scripts/core/css/templates/cssom_types.cc.tmpl",
+  ]
+  outputs = [
+    "$blink_core_output_dir/cssom_keywords.cc",
+    "$blink_core_output_dir/cssom_types.cc",
+  ]
+}
+
+css_properties("make_core_generated_property_bitsets") {
+  script = "../build/scripts/core/css/properties/make_property_bitsets.py"
+  other_inputs = [
+    "../build/scripts/core/css/properties/templates/property_bitsets.cc.tmpl",
+  ]
+  outputs = [ "$blink_core_output_dir/property_bitsets.cc" ]
+}
+
+code_generator("make_core_generated_css_value_keywords") {
+  script = "../build/scripts/core/css/make_css_value_keywords.py"
+  json_inputs = [ "css/css_value_keywords.json5" ]
+  other_inputs = [ "../build/scripts/gperf.py" ]
+  templates = [
+    "../build/scripts/core/css/templates/css_value_keywords.cc.tmpl",
+    "../build/scripts/core/css/templates/css_value_keywords.h.tmpl",
+  ]
+  outputs = [
+    "$blink_core_output_dir/css_value_keywords.cc",
+    "$blink_core_output_dir/css_value_keywords.h",
+  ]
+  other_args = [
+    "--gperf",
+    rebase_path(gperf_exe, root_build_dir),
+  ]
+  sources = [ gperf_exe ]
+}
+
+process_json5_files("make_core_generated_html_element_factory") {
+  script = "../build/scripts/make_element_factory.py"
+
+  in_files = [
+    "html/aria_properties.json5",
+    "html/html_tag_names.json5",
+    "html/html_attribute_names.json5",
+  ]
+  other_inputs = make_element_factory_files
+  outputs = [
+    "$blink_core_output_dir/html_element_factory.cc",
+    "$blink_core_output_dir/html_element_factory.h",
+    "$blink_core_output_dir/html_names.cc",
+    "$blink_core_output_dir/html_names.h",
+  ]
+  other_args = [ "--generate_tag_enum" ]
+}
+
+process_json5_files("make_core_generated_element_type_enum") {
+  script = "../build/scripts/make_element_type_enum.py"
+
+  in_files = [
+    "html/html_tag_names.json5",
+    "mathml/mathml_tag_names.json5",
+    "svg/svg_tag_names.json5",
+  ]
+  other_inputs = make_element_type_enum_files
+  outputs = [ "$blink_core_output_dir/element_type_enum.h" ]
+}
+
+process_json5_files("make_core_generated_html_element_type_helpers") {
+  script = "../build/scripts/make_element_type_helpers.py"
+
+  in_files = [ "html/html_tag_names.json5" ]
+  other_inputs = make_element_type_helpers_files
+  outputs = [
+    "$blink_core_output_dir/html_element_type_helpers.cc",
+    "$blink_core_output_dir/html_element_type_helpers.h",
+  ]
+}
+
+process_json5_files("make_core_generated_mathml_names") {
+  script = "../build/scripts/make_element_factory.py"
+
+  in_files = [
+    "mathml/mathml_tag_names.json5",
+    "mathml/mathml_attribute_names.json5",
+  ]
+  other_inputs = make_element_factory_files
+  outputs = [
+    "$blink_core_output_dir/mathml_element_factory.cc",
+    "$blink_core_output_dir/mathml_element_factory.h",
+    "$blink_core_output_dir/mathml_names.cc",
+    "$blink_core_output_dir/mathml_names.h",
+  ]
+}
+
+process_json5_files("make_core_generated_mathml_element_type_helpers") {
+  script = "../build/scripts/make_element_type_helpers.py"
+
+  in_files = [ "mathml/mathml_tag_names.json5" ]
+  other_inputs = make_element_type_helpers_files
+  outputs = [
+    "$blink_core_output_dir/mathml_element_type_helpers.cc",
+    "$blink_core_output_dir/mathml_element_type_helpers.h",
+  ]
+}
+
+process_json5_files("make_core_generated_svg_names") {
+  script = "../build/scripts/make_element_factory.py"
+
+  in_files = [
+    "svg/svg_tag_names.json5",
+    "svg/svg_attribute_names.json5",
+  ]
+  other_inputs = make_element_factory_files
+  outputs = [
+    "$blink_core_output_dir/svg_element_factory.cc",
+    "$blink_core_output_dir/svg_element_factory.h",
+    "$blink_core_output_dir/svg_names.cc",
+    "$blink_core_output_dir/svg_names.h",
+  ]
+}
+
+process_json5_files("make_core_generated_svg_element_type_helpers") {
+  script = "../build/scripts/make_element_type_helpers.py"
+
+  in_files = [ "svg/svg_tag_names.json5" ]
+  other_inputs = make_element_type_helpers_files
+  outputs = [ "$blink_core_output_dir/svg_element_type_helpers.h" ]
+}
+
+# make_event_factory -----------------------------------------------------------
+
+# make_core_generated_event_factory was here. It generated event_factory.cc,
+# the switch that turns a document.createEvent("MouseEvent") string into an
+# Event subclass. Its header, core/events/event_factory.h, declared
+# Create(ScriptState*, ExecutionContext*, const String&) -- createEvent is a
+# script-only API and ScriptState is gone.
+# make_names -------------------------------------------------------------------
+
+code_generator("make_core_generated_media_feature_names") {
+  script = "../build/scripts/core/css/make_media_feature_names.py"
+  json_inputs = [ "css/media_feature_names.json5" ]
+  templates = [
+    "../build/scripts/templates/make_names.cc.tmpl",
+    "../build/scripts/templates/make_names.h.tmpl",
+  ]
+  other_inputs =
+      make_names_files + [ "../build/scripts/media_feature_symbol.py" ]
+  outputs = [
+    "$blink_core_output_dir/css/media_feature_names.cc",
+    "$blink_core_output_dir/css/media_feature_names.h",
+  ]
+}
+
+make_names("make_core_generated_media_type_names") {
+  in_files = [ "css/media_type_names.json5" ]
+  output_dir = blink_core_output_dir
+}
+
+make_names("make_core_generated_event_names") {
+  in_files = [ "events/event_interface_names.json5" ]
+  output_dir = blink_core_output_dir
+}
+
+make_names("make_core_generated_event_target_names") {
+  in_files = [ "events/event_target_names.json5" ]
+  output_dir = blink_core_output_dir
+}
+
+make_names("make_core_generated_event_type_names") {
+  in_files = [ "events/event_type_names.json5" ]
+  output_dir = blink_core_output_dir
+}
+
+make_names("make_core_generated_html_tokenizer_names") {
+  in_files = [ "html/parser/html_tokenizer_names.json5" ]
+  output_dir = blink_core_output_dir
+}
+
+make_names("make_core_generated_input_type_names") {
+  in_files = [ "html/forms/input_type_names.json5" ]
+  output_dir = blink_core_output_dir
+}
+
+make_names("make_core_generated_keywords") {
+  in_files = [ "html/keywords.json5" ]
+  output_dir = blink_core_output_dir
+}
+
+make_names("make_core_generated_performance_entry_names") {
+  in_files = [ "timing/performance_entry_names.json5" ]
+  output_dir = blink_core_output_dir
+}
+
+make_names("make_core_generated_pointer_type_names") {
+  in_files = [ "events/pointer_type_names.json5" ]
+  output_dir = blink_core_output_dir
+}
+
+make_names("make_core_generated_script_type_names") {
+  in_files = [ "script/script_type_names.json5" ]
+  output_dir = blink_core_output_dir
+}
+
+make_names("make_core_generated_shadow_element_names") {
+  in_files = [ "html/shadow/shadow_element_names.json5" ]
+  output_dir = "$blink_core_output_dir/html/shadow"
+}
+
+code_generator("make_core_generated_ax_utilities") {
+  script = "../build/scripts/make_ax_utilities.py"
+  json_inputs = [ "html/aria_properties.json5" ]
+  templates = [
+    "../build/scripts/templates/ax_utilities_generated.h.tmpl",
+    "../build/scripts/templates/ax_utilities_generated_attributes.cc.tmpl",
+    "../build/scripts/templates/ax_utilities_generated_roles.cc.tmpl",
+    "../build/scripts/templates/ax_utilities_generated_naming.cc.tmpl",
+  ]
+  other_inputs = [ "../build/scripts/aria_properties.py" ]
+  outputs = [
+    "$blink_core_output_dir/accessibility/ax_utilities_generated.h",
+    "$blink_core_output_dir/accessibility/ax_utilities_generated_attributes.cc",
+    "$blink_core_output_dir/accessibility/ax_utilities_generated_roles.cc",
+    "$blink_core_output_dir/accessibility/ax_utilities_generated_naming.cc",
+  ]
+}
+
+make_names("make_core_generated_trusted_types_names") {
+  in_files = [ "trustedtypes/trusted_types_names.json5" ]
+  output_dir = "$blink_core_output_dir/trustedtypes"
+}
+
+# make_qualified_names ---------------------------------------------------------
+
+make_qualified_names("make_core_generated_xlink_names") {
+  in_files = [ "svg/xlink_attribute_names.json5" ]
+  outputs = [
+    "$blink_core_output_dir/xlink_names.cc",
+    "$blink_core_output_dir/xlink_names.h",
+  ]
+}
+
+make_qualified_names("make_core_generated_xml_ns_names") {
+  in_files = [ "xml/xmlns_attribute_names.json5" ]
+  outputs = [
+    "$blink_core_output_dir/xmlns_names.cc",
+    "$blink_core_output_dir/xmlns_names.h",
+  ]
+}
+
+make_qualified_names("make_core_generated_xml_names") {
+  in_files = [ "xml/xml_attribute_names.json5" ]
+  outputs = [
+    "$blink_core_output_dir/xml_names.cc",
+    "$blink_core_output_dir/xml_names.h",
+  ]
+}
+
+# One-off scripts --------------------------------------------------------------
+
+blink_python_runner("make_core_generated_html_entity_table") {
+  visibility = []  # Allow re-assignment of list.
+  visibility = [ ":*" ]
+  script = "../build/scripts/make_html_entity_table.py"
+
+  inputs = scripts_for_json5_files + [
+             "html/parser/html_entity_names.csv",
+             "../build/scripts/templates/html_entity_table.cc.tmpl",
+           ]
+  outputs = [ "$blink_core_output_dir/html_entity_table.cc" ]
+
+  args = [ "-o" ] + rebase_path(outputs, root_build_dir)
+  args += [ rebase_path("html/parser/html_entity_names.csv", root_build_dir) ]
+
+  deps = make_core_generated_deps
+}
+
+blink_python_runner("make_core_generated_css_primitive_value_unit_trie") {
+  visibility = []  # Allow re-assignment of list.
+  visibility = [ ":*" ]
+  script = "../build/scripts/core/css/make_css_primitive_value_unit_trie.py"
+
+  input_file = "css/css_primitive_value_units.json5"
+  inputs = make_trie_helpers_files + [
+             input_file,
+             "../build/scripts/core/css/templates/css_primitive_value_unit_trie.cc.tmpl",
+           ]
+  outputs = [ "$blink_core_output_dir/css/css_primitive_value_unit_trie.cc" ]
+
+  args = [
+    rebase_path(input_file, root_build_dir),
+    "--output_dir",
+    "$rel_blink_core_gen_dir/css",
+  ]
+
+  deps = make_core_generated_deps
+}
+
+blink_python_runner("make_core_generated_permissions_policy_helper") {
+  script = "../build/scripts/make_policy_helper.py"
+
+  inputs = scripts_for_json5_files + [
+             "../build/scripts/make_runtime_features_utilities.py",
+             "../build/scripts/templates/policy_helper.cc.tmpl",
+             "../platform/runtime_enabled_features.json5",
+             "../platform/runtime_enabled_features.override.json5",
+             "./permissions_policy/document_policy_features.json5",
+             "//services/network/public/cpp/permissions_policy/permissions_policy_features.json5",
+           ]
+  outputs = [ "$blink_core_output_dir/permissions_policy/policy_helper.cc" ]
+
+  args = [
+    rebase_path("../platform/runtime_enabled_features.json5", root_build_dir),
+    rebase_path(
+        "//services/network/public/cpp/permissions_policy/permissions_policy_features.json5",
+        root_build_dir),
+    rebase_path("./permissions_policy/document_policy_features.json5",
+                root_build_dir),
+    "--output_dir",
+    "$rel_blink_core_gen_dir/permissions_policy",
+  ]
+}
+
+blink_python_runner("make_core_generated_html_element_lookup_trie") {
+  visibility = []  # Allow re-assignment of list.
+  visibility = [ ":*" ]
+  script = "../build/scripts/make_element_lookup_trie.py"
+
+  input_file = "html/html_tag_names.json5"
+  inputs = make_trie_helpers_files + [
+             input_file,
+             "../build/scripts/templates/element_lookup_trie.cc.tmpl",
+             "../build/scripts/templates/element_lookup_trie.h.tmpl",
+           ]
+  outputs = [
+    "$blink_core_output_dir/html_element_lookup_trie.cc",
+    "$blink_core_output_dir/html_element_lookup_trie.h",
+  ]
+
+  args = [
+    rebase_path(input_file, root_build_dir),
+    "--output_dir",
+    rel_blink_core_gen_dir,
+  ]
+
+  deps = make_core_generated_deps
+}
+
+blink_python_runner("make_core_generated_html_attribute_name_lookup_trie") {
+  visibility = []  # Allow re-assignment of list.
+  visibility = [ ":*" ]
+  script = "../build/scripts/make_element_attribute_name_lookup_trie.py"
+
+  input_file = "html/html_attribute_names.json5"
+  inputs =
+      make_trie_helpers_files + [
+        input_file,
+        "../build/scripts/templates/element_attribute_name_lookup_trie.cc.tmpl",
+        "../build/scripts/templates/element_attribute_name_lookup_trie.h.tmpl",
+      ]
+  outputs = [
+    "$blink_core_output_dir/html_element_attribute_name_lookup_trie.cc",
+    "$blink_core_output_dir/html_element_attribute_name_lookup_trie.h",
+  ]
+
+  args = [
+    rebase_path(input_file, root_build_dir),
+    "--output_dir",
+    rel_blink_core_gen_dir,
+  ]
+
+  deps = make_core_generated_deps
+}
+
+blink_python_runner("make_core_generated_web_origin_trials") {
+  script = "../build/scripts/make_web_origin_trials.py"
+
+  inputs = scripts_for_json5_files + [
+             "../build/scripts/make_runtime_features.py",
+             "../build/scripts/make_runtime_features_utilities.py",
+             "../build/scripts/templates/web_origin_trials.cc.tmpl",
+             "../platform/runtime_enabled_features.json5",
+           ]
+  outputs = [ "$blink_core_output_dir/exported/web_origin_trials.cc" ]
+
+  args = [
+    rebase_path("../platform/runtime_enabled_features.json5", root_build_dir),
+    "--output_dir",
+    "$rel_blink_core_gen_dir/exported",
+  ]
+}
+
+# Targets from above that generate outputs that need to be compiled.
+# All sources declared as outputs from these targets will be compiled into one
+# target.
+targets_generating_sources = [
+  ":make_core_generated_atrule_names",
+  ":make_core_generated_ax_utilities",
+  ":make_core_generated_computed_style_base",
+  ":make_core_generated_computed_style_initial_values",
+  ":make_core_generated_css_primitive_value_unit_trie",
+  ":make_core_generated_css_property_instances",
+  ":make_core_generated_css_property_names",
+  ":make_core_generated_css_subclasses",
+  ":make_core_generated_css_value_id_mappings",
+  ":make_core_generated_css_value_keywords",
+  ":make_core_generated_cssom_types",
+  ":make_core_generated_element_type_enum",
+  ":make_core_generated_event_names",
+  ":make_core_generated_event_target_names",
+  ":make_core_generated_event_type_names",
+  ":make_core_generated_html_attribute_name_lookup_trie",
+  ":make_core_generated_html_element_factory",
+  ":make_core_generated_html_element_lookup_trie",
+  ":make_core_generated_html_element_type_helpers",
+  ":make_core_generated_html_entity_table",
+  ":make_core_generated_html_tokenizer_names",
+  ":make_core_generated_input_type_names",
+  ":make_core_generated_keywords",
+  ":make_core_generated_mathml_element_type_helpers",
+  ":make_core_generated_mathml_names",
+  ":make_core_generated_media_feature_names",
+  ":make_core_generated_media_features",
+  ":make_core_generated_media_type_names",
+  ":make_core_generated_performance_entry_names",
+  ":make_core_generated_permissions_policy_helper",
+  ":make_core_generated_pointer_type_names",
+  ":make_core_generated_property_bitsets",
+  ":make_core_generated_script_type_names",
+  ":make_core_generated_settings",
+  ":make_core_generated_shadow_element_names",
+  ":make_core_generated_style_property_shorthand",
+  ":make_core_generated_svg_element_type_helpers",
+  ":make_core_generated_svg_names",
+  ":make_core_generated_trusted_types_names",
+  ":make_core_generated_web_origin_trials",
+  ":make_core_generated_xlink_names",
+  ":make_core_generated_xml_names",
+  ":make_core_generated_xml_ns_names",
+]
+
+group("all_generators") {
+  public_deps = targets_generating_sources
+}
+
+# Compiles the code generated by the targets above.
+if (is_component_build) {
+  # To get exported symbols correct in component builds, the files must be in
+  # source sets.
+  core_generated_target_type = "source_set"
+} else {
+  core_generated_target_type = "static_library"
+}
+
+target(core_generated_target_type, "core_generated") {
+  # Add all sources generated by the targets above.
+  sources = []
+  foreach(current, targets_generating_sources) {
+    sources += get_target_outputs(current)
+  }
+  deps = [
+    "//third_party/blink/renderer/core/probe",
+  ]
+  public_deps = [ ":all_generators" ]
+
+  configs -= core_config_remove
+  configs += core_config_add + [ "..:inside_blink" ]
+
+  # Dependencies required to compile the sources.
+  public_deps += [
+    ":buildflags",
+    ":prerequisites",
+    "//skia",
+    "//third_party/blink/renderer/platform:make_platform_generated",
+    "//third_party/blink/renderer/platform/wtf",
+    "//third_party/libwebp",
+    "//third_party/libxml",
+    "//third_party/libxslt",
+    "//url",
+  ]
+
+  allow_circular_includes_from =
+      [ "//third_party/blink/renderer/core/probe:probe" ]
+
+  configs += [ ":core_include_dirs" ]
+
+  cflags = []
+  defines = []
+
+  if (is_win && is_component_build) {
+    defines += [ "USING_V8_SHARED" ]
+  }
+
+  if (is_win) {
+    cflags += [
+      # In generated bindings code: "switch contains default but no case".
+      # 4701 and 4702 are disabled because of issues in Bison-generated
+      # XPathGrammar.cpp.
+      "/wd4065",
+      "/wd4701",
+      "/wd4702",
+    ]
+  }
+
+  if (is_debug || dcheck_always_on) {
+    deps += [ "//components/crash/core/common:crash_key" ]
+  }
+}
+
+# Generate a list of event handler attributes, for use by Trusted Types.
+
+source_set("unit_tests") {
+  testonly = true
+
+  # If you create a new subdirectory 'foo' that contains unit tests, list them
+  # in 'foo/build.gni' to define blink_core_tests_foo, and add any dependencies
+  # in the deps section below.
+  sources = rebase_path(blink_core_tests_accessibility, "", "accessibility")
+  sources += rebase_path(blink_core_tests_animation, "", "animation")
+  sources += rebase_path(blink_core_tests_clipboard, "", "clipboard")
+  sources += rebase_path(blink_core_tests_css, "", "css")
+  sources += rebase_path(blink_core_tests_display_lock, "", "display_lock")
+  sources +=
+      rebase_path(blink_core_tests_view_transition, "", "view_transition")
+  sources += rebase_path(blink_core_tests_dom, "", "dom")
+  sources += rebase_path(blink_core_tests_editing, "", "editing")
+  sources += rebase_path(blink_core_tests_events, "", "events")
+  sources +=
+      rebase_path(blink_core_tests_execution_context, "", "execution_context")
+  sources += rebase_path(blink_core_tests_exported, "", "exported")
+  sources += rebase_path(blink_core_tests_fetch, "", "fetch")
+  sources += rebase_path(blink_core_tests_fileapi, "", "fileapi")
+  sources += rebase_path(blink_core_tests_frame, "", "frame")
+  sources += rebase_path(blink_core_tests_fullscreen, "", "fullscreen")
+  sources += rebase_path(blink_core_tests_geometry, "", "geometry")
+  sources += rebase_path(blink_core_tests_highlight, "", "highlight")
+  sources += rebase_path(blink_core_tests_html, "", "html")
+  sources += rebase_path(blink_core_tests_input, "", "input")
+  sources += rebase_path(blink_core_tests_intersection_observer,
+                         "",
+                         "intersection_observer")
+  sources += rebase_path(blink_core_tests_layout, "", "layout")
+  sources += rebase_path(blink_core_tests_loader, "", "loader")
+  sources += rebase_path(blink_core_tests_mathml, "", "mathml")
+  sources += rebase_path(blink_core_tests_origin_trials, "", "origin_trials")
+  sources += rebase_path(blink_core_tests_page, "", "page")
+  sources += rebase_path(blink_core_tests_paint, "", "paint")
+  sources +=
+      rebase_path(blink_core_tests_permissions_policy, "", "permissions_policy")
+  sources +=
+      rebase_path(blink_core_tests_resize_observer, "", "resize_observer")
+  sources += rebase_path(blink_core_tests_overscroll, "", "overscroll")
+  sources += rebase_path(blink_core_tests_scheduler, "", "scheduler")
+  sources += rebase_path(blink_core_tests_script, "", "script")
+  sources += rebase_path(blink_core_tests_scroll, "", "scroll")
+  sources += rebase_path(blink_core_tests_style, "", "style")
+  sources += rebase_path(blink_core_tests_svg, "", "svg")
+  sources += rebase_path(blink_core_tests_timing, "", "timing")
+  sources += rebase_path(blink_core_tests_trustedtypes, "", "trustedtypes")
+  sources += rebase_path(blink_core_tests_typed_arrays, "", "typed_arrays")
+  sources += rebase_path(blink_core_tests_url, "", "url")
+  sources += rebase_path(blink_core_tests_xml, "", "xml")
+
+  configs += [
+    ":blink_core_pch",
+    "//third_party/blink/renderer:config",
+    "//third_party/blink/renderer:inside_blink",
+  ]
+
+  deps = [
+    ":core",
+    ":fuzztest_utils",
+    ":unit_test_support",
+    "//cc",
+    "//components/viz/test:test_support",
+    "//content/test:test_support",
+    "//gpu/command_buffer/client:raster",
+    "//gpu/config",
+    "//mojo/public/cpp/system",
+    "//mojo/public/cpp/test_support:test_utils",
+    "//services/metrics/public/cpp:ukm_builders",
+    "//services/network:test_support",
+    "//services/network/public/mojom:mojom_permissions_policy",
+    "//skia",
+    "//skia:skcms",
+    "//testing/gmock",
+    "//testing/gtest",
+    "//third_party/blink/public:buildflags",
+    "//third_party/blink/public:test_headers",
+    "//third_party/blink/public/strings:permission_element_generated_strings_grit",
+    "//third_party/blink/public/strings:permission_element_strings_grit",
+    "//third_party/blink/renderer/core",
+    "//third_party/blink/renderer/core:testing",
+    "//third_party/blink/renderer/core:unit_test_support",
+    "//third_party/blink/renderer/platform:test_support",
+    "//third_party/fuzztest",
+    "//third_party/harfbuzz",
+    "//ui/base/cursor",
+    "//ui/base/cursor/mojom:cursor_type_blink",
+    "//ui/base/dragdrop/mojom:mojom_blink",
+    "//ui/base/mojom:ui_base_types_blink",
+    "//ui/gfx:test_support",
+  ]
+
+  if (is_win) {
+  }
+
+  if (enable_nocompile_tests) {
+    deps += [ "//third_party/blink/renderer/core/probe:probe_nocompile_tests" ]
+  }
+
+  data_deps = [ ":unit_tests_data" ]
+
+  if (media_use_ffmpeg) {
+    data = [ "//media/test/data/" ]
+    deps += [
+      "//media",
+      "//media:test_support",
+      "//third_party/blink/public:blink",
+      "//third_party/blink/public:test_support",
+      "//third_party/blink/public/common/tokens:tokens_headers",
+      "//ui/gfx/geometry",
+    ]
+  }
+
+  # TODO(crbug.com/40031409): Fix code that adds exit-time destructors and
+  # enable the diagnostic by removing this line.
+  configs += [ "//build/config/compiler:no_exit_time_destructors" ]
+}
+
+group("unit_tests_data") {
+  data = [
+    "//third_party/blink/web_tests/svg/animations/path-animation.svg",
+    "//third_party/blink/web_tests/svg/stroke/zero-length-path-linecap-rendering.svg",
+    "//third_party/blink/web_tests/svg/foreignObject/fixed-position.svg",
+    "//third_party/blink/web_tests/svg/clip-path/clip-in-mask.svg",
+  ]
+}
+
+copy("form_controls_pickers_js") {
+  testonly = true
+
+  sources = [ "html/forms/resources/color_picker.js" ]
+
+  outputs = [ "{{source_gen_dir}}/{{source_file_part}}" ]
+}
+
+group("gen_files_for_web_tests") {
+  testonly = true
+  visibility = []  # Allow re-assignment of list.
+  visibility = [ "*" ]
+  data_deps = [
+    ":form_controls_pickers_js",
+  ]
+}
+
+source_set("perf_tests") {
+  testonly = true
+  sources = [
+    "css/parser/css_parser_fast_paths_perftest.cc",
+    "css/style_perftest.cc",
+    "layout/inline/inline_node_data_perftest.cc",
+    "layout/svg/svg_hit_test_perftest.cc",
+    "layout/visual_rect_mapping_perftest.cc",
+    "paint/timing/container_timing_perftest.cc",
+  ]
+
+  configs += [
+    ":blink_core_pch",
+    "//third_party/blink/renderer:config",
+    "//third_party/blink/renderer:inside_blink",
+  ]
+
+  deps = [
+    ":core",
+    ":unit_test_support",
+    "//mojo/public/cpp/system",
+    "//testing/gmock",
+    "//testing/gtest",
+    "//third_party/blink/renderer/core:testing",
+    "//third_party/blink/renderer/platform:test_support",
+  ]
+}
+
+source_set("unit_test_support") {
+  testonly = true
+  sources = [
+    "css/css_test_helpers.cc",
+    "css/css_test_helpers.h",
+    "css/mock_css_paint_image_generator.h",
+    "editing/testing/editing_test_base.cc",
+    "editing/testing/editing_test_base.h",
+    "editing/testing/selection_sample.cc",
+    "editing/testing/selection_sample.h",
+    "paint/timing/container_timing_test_utils.h",
+  ]
+
+  configs += [
+    ":blink_core_pch",
+    "//third_party/blink/renderer:config",
+    "//third_party/blink/renderer:inside_blink",
+  ]
+
+  deps = [
+    ":core",
+    "//content/test:test_support",
+    "//testing/gmock",
+    "//testing/gtest",
+    "//third_party/blink/renderer/core:testing",
+    "//third_party/blink/renderer/platform:test_support",
+  ]
+
+  data = [
+    "//third_party/blink/renderer/platform/testing/data/third_party/Roboto/roboto-regular.woff2",
+    "//third_party/blink/renderer/platform/testing/data/third_party/Noto/NotoNaskhArabic-regular.woff2",
+    "//third_party/blink/web_tests/external/wpt/fonts/mplus-1p-regular.woff",
+  ]
+}
+
+source_set("fuzztest_utils") {
+  testonly = true
+
+  sources = [
+  ]
+
+  configs += [
+    ":blink_core_pch",
+    "//third_party/blink/renderer:config",
+    "//third_party/blink/renderer:inside_blink",
+  ]
+
+  deps = [
+    ":core",
+    ":unit_test_support",
+    "//testing/gtest",
+  ]
+
+  public_deps = [ "//third_party/fuzztest" ]
+}
+
+# Fuzzer for blink::StyleSheetContents
+blink_fuzzer_test("stylesheet_contents_fuzzer") {
+  sources = [ "css/style_sheet_contents_fuzzer.cc" ]
+  deps = [ ":core" ]
+  dict = "//third_party/blink/renderer/core/css/css.dict"
+  seed_corpus = "//third_party/blink/web_tests/fast/css/resources"
+  libfuzzer_options = [ "max_len=1024" ]
+}
+
+# Fuzzer for blink::CSSParserFastPaths
+blink_fuzzer_test("css_parser_fast_paths_fuzzer") {
+  sources = [ "css/parser/css_parser_fast_paths_fuzzer.cc" ]
+  deps = [ ":core" ]
+  dict = "//third_party/blink/renderer/core/css/css.dict"
+  libfuzzer_options = [ "max_len=128" ]
+}
+
+css_properties("make_css_proto") {
+  script = "../build/scripts/core/css/parser/make_proto.py"
+  in_files = [ "css/css_value_keywords.json5" ]
+  other_inputs = [
+    "../build/scripts/core/css/parser/templates/css.proto.tmpl",
+    "../build/scripts/core/css/parser/templates/css_proto_converter_generated.h.tmpl",
+  ]
+  outputs = [
+    "$blink_core_output_dir/css/parser/css.proto",
+    "$blink_core_output_dir/css/parser/css_proto_converter_generated.h",
+  ]
+}
+
+blink_fuzzer_test("css_parser_proto_fuzzer") {
+  sources = [
+    "css/parser/css_parser_proto_fuzzer.cc",
+    "css/parser/css_proto_converter.cc",
+    "css/parser/css_proto_converter.h",
+  ]
+  deps = [
+    ":core",
+    ":css_proto",
+    "//third_party/libprotobuf-mutator",
+  ]
+  dict = "//third_party/blink/renderer/core/css/css.dict"
+}
+
+test("css_parser_fuzzer") {
+  sources = [ "css/parser/css_parser_fuzzer.cc" ]
+  deps = [
+    ":core",
+    "//third_party/blink/renderer/platform:blink_fuzzer_test_support",
+    "//third_party/fuzztest:fuzztest_gtest_main",
+  ]
+  fuzztests = [ "CssParser.ParseSheetFuzzer" ]
+
+  # TODO(crbug.com/40031409): Fix code that adds exit-time destructors and
+  # enable the diagnostic by removing this line.
+  configs += [ "//build/config/compiler:no_exit_time_destructors" ]
+}
+
+test("inspector_ghost_rules_fuzzer") {
+  sources = []
+  deps = [
+    ":core",
+    ":testing",
+    ":unit_test_support",
+    "//third_party/blink/renderer/platform:blink_fuzzer_test_support",
+    "//third_party/fuzztest:fuzztest_gtest_main",
+  ]
+  fuzztests = [ "InspectorGhostRules.PopulateFuzzer" ]
+
+  # TODO(crbug.com/40031409): Fix code that adds exit-time destructors and
+  # enable the diagnostic by removing this line.
+  configs += [ "//build/config/compiler:no_exit_time_destructors" ]
+}
+
+proto_library("css_proto") {
+  sources = [ "$blink_core_output_dir/css/parser/css.proto" ]
+  proto_out_dir = "third_party/blink/renderer/core/css/parser"
+  proto_deps = [ ":make_css_proto" ]
+}
+
+# Builds a wire format proto to that is consumed from LCPP web_tests. Used in
+# third_party/blink/web_tests/http/tests/lcp_critical_path_predictor
+
+# Fuzzer for SVG path string parsing
+blink_fuzzer_test("svg_path_parser_fuzzer") {
+  sources = [ "svg/svg_path_parser_fuzzer.cc" ]
+  deps = [
+    ":core",
+    "//testing/libfuzzer:libfuzzer_base_wrappers",
+  ]
+  dict = "//third_party/blink/renderer/core/svg/svg_path_parser.dict"
+  seed_corpus = "//third_party/blink/renderer/core/svg/svg_path_parser_corpus"
+}
+
+# Fuzzers for blink::PermissionsPolicyParser.
+blink_fuzzer_test("feature_policy_fuzzer") {
+  sources = [ "permissions_policy/feature_policy_fuzzer.cc" ]
+  deps = [
+    "//testing/libfuzzer:libfuzzer_base_wrappers",
+    "//third_party/blink/renderer/core",
+    "//third_party/icu",
+  ]
+  dict =
+      "//third_party/blink/renderer/core/permissions_policy/feature_policy.dict"
+  seed_corpus = "//third_party/blink/renderer/core/permissions_policy/feature_policy_corpus"
+}
+
+blink_fuzzer_test("permissions_policy_attr_fuzzer") {
+  sources = [ "permissions_policy/permissions_policy_attr_fuzzer.cc" ]
+  deps = [
+    "//testing/libfuzzer:libfuzzer_base_wrappers",
+    "//third_party/blink/renderer/core",
+    "//third_party/icu",
+  ]
+  dict =
+      "//third_party/blink/renderer/core/permissions_policy/feature_policy.dict"
+  seed_corpus = "//third_party/blink/renderer/core/permissions_policy/feature_policy_corpus"
+}
+
+blink_fuzzer_test("document_policy_fuzzer") {
+  sources = [ "permissions_policy/document_policy_fuzzer.cc" ]
+  deps = [
+    "//testing/libfuzzer:libfuzzer_base_wrappers",
+    "//third_party/blink/renderer/core",
+    "//third_party/icu",
+  ]
+  dict = "//third_party/blink/renderer/core/permissions_policy/document_policy.dict"
+  seed_corpus = "//third_party/blink/renderer/core/permissions_policy/document_policy_corpus"
+}
+
+blink_fuzzer_test("permissions_policy_fuzzer") {
+  sources = [ "permissions_policy/permissions_policy_fuzzer.cc" ]
+  deps = [
+    "//testing/libfuzzer:libfuzzer_base_wrappers",
+    "//third_party/blink/renderer/core",
+    "//third_party/icu",
+  ]
+  dict = "//third_party/blink/renderer/core/permissions_policy/permissions_policy.dict"
+  seed_corpus = "//third_party/blink/renderer/core/permissions_policy/permissions_policy_corpus"
+}

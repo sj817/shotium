@@ -1,0 +1,61 @@
+// Copyright 2020 The Chromium Authors
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// There is no bindings generator in this tree and no script engine for it to
+// generate bindings against, so nothing turns this file into a JS-visible
+// URLPattern any more. It is kept verbatim because it is still the declaration
+// of the type vocabulary: tools/shot/gen_idl_unions.py reads the two typedefs
+// below out of it (URLPatternInput is what produces V8URLPatternInput, and
+// losing this file is what made that union disappear), and
+// tools/shot/gen_idl_enums.py reads URLPatternComponent.
+//
+// The C++ class next door implements only the part of this interface that a
+// caller with no script engine can reach: the constructors (as
+// URLPattern::Create overloads taking a String or a URLPatternInit* directly,
+// rather than a V8URLPatternInput union built from a JS argument), the
+// component accessors, hasRegExpGroups and the KURL matcher. test(), exec(),
+// generate() and compareComponent() are gone -- see url_pattern.h for why each
+// one could not survive. URLPatternResult and URLPatternComponentResult, which
+// only exec() produced, are not restored: URLPatternComponentResult's `groups`
+// is a record of `any`, which has no representation without a script value.
+typedef (USVString or URLPatternInit) URLPatternInput;
+typedef (USVString or URLPatternInit or URLPattern) URLPatternCompatible;
+
+enum URLPatternComponent { "protocol", "username", "password", "hostname",
+                           "port", "pathname", "search", "hash" };
+
+// https://wicg.github.io/urlpattern/
+[
+  Exposed=(Window,Worker,ShadowRealm) // TODO(crbug.com/41480387): This should be Exposed=*
+] interface URLPattern {
+  [RaisesException, CallWith=Isolate, Measure]
+  constructor(URLPatternInput input, USVString baseURL, optional URLPatternOptions options = {});
+
+  [RaisesException, CallWith=Isolate, Measure]
+  constructor(optional URLPatternInput input = {}, optional URLPatternOptions options = {});
+
+  [RaisesException, CallWith=Isolate, Measure]
+  boolean test(optional URLPatternInput input = {}, optional USVString baseURL);
+
+  [RaisesException, CallWith=Isolate, Measure]
+  URLPatternResult? exec(optional URLPatternInput input = {}, optional USVString baseURL);
+
+  [RuntimeEnabled=URLPatternGenerate, RaisesException, Measure]
+  USVString generate(URLPatternComponent component, record<USVString, USVString> groups);
+
+  readonly attribute USVString protocol;
+  readonly attribute USVString username;
+  readonly attribute USVString password;
+  readonly attribute USVString hostname;
+  readonly attribute USVString port;
+  readonly attribute USVString pathname;
+  readonly attribute USVString search;
+  readonly attribute USVString hash;
+
+  readonly attribute boolean hasRegExpGroups;
+
+  [RuntimeEnabled=URLPatternCompareComponent, Measure]
+  static short compareComponent(URLPatternComponent component,
+                                URLPattern left, URLPattern right);
+};

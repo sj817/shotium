@@ -1,0 +1,64 @@
+// Copyright 2020 The Chromium Authors
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include "content/public/browser/ax_inspect_factory.h"
+
+#include "content/browser/accessibility/accessibility_tree_formatter_blink.h"
+
+namespace content {
+
+// static
+ui::AXApiType::Type AXInspectFactory::DefaultPlatformFormatterType() {
+  return ui::AXApiType::kMac;
+}
+
+// static
+ui::AXApiType::Type AXInspectFactory::DefaultPlatformRecorderType() {
+  return ui::AXApiType::kMac;
+}
+
+// static
+std::unique_ptr<ui::AXTreeFormatter> AXInspectFactory::CreateFormatter(
+    ui::AXApiType::Type type) {
+  // Developer mode: crash immediately on any accessibility fatal error.
+  // This only runs during integration tests, or if a developer is
+  // using an inspection tool, e.g. chrome://accessibility.
+  ui::AXTreeManager::AlwaysFailFast();
+
+  switch (type) {
+    case ui::AXApiType::kBlink:
+      return std::make_unique<AccessibilityTreeFormatterBlink>();
+    case ui::AXApiType::kMac:
+      return std::make_unique<ui::AXTreeFormatterMac>();
+    default:
+      NOTREACHED() << "Unsupported API type " << type;
+  }
+}
+
+// static
+std::unique_ptr<ui::AXEventRecorder> AXInspectFactory::CreateRecorder(
+    ui::AXApiType::Type type,
+    ui::AXPlatformTreeManager* manager,
+    base::ProcessId pid,
+    const ui::AXTreeSelector& selector) {
+  // Developer mode: crash immediately on any accessibility fatal error.
+  // This only runs during integration tests, or if a developer is
+  // using an inspection tool, e.g. chrome://accessibility.
+  ui::AXTreeManager::AlwaysFailFast();
+
+  switch (type) {
+    case ui::AXApiType::kMac:
+      return std::make_unique<ui::AXEventRecorderMac>(
+          manager ? manager->GetWeakPtr() : nullptr, pid, selector);
+    default:
+      NOTREACHED() << "Unsupported API type " << type;
+  }
+}
+
+// static
+std::vector<ui::AXApiType::Type> AXInspectFactory::SupportedApis() {
+  return {ui::AXApiType::kBlink, ui::AXApiType::kMac};
+}
+
+}  // namespace content

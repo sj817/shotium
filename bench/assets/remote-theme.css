@@ -1,0 +1,7 @@
+@font-face {
+  font-family: AhemRemote;
+  src: url("../../third_party/blink/web_tests/resources/Ahem.woff2") format("woff2");
+}
+
+:root { --remote-accent: #53e0b8; --remote-panel: #17233e; }
+.remote-ahem { font-family: AhemRemote; letter-spacing: 2px; }

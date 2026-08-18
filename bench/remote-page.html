@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Shot benchmark: loopback remote page</title>
+<link rel="stylesheet" href="assets/remote.css">
+<main class="remote-shell">
+  <section class="remote-hero"><div><b>LOOPBACK HTTP</b><h1>Network resource closure</h1><p>This page is served from 127.0.0.1. It loads HTML, a linked stylesheet, a CSS @import, a WOFF2 font, and an SVG image over HTTP without public-network variance.</p><div class="remote-ahem">REMOTE STATIC 012345</div></div><img src="assets/pattern.svg" alt="deterministic vector landscape"></section>
+  <section class="remote-grid"><article><b>HTML</b><h2>Top-level GET</h2><p>Document response and relative base URL.</p></article><article><b>CSS</b><h2>Linked style</h2><p>External cascade from remote.css.</p></article><article><b>@import</b><h2>Nested request</h2><p>remote-theme.css defines font and tokens.</p></article><article><b>Resources</b><h2>Font + SVG</h2><p>Two decoded subresources become ready.</p></article></section>
+</main>
+</html>

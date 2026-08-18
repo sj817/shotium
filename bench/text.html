@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Shot benchmark: text</title><link rel="stylesheet" href="assets/base.css">
+<style>
+  .book { display:grid; grid-template-columns:1.4fr .6fr; gap:34px; height:520px; margin-top:22px; padding:30px; }
+  .columns { columns:3; column-gap:26px; column-rule:1px solid #d9e0e8; text-align:justify; line-height:1.62; }
+  .columns p { margin:0 0 14px; } .drop::first-letter { float:left; margin:3px 7px 0 0; color:#2563eb; font:700 50px/.8 Georgia,serif; }
+  aside { border-left:1px solid #d9e0e8; padding-left:25px; } aside h2 { margin:0 0 14px; font:27px Georgia,serif; }
+  .sample { margin:0 0 15px; padding:12px; border-radius:8px; background:#f1f5f9; }
+  .serif { font-family:Georgia,serif; font-size:18px; } .mono { font-family:Consolas,monospace; font-size:14px; }
+  .rtl { direction:rtl; font-size:20px; } .cjk { font-family:"Microsoft YaHei",sans-serif; font-size:17px; }
+  .decorated { text-decoration:underline wavy #e11d48 2px; text-underline-offset:4px; }
+</style>
+<main class="page"><span class="eyebrow">Text fixture</span><h1>Inline layout, shaping, and line breaking</h1><p class="lede">Long-form fragments, columns, justification, decorations, mixed scripts, and fallback families.</p>
+<section class="book panel"><article class="columns"><p class="drop">A static renderer still carries a demanding text pipeline. Words become shaped glyph runs, inline boxes, line fragments, and painted decorations. The exact result depends on available fonts and deterministic fallback.</p><p>Multiple columns create fragmentation pressure while justification changes the distribution of inline space. Long passages ensure the engine cannot optimize the page as a single short line.</p><p class="decorated">Underline geometry, emphasis, weight, italic faces, superscripts, and punctuation all contribute visible pixels to the final image.</p><p>Viewport width is fixed. There are no animations, clocks, scripts, form controls, selections, carets, or user state in this benchmark document.</p><p>Repeated prose adds enough glyphs to distinguish startup cost from shaping and paint work while remaining easy to inspect.</p></article>
+<aside><h2>Shaping samples</h2><p class="sample serif">Sphinx of black quartz, judge my vow.</p><p class="sample mono">0123456789 ABCDEF =&gt; raster</p><p class="sample rtl">مرحبا بالعالم — ١٢٣٤٥</p><p class="sample cjk">静态网页渲染：布局、绘制、栅格化。</p><p class="sample">Ligatures: office affine efficient<br>Metrics: H<sub>2</sub>O and x<sup>2</sup></p></aside></section></main></html>

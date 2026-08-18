@@ -1,0 +1,95 @@
+// Copyright 2026 The Chromium Authors
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#ifndef SHOT_SHOT_RUNTIME_H_
+#define SHOT_SHOT_RUNTIME_H_
+
+#include <memory>
+#include <string>
+
+#include "base/functional/callback_helpers.h"
+#include "base/memory_coordinator/memory_consumer_registry.h"
+#include "base/types/expected.h"
+#include "shot/shot_network.h"
+
+namespace blink {
+namespace scheduler {
+class WebThreadScheduler;
+}  // namespace scheduler
+}  // namespace blink
+
+namespace discardable_memory {
+class DiscardableSharedMemoryManager;
+}  // namespace discardable_memory
+
+namespace shot {
+
+class ShotPlatform;
+
+// Everything a process needs before blink will render anything, brought up once
+// and held for as long as the process lives.
+//
+// This used to be the body of main(), which was fine while shot rendered one
+// document and exited. It is a class now because a resident worker renders many
+// documents over one process lifetime: blink is a process-wide singleton --
+// Platform::InitializeBlink() builds WTF and the partitions once,
+// cppgc::InitializeProcess() sits behind a NoDestructor, and Initialize() binds
+// the scheduler to this thread -- so the setup cannot be repeated per render,
+// and the teardown cannot happen until the process is done.
+//
+// Construction order is not negotiable and the comments on each step say why.
+// Destruction is the reverse, which is why the members are declared in the
+// order they are built rather than grouped by kind: shutting the scheduler down
+// before the heap that points into it, and the thread pool last, is a
+// requirement of ~MainThreadSchedulerImpl's own CHECK.
+//
+// Must be created on, and destroyed on, the thread that will do the rendering.
+class ShotRuntime {
+ public:
+  // Brings up ICU, the resource bundle, the thread pool, mojo, blink's
+  // scheduler, discardable memory, blink itself, and //net.
+  static base::expected<std::unique_ptr<ShotRuntime>, std::string> Create(
+      const NetworkConfig& network_config);
+
+  ShotRuntime(const ShotRuntime&) = delete;
+  ShotRuntime& operator=(const ShotRuntime&) = delete;
+  ~ShotRuntime();
+
+ private:
+  ShotRuntime();
+
+  // Somewhere for memory consumers to register.
+  //
+  // base::MemoryConsumerRegistry is abstract, and the only concrete production
+  // implementation is content's, which groups consumers and reports them to a
+  // MemoryConsumerGroupController -- a browser-process memory coordinator that
+  // decides who should shrink when the device is under pressure. shot has no
+  // coordinator and no second process to coordinate with, so it supplies the
+  // other half of the contract itself: consumers register and unregister, and
+  // nothing ever asks them to release.
+  //
+  // That is the whole behaviour of a registry in a process nobody is
+  // coordinating -- not a stub standing in for one. The consumer that needs it
+  // here is DiscardableSharedMemoryManager, whose constructor registers so that
+  // a coordinator *could* tell it to purge.
+  class MemoryConsumerRegistry;
+
+  // Declared in construction order; destroyed in reverse.
+  base::ScopedClosureRunner shutdown_thread_pool_;
+  std::unique_ptr<blink::scheduler::WebThreadScheduler> main_thread_scheduler_;
+  std::unique_ptr<base::ScopedMemoryConsumerRegistry<MemoryConsumerRegistry>>
+      memory_consumer_registry_;
+  std::unique_ptr<discardable_memory::DiscardableSharedMemoryManager>
+      discardable_manager_;
+  base::ScopedClosureRunner shutdown_scheduler_;
+  std::unique_ptr<ShotPlatform> platform_;
+  // Last, so it is the first thing torn down: the disk cache and the host
+  // resolver post to the thread pool, and the sockets are watched by this
+  // thread's message pump, so neither may still be running when those go.
+  std::unique_ptr<ShotNetwork> network_;
+};
+
+}  // namespace shot
+
+#endif  // SHOT_SHOT_RUNTIME_H_

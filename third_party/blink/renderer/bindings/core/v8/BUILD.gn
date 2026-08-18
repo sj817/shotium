@@ -1,0 +1,12 @@
+# Copyright 2026 The Chromium Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//third_party/blink/renderer/core/core.gni")
+import("//third_party/blink/renderer/bindings/core/v8/build.gni")
+
+blink_core_sources("bindings_core_v8") {
+  sources = blink_core_sources_bindings_core_v8
+
+  deps = [ "//third_party/blink/renderer/core:core_generated" ]
+}

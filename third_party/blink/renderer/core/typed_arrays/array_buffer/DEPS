@@ -1,0 +1,5 @@
+include_rules = [
+    "+base/memory/page_size.h",
+    "+partition_alloc/page_allocator.h",
+    "+partition_alloc/partition_alloc_constants.h",
+]

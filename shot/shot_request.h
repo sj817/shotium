@@ -1,0 +1,69 @@
+// Copyright 2026 The Chromium Authors
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#ifndef SHOT_SHOT_REQUEST_H_
+#define SHOT_SHOT_REQUEST_H_
+
+#include <optional>
+#include <string>
+#include <string_view>
+
+#include "base/types/expected.h"
+
+namespace shot {
+
+// One screenshot request, as it arrives over the wire.
+//
+// The field names mirror shotium's public ScreenshotOptions exactly, so that
+// the JS layer is a transport and not a translation: anything it has to rename
+// is somewhere a bug can hide. See docs/shotium-plan.md section 4.
+//
+// Two fields have no counterpart in ScreenshotOptions as it stands -- `width`
+// and `height`. A screenshot needs a viewport and ScreenshotOptions has no way
+// to say what it is; fullPage and clip both describe what to take *out* of a
+// viewport rather than how big it is. They are here with browser defaults so
+// the protocol is complete, and the public interface will need a `viewport`
+// field of some shape to reach them.
+struct Clip {
+  int x = 0;
+  int y = 0;
+  int width = 0;
+  int height = 0;
+};
+
+struct ScreenshotRequest {
+  // Required. A URL, or a path that the caller wants treated as one.
+  std::string file;
+
+  std::string type = "png";  // png | jpeg | webp
+  bool full_page = false;
+  std::string selector;
+  std::optional<int> quality;  // 1-100, jpeg/webp only
+  double scale = 1.0;
+  bool omit_background = false;
+  std::string path;  // if set, the worker writes the file itself
+
+  int timeout_ms = 30000;
+  std::string wait_until = "load";  // load | networkidle
+
+  std::optional<Clip> clip;
+
+  // Viewport. Not in ScreenshotOptions yet; see the comment above.
+  int width = 1280;
+  int height = 720;
+
+  // Local file access. Off by default because a library should not decide for
+  // its caller that a document may read the filesystem it is being rendered on;
+  // the CLI turns it on for the file it was pointed at.
+  bool allow_file_access = false;
+};
+
+// Parses one request. The error is the message the caller sees, so it names the
+// field rather than the parser.
+base::expected<ScreenshotRequest, std::string> ParseScreenshotRequest(
+    std::string_view json);
+
+}  // namespace shot
+
+#endif  // SHOT_SHOT_REQUEST_H_

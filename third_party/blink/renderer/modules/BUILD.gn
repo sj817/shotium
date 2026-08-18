@@ -1,0 +1,46 @@
+# Copyright 2014 The Chromium Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//third_party/blink/renderer/config.gni")
+
+visibility = [ "//third_party/blink/renderer/*" ]
+
+config("modules_implementation") {
+  defines = [ "BLINK_MODULES_IMPLEMENTATION=1" ]
+}
+
+# All 120 module directories are gone, along with the generated modules event
+# interface / event target / IndexedDB name tables, the modules V8 bindings,
+# the modules_testing and unit_tests targets, and every blink_fuzzer_test that
+# lived here.
+#
+# What survives is the CoreInitializer implementation. core/ reaches modules/
+# only through that interface -- there is not a single
+# `#include "third_party/blink/renderer/modules/..."` anywhere in core/ -- so
+# plugging those methods is the whole of the modules-side contract.
+component("modules") {
+  output_name = "blink_modules"
+
+  visibility = []  # Allow re-assignment of the file-level list.
+  visibility = [ "//third_party/blink/*" ]
+
+  sources = [
+    "modules_export.h",
+    "modules_initializer.cc",
+    "modules_initializer.h",
+  ]
+
+  configs += [
+    ":modules_implementation",
+    "//third_party/blink/renderer:config",
+    "//third_party/blink/renderer:non_test_config",
+    "//third_party/blink/renderer:inside_blink",
+    "//third_party/blink/renderer/core:blink_core_pch",
+  ]
+
+  deps = [ "//third_party/blink/renderer/core" ]
+
+  configs -= [ "//build/config/compiler:default_symbols" ]
+  configs += blink_symbols_config
+}

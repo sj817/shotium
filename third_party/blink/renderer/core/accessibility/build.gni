@@ -1,0 +1,25 @@
+# Copyright 2020 The Chromium Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# AXContext, AXObjectCache/AXObjectCacheBase and their histogram_macros.h
+# helper were removed: they built and drove the accessibility tree
+# (AXObject/AXObjectCacheImpl, in the already-deleted modules/accessibility),
+# which a static-screenshot engine never constructs. axid.h (the AXID type
+# alias) went with them: it had no reader left outside that removed cache
+# API. The BlinkAXEventIntent/ScopedBlinkAXEventIntent pair stays because
+# editing code still annotates operations with intents.
+blink_core_sources_accessibility = [
+  "blink_ax_event_intent.cc",
+  "blink_ax_event_intent.h",
+  "scoped_blink_ax_event_intent.cc",
+  "scoped_blink_ax_event_intent.h",
+]
+
+# ax_context_test.cc and scoped_blink_ax_event_intent_test.cc exercised the
+# removed AXContext/AXObjectCache forwarding behavior and were deleted with
+# it.
+blink_core_tests_accessibility = [
+  "ax_utilities_test.cc",
+  "blink_ax_event_intent_test.cc",
+]

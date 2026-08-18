@@ -1,0 +1,76 @@
+# First custom_deps = None batch.
+#
+# Source of truth: docs/minimal-checkout.md section 4. Every path here is a
+# CANDIDATE_DELETE, not a VERIFIED_DELETE: nothing graduates until the section 8
+# gate passes in a fresh isolated checkout. Editing this file changes the
+# Phase 0 input digest, which is the point -- the batch is a locked input.
+#
+# 54 paths. Lines are '# ' comments or a DEPS key exactly as it appears in DEPS
+# (including the leading 'src/'). bootstrap.ps1 turns each into a
+# custom_deps entry mapped to None.
+
+# --- 4.1 no condition (19) ---
+src/content/test/data/gpu/meet_effects_videos
+src/chrome/test/data/perf/canvas_bench
+src/chrome/test/data/perf/frame_rate/content
+src/chrome/test/data/xr/webvr_info
+src/testing/libfuzzer/fuzzers/wasm_corpus
+src/third_party/google_benchmark/src
+src/third_party/libFuzzer/src
+src/third_party/fuzztest/src
+src/third_party/domato/src
+src/third_party/libprotobuf-mutator/src
+src/base/tracing/test/data
+src/third_party/webdriver/pylib
+src/third_party/webgl/src
+src/third_party/webgpu-cts/src
+src/third_party/webpagereplay
+src/third_party/pywebsocket3/src
+src/third_party/crossbench
+src/third_party/crossbench-web-tests
+src/docs/website
+
+# --- 4.2 condition non_git_source (9) ---
+# test_fonts is only a data_deps of font unit tests here; Shot must carry its
+# own fixed font fixture for pixel repeatability once this is removed.
+src/third_party/js_code_coverage/node_modules
+src/content/test/data/gpu/meet_effects
+src/components/variations/test_data/cipd
+src/third_party/blink/renderer/core/css/perftest_data
+src/tools/perf/page_sets/maps_perf_test/dataset
+src/third_party/opus/tests/resources
+src/third_party/test_fonts/test_fonts
+src/tools/resultdb
+src/third_party/subresource-filter-ruleset/data
+
+# --- 4.3 condition checkout_press_benchmarks (7) ---
+# checkout_configuration = "small" already makes these false. They are listed
+# anyway so a future configuration regression cannot quietly re-enable them.
+src/third_party/jetstream/main
+src/third_party/jetstream/v2.2
+src/third_party/speedometer/main
+src/third_party/speedometer/v3.1
+src/third_party/speedometer/v3.0
+src/third_party/speedometer/v2.1
+src/third_party/speedometer/v2.0
+
+# --- 4.4 condition checkout_win (19) ---
+src/tools/skia_goldctl/win
+src/third_party/apache-windows-arm64
+src/third_party/updater/chrome_win_arm64/cipd
+src/third_party/updater/chrome_win_x86/cipd
+src/third_party/updater/chrome_win_x86_64/cipd
+src/third_party/updater/chrome_win_arm64_sans_iid/cipd
+src/third_party/updater/chrome_win_x86_sans_iid/cipd
+src/third_party/updater/chrome_win_x86_64_sans_iid/cipd
+src/third_party/updater/chromium_win_arm64/cipd
+src/third_party/updater/chromium_win_x86/cipd
+src/third_party/updater/chromium_win_x86_64/cipd
+src/third_party/updater/chromium_win_arm64_sans_iid/cipd
+src/third_party/updater/chromium_win_x86_sans_iid/cipd
+src/third_party/updater/chromium_win_x86_64_sans_iid/cipd
+src/third_party/enterprise_companion/chromium_win_x86/cipd
+src/third_party/enterprise_companion/chromium_win_x86_64/cipd
+src/third_party/webview2
+src/third_party/screen-ai/windows_amd64
+src/third_party/screen-ai/windows_386

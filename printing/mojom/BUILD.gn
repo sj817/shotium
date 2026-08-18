@@ -1,0 +1,25 @@
+# Copyright 2026 The Chromium Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//mojo/public/tools/bindings/mojom.gni")
+
+# What is left of //printing.
+#
+# The print backend, the printing context, the OOP printing service and the
+# PageRange typemap are all cut -- this engine has no printer and no print
+# preview. print.mojom itself is 245 lines of enums and plain structs with no
+# imports, and blink's *pagination* is written in terms of it:
+# pagination_utils.cc branches on PrintScalingOption, and WebPrintParams
+# carries PageSizeMargins.
+#
+# Pagination is layout, not printing, so those files are not somewhere to be
+# cutting while chasing a compile. The enums come back; nothing that acts on
+# them does.
+#
+# The PageRange typemap is dropped with print_mojom_traits.{h,cc}: ::printing::
+# PageRange lived in //printing/page_range.h, which is gone, and nothing in
+# this build converts one.
+mojom("mojom") {
+  sources = [ "print.mojom" ]
+}

@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Shot benchmark: gradients</title><link rel="stylesheet" href="assets/base.css">
+<style>
+  body { background:#11172a; color:#f8fafc; }
+  .page .lede { color:#aab5ca; }
+  .swatches { display:grid; grid-template-columns:repeat(4,1fr); grid-template-rows:repeat(2,220px); gap:17px; margin-top:24px; }
+  .swatch { position:relative; overflow:hidden; border:1px solid rgba(255,255,255,.16); border-radius:18px; box-shadow:0 15px 34px rgba(0,0,0,.25); }
+  .swatch::after { content:attr(data-label); position:absolute; inset:auto 14px 14px; padding:8px 11px; border-radius:8px; background:rgba(3,7,18,.62); backdrop-filter:blur(8px); font-size:12px; }
+  .g1 { background:linear-gradient(125deg,#22d3ee,#2563eb 48%,#7c3aed); }
+  .g2 { background:radial-gradient(circle at 28% 30%,#fef08a 0 8%,#f97316 28%,#be123c 58%,#4c1d95); }
+  .g3 { background:conic-gradient(from 30deg at 50% 55%,#06b6d4,#6366f1,#d946ef,#f59e0b,#06b6d4); }
+  .g4 { background:repeating-linear-gradient(45deg,#0f172a 0 12px,#334155 12px 24px,#38bdf8 24px 27px); }
+  .g5 { background:repeating-radial-gradient(circle at 50% 100%,#10b981 0 15px,#064e3b 16px 29px,#022c22 30px 43px); }
+  .g6 { background:linear-gradient(90deg in oklab,#fb7185,#facc15,#34d399,#38bdf8,#a78bfa); }
+  .g7 { background:radial-gradient(ellipse at top left,rgba(255,255,255,.75),transparent 32%),linear-gradient(145deg,#312e81,#0f766e); }
+  .g8 { background:linear-gradient(160deg,transparent 25%,rgba(255,255,255,.25) 25% 28%,transparent 28%),linear-gradient(20deg,#581c87,#be123c); }
+</style>
+<main class="page"><span class="eyebrow">Gradient fixture</span><h1>Shader-like static paint</h1><p class="lede">Linear, radial, conic, repeating, interpolated, and layered gradients.</p><section class="swatches"><div class="swatch g1" data-label="linear"></div><div class="swatch g2" data-label="radial"></div><div class="swatch g3" data-label="conic"></div><div class="swatch g4" data-label="repeating linear"></div><div class="swatch g5" data-label="repeating radial"></div><div class="swatch g6" data-label="oklab interpolation"></div><div class="swatch g7" data-label="layered"></div><div class="swatch g8" data-label="hard stops"></div></section></main></html>

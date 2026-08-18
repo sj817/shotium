@@ -1,0 +1,47 @@
+// Copyright 2025 The Chromium Authors
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#ifndef CC_METRICS_SCROLL_JANK_V4_PROCESSOR_H_
+#define CC_METRICS_SCROLL_JANK_V4_PROCESSOR_H_
+
+#include "base/memory/weak_ptr.h"
+#include "cc/cc_export.h"
+#include "cc/metrics/event_metrics.h"
+#include "cc/metrics/scroll_jank_os_reporter.h"
+#include "cc/metrics/scroll_jank_v4_decision_queue.h"
+#include "cc/metrics/scroll_jank_v4_frame_timeline_calculator.h"
+
+namespace cc {
+
+// Class responsible for processing presented frames, deciding whether they are
+// janky according to the scroll jank v4 metric, reporting the associated UMA
+// histograms and emitting relevant trace events. This class also sets
+// `ScrollUpdateEventMetrics::scroll_jank_v4_result_id()`.
+//
+// See
+// https://docs.google.com/document/d/1AaBvTIf8i-c-WTKkjaL4vyhQMkSdynxo3XEiwpofdeA
+// for more details about the scroll jank v4 metric.
+class CC_EXPORT ScrollJankV4Processor {
+ public:
+  ScrollJankV4Processor();
+  ~ScrollJankV4Processor();
+
+  void ProcessEventsMetricsForPresentedFrame(EventMetrics::List& events_metrics,
+                                             base::TimeTicks presentation_ts,
+                                             const viz::BeginFrameArgs& args);
+
+  void SetOsReporter(base::WeakPtr<ScrollJankOsReporter> os_reporter);
+
+ private:
+  void HandleFrame(const ScrollJankV4Frame::StageList& stages,
+                   const ScrollJankV4Frame::ScrollDamage& damage,
+                   const ScrollJankV4Frame::BeginFrameArgsForScrollJank& args);
+
+  ScrollJankV4FrameTimelineCalculator timeline_calculator_;
+  ScrollJankV4DecisionQueue decision_queue_;
+};
+
+}  // namespace cc
+
+#endif  // CC_METRICS_SCROLL_JANK_V4_PROCESSOR_H_

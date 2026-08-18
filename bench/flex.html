@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Shot benchmark: flex</title><link rel="stylesheet" href="assets/base.css">
+<style>
+  .board { display:flex; gap:18px; height:515px; margin-top:24px; padding:18px; }
+  .lane { display:flex; flex:1 1 0; flex-direction:column; min-width:0; gap:10px; padding:14px; border-radius:12px; background:#f2f5f9; }
+  .lane:nth-child(2) { flex-grow:1.3; } .lane:nth-child(3) { flex-grow:.8; }
+  .lane h2 { display:flex; align-items:center; justify-content:space-between; margin:0 0 3px; font-size:16px; }
+  .lane h2 i { display:grid; place-items:center; width:25px; height:25px; border-radius:50%; color:white; background:#64748b; font-size:11px; font-style:normal; }
+  .ticket { display:flex; align-items:flex-start; gap:11px; min-height:72px; padding:12px; border:1px solid #d9e1eb; border-radius:9px; background:white; }
+  .ticket::before { content:""; flex:0 0 auto; width:9px; height:42px; border-radius:6px; background:var(--ticket,#2563eb); }
+  .ticket div { min-width:0; flex:1; } .ticket b,.ticket small { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .ticket small { margin-top:4px; color:#718096; }
+  .lane:nth-child(2) .ticket { --ticket:#0f9f75; } .lane:nth-child(3) .ticket { --ticket:#d97706; } .lane:nth-child(4) .ticket { --ticket:#9333ea; }
+  .footer { display:flex; justify-content:space-between; margin-top:auto; padding-top:8px; color:#64748b; font-size:12px; }
+</style>
+<main class="page"><span class="eyebrow">Flex fixture</span><h1>Nested flexible formatting contexts</h1><p class="lede">Growth, shrinkage, intrinsic sizing, column flow, alignment, gaps, overflow, and auto margins.</p>
+<section class="board panel">
+  <article class="lane"><h2>Backlog <i>4</i></h2><div class="ticket"><div><b>Parse document input</b><small>HTML tokenizer and tree builder</small></div></div><div class="ticket"><div><b>Resolve imported styles</b><small>Cascade and inheritance</small></div></div><div class="ticket"><div><b>Decode image resource</b><small>Static codec workload</small></div></div><div class="ticket"><div><b>Load web font</b><small>Deterministic local asset</small></div></div><footer class="footer"><span>min 0</span><span>grow 1</span></footer></article>
+  <article class="lane"><h2>Layout <i>5</i></h2><div class="ticket"><div><b>Build fragment tree</b><small>Block and inline formatting</small></div></div><div class="ticket"><div><b>Measure intrinsic widths</b><small>Long labels clip correctly</small></div></div><div class="ticket"><div><b>Place flexible items</b><small>Distribution across main axis</small></div></div><div class="ticket"><div><b>Resolve percentage sizes</b><small>Definite containing block</small></div></div><div class="ticket"><div><b>Finalize overflow</b><small>Scrollable geometry</small></div></div><footer class="footer"><span>min 0</span><span>grow 1.3</span></footer></article>
+  <article class="lane"><h2>Paint <i>3</i></h2><div class="ticket"><div><b>Record display items</b><small>Stable paint ordering</small></div></div><div class="ticket"><div><b>Build property trees</b><small>Clip and transform nodes</small></div></div><div class="ticket"><div><b>Raster tiles</b><small>CPU or GPU backend</small></div></div><footer class="footer"><span>min 0</span><span>grow .8</span></footer></article>
+  <article class="lane"><h2>Encode <i>4</i></h2><div class="ticket"><div><b>Read bitmap</b><small>Viewport surface</small></div></div><div class="ticket"><div><b>Encode PNG</b><small>Lossless output bytes</small></div></div><div class="ticket"><div><b>Write artifact</b><small>Atomic output file</small></div></div><div class="ticket"><div><b>Report metrics</b><small>Wall, RSS, threads</small></div></div><footer class="footer"><span>min 0</span><span>grow 1</span></footer></article>
+</section></main></html>

@@ -1,0 +1,14 @@
+/* Deliberately an external stylesheet rather than an inline <style>.
+ *
+ * Loading it over file: is a regression guard for a bug that had nothing to do
+ * with loading: the bytes arrived fine, but CSSStyleSheetResource::CanUseSheet
+ * asks MIMETypeRegistry::GetMIMETypeForExtension whether ".css" means text/css,
+ * that lookup is a mojo call to the browser process, and with nothing answering
+ * it the sheet was parsed and then thrown away. The page laid out as though the
+ * author had written no CSS, silently. See ShotPlatform's browser interface
+ * broker. */
+html, body { margin: 0; padding: 0; background: transparent; }
+#tall { position: absolute; left: 0; top: 0; width: 10px; height: 2000px;
+        background: #00cc00; }
+#box  { position: absolute; left: 40px; top: 60px; width: 200px;
+        height: 120px; background: #cc0000; }

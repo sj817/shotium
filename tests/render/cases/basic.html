@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>basic rendering fixture</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; width: 100%; min-height: 100%; }
+  body {
+    background: #eef2f6;
+    color: #16202a;
+    font: 16px/1.5 Arial, sans-serif;
+    padding: 48px;
+  }
+  main {
+    width: 704px;
+    height: 504px;
+    background: #fff;
+    border: 1px solid #bac5d1;
+    border-radius: 18px;
+    box-shadow: 0 18px 42px rgba(33, 48, 66, .16);
+    padding: 36px;
+  }
+  h1 { margin: 0 0 8px; color: #183153; font-size: 34px; letter-spacing: -.5px; }
+  p { margin: 0; color: #536273; }
+  .rule { height: 1px; margin: 25px 0; background: #dbe2ea; }
+  .row { display: flex; gap: 16px; }
+  .box {
+    width: 198px;
+    height: 172px;
+    border: 2px solid #2d6cdf;
+    border-radius: 12px;
+    padding: 20px;
+    background: #eaf1ff;
+  }
+  .box:nth-child(2) { border-color: #158467; background: #e5f7f1; }
+  .box:nth-child(3) { border-color: #ad5b00; background: #fff2db; }
+  .dot { width: 34px; height: 34px; border-radius: 50%; background: currentColor; }
+  strong { display: block; margin-top: 22px; font-size: 18px; }
+  small { display: block; margin-top: 4px; color: #536273; }
+</style>
+<main>
+  <h1>Static render fixture</h1>
+  <p>Block flow, borders, colors, shadows, and text metrics.</p>
+  <div class="rule"></div>
+  <section class="row">
+    <article class="box"><div class="dot"></div><strong>Alpha</strong><small>One deterministic card</small></article>
+    <article class="box"><div class="dot"></div><strong>Beta</strong><small>Two deterministic cards</small></article>
+    <article class="box"><div class="dot"></div><strong>Gamma</strong><small>Three deterministic cards</small></article>
+  </section>
+</main>
+</html>

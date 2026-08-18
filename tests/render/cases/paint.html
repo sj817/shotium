@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>paint rendering fixture</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body { padding: 40px; background: #0b1020; font-family: Arial, sans-serif; }
+  .stage { position: relative; width: 820px; height: 560px; overflow: hidden; border-radius: 24px; background: radial-gradient(circle at 20% 15%, #334b91 0 7%, transparent 35%), linear-gradient(135deg, #151c3a, #331e55 52%, #152d37); }
+  .orb { position: absolute; border-radius: 50%; filter: blur(10px); opacity: .75; }
+  .one { left: 70px; top: 70px; width: 220px; height: 220px; background: conic-gradient(from 30deg, #56e0ff, #7756ff, #ff6eb4, #56e0ff); }
+  .two { right: 34px; bottom: 15px; width: 300px; height: 300px; background: radial-gradient(circle at 30% 30%, #ffcf66, #ff5e62 55%, #7b2ff7); }
+  .panel { position: absolute; inset: 82px 105px; padding: 38px; color: white; border: 1px solid rgba(255,255,255,.35); border-radius: 22px; background: rgba(255,255,255,.12); box-shadow: 0 28px 70px rgba(0,0,0,.42), inset 0 1px rgba(255,255,255,.3); backdrop-filter: blur(18px); transform: rotate(-2deg); }
+  .panel::before { content: "PAINT"; display: inline-block; padding: 6px 10px; border-radius: 999px; color: #17152b; background: #d7ff73; font-weight: 700; letter-spacing: 2px; }
+  h1 { margin: 48px 0 8px; font-size: 42px; text-shadow: 0 3px 12px rgba(0,0,0,.45); }
+  p { width: 430px; margin: 0; color: #d7dced; font-size: 17px; line-height: 1.55; }
+  .swatches { display: flex; gap: 10px; margin-top: 34px; }
+  .swatches i { width: 52px; height: 52px; border: 3px solid rgba(255,255,255,.65); border-radius: 14px; box-shadow: 0 5px 13px rgba(0,0,0,.25); }
+  .swatches i:nth-child(1) { background: linear-gradient(#ff8a00,#e52e71); }
+  .swatches i:nth-child(2) { background: repeating-linear-gradient(45deg,#38bdf8 0 8px,#1e3a8a 8px 16px); }
+  .swatches i:nth-child(3) { background: radial-gradient(circle,#fef08a 0 25%,#ca8a04 26% 52%,#422006 53%); }
+</style>
+<div class="stage"><div class="orb one"></div><div class="orb two"></div><section class="panel"><h1>Raster fidelity</h1><p>Gradients, rounded clipping, transforms, opacity, shadows, filters, and pseudo-elements.</p><div class="swatches"><i></i><i></i><i></i></div></section></div>
+</html>

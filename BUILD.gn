@@ -1,0 +1,32 @@
+# Copyright 2013 The Chromium Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This is the root build file for GN. GN will start processing by loading this
+# file, and recursively load all dependencies until all dependencies are either
+# resolved or known not to exist (which will cause the build to fail). So if
+# you add a new build file, there must be some path of dependencies from this
+# file to your new one or GN won't know about it.
+#
+# Shot engine fork: upstream listed every Chromium product, test, fuzzer and
+# tooling target here. Because GN loads every BUILD.gn reachable from this file,
+# that forced the entire browser build graph to be parsed just to configure
+# //shot:shot, and unrelated product asserts (for example
+# //chrome/browser/ui/webui/print_preview asserting enable_print_preview) failed
+# the configure step before Shot was ever reached.
+#
+# The root graph is therefore reduced to the screenshot executable. Deleting a
+# target from this list does not delete its sources; it only stops GN from
+# walking into it. Source and dependency deletion is tracked separately in
+# docs/round1-removal-plan.md.
+
+declare_args() {
+  # A list of extra dependencies to add to the root target. This allows a
+  # checkout to add additional targets without explicitly changing any checked-
+  # in files.
+  root_extra_deps = []
+}
+
+group("gn_all") {
+  deps = [ "//shot" ] + root_extra_deps
+}

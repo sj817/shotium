@@ -1,0 +1,18 @@
+# Copyright 2021 The Chromium Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//media/media_options.gni")
+import("//mojo/public/tools/bindings/mojom.gni")
+
+mojom("mojom") {
+  generate_java = true
+  sources = [
+    "context.mojom",
+    "sandbox.mojom",
+  ]
+
+  # Both out-of-process video accelerator features are gone with //media/gpu
+  # and //media/mojo.
+  enabled_features = []
+}

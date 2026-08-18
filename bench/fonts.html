@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Shot benchmark: fonts</title><link rel="stylesheet" href="assets/base.css">
+<style>
+  @font-face { font-family:AhemBench; src:url("../third_party/blink/web_tests/resources/Ahem.woff2") format("woff2"); font-display:block; }
+  .specimen { display:grid; grid-template-columns:repeat(2,1fr); gap:18px; margin-top:24px; }
+  .sheet { height:225px; padding:22px; overflow:hidden; }
+  .sheet b { display:block; margin-bottom:13px; color:#64748b; font:12px Arial,sans-serif; letter-spacing:1.5px; text-transform:uppercase; }
+  .ahem { font-family:AhemBench; } .s20 { font-size:20px; line-height:1.25; } .s32 { font-size:32px; line-height:1.1; }
+  .tight { letter-spacing:-2px; word-spacing:8px; } .wide { letter-spacing:4px; }
+  .metrics { display:grid; grid-template-columns:repeat(8,1fr); align-items:baseline; gap:4px; height:88px; border-block:1px solid #d6dee8; }
+  .metrics i { display:block; background:#2563eb; height:var(--h); }
+  .fallback { font-family:"Times New Roman",Georgia,serif; font-size:26px; }
+</style>
+<main class="page"><span class="eyebrow">Font fixture</span><h1>Web-font loading and glyph raster</h1><p class="lede">The Ahem WOFF2 file is checked into Chromium, so its glyph metrics are stable and network-free.</p>
+<section class="specimen"><article class="sheet panel"><b>Ahem · 20 / 25</b><div class="ahem s20">ABCDEFGHIJKLM<br>NOPQRSTUVWXYZ<br>0123456789 !?+-=</div></article><article class="sheet panel"><b>Ahem · tight and wide</b><div class="ahem s32 tight">STATIC SHOT</div><div class="ahem s20 wide">CSS FONT FACE</div></article><article class="sheet panel"><b>Baseline alignment</b><div class="metrics"><i style="--h:22px"></i><i style="--h:36px"></i><i style="--h:52px"></i><i style="--h:70px"></i><i style="--h:40px"></i><i style="--h:62px"></i><i style="--h:31px"></i><i style="--h:58px"></i></div><div class="ahem s20">BASELINE</div></article><article class="sheet panel"><b>Fallback comparison</b><div class="fallback">Hamburgefontsiv 012345</div><div style="font:23px Arial,sans-serif">Hamburgefontsiv 012345</div><div class="ahem s20">AAAAAAAAAAAAAAAA</div></article></section></main></html>

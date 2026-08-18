@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<meta charset="utf-8">
+<title>shot feature corpus</title>
+<!--
+  A page whose geometry is stated rather than laid out, so that a check can
+  assert exact pixel values instead of comparing against a golden image.
+
+  Nothing here is a rendering test -- render_corpus.html is that. This exists so
+  that fullPage, clip, selector, scale and omitBackground have something with
+  known coordinates to be wrong about:
+
+    - the document is 2000px tall and the viewport is not, so fullPage has
+      something to find below the fold
+    - #box is at exactly (40, 60) and is exactly 200x120, so clip and selector
+      must produce the same 200x120 image of solid #cc0000
+    - nothing paints a background, so with omitBackground the corners stay
+      transparent and without it they are the browser's white
+
+  The style lives in features.css rather than inline on purpose; see the comment
+  at the top of that file.
+-->
+<link rel="stylesheet" href="features.css">
+<div id="tall"></div>
+<div id="box"></div>
+</html>

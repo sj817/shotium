@@ -1,0 +1,108 @@
+# Copyright 2026 The Chromium Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# cppgc, vendored out of V8. See README.chromium for why this exists.
+#
+# Only the garbage collector is here. The JavaScript engine -- parser,
+# interpreter, TurboFan, snapshot, bindings -- is not, and nothing in this
+# target can reach it.
+#
+# The split into four source_sets mirrors V8's own targets (v8_libbase,
+# v8_heap_base, v8_libplatform, cppgc_base) and is not cosmetic:
+# src/base/logging.cc and src/heap/cppgc-internal/logging.cc map to the same
+# object file name, which GN rejects inside a single target.
+
+import("//third_party/cppgc/sources.gni")
+
+# Applied to cppgc's own translation units *and* to everything that includes a
+# cppgc header. These defines change the layout of Member<T> and of the heap, so
+# a mismatch between the two sides is not a compile error -- it is a crash at
+# run time. Keeping them in one public config is what makes that impossible.
+config("cppgc_config") {
+  include_dirs = [
+    # blink writes the include exactly as upstream does:
+    #     #include "v8/include/cppgc/type-traits.h"
+    # which resolves against the source root in a stock checkout because v8/ is
+    # there. Here cppgc is vendored under third_party/cppgc/v8, so this
+    # directory has to be on the search path for that same line to resolve.
+    # Adding it rather than rewriting the four includes in wtf and platform/heap
+    # keeps those files identical to upstream, which matters when they are next
+    # rebased.
+    ".",
+
+    # cppgc's own sources include "include/cppgc/..." and "cppgc/...".
+    "v8",
+    "v8/include",
+  ]
+
+  # Standalone is required, not preferred: the non-standalone path expects
+  # v8::CppHeap and the unified heap, which live in src/heap/cpp-heap.cc and are
+  # deliberately not vendored.
+  #
+  # Caged heap, young generation and pointer compression are all off. They are
+  # on in a stock Chromium build, but each one is another ABI bit that blink's
+  # headers and cppgc's implementation have to agree on, and the failure mode is
+  # silent. Member<T> is 8 bytes instead of 4 as a result; that is a memory cost
+  # we can afford here and revisit once the pipeline renders.
+  defines = [ "CPPGC_IS_STANDALONE" ]
+}
+
+# V8 does not build clean under Chromium's warning set; it has its own.
+template("v8_vendored_source_set") {
+  source_set(target_name) {
+    forward_variables_from(invoker, "*")
+    configs -= [ "//build/config/compiler:chromium_code" ]
+    configs += [ "//build/config/compiler:no_chromium_code" ]
+    if (!defined(public_configs)) {
+      public_configs = []
+    }
+    public_configs += [ ":cppgc_config" ]
+
+    # src/base/hashing.h and the platform code reach for absl directly, so
+    # every one of these sets needs it, not just the two that name it.
+    if (!defined(deps)) {
+      deps = []
+    }
+    deps += [ "//third_party/abseil-cpp:absl" ]
+  }
+}
+
+v8_vendored_source_set("v8_libbase") {
+  sources = v8_libbase_sources
+
+  # src/base/ieee754.cc pulls llvm-libc's shared math headers.
+  public_deps = [ "//third_party/llvm-libc:headers" ]
+
+  if (is_win) {
+    # platform-win32.cc and debug/stack_trace_win.cc.
+    libs = [
+      "winmm.lib",
+      "dbghelp.lib",
+    ]
+  }
+}
+
+v8_vendored_source_set("v8_heap_base") {
+  sources = v8_heap_base_sources
+  public_deps = [ ":v8_libbase" ]
+}
+
+v8_vendored_source_set("v8_libplatform") {
+  sources = v8_libplatform_sources
+  public_deps = [ ":v8_libbase" ]
+}
+
+v8_vendored_source_set("cppgc_base") {
+  sources = cppgc_base_sources
+  public_deps = [
+    ":v8_heap_base",
+    ":v8_libbase",
+    ":v8_libplatform",
+  ]
+}
+
+group("cppgc") {
+  public_deps = [ ":cppgc_base" ]
+}
+

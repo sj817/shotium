@@ -1,0 +1,56 @@
+# Copyright 2016 The Chromium Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Moved here from //chrome/process_version_rc_template.gni when //chrome was
+# deleted. The only changes are the two paths it used to reach into //chrome
+# for: the VERSION file and the default .rc template, both of which now live
+# under //shot.
+
+import("//build/config/chrome_build.gni")
+import("//build/util/lastchange.gni")
+import("//build/util/process_version.gni")
+
+# This is a wrapper around process_version() that eases the task of processing
+# a .rc.version file (used especially on Windows).
+#
+# This template automatically includes VERSION, LASTCHANGE and BRANDING, and
+# any additional source files are passed after those (so their values can
+# override the ones specified by those 3 files).
+#
+# Parameters:
+#   sources (optional):
+#     List of files with value definitions that will be passed in addition to
+#     VERSION, LASTCHANGE and BRANDING.
+#
+#   template_file (optional):
+#     Template file to use (not a list). If not specified, a default value,
+#     //shot/shot_version.rc.version will be used.
+#
+# This template forwards all other parameters directly to process_version().
+template("process_version_rc_template") {
+  if (defined(invoker.template_file)) {
+    _template_file = invoker.template_file
+  } else {
+    _template_file = "//shot/shot_version.rc.version"
+  }
+  _sources = [
+    "//shot/VERSION",
+    branding_file_path,
+    lastchange_file,
+  ]
+  if (defined(invoker.sources)) {
+    _sources += invoker.sources
+  }
+
+  process_version(target_name) {
+    template_file = _template_file
+    sources = _sources
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "sources",
+                             "template_file",
+                           ])
+  }
+}

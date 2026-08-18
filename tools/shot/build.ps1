@@ -1,0 +1,62 @@
+# Build //shot:shot, absorbing the two failure modes that are not build errors.
+#
+#   1. `gn gen` evaluates several Windows toolchain variants in parallel and they
+#      all write the same environment.x86 / environment.x64, so one of them
+#      intermittently loses and reports
+#          PermissionError: [Errno 13] Permission denied: 'environment.x64'
+#      This is a race, not a configuration error; the retry always wins.
+#
+#   2. ninja re-runs `gn gen` itself when a BUILD.gn changed since the last
+#      generate, which puts that same race inside the build. Running gn gen here
+#      first makes build.ninja current so ninja usually skips its own regen, and
+#      the ninja invocation is retried once for the case where it does not.
+#
+# -j 12 is a hard constraint on this host, not a preference: higher runs it out
+# of memory. See memory `chromium-build-host-quirks`.
+param(
+    [string]$Target = "shot",
+    [string]$Log = "",
+    [int]$Jobs = 12
+)
+
+$ErrorActionPreference = "Continue"
+Set-Location D:\Github\chromium
+
+function Invoke-GnGen {
+    for ($i = 1; $i -le 8; $i++) {
+        $out = (& .\buildtools\win\gn.exe gen out\Shot 2>&1 | Out-String)
+        if ($LASTEXITCODE -eq 0) {
+            Write-Output ("gn gen OK (attempt {0}): {1}" -f $i,
+                          (($out -split "`n" | Select-Object -Last 2) -join ' ').Trim())
+            return $true
+        }
+        if ($out -notmatch 'PermissionError') {
+            Write-Output "gn gen FAILED (attempt $i)"
+            Write-Output (($out -split "`n" | Select-Object -Last 25) -join "`n")
+            return $false
+        }
+    }
+    Write-Output "gn gen: gave up after 8 attempts on the environment.x64 race"
+    return $false
+}
+
+if (-not (Invoke-GnGen)) { exit 1 }
+
+if (-not $Log) {
+    $Log = Join-Path $env:TEMP ("shot-build-{0}.log" -f $Target)
+}
+
+for ($attempt = 1; $attempt -le 2; $attempt++) {
+    & ninja -C out\Shot $Target -j $Jobs -k 0 2>&1 | Out-File -Encoding utf8 $Log
+    $code = $LASTEXITCODE
+    if ($code -eq 0) { break }
+    $head = (Get-Content $Log -TotalCount 30) -join "`n"
+    if ($head -notmatch 'PermissionError.*environment\.x') { break }
+    Write-Output "ninja hit the toolchain race while regenerating; retrying"
+    if (-not (Invoke-GnGen)) { exit 1 }
+}
+
+Write-Output "log: $Log"
+Write-Output "ninja exit: $code"
+& python tools\shot\build_errors.py $Log --limit 40
+exit $code

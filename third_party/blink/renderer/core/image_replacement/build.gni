@@ -1,0 +1,16 @@
+# Copyright 2026 The Chromium Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# image_replacement_test.cc was not restored with the rest of this directory:
+# it's ~1800 lines with its own test-harness dependencies that were never
+# verified against this cut, and nothing wired it into core/BUILD.gn's test
+# sources before. The four files below are a real, live-called restore (see
+# core/html/html_image_element.cc, core/layout/layout_image_replacement.cc);
+# the test file is a separate, unverified addition and was left out.
+blink_core_sources_image_replacement = [
+  "document_image_replacements.cc",
+  "document_image_replacements.h",
+  "image_replacement.cc",
+  "image_replacement.h",
+]

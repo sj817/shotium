@@ -1,0 +1,43 @@
+# Copyright 2026 The Chromium Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# What is left of core/inspector. The DevTools agent, the protocol session
+# handlers and the inspector agents are all cut; DevToolsEmulator is not part
+# of them in any meaningful sense.
+#
+# It applies device emulation to a WebViewImpl -- device scale factor, viewport
+# size, screen orientation, forced text autosizing, LCD text preference -- and
+# WebViewImpl, WebSettingsImpl and ChromeClientImpl all call into it on the
+# ordinary rendering path, not just when a DevTools frontend is attached. It
+# also has no reference to V8 or to the protocol; it went only because it was
+# sitting in the same directory as the things that did.
+#
+# ConsoleMessage is here for the same reason: it is the object every part of
+# blink builds to report a problem, ~180 call sites construct one, and it holds
+# no V8 type. See console_message.cc for what did not come back with it.
+#
+# ConsoleMessageStorage is ConsoleMessage's per-Page ring buffer -- also no V8
+# type -- and Page::GetConsoleMessageStorage()/FrameConsole::AddMessageToStorage()
+# kept calling it after the inspector sweep removed it. See
+# console_message_storage.cc for what it lost: the probe call that notified an
+# attached DevTools frontend.
+blink_core_sources_inspector = [
+  "console_message.cc",
+  "console_message.h",
+  "console_message_storage.cc",
+  "console_message_storage.h",
+  "dev_tools_emulator.cc",
+  "dev_tools_emulator.h",
+  "agent_registry.h",
+  "invalidation_set_to_selector_map.cc",
+
+  # A 30-line HeapHashMap<Member<const StyleRule>,
+  # Member<const StyleSheetContents>> back-mapping, with no V8 in it. It went
+  # with core/inspector but InvalidationSetToSelectorMap needs it, and that is
+  # called from eight files in core/css on the ordinary style path
+  # (element_rule_collector, rule_set, style_engine, invalidation/*).
+  "style_rule_to_style_sheet_contents_map.cc",
+  "style_rule_to_style_sheet_contents_map.h",
+  "invalidation_set_to_selector_map.h",
+]

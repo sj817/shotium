@@ -1,0 +1,35 @@
+# Copyright 2020 The Chromium Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+blink_core_sources_script = [
+  "cache_hint_attribute_value.cc",
+  "cache_hint_attribute_value.h",
+  "classic_pending_script.cc",
+  "classic_pending_script.h",
+  "classic_script.cc",
+  "classic_script.h",
+  "document_write_intervention.cc",
+  "document_write_intervention.h",
+  "fetch_client_settings_object_impl.cc",
+  "fetch_client_settings_object_impl.h",
+  "html_parser_script_runner.cc",
+  "html_parser_script_runner.h",
+  "html_parser_script_runner_host.h",
+  "ignore_destructive_write_count_incrementer.h",
+  "pending_script.cc",
+  "pending_script.h",
+  "script.h",
+  "script_element_base.cc",
+  "script_element_base.h",
+  "script_loader.cc",
+  "script_loader.h",
+  "script_runner.cc",
+  "script_runner.h",
+  "script_scheduling_type.h",
+  "xml_parser_script_runner.cc",
+  "xml_parser_script_runner.h",
+  "xml_parser_script_runner_host.h",
+]
+
+blink_core_tests_script = []

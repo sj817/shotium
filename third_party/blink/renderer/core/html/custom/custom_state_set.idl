@@ -1,0 +1,14 @@
+// Copyright 2021 The Chromium Authors
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// https://wicg.github.io/custom-state-pseudo-class/#customstateset
+[
+  Exposed=Window
+]
+interface CustomStateSet {
+  setlike<DOMString>;
+  // add() was removed: it was reachable only from a custom element's own
+  // script, and this engine has no script engine to call it (nor can it
+  // define custom elements at all without one).
+};
