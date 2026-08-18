@@ -1618,3 +1618,31 @@ mixin,分布在 66 个文件**里 —— `blink/public/mojom/*` 里一大片指�
   找的是 `--grep=^Change-Id:`,而发布仓库是一个压扁的孤儿提交,没有 Change-Id。
 - 磁盘不是瓶颈:runner 上 C: 剩 45 GB、D: 剩 219 GB,而 workspace 在 D:。
   最早那版 workflow 只打印 C:,差点把「够不够」判断在错误的盘上。
+
+### 21.6 编译真的开始了,然后 sccache 把它弄停了
+
+`gn gen` 过了,ninja 报出整张图 **14,907 条边**,编到第 7 条时死掉 —— 不是代码:
+
+```
+sccache: error: Server startup failed: cache storage failed to read:
+  uri: https://.../\_apis/artifactcache/cache?keys=sccache/.sccache_check
+  response: status: 400  <h2>Our services aren't available right now</h2>
+```
+
+`_apis/artifactcache` 是 Actions Cache 的 **v1 API**,GitHub 已经停服。sccache 启动
+失败就整个退出,ninja 跟着停。
+
+换掉,而不是修:**直接缓存构建目录本身**(`actions/cache` 存 `src/out/Shot`)。
+理由是 ninja 本来就是增量的,它需要的只是自己的输出目录回来 —— 在它前面再放一层
+编译器缓存,是多一层可以坏掉的东西。配套的三件事:
+
+- `ninja` 那步给 `continue-on-error: true` 和自己的 `timeout-minutes: 280`。
+  **超时不能把保存缓存那步一起带走** —— 靠 job 级超时的话,后面的步骤能不能跑
+  取决于 cancel 的语义,不可靠;给这一步单独的预算就没有这个问题。
+- 保存之后单独一步检查 `shot.exe` 在不在。ninja 可以没编完,job 不可以把这叫成功。
+- `args.gn` 每次必须写出**逐字节相同**的内容,否则恢复回来的目标文件全部失效。
+
+顺带确认了两件事:runner 上是 **Visual Studio 18 Enterprise**,`vs_toolchain.py`
+自己找得到,所以把 `GYP_MSVS_VERSION` 拿掉了 —— 写死一个版本号只是一句会过期的
+断言。SDK 检测步骤挑中 **10.0.26100.0**,clang-cl 用它的头文件编前 7 个 TU 没有
+抱怨。

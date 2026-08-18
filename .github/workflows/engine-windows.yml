@@ -8,10 +8,10 @@
 #
 # It is still worth running, for two reasons. It reports exactly where it dies,
 # which is the only honest way to find out whether the disk, the toolchain fetch
-# or the clock is the binding constraint. And the sccache is saved even when the
-# job fails, so a second run starts warm and gets further -- the build bootstraps
-# across several runs rather than needing one long one. Once the cache is full a
-# run is minutes.
+# or the clock is the binding constraint. And the build directory is stored even
+# when ninja runs out of time, so the next run restores it and carries on -- the
+# build bootstraps across several runs rather than needing one long one. Once it
+# is complete a run is minutes.
 #
 # If you want it green in one go, point `runs-on` at a self-hosted Windows
 # runner, or at a larger GitHub runner. Nothing else needs to change.
@@ -50,10 +50,12 @@ jobs:
                            # "save the cache" step still gets to run
 
     env:
-      DEPOT_TOOLS_WIN_TOOLCHAIN: '0'   # use the locally installed Visual Studio
+      DEPOT_TOOLS_WIN_TOOLCHAIN: '0'   # use the runner's Visual Studio; Google's
+                                       # packaged toolchain is not public
+      # GYP_MSVS_VERSION is deliberately unset. The runner image currently
+      # carries Visual Studio 18, and vs_toolchain.py picks that up on its own;
+      # naming a version here would only be a claim that goes stale.
       DEPOT_TOOLS_UPDATE: '0'
-      GYP_MSVS_VERSION: '2022'
-      SCCACHE_GHA_ENABLED: 'true'
 
     steps:
       - name: free up disk
@@ -123,9 +125,6 @@ jobs:
           "CHROMIUM_WIN_SDK_VERSION=$sdk" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "building against $sdk"
 
-      - name: sccache
-        uses: mozilla-actions/sccache-action@v0.0.6
-
       - name: gclient solution
         shell: pwsh
         # "managed": False is the whole point -- see the note at the top.
@@ -150,34 +149,59 @@ jobs:
           gclient runhooks
           Get-PSDrive -PSProvider FileSystem | Select-Object Name,Used,Free
 
+      - name: restore the build directory
+        uses: actions/cache/restore@v4
+        # This is what makes a killed run useful to the next one. ninja is
+        # already incremental; all it needs is its output directory back, so
+        # the cache is the build directory itself rather than a compiler cache
+        # in front of it. (sccache was here first and could not be used: it
+        # talks to the retired v1 Actions cache API, which now answers 400.)
+        with:
+          path: src/out/Shot
+          key: out-shot-${{ github.run_id }}
+          restore-keys: |
+            out-shot-
+
       - name: gn gen
         shell: pwsh
         working-directory: src
         # args.gn imports the checked-in configuration rather than passing it
         # as --args: the file has quoted values in it, and those do not survive
-        # being interpolated into a command line. cc_wrapper routes every
-        # compile through sccache, which is what makes a killed run useful to
-        # the next one.
+        # being interpolated into a command line. Writing the same one byte for
+        # byte every run is also what keeps the restored build directory valid
+        # -- a different args.gn would invalidate every object in it.
         run: |
           New-Item -ItemType Directory -Force out/Shot | Out-Null
-          @'
-          import("//build/args/shot.gn")
-          cc_wrapper = "sccache"
-          '@.Trim() -replace '(?m)^\s+', '' | Out-File -FilePath out/Shot/args.gn -Encoding ascii
+          'import("//build/args/shot.gn")' | Out-File -FilePath out/Shot/args.gn -Encoding ascii
           Get-Content out/Shot/args.gn
           gn gen out/Shot
 
       - name: ninja
         shell: pwsh
         working-directory: src
+        continue-on-error: true
+        timeout-minutes: 280   # leaves the job time to store what got built
         run: |
           ninja -C out/Shot shot -j ${{ github.event.inputs.jobs }}
 
-      - name: sccache stats
+      - name: save the build directory
         if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: src/out/Shot
+          key: out-shot-${{ github.run_id }}
+
+      - name: did the build finish
         shell: pwsh
+        working-directory: src
+        # ninja is allowed to run out of time; the job is not allowed to call
+        # that a success. Re-running picks up where this left off.
         run: |
-          if (Get-Command sccache -ErrorAction SilentlyContinue) { sccache --show-stats }
+          if (-not (Test-Path out/Shot/shot.exe)) {
+            throw "shot.exe was not produced -- the build got further, but is not done. Run this workflow again; the cache carries the objects over."
+          }
+          Get-Item out/Shot/shot.exe | Select-Object Length,LastWriteTime
+
 
       - name: package
         if: success()
