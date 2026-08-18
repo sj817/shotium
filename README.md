@@ -157,9 +157,14 @@ gclient sync --nohooks --no-history
 gclient runhooks
 
 cd src
-gn gen out/Shot --args="$(cat build/args/shot.gn)"
+mkdir -p out/Shot
+echo 'import("//build/args/shot.gn")' > out/Shot/args.gn
+gn gen out/Shot
 ninja -C out/Shot shot
 ```
+
+The `import` rather than `--args="$(cat ...)"`: the file contains quoted values,
+which do not survive being interpolated into a shell argument.
 
 `build/args/shot.gn` is the release configuration: official build, ThinLTO,
 `-Os`, DCHECKs off, and a list of features turned off with a comment on each

@@ -110,13 +110,19 @@ jobs:
       - name: gn gen
         shell: pwsh
         working-directory: src
-        # cc_wrapper routes every compile through sccache, which is what makes a
-        # killed run useful to the next one.
+        # args.gn imports the checked-in configuration rather than passing it
+        # as --args: the file has quoted values in it, and those do not survive
+        # being interpolated into a command line. cc_wrapper routes every
+        # compile through sccache, which is what makes a killed run useful to
+        # the next one.
         run: |
-          $shotArgs = (Get-Content build/args/shot.gn -Raw)
-          $shotArgs += "`ncc_wrapper = ""sccache"""
-          $shotArgs | Out-File -FilePath shot-ci.gn -Encoding ascii
-          gn gen out/Shot "--args=$(Get-Content shot-ci.gn -Raw)"
+          New-Item -ItemType Directory -Force out/Shot | Out-Null
+          @'
+          import("//build/args/shot.gn")
+          cc_wrapper = "sccache"
+          '@.Trim() -replace '(?m)^\s+', '' | Out-File -FilePath out/Shot/args.gn -Encoding ascii
+          Get-Content out/Shot/args.gn
+          gn gen out/Shot
 
       - name: ninja
         shell: pwsh
