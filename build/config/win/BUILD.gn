@@ -17,6 +17,15 @@ import("//build/toolchain/toolchain.gni")
 assert(is_win)
 
 declare_args() {
+  # The NTDDI_VERSION this build targets. It has to name a symbol the installed
+  # SDK actually defines: an unknown identifier is 0 in a preprocessor
+  # comparison, so naming one the SDK does not have does not produce an error --
+  # it silently deletes every declaration guarded on the version, and the build
+  # fails much later with "unknown type name" on things like
+  # FILE_INFO_BY_HANDLE_CLASS. The default is the symbol that goes with the SDK
+  # named in build/vs_toolchain.py; override both together.
+  win_ntddi_version = "NTDDI_WIN11_BR"
+
   # Turn this on to have the linker output extra timing information.
   win_linker_timing = false
 
@@ -305,7 +314,7 @@ config("runtime_library") {
 # manually override this config for their compiles.
 config("winver") {
   defines = [
-    "NTDDI_VERSION=NTDDI_WIN11_BR",
+    "NTDDI_VERSION=$win_ntddi_version",
 
     # We can't say `=_WIN32_WINNT_WIN10` here because some files do
     # `#if WINVER < 0x0600` without including windows.h before,

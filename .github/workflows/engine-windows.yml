@@ -125,6 +125,24 @@ jobs:
           "CHROMIUM_WIN_SDK_VERSION=$sdk" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "building against $sdk"
 
+          # And the NTDDI symbol has to come from the same SDK. An identifier
+          # the preprocessor has never heard of compares as 0, so naming a
+          # newer one than the SDK defines is not an error -- it quietly turns
+          # off every version-guarded declaration, and the failure surfaces
+          # thousands of lines later as "unknown type name". Take the highest
+          # one this SDK actually defines.
+          $ddk = "$root\Include\$sdk\shared\sdkddkver.h"
+          $ntddi = Select-String -Path $ddk -Pattern '^\s*#define\s+(NTDDI_WIN\w+)\s+0x([0-9A-Fa-f]{8})\s*$' |
+            ForEach-Object {
+              [pscustomobject]@{
+                Name  = $_.Matches[0].Groups[1].Value
+                Value = [Convert]::ToUInt32($_.Matches[0].Groups[2].Value, 16)
+              }
+            } | Sort-Object Value | Select-Object -Last 1
+          if (-not $ntddi) { throw "no NTDDI_WIN* symbols in $ddk" }
+          "WIN_NTDDI_VERSION=$($ntddi.Name)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "targeting $($ntddi.Name) (0x$('{0:X8}' -f $ntddi.Value))"
+
       - name: gclient solution
         shell: pwsh
         # "managed": False is the whole point -- see the note at the top.
@@ -172,7 +190,10 @@ jobs:
         # -- a different args.gn would invalidate every object in it.
         run: |
           New-Item -ItemType Directory -Force out/Shot | Out-Null
-          'import("//build/args/shot.gn")' | Out-File -FilePath out/Shot/args.gn -Encoding ascii
+          @(
+            'import("//build/args/shot.gn")'
+            "win_ntddi_version = ""$env:WIN_NTDDI_VERSION"""
+          ) | Out-File -FilePath out/Shot/args.gn -Encoding ascii
           Get-Content out/Shot/args.gn
           gn gen out/Shot
 

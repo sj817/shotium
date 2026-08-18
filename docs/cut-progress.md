@@ -1646,3 +1646,27 @@ sccache: error: Server startup failed: cache storage failed to read:
 自己找得到,所以把 `GYP_MSVS_VERSION` 拿掉了 —— 写死一个版本号只是一句会过期的
 断言。SDK 检测步骤挑中 **10.0.26100.0**,clang-cl 用它的头文件编前 7 个 TU 没有
 抱怨。
+
+### 21.7 `NTDDI_WIN11_BR`:一个不存在的宏,不会报错,只会让声明消失
+
+换掉 sccache 之后 ninja 真的开编,第 8 条边炸了:
+
+```
+fileapi.h(1081,10): error: unknown type name 'FILE_INFO_BY_HANDLE_CLASS'
+winbase.h(9388,11): error: unknown type name 'FILE_INFO_BY_HANDLE_CLASS'
+```
+
+看起来像 SDK 坏了,其实是命令行里的 `-DNTDDI_VERSION=NTDDI_WIN11_BR`。
+`build/config/win/BUILD.gn` 的 `config("winver")` 把它写死,而
+**`NTDDI_WIN11_BR` 是 SDK 28000 才有的符号**(28000 的 `sdkddkver.h`:
+`NTDDI_WIN11_GE 0x0A000010`、`NTDDI_WIN11_DT ...11`、`NTDDI_WIN11_BR ...12`),
+26100 里没有。
+
+关键在于**这不会报错**:预处理器把没见过的标识符在 `#if` 里当 0,于是
+`NTDDI_VERSION` 变成 0,所有 `#if NTDDI_VERSION >= NTDDI_WIN7` 之类的守卫全部为假,
+`FILE_INFO_BY_HANDLE_CLASS` 这些声明**静悄悄地消失**,几千行之后才以「未知类型名」
+的形式冒出来。所以这类错误不能按字面读。
+
+改成 gn 参数 `win_ntddi_version`,默认值仍是 `NTDDI_WIN11_BR`(本机不变);CI 在
+选定 SDK 之后顺手从**同一个** `sdkddkver.h` 里把所有 `NTDDI_WIN*` 宏的值解析出来
+取最大的那个,写进 `args.gn`。SDK 和 NTDDI 必须来自同一处,这是本质约束,不是巧合。
