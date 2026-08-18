@@ -15,7 +15,9 @@
 #include "base/task/thread_pool.h"
 #include "base/timer/elapsed_timer.h"
 #include "base/types/pass_key.h"
+#if !defined(IS_SHOT_BUILD)
 #include "mojo/public/cpp/bindings/callback_helpers.h"
+#endif
 #include "mojo/public/cpp/bindings/receiver.h"
 #include "mojo/public/cpp/bindings/remote.h"
 #include "mojo/public/cpp/bindings/self_owned_receiver.h"
@@ -25,7 +27,9 @@
 #include "services/network/public/cpp/loading_params.h"
 #include "services/network/public/cpp/source_stream_to_data_pipe.h"
 #include "services/network/public/mojom/early_hints.mojom.h"
+#if !defined(IS_SHOT_BUILD)
 #include "services/network/public/mojom/network_service.mojom.h"
+#endif
 #include "services/network/public/mojom/url_response_head.mojom.h"
 
 namespace network {
@@ -377,6 +381,7 @@ void ContentDecodingInterceptor::Intercept(
 }
 
 // static
+#if !defined(IS_SHOT_BUILD)
 void ContentDecodingInterceptor::InterceptOnNetworkService(
     mojom::NetworkService& network_service,
     const std::vector<net::SourceStreamType>& types,
@@ -416,6 +421,7 @@ void ContentDecodingInterceptor::DecodeOnNetworkService(
           net::ERR_FAILED));
   body = std::move(data_pipe_pair->second);
 }
+#endif
 
 // static
 void ContentDecodingInterceptor::SetIsNetworkServiceRunningInTheCurrentProcess(

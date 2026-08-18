@@ -1,0 +1,16 @@
+# Copyright 2026 The Chromium Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Sources from //services/network/public/mojom:mojom reachable from Shot's URL
+# loading and Direct Sockets interfaces. Imported Mojom files are provided by
+# the aggregate target's existing public dependencies.
+shot_network_mojom_sources = [
+  "restricted_udp_socket.mojom",
+  "socket_connection_tracker.mojom",
+  "ssl_config.mojom",
+  "tcp_socket.mojom",
+  "tls_socket.mojom",
+  "udp_socket.mojom",
+  "url_loader_factory.mojom",
+]

@@ -3,9 +3,11 @@
 # found in the LICENSE file.
 
 import("//build/config/dcheck_always_on.gni")
+import("//build/config/shot_build.gni")
 import("//mojo/public/tools/bindings/mojom.gni")
 import("//net/features.gni")
 import("//services/network/public/cpp/features.gni")
+import("//services/network/public/mojom/shot_sources.gni")
 
 # These interfaces are put in their own target to avoid a circular dependency,
 # which comes from the fact that proxy_resolver service uses these interfaces,
@@ -1026,9 +1028,7 @@ mojom("url_loader_base") {
       traits_sources = [
         "//services/network/public/cpp/device_bound_sessions_mojom_traits.cc",
       ]
-      traits_public_deps = [
-        "//net",
-      ]
+      traits_public_deps = [ "//net" ]
     },
     {
       types = [
@@ -1994,6 +1994,11 @@ mojom("mojom") {
     ]
   }
 
+  if (is_shot_build) {
+    sources = []
+    sources = shot_network_mojom_sources
+  }
+
   has_dchecks = is_debug || dcheck_always_on
   if (has_dchecks && is_win) {
     enabled_features += [ "win_permissions_validation" ]
@@ -2014,11 +2019,10 @@ mojom("mojom") {
     enabled_features += [ "use_network_interface_change_listener" ]
   }
 
-
   # Typemaps which apply to both Blink and non-Blink bindings.
   shared_cpp_typemaps = []
 
-  if (is_p2p_enabled) {
+  if (is_p2p_enabled && !is_shot_build) {
     shared_cpp_typemaps += [
       {
         types = [
@@ -2252,6 +2256,10 @@ mojom("mojom") {
         traits_public_deps = [ "//net" ]
       },
     ]
+  }
+
+  if (is_shot_build) {
+    cpp_typemaps = []
   }
 
   cpp_typemaps += shared_cpp_typemaps

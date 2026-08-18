@@ -25,6 +25,7 @@
 is_debug = false
 is_component_build = false
 symbol_level = 0
+is_shot_build = true
 
 # Embed ICU data so the executable stays self-contained. The companion
 # v8_use_external_startup_data is gone with //v8: no declare_args block

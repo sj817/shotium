@@ -3,8 +3,10 @@
 # found in the LICENSE file.
 
 import("//build/config/features.gni")
+import("//build/config/shot_build.gni")
 import("//build/config/ui.gni")
 import("//mojo/public/tools/bindings/mojom.gni")
+import("//third_party/blink/public/mojom/shot_sources.gni")
 import("//third_party/blink/public/public_features.gni")
 import("//third_party/blink/renderer/config.gni")
 
@@ -276,6 +278,11 @@ mojom("mojom_platform") {
     "worker/worklet_global_scope_creation_params.mojom",
   ]
 
+  if (is_shot_build) {
+    sources = []
+    sources = shot_mojom_platform_sources
+  }
+
   if (is_android) {
     sources += [ "input/synchronous_compositor.mojom" ]
   }
@@ -376,8 +383,7 @@ mojom("mojom_platform") {
 
   # Chromium without blink doesn't use and must not depend on //media
   if (use_blink) {
-    public_deps += [
-    ]
+    public_deps += []
   }
 
   enabled_features = []
@@ -854,6 +860,11 @@ mojom("mojom_core") {
     "worker/shared_worker_factory.mojom",
   ]
 
+  if (is_shot_build) {
+    sources = []
+    sources = shot_mojom_core_sources
+  }
+
   public_deps = [
     ":android_mojo_bindings",
     ":color_scheme_mojo_bindings",
@@ -1094,6 +1105,11 @@ mojom("mojom_modules") {
     "storage_access/storage_access_handle.mojom",
   ]
 
+  if (is_shot_build) {
+    sources = []
+    sources = shot_mojom_modules_sources
+  }
+
   public_deps = [
     ":android_mojo_bindings",
     ":mojom_core",
@@ -1117,11 +1133,9 @@ mojom("mojom_modules") {
   export_define_blink = "BLINK_MODULES_IMPLEMENTATION=1"
   export_header_blink = "third_party/blink/renderer/modules/modules_export.h"
 
-  blink_cpp_typemaps = [
-  ]
+  blink_cpp_typemaps = []
 
-  cpp_typemaps = [
-  ]
+  cpp_typemaps = []
 }
 
 mojom("mojom_mhtml_load_result") {
@@ -1242,4 +1256,3 @@ mojom_component("credentialmanagement_mojo_bindings") {
   export_define_blink = "BLINK_PLATFORM_IMPLEMENTATION=1"
   export_header_blink = "third_party/blink/renderer/platform/platform_export.h"
 }
-

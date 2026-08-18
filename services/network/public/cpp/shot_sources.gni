@@ -1,0 +1,44 @@
+# Copyright 2026 The Chromium Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Implementations from //services/network/public/cpp:cpp that are reachable
+# from the Shot target. Keep this list separate so regular Chromium builds
+# retain the complete network public C++ surface.
+shot_network_cpp_sources = [
+  "avail_language_header_parser.cc",
+  "connection_allowlist_parser.cc",
+  "constants.cc",
+  "content_decoding_interceptor.cc",
+  "content_language_parser.cc",
+  "cors/cors.cc",
+  "cors/origin_access_list.cc",
+  "cross_origin_embedder_policy_parser.cc",
+  "cross_origin_opener_policy_parser.cc",
+  "data_pipe_to_source_stream.cc",
+  "declarative_performance_observer_parser.cc",
+  "document_isolation_policy_parser.cc",
+  "fence_event_reporting_parser.cc",
+  "header_util.cc",
+  "ip_address_space_util.cc",
+  "link_header_parser.cc",
+  "loading_params.cc",
+  "net_adapters.cc",
+  "no_vary_search_header_parser.cc",
+  "not_implemented_url_loader_factory.cc",
+  "origin_agent_cluster_parser.cc",
+  "parsed_headers.cc",
+  "request_destination.cc",
+  "request_mode.cc",
+  "self_deleting_url_loader_factory.cc",
+  "shared_url_loader_factory.cc",
+  "single_request_url_loader_factory.cc",
+  "source_stream_to_data_pipe.cc",
+  "sri_message_signatures.cc",
+  "supports_loading_mode/supports_loading_mode_parser.cc",
+  "timing_allow_origin_parser.cc",
+  "unencoded_digests.cc",
+  "url_util.cc",
+  "wrapper_shared_url_loader_factory.cc",
+  "x_frame_options_parser.cc",
+]

@@ -3,9 +3,11 @@
 # found in the LICENSE file.
 
 import("//build/buildflag_header.gni")
+import("//build/config/shot_build.gni")
 import("//mojo/public/tools/bindings/mojom.gni")
 import("//net/features.gni")
 import("//services/network/public/cpp/features.gni")
+import("//services/network/public/cpp/shot_sources.gni")
 import("//testing/libfuzzer/fuzzer_test.gni")
 import("//testing/test.gni")
 import("//third_party/blink/renderer/build/scripts/scripts.gni")  # TODO(crbug.com/397934758)
@@ -179,6 +181,11 @@ component("cpp") {
     "x_frame_options_parser.h",
   ]
 
+  if (is_shot_build) {
+    sources = []
+    sources = shot_network_cpp_sources
+  }
+
   configs += [ "//build/config/compiler:wexit_time_destructors" ]
 
   public_deps = [
@@ -203,6 +210,9 @@ component("cpp") {
   ]
 
   defines = [ "IS_NETWORK_CPP_IMPL" ]
+  if (is_shot_build) {
+    defines += [ "IS_SHOT_BUILD" ]
+  }
 }
 
 # These interfaces are put in their own target so that modules that only
@@ -733,7 +743,6 @@ if (is_p2p_enabled) {
     ]
 
     defines = [ "IS_NETWORK_CPP_P2P_IMPL" ]
-
 
     deps = [
       ":network_param_mojom_support",

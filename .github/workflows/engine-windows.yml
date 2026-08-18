@@ -79,11 +79,14 @@ jobs:
           }
           Get-PSDrive -PSProvider FileSystem | Select-Object Name,Used,Free
 
-      - name: checkout (shallow -- history is not a build input)
+      - name: checkout
         uses: actions/checkout@v4
         with:
           path: src
-          fetch-depth: 1
+          # The history is not a build input, but it is a timestamp input: the
+          # step that makes ninja's incremental state usable reads, per file,
+          # the commit that last touched it. See tools/shot/ci_stamp_mtimes.py.
+          fetch-depth: 0
           submodules: false   # gclient fetches the DEPS-managed ones itself
 
       - name: depot_tools
@@ -166,6 +169,15 @@ jobs:
           gclient sync --nohooks --no-history --shallow --verbose
           gclient runhooks
           Get-PSDrive -PSProvider FileSystem | Select-Object Name,Used,Free
+
+      - name: make source timestamps content-faithful
+        shell: pwsh
+        # Without this the cached build directory is useless: checkout and
+        # gclient stamp every file with "now", so every source looks newer than
+        # every restored object and ninja rebuilds all 14,906 edges. See the
+        # script for what each kind of file gets.
+        run: |
+          python src/tools/shot/ci_stamp_mtimes.py .
 
       - name: restore the build directory
         uses: actions/cache/restore@v4
