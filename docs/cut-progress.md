@@ -1511,3 +1511,86 @@ Windows 和 Linux 上**没有**四参数(未标注流量)的重载 —— 只有
 | §19.7 那一张表 | ~5.3 MB | 仍然有效 |
 
 现在压缩后 16.69 MB,目标是 15 MB。差 1.69 MB,上表随便凑两项就够。
+
+## 21. CI:一个公网 runner 到底卡在哪
+
+第一次真的把 `engine (windows)` 跑起来,连 `gclient sync` 都没过。四个问题,每一个
+都是「裁剪之后才存在」或者「本机看不见」的,记在这里。
+
+### 21.1 `git.bat`:被自己的 `DEPOT_TOOLS_UPDATE=0` 挡住的 bootstrap
+
+```
+File "C:\depot_tools\git_cache.py", line 218, in GetCachePath
+  subprocess.check_output(
+FileNotFoundError: [WinError 2] The system cannot find the file specified
+```
+
+`git_cache.py` 里写死 `git_exe = "git.bat" if sys.platform.startswith("win")`。
+那个 `git.bat` 不在 depot_tools 仓库里,是 `bootstrap/bootstrap.py` 生成的
+(`WIN_GIT_STUB_NAMES`)。而 `gclient.bat` 只在**要自更新的时候**才会
+`call update_depot_tools.bat`,bootstrap 就挂在那条路径的末尾。我为了让每次 CI
+用它自己 clone 的那个 depot_tools(而不是跑到一半被上游新版本换掉)设了
+`DEPOT_TOOLS_UPDATE=0`,正好把唯一一条通往 bootstrap 的路跳过去了。
+
+要命的是 runner 上 **`git.exe` 是有的**(Git for Windows 在 PATH 里),所以看起来
+「git 明明能用」。gclient 找的不是 `git`,是 `git.bat`。
+
+修法:clone 完显式 `call bootstrap\win_tools.bat`,然后断言 `git.bat` 存在。
+`win_tools.bat` 是自足的(cipd 自举),不需要先跑自更新。
+
+### 21.2 `version_file`:条件还没判,文件已经读了
+
+```
+FileNotFoundError: 'src\chrome/build/android-arm.orderfile.txt'
+```
+
+DEPS 里四个 Android orderfile 的 CIPD 包用 `'version_file'` 指向仓库里的一个 txt。
+gclient 在 `_deps_to_objects` → `CipdDependency.__init__` 里就把它读掉了 ——
+**`'condition': 'checkout_android and non_git_source'` 是之后才判的**。所以哪怕
+`target_os = ["win"]`、`checkout_android` 是 False,少了那个 txt 一样解析不下去。
+
+这是「删文件」和「删依赖」不同步的典型:txt 早在第一波裁 Android 时就没了,但
+DEPS 里的引用留着。修法是把那四块从 DEPS 删掉,而不是把 txt 恢复回来 —— 这棵树
+永远不会构建 Android。
+
+### 21.3 `tast_control`:一个无条件 hook,输入在 //chromeos
+
+顺着上一个问题查的时候顺手把 57 个 hook 全过了一遍:哪些是无条件的、它们引用的
+路径还在不在。只有一个真的会炸 ——
+
+```
+'name': 'tast_control',            # 没有 condition
+'action': [..., '-o', 'src/chromeos/tast_control.gni',
+                '-t', 'src/chromeos/tast_control.gni.template', ...]
+```
+
+脚本 `build/util/tast_control.py` 还在,输入全没了(`chromeos/` 整个删了)。
+`remove_stale_files` / `remove_stale_pyc_files` 引用的路径也不存在,但那两个的
+工作就是删东西,缺了正好。
+
+**方法值得记**:与其一次跑一次 CI 撞一个,不如把 DEPS 里所有 hook 的 `'src/...'`
+token 抓出来,逐个 `os.path.exists`,再按 condition 分类。一次就把剩下三个雷
+(`ios_internal`、`telemetry`、`v8 builtins-pgo`)确认为「条件为假,不会跑」。
+
+### 21.4 Windows SDK:pin 的是目录名,不是兼容性
+
+`build/vs_toolchain.py` 里 `SDK_VERSION = '10.0.28000.0'`,注释写着
+「VS 2026 18 with 10.0.28000.2270 SDK」。公网 runner 上没有,也装不了 ——
+Chromium 平时用的那个打包工具链要从 Google 内部的 GCS 桶下载
+(`DEPOT_TOOLS_WIN_TOOLCHAIN=1` 那条路),外面拿不到。所以 CI 只能用镜像自带的
+Visual Studio,也就只能用镜像自带的 SDK。
+
+关键判断:**那个常量是拿去拼目录名的**(`Include/<SDK_VERSION>/um/...`),
+不是「低于此版本编不过」的声明。真正的能力检查在同一个文件里,叫
+`SDKIncludesIDCompositionDevice4()` —— 它打开 `dcomp.h` 找一个 GUID,因为那个接口
+是在一次不涨主版本号的 servicing release 里加的。既然版本号本身不承载兼容性,
+就不该让它把一个装好了的 SDK 判死。
+
+改成 `os.environ.get('CHROMIUM_WIN_SDK_VERSION', '10.0.28000.0')`,两个文件都改
+(`build/vs_toolchain.py` 和 `build/toolchain/win/setup_toolchain.py`,注释里明写
+这两个必须一致)。CI 里加一步扫 `Windows Kits\10\Include`,挑出**同时**有
+`um\windows.h` 和 `Lib\...\um\x64\kernel32.lib` 的最新一个 —— 镜像里确实存在只有
+一半的 SDK 目录。本地默认值不变。
+
+这条改完之后,头文件比本机旧。如果有代码依赖新 SDK,它会在编译期说话;那时候读到
+的报错是「这段代码需要新头文件」,不是「构建坏了」。

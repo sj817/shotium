@@ -22,7 +22,8 @@ sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir))
 import gn_helpers
 
 SCRIPT_DIR = os.path.dirname(__file__)
-SDK_VERSION = '10.0.28000.0'
+# Overridable by the environment; see the note in build/vs_toolchain.py.
+SDK_VERSION = os.environ.get('CHROMIUM_WIN_SDK_VERSION', '10.0.28000.0')
 MSVC_DIR = re.compile('^.*/VC/Tools/MSVC/[^/]+/include$')
 WINDOWS_KITS_DIR = re.compile(r'^(.*/Windows Kits/\d+/Include/[^/]+)/.*')
 

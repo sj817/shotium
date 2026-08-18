@@ -136,8 +136,20 @@ the next `gclient sync` will reset the tree to upstream and undo everything this
 repository is.
 
 You need [depot_tools] on your `PATH`, Visual Studio with the Windows SDK
-(**10.0.28000**; older SDKs do not work — see `docs/cut-progress.md`), and about
-40 GB of disk.
+(**10.0.28000** is what the tree pins), and about 40 GB of disk.
+
+The pin is a directory name rather than a compatibility statement, and it lives
+in two files that must agree — `build/vs_toolchain.py` and
+`build/toolchain/win/setup_toolchain.py`. If the SDK you have installed is a
+different one, name it instead of editing both:
+
+```bash
+export CHROMIUM_WIN_SDK_VERSION=10.0.26100.0
+```
+
+That is what CI does, because Chromium's own toolchain package is not
+downloadable outside Google and a hosted runner has whatever SDK its image
+shipped with.
 
 ```bash
 mkdir shotium-build && cd shotium-build

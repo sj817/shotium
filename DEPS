@@ -1242,49 +1242,10 @@ deps = {
       'dep_type': 'cipd',
   },
 
-  'src/chrome/android/orderfiles/arm': {
-      'packages': [
-          {
-              'package': 'chromium/chrome/android/orderfiles/arm',
-              'version_file': 'chrome/build/android-arm.orderfile.txt',
-          },
-      ],
-      'condition': 'checkout_android and non_git_source',
-      'dep_type': 'cipd',
-  },
-
-  'src/chrome/android/orderfiles/arm64': {
-      'packages': [
-          {
-              'package': 'chromium/chrome/android/orderfiles/arm64',
-              'version_file': 'chrome/build/android-arm64.orderfile.txt',
-          },
-      ],
-      'condition': 'checkout_android and non_git_source',
-      'dep_type': 'cipd',
-  },
-
-  'src/android_webview/tools/orderfiles/arm': {
-      'packages': [
-          {
-              'package': 'chromium/android_webview/tools/orderfiles/arm',
-              'version_file': 'android_webview/tools/android-webview-arm.orderfile.txt',
-          },
-      ],
-      'condition': 'checkout_android and non_git_source',
-      'dep_type': 'cipd',
-  },
-
-  'src/android_webview/tools/orderfiles/arm64': {
-      'packages': [
-          {
-              'package': 'chromium/android_webview/tools/orderfiles/arm64',
-              'version_file': 'android_webview/tools/android-webview-arm64.orderfile.txt',
-          },
-      ],
-      'condition': 'checkout_android and non_git_source',
-      'dep_type': 'cipd',
-  },
+  # The four Android orderfile packages that were here are removed in this
+  # fork. Their 'version_file' entries are read while gclient builds the
+  # dependency object -- before it evaluates 'checkout_android' -- so they
+  # broke `gclient sync` on Windows once the Android tree was cut.
 
   'src/chrome/browser/resources/preinstalled_web_apps/internal': {
     'url': Var('chrome_git') + '/chrome/components/default_apps.git' + '@' + 'fbc0f36186884f936537d5f74758550dd772b980',
@@ -4510,18 +4471,9 @@ hooks = [
                Var('reapi_credential_helper'),
                ],
   },
-  {
-    # Update chromeos/tast_control.gni
-    'name': 'tast_control',
-    'pattern': '.',
-    'action': ['python3', 'src/build/util/tast_control.py',
-               '-o', 'src/chromeos/tast_control.gni',
-               '-t', 'src/chromeos/tast_control.gni.template',
-               '-i', 'src/chromeos/tast_control_disabled_tests.txt',
-               '--input-public',
-               'src/chromeos/tast_control_disabled_tests_public_builders.txt',
-               '-f', 'src/chromeos/tast_control_flaky_tests.txt'],
-  },
+  # The tast_control hook that was here is removed in this fork: it is
+  # unconditional, and it reads //chromeos/tast_control*.{gni,txt}, which
+  # went with the rest of the ChromeOS tree.
   {
     # Update chromeos/tast_control_cq_tests.txt
     'name': 'tast_control_cq_tests',

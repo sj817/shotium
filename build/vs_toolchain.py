@@ -60,7 +60,16 @@ from gn_helpers import ToGNString
 #   Make sure any version numbers in the documentation match the code.
 #
 TOOLCHAIN_HASH = '3bfcb536c8'
-SDK_VERSION = '10.0.28000.0'
+# The SDK version that Google's packaged toolchain ships. Building against a
+# locally installed toolchain (DEPOT_TOOLS_WIN_TOOLCHAIN=0) means building
+# against whatever SDK is actually on the machine, which is rarely that exact
+# one -- and the version here is a directory name, not a compatibility
+# statement, so pinning it turns an installed-and-usable SDK into a hard
+# failure. Let the environment name the installed one. It must be set to the
+# same value for both this file and build/toolchain/win/setup_toolchain.py,
+# which is why it is an environment variable rather than a gn arg: gn reads
+# them through two different paths.
+SDK_VERSION = os.environ.get('CHROMIUM_WIN_SDK_VERSION', '10.0.28000.0')
 
 # Visual Studio versions are listed in descending order of priority.
 # The first version is assumed by this script to be the one that is packaged,
