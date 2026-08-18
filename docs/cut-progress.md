@@ -1702,3 +1702,35 @@ lld-link: error: invalid timestamp: -2142000. Expected 32-bit integer
 
 值得记的是这条因果链的长度:发布时决定"压成一个提交" → 三个月后在链接器参数里
 以一个负数的形式炸出来。中间没有任何一步会警告。
+
+### 21.9 `gclient sync` 把 V8 装了回来,于是 include 被劫持
+
+时间戳修好之后,ninja 一口气跑到 **12,065 / 14,907**(4 核 3 小时 07 分),然后:
+
+```
+blink_gc_memory_dump_provider.cc(117,44):
+  error: no member named 'CollectStatistics' in namespace 'cppgc'
+```
+
+本机编得过,CI 编不过。差别在于 **CI 里有 `v8/` 目录,本机没有**。
+
+v8ectomy 的时候,cppgc 被留下来放进了 `third_party/cppgc/v8/include/cppgc/`,
+并且在 `heap-statistics.h` 里加了一个 `cppgc::CollectStatistics` 转发函数
+(上游走的是 `v8::CppHeap::CollectStatistics()`)。引用它的写法是
+`#include "v8/include/cppgc/heap-statistics.h"` —— **这是一个相对于源码根的路径**。
+本机没有 `v8/`,于是它落到 `third_party/cppgc` 那个 include 目录上。
+
+而 CI 里 `gclient sync` 照着 DEPS 把 `src/v8` **重新克隆了回来**(我们只是把目录
+从 git 里删了,DEPS 条目还在),`-I../..` 排在最前面,于是同一行 include 解析到
+**上游 v8 的头文件**,里面当然没有我们加的那个转发函数。
+
+这不是 v8 一个的问题,是一整类:**「从 git 里删掉」和「从 DEPS 里删掉」不是一回事**,
+凡是删了目录却留着 DEPS 条目的,gclient 都会尽职地装回来。按这个判据全查一遍:
+349 个 DEPS 路径里,122 个有 gitlink(要)、5 个有实际文件(要)、21 个不在 git 里但
+在磁盘上(clang / rust / ninja / node 这些工具链,gclient 装的,要),剩下 201 个
+两边都没有 —— 其中 **16 个是无条件的**,也就是每次 sync 都会被装回来。这 16 个
+从 DEPS 删掉,包括 `src/v8`。
+
+顺带一个数据:**4 核 3 小时 07 分编了 12,065 条边**,照这个速度整棵树 3.5–4 小时,
+在 6 小时上限之内。所以「公网 runner 编不了」这个假设是错的 —— 挡路的从来是工具链
+和这些不一致,不是时钟。

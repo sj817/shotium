@@ -1565,12 +1565,6 @@ deps = {
     'condition': 'checkout_chromium_password_manager_test_dependencies',
   },
 
-  'src/chrome/test/data/perf/canvas_bench':
-    Var('chromium_git') + '/chromium/canvas_bench.git' + '@' + 'a7b40ea5ae0239517d78845a5fc9b12976bfc732',
-
-  'src/chrome/test/data/perf/frame_rate/content':
-    Var('chromium_git') + '/chromium/frame_rate/content.git' + '@' + 'c10272c88463efeef6bb19c9ec07c42bc8fe22b9',
-
   'src/chrome/test/data/safe_browsing/dmg': {
     'packages': [
       {
@@ -1592,9 +1586,6 @@ deps = {
     'condition': 'non_git_source',
     'dep_type': 'cipd',
   },
-
-  'src/chrome/test/data/xr/webvr_info':
-    Var('chromium_git') + '/external/github.com/toji/webvr.info.git' + '@' + 'c58ae99b9ff9e2aa4c524633519570bf33536248',
 
   'src/clank': {
     'url': Var('chrome_git') + '/clank/internal/apps.git' + '@' +
@@ -1631,9 +1622,6 @@ deps = {
              '@' + Var('ios_webkit_revision'),
       'condition': 'checkout_ios and checkout_ios_webkit'
   },
-
-  'src/media/cdm/api':
-    Var('chromium_git') + '/chromium/cdm.git' + '@' + 'd6c4e1ea4c8fc3dcd98ac3ab5a981f63067223a4',
 
   'src/net/third_party/quiche/src':
     Var('quiche_git') + '/quiche.git' + '@' +  Var('quiche_revision'),
@@ -1936,9 +1924,6 @@ deps = {
 
 
 
-  'src/third_party/disarm/src':
-     Var('chromium_git') + '/external/github.com/aengelke/disarm.git' + '@' + '2d13d3f410a52daff1c5d8ef07d623332f372560',
-
   'src/third_party/fadec/src':
      Var('chromium_git') + '/external/github.com/aengelke/fadec.git' + '@' + 'c9f78f532b9004de278489019ab2c6c28ae9746e',
 
@@ -1994,9 +1979,6 @@ deps = {
       'condition': 'checkout_chromeos',
   },
 
-  'src/third_party/cld_3/src':
-    Var('chromium_git') + '/external/github.com/google/cld_3.git' + '@' + 'b48dc46512566f5a2d41118c8c1116c4f96dc661',
-
   'src/third_party/colorama/src':
     Var('chromium_git') + '/external/colorama.git' + '@' + '3de9f013df4b470069d03d250224062e8cf15c49',
 
@@ -2009,20 +1991,8 @@ deps = {
       'condition': 'checkout_linux or checkout_chromeos',
   },
 
-  'src/third_party/crossbench':
-    Var('chromium_git') + '/crossbench.git' + '@' + Var('crossbench_revision'),
-
-  'src/third_party/crossbench-web-tests':
-    Var('chromium_git') + '/chromium/web-tests.git' + '@' + Var('crossbench_web_tests_revision'),
-
   'src/third_party/depot_tools':
     Var('chromium_git') + '/chromium/tools/depot_tools.git' + '@' + '13febbee9ece9e03df923f69d540afc63c6db93e',
-
-  'src/third_party/dom_distiller_js/dist':
-    Var('chromium_git') + '/chromium/dom-distiller/dist.git' + '@' + '199de96b345ada7c6e7e6ba3d2fa7a6911b8767d',
-
-  'src/third_party/dragonbox/src':
-    Var('chromium_git') + '/external/github.com/jk-jeon/dragonbox.git' + '@' + 'beeeef91cf6fef89a4d4ba5e95d47ca64ccb3a44',
 
 
 
@@ -2158,9 +2128,6 @@ deps = {
       'dep_type': 'cipd',
   },
 
-  'src/third_party/hunspell_dictionaries':
-    Var('chromium_git') + '/chromium/deps/hunspell_dictionaries.git' + '@' + 'cccf64a8acc951afe3f47fee023908e55699bc58',
-
   'src/third_party/icu':
     Var('chromium_git') + '/chromium/deps/icu.git' + '@' + '8cc91d9b6ab9991802fd208ee03a69714fd0251c',
 
@@ -2253,9 +2220,6 @@ deps = {
 
   'src/third_party/domato/src':
     Var('chromium_git') + '/external/github.com/googleprojectzero/domato.git' + '@' + Var('domato_revision'),
-
-  'src/third_party/libaddressinput/src':
-    Var('chromium_git') + '/external/libaddressinput.git' + '@' + '81eb9628382b07d371d8ea0b11badf7de3857fd5',
 
 
 
@@ -2408,160 +2372,6 @@ deps = {
 
 
 
-  'src/base/tracing/test/data': {
-    'bucket': 'perfetto',
-    'objects': [
-      {
-        'object_name': 'test_data/chrome_fcp_lcp_navigations.pftrace-ae01d849fbd75a98be1b7ddd5a8873217c377b393a1d5bbd788ed3364f7fefc3',
-        'sha256sum': 'ae01d849fbd75a98be1b7ddd5a8873217c377b393a1d5bbd788ed3364f7fefc3',
-        'size_bytes': 2398645,
-        'generation': 1697714434866488,
-        'output_file': 'chrome_fcp_lcp_navigations.pftrace'
-      },
-      {
-        'object_name': 'test_data/chrome_input_with_frame_view.pftrace-a93548822e481508c728ccc5da3ad34afcd0aec02ca7a7a4dad84ff340ee5975',
-        'sha256sum': 'a93548822e481508c728ccc5da3ad34afcd0aec02ca7a7a4dad84ff340ee5975',
-        'size_bytes': 6392331,
-        'generation': 1711402389089075,
-        'output_file': 'chrome_input_with_frame_view.pftrace'
-      },
-      {
-        'object_name': 'test_data/scroll_offsets_trace_2.pftrace-2ddd9f78d91d51e39c72c520bb54fdc9dbf1333ae722e87633fc345159296289',
-        'sha256sum': '2ddd9f78d91d51e39c72c520bb54fdc9dbf1333ae722e87633fc345159296289',
-        'size_bytes': 1496388,
-        'generation': 1712592637141461,
-        'output_file': 'scroll_offsets_trace_2.pftrace'
-      },
-      {
-        'object_name': 'test_data/top_level_java_choreographer_slices-8001e73b2458e94f65a606bb558a645ba5bca553b57fe416001f6c2175675a8a',
-        'sha256sum': '8001e73b2458e94f65a606bb558a645ba5bca553b57fe416001f6c2175675a8a',
-        'size_bytes': 5323017,
-        'generation': 1671708979893186,
-        'output_file': 'top_level_java_choreographer_slices'
-      },
-      {
-        'object_name': 'test_data/chrome_page_load_all_categories_not_extended.pftrace.gz-6586e9e2bbc0c996caddb321a0374328654983733e6ffd7f4635ac07db32a493',
-        'sha256sum': '6586e9e2bbc0c996caddb321a0374328654983733e6ffd7f4635ac07db32a493',
-        'size_bytes': 1277750,
-        'generation': 1652442088902445,
-        'output_file': 'chrome_page_load_all_categories_not_extended.pftrace.gz'
-      },
-      {
-        'object_name': 'test_data/jetstream_3.pftrace.gz-8b5915cdf7f4182a74345cc080c34ce190835e5b46c30e921ce81433119acfda',
-        'sha256sum': '8b5915cdf7f4182a74345cc080c34ce190835e5b46c30e921ce81433119acfda',
-        'size_bytes': 78162,
-        'generation': 1771505932279144,
-        'output_file': 'jetstream_3.pftrace.gz'
-      },
-      {
-        'object_name': 'test_data/speedometer_21.perfetto_trace.gz-8a159b354d74a3ca0d38ce9cd071ef47de322db4261ee266bfafe04d70310529',
-        'sha256sum': '8a159b354d74a3ca0d38ce9cd071ef47de322db4261ee266bfafe04d70310529',
-        'size_bytes': 891088,
-        'generation': 1716566741068306,
-        'output_file': 'speedometer_21.perfetto_trace.gz'
-      },
-      {
-       'object_name': 'test_data/speedometer_3.perfetto_trace.gz-b2c77fbe2c17363432a1ad0c05c1c1c20d3ebc62bda92c041d39918011af6f02',
-        'sha256sum': 'b2c77fbe2c17363432a1ad0c05c1c1c20d3ebc62bda92c041d39918011af6f02',
-        'size_bytes': 1301036,
-        'generation': 1716566914245446,
-        'output_file': 'speedometer_3.perfetto_trace.gz'
-      },
-      {
-        'object_name': 'test_data/scroll_jank_with_pinch.pftrace-8587d2016fdb5d39b5f852704b6e3925e9e6527af01696396be767bed04d4a45',
-        'sha256sum': '8587d2016fdb5d39b5f852704b6e3925e9e6527af01696396be767bed04d4a45',
-        'size_bytes': 3914720,
-        'generation': 1717497788778335,
-        'output_file': 'scroll_jank_with_pinch.pftrace'
-      },
-      {
-        'object_name': 'test_data/cpu_powerups_1.pb-70f5511ba0cd6ce1359e3cadb4d1d9301fb6e26be85158e3384b06f41418d386',
-        'sha256sum': '70f5511ba0cd6ce1359e3cadb4d1d9301fb6e26be85158e3384b06f41418d386',
-        'size_bytes': 2033064,
-        'generation': 1669652389509708,
-        'output_file': 'cpu_powerups_1.pb'
-      },
-      {
-        'object_name': 'test_data/chrome_5672_histograms.pftrace.gz-a09bd44078ac71bcfbc901b0544750e8344d0d0f6f96e220f700a5a53fa932ee',
-        'sha256sum': 'a09bd44078ac71bcfbc901b0544750e8344d0d0f6f96e220f700a5a53fa932ee',
-        'size_bytes': 1127472,
-        'generation': 1684946598804577,
-        'output_file': 'chrome_5672_histograms.pftrace.gz'
-      },
-      {
-        'object_name': 'test_data/chrome_custom_navigation_trace.gz-ff68279e3cec94076b69259d756eed181a63eaf834d8b956a7f4ba665fabf939',
-        'sha256sum': 'ff68279e3cec94076b69259d756eed181a63eaf834d8b956a7f4ba665fabf939',
-        'size_bytes': 7572484,
-        'generation': 1666713705258900,
-        'output_file': 'chrome_custom_navigation_trace.gz'
-      },
-      {
-        'object_name': 'test_data/scroll_offsets.pftrace-62101edb5204fec8bea30124f65d4e49bda0808d7b036e95f89445aaad6d8d98',
-        'sha256sum': '62101edb5204fec8bea30124f65d4e49bda0808d7b036e95f89445aaad6d8d98',
-        'size_bytes': 769741,
-        'generation': 1693402148909129,
-        'output_file': 'scroll_offsets.pftrace'
-      },
-      {
-        'object_name': 'test_data/chrome_input_with_frame_view_new.pftrace-e901ad9577088e62c921dd8bfcb43d652ecf49fa69b5b57f81bb3d27dbe94e12',
-        'sha256sum': 'e901ad9577088e62c921dd8bfcb43d652ecf49fa69b5b57f81bb3d27dbe94e12',
-        'size_bytes': 1967821,
-        'generation': 1719520814352733,
-        'output_file': 'chrome_input_with_frame_view_new.pftrace'
-      },
-      {
-        'object_name': 'test_data/scroll_m131.pftrace-14171c9e502a65a454f39fe14fce8b313c7012a2c14394bed496fc93b1644b0d',
-        'sha256sum': '14171c9e502a65a454f39fe14fce8b313c7012a2c14394bed496fc93b1644b0d',
-        'size_bytes': 1247290,
-        'generation': 1729619115836875,
-        'output_file': 'scroll_m131.pftrace'
-      },
-      {
-        'object_name': 'test_data/scroll_m132.pftrace-779e1fa6cab1abc0ab2dcafa4bbbf826ea8fc052878886ab168c783ca32f3bbe',
-        'sha256sum': '779e1fa6cab1abc0ab2dcafa4bbbf826ea8fc052878886ab168c783ca32f3bbe',
-        'size_bytes': 1854184,
-        'generation': 1732117381568969,
-        'output_file': 'scroll_m132.pftrace'
-      },
-      {
-        'object_name': 'test_data/scroll_m132_with_atrace.pftrace-b1fe189738a4a714cef7dd13b12318c89d6c4345fbe65096b4680ffa79f2872a',
-        'sha256sum': 'b1fe189738a4a714cef7dd13b12318c89d6c4345fbe65096b4680ffa79f2872a',
-        'size_bytes': 18887098,
-        'generation': 1730148514067154,
-        'output_file': 'scroll_m132_with_atrace.pftrace'
-      },
-      {
-        'object_name': 'test_data/scroll_m133beta.pftrace-2acc70545be1caeb3fb43218ab52872c2c749b49577b973cb8400057c680fc19',
-        'sha256sum': '2acc70545be1caeb3fb43218ab52872c2c749b49577b973cb8400057c680fc19',
-        'size_bytes': 1448694,
-        'generation': 1738338471679054,
-        'output_file': 'scroll_m133beta.pftrace'
-      },
-      {
-        'object_name': 'test_data/scroll_with_input_not_forwarded_to_renderer.pftrace-ceb2ff3cb64c99ddb28a29867bc82f1491c4b413bfacd8638551b80936240faf',
-        'sha256sum': 'ceb2ff3cb64c99ddb28a29867bc82f1491c4b413bfacd8638551b80936240faf',
-        'size_bytes': 729606,
-        'generation': 1732902685002882,
-        'output_file': 'scroll_with_input_not_forwarded_to_renderer.pftrace'
-      },
-      {
-        'object_name': 'test_data/scroll_m144.pftrace-6a3426ee6a441cf71ec8b634b662fe800700b8c3d2d1e9f247feaba890315843',
-        'sha256sum': '6a3426ee6a441cf71ec8b634b662fe800700b8c3d2d1e9f247feaba890315843',
-        'size_bytes': 4384532,
-        'generation': 1769534965677794,
-        'output_file': 'scroll_m144.pftrace'
-      },
-      {
-        'object_name': 'test_data/loadline2_phone_perfetto_trace.pb.gz-446e12518282e078360cb1ab55ebb3e3788c3863b269601d2392c9e5d058a92c',
-        'sha256sum': '446e12518282e078360cb1ab55ebb3e3788c3863b269601d2392c9e5d058a92c',
-        'size_bytes': 1214995,
-        'generation': 1763134487216405,
-        'output_file': 'loadline2_phone_perfetto_trace.pb.gz'
-      },
-    ],
-    'dep_type': 'gcs'
-  },
-
   'src/third_party/perl': {
       'url': Var('chromium_git') + '/chromium/deps/perl.git' + '@' + 'a2bd4470d3485e6eda532eee416a71d16db2d7ba',
       'condition': 'checkout_win',
@@ -2572,9 +2382,6 @@ deps = {
   # See docs/cut-progress.md.
   'src/third_party/perfetto':
     Var('chromium_git') + '/external/github.com/google/perfetto.git' + '@' + '71b477b75d53576fa40f8ba19897a50c83255e03',
-
-  'src/third_party/protobuf-javascript/src':
-    Var('chromium_git') + '/external/github.com/protocolbuffers/protobuf-javascript' + '@' + 'e6d763860001ba1a76a63adcff5efb12b1c96024',
 
 
   # Dependency of skia.
@@ -2779,9 +2586,6 @@ deps = {
   },
 
   # Keep this to the same revision as the one .vpython3.
-  'src/third_party/webdriver/pylib':
-    Var('chromium_git') + '/external/github.com/SeleniumHQ/selenium/py.git' + '@' + '1e954903022e9386b9acf452c24f4458dd4c4fc1',
-
   'src/third_party/webgl/src':
     Var('chromium_git') + '/external/khronosgroup/webgl.git' + '@' + '064aaf18207438d4f6dd10c98b02b25778257b7f',
 
@@ -2852,9 +2656,6 @@ deps = {
       'dep_type': 'cipd',
       'condition': 'checkout_mac',
   },
-
-  'src/v8':
-    Var('chromium_git') + '/v8/v8.git' + '@' +  Var('v8_revision'),
 
 # See checkout_src_internal_infra declaration.
 # LINT.IfChange
