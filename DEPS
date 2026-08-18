@@ -3944,7 +3944,14 @@ hooks = [
     # Update LASTCHANGE.
     'name': 'lastchange',
     'pattern': '.',
+    # --filter overrides the default '^Change-Id:', which exists to skip a
+    # developer's local commits and find the last upstream one. This fork has
+    # no upstream commits: every commit in it is local and none carry a
+    # Change-Id, so the default matches nothing, LASTCHANGE.committime becomes
+    # 0, and build_timestamp is quantised backwards past the epoch into a
+    # negative number that lld refuses to link with.
     'action': ['python3', 'src/build/util/lastchange.py',
+               '--filter', '.',
                '-o', 'src/build/util/LASTCHANGE'],
   },
   {
@@ -3962,6 +3969,7 @@ hooks = [
     'name': 'gpu_lists_version',
     'pattern': '.',
     'action': ['python3', 'src/build/util/lastchange.py',
+               '--filter', '.',
                '-m', 'GPU_LISTS_VERSION',
                '--revision-id-only',
                '--header', 'src/gpu/config/gpu_lists_version.h'],

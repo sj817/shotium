@@ -135,7 +135,12 @@ def main():
                 offset = int(patch_line[6:])
     else:
         build_date = GetUnofficialBuildDate(build_date)
-    print(offset + int(calendar.timegm(build_date.utctimetuple())))
+    # A source tree with no git history at all (a tarball, say) makes
+    # lastchange fall back to a commit time of 0, and the quantisation above
+    # then walks that back to December 1969. A negative timestamp is not a
+    # timestamp -- lld rejects it outright with "invalid timestamp ...
+    # Expected 32-bit integer" -- so floor it at the epoch.
+    print(max(0, offset + int(calendar.timegm(build_date.utctimetuple()))))
     return 0
 
 

@@ -1670,3 +1670,35 @@ winbase.h(9388,11): error: unknown type name 'FILE_INFO_BY_HANDLE_CLASS'
 改成 gn 参数 `win_ntddi_version`,默认值仍是 `NTDDI_WIN11_BR`(本机不变);CI 在
 选定 SDK 之后顺手从**同一个** `sdkddkver.h` 里把所有 `NTDDI_WIN*` 宏的值解析出来
 取最大的那个,写进 `args.gn`。SDK 和 NTDDI 必须来自同一处,这是本质约束,不是巧合。
+
+### 21.8 `/TIMESTAMP:-2142000`:压扁历史的代价,在链接器上现形
+
+SDK 和 NTDDI 都对上之后,编译真的跑了三分钟,死在 rust 那条支路上:
+
+```
+lld-link: error: invalid timestamp: -2142000. Expected 32-bit integer
+```
+
+这个数字可以精确推回去,一步不差:
+
+1. `lastchange.py` 的 `--filter` 默认是 `'^Change-Id:'` —— 它存在的目的是跳过开发者
+   本地的提交、找到最后一个上游 CL。**这个 fork 里所有提交都是"本地"的**,
+   发布仓库还是一个压扁的孤儿提交,没有任何 Change-Id,于是 `git log --grep` 一条
+   都匹配不到。
+2. 匹配不到就退回 `_EMPTY_VERSION_INFO`,`LASTCHANGE.committime` 写成 **0**。
+3. `compute_build_timestamp.py` 对**非** official 的构建做"量化到当月第一个周日
+   5:00"(减少缓存失效)。拿 1970-01-01 00:00 去量化:小时 < 5 先退一天到
+   1969-12-31,再退到 1969 年 12 月的第一个周日 —— **1969-12-07 05:00,
+   正好是 -2142000**。
+4. 为什么是非 official 那条:主构建是 official,但 rust 的宿主工具链
+   (`win_clang_x64_for_rust_host_build_tools`)不是。所以整棵树里恰好是它先炸。
+
+两处都改:
+- DEPS 里那两个跑在 src 上的 lastchange hook 加 `--filter '.'`。理由不是"绕过",
+  是**默认值的前提在这个仓库不成立** —— 这里没有"上游提交"和"本地提交"之分。
+  skia 那个 hook 不动,它跑在真正的 chromium 仓库上。
+- `compute_build_timestamp.py` 把结果 `max(0, ...)`。没有 git 历史的源码包
+  (tarball)会走到同一条路上,而**负数不是时间戳**。
+
+值得记的是这条因果链的长度:发布时决定"压成一个提交" → 三个月后在链接器参数里
+以一个负数的形式炸出来。中间没有任何一步会警告。
