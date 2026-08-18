@@ -1594,3 +1594,27 @@ Visual Studio,也就只能用镜像自带的 SDK。
 
 这条改完之后,头文件比本机旧。如果有代码依赖新 SDK,它会在编译期说话;那时候读到
 的报错是「这段代码需要新头文件」,不是「构建坏了」。
+
+### 21.5 `DIR_METADATA` 的 mixin:66 个指向已删目录的引用
+
+修完上面四个之后,`gclient sync` 过了(依赖全部拉下来,hook 跑到第 40 个),死在:
+
+```
+'python3 src/testing/generate_location_tags.py --out src/testing/location_tags.json'
+failed to read "src\base\android\COMMON_METADATA": The system cannot find the path specified
+```
+
+`base/test/android/DIR_METADATA` 第一行是 `mixins: "//base/android/COMMON_METADATA"`,
+而那个文件跟着 Android 一起删了。照例不是修一个,是把同类全查一遍:**67 处 dangling
+mixin,分布在 66 个文件**里 —— `blink/public/mojom/*` 里一大片指向
+`content/browser/*/COMMON_METADATA`,`blink/common/*` 指向
+`blink/renderer/modules/*`。裁掉整个子系统时,活下来的目录还留着指向它的元数据。
+
+删掉这些行之后有 **55 个 DIR_METADATA 变成空文件**(它们本来只有一行 mixin),
+一并删掉 —— 空的元数据文件不是元数据。
+
+顺带记两个不算错误的现象:
+- `lastchange.py` 报 `Failed to get version info from git`,退回 `0.0.0`。原因是它
+  找的是 `--grep=^Change-Id:`,而发布仓库是一个压扁的孤儿提交,没有 Change-Id。
+- 磁盘不是瓶颈:runner 上 C: 剩 45 GB、D: 剩 219 GB,而 workspace 在 D:。
+  最早那版 workflow 只打印 C:,差点把「够不够」判断在错误的盘上。
