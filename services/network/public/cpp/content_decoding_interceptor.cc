@@ -7,6 +7,7 @@
 #include <string_view>
 
 #include "base/byte_size.h"
+#include "base/containers/fixed_flat_map.h"
 #include "base/metrics/histogram_functions.h"
 #include "base/numerics/safe_conversions.h"
 #include "base/process/current_process.h"
