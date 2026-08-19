@@ -1791,3 +1791,43 @@ CI 改动时,把它当时的半成品一并提交、推到了公开仓库。上�
 
 教训是流程上的,不是技术上的:**在共享的工作树里只 stage 自己动过的文件**。
 提交信息会说谎 —— 那条提交写着「CI 时间戳修复」,内容里有 8 个文件不是它的。
+
+### 21.12 链接器点名的完整清单(交接用)
+
+`/errorlimit:0` 那一次跑出来 **113 条** undefined symbol(默认只报 20 条)。把符号名
+反查回定义它的 .mojom 文件(`interface`/`struct`/`enum`/`union` 建索引,再剥掉生成器
+加的 `Proxy` / `StubDispatch` / `RequestValidator` / `_Mode` 之类后缀),**113 条收敛
+到 15 个文件,没有一条落空**:
+
+```
+associated_interfaces/associated_interfaces.mojom     loader/transferrable_url_loader.mojom
+choosers/file_chooser.mojom                           media/fullscreen_video_element.mojom
+clipboard/clipboard.mojom                             origin_trials/origin_trials_settings.mojom
+data_transfer/data_transfer.mojom                     prerender/prerender.mojom
+disk_allocator.mojom                                  renderer_preference_watcher.mojom
+image_replacement/image_replacement.mojom             timing/declarative_performance_observer.mojom
+leak_detector/leak_detector.mojom
+loader/content_security_notifier.mojom
+loader/pause_subresource_loading_handle.mojom
+```
+
+方法值得留着,因为它可以重复使用:**不要用 `.ninja_deps` 反推**。那份记录回答的是
+「哪些头文件被 include 过」(379 个 .mojom),而链接要的是「哪些**符号**被引用」
+(15 个)。前者是后者的超集 —— 照它补,`services/network/public/mojom` 的 36 个源文件
+会回来 34 个,等于把裁剪撤销。工具在
+`scratchpad`(`map_symbols.py`),索引 1,717 个符号。
+
+写下这一节的时候,`shot_sources.gni` 正在被另一个进程改(未提交),已经补进了
+`associated_interfaces`、`disk_allocator`、`pause_subresource_loading_handle`、
+`origin_trials_settings` 四个。链接器点名、当时两版都还没有的是这十个:
+
+```
+choosers/file_chooser.mojom              media/fullscreen_video_element.mojom
+clipboard/clipboard.mojom                prerender/prerender.mojom
+image_replacement/image_replacement.mojom          renderer_preference_watcher.mojom
+leak_detector/leak_detector.mojom        timing/declarative_performance_observer.mojom
+loader/content_security_notifier.mojom
+loader/transferrable_url_loader.mojom
+```
+
+这些文件我没有动 —— 它们正在别人手里。
