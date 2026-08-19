@@ -93,9 +93,11 @@ executable("shot") {
     "//base",
     "//base:i18n",
     "//cc/paint",
+
     # base::DiscardableMemoryAllocator has no default; skia's blur-mask
     # cache is the first thing that asks for one.
     "//components/discardable_memory/service",
+
     # mojo::core::Init(). blink's object graph is wired with mojo types even
     # when nothing leaves the process -- an empty PolicyContainer is an
     # AssociatedRemote over a pipe with nothing on the far end.
@@ -108,10 +110,12 @@ executable("shot") {
     "//third_party/blink/renderer/core",
     "//third_party/blink/renderer/platform",
     "//ui/base",
+
     # display::ScreenInfo, which is how the page is told its device scale
     # factor -- the thing resolution media queries and srcset are decided on.
     "//ui/display",
     "//ui/gfx",
+
     # gfx::PNGCodec, which is how the rendered bitmap becomes a PNG. It is the
     # wrapper that knows which encoder skia was actually built with -- this
     # build has the rust one, not libpng, so SkPngEncoder is a header with
@@ -139,5 +143,11 @@ executable("shot") {
 
   if (is_win) {
     deps += [ "//build/win:default_exe_manifest" ]
+
+    # lld stops after twenty undefined symbols. This binary is linked out of a
+    # tree where whole subsystems have been removed, so when it does fail to
+    # link the interesting question is which set of things is missing, not
+    # which twenty. Reporting all of them turns a bisect into one read.
+    ldflags = [ "/errorlimit:0" ]
   }
 }
