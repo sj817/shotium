@@ -1765,3 +1765,29 @@ Cache restored from key: out-shot-32137426382   (443 MB)
 
 代价是 checkout 要 `fetch-depth: 0`(逐文件的时间需要历史)。这个仓库的历史是自己的
 几个提交,不是上游那二十万个,所以全取也没多少。
+
+### 21.11 缓存生效之后:25 分钟走到链接,以及一次不该发生的推送
+
+第七、八次:`gclient sync` 6 分钟,ninja **25 分钟**(14,906 条边里只有 4,882 条需要
+重做),然后 —— **每一个 TU 都编过了,走到了 `FAILED: shot.exe`**。
+
+也就是说 21.1–21.10 那一串修完之后,公网 runner 上的构建是走得通的。整条路径:
+工具链 bootstrap → SDK/NTDDI 同源 → DEPS 与实际目录一致 → 时间戳可信 → 增量缓存。
+第一次全量 4 核约 4 小时,之后每次 25 分钟。
+
+链接报的是一片 undefined symbol:`blink::mojom::AssociatedInterfaceProvider`、
+`PauseSubresourceLoadingHandle`、`FileChooser`、`OriginTrialsSettings`……
+
+**这些不是 CI 的问题,是我推了不该推的东西。** 这个工作树同时有另一个进程在做
+`is_shot_build` 那一层(`build/config/shot_build.gni`、三个 `shot_sources.gni`
+白名单、源码里的 `#if !defined(IS_SHOT_BUILD)` 守卫),而我用 `git add -A` 提交
+CI 改动时,把它当时的半成品一并提交、推到了公开仓库。上面那片符号,正是白名单
+暂时还没放行、但 blink 仍在引用的那些接口。
+
+同一次误提交还带来了 `MakeFixedFlatMap` 那个编译错误 —— 守卫把
+`mojo/.../callback_helpers.h` 关掉,而 `base/containers/fixed_flat_map.h` 一直是
+**从它顺带进来的**。那一行 include 我补了:不管有没有守卫,靠传递包含都是隐患,
+文件应该声明自己依赖什么。
+
+教训是流程上的,不是技术上的:**在共享的工作树里只 stage 自己动过的文件**。
+提交信息会说谎 —— 那条提交写着「CI 时间戳修复」,内容里有 8 个文件不是它的。
