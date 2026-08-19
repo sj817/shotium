@@ -1831,3 +1831,34 @@ loader/transferrable_url_loader.mojom
 ```
 
 这些文件我没有动 —— 它们正在别人手里。
+
+### 21.13 绿了
+
+第十一次,`engine (windows)` 全绿:
+
+```
+gclient sync   7.5 分钟
+ninja          60 分钟(白名单一动,mojom 重生成 + ThinLTO 重链)
+did the build finish / package / upload   ✅
+checks         17 秒   三套 76 项全过
+```
+
+产物:`shot.exe` 57,953,280 字节 + `icudtl.dat` 10,823,536 + 两个 .pak,
+作为 `shot-windows-x64` 上传。
+
+最值得记的一行在 `node_check` 的输出里:
+
+```
+sha256 b42f1efe5f7f433cebdd9ec5f362d181
+```
+
+**和本机构建出来的二进制渲染出的哈希一模一样。** 也就是说在完全不同的工具链上
+(VS 18 + SDK 26100,而本机是 SDK 28000)、经过 NTDDI 降级、mojom 白名单裁剪之后,
+渲染结果仍然逐字节相同。`render_corpus.html` 这个哈希从 §16 一路活到现在。
+
+整条路径的最终形态,和最初的猜测差得很远:挡路的从来不是 6 小时上限,是
+**工具链的可得性、DEPS 与实际目录的不一致、时间戳的可信度**,以及最后那个
+「白名单少了什么」—— 而后者只要让链接器一次把话说完(`/errorlimit:0`),
+就是一次就能读完的答案,不是二十条一轮的试错。
+
+一次冷构建约 4 小时,之后源码改动 25 分钟。
