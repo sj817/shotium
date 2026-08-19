@@ -30,7 +30,6 @@ shot_mojom_platform_sources = [
   "dom_storage/session_storage_namespace.mojom",
   "dom_storage/storage_area.mojom",
   "drag/drag.mojom",
-  "dwrite_font_proxy/dwrite_font_proxy.mojom",
   "favicon/favicon_url.mojom",
   "fenced_frame/fenced_frame_config.mojom",
   "fetch/fetch_api_request.mojom",
