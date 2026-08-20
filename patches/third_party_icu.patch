@@ -1,0 +1,148 @@
+diff --git a/BUILD.gn b/BUILD.gn
+index 5f01574..6fe65c5 100644
+--- a/BUILD.gn
++++ b/BUILD.gn
+@@ -126,7 +126,8 @@ config("icu_code") {
+       # putil.cpp contains unused variables when building for iOS simulators.
+       "-Wno-unused-variable",
+ 
+-      # Required for uversion.h putting a using namespace directive in the header.
++      # Required for uversion.h putting a using namespace directive in the
++      # header.
+       "-Wno-header-hygiene",
+ 
+       # ICU has decided not to fix this warning as doing so would break its
+@@ -253,8 +254,9 @@ template("generate_icu_component") {
+           base_output_name = invoker.output_name
+         }
+ 
+-        # Fuchsia puts its own libicu*.so in /system/lib where we need to put our
+-        # .so when doing component builds, so we need to give this a different name.
++        # Fuchsia puts its own libicu*.so in /system/lib where we need to put
++        # our .so when doing component builds, so we need to give this a
++        # different name.
+         output_name = "${base_output_name}_cr${fuchsia_output_name_postfix}"
+       } else {
+         assert(fuchsia_output_name_postfix == "")
+@@ -326,6 +328,63 @@ template("generate_icui18n") {
+ }
+ 
+ generate_icui18n("icui18n") {
++  shot_jumbo_file_merge_limit = 4
++
++  # These source groups leak ICU-private macros or duplicate file-local names
++  # when combined. Keep their stable Jumbo slots but compile them separately.
++  shot_jumbo_excluded_sources = [
++    "source/i18n/casetrn.cpp",
++    "source/i18n/cecal.cpp",
++    "source/i18n/chnsecal.cpp",
++    "source/i18n/choicfmt.cpp",
++    "source/i18n/decContext.cpp",
++    "source/i18n/decNumber.cpp",
++    "source/i18n/decimfmt.cpp",
++    "source/i18n/displayoptions.cpp",
++    "source/i18n/dtitvfmt.cpp",
++    "source/i18n/dtitvinf.cpp",
++    "source/i18n/dtptngen.cpp",
++    "source/i18n/dtrule.cpp",
++    "source/i18n/hebrwcal.cpp",
++    "source/i18n/indiancal.cpp",
++    "source/i18n/inputext.cpp",
++    "source/i18n/islamcal.cpp",
++    "source/i18n/messageformat2_parser.cpp",
++    "source/i18n/messageformat2_serializer.cpp",
++    "source/i18n/msgfmt.cpp",
++    "source/i18n/name2uni.cpp",
++    "source/i18n/nfrs.cpp",
++    "source/i18n/nfrule.cpp",
++    "source/i18n/nfsubs.cpp",
++    "source/i18n/nortrans.cpp",
++    "source/i18n/number_longnames.cpp",
++    "source/i18n/number_mapper.cpp",
++    "source/i18n/number_modifiers.cpp",
++    "source/i18n/number_patternmodifier.cpp",
++    "source/i18n/number_patternstring.cpp",
++    "source/i18n/number_rounding.cpp",
++    "source/i18n/number_scientific.cpp",
++    "source/i18n/number_simple.cpp",
++    "source/i18n/number_skeletons.cpp",
++    "source/i18n/number_symbolswrapper.cpp",
++    "source/i18n/number_usageprefs.cpp",
++    "source/i18n/numfmt.cpp",
++    "source/i18n/numrange_fluent.cpp",
++    "source/i18n/tridpars.cpp",
++    "source/i18n/tzfmt.cpp",
++    "source/i18n/tzgnames.cpp",
++    "source/i18n/tznames.cpp",
++    "source/i18n/umsg.cpp",
++    "source/i18n/utf8collationiterator.cpp",
++    "source/i18n/utmscale.cpp",
++    "source/i18n/utrans.cpp",
++    "source/i18n/vtzone.cpp",
++    "source/i18n/vzone.cpp",
++    "source/i18n/windtfmt.cpp",
++    "source/i18n/winnmfmt.cpp",
++    "source/i18n/wintzimpl.cpp",
++  ]
++
+   extra_configs = []
+   if (icu_is_in_fuchsia) {
+     # See similar stanza above for details.
+@@ -396,6 +455,19 @@ source_set("icuuc_public") {
+ }
+ 
+ generate_icuuc("icuuc_private") {
++  shot_jumbo_file_merge_limit = 4
++
++  shot_jumbo_excluded_sources = [
++    "source/common/simpleformatter.cpp",
++    "source/common/static_unicode_sets.cpp",
++    "source/common/stringpiece.cpp",
++    "source/common/stringtriebuilder.cpp",
++    "source/common/utrace.cpp",
++    "source/common/utrie.cpp",
++    "source/common/utrie2.cpp",
++    "source/common/utrie2_builder.cpp",
++  ]
++
+   extra_configs = []
+   if (icu_is_in_fuchsia) {
+     # See similar stanza above for details.
+@@ -438,7 +510,9 @@ if (is_android && enable_java_templates) {
+   }
+ }
+ 
+-if (is_android) {
++if (icu_data_dir_override != "") {
++  data_dir = icu_data_dir_override
++} else if (is_android) {
+   data_dir = "android"
+ } else if (is_ios && !use_blink) {
+   data_dir = "ios"
+diff --git a/config.gni b/config.gni
+index 5263004..134f37c 100644
+--- a/config.gni
++++ b/config.gni
+@@ -7,7 +7,6 @@
+ 
+ if (defined(is_fuchsia_tree) && is_fuchsia_tree) {
+   # This file is supposed to exist only in the Fuchsia build tree.
+-  import("//build/icu.gni")
+ } else {
+   declare_args() {
+     # Tells icu to load an external data file rather than rely on the icudata
+@@ -28,6 +27,14 @@ if (defined(is_fuchsia_tree) && is_fuchsia_tree) {
+     # inside the Fuchsia source tree.
+     icu_fuchsia_override_data_dir = ""
+ 
++    # Chromium-only. Selects which prebuilt data set under this directory gets
++    # linked in, overriding the per-platform choice below. The checkout ships
++    # nine of them -- common (10.3 MB) down to flutter (0.8 MB) -- differing in
++    # which ICU features survived the filter in filters/*.json. A build that
++    # has no consumer for collation, currency, units, time zones or locale
++    # display names has no reason to carry their tables.
++    icu_data_dir_override = ""
++
+     # If set, the ":icudata" target will copy the ICU data to $root_build_dir.
+     icu_copy_icudata_to_root_build_dir = true
+ 

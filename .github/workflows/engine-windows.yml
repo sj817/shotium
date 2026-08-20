@@ -192,6 +192,29 @@ jobs:
           restore-keys: |
             out-shot-
 
+      - name: patch the DEPS checkouts
+        shell: pwsh
+        working-directory: src
+        # gclient restores third_party/icu from its own upstream, so anything
+        # this repository changes there has to be reapplied on every run. It is
+        # worth 5.8 MB of shot.exe: icu_data_dir_override picks the "cast"
+        # filtered data set (5.0 MB) over the platform default "common"
+        # (10.8 MB), and icu_use_data_file = false links whichever one it is
+        # into the binary.
+        #
+        # This runs after the mtime stamping and the cache restore on purpose.
+        # The patched files then carry the current time, which is newer than
+        # any restored object built from the unpatched ones, so ninja rebuilds
+        # exactly those and nothing else.
+        #
+        # A failure here is not something to swallow. If a DEPS roll moves the
+        # file out from under the patch, the build has to stop and say so --
+        # the alternative is a silently different binary, which is the state
+        # this step exists to end.
+        run: |
+          git -C third_party/icu apply --verbose ../../patches/third_party_icu.patch
+          if ($LASTEXITCODE -ne 0) { throw "patches/third_party_icu.patch did not apply" }
+
       - name: gn gen
         shell: pwsh
         working-directory: src
@@ -241,8 +264,13 @@ jobs:
         shell: pwsh
         working-directory: src
         run: |
+          # icudtl.dat is deliberately not shipped. icu_use_data_file = false
+          # builds with ICU_UTIL_DATA_STATIC, so the table is linked into
+          # shot.exe and the loose copy is never opened -- verified by
+          # rendering the same page with the file present and absent and
+          # getting byte-identical PNGs.
           New-Item -ItemType Directory dist | Out-Null
-          Copy-Item out/Shot/shot.exe,out/Shot/icudtl.dat,out/Shot/shot_data.pak,out/Shot/shot_strings.pak dist/
+          Copy-Item out/Shot/shot.exe,out/Shot/shot_data.pak,out/Shot/shot_strings.pak dist/
           Get-ChildItem dist | Select-Object Name,Length
 
       - name: upload
