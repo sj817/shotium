@@ -235,6 +235,13 @@ source_set("asan_raw_ptr_service") {
 # This does not include test code (test support and anything in the test
 # directory) which should use source_set as is recommended for GN targets).
 component("base") {
+  shot_jumbo_file_merge_limit = 4
+  shot_jumbo_excluded_sources = [
+    "allocator/scheduler_loop_quarantine_config.cc",
+    "power_monitor/battery_level_provider_win.cc",
+    "task/single_thread_task_runner.cc",
+  ]
+
   sources = [
     "allocator/allocator_check.cc",
     "allocator/allocator_check.h",

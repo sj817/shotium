@@ -184,6 +184,7 @@ if (crashpad_is_win) {
 }
 
 crashpad_static_library("util") {
+  shot_jumbo_excluded_sources = [ "misc/clock_win.cc" ]
   sources = [
     "file/delimited_file_reader.cc",
     "file/delimited_file_reader.h",

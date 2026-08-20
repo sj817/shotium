@@ -225,6 +225,10 @@ absl_source_set("randen_engine") {
 }
 
 absl_source_set("platform") {
+  if (use_shot_jumbo_build) {
+    never_build_shot_jumbo = true
+  }
+
   sources = [ "randen_round_keys.cc" ]
   public = [
     "platform.h",
@@ -238,6 +242,10 @@ absl_source_set("platform") {
 }
 
 absl_source_set("randen") {
+  if (use_shot_jumbo_build) {
+    never_build_shot_jumbo = true
+  }
+
   sources = [ "randen.cc" ]
   public = [ "randen.h" ]
   visibility = [
@@ -254,6 +262,10 @@ absl_source_set("randen") {
 }
 
 absl_source_set("randen_slow") {
+  if (use_shot_jumbo_build) {
+    never_build_shot_jumbo = true
+  }
+
   sources = [ "randen_slow.cc" ]
   public = [ "randen_slow.h" ]
   visibility = [
@@ -270,6 +282,10 @@ absl_source_set("randen_slow") {
 }
 
 absl_source_set("randen_hwaes") {
+  if (use_shot_jumbo_build) {
+    never_build_shot_jumbo = true
+  }
+
   sources = [ "randen_detect.cc" ]
   public = [ "randen_detect.h" ]
   visibility = [
@@ -283,6 +299,10 @@ absl_source_set("randen_hwaes") {
 }
 
 absl_source_set("randen_hwaes_impl") {
+  if (use_shot_jumbo_build) {
+    never_build_shot_jumbo = true
+  }
+
   sources = [ "randen_hwaes.cc" ]
   public = [ "randen_hwaes.h" ]
   visibility = [

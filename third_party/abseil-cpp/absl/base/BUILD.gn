@@ -22,6 +22,10 @@ absl_source_set("errno_saver") {
 }
 
 absl_source_set("cpu_detect") {
+  if (use_shot_jumbo_build) {
+    never_build_shot_jumbo = true
+  }
+
   sources = [ "internal/cpu_detect.cc" ]
   public = [ "internal/cpu_detect.h" ]
   visibility = [ "//third_party/abseil-cpp/absl/*" ]

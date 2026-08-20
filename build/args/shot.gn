@@ -26,6 +26,19 @@ is_debug = false
 is_component_build = false
 symbol_level = 0
 is_shot_build = true
+use_shot_jumbo_build = true
+shot_jumbo_file_merge_limit = 8
+
+# //third_party/icu is a DEPS checkout, so a builder that runs gclient sync
+# gets it from its own upstream and never sees the exclusion list this tree
+# carries locally. Merged without it, icuuc and icui18n collide on gInitOnce,
+# LIMITS and the gSystemDefaultCentury* statics that half the calendars define.
+# Keeping ICU out of Jumbo costs a few hundred small compile actions and makes
+# the graph identical whether or not the checkout is patched.
+shot_jumbo_excluded_dirs = [
+  "//third_party/angle*",
+  "//third_party/icu*",
+]
 
 # Embed ICU data so the executable stays self-contained. The companion
 # v8_use_external_startup_data is gone with //v8: no declare_args block
@@ -85,6 +98,24 @@ use_perfetto_trace_processor = false
 #
 # A screenshot of a static page opens no peer connections.
 is_p2p_enabled = false
+
+# Shot paints Blink's cc::PaintRecord into a CPU SkSurface. It never creates a
+# GL context, a Vulkan device, or a GPU process, so ANGLE's renderer backends
+# and SwiftShader cannot be selected at runtime. They previously survived in
+# the build graph even though ThinLTO removed all of their code from shot.exe.
+enable_swiftshader = false
+enable_swiftshader_vulkan = false
+angle_enable_swiftshader = false
+angle_enable_vulkan = false
+angle_enable_d3d11 = false
+angle_enable_gl = false
+
+# With every renderer backend above turned off, Display.cpp still has to
+# resolve one default platform type, so the Null backend has to be the one
+# left standing. angle_enable_null otherwise follows !is_official_build, which
+# is false here. Setting it explicitly rather than deriving it in angle.gni
+# keeps this correct on a checkout that gclient restored from ANGLE upstream.
+angle_enable_null = true
 
 # ---------------------------------------------------------------------------
 # Size. Everything below was chosen from measured bytes, not from the

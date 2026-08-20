@@ -127,16 +127,25 @@ proto_library("device_bound_sessions_storage_proto") {
 source_set("net_features") {
   sources = [ "base/features.h" ]
   deps = [
-    "//components/unexportable_keys",
     ":buildflags",
     ":disk_cache_buildflags",
     "//base",
+    "//components/unexportable_keys",
     "//crypto:buildflags",
     "//net/base:net_export_header",
   ]
 }
 
 component("net") {
+  shot_jumbo_file_merge_limit = 4
+  shot_jumbo_excluded_sources = [
+    "filter/gzip_source_stream.cc",
+    "http/http_cache_transaction.cc",
+    "http/http_stream_factory_job_controller.cc",
+    "url_request/url_request_http_job.cc",
+    "url_request/url_request_job.cc",
+  ]
+
   sources = [
     "base/address_family.cc",
     "base/address_family.h",
@@ -455,11 +464,13 @@ component("net") {
     "device_bound_sessions/session_access.h",
     "device_bound_sessions/session_display.cc",
     "device_bound_sessions/session_display.h",
+
     # session_event.cc constructs and destroys SessionError unconditionally, so
-    # its definition has to be here rather than behind enable_device_bound_sessions
-    # -- with the feature off the build compiled the user and dropped the
-    # definition, and only the link found out. session_error.cc needs nothing but
-    # base/notreached.h and refresh_result.h, so moving it costs nothing.
+    # its definition has to be here rather than behind
+    # enable_device_bound_sessions -- with the feature off the build compiled
+    # the user and dropped the definition, and only the link found out.
+    # session_error.cc needs nothing but base/notreached.h and refresh_result.h,
+    # so moving it costs nothing.
     "device_bound_sessions/session_error.cc",
     "device_bound_sessions/session_error.h",
     "device_bound_sessions/session_event.cc",
@@ -1341,9 +1352,9 @@ component("net") {
 
     deps += [
       ":device_bound_sessions_storage_proto",
-      "//components/unexportable_keys",
       "//build:branding_buildflags",
       "//components/sqlite_proto",
+      "//components/unexportable_keys",
       "//sql",
     ]
   }
@@ -3699,9 +3710,7 @@ target(_test_target_type, "net_unittests") {
       "device_bound_sessions/unexportable_key_service_factory_unittest.cc",
       "device_bound_sessions/url_fetcher_unittest.cc",
     ]
-    deps += [
-      ":device_bound_sessions_storage_proto",
-    ]
+    deps += [ ":device_bound_sessions_storage_proto" ]
   }
 
   if (enable_disk_cache_sql_backend) {
@@ -3727,9 +3736,7 @@ target(_test_target_type, "net_unittests") {
       "disk_cache/sql/test_util.h",
     ]
 
-    deps += [
-      "//components/sqlite_vfs",
-    ]
+    deps += [ "//components/sqlite_vfs" ]
 
     # Platforms where sqlite_dev_shell is defined.
     if (is_win || is_mac || is_linux || is_chromeos) {

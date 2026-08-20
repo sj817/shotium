@@ -378,6 +378,10 @@ absl_source_set("hashtable_debug_hooks") {
 }
 
 absl_source_set("hashtablez_sampler") {
+  if (use_shot_jumbo_build) {
+    never_build_shot_jumbo = true
+  }
+
   sources = [
     "internal/hashtablez_sampler.cc",
     "internal/hashtablez_sampler_force_weak_definition.cc",
@@ -489,6 +493,10 @@ absl_test("raw_hash_set_resize_impl_test") {
 }
 
 absl_source_set("raw_hash_set") {
+  if (use_shot_jumbo_build) {
+    never_build_shot_jumbo = true
+  }
+
   sources = [ "internal/raw_hash_set.cc" ]
   public = [ "internal/raw_hash_set.h" ]
   deps = [

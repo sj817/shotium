@@ -35,6 +35,9 @@ cc_component("layer_selection_bound") {
 }
 
 cc_component("cc") {
+  shot_jumbo_excluded_sources =
+      [ "metrics/compositor_frame_reporting_controller.cc" ]
+
   sources = [
     "benchmarks/benchmark_instrumentation.cc",
     "benchmarks/benchmark_instrumentation.h",
@@ -1040,9 +1043,7 @@ cc_test("cc_unittests") {
   }
 
   if (is_ios) {
-    public_deps = [
-      ":unit_tests_bundle_data",
-    ]
+    public_deps = [ ":unit_tests_bundle_data" ]
   }
 }
 

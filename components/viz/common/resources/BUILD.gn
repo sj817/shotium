@@ -5,6 +5,8 @@
 import("//components/viz/viz.gni")
 
 viz_component("shared_image_format") {
+  shot_jumbo_excluded_sources = [ "shared_image_format_utils.cc" ]
+
   output_name = "viz_shared_image_format"
 
   defines = [ "IS_VIZ_SHARED_IMAGE_FORMAT_IMPL" ]

@@ -7,6 +7,10 @@
 import("//third_party/abseil-cpp/absl.gni")
 
 absl_source_set("hash") {
+  if (use_shot_jumbo_build) {
+    never_build_shot_jumbo = true
+  }
+
   sources = [
     "internal/hash.cc",
     "internal/hash.h",

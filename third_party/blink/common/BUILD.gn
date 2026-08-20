@@ -112,7 +112,7 @@ config("blink_common_implementation") {
   defines = [ "BLINK_COMMON_IMPLEMENTATION=1" ]
 }
 
-source_set("common") {
+shot_compatible_source_set("common") {
   # No target should directly depend on this target since this is just the
   # source set rather than the actual component that can be linked to.
   # Dependencies instead should be to //third_party/blink/public/common:common.

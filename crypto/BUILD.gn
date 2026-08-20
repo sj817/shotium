@@ -44,6 +44,10 @@ rust_static_library("tpm_unittests") {
 
 component("crypto") {
   output_name = "crcrypto"  # Avoid colliding with OpenSSL's libcrypto.
+  shot_jumbo_excluded_sources = [
+    "cose.cc",
+    "user_verifying_key.cc",
+  ]
   sources = [
     "aead.cc",
     "aead.h",
@@ -110,9 +114,7 @@ component("crypto") {
     "user_verifying_key.h",
   ]
 
-  deps = [
-    ":tpm",
-  ]
+  deps = [ ":tpm" ]
 
   public_deps = [
     ":buildflags",

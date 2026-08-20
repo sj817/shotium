@@ -16,6 +16,10 @@ absl_source_set("civil_time") {
 }
 
 absl_source_set("time_zone") {
+  if (use_shot_jumbo_build) {
+    shot_jumbo_excluded_sources = [ "src/time_zone_posix.cc" ]
+  }
+
   sources = [
     "src/time_zone_fixed.cc",
     "src/time_zone_fixed.h",

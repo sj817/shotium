@@ -50,8 +50,12 @@ config("cppgc_config") {
 
 # V8 does not build clean under Chromium's warning set; it has its own.
 template("v8_vendored_source_set") {
-  source_set(target_name) {
+  _target_variables = {
     forward_variables_from(invoker, "*")
+    configs = default_compiler_configs
+    if (defined(invoker.configs)) {
+      configs = invoker.configs
+    }
     configs -= [ "//build/config/compiler:chromium_code" ]
     configs += [ "//build/config/compiler:no_chromium_code" ]
     if (!defined(public_configs)) {
@@ -65,6 +69,17 @@ template("v8_vendored_source_set") {
       deps = []
     }
     deps += [ "//third_party/abseil-cpp:absl" ]
+  }
+
+  if (use_shot_jumbo_build) {
+    component(target_name) {
+      static_component_type = "source_set"
+      forward_variables_from(_target_variables, "*")
+    }
+  } else {
+    source_set(target_name) {
+      forward_variables_from(_target_variables, "*")
+    }
   }
 }
 

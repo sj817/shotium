@@ -7,6 +7,10 @@
 import("//third_party/abseil-cpp/absl.gni")
 
 absl_source_set("time") {
+  if (use_shot_jumbo_build) {
+    shot_jumbo_excluded_sources = [ "format.cc" ]
+  }
+
   sources = [
     "civil_time.cc",
     "clock.cc",

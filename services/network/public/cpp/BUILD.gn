@@ -57,6 +57,7 @@ component("crash_keys") {
 
 component("cpp") {
   output_name = "network_cpp"
+  shot_jumbo_excluded_sources = [ "declarative_performance_observer_parser.cc" ]
 
   sources = [
     "avail_language_header_parser.cc",

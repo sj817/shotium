@@ -14,7 +14,7 @@
 
 import("../build/crashpad_buildconfig.gni")
 
-static_library("common") {
+crashpad_static_library("common") {
   sources = [
     "crash_report_upload_rate_limit.cc",
     "crash_report_upload_rate_limit.h",
@@ -49,7 +49,8 @@ static_library("common") {
 }
 
 if (!crashpad_is_ios) {
-  static_library("handler") {
+  crashpad_static_library("handler") {
+    configs = []
     sources = [
       "handler_main.cc",
       "handler_main.h",

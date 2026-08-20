@@ -27,9 +27,7 @@ if (current_cpu == "mipsel" || current_cpu == "mips64el") {
 
 buildflag_header("buildflags") {
   header = "buildflags.h"
-  flags = [
-    "SKIA_SUPPORT_SKOTTIE=$skia_support_skottie",
-  ]
+  flags = [ "SKIA_SUPPORT_SKOTTIE=$skia_support_skottie" ]
 }
 
 source_set("path_bridge") {
@@ -234,6 +232,19 @@ source_set("skia_core_public_headers") {
 }
 
 component("skia") {
+  shot_jumbo_file_merge_limit = 4
+  shot_jumbo_excluded_sources = [
+    "//third_party/skia/modules/skottie/src/Transform.cpp",
+    "//third_party/skia/modules/skottie/src/animator/KeyframeAnimator.cpp",
+    "//third_party/skia/src/gpu/ganesh/GrDirectContextPriv.cpp",
+    "//third_party/skia/src/gpu/ganesh/SurfaceDrawContext.cpp",
+    "//third_party/skia/src/gpu/ganesh/gl/GrGLAttachment.cpp",
+    "//third_party/skia/src/ports/SkFontHost_FreeType_common.cpp",
+    "//third_party/skia/src/ports/SkTypeface_fontations.cpp",
+    "//third_party/skia/src/ports/SkTypeface_win_dw.cpp",
+    "//third_party/skia/src/utils/SkParsePath.cpp",
+  ]
+
   deps = []
   public = [
     "ext/benchmarking_canvas.h",
@@ -924,7 +935,7 @@ source_set("rust_exif_ffi_cpp") {
 # These are all opted out of check_includes, due to (logically) being part of
 # skia.
 template("skia_source_set") {
-  source_set(target_name) {
+  _target_variables = {
     forward_variables_from(invoker, "*")
 
     check_includes = false
@@ -976,6 +987,17 @@ template("skia_source_set") {
       ]
     }
   }
+
+  if (use_shot_jumbo_build) {
+    component(target_name) {
+      static_component_type = "source_set"
+      forward_variables_from(_target_variables, "*")
+    }
+  } else {
+    source_set(target_name) {
+      forward_variables_from(_target_variables, "*")
+    }
+  }
 }
 set_defaults("skia_source_set") {
   # Match the defaults for `source_set`
@@ -996,6 +1018,13 @@ config("skia_avx512_flags") {
 
 # Split out for targeted removal of the afdo_optimize_size config on Android.
 skia_source_set("skia_core_and_effects") {
+  shot_jumbo_file_merge_limit = 4
+  shot_jumbo_excluded_sources =
+      filter_include(skia_core_sources, [ "*_opts*.cpp" ]) + [
+        "//third_party/skia/src/core/SkBitmapProcState_matrixProcs.cpp",
+        "//third_party/skia/src/core/SkScan_Antihair.cpp",
+      ]
+
   defines = []
   sources = skia_core_sources
   sources += skia_colorfilters_sources
@@ -1215,6 +1244,16 @@ if (skia_support_gpu) {
   # If a source set contains only sources and no public files, then dependents
   # can include any file from sources.
   skia_source_set("skia_graphite_private") {
+    shot_jumbo_file_merge_limit = 4
+    shot_jumbo_excluded_sources = [
+      "//third_party/skia/src/gpu/graphite/Device.cpp",
+      "//third_party/skia/src/gpu/graphite/ResourceProvider.cpp",
+      "//third_party/skia/src/gpu/graphite/render/SDFTextRenderStep.cpp",
+      "//third_party/skia/src/gpu/graphite/render/TessellateStrokesRenderStep.cpp",
+      "//third_party/skia/src/gpu/graphite/render/TessellateWedgesRenderStep.cpp",
+      "//third_party/skia/src/gpu/graphite/render/VerticesRenderStep.cpp",
+    ]
+
     sources = skia_graphite_sources + skia_graphite_precompile_sources +
               skia_sksl_graphite_modules_sources
     deps = [ "//gpu/config:workaround_list" ]

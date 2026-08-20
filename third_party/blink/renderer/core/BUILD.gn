@@ -69,11 +69,11 @@ if (is_ios) {
 }
 
 visibility = [
-  "//third_party/blink/public/*",
-  "//third_party/blink/renderer/*",
   # //shot drives Page/LocalFrame/LocalFrameView directly instead of going
   # through public/web; see third_party/blink/renderer/BUILD.gn.
   "//shot/*",
+  "//third_party/blink/public/*",
+  "//third_party/blink/renderer/*",
 ]
 
 rel_blink_core_gen_dir = rebase_path(blink_core_output_dir, root_build_dir)
@@ -228,7 +228,6 @@ rust_static_library("xml_ffi") {
   ]
   cxx_bindings = [ crate_root ]
   deps = [
-    "//services/metrics/public/cpp:ukm_builders",
     "//services/metrics/public/cpp:metrics_cpp",
     "//services/metrics/public/cpp:ukm_builders",
     "//services/metrics/public/mojom",
@@ -240,6 +239,18 @@ rust_static_library("xml_ffi") {
 
 component("core") {
   output_name = "blink_core"
+
+  # Each of these collides with a sibling in the same Jumbo translation unit:
+  # a duplicated file-scope symbol, or a name that resolves differently once
+  # another source's declarations precede it. They still compile on their own.
+  shot_jumbo_excluded_sources = [
+    "css/clip_path_paint_image_generator.cc",
+    "css/properties/css_direction_aware_resolver.cc",
+    "frame/cached_permission_status.cc",
+    "html/anchor_element_viewport_position_tracker.cc",
+    "paint/highlight_painter.cc",
+    "xml/parser/xml_document_parser_rs.cc",
+  ]
 
   visibility = []  # Allow re-assignment of list.
   visibility = [
@@ -285,9 +296,8 @@ component("core") {
   sources += rebase_path(blink_core_sources_geometry, "", "geometry")
   sources += rebase_path(blink_core_sources_highlight, "", "highlight")
   sources += rebase_path(blink_core_sources_html, "", "html")
-  sources += rebase_path(blink_core_sources_image_replacement,
-                         "",
-                         "image_replacement")
+  sources +=
+      rebase_path(blink_core_sources_image_replacement, "", "image_replacement")
   sources += rebase_path(blink_core_sources_input, "", "input")
   sources += rebase_path(blink_core_sources_intersection_observer,
                          "",
@@ -302,8 +312,7 @@ component("core") {
   sources += rebase_path(blink_core_sources_overscroll, "", "overscroll")
   sources += rebase_path(blink_core_sources_page, "", "page")
   sources += rebase_path(blink_core_sources_paint, "", "paint")
-  sources +=
-      rebase_path(blink_core_sources_preferences, "", "preferences")
+  sources += rebase_path(blink_core_sources_preferences, "", "preferences")
   sources +=
       rebase_path(blink_core_sources_resize_observer, "", "resize_observer")
   sources += rebase_path(blink_core_sources_scheduler, "", "scheduler")
@@ -326,24 +335,24 @@ component("core") {
     ":core_generated",
     ":core_hot",
     "//cc",
+    "//printing/mojom:mojom_blink",
     "//skia",
     "//third_party/blink/public/mojom:mojom_core_blink",
-    "//third_party/blink/renderer/core/animation",
     "//third_party/blink/renderer/bindings/core/v8:bindings_core_v8",
+    "//third_party/blink/renderer/core/animation",
     "//third_party/blink/renderer/core/exported",
     "//third_party/blink/renderer/core/inspector",
     "//third_party/blink/renderer/core/probe",
-    "//printing/mojom:mojom_blink",
     "//third_party/blink/renderer/core/sanitizer:generated",
     "//third_party/blink/renderer/core/url_pattern",
     "//third_party/blink/renderer/platform",
 
     # focusgroup_flags.h and the editing code are written in terms of
     # ax::mojom::blink::Role / Command / InputEventType.
-    "//ui/accessibility:ax_enums_mojo_blink",
-    "//ui/accessibility:ax_base",
     "//third_party/blink/renderer/platform/wtf",
     "//third_party/re2",
+    "//ui/accessibility:ax_base",
+    "//ui/accessibility:ax_enums_mojo_blink",
     "//ui/base",
     "//ui/base:ui_data_pack",
     "//ui/base/cursor",
@@ -364,11 +373,11 @@ component("core") {
   deps = [
     ":make_deprecation_info",
     ":xml_ffi",
-    "//services/metrics/public/cpp:ukm_builders",
     "//base",
     "//gpu/config",
     "//mojo/public/cpp/bindings",
     "//mojo/public/cpp/system",
+    "//services/metrics/public/cpp:ukm_builders",
     "//services/network/public/cpp",
     "//services/service_manager/public/cpp",
     "//skia",
@@ -1187,9 +1196,7 @@ target(core_generated_target_type, "core_generated") {
   foreach(current, targets_generating_sources) {
     sources += get_target_outputs(current)
   }
-  deps = [
-    "//third_party/blink/renderer/core/probe",
-  ]
+  deps = [ "//third_party/blink/renderer/core/probe" ]
   public_deps = [ ":all_generators" ]
 
   configs -= core_config_remove
@@ -1378,9 +1385,7 @@ group("gen_files_for_web_tests") {
   testonly = true
   visibility = []  # Allow re-assignment of list.
   visibility = [ "*" ]
-  data_deps = [
-    ":form_controls_pickers_js",
-  ]
+  data_deps = [ ":form_controls_pickers_js" ]
 }
 
 source_set("perf_tests") {
@@ -1449,8 +1454,7 @@ source_set("unit_test_support") {
 source_set("fuzztest_utils") {
   testonly = true
 
-  sources = [
-  ]
+  sources = []
 
   configs += [
     ":blink_core_pch",

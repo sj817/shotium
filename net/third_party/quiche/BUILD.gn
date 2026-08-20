@@ -55,6 +55,22 @@ config("quiche_config") {
 }
 
 component("quiche") {
+  shot_jumbo_file_merge_limit = 4
+  shot_jumbo_excluded_sources = [
+    "src/quiche/http2/core/spdy_protocol.cc",
+    "src/quiche/oblivious_http/oblivious_http_gateway.cc",
+    "src/quiche/quic/core/congestion_control/bbr3_sender.cc",
+    "src/quiche/quic/core/congestion_control/bbr_sender.cc",
+    "src/quiche/quic/core/crypto/aes_128_gcm_12_encrypter.cc",
+    "src/quiche/quic/core/crypto/aes_128_gcm_decrypter.cc",
+    "src/quiche/quic/core/crypto/aes_128_gcm_encrypter.cc",
+    "src/quiche/quic/core/crypto/aes_256_gcm_encrypter.cc",
+    "src/quiche/quic/core/crypto/chacha20_poly1305_decrypter.cc",
+    "src/quiche/quic/core/crypto/chacha20_poly1305_tls_decrypter.cc",
+    "src/quiche/quic/core/crypto/chacha20_poly1305_tls_encrypter.cc",
+    "src/quiche/quic/core/crypto/crypto_secret_boxer.cc",
+  ]
+
   sources = [
               "overrides/quiche_platform_impl/quiche_bug_tracker_impl.h",
               "overrides/quiche_platform_impl/quiche_client_stats_impl.h",

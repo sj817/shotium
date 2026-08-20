@@ -288,6 +288,10 @@ config("zlib_warnings") {
 }
 
 component("zlib") {
+  # zlib intentionally has internal headers without include guards, so its C
+  # sources cannot share a translation unit.
+  never_build_shot_jumbo = true
+
   if (!is_win) {
     # Don't stomp on "libzlib" on other platforms.
     output_name = "chrome_zlib"

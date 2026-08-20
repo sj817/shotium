@@ -29,15 +29,15 @@ if (is_ios) {
 visibility = [
   ":*",
   "//:gn_all",
-  "//third_party/blink/public:all_blink",
-  "//third_party/blink/renderer/platform/heap:test_support",
+
   # //shot drives Page/LocalFrame/LocalFrameView directly instead of going
   # through public/web; see third_party/blink/renderer/BUILD.gn.
   "//shot/*",
+  "//third_party/blink/public:all_blink",
+  "//third_party/blink/renderer/platform/heap:test_support",
 ]
 
-blink_platform_avx_files = [
-]
+blink_platform_avx_files = []
 
 make_names("font_family_names") {
   in_files = [ "fonts/font_family_names.json5" ]
@@ -73,8 +73,7 @@ blink_python_runner("runtime_enabled_features") {
     rebase_path(blink_platform_output_dir, root_build_dir),
   ]
 
-  visibility += [
-  ]
+  visibility += []
 }
 
 blink_python_runner("runtime_feature_state_override_context") {
@@ -328,6 +327,12 @@ source_set("image_headers") {
 }
 
 component("platform") {
+  shot_jumbo_excluded_sources = [
+    "fonts/shaping/shape_result.cc",
+    "theme/web_theme_engine_default.cc",
+    "widget/input/widget_base_input_handler.cc",
+  ]
+
   visibility = []  # Allow re-assignment of list.
   visibility = [
     "//third_party/blink/*",
@@ -360,6 +365,8 @@ component("platform") {
     "bindings/cross_thread_copier.h",
     "bindings/cross_thread_source_location.cc",
     "bindings/cross_thread_source_location.h",
+    "bindings/dictionary_base.h",
+    "bindings/enumeration_base.h",
     "bindings/exception_code.h",
     "bindings/exception_context.h",
     "bindings/exception_messages.cc",
@@ -379,8 +386,6 @@ component("platform") {
     "bindings/source_location.cc",
     "bindings/source_location.h",
     "bindings/source_location_copier.h",
-    "bindings/dictionary_base.h",
-    "bindings/enumeration_base.h",
     "bindings/transform_view.h",
     "bindings/union_base.h",
     "bindings/v8_binding.cc",
@@ -866,11 +871,12 @@ component("platform") {
     "graphics/gpu/webgl_image_conversion.h",
     "graphics/gpu/webgraphics_shared_image_interface_provider_impl.cc",
     "graphics/gpu/webgraphics_shared_image_interface_provider_impl.h",
-    # xr_webgl_drawing_buffer.{h,cc} and xr_webgl_frame_transport_delegate.{h,cc}
-    # deleted: orphaned WebXR frame-transport plumbing left behind after the
-    # WebXR frame transport / modules/xr cut. No callers outside modules/xr,
-    # which no longer exists; base class XRFrameTransportDelegate was already
-    # gone.
+
+    # xr_webgl_drawing_buffer.{h,cc} and
+    # xr_webgl_frame_transport_delegate.{h,cc} deleted: orphaned WebXR
+    # frame-transport plumbing left behind after the WebXR frame transport /
+    # modules/xr cut. No callers outside modules/xr, which no longer exists;
+    # base class XRFrameTransportDelegate was already gone.
     "graphics/gradient.cc",
     "graphics/gradient.h",
     "graphics/gradient_generated_image.cc",
@@ -1419,16 +1425,17 @@ component("platform") {
   deps = [
     "fonts:font_format_bindings",
     "//base:base_static",
-    # main_thread_scheduler_impl.cc calls PerformanceScenarioObserverList, but
-    # this dependency was never declared: the symbols arrived because //net
-    # pulled scenario_api in from its SQL disk cache block. Turning that block
-    # off made the missing edge visible. Declared here, where the use is.
-    "//components/performance_manager/scenario_api",
     "//base/allocator:buildflags",
     "//build:chromecast_buildflags",
     "//cc",
     "//cc/mojo_embedder",
     "//components/input",
+
+    # main_thread_scheduler_impl.cc calls PerformanceScenarioObserverList, but
+    # this dependency was never declared: the symbols arrived because //net
+    # pulled scenario_api in from its SQL disk cache block. Turning that block
+    # off made the missing edge visible. Declared here, where the use is.
+    "//components/performance_manager/scenario_api",
     "//components/viz/client",
     "//components/viz/common",
     "//crypto",
@@ -2019,9 +2026,7 @@ source_set("blink_platform_unittests_sources") {
     "//url/mojom:test_url_mojom_gurl_blink",
   ]
 
-  deps += [
-    ":bridge_ice_controller_tests",
-  ]
+  deps += [ ":bridge_ice_controller_tests" ]
 
   data_deps = [ ":blink_platform_unittests_data" ]
 
@@ -2040,12 +2045,9 @@ source_set("bridge_ice_controller_tests") {
   visibility = [ ":*" ]
   testonly = true
 
-  sources = [
-  ]
+  sources = []
 
-  deps = [
-    ":test_support",
-  ]
+  deps = [ ":test_support" ]
 
   # TODO(crbug.com/40031409): Fix code that adds exit-time destructors and
   # enable the diagnostic by removing this line.

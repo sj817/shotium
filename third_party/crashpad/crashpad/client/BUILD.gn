@@ -124,7 +124,7 @@ crashpad_static_library("client") {
   }
 }
 
-static_library("common") {
+crashpad_static_library("common") {
   sources = [
     "annotation.cc",
     "annotation.h",
@@ -161,7 +161,7 @@ static_library("common") {
     "../util",
   ]
   deps = [ "../util" ]
-  configs += [ "../build:flock_always_supported_defines" ]
+  configs = [ "../build:flock_always_supported_defines" ]
 
   if (crashpad_is_apple) {
     deps += [ "../build:apple_enable_arc" ]

@@ -19,6 +19,13 @@ buildflag_header("buildflags") {
 }
 
 blink_core_sources("animation") {
+  if (use_shot_jumbo_build) {
+    # IsCompatible() collides with the same-named file-scope helper in a
+    # sibling interpolation type.
+    shot_jumbo_excluded_sources =
+        [ "css_gap_length_list_interpolation_type.cc" ]
+  }
+
   sources = [
     "animation.cc",
     "animation.h",

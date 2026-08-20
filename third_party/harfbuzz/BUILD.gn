@@ -84,6 +84,10 @@ if (use_system_harfbuzz) {
     # that gets implemented. Then patch harfbuzz and remove this completely.
     # Upstream issue: https://github.com/harfbuzz/harfbuzz/issues/5738
     cflags += [ "-Wno-array-bounds" ]
+
+    if (use_shot_jumbo_build) {
+      cflags += [ "-Wno-range-loop-bind-reference" ]
+    }
   }
 
   component("harfbuzz") {

@@ -156,6 +156,10 @@ if (is_msan) {
 }
 
 component("boringssl") {
+  # BoringSSL has pervasive file-local name and macro collisions, and it is
+  # autorolled too frequently for a stable per-source Jumbo exclusion list.
+  never_build_shot_jumbo = true
+
   sources = rebase_path(all_sources, ".", "src")
   public = rebase_path(all_headers, ".", "src")
   friend = [ ":*" ]

@@ -657,6 +657,7 @@ if (is_clang_or_gcc) {
   }
 
   component("allocator_base") {
+    shot_jumbo_file_merge_limit = 4
     visibility = [ ":*" ]
     if (use_partition_alloc_as_malloc_on_win_component_build) {
       # Since common_deps defined in //build/config/BUILD.gn depends on

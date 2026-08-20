@@ -7,6 +7,10 @@
 import("//third_party/abseil-cpp/absl.gni")
 
 absl_source_set("crc_internal") {
+  if (use_shot_jumbo_build) {
+    never_build_shot_jumbo = true
+  }
+
   sources = [
     "internal/crc.cc",
     "internal/crc_internal.h",
@@ -30,6 +34,10 @@ absl_source_set("crc_internal") {
 }
 
 absl_source_set("crc32c") {
+  if (use_shot_jumbo_build) {
+    never_build_shot_jumbo = true
+  }
+
   sources = [
     "crc32c.cc",
     "internal/crc32c_inline.h",

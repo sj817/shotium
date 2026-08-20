@@ -8,7 +8,14 @@ import("//third_party/protobuf/proto_library.gni")
 
 enable_built_in_dns = use_blink
 
-source_set("dns") {
+shot_compatible_source_set("dns") {
+  shot_jumbo_excluded_sources = [
+    "dns_response.cc",
+    "host_resolver_cache.cc",
+    "host_resolver_internal_result.cc",
+    "host_resolver_manager.cc",
+  ]
+
   # Due to circular dependencies, should only be depended on through //net.
   visibility = [
     "//net",

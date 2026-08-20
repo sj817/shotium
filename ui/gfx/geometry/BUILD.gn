@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 component("geometry") {
+  shot_jumbo_excluded_sources = [ "quaternion.cc" ]
+
   sources = [
     "axis_transform2d.cc",
     "axis_transform2d.h",
