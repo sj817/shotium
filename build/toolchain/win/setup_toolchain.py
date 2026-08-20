@@ -74,7 +74,20 @@ def _ExtractImportantEnvironment(output_of_set):
                                 'Make sure the necessary SDK is installed.'
                                 % (part, envvar)
                             )
-                env[var.upper()] = setting
+                key = var.upper()
+                if key in env:
+                    # Windows environment names are case-insensitive, but the
+                    # runner can expose both PATH and Path. Keep the toolchain
+                    # entries from vcvarsall instead of letting the later
+                    # inherited spelling hide cl.exe and the SDK.
+                    if key == 'PATH':
+                        existing = env[key].split(os.pathsep)
+                        for part in setting.split(os.pathsep):
+                            if part and part not in existing:
+                                existing.append(part)
+                        env[key] = os.pathsep.join(existing)
+                else:
+                    env[key] = setting
                 break
     if sys.platform in ('win32', 'cygwin'):
         for required in ('SYSTEMROOT', 'TEMP', 'TMP'):
