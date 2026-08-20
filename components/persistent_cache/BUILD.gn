@@ -2,6 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config/shot_build.gni")
+
+# Shot takes the same shape as Fuchsia here. Its only PersistentCache client is
+# blink's code cache, which stores V8 bytecode -- and this build has no V8, no
+# script engine, and never binds a CodeCacheHost, so nothing can reach a
+# backend. Taking the placeholder implementation instead of the sqlite one
+# keeps //third_party/sqlite and //sql out of the image; the mojom traits still
+# need this target, which is why dropping the dependency on the blink side
+# alone did not do it.
 component("persistent_cache") {
   public = [
     "backend_storage.h",
@@ -26,7 +35,7 @@ component("persistent_cache") {
     "persistent_cache_collection.cc",
   ]
 
-  if (is_fuchsia) {
+  if (is_fuchsia || is_shot_build) {
     sources += [ "persistent_cache_fuchsia.cc" ]
   }
 
@@ -38,7 +47,7 @@ component("persistent_cache") {
   ]
 
   # Cross-process file locks are not available on Fuchsia.
-  if (!is_fuchsia) {
+  if (!is_fuchsia && !is_shot_build) {
     sources += [
       "persistent_cache.cc",
       "sqlite/backend_storage_delegate.cc",
@@ -56,6 +65,9 @@ component("persistent_cache") {
 
   # See base/component_export.h
   defines = [ "IS_PERSISTENT_CACHE_IMPL" ]
+  if (is_shot_build) {
+    defines += [ "IS_SHOT_BUILD" ]
+  }
 
   friend = [
     ":perf_tests",

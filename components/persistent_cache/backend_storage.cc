@@ -20,7 +20,8 @@
 #include "components/persistent_cache/pending_backend.h"
 #include "components/persistent_cache/persistent_cache.h"
 
-#if !BUILDFLAG(IS_FUCHSIA)
+// Shot builds no sqlite backend either; see the note in BUILD.gn.
+#if !BUILDFLAG(IS_FUCHSIA) && !defined(IS_SHOT_BUILD)
 #include "components/persistent_cache/sqlite/backend_storage_delegate.h"
 #endif
 
@@ -30,7 +31,7 @@ namespace {
 
 std::unique_ptr<BackendStorage::Delegate> MakeDelegateOfType(
     BackendType backend_type) {
-#if BUILDFLAG(IS_FUCHSIA)
+#if BUILDFLAG(IS_FUCHSIA) || defined(IS_SHOT_BUILD)
   return nullptr;
 #else
   switch (backend_type) {
