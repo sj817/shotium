@@ -30,6 +30,7 @@ shot_mojom_platform_sources = [
   "dom_storage/session_storage_namespace.mojom",
   "dom_storage/storage_area.mojom",
   "drag/drag.mojom",
+  "dwrite_font_proxy/dwrite_font_proxy.mojom",
   "favicon/favicon_url.mojom",
   "fenced_frame/fenced_frame_config.mojom",
   "fetch/fetch_api_request.mojom",
@@ -59,6 +60,7 @@ shot_mojom_platform_sources = [
   "loader/content_security_notifier.mojom",
   "loader/fetch_client_settings_object.mojom",
   "loader/fetch_later.mojom",
+  "loader/javascript_framework_detection.mojom",
   "loader/keep_alive_handle.mojom",
   "loader/keep_alive_handle_factory.mojom",
   "loader/local_resource_loader_config.mojom",
@@ -109,6 +111,7 @@ shot_mojom_platform_sources = [
   "service_worker/controller_service_worker_mode.mojom",
   "service_worker/service_worker_fetch_handler_bypass_option.mojom",
   "service_worker/service_worker_fetch_handler_type.mojom",
+  "service_worker/service_worker_state.mojom",
   "timing/declarative_performance_observer.mojom",
   "timing/performance_mark_or_measure.mojom",
   "timing/resource_timing.mojom",
@@ -166,6 +169,7 @@ shot_mojom_core_sources = [
   "page/prerender_page_param.mojom",
   "page/widget.mojom",
   "page_state/page_state.mojom",
+  "service_worker/service_worker_object.mojom",
 ]
 
 # Keep this target nonempty so its existing export settings remain meaningful.

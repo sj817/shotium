@@ -283,19 +283,19 @@ mojom("mojom_platform") {
     sources = shot_mojom_platform_sources
   }
 
-  if (is_android) {
+  if (is_android && !is_shot_build) {
     sources += [ "input/synchronous_compositor.mojom" ]
   }
 
-  if (is_win) {
+  if (is_win && !is_shot_build) {
     sources += [ "dwrite_font_proxy/dwrite_font_proxy.mojom" ]
   }
 
-  if (is_mac) {
+  if (is_mac && !is_shot_build) {
     sources += [ "input/text_input_host.mojom" ]
   }
 
-  if (is_chromeos) {
+  if (is_chromeos && !is_shot_build) {
     sources += [ "set_shape/set_shape.mojom" ]
   }
 
@@ -349,6 +349,11 @@ mojom("mojom_platform") {
     "//url/mojom:url_mojom_scheme_host_port",
   ]
 
+  if (is_shot_build) {
+    public_deps +=
+        [ "//services/network/public/mojom:mojom_cors_origin_pattern" ]
+  }
+
   if (is_android) {
     # Direct deps (instead of transitive deps) are necessary for java targets.
     public_deps += [
@@ -367,7 +372,7 @@ mojom("mojom_platform") {
       "//services/viz/public/mojom:surfaces",
       "//ui/latency/mojom",
     ]
-  } else {
+  } else if (!is_shot_build) {
     sources += [
       "direct_sockets/direct_sockets.mojom",
       "printing/web_printing.mojom",

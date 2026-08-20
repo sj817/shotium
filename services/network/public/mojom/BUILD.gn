@@ -1975,6 +1975,14 @@ mojom("mojom") {
     "//url/mojom:url_mojom_scheme_host_port",
   ]
 
+  if (is_shot_build) {
+    public_deps = []
+    public_deps = [
+      ":mojom_proxy_config",
+      ":url_loader_base",
+    ]
+  }
+
   enabled_features = []
 
   # TODO(crbug.com/40083944): When moving the service implementation to
