@@ -702,8 +702,17 @@ template("proto_library") {
     _library_type = "static_library"
   }
 
-  # Build generated protobuf stubs as libary or source set.
-  target(_library_type, target_name) {
+  # Build generated protobuf stubs as library or source set.
+  _target_variables = {
+    if (defined(invoker.use_protobuf_full) && invoker.use_protobuf_full) {
+      never_build_shot_jumbo = true
+    }
+
+    if (_library_type == "component") {
+      configs = default_component_configs
+    } else {
+      configs = default_compiler_configs
+    }
     forward_variables_from(invoker,
                            [
                              "defines",
@@ -794,6 +803,35 @@ template("proto_library") {
           ]
         }
       }
+    }
+  }
+
+  # never_build_shot_jumbo is only meaningful to component(); group() and a
+  # plain source_set/static_library would report it as an assignment with no
+  # effect, which is what a build with use_shot_jumbo_build turned off gets.
+  if (_library_type == "group") {
+    group(target_name) {
+      forward_variables_from(_target_variables,
+                             "*",
+                             [
+                               "configs",
+                               "never_build_shot_jumbo",
+                             ])
+    }
+  } else if (_library_type == "component") {
+    component(target_name) {
+      forward_variables_from(_target_variables, "*")
+    }
+  } else if (use_shot_jumbo_build) {
+    component(target_name) {
+      static_component_type = _library_type
+      forward_variables_from(_target_variables, "*")
+    }
+  } else {
+    target(_library_type, target_name) {
+      forward_variables_from(_target_variables,
+                             "*",
+                             [ "never_build_shot_jumbo" ])
     }
   }
 

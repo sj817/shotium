@@ -133,6 +133,27 @@ if (enable_scrambled_message_ids) {
   message_scrambling_inputs = []
 }
 
+# Generated mojom implementations are numerous but small. Shot combines them
+# in a few translation units while preserving source_set semantics.
+template("_shot_compatible_mojom_source_set") {
+  if (use_shot_jumbo_build) {
+    component(target_name) {
+      static_component_type = "source_set"
+      forward_variables_from(invoker, "*", [ "additional_configs" ])
+      if (defined(invoker.additional_configs)) {
+        configs += invoker.additional_configs
+      }
+    }
+  } else {
+    source_set(target_name) {
+      forward_variables_from(invoker, "*", [ "additional_configs" ])
+      if (defined(invoker.additional_configs)) {
+        configs += invoker.additional_configs
+      }
+    }
+  }
+}
+
 # Generates targets for building C++, JavaScript and Java bindings from mojom
 # files. The output files will go under the generated file directory tree with
 # the same path as each input file.
@@ -1014,11 +1035,11 @@ template("mojom") {
   }
 
   shared_cpp_sources_target_name = "${target_name}_shared_cpp_sources"
-  source_set(shared_cpp_sources_target_name) {
+  _shot_compatible_mojom_source_set(shared_cpp_sources_target_name) {
     if (defined(invoker.testonly)) {
       testonly = invoker.testonly
     }
-    configs += [ "//build/config/compiler:wexit_time_destructors" ]
+    additional_configs = [ "//build/config/compiler:wexit_time_destructors" ]
     deps = []
     public_deps = []
     if (output_file_base_paths != []) {
@@ -1555,6 +1576,11 @@ template("mojom") {
     } else {
       sources_target_type = "source_set"
     }
+    use_shot_jumbo_sources_target =
+        use_shot_jumbo_build && sources_target_type == "source_set"
+    if (use_shot_jumbo_sources_target) {
+      sources_target_type = "component"
+    }
 
     output_target_name = "${target_name}${variant_suffix}"
     if (proxy_target != "") {
@@ -1584,6 +1610,9 @@ template("mojom") {
     }
 
     target(sources_target_type, sources_target_name) {
+      if (use_shot_jumbo_sources_target) {
+        static_component_type = "source_set"
+      }
       if (defined(output_name_override)) {
         output_name = output_name_override
       }

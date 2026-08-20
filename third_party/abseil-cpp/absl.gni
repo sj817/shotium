@@ -24,7 +24,11 @@ declare_args() {
 }
 
 template("absl_source_set") {
-  source_set(target_name) {
+  shot_compatible_source_set(target_name) {
+    if (use_shot_jumbo_build && !defined(invoker.shot_jumbo_file_merge_limit)) {
+      shot_jumbo_file_merge_limit = 8
+    }
+
     if (defined(invoker.testonly) && invoker.testonly && !absl_build_tests) {
       not_needed(invoker, "*")
     } else {

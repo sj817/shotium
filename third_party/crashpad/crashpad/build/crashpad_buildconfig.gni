@@ -155,26 +155,54 @@ template("crashpad_loadable_module") {
 }
 
 template("crashpad_static_library") {
-  static_library(target_name) {
-    forward_variables_from(invoker,
-                           "*",
-                           [
-                             "configs",
-                             "remove_configs",
-                           ])
-    if (defined(invoker.remove_configs)) {
-      configs -= invoker.remove_configs
-    }
+  if (crashpad_is_in_chromium && defined(use_shot_jumbo_build) &&
+      use_shot_jumbo_build) {
+    shot_compatible_static_library(target_name) {
+      forward_variables_from(invoker,
+                             "*",
+                             [
+                               "configs",
+                               "remove_configs",
+                               "shot_jumbo_file_merge_limit",
+                             ])
+      if (defined(invoker.remove_configs)) {
+        configs -= invoker.remove_configs
+      }
 
-    if (defined(invoker.configs)) {
-      configs += invoker.configs
-    }
+      if (defined(invoker.configs)) {
+        configs += invoker.configs
+      }
 
-    if (crashpad_is_in_fuchsia) {
-      conversion_config = [ "//build/config:Wno-conversion" ]
-      if (configs + conversion_config - conversion_config == configs) {
-        # TODO(https://fxbug.dev/42136089): Decide if these are worth enabling.
-        configs += conversion_config
+      # Crashpad has many repeated implementation-local names. Four still
+      # removes most compile edges while keeping Unity collisions local.
+      shot_jumbo_file_merge_limit = 4
+      if (defined(invoker.shot_jumbo_file_merge_limit)) {
+        shot_jumbo_file_merge_limit = invoker.shot_jumbo_file_merge_limit
+      }
+    }
+  } else {
+    static_library(target_name) {
+      forward_variables_from(invoker,
+                             "*",
+                             [
+                               "configs",
+                               "remove_configs",
+                             ])
+      if (defined(invoker.remove_configs)) {
+        configs -= invoker.remove_configs
+      }
+
+      if (defined(invoker.configs)) {
+        configs += invoker.configs
+      }
+
+      if (crashpad_is_in_fuchsia) {
+        conversion_config = [ "//build/config:Wno-conversion" ]
+        if (configs + conversion_config - conversion_config == configs) {
+          # TODO(https://fxbug.dev/42136089): Decide if these are worth
+          # enabling.
+          configs += conversion_config
+        }
       }
     }
   }

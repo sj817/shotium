@@ -13,34 +13,69 @@ platform_config_add = [
 platform_config_remove = []
 
 template("blink_platform_sources") {
-  source_set(target_name) {
-    # Only platform can directly depend on this.
-    # Any target outside platform should instead depend on platform.
-    visibility = [ "//third_party/blink/renderer/platform/*" ]
+  if (use_shot_jumbo_build) {
+    component(target_name) {
+      static_component_type = "source_set"
+      shot_jumbo_file_merge_limit = 4
 
-    deps =
-        [ "//third_party/blink/renderer/platform:blink_platform_public_deps" ]
-    if (defined(invoker.deps)) {
-      deps += invoker.deps
+      # Only platform can directly depend on this.
+      # Any target outside platform should instead depend on platform.
+      visibility = [ "//third_party/blink/renderer/platform/*" ]
+
+      deps =
+          [ "//third_party/blink/renderer/platform:blink_platform_public_deps" ]
+      if (defined(invoker.deps)) {
+        deps += invoker.deps
+      }
+
+      assert(
+          !defined(invoker.public_configs),
+          "$target_name's public_configs should be moved to //third_party/blink/renderer/platform:blink_platform_public_deps")
+      assert(
+          !defined(invoker.all_dependent_configs),
+          "$target_name's all_dependent_configs should be moved to //third_party/blink/renderer/platform:blink_platform_public_deps")
+      configs = []
+      if (defined(invoker.configs)) {
+        configs += invoker.configs
+      }
+
+      forward_variables_from(invoker,
+                             "*",
+                             [
+                               "deps",
+                               "configs",
+                             ])
     }
+  } else {
+    source_set(target_name) {
+      # Only platform can directly depend on this.
+      # Any target outside platform should instead depend on platform.
+      visibility = [ "//third_party/blink/renderer/platform/*" ]
 
-    assert(
-        !defined(invoker.public_configs),
-        "$target_name's public_configs should be moved to //third_party/blink/renderer/platform:blink_platform_public_deps")
-    assert(
-        !defined(invoker.all_dependent_configs),
-        "$target_name's all_dependent_configs should be moved to //third_party/blink/renderer/platform:blink_platform_public_deps")
-    configs = []
-    if (defined(invoker.configs)) {
-      configs += invoker.configs
+      deps =
+          [ "//third_party/blink/renderer/platform:blink_platform_public_deps" ]
+      if (defined(invoker.deps)) {
+        deps += invoker.deps
+      }
+
+      assert(
+          !defined(invoker.public_configs),
+          "$target_name's public_configs should be moved to //third_party/blink/renderer/platform:blink_platform_public_deps")
+      assert(
+          !defined(invoker.all_dependent_configs),
+          "$target_name's all_dependent_configs should be moved to //third_party/blink/renderer/platform:blink_platform_public_deps")
+      configs = []
+      if (defined(invoker.configs)) {
+        configs += invoker.configs
+      }
+
+      forward_variables_from(invoker,
+                             "*",
+                             [
+                               "deps",
+                               "configs",
+                             ])
     }
-
-    forward_variables_from(invoker,
-                           "*",
-                           [
-                             "deps",
-                             "configs",
-                           ])
   }
 }
 

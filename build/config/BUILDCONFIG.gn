@@ -812,6 +812,25 @@ foreach(_target_type,
 # The invoker can override the type of the target in the non-component-build
 # case by setting static_component_type to either "source_set" or
 # "static_library". If unset, the default will be used.
+declare_args() {
+  # Merge component sources only for Shot's resource-constrained clean build.
+  # This is off by default and has no effect on Chromium's normal build graph.
+  use_shot_jumbo_build = false
+
+  # Four keeps individual clang-cl processes within hosted-runner memory while
+  # removing roughly three quarters of component compile actions.
+  shot_jumbo_file_merge_limit = 4
+
+  # Label directories whose targets never take part in the Jumbo build, matched
+  # with filter_include() patterns. This exists for third_party checkouts that
+  # gclient restores from their own upstream: their per-target exclusion lists
+  # live in a repository this one does not publish, so a builder that syncs
+  # DEPS gets the sources without the exclusions and the merged translation
+  # units collide. Opting the directory out keeps that builder and this one
+  # producing the same graph.
+  shot_jumbo_excluded_dirs = []
+}
+
 template("component") {
   if (is_component_build) {
     _component_mode = "shared_library"
@@ -836,6 +855,263 @@ template("component") {
   } else {
     _component_mode = "static_library"
   }
+  _use_shot_jumbo = use_shot_jumbo_build && defined(invoker.sources)
+  if (_use_shot_jumbo && defined(invoker.never_build_shot_jumbo) &&
+      invoker.never_build_shot_jumbo) {
+    _use_shot_jumbo = false
+  }
+  if (_use_shot_jumbo && shot_jumbo_excluded_dirs != []) {
+    if (filter_include([ get_label_info(":$target_name", "dir") ],
+                       shot_jumbo_excluded_dirs) != []) {
+      _use_shot_jumbo = false
+    }
+  }
+
+  _shot_jumbo_inputs = []
+  _shot_jumbo_outputs = []
+  _shot_jumbo_cc_outputs = []
+  _shot_jumbo_c_outputs = []
+  _shot_jumbo_mm_outputs = []
+  _shot_jumbo_excluded = []
+  _shot_jumbo_cc_entries = []
+  _shot_jumbo_c_entries = []
+  _shot_jumbo_mm_entries = []
+  not_needed([
+               "_shot_jumbo_inputs",
+               "_shot_jumbo_outputs",
+               "_shot_jumbo_cc_outputs",
+               "_shot_jumbo_c_outputs",
+               "_shot_jumbo_mm_outputs",
+               "_shot_jumbo_excluded",
+               "_shot_jumbo_cc_entries",
+               "_shot_jumbo_c_entries",
+               "_shot_jumbo_mm_entries",
+             ])
+  if (_use_shot_jumbo) {
+    _shot_jumbo_merge_limit = shot_jumbo_file_merge_limit
+    if (defined(invoker.shot_jumbo_file_merge_limit)) {
+      _shot_jumbo_merge_limit = invoker.shot_jumbo_file_merge_limit
+    }
+    assert(_shot_jumbo_merge_limit > 0)
+
+    if (defined(invoker.shot_jumbo_excluded_sources)) {
+      _shot_jumbo_excluded = invoker.shot_jumbo_excluded_sources
+    }
+
+    _cc_count = 0
+    _cc_next_chunk = 0
+    _c_count = 0
+    _c_next_chunk = 0
+    _mm_count = 0
+    _mm_next_chunk = 0
+    not_needed([
+                 "_cc_count",
+                 "_cc_next_chunk",
+                 "_c_count",
+                 "_c_next_chunk",
+                 "_mm_count",
+                 "_mm_next_chunk",
+               ])
+    foreach(_source, invoker.sources) {
+      _extension = get_path_info(_source, "extension")
+      if (_extension == "cc" || _extension == "cpp") {
+        _response_entry = rebase_path(_source, root_build_dir)
+
+        # Exclusion lists are written either the way the target spells its
+        # own sources, or relative to the target's directory. A list built
+        # with rebase_path(list, "", subdir) holds system-absolute paths and
+        # only ever matches the second form, so try both.
+        if (filter_include([ _source ], _shot_jumbo_excluded) != [] ||
+            filter_include([ rebase_path(_source, ".") ],
+                           _shot_jumbo_excluded) != []) {
+          _response_entry = "!$_response_entry"
+        } else {
+          _shot_jumbo_inputs += [ _source ]
+        }
+        _shot_jumbo_cc_entries += [ _response_entry ]
+        if (_cc_count == _cc_next_chunk) {
+          _output = "$target_gen_dir/${target_name}_shot_jumbo_${_cc_count}.cc"
+          _shot_jumbo_outputs += [ _output ]
+          _shot_jumbo_cc_outputs += [ _output ]
+          _cc_next_chunk += _shot_jumbo_merge_limit
+        }
+        _cc_count += 1
+      } else if (_extension == "c") {
+        _response_entry = rebase_path(_source, root_build_dir)
+
+        # Exclusion lists are written either the way the target spells its
+        # own sources, or relative to the target's directory. A list built
+        # with rebase_path(list, "", subdir) holds system-absolute paths and
+        # only ever matches the second form, so try both.
+        if (filter_include([ _source ], _shot_jumbo_excluded) != [] ||
+            filter_include([ rebase_path(_source, ".") ],
+                           _shot_jumbo_excluded) != []) {
+          _response_entry = "!$_response_entry"
+        } else {
+          _shot_jumbo_inputs += [ _source ]
+        }
+        _shot_jumbo_c_entries += [ _response_entry ]
+        if (_c_count == _c_next_chunk) {
+          _output = "$target_gen_dir/${target_name}_shot_jumbo_c_${_c_count}.c"
+          _shot_jumbo_outputs += [ _output ]
+          _shot_jumbo_c_outputs += [ _output ]
+          _c_next_chunk += _shot_jumbo_merge_limit
+        }
+        _c_count += 1
+      } else if (_extension == "mm") {
+        _response_entry = rebase_path(_source, root_build_dir)
+
+        # Exclusion lists are written either the way the target spells its
+        # own sources, or relative to the target's directory. A list built
+        # with rebase_path(list, "", subdir) holds system-absolute paths and
+        # only ever matches the second form, so try both.
+        if (filter_include([ _source ], _shot_jumbo_excluded) != [] ||
+            filter_include([ rebase_path(_source, ".") ],
+                           _shot_jumbo_excluded) != []) {
+          _response_entry = "!$_response_entry"
+        } else {
+          _shot_jumbo_inputs += [ _source ]
+        }
+        _shot_jumbo_mm_entries += [ _response_entry ]
+        if (_mm_count == _mm_next_chunk) {
+          _output =
+              "$target_gen_dir/${target_name}_shot_jumbo_mm_${_mm_count}.mm"
+          _shot_jumbo_outputs += [ _output ]
+          _shot_jumbo_mm_outputs += [ _output ]
+          _mm_next_chunk += _shot_jumbo_merge_limit
+        }
+        _mm_count += 1
+      }
+    }
+
+    # Do not enable Jumbo when every compilable source was excluded.
+    if (_shot_jumbo_inputs == []) {
+      _use_shot_jumbo = false
+    }
+  }
+
+  if (_use_shot_jumbo) {
+    # GN evaluates this template while generating the build files. Writing the
+    # Jumbo translation units here removes one Ninja action per component;
+    # write_file() also avoids touching an unchanged output.
+    if (_shot_jumbo_cc_entries != []) {
+      _cc_count = 0
+      _cc_next_chunk = 0
+      _cc_output_index = 0
+      _cc_contents = []
+      foreach(_entry, _shot_jumbo_cc_entries) {
+        if (_cc_count == _cc_next_chunk) {
+          if (_cc_count != 0) {
+            write_file(_shot_jumbo_cc_outputs[_cc_output_index], _cc_contents)
+            _cc_output_index += 1
+          }
+          _cc_contents = []
+          _cc_contents += [
+            "/* Generated by //build/config/BUILDCONFIG.gn. Do not edit. */",
+          ]
+          _cc_next_chunk += _shot_jumbo_merge_limit
+        }
+        if (string_replace(_entry, "!", "", 1) == _entry) {
+          _cc_contents += [
+            "",
+            "#if defined(__clang__)",
+            "#pragma clang diagnostic push",
+            "#pragma clang diagnostic ignored \"-Wheader-hygiene\"",
+            "#endif",
+            "",
+            "#include \"$_entry\"",
+            "",
+            "#if defined(__clang__)",
+            "#pragma clang diagnostic pop",
+            "#endif",
+          ]
+        }
+        _cc_count += 1
+      }
+      if (_cc_count != 0) {
+        write_file(_shot_jumbo_cc_outputs[_cc_output_index], _cc_contents)
+      }
+    }
+
+    if (_shot_jumbo_c_entries != []) {
+      _c_count = 0
+      _c_next_chunk = 0
+      _c_output_index = 0
+      _c_contents = []
+      foreach(_entry, _shot_jumbo_c_entries) {
+        if (_c_count == _c_next_chunk) {
+          if (_c_count != 0) {
+            write_file(_shot_jumbo_c_outputs[_c_output_index], _c_contents)
+            _c_output_index += 1
+          }
+          _c_contents = []
+          _c_contents += [
+            "/* Generated by //build/config/BUILDCONFIG.gn. Do not edit. */",
+          ]
+          _c_next_chunk += _shot_jumbo_merge_limit
+        }
+        if (string_replace(_entry, "!", "", 1) == _entry) {
+          _c_contents += [
+            "",
+            "#if defined(__clang__)",
+            "#pragma clang diagnostic push",
+            "#pragma clang diagnostic ignored \"-Wheader-hygiene\"",
+            "#endif",
+            "",
+            "#include \"$_entry\"",
+            "",
+            "#if defined(__clang__)",
+            "#pragma clang diagnostic pop",
+            "#endif",
+          ]
+        }
+        _c_count += 1
+      }
+      if (_c_count != 0) {
+        write_file(_shot_jumbo_c_outputs[_c_output_index], _c_contents)
+      }
+    }
+
+    if (_shot_jumbo_mm_entries != []) {
+      _mm_count = 0
+      _mm_next_chunk = 0
+      _mm_output_index = 0
+      _mm_contents = []
+      foreach(_entry, _shot_jumbo_mm_entries) {
+        if (_mm_count == _mm_next_chunk) {
+          if (_mm_count != 0) {
+            write_file(_shot_jumbo_mm_outputs[_mm_output_index], _mm_contents)
+            _mm_output_index += 1
+          }
+          _mm_contents = []
+          _mm_contents += [
+            "/* Generated by //build/config/BUILDCONFIG.gn. Do not edit. */",
+          ]
+          _mm_next_chunk += _shot_jumbo_merge_limit
+        }
+        if (string_replace(_entry, "!", "", 1) == _entry) {
+          _mm_contents += [
+            "",
+            "#if defined(__clang__)",
+            "#pragma clang diagnostic push",
+            "#pragma clang diagnostic ignored \"-Wheader-hygiene\"",
+            "#endif",
+            "",
+            "#include \"$_entry\"",
+            "",
+            "#if defined(__clang__)",
+            "#pragma clang diagnostic pop",
+            "#endif",
+          ]
+        }
+        _mm_count += 1
+      }
+      if (_mm_count != 0) {
+        write_file(_shot_jumbo_mm_outputs[_mm_output_index], _mm_contents)
+      }
+    }
+  }
+
   target(_component_mode, target_name) {
     if (defined(_output_name)) {
       output_name = _output_name
@@ -845,8 +1121,38 @@ template("component") {
       # loaded by the Android zygote.
       output_extension = "cr.so"
     }
+
+    if (_use_shot_jumbo) {
+      deps = []
+      if (defined(invoker.deps)) {
+        deps += invoker.deps
+      }
+      sources = invoker.sources - _shot_jumbo_inputs + _shot_jumbo_outputs
+
+      include_dirs = [ root_build_dir ]
+      if (defined(invoker.include_dirs)) {
+        include_dirs += invoker.include_dirs
+      }
+      forward_variables_from(invoker,
+                             "*",
+                             TESTONLY_AND_VISIBILITY + [
+                                   "deps",
+                                   "include_dirs",
+                                   "never_build_shot_jumbo",
+                                   "shot_jumbo_excluded_sources",
+                                   "shot_jumbo_file_merge_limit",
+                                   "sources",
+                                 ])
+    } else {
+      forward_variables_from(invoker,
+                             "*",
+                             TESTONLY_AND_VISIBILITY + [
+                                   "never_build_shot_jumbo",
+                                   "shot_jumbo_excluded_sources",
+                                   "shot_jumbo_file_merge_limit",
+                                 ])
+    }
     forward_variables_from(invoker, TESTONLY_AND_VISIBILITY)
-    forward_variables_from(invoker, "*", TESTONLY_AND_VISIBILITY)
   }
 }
 
@@ -870,4 +1176,38 @@ if (is_component_build) {
 
 set_defaults("component") {
   configs = default_component_configs
+}
+
+# Lets selected source sets opt into Shot's Jumbo implementation without
+# changing their type or affecting normal Chromium builds.
+template("shot_compatible_source_set") {
+  if (use_shot_jumbo_build) {
+    component(target_name) {
+      static_component_type = "source_set"
+      forward_variables_from(invoker, "*")
+    }
+  } else {
+    source_set(target_name) {
+      forward_variables_from(invoker, "*")
+    }
+  }
+}
+set_defaults("shot_compatible_source_set") {
+  configs = default_compiler_configs
+}
+
+template("shot_compatible_static_library") {
+  if (use_shot_jumbo_build) {
+    component(target_name) {
+      static_component_type = "static_library"
+      forward_variables_from(invoker, "*")
+    }
+  } else {
+    static_library(target_name) {
+      forward_variables_from(invoker, "*")
+    }
+  }
+}
+set_defaults("shot_compatible_static_library") {
+  configs = default_compiler_configs
 }
