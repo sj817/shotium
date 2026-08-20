@@ -2600,15 +2600,30 @@ config("optimize") {
   if (is_win) {
     # clang-cl's /O2 corresponds to clang's -O3, and really want -O2 for
     # consistency with the other platforms.
-    cflags = [
-               "/O2",
-               "/clang:-O2",
-             ] + common_optimize_on_cflags
+    #
+    # optimize_for_size is honoured here too. It used to be unreachable on
+    # Windows: this branch is taken before the optimize_for_size one below, so
+    # setting the arg in a Windows build changed nothing at all. /O2 stays
+    # because it is what selects the MSVC-level codegen settings; only the
+    # clang optimisation level moves, which is the same split the -O2 line
+    # above already relies on.
+    if (optimize_for_size) {
+      cflags = [
+                 "/O2",
+                 "/clang:-Os",
+               ] + common_optimize_on_cflags
+      rustflags = [ "-Copt-level=s" ]
+    } else {
+      cflags = [
+                 "/O2",
+                 "/clang:-O2",
+               ] + common_optimize_on_cflags
 
-    # The `-O3` for clang turns on extra optimizations compared to the standard
-    # `-O2`. But for rust, `-Copt-level=3` is the default and is thus reliable
-    # to use.
-    rustflags = [ "-Copt-level=3" ]
+      # The `-O3` for clang turns on extra optimizations compared to the
+      # standard `-O2`. But for rust, `-Copt-level=3` is the default and is
+      # thus reliable to use.
+      rustflags = [ "-Copt-level=3" ]
+    }
   } else if (optimize_for_size || is_chromeos) {
     # Favor size over speed.
     # -Os in clang is more of a size-conscious -O2 than "size at any cost"
