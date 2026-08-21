@@ -53,21 +53,40 @@ PATTERNS = [
     re.compile(r'Unable to load "([^"]+)"'),
 ]
 
-# A path we are told about may be absolute, or relative to the build directory,
-# or already repository-relative. Reduce it to the last of those.
+def exists_upstream(rel):
+    result = subprocess.run(
+        ['git', 'cat-file', '-e', '%s:%s' % (PRISTINE, rel)],
+        cwd=ROOT, capture_output=True)
+    return result.returncode == 0
+
+
+# A path we are told about may be absolute, or relative to the build
+# directory, or already repository-relative. Reduce it to the last of those.
+#
+# The absolute case is the one that matters, because the interesting logs come
+# from a CI runner: gn reports
+#   Unable to load "/home/runner/work/shotium/shotium/src/third_party/x/BUILD.gn"
+# and that prefix has nothing to do with this machine. Rather than guess where
+# the checkout root was, try each suffix of the path from longest to shortest
+# and take the first one upstream recognises. A wrong guess cannot survive
+# that test, because it would have to name a file that exists in Chromium.
 def normalise(path):
     path = path.replace('\\', '/').strip()
     if path.startswith('//'):
         path = path[2:]
     path = re.sub(r'^(\.\./)+', '', path)
+
     absolute = os.path.abspath(os.path.join(ROOT, path))
-    try:
-        rel = os.path.relpath(absolute, ROOT).replace('\\', '/')
-    except ValueError:
-        return None
-    if rel.startswith('..'):
-        return None
-    return rel
+    rel = os.path.relpath(absolute, ROOT).replace('\\', '/')
+    if not rel.startswith('..'):
+        return rel
+
+    parts = [p for p in path.split('/') if p and p != '..']
+    for start in range(len(parts)):
+        candidate = '/'.join(parts[start:])
+        if exists_upstream(candidate):
+            return candidate
+    return None
 
 
 def paths_from_log(text):
@@ -82,13 +101,6 @@ def paths_from_log(text):
     # Preserve order, drop repeats.
     seen = set()
     return [p for p in found if not (p in seen or seen.add(p))]
-
-
-def exists_upstream(rel):
-    result = subprocess.run(
-        ['git', 'cat-file', '-e', '%s:%s' % (PRISTINE, rel)],
-        cwd=ROOT, capture_output=True)
-    return result.returncode == 0
 
 
 def restore(rel):
