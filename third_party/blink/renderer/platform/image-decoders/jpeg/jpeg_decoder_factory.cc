@@ -4,9 +4,7 @@
 
 #include "third_party/blink/renderer/platform/image-decoders/jpeg/jpeg_decoder_factory.h"
 
-#include "skia/rusty_jpeg_feature.h"
 #include "third_party/blink/renderer/platform/image-decoders/jpeg/jpeg_image_decoder.h"
-#include "third_party/blink/renderer/platform/image-decoders/jpeg/jpeg_rust_image_decoder.h"
 
 namespace blink {
 
@@ -15,13 +13,9 @@ std::unique_ptr<ImageDecoder> CreateJpegImageDecoder(
     ColorBehavior color_behavior,
     cc::AuxImage aux_image,
     wtf_size_t max_decoded_bytes) {
-  // The Skia-backed decoder does not yet support budget-driven downsampling.
-  if (skia::IsRustyJpegEnabled() && aux_image == cc::AuxImage::kDefault &&
-      max_decoded_bytes == ImageDecoder::kNoDecodedImageByteLimit) {
-    return std::make_unique<JpegRustImageDecoder>(alpha_option, color_behavior,
-                                                  max_decoded_bytes);
-  }
-
+  // Upstream returns a JpegRustImageDecoder here when
+  // skia::IsRustyJpegEnabled() and the request has no decode budget. That
+  // feature ships disabled, so JPEGImageDecoder was always what ran.
   return std::make_unique<JPEGImageDecoder>(alpha_option, color_behavior,
                                             aux_image, max_decoded_bytes);
 }
