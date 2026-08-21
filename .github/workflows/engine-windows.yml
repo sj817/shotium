@@ -49,6 +49,10 @@ jobs:
     timeout-minutes: 350   # just under GitHub's six-hour ceiling, so the
                            # "save the cache" step still gets to run
 
+    permissions:
+      contents: read
+      actions: write   # so the run can delete the cache entries it supersedes
+
     env:
       DEPOT_TOOLS_WIN_TOOLCHAIN: '0'   # use the runner's Visual Studio; Google's
                                        # packaged toolchain is not public
@@ -104,6 +108,13 @@ jobs:
           & C:\depot_tools\bootstrap\win_tools.bat
           if (-not (Test-Path C:\depot_tools\git.bat)) { throw "depot_tools bootstrap produced no git.bat" }
           "C:\depot_tools" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      # Deliberately not cached: depot_tools, the gclient git cache, and the
+      # synced working copies. Not because they are cheap -- the sync is 15 to
+      # 30 minutes -- but because the 10 GB the repository gets is shared by
+      # everything, and the build directory is worth about four hours of it.
+      # Anything else put in that budget competes with the one entry that
+      # matters, and loses the comparison while still evicting it.
 
       - name: windows sdk
         shell: pwsh
@@ -186,11 +197,21 @@ jobs:
         # the cache is the build directory itself rather than a compiler cache
         # in front of it. (sccache was here first and could not be used: it
         # talks to the retired v1 Actions cache API, which now answers 400.)
+        #
+        # The key carries the platform because a matrix would otherwise have
+        # every target restoring whichever build directory happened to be
+        # newest, which is worse than starting cold: ninja would rebuild
+        # everything anyway and the wrong entry would be the one kept.
+        #
+        # Excluding anything from this path is a trap worth naming. The .pdb
+        # files are 13% of the directory and look like debug baggage under
+        # symbol_level = 0, but dropping them makes ninja redo 757 CXX edges,
+        # not just the links -- measured, not assumed.
         with:
           path: src/out/Shot
-          key: out-shot-${{ github.run_id }}
+          key: out-shot-windows-x64-${{ github.run_id }}
           restore-keys: |
-            out-shot-
+            out-shot-windows-x64-
 
       - name: patch the DEPS checkouts
         shell: pwsh
@@ -265,7 +286,46 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: src/out/Shot
-          key: out-shot-${{ github.run_id }}
+          key: out-shot-windows-x64-${{ github.run_id }}
+
+      - name: drop the build directories this one replaces
+        if: always()
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # A repository gets 10 GB of Actions cache in total, evicted least
+        # recently used, and one Chromium build directory is 6.1 GB before
+        # compression. Saving a new entry every run and never removing the old
+        # ones means the budget is full after three or four runs, and eviction
+        # then starts taking entries that are still wanted -- including,
+        # eventually, the one this run just wrote.
+        #
+        # So the run that writes a build directory removes the older ones it
+        # supersedes. Keeping one spare is deliberate: if this run's entry is
+        # somehow unusable, the previous one is still there to restore from.
+        #
+        # Failing here must not fail the job. The cache is an optimisation; a
+        # build that finished is still a build that finished.
+        run: |
+          $keep = 2
+          try {
+            $stale = gh cache list --repo ${{ github.repository }} `
+                       --key out-shot-windows-x64- --limit 100 `
+                       --sort created_at --order desc --json id,key,sizeInBytes |
+                     ConvertFrom-Json
+          } catch {
+            Write-Output "could not list caches: $_"
+            exit 0
+          }
+          if (-not $stale) { exit 0 }
+          $freed = 0
+          foreach ($entry in $stale | Select-Object -Skip $keep) {
+            Write-Output ("deleting {0} ({1:N0} bytes)" -f $entry.key, $entry.sizeInBytes)
+            gh cache delete $entry.id --repo ${{ github.repository }} 2>&1 | Out-Null
+            $freed += $entry.sizeInBytes
+          }
+          Write-Output ("kept {0}, freed {1:N2} GB" -f
+                        [math]::Min($keep, $stale.Count), ($freed / 1GB))
 
       - name: did the build finish
         shell: pwsh

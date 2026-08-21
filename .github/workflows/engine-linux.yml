@@ -1,0 +1,270 @@
+# Builds //shot:shot on Linux, for x64 or as an arm64 cross-compile.
+#
+# This is the second platform, and it is deliberately a separate workflow from
+# engine-windows.yml rather than a matrix entry on it. The Windows build works;
+# folding an unproven target into the same job would put it at risk for no
+# gain, and the two have almost no steps in common anyway -- no Visual Studio,
+# no SDK hunt, a sysroot instead, different packaging.
+#
+# What is genuinely unknown here is how much of the cutting assumed Windows.
+# Every round of it was verified by building and rendering on Windows only, and
+# a cut that removed something only a POSIX file reads would not have shown up.
+# The audit that preceded this workflow sampled 19 Linux-specific sources
+# across base, net, skia, blink and ui and found all 19 still present, so the
+# source tree is probably not the problem -- but "probably" is why `mode:
+# probe` exists.
+#
+#   probe   sync, gn gen, and ask ninja what it *would* do. About 30 minutes,
+#           and it surfaces every configuration error: an arg that does not
+#           exist on this platform, a source a BUILD.gn names that the pruning
+#           removed, a missing dependency. Iterate here.
+#   build   the real thing, once probe is clean.
+#
+# Discovering a one-line GN error costs half an hour this way instead of the
+# four it takes to reach the link step and fail there.
+name: engine (linux)
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'probe (sync + gn gen + ninja -n) or build'
+        type: choice
+        options: [probe, build]
+        default: probe
+      target_cpu:
+        description: 'x64, or arm64 as a cross-compile from this x64 host'
+        type: choice
+        options: [x64, arm64]
+        default: x64
+      jobs:
+        description: 'ninja -j (4 cores; blink layout TUs peak at ~1.2 GB each)'
+        default: '4'
+      run_checks:
+        description: 'run the check suites if the build finishes'
+        type: boolean
+        default: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 350
+
+    permissions:
+      contents: read
+      actions: write   # so the run can delete the cache entries it supersedes
+
+    env:
+      DEPOT_TOOLS_UPDATE: '0'
+
+    steps:
+      - name: free up disk
+        # An ubuntu runner has about 25 GB free, and a Chromium checkout plus a
+        # build directory does not fit next to the preinstalled toolchains.
+        # These are the big ones and none of them is a build input here.
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android \
+                      /opt/ghc /usr/local/share/boost \
+                      "$AGENT_TOOLSDIRECTORY" || true
+          sudo apt-get clean
+          df -h /
+
+      - name: checkout
+        uses: actions/checkout@v4
+        with:
+          path: src
+          # Read by tools/shot/ci_stamp_mtimes.py, which needs the commit that
+          # last touched each file for the build cache to be worth anything.
+          fetch-depth: 0
+          submodules: false
+
+      - name: depot_tools
+        run: |
+          git clone --depth 1 \
+            https://chromium.googlesource.com/chromium/tools/depot_tools.git \
+            "$HOME/depot_tools"
+          echo "$HOME/depot_tools" >> "$GITHUB_PATH"
+
+      - name: gclient solution
+        # target_os is the whole reason a Linux sync produces anything usable:
+        # DEPS gates entries like third_party/fontconfig/src on checkout_linux,
+        # and the local .gclient in this tree says ["win"], so a naive sync here
+        # would silently omit them and fail much later with a missing include.
+        run: |
+          cat > .gclient <<'EOF'
+          solutions = [{
+            "name": "src",
+            "url": "https://github.com/${{ github.repository }}.git",
+            "managed": False,
+            "custom_deps": {},
+            "custom_vars": {"checkout_configuration": "small"},
+          }]
+          target_os = ["linux"]
+          EOF
+          cat .gclient
+
+      - name: gclient sync
+        run: |
+          gclient sync --nohooks --no-history --shallow --verbose
+          gclient runhooks
+          df -h /
+
+      - name: build dependencies
+        # --no-prompt because there is no terminal; --no-arm/--no-nacl because
+        # neither is in this build graph. The arm64 target gets its sysroot from
+        # the hook below instead, which is the supported way to cross-compile.
+        working-directory: src
+        run: |
+          sudo ./build/install-build-deps.sh --no-prompt --no-nacl || \
+          sudo ./build/install-build-deps.sh --no-prompt
+
+      - name: arm64 sysroot
+        if: ${{ github.event.inputs.target_cpu == 'arm64' }}
+        working-directory: src
+        run: |
+          python3 build/linux/sysroot_scripts/install-sysroot.py --arch=arm64
+
+      - name: make source timestamps content-faithful
+        run: python3 src/tools/shot/ci_stamp_mtimes.py .
+
+      - name: restore the build directory
+        uses: actions/cache/restore@v4
+        # See engine-windows.yml for why the build directory itself is the
+        # cache and why nothing else shares the budget with it. The key carries
+        # the platform *and* the cpu, because an arm64 cross-compile and an x64
+        # build are different output directories that must never restore each
+        # other's objects.
+        with:
+          path: src/out/Shot
+          key: out-shot-linux-${{ github.event.inputs.target_cpu }}-${{ github.run_id }}
+          restore-keys: |
+            out-shot-linux-${{ github.event.inputs.target_cpu }}-
+
+      - name: build the shot ICU data set
+        working-directory: src
+        # Same as the Windows job: third_party/icu is a DEPS checkout, so the
+        # trimmed data set has to be regenerated on every run rather than
+        # checked in. Failing loudly beats quietly building against `cast` and
+        # shipping a binary 0.81 MB larger than the numbers claim.
+        run: |
+          mkdir -p third_party/icu/shot
+          python3 tools/shot/icu_repack.py \
+            third_party/icu/cast/icudtl.dat \
+            third_party/icu/shot/icudtl.dat --preset shot
+
+      - name: gn gen
+        working-directory: src
+        # The args file is imported rather than passed on the command line: it
+        # has quoted values that do not survive interpolation, and writing the
+        # same bytes every run is what keeps a restored build directory valid.
+        run: |
+          mkdir -p out/Shot
+          cat > out/Shot/args.gn <<EOF
+          import("//build/args/shot.gn")
+          target_cpu = "${{ github.event.inputs.target_cpu }}"
+          EOF
+          cat out/Shot/args.gn
+          gn gen out/Shot
+
+      - name: probe
+        if: ${{ github.event.inputs.mode == 'probe' }}
+        working-directory: src
+        # `ninja -n` resolves the whole graph and names every edge it would run
+        # without compiling anything, so a BUILD.gn that references a file the
+        # pruning removed fails here in seconds. The edge count is the useful
+        # output: it says how much of this platform is actually configured.
+        run: |
+          ninja -C out/Shot shot -n > /tmp/probe.txt 2>&1 || {
+            echo "=== ninja refused the graph ==="
+            tail -40 /tmp/probe.txt
+            exit 1
+          }
+          echo "edges ninja would run: $(grep -c '^\[' /tmp/probe.txt || true)"
+          grep -oE '^\[[0-9]+/[0-9]+\] [A-Z_]+' /tmp/probe.txt \
+            | awk '{print $2}' | sort | uniq -c | sort -rn | head
+          echo
+          echo "probe clean -- re-run this workflow with mode: build"
+
+      - name: ninja
+        if: ${{ github.event.inputs.mode == 'build' }}
+        working-directory: src
+        continue-on-error: true
+        timeout-minutes: 280
+        run: ninja -C out/Shot shot -j ${{ github.event.inputs.jobs }}
+
+      - name: save the build directory
+        if: ${{ always() && github.event.inputs.mode == 'build' }}
+        uses: actions/cache/save@v4
+        with:
+          path: src/out/Shot
+          key: out-shot-linux-${{ github.event.inputs.target_cpu }}-${{ github.run_id }}
+
+      - name: drop the build directories this one replaces
+        if: ${{ always() && github.event.inputs.mode == 'build' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # The repository gets 10 GB of Actions cache in total and one build
+        # directory is 6.1 GB before compression, so entries that are no longer
+        # wanted have to go or they evict the one that is. Never fatal: the
+        # cache is an optimisation.
+        run: |
+          prefix="out-shot-linux-${{ github.event.inputs.target_cpu }}-"
+          # .[2:] keeps the newest two: this run's entry, and one spare to fall
+          # back on if this run's turns out to be unusable.
+          ids=$(gh cache list --repo "${{ github.repository }}" \
+                  --key "$prefix" --limit 100 \
+                  --sort created_at --order desc \
+                  --json id --jq '.[2:][].id' 2>/dev/null || true)
+          for id in $ids; do
+            echo "deleting cache entry $id"
+            gh cache delete "$id" --repo "${{ github.repository }}" || true
+          done
+
+      - name: did the build finish
+        if: ${{ github.event.inputs.mode == 'build' }}
+        working-directory: src
+        run: |
+          if [ ! -f out/Shot/shot ]; then
+            echo "shot was not produced -- the build got further, but is not done."
+            echo "Run this workflow again; the cache carries the objects over."
+            exit 1
+          fi
+          ls -l out/Shot/shot
+
+      - name: package
+        if: ${{ success() && github.event.inputs.mode == 'build' }}
+        working-directory: src
+        # Same reasoning as the Windows job: LZMA2 with the x86 filter beats
+        # deflate by a wide margin on an executable, and upload-artifact only
+        # ever zips, so it is handed one finished archive with deflate off.
+        run: |
+          mkdir -p dist
+          cp out/Shot/shot out/Shot/shot_data.pak out/Shot/shot_strings.pak dist/
+          ls -l dist
+          7z a -t7z -mx=9 \
+            "shot-linux-${{ github.event.inputs.target_cpu }}.7z" ./dist/*
+          ls -l "shot-linux-${{ github.event.inputs.target_cpu }}.7z"
+
+      - name: upload
+        if: ${{ success() && github.event.inputs.mode == 'build' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: shot-linux-${{ github.event.inputs.target_cpu }}
+          path: src/shot-linux-${{ github.event.inputs.target_cpu }}.7z
+          if-no-files-found: error
+          compression-level: 0
+
+      - name: checks
+        # An arm64 binary cannot run on this x64 host, so the suites are only
+        # meaningful for a native build.
+        if: ${{ success() && github.event.inputs.mode == 'build'
+                && github.event.inputs.run_checks == 'true'
+                && github.event.inputs.target_cpu == 'x64' }}
+        working-directory: src
+        run: |
+          python3 -m pip install --quiet pillow
+          python3 tools/shot/serve_check.py out/Shot/shot
+          python3 tools/shot/net_check.py out/Shot/shot
+          python3 tools/shot/charset_check.py out/Shot/shot
+          python3 tools/shot/demo_check.py out/Shot/shot
