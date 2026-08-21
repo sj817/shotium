@@ -1,11 +1,10 @@
 # Builds //shot:shot on Linux, natively, on x64 or arm64.
 #
 # Native on both: arm64 runs on ubuntu-24.04-arm rather than being
-# cross-compiled from an x64 host. That is the more expensive-looking choice
-# and the cheaper real one -- a fresh arm64 runner starts with about 45 GB
-# free against roughly 22 GB on x64, and this build wants every gigabyte of
-# it. It also means the binary is exercised by the check suites on the
-# architecture it ships for, which a cross-compile cannot do.
+# cross-compiled from an x64 host. GitHub documents the two runners as the
+# same machine -- 4 CPUs, 16 GB of RAM, 14 GB of SSD -- so this costs nothing
+# in capability, and it buys the one thing a cross-compile cannot: the check
+# suites run the binary on the architecture it ships for.
 #
 # This is deliberately a separate workflow from engine-windows.yml rather than
 # a matrix entry on it. The Windows build works; folding an unproven target
@@ -67,9 +66,11 @@ jobs:
 
     steps:
       - name: free up disk
-        # An ubuntu runner has about 25 GB free, and a Chromium checkout plus a
-        # build directory does not fit next to the preinstalled toolchains.
-        # These are the big ones and none of them is a build input here.
+        # GitHub documents 14 GB of SSD and does not say how much of it a job
+        # actually gets. A Chromium checkout plus a build directory does not
+        # fit next to the preinstalled toolchains either way, and the same step
+        # is what makes the Windows job fit. These are the big ones and none of
+        # them is a build input here; df before and after says what it bought.
         run: |
           df -h /
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android \
