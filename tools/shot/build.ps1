@@ -22,6 +22,36 @@ param(
 $ErrorActionPreference = "Continue"
 Set-Location D:\Github\chromium
 
+# args.gn sets icu_data_dir_override = "shot", which is a data set this
+# repository generates rather than one third_party/icu ships. third_party/icu is
+# a DEPS checkout, so gclient discards the directory; regenerate it here so a
+# fresh sync does not fail gn gen with a missing input. The script is
+# deterministic, so an unchanged output leaves ninja nothing to redo.
+function Invoke-IcuRepack {
+    $src = "third_party\icu\cast\icudtl.dat"
+    $dst = "third_party\icu\shot\icudtl.dat"
+    if (-not (Test-Path $src)) {
+        Write-Output "icu: no $src -- is third_party/icu synced?"
+        return $false
+    }
+    New-Item -ItemType Directory -Force (Split-Path $dst) | Out-Null
+    $tmp = "$dst.tmp"
+    & python tools\shot\icu_repack.py $src $tmp --preset shot
+    if ($LASTEXITCODE -ne 0) {
+        Write-Output "icu: icu_repack.py failed"
+        return $false
+    }
+    # Only replace the file when the bytes changed, so ninja does not rebuild
+    # the 4 MB data assembly on every invocation.
+    if ((Test-Path $dst) -and
+        ((Get-FileHash $tmp).Hash -eq (Get-FileHash $dst).Hash)) {
+        Remove-Item $tmp
+    } else {
+        Move-Item -Force $tmp $dst
+    }
+    return $true
+}
+
 function Invoke-GnGen {
     for ($i = 1; $i -le 8; $i++) {
         $out = (& .\buildtools\win\gn.exe gen out\Shot 2>&1 | Out-String)
@@ -40,6 +70,7 @@ function Invoke-GnGen {
     return $false
 }
 
+if (-not (Invoke-IcuRepack)) { exit 1 }
 if (-not (Invoke-GnGen)) { exit 1 }
 
 if (-not $Log) {

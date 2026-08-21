@@ -215,6 +215,26 @@ jobs:
           git -C third_party/icu apply --verbose ../../patches/third_party_icu.patch
           if ($LASTEXITCODE -ne 0) { throw "patches/third_party_icu.patch did not apply" }
 
+      - name: build the shot ICU data set
+        shell: pwsh
+        working-directory: src
+        # args.gn asks for icu_data_dir_override = "shot", which is not one of
+        # the nine sets third_party/icu ships: it is `cast` with the six CJK
+        # converter tables removed, since Blink decodes those encodings itself.
+        # Like the patch above this has to be redone on every run, because
+        # gclient owns that directory.
+        #
+        # Failing here rather than falling back to `cast` is deliberate. A
+        # missing input would stop gn gen anyway; what must not happen is the
+        # build quietly picking a different data set than the one the size
+        # numbers were measured against.
+        run: |
+          New-Item -ItemType Directory -Force third_party/icu/shot | Out-Null
+          python tools/shot/icu_repack.py `
+            third_party/icu/cast/icudtl.dat `
+            third_party/icu/shot/icudtl.dat --preset shot
+          if ($LASTEXITCODE -ne 0) { throw "icu_repack.py failed" }
+
       - name: gn gen
         shell: pwsh
         working-directory: src

@@ -167,7 +167,16 @@ enable_expensive_dchecks = false
 # V8 is gone: most of the collation tables, unit and number spellout data,
 # confusables, stringprep, character names, and the bulk of the currency,
 # language and region display names that only Intl ever read.
-icu_data_dir_override = "cast"
+# "shot" is not one of the nine sets the checkout ships. It is `cast` with the
+# six CJK converter tables removed by tools/shot/icu_repack.py, which rewrites
+# the package's table of contents in place of running ICU's data build. See
+# that script for why those six are unreachable; it is 853 KB and costs
+# nothing, because Blink decodes all six encodings itself.
+#
+# The directory is generated, not checked in -- third_party/icu is a DEPS
+# checkout, so gclient would discard it either way. tools/shot/build.ps1 and
+# the CI workflow both regenerate it before gn gen.
+icu_data_dir_override = "shot"
 
 # JPEG XL. 2.82 MB across the jxl, jxl_transforms and jxl_rs Rust crates,
 # measured, for a format no page in the corpus uses and that ships disabled in
