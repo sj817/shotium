@@ -289,17 +289,48 @@ jobs:
           # shot.exe and the loose copy is never opened -- verified by
           # rendering the same page with the file present and absent and
           # getting byte-identical PNGs.
+          #
+          # The payload is 7z rather than zip because the difference is large
+          # and one-sided. Measured on the three files below:
+          #
+          #   zip  -mx9 (deflate)   18.29 MB
+          #   7z   -mx6 (LZMA2)     13.48 MB
+          #   7z   -mx9 (LZMA2)     12.80 MB
+          #
+          # Two things account for it. deflate looks back 32 KB, LZMA2 at -mx9
+          # looks back 64 MB, and the repetition in a 41 MB executable is
+          # spread much further apart than 32 KB. On top of that 7z applies the
+          # x86 BCJ filter to executables, which rewrites relative CALL/JMP
+          # offsets as absolute addresses so that the same call compresses the
+          # same way wherever it appears -- worth 0.71 MB here on its own.
+          #
+          # Decompression costs about half a second, once, when the user
+          # unpacks. It is not on any per-render path.
           New-Item -ItemType Directory dist | Out-Null
           Copy-Item out/Shot/shot.exe,out/Shot/shot_data.pak,out/Shot/shot_strings.pak dist/
           Get-ChildItem dist | Select-Object Name,Length
+          # windows-2025 ships 7-Zip on PATH; fall back to its install path
+          # rather than silently producing no archive if that ever changes.
+          $sevenzip = (Get-Command 7z -ErrorAction SilentlyContinue).Source
+          if (-not $sevenzip) { $sevenzip = "$env:ProgramFiles\7-Zip\7z.exe" }
+          if (-not (Test-Path $sevenzip)) { throw "no 7z on this runner" }
+          & $sevenzip a -t7z -mx=9 shot-windows-x64.7z ./dist/*
+          if ($LASTEXITCODE -ne 0) { throw "7z failed with $LASTEXITCODE" }
+          Get-Item shot-windows-x64.7z |
+              Select-Object Name,@{n='MB';e={[math]::Round($_.Length/1MB,2)}}
 
       - name: upload
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: shot-windows-x64
-          path: src/dist/
+          path: src/shot-windows-x64.7z
           if-no-files-found: error
+          # upload-artifact always wraps what it is given in a zip and only
+          # lets you pick a deflate level. Level 0 stores the .7z as-is;
+          # anything higher spends CI time re-compressing data that is already
+          # compressed and gives back nothing.
+          compression-level: 0
 
       - name: checks
         if: success() && github.event.inputs.run_checks == 'true'
