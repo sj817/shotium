@@ -301,13 +301,6 @@ NET_EXPORT extern const base::FeatureParam<int> kMaxPreconnectRetryInterval;
 // SearchEnginePreconnector2.
 NET_EXPORT BASE_DECLARE_FEATURE_PARAM(int, kPingIntervalInSeconds);
 
-// The QUIC connection options which will be sent to the server in order to
-// enable certain QUIC features. This should be set using `QuicTag`s (32-bit
-// value represented in ASCII equivalent e.g. EXMP). If we want to set
-// multiple features, then the values should be separated with a comma
-// (e.g. "ABCD,EFGH").
-NET_EXPORT BASE_DECLARE_FEATURE_PARAM(std::string, kQuicConnectionOptions);
-
 // Whether to fallback to the old preconnect interval when the device is in low
 // power mode.
 NET_EXPORT BASE_DECLARE_FEATURE_PARAM(bool, kFallbackInLowPowerMode);
@@ -427,22 +420,6 @@ NET_EXPORT BASE_DECLARE_FEATURE(kAvoidEntryCreationForNoStore);
 NET_EXPORT extern const base::FeatureParam<int>
     kAvoidEntryCreationForNoStoreCacheSize;
 
-// A flag to use asynchronous session creation for new QUIC sessions.
-NET_EXPORT BASE_DECLARE_FEATURE(kAsyncQuicSession);
-
-// A flag to use QuicSessionPool::AsyncDnsJob, which resolves hostnames with
-// HostResolver::ServiceEndpointRequest, for direct QUIC sessions.
-NET_EXPORT BASE_DECLARE_FEATURE(kAsyncDnsQuicJob);
-
-// How long AsyncDnsJob waits before it starts a second connection attempt
-// next to the one it already has in flight. Zero or a negative value means
-// AsyncDnsJob never runs two attempts at once.
-NET_EXPORT BASE_DECLARE_FEATURE_PARAM(base::TimeDelta,
-                                      kAsyncDnsQuicJobSlowTimerDelay);
-
-// A flag to make multiport context creation asynchronous.
-NET_EXPORT BASE_DECLARE_FEATURE(kAsyncMultiPortPath);
-
 // Maximum report body size (KB) to include in serialized reports. Bodies
 // exceeding this are omitted when kExcludeLargeBodyReports is enabled.  Use
 // Reporting.ReportBodySize UMA histogram to monitor report body sizes and
@@ -495,10 +472,6 @@ NET_EXPORT BASE_DECLARE_FEATURE(kSpdyHeadersToHttpResponseUseBuilder);
 // Enables using the new ALPS codepoint to negotiate application settings for
 // HTTP2.
 NET_EXPORT BASE_DECLARE_FEATURE(kUseNewAlpsCodepointHttp2);
-
-// Enables using the new ALPS codepoint to negotiate application settings for
-// QUIC.
-NET_EXPORT BASE_DECLARE_FEATURE(kUseNewAlpsCodepointQUIC);
 
 // Enables truncating the response body to the content length.
 NET_EXPORT BASE_DECLARE_FEATURE(kTruncateBodyToContentLength);
@@ -847,34 +820,8 @@ NET_EXPORT BASE_DECLARE_FEATURE_PARAM(base::TimeDelta, kAdditionalDelay);
 NET_EXPORT BASE_DECLARE_FEATURE_PARAM(bool,
                                       kDelayMainJobWithAvailableSpdySession);
 
-// If enabled, we will extend the quic handshake timeout.
-NET_EXPORT BASE_DECLARE_FEATURE(kExtendQuicHandshakeTimeout);
-NET_EXPORT BASE_DECLARE_FEATURE_PARAM(base::TimeDelta, kQuicHandshakeTimeout);
-NET_EXPORT BASE_DECLARE_FEATURE_PARAM(base::TimeDelta,
-                                      kMaxIdleTimeBeforeCryptoHandshake);
-
-// If enabled, we will ignore redundant OnNetworkMadeDefault notifications.
-NET_EXPORT BASE_DECLARE_FEATURE(kQuicIgnoreRedundantOnNetworkMadeDefault);
-
-// If enabled, we will use a longer idle timeout.
-NET_EXPORT BASE_DECLARE_FEATURE(kQuicLongerIdleConnectionTimeout);
-
-// If enabled, we will use QUIC with a smaller MTU.
-NET_EXPORT BASE_DECLARE_FEATURE(kLowerQuicMaxPacketSize);
-NET_EXPORT BASE_DECLARE_FEATURE_PARAM(size_t, kQuicMaxPacketSize);
-
-// If enabled, QuicChromiumPacketReader will use ReadMultiple API.
-NET_EXPORT BASE_DECLARE_FEATURE(kQuicUseReadMultiple);
-
 // If enabled, UDPSocketPosix will enable UDP Generic Receive Offload (UDP_GRO).
 NET_EXPORT BASE_DECLARE_FEATURE(kEnableUdpGro);
-
-// When enabled, races QUIC connection attempts for the specified hostnames
-// even when there is no available ALPN information.
-NET_EXPORT BASE_DECLARE_FEATURE(kConfigureQuicHints);
-NET_EXPORT BASE_DECLARE_FEATURE_PARAM(std::string, kQuicHintHostPortPairs);
-NET_EXPORT BASE_DECLARE_FEATURE_PARAM(std::string,
-                                      kWildcardQuicHintHostPortPairs);
 
 // When enabled, the browser checks if a navigation URL is in any navigation
 // entry. If so, it sets the
@@ -883,38 +830,12 @@ NET_EXPORT BASE_DECLARE_FEATURE_PARAM(std::string,
 NET_EXPORT BASE_DECLARE_FEATURE(kUpdateIsMainFrameOriginRecentlyAccessed);
 NET_EXPORT BASE_DECLARE_FEATURE_PARAM(size_t, kRecentlyAccessedOriginCacheSize);
 
-// When enabled, the browser tries QUIC by default.
-NET_EXPORT BASE_DECLARE_FEATURE(kTryQuicByDefault);
-
-// If enabled, close all QUIC sessions when the app is about to be frozen
-// (Android only).
-NET_EXPORT BASE_DECLARE_FEATURE(kCloseQuicSessionsOnPreFreeze);
-
-// The QUIC connection options which will be sent to the server in order to
-// enable certain QUIC features. This should be set using `QuicTag`s (32-bit
-// value represented in ASCII equivalent e.g. EXMP). To set multiple features,
-// separate the values with a comma (e.g. "ABCD,EFGH").
-NET_EXPORT BASE_DECLARE_FEATURE_PARAM(std::string, kQuicOptions);
-
-// When enabled, allows the browser to ignore IP matching and rely on
-// the hostname being present in the existing session's certificate when
-// connection coalescing.
-NET_EXPORT BASE_DECLARE_FEATURE(kIgnoreIpMatching);
-NET_EXPORT BASE_DECLARE_FEATURE_PARAM(std::string, kNoIPQuicOption);
-NET_EXPORT BASE_DECLARE_FEATURE_PARAM(
-    bool,
-    kIgnoreIpMatchingWhenFindingExistingSessions);
-
 // When enabled, allows DoH upgrade even if there are local nameservers.
 NET_EXPORT BASE_DECLARE_FEATURE(kDohFallbackAllowedWithLocalNameservers);
 
 // When enabled, users can make Secure DNS in AUTOMATIC mode fallback to a
 // well-known DoH provider before using insecure DNS.
 NET_EXPORT BASE_DECLARE_FEATURE(kAddAutomaticWithDohFallbackMode);
-
-// If true, a CONNECT-UDP response is not needed to start sending datagrams.
-NET_EXPORT BASE_DECLARE_FEATURE(
-    kUseQuicProxiesWithoutWaitingForConnectResponse);
 
 // If enabled, the configured bootstrap IP addresses of DoH providers will
 // be randomized for better load balancing of the initial DoH URL lookups.
@@ -958,14 +879,6 @@ NET_EXPORT BASE_DECLARE_FEATURE(kPermitTcpSocketPoolConnectBackupJobs);
 // If enabled, examine why a network operation was blocked due to local network
 // permission.
 NET_EXPORT BASE_DECLARE_FEATURE(kLocalNetworkPermissionCheck);
-
-// If enabled, QuicCryptoClientConfigOwner will ignore memory pressure events
-// for all network isolation partitions.
-NET_EXPORT BASE_DECLARE_FEATURE(kIgnoreQuicCryptoConfigMemoryPressure);
-
-// If enabled, QuicCryptoClientConfigOwner will ignore memory pressure events
-// for the kDnsOverHttps partition.
-NET_EXPORT BASE_DECLARE_FEATURE(kIgnoreQuicCryptoConfigMemoryPressureForDoh);
 
 // If enabled, SSLClientSessionCache will ignore memory pressure events.
 NET_EXPORT BASE_DECLARE_FEATURE(kIgnoreMemoryPressureForSslClientSessionCache);

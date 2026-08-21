@@ -147,7 +147,6 @@ source_set("browser") {
     "//components/file_access",
     "//components/input",
     "//components/link_header_util",
-    "//components/network_session_configurator/browser",
     "//components/power_monitor",
     "//components/sqlite_proto",
     "//components/version_info",

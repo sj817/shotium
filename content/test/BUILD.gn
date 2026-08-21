@@ -2238,7 +2238,6 @@ test("content_unittests") {
     "//cc/mojom",
     "//components/cbor",
     "//components/input",
-    "//components/network_session_configurator/browser",
     "//components/network_session_configurator/common",
     "//components/services/quarantine/public/mojom",
     "//components/viz/client",

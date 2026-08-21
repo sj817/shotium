@@ -13,7 +13,6 @@
 #include "net/disk_cache/buildflags.h"
 #include "net/net_buildflags.h"
 #include "net/socket/tcp_connect_job.h"
-#include "net/third_party/quiche/src/quiche/quic/core/quic_constants.h"
 
 #if BUILDFLAG(IS_APPLE)
 #include "net/base/network_change_notifier_apple_buildflags.h"
@@ -247,12 +246,6 @@ BASE_FEATURE_PARAM(int,
                    "PingIntervalInSeconds",
                    27);
 
-BASE_FEATURE_PARAM(std::string,
-                   kQuicConnectionOptions,
-                   &kSearchEnginePreconnect2,
-                   "QuicConnectionOptions",
-                   "ECCP");
-
 BASE_FEATURE_PARAM(bool,
                    kFallbackInLowPowerMode,
                    &kSearchEnginePreconnect2,
@@ -334,31 +327,6 @@ const base::FeatureParam<int> kAvoidEntryCreationForNoStoreCacheSize{
     &kAvoidEntryCreationForNoStore, "AvoidEntryCreationForNoStoreCacheSize",
     1000};
 
-// A flag to use asynchronous session creation for new QUIC sessions.
-BASE_FEATURE(kAsyncQuicSession,
-#if BUILDFLAG(IS_WIN)
-             base::FEATURE_ENABLED_BY_DEFAULT);
-#else
-             base::FEATURE_DISABLED_BY_DEFAULT);
-#endif
-
-// A flag to use QuicSessionPool::AsyncDnsJob, which resolves hostnames with
-// HostResolver::ServiceEndpointRequest, for direct QUIC sessions.
-BASE_FEATURE(kAsyncDnsQuicJob, base::FEATURE_DISABLED_BY_DEFAULT);
-
-BASE_FEATURE_PARAM(base::TimeDelta,
-                   kAsyncDnsQuicJobSlowTimerDelay,
-                   &kAsyncDnsQuicJob,
-                   TcpConnectJob::kIPv6FallbackTime);
-
-// A flag to make multiport context creation asynchronous.
-BASE_FEATURE(kAsyncMultiPortPath,
-#if !BUILDFLAG(CRONET_BUILD) && (BUILDFLAG(IS_WIN) || BUILDFLAG(IS_ANDROID))
-             base::FEATURE_ENABLED_BY_DEFAULT);
-#else
-             base::FEATURE_DISABLED_BY_DEFAULT);
-#endif
-
 BASE_FEATURE(kExcludeLargeBodyReports,
              "ExcludeLargeReportBodies",
              base::FEATURE_ENABLED_BY_DEFAULT);
@@ -423,8 +391,6 @@ BASE_FEATURE(kSpdyHeadersToHttpResponseUseBuilder,
              base::FEATURE_DISABLED_BY_DEFAULT);
 
 BASE_FEATURE(kUseNewAlpsCodepointHttp2, base::FEATURE_ENABLED_BY_DEFAULT);
-
-BASE_FEATURE(kUseNewAlpsCodepointQUIC, base::FEATURE_ENABLED_BY_DEFAULT);
 
 BASE_FEATURE(kTruncateBodyToContentLength, base::FEATURE_ENABLED_BY_DEFAULT);
 
@@ -816,46 +782,7 @@ BASE_FEATURE_PARAM(bool,
                    "DelayMainJobWithAvailableSpdySession",
                    false);
 
-BASE_FEATURE(kExtendQuicHandshakeTimeout, base::FEATURE_DISABLED_BY_DEFAULT);
-BASE_FEATURE_PARAM(base::TimeDelta,
-                   kQuicHandshakeTimeout,
-                   &kExtendQuicHandshakeTimeout,
-                   "QuicHandshakeTimeout",
-                   base::Seconds(quic::kMaxTimeForCryptoHandshakeSecs));
-BASE_FEATURE_PARAM(base::TimeDelta,
-                   kMaxIdleTimeBeforeCryptoHandshake,
-                   &kExtendQuicHandshakeTimeout,
-                   "MaxIdleTimeBeforeCryptoHandshake",
-                   base::Seconds(quic::kInitialIdleTimeoutSecs));
-
-BASE_FEATURE(kQuicIgnoreRedundantOnNetworkMadeDefault,
-             base::FEATURE_DISABLED_BY_DEFAULT);
-
-BASE_FEATURE(kQuicLongerIdleConnectionTimeout,
-             base::FEATURE_DISABLED_BY_DEFAULT);
-
-BASE_FEATURE(kLowerQuicMaxPacketSize, base::FEATURE_DISABLED_BY_DEFAULT);
-BASE_FEATURE_PARAM(size_t,
-                   kQuicMaxPacketSize,
-                   &kLowerQuicMaxPacketSize,
-                   "mtu",
-                   quic::kDefaultMaxPacketSize);
-
-BASE_FEATURE(kQuicUseReadMultiple, base::FEATURE_DISABLED_BY_DEFAULT);
-
 BASE_FEATURE(kEnableUdpGro, base::FEATURE_DISABLED_BY_DEFAULT);
-
-BASE_FEATURE(kConfigureQuicHints, base::FEATURE_DISABLED_BY_DEFAULT);
-BASE_FEATURE_PARAM(std::string,
-                   kQuicHintHostPortPairs,
-                   &kConfigureQuicHints,
-                   /*name=*/"quic_hints",
-                   /*default_value=*/"");
-BASE_FEATURE_PARAM(std::string,
-                   kWildcardQuicHintHostPortPairs,
-                   &kConfigureQuicHints,
-                   /*name=*/"wildcard_quic_hints",
-                   /*default_value=*/"");
 
 BASE_FEATURE(kUpdateIsMainFrameOriginRecentlyAccessed,
              base::FEATURE_DISABLED_BY_DEFAULT);
@@ -866,42 +793,11 @@ BASE_FEATURE_PARAM(size_t,
                    "cache_size",
                    64);
 
-BASE_FEATURE(kTryQuicByDefault, base::FEATURE_ENABLED_BY_DEFAULT);
-
-BASE_FEATURE(kCloseQuicSessionsOnPreFreeze,
-#if BUILDFLAG(CRONET_BUILD)
-             base::FEATURE_DISABLED_BY_DEFAULT
-#else
-             base::FEATURE_ENABLED_BY_DEFAULT
-#endif
-);
-
-BASE_FEATURE_PARAM(std::string,
-                   kQuicOptions,
-                   &kTryQuicByDefault,
-                   "quic_options",
-                   "ORIG");
-
-BASE_FEATURE(kIgnoreIpMatching, base::FEATURE_DISABLED_BY_DEFAULT);
-BASE_FEATURE_PARAM(std::string,
-                   kNoIPQuicOption,
-                   &kIgnoreIpMatching,
-                   "noip_quic_option",
-                   "");
-BASE_FEATURE_PARAM(bool,
-                   kIgnoreIpMatchingWhenFindingExistingSessions,
-                   &kIgnoreIpMatching,
-                   "ignore_ip_matching_when_finding_existing_sessions",
-                   false);
-
 BASE_FEATURE(kDohFallbackAllowedWithLocalNameservers,
              base::FEATURE_DISABLED_BY_DEFAULT);
 
 BASE_FEATURE(kAddAutomaticWithDohFallbackMode,
              base::FEATURE_ENABLED_BY_DEFAULT);
-
-BASE_FEATURE(kUseQuicProxiesWithoutWaitingForConnectResponse,
-             base::FEATURE_DISABLED_BY_DEFAULT);
 
 BASE_FEATURE(kEnableBootstrapIPRandomizationForDoh,
              base::FEATURE_ENABLED_BY_DEFAULT);
@@ -936,12 +832,6 @@ BASE_FEATURE(kPermitTcpSocketPoolConnectBackupJobs,
              base::FEATURE_ENABLED_BY_DEFAULT);
 
 BASE_FEATURE(kLocalNetworkPermissionCheck, base::FEATURE_ENABLED_BY_DEFAULT);
-
-BASE_FEATURE(kIgnoreQuicCryptoConfigMemoryPressure,
-             base::FEATURE_DISABLED_BY_DEFAULT);
-
-BASE_FEATURE(kIgnoreQuicCryptoConfigMemoryPressureForDoh,
-             base::FEATURE_ENABLED_BY_DEFAULT);
 
 BASE_FEATURE(kIgnoreMemoryPressureForSslClientSessionCache,
              base::FEATURE_DISABLED_BY_DEFAULT);
