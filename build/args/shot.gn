@@ -189,6 +189,23 @@ enable_websockets = false
 enable_mdns = false
 use_kerberos = false
 
+# Content-Encoding: zstd, for a codec this binary can never be handed.
+# URLRequestContext::enable_zstd_ defaults to false
+# (net/url_request/url_request_context.h) and shot_network.cc only ever calls
+# set_enable_brotli(true), so "zstd" never appears in Accept-Encoding and no
+# server has a reason to send it. The code was alive only because
+# ZstdSourceStream is statically reachable from the filter factory.
+#
+# Turning the arg off is upstream's own switch for this: //net swaps
+# filter/zstd_source_stream.cc for filter/zstd_source_stream_disabled.cc and
+# drops the //third_party/zstd dependency. Brotli and gzip are untouched.
+#
+# On its own this saves nothing: //third_party/blink/renderer/platform depends
+# on zstd independently, so the module stayed in the binary at its full 0.47 MB
+# until has_zstd_compression was turned off too. The pair of them is what
+# removes it.
+disable_zstd_filter = true
+
 # -Os rather than -O2. Chromium turns this on for Android, CastOS, iOS and
 # ChromeOS -- every target where the binary's size costs more than the last few
 # percent of throughput. shot rasterises one page per process launch, so it is

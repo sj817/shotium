@@ -242,9 +242,13 @@ declare_args() {
   enable_blink_bindings_tracing = false
 }
 
-# ZSTD compression is available on Fuchsia (crbug.com/534838085) but disable in
-# Blink to disable features that depend on it.
-has_zstd_compression = !is_fuchsia
+# Upstream this is `!is_fuchsia`. The flag only chooses zstd over zlib for two
+# memory optimizations -- ParkableString compression and canvas hibernation --
+# and both fall back to zlib (already linked, via compression_utils) when it is
+# false, which is the configuration Fuchsia ships. A process that renders one
+# page and exits barely reaches either path, so the whole of //third_party/zstd
+# was buying a compression-ratio improvement on memory this build never holds.
+has_zstd_compression = false
 
 buildflag_header("bindings_buildflags") {
   header = "buildflags.h"
