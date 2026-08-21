@@ -35,6 +35,11 @@ name: engine (windows)
 on:
   workflow_dispatch:
     inputs:
+      arch:
+        description: 'x64 (native) or arm64 (cross-compiled from this x64 host)'
+        type: choice
+        options: [x64, arm64]
+        default: x64
       jobs:
         description: 'ninja -j (4 cores; blink layout TUs peak at ~1.2 GB each)'
         default: '4'
@@ -124,17 +129,35 @@ jobs:
         # exact one build/vs_toolchain.py pins. That pin is a directory name,
         # not a compatibility statement, so the fix is to name the installed SDK
         # rather than to demand the packaged one. "Complete" means it has both
-        # the headers and the x64 import libraries: the runner images carry SDK
-        # directories that have only one of the two.
+        # the headers and the import libraries *for the target architecture*:
+        # the runner images carry SDK directories that have only one of the
+        # two, and an arm64 cross-compile needs Lib\...\um\arm64, which is a
+        # separate Visual Studio component that may simply not be installed.
+        #
+        # Checking it here is the point. clang-cl and lld-link come from
+        # third_party/llvm-build and target anything, so nothing else in this
+        # job would notice a missing arm64 SDK until the link, hours in.
         run: |
+          $target = "${{ github.event.inputs.arch }}"
           $root = "${env:ProgramFiles(x86)}\Windows Kits\10"
           $usable = Get-ChildItem "$root\Include" -Directory -ErrorAction SilentlyContinue |
             Where-Object {
               (Test-Path "$root\Include\$($_.Name)\um\windows.h") -and
-              (Test-Path "$root\Lib\$($_.Name)\um\x64\kernel32.lib")
+              (Test-Path "$root\Lib\$($_.Name)\um\$target\kernel32.lib")
             } | Sort-Object { [version]$_.Name }
           $usable | ForEach-Object { Write-Host "usable SDK: $($_.Name)" }
-          if (-not $usable) { throw "no complete Windows SDK under $root" }
+          if (-not $usable) {
+            throw "no Windows SDK under $root has both um\windows.h and um\$target\kernel32.lib"
+          }
+
+          # The MSVC runtime for the target has to be there too, and it is a
+          # different component from the SDK.
+          $crt = Get-ChildItem "${env:ProgramFiles}\Microsoft Visual Studio\*\*\VC\Tools\MSVC\*\lib\$target\libcmt.lib" `
+                   -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $crt) {
+            throw "no MSVC libcmt.lib for $target -- the Visual Studio on this runner has no $target toolset"
+          }
+          Write-Host "target CRT: $($crt.FullName)"
           $sdk = $usable[-1].Name
           "CHROMIUM_WIN_SDK_VERSION=$sdk" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "building against $sdk"
@@ -209,9 +232,9 @@ jobs:
         # not just the links -- measured, not assumed.
         with:
           path: src/out/Shot
-          key: out-shot-windows-x64-${{ github.run_id }}
+          key: out-shot-windows-${{ github.event.inputs.arch }}-${{ github.run_id }}
           restore-keys: |
-            out-shot-windows-x64-
+            out-shot-windows-${{ github.event.inputs.arch }}-
 
       - name: patch the DEPS checkouts
         shell: pwsh
@@ -269,6 +292,7 @@ jobs:
           @(
             'import("//build/args/shot.gn")'
             "win_ntddi_version = ""$env:WIN_NTDDI_VERSION"""
+            "target_cpu = ""${{ github.event.inputs.arch }}"""
           ) | Out-File -FilePath out/Shot/args.gn -Encoding ascii
           Get-Content out/Shot/args.gn
           gn gen out/Shot
@@ -286,7 +310,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: src/out/Shot
-          key: out-shot-windows-x64-${{ github.run_id }}
+          key: out-shot-windows-${{ github.event.inputs.arch }}-${{ github.run_id }}
 
       - name: drop the build directories this one replaces
         if: always()
@@ -310,7 +334,7 @@ jobs:
           $keep = 2
           try {
             $stale = gh cache list --repo ${{ github.repository }} `
-                       --key out-shot-windows-x64- --limit 100 `
+                       --key "out-shot-windows-${{ github.event.inputs.arch }}-" --limit 100 `
                        --sort created_at --order desc --json id,key,sizeInBytes |
                      ConvertFrom-Json
           } catch {
@@ -374,17 +398,17 @@ jobs:
           $sevenzip = (Get-Command 7z -ErrorAction SilentlyContinue).Source
           if (-not $sevenzip) { $sevenzip = "$env:ProgramFiles\7-Zip\7z.exe" }
           if (-not (Test-Path $sevenzip)) { throw "no 7z on this runner" }
-          & $sevenzip a -t7z -mx=9 shot-windows-x64.7z ./dist/*
+          & $sevenzip a -t7z -mx=9 shot-windows-${{ github.event.inputs.arch }}.7z ./dist/*
           if ($LASTEXITCODE -ne 0) { throw "7z failed with $LASTEXITCODE" }
-          Get-Item shot-windows-x64.7z |
+          Get-Item shot-windows-${{ github.event.inputs.arch }}.7z |
               Select-Object Name,@{n='MB';e={[math]::Round($_.Length/1MB,2)}}
 
       - name: upload
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: shot-windows-x64
-          path: src/shot-windows-x64.7z
+          name: shot-windows-${{ github.event.inputs.arch }}
+          path: src/shot-windows-${{ github.event.inputs.arch }}.7z
           if-no-files-found: error
           # upload-artifact always wraps what it is given in a zip and only
           # lets you pick a deflate level. Level 0 stores the .7z as-is;
