@@ -72,12 +72,14 @@ namespace blink {
 
 namespace {
 
-const char* const harfrust_shaper_list[] = {"harfrust"};
+// Upstream this picks between "harfrust" and "ot" on
+// RuntimeEnabledFeatures::HarfRustShapingEnabled(). HarfRustShaping carried no
+// status in runtime_enabled_features.json5, so it was never on anywhere, and
+// the HarfRust shaper it selected has been dropped from the HarfBuzz build.
 const char* const ot_shaper_list[] = {"ot"};
 
 inline const char* const* ShapingBackend() {
-  return RuntimeEnabledFeatures::HarfRustShapingEnabled() ? harfrust_shaper_list
-                                                          : ot_shaper_list;
+  return ot_shaper_list;
 }
 
 //

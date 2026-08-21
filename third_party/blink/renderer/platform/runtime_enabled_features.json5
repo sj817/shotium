@@ -3414,9 +3414,6 @@
       },
     },
     {
-      name: "HarfRustShaping",
-    },
-    {
       name: "HasUAVisualTransition",
       status: "stable",
     },
