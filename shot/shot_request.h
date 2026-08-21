@@ -61,8 +61,14 @@ struct ScreenshotRequest {
 
 // Parses one request. The error is the message the caller sees, so it names the
 // field rather than the parser.
+//
+// `default_allow_file_access` is what an absent `allowFileAccess` means. It is
+// a parameter rather than a constant because the answer belongs to whoever
+// started the process: the operator knows whether the sender is trusted, and
+// the sender may not. A request that states the field wins either way.
 base::expected<ScreenshotRequest, std::string> ParseScreenshotRequest(
-    std::string_view json);
+    std::string_view json,
+    bool default_allow_file_access = false);
 
 }  // namespace shot
 

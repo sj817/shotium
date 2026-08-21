@@ -85,7 +85,8 @@ std::string OutOfRange(std::string_view key, int low, int high) {
 }  // namespace
 
 base::expected<ScreenshotRequest, std::string> ParseScreenshotRequest(
-    std::string_view json) {
+    std::string_view json,
+    bool default_allow_file_access) {
   std::optional<base::DictValue> parsed =
       base::JSONReader::ReadDict(json, base::JSON_PARSE_RFC);
   if (!parsed) {
@@ -166,7 +167,8 @@ base::expected<ScreenshotRequest, std::string> ParseScreenshotRequest(
   if (!allow_file_access.has_value()) {
     return base::unexpected(allow_file_access.error());
   }
-  request.allow_file_access = allow_file_access->value_or(false);
+  request.allow_file_access =
+      allow_file_access->value_or(default_allow_file_access);
 
   for (const auto& [key, field] :
        {std::pair<std::string_view, int*>{"width", &request.width},

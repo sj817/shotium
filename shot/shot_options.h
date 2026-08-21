@@ -28,6 +28,11 @@ struct ShotOptions {
   // Resident worker mode: no input on the command line, requests arrive
   // on stdin. See shot_server.h for the framing.
   bool serve = false;
+  // The default for a --serve request that does not set allowFileAccess. The
+  // command line's own request always allows it -- pointing shot at a local
+  // file is the decision -- so this only moves the default for requests that
+  // arrive over the protocol, where the sender may not be the operator.
+  bool allow_file_access = false;
   bool read_stdin = false;
   bool force_file_input = false;
   std::string input;

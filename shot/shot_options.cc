@@ -158,6 +158,10 @@ base::expected<ShotOptions, std::string> ParseShotOptions(
       options.serve = true;
       continue;
     }
+    if (!positional_only && argument == "--allow-file-access") {
+      options.allow_file_access = true;
+      continue;
+    }
     if (!positional_only && argument == "--full-page") {
       options.full_page = true;
       continue;
@@ -431,6 +435,10 @@ Options:
   --timeout N           Alias for --timeout-ms
   --serve               Resident worker: read length-prefixed JSON requests
                         from stdin and write results to stdout
+  --allow-file-access   Let --serve requests that do not say load file://
+                        subresources. A request may still set allowFileAccess
+                        either way; this only changes what silence means. The
+                        command line already allows it and ignores this flag.
   --cache-dir PATH      HTTP disk cache directory; without it nothing is cached
   --user-agent STRING   Override the User-Agent sent and reported
   --verbose             Log every subresource request and its outcome

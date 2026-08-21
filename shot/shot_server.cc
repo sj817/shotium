@@ -112,7 +112,7 @@ base::DictValue ErrorHeader(const std::string& message) {
 
 }  // namespace
 
-int RunServer() {
+int RunServer(bool default_allow_file_access) {
   base::File input = StandardInput();
   base::File output = StandardOutput();
   if (!input.IsValid() || !output.IsValid()) {
@@ -149,7 +149,8 @@ int RunServer() {
 
     auto request = ParseScreenshotRequest(
         std::string_view(reinterpret_cast<const char*>(request_bytes.data()),
-                         request_bytes.size()));
+                         request_bytes.size()),
+        default_allow_file_access);
     if (!request.has_value()) {
       if (!WriteResponse(output, ErrorHeader(request.error()), {})) {
         return kCaptureExitCode;

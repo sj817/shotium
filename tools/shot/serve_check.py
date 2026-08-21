@@ -15,7 +15,8 @@ What it checks, in order:
      really do share one path
   3. allowFileAccess actually gates subresources: the same document without it
      must not come back the same, because the corpus loads fonts and bitmaps
-     over file:
+     over file:, and --allow-file-access moves what silence means without
+     overriding a request that states the field either way
   4. the capture geometry -- fullPage, clip, selector, scale -- lands on the
      exact pixels shot/testdata/features.html states it should
   5. omitBackground really keeps the alpha channel, checked by decoding the PNG
@@ -202,6 +203,32 @@ def main():
     denied = hashlib.sha256(payload).hexdigest()
     checks.check(denied != digests[0],
                  "and renders differently, because fonts and images were refused")
+
+    # The same question asked of a worker started with --allow-file-access.
+    # The point of the flag is that the answer to silence belongs to whoever
+    # launched the process rather than to whoever sends the request, so both
+    # halves matter: silence now means yes, and an explicit no is still obeyed.
+    print("\n== --allow-file-access moves the default, not the decision ==")
+    permissive = subprocess.Popen([exe, "--serve", "--allow-file-access"],
+                                  stdin=subprocess.PIPE,
+                                  stdout=subprocess.PIPE)
+    send(permissive, denied_request)
+    header, payload = recv(permissive)
+    checks.check(header.get("ok") is True,
+                 "a silent request renders on a permissive worker",
+                 header.get("error", ""))
+    checks.check(hashlib.sha256(payload).hexdigest() == digests[0],
+                 "and matches the render that asked for file access")
+
+    send(permissive, dict(denied_request, allowFileAccess=False))
+    header, payload = recv(permissive)
+    checks.check(header.get("ok") is True,
+                 "an explicit allowFileAccess:false still renders",
+                 header.get("error", ""))
+    checks.check(hashlib.sha256(payload).hexdigest() == denied,
+                 "and matches the refused render, so the request still wins")
+    permissive.stdin.close()
+    permissive.wait(timeout=30)
 
     # features.html states its own geometry, so these are exact.
     print("\n== capture geometry ==")

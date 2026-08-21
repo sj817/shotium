@@ -34,8 +34,14 @@ namespace shot {
 // indistinguishable to it from one that never answered -- which is the point,
 // since a crash has to look like a timeout for the retry path to be simple.
 //
+// `default_allow_file_access` is what an incoming request means when it says
+// nothing about allowFileAccess. It comes from the command line that started
+// the worker rather than from the request, because the process that renders
+// a page for a stranger should not be taking that instruction from the
+// stranger. See shot_options.cc for the flag.
+//
 // Requires a live ShotRuntime on this thread. Returns a process exit code.
-int RunServer();
+int RunServer(bool default_allow_file_access);
 
 }  // namespace shot
 
