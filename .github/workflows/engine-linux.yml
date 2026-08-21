@@ -189,6 +189,17 @@ jobs:
           echo
           echo "probe clean -- re-run this workflow with mode: build"
 
+      - name: probe log
+        if: ${{ always() && github.event.inputs.mode == 'probe' }}
+        uses: actions/upload-artifact@v4
+        # Uploaded whether the probe passed or failed, because the failing case
+        # is the one worth having: tools/shot/restore_from_upstream.py --log
+        # reads exactly this file and puts back whatever it names.
+        with:
+          name: probe-linux-${{ github.event.inputs.arch }}
+          path: /tmp/probe.txt
+          if-no-files-found: ignore
+
       - name: ninja
         if: ${{ github.event.inputs.mode == 'build' }}
         working-directory: src
