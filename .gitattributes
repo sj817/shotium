@@ -58,3 +58,9 @@ DIR_METADATA   text eol=lf
 
 # Skip Tricium by default on files in third_party.
 third_party/** -tricium
+
+# base/BUILD.gn measures this file's length and compiles the number in as
+# APP_INFO_PLIST_FILE_SIZE, so its byte count is a build input rather than a
+# detail of how it happens to be checked out. Without this a CRLF checkout
+# would silently change the constant.
+/chrome/app/app-Info.plist  text eol=lf
