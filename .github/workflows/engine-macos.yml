@@ -85,10 +85,20 @@ jobs:
           submodules: false
 
       - name: depot_tools
+        # Invoked by hand for the same reason the Windows job calls
+        # win_tools.bat: DEPOT_TOOLS_UPDATE=0 pins the depot_tools this run
+        # cloned, and that skips the call that would otherwise bootstrap it.
+        # The bootstrap writes python3_bin_reldir.txt, which the `gn` and
+        # `ninja` wrappers read to find their interpreter -- and gclient sync
+        # succeeds without it, so the failure surfaces later at gn gen than the
+        # step that caused it.
         run: |
           git clone --depth 1 \
             https://chromium.googlesource.com/chromium/tools/depot_tools.git \
             "$HOME/depot_tools"
+          "$HOME/depot_tools/ensure_bootstrap"
+          test -f "$HOME/depot_tools/python3_bin_reldir.txt" \
+            || { echo "bootstrap produced no python3_bin_reldir.txt"; exit 1; }
           echo "$HOME/depot_tools" >> "$GITHUB_PATH"
 
       - name: gclient solution
