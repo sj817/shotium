@@ -1,0 +1,47 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>combination stress</title>
+<style>
+  html,body{margin:0;padding:0;background:#fff}
+  body{width:400px;height:200px;font:12px/1.4 system-ui,sans-serif}
+
+  /* a grid whose items are flex containers, inside a container query,
+     inside a cascade layer, painted with a gradient under a filter */
+  @layer base, theme;
+  @layer base { .card{background:#ddd;color:#000} }
+  @layer theme { .card{background:linear-gradient(135deg,#06c,#093);color:#fff} }
+
+  .wrap{container-type:inline-size;position:absolute;inset:8px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));
+        gap:8px}
+  .card{display:flex;flex-direction:column;justify-content:space-between;
+        border-radius:8px;padding:8px;box-shadow:0 2px 6px rgba(0,0,0,.35);
+        min-height:56px;transform:rotate(-1deg)}
+  .card:nth-child(2){transform:rotate(1deg) scale(.96);
+        filter:saturate(1.4) drop-shadow(0 0 3px rgba(0,0,0,.5))}
+  .card:nth-child(3){background:
+        conic-gradient(from 45deg,#c00,#fc0,#c00);mix-blend-mode:multiply}
+  .card h2{margin:0;font-size:14px;letter-spacing:.5px;
+        text-shadow:0 1px 0 rgba(0,0,0,.4)}
+  .card p{margin:0;opacity:.85}
+  .card::after{content:"›";float:right;font-weight:700}
+
+  /* :has() reaching back up, plus a counter and a clipped badge */
+  .grid:has(.card:nth-child(3)) .card:first-child{outline:2px dashed #fff;
+        outline-offset:-4px}
+  .grid{counter-reset:c}
+  .card h2::before{counter-increment:c;content:counter(c) ". "}
+  .badge{position:absolute;right:0;top:0;width:26px;height:26px;
+        background:#c00;clip-path:polygon(100% 0,100% 100%,0 0);
+        border-radius:0 8px 0 0}
+
+  @container (min-width:300px){ .card p{font-variant-numeric:tabular-nums} }
+  @media (max-width:1px){ .card{display:none} }
+</style>
+<div class=wrap>
+  <div class=grid>
+    <div class=card><h2>Alpha</h2><p>1,234 ¥ — 漢字</p><i class=badge></i></div>
+    <div class=card><h2>Beta</h2><p>עברית 5,678</p></div>
+    <div class=card><h2>Gamma</h2><p>مرحبا 9,012</p></div>
+  </div>
+</div>
