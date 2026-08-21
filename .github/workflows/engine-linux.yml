@@ -1,10 +1,17 @@
-# Builds //shot:shot on Linux, for x64 or as an arm64 cross-compile.
+# Builds //shot:shot on Linux, natively, on x64 or arm64.
 #
-# This is the second platform, and it is deliberately a separate workflow from
-# engine-windows.yml rather than a matrix entry on it. The Windows build works;
-# folding an unproven target into the same job would put it at risk for no
-# gain, and the two have almost no steps in common anyway -- no Visual Studio,
-# no SDK hunt, a sysroot instead, different packaging.
+# Native on both: arm64 runs on ubuntu-24.04-arm rather than being
+# cross-compiled from an x64 host. That is the more expensive-looking choice
+# and the cheaper real one -- a fresh arm64 runner starts with about 45 GB
+# free against roughly 22 GB on x64, and this build wants every gigabyte of
+# it. It also means the binary is exercised by the check suites on the
+# architecture it ships for, which a cross-compile cannot do.
+#
+# This is deliberately a separate workflow from engine-windows.yml rather than
+# a matrix entry on it. The Windows build works; folding an unproven target
+# into the same job would put it at risk for no gain, and the two have almost
+# no steps in common anyway -- no Visual Studio, no SDK hunt, different
+# packaging.
 #
 # What is genuinely unknown here is how much of the cutting assumed Windows.
 # Every round of it was verified by building and rendering on Windows only, and
@@ -32,8 +39,8 @@ on:
         type: choice
         options: [probe, build]
         default: probe
-      target_cpu:
-        description: 'x64, or arm64 as a cross-compile from this x64 host'
+      arch:
+        description: 'x64 (ubuntu-24.04) or arm64 (ubuntu-24.04-arm), both native'
         type: choice
         options: [x64, arm64]
         default: x64
@@ -47,7 +54,8 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-24.04
+    runs-on: ${{ github.event.inputs.arch == 'arm64'
+                 && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
     timeout-minutes: 350
 
     permissions:
@@ -111,19 +119,14 @@ jobs:
           df -h /
 
       - name: build dependencies
-        # --no-prompt because there is no terminal; --no-arm/--no-nacl because
-        # neither is in this build graph. The arm64 target gets its sysroot from
-        # the hook below instead, which is the supported way to cross-compile.
+        # --no-prompt because there is no terminal, --no-nacl because it is not
+        # in this build graph. No sysroot step: both architectures build
+        # natively, so the packages this installs are the ones the compiler
+        # actually links against.
         working-directory: src
         run: |
           sudo ./build/install-build-deps.sh --no-prompt --no-nacl || \
           sudo ./build/install-build-deps.sh --no-prompt
-
-      - name: arm64 sysroot
-        if: ${{ github.event.inputs.target_cpu == 'arm64' }}
-        working-directory: src
-        run: |
-          python3 build/linux/sysroot_scripts/install-sysroot.py --arch=arm64
 
       - name: make source timestamps content-faithful
         run: python3 src/tools/shot/ci_stamp_mtimes.py .
@@ -132,14 +135,14 @@ jobs:
         uses: actions/cache/restore@v4
         # See engine-windows.yml for why the build directory itself is the
         # cache and why nothing else shares the budget with it. The key carries
-        # the platform *and* the cpu, because an arm64 cross-compile and an x64
-        # build are different output directories that must never restore each
-        # other's objects.
+        # the architecture as well as the platform: the two are different
+        # machines producing different objects, and restoring one into the
+        # other would rebuild everything having evicted something useful.
         with:
           path: src/out/Shot
-          key: out-shot-linux-${{ github.event.inputs.target_cpu }}-${{ github.run_id }}
+          key: out-shot-linux-${{ github.event.inputs.arch }}-${{ github.run_id }}
           restore-keys: |
-            out-shot-linux-${{ github.event.inputs.target_cpu }}-
+            out-shot-linux-${{ github.event.inputs.arch }}-
 
       - name: build the shot ICU data set
         working-directory: src
@@ -158,12 +161,11 @@ jobs:
         # The args file is imported rather than passed on the command line: it
         # has quoted values that do not survive interpolation, and writing the
         # same bytes every run is what keeps a restored build directory valid.
+        # No target_cpu: the build is native, so GN takes the host's. Naming
+        # it would only be a claim that could disagree with the runner.
         run: |
           mkdir -p out/Shot
-          cat > out/Shot/args.gn <<EOF
-          import("//build/args/shot.gn")
-          target_cpu = "${{ github.event.inputs.target_cpu }}"
-          EOF
+          echo 'import("//build/args/shot.gn")' > out/Shot/args.gn
           cat out/Shot/args.gn
           gn gen out/Shot
 
@@ -198,7 +200,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: src/out/Shot
-          key: out-shot-linux-${{ github.event.inputs.target_cpu }}-${{ github.run_id }}
+          key: out-shot-linux-${{ github.event.inputs.arch }}-${{ github.run_id }}
 
       - name: drop the build directories this one replaces
         if: ${{ always() && github.event.inputs.mode == 'build' }}
@@ -209,7 +211,7 @@ jobs:
         # wanted have to go or they evict the one that is. Never fatal: the
         # cache is an optimisation.
         run: |
-          prefix="out-shot-linux-${{ github.event.inputs.target_cpu }}-"
+          prefix="out-shot-linux-${{ github.event.inputs.arch }}-"
           # .[2:] keeps the newest two: this run's entry, and one spare to fall
           # back on if this run's turns out to be unusable.
           ids=$(gh cache list --repo "${{ github.repository }}" \
@@ -243,24 +245,22 @@ jobs:
           cp out/Shot/shot out/Shot/shot_data.pak out/Shot/shot_strings.pak dist/
           ls -l dist
           7z a -t7z -mx=9 \
-            "shot-linux-${{ github.event.inputs.target_cpu }}.7z" ./dist/*
-          ls -l "shot-linux-${{ github.event.inputs.target_cpu }}.7z"
+            "shot-linux-${{ github.event.inputs.arch }}.7z" ./dist/*
+          ls -l "shot-linux-${{ github.event.inputs.arch }}.7z"
 
       - name: upload
         if: ${{ success() && github.event.inputs.mode == 'build' }}
         uses: actions/upload-artifact@v4
         with:
-          name: shot-linux-${{ github.event.inputs.target_cpu }}
-          path: src/shot-linux-${{ github.event.inputs.target_cpu }}.7z
+          name: shot-linux-${{ github.event.inputs.arch }}
+          path: src/shot-linux-${{ github.event.inputs.arch }}.7z
           if-no-files-found: error
           compression-level: 0
 
       - name: checks
-        # An arm64 binary cannot run on this x64 host, so the suites are only
-        # meaningful for a native build.
+        # Both architectures are native, so both can run their own binary.
         if: ${{ success() && github.event.inputs.mode == 'build'
-                && github.event.inputs.run_checks == 'true'
-                && github.event.inputs.target_cpu == 'x64' }}
+                && github.event.inputs.run_checks == 'true' }}
         working-directory: src
         run: |
           python3 -m pip install --quiet pillow
