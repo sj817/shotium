@@ -26,10 +26,8 @@
 #include "net/http/http_stream_pool_request_info.h"
 #include "net/http/http_stream_request.h"
 #include "net/log/net_log.h"
-#include "net/quic/quic_session_alias_key.h"
 #include "net/socket/next_proto.h"
 #include "net/ssl/ssl_config.h"
-#include "net/third_party/quiche/src/quiche/quic/core/quic_versions.h"
 
 namespace net {
 
@@ -98,10 +96,7 @@ class HttpStreamPool::JobController : public HttpStreamPool::Job::Delegate,
  private:
   // Represents an alternative endpoint for the request.
   struct Alternative {
-    Alternative(HttpStreamKey stream_key,
-                NextProto protocol,
-                quic::ParsedQuicVersion quic_version,
-                std::optional<QuicSessionAliasKey> quic_key);
+    Alternative(HttpStreamKey stream_key, NextProto protocol);
     Alternative(Alternative&&);
     ~Alternative();
 
@@ -112,10 +107,6 @@ class HttpStreamPool::JobController : public HttpStreamPool::Job::Delegate,
 
     HttpStreamKey stream_key;
     NextProto protocol;
-
-    // Only set when this alternative is QUIC.
-    quic::ParsedQuicVersion quic_version;
-    std::optional<QuicSessionAliasKey> quic_key;
   };
 
   // Stream that is ready to be used, along with some associated metadata.
@@ -139,7 +130,6 @@ class HttpStreamPool::JobController : public HttpStreamPool::Job::Delegate,
       const HttpStreamPoolRequestInfo& request_info,
       bool enable_alternative_services);
 
-  QuicSessionPool* quic_session_pool();
   SpdySessionPool* spdy_session_pool();
 
   // Returns an HttpStream and its negotiated protocol if there is an
@@ -147,26 +137,13 @@ class HttpStreamPool::JobController : public HttpStreamPool::Job::Delegate,
   // returns std::nullopt.
   std::optional<PendingStream> MaybeCreateStreamFromExistingSession();
 
-  // When there is a QUIC session that can serve an HttpStream for the request,
-  // creates an HttpStream and returns it.
-  std::unique_ptr<HttpStream> MaybeCreateStreamFromExistingQuicSession();
-  std::unique_ptr<HttpStream> MaybeCreateStreamFromExistingQuicSessionInternal(
-      const QuicSessionAliasKey& key);
-
   // May start an alternative job. Returns true when an alternative job is
   // started.
   bool MaybeStartAlternativeJob();
 
-  // Returns true when a QUIC session can be used for the request.
-  bool CanUseExistingQuicSession();
-
-  // Starts a QUIC preconnect job when an alternative service is advertised via
-  // Alt-Svc but the current request is not using it.
-  void StartAltSvcQuicPreconnect();
-
   // Calls the request's Complete() and tells the delegate that a stream, now
   // stored in `pending_stream_`, is ready. Used when there is an existing
-  // QUIC/SPDY session that can serve the request.
+  // SPDY session that can serve the request.
   void CallRequestCompleteAndStreamReady();
 
   // Calls the request's stream failed callback.
@@ -211,9 +188,6 @@ class HttpStreamPool::JobController : public HttpStreamPool::Job::Delegate,
   const AdvertisedAltSvcState advertised_alt_svc_state_;
 
   const HttpStreamKey origin_stream_key_;
-  const QuicSessionAliasKey origin_quic_key_;
-  quic::ParsedQuicVersion origin_quic_version_ =
-      quic::ParsedQuicVersion::Unsupported();
 
   const std::optional<Alternative> alternative_;
 

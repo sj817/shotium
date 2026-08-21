@@ -21,7 +21,6 @@
 #include "net/socket/next_proto.h"
 #include "net/socket/stream_socket.h"
 #include "net/socket/stream_socket_close_reason.h"
-#include "net/third_party/quiche/src/quiche/quic/core/quic_versions.h"
 
 namespace net {
 
@@ -80,14 +79,9 @@ HttpStreamPool::Group::Group(HttpStreamPool* pool, HttpStreamKey stream_key)
     : pool_(pool),
       stream_key_(std::move(stream_key)),
       spdy_session_key_(stream_key_.CalculateSpdySessionKey()),
-      quic_session_alias_key_(stream_key_.CalculateQuicSessionAliasKey()),
       net_log_(
           NetLogWithSource::Make(http_network_session()->net_log(),
                                  NetLogSourceType::HTTP_STREAM_POOL_GROUP)),
-      force_quic_(
-          http_network_session()->ShouldForceQuic(stream_key_.destination(),
-                                                  ProxyInfo::Direct(),
-                                                  /*is_websocket=*/false)),
       track_("HttpStreamPool::Group"),
       flow_(perfetto::Flow::ProcessScoped(
           base::trace_event::GetNextGlobalTraceId())) {
@@ -96,7 +90,6 @@ HttpStreamPool::Group::Group(HttpStreamPool* pool, HttpStreamKey stream_key)
   net_log_.BeginEvent(NetLogEventType::HTTP_STREAM_POOL_GROUP_ALIVE, [&] {
     base::DictValue dict;
     dict.Set("stream_key", stream_key_.ToValue());
-    dict.Set("force_quic", force_quic_);
     return dict;
   });
 }
@@ -110,10 +103,9 @@ HttpStreamPool::Group::~Group() {
 
 std::unique_ptr<HttpStreamPool::Job> HttpStreamPool::Group::CreateJob(
     Job::Delegate* delegate,
-    quic::ParsedQuicVersion quic_version,
     NextProto expected_protocol,
     const NetLogWithSource& request_net_log) {
-  return std::make_unique<Job>(delegate, JobType::kRequest, this, quic_version,
+  return std::make_unique<Job>(delegate, JobType::kRequest, this,
                                expected_protocol, request_net_log);
 }
 
@@ -330,10 +322,6 @@ void HttpStreamPool::Group::CancelJobs(int error,
 
 HttpStreamPool::AttemptManager* HttpStreamPool::Group::GetAttemptManagerForJob(
     Job* job) {
-  if (job->type() == JobType::kAltSvcQuicPreconnect) {
-    return GetAttemptManagerForAltSvcQuicPreconnect();
-  }
-
   if (!attempt_manager_) {
     attempt_manager_ = std::make_unique<AttemptManager>(
         this, http_network_session()->net_log());
@@ -346,11 +334,6 @@ void HttpStreamPool::Group::OnAttemptManagerShuttingDown(
   if (attempt_manager == attempt_manager_.get()) {
     shutting_down_attempt_managers_.emplace(std::move(attempt_manager_));
     CHECK(!attempt_manager_.get());
-  } else if (attempt_manager ==
-             alt_svc_quic_preconnect_attempt_manager_.get()) {
-    shutting_down_attempt_managers_.emplace(
-        std::move(alt_svc_quic_preconnect_attempt_manager_));
-    CHECK(!alt_svc_quic_preconnect_attempt_manager_.get());
   } else {
     NOTREACHED();
   }
@@ -361,14 +344,10 @@ void HttpStreamPool::Group::OnAttemptManagerComplete(
   auto it = shutting_down_attempt_managers_.find(attempt_manager);
   if (it != shutting_down_attempt_managers_.end()) {
     CHECK_NE(attempt_manager_.get(), attempt_manager);
-    CHECK_NE(alt_svc_quic_preconnect_attempt_manager_.get(), attempt_manager);
     shutting_down_attempt_managers_.erase(it);
   } else {
     if (attempt_manager == attempt_manager_.get()) {
       attempt_manager_.reset();
-    } else if (attempt_manager ==
-               alt_svc_quic_preconnect_attempt_manager_.get()) {
-      alt_svc_quic_preconnect_attempt_manager_.reset();
     } else {
       NOTREACHED();
     }
@@ -421,18 +400,8 @@ void HttpStreamPool::Group::CleanupIdleStreamSockets(
   MaybeCompleteLater();
 }
 
-HttpStreamPool::AttemptManager*
-HttpStreamPool::Group::GetAttemptManagerForAltSvcQuicPreconnect() {
-  if (!alt_svc_quic_preconnect_attempt_manager_) {
-    alt_svc_quic_preconnect_attempt_manager_ = std::make_unique<AttemptManager>(
-        this, http_network_session()->net_log());
-  }
-  return alt_svc_quic_preconnect_attempt_manager_.get();
-}
-
 bool HttpStreamPool::Group::CanComplete() const {
   return ActiveStreamSocketCount() == 0 && !attempt_manager_ &&
-         !alt_svc_quic_preconnect_attempt_manager_ &&
          shutting_down_attempt_managers_.empty();
 }
 

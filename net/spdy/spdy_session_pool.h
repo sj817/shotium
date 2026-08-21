@@ -36,7 +36,6 @@
 #include "net/spdy/spdy_session_key.h"
 #include "net/ssl/ssl_config_service.h"
 #include "net/third_party/quiche/src/quiche/http2/core/spdy_protocol.h"
-#include "net/third_party/quiche/src/quiche/quic/core/quic_versions.h"
 
 namespace net {
 
@@ -146,10 +145,8 @@ class NET_EXPORT SpdySessionPool
                   SSLClientContext* ssl_client_context,
                   HttpServerProperties* http_server_properties,
                   TransportSecurityState* transport_security_state,
-                  const quic::ParsedQuicVersionVector& quic_supported_versions,
                   bool enable_ping_based_connection_checking,
                   bool is_http_enabled,
-                  bool is_quic_enabled,
                   size_t session_max_recv_window_size,
                   int session_max_queued_capped_frames,
                   const spdy::SettingsMap& initial_settings,
@@ -525,15 +522,12 @@ class NET_EXPORT SpdySessionPool
   const raw_ptr<SSLClientContext> ssl_client_context_;
   const raw_ptr<HostResolver> resolver_;
 
-  // Versions of QUIC which may be used.
-  const quic::ParsedQuicVersionVector quic_supported_versions_;
 
   // Defaults to true. May be controlled via SpdySessionPoolPeer for tests.
   bool enable_sending_initial_data_ = true;
   bool enable_ping_based_connection_checking_;
 
   const bool is_http2_enabled_;
-  const bool is_quic_enabled_;
 
   size_t session_max_recv_window_size_;
 

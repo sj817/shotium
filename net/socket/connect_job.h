@@ -32,7 +32,6 @@
 #include "net/socket/socket_tag.h"
 #include "net/socket/ssl_client_socket.h"
 #include "net/ssl/ssl_config.h"
-#include "net/third_party/quiche/src/quiche/quic/core/quic_versions.h"
 
 namespace net {
 
@@ -49,7 +48,6 @@ class NetLog;
 class NetLogWithSource;
 class NetworkQualityEstimator;
 class ProxyDelegate;
-class QuicSessionPool;
 class SocketPerformanceWatcherFactory;
 class SocketTag;
 class SpdySessionPool;
@@ -71,8 +69,6 @@ struct NET_EXPORT_PRIVATE CommonConnectJobParams {
       HttpAuthCache* http_auth_cache,
       HttpAuthHandlerFactory* http_auth_handler_factory,
       SpdySessionPool* spdy_session_pool,
-      const quic::ParsedQuicVersionVector* quic_supported_versions,
-      QuicSessionPool* quic_session_pool,
       ProxyDelegate* proxy_delegate,
       const HttpUserAgentSettings* http_user_agent_settings,
       SSLClientContext* ssl_client_context,
@@ -95,8 +91,6 @@ struct NET_EXPORT_PRIVATE CommonConnectJobParams {
   raw_ptr<HttpAuthCache> http_auth_cache;
   raw_ptr<HttpAuthHandlerFactory> http_auth_handler_factory;
   raw_ptr<SpdySessionPool> spdy_session_pool;
-  raw_ptr<const quic::ParsedQuicVersionVector> quic_supported_versions;
-  raw_ptr<QuicSessionPool> quic_session_pool;
   raw_ptr<ProxyDelegate> proxy_delegate;
   raw_ptr<const HttpUserAgentSettings> http_user_agent_settings;
   raw_ptr<SSLClientContext> ssl_client_context;

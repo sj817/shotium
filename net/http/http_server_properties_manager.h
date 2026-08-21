@@ -41,9 +41,6 @@ class NET_EXPORT_PRIVATE HttpServerPropertiesManager {
   // |recently_broken_alternative_services|, which may be null.
   using OnPrefsLoadedCallback = base::OnceCallback<void(
       std::unique_ptr<HttpServerProperties::ServerInfoMap> server_info_map,
-      const IPAddress& last_local_address_when_quic_worked,
-      std::unique_ptr<HttpServerProperties::QuicServerInfoMap>
-          quic_server_info_map,
       std::unique_ptr<BrokenAlternativeServiceList>
           broken_alternative_service_list,
       std::unique_ptr<RecentlyBrokenAlternativeServices>
@@ -65,7 +62,6 @@ class NET_EXPORT_PRIVATE HttpServerPropertiesManager {
   HttpServerPropertiesManager(
       std::unique_ptr<HttpServerProperties::PrefDelegate> pref_delegate,
       OnPrefsLoadedCallback on_prefs_loaded_callback,
-      size_t max_server_configs_stored_in_properties,
       NetLog* net_log,
       const base::TickClock* clock = nullptr);
 
@@ -85,19 +81,10 @@ class NET_EXPORT_PRIVATE HttpServerPropertiesManager {
   // simpler API.
   void ReadPrefs(
       std::unique_ptr<HttpServerProperties::ServerInfoMap>* server_info_map,
-      IPAddress* last_local_address_when_quic_worked,
-      std::unique_ptr<HttpServerProperties::QuicServerInfoMap>*
-          quic_server_info_map,
       std::unique_ptr<BrokenAlternativeServiceList>*
           broken_alternative_service_list,
       std::unique_ptr<RecentlyBrokenAlternativeServices>*
           recently_broken_alternative_services);
-
-  void set_max_server_configs_stored_in_properties(
-      size_t max_server_configs_stored_in_properties) {
-    max_server_configs_stored_in_properties_ =
-        max_server_configs_stored_in_properties;
-  }
 
   // Update preferences with caller-provided data. Invokes |callback| when
   // changes have been committed, if non-null.
@@ -111,8 +98,6 @@ class NET_EXPORT_PRIVATE HttpServerPropertiesManager {
   void WriteToPrefs(
       const HttpServerProperties::ServerInfoMap& server_info_map,
       const GetCannonicalSuffix& get_canonical_suffix,
-      const IPAddress& last_local_address_when_quic_worked,
-      const HttpServerProperties::QuicServerInfoMap& quic_server_info_map,
       const BrokenAlternativeServiceList& broken_alternative_service_list,
       const RecentlyBrokenAlternativeServices&
           recently_broken_alternative_services,
@@ -164,16 +149,9 @@ class NET_EXPORT_PRIVATE HttpServerPropertiesManager {
       const base::DictValue& server_dict,
       HttpServerProperties::ServerInfo* server_info);
 
-  void ReadLastLocalAddressWhenQuicWorked(
-      const base::DictValue& server_dict,
-      IPAddress* last_local_address_when_quic_worked);
   void ParseNetworkStats(const url::SchemeHostPort& server,
                          const base::DictValue& server_dict,
                          HttpServerProperties::ServerInfo* server_info);
-  void AddToQuicServerInfoMap(
-      const base::DictValue& server_dict,
-      bool use_network_anonymization_key,
-      HttpServerProperties::QuicServerInfoMap* quic_server_info_map);
   void AddToBrokenAlternativeServices(
       const base::DictValue& broken_alt_svc_entry_dict,
       bool use_network_anonymization_key,
@@ -183,15 +161,9 @@ class NET_EXPORT_PRIVATE HttpServerPropertiesManager {
   void SaveAlternativeServiceToServerPrefs(
       const AlternativeServiceInfoVector& alternative_service_info_vector,
       base::DictValue& server_pref_dict);
-  void SaveLastLocalAddressWhenQuicWorkedToPrefs(
-      const IPAddress& last_local_address_when_quic_worked,
-      base::DictValue& http_server_properties_dict);
   void SaveNetworkStatsToServerPrefs(
       const ServerNetworkStats& server_network_stats,
       base::DictValue& server_pref_dict);
-  void SaveQuicServerInfoMapToServerPrefs(
-      const HttpServerProperties::QuicServerInfoMap& quic_server_info_map,
-      base::DictValue& http_server_properties_dict);
   void SaveBrokenAlternativeServicesToPrefs(
       const BrokenAlternativeServiceList& broken_alternative_service_list,
       size_t max_broken_alternative_services,
@@ -205,7 +177,6 @@ class NET_EXPORT_PRIVATE HttpServerPropertiesManager {
 
   OnPrefsLoadedCallback on_prefs_loaded_callback_;
 
-  size_t max_server_configs_stored_in_properties_;
 
   raw_ptr<const base::TickClock> clock_;  // Unowned
 

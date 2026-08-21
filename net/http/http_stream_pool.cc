@@ -38,12 +38,10 @@
 #include "net/http/http_stream_pool_job_controller.h"
 #include "net/http/http_stream_request.h"
 #include "net/log/net_log_with_source.h"
-#include "net/quic/quic_session_pool.h"
 #include "net/socket/next_proto.h"
 #include "net/socket/ssl_client_socket.h"
 #include "net/socket/stream_socket_close_reason.h"
 #include "net/spdy/spdy_session.h"
-#include "net/third_party/quiche/src/quiche/quic/core/quic_versions.h"
 #include "url/gurl.h"
 #include "url/scheme_host_port.h"
 
@@ -87,7 +85,7 @@ constexpr base::FeatureParam<HttpStreamPool::TcpBasedAttemptDelayBehavior>
         &features::kHappyEyeballsV3,
         HttpStreamPool::kTcpBasedAttemptDelayBehaviorParamName.data(),
         HttpStreamPool::TcpBasedAttemptDelayBehavior::
-            kStartTimerOnFirstQuicAttempt,
+            kStartTimerOnFirstEndpointUpdate,
         HttpStreamPool::kTcpBasedAttemptDelayBehaviorOptions};
 
 constexpr base::FeatureParam<bool> kVerboseNetLog{
@@ -151,12 +149,7 @@ HttpStreamPool::GetTcpBasedAttemptDelayBehavior() {
 }
 
 // static
-bool HttpStreamPool::VerboseNetLog() {
-  return kVerboseNetLog.Get();
-}
-
-// static
-bool HttpStreamPool::IsQuicErrorBrokenable(int net_error) {
+bool HttpStreamPool::IsAlternativeServiceErrorBrokenable(int net_error) {
   switch (net_error) {
     case OK:
     case ERR_DNS_NO_MATCHING_SUPPORTED_ALPN:
@@ -168,6 +161,11 @@ bool HttpStreamPool::IsQuicErrorBrokenable(int net_error) {
     default:
       return true;
   }
+}
+
+// static
+bool HttpStreamPool::VerboseNetLog() {
+  return kVerboseNetLog.Get();
 }
 
 HttpStreamPool::HttpStreamPool(HttpNetworkSession* http_network_session,
@@ -422,63 +420,6 @@ bool HttpStreamPool::RequiresHTTP11(
     const NetworkAnonymizationKey& network_anonymization_key) const {
   return http_network_session()->http_server_properties()->RequiresHTTP11(
       destination, network_anonymization_key);
-}
-
-bool HttpStreamPool::IsQuicBroken(
-    const url::SchemeHostPort& destination,
-    const NetworkAnonymizationKey& network_anonymization_key) const {
-  return http_network_session()
-      ->http_server_properties()
-      ->IsAlternativeServiceBroken(
-          AlternativeService(NextProto::kProtoQUIC,
-                             HostPortPair::FromSchemeHostPort(destination)),
-          network_anonymization_key);
-}
-
-bool HttpStreamPool::CanUseQuic(
-    const url::SchemeHostPort& destination,
-    const NetworkAnonymizationKey& network_anonymization_key,
-    bool enable_alternative_services) const {
-  if (http_network_session()->ShouldForceQuic(destination, ProxyInfo::Direct(),
-                                              /*is_websocket=*/false)) {
-    return true;
-  }
-
-  // Note that this does not check RequiresHTTP11(), as despite its name, it
-  // only means H2 is not allowed.
-  return http_network_session()->IsQuicEnabled() &&
-         enable_alternative_services &&
-         GURL::SchemeIsCryptographic(destination.scheme()) &&
-         !IsQuicBroken(destination, network_anonymization_key);
-}
-
-quic::ParsedQuicVersion HttpStreamPool::SelectQuicVersion(
-    const AlternativeServiceInfo& alternative_service_info) {
-  if (alternative_service_info.protocol() != NextProto::kProtoQUIC) {
-    return quic::ParsedQuicVersion::Unsupported();
-  }
-  return http_network_session()->context().quic_context->SelectQuicVersion(
-      alternative_service_info.advertised_versions());
-}
-
-bool HttpStreamPool::CanUseExistingQuicSession(
-    const QuicSessionAliasKey& quic_session_alias_key,
-    bool enable_alternative_services) {
-  const url::SchemeHostPort& destination = quic_session_alias_key.destination();
-  return destination.IsValid() &&
-         CanUseQuic(
-             destination,
-             quic_session_alias_key.session_key().network_anonymization_key(),
-             enable_alternative_services) &&
-         http_network_session()->quic_session_pool()->CanUseExistingSession(
-             quic_session_alias_key.session_key(), destination);
-}
-
-CompletionOnceCallback HttpStreamPool::GetAltSvcQuicPreconnectCallback() {
-  if (alt_svc_quic_preconnect_callback_for_testing_) {
-    return std::move(alt_svc_quic_preconnect_callback_for_testing_);
-  }
-  return base::DoNothing();
 }
 
 void HttpStreamPool::SetDelegateForTesting(

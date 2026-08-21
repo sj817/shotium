@@ -28,7 +28,6 @@
 #include "net/http/http_auth_cache.h"
 #include "net/http/http_stream_factory.h"
 #include "net/net_buildflags.h"
-#include "net/quic/quic_session_pool.h"
 #include "net/socket/connect_job.h"
 #include "net/socket/next_proto.h"
 #include "net/socket/websocket_endpoint_lock_manager.h"
@@ -57,7 +56,6 @@ class NetworkQualityEstimator;
 class ProxyDelegate;
 class ProxyResolutionService;
 class ProxyChain;
-class QuicCryptoClientStreamFactory;
 #if BUILDFLAG(ENABLE_REPORTING)
 class ReportingService;
 #endif
@@ -137,12 +135,6 @@ struct NET_EXPORT HttpNetworkSessionParams {
   // Enables 0-RTT support.
   bool enable_early_data;
 
-  // Enables QUIC support.
-  bool enable_quic = true;
-
-  // If non-empty, QUIC will only be spoken to hosts in this list.
-  base::flat_set<std::string> quic_host_allowlist;
-
   bool key_auth_cache_server_entries_by_network_anonymization_key = false;
 
   // If true, enable sending PRIORITY_UPDATE frames until SETTINGS frame
@@ -186,14 +178,10 @@ struct NET_EXPORT HttpNetworkSessionContext {
   raw_ptr<NetLog> net_log;
   raw_ptr<SocketPerformanceWatcherFactory> socket_performance_watcher_factory;
   raw_ptr<NetworkQualityEstimator> network_quality_estimator;
-  raw_ptr<QuicContext> quic_context;
 #if BUILDFLAG(ENABLE_REPORTING)
   raw_ptr<ReportingService> reporting_service;
   raw_ptr<NetworkErrorLoggingService> network_error_logging_service;
 #endif
-
-  // Optional factory to use for creating QuicCryptoClientStreams.
-  raw_ptr<QuicCryptoClientStreamFactory> quic_crypto_client_stream_factory;
 };
 
 // This class holds session objects used by HttpNetworkTransaction objects.
@@ -236,7 +224,6 @@ class NET_EXPORT HttpNetworkSession : public base::PowerSuspendObserver {
     return &websocket_endpoint_lock_manager_;
   }
   SpdySessionPool* spdy_session_pool() { return &spdy_session_pool_; }
-  QuicSessionPool* quic_session_pool() { return &quic_session_pool_; }
   HttpAuthHandlerFactory* http_auth_handler_factory() {
     return http_auth_handler_factory_;
   }
@@ -262,10 +249,6 @@ class NET_EXPORT HttpNetworkSession : public base::PowerSuspendObserver {
   // Creates a Value summary of the state of the SPDY sessions.
   base::Value SpdySessionPoolInfoToValue() const;
 
-  // Creates a Value summary of the state of the QUIC sessions and
-  // configuration.
-  base::Value QuicInfoToValue() const;
-
   void CloseAllConnections(int net_error, const char* net_log_reason_utf8);
   void CloseIdleConnections(const char* net_log_reason_utf8);
 
@@ -284,17 +267,6 @@ class NET_EXPORT HttpNetworkSession : public base::PowerSuspendObserver {
   }
 
   void SetTLS13EarlyDataEnabled(bool enabled);
-
-  // Evaluates if QUIC is enabled for new streams.
-  bool IsQuicEnabled() const;
-
-  // Disable QUIC for new streams.
-  void DisableQuic();
-
-  // Returns true when QUIC is forcibly used for `destination`.
-  bool ShouldForceQuic(const url::SchemeHostPort& destination,
-                       const ProxyInfo& proxy_info,
-                       bool is_websocket);
 
   // Ignores certificate errors on new connection attempts.
   void IgnoreCertificateErrorsForTesting();
@@ -338,14 +310,9 @@ class NET_EXPORT HttpNetworkSession : public base::PowerSuspendObserver {
   WebSocketEndpointLockManager websocket_endpoint_lock_manager_;
   std::unique_ptr<ClientSocketPoolManager> normal_socket_pool_manager_;
   std::unique_ptr<ClientSocketPoolManager> websocket_socket_pool_manager_;
-  QuicSessionPool quic_session_pool_;
   // `http_stream_pool_` needs to outlive `spdy_session_pool_` because it owns
   // SpdySessions, which own HttpStreamHandle and handles are owned by
   // `http_stream_pool_`.
-  // `http_stream_pool_` needs to be destroyed before `quic_session_pool_`
-  // because an HttpStreamPool::QuicTask, which is owned by `http_stream_pool_`,
-  // may have a QuicSessionAttempt that must be destroyed before
-  // `quic_session_pool_`.
   std::unique_ptr<HttpStreamPool> http_stream_pool_;
   SpdySessionPool spdy_session_pool_;
   std::unique_ptr<HttpStreamFactory> http_stream_factory_;

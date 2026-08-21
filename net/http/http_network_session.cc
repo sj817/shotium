@@ -26,9 +26,6 @@
 #include "net/http/http_stream_pool.h"
 #include "net/http/url_security_manager.h"
 #include "net/proxy_resolution/proxy_resolution_service.h"
-#include "net/quic/platform/impl/quic_chromium_clock.h"
-#include "net/quic/quic_crypto_client_stream_factory.h"
-#include "net/quic/quic_session_pool.h"
 #include "net/socket/client_socket_factory.h"
 #include "net/socket/client_socket_pool_manager_impl.h"
 #include "net/socket/next_proto.h"
@@ -36,10 +33,6 @@
 #include "net/socket/stream_socket_close_reason.h"
 #include "net/spdy/spdy_session.h"
 #include "net/spdy/spdy_session_pool.h"
-#include "net/third_party/quiche/src/quiche/quic/core/crypto/quic_random.h"
-#include "net/third_party/quiche/src/quiche/quic/core/quic_packets.h"
-#include "net/third_party/quiche/src/quiche/quic/core/quic_tag.h"
-#include "net/third_party/quiche/src/quiche/quic/core/quic_utils.h"
 #include "url/scheme_host_port.h"
 
 namespace net {
@@ -82,12 +75,6 @@ spdy::SettingsMap AddDefaultHttp2Settings(spdy::SettingsMap http2_settings) {
   return http2_settings;
 }
 
-bool OriginToForceQuicOnInternal(const QuicParams& quic_params,
-                                 const url::SchemeHostPort& destination) {
-  return (quic_params.force_quic_everywhere ||
-          quic_params.origins_to_force_quic_on.contains(destination));
-}
-
 }  // unnamed namespace
 
 HttpNetworkSessionParams::HttpNetworkSessionParams()
@@ -116,14 +103,13 @@ HttpNetworkSessionContext::HttpNetworkSessionContext()
       http_auth_handler_factory(nullptr),
       net_log(nullptr),
       socket_performance_watcher_factory(nullptr),
-      network_quality_estimator(nullptr),
-      quic_context(nullptr),
+      network_quality_estimator(nullptr)
 #if BUILDFLAG(ENABLE_REPORTING)
+      ,
       reporting_service(nullptr),
-      network_error_logging_service(nullptr),
+      network_error_logging_service(nullptr)
 #endif
-      quic_crypto_client_stream_factory(
-          QuicCryptoClientStreamFactory::GetDefaultFactory()) {
+{
 }
 
 HttpNetworkSessionContext::HttpNetworkSessionContext(
@@ -153,26 +139,12 @@ HttpNetworkSession::HttpNetworkSession(const HttpNetworkSessionParams& params,
                           context.transport_security_state,
                           &ssl_client_session_cache_,
                           context.sct_auditing_delegate),
-      quic_session_pool_(context.net_log,
-                         context.host_resolver,
-                         context.ssl_config_service,
-                         context.client_socket_factory,
-                         context.http_server_properties,
-                         context.cert_verifier,
-                         context.transport_security_state,
-                         context.proxy_delegate,
-                         context.sct_auditing_delegate,
-                         context.socket_performance_watcher_factory,
-                         context.quic_crypto_client_stream_factory,
-                         context.quic_context),
       spdy_session_pool_(context.host_resolver,
                          &ssl_client_context_,
                          context.http_server_properties,
                          context.transport_security_state,
-                         context.quic_context->params()->supported_versions,
                          params.enable_spdy_ping_based_connection_checking,
                          params.enable_http2,
-                         params.enable_quic,
                          params.spdy_session_max_recv_window_size,
                          params.spdy_session_max_queued_capped_frames,
                          AddDefaultHttp2Settings(params.http2_settings),
@@ -216,13 +188,6 @@ HttpNetworkSession::HttpNetworkSession(const HttpNetworkSessionParams& params,
   }
 
   next_protos_.push_back(NextProto::kProtoHTTP11);
-
-  http_server_properties_->SetMaxServerConfigsStoredInProperties(
-      context.quic_context->params()->max_server_configs_stored_in_properties);
-  http_server_properties_->SetBrokenAlternativeServicesDelayParams(
-      context.quic_context->params()
-          ->initial_delay_for_broken_alternative_service,
-      context.quic_context->params()->exponential_backoff_on_initial_delay);
 
   http_stream_pool_ = std::make_unique<HttpStreamPool>(
       this,
@@ -276,79 +241,6 @@ base::Value HttpNetworkSession::SpdySessionPoolInfoToValue() const {
   return spdy_session_pool_.SpdySessionPoolInfoToValue();
 }
 
-base::Value HttpNetworkSession::QuicInfoToValue() const {
-  base::DictValue dict;
-  dict.Set("sessions", quic_session_pool_.QuicSessionPoolInfoToValue());
-  dict.Set("quic_enabled", IsQuicEnabled());
-
-  const QuicParams* quic_params = context_.quic_context->params();
-
-  base::ListValue connection_options;
-  for (const auto& option : quic_params->connection_options) {
-    connection_options.Append(quic::QuicTagToString(option));
-  }
-  dict.Set("connection_options", std::move(connection_options));
-
-  base::ListValue supported_versions;
-  for (const auto& version : quic_params->supported_versions) {
-    supported_versions.Append(ParsedQuicVersionToString(version));
-  }
-  dict.Set("supported_versions", std::move(supported_versions));
-
-  base::ListValue origins_to_force_quic_on;
-  if (quic_params->force_quic_everywhere) {
-    origins_to_force_quic_on.Append("<everywhere>");
-  } else {
-    for (const auto& origin : quic_params->origins_to_force_quic_on) {
-      origins_to_force_quic_on.Append(origin.Serialize());
-    }
-  }
-  dict.Set("origins_to_force_quic_on", std::move(origins_to_force_quic_on));
-
-  dict.Set("max_packet_length",
-           static_cast<int>(quic_params->max_packet_length));
-  dict.Set(
-      "max_server_configs_stored_in_properties",
-      static_cast<int>(quic_params->max_server_configs_stored_in_properties));
-  dict.Set("idle_connection_timeout_seconds",
-           static_cast<int>(quic_params->idle_connection_timeout.InSeconds()));
-  dict.Set("reduced_ping_timeout_seconds",
-           static_cast<int>(quic_params->reduced_ping_timeout.InSeconds()));
-  dict.Set("retry_without_alt_svc_on_quic_errors",
-           quic_params->retry_without_alt_svc_on_quic_errors);
-  dict.Set("close_sessions_on_ip_change",
-           quic_params->close_sessions_on_ip_change);
-  dict.Set("goaway_sessions_on_ip_change",
-           quic_params->goaway_sessions_on_ip_change);
-  dict.Set("migrate_sessions_on_network_change_v2",
-           quic_params->migrate_sessions_on_network_change_v2);
-  dict.Set("migrate_sessions_early_v2", quic_params->migrate_sessions_early_v2);
-  dict.Set("retransmittable_on_wire_timeout_milliseconds",
-           static_cast<int>(
-               quic_params->retransmittable_on_wire_timeout.InMilliseconds()));
-  dict.Set("retry_on_alternate_network_before_handshake",
-           quic_params->retry_on_alternate_network_before_handshake);
-  dict.Set("migrate_idle_sessions", quic_params->migrate_idle_sessions);
-  dict.Set(
-      "idle_session_migration_period_seconds",
-      static_cast<int>(quic_params->idle_session_migration_period.InSeconds()));
-  dict.Set("max_time_on_non_default_network_seconds",
-           static_cast<int>(
-               quic_params->max_time_on_non_default_network.InSeconds()));
-  dict.Set("max_num_migrations_to_non_default_network_on_write_error",
-           quic_params->max_migrations_to_non_default_network_on_write_error);
-  dict.Set(
-      "max_num_migrations_to_non_default_network_on_path_degrading",
-      quic_params->max_migrations_to_non_default_network_on_path_degrading);
-  dict.Set("allow_server_migration", quic_params->allow_server_migration);
-  dict.Set("estimate_initial_rtt", quic_params->estimate_initial_rtt);
-  dict.Set("initial_rtt_for_handshake_milliseconds",
-           static_cast<int>(
-               quic_params->initial_rtt_for_handshake.InMilliseconds()));
-
-  return base::Value(std::move(dict));
-}
-
 void HttpNetworkSession::CloseAllConnections(int net_error,
                                              const char* net_log_reason_utf8) {
   normal_socket_pool_manager_->FlushSocketPoolsWithError(net_error,
@@ -361,7 +253,6 @@ void HttpNetworkSession::CloseAllConnections(int net_error,
         net_log_reason_utf8);
   }
   spdy_session_pool_.CloseCurrentSessions(static_cast<Error>(net_error));
-  quic_session_pool_.CloseAllSessions(net_error, quic::QUIC_PEER_GOING_AWAY);
 }
 
 void HttpNetworkSession::CloseIdleConnections(const char* net_log_reason_utf8) {
@@ -375,33 +266,6 @@ void HttpNetworkSession::CloseIdleConnections(const char* net_log_reason_utf8) {
 
 void HttpNetworkSession::SetTLS13EarlyDataEnabled(bool enabled) {
   params_.enable_early_data = enabled;
-}
-
-bool HttpNetworkSession::IsQuicEnabled() const {
-  return params_.enable_quic;
-}
-
-void HttpNetworkSession::DisableQuic() {
-  params_.enable_quic = false;
-}
-
-bool HttpNetworkSession::ShouldForceQuic(const url::SchemeHostPort& destination,
-                                         const ProxyInfo& proxy_info,
-                                         bool is_websocket) {
-  if (!IsQuicEnabled()) {
-    return false;
-  }
-  if (is_websocket) {
-    return false;
-  }
-  // If a proxy is being used, the last proxy in the chain must be QUIC if we
-  // are to use QUIC on top of it.
-  if (!proxy_info.is_direct() && !proxy_info.proxy_chain().Last().is_quic()) {
-    return false;
-  }
-  return OriginToForceQuicOnInternal(*context_.quic_context->params(),
-                                     destination) &&
-         GURL::SchemeIsCryptographic(destination.scheme());
 }
 
 void HttpNetworkSession::IgnoreCertificateErrorsForTesting() {
@@ -419,7 +283,6 @@ CommonConnectJobParams HttpNetworkSession::CreateCommonConnectJobParams(
   return CommonConnectJobParams(
       context_.client_socket_factory, context_.host_resolver, &http_auth_cache_,
       context_.http_auth_handler_factory, &spdy_session_pool_,
-      &context_.quic_context->params()->supported_versions, &quic_session_pool_,
       context_.proxy_delegate, context_.http_user_agent_settings,
       &ssl_client_context_, context_.socket_performance_watcher_factory,
       context_.network_quality_estimator, context_.net_log,

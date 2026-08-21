@@ -162,13 +162,6 @@ StructTraits<network::mojom::LoadTimingInternalInfoDataView,
   return info.advertised_alt_svc_state;
 }
 
-bool StructTraits<network::mojom::LoadTimingInternalInfoDataView,
-                  net::LoadTimingInternalInfo>::
-    http_network_session_quic_enabled(const net::LoadTimingInternalInfo& info) {
-  return info.http_network_session_quic_enabled;
-}
-
-// static
 bool StructTraits<network::mojom::ResolutionDetailsDataView,
                   net::ResolutionDetails>::
     Read(network::mojom::ResolutionDetailsDataView data,
@@ -302,9 +295,6 @@ bool StructTraits<network::mojom::LoadTimingInternalInfoDataView,
   if (!data.ReadAdvertisedAltSvcState(&info->advertised_alt_svc_state)) {
     return false;
   }
-  info->http_network_session_quic_enabled =
-      data.http_network_session_quic_enabled();
-
   if (!data.ReadResolutionDetails(&info->resolution_details)) {
     return false;
   }

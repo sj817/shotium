@@ -110,7 +110,6 @@ class NET_EXPORT_PRIVATE HttpStreamRequest {
 
     // Called when finding all QUIC alternative services are marked broken for
     // the origin in this request which advertises supporting QUIC.
-    virtual void OnQuicBroken() = 0;
   };
 
   class NET_EXPORT_PRIVATE Helper {

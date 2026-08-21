@@ -22,11 +22,9 @@
 #include "net/http/http_stream_pool.h"
 #include "net/http/http_stream_pool_job.h"
 #include "net/http/http_stream_request.h"
-#include "net/quic/quic_session_alias_key.h"
 #include "net/socket/stream_socket_close_reason.h"
 #include "net/socket/stream_socket_handle.h"
 #include "net/spdy/spdy_session_key.h"
-#include "net/third_party/quiche/src/quiche/quic/core/quic_versions.h"
 #include "url/scheme_host_port.h"
 
 namespace net {
@@ -69,10 +67,6 @@ class HttpStreamPool::Group {
 
   const SpdySessionKey& spdy_session_key() const { return spdy_session_key_; }
 
-  const QuicSessionAliasKey& quic_session_alias_key() const {
-    return quic_session_alias_key_;
-  }
-
   HttpStreamPool* pool() { return pool_; }
   const HttpStreamPool* pool() const { return pool_; }
 
@@ -89,8 +83,6 @@ class HttpStreamPool::Group {
 
   const NetLogWithSource& net_log() { return net_log_; }
 
-  bool force_quic() const { return force_quic_; }
-
   const perfetto::Track& track() const { return track_; }
   const perfetto::Flow& flow() const { return flow_; }
 
@@ -99,7 +91,6 @@ class HttpStreamPool::Group {
   // properly manage the lifetime of the Job, even when StartJob() synchronously
   // calls one of the delegate's methods.
   std::unique_ptr<Job> CreateJob(Job::Delegate* delegate,
-                                 quic::ParsedQuicVersion quic_version,
                                  NextProto expected_protocol,
                                  const NetLogWithSource& request_net_log);
 
@@ -222,9 +213,6 @@ class HttpStreamPool::Group {
   void CleanupIdleStreamSockets(CleanupMode mode,
                                 std::string_view net_log_close_reason_utf8);
 
-  // Returns an `AttemptManager` for an Alt-Svc QUIC preconnect job.
-  AttemptManager* GetAttemptManagerForAltSvcQuicPreconnect();
-
   void MaybeComplete();
 
   // Posts a task to call MaybeComplete() later.
@@ -233,9 +221,7 @@ class HttpStreamPool::Group {
   const raw_ptr<HttpStreamPool> pool_;
   const HttpStreamKey stream_key_;
   const SpdySessionKey spdy_session_key_;
-  const QuicSessionAliasKey quic_session_alias_key_;
   const NetLogWithSource net_log_;
-  const bool force_quic_;
   const perfetto::NamedTrack track_;
   const perfetto::Flow flow_;
 
@@ -244,9 +230,6 @@ class HttpStreamPool::Group {
   std::list<IdleStreamSocket> idle_stream_sockets_;
 
   std::unique_ptr<AttemptManager> attempt_manager_;
-
-  // An `AttemptManager` for Alt-Svc QUIC preconnects.
-  std::unique_ptr<AttemptManager> alt_svc_quic_preconnect_attempt_manager_;
 
   // Keeps AttemptManagers that are shutting down.
   std::set<std::unique_ptr<AttemptManager>, base::UniquePtrComparator>

@@ -21,7 +21,6 @@
 #include "net/socket/next_proto.h"
 #include "net/socket/stream_socket.h"
 #include "net/ssl/ssl_info.h"
-#include "net/third_party/quiche/src/quiche/quic/core/quic_versions.h"
 
 namespace net {
 
@@ -97,7 +96,6 @@ class HttpStreamPool::Job {
   Job(Delegate* delegate,
       JobType type,
       Group* group,
-      quic::ParsedQuicVersion quic_version,
       NextProto expected_protocol,
       const NetLogWithSource& request_net_log,
       size_t num_streams = 0);
@@ -184,8 +182,6 @@ class HttpStreamPool::Job {
 
   const perfetto::Flow& flow() const { return delegate_->flow(); }
 
-  quic::ParsedQuicVersion quic_version() const { return quic_version_; }
-
   const NextProtoSet& allowed_alpns() const { return allowed_alpns_; }
 
   size_t num_streams() const { return num_streams_; }
@@ -214,7 +210,6 @@ class HttpStreamPool::Job {
   // success or failure, replaced with nullptr.
   raw_ptr<AttemptManager> attempt_manager_;
 
-  const quic::ParsedQuicVersion quic_version_;
   const NextProtoSet allowed_alpns_;
   const NetLogWithSource request_net_log_;
   const NetLogWithSource job_net_log_;

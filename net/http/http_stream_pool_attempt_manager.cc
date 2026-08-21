@@ -39,13 +39,9 @@
 #include "net/http/http_stream_pool_group.h"
 #include "net/http/http_stream_pool_handle.h"
 #include "net/http/http_stream_pool_job.h"
-#include "net/http/http_stream_pool_quic_attempt.h"
 #include "net/http/http_stream_pool_tcp_based_attempt.h"
 #include "net/log/net_log_util.h"
 #include "net/log/net_log_with_source.h"
-#include "net/quic/quic_http_stream.h"
-#include "net/quic/quic_session_alias_key.h"
-#include "net/quic/quic_session_pool.h"
 #include "net/socket/connection_attempts.h"
 #include "net/socket/next_proto.h"
 #include "net/socket/stream_attempt.h"
@@ -59,7 +55,6 @@
 #include "net/spdy/spdy_session_pool.h"
 #include "net/ssl/ssl_cert_request_info.h"
 #include "net/ssl/ssl_config_service.h"
-#include "net/third_party/quiche/src/quiche/quic/core/quic_versions.h"
 
 namespace net {
 
@@ -146,22 +141,10 @@ std::string_view HttpStreamPool::AttemptManager::InitialAttemptStateToString(
   switch (state) {
     case InitialAttemptState::kOther:
       return "Other";
-    case InitialAttemptState::kCanUseQuicWithKnownVersion:
-      return "CanUseQuicWithKnownVersion";
-    case InitialAttemptState::kCanUseQuicWithKnownVersionAndSupportsSpdy:
-      return "CanUseQuicWithKnownVersionAndSupportsSpdy";
-    case InitialAttemptState::kCanUseQuicWithUnknownVersion:
-      return "CanUseQuicWithUnknownVersion";
-    case InitialAttemptState::kCanUseQuicWithUnknownVersionAndSupportsSpdy:
-      return "CanUseQuicWithUnknownVersionAndSupportsSpdy";
-    case InitialAttemptState::kCannotUseQuicWithKnownVersion:
-      return "CannotUseQuicWithKnownVersion";
-    case InitialAttemptState::kCannotUseQuicWithKnownVersionAndSupportsSpdy:
-      return "CannotUseQuicWithKnownVersionAndSupportsSpdy";
-    case InitialAttemptState::kCannotUseQuicWithUnknownVersion:
-      return "CannotUseQuicWithUnknownVersion";
-    case InitialAttemptState::kCannotUseQuicWithUnknownVersionAndSupportsSpdy:
-      return "CannotUseQuicWithUnknownVersionAndSupportsSpdy";
+    case InitialAttemptState::kNoSupportsSpdy:
+      return "NoSupportsSpdy";
+    case InitialAttemptState::kSupportsSpdy:
+      return "SupportsSpdy";
   }
 }
 
@@ -176,12 +159,11 @@ HttpStreamPool::AttemptManager::AttemptManager(Group* group, NetLog* net_log)
       created_time_(base::TimeTicks::Now()),
       is_using_tls_(
           GURL::SchemeIsCryptographic(stream_key().destination().scheme())),
-      // This must be before the GetTcpBasedAttemptDelay() call, since it needs
-      // to know that QUIC is not allowed, or it will try to create an invalid
-      // QUIC destination and trigger a CHECK.
       allowed_alpns_(is_using_tls_ ? kAllProtocols : kTcpBasedProtocols),
       request_jobs_(NUM_PRIORITIES),
-      tcp_based_attempt_delay_(GetTcpBasedAttemptDelay()),
+      // Always zero: the delay existed to give a racing QUIC attempt a head
+      // start, and there is no QUIC attempt any more.
+      tcp_based_attempt_delay_(),
       should_block_tcp_based_attempt_(!tcp_based_attempt_delay_.is_zero()) {
   CHECK(group_);
   // Since this is only one of two fixed values, seems not worth CHECKing.
@@ -286,8 +268,6 @@ void HttpStreamPool::AttemptManager::RequestStream(Job* job) {
         dict.Set("enable_ip_based_pooling_for_h2",
                  job->enable_ip_based_pooling_for_h2());
         dict.Set("allowed_alpns", AllowedAlpnsToValue(job->allowed_alpns()));
-        dict.Set("quic_version",
-                 quic::ParsedQuicVersionToString(job->quic_version()));
         job->net_log().source().AddToEventParameters(dict);
         return dict;
       });
@@ -310,8 +290,6 @@ void HttpStreamPool::AttemptManager::Preconnect(Job* job) {
       NetLogEventType::HTTP_STREAM_POOL_ATTEMPT_MANAGER_PRECONNECT, [&] {
         base::DictValue dict;
         dict.Set("num_streams", static_cast<int>(job->num_streams()));
-        dict.Set("quic_version",
-                 quic::ParsedQuicVersionToString(job->quic_version()));
         job->delegate_net_log().source().AddToEventParameters(dict);
         return dict;
       });
@@ -436,36 +414,7 @@ bool HttpStreamPool::AttemptManager::IsEndpointUsableForTcpBasedAttempt(
 HttpStreamPool::AttemptManager::InitialAttemptState
 HttpStreamPool::AttemptManager::CalculateInitialAttemptState() {
   using enum InitialAttemptState;
-  bool supports_spdy = SupportsSpdy();
-  if (CanUseQuic()) {
-    if (quic_version_.IsKnown()) {
-      if (supports_spdy) {
-        return kCanUseQuicWithKnownVersionAndSupportsSpdy;
-      } else {
-        return kCanUseQuicWithKnownVersion;
-      }
-    } else {
-      if (supports_spdy) {
-        return kCanUseQuicWithUnknownVersionAndSupportsSpdy;
-      } else {
-        return kCanUseQuicWithUnknownVersion;
-      }
-    }
-  } else {
-    if (quic_version_.IsKnown()) {
-      if (supports_spdy) {
-        return kCannotUseQuicWithKnownVersionAndSupportsSpdy;
-      } else {
-        return kCannotUseQuicWithKnownVersion;
-      }
-    } else {
-      if (supports_spdy) {
-        return kCannotUseQuicWithUnknownVersionAndSupportsSpdy;
-      } else {
-        return kCannotUseQuicWithUnknownVersion;
-      }
-    }
-  }
+  return SupportsSpdy() ? kSupportsSpdy : kNoSupportsSpdy;
 }
 
 void HttpStreamPool::AttemptManager::SetInitialAttemptState() {
@@ -604,38 +553,12 @@ void HttpStreamPool::AttemptManager::CancelJobs(
   HandleFinalError(error);
 }
 
-void HttpStreamPool::AttemptManager::CompleteQuicAttempt(
-    int result,
-    base::optional_ref<NetErrorDetails> net_error_details,
-    bool overwrite_old_result) {
-  if (quic_attempt_result_.has_value() && !overwrite_old_result) {
-    CHECK(!quic_attempt_);
-    CHECK_NE(result, OK)
-        << "QUIC attempt should not be completed with OK more than once";
-    CHECK_NE(*quic_attempt_result_, OK)
-        << "QUIC attempt should not be completed more than once if initially "
-           "succeeded";
-    return;
-  }
-
-  if (net_error_details.has_value()) {
-    net_error_details_ = *net_error_details;
-  }
-  quic_attempt_result_ = result;
-  quic_attempt_.reset();
-}
-
 const HttpStreamKey& HttpStreamPool::AttemptManager::stream_key() const {
   return group_->stream_key();
 }
 
 const SpdySessionKey& HttpStreamPool::AttemptManager::spdy_session_key() const {
   return group_->spdy_session_key();
-}
-
-const QuicSessionAliasKey&
-HttpStreamPool::AttemptManager::quic_session_alias_key() const {
-  return group_->quic_session_alias_key();
 }
 
 HttpNetworkSession* HttpStreamPool::AttemptManager::http_network_session()
@@ -645,10 +568,6 @@ HttpNetworkSession* HttpStreamPool::AttemptManager::http_network_session()
 
 SpdySessionPool* HttpStreamPool::AttemptManager::spdy_session_pool() const {
   return http_network_session()->spdy_session_pool();
-}
-
-QuicSessionPool* HttpStreamPool::AttemptManager::quic_session_pool() const {
-  return http_network_session()->quic_session_pool();
 }
 
 HttpStreamPool* HttpStreamPool::AttemptManager::pool() {
@@ -715,14 +634,6 @@ bool HttpStreamPool::AttemptManager::IsStalledByPoolLimit() {
 
   if (!ip_endpoint_state_tracker_.GetIPEndPointToAttemptTcpBased()
            .has_value()) {
-    return false;
-  }
-
-  if (CanUseExistingQuicSession()) {
-    // There could be a matching QUIC session if an existing QUIC session
-    // receives an HTTP/3 Origin frame while `this` is attempting QUIC session
-    // establishment. In such case, QuicSessionAttempt will close the new
-    // session later. See QuicSessionAttempt::DoConfirmConnection().
     return false;
   }
 
@@ -866,86 +777,6 @@ void HttpStreamPool::AttemptManager::OnTcpBasedAttemptSlow(
   MaybeAttemptTcpBased();
 }
 
-void HttpStreamPool::AttemptManager::OnQuicAttemptComplete(
-    QuicAttemptOutcome outcome) {
-  CHECK(!quic_attempt_result_.has_value());
-  int rv = outcome.result;
-  QuicChromiumClientSession* quic_session = outcome.session;
-
-  // Record completion time only when QuicAttempt actually attempted QUIC.
-  if (rv != ERR_DNS_NO_MATCHING_SUPPORTED_ALPN) {
-    base::UmaHistogramTimes(
-        base::StrCat({"Net.HttpStreamPool.QuicAttemptTime.",
-                      rv == OK ? "Success" : "Failure"}),
-        base::TimeTicks::Now() - quic_attempt_->start_time());
-  }
-
-  CompleteQuicAttempt(rv, outcome.error_details);
-
-  net_log().AddEvent(
-      NetLogEventType::HTTP_STREAM_POOL_ATTEMPT_MANAGER_QUIC_ATTEMPT_COMPLETED,
-      [&] {
-        base::DictValue dict = GetStatesAsNetLogParams();
-        dict.Set("result", rv);
-        if (net_error_details_.quic_connection_error != quic::QUIC_NO_ERROR) {
-          dict.Set("quic_error", quic::QuicErrorCodeToString(
-                                     net_error_details_.quic_connection_error));
-        }
-
-        if (rv == OK) {
-          CHECK(quic_session);
-          quic_session->net_log().source().AddToEventParameters(dict);
-        }
-        return dict;
-      });
-
-  if (is_shutting_down()) {
-    MaybeCompleteLater();
-    return;
-  }
-
-  if (rv == OK) {
-    HandleQuicSessionReady(quic_session,
-                           StreamSocketCloseReason::kQuicSessionCreated);
-    MaybeCompleteLater();
-    return;
-  }
-
-  if (tcp_based_attempt_state_ == TcpBasedAttemptState::kAllEndpointsFailed ||
-      !CanUseTcpBasedProtocols()) {
-    CancelTcpBasedAttemptDelayTimer();
-    HandleFinalError(rv);
-    return;
-  }
-
-  if (should_block_tcp_based_attempt_) {
-    CancelTcpBasedAttemptDelayTimer();
-    MaybeAttemptTcpBased();
-  } else {
-    MaybeCompleteLater();
-  }
-}
-
-void HttpStreamPool::AttemptManager::OnQuicAttemptSlow() {
-  CHECK(quic_attempt_);
-  CHECK(quic_attempt_->is_slow());
-
-  TRACE_EVENT_INSTANT("net.stream", "AttemptManager::OnQuicAttemptSlow", track_,
-                      "ip_endpoint",
-                      quic_attempt_->quic_endpoint().ip_endpoint.ToString());
-  net_log().AddEvent(
-      NetLogEventType::HTTP_STREAM_POOL_ATTEMPT_MANAGER_QUIC_ATTEMPT_SLOW, [&] {
-        return base::DictValue().Set(
-            "ip_endpoint",
-            quic_attempt_->quic_endpoint().ip_endpoint.ToString());
-      });
-
-  if (is_shutting_down()) {
-    CompleteQuicAttempt(ERR_ABORTED);
-    MaybeCompleteLater();
-  }
-}
-
 base::DictValue HttpStreamPool::AttemptManager::GetInfoAsValue() const {
   base::DictValue dict;
   dict.Set("request_job_count", static_cast<int>(request_jobs_.size()));
@@ -988,13 +819,6 @@ base::DictValue HttpStreamPool::AttemptManager::GetInfoAsValue() const {
     dict.Set("ip_endpoint_states", std::move(ip_endpoint_states));
   }
 
-  if (quic_attempt_) {
-    dict.Set("quic_attempt", quic_attempt_->GetInfoAsValue());
-  }
-  if (quic_attempt_result_.has_value()) {
-    dict.Set("quic_attempt_result", ErrorToString(*quic_attempt_result_));
-  }
-
   return dict;
 }
 
@@ -1019,11 +843,6 @@ base::DictValue HttpStreamPool::AttemptManager::GetStatesAsNetLogParams()
            static_cast<int>(tcp_based_attempt_slots_.size()));
   dict.Set("enable_ip_based_pooling_for_h2", IsIpBasedPoolingEnabledForH2());
   dict.Set("allowed_alpns", AllowedAlpnsToValue(allowed_alpns_));
-  dict.Set("quic_attempt_alive", !!quic_attempt_);
-  if (quic_attempt_result_.has_value()) {
-    dict.Set("quic_attempt_result", *quic_attempt_result_);
-  }
-
   dict.Set("tcp_based_attempt_slots", GetTcpBasedAttemptSlotsAsValue());
 
   return dict;
@@ -1055,7 +874,6 @@ void HttpStreamPool::AttemptManager::StartInternal(Job* job) {
       }
       break;
     case JobType::kPreconnect:
-    case JobType::kAltSvcQuicPreconnect:
       auto [it, inserted] = preconnect_jobs_.emplace(job);
       CHECK(inserted);
       if (job->type() == JobType::kPreconnect) {
@@ -1077,37 +895,14 @@ void HttpStreamPool::AttemptManager::StartInternal(Job* job) {
     ip_based_pooling_disabling_jobs_.emplace(job);
   }
 
-  quic_version_ = job->quic_version();
   RestrictAllowedProtocols(job->allowed_alpns());
 
-  // JobController should check the existing QUIC/SPDY sessions before starting
-  // a Job.
+  // JobController should check the existing SPDY session before starting a Job.
   // TODO(crbug.com/346835898): Change to DCHECK once we stabilize the
   // implementation.
-  // TODO(crbug.com/455891789): Replace this block with
-  // CHECK(CanUseExistingQuicSession()), once bug is fixed.
-  if (CanUseExistingQuicSession()) {
-    SCOPED_CRASH_KEY_BOOL("crbug-455891789", "CanUseQuic", CanUseQuic());
-    SCOPED_CRASH_KEY_BOOL("crbug-455891789", "IsQuicEnabled",
-                          http_network_session()->IsQuicEnabled());
-    SCOPED_CRASH_KEY_BOOL(
-        "crbug-455891789", "IsQuicBroken",
-        pool()->IsQuicBroken(quic_session_alias_key().destination(),
-                             quic_session_alias_key()
-                                 .session_key()
-                                 .network_anonymization_key()));
-    SCOPED_CRASH_KEY_BOOL("crbug-455891789", "is_using_tls", is_using_tls_);
-    SCOPED_CRASH_KEY_BOOL("crbug-455891789", "enable_alt_services",
-                          job->enable_alternative_services());
-    SCOPED_CRASH_KEY_BOOL("crbug-455891789", "force_quic",
-                          group_->force_quic());
-    NOTREACHED();
-  }
-  CHECK(job->type() == JobType::kAltSvcQuicPreconnect ||
-        !HasAvailableSpdySession());
+  CHECK(!HasAvailableSpdySession());
 
   MaybeChangeServiceEndpointRequestPriority();
-  UpdateTcpBasedAttemptState();
 
   if (GetTcpBasedAttemptDelayBehavior() ==
       TcpBasedAttemptDelayBehavior::kStartTimerOnFirstJob) {
@@ -1115,7 +910,6 @@ void HttpStreamPool::AttemptManager::StartInternal(Job* job) {
   }
 
   if (service_endpoint_request_ || service_endpoint_request_finished_) {
-    MaybeAttemptQuic();
     MaybeAttemptTcpBased();
   } else {
     ResolveServiceEndpoint(job->priority());
@@ -1153,11 +947,6 @@ void HttpStreamPool::AttemptManager::RestrictAllowedProtocols(
     CancelTcpBasedAttempts(
         StreamSocketCloseReason::kCannotUseTcpBasedProtocols);
   }
-
-  if (!CanUseQuic()) {
-    // TODO(crbug.com/346835898): Use other error code?
-    CompleteQuicAttempt(ERR_ABORTED);
-  }
 }
 
 void HttpStreamPool::AttemptManager::
@@ -1180,29 +969,6 @@ void HttpStreamPool::AttemptManager::ProcessServiceEndpointChanges() {
   // resolution.
   if (!is_using_tls_ && !service_endpoint_request_->EndpointsCryptoReady() &&
       !service_endpoint_request_finished_) {
-    return;
-  }
-
-  if (QuicChromiumClientSession* quic_session =
-          CanUseExistingQuicSessionAfterEndpointChanges()) {
-    net_log_.AddEvent(
-        NetLogEventType::
-            HTTP_STREAM_POOL_ATTEMPT_MANAGER_EXISTING_QUIC_SESSION_MATCHED,
-        [&] {
-          base::DictValue dict;
-          quic_session->net_log().source().AddToEventParameters(dict);
-          return dict;
-        });
-    base::UmaHistogramTimes(
-        "Net.HttpStreamPool.ExistingQuicSessionFoundTime",
-        base::TimeTicks::Now() - dns_resolution_start_time_);
-
-    CompleteQuicAttempt(OK, /*net_error_details=*/std::nullopt,
-                        /*overwrite_old_result=*/true);
-    HandleQuicSessionReady(quic_session,
-                           StreamSocketCloseReason::kUsingExistingQuicSession);
-
-    CHECK(tcp_based_attempt_slots_.empty());
     return;
   }
 
@@ -1234,38 +1000,7 @@ void HttpStreamPool::AttemptManager::ProcessServiceEndpointChanges() {
   }
 
   MaybeNotifySSLConfigReady();
-  MaybeAttemptQuic();
   MaybeAttemptTcpBased();
-}
-
-QuicChromiumClientSession* HttpStreamPool::AttemptManager::
-    CanUseExistingQuicSessionAfterEndpointChanges() {
-  if (!CanUseQuic()) {
-    return nullptr;
-  }
-
-  if (CanUseExistingQuicSession()) {
-    QuicChromiumClientSession* quic_session =
-        quic_session_pool()->FindExistingSession(
-            quic_session_alias_key().session_key(),
-            quic_session_alias_key().destination());
-    CHECK(quic_session);
-    return quic_session;
-  }
-
-  for (const auto& endpoint : service_endpoint_request_->GetEndpointResults()) {
-    QuicChromiumClientSession* quic_session =
-        quic_session_pool()->HasMatchingIpSessionForServiceEndpoint(
-            quic_session_alias_key(), endpoint,
-            service_endpoint_request_->GetDnsAliasResults(),
-            /*use_dns_aliases=*/true,
-            /*log_negative_result=*/true);
-    if (quic_session) {
-      return quic_session;
-    }
-  }
-
-  return nullptr;
 }
 
 base::WeakPtr<SpdySession> HttpStreamPool::AttemptManager::
@@ -1322,36 +1057,6 @@ void HttpStreamPool::AttemptManager::MaybeNotifySSLConfigReady() {
   }
 }
 
-void HttpStreamPool::AttemptManager::MaybeAttemptQuic() {
-  if (is_shutting_down() || !CanUseQuic() || quic_attempt_result_.has_value()) {
-    return;
-  }
-
-  CHECK(service_endpoint_request_);
-  if (!service_endpoint_request_->EndpointsCryptoReady()) {
-    return;
-  }
-
-  if (quic_attempt_) {
-    // TODO(crbug.com/346835898): Support multiple QUIC attempts.
-    return;
-  }
-
-  std::optional<QuicEndpoint> quic_endpoint = GetQuicEndpointToAttempt();
-  if (quic_endpoint.has_value()) {
-    quic_attempt_ =
-        std::make_unique<QuicAttempt>(this, std::move(*quic_endpoint));
-    quic_attempt_->Start();
-    return;
-  }
-
-  if (service_endpoint_request_finished_) {
-    // There is no QUIC endpoint to attempt.
-    OnQuicAttemptComplete(
-        QuicAttemptOutcome(ERR_DNS_NO_MATCHING_SUPPORTED_ALPN));
-  }
-}
-
 void HttpStreamPool::AttemptManager::MaybeAttemptTcpBased() {
   // Do not put logic here. Instead, checks for anything that can prevent making
   // a TCP connection should go in CanAttemptConnection(), so that
@@ -1374,8 +1079,7 @@ void HttpStreamPool::AttemptManager::MaybeAttemptTcpBased() {
         tcp_based_attempt_state_ = TcpBasedAttemptState::kAllEndpointsFailed;
       }
       if (tcp_based_attempt_state_ ==
-              TcpBasedAttemptState::kAllEndpointsFailed &&
-          !quic_attempt_) {
+          TcpBasedAttemptState::kAllEndpointsFailed) {
         // Tried all endpoints.
         CHECK(most_recent_tcp_error_.has_value());
         HandleFinalError(*most_recent_tcp_error_);
@@ -1544,11 +1248,6 @@ HttpStreamPool::AttemptManager::CanAttemptConnection() const {
     return CanAttemptResult::kTcpNotAllowed;
   }
 
-  if (CanUseQuic() && quic_attempt_result_.has_value() &&
-      *quic_attempt_result_ == OK) {
-    return CanAttemptResult::kUdpSucceeded;
-  }
-
   const size_t required_attempt_count =
       std::max(request_jobs_.size(), CalculateMaxPreconnectCount());
   if (required_attempt_count <= NonSlowTcpBasedAttemptCount()) {
@@ -1622,37 +1321,6 @@ size_t HttpStreamPool::AttemptManager::CalculateMaxPreconnectCount() const {
   return num_streams;
 }
 
-std::optional<QuicEndpoint>
-HttpStreamPool::AttemptManager::GetQuicEndpointToAttempt() {
-  const bool svcb_optional = IsSvcbOptional();
-  for (auto& service_endpoint :
-       service_endpoint_request()->GetEndpointResults()) {
-    quic::ParsedQuicVersion endpoint_quic_version =
-        quic_session_pool()->SelectQuicVersion(
-            quic_version_, service_endpoint.metadata, svcb_optional);
-    if (!endpoint_quic_version.IsKnown()) {
-      continue;
-    }
-
-    // TODO(crbug.com/346835898): Attempt more than one endpoints.
-    std::optional<IPEndPoint> ip_endpoint;
-    if (!service_endpoint.ipv6_endpoints.empty()) {
-      ip_endpoint = service_endpoint.ipv6_endpoints[0];
-    } else if (!service_endpoint.ipv4_endpoints.empty()) {
-      ip_endpoint = service_endpoint.ipv4_endpoints[0];
-    }
-
-    if (!ip_endpoint.has_value()) {
-      continue;
-    }
-
-    return QuicEndpoint(endpoint_quic_version, *ip_endpoint,
-                        service_endpoint.metadata);
-  }
-
-  return std::nullopt;
-}
-
 void HttpStreamPool::AttemptManager::HandleFinalError(int error) {
   // `this` may already be failing, e.g. IP address change happens while failing
   // for a different reason.
@@ -1673,14 +1341,12 @@ void HttpStreamPool::AttemptManager::HandleFinalError(int error) {
       });
 
   CancelTcpBasedAttempts(StreamSocketCloseReason::kAbort);
-  CompleteQuicAttempt(final_error_to_notify_jobs());
   NotifyPreconnectsComplete(final_error_to_notify_jobs());
   NotifyRequestJobsOfFailure();
 
   CHECK(tcp_based_attempt_slots_.empty());
   CHECK(request_jobs_.empty());
   CHECK(preconnect_jobs_.empty());
-  CHECK(!quic_attempt_);
 
   group_->OnAttemptManagerShuttingDown(this);
   // `this` may be deleted.
@@ -1740,9 +1406,6 @@ void HttpStreamPool::AttemptManager::ProcessPreconnectsAfterTcpAttemptComplete(
     auto current_it = preconnect_it;
     ++preconnect_it;
     Job* job = current_it->get();
-    if (job->type() == JobType::kAltSvcQuicPreconnect) {
-      continue;
-    }
     job->OnPreconnectTcpAttemptComplete();
     if (job->IsPreconnectTcpAttemptComplete()) {
       // Since jobs complete asynchronously, this cannot modify `next`.
@@ -1812,10 +1475,6 @@ void HttpStreamPool::AttemptManager::OnJobDone(Job* job) {
   limit_ignoring_jobs_.erase(job);
   ip_based_pooling_disabling_jobs_.erase(job);
   if (!job->is_preconnect()) {
-    // MaybeStartDraining() is only called for non-preconnects. That does mean
-    // slow QUIC attempts will never be cancelled at this layer unless there's a
-    // a Job that makes it to the AttemptManager (as opposed to using an already
-    // connected TCP stream).
     MaybeStartDraining();
   }
   MaybeCompleteLater();
@@ -1859,10 +1518,6 @@ void HttpStreamPool::AttemptManager::MaybeStartDraining() {
   // should check draining AttemptManagers.
   CancelTcpBasedAttempts(StreamSocketCloseReason::kAttemptManagerDraining);
 
-  if (quic_attempt_ && quic_attempt_->is_slow()) {
-    CompleteQuicAttempt(ERR_ABORTED);
-  }
-
   group_->OnAttemptManagerShuttingDown(this);
 }
 
@@ -1896,33 +1551,6 @@ void HttpStreamPool::AttemptManager::MaybeCreateSpdyStreamAndNotify(
   CHECK(request_jobs_.empty());
 }
 
-void HttpStreamPool::AttemptManager::MaybeCreateQuicStreamAndNotify(
-    QuicChromiumClientSession* quic_session,
-    SessionSource session_source) {
-  if (request_jobs_.empty()) {
-    return;
-  }
-
-  CHECK(availability_state_ == AvailabilityState::kAvailable);
-  CHECK(quic_session);
-
-  std::set<std::string> dns_aliases = quic_session->GetDnsAliasesForSessionKey(
-      quic_session_alias_key().session_key());
-
-  std::vector<std::unique_ptr<QuicHttpStream>> streams(request_jobs_.size());
-  std::ranges::generate(streams, [&] {
-    return std::make_unique<QuicHttpStream>(
-        quic_session->CreateHandle(stream_key().destination()), dns_aliases);
-  });
-
-  while (!streams.empty()) {
-    std::unique_ptr<QuicHttpStream> stream = std::move(streams.back());
-    streams.pop_back();
-    NotifyStreamReady(std::move(stream), NextProto::kProtoQUIC, session_source);
-  }
-  CHECK(request_jobs_.empty());
-}
-
 void HttpStreamPool::AttemptManager::NotifyStreamReady(
     std::unique_ptr<HttpStream> stream,
     NextProto negotiated_protocol,
@@ -1940,7 +1568,6 @@ void HttpStreamPool::AttemptManager::NotifyStreamReady(
 void HttpStreamPool::AttemptManager::HandleSpdySessionReady(
     base::WeakPtr<SpdySession> spdy_session,
     StreamSocketCloseReason refresh_group_reason) {
-  CHECK(!group_->force_quic());
   CHECK(availability_state_ == AvailabilityState::kAvailable);
   CHECK(spdy_session);
   CHECK(spdy_session->IsAvailable());
@@ -1958,31 +1585,6 @@ void HttpStreamPool::AttemptManager::HandleSpdySessionReady(
           ? SessionSource::kNew
           : SessionSource::kExisting;
   MaybeCreateSpdyStreamAndNotify(spdy_session, session_source);
-}
-
-void HttpStreamPool::AttemptManager::HandleQuicSessionReady(
-    QuicChromiumClientSession* quic_session,
-    StreamSocketCloseReason refresh_group_reason) {
-  CHECK(availability_state_ == AvailabilityState::kAvailable);
-  CHECK(!quic_attempt_);
-  CHECK(quic_session);
-  // TODO(crbug.com/415488524): Change to DCHECK once we confirm the bug is
-  // fixed.
-  CHECK(CanUseExistingQuicSession());
-
-  TRACE_EVENT_INSTANT("net.stream", "AttemptManager::QuicSessionReady", track_);
-
-  group_->Refresh(kSwitchingToHttp3, refresh_group_reason);
-  NotifyPreconnectsComplete(OK);
-
-  CHECK(refresh_group_reason == StreamSocketCloseReason::kQuicSessionCreated ||
-        refresh_group_reason ==
-            StreamSocketCloseReason::kUsingExistingQuicSession);
-  SessionSource session_source =
-      refresh_group_reason == StreamSocketCloseReason::kQuicSessionCreated
-          ? SessionSource::kNew
-          : SessionSource::kExisting;
-  MaybeCreateQuicStreamAndNotify(quic_session, session_source);
 }
 
 HttpStreamPool::Job* HttpStreamPool::AttemptManager::ExtractFirstJobToNotify() {
@@ -2118,21 +1720,6 @@ void HttpStreamPool::AttemptManager::OnSpdyThrottleDelayPassed() {
   MaybeAttemptTcpBased();
 }
 
-base::TimeDelta HttpStreamPool::AttemptManager::GetTcpBasedAttemptDelay() {
-  if (!CanUseQuic()) {
-    return base::TimeDelta();
-  }
-
-  return quic_session_pool()->GetTimeDelayForWaitingJob(
-      quic_session_alias_key().session_key());
-}
-
-void HttpStreamPool::AttemptManager::UpdateTcpBasedAttemptState() {
-  if (should_block_tcp_based_attempt_ && !CanUseQuic()) {
-    CancelTcpBasedAttemptDelayTimer();
-  }
-}
-
 void HttpStreamPool::AttemptManager::MaybeRunTcpBasedAttemptDelayTimer() {
   if (!should_block_tcp_based_attempt_ ||
       tcp_based_attempt_delay_timer_.IsRunning() ||
@@ -2170,17 +1757,6 @@ bool HttpStreamPool::AttemptManager::CanUseTcpBasedProtocols() const {
   return allowed_alpns_.HasAny(kTcpBasedProtocols);
 }
 
-bool HttpStreamPool::AttemptManager::CanUseQuic() const {
-  return allowed_alpns_.HasAny(kQuicBasedProtocols);
-}
-
-bool HttpStreamPool::AttemptManager::CanUseExistingQuicSession() const {
-  const QuicSessionAliasKey& session_alias_key = quic_session_alias_key();
-  return CanUseQuic() &&
-         http_network_session()->quic_session_pool()->CanUseExistingSession(
-             session_alias_key.session_key(), session_alias_key.destination());
-}
-
 bool HttpStreamPool::AttemptManager::IsEchEnabled() const {
   SSLClientContext* ssl_client_context =
       pool()->stream_attempt_params()->ssl_client_context;
@@ -2192,32 +1768,6 @@ bool HttpStreamPool::AttemptManager::IsEchEnabled() const {
   }
   return ssl_client_context->ssl_config_service()->GetEchMode(
              stream_key().destination().host()) != EchMode::kDisabled;
-}
-
-void HttpStreamPool::AttemptManager::MaybeMarkQuicBroken() {
-  if (!quic_attempt_result_.has_value() ||
-      tcp_based_attempt_state_ == TcpBasedAttemptState::kAttempting) {
-    return;
-  }
-
-  if (!IsQuicErrorBrokenable(*quic_attempt_result_)) {
-    return;
-  }
-
-  // No brokenness to report if we didn't attempt TCP-based connection or all
-  // TCP-based attempts failed.
-  if (tcp_based_attempt_state_ == TcpBasedAttemptState::kNotStarted ||
-      tcp_based_attempt_state_ == TcpBasedAttemptState::kAllEndpointsFailed) {
-    return;
-  }
-
-  const url::SchemeHostPort& destination = stream_key().destination();
-  http_network_session()
-      ->http_server_properties()
-      ->MarkAlternativeServiceBroken(
-          AlternativeService(NextProto::kProtoQUIC, destination.host(),
-                             destination.port()),
-          stream_key().network_anonymization_key());
 }
 
 base::DictValue HttpStreamPool::AttemptManager::GetTcpBasedAttemptSlotsAsValue()
@@ -2238,7 +1788,7 @@ base::DictValue HttpStreamPool::AttemptManager::GetTcpBasedAttemptSlotsAsValue()
 
 bool HttpStreamPool::AttemptManager::CanComplete() const {
   return request_jobs_.empty() && preconnect_jobs_.empty() &&
-         tcp_based_attempt_slots_.empty() && !quic_attempt_;
+         tcp_based_attempt_slots_.empty();
 }
 
 void HttpStreamPool::AttemptManager::MaybeComplete() {
@@ -2248,8 +1798,6 @@ void HttpStreamPool::AttemptManager::MaybeComplete() {
 
   CHECK(limit_ignoring_jobs_.empty());
   CHECK(ip_based_pooling_disabling_jobs_.empty());
-
-  MaybeMarkQuicBroken();
 
   if (on_complete_callback_for_testing_) {
     std::move(on_complete_callback_for_testing_).Run();

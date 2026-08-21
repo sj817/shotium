@@ -119,8 +119,6 @@ struct COMPONENT_EXPORT(NETWORK_CPP_BASE)
       const net::LoadTimingInternalInfo& info);
   static net::AdvertisedAltSvcState advertised_alt_svc_state(
       const net::LoadTimingInternalInfo& info);
-  static bool http_network_session_quic_enabled(
-      const net::LoadTimingInternalInfo& info);
   static const std::optional<net::ResolutionDetails>& resolution_details(
       const net::LoadTimingInternalInfo& info);
   static bool Read(network::mojom::LoadTimingInternalInfoDataView data,

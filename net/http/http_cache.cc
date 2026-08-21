@@ -60,7 +60,6 @@
 #include "net/http/http_util.h"
 #include "net/http/no_vary_search_cache_storage_file_operations.h"
 #include "net/log/net_log_with_source.h"
-#include "net/quic/quic_server_info.h"
 #include "url/origin.h"
 
 #if BUILDFLAG(IS_POSIX)

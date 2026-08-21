@@ -612,8 +612,6 @@ source_set("tests") {
     "//mojo/public/cpp/test_support:test_utils",
     "//net",
     "//net:extras",
-    "//net:quic_test_tools",
-    "//net:simple_quic_tools",
     "//net:test_support",
     "//services/network/first_party_sets:first_party_sets_manager",
     "//services/network/first_party_sets:tests",

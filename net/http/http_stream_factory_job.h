@@ -23,7 +23,6 @@
 #include "net/http/http_auth_controller.h"
 #include "net/http/http_stream_factory.h"
 #include "net/http/http_stream_request.h"
-#include "net/quic/quic_session_pool.h"
 #include "net/socket/client_socket_handle.h"
 #include "net/socket/client_socket_pool.h"
 #include "net/socket/client_socket_pool_manager.h"
@@ -80,17 +79,8 @@ class HttpStreamFactory::Job
         const ProxyInfo& used_proxy_info,
         std::unique_ptr<WebSocketHandshakeStreamBase> stream) = 0;
 
-    // Invoked when a QUIC job finished a DNS resolution.
-    virtual void OnQuicHostResolution(
-        const url::SchemeHostPort& destination,
-        base::TimeTicks dns_resolution_start_time,
-        base::TimeTicks dns_resolution_end_time) = 0;
-
     // Invoked when |job| fails to create a stream.
     virtual void OnStreamFailed(Job* job, int status) = 0;
-
-    // Invoked when |job| fails on the default network.
-    virtual void OnFailedOnDefaultNetwork(Job* job) = 0;
 
     // Invoked when |job| has a certificate error for the HttpStreamRequest.
     virtual void OnCertificateError(Job* job,
@@ -147,11 +137,6 @@ class HttpStreamFactory::Job
   // * `alternative_protocol == kProtoHTTP2` means that the Job can pool to an
   //   existing SpdySession, or bind to a idle TCP socket.  In the latter case,
   //   if the socket does not use HTTP/2, then the Job fails.
-  // * `alternative_protocol == kProtoQUIC` means that the Job can pool to an
-  //   existing QUIC connection or open a new one.
-  // Note that this can be overwritten by specifying a QUIC proxy in
-  // `proxy_info`, or by setting
-  // HttpNetworkSession::Params::origins_to_force_quic_on.
   Job(Delegate* delegate,
       JobType job_type,
       HttpNetworkSession* session,
@@ -161,7 +146,6 @@ class HttpStreamFactory::Job
       const std::vector<SSLConfig::CertAndStatus>& allowed_bad_certs,
       url::SchemeHostPort destination,
       NextProto alternative_protocol,
-      quic::ParsedQuicVersion quic_version,
       bool is_websocket,
       bool enable_ip_based_pooling_for_h2,
       std::optional<ConnectionManagementConfig> management_config,
@@ -197,12 +181,8 @@ class HttpStreamFactory::Job
   // spdy session.
   bool HasAvailableSpdySession() const;
 
-  // Returns true if the current request can be immediately sent on a existing
-  // QUIC session.
-  bool HasAvailableQuicSession() const;
-
   // Returns true if a connected (idle or handed out) or connecting socket
-  // exists for the job. This method is not supported for WebSocket and QUIC.
+  // exists for the job. This method is not supported for WebSocket.
   bool TargettedSocketGroupHasActiveSocket() const;
 
   RequestPriority priority() const { return priority_; }
@@ -229,20 +209,6 @@ class HttpStreamFactory::Job
     return *used_existing_spdy_session_;
   }
 
-  bool using_existing_quic_session() const {
-    return using_existing_quic_session_;
-  }
-
-  bool expect_on_quic_session_created() const {
-    return expect_on_quic_session_created_;
-  }
-
-  bool expect_on_quic_host_resolution_for_tests() const {
-    return expect_on_quic_host_resolution_;
-  }
-
-  bool using_quic() const { return using_quic_; }
-
   bool should_reconsider_proxy() const { return should_reconsider_proxy_; }
 
   NetErrorDetails* net_error_details() { return &net_error_details_; }
@@ -258,10 +224,6 @@ class HttpStreamFactory::Job
     // An HTTP/2 alternative job notifies the JobController in DoInitConnection
     // unless it can pool to an existing SpdySession.  JobController, in turn,
     // resumes the main job.
-    //
-    // A QUIC alternative job notifies the JobController in DoInitConnection
-    // regardless of whether it pools to an existing QUIC session, but the main
-    // job is only resumed after some delay.
     //
     // If the main job is resumed, then it races the alternative job.
     STATE_WAIT,
@@ -296,20 +258,6 @@ class HttpStreamFactory::Job
   int DoLoop(int result);
   int StartInternal();
   int DoInitConnectionImpl();
-  int DoInitConnectionImplQuic();
-
-  // If this is a QUIC alt job, then this function is called when host
-  // resolution completes. It's called with the next result after host
-  // resolution, not the result of host resolution itself.
-  void OnQuicHostResolution(int result);
-
-  // If this is a QUIC alt job, this function is called when the QUIC session is
-  // created. It's called with the result of either failed session creation or
-  // an attempted crypto connection.
-  void OnQuicSessionCreated(int result);
-
-  // Invoked when the underlying connection fails on the default network.
-  void OnFailedOnDefaultNetwork(int result);
 
   // Each of these methods corresponds to a State value.  Those with an input
   // argument receive the result from the previous state.  If a method returns
@@ -427,18 +375,9 @@ class HttpStreamFactory::Job
 
   // True if handling a HTTPS request. Note this only describes the origin URL.
   // If false (an HTTP request), the request may still be sent over an HTTPS
-  // proxy. This differs from `using_quic_` and `using_spdy()`, which also
-  // describe some proxy cases.
+  // proxy. This differs from `using_spdy()`, which also describes some proxy
+  // cases.
   const bool using_ssl_;
-
-  // True if Job actually uses QUIC. Note this describes both using QUIC
-  // with an HTTPS origin, and proxying a cleartext HTTP request over an QUIC
-  // proxy. This differs from `using_ssl_`, which only describes the origin.
-  const bool using_quic_;
-
-  // quic::ParsedQuicVersion that should be used to connect to the QUIC
-  // server if Job uses QUIC.
-  quic::ParsedQuicVersion quic_version_;
 
   // True if Alternative Service protocol field requires that HTTP/2 is used.
   // In this case, Job fails if it cannot pool to an existing SpdySession and
@@ -447,19 +386,6 @@ class HttpStreamFactory::Job
 
   // True if this job might succeed with a different proxy config.
   bool should_reconsider_proxy_ = false;
-
-  QuicSessionRequest quic_request_;
-
-  // Only valid for a QUIC job. Set when a QUIC connection is started. If true,
-  // then OnQuicHostResolution() is expected to be called in the future.
-  bool expect_on_quic_host_resolution_ = false;
-
-  // Only valid for a QUIC job. Set when a QUIC connection is started. If true,
-  // OnQuicSessionCreated() is expected to be called in the future.
-  bool expect_on_quic_session_created_ = false;
-
-  // True if this job used an existing QUIC session.
-  bool using_existing_quic_session_ = false;
 
   // True when the tunnel is in the process of being established - we can't
   // read from the socket until the tunnel is done.
@@ -532,7 +458,6 @@ class HttpStreamFactory::JobFactory {
       bool enable_ip_based_pooling_for_h2,
       NetLog* net_log,
       NextProto alternative_protocol,
-      quic::ParsedQuicVersion quic_version,
       std::optional<ConnectionManagementConfig> management_config);
 };
 

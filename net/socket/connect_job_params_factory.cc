@@ -212,20 +212,14 @@ ConnectJobParams CreateProxyParams(
   // will be made.
   ConnectJobParams params;
 
-  if (proxy_server.is_quic()) {
-    // If this and all proxies earlier in the chain are QUIC, then we can hand
-    // off the remainder of the proxy connecting work to the QuicSocketPool, so
-    // no further recursion is required. If any proxies earlier in the chain are
-    // not QUIC, then the chain is unsupported. Such ProxyChains cannot be
-    // constructed, so this is just a double-check.
-    for (size_t i = 0; i < proxy_chain_index; i++) {
-      CHECK(proxy_chain.GetProxyServer(i).is_quic());
-    }
-    return ConnectJobParams(base::MakeRefCounted<HttpProxySocketParams>(
-        std::move(proxy_server_ssl_config), host_port_pair, proxy_chain,
-        proxy_chain_index, should_tunnel, *proxy_annotation_tag,
-        network_anonymization_key, secure_dns_policy, target_network));
-  } else if (proxy_chain_index == 0) {
+  // Upstream a SCHEME_QUIC proxy hands the rest of the chain to the QUIC
+  // socket pool here. HTTP/3 is out of this build, and a SCHEME_QUIC proxy
+  // cannot be parsed out of a proxy configuration without
+  // BUILDFLAG(ENABLE_QUIC_PROXY_SUPPORT) (which follows is_debug), so the
+  // scheme cannot reach this far.
+  CHECK(!proxy_server.is_quic());
+
+  if (proxy_chain_index == 0) {
     // At the beginning of the chain, create the only TransportSocketParams
     // object, corresponding to the transport socket we want to create to the
     // first proxy.

@@ -25,7 +25,6 @@
 #include "net/base/port_util.h"
 #include "net/base/privacy_mode.h"
 #include "net/http/http_server_properties.h"
-#include "net/third_party/quiche/src/quiche/quic/platform/api/quic_hostname_utils.h"
 #include "url/gurl.h"
 #include "url/scheme_host_port.h"
 
@@ -44,15 +43,11 @@ const int kVersionNumber = 5;
 const int kMaxBrokenAlternativeServicesToPersist = 200;
 
 const char kServerKey[] = "server";
-const char kQuicServerIdKey[] = "server_id";
 const char kNetworkAnonymizationKey[] = "anonymization";
 const char kVersionKey[] = "version";
 const char kServersKey[] = "servers";
 const char kSupportsSpdyKey[] = "supports_spdy";
-const char kSupportsQuicKey[] = "supports_quic";
-const char kQuicServers[] = "quic_servers";
 const char kServerInfoKey[] = "server_info";
-const char kUsedQuicKey[] = "used_quic";
 const char kAddressKey[] = "address";
 const char kAlternativeServiceKey[] = "alternative_service";
 const char kProtocolKey[] = "protocol_str";
@@ -137,78 +132,6 @@ bool TryAddBrokenAlternativeServiceFieldsToDictionaryValue(
   return true;
 }
 
-static constexpr std::string_view kPrivacyModeDisabledPath = "/";
-static constexpr std::string_view kPrivacyModeEnabledPath = "/private";
-static constexpr std::string_view kPrivacyModeEnabledWithoutClientCertsPath =
-    "/private_without_client_certs";
-static constexpr std::string_view
-    kPrivacyModeEnabledPartitionedStateAllowedPath =
-        "/private_partitioned_state_allowed";
-
-std::string_view PrivacyModeToPathString(PrivacyMode privacy_mode) {
-  switch (privacy_mode) {
-    case PRIVACY_MODE_DISABLED:
-      NOTREACHED();
-    case PRIVACY_MODE_ENABLED:
-      return kPrivacyModeEnabledPath;
-    case PRIVACY_MODE_ENABLED_WITHOUT_CLIENT_CERTS:
-      return kPrivacyModeEnabledWithoutClientCertsPath;
-    case PRIVACY_MODE_ENABLED_PARTITIONED_STATE_ALLOWED:
-      return kPrivacyModeEnabledPartitionedStateAllowedPath;
-  }
-}
-
-std::optional<PrivacyMode> PrivacyModeFromPathString(std::string_view path) {
-  if (path == kPrivacyModeDisabledPath) {
-    return PRIVACY_MODE_DISABLED;
-  } else if (path == kPrivacyModeEnabledPath) {
-    return PRIVACY_MODE_ENABLED;
-  } else if (path == kPrivacyModeEnabledWithoutClientCertsPath) {
-    return PRIVACY_MODE_ENABLED_WITHOUT_CLIENT_CERTS;
-  } else if (path == kPrivacyModeEnabledPartitionedStateAllowedPath) {
-    return PRIVACY_MODE_ENABLED_PARTITIONED_STATE_ALLOWED;
-  }
-  return std::nullopt;
-}
-
-struct QuicServerIdAndPrivacyMode {
-  quic::QuicServerId server_id;
-  PrivacyMode privacy_mode = PRIVACY_MODE_DISABLED;
-};
-
-std::optional<QuicServerIdAndPrivacyMode> QuicServerIdFromString(
-    const std::string& str) {
-  GURL url(str);
-  if (!url.is_valid()) {
-    return std::nullopt;
-  }
-  std::optional<PrivacyMode> privacy_mode =
-      PrivacyModeFromPathString(url.path());
-  if (!privacy_mode.has_value()) {
-    return std::nullopt;
-  }
-
-  HostPortPair host_port_pair = HostPortPair::FromURL(url);
-
-  return QuicServerIdAndPrivacyMode{
-      quic::QuicServerId(host_port_pair.host(), host_port_pair.port()),
-      *privacy_mode};
-}
-
-std::string QuicServerIdToString(const quic::QuicServerId& server_id,
-                                 PrivacyMode privacy_mode) {
-  return base::StrCat({"https://", server_id.ToHostPortString(),
-                       privacy_mode == PRIVACY_MODE_DISABLED
-                           ? ""
-                           : PrivacyModeToPathString(privacy_mode)});
-}
-
-// Takes in a base::DictValue, and whether NetworkAnonymizationKeys are
-// enabled for HttpServerProperties, and extracts the NetworkAnonymizationKey
-// stored with the `kNetworkAnonymizationKey` in the dictionary, and writes it
-// to `out_network_anonymization_key`. Returns false if unable to load a
-// NetworkAnonymizationKey, or the NetworkAnonymizationKey is non-empty, but
-// `use_network_anonymization_key` is false.
 bool GetNetworkAnonymizationKeyFromDict(
     const base::DictValue& dict,
     bool use_network_anonymization_key,
@@ -239,13 +162,10 @@ bool GetNetworkAnonymizationKeyFromDict(
 HttpServerPropertiesManager::HttpServerPropertiesManager(
     std::unique_ptr<HttpServerProperties::PrefDelegate> pref_delegate,
     OnPrefsLoadedCallback on_prefs_loaded_callback,
-    size_t max_server_configs_stored_in_properties,
     NetLog* net_log,
     const base::TickClock* clock)
     : pref_delegate_(std::move(pref_delegate)),
       on_prefs_loaded_callback_(std::move(on_prefs_loaded_callback)),
-      max_server_configs_stored_in_properties_(
-          max_server_configs_stored_in_properties),
       clock_(clock),
       net_log_(
           NetLogWithSource::Make(net_log,
@@ -267,9 +187,6 @@ HttpServerPropertiesManager::~HttpServerPropertiesManager() {
 
 void HttpServerPropertiesManager::ReadPrefs(
     std::unique_ptr<HttpServerProperties::ServerInfoMap>* server_info_map,
-    IPAddress* last_local_address_when_quic_worked,
-    std::unique_ptr<HttpServerProperties::QuicServerInfoMap>*
-        quic_server_info_map,
     std::unique_ptr<BrokenAlternativeServiceList>*
         broken_alternative_service_list,
     std::unique_ptr<RecentlyBrokenAlternativeServices>*
@@ -312,13 +229,7 @@ void HttpServerPropertiesManager::ReadPrefs(
     return;
   }
 
-  ReadLastLocalAddressWhenQuicWorked(http_server_properties_dict,
-                                     last_local_address_when_quic_worked);
-
   *server_info_map = std::make_unique<HttpServerProperties::ServerInfoMap>();
-  *quic_server_info_map =
-      std::make_unique<HttpServerProperties::QuicServerInfoMap>(
-          max_server_configs_stored_in_properties_);
 
   bool use_network_anonymization_key =
       NetworkAnonymizationKey::IsPartitioningEnabled();
@@ -333,10 +244,6 @@ void HttpServerPropertiesManager::ReadPrefs(
     AddServerData(server_dict_value.GetDict(), server_info_map->get(),
                   use_network_anonymization_key);
   }
-
-  AddToQuicServerInfoMap(http_server_properties_dict,
-                         use_network_anonymization_key,
-                         quic_server_info_map->get());
 
   // Read list containing broken and recently-broken alternative services, if
   // it exists.
@@ -366,9 +273,6 @@ void HttpServerPropertiesManager::ReadPrefs(
   }
 
   // Set the properties loaded from prefs on |http_server_properties_impl_|.
-
-  UMA_HISTOGRAM_COUNTS_1000("Net.CountOfQuicServerInfos",
-                            (*quic_server_info_map)->size());
 
   if (*recently_broken_alternative_services) {
     DCHECK(*broken_alternative_service_list);
@@ -572,30 +476,6 @@ bool HttpServerPropertiesManager::ParseAlternativeServiceInfoDictOfServer(
   }
 
   // Advertised versions list is optional.
-  if (dict.Find(kAdvertisedAlpnsKey)) {
-    const base::ListValue* versions_list = dict.FindList(kAdvertisedAlpnsKey);
-    if (!versions_list) {
-      DVLOG(1) << "Malformed alternative service advertised versions list for "
-               << "server: " << server_str;
-      return false;
-    }
-    quic::ParsedQuicVersionVector advertised_versions;
-    for (const auto& value : *versions_list) {
-      const std::string* version_string = value.GetIfString();
-      if (!version_string) {
-        DVLOG(1) << "Malformed alternative service version for server: "
-                 << server_str;
-        return false;
-      }
-      quic::ParsedQuicVersion version =
-          quic::ParseQuicVersionString(*version_string);
-      if (version != quic::ParsedQuicVersion::Unsupported()) {
-        advertised_versions.push_back(version);
-      }
-    }
-    alternative_service_info->SetAdvertisedVersions(advertised_versions);
-  }
-
   return true;
 }
 
@@ -636,29 +516,6 @@ bool HttpServerPropertiesManager::ParseAlternativeServiceInfo(
   return true;
 }
 
-void HttpServerPropertiesManager::ReadLastLocalAddressWhenQuicWorked(
-    const base::DictValue& http_server_properties_dict,
-    IPAddress* last_local_address_when_quic_worked) {
-  const base::DictValue* supports_quic_dict =
-      http_server_properties_dict.FindDict(kSupportsQuicKey);
-  if (!supports_quic_dict) {
-    return;
-  }
-  const base::Value* used_quic = supports_quic_dict->Find(kUsedQuicKey);
-  if (!used_quic || !used_quic->is_bool()) {
-    DVLOG(1) << "Malformed SupportsQuic";
-    return;
-  }
-  if (!used_quic->GetBool())
-    return;
-
-  const std::string* address = supports_quic_dict->FindString(kAddressKey);
-  if (!address ||
-      !last_local_address_when_quic_worked->AssignFromIPLiteral(*address)) {
-    DVLOG(1) << "Malformed SupportsQuic";
-  }
-}
-
 void HttpServerPropertiesManager::ParseNetworkStats(
     const url::SchemeHostPort& server,
     const base::DictValue& server_pref_dict,
@@ -677,71 +534,12 @@ void HttpServerPropertiesManager::ParseNetworkStats(
   }
   ServerNetworkStats server_network_stats;
   server_network_stats.srtt = base::Microseconds(maybe_srtt.value());
-  // TODO(rtenneti): When QUIC starts using bandwidth_estimate, then persist
-  // bandwidth_estimate.
   server_info->server_network_stats = server_network_stats;
-}
-
-void HttpServerPropertiesManager::AddToQuicServerInfoMap(
-    const base::DictValue& http_server_properties_dict,
-    bool use_network_anonymization_key,
-    HttpServerProperties::QuicServerInfoMap* quic_server_info_map) {
-  const base::ListValue* quic_server_info_list =
-      http_server_properties_dict.FindList(kQuicServers);
-  if (!quic_server_info_list) {
-    DVLOG(1) << "Malformed http_server_properties for quic_servers.";
-    return;
-  }
-
-  for (const auto& quic_server_info_value : *quic_server_info_list) {
-    const base::DictValue* quic_server_info_dict =
-        quic_server_info_value.GetIfDict();
-    if (!quic_server_info_dict)
-      continue;
-
-    const std::string* quic_server_id_str =
-        quic_server_info_dict->FindString(kQuicServerIdKey);
-    if (!quic_server_id_str || quic_server_id_str->empty())
-      continue;
-
-    std::optional<QuicServerIdAndPrivacyMode> result =
-        QuicServerIdFromString(*quic_server_id_str);
-    if (!result.has_value()) {
-      DVLOG(1) << "Malformed http_server_properties for quic server: "
-               << quic_server_id_str;
-      continue;
-    }
-    auto [quic_server_id, privacy_mode] = *result;
-
-    NetworkAnonymizationKey network_anonymization_key;
-    if (!GetNetworkAnonymizationKeyFromDict(*quic_server_info_dict,
-                                            use_network_anonymization_key,
-                                            &network_anonymization_key)) {
-      DVLOG(1) << "Malformed http_server_properties quic server dict: "
-               << *quic_server_id_str;
-      continue;
-    }
-
-    const std::string* quic_server_info =
-        quic_server_info_dict->FindString(kServerInfoKey);
-    if (!quic_server_info) {
-      DVLOG(1) << "Malformed http_server_properties quic server info: "
-               << *quic_server_id_str;
-      continue;
-    }
-    quic_server_info_map->Put(
-        HttpServerProperties::QuicServerInfoMapKey(
-            quic_server_id, privacy_mode, network_anonymization_key,
-            use_network_anonymization_key),
-        *quic_server_info);
-  }
 }
 
 void HttpServerPropertiesManager::WriteToPrefs(
     const HttpServerProperties::ServerInfoMap& server_info_map,
     const GetCannonicalSuffix& get_canonical_suffix,
-    const IPAddress& last_local_address_when_quic_worked,
-    const HttpServerProperties::QuicServerInfoMap& quic_server_info_map,
     const BrokenAlternativeServiceList& broken_alternative_service_list,
     const RecentlyBrokenAlternativeServices&
         recently_broken_alternative_services,
@@ -804,12 +602,6 @@ void HttpServerPropertiesManager::WriteToPrefs(
 
   http_server_properties_dict.Set(kVersionKey, kVersionNumber);
 
-  SaveLastLocalAddressWhenQuicWorkedToPrefs(last_local_address_when_quic_worked,
-                                            http_server_properties_dict);
-
-  SaveQuicServerInfoMapToServerPrefs(quic_server_info_map,
-                                     http_server_properties_dict);
-
   SaveBrokenAlternativeServicesToPrefs(
       broken_alternative_service_list, kMaxBrokenAlternativeServicesToPersist,
       recently_broken_alternative_services, http_server_properties_dict);
@@ -841,32 +633,12 @@ void HttpServerPropertiesManager::SaveAlternativeServiceToServerPrefs(
         kExpirationKey,
         base::NumberToString(
             alternative_service_info.expiration().ToInternalValue()));
-    base::ListValue advertised_versions_list;
-    for (const auto& version : alternative_service_info.advertised_versions()) {
-      advertised_versions_list.Append(quic::AlpnForVersion(version));
-    }
-    alternative_service_dict.Set(kAdvertisedAlpnsKey,
-                                 std::move(advertised_versions_list));
     alternative_service_list.Append(std::move(alternative_service_dict));
   }
   if (alternative_service_list.size() == 0)
     return;
   server_pref_dict.Set(kAlternativeServiceKey,
                        std::move(alternative_service_list));
-}
-
-void HttpServerPropertiesManager::SaveLastLocalAddressWhenQuicWorkedToPrefs(
-    const IPAddress& last_local_address_when_quic_worked,
-    base::DictValue& http_server_properties_dict) {
-  if (!last_local_address_when_quic_worked.IsValid())
-    return;
-
-  base::DictValue supports_quic_dict;
-  supports_quic_dict.Set(kUsedQuicKey, true);
-  supports_quic_dict.Set(kAddressKey,
-                         last_local_address_when_quic_worked.ToString());
-  http_server_properties_dict.Set(kSupportsQuicKey,
-                                  std::move(supports_quic_dict));
 }
 
 void HttpServerPropertiesManager::SaveNetworkStatsToServerPrefs(
@@ -876,36 +648,7 @@ void HttpServerPropertiesManager::SaveNetworkStatsToServerPrefs(
   // Because JSON doesn't support int64_t, persist int64_t as a string.
   server_network_stats_dict.Set(
       kSrttKey, static_cast<int>(server_network_stats.srtt.InMicroseconds()));
-  // TODO(rtenneti): When QUIC starts using bandwidth_estimate, then persist
-  // bandwidth_estimate.
   server_pref_dict.Set(kNetworkStatsKey, std::move(server_network_stats_dict));
-}
-
-void HttpServerPropertiesManager::SaveQuicServerInfoMapToServerPrefs(
-    const HttpServerProperties::QuicServerInfoMap& quic_server_info_map,
-    base::DictValue& http_server_properties_dict) {
-  if (quic_server_info_map.empty())
-    return;
-  base::ListValue quic_servers_list;
-  for (const auto& [key, server_info] : base::Reversed(quic_server_info_map)) {
-    base::Value network_anonymization_key_value;
-    // Don't save entries with ephemeral NAKs.
-    if (!key.network_anonymization_key.ToValue(
-            &network_anonymization_key_value)) {
-      continue;
-    }
-
-    base::DictValue quic_server_pref_dict;
-    quic_server_pref_dict.Set(
-        kQuicServerIdKey,
-        QuicServerIdToString(key.server_id, key.privacy_mode));
-    quic_server_pref_dict.Set(kNetworkAnonymizationKey,
-                              std::move(network_anonymization_key_value));
-    quic_server_pref_dict.Set(kServerInfoKey, server_info);
-
-    quic_servers_list.Append(std::move(quic_server_pref_dict));
-  }
-  http_server_properties_dict.Set(kQuicServers, std::move(quic_servers_list));
 }
 
 void HttpServerPropertiesManager::SaveBrokenAlternativeServicesToPrefs(
@@ -999,19 +742,15 @@ void HttpServerPropertiesManager::OnHttpServerPropertiesLoaded() {
     return;
 
   std::unique_ptr<HttpServerProperties::ServerInfoMap> server_info_map;
-  IPAddress last_local_address_when_quic_worked;
-  std::unique_ptr<HttpServerProperties::QuicServerInfoMap> quic_server_info_map;
   std::unique_ptr<BrokenAlternativeServiceList> broken_alternative_service_list;
   std::unique_ptr<RecentlyBrokenAlternativeServices>
       recently_broken_alternative_services;
 
-  ReadPrefs(&server_info_map, &last_local_address_when_quic_worked,
-            &quic_server_info_map, &broken_alternative_service_list,
+  ReadPrefs(&server_info_map, &broken_alternative_service_list,
             &recently_broken_alternative_services);
 
   std::move(on_prefs_loaded_callback_)
-      .Run(std::move(server_info_map), last_local_address_when_quic_worked,
-           std::move(quic_server_info_map),
+      .Run(std::move(server_info_map),
            std::move(broken_alternative_service_list),
            std::move(recently_broken_alternative_services));
 }

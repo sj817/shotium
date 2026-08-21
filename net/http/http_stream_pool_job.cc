@@ -25,14 +25,12 @@
 #include "net/log/net_log_source_type.h"
 #include "net/log/net_log_with_source.h"
 #include "net/proxy_resolution/proxy_resolution_service.h"
-#include "net/quic/quic_http_stream.h"
 #include "net/socket/connection_attempts.h"
 #include "net/socket/next_proto.h"
 #include "net/socket/stream_socket.h"
 #include "net/spdy/spdy_http_stream.h"
 #include "net/ssl/ssl_cert_request_info.h"
 #include "net/ssl/ssl_info.h"
-#include "net/third_party/quiche/src/quiche/quic/core/quic_versions.h"
 
 namespace net {
 
@@ -41,55 +39,14 @@ namespace {
 NextProtoSet CalculateAllowedAlpns(HttpStreamPool::Job::Delegate* delegate,
                                    HttpStreamPool::Group* group,
                                    NextProto expected_protocol) {
-  if (group->force_quic()) {
-    return NextProtoSet({NextProto::kProtoQUIC});
-  }
-
   NextProtoSet allowed_alpns = expected_protocol == NextProto::kProtoUnknown
                                    ? HttpStreamPool::kAllProtocols
                                    : NextProtoSet({expected_protocol});
 
   allowed_alpns = Intersection(allowed_alpns, delegate->allowed_alpns());
 
-  // Remove QUIC from the list if QUIC cannot be used for some reason.
-  //
-  // Note that this does not check RequiresHTTP11(), as despite its name, it
-  // only means H2 is not allowed.
-  //
-  // Inlining this logic instead of calling HttpStreamPool::CanUseQuic() is an
-  // optimization, to avoid the extra ShouldForceQuic() call.
-  //
-  // Note that IsQuicBroken() takes the hostname that we're establishing a UDP
-  // connection to, rather than the origin we're establishing a secure session
-  // with.
-  if (!group->http_network_session()->IsQuicEnabled() ||
-      !group->quic_session_alias_key().destination().IsValid() ||
-      !delegate->enable_alternative_services() ||
-      !GURL::SchemeIsCryptographic(
-          group->stream_key().destination().scheme()) ||
-      group->pool()->IsQuicBroken(
-          group->quic_session_alias_key().destination(),
-          group->stream_key().network_anonymization_key())) {
-    allowed_alpns.RemoveAll(HttpStreamPool::kQuicBasedProtocols);
-  }
-
-  // TODO(crbug.com/473856758): This can trigger for QUIC alt-service jobs when
-  // QUIC is marked a broken. Fix that.
   CHECK(!allowed_alpns.empty());
   return allowed_alpns;
-}
-
-// If the destination is forced to use QUIC and the QUIC version is unknown,
-// try the preferred QUIC version that is supported by default.
-quic::ParsedQuicVersion CalculateQuicVersion(
-    quic::ParsedQuicVersion original_quic_version,
-    HttpStreamPool::Group* group) {
-  return !original_quic_version.IsKnown() && group->force_quic()
-             ? group->http_network_session()
-                   ->context()
-                   .quic_context->params()
-                   ->supported_versions[0]
-             : original_quic_version;
 }
 
 }  // namespace
@@ -97,14 +54,12 @@ quic::ParsedQuicVersion CalculateQuicVersion(
 HttpStreamPool::Job::Job(Delegate* delegate,
                          JobType type,
                          Group* group,
-                         quic::ParsedQuicVersion quic_version,
                          NextProto expected_protocol,
                          const NetLogWithSource& request_net_log,
                          size_t num_streams)
     : delegate_(delegate),
       type_(type),
       attempt_manager_(group->GetAttemptManagerForJob(this)),
-      quic_version_(CalculateQuicVersion(quic_version, group)),
       allowed_alpns_(
           CalculateAllowedAlpns(delegate_, group, expected_protocol)),
       request_net_log_(request_net_log),
@@ -117,7 +72,6 @@ HttpStreamPool::Job::Job(Delegate* delegate,
   job_net_log_.BeginEvent(NetLogEventType::HTTP_STREAM_POOL_JOB_ALIVE, [&] {
     base::DictValue dict;
     dict.Set("stream_key", group->stream_key().ToValue());
-    dict.Set("quic_version", quic::ParsedQuicVersionToString(quic_version));
     base::ListValue allowed_alpn_list;
     for (const auto alpn : allowed_alpns_) {
       allowed_alpn_list.Append(NextProtoToString(alpn));
@@ -149,7 +103,6 @@ void HttpStreamPool::Job::Start() {
       attempt_manager_->RequestStream(this);
       break;
     case JobType::kPreconnect:
-    case JobType::kAltSvcQuicPreconnect:
       attempt_manager_->Preconnect(this);
       break;
   }

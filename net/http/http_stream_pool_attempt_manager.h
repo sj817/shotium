@@ -36,7 +36,6 @@
 #include "net/http/http_stream_pool_job.h"
 #include "net/http/http_stream_request.h"
 #include "net/log/net_log_with_source.h"
-#include "net/quic/quic_session_pool.h"
 #include "net/socket/connection_attempts.h"
 #include "net/socket/next_proto.h"
 #include "net/socket/stream_attempt.h"
@@ -45,7 +44,6 @@
 #include "net/socket/tls_stream_attempt.h"
 #include "net/spdy/multiplexed_session_creation_initiator.h"
 #include "net/ssl/ssl_cert_request_info.h"
-#include "net/third_party/quiche/src/quiche/quic/core/quic_versions.h"
 
 namespace net {
 
@@ -57,12 +55,11 @@ class HttpStreamKey;
 //
 // Maintains multiple in-flight Jobs for a single destination keyed by
 // HttpStreamKey. Peforms DNS resolution and manages connection attempts.
-// Delegates QUIC connection attempts to QuicAttempt. Upon successful HttpStream
-// creations or fatal error occurrence, notify jobs of success or failure.
+// Upon successful HttpStream creations or fatal error occurrence, notify jobs
+// of success or failure.
 //
 // Created by an HttpStreamPool::Group when new connection attempts are needed
-// and destroyed when all jobs, in-flight attempts, and the QuicAttempt are
-// completed.
+// and destroyed when all jobs and in-flight attempts are completed.
 class HttpStreamPool::AttemptManager
     : public HostResolver::ServiceEndpointRequest::Delegate,
       public IPEndPointStateTracker::Delegate {
@@ -74,23 +71,14 @@ class HttpStreamPool::AttemptManager
   // LINT.IfChange(InitialAttemptState)
   enum class InitialAttemptState {
     kOther = 0,
-    // CanUseQuic() && quic_version_.IsKnown() && !SupportsSpdy()
-    kCanUseQuicWithKnownVersion = 1,
-    // CanUseQuic() && quic_version_.IsKnown() && SupportsSpdy()
-    kCanUseQuicWithKnownVersionAndSupportsSpdy = 2,
-    // CanUseQuic() && !quic_version_.IsKnown() && !SupportsSpdy()
-    kCanUseQuicWithUnknownVersion = 3,
-    // CanUseQuic() && !quic_version_.IsKnown() && SupportsSpdy()
-    kCanUseQuicWithUnknownVersionAndSupportsSpdy = 4,
-    // !CanUseQuic() && quic_version_.IsKnown() && !SupportsSpdy()
-    kCannotUseQuicWithKnownVersion = 5,
-    // !CanUseQuic() && quic_version_.IsKnown() && SupportsSpdy()
-    kCannotUseQuicWithKnownVersionAndSupportsSpdy = 6,
-    // !CanUseQuic() && !quic_version_.IsKnown() && !SupportsSpdy()
-    kCannotUseQuicWithUnknownVersion = 7,
-    // !CanUseQuic() && !quic_version_.IsKnown() && SupportsSpdy()
-    kCannotUseQuicWithUnknownVersionAndSupportsSpdy = 8,
-    kMaxValue = kCannotUseQuicWithUnknownVersionAndSupportsSpdy,
+    // Upstream this enum crossed CanUseQuic() with whether the QUIC version
+    // was known; with HTTP/3 out of the build only the SupportsSpdy() axis is
+    // left.
+    // !SupportsSpdy()
+    kNoSupportsSpdy = 1,
+    // SupportsSpdy()
+    kSupportsSpdy = 2,
+    kMaxValue = kSupportsSpdy,
   };
   // LINT.ThenChange(//tools/metrics/histograms/metadata/net/enums.xml:HttpStreamPoolInitialAttemptState)
 
@@ -111,11 +99,8 @@ class HttpStreamPool::AttemptManager
 
   const SpdySessionKey& spdy_session_key() const;
 
-  const QuicSessionAliasKey& quic_session_alias_key() const;
-
   HttpNetworkSession* http_network_session() const;
   SpdySessionPool* spdy_session_pool() const;
-  QuicSessionPool* quic_session_pool() const;
 
   HttpStreamPool* pool();
   const HttpStreamPool* pool() const;
@@ -196,15 +181,6 @@ class HttpStreamPool::AttemptManager
   // Cancels all jobs.
   void CancelJobs(int error, StreamSocketCloseReason cancel_reason);
 
-  // Completes the QuicAttempt with `result` if not completed before.
-  // `overwrite_old_result` will cause the old QUIC attempt result to be
-  // unconditionally overwritten - intended for use when an existing QUIC
-  // session is found, which means any previous failure should be ignored.
-  void CompleteQuicAttempt(
-      int result,
-      base::optional_ref<NetErrorDetails> net_error_details = std::nullopt,
-      bool overwrite_old_result = false);
-
   // Returns the current load state.
   LoadState GetLoadState() const;
 
@@ -233,18 +209,11 @@ class HttpStreamPool::AttemptManager
   void OnTcpBasedAttemptComplete(TcpBasedAttempt* raw_attempt, int rv);
   void OnTcpBasedAttemptSlow(TcpBasedAttempt* raw_attempt);
 
-  bool CanUseExistingQuicSession() const;
 
   // Runs the TCP based attempt delay timer if TCP based attempts are blocked
   // and the timer is not running. TcpBasedAttemptDelayBehavior specifies when
   // this method is called.
   void MaybeRunTcpBasedAttemptDelayTimer();
-
-  // Called when the QuicAttempt owned by `this` is completed.
-  void OnQuicAttemptComplete(QuicAttemptOutcome result);
-
-  // Called when the QuicAttempt owned by `this` is slow.
-  void OnQuicAttemptSlow();
 
   // Retrieves information on the current state of `this` as a base::Value.
   base::DictValue GetInfoAsValue() const;
@@ -254,15 +223,10 @@ class HttpStreamPool::AttemptManager
   MultiplexedSessionCreationInitiator
   CalculateMultiplexedSessionCreationInitiator();
 
-  std::optional<int> GetQuicAttemptResultForTesting() {
-    return quic_attempt_result_;
-  }
-
   base::WeakPtr<AttemptManager> GetWeakPtrForTesting() {
     return weak_ptr_factory_.GetWeakPtr();
   }
 
-  QuicAttempt* quic_attempt_for_testing() const { return quic_attempt_.get(); }
 
   void SetOnCompleteCallbackForTesting(base::OnceClosure callback);
 
@@ -327,10 +291,6 @@ class HttpStreamPool::AttemptManager
   // Called when service endpoint results have changed or finished.
   void ProcessServiceEndpointChanges();
 
-  // Returns an active QUIC session when there is an active QUIC session that
-  // can be used for on-going jobs after service endpoint results have changed.
-  QuicChromiumClientSession* CanUseExistingQuicSessionAfterEndpointChanges();
-
   // Returns an active SPDY session when there is an active SPDY session that
   // can be used for on-going jobs after service endpoint results have changed.
   base::WeakPtr<SpdySession> CanUseExistingSpdySessionAfterEndpointChanges();
@@ -338,10 +298,6 @@ class HttpStreamPool::AttemptManager
   // If `this` is ready to start cryptographic handshakes, notifies TCP based
   // attempts that SSLConfigs are ready.
   void MaybeNotifySSLConfigReady();
-
-  // Attempts QUIC sessions if QUIC can be used and `this` is ready to start
-  // cryptographic connection handshakes.
-  void MaybeAttemptQuic();
 
   // Attempts connections if there are pending jobs and IPEndPoints that
   // haven't failed.
@@ -386,7 +342,6 @@ class HttpStreamPool::AttemptManager
   bool ShouldRespectLimits() const;
 
   // Returns true only when there are no jobs that disable IP based pooling for
-  // HTTP/2. Note that this does nothing with QUIC.
   bool IsIpBasedPoolingEnabledForH2() const;
 
   // Returns true when the destination is known to support HTTP/2. The value is
@@ -407,13 +362,8 @@ class HttpStreamPool::AttemptManager
   // slow.
   size_t NonSlowTcpBasedAttemptCount() const;
 
-  // Returns a QUIC endpoint to make a connection attempt. See the comments in
-  // QuicSessionPool::SelectQuicVersion() for the criteria to select a QUIC
-  // endpoint.
-  std::optional<QuicEndpoint> GetQuicEndpointToAttempt();
-
   // Called when this gets a fatal error. Notifies all jobs of the failure and
-  // cancels in-flight TCP based attempts and QuicAttempt's, if they exist.
+  // cancels in-flight TCP based attempts, if they exist.
   void HandleFinalError(int error);
 
   // Notifies the final failure to all request jobs.
@@ -421,7 +371,7 @@ class HttpStreamPool::AttemptManager
 
   // Notifies a failure to a single request job.
   // Note that `connection_attempts` is a list of failed IPEndPoints, not
-  // TcpBasedAttempt or QuicAttempt.
+  // TcpBasedAttempt.
   void NotifySingleRequestJobOfFailure(
       Job& job,
       int error,
@@ -451,9 +401,6 @@ class HttpStreamPool::AttemptManager
   void MaybeCreateSpdyStreamAndNotify(base::WeakPtr<SpdySession> spdy_session,
                                       SessionSource session_source);
 
-  void MaybeCreateQuicStreamAndNotify(QuicChromiumClientSession* quic_session,
-                                      SessionSource session_source);
-
   void NotifyStreamReady(std::unique_ptr<HttpStream> stream,
                          NextProto negotiated_protocol,
                          std::optional<SessionSource> session_source);
@@ -461,11 +408,6 @@ class HttpStreamPool::AttemptManager
   // Called when a SPDY session is ready to use. Cancels in-flight attempts.
   // Closes idle streams. Completes request/preconnect jobs.
   void HandleSpdySessionReady(base::WeakPtr<SpdySession> spdy_session,
-                              StreamSocketCloseReason refresh_group_reason);
-
-  // Called when a QUIC session is ready to use. Cancels in-flight attempts.
-  // Closes idle streams. Completes request/preconnect jobs.
-  void HandleQuicSessionReady(QuicChromiumClientSession* quic_session,
                               StreamSocketCloseReason refresh_group_reason);
 
   // Called when a job is done, due to success, failure, or cancellation. `job`
@@ -500,13 +442,6 @@ class HttpStreamPool::AttemptManager
 
   void OnSpdyThrottleDelayPassed();
 
-  // Returns the delay for TCP based attempts in favor of QUIC.
-  base::TimeDelta GetTcpBasedAttemptDelay();
-
-  // Updates whether TCP based attempts should be blocked or not. May cancel
-  // `tcp_based_attempt_delay_timer_`.
-  void UpdateTcpBasedAttemptState();
-
   // Cancels `tcp_based_attempt_delay_timer_`.
   void CancelTcpBasedAttemptDelayTimer();
 
@@ -515,13 +450,7 @@ class HttpStreamPool::AttemptManager
 
   bool CanUseTcpBasedProtocols() const;
 
-  bool CanUseQuic() const;
-
   bool IsEchEnabled() const;
-
-  // Mark QUIC brokenness if QUIC attempts failed but TCP/TLS attempts succeeded
-  // or not attempted.
-  void MaybeMarkQuicBroken();
 
   base::DictValue GetTcpBasedAttemptSlotsAsValue() const;
 
@@ -583,7 +512,7 @@ class HttpStreamPool::AttemptManager
 
   // An error code to notify jobs when `this` cannot make any further progress.
   // Set to an error from service endpoint resolution failure, the last stream
-  // attempt failure, network change events, or QUIC task failure.
+  // attempt failure or network change events.
   std::optional<int> final_error_to_notify_jobs_;
 
   // Set to the most recent TCP based attempt failure, if any.
@@ -614,15 +543,6 @@ class HttpStreamPool::AttemptManager
   TcpBasedAttemptState tcp_based_attempt_state_ =
       TcpBasedAttemptState::kNotStarted;
 
-  // QUIC version that is known to be used for the destination, usually coming
-  // from Alt-Svc.
-  quic::ParsedQuicVersion quic_version_ =
-      quic::ParsedQuicVersion::Unsupported();
-  // Created when attempting a QUIC session.
-  std::unique_ptr<QuicAttempt> quic_attempt_;
-  // Set when `quic_attempt_` is completed.
-  std::optional<int> quic_attempt_result_;
-
   // Whether the host has previously been observed to support SPDY. Populated as
   // needed, from HttpServerProperties. Set to false (without updating
   // HttpServerProperties) if an HTTP/1.x connection is established.
@@ -633,7 +553,10 @@ class HttpStreamPool::AttemptManager
   // To check the value, call SupportsSpdy(), which will populate it if needed.
   mutable std::optional<bool> supports_spdy_;
 
-  // The delay for TCP based stream attempts in favor of QUIC.
+  // Upstream this timer delays TCP-based attempts in favour of a racing QUIC
+  // attempt. With HTTP/3 out of the build the delay is always zero and the
+  // timer never runs, but the plumbing stays so that the "should we block"
+  // question still has one place to be answered.
   base::TimeDelta tcp_based_attempt_delay_;
   // Set to true when TCP based attempts should be blocked.
   bool should_block_tcp_based_attempt_ = false;

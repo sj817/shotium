@@ -354,8 +354,13 @@ void ResourceError::InitializeDescription() {
     localized_description_ =
         DescriptionForBlockedByClientOrResponse(error_code_, reason);
   } else {
-    localized_description_ = WebString::FromAscii(
-        net::ExtendedErrorToString(error_code_, extended_error_code_));
+    // Upstream this is net::ExtendedErrorToString(error_code_,
+    // extended_error_code_), whose only extended decoding was appending a
+    // quic::QuicErrorCode name to ERR_QUIC_PROTOCOL_ERROR. With HTTP/3 out of
+    // the build there is nothing left to append. `extended_error_code_` is
+    // still read above for ResourceRequestBlockedReason.
+    localized_description_ =
+        WebString::FromAscii(net::ErrorToString(error_code_));
   }
 }
 

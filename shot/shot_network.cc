@@ -76,12 +76,11 @@ base::expected<std::unique_ptr<ShotNetwork>, std::string> ShotNetwork::Create(
   builder.set_proxy_resolution_service(
       net::ConfiguredProxyResolutionService::CreateDirect());
 
-  // HTTP/2 on, HTTP/3 off. h2 is already linked in through
-  // net/spdy/spdy_session.cc and costs nothing to allow; QUIC would drag in
-  // quiche for a protocol whose win -- connection setup latency across many
-  // origins -- barely shows up when a screenshot fetches a handful of
-  // subresources from one or two hosts.
-  builder.SetSpdyAndQuicEnabled(/*spdy_enabled=*/true, /*quic_enabled=*/false);
+  // HTTP/2 on. HTTP/3 is no longer a runtime choice: //net/quic and quiche's
+  // quic/ tree are out of this build, so there is nothing left to enable. A
+  // server that advertises h3 over Alt-Svc is simply not followed, and the
+  // request stays on h2 or HTTP/1.1.
+  builder.SetSpdyEnabled(/*spdy_enabled=*/true);
 
   // Real servers negotiate brotli; asking for it and then not being able to
   // decode it is worse than not asking. //third_party/brotli is in the tree.

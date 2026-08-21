@@ -51,25 +51,20 @@ class NET_EXPORT HttpStreamFactory {
 
   enum JobType {
     // Job that will connect via HTTP/1 or HTTP/2. This may be paused for a
-    // while when ALTERNATIVE or DNS_ALPN_H3 job was created.
+    // while when an ALTERNATIVE job was created.
     MAIN,
-    // Job that will connect via HTTP/3 iff Chrome has received an Alt-Svc
-    // header from the origin.
+    // Job that connects to an origin named by an Alt-Svc header. Upstream this
+    // is the HTTP/3 path; here the only alternative protocol left is HTTP/2.
     ALTERNATIVE,
-    // Job that will connect via HTTP/3 iff an "h3" value was found in the ALPN
-    // list of an HTTPS DNS record.
-    DNS_ALPN_H3,
-    // Job that will preconnect. This uses HTTP/3 iff Chrome has received an
-    // Alt-Svc header from the origin. Otherwise, it use HTTP/1 or HTTP/2.
+    // Job that will preconnect via HTTP/1 or HTTP/2.
     PRECONNECT,
-    // Job that will preconnect via HTTP/3 iff an "h3" value was found in the
-    // ALPN list of an HTTPS DNS record.
-    PRECONNECT_DNS_ALPN_H3,
-    // Job that reuses an existing HTTP/3 session for WebSocket via Extended
-    // CONNECT. Never creates a new connection -- yields to `main_job_` if no
-    // suitable session exists.
-    WS_OVER_H3,
   };
+
+  // Upstream this enum also carries DNS_ALPN_H3, PRECONNECT_DNS_ALPN_H3 and
+  // WS_OVER_H3. All three name HTTP/3 jobs -- connecting on an "h3" ALPN value
+  // from an HTTPS DNS record, preconnecting the same way, and reusing an
+  // existing HTTP/3 session for WebSocket-over-Extended-CONNECT -- and all
+  // three are gone with the protocol.
 
   // This is the subset of HttpRequestInfo needed by the HttpStreamFactory
   // layer. It's separated out largely to avoid dangling pointers when jobs are

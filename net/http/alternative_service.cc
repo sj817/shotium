@@ -10,8 +10,6 @@
 #include "base/notreached.h"
 #include "base/strings/stringprintf.h"
 #include "net/base/port_util.h"
-#include "net/third_party/quiche/src/quiche/quic/core/http/spdy_utils.h"
-#include "net/third_party/quiche/src/quiche/quic/core/quic_versions.h"
 
 namespace net {
 
@@ -40,14 +38,14 @@ bool IsAlternateProtocolValid(NextProto protocol) {
     case NextProto::kProtoHTTP2:
       return true;
     case NextProto::kProtoQUIC:
-      return true;
+      // HTTP/3 is not built. NextProto keeps the constant because it is the
+      // ALPN vocabulary, but nothing may advertise us onto it.
+      return false;
   }
   NOTREACHED();
 }
 
-bool IsProtocolEnabled(NextProto protocol,
-                       bool is_http2_enabled,
-                       bool is_quic_enabled) {
+bool IsProtocolEnabled(NextProto protocol, bool is_http2_enabled) {
   switch (protocol) {
     case NextProto::kProtoUnknown:
       NOTREACHED();
@@ -56,7 +54,7 @@ bool IsProtocolEnabled(NextProto protocol,
     case NextProto::kProtoHTTP2:
       return is_http2_enabled;
     case NextProto::kProtoQUIC:
-      return is_quic_enabled;
+      return false;
   }
   NOTREACHED();
 }
@@ -105,18 +103,7 @@ AlternativeServiceInfo::CreateHttp2AlternativeServiceInfo(
     const AlternativeService& alternative_service,
     base::Time expiration) {
   DCHECK_EQ(alternative_service.protocol, NextProto::kProtoHTTP2);
-  return AlternativeServiceInfo(alternative_service, expiration,
-                                quic::ParsedQuicVersionVector());
-}
-
-// static
-AlternativeServiceInfo AlternativeServiceInfo::CreateQuicAlternativeServiceInfo(
-    const AlternativeService& alternative_service,
-    base::Time expiration,
-    const quic::ParsedQuicVersionVector& advertised_versions) {
-  DCHECK_EQ(alternative_service.protocol, NextProto::kProtoQUIC);
-  return AlternativeServiceInfo(alternative_service, expiration,
-                                advertised_versions);
+  return AlternativeServiceInfo(alternative_service, expiration);
 }
 
 AlternativeServiceInfo::AlternativeServiceInfo() = default;
@@ -147,25 +134,20 @@ std::string AlternativeServiceInfo::ToString() const {
       exploded.day_of_month, exploded.hour, exploded.minute, exploded.second);
 }
 
-void AlternativeServiceInfo::SetAdvertisedVersions(
-    const quic::ParsedQuicVersionVector& advertised_versions) {
-  if (alternative_service_.protocol != NextProto::kProtoQUIC) {
-    return;
-  }
-
-  advertised_versions_ = advertised_versions;
-  std::ranges::sort(advertised_versions_, {},
-                    &quic::ParsedQuicVersion::transport_version);
-}
-
 AlternativeServiceInfoVector ProcessAlternativeServices(
     const spdy::SpdyAltSvcWireFormat::AlternativeServiceVector&
         alternative_service_vector,
-    bool is_http2_enabled,
-    bool is_quic_enabled,
-    const quic::ParsedQuicVersionVector& supported_quic_versions) {
+    bool is_http2_enabled) {
   // Convert spdy::SpdyAltSvcWireFormat::AlternativeService entries
   // to AlternativeServiceInfo.
+  //
+  // Upstream this loop has a second arm: an entry whose protocol_id is not a
+  // known NextProto is handed to quic::SpdyUtils::ExtractQuicVersionFromAltSvcEntry
+  // to see whether it names an HTTP/3 version, and an entry that says "quic"
+  // is dropped as a legacy advertisement. With HTTP/3 out of the build both
+  // arms end in the same place, so what is left keeps only the "h2" entries --
+  // IsAlternateProtocolValid() is false for everything else, kProtoQUIC
+  // included.
   AlternativeServiceInfoVector alternative_service_info_vector;
   for (const spdy::SpdyAltSvcWireFormat::AlternativeService&
            alternative_service_entry : alternative_service_vector) {
@@ -175,21 +157,8 @@ AlternativeServiceInfoVector ProcessAlternativeServices(
 
     NextProto protocol =
         NextProtoFromString(alternative_service_entry.protocol_id);
-    quic::ParsedQuicVersionVector advertised_versions;
-    if (protocol == NextProto::kProtoQUIC) {
-      continue;  // Ignore legacy QUIC alt-svc advertisements.
-    } else if (!IsAlternateProtocolValid(protocol)) {
-      quic::ParsedQuicVersion version =
-          quic::SpdyUtils::ExtractQuicVersionFromAltSvcEntry(
-              alternative_service_entry, supported_quic_versions);
-      if (version == quic::ParsedQuicVersion::Unsupported()) {
-        continue;
-      }
-      protocol = NextProto::kProtoQUIC;
-      advertised_versions = {version};
-    }
     if (!IsAlternateProtocolValid(protocol) ||
-        !IsProtocolEnabled(protocol, is_http2_enabled, is_quic_enabled)) {
+        !IsProtocolEnabled(protocol, is_http2_enabled)) {
       continue;
     }
 
@@ -199,29 +168,16 @@ AlternativeServiceInfoVector ProcessAlternativeServices(
     base::Time expiration =
         base::Time::Now() +
         base::Seconds(alternative_service_entry.max_age_seconds);
-    AlternativeServiceInfo alternative_service_info;
-    if (protocol == NextProto::kProtoQUIC) {
-      alternative_service_info =
-          AlternativeServiceInfo::CreateQuicAlternativeServiceInfo(
-              alternative_service, expiration, advertised_versions);
-    } else {
-      alternative_service_info =
-          AlternativeServiceInfo::CreateHttp2AlternativeServiceInfo(
-              alternative_service, expiration);
-    }
-    alternative_service_info_vector.push_back(alternative_service_info);
+    alternative_service_info_vector.push_back(
+        AlternativeServiceInfo::CreateHttp2AlternativeServiceInfo(
+            alternative_service, expiration));
   }
   return alternative_service_info_vector;
 }
 
 AlternativeServiceInfo::AlternativeServiceInfo(
     const AlternativeService& alternative_service,
-    base::Time expiration,
-    const quic::ParsedQuicVersionVector& advertised_versions)
-    : alternative_service_(alternative_service), expiration_(expiration) {
-  if (alternative_service_.protocol == NextProto::kProtoQUIC) {
-    advertised_versions_ = advertised_versions;
-  }
-}
+    base::Time expiration)
+    : alternative_service_(alternative_service), expiration_(expiration) {}
 
 }  // namespace net

@@ -1030,20 +1030,6 @@ mojom("url_loader_base") {
       ]
       traits_public_deps = [ "//net" ]
     },
-    {
-      types = [
-        {
-          mojom = "network.mojom.WebTransportError"
-          cpp = "::net::WebTransportError"
-        },
-      ]
-      traits_headers =
-          [ "//services/network/public/cpp/web_transport_error_mojom_traits.h" ]
-      traits_public_deps = [
-        "//net",
-        "//services/network/public/cpp:ip_address_mojom_support",
-      ]
-    },
   ]
 
   if (is_linux) {

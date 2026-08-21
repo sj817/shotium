@@ -29,7 +29,6 @@
 #include "net/socket/ssl_client_socket.h"
 #include "net/socket/stream_attempt.h"
 #include "net/socket/stream_socket_close_reason.h"
-#include "net/third_party/quiche/src/quiche/quic/core/quic_versions.h"
 
 namespace net {
 
@@ -59,9 +58,6 @@ class NET_EXPORT_PRIVATE HttpStreamPool
     // Starts the stream attempt delay timer on the first service endpoint
     // update.
     kStartTimerOnFirstEndpointUpdate,
-    // Start the stream attempt delay timer when the first QUIC endpoint is
-    // attempted.
-    kStartTimerOnFirstQuicAttempt,
   };
 
   // The type of a Job. A Job is a stream request or a preconnect.
@@ -70,9 +66,6 @@ class NET_EXPORT_PRIVATE HttpStreamPool
     kRequest = 0,
     // A normal preconnect.
     kPreconnect = 1,
-    // A preconnect which is initiated when an alternative service is advertised
-    // via Alt-Svc but the current request is not using it.
-    kAltSvcQuicPreconnect = 2,
   };
 
   // Observes events on the HttpStreamPool and may intercept preconnects. Used
@@ -107,13 +100,11 @@ class NET_EXPORT_PRIVATE HttpStreamPool
   // kProtoUnknown is not used, as it's an alias for all protocols, so causes
   // issues when excluding one or more protocols.
   static inline constexpr NextProtoSet kAllProtocols = {
-      NextProto::kProtoHTTP11, NextProto::kProtoHTTP2, NextProto::kProtoQUIC};
+      NextProto::kProtoHTTP11, NextProto::kProtoHTTP2};
   static inline constexpr NextProtoSet kTcpBasedProtocols = {
       NextProto::kProtoHTTP11, NextProto::kProtoHTTP2};
   static inline constexpr NextProtoSet kHttp11Protocols = {
       NextProto::kProtoHTTP11};
-  static inline constexpr NextProtoSet kQuicBasedProtocols = {
-      NextProto::kProtoQUIC};
 
   // Reasons for closing streams.
   static constexpr std::string_view kIpAddressChanged = "IP address changed";
@@ -153,8 +144,6 @@ class NET_EXPORT_PRIVATE HttpStreamPool
       std::to_array<base::FeatureParam<TcpBasedAttemptDelayBehavior>::Option>(
           {{TcpBasedAttemptDelayBehavior::kStartTimerOnFirstEndpointUpdate,
             "first_endpoint_update"},
-           {TcpBasedAttemptDelayBehavior::kStartTimerOnFirstQuicAttempt,
-            "first_quic_attempt"},
            {TcpBasedAttemptDelayBehavior::kStartTimerOnFirstJob, "first_job"}});
 
   class NET_EXPORT_PRIVATE Job;
@@ -167,20 +156,6 @@ class NET_EXPORT_PRIVATE HttpStreamPool
   // `TcpBasedAttemptSlot` once we complete implementing `Attempt`.
   class NET_EXPORT_PRIVATE TcpBasedAttempt;
   class NET_EXPORT_PRIVATE TcpBasedAttemptSlot;
-  class NET_EXPORT_PRIVATE QuicAttempt;
-  struct NET_EXPORT_PRIVATE QuicAttemptOutcome {
-    explicit QuicAttemptOutcome(int result) : result(result) {}
-    ~QuicAttemptOutcome() = default;
-
-    QuicAttemptOutcome(QuicAttemptOutcome&&) = default;
-    QuicAttemptOutcome& operator=(QuicAttemptOutcome&&) = default;
-    QuicAttemptOutcome(const QuicAttemptOutcome&) = delete;
-    QuicAttemptOutcome& operator=(const QuicAttemptOutcome&) = delete;
-
-    int result;
-    NetErrorDetails error_details;
-    raw_ptr<QuicChromiumClientSession> session;
-  };
 
   static const scoped_refptr<base::SequencedTaskRunner> TaskRunner(
       RequestPriority priority);
@@ -191,7 +166,12 @@ class NET_EXPORT_PRIVATE HttpStreamPool
   // Returns when to start the stream attempt delay timer.
   static TcpBasedAttemptDelayBehavior GetTcpBasedAttemptDelayBehavior();
 
-  static bool IsQuicErrorBrokenable(int net_error);
+  // Returns true when `net_error` from an alternative job is a protocol
+  // failure, i.e. a reason to mark the alternative service broken rather than
+  // something about this machine's network. Upstream this is
+  // IsQuicErrorBrokenable(); the predicate never looked at the protocol, and
+  // the alternative job it judges may be HTTP/2.
+  static bool IsAlternativeServiceErrorBrokenable(int net_error);
 
   explicit HttpStreamPool(HttpNetworkSession* http_network_session,
                           bool cleanup_on_ip_address_change = true);
@@ -285,31 +265,6 @@ class NET_EXPORT_PRIVATE HttpStreamPool
       const url::SchemeHostPort& destination,
       const NetworkAnonymizationKey& network_anonymization_key) const;
 
-  // Returns true when QUIC is broken for `destination`.
-  bool IsQuicBroken(
-      const url::SchemeHostPort& destination,
-      const NetworkAnonymizationKey& network_anonymization_key) const;
-
-  // Returns true when QUIC can be used for `destination`.
-  bool CanUseQuic(const url::SchemeHostPort& destination,
-                  const NetworkAnonymizationKey& network_anonymization_key,
-                  bool enable_alternative_services) const;
-
-  // Returns the first quic::ParsedQuicVersion that has been advertised in
-  // `alternative_service_info` and is supported, following the order of
-  // `alternative_service_info.advertised_versions()`. Returns
-  // quic::ParsedQuicVersion::Unsupported() when the alternative service is
-  // not QUIC or no mutually supported version is found.
-  quic::ParsedQuicVersion SelectQuicVersion(
-      const AlternativeServiceInfo& alternative_service_info);
-
-  // Returns true when there is an existing QUIC session for `quic_session_key`.
-  bool CanUseExistingQuicSession(
-      const QuicSessionAliasKey& quic_session_alias_key,
-      bool enable_alternative_services);
-
-  CompletionOnceCallback GetAltSvcQuicPreconnectCallback();
-
   // Retrieves information on the current state of the pool as a base::Value.
   base::DictValue GetInfoAsValue() const;
 
@@ -347,11 +302,6 @@ class NET_EXPORT_PRIVATE HttpStreamPool
 
   size_t JobControllerCountForTesting() const {
     return job_controllers_.size();
-  }
-
-  void SetAltSvcQuicPreconnectCallbackForTesting(
-      CompletionOnceCallback callback) {
-    alt_svc_quic_preconnect_callback_for_testing_ = std::move(callback);
   }
 
  private:
@@ -426,8 +376,6 @@ class NET_EXPORT_PRIVATE HttpStreamPool
   size_t limit_ignoring_job_controller_counts_ = 0;
 
   std::unique_ptr<TestDelegate> delegate_for_testing_;
-
-  CompletionOnceCallback alt_svc_quic_preconnect_callback_for_testing_;
 
   base::WeakPtrFactory<HttpStreamPool> weak_ptr_factory_{this};
 };

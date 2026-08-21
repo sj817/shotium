@@ -85,7 +85,6 @@ struct NET_EXPORT LoadTimingInternalInfo {
       AdvertisedAltSvcState::kUnknown;
 
   // Whether QUIC is enabled.
-  bool http_network_session_quic_enabled = false;
 
   // The details of the DNS resolution that established the connection used by
   // this request. Can be nullopt when no resolution was performed, or

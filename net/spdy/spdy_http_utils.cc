@@ -24,12 +24,64 @@
 #include "net/http/http_response_headers.h"
 #include "net/http/http_response_info.h"
 #include "net/http/http_util.h"
-#include "net/quic/quic_http_utils.h"
-#include "net/third_party/quiche/src/quiche/quic/core/quic_stream_priority.h"
+#include "net/third_party/quiche/src/quiche/common/structured_headers.h"
 
 namespace net {
 
 const char* const kHttp2PriorityHeader = "priority";
+
+namespace {
+
+// RFC 9218 "Extensible Prioritization Scheme for HTTP". The scheme is shared
+// between HTTP/2 and HTTP/3; quiche houses it under quiche/quic/core/
+// (quic_stream_priority.h) only because HTTP/3 was its first user there, and
+// that header reaches quic_types.h and web_transport.h, neither of which is in
+// this build. What the `priority` request header needs is just the structured-
+// headers dictionary below, so it is written out here against
+// quiche/common/structured_headers.h directly.
+//
+// Kept byte-identical to quic::SerializePriorityFieldValue(): defaults are
+// omitted from the dictionary, out-of-range urgencies are dropped rather than
+// clamped, and a serialization failure yields the empty string (the caller
+// then sends no header at all).
+constexpr int kPriorityMinimumUrgency = 0;
+constexpr int kPriorityMaximumUrgency = 7;
+constexpr int kPriorityDefaultUrgency = 3;
+constexpr bool kPriorityDefaultIncremental = false;
+constexpr std::string_view kPriorityUrgencyKey = "u";
+constexpr std::string_view kPriorityIncrementalKey = "i";
+
+// Maps net's RequestPriority onto an RFC 9218 urgency. This is the body of
+// what net/quic/quic_http_utils.cc called
+// ConvertRequestPriorityToQuicPriority().
+int RequestPriorityToUrgency(RequestPriority priority) {
+  DCHECK_GE(priority, MINIMUM_PRIORITY);
+  DCHECK_LE(priority, MAXIMUM_PRIORITY);
+  return HIGHEST - priority;
+}
+
+std::string SerializePriorityFieldValue(int urgency, bool incremental) {
+  quiche::structured_headers::Dictionary dictionary;
+
+  if (urgency != kPriorityDefaultUrgency && urgency >= kPriorityMinimumUrgency &&
+      urgency <= kPriorityMaximumUrgency) {
+    dictionary[std::string(kPriorityUrgencyKey)] =
+        quiche::structured_headers::ParameterizedMember(
+            quiche::structured_headers::Item(static_cast<int64_t>(urgency)),
+            {});
+  }
+
+  if (incremental != kPriorityDefaultIncremental) {
+    dictionary[std::string(kPriorityIncrementalKey)] =
+        quiche::structured_headers::ParameterizedMember(
+            quiche::structured_headers::Item(incremental), {});
+  }
+
+  return quiche::structured_headers::SerializeDictionary(dictionary)
+      .value_or(std::string());
+}
+
+}  // namespace
 
 namespace {
 
@@ -221,16 +273,11 @@ void CreateSpdyHeadersFromHttpRequest(const HttpRequestInfo& info,
     AddUniqueSpdyHeader(name, it.value(), headers);
   }
 
-  // Add the priority header if there is not already one set. This uses the
-  // quic helpers but the header values for HTTP extensible priorities are
-  // independent of quic.
+  // Add the priority header if there is not already one set.
   if (priority &&
       headers->find(kHttp2PriorityHeader) == headers->end()) {
-    uint8_t urgency = ConvertRequestPriorityToQuicPriority(priority.value());
-    bool incremental = info.priority_incremental;
-    quic::HttpStreamPriority quic_priority{urgency, incremental};
-    std::string serialized_priority =
-        quic::SerializePriorityFieldValue(quic_priority);
+    std::string serialized_priority = SerializePriorityFieldValue(
+        RequestPriorityToUrgency(priority.value()), info.priority_incremental);
     if (!serialized_priority.empty()) {
       AddUniqueSpdyHeader(kHttp2PriorityHeader, serialized_priority, headers);
     }

@@ -85,6 +85,5 @@ struct LoadTimingInternalInfo {
   mojo_base.mojom.TimeDelta initialize_stream_delay;
   SessionSource? session_source;
   AdvertisedAltSvcState advertised_alt_svc_state;
-  bool http_network_session_quic_enabled;
   ResolutionDetails? resolution_details;
 };

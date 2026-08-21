@@ -30,7 +30,6 @@
 #include "net/http/http_stream_factory_job.h"
 #include "net/http/http_stream_factory_job_controller.h"
 #include "net/http/transport_security_state.h"
-#include "net/quic/quic_http_utils.h"
 #include "net/socket/socket_tag.h"
 #include "net/spdy/bidirectional_stream_spdy_impl.h"
 #include "net/spdy/spdy_http_stream.h"
@@ -147,10 +146,8 @@ void HttpStreamFactory::ProcessAlternativeServices(
 
   session->http_server_properties()->SetAlternativeServices(
       http_server, network_anonymization_key,
-      net::ProcessAlternativeServices(
-          alternative_service_vector, session->params().enable_http2,
-          session->params().enable_quic,
-          session->context().quic_context->params()->supported_versions));
+      net::ProcessAlternativeServices(alternative_service_vector,
+                                      session->params().enable_http2));
 }
 
 std::unique_ptr<HttpStreamRequest> HttpStreamFactory::RequestStream(
@@ -224,9 +221,10 @@ std::unique_ptr<HttpStreamRequest> HttpStreamFactory::RequestStreamInternal(
       this, delegate, session_, job_factory_.get(), request_info,
       /* is_preconnect = */ false, is_websocket, enable_ip_based_pooling_for_h2,
       enable_alternative_services,
-      session_->context()
-          .quic_context->params()
-          ->delay_main_job_with_available_spdy_session,
+      // Upstream this comes from
+      // QuicParams::delay_main_job_with_available_spdy_session, which defaults
+      // to false and had no other setter in this build.
+      /*delay_main_job_with_available_spdy_session=*/false,
       allowed_bad_certs);
   JobController* job_controller_raw_ptr = job_controller.get();
   job_controller_set_.insert(std::move(job_controller));
@@ -255,9 +253,10 @@ void HttpStreamFactory::PreconnectStreams(int num_streams,
       /*is_websocket=*/false,
       /*enable_ip_based_pooling_for_h2=*/true,
       /*enable_alternative_services=*/true,
-      session_->context()
-          .quic_context->params()
-          ->delay_main_job_with_available_spdy_session,
+      // Upstream this comes from
+      // QuicParams::delay_main_job_with_available_spdy_session, which defaults
+      // to false and had no other setter in this build.
+      /*delay_main_job_with_available_spdy_session=*/false,
       /*allowed_bad_certs=*/std::vector<SSLConfig::CertAndStatus>());
   JobController* job_controller_raw_ptr = job_controller.get();
   job_controller_set_.insert(std::move(job_controller));

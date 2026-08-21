@@ -17,8 +17,6 @@
 #include "net/dns/host_resolver.h"
 #include "net/dns/public/secure_dns_policy.h"
 #include "net/http/alternative_service.h"
-#include "net/quic/quic_session_alias_key.h"
-#include "net/quic/quic_session_key.h"
 #include "net/socket/socket_tag.h"
 #include "net/spdy/spdy_session_key.h"
 #include "url/scheme_host_port.h"
@@ -77,9 +75,8 @@ class NET_EXPORT_PRIVATE HttpStreamKey {
 
   base::DictValue ToValue() const;
 
-  // Calculate a SpdySessionKey from `this`. Unlike
-  // CalculateQuicSessionAliasKey(), this method doesn't take an optional
-  // destination because we don't use a different destination for
+  // Calculate a SpdySessionKey from `this`. This method doesn't take an
+  // optional destination because we don't use a different destination for
   // SpdySessionKey.
   // TODO(crbug.com/346835898): We may need to create SpdySessionAliasKey and
   // use a different destination to support H2 alternative endpoints that have
@@ -95,13 +92,6 @@ class NET_EXPORT_PRIVATE HttpStreamKey {
   // This is typically `destination_`, except in the case `alt_service_` is
   // non-null, in which case it's the alt service destination.
   HostResolver::Host GetHostToResolve() const;
-
-  // Calculates a QuicSessionAliasKey from `this`. Takes `alt_service_` into
-  // consideration, when populated and for the QUIC protocol. See the comment of
-  // QuicSessionAliasKey about the difference between the server id and the
-  // destination. Returns a key with empty server_id/destination when the scheme
-  // is not cryptographic.
-  QuicSessionAliasKey CalculateQuicSessionAliasKey() const;
 
  private:
   url::SchemeHostPort destination_;

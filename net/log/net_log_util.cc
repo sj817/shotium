@@ -46,8 +46,6 @@
 #include "net/proxy_resolution/proxy_resolution_service.h"
 #include "net/proxy_resolution/proxy_retry_info.h"
 #include "net/socket/ssl_client_socket.h"
-#include "net/third_party/quiche/src/quiche/quic/core/quic_error_codes.h"
-#include "net/third_party/quiche/src/quiche/quic/core/quic_packets.h"
 #include "net/url_request/url_request.h"
 #include "net/url_request/url_request_context.h"
 #include "third_party/boringssl/src/pki/simple_path_builder_delegate.h"
@@ -228,34 +226,6 @@ base::DictValue GetNetConstants(NetConstantsRequestMode request_mode) {
     }
 
     constants_dict.Set("netError", std::move(dict));
-  }
-
-  // Add information on the relationship between QUIC error codes and their
-  // symbolic names.
-  {
-    base::DictValue dict;
-
-    for (quic::QuicErrorCode error = quic::QUIC_NO_ERROR;
-         error < quic::QUIC_LAST_ERROR;
-         error = static_cast<quic::QuicErrorCode>(error + 1)) {
-      dict.Set(QuicErrorCodeToString(error), static_cast<int>(error));
-    }
-
-    constants_dict.Set("quicError", std::move(dict));
-  }
-
-  // Add information on the relationship between QUIC RST_STREAM error codes
-  // and their symbolic names.
-  {
-    base::DictValue dict;
-
-    for (quic::QuicRstStreamErrorCode error = quic::QUIC_STREAM_NO_ERROR;
-         error < quic::QUIC_STREAM_LAST_ERROR;
-         error = static_cast<quic::QuicRstStreamErrorCode>(error + 1)) {
-      dict.Set(QuicRstStreamErrorCodeToString(error), static_cast<int>(error));
-    }
-
-    constants_dict.Set("quicRstStreamError", std::move(dict));
   }
 
   // Information about the relationship between event phase enums and their
@@ -444,9 +414,6 @@ NET_EXPORT base::DictValue GetNetInfo(URLRequestContext* context) {
         kNetInfoAltSvcMappings,
         http_server_properties.GetAlternativeServiceInfoAsValue());
   }
-
-  // Log QUIC info.
-  { net_info_dict.Set(kNetInfoQuic, http_network_session->QuicInfoToValue()); }
 
   // Log HTTP Cache info.
   {

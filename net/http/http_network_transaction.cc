@@ -786,8 +786,6 @@ void HttpNetworkTransaction::PopulateLoadTimingInternalInfo(
         stream_request_completion_details_->advertised_alt_svc_state;
   }
 
-  load_timing_internal_info->http_network_session_quic_enabled =
-      session_->IsQuicEnabled();
 }
 
 bool HttpNetworkTransaction::GetRemoteEndpoint(IPEndPoint* endpoint) const {
@@ -988,10 +986,6 @@ void HttpNetworkTransaction::OnNeedsClientAuth(SSLCertRequestInfo* cert_info) {
 
   response_.cert_request_info = cert_info;
   OnIOComplete(ERR_SSL_CLIENT_AUTH_CERT_NEEDED);
-}
-
-void HttpNetworkTransaction::OnQuicBroken() {
-  net_error_details_.quic_broken = true;
 }
 
 ConnectionAttempts HttpNetworkTransaction::GetConnectionAttempts() const {
@@ -2251,12 +2245,14 @@ int HttpNetworkTransaction::HandleIOError(int error) {
         retry_attempts_++;
         ResetConnectionAndRequestForResend(*retry_reason);
         return OK;
-      } else if (session_->context()
-                     .quic_context->params()
-                     ->retry_without_alt_svc_on_quic_errors) {
+      } else {
         // Disable alternative services for this request and retry it. If the
         // retry succeeds, then the alternative service will be marked as
         // broken then.
+        //
+        // Upstream this arm is guarded by
+        // QuicParams::retry_without_alt_svc_on_quic_errors, which defaults to
+        // true and had no other setter in this build.
         enable_alternative_services_ = false;
         net_log_.AddEventWithNetErrorCode(
             NetLogEventType::HTTP_TRANSACTION_RESTART_AFTER_ERROR, error);
@@ -2298,8 +2294,6 @@ void HttpNetworkTransaction::ResetStateForAuthRestart() {
   SetProxyInfoInResponse(proxy_info_, &response_);
   establishing_tunnel_ = false;
   remote_endpoint_ = IPEndPoint();
-  net_error_details_.quic_broken = false;
-  net_error_details_.quic_connection_error = quic::QUIC_NO_ERROR;
 #if BUILDFLAG(ENABLE_REPORTING)
   network_error_logging_report_generated_ = false;
   start_timeticks_ = base::TimeTicks::Now();

@@ -116,31 +116,4 @@ HostResolver::Host HttpStreamKey::GetHostToResolve() const {
   return HostResolver::Host(destination_);
 }
 
-QuicSessionAliasKey HttpStreamKey::CalculateQuicSessionAliasKey() const {
-  // HTTP requests have empty QuicSessionAliasKeys, as do non-QUIC alt-service
-  // requests.
-  if (!GURL::SchemeIsCryptographic(destination_.scheme()) ||
-      (alt_service_ && alt_service_->protocol != NextProto::kProtoQUIC)) {
-    return QuicSessionAliasKey();
-  }
-
-  url::SchemeHostPort destination_for_name_resolution;
-  if (alt_service_ && alt_service_->protocol == NextProto::kProtoQUIC) {
-    destination_for_name_resolution = url::SchemeHostPort(
-        url::kHttpsScheme, alt_service_->host, alt_service_->port);
-    CHECK_EQ(destination_for_name_resolution.scheme(), destination_.scheme());
-  } else {
-    destination_for_name_resolution = destination_;
-  }
-
-  QuicSessionKey quic_session_key(
-      destination_.host(), destination_.port(), privacy_mode(),
-      ProxyChain::Direct(), SessionUsage::kDestination, socket_tag(),
-      network_anonymization_key(), secure_dns_policy(),
-      /*require_dns_https_alpn=*/false, disable_cert_network_fetches(),
-      target_network());
-  return QuicSessionAliasKey(std::move(destination_for_name_resolution),
-                             std::move(quic_session_key));
-}
-
 }  // namespace net

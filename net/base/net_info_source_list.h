@@ -15,7 +15,6 @@ inline constexpr char kNetInfoDohProvidersDisabledDueToFeature[] =
     "dohProvidersDisabledDueToFeature";
 inline constexpr char kNetInfoSocketPool[] = "socketPoolInfo";
 inline constexpr char kNetInfoHttpStreamPool[] = "httpStreamPoolInfo";
-inline constexpr char kNetInfoQuic[] = "quicInfo";
 inline constexpr char kNetInfoSpdySessions[] = "spdySessionInfo";
 inline constexpr char kNetInfoSpdyStatus[] = "spdyStatus";
 inline constexpr char kNetInfoAltSvcMappings[] = "altSvcMappings";

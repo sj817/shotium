@@ -34,14 +34,10 @@
 #include "net/log/net_log_event_type.h"
 #include "net/log/net_log_util.h"
 #include "net/log/net_log_with_source.h"
-#include "net/quic/quic_chromium_client_session.h"
-#include "net/quic/quic_http_stream.h"
-#include "net/quic/quic_session_alias_key.h"
 #include "net/socket/next_proto.h"
 #include "net/spdy/spdy_http_stream.h"
 #include "net/ssl/ssl_cert_request_info.h"
 #include "net/ssl/ssl_config.h"
-#include "net/third_party/quiche/src/quiche/quic/core/quic_versions.h"
 #include "url/scheme_host_port.h"
 #include "url/url_constants.h"
 
@@ -49,13 +45,8 @@ namespace net {
 
 HttpStreamPool::JobController::Alternative::Alternative(
     HttpStreamKey stream_key,
-    NextProto protocol,
-    quic::ParsedQuicVersion quic_version,
-    std::optional<QuicSessionAliasKey> quic_key)
-    : stream_key(std::move(stream_key)),
-      protocol(protocol),
-      quic_version(quic_version),
-      quic_key(std::move(quic_key)) {}
+    NextProto protocol)
+    : stream_key(std::move(stream_key)), protocol(protocol) {}
 
 HttpStreamPool::JobController::Alternative::~Alternative() = default;
 
@@ -95,8 +86,7 @@ HttpStreamPool::JobController::CalculateAlternative(
     return std::nullopt;
   }
 
-  CHECK(protocol == NextProto::kProtoHTTP2 ||
-        protocol == NextProto::kProtoQUIC);
+  CHECK(protocol == NextProto::kProtoHTTP2);
 
   url::SchemeHostPort destination(
       url::kHttpsScheme,
@@ -110,14 +100,6 @@ HttpStreamPool::JobController::CalculateAlternative(
     return std::nullopt;
   }
 
-  // If the alternative isn't QUIC but the destination is forced to use QUIC,
-  // we shouldn't try the alternative.
-  if (protocol != NextProto::kProtoQUIC &&
-      pool->http_network_session()->ShouldForceQuic(
-          destination, ProxyInfo::Direct(), /*is_websocket=*/false)) {
-    return std::nullopt;
-  }
-
   HttpStreamKey stream_key(
       request_info.destination, request_info.privacy_mode,
       request_info.socket_tag, request_info.network_anonymization_key,
@@ -125,16 +107,7 @@ HttpStreamPool::JobController::CalculateAlternative(
       request_info.target_network,
       request_info.alternative_service_info.alternative_service());
 
-  quic::ParsedQuicVersion quic_version = quic::ParsedQuicVersion::Unsupported();
-  std::optional<QuicSessionAliasKey> quic_key;
-  if (protocol == NextProto::kProtoQUIC) {
-    quic_version =
-        pool->SelectQuicVersion(request_info.alternative_service_info);
-    quic_key = stream_key.CalculateQuicSessionAliasKey();
-  }
-
-  return Alternative(std::move(stream_key), protocol, quic_version,
-                     std::move(quic_key));
+  return Alternative(std::move(stream_key), protocol);
 }
 
 HttpStreamPool::JobController::JobController(
@@ -163,7 +136,6 @@ HttpStreamPool::JobController::JobController(
                          request_info.secure_dns_policy,
                          request_info.disable_cert_network_fetches,
                          request_info.target_network),
-      origin_quic_key_(origin_stream_key_.CalculateQuicSessionAliasKey()),
       alternative_(CalculateAlternative(pool,
                                         request_info,
                                         enable_alternative_services_)),
@@ -189,10 +161,6 @@ HttpStreamPool::JobController::JobController(
       });
 
   CHECK(proxy_info_.is_direct());
-  if (!alternative_.has_value() &&
-      alternative_service_info_.protocol() == NextProto::kProtoQUIC) {
-    origin_quic_version_ = pool_->SelectQuicVersion(alternative_service_info_);
-  }
 }
 
 HttpStreamPool::JobController::~JobController() {
@@ -231,10 +199,6 @@ void HttpStreamPool::JobController::HandleStreamRequest(
     TRACE_EVENT("net.stream", "JobController::CreateStreamFromExistingSession",
                 "negotiated_protocol", pending_stream_->negotiated_protocol);
 
-    if (pending_stream_->negotiated_protocol != NextProto::kProtoQUIC &&
-        origin_quic_version_.IsKnown()) {
-      StartAltSvcQuicPreconnect();
-    }
     CHECK(!stream_ready_time_.has_value());
     stream_ready_time_ = base::TimeTicks::Now();
     TaskRunner(priority_)->PostTask(
@@ -255,7 +219,7 @@ void HttpStreamPool::JobController::HandleStreamRequest(
   if (!alternative_job_succeeded) {
     origin_job_ =
         pool_->GetOrCreateGroup(origin_stream_key_)
-            .CreateJob(this, origin_quic_version_, NextProto::kProtoUnknown,
+            .CreateJob(this, NextProto::kProtoUnknown,
                        stream_request_->net_log());
     origin_job_->Start();
   }
@@ -271,21 +235,6 @@ int HttpStreamPool::JobController::Preconnect(
   if (!IsPortAllowedForScheme(origin_stream_key_.destination().port(),
                               origin_stream_key_.destination().scheme())) {
     return ERR_UNSAFE_PORT;
-  }
-
-  if (CanUseExistingQuicSession()) {
-    net_log_.AddEvent(
-        NetLogEventType::
-            HTTP_STREAM_POOL_JOB_CONTROLLER_FOUND_EXISTING_QUIC_SESSION);
-    return OK;
-  }
-
-  // If the preconnect explicitly requests QUIC, start preconnecting before
-  // checking existing SpdySession and idle streams.
-  if (origin_quic_version_.IsKnown()) {
-    preconnect_callback_ = std::move(callback);
-    StartAltSvcQuicPreconnect();
-    return ERR_IO_PENDING;
   }
 
   SpdySessionKey spdy_session_key =
@@ -318,8 +267,8 @@ int HttpStreamPool::JobController::Preconnect(
 
   preconnect_callback_ = std::move(callback);
   origin_job_ = std::make_unique<Job>(
-      this, JobType::kPreconnect, &group, origin_quic_version_,
-      NextProto::kProtoUnknown, net_log_, num_streams);
+      this, JobType::kPreconnect, &group, NextProto::kProtoUnknown, net_log_,
+      num_streams);
   origin_job_->Start();
   return ERR_IO_PENDING;
 }
@@ -508,29 +457,13 @@ base::DictValue HttpStreamPool::JobController::GetInfoAsValue() const {
   return dict;
 }
 
-QuicSessionPool* HttpStreamPool::JobController::quic_session_pool() {
-  return pool_->http_network_session()->quic_session_pool();
-}
-
 SpdySessionPool* HttpStreamPool::JobController::spdy_session_pool() {
   return pool_->http_network_session()->spdy_session_pool();
 }
 
 std::optional<HttpStreamPool::JobController::PendingStream>
 HttpStreamPool::JobController::MaybeCreateStreamFromExistingSession() {
-  // Check QUIC session first.
-  std::unique_ptr<HttpStream> quic_http_stream =
-      MaybeCreateStreamFromExistingQuicSession();
-  if (quic_http_stream) {
-    net_log_.AddEvent(
-        NetLogEventType::
-            HTTP_STREAM_POOL_JOB_CONTROLLER_FOUND_EXISTING_QUIC_SESSION);
-    return std::optional<PendingStream>(
-        std::in_place, std::move(quic_http_stream), NextProto::kProtoQUIC,
-        SessionSource::kExisting);
-  }
-
-  // Check SPDY session next.
+  // Check SPDY session.
   SpdySessionKey spdy_session_key =
       origin_stream_key_.CalculateSpdySessionKey();
   base::WeakPtr<SpdySession> spdy_session = pool_->FindAvailableSpdySession(
@@ -570,44 +503,6 @@ HttpStreamPool::JobController::MaybeCreateStreamFromExistingSession() {
   return std::nullopt;
 }
 
-std::unique_ptr<HttpStream>
-HttpStreamPool::JobController::MaybeCreateStreamFromExistingQuicSession() {
-  std::unique_ptr<HttpStream> stream =
-      MaybeCreateStreamFromExistingQuicSessionInternal(origin_quic_key_);
-  if (stream) {
-    return stream;
-  }
-
-  if (alternative_.has_value() && alternative_->quic_key.has_value()) {
-    stream = MaybeCreateStreamFromExistingQuicSessionInternal(
-        *alternative_->quic_key);
-  }
-
-  return stream;
-}
-
-std::unique_ptr<HttpStream>
-HttpStreamPool::JobController::MaybeCreateStreamFromExistingQuicSessionInternal(
-    const QuicSessionAliasKey& key) {
-  if (!key.destination().IsValid() ||
-      !pool_->CanUseQuic(key.destination(),
-                         key.session_key().network_anonymization_key(),
-                         enable_alternative_services_)) {
-    return nullptr;
-  }
-
-  QuicChromiumClientSession* quic_session =
-      quic_session_pool()->FindExistingSession(key.session_key(),
-                                               key.destination());
-  if (!quic_session) {
-    return nullptr;
-  }
-
-  return std::make_unique<QuicHttpStream>(
-      quic_session->CreateHandle(key.destination()),
-      quic_session->GetDnsAliasesForSessionKey(key.session_key()));
-}
-
 bool HttpStreamPool::JobController::MaybeStartAlternativeJob() {
   if (!alternative_.has_value()) {
     return false;
@@ -639,27 +534,9 @@ bool HttpStreamPool::JobController::MaybeStartAlternativeJob() {
   }
 
   alternative_job_ = alternative_group.CreateJob(
-      this, alternative_->quic_version, alternative_->protocol,
-      stream_request_->net_log());
+      this, alternative_->protocol, stream_request_->net_log());
   alternative_job_->Start();
   return true;
-}
-
-bool HttpStreamPool::JobController::CanUseExistingQuicSession() {
-  return pool_->CanUseExistingQuicSession(origin_quic_key_,
-                                          enable_alternative_services_);
-}
-
-void HttpStreamPool::JobController::StartAltSvcQuicPreconnect() {
-  Group& group = pool_->GetOrCreateGroup(origin_stream_key_);
-  if (preconnect_callback_.is_null()) {
-    preconnect_callback_ = pool_->GetAltSvcQuicPreconnectCallback();
-  }
-  origin_job_ = std::make_unique<Job>(this, JobType::kAltSvcQuicPreconnect,
-                                      &group, origin_quic_version_,
-                                      NextProto::kProtoQUIC, net_log_,
-                                      /*num_streams=*/1);
-  origin_job_->Start();
 }
 
 void HttpStreamPool::JobController::CallRequestCompleteAndStreamReady() {
@@ -753,7 +630,7 @@ void HttpStreamPool::JobController::MaybeMarkAlternativeServiceBroken() {
   }
 
   // Only mark broken if the error is actually a protocol failure.
-  if (!IsQuicErrorBrokenable(*alternative_job_result_)) {
+  if (!IsAlternativeServiceErrorBrokenable(*alternative_job_result_)) {
     return;
   }
 

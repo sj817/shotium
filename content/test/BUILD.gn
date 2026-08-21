@@ -481,8 +481,6 @@ static_library("test_support") {
     "//gpu/ipc:gl_in_process_context",
     "//media",
     "//mojo/core/embedder",
-    "//net:quic_test_tools",
-    "//net:simple_quic_tools",
     "//net:test_support",
     "//services/cert_verifier:lib",
     "//storage/browser/quota:mojo_bindings",
@@ -1396,7 +1394,6 @@ test("content_browsertests") {
   if (is_android) {
     sources += [
       "../browser/gpu/gpu_background_kill_android_browsertest.cc",
-      "../browser/network/quic_connection_migration_android_browsertest.cc",
       "../browser/renderer_host/android_spare_renderer_navigation_throttle_browsertest.cc",
       "../browser/renderer_host/render_widget_host_view_android_browsertest.cc",
 
@@ -1477,8 +1474,6 @@ test("content_browsertests") {
     "//mojo/public/cpp/bindings/tests:mojo_public_bindings_test_utils",
     "//mojo/public/cpp/test_support:test_utils",
     "//mojo/public/interfaces/bindings/tests:test_interfaces",
-    "//net:quic_test_tools",
-    "//net:simple_quic_tools",
     "//net:test_support",
     "//services/cert_verifier/public/mojom",
     "//services/network:test_support",

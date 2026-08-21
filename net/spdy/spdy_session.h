@@ -343,11 +343,9 @@ class NET_EXPORT SpdySession
               HttpServerProperties* http_server_properties,
               TransportSecurityState* transport_security_state,
               SSLConfigService* ssl_config_service,
-              const quic::ParsedQuicVersionVector& quic_supported_versions,
               bool enable_sending_initial_data,
               bool enable_ping_based_connection_checking,
               bool is_http_enabled,
-              bool is_quic_enabled,
               size_t session_max_recv_window_size,
               int session_max_queued_capped_frames,
               const spdy::SettingsMap& initial_settings,
@@ -1290,15 +1288,12 @@ class NET_EXPORT SpdySession
 
   NetLogWithSource net_log_;
 
-  // Versions of QUIC which may be used.
-  const quic::ParsedQuicVersionVector quic_supported_versions_;
 
   // Outside of tests, these should always be true.
   const bool enable_sending_initial_data_;
   const bool enable_ping_based_connection_checking_;
 
   const bool is_http2_enabled_;
-  const bool is_quic_enabled_;
 
   // True if the server has advertised WebSocket support via
   // spdy::SETTINGS_ENABLE_CONNECT_PROTOCOL, see

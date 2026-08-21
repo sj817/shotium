@@ -22,7 +22,6 @@
 #include "net/http/http_stream_request.h"
 #include "net/spdy/spdy_session_pool.h"
 #include "net/ssl/ssl_config.h"
-#include "net/third_party/quiche/src/quiche/quic/core/quic_versions.h"
 
 namespace net {
 
@@ -56,8 +55,6 @@ class HttpStreamFactory::JobController
   // Used in tests only for verification purpose.
   const Job* main_job() const { return main_job_.get(); }
   const Job* alternative_job() const { return alternative_job_.get(); }
-  const Job* dns_alpn_h3_job() const { return dns_alpn_h3_job_.get(); }
-  const Job* ws_over_h3_job() const { return ws_over_h3_job_.get(); }
 
   // Methods below are called by HttpStreamFactory only.
   // Creates request and hands out to HttpStreamFactory, this will also create
@@ -103,16 +100,8 @@ class HttpStreamFactory::JobController
       const ProxyInfo& used_proxy_info,
       std::unique_ptr<WebSocketHandshakeStreamBase> stream) override;
 
-  // Invoked when a QUIC job finished a DNS resolution.
-  void OnQuicHostResolution(const url::SchemeHostPort& destination,
-                            base::TimeTicks dns_resolution_start_time,
-                            base::TimeTicks dns_resolution_end_time) override;
-
   // Invoked when |job| fails to create a stream.
   void OnStreamFailed(Job* job, int status) override;
-
-  // Invoked when |job| fails on the default network.
-  void OnFailedOnDefaultNetwork(Job* job) override;
 
   // Invoked when |job| has a certificate error for the Request.
   void OnCertificateError(Job* job,
@@ -240,11 +229,8 @@ class HttpStreamFactory::JobController
   // Resumes the main job immediately.
   void ResumeMainJob();
 
-  // Reset error status to default value for Jobs:
-  // - reset |main_job_net_error_| and |alternative_job_net_error_| and
-  //   |dns_alpn_h3_job_net_error_| to OK;
-  // - reset |alternative_job_failed_on_default_network_| and
-  //   |dns_alpn_h3_job_failed_on_default_network_| to false.
+  // Reset error status to default value for Jobs: resets
+  // |main_job_net_error_| and |alternative_job_net_error_| to OK.
   void ResetErrorStatusForJobs();
 
   AdvertisedAlternativeService GetAdvertisedAltSvcFor(
@@ -256,10 +242,6 @@ class HttpStreamFactory::JobController
       const StreamRequestInfo& request_info,
       HttpStreamRequest::Delegate* delegate,
       HttpStreamRequest::StreamType stream_type);
-
-  // Just calls QuicContext::SelectQuicVersion().
-  quic::ParsedQuicVersion SelectQuicVersion(
-      const quic::ParsedQuicVersionVector& advertised_versions);
 
   // Records histogram metrics for the usage of alternative protocol. Must be
   // called when |job| has succeeded and the other job will be orphaned.
@@ -286,12 +268,8 @@ class HttpStreamFactory::JobController
   // given error code is simply returned.
   int ReconsiderProxyAfterError(Job* job, int error);
 
-  // Returns true if QUIC is allowed for |host|.
-  bool IsQuicAllowedForHost(const std::string& host);
-
   int GetJobCount() const {
-    return (main_job_ ? 1 : 0) + (alternative_job_ ? 1 : 0) +
-           (dns_alpn_h3_job_ ? 1 : 0) + (ws_over_h3_job_ ? 1 : 0);
+    return (main_job_ ? 1 : 0) + (alternative_job_ ? 1 : 0);
   }
 
   // Called when the request needs to use the HttpStreamPool instead of `this`.
@@ -322,30 +300,23 @@ class HttpStreamFactory::JobController
 
   // Enable pooling to a SpdySession with matching IP and certificate even if
   // the SpdySessionKey is different.
-  // Note that this does nothing with QUIC.
   const bool enable_ip_based_pooling_for_h2_;
 
   // Enable using alternative services for the request. If false, the
   // JobController will only create a |main_job_|.
   const bool enable_alternative_services_;
 
-  // For normal (non-preconnect) job, |main_job_| is a job waiting to see if
-  // |alternative_job_| or |dns_alpn_h3_job_| can reuse a connection. If both
-  // |alternative_job_| and |dns_alpn_h3_job_| are unable to do so, |this| will
-  // notify |main_job_| to proceed and then race the two jobs.
-  // For WebSocket requests, |ws_over_h3_job_| may also be created to reuse an
-  // existing QUIC session. It resolves synchronously: if it finds a session,
-  // |main_job_| is cleared; otherwise |ws_over_h3_job_| is cleared and
-  // |main_job_| proceeds to HTTP/1.1 or HTTP/2.
-  // For preconnect job, |main_job_| is started first, and if it fails with
-  // ERR_DNS_NO_MATCHING_SUPPORTED_ALPN, |preconnect_backup_job_| will be
-  // started.
+  // For a normal (non-preconnect) job, |main_job_| is a job waiting to see if
+  // |alternative_job_| can reuse a connection. If it cannot, |this| notifies
+  // |main_job_| to proceed and then races the two jobs.
+  //
+  // Upstream there are two more: |dns_alpn_h3_job_|, racing on an "h3" ALPN
+  // value from an HTTPS DNS record, and |ws_over_h3_job_|, reusing an existing
+  // HTTP/3 session for WebSocket. Both are HTTP/3 and are gone, and so is
+  // |preconnect_backup_job_|, which existed only to fall back to TCP when the
+  // HTTP/3 preconnect failed with ERR_DNS_NO_MATCHING_SUPPORTED_ALPN.
   std::unique_ptr<Job> main_job_;
   std::unique_ptr<Job> alternative_job_;
-  std::unique_ptr<Job> dns_alpn_h3_job_;
-  std::unique_ptr<Job> ws_over_h3_job_;
-
-  std::unique_ptr<Job> preconnect_backup_job_;
 
   // The alternative service and its state used by `alternative_job_`
   // (or by `main_job_` if `is_preconnect_`.)
@@ -356,12 +327,6 @@ class HttpStreamFactory::JobController
   int main_job_net_error_ = OK;
   // Net error code of the alternative job. Set to OK by default.
   int alternative_job_net_error_ = OK;
-  // Set to true if the alternative job failed on the default network.
-  bool alternative_job_failed_on_default_network_ = false;
-  // Net error code of the DNS HTTPS ALPN job. Set to OK by default.
-  int dns_alpn_h3_job_net_error_ = OK;
-  // Set to true if the DNS HTTPS ALPN job failed on the default network.
-  bool dns_alpn_h3_job_failed_on_default_network_ = false;
 
   // True if a Job has ever been bound to the |request_|.
   bool job_bound_ = false;

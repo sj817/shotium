@@ -55,7 +55,6 @@
 #include "net/log/net_log_source_type.h"
 #include "net/log/net_log_with_source.h"
 #include "net/nqe/network_quality_estimator.h"
-#include "net/quic/quic_http_utils.h"
 #include "net/socket/socket.h"
 #include "net/socket/ssl_client_socket.h"
 #include "net/spdy/alps_decoder.h"
@@ -806,11 +805,9 @@ SpdySession::SpdySession(
     HttpServerProperties* http_server_properties,
     TransportSecurityState* transport_security_state,
     SSLConfigService* ssl_config_service,
-    const quic::ParsedQuicVersionVector& quic_supported_versions,
     bool enable_sending_initial_data,
     bool enable_ping_based_connection_checking,
     bool is_http2_enabled,
-    bool is_quic_enabled,
     size_t session_max_recv_window_size,
     int session_max_queued_capped_frames,
     const spdy::SettingsMap& initial_settings,
@@ -848,12 +845,10 @@ SpdySession::SpdySession(
           initial_settings.at(spdy::SETTINGS_INITIAL_WINDOW_SIZE)),
       net_log_(
           NetLogWithSource::Make(net_log, NetLogSourceType::HTTP2_SESSION)),
-      quic_supported_versions_(quic_supported_versions),
       enable_sending_initial_data_(enable_sending_initial_data),
       enable_ping_based_connection_checking_(
           enable_ping_based_connection_checking),
       is_http2_enabled_(is_http2_enabled),
-      is_quic_enabled_(is_quic_enabled),
       connection_at_risk_of_loss_time_(
           base::Seconds(kSpdyDefaultConnectionAtRiskOfLossSeconds)),
       hung_interval_(base::Seconds(kHungIntervalSeconds)),
@@ -3245,8 +3240,7 @@ void SpdySession::OnAltSvc(
 
   http_server_properties_->SetAlternativeServices(
       scheme_host_port, spdy_session_key_.network_anonymization_key(),
-      ProcessAlternativeServices(altsvc_vector, is_http2_enabled_,
-                                 is_quic_enabled_, quic_supported_versions_));
+      ProcessAlternativeServices(altsvc_vector, is_http2_enabled_));
 }
 
 bool SpdySession::OnUnknownFrame(spdy::SpdyStreamId stream_id,

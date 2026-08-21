@@ -37,7 +37,6 @@
 #include "net/log/net_log_source.h"
 #include "net/nqe/network_quality_estimator.h"
 #include "net/proxy_resolution/proxy_resolution_service.h"
-#include "net/quic/quic_context.h"
 #include "net/socket/client_socket_factory.h"
 #include "net/socket/ssl_client_socket_impl.h"
 #include "net/ssl/ssl_config_service.h"
@@ -247,10 +246,6 @@ void URLRequestContext::set_job_factory(
     std::unique_ptr<const URLRequestJobFactory> job_factory) {
   job_factory_storage_ = std::move(job_factory);
   job_factory_ = job_factory_storage_.get();
-}
-void URLRequestContext::set_quic_context(
-    std::unique_ptr<QuicContext> quic_context) {
-  quic_context_ = std::move(quic_context);
 }
 void URLRequestContext::set_http_user_agent_settings(
     std::unique_ptr<const HttpUserAgentSettings> http_user_agent_settings) {

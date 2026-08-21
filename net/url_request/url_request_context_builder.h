@@ -50,7 +50,6 @@
 #include "net/reporting/reporting_uploader.h"
 #include "net/socket/client_socket_factory.h"
 #include "net/ssl/ssl_config_service.h"
-#include "net/third_party/quiche/src/quiche/quic/core/quic_packets.h"
 #include "net/url_request/url_request_job_factory.h"
 #include "url/origin.h"
 
@@ -326,11 +325,10 @@ class NET_EXPORT URLRequestContextBuilder {
     hsts_policy_bypass_list_ = hsts_policy_bypass_list;
   }
 
-  void SetSpdyAndQuicEnabled(bool spdy_enabled, bool quic_enabled);
+  void SetSpdyEnabled(bool spdy_enabled);
 
   void set_sct_auditing_delegate(
       std::unique_ptr<SCTAuditingDelegate> sct_auditing_delegate);
-  void set_quic_context(std::unique_ptr<QuicContext> quic_context);
 
   void SetCertVerifier(std::unique_ptr<CertVerifier> cert_verifier);
 
@@ -569,7 +567,6 @@ class NET_EXPORT URLRequestContextBuilder {
   std::unique_ptr<HttpAuthHandlerFactory> http_auth_handler_factory_;
   std::unique_ptr<CertVerifier> cert_verifier_;
   std::unique_ptr<SCTAuditingDelegate> sct_auditing_delegate_;
-  std::unique_ptr<QuicContext> quic_context_;
   std::unique_ptr<ClientSocketFactory> client_socket_factory_ = nullptr;
 #if BUILDFLAG(ENABLE_REPORTING)
   std::unique_ptr<ReportingService> reporting_service_;

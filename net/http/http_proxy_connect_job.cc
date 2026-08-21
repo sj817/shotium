@@ -34,11 +34,6 @@
 #include "net/log/net_log_source_type.h"
 #include "net/log/net_log_with_source.h"
 #include "net/nqe/network_quality_estimator.h"
-#include "net/quic/quic_context.h"
-#include "net/quic/quic_http_utils.h"
-#include "net/quic/quic_proxy_client_socket.h"
-#include "net/quic/quic_session_key.h"
-#include "net/quic/quic_session_pool.h"
 #include "net/socket/client_socket_handle.h"
 #include "net/socket/next_proto.h"
 #include "net/socket/ssl_client_socket.h"
@@ -133,7 +128,7 @@ HttpProxyTimeoutExperiments* GetProxyTimeoutExperiments() {
 
 // Make a URL for a proxy, for use in proxy auth challenges.
 GURL MakeProxyUrl(const HttpProxySocketParams& params) {
-  const bool is_https = params.is_over_ssl() || params.is_over_quic();
+  const bool is_https = params.is_over_ssl();
   return GURL((is_https ? "https://" : "http://") +
               params.proxy_server().host_port_pair().ToString());
 }
@@ -158,51 +153,7 @@ HttpProxySocketParams::HttpProxySocketParams(
     const NetworkAnonymizationKey& network_anonymization_key,
     SecureDnsPolicy secure_dns_policy,
     handles::NetworkHandle target_network)
-    : HttpProxySocketParams(std::move(nested_params),
-                            std::nullopt,
-                            endpoint,
-                            proxy_chain,
-                            proxy_chain_index,
-                            tunnel,
-                            std::move(traffic_annotation),
-                            network_anonymization_key,
-                            secure_dns_policy,
-                            target_network) {}
-
-HttpProxySocketParams::HttpProxySocketParams(
-    SSLConfig quic_ssl_config,
-    const HostPortPair& endpoint,
-    const ProxyChain& proxy_chain,
-    size_t proxy_chain_index,
-    bool tunnel,
-    const NetworkTrafficAnnotationTag traffic_annotation,
-    const NetworkAnonymizationKey& network_anonymization_key,
-    SecureDnsPolicy secure_dns_policy,
-    handles::NetworkHandle target_network)
-    : HttpProxySocketParams(std::nullopt,
-                            std::move(quic_ssl_config),
-                            endpoint,
-                            proxy_chain,
-                            proxy_chain_index,
-                            tunnel,
-                            std::move(traffic_annotation),
-                            network_anonymization_key,
-                            secure_dns_policy,
-                            target_network) {}
-
-HttpProxySocketParams::HttpProxySocketParams(
-    std::optional<ConnectJobParams> nested_params,
-    std::optional<SSLConfig> quic_ssl_config,
-    const HostPortPair& endpoint,
-    const ProxyChain& proxy_chain,
-    size_t proxy_chain_index,
-    bool tunnel,
-    const NetworkTrafficAnnotationTag traffic_annotation,
-    const NetworkAnonymizationKey& network_anonymization_key,
-    SecureDnsPolicy secure_dns_policy,
-    handles::NetworkHandle target_network)
     : nested_params_(std::move(nested_params)),
-      quic_ssl_config_(std::move(quic_ssl_config)),
       endpoint_(endpoint),
       proxy_chain_(proxy_chain),
       proxy_chain_index_(proxy_chain_index),
@@ -215,19 +166,16 @@ HttpProxySocketParams::HttpProxySocketParams(
   DCHECK(proxy_chain_.IsValid());
   CHECK(proxy_chain_index_ < proxy_chain_.length());
 
-  // This is either a connection to an HTTP proxy,an SSL proxy, or a QUIC proxy.
-  DCHECK(nested_params_ || quic_ssl_config_);
-  DCHECK(!(nested_params_ && quic_ssl_config_));
 
   // Only supports proxy endpoints without scheme for now.
   // TODO(crbug.com/40181080): Handle scheme.
   if (is_over_transport()) {
     DCHECK(std::holds_alternative<HostPortPair>(
-        nested_params_->transport()->destination()));
-  } else if (is_over_ssl() && nested_params_->ssl()->GetConnectionType() ==
+        nested_params_.transport()->destination()));
+  } else if (is_over_ssl() && nested_params_.ssl()->GetConnectionType() ==
                                   SSLSocketParams::ConnectionType::DIRECT) {
     DCHECK(std::holds_alternative<HostPortPair>(
-        nested_params_->ssl()->GetDirectConnectionParams()->destination()));
+        nested_params_.ssl()->GetDirectConnectionParams()->destination()));
   }
 }
 
@@ -274,7 +222,7 @@ HttpProxyConnectJob::HttpProxyConnectJob(
 
 HttpProxyConnectJob::~HttpProxyConnectJob() = default;
 
-const RequestPriority HttpProxyConnectJob::kH2QuicTunnelPriority =
+const RequestPriority HttpProxyConnectJob::kH2TunnelPriority =
     DEFAULT_PRIORITY;
 
 LoadState HttpProxyConnectJob::GetLoadState() const {
@@ -285,9 +233,6 @@ LoadState HttpProxyConnectJob::GetLoadState() const {
     case STATE_HTTP_PROXY_CONNECT_COMPLETE:
     case STATE_SPDY_PROXY_CREATE_STREAM:
     case STATE_SPDY_PROXY_CREATE_STREAM_COMPLETE:
-    case STATE_QUIC_PROXY_CREATE_SESSION:
-    case STATE_QUIC_PROXY_CREATE_STREAM:
-    case STATE_QUIC_PROXY_CREATE_STREAM_COMPLETE:
     case STATE_RESTART_WITH_AUTH:
     case STATE_RESTART_WITH_AUTH_COMPLETE:
       return LOAD_STATE_ESTABLISHING_PROXY_TUNNEL;
@@ -451,16 +396,6 @@ int HttpProxyConnectJob::DoLoop(int result) {
       case STATE_SPDY_PROXY_CREATE_STREAM_COMPLETE:
         rv = DoSpdyProxyCreateStreamComplete(rv);
         break;
-      case STATE_QUIC_PROXY_CREATE_SESSION:
-        DCHECK_EQ(OK, rv);
-        rv = DoQuicProxyCreateSession();
-        break;
-      case STATE_QUIC_PROXY_CREATE_STREAM:
-        rv = DoQuicProxyCreateStream(rv);
-        break;
-      case STATE_QUIC_PROXY_CREATE_STREAM_COMPLETE:
-        rv = DoQuicProxyCreateStreamComplete(rv);
-        break;
       case STATE_RESTART_WITH_AUTH:
         DCHECK_EQ(OK, rv);
         rv = DoRestartWithAuth();
@@ -481,14 +416,6 @@ int HttpProxyConnectJob::DoBeginConnect() {
   ResetTimer(
       AlternateNestedConnectionTimeout(*params_, network_quality_estimator()));
   switch (GetProxyServerScheme()) {
-    case ProxyServer::SCHEME_QUIC:
-      next_state_ = STATE_QUIC_PROXY_CREATE_SESSION;
-      // QUIC connections are always considered to have been established.
-      // |has_established_connection_| is only used to start retries if a
-      // connection hasn't been established yet, and QUIC has its own connection
-      // establishment logic.
-      has_established_connection_ = true;
-      break;
     case ProxyServer::SCHEME_HTTP:
     case ProxyServer::SCHEME_HTTPS:
       next_state_ = STATE_TRANSPORT_CONNECT;
@@ -702,7 +629,7 @@ int HttpProxyConnectJob::DoSpdyProxyCreateStream() {
   return spdy_stream_request_->StartRequest(
       SPDY_BIDIRECTIONAL_STREAM, spdy_session,
       GURL("https://" + params_->endpoint().ToString()),
-      false /* no early data */, kH2QuicTunnelPriority, socket_tag(),
+      false /* no early data */, kH2TunnelPriority, socket_tag(),
       spdy_session->net_log(),
       base::BindOnce(&HttpProxyConnectJob::OnIOComplete,
                      base::Unretained(this)),
@@ -731,93 +658,6 @@ int HttpProxyConnectJob::DoSpdyProxyCreateStreamComplete(int result) {
   transport_socket_ = std::make_unique<SpdyProxyClientSocket>(
       stream, params_->proxy_chain(), params_->proxy_chain_index(),
       GetUserAgent(), params_->endpoint(), net_log(), http_auth_controller_,
-      common_connect_job_params()->proxy_delegate);
-  return transport_socket_->Connect(base::BindOnce(
-      &HttpProxyConnectJob::OnIOComplete, base::Unretained(this)));
-}
-
-int HttpProxyConnectJob::DoQuicProxyCreateSession() {
-  DCHECK(params_->tunnel());
-  DCHECK(!common_connect_job_params()->quic_supported_versions->empty());
-  const SSLConfig& ssl_config = params_->quic_ssl_config().value();
-
-  // Reset the timer to just the length of time allowed for HttpProxy handshake
-  // so that a fast QUIC connection plus a slow tunnel setup doesn't take longer
-  // to timeout than it should.
-  ResetTimer(kHttpProxyConnectJobTunnelTimeout);
-
-  next_state_ = STATE_QUIC_PROXY_CREATE_STREAM;
-  const HostPortPair& proxy_server = params_->proxy_server().host_port_pair();
-  quic_session_request_ = std::make_unique<QuicSessionRequest>(
-      common_connect_job_params()->quic_session_pool);
-
-  // Select the default QUIC version for the session to the proxy, since there
-  // is no DNS or Alt-Svc information to use.
-  quic::ParsedQuicVersion quic_version = SupportedQuicVersionForProxying();
-
-  // The QuicSessionRequest will handle connecting to any proxies earlier in the
-  // chain to this one, but expects a ProxyChain containing only QUIC proxies.
-  ProxyChain quic_proxies =
-      params_->proxy_chain().Prefix(params_->proxy_chain_index());
-
-  // The ConnectJobParamsFactory ensures that this prefix is all QUIC proxies.
-  for (const ProxyServer& ps : quic_proxies.proxy_servers()) {
-    CHECK(ps.is_quic());
-  }
-
-  return quic_session_request_->Request(
-      // TODO(crbug.com/40181080) Pass the destination directly once it's
-      // converted to contain scheme.
-      url::SchemeHostPort(url::kHttpsScheme, proxy_server.host(),
-                          proxy_server.port()),
-      quic_version, quic_proxies, params_->traffic_annotation(),
-      http_user_agent_settings(), SessionUsage::kProxy, ssl_config.privacy_mode,
-      kH2QuicTunnelPriority, socket_tag(), params_->network_anonymization_key(),
-      params_->secure_dns_policy(),
-      /*require_dns_https_alpn=*/false, ssl_config.GetCertVerifyFlags(),
-      GURL("https://" + proxy_server.ToString()), params_->target_network(),
-      net_log(), &quic_net_error_details_,
-      MultiplexedSessionCreationInitiator::kUnknown,
-      /*management_config=*/std::nullopt,
-      /*failed_on_default_network_callback=*/CompletionOnceCallback(),
-      base::BindOnce(&HttpProxyConnectJob::OnIOComplete,
-                     base::Unretained(this)));
-}
-
-int HttpProxyConnectJob::DoQuicProxyCreateStream(int result) {
-  if (result < 0) {
-    quic_session_request_.reset();
-    return result;
-  }
-
-  next_state_ = STATE_QUIC_PROXY_CREATE_STREAM_COMPLETE;
-  quic_session_ = quic_session_request_->ReleaseSessionHandle();
-  quic_session_request_.reset();
-
-  return quic_session_->RequestStream(
-      false,
-      base::BindOnce(&HttpProxyConnectJob::OnIOComplete,
-                     base::Unretained(this)),
-      params_->traffic_annotation());
-}
-
-int HttpProxyConnectJob::DoQuicProxyCreateStreamComplete(int result) {
-  if (result < 0) {
-    return result;
-  }
-
-  next_state_ = STATE_HTTP_PROXY_CONNECT_COMPLETE;
-  std::unique_ptr<QuicChromiumClientStream::Handle> quic_stream =
-      quic_session_->ReleaseStream();
-
-  uint8_t urgency = ConvertRequestPriorityToQuicPriority(kH2QuicTunnelPriority);
-  quic_stream->SetPriority(quic::QuicStreamPriority(
-      quic::HttpStreamPriority{urgency, kDefaultPriorityIncremental}));
-
-  transport_socket_ = std::make_unique<QuicProxyClientSocket>(
-      std::move(quic_stream), std::move(quic_session_), params_->proxy_chain(),
-      params_->proxy_chain_index(), GetUserAgent(), params_->endpoint(),
-      net_log(), http_auth_controller_,
       common_connect_job_params()->proxy_delegate);
   return transport_socket_->Connect(base::BindOnce(
       &HttpProxyConnectJob::OnIOComplete, base::Unretained(this)));
@@ -879,9 +719,8 @@ int HttpProxyConnectJob::DoRestartWithAuthComplete(int result) {
 }
 
 void HttpProxyConnectJob::ChangePriorityInternal(RequestPriority priority) {
-  // Do not set the priority on |spdy_stream_request_| or
-  // |quic_session_request_|, since those should always use
-  // kH2QuicTunnelPriority.
+  // Do not set the priority on |spdy_stream_request_|, since it should always
+  // use kH2TunnelPriority.
   if (nested_connect_job_) {
     nested_connect_job_->ChangePriority(priority);
   }
@@ -956,9 +795,6 @@ void HttpProxyConnectJob::EmitConnectLatency(NextProto http_version,
     case NextProto::kProtoHTTP2:
       http_version_piece = "Http2";
       break;
-    case NextProto::kProtoQUIC:
-      http_version_piece = "Http3";
-      break;
     default:
       NOTREACHED();
   }
@@ -970,9 +806,6 @@ void HttpProxyConnectJob::EmitConnectLatency(NextProto http_version,
       break;
     case ProxyServer::SCHEME_HTTPS:
       scheme_piece = "Https";
-      break;
-    case ProxyServer::SCHEME_QUIC:
-      scheme_piece = "Quic";
       break;
     case ProxyServer::SCHEME_INVALID:
     case ProxyServer::SCHEME_SOCKS4:

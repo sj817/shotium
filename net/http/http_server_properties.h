@@ -32,9 +32,6 @@
 #include "net/http/broken_alternative_services.h"
 #include "net/third_party/quiche/src/quiche/http2/core/spdy_framer.h"  // TODO(willchan): Reconsider this.
 #include "net/third_party/quiche/src/quiche/http2/core/spdy_protocol.h"
-#include "net/third_party/quiche/src/quiche/quic/core/quic_bandwidth.h"
-#include "net/third_party/quiche/src/quiche/quic/core/quic_server_id.h"
-#include "net/third_party/quiche/src/quiche/quic/core/quic_versions.h"
 #include "url/scheme_host_port.h"
 
 namespace base {
@@ -49,27 +46,13 @@ class IPAddress;
 class NetLog;
 struct SSLConfig;
 
-struct NET_EXPORT SupportsQuic {
-  SupportsQuic() : used_quic(false) {}
-  SupportsQuic(bool used_quic, const std::string& address)
-      : used_quic(used_quic), address(address) {}
-
-  bool Equals(const SupportsQuic& other) const {
-    return used_quic == other.used_quic && address == other.address;
-  }
-
-  bool used_quic;
-  std::string address;
-};
-
 struct NET_EXPORT ServerNetworkStats {
-  ServerNetworkStats() : bandwidth_estimate(quic::QuicBandwidth::Zero()) {}
+  ServerNetworkStats() = default;
 
   friend bool operator==(const ServerNetworkStats&,
                          const ServerNetworkStats&) = default;
 
   base::TimeDelta srtt;
-  quic::QuicBandwidth bandwidth_estimate;
 };
 
 typedef std::vector<AlternativeService> AlternativeServiceVector;
@@ -79,14 +62,11 @@ typedef std::vector<AlternativeService> AlternativeServiceVector;
 // has to go here instead of prevent a circular dependency.
 const int kMaxRecentlyBrokenAlternativeServiceEntries = 200;
 
-// Store at most 5 MRU QUIC servers by default. This is mainly used by cronet.
-const int kDefaultMaxQuicServerEntries = 5;
-
 // The interface for setting/retrieving the HTTP server properties.
 // Currently, this class manages servers':
 // * HTTP/2 support;
 // * Alternative Service support;
-// * QUIC data (like ServerNetworkStats and QuicServerInfo).
+// * ServerNetworkStats.
 //
 // Optionally retrieves and saves properties from/to disk. This class is not
 // threadsafe.
@@ -192,34 +172,6 @@ class NET_EXPORT HttpServerProperties
     iterator EraseIfEmpty(iterator server_info_it);
   };
 
-  struct NET_EXPORT QuicServerInfoMapKey {
-    // If |use_network_anonymization_key| is false, an empty
-    // NetworkAnonymizationKey is used instead of |network_anonymization_key|.
-    QuicServerInfoMapKey(
-        const quic::QuicServerId& server_id,
-        PrivacyMode privacy_mode,
-        const NetworkAnonymizationKey& network_anonymization_key,
-        bool use_network_anonymization_key);
-    ~QuicServerInfoMapKey();
-
-    bool operator<(const QuicServerInfoMapKey& other) const;
-
-    // Used in tests.
-    bool operator==(const QuicServerInfoMapKey& other) const;
-
-    quic::QuicServerId server_id;
-    PrivacyMode privacy_mode = PRIVACY_MODE_DISABLED;
-    NetworkAnonymizationKey network_anonymization_key;
-  };
-
-  // Max number of quic servers to store is not hardcoded and can be set.
-  // Because of this, QuicServerInfoMap will not be a subclass of LRUCache.
-  // Separate from ServerInfoMap because the key includes privacy mode (Since
-  // this is analogous to the SSL session cache, which has separate caches for
-  // privacy mode), and each entry can be quite large, so it has its own size
-  // limit, which is much smaller than the ServerInfoMap's limit.
-  typedef base::LRUCache<QuicServerInfoMapKey, std::string> QuicServerInfoMap;
-
   // If a |pref_delegate| is specified, it will be used to read/write the
   // properties to a pref file. Writes are rate limited to improve performance.
   //
@@ -302,16 +254,6 @@ class NET_EXPORT HttpServerProperties
       const AlternativeService& alternative_service,
       base::Time expiration);
 
-  // Set a single QUIC alternative service for |origin|.  Previous alternative
-  // services for |origin| are discarded.
-  // |alternative_service.host| may be empty.
-  void SetQuicAlternativeService(
-      const url::SchemeHostPort& origin,
-      const NetworkAnonymizationKey& network_anonymization_key,
-      const AlternativeService& alternative_service,
-      base::Time expiration,
-      const quic::ParsedQuicVersionVector& advertised_versions);
-
   // Set alternative services for |origin|, learned in the context of
   // |network_anonymization_key|.  Previous alternative services for |origin|
   // are discarded. Hostnames in |alternative_service_info_vector| may be empty.
@@ -320,25 +262,6 @@ class NET_EXPORT HttpServerProperties
       const url::SchemeHostPort& origin,
       const NetworkAnonymizationKey& network_anonymization_key,
       const AlternativeServiceInfoVector& alternative_service_info_vector);
-
-  // Process configured QUIC hints to identify known QUIC alternative services,
-  // if the kConfigureQuicHints feature is enabled.
-  void MaybeProcessQuicHints();
-
-  // Validates that the QUIC hint is well-formed and adds it as a known
-  // alternative service, if so.
-  // If `is_suffix` is true, `host` is matched as a wildcard suffix.
-  void ValidateAndMaybeAddQuicHint(std::string_view host,
-                                   std::string_view port_string,
-                                   std::string_view alternate_port_string,
-                                   bool is_suffix = false);
-
-  // Sets a single known QUIC alternative service for `canon_host` and `port`,
-  // located at `canon_host` and `alternate_port`.
-  void SetKnownQuicAlternativeService(std::string_view canon_host,
-                                      int port,
-                                      int alternate_port,
-                                      bool is_suffix = false);
 
   // Marks |alternative_service| as broken in the context of
   // |network_anonymization_key|. |alternative_service.host| must not be empty.
@@ -388,15 +311,6 @@ class NET_EXPORT HttpServerProperties
   // Empty alternative service hostnames will be printed as such.
   base::Value GetAlternativeServiceInfoAsValue() const;
 
-  // Tracks the last local address when QUIC was known to work. The address
-  // cannot be set to an empty address - use
-  // ClearLastLocalAddressWhenQuicWorked() if it needs to be cleared.
-  bool WasLastLocalAddressWhenQuicWorked(const IPAddress& local_address) const;
-  bool HasLastLocalAddressWhenQuicWorked() const;
-  void SetLastLocalAddressWhenQuicWorked(
-      IPAddress last_local_address_when_quic_worked);
-  void ClearLastLocalAddressWhenQuicWorked();
-
   // Sets |stats| for |server|.
   void SetServerNetworkStats(
       const url::SchemeHostPort& server,
@@ -412,31 +326,6 @@ class NET_EXPORT HttpServerProperties
   const ServerNetworkStats* GetServerNetworkStats(
       const url::SchemeHostPort& server,
       const NetworkAnonymizationKey& network_anonymization_key);
-
-  // Save QuicServerInfo (in std::string form) for the given |server_id|, in the
-  // context of |network_anonymization_key|.
-  void SetQuicServerInfo(
-      const quic::QuicServerId& server_id,
-      PrivacyMode privacy_mode,
-      const NetworkAnonymizationKey& network_anonymization_key,
-      const std::string& server_info);
-
-  // Get QuicServerInfo (in std::string form) for the given |server_id|, in the
-  // context of |network_anonymization_key|.
-  const std::string* GetQuicServerInfo(
-      const quic::QuicServerId& server_id,
-      PrivacyMode privacy_mode,
-      const NetworkAnonymizationKey& network_anonymization_key);
-
-  // Returns all persistent QuicServerInfo objects.
-  const QuicServerInfoMap& quic_server_info_map() const;
-
-  // Returns the number of server configs (QuicServerInfo objects) persisted.
-  size_t max_server_configs_stored_in_properties() const;
-
-  // Sets the number of server configs (QuicServerInfo objects) to be persisted.
-  void SetMaxServerConfigsStoredInProperties(
-      size_t max_server_configs_stored_in_properties);
 
   // If values are present, sets initial_delay and
   // exponential_backoff_on_initial_delay which are used to calculate delay of
@@ -461,14 +350,6 @@ class NET_EXPORT HttpServerProperties
   void OnServerInfoLoadedForTesting(
       std::unique_ptr<ServerInfoMap> server_info_map) {
     OnServerInfoLoaded(std::move(server_info_map));
-  }
-  void OnLastLocalAddressWhenQuicWorkedForTesting(
-      const IPAddress& last_local_address_when_quic_worked) {
-    OnLastLocalAddressWhenQuicWorkedLoaded(last_local_address_when_quic_worked);
-  }
-  void OnQuicServerInfoMapLoadedForTesting(
-      std::unique_ptr<QuicServerInfoMap> quic_server_info_map) {
-    OnQuicServerInfoMapLoaded(std::move(quic_server_info_map));
   }
   void OnBrokenAndRecentlyBrokenAlternativeServicesLoadedForTesting(
       std::unique_ptr<BrokenAlternativeServiceList>
@@ -498,10 +379,6 @@ class NET_EXPORT HttpServerProperties
     return broken_alternative_services_;
   }
 
-  const QuicServerInfoMap& quic_server_info_map_for_testing() const {
-    return quic_server_info_map_;
-  }
-
   // TODO(mmenke): Look into removing this.
   HttpServerPropertiesManager* properties_manager_for_testing() {
     return properties_manager_.get();
@@ -512,13 +389,7 @@ class NET_EXPORT HttpServerProperties
   // friendness is no longer required.
   friend class HttpServerPropertiesPeer;
 
-  using KnownAlternativeServiceMap =
-      base::flat_map<url::SchemeHostPort, AlternativeService>;
-  using KnownAlternativeServiceSuffixSet = base::flat_set<std::string>;
-
   using CanonicalMap = base::flat_map<ServerInfoMapKey, url::SchemeHostPort>;
-  using QuicCanonicalMap =
-      base::flat_map<QuicServerInfoMapKey, quic::QuicServerId>;
   using CanonicalSuffixList = std::vector<std::string>;
 
   // Internal implementations of public methods. SchemeHostPort argument must be
@@ -552,14 +423,10 @@ class NET_EXPORT HttpServerProperties
       url::SchemeHostPort server,
       const NetworkAnonymizationKey& network_anonymization_key);
 
-  // Helper functions to use the passed in parameters and
-  // |use_network_anonymization_key_| to create a [Quic]ServerInfoMapKey.
+  // Helper function to use the passed in parameters and
+  // |use_network_anonymization_key_| to create a ServerInfoMapKey.
   ServerInfoMapKey CreateServerInfoKey(
       const url::SchemeHostPort& server,
-      const NetworkAnonymizationKey& network_anonymization_key) const;
-  QuicServerInfoMapKey CreateQuicServerInfoKey(
-      const quic::QuicServerId& server_id,
-      PrivacyMode privacy_mode,
       const NetworkAnonymizationKey& network_anonymization_key) const;
 
   // Return the iterator for |server| in the context of
@@ -580,31 +447,17 @@ class NET_EXPORT HttpServerProperties
       const url::SchemeHostPort& server,
       const NetworkAnonymizationKey& network_anonymization_key) const;
 
-  // Return the canonical host with the same canonical suffix as |server|.
-  // The returned canonical host can be used to search for server info in
-  // |quic_server_info_map_|. Return 'end' the host doesn't exist.
-  QuicCanonicalMap::const_iterator GetCanonicalServerInfoHost(
-      const QuicServerInfoMapKey& key) const;
-
   // Remove the canonical alt-svc host for |server| with
   // |network_anonymization_key|.
   void RemoveAltSvcCanonicalHost(
       const url::SchemeHostPort& server,
       const NetworkAnonymizationKey& network_anonymization_key);
 
-  // Update |canonical_server_info_map_| with the new canonical host.
-  // The |key| should have the corresponding server info associated with it
-  // in |quic_server_info_map_|. If |canonical_server_info_map_| doesn't
-  // have an entry associated with |key|, the method will add one.
-  void UpdateCanonicalServerInfoMap(const QuicServerInfoMapKey& key);
-
   // Returns the canonical host suffix for |host|, or nullptr if none
   // exists.
   const std::string* GetCanonicalSuffix(const std::string& host) const;
 
   void OnPrefsLoaded(std::unique_ptr<ServerInfoMap> server_info_map,
-                     const IPAddress& last_local_address_when_quic_worked,
-                     std::unique_ptr<QuicServerInfoMap> quic_server_info_map,
                      std::unique_ptr<BrokenAlternativeServiceList>
                          broken_alternative_service_list,
                      std::unique_ptr<RecentlyBrokenAlternativeServices>
@@ -614,10 +467,6 @@ class NET_EXPORT HttpServerProperties
   // loaded from prefs with what has been learned while waiting for prefs to
   // load.
   void OnServerInfoLoaded(std::unique_ptr<ServerInfoMap> server_info_map);
-  void OnLastLocalAddressWhenQuicWorkedLoaded(
-      const IPAddress& last_local_address_when_quic_worked);
-  void OnQuicServerInfoMapLoaded(
-      std::unique_ptr<QuicServerInfoMap> quic_server_info_map);
   void OnBrokenAndRecentlyBrokenAlternativeServicesLoaded(
       std::unique_ptr<BrokenAlternativeServiceList>
           broken_alternative_service_list,
@@ -663,24 +512,6 @@ class NET_EXPORT HttpServerProperties
 
   BrokenAlternativeServices broken_alternative_services_;
 
-  IPAddress last_local_address_when_quic_worked_;
-
-  // Contains a map of servers which use a known alternative service.
-  // Map from a scheme/host/port to the AlternativeService
-  // with the known alternative service info.
-  KnownAlternativeServiceMap known_alternative_service_map_;
-
-  // Contains a map of suffixes for servers which use a known alternative
-  // service. Map from a scheme/host/port to the AlternativeService
-  // with the known alternative service info. Hosts are reversed to allow for
-  // efficient comparison.
-  KnownAlternativeServiceMap wildcard_known_alternative_service_map_;
-
-  // Contains list of suffixes of hostnames with known alternative
-  // services. Suffixes are reversed to allow for efficient comparison.
-  KnownAlternativeServiceSuffixSet
-      reversed_known_alternative_service_suffixes_set_;
-
   // Contains a map of servers which could share the same alternate protocol.
   // Map from a Canonical scheme/host/port/NAK (host is some postfix of host
   // names) to an actual origin, which has a plausible alternate protocol
@@ -691,18 +522,6 @@ class NET_EXPORT HttpServerProperties
   // ".googlevideo.com", ".googleusercontent.com") of canonical hostnames.
   const CanonicalSuffixList canonical_suffixes_;
 
-  QuicServerInfoMap quic_server_info_map_;
-
-  // Maps canonical suffixes to host names that have the same canonical suffix
-  // and have a corresponding entry in |quic_server_info_map_|. The map can be
-  // used to quickly look for server info for hosts that share the same
-  // canonical suffix but don't have exact match in |quic_server_info_map_|. The
-  // map exists solely to improve the search performance. It only contains
-  // derived data that can be recalculated by traversing
-  // |quic_server_info_map_|.
-  QuicCanonicalMap canonical_server_info_map_;
-
-  size_t max_server_configs_stored_in_properties_;
 
   // Used to post calls to WriteProperties().
   base::OneShotTimer prefs_update_timer_;

@@ -50,8 +50,6 @@
 #include "net/net_buildflags.h"
 #include "net/nqe/network_quality_estimator.h"
 #include "net/proxy_resolution/configured_proxy_resolution_service.h"
-#include "net/quic/quic_context.h"
-#include "net/quic/quic_session_pool.h"
 #include "net/shared_dictionary/shared_dictionary_network_transaction_factory.h"
 #include "net/socket/network_binding_client_socket_factory.h"
 #include "net/ssl/ech_mode_getter.h"
@@ -111,7 +109,6 @@ void URLRequestContextBuilder::SetHttpNetworkSessionComponents(
       request_context->http_auth_handler_factory();
   session_context->http_server_properties =
       request_context->http_server_properties();
-  session_context->quic_context = request_context->quic_context();
   session_context->net_log = request_context->net_log();
   session_context->network_quality_estimator =
       request_context->network_quality_estimator();
@@ -153,20 +150,13 @@ void URLRequestContextBuilder::DisableHttpCache() {
   http_cache_params_ = HttpCacheParams();
 }
 
-void URLRequestContextBuilder::SetSpdyAndQuicEnabled(bool spdy_enabled,
-                                                     bool quic_enabled) {
+void URLRequestContextBuilder::SetSpdyEnabled(bool spdy_enabled) {
   http_network_session_params_.enable_http2 = spdy_enabled;
-  http_network_session_params_.enable_quic = quic_enabled;
 }
 
 void URLRequestContextBuilder::set_sct_auditing_delegate(
     std::unique_ptr<SCTAuditingDelegate> sct_auditing_delegate) {
   sct_auditing_delegate_ = std::move(sct_auditing_delegate);
-}
-
-void URLRequestContextBuilder::set_quic_context(
-    std::unique_ptr<QuicContext> quic_context) {
-  quic_context_ = std::move(quic_context);
 }
 
 void URLRequestContextBuilder::SetCertVerifier(
@@ -333,20 +323,6 @@ std::unique_ptr<URLRequestContext> URLRequestContextBuilder::Build() {
     host_resolver_ = HostResolver::CreateStandaloneNetworkBoundResolver(
         context->net_log(), bound_network_, manager_options_);
 
-    if (!quic_context_) {
-      set_quic_context(std::make_unique<QuicContext>());
-    }
-    auto* quic_params = quic_context_->params();
-    // QUIC sessions for this context should not be closed (or go away) after a
-    // network change.
-    quic_params->close_sessions_on_ip_change = false;
-    quic_params->goaway_sessions_on_ip_change = false;
-
-    // QUIC connection migration should not be enabled when binding a context
-    // to a network.
-    quic_params->migrate_sessions_on_network_change_v2 = false;
-    quic_params->migrate_sessions_early_v2 = false;
-
     // Objects used by network sessions for this context shouldn't listen to
     // network changes.
     http_network_session_params_.ignore_ip_address_changes = true;
@@ -445,12 +421,6 @@ std::unique_ptr<URLRequestContext> URLRequestContextBuilder::Build() {
 
   if (sct_auditing_delegate_) {
     context->set_sct_auditing_delegate(std::move(sct_auditing_delegate_));
-  }
-
-  if (quic_context_) {
-    context->set_quic_context(std::move(quic_context_));
-  } else {
-    context->set_quic_context(std::make_unique<QuicContext>());
   }
 
   if (!proxy_resolution_service_) {

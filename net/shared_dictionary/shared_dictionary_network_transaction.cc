@@ -29,6 +29,7 @@
 #include "net/base/transport_info.h"
 #include "net/base/url_util.h"
 #include "net/cert/x509_certificate.h"
+#include "net/http/http_response_info.h"
 #include "net/filter/brotli_source_stream.h"
 #include "net/filter/filter_source_stream.h"
 #include "net/filter/source_stream.h"

@@ -16,10 +16,8 @@
 #include "net/base/host_port_pair.h"
 #include "net/base/net_export.h"
 #include "net/http/alternate_protocol_usage.h"
-#include "net/quic/quic_http_utils.h"
 #include "net/socket/next_proto.h"
 #include "net/third_party/quiche/src/quiche/http2/core/spdy_protocol.h"
-#include "net/third_party/quiche/src/quiche/quic/core/quic_versions.h"
 
 namespace net {
 
@@ -44,11 +42,9 @@ NET_EXPORT void HistogramBrokenAlternateProtocolLocation(
 // Returns true if |protocol| is a valid protocol.
 NET_EXPORT bool IsAlternateProtocolValid(NextProto protocol);
 
-// Returns true if |protocol| is enabled, based on |is_http2_enabled|
-// and |is_quic_enabled|..
+// Returns true if |protocol| is enabled, based on |is_http2_enabled|.
 NET_EXPORT bool IsProtocolEnabled(NextProto protocol,
-                                  bool is_http2_enabled,
-                                  bool is_quic_enabled);
+                                  bool is_http2_enabled);
 
 // (protocol, host, port) triple as defined in
 // https://tools.ietf.org/id/draft-ietf-httpbis-alt-svc-06.html
@@ -89,11 +85,6 @@ class NET_EXPORT_PRIVATE AlternativeServiceInfo {
       const AlternativeService& alternative_service,
       base::Time expiration);
 
-  static AlternativeServiceInfo CreateQuicAlternativeServiceInfo(
-      const AlternativeService& alternative_service,
-      base::Time expiration,
-      const quic::ParsedQuicVersionVector& advertised_versions);
-
   AlternativeServiceInfo();
 
   AlternativeServiceInfo(
@@ -126,11 +117,6 @@ class NET_EXPORT_PRIVATE AlternativeServiceInfo {
 
   void set_expiration(base::Time expiration) { expiration_ = expiration; }
 
-  // Sets the advertised versions for QUIC alternative services to a sorted copy
-  // of `advertised_versions`.
-  void SetAdvertisedVersions(
-      const quic::ParsedQuicVersionVector& advertised_versions);
-
   const AlternativeService& alternative_service() const {
     return alternative_service_;
   }
@@ -143,23 +129,12 @@ class NET_EXPORT_PRIVATE AlternativeServiceInfo {
 
   base::Time expiration() const { return expiration_; }
 
-  const quic::ParsedQuicVersionVector& advertised_versions() const {
-    return advertised_versions_;
-  }
-
  private:
-  AlternativeServiceInfo(
-      const AlternativeService& alternative_service,
-      base::Time expiration,
-      const quic::ParsedQuicVersionVector& advertised_versions);
+  AlternativeServiceInfo(const AlternativeService& alternative_service,
+                         base::Time expiration);
 
   AlternativeService alternative_service_;
   base::Time expiration_;
-
-  // Lists all the QUIC versions that are advertised by the server and supported
-  // by Chrome. If empty, defaults to versions used by the current instance of
-  // the netstack. This list is sorted according to the server's preference.
-  quic::ParsedQuicVersionVector advertised_versions_;
 };
 
 using AlternativeServiceInfoVector = std::vector<AlternativeServiceInfo>;
@@ -167,9 +142,7 @@ using AlternativeServiceInfoVector = std::vector<AlternativeServiceInfo>;
 NET_EXPORT_PRIVATE AlternativeServiceInfoVector ProcessAlternativeServices(
     const spdy::SpdyAltSvcWireFormat::AlternativeServiceVector&
         alternative_service_vector,
-    bool is_http2_enabled,
-    bool is_quic_enabled,
-    const quic::ParsedQuicVersionVector& supported_quic_versions);
+    bool is_http2_enabled);
 
 }  // namespace net
 
