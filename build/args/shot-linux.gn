@@ -1,0 +1,41 @@
+# Copyright 2026 The Chromium Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# GN args template for //shot:shot on Linux.
+#
+#   echo 'import("//build/args/shot-linux.gn")' > out/Shot/args.gn
+#   gn gen out/Shot
+#
+# Everything platform-neutral is in shot.gn; this file is only the two things
+# that are wrong to state anywhere else, because on Windows they are not merely
+# unnecessary but an error.
+
+import("//build/args/shot.gn")
+
+# Ozone, headless. Linux Chromium has no non-Ozone path any more -- files like
+# ui/platform_window/common/BUILD.gn open with assert(use_ozone) -- so
+# use_ozone = false is not a configuration upstream supports, and reaching it
+# would mean patching those asserts out. Headless is upstream's own answer to
+# "render without a display server", which is exactly what shot is, so it is
+# the platform to select rather than X11 or Wayland.
+#
+# ozone_auto_platforms = false is what makes that a choice instead of an
+# addition: left on, it turns X11 and Wayland on as well and drags in
+# //ui/gfx/x, //ui/ozone/platform/wayland and the protocol bindings under them.
+# Neither is in this tree, and neither would ever be selected at run time.
+#
+# These three cannot live in shot.gn. build/config/ozone.gni asserts that
+# use_ozone is on if any ozone_platform_* is, and use_ozone is false on
+# Windows, so a shared file that set ozone_platform_headless would fail the
+# Windows configure step outright.
+ozone_auto_platforms = false
+ozone_platform = "headless"
+ozone_platform_headless = true
+
+# D-Bus. use_dbus defaults to is_linux, and //components/dbus is not in this
+# tree: it is the desktop session bus -- power management, notifications,
+# global media keys -- and shot renders one document with no session to talk
+# to. Turning the arg off is upstream's switch for that; the alternative is
+# vendoring a bus client that is never connected.
+use_dbus = false

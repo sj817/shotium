@@ -181,7 +181,7 @@ jobs:
         # it would only be a claim that could disagree with the runner.
         run: |
           mkdir -p out/Shot
-          echo 'import("//build/args/shot.gn")' > out/Shot/args.gn
+          echo 'import("//build/args/shot-linux.gn")' > out/Shot/args.gn
           cat out/Shot/args.gn
           gn gen out/Shot
 
