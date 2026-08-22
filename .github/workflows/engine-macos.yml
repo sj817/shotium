@@ -196,6 +196,16 @@ jobs:
           path: /tmp/probe.txt
           if-no-files-found: ignore
 
+      - name: why is the restored build directory dirty
+        if: ${{ github.event.inputs.mode == 'build' }}
+        working-directory: src
+        # The cache restores ~300 MB of objects, yet recent runs re-ran nearly
+        # every CXX edge they had already built -- a cached run should be a
+        # fraction of a full one. `-d explain` makes ninja say why each dirty
+        # edge is dirty; the root causes appear at the top, so a head of the
+        # output is the whole answer. Diagnosis only: nothing is built here.
+        run: ninja -C out/Shot shot -n -d explain 2>&1 | head -120 || true
+
       - name: ninja
         if: ${{ github.event.inputs.mode == 'build' }}
         working-directory: src
