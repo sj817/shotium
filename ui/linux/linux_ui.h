@@ -39,11 +39,6 @@ class Image;
 class Size;
 }  // namespace gfx
 
-namespace printing {
-class PrintingContextLinux;
-class PrintDialogLinuxInterface;
-}  // namespace printing
-
 namespace ui {
 
 class CursorThemeManagerObserver;
@@ -164,14 +159,6 @@ class COMPONENT_EXPORT(LINUX_UI) LinuxUi {
 
   // Returns a map of KeyboardEvent code to KeyboardEvent key values.
   virtual base::flat_map<std::string, std::string> GetKeyboardLayoutMap() = 0;
-
-#if BUILDFLAG(ENABLE_PRINTING)
-  virtual std::unique_ptr<printing::PrintDialogLinuxInterface>
-  CreatePrintDialog(printing::PrintingContextLinux* context) = 0;
-
-  virtual gfx::Size GetPdfPaperSize(
-      printing::PrintingContextLinux* context) = 0;
-#endif
 
   // Returns a native file selection dialog.  `listener` is of type
   // SelectFileDialog::Listener.  TODO(thomasanderson): Move

@@ -188,18 +188,6 @@ ui::TextEditCommand FallbackLinuxUi::GetTextEditCommandForEvent(
 }
 
 #if BUILDFLAG(ENABLE_PRINTING)
-std::unique_ptr<printing::PrintDialogLinuxInterface>
-FallbackLinuxUi::CreatePrintDialog(printing::PrintingContextLinux* context) {
-  // A print dialog won't be created.  Chrome's print dialog (Ctrl-P)
-  // should be used instead of the system (Ctrl-Shift-P) dialog.
-  NOTIMPLEMENTED();
-  return nullptr;
-}
-
-gfx::Size FallbackLinuxUi::GetPdfPaperSize(
-    printing::PrintingContextLinux* context) {
-  return gfx::Size();
-}
 #endif
 
 }  // namespace ui

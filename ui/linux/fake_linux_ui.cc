@@ -151,15 +151,6 @@ ui::TextEditCommand FakeLinuxUi::GetTextEditCommandForEvent(
 }
 
 #if BUILDFLAG(ENABLE_PRINTING)
-std::unique_ptr<printing::PrintDialogLinuxInterface>
-FakeLinuxUi::CreatePrintDialog(printing::PrintingContextLinux* context) {
-  return nullptr;
-}
-
-gfx::Size FakeLinuxUi::GetPdfPaperSize(
-    printing::PrintingContextLinux* context) {
-  return gfx::Size();
-}
 #endif
 
 }  // namespace ui

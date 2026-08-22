@@ -28,9 +28,6 @@ class FallbackLinuxUi : public LinuxUiAndTheme {
                                    float scale) const override;
   base::flat_map<std::string, std::string> GetKeyboardLayoutMap() override;
 #if BUILDFLAG(ENABLE_PRINTING)
-  std::unique_ptr<printing::PrintDialogLinuxInterface> CreatePrintDialog(
-      printing::PrintingContextLinux* context) override;
-  gfx::Size GetPdfPaperSize(printing::PrintingContextLinux* context) override;
 #endif
   ui::SelectFileDialog* CreateSelectFileDialog(
       void* listener,
