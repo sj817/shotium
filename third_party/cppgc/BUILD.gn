@@ -84,6 +84,26 @@ template("v8_vendored_source_set") {
 }
 
 v8_vendored_source_set("v8_libbase") {
+  # lsan-virtual-address-space.cc defines
+  #
+  #   std::unique_ptr<VirtualAddressSpace> LsanVirtualAddressSpace::AllocateSubspace(
+  #
+  # with the return type unqualified. In the header that name is looked up
+  # inside the class, where the base class v8::VirtualAddressSpace injects it;
+  # in the out-of-line definition it is looked up in namespace v8::base before
+  # the class scope is entered. Alone those agree, because nothing that
+  # translation unit includes declares a v8::base::VirtualAddressSpace. Merged
+  # with virtual-address-space.cc, which does, the definition binds to the
+  # v8::base one and the two signatures no longer match.
+  #
+  # It is latent upstream -- V8 never compiles the two together -- and which
+  # jumbo group each lands in depends on the source list, so it appeared on
+  # arm64 (cpu-arm.cc in place of cpu-x86.cc shifted the grouping) while x64
+  # kept building. Excluding the file settles it for every architecture rather
+  # than leaving it to how the chunks happen to fall.
+  shot_jumbo_excluded_sources =
+      [ "v8/src/base/sanitizer/lsan-virtual-address-space.cc" ]
+
   sources = v8_libbase_sources
 
   # src/base/ieee754.cc pulls llvm-libc's shared math headers.
