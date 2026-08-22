@@ -52,6 +52,11 @@ static_library("viz_debugger") {
 }
 
 viz_component("service") {
+  # software_renderer.cc and skia_renderer.cc each define MakeOpacityFilter
+  # in an anonymous namespace, with the same signature and the same comment
+  # above it.
+  shot_jumbo_excluded_sources = [ "display/software_renderer.cc" ]
+
   sources = [
     "display/aggregated_frame.cc",
     "display/aggregated_frame.h",

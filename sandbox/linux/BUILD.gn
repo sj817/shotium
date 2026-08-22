@@ -209,6 +209,11 @@ test("sandbox_linux_unittests") {
 }
 
 component("seccomp_bpf") {
+  # syscall_parameters_restrictions.cc and sigsys_handlers.cc each define
+  # an inline IsArchitectureX86_64() in an anonymous namespace.
+  shot_jumbo_excluded_sources =
+      [ "seccomp-bpf-helpers/syscall_parameters_restrictions.cc" ]
+
   sources = [
     "bpf_dsl/bpf_dsl.cc",
     "bpf_dsl/bpf_dsl.h",

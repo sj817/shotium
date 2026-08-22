@@ -3,6 +3,11 @@
 # found in the LICENSE file.
 
 component("prefs") {
+  # pref_member.cc and pref_change_registrar.cc each define their own
+  # CopyStringView in an anonymous namespace. Two separate functions until
+  # Jumbo puts them in one translation unit.
+  shot_jumbo_excluded_sources = [ "pref_member.cc" ]
+
   sources = [
     "command_line_pref_store.cc",
     "command_line_pref_store.h",
