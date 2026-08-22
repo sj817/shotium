@@ -420,7 +420,10 @@ def header_for(name, dicts, idl_of):
     # everything below it is skipped for "no header for Window".
     impl = implemented_as(rel, name)
     if impl:
-        sibling = os.path.join(os.path.dirname(rel), snake(impl) + ".h")
+        # rel is posix form and this string becomes an #include line, so the
+        # separator must stay "/": os.path.join writes the host's, and clang on
+        # Linux (correctly) refuses an include with a backslash in it.
+        sibling = "%s/%s.h" % (os.path.dirname(rel), snake(impl))
         if os.path.exists(os.path.join(ROOT, sibling.replace("/", os.sep))):
             return sibling
     return None

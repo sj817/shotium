@@ -7,7 +7,7 @@
 
 #include "third_party/blink/renderer/bindings/core/v8/v8_ui_event_init.h"
 
-#include "third_party/blink/renderer/core/frame\dom_window.h"
+#include "third_party/blink/renderer/core/frame/dom_window.h"
 #include "third_party/blink/renderer/core/input/input_device_capabilities.h"
 
 namespace blink {
