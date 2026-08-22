@@ -15,9 +15,15 @@ The fix is to give every source file the time of the revision it came from:
   * files in a DEPS-managed repository get that repository's HEAD commit time.
     A dependency moves as a unit -- when the pinned revision changes, every
     file in it is suspect anyway.
-  * anything a hook produced or downloaded is not in any repository, so it
-    keeps the time it was written. Those are inputs to few edges and there is
-    nothing better to say about them.
+  * anything a hook produced or downloaded gets the time of the last commit
+    that touched DEPS, which is what pins it. "Inputs to few edges" was the
+    first guess here and it was wrong twice over: the clang binary is an
+    explicit input of the libc++ module.pcm, which every CXX edge depends on,
+    and the rust stdlib .rlibs are inputs of libstd -- a freshly-downloaded
+    toolchain with "now" for a timestamp re-dirtied the entire build, which
+    ninja -d explain named directly. The one exception is LASTCHANGE, whose
+    content derives from HEAD, so it carries HEAD's time; its cone is one
+    translation unit.
 
 The output directory is left alone: its timestamps are what the comparison is
 against.
@@ -101,17 +107,34 @@ def main(argv):
 
     times = file_times_from_log(solution)
     head = int(git(solution, 'log', '-1', '--format=%ct').strip())
-    print(f'{args.solution}: {len(times)} tracked paths, head {head}')
+    deps_time = int(git(solution, 'log', '-1', '--format=%ct', '--',
+                        'DEPS').strip())
+    print(f'{args.solution}: {len(times)} tracked paths, '
+          f'head {head}, DEPS {deps_time}')
     for path in walk(solution, skip):
         rel = os.path.relpath(path, solution).replace(os.sep, '/')
-        stamp(path, times.get(rel, head), counters)
+        when = times.get(rel)
+        if when is None:
+            # Untracked: a hook wrote it (llvm-build, rust-toolchain,
+            # LASTCHANGE) or it is local debris. DEPS pins the toolchains, so
+            # DEPS's time is their provenance; if a toolchain ever changes
+            # without a DEPS edit, the CR_CLANG_REVISION / rustflags in every
+            # command line still force the rebuild mtimes no longer would.
+            name = os.path.basename(rel)
+            when = head if name.startswith('LASTCHANGE') else deps_time
+        stamp(path, when, counters)
 
     for entry in entries:
         if entry == args.solution:
             continue
         repo = os.path.join(workspace, entry.replace('/', os.sep))
         if not os.path.isdir(os.path.join(repo, '.git')):
-            continue  # a CIPD or GCS dependency: no revision to speak of
+            # A CIPD or GCS dependency: no commit of its own, but DEPS pins
+            # it, so DEPS's time is the honest answer -- "downloaded just now"
+            # makes every cached compile downstream of it stale.
+            for path in walk(repo, dep_dirs):
+                stamp(path, deps_time, counters)
+            continue
         try:
             when = int(git(repo, 'log', '-1', '--format=%ct').strip())
         except subprocess.CalledProcessError:
