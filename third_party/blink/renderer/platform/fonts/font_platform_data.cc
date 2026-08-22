@@ -26,6 +26,7 @@
 #include "hb-ot.h"
 #include "hb.h"
 #include "skia/ext/skia_utils_base.h"
+#include "third_party/blink/public/platform/linux/web_sandbox_support.h"
 #include "third_party/blink/public/platform/platform.h"
 #include "third_party/blink/renderer/platform/fonts/font_cache.h"
 #include "third_party/blink/renderer/platform/fonts/shaping/harfbuzz_face.h"

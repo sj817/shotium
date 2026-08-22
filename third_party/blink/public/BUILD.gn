@@ -318,6 +318,8 @@ source_set("blink_headers") {
 
   if (is_mac) {
     sources += [
+      "platform/mac/web_sandbox_support.h",
+      "platform/mac/web_scrollbar_theme.h",
     ]
   }
 
