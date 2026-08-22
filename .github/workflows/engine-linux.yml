@@ -254,7 +254,10 @@ jobs:
         working-directory: src
         continue-on-error: true
         timeout-minutes: 280
-        run: ninja -C out/Shot shot -j ${{ github.event.inputs.jobs }}
+        # -k 0: this platform is still being brought up, and each round costs
+        # a runner-hour -- keep compiling past a failure so one log names every
+        # broken translation unit, not just the first.
+        run: ninja -C out/Shot shot -j ${{ github.event.inputs.jobs }} -k 0
 
       - name: save the build directory
         if: ${{ always() && github.event.inputs.mode == 'build' }}

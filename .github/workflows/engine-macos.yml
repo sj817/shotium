@@ -63,9 +63,17 @@ jobs:
         # else worth deleting on Linux is not present here.
         run: |
           df -h /
-          xcodebuild -version || true
-          xcode-select -p
           ls -d /Applications/Xcode*.app 2>/dev/null || true
+          # The image defaults to Xcode 16.4 but ships up to 26.x, and the
+          # tree is cut from a Chromium that builds against the SDK 26 era:
+          # base/process/launch_mac.cc calls posix_spawn_file_actions_addchdir
+          # under __builtin_available(macOS 26), a name SDK 15.5 does not
+          # declare. Selecting the newest installed Xcode makes that whole
+          # class of failure disappear instead of patching each call site.
+          newest="$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)"
+          sudo xcode-select -s "$newest"
+          xcodebuild -version
+          xcode-select -p
           selected="$(xcode-select -p | sed 's|/Contents/Developer||')"
           for app in /Applications/Xcode*.app; do
             if [ "$app" != "$selected" ]; then
@@ -211,7 +219,10 @@ jobs:
         working-directory: src
         continue-on-error: true
         timeout-minutes: 280
-        run: ninja -C out/Shot shot -j ${{ github.event.inputs.jobs }}
+        # -k 0: this platform is still being brought up, and each round costs
+        # a runner-hour -- keep compiling past a failure so one log names every
+        # broken translation unit, not just the first.
+        run: ninja -C out/Shot shot -j ${{ github.event.inputs.jobs }} -k 0
 
       - name: save the build directory
         if: ${{ always() && github.event.inputs.mode == 'build' }}
