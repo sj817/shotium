@@ -1741,24 +1741,6 @@ test("content_browsertests") {
     sources += []
   }
 
-  if (is_mac) {
-    sources += [
-      "../app_shim_remote_cocoa/window_occlusion_browsertest_mac.mm",
-      "../browser/gpu/browser_child_process_backgrounded_bridge_browsertest.mm",
-      "../browser/keyboard_lock_browsertest_mac.mm",
-      "../browser/pointer_lock_browsertest_mac.mm",
-      "../browser/renderer_host/render_frame_host_impl_mac_browsertest.mm",
-      "../browser/renderer_host/render_widget_host_view_mac_browsertest.mm",
-      "../browser/renderer_host/unbounded_element_mac_browsertest.mm",
-      "../browser/scheduler/responsiveness/native_event_observer_browsertest.mm",
-      "../browser/site_per_process_mac_browsertest.mm",
-    ]
-    deps += [ "//third_party/ocmock" ]
-    data_deps += [ "//content/shell:content_shell" ]
-    data += [ "$root_out_dir/Content Shell.app/" ]
-    frameworks = [ "ScreenCaptureKit.framework" ]
-  }
-
   if (is_ios) {
     sources += [
       "../browser/keyboard_lock_browsertest_ios.mm",
@@ -1790,7 +1772,6 @@ test("content_browsertests") {
       "//mojo/public/cpp/platform",
       "//mojo/public/mojom/base",
     ]
-    data_deps += [ "//content/shell:content_shell" ]
     if (use_ozone) {
       deps += [ "//ui/ozone" ]
     }
