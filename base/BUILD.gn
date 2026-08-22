@@ -6410,33 +6410,6 @@ fuzzer_test("base_json_string_escape_fuzzer") {
   ]
 }
 
-if (is_mac) {
-  protoc_convert("base_mach_port_rendezvous_convert_corpus") {
-    sources = [
-      "test/data/mach_port_rendezvous_fuzz/dead_name.textproto",
-      "test/data/mach_port_rendezvous_fuzz/send.textproto",
-    ]
-    inputs = [ "//testing/libfuzzer/fuzzers/mach/mach_message.proto" ]
-    output_pattern = "$target_gen_dir/base_mach_port_rendezvous_corpus/{{source_name_part}}.binarypb"
-    args = [
-      "--encode=mach_fuzzer.MachMessage",
-      "-I",
-      rebase_path("//", root_build_dir),
-      rebase_path(inputs[0], root_build_dir),
-    ]
-  }
-  fuzzer_test("base_mach_port_rendezvous_fuzzer") {
-    sources = [ "apple/mach_port_rendezvous_fuzzer.cc" ]
-    deps = [
-      "//base",
-      "//testing/libfuzzer/fuzzers/mach:converter",
-      "//third_party/libprotobuf-mutator",
-    ]
-    seed_corpus = "$target_gen_dir/base_mach_port_rendezvous_corpus"
-    seed_corpus_deps = [ ":base_mach_port_rendezvous_convert_corpus" ]
-  }
-}
-
 fuzzer_test("command_line_fuzzer") {
   sources = [ "command_line_fuzzer.cc" ]
   deps = [ "//base" ]
