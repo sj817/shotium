@@ -420,11 +420,22 @@ jobs:
         if: success() && github.event.inputs.run_checks == 'true'
         shell: pwsh
         working-directory: src
-        # The three suites, in the order they cost: protocol and geometry first
-        # because they are seconds, then the network one, then the pool. Any
-        # failure fails the job -- there is no point publishing an engine that
-        # does not pass its own checks.
+        # In the order they cost: protocol and geometry first because they are
+        # seconds, then the network one, then the pool, then the two that
+        # render. Any failure fails the job -- there is no point publishing an
+        # engine that does not pass its own checks.
+        #
+        # charset_check and demo_check run here for the same reason they run on
+        # Linux and macOS: they are the only suites that compare pixels, and a
+        # cut that breaks layout produces a wrong page rather than a build
+        # error. The demos travel because they are reftests -- each one renders
+        # its own reference on the same host, so a platform's fonts and
+        # antialiasing cancel out instead of needing a blessed image per
+        # platform. Windows was simply the one still not running them.
         run: |
+          python -m pip install --quiet pillow
           python tools/shot/serve_check.py out/Shot/shot.exe
           python tools/shot/net_check.py out/Shot/shot.exe
           node tools/shot/node_check.cjs out/Shot/shot.exe
+          python tools/shot/charset_check.py out/Shot/shot.exe
+          python tools/shot/demo_check.py out/Shot/shot.exe
