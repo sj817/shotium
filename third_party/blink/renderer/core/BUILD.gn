@@ -249,6 +249,7 @@ component("core") {
     "frame/cached_permission_status.cc",
     "html/anchor_element_viewport_position_tracker.cc",
     "paint/highlight_painter.cc",
+    "timing/performance_timing_for_reporting.cc",
     "xml/parser/xml_document_parser_rs.cc",
   ]
 
