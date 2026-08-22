@@ -114,6 +114,25 @@ is_p2p_enabled = false
 # context, a Vulkan device or a GPU process, so nothing here can select it at
 # run time; the swiftshader and ANGLE args below already say the same thing
 # about their halves of the same stack.
+# The views toolkit, gone. //ui/views and the desktop UI layer around it --
+# message_center, gtk, qt, shell_dialogs, accelerated_widget_mac,
+# remote_cocoa -- were removed: 1801 files that shot has no dependency path to
+# and compiles no translation unit from. What kept them in the tree was that
+# GN loads a BUILD.gn whenever any label in it is named, and their is_mac
+# branches then demanded //components/remote_cocoa and //ui/accessibility,
+# which this fork does not have and cannot restore without dragging //v8,
+# //gin and //chrome back into the graph.
+#
+# Turning the arg off is what makes the removal coherent rather than a hole:
+# every `if (toolkit_views)` block upstream wrote for a build without the
+# toolkit is now taken, including the ones that repack views_resources into
+# ui_test.pak.
+#
+# This changes no bytes in the binary. ThinLTO had already dropped all of it;
+# what it buys is a macOS build that configures, and a smaller graph to
+# evaluate.
+toolkit_views = false
+
 enable_vulkan = false
 
 enable_swiftshader = false

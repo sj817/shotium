@@ -362,7 +362,6 @@ viz_component("service") {
       "display_embedder/software_output_device_mac.h",
     ]
 
-    deps += [ "//ui/accelerated_widget_mac" ]
     frameworks = [ "IOSurface.framework" ]
     if (is_mac) {
       sources += [

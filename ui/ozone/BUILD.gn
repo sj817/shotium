@@ -318,7 +318,6 @@ source_set("test_support_internal") {
 
 static_library("ui_test_support") {
   visibility = []
-  visibility = [ "//ui/views:test_support" ]
 
   testonly = true
 

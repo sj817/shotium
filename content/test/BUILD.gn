@@ -519,7 +519,6 @@ static_library("test_support") {
     "//ui/gl",
     "//ui/native_theme",
     "//ui/resources",
-    "//ui/shell_dialogs",
     "//ui/strings:auto_image_annotation_strings",
     "//url",
     "//url/mojom:url_mojom_gurl",
@@ -612,7 +611,6 @@ static_library("test_support") {
     ]
     deps += [
       "//ui/base/mojom",
-      "//ui/views:test_support",
     ]
   }
 
@@ -651,7 +649,6 @@ static_library("test_support") {
       "//components/discardable_memory/service",
       "//ui/android",
       "//ui/android:test_support",
-      "//ui/shell_dialogs",
     ]
   }
 
@@ -663,7 +660,6 @@ static_library("test_support") {
   if (is_mac) {
     deps += [
       "//sandbox/mac:seatbelt",
-      "//ui/accelerated_widget_mac",
     ]
   }
 
@@ -906,7 +902,6 @@ static_library("browsertest_support") {
   }
 
   if (use_aura && toolkit_views && !is_castos) {
-    deps += [ "//ui/views" ]
   }
 
   if (use_aura) {
@@ -1519,7 +1514,6 @@ test("content_browsertests") {
     "//ui/latency",
     "//ui/native_theme",
     "//ui/resources",
-    "//ui/shell_dialogs",
   ]
 
   if (!(is_chromeos && target_cpu == "arm64" && current_cpu == "arm")) {
@@ -2304,7 +2298,6 @@ test("content_unittests") {
     "//ui/gl:test_support",
     "//ui/latency:test_support",
     "//ui/native_theme",
-    "//ui/shell_dialogs",
     "//url",
   ]
 
@@ -2375,7 +2368,6 @@ test("content_unittests") {
       "//crypto:test_support",
       "//sandbox/mac:seatbelt",
       "//third_party/ocmock",
-      "//ui/accelerated_widget_mac",
       "//ui/base/mojom",
     ]
     frameworks = [

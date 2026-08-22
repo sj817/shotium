@@ -247,7 +247,6 @@ source_set("browser") {
     "//ui/menus",
     "//ui/native_theme",
     "//ui/resources",
-    "//ui/shell_dialogs",
     "//ui/strings:auto_image_annotation_strings",
     "//ui/strings:ax_strings",
   ]
@@ -1371,11 +1370,7 @@ source_set("browser") {
     deps += [
       ":mac_helpers",
       "//components/device_event_log",
-      "//components/remote_cocoa/app_shim",
-      "//components/remote_cocoa/browser",
-      "//components/remote_cocoa/common:mojo",
       "//media",
-      "//ui/accelerated_widget_mac",
       "//ui/events:dom_keyboard_layout",
     ]
     frameworks += [
@@ -1432,7 +1427,6 @@ source_set("browser") {
     deps += [
       "//build:ios_buildflags",
       "//components/strings",
-      "//ui/accelerated_widget_mac",
     ]
   } else {
     # Not Mac.

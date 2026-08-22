@@ -11,10 +11,10 @@ devtools_grd_path = "$shared_intermediate_dir/$devtools_grd_location"
 devtools_grd_path_no_ext = get_path_info(devtools_grd_path, "dir") + "/" +
                            get_path_info(devtools_grd_path, "name")
 
-# Prefer using this (and excluding specific platforms) when a resource applies
-# to (most) desktop platforms.
-assert(toolkit_views ==
-       (is_chromeos || is_fuchsia || is_linux || is_mac || is_win))
+# Upstream asserts here that toolkit_views tracks the desktop platforms.
+# This build deliberately breaks that: //ui/views is gone, so the flag is
+# false on platforms the assert expects it true on. Keeping the assert would
+# only forbid the configuration this tree is.
 
 # Variables that are passed to grit with the -D flag.
 

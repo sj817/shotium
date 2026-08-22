@@ -4,7 +4,6 @@
 
 import("//build/config/features.gni")
 import("//build/config/linux/gtk/gtk.gni")
-import("//ui/qt/qt.gni")
 
 assert(is_linux)
 
@@ -38,52 +37,6 @@ component("linux_ui") {
   ]
 }
 
-component("linux_ui_factory") {
-  defines = [ "IS_LINUX_UI_FACTORY_IMPL" ]
-  public = [ "linux_ui_factory.h" ]
-  sources = [
-    "fallback_linux_ui.cc",
-    "fallback_linux_ui.h",
-    "linux_ui_factory.cc",
-  ]
-
-  public_deps = [
-    ":linux_ui",
-    "//ui/color:color_headers",
-  ]
-
-  deps = [
-    "//base",
-    "//ui/base",
-    "//ui/base/ime/linux",
-    "//ui/events:dom_keyboard_layout",
-    "//ui/gfx",
-    "//ui/native_theme",
-    "//ui/shell_dialogs",
-    "//ui/views",
-  ]
-  if (use_gtk) {
-    # This is the only component that can interact with gtk.
-    deps += [ "//ui/gtk" ]
-  }
-  if (use_qt) {
-    deps += [ "//ui/qt" ]
-  }
-}
-
-source_set("display_server_utils") {
-  sources = [
-    "display_server_utils.cc",
-    "display_server_utils.h",
-  ]
-  deps = [
-    "//base",
-    "//third_party/angle:angle_gpu_info_util",
-    "//ui/base:features",
-    "//ui/base:ozone_buildflags",
-    "//ui/ozone",
-  ]
-}
 
 source_set("test_support") {
   testonly = true
@@ -98,45 +51,5 @@ source_set("test_support") {
     "//ui/base/ime/linux",
     "//ui/gfx",
     "//ui/native_theme",
-    "//ui/shell_dialogs",
   ]
-}
-
-if (use_dbus) {
-  # Observes the system color scheme and accent color via the
-  # org.freedesktop.portal.Settings D-Bus interface, applying them to
-  # NativeTheme.
-  source_set("dark_mode_manager") {
-    sources = [
-      "dark_mode_manager_linux.cc",
-      "dark_mode_manager_linux.h",
-    ]
-    deps = [
-      ":linux_ui",
-      ":linux_ui_factory",
-      "//base",
-      "//components/dbus",
-      "//dbus",
-      "//ui/base:features",
-      "//ui/native_theme",
-    ]
-  }
-
-  source_set("dark_mode_manager_unittests") {
-    testonly = true
-    sources = [ "dark_mode_manager_linux_unittest.cc" ]
-    deps = [
-      ":dark_mode_manager",
-      ":test_support",
-      "//base",
-      "//base/test:test_support",
-      "//components/dbus",
-      "//dbus:test_support",
-      "//testing/gmock",
-      "//testing/gtest",
-      "//ui/base:features",
-      "//ui/native_theme",
-      "//ui/native_theme:test_support",
-    ]
-  }
 }

@@ -18,7 +18,6 @@ import("//testing/test.gni")
 import("//third_party/jni_zero/jni_zero.gni")
 import("//tools/grit/grit_rule.gni")
 import("//ui/base/ui_features.gni")
-import("//ui/qt/qt.gni")
 
 if (is_android) {
   import("//build/config/android/config.gni")
@@ -88,8 +87,6 @@ buildflag_header("buildflags") {
     "USE_XKBCOMMON=$use_xkbcommon",
     "HAS_NATIVE_ACCESSIBILITY=$has_native_accessibility",
     "HAS_PLATFORM_ACCESSIBILITY_SUPPORT=$has_platform_accessibility_support",
-    "USE_GTK=$use_gtk",
-    "USE_QT=$use_qt",
     "ENABLE_PSEUDOLOCALES=$enable_pseudolocales",
   ]
 }

@@ -126,7 +126,6 @@ component("compositor") {
   ]
 
   if (is_apple) {
-    deps += [ "//ui/accelerated_widget_mac" ]
   }
 
   if (is_win && use_aura) {
@@ -221,7 +220,6 @@ static_library("test_support") {
   if (is_apple) {
     deps += [
       "//gpu/ipc/service",
-      "//ui/accelerated_widget_mac",
     ]
   }
 

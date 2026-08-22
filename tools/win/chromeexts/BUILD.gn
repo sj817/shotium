@@ -25,6 +25,5 @@ shared_library("chromeexts") {
     "//third_party/crashpad/crashpad/client",
     "//third_party/crashpad/crashpad/minidump",
     "//third_party/crashpad/crashpad/snapshot",
-    "//ui/views/debug:views_debug",
   ]
 }

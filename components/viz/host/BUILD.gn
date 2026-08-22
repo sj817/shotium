@@ -57,7 +57,6 @@ viz_component("host") {
   ]
 
   if (is_apple) {
-    deps += [ "//ui/accelerated_widget_mac" ]
   }
 
   if (use_ozone) {
