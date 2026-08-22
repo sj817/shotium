@@ -885,6 +885,27 @@ if (is_clang_or_gcc) {
   }
 
   component("allocator_shim") {
+    # allocator_shim.cc includes shim/shim_alloc_functions.h, which ends with
+    #
+    #   #undef PA_ALWAYS_INLINE
+    #
+    # to keep the macro from escaping the header. In its own translation unit
+    # that is tidy. In a Jumbo one it leaves every file concatenated after it
+    # without the macro, and the next #include of the header that defines it is
+    # a no-op because the include guard has already fired. On Linux the file
+    # that lands next is allocator_shim_default_dispatch_to_partition_alloc.cc,
+    # and it fails at
+    #
+    #   partition_address_space_internal.h:26: error: unknown type name
+    #   'PA_ALWAYS_INLINE'
+    #
+    # Excluding the file that does the #undef rather than the one that trips
+    # over it: any source ordered after it would hit the same thing, so the
+    # source list deciding the chunking would decide whether this builds.
+    # Windows escapes it today only because its sources differ enough that the
+    # two never share a chunk.
+    shot_jumbo_excluded_sources = [ "shim/allocator_shim.cc" ]
+
     sources = []
     deps = []
     all_dependent_configs = []
