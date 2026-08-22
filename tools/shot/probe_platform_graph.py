@@ -107,8 +107,24 @@ def run_gn(out_dir):
     return result.returncode, result.stdout + result.stderr
 
 
+DEPS_ENTRY = re.compile(r"^\s*'src/([^']+)'\s*:", re.M)
+
+
 def deps_paths():
-    """The gclient entries, with the platforms each is checked out for."""
+    """The gclient entries, with the condition each is checked out under.
+
+    Both files have to be read, and the difference between them is the whole
+    point. gclient fetches what DEPS lists; .gitmodules carries the same paths
+    for git's benefit, and the two can disagree -- a pruning pass that dropped
+    a DEPS entry and left the submodule behind produces a path that looks
+    checked out for this platform and is never fetched. That is what happened
+    to third_party/libsync/src: .gitmodules said "checkout_linux or
+    checkout_android", DEPS said nothing, and the Linux runner reached ninja
+    before anyone found out.
+
+    So a path in .gitmodules but not in DEPS is reported as a finding rather
+    than as something the runner will provide.
+    """
     out = subprocess.run(
         ['git', 'config', '-f', '.gitmodules', '--get-regexp',
          r'^submodule\..*\.(path|gclient-condition)$'],
@@ -123,7 +139,18 @@ def deps_paths():
             paths[name] = value.strip()
         else:
             conditions[name] = value.strip()
-    return {p: conditions.get(n, '') for n, p in paths.items()}
+
+    with open(os.path.join(ROOT, 'DEPS'), encoding='utf-8',
+              errors='replace') as f:
+        in_deps = set(DEPS_ENTRY.findall(f.read()))
+
+    result = {}
+    for name, path in paths.items():
+        condition = conditions.get(name, '') or '(unconditional)'
+        if path not in in_deps:
+            condition += '  -- NOT IN DEPS, so gclient will not fetch it'
+        result[path] = condition
+    return result, in_deps
 
 
 def check_inputs(out_dir, target='shot'):
@@ -143,8 +170,9 @@ def check_inputs(out_dir, target='shot'):
         print('\nninja could not list inputs:\n%s' % result.stderr[:1000])
         return []
 
-    deps = deps_paths()
+    deps, in_deps = deps_paths()
     toolchain, from_deps, repo = [], {}, []
+    unfetchable = []
     for raw in result.stdout.split('\n'):
         path = raw.strip().replace('\\', '/')
         if not path:
@@ -160,6 +188,8 @@ def check_inputs(out_dir, target='shot'):
         for d, condition in deps.items():
             if rel == d or rel.startswith(d + '/'):
                 from_deps.setdefault(d, condition)
+                if d not in in_deps and d not in unfetchable:
+                    unfetchable.append(d)
                 break
         else:
             repo.append(rel)
@@ -167,9 +197,9 @@ def check_inputs(out_dir, target='shot'):
     print('\n=== inputs ===')
     print('%d absent from the toolchain package this host carries'
           % len(toolchain))
-    print('%d gclient entr(ies) the runner will fetch:' % len(from_deps))
+    print('%d gclient entr(ies) this build reads from:' % len(from_deps))
     for d in sorted(from_deps):
-        print('    %-48s %s' % (d, from_deps[d] or '(unconditional)'))
+        print('    %-42s %s' % (d, from_deps[d]))
     print('%d file(s) this repository should carry and does not:' % len(repo))
     for rel in repo:
         print('    %s' % rel)
@@ -177,7 +207,15 @@ def check_inputs(out_dir, target='shot'):
         print('\nRestore them:\n  python tools/shot/restore_from_upstream.py '
               '<paths>\nand prefer restoring a vendored crate or library whole '
               'over restoring the\nfiles ninja happened to name first.')
-    return repo
+    if unfetchable:
+        print('\n%d gclient entr(ies) the build needs that DEPS does not list.'
+              % len(unfetchable))
+        print('The submodule is still in .gitmodules, so the path looks '
+              'accounted for,\nbut gclient reads DEPS and will not fetch it. '
+              'Restore the entry:')
+        for d in unfetchable:
+            print('    git cat-file blob <baseline>:DEPS | grep -A3 "%s"' % d)
+    return repo + unfetchable
 
 
 def main(argv):
