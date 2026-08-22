@@ -3,9 +3,15 @@
 # found in the LICENSE file.
 
 # Exposes the product version as GN variables. This replaces //chrome/version.gni,
-# which was deleted with the rest of //chrome. Only the desktop half survives:
-# every Android version-code table in the original is gone, since this build
-# targets Windows and the Android products no longer exist in the tree.
+# which was deleted with the rest of //chrome. Every Android version-code table
+# in the original is gone; those products do not exist in this tree.
+#
+# The macOS half is here because it is needed, not for symmetry. Written first
+# for Windows, this file dropped chrome_dylib_version along with the Android
+# tables, and //content/public/app builds a shared_library under is_mac whose
+# -compatibility_version and -current_version are that string -- so a macOS
+# gn gen failed with "Undefined identifier: chrome_dylib_version" long after
+# the file that dropped it looked finished.
 #
 # PREFER NOT TO USE THESE. Write an action, or use //build/util/process_version.gni,
 # to generate a file at build time instead. Reading the version here forces GN to
@@ -18,7 +24,24 @@ _version_dictionary_template = "full = \"@MAJOR@.@MINOR@.@BUILD@.@PATCH@\" " +
                                "major = \"@MAJOR@\" minor = \"@MINOR@\" " +
                                "build = \"@BUILD@\" patch = \"@PATCH@\" "
 
-_script_arguments = [
+_script_arguments = []
+
+# Mach-O version numbers are three fields, and the third is a byte, so the
+# patch number is split across the last two rather than truncated. Transcribed
+# from upstream chrome/version.gni, including the synthesised arguments --
+# version.py has no built-in notion of PATCH_HI or PATCH_LO.
+if (is_mac) {
+  _version_dictionary_template += "patch_hi = @PATCH_HI@ patch_lo = @PATCH_LO@ "
+
+  _script_arguments += [
+    "-e",
+    "PATCH_HI=int(PATCH)//256",
+    "-e",
+    "PATCH_LO=int(PATCH)%256",
+  ]
+}
+
+_script_arguments += [
   "-f",
   rebase_path(chrome_version_file, root_build_dir),
   "-t",
@@ -40,3 +63,12 @@ chrome_version_major = _result.major
 chrome_version_minor = _result.minor
 chrome_version_build = _result.build
 chrome_version_patch = _result.patch
+
+if (is_mac) {
+  chrome_version_patch_hi = _result.patch_hi
+  chrome_version_patch_lo = _result.patch_lo
+
+  # What //content/public/app passes to -compatibility_version.
+  chrome_dylib_version = "$chrome_version_build.$chrome_version_patch_hi" +
+                         ".$chrome_version_patch_lo"
+}
