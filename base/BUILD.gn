@@ -239,6 +239,16 @@ component("base") {
   shot_jumbo_excluded_sources = [
     "allocator/scheduler_loop_quarantine_config.cc",
     "power_monitor/battery_level_provider_win.cc",
+
+    # sampling_heap_profiler.cc and poisson_allocation_sampler.cc each define
+    # their own `struct ThreadLocalData` and `GetThreadLocalData()` in an
+    # anonymous namespace. Separately compiled that is what anonymous
+    # namespaces are for; merged, the second is a redefinition of the first.
+    # They share a chunk on Linux and not on Windows, whose base sources differ
+    # enough to fall differently -- so this is not a Linux bug, it is the same
+    # latent collision the source list happens to expose there.
+    "sampling_heap_profiler/sampling_heap_profiler.cc",
+
     "task/single_thread_task_runner.cc",
   ]
 
