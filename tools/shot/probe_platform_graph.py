@@ -30,7 +30,22 @@ it refuses to overwrite a path that already exists. What it produces is a list
 to make decisions from: restore the directory from upstream with
 tools/shot/restore_from_upstream.py, or cut the dependency that named it.
 
-Two things it cannot tell you:
+Once gn resolves, a second check runs. `ninja -t inputs` names every file the
+target reads -- twenty-odd thousand of them -- and each one that is not on disk
+falls into exactly one of three groups:
+
+  toolchain  llvm-build and the rust host tools; this checkout has the Windows
+             ones, and the runner will have its own
+  DEPS       under a gclient entry whose .gitmodules condition includes this
+             platform, so the runner fetches it
+  REPO       a file this repository is supposed to carry, and does not
+
+Only the third is a finding, and it is one gn cannot make: gn does not stat
+sources. It is how //third_party/rust/libc/v0_2 turned up with 7 of its 405
+files -- the crate is absent from the Windows graph entirely, so the pruning
+saw nothing mention it. ninja would have found it too, one file per run.
+
+Two things this cannot tell you:
 
   * macOS. build/config/BUILDCONFIG.gn asserts host_os is mac or linux, so
     there is no cross-configure to run. --os mac is rejected rather than
@@ -40,8 +55,8 @@ Two things it cannot tell you:
     exists but is wrong for the target -- the x64 assembly in an arm64 build,
     say -- resolves perfectly here and fails thousands of edges into ninja.
 
-A clean run still ends in errors, and they are worth recognising rather than
-chasing: cxxbridge.exe and the rust build scripts are reported as inputs
+A clean gn run still ends in errors, and they are worth recognising rather
+than chasing: cxxbridge.exe and the rust build scripts are reported as inputs
 nothing generates, because rust_cxx.gni appends .exe when host_os == "win".
 That is the host showing through, not the target, and the script says so.
 """
@@ -82,10 +97,87 @@ BASE_ARGS = {
 }
 
 
+NINJA = os.path.join(ROOT, 'third_party', 'ninja',
+                     'ninja.exe' if os.name == 'nt' else 'ninja')
+
+
 def run_gn(out_dir):
     result = subprocess.run([GN, 'gen', out_dir], cwd=ROOT,
                             capture_output=True, text=True, errors='replace')
     return result.returncode, result.stdout + result.stderr
+
+
+def deps_paths():
+    """The gclient entries, with the platforms each is checked out for."""
+    out = subprocess.run(
+        ['git', 'config', '-f', '.gitmodules', '--get-regexp',
+         r'^submodule\..*\.(path|gclient-condition)$'],
+        cwd=ROOT, capture_output=True, text=True, errors='replace').stdout
+    paths, conditions = {}, {}
+    for line in out.split('\n'):
+        if not line.strip():
+            continue
+        key, _, value = line.partition(' ')
+        name = key[len('submodule.'):key.rindex('.')]
+        if key.endswith('.path'):
+            paths[name] = value.strip()
+        else:
+            conditions[name] = value.strip()
+    return {p: conditions.get(n, '') for n, p in paths.items()}
+
+
+def check_inputs(out_dir, target='shot'):
+    """Every file the target reads, and which of them are not here.
+
+    gn does not stat sources, so a build file naming a file the pruning
+    removed configures cleanly and fails in ninja -- one file per run. This
+    asks ninja for the whole list instead.
+    """
+    if not os.path.exists(NINJA):
+        print('\nno ninja at %s; skipping the input check' % NINJA)
+        return []
+    result = subprocess.run([NINJA, '-C', out_dir, '-t', 'inputs', target],
+                            cwd=ROOT, capture_output=True, text=True,
+                            errors='replace')
+    if result.returncode != 0:
+        print('\nninja could not list inputs:\n%s' % result.stderr[:1000])
+        return []
+
+    deps = deps_paths()
+    toolchain, from_deps, repo = [], {}, []
+    for raw in result.stdout.split('\n'):
+        path = raw.strip().replace('\\', '/')
+        if not path:
+            continue
+        if not path.startswith('../../'):
+            continue          # generated in the build directory; ninja makes it
+        rel = path[6:]
+        if os.path.exists(os.path.join(ROOT, rel)):
+            continue
+        if 'llvm-build' in rel or 'rust-toolchain' in rel or rel.endswith('.exe'):
+            toolchain.append(rel)
+            continue
+        for d, condition in deps.items():
+            if rel == d or rel.startswith(d + '/'):
+                from_deps.setdefault(d, condition)
+                break
+        else:
+            repo.append(rel)
+
+    print('\n=== inputs ===')
+    print('%d absent from the toolchain package this host carries'
+          % len(toolchain))
+    print('%d gclient entr(ies) the runner will fetch:' % len(from_deps))
+    for d in sorted(from_deps):
+        print('    %-48s %s' % (d, from_deps[d] or '(unconditional)'))
+    print('%d file(s) this repository should carry and does not:' % len(repo))
+    for rel in repo:
+        print('    %s' % rel)
+    if repo:
+        print('\nRestore them:\n  python tools/shot/restore_from_upstream.py '
+              '<paths>\nand prefer restoring a vendored crate or library whole '
+              'over restoring the\nfiles ninja happened to name first.')
+    return repo
 
 
 def main(argv):
@@ -198,7 +290,17 @@ def main(argv):
               '  python tools/shot/restore_from_upstream.py <paths>\n'
               'or cut whatever names it. A directory only the test targets of '
               'a\nloaded BUILD.gn reach is usually the second.')
-    return 0 if verdict.startswith(('gn gen succeeded', 'graph resolved')) else 1
+
+    resolved = verdict.startswith(('gn gen succeeded', 'graph resolved'))
+    if not resolved:
+        # build.ninja is stale or absent; asking ninja anything would only
+        # describe the last configuration that worked.
+        return 1
+    if created:
+        print('\nstubs were in play, so the input list below is not '
+              'trustworthy; fix the\ndirectories above and run again')
+        return 1
+    return 1 if check_inputs(out_dir) else 0
 
 
 if __name__ == '__main__':
