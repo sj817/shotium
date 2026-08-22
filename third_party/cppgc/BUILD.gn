@@ -96,6 +96,16 @@ v8_vendored_source_set("v8_libbase") {
       "dbghelp.lib",
     ]
   }
+
+  if (is_linux) {
+    # Same two V8 names here: platform-linux.cc calls dladdr and
+    # clock_nanosleep. On macOS both live in libSystem, which is why there is
+    # no matching is_mac block.
+    libs = [
+      "dl",
+      "rt",
+    ]
+  }
 }
 
 v8_vendored_source_set("v8_heap_base") {

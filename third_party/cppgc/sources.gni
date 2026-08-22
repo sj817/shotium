@@ -4,6 +4,11 @@
 # One list per upstream target. Merging them would collide:
 # src/base/logging.cc and src/heap/cppgc-internal/logging.cc
 # map to the same object file name.
+#
+# The conditionals are transcribed from V8's own BUILD.gn -- see
+# PLATFORM_RULES in the generator. A source under a condition is
+# reachable on some platform this fork builds and not on others; one
+# outside every condition compiles everywhere.
 
 v8_libplatform_sources = [
   "v8/src/libplatform/default-foreground-task-runner.cc",
@@ -72,22 +77,34 @@ cppgc_base_sources = [
 
 v8_heap_base_sources = [
   "v8/src/heap/base/active-system-pages.cc",
-  "v8/src/heap/base/asm/x64/push_registers_masm.asm",
   "v8/src/heap/base/incremental-marking-schedule.cc",
   "v8/src/heap/base/memory-tagging.cc",
   "v8/src/heap/base/stack.cc",
   "v8/src/heap/base/unsafe-json-emitter.cc",
   "v8/src/heap/base/worklist.cc",
 ]
+if (current_cpu == "x64" && is_win) {
+  v8_heap_base_sources += [
+    "v8/src/heap/base/asm/x64/push_registers_masm.asm",
+  ]
+}
+if (current_cpu == "x64" && !is_win) {
+  v8_heap_base_sources += [
+    "v8/src/heap/base/asm/x64/push_registers_asm.cc",
+  ]
+}
+if (current_cpu == "arm64") {
+  v8_heap_base_sources += [
+    "v8/src/heap/base/asm/arm64/push_registers_asm.cc",
+  ]
+}
 
 v8_libbase_sources = [
   "v8/src/base/abort-mode.cc",
   "v8/src/base/bits.cc",
   "v8/src/base/bounded-page-allocator.cc",
-  "v8/src/base/cpu/cpu-x86.cc",
   "v8/src/base/cpu/cpu.cc",
   "v8/src/base/debug/stack_trace.cc",
-  "v8/src/base/debug/stack_trace_win.cc",
   "v8/src/base/division-by-constant.cc",
   "v8/src/base/emulated-virtual-address-subspace.cc",
   "v8/src/base/file-utils.cc",
@@ -107,7 +124,6 @@ v8_libbase_sources = [
   "v8/src/base/platform/condition-variable.cc",
   "v8/src/base/platform/memory-protection-key.cc",
   "v8/src/base/platform/mutex.cc",
-  "v8/src/base/platform/platform-win32.cc",
   "v8/src/base/platform/platform.cc",
   "v8/src/base/platform/semaphore.cc",
   "v8/src/base/platform/time.cc",
@@ -121,3 +137,36 @@ v8_libbase_sources = [
   "v8/src/base/virtual-address-space.cc",
   "v8/src/base/vlq-base64.cc",
 ]
+if (target_cpu == "x86" || target_cpu == "x64") {
+  v8_libbase_sources += [
+    "v8/src/base/cpu/cpu-x86.cc",
+  ]
+}
+if (target_cpu == "arm" || target_cpu == "arm64") {
+  v8_libbase_sources += [
+    "v8/src/base/cpu/cpu-arm.cc",
+  ]
+}
+if (is_posix) {
+  v8_libbase_sources += [
+    "v8/src/base/debug/stack_trace_posix.cc",
+    "v8/src/base/platform/platform-posix-time.cc",
+    "v8/src/base/platform/platform-posix.cc",
+  ]
+}
+if (is_linux) {
+  v8_libbase_sources += [
+    "v8/src/base/platform/platform-linux.cc",
+  ]
+}
+if (is_mac) {
+  v8_libbase_sources += [
+    "v8/src/base/platform/platform-darwin.cc",
+  ]
+}
+if (is_win) {
+  v8_libbase_sources += [
+    "v8/src/base/debug/stack_trace_win.cc",
+    "v8/src/base/platform/platform-win32.cc",
+  ]
+}

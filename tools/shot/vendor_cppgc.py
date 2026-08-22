@@ -12,21 +12,35 @@ v8-platform.h, the latter pulling v8-source-location.h) plus abseil, which
 Chromium already has. Nothing here drags in the parser, the interpreter,
 TurboFan, the snapshot or the bindings.
 
-The source list is computed from the files on disk rather than transcribed from
-V8's BUILD.gn, because that file expresses the platform split through ~350 lines
-of conditionals. Files for other platforms are excluded by name; if that filter
-is wrong the compiler says so immediately, which is a better check than a
-hand-copied list nobody re-reads.
+Every platform this fork targets is vendored, not just the host. The first
+version of this script kept only the files a Windows x64 build reaches, and
+wrote them into sources.gni as a flat list. That is invisible until another
+platform builds: an arm64 Windows run got as far as edge 6362 of 7548 before
+clang-cl was handed src/heap/base/asm/x64/push_registers_masm.asm with
+--target=aarch64-pc-windows and failed on the first `;;` of the copyright
+header. `ninja -n` cannot catch that class of error either, because the file
+exists -- it is simply the wrong one. So the platform split now lives in
+sources.gni as GN conditionals, and PLATFORM_RULES below is transcribed from
+V8's own BUILD.gn rather than inferred from filenames.
 
 Usage:
   vendor_cppgc.py <v8-checkout> [--revision <sha>]
+  vendor_cppgc.py --regenerate
+
+--regenerate rewrites sources.gni from the files already under
+third_party/cppgc/v8, with no V8 checkout involved. It is what to run after
+adding or removing a vendored file by hand; the generated list then still
+matches what is on disk, which is the only thing that makes the "do not edit"
+header true.
 """
 
 import os
 import shutil
 import sys
 
-DEST = r"D:\Github\chromium\third_party\cppgc"
+DEST = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+    "third_party", "cppgc")
 VENDOR = os.path.join(DEST, "v8")
 
 # Directories taken wholesale, relative to the V8 checkout root.
@@ -48,22 +62,38 @@ FILES = [
     "LICENSE",
 ]
 
-# Other platforms' implementations. V8 selects these with current_cpu/is_win
-# conditionals; here they are simply not vendored.
-OTHER_PLATFORM = (
-    "platform-aix", "platform-cygwin", "platform-darwin", "platform-freebsd",
-    "platform-fuchsia", "platform-linux", "platform-openbsd",
-    "platform-posix", "platform-posix-time", "platform-qnx",
-    "platform-solaris", "platform-starboard", "platform-zos",
-    "stack_trace_android", "stack_trace_fuchsia", "stack_trace_posix",
-    "stack_trace_zos",
+# The six configurations this fork builds. Anything only reachable outside this
+# set is not vendored -- there is no aix, zos, fuchsia, android or ios here, and
+# no 32-bit, mips, ppc, s390, loong64 or riscv.
+#
+# Adding a platform means adding its files here *and* to PLATFORM_RULES, and the
+# two have to agree: a file vendored but unclassified would be compiled on every
+# platform, which is the bug this replaced.
+PLATFORM_KEEP = (
+    "platform-posix", "platform-posix-time", "platform-linux",
+    "platform-darwin", "platform-win32",
+    "stack_trace_posix", "stack_trace_win",
 )
-# Only the x64 register-push assembly is reachable on this host.
-ASM_KEEP = "src/heap/base/asm/x64/push_registers_masm.asm"
+CPU_KEEP = ("cpu-x86", "cpu-arm")
+ASM_KEEP = (
+    "src/heap/base/asm/x64/push_registers_masm.asm",
+    "src/heap/base/asm/x64/push_registers_asm.cc",
+    "src/heap/base/asm/arm64/push_registers_asm.cc",
+)
 
-# Other architectures' CPU feature detection.
-OTHER_CPU = ("cpu-arm", "cpu-loong64", "cpu-mips64", "cpu-ppc", "cpu-riscv",
-             "cpu-s390")
+# Every platform- and cpu-specific stem V8 has, so that one it grows later is
+# not silently swept into the unconditional list by a filter that only knows
+# what to exclude. A stem here that is not in PLATFORM_KEEP/CPU_KEEP is dropped;
+# a stem in neither list is a source this script has no opinion about, and it
+# says so rather than guessing.
+PLATFORM_ALL = PLATFORM_KEEP + (
+    "platform-aix", "platform-cygwin", "platform-freebsd", "platform-fuchsia",
+    "platform-openbsd", "platform-qnx", "platform-solaris",
+    "platform-starboard", "platform-zos",
+    "stack_trace_android", "stack_trace_fuchsia", "stack_trace_zos",
+)
+CPU_ALL = CPU_KEEP + ("cpu-loong64", "cpu-mips64", "cpu-ppc", "cpu-riscv",
+                      "cpu-s390")
 
 # Built by V8 only when cppgc_enable_caged_heap is on; caged-heap.h has an
 # #error for the case we are in. Same for the 32-bit-UBSan-only translation
@@ -77,6 +107,45 @@ DISABLED_FEATURE = ("caged-heap", "caged-heap-local-data", "ubsan",
 SKIP_NAMES = {"DEPS", "OWNERS", "DIR_METADATA", "README.md", "BUILD.gn",
               "PRESUBMIT.py"}
 
+# Which GN condition guards each platform-specific source, transcribed from
+# V8's BUILD.gn at the vendored revision -- v8_heap_base for the assembly,
+# v8_libbase for the rest. Sources not named here are unconditional.
+#
+# Two of V8's conditions are narrowed rather than copied, because the platforms
+# they distinguish do not exist in this tree:
+#   is_posix || is_fuchsia          -> is_posix
+#   is_linux || is_chromeos         -> is_linux
+# and platform-posix-time.cc, which upstream excludes on aix and zos, is simply
+# posix here. Narrowing an unreachable branch away is safe; widening one would
+# not be, so nothing below is broader than upstream.
+PLATFORM_RULES = [
+    # v8_heap_base. Note the x64 split: Windows prefers the masm version
+    # because it carries unwind directives, and every other target compiles the
+    # inline-asm .cc. arm64 has no masm variant at all -- Windows arm64 builds
+    # push_registers_asm.cc too, which is why it guards on _WIN64 internally.
+    ("src/heap/base/asm/x64/push_registers_masm.asm",
+     'current_cpu == "x64" && is_win'),
+    ("src/heap/base/asm/x64/push_registers_asm.cc",
+     'current_cpu == "x64" && !is_win'),
+    ("src/heap/base/asm/arm64/push_registers_asm.cc",
+     'current_cpu == "arm64"'),
+
+    # v8_libbase: CPU feature detection. Upstream keys these on target_cpu, not
+    # current_cpu, and the difference is deliberate -- keep it.
+    ("src/base/cpu/cpu-x86.cc", 'target_cpu == "x86" || target_cpu == "x64"'),
+    ("src/base/cpu/cpu-arm.cc", 'target_cpu == "arm" || target_cpu == "arm64"'),
+
+    # v8_libbase: the platform layer.
+    ("src/base/platform/platform-posix.cc", "is_posix"),
+    ("src/base/platform/platform-posix-time.cc", "is_posix"),
+    ("src/base/platform/platform-linux.cc", "is_linux"),
+    ("src/base/platform/platform-darwin.cc", "is_mac"),
+    ("src/base/platform/platform-win32.cc", "is_win"),
+    ("src/base/debug/stack_trace_posix.cc", "is_posix"),
+    ("src/base/debug/stack_trace_win.cc", "is_win"),
+]
+RULE_FOR = dict(PLATFORM_RULES)
+
 
 def wanted(rel):
     """rel is a forward-slash path relative to the V8 root."""
@@ -85,9 +154,14 @@ def wanted(rel):
     if name in SKIP_NAMES:
         return False
     if "/asm/" in rel:
-        return rel == ASM_KEEP
-    if stem in OTHER_PLATFORM or stem in OTHER_CPU:
-        return False
+        return rel in ASM_KEEP
+    if stem in PLATFORM_ALL:
+        # Headers stay whichever platform they belong to: platform-posix.h is
+        # included by platform-linux.cc and platform-darwin.cc alike, and a
+        # header that is never compiled costs nothing.
+        return stem in PLATFORM_KEEP or name.endswith(".h")
+    if stem in CPU_ALL:
+        return stem in CPU_KEEP or name.endswith(".h")
     # Headers stay -- they are included unconditionally; only the translation
     # units are dropped.
     if stem in DISABLED_FEATURE and name.endswith(".cc"):
@@ -123,61 +197,142 @@ def copy_all(src_root):
     return copied
 
 
-def main():
-    if len(sys.argv) < 2:
-        sys.exit(__doc__)
-    src_root = sys.argv[1]
-    revision = "unknown"
-    if "--revision" in sys.argv:
-        revision = sys.argv[sys.argv.index("--revision") + 1]
+def scan_vendored():
+    """The same list copy_all returns, read back off disk instead."""
+    found = []
+    for dirpath, dirnames, filenames in os.walk(VENDOR):
+        for fn in sorted(filenames):
+            rel = os.path.relpath(os.path.join(dirpath, fn),
+                                  VENDOR).replace("\\", "/")
+            found.append(rel)
+    return sorted(found)
 
-    if os.path.isdir(VENDOR):
-        shutil.rmtree(VENDOR)
-    copied = copy_all(src_root)
 
+# One list per V8 target. They have to stay separate: src/base/logging.cc and
+# src/heap/cppgc-internal/logging.cc would otherwise produce the same object
+# file name, which GN rejects.
+GROUPS = [
+    ("v8_libplatform_sources", "src/libplatform/"),
+    ("cppgc_base_sources", "src/heap/cppgc-internal/"),
+    ("v8_heap_base_sources", "src/heap/base/"),
+    ("v8_libbase_sources", "src/base/"),
+]
+
+
+def write_sources_gni(copied, revision):
     sources = sorted(r for r in copied
-                     if r.endswith((".cc", ".asm"))
-                     and (r.startswith("src/")))
-    headers = [r for r in copied if r.endswith((".h", ".inc"))]
+                     if r.endswith((".cc", ".asm")) and r.startswith("src/"))
 
-    # One list per V8 target. They have to stay separate: src/base/logging.cc
-    # and src/heap/cppgc-internal/logging.cc would otherwise produce the same
-    # object file name, which GN rejects.
-    groups = [
-        ("v8_libplatform_sources", "src/libplatform/"),
-        ("cppgc_base_sources", "src/heap/cppgc-internal/"),
-        ("v8_heap_base_sources", "src/heap/base/"),
-        ("v8_libbase_sources", "src/base/"),
+    lines = [
+        "# Generated by //tools/shot/vendor_cppgc.py from V8 %s." % revision[:12],
+        "# Do not edit; re-run the script instead.",
+        "#",
+        "# One list per upstream target. Merging them would collide:",
+        "# src/base/logging.cc and src/heap/cppgc-internal/logging.cc",
+        "# map to the same object file name.",
+        "#",
+        "# The conditionals are transcribed from V8's own BUILD.gn -- see",
+        "# PLATFORM_RULES in the generator. A source under a condition is",
+        "# reachable on some platform this fork builds and not on others; one",
+        "# outside every condition compiles everywhere.",
     ]
+
+    claimed = set()
+    unclassified = []
+    for var, prefix in GROUPS:
+        mine = [r for r in sources
+                if r.startswith(prefix) and r not in claimed]
+        claimed.update(mine)
+
+        plain = [r for r in mine if r not in RULE_FOR]
+        lines.append("")
+        lines.append("%s = [" % var)
+        for rel in plain:
+            lines.append('  "v8/%s",' % rel)
+        lines.append("]")
+
+        # Group by condition, in the order PLATFORM_RULES lists them, so a
+        # regeneration produces the same bytes as long as the rules and the
+        # tree have not changed.
+        conditional = [r for r in mine if r in RULE_FOR]
+        seen_conditions = []
+        for rel, cond in PLATFORM_RULES:
+            if rel in conditional and cond not in seen_conditions:
+                seen_conditions.append(cond)
+        for cond in seen_conditions:
+            group = [r for r in conditional if RULE_FOR[r] == cond]
+            lines.append("if (%s) {" % cond)
+            lines.append("  %s += [" % var)
+            for rel in group:
+                lines.append('    "v8/%s",' % rel)
+            lines.append("  ]")
+            lines.append("}")
+
+    unclassified = [r for r in sources if r not in claimed]
+
     with open(os.path.join(DEST, "sources.gni"), "w", newline="") as f:
-        f.write("# Generated by //tools/shot/vendor_cppgc.py from V8 %s.\n"
-                "# Do not edit; re-run the script instead.\n"
-                "#\n"
-                "# One list per upstream target. Merging them would collide:\n"
-                "# src/base/logging.cc and src/heap/cppgc-internal/logging.cc\n"
-                "# map to the same object file name.\n"
-                % revision[:12])
-        claimed = set()
-        for var, prefix in groups:
-            f.write("\n%s = [\n" % var)
-            for rel in sources:
-                if rel.startswith(prefix) and rel not in claimed:
-                    claimed.add(rel)
-                    f.write('  "v8/%s",\n' % rel)
-            f.write("]\n")
-        leftover = [r for r in sources if r not in claimed]
-        if leftover:
-            print("UNCLAIMED: %s" % ", ".join(leftover))
+        f.write("\n".join(lines) + "\n")
 
-    print("copied %d file(s): %d source(s), %d header(s)"
-          % (len(copied), len(sources), len(headers)))
-    by_tree = {}
-    for rel in copied:
-        key = "/".join(rel.split("/")[:3]) if rel.startswith("src/heap") \
-            else "/".join(rel.split("/")[:2])
-        by_tree[key] = by_tree.get(key, 0) + 1
-    for key in sorted(by_tree):
-        print("  %-32s %4d" % (key, by_tree[key]))
+    return sources, unclassified
 
 
-main()
+def main():
+    argv = sys.argv[1:]
+    revision = "unknown"
+    if "--revision" in argv:
+        i = argv.index("--revision")
+        revision = argv[i + 1]
+        del argv[i:i + 2]
+
+    if "--regenerate" in argv:
+        copied = scan_vendored()
+        # The revision is a property of what was vendored, not of this run, so
+        # a regeneration must not overwrite it with "unknown".
+        if revision == "unknown":
+            revision = read_recorded_revision()
+        stray = [r for r in copied if not wanted(r)]
+        if stray:
+            print("VENDORED BUT NOT WANTED (the filter and the tree disagree):")
+            for rel in stray:
+                print("  %s" % rel)
+    else:
+        if not argv:
+            sys.exit(__doc__)
+        src_root = argv[0]
+        if os.path.isdir(VENDOR):
+            shutil.rmtree(VENDOR)
+        copied = copy_all(src_root)
+
+    sources, unclassified = write_sources_gni(copied, revision)
+
+    print("%d file(s), %d source(s)" % (len(copied), len(sources)))
+    if unclassified:
+        print("UNCLAIMED (in no group -- they will not be built):")
+        for rel in unclassified:
+            print("  %s" % rel)
+
+    # Which sources ended up behind which condition, so the split is readable
+    # without opening the generated file.
+    by_cond = {}
+    for rel in sources:
+        by_cond.setdefault(RULE_FOR.get(rel, "(always)"), []).append(rel)
+    for cond in sorted(by_cond, key=lambda c: (c != "(always)", c)):
+        print("  %-42s %d" % (cond, len(by_cond[cond])))
+    return 0
+
+
+def read_recorded_revision():
+    """The revision README.chromium records for the vendored tree."""
+    path = os.path.join(DEST, "README.chromium")
+    try:
+        with open(path, encoding="utf-8") as f:
+            for line in f:
+                if line.startswith("Revision:"):
+                    return line.split(":", 1)[1].strip()
+    except OSError:
+        pass
+    return "unknown"
+
+
+if __name__ == "__main__":
+    sys.exit(main())
