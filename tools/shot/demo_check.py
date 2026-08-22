@@ -153,7 +153,14 @@ def run_one(exe, tmp, name):
         return name, 'FAIL', 'rendered a single flat colour'
     again, err = render(exe, test, os.path.join(tmp, name + '.2.png'))
     if again != got:
-        return name, 'FAIL', 'two renders of the same page differ'
+        # Say how they differ, not just that they do. The two answers look
+        # nothing alike and lead in opposite directions: a handful of pixels
+        # off by one or two is text rasterising against a font cache that was
+        # cold for the first render, while a large or structural difference is
+        # the engine itself being non-deterministic. Reporting only "differ"
+        # once cost a CI round that could not distinguish them.
+        return name, 'FAIL', 'two renders of the same page differ: %s' % (
+            describe_difference(got, again))
     detail = 'renders, deterministic'
     if n is not None:
         detail += ', %s%d colours' % ('>=' if n >= 64 else '', n)
