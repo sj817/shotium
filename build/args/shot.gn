@@ -103,6 +103,19 @@ is_p2p_enabled = false
 # GL context, a Vulkan device, or a GPU process, so ANGLE's renderer backends
 # and SwiftShader cannot be selected at runtime. They previously survived in
 # the build graph even though ThinLTO removed all of their code from shot.exe.
+# Vulkan, off. enable_vulkan defaults to is_linux || is_chromeos ||
+# is_android || is_fuchsia, so Windows has never built skia's Vulkan backend
+# and Linux always did -- which is why the first Linux build reached
+# GrVkImage.cpp and found VK_CALL defined two different ways in one Jumbo
+# translation unit.
+#
+# Excluding a file from Jumbo would have silenced that and left the backend in
+# the build. shot rasterises into a CPU SkSurface and never creates a GL
+# context, a Vulkan device or a GPU process, so nothing here can select it at
+# run time; the swiftshader and ANGLE args below already say the same thing
+# about their halves of the same stack.
+enable_vulkan = false
+
 enable_swiftshader = false
 enable_swiftshader_vulkan = false
 angle_enable_swiftshader = false
