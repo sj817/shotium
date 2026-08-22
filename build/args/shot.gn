@@ -29,6 +29,31 @@ is_shot_build = true
 use_shot_jumbo_build = true
 shot_jumbo_file_merge_limit = 8
 
+# Clang modules, off, because Jumbo and modules cannot both be right about the
+# same translation unit. Modules compile each header once and make its macros
+# visible only where the module map says; -fmodules-local-submodule-visibility
+# then scopes them per submodule. Jumbo does the opposite -- it concatenates
+# translation units precisely so that one #include serves all of them.
+#
+# Where they meet, a header that upstream only ever includes from one .cc stops
+# seeing the macros it relies on the includer having defined. On Linux that is
+#
+#   partition_address_space_internal.h:26: error: unknown type name
+#   'PA_ALWAYS_INLINE'
+#
+# four hundred edges into the build, in allocator_shim_shot_jumbo_0.o.
+#
+# This has no effect on Windows, where use_clang_modules was already false --
+# clang_modules_platform_supported does not cover it. It changes only the two
+# platforms that would otherwise pay for a feature Jumbo has already replaced:
+# both exist to stop the compiler parsing the same header repeatedly, and the
+# build cannot have both.
+#
+# Worth knowing when reproducing a Linux configure locally: use_clang_modules
+# also requires using_tested_sysroot, so a local gn gen with use_sysroot =
+# false has modules off regardless, and will not reproduce this.
+use_clang_modules = false
+
 # //third_party/icu is a DEPS checkout, so a builder that runs gclient sync
 # gets it from its own upstream and never sees the exclusion list this tree
 # carries locally. Merged without it, icuuc and icui18n collide on gInitOnce,
