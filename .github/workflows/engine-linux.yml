@@ -1,10 +1,27 @@
-# Builds //shot:shot on Linux, natively, on x64 or arm64.
+# Builds //shot:shot on Linux for x64 or arm64, both on an x64 host.
 #
-# Native on both: arm64 runs on ubuntu-24.04-arm rather than being
-# cross-compiled from an x64 host. GitHub documents the two runners as the
-# same machine -- 4 CPUs, 16 GB of RAM, 14 GB of SSD -- so this costs nothing
-# in capability, and it buys the one thing a cross-compile cannot: the check
-# suites run the binary on the architecture it ships for.
+# arm64 is cross-compiled, and not by preference. It was native at first, on
+# ubuntu-24.04-arm, which GitHub documents as the same machine as the x64
+# runner; the appeal was that the check suites would run the binary on the
+# architecture it ships for. gclient sync refuses:
+#
+#   failed to resolve infra/3pp/tools/gperf/linux-arm64@version:3@3.2
+#   no such package: infra/3pp/tools/gperf/linux-arm64
+#
+# DEPS asks for infra/3pp/tools/gperf/${platform} whenever host_os is linux,
+# and upstream has never published that package for linux-arm64, because
+# upstream has never built there: Chromium's own linux-arm64 is cross-compiled
+# from an x64 host, where ${platform} resolves to linux-amd64 and the package
+# exists. Nothing in this fork can conjure a CIPD package that was never built,
+# so the fix is to build the way the package list assumes.
+#
+# Cross-compiling also settles the sysroot, which is the other half of the same
+# assumption: debian_bullseye_arm64-sysroot is gated on checkout_arm64, so
+# target_cpu in .gclient is what fetches it.
+#
+# The cost is real and worth stating: an x64 runner cannot execute an arm64
+# binary, so run_checks is ignored for that architecture. windows-arm64 is in
+# the same position for the same reason.
 #
 # This is deliberately a separate workflow from engine-windows.yml rather than
 # a matrix entry on it. The Windows build works; folding an unproven target
@@ -39,7 +56,7 @@ on:
         options: [probe, build]
         default: probe
       arch:
-        description: 'x64 (ubuntu-24.04) or arm64 (ubuntu-24.04-arm), both native'
+        description: 'x64 (native) or arm64 (cross-compiled from this x64 host)'
         type: choice
         options: [x64, arm64]
         default: x64
@@ -53,8 +70,7 @@ on:
 
 jobs:
   build:
-    runs-on: ${{ github.event.inputs.arch == 'arm64'
-                 && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
+    runs-on: ubuntu-24.04
     timeout-minutes: 350
 
     permissions:
@@ -125,6 +141,7 @@ jobs:
             "custom_vars": {"checkout_configuration": "small"},
           }]
           target_os = ["linux"]
+          target_cpu = ["x64", "arm64"]
           EOF
           cat .gclient
 
@@ -136,9 +153,13 @@ jobs:
 
       - name: build dependencies
         # --no-prompt because there is no terminal, --no-nacl because it is not
-        # in this build graph. No sysroot step: both architectures build
-        # natively, so the packages this installs are the ones the compiler
-        # actually links against.
+        # in this build graph.
+        #
+        # These are host packages, and for x64 they are also what the compiler
+        # links against. arm64 links against debian_bullseye_arm64-sysroot
+        # instead, which gclient fetches because .gclient names arm64 in
+        # target_cpu -- so there is no install-sysroot.py step here; DEPS has
+        # already done it.
         working-directory: src
         run: |
           sudo ./build/install-build-deps.sh --no-prompt --no-nacl || \
@@ -151,8 +172,8 @@ jobs:
         uses: actions/cache/restore@v4
         # See engine-windows.yml for why the build directory itself is the
         # cache and why nothing else shares the budget with it. The key carries
-        # the architecture as well as the platform: the two are different
-        # machines producing different objects, and restoring one into the
+        # the architecture as well as the platform: the two produce entirely
+        # different objects even from the same host, and restoring one into the
         # other would rebuild everything having evicted something useful.
         with:
           path: src/out/Shot
@@ -181,7 +202,10 @@ jobs:
         # it would only be a claim that could disagree with the runner.
         run: |
           mkdir -p out/Shot
-          echo 'import("//build/args/shot-linux.gn")' > out/Shot/args.gn
+          {
+            echo 'import("//build/args/shot-linux.gn")'
+            echo 'target_cpu = "${{ github.event.inputs.arch }}"'
+          } > out/Shot/args.gn
           cat out/Shot/args.gn
           gn gen out/Shot
 
@@ -285,9 +309,15 @@ jobs:
           compression-level: 0
 
       - name: checks
-        # Both architectures are native, so both can run their own binary.
+        # x64 only. The runner is x64 for both architectures now, so there is
+        # nothing here that can execute an arm64 binary; asking would fail on
+        # "cannot execute binary file" and read as a broken engine rather than
+        # a host that cannot run it. An arm64 artifact therefore ships checked
+        # by nothing but the compiler and the linker -- worth remembering
+        # before trusting one.
         if: ${{ success() && github.event.inputs.mode == 'build'
-                && github.event.inputs.run_checks == 'true' }}
+                && github.event.inputs.run_checks == 'true'
+                && github.event.inputs.arch == 'x64' }}
         working-directory: src
         run: |
           python3 -m pip install --quiet pillow
