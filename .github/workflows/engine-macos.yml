@@ -160,8 +160,7 @@ jobs:
         run: |
           mkdir -p out/Shot
           cat > out/Shot/args.gn <<'EOF'
-          import("//build/args/shot.gn")
-          use_system_xcode = true
+          import("//build/args/shot-mac.gn")
           EOF
           cat out/Shot/args.gn
           gn gen out/Shot

@@ -22,7 +22,6 @@
 
 #if BUILDFLAG(IS_LINUX)
 #include "base/cpu.h"
-#include "components/system_media_controls/linux/buildflags/buildflags.h"
 #endif
 
 #if BUILDFLAG(IS_MAC)
@@ -626,11 +625,12 @@ BASE_FEATURE(kHardwareMediaKeyHandling,
 #if BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC)
              base::FEATURE_ENABLED_BY_DEFAULT
 #elif BUILDFLAG(IS_LINUX)
-#if BUILDFLAG(USE_MPRIS)
-             base::FEATURE_ENABLED_BY_DEFAULT
-#else
+             // MPRIS is the D-Bus interface a Linux desktop uses
+             // to expose media controls, and it needs
+             // //components/system_media_controls, which this
+             // tree does not have. Upstream picks the default
+             // from USE_MPRIS; here the answer is fixed.
              base::FEATURE_DISABLED_BY_DEFAULT
-#endif  // BUILDFLAG(USE_MPRIS)
 #else
              base::FEATURE_DISABLED_BY_DEFAULT
 #endif  // BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) ||
