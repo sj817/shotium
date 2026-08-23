@@ -305,7 +305,8 @@ jobs:
         # did, once. Deleting it first means only this run's link can
         # satisfy the check; the relink costs a couple of minutes.
         working-directory: src
-        run: rm -f out/Shot/shot.exe
+          # pwsh, not bash: rm is Remove-Item, whose flags differ.
+        run: if (Test-Path out/Shot/shot.exe) { Remove-Item -Force out/Shot/shot.exe }
 
       - name: ninja
         shell: pwsh
