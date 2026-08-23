@@ -291,7 +291,13 @@ mojom("mojom_platform") {
     sources += [ "dwrite_font_proxy/dwrite_font_proxy.mojom" ]
   }
 
-  if (is_mac && !is_shot_build) {
+  if (is_mac) {
+    # Carved out of the shot build once, but local_frame_mojo_handler.h
+    # includes the generated -blink.h under IS_MAC with no shot condition,
+    # and its mac members (TextInputHost, GetCharacterIndexAtPoint and
+    # friends) are compiled into LocalFrame regardless. The interface is the
+    # cheap half; the carve-out only broke the build on the one platform
+    # Windows CI never judged.
     sources += [ "input/text_input_host.mojom" ]
   }
 

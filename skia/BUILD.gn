@@ -236,6 +236,14 @@ component("skia") {
   shot_jumbo_excluded_sources = [
     "//third_party/skia/modules/skottie/src/Transform.cpp",
     "//third_party/skia/modules/skottie/src/animator/KeyframeAnimator.cpp",
+
+    # GrFragmentProcessor.cpp and GrGeometryProcessor.cpp both open with a
+    # file-scope `using ProgramImpl = ...` naming different types, and
+    # RangeSelector.cpp and ShapeLayer.cpp both define a ShapeInfo struct.
+    # The mac source list groups each pair into one jumbo unit; the lists the
+    # other platforms produce happen not to.
+    "//third_party/skia/src/gpu/ganesh/GrGeometryProcessor.cpp",
+    "//third_party/skia/modules/skottie/src/text/RangeSelector.cpp",
     "//third_party/skia/src/gpu/ganesh/GrDirectContextPriv.cpp",
     "//third_party/skia/src/gpu/ganesh/SurfaceDrawContext.cpp",
     "//third_party/skia/src/gpu/ganesh/gl/GrGLAttachment.cpp",

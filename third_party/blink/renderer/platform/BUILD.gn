@@ -1346,6 +1346,8 @@ component("platform") {
       "fonts/mac/font_cache_mac.mm",
       "fonts/mac/font_matcher_mac.h",
       "fonts/mac/font_matcher_mac.mm",
+      "mac/color_mac.h",
+      "mac/color_mac.mm",
       "text/locale_mac.h",
       "text/locale_mac.mm",
       "theme/web_theme_engine_mac.cc",

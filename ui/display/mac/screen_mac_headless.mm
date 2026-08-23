@@ -12,6 +12,7 @@
 #include "base/command_line.h"
 #include "base/containers/flat_set.h"
 #include "base/types/expected.h"
+#include "components/headless/screen_info/headless_screen_info.h"
 #include "ui/display/headless/headless_screen_util.h"
 #include "ui/display/util/display_util.h"
 #include "ui/gfx/geometry/rect.h"

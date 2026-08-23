@@ -147,6 +147,13 @@ component("net") {
     # nothing it includes reaches combaseapi.h; merged with a file that does, the
     # loop head becomes `for (auto& struct : interfaces)`.
     "base/network_interfaces_win.cc",
+    # Opens with `#define __APPLE_USE_RFC_3542`, which only works if it comes
+    # before the first include of <netinet/in.h>. Alone it always does; merged
+    # after a file that has already pulled that header in, the include guard
+    # wins and IPV6_DONTFRAG is never exposed. Mac is where that constant is
+    # needed, but the ordering hazard is the file's, so it stays out of jumbo
+    # everywhere it could be grouped.
+    "socket/udp_socket_posix.cc",
     "filter/gzip_source_stream.cc",
     "http/http_cache_transaction.cc",
     "http/http_stream_factory_job_controller.cc",

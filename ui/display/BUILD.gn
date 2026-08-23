@@ -17,6 +17,16 @@ component("display_features") {
 }
 
 component("display") {
+  # ca_display_link_mac.mm, cv_display_link_mac.mm and
+  # external_display_link_mac.mm each define an anonymous-namespace
+  # DisplayLinkGlobals; any two merged into one jumbo unit collide. Keep all
+  # three out so no regrouping can pick a colliding pair.
+  shot_jumbo_excluded_sources = [
+    "mac/ca_display_link_mac.mm",
+    "mac/cv_display_link_mac.mm",
+    "mac/external_display_link_mac.mm",
+  ]
+
   sources = [
     "display.cc",
     "display.h",

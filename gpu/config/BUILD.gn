@@ -179,6 +179,12 @@ component("config") {
   if (is_mac) {
     sources += [ "gpu_info_collector_mac.mm" ]
     frameworks = [ "OpenGL.framework" ]
+
+    # gpu_switching.cc calls CGLChoosePixelFormat, deprecated along with the
+    # rest of OpenGL since 10.14, and -Werror makes that fatal. This is the
+    # SDK's own silencer, and the one upstream already uses for the same
+    # reason in ui/gl, ui/gl/init and gpu/ipc/service.
+    defines += [ "GL_SILENCE_DEPRECATION" ]
   }
   if (is_ios) {
     sources += [ "gpu_info_collector_ios.mm" ]
