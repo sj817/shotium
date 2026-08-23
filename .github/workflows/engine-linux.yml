@@ -249,6 +249,17 @@ jobs:
         # output is the whole answer. Diagnosis only: nothing is built here.
         run: ninja -C out/Shot shot -n -d explain 2>&1 | head -120 || true
 
+      - name: forget the previous binary
+        # The build directory is restored from cache, so out/Shot still
+        # holds the previous run's executable -- and when a compile fails,
+        # "did the build finish" would find that stale binary, call the run
+        # a success, and ship yesterday's build as today's artifact. It
+        # did, once. Deleting it first means only this run's link can
+        # satisfy the check; the relink costs a couple of minutes.
+        if: ${{ github.event.inputs.mode == 'build' }}
+        working-directory: src
+        run: rm -f out/Shot/shot
+
       - name: ninja
         if: ${{ github.event.inputs.mode == 'build' }}
         working-directory: src

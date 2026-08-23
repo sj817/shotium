@@ -33,6 +33,7 @@
 #include <wrl/client.h>
 
 #include "skia/ext/font_utils.h"
+#include "third_party/skia/include/core/SkFontMgr.h"
 #include "third_party/blink/public/platform/web_string.h"
 #include "third_party/blink/public/web/win/web_font_rendering.h"
 #include "third_party/skia/include/ports/SkTypeface_win.h"
