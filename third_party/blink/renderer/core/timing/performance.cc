@@ -224,8 +224,6 @@ PerformanceEntryVector MergePerformanceEntryVectors(
   return merged_entries;
 }
 
-using PerformanceObserverVector = HeapVector<Member<PerformanceObserver>>;
-
 constexpr size_t kDefaultResourceTimingBufferSize = 250;
 constexpr size_t kDefaultEventTimingBufferSize = 150;
 constexpr size_t kDefaultContainerTimingBufferSize = 150;

@@ -21,6 +21,10 @@
 
 #include "third_party/blink/renderer/core/svg/svg_animate_motion_element.h"
 
+// Directly, not transitively: ParsePoint() below returns base::expected, and
+// which jumbo chunk happens to have included this first differs per platform
+// -- linux was the first compiler to see a chunk where none had.
+#include "base/types/expected.h"
 #include "third_party/blink/renderer/core/dom/document.h"
 #include "third_party/blink/renderer/core/dom/element_traversal.h"
 #include "third_party/blink/renderer/core/svg/animation/smil_animation_effect_parameters.h"
