@@ -70,17 +70,25 @@ jobs:
           # under __builtin_available(macOS 26), a name SDK 15.5 does not
           # declare. Selecting the newest installed Xcode makes that whole
           # class of failure disappear instead of patching each call site.
+          # Xcode_26.3.app is a symlink to Xcode_26.3.0.app, and the first
+          # attempt selected the symlink and then deleted its target: the
+          # deletion loop compared path strings, "the newest Xcode" pointed at
+          # nothing, and the developer directory collapsed to CommandLineTools
+          # -- which is what gn gen then found. Resolve every path first and
+          # compare resolved paths only.
           newest="$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)"
+          newest="$(readlink -f "$newest")"
           sudo xcode-select -s "$newest"
-          xcodebuild -version
-          xcode-select -p
-          selected="$(xcode-select -p | sed 's|/Contents/Developer||')"
           for app in /Applications/Xcode*.app; do
-            if [ "$app" != "$selected" ]; then
+            if [ "$(readlink -f "$app")" != "$newest" ]; then
               echo "removing $app"
               sudo rm -rf "$app" || true
             fi
           done
+          # Prove the selection survived the deletions before spending an hour
+          # on a sync that would fail at gn gen.
+          xcodebuild -version
+          xcode-select -p
           df -h /
 
       - name: checkout
