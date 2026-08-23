@@ -29,8 +29,13 @@
 #include "ui/base/ui_base_paths.h"
 
 #if BUILDFLAG(IS_WIN)
+#include <dwrite.h>
+#include <wrl/client.h>
+
+#include "skia/ext/font_utils.h"
 #include "third_party/blink/public/platform/web_string.h"
 #include "third_party/blink/public/web/win/web_font_rendering.h"
+#include "third_party/skia/include/ports/SkTypeface_win.h"
 #include "ui/gfx/font.h"
 #include "ui/gfx/system_fonts_win.h"
 #endif
@@ -187,6 +192,33 @@ base::expected<std::unique_ptr<ShotRuntime>, std::string> ShotRuntime::Create(
 #if BUILDFLAG(IS_WIN)
   blink::WebFontRendering::SetAntialiasedTextEnabled(true);
   blink::WebFontRendering::SetLCDTextEnabled(false);
+
+  // Grayscale alone shrank the differences but did not close them, and the
+  // remaining state turned out to live outside the process entirely. Measured
+  // on one machine: the first process ever to rasterise a given (font, size,
+  // rendering mode) tuple produces slightly different glyph edges than every
+  // process after it; the warm state survives across processes and batches,
+  // and a byte-identical copy of the executable stays warm, so it is keyed by
+  // what was drawn, not by who drew it. That is the Windows font cache
+  // service: a shared DirectWrite factory consults it, and a render that runs
+  // while an entry is still being built takes the in-process path, whose
+  // rasterisation differs by a hair. CI runners are always that first
+  // machine.
+  //
+  // An ISOLATED factory never talks to the service, so every process --
+  // including the first on a freshly booted machine -- rasterises the same
+  // way. The cost is losing the cross-process font list cache, paid once per
+  // process start, and shot's serve mode starts one process.
+  {
+    Microsoft::WRL::ComPtr<IUnknown> dwrite_unknown;
+    Microsoft::WRL::ComPtr<IDWriteFactory> dwrite_factory;
+    CHECK(SUCCEEDED(DWriteCreateFactory(DWRITE_FACTORY_TYPE_ISOLATED,
+                                        __uuidof(IDWriteFactory),
+                                        &dwrite_unknown)));
+    CHECK(SUCCEEDED(dwrite_unknown.As(&dwrite_factory)));
+    skia::OverrideDefaultSkFontMgr(
+        SkFontMgr_New_DirectWrite(dwrite_factory.Get()));
+  }
 
   // The Windows shell fonts, which blink cannot ask for itself.
   //

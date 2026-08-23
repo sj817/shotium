@@ -144,6 +144,10 @@ executable("shot") {
   if (is_win) {
     deps += [ "//build/win:default_exe_manifest" ]
 
+    # shot_runtime.cc creates its own ISOLATED DWriteCreateFactory so glyph
+    # rasterisation never consults the machine-wide font cache service.
+    libs = [ "dwrite.lib" ]
+
     # lld stops after twenty undefined symbols. This binary is linked out of a
     # tree where whole subsystems have been removed, so when it does fail to
     # link the interesting question is which set of things is missing, not
