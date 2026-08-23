@@ -27,7 +27,6 @@
 #include "third_party/blink/public/web/blink.h"
 #include "ui/base/resource/resource_bundle.h"
 #include "ui/base/ui_base_paths.h"
-#include "ui/gfx/font_render_params.h"
 
 #if BUILDFLAG(IS_WIN)
 #include "third_party/blink/public/platform/web_string.h"
@@ -165,22 +164,29 @@ base::expected<std::unique_ptr<ShotRuntime>, std::string> ShotRuntime::Create(
   // blink's FontCache starts with antialiased_text_enabled_ = false and
   // lcd_text_enabled_ = false, so FontPlatformData::CreateSkFont() picked
   // SkFont::Edging::kAlias and every glyph came out with hard, unantialiased
-  // edges. A browser does not leave those at their defaults: it fills
-  // RendererPreferences from gfx::GetFontRenderParams(), which on Windows reads
-  // the system's ClearType configuration, and pushes the result into blink --
-  // WebViewImpl::UpdateFontRenderingFromRendererPrefs(). shot has no WebView,
-  // so it asks the host the same question and answers blink directly.
-  const gfx::FontRenderParams font_params =
-      gfx::GetFontRenderParams(gfx::FontRenderParamsQuery(), nullptr);
+  // edges. A browser fills these from gfx::GetFontRenderParams(), the host's
+  // ClearType configuration -- and the first cut of this code did the same.
+  //
+  // A screenshot must not do that, for two reasons this code has now paid for:
+  //
+  //  * Subpixel (LCD) antialiasing encodes the physical RGB stripe layout of
+  //    the monitor the page was rendered for into the image. A screenshot is
+  //    exactly the case where the pixels will be shown on some other display.
+  //
+  //  * The host's answer is not even stable on the host. Rendering the same
+  //    page from ten fresh processes produced nine identical images and one
+  //    outlier -- always the first -- differing only in glyph-edge pixels
+  //    whose channels sit on Skia's LCD gamma table ({0, 39, 87, 143, ...})
+  //    and move independently per channel: the first process rasterised with
+  //    different ClearType parameters than every later one, which is what the
+  //    four "two renders of the same page differ" demo failures were.
+  //
+  // So: grayscale antialiasing, fixed gamma, no pixel geometry, everywhere.
   skia::LegacyDisplayGlobals::SetCachedParams(
-      gfx::FontRenderParams::SubpixelRenderingToSkiaPixelGeometry(
-          font_params.subpixel_rendering),
-      SK_GAMMA_CONTRAST, SK_GAMMA_EXPONENT);
+      kUnknown_SkPixelGeometry, SK_GAMMA_CONTRAST, SK_GAMMA_EXPONENT);
 #if BUILDFLAG(IS_WIN)
-  blink::WebFontRendering::SetAntialiasedTextEnabled(font_params.antialiasing);
-  blink::WebFontRendering::SetLCDTextEnabled(
-      font_params.subpixel_rendering !=
-      gfx::FontRenderParams::SUBPIXEL_RENDERING_NONE);
+  blink::WebFontRendering::SetAntialiasedTextEnabled(true);
+  blink::WebFontRendering::SetLCDTextEnabled(false);
 
   // The Windows shell fonts, which blink cannot ask for itself.
   //
