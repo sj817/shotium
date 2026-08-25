@@ -368,6 +368,12 @@ jobs:
           python3 -m pip install --quiet pillow
           python3 tools/shot/serve_check.py out/Shot/shot
           python3 tools/shot/net_check.py out/Shot/shot
+          # The two node suites run here as well as on Windows because
+          # shotium/lib/endpoint.js has two branches -- a named pipe on
+          # Windows, a unix socket everywhere else -- and the Windows job
+          # exercises exactly one of them.
+          node tools/shot/node_check.cjs out/Shot/shot
+          node tools/shot/daemon_check.cjs out/Shot/shot
           python3 tools/shot/charset_check.py out/Shot/shot
           python3 tools/shot/demo_check.py out/Shot/shot
 

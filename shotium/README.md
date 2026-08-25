@@ -73,6 +73,66 @@ its own request down and nothing else, and the pool refills the slot.
 mid-request looks exactly like one that never answered, which is deliberate —
 the retry path does not have to tell them apart.
 
+## The resident daemon
+
+The pool above lives and dies with the process holding it. A command line, a CI
+step, a queue worker and a `node -e` all pay to start workers and then throw
+them away, which for a one-shot process is most of what the screenshot costs.
+
+`daemon` is the same pool behind a socket — a named pipe on Windows, a unix
+socket elsewhere — so the next process finds it already warm:
+
+```js
+const client = await shotium.daemon.connect({workers: 4});
+const png = await client.screenshot({file: 'https://example.com'});
+client.close();
+```
+
+`connect()` starts a daemon if none is listening, and several processes racing
+to do that is fine: the losers exit and everyone ends up on the winner. One
+connection can carry several requests at once — each is tagged, and the pool
+spreads them across workers — which the worker protocol underneath cannot do.
+
+```js
+await shotium.daemon.start({workers: 4});   // start one and leave it running
+await shotium.daemon.status();              // {running, pid, workers, served, warm, ...}
+await shotium.daemon.stop();                // ask it to go away
+await shotium.daemon.screenshot({file});    // connect, render, disconnect
+```
+
+A daemon is identified by its configuration — binary, workers, cache root,
+extra flags — and the endpoint is a hash of those, so a client never silently
+attaches to a pool that renders with something other than what it asked for.
+Pass `name` to address one by name instead.
+
+Who may talk to it matters, because a request may set `allowFileAccess` and get
+this machine's files back as a picture. On POSIX the socket is chmod 0600, so
+only its owner can connect. On Windows it is a named pipe and Node exposes no
+way to give one an ACL — the default lets any account on the machine open it, so
+a daemon on a shared Windows host is as trusted as that host's users are.
+
+It prewarms: one throwaway document per worker at startup, so the first real
+request does not pay for whatever a worker initialises lazily. It exits after
+`idleTimeoutMs` with nothing connected and nothing rendering (default five
+minutes, `0` to stay forever), and its workers are resident for as long as it
+is — about 30 MB each, which is the price of not paying for startup again.
+
+## The command line
+
+```bash
+npx shotium https://example.com -o out.png --width 1280 --height 720
+npx shotium daemon start --workers 4
+npx shotium daemon status
+npx shotium daemon stop
+```
+
+The command line is a daemon client: the first invocation starts one, and the
+rest of them are a socket connect. `--no-daemon` renders in the invoking process
+instead, for a caller who would rather pay the startup than leave a process
+behind. Pointing it at a local path is what allows that document to read the
+filesystem, exactly as `shot`'s own command line does; a URL is not that
+statement and does not get the permission.
+
 ## Network
 
 The worker links `//net` directly: HTTPS, HTTP/2, redirects, an in-memory cookie

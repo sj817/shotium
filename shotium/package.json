@@ -5,9 +5,13 @@
   "type": "commonjs",
   "main": "index.js",
   "types": "index.d.ts",
+  "bin": {
+    "shotium": "cli.js"
+  },
   "files": [
     "index.js",
     "index.d.ts",
+    "cli.js",
     "lib/",
     "README.md"
   ],

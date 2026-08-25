@@ -71,7 +71,7 @@ export interface ScreenshotOptions {
 export interface StartOptions {
   /** Path to `shot.exe`. Default `$SHOTIUM_BINARY`, then `./bin/shot.exe`. */
   binary?: string;
-  /** Worker processes. Default half the cores, at least one. */
+  /** Worker processes. Default half the cores, at least one, at most four. */
   workers?: number;
   /** Root of the per-worker HTTP disk caches. `null` disables caching. */
   cacheDir?: string|null;
@@ -98,11 +98,89 @@ export interface Runtime extends EventEmitter {
   on(event: 'timeout',
      listener: (event: {worker: number, timeout: number}) => void): this;
   on(event: 'worker-restart',
-     listener: (event: {worker: number, reason: string}) => void): this;
+     listener: (event: {worker: number, reason: string, delay: number}) => void):
+      this;
+  /** A worker could not be started at all -- a missing or unusable binary. */
+  on(event: 'worker-error',
+     listener: (event: {worker: number, error: Error}) => void): this;
   on(event: 'stderr',
      listener: (event: {worker: number, line: string}) => void): this;
 }
 
+export interface DaemonOptions extends StartOptions {
+  /**
+   * Address the daemon by name instead of by configuration. Without it the
+   * endpoint is a hash of `binary`, `workers`, `cacheDir` and `args`, so a
+   * client never attaches to a pool that renders with something other than
+   * what it asked for.
+   */
+  name?: string;
+  /** The pipe or socket to use, overriding both the name and the hash. */
+  endpoint?: string;
+  /**
+   * Exit after this long with no connections and nothing rendering. Default
+   * 300000; `0` never exits.
+   */
+  idleTimeoutMs?: number;
+  /**
+   * Render one throwaway document per worker at startup, so the first real
+   * request does not pay for whatever a worker initialises lazily. Default
+   * true.
+   */
+  prewarm?: boolean;
+  /** Fail instead of starting a daemon when none is listening. */
+  spawn?: boolean;
+  /** Where a spawned daemon's diagnostics go. Default `$SHOTIUM_DAEMON_LOG`. */
+  logFile?: string;
+}
+
+export interface DaemonStatus {
+  running?: boolean;
+  spawned?: boolean;
+  pid: number;
+  endpoint: string;
+  binary: string;
+  workers: number;
+  cacheDir: string|null;
+  args: string[];
+  /** Every worker has rendered at least once. */
+  warm: boolean;
+  uptimeMs: number;
+  connections: number;
+  inFlight: number;
+  served: number;
+  idleTimeoutMs: number;
+  version: string;
+}
+
+/** An open connection to a daemon. Several requests may be in flight at once. */
+export interface DaemonClient {
+  readonly endpoint: string;
+  readonly closed: boolean;
+  screenshot(options: ScreenshotOptions): Promise<Buffer|null>;
+  status(): Promise<DaemonStatus>;
+  shutdown(): Promise<{ok: boolean}>;
+  close(): void;
+}
+
+export interface Daemon {
+  /** Connects, starting a daemon if none is listening. */
+  connect(options?: DaemonOptions): Promise<DaemonClient>;
+  /** One screenshot through the daemon, connection and all. */
+  screenshot(options: ScreenshotOptions&{daemon?: DaemonOptions}):
+      Promise<Buffer|null>;
+  /** Starts one if it is not up, and reports what is there either way. */
+  start(options?: DaemonOptions): Promise<DaemonStatus&{spawned: boolean}>;
+  status(options?: DaemonOptions):
+      Promise<Partial<DaemonStatus>&{running: boolean, endpoint: string}>;
+  stop(options?: DaemonOptions): Promise<{stopped: boolean, endpoint: string}>;
+}
+
 export declare const runtime: Runtime;
+/**
+ * The resident pool: workers that outlive the process that started them,
+ * reachable over a named pipe on Windows and a unix socket elsewhere.
+ */
+export declare const daemon: Daemon;
 export declare function screenshot(options: ScreenshotOptions):
     Promise<Buffer|null>;

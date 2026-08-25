@@ -22,6 +22,10 @@ class Worker extends EventEmitter {
   constructor(options) {
     super();
     this.id = options.id;
+    // How many requests this process has answered, either way. The pool reads
+    // it to tell a worker that was working and then died from one that never
+    // came up at all.
+    this.served = 0;
     this._binary = options.binary;
     this._args = options.args || [];
     this._pending = null;
@@ -45,6 +49,14 @@ class Worker extends EventEmitter {
     this._process = spawn(this._binary, ['--serve', ...this._args], {
       stdio: ['pipe', 'pipe', 'pipe'],
       windowsHide: true,
+      // Detached, which on Windows means DETACHED_PROCESS: no console, and so
+      // no conhost.exe beside every worker. Four of those cost 40 MB of
+      // working set for a console nothing writes to -- the worker's output is
+      // three pipes.
+      //
+      // It does not outlive its supervisor despite the name: the worker exits
+      // when its stdin closes, and stdin closes when this process dies.
+      detached: true,
     });
 
     this._process.stdout.on('data', (chunk) => this._onStdout(chunk));
@@ -119,6 +131,7 @@ class Worker extends EventEmitter {
       return;
     }
     this._pending = null;
+    this.served += 1;
     if (header.ok) {
       pending.resolve({header, image: header.path ? null : payload});
     } else {

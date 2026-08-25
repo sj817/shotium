@@ -455,9 +455,10 @@ jobs:
         shell: pwsh
         working-directory: src
         # In the order they cost: protocol and geometry first because they are
-        # seconds, then the network one, then the pool, then the two that
-        # render. Any failure fails the job -- there is no point publishing an
-        # engine that does not pass its own checks.
+        # seconds, then the network one, then the pool and the resident daemon
+        # in front of it, then the two that render. Any failure fails the
+        # job -- there is no point publishing an engine that does not pass its
+        # own checks.
         #
         # charset_check and demo_check run here for the same reason they run on
         # Linux and macOS: they are the only suites that compare pixels, and a
@@ -471,6 +472,7 @@ jobs:
           python tools/shot/serve_check.py out/Shot/shot.exe
           python tools/shot/net_check.py out/Shot/shot.exe
           node tools/shot/node_check.cjs out/Shot/shot.exe
+          node tools/shot/daemon_check.cjs out/Shot/shot.exe
           python tools/shot/charset_check.py out/Shot/shot.exe
           python tools/shot/demo_check.py out/Shot/shot.exe
 

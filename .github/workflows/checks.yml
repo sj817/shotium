@@ -7,8 +7,8 @@
 # broken. It runs on every push, and it is expected to always be green.
 #
 # What it deliberately does NOT do is claim the engine works. That claim is made
-# by tools/shot/{serve_check.py,net_check.py,node_check.cjs} against a real
-# binary, and engine-windows.yml is where those run.
+# by tools/shot/{serve_check.py,net_check.py,node_check.cjs,daemon_check.cjs}
+# against a real binary, and the engine-* workflows are where those run.
 
 name: checks
 
