@@ -8,17 +8,23 @@
 #include <vector>
 
 #include "base/at_exit.h"
+#include "base/check_op.h"
 #include "base/command_line.h"
 #include "base/compiler_specific.h"
 #include "base/containers/span.h"
 #include "base/files/file_util.h"
 #include "base/logging.h"
 #include "base/logging/logging_settings.h"
+#include "build/build_config.h"
 #include "shot/shot_capture.h"
 #include "shot/shot_options.h"
 #include "shot/shot_request.h"
 #include "shot/shot_runtime.h"
 #include "shot/shot_server.h"
+
+#if BUILDFLAG(IS_POSIX)
+#include <csignal>
+#endif
 
 namespace {
 
@@ -40,6 +46,27 @@ namespace {
 int Main(int argc, const char** argv) {
   base::AtExitManager at_exit;
   base::CommandLine::Init(argc, argv);
+
+#if BUILDFLAG(IS_POSIX)
+  // Ignore SIGPIPE, so that writing to a pipe nobody is reading returns EPIPE
+  // rather than killing the process outright.
+  //
+  // Every write in this program checks its return value and has something to
+  // do about a failure: --serve stops reading requests and exits with a code,
+  // one-shot mode reports that it could not write the image. None of that runs
+  // if the default disposition gets there first, which on POSIX it does -- so
+  // on Linux and macOS the whole "stdout is gone" path was unreachable, and a
+  // worker whose supervisor died mid-response reached the pool as killed by
+  // signal 13 rather than as a process that noticed and stopped.
+  //
+  // //content does this in the same place and for the same stated reason
+  // (content_main.cc, SetupSignalHandlers: "Always ignore SIGPIPE. We check
+  // the return value of write."), which is where this process would have
+  // inherited it from had it kept the browser. Windows needs no equivalent: a
+  // broken pipe is an error out of WriteFile, which is what this code already
+  // expects everywhere.
+  CHECK_NE(SIG_ERR, signal(SIGPIPE, SIG_IGN));
+#endif
 
   // Logging to stderr, explicitly. On Windows LOG_DEFAULT is
   // LOG_TO_SYSTEM_DEBUG_LOG -- OutputDebugString and nothing else -- so a

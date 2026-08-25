@@ -177,7 +177,7 @@ shot 输掉的那一列反而是值得说的一列。让**同一个页面**在�
 | playwright · chrome-headless-shell | 764 ms | 38 ms | 189 ms | 272 MiB | 154 MiB | 5 |
 | playwright · headless Chrome | 680 ms | 34 ms | 228 ms | 400 MiB | 299 MiB | 7 |
 
-两边连的都是不是自己拉起来的东西：shotium 走命名管道，puppeteer 走 `browserWSEndpoint`，playwright 连 `launchServer()`。常驻那几列是「什么都不干的时候」各自的开销，每个引擎都先晾十五秒再采样。「仅引擎」是把 node 进程去掉之后剩下的部分，对 shotium 来说那几乎就是全部：队列安静十秒之后，worker 会回收 blink 的堆、丢掉缓存、把页面交还给操作系统，于是四个常驻渲染器加起来只占 2.8 MiB，58 MiB 里剩下的是管着它们的那个 node。下一个请求要付大约 8 ms 的软缺页把它们拿回来——见 [`shot/shot_runtime.h`](shot/shot_runtime.h) 里的 `PurgeMemory` 和 `ReleaseWorkingSet`。
+两边连的都是不是自己拉起来的东西：shotium 走命名管道，puppeteer 走 `browserWSEndpoint`，playwright 连 `launchServer()`。常驻那几列是「什么都不干的时候」各自的开销，每个引擎都先晾十五秒再采样。「仅引擎」是把 node 进程去掉之后剩下的部分，对 shotium 来说那几乎就是全部：队列安静十秒之后，worker 会回收 blink 的堆、丢掉缓存、把页面交还给操作系统，于是四个常驻渲染器加起来只占 2.8 MiB，58 MiB 里剩下的是管着它们的那个 node。下一个请求要付大约 8 ms 的软缺页把它们拿回来——见 [`shot/shot_runtime.h`](shot/shot_runtime.h) 里的 `PurgeMemory` 和 `ReleaseWorkingSet`。其中「把页面交还给操作系统」这一步是 Windows 的工作集裁剪，回收堆和丢缓存不是；Linux 上 PartitionAlloc 的回收器走 `madvise(MADV_DONTNEED)`，堆在那一步之前就已经还回去了。这张表本身也只是 Windows 的数：它测自一台主机，Linux 还没有对应的一轮。
 
 **这里没有测的是脚本。** 语料全是静态文档，因为那才是 shot 能拍的东西。页面靠脚本把自己建出来的场景，这些数字一概不适用——那种页面拍出来是空白的，任何跑分都改不了这一点。
 

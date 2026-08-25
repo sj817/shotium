@@ -80,6 +80,18 @@ class ShotRuntime {
   // about 8 ms for a worker that had settled -- and is worth paying only
   // when nobody is likely to ask again soon, which is a longer silence than
   // the one that makes a purge worthwhile.
+  //
+  // Windows only, and deliberately so rather than for want of an equivalent.
+  // The heap half is already handled everywhere: PurgeMemory() ends in
+  // PartitionAlloc's reclaimer, which on POSIX discards through
+  // madvise(MADV_DONTNEED) -- upstream picked DONTNEED over FREE precisely so
+  // that the pages leave the RSS immediately (page_allocator_internals_posix.h
+  // says so). What is left over on Windows, and what this call is for, is
+  // clean file-backed code: shot's own text, faulted in during startup by
+  // paths that will not run again, which Windows keeps in the working set
+  // until asked and Linux hands back for free under pressure with no syscall
+  // and no fault to pay. There is no portable "trim me now" on POSIX and no
+  // measurement here saying one is needed.
   void ReleaseWorkingSet();
 
  private:

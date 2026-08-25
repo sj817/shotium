@@ -247,7 +247,11 @@ blink's heap, drops the caches, and hands its pages back to the OS, so four
 resident renderers cost 2.8 MiB between them and the node supervising them
 costs the rest. The next request pays about 8 ms of soft page faults to get
 them back — see `PurgeMemory` and `ReleaseWorkingSet` in
-[`shot/shot_runtime.h`](shot/shot_runtime.h).
+[`shot/shot_runtime.h`](shot/shot_runtime.h). The last step of that, handing
+the pages back, is a Windows working-set trim; the collection and the caches
+are not, and on Linux PartitionAlloc's reclaimer has already returned the heap
+by the time it would run. These are Windows numbers either way — the table was
+measured on one host, and no equivalent run exists for Linux yet.
 
 **What none of this measures is script.** The corpus is static documents,
 because that is what shot can photograph. On a page that builds itself in the
