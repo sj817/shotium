@@ -362,7 +362,7 @@ jobs:
           ( cd shotium/native \
             && SHOT_INCLUDE_DIR="$PWD/../../shot" \
                SHOT_LIB_DIR="$PWD/../../out/Shot" \
-               npx --yes node-gyp@11 rebuild )
+               npx --yes node-gyp@13 rebuild )
           cp out/Shot/libshotium.dylib out/Shot/shotium_data.pak \
              out/Shot/shotium_strings.pak shotium/native/build/Release/
           node tools/shot/native_check.cjs out/Shot/shotium

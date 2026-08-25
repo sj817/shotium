@@ -497,10 +497,18 @@ jobs:
           # taken from anywhere else, because the library it links against is
           # the one this job has just produced -- an addon checked against a
           # different build would be checking nothing.
+          #
+          # node-gyp 13 and not 11, because this runner image ships Visual
+          # Studio 18 (2026) at "Microsoft Visual Studio\18\Enterprise", and
+          # every node-gyp before 13 stops at `unknown version "undefined"`
+          # and then reports that no Visual Studio is installed at all. 13 is
+          # the release that maps installationVersion 18 to VS2026 and its
+          # v145 toolset. Chromium's own build is unaffected -- it uses clang
+          # and only borrows the SDK and the CRT.
           $env:SHOT_INCLUDE_DIR = "$PWD/shot"
           $env:SHOT_LIB_DIR = "$PWD/out/Shot"
           Push-Location shotium/native
-          npx --yes node-gyp@11 rebuild
+          npx --yes node-gyp@13 rebuild
           Pop-Location
           Copy-Item out/Shot/shotium.dll,out/Shot/shotium_data.pak,out/Shot/shotium_strings.pak `
                     shotium/native/build/Release/
@@ -533,7 +541,7 @@ jobs:
             $env:SHOT_INCLUDE_DIR = "$PWD/shot"
             $env:SHOT_LIB_DIR = "$PWD/out/Shot"
             Push-Location shotium/native
-            npx --yes node-gyp@11 rebuild --arch=$arch
+            npx --yes node-gyp@13 rebuild --arch=$arch
             $built = $LASTEXITCODE -eq 0
             Pop-Location
             if (-not $built) {

@@ -387,9 +387,28 @@ jobs:
           # taken from anywhere else, because the library it links against is
           # the one this job has just produced -- an addon checked against a
           # different build would be checking nothing.
-          ( cd shotium/native             && SHOT_INCLUDE_DIR="$PWD/../../shot" SHOT_LIB_DIR="$PWD/../../out/Shot"                npx --yes node-gyp@11 rebuild )
+          ( cd shotium/native             && SHOT_INCLUDE_DIR="$PWD/../../shot" SHOT_LIB_DIR="$PWD/../../out/Shot"                npx --yes node-gyp@13 rebuild )
           cp out/Shot/libshotium.so out/Shot/shotium_data.pak out/Shot/shotium_strings.pak              shotium/native/build/Release/
-          node tools/shot/native_check.cjs out/Shot/shotium
+          # Under a backtrace if it dies. This build is is_official_build, and
+          # an official build compiles CHECK() down to a bare trap with no
+          # message -- so a failed CHECK inside the library arrives as
+          # "Trace/breakpoint trap" and nothing else. symbol_level is 0, but
+          # only -g0: .symtab survives the link, so gdb still names the
+          # functions even though it cannot name the lines. Costs nothing when
+          # the check passes.
+          node tools/shot/native_check.cjs out/Shot/shotium || {
+            status=$?
+            echo "::group::native_check died with $status -- backtrace"
+            readelf -SW out/Shot/libshotium.so | grep -E 'symtab|dynsym' || true
+            sudo apt-get update -qq && sudo apt-get install -y -qq gdb || true
+            gdb -q -batch \
+                -ex 'set confirm off' \
+                -ex run \
+                -ex 'thread apply all bt 40' \
+                --args node tools/shot/native_check.cjs out/Shot/shotium || true
+            echo "::endgroup::"
+            exit "$status"
+          }
           python3 tools/shot/charset_check.py out/Shot/shotium
           python3 tools/shot/demo_check.py out/Shot/shotium
 
@@ -425,7 +444,7 @@ jobs:
               && SHOT_INCLUDE_DIR="$PWD/../../shot" \
                  SHOT_LIB_DIR="$PWD/../../out/Shot" \
                  CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++ \
-                 npx --yes node-gyp@11 rebuild --arch=arm64 ) \
+                 npx --yes node-gyp@13 rebuild --arch=arm64 ) \
               || echo "::warning::the arm64 addon did not cross-compile;" \
                       "the package ships without it"
           fi
