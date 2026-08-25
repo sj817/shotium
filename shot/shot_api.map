@@ -1,0 +1,30 @@
+# Copyright 2026 The Chromium Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+#
+# What libshot.so exports, which is shot_api.h and nothing else.
+#
+# `local: *` is doing real work here, not tidying. The library links
+# PartitionAlloc's allocator shim, which defines malloc, free and the operator
+# new family and deliberately marks them visible -- correct inside an
+# executable, and inside a shared object loaded by another program it would
+# interpose on that program's allocator for the whole process. A version script
+# overrides the visibility attribute, so this is the thing that stops it.
+#
+# The same applies, less dramatically, to every blink, skia and //net symbol in
+# here: a host that happens to link its own copy of any of them should not find
+# ours instead.
+
+{
+  global:
+    shot_abi_version;
+    shot_engine_create;
+    shot_engine_destroy;
+    shot_engine_capture;
+    shot_engine_purge;
+    shot_buffer_data;
+    shot_buffer_size;
+    shot_buffer_free;
+  local:
+    *;
+};

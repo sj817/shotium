@@ -49,7 +49,7 @@ repack("shot_strings") {
   output = "$root_out_dir/shot_strings.pak"
 }
 
-# shot.exe.
+# The engine, with nothing yet decided about how it is entered.
 #
 # Note what is *not* here: //content, //ui/aura, //ui/compositor, //components/
 # viz, //gpu, //sandbox, //services/network. //net is here and //services/
@@ -64,9 +64,16 @@ repack("shot_strings") {
 # `inside_blink` is required: shot_renderer.cc uses blink's internal types
 # (Page, LocalFrame, LocalFrameView) rather than the public Web* API, because
 # the public API is the surface //content talks to and it is on its way out.
-executable("shot") {
+# It is public because a dependent's own sources are compiled against the same
+# blink headers and would disagree about their layout without it.
+#
+# This is a source_set rather than a static_library on purpose. Blink is full
+# of objects registered by static initialisers, and a static library only
+# pulls in the members somebody references by name; a source_set links all of
+# it, which is what an embedder that reaches blink through one C entry point
+# needs.
+source_set("shot_core") {
   sources = [
-    "main.cc",
     "shot_capture.cc",
     "shot_capture.h",
     "shot_fetch.cc",
@@ -83,13 +90,11 @@ executable("shot") {
     "shot_request.h",
     "shot_runtime.cc",
     "shot_runtime.h",
-    "shot_server.cc",
-    "shot_server.h",
     "shot_url_loader.cc",
     "shot_url_loader.h",
   ]
 
-  deps = [
+  public_deps = [
     "//base",
     "//base:i18n",
     "//cc/paint",
@@ -125,12 +130,22 @@ executable("shot") {
     "//url",
   ]
 
-  configs += [
+  public_configs = [
     "//third_party/blink/renderer:config",
     "//third_party/blink/renderer:inside_blink",
-    "//build/config/compiler:wexit_time_destructors",
   ]
 
+  configs += [ "//build/config/compiler:wexit_time_destructors" ]
+
+  if (is_win) {
+    # shot_runtime.cc creates its own ISOLATED DWriteCreateFactory so glyph
+    # rasterisation never consults the machine-wide font cache service.
+    libs = [ "dwrite.lib" ]
+  }
+}
+
+# The resource packs both entry points need beside them.
+group("shot_resources") {
   data_deps = [
     ":shot_data",
     ":shot_strings",
@@ -140,18 +155,77 @@ executable("shot") {
     "$root_out_dir/shot_data.pak",
     "$root_out_dir/shot_strings.pak",
   ]
+}
+
+# lld stops after twenty undefined symbols. These binaries are linked out of a
+# tree where whole subsystems have been removed, so when one does fail to link
+# the interesting question is which set of things is missing, not which twenty.
+# Reporting all of them turns a bisect into one read.
+if (is_win) {
+  shot_link_flags = [ "/errorlimit:0" ]
+} else {
+  shot_link_flags = []
+}
+
+# shot.exe: the command line, and the resident worker behind --serve.
+executable("shot") {
+  sources = [
+    "main.cc",
+    "shot_server.cc",
+    "shot_server.h",
+  ]
+
+  deps = [ ":shot_core" ]
+  data_deps = [ ":shot_resources" ]
+
+  configs += [ "//build/config/compiler:wexit_time_destructors" ]
+
+  ldflags = shot_link_flags
 
   if (is_win) {
     deps += [ "//build/win:default_exe_manifest" ]
+  }
+}
 
-    # shot_runtime.cc creates its own ISOLATED DWriteCreateFactory so glyph
-    # rasterisation never consults the machine-wide font cache service.
-    libs = [ "dwrite.lib" ]
+# libshot: the same engine, entered over a C ABI, for a host that wants it in
+# its own process rather than in a child.
+#
+# See shot_api.h for what that costs and what it buys. The short version is
+# that a host gets one renderer, because blink is a process-wide singleton, and
+# gives up the crash isolation a separate process was providing for free.
+#
+# The version script is not tidiness. This library links PartitionAlloc's
+# allocator shim, which defines malloc, free and the operator new family and
+# marks them visible on purpose -- inside an executable that is the point, and
+# inside a shared object loaded into somebody else's process it would interpose
+# on the host's allocator for the whole process. Hiding everything except the
+# eight shot_* entry points keeps shot's allocator shot's, which is also why
+# nothing in shot_api.h passes ownership of memory across the seam.
+shared_library("shot_c") {
+  output_name = "shot"
 
-    # lld stops after twenty undefined symbols. This binary is linked out of a
-    # tree where whole subsystems have been removed, so when it does fail to
-    # link the interesting question is which set of things is missing, not
-    # which twenty. Reporting all of them turns a bisect into one read.
-    ldflags = [ "/errorlimit:0" ]
+  sources = [
+    "shot_api.cc",
+    "shot_api.h",
+  ]
+
+  deps = [ ":shot_core" ]
+  data_deps = [ ":shot_resources" ]
+
+  configs += [ "//build/config/compiler:wexit_time_destructors" ]
+
+  ldflags = shot_link_flags
+
+  # Three linkers, three spellings of the same instruction. Windows exports
+  # nothing it was not asked to, so __declspec(dllexport) in shot_api.h is the
+  # whole of it there.
+  if (is_apple) {
+    inputs = [ "shot_api.exports" ]
+    ldflags += [ "-Wl,-exported_symbols_list," +
+                 rebase_path("shot_api.exports", root_build_dir) ]
+  } else if (!is_win) {
+    inputs = [ "shot_api.map" ]
+    ldflags += [ "-Wl,--version-script=" +
+                 rebase_path("shot_api.map", root_build_dir) ]
   }
 }

@@ -176,4 +176,30 @@ base::expected<std::vector<uint8_t>, std::string> Capture(
   return renderer.Render(*input, request);
 }
 
+base::expected<CaptureResult, std::string> CaptureAndDeliver(
+    const ScreenshotRequest& request) {
+  auto image = Capture(request);
+  if (!image.has_value()) {
+    return base::unexpected(image.error());
+  }
+
+  CaptureResult result;
+  result.size = image->size();
+  if (request.path.empty()) {
+    result.image = std::move(*image);
+    return result;
+  }
+
+  // FromUTF8Unsafe rather than a validated conversion because the path came in
+  // as UTF-8 JSON and there is nothing to validate it against; a path that is
+  // not a path fails at the write, which is where the caller can be told about
+  // it by name.
+  const base::FilePath path = base::FilePath::FromUTF8Unsafe(request.path);
+  if (!base::WriteFile(path, *image)) {
+    return base::unexpected("could not write " + request.path);
+  }
+  result.wrote_path = true;
+  return result;
+}
+
 }  // namespace shot

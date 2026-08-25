@@ -12,8 +12,6 @@
 
 #include "base/containers/span.h"
 #include "base/files/file.h"
-#include "base/files/file_path.h"
-#include "base/files/file_util.h"
 #include "base/functional/bind.h"
 #include "base/functional/callback.h"
 #include "base/json/json_writer.h"
@@ -280,29 +278,25 @@ class RequestHandler {
       return WriteResponse(output_, ErrorHeader(request.error()), {});
     }
 
-    auto image = Capture(*request);
-    if (!image.has_value()) {
-      return WriteResponse(output_, ErrorHeader(image.error()), {});
+    // CaptureAndDeliver rather than Capture: writing the file here rather than
+    // shipping the bytes back is worth a whole round trip of a few hundred
+    // kilobytes when the caller only wanted it on disk, and it is shot_capture
+    // that owns doing it, so that this worker and the shared library cannot
+    // come to do it differently.
+    auto result = CaptureAndDeliver(*request);
+    if (!result.has_value()) {
+      return WriteResponse(output_, ErrorHeader(result.error()), {});
     }
 
     base::DictValue header;
     header.Set("ok", true);
-    header.Set("bytes", static_cast<int>(image->size()));
-
-    // Writing the file here rather than shipping the bytes back is worth a
-    // whole round trip of a few hundred kilobytes when the caller only wanted
-    // it on disk.
-    if (!request->path.empty()) {
-      const base::FilePath path = base::FilePath::FromUTF8Unsafe(request->path);
-      if (!base::WriteFile(path, *image)) {
-        return WriteResponse(
-            output_, ErrorHeader("could not write " + request->path), {});
-      }
+    header.Set("bytes", static_cast<int>(result->size));
+    if (result->wrote_path) {
       header.Set("path", request->path);
       return WriteResponse(output_, std::move(header), {});
     }
 
-    return WriteResponse(output_, std::move(header), *image);
+    return WriteResponse(output_, std::move(header), result->image);
   }
 
   const base::raw_ref<ShotRuntime> runtime_;

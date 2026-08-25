@@ -1,0 +1,21 @@
+# Copyright 2026 The Chromium Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+#
+# What libshot.dylib exports. The same list as shot_api.map, in ld64's
+# spelling: one symbol per line, with the leading underscore Mach-O adds, and
+# an exported list rather than a hidden one -- naming what goes out is the only
+# form this linker takes.
+#
+# See shot_api.map for why the list matters and is not tidiness: the allocator
+# shim's malloc and operator new are marked visible on purpose, and a shared
+# library that exported them would replace the host program's allocator.
+
+_shot_abi_version
+_shot_engine_create
+_shot_engine_destroy
+_shot_engine_capture
+_shot_engine_purge
+_shot_buffer_data
+_shot_buffer_size
+_shot_buffer_free
