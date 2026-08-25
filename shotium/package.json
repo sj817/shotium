@@ -17,6 +17,7 @@
     "native.d.ts",
     "native/binding.cc",
     "native/binding.gyp",
+    "native/stage_header.js",
     "README.md"
   ],
   "engines": {

@@ -8,7 +8,14 @@
   #   SHOT_LIB_DIR=/path/to/out/Shot   (the directory holding the library)
   #   npx node-gyp rebuild
   "variables": {
-    "shot_include_dir%": "<!(node -p \"process.env.SHOT_INCLUDE_DIR || require('path').resolve('../../shot')\")",
+    # Not the engine's source directory: a directory holding a copy of
+    # shot_api.h and nothing else. An include directory pointed at shot/ makes
+    # libc++'s `#include <version>` resolve to shot/VERSION on any
+    # case-insensitive filesystem, which is macOS out of the box. See
+    # stage_header.js, which does the copying and explains the rest.
+    #
+    # SHOT_INCLUDE_DIR still says where shot_api.h is; stage_header.js reads it.
+    "shot_include_dir%": "<!(node stage_header.js)",
     "shot_lib_dir%": "<!(node -p \"process.env.SHOT_LIB_DIR || require('path').resolve('../../out/Shot')\")"
   },
   "targets": [
