@@ -42,6 +42,10 @@ on:
         description: 'run the check suites if the build finishes'
         type: boolean
         default: true
+      release:
+        description: 'upload the archive to the draft release for this version'
+        type: boolean
+        default: true
 
 jobs:
   build:
@@ -50,7 +54,7 @@ jobs:
     timeout-minutes: 350
 
     permissions:
-      contents: read
+      contents: write  # the release step creates and uploads to a draft release
       actions: write   # so the run can delete the cache entries it supersedes
 
     env:
@@ -208,7 +212,7 @@ jobs:
         if: ${{ always() && github.event.inputs.mode == 'probe' }}
         uses: actions/upload-artifact@v4
         with:
-          name: probe-macos-${{ github.event.inputs.arch }}
+          name: probe-mac-${{ github.event.inputs.arch }}
           path: /tmp/probe.txt
           if-no-files-found: ignore
 
@@ -286,31 +290,55 @@ jobs:
       - name: package
         if: ${{ success() && github.event.inputs.mode == 'build' }}
         working-directory: src
-        # tar.xz rather than the .7z the Windows job produces, because xz is
-        # what a macOS image reliably has. Same LZMA2, and --x86 is the same
-        # BCJ filter 7z applies to executables by itself: it rewrites relative
-        # CALL/JMP offsets as absolute addresses so one function called from
-        # many places compresses as one pattern. Worth 0.71 MB on the Windows
-        # binary, measured.
+        # .7z like the other two platforms, rather than the tar.xz this job used
+        # to produce. It is the same LZMA2 either way, so the only thing that
+        # changed is that one format now covers everything. macOS images do not
+        # all carry a 7-Zip, and the name differs between the ones that do (7zz
+        # from the official build, 7z or 7za from p7zip), so the binary is
+        # looked up rather than assumed, and installed if the image has none.
+        #
+        # The archive holds exactly one directory, named for the platform and
+        # the architecture and nothing else. The version lives in the file name
+        # instead, so unpacking a newer build over an older one replaces it in
+        # place rather than leaving two versioned directories side by side.
         run: |
-          mkdir -p dist
-          cp out/Shot/shot out/Shot/shot_data.pak out/Shot/shot_strings.pak dist/
-          ls -l dist
-          tar -cf - -C dist . \
-            | xz -9e --x86 --lzma2=preset=9e -T0 \
-            > "shot-macos-${{ github.event.inputs.arch }}.tar.xz"
-          ls -l "shot-macos-${{ github.event.inputs.arch }}.tar.xz"
+          sevenzip=$(command -v 7zz || command -v 7z || command -v 7za || true)
+          if [ -z "$sevenzip" ]; then
+            brew install --quiet sevenzip
+            sevenzip=$(command -v 7zz || true)
+          fi
+          if [ -z "$sevenzip" ]; then
+            echo "no 7z on this runner and brew could not supply one"
+            exit 1
+          fi
+          echo "using $sevenzip"
+          version=$(python3 -c \
+            "import json;print(json.load(open('shotium/package.json'))['version'])")
+          stem="shot-mac-${{ github.event.inputs.arch }}"
+          archive="$stem-v$version.7z"
+          rm -rf dist "$archive"
+          mkdir -p "dist/$stem"
+          cp out/Shot/shot out/Shot/shot_data.pak out/Shot/shot_strings.pak "dist/$stem/"
+          ls -l "dist/$stem"
+          ( cd dist && "$sevenzip" a -t7z -mx=9 "../$archive" "$stem" )
+          ls -l "$archive"
+          {
+            echo "SHOT_VERSION=$version"
+            echo "SHOT_STEM=$stem"
+            echo "SHOT_ARCHIVE=$archive"
+          } >> "$GITHUB_ENV"
 
       - name: upload
         if: ${{ success() && github.event.inputs.mode == 'build' }}
         uses: actions/upload-artifact@v4
         with:
-          name: shot-macos-${{ github.event.inputs.arch }}
-          path: src/shot-macos-${{ github.event.inputs.arch }}.tar.xz
+          name: ${{ env.SHOT_STEM }}
+          path: src/${{ env.SHOT_ARCHIVE }}
           if-no-files-found: error
-          # upload-artifact always wraps what it is given in a zip and only
-          # exposes a deflate level. 0 stores the archive as-is; anything more
-          # re-compresses already-compressed bytes for nothing.
+          # upload-artifact always wraps what it is handed in a zip and only
+          # exposes a deflate level; no switch turns the wrapper off. 0 stores
+          # the .7z as-is instead of re-compressing compressed bytes. The
+          # release step below is where a download is the .7z itself.
           compression-level: 0
 
       - name: checks
@@ -324,3 +352,24 @@ jobs:
           python3 tools/shot/net_check.py out/Shot/shot
           python3 tools/shot/charset_check.py out/Shot/shot
           python3 tools/shot/demo_check.py out/Shot/shot
+
+      - name: release
+        if: ${{ success() && github.event.inputs.mode == 'build'
+                && github.event.inputs.release == 'true' }}
+        working-directory: src
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # A release asset is served as the bytes that were uploaded, so this
+        # copy has no zip around it. It goes to a draft release: one run builds
+        # one architecture, the release fills up over six of them, and nothing
+        # is public until someone publishes it by hand.
+        #
+        # It is the last step in the job, after the checks, so a binary that
+        # fails its own suites never becomes an asset.
+        run: |
+          tag="v$SHOT_VERSION"
+          gh release view "$tag" >/dev/null 2>&1 \
+            || gh release create "$tag" --draft --title "$tag" \
+                 --notes "shot $SHOT_VERSION" --target "$GITHUB_SHA" \
+            || gh release view "$tag" >/dev/null
+          gh release upload "$tag" "$SHOT_ARCHIVE" --clobber

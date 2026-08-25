@@ -47,6 +47,10 @@ on:
         description: 'run the check suites if the build finishes'
         type: boolean
         default: true
+      release:
+        description: 'upload the archive to the draft release for this version'
+        type: boolean
+        default: true
 
 jobs:
   build:
@@ -55,7 +59,7 @@ jobs:
                            # "save the cache" step still gets to run
 
     permissions:
-      contents: read
+      contents: write  # the release step creates and uploads to a draft release
       actions: write   # so the run can delete the cache entries it supersedes
 
     env:
@@ -401,30 +405,49 @@ jobs:
           #
           # Decompression costs about half a second, once, when the user
           # unpacks. It is not on any per-render path.
-          New-Item -ItemType Directory dist | Out-Null
-          Copy-Item out/Shot/shot.exe,out/Shot/shot_data.pak,out/Shot/shot_strings.pak dist/
-          Get-ChildItem dist | Select-Object Name,Length
+          #
+          # The archive holds exactly one directory, named for the platform and
+          # the architecture and nothing else. The version lives in the file
+          # name instead, so unpacking a newer build over an older one replaces
+          # it in place rather than leaving two versioned directories side by
+          # side.
+          $version = (Get-Content shotium/package.json -Raw | ConvertFrom-Json).version
+          $stem = "shot-win-${{ github.event.inputs.arch }}"
+          $archive = "$stem-v$version.7z"
+          if (Test-Path dist) { Remove-Item -Recurse -Force dist }
+          if (Test-Path $archive) { Remove-Item -Force $archive }
+          New-Item -ItemType Directory "dist/$stem" | Out-Null
+          Copy-Item out/Shot/shot.exe,out/Shot/shot_data.pak,out/Shot/shot_strings.pak "dist/$stem/"
+          Get-ChildItem "dist/$stem" | Select-Object Name,Length
           # windows-2025 ships 7-Zip on PATH; fall back to its install path
           # rather than silently producing no archive if that ever changes.
           $sevenzip = (Get-Command 7z -ErrorAction SilentlyContinue).Source
           if (-not $sevenzip) { $sevenzip = "$env:ProgramFiles\7-Zip\7z.exe" }
           if (-not (Test-Path $sevenzip)) { throw "no 7z on this runner" }
-          & $sevenzip a -t7z -mx=9 shot-windows-${{ github.event.inputs.arch }}.7z ./dist/*
-          if ($LASTEXITCODE -ne 0) { throw "7z failed with $LASTEXITCODE" }
-          Get-Item shot-windows-${{ github.event.inputs.arch }}.7z |
+          Push-Location dist
+          & $sevenzip a -t7z -mx=9 "../$archive" $stem
+          $code = $LASTEXITCODE
+          Pop-Location
+          if ($code -ne 0) { throw "7z failed with $code" }
+          Get-Item $archive |
               Select-Object Name,@{n='MB';e={[math]::Round($_.Length/1MB,2)}}
+          "SHOT_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "SHOT_STEM=$stem"       | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "SHOT_ARCHIVE=$archive" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: upload
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: shot-windows-${{ github.event.inputs.arch }}
-          path: src/shot-windows-${{ github.event.inputs.arch }}.7z
+          name: ${{ env.SHOT_STEM }}
+          path: src/${{ env.SHOT_ARCHIVE }}
           if-no-files-found: error
-          # upload-artifact always wraps what it is given in a zip and only
-          # lets you pick a deflate level. Level 0 stores the .7z as-is;
-          # anything higher spends CI time re-compressing data that is already
-          # compressed and gives back nothing.
+          # upload-artifact always wraps what it is handed in a zip and only
+          # lets you pick a deflate level; no switch turns the wrapper off.
+          # Level 0 stores the .7z as-is; anything higher spends CI time
+          # re-compressing data that is already compressed and gives back
+          # nothing. The release step below is where a download is the .7z
+          # itself.
           compression-level: 0
 
       - name: checks
@@ -450,3 +473,31 @@ jobs:
           node tools/shot/node_check.cjs out/Shot/shot.exe
           python tools/shot/charset_check.py out/Shot/shot.exe
           python tools/shot/demo_check.py out/Shot/shot.exe
+
+      - name: release
+        if: success() && github.event.inputs.release == 'true'
+        shell: pwsh
+        working-directory: src
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # A release asset is served as the bytes that were uploaded, so this
+        # copy has no zip around it. It goes to a draft release: one run builds
+        # one architecture, the release fills up over six of them, and nothing
+        # is public until someone publishes it by hand.
+        #
+        # It is the last step in the job, after the checks, so a binary that
+        # fails its own suites never becomes an asset.
+        run: |
+          $tag = "v$env:SHOT_VERSION"
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create $tag --draft --title $tag `
+              --notes "shot $env:SHOT_VERSION" --target $env:GITHUB_SHA
+            if ($LASTEXITCODE -ne 0) {
+              # Another architecture's run may have created it in between.
+              gh release view $tag *> $null
+              if ($LASTEXITCODE -ne 0) { throw "cannot create or find release $tag" }
+            }
+          }
+          gh release upload $tag $env:SHOT_ARCHIVE --clobber
+          if ($LASTEXITCODE -ne 0) { throw "gh release upload failed with $LASTEXITCODE" }
