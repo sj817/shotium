@@ -7,6 +7,8 @@
 
 namespace shot {
 
+class ShotRuntime;
+
 // The resident worker: read a request off stdin, render it, write the result to
 // stdout, repeat until stdin closes.
 //
@@ -29,6 +31,15 @@ namespace shot {
 // is already configured for stderr in main(), and a stray printf into the
 // stream would desynchronise the framing permanently.
 //
+// The reading happens on a thread of its own and the rendering happens on the
+// thread that called this, inside a run loop. That split is not about
+// concurrency -- one worker renders one document at a time either way -- it is
+// about what the rendering thread is doing when there is nothing to render. A
+// worker parked in a blocking read runs no tasks at all, so blink's idle work
+// and PartitionAlloc's reclaimer never fire, and nothing can notice that the
+// queue has gone quiet. Parked in a run loop it can do all three, and
+// ShotRuntime::PurgeMemory() is what it does with the last one.
+//
 // There is no shutdown message. The supervisor ends a worker by closing the
 // pipe or killing the process, and a worker that dies mid-request is
 // indistinguishable to it from one that never answered -- which is the point,
@@ -40,8 +51,9 @@ namespace shot {
 // a page for a stranger should not be taking that instruction from the
 // stranger. See shot_options.cc for the flag.
 //
-// Requires a live ShotRuntime on this thread. Returns a process exit code.
-int RunServer(bool default_allow_file_access);
+// `runtime` must be the live ShotRuntime on this thread. Returns a process
+// exit code.
+int RunServer(ShotRuntime& runtime, bool default_allow_file_access);
 
 }  // namespace shot
 

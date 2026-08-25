@@ -56,6 +56,32 @@ class ShotRuntime {
   ShotRuntime& operator=(const ShotRuntime&) = delete;
   ~ShotRuntime();
 
+  // Hands back everything this process is holding that it can rebuild.
+  //
+  // A worker that renders one document and exits does not need this; one that
+  // stays resident does, because every cache blink and skia keep is sized for
+  // a browser tab that will be asked for the same font and the same image
+  // again. Between bursts a shot worker will not be, and holding a warm cache
+  // for a queue that is empty is the whole difference between a resident pool
+  // that costs what it renders and one that costs what it ever rendered.
+  //
+  // Must be called on the rendering thread, and not while a capture is in
+  // flight: it collects blink's heap, which is only safe between documents.
+  void PurgeMemory();
+
+  // Gives the pages themselves back, which PurgeMemory() deliberately does
+  // not. Everything it frees is decommitted address space; the working set
+  // still holds every page this process has touched since it started, most of
+  // them shot.exe's own code faulted in by a path that ran once.
+  //
+  // Separate because the two have different prices. Purging costs a
+  // collection and rebuilds caches that were about to be cold anyway.
+  // Trimming costs a soft fault per page on the next request -- measured at
+  // about 8 ms for a worker that had settled -- and is worth paying only
+  // when nobody is likely to ask again soon, which is a longer silence than
+  // the one that makes a purge worthwhile.
+  void ReleaseWorkingSet();
+
  private:
   ShotRuntime();
 

@@ -94,7 +94,7 @@ int Main(int argc, const char** argv) {
   }
 
   if (serve) {
-    return shot::RunServer(parsed->allow_file_access);
+    return shot::RunServer(*runtime.value(), parsed->allow_file_access);
   }
 
   // PrepareShot owns the temporary file that makes --stdin navigable, so it

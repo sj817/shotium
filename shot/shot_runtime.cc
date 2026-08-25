@@ -20,11 +20,14 @@
 #include "components/discardable_memory/service/discardable_shared_memory_manager.h"
 #include "mojo/core/embedder/embedder.h"
 #include "mojo/public/cpp/bindings/binder_map.h"
+#include "partition_alloc/memory_reclaimer.h"
 #include "shot/shot_platform.h"
 #include "skia/ext/legacy_display_globals.h"
 #include "third_party/blink/public/platform/platform.h"
 #include "third_party/blink/public/platform/scheduler/web_thread_scheduler.h"
 #include "third_party/blink/public/web/blink.h"
+#include "third_party/blink/renderer/platform/heap/thread_state.h"
+#include "third_party/skia/include/core/SkGraphics.h"
 #include "ui/base/resource/resource_bundle.h"
 #include "ui/base/ui_base_paths.h"
 
@@ -47,6 +50,16 @@ class ShotRuntime::MemoryConsumerRegistry : public base::MemoryConsumerRegistry 
  public:
   MemoryConsumerRegistry() = default;
   ~MemoryConsumerRegistry() override { NotifyDestruction(); }
+
+  // Every consumer that has registered, told to drop what it is holding above
+  // its limit. This is the other half of the contract: a coordinator would
+  // decide when, and in a process with no coordinator ShotRuntime decides --
+  // when the request queue has been empty long enough to say so.
+  void ReleaseMemory() {
+    for (base::MemoryConsumer& consumer : memory_consumers_) {
+      NotifyReleaseMemory(&consumer);
+    }
+  }
 
  private:
   // base::MemoryConsumerRegistry:
@@ -102,9 +115,28 @@ base::expected<std::unique_ptr<ShotRuntime>, std::string> ShotRuntime::Create(
   // allocates. Blink's own workers -- image decoding, font loading, raster --
   // come from here too.
   //
-  // CreateAndStartWithDefaultParams is what every chromium process calls; the
-  // pool sizes itself to the machine.
-  base::ThreadPoolInstance::CreateAndStartWithDefaultParams("Shot");
+  // Not CreateAndStartWithDefaultParams, which is what every other chromium
+  // process calls: it sizes the pool at `cores - 1`, on the stated assumption
+  // that the process should use the whole machine. A shot worker is the one
+  // case where that assumption is wrong in both directions. It renders one
+  // document at a time on this thread, so it never has `cores - 1` unblocked
+  // tasks to run; and it is one of N sibling processes, so a pool that helps
+  // itself to the machine is N pools all doing it at once.
+  //
+  // kMaxUnblockedTasks is upstream's own floor -- max(3, cores - 1) -- which
+  // is the number a two-core machine gets today, and is enough for the widest
+  // thing a capture actually fans out: decoding the images on one page. Warm
+  // per-shot time does not move.
+  //
+  // What it does not do is make the process smaller, which is what it was
+  // first tried for. A worker holds 32 threads on a 32-core host either way:
+  // capping this took ThreadPoolForegroundWorker from as many as 31 down to
+  // three, and 25 of the remaining threads turn out to belong to Windows
+  // rather than to anything chromium started. The reason to cap it is
+  // oversubscription, not bytes.
+  constexpr size_t kMaxUnblockedTasks = 3;
+  base::ThreadPoolInstance::Create("Shot");
+  base::ThreadPoolInstance::Get()->Start({kMaxUnblockedTasks});
   runtime->shutdown_thread_pool_ = base::ScopedClosureRunner(
       base::BindOnce([] { base::ThreadPoolInstance::Get()->Shutdown(); }));
 
@@ -268,6 +300,50 @@ base::expected<std::unique_ptr<ShotRuntime>, std::string> ShotRuntime::Create(
   runtime->network_ = std::move(network).value();
 
   return runtime;
+}
+
+void ShotRuntime::PurgeMemory() {
+  // Blink's heap first, and everything else after, because the collection is
+  // what makes the rest of it worth doing: the Page, the Document, every
+  // LayoutObject and every Resource the capture built are unreachable the
+  // moment Capture() returns, but cppgc frees nothing until someone asks. The
+  // caches below hold entries keyed by objects that are still alive until it
+  // does, so purging in the other order leaves the largest part behind.
+  blink::ThreadState::Current()->CollectAllGarbageForMemoryPressure();
+
+  // The caches that survive a collection because they are deliberate: blink's
+  // resource cache, the font cache, the shaping cache, the parkable strings,
+  // and the discardable segments skia rasterises through. They register as
+  // memory consumers precisely so that something can tell them to shrink.
+  memory_consumer_registry_->Get().ReleaseMemory();
+
+  // Skia's own two, which are not memory consumers: the glyph raster cache and
+  // SkResourceCache's non-discardable half.
+  SkGraphics::PurgeAllCaches();
+
+  // And the free lists underneath all of it. Everything above returns memory
+  // to PartitionAlloc, which keeps it: the pages stay committed and charged to
+  // this process against the next allocation of that size. Reclaiming is what
+  // turns a purge into a smaller process.
+  //
+  // Blink starts a periodic reclaimer of its own (Platform::Initialize, via an
+  // idle task) and it has never run here, because a worker between requests is
+  // not idle in the scheduler's sense -- it is blocked on the request stream,
+  // with no idle period for the task to be scheduled in.
+  ::partition_alloc::MemoryReclaimer::Instance()->ReclaimAll();
+}
+
+void ShotRuntime::ReleaseWorkingSet() {
+#if BUILDFLAG(IS_WIN)
+  // Both sizes (SIZE_T)-1 is the documented way to say "trim the working set
+  // now": the pages go to the standby list, where they cost this process
+  // nothing and are still in RAM, so the next request faults them back
+  // without touching the disk. That is why this is cheap enough to be worth
+  // doing at all, and why it is still not free -- 30 MB is 7,500 soft faults.
+  ::SetProcessWorkingSetSizeEx(::GetCurrentProcess(),
+                               static_cast<SIZE_T>(-1),
+                               static_cast<SIZE_T>(-1), 0);
+#endif
 }
 
 }  // namespace shot
