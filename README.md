@@ -1,3 +1,5 @@
+**English** · [简体中文](README.zh.md)
+
 # shotium
 
 Static screenshots from a stripped Chromium. DOM, CSS, layout, paint, fonts,
