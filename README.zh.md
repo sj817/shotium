@@ -29,7 +29,7 @@ await shotium.runtime.stop();
 | | |
 |---|---|
 | `shot/` | 引擎。约 1,800 行 C++，直接驱动 Blink |
-| `shotium/` | npm 包。进程池、队列、重试、类型声明 —— 纯 JavaScript |
+| `shotium/` | npm 包。进程池、队列、重试、类型声明 —— 纯 JavaScript，另外带一个原生 addon |
 | `tools/shot/` | 检查脚本：协议、几何、网络，以及 JavaScript 层 |
 | `bench/` | 基准测试：对同一棵树构建出的 Chromium，以及对 puppeteer 和 playwright |
 | `docs/cut-progress.md` | 这棵树是怎么裁的，以及裁的过程中弄坏了什么 |
@@ -112,6 +112,26 @@ npx shotium daemon status
 ```
 
 守护进程的端点是它自身配置的哈希 —— 二进制、worker 数、缓存目录、附加 flag —— 所以客户端不会悄悄连上一个「用别的东西渲图」的池子。最后一个客户端离开五分钟后它自己退出；一条连接上可以同时跑多个请求。
+
+### 或者，就在本进程里
+
+`runtime` 和 `daemon` 都是把 blink 放在 worker 进程里。原生引擎把它放在这里：
+
+```js
+const {native} = require('shotium/native');
+
+const png = await native.screenshot({file: 'https://example.com'});
+native.purge({releaseWorkingSet: true});   // 一批完了之后
+await native.stop();
+```
+
+选项一样，字节也一样 —— `tools/shot/native_check.cjs` 会拿同一份文档去比对可执行文件的输出，因为两条通向 blink 的路径如果可能不一致，那就是两个引擎。不同的是形状：一个进程而不是五个，一张图约 **31 ms** 而不是 47 ms，工作集约 **81 MiB** 而不是 190 MiB。
+
+它放弃的，是单独一个进程本来白送的两件事。**只有一个渲染器** —— blink 是进程级单例，`worker_threads` 共享同一个进程，所以无论多少个调用方，请求都是串行的，进程池那个四并发在这里没有对应物。以及**没有崩溃隔离**：渲染器挂了会把宿主程序一起带走，而进程池会换一个 worker 重试。
+
+下面是一个带 C ABI 的共享库，[`shot/shot_api.h`](shot/shot_api.h) —— 八个函数、不透明指针、进去 JSON 出来字节，没有任何内存的所有权跨过这道缝。上面的 addon 是一层很薄的 Node-API，它不读自己搬的东西。这个头文件并不绑定 node；ctypes、cgo、libloading 都能直接用。
+
+它按平台以预构建二进制的形式发布，因为底下那个库是一次 Chromium 构建，`npm install` 做不了这件事。`require('shotium')` 两者都不需要。
 
 ### 选项
 
@@ -254,11 +274,12 @@ python tools/shot/serve_check.py   out/Shot/shot.exe   # 协议、几何、编�
 python tools/shot/net_check.py     out/Shot/shot.exe   # http、重定向、缓存、TLS
 node   tools/shot/node_check.cjs   out/Shot/shot.exe   # 进程池、重试、崩溃隔离
 node   tools/shot/daemon_check.cjs out/Shot/shot.exe   # 常驻守护进程
+node   tools/shot/native_check.cjs out/Shot/shot.exe   # 进程内引擎
 python tools/shot/charset_check.py out/Shot/shot.exe   # 旧式编码与 ICU 裁剪的关系
 python tools/shot/demo_check.py    out/Shot/shot.exe   # 84 个 reftest
 ```
 
-91 项检查加 84 个 reftest（参考比对测试）。需要 Node.js 的是两个 `.cjs`，它们在 Windows 和 Linux 上都跑 —— 守护进程在一边监听命名管道，在另一边监听 unix socket，只在一个平台上跑等于只检查了一半。其中值得单独说明的几条：
+104 项检查加 84 个 reftest（参考比对测试）。需要 Node.js 的是三个 `.cjs`，它们在 Windows 和 Linux 上都跑 —— 守护进程在一边监听命名管道，在另一边监听 unix socket，只在一个平台上跑等于只检查了一半。其中值得单独说明的几条：
 
 - **同一份文档，通过 HTTP 取回和从磁盘读取，必须产出完全相同的字节。** 传输方式不应该在图片里看得出来。
 - **`clip` 和 `selector` 必须找到同一个盒子，精确到字节。** 它们是同一个矩形的两种指定方式；如果结果不一致，其中一个是错的。

@@ -177,6 +177,41 @@ playwright(各两档:`chrome-headless-shell` 与完整 headless Chrome)。六个
 
 方法和口径写在 `bench/cross/README.md`,结果表在 README 的「Numbers」一节。
 
+### 第 6 组 · C ABI 与 node addon — ✅ 完成
+
+进程池和守护进程都是把 blink 放在别的进程里。第 6 组是把它放进调用方自己的
+进程:`shared_library("shot_c")` 导出一套 C 接口,`shotium/native.js` 通过一个
+Node-API addon 用它。
+
+| # | 内容 | 落点 |
+|---|---|---|
+| 6.1 | C 接口:八个函数,不透明指针,JSON 进字节出 | `shot/shot_api.h`、`shot_api.cc` |
+| 6.2 | 引擎线程:blink 一条线程,任何线程调用都排到它上面 | `shot/shot_api.cc` |
+| 6.3 | 导出裁剪(版本脚本 / exported_symbols_list) | `shot/shot_api.map`、`shot_api.exports` |
+| 6.4 | addon 与 JS 外壳,队列深度 1 | `shotium/native/binding.cc`、`shotium/native.js` |
+| 6.5 | 检查:与可执行文件逐字节一致、并发串行化、只有一个引擎 | `tools/shot/native_check.cjs` |
+
+四个决定值得记下来:
+
+- **接缝是 C,不是 C++。** 引擎用 clang、自带的 libc++ 和自带的分配器编译,这些
+  都过不了另一套工具链。`std::string` 放在接缝上,布局就成了两边各自标准库的
+  属性。所以:不透明指针、UTF-8、返回码,以及没有任何内存的所有权跨过去。
+- **请求走 JSON,不走结构体。** `ScreenshotOptions` 已经有一份线上格式,
+  `shotium/lib/request.js` 生产它、`shot_request.cc` 消费它。再定义一个 C 结构
+  体等于给同一件事写第三种拼法,而第三种拼法总是先漂移的那一个;顺带也免掉了
+  结构体布局的版本兼容问题。
+- **导出必须裁到只剩 `shot_*`。** 这个库链进了 PartitionAlloc 的 allocator
+  shim,它定义 `malloc`、`free` 和 operator new 一族并且**故意**标成可见——在可
+  执行文件里这是重点,在被别人加载的共享库里就是替换掉宿主整个进程的分配器。
+  Windows 上不导出就不导出;Linux 用版本脚本,macOS 用 exported_symbols_list。
+- **资源目录要显式传。** 可执行文件靠 `DIR_MODULE` 在自己旁边找 `.pak`,共享库
+  找不到:Linux 上那条路径走 `/proc/self/exe`,指向的是宿主的二进制(node)。
+  所以 `resourceDir` 是引擎选项的一部分,由 addon 用 `__dirname` 填。
+
+代价写在 `shot_api.h` 和两份 README 里,不藏着:进程内只有一个渲染器(blink 是
+进程级单例,`worker_threads` 也共享进程),而且渲染器崩溃会带走宿主。这条路是给
+「一次一张、不想跑池子」的程序用的,服务仍然用池子或守护进程。
+
 ---
 
 ## 4. 对外接口(约定)

@@ -33,7 +33,7 @@ A fork of Chromium with most of it removed, plus two things that are ours:
 | | |
 |---|---|
 | `shot/` | the engine. A ~1,800-line C++ program that drives Blink directly |
-| `shotium/` | the npm package. Process pool, queue, retry, types — plain JavaScript |
+| `shotium/` | the npm package. Process pool, queue, retry, types — plain JavaScript, plus a native addon |
 | `tools/shot/` | the checks: protocol, geometry, network, and the JS layer |
 | `bench/` | the benchmarks: this engine against Chromium, and against puppeteer and playwright |
 | `docs/cut-progress.md` | how the tree was cut, and what broke on the way |
@@ -147,6 +147,42 @@ A daemon is addressed by a hash of its configuration — binary, workers, cache
 root, flags — so a client never silently attaches to a pool that renders with
 something other than what it asked for. It exits five minutes after the last
 client leaves, and one connection can carry several requests at once.
+
+### In this process, instead
+
+`runtime` and `daemon` both put blink in a worker process. The native engine
+puts it here:
+
+```js
+const {native} = require('shotium/native');
+
+const png = await native.screenshot({file: 'https://example.com'});
+native.purge({releaseWorkingSet: true});   // when the batch is over
+await native.stop();
+```
+
+Same options and the same bytes — `tools/shot/native_check.cjs` compares them
+against what the executable produces for the same document, because two paths
+to blink that could disagree are two engines. What differs is the shape: one
+process instead of five, about **31 ms** a screenshot instead of 47, and about
+**81 MiB** of working set instead of 190.
+
+What it gives up is what a separate process was providing for free. **One
+renderer** — blink is a process-wide singleton and `worker_threads` share the
+process, so requests are serialised however many callers there are, and the
+pool's four-at-once has no equivalent here. And **no crash isolation**: a
+renderer that dies takes the host program with it, where the pool would have
+retried on another worker.
+
+Underneath is a shared library with a C ABI, [`shot/shot_api.h`](shot/shot_api.h)
+— eight functions, opaque pointers, JSON in and bytes out, nothing owning
+memory across the seam. The addon is a thin piece of Node-API over it that does
+not read what it carries. The header is not node-specific; ctypes, cgo and
+libloading take it as-is.
+
+It ships as a prebuilt binary per platform, because the library underneath is a
+Chromium build and `npm install` is not going to do that. `require('shotium')`
+needs neither.
 
 ### Options
 
@@ -358,14 +394,15 @@ python tools/shot/serve_check.py   out/Shot/shot.exe   # protocol, geometry, enc
 python tools/shot/net_check.py     out/Shot/shot.exe   # http, redirects, cache, TLS
 node   tools/shot/node_check.cjs   out/Shot/shot.exe   # pool, retry, crash isolation
 node   tools/shot/daemon_check.cjs out/Shot/shot.exe   # the resident daemon
+node   tools/shot/native_check.cjs out/Shot/shot.exe   # the in-process engine
 python tools/shot/charset_check.py out/Shot/shot.exe   # legacy encodings vs the ICU cut
 python tools/shot/demo_check.py    out/Shot/shot.exe   # 84 reftests
 ```
 
-91 checks and 84 reftests. The two `.cjs` suites are the ones that need Node,
-and they run on Windows and Linux — the daemon listens on a named pipe on one
-and a unix socket on the other, and a suite that ran on only one platform would
-be checking half of it. The ones worth knowing about:
+104 checks and 84 reftests. The three `.cjs` suites are the ones that need
+Node, and they run on Windows and Linux — the daemon listens on a named pipe on
+one and a unix socket on the other, and a suite that ran on only one platform
+would be checking half of it. The ones worth knowing about:
 
 - **The same document fetched over http and read off the disk must produce
   identical bytes.** The transport is not supposed to be visible in the picture.
@@ -373,6 +410,10 @@ be checking half of it. The ones worth knowing about:
   ways of naming one rectangle; if they disagree, one of them is wrong.
 - **A worker killed mid-request must come back on another one with the same
   image.** That is the claim the whole out-of-process design rests on.
+- **The addon and the executable must produce the same bytes for the same
+  document.** They reach blink two different ways — one through a pipe, one
+  through a C ABI — and the only thing making them one engine is that they
+  agree.
 - **A second process must find the daemon rather than start one, and get the
   same bytes the in-process pool produces.** Two entry points that could drift
   apart would be two renderers.

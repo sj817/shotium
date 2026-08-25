@@ -357,6 +357,11 @@ third_party/rust/target/
 # no runtime dependencies.
 /shotium/node_modules
 
+# The node addon is built against a shot library rather than by `npm install`,
+# and ships as a prebuilt binary per platform. Both are artifacts.
+/shotium/native/build
+/shotium/prebuilds
+
 # The cross-engine benchmark installs puppeteer and playwright, which bring a
 # browser each, and writes its report and sample PNGs beside them.
 /bench/cross/node_modules

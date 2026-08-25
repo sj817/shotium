@@ -13,13 +13,18 @@
     "index.d.ts",
     "cli.js",
     "lib/",
+    "native.js",
+    "native.d.ts",
+    "native/binding.cc",
+    "native/binding.gyp",
+    "prebuilds/",
     "README.md"
   ],
   "engines": {
     "node": ">=18"
   },
   "scripts": {
-    "check:types": "tsc --noEmit --strict index.d.ts"
+    "check:types": "tsc --noEmit --strict index.d.ts native.d.ts"
   },
   "devDependencies": {
     "@types/node": "^22",

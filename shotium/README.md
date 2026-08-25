@@ -117,6 +117,39 @@ request does not pay for whatever a worker initialises lazily. It exits after
 minutes, `0` to stay forever), and its workers are resident for as long as it
 is — about 30 MB each, which is the price of not paying for startup again.
 
+## In this process, instead
+
+`require('shotium/native')` is the same engine loaded into this process rather
+than started beside it. There is no worker, no pipe and no supervisor: a
+screenshot costs about a third less, and the whole thing is one process.
+
+```js
+const {native} = require('shotium/native');
+
+const png = await native.screenshot({file: 'https://example.com'});
+native.purge({releaseWorkingSet: true});   // when the batch is over
+await native.stop();
+```
+
+Same options, and the same bytes: `tools/shot/native_check.cjs` compares the
+addon's output against the executable's for the same document, because two
+paths to blink that could disagree are two engines rather than one.
+
+Two things it does not have, both of them things a separate process was
+providing for free. It is **one renderer** -- the singleton above applies to
+this process too, and `worker_threads` share it, so requests are serialised
+however many callers there are. And there is **no crash isolation**: a renderer
+that dies takes the host with it, where the pool would have refilled the slot
+and retried.
+
+So: this for a program that takes screenshots one at a time and would rather
+not run a pool; `runtime` or `daemon` for a service.
+
+Under it is a shared library with a C ABI -- `shot/shot_api.h`, eight
+functions, JSON in and bytes out -- and a thin Node-API addon over that. Both
+ship prebuilt per platform, because the library is a Chromium build and `npm
+install` is not going to produce one. Nothing else in this package needs them.
+
 ## The command line
 
 ```bash

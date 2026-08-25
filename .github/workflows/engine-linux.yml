@@ -221,7 +221,7 @@ jobs:
         # pruning removed fails here in seconds. The edge count is the useful
         # output: it says how much of this platform is actually configured.
         run: |
-          ninja -C out/Shot shot -n > /tmp/probe.txt 2>&1 || {
+          ninja -C out/Shot shot shot_c -n > /tmp/probe.txt 2>&1 || {
             echo "=== ninja refused the graph ==="
             tail -40 /tmp/probe.txt
             exit 1
@@ -251,7 +251,7 @@ jobs:
         # fraction of a full one. `-d explain` makes ninja say why each dirty
         # edge is dirty; the root causes appear at the top, so a head of the
         # output is the whole answer. Diagnosis only: nothing is built here.
-        run: ninja -C out/Shot shot -n -d explain 2>&1 | head -120 || true
+        run: ninja -C out/Shot shot shot_c -n -d explain 2>&1 | head -120 || true
 
       - name: forget the previous binary
         # The build directory is restored from cache, so out/Shot still
@@ -262,7 +262,7 @@ jobs:
         # satisfy the check; the relink costs a couple of minutes.
         if: ${{ github.event.inputs.mode == 'build' }}
         working-directory: src
-        run: rm -f out/Shot/shot
+        run: rm -f out/Shot/shot out/Shot/libshot.so
 
       - name: ninja
         if: ${{ github.event.inputs.mode == 'build' }}
@@ -272,7 +272,10 @@ jobs:
         # -k 0: this platform is still being brought up, and each round costs
         # a runner-hour -- keep compiling past a failure so one log names every
         # broken translation unit, not just the first.
-        run: ninja -C out/Shot shot -j ${{ github.event.inputs.jobs }} -k 0
+        # shot_c is the same engine behind a C ABI, for shotium's node addon.
+        # The second link shares this directory's ThinLTO cache with the first,
+        # so it reuses that codegen and costs minutes rather than an hour.
+        run: ninja -C out/Shot shot shot_c -j ${{ github.event.inputs.jobs }} -k 0
 
       - name: save the build directory
         if: ${{ always() && github.event.inputs.mode == 'build' }}
@@ -306,12 +309,14 @@ jobs:
         if: ${{ github.event.inputs.mode == 'build' }}
         working-directory: src
         run: |
-          if [ ! -f out/Shot/shot ]; then
-            echo "shot was not produced -- the build got further, but is not done."
-            echo "Run this workflow again; the cache carries the objects over."
-            exit 1
-          fi
-          ls -l out/Shot/shot
+          for wanted in out/Shot/shot out/Shot/libshot.so; do
+            if [ ! -f "$wanted" ]; then
+              echo "$wanted was not produced -- the build got further, but is not done."
+              echo "Run this workflow again; the cache carries the objects over."
+              exit 1
+            fi
+          done
+          ls -l out/Shot/shot out/Shot/libshot.so
 
       - name: package
         if: ${{ success() && github.event.inputs.mode == 'build' }}
@@ -330,7 +335,11 @@ jobs:
           archive="$stem-v$version.7z"
           rm -rf dist "$archive"
           mkdir -p "dist/$stem"
-          cp out/Shot/shot out/Shot/shot_data.pak out/Shot/shot_strings.pak "dist/$stem/"
+          # libshot.so ships beside shot rather than in an archive of its own:
+          # they are the same engine, the resource packs serve both, and a
+          # caller who wants the addon should not have to work out which two
+          # downloads go together.
+          cp out/Shot/shot out/Shot/libshot.so              out/Shot/shot_data.pak out/Shot/shot_strings.pak "dist/$stem/"
           ls -l "dist/$stem"
           ( cd dist && 7z a -t7z -mx=9 "../$archive" "$stem" )
           ls -l "$archive"
@@ -374,6 +383,13 @@ jobs:
           # exercises exactly one of them.
           node tools/shot/node_check.cjs out/Shot/shot
           node tools/shot/daemon_check.cjs out/Shot/shot
+          # The node addon, and the C ABI under it. Built here rather than
+          # taken from anywhere else, because the library it links against is
+          # the one this job has just produced -- an addon checked against a
+          # different build would be checking nothing.
+          ( cd shotium/native             && SHOT_INCLUDE_DIR="$PWD/../../shot" SHOT_LIB_DIR="$PWD/../../out/Shot"                npx --yes node-gyp@11 rebuild )
+          cp out/Shot/libshot.so out/Shot/shot_data.pak out/Shot/shot_strings.pak              shotium/native/build/Release/
+          node tools/shot/native_check.cjs out/Shot/shot
           python3 tools/shot/charset_check.py out/Shot/shot
           python3 tools/shot/demo_check.py out/Shot/shot
 

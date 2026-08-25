@@ -310,7 +310,10 @@ jobs:
         # satisfy the check; the relink costs a couple of minutes.
         working-directory: src
           # pwsh, not bash: rm is Remove-Item, whose flags differ.
-        run: if (Test-Path out/Shot/shot.exe) { Remove-Item -Force out/Shot/shot.exe }
+        run: |
+          foreach ($stale in 'out/Shot/shot.exe', 'out/Shot/shot.dll') {
+            if (Test-Path $stale) { Remove-Item -Force $stale }
+          }
 
       - name: ninja
         shell: pwsh
@@ -318,7 +321,12 @@ jobs:
         continue-on-error: true
         timeout-minutes: 280   # leaves the job time to store what got built
         run: |
-          ninja -C out/Shot shot -j ${{ github.event.inputs.jobs }}
+          # shot_c is the same engine behind a C ABI, for shotium's node
+          # addon. It is a second link of the same 43 MB, which sounds like
+          # doubling the job and is not: both links share the ThinLTO cache
+          # this build directory already carries, so the second one reuses the
+          # codegen the first one did and costs minutes rather than an hour.
+          ninja -C out/Shot shot shot_c -j ${{ github.event.inputs.jobs }}
 
       - name: save the build directory
         if: always()
@@ -372,10 +380,13 @@ jobs:
         # ninja is allowed to run out of time; the job is not allowed to call
         # that a success. Re-running picks up where this left off.
         run: |
-          if (-not (Test-Path out/Shot/shot.exe)) {
-            throw "shot.exe was not produced -- the build got further, but is not done. Run this workflow again; the cache carries the objects over."
+          foreach ($wanted in 'out/Shot/shot.exe', 'out/Shot/shot.dll') {
+            if (-not (Test-Path $wanted)) {
+              throw "$wanted was not produced -- the build got further, but is not done. Run this workflow again; the cache carries the objects over."
+            }
           }
-          Get-Item out/Shot/shot.exe | Select-Object Length,LastWriteTime
+          Get-Item out/Shot/shot.exe,out/Shot/shot.dll |
+            Select-Object Name,Length,LastWriteTime
 
 
       - name: package
@@ -417,7 +428,11 @@ jobs:
           if (Test-Path dist) { Remove-Item -Recurse -Force dist }
           if (Test-Path $archive) { Remove-Item -Force $archive }
           New-Item -ItemType Directory "dist/$stem" | Out-Null
-          Copy-Item out/Shot/shot.exe,out/Shot/shot_data.pak,out/Shot/shot_strings.pak "dist/$stem/"
+          # shot.dll ships beside shot.exe rather than in an archive of its
+          # own: they are the same engine, the resource packs serve both, and
+          # a caller who wants the addon should not have to work out which two
+          # downloads go together.
+          Copy-Item out/Shot/shot.exe,out/Shot/shot.dll,out/Shot/shot_data.pak,out/Shot/shot_strings.pak "dist/$stem/"
           Get-ChildItem "dist/$stem" | Select-Object Name,Length
           # windows-2025 ships 7-Zip on PATH; fall back to its install path
           # rather than silently producing no archive if that ever changes.
@@ -456,9 +471,9 @@ jobs:
         working-directory: src
         # In the order they cost: protocol and geometry first because they are
         # seconds, then the network one, then the pool and the resident daemon
-        # in front of it, then the two that render. Any failure fails the
-        # job -- there is no point publishing an engine that does not pass its
-        # own checks.
+        # in front of it, then the addon that skips both, then the two that
+        # render. Any failure fails the job -- there is no point publishing an
+        # engine that does not pass its own checks.
         #
         # charset_check and demo_check run here for the same reason they run on
         # Linux and macOS: they are the only suites that compare pixels, and a
@@ -473,6 +488,18 @@ jobs:
           python tools/shot/net_check.py out/Shot/shot.exe
           node tools/shot/node_check.cjs out/Shot/shot.exe
           node tools/shot/daemon_check.cjs out/Shot/shot.exe
+          # The node addon, and the C ABI under it. Built here rather than
+          # taken from anywhere else, because the library it links against is
+          # the one this job has just produced -- an addon checked against a
+          # different build would be checking nothing.
+          $env:SHOT_INCLUDE_DIR = "$PWD/shot"
+          $env:SHOT_LIB_DIR = "$PWD/out/Shot"
+          Push-Location shotium/native
+          npx --yes node-gyp@11 rebuild
+          Pop-Location
+          Copy-Item out/Shot/shot.dll,out/Shot/shot_data.pak,out/Shot/shot_strings.pak `
+                    shotium/native/build/Release/
+          node tools/shot/native_check.cjs out/Shot/shot.exe
           python tools/shot/charset_check.py out/Shot/shot.exe
           python tools/shot/demo_check.py out/Shot/shot.exe
 
