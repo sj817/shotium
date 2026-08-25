@@ -1,5 +1,10 @@
 # Shot benchmark corpus
 
+Two benchmarks share this corpus. This one compares `shot` against a Chromium
+built from the same tree, over native CLI flags. `bench/cross/` compares the
+npm package against puppeteer and playwright, which is the comparison a caller
+choosing a library actually faces.
+
 The corpus covers `simple`, `css-heavy`, `flex`, `grid`, `text`, `fonts`,
 `images`, `gradient`, `filter`, `long-page`, and `remote-page`. Every case is
 static and fixed at 1280 × 720, scale 1. The v1 contract is viewport-only: a

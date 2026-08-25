@@ -356,3 +356,9 @@ third_party/rust/target/
 # shotium's dev-only tooling (typescript, @types/node). The package itself has
 # no runtime dependencies.
 /shotium/node_modules
+
+# The cross-engine benchmark installs puppeteer and playwright, which bring a
+# browser each, and writes its report and sample PNGs beside them.
+/bench/cross/node_modules
+/bench/cross/out*
+/bench/out

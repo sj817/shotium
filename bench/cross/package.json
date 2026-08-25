@@ -1,0 +1,12 @@
+{
+  "name": "shot-cross-bench",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Cross-engine screenshot benchmark: shotium, puppeteer and playwright on one corpus.",
+  "type": "commonjs",
+  "engines": {"node": ">=18"},
+  "dependencies": {
+    "playwright": "1.62.1",
+    "puppeteer": "25.8.0"
+  }
+}
