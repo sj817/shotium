@@ -17,8 +17,9 @@ await shotium.runtime.stop();
 
 ## What it is
 
-`shot.exe` is Chromium with V8 removed and the browser layer removed with it:
-no `//content`, no render process, no GPU process, no compositor, no sandbox.
+`shot` — `shot.exe` on Windows — is Chromium with V8 removed and the browser
+layer removed with it: no `//content`, no render process, no GPU process, no
+compositor, no sandbox.
 What is left is Blink used directly — `Page` → `LocalFrame` → `Document` →
 lifecycle → `cc::PaintRecord` → CPU raster — which is the same shape Blink
 already uses internally for SVG images.
@@ -39,8 +40,26 @@ Consequences worth knowing:
 - No `<script>`, no framework hydration, no `document.fonts.ready`.
 - `selector` is resolved with `Document::querySelector` inside the renderer.
   Nothing is injected into the page.
-- Fonts come from the host system. The same HTML on two machines can differ by
-  a pixel, and that is accepted rather than fixed.
+- Which fonts exist is the host's business; how they are rasterised is not.
+  Grayscale antialiasing at a fixed gamma, no subpixel geometry, no read of the
+  host's ClearType settings — so one platform renders a page the same way every
+  time. Two different platforms still differ by a hair at glyph edges.
+- A page that declares a legacy encoding renders as mojibake. The document is
+  installed with the encoding hardcoded to UTF-8, and that outranks
+  `<meta charset>`, so `shift_jis` and `gbk` declarations are never consulted.
+
+## The engine binary
+
+The engine is a separate download, one archive per platform and architecture —
+`shot-win-x64`, `shot-mac-arm64`, `shot-linux-x64` and the other three — on the
+[releases page]. Unpack one and point the package at it:
+
+```bash
+export SHOTIUM_BINARY=/path/to/shot-mac-arm64/shot
+```
+
+Or pass `binary` to `runtime.start()`. With neither set, the package looks for
+`bin/shot` (`bin/shot.exe` on Windows) beside `index.js`.
 
 ## Processes
 
@@ -79,3 +98,5 @@ shotium.runtime.on('stderr', ({worker, line}) => …);   // console + load log
 `stderr` carries the worker's own diagnostics, including the page's console
 messages and, with `args: ['--verbose']`, every subresource request and its
 outcome. It is the first place to look when a screenshot comes out wrong.
+
+[releases page]: https://github.com/sj817/shotium/releases

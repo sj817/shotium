@@ -5,8 +5,8 @@ images, HTTP — everything a page needs to *look* right.
 
 **There is no JavaScript engine.** V8 is not disabled, it is gone: deleted from
 the tree, along with the browser layer that existed to host it. What is left is
-Blink used directly, which turns out to be about 50 MB and starts in under a
-second.
+Blink used directly, which turns out to be one self-contained executable —
+41 MB on Windows, 12.8 MB compressed — that starts in under a second.
 
 ```js
 const shotium = require('shotium');
@@ -52,23 +52,48 @@ boundary rather than a list of bugs:
   a React app with no server rendering, this tool is the wrong tool.
 - `selector` is resolved with `Document::querySelector` inside the renderer.
   Nothing is injected into the page, because there is nothing to inject it with.
-- **Fonts come from the host system.** The same HTML on two machines can differ
-  by a pixel. That is accepted, not fixed.
+- **Which fonts exist is the host's business. How they are rasterised is
+  not.** Text is drawn with grayscale antialiasing at a fixed gamma, with no
+  subpixel geometry and no read of the host's ClearType settings, so the same
+  page renders byte-identically on every process on a platform. Two *different*
+  platforms still differ by a hair at glyph edges — CoreText and DirectWrite
+  round an advance differently — and a font the host does not have is a font
+  the page does not get.
+- **A page that declares a legacy encoding renders as mojibake.**
+  `ForceSynchronousDocumentInstall` installs the document with the encoding
+  hardcoded to UTF-8, and an explicit encoding outranks `<meta charset>`, so a
+  `shift_jis` or `gbk` declaration is never consulted.
+  `tools/shot/charset_check.py` measures this every run rather than assuming it
+  is fine; whoever fixes it should re-run that script.
 - There is no SSRF protection and no resource ceiling beyond a body-size cap.
   Deciding which URLs may be fetched is the caller's job.
-- **Windows only, today.** The tree was cut on Windows; Linux and macOS need
-  their platform files restored, which is real work and has not been done.
 
 ## Using it
 
-The npm package is not published yet. Point it at a built engine:
+Built engines are on the [releases page], six archives per version:
+
+| | x64 | arm64 |
+|---|---|---|
+| Windows | `shot-win-x64-v0.1.0.7z` | `shot-win-arm64-v0.1.0.7z` |
+| macOS | `shot-mac-x64-v0.1.0.7z` | `shot-mac-arm64-v0.1.0.7z` |
+| Linux | `shot-linux-x64-v0.1.0.7z` | `shot-linux-arm64-v0.1.0.7z` |
+
+Each unpacks to one directory named for its platform and nothing else —
+`shot-win-x64/`, `shot-mac-arm64/` — holding the executable and two `.pak`
+files. The version is on the archive rather than inside it, so a newer build
+unpacks over an older one in place.
+
+The npm package is not published yet. Point it at an unpacked engine:
 
 ```bash
 git clone https://github.com/sj817/shotium
 cd shotium/shotium
 npm link                      # or: require() it by path
-export SHOTIUM_BINARY=/path/to/shot.exe
+export SHOTIUM_BINARY=/path/to/shot-win-x64/shot.exe    # `shot`, off Windows
 ```
+
+With `SHOTIUM_BINARY` unset the package looks for `bin/shot.exe` — `bin/shot`
+on macOS and Linux — beside `index.js`.
 
 ```js
 const {runtime, screenshot} = require('shotium');
@@ -135,21 +160,34 @@ changes one thing: `gclient` must not manage `src`.** Set `"managed": False`, or
 the next `gclient sync` will reset the tree to upstream and undo everything this
 repository is.
 
-You need [depot_tools] on your `PATH`, Visual Studio with the Windows SDK
-(**10.0.28000** is what the tree pins), and about 40 GB of disk.
+You need [depot_tools] on your `PATH`, about 40 GB of disk, and a host
+toolchain:
 
-The pin is a directory name rather than a compatibility statement, and it lives
-in two files that must agree — `build/vs_toolchain.py` and
-`build/toolchain/win/setup_toolchain.py`. If the SDK you have installed is a
-different one, name it instead of editing both:
+| | |
+|---|---|
+| Windows | Visual Studio with the Windows SDK, plus the arm64 toolset for an arm64 target |
+| macOS | Xcode. Leave `FORCE_MAC_TOOLCHAIN` unset — the hermetic Xcode needs access outside Google nobody has |
+| Linux | `sudo ./build/install-build-deps.sh --no-prompt --no-nacl` |
+
+The tree pins Windows SDK **10.0.28000**. The pin is a directory name rather
+than a compatibility statement, and it lives in two files that must agree —
+`build/vs_toolchain.py` and `build/toolchain/win/setup_toolchain.py`. If the
+SDK you have installed is a different one, name it instead of editing both —
+and name the NTDDI symbol out of that same SDK:
 
 ```bash
 export CHROMIUM_WIN_SDK_VERSION=10.0.26100.0
+# and in out/Shot/args.gn:  win_ntddi_version = "NTDDI_WIN11_GE"
 ```
 
-That is what CI does, because Chromium's own toolchain package is not
-downloadable outside Google and a hosted runner has whatever SDK its image
-shipped with.
+Both halves matter. `win_ntddi_version` defaults to `NTDDI_WIN11_BR`, and an
+NTDDI identifier the preprocessor has never heard of compares as 0 instead of
+failing — so naming one your SDK does not define quietly switches off every
+version-guarded declaration, and it surfaces thousands of lines later as
+`unknown type name`. Take the highest `NTDDI_WIN*` that SDK's
+`shared/sdkddkver.h` actually defines. That is what CI does, because Chromium's
+own toolchain package is not downloadable outside Google and a hosted runner
+has whatever SDK its image shipped with.
 
 ```bash
 mkdir shotium-build && cd shotium-build
@@ -162,18 +200,34 @@ solutions = [{
   "custom_deps": {},
   "custom_vars": {"checkout_configuration": "small"},
 }]
-target_os = ["win"]
+target_os = ["win"]          # or ["mac"], or ["linux"]
 EOF
 
 gclient sync --nohooks --no-history
 gclient runhooks
 
 cd src
+
+# The ICU data set is generated rather than checked in: third_party/icu is a
+# DEPS checkout, so gclient would discard it. This has to run before gn gen.
+python3 tools/shot/icu_repack.py \
+  third_party/icu/cast/icudtl.dat \
+  third_party/icu/shot/icudtl.dat --preset shot
+
 mkdir -p out/Shot
 echo 'import("//build/args/shot.gn")' > out/Shot/args.gn
 gn gen out/Shot
 ninja -C out/Shot shot
 ```
+
+**`target_os` decides which DEPS entries exist at all.** The `.gclient` checked
+into this tree says `["win"]`, so a sync that inherits it on another platform
+omits every entry gated on that platform and fails much later — on a missing
+include, rather than on anything that names the cause.
+
+Use `build/args/shot-mac.gn` or `build/args/shot-linux.gn` in the `import` on
+those platforms. Both import `shot.gn` and add what the platform needs, so
+there is still one place where a configuration decision is written down.
 
 The `import` rather than `--args="$(cat ...)"`: the file contains quoted values,
 which do not survive being interpolated into a shell argument.
@@ -193,12 +247,15 @@ Budget from the peak, not the average.
 ### Checks
 
 ```bash
-python tools/shot/serve_check.py out/Shot/shot.exe    # protocol, geometry, encoders
-python tools/shot/net_check.py   out/Shot/shot.exe    # http, redirects, cache, TLS
-node   tools/shot/node_check.cjs out/Shot/shot.exe    # pool, retry, crash isolation
+python tools/shot/serve_check.py   out/Shot/shot.exe   # protocol, geometry, encoders
+python tools/shot/net_check.py     out/Shot/shot.exe   # http, redirects, cache, TLS
+node   tools/shot/node_check.cjs   out/Shot/shot.exe   # pool, retry, crash isolation
+python tools/shot/charset_check.py out/Shot/shot.exe   # legacy encodings vs the ICU cut
+python tools/shot/demo_check.py    out/Shot/shot.exe   # 84 reftests
 ```
 
-76 checks. The ones worth knowing about:
+77 checks and 84 reftests. `node_check.cjs` is the only one that needs Node;
+CI runs it on Windows and the rest everywhere. The ones worth knowing about:
 
 - **The same document fetched over http and read off the disk must produce
   identical bytes.** The transport is not supposed to be visible in the picture.
@@ -206,6 +263,11 @@ node   tools/shot/node_check.cjs out/Shot/shot.exe    # pool, retry, crash isola
   ways of naming one rectangle; if they disagree, one of them is wrong.
 - **A worker killed mid-request must come back on another one with the same
   image.** That is the claim the whole out-of-process design rests on.
+- **Every reftest states its expected result in CSS the cut cannot break** — a
+  pair of pages that must render identically, rather than a stored image that
+  would need re-blessing after every cut and would hide the regressions in the
+  noise. A page with no reference is a smoke test instead: it must render, show
+  more than one colour, and produce the same bytes twice.
 
 `tools/shot/size_report.py` attributes every byte of the binary to the object
 file it came from, via the PDB's section contributions — no `/MAP` relink and no
@@ -257,16 +319,29 @@ jar and an optional disk cache are on; HTTP/3 and proxies are not.
 
 ## Size
 
-| | raw | compressed (7z, BCJ+LZMA2) |
-|---|---:|---:|
-| `shot.exe` + `icudtl.dat` + two `.pak` files | 57.7 MB | **16.7 MB** |
+`icu_use_data_file = false` links ICU's table into the executable, so there is
+no `icudtl.dat` to ship. What ships is the binary and two `.pak` files, 118 KB
+between them.
 
-Down from 336 MB. `docs/cut-progress.md` has the whole account, including the
-measurement method — and where the next few megabytes are, measured rather than
-guessed.
+| | raw | .7z |
+|---|---:|---:|
+| Windows x64 | 41.5 MB | **12.80 MB** |
+| Windows arm64 | | **10.56 MB** |
+| macOS arm64 | 38.4 MB | **12.29 MB** |
+| Linux x64 | 70.2 MB | **15.80 MB** |
+
+Down from 336 MB. The macOS figure is from the `tar.xz` that job produced
+before the archive formats were unified; the same LZMA2 either way, so expect
+it to move by kilobytes rather than megabytes. The Linux raw size is the one
+number here that is not yet accounted for — 70 MB of ELF against 41 MB of PE
+from the same source is a gap worth measuring, not explaining away.
+
+`docs/cut-progress.md` has the whole account, including the measurement
+method — and where the next few megabytes are, measured rather than guessed.
 
 ## Licence
 
 Chromium's, unchanged: BSD-3-Clause, see [LICENSE](LICENSE).
 
 [depot_tools]: https://commondatastorage.googleapis.com/chrome-infra-docs/flat/depot_tools/docs/html/depot_tools_tutorial.html#_setting_up
+[releases page]: https://github.com/sj817/shotium/releases
