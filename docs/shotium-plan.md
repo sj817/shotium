@@ -142,6 +142,41 @@ Chrome 用的壳。缓存、重定向、HTTP/2、TLS 全部在 `//net` 里。wor
 `shotium/`:`index.js`、`lib/{protocol,worker,pool}.js`、`index.d.ts`、`README.md`。
 `runtime.start()/stop()`、`on()` 五个事件、进程池 + 队列、`retry`、类型定义,全部落地。
 
+### 第 4 组 · 常驻守护进程 — ✅ 完成
+
+进程池的寿命等于持有它的 Node 进程。命令行、CI 步骤、队列 worker、`node -e`
+都是「起 4 个 worker,渲一张,全扔掉」——对一次性进程来说,启动就是这张图的
+大头。第 4 组把同一个池放到一个 socket 后面。
+
+| # | 内容 | 落点 |
+|---|---|---|
+| 4.1 | 守护进程:池 + 监听 + 空闲退出 | `shotium/lib/daemon.js`、`lib/daemon_main.js` |
+| 4.2 | 端点按配置取哈希(Windows 命名管道 / POSIX unix socket) | `shotium/lib/endpoint.js` |
+| 4.3 | 客户端:连不上就拉起,一条连接多请求并发(带 `id`) | `shotium/lib/client.js` |
+| 4.4 | 命令行 `shotium` / `shotium daemon start\|status\|stop` | `shotium/cli.js` |
+| 4.5 | 检查:跨进程复用、并发、失败不致命、两种退出 | `tools/shot/daemon_check.cjs` |
+
+三个决定值得记下来:
+
+- **端点是配置的哈希,不是固定名字。** 连上「碰巧在跑的那个」意味着用别人的
+  二进制、别人的 flag 渲图。两份配置就是两个守护进程;要按名字找就传 `name`。
+- **预热是启动的一部分。** 每个 worker 先渲一张丢掉的空文档,否则第一个真实
+  请求要替所有 worker 付懒初始化的钱。
+- **worker 用 `detached` 起。** Windows 上这对应 `DETACHED_PROCESS`:不分配
+  控制台,也就没有每个 worker 一个的 `conhost.exe`。实测四个 worker 少 40 MB
+  工作集。名字听着像会活过 supervisor,其实不会——stdin 一断 worker 就退出,
+  而 supervisor 死掉 stdin 就断了。
+
+### 第 5 组 · 横向基准 — ✅ 完成
+
+`bench/cross/`:同一份语料、同一套测量模型下,shotium 对 puppeteer 和
+playwright(各两档:`chrome-headless-shell` 与完整 headless Chrome)。六个场景
+——冷启动、冷启动一秒后、稳态、十张顺序、十张四并发、以及**空进程连常驻引擎**
+——每格 7 次,一次一棵全新进程树。内存是整棵树工作集的采样峰值,并在峰值那一
+刻按映像名拆开,因为四个引擎都是 node 驱动的,Node 堆不是被比较的东西。
+
+方法和口径写在 `bench/cross/README.md`,结果表在 README 的「Numbers」一节。
+
 ---
 
 ## 4. 对外接口(约定)

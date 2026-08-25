@@ -31,6 +31,7 @@ await shotium.runtime.stop();
 | `shot/` | 引擎。约 1,800 行 C++，直接驱动 Blink |
 | `shotium/` | npm 包。进程池、队列、重试、类型声明 —— 纯 JavaScript |
 | `tools/shot/` | 检查脚本：协议、几何、网络，以及 JavaScript 层 |
+| `bench/` | 基准测试：对同一棵树构建出的 Chromium，以及对 puppeteer 和 playwright |
 | `docs/cut-progress.md` | 这棵树是怎么裁的，以及裁的过程中弄坏了什么 |
 | `docs/shotium-plan.md` | 当前设计，以及明确不做的部分 |
 
@@ -88,6 +89,30 @@ await screenshot({file: 'https://example.com', path: 'out.png'});
 
 `screenshot()` 返回一个 `Buffer`；如果传了 `path`，文件由 worker 自己写，此时返回 `null`。
 
+### 常驻守护进程
+
+`runtime` 的 worker 活多久，取决于持有它的那个 Node 进程活多久。命令行、CI 步骤、队列 worker 都是「为了一张图而存在」的进程，对它们来说，起 worker 就是这张图的主要成本。
+
+`daemon` 是同一个进程池，放在一个 socket 后面 —— Windows 上是命名管道，其他平台是 unix socket —— 下一个进程连上去时，它已经起好并且预热过了：
+
+```js
+const {daemon} = require('shotium');
+
+const client = await daemon.connect({workers: 4});   // 没有就先拉起一个
+const png = await client.screenshot({file: 'https://example.com'});
+client.close();
+
+await daemon.status();    // {running, pid, workers, served, warm, ...}
+await daemon.stop();
+```
+
+```bash
+npx shotium https://example.com -o out.png    # 第一次调用会把守护进程拉起来
+npx shotium daemon status
+```
+
+守护进程的端点是它自身配置的哈希 —— 二进制、worker 数、缓存目录、附加 flag —— 所以客户端不会悄悄连上一个「用别的东西渲图」的池子。最后一个客户端离开五分钟后它自己退出；一条连接上可以同时跑多个请求。
+
 ### 选项
 
 ```ts
@@ -121,6 +146,40 @@ shot --file page.html --full-page --type webp --quality 85 -o out.webp
 shot --serve --cache-dir /var/tmp/shot-cache    # 常驻 worker，见 shot/shot_server.h
 shot --help
 ```
+
+---
+
+## 实测数据
+
+在同一份语料上对 puppeteer 和 playwright：十个静态本地文档，1280x720，PNG，只截视口，`waitUntil: 'load'`，每张截图一个新页面，每个样本一棵全新进程树，每格 7 次，取中位数。方法和全部口径写在 [`bench/cross/`](bench/cross/README.md)；完整报告——每一列、每个场景，以及失败的样本——在 [`bench/cross/RESULTS.md`](bench/cross/RESULTS.md)。测试机是一台 32 核 Windows 台式机，测的时候它还在干别的事。
+
+| 引擎 | 冷启动 | 单张 | 单张（复用页面） | 十张 · 四并发 | 该场景内存 |
+|---|--:|--:|--:|--:|--:|
+| **shotium** | **352 ms** | **47 ms** | — | **237 ms**（42 张/秒） | **256 MiB** / 私有 **73** |
+| puppeteer · chrome-headless-shell | 946 ms | 133 ms | 61 ms | 905 ms（11 张/秒） | 647 MiB / 私有 180 |
+| puppeteer · headless Chrome | 1559 ms | 132 ms | 50 ms | 1890 ms（5 张/秒） | 1287 MiB / 私有 379 |
+| playwright · chrome-headless-shell | 962 ms | 150 ms | **33 ms** | 1171 ms（9 张/秒） | 652 MiB / 私有 215 |
+| playwright · headless Chrome | 1385 ms | 146 ms | 45 ms | 1276 ms（8 张/秒） | 789 MiB / 私有 282 |
+
+「冷启动」是一整个进程：node 启动、`require`、拉起引擎、截一张图。「单张」是引擎已经在跑之后再多截一张的边际成本，启动完全不在里面。
+
+内存写成两个数，因为一棵进程树没有单一的那个数。前一个是工作集之和，也就是任务管理器加出来的数——它对进程间共享的页面按进程重复计费：四个 shot worker 各自映射同一份 43 MiB 的 `shot.exe`，二十一个 chrome 进程各自映射同一份 `chrome.dll`。后一个是私有工作集之和：只属于某一个进程的页面，一份不重复。真实开销在两者之间，这两个数把它夹住。
+
+shot 输掉的那一列反而是值得说的一列。让**同一个页面**在文档之间跳转，比每次新建一个页面快，Chrome 允许这么做；而 shot 每个请求都要建一个 `Page` 再拆掉，没有对应的做法。这个优势到并发就停了：四个页面同时跑，Chrome 要付四个渲染进程和接近一个 GB，而四个 worker 同时应付四个请求正是 shot 的形状。
+
+引擎已经起着的时候——命令行调用、队列 worker、请求处理器——一个**全新进程**为一张图付出的是：
+
+| 引擎 | 客户端端到端 | 连接 | 截图 | 常驻 | 仅引擎 | 常驻进程数 |
+|---|--:|--:|--:|--:|--:|--:|
+| **shotium 守护进程** | **250 ms** | **2.3 ms** | **57 ms** | **58 MiB** | **2.8 MiB** | 5 |
+| puppeteer · chrome-headless-shell | 512 ms | 17 ms | 170 ms | 355 MiB | 287 MiB | 8 |
+| puppeteer · headless Chrome | 588 ms | 19 ms | 204 ms | 587 MiB | 519 MiB | 12 |
+| playwright · chrome-headless-shell | 764 ms | 38 ms | 189 ms | 272 MiB | 154 MiB | 5 |
+| playwright · headless Chrome | 680 ms | 34 ms | 228 ms | 400 MiB | 299 MiB | 7 |
+
+两边连的都是不是自己拉起来的东西：shotium 走命名管道，puppeteer 走 `browserWSEndpoint`，playwright 连 `launchServer()`。常驻那几列是「什么都不干的时候」各自的开销，每个引擎都先晾十五秒再采样。「仅引擎」是把 node 进程去掉之后剩下的部分，对 shotium 来说那几乎就是全部：队列安静十秒之后，worker 会回收 blink 的堆、丢掉缓存、把页面交还给操作系统，于是四个常驻渲染器加起来只占 2.8 MiB，58 MiB 里剩下的是管着它们的那个 node。下一个请求要付大约 8 ms 的软缺页把它们拿回来——见 [`shot/shot_runtime.h`](shot/shot_runtime.h) 里的 `PurgeMemory` 和 `ReleaseWorkingSet`。
+
+**这里没有测的是脚本。** 语料全是静态文档，因为那才是 shot 能拍的东西。页面靠脚本把自己建出来的场景，这些数字一概不适用——那种页面拍出来是空白的，任何跑分都改不了这一点。
 
 ---
 
@@ -194,15 +253,17 @@ Blink 的布局代码在最重的时候需要**每个编译进程 1.1–1.3 GB**
 python tools/shot/serve_check.py   out/Shot/shot.exe   # 协议、几何、编码器
 python tools/shot/net_check.py     out/Shot/shot.exe   # http、重定向、缓存、TLS
 node   tools/shot/node_check.cjs   out/Shot/shot.exe   # 进程池、重试、崩溃隔离
+node   tools/shot/daemon_check.cjs out/Shot/shot.exe   # 常驻守护进程
 python tools/shot/charset_check.py out/Shot/shot.exe   # 旧式编码与 ICU 裁剪的关系
 python tools/shot/demo_check.py    out/Shot/shot.exe   # 84 个 reftest
 ```
 
-77 项检查加 84 个 reftest（参考比对测试）。只有 `node_check.cjs` 需要 Node.js；CI 在 Windows 上跑它，其余脚本三个平台都跑。其中值得单独说明的几条：
+91 项检查加 84 个 reftest（参考比对测试）。需要 Node.js 的是两个 `.cjs`，它们在 Windows 和 Linux 上都跑 —— 守护进程在一边监听命名管道，在另一边监听 unix socket，只在一个平台上跑等于只检查了一半。其中值得单独说明的几条：
 
 - **同一份文档，通过 HTTP 取回和从磁盘读取，必须产出完全相同的字节。** 传输方式不应该在图片里看得出来。
 - **`clip` 和 `selector` 必须找到同一个盒子，精确到字节。** 它们是同一个矩形的两种指定方式；如果结果不一致，其中一个是错的。
 - **请求处理到一半被杀掉的 worker，必须在另一个 worker 上返回同样的图片。** 整个多进程设计成立与否，就取决于这一条。
+- **另一个进程必须找到已有的守护进程，而不是再起一个；拿到的字节必须和进程内的池子一致。** 两个会各自漂移的入口，就是两个渲染器。
 - **每个 reftest 都用「裁剪不可能弄坏的 CSS」来表达预期结果** —— 一对必须渲染成相同像素的页面，而不是一张存好的基准图。基准图在每次裁剪之后都要重新确认，会把真正的回归淹没在噪声里。没有参考页的用例则是冒烟测试：必须能渲染出来、颜色多于一种，并且跑两次得到相同的字节。
 
 `tools/shot/size_report.py` 通过 PDB 的 section contributions，把二进制的每一个字节归属到它来自的目标文件，既不需要 `/MAP` 重链接，也不需要提高 `symbol_level`。

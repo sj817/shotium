@@ -35,6 +35,7 @@ A fork of Chromium with most of it removed, plus two things that are ours:
 | `shot/` | the engine. A ~1,800-line C++ program that drives Blink directly |
 | `shotium/` | the npm package. Process pool, queue, retry, types — plain JavaScript |
 | `tools/shot/` | the checks: protocol, geometry, network, and the JS layer |
+| `bench/` | the benchmarks: this engine against Chromium, and against puppeteer and playwright |
 | `docs/cut-progress.md` | how the tree was cut, and what broke on the way |
 | `docs/shotium-plan.md` | the current design and what is deliberately not done |
 
@@ -115,6 +116,38 @@ await screenshot({file: 'https://example.com', path: 'out.png'});
 `screenshot()` resolves to a `Buffer`, or to `null` when `path` was given and
 the worker wrote the file itself.
 
+### The resident daemon
+
+`runtime` holds its workers for as long as the Node process holding it. A
+command line, a CI step or a queue worker is a process that exists for one
+screenshot, and for that process starting the workers *is* the cost of the
+picture.
+
+`daemon` is the same pool behind a socket — a named pipe on Windows, a unix
+socket elsewhere — so the next process finds it already warm and already
+prewarmed:
+
+```js
+const {daemon} = require('shotium');
+
+const client = await daemon.connect({workers: 4});   // starts one if none is up
+const png = await client.screenshot({file: 'https://example.com'});
+client.close();
+
+await daemon.status();    // {running, pid, workers, served, warm, ...}
+await daemon.stop();
+```
+
+```bash
+npx shotium https://example.com -o out.png    # first call starts the daemon
+npx shotium daemon status
+```
+
+A daemon is addressed by a hash of its configuration — binary, workers, cache
+root, flags — so a client never silently attaches to a pool that renders with
+something other than what it asked for. It exits five minutes after the last
+client leaves, and one connection can carry several requests at once.
+
 ### Options
 
 ```ts
@@ -152,6 +185,74 @@ shot --file page.html --full-page --type webp --quality 85 -o out.webp
 shot --serve --cache-dir /var/tmp/shot-cache    # resident worker, see shot/shot_server.h
 shot --help
 ```
+
+---
+
+## Numbers
+
+Against puppeteer and playwright, on ten static local documents at 1280x720,
+PNG, viewport only, `waitUntil: 'load'`, a fresh page per screenshot, one fresh
+process tree per sample, seven repeats, medians. The method and every caveat
+are in [`bench/cross/`](bench/cross/README.md); the full report — every column,
+every scenario, and the samples that failed — is
+[`bench/cross/RESULTS.md`](bench/cross/RESULTS.md). A 32-core Windows desktop
+that was doing other things at the time.
+
+| engine | cold start | per shot | per shot, page reused | ten pages, 4 at a time | memory there |
+|---|--:|--:|--:|--:|--:|
+| **shotium** | **352 ms** | **47 ms** | — | **237 ms** (42/s) | **256 MiB** / **73 private** |
+| puppeteer, chrome-headless-shell | 946 ms | 133 ms | 61 ms | 905 ms (11/s) | 647 MiB / 180 private |
+| puppeteer, headless Chrome | 1559 ms | 132 ms | 50 ms | 1890 ms (5/s) | 1287 MiB / 379 private |
+| playwright, chrome-headless-shell | 962 ms | 150 ms | **33 ms** | 1171 ms (9/s) | 652 MiB / 215 private |
+| playwright, headless Chrome | 1385 ms | 146 ms | 45 ms | 1276 ms (8/s) | 789 MiB / 282 private |
+
+*Cold start* is a whole process: node, `require`, launching the engine, one
+screenshot. *Per shot* is the marginal cost on an engine already running, with
+startup entirely out of it.
+
+*Memory* is two numbers because a tree of processes does not have one. The
+first is the sum of working sets, which is what task manager adds up and which
+charges every process separately for pages it shares with its siblings — four
+shot workers each mapping the same 43 MiB of `shot.exe`, twenty-one chrome
+processes each mapping the same `chrome.dll`. The second is the sum of private
+working sets: the pages belonging to exactly one process, nothing counted
+twice. The real cost is between them, and the two bracket it.
+
+The one column shot loses is the interesting one. Navigating **one page** from
+document to document is faster than making a new one, and Chrome lets you do
+that; shot builds and tears down a `Page` per request whether you want it or
+not, so it has no equivalent. Where that stops helping is concurrency: four
+pages driven at once cost Chrome four renderer processes and most of a
+gigabyte, and the four workers answering four requests at once are what shot is
+shaped for.
+
+With the engine already up — a CLI invocation, a queue worker, a request
+handler — what a **fresh process** pays for one screenshot:
+
+| engine | client, end to end | connect | screenshot | resident | engine only | resident processes |
+|---|--:|--:|--:|--:|--:|--:|
+| **shotium daemon** | **250 ms** | **2.3 ms** | **57 ms** | **58 MiB** | **2.8 MiB** | 5 |
+| puppeteer, chrome-headless-shell | 512 ms | 17 ms | 170 ms | 355 MiB | 287 MiB | 8 |
+| puppeteer, headless Chrome | 588 ms | 19 ms | 204 ms | 587 MiB | 519 MiB | 12 |
+| playwright, chrome-headless-shell | 764 ms | 38 ms | 189 ms | 272 MiB | 154 MiB | 5 |
+| playwright, headless Chrome | 680 ms | 34 ms | 228 ms | 400 MiB | 299 MiB | 7 |
+
+Both sides are attaching to something they did not start: shotium over its
+named pipe, puppeteer over `browserWSEndpoint`, playwright over a
+`launchServer()`. The resident columns are what each costs while nothing at all
+is happening, sampled after every engine has been left alone for fifteen
+seconds. *Engine only* takes the node processes out, and for shotium that is
+almost all of it: a worker whose queue has been quiet for ten seconds collects
+blink's heap, drops the caches, and hands its pages back to the OS, so four
+resident renderers cost 2.8 MiB between them and the node supervising them
+costs the rest. The next request pays about 8 ms of soft page faults to get
+them back — see `PurgeMemory` and `ReleaseWorkingSet` in
+[`shot/shot_runtime.h`](shot/shot_runtime.h).
+
+**What none of this measures is script.** The corpus is static documents,
+because that is what shot can photograph. On a page that builds itself in the
+browser these numbers do not apply — that page comes out blank, and no
+benchmark result changes it.
 
 ---
 
@@ -252,12 +353,15 @@ Budget from the peak, not the average.
 python tools/shot/serve_check.py   out/Shot/shot.exe   # protocol, geometry, encoders
 python tools/shot/net_check.py     out/Shot/shot.exe   # http, redirects, cache, TLS
 node   tools/shot/node_check.cjs   out/Shot/shot.exe   # pool, retry, crash isolation
+node   tools/shot/daemon_check.cjs out/Shot/shot.exe   # the resident daemon
 python tools/shot/charset_check.py out/Shot/shot.exe   # legacy encodings vs the ICU cut
 python tools/shot/demo_check.py    out/Shot/shot.exe   # 84 reftests
 ```
 
-77 checks and 84 reftests. `node_check.cjs` is the only one that needs Node;
-CI runs it on Windows and the rest everywhere. The ones worth knowing about:
+91 checks and 84 reftests. The two `.cjs` suites are the ones that need Node,
+and they run on Windows and Linux — the daemon listens on a named pipe on one
+and a unix socket on the other, and a suite that ran on only one platform would
+be checking half of it. The ones worth knowing about:
 
 - **The same document fetched over http and read off the disk must produce
   identical bytes.** The transport is not supposed to be visible in the picture.
@@ -265,6 +369,9 @@ CI runs it on Windows and the rest everywhere. The ones worth knowing about:
   ways of naming one rectangle; if they disagree, one of them is wrong.
 - **A worker killed mid-request must come back on another one with the same
   image.** That is the claim the whole out-of-process design rests on.
+- **A second process must find the daemon rather than start one, and get the
+  same bytes the in-process pool produces.** Two entry points that could drift
+  apart would be two renderers.
 - **Every reftest states its expected result in CSS the cut cannot break** — a
   pair of pages that must render identically, rather than a stored image that
   would need re-blessing after every cut and would hide the regressions in the
