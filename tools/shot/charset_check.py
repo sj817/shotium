@@ -39,7 +39,7 @@ single-byte ones, whose tables were kept. If the two groups ever disagree, the
 data cut is the reason.
 
 Usage:
-    python tools/shot/charset_check.py out/ShotWip/shot.exe
+    python tools/shot/charset_check.py out/ShotWip/shotium.exe
 """
 
 import os

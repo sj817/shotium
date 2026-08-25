@@ -24,7 +24,7 @@ $corpus = "shot\testdata\render_corpus.html"
 $oracle = "shot\testdata\out\oracle.png"
 $actual = "shot\testdata\out\shot.png"
 $diff = "shot\testdata\out\diff.png"
-$exe = "out\Shot\shot.exe"
+$exe = "out\Shot\shotium.exe"
 
 if (-not $SkipBuild) {
     Write-Output "== build =="

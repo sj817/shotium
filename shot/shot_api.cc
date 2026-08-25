@@ -209,7 +209,7 @@ class EngineThread : public base::DelegateSimpleThread::Delegate {
     logging::InitLogging(log_settings);
     logging::SetMinLogLevel(logging::LOGGING_WARNING);
 
-    // Where shot_data.pak and shot_strings.pak are. See the header: the
+    // Where shotium_data.pak and shotium_strings.pak are. See the header: the
     // executable finds them next to itself through DIR_MODULE and a shared
     // library cannot, because on Linux that path resolves through
     // /proc/self/exe and names the host binary. Overriding the key rather than

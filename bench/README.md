@@ -16,7 +16,7 @@ Run a pinned Chromium source baseline against Shot:
 pwsh ./bench/run.ps1 `
   -BaselineEngine headless-shell `
   -BaselineExecutable ./out/Release/headless_shell.exe `
-  -ShotExecutable ./out/Release/shot.exe `
+  -ShotExecutable ./out/Release/shotium.exe `
   -Iterations 10 -WarmupIterations 2
 ```
 

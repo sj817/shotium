@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 
+const platformPackage = require('./lib/platform');
 const {toRequest} = require('./lib/request');
 
 // shot in this process, instead of in workers beside it.
@@ -29,15 +30,19 @@ const {toRequest} = require('./lib/request');
 
 // Where the addon and the library beside it live.
 //
-// prebuilds/ is what ships; build/Release is where node-gyp puts a local
-// build, and is checked second so that a developer who just rebuilt gets what
-// they built rather than what was published.
+// The platform package is what ships -- the .node sits next to the shared
+// library it is linked against, which is the whole reason the two travel in
+// one package rather than two. build/Release is where node-gyp puts a local
+// build; it exists in a checkout and not in an install, so the two never
+// compete in practice.
 function candidates() {
-  const platform = `${process.platform}-${process.arch}`;
-  return [
-    path.join(__dirname, 'prebuilds', platform, 'shotium.node'),
-    path.join(__dirname, 'native', 'build', 'Release', 'shotium.node'),
-  ];
+  const found = [];
+  const dir = platformPackage.packageDir();
+  if (dir) {
+    found.push(path.join(dir, 'shotium.node'));
+  }
+  found.push(path.join(__dirname, 'native', 'build', 'Release', 'shotium.node'));
+  return found;
 }
 
 let binding = null;
@@ -60,11 +65,16 @@ function load() {
     bindingDir = path.dirname(candidate);
     return binding;
   }
+  const expected = platformPackage.packageName();
   throw new Error(
       'shotium: no native engine for this platform.\n' +
       `  looked in:\n    ${tried.join('\n    ')}\n` +
-      '  The native engine ships as a prebuilt binary per platform; ' +
-      'require("shotium") uses worker processes instead and needs no build.');
+      (expected ?
+           `  It ships in ${expected}, which npm installs as an optional ` +
+               'dependency of this package.\n' :
+           `  There is no build for ${process.platform}-${process.arch}.\n`) +
+      '  require("@shotkit/shotium") uses worker processes instead and needs ' +
+      'no addon.');
 }
 
 // The engine, and the queue in front of it.

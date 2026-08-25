@@ -11,7 +11,7 @@
 // same renderer as the in-process pool rather than a second path that could
 // drift from it; and that it goes away, both when asked and when left alone.
 //
-//   node tools/shot/daemon_check.cjs out/ShotWip/shot.exe
+//   node tools/shot/daemon_check.cjs out/ShotWip/shotium.exe
 
 const {execFileSync} = require('child_process');
 const crypto = require('crypto');
@@ -21,7 +21,7 @@ const path = require('path');
 
 const shotium = require('../../shotium');
 
-const exe = path.resolve(process.argv[2] || 'out/Shot/shot.exe');
+const exe = path.resolve(process.argv[2] || 'out/Shot/shotium.exe');
 const corpus = path.resolve('shot/testdata/render_corpus.html');
 const cli = path.resolve('shotium/cli.js');
 // A name of this run's own, so that a daemon left over from an earlier run --

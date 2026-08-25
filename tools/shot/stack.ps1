@@ -1,4 +1,4 @@
-# Run shot.exe under cdb and print the crashing stack.
+# Run shotium.exe under cdb and print the crashing stack.
 #
 # The build sets symbol_level = 0, which does not mean "no symbols": lld still
 # writes a PDB with public symbols, so every frame comes back with a function
@@ -27,10 +27,10 @@ if (-not (Test-Path $cdb)) {
 
 # -o follows child processes, -g/-G skip the initial and final breakpoints so
 # the only stop is the fault itself. .symfix points at the public symbol server
-# for the system DLLs; shot.exe's own PDB is found next to the binary.
+# for the system DLLs; shotium.exe's own PDB is found next to the binary.
 $script = ".symfix;.reload;g;kb $Frames;q"
 
-& $cdb -o -g -G -c $script .\out\Shot\shot.exe `
+& $cdb -o -g -G -c $script .\out\Shot\shotium.exe `
     --file $Page --width $Width --height $Height --output $Output 2>&1 |
     Select-String -Pattern 'shot!|ntdll!|KERNELBASE!|Access violation|second chance|FATAL|Check failed' |
     Select-Object -First ($Frames + 10)

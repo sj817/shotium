@@ -102,7 +102,7 @@ is_p2p_enabled = false
 # Shot paints Blink's cc::PaintRecord into a CPU SkSurface. It never creates a
 # GL context, a Vulkan device, or a GPU process, so ANGLE's renderer backends
 # and SwiftShader cannot be selected at runtime. They previously survived in
-# the build graph even though ThinLTO removed all of their code from shot.exe.
+# the build graph even though ThinLTO removed all of their code from shotium.exe.
 # Vulkan, off. enable_vulkan defaults to is_linux || is_chromeos ||
 # is_android || is_fuchsia, so Windows has never built skia's Vulkan backend
 # and Linux always did -- which is why the first Linux build reached

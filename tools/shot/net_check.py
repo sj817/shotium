@@ -12,7 +12,7 @@ over http and read off the disk, must render to the same bytes. The transport is
 not supposed to be visible in the picture, and comparing digests is how that
 stops being an assumption.
 
-    python tools/shot/net_check.py out/ShotSize/shot.exe
+    python tools/shot/net_check.py out/ShotSize/shotium.exe
 """
 
 import argparse

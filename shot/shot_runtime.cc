@@ -105,9 +105,9 @@ base::expected<std::unique_ptr<ShotRuntime>, std::string> ShotRuntime::Create(
     return base::unexpected("could not locate the module directory");
   }
   ui::ResourceBundle::InitSharedInstanceWithPakPath(
-      module_dir.AppendASCII("shot_strings.pak"));
+      module_dir.AppendASCII("shotium_strings.pak"));
   ui::ResourceBundle::GetSharedInstance().AddDataPackFromPath(
-      module_dir.AppendASCII("shot_data.pak"), ui::kScaleFactorNone);
+      module_dir.AppendASCII("shotium_data.pak"), ui::kScaleFactorNone);
 
   // The thread pool. base::ThreadPool::PostTask DCHECKs on an instance, and the
   // first caller is DiscardableSharedMemoryManager, which does its accounting

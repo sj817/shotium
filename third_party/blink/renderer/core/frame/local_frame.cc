@@ -3506,7 +3506,7 @@ void LocalFrame::MediaPlayerActionAtViewportPoint(
       // to enter/exit here. This whole switch is a mojo IPC handler for
       // browser-process-initiated media actions, and //content (the only
       // thing that could send it) is gone, so this case is unreachable in
-      // shot.exe regardless.
+      // shotium.exe regardless.
       break;
   }
 }

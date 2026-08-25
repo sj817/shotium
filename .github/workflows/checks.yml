@@ -85,6 +85,37 @@ jobs:
             })().catch((e) => { console.error(e.message); process.exit(1); });
           '
 
+      - name: the six platform packages are declared consistently
+        working-directory: shotium
+        # The list of six exists twice: in optionalDependencies, which is what
+        # npm installs, and in lib/platform.js, which is what looks for them
+        # afterwards. A rename that touches one and not the other installs 41 MB
+        # of engine and then reports that there is no engine for this platform.
+        #
+        # The version is pinned rather than ranged for the same class of
+        # reason: seven packages that must be installed together cannot be
+        # allowed to drift apart by a caret.
+        run: |
+          node -e '
+            const pkg = require("./package.json");
+            const {PACKAGES} = require("./lib/platform");
+            const declared = Object.keys(pkg.optionalDependencies || {}).sort();
+            const used = Object.values(PACKAGES).sort();
+            if (declared.join(",") !== used.join(",")) {
+              throw new Error("optionalDependencies and lib/platform.js disagree:\n  " +
+                  declared.join(" ") + "\n  " + used.join(" "));
+            }
+            if (used.length !== 6) {
+              throw new Error(used.length + " platform packages, expected 6");
+            }
+            for (const [name, pin] of Object.entries(pkg.optionalDependencies)) {
+              if (pin !== pkg.version) {
+                throw new Error(name + " is pinned to " + pin + ", not " + pkg.version);
+              }
+            }
+            console.log("ok: 6 platform packages at " + pkg.version);
+          '
+
       # index.d.ts is what every consumer sees, and nothing else in this
       # repository would notice if it stopped describing index.js.
       - name: types compile

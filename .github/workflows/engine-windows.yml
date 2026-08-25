@@ -1,4 +1,4 @@
-# Builds shot.exe on Windows, then runs the checks that need it.
+# Builds shotium.exe on Windows, then runs the checks that need it.
 #
 # READ THIS BEFORE RUNNING IT.
 #
@@ -245,7 +245,7 @@ jobs:
         working-directory: src
         # gclient restores third_party/icu from its own upstream, so anything
         # this repository changes there has to be reapplied on every run. It is
-        # worth 5.8 MB of shot.exe: icu_data_dir_override picks the "cast"
+        # worth 5.8 MB of shotium.exe: icu_data_dir_override picks the "cast"
         # filtered data set (5.0 MB) over the platform default "common"
         # (10.8 MB), and icu_use_data_file = false links whichever one it is
         # into the binary.
@@ -311,7 +311,7 @@ jobs:
         working-directory: src
           # pwsh, not bash: rm is Remove-Item, whose flags differ.
         run: |
-          foreach ($stale in 'out/Shot/shot.exe', 'out/Shot/shot.dll') {
+          foreach ($stale in 'out/Shot/shotium.exe', 'out/Shot/shotium.dll') {
             if (Test-Path $stale) { Remove-Item -Force $stale }
           }
 
@@ -380,12 +380,12 @@ jobs:
         # ninja is allowed to run out of time; the job is not allowed to call
         # that a success. Re-running picks up where this left off.
         run: |
-          foreach ($wanted in 'out/Shot/shot.exe', 'out/Shot/shot.dll') {
+          foreach ($wanted in 'out/Shot/shotium.exe', 'out/Shot/shotium.dll') {
             if (-not (Test-Path $wanted)) {
               throw "$wanted was not produced -- the build got further, but is not done. Run this workflow again; the cache carries the objects over."
             }
           }
-          Get-Item out/Shot/shot.exe,out/Shot/shot.dll |
+          Get-Item out/Shot/shotium.exe,out/Shot/shotium.dll |
             Select-Object Name,Length,LastWriteTime
 
 
@@ -396,7 +396,7 @@ jobs:
         run: |
           # icudtl.dat is deliberately not shipped. icu_use_data_file = false
           # builds with ICU_UTIL_DATA_STATIC, so the table is linked into
-          # shot.exe and the loose copy is never opened -- verified by
+          # shotium.exe and the loose copy is never opened -- verified by
           # rendering the same page with the file present and absent and
           # getting byte-identical PNGs.
           #
@@ -423,16 +423,16 @@ jobs:
           # it in place rather than leaving two versioned directories side by
           # side.
           $version = (Get-Content shotium/package.json -Raw | ConvertFrom-Json).version
-          $stem = "shot-win-${{ github.event.inputs.arch }}"
+          $stem = "shotium-win-${{ github.event.inputs.arch }}"
           $archive = "$stem-v$version.7z"
           if (Test-Path dist) { Remove-Item -Recurse -Force dist }
           if (Test-Path $archive) { Remove-Item -Force $archive }
           New-Item -ItemType Directory "dist/$stem" | Out-Null
-          # shot.dll ships beside shot.exe rather than in an archive of its
+          # shotium.dll ships beside shotium.exe rather than in an archive of its
           # own: they are the same engine, the resource packs serve both, and
           # a caller who wants the addon should not have to work out which two
           # downloads go together.
-          Copy-Item out/Shot/shot.exe,out/Shot/shot.dll,out/Shot/shot_data.pak,out/Shot/shot_strings.pak "dist/$stem/"
+          Copy-Item out/Shot/shotium.exe,out/Shot/shotium.dll,out/Shot/shotium_data.pak,out/Shot/shotium_strings.pak "dist/$stem/"
           Get-ChildItem "dist/$stem" | Select-Object Name,Length
           # windows-2025 ships 7-Zip on PATH; fall back to its install path
           # rather than silently producing no archive if that ever changes.
@@ -466,7 +466,12 @@ jobs:
           compression-level: 0
 
       - name: checks
+        # x64 only, for the reason the Linux job gives: this runner is x64 and
+        # cannot execute an arm64 binary, so asking would fail on a host
+        # limitation and read as a broken engine. An arm64 artifact ships
+        # checked by nothing but the compiler and the linker.
         if: success() && github.event.inputs.run_checks == 'true'
+             && github.event.inputs.arch == 'x64'
         shell: pwsh
         working-directory: src
         # In the order they cost: protocol and geometry first because they are
@@ -484,10 +489,10 @@ jobs:
         # platform. Windows was simply the one still not running them.
         run: |
           python -m pip install --quiet pillow
-          python tools/shot/serve_check.py out/Shot/shot.exe
-          python tools/shot/net_check.py out/Shot/shot.exe
-          node tools/shot/node_check.cjs out/Shot/shot.exe
-          node tools/shot/daemon_check.cjs out/Shot/shot.exe
+          python tools/shot/serve_check.py out/Shot/shotium.exe
+          python tools/shot/net_check.py out/Shot/shotium.exe
+          node tools/shot/node_check.cjs out/Shot/shotium.exe
+          node tools/shot/daemon_check.cjs out/Shot/shotium.exe
           # The node addon, and the C ABI under it. Built here rather than
           # taken from anywhere else, because the library it links against is
           # the one this job has just produced -- an addon checked against a
@@ -497,11 +502,71 @@ jobs:
           Push-Location shotium/native
           npx --yes node-gyp@11 rebuild
           Pop-Location
-          Copy-Item out/Shot/shot.dll,out/Shot/shot_data.pak,out/Shot/shot_strings.pak `
+          Copy-Item out/Shot/shotium.dll,out/Shot/shotium_data.pak,out/Shot/shotium_strings.pak `
                     shotium/native/build/Release/
-          node tools/shot/native_check.cjs out/Shot/shot.exe
-          python tools/shot/charset_check.py out/Shot/shot.exe
-          python tools/shot/demo_check.py out/Shot/shot.exe
+          node tools/shot/native_check.cjs out/Shot/shotium.exe
+          python tools/shot/charset_check.py out/Shot/shotium.exe
+          python tools/shot/demo_check.py out/Shot/shotium.exe
+
+      - name: npm platform package
+        if: success()
+        shell: pwsh
+        working-directory: src
+        # One of the six @shotkit/shotium-<os>-<arch> packages: the engine, the
+        # shared library, the two resource packs and the addon, in a package
+        # npm can install. @shotkit/shotium depends on all six as
+        # optionalDependencies with os/cpu set, so an install pulls the one
+        # that matches and skips the rest. See tools/shot/make_platform_package.cjs.
+        #
+        # On x64 the addon already exists: the checks step built it against
+        # this job's own library and compared its output against the
+        # executable's. On arm64 the checks did not run, so it is
+        # cross-compiled here and shipped unchecked -- and failing to
+        # cross-compile it is not a failure of the job. The package is still
+        # complete for the worker pool and the daemon, which is what
+        # require("@shotkit/shotium") uses; only require(".../native") needs
+        # the addon, and native.js says so rather than crashing.
+        run: |
+          $arch = "${{ github.event.inputs.arch }}"
+          $addon = "shotium/native/build/Release/shotium.node"
+          if (-not (Test-Path $addon)) {
+            $env:SHOT_INCLUDE_DIR = "$PWD/shot"
+            $env:SHOT_LIB_DIR = "$PWD/out/Shot"
+            Push-Location shotium/native
+            npx --yes node-gyp@11 rebuild --arch=$arch
+            $built = $LASTEXITCODE -eq 0
+            Pop-Location
+            if (-not $built) {
+              Write-Host "::warning::the $arch addon did not cross-compile; the package ships without it"
+            }
+          }
+          $argv = @('--build', 'out/Shot', '--os', 'win', '--arch', $arch,
+                    '--dest', 'dist/npm')
+          if (Test-Path $addon) { $argv += @('--addon', $addon) }
+          node tools/shot/make_platform_package.cjs @argv
+          if ($LASTEXITCODE -ne 0) { throw "make_platform_package failed" }
+          Push-Location "dist/npm/shotium-win-$arch"
+          npm pack --pack-destination ..
+          $packed = $LASTEXITCODE
+          Pop-Location
+          if ($packed -ne 0) { throw "npm pack failed with $packed" }
+          $tgz = Get-ChildItem dist/npm/*.tgz | Select-Object -First 1
+          if (-not $tgz) { throw "npm pack produced no tarball" }
+          Get-Item $tgz.FullName |
+            Select-Object Name,@{n='MB';e={[math]::Round($_.Length/1MB,2)}}
+          # Relative to src/, which is this step's working directory and the
+          # release step's: one value that both gh and upload-artifact accept.
+          "SHOT_NPM_TARBALL=dist/npm/$($tgz.Name)" |
+            Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: upload the npm package
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-shotium-win-${{ github.event.inputs.arch }}
+          path: src/${{ env.SHOT_NPM_TARBALL }}
+          if-no-files-found: error
+          compression-level: 0
 
       - name: release
         if: success() && github.event.inputs.release == 'true'
@@ -521,7 +586,7 @@ jobs:
           gh release view $tag *> $null
           if ($LASTEXITCODE -ne 0) {
             gh release create $tag --draft --title $tag `
-              --notes "shot $env:SHOT_VERSION" --target $env:GITHUB_SHA
+              --notes "shotium $env:SHOT_VERSION" --target $env:GITHUB_SHA
             if ($LASTEXITCODE -ne 0) {
               # Another architecture's run may have created it in between.
               gh release view $tag *> $null
@@ -529,4 +594,6 @@ jobs:
             }
           }
           gh release upload $tag $env:SHOT_ARCHIVE --clobber
+          if ($LASTEXITCODE -ne 0) { throw "gh release upload failed with $LASTEXITCODE" }
+          gh release upload $tag $env:SHOT_NPM_TARBALL --clobber
           if ($LASTEXITCODE -ne 0) { throw "gh release upload failed with $LASTEXITCODE" }

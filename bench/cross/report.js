@@ -23,7 +23,7 @@ const report = JSON.parse(fs.readFileSync(source, 'utf8'));
 const outputPath = path.join(path.dirname(source), 'REPORT.md');
 
 const ENGINE_LABELS = {
-  'shotium': 'shotium (shot.exe pool)',
+  'shotium': 'shotium (shotium.exe pool)',
   'shotium-daemon': 'shotium (resident daemon)',
   'puppeteer-shell': 'puppeteer, chrome-headless-shell',
   'puppeteer-chrome': 'puppeteer, headless Chrome',
@@ -75,7 +75,7 @@ out.push(table(
       ['host', `${host.processor || 'unknown CPU'}, ${host.logical_processors} logical processors`],
       ['os', host.os],
       ['node', host.node],
-      ['shot.exe', `${mib(report.engines.shot.bytes)} MiB, sha256 ${report.engines.shot.sha256.slice(0, 16)}`],
+      ['shotium.exe', `${mib(report.engines.shot.bytes)} MiB, sha256 ${report.engines.shot.sha256.slice(0, 16)}`],
       ['puppeteer', report.engines.packages.puppeteer || 'not installed'],
       ['playwright', report.engines.packages.playwright || 'not installed'],
       ['repeats', `${config.repeats} per cell`],
@@ -90,7 +90,7 @@ out.push('Memory is two columns, because one column cannot say what a tree of');
 out.push('processes costs. `peak RSS` is the maximum sampled sum of working sets');
 out.push('over the whole tree, node included -- the number task manager adds up,');
 out.push('and the one that charges every process separately for pages they share.');
-out.push('Four shot workers each map the same 43 MiB of shot.exe; twenty-one');
+out.push('Four shot workers each map the same 43 MiB of shotium.exe; twenty-one');
 out.push('chrome processes each map the same chrome.dll. `private` is the sum of');
 out.push('the private working sets at that same instant: the pages that belong to');
 out.push('exactly one process, with nothing counted twice. The truth is between');
@@ -195,7 +195,7 @@ out.push('');
 
 out.push(`## 5. Ten different pages, ${config.concurrency} at a time`);
 out.push('');
-out.push(`The same ten with ${config.concurrency} in flight: ${config.concurrency} shot.exe`);
+out.push(`The same ten with ${config.concurrency} in flight: ${config.concurrency} shotium.exe`);
 out.push(`workers on one side, ${config.concurrency} pages on the other.`);
 out.push('');
 const parallelRows =

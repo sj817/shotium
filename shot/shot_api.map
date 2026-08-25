@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 #
-# What libshot.so exports, which is shot_api.h and nothing else.
+# What libshotium.so exports, which is shot_api.h and nothing else.
 #
 # `local: *` is doing real work here, not tidying. The library links
 # PartitionAlloc's allocator shim, which defines malloc, free and the operator

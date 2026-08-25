@@ -16,7 +16,7 @@
 // second engine is refused; that a purge changes no pixels; and that stopping
 // leaves nothing behind.
 //
-//   node tools/shot/native_check.cjs out/ShotWip/shot.exe
+//   node tools/shot/native_check.cjs out/ShotWip/shotium.exe
 //
 // The argument is the *executable*, which is what the other suites take and
 // what this one compares against. The library and the addon are found where
@@ -30,7 +30,7 @@ const path = require('path');
 
 const {NativeRuntime, native} = require('../../shotium/native');
 
-const exe = path.resolve(process.argv[2] || 'out/Shot/shot.exe');
+const exe = path.resolve(process.argv[2] || 'out/Shot/shotium.exe');
 const corpus = path.resolve('shot/testdata/render_corpus.html');
 const output = path.join(os.tmpdir(), `shot-native-check-${process.pid}.png`);
 
@@ -73,7 +73,7 @@ async function main() {
     corpus, '-o', output, '--width=1280', '--height=720', '--allow-file-access',
   ]);
   const fromExe = fs.readFileSync(output);
-  check(sha(fromExe) === sha(first), 'byte for byte what shot.exe produces',
+  check(sha(fromExe) === sha(first), 'byte for byte what shotium.exe produces',
         sha(first).slice(0, 16));
 
   console.log('\n== a bad request is an error, not a crash ==');

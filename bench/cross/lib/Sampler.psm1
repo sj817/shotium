@@ -17,7 +17,7 @@ $ErrorActionPreference = 'Stop'
 # Working set is what task manager shows and what an operator watches, but it
 # counts a shared page once per process that maps it, and every engine here is
 # several processes mapping one large binary. Four shot workers map 43 MB of
-# shot.exe between them and the sum charges for it four times; twenty-one
+# shotium.exe between them and the sum charges for it four times; twenty-one
 # chrome processes map chrome.dll and the sum charges for it twenty-one times.
 # That is not a small correction -- measured on this tree, the sum of working
 # sets came to about 3.8x the memory four workers actually held.

@@ -25,7 +25,7 @@ repack("shot_data") {
     "//ui/resources",
   ]
 
-  output = "$root_out_dir/shot_data.pak"
+  output = "$root_out_dir/shotium_data.pak"
 }
 
 # Shot's string resources.
@@ -46,7 +46,7 @@ repack("shot_strings") {
     "//ui/strings",
   ]
 
-  output = "$root_out_dir/shot_strings.pak"
+  output = "$root_out_dir/shotium_strings.pak"
 }
 
 # The engine, with nothing yet decided about how it is entered.
@@ -152,8 +152,8 @@ group("shot_resources") {
   ]
 
   data = [
-    "$root_out_dir/shot_data.pak",
-    "$root_out_dir/shot_strings.pak",
+    "$root_out_dir/shotium_data.pak",
+    "$root_out_dir/shotium_strings.pak",
   ]
 }
 
@@ -167,8 +167,14 @@ if (is_win) {
   shot_link_flags = []
 }
 
-# shot.exe: the command line, and the resident worker behind --serve.
+# shotium.exe: the command line, and the resident worker behind --serve.
+#
+# The GN target keeps the name the tree uses for it; the file it writes is
+# named for the package that ships it, so an unpacked archive holds one name
+# rather than two.
 executable("shot") {
+  output_name = "shotium"
+
   sources = [
     "main.cc",
     "shot_server.cc",
@@ -187,7 +193,7 @@ executable("shot") {
   }
 }
 
-# libshot: the same engine, entered over a C ABI, for a host that wants it in
+# libshotium: the same engine, entered over a C ABI, for a host that wants it in
 # its own process rather than in a child.
 #
 # See shot_api.h for what that costs and what it buys. The short version is
@@ -202,7 +208,7 @@ executable("shot") {
 # eight shot_* entry points keeps shot's allocator shot's, which is also why
 # nothing in shot_api.h passes ownership of memory across the seam.
 shared_library("shot_c") {
-  output_name = "shot"
+  output_name = "shotium"
 
   sources = [
     "shot_api.cc",

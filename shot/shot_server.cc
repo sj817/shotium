@@ -63,7 +63,7 @@ constexpr base::TimeDelta kIdleBeforePurge = base::Seconds(2);
 // faults on the very next request, measured at about 8 ms for a settled
 // worker. Ten seconds is the line between "the caller is between batches" and
 // "nobody is asking", and 8 ms once on the far side of it buys back about
-// 25 MB per worker -- almost all of it shot.exe's own code, faulted in during
+// 25 MB per worker -- almost all of it shotium.exe's own code, faulted in during
 // startup by paths that will not run again.
 constexpr base::TimeDelta kIdleBeforeTrim = base::Seconds(10);
 

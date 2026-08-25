@@ -72,7 +72,7 @@ class ShotRuntime {
   // Gives the pages themselves back, which PurgeMemory() deliberately does
   // not. Everything it frees is decommitted address space; the working set
   // still holds every page this process has touched since it started, most of
-  // them shot.exe's own code faulted in by a path that ran once.
+  // them shotium.exe's own code faulted in by a path that ran once.
   //
   // Separate because the two have different prices. Purging costs a
   // collection and rebuilds caches that were about to be cold anyway.

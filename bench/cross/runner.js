@@ -174,7 +174,7 @@ async function main() {
       mark('warm');
       const started = now();
       // A fixed window rather than Promise.all over everything: four in flight
-      // is what both sides were configured for -- four shot.exe workers, four
+      // is what both sides were configured for -- four shotium.exe workers, four
       // pages -- and letting eleven go at once would measure how each engine
       // degrades under overload instead.
       const queue = cases.slice();

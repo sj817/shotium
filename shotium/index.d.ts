@@ -69,7 +69,10 @@ export interface ScreenshotOptions {
 }
 
 export interface StartOptions {
-  /** Path to `shot.exe`. Default `$SHOTIUM_BINARY`, then `./bin/shot.exe`. */
+  /**
+   * Path to `shotium.exe`. Default `$SHOTIUM_BINARY`, then the platform
+   * package for this machine, then `./bin/shotium.exe`.
+   */
   binary?: string;
   /** Worker processes. Default half the cores, at least one, at most four. */
   workers?: number;

@@ -21,7 +21,7 @@
 |---|---|
 | **名字** | **shotium**(shot + Chromium 的 `-ium`)。对应 WebKit 版的 `shotkit`,同构。C 符号前缀 `shotium_*` |
 | **Node 层形态** | **纯 JS**,不做原生 addon。要的是对外接口长成约定的 `ScreenshotOptions`,不是必须 `.node`。省掉 node-gyp / prebuild / 多 ABI |
-| **进程模型** | **渲染出进程**。`.node`/JS 层是进程池管理器,worker 是 `shot.exe` |
+| **进程模型** | **渲染出进程**。`.node`/JS 层是进程池管理器,worker 是 `shotium.exe` |
 | **JS 引擎** | 永远没有。V8 已删且不恢复。靠脚本渲染的页面出来是空的 —— 这是产品边界,不是待办 |
 | **字体** | 用宿主系统字体。同一份 HTML 在不同机器上像素不同,这是接受的行为 |
 | **公网威胁模型** | **不在本项目范围**。shotium 只提供底层能力,SSRF / 本地文件访问 / 资源上限由调用方决定。对应地,`file://` 访问做成**显式选项**而不是硬编码 —— 那是接口设计,不是安全策略 |
@@ -55,7 +55,7 @@ shotium (npm, 纯 JS)          进程池 · 生命周期 · on() 事件 · retry
      │
      │  stdio 管道:长度前缀 JSON 请求 / 长度前缀二进制响应
      ▼
-shotium_worker (shot.exe --serve)   常驻,一个进程一个 Blink,连续渲多张
+shotium_worker (shotium.exe --serve)   常驻,一个进程一个 Blink,连续渲多张
      │
      ▼
 Blink   DOM → CSS → Layout → Paint → Raster → 编码
@@ -211,6 +211,36 @@ Node-API addon 用它。
 代价写在 `shot_api.h` 和两份 README 里,不藏着:进程内只有一个渲染器(blink 是
 进程级单例,`worker_threads` 也共享进程),而且渲染器崩溃会带走宿主。这条路是给
 「一次一张、不想跑池子」的程序用的,服务仍然用池子或守护进程。
+
+### 第 7 组 · 发版形态
+
+npm 上 `shotium` 这个名字拿不到,所以包名带上了 scope:`@shotkit/shotium`。产物
+的名字跟着一起对齐了,构建出来的可执行文件从 `shot.exe` 改成 `shotium.exe`,
+共享库、两个 `.pak`、压缩包同理 —— 解开一个归档里只有一个名字,不是两个。
+
+| # | 内容 | 落点 |
+|---|---|---|
+| 7.1 | GN 输出名(`output_name`,两个 repack 的 `output`) | `shot/BUILD.gn` |
+| 7.2 | 六个平台包的装配 | `tools/shot/make_platform_package.cjs` |
+| 7.3 | 平台包的解析 | `shotium/lib/platform.js` |
+| 7.4 | CI 产出 `.tgz` 并挂到 draft release | `.github/workflows/engine-*.yml` |
+| 7.5 | 从 release 资产发布七个包 | `.github/workflows/npm-publish.yml` |
+
+引擎不进主包:它是一次 Chromium 构建,一个平台一个架构各 41 MB,六份。所以
+`@shotkit/shotium` 只有 JS,引擎在 `@shotkit/shotium-win-x64` 那六个包里,以
+`optionalDependencies` 声明并带 `os` / `cpu`,npm 只装匹配当前机器的那一个。
+
+没选 postinstall 下载:那条路让 lockfile 失去意义(锁住的不是最终拿到的东西),
+在 registry 镜像后面会直接断掉,而且为了省下 npm 本来就在做的事,在安装期多跑
+了一段任意代码。
+
+addon 和它链接的共享库放在同一个平台包里,这不是为了整齐 —— `.node` 是动态链接
+到那个库的,分开发就是发一个跑不起来的 `.node`。
+
+两处诚实的缺口,写在这里而不是等别人踩:交叉编译出来的 arm64(win 和 linux)在
+x64 runner 上没法执行,所以那两个平台的 addon 是交叉编译且没跑过检查的;交叉编译
+失败不算 job 失败,平台包会不带 `.node` 发出去,进程池和守护进程照常工作,只有
+`require(".../native")` 拿不到东西,而 `native.js` 会说清楚是哪一种情况。
 
 ---
 

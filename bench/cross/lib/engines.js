@@ -9,7 +9,7 @@ const path = require('path');
 // of them:
 //
 //   * default launch configuration. No tuning flags on either side -- what a
-//     caller gets from `npm install puppeteer` and from `require('shotium')`.
+//     caller gets from `npm install puppeteer` and from `require('@shotkit/shotium')`.
 //   * one fresh page per screenshot, closed afterwards. That is the isolation
 //     shot gives whether you want it or not (it builds and tears down a Page
 //     per request), so holding one page open across ten documents would be
@@ -221,7 +221,7 @@ function playwrightServerLauncher(launchOptions) {
 }
 
 const DEFINITIONS = {
-  // Four processes' worth of shot.exe, which is what a caller asking for four
+  // Four processes' worth of shotium.exe, which is what a caller asking for four
   // concurrent screenshots gets.
   'shotium': (options) => new ShotiumEngine({...options, name: 'shotium'}),
   'shotium-daemon': (options) =>

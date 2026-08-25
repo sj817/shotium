@@ -1,6 +1,6 @@
 'use strict';
 
-// The wire format shot.exe --serve speaks, in both directions: a 4-byte
+// The wire format shotium.exe --serve speaks, in both directions: a 4-byte
 // little-endian length followed by that many bytes.
 //
 // Length-prefixed rather than line-delimited because the payload is binary and

@@ -30,7 +30,8 @@ class Runtime extends EventEmitter {
   // Starts the pool. Safe to call twice; the second call is a no-op so that
   // library code can call it defensively.
   //
-  //   binary    path to shot.exe (default: $SHOTIUM_BINARY, then ./bin/shot.exe)
+  //   binary    path to shotium.exe (default: $SHOTIUM_BINARY, then the
+  //             platform package, then ./bin/shotium.exe)
   //   workers   how many processes (default: half the cores, 1..4)
   //   cacheDir  root for the per-worker HTTP disk caches; null disables caching
   //   args      extra flags for every worker

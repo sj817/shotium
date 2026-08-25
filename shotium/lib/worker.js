@@ -5,7 +5,7 @@ const {spawn} = require('child_process');
 
 const {FrameReader, encodeRequest} = require('./protocol');
 
-// One shot.exe --serve process.
+// One shotium.exe --serve process.
 //
 // Exactly one request is in flight at a time, and that is not a simplification:
 // blink is a process-wide singleton bound to the worker's main thread, so a

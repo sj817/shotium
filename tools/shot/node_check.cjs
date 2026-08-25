@@ -1,6 +1,6 @@
 'use strict';
 
-// Exercises the shotium package against a real shot.exe.
+// Exercises the shotium package against a real shotium.exe.
 //
 // serve_check.py and net_check.py cover the worker. This covers the half that
 // only exists in JavaScript: the pool, the queue, retry, and the claim the
@@ -12,7 +12,7 @@
 // require() a syntax error. shotium's own package.json says "commonjs", so the
 // package itself is unaffected.
 //
-//   node tools/shot/node_check.cjs out/ShotSize/shot.exe
+//   node tools/shot/node_check.cjs out/ShotSize/shotium.exe
 
 const assert = require('assert');
 const os = require('os');
@@ -20,7 +20,7 @@ const path = require('path');
 
 const shotium = require('../../shotium');
 
-const exe = path.resolve(process.argv[2] || 'out/ShotSize/shot.exe');
+const exe = path.resolve(process.argv[2] || 'out/ShotSize/shotium.exe');
 const corpus = path.resolve('shot/testdata/render_corpus.html');
 const features = path.resolve('shot/testdata/features.html');
 

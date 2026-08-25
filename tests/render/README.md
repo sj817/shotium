@@ -22,7 +22,7 @@ An installed Chrome can be measured explicitly with
 Run Shot and perform decoded-pixel comparison:
 
 ```powershell
-pwsh ./tests/render/run.ps1 -ShotExecutable ./out/Release/shot.exe
+pwsh ./tests/render/run.ps1 -ShotExecutable ./out/Release/shotium.exe
 ```
 
 The report includes PNG width/height, encoded byte count, SHA-256, changed pixel

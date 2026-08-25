@@ -1,4 +1,4 @@
-"""Attribute shot.exe image bytes to GN directories using PDB section contributions.
+"""Attribute shotium.exe image bytes to GN directories using PDB section contributions.
 
 Two numbers are produced per bucket:
 

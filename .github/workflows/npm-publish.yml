@@ -1,0 +1,105 @@
+# Publishes the seven packages to npm.
+#
+# Nothing is built here. The six platform packages are release assets, put
+# there by engine-windows.yml, engine-linux.yml and engine-macos.yml -- one
+# per run, six runs to fill a release -- and this workflow takes them as they
+# are. Publishing a tarball that CI produced and a human downloaded and looked
+# at is a different act from publishing whatever a build step happened to leave
+# in a directory, and only the first one can be checked before it is public.
+#
+# Order is not cosmetic. @shotkit/shotium declares the six as
+# optionalDependencies pinned to its own version, so it goes last: a registry
+# that has the main package but not the platform package it names hands out an
+# install that cannot take a screenshot.
+#
+# Before running this:
+#
+#   1. The draft release for the tag has all six .tgz assets. Six, not five --
+#      a missing platform is an install that silently falls back to "no engine
+#      for this platform" on exactly the machines nobody tested on.
+#   2. shotium/package.json version matches the tag, and its six
+#      optionalDependencies match that version. checks.yml enforces the second
+#      half of that on every push.
+#   3. NPM_TOKEN is a granular token with publish rights on the @shotkit scope.
+#
+# dry_run is the default. It runs the whole thing with --dry-run, which does
+# everything except make it permanent -- npm has no unpublish worth relying on.
+
+name: npm publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'release tag to publish from, e.g. v0.1.0'
+        required: true
+      dry_run:
+        description: 'run npm publish --dry-run and change nothing'
+        type: boolean
+        default: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: the tag and the package agree
+        env:
+          TAG: ${{ github.event.inputs.tag }}
+        # A tag that does not match the version in the tree publishes the wrong
+        # number under the right name, which cannot be taken back.
+        run: |
+          version=$(node -p \
+            "require('./shotium/package.json').version")
+          if [ "v$version" != "$TAG" ]; then
+            echo "shotium/package.json is $version, the tag is $TAG"
+            exit 1
+          fi
+          echo "publishing $version"
+
+      - name: collect the platform tarballs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.inputs.tag }}
+        # All six, by name, rather than a glob over whatever the release holds:
+        # a release that is short one architecture should stop here, not
+        # produce a main package pointing at a version of a platform package
+        # that was never published.
+        run: |
+          mkdir -p dist/npm
+          version=$(node -p "require('./shotium/package.json').version")
+          for platform in win-x64 win-arm64 mac-x64 mac-arm64 \
+                          linux-x64 linux-arm64; do
+            asset="shotkit-shotium-$platform-$version.tgz"
+            gh release download "$TAG" --repo "${{ github.repository }}" \
+              --pattern "$asset" --dir dist/npm
+          done
+          ls -l dist/npm
+
+      - name: publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          DRY_RUN: ${{ github.event.inputs.dry_run }}
+        # --access public because the scope is new and npm defaults a scoped
+        # package to restricted, which would publish successfully and install
+        # for nobody.
+        run: |
+          flags="--access public"
+          if [ "$DRY_RUN" = "true" ]; then
+            flags="$flags --dry-run"
+            echo "=== dry run: nothing below becomes public ==="
+          fi
+          for tarball in dist/npm/*.tgz; do
+            echo "--- $tarball"
+            npm publish "$tarball" $flags
+          done
+          echo "--- shotium"
+          npm publish ./shotium $flags

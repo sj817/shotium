@@ -26,7 +26,7 @@ What it checks, in order:
      answered and the stream survives them, rather than taking the worker down
   8. closing stdin exits cleanly
 
-    python tools/shot/serve_check.py out/ShotSize/shot.exe
+    python tools/shot/serve_check.py out/ShotSize/shotium.exe
 """
 
 import argparse

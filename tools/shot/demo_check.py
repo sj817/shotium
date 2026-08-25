@@ -30,7 +30,7 @@ is stated in the test file so it sits next to the reason for it, and both
 bounds are upper limits -- a render that differs by less still passes.
 
 Usage:
-    python tools/shot/demo_check.py out/ShotWip/shot.exe [--filter SUBSTRING]
+    python tools/shot/demo_check.py out/ShotWip/shotium.exe [--filter SUBSTRING]
                                     [--jobs N] [--out DIR]
 """
 

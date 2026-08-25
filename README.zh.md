@@ -7,7 +7,7 @@
 **没有 JavaScript 引擎。** V8 不是被禁用，是被删掉了：连同当初用来承载它的整个浏览器层，一起从源码树里移除。剩下的是直接使用的 Blink，最终是一个自包含的可执行文件 —— Windows 上 41 MB，压缩后 12.8 MB —— 启动耗时不到一秒。
 
 ```js
-const shotium = require('shotium');
+const shotium = require('@shotkit/shotium');
 
 shotium.runtime.start({workers: 4});
 
@@ -51,29 +51,32 @@ await shotium.runtime.stop();
 
 ## 使用
 
-构建好的引擎在 [releases 页面]，每个版本六个压缩包：
+```bash
+npm install @shotkit/shotium
+```
+
+引擎是 41 MB 的 Chromium，每个平台和架构各有一份，所以它不在这个包里，而在另外六个包里 —— `@shotkit/shotium-win-x64`、`@shotkit/shotium-mac-arm64`，以及其余四个 —— 以 `optionalDependencies` 声明，并带上 `os` 和 `cpu`。npm 只装匹配当前机器的那一个，其余五个跳过。没有 postinstall 脚本，也不从 registry 之外下载任何东西：lockfile 锁住的就是你拿到的。
+
+同样这些引擎也在 [releases 页面]，每个版本六个压缩包，给不从 npm 安装的调用方：
 
 | | x64 | arm64 |
 |---|---|---|
-| Windows | `shot-win-x64-v0.1.0.7z` | `shot-win-arm64-v0.1.0.7z` |
-| macOS | `shot-mac-x64-v0.1.0.7z` | `shot-mac-arm64-v0.1.0.7z` |
-| Linux | `shot-linux-x64-v0.1.0.7z` | `shot-linux-arm64-v0.1.0.7z` |
+| Windows | `shotium-win-x64-v0.1.0.7z` | `shotium-win-arm64-v0.1.0.7z` |
+| macOS | `shotium-mac-x64-v0.1.0.7z` | `shotium-mac-arm64-v0.1.0.7z` |
+| Linux | `shotium-linux-x64-v0.1.0.7z` | `shotium-linux-arm64-v0.1.0.7z` |
 
-每个压缩包解开后是一个目录，目录名只包含平台和架构 —— `shot-win-x64/`、`shot-mac-arm64/` —— 里面是可执行文件和两个 `.pak` 文件。版本号写在压缩包上而不是目录里，所以新版本解压到同一位置就是原地覆盖旧版本。
+每个压缩包解开后是一个目录，目录名只包含平台和架构 —— `shotium-win-x64/`、`shotium-mac-arm64/` —— 里面是可执行文件和两个 `.pak` 文件。版本号写在压缩包上而不是目录里，所以新版本解压到同一位置就是原地覆盖旧版本。
 
-npm 包尚未发布。把它指向解压后的引擎：
+用 `SHOTIUM_BINARY` 把包指向解压后的引擎，它的优先级高于平台包：
 
 ```bash
-git clone https://github.com/sj817/shotium
-cd shotium/shotium
-npm link                      # 或者：按路径 require() 它
-export SHOTIUM_BINARY=/path/to/shot-win-x64/shot.exe    # 非 Windows 平台是 `shot`
+export SHOTIUM_BINARY=/path/to/shotium-win-x64/shotium.exe    # 非 Windows 平台是 `shotium`
 ```
 
-未设置 `SHOTIUM_BINARY` 时，包会在 `index.js` 同级目录下找 `bin/shot.exe` —— macOS 和 Linux 上是 `bin/shot`。
+两者都没有时，包会在 `index.js` 同级目录下找 `bin/shotium.exe` —— macOS 和 Linux 上是 `bin/shotium`。
 
 ```js
-const {runtime, screenshot} = require('shotium');
+const {runtime, screenshot} = require('@shotkit/shotium');
 
 runtime.on('crash',   ({worker})          => console.warn('worker', worker, 'died'));
 runtime.on('timeout', ({worker, timeout}) => console.warn('worker', worker, 'hung'));
@@ -96,7 +99,7 @@ await screenshot({file: 'https://example.com', path: 'out.png'});
 `daemon` 是同一个进程池，放在一个 socket 后面 —— Windows 上是命名管道，其他平台是 unix socket —— 下一个进程连上去时，它已经起好并且预热过了：
 
 ```js
-const {daemon} = require('shotium');
+const {daemon} = require('@shotkit/shotium');
 
 const client = await daemon.connect({workers: 4});   // 没有就先拉起一个
 const png = await client.screenshot({file: 'https://example.com'});
@@ -107,8 +110,8 @@ await daemon.stop();
 ```
 
 ```bash
-npx shotium https://example.com -o out.png    # 第一次调用会把守护进程拉起来
-npx shotium daemon status
+npx @shotkit/shotium https://example.com -o out.png    # 第一次调用会把守护进程拉起来
+npx @shotkit/shotium daemon status
 ```
 
 守护进程的端点是它自身配置的哈希 —— 二进制、worker 数、缓存目录、附加 flag —— 所以客户端不会悄悄连上一个「用别的东西渲图」的池子。最后一个客户端离开五分钟后它自己退出；一条连接上可以同时跑多个请求。
@@ -118,7 +121,7 @@ npx shotium daemon status
 `runtime` 和 `daemon` 都是把 blink 放在 worker 进程里。原生引擎把它放在这里：
 
 ```js
-const {native} = require('shotium/native');
+const {native} = require('@shotkit/shotium/native');
 
 const png = await native.screenshot({file: 'https://example.com'});
 native.purge({releaseWorkingSet: true});   // 一批完了之后
@@ -131,7 +134,7 @@ await native.stop();
 
 下面是一个带 C ABI 的共享库，[`shot/shot_api.h`](shot/shot_api.h) —— 八个函数、不透明指针、进去 JSON 出来字节，没有任何内存的所有权跨过这道缝。上面的 addon 是一层很薄的 Node-API，它不读自己搬的东西。这个头文件并不绑定 node；ctypes、cgo、libloading 都能直接用。
 
-它按平台以预构建二进制的形式发布，因为底下那个库是一次 Chromium 构建，`npm install` 做不了这件事。`require('shotium')` 两者都不需要。
+两者都以预构建的形式放在平台包里，和它们所属的引擎挨着，因为底下那个库是一次 Chromium 构建，`npm install` 做不了这件事。`require('@shotkit/shotium')` 两者都不需要。
 
 ### 选项
 
@@ -183,7 +186,7 @@ shot --help
 
 「冷启动」是一整个进程：node 启动、`require`、拉起引擎、截一张图。「单张」是引擎已经在跑之后再多截一张的边际成本，启动完全不在里面。
 
-内存写成两个数，因为一棵进程树没有单一的那个数。前一个是工作集之和，也就是任务管理器加出来的数——它对进程间共享的页面按进程重复计费：四个 shot worker 各自映射同一份 43 MiB 的 `shot.exe`，二十一个 chrome 进程各自映射同一份 `chrome.dll`。后一个是私有工作集之和：只属于某一个进程的页面，一份不重复。真实开销在两者之间，这两个数把它夹住。
+内存写成两个数，因为一棵进程树没有单一的那个数。前一个是工作集之和，也就是任务管理器加出来的数——它对进程间共享的页面按进程重复计费：四个 shot worker 各自映射同一份 43 MiB 的 `shotium.exe`，二十一个 chrome 进程各自映射同一份 `chrome.dll`。后一个是私有工作集之和：只属于某一个进程的页面，一份不重复。真实开销在两者之间，这两个数把它夹住。
 
 shot 输掉的那一列反而是值得说的一列。让**同一个页面**在文档之间跳转，比每次新建一个页面快，Chrome 允许这么做；而 shot 每个请求都要建一个 `Page` 再拆掉，没有对应的做法。这个优势到并发就停了：四个页面同时跑，Chrome 要付四个渲染进程和接近一个 GB，而四个 worker 同时应付四个请求正是 shot 的形状。
 
@@ -270,13 +273,13 @@ Blink 的布局代码在最重的时候需要**每个编译进程 1.1–1.3 GB**
 ### 检查
 
 ```bash
-python tools/shot/serve_check.py   out/Shot/shot.exe   # 协议、几何、编码器
-python tools/shot/net_check.py     out/Shot/shot.exe   # http、重定向、缓存、TLS
-node   tools/shot/node_check.cjs   out/Shot/shot.exe   # 进程池、重试、崩溃隔离
-node   tools/shot/daemon_check.cjs out/Shot/shot.exe   # 常驻守护进程
-node   tools/shot/native_check.cjs out/Shot/shot.exe   # 进程内引擎
-python tools/shot/charset_check.py out/Shot/shot.exe   # 旧式编码与 ICU 裁剪的关系
-python tools/shot/demo_check.py    out/Shot/shot.exe   # 84 个 reftest
+python tools/shot/serve_check.py   out/Shot/shotium.exe   # 协议、几何、编码器
+python tools/shot/net_check.py     out/Shot/shotium.exe   # http、重定向、缓存、TLS
+node   tools/shot/node_check.cjs   out/Shot/shotium.exe   # 进程池、重试、崩溃隔离
+node   tools/shot/daemon_check.cjs out/Shot/shotium.exe   # 常驻守护进程
+node   tools/shot/native_check.cjs out/Shot/shotium.exe   # 进程内引擎
+python tools/shot/charset_check.py out/Shot/shotium.exe   # 旧式编码与 ICU 裁剪的关系
+python tools/shot/demo_check.py    out/Shot/shotium.exe   # 84 个 reftest
 ```
 
 104 项检查加 84 个 reftest（参考比对测试）。需要 Node.js 的是三个 `.cjs`，它们在 Windows 和 Linux 上都跑 —— 守护进程在一边监听命名管道，在另一边监听 unix socket，只在一个平台上跑等于只检查了一半。其中值得单独说明的几条：
@@ -298,7 +301,7 @@ shotium (npm, plain JS)          pool · lifecycle · on() events · retry
      │
      │  stdio: length-prefixed JSON request / length-prefixed binary response
      ▼
-shot.exe --serve                 resident worker, one Blink per process
+shotium.exe --serve                 resident worker, one Blink per process
      │
      ▼
 Blink   DOM → CSS → layout → paint → raster → encode

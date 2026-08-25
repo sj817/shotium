@@ -25,7 +25,7 @@ npm packages a caller would actually reach for.
 
 | id | what it runs |
 |---|---|
-| `shotium` | `shot.exe --serve` workers driven by this checkout's `shotium/` |
+| `shotium` | `shotium.exe --serve` workers driven by this checkout's `shotium/` |
 | `shotium-daemon` | the same workers, resident, reached over a named pipe |
 | `puppeteer-shell` | `puppeteer.launch({headless: 'shell'})` — chrome-headless-shell |
 | `puppeteer-chrome` | `puppeteer.launch({headless: true})` — headless Chrome |
@@ -42,7 +42,7 @@ processes, not at a changelog.
 ## What is held equal
 
 - **Default launch configuration.** No tuning flags on any side. What you get
-  from `npm install puppeteer` and from `require('shotium')`.
+  from `npm install puppeteer` and from `require('@shotkit/shotium')`.
 - **One fresh page per screenshot**, closed afterwards. shot builds and tears
   down a `Page` per request whether you want it or not, so holding one page open
   across ten documents would be measuring a different thing. It is a faster
@@ -90,7 +90,7 @@ the breakdown taken at that same instant — the maxima of the parts do not have
 to happen together, and adding them up would report a total the machine never
 held. It is what task manager shows, and it charges every process separately
 for the pages it shares with its siblings: four shot workers each map the same
-43 MiB of `shot.exe`, twenty-one chrome processes each map the same
+43 MiB of `shotium.exe`, twenty-one chrome processes each map the same
 `chrome.dll`, and the sum counts all of it once per process.
 
 `private` is the sum of the **private working sets** at that same instant — the

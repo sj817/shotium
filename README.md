@@ -11,7 +11,7 @@ Blink used directly, which turns out to be one self-contained executable —
 41 MB on Windows, 12.8 MB compressed — that starts in under a second.
 
 ```js
-const shotium = require('shotium');
+const shotium = require('@shotkit/shotium');
 
 shotium.runtime.start({workers: 4});
 
@@ -73,33 +73,43 @@ boundary rather than a list of bugs:
 
 ## Using it
 
-Built engines are on the [releases page], six archives per version:
+```bash
+npm install @shotkit/shotium
+```
+
+The engine is 41 MB of Chromium and there is a different one per platform and
+architecture, so it is not in that package. It is in six of its own —
+`@shotkit/shotium-win-x64`, `@shotkit/shotium-mac-arm64`, and the other four —
+declared as `optionalDependencies` with `os` and `cpu` set. npm installs the
+one that matches the machine and skips the rest. No postinstall script, no
+download outside the registry: what the lockfile pins is what arrives.
+
+The same engines are on the [releases page] as six archives per version, for a
+caller who is not installing from npm at all:
 
 | | x64 | arm64 |
 |---|---|---|
-| Windows | `shot-win-x64-v0.1.0.7z` | `shot-win-arm64-v0.1.0.7z` |
-| macOS | `shot-mac-x64-v0.1.0.7z` | `shot-mac-arm64-v0.1.0.7z` |
-| Linux | `shot-linux-x64-v0.1.0.7z` | `shot-linux-arm64-v0.1.0.7z` |
+| Windows | `shotium-win-x64-v0.1.0.7z` | `shotium-win-arm64-v0.1.0.7z` |
+| macOS | `shotium-mac-x64-v0.1.0.7z` | `shotium-mac-arm64-v0.1.0.7z` |
+| Linux | `shotium-linux-x64-v0.1.0.7z` | `shotium-linux-arm64-v0.1.0.7z` |
 
 Each unpacks to one directory named for its platform and nothing else —
-`shot-win-x64/`, `shot-mac-arm64/` — holding the executable and two `.pak`
+`shotium-win-x64/`, `shotium-mac-arm64/` — holding the executable and two `.pak`
 files. The version is on the archive rather than inside it, so a newer build
 unpacks over an older one in place.
 
-The npm package is not published yet. Point it at an unpacked engine:
+Point the package at one with `SHOTIUM_BINARY`, which outranks the platform
+package if both are there:
 
 ```bash
-git clone https://github.com/sj817/shotium
-cd shotium/shotium
-npm link                      # or: require() it by path
-export SHOTIUM_BINARY=/path/to/shot-win-x64/shot.exe    # `shot`, off Windows
+export SHOTIUM_BINARY=/path/to/shotium-win-x64/shotium.exe    # `shotium`, off Windows
 ```
 
-With `SHOTIUM_BINARY` unset the package looks for `bin/shot.exe` — `bin/shot`
-on macOS and Linux — beside `index.js`.
+With that unset and no platform package installed, it looks for
+`bin/shotium.exe` — `bin/shotium` on macOS and Linux — beside `index.js`.
 
 ```js
-const {runtime, screenshot} = require('shotium');
+const {runtime, screenshot} = require('@shotkit/shotium');
 
 runtime.on('crash',   ({worker})          => console.warn('worker', worker, 'died'));
 runtime.on('timeout', ({worker, timeout}) => console.warn('worker', worker, 'hung'));
@@ -128,7 +138,7 @@ socket elsewhere — so the next process finds it already warm and already
 prewarmed:
 
 ```js
-const {daemon} = require('shotium');
+const {daemon} = require('@shotkit/shotium');
 
 const client = await daemon.connect({workers: 4});   // starts one if none is up
 const png = await client.screenshot({file: 'https://example.com'});
@@ -139,8 +149,8 @@ await daemon.stop();
 ```
 
 ```bash
-npx shotium https://example.com -o out.png    # first call starts the daemon
-npx shotium daemon status
+npx @shotkit/shotium https://example.com -o out.png    # first call starts the daemon
+npx @shotkit/shotium daemon status
 ```
 
 A daemon is addressed by a hash of its configuration — binary, workers, cache
@@ -154,7 +164,7 @@ client leaves, and one connection can carry several requests at once.
 puts it here:
 
 ```js
-const {native} = require('shotium/native');
+const {native} = require('@shotkit/shotium/native');
 
 const png = await native.screenshot({file: 'https://example.com'});
 native.purge({releaseWorkingSet: true});   // when the batch is over
@@ -180,9 +190,9 @@ memory across the seam. The addon is a thin piece of Node-API over it that does
 not read what it carries. The header is not node-specific; ctypes, cgo and
 libloading take it as-is.
 
-It ships as a prebuilt binary per platform, because the library underneath is a
-Chromium build and `npm install` is not going to do that. `require('shotium')`
-needs neither.
+Both ship prebuilt in the platform package, beside the engine they belong to,
+because the library underneath is a Chromium build and `npm install` is not
+going to do that. `require('@shotkit/shotium')` needs neither.
 
 ### Options
 
@@ -249,7 +259,7 @@ startup entirely out of it.
 *Memory* is two numbers because a tree of processes does not have one. The
 first is the sum of working sets, which is what task manager adds up and which
 charges every process separately for pages it shares with its siblings — four
-shot workers each mapping the same 43 MiB of `shot.exe`, twenty-one chrome
+shot workers each mapping the same 43 MiB of `shotium.exe`, twenty-one chrome
 processes each mapping the same `chrome.dll`. The second is the sum of private
 working sets: the pages belonging to exactly one process, nothing counted
 twice. The real cost is between them, and the two bracket it.
@@ -390,13 +400,13 @@ Budget from the peak, not the average.
 ### Checks
 
 ```bash
-python tools/shot/serve_check.py   out/Shot/shot.exe   # protocol, geometry, encoders
-python tools/shot/net_check.py     out/Shot/shot.exe   # http, redirects, cache, TLS
-node   tools/shot/node_check.cjs   out/Shot/shot.exe   # pool, retry, crash isolation
-node   tools/shot/daemon_check.cjs out/Shot/shot.exe   # the resident daemon
-node   tools/shot/native_check.cjs out/Shot/shot.exe   # the in-process engine
-python tools/shot/charset_check.py out/Shot/shot.exe   # legacy encodings vs the ICU cut
-python tools/shot/demo_check.py    out/Shot/shot.exe   # 84 reftests
+python tools/shot/serve_check.py   out/Shot/shotium.exe   # protocol, geometry, encoders
+python tools/shot/net_check.py     out/Shot/shotium.exe   # http, redirects, cache, TLS
+node   tools/shot/node_check.cjs   out/Shot/shotium.exe   # pool, retry, crash isolation
+node   tools/shot/daemon_check.cjs out/Shot/shotium.exe   # the resident daemon
+node   tools/shot/native_check.cjs out/Shot/shotium.exe   # the in-process engine
+python tools/shot/charset_check.py out/Shot/shotium.exe   # legacy encodings vs the ICU cut
+python tools/shot/demo_check.py    out/Shot/shotium.exe   # 84 reftests
 ```
 
 104 checks and 84 reftests. The three `.cjs` suites are the ones that need
@@ -436,7 +446,7 @@ shotium (npm, plain JS)          pool · lifecycle · on() events · retry
      │
      │  stdio: length-prefixed JSON request / length-prefixed binary response
      ▼
-shot.exe --serve                 resident worker, one Blink per process
+shotium.exe --serve                 resident worker, one Blink per process
      │
      ▼
 Blink   DOM → CSS → layout → paint → raster → encode

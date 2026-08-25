@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Attribute shot.exe's bytes to the code that produced them.
+"""Attribute shotium.exe's bytes to the code that produced them.
 
 The question "what is in the binary" cannot be answered from the GN graph. A
 target being in the dependency closure does not mean it contributed bytes:
@@ -11,7 +11,7 @@ PDB's section-contribution table is written *after* the layout is decided, so
 every entry in it is a range of the final image, named by the object file it
 came from. symbol_level = 0 is enough -- contributions are not debug info.
 
-    python tools/shot/size_report.py out/Shot/shot.exe
+    python tools/shot/size_report.py out/Shot/shotium.exe
 
 Reported per component, where a component is the source directory of the object
 file (obj/<dir>/<target>/<file>.obj -> <dir>), rolled up to --depth for the
@@ -103,7 +103,7 @@ def roll_up(component, depth):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("binary", help="path to shot.exe (its .pdb must sit beside it)")
+    ap.add_argument("binary", help="path to shotium.exe (its .pdb must sit beside it)")
     ap.add_argument("--depth", type=int, default=3,
                     help="directory depth for the headline rollup (default 3)")
     ap.add_argument("--top", type=int, default=40, help="rows to print (default 40)")
@@ -183,7 +183,7 @@ def main():
     on_disk = os.path.getsize(args.binary)
 
     print("")
-    print("shot.exe size composition")
+    print("shotium.exe size composition")
     print("=" * 78)
     print("binary            %s" % args.binary)
     print("on disk           %14s bytes  %8.2f MB" % (f"{on_disk:,}", on_disk / 1048576))

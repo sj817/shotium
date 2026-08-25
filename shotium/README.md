@@ -4,7 +4,7 @@ Static screenshots from a stripped Chromium. DOM, CSS, layout, paint, fonts,
 images, HTTP — everything a page needs to *look* right. No JavaScript engine.
 
 ```js
-const shotium = require('shotium');
+const shotium = require('@shotkit/shotium');
 
 shotium.runtime.start({workers: 4});
 const png = await shotium.screenshot({
@@ -17,7 +17,7 @@ await shotium.runtime.stop();
 
 ## What it is
 
-`shot` — `shot.exe` on Windows — is Chromium with V8 removed and the browser
+`shotium` — `shotium.exe` on Windows — is Chromium with V8 removed and the browser
 layer removed with it: no `//content`, no render process, no GPU process, no
 compositor, no sandbox.
 What is left is Blink used directly — `Page` → `LocalFrame` → `Document` →
@@ -50,16 +50,30 @@ Consequences worth knowing:
 
 ## The engine binary
 
-The engine is a separate download, one archive per platform and architecture —
-`shot-win-x64`, `shot-mac-arm64`, `shot-linux-x64` and the other three — on the
-[releases page]. Unpack one and point the package at it:
+The engine is 41 MB of Chromium and there is a different one for every platform
+and architecture, so it does not ship inside this package. It ships in six of
+its own:
 
-```bash
-export SHOTIUM_BINARY=/path/to/shot-mac-arm64/shot
+```
+@shotkit/shotium-win-x64      @shotkit/shotium-mac-x64      @shotkit/shotium-linux-x64
+@shotkit/shotium-win-arm64    @shotkit/shotium-mac-arm64    @shotkit/shotium-linux-arm64
 ```
 
-Or pass `binary` to `runtime.start()`. With neither set, the package looks for
-`bin/shot` (`bin/shot.exe` on Windows) beside `index.js`.
+All six are `optionalDependencies` of this package with `os` and `cpu` set, so
+`npm install @shotkit/shotium` fetches the one that matches the machine and
+skips the other five. There is no postinstall script and nothing is downloaded
+outside the registry — what the lockfile pins is what you get.
+
+Two ways to override that, in the order they win:
+
+```bash
+export SHOTIUM_BINARY=/path/to/shotium          # or shotium.exe
+```
+
+…or pass `binary` to `runtime.start()`. With neither set and no platform
+package installed — a machine nobody builds for, or a checkout — the package
+looks for `bin/shotium` (`bin/shotium.exe` on Windows) beside `index.js`, which
+is where an archive from the [releases page] unpacks to.
 
 ## Processes
 
@@ -119,12 +133,12 @@ is — about 30 MB each, which is the price of not paying for startup again.
 
 ## In this process, instead
 
-`require('shotium/native')` is the same engine loaded into this process rather
+`require('@shotkit/shotium/native')` is the same engine loaded into this process rather
 than started beside it. There is no worker, no pipe and no supervisor: a
 screenshot costs about a third less, and the whole thing is one process.
 
 ```js
-const {native} = require('shotium/native');
+const {native} = require('@shotkit/shotium/native');
 
 const png = await native.screenshot({file: 'https://example.com'});
 native.purge({releaseWorkingSet: true});   // when the batch is over
@@ -147,16 +161,17 @@ not run a pool; `runtime` or `daemon` for a service.
 
 Under it is a shared library with a C ABI -- `shot/shot_api.h`, eight
 functions, JSON in and bytes out -- and a thin Node-API addon over that. Both
-ship prebuilt per platform, because the library is a Chromium build and `npm
-install` is not going to produce one. Nothing else in this package needs them.
+ship in the platform package beside the engine, because the library is a
+Chromium build and `npm install` is not going to produce one. Nothing else in
+this package needs them.
 
 ## The command line
 
 ```bash
-npx shotium https://example.com -o out.png --width 1280 --height 720
-npx shotium daemon start --workers 4
-npx shotium daemon status
-npx shotium daemon stop
+npx @shotkit/shotium https://example.com -o out.png --width 1280 --height 720
+npx @shotkit/shotium daemon start --workers 4
+npx @shotkit/shotium daemon status
+npx @shotkit/shotium daemon stop
 ```
 
 The command line is a daemon client: the first invocation starts one, and the

@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-  [string]$ShotBinary = (Join-Path $PSScriptRoot '../../out/ShotWip/shot.exe'),
+  [string]$ShotBinary = (Join-Path $PSScriptRoot '../../out/ShotWip/shotium.exe'),
   [string[]]$Engines = @('shotium', 'puppeteer-shell', 'puppeteer-chrome',
                          'playwright-shell', 'playwright-chrome'),
   [string[]]$Scenarios = @('cold', 'cold-settled', 'warm', 'batch',

@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 #
-# What libshot.dylib exports. The same list as shot_api.map, in ld64's
+# What libshotium.dylib exports. The same list as shot_api.map, in ld64's
 # spelling: one symbol per line, with the leading underscore Mach-O adds, and
 # an exported list rather than a hidden one -- naming what goes out is the only
 # form this linker takes.

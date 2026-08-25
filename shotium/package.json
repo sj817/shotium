@@ -1,5 +1,5 @@
 {
-  "name": "shotium",
+  "name": "@shotkit/shotium",
   "version": "0.1.0",
   "description": "Static screenshots from a stripped Chromium: DOM, CSS, layout, paint, no JavaScript engine.",
   "type": "commonjs",
@@ -17,11 +17,18 @@
     "native.d.ts",
     "native/binding.cc",
     "native/binding.gyp",
-    "prebuilds/",
     "README.md"
   ],
   "engines": {
     "node": ">=18"
+  },
+  "optionalDependencies": {
+    "@shotkit/shotium-linux-arm64": "0.1.0",
+    "@shotkit/shotium-linux-x64": "0.1.0",
+    "@shotkit/shotium-mac-arm64": "0.1.0",
+    "@shotkit/shotium-mac-x64": "0.1.0",
+    "@shotkit/shotium-win-arm64": "0.1.0",
+    "@shotkit/shotium-win-x64": "0.1.0"
   },
   "scripts": {
     "check:types": "tsc --noEmit --strict index.d.ts native.d.ts"

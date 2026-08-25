@@ -262,7 +262,7 @@ jobs:
         # satisfy the check; the relink costs a couple of minutes.
         if: ${{ github.event.inputs.mode == 'build' }}
         working-directory: src
-        run: rm -f out/Shot/shot out/Shot/libshot.so
+        run: rm -f out/Shot/shotium out/Shot/libshotium.so
 
       - name: ninja
         if: ${{ github.event.inputs.mode == 'build' }}
@@ -309,14 +309,14 @@ jobs:
         if: ${{ github.event.inputs.mode == 'build' }}
         working-directory: src
         run: |
-          for wanted in out/Shot/shot out/Shot/libshot.so; do
+          for wanted in out/Shot/shotium out/Shot/libshotium.so; do
             if [ ! -f "$wanted" ]; then
               echo "$wanted was not produced -- the build got further, but is not done."
               echo "Run this workflow again; the cache carries the objects over."
               exit 1
             fi
           done
-          ls -l out/Shot/shot out/Shot/libshot.so
+          ls -l out/Shot/shotium out/Shot/libshotium.so
 
       - name: package
         if: ${{ success() && github.event.inputs.mode == 'build' }}
@@ -331,15 +331,15 @@ jobs:
         run: |
           version=$(python3 -c \
             "import json;print(json.load(open('shotium/package.json'))['version'])")
-          stem="shot-linux-${{ github.event.inputs.arch }}"
+          stem="shotium-linux-${{ github.event.inputs.arch }}"
           archive="$stem-v$version.7z"
           rm -rf dist "$archive"
           mkdir -p "dist/$stem"
-          # libshot.so ships beside shot rather than in an archive of its own:
+          # libshotium.so ships beside shotium rather than in an archive of its own:
           # they are the same engine, the resource packs serve both, and a
           # caller who wants the addon should not have to work out which two
           # downloads go together.
-          cp out/Shot/shot out/Shot/libshot.so              out/Shot/shot_data.pak out/Shot/shot_strings.pak "dist/$stem/"
+          cp out/Shot/shotium out/Shot/libshotium.so              out/Shot/shotium_data.pak out/Shot/shotium_strings.pak "dist/$stem/"
           ls -l "dist/$stem"
           ( cd dist && 7z a -t7z -mx=9 "../$archive" "$stem" )
           ls -l "$archive"
@@ -375,23 +375,80 @@ jobs:
         working-directory: src
         run: |
           python3 -m pip install --quiet pillow
-          python3 tools/shot/serve_check.py out/Shot/shot
-          python3 tools/shot/net_check.py out/Shot/shot
+          python3 tools/shot/serve_check.py out/Shot/shotium
+          python3 tools/shot/net_check.py out/Shot/shotium
           # The two node suites run here as well as on Windows because
           # shotium/lib/endpoint.js has two branches -- a named pipe on
           # Windows, a unix socket everywhere else -- and the Windows job
           # exercises exactly one of them.
-          node tools/shot/node_check.cjs out/Shot/shot
-          node tools/shot/daemon_check.cjs out/Shot/shot
+          node tools/shot/node_check.cjs out/Shot/shotium
+          node tools/shot/daemon_check.cjs out/Shot/shotium
           # The node addon, and the C ABI under it. Built here rather than
           # taken from anywhere else, because the library it links against is
           # the one this job has just produced -- an addon checked against a
           # different build would be checking nothing.
           ( cd shotium/native             && SHOT_INCLUDE_DIR="$PWD/../../shot" SHOT_LIB_DIR="$PWD/../../out/Shot"                npx --yes node-gyp@11 rebuild )
-          cp out/Shot/libshot.so out/Shot/shot_data.pak out/Shot/shot_strings.pak              shotium/native/build/Release/
-          node tools/shot/native_check.cjs out/Shot/shot
-          python3 tools/shot/charset_check.py out/Shot/shot
-          python3 tools/shot/demo_check.py out/Shot/shot
+          cp out/Shot/libshotium.so out/Shot/shotium_data.pak out/Shot/shotium_strings.pak              shotium/native/build/Release/
+          node tools/shot/native_check.cjs out/Shot/shotium
+          python3 tools/shot/charset_check.py out/Shot/shotium
+          python3 tools/shot/demo_check.py out/Shot/shotium
+
+      - name: npm platform package
+        if: ${{ success() && github.event.inputs.mode == 'build' }}
+        working-directory: src
+        # One of the six @shotkit/shotium-<os>-<arch> packages: the engine, the
+        # shared library, the two resource packs and the addon, in a package
+        # npm can install. @shotkit/shotium depends on all six as
+        # optionalDependencies with os/cpu set, so an install pulls the one
+        # that matches and skips the rest. See
+        # tools/shot/make_platform_package.cjs.
+        #
+        # On x64 the addon already exists: the checks step built it against
+        # this job's own library and compared its output against the
+        # executable's. On arm64 the checks did not run, so it is
+        # cross-compiled here and shipped unchecked -- node-gyp compiles
+        # binding.cc with the system compiler rather than the one Chromium
+        # brought, which is why a second toolchain has to be installed for it
+        # and for nothing else.
+        #
+        # A failure to cross-compile is not a failure of the job. The package
+        # is still complete for the worker pool and the daemon, which is what
+        # require("@shotkit/shotium") uses; only require(".../native") wants
+        # the addon, and native.js reports it missing rather than crashing.
+        run: |
+          arch="${{ github.event.inputs.arch }}"
+          addon="shotium/native/build/Release/shotium.node"
+          if [ ! -f "$addon" ] && [ "$arch" = arm64 ]; then
+            sudo apt-get update -qq \
+              && sudo apt-get install -y -qq g++-aarch64-linux-gnu || true
+            ( cd shotium/native \
+              && SHOT_INCLUDE_DIR="$PWD/../../shot" \
+                 SHOT_LIB_DIR="$PWD/../../out/Shot" \
+                 CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++ \
+                 npx --yes node-gyp@11 rebuild --arch=arm64 ) \
+              || echo "::warning::the arm64 addon did not cross-compile;" \
+                      "the package ships without it"
+          fi
+          argv=(--build out/Shot --os linux --arch "$arch" --dest dist/npm)
+          if [ -f "$addon" ]; then
+            argv+=(--addon "$addon")
+          else
+            echo "::warning::no addon was built; the package ships without it"
+          fi
+          node tools/shot/make_platform_package.cjs "${argv[@]}"
+          ( cd "dist/npm/shotium-linux-$arch" && npm pack --pack-destination .. )
+          tarball=$(ls dist/npm/*.tgz | head -1)
+          ls -l "$tarball"
+          echo "SHOT_NPM_TARBALL=$tarball" >> "$GITHUB_ENV"
+
+      - name: upload the npm package
+        if: ${{ success() && github.event.inputs.mode == 'build' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-shotium-linux-${{ github.event.inputs.arch }}
+          path: src/${{ env.SHOT_NPM_TARBALL }}
+          if-no-files-found: error
+          compression-level: 0
 
       - name: release
         if: ${{ success() && github.event.inputs.mode == 'build'
@@ -410,6 +467,7 @@ jobs:
           tag="v$SHOT_VERSION"
           gh release view "$tag" >/dev/null 2>&1 \
             || gh release create "$tag" --draft --title "$tag" \
-                 --notes "shot $SHOT_VERSION" --target "$GITHUB_SHA" \
+                 --notes "shotium $SHOT_VERSION" --target "$GITHUB_SHA" \
             || gh release view "$tag" >/dev/null
           gh release upload "$tag" "$SHOT_ARCHIVE" --clobber
+          gh release upload "$tag" "$SHOT_NPM_TARBALL" --clobber

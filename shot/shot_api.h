@@ -115,7 +115,7 @@ SHOT_EXPORT void shot_buffer_free(shot_buffer* buffer);
 //   {
 //     "cacheDir":         "...",   // the HTTP cache; omitted means none
 //     "userAgent":        "...",
-//     "resourceDir":      "...",   // where shot_data.pak and shot_strings.pak
+//     "resourceDir":      "...",   // where shotium_data.pak and shotium_strings.pak
 //                                  //   are; see below
 //     "allowFileAccess":  false    // what a request that says nothing means
 //   }

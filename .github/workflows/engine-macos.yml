@@ -194,7 +194,7 @@ jobs:
         # does, tools/shot/restore_from_upstream.py --log takes this output and
         # puts those files back from the upstream baseline.
         run: |
-          if ! ninja -C out/Shot shot -n > /tmp/probe.txt 2>&1; then
+          if ! ninja -C out/Shot shot shot_c -n > /tmp/probe.txt 2>&1; then
             echo "=== ninja refused the graph ==="
             tail -40 /tmp/probe.txt
             echo
@@ -224,7 +224,7 @@ jobs:
         # fraction of a full one. `-d explain` makes ninja say why each dirty
         # edge is dirty; the root causes appear at the top, so a head of the
         # output is the whole answer. Diagnosis only: nothing is built here.
-        run: ninja -C out/Shot shot -n -d explain 2>&1 | head -120 || true
+        run: ninja -C out/Shot shot shot_c -n -d explain 2>&1 | head -120 || true
 
       - name: forget the previous binary
         # The build directory is restored from cache, so out/Shot still
@@ -235,7 +235,7 @@ jobs:
         # satisfy the check; the relink costs a couple of minutes.
         if: ${{ github.event.inputs.mode == 'build' }}
         working-directory: src
-        run: rm -f out/Shot/shot
+        run: rm -f out/Shot/shotium out/Shot/libshotium.dylib
 
       - name: ninja
         if: ${{ github.event.inputs.mode == 'build' }}
@@ -245,7 +245,7 @@ jobs:
         # -k 0: this platform is still being brought up, and each round costs
         # a runner-hour -- keep compiling past a failure so one log names every
         # broken translation unit, not just the first.
-        run: ninja -C out/Shot shot -j ${{ github.event.inputs.jobs }} -k 0
+        run: ninja -C out/Shot shot shot_c -j ${{ github.event.inputs.jobs }} -k 0
 
       - name: save the build directory
         if: ${{ always() && github.event.inputs.mode == 'build' }}
@@ -279,13 +279,15 @@ jobs:
         if: ${{ github.event.inputs.mode == 'build' }}
         working-directory: src
         run: |
-          if [ ! -f out/Shot/shot ]; then
-            echo "shot was not produced -- the build got further, but is not done."
-            echo "Run this workflow again; the cache carries the objects over."
-            exit 1
-          fi
-          ls -l out/Shot/shot
-          file out/Shot/shot
+          for wanted in out/Shot/shotium out/Shot/libshotium.dylib; do
+            if [ ! -f "$wanted" ]; then
+              echo "$wanted was not produced -- the build got further, but is not done."
+              echo "Run this workflow again; the cache carries the objects over."
+              exit 1
+            fi
+          done
+          ls -l out/Shot/shotium out/Shot/libshotium.dylib
+          file out/Shot/shotium out/Shot/libshotium.dylib
 
       - name: package
         if: ${{ success() && github.event.inputs.mode == 'build' }}
@@ -314,11 +316,12 @@ jobs:
           echo "using $sevenzip"
           version=$(python3 -c \
             "import json;print(json.load(open('shotium/package.json'))['version'])")
-          stem="shot-mac-${{ github.event.inputs.arch }}"
+          stem="shotium-mac-${{ github.event.inputs.arch }}"
           archive="$stem-v$version.7z"
           rm -rf dist "$archive"
           mkdir -p "dist/$stem"
-          cp out/Shot/shot out/Shot/shot_data.pak out/Shot/shot_strings.pak "dist/$stem/"
+          cp out/Shot/shotium out/Shot/libshotium.dylib \
+             out/Shot/shotium_data.pak out/Shot/shotium_strings.pak "dist/$stem/"
           ls -l "dist/$stem"
           ( cd dist && "$sevenzip" a -t7z -mx=9 "../$archive" "$stem" )
           ls -l "$archive"
@@ -348,10 +351,60 @@ jobs:
         run: |
           python3 -m pip install --quiet --break-system-packages pillow || \
             python3 -m pip install --quiet pillow
-          python3 tools/shot/serve_check.py out/Shot/shot
-          python3 tools/shot/net_check.py out/Shot/shot
-          python3 tools/shot/charset_check.py out/Shot/shot
-          python3 tools/shot/demo_check.py out/Shot/shot
+          python3 tools/shot/serve_check.py out/Shot/shotium
+          python3 tools/shot/net_check.py out/Shot/shotium
+          node tools/shot/node_check.cjs out/Shot/shotium
+          node tools/shot/daemon_check.cjs out/Shot/shotium
+          # The node addon, and the C ABI under it. Built here rather than
+          # taken from anywhere else, because the library it links against is
+          # the one this job has just produced -- an addon checked against a
+          # different build would be checking nothing.
+          ( cd shotium/native \
+            && SHOT_INCLUDE_DIR="$PWD/../../shot" \
+               SHOT_LIB_DIR="$PWD/../../out/Shot" \
+               npx --yes node-gyp@11 rebuild )
+          cp out/Shot/libshotium.dylib out/Shot/shotium_data.pak \
+             out/Shot/shotium_strings.pak shotium/native/build/Release/
+          node tools/shot/native_check.cjs out/Shot/shotium
+          python3 tools/shot/charset_check.py out/Shot/shotium
+          python3 tools/shot/demo_check.py out/Shot/shotium
+
+      - name: npm platform package
+        if: ${{ success() && github.event.inputs.mode == 'build' }}
+        working-directory: src
+        # One of the six @shotkit/shotium-<os>-<arch> packages: the engine, the
+        # shared library, the two resource packs and the addon, in a package
+        # npm can install. @shotkit/shotium depends on all six as
+        # optionalDependencies with os/cpu set, so an install pulls the one
+        # that matches and skips the rest. See
+        # tools/shot/make_platform_package.cjs.
+        #
+        # Both macOS runners are native, so the addon exists whenever the
+        # checks ran. With run_checks off the package ships without it, which
+        # costs require(".../native") and nothing else.
+        run: |
+          arch="${{ github.event.inputs.arch }}"
+          addon="shotium/native/build/Release/shotium.node"
+          argv=(--build out/Shot --os mac --arch "$arch" --dest dist/npm)
+          if [ -f "$addon" ]; then
+            argv+=(--addon "$addon")
+          else
+            echo "::warning::no addon was built; the package ships without it"
+          fi
+          node tools/shot/make_platform_package.cjs "${argv[@]}"
+          ( cd "dist/npm/shotium-mac-$arch" && npm pack --pack-destination .. )
+          tarball=$(ls dist/npm/*.tgz | head -1)
+          ls -l "$tarball"
+          echo "SHOT_NPM_TARBALL=$tarball" >> "$GITHUB_ENV"
+
+      - name: upload the npm package
+        if: ${{ success() && github.event.inputs.mode == 'build' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-shotium-mac-${{ github.event.inputs.arch }}
+          path: src/${{ env.SHOT_NPM_TARBALL }}
+          if-no-files-found: error
+          compression-level: 0
 
       - name: release
         if: ${{ success() && github.event.inputs.mode == 'build'
@@ -370,6 +423,7 @@ jobs:
           tag="v$SHOT_VERSION"
           gh release view "$tag" >/dev/null 2>&1 \
             || gh release create "$tag" --draft --title "$tag" \
-                 --notes "shot $SHOT_VERSION" --target "$GITHUB_SHA" \
+                 --notes "shotium $SHOT_VERSION" --target "$GITHUB_SHA" \
             || gh release view "$tag" >/dev/null
           gh release upload "$tag" "$SHOT_ARCHIVE" --clobber
+          gh release upload "$tag" "$SHOT_NPM_TARBALL" --clobber

@@ -13,7 +13,7 @@ const FAST_FAILURE_MS = 1000;
 const RESPAWN_DELAY_MS = 100;
 const MAX_RESPAWN_DELAY_MS = 5000;
 
-// A fixed set of shot.exe --serve processes, and a queue in front of them.
+// A fixed set of shotium.exe --serve processes, and a queue in front of them.
 //
 // The pool exists because blink is a process-wide singleton: one worker renders
 // one document at a time, so N concurrent screenshots means N processes. It is

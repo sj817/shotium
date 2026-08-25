@@ -26,12 +26,12 @@
         ["OS=='win'", {
           # The import library GN writes beside the DLL. The DLL itself is
           # found at run time in the directory the .node was loaded from.
-          "libraries": ["<(shot_lib_dir)/shot.dll.lib"]
+          "libraries": ["<(shot_lib_dir)/shotium.dll.lib"]
         }],
         ["OS=='linux'", {
           "libraries": [
             "-L<(shot_lib_dir)",
-            "-lshot",
+            "-lshotium",
             # $ORIGIN, escaped past make: the library ships beside the .node,
             # not in a system directory, and nothing should be searching the
             # host's library path for something named this generally.
@@ -39,7 +39,7 @@
           ]
         }],
         ["OS=='mac'", {
-          "libraries": ["-L<(shot_lib_dir)", "-lshot", "-Wl,-rpath,@loader_path"]
+          "libraries": ["-L<(shot_lib_dir)", "-lshotium", "-Wl,-rpath,@loader_path"]
         }]
       ]
     }
