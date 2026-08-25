@@ -253,3 +253,36 @@ disable_zstd_filter = true
 # in the same category: the time is dominated by process startup and layout,
 # not by the inner loops -Os gives up.
 optimize_for_size = true
+
+# blink's heap TLS has to be reachable from a shared object.
+#
+# ThreadStateStorage::Current() reads `blink::g_thread_specific_`, and in a
+# non-component build blink asks for the `local-exec` TLS model -- the fastest
+# one, a fixed offset from the thread pointer, and the one an ELF shared object
+# is not allowed to use. //shot:shot_c is a shared object, so lld rejected
+# every access:
+#
+#   ld.lld: error: relocation R_X86_64_TPOFF32 against blink::g_thread_specific_
+#           cannot be used with -shared            (R_AARCH64_TLSLE_* on arm64)
+#
+# This argument is upstream's own switch for the situation and its declaration
+# names the case: "Embedders like CEF use this flag to include blink in a
+# shared library under non-component build." It moves the model to
+# `local-dynamic`, which resolves through __tls_get_addr and links anywhere.
+#
+# It is set for every platform rather than for ELF alone. Windows and macOS
+# link the library without it -- COFF resolves TLS through _tls_index rather
+# than a relocation, and Darwin routes every thread_local through _tlv_get_addr
+# whatever the model says -- so this is not correctness there. It is that the
+# alternative is one blink configuration on Linux and a different one
+# everywhere else, in a tree whose whole claim is that the same engine renders
+# the same bytes on all six platforms. The price on Windows is that
+# ThreadStateStorage::Current() stops being inlined and becomes the
+# out-of-line getter that shipped before the inlining existed; blink's own
+# comment on that path is that "the call is still cheaper than multiple calls
+# through WTF/base/pthread* layers".
+#
+# There is no conditional form of this available: a gn args file cannot see
+# `is_win`, and `target_os` is undefined in one unless the file itself sets it
+# -- which import() has already evaluated this file past by then.
+blink_heap_inside_shared_library = true
