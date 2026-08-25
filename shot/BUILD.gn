@@ -227,8 +227,23 @@ shared_library("shot_c") {
   # whole of it there.
   if (is_apple) {
     inputs = [ "shot_api.exports" ]
-    ldflags += [ "-Wl,-exported_symbols_list," +
-                 rebase_path("shot_api.exports", root_build_dir) ]
+    ldflags += [
+      "-Wl,-exported_symbols_list," +
+          rebase_path("shot_api.exports", root_build_dir),
+
+      # And where the addon should look for it. The .node ships in the same
+      # directory as this library and is linked with `-rpath @loader_path`,
+      # which only resolves if the library's own install_name is @rpath-
+      # relative. ld64's default is the path it was handed on the command
+      # line -- `./libshotium.dylib` -- so dyld looks in the process's working
+      # directory and reports "Library not loaded: ./libshotium.dylib".
+      #
+      # GN's Apple toolchain passes -install_name itself, but only in a
+      # component build (build/toolchain/apple/toolchain.gni), and this is not
+      # one. Linux needs no equivalent: $ORIGIN on the .node's DT_RUNPATH is
+      # resolved against the .node, not against a name the library carries.
+      "-Wl,-install_name,@rpath/lib${output_name}.dylib",
+    ]
   } else if (!is_win) {
     inputs = [ "shot_api.map" ]
     ldflags += [ "-Wl,--version-script=" +
