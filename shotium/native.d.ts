@@ -80,3 +80,11 @@ export declare const NativeRuntime: {
 export declare const native: NativeRuntime;
 export declare function screenshot(options: ScreenshotOptions):
     Promise<Buffer|null>;
+
+// The named exports, again, as one object. See index.d.ts.
+declare const nativeModule: {
+  NativeRuntime: typeof NativeRuntime,
+  native: NativeRuntime,
+  screenshot: typeof screenshot,
+};
+export default nativeModule;

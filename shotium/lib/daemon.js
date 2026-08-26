@@ -1,13 +1,16 @@
-'use strict';
+import {EventEmitter} from 'node:events';
+import {createRequire} from 'node:module';
+import fs from 'node:fs';
+import net from 'node:net';
 
-const {EventEmitter} = require('events');
-const fs = require('fs');
-const net = require('net');
+import {Pool} from './pool.js';
+import {resolveStartOptions} from './config.js';
+import {endpointFor} from './endpoint.js';
+import {FrameReader, encodeFrame} from './protocol.js';
 
-const {Pool} = require('./pool');
-const {resolveStartOptions} = require('./config');
-const {endpointFor} = require('./endpoint');
-const {FrameReader, encodeFrame} = require('./protocol');
+// Reading our own version. An import attribute would do it too, but only
+// on a node new enough that this package would not run on the rest.
+const require = createRequire(import.meta.url);
 
 // How much longer than the page's own deadline the daemon waits before it
 // decides a worker is not going to answer at all. Same margin, same reasoning
@@ -320,4 +323,4 @@ class Daemon extends EventEmitter {
   }
 }
 
-module.exports = {Daemon, DEFAULT_IDLE_TIMEOUT_MS};
+export {Daemon, DEFAULT_IDLE_TIMEOUT_MS};

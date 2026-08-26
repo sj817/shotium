@@ -2,9 +2,34 @@
   "name": "@shotkit/shotium",
   "version": "0.1.0",
   "description": "Static screenshots from a stripped Chromium: DOM, CSS, layout, paint, no JavaScript engine.",
-  "type": "commonjs",
+  "keywords": [
+    "screenshot",
+    "chromium",
+    "blink",
+    "html-to-image",
+    "png",
+    "render"
+  ],
+  "homepage": "https://github.com/sj817/shotium#readme",
+  "bugs": "https://github.com/sj817/shotium/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sj817/shotium.git"
+  },
+  "type": "module",
   "main": "index.js",
   "types": "index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.js"
+    },
+    "./native": {
+      "types": "./native.d.ts",
+      "default": "./native.js"
+    },
+    "./package.json": "./package.json"
+  },
   "bin": {
     "shotium": "cli.js"
   },

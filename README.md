@@ -11,7 +11,7 @@ Blink used directly, which turns out to be one self-contained executable —
 41 MB on Windows, 12.8 MB compressed — that starts in under a second.
 
 ```js
-const shotium = require('@shotkit/shotium');
+import shotium from '@shotkit/shotium';
 
 shotium.runtime.start({workers: 4});
 
@@ -77,6 +77,25 @@ boundary rather than a list of bugs:
 npm install @shotkit/shotium
 ```
 
+It is an ES module, and only that. `import` works anywhere; `require()` of it
+works on Node 20.19 and 22.12 and later, and on anything older a CommonJS
+caller reaches it with `await import('@shotkit/shotium')`.
+
+Shipping one format rather than two is deliberate. Everything this package
+holds is a process-wide singleton — `runtime` is one pool, the daemon is
+addressed by a hash so that two callers find one process, and blink refuses
+outright to start a second engine in a process that has had one. A package
+built both ways hands a caller who reaches it both ways two of each, and the
+failure that produces is a second pool nobody asked for and an engine that
+will not start, some distance from the `require` that caused it.
+
+Two entry points, and nothing else is reachable:
+
+| | |
+|---|---|
+| `@shotkit/shotium` | `runtime`, `screenshot`, `daemon`, `Runtime` |
+| `@shotkit/shotium/native` | `native`, `screenshot`, `NativeRuntime` |
+
 The engine is 41 MB of Chromium and there is a different one per platform and
 architecture, so it is not in that package. It is in six of its own —
 `@shotkit/shotium-win-x64`, `@shotkit/shotium-mac-arm64`, and the other four —
@@ -109,7 +128,7 @@ With that unset and no platform package installed, it looks for
 `bin/shotium.exe` — `bin/shotium` on macOS and Linux — beside `index.js`.
 
 ```js
-const {runtime, screenshot} = require('@shotkit/shotium');
+import {runtime, screenshot} from '@shotkit/shotium';
 
 runtime.on('crash',   ({worker})          => console.warn('worker', worker, 'died'));
 runtime.on('timeout', ({worker, timeout}) => console.warn('worker', worker, 'hung'));
@@ -138,7 +157,7 @@ socket elsewhere — so the next process finds it already warm and already
 prewarmed:
 
 ```js
-const {daemon} = require('@shotkit/shotium');
+import {daemon} from '@shotkit/shotium';
 
 const client = await daemon.connect({workers: 4});   // starts one if none is up
 const png = await client.screenshot({file: 'https://example.com'});
@@ -164,7 +183,7 @@ client leaves, and one connection can carry several requests at once.
 puts it here:
 
 ```js
-const {native} = require('@shotkit/shotium/native');
+import {native} from '@shotkit/shotium/native';
 
 const png = await native.screenshot({file: 'https://example.com'});
 native.purge({releaseWorkingSet: true});   // when the batch is over
@@ -192,7 +211,7 @@ libloading take it as-is.
 
 Both ship prebuilt in the platform package, beside the engine they belong to,
 because the library underneath is a Chromium build and `npm install` is not
-going to do that. `require('@shotkit/shotium')` needs neither.
+going to do that. `@shotkit/shotium` itself needs neither.
 
 ### Options
 
@@ -226,10 +245,10 @@ dropped.
 ### Or just the binary
 
 ```bash
-shot https://example.com --width 1280 --height 720 -o out.png
-shot --file page.html --full-page --type webp --quality 85 -o out.webp
-shot --serve --cache-dir /var/tmp/shot-cache    # resident worker, see shot/shot_server.h
-shot --help
+shotium https://example.com --width 1280 --height 720 -o out.png
+shotium --file page.html --full-page --type webp --quality 85 -o out.webp
+shotium --serve --cache-dir /var/tmp/shotium-cache    # resident worker, see shot/shot_server.h
+shotium --help
 ```
 
 ---
@@ -259,17 +278,17 @@ startup entirely out of it.
 *Memory* is two numbers because a tree of processes does not have one. The
 first is the sum of working sets, which is what task manager adds up and which
 charges every process separately for pages it shares with its siblings — four
-shot workers each mapping the same 43 MiB of `shotium.exe`, twenty-one chrome
+shotium workers each mapping the same 43 MiB of `shotium.exe`, twenty-one chrome
 processes each mapping the same `chrome.dll`. The second is the sum of private
 working sets: the pages belonging to exactly one process, nothing counted
 twice. The real cost is between them, and the two bracket it.
 
-The one column shot loses is the interesting one. Navigating **one page** from
+The one column shotium loses is the interesting one. Navigating **one page** from
 document to document is faster than making a new one, and Chrome lets you do
-that; shot builds and tears down a `Page` per request whether you want it or
+that; shotium builds and tears down a `Page` per request whether you want it or
 not, so it has no equivalent. Where that stops helping is concurrency: four
 pages driven at once cost Chrome four renderer processes and most of a
-gigabyte, and the four workers answering four requests at once are what shot is
+gigabyte, and the four workers answering four requests at once are what shotium is
 shaped for.
 
 With the engine already up — a CLI invocation, a queue worker, a request
@@ -300,7 +319,7 @@ by the time it would run. These are Windows numbers either way — the table was
 measured on one host, and no equivalent run exists for Linux yet.
 
 **What none of this measures is script.** The corpus is static documents,
-because that is what shot can photograph. On a page that builds itself in the
+because that is what shotium can photograph. On a page that builds itself in the
 browser these numbers do not apply — that page comes out blank, and no
 benchmark result changes it.
 

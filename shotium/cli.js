@@ -1,6 +1,4 @@
 #!/usr/bin/env node
-'use strict';
-
 // The command line, which is a client of the resident daemon.
 //
 // A command-line screenshot is the case the in-process pool serves worst: the
@@ -9,11 +7,11 @@
 // starts one if there is not one, and `--no-daemon` is there for the caller who
 // would rather pay the startup than leave a process behind.
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'node:fs';
+import path from 'node:path';
 
-const shotium = require('./index');
-const {DEFAULT_IDLE_TIMEOUT_MS} = require('./lib/daemon');
+import * as shotium from './index.js';
+import {DEFAULT_IDLE_TIMEOUT_MS} from './lib/daemon.js';
 
 const USAGE = `Usage:
   shotium URL_OR_PATH [options]        one screenshot, through the daemon

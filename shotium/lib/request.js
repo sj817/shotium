@@ -1,5 +1,3 @@
-'use strict';
-
 const DEFAULT_TIMEOUT_MS = 30000;
 // How much longer than the page's own deadline a supervisor waits before
 // deciding the worker is not going to answer at all. The worker fails a slow
@@ -74,7 +72,7 @@ function timeoutFor(options) {
   return typeof timeout === 'number' ? timeout : DEFAULT_TIMEOUT_MS;
 }
 
-module.exports = {
+export {
   DEFAULT_TIMEOUT_MS,
   SUPERVISOR_MARGIN_MS,
   WIRE_FIELDS,

@@ -1,6 +1,9 @@
-'use strict';
+import {createRequire} from 'node:module';
+import path from 'node:path';
 
-const path = require('path');
+// require.resolve is the resolver, and ESM has no synchronous equivalent
+// that answers for a package that may not be installed at all.
+const require = createRequire(import.meta.url);
 
 // Which package carries the engine for this machine.
 //
@@ -60,4 +63,4 @@ function binaryName() {
   return process.platform === 'win32' ? 'shotium.exe' : 'shotium';
 }
 
-module.exports = {PACKAGES, binaryName, packageDir, packageName};
+export {PACKAGES, binaryName, packageDir, packageName};

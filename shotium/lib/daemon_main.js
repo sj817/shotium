@@ -1,5 +1,3 @@
-'use strict';
-
 // The entry point of a detached daemon process.
 //
 // The configuration arrives as one base64 argument rather than as flags,
@@ -10,7 +8,7 @@
 //
 //   node lib/daemon_main.js <base64 json>
 
-const {Daemon} = require('./daemon');
+import {Daemon} from './daemon.js';
 
 async function main() {
   const encoded = process.argv[2];

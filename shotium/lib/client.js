@@ -1,17 +1,19 @@
-'use strict';
+import {EventEmitter} from 'node:events';
+import {spawn} from 'node:child_process';
+import fs from 'node:fs';
+import net from 'node:net';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
 
-const {EventEmitter} = require('events');
-const {spawn} = require('child_process');
-const fs = require('fs');
-const net = require('net');
-const path = require('path');
+import {resolveStartOptions} from './config.js';
+import {endpointFor} from './endpoint.js';
+import {FrameReader, encodeFrame} from './protocol.js';
+import {timeoutFor, toRequest} from './request.js';
 
-const {resolveStartOptions} = require('./config');
-const {endpointFor} = require('./endpoint');
-const {FrameReader, encodeFrame} = require('./protocol');
-const {timeoutFor, toRequest} = require('./request');
+// ESM has no __dirname. This is the same thing, from the module's own URL.
+const HERE = path.dirname(fileURLToPath(import.meta.url));
 
-const DAEMON_MAIN = path.join(__dirname, 'daemon_main.js');
+const DAEMON_MAIN = path.join(HERE, 'daemon_main.js');
 // How long to wait for a daemon this process just started to bind its
 // endpoint. Binding happens after the workers are spawned but before they are
 // warm, so this covers process startup and nothing else.
@@ -306,7 +308,7 @@ async function screenshot(options = {}) {
   }
 }
 
-module.exports = {
+export {
   DaemonClient,
   connect,
   ensureClient,

@@ -1,11 +1,9 @@
-'use strict';
+import {EventEmitter} from 'node:events';
 
-const {EventEmitter} = require('events');
-
-const client = require('./lib/client');
-const {Pool} = require('./lib/pool');
-const {resolveStartOptions} = require('./lib/config');
-const {SUPERVISOR_MARGIN_MS, timeoutFor, toRequest} = require('./lib/request');
+import * as client from './lib/client.js';
+import {Pool} from './lib/pool.js';
+import {resolveStartOptions} from './lib/config.js';
+import {SUPERVISOR_MARGIN_MS, timeoutFor, toRequest} from './lib/request.js';
 
 // The library's one runtime: a pool of worker processes plus its lifecycle.
 //
@@ -81,17 +79,21 @@ class Runtime extends EventEmitter {
 
 const runtime = new Runtime();
 
-module.exports = {
-  Runtime,
-  runtime,
-  screenshot: (options) => runtime.screenshot(options),
-  // The resident pool: workers that outlive the process that started them, for
-  // callers that are short-lived themselves. See lib/daemon.js.
-  daemon: {
-    connect: client.connect,
-    screenshot: client.screenshot,
-    start: client.start,
-    status: client.status,
-    stop: client.stop,
-  },
+const screenshot = (options) => runtime.screenshot(options);
+
+// The resident pool: workers that outlive the process that started them, for
+// callers that are short-lived themselves. See lib/daemon.js.
+const daemon = {
+  connect: client.connect,
+  screenshot: client.screenshot,
+  start: client.start,
+  status: client.status,
+  stop: client.stop,
 };
+
+export {Runtime, runtime, screenshot, daemon};
+
+// A default as well as the names, because `import shotium from` is what a
+// caller coming from `require` writes first, and the two have to be the same
+// object rather than two views that drift.
+export default {Runtime, runtime, screenshot, daemon};

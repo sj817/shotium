@@ -1,9 +1,11 @@
-'use strict';
+import os from 'node:os';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
 
-const os = require('os');
-const path = require('path');
+import * as platform from './platform.js';
 
-const platform = require('./platform');
+// ESM has no __dirname. This is the same thing, from the module's own URL.
+const HERE = path.dirname(fileURLToPath(import.meta.url));
 
 // The one place that decides what "no options" means.
 //
@@ -27,7 +29,7 @@ function defaultBinary() {
   // No platform package: an archive from the releases page, unpacked into
   // bin/ beside this file. This is also the path a checkout takes, where
   // nothing was installed from a registry at all.
-  return path.join(__dirname, '..', 'bin', platform.binaryName());
+  return path.join(HERE, '..', 'bin', platform.binaryName());
 }
 
 // How many worker processes, when nobody said.
@@ -65,7 +67,7 @@ function resolveStartOptions(options = {}) {
   };
 }
 
-module.exports = {
+export {
   defaultBinary,
   defaultCacheDir,
   defaultWorkers,

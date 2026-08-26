@@ -1,5 +1,3 @@
-'use strict';
-
 // Puts shot_api.h somewhere it is the only thing there, and prints where.
 //
 // binding.gyp calls this at generate time and uses the result as the addon's
@@ -26,14 +24,18 @@
 // SHOT_INCLUDE_DIR still names where shot_api.h is *found*; it just is not
 // handed to the compiler any more.
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'node:fs';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+
+// ESM has no __dirname. This is the same thing, from the module's own URL.
+const HERE = path.dirname(fileURLToPath(import.meta.url));
 
 const HEADER = 'shot_api.h';
 
 const source = process.env.SHOT_INCLUDE_DIR ||
-    path.resolve(__dirname, '..', '..', 'shot');
-const staged = path.resolve(__dirname, 'build', 'include');
+    path.resolve(HERE, '..', '..', 'shot');
+const staged = path.resolve(HERE, 'build', 'include');
 
 const from = path.join(source, HEADER);
 if (!fs.existsSync(from)) {

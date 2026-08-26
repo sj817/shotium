@@ -1,8 +1,6 @@
-'use strict';
-
-const crypto = require('crypto');
-const os = require('os');
-const path = require('path');
+import crypto from 'node:crypto';
+import os from 'node:os';
+import path from 'node:path';
 
 // Where a daemon listens, derived from what it was asked to be.
 //
@@ -51,4 +49,4 @@ function endpointFor(options = {}) {
   return path.join(os.tmpdir(), `shotium-${uid}-${key}.sock`);
 }
 
-module.exports = {endpointFor, endpointKey};
+export {endpointFor, endpointKey};

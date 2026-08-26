@@ -1,10 +1,16 @@
-'use strict';
+import fs from 'node:fs';
+import {createRequire} from 'node:module';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
 
-const fs = require('fs');
-const path = require('path');
+import * as platformPackage from './lib/platform.js';
+import {toRequest} from './lib/request.js';
 
-const platformPackage = require('./lib/platform');
-const {toRequest} = require('./lib/request');
+// A .node addon is a CommonJS artefact: there is no ESM loader for one.
+const require = createRequire(import.meta.url);
+
+// ESM has no __dirname. This is the same thing, from the module's own URL.
+const HERE = path.dirname(fileURLToPath(import.meta.url));
 
 // shot in this process, instead of in workers beside it.
 //
@@ -41,7 +47,7 @@ function candidates() {
   if (dir) {
     found.push(path.join(dir, 'shotium.node'));
   }
-  found.push(path.join(__dirname, 'native', 'build', 'Release', 'shotium.node'));
+  found.push(path.join(HERE, 'native', 'build', 'Release', 'shotium.node'));
   return found;
 }
 
@@ -176,8 +182,8 @@ class NativeRuntime {
 
 const native = new NativeRuntime();
 
-module.exports = {
-  NativeRuntime,
-  native,
-  screenshot: (options) => native.screenshot(options),
-};
+const screenshot = (options) => native.screenshot(options);
+
+export {NativeRuntime, native, screenshot};
+
+export default {NativeRuntime, native, screenshot};

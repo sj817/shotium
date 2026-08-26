@@ -1,9 +1,7 @@
-'use strict';
+import {EventEmitter} from 'node:events';
+import {spawn} from 'node:child_process';
 
-const {EventEmitter} = require('events');
-const {spawn} = require('child_process');
-
-const {FrameReader, encodeRequest} = require('./protocol');
+import {FrameReader, encodeRequest} from './protocol.js';
 
 // One shotium.exe --serve process.
 //
@@ -187,4 +185,4 @@ class Worker extends EventEmitter {
   }
 }
 
-module.exports = {Worker};
+export {Worker};

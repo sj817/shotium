@@ -1,11 +1,9 @@
-'use strict';
+import {EventEmitter} from 'node:events';
+import fs from 'node:fs';
+import path from 'node:path';
 
-const {EventEmitter} = require('events');
-const fs = require('fs');
-const path = require('path');
-
-const {Worker} = require('./worker');
-const {defaultCacheDir} = require('./config');
+import {Worker} from './worker.js';
+import {defaultCacheDir} from './config.js';
 
 // A worker that exits sooner than this never really started, so its slot is
 // refilled on a doubling delay rather than immediately.
@@ -217,4 +215,4 @@ class Pool extends EventEmitter {
   }
 }
 
-module.exports = {Pool, defaultCacheDir};
+export {Pool, defaultCacheDir};

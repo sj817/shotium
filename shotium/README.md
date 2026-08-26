@@ -4,7 +4,7 @@ Static screenshots from a stripped Chromium. DOM, CSS, layout, paint, fonts,
 images, HTTP — everything a page needs to *look* right. No JavaScript engine.
 
 ```js
-const shotium = require('@shotkit/shotium');
+import shotium from '@shotkit/shotium';
 
 shotium.runtime.start({workers: 4});
 const png = await shotium.screenshot({
@@ -27,6 +27,21 @@ already uses internally for SVG images.
 This package is the supervisor for those processes. It is plain JavaScript: no
 native addon, no node-gyp, no ABI matrix. The worker talks a length-prefixed
 protocol over stdio.
+
+It is an ES module, and only that. `import` works anywhere; `require()` of it
+works on Node 20.19 and 22.12 and later, and a CommonJS caller on anything
+older reaches it with `await import('@shotkit/shotium')`. One format rather
+than two because everything here is a process-wide singleton — one pool, one
+daemon per configuration, and an in-process engine blink will not start twice
+— and a package built both ways gives a caller who reaches it both ways two of
+each.
+
+Two entry points, and nothing else is reachable:
+
+| | |
+|---|---|
+| `@shotkit/shotium` | `runtime`, `screenshot`, `daemon`, `Runtime` |
+| `@shotkit/shotium/native` | `native`, `screenshot`, `NativeRuntime` |
 
 ## What it is not
 
@@ -133,12 +148,12 @@ is — about 30 MB each, which is the price of not paying for startup again.
 
 ## In this process, instead
 
-`require('@shotkit/shotium/native')` is the same engine loaded into this process rather
+`@shotkit/shotium/native` is the same engine loaded into this process rather
 than started beside it. There is no worker, no pipe and no supervisor: a
 screenshot costs about a third less, and the whole thing is one process.
 
 ```js
-const {native} = require('@shotkit/shotium/native');
+import {native} from '@shotkit/shotium/native';
 
 const png = await native.screenshot({file: 'https://example.com'});
 native.purge({releaseWorkingSet: true});   // when the batch is over

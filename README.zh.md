@@ -7,7 +7,7 @@
 **没有 JavaScript 引擎。** V8 不是被禁用，是被删掉了：连同当初用来承载它的整个浏览器层，一起从源码树里移除。剩下的是直接使用的 Blink，最终是一个自包含的可执行文件 —— Windows 上 41 MB，压缩后 12.8 MB —— 启动耗时不到一秒。
 
 ```js
-const shotium = require('@shotkit/shotium');
+import shotium from '@shotkit/shotium';
 
 shotium.runtime.start({workers: 4});
 
@@ -55,6 +55,23 @@ await shotium.runtime.stop();
 npm install @shotkit/shotium
 ```
 
+这是一个 ES module，而且只有这一种形态。`import` 在哪里都能用；`require()` 需要
+Node 20.19 或 22.12 以上，更老的版本上 CommonJS 调用方用
+`await import('@shotkit/shotium')`。
+
+只发一种格式是有意的。这个包里的东西全是进程级单例 —— `runtime` 就是那一个池，
+daemon 用配置的哈希寻址以保证两个调用方找到同一个进程，而 blink 会直接拒绝在一个
+已经有过引擎的进程里再起第二个。同时提供 CJS 和 ESM 两份的包，会让同时用两种方式
+引它的调用方各拿到两份：多出一个没人要的池，和一个起不来的引擎 —— 而且报错的地方
+离那句 `require` 很远。
+
+两个入口，除此之外的路径都不可达：
+
+| | |
+|---|---|
+| `@shotkit/shotium` | `runtime`、`screenshot`、`daemon`、`Runtime` |
+| `@shotkit/shotium/native` | `native`、`screenshot`、`NativeRuntime` |
+
 引擎是 41 MB 的 Chromium，每个平台和架构各有一份，所以它不在这个包里，而在另外六个包里 —— `@shotkit/shotium-win-x64`、`@shotkit/shotium-mac-arm64`，以及其余四个 —— 以 `optionalDependencies` 声明，并带上 `os` 和 `cpu`。npm 只装匹配当前机器的那一个，其余五个跳过。没有 postinstall 脚本，也不从 registry 之外下载任何东西：lockfile 锁住的就是你拿到的。
 
 同样这些引擎也在 [releases 页面]，每个版本六个压缩包，给不从 npm 安装的调用方：
@@ -76,7 +93,7 @@ export SHOTIUM_BINARY=/path/to/shotium-win-x64/shotium.exe    # 非 Windows 平�
 两者都没有时，包会在 `index.js` 同级目录下找 `bin/shotium.exe` —— macOS 和 Linux 上是 `bin/shotium`。
 
 ```js
-const {runtime, screenshot} = require('@shotkit/shotium');
+import {runtime, screenshot} from '@shotkit/shotium';
 
 runtime.on('crash',   ({worker})          => console.warn('worker', worker, 'died'));
 runtime.on('timeout', ({worker, timeout}) => console.warn('worker', worker, 'hung'));
@@ -99,7 +116,7 @@ await screenshot({file: 'https://example.com', path: 'out.png'});
 `daemon` 是同一个进程池，放在一个 socket 后面 —— Windows 上是命名管道，其他平台是 unix socket —— 下一个进程连上去时，它已经起好并且预热过了：
 
 ```js
-const {daemon} = require('@shotkit/shotium');
+import {daemon} from '@shotkit/shotium';
 
 const client = await daemon.connect({workers: 4});   // 没有就先拉起一个
 const png = await client.screenshot({file: 'https://example.com'});
@@ -121,7 +138,7 @@ npx @shotkit/shotium daemon status
 `runtime` 和 `daemon` 都是把 blink 放在 worker 进程里。原生引擎把它放在这里：
 
 ```js
-const {native} = require('@shotkit/shotium/native');
+import {native} from '@shotkit/shotium/native';
 
 const png = await native.screenshot({file: 'https://example.com'});
 native.purge({releaseWorkingSet: true});   // 一批完了之后
@@ -134,7 +151,7 @@ await native.stop();
 
 下面是一个带 C ABI 的共享库，[`shot/shot_api.h`](shot/shot_api.h) —— 八个函数、不透明指针、进去 JSON 出来字节，没有任何内存的所有权跨过这道缝。上面的 addon 是一层很薄的 Node-API，它不读自己搬的东西。这个头文件并不绑定 node；ctypes、cgo、libloading 都能直接用。
 
-两者都以预构建的形式放在平台包里，和它们所属的引擎挨着，因为底下那个库是一次 Chromium 构建，`npm install` 做不了这件事。`require('@shotkit/shotium')` 两者都不需要。
+两者都以预构建的形式放在平台包里，和它们所属的引擎挨着，因为底下那个库是一次 Chromium 构建，`npm install` 做不了这件事。`@shotkit/shotium` 本身两者都不需要。
 
 ### 选项
 
@@ -164,10 +181,10 @@ interface ScreenshotOptions {
 ### 直接用二进制
 
 ```bash
-shot https://example.com --width 1280 --height 720 -o out.png
-shot --file page.html --full-page --type webp --quality 85 -o out.webp
-shot --serve --cache-dir /var/tmp/shot-cache    # 常驻 worker，见 shot/shot_server.h
-shot --help
+shotium https://example.com --width 1280 --height 720 -o out.png
+shotium --file page.html --full-page --type webp --quality 85 -o out.webp
+shotium --serve --cache-dir /var/tmp/shotium-cache    # 常驻 worker，见 shot/shot_server.h
+shotium --help
 ```
 
 ---
@@ -186,9 +203,9 @@ shot --help
 
 「冷启动」是一整个进程：node 启动、`require`、拉起引擎、截一张图。「单张」是引擎已经在跑之后再多截一张的边际成本，启动完全不在里面。
 
-内存写成两个数，因为一棵进程树没有单一的那个数。前一个是工作集之和，也就是任务管理器加出来的数——它对进程间共享的页面按进程重复计费：四个 shot worker 各自映射同一份 43 MiB 的 `shotium.exe`，二十一个 chrome 进程各自映射同一份 `chrome.dll`。后一个是私有工作集之和：只属于某一个进程的页面，一份不重复。真实开销在两者之间，这两个数把它夹住。
+内存写成两个数，因为一棵进程树没有单一的那个数。前一个是工作集之和，也就是任务管理器加出来的数——它对进程间共享的页面按进程重复计费：四个 shotium worker 各自映射同一份 43 MiB 的 `shotium.exe`，二十一个 chrome 进程各自映射同一份 `chrome.dll`。后一个是私有工作集之和：只属于某一个进程的页面，一份不重复。真实开销在两者之间，这两个数把它夹住。
 
-shot 输掉的那一列反而是值得说的一列。让**同一个页面**在文档之间跳转，比每次新建一个页面快，Chrome 允许这么做；而 shot 每个请求都要建一个 `Page` 再拆掉，没有对应的做法。这个优势到并发就停了：四个页面同时跑，Chrome 要付四个渲染进程和接近一个 GB，而四个 worker 同时应付四个请求正是 shot 的形状。
+shotium 输掉的那一列反而是值得说的一列。让**同一个页面**在文档之间跳转，比每次新建一个页面快，Chrome 允许这么做；而 shotium 每个请求都要建一个 `Page` 再拆掉，没有对应的做法。这个优势到并发就停了：四个页面同时跑，Chrome 要付四个渲染进程和接近一个 GB，而四个 worker 同时应付四个请求正是 shotium 的形状。
 
 引擎已经起着的时候——命令行调用、队列 worker、请求处理器——一个**全新进程**为一张图付出的是：
 
@@ -202,7 +219,7 @@ shot 输掉的那一列反而是值得说的一列。让**同一个页面**在�
 
 两边连的都是不是自己拉起来的东西：shotium 走命名管道，puppeteer 走 `browserWSEndpoint`，playwright 连 `launchServer()`。常驻那几列是「什么都不干的时候」各自的开销，每个引擎都先晾十五秒再采样。「仅引擎」是把 node 进程去掉之后剩下的部分，对 shotium 来说那几乎就是全部：队列安静十秒之后，worker 会回收 blink 的堆、丢掉缓存、把页面交还给操作系统，于是四个常驻渲染器加起来只占 2.8 MiB，58 MiB 里剩下的是管着它们的那个 node。下一个请求要付大约 8 ms 的软缺页把它们拿回来——见 [`shot/shot_runtime.h`](shot/shot_runtime.h) 里的 `PurgeMemory` 和 `ReleaseWorkingSet`。其中「把页面交还给操作系统」这一步是 Windows 的工作集裁剪，回收堆和丢缓存不是；Linux 上 PartitionAlloc 的回收器走 `madvise(MADV_DONTNEED)`，堆在那一步之前就已经还回去了。这张表本身也只是 Windows 的数：它测自一台主机，Linux 还没有对应的一轮。
 
-**这里没有测的是脚本。** 语料全是静态文档，因为那才是 shot 能拍的东西。页面靠脚本把自己建出来的场景，这些数字一概不适用——那种页面拍出来是空白的，任何跑分都改不了这一点。
+**这里没有测的是脚本。** 语料全是静态文档，因为那才是 shotium 能拍的东西。页面靠脚本把自己建出来的场景，这些数字一概不适用——那种页面拍出来是空白的，任何跑分都改不了这一点。
 
 ---
 

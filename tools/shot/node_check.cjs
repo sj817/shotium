@@ -9,8 +9,13 @@
 //
 // The .cjs extension is not decoration: chromium's root package.json says
 // "type": "module", which would otherwise make this file an ES module and
-// require() a syntax error. shotium's own package.json says "commonjs", so the
-// package itself is unaffected.
+// require() a syntax error.
+//
+// The package under test is an ES module and this is not, which is the point:
+// require() of an ES module is what a CommonJS caller of @shotkit/shotium does,
+// so checking it here is checking that. It needs node 22.12 or 20.19; the
+// workflows pin 22, and a caller on anything older uses await import()
+// instead.
 //
 //   node tools/shot/node_check.cjs out/ShotSize/shotium.exe
 

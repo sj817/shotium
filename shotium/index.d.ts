@@ -179,6 +179,15 @@ export interface Daemon {
   stop(options?: DaemonOptions): Promise<{stopped: boolean, endpoint: string}>;
 }
 
+/**
+ * The class behind `runtime`, for a caller who wants a second pool of their
+ * own. Declared as a value as well as a type because the module exports both,
+ * the way native.d.ts declares NativeRuntime.
+ */
+export declare const Runtime: {
+  new(): Runtime;
+};
+
 export declare const runtime: Runtime;
 /**
  * The resident pool: workers that outlive the process that started them,
@@ -187,3 +196,13 @@ export declare const runtime: Runtime;
 export declare const daemon: Daemon;
 export declare function screenshot(options: ScreenshotOptions):
     Promise<Buffer|null>;
+
+// The named exports, again, as one object. `import shotium from` is what a
+// caller coming from `require` writes first; it resolves to the same values.
+declare const shotium: {
+  Runtime: typeof Runtime,
+  runtime: Runtime,
+  screenshot: typeof screenshot,
+  daemon: Daemon,
+};
+export default shotium;

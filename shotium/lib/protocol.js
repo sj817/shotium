@@ -1,5 +1,3 @@
-'use strict';
-
 // The wire format shotium.exe --serve speaks, in both directions: a 4-byte
 // little-endian length followed by that many bytes.
 //
@@ -54,4 +52,4 @@ class FrameReader {
   }
 }
 
-module.exports = {HEADER_BYTES, encodeFrame, encodeRequest, FrameReader};
+export {HEADER_BYTES, encodeFrame, encodeRequest, FrameReader};
