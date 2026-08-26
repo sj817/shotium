@@ -227,7 +227,7 @@ npm 上 `shotium` 这个名字拿不到,所以包名带上了 scope:`@shotkit/sh
 | 7.5 | 从 release 资产发布七个包 | `.github/workflows/npm-publish.yml` |
 
 引擎不进主包:它是一次 Chromium 构建,一个平台一个架构各 41 MB,六份。所以
-`@shotkit/shotium` 只有 JS,引擎在 `@shotkit/shotium-win-x64` 那六个包里,以
+`@shotkit/shotium` 只有 JS,引擎在 `@shotkit/shotium-win32-x64` 那六个包里,以
 `optionalDependencies` 声明并带 `os` / `cpu`,npm 只装匹配当前机器的那一个。
 
 没选 postinstall 下载:那条路让 lockfile 失去意义(锁住的不是最终拿到的东西),

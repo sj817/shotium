@@ -21,16 +21,23 @@ const require = createRequire(import.meta.url);
 // most needs to work; and it runs code at install time in exchange for saving
 // nothing that npm was not already doing.
 //
-// The keys are node's `${process.platform}-${process.arch}`. The names are the
-// release archives' spelling -- win/mac/linux -- because a user who downloads
-// `shotium-mac-arm64-v0.1.0.7z` by hand and a user who installs
-// `@shotkit/shotium-mac-arm64` should not have to work out that they got the
-// same thing.
+// Key and name are both `${process.platform}-${process.arch}`, so the table is
+// the identity map with a prefix on it. That is deliberate: the value npm
+// matches `os` and `cpu` against is process.platform, and a package named for
+// anything else makes the reader hold two spellings of one machine in their
+// head. It is also what every other package of this shape does -- esbuild,
+// swc, lightningcss all publish darwin-arm64 and win32-x64.
+//
+// The release archives spell it win/mac instead -- shotium-mac-arm64.7z --
+// and that is not going to change either. They are downloaded by people, and
+// `mac` is what people call it. So the two spellings do differ, in the one
+// place where each is right: the registry gets node's, the download page gets
+// the reader's.
 const PACKAGES = {
-  'win32-x64': '@shotkit/shotium-win-x64',
-  'win32-arm64': '@shotkit/shotium-win-arm64',
-  'darwin-x64': '@shotkit/shotium-mac-x64',
-  'darwin-arm64': '@shotkit/shotium-mac-arm64',
+  'win32-x64': '@shotkit/shotium-win32-x64',
+  'win32-arm64': '@shotkit/shotium-win32-arm64',
+  'darwin-x64': '@shotkit/shotium-darwin-x64',
+  'darwin-arm64': '@shotkit/shotium-darwin-arm64',
   'linux-x64': '@shotkit/shotium-linux-x64',
   'linux-arm64': '@shotkit/shotium-linux-arm64',
 };

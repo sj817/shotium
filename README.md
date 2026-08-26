@@ -98,9 +98,11 @@ Two entry points, and nothing else is reachable:
 
 The engine is 41 MB of Chromium and there is a different one per platform and
 architecture, so it is not in that package. It is in six of its own —
-`@shotkit/shotium-win-x64`, `@shotkit/shotium-mac-arm64`, and the other four —
-declared as `optionalDependencies` with `os` and `cpu` set. npm installs the
-one that matches the machine and skips the rest. No postinstall script, no
+`@shotkit/shotium-win32-x64`, `@shotkit/shotium-darwin-arm64`, and the other
+four — declared as `optionalDependencies` with `os` and `cpu` set. npm installs
+the one that matches the machine and skips the rest. They are named for
+`process.platform`, which is what npm matches `os` against; the archives below
+spell those two platforms `win` and `mac`, because those are read by people. No postinstall script, no
 download outside the registry: what the lockfile pins is what arrives.
 
 The same engines are on the [releases page] as six archives per version, for a

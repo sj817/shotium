@@ -108,7 +108,11 @@ function main() {
   const args = parseArgs(process.argv.slice(2));
   const platform = PLATFORMS[args.os];
   const mainPkg = mainPackage();
-  const name = `@shotkit/shotium-${args.os}-${args.arch}`;
+  // npmOs, not args.os: the package is named for process.platform, because
+  // that is what npm matches its `os` field against and what the caller's
+  // machine calls itself. The archives keep win/mac -- people read those.
+  // See shotium/lib/platform.js, which is the other half of this.
+  const name = `@shotkit/shotium-${platform.npmOs}-${args.arch}`;
   const buildDir = path.resolve(ROOT, args.build);
   const dest = path.resolve(ROOT, args.dest, `shotium-${args.os}-${args.arch}`);
 

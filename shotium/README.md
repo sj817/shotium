@@ -70,8 +70,8 @@ and architecture, so it does not ship inside this package. It ships in six of
 its own:
 
 ```
-@shotkit/shotium-win-x64      @shotkit/shotium-mac-x64      @shotkit/shotium-linux-x64
-@shotkit/shotium-win-arm64    @shotkit/shotium-mac-arm64    @shotkit/shotium-linux-arm64
+@shotkit/shotium-win32-x64    @shotkit/shotium-darwin-x64    @shotkit/shotium-linux-x64
+@shotkit/shotium-win32-arm64  @shotkit/shotium-darwin-arm64  @shotkit/shotium-linux-arm64
 ```
 
 All six are `optionalDependencies` of this package with `os` and `cpu` set, so

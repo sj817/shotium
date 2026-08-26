@@ -49,12 +49,12 @@
     "node": ">=18"
   },
   "optionalDependencies": {
+    "@shotkit/shotium-darwin-arm64": "0.1.0",
+    "@shotkit/shotium-darwin-x64": "0.1.0",
     "@shotkit/shotium-linux-arm64": "0.1.0",
     "@shotkit/shotium-linux-x64": "0.1.0",
-    "@shotkit/shotium-mac-arm64": "0.1.0",
-    "@shotkit/shotium-mac-x64": "0.1.0",
-    "@shotkit/shotium-win-arm64": "0.1.0",
-    "@shotkit/shotium-win-x64": "0.1.0"
+    "@shotkit/shotium-win32-arm64": "0.1.0",
+    "@shotkit/shotium-win32-x64": "0.1.0"
   },
   "scripts": {
     "check:types": "tsc --noEmit --strict index.d.ts native.d.ts"

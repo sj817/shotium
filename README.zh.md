@@ -72,7 +72,7 @@ daemon 用配置的哈希寻址以保证两个调用方找到同一个进程，�
 | `@shotkit/shotium` | `runtime`、`screenshot`、`daemon`、`Runtime` |
 | `@shotkit/shotium/native` | `native`、`screenshot`、`NativeRuntime` |
 
-引擎是 41 MB 的 Chromium，每个平台和架构各有一份，所以它不在这个包里，而在另外六个包里 —— `@shotkit/shotium-win-x64`、`@shotkit/shotium-mac-arm64`，以及其余四个 —— 以 `optionalDependencies` 声明，并带上 `os` 和 `cpu`。npm 只装匹配当前机器的那一个，其余五个跳过。没有 postinstall 脚本，也不从 registry 之外下载任何东西：lockfile 锁住的就是你拿到的。
+引擎是 41 MB 的 Chromium，每个平台和架构各有一份，所以它不在这个包里，而在另外六个包里 —— `@shotkit/shotium-win32-x64`、`@shotkit/shotium-darwin-arm64`，以及其余四个 —— 以 `optionalDependencies` 声明，并带上 `os` 和 `cpu`。包名用的是 `process.platform` 的拼法，因为 npm 就是拿它去匹配 `os` 的；下面那些压缩包把同两个平台写作 `win` 和 `mac`，因为那是给人看的。npm 只装匹配当前机器的那一个，其余五个跳过。没有 postinstall 脚本，也不从 registry 之外下载任何东西：lockfile 锁住的就是你拿到的。
 
 同样这些引擎也在 [releases 页面]，每个版本六个压缩包，给不从 npm 安装的调用方：
 
