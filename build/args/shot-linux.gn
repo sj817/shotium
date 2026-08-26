@@ -39,3 +39,52 @@ ozone_platform_headless = true
 # to. Turning the arg off is upstream's switch for that; the alternative is
 # vendoring a bus client that is never connected.
 use_dbus = false
+
+# PartitionAlloc-Everywhere, off, and only here.
+#
+# libshotium.so hides every symbol but the eight in shot_api.h -- see
+# shot/shot_api.map, which explains why -- and PartitionAlloc's allocator shim
+# is one of the things that hides. That leaves the library replacing the
+# process allocator for itself and for nobody else, which is not a smaller
+# version of replacing it: it is two allocators in one process with no way to
+# tell their pointers apart. The first render found the seam:
+#
+#   #0  partition_alloc::PartitionRoot::FreeInUnknownRoot<...>(void*)
+#   #1  _get_real_paths_from_prefix ()            <- fontconfig
+#   #2  FcParseDir ()
+#   ...
+#   #11 SkFontConfigInterfaceDirect::matchFamilyName(...)
+#   #13 blink::FontCache::MatchFamilyStyle(...)
+#
+# glibc allocated that string -- fontconfig asks realpath() for it -- and
+# fontconfig, linked into the library, freed it through the library's own
+# free(), which is PartitionAlloc's. In the executable the same code works
+# because the shim's malloc is exported, so glibc's internal allocation went
+# through PartitionAlloc too. PartitionAlloc's comment on the check that fires
+# says what this is:
+#
+#   This is a crash to detect imperfect symbol interception.
+#     -- partition_root_internal.h, GetSlotStartAndSlotSpanFromAddress
+#
+# It is imperfect by construction here, and there is no third state. Either the
+# library exports malloc, and a host that loads it finds its own allocations
+# going to shot's allocator for the life of the process, or it does not, and
+# has no business claiming free(). ENABLE_SYSTEM_FREE_FALLBACK is upstream's
+# answer to exactly this and is asserted to Android, where it is wired to the
+# -Wl,--wrap symbols that make __real_free exist.
+#
+# This is in the Linux file rather than in shot.gn because Linux is the only
+# one of the three that needs it. macOS forwards a foreign pointer to the
+# system free() unconditionally -- MaybeHandleSystemDeallocation() is compiled
+# in under PA_BUILDFLAG(IS_APPLE) -- and Windows links the DLL against the
+# CRT's allocator rather than interposing on it. Both run the addon's checks
+# green with the shim on, so turning it off there would cost them
+# PartitionAlloc for nothing.
+#
+# What actually changes: malloc, free and the operator new family go to the
+# system allocator. PartitionAlloc itself stays -- use_partition_alloc is
+# untouched -- so blink's own partitions, the ones reached through
+# WTF::Partitions and PartitionRoot directly rather than through malloc, are
+# exactly what they were. Not measured yet on this tree, and the Linux numbers
+# in bench/cross/RESULTS.md were taken with PA-E on.
+use_allocator_shim = false
