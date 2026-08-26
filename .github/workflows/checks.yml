@@ -165,9 +165,15 @@ jobs:
           node -e '
             const fs = require("fs");
             // prepack writes to the same stdout, so the JSON is the tail of
-            // the file rather than the whole of it.
+            // the file rather than the whole of it. Found by the line it
+            // starts on and not by the first "[": on a runner tsdown colours
+            // its output, and the first "[" in the file belongs to an ANSI
+            // escape. Every line npm and tsdown write before this one begins
+            // with a glyph or an escape, so column zero is the array.
             const raw = fs.readFileSync("pack.json", "utf8");
-            const [entry] = JSON.parse(raw.slice(raw.indexOf("[")));
+            const at = raw.search(/^\[/m);
+            if (at < 0) throw new Error("npm pack --json printed no array");
+            const [entry] = JSON.parse(raw.slice(at));
             const names = entry.files.map((f) => f.path).sort();
             const missing = ["dist/index.js", "dist/index.d.ts", "dist/native.js",
                              "dist/native.d.ts", "dist/daemon_main.js",
