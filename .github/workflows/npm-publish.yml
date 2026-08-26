@@ -42,7 +42,11 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      # write, not read, and only because the release is a draft. A draft is
+      # visible to whoever can push and to nobody else, so a contents:read
+      # token asking for it is told the release does not exist -- not that it
+      # may not have it. Nothing here writes; the step below downloads.
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
