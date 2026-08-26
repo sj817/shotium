@@ -50,8 +50,6 @@ gclient_gn_args = [
   'checkout_mutter',
   'checkout_openxr',
   'checkout_src_internal',
-  'checkout_src_internal_infra',
-  'checkout_clusterfuzz_data',
   'cros_boards',
   'cros_boards_with_qemu_images',
   'generate_location_tags',
@@ -113,9 +111,6 @@ vars = {
   # restricted to Googlers only.
   'checkout_chromium_password_manager_test_dependencies': False,
 
-  # Checkout fuzz archive. Should not need in builders.
-  'checkout_clusterfuzz_data': False,
-
   # By default, checkout JavaScript coverage node modules. These packages
   # are used to post-process raw v8 coverage reports into IstanbulJS compliant
   # output.
@@ -128,14 +123,6 @@ vars = {
   # By default, do not check out src-internal. This can be overridden e.g. with
   # custom_vars.
   'checkout_src_internal': False,
-
-  # By default, do not check out //src/internal. This can be overridden e.g. with
-  # custom_vars. This acts the same way as checkout_src_internal, but only affects
-  # the internal infra folder, instead of all internal repos. It is used by
-  # Cronet internal gn2bp to make sure no internal source code is uploaded.
-  # See https://crbug.com/404202679: do not modify the set of directories this
-  # acts upon.
-  'checkout_src_internal_infra' : False,
 
   # Checkout legacy src_internal. This variable is ignored if
   # checkout_src_internal is set as false.
@@ -1587,16 +1574,6 @@ deps = {
     'dep_type': 'cipd',
   },
 
-  'src/clank': {
-    'url': Var('chrome_git') + '/clank/internal/apps.git' + '@' +
-    '075a92cf33b80510348579f257a0c4d059c6ef47',
-    'condition': 'checkout_android and checkout_src_internal',
-  },
-
-  'src/docs/website': {
-    'url': Var('chromium_git') + '/website.git' + '@' + '796641dd2b82060117299f99d9f136356dc25e1f',
-  },
-
   'src/ios/third_party/earl_grey2/src': {
       'url': Var('chromium_git') + '/external/github.com/google/EarlGrey.git' + '@' + 'f62e250172a3296e9ebe7efa4d0447ce447f94e5',
       'condition': 'checkout_ios',
@@ -2665,34 +2642,6 @@ deps = {
       'condition': 'checkout_mac',
   },
 
-# See checkout_src_internal_infra declaration.
-# LINT.IfChange
-  'src/internal': {
-    'url': Var('chrome_git') + '/chrome/src-internal.git' + '@' + Var('src_internal_revision'),
-    'condition': 'checkout_src_internal or checkout_src_internal_infra',
-  },
-# LINT.ThenChange(/components/cronet/gn2bp/copy.bara.sky)
-
-  'src/agents/internal': {
-    'url': Var('chrome_git') + '/chrome/agents-internal.git' + '@' + Var('agents_internal_revision'),
-    'condition': 'checkout_src_internal or checkout_src_internal_infra',
-  },
-
-  'src/agents/shared': {
-    'url': Var('chromium_git') + '/chromium/agents.git' + '@' + Var('agents_public_revision'),
-  },
-
-  'src/internal/tools/edit_monitor/cipd': {
-      'packages': [
-          {
-              'package': 'infra_internal/edit_monitor/linux-amd64',
-              'version': 'GnKYrWWnxMRz9PuawzZLQd6jXfLy-yYYs03lINw5Oh4C',
-          },
-      ],
-      'condition': 'host_os == "linux" and (checkout_src_internal or checkout_src_internal_infra)',
-      'dep_type': 'cipd',
-  },
-
   'src/ash/ambient/resources': {
     'packages': [
       {
@@ -3418,22 +3367,10 @@ deps = {
       'condition': 'checkout_src_internal',
   },
 
-  'src/content/test/data/plugin': {
-      'url': Var('chrome_git') + '/chrome/data/chrome_plugin_tests.git' + '@' +
-        '3e80d4d08f5421d6bc9340964834ebc903a318aa',
-      'condition': 'checkout_src_internal',
-  },
-
   'src/google_apis/internal': {
       'url': Var('chrome_git') + '/chrome/google_apis/internal.git' + '@' +
         '7b404d2cef42e71f92977364e5249511e46f3571',
       'condition': 'checkout_src_internal',
-  },
-
-  'src/ios_internal':  {
-      'url': Var('chrome_git') + '/chrome/ios_internal.git' + '@' +
-        '1f472d6ed7506fdf688715ae6cfa6ecd411fd704',
-      'condition': 'checkout_ios and checkout_src_internal',
   },
 
   'src/remoting/host/installer/linux/internal': {
@@ -3466,18 +3403,6 @@ deps = {
       'condition': 'checkout_src_internal',
   },
 
-  'src/signing_keys': {
-      'url': Var('chrome_git') + '/clank/apptestkey.git' + '@' +
-        '5138e684915721cbccbb487ec0764ed05650fcd0',
-      'condition': 'checkout_android and checkout_google_internal and checkout_src_internal',
-  },
-
-  'src/clusterfuzz-data':{
-      'url': Var('chrome_git') + '/chrome/tools/clusterfuzz-data.git' + '@' +
-        Var('clusterfuzz_data_revision'),
-      'condition': 'checkout_clusterfuzz_data and checkout_src_internal',
-  },
-
 
 
 
@@ -3500,23 +3425,6 @@ deps = {
       'condition': 'checkout_chromeos and checkout_src_internal',
   },
 
-  'src/webkit/data/bmp_decoder': {
-      'url': Var('chrome_git') + '/chrome/data/bmp_decoder.git' + '@' +
-        '595d7702a51c161b9d0e0239c1a44dbfed818162',
-      'condition': 'checkout_src_internal',
-  },
-
-  'src/webkit/data/ico_decoder': {
-      'url': Var('chrome_git') + '/chrome/data/ico_decoder.git' + '@' +
-        'aba38604e037bdbeedca9c2780c94502a8a6034d',
-      'condition': 'checkout_src_internal',
-  },
-
-  'src/webkit/data/test_shell/plugins': {
-      'url': Var('chrome_git') + '/chrome/data/webkit_plugin_tests.git' + '@' +
-        'e4bd19f95afa6483a54906c2a3e5d329d2d81690',
-      'condition': 'checkout_src_internal',
-  },
 }
 
 
@@ -3626,24 +3534,6 @@ hooks = [
     ],
   },
   {
-    # This clobbers when necessary (based on the internal ios version of
-    # get_landmines.py). This should run as early as possible so that
-    # other things that get/generate into the output directory will not
-    # subsequently be clobbered. This script is only run# for iOS build
-    # with src_internal.
-    'name': 'landmines_ios_internal',
-    'pattern': '.',
-    'condition': 'checkout_ios and checkout_src_internal',
-    'action': [
-        'python3',
-        'src/build/landmines.py',
-        '--landmine-scripts',
-        'src/ios_internal/build/get_landmines.py',
-        '--landmines-path',
-        'src/ios_internal/.landmines',
-    ],
-  },
-  {
     # Ensure that the DEPS'd "depot_tools" has its self-update capability
     # disabled.
     'name': 'disable_depot_tools_selfupdate',
@@ -3688,16 +3578,6 @@ hooks = [
         'src/third_party/catapult',
         'src/third_party/mako', # Some failures triggered by crrev.com/c/3686969
         'src/tools',
-    ],
-  },
-  {
-    'name': 'edit_monitor_rollout',
-    'pattern': '.',
-    'condition': 'host_os == "linux" and (checkout_src_internal or checkout_src_internal_infra)',
-    'action': [
-        'vpython3',
-        'src/internal/tools/edit_monitor/daemon_manager.py',
-        'start',
     ],
   },
   {
@@ -4316,7 +4196,5 @@ recursedeps = [
   'src/third_party/instrumented_libs',
   # clank has its own DEPS file, does not need to be in trybot_analyze_config
   # since the roller does not run tests.
-  'src/clank',
   'src/components/optimization_guide/internal',
-  'src/ios_internal',
 ]

@@ -1,3 +1,0 @@
-per-file dpapi*=wfh@chromium.org
-per-file freedesktop*=thomasanderson@chromium.org
-per-file *secret_portal*=thomasanderson@chromium.org

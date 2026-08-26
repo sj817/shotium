@@ -1,4 +1,0 @@
-file://services/webnn/OWNERS
-
-per-file webnn_sandbox_init.*=set noparent
-per-file webnn_sandbox_init.*=file://sandbox/win/OWNERS

@@ -1,3 +1,0 @@
-file://extensions/OWNERS
-
-per-file global_accelerator_listener_linux*=thomasanderson@chromium.org

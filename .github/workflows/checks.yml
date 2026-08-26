@@ -1,6 +1,6 @@
 # The checks that do not need an engine binary.
 #
-# Everything worth knowing about shotium needs a built shot.exe, and building
+# Everything worth knowing about shotium needs a built shotium.exe, and building
 # one is hours of compute -- see engine-windows.yml. So this workflow covers the
 # half that can be checked in seconds: that the JavaScript parses, that the
 # published types actually typecheck, and that the Python check scripts are not

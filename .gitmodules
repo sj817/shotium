@@ -37,13 +37,6 @@
 [submodule "chrome/test/data/xr/webvr_info"]
 	path = chrome/test/data/xr/webvr_info
 	url = https://chromium.googlesource.com/external/github.com/toji/webvr.info
-[submodule "clank"]
-	path = clank
-	url = https://chrome-internal.googlesource.com/clank/internal/apps
-	gclient-condition = checkout_android and checkout_src_internal
-[submodule "docs/website"]
-	path = docs/website
-	url = https://chromium.googlesource.com/website
 [submodule "ios/third_party/earl_grey2/src"]
 	path = ios/third_party/earl_grey2/src
 	url = https://chromium.googlesource.com/external/github.com/google/EarlGrey
@@ -620,17 +613,6 @@
 [submodule "v8"]
 	path = v8
 	url = https://chromium.googlesource.com/v8/v8
-[submodule "internal"]
-	path = internal
-	url = https://chrome-internal.googlesource.com/chrome/src-internal
-	gclient-condition = checkout_src_internal or checkout_src_internal_infra
-[submodule "agents/internal"]
-	path = agents/internal
-	url = https://chrome-internal.googlesource.com/chrome/agents-internal
-	gclient-condition = checkout_src_internal or checkout_src_internal_infra
-[submodule "agents/shared"]
-	path = agents/shared
-	url = https://chromium.googlesource.com/chromium/agents
 [submodule "third_party/android_prebuilts/build_tools"]
 	path = third_party/android_prebuilts/build_tools
 	url = https://android.googlesource.com/platform/prebuilts/build-tools
@@ -863,18 +845,10 @@
 	path = components/vector_icons/google_chrome
 	url = https://chrome-internal.googlesource.com/chrome/vector_icons/google_chrome
 	gclient-condition = checkout_src_internal
-[submodule "content/test/data/plugin"]
-	path = content/test/data/plugin
-	url = https://chrome-internal.googlesource.com/chrome/data/chrome_plugin_tests
-	gclient-condition = checkout_src_internal
 [submodule "google_apis/internal"]
 	path = google_apis/internal
 	url = https://chrome-internal.googlesource.com/chrome/google_apis/internal
 	gclient-condition = checkout_src_internal
-[submodule "ios_internal"]
-	path = ios_internal
-	url = https://chrome-internal.googlesource.com/chrome/ios_internal
-	gclient-condition = checkout_ios and checkout_src_internal
 [submodule "remoting/host/installer/linux/internal"]
 	path = remoting/host/installer/linux/internal
 	url = https://chrome-internal.googlesource.com/chrome/remoting/host/installer/linux/internal
@@ -895,14 +869,6 @@
 	path = services/shape_detection/internal
 	url = https://chrome-internal.googlesource.com/chrome/services/shape_detection
 	gclient-condition = checkout_src_internal
-[submodule "signing_keys"]
-	path = signing_keys
-	url = https://chrome-internal.googlesource.com/clank/apptestkey
-	gclient-condition = checkout_android and checkout_google_internal and checkout_src_internal
-[submodule "clusterfuzz-data"]
-	path = clusterfuzz-data
-	url = https://chrome-internal.googlesource.com/chrome/tools/clusterfuzz-data
-	gclient-condition = checkout_clusterfuzz_data and checkout_src_internal
 [submodule "third_party/widevine/cdm/chromeos"]
 	path = third_party/widevine/cdm/chromeos
 	url = https://chrome-internal.googlesource.com/chrome/deps/widevine/cdm/chromeos
@@ -939,15 +905,3 @@
 	path = ui/webui/internal
 	url = https://chrome-internal.googlesource.com/chrome/ui-webui-internal
 	gclient-condition = checkout_chromeos and checkout_src_internal
-[submodule "webkit/data/bmp_decoder"]
-	path = webkit/data/bmp_decoder
-	url = https://chrome-internal.googlesource.com/chrome/data/bmp_decoder
-	gclient-condition = checkout_src_internal
-[submodule "webkit/data/ico_decoder"]
-	path = webkit/data/ico_decoder
-	url = https://chrome-internal.googlesource.com/chrome/data/ico_decoder
-	gclient-condition = checkout_src_internal
-[submodule "webkit/data/test_shell/plugins"]
-	path = webkit/data/test_shell/plugins
-	url = https://chrome-internal.googlesource.com/chrome/data/webkit_plugin_tests
-	gclient-condition = checkout_src_internal

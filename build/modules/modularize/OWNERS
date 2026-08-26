@@ -1,8 +1,0 @@
-# Primary owner
-msta@google.com
-
-# Secondary owner
-tikuta@chromium.org
-
-# Chrome Build Team members
-file://infra/config/groups/chrome-build/OWNERS
