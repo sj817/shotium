@@ -17,29 +17,22 @@
     "url": "git+https://github.com/sj817/shotium.git"
   },
   "type": "module",
-  "main": "index.js",
-  "types": "index.d.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./index.d.ts",
-      "default": "./index.js"
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
     },
     "./native": {
-      "types": "./native.d.ts",
-      "default": "./native.js"
+      "types": "./dist/native.d.ts",
+      "default": "./dist/native.js"
     },
     "./package.json": "./package.json"
   },
-  "bin": {
-    "shotium": "cli.js"
-  },
   "files": [
-    "index.js",
-    "index.d.ts",
-    "cli.js",
-    "lib/",
-    "native.js",
-    "native.d.ts",
+    "dist/",
+    "src/",
     "native/binding.cc",
     "native/binding.gyp",
     "native/stage_header.js",
@@ -57,11 +50,14 @@
     "@shotkit/shotium-win32-x64": "0.1.0"
   },
   "scripts": {
-    "check:types": "tsc --noEmit --strict index.d.ts native.d.ts"
+    "build": "tsdown",
+    "check:types": "tsc --noEmit",
+    "prepack": "tsdown"
   },
   "devDependencies": {
-    "@types/node": "^22",
-    "typescript": "^5"
+    "@types/node": "22.20.1",
+    "tsdown": "0.22.14",
+    "typescript": "5.9.3"
   },
   "license": "BSD-3-Clause"
 }

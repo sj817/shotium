@@ -7,7 +7,8 @@
 // architecture. So each build produces a package of its own, and the main
 // package depends on all six as optionalDependencies with `os` and `cpu` set
 // -- npm then installs the one that matches and skips the other five. See
-// shotium/lib/platform.js, which is the code that finds whichever one landed.
+// shotium/src/lib/platform.ts, which is the code that finds whichever one
+// landed.
 //
 //   node tools/shot/make_platform_package.cjs \
 //       --build out/Shot --os win --arch x64 --dest dist/npm
@@ -16,8 +17,8 @@
 // package carries the in-process engine as well; where it is not -- an arm64
 // build cross-compiled on an x64 host, which has no way to produce or check an
 // addon -- the package is still complete for the worker pool and the daemon,
-// which is what require("@shotkit/shotium") uses. native.js reports the addon
-// as missing rather than the install as broken.
+// which is what import("@shotkit/shotium") uses. src/native.ts reports the
+// addon as missing rather than the install as broken.
 //
 // This script does not run npm. It writes a directory; the caller runs
 // `npm pack` or `npm publish` on it, because those need credentials and a
@@ -111,7 +112,7 @@ function main() {
   // npmOs, not args.os: the package is named for process.platform, because
   // that is what npm matches its `os` field against and what the caller's
   // machine calls itself. The archives keep win/mac -- people read those.
-  // See shotium/lib/platform.js, which is the other half of this.
+  // See shotium/src/lib/platform.ts, which is the other half of this.
   const name = `@shotkit/shotium-${platform.npmOs}-${args.arch}`;
   const buildDir = path.resolve(ROOT, args.build);
   const dest = path.resolve(ROOT, args.dest, `shotium-${args.os}-${args.arch}`);

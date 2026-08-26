@@ -29,7 +29,7 @@ await shotium.runtime.stop();
 | | |
 |---|---|
 | `shot/` | 引擎。约 1,800 行 C++，直接驱动 Blink |
-| `shotium/` | npm 包。进程池、队列、重试、类型声明 —— 纯 JavaScript，另外带一个原生 addon |
+| `shotium/` | npm 包。进程池、队列、重试 —— TypeScript，用 tsdown 打包，另外带一个原生 addon |
 | `tools/shot/` | 检查脚本：协议、几何、网络，以及 JavaScript 层 |
 | `bench/` | 基准测试：对同一棵树构建出的 Chromium，以及对 puppeteer 和 playwright |
 | `docs/cut-progress.md` | 这棵树是怎么裁的，以及裁的过程中弄坏了什么 |
@@ -124,11 +124,6 @@ client.close();
 
 await daemon.status();    // {running, pid, workers, served, warm, ...}
 await daemon.stop();
-```
-
-```bash
-npx @shotkit/shotium https://example.com -o out.png    # 第一次调用会把守护进程拉起来
-npx @shotkit/shotium daemon status
 ```
 
 守护进程的端点是它自身配置的哈希 —— 二进制、worker 数、缓存目录、附加 flag —— 所以客户端不会悄悄连上一个「用别的东西渲图」的池子。最后一个客户端离开五分钟后它自己退出；一条连接上可以同时跑多个请求。
@@ -314,7 +309,7 @@ python tools/shot/demo_check.py    out/Shot/shotium.exe   # 84 个 reftest
 ## 工作原理
 
 ```
-shotium (npm, plain JS)          pool · lifecycle · on() events · retry
+shotium (npm, TypeScript)        pool · lifecycle · on() events · retry
      │
      │  stdio: length-prefixed JSON request / length-prefixed binary response
      ▼

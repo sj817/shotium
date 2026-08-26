@@ -1,3 +1,5 @@
+import type {Clip, PageGotoParams, ScreenshotOptions} from '../types.js';
+
 const DEFAULT_TIMEOUT_MS = 30000;
 // How much longer than the page's own deadline a supervisor waits before
 // deciding the worker is not going to answer at all. The worker fails a slow
@@ -5,9 +7,31 @@ const DEFAULT_TIMEOUT_MS = 30000;
 // encode, and firing it means something worse than a slow page.
 const SUPERVISOR_MARGIN_MS = 10000;
 
+// What actually goes down the pipe. It is ScreenshotOptions with the viewport
+// flattened and `retry` taken out -- see toRequest below for why each.
+export interface WireRequest {
+  file: string;
+  type?: 'png'|'jpeg'|'webp';
+  fullPage?: boolean;
+  selector?: string;
+  quality?: number;
+  scale?: number;
+  omitBackground?: boolean;
+  path?: string;
+  pageGotoParams?: PageGotoParams;
+  clip?: Clip;
+  allowFileAccess?: boolean;
+  width?: number;
+  height?: number;
+}
+
 // Everything the worker understands, and nothing else. An unknown field is a
 // typo, and a typo that is silently dropped is a screenshot that quietly
 // ignored what was asked for -- so this rejects rather than filters.
+//
+// It is a runtime check even though the argument has a type, because the
+// argument having a type says nothing about a caller who is not compiled
+// against it: a JavaScript program, or a JSON body from somewhere else.
 const WIRE_FIELDS = new Set([
   'file',
   'type',
@@ -25,10 +49,10 @@ const WIRE_FIELDS = new Set([
 
 // One ScreenshotOptions, checked and flattened into what goes on the wire.
 //
-// It lives here rather than in index.js because the in-process pool and the
+// It lives here rather than in index.ts because the in-process pool and the
 // daemon both send it: a request that is valid through one entry point and
 // rejected through the other would be a difference nobody asked for.
-function toRequest(options) {
+function toRequest(options: ScreenshotOptions): WireRequest {
   if (!options || typeof options !== 'object') {
     throw new TypeError('shotium: screenshot(options) needs an object');
   }
@@ -36,7 +60,7 @@ function toRequest(options) {
     throw new TypeError('shotium: options.file is required');
   }
 
-  const request = {};
+  const request: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(options)) {
     if (value === undefined) {
       continue;
@@ -55,7 +79,10 @@ function toRequest(options) {
   // The viewport is flattened because the worker takes width and height at the
   // top level: it is one screenshot's frame, not a nested object on the wire.
   if (request.viewport) {
-    const {width, height} = request.viewport;
+    const {width, height} = request.viewport as {
+      width?: number,
+      height?: number,
+    };
     delete request.viewport;
     if (width !== undefined) {
       request.width = width;
@@ -64,10 +91,10 @@ function toRequest(options) {
       request.height = height;
     }
   }
-  return request;
+  return request as unknown as WireRequest;
 }
 
-function timeoutFor(options) {
+function timeoutFor(options: ScreenshotOptions): number {
   const timeout = options.pageGotoParams && options.pageGotoParams.timeout;
   return typeof timeout === 'number' ? timeout : DEFAULT_TIMEOUT_MS;
 }

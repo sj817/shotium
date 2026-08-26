@@ -20,7 +20,7 @@
 //
 // The argument is the *executable*, which is what the other suites take and
 // what this one compares against. The library and the addon are found where
-// shotium/native.js looks for them.
+// shotium/src/native.ts looks for them.
 
 const {execFileSync} = require('child_process');
 const crypto = require('crypto');
@@ -28,7 +28,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const {NativeRuntime, native} = require('../../shotium/native');
+const {NativeRuntime, native} = require('../../shotium/dist/native.js');
 
 const exe = path.resolve(process.argv[2] || 'out/Shot/shotium.exe');
 const corpus = path.resolve('shot/testdata/render_corpus.html');

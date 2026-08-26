@@ -2,9 +2,10 @@
 #
 # Everything worth knowing about shotium needs a built shotium.exe, and building
 # one is hours of compute -- see engine-windows.yml. So this workflow covers the
-# half that can be checked in seconds: that the JavaScript parses, that the
-# published types actually typecheck, and that the Python check scripts are not
-# broken. It runs on every push, and it is expected to always be green.
+# half that can be checked in seconds: that the package builds, that the bundle
+# it produces loads and refuses a malformed request, that the generated types
+# describe it, and that the Python check scripts are not broken. It runs on
+# every push, and it is expected to always be green.
 #
 # What it deliberately does NOT do is claim the engine works. That claim is made
 # by tools/shot/{serve_check.py,net_check.py,node_check.cjs,daemon_check.cjs,
@@ -37,26 +38,53 @@ jobs:
         with:
           node-version: '22'
 
-      - name: parse every module
+      - name: the build tooling
         working-directory: shotium
-        # --check parses without running, which is the right test for files
-        # whose side effect is spawning processes.
-        run: |
-          for f in index.js lib/*.js; do
-            node --check "$f"
-          done
+        # `npm install` rather than `npm ci`, and it has to be. The six
+        # platform packages are optionalDependencies pinned to this version,
+        # and that version does not exist on the registry until a release is
+        # cut -- so they are absent from the lockfile, and `npm ci` reads an
+        # unresolvable optional dependency as a lockfile out of sync and
+        # refuses. `--omit=optional` does not help either: it would also skip
+        # rolldown's own native binding, which the build needs. The
+        # devDependencies are pinned exactly rather than by caret for this
+        # reason -- the lockfile is not the thing holding them still.
+        run: npm install --no-audit --no-fund
+
+      - name: build
+        working-directory: shotium
+        # Everything below is checked against dist/, because dist/ is what npm
+        # publishes. Nothing a caller loads is committed to this repository.
+        run: npm run build
+
+      - name: types
+        working-directory: shotium
+        # Two things at once. That src/ typechecks -- tsdown emits declarations
+        # without running the checker, so a green build says nothing about
+        # that. And that test/consumer.ts compiles: it imports the package by
+        # name, through the `exports` map, against the .d.ts that was just
+        # generated, which is the only thing here that would notice a map
+        # pointing at a file that is not written.
+        run: npm run check:types
 
       - name: the package loads
         working-directory: shotium
         # Loading it must not start anything: the pool is created by
-        # runtime.start(), and a require() that spawned workers would make the
+        # runtime.start(), and an import that spawned workers would make the
         # library unusable as a dependency.
+        #
+        # require() rather than import, because the package is an ES module and
+        # a CommonJS caller reaching one is the case that breaks first. It needs
+        # node 22.12 or 20.19, which this job has.
         run: |
           node -e '
-            const s = require("./index.js");
+            const s = require("./dist/index.js");
             if (typeof s.screenshot !== "function") throw new Error("no screenshot()");
             if (typeof s.runtime.start !== "function") throw new Error("no runtime.start()");
-            if (s.runtime.running) throw new Error("require() started the pool");
+            if (s.runtime.running) throw new Error("importing started the pool");
+            if (s.default.runtime !== s.runtime) throw new Error("default and named exports disagree");
+            const n = require("./dist/native.js");
+            if (n.native.running) throw new Error("importing loaded the addon");
             console.log("ok");
           '
 
@@ -68,7 +96,7 @@ jobs:
         # the half of this that actually needs asserting.
         run: |
           node -e '
-            const {Runtime} = require("./index.js");
+            const {Runtime} = require("./dist/index.js");
             const r = new Runtime();
             const rejects = async (options, what) => {
               // screenshot() is async, so a bad request is a rejected promise
@@ -88,21 +116,31 @@ jobs:
       - name: the six platform packages are declared consistently
         working-directory: shotium
         # The list of six exists twice: in optionalDependencies, which is what
-        # npm installs, and in lib/platform.js, which is what looks for them
-        # afterwards. A rename that touches one and not the other installs 41 MB
-        # of engine and then reports that there is no engine for this platform.
+        # npm installs, and in the lookup table that goes looking for them
+        # afterwards. A rename that touches one and not the other installs
+        # 41 MB of engine and then reports that there is no engine for this
+        # platform.
+        #
+        # Read back out of the bundle rather than out of src/, because the
+        # bundle is what ships: a table that is right in the source and wrong
+        # in the build is exactly the failure this exists to catch.
         #
         # The version is pinned rather than ranged for the same class of
         # reason: seven packages that must be installed together cannot be
         # allowed to drift apart by a caret.
         run: |
           node -e '
+            const fs = require("fs");
             const pkg = require("./package.json");
-            const {PACKAGES} = require("./lib/platform");
+            const bundle = fs.readdirSync("dist")
+                .filter((f) => f.endsWith(".js"))
+                .map((f) => fs.readFileSync("dist/" + f, "utf8"))
+                .join("\n");
+            const used = [...new Set(bundle.match(
+                /@shotkit\/shotium-[a-z0-9]+-[a-z0-9]+/g) || [])].sort();
             const declared = Object.keys(pkg.optionalDependencies || {}).sort();
-            const used = Object.values(PACKAGES).sort();
             if (declared.join(",") !== used.join(",")) {
-              throw new Error("optionalDependencies and lib/platform.js disagree:\n  " +
+              throw new Error("optionalDependencies and the bundle disagree:\n  " +
                   declared.join(" ") + "\n  " + used.join(" "));
             }
             if (used.length !== 6) {
@@ -116,13 +154,37 @@ jobs:
             console.log("ok: 6 platform packages at " + pkg.version);
           '
 
-      # index.d.ts is what every consumer sees, and nothing else in this
-      # repository would notice if it stopped describing index.js.
-      - name: types compile
+      - name: the tarball holds what it should and nothing else
         working-directory: shotium
+        # `npm pack --dry-run` is the only way to see what `files` actually
+        # resolves to. It runs prepack, so it also demonstrates that a publish
+        # from a clean checkout builds the package rather than shipping
+        # whatever dist/ happened to contain.
         run: |
-          npm install --no-audit --no-fund
-          npm run check:types
+          npm pack --dry-run --json > pack.json
+          node -e '
+            const fs = require("fs");
+            // prepack writes to the same stdout, so the JSON is the tail of
+            // the file rather than the whole of it.
+            const raw = fs.readFileSync("pack.json", "utf8");
+            const [entry] = JSON.parse(raw.slice(raw.indexOf("[")));
+            const names = entry.files.map((f) => f.path).sort();
+            const missing = ["dist/index.js", "dist/index.d.ts", "dist/native.js",
+                             "dist/native.d.ts", "dist/daemon_main.js",
+                             "package.json", "README.md"]
+                .filter((f) => !names.includes(f));
+            if (missing.length) {
+              throw new Error("not in the tarball: " + missing.join(" "));
+            }
+            const strays = names.filter(
+                (f) => !/^(dist|src|native)\//.test(f) &&
+                       !["package.json", "README.md"].includes(f));
+            if (strays.length) {
+              throw new Error("unexpected in the tarball: " + strays.join(" "));
+            }
+            console.log("ok: " + names.length + " files, " + entry.size + " bytes");
+          '
+          rm -f pack.json
 
   python:
     runs-on: ubuntu-latest

@@ -24,9 +24,15 @@ What is left is Blink used directly — `Page` → `LocalFrame` → `Document` �
 lifecycle → `cc::PaintRecord` → CPU raster — which is the same shape Blink
 already uses internally for SVG images.
 
-This package is the supervisor for those processes. It is plain JavaScript: no
-native addon, no node-gyp, no ABI matrix. The worker talks a length-prefixed
-protocol over stdio.
+This package is the supervisor for those processes: no native addon on this
+side, no node-gyp, no ABI matrix. The worker talks a length-prefixed protocol
+over stdio.
+
+It is written in TypeScript and ships the types generated from that source, so
+the declarations and the code cannot disagree — there is no second description
+of the API to keep in step. What is published is the bundle, plus the sources
+and sourcemaps it was built from, so a stack trace out of a failed screenshot
+names a line rather than a column.
 
 It is an ES module, and only that. `import` works anywhere; `require()` of it
 works on Node 20.19 and 22.12 and later, and a CommonJS caller on anything
@@ -180,21 +186,16 @@ ship in the platform package beside the engine, because the library is a
 Chromium build and `npm install` is not going to produce one. Nothing else in
 this package needs them.
 
-## The command line
+## No command line
 
-```bash
-npx @shotkit/shotium https://example.com -o out.png --width 1280 --height 720
-npx @shotkit/shotium daemon start --workers 4
-npx @shotkit/shotium daemon status
-npx @shotkit/shotium daemon stop
-```
+There is no `bin` here, and `npx @shotkit/shotium` does nothing. A command line
+that renders a page is a program, not a library entry point: it wants to start
+fast, and paying node's startup and this package's import to reach an engine
+that is already resident is most of what a one-shot screenshot costs.
 
-The command line is a daemon client: the first invocation starts one, and the
-rest of them are a socket connect. `--no-daemon` renders in the invoking process
-instead, for a caller who would rather pay the startup than leave a process
-behind. Pointing it at a local path is what allows that document to read the
-filesystem, exactly as `shot`'s own command line does; a URL is not that
-statement and does not get the permission.
+So the command line ships as a binary of its own, from the [releases page],
+alongside the engine archives. This package is for programs that are already
+running node, and it stops there.
 
 ## Network
 

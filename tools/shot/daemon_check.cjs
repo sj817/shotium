@@ -18,12 +18,35 @@ const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const {pathToFileURL} = require('url');
 
 const shotium = require('../../shotium');
 
 const exe = path.resolve(process.argv[2] || 'out/Shot/shotium.exe');
 const corpus = path.resolve('shot/testdata/render_corpus.html');
-const cli = path.resolve('shotium/cli.js');
+const entry = pathToFileURL(path.resolve('shotium/dist/index.js')).href;
+
+// A second node process, which is what this check is actually about: a caller
+// in a process that did not start the daemon has to find it rather than start
+// another one. It is spelled out here rather than run from a script in the
+// package because the package no longer ships one -- the command line is a
+// binary of its own now -- and this is what a caller writes anyway.
+//
+// Its argument is one JSON blob for the same reason the daemon's own is: the
+// endpoint is a hash of the configuration, so a value mangled on a Windows
+// command line would send it looking for a daemon nobody is running.
+const SECOND_PROCESS = `
+import {writeFileSync} from 'node:fs';
+import shotium from ${JSON.stringify(entry)};
+
+const [config, request, output] = JSON.parse(process.argv[1]);
+const started = Date.now();
+const image = await shotium.daemon.screenshot({...request, daemon: config});
+writeFileSync(output, image);
+process.stdout.write(JSON.stringify(
+    {bytes: image.length, elapsedMs: Date.now() - started}));
+`;
+
 // A name of this run's own, so that a daemon left over from an earlier run --
 // or a developer's own, started by hand -- can never be mistaken for the one
 // under test.
@@ -85,14 +108,13 @@ async function main() {
 
   console.log('\n== a second process finds it instead of starting one ==');
   const output = path.join(os.tmpdir(), `shotium-daemon-check-${process.pid}.png`);
-  const cliStarted = Date.now();
+  const secondStarted = Date.now();
   const printed = execFileSync(
       process.execPath,
-      [cli, corpus, '-o', output, '--width', '1248', '--height', '1320',
-       '--workers', '2', '--binary', exe, '--name', config.name,
-       '--cache-dir', config.cacheDir, '--json'],
+      ['--input-type=module', '-e', SECOND_PROCESS,
+       JSON.stringify([config, request, output])],
       {encoding: 'utf8'});
-  const cliWall = Date.now() - cliStarted;
+  const secondWall = Date.now() - secondStarted;
   const reported = JSON.parse(printed);
   const after = await client.status();
   check(after.pid === started.pid,
@@ -101,13 +123,13 @@ async function main() {
   check(after.served > started.served,
         'and it counted the request',
         `${started.served} -> ${after.served}`);
-  const cliImage = fs.readFileSync(output);
-  check(sha256(cliImage) === sha256(first),
+  const written = fs.readFileSync(output);
+  check(sha256(written) === sha256(first),
         'the image it wrote is the same image',
-        `${sha256(cliImage).slice(0, 16)} vs ${sha256(first).slice(0, 16)}`);
+        `${sha256(written).slice(0, 16)} vs ${sha256(first).slice(0, 16)}`);
   check(reported.elapsedMs < 1000,
         'a whole second process rendered in well under a second',
-        `${reported.elapsedMs}ms in-process, ${cliWall}ms including node`);
+        `${reported.elapsedMs}ms in-process, ${secondWall}ms including node`);
 
   console.log('\n== one connection, several requests at once ==');
   // The worker protocol cannot do this: a worker renders one document at a

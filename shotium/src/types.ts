@@ -1,7 +1,12 @@
-/// <reference types="node" />
+// The vocabulary of the package: what a caller passes in and what comes back.
+//
+// It lives in one file rather than beside the code that reads each field
+// because these types are the published API. index.ts and native.ts both
+// re-export them, so a consumer sees one `ScreenshotOptions` whichever entry
+// point they came through -- and, more to the point, so there is one place
+// where adding an option means adding it.
 
-import {EventEmitter} from 'events';
-
+/** A region of the document, in CSS pixels. */
 export interface Clip {
   x: number;
   y: number;
@@ -22,6 +27,7 @@ export interface PageGotoParams {
   waitUntil?: 'load'|'networkidle';
 }
 
+/** The viewport the document is laid out in. */
 export interface Viewport {
   /** CSS pixels. Default 1280. */
   width?: number;
@@ -85,29 +91,7 @@ export interface StartOptions {
 export interface WorkerEvent {
   worker: number;
   code?: number|null;
-  signal?: string|null;
-}
-
-export interface Runtime extends EventEmitter {
-  readonly running: boolean;
-  start(options?: StartOptions): Runtime;
-  stop(): Promise<void>;
-  /** Resolves to the image, or to null when `path` was given. */
-  screenshot(options: ScreenshotOptions): Promise<Buffer|null>;
-
-  on(event: 'ready', listener: (info: {workers: number}) => void): this;
-  on(event: 'exit', listener: (event: WorkerEvent) => void): this;
-  on(event: 'crash', listener: (event: WorkerEvent) => void): this;
-  on(event: 'timeout',
-     listener: (event: {worker: number, timeout: number}) => void): this;
-  on(event: 'worker-restart',
-     listener: (event: {worker: number, reason: string, delay: number}) => void):
-      this;
-  /** A worker could not be started at all -- a missing or unusable binary. */
-  on(event: 'worker-error',
-     listener: (event: {worker: number, error: Error}) => void): this;
-  on(event: 'stderr',
-     listener: (event: {worker: number, line: string}) => void): this;
+  signal?: NodeJS.Signals|null;
 }
 
 export interface DaemonOptions extends StartOptions {
@@ -135,9 +119,12 @@ export interface DaemonOptions extends StartOptions {
   spawn?: boolean;
   /** Where a spawned daemon's diagnostics go. Default `$SHOTIUM_DAEMON_LOG`. */
   logFile?: string;
+  /** How long to wait for a daemon this process started to bind. */
+  startTimeoutMs?: number;
 }
 
 export interface DaemonStatus {
+  ok?: boolean;
   running?: boolean;
   spawned?: boolean;
   pid: number;
@@ -156,53 +143,27 @@ export interface DaemonStatus {
   version: string;
 }
 
-/** An open connection to a daemon. Several requests may be in flight at once. */
-export interface DaemonClient {
-  readonly endpoint: string;
-  readonly closed: boolean;
-  screenshot(options: ScreenshotOptions): Promise<Buffer|null>;
-  status(): Promise<DaemonStatus>;
-  shutdown(): Promise<{ok: boolean}>;
-  close(): void;
+export interface NativeStartOptions {
+  /**
+   * Root of the HTTP disk cache. `null` disables caching entirely, which is
+   * the default here: an in-process engine is often a short-lived program, and
+   * a cache it never reads twice is a directory it leaves behind.
+   */
+  cacheDir?: string|null;
+  /** Overrides the built-in user agent string. */
+  userAgent?: string;
+  /**
+   * Where `shotium_data.pak` and `shotium_strings.pak` are. Defaults to the
+   * directory the native engine was loaded from, which is where they ship.
+   */
+  resourceDir?: string;
 }
 
-export interface Daemon {
-  /** Connects, starting a daemon if none is listening. */
-  connect(options?: DaemonOptions): Promise<DaemonClient>;
-  /** One screenshot through the daemon, connection and all. */
-  screenshot(options: ScreenshotOptions&{daemon?: DaemonOptions}):
-      Promise<Buffer|null>;
-  /** Starts one if it is not up, and reports what is there either way. */
-  start(options?: DaemonOptions): Promise<DaemonStatus&{spawned: boolean}>;
-  status(options?: DaemonOptions):
-      Promise<Partial<DaemonStatus>&{running: boolean, endpoint: string}>;
-  stop(options?: DaemonOptions): Promise<{stopped: boolean, endpoint: string}>;
+export interface PurgeOptions {
+  /**
+   * Also ask the OS to take the engine's pages back. The next screenshot pays
+   * them back in soft page faults -- a few milliseconds -- so this is for when
+   * there may not be a next one soon.
+   */
+  releaseWorkingSet?: boolean;
 }
-
-/**
- * The class behind `runtime`, for a caller who wants a second pool of their
- * own. Declared as a value as well as a type because the module exports both,
- * the way native.d.ts declares NativeRuntime.
- */
-export declare const Runtime: {
-  new(): Runtime;
-};
-
-export declare const runtime: Runtime;
-/**
- * The resident pool: workers that outlive the process that started them,
- * reachable over a named pipe on Windows and a unix socket elsewhere.
- */
-export declare const daemon: Daemon;
-export declare function screenshot(options: ScreenshotOptions):
-    Promise<Buffer|null>;
-
-// The named exports, again, as one object. `import shotium from` is what a
-// caller coming from `require` writes first; it resolves to the same values.
-declare const shotium: {
-  Runtime: typeof Runtime,
-  runtime: Runtime,
-  screenshot: typeof screenshot,
-  daemon: Daemon,
-};
-export default shotium;

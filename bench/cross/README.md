@@ -4,6 +4,10 @@ shotium against puppeteer and playwright, on one corpus, with one measurement
 model.
 
 ```powershell
+# The shotium engines load this checkout's npm package, which is TypeScript
+# and builds to shotium/dist. Nothing here works until that exists.
+( cd shotium; npm install; npm run build )
+
 cd bench/cross
 npm install
 # npm 11 does not run a dependency's install script until it is approved, and

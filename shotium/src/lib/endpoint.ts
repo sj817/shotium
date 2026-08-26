@@ -2,6 +2,17 @@ import crypto from 'node:crypto';
 import os from 'node:os';
 import path from 'node:path';
 
+// What endpointFor() needs to know: a resolved configuration, plus the two
+// ways of overriding the address it would derive from one.
+export interface EndpointOptions {
+  binary?: string;
+  workers?: number;
+  cacheDir?: string|null;
+  args?: string[];
+  name?: string;
+  endpoint?: string;
+}
+
 // Where a daemon listens, derived from what it was asked to be.
 //
 // The address is a hash of the configuration -- binary, worker count, cache
@@ -14,12 +25,12 @@ import path from 'node:path';
 // `name`, which replaces the hash. That is the escape hatch for a service that
 // starts its daemon deliberately and wants clients to find it without
 // repeating the configuration.
-function endpointKey(options) {
+function endpointKey(options: EndpointOptions): string {
   if (options.name) {
     return String(options.name);
   }
   const identity = JSON.stringify([
-    path.resolve(options.binary),
+    path.resolve(options.binary || ''),
     options.workers,
     options.cacheDir === null ? null : path.resolve(options.cacheDir || ''),
     options.args || [],
@@ -34,7 +45,7 @@ function endpointKey(options) {
 // The pipe namespace is per-machine but the socket path is per-user, so the
 // uid goes in the POSIX name to keep two users on one host from colliding on a
 // path only one of them can open.
-function endpointFor(options = {}) {
+function endpointFor(options: EndpointOptions = {}): string {
   if (options.endpoint) {
     return options.endpoint;
   }

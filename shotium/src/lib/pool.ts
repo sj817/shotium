@@ -2,14 +2,32 @@ import {EventEmitter} from 'node:events';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import {Worker} from './worker.js';
+import type {ResolvedStartOptions} from './config.js';
 import {defaultCacheDir} from './config.js';
+import type {WireRequest} from './request.js';
+import type {WorkerResult} from './worker.js';
+import {Worker} from './worker.js';
 
 // A worker that exits sooner than this never really started, so its slot is
 // refilled on a doubling delay rather than immediately.
 const FAST_FAILURE_MS = 1000;
 const RESPAWN_DELAY_MS = 100;
 const MAX_RESPAWN_DELAY_MS = 5000;
+
+export interface SubmitOptions {
+  /** The supervisor's deadline, in milliseconds. */
+  timeout: number;
+  /** How many times to re-send after a crash or a timeout. */
+  retry: number;
+}
+
+interface Job {
+  request: WireRequest;
+  timeout: number;
+  attemptsLeft: number;
+  resolve: (result: WorkerResult) => void;
+  reject: (error: Error) => void;
+}
 
 // A fixed set of shotium.exe --serve processes, and a queue in front of them.
 //
@@ -27,45 +45,50 @@ const MAX_RESPAWN_DELAY_MS = 5000;
 //   worker-error   {worker, error}           a worker could not be started
 //   stderr         {worker, line}            a diagnostic line from a worker
 class Pool extends EventEmitter {
-  constructor(options) {
+  private readonly binary: string;
+  private readonly size: number;
+  private readonly args: string[];
+  private readonly cacheDir: string|null;
+  private slots: Worker[] = [];
+  private failures: number[] = [];
+  private queue: Job[] = [];
+  private stopping = false;
+  private nextId = 0;
+
+  constructor(options: ResolvedStartOptions) {
     super();
-    this._binary = options.binary;
-    this._size = options.workers;
-    this._args = options.args || [];
-    this._cacheDir = options.cacheDir || null;
-    this._slots = [];
-    this._failures = [];
-    this._queue = [];
-    this._stopping = false;
-    this._nextId = 0;
+    this.binary = options.binary;
+    this.size = options.workers;
+    this.args = options.args || [];
+    this.cacheDir = options.cacheDir || null;
   }
 
-  start() {
-    if (this._slots.length > 0) {
+  start(): void {
+    if (this.slots.length > 0) {
       return;
     }
-    for (let slot = 0; slot < this._size; ++slot) {
-      this._slots[slot] = this._spawn(slot);
+    for (let slot = 0; slot < this.size; ++slot) {
+      this.slots[slot] = this.spawn(slot);
     }
-    this.emit('ready', {workers: this._size});
+    this.emit('ready', {workers: this.size});
   }
 
-  _spawn(slot) {
-    const id = this._nextId++;
-    const args = [...this._args];
-    if (this._cacheDir) {
+  private spawn(slot: number): Worker {
+    const id = this.nextId++;
+    const args = [...this.args];
+    if (this.cacheDir) {
       // One directory per slot, not per process: the Simple backend takes an
       // exclusive lock on its directory, so sharing one would leave every
       // worker but the first running uncached. Keying on the slot rather than
       // the worker id means a restarted worker inherits the warm cache its
       // predecessor built.
-      const dir = path.join(this._cacheDir, `worker-${slot}`);
+      const dir = path.join(this.cacheDir, `worker-${slot}`);
       fs.mkdirSync(dir, {recursive: true});
       args.push(`--cache-dir=${dir}`);
     }
 
     const startedAt = Date.now();
-    const worker = new Worker({id, binary: this._binary, args});
+    const worker = new Worker({id, binary: this.binary, args});
     worker.on('stderr', (event) => this.emit('stderr', event));
     worker.on('crash', (event) => this.emit('crash', event));
     // A worker that could not be started at all -- a binary that is not there,
@@ -75,7 +98,7 @@ class Pool extends EventEmitter {
     worker.on('error', (error) => this.emit('worker-error', {worker: id, error}));
     worker.on('exit', (event) => {
       this.emit('exit', event);
-      if (this._stopping || this._slots[slot] !== worker) {
+      if (this.stopping || this.slots[slot] !== worker) {
         return;
       }
       // A worker that died on the way up is not a crash to recover from, it is
@@ -91,21 +114,22 @@ class Pool extends EventEmitter {
       const started = worker.served > 0 ||
           (Date.now() - startedAt) >= FAST_FAILURE_MS;
       if (started) {
-        this._failures[slot] = 0;
+        this.failures[slot] = 0;
       }
-      const failures = this._failures[slot] || 0;
+      const failures = this.failures[slot] || 0;
       const delay = started ?
           0 :
           Math.min(MAX_RESPAWN_DELAY_MS, RESPAWN_DELAY_MS * 2 ** failures);
-      this._failures[slot] = failures + 1;
+      this.failures[slot] = failures + 1;
       const refill = () => {
-        if (this._stopping || this._slots[slot] !== worker) {
+        if (this.stopping || this.slots[slot] !== worker) {
           return;
         }
-        this._slots[slot] = this._spawn(slot);
+        const replacement = this.spawn(slot);
+        this.slots[slot] = replacement;
         this.emit('worker-restart',
-                  {worker: this._slots[slot].id, reason: 'exit', delay});
-        this._pump();
+                  {worker: replacement.id, reason: 'exit', delay});
+        this.pump();
       };
       if (delay === 0) {
         refill();
@@ -122,30 +146,31 @@ class Pool extends EventEmitter {
   // Queues one request. `timeout` is the supervisor's deadline, which is longer
   // than the worker's own: the worker fails a slow page by itself and answers,
   // and this only fires when it has stopped answering at all.
-  submit(request, {timeout, retry}) {
-    return new Promise((resolve, reject) => {
-      this._queue.push({
+  submit(request: WireRequest, {timeout, retry}: SubmitOptions):
+      Promise<WorkerResult> {
+    return new Promise<WorkerResult>((resolve, reject) => {
+      this.queue.push({
         request,
         timeout,
         attemptsLeft: Math.max(0, retry) + 1,
         resolve,
         reject,
       });
-      this._pump();
+      this.pump();
     });
   }
 
-  _pump() {
-    while (this._queue.length > 0) {
-      const slot = this._slots.findIndex((w) => w && w.alive && !w.busy);
+  private pump(): void {
+    while (this.queue.length > 0) {
+      const slot = this.slots.findIndex((w) => w && w.alive && !w.busy);
       if (slot < 0) {
         return;
       }
-      this._dispatch(this._slots[slot], this._queue.shift());
+      this.dispatch(this.slots[slot]!, this.queue.shift()!);
     }
   }
 
-  _dispatch(worker, job) {
+  private dispatch(worker: Worker, job: Job): void {
     job.attemptsLeft -= 1;
 
     let settled = false;
@@ -158,7 +183,7 @@ class Pool extends EventEmitter {
       // The worker is not answering, so the only way to get the slot back is to
       // take the process down. The exit handler refills the slot.
       worker.kill();
-      this._retryOrFail(
+      this.retryOrFail(
           job,
           new Error(`shotium: no answer within ${job.timeout}ms`));
     }, job.timeout);
@@ -171,47 +196,47 @@ class Pool extends EventEmitter {
           settled = true;
           clearTimeout(timer);
           job.resolve(result);
-          this._pump();
+          this.pump();
         })
-        .catch((error) => {
+        .catch((error: Error) => {
           if (settled) {
             return;
           }
           settled = true;
           clearTimeout(timer);
-          this._retryOrFail(job, error);
+          this.retryOrFail(job, error);
         });
   }
 
-  _retryOrFail(job, error) {
+  private retryOrFail(job: Job, error: Error): void {
     // A request rejected on its own merits -- a bad selector, an unreadable
     // file -- would fail the same way every time, but the worker also rejects
     // with the same shape when it dies. Retrying both is the safe direction:
     // the cost of a pointless retry is one more render, and the cost of not
     // retrying a crash is a failure the caller cannot do anything about.
-    if (job.attemptsLeft > 0 && !this._stopping) {
-      this._queue.unshift(job);
-      this._pump();
+    if (job.attemptsLeft > 0 && !this.stopping) {
+      this.queue.unshift(job);
+      this.pump();
       return;
     }
     job.reject(error);
-    this._pump();
+    this.pump();
   }
 
-  async stop() {
-    this._stopping = true;
-    for (const job of this._queue.splice(0)) {
+  async stop(): Promise<void> {
+    this.stopping = true;
+    for (const job of this.queue.splice(0)) {
       job.reject(new Error('shotium: the runtime was stopped'));
     }
-    await Promise.all(this._slots.map((worker) => new Promise((resolve) => {
+    await Promise.all(this.slots.map((worker) => new Promise<void>((resolve) => {
       if (!worker || !worker.alive) {
         resolve();
         return;
       }
-      worker.once('exit', resolve);
+      worker.once('exit', () => resolve());
       worker.stop();
     })));
-    this._slots = [];
+    this.slots = [];
   }
 }
 

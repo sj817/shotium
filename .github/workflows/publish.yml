@@ -117,6 +117,26 @@ jobs:
           fi
           echo "publishing $version"
 
+      - name: build the main package
+        working-directory: shotium
+        # The package is TypeScript and dist/ is not committed, so until this
+        # runs there is nothing to publish. `npm publish ./shotium` would run
+        # prepack and build it anyway -- but it would do that after the six
+        # platform packages were already public, and a build failure has to
+        # land before anything is irreversible rather than between the sixth
+        # package and the seventh.
+        run: |
+          npm install --no-audit --no-fund
+          npm run build
+          node -e '
+            const fs = require("fs");
+            for (const f of ["dist/index.js", "dist/index.d.ts",
+                             "dist/native.js", "dist/daemon_main.js"]) {
+              if (!fs.existsSync(f)) throw new Error("no " + f);
+            }
+            console.log("ok");
+          '
+
       - name: collect the platform tarballs
         env:
           GH_TOKEN: ${{ github.token }}

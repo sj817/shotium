@@ -6,7 +6,7 @@
 //
 // It is deliberately thin. Everything about what a screenshot means -- which
 // fields exist, what they default to, what an unknown one is -- lives in
-// shotium/lib/request.js and shot/shot_request.cc, and this file carries the
+// shotium/src/lib/request.ts and shot/shot_request.cc, and this file carries
 // JSON between them without reading it. Anything it understood would be a
 // third opinion about the request format, and the third opinion is always the
 // one that drifts.

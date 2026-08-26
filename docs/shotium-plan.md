@@ -20,7 +20,7 @@
 | 项 | 决定 |
 |---|---|
 | **名字** | **shotium**(shot + Chromium 的 `-ium`)。对应 WebKit 版的 `shotkit`,同构。C 符号前缀 `shotium_*` |
-| **Node 层形态** | **纯 JS**,不做原生 addon。要的是对外接口长成约定的 `ScreenshotOptions`,不是必须 `.node`。省掉 node-gyp / prebuild / 多 ABI |
+| **Node 层形态** | **TypeScript,tsdown 打包成纯 ESM**,类型由源码生成而不是手写第二份。原生 addon 是后来第 6 组加的旁路,主路径(进程池 + 守护进程)依然不需要 `.node`,也就不需要 node-gyp / prebuild / 多 ABI |
 | **进程模型** | **渲染出进程**。`.node`/JS 层是进程池管理器,worker 是 `shotium.exe` |
 | **JS 引擎** | 永远没有。V8 已删且不恢复。靠脚本渲染的页面出来是空的 —— 这是产品边界,不是待办 |
 | **字体** | 用宿主系统字体。同一份 HTML 在不同机器上像素不同,这是接受的行为 |
@@ -51,7 +51,7 @@ Blink 是**进程级单例**,代码里已确认三处:
 ## 1. 架构
 
 ```
-shotium (npm, 纯 JS)          进程池 · 生命周期 · on() 事件 · retry
+shotium (npm, TypeScript)     进程池 · 生命周期 · on() 事件 · retry
      │
      │  stdio 管道:长度前缀 JSON 请求 / 长度前缀二进制响应
      ▼
@@ -150,10 +150,10 @@ Chrome 用的壳。缓存、重定向、HTTP/2、TLS 全部在 `//net` 里。wor
 
 | # | 内容 | 落点 |
 |---|---|---|
-| 4.1 | 守护进程:池 + 监听 + 空闲退出 | `shotium/lib/daemon.js`、`lib/daemon_main.js` |
-| 4.2 | 端点按配置取哈希(Windows 命名管道 / POSIX unix socket) | `shotium/lib/endpoint.js` |
-| 4.3 | 客户端:连不上就拉起,一条连接多请求并发(带 `id`) | `shotium/lib/client.js` |
-| 4.4 | 命令行 `shotium` / `shotium daemon start\|status\|stop` | `shotium/cli.js` |
+| 4.1 | 守护进程:池 + 监听 + 空闲退出 | `shotium/src/lib/daemon.ts`、`src/daemon_main.ts` |
+| 4.2 | 端点按配置取哈希(Windows 命名管道 / POSIX unix socket) | `shotium/src/lib/endpoint.ts` |
+| 4.3 | 客户端:连不上就拉起,一条连接多请求并发(带 `id`) | `shotium/src/lib/client.ts` |
+| 4.4 | ~~命令行 `shotium` / `shotium daemon start\|status\|stop`~~ 已从 npm 包里拿掉,改由 releases 页发二进制。npm 包只服务 node | — |
 | 4.5 | 检查:跨进程复用、并发、失败不致命、两种退出 | `tools/shot/daemon_check.cjs` |
 
 三个决定值得记下来:
@@ -180,15 +180,15 @@ playwright(各两档:`chrome-headless-shell` 与完整 headless Chrome)。六个
 ### 第 6 组 · C ABI 与 node addon — ✅ 完成
 
 进程池和守护进程都是把 blink 放在别的进程里。第 6 组是把它放进调用方自己的
-进程:`shared_library("shot_c")` 导出一套 C 接口,`shotium/native.js` 通过一个
-Node-API addon 用它。
+进程:`shared_library("shot_c")` 导出一套 C 接口,`shotium/src/native.ts` 通过
+一个 Node-API addon 用它。
 
 | # | 内容 | 落点 |
 |---|---|---|
 | 6.1 | C 接口:八个函数,不透明指针,JSON 进字节出 | `shot/shot_api.h`、`shot_api.cc` |
 | 6.2 | 引擎线程:blink 一条线程,任何线程调用都排到它上面 | `shot/shot_api.cc` |
 | 6.3 | 导出裁剪(版本脚本 / exported_symbols_list) | `shot/shot_api.map`、`shot_api.exports` |
-| 6.4 | addon 与 JS 外壳,队列深度 1 | `shotium/native/binding.cc`、`shotium/native.js` |
+| 6.4 | addon 与 JS 外壳,队列深度 1 | `shotium/native/binding.cc`、`shotium/src/native.ts` |
 | 6.5 | 检查:与可执行文件逐字节一致、并发串行化、只有一个引擎 | `tools/shot/native_check.cjs` |
 
 四个决定值得记下来:
@@ -197,7 +197,7 @@ Node-API addon 用它。
   都过不了另一套工具链。`std::string` 放在接缝上,布局就成了两边各自标准库的
   属性。所以:不透明指针、UTF-8、返回码,以及没有任何内存的所有权跨过去。
 - **请求走 JSON,不走结构体。** `ScreenshotOptions` 已经有一份线上格式,
-  `shotium/lib/request.js` 生产它、`shot_request.cc` 消费它。再定义一个 C 结构
+  `shotium/src/lib/request.ts` 生产它、`shot_request.cc` 消费它。再定义一个 C 结构
   体等于给同一件事写第三种拼法,而第三种拼法总是先漂移的那一个;顺带也免掉了
   结构体布局的版本兼容问题。
 - **导出必须裁到只剩 `shot_*`。** 这个库链进了 PartitionAlloc 的 allocator
@@ -222,7 +222,7 @@ npm 上 `shotium` 这个名字拿不到,所以包名带上了 scope:`@shotkit/sh
 |---|---|---|
 | 7.1 | GN 输出名(`output_name`,两个 repack 的 `output`) | `shot/BUILD.gn` |
 | 7.2 | 六个平台包的装配 | `tools/shot/make_platform_package.cjs` |
-| 7.3 | 平台包的解析 | `shotium/lib/platform.js` |
+| 7.3 | 平台包的解析 | `shotium/src/lib/platform.ts` |
 | 7.4 | CI 产出 `.tgz` 并挂到 draft release | `.github/workflows/engine-*.yml` |
 | 7.5 | 从 release 资产发布七个包 | `.github/workflows/npm-publish.yml` |
 

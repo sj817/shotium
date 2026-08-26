@@ -1,7 +1,33 @@
-import {EventEmitter} from 'node:events';
 import {spawn} from 'node:child_process';
+import type {ChildProcess, StdioOptions} from 'node:child_process';
+import {EventEmitter} from 'node:events';
 
 import {FrameReader, encodeRequest} from './protocol.js';
+import type {WireRequest} from './request.js';
+
+export interface WorkerOptions {
+  id: number;
+  binary: string;
+  args?: string[];
+}
+
+// The header frame the worker answers with, followed by the image frame.
+export interface ResponseHeader {
+  ok: boolean;
+  error?: string;
+  bytes?: number;
+  path?: string;
+}
+
+export interface WorkerResult {
+  header: ResponseHeader;
+  image: Buffer|null;
+}
+
+interface Pending {
+  resolve: (result: WorkerResult) => void;
+  reject: (error: Error) => void;
+}
 
 // One shotium.exe --serve process.
 //
@@ -17,35 +43,42 @@ import {FrameReader, encodeRequest} from './protocol.js';
 //   crash  {code, signal}       it is gone while it owed an answer
 //   stderr {line}               a diagnostic line, useful when a render is wrong
 class Worker extends EventEmitter {
-  constructor(options) {
+  readonly id: number;
+  // How many requests this process has answered, either way. The pool reads
+  // it to tell a worker that was working and then died from one that never
+  // came up at all.
+  served = 0;
+
+  private readonly binary: string;
+  private readonly args: string[];
+  private process: ChildProcess|null = null;
+  private pending: Pending|null = null;
+  private stopping = false;
+  private reader = new FrameReader();
+  private header: ResponseHeader|null = null;
+  private stderr = '';
+
+  constructor(options: WorkerOptions) {
     super();
     this.id = options.id;
-    // How many requests this process has answered, either way. The pool reads
-    // it to tell a worker that was working and then died from one that never
-    // came up at all.
-    this.served = 0;
-    this._binary = options.binary;
-    this._args = options.args || [];
-    this._pending = null;
-    this._stopping = false;
-    this._reader = new FrameReader();
-    this._header = null;
-    this._stderr = '';
-    this._start();
+    this.binary = options.binary;
+    this.args = options.args || [];
+    this.start();
   }
 
-  get busy() {
-    return this._pending !== null;
+  get busy(): boolean {
+    return this.pending !== null;
   }
 
-  get alive() {
-    return this._process !== null && this._process.exitCode === null &&
-        !this._stopping;
+  get alive(): boolean {
+    return this.process !== null && this.process.exitCode === null &&
+        !this.stopping;
   }
 
-  _start() {
-    this._process = spawn(this._binary, ['--serve', ...this._args], {
-      stdio: ['pipe', 'pipe', 'pipe'],
+  private start(): void {
+    const stdio: StdioOptions = ['pipe', 'pipe', 'pipe'];
+    const child = spawn(this.binary, ['--serve', ...this.args], {
+      stdio,
       windowsHide: true,
       // Detached, which on Windows means DETACHED_PROCESS: no console, and so
       // no conhost.exe beside every worker. Four of those cost 40 MB of
@@ -56,11 +89,12 @@ class Worker extends EventEmitter {
       // when its stdin closes, and stdin closes when this process dies.
       detached: true,
     });
+    this.process = child;
 
-    this._process.stdout.on('data', (chunk) => this._onStdout(chunk));
-    this._process.stderr.on('data', (chunk) => this._onStderr(chunk));
-    this._process.on('error', (error) => this._onGone(null, null, error));
-    this._process.on('exit', (code, signal) => this._onGone(code, signal, null));
+    child.stdout?.on('data', (chunk: Buffer) => this.onStdout(chunk));
+    child.stderr?.on('data', (chunk: Buffer) => this.onStderr(chunk));
+    child.on('error', (error) => this.onGone(null, null, error));
+    child.on('exit', (code, signal) => this.onGone(code, signal, null));
 
     // The process is up as soon as spawn resolves the executable; there is no
     // handshake in the protocol, and adding one would only move the failure --
@@ -68,19 +102,19 @@ class Worker extends EventEmitter {
     this.emit('ready');
   }
 
-  _onStdout(chunk) {
-    this._reader.push(chunk);
+  private onStdout(chunk: Buffer): void {
+    this.reader.push(chunk);
     for (;;) {
-      const frame = this._reader.next();
+      const frame = this.reader.next();
       if (frame === null) {
         return;
       }
-      if (this._header === null) {
+      if (this.header === null) {
         // Frame one of two: the JSON header.
         try {
-          this._header = JSON.parse(frame.toString('utf8'));
-        } catch (error) {
-          this._fail(new Error(
+          this.header = JSON.parse(frame.toString('utf8')) as ResponseHeader;
+        } catch {
+          this.fail(new Error(
               `shotium: worker ${this.id} sent a header that is not JSON`));
           return;
         }
@@ -88,16 +122,16 @@ class Worker extends EventEmitter {
       }
       // Frame two: the image, empty when the header reported a failure or when
       // the worker was asked to write the file itself.
-      const header = this._header;
-      this._header = null;
-      this._settle(header, frame);
+      const header = this.header;
+      this.header = null;
+      this.settle(header, frame);
     }
   }
 
-  _onStderr(chunk) {
-    this._stderr += chunk.toString('utf8');
-    const lines = this._stderr.split(/\r?\n/);
-    this._stderr = lines.pop();
+  private onStderr(chunk: Buffer): void {
+    this.stderr += chunk.toString('utf8');
+    const lines = this.stderr.split(/\r?\n/);
+    this.stderr = lines.pop() ?? '';
     for (const line of lines) {
       if (line.length > 0) {
         this.emit('stderr', {worker: this.id, line});
@@ -105,14 +139,16 @@ class Worker extends EventEmitter {
     }
   }
 
-  _onGone(code, signal, error) {
-    const wasOwed = this._pending !== null;
-    this._process = null;
+  private onGone(
+      code: number|null, signal: NodeJS.Signals|null,
+      error: Error|null): void {
+    const wasOwed = this.pending !== null;
+    this.process = null;
     if (wasOwed) {
       // A worker that dies mid-request is indistinguishable from one that never
       // answered, which is the point: the retry path does not have to tell a
       // crash from a hang.
-      this._fail(
+      this.fail(
           error ||
           new Error(`shotium: worker ${this.id} exited (code ${code}, signal ${
               signal}) with a request in flight`));
@@ -123,12 +159,12 @@ class Worker extends EventEmitter {
     this.emit('exit', {worker: this.id, code, signal});
   }
 
-  _settle(header, payload) {
-    const pending = this._pending;
+  private settle(header: ResponseHeader, payload: Buffer): void {
+    const pending = this.pending;
     if (!pending) {
       return;
     }
-    this._pending = null;
+    this.pending = null;
     this.served += 1;
     if (header.ok) {
       pending.resolve({header, image: header.path ? null : payload});
@@ -137,31 +173,31 @@ class Worker extends EventEmitter {
     }
   }
 
-  _fail(error) {
-    const pending = this._pending;
+  private fail(error: Error): void {
+    const pending = this.pending;
     if (!pending) {
       return;
     }
-    this._pending = null;
+    this.pending = null;
     pending.reject(error);
   }
 
   // Sends one request. Rejects if the worker dies before answering; there is no
   // timeout here, because the deadline belongs to whoever owns the retry
   // policy.
-  send(request) {
-    if (this._pending) {
+  send(request: WireRequest): Promise<WorkerResult> {
+    if (this.pending) {
       return Promise.reject(
           new Error(`shotium: worker ${this.id} is already busy`));
     }
     if (!this.alive) {
       return Promise.reject(new Error(`shotium: worker ${this.id} is not up`));
     }
-    return new Promise((resolve, reject) => {
-      this._pending = {resolve, reject};
-      this._process.stdin.write(encodeRequest(request), (error) => {
+    return new Promise<WorkerResult>((resolve, reject) => {
+      this.pending = {resolve, reject};
+      this.process?.stdin?.write(encodeRequest(request), (error) => {
         if (error) {
-          this._fail(error);
+          this.fail(error);
         }
       });
     });
@@ -170,18 +206,14 @@ class Worker extends EventEmitter {
   // Closing stdin is the shutdown message: the worker sees the frame stream end
   // on a frame boundary and exits 0. kill() is for when it has stopped
   // listening.
-  stop() {
-    this._stopping = true;
-    if (this._process) {
-      this._process.stdin.end();
-    }
+  stop(): void {
+    this.stopping = true;
+    this.process?.stdin?.end();
   }
 
-  kill() {
-    this._stopping = true;
-    if (this._process) {
-      this._process.kill();
-    }
+  kill(): void {
+    this.stopping = true;
+    this.process?.kill();
   }
 }
 

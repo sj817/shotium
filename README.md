@@ -33,7 +33,7 @@ A fork of Chromium with most of it removed, plus two things that are ours:
 | | |
 |---|---|
 | `shot/` | the engine. A ~1,800-line C++ program that drives Blink directly |
-| `shotium/` | the npm package. Process pool, queue, retry, types — plain JavaScript, plus a native addon |
+| `shotium/` | the npm package. Process pool, queue, retry — TypeScript, bundled by tsdown, plus a native addon |
 | `tools/shot/` | the checks: protocol, geometry, network, and the JS layer |
 | `bench/` | the benchmarks: this engine against Chromium, and against puppeteer and playwright |
 | `docs/cut-progress.md` | how the tree was cut, and what broke on the way |
@@ -167,11 +167,6 @@ client.close();
 
 await daemon.status();    // {running, pid, workers, served, warm, ...}
 await daemon.stop();
-```
-
-```bash
-npx @shotkit/shotium https://example.com -o out.png    # first call starts the daemon
-npx @shotkit/shotium daemon status
 ```
 
 A daemon is addressed by a hash of its configuration — binary, workers, cache
@@ -463,7 +458,7 @@ file it came from, via the PDB's section contributions — no `/MAP` relink and 
 ## How it works
 
 ```
-shotium (npm, plain JS)          pool · lifecycle · on() events · retry
+shotium (npm, TypeScript)        pool · lifecycle · on() events · retry
      │
      │  stdio: length-prefixed JSON request / length-prefixed binary response
      ▼

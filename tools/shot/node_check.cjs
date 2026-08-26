@@ -143,7 +143,12 @@ async function main() {
   // be a race in the other direction -- a viewport render of this corpus takes
   // about 17ms, so a sleep long enough to be reliable is long enough for the
   // answer to have arrived.
-  const victim = runtime._pool._slots.find((w) => w.busy);
+  // Through the private fields, deliberately: killing a live worker is not
+  // something the API offers, and it should not -- the whole claim being
+  // checked is that a caller never has to care. `private` in TypeScript is a
+  // compile-time word, so the names are there at runtime; nothing is minified,
+  // so they are the names the source uses.
+  const victim = runtime.pool.slots.find((w) => w.busy);
   if (victim) {
     victim.kill();
   }

@@ -33,7 +33,7 @@ const require = createRequire(import.meta.url);
 // `mac` is what people call it. So the two spellings do differ, in the one
 // place where each is right: the registry gets node's, the download page gets
 // the reader's.
-const PACKAGES = {
+const PACKAGES: Readonly<Record<string, string>> = {
   'win32-x64': '@shotkit/shotium-win32-x64',
   'win32-arm64': '@shotkit/shotium-win32-arm64',
   'darwin-x64': '@shotkit/shotium-darwin-x64',
@@ -42,17 +42,19 @@ const PACKAGES = {
   'linux-arm64': '@shotkit/shotium-linux-arm64',
 };
 
-function packageName(platform = process.platform, arch = process.arch) {
-  return PACKAGES[`${platform}-${arch}`] || null;
+function packageName(
+    platform: string = process.platform,
+    arch: string = process.arch): string|null {
+  return PACKAGES[`${platform}-${arch}`] ?? null;
 }
 
 // Where the matching platform package unpacked, or null if it is not installed.
 //
-// require.resolve rather than a path built from __dirname: the package can be
-// hoisted to a workspace root, nested under this one, or left in a pnpm store
-// with a symlink pointing at it, and the resolver is the only thing that knows
-// which of those happened.
-function packageDir() {
+// require.resolve rather than a path built from the module's own location: the
+// package can be hoisted to a workspace root, nested under this one, or left
+// in a pnpm store with a symlink pointing at it, and the resolver is the only
+// thing that knows which of those happened.
+function packageDir(): string|null {
   const name = packageName();
   if (!name) {
     return null;
@@ -66,7 +68,7 @@ function packageDir() {
 
 // What the engine executable is called, which is not what the platform calls
 // it: Windows wants the extension and nothing else does.
-function binaryName() {
+function binaryName(): string {
   return process.platform === 'win32' ? 'shotium.exe' : 'shotium';
 }
 

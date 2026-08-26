@@ -2,23 +2,34 @@ import os from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
+import type {StartOptions} from '../types.js';
+
 import * as platform from './platform.js';
 
 // ESM has no __dirname. This is the same thing, from the module's own URL.
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
+// StartOptions with every hole filled in. `cacheDir` is still nullable here
+// because null is an answer -- "no disk cache" -- and not an absent one.
+export interface ResolvedStartOptions {
+  binary: string;
+  workers: number;
+  cacheDir: string|null;
+  args: string[];
+}
+
 // The one place that decides what "no options" means.
 //
 // It is shared rather than duplicated because the daemon's address is a hash of
-// its configuration: if the library and the CLI filled in defaults even
-// slightly differently, a client would compute an address no daemon is
-// listening on and start a second pool next to the first one that was already
-// warm. See endpoint.js.
+// its configuration: if two callers filled in defaults even slightly
+// differently, one would compute an address no daemon is listening on and
+// start a second pool next to the first one that was already warm. See
+// endpoint.ts.
 //
 // Three places, in the order a caller means them: what they said, what npm
 // installed, and what they unpacked by hand. The middle one is the normal case
 // and the only one that needs no instructions.
-function defaultBinary() {
+function defaultBinary(): string {
   if (process.env.SHOTIUM_BINARY) {
     return process.env.SHOTIUM_BINARY;
   }
@@ -44,19 +55,19 @@ function defaultBinary() {
 // `workers`.
 const MAXIMUM_DEFAULT_WORKERS = 4;
 
-function defaultWorkers() {
+function defaultWorkers(): number {
   const half = Math.floor((os.cpus().length || 2) / 2);
   return Math.max(1, Math.min(MAXIMUM_DEFAULT_WORKERS, half));
 }
 
-function defaultCacheDir() {
+function defaultCacheDir(): string {
   return path.join(os.tmpdir(), 'shotium-cache');
 }
 
 // binary / workers / cacheDir / args, filled in and normalised. `cacheDir:
 // null` survives as null -- it means "no disk cache", which is not the same
 // request as "use the default one".
-function resolveStartOptions(options = {}) {
+function resolveStartOptions(options: StartOptions = {}): ResolvedStartOptions {
   return {
     binary: options.binary || defaultBinary(),
     workers: options.workers || defaultWorkers(),

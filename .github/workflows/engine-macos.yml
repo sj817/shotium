@@ -353,6 +353,11 @@ jobs:
             python3 -m pip install --quiet pillow
           python3 tools/shot/serve_check.py out/Shot/shotium
           python3 tools/shot/net_check.py out/Shot/shotium
+          # The package is TypeScript, so what the check suites import is a
+          # build output rather than a file in the tree. `npm install`, not
+          # `npm ci` -- see checks.yml for why the lockfile cannot carry the
+          # six optionalDependencies yet.
+          ( cd shotium && npm install --no-audit --no-fund && npm run build )
           node tools/shot/node_check.cjs out/Shot/shotium
           node tools/shot/daemon_check.cjs out/Shot/shotium
           # The node addon, and the C ABI under it. Built here rather than
