@@ -1,0 +1,185 @@
+# Publishes the seven packages to npm.
+#
+# Nothing is built here. The six platform packages are release assets, put
+# there by engine-windows.yml, engine-linux.yml and engine-macos.yml -- one
+# per run, six runs to fill a release -- and this workflow takes them as they
+# are. Publishing a tarball that CI produced and a human downloaded and looked
+# at is a different act from publishing whatever a build step happened to leave
+# in a directory, and only the first one can be checked before it is public.
+#
+# Order is not cosmetic. @shotkit/shotium declares the six as
+# optionalDependencies pinned to its own version, so it goes last: a registry
+# that has the main package but not the platform package it names hands out an
+# install that cannot take a screenshot.
+#
+# There is no npm token. This workflow authenticates by trusted publishing:
+# GitHub mints a short-lived OIDC token for the job, npm checks that its
+# claims -- this repository, this workflow file, this ref -- match what the
+# package has on record, and issues credentials good for that one publish.
+# Nothing long-lived exists to leak, and a stolen workflow file is useless
+# because the claims are asserted by GitHub rather than by the workflow.
+#
+# Two consequences of that, both of which have bitten people:
+#
+#   - The filename matters. npm records `publish.yml`, not the `name:` below
+#     and not the job id, so renaming this file silently invalidates every
+#     trusted publisher configured against it. Rename it and you are back to
+#     "404 Not Found" on publish, which is what npm returns when it cannot
+#     tell an unauthenticated caller from an unauthorised one.
+#   - Each of the seven packages carries its own trusted publisher, set on
+#     npmjs.com under the package's settings, and npm has no way to configure
+#     one for a package that does not exist yet. Hence the 0.0.1 placeholders:
+#     publish once by hand, attach the publisher, and every version after that
+#     comes from here.
+#
+# Provenance follows from the same token and is on by default -- a signed
+# statement, in a public transparency log, that these bytes came out of this
+# workflow at this commit. It needs every package.json to carry a `repository`
+# that matches this repository, case for case, or the publish fails outright.
+# The six platform manifests inherit theirs from shotium/package.json in
+# tools/shot/make_platform_package.cjs, so a platform tarball built before that
+# field existed cannot be published from here. Rebuild it rather than reaching
+# for --no-provenance; an unattested engine binary is the one package in the
+# seven where the attestation is worth something.
+#
+# Before running this:
+#
+#   1. The draft release for the tag has all six .tgz assets. Six, not five --
+#      a missing platform is an install that silently falls back to "no engine
+#      for this platform" on exactly the machines nobody tested on.
+#   2. shotium/package.json version matches the tag, and its six
+#      optionalDependencies match that version. checks.yml enforces the second
+#      half of that on every push.
+#   3. All seven packages have a trusted publisher pointing at this repository
+#      and this file.
+#
+# dry_run is the default. It runs the whole thing with --dry-run, which does
+# everything except make it permanent -- npm has no unpublish worth relying on.
+# A dry run does not authenticate, so it proves the tarballs and the versions
+# and nothing about the trust configuration.
+
+name: npm publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'release tag to publish from, e.g. v0.1.0'
+        required: true
+      dry_run:
+        description: 'run npm publish --dry-run and change nothing'
+        type: boolean
+        default: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      # The OIDC token. Without it npm has nothing to check and falls back to
+      # looking for a token it will not find.
+      id-token: write
+      # write, not read, and only because the release is a draft. A draft is
+      # visible to whoever can push and to nobody else, so a contents:read
+      # token asking for it is told the release does not exist -- not that it
+      # may not have it. Nothing here writes; the step below downloads.
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # No registry-url, and so no .npmrc: setup-node's registry-url exists to
+      # write an _authToken line pointing at NODE_AUTH_TOKEN, and an .npmrc
+      # naming an empty token is worse than no .npmrc at all -- npm sends the
+      # empty credential instead of asking for an OIDC one.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: an npm that can do this
+        # Trusted publishing landed in npm 11.5.1. Node 24 ships something
+        # newer than that already, but the runner image's bundled npm is not a
+        # thing this repository controls, and the failure if it is too old is
+        # an authentication error that says nothing about versions.
+        run: |
+          npm install -g npm@latest
+          echo "node $(node --version), npm $(npm --version)"
+
+      - name: the tag and the package agree
+        env:
+          TAG: ${{ github.event.inputs.tag }}
+        # A tag that does not match the version in the tree publishes the wrong
+        # number under the right name, which cannot be taken back.
+        run: |
+          version=$(node -p \
+            "require('./shotium/package.json').version")
+          if [ "v$version" != "$TAG" ]; then
+            echo "shotium/package.json is $version, the tag is $TAG"
+            exit 1
+          fi
+          echo "publishing $version"
+
+      - name: collect the platform tarballs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.inputs.tag }}
+        # All six, by name, rather than a glob over whatever the release holds:
+        # a release that is short one architecture should stop here, not
+        # produce a main package pointing at a version of a platform package
+        # that was never published.
+        run: |
+          mkdir -p dist/npm
+          version=$(node -p "require('./shotium/package.json').version")
+          for platform in win-x64 win-arm64 mac-x64 mac-arm64 \
+                          linux-x64 linux-arm64; do
+            asset="shotkit-shotium-$platform-$version.tgz"
+            gh release download "$TAG" --repo "${{ github.repository }}" \
+              --pattern "$asset" --dir dist/npm
+          done
+          ls -l dist/npm
+
+      - name: every tarball names this repository
+        env:
+          REPO: ${{ github.repository }}
+        # Provenance compares package.json's repository against this one and
+        # rejects a mismatch, after uploading. Six tarballs published and the
+        # seventh refused is the worst outcome available here, so the check
+        # happens before anything is sent -- and on the tarballs themselves,
+        # not on the tree, because the tree is not what gets published.
+        run: |
+          fail=0
+          for tarball in dist/npm/*.tgz; do
+            url=$(tar -xzOf "$tarball" package/package.json \
+                  | node -e 'let s="";process.stdin.on("data",d=>s+=d)
+                             .on("end",()=>{const r=JSON.parse(s).repository
+                               process.stdout.write(
+                                 (r && (r.url || r)) || "")})')
+            case "$url" in
+              *"github.com/$REPO"*) ;;
+              '') echo "$tarball has no repository field"; fail=1 ;;
+              *)  echo "$tarball says $url, not $REPO"; fail=1 ;;
+            esac
+          done
+          if [ "$fail" = 1 ]; then
+            echo "rebuild the engine workflows: the tarballs predate the" \
+                 "repository field, and provenance will refuse them"
+            exit 1
+          fi
+          echo "all six name $REPO"
+
+      - name: publish
+        env:
+          DRY_RUN: ${{ github.event.inputs.dry_run }}
+        # --access public because the scope is new and npm defaults a scoped
+        # package to restricted, which would publish successfully and install
+        # for nobody.
+        run: |
+          flags="--access public"
+          if [ "$DRY_RUN" = "true" ]; then
+            flags="$flags --dry-run"
+            echo "=== dry run: nothing below becomes public ==="
+          fi
+          for tarball in dist/npm/*.tgz; do
+            echo "--- $tarball"
+            npm publish "$tarball" $flags
+          done
+          echo "--- shotium"
+          npm publish ./shotium $flags
