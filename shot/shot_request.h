@@ -5,6 +5,7 @@
 #ifndef SHOT_SHOT_REQUEST_H_
 #define SHOT_SHOT_REQUEST_H_
 
+#include <map>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -46,6 +47,24 @@ struct ScreenshotRequest {
 
   int timeout_ms = 30000;
   std::string wait_until = "load";  // load | networkidle
+
+  // What this capture may do with the HTTP cache, spelled the way fetch()
+  // spells it: default | reload | no-store | only-if-cached. Turned into
+  // net::LOAD_* by CacheModeToLoadFlags and applied to every request the
+  // document makes, not just the top-level one -- a reload that refreshed the
+  // HTML and reused yesterday's stylesheet would be a confusing thing to have
+  // asked for.
+  std::string cache = "default";
+
+  // Extra request headers, sent with the document and with the subresources
+  // that are same-origin with it. The usual reason is a credential --
+  // Authorization, or a Cookie for a session the caller already has -- which
+  // is exactly why they stop at the origin boundary.
+  //
+  // A map rather than net::HttpRequestHeaders because this struct is the wire
+  // format and has no business naming a //net type; the conversion happens
+  // once, in shot_capture.cc.
+  std::map<std::string, std::string> headers;
 
   std::optional<Clip> clip;
 

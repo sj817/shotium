@@ -7,9 +7,14 @@
 #include <utility>
 
 #include "base/files/file_util.h"
+#include "base/functional/bind.h"
 #include "base/logging.h"
 #include "base/no_destructor.h"
+#include "base/run_loop.h"
+#include "net/base/net_errors.h"
 #include "net/base/network_change_notifier.h"
+#include "net/http/http_cache.h"
+#include "net/http/http_transaction_factory.h"
 #include "net/proxy_resolution/configured_proxy_resolution_service.h"
 #include "net/url_request/url_request_context.h"
 #include "net/url_request/url_request_context_builder.h"
@@ -25,6 +30,63 @@ net::URLRequestContext* g_context = nullptr;
 std::string& MutableUserAgent() {
   static base::NoDestructor<std::string> user_agent;
   return *user_agent;
+}
+
+// Recorded rather than re-derived: the context knows it has a cache but not
+// where it was told to put one, and a caller asking "is this the directory the
+// engine has open?" is asking about what was configured.
+base::FilePath& MutableCacheDir() {
+  static base::NoDestructor<base::FilePath> cache_dir;
+  return *cache_dir;
+}
+
+// Whether the directory in MutableCacheDir() is actually being cached into.
+// False with a directory set means the lock was held by somebody else.
+bool g_cache_active = false;
+
+// Builds the HttpCache's backend now and reports whether it worked.
+//
+// The run loop is nestable because this is called during engine startup, from
+// a thread whose own loop has not begun: the scheduler and its task queues
+// exist by this point, so a nested loop turns, but there is no outer loop that
+// would otherwise deliver the callback.
+bool OpenCacheEagerly(net::URLRequestContext* context) {
+  net::HttpTransactionFactory* factory = context->http_transaction_factory();
+  if (!factory) {
+    return false;
+  }
+  net::HttpCache* cache = factory->GetCache();
+  if (!cache) {
+    return false;
+  }
+
+  base::RunLoop run_loop(base::RunLoop::Type::kNestableTasksAllowed);
+  net::HttpCache::GetBackendResult result{net::ERR_IO_PENDING, nullptr};
+  bool answered = false;
+
+  net::HttpCache::GetBackendResult immediate = cache->GetBackend(base::BindOnce(
+      [](base::RunLoop* loop, net::HttpCache::GetBackendResult* out,
+         bool* answered, net::HttpCache::GetBackendResult value) {
+        *out = value;
+        *answered = true;
+        loop->Quit();
+      },
+      &run_loop, &result, &answered));
+
+  if (immediate.first != net::ERR_IO_PENDING) {
+    result = immediate;
+  } else if (!answered) {
+    run_loop.Run();
+  }
+
+  if (result.first != net::OK || !result.second) {
+    LOG(WARNING) << "shot: the cache directory could not be opened ("
+                 << net::ErrorToShortString(
+                        static_cast<net::Error>(result.first))
+                 << "); this process is running without a cache.";
+    return false;
+  }
+  return true;
 }
 
 // Chrome's reduced User-Agent, with this tree's milestone in it.
@@ -45,6 +107,8 @@ ShotNetwork::ShotNetwork() = default;
 ShotNetwork::~ShotNetwork() {
   g_context = nullptr;
   MutableUserAgent().clear();
+  MutableCacheDir().clear();
+  g_cache_active = false;
 }
 
 // static
@@ -101,6 +165,7 @@ base::expected<std::unique_ptr<ShotNetwork>, std::string> ShotNetwork::Create(
     params.path = config.cache_dir;
     params.max_size = config.cache_max_bytes;
     builder.EnableHttpCache(params);
+    MutableCacheDir() = config.cache_dir;
   }
 
   // Everything not named above is the builder's default, and the defaults are
@@ -114,6 +179,23 @@ base::expected<std::unique_ptr<ShotNetwork>, std::string> ShotNetwork::Create(
     return base::unexpected("could not build the URLRequestContext");
   }
   g_context = network->context_.get();
+
+  // The cache is opened here rather than on the first request that wants it.
+  //
+  // HttpCache builds its backend lazily, which means "did the cache actually
+  // work" is not knowable until a screenshot has already been taken -- and the
+  // answer can be no, silently. A directory that cannot be created, cannot be
+  // written to, or is not a directory at all costs nothing visible: the engine
+  // renders exactly as well without a cache, only slower, and every capture
+  // pays the network again for a reason nothing reports.
+  //
+  // That was survivable while caching was off by default and everyone using it
+  // had named a directory on purpose. With a default directory it is worth
+  // one open at startup -- where the caller already agreed to pay for the
+  // engine coming up -- so that start() can return the answer.
+  if (!config.cache_dir.empty()) {
+    g_cache_active = OpenCacheEagerly(network->context_.get());
+  }
   return network;
 }
 
@@ -125,6 +207,36 @@ net::URLRequestContext* ShotNetwork::Get() {
 // static
 const std::string& ShotNetwork::UserAgent() {
   return MutableUserAgent();
+}
+
+// static
+const base::FilePath& ShotNetwork::CacheDir() {
+  return MutableCacheDir();
+}
+
+// static
+bool ShotNetwork::CacheActive() {
+  return g_cache_active;
+}
+
+// static
+disk_cache::Backend* ShotNetwork::CacheBackend() {
+  if (!g_context) {
+    return nullptr;
+  }
+  net::HttpTransactionFactory* factory = g_context->http_transaction_factory();
+  if (!factory) {
+    return nullptr;
+  }
+  net::HttpCache* cache = factory->GetCache();
+  if (!cache) {
+    return nullptr;
+  }
+  // GetCurrentBackend and not GetBackend: the asynchronous one would create
+  // the backend if it did not exist yet, and a caller who only wants to look
+  // at a cache should not be the reason one comes into being. Null here means
+  // the engine has not needed its cache yet, which is a true answer.
+  return cache->GetCurrentBackend();
 }
 
 }  // namespace shot

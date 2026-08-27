@@ -19,6 +19,7 @@
 #include "net/base/net_errors.h"
 #include "net/http/http_request_headers.h"
 #include "services/network/public/cpp/resource_request.h"
+#include "shot/shot_capture_context.h"
 #include "third_party/blink/public/platform/resource_load_info_notifier_wrapper.h"
 #include "third_party/blink/public/platform/web_string.h"
 #include "third_party/blink/public/platform/web_url.h"
@@ -62,17 +63,34 @@ bool ReadFileURL(const GURL& url,
   // "\D:\x\y.png", which does not exist. Every subresource in the corpus failed
   // this way while the main document, which main.cc converts with the same
   // net:: helper, loaded fine.
+  // A file: resource never reaches ShotFetch, so the accounting every http(s)
+  // request gets for free in Finish() has to be done by hand here. It is
+  // counted for the same reason: a caller looking at `failed` wants to know
+  // that an <img src="missing.png"> did not load, and cares no more that it
+  // was a local file than blink does.
+  CaptureContext* capture = CaptureContext::Current();
+
   base::FilePath path;
   if (!net::FileURLToFilePath(url, &path)) {
+    if (capture) {
+      capture->RecordResource(/*from_cache=*/false, /*failed=*/true, 0);
+    }
     error = blink::WebURLError(net::ERR_INVALID_URL,
                                blink::WebURL(blink::KURL(url)));
     return false;
   }
   if (!base::ReadFileToString(path, &contents)) {
     LOG(INFO) << "shot: load FAILED (unreadable) " << url.spec();
+    if (capture) {
+      capture->RecordResource(/*from_cache=*/false, /*failed=*/true, 0);
+    }
     error = blink::WebURLError(net::ERR_FILE_NOT_FOUND,
                                blink::WebURL(blink::KURL(url)));
     return false;
+  }
+  if (capture) {
+    capture->RecordResource(/*from_cache=*/false, /*failed=*/false,
+                            static_cast<int64_t>(contents.size()));
   }
 
   response = blink::WebURLResponse(blink::WebURL(blink::KURL(url)));

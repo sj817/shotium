@@ -56,6 +56,9 @@ struct ShotOptions {
   // Process-level, not per-shot: the network stack is built once, before any
   // request is read. See shot_network.h.
   base::FilePath cache_dir;
+  // 0 lets the backend size itself from the volume's free space, which is what
+  // it did unconditionally before there was a flag for this.
+  int cache_max_bytes = 0;
   std::string user_agent;
 };
 

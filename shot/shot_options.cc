@@ -299,6 +299,20 @@ base::expected<ShotOptions, std::string> ParseShotOptions(
         continue;
       }
       if (std::optional<std::string> value =
+              ConsumeValue(argv, &i, argument, "cache-max-bytes")) {
+        // Reachable from the library since 0.3 as `cacheMaxBytes`, and here
+        // for the same reason: the field existed and nothing could set it, so
+        // the backend's own default -- a fraction of the volume's free space
+        // -- was the only size a cache could ever have.
+        int64_t bytes = 0;
+        if (!base::StringToInt64(*value, &bytes) || bytes < 0) {
+          return base::unexpected(
+              "--cache-max-bytes must be a non-negative number");
+        }
+        options.cache_max_bytes = static_cast<int>(bytes);
+        continue;
+      }
+      if (std::optional<std::string> value =
               ConsumeValue(argv, &i, argument, "user-agent")) {
         if (value->empty()) {
           return base::unexpected("--user-agent requires a value");
@@ -440,13 +454,17 @@ Options:
                         either way; this only changes what silence means. The
                         command line already allows it and ignores this flag.
   --cache-dir PATH      HTTP disk cache directory; without it nothing is cached
+  --cache-max-bytes N   Ceiling on that directory; 0 (the default) lets the
+                        backend size itself from the volume's free space
   --user-agent STRING   Override the User-Agent sent and reported
   --verbose             Log every subresource request and its outcome
   --help, -h            Show this help
 
-http, https, file and data URLs are accepted, as are local paths. One cache
-directory per process: the backend locks it, so a second worker pointed at the
-same path silently runs without a cache.
+http, https, file and data URLs are accepted, as are local paths. Several
+processes may share one cache directory: the simple backend takes no lock
+across processes, and each keeps its own index of what is in it. The entries
+carry checksums, so the worst a disagreement costs is an index rebuild -- but
+one directory per worker still writes fewer of them.
 )";
 }
 

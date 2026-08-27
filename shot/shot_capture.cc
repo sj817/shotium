@@ -6,9 +6,11 @@
 
 #include <utility>
 
+#include "base/check.h"
 #include "base/files/file_path.h"
 #include "base/files/file_util.h"
 #include "base/functional/bind.h"
+#include "base/functional/callback_helpers.h"
 #include "base/logging.h"
 #include "base/run_loop.h"
 #include "base/strings/strcat.h"
@@ -19,6 +21,7 @@
 #include "net/base/mime_util.h"
 #include "net/base/net_errors.h"
 #include "net/http/http_request_headers.h"
+#include "shot/shot_capture_context.h"
 #include "shot/shot_fetch.h"
 #include "shot/shot_network.h"
 #include "shot/shot_renderer.h"
@@ -65,8 +68,21 @@ base::expected<RenderInput, std::string> ReadLocalDocument(const GURL& url) {
   RenderInput input;
   input.url = url;
   if (!base::ReadFileToString(path, &input.body)) {
+    if (CaptureContext* context = CaptureContext::Current()) {
+      context->RecordResource(/*from_cache=*/false, /*failed=*/true, 0);
+    }
     return base::unexpected(
         base::StrCat({"could not read ", path.AsUTF8Unsafe()}));
+  }
+  // Counted like any other resource. This is the top-level document rather
+  // than a subresource, and it is the only one that does not reach either of
+  // the two paths that count for themselves -- ShotFetch for http(s),
+  // ShotURLLoader for a file: subresource. Without this a local page reported
+  // `requests: 0` while the identical page over http reported 1, which is a
+  // difference in the accounting and not in what happened.
+  if (CaptureContext* context = CaptureContext::Current()) {
+    context->RecordResource(/*from_cache=*/false, /*failed=*/false,
+                            static_cast<int64_t>(input.body.size()));
   }
   // From the extension, because there is no server to say. This is how an SVG
   // or an XHTML file gets the parser it needs instead of being fed to the HTML
@@ -84,6 +100,11 @@ base::expected<RenderInput, std::string> ReadLocalDocument(const GURL& url) {
 // a request loop that has nothing else to do until this screenshot is finished,
 // and ForceSynchronousDocumentInstall needs the whole body anyway. The run loop
 // is what lets //net make progress in the meantime.
+//
+// The caller's extra headers are not a parameter here: ShotFetch takes them
+// off the CaptureContext, which is also how the subresources get them. Passing
+// them down this path as well would be a second way to say the same thing,
+// and the two would eventually disagree about the same-origin rule.
 base::expected<RenderInput, std::string> FetchDocument(
     const GURL& url,
     base::TimeDelta timeout) {
@@ -136,6 +157,7 @@ base::expected<RenderInput, std::string> FetchDocument(
   // A server that sends no Content-Type gets the same treatment a browser
   // gives it for a top-level load: parse it as HTML.
   input.mime_type = result.mime_type.empty() ? "text/html" : result.mime_type;
+  input.http_status = result.http_status;
 
   // A 4xx or 5xx is still a document, and photographing the error page is the
   // truthful answer to "what does this URL look like". The status is logged so
@@ -150,12 +172,49 @@ base::expected<RenderInput, std::string> FetchDocument(
 }  // namespace
 
 base::expected<std::vector<uint8_t>, std::string> Capture(
-    const ScreenshotRequest& request) {
+    const ScreenshotRequest& request,
+    CaptureStats* out_stats) {
+  const base::TimeTicks started = base::TimeTicks::Now();
+
+  // Up before the target is even resolved, so that a request refused for its
+  // scheme still reports the timings it did spend. It comes down when this
+  // function returns, on every path including the failures.
+  CaptureContext capture;
+
+  int load_flags = 0;
+  // The string was checked at parse time, so a failure here would mean the two
+  // tables disagree rather than that the caller sent something odd.
+  CHECK(CacheModeToLoadFlags(request.cache, &load_flags))
+      << "unmapped cache mode " << request.cache;
+  capture.set_load_flags(load_flags);
+
+  // Delivered on the way out whatever happened, because the interesting case
+  // for statistics is often the failure: forty subresources fetched and the
+  // one that mattered timed out.
+  base::ScopedClosureRunner deliver_stats(base::BindOnce(
+      [](CaptureContext* capture, CaptureStats* out, base::TimeTicks started) {
+        if (!out) {
+          return;
+        }
+        capture->stats().total = base::TimeTicks::Now() - started;
+        *out = capture->stats();
+      },
+      base::Unretained(&capture), out_stats, started));
+
   auto url = ResolveTarget(request.file);
   if (!url.has_value()) {
     return base::unexpected(url.error());
   }
 
+  if (!request.headers.empty()) {
+    net::HttpRequestHeaders headers;
+    for (const auto& [name, value] : request.headers) {
+      headers.SetHeader(name, value);
+    }
+    capture.SetExtraHeaders(std::move(headers), url::Origin::Create(*url));
+  }
+
+  const base::TimeTicks fetch_started = base::TimeTicks::Now();
   base::expected<RenderInput, std::string> input =
       base::unexpected(std::string());
   if (url->SchemeIsFile()) {
@@ -168,17 +227,28 @@ base::expected<std::vector<uint8_t>, std::string> Capture(
          ": is not a scheme this renderer can load; use http, https, file, or "
          "a local path"}));
   }
+  capture.stats().fetch = base::TimeTicks::Now() - fetch_started;
   if (!input.has_value()) {
     return base::unexpected(input.error());
   }
+  capture.stats().final_url = input->url.spec();
+  capture.stats().http_status = input->http_status;
 
+  const base::TimeTicks render_started = base::TimeTicks::Now();
   ShotRenderer renderer;
-  return renderer.Render(*input, request);
+  auto image = renderer.Render(*input, request);
+  // Render() reported its own encode time into the same stats block on its way
+  // out, so what is left over here is parse, subresources, style, layout and
+  // paint -- which is what `render` is documented to be.
+  capture.stats().render =
+      (base::TimeTicks::Now() - render_started) - capture.stats().encode;
+  return image;
 }
 
 base::expected<CaptureResult, std::string> CaptureAndDeliver(
-    const ScreenshotRequest& request) {
-  auto image = Capture(request);
+    const ScreenshotRequest& request,
+    CaptureStats* out_stats) {
+  auto image = Capture(request, out_stats);
   if (!image.has_value()) {
     return base::unexpected(image.error());
   }

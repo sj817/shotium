@@ -10,6 +10,8 @@
 #include "base/strings/strcat.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/values.h"
+#include "net/http/http_util.h"
+#include "shot/shot_capture_context.h"
 
 namespace shot {
 namespace {
@@ -169,6 +171,41 @@ base::expected<ScreenshotRequest, std::string> ParseScreenshotRequest(
   }
   request.allow_file_access =
       allow_file_access->value_or(default_allow_file_access);
+
+  auto cache = ReadString(dict, "cache");
+  if (!cache.has_value()) {
+    return base::unexpected(cache.error());
+  }
+  if (cache->has_value()) {
+    int ignored = 0;
+    if (!CacheModeToLoadFlags(**cache, &ignored)) {
+      return base::unexpected(
+          "cache must be one of default, reload, no-store, only-if-cached");
+    }
+    request.cache = **cache;
+  }
+
+  if (const base::Value* headers = dict.Find("headers")) {
+    if (!headers->is_dict()) {
+      return base::unexpected("headers must be an object");
+    }
+    for (const auto [name, value] : headers->GetDict()) {
+      if (!value.is_string()) {
+        return base::unexpected(
+            base::StrCat({"headers.", name, " must be a string"}));
+      }
+      // Rejected here rather than by //net, which drops an invalid header and
+      // carries on: a request that quietly went out without the Authorization
+      // the caller supplied would be answered with a login page and
+      // photographed as one.
+      if (!net::HttpUtil::IsValidHeaderName(name) ||
+          !net::HttpUtil::IsValidHeaderValue(value.GetString())) {
+        return base::unexpected(
+            base::StrCat({"headers.", name, " is not a valid HTTP header"}));
+      }
+      request.headers[name] = value.GetString();
+    }
+  }
 
   for (const auto& [key, field] :
        {std::pair<std::string_view, int*>{"width", &request.width},

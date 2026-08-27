@@ -11,6 +11,10 @@
 #include "base/files/file_path.h"
 #include "base/types/expected.h"
 
+namespace disk_cache {
+class Backend;
+}
+
 namespace net {
 class NetworkChangeNotifier;
 class URLRequestContext;
@@ -24,9 +28,13 @@ namespace shot {
 struct NetworkConfig {
   // Where the HTTP cache lives. Empty disables caching entirely.
   //
-  // One directory per worker: the Simple backend takes an exclusive lock on
-  // its directory, so two workers pointed at the same path means the second
-  // one silently runs without a cache.
+  // Two processes may point at the same directory and both get a working
+  // cache: the simple backend takes no cross-process lock, and each keeps its
+  // own index. Measured, the second process reads what the first one wrote.
+  // What they can disagree about is the index, and an index found
+  // inconsistent is rebuilt from the entries, which carry checksums. Inside
+  // one process it is genuinely exclusive -- see BackendCleanupTracker -- so
+  // the engine's own backend has to be borrowed rather than reopened.
   base::FilePath cache_dir;
 
   // 0 lets the backend size itself from the free space on the volume.
@@ -67,6 +75,29 @@ class ShotNetwork {
   // disagreeing is the kind of thing that makes a server serve one page and the
   // screenshot show another.
   static const std::string& UserAgent();
+
+  // The cache this process is using, if it has one.
+  //
+  // Both of these exist for the same reason: a caller who wants to inspect or
+  // clear this directory cannot open a second backend on it from inside this
+  // process. disk_cache::BackendCleanupTracker sequences backends per
+  // directory within a process, so the attempt does not fail -- it waits for
+  // the first one to go away, which is not going to happen while the engine
+  // is up. Asking the engine for the backend it already has is the way in,
+  // and comparing the directory is how a caller finds out whether that is the
+  // situation it is in. Empty and null respectively when caching was never
+  // configured.
+  static const base::FilePath& CacheDir();
+  static disk_cache::Backend* CacheBackend();
+
+  // Whether the directory above is actually being cached into.
+  //
+  // A configured directory that could not be opened -- no permission, no
+  // space, a path that is not a directory -- otherwise fails invisibly: the
+  // engine renders correctly and every capture pays for the network again.
+  // Create() opens the cache eagerly so that this is answerable before the
+  // first screenshot rather than after it.
+  static bool CacheActive();
 
  private:
   ShotNetwork();

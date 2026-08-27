@@ -74,8 +74,12 @@ repack("shot_strings") {
 # needs.
 source_set("shot_core") {
   sources = [
+    "shot_cache.cc",
+    "shot_cache.h",
     "shot_capture.cc",
     "shot_capture.h",
+    "shot_capture_context.cc",
+    "shot_capture_context.h",
     "shot_fetch.cc",
     "shot_fetch.h",
     "shot_network.cc",
@@ -205,7 +209,7 @@ executable("shot") {
 # marks them visible on purpose -- inside an executable that is the point, and
 # inside a shared object loaded into somebody else's process it would interpose
 # on the host's allocator for the whole process. Hiding everything except the
-# eight shot_* entry points keeps shot's allocator shot's, which is also why
+# eleven shot_* entry points keeps shot's allocator shot's, which is also why
 # nothing in shot_api.h passes ownership of memory across the seam.
 shared_library("shot_c") {
   output_name = "shotium"

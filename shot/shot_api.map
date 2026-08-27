@@ -22,6 +22,9 @@
     shot_engine_destroy;
     shot_engine_capture;
     shot_engine_purge;
+    shot_engine_status;
+    shot_cache_list;
+    shot_cache_clear;
     shot_buffer_data;
     shot_buffer_size;
     shot_buffer_free;

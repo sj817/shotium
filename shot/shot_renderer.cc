@@ -20,6 +20,7 @@
 #include "cc/paint/paint_record.h"
 #include "cc/paint/skia_paint_canvas.h"
 #include "skia/ext/legacy_display_globals.h"
+#include "shot/shot_capture_context.h"
 #include "shot/shot_network.h"
 #include "shot/shot_url_loader.h"
 #include "third_party/blink/public/mojom/frame/frame.mojom-blink.h"
@@ -709,7 +710,18 @@ base::expected<std::vector<uint8_t>, std::string> ShotRenderer::Render(
   if (!bitmap.installPixels(pixmap)) {
     return base::unexpected("could not wrap the rendered pixels as a bitmap");
   }
-  return EncodeImage(bitmap, request);
+
+  // Timed separately from the rest because it is the one phase whose cost the
+  // caller can change without changing the page: a full-page PNG of a long
+  // document can outweigh the layout that produced it, and `quality` or a
+  // switch to JPEG is the answer. Folded into "render" it would look like the
+  // document's fault.
+  const base::TimeTicks encode_started = base::TimeTicks::Now();
+  auto encoded = EncodeImage(bitmap, request);
+  if (CaptureContext* context = CaptureContext::Current()) {
+    context->stats().encode = base::TimeTicks::Now() - encode_started;
+  }
+  return encoded;
 }
 
 }  // namespace shot

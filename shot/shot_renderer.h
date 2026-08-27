@@ -40,6 +40,11 @@ struct RenderInput {
   // From the Content-Type header, when there was one. Empty means the document
   // has to declare its own encoding, exactly as in a browser.
   std::string charset;
+  // What the server answered, or 0 for a document that came off the disk and
+  // had nobody to answer. Carried through to the caller's statistics: a
+  // screenshot of a 404 page is a valid screenshot and an easy thing to
+  // mistake for the page that was asked for.
+  int http_status = 0;
 };
 
 // Renders one document to one encoded image, entirely inside Blink.

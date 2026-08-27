@@ -61,7 +61,7 @@ extern "C" {
 // a status that starts being returned where it was not, a lifetime rule that
 // moves. Adding a JSON field neither side is required to send is not a change
 // under this number, which is the reason the payloads are JSON.
-#define SHOT_ABI_VERSION 1
+#define SHOT_ABI_VERSION 2
 
 // What the library was built as, which is not necessarily what the caller
 // compiled against -- a prebuilt addon and a prebuilt engine are shipped as
@@ -114,11 +114,18 @@ SHOT_EXPORT void shot_buffer_free(shot_buffer* buffer);
 //
 //   {
 //     "cacheDir":         "...",   // the HTTP cache; omitted means none
+//     "cacheMaxBytes":    0,       // 0 lets the backend size itself
 //     "userAgent":        "...",
 //     "resourceDir":      "...",   // where shotium_data.pak and shotium_strings.pak
 //                                  //   are; see below
 //     "allowFileAccess":  false    // what a request that says nothing means
 //   }
+//
+// cacheMaxBytes is worth setting once caching is on by default. Zero is not
+// "unlimited" -- the simple backend picks a fraction of the volume's free
+// space -- but it is a number nobody chose, and a cache in a temporary
+// directory that sizes itself against a 2 TB disk is a surprise waiting in
+// somebody's CI.
 //
 // resourceDir matters more than it looks. An executable finds its resource
 // packs next to itself and a shared library cannot: on Linux the path base
@@ -157,9 +164,29 @@ SHOT_EXPORT void shot_engine_destroy(shot_engine* engine);
 // Exactly one of `*out_image` and `*out_error` is set. A request that names a
 // `path` for the engine to write itself sets an empty image rather than the
 // bytes.
+//
+// `out_stats` is optional -- pass NULL and nothing is written -- and receives
+// one JSON object describing what the capture cost and where the bytes came
+// from:
+//
+//   {
+//     "requests": 12, "fromCache": 11, "failed": 0, "bytes": 48213,
+//     "httpStatus": 200, "finalUrl": "https://example.com/",
+//     "timing": {"fetch": 3.1, "render": 24.8, "encode": 2.0, "total": 30.4}
+//   }
+//
+// Timings are milliseconds as doubles. It is delivered on failure too, when
+// `out_error` is also set: a capture that timed out having fetched forty
+// subresources is one whose statistics are the whole explanation.
+//
+// Every number in it was already known inside the engine and none of it used
+// to leave. That was the difference between "this screenshot got ten times
+// slower" being answerable in a minute and being answerable by rebuilding the
+// engine with logging in it.
 SHOT_EXPORT shot_status shot_engine_capture(shot_engine* engine,
                                             const char* request_json,
                                             shot_buffer** out_image,
+                                            shot_buffer** out_stats,
                                             shot_buffer** out_error);
 
 // Hands back what the engine is holding but can rebuild: blink's heap, the
@@ -173,6 +200,65 @@ SHOT_EXPORT shot_status shot_engine_capture(shot_engine* engine,
 // is how it says so.
 SHOT_EXPORT void shot_engine_purge(shot_engine* engine,
                                    int32_t release_working_set);
+
+// What the engine came up as.
+//
+//   {"cacheDir": "..." | null, "cacheActive": true}
+//
+// cacheActive is the one worth having. A directory that cannot be created or
+// written to costs nothing visible -- the engine renders exactly as well
+// without a cache, only slower, and every capture pays the network again for
+// a reason nothing reports. The engine opens the cache during startup so that
+// this is answerable before the first screenshot rather than after it.
+//
+// false with a directory set means the open failed. false with
+// `cacheDir: null` means no cache was asked for.
+//
+// Note what it does *not* mean: sharing. Several processes may point at one
+// directory and all of them cache -- the simple backend takes no lock across
+// processes -- so `true` in two engines at once is the ordinary answer and not
+// a contradiction.
+SHOT_EXPORT shot_status shot_engine_status(shot_engine* engine,
+                                           shot_buffer** out_json,
+                                           shot_buffer** out_error);
+
+// The HTTP cache, from outside a capture.
+//
+// `engine` may be NULL, and passing it when there is one is not optional.
+// Within a process, disk_cache sequences backends per directory: asking for a
+// second one on a directory the engine holds waits for the engine's to go
+// away, which it will not do while the engine is up. Given an engine, these
+// run on its thread and borrow the backend it already holds; given NULL, they
+// build a small task environment of their own, open the directory, and take it
+// down again.
+//
+// `options_json` for both:
+//
+//   {
+//     "cacheDir": "...",        // required
+//     "urls":     ["..."],      // clear only: exact resource URLs
+//     "unusedSinceMs": 0,       // clear only: Unix epoch milliseconds
+//     "maxBytes": 0             // clear only: evict LRU down to this
+//   }
+//
+// The three clear filters compose, and a clear with none of them empties the
+// cache. There is deliberately no pattern syntax here -- the caller lists,
+// matches with whatever dialect its own users expect, and passes back the URLs
+// it decided on.
+//
+// `*out_json` receives the answer: an array of {url, lastUsedMs, bytes} for
+// list, and {removed, bytesBefore, bytesAfter} for clear. `removed` is -1 when
+// the whole cache was dropped in one operation, which the backend does without
+// counting.
+SHOT_EXPORT shot_status shot_cache_list(shot_engine* engine,
+                                        const char* options_json,
+                                        shot_buffer** out_json,
+                                        shot_buffer** out_error);
+
+SHOT_EXPORT shot_status shot_cache_clear(shot_engine* engine,
+                                         const char* options_json,
+                                         shot_buffer** out_json,
+                                         shot_buffer** out_error);
 
 #ifdef __cplusplus
 }  // extern "C"

@@ -26,6 +26,7 @@
 #include "base/values.h"
 #include "build/build_config.h"
 #include "shot/shot_capture.h"
+#include "shot/shot_capture_context.h"
 #include "shot/shot_options.h"
 #include "shot/shot_request.h"
 #include "shot/shot_runtime.h"
@@ -283,14 +284,21 @@ class RequestHandler {
     // kilobytes when the caller only wanted it on disk, and it is shot_capture
     // that owns doing it, so that this worker and the shared library cannot
     // come to do it differently.
-    auto result = CaptureAndDeliver(*request);
+    CaptureStats stats;
+    auto result = CaptureAndDeliver(*request, &stats);
     if (!result.has_value()) {
-      return WriteResponse(output_, ErrorHeader(result.error()), {});
+      // The counters go back with the failure too. A capture that timed out
+      // having fetched forty subresources has already said why, and the error
+      // string on its own cannot.
+      base::DictValue failed = ErrorHeader(result.error());
+      failed.Set("stats", StatsToValue(stats));
+      return WriteResponse(output_, std::move(failed), {});
     }
 
     base::DictValue header;
     header.Set("ok", true);
     header.Set("bytes", static_cast<int>(result->size));
+    header.Set("stats", StatsToValue(stats));
     if (result->wrote_path) {
       header.Set("path", request->path);
       return WriteResponse(output_, std::move(header), {});

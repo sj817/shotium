@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "base/types/expected.h"
+#include "shot/shot_capture_context.h"
 #include "shot/shot_request.h"
 
 namespace shot {
@@ -22,9 +23,15 @@ namespace shot {
 // difference between "what the CLI does" and "what the worker does" would be
 // invisible until someone compared two pictures.
 //
+// `out_stats` is optional and costs nothing to omit: the counters are
+// collected either way, by whatever is already touching each resource, and
+// this only decides whether the total is handed back. The command line has no
+// use for it.
+//
 // Requires a live ShotRuntime on this thread.
 base::expected<std::vector<uint8_t>, std::string> Capture(
-    const ScreenshotRequest& request);
+    const ScreenshotRequest& request,
+    CaptureStats* out_stats = nullptr);
 
 // What one answered request amounts to.
 struct CaptureResult {
@@ -46,9 +53,15 @@ struct CaptureResult {
 // process -- but it is on the wire, so all three answer it, and answering it
 // three times is how they would come to answer it differently.
 //
+// `out_stats` is filled in on the way out whether or not the capture
+// succeeded, which is the case it is most worth having: a request that timed
+// out after fetching forty subresources has already said why in its counters,
+// and the error string alone cannot.
+//
 // Requires a live ShotRuntime on this thread.
 base::expected<CaptureResult, std::string> CaptureAndDeliver(
-    const ScreenshotRequest& request);
+    const ScreenshotRequest& request,
+    CaptureStats* out_stats = nullptr);
 
 }  // namespace shot
 

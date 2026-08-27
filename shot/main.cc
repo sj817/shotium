@@ -117,6 +117,7 @@ int Main(int argc, const char** argv) {
   // makes a resident worker worth having.
   shot::NetworkConfig network_config;
   network_config.cache_dir = parsed->cache_dir;
+  network_config.cache_max_bytes = parsed->cache_max_bytes;
   network_config.user_agent = parsed->user_agent;
   auto runtime = shot::ShotRuntime::Create(network_config);
   if (!runtime.has_value()) {

@@ -19,6 +19,7 @@
 #include "net/traffic_annotation/network_traffic_annotation.h"
 #include "net/url_request/redirect_info.h"
 #include "net/url_request/url_request_context.h"
+#include "shot/shot_capture_context.h"
 #include "shot/shot_network.h"
 
 namespace shot {
@@ -102,7 +103,22 @@ void ShotFetch::Start(const GURL& url,
                                     kTrafficAnnotation,
                                     net::handles::kInvalidNetworkHandle);
   request_->set_method("GET");
-  request_->SetExtraRequestHeaders(extra_headers);
+
+  // The caller's headers, then the capture's. Both are "extra" in the same
+  // sense -- neither is something //net would have sent for itself -- but they
+  // arrive from different places: blink fills in Accept and Referer per
+  // resource, while the capture carries what the host program asked for. The
+  // capture's win a collision, because a host that set Authorization meant it.
+  net::HttpRequestHeaders headers = extra_headers;
+  if (CaptureContext* capture = CaptureContext::Current()) {
+    headers.MergeFrom(capture->HeadersFor(url));
+    // Applied here rather than in the context because this is the only place
+    // that has a URLRequest to apply it to, and because a request built while
+    // no capture is in progress must keep //net's defaults rather than the
+    // last capture's.
+    request_->SetLoadFlags(capture->load_flags());
+  }
+  request_->SetExtraRequestHeaders(headers);
 
   // The isolation info decides which cache and cookie partition this request
   // lands in. Attributing every subresource to the document's origin is what a
@@ -194,6 +210,14 @@ bool ShotFetch::Consume(int bytes_read) {
 
 void ShotFetch::Finish(int net_error) {
   result_.net_error = net_error;
+  // Counted here rather than at each call site because this is the one place
+  // every http(s) resource passes through exactly once, whether it succeeded,
+  // failed, redirected or came out of the cache. A count kept by the callers
+  // would be two counts that agree until one of them grows a new early return.
+  if (CaptureContext* capture = CaptureContext::Current()) {
+    capture->RecordResource(result_.was_cached, net_error != net::OK,
+                            static_cast<int64_t>(result_.body.size()));
+  }
   // The request is done with; dropping it here means a callback that renders
   // synchronously is not doing so with a live URLRequest underneath it.
   request_.reset();

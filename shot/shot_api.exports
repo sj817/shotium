@@ -16,6 +16,9 @@ _shot_engine_create
 _shot_engine_destroy
 _shot_engine_capture
 _shot_engine_purge
+_shot_engine_status
+_shot_cache_list
+_shot_cache_clear
 _shot_buffer_data
 _shot_buffer_size
 _shot_buffer_free
