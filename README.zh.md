@@ -21,15 +21,17 @@
 ```ts
 import shotium from '@shotkit/shotium';
 
-shotium.runtime.start();
+shotium.start();
 
-const png = await shotium.screenshot({
+const { image, stats } = await shotium.screenshot({
   file: 'https://example.com',
   viewport: { width: 1280, height: 720 },
   fullPage: true,
 });
 
-await shotium.runtime.stop();
+console.log(stats.timing.total, 'ms，', stats.requests, '个请求命中缓存', stats.fromCache, '个');
+
+await shotium.stop();
 ```
 
 ---
@@ -63,18 +65,16 @@ npm install @shotkit/shotium
 
 ## 使用方式
 
-### 1. 进程内引擎 (`runtime`)
+### 1. 进程内引擎
 
 引擎跑在你自己的 Node.js 进程里，通过 Node-API 加载 [`shot/shot_api.h`](shot/shot_api.h) 提供的 C ABI。`screenshot()` 返回的就是 Blink 刚编码出来的字节：不拉子进程，图片也不跨进程边界拷贝（单张约 **31 ms**）。
 
 ```ts
-import { runtime, screenshot } from '@shotkit/shotium';
+import shotium, { screenshot } from '@shotkit/shotium';
 
-runtime.start({
-  cacheDir: '/var/tmp/shotium-cache' // 可选：HTTP 磁盘缓存路径。默认 null（关闭）
-});
+const { cacheDir, cacheActive } = shotium.start();
 
-const buffer = await screenshot({
+const { image, stats } = await screenshot({
   file: 'https://example.com',
   viewport: { width: 1280, height: 720 },
   type: 'webp',
@@ -82,12 +82,16 @@ const buffer = await screenshot({
 });
 
 // 批次之间交还内存，但不交出引擎
-runtime.purge({ releaseWorkingSet: true });
+shotium.releaseMemory({ releaseWorkingSet: true });
 
-await runtime.stop();
+await shotium.stop();
 ```
 
-**一个进程一个引擎，是一辈子一个，不是一次一个。** 启动 Blink 会写下进程级静态量，而它没有回退路径，所以 `stop()` 对这个进程是终局：之后再 `start()` 会抛，`new Runtime()` 也一样。并发调用会排队逐个执行，因为渲染器只有一个 —— 所以要并行就要多开进程；之后还要截图的程序，应该让引擎继续开着并调用 `purge()`，而不是停掉它。
+**一个进程只有一个引擎 —— 但 `start()` 和 `stop()` 不限次数。** 启动 Blink 会写下进程级静态量，而它没有回退路径，所以一个进程只能有一个引擎，`new Runtime()` 会接管已有的那个而不是再造一个。但这说的是引擎有几个，不是你能要几次：`stop()` 只是让引擎停下来（队列排空、内存交还、`running: false`），`start()` 会把同一个引擎重新拿起来，缓存还是热的，想调多少次都行。`start()` 唯一会拒绝的是**不同的配置** —— 引擎的选项在创建时就定死了，所以指定一个跟当前引擎不一致的值会抛错，而不是默默用另一个值去渲染。并发调用会排队逐个执行，因为渲染器只有一个 —— 所以要并行就要多开进程。
+
+`start()` 会返回引擎起来之后的状态。`cacheDir` 有值而 `cacheActive` 为 `false`，意思是那个目录没能打开，这个进程在裸跑 —— 渲染结果一样正确，只是每张图都多付一次网络往返，而且不会有任何报错。
+
+> **从 0.2 升级。** 生命周期方法从 `shotium.runtime.*` 移到了模块本身，`purge()` 改名为 `releaseMemory()`，`screenshot()` 的返回值从 Buffer 变成了 `{ image, stats }`，`stop()` 不再是终局 —— 停了还能再 `start()`。`shotium.runtime` 和 `Runtime` 类仍然导出，供需要自己持有生命周期的调用方使用。
 
 ---
 
@@ -103,7 +107,7 @@ import { daemon } from '@shotkit/shotium';
 // 连接现有守护进程（若未运行则自动拉起）
 const client = await daemon.connect();
 
-const png = await client.screenshot({
+const { image, stats } = await client.screenshot({
   file: 'https://example.com',
   viewport: { width: 1280, height: 720 },
 });
@@ -180,10 +184,111 @@ interface ScreenshotOptions {
 
   /** 是否允许文档访问本地 file:// 子资源 (默认: false) */
   allowFileAccess?: boolean;
+
+  /** 这次截图可以怎么用 HTTP 缓存 (默认: 'default') */
+  cache?: 'default' | 'reload' | 'no-store' | 'only-if-cached';
+
+  /** 附加请求头，只发给与文档同源的地址 */
+  headers?: Record<string, string>;
 }
 ```
 
 > **注意**：`fullPage`、`selector` 与 `clip` 为互斥参数，同时传入多个将触发参数校验错误。
+
+`cache` 的四个取值照抄 `fetch` 的拼写，含义也一致：`reload` 不读缓存但写缓存，`no-store` 不读也不写，`only-if-cached` 不碰网络、未命中即报错。它对子资源和主文档同时生效 —— 只刷新 HTML 而复用昨天的样式表，不会是有人真正想要的行为。
+
+`headers` 到同源边界为止。调用方传 `Authorization` 或 `Cookie` 是冲着被截的站点去的，所以它不会跟着发给另一个源上的样式表或字体。
+
+---
+
+### `StartOptions`
+
+```ts
+interface StartOptions {
+  /**
+   * HTTP 磁盘缓存目录。默认是系统临时目录下按项目区分的一个目录；
+   * 传 null 关闭缓存。
+   */
+  cacheDir?: string | null;
+
+  /** 该目录的容量上限，单位字节 (默认: 256 MB) */
+  cacheMaxBytes?: number;
+
+  /** 覆盖内置的 User-Agent */
+  userAgent?: string;
+
+  /** shotium_data.pak 与 shotium_strings.pak 所在目录 */
+  resourceDir?: string;
+}
+```
+
+`start()` 和 `status()` 返回 `{ running, cacheDir, cacheActive }`。`running` 说的是这个生命周期，不是这个进程：`stop()` 之后它是 `false`，而 `cacheDir` 仍然是那个停下来的引擎持有的目录。
+
+**0.3 起缓存默认开启**，这是相对 0.2 的反转。理由是量出来的：不开缓存时，每次截一个 `https:` URL 都要付 DNS、TLS 和一次往返，对一个小页面来说这是整个调用耗时的大头，也是调用方完全没预期要花的时间。至于「短命进程会留下一个目录」这个顾虑，答案是把目录按项目区分并加上容量上限，而不是干脆不缓存。
+
+---
+
+### `CaptureStats`
+
+每次截图都会报告它花了多少。这些数字引擎内部一直知道，只是在 0.3 之前一个都没往外传。
+
+```ts
+interface CaptureStats {
+  requests: number;     // 文档请求过的所有资源，含它自己
+  fromCache: number;    // 正文由 HTTP 缓存作答的数量（含义见下）
+  failed: number;
+  bytes: number;        // 解码后的正文字节数，不是传输体积
+  httpStatus: number;   // 主文档自身的状态码；file: URL 为 0
+  finalUrl: string;     // 跟随重定向之后的地址
+  timing: {
+    fetch: number;      // 取主文档：DNS、TCP、TLS、一次往返
+    render: number;     // 解析、子资源、样式、布局、绘制
+    encode: number;
+    total: number;
+  };
+}
+```
+
+`timing.fetch` 是最容易出乎意料的一项。对一个冷的 `https:` URL，它通常比渲染本身大一个数量级 —— 这也就是大部分「为什么这次特别慢」的答案：
+
+```
+本地文件          fetch   0.2 ms   render  20 ms   total   25 ms
+https，冷连接      fetch 321.1 ms   render  16 ms   total  350 ms
+https，命中缓存    fetch   0.7 ms   render  18 ms   total   31 ms
+```
+
+`fromCache` 的含义是「正文来自磁盘」，不等于「没碰网络」。一个已过期但可以重新验证的条目，仍然要付一次条件请求和一个 304 —— 缓存在那种情况下省下的是下载量，不是往返 —— 所以 `fromCache: 1` 同时 `timing.fetch` 有 88 ms，是正常结果而不是自相矛盾。
+
+失败时统计同样会给出来，挂在 `error.stats` 上 —— 一次取了四十个子资源之后超时的截图，它自己已经把原因说清楚了。
+
+---
+
+### `cache`
+
+HTTP 缓存。它比任何一个引擎都活得久：目录就在磁盘上，跟有没有引擎在跑无关，所以这组方法在 `start()` 之前和 `stop()` 之后都能用 —— 而且 `stop()` 不会清掉它。缓存的意义在于下一次运行，那它就必须活过这一次。
+
+```ts
+import { cache } from '@shotkit/shotium';
+
+cache.getDir();                     // 本项目的缓存目录，绝对路径，统一用 /
+cache.getDirs({ target: 'all' });   // 本机上 shotium 的所有缓存目录
+
+await cache.getFiles();             // [{ url, lastUsedMs, bytes, dir }, ...]
+
+await cache.clear();                                       // 全清
+await cache.clear({ glob: ['https://example.com/**'] });    // 按 URL 模式清
+await cache.clear({ maxAge: 86400 });                       // 清掉一天没用过的
+await cache.clear({ maxSize: 64 * 1024 * 1024 });           // 按 LRU 清到 64 MB 以内
+```
+
+`target` 决定操作哪个目录：`'current'`（默认）是本项目的，`'all'` 是共享根目录下的全部，传项目哈希则直接指定一个。
+
+有两件事值得知道，因为它们都是「凭直觉猜会猜错」的地方：
+
+- **缓存文件不是按 URL 命名的。** 一个缓存目录里躺的是 `5349fbae98c6d9a1_0` 这样的文件（文件名是 entry key 的哈希），外加一个 `index`。所以 `getFiles()` 返回的是 URL 而不是文件名，`glob` 匹配的也是 URL；照着文件名写的模式什么都匹配不到。
+- **删除一律走缓存后端，绝不走文件系统。** 手工删 entry 文件会让 index 里留下已经不存在的条目，下一个打开这个目录的进程要么重建索引，要么发现不一致后整个丢弃。唯一的例外是「进程里压根没有引擎时清空整个目录」—— 那种情况会把目录整个删掉，而它之所以安全，恰恰是因为不会有东西残留下来跟 index 对不上。
+
+多个进程可以共用同一个缓存目录，而且都能缓存 —— 后端不做跨进程加锁。但在单个进程内，一个目录只有一个后端，所以这些调用会借用正在跑的引擎的那一个。
 
 ---
 
@@ -256,7 +361,7 @@ interface ScreenshotOptions {
 addon 从已安装的平台包里加载，源码检出时则从 `shotium/native/build/Release/` 加载。资源包（`.pak`、ICU）默认在 addon 旁边找 —— 安装出来就是这么放的；本地构建则把它们留在构建目录里，所以要把 `resourceDir` 指过去：
 
 ```ts
-runtime.start({ resourceDir: '/path/to/out/Shot' });
+shotium.start({ resourceDir: '/path/to/out/Shot' });
 ```
 
 ---
@@ -273,14 +378,22 @@ shot_buffer* error = NULL;
 shot_engine_create("{}", &engine, &error);
 
 shot_buffer* png = NULL;
-shot_engine_capture(engine, "{\"file\":\"https://example.com\"}", &png, &error);
+shot_buffer* stats = NULL;  /* 可选，不需要就传 NULL */
+shot_engine_capture(engine, "{\"file\":\"https://example.com\"}",
+                    &png, &stats, &error);
 
 const uint8_t* data = shot_buffer_data(png);
 size_t size = shot_buffer_size(png);
 
 shot_buffer_free(png);
+shot_buffer_free(stats);
 shot_engine_destroy(engine);
 ```
+
+0.3 起 ABI 版本是 **2**：`shot_engine_capture` 多了 `out_stats` 参数，并新增了
+`shot_engine_status`、`shot_cache_list` 和 `shot_cache_clear`。调用任何东西之前，
+先拿 `shot_abi_version()` 和头文件里的 `SHOT_ABI_VERSION` 比一下 —— 预编译的
+addon 和预编译的引擎是两个文件，没有任何机制阻止它们是两个版本。
 
 ---
 

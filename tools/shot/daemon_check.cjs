@@ -11,10 +11,9 @@
 // being a second path that could drift from it; and that it goes away, both
 // when asked and when left alone.
 //
-// The daemon matters more than it did. Blink starts once per process and
-// cannot be restarted, so a program that has stopped its engine has no way to
-// get another -- the daemon is where a short-lived caller gets one without
-// paying for the start.
+// The daemon is where a caller who cannot keep an engine gets one anyway. A
+// process that lives for the length of one command pays the full start every
+// time; the daemon pays it once and outlives them all.
 //
 //   node tools/shot/daemon_check.cjs out/ShotWip/shotium.exe
 
@@ -49,10 +48,12 @@ import shotium from ${JSON.stringify(entry)};
 
 const [config, request, output] = JSON.parse(process.argv[1]);
 const started = Date.now();
-const image = await shotium.daemon.screenshot({...request, daemon: config});
+const {image, stats} = await shotium.daemon.screenshot(
+    {...request, daemon: config});
 writeFileSync(output, image);
 process.stdout.write(JSON.stringify(
-    {bytes: image.length, elapsedMs: Date.now() - started}));
+    {bytes: image.length, elapsedMs: Date.now() - started,
+     requests: stats.requests}));
 `;
 
 // A name of this run's own, so that a daemon left over from an earlier run --
@@ -95,10 +96,16 @@ async function main() {
   const coldStarted = Date.now();
   const client = await shotium.daemon.connect(config);
   const cold = Date.now() - coldStarted;
-  const first = await client.screenshot(request);
+  const {image: first, stats} = await client.screenshot(request);
   check(Buffer.isBuffer(first) &&
             first.subarray(0, 8).equals(Buffer.from('89504e470d0a1a0a', 'hex')),
         'a screenshot comes back as a PNG');
+  // Over a socket rather than out of an addon, which is the half of the 0.3
+  // statistics that could have been left behind: they travel in the response
+  // header the daemon writes, not in the image frame.
+  check(stats && stats.requests >= 1 && stats.timing.total > 0,
+        'with the statistics the in-process engine reports',
+        `${stats.requests} request(s), ${stats.timing.total.toFixed(1)}ms`);
   const started = await client.status();
   check(started.ok && started.pid > 0,
         'and it is a process of its own',
@@ -112,7 +119,7 @@ async function main() {
   // demonstrably separate processes rather than one being the other.
   const runtime = new shotium.Runtime();
   runtime.start({resourceDir: buildDir, cacheDir: null});
-  const inProcess = await runtime.screenshot(request);
+  const {image: inProcess} = await runtime.screenshot(request);
   await runtime.stop();
   check(sha256(inProcess) === sha256(first),
         'the daemon and an in-process engine produce the same bytes',
@@ -151,7 +158,8 @@ async function main() {
   // ten is faster than one.
   const batchStarted = Date.now();
   const batch = await Promise.all(
-      Array.from({length: 10}, () => client.screenshot(request)));
+      Array.from({length: 10}, () => client.screenshot(request).then(
+          (result) => result.image)));
   check(batch.length === 10 && batch.every((png) => sha256(png) === sha256(first)),
         'ten concurrent requests all come back, all identical',
         `${Date.now() - batchStarted}ms for ten`);
@@ -166,7 +174,7 @@ async function main() {
   check(rejected !== null && /no element matches/.test(rejected.message),
         'a selector that matches nothing rejects with the worker\'s message',
         rejected ? rejected.message.slice(0, 60) : 'no error');
-  const afterError = await client.screenshot(request);
+  const {image: afterError} = await client.screenshot(request);
   check(sha256(afterError) === sha256(first), 'and the next request still works');
 
   console.log('\n== shutdown ==');

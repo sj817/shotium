@@ -72,7 +72,8 @@ async function main() {
   // require() of an ES module: node builds the namespace and this is what the
   // caller sees. If the exports drift -- a rename, a default that is not the
   // same object as the names -- it shows up here and nowhere else.
-  for (const name of ['Runtime', 'runtime', 'screenshot', 'daemon']) {
+  for (const name of ['Runtime', 'runtime', 'screenshot', 'daemon', 'cache',
+                      'start', 'stop', 'status', 'releaseMemory']) {
     check(shotium[name] !== undefined, `\`${name}\` is exported`);
   }
   check(shotium.default.runtime === shotium.runtime,
@@ -82,13 +83,23 @@ async function main() {
   // resourceDir because the packs live beside the executable in a checkout,
   // not beside the addon. An install has them in one directory and needs none
   // of this.
-  shotium.runtime.start({resourceDir: buildDir, cacheDir: null});
+  const came = shotium.runtime.start({resourceDir: buildDir, cacheDir: null});
   check(shotium.runtime.running === true, 'the engine is up');
-  const first = await shotium.screenshot(request);
+  check(came.running === true && came.cacheDir === null,
+        'and start() reports what it came up as', JSON.stringify(came));
+  const {image: first, stats} = await shotium.screenshot(request);
   check(Buffer.isBuffer(first) && first.length > 0, 'a screenshot comes back',
         `${first.length} bytes`);
   check(first.subarray(0, 8).equals(Buffer.from('89504e470d0a1a0a', 'hex')),
         'and it is a PNG');
+
+  // New in 0.3, and the reason screenshot() resolves to an object rather than
+  // to the buffer: the counters the engine always had now leave it.
+  check(stats.requests >= 1 && stats.timing.total > 0,
+        'and it says what it cost',
+        `${stats.requests} request(s), ${stats.timing.total.toFixed(1)}ms`);
+  check(stats.timing.fetch + stats.timing.render <= stats.timing.total + 1,
+        'whose parts add up to no more than the whole');
 
   console.log('\n== it is the same renderer as the executable ==');
   // Not "close enough": identical. Both go through shot::Capture, and the only
@@ -103,7 +114,7 @@ async function main() {
         sha(first).slice(0, 16));
 
   console.log('\n== the geometry options reach the engine ==');
-  const clipped = await shotium.screenshot({
+  const {image: clipped} = await shotium.screenshot({
     file: features,
     viewport: {width: 400, height: 300},
     clip: {x: 40, y: 60, width: 200, height: 120},
@@ -114,13 +125,13 @@ async function main() {
         `${clipped.readUInt32BE(16)}x${clipped.readUInt32BE(20)}`);
 
   const written = path.join(os.tmpdir(), `shot-node-check-path-${process.pid}.png`);
-  const viaPath = await shotium.screenshot({
+  const {image: viaPath} = await shotium.screenshot({
     file: features,
     viewport: {width: 400, height: 300},
     path: written,
     allowFileAccess: true,
   });
-  check(viaPath === null, 'a request with `path` resolves to null');
+  check(viaPath === null, 'a request with `path` gives back a null image');
   check(fs.existsSync(written), 'and the engine wrote the file');
   fs.rmSync(written, {force: true});
 
@@ -146,8 +157,22 @@ async function main() {
         'a missing document says what it could not read',
         rejected ? rejected.message.slice(0, 48) : 'no error');
 
-  const afterError = await shotium.screenshot(request);
+  const {image: afterError} = await shotium.screenshot(request);
   check(sha(afterError) === sha(first), 'the engine still works afterwards');
+
+  // The counters are attached to failures too, which is the case where they
+  // explain the most: a capture that gave up after forty subresources has
+  // already said what happened.
+  let withStats = null;
+  try {
+    await shotium.screenshot({file: features, selector: '#nothing-here'});
+  } catch (error) {
+    withStats = error;
+  }
+  check(withStats && withStats.stats && typeof withStats.stats === 'object',
+        'and a rejection carries the statistics as an object',
+        withStats && withStats.stats ?
+            `${withStats.stats.requests} request(s)` : 'none');
 
   let threw = null;
   try {
@@ -176,46 +201,72 @@ async function main() {
   // Blink renders one document at a time. Nine callers who do not know that
   // must still get nine correct answers rather than nine interleaved ones.
   const started = Date.now();
-  const many = await Promise.all(
-      Array.from({length: 9}, () => shotium.screenshot(request)));
+  const many = (await Promise.all(
+      Array.from({length: 9}, () => shotium.screenshot(request))))
+      .map((result) => result.image);
   check(many.length === 9 && many.every((png) => sha(png) === sha(first)),
         'nine at once give nine images identical to the first');
   console.log(`        ${Date.now() - started}ms for nine`);
 
-  console.log('\n== there is only ever one engine ==');
+  console.log('\n== there is one engine, and it is shared ==');
   // Not one at a time -- one. Blink's initialisation writes process-wide
-  // statics it cannot undo, so a second Runtime has nothing to be. The
-  // package says so itself rather than letting SHOT_ERR_STATE out of the
-  // addon, and this is that message.
+  // statics it cannot undo, so there is no second engine for a second Runtime
+  // to have. It gets the first one rather than an error: a lifecycle object is
+  // a lifecycle, and how many of those a program keeps is its own business.
+  const second = new shotium.Runtime();
+  const adopted = second.start({resourceDir: buildDir});
+  check(second.running === true, 'a second Runtime adopts the engine');
+  check(adopted.cacheDir === null,
+        'and gets the configuration the engine actually has',
+        JSON.stringify(adopted));
+
+  // What it cannot do is ask for a different one. The options are fixed when
+  // the engine is built and there is no second build, so the alternative to
+  // this error is rendering with a value the caller did not ask for.
   let refused = null;
   try {
-    new shotium.Runtime().start({resourceDir: buildDir});
+    second.start({resourceDir: buildDir, cacheDir: path.join(os.tmpdir(), 'no')});
   } catch (error) {
     refused = error;
   }
-  check(refused instanceof Error, 'a second Runtime is refused');
-  check(refused && /process-wide singleton/.test(refused.message),
-        'and says why rather than failing obscurely',
+  check(refused instanceof Error, 'a conflicting configuration is refused');
+  check(refused && /cacheDir is/.test(refused.message),
+        'and says which option disagrees',
         refused ? refused.message.slice(0, 56) : '');
 
-  console.log('\n== purging costs nothing but memory ==');
-  shotium.runtime.purge({releaseWorkingSet: true});
-  const afterPurge = await shotium.screenshot(request);
-  check(sha(afterPurge) === sha(first), 'the purge changed no pixels');
+  console.log('\n== releasing memory costs nothing but memory ==');
+  shotium.runtime.releaseMemory({releaseWorkingSet: true});
+  const {image: afterPurge} = await shotium.screenshot(request);
+  check(sha(afterPurge) === sha(first), 'the release changed no pixels');
 
-  console.log('\n== and it puts itself away, once ==');
+  console.log('\n== stop() is not a destructor ==');
   await shotium.runtime.stop();
   check(shotium.runtime.running === false, 'stop() leaves the engine down');
 
+  // The whole point of the 0.3 lifecycle. Blink still cannot be initialised
+  // twice, but that is a fact about how many engines there are rather than
+  // about how many times one may be asked for -- and a disk cache whose value
+  // is the next run would be worth very little if the next run could not have
+  // the engine that reads it.
   let restarted = null;
   try {
     shotium.runtime.start({resourceDir: buildDir});
   } catch (error) {
     restarted = error;
   }
-  check(restarted instanceof Error && /cannot be started again/.test(restarted.message),
-        'and starting again is refused, in words',
-        restarted ? restarted.message.slice(0, 56) : 'no error');
+  check(restarted === null && shotium.runtime.running === true,
+        'and starting again picks the same engine back up',
+        restarted ? restarted.message.slice(0, 56) : '');
+
+  const {image: afterRestart} = await shotium.screenshot(request);
+  check(sha(afterRestart) === sha(first),
+        'which renders exactly what it rendered before');
+
+  await shotium.runtime.stop();
+  const {image: afterImplicit} = await shotium.screenshot(request);
+  check(sha(afterImplicit) === sha(first),
+        'and a screenshot after stop() starts it without being asked');
+  await shotium.runtime.stop();
 
   fs.rmSync(output, {force: true});
   console.log(`\n${failures ? failures + ' CHECK(S) FAILED' : 'ALL CHECKS PASSED'}`);
