@@ -1,0 +1,150 @@
+diff --git a/src/core/SkBlurEngine.cpp b/src/core/SkBlurEngine.cpp
+index bcec30e6fd..0b98caaf21 100644
+--- a/src/core/SkBlurEngine.cpp
++++ b/src/core/SkBlurEngine.cpp
+@@ -35,6 +35,7 @@
+ #include "src/core/SkDevice.h"
+ #include "src/core/SkKnownRuntimeEffects.h"
+ #include "src/core/SkSpecialImage.h"
++#include "src/core/SkTaskGroup.h"
+ #include "src/core/SkVx.h"
+ 
+ #include <algorithm>
+@@ -182,10 +183,6 @@ static sk_sp<SkSpecialImage> eval_blur_passes(PassMaker* makerX, PassMaker* make
+     }
+     dst.eraseColor(SK_ColorTRANSPARENT);
+ 
+-    auto buffer = alloc->makeBytesAlignedTo(std::max(makerX->bufferSizeBytes(),
+-                                            makerY->bufferSizeBytes()),
+-                                            alignof(skvx::Vec<N, uint32_t>));
+-
+     // Basic Plan: The three cases to handle
+     // * Horizontal and Vertical - blur horizontally while copying values from the source to
+     //     the destination. Then, do an in-place vertical blur.
+@@ -204,19 +201,50 @@ static sk_sp<SkSpecialImage> eval_blur_passes(PassMaker* makerX, PassMaker* make
+         loopEnd   = std::min(srcBounds.bottom(), dstBounds.bottom());
+ 
+         if (loopStart < loopEnd) {
+-            auto srcAddr = reinterpret_cast<T*>(src.getAddr(0, loopStart - srcBounds.top()));
+-            auto dstAddr = reinterpret_cast<T*>(dst.getAddr(0, loopStart - dstBounds.top()));
+-
+             // Iterate over each row to calculate 1D blur along X.
+-            Pass* pass = makerX->makePass(buffer, alloc);
+-            for (int y = loopStart; y < loopEnd; ++y) {
+-                pass->blur<T>(srcBounds.left()  - dstBounds.left(),
+-                              srcBounds.right() - dstBounds.left(),
+-                              dstBounds.width(),
+-                              srcAddr, 1,
+-                              dstAddr, 1);
+-                srcAddr += src.rowBytesAsPixels();
+-                dstAddr += dst.rowBytesAsPixels();
++            const int lineCount = loopEnd - loopStart;
++            const bool parallel =
++                    static_cast<int64_t>(lineCount) * dstBounds.width() >= 256 * 256;
++            if (!parallel) {
++                auto srcAddr = reinterpret_cast<T*>(src.getAddr(0, loopStart - srcBounds.top()));
++                auto dstAddr = reinterpret_cast<T*>(dst.getAddr(0, loopStart - dstBounds.top()));
++                auto buffer = alloc->makeBytesAlignedTo(
++                        makerX->bufferSizeBytes(), alignof(skvx::Vec<N, uint32_t>));
++                Pass* pass = makerX->makePass(buffer, alloc);
++                for (int y = loopStart; y < loopEnd; ++y) {
++                    pass->blur<T>(srcBounds.left()  - dstBounds.left(),
++                                  srcBounds.right() - dstBounds.left(),
++                                  dstBounds.width(),
++                                  srcAddr, 1,
++                                  dstAddr, 1);
++                    srcAddr += src.rowBytesAsPixels();
++                    dstAddr += dst.rowBytesAsPixels();
++                }
++            } else {
++                const int taskCount = std::min(4, lineCount);
++                SkTaskGroup tasks;
++                tasks.batch(taskCount, [&](int task) {
++                    const int taskStart = loopStart + lineCount * task / taskCount;
++                    const int taskEnd = loopStart + lineCount * (task + 1) / taskCount;
++                    auto srcAddr = reinterpret_cast<T*>(
++                            src.getAddr(0, taskStart - srcBounds.top()));
++                    auto dstAddr = reinterpret_cast<T*>(
++                            dst.getAddr(0, taskStart - dstBounds.top()));
++                    SkSTArenaAlloc<1024> taskAlloc;
++                    auto buffer = taskAlloc.makeBytesAlignedTo(
++                            makerX->bufferSizeBytes(), alignof(skvx::Vec<N, uint32_t>));
++                    Pass* pass = makerX->makePass(buffer, &taskAlloc);
++                    for (int y = taskStart; y < taskEnd; ++y) {
++                        pass->blur<T>(srcBounds.left()  - dstBounds.left(),
++                                      srcBounds.right() - dstBounds.left(),
++                                      dstBounds.width(),
++                                      srcAddr, 1,
++                                      dstAddr, 1);
++                        srcAddr += src.rowBytesAsPixels();
++                        dstAddr += dst.rowBytesAsPixels();
++                    }
++                });
++                tasks.wait();
+             }
+         }
+ 
+@@ -238,18 +266,51 @@ static sk_sp<SkSpecialImage> eval_blur_passes(PassMaker* makerX, PassMaker* make
+     // blur.
+     if (makerY->window() > 1) {
+         if (loopStart < loopEnd) {
+-            auto srcAddr = reinterpret_cast<T*>(src.getAddr(loopStart - srcBounds.left(), 0));
+-            auto dstAddr = reinterpret_cast<T*>(dst.getAddr(loopStart - dstBounds.left(), dstYOffset));
+-
+-            Pass* pass = makerY->makePass(buffer, alloc);
+-            for (int x = loopStart; x < loopEnd; ++x) {
+-                pass->blur<T>(srcBounds.top()    - dstBounds.top(),
+-                              srcBounds.bottom() - dstBounds.top(),
+-                              dstBounds.height(),
+-                              srcAddr, src.rowBytesAsPixels(),
+-                              dstAddr, dst.rowBytesAsPixels());
+-                srcAddr += 1;
+-                dstAddr += 1;
++            const int lineCount = loopEnd - loopStart;
++            const bool parallel =
++                    static_cast<int64_t>(lineCount) * dstBounds.height() >= 256 * 256;
++            if (!parallel) {
++                auto srcAddr = reinterpret_cast<T*>(
++                        src.getAddr(loopStart - srcBounds.left(), 0));
++                auto dstAddr = reinterpret_cast<T*>(
++                        dst.getAddr(loopStart - dstBounds.left(), dstYOffset));
++                auto buffer = alloc->makeBytesAlignedTo(
++                        makerY->bufferSizeBytes(), alignof(skvx::Vec<N, uint32_t>));
++                Pass* pass = makerY->makePass(buffer, alloc);
++                for (int x = loopStart; x < loopEnd; ++x) {
++                    pass->blur<T>(srcBounds.top()    - dstBounds.top(),
++                                  srcBounds.bottom() - dstBounds.top(),
++                                  dstBounds.height(),
++                                  srcAddr, src.rowBytesAsPixels(),
++                                  dstAddr, dst.rowBytesAsPixels());
++                    srcAddr += 1;
++                    dstAddr += 1;
++                }
++            } else {
++                const int taskCount = std::min(4, lineCount);
++                SkTaskGroup tasks;
++                tasks.batch(taskCount, [&](int task) {
++                    const int taskStart = loopStart + lineCount * task / taskCount;
++                    const int taskEnd = loopStart + lineCount * (task + 1) / taskCount;
++                    auto srcAddr = reinterpret_cast<T*>(
++                            src.getAddr(taskStart - srcBounds.left(), 0));
++                    auto dstAddr = reinterpret_cast<T*>(
++                            dst.getAddr(taskStart - dstBounds.left(), dstYOffset));
++                    SkSTArenaAlloc<1024> taskAlloc;
++                    auto buffer = taskAlloc.makeBytesAlignedTo(
++                            makerY->bufferSizeBytes(), alignof(skvx::Vec<N, uint32_t>));
++                    Pass* pass = makerY->makePass(buffer, &taskAlloc);
++                    for (int x = taskStart; x < taskEnd; ++x) {
++                        pass->blur<T>(srcBounds.top()    - dstBounds.top(),
++                                      srcBounds.bottom() - dstBounds.top(),
++                                      dstBounds.height(),
++                                      srcAddr, src.rowBytesAsPixels(),
++                                      dstAddr, dst.rowBytesAsPixels());
++                        srcAddr += 1;
++                        dstAddr += 1;
++                    }
++                });
++                tasks.wait();
+             }
+         }
+     }

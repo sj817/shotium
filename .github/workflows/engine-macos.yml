@@ -157,6 +157,14 @@ jobs:
           restore-keys: |
             out-shot-macos-${{ github.event.inputs.arch }}-
 
+      - name: patch the Skia checkout
+        working-directory: src
+        # Skia is DEPS-managed, so the scanline-parallel CPU blur has to be
+        # reapplied after every sync. Keep this after cache restore: the new
+        # source timestamp then invalidates exactly the affected Skia object.
+        run: |
+          git -C third_party/skia apply --verbose ../../patches/third_party_skia_parallel_blur.patch
+
       - name: build the shot ICU data set
         working-directory: src
         # third_party/icu is a DEPS checkout, so the trimmed data set is
@@ -429,4 +437,3 @@ jobs:
           path: src/${{ env.SHOT_NPM_TARBALL }}
           if-no-files-found: error
           compression-level: 0
-

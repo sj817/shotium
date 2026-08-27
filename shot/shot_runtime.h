@@ -23,6 +23,8 @@ namespace discardable_memory {
 class DiscardableSharedMemoryManager;
 }  // namespace discardable_memory
 
+class SkExecutor;
+
 namespace shot {
 
 class ShotPlatform;
@@ -120,6 +122,8 @@ class ShotRuntime {
 
   // Declared in construction order; destroyed in reverse.
   base::ScopedClosureRunner shutdown_thread_pool_;
+  std::unique_ptr<SkExecutor> skia_executor_;
+  SkExecutor* previous_skia_executor_ = nullptr;
   std::unique_ptr<blink::scheduler::WebThreadScheduler> main_thread_scheduler_;
   std::unique_ptr<base::ScopedMemoryConsumerRegistry<MemoryConsumerRegistry>>
       memory_consumer_registry_;

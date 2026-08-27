@@ -4,17 +4,23 @@
 
 #include "shot/shot_runtime.h"
 
+#include <deque>
+#include <functional>
 #include <utility>
 
 #include "base/files/file_path.h"
 #include "base/functional/bind.h"
 #include "base/i18n/icu_util.h"
+#include "base/location.h"
 #include "base/memory/discardable_memory_allocator.h"
 #include "base/memory_coordinator/memory_consumer.h"
+#include "base/memory/ref_counted.h"
 #include "base/message_loop/message_pump.h"
 #include "base/message_loop/message_pump_type.h"
 #include "base/observer_list.h"
 #include "base/path_service.h"
+#include "base/synchronization/lock.h"
+#include "base/task/thread_pool.h"
 #include "base/task/thread_pool/thread_pool_instance.h"
 #include "build/build_config.h"
 #include "components/discardable_memory/service/discardable_shared_memory_manager.h"
@@ -28,6 +34,7 @@
 #include "third_party/blink/public/platform/scheduler/web_thread_scheduler.h"
 #include "third_party/blink/public/web/blink.h"
 #include "third_party/blink/renderer/platform/heap/thread_state.h"
+#include "third_party/skia/include/core/SkExecutor.h"
 #include "third_party/skia/include/core/SkGraphics.h"
 #include "ui/base/resource/resource_bundle.h"
 #include "ui/base/ui_base_paths.h"
@@ -46,6 +53,65 @@
 #endif
 
 namespace shot {
+
+namespace {
+
+// Sends Skia's independent scanlines to Shot's existing worker pool. The
+// rendering thread borrows from the same queue while it waits, so the pool's
+// three-worker cap gives a large blur four-way parallelism without creating a
+// second set of threads in every CLI process or Node worker.
+class ShotSkiaExecutor final : public SkExecutor {
+ public:
+  ShotSkiaExecutor() : state_(base::MakeRefCounted<State>()) {}
+  ~ShotSkiaExecutor() override = default;
+
+  void add(std::function<void()> work) override {
+    state_->Add(std::move(work));
+    base::ThreadPool::PostTask(
+        FROM_HERE, {base::TaskPriority::USER_BLOCKING},
+        base::BindOnce(
+            [](scoped_refptr<State> state) { state->RunOne(); }, state_));
+  }
+
+  void add(std::function<void()> work, int /*work_list*/) override {
+    add(std::move(work));
+  }
+
+  void borrow() override { state_->RunOne(); }
+
+ private:
+  class State : public base::RefCountedThreadSafe<State> {
+   public:
+    void Add(std::function<void()> work) {
+      base::AutoLock lock(lock_);
+      work_.push_back(std::move(work));
+    }
+
+    void RunOne() {
+      std::function<void()> work;
+      {
+        base::AutoLock lock(lock_);
+        if (work_.empty()) {
+          return;
+        }
+        work = std::move(work_.back());
+        work_.pop_back();
+      }
+      work();
+    }
+
+   private:
+    friend class base::RefCountedThreadSafe<State>;
+    ~State() = default;
+
+    base::Lock lock_;
+    std::deque<std::function<void()>> work_;
+  };
+
+  scoped_refptr<State> state_;
+};
+
+}  // namespace
 
 class ShotRuntime::MemoryConsumerRegistry : public base::MemoryConsumerRegistry {
  public:
@@ -81,6 +147,10 @@ class ShotRuntime::MemoryConsumerRegistry : public base::MemoryConsumerRegistry 
 ShotRuntime::ShotRuntime() = default;
 
 ShotRuntime::~ShotRuntime() {
+  // SkExecutor does not take ownership of its default. Restore the process-wide
+  // pointer before the member backing our replacement is destroyed.
+  SkExecutor::SetDefault(previous_skia_executor_);
+
   // The allocator instance points at a member that is about to go away, and a
   // dangling one would be read by anything that outlives this object.
   base::DiscardableMemoryAllocator::SetInstance(nullptr);
@@ -140,6 +210,12 @@ base::expected<std::unique_ptr<ShotRuntime>, std::string> ShotRuntime::Create(
   base::ThreadPoolInstance::Get()->Start({kMaxUnblockedTasks});
   runtime->shutdown_thread_pool_ = base::ScopedClosureRunner(
       base::BindOnce([] { base::ThreadPoolInstance::Get()->Shutdown(); }));
+
+  // CPU image-filter passes are independent by scanline, but Skia's default
+  // executor deliberately runs every task inline.
+  runtime->previous_skia_executor_ = &SkExecutor::GetDefault();
+  runtime->skia_executor_ = std::make_unique<ShotSkiaExecutor>();
+  SkExecutor::SetDefault(runtime->skia_executor_.get());
 
   // Mojo, before blink. Nothing here talks to another process, but blink's
   // object graph is wired with mojo types regardless: LocalFrame::Init() builds

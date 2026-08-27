@@ -52,6 +52,27 @@ function Invoke-IcuRepack {
     return $true
 }
 
+# Skia is a DEPS checkout, so gclient restores its upstream source rather than
+# the patch tracked by this repository. Apply it once, and fail loudly if a
+# Skia roll makes the patch stop matching instead of silently building the
+# single-threaded blur again.
+function Invoke-SkiaPatch {
+    $patch = "..\..\patches\third_party_skia_parallel_blur.patch"
+    & git -C third_party\skia apply --check --reverse $patch 2>$null
+    if ($LASTEXITCODE -eq 0) {
+        Write-Output "skia: parallel blur patch already applied"
+        return $true
+    }
+
+    & git -C third_party\skia apply --check $patch
+    if ($LASTEXITCODE -ne 0) {
+        Write-Output "skia: patches/third_party_skia_parallel_blur.patch no longer applies"
+        return $false
+    }
+    & git -C third_party\skia apply --verbose $patch
+    return $LASTEXITCODE -eq 0
+}
+
 function Invoke-GnGen {
     for ($i = 1; $i -le 8; $i++) {
         $out = (& .\buildtools\win\gn.exe gen out\Shot 2>&1 | Out-String)
@@ -70,6 +91,7 @@ function Invoke-GnGen {
     return $false
 }
 
+if (-not (Invoke-SkiaPatch)) { exit 1 }
 if (-not (Invoke-IcuRepack)) { exit 1 }
 if (-not (Invoke-GnGen)) { exit 1 }
 

@@ -239,9 +239,10 @@ jobs:
       - name: patch the DEPS checkouts
         shell: pwsh
         working-directory: src
-        # gclient restores third_party/icu from its own upstream, so anything
-        # this repository changes there has to be reapplied on every run. It is
-        # worth 5.8 MB of shotium.exe: icu_data_dir_override picks the "cast"
+        # gclient restores third_party/icu and third_party/skia from their own
+        # upstreams, so anything this repository changes there has to be
+        # reapplied on every run. The ICU patch is worth 5.8 MB of shotium.exe:
+        # icu_data_dir_override picks the "cast"
         # filtered data set (5.0 MB) over the platform default "common"
         # (10.8 MB), and icu_use_data_file = false links whichever one it is
         # into the binary.
@@ -258,6 +259,8 @@ jobs:
         run: |
           git -C third_party/icu apply --verbose ../../patches/third_party_icu.patch
           if ($LASTEXITCODE -ne 0) { throw "patches/third_party_icu.patch did not apply" }
+          git -C third_party/skia apply --verbose ../../patches/third_party_skia_parallel_blur.patch
+          if ($LASTEXITCODE -ne 0) { throw "patches/third_party_skia_parallel_blur.patch did not apply" }
 
       - name: build the shot ICU data set
         shell: pwsh
@@ -591,4 +594,3 @@ jobs:
           path: src/${{ env.SHOT_NPM_TARBALL }}
           if-no-files-found: error
           compression-level: 0
-
