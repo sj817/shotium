@@ -55,6 +55,23 @@ struct CaptureTask {
   std::string request;
   shot_status status = SHOT_ERR_CAPTURE;
   shot_buffer* image = nullptr;
+  shot_buffer* stats = nullptr;
+  shot_buffer* error = nullptr;
+};
+
+// One cache operation in flight. The same shape as a capture and deliberately
+// not shared with it: a capture resolves to bytes and this resolves to JSON,
+// and the one field they would have in common is the promise.
+struct CacheTask {
+  napi_deferred deferred = nullptr;
+  napi_async_work work = nullptr;
+  // Null is meaningful here rather than an error: it says there is no engine
+  // in this process, and the library should open the directory itself.
+  shot_engine* engine = nullptr;
+  bool clearing = false;
+  std::string options;
+  shot_status status = SHOT_ERR_STATE;
+  shot_buffer* json = nullptr;
   shot_buffer* error = nullptr;
 };
 
@@ -169,8 +186,26 @@ napi_value Destroy(napi_env env, napi_callback_info info) {
 // no env, which is why everything it needs was copied out first.
 void ExecuteCapture(napi_env env, void* data) {
   auto* task = static_cast<CaptureTask*>(data);
-  task->status = shot_engine_capture(task->engine, task->request.c_str(),
-                                     &task->image, &task->error);
+  task->status =
+      shot_engine_capture(task->engine, task->request.c_str(), &task->image,
+                          &task->stats, &task->error);
+}
+
+// The statistics buffer as a JS string, or undefined when there is none.
+//
+// Left as a string rather than parsed here: this file carries JSON between the
+// engine and the JS layer without reading it, and a JSON.parse on this side
+// would be a second opinion about the shape -- the thing the comment at the
+// top of this file exists to rule out.
+napi_value StatsValue(napi_env env, shot_buffer* stats) {
+  if (!stats || shot_buffer_size(stats) == 0) {
+    return Undefined(env);
+  }
+  napi_value value = nullptr;
+  napi_create_string_utf8(env,
+                          reinterpret_cast<const char*>(shot_buffer_data(stats)),
+                          shot_buffer_size(stats), &value);
+  return value;
 }
 
 void CompleteCapture(napi_env env, napi_status status, void* data) {
@@ -185,9 +220,61 @@ void CompleteCapture(napi_env env, napi_status status, void* data) {
     napi_value buffer = nullptr;
     napi_create_buffer_copy(env, shot_buffer_size(task->image),
                             shot_buffer_data(task->image), nullptr, &buffer);
-    napi_resolve_deferred(env, task->deferred, buffer);
+
+    // An object rather than the buffer alone, because there are now two
+    // answers and a caller that wanted only the first should still not have to
+    // ask for a second call to get the other.
+    napi_value result = nullptr;
+    napi_create_object(env, &result);
+    napi_set_named_property(env, result, "image", buffer);
+    napi_set_named_property(env, result, "stats",
+                            StatsValue(env, task->stats));
+    napi_resolve_deferred(env, task->deferred, result);
   } else {
     const char* text = "shotium: the capture failed";
+    if (task->error && shot_buffer_size(task->error) > 0) {
+      text = reinterpret_cast<const char*>(shot_buffer_data(task->error));
+    }
+    napi_value message = nullptr;
+    napi_value error_value = nullptr;
+    napi_create_string_utf8(env, text, NAPI_AUTO_LENGTH, &message);
+    napi_create_error(env, nullptr, message, &error_value);
+    // A capture that failed part of the way through still measured what it
+    // did, and that is usually the explanation -- forty subresources fetched
+    // and the one that mattered timed out. Attached to the error because a
+    // rejection has nowhere else to carry it.
+    napi_set_named_property(env, error_value, "stats",
+                            StatsValue(env, task->stats));
+    napi_reject_deferred(env, task->deferred, error_value);
+  }
+
+  shot_buffer_free(task->image);
+  shot_buffer_free(task->stats);
+  shot_buffer_free(task->error);
+  napi_delete_async_work(env, task->work);
+  delete task;
+}
+
+void ExecuteCache(napi_env env, void* data) {
+  auto* task = static_cast<CacheTask*>(data);
+  task->status = task->clearing
+                     ? shot_cache_clear(task->engine, task->options.c_str(),
+                                        &task->json, &task->error)
+                     : shot_cache_list(task->engine, task->options.c_str(),
+                                       &task->json, &task->error);
+}
+
+void CompleteCache(napi_env env, napi_status status, void* data) {
+  auto* task = static_cast<CacheTask*>(data);
+
+  if (status == napi_ok && task->status == SHOT_OK) {
+    napi_value json = nullptr;
+    napi_create_string_utf8(
+        env, reinterpret_cast<const char*>(shot_buffer_data(task->json)),
+        shot_buffer_size(task->json), &json);
+    napi_resolve_deferred(env, task->deferred, json);
+  } else {
+    const char* text = "shotium: the cache operation failed";
     if (task->error && shot_buffer_size(task->error) > 0) {
       text = reinterpret_cast<const char*>(shot_buffer_data(task->error));
     }
@@ -198,7 +285,7 @@ void CompleteCapture(napi_env env, napi_status status, void* data) {
     napi_reject_deferred(env, task->deferred, error_value);
   }
 
-  shot_buffer_free(task->image);
+  shot_buffer_free(task->json);
   shot_buffer_free(task->error);
   napi_delete_async_work(env, task->work);
   delete task;
@@ -239,6 +326,96 @@ napi_value Capture(napi_env env, napi_callback_info info) {
   return promise;
 }
 
+// status(engine) -> string
+//
+// Synchronous, like purge: it reads two fields the engine already knows and
+// the caller is holding a promise open for nothing if it waits on the event
+// loop for them.
+napi_value Status(napi_env env, napi_callback_info info) {
+  size_t argc = 1;
+  napi_value argv[1] = {};
+  napi_get_cb_info(env, info, &argc, argv, nullptr, nullptr);
+
+  EngineHandle* handle = nullptr;
+  if (argc < 1 || !ReadHandle(env, argv[0], &handle)) {
+    return nullptr;
+  }
+
+  shot_buffer* json = nullptr;
+  shot_buffer* error = nullptr;
+  if (shot_engine_status(handle->engine, &json, &error) != SHOT_OK) {
+    ThrowFromBuffer(env, error, "shotium: could not read the engine's status");
+    return nullptr;
+  }
+
+  napi_value value = nullptr;
+  napi_create_string_utf8(env,
+                          reinterpret_cast<const char*>(shot_buffer_data(json)),
+                          shot_buffer_size(json), &value);
+  shot_buffer_free(json);
+  shot_buffer_free(error);
+  return value;
+}
+
+// cache(engineOrNull, clearing, optionsJson) -> Promise<string>
+//
+// The engine argument is nullable and that is the whole interface: with one,
+// the operation runs on the engine's thread and borrows the backend it already
+// holds; without one, the library builds a small environment and opens the
+// directory itself. The JS layer knows which it has and this does not have to
+// guess.
+napi_value Cache(napi_env env, napi_callback_info info) {
+  size_t argc = 3;
+  napi_value argv[3] = {};
+  napi_get_cb_info(env, info, &argc, argv, nullptr, nullptr);
+
+  if (argc < 3) {
+    napi_throw_type_error(
+        env, nullptr, "shotium: cache(engine, clearing, optionsJson) wants "
+                      "three arguments");
+    return nullptr;
+  }
+
+  auto* task = new CacheTask;
+
+  // Null and undefined both mean "no engine". Anything else has to be a
+  // handle, and a handle that has been destroyed is an error rather than a
+  // silent fallback to opening the directory -- the directory may still be
+  // locked by an engine that is on its way down.
+  napi_valuetype type = napi_undefined;
+  napi_typeof(env, argv[0], &type);
+  if (type != napi_null && type != napi_undefined) {
+    EngineHandle* handle = nullptr;
+    if (!ReadHandle(env, argv[0], &handle)) {
+      delete task;
+      return nullptr;
+    }
+    task->engine = handle->engine;
+  }
+
+  napi_get_value_bool(env, argv[1], &task->clearing);
+  if (!ReadUtf8(env, argv[2], &task->options)) {
+    delete task;
+    napi_throw_type_error(env, nullptr,
+                          "shotium: cache() wants an options string");
+    return nullptr;
+  }
+
+  napi_value promise = nullptr;
+  if (napi_create_promise(env, &task->deferred, &promise) != napi_ok) {
+    delete task;
+    napi_throw_error(env, nullptr, "shotium: could not make a promise");
+    return nullptr;
+  }
+
+  napi_value name = nullptr;
+  napi_create_string_utf8(env, "shot:cache", NAPI_AUTO_LENGTH, &name);
+  napi_create_async_work(env, nullptr, name, ExecuteCache, CompleteCache, task,
+                         &task->work);
+  napi_queue_async_work(env, task->work);
+  return promise;
+}
+
 // Synchronous on purpose. A purge is milliseconds and happens when the caller
 // has decided it has nothing else to do; queuing it behind the event loop
 // would mean the process that just went idle stays large until something wakes
@@ -270,6 +447,10 @@ napi_value Init(napi_env env, napi_value exports) {
       {"capture", nullptr, Capture, nullptr, nullptr, nullptr, napi_default,
        nullptr},
       {"purge", nullptr, Purge, nullptr, nullptr, nullptr, napi_default,
+       nullptr},
+      {"cache", nullptr, Cache, nullptr, nullptr, nullptr, napi_default,
+       nullptr},
+      {"status", nullptr, Status, nullptr, nullptr, nullptr, napi_default,
        nullptr},
   };
   napi_define_properties(env, exports,

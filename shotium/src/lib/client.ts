@@ -6,12 +6,15 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 import type {
+  CaptureStats,
   DaemonOptions,
   DaemonStatus,
   ScreenshotOptions,
+  ScreenshotResult,
 } from '../types.js';
 
 import {resolveStartOptions} from './config.js';
+import {emptyStats} from './engine.js';
 import {endpointFor} from './endpoint.js';
 import {FrameReader, encodeFrame} from './protocol.js';
 import {timeoutFor, toRequest} from './request.js';
@@ -35,6 +38,10 @@ interface ClientReply {
   ok?: boolean;
   error?: string;
   path?: string;
+  // The daemon reports the same CaptureStats the in-process engine does, in
+  // its response header. It rides on the failure header too, which is why the
+  // rejection below carries it.
+  stats?: CaptureStats;
 }
 
 interface ClientResult {
@@ -126,7 +133,14 @@ class DaemonClient extends EventEmitter {
     if (header.ok) {
       pending.resolve({header, image: header.path ? null : payload});
     } else {
-      pending.reject(new Error(header.error || 'shotium: request failed'));
+      const error = new Error(header.error || 'shotium: request failed');
+      // Attached rather than dropped: a capture that failed part of the way
+      // through has already measured what it did, and that is usually the
+      // explanation. The in-process engine does the same.
+      if (header.stats) {
+        (error as Error & {stats?: CaptureStats}).stats = header.stats;
+      }
+      pending.reject(error);
     }
   }
 
@@ -151,15 +165,20 @@ class DaemonClient extends EventEmitter {
     });
   }
 
-  /** Resolves to the image, or to null when `path` was given. */
-  async screenshot(options: ScreenshotOptions): Promise<Buffer|null> {
+  /**
+   * One screenshot, and what taking it cost.
+   *
+   * The same shape the in-process engine returns, so that moving a program
+   * between the two is an import change and nothing else.
+   */
+  async screenshot(options: ScreenshotOptions): Promise<ScreenshotResult> {
     const request = toRequest(options);
     const result = await this.send({
       op: 'screenshot',
       request,
       timeout: timeoutFor(options),
     });
-    return result.image;
+    return {image: result.image, stats: result.header.stats ?? emptyStats()};
   }
 
   async status(): Promise<DaemonStatus> {
@@ -351,7 +370,7 @@ async function stop(options: DaemonOptions = {}):
 // here rather than sent, because it says which daemon to talk to and not what
 // to photograph.
 async function screenshot(options: ScreenshotOptions&{daemon?: DaemonOptions}):
-    Promise<Buffer|null> {
+    Promise<ScreenshotResult> {
   const {daemon, ...rest} = options;
   const client = await connect(daemon || {});
   try {

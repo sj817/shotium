@@ -17,12 +17,33 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
  */
 export type Engine = unknown;
 
+/** One capture's answer, as the addon hands it over. */
+export interface NativeCapture {
+  image: Buffer;
+  /**
+   * CaptureStats as JSON, unparsed. The addon carries JSON between the engine
+   * and this layer without reading it -- anything it understood would be a
+   * third opinion about the shape, and the third opinion is the one that
+   * drifts. Undefined when the engine reported none.
+   */
+  stats?: string;
+}
+
 /** What native/binding.cc exports. See shot/shot_api.h for the C ABI. */
 export interface NativeBinding {
   create(optionsJson: string): Engine;
   destroy(engine: Engine): void;
   purge(engine: Engine, releaseWorkingSet: boolean): void;
-  capture(engine: Engine, requestJson: string): Promise<Buffer>;
+  status(engine: Engine): string;
+  capture(engine: Engine, requestJson: string): Promise<NativeCapture>;
+  /**
+   * List or clear a cache directory. `engine` is nullable and that is the
+   * interface: with one, the operation runs on the engine's thread and borrows
+   * the backend it already holds; without one, the library opens the directory
+   * itself. Resolves to JSON.
+   */
+  cache(engine: Engine|null, clearing: boolean, optionsJson: string):
+      Promise<string>;
 }
 
 // Where the addon and the library beside it live.

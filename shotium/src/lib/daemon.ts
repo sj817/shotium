@@ -4,7 +4,11 @@ import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 
-import type {DaemonOptions, DaemonStatus} from '../types.js';
+import type {
+  CaptureStats,
+  DaemonOptions,
+  DaemonStatus,
+} from '../types.js';
 
 import {resolveStartOptions} from './config.js';
 import type {ResolvedStartOptions} from './config.js';
@@ -46,6 +50,11 @@ interface DaemonReply {
   bytes?: number;
   path?: string;
   stopping?: boolean;
+  // What the capture cost, on the success header and on the failure one. The
+  // client turns it back into the same CaptureStats the in-process engine
+  // returns, so a program moving between the two changes an import and
+  // nothing else.
+  stats?: CaptureStats;
 }
 
 // An engine that outlives the process that asked for it.
@@ -306,7 +315,7 @@ class Daemon extends EventEmitter {
     this.armIdleTimer();
     this.emit('request', {id, file: request.file});
     this.engine.capture(request)
-        .then((image) => {
+        .then(({image, stats}) => {
           this.served += 1;
           this.reply(
               socket,
@@ -315,12 +324,20 @@ class Daemon extends EventEmitter {
                 ok: true,
                 bytes: image ? image.length : 0,
                 path: request.path,
+                stats,
               },
               image);
         })
-        .catch((error: Error) => {
-          this.reply(
-              socket, {id, ok: false, error: String(error.message || error)});
+        .catch((error: Error&{stats?: CaptureStats}) => {
+          // The counters go back with the failure, matching the in-process
+          // engine: a capture that timed out after fetching forty subresources
+          // has already said why, and the message alone has not.
+          this.reply(socket, {
+            id,
+            ok: false,
+            error: String(error.message || error),
+            stats: error.stats,
+          });
         })
         .finally(() => {
           this.inFlight -= 1;
@@ -374,7 +391,13 @@ class Daemon extends EventEmitter {
     }
     this.sockets.clear();
     await new Promise<void>((resolve) => this.server!.close(() => resolve()));
-    await this.engine.stop();
+    // dispose() rather than stop(), and this is the one caller that should.
+    // The daemon owns its process and is leaving it, so the real teardown is
+    // available and worth taking: joining the engine thread unwinds the
+    // network stack, which is what lets the disk cache write its index. A
+    // daemon that merely stood the engine down would leave the index dirty and
+    // make the next daemon rebuild it by scanning the directory.
+    await this.engine.dispose();
     this.emit('close', {});
   }
 }

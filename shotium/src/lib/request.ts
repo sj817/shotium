@@ -1,4 +1,9 @@
-import type {Clip, PageGotoParams, ScreenshotOptions} from '../types.js';
+import type {
+  CacheMode,
+  Clip,
+  PageGotoParams,
+  ScreenshotOptions,
+} from '../types.js';
 
 const DEFAULT_TIMEOUT_MS = 30000;
 
@@ -16,6 +21,8 @@ export interface WireRequest {
   pageGotoParams?: PageGotoParams;
   clip?: Clip;
   allowFileAccess?: boolean;
+  cache?: CacheMode;
+  headers?: Record<string, string>;
   width?: number;
   height?: number;
 }
@@ -40,6 +47,8 @@ const WIRE_FIELDS = new Set([
   'clip',
   'viewport',
   'allowFileAccess',
+  'cache',
+  'headers',
 ]);
 
 // One ScreenshotOptions, checked and flattened into what goes on the wire.

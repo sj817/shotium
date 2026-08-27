@@ -11,23 +11,34 @@
 
 import shotium, {
   Runtime,
+  cache,
   daemon,
+  releaseMemory,
   runtime,
   screenshot,
+  start as startEngine,
+  stop as stopEngine,
 } from '@shotkit/shotium';
 import type {
+  CacheEntry,
+  CaptureStats,
   DaemonStatus,
   ScreenshotOptions,
+  ScreenshotResult,
   StartOptions,
+  StartResult,
 } from '@shotkit/shotium';
 
 // The default export and the named ones are the same values, which is the
 // whole reason the default exists.
 const _sameRuntime: typeof runtime = shotium.runtime;
 const _sameScreenshot: typeof screenshot = shotium.screenshot;
+const _sameCache: typeof cache = shotium.cache;
+const _sameStart: typeof startEngine = shotium.start;
 
 const start: StartOptions = {
   cacheDir: null,
+  cacheMaxBytes: 64 * 1024 * 1024,
   userAgent: 'checks/1.0',
   resourceDir: '/opt/shotium',
 };
@@ -41,6 +52,8 @@ const request: ScreenshotOptions = {
   pageGotoParams: {timeout: 15000, waitUntil: 'networkidle'},
   clip: {x: 0, y: 0, width: 100, height: 100},
   allowFileAccess: false,
+  cache: 'only-if-cached',
+  headers: {Authorization: 'Bearer token'},
 };
 
 // retry was a supervisor's knob, and there is no supervisor: the pool that
@@ -52,23 +65,75 @@ const request: ScreenshotOptions = {
 // @ts-expect-error retry is not a screenshot option
 const _noRetry: ScreenshotOptions = {file: 'https://example.com', retry: 2};
 
+// `workers` went with the pool in 0.2 and `purge` was renamed in 0.3. Both are
+// asserted gone for the same reason as retry: an option that is accepted and
+// ignored is worse than one that is refused.
+// @ts-expect-error workers is not a start option
+const _noWorkers: StartOptions = {workers: 4};
+
 // The lifecycle from the README, which is the shape this package is for: the
 // caller decides when Blink starts and when it goes away.
 async function lifecycle(): Promise<void> {
   const own = new Runtime();
-  own.start(start);
-  const image: Buffer|null = await own.screenshot(request);
+  const started: StartResult = own.start(start);
+  void started.cacheDir;
+  // The half worth reading: a directory that could not be opened means this
+  // engine is running without a cache, correctly and silently.
+  void started.cacheActive;
+  void started.running;
+
+  const result: ScreenshotResult = await own.screenshot(request);
+  const image: Buffer|null = result.image;
+  const stats: CaptureStats = result.stats;
+  void stats.fromCache;
+  void stats.timing.fetch;
+  void stats.finalUrl;
+
   const _running: boolean = own.running;
+  own.releaseMemory({releaseWorkingSet: true});
+
+  // @ts-expect-error purge was renamed to releaseMemory in 0.3
   own.purge({releaseWorkingSet: true});
+
+  await own.stop();
+
+  // Stopping is not final. The engine comes back, and so does its cache.
+  const again: StartResult = own.start();
+  void again.running;
   await own.stop();
   void image;
 }
 
 // The same, on the shared singleton, with no lifecycle at all.
 async function implicit(): Promise<void> {
-  runtime.start();
-  await screenshot(request);
-  await runtime.stop();
+  startEngine();
+  const {image, stats} = await screenshot(request);
+  void image;
+  void stats.requests;
+  releaseMemory();
+  await stopEngine();
+}
+
+// The cache, which is reachable with no engine running at all -- that is the
+// reason it is at the top level rather than under the runtime.
+async function caching(): Promise<void> {
+  const dir: string = cache.getDir();
+  const everywhere: string[] = cache.getDirs({target: 'all'});
+  const named: string = cache.getDir({target: '0123456789abcdef'});
+
+  const files: CacheEntry[] = await cache.getFiles();
+  void files[0]?.url;
+  void files[0]?.lastUsedMs;
+
+  await cache.clear();
+  await cache.clear({glob: ['https://example.com/**'], target: 'all'});
+  const [outcome] = await cache.clear({maxAge: 3600, maxSize: 1024 * 1024});
+  void outcome?.removed;
+  void outcome?.bytesBefore;
+
+  void dir;
+  void everywhere;
+  void named;
 }
 
 async function resident(): Promise<void> {
@@ -77,7 +142,10 @@ async function resident(): Promise<void> {
   const _closed: boolean = client.closed;
   const status: DaemonStatus = await client.status();
   void status.served;
-  await client.screenshot(request);
+  // The daemon returns the same shape the in-process engine does, so moving a
+  // program between them is an import change and nothing else.
+  const shot: ScreenshotResult = await client.screenshot(request);
+  void shot.stats.timing.total;
   client.close();
 
   const started = await daemon.start(start);
@@ -89,4 +157,13 @@ async function resident(): Promise<void> {
   await daemon.screenshot({...request, daemon: start});
 }
 
-export {_sameRuntime, _sameScreenshot, implicit, lifecycle, resident};
+export {
+  _sameCache,
+  _sameRuntime,
+  _sameScreenshot,
+  _sameStart,
+  caching,
+  implicit,
+  lifecycle,
+  resident,
+};
