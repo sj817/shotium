@@ -356,19 +356,37 @@ jobs:
         # already exists here, because it is what started this run, so there is
         # nothing left for a human to click.
         run: |
-          {
-            echo "## @shotkit/shotium $VERSION"
-            echo
-            echo '```'
-            echo "npm install @shotkit/shotium@$VERSION"
-            echo '```'
-            echo
-            echo "Published from ${GITHUB_SHA} with npm provenance."
-            echo
-            echo "The attached archives are the standalone engine -- the"
-            echo "executable, the shared library and the resource packs -- for"
-            echo "using it without node. An npm install does not need them."
-          } > /tmp/notes.md
+          cat > /tmp/notes.md <<EOF
+## @shotkit/shotium $VERSION
+
+### 📦 安装 / Installation
+
+\`\`\`bash
+# npm
+npm install @shotkit/shotium@$VERSION
+
+# pnpm
+pnpm add @shotkit/shotium@$VERSION
+
+# yarn
+yarn add @shotkit/shotium@$VERSION
+
+# bun
+bun add @shotkit/shotium@$VERSION
+\`\`\`
+
+---
+
+### 🚀 独立可执行文件 / Standalone Binaries
+- **English**: The attached \`.7z\` archives contain the standalone engine (executables, shared libraries, and resource packs) for environments without Node.js. If you are using \`@shotkit/shotium\` via npm/pnpm/yarn/bun, platform dependencies are installed automatically and you do not need to download these archives manually.
+- **简体中文**：下方附加的 \`.7z\` 压缩包为独立引擎二进制文件（包含单文件命令行工具、共享库及资源包），适用于无 Node.js 的运行环境。若通过 npm/pnpm/yarn/bun 安装使用，包管理器会自动下载对应的预编译平台依赖，无需手动下载此处的附件。
+
+---
+
+### 📝 验证与来源 / Provenance
+- Commit: \`${GITHUB_SHA}\`
+- Verified with npm provenance / 已通过 npm 官方签名与 Provenance 溯源验证。
+EOF
 
           # The .7z archives and not the .tgz files. A platform package's home
           # is the registry: once npm has it, a copy here is a second place to
