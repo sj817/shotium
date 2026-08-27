@@ -8,8 +8,8 @@
 # every push, and it is expected to always be green.
 #
 # What it deliberately does NOT do is claim the engine works. That claim is made
-# by tools/shot/{serve_check.py,net_check.py,node_check.cjs,daemon_check.cjs,
-# native_check.cjs} against a real binary, and the engine-* workflows are where
+# by tools/shot/{serve_check.py,net_check.py,node_check.cjs,daemon_check.cjs}
+# against a real binary, and the engine-* workflows are where
 # those run.
 
 name: checks
@@ -69,31 +69,37 @@ jobs:
 
       - name: the package loads
         working-directory: shotium
-        # Loading it must not start anything: the pool is created by
-        # runtime.start(), and an import that spawned workers would make the
-        # library unusable as a dependency.
+        # Loading it must not start anything. Blink starts once per process and
+        # cannot be restarted, so an import that started the engine would spend
+        # the one start a caller gets -- and it would do it on a machine that
+        # merely required the package to read its version.
         #
         # require() rather than import, because the package is an ES module and
         # a CommonJS caller reaching one is the case that breaks first. It needs
         # node 22.12 or 20.19, which this job has.
+        #
+        # There is no addon on this runner, and that is the point: none of this
+        # may touch one. The engine ships in a platform package that is an
+        # optionalDependency, so a machine with no build for it still has to be
+        # able to load the package and get a legible error later.
         run: |
           node -e '
             const s = require("./dist/index.js");
             if (typeof s.screenshot !== "function") throw new Error("no screenshot()");
             if (typeof s.runtime.start !== "function") throw new Error("no runtime.start()");
-            if (s.runtime.running) throw new Error("importing started the pool");
+            if (typeof s.daemon.connect !== "function") throw new Error("no daemon.connect()");
+            if (s.runtime.running) throw new Error("importing started the engine");
             if (s.default.runtime !== s.runtime) throw new Error("default and named exports disagree");
-            const n = require("./dist/native.js");
-            if (n.native.running) throw new Error("importing loaded the addon");
             console.log("ok");
           '
 
-      - name: options are validated before anything is spawned
+      - name: options are validated before the engine is touched
         working-directory: shotium
-        # toRequest() is the only check that can be made without a binary, and
-        # it has to happen before the pool exists -- a malformed request should
-        # not cost four worker processes to discover. `running` staying false is
-        # the half of this that actually needs asserting.
+        # toRequest() is the only check that can be made without an engine, and
+        # it has to happen first -- on this runner there is no addon to load, so
+        # a request that reached the engine would fail with "no engine for this
+        # platform" and the validation would never be reached. `running` staying
+        # false is the half of this that actually needs asserting.
         run: |
           node -e '
             const {Runtime} = require("./dist/index.js");
@@ -104,7 +110,7 @@ jobs:
               await r.screenshot(options).then(
                   () => { throw new Error("accepted " + what); },
                   () => {});
-              if (r.running) throw new Error("started the pool for " + what);
+              if (r.running) throw new Error("started the engine for " + what);
             };
             (async () => {
               await rejects({}, "a request with no file");
@@ -118,7 +124,7 @@ jobs:
         # The list of six exists twice: in optionalDependencies, which is what
         # npm installs, and in the lookup table that goes looking for them
         # afterwards. A rename that touches one and not the other installs
-        # 41 MB of engine and then reports that there is no engine for this
+        # the engine and then reports that there is no engine for this
         # platform.
         #
         # Read back out of the bundle rather than out of src/, because the
@@ -175,8 +181,8 @@ jobs:
             if (at < 0) throw new Error("npm pack --json printed no array");
             const [entry] = JSON.parse(raw.slice(at));
             const names = entry.files.map((f) => f.path).sort();
-            const missing = ["dist/index.js", "dist/index.d.ts", "dist/native.js",
-                             "dist/native.d.ts", "dist/daemon_main.js",
+            const missing = ["dist/index.js", "dist/index.d.ts",
+                             "dist/daemon_main.js",
                              "package.json", "README.md"]
                 .filter((f) => !names.includes(f));
             if (missing.length) {

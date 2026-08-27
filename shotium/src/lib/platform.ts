@@ -66,10 +66,4 @@ function packageDir(): string|null {
   }
 }
 
-// What the engine executable is called, which is not what the platform calls
-// it: Windows wants the extension and nothing else does.
-function binaryName(): string {
-  return process.platform === 'win32' ? 'shotium.exe' : 'shotium';
-}
-
-export {PACKAGES, binaryName, packageDir, packageName};
+export {PACKAGES, packageDir, packageName};

@@ -5,21 +5,27 @@ import path from 'node:path';
 // What endpointFor() needs to know: a resolved configuration, plus the two
 // ways of overriding the address it would derive from one.
 export interface EndpointOptions {
-  binary?: string;
-  workers?: number;
   cacheDir?: string|null;
-  args?: string[];
+  userAgent?: string;
+  resourceDir?: string;
   name?: string;
   endpoint?: string;
 }
 
 // Where a daemon listens, derived from what it was asked to be.
 //
-// The address is a hash of the configuration -- binary, worker count, cache
-// root, extra flags -- rather than a fixed name, because attaching to whatever
-// daemon happens to be up would mean rendering with someone else's binary and
-// someone else's flags. Two configurations are two daemons; the same
-// configuration, from any process, is one.
+// The address is a hash of the configuration -- cache root, user agent,
+// resource directory -- rather than a fixed name, because attaching to
+// whatever daemon happens to be up would mean rendering with someone else's
+// settings. Two configurations are two daemons; the same configuration, from
+// any process, is one.
+//
+// Every field of EndpointOptions is optional, so nothing here fails to compile
+// when a field is dropped from the configuration -- it just stops being part
+// of the identity, and every caller collapses onto one address. That happened
+// once, when the worker pool went away and this was left hashing three fields
+// that no longer existed. If a field is added to StartOptions and it changes
+// what the engine renders, it belongs in the array below.
 //
 // A caller who wants a daemon by name instead of by configuration passes
 // `name`, which replaces the hash. That is the escape hatch for a service that
@@ -30,10 +36,11 @@ function endpointKey(options: EndpointOptions): string {
     return String(options.name);
   }
   const identity = JSON.stringify([
-    path.resolve(options.binary || ''),
-    options.workers,
-    options.cacheDir === null ? null : path.resolve(options.cacheDir || ''),
-    options.args || [],
+    options.cacheDir === null || options.cacheDir === undefined ?
+        null :
+        path.resolve(options.cacheDir),
+    options.userAgent ?? null,
+    options.resourceDir ? path.resolve(options.resourceDir) : null,
   ]);
   return crypto.createHash('sha256').update(identity).digest('hex').slice(0, 16);
 }

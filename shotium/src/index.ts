@@ -1,16 +1,12 @@
-import {EventEmitter} from 'node:events';
-
 import * as client from './lib/client.js';
 import type {DaemonClient} from './lib/client.js';
-import {resolveStartOptions} from './lib/config.js';
-import {Pool} from './lib/pool.js';
-import {SUPERVISOR_MARGIN_MS, timeoutFor, toRequest} from './lib/request.js';
+import {Engine} from './lib/engine.js';
 import type {
   DaemonOptions,
   DaemonStatus,
+  PurgeOptions,
   ScreenshotOptions,
   StartOptions,
-  WorkerEvent,
 } from './types.js';
 
 export type {
@@ -22,11 +18,10 @@ export type {
   ScreenshotOptions,
   StartOptions,
   Viewport,
-  WorkerEvent,
 } from './types.js';
 export type {DaemonClient} from './lib/client.js';
 
-/** The five things a caller does with the resident pool. */
+/** The five things a caller does with the resident engine. */
 export interface Daemon {
   /** Connects, starting a daemon if none is listening. */
   connect(options?: DaemonOptions): Promise<DaemonClient>;
@@ -40,108 +35,91 @@ export interface Daemon {
   stop(options?: DaemonOptions): Promise<{stopped: boolean, endpoint: string}>;
 }
 
-// The events the pool forwards, and the only ones. Declared as an interface
-// merged into the class below rather than as a catch-all `on(string, ...)`,
-// so that a listener for an event this runtime never emits is a compile error
-// rather than a callback nobody ever calls.
-export interface Runtime {
-  on(event: 'ready', listener: (info: {workers: number}) => void): this;
-  on(event: 'exit', listener: (event: WorkerEvent) => void): this;
-  on(event: 'crash', listener: (event: WorkerEvent) => void): this;
-  on(event: 'timeout',
-     listener: (event: {worker: number, timeout: number}) => void): this;
-  on(event: 'worker-restart',
-     listener: (event: {worker: number, reason: string, delay: number}) => void):
-      this;
-  /** A worker could not be started at all -- a missing or unusable binary. */
-  on(event: 'worker-error',
-     listener: (event: {worker: number, error: Error}) => void): this;
-  on(event: 'stderr',
-     listener: (event: {worker: number, line: string}) => void): this;
-}
-
 /**
- * The library's one runtime: a pool of worker processes plus its lifecycle.
+ * The engine, and its lifecycle, in this process.
  *
- * `runtime` below is the singleton, because the expensive part is the
- * processes and a second runtime would double them for no gain. Anyone who
- * genuinely wants two constructs a Runtime directly.
+ *     import shotium from '@shotkit/shotium';
  *
- * Its pool lives and dies with this process. `daemon` is the same pool behind
- * a socket, for callers whose process does not live long enough to be worth
- * starting one.
+ *     shotium.runtime.start();
+ *     const png = await shotium.screenshot({file: 'https://example.com'});
+ *     await shotium.runtime.stop();
+ *
+ * `start` and `stop` are explicit because starting Blink is the expensive part
+ * -- tens of milliseconds and a working set that stays resident -- and only
+ * the caller knows whether the next screenshot is coming in a moment or never.
+ * Neither call is required: a screenshot starts the engine if it is not up.
+ * What they buy is control over when that cost is paid, and the certainty that
+ * it has been given back.
+ *
+ * `runtime` below is the singleton because there is nothing else it could be:
+ * Blink starts once per process and cannot be restarted, so a second Runtime
+ * in the same process has no engine to have. Construct one directly only to
+ * own the lifecycle yourself instead of using `runtime`. Parallelism is more
+ * processes, not more Runtimes.
+ *
+ * `daemon` is the same engine in a process of its own, behind a socket, for
+ * callers whose own process does not live long enough to be worth starting
+ * one.
  */
-export class Runtime extends EventEmitter {
-  private pool: Pool|null = null;
+export class Runtime {
+  private engine = new Engine();
 
   get running(): boolean {
-    return this.pool !== null;
+    return this.engine.running;
   }
 
   /**
-   * Starts the pool. Safe to call twice; the second call is a no-op, so that
-   * library code can call it defensively.
+   * Starts the engine. Safe to call twice; the second call is a no-op, so that
+   * library code can call it defensively. Not safe after `stop()` -- see there.
    *
-   * Every option has a default: the binary is `$SHOTIUM_BINARY`, then the
-   * platform package, then `./bin/shotium.exe`; the worker count is half the
-   * cores, at least one and at most four; the cache root is a directory under
-   * the system temp, and `null` disables caching.
+   * Every option has a default. `cacheDir` is the HTTP disk cache and `null`
+   * disables it; `resourceDir` is where `shotium_data.pak` and
+   * `shotium_strings.pak` are, and defaults to the directory the engine was
+   * loaded from, which is where they ship.
    */
   start(options: StartOptions = {}): this {
-    if (this.pool) {
-      return this;
-    }
-    const pool = new Pool(resolveStartOptions(options));
-    this.pool = pool;
-    for (const event
-             of ['ready', 'exit', 'crash', 'timeout', 'worker-restart',
-                 'worker-error', 'stderr']) {
-      pool.on(event, (payload) => this.emit(event, payload));
-    }
-    pool.start();
+    this.engine.start(options);
     return this;
   }
 
-  /** Stops every worker. The pool can be started again afterwards. */
-  async stop(): Promise<void> {
-    if (!this.pool) {
-      return;
-    }
-    const pool = this.pool;
-    this.pool = null;
-    await pool.stop();
+  /**
+   * Stops the engine, after whatever is queued.
+   *
+   * Final for this process. Blink writes process-wide state that it has no
+   * path to undo, so starting again -- here or on another Runtime -- throws
+   * rather than quietly handing back something that cannot render. A program
+   * that wants another screenshot later should stay started and `purge()`.
+   */
+  stop(): Promise<void> {
+    return this.engine.stop();
+  }
+
+  /**
+   * Hands back what the engine is holding but can rebuild. Worth calling when
+   * a batch has ended and the next one may be a while away.
+   */
+  purge(options: PurgeOptions = {}): void {
+    this.engine.purge(options);
   }
 
   /**
    * Renders one screenshot. Resolves to the encoded image, or to `null` when
-   * `path` was given and the worker wrote the file itself.
+   * `path` was given and the engine wrote the file itself.
    */
-  async screenshot(options: ScreenshotOptions): Promise<Buffer|null> {
-    // Validate before starting anything. A malformed request should not cost a
-    // pool of worker processes to discover, and toRequest() is the only check
-    // that can be made without one.
-    const request = toRequest(options);
-    if (!this.pool) {
-      this.start();
-    }
-    const retry = typeof options.retry === 'number' ? options.retry : 0;
-    const result = await this.pool!.submit(request, {
-      timeout: timeoutFor(options) + SUPERVISOR_MARGIN_MS,
-      retry,
-    });
-    return result.image;
+  screenshot(options: ScreenshotOptions): Promise<Buffer|null> {
+    return this.engine.screenshot(options);
   }
 }
 
-/** The shared pool: one per process, started on first use. */
+/** The shared engine: one per process, started on first use. */
 const runtime = new Runtime();
 
-/** One screenshot through the shared pool, starting it if it is not up. */
+/** One screenshot through the shared engine, starting it if it is not up. */
 const screenshot = (options: ScreenshotOptions): Promise<Buffer|null> =>
     runtime.screenshot(options);
 
 /**
- * The resident pool: workers that outlive the process that started them,
+ * The resident engine: a process that outlives the one that started it,
  * reachable over a named pipe on Windows and a unix socket elsewhere. For
  * callers that are short-lived themselves. See lib/daemon.ts.
  */

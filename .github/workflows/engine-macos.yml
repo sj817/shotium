@@ -42,10 +42,6 @@ on:
         description: 'run the check suites if the build finishes'
         type: boolean
         default: true
-      release:
-        description: 'upload the archive to the draft release for this version'
-        type: boolean
-        default: true
 
 jobs:
   build:
@@ -353,50 +349,73 @@ jobs:
             python3 -m pip install --quiet pillow
           python3 tools/shot/serve_check.py out/Shot/shotium
           python3 tools/shot/net_check.py out/Shot/shotium
-          # The package is TypeScript, so what the check suites import is a
-          # build output rather than a file in the tree. `npm install`, not
-          # `npm ci` -- see checks.yml for why the lockfile cannot carry the
-          # six optionalDependencies yet.
-          ( cd shotium && npm install --no-audit --no-fund && npm run build )
-          node tools/shot/node_check.cjs out/Shot/shotium
-          node tools/shot/daemon_check.cjs out/Shot/shotium
           # The node addon, and the C ABI under it. Built here rather than
           # taken from anywhere else, because the library it links against is
           # the one this job has just produced -- an addon checked against a
           # different build would be checking nothing.
+          #
+          # Before the node suites, not after: the addon is what they load. An
+          # npm install carries the library and the addon and not the
+          # executable, so there is no second path for them to fall back to.
           ( cd shotium/native \
             && SHOT_INCLUDE_DIR="$PWD/../../shot" \
                SHOT_LIB_DIR="$PWD/../../out/Shot" \
                npx --yes node-gyp@13 rebuild )
           cp out/Shot/libshotium.dylib out/Shot/shotium_data.pak \
              out/Shot/shotium_strings.pak shotium/native/build/Release/
-          node tools/shot/native_check.cjs out/Shot/shotium
+
+          # The package is TypeScript, so what the check suites import is a
+          # build output rather than a file in the tree. `npm install`, not
+          # `npm ci` -- see checks.yml for why the lockfile cannot carry the
+          # six optionalDependencies yet.
+          ( cd shotium && npm install --no-audit --no-fund && npm run build )
+
+          node tools/shot/node_check.cjs out/Shot/shotium
+          node tools/shot/daemon_check.cjs out/Shot/shotium
+
           python3 tools/shot/charset_check.py out/Shot/shotium
           python3 tools/shot/demo_check.py out/Shot/shotium
 
       - name: npm platform package
         if: ${{ success() && github.event.inputs.mode == 'build' }}
         working-directory: src
-        # One of the six @shotkit/shotium-<os>-<arch> packages: the engine, the
-        # shared library, the two resource packs and the addon, in a package
-        # npm can install. @shotkit/shotium depends on all six as
+        # One of the six @shotkit/shotium-<os>-<arch> packages: the shared
+        # library, the addon linked against it, and the two resource packs, in
+        # a package npm can install. @shotkit/shotium depends on all six as
         # optionalDependencies with os/cpu set, so an install pulls the one
         # that matches and skips the rest. See
         # tools/shot/make_platform_package.cjs.
         #
-        # Both macOS runners are native, so the addon exists whenever the
-        # checks ran. With run_checks off the package ships without it, which
-        # costs require(".../native") and nothing else.
+        # Not the executable. It is a second, independent copy of the same
+        # engine -- shot_core is a source_set, so its objects link into both
+        # the executable and the library -- and node has no use for it now
+        # that rendering is in-process. It still goes out in the .7z on the
+        # releases page, for using the engine without node.
+        #
+        # Which makes the addon the only thing in the package that node can
+        # call. Both macOS runners are native, so the checks step has usually
+        # built one already; with run_checks off it has not, and this builds
+        # it rather than shipping a package that installs and cannot render.
         run: |
           arch="${{ github.event.inputs.arch }}"
           addon="shotium/native/build/Release/shotium.node"
-          argv=(--build out/Shot --os mac --arch "$arch" --dest dist/npm)
-          if [ -f "$addon" ]; then
-            argv+=(--addon "$addon")
-          else
-            echo "::warning::no addon was built; the package ships without it"
+          if [ ! -f "$addon" ]; then
+            ( cd shotium/native \
+              && SHOT_INCLUDE_DIR="$PWD/../../shot" \
+                 SHOT_LIB_DIR="$PWD/../../out/Shot" \
+                 npx --yes node-gyp@13 rebuild )
+            cp out/Shot/libshotium.dylib out/Shot/shotium_data.pak \
+               out/Shot/shotium_strings.pak shotium/native/build/Release/
           fi
-          node tools/shot/make_platform_package.cjs "${argv[@]}"
+          if [ ! -f "$addon" ]; then
+            echo "no $addon -- the package would install and then be unable"
+            echo "to render, since the addon is the only thing in it node can"
+            echo "call. Not shipping that."
+            exit 1
+          fi
+          node tools/shot/make_platform_package.cjs \
+            --build out/Shot --os mac --arch "$arch" --dest dist/npm \
+            --addon "$addon"
           ( cd "dist/npm/shotium-mac-$arch" && npm pack --pack-destination .. )
           tarball=$(ls dist/npm/*.tgz | head -1)
           ls -l "$tarball"
@@ -411,24 +430,3 @@ jobs:
           if-no-files-found: error
           compression-level: 0
 
-      - name: release
-        if: ${{ success() && github.event.inputs.mode == 'build'
-                && github.event.inputs.release == 'true' }}
-        working-directory: src
-        env:
-          GH_TOKEN: ${{ github.token }}
-        # A release asset is served as the bytes that were uploaded, so this
-        # copy has no zip around it. It goes to a draft release: one run builds
-        # one architecture, the release fills up over six of them, and nothing
-        # is public until someone publishes it by hand.
-        #
-        # It is the last step in the job, after the checks, so a binary that
-        # fails its own suites never becomes an asset.
-        run: |
-          tag="v$SHOT_VERSION"
-          gh release view "$tag" >/dev/null 2>&1 \
-            || gh release create "$tag" --draft --title "$tag" \
-                 --notes "shotium $SHOT_VERSION" --target "$GITHUB_SHA" \
-            || gh release view "$tag" >/dev/null
-          gh release upload "$tag" "$SHOT_ARCHIVE" --clobber
-          gh release upload "$tag" "$SHOT_NPM_TARBALL" --clobber

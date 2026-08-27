@@ -1,23 +1,62 @@
-# Publishes the seven packages to npm.
+# Publishes the seven packages to npm, then announces them as a release.
 #
-# Nothing is built here. The six platform packages are release assets, put
-# there by engine-windows.yml, engine-linux.yml and engine-macos.yml -- one
-# per run, six runs to fill a release -- and this workflow takes them as they
-# are. Publishing a tarball that CI produced and a human downloaded and looked
-# at is a different act from publishing whatever a build step happened to leave
-# in a directory, and only the first one can be checked before it is public.
+# The tag is the trigger, not the product. Pushing `vX.Y.Z` starts this; there
+# is no button to press afterwards and no draft to remember to publish. That
+# ordering is the whole point of the file, so it is worth saying what the
+# previous one did instead: the six platform packages accumulated on a draft
+# release, a human dispatched this workflow, and the tag came into existence
+# only when someone finally clicked publish on the draft. v0.1.0 spent an hour
+# fully published on npm with no tag in the repository at all, and the draft it
+# was waiting on pointed fifteen commits back -- at the first engine run that
+# happened to create it, since the five after that found the release already
+# there and left its target alone. A tag that is created last records whatever
+# was true when someone got round to it.
 #
-# Order is not cosmetic. @shotkit/shotium declares the six as
-# optionalDependencies pinned to its own version, so it goes last: a registry
-# that has the main package but not the platform package it names hands out an
-# install that cannot take a screenshot.
+# The release is created after npm and only if npm succeeded. Both directions
+# of that failure are possible and they are not equally bad: npm-without-a-
+# release is a missing announcement, fixed by creating one; a release without
+# npm is a published version number that nobody can install, and it is on the
+# repository's front page. npm also has no unpublish worth relying on, so the
+# irreversible half goes first and the reversible half confirms it.
+#
+# The bytes come from workflow artifacts, not from release assets. An artifact
+# belongs to a run and a run belongs to a commit, so asking for the artifacts
+# at $GITHUB_SHA cannot return a binary built from a different tree. Release
+# assets carry no such link -- anything uploaded under a tag looks like it
+# belongs to that tag.
+#
+# ---------------------------------------------------------------------------
+# The release procedure, which this workflow is only the last step of:
+#
+#   1. Bump the version in shotium/package.json. SEVEN lines: `version`, and
+#      the six optionalDependencies that pin the platform packages to it. They
+#      must match exactly -- checks.yml fails the build if they do not.
+#   2. Commit and push. Wait for checks.yml.
+#   3. Run the six engine workflows against that commit. This is the slow part
+#      and it comes before the tag for a reason: the version is stamped into
+#      the platform tarballs, both in the filename and in the package.json
+#      inside, so a tarball built before step 1 carries the old version and is
+#      useless. Artifacts from an earlier commit cannot be reused across a
+#      version bump.
+#   4. All six green -- `git tag vX.Y.Z && git push origin vX.Y.Z`.
+#   5. This runs.
+#
+# Step 3 before step 4 is the one part of that order people get wrong, and the
+# failure is late: everything looks fine until the collect step below reports
+# a platform missing at this commit.
+# ---------------------------------------------------------------------------
+#
+# Publishing order within the job is also not cosmetic. @shotkit/shotium
+# declares the six as optionalDependencies pinned to its own version, so it
+# goes last: a registry that has the main package but not the platform package
+# it names hands out an install that cannot take a screenshot.
 #
 # There is no npm token. This workflow authenticates by trusted publishing:
 # GitHub mints a short-lived OIDC token for the job, npm checks that its
-# claims -- this repository, this workflow file, this ref -- match what the
-# package has on record, and issues credentials good for that one publish.
-# Nothing long-lived exists to leak, and a stolen workflow file is useless
-# because the claims are asserted by GitHub rather than by the workflow.
+# claims -- this repository, this workflow file -- match what the package has
+# on record, and issues credentials good for that one publish. Nothing
+# long-lived exists to leak, and a stolen workflow file is useless because the
+# claims are asserted by GitHub rather than by the workflow.
 #
 # Two consequences of that, both of which have bitten people:
 #
@@ -25,7 +64,9 @@
 #     and not the job id, so renaming this file silently invalidates every
 #     trusted publisher configured against it. Rename it and you are back to
 #     "404 Not Found" on publish, which is what npm returns when it cannot
-#     tell an unauthenticated caller from an unauthorised one.
+#     tell an unauthenticated caller from an unauthorised one. Changing the
+#     trigger, as this commit does, is safe for the same reason: the claim is
+#     about the file, not about how it started.
 #   - Each of the seven packages carries its own trusted publisher, set on
 #     npmjs.com under the package's settings, and npm has no way to configure
 #     one for a package that does not exist yet. Hence the 0.0.1 placeholders:
@@ -42,32 +83,22 @@
 # for --no-provenance; an unattested engine binary is the one package in the
 # seven where the attestation is worth something.
 #
-# Before running this:
-#
-#   1. The draft release for the tag has all six .tgz assets. Six, not five --
-#      a missing platform is an install that silently falls back to "no engine
-#      for this platform" on exactly the machines nobody tested on.
-#   2. shotium/package.json version matches the tag, and its six
-#      optionalDependencies match that version. checks.yml enforces the second
-#      half of that on every push.
-#   3. All seven packages have a trusted publisher pointing at this repository
-#      and this file.
-#
-# dry_run is the default. It runs the whole thing with --dry-run, which does
-# everything except make it permanent -- npm has no unpublish worth relying on.
-# A dry run does not authenticate, so it proves the tarballs and the versions
-# and nothing about the trust configuration.
+# workflow_dispatch remains, for rehearsal only. It publishes nothing unless
+# dry_run is turned off, it never creates a release, and it reads the version
+# from the tree rather than from a tag. A dry run does not authenticate, so it
+# proves the tarballs and the versions and nothing about the trust
+# configuration.
 
 name: npm publish
 
 on:
+  push:
+    tags:
+      - 'v*'
   workflow_dispatch:
     inputs:
-      tag:
-        description: 'release tag to publish from, e.g. v0.1.0'
-        required: true
       dry_run:
-        description: 'run npm publish --dry-run and change nothing'
+        description: 'rehearse against this ref and publish nothing'
         type: boolean
         default: true
 
@@ -78,11 +109,11 @@ jobs:
       # The OIDC token. Without it npm has nothing to check and falls back to
       # looking for a token it will not find.
       id-token: write
-      # write, not read, and only because the release is a draft. A draft is
-      # visible to whoever can push and to nobody else, so a contents:read
-      # token asking for it is told the release does not exist -- not that it
-      # may not have it. Nothing here writes; the step below downloads.
+      # Creating the release at the end.
       contents: write
+      # Reading artifacts that belong to the engine runs, which are other
+      # workflows' runs. contents:write does not cover that.
+      actions: read
     steps:
       - uses: actions/checkout@v4
 
@@ -103,19 +134,47 @@ jobs:
           npm install -g npm@latest
           echo "node $(node --version), npm $(npm --version)"
 
-      - name: the tag and the package agree
+      - name: what this run is
         env:
-          TAG: ${{ github.event.inputs.tag }}
-        # A tag that does not match the version in the tree publishes the wrong
-        # number under the right name, which cannot be taken back.
+          EVENT: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          INPUT_DRY_RUN: ${{ github.event.inputs.dry_run }}
+        # Two triggers, one job. A tag push is always for real and takes its
+        # version from the tag; a dispatch is a rehearsal and takes it from the
+        # tree. Deciding that once, here, keeps every step below from having to
+        # ask which one it is.
         run: |
-          version=$(node -p \
-            "require('./shotium/package.json').version")
-          if [ "v$version" != "$TAG" ]; then
-            echo "shotium/package.json is $version, the tag is $TAG"
+          version=$(node -p "require('./shotium/package.json').version")
+          if [ "$EVENT" = "push" ]; then
+            tag="$REF_NAME"
+            dry_run=false
+            release=true
+          else
+            tag="v$version"
+            dry_run="${INPUT_DRY_RUN:-true}"
+            release=false
+          fi
+          {
+            echo "TAG=$tag"
+            echo "VERSION=$version"
+            echo "DRY_RUN=$dry_run"
+            echo "RELEASE=$release"
+          } >> "$GITHUB_ENV"
+          echo "event=$EVENT tag=$tag version=$version" \
+               "dry_run=$dry_run release=$release"
+
+      - name: the tag and the package agree
+        # A tag that does not match the version in the tree publishes the wrong
+        # number under the right name, which cannot be taken back. On a
+        # dispatch this is a tautology; on a tag push it is the check that
+        # catches a tag pushed before the version bump was committed.
+        run: |
+          if [ "v$VERSION" != "$TAG" ]; then
+            echo "shotium/package.json is $VERSION, the tag is $TAG"
+            echo "the tag must be pushed after the version bump, not before"
             exit 1
           fi
-          echo "publishing $version"
+          echo "publishing $VERSION"
 
       - name: build the main package
         working-directory: shotium
@@ -131,30 +190,89 @@ jobs:
           node -e '
             const fs = require("fs");
             for (const f of ["dist/index.js", "dist/index.d.ts",
-                             "dist/native.js", "dist/daemon_main.js"]) {
+                             "dist/daemon_main.js"]) {
               if (!fs.existsSync(f)) throw new Error("no " + f);
             }
             console.log("ok");
           '
 
-      - name: collect the platform tarballs
+      - name: collect the engine artifacts for this commit
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.event.inputs.tag }}
-        # All six, by name, rather than a glob over whatever the release holds:
-        # a release that is short one architecture should stop here, not
-        # produce a main package pointing at a version of a platform package
-        # that was never published.
+        # Every engine run that succeeded at this exact commit, and the
+        # artifacts belonging to it. Not "the most recent run" and not a
+        # release's assets: an artifact is reachable only through the run that
+        # produced it, and a run names one commit, so nothing built from
+        # another tree can arrive here by accident.
+        #
+        # Two artifacts per platform. The .tgz is what npm publishes; the .7z
+        # is the standalone engine, which goes on the release for people who
+        # want the binary without npm.
+        #
+        # All six, by name, rather than a glob over what happens to be there: a
+        # missing architecture must stop the run, not produce a main package
+        # pointing at a platform package that was never published.
         run: |
-          mkdir -p dist/npm
-          version=$(node -p "require('./shotium/package.json').version")
-          for platform in win32-x64 win32-arm64 darwin-x64 darwin-arm64 \
-                          linux-x64 linux-arm64; do
-            asset="shotkit-shotium-$platform-$version.tgz"
-            gh release download "$TAG" --repo "${{ github.repository }}" \
-              --pattern "$asset" --dir dist/npm
+          mkdir -p dist/npm dist/archive
+
+          gh run list --repo "$GITHUB_REPOSITORY" --commit "$GITHUB_SHA" \
+            --status success --limit 100 --json databaseId,name \
+            -q '.[] | select(.name | startswith("engine")) | .databaseId' \
+            > /tmp/runs.txt
+          echo "engine runs that succeeded at $GITHUB_SHA:"
+          sed 's/^/  /' /tmp/runs.txt
+
+          # The artifact name says which run holds it; the runs themselves are
+          # indistinguishable from here, since one workflow file builds both
+          # architectures and the arch is an input rather than part of the run
+          # name. So ask each run in turn and take the first that has it.
+          fetch() {
+            for run in $(cat /tmp/runs.txt); do
+              if gh run download "$run" --repo "$GITHUB_REPOSITORY" \
+                   --name "$1" --dir "$2" >/dev/null 2>&1; then
+                echo "  $1 <- run $run"
+                return 0
+              fi
+            done
+            echo "  $1 -- NOT FOUND at this commit"
+            return 1
+          }
+
+          fail=0
+          # npm platform id : engine workflow's platform id. They differ:
+          # npm wants process.platform, the engine archives were named for
+          # people.
+          for pair in win32-x64:win-x64 win32-arm64:win-arm64 \
+                      darwin-x64:mac-x64 darwin-arm64:mac-arm64 \
+                      linux-x64:linux-x64 linux-arm64:linux-arm64; do
+            engine=${pair##*:}
+            fetch "npm-shotium-$engine" dist/npm     || fail=1
+            fetch "shotium-$engine"     dist/archive || fail=1
           done
-          ls -l dist/npm
+
+          if [ "$fail" = 1 ]; then
+            echo
+            echo "Something this tag needs was not built at $GITHUB_SHA."
+            echo "The engine workflows have to run against the commit the tag"
+            echo "points at, after the version bump: the version is stamped"
+            echo "into the tarball, so an older build carries the wrong one."
+            exit 1
+          fi
+
+          # The filenames, too, and not just the artifacts. An artifact named
+          # for a platform can still hold a tarball built at the wrong version
+          # if someone dispatched the engine workflow against an older tree.
+          for plat in win32-x64 win32-arm64 darwin-x64 darwin-arm64 \
+                      linux-x64 linux-arm64; do
+            f="dist/npm/shotkit-shotium-$plat-$VERSION.tgz"
+            if [ ! -f "$f" ]; then
+              echo "$f is missing -- the artifact holds:"
+              ls dist/npm
+              exit 1
+            fi
+          done
+
+          ls -l dist/npm dist/archive
 
       - name: every tarball names this repository
         env:
@@ -186,8 +304,6 @@ jobs:
           echo "all six name $REPO"
 
       - name: publish
-        env:
-          DRY_RUN: ${{ github.event.inputs.dry_run }}
         # --access public because the scope is new and npm defaults a scoped
         # package to restricted, which would publish successfully and install
         # for nobody.
@@ -203,3 +319,66 @@ jobs:
           done
           echo "--- shotium"
           npm publish ./shotium $flags
+
+      - name: the packages are actually there
+        if: ${{ env.DRY_RUN != 'true' }}
+        # `npm publish` prints `+ name@version` on success -- and prints the
+        # same line on a dry run, which makes it useless as evidence on its
+        # own. So ask the registry. A 404 here is not proof of failure either:
+        # the CDN took several minutes to serve one of the seven at v0.1.0
+        # while npm had already accepted it. Hence the retry, and hence this
+        # being a report rather than a gate -- the publish already happened
+        # and cannot be undone by failing the job.
+        continue-on-error: true
+        run: |
+          for pkg in shotium-win32-x64 shotium-win32-arm64 \
+                     shotium-darwin-x64 shotium-darwin-arm64 \
+                     shotium-linux-x64 shotium-linux-arm64 shotium; do
+            url="https://registry.npmjs.org/@shotkit/$pkg/$VERSION"
+            for attempt in 1 2 3 4 5 6; do
+              code=$(curl -s -o /dev/null -w '%{http_code}' "$url")
+              [ "$code" = "200" ] && break
+              sleep 20
+            done
+            echo "$code  @shotkit/$pkg@$VERSION"
+          done
+
+      - name: release
+        if: ${{ env.RELEASE == 'true' && env.DRY_RUN != 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # Last, and only because npm got there first. --target pins it to the
+        # commit the tag is on, which is also the commit every artifact above
+        # came from and the commit npm's provenance attests to; all three agree
+        # by construction rather than by anyone checking.
+        #
+        # Not a draft. A draft release does not create the tag -- but the tag
+        # already exists here, because it is what started this run, so there is
+        # nothing left for a human to click.
+        run: |
+          {
+            echo "## @shotkit/shotium $VERSION"
+            echo
+            echo '```'
+            echo "npm install @shotkit/shotium@$VERSION"
+            echo '```'
+            echo
+            echo "Published from ${GITHUB_SHA} with npm provenance."
+            echo
+            echo "The attached archives are the standalone engine -- the"
+            echo "executable, the shared library and the resource packs -- for"
+            echo "using it without node. An npm install does not need them."
+          } > /tmp/notes.md
+
+          # The .7z archives and not the .tgz files. A platform package's home
+          # is the registry: once npm has it, a copy here is a second place to
+          # get the same bytes, one of which nothing resolves against and
+          # neither of which says which is current. They were on the v0.1.0
+          # release only because that is where the engine workflows staged
+          # them for publishing, which is now what artifacts are for.
+          gh release create "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$TAG" \
+            --target "$GITHUB_SHA" \
+            --notes-file /tmp/notes.md \
+            dist/archive/*.7z

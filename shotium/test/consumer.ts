@@ -20,7 +20,6 @@ import type {
   ScreenshotOptions,
   StartOptions,
 } from '@shotkit/shotium';
-import {NativeRuntime, native} from '@shotkit/shotium/native';
 
 // The default export and the named ones are the same values, which is the
 // whole reason the default exists.
@@ -28,10 +27,9 @@ const _sameRuntime: typeof runtime = shotium.runtime;
 const _sameScreenshot: typeof screenshot = shotium.screenshot;
 
 const start: StartOptions = {
-  binary: '/opt/shotium/shotium',
-  workers: 4,
   cacheDir: null,
-  args: ['--verbose'],
+  userAgent: 'checks/1.0',
+  resourceDir: '/opt/shotium',
 };
 
 const request: ScreenshotOptions = {
@@ -46,19 +44,27 @@ const request: ScreenshotOptions = {
   retry: 2,
 };
 
-async function pool(): Promise<void> {
+// The lifecycle from the README, which is the shape this package is for: the
+// caller decides when Blink starts and when it goes away.
+async function lifecycle(): Promise<void> {
   const own = new Runtime();
   own.start(start);
-  own.on('stderr', ({worker, line}) => void `${worker}${line}`);
-  own.on('worker-error', ({error}) => void error.message);
   const image: Buffer|null = await own.screenshot(request);
   const _running: boolean = own.running;
+  own.purge({releaseWorkingSet: true});
   await own.stop();
   void image;
 }
 
+// The same, on the shared singleton, with no lifecycle at all.
+async function implicit(): Promise<void> {
+  runtime.start();
+  await screenshot(request);
+  await runtime.stop();
+}
+
 async function resident(): Promise<void> {
-  const client = await daemon.connect({...start, name: 'checks', workers: 2});
+  const client = await daemon.connect({...start, name: 'checks'});
   const _endpoint: string = client.endpoint;
   const _closed: boolean = client.closed;
   const status: DaemonStatus = await client.status();
@@ -75,13 +81,4 @@ async function resident(): Promise<void> {
   await daemon.screenshot({...request, daemon: start});
 }
 
-async function inProcess(): Promise<void> {
-  const engine = new NativeRuntime();
-  engine.start({cacheDir: null, resourceDir: '/opt/shotium'});
-  await engine.screenshot(request);
-  engine.purge({releaseWorkingSet: true});
-  await engine.stop();
-  await native.screenshot(request);
-}
-
-export {_sameRuntime, _sameScreenshot, inProcess, pool, resident};
+export {_sameRuntime, _sameScreenshot, implicit, lifecycle, resident};

@@ -67,10 +67,6 @@ on:
         description: 'run the check suites if the build finishes'
         type: boolean
         default: true
-      release:
-        description: 'upload the archive to the draft release for this version'
-        type: boolean
-        default: true
 
 jobs:
   build:
@@ -318,6 +314,133 @@ jobs:
           done
           ls -l out/Shot/shotium out/Shot/libshotium.so
 
+      - name: checks
+        # x64 only. The runner is x64 for both architectures now, so there is
+        # nothing here that can execute an arm64 binary; asking would fail on
+        # "cannot execute binary file" and read as a broken engine rather than
+        # a host that cannot run it. An arm64 artifact therefore ships checked
+        # by nothing but the compiler and the linker -- worth remembering
+        # before trusting one.
+        if: ${{ success() && github.event.inputs.mode == 'build'
+                && github.event.inputs.run_checks == 'true'
+                && github.event.inputs.arch == 'x64' }}
+        working-directory: src
+        run: |
+          python3 -m pip install --quiet pillow
+          python3 tools/shot/serve_check.py out/Shot/shotium
+          python3 tools/shot/net_check.py out/Shot/shotium
+
+          # The node addon, and the C ABI under it. Built here rather than
+          # taken from anywhere else, because the library it links against is
+          # the one this job has just produced -- an addon checked against a
+          # different build would be checking nothing.
+          #
+          # Before the node suites, not after: the addon is what they load.
+          # An npm install carries the library and the addon and not the
+          # executable, so there is no second path for them to fall back to.
+          ( cd shotium/native             && SHOT_INCLUDE_DIR="$PWD/../../shot" SHOT_LIB_DIR="$PWD/../../out/Shot"                npx --yes node-gyp@13 rebuild )
+          cp out/Shot/libshotium.so out/Shot/shotium_data.pak out/Shot/shotium_strings.pak              shotium/native/build/Release/
+
+          # The package is TypeScript, so what the check suites import is a
+          # build output rather than a file in the tree. `npm install`, not
+          # `npm ci` -- see checks.yml for why the lockfile cannot carry the
+          # six optionalDependencies yet.
+          ( cd shotium && npm install --no-audit --no-fund && npm run build )
+
+          # Under a backtrace if it dies. This build is is_official_build, and
+          # an official build compiles CHECK() down to a bare trap with no
+          # message -- so a failed CHECK inside the library arrives as
+          # "Trace/breakpoint trap" and nothing else. symbol_level is 0, but
+          # only -g0: .symtab survives the link, so gdb still names the
+          # functions even though it cannot name the lines.
+          #
+          # Which is why the strip step runs after this one rather than before.
+          # A stripped library gives back a backtrace of hex addresses.
+          node tools/shot/node_check.cjs out/Shot/shotium || {
+            status=$?
+            echo "::group::node_check died with $status -- backtrace"
+            readelf -SW out/Shot/libshotium.so | grep -E 'symtab|dynsym' || true
+            sudo apt-get update -qq && sudo apt-get install -y -qq gdb || true
+            gdb -q -batch \
+                -ex 'set confirm off' \
+                -ex run \
+                -ex 'thread apply all bt 40' \
+                --args node tools/shot/node_check.cjs out/Shot/shotium || true
+            echo "::endgroup::"
+            exit "$status"
+          }
+          # The daemon runs here as well as on Windows because
+          # shotium/src/lib/endpoint.ts has two branches -- a named pipe on
+          # Windows, a unix socket everywhere else -- and the Windows job
+          # exercises exactly one of them.
+          node tools/shot/daemon_check.cjs out/Shot/shotium
+
+          python3 tools/shot/charset_check.py out/Shot/shotium
+          python3 tools/shot/demo_check.py out/Shot/shotium
+
+      - name: keep the symbols before stripping them
+        if: ${{ success() && github.event.inputs.mode == 'build' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: unstripped-linux-${{ github.event.inputs.arch }}
+          path: |
+            src/out/Shot/shotium
+            src/out/Shot/libshotium.so
+          if-no-files-found: error
+          compression-level: 6
+
+      - name: strip
+        if: ${{ success() && github.event.inputs.mode == 'build' }}
+        working-directory: src
+        # Linux was shipping 36.5% debugging leftovers.
+        #
+        # `symbol_level = 0` turns off DWARF, and it is easy to read that as
+        # "no symbols". It is not: the linker still writes .symtab and .strtab,
+        # the static symbol table, which nothing at run time reads. Measured on
+        # the v0.1.0 libshotium.so, 73,285,608 bytes on disk:
+        #
+        #   .text      26,335,938  35.9%
+        #   .strtab    22,004,373  30.0%   <- this
+        #   .rodata    14,603,493  19.9%
+        #   .symtab     4,743,360   6.5%   <- and this
+        #   .dynsym        10,800   0.0%
+        #
+        # .dynsym is what the dynamic linker resolves against and it is 10 KB,
+        # because shot_api.exports hides everything except the eight shot_*
+        # entry points. So the export list was already right; the 26.7 MB was
+        # the other table.
+        #
+        # Windows does not have this problem -- PE symbols go to a .pdb, which
+        # is not shipped -- and macOS keeps a compact one. Linux was the only
+        # platform where a .7z came to 31 MB against Windows' 15 and macOS' 13.
+        #
+        # The unstripped pair went up as an artifact in the step above, which
+        # is not optional: an official build's CHECK failure arrives as a bare
+        # SIGTRAP with no message, and reading the stack needs exactly the
+        # table this removes.
+        run: |
+          before=$(stat -c%s out/Shot/libshotium.so)
+          llvm_strip=third_party/llvm-build/Release+Asserts/bin/llvm-strip
+          if [ -x "$llvm_strip" ]; then
+            strip_binary="$llvm_strip"
+          else
+            strip_binary=strip
+          fi
+          echo "using $strip_binary"
+          # --strip-all removes .symtab and .strtab and leaves .dynsym alone,
+          # which is the whole distinction that matters here. On the shared
+          # library that is what keeps it loadable at all.
+          "$strip_binary" --strip-all out/Shot/shotium out/Shot/libshotium.so
+          after=$(stat -c%s out/Shot/libshotium.so)
+          ls -l out/Shot/shotium out/Shot/libshotium.so
+          echo "libshotium.so: $before -> $after bytes"
+          # A strip that silently did nothing would ship the same 70 MB and
+          # look like it worked, so this fails rather than reports.
+          if [ "$after" -ge "$before" ]; then
+            echo "strip changed nothing -- it is not doing what this step is for"
+            exit 1
+          fi
+
       - name: package
         if: ${{ success() && github.event.inputs.mode == 'build' }}
         working-directory: src
@@ -362,104 +485,57 @@ jobs:
           # release step below is where a download is the .7z itself.
           compression-level: 0
 
-      - name: checks
-        # x64 only. The runner is x64 for both architectures now, so there is
-        # nothing here that can execute an arm64 binary; asking would fail on
-        # "cannot execute binary file" and read as a broken engine rather than
-        # a host that cannot run it. An arm64 artifact therefore ships checked
-        # by nothing but the compiler and the linker -- worth remembering
-        # before trusting one.
-        if: ${{ success() && github.event.inputs.mode == 'build'
-                && github.event.inputs.run_checks == 'true'
-                && github.event.inputs.arch == 'x64' }}
-        working-directory: src
-        run: |
-          python3 -m pip install --quiet pillow
-          python3 tools/shot/serve_check.py out/Shot/shotium
-          python3 tools/shot/net_check.py out/Shot/shotium
-          # The two node suites run here as well as on Windows because
-          # shotium/src/lib/endpoint.ts has two branches -- a named pipe on
-          # Windows, a unix socket everywhere else -- and the Windows job
-          # exercises exactly one of them.
-          # The package is TypeScript, so what the check suites import is a
-          # build output rather than a file in the tree. `npm install`, not
-          # `npm ci` -- see checks.yml for why the lockfile cannot carry the
-          # six optionalDependencies yet.
-          ( cd shotium && npm install --no-audit --no-fund && npm run build )
-          node tools/shot/node_check.cjs out/Shot/shotium
-          node tools/shot/daemon_check.cjs out/Shot/shotium
-          # The node addon, and the C ABI under it. Built here rather than
-          # taken from anywhere else, because the library it links against is
-          # the one this job has just produced -- an addon checked against a
-          # different build would be checking nothing.
-          ( cd shotium/native             && SHOT_INCLUDE_DIR="$PWD/../../shot" SHOT_LIB_DIR="$PWD/../../out/Shot"                npx --yes node-gyp@13 rebuild )
-          cp out/Shot/libshotium.so out/Shot/shotium_data.pak out/Shot/shotium_strings.pak              shotium/native/build/Release/
-          # Under a backtrace if it dies. This build is is_official_build, and
-          # an official build compiles CHECK() down to a bare trap with no
-          # message -- so a failed CHECK inside the library arrives as
-          # "Trace/breakpoint trap" and nothing else. symbol_level is 0, but
-          # only -g0: .symtab survives the link, so gdb still names the
-          # functions even though it cannot name the lines. Costs nothing when
-          # the check passes.
-          node tools/shot/native_check.cjs out/Shot/shotium || {
-            status=$?
-            echo "::group::native_check died with $status -- backtrace"
-            readelf -SW out/Shot/libshotium.so | grep -E 'symtab|dynsym' || true
-            sudo apt-get update -qq && sudo apt-get install -y -qq gdb || true
-            gdb -q -batch \
-                -ex 'set confirm off' \
-                -ex run \
-                -ex 'thread apply all bt 40' \
-                --args node tools/shot/native_check.cjs out/Shot/shotium || true
-            echo "::endgroup::"
-            exit "$status"
-          }
-          python3 tools/shot/charset_check.py out/Shot/shotium
-          python3 tools/shot/demo_check.py out/Shot/shotium
-
       - name: npm platform package
         if: ${{ success() && github.event.inputs.mode == 'build' }}
         working-directory: src
-        # One of the six @shotkit/shotium-<os>-<arch> packages: the engine, the
-        # shared library, the two resource packs and the addon, in a package
-        # npm can install. @shotkit/shotium depends on all six as
+        # One of the six @shotkit/shotium-<os>-<arch> packages: the shared
+        # library, the addon linked against it, and the two resource packs, in
+        # a package npm can install. @shotkit/shotium depends on all six as
         # optionalDependencies with os/cpu set, so an install pulls the one
         # that matches and skips the rest. See
         # tools/shot/make_platform_package.cjs.
         #
-        # On x64 the addon already exists: the checks step built it against
-        # this job's own library and compared its output against the
-        # executable's. On arm64 the checks did not run, so it is
-        # cross-compiled here and shipped unchecked -- node-gyp compiles
-        # binding.cc with the system compiler rather than the one Chromium
-        # brought, which is why a second toolchain has to be installed for it
-        # and for nothing else.
+        # Not the executable. It is a second, independent copy of the same
+        # engine -- shot_core is a source_set, so its objects link into both
+        # the executable and the library -- and node has no use for it now that
+        # rendering is in-process. Shipping it doubled the download. It still
+        # goes out in the .7z on the releases page, for using the engine
+        # without node.
         #
-        # A failure to cross-compile is not a failure of the job. The package
-        # is still complete for the worker pool and the daemon, which is what
-        # require("@shotkit/shotium") uses; only require(".../native") wants
-        # the addon, and native.js reports it missing rather than crashing.
+        # Which makes the addon the only thing in the package that node can
+        # call, so this step fails rather than warns if there is not one. It
+        # used to warn and ship anyway, back when a package without an addon
+        # could still drive the worker pool; there is no pool to fall back to.
+        #
+        # On x64 the addon already exists: the checks step built it against
+        # this job's own library and proved it renders the same bytes as the
+        # executable. On arm64 the checks did not run -- the runner cannot
+        # execute an arm64 binary -- so it is cross-compiled here and ships
+        # having been checked by nothing but the compiler and the linker.
+        # node-gyp compiles binding.cc with the system compiler rather than
+        # the one Chromium brought, which is why a second toolchain has to be
+        # installed for it and for nothing else.
         run: |
           arch="${{ github.event.inputs.arch }}"
           addon="shotium/native/build/Release/shotium.node"
           if [ ! -f "$addon" ] && [ "$arch" = arm64 ]; then
-            sudo apt-get update -qq \
-              && sudo apt-get install -y -qq g++-aarch64-linux-gnu || true
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq g++-aarch64-linux-gnu
             ( cd shotium/native \
               && SHOT_INCLUDE_DIR="$PWD/../../shot" \
                  SHOT_LIB_DIR="$PWD/../../out/Shot" \
                  CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++ \
-                 npx --yes node-gyp@13 rebuild --arch=arm64 ) \
-              || echo "::warning::the arm64 addon did not cross-compile;" \
-                      "the package ships without it"
+                 npx --yes node-gyp@13 rebuild --arch=arm64 )
           fi
-          argv=(--build out/Shot --os linux --arch "$arch" --dest dist/npm)
-          if [ -f "$addon" ]; then
-            argv+=(--addon "$addon")
-          else
-            echo "::warning::no addon was built; the package ships without it"
+          if [ ! -f "$addon" ]; then
+            echo "no $addon -- the package would install and then be unable"
+            echo "to render, since the addon is the only thing in it node can"
+            echo "call. Not shipping that."
+            exit 1
           fi
-          node tools/shot/make_platform_package.cjs "${argv[@]}"
+          node tools/shot/make_platform_package.cjs \
+            --build out/Shot --os linux --arch "$arch" --dest dist/npm \
+            --addon "$addon"
           ( cd "dist/npm/shotium-linux-$arch" && npm pack --pack-destination .. )
           tarball=$(ls dist/npm/*.tgz | head -1)
           ls -l "$tarball"
@@ -473,25 +549,3 @@ jobs:
           path: src/${{ env.SHOT_NPM_TARBALL }}
           if-no-files-found: error
           compression-level: 0
-
-      - name: release
-        if: ${{ success() && github.event.inputs.mode == 'build'
-                && github.event.inputs.release == 'true' }}
-        working-directory: src
-        env:
-          GH_TOKEN: ${{ github.token }}
-        # A release asset is served as the bytes that were uploaded, so this
-        # copy has no zip around it. It goes to a draft release: one run builds
-        # one architecture, the release fills up over six of them, and nothing
-        # is public until someone publishes it by hand.
-        #
-        # It is the last step in the job, after the checks, so a binary that
-        # fails its own suites never becomes an asset.
-        run: |
-          tag="v$SHOT_VERSION"
-          gh release view "$tag" >/dev/null 2>&1 \
-            || gh release create "$tag" --draft --title "$tag" \
-                 --notes "shotium $SHOT_VERSION" --target "$GITHUB_SHA" \
-            || gh release view "$tag" >/dev/null
-          gh release upload "$tag" "$SHOT_ARCHIVE" --clobber
-          gh release upload "$tag" "$SHOT_NPM_TARBALL" --clobber

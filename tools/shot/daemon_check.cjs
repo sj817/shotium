@@ -1,15 +1,20 @@
 'use strict';
 
-// Exercises the resident daemon: the pool that outlives the process that
+// Exercises the resident daemon: the engine that outlives the process that
 // started it.
 //
-// node_check.cjs covers the in-process pool, and everything the daemon renders
-// goes through that same pool -- so what is left to check here is the part that
-// is genuinely new. That a client in another process finds the daemon instead
-// of starting a second one; that one connection can have several requests in
-// flight, which the worker protocol underneath cannot; that the daemon is the
-// same renderer as the in-process pool rather than a second path that could
-// drift from it; and that it goes away, both when asked and when left alone.
+// node_check.cjs covers the engine in this process, and the daemon is the same
+// engine in one of its own -- so what is left to check here is the part that is
+// genuinely new. That a client in another process finds the daemon instead of
+// starting a second one; that one connection can carry several requests at
+// once; that the daemon renders what an in-process engine renders rather than
+// being a second path that could drift from it; and that it goes away, both
+// when asked and when left alone.
+//
+// The daemon matters more than it did. Blink starts once per process and
+// cannot be restarted, so a program that has stopped its engine has no way to
+// get another -- the daemon is where a short-lived caller gets one without
+// paying for the start.
 //
 //   node tools/shot/daemon_check.cjs out/ShotWip/shotium.exe
 
@@ -23,6 +28,9 @@ const {pathToFileURL} = require('url');
 const shotium = require('../../shotium');
 
 const exe = path.resolve(process.argv[2] || 'out/Shot/shotium.exe');
+// The resource packs sit beside the executable in a checkout rather than beside
+// the addon. An install has them in one directory and needs none of this.
+const buildDir = path.dirname(exe);
 const corpus = path.resolve('shot/testdata/render_corpus.html');
 const entry = pathToFileURL(path.resolve('shotium/dist/index.js')).href;
 
@@ -51,8 +59,7 @@ process.stdout.write(JSON.stringify(
 // or a developer's own, started by hand -- can never be mistaken for the one
 // under test.
 const config = {
-  binary: exe,
-  workers: 2,
+  resourceDir: buildDir,
   name: `check-${process.pid}`,
   cacheDir: path.join(os.tmpdir(), `shotium-daemon-check-${process.pid}`),
 };
@@ -93,17 +100,22 @@ async function main() {
             first.subarray(0, 8).equals(Buffer.from('89504e470d0a1a0a', 'hex')),
         'a screenshot comes back as a PNG');
   const started = await client.status();
-  check(started.ok && started.workers === 2,
-        'and the daemon is up with the workers it was asked for',
+  check(started.ok && started.pid > 0,
+        'and it is a process of its own',
         `pid ${started.pid}, ${cold}ms to connect`);
+  check(started.warm === true,
+        'that prewarmed before it took the first request');
 
-  console.log('\n== it is the same renderer as the in-process pool ==');
+  console.log('\n== it is the same renderer as an engine in this process ==');
+  // This process gets one engine, ever, so this is the only place it may start
+  // one -- and it does so after the daemon is up, so that the two are
+  // demonstrably separate processes rather than one being the other.
   const runtime = new shotium.Runtime();
-  runtime.start({binary: exe, workers: 1, cacheDir: null});
+  runtime.start({resourceDir: buildDir, cacheDir: null});
   const inProcess = await runtime.screenshot(request);
   await runtime.stop();
   check(sha256(inProcess) === sha256(first),
-        'the daemon and the in-process pool produce the same bytes',
+        'the daemon and an in-process engine produce the same bytes',
         sha256(first).slice(0, 16));
 
   console.log('\n== a second process finds it instead of starting one ==');
@@ -132,15 +144,17 @@ async function main() {
         `${reported.elapsedMs}ms in-process, ${secondWall}ms including node`);
 
   console.log('\n== one connection, several requests at once ==');
-  // The worker protocol cannot do this: a worker renders one document at a
-  // time. The pool in the middle is what makes it possible, and `id` is what
-  // makes the answers findable.
+  // `id` on each message is what makes the answers findable, so a caller may
+  // have ten outstanding without waiting between them. They come back one at a
+  // time -- there is one renderer on the other side -- so what this checks is
+  // that ten in flight is ten correct answers rather than a muddle, not that
+  // ten is faster than one.
   const batchStarted = Date.now();
   const batch = await Promise.all(
       Array.from({length: 10}, () => client.screenshot(request)));
   check(batch.length === 10 && batch.every((png) => sha256(png) === sha256(first)),
         'ten concurrent requests all come back, all identical',
-        `${Date.now() - batchStarted}ms for ten over 2 workers`);
+        `${Date.now() - batchStarted}ms for ten`);
 
   console.log('\n== a failed request is not a dead daemon ==');
   let rejected = null;

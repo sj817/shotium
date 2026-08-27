@@ -3,7 +3,7 @@
 // Assembles one of the six @shotkit/shotium-<os>-<arch> packages.
 //
 // The engine cannot ship inside @shotkit/shotium itself: it is a Chromium
-// build, 41 MB, and there is a different one for every platform and
+// build, 42 MB, and there is a different one for every platform and
 // architecture. So each build produces a package of its own, and the main
 // package depends on all six as optionalDependencies with `os` and `cpu` set
 // -- npm then installs the one that matches and skips the other five. See
@@ -11,14 +11,29 @@
 // landed.
 //
 //   node tools/shot/make_platform_package.cjs \
-//       --build out/Shot --os win --arch x64 --dest dist/npm
+//       --build out/Shot --os win --arch x64 --dest dist/npm \
+//       --addon shotium/native/build/Release/shotium.node
 //
-// --addon is optional and names a built shotium.node. Where it is given the
-// package carries the in-process engine as well; where it is not -- an arm64
-// build cross-compiled on an x64 host, which has no way to produce or check an
-// addon -- the package is still complete for the worker pool and the daemon,
-// which is what import("@shotkit/shotium") uses. src/native.ts reports the
-// addon as missing rather than the install as broken.
+// What ships is the shared library, the addon linked against it, and the two
+// resource packs. Not the executable.
+//
+// That is worth saying because the executable is also built, sits beside the
+// library, and used to ship here. It is a second, independent copy of the same
+// engine: shot/BUILD.gn links `shot_core` -- a source_set, so its objects go
+// into every target that depends on it -- into both `executable("shot")` and
+// `shared_library("shot_c")`. The two came to 43,582,464 and 43,560,448 bytes,
+// 22 KB apart, and the executable held no reference to the library at all.
+// Shipping both put 19.75 MB of duplicate engine in a 40 MB download, for a
+// process-spawning path that node has no reason to take: the addon is in-
+// process, so there is no spawn, no pipe and no copy of the image across a
+// process boundary.
+//
+// The executable still exists and is still worth having -- it is what the
+// standalone .7z archives on the releases page carry, for using the engine
+// without node at all. It is just not part of an npm install.
+//
+// --addon is therefore required in practice. A package without one installs
+// and then cannot render: there is nothing else in it that node can call.
 //
 // This script does not run npm. It writes a directory; the caller runs
 // `npm pack` or `npm publish` on it, because those need credentials and a
@@ -36,7 +51,6 @@ const ROOT = path.resolve(__dirname, '..', '..');
 const PLATFORMS = {
   win: {
     npmOs: 'win32',
-    binary: 'shotium.exe',
     library: 'shotium.dll',
     // The import library is a build input, not a run-time one: nothing that
     // installs this package links against the DLL, so it stays out.
@@ -44,13 +58,11 @@ const PLATFORMS = {
   },
   mac: {
     npmOs: 'darwin',
-    binary: 'shotium',
     library: 'libshotium.dylib',
     extra: [],
   },
   linux: {
     npmOs: 'linux',
-    binary: 'shotium',
     library: 'libshotium.so',
     extra: [],
   },
@@ -122,10 +134,6 @@ function main() {
 
   const shipped = [];
 
-  copy(path.join(buildDir, platform.binary), path.join(dest, platform.binary),
-       0o755);
-  shipped.push(platform.binary);
-
   copy(path.join(buildDir, platform.library), path.join(dest, platform.library),
        0o755);
   shipped.push(platform.library);
@@ -143,6 +151,12 @@ function main() {
   if (args.addon) {
     copy(path.resolve(ROOT, args.addon), path.join(dest, 'shotium.node'), 0o755);
     shipped.push('shotium.node');
+  } else {
+    // Not a warning. A package with no addon is a package that installs and
+    // then cannot render, and the machine that finds out is the user's.
+    throw new Error(
+        'no --addon: the addon is the only thing in this package that node ' +
+        'can call, so a package without one is not publishable');
   }
 
   const manifest = {
@@ -153,7 +167,7 @@ function main() {
         '@shotkit/shotium; not useful on its own.',
     // os and cpu are the whole point of this package. npm skips an optional
     // dependency whose os/cpu do not match the machine, which is how one
-    // install of @shotkit/shotium pulls 41 MB instead of six times that.
+    // install of @shotkit/shotium pulls one engine instead of six.
     os: [platform.npmOs],
     cpu: [args.arch],
     files: shipped.slice().sort(),
@@ -172,9 +186,8 @@ function main() {
       `# ${name}\n\n` +
           `The shotium engine built for ${args.os}-${args.arch}.\n\n` +
           'This package is one of six, and holds bytes rather than code: the\n' +
-          'engine executable, the shared library behind the C ABI, the two\n' +
-          'resource packs they both read' +
-          (args.addon ? ', and the node addon' : '') + '.\n\n' +
+          'shared library behind the C ABI, the node addon linked against it,\n' +
+          'and the two resource packs it reads.\n\n' +
           'Install [`@shotkit/shotium`](https://www.npmjs.com/package/' +
           '@shotkit/shotium) instead. It depends on all six and npm installs\n' +
           'whichever matches the machine.\n');

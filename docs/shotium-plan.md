@@ -20,8 +20,8 @@
 | 项 | 决定 |
 |---|---|
 | **名字** | **shotium**(shot + Chromium 的 `-ium`)。对应 WebKit 版的 `shotkit`,同构。C 符号前缀 `shotium_*` |
-| **Node 层形态** | **TypeScript,tsdown 打包成纯 ESM**,类型由源码生成而不是手写第二份。原生 addon 是后来第 6 组加的旁路,主路径(进程池 + 守护进程)依然不需要 `.node`,也就不需要 node-gyp / prebuild / 多 ABI |
-| **进程模型** | **渲染出进程**。`.node`/JS 层是进程池管理器,worker 是 `shotium.exe` |
+| **Node 层形态** | **TypeScript,tsdown 打包成纯 ESM**,类型由源码生成而不是手写第二份 |
+| **进程模型** | **渲染在调用方进程内**,走 `.node` addon 和它背后的 C ABI。曾经是进程池派 `shotium.exe`,2026-08-27 砍掉 —— 见下 |
 | **JS 引擎** | 永远没有。V8 已删且不恢复。靠脚本渲染的页面出来是空的 —— 这是产品边界,不是待办 |
 | **字体** | 用宿主系统字体。同一份 HTML 在不同机器上像素不同,这是接受的行为 |
 | **公网威胁模型** | **不在本项目范围**。shotium 只提供底层能力,SSRF / 本地文件访问 / 资源上限由调用方决定。对应地,`file://` 访问做成**显式选项**而不是硬编码 —— 那是接口设计,不是安全策略 |
@@ -51,15 +51,24 @@ Blink 是**进程级单例**,代码里已确认三处:
 ## 1. 架构
 
 ```
-shotium (npm, TypeScript)     进程池 · 生命周期 · on() 事件 · retry
+shotium (npm, TypeScript)     生命周期 start/stop · 串行队列 · 选项校验
      │
-     │  stdio 管道:长度前缀 JSON 请求 / 长度前缀二进制响应
+     │  shotium.node (Node-API):JSON 进,字节出
      ▼
-shotium_worker (shotium.exe --serve)   常驻,一个进程一个 Blink,连续渲多张
+libshotium (shot_c)           八个 shot_* 函数,一条引擎线程
      │
      ▼
 Blink   DOM → CSS → Layout → Paint → Raster → 编码
 ```
+
+一个进程一个 Blink,而且**是一辈子一个,不是一次一个** —— blink 初始化写的是
+进程级静态量,没有回退路径,所以 `stop()` 之后 `start()` 不回来。要并发就要多进程。
+
+`shotium.exe` 还在构建,还在 release 的 `.7z` 里,但**不进 npm 包**:它和
+`libshotium` 各自静态链了一份完整的 `shot_core`(GN 的 `source_set` 会把 .obj
+链进每个依赖方),两个文件差 22 KB,exe 里没有任何对 dll 的引用。同时发就是在
+40 MB 的下载里塞 19.75 MB 的重复引擎。砍掉之后 win32-x64 从 40,494,470 字节
+降到 20,350,362。
 
 ---
 
@@ -179,17 +188,17 @@ playwright(各两档:`chrome-headless-shell` 与完整 headless Chrome)。六个
 
 ### 第 6 组 · C ABI 与 node addon — ✅ 完成
 
-进程池和守护进程都是把 blink 放在别的进程里。第 6 组是把它放进调用方自己的
-进程:`shared_library("shot_c")` 导出一套 C 接口,`shotium/src/native.ts` 通过
-一个 Node-API addon 用它。
+第 6 组把 blink 放进调用方自己的进程:`shared_library("shot_c")` 导出一套 C
+接口,一个 Node-API addon 用它。当时这是进程池旁边的一条旁路;2026-08-27 之后
+它是唯一一条,`shotium/src/lib/engine.ts` 就是它的 JS 外壳。
 
 | # | 内容 | 落点 |
 |---|---|---|
 | 6.1 | C 接口:八个函数,不透明指针,JSON 进字节出 | `shot/shot_api.h`、`shot_api.cc` |
 | 6.2 | 引擎线程:blink 一条线程,任何线程调用都排到它上面 | `shot/shot_api.cc` |
 | 6.3 | 导出裁剪(版本脚本 / exported_symbols_list) | `shot/shot_api.map`、`shot_api.exports` |
-| 6.4 | addon 与 JS 外壳,队列深度 1 | `shotium/native/binding.cc`、`shotium/src/native.ts` |
-| 6.5 | 检查:与可执行文件逐字节一致、并发串行化、只有一个引擎 | `tools/shot/native_check.cjs` |
+| 6.4 | addon 与 JS 外壳,队列深度 1 | `shotium/native/binding.cc`、`shotium/src/lib/engine.ts` |
+| 6.5 | 检查:与可执行文件逐字节一致、并发串行化、只有一个引擎 | `tools/shot/node_check.cjs` |
 
 四个决定值得记下来:
 
@@ -237,10 +246,11 @@ npm 上 `shotium` 这个名字拿不到,所以包名带上了 scope:`@shotkit/sh
 addon 和它链接的共享库放在同一个平台包里,这不是为了整齐 —— `.node` 是动态链接
 到那个库的,分开发就是发一个跑不起来的 `.node`。
 
-两处诚实的缺口,写在这里而不是等别人踩:交叉编译出来的 arm64(win 和 linux)在
-x64 runner 上没法执行,所以那两个平台的 addon 是交叉编译且没跑过检查的;交叉编译
-失败不算 job 失败,平台包会不带 `.node` 发出去,进程池和守护进程照常工作,只有
-`require(".../native")` 拿不到东西,而 `native.js` 会说清楚是哪一种情况。
+一处诚实的缺口,写在这里而不是等别人踩:交叉编译出来的 arm64(win 和 linux)在
+x64 runner 上没法执行,所以那两个平台的 addon **是交叉编译且从没在真机上跑过的**
+—— 只过了编译器和链接器。以前这不太要紧,因为进程池能兜底;现在 addon 是平台包里
+唯一能被 node 调用的东西,所以交叉编译失败已经改成**直接让 job 失败**,而不是发一个
+装完就渲染不了的包。真机检查要等 arm64 runner 补上。
 
 ---
 

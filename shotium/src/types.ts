@@ -1,10 +1,8 @@
 // The vocabulary of the package: what a caller passes in and what comes back.
 //
 // It lives in one file rather than beside the code that reads each field
-// because these types are the published API. index.ts and native.ts both
-// re-export them, so a consumer sees one `ScreenshotOptions` whichever entry
-// point they came through -- and, more to the point, so there is one place
-// where adding an option means adding it.
+// because these types are the published API: index.ts re-exports them, so
+// there is one place where adding an option means adding it.
 
 /** A region of the document, in CSS pixels. */
 export interface Clip {
@@ -76,29 +74,25 @@ export interface ScreenshotOptions {
 
 export interface StartOptions {
   /**
-   * Path to `shotium.exe`. Default `$SHOTIUM_BINARY`, then the platform
-   * package for this machine, then `./bin/shotium.exe`.
+   * Root of the HTTP disk cache. `null` disables caching entirely, which is
+   * the default: a program holding the engine is often short-lived, and a
+   * cache it never reads twice is a directory it leaves behind.
    */
-  binary?: string;
-  /** Worker processes. Default half the cores, at least one, at most four. */
-  workers?: number;
-  /** Root of the per-worker HTTP disk caches. `null` disables caching. */
   cacheDir?: string|null;
-  /** Extra flags passed to every worker. */
-  args?: string[];
-}
-
-export interface WorkerEvent {
-  worker: number;
-  code?: number|null;
-  signal?: NodeJS.Signals|null;
+  /** Overrides the built-in user agent string. */
+  userAgent?: string;
+  /**
+   * Where `shotium_data.pak` and `shotium_strings.pak` are. Defaults to the
+   * directory the engine was loaded from, which is where they ship.
+   */
+  resourceDir?: string;
 }
 
 export interface DaemonOptions extends StartOptions {
   /**
    * Address the daemon by name instead of by configuration. Without it the
-   * endpoint is a hash of `binary`, `workers`, `cacheDir` and `args`, so a
-   * client never attaches to a pool that renders with something other than
+   * endpoint is a hash of `cacheDir`, `userAgent` and `resourceDir`, so a
+   * client never attaches to a daemon that renders with something other than
    * what it asked for.
    */
   name?: string;
@@ -110,9 +104,8 @@ export interface DaemonOptions extends StartOptions {
    */
   idleTimeoutMs?: number;
   /**
-   * Render one throwaway document per worker at startup, so the first real
-   * request does not pay for whatever a worker initialises lazily. Default
-   * true.
+   * Render one throwaway document at startup, so the first real request does
+   * not pay for whatever the engine initialises lazily. Default true.
    */
   prewarm?: boolean;
   /** Fail instead of starting a daemon when none is listening. */
@@ -129,11 +122,10 @@ export interface DaemonStatus {
   spawned?: boolean;
   pid: number;
   endpoint: string;
-  binary: string;
-  workers: number;
   cacheDir: string|null;
-  args: string[];
-  /** Every worker has rendered at least once. */
+  userAgent?: string;
+  resourceDir?: string;
+  /** The engine has rendered at least once. */
   warm: boolean;
   uptimeMs: number;
   connections: number;
@@ -141,22 +133,6 @@ export interface DaemonStatus {
   served: number;
   idleTimeoutMs: number;
   version: string;
-}
-
-export interface NativeStartOptions {
-  /**
-   * Root of the HTTP disk cache. `null` disables caching entirely, which is
-   * the default here: an in-process engine is often a short-lived program, and
-   * a cache it never reads twice is a directory it leaves behind.
-   */
-  cacheDir?: string|null;
-  /** Overrides the built-in user agent string. */
-  userAgent?: string;
-  /**
-   * Where `shotium_data.pak` and `shotium_strings.pak` are. Defaults to the
-   * directory the native engine was loaded from, which is where they ship.
-   */
-  resourceDir?: string;
 }
 
 export interface PurgeOptions {

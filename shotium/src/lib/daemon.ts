@@ -1,13 +1,15 @@
 import {EventEmitter} from 'node:events';
 import fs from 'node:fs';
 import net from 'node:net';
+import os from 'node:os';
+import path from 'node:path';
 
 import type {DaemonOptions, DaemonStatus} from '../types.js';
 
 import {resolveStartOptions} from './config.js';
 import type {ResolvedStartOptions} from './config.js';
 import {endpointFor} from './endpoint.js';
-import {Pool} from './pool.js';
+import {Engine} from './engine.js';
 import {FrameReader, encodeFrame} from './protocol.js';
 import type {WireRequest} from './request.js';
 
@@ -25,11 +27,6 @@ const VERSION = (() => {
   }
 })();
 
-// How much longer than the page's own deadline the daemon waits before it
-// decides a worker is not going to answer at all. Same margin, same reasoning
-// as index.ts: the worker fails a slow page by itself and replies.
-const SUPERVISOR_MARGIN_MS = 10000;
-const DEFAULT_TIMEOUT_MS = 30000;
 const DEFAULT_IDLE_TIMEOUT_MS = 300000;
 
 // One message off the socket. `op` defaults to screenshot because that is what
@@ -51,30 +48,39 @@ interface DaemonReply {
   stopping?: boolean;
 }
 
-// A worker pool that outlives the process that asked for it.
+// An engine that outlives the process that asked for it.
 //
-// The pool in index.ts is already resident, but only for as long as the Node
+// The engine in index.ts is already resident, but only for as long as the Node
 // process holding it: a command-line invocation, a CI step, a serverless
-// handler and a `node -e` all pay for starting workers and then throw them
-// away. This is the same pool behind a socket, so the second caller -- in a
+// handler and a `node -e` all pay for starting Blink and then throw it away.
+// This is the same engine behind a socket, so the second caller -- in a
 // different process, minutes later -- pays a connect() and nothing else.
 //
-// The wire format is the worker's own, one level up: a request frame of JSON,
-// answered by a header frame and a payload frame. What it adds is `id`, so one
-// connection can have several requests in flight; the worker protocol cannot,
-// because a worker renders one document at a time, and multiplexing is exactly
-// what the pool in the middle is for.
+// A request frame of JSON, answered by a header frame and a payload frame:
 //
 //   ->  [len][{"id":7,"op":"screenshot","request":{...}}]
 //   <-  [len][{"id":7,"ok":true,"bytes":97756}]  [len][<PNG>]
 //
-// Events: ready, request, response, idle-exit, error, plus the pool's own.
+// `id` is on the wire so that a client may have several requests outstanding
+// on one connection. That is a convenience for the client, not concurrency:
+// there is one renderer here, because Blink is a process-wide singleton, so
+// the requests queue and come back in the order the engine finished them.
+// Wanting two at once means wanting two daemons, addressed by `name`.
+//
+// Nothing supervises a capture. The pool this replaced could time a worker out
+// and kill it; an in-process engine has no such seam -- there is no way to
+// abandon a render without abandoning the process. A page's own deadline
+// (`pageGotoParams.timeout`) is what bounds it, and the engine answers slow
+// pages by itself. `timeout` and `retry` on the wire are accepted and ignored,
+// so that an older client still talks to this.
+//
+// Events: ready, warm, request, response, idle-exit, error, close.
 class Daemon extends EventEmitter {
   private readonly options: ResolvedStartOptions;
   private readonly endpointPath: string;
   private readonly idleTimeoutMs: number;
   private readonly prewarmOnStart: boolean;
-  private pool: Pool|null = null;
+  private readonly engine = new Engine();
   private server: net.Server|null = null;
   private sockets = new Set<net.Socket>();
   private inFlight = 0;
@@ -106,24 +112,21 @@ class Daemon extends EventEmitter {
     return this.warmed;
   }
 
-  // Brings the pool up and starts listening. The pipe existing *is* the
+  // Brings the engine up and starts listening. The pipe existing *is* the
   // readiness signal -- a client's connect() either succeeds or the daemon is
-  // not up -- so nothing is bound until the pool has been asked to start.
+  // not up -- so nothing is bound until the engine has started.
+  //
+  // Starting it here rather than on the first request is deliberate: a machine
+  // with no engine for its platform should fail while the caller is still
+  // watching, not answer a connect() and then reject every request on it.
   async listen(): Promise<this> {
-    const pool = new Pool(this.options);
-    this.pool = pool;
-    for (const event of ['exit', 'crash', 'timeout', 'worker-restart',
-                         'worker-error', 'stderr']) {
-      pool.on(event, (payload) => this.emit(event, payload));
-    }
-    pool.start();
+    this.engine.start(this.options);
 
     this.server = net.createServer((socket) => this.accept(socket));
     this.server.on('error', (error) => this.emit('error', error));
     await this.bind();
     this.armIdleTimer();
-    this.emit('ready',
-              {endpoint: this.endpointPath, workers: this.options.workers});
+    this.emit('ready', {endpoint: this.endpointPath});
     if (this.prewarmOnStart) {
       await this.prewarm();
     }
@@ -178,8 +181,8 @@ class Daemon extends EventEmitter {
   //
   // On Windows it is a named pipe, and node exposes no way to give one an ACL:
   // the default lets any account on the machine open it. A daemon on a shared
-  // Windows host is therefore as trusted as the machine's users are -- render
-  // in-process, or with a binary that has no file access, if that is not
+  // Windows host is therefore as trusted as the machine's users are -- use the
+  // engine in your own process, where nothing is listening, if that is not
   // acceptable.
   private restrict(): void {
     if (process.platform === 'win32') {
@@ -192,23 +195,37 @@ class Daemon extends EventEmitter {
     }
   }
 
-  // Renders one throwaway document per worker so that the first real request
-  // does not pay for whatever each process initialises lazily. The pool hands
-  // one request to each free worker, and there are exactly as many requests as
-  // workers, so every process is touched.
+  // Renders one throwaway document so that the first real request does not pay
+  // for whatever the engine initialises lazily. One is enough: there is one
+  // renderer, and it is the same one every request lands on.
   //
-  // `data:` rather than a file, because a daemon started without
-  // --allow-file-access would otherwise be prewarmed by a request it refuses.
+  // A temporary file, not a `data:` URL. This used to send
+  // `data:text/html,...`, which the renderer rejects -- shot_capture.cc takes
+  // file, http and https and nothing else -- so every prewarm failed into the
+  // catch below and the step had never once done anything. The failure was
+  // invisible because a prewarm that does not work looks exactly like one that
+  // does, only slower on the first request.
+  //
+  // The document names no subresources, so it renders identically whether or
+  // not this daemon allows file access -- which is what the `data:` URL was
+  // reaching for. A top-level file: URL always loads; `allowFileAccess` gates
+  // what the document may then pull in.
   async prewarm(): Promise<void> {
-    const blank = 'data:text/html,<!doctype html><title>shotium</title>';
-    await Promise.all(Array.from({length: this.options.workers}, () => {
-      return this.pool!
-          .submit({file: blank, width: 16, height: 16},
-                  {timeout: DEFAULT_TIMEOUT_MS + SUPERVISOR_MARGIN_MS, retry: 1})
-          .catch(() => null);
-    }));
-    this.warmed = true;
-    this.emit('warm', {workers: this.options.workers});
+    const blank = path.join(
+        os.tmpdir(), `shotium-prewarm-${process.pid}.html`);
+    try {
+      fs.writeFileSync(
+          blank, '<!doctype html><title>shotium</title><p>shotium');
+      await this.engine.capture({file: blank, width: 16, height: 16});
+      this.warmed = true;
+    } catch (error) {
+      // Not fatal: a daemon that could not prewarm still serves. But it is not
+      // warm, and status() should not claim it is.
+      this.emit('error', error);
+    } finally {
+      fs.rmSync(blank, {force: true});
+    }
+    this.emit('warm', {warm: this.warmed});
   }
 
   status(): DaemonStatus {
@@ -216,10 +233,9 @@ class Daemon extends EventEmitter {
       ok: true,
       pid: process.pid,
       endpoint: this.endpointPath,
-      binary: this.options.binary,
-      workers: this.options.workers,
       cacheDir: this.options.cacheDir,
-      args: this.options.args,
+      userAgent: this.options.userAgent,
+      resourceDir: this.options.resourceDir,
       warm: this.warmed,
       uptimeMs: Date.now() - this.startedAt,
       connections: this.sockets.size,
@@ -285,26 +301,22 @@ class Daemon extends EventEmitter {
     }
 
     const request = message.request || ({} as WireRequest);
-    const timeout = (typeof message.timeout === 'number' ? message.timeout :
-                                                           DEFAULT_TIMEOUT_MS) +
-        SUPERVISOR_MARGIN_MS;
-    const retry = typeof message.retry === 'number' ? message.retry : 0;
 
     this.inFlight += 1;
     this.armIdleTimer();
     this.emit('request', {id, file: request.file});
-    this.pool!.submit(request, {timeout, retry})
-        .then((result) => {
+    this.engine.capture(request)
+        .then((image) => {
           this.served += 1;
           this.reply(
               socket,
               {
                 id,
                 ok: true,
-                bytes: result.image ? result.image.length : 0,
-                path: result.header ? result.header.path : undefined,
+                bytes: image ? image.length : 0,
+                path: request.path,
               },
-              result.image);
+              image);
         })
         .catch((error: Error) => {
           this.reply(
@@ -362,7 +374,7 @@ class Daemon extends EventEmitter {
     }
     this.sockets.clear();
     await new Promise<void>((resolve) => this.server!.close(() => resolve()));
-    await this.pool!.stop();
+    await this.engine.stop();
     this.emit('close', {});
   }
 }

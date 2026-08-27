@@ -48,10 +48,9 @@ interface Pending {
 }
 
 interface ResolvedDaemonOptions {
-  binary: string;
-  workers: number;
   cacheDir: string|null;
-  args: string[];
+  userAgent?: string;
+  resourceDir?: string;
   name: string|undefined;
   endpoint: string;
   idleTimeoutMs: number|undefined;
@@ -61,11 +60,11 @@ interface ResolvedDaemonOptions {
 
 // The client half of the resident daemon.
 //
-// One connection can carry several requests at once, which is the difference
-// between this and the worker protocol underneath: every message carries an
+// One connection can carry several requests at once: every message carries an
 // `id` and the answers are matched back by it, so a caller can fire ten
-// screenshots down one socket and let the pool on the other side spread them
-// across workers.
+// screenshots down one socket without waiting between them. They still come
+// back one at a time -- there is one renderer on the other side -- so this
+// saves the round trips, not the renders.
 class DaemonClient extends EventEmitter {
   private readonly socket: net.Socket;
   private readonly endpointPath: string;
@@ -219,10 +218,9 @@ function resolveDaemonOptions(options: DaemonOptions = {}):
 
 function spawnDaemon(options: ResolvedDaemonOptions): void {
   const config = {
-    binary: options.binary,
-    workers: options.workers,
     cacheDir: options.cacheDir,
-    args: options.args,
+    userAgent: options.userAgent,
+    resourceDir: options.resourceDir,
     endpoint: options.endpoint,
     idleTimeoutMs: options.idleTimeoutMs,
     prewarm: options.prewarm,

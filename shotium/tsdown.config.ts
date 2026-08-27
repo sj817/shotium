@@ -1,19 +1,18 @@
 import {defineConfig} from 'tsdown';
 
-// Three entry points, one bundle each, plus whatever chunks they share.
+// Two entry points, one bundle each, plus whatever chunks they share.
 //
-// index and native are what a caller imports; daemon_main is spawned by path,
-// which is the reason it is an entry rather than something the bundler was
-// free to inline or rename. Everything lands directly in dist/, one directory
-// below the package root -- lib/config.ts, lib/daemon.ts and native.ts all
-// compute paths relative to their own module URL and expect exactly that
-// depth.
+// index is what a caller imports; daemon_main is spawned by path, which is the
+// reason it is an entry rather than something the bundler was free to inline
+// or rename. Everything lands directly in dist/, one directory below the
+// package root -- lib/binding.ts and lib/daemon.ts compute paths relative to
+// their own module URL and expect exactly that depth.
 //
 // ESM and nothing else. The package is a set of process-wide singletons -- one
-// pool, one daemon per configuration, an engine blink will not start twice --
-// so a dual build would hand a caller who reached it both ways two of each.
+// engine, which blink will not start twice, and one daemon per configuration
+// -- so a dual build would hand a caller who reached it both ways two of each.
 export default defineConfig({
-  entry: ['src/index.ts', 'src/native.ts', 'src/daemon_main.ts'],
+  entry: ['src/index.ts', 'src/daemon_main.ts'],
   outDir: 'dist',
   format: 'esm',
   platform: 'node',

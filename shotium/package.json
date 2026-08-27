@@ -24,10 +24,6 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./native": {
-      "types": "./dist/native.d.ts",
-      "default": "./dist/native.js"
-    },
     "./package.json": "./package.json"
   },
   "files": [
