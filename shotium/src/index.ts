@@ -118,10 +118,9 @@ export class Runtime {
    * a value you did not ask for.
    *
    * Every option has a default. `cacheDir` is the HTTP disk cache and defaults
-   * to a per-project directory under the platform's cache directory --
-   * `%LOCALAPPDATA%`, `~/Library/Caches`, `$XDG_CACHE_HOME` -- and not under
-   * the temporary directory, which is defined by not surviving. `null` turns
-   * it off. `resourceDir` is where `shotium_data.pak` and
+   * to a per-project directory under `~/.shotium/cache`, and not under the
+   * temporary directory, which is defined by not surviving. `null` turns it
+   * off. `resourceDir` is where `shotium_data.pak` and
    * `shotium_strings.pak` are, and defaults to the directory the engine was
    * loaded from, which is where they ship.
    *

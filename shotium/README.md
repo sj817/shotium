@@ -170,7 +170,7 @@ interface ScreenshotOptions {
 interface StartOptions {
   /**
    * HTTP disk cache directory. Defaults to a per-project directory under
-   * the platform's cache directory; null disables caching.
+   * ~/.shotium/cache; null disables caching.
    */
   cacheDir?: string | null;
 
@@ -242,7 +242,7 @@ await cache.clear({ maxAge: 86400 });                       // unused for a day
 await cache.clear({ maxSize: 64 * 1024 * 1024 });           // evict LRU down to 64 MB
 ```
 
-Cache directories live where the platform puts caches: `%LOCALAPPDATA%\shotium\Cache` on Windows, `~/Library/Caches/shotium` on macOS, `$XDG_CACHE_HOME/shotium` (usually `~/.cache/shotium`) elsewhere. Not the temporary directory, which is defined by not surviving -- `/tmp` is emptied on reboot and swept of anything untouched for ten days, and a cache whose whole value is the next run cannot live there. One directory per project inside it, named by a hash of the project root.
+Cache directories live under `~/.shotium/cache`, one per project, named by a hash of the project root. Not the temporary directory, which is defined by not surviving -- `/tmp` is emptied on reboot and swept of anything untouched for ten days, and a cache whose whole value is the next run cannot live there.
 
 `target` selects which directory: `'current'` (the default) is this project's, `'all'` is every one under the shared root, and a string is either an absolute path or a project hash.
 

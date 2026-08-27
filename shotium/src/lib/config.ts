@@ -19,9 +19,9 @@ export interface ResolvedStartOptions {
 // Passing 0 hands the decision to the disk cache backend, which sizes itself
 // against the volume's free space -- a defensible default for a browser
 // profile the user knows about, and a poor one for a directory that appears
-// under the user's cache directory because somebody imported a library. 256 MB
-// holds a large corpus of pages and their fonts, and is small enough that
-// nobody has to think about it.
+// under ~/.shotium because somebody imported a library. 256 MB holds a large
+// corpus of pages and their fonts, and is small enough that nobody has to
+// think about it.
 const DEFAULT_CACHE_MAX_BYTES = 256 * 1024 * 1024;
 
 /**
@@ -68,42 +68,28 @@ function projectRoot(): string {
  * Where every shotium cache directory lives. One level up from any single
  * project's, which is what makes `target: 'all'` answerable.
  *
- * Where the operating system puts caches, and not the temporary directory,
- * which is where this was until 0.3 was cut. $TMPDIR is a place for files that
- * do not need to exist tomorrow: /tmp is emptied on reboot, systemd-tmpfiles
- * removes what has not been touched in ten days, and macOS clears it on its
- * own schedule. A cache whose entire value is the *next* run cannot live
- * somewhere defined by not surviving.
+ * Under the home directory and not the temporary one, which is where this was
+ * until 0.3 was cut. $TMPDIR is defined by not surviving: /tmp is emptied on
+ * reboot, systemd-tmpfiles removes anything untouched for ten days, and macOS
+ * sweeps it on a schedule of its own. The entire value of an HTTP cache is the
+ * *next* run, so a default that lives somewhere designed to be cleared is a
+ * cache that stops working at exactly the moment it would have started paying
+ * for itself.
  *
- * So: %LOCALAPPDATA%\shotium\Cache, ~/Library/Caches/shotium, and
- * $XDG_CACHE_HOME/shotium -- three answers because the three platforms have
- * three answers, and the point of using them is that the user's own tooling
- * already knows what these directories are and is allowed to empty them.
+ * `~/.shotium`, spelled the same on every platform. One place a user can look
+ * for it, one path to say in a bug report, and one directory to delete.
  *
- * The temporary directory is the fallback for a process with no home to speak
- * of -- some containers, some service accounts. That is a degradation and not
- * a second location: there is no home directory to hold a cache that would
- * otherwise be found there.
+ * $TMPDIR remains only as a fallback for a process with no home to speak of --
+ * some containers, some service accounts. That is a degradation and not a
+ * second location: there is no home directory holding a cache that would
+ * otherwise have been found.
  */
-function cacheHome(): string {
-  const home = os.homedir();
-  if (!home) {
-    return path.join(os.tmpdir(), '.shotium');
-  }
-  if (process.platform === 'win32') {
-    return path.join(
-        process.env.LOCALAPPDATA || path.join(home, 'AppData', 'Local'),
-        'shotium', 'Cache');
-  }
-  if (process.platform === 'darwin') {
-    return path.join(home, 'Library', 'Caches', 'shotium');
-  }
-  return path.join(
-      process.env.XDG_CACHE_HOME || path.join(home, '.cache'), 'shotium');
+function shotiumHome(): string {
+  return path.join(os.homedir() || os.tmpdir(), '.shotium');
 }
 
 export function cacheRoot(): string {
-  return normalizePath(cacheHome());
+  return normalizePath(path.join(shotiumHome(), 'cache'));
 }
 
 /**

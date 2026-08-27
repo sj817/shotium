@@ -169,9 +169,8 @@ export interface StartOptions {
    * Zero is not "unlimited" -- it hands the decision to the backend, which
    * sizes itself against the volume's free space. That was a reasonable
    * default when every user of the cache had named a directory on purpose; for
-   * one that appears by default in the user's cache directory because somebody
-   * imported a library, a number somebody chose is better than a number nobody
-   * did.
+   * one that appears by default under `~/.shotium` because somebody imported a
+   * library, a number somebody chose is better than a number nobody did.
    */
   cacheMaxBytes?: number;
   /** Overrides the built-in user agent string. */
@@ -282,9 +281,9 @@ export interface ReleaseMemoryOptions {
 export interface CacheTarget {
   /**
    * `current` (the default) is this project's directory, `all` is every
-   * directory shotium has created under the shared root -- the platform's
-   * cache directory, see `cacheRoot()` -- and a string is either an absolute
-   * path or one project hash as `getDir()` reports it.
+   * directory shotium has created under the shared root -- `~/.shotium/cache`
+   * -- and a string is either an absolute path or one project hash as
+   * `getDir()` reports it.
    *
    * The absolute path is there because `start({cacheDir})` accepts any
    * directory: without it, a caller who chose their own cache would have the
