@@ -317,11 +317,8 @@ base::expected<std::vector<uint8_t>, std::string> EncodeImage(
     // dropping the alpha channel here would hide any error in it -- and with
     // omitBackground it is the whole point of the request.
     std::optional<std::vector<uint8_t>> png =
-        request.png_compression == "fast"
-            ? gfx::PNGCodec::FastEncodeBGRASkBitmap(
-                  bitmap, /*discard_transparency=*/false)
-            : gfx::PNGCodec::EncodeBGRASkBitmap(
-                  bitmap, /*discard_transparency=*/false);
+        gfx::PNGCodec::FastEncodeBGRASkBitmap(
+            bitmap, /*discard_transparency=*/false);
     if (!png) {
       return base::unexpected("could not encode the image as PNG");
     }

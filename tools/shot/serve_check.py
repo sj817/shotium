@@ -332,6 +332,14 @@ def main():
     checks.check("alpha" in header.get("error", ""), "and the error says why",
                  header.get("error", ""))
 
+    send(proc, {"file": features, "pngCompression": "balanced"})
+    header, payload = recv(proc)
+    checks.check(header.get("ok") is False,
+                 "the removed PNG compression mode is rejected")
+    checks.check("removed" in header.get("error", ""),
+                 "and the error explains that it is gone",
+                 header.get("error", ""))
+
     send(proc, {"file": features, "selector": "!!not a selector"})
     header, payload = recv(proc)
     checks.check(header.get("ok") is False, "an invalid selector is rejected")

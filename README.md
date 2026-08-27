@@ -252,9 +252,6 @@ interface ScreenshotOptions {
   /** Output image format (default: 'png') */
   type?: 'png' | 'jpeg' | 'webp';
 
-  /** PNG effort (default: fast); balanced trades latency for a smaller file */
-  pngCompression?: 'balanced' | 'fast';
-
   /** Viewport dimensions (default: 1280x720) */
   viewport?: { width?: number; height?: number };
 

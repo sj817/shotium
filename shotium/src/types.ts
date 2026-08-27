@@ -111,12 +111,6 @@ export interface ScreenshotOptions {
   file: string;
   /** Default `png`. */
   type?: 'png'|'jpeg'|'webp';
-  /**
-   * PNG compression effort. Both modes are lossless. `fast` reduces encoding
-   * latency but may produce a larger file. Default `fast`; use `balanced` when
-   * transfer or storage size matters more than capture latency.
-   */
-  pngCompression?: 'balanced'|'fast';
   /** Capture the whole document rather than the viewport. */
   fullPage?: boolean;
   /**

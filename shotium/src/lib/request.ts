@@ -12,7 +12,6 @@ const DEFAULT_TIMEOUT_MS = 30000;
 export interface WireRequest {
   file: string;
   type?: 'png'|'jpeg'|'webp';
-  pngCompression?: 'balanced'|'fast';
   fullPage?: boolean;
   selector?: string;
   quality?: number;
@@ -38,7 +37,6 @@ export interface WireRequest {
 const WIRE_FIELDS = new Set([
   'file',
   'type',
-  'pngCompression',
   'fullPage',
   'selector',
   'quality',

@@ -145,7 +145,6 @@ int Main(int argc, const char** argv) {
   request.full_page = prepared->options.full_page;
   request.selector = prepared->options.selector;
   request.type = prepared->options.type;
-  request.png_compression = prepared->options.png_compression;
   request.quality = prepared->options.quality;
   request.omit_background = prepared->options.omit_background;
   request.wait_until = prepared->options.wait_until;

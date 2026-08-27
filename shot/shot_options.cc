@@ -270,16 +270,6 @@ base::expected<ShotOptions, std::string> ParseShotOptions(
         continue;
       }
       if (std::optional<std::string> value =
-              ConsumeValue(argv, &i, argument, "png-compression")) {
-        if (*value != "balanced" && *value != "fast") {
-          return base::unexpected(
-              "--png-compression must be one of balanced, fast");
-        }
-        options.png_compression = std::move(*value);
-        options.png_compression_set = true;
-        continue;
-      }
-      if (std::optional<std::string> value =
               ConsumeValue(argv, &i, argument, "quality")) {
         if (value->empty()) {
           return base::unexpected("--quality requires a value");
@@ -381,10 +371,6 @@ base::expected<ShotOptions, std::string> ParseShotOptions(
   if (options.output_path.empty()) {
     return base::unexpected("output path must not be empty");
   }
-  if (options.png_compression_set && options.type != "png") {
-    return base::unexpected("--png-compression applies to png only");
-  }
-
   return options;
 }
 
@@ -453,9 +439,6 @@ Options:
   --full-page           Capture the whole document, not just the viewport
   --selector CSS        Capture only the first element matching CSS
   --type TYPE           png, jpeg or webp (default: png)
-  --png-compression MODE
-                        fast or balanced (default: fast); both are lossless,
-                        balanced produces a smaller file more slowly
   --quality N           1-100, jpeg and webp only (default: 90)
   --omit-background     Keep the alpha channel instead of painting white
   --wait-until WHEN     load or networkidle (default: load)
