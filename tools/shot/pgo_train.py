@@ -62,6 +62,7 @@ def representative_requests(repeats):
         "width": 1248,
         "height": 1320,
         "allowFileAccess": True,
+        "pngCompression": "balanced",
     }
     for _ in range(repeats):
         requests.extend([
@@ -115,7 +116,7 @@ def train_server(exe, requests):
 def train_cli(exe):
     corpus = os.path.join(TESTDATA, "render_corpus.html")
     cases = [
-        [],
+        ["--png-compression", "balanced"],
         ["--png-compression", "fast"],
         ["--type", "jpeg", "--quality", "90"],
         ["--type", "webp", "--quality", "90"],

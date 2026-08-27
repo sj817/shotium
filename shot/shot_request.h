@@ -38,10 +38,9 @@ struct ScreenshotRequest {
   std::string file;
 
   std::string type = "png";  // png | jpeg | webp
-  // PNG is lossless in both modes. "balanced" keeps Chromium's ordinary
-  // compression level; "fast" spends fewer CPU cycles and may produce a
-  // larger file.
-  std::string png_compression = "balanced";  // balanced | fast
+  // PNG is lossless in both modes. "fast" is the performance-first default;
+  // "balanced" spends more CPU to produce a smaller file.
+  std::string png_compression = "fast";  // fast | balanced
   bool full_page = false;
   std::string selector;
   std::optional<int> quality;  // 1-100, jpeg/webp only

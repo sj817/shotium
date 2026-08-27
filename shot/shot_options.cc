@@ -454,8 +454,8 @@ Options:
   --selector CSS        Capture only the first element matching CSS
   --type TYPE           png, jpeg or webp (default: png)
   --png-compression MODE
-                        balanced or fast (default: balanced); both are
-                        lossless, fast may produce a larger file
+                        fast or balanced (default: fast); both are lossless,
+                        balanced produces a smaller file more slowly
   --quality N           1-100, jpeg and webp only (default: 90)
   --omit-background     Keep the alpha channel instead of painting white
   --wait-until WHEN     load or networkidle (default: load)
