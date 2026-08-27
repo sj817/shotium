@@ -69,10 +69,25 @@ void CaptureContext::RecordResource(bool from_cache,
   stats_.bytes += bytes;
 }
 
+void CaptureContext::SetProgressCallback(base::RepeatingClosure callback) {
+  progress_callback_ = std::move(callback);
+}
+
+void CaptureContext::NotifyProgress() {
+  if (progress_callback_) {
+    progress_callback_.Run();
+  }
+}
+
 base::DictValue StatsToValue(const CaptureStats& stats) {
   base::DictValue timing;
   timing.Set("fetch", stats.fetch.InMillisecondsF());
   timing.Set("render", stats.render.InMillisecondsF());
+  timing.Set("setup", stats.setup.InMillisecondsF());
+  timing.Set("wait", stats.wait.InMillisecondsF());
+  timing.Set("lifecycle", stats.lifecycle.InMillisecondsF());
+  timing.Set("paint", stats.paint.InMillisecondsF());
+  timing.Set("raster", stats.raster.InMillisecondsF());
   timing.Set("encode", stats.encode.InMillisecondsF());
   timing.Set("total", stats.total.InMillisecondsF());
 

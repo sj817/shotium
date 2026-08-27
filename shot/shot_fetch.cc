@@ -217,6 +217,7 @@ void ShotFetch::Finish(int net_error) {
   if (CaptureContext* capture = CaptureContext::Current()) {
     capture->RecordResource(result_.was_cached, net_error != net::OK,
                             static_cast<int64_t>(result_.body.size()));
+    capture->NotifyProgress();
   }
   // The request is done with; dropping it here means a callback that renders
   // synchronously is not doing so with a live URLRequest underneath it.

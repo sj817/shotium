@@ -15,6 +15,8 @@
 
 namespace shot {
 
+class ShotRuntime;
+
 // One request in, one encoded image out.
 //
 // Every caller goes through here -- the command line, which serves one request
@@ -30,6 +32,7 @@ namespace shot {
 //
 // Requires a live ShotRuntime on this thread.
 base::expected<std::vector<uint8_t>, std::string> Capture(
+    ShotRuntime& runtime,
     const ScreenshotRequest& request,
     CaptureStats* out_stats = nullptr);
 
@@ -60,6 +63,7 @@ struct CaptureResult {
 //
 // Requires a live ShotRuntime on this thread.
 base::expected<CaptureResult, std::string> CaptureAndDeliver(
+    ShotRuntime& runtime,
     const ScreenshotRequest& request,
     CaptureStats* out_stats = nullptr);
 

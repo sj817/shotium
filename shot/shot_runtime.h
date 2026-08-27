@@ -26,6 +26,7 @@ class DiscardableSharedMemoryManager;
 namespace shot {
 
 class ShotPlatform;
+class ShotRenderer;
 
 // Everything a process needs before blink will render anything, brought up once
 // and held for as long as the process lives.
@@ -94,6 +95,10 @@ class ShotRuntime {
   // measurement here saying one is needed.
   void ReleaseWorkingSet();
 
+  // The renderer is process-resident so it can retain only its reusable raster
+  // surface. Every Page and Frame is still detached after each capture.
+  ShotRenderer& renderer();
+
  private:
   ShotRuntime();
 
@@ -126,6 +131,8 @@ class ShotRuntime {
   // resolver post to the thread pool, and the sockets are watched by this
   // thread's message pump, so neither may still be running when those go.
   std::unique_ptr<ShotNetwork> network_;
+  // Last so it is destroyed first, while Blink and Skia are still alive.
+  std::unique_ptr<ShotRenderer> renderer_;
 };
 
 }  // namespace shot

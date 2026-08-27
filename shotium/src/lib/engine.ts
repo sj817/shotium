@@ -342,7 +342,17 @@ function emptyStats(): CaptureStats {
     bytes: 0,
     httpStatus: 0,
     finalUrl: '',
-    timing: {fetch: 0, render: 0, encode: 0, total: 0},
+    timing: {
+      fetch: 0,
+      render: 0,
+      setup: 0,
+      wait: 0,
+      lifecycle: 0,
+      paint: 0,
+      raster: 0,
+      encode: 0,
+      total: 0,
+    },
   };
 }
 

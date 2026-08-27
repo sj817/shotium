@@ -198,6 +198,9 @@ interface ScreenshotOptions {
   /** Output image format (default: 'png') */
   type?: 'png' | 'jpeg' | 'webp';
 
+  /** PNG effort: both are lossless; fast trades file size for latency */
+  pngCompression?: 'balanced' | 'fast';
+
   /** Viewport dimensions (default: 1280x720) */
   viewport?: { width?: number; height?: number };
 
@@ -325,6 +328,11 @@ interface CaptureStats {
   timing: {
     fetch: number;      // Document retrieval: DNS, TCP, TLS, and round-trip latency
     render: number;     // Rendering: parsing, subresources, styles, layout, paint
+    setup: number;      // Page/frame creation and document installation
+    wait: number;       // Parsing, load completion and subresource wait
+    lifecycle: number;  // Capture selection, style, layout and lifecycle
+    paint: number;      // PaintRecord extraction
+    raster: number;     // Surface preparation and PaintRecord replay
     encode: number;     // Image encoding duration
     total: number;      // Total wall-clock duration
   };

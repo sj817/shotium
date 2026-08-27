@@ -145,6 +145,7 @@ int Main(int argc, const char** argv) {
   request.full_page = prepared->options.full_page;
   request.selector = prepared->options.selector;
   request.type = prepared->options.type;
+  request.png_compression = prepared->options.png_compression;
   request.quality = prepared->options.quality;
   request.omit_background = prepared->options.omit_background;
   request.wait_until = prepared->options.wait_until;
@@ -156,7 +157,7 @@ int Main(int argc, const char** argv) {
   // field and not a constant.
   request.allow_file_access = true;
 
-  auto image = shot::Capture(request);
+  auto image = shot::Capture(**runtime, request);
   if (!image.has_value()) {
     LOG(ERROR) << "shot: " << image.error();
     return shot::kCaptureExitCode;

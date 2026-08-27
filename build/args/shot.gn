@@ -247,12 +247,11 @@ use_kerberos = false
 # removes it.
 disable_zstd_filter = true
 
-# -Os rather than -O2. Chromium turns this on for Android, CastOS, iOS and
-# ChromeOS -- every target where the binary's size costs more than the last few
-# percent of throughput. shot rasterises one page per process launch, so it is
-# in the same category: the time is dominated by process startup and layout,
-# not by the inner loops -Os gives up.
-optimize_for_size = true
+# Prefer -O2 over -Os. Chromium turns size optimization on for several
+# Shot is performance-first. Resident --serve and C ABI workloads spend enough
+# time in Blink, raster, and image encoding for -O2 to outperform -Os. ThinLTO
+# and optional PGO recover part of the resulting code-size increase.
+optimize_for_size = false
 
 # blink's heap TLS has to be reachable from a shared object.
 #

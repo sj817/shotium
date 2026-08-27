@@ -56,6 +56,12 @@ const request: ScreenshotOptions = {
   headers: {Authorization: 'Bearer token'},
 };
 
+const _fastPng: ScreenshotOptions = {
+  file: 'https://example.com',
+  type: 'png',
+  pngCompression: 'fast',
+};
+
 // retry was a supervisor's knob, and there is no supervisor: the pool that
 // re-sent a request to a fresh worker is gone, and an in-process engine has
 // nothing to re-send to. It is rejected rather than accepted-and-ignored,
@@ -87,6 +93,11 @@ async function lifecycle(): Promise<void> {
   const stats: CaptureStats = result.stats;
   void stats.fromCache;
   void stats.timing.fetch;
+  void stats.timing.setup;
+  void stats.timing.wait;
+  void stats.timing.lifecycle;
+  void stats.timing.paint;
+  void stats.timing.raster;
   void stats.finalUrl;
 
   const _running: boolean = own.running;

@@ -623,7 +623,8 @@ shot_status shot_engine_capture(shot_engine* engine,
           return;
         }
         shot::CaptureStats collected;
-        auto result = shot::CaptureAndDeliver(*request, &collected);
+        auto result = shot::CaptureAndDeliver(engine->thread.runtime(),
+                                              *request, &collected);
         // Serialised before the failure is checked: a capture that got part of
         // the way through has counters worth returning, and they are the same
         // counters either way.

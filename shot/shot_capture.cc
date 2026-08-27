@@ -25,6 +25,7 @@
 #include "shot/shot_fetch.h"
 #include "shot/shot_network.h"
 #include "shot/shot_renderer.h"
+#include "shot/shot_runtime.h"
 #include "url/gurl.h"
 #include "url/origin.h"
 #include "url/url_constants.h"
@@ -172,6 +173,7 @@ base::expected<RenderInput, std::string> FetchDocument(
 }  // namespace
 
 base::expected<std::vector<uint8_t>, std::string> Capture(
+    ShotRuntime& runtime,
     const ScreenshotRequest& request,
     CaptureStats* out_stats) {
   const base::TimeTicks started = base::TimeTicks::Now();
@@ -235,8 +237,7 @@ base::expected<std::vector<uint8_t>, std::string> Capture(
   capture.stats().http_status = input->http_status;
 
   const base::TimeTicks render_started = base::TimeTicks::Now();
-  ShotRenderer renderer;
-  auto image = renderer.Render(*input, request);
+  auto image = runtime.renderer().Render(*input, request);
   // Render() reported its own encode time into the same stats block on its way
   // out, so what is left over here is parse, subresources, style, layout and
   // paint -- which is what `render` is documented to be.
@@ -246,9 +247,10 @@ base::expected<std::vector<uint8_t>, std::string> Capture(
 }
 
 base::expected<CaptureResult, std::string> CaptureAndDeliver(
+    ShotRuntime& runtime,
     const ScreenshotRequest& request,
     CaptureStats* out_stats) {
-  auto image = Capture(request, out_stats);
+  auto image = Capture(runtime, request, out_stats);
   if (!image.has_value()) {
     return base::unexpected(image.error());
   }

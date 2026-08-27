@@ -119,6 +119,19 @@ base::expected<ScreenshotRequest, std::string> ParseScreenshotRequest(
     request.type = value;
   }
 
+  auto png_compression = ReadString(dict, "pngCompression");
+  if (!png_compression.has_value()) {
+    return base::unexpected(png_compression.error());
+  }
+  if (png_compression->has_value()) {
+    const std::string& value = **png_compression;
+    if (value != "balanced" && value != "fast") {
+      return base::unexpected(
+          "pngCompression must be one of balanced, fast");
+    }
+    request.png_compression = value;
+  }
+
   auto full_page = ReadBool(dict, "fullPage");
   if (!full_page.has_value()) {
     return base::unexpected(full_page.error());
@@ -286,6 +299,9 @@ base::expected<ScreenshotRequest, std::string> ParseScreenshotRequest(
   // "transparent" areas came out black.
   if (request.quality.has_value() && request.type == "png") {
     return base::unexpected("quality applies to jpeg and webp; png is lossless");
+  }
+  if (png_compression->has_value() && request.type != "png") {
+    return base::unexpected("pngCompression applies to png only");
   }
   if (request.omit_background && request.type == "jpeg") {
     return base::unexpected(

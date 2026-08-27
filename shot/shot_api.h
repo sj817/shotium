@@ -172,7 +172,9 @@ SHOT_EXPORT void shot_engine_destroy(shot_engine* engine);
 //   {
 //     "requests": 12, "fromCache": 11, "failed": 0, "bytes": 48213,
 //     "httpStatus": 200, "finalUrl": "https://example.com/",
-//     "timing": {"fetch": 3.1, "render": 24.8, "encode": 2.0, "total": 30.4}
+//     "timing": {"fetch": 3.1, "render": 24.8, "setup": 2.1,
+//                "wait": 10.2, "lifecycle": 4.0, "paint": 0.4,
+//                "raster": 6.1, "encode": 2.0, "total": 30.4}
 //   }
 //
 // Timings are milliseconds as doubles. It is delivered on failure too, when

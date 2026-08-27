@@ -58,8 +58,18 @@ export interface CaptureTiming {
   fetch: number;
   /** Parse, subresources, style, layout, prepaint, paint. */
   render: number;
+  /** Page/frame creation and synchronous document installation. */
+  setup: number;
+  /** Waiting for parsing, load completion and subresources. */
+  wait: number;
+  /** Capture selection plus style/layout/lifecycle advancement. */
+  lifecycle: number;
+  /** Extracting Blink's paint record. */
+  paint: number;
+  /** Raster-surface preparation and paint-record replay. */
+  raster: number;
   encode: number;
-  /** Wall clock for the whole capture, so the three above can be checked. */
+  /** Wall clock for the whole capture, so the phases above can be checked. */
   total: number;
 }
 
@@ -101,6 +111,11 @@ export interface ScreenshotOptions {
   file: string;
   /** Default `png`. */
   type?: 'png'|'jpeg'|'webp';
+  /**
+   * PNG compression effort. Both modes are lossless. `fast` reduces encoding
+   * latency but may produce a larger file. Default `balanced`.
+   */
+  pngCompression?: 'balanced'|'fast';
   /** Capture the whole document rather than the viewport. */
   fullPage?: boolean;
   /**

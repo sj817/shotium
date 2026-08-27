@@ -57,6 +57,7 @@
 .pydevproject
 .ruff_cache
 /.scratch
+/.shot-pgo/
 .siso_failed_targets
 *.class
 compile_commands.json

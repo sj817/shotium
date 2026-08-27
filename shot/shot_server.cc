@@ -285,7 +285,7 @@ class RequestHandler {
     // that owns doing it, so that this worker and the shared library cannot
     // come to do it differently.
     CaptureStats stats;
-    auto result = CaptureAndDeliver(*request, &stats);
+    auto result = CaptureAndDeliver(*runtime_, *request, &stats);
     if (!result.has_value()) {
       // The counters go back with the failure too. A capture that timed out
       // having fetched forty subresources has already said why, and the error

@@ -252,6 +252,9 @@ interface ScreenshotOptions {
   /** Output image format (default: 'png') */
   type?: 'png' | 'jpeg' | 'webp';
 
+  /** PNG effort: both are lossless; fast trades file size for latency */
+  pngCompression?: 'balanced' | 'fast';
+
   /** Viewport dimensions (default: 1280x720) */
   viewport?: { width?: number; height?: number };
 
@@ -379,6 +382,11 @@ interface CaptureStats {
   timing: {
     fetch: number;      // Document retrieval: DNS, TCP, TLS, and round-trip latency
     render: number;     // Rendering: parsing, subresources, styles, layout, paint
+    setup: number;      // Page/frame creation and document installation
+    wait: number;       // Parsing, load completion and subresource wait
+    lifecycle: number;  // Capture selection, style, layout and lifecycle
+    paint: number;      // PaintRecord extraction
+    raster: number;     // Surface preparation and PaintRecord replay
     encode: number;     // Image encoding duration
     total: number;      // Total wall-clock duration
   };
@@ -622,6 +630,14 @@ echo 'import("//build/args/shot.gn")' > out/Shot/args.gn
 
 gn gen out/Shot
 ninja -C out/Shot shot
+```
+
+For a profile-guided performance build, the helper performs the instrumented
+build, trains CLI/serve/C ABI on the render corpus, merges the profile, and
+rebuilds the same output directory:
+
+```bash
+python3 tools/shot/pgo.py --out out/ShotPgo --jobs 12
 ```
 
 ### Test Suites

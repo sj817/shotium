@@ -8,6 +8,7 @@
 #include <map>
 #include <string>
 
+#include "base/functional/callback.h"
 #include "base/time/time.h"
 #include "base/values.h"
 #include "net/http/http_request_headers.h"
@@ -55,8 +56,18 @@ struct CaptureStats {
   base::TimeDelta fetch;
   // Parse, subresource loading, style, layout, prepaint, paint.
   base::TimeDelta render;
+  // Page/frame creation and synchronous document installation.
+  base::TimeDelta setup;
+  // Waiting for parsing, load completion and subresources.
+  base::TimeDelta wait;
+  // Capture-rectangle resolution plus style/layout/lifecycle advancement.
+  base::TimeDelta lifecycle;
+  // Extracting Blink's paint record after the lifecycle is clean.
+  base::TimeDelta paint;
+  // Allocating or reusing the raster surface and replaying the paint record.
+  base::TimeDelta raster;
   base::TimeDelta encode;
-  // Wall clock across the whole call, so the three above can be checked
+  // Wall clock across the whole call, so the phases above can be checked
   // against it rather than assumed to be exhaustive.
   base::TimeDelta total;
 };
@@ -109,11 +120,18 @@ class CaptureContext {
   // fetch, or the file: reader that never touches //net.
   void RecordResource(bool from_cache, bool failed, int64_t bytes);
 
+  // Wakes ShotRenderer's load wait when a resource or frame event makes
+  // progress. The 10 ms fallback remains as a correctness watchdog for Blink
+  // state changes that have no embedder callback.
+  void SetProgressCallback(base::RepeatingClosure callback);
+  void NotifyProgress();
+
   CaptureStats& stats() { return stats_; }
   const CaptureStats& stats() const { return stats_; }
 
  private:
   CaptureStats stats_;
+  base::RepeatingClosure progress_callback_;
   int load_flags_ = 0;
   net::HttpRequestHeaders extra_headers_;
   url::Origin headers_origin_;

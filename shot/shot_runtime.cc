@@ -22,6 +22,7 @@
 #include "mojo/public/cpp/bindings/binder_map.h"
 #include "partition_alloc/memory_reclaimer.h"
 #include "shot/shot_platform.h"
+#include "shot/shot_renderer.h"
 #include "skia/ext/legacy_display_globals.h"
 #include "third_party/blink/public/platform/platform.h"
 #include "third_party/blink/public/platform/scheduler/web_thread_scheduler.h"
@@ -298,11 +299,17 @@ base::expected<std::unique_ptr<ShotRuntime>, std::string> ShotRuntime::Create(
     return base::unexpected(network.error());
   }
   runtime->network_ = std::move(network).value();
+  runtime->renderer_ = std::make_unique<ShotRenderer>();
 
   return runtime;
 }
 
+ShotRenderer& ShotRuntime::renderer() {
+  return *renderer_;
+}
+
 void ShotRuntime::PurgeMemory() {
+  renderer_->PurgeMemory();
   // Blink's heap first, and everything else after, because the collection is
   // what makes the rest of it worth doing: the Page, the Document, every
   // LayoutObject and every Resource the capture built are unreachable the

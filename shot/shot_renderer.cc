@@ -16,6 +16,7 @@
 #include "base/strings/string_number_conversions.h"
 #include "base/task/single_thread_task_runner.h"
 #include "base/time/time.h"
+#include "base/timer/timer.h"
 #include "cc/paint/paint_canvas.h"
 #include "cc/paint/paint_record.h"
 #include "cc/paint/skia_paint_canvas.h"
@@ -51,6 +52,7 @@
 #include "third_party/blink/renderer/platform/weborigin/kurl.h"
 #include "third_party/blink/renderer/platform/weborigin/security_origin.h"
 #include "third_party/skia/include/core/SkBitmap.h"
+#include "third_party/skia/include/core/SkCanvas.h"
 #include "third_party/skia/include/core/SkPixmap.h"
 #include "third_party/skia/include/core/SkSurface.h"
 #include "third_party/skia/include/core/SkSurfaceProps.h"
@@ -155,6 +157,18 @@ class ShotRenderer::FrameClient final : public blink::EmptyLocalFrameClient {
   blink::String UserAgent() override {
     return blink::String::FromUtf8(ShotNetwork::UserAgent());
   }
+
+  void DispatchDidFinishLoad() override {
+    if (CaptureContext* capture = CaptureContext::Current()) {
+      capture->NotifyProgress();
+    }
+  }
+
+  void DidStopLoading() override {
+    if (CaptureContext* capture = CaptureContext::Current()) {
+      capture->NotifyProgress();
+    }
+  }
 };
 
 namespace {
@@ -183,7 +197,9 @@ using FontFamilyUpdater = bool (blink::GenericFontFamilySettings::*)(
     const blink::AtomicString&,
     UScriptCode);
 
-// Runs the message loop for `slice`, then returns.
+// Runs the message loop until a resource/frame event reports progress, with a
+// short timer as a watchdog for Blink state changes that have no embedder
+// callback.
 //
 // RunUntilIdle would not do: the network stack completes on this thread from
 // timers and IO completions, and "no task queued right now" is not "nothing is
@@ -191,8 +207,19 @@ using FontFamilyUpdater = bool (blink::GenericFontFamilySettings::*)(
 // measurable at all.
 void PumpFor(base::TimeDelta slice) {
   base::RunLoop run_loop(base::RunLoop::Type::kNestableTasksAllowed);
-  base::SingleThreadTaskRunner::GetCurrentDefault()->PostDelayedTask(
-      FROM_HERE, run_loop.QuitClosure(), slice);
+  CaptureContext* capture = CaptureContext::Current();
+  if (capture) {
+    capture->SetProgressCallback(run_loop.QuitClosure());
+  }
+  base::ScopedClosureRunner clear_progress(base::BindOnce(
+      [](CaptureContext* capture) {
+        if (capture) {
+          capture->SetProgressCallback(base::RepeatingClosure());
+        }
+      },
+      base::Unretained(capture)));
+  base::OneShotTimer watchdog;
+  watchdog.Start(FROM_HERE, slice, run_loop.QuitClosure());
   run_loop.Run();
 }
 
@@ -290,8 +317,11 @@ base::expected<std::vector<uint8_t>, std::string> EncodeImage(
     // dropping the alpha channel here would hide any error in it -- and with
     // omitBackground it is the whole point of the request.
     std::optional<std::vector<uint8_t>> png =
-        gfx::PNGCodec::EncodeBGRASkBitmap(bitmap,
-                                          /*discard_transparency=*/false);
+        request.png_compression == "fast"
+            ? gfx::PNGCodec::FastEncodeBGRASkBitmap(
+                  bitmap, /*discard_transparency=*/false)
+            : gfx::PNGCodec::EncodeBGRASkBitmap(
+                  bitmap, /*discard_transparency=*/false);
     if (!png) {
       return base::unexpected("could not encode the image as PNG");
     }
@@ -326,6 +356,12 @@ ShotRenderer::ShotRenderer() = default;
 
 ShotRenderer::~ShotRenderer() {
   TearDown();
+}
+
+void ShotRenderer::PurgeMemory() {
+  surface_.reset();
+  surface_width_ = 0;
+  surface_height_ = 0;
 }
 
 void ShotRenderer::TearDown() {
@@ -591,6 +627,10 @@ base::expected<std::vector<uint8_t>, std::string> ShotRenderer::Render(
       base::BindOnce(&ShotRenderer::TearDown, base::Unretained(this)));
   TearDown();
 
+  CaptureStats* stats = CaptureContext::Current()
+                            ? &CaptureContext::Current()->stats()
+                            : nullptr;
+  const base::TimeTicks setup_started = base::TimeTicks::Now();
   if (auto created = CreatePage(input, request); !created.has_value()) {
     return base::unexpected(created.error());
   }
@@ -623,17 +663,26 @@ base::expected<std::vector<uint8_t>, std::string> ShotRenderer::Render(
           input.mime_type.empty() ? "text/html" : input.mime_type)),
       *data, blink::KURL(input.url));
 
+  if (stats) {
+    stats->setup = base::TimeTicks::Now() - setup_started;
+  }
+
   blink::LocalFrameView* view = frame_->View();
   if (!view) {
     return base::unexpected("the frame has no view after install");
   }
 
+  const base::TimeTicks wait_started = base::TimeTicks::Now();
   if (auto waited = WaitForLoad(request.wait_until,
                                 base::Milliseconds(request.timeout_ms));
       !waited.has_value()) {
     return base::unexpected(waited.error());
   }
+  if (stats) {
+    stats->wait = base::TimeTicks::Now() - wait_started;
+  }
 
+  const base::TimeTicks lifecycle_started = base::TimeTicks::Now();
   auto capture = ResolveCaptureRect(request);
   if (!capture.has_value()) {
     return base::unexpected(capture.error());
@@ -646,10 +695,18 @@ base::expected<std::vector<uint8_t>, std::string> ShotRenderer::Render(
           blink::DocumentUpdateReason::kBeginMainFrame)) {
     return base::unexpected("the document did not reach a painted state");
   }
+  if (stats) {
+    stats->lifecycle = base::TimeTicks::Now() - lifecycle_started;
+  }
 
   const gfx::Rect cull_rect = capture.value();
+  const base::TimeTicks paint_started = base::TimeTicks::Now();
   cc::PaintRecord record = view->GetPaintRecord(&cull_rect);
+  if (stats) {
+    stats->paint = base::TimeTicks::Now() - paint_started;
+  }
 
+  const base::TimeTicks raster_started = base::TimeTicks::Now();
   const SkSurfaceProps surface_props =
       skia::LegacyDisplayGlobals::GetSkSurfaceProps();
   const int pixel_width =
@@ -668,15 +725,27 @@ base::expected<std::vector<uint8_t>, std::string> ShotRenderer::Render(
   // SkSurfaceProps says. ShotRuntime put the host's geometry in
   // LegacyDisplayGlobals; this is where it has to be honoured, or the SkFont
   // edging chosen for the glyphs is silently downgraded at draw time.
-  sk_sp<SkSurface> surface = SkSurfaces::Raster(
-      SkImageInfo::MakeN32Premul(pixel_width, pixel_height), &surface_props);
-  if (!surface) {
-    return base::unexpected("could not allocate a " +
-                            base::NumberToString(pixel_width) + "x" +
-                            base::NumberToString(pixel_height) + " bitmap");
+  const bool reuse_surface = surface_ && surface_width_ == pixel_width &&
+                             surface_height_ == pixel_height;
+  if (!reuse_surface) {
+    surface_ = SkSurfaces::Raster(
+        SkImageInfo::MakeN32Premul(pixel_width, pixel_height), &surface_props);
+    if (!surface_) {
+      return base::unexpected("could not allocate a " +
+                              base::NumberToString(pixel_width) + "x" +
+                              base::NumberToString(pixel_height) + " bitmap");
+    }
+    surface_width_ = pixel_width;
+    surface_height_ = pixel_height;
   }
+  sk_sp<SkSurface> surface = surface_;
+  // Make new and retained surfaces start from the same defined state. This is
+  // required for byte-identical clip/selector output and for omitBackground,
+  // where uncovered pixels must remain transparent.
+  surface->getCanvas()->clear(SK_ColorTRANSPARENT);
 
   {
+    SkAutoCanvasRestore restore(surface->getCanvas(), /*doSave=*/true);
     cc::SkiaPaintCanvas canvas(surface->getCanvas());
     if (request.scale != 1.0) {
       canvas.scale(static_cast<float>(request.scale),
@@ -709,6 +778,9 @@ base::expected<std::vector<uint8_t>, std::string> ShotRenderer::Render(
   SkBitmap bitmap;
   if (!bitmap.installPixels(pixmap)) {
     return base::unexpected("could not wrap the rendered pixels as a bitmap");
+  }
+  if (stats) {
+    stats->raster = base::TimeTicks::Now() - raster_started;
   }
 
   // Timed separately from the rest because it is the one phase whose cost the

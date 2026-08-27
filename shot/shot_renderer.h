@@ -14,6 +14,7 @@
 #include "base/types/expected.h"
 #include "shot/shot_request.h"
 #include "third_party/blink/renderer/platform/heap/persistent.h"
+#include "third_party/skia/include/core/SkRefCnt.h"
 #include "ui/gfx/geometry/rect.h"
 #include "url/gurl.h"
 
@@ -22,6 +23,8 @@ class LocalFrame;
 class LocalFrameView;
 class Page;
 }  // namespace blink
+
+class SkSurface;
 
 namespace shot {
 
@@ -83,6 +86,10 @@ class ShotRenderer {
       const RenderInput& input,
       const ScreenshotRequest& request);
 
+  // Drops the retained raster surface between bursts. The next capture simply
+  // allocates it again; page/frame state is never retained between requests.
+  void PurgeMemory();
+
  private:
   // Detaches the frame and drops the page. Idempotent, so the scoped call in
   // Render() and the one in the destructor cannot double-detach.
@@ -121,6 +128,9 @@ class ShotRenderer {
 
   blink::Persistent<blink::Page> page_;
   blink::Persistent<blink::LocalFrame> frame_;
+  sk_sp<SkSurface> surface_;
+  int surface_width_ = 0;
+  int surface_height_ = 0;
 };
 
 }  // namespace shot

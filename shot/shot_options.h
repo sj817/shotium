@@ -49,6 +49,8 @@ struct ShotOptions {
   bool full_page = false;
   std::string selector;
   std::string type = "png";
+  std::string png_compression = "balanced";
+  bool png_compression_set = false;
   std::optional<int> quality;
   bool omit_background = false;
   std::string wait_until = "load";
