@@ -4,7 +4,7 @@
 
 [![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](LICENSE)
 [![npm version](https://img.shields.io/npm/v/@shotkit/shotium.svg)](https://www.npmjs.com/package/@shotkit/shotium)
-[![Release](https://img.shields.io/badge/binary-~12MB%20compressed-green.svg)](https://github.com/sj817/shotium/releases)
+[![Download](https://img.shields.io/badge/npm%20download-19.4%20MB%20(win32--x64)-green.svg)](https://www.npmjs.com/package/@shotkit/shotium)
 
 **English** · [简体中文](README.zh.md)
 
@@ -14,12 +14,14 @@
 
 **shotium** is a lightweight, high-performance rendering engine designed specifically for capturing static screenshots from HTML and CSS. It is built by stripping down Chromium to its core rendering pipeline: Blink layout, Skia CPU rasterization, typography, image decoders, and the Chromium `//net` network stack.
 
-**V8 and the browser layer are completely removed.** There is no `//content`, no GPU process, no compositor, and no DevTools protocol. What remains is a single standalone executable (~41 MB uncompressed, ~12.8 MB compressed) that starts in under 350 ms, captures a viewport in ~47 ms, and consumes significantly less memory than Headless Chrome or Puppeteer.
+**V8 and the browser layer are completely removed.** There is no `//content`, no GPU process, no compositor, and no DevTools protocol. What remains is about 41 MB of engine that starts in under 350 ms, captures a viewport in ~47 ms, and consumes significantly less memory than Headless Chrome or Puppeteer.
+
+It ships two ways. For Node.js it is a Node-API addon over a shared library, loaded into the calling process: `npm install` pulls 19.4 MB for win32-x64 and nothing is spawned. For everything else it is a standalone executable on the [releases page](https://github.com/sj817/shotium/releases), 15.3 MB compressed.
 
 ```ts
 import shotium from '@shotkit/shotium';
 
-shotium.runtime.start({ workers: 4 });
+shotium.runtime.start();
 
 const png = await shotium.screenshot({
   file: 'https://example.com',
@@ -40,7 +42,7 @@ shotium is intended for server-side HTML/CSS rendering tasks, such as generating
 - **Blink Layout Engine**: Full CSS Flexbox, Grid, custom web fonts, SVG, pseudo-elements, and CSS variables.
 - **Image Formats**: Direct encoding to PNG, JPEG, and WebP with configurable quality and alpha channel support.
 - **Chromium Networking**: Direct integration with Chromium's `//net` stack (HTTPS, HTTP/2, Brotli, redirects, disk cache, in-memory cookies).
-- **Process Isolation**: Multi-process worker pool with crash recovery and automatic retry logic.
+- **In-Process Rendering**: The engine is a Node-API addon over a C ABI, not a spawned browser. No IPC, no temporary files, no port, and no image copied across a process boundary. A resident daemon is provided for callers that would rather not pay the start.
 
 ### Deliberate Omissions
 - **No JavaScript Execution**: V8 is absent. `<script>` tags are ignored, and client-side framework hydration (e.g., pure CSR React/Vue apps) will not execute. Target documents must be server-rendered or static HTML.
@@ -61,24 +63,17 @@ Prebuilt binaries are published as optional dependencies for supported platforms
 
 ## Usage
 
-### 1. Multi-Process Pool (`runtime`)
+### 1. In-Process Engine (`runtime`)
 
-Recommended for backend services and queue workers. Manages worker processes in the background with automatic request queuing and crash isolation.
+The engine runs inside your Node.js process, loaded through Node-API from the C ABI in [`shot/shot_api.h`](shot/shot_api.h). `screenshot()` returns the bytes Blink just encoded: nothing is spawned, and no image is copied across a process boundary (~31 ms per shot).
 
 ```ts
 import { runtime, screenshot } from '@shotkit/shotium';
 
-// Optional lifecycle event listeners
-runtime.on('crash', ({ worker }) => console.warn(`Worker ${worker} crashed and restarted`));
-runtime.on('timeout', ({ worker, timeout }) => console.warn(`Worker ${worker} timed out (${timeout}ms)`));
-
-// Start the worker pool
 runtime.start({
-  workers: 4,                        // Default: half of CPU cores
-  cacheDir: '/var/tmp/shotium-cache' // Optional HTTP disk cache path
+  cacheDir: '/var/tmp/shotium-cache' // Optional HTTP disk cache. Default: null (off)
 });
 
-// Take a screenshot
 const buffer = await screenshot({
   file: 'https://example.com',
   viewport: { width: 1280, height: 720 },
@@ -86,8 +81,13 @@ const buffer = await screenshot({
   quality: 85,
 });
 
+// Hand memory back between batches without giving up the engine
+runtime.purge({ releaseWorkingSet: true });
+
 await runtime.stop();
 ```
+
+**One engine per process, ever, and not one at a time.** Starting Blink writes process-wide statics it has no path to undo, so `stop()` is final: a `start()` after it throws, and so does a second `Runtime`. Concurrent callers are queued and served one at a time, because there is one renderer. Parallelism is therefore more processes, and a program that will want another screenshot later should stay started and call `purge()` rather than stopping.
 
 ---
 
@@ -95,13 +95,13 @@ await runtime.stop();
 
 Recommended for CLI commands, CI pipelines, and ephemeral tasks where process startup overhead must be minimized.
 
-The daemon keeps a pre-warmed worker pool running behind a local domain socket or named pipe. Subsequent processes connect with ~2.3 ms latency.
+The daemon is that same engine in a process of its own, behind a local domain socket or named pipe. It renders a blank page on start, so it is warm before the first real request arrives, and a later process connects with ~2.3 ms latency.
 
 ```ts
 import { daemon } from '@shotkit/shotium';
 
 // Connect to existing daemon, or automatically launch one if not running
-const client = await daemon.connect({ workers: 4 });
+const client = await daemon.connect();
 
 const png = await client.screenshot({
   file: 'https://example.com',
@@ -111,34 +111,15 @@ const png = await client.screenshot({
 client.close();
 
 // Optional management
-const status = await daemon.status(); // { running: true, pid: 12345, workers: 4, ... }
+const status = await daemon.status(); // { running: true, pid: 12345, warm: true, ... }
 await daemon.stop();
 ```
 
----
-
-### 3. In-Process Native Engine (`@shotkit/shotium/native`)
-
-Recommended for single-threaded batch processing requiring minimal latency (~31 ms per shot).
-
-Loads the stripped Blink engine directly into the Node.js process using Node-API and C ABI bindings (`shot/shot_api.h`). Requests are serialized within the process.
-
-```ts
-import { native } from '@shotkit/shotium/native';
-
-const png = await native.screenshot({
-  file: 'https://example.com',
-  viewport: { width: 1280, height: 720 },
-});
-
-// Release memory back to OS after batch completion
-native.purge({ releaseWorkingSet: true });
-await native.stop();
-```
+One connection may have several requests outstanding, because every message carries an `id`. That is a convenience for the client rather than concurrency: the daemon holds one renderer too, and answers in the order it finished them. Two at once means two daemons, told apart by `name`.
 
 ---
 
-### 4. Standalone CLI
+### 3. Standalone CLI
 
 Standalone executables are available from [GitHub Releases](https://github.com/sj817/shotium/releases) for environments without Node.js.
 
@@ -149,7 +130,7 @@ shotium https://example.com --width 1280 --height 720 -o output.png
 # Capture full-page local document as WebP
 shotium --file page.html --full-page --type webp --quality 85 -o output.webp
 
-# Run as a resident worker server
+# Stay resident and answer length-prefixed JSON requests on stdin
 shotium --serve --cache-dir /var/tmp/shotium-cache
 ```
 
@@ -199,9 +180,6 @@ interface ScreenshotOptions {
 
   /** Allow document to read local file:// subresources (default: false) */
   allowFileAccess?: boolean;
-
-  /** Number of retry attempts on crash or timeout (default: 0) */
-  retry?: number;
 }
 ```
 
@@ -215,13 +193,15 @@ Measured on a 32-core Windows workstation across 10 static local HTML test docum
 
 ### 1. Throughput & Cold Start
 
-| Engine | Cold Start (1 shot) | Marginal / Shot | 10 Pages (4 Concurrency) | Working Set Memory (Private) |
+| Engine | Cold Start (1 shot) | Marginal / Shot | 10 Pages, 4 in Flight | Working Set Memory (Private) |
 |---|--:|--:|--:|--:|
 | **shotium** | **352 ms** | **47 ms** | **237 ms (42 shots/s)** | **256 MiB (73 MiB private)** |
 | Puppeteer (`chrome-headless-shell`) | 946 ms | 133 ms | 905 ms (11 shots/s) | 647 MiB (180 MiB private) |
 | Puppeteer (`headless Chrome`) | 1,559 ms | 132 ms | 1,890 ms (5 shots/s) | 1,287 MiB (379 MiB private) |
 | Playwright (`chrome-headless-shell`) | 962 ms | 150 ms | 1,171 ms (9 shots/s) | 652 MiB (215 MiB private) |
 | Playwright (`headless Chrome`) | 1,385 ms | 146 ms | 1,276 ms (8 shots/s) | 789 MiB (282 MiB private) |
+
+> The four-in-flight column was measured with four shotium **processes**, against four pages in one browser on the other side. One process holds one renderer, so shotium scales by process; a single `runtime` serialises its callers however many are waiting.
 
 ### 2. Client Connection to Pre-warmed Engine
 
@@ -240,11 +220,12 @@ Measured on a 32-core Windows workstation across 10 static local HTML test docum
 ```
 ┌────────────────────────────────────────────────────────┐
 │  shotium (TypeScript / Node.js API)                    │
-│  Worker pool · Request queue · Event bus · Retries     │
+│  Lifecycle · Serialized queue · Option validation      │
 └──────────────────────────┬─────────────────────────────┘
-                           │ Length-prefixed JSON / Binary IPC
+                           │ Node-API: JSON in, bytes out
 ┌──────────────────────────▼─────────────────────────────┐
-│  shotium.exe --serve (C++ Worker Process)              │
+│  shotium.node  ──►  libshotium (C ABI, shot_api.h)     │
+│                     same process, no IPC               │
 │                                                        │
 │  Blink Pipeline:                                       │
 │  DOM ──► Layout / Style ──► PaintRecord ──► Skia Raster│
@@ -258,15 +239,21 @@ Measured on a 32-core Windows workstation across 10 static local HTML test docum
 1. **Direct Blink Lifecycle**: Instead of dispatching IPC calls through `//content` and compositor layers, Shotium instantiates `PageNonOrdinary` and triggers `LocalFrameView::UpdateAllLifecyclePhases()` synchronously.
 2. **Skia CPU Raster**: Draws the generated `cc::PaintRecord` directly to an in-memory `SkSurface`, passing raw pixels to Skia image codecs.
 3. **Embedded Network Stack**: Links directly against Chromium's `//net` subsystem (`URLRequestContext`, BoringSSL, SpdySession).
+4. **One Engine, Two Front Ends**: The npm platform package carries the shared library and the addon; the standalone executable is a separate download. Both call the same `shot::Capture`, and `tools/shot/node_check.cjs` asserts that they produce byte-identical images.
 
 ---
 
-## Custom Binary Path
+## Environment
 
-To use a local or custom-compiled binary instead of the bundled npm platform package, set the `SHOTIUM_BINARY` environment variable:
+| Variable | Effect |
+|---|---|
+| `SHOTIUM_ENDPOINT` | Overrides the daemon's socket path or named pipe. |
+| `SHOTIUM_DAEMON_LOG` | Where a daemon started by `daemon.connect()` writes its diagnostics. |
 
-```bash
-export SHOTIUM_BINARY=/path/to/shotium.exe
+The addon is loaded from the installed platform package, or from `shotium/native/build/Release/` in a source checkout. Resource packs are looked for beside it, which is where an install keeps them; a local build keeps them in its build directory instead, so point `resourceDir` at that:
+
+```ts
+runtime.start({ resourceDir: '/path/to/out/Shot' });
 ```
 
 ---
@@ -345,9 +332,18 @@ ninja -C out/Shot shot
 ```bash
 python tools/shot/serve_check.py   out/Shot/shotium.exe  # Protocol and codecs
 python tools/shot/net_check.py     out/Shot/shotium.exe  # HTTP, SSL, redirect, cache
-node   tools/shot/node_check.cjs   out/Shot/shotium.exe  # Pool lifecycle and retry
+node   tools/shot/node_check.cjs   out/Shot/shotium.exe  # Addon, queue, lifecycle
 node   tools/shot/daemon_check.cjs out/Shot/shotium.exe  # Daemon socket and concurrency
 python tools/shot/demo_check.py    out/Shot/shotium.exe  # Visual reftests (84 tests)
+```
+
+The two node suites load the addon, not the executable, so build it against the library this checkout just produced -- an addon checked against a different build is checking nothing. The executable argument is what they compare their output against.
+
+```bash
+export SHOT_INCLUDE_DIR=$PWD/shot SHOT_LIB_DIR=$PWD/out/Shot
+npx node-gyp@13 rebuild -C shotium/native
+cp out/Shot/libshotium.so out/Shot/*.pak shotium/native/build/Release/
+npm --prefix shotium install && npm --prefix shotium run build
 ```
 
 ---

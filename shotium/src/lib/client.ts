@@ -154,12 +154,10 @@ class DaemonClient extends EventEmitter {
   /** Resolves to the image, or to null when `path` was given. */
   async screenshot(options: ScreenshotOptions): Promise<Buffer|null> {
     const request = toRequest(options);
-    const retry = typeof options.retry === 'number' ? options.retry : 0;
     const result = await this.send({
       op: 'screenshot',
       request,
       timeout: timeoutFor(options),
-      retry,
     });
     return result.image;
   }

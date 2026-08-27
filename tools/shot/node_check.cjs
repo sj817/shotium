@@ -159,6 +159,19 @@ async function main() {
         'a misspelled option is refused rather than dropped',
         threw ? threw.message : 'no error');
 
+  // Same rule, for an option that used to be real. `retry` belonged to the
+  // supervisor that re-sent a request to a fresh worker; there is no worker and
+  // no supervisor, so accepting it would promise a retry that never happens.
+  let retried = null;
+  try {
+    await shotium.screenshot({file: corpus, retry: 2});
+  } catch (error) {
+    retried = error;
+  }
+  check(retried instanceof TypeError && /retry/.test(retried.message),
+        'and so is an option that was real in 0.1.0',
+        retried ? retried.message : 'no error');
+
   console.log('\n== concurrent callers are serialised, not raced ==');
   // Blink renders one document at a time. Nine callers who do not know that
   // must still get nine correct answers rather than nine interleaved ones.

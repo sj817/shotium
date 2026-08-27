@@ -273,9 +273,12 @@ interface ScreenshotOptions {
   clip?: { x: number; y: number; width: number; height: number }
   viewport?: { width?: number; height?: number }   // 新增,见下
   allowFileAccess?: boolean                        // 新增,见下
-  retry?: number
 }
 ```
+
+`retry` 曾经在这里，2026-08-27 拿掉了。它是监工的旋钮：把请求重发给一个
+新 worker。监工和 worker 都没了，进程内引擎无处可重发，所以它现在是一个
+被拒绝的未知字段，而不是一个收下来但不生效的承诺。
 
 补了两个字段:
 

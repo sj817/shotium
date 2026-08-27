@@ -68,8 +68,6 @@ export interface ScreenshotOptions {
    * is rendered on.
    */
   allowFileAccess?: boolean;
-  /** How many times to re-send after a crash or a timeout. Default 0. */
-  retry?: number;
 }
 
 export interface StartOptions {

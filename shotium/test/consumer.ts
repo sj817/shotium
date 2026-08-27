@@ -41,8 +41,16 @@ const request: ScreenshotOptions = {
   pageGotoParams: {timeout: 15000, waitUntil: 'networkidle'},
   clip: {x: 0, y: 0, width: 100, height: 100},
   allowFileAccess: false,
-  retry: 2,
 };
+
+// retry was a supervisor's knob, and there is no supervisor: the pool that
+// re-sent a request to a fresh worker is gone, and an in-process engine has
+// nothing to re-send to. It is rejected rather than accepted-and-ignored,
+// because a knob that does nothing is worse than no knob -- and this line is
+// what says so, since removing a field from an interface is exactly the kind
+// of change that compiles everywhere and quietly changes behaviour.
+// @ts-expect-error retry is not a screenshot option
+const _noRetry: ScreenshotOptions = {file: 'https://example.com', retry: 2};
 
 // The lifecycle from the README, which is the shape this package is for: the
 // caller decides when Blink starts and when it goes away.

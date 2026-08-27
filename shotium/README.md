@@ -11,10 +11,12 @@
 
 `@shotkit/shotium` provides Node.js / TypeScript bindings for **shotium**, a stripped-down Chromium engine built specifically for fast static page rendering. By completely removing V8 and browser chrome overhead, Shotium delivers cold starts under 350 ms, single-shot captures in ~47 ms, and an idle memory footprint of ~58 MB.
 
+The engine is loaded into your own process as a Node-API addon over a C ABI. Nothing is spawned, no image crosses a process boundary, and `screenshot()` returns the bytes Blink just encoded.
+
 ```ts
 import shotium from '@shotkit/shotium';
 
-shotium.runtime.start({ workers: 4 });
+shotium.runtime.start();
 
 const png = await shotium.screenshot({
   file: 'https://example.com',
@@ -33,30 +35,24 @@ await shotium.runtime.stop();
 npm install @shotkit/shotium
 ```
 
-Prebuilt platform binaries are installed automatically via npm optional dependencies.
+Prebuilt platform binaries are installed automatically via npm optional dependencies — six of them, covering Windows, macOS and Linux on x64 and arm64. There is no build step and no postinstall download.
+
+The package is ESM. `import` works on Node 18 and up; `require()` of it needs Node 22.12 or 20.19, and anything older should use `await import('@shotkit/shotium')`.
 
 ---
 
 ## Usage
 
-### 1. Multi-Process Pool (`runtime`)
-
-Recommended for standard backend servers and continuous job queues.
+### 1. In-Process Engine (`runtime`)
 
 ```ts
 import { runtime, screenshot } from '@shotkit/shotium';
 
-// Optional: listen to runtime lifecycle events
-runtime.on('crash', ({ worker }) => console.warn(`Worker ${worker} recovered from crash`));
-runtime.on('timeout', ({ worker, timeout }) => console.warn(`Worker ${worker} timed out (${timeout}ms)`));
-
-// Start pool
 runtime.start({
-  workers: 4,                        // Default: Math.max(1, Math.floor(cpuCount / 2))
-  cacheDir: '/var/tmp/shotium-cache' // Optional HTTP disk cache
+  cacheDir: '/var/tmp/shotium-cache' // Optional HTTP disk cache. Default: null (off)
 });
 
-// Take screenshot (returns Buffer or writes to disk if 'path' is specified)
+// Returns a Buffer, or null when `path` was given and the engine wrote the file
 const buffer = await screenshot({
   file: 'https://example.com',
   viewport: { width: 1280, height: 720 },
@@ -64,7 +60,28 @@ const buffer = await screenshot({
   quality: 85,
 });
 
+// Hand memory back between batches without giving up the engine
+runtime.purge({ releaseWorkingSet: true });
+
 await runtime.stop();
+```
+
+**One engine per process, ever, and not one at a time.** Starting Blink writes process-wide statics it has no path to undo, so `stop()` is final: a `start()` after it throws, and so does a second `Runtime`. Concurrent callers are queued and served one at a time, because there is one renderer. Parallelism is therefore more processes, and a program that will want another screenshot later should stay started and call `purge()` rather than stopping.
+
+#### `StartOptions`
+
+```ts
+interface StartOptions {
+  /** Root of the HTTP disk cache. null (the default) disables caching. */
+  cacheDir?: string | null;
+
+  /** User-Agent sent with every request. */
+  userAgent?: string;
+
+  /** Where the engine looks for its resource packs. Defaults to the
+   *  directory the addon was loaded from, which is right for an install. */
+  resourceDir?: string;
+}
 ```
 
 ---
@@ -73,13 +90,13 @@ await runtime.stop();
 
 Recommended for CLI tools, ephemeral CI tasks, or serverless workers where startup latency is critical.
 
-`daemon` keeps a pre-warmed worker pool listening behind a local socket (Named Pipe on Windows, Unix domain socket on POSIX).
+The daemon is the same engine in a process of its own, behind a local socket (Named Pipe on Windows, Unix domain socket on POSIX). It renders a blank page on start, so it is warm before the first real request arrives.
 
 ```ts
 import { daemon } from '@shotkit/shotium';
 
-// Connect to existing daemon (automatically starts one if none is running)
-const client = await daemon.connect({ workers: 4 });
+// Connect to an existing daemon (automatically starts one if none is running)
+const client = await daemon.connect();
 
 const png = await client.screenshot({
   file: 'https://example.com',
@@ -88,29 +105,12 @@ const png = await client.screenshot({
 
 client.close();
 
-// Check status or stop daemon
-const status = await daemon.status();
+// Check status or stop the daemon
+const status = await daemon.status(); // { running: true, pid: 12345, warm: true, ... }
 await daemon.stop();
 ```
 
----
-
-### 3. In-Process Native Engine (`@shotkit/shotium/native`)
-
-Recommended for single-process, single-threaded batch rendering with minimum overhead (~31 ms per shot).
-
-```ts
-import { native } from '@shotkit/shotium/native';
-
-const png = await native.screenshot({
-  file: 'https://example.com',
-  viewport: { width: 1280, height: 720 },
-});
-
-// Purge cache and release working set after batch
-native.purge({ releaseWorkingSet: true });
-await native.stop();
-```
+One connection may have several requests outstanding, because every message carries an `id`. That is a convenience for the client rather than concurrency: the daemon holds one renderer too, and answers in the order it finished them. Two at once means two daemons, told apart by `name`.
 
 ---
 
@@ -158,11 +158,10 @@ interface ScreenshotOptions {
 
   /** Allow document to access local file:// resources (default: false) */
   allowFileAccess?: boolean;
-
-  /** Auto retry count on failure (default: 0) */
-  retry?: number;
 }
 ```
+
+An option this interface does not list is a typo, and a typo that was quietly dropped is a screenshot that ignored what you asked for — so an unknown key is a `TypeError` rather than a silent no-op. `fullPage`, `selector` and `clip` are mutually exclusive.
 
 ---
 

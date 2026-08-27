@@ -39,10 +39,14 @@ namespace {
 //
 // There are two ways in. The command line renders one document and exits, which
 // is what this was. --serve keeps the process alive and answers requests off
-// stdin, which is what shotium's worker pool drives; blink is a process-wide
-// singleton, so a resident worker is the only way to render more than one
-// document without paying to start a process each time. Both go through
-// Capture(), so neither can drift from the other.
+// stdin; blink is a process-wide singleton, so staying resident is the only way
+// to render more than one document without paying to start a process each time.
+// Both go through Capture(), so neither can drift from the other.
+//
+// Node does not use either of them any more. It loads shot_c into its own
+// process through a Node-API addon, which is the same Capture() again --
+// node_check.cjs asserts the images match byte for byte. --serve is for a
+// caller that wants a resident renderer and is not node.
 int Main(int argc, const char** argv) {
   base::AtExitManager at_exit;
   base::CommandLine::Init(argc, argv);
