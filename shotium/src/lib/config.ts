@@ -18,10 +18,10 @@ export interface ResolvedStartOptions {
 //
 // Passing 0 hands the decision to the disk cache backend, which sizes itself
 // against the volume's free space -- a defensible default for a browser
-// profile the user knows about, and a poor one for a directory that appears in
-// $TMPDIR because somebody imported a library. 256 MB holds a large corpus of
-// pages and their fonts, and is small enough that nobody has to think about
-// it.
+// profile the user knows about, and a poor one for a directory that appears
+// under the user's cache directory because somebody imported a library. 256 MB
+// holds a large corpus of pages and their fonts, and is small enough that
+// nobody has to think about it.
 const DEFAULT_CACHE_MAX_BYTES = 256 * 1024 * 1024;
 
 /**
@@ -67,9 +67,43 @@ function projectRoot(): string {
 /**
  * Where every shotium cache directory lives. One level up from any single
  * project's, which is what makes `target: 'all'` answerable.
+ *
+ * Where the operating system puts caches, and not the temporary directory,
+ * which is where this was until 0.3 was cut. $TMPDIR is a place for files that
+ * do not need to exist tomorrow: /tmp is emptied on reboot, systemd-tmpfiles
+ * removes what has not been touched in ten days, and macOS clears it on its
+ * own schedule. A cache whose entire value is the *next* run cannot live
+ * somewhere defined by not surviving.
+ *
+ * So: %LOCALAPPDATA%\shotium\Cache, ~/Library/Caches/shotium, and
+ * $XDG_CACHE_HOME/shotium -- three answers because the three platforms have
+ * three answers, and the point of using them is that the user's own tooling
+ * already knows what these directories are and is allowed to empty them.
+ *
+ * The temporary directory is the fallback for a process with no home to speak
+ * of -- some containers, some service accounts. That is a degradation and not
+ * a second location: there is no home directory to hold a cache that would
+ * otherwise be found there.
  */
+function cacheHome(): string {
+  const home = os.homedir();
+  if (!home) {
+    return path.join(os.tmpdir(), '.shotium');
+  }
+  if (process.platform === 'win32') {
+    return path.join(
+        process.env.LOCALAPPDATA || path.join(home, 'AppData', 'Local'),
+        'shotium', 'Cache');
+  }
+  if (process.platform === 'darwin') {
+    return path.join(home, 'Library', 'Caches', 'shotium');
+  }
+  return path.join(
+      process.env.XDG_CACHE_HOME || path.join(home, '.cache'), 'shotium');
+}
+
 export function cacheRoot(): string {
-  return normalizePath(path.join(os.tmpdir(), '.shotium', 'cache'));
+  return normalizePath(cacheHome());
 }
 
 /**
@@ -102,8 +136,9 @@ export function defaultCacheDir(): string {
 // of an `https:` URL pays DNS, TLS and a round trip, which for a small page is
 // most of the wall clock and all of the surprise. The objection to a default
 // -- that a short-lived program leaves a directory behind -- is answered by
-// the directory being per-project and size-capped rather than by there being
-// no cache. `cacheDir: null` still turns it off.
+// the directory being per-project, size-capped, and somewhere the platform's
+// own tooling knows how to clear, rather than by there being no cache.
+// `cacheDir: null` still turns it off.
 function resolveStartOptions(options: StartOptions = {}): ResolvedStartOptions {
   return {
     cacheDir: options.cacheDir === null ? null :
