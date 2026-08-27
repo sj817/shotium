@@ -208,18 +208,38 @@ napi_value StatsValue(napi_env env, shot_buffer* stats) {
   return value;
 }
 
+// Returns the encoded bytes without copying them across the addon boundary.
+// The memory remains owned by shot: Node only decides when its Buffer dies,
+// and the finalizer re-enters the DLL so the allocator that created the
+// shot_buffer is also the one that destroys it.
+void FinalizeImageBuffer(napi_env, void*, void* hint) {
+  shot_buffer_free(static_cast<shot_buffer*>(hint));
+}
+
+napi_value ImageValue(napi_env env, shot_buffer** image) {
+  const size_t size = shot_buffer_size(*image);
+  napi_value value = nullptr;
+  if (size > 0 &&
+      napi_create_external_buffer(
+          env, size, const_cast<uint8_t*>(shot_buffer_data(*image)),
+          FinalizeImageBuffer, *image, &value) == napi_ok) {
+    // The JS Buffer now owns the shot_buffer through FinalizeImageBuffer.
+    *image = nullptr;
+    return value;
+  }
+
+  // Some Node-API hosts deliberately disallow external buffers. Preserve the
+  // old behaviour there, and for the empty buffer returned when `path` asks
+  // the engine to write the image itself.
+  napi_create_buffer_copy(env, size, shot_buffer_data(*image), nullptr, &value);
+  return value;
+}
+
 void CompleteCapture(napi_env env, napi_status status, void* data) {
   auto* task = static_cast<CaptureTask*>(data);
 
   if (status == napi_ok && task->status == SHOT_OK) {
-    // Copied into a node Buffer rather than handed over as external memory.
-    // An external buffer would save a memcpy of a few hundred kilobytes
-    // against a render that took tens of milliseconds, and would put the
-    // lifetime of shot's allocation in the hands of node's GC -- across an
-    // allocator boundary the whole C ABI exists to keep closed.
-    napi_value buffer = nullptr;
-    napi_create_buffer_copy(env, shot_buffer_size(task->image),
-                            shot_buffer_data(task->image), nullptr, &buffer);
+    napi_value buffer = ImageValue(env, &task->image);
 
     // An object rather than the buffer alone, because there are now two
     // answers and a caller that wanted only the first should still not have to

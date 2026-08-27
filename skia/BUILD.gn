@@ -705,6 +705,7 @@ rust_static_library("rust_png_ffi") {
   configs += [
     ":skia_config",
     "//build/config/compiler:no_chromium_code",
+    "//build/config/compiler:shot_rust_optimize_speed",
   ]
   no_clippy = true  # TODO(https://crbug.com/472355480)
 }

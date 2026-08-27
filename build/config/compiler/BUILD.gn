@@ -20,6 +20,7 @@ import("//build/config/host_byteorder.gni")
 import("//build/config/pch.gni")
 import("//build/config/rust.gni")
 import("//build/config/sanitizers/sanitizers.gni")
+import("//build/config/shot_build.gni")
 import("//build/config/ui.gni")
 import("//build/config/unwind.gni")
 import("//build/toolchain/rbe.gni")
@@ -2731,6 +2732,16 @@ config("optimize_speed") {
     cflags = [ "-O3" ] + common_optimize_on_cflags
   }
   rustflags = [ "-Copt-level=3" ]
+}
+
+# Shot keeps the full image size-optimized, but PNG encoding is on every
+# capture's critical path. Attach this after the normal optimization config on
+# only the Rust PNG encoder and its compression dependencies. It is deliberately
+# a no-op for non-Shot builds.
+config("shot_rust_optimize_speed") {
+  if (is_shot_build) {
+    rustflags = [ "-Copt-level=3" ]
+  }
 }
 
 config("optimize_fuzzing") {
