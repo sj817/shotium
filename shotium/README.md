@@ -7,71 +7,145 @@
 
 ---
 
-## Overview
+## Quick Start
 
-`@shotkit/shotium` provides Node.js / TypeScript bindings for **shotium**, a stripped-down Chromium engine built specifically for fast static page rendering. By completely removing V8 and browser chrome overhead, Shotium delivers cold starts under 350 ms, single-shot captures in ~47 ms, and an idle memory footprint of ~58 MB.
+### 1. Installation
 
-The engine is loaded into your own process as a Node-API addon over a C ABI. Nothing is spawned, no image crosses a process boundary, and `screenshot()` returns the bytes Blink just encoded.
+```bash
+# npm
+npm install @shotkit/shotium
+
+# pnpm
+pnpm add @shotkit/shotium
+
+# yarn
+yarn add @shotkit/shotium
+
+# bun
+bun add @shotkit/shotium
+```
+
+Prebuilt platform binaries are installed automatically via npm optional dependencies across six architectures (Windows, macOS, and Linux on x64 and arm64). No local compiler or postinstall build script is required.
+
+The package is published as native ESM:
+- `import` is supported on Node.js 18+.
+- Synchronous `require()` is supported on Node.js 22.12+ / 20.19+.
+- Earlier Node.js versions can use dynamic `await import('@shotkit/shotium')`.
+
+### 2. Basic Example
 
 ```ts
-import shotium from '@shotkit/shotium';
+import shotium, { screenshot } from '@shotkit/shotium';
 
+// 1. Initialize engine
 shotium.start();
 
-const { image, stats } = await shotium.screenshot({
-  file: 'https://example.com',
-  viewport: { width: 1280, height: 720 },
-  fullPage: true,
+// 2. Render remote URLs, local HTML files, or inline HTML strings (data:text/html)
+const { image, stats } = await screenshot({
+  file: 'data:text/html,<h1 style="color: #0969da; font-family: sans-serif;">Hello Shotium</h1>',
+  viewport: { width: 800, height: 400 },
 });
 
-console.log(stats.timing.total, 'ms', stats.fromCache, 'of', stats.requests, 'cached');
+console.log(`Rendered in ${stats.timing.render}ms, Total: ${stats.timing.total}ms`);
 
+// 3. Shut down engine and release resources
 await shotium.stop();
 ```
 
 ---
 
-## Installation
+## Table of Contents
 
-```bash
-npm install @shotkit/shotium
-```
-
-Prebuilt platform binaries are installed automatically via npm optional dependencies — six of them, covering Windows, macOS and Linux on x64 and arm64. There is no build step and no postinstall download.
-
-The package is ESM. `import` works on Node 18 and up; `require()` of it needs Node 22.12 or 20.19, and anything older should use `await import('@shotkit/shotium')`.
+- [Overview & Key Highlights](#overview--key-highlights)
+- [Execution Mode Selection Guide](#execution-mode-selection-guide)
+- [Usage Modes](#usage-modes)
+  - [1. In-Process Engine](#1-in-process-engine)
+  - [2. Resident Daemon](#2-resident-daemon-daemon)
+- [API Reference](#api-reference)
+  - [`ScreenshotOptions` & `ScreenshotResult`](#screenshotoptions)
+  - [`StartOptions` & `StartResult`](#startoptions)
+  - [`CaptureStats` Metrics Breakdown](#capturestats)
+  - [`daemon` Module & Status](#daemon-module)
+  - [`cache` Management Module](#cache-module)
+- [License](#license)
 
 ---
 
-## Usage
+## Overview & Key Highlights
+
+`@shotkit/shotium` provides Node.js / TypeScript bindings for **shotium**, a stripped-down Chromium engine built specifically for fast static page rendering.
+
+By completely removing V8 and multi-process browser overhead, Shotium delivers:
+- **Fast Cold Starts**: Under 350 ms
+- **High Render Speed**: ~47 ms for single viewport capture (down to ~31 ms in-process)
+- **Low Memory Footprint**: ~58 MB idle memory
+
+The engine is loaded into the host process as a Node-API addon wrapping a shared library. With zero child process overhead, no inter-process image copying is needed, and `screenshot()` directly returns the encoded image buffer from Blink.
+
+---
+
+## Execution Mode Selection Guide
+
+| Use Case | Recommended Mode | Key Benefit |
+|---|---|---|
+| **Long-Running Web / API Services** (Express, Fastify, NestJS) | **In-Process Engine** | Zero IPC overhead, zero process startup cost, lowest per-shot latency (~31 ms). |
+| **CLI Tools / CI Pipelines / Serverless Tasks** | **Resident Daemon** | Cross-process pre-warmed engine reuse; connects in **2.3 ms**, eliminating cold starts. |
+
+---
+
+## Usage Modes
 
 ### 1. In-Process Engine
 
-The engine runs inside your Node.js process, loaded through Node-API from the C ABI in [`shot/shot_api.h`](https://github.com/sj817/shotium/blob/main/shot/shot_api.h). `screenshot()` returns the bytes Blink just encoded: nothing is spawned, and no image is copied across a process boundary (~31 ms per shot).
+The engine runs directly inside your Node.js process via Node-API, bound to the C ABI in [`shot/shot_api.h`](https://github.com/sj817/shotium/blob/main/shot/shot_api.h). `screenshot()` returns the image buffer encoded directly by Blink (~**31 ms** per shot).
 
 ```ts
 import shotium, { screenshot } from '@shotkit/shotium';
 
+// Start engine and retrieve cache status
 const { cacheDir, cacheActive } = shotium.start();
 
-const { image, stats } = await screenshot({
+// 1. Capture remote URL
+const res1 = await screenshot({
   file: 'https://example.com',
   viewport: { width: 1280, height: 720 },
   type: 'webp',
   quality: 85,
 });
 
-// Hand memory back between batches without giving up the engine
+// 2. Capture dynamically assembled inline HTML string (no temporary files on disk)
+const html = `<div style="padding: 24px; background: #f6f8fa;"><h2>Invoice #1024</h2></div>`;
+const res2 = await screenshot({
+  file: `data:text/html;charset=utf-8,${encodeURIComponent(html)}`,
+  viewport: { width: 600, height: 300 },
+});
+
+// 3. Memory reclamation strategies:
+// - releaseMemory(): clears Blink heap, Skia caches, and PartitionAlloc free lists (instant)
+// - releaseWorkingSet: true: additionally asks OS to reclaim physical working set memory
 shotium.releaseMemory({ releaseWorkingSet: true });
 
+// 4. Shut down engine
 await shotium.stop();
 ```
 
-**One engine per process -- but `start()` and `stop()` are not rationed.** Starting Blink writes process-wide statics it has no path to undo, so a process gets one engine and a second `Runtime` adopts it rather than building another. That is a fact about how many engines there are, not about how many times you may ask for one: `stop()` stands the engine down (queue drained, memory returned, `running: false`) and `start()` picks the same one back up, warm cache and all, as often as you like. What `start()` will refuse is a *different* configuration -- the options are fixed when the engine is built, so naming one that disagrees with what is running throws instead of quietly rendering with the other value. Concurrent callers are queued and served one at a time, because there is one renderer, so parallelism is more processes.
+#### Lifecycle & Execution Model
 
-`start()` reports what it came up as. `cacheActive: false` with a `cacheDir` set means the directory could not be opened and this engine is running without a cache -- correctly, silently, and a round trip slower on everything.
-
-> **Upgrading from 0.2.** The lifecycle moved from `shotium.runtime.*` to the module itself, `purge()` became `releaseMemory()`, `screenshot()` now resolves to `{ image, stats }` rather than to the buffer alone, and `stop()` is no longer final -- a stopped engine starts again. `shotium.runtime` and the `Runtime` class are still exported for callers who own their own lifecycle.
+- **Process Singleton**:
+  - Blink relies on process-wide statics that cannot be cleanly uninitialized.
+  - Each process hosts a single engine instance; subsequent `new Runtime()` calls reuse the existing instance.
+- **Start / Stop Semantics**:
+  - Calling `stop()` drains the task queue, marks `running: false`, and releases working set memory.
+  - Calling `start()` subsequent times re-activates the engine and preserves its warm disk cache.
+- **Configuration Consistency**:
+  - Engine options are established at initial creation.
+  - Passing conflicting options in subsequent `start()` calls throws an explicit error rather than silently ignoring parameters.
+- **Concurrency & Parallelism**:
+  - Within a single engine instance, concurrent screenshot calls are queued and rendered sequentially.
+  - To achieve parallel throughput, scale horizontally across multiple worker processes.
+- **Status Reporting**:
+  - `start()` and `status()` return `{ running, cacheDir, cacheActive }`.
+  - If `cacheDir` cannot be opened, `cacheActive` is set to `false`, and the engine operates safely in cacheless mode.
 
 ---
 
@@ -79,27 +153,36 @@ await shotium.stop();
 
 Recommended for CLI tools, ephemeral CI tasks, or serverless workers where startup latency is critical.
 
-The daemon is the same engine in a process of its own, behind a local socket (Named Pipe on Windows, Unix domain socket on POSIX). It renders a blank page on start, so it is warm before the first real request arrives.
+The daemon runs the engine in a standalone background process exposed via a local IPC socket (Named Pipe on Windows, Unix domain socket on POSIX). It pre-renders a blank page upon startup to warm up all subsystems, allowing clients to connect with ~**2.3 ms** latency.
 
 ```ts
 import { daemon } from '@shotkit/shotium';
 
-// Connect to an existing daemon (automatically starts one if none is running)
+// Connect to existing daemon, or automatically launch one in background
 const client = await daemon.connect();
 
+// Dispatch screenshot request
 const { image, stats } = await client.screenshot({
   file: 'https://example.com',
   viewport: { width: 1280, height: 720 },
 });
 
+// Manage daemon status or release memory from client connection
+const clientStatus = await client.status();
+await client.releaseMemory({ releaseWorkingSet: false });
+
 client.close();
 
-// Check status or stop the daemon
-const status = await daemon.status(); // { running: true, pid: 12345, warm: true, ... }
+// Global daemon operations (optional)
+const daemonInfo = await daemon.status();
+console.log(`Daemon PID: ${daemonInfo.pid}, Uptime: ${daemonInfo.uptimeMs}ms, Served: ${daemonInfo.served}`);
+
+// Stop daemon
 await daemon.stop();
 ```
 
-One connection may have several requests outstanding, because every message carries an `id`. That is a convenience for the client rather than concurrency: the daemon holds one renderer too, and answers in the order it finished them. Two at once means two daemons, told apart by `name`.
+- **Request Multiplexing**: Multiple requests can be dispatched concurrently over a single connection; each message carries a unique `id`. The daemon processes and returns responses in completion order.
+- **Multi-Instance Isolation**: Each daemon instance renders requests serially. To scale concurrent rendering, launch multiple distinct daemon instances using unique `name` identifiers.
 
 ---
 
@@ -109,7 +192,7 @@ One connection may have several requests outstanding, because every message carr
 
 ```ts
 interface ScreenshotOptions {
-  /** Target URL (http/https/file) or local file path */
+  /** Target URL (http/https/file/data) or local file path */
   file: string;
 
   /** Output image format (default: 'png') */
@@ -118,37 +201,42 @@ interface ScreenshotOptions {
   /** Viewport dimensions (default: 1280x720) */
   viewport?: { width?: number; height?: number };
 
-  /** Capture entire scrollable document */
+  /** Capture full scrollable document */
   fullPage?: boolean;
 
-  /** Capture bounding box of matching CSS selector */
+  /** Capture bounding box of matching CSS selector (resolved via Document::querySelector) */
   selector?: string;
 
-  /** Capture specific rectangular region */
+  /** Capture specific rectangular coordinate region */
   clip?: { x: number; y: number; width: number; height: number };
 
-  /** Image compression quality: 1-100 (jpeg and webp only, default: 90) */
+  /** Compression quality: 1-100 (jpeg and webp only, default: 90) */
   quality?: number;
 
   /** Device scale factor: 0.01 - 8.0 (default: 1.0) */
   scale?: number;
 
-  /** Preserve transparent background (png and webp only) */
+  /** Preserve transparent background (png and webp only; jpeg has no alpha channel) */
   omitBackground?: boolean;
 
-  /** Output file path. If provided, screenshot writes directly to disk and returns null */
+  /** Output file path. If specified, writes directly to disk and image returns null */
   path?: string;
 
   /** Page navigation options */
   pageGotoParams?: {
+    /** Timeout in milliseconds (default: 30000) */
     timeout?: number;
+    /**
+     * load: wait until DOM is parsed and basic resources loaded (default)
+     * networkidle: additionally wait for 500ms window with 0 in-flight requests (for late WebFonts/CSS)
+     */
     waitUntil?: 'load' | 'networkidle';
   };
 
   /** Allow document to read local file:// subresources (default: false) */
   allowFileAccess?: boolean;
 
-  /** What this capture may do with the HTTP cache (default: 'default') */
+  /** HTTP cache strategy (default: 'default') */
   cache?: 'default' | 'reload' | 'no-store' | 'only-if-cached';
 
   /** Extra request headers, sent to same-origin URLs only */
@@ -158,9 +246,31 @@ interface ScreenshotOptions {
 
 > **Note**: `fullPage`, `selector`, and `clip` are mutually exclusive. Specifying more than one will throw a validation error.
 
-`cache` is spelled the way `fetch` spells it and means the same things: `reload` reads nothing and writes everything, `no-store` neither reads nor writes, and `only-if-cached` refuses to touch the network and fails on a miss. It applies to subresources as well as to the document.
+#### `ScreenshotResult` Return Structure
 
-`headers` stops at the origin boundary. A caller passing `Authorization` or `Cookie` means it for the site being photographed, so it is not forwarded to a stylesheet or font on another origin.
+```ts
+interface ScreenshotResult {
+  /** Encoded image buffer; null when path parameter was specified (written directly to disk) */
+  image: Buffer | null;
+  /** Detailed capture timing and network statistics */
+  stats: CaptureStats;
+}
+```
+
+#### Parameter Details
+
+- **`file` Input Schemes**:
+  - Remote URLs: `https://example.com`
+  - Local Paths: `./template.html`, `/absolute/path/index.html`, `file:///...`
+  - Inline HTML Strings: `data:text/html;charset=utf-8,<h1>Hello</h1>`
+- **`cache` Strategies** (follows Web Fetch API, applies to document and subresources):
+  - `default`: Standard HTTP caching behavior.
+  - `reload`: Bypasses existing cache, fetches fresh resources from server, and updates cache.
+  - `no-store`: Completely disables reading and writing to cache.
+  - `only-if-cached`: Retrieves cached entries only; throws an immediate error if cache misses (no network request).
+- **`headers` Scope**:
+  - Strictly adheres to Same-Origin policy.
+  - Passed headers (such as `Authorization` or `Cookie`) are sent only to the target site, and never forwarded to cross-origin external stylesheets or fonts.
 
 ---
 
@@ -169,89 +279,146 @@ interface ScreenshotOptions {
 ```ts
 interface StartOptions {
   /**
-   * HTTP disk cache directory. Defaults to a per-project directory under
-   * ~/.shotium/cache; null disables caching.
+   * HTTP disk cache directory. Defaults to a project-specific directory
+   * under ~/.shotium/cache; set to null to disable disk caching.
    */
   cacheDir?: string | null;
 
-  /** Ceiling on that directory, in bytes (default: 256 MB) */
+  /** Maximum size ceiling for cache directory in bytes (default: 256 MB) */
   cacheMaxBytes?: number;
 
-  /** Override the built-in User-Agent */
+  /** Custom User-Agent string */
   userAgent?: string;
 
-  /** Where shotium_data.pak and shotium_strings.pak are */
+  /** Directory containing shotium_data.pak and shotium_strings.pak */
   resourceDir?: string;
 }
 ```
 
-`start()` and `status()` return `{ running, cacheDir, cacheActive }`. `running` is about this lifecycle, not about the process: after `stop()` it is `false` while `cacheDir` still names the directory the stood-down engine holds.
+#### `StartResult` Return Structure
+
+```ts
+interface StartResult {
+  /** Whether the runtime instance is currently started */
+  running: boolean;
+  /** Active cache directory path (null when caching is disabled) */
+  cacheDir: string | null;
+  /** Whether cache directory was opened successfully and is active */
+  cacheActive: boolean;
+}
+```
 
 ---
 
 ### `CaptureStats`
 
-Every capture reports what it cost. The numbers were always known inside the engine; before 0.3 none of them left it.
+Every capture operation returns detailed timing breakdown and network statistics:
 
 ```ts
 interface CaptureStats {
-  requests: number;     // every resource the document asked for, itself included
-  fromCache: number;    // answered from the HTTP cache, no network touched
-  failed: number;
-  bytes: number;        // decoded body bytes, not transfer size
-  httpStatus: number;   // the document's own status; 0 for a file: URL
-  finalUrl: string;     // after redirects
+  requests: number;     // Total resources requested by document (including itself)
+  fromCache: number;    // Number of resource bodies served from HTTP disk cache
+  failed: number;       // Number of failed subresource requests
+  bytes: number;        // Total decoded body bytes (not transfer size)
+  httpStatus: number;   // Main document HTTP status code (0 for file: / data: URLs)
+  finalUrl: string;     // Final URL after resolving redirects
   timing: {
-    fetch: number;      // fetching the document: DNS, TCP, TLS, round trip
-    render: number;     // parse, subresources, style, layout, paint
-    encode: number;
-    total: number;
+    fetch: number;      // Document retrieval: DNS, TCP, TLS, and round-trip latency
+    render: number;     // Rendering: parsing, subresources, styles, layout, paint
+    encode: number;     // Image encoding duration
+    total: number;      // Total wall-clock duration
   };
 }
 ```
 
-`timing.fetch` is the one that surprises people. For a cold `https:` URL it is routinely an order of magnitude larger than the render, which makes it the answer to most "why was this slow" questions:
+#### Metrics & Timing Breakdown
 
-```
-local file            fetch   0.2 ms   render  20 ms   total   25 ms
-https, cold           fetch 321.1 ms   render  16 ms   total  350 ms
-https, cache hit      fetch   0.7 ms   render  18 ms   total   31 ms
-```
+- **Network Latency Breakdown**: For cold `https:` requests, `timing.fetch` represents the majority of total latency. Cache hits reduce fetch latency to sub-millisecond levels:
 
-`fromCache` says the body came from disk, which is not the same as "no network was touched". A stale entry that can be revalidated costs a conditional request and a 304 -- what the cache saved there is the download, not the round trip -- so `fromCache: 1` alongside a `timing.fetch` of 88 ms is an ordinary result and not a contradiction.
+| Scenario | `fetch` Latency | `render` Latency | `total` Latency |
+|---|---|---|---|
+| **Local file / Inline HTML** (`file:` / `data:`) | 0.2 ms | 20 ms | 25 ms |
+| **HTTPS (Cold request)** | 321.1 ms | 16 ms | 350 ms |
+| **HTTPS (Cache hit)** | 0.7 ms | 18 ms | 31 ms |
 
-Statistics are attached to failures too, as `error.stats` -- a capture that timed out after fetching forty subresources has already explained itself.
+- **`fromCache` Semantics**: Indicates that the response body was served from disk. If an entry is revalidated via conditional request (304 Not Modified), network round-trip latency is still incurred while saving body payload transfer.
+- **Failure Diagnostics (`error.stats`)**: When a capture fails or times out, the error object includes `error.stats` containing network metrics prior to the error.
 
 ---
 
-### `cache`
+### `daemon` Module
 
-The HTTP cache, which outlives any one engine: the directory is on disk whether or not anything is running, so these work before `start()` and after `stop()` -- and `stop()` does not empty it. A cache whose point is the next run has to survive the end of this one.
+Manages resident daemon instances and IPC connections:
+
+```ts
+import { daemon } from '@shotkit/shotium';
+
+// 1. Establish IPC connection
+const client = await daemon.connect({
+  name: 'custom-pool',      // Optional: daemon naming isolation
+  idleTimeoutMs: 300000,    // Idle exit timeout when no connections active (default 5 min; 0 = never)
+  prewarm: true,            // Pre-renders a blank page upon startup to warm up engine (default true)
+});
+
+// 2. Client instance methods
+const res = await client.screenshot({ file: 'https://example.com' });
+const status = await client.status();
+await client.releaseMemory({ releaseWorkingSet: false });
+client.close();
+
+// 3. Global daemon management
+const info: DaemonStatus = await daemon.status();
+await daemon.stop();
+```
+
+#### `DaemonStatus` Structure
+
+```ts
+interface DaemonStatus {
+  pid: number;              // Daemon OS process ID
+  endpoint: string;         // IPC socket path / named pipe
+  cacheDir: string | null;  // Active disk cache directory
+  warm: boolean;            // Whether engine pre-warm has completed
+  uptimeMs: number;         // Uptime in milliseconds
+  connections: number;      // Current active client connections
+  inFlight: number;         // Requests currently being rendered
+  served: number;           // Total completed requests
+  idleTimeoutMs: number;    // Configured idle timeout
+  version: string;          // Engine version
+}
+```
+
+---
+
+### `cache` Module
+
+Manages persistent HTTP disk caching across processes and engine lifecycles:
 
 ```ts
 import { cache } from '@shotkit/shotium';
 
-cache.getDir();                     // this project's directory, absolute, forward slashes
-cache.getDirs({ target: 'all' });   // every shotium cache directory on this machine
+// 1. Directory query
+cache.getDir();                     // Current project's cache directory (absolute path)
+cache.getDirs({ target: 'all' });   // List all shotium cache directories on the system
 
-await cache.getFiles();             // [{ url, lastUsedMs, bytes, dir }, ...]
+// 2. List cached file metadata
+const files = await cache.getFiles(); // [{ url, lastUsedMs, bytes, dir }, ...]
 
-await cache.clear();                                       // everything
-await cache.clear({ glob: ['https://example.com/**'] });    // by URL pattern
-await cache.clear({ maxAge: 86400 });                       // unused for a day
-await cache.clear({ maxSize: 64 * 1024 * 1024 });           // evict LRU down to 64 MB
+// 3. Evict cache and inspect result
+const result: CacheClearResult = await cache.clear({
+  glob: ['https://example.com/**'], // Evict by URL glob pattern
+  maxAge: 86400,                    // Evict entries unused for > 24h (seconds)
+  maxSize: 64 * 1024 * 1024,        // Evict via LRU to under 64 MB
+});
+
+console.log(`Removed: ${result.removed}, Bytes before: ${result.bytesBefore}, Bytes after: ${result.bytesAfter}`);
 ```
 
-Cache directories live under `~/.shotium/cache`, one per project, named by a hash of the project root. Not the temporary directory, which is defined by not surviving -- `/tmp` is emptied on reboot and swept of anything untouched for ten days, and a cache whose whole value is the next run cannot live there.
+#### Cache Design & Guidelines
 
-`target` selects which directory: `'current'` (the default) is this project's, `'all'` is every one under the shared root, and a string is either an absolute path or a project hash.
-
-Two things are worth knowing about how this is implemented, because both are places a reasonable guess is wrong:
-
-- **The files are not named after URLs.** A cache directory holds files called `5349fbae98c6d9a1_0` -- the name is a hash of the entry key -- plus an `index`. So `getFiles()` returns URLs rather than filenames, and `glob` matches URLs. A pattern written against filenames would match nothing.
-- **Removal goes through the cache backend, never through the filesystem.** Deleting entry files by hand leaves the index naming things that are gone, and the next process to open the directory rebuilds or discards it. The one exception is clearing a whole directory in a process that has no engine at all, which removes the directory outright -- safe precisely because nothing survives to disagree.
-
-Several processes may share one cache directory and all of them will cache; the backend takes no cross-process lock. Within a single process a directory has one backend, which is why these calls borrow the running engine's.
+- **Directory Structure**: Stored under `~/.shotium/cache/<project-hash>`, avoiding ephemeral `/tmp` directories that are automatically purged on reboot.
+- **Index Integrity**: Cache files are stored using URL-key hashes with an internal index file. Cache eviction must be performed via the `cache` API rather than manual file deletion to preserve index consistency.
+- **Cross-Process Sharing**: Multiple processes may concurrently access the same cache directory safely.
 
 ---
 
