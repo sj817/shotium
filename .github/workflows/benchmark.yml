@@ -1,0 +1,334 @@
+name: Six-platform benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      shotium_version:
+        description: Published semver or npm dist-tag to benchmark
+        required: true
+        default: latest
+        type: string
+      profile:
+        description: Benchmark coverage profile
+        required: true
+        default: full
+        type: choice
+        options:
+          - smoke
+          - full
+      commit_results:
+        description: Commit the aggregated result directly to main
+        required: true
+        default: true
+        type: boolean
+      seed:
+        description: Optional fixed scheduling seed; blank uses the tested commit
+        required: false
+        type: string
+      source_sha:
+        description: Released source SHA; release dispatch fills this automatically
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  resolve:
+    name: Resolve one immutable npm version
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    outputs:
+      install_spec: ${{ steps.normalize.outputs.install_spec }}
+      archive_version: ${{ steps.normalize.outputs.archive_version }}
+      resolution_status: ${{ steps.normalize.outputs.resolution_status }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/benchmark/package-lock.json
+
+      - name: Install the locked npm resolver
+        id: resolver_install
+        continue-on-error: true
+        working-directory: apps/benchmark
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+        run: npm ci --no-audit --no-fund
+
+      - name: Poll npm and freeze a dist-tag to one exact version
+        if: steps.resolver_install.outcome == 'success'
+        id: registry
+        continue-on-error: true
+        shell: bash
+        working-directory: apps/benchmark
+        run: |
+          version=$(npm run --silent resolve-version -- -- \
+            --shotium-version "${{ inputs.shotium_version }}" \
+            --timeout 600000 | tail -n 1)
+          test -n "$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Preserve an auditable fallback when npm itself is unavailable
+        if: always()
+        id: normalize
+        shell: bash
+        env:
+          REQUESTED: ${{ inputs.shotium_version }}
+          RESOLVED: ${{ steps.registry.outputs.version }}
+        run: |
+          requested="${REQUESTED#v}"
+          if [ -n "$RESOLVED" ]; then
+            install_spec="$RESOLVED"
+            archive_version="$RESOLVED"
+            resolution_status=resolved
+          elif [[ "$requested" =~ ^[0-9]+\.[0-9]+\.[0-9]+([+-].+)?$ ]]; then
+            install_spec="$requested"
+            archive_version="$requested"
+            resolution_status=exact-input
+          else
+            safe_tag=$(printf '%s' "$requested" | sed 's/[^A-Za-z0-9._-]/-/g')
+            install_spec="$REQUESTED"
+            archive_version="unresolved-$safe_tag"
+            resolution_status=registry-unavailable
+          fi
+          echo "install_spec=$install_spec" >> "$GITHUB_OUTPUT"
+          echo "archive_version=$archive_version" >> "$GITHUB_OUTPUT"
+          echo "resolution_status=$resolution_status" >> "$GITHUB_OUTPUT"
+
+  platform:
+    name: ${{ matrix.platform }}
+    needs: resolve
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux-x64
+            runner: ubuntu-24.04
+          - platform: linux-arm64
+            runner: ubuntu-24.04-arm
+          - platform: win32-x64
+            runner: windows-2025
+          - platform: win32-arm64
+            runner: windows-11-arm
+          - platform: darwin-x64
+            runner: macos-15-intel
+          - platform: darwin-arm64
+            runner: macos-15
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/benchmark/package-lock.json
+
+      - name: Install locked benchmark tools
+        id: install
+        working-directory: apps/benchmark
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+        run: npm ci --no-audit --no-fund
+
+      - name: Install Puppeteer Chrome
+        continue-on-error: true
+        working-directory: apps/benchmark
+        run: npm run browser:install:puppeteer-chrome
+
+      - name: Install Puppeteer headless shell
+        continue-on-error: true
+        working-directory: apps/benchmark
+        run: npm run browser:install:puppeteer-shell
+
+      - name: Install Playwright Chromium and headless shell
+        continue-on-error: true
+        working-directory: apps/benchmark
+        run: npm run browser:install:playwright
+
+      - name: Run the native benchmark
+        id: benchmark
+        continue-on-error: true
+        working-directory: apps/benchmark
+        run: >-
+          npm run benchmark -- --
+          --shotium-version "${{ needs.resolve.outputs.install_spec }}"
+          --profile "${{ inputs.profile }}"
+          --output "${{ github.workspace }}/apps/benchmark/out"
+          --seed "${{ inputs.seed || inputs.source_sha || github.sha }}"
+
+      - name: Hash the 90-day evidence artifact
+        if: always() && steps.install.outcome == 'success'
+        id: hash
+        continue-on-error: true
+        working-directory: apps/benchmark
+        run: >-
+          npm run hash-artifact -- --
+          --input "${{ github.workspace }}/apps/benchmark/out/artifact/${{ matrix.platform }}"
+          --output "${{ github.workspace }}/apps/benchmark/out/permanent/${{ matrix.platform }}/artifact.json"
+          --name "benchmark-evidence-${{ matrix.platform }}-${{ github.run_id }}-a${{ github.run_attempt }}"
+          --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+      - name: Upload detailed evidence
+        if: always()
+        id: evidence
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-evidence-${{ matrix.platform }}-${{ github.run_id }}-a${{ github.run_attempt }}
+          path: apps/benchmark/out/artifact/${{ matrix.platform }}
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Record whether the evidence artifact really exists
+        if: always() && steps.hash.outcome == 'success'
+        working-directory: apps/benchmark
+        run: >-
+          npm run record-artifact-upload -- --
+          --record="${{ github.workspace }}/apps/benchmark/out/permanent/${{ matrix.platform }}/artifact.json"
+          --uploaded=${{ steps.evidence.outcome == 'success' }}
+          --artifact-id="${{ steps.evidence.outputs.artifact-id }}"
+          --artifact-url="${{ steps.evidence.outputs.artifact-url }}"
+          --artifact-digest="${{ steps.evidence.outputs.artifact-digest }}"
+
+      - name: Upload permanent numerical result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-permanent-${{ matrix.platform }}
+          path: apps/benchmark/out/permanent/${{ matrix.platform }}
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Preserve the benchmark failure after uploads
+        if: >-
+          always() &&
+          (steps.benchmark.outcome == 'failure' ||
+           steps.hash.outcome == 'failure' ||
+           steps.evidence.outcome == 'failure')
+        run: exit 1
+
+  aggregate:
+    name: Aggregate and archive
+    needs: [resolve, platform]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    concurrency:
+      group: benchmark-results-main
+      cancel-in-progress: false
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Check out the benchmark implementation that produced the samples
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: .benchmark-source
+          sparse-checkout: apps/benchmark
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: .benchmark-source/apps/benchmark/package-lock.json
+
+      - name: Install the TypeScript aggregator
+        working-directory: .benchmark-source/apps/benchmark
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+        run: npm ci --no-audit --no-fund
+
+      - name: Prepare an input directory even when every platform failed
+        shell: bash
+        run: mkdir -p "${RUNNER_TEMP}/benchmark-input"
+
+      - name: Download every platform result that exists
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: benchmark-permanent-*
+          path: ${{ runner.temp }}/benchmark-input
+
+      - name: Fix the immutable result timestamp
+        id: clock
+        shell: bash
+        run: echo "timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
+      - name: Aggregate, validate and rebuild the index
+        id: aggregate
+        working-directory: .benchmark-source/apps/benchmark
+        run: >-
+          npm run aggregate -- --
+          --input "${{ runner.temp }}/benchmark-input"
+          --results-root "${{ github.workspace }}/benchmark-results"
+          --shotium-version "${{ needs.resolve.outputs.archive_version || inputs.shotium_version }}"
+          --profile "${{ inputs.profile }}"
+          --seed "${{ inputs.seed || inputs.source_sha || github.sha }}"
+          --timestamp "${{ steps.clock.outputs.timestamp }}"
+          --run-id "${{ github.run_id }}"
+          --run-attempt "${{ github.run_attempt }}"
+          --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          --source-sha "${{ inputs.source_sha || github.sha }}"
+          --github-output "$GITHUB_OUTPUT"
+
+      - name: Upload the aggregated repository payload
+        if: always() && steps.aggregate.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-aggregate-${{ github.run_id }}-a${{ github.run_attempt }}
+          path: ${{ steps.aggregate.outputs.result_directory }}
+          retention-days: 90
+
+      - name: Commit the immutable result to main
+        if: inputs.commit_results && steps.aggregate.outcome == 'success'
+        shell: bash
+        env:
+          VERSION: ${{ steps.aggregate.outputs.version }}
+          RESULT_NAME: ${{ steps.aggregate.outputs.result_name }}
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add benchmark-results
+          git commit -m "bench(results): v${VERSION} gh${GITHUB_RUN_ID}-a${GITHUB_RUN_ATTEMPT} [skip ci]"
+          for attempt in 1 2 3; do
+            git push origin HEAD:main && exit 0
+            [ "$attempt" = 3 ] && exit 1
+            git fetch origin main
+            if ! git rebase -X ours origin/main; then
+              git rebase --abort
+              exit 1
+            fi
+            npm --prefix .benchmark-source/apps/benchmark ci --no-audit --no-fund
+            npm --prefix .benchmark-source/apps/benchmark run aggregate -- -- \
+              --input "${RUNNER_TEMP}/benchmark-input" \
+              --results-root "${GITHUB_WORKSPACE}/benchmark-results" \
+              --shotium-version "${VERSION}" \
+              --profile "${{ inputs.profile }}" \
+              --seed "${{ inputs.seed || inputs.source_sha || github.sha }}" \
+              --timestamp "${{ steps.clock.outputs.timestamp }}" \
+              --run-id "${GITHUB_RUN_ID}" \
+              --run-attempt "${GITHUB_RUN_ATTEMPT}" \
+              --run-url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+              --source-sha "${{ inputs.source_sha || github.sha }}" \
+              --allow-existing true
+            git add benchmark-results/index.json benchmark-results/LATEST.md
+            git commit --amend --no-edit
+          done

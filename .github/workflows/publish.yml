@@ -113,7 +113,7 @@ jobs:
       contents: write
       # Reading artifacts that belong to the engine runs, which are other
       # workflows' runs. contents:write does not cover that.
-      actions: read
+      actions: write
     steps:
       - uses: actions/checkout@v4
 
@@ -400,3 +400,22 @@ jobs:
             --target "$GITHUB_SHA" \
             --notes-file /tmp/notes.md \
             dist/archive/*.7z
+
+      - name: dispatch the published-version benchmark
+        if: ${{ env.RELEASE == 'true' && env.DRY_RUN != 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # A release made by GITHUB_TOKEN does not recursively trigger ordinary
+        # release-event workflows. workflow_dispatch is the documented
+        # exception, so schedule the exact package version explicitly after
+        # both npm and the GitHub Release have succeeded. This records release
+        # quality but cannot roll back or block the version that now exists.
+        run: |
+          gh workflow run benchmark.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref "$TAG" \
+            -f shotium_version="$VERSION" \
+            -f profile=full \
+            -f commit_results=true \
+            -f seed="$GITHUB_SHA" \
+            -f source_sha="$GITHUB_SHA"

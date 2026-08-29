@@ -483,7 +483,7 @@ console.log(`Removed: ${result.removed}, Bytes before: ${result.bytesBefore}, By
 
 ## Performance Benchmarks
 
-Measured on a 32-core Windows workstation across 10 static local HTML test documents (1280x720 viewport, PNG output, `waitUntil: 'load'`, 7 runs per test case, median reported). For detailed methodology and raw logs, see [`bench/cross/RESULTS.md`](bench/cross/RESULTS.md).
+The canonical benchmark now runs on six native GitHub runner platforms and keeps raw samples under [`benchmark-results/`](benchmark-results/LATEST.md). The table below is the earlier single-machine Windows result and is retained only as [legacy evidence](benchmark-results/legacy/2026-08-25-windows-local/RESULTS.md); it must not be compared directly with the CI series.
 
 ### 1. Throughput & Cold Start
 

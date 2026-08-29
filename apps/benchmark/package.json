@@ -1,0 +1,42 @@
+{
+  "name": "@shotkit/benchmark",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Six-platform, cross-engine Shotium benchmark and release evidence harness.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "benchmark": "tsx src/cli.ts",
+    "benchmark:native": "tsx src/native-cli.ts",
+    "install-target": "tsx src/install-target.ts",
+    "resolve-version": "tsx src/install-target.ts --main-only true --resolve-only true",
+    "aggregate": "tsx src/aggregate.ts",
+    "hash-artifact": "tsx src/hash-artifact.ts",
+    "record-artifact-upload": "tsx src/record-artifact-upload.ts",
+    "browser:install:puppeteer-chrome": "puppeteer browsers install chrome",
+    "browser:install:puppeteer-shell": "puppeteer browsers install chrome-headless-shell",
+    "browser:install:playwright": "playwright install chromium",
+    "test": "tsx --test test/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && npm test"
+  },
+  "dependencies": {
+    "ajv": "8.17.1",
+    "execa": "9.6.0",
+    "pixelmatch": "7.1.0",
+    "playwright": "1.62.1",
+    "pngjs": "7.0.0",
+    "puppeteer": "25.8.0",
+    "systeminformation": "5.33.0",
+    "tinybench": "5.1.0",
+    "tsx": "4.20.6",
+    "typescript": "5.9.2",
+    "wait-on": "8.0.4"
+  },
+  "devDependencies": {
+    "@types/node": "22.18.0",
+    "@types/pngjs": "6.0.5"
+  }
+}

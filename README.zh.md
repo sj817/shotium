@@ -478,7 +478,7 @@ console.log(`清理条目: ${result.removed}, 清理前体积: ${result.bytesBef
 
 ## 性能基准测试
 
-测试环境：32 核 Windows 工作站，针对 10 个标准本地静态 HTML 文档（1280×720 视口，PNG 格式，`waitUntil: 'load'`，每组测试执行 7 次取中位数）。详细测试方案与原始数据参见 [`bench/cross/RESULTS.md`](bench/cross/RESULTS.md)。
+当前正式基准会在六种原生 GitHub runner 平台执行，逐样本结果统一归档于 [`benchmark-results/`](benchmark-results/LATEST.md)。下表是早期单机 Windows 数据，仅作为 [legacy 证据](benchmark-results/legacy/2026-08-25-windows-local/RESULTS.md) 保留，不能与 CI 系列直接比较。
 
 ### 1. 冷启动与吞吐量
 

@@ -1,0 +1,244 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/sj817/shotium/apps/benchmark/platform-result.schema.json",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "generated_utc",
+    "platform",
+    "status",
+    "shotium_version",
+    "profile",
+    "seed",
+    "source_revision",
+    "install",
+    "host",
+    "packages",
+    "engines",
+    "scenarios",
+    "execution_order",
+    "raw_samples",
+    "failures"
+  ],
+  "properties": {
+    "schema_version": {"const": 2},
+    "generated_utc": {"type": "string", "minLength": 1},
+    "platform": {
+      "enum": ["linux-x64", "linux-arm64", "win32-x64", "win32-arm64", "darwin-x64", "darwin-arm64"]
+    },
+    "status": {"$ref": "#/$defs/status"},
+    "shotium_version": {"type": "string", "minLength": 1},
+    "profile": {"enum": ["smoke", "full"]},
+    "seed": {"type": "string"},
+    "source_revision": {"type": ["string", "null"]},
+    "install": {
+      "oneOf": [
+        {"type": "null"},
+        {"$ref": "#/$defs/install"}
+      ]
+    },
+    "host": {
+      "oneOf": [
+        {"type": "null"},
+        {"$ref": "#/$defs/host"}
+      ]
+    },
+    "packages": {"type": "object"},
+    "engines": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/engine"}
+    },
+    "scenarios": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/scenario"}
+    },
+    "execution_order": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["engine", "scenario", "repeat", "attempt", "concurrency", "iterations"],
+        "properties": {
+          "engine": {"type": "string", "minLength": 1},
+          "scenario": {"type": "string", "minLength": 1},
+          "repeat": {"type": "integer", "minimum": 1},
+          "attempt": {"type": "integer", "minimum": 1, "maximum": 2},
+          "concurrency": {"type": "integer", "minimum": 1},
+          "iterations": {"type": "integer", "minimum": 1}
+        },
+        "additionalProperties": true
+      }
+    },
+    "raw_samples": {"type": "integer", "minimum": 0},
+    "failures": {"type": "integer", "minimum": 0},
+    "error": {"type": "string"}
+  },
+  "$defs": {
+    "status": {"enum": ["pass", "fail", "noisy", "n/a", "infra-error"]},
+    "distribution": {
+      "oneOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "required": ["n", "min", "p50", "p95", "max", "mean", "mad"],
+          "properties": {
+            "n": {"type": "integer", "minimum": 1},
+            "min": {"type": "number"},
+            "p50": {"type": "number"},
+            "p95": {"type": "number"},
+            "max": {"type": "number"},
+            "mean": {"type": "number"},
+            "mad": {"type": "number"}
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "install": {
+      "type": "object",
+      "required": ["main", "platform", "main_manifest_sha256", "platform_manifest_sha256", "esm", "commonjs", "api_smoke"],
+      "properties": {
+        "main": {
+          "type": "object",
+          "required": ["name", "version", "content_sha256", "files", "bytes"],
+          "properties": {
+            "name": {"const": "@shotkit/shotium"},
+            "version": {"type": "string", "minLength": 1},
+            "content_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+            "files": {"type": "integer", "minimum": 1},
+            "bytes": {"type": "integer", "minimum": 1}
+          }
+        },
+        "platform": {
+          "type": "object",
+          "required": ["name", "version", "content_sha256", "files", "bytes"],
+          "properties": {
+            "name": {"type": "string", "pattern": "^@shotkit/shotium-"},
+            "version": {"type": "string", "minLength": 1},
+            "content_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+            "files": {"type": "integer", "minimum": 1},
+            "bytes": {"type": "integer", "minimum": 1}
+          }
+        },
+        "main_manifest_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "platform_manifest_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "esm": {"const": true},
+        "commonjs": {"const": true},
+        "api_smoke": {
+          "type": "object",
+          "required": ["width", "height", "bytes", "sha256"]
+        }
+      },
+      "additionalProperties": true
+    },
+    "host": {
+      "type": "object",
+      "required": ["runner", "os", "cpu", "memory_bytes", "logical_processors", "node", "npm"],
+      "properties": {
+        "runner": {"type": "string", "minLength": 1},
+        "os": {"type": "object"},
+        "cpu": {"type": "object"},
+        "memory_bytes": {"type": "number", "exclusiveMinimum": 0},
+        "logical_processors": {"type": "integer", "minimum": 1},
+        "node": {"type": "string", "minLength": 1},
+        "npm": {"type": ["string", "null"]}
+      },
+      "additionalProperties": true
+    },
+    "engine": {
+      "type": "object",
+      "required": ["engine", "status", "reason", "executable", "architectures"],
+      "properties": {
+        "engine": {"type": "string", "minLength": 1},
+        "status": {"$ref": "#/$defs/status"},
+        "reason": {"type": ["string", "null"]},
+        "executable": {"type": ["string", "null"]},
+        "architectures": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "sha256": {"type": "string"},
+        "binary_version": {"type": ["string", "null"]},
+        "binaries": {"type": "array"}
+      },
+      "additionalProperties": true,
+      "allOf": [
+        {
+          "if": {"properties": {"status": {"const": "pass"}}, "required": ["status"]},
+          "then": {
+            "required": ["sha256", "binary_version", "binaries"],
+            "properties": {
+              "executable": {"type": "string", "minLength": 1},
+              "architectures": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+              "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+              "binary_version": {"type": "string", "minLength": 1},
+              "binaries": {"type": "array", "minItems": 1}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"status": {"const": "n/a"}}, "required": ["status"]},
+          "then": {"properties": {"reason": {"type": "string", "minLength": 1}}}
+        }
+      ]
+    },
+    "scenario": {
+      "type": "object",
+      "required": [
+        "engine",
+        "scenario",
+        "concurrency",
+        "status",
+        "ranking_eligible",
+        "runs",
+        "shots",
+        "wall_time_ms",
+        "orchestration_wall_time_ms",
+        "latency_ms",
+        "peak_rss_bytes",
+        "rss_slope_bytes_per_minute",
+        "throughput_per_second",
+        "failure_rate"
+      ],
+      "properties": {
+        "engine": {"type": "string", "minLength": 1},
+        "scenario": {"type": "string", "minLength": 1},
+        "concurrency": {"type": "integer", "minimum": 1},
+        "status": {"enum": ["pass", "fail", "noisy", "infra-error"]},
+        "ranking_eligible": {"type": "boolean"},
+        "runs": {"type": "integer", "minimum": 1},
+        "shots": {"type": "integer", "minimum": 0},
+        "wall_time_ms": {"$ref": "#/$defs/distribution"},
+        "orchestration_wall_time_ms": {"$ref": "#/$defs/distribution"},
+        "latency_ms": {"$ref": "#/$defs/distribution"},
+        "peak_rss_bytes": {"$ref": "#/$defs/distribution"},
+        "rss_slope_bytes_per_minute": {"$ref": "#/$defs/distribution"},
+        "throughput_per_second": {"type": ["number", "null"]},
+        "failure_rate": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "succeeded_requests": {"type": ["integer", "null"], "minimum": 0},
+        "failed_requests": {"type": ["integer", "null"], "minimum": 0}
+      },
+      "additionalProperties": true
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {"status": {"enum": ["pass", "noisy"]}},
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "shotium_version": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(?:[-+].+)?$"},
+          "install": {"$ref": "#/$defs/install"},
+          "host": {"$ref": "#/$defs/host"},
+          "packages": {
+            "type": "object",
+            "required": ["@shotkit/shotium", "tinybench", "execa", "systeminformation", "pngjs", "pixelmatch", "wait-on", "ajv", "tsx", "typescript"]
+          },
+          "engines": {"type": "array", "minItems": 1},
+          "scenarios": {"type": "array", "minItems": 1},
+          "execution_order": {"type": "array", "minItems": 1},
+          "raw_samples": {"type": "integer", "minimum": 1}
+        }
+      }
+    }
+  ],
+  "additionalProperties": true
+}

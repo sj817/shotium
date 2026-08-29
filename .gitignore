@@ -383,10 +383,9 @@ third_party/rust/target/
 /shot/testdata/out/*
 !/shot/testdata/out/oracle.png
 
-# The cross-engine benchmark installs puppeteer and playwright, which bring a
-# browser each, and writes its report and sample PNGs beside them.
-/bench/cross/node_modules
-/bench/cross/out*
-/bench/out
+# The TypeScript benchmark keeps browsers and high-frequency evidence local.
+# Only compact results copied into /benchmark-results are committed.
+/apps/benchmark/node_modules
+/apps/benchmark/out*
 node_modules
 apps/demo/faruzan.png

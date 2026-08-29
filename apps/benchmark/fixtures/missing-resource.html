@@ -1,0 +1,8 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Shot benchmark: missing resource</title><link rel="stylesheet" href="assets/base.css">
+<main class="page"><span class="eyebrow">Failure tolerance fixture</span><h1>A missing subresource must not hang the page</h1>
+<p class="lede">The deliberately missing image below returns 404 while the document still reaches the load event.</p>
+<section class="panel" style="margin-top:28px;padding:28px;height:360px"><img src="assets/intentionally-missing.png" width="320" height="180" alt="expected broken image"><p>The rest of this deterministic page remains renderable.</p></section></main>
+</html>
