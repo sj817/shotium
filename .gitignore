@@ -388,3 +388,5 @@ third_party/rust/target/
 /bench/cross/node_modules
 /bench/cross/out*
 /bench/out
+node_modules
+apps/demo/faruzan.png

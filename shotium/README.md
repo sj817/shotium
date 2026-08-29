@@ -52,6 +52,10 @@ console.log(`Rendered in ${stats.timing.render}ms, Total: ${stats.timing.total}m
 await shotium.stop();
 ```
 
+### Vite Demo
+
+The [Genshin profile share-card demo](../apps/genshin-faruzan-profile-card) is a Vite-served HTML/CSS card. The sibling [`apps/demo`](../apps/demo) example starts its own HTTP server and captures the card with Shotium.
+
 ---
 
 ## Table of Contents

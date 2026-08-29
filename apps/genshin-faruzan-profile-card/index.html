@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>珐露珊 · 旅行者档案 | Faruzan Profile Card</title>
+  <link rel="icon" href="assets/icons/faruzan-icon.png" type="image/png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- 官方风元素符号,供页面内多处 <use> 复用 -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <path id="anemo-symbol" d="M 0.34375 8.410156 C 1.652344 10.464844 3.449219 12.652344 6.105469 12.582031 C 7.863281 12.464844 10.175781 12.964844 10.699219 14.914062 C 11.234375 16.394531 9.285156 18.308594 8.105469 16.835938 C 7.921875 16.519531 8.035156 16.324219 8.402344 16.28125 C 10.117188 16.316406 10.710938 14.359375 9.085938 13.683594 C 7.695312 13.515625 6.433594 14.589844 5.09375 14.898438 C 1.359375 15.976562 -0.898438 11.535156 0.34375 8.410156 Z M 17.335938 12.574219 C 15.523438 12.449219 13.136719 13.539062 13.261719 15.632812 C 13.253906 16.121094 13.457031 16.585938 13.816406 16.910156 C 14.179688 17.238281 14.667969 17.386719 15.148438 17.324219 C 15.691406 17.34375 16.390625 16.386719 15.652344 16.273438 C 12.875 16.273438 13.902344 12.671875 16.246094 13.871094 C 17.472656 14.578125 18.851562 14.980469 20.261719 15.050781 C 23.347656 14.746094 24.671875 11.105469 23.671875 8.433594 C 22.179688 10.667969 20.316406 12.886719 17.335938 12.574219 Z M 13.1875 11.25 C 14.527344 10.964844 15.816406 10.46875 17.003906 9.773438 C 18.839844 8.738281 19.882812 6.703125 19.644531 4.605469 C 19.410156 2.507812 17.941406 0.753906 15.917969 0.152344 C 17.851562 4.023438 16.695312 8.722656 13.1875 11.25 Z M 10.882812 11.226562 C 7.308594 8.742188 6.125 3.992188 8.117188 0.121094 C 6.261719 0.667969 4.859375 2.1875 4.457031 4.078125 C 4.054688 5.96875 4.722656 7.929688 6.191406 9.183594 C 7.589844 10.171875 9.160156 10.890625 10.820312 11.300781 Z M 20.042969 11.074219 C 18.082031 12.195312 15.59375 11.695312 13.78125 13.160156 C 12.90625 13.640625 12.371094 14.570312 12.394531 15.566406 C 12.421875 16.566406 13.003906 17.46875 13.902344 17.902344 C 14.304688 18.074219 14.695312 18.257812 15.085938 17.929688 C 15.464844 17.640625 15.769531 17.648438 16.316406 17.90625 C 14.425781 19.523438 12.949219 21.570312 12.011719 23.875 C 11.058594 21.574219 9.578125 19.535156 7.6875 17.914062 C 8.054688 17.636719 8.5625 17.636719 8.929688 17.914062 C 9.960938 18.507812 11.40625 17.230469 11.597656 16.199219 C 12.019531 14.179688 9.992188 12.589844 8.199219 12.207031 C 7.320312 12 6.421875 11.894531 5.542969 11.691406 C 1.484375 10.863281 0.875 6.753906 2.859375 3.609375 C 4.007812 12.007812 9.71875 9.703125 12 14.339844 C 14.265625 9.761719 20.019531 11.972656 21.164062 3.609375 C 22.554688 6.035156 22.972656 9.644531 20.042969 11.074219 Z M 12.976562 19.972656 L 12 19.320312 L 11.019531 19.980469 L 12.015625 21.648438 Z M 12 17.378906 C 11.6875 18.128906 11.0625 18.699219 10.285156 18.9375 C 10.894531 19.140625 11.5625 18.957031 11.984375 18.472656 C 12.714844 19.035156 13.347656 19.1875 13.777344 18.910156 C 12.980469 18.699219 12.324219 18.136719 12 17.378906 Z"/>
+
+      <!-- 原神四芒星芒(命之座星图用) -->
+      <path id="gi-star" d="M 0 -9 C 1.2 -3.6, 3.6 -1.2, 9 0 C 3.6 1.2, 1.2 3.6, 0 9 C -1.2 3.6, -3.6 1.2, -9 0 C -3.6 -1.2, -1.2 -3.6, 0 -9 Z"/>
+
+      <!-- 金色卷草角饰(左上角朝向,其余角旋转复用) -->
+      <g id="gi-corner">
+        <path d="M 4 40 L 4 12 Q 4 4 12 4 L 40 4" fill="none" stroke="currentColor" stroke-width="1.6"/>
+        <path d="M 12 30 L 12 16 Q 12 12 16 12 L 30 12" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.7"/>
+        <path d="M 40 4 C 48 4, 50 10, 46 12 C 43 13.5, 40.5 11, 42.5 8.5" fill="none" stroke="currentColor" stroke-width="1.2"/>
+        <path d="M 4 40 C 4 48, 10 50, 12 46 C 13.5 43, 11 40.5, 8.5 42.5" fill="none" stroke="currentColor" stroke-width="1.2"/>
+        <path d="M 8 8 L 12 5 L 15 8 L 12 12 Z" fill="currentColor" opacity="0.9"/>
+      </g>
+    </defs>
+  </svg>
+
+  <!-- 舞台:负责把 1600x900 的卡片等比缩放居中 -->
+  <main class="stage">
+    <section class="card" id="card" aria-label="珐露珊主题个人资料卡片">
+
+      <!-- ===== 背景装饰层(全部 pointer-events:none) ===== -->
+      <div class="card__bg" aria-hidden="true">
+        <div class="bg-gradient"></div>
+        <div class="bg-grid"></div>
+
+        <!-- 机关圆盘:角色身后缓慢旋转的古代机关 -->
+        <svg class="bg-mechanism" viewBox="0 0 800 800">
+          <g class="mech-ring mech-ring--outer">
+            <circle cx="400" cy="400" r="380" fill="none" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+            <circle cx="400" cy="400" r="366" fill="none" stroke="currentColor" stroke-width="0.6" stroke-dasharray="2 10" opacity="0.6"/>
+            <g class="mech-ticks"></g>
+          </g>
+          <g class="mech-ring mech-ring--mid">
+            <circle cx="400" cy="400" r="300" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.45"/>
+            <polygon points="400,112 649.4,256 649.4,544 400,688 150.6,544 150.6,256" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.4"/>
+            <polygon points="400,152 614.8,276 614.8,524 400,648 185.2,524 185.2,276" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.3"/>
+          </g>
+          <g class="mech-ring mech-ring--inner">
+            <circle cx="400" cy="400" r="210" fill="none" stroke="currentColor" stroke-width="0.7" opacity="0.5" stroke-dasharray="40 14"/>
+            <polygon points="400,214 561,307 561,493 400,586 239,493 239,307" fill="none" stroke="currentColor" stroke-width="0.6" opacity="0.45"/>
+          </g>
+        </svg>
+
+        <!-- 风场流线 -->
+        <svg class="bg-windlines" viewBox="0 0 1600 900" preserveAspectRatio="none">
+          <path class="wind-line wind-line--1" d="M -60 640 C 260 560, 420 700, 760 610 S 1300 480, 1680 560" />
+          <path class="wind-line wind-line--2" d="M -60 250 C 300 180, 560 300, 900 230 S 1380 130, 1680 210" />
+          <path class="wind-line wind-line--3" d="M -60 810 C 380 760, 700 840, 1080 770 S 1480 700, 1680 740" />
+        </svg>
+
+        <!-- 漂浮光点(JS 生成) -->
+        <div class="bg-particles" id="particles"></div>
+
+        <!-- 命之座星图:蔓藤花饰座 -->
+        <svg class="bg-constellation" viewBox="0 0 700 190">
+          <g class="cons-lines" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.4">
+            <path d="M 36 150 L 160 58 L 306 108 L 436 30 L 566 88 L 664 152"/>
+          </g>
+          <g class="cons-stars" fill="currentColor">
+            <use href="#gi-star" class="cons-star" style="--tw: 0s"   transform="translate(36 150) scale(0.9)"/>
+            <use href="#gi-star" class="cons-star" style="--tw: 1.2s" transform="translate(160 58) scale(1.25)"/>
+            <use href="#gi-star" class="cons-star" style="--tw: 2.4s" transform="translate(306 108) scale(0.8)"/>
+            <use href="#gi-star" class="cons-star" style="--tw: 0.7s" transform="translate(436 30) scale(1.1)"/>
+            <use href="#gi-star" class="cons-star" style="--tw: 1.8s" transform="translate(566 88) scale(0.95)"/>
+            <use href="#gi-star" class="cons-star" style="--tw: 3s"   transform="translate(664 152) scale(1.2)"/>
+          </g>
+          <text class="cons-label" x="436" y="66">蔓藤花饰座</text>
+        </svg>
+
+        <!-- 左下:教令院档案印章(中心为官方风元素纹样) -->
+        <svg class="bg-seal" viewBox="0 0 200 200">
+          <g class="seal-spin">
+            <circle cx="100" cy="100" r="92" fill="none" stroke="currentColor" stroke-width="1" opacity="0.7"/>
+            <circle cx="100" cy="100" r="84" fill="none" stroke="currentColor" stroke-width="0.5" stroke-dasharray="3 6" opacity="0.6"/>
+            <polygon points="100,32 158.9,66 158.9,134 100,168 41.1,134 41.1,66" fill="none" stroke="currentColor" stroke-width="0.7" opacity="0.55"/>
+            <polygon points="100,52 141.6,76 141.6,124 100,148 58.4,124 58.4,76" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.4"/>
+          </g>
+          <use href="#anemo-symbol" transform="translate(64 64) scale(3)" fill="currentColor" opacity="0.75"/>
+        </svg>
+
+        <!-- 右缘竖排须弥文装饰 -->
+        <div class="bg-sumeru">Faruzan Haravatat Akademiya</div>
+
+        <!-- 角色展示台:脚下的元素光环 -->
+        <svg class="bg-stand" viewBox="0 0 560 160">
+          <ellipse cx="280" cy="80" rx="250" ry="52" fill="none" stroke="currentColor" stroke-width="1.4" opacity="0.55"/>
+          <ellipse cx="280" cy="80" rx="215" ry="43" fill="none" stroke="currentColor" stroke-width="0.7" stroke-dasharray="6 10" opacity="0.5"/>
+          <ellipse cx="280" cy="80" rx="250" ry="52" fill="url(#stand-glow)"/>
+          <defs>
+            <radialGradient id="stand-glow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="rgba(116,227,193,0.18)"/>
+              <stop offset="70%" stop-color="rgba(116,227,193,0.05)"/>
+              <stop offset="100%" stop-color="rgba(116,227,193,0)"/>
+            </radialGradient>
+          </defs>
+        </svg>
+
+        <!-- 顶部中央悬饰 -->
+        <div class="bg-topmark">
+          <span class="topmark-line"></span>
+          <span class="topmark-diamond"></span>
+          <span class="topmark-line"></span>
+        </div>
+
+        <!-- 四角金色卷草角饰 -->
+        <svg class="bg-filigree bg-filigree--tl" viewBox="0 0 52 52"><use href="#gi-corner"/></svg>
+        <svg class="bg-filigree bg-filigree--tr" viewBox="0 0 52 52"><use href="#gi-corner" transform="rotate(90 26 26)"/></svg>
+        <svg class="bg-filigree bg-filigree--br" viewBox="0 0 52 52"><use href="#gi-corner" transform="rotate(180 26 26)"/></svg>
+        <svg class="bg-filigree bg-filigree--bl" viewBox="0 0 52 52"><use href="#gi-corner" transform="rotate(270 26 26)"/></svg>
+
+        <div class="bg-vignette"></div>
+      </div>
+
+      <!-- ===== 角色层 ===== -->
+      <div class="card__character" aria-hidden="true">
+        <div class="character-halo"></div>
+        <img class="character-art" src="assets/character/faruzan-splash.png"
+             alt="珐露珊官方立绘" draggable="false">
+        <div class="character-fade"></div>
+      </div>
+
+      <!-- 左缘竖排角色名 -->
+      <div class="card__spine" aria-hidden="true">
+        <span class="spine-cn">珐露珊</span>
+        <span class="spine-divider"></span>
+        <span class="spine-en">FARUZAN · HARAVATAT</span>
+      </div>
+
+      <!-- ===== 信息层 ===== -->
+      <div class="card__info">
+
+        <!-- 右上:玩家档案面板 -->
+        <header class="panel panel--identity">
+          <div class="identity-head">
+            <!-- 神之眼(风) -->
+            <svg class="vision" viewBox="0 0 120 132" aria-hidden="true">
+              <!-- 符号后的辉光 -->
+              <circle cx="60" cy="70" r="30" fill="rgba(116, 227, 193, 0.16)"/>
+              <g class="vision-frame" fill="none" stroke="currentColor">
+                <!-- 顶部饰翼 -->
+                <path d="M 60 4 L 65 13 L 60 22 L 55 13 Z" fill="currentColor" stroke="none"/>
+                <path d="M 44 20 C 30 10, 14 14, 6 30 C 18 24, 28 28, 36 37" stroke-width="2"/>
+                <path d="M 76 20 C 90 10, 106 14, 114 30 C 102 24, 92 28, 84 37" stroke-width="2"/>
+                <!-- 主环 -->
+                <circle cx="60" cy="70" r="42" stroke-width="2.6"/>
+                <circle cx="60" cy="70" r="36" stroke-width="0.8" opacity="0.6" stroke-dasharray="4 5"/>
+                <!-- 环上四向小菱形 -->
+                <path d="M 60 24 L 63 28 L 60 32 L 57 28 Z" fill="currentColor" stroke="none" opacity="0.9"/>
+                <path d="M 14 70 L 18 67 L 22 70 L 18 73 Z" fill="currentColor" stroke="none" opacity="0.7"/>
+                <path d="M 98 70 L 102 67 L 106 70 L 102 73 Z" fill="currentColor" stroke="none" opacity="0.7"/>
+                <!-- 底部坠饰 -->
+                <path d="M 60 116 L 66 124 L 60 132 L 54 124 Z" fill="currentColor" stroke="none" opacity="0.9"/>
+              </g>
+              <use href="#anemo-symbol" class="vision-anemo" transform="translate(33 43) scale(2.25)"/>
+            </svg>
+            <div class="identity-title">
+              <h1 class="identity-nickname" data-field="nickname">知论派前辈</h1>
+              <p class="identity-meta">
+                <span class="identity-uid">UID <b data-field="uid">100000001</b></span>
+                <span class="meta-diamond"></span>
+                <span data-field="server">天空岛</span>
+              </p>
+            </div>
+            <div class="identity-rank">
+              <div class="rank-badge">
+                <span class="rank-label">冒险等阶</span>
+                <span class="rank-value" data-field="adventureRank">60</span>
+              </div>
+              <div class="rank-badge">
+                <span class="rank-label">世界等级</span>
+                <span class="rank-value" data-field="worldLevel">8</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 原神经典菱形分割线 -->
+          <div class="gi-divider" aria-hidden="true">
+            <span class="gi-divider-line"></span>
+            <span class="gi-divider-diamond"></span>
+            <span class="gi-divider-line"></span>
+          </div>
+
+          <p class="identity-signature">
+            <span class="signature-quote">「</span><span data-field="signature">要称呼我为前辈,明白了吗?</span><span class="signature-quote">」</span>
+          </p>
+
+          <ul class="identity-stats">
+            <li class="stat-cell">
+              <span class="stat-value" data-field="achievements">987</span>
+              <span class="stat-label">成就达成</span>
+            </li>
+            <li class="stat-cell">
+              <span class="stat-value" data-field="spiralAbyss">12-3</span>
+              <span class="stat-label">深境螺旋</span>
+            </li>
+            <li class="stat-cell">
+              <span class="stat-value" data-field="activeDays">1024</span>
+              <span class="stat-label">活跃天数</span>
+            </li>
+          </ul>
+        </header>
+
+        <!-- 右下:珐露珊养成面板 -->
+        <section class="panel panel--build">
+          <div class="build-head">
+            <div class="build-avatar-wrap">
+              <img class="build-avatar" src="assets/icons/faruzan-icon.png" alt="珐露珊头像">
+              <svg class="build-avatar-element" viewBox="0 0 24 24"><use href="#anemo-symbol"/></svg>
+            </div>
+            <div class="build-title">
+              <h2 class="build-name">珐露珊 <em class="build-name-en">Faruzan</em></h2>
+              <p class="build-rarity" aria-label="四星角色">
+                <span class="rarity-star"></span><span class="rarity-star"></span><span class="rarity-star"></span><span class="rarity-star"></span>
+              </p>
+              <p class="build-sub">
+                <span>Lv.<b data-field="charLevel">90</b></span>
+                <span class="meta-diamond"></span>
+                <span data-field="constellation">满命 C6</span>
+                <span class="meta-diamond"></span>
+                <span>好感 <b data-field="friendship">10</b></span>
+              </p>
+            </div>
+            <div class="build-weapon">
+              <img class="weapon-icon" src="assets/icons/weapon-elegy.png" alt="武器图标">
+              <div class="weapon-text">
+                <span class="weapon-name" data-field="weapon">终末嗟叹之诗</span>
+                <span class="weapon-sub">五星弓 · 精炼一阶</span>
+              </div>
+            </div>
+          </div>
+
+          <ul class="build-stats">
+            <li class="bstat"><span class="bstat-label">暴击率</span><span class="bstat-value" data-field="critRate">62.4%</span></li>
+            <li class="bstat"><span class="bstat-label">暴击伤害</span><span class="bstat-value" data-field="critDmg">128.6%</span></li>
+            <li class="bstat"><span class="bstat-label">充能效率</span><span class="bstat-value" data-field="energyRecharge">241.3%</span></li>
+            <li class="bstat"><span class="bstat-label">风伤加成</span><span class="bstat-value bstat-value--anemo" data-field="anemoDmg">61.6%</span></li>
+            <li class="bstat"><span class="bstat-label">天赋等级</span><span class="bstat-value" data-field="talents">9 / 12 / 12</span></li>
+          </ul>
+        </section>
+
+        <!-- 底部铭牌 -->
+        <footer class="card__footer" aria-hidden="true">
+          <span>GENSHIN IMPACT · TRAVELER PROFILE</span>
+          <span class="footer-diamond"></span>
+          <span>机逐封秘 — 室罗婆耽学院</span>
+        </footer>
+      </div>
+    </section>
+  </main>
+
+  <!-- <script src="script.js"></script> -->
+</body>
+</html>

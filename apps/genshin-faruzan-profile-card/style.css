@@ -1,0 +1,712 @@
+/* ==========================================================================
+   珐露珊 · 旅行者档案卡片(纯静态)
+   设计基调:须弥学者 / 古典机关 / 风元素 —— 青绿、湖蓝、象牙白、原神金
+   全局使用《原神》游戏字体 汉仪文黑(HYWenHei / "Genshin-Impact")
+   ========================================================================== */
+
+@font-face {
+  font-family: "HYWenHei";
+  src: url("assets/fonts/HYWenHei-Extended.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* 须弥文(社区手工制作的提瓦特文字字体,仅作装饰) */
+@font-face {
+  font-family: "GenshinSumeru";
+  src: url("assets/fonts/GenshinSumeru.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* 色彩 */
+  --ink-deep: #0b1d1e;          /* 页面底色:墨绿近黑 */
+  --card-deep: #0e2427;         /* 卡片深部 */
+  --anemo: #74e3c1;             /* 风元素青绿 */
+  --anemo-soft: #a8ead6;        /* 柔和风绿 */
+  --lake: #6fc4d8;              /* 湖蓝 */
+  --ivory: #f3efe4;             /* 象牙白(主文字) */
+  --ivory-dim: rgba(243, 239, 228, 0.62);
+  --ivory-faint: rgba(243, 239, 228, 0.38);
+  --gold: #d3bc8e;              /* 原神 UI 金 */
+  --gold-bright: #e8d5a5;
+  --gold-soft: rgba(211, 188, 142, 0.45);
+  --gold-faint: rgba(211, 188, 142, 0.22);
+
+  /* 面板 */
+  --panel-bg: rgba(10, 30, 32, 0.52);
+  --panel-border: rgba(211, 188, 142, 0.30);
+  --panel-radius: 18px;
+  --panel-blur: 14px;
+
+  /* 阴影 */
+  --shadow-card: 0 30px 80px rgba(0, 0, 0, 0.55), 0 6px 24px rgba(0, 0, 0, 0.35);
+  --shadow-panel: 0 10px 32px rgba(4, 14, 15, 0.35);
+
+  /* 字体:全局原神字体,后备中文黑体 */
+  --font-gi: "HYWenHei", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+/* ---------- 基础 ---------- */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+  background:
+    radial-gradient(1200px 700px at 70% -10%, rgba(29, 90, 85, 0.35), transparent 60%),
+    radial-gradient(900px 600px at 10% 110%, rgba(21, 55, 66, 0.5), transparent 60%),
+    var(--ink-deep);
+  font-family: var(--font-gi);
+  color: var(--ivory);
+  overflow: hidden;
+}
+
+/* ---------- 舞台与缩放 ---------- */
+.stage {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+
+/* 卡片固定 1600x900,由 JS 写入 --card-scale 做等比缩放,内部布局永不回流;
+   用 left/top 50% + translate 居中,窗口小于卡片时依然精确居中 */
+.card {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 1600px;
+  height: 900px;
+  transform: translate(-50%, -50%) scale(var(--card-scale, 1));
+  transform-origin: center center;
+  border-radius: 24px;
+  overflow: hidden;
+  background: var(--card-deep);
+  box-shadow: var(--shadow-card);
+  isolation: isolate;
+  opacity: 1;
+}
+
+/* 极细金色描边 + 内侧再嵌一圈更细的线,营造装帧感 */
+.card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 24px;
+  border: 1px solid var(--gold-soft);
+  pointer-events: none;
+  z-index: 30;
+}
+.card::after {
+  content: "";
+  position: absolute;
+  inset: 10px;
+  border-radius: 16px;
+  border: 1px solid var(--gold-faint);
+  pointer-events: none;
+  z-index: 30;
+}
+
+/* ---------- 背景装饰层 ---------- */
+.card__bg { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+
+.bg-gradient {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(1100px 800px at 26% 42%, rgba(46, 122, 110, 0.42), transparent 62%),
+    radial-gradient(700px 500px at 88% 12%, rgba(53, 106, 128, 0.28), transparent 65%),
+    radial-gradient(900px 600px at 78% 96%, rgba(24, 66, 70, 0.5), transparent 60%),
+    linear-gradient(112deg, #123336 0%, #0e2629 44%, #0b2023 100%);
+}
+
+/* 极淡的几何网格,学术制图感 */
+.bg-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(168, 234, 214, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(168, 234, 214, 0.045) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: radial-gradient(1000px 700px at 30% 45%, rgba(0,0,0,0.9), transparent 75%);
+  -webkit-mask-image: radial-gradient(1000px 700px at 30% 45%, rgba(0,0,0,0.9), transparent 75%);
+}
+
+/* 机关圆盘 */
+.bg-mechanism {
+  position: absolute;
+  width: 860px;
+  height: 860px;
+  left: -10px;
+  top: -30px;
+  color: var(--anemo);
+  opacity: 0.5;
+}
+.mech-ring { transform-origin: 400px 400px; }
+.mech-ring--outer { animation: mech-spin 160s linear infinite; }
+.mech-ring--mid   { animation: mech-spin 110s linear infinite reverse; }
+.mech-ring--inner { animation: mech-spin 80s  linear infinite; }
+@keyframes mech-spin { to { transform: rotate(360deg); } }
+
+/* 风场流线 */
+.bg-windlines { position: absolute; inset: 0; width: 100%; height: 100%; }
+.wind-line {
+  fill: none;
+  stroke: var(--anemo-soft);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+  stroke-dasharray: 90 640;
+  opacity: 0.45;
+  animation: wind-flow 16s linear infinite;
+}
+.wind-line--2 { animation-duration: 22s; animation-delay: -8s; opacity: 0.22; }
+.wind-line--3 { animation-duration: 19s; animation-delay: -4s; opacity: 0.18; }
+@keyframes wind-flow { to { stroke-dashoffset: -730; } }
+
+/* 漂浮光点 */
+.bg-particles { position: absolute; inset: 0; }
+.particle {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(168, 234, 214, 0.9), rgba(168, 234, 214, 0) 70%);
+  animation: particle-drift var(--dur, 18s) ease-in-out var(--delay, 0s) infinite alternate;
+  opacity: var(--op, 0.5);
+}
+@keyframes particle-drift {
+  from { transform: translate(0, 0); }
+  to   { transform: translate(var(--dx, 20px), var(--dy, -60px)); }
+}
+
+/* 命之座星图:蔓藤花饰座 */
+.bg-constellation {
+  position: absolute;
+  right: 60px;
+  top: 448px;
+  width: 700px;
+  height: 190px;
+  color: var(--gold);
+  opacity: 0.55;
+}
+.cons-star {
+  animation: star-twinkle 4.5s ease-in-out var(--tw, 0s) infinite;
+}
+@keyframes star-twinkle {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 1; }
+}
+.cons-label {
+  font-family: var(--font-gi);
+  font-size: 15px;
+  letter-spacing: 0.5em;
+  fill: var(--ivory-faint);
+}
+
+/* 教令院档案印章 */
+.bg-seal {
+  position: absolute;
+  left: 96px;
+  bottom: 64px;
+  width: 128px;
+  height: 128px;
+  color: var(--gold);
+  opacity: 0.4;
+}
+.seal-spin {
+  transform-origin: 100px 100px;
+  animation: mech-spin 90s linear infinite reverse;
+}
+
+/* 右缘竖排须弥文 */
+.bg-sumeru {
+  position: absolute;
+  right: 26px;
+  top: 50%;
+  transform: translateY(-50%);
+  writing-mode: vertical-rl;
+  font-family: "GenshinSumeru", sans-serif;
+  font-size: 20px;
+  letter-spacing: 0.35em;
+  color: var(--gold);
+  opacity: 0.22;
+  white-space: nowrap;
+}
+
+/* 四角金色卷草角饰 */
+.bg-filigree {
+  position: absolute;
+  width: 52px;
+  height: 52px;
+  color: var(--gold);
+  opacity: 0.75;
+}
+.bg-filigree--tl { left: 20px; top: 20px; }
+.bg-filigree--tr { right: 20px; top: 20px; }
+.bg-filigree--br { right: 20px; bottom: 20px; }
+.bg-filigree--bl { left: 20px; bottom: 20px; }
+
+/* 角色展示台光环(位于角色脚下,压在立绘之下) */
+.bg-stand {
+  position: absolute;
+  left: 235px;
+  bottom: 72px;
+  width: 560px;
+  height: 160px;
+  color: var(--anemo);
+}
+
+/* 顶部中央悬饰:线—◆—线 */
+.bg-topmark {
+  position: absolute;
+  left: 50%;
+  top: 24px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.topmark-line {
+  width: 130px;
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--gold-soft));
+}
+.topmark-line:last-child {
+  background: linear-gradient(to left, transparent, var(--gold-soft));
+}
+.topmark-diamond {
+  width: 7px;
+  height: 7px;
+  background: var(--gold);
+  transform: rotate(45deg);
+  box-shadow: 0 0 8px rgba(211, 188, 142, 0.6);
+}
+
+/* 暗角,收束视线 */
+.bg-vignette {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(1400px 1000px at 45% 45%, transparent 55%, rgba(6, 16, 17, 0.55) 100%);
+}
+
+/* ---------- 角色层 ---------- */
+.card__character {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* 角色身后的辉光,把人物从背景里托出来 */
+.character-halo {
+  position: absolute;
+  width: 720px;
+  height: 720px;
+  left: 60px;
+  top: 60px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(116, 227, 193, 0.36), rgba(116, 227, 193, 0.1) 45%, transparent 70%);
+  filter: blur(6px);
+}
+
+/* 立绘原图 2048x1024,人物居中;放大裁切,让人物立于卡片左侧 */
+.character-art {
+  position: absolute;
+  width: 1560px;
+  left: -350px;
+  top: -8px;
+  object-fit: contain;
+  user-select: none;
+  /* 底部与右侧渐隐,让人物融进卡片而不是贴上去 */
+  mask-image:
+    linear-gradient(to bottom, #000 78%, transparent 97%),
+    linear-gradient(to right, #000 62%, transparent 88%);
+  -webkit-mask-image:
+    linear-gradient(to bottom, #000 78%, transparent 97%),
+    linear-gradient(to right, #000 62%, transparent 88%);
+  mask-composite: intersect;
+  -webkit-mask-composite: source-in;
+  filter: drop-shadow(0 24px 48px rgba(5, 18, 19, 0.6));
+}
+
+/* 地面与卡片底部之间的过渡阴影 */
+.character-fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 220px;
+  background: linear-gradient(to top, rgba(9, 24, 26, 0.85), transparent);
+}
+
+/* ---------- 左缘竖排铭牌 ---------- */
+.card__spine {
+  position: absolute;
+  left: 34px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  writing-mode: vertical-rl;
+  pointer-events: none;
+}
+.spine-cn {
+  font-size: 25px;
+  letter-spacing: 0.5em;
+  color: var(--ivory);
+  text-shadow: 0 2px 12px rgba(9, 24, 26, 0.8);
+}
+.spine-divider {
+  width: 1px;
+  height: 64px;
+  background: linear-gradient(to bottom, transparent, var(--gold-soft), transparent);
+}
+.spine-en {
+  font-size: 11px;
+  letter-spacing: 0.42em;
+  color: var(--ivory-faint);
+}
+
+/* ---------- 信息层 ---------- */
+.card__info { position: absolute; inset: 0; z-index: 20; }
+
+.panel {
+  position: absolute;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--panel-radius);
+  backdrop-filter: blur(var(--panel-blur));
+  -webkit-backdrop-filter: blur(var(--panel-blur));
+  box-shadow: var(--shadow-panel);
+}
+/* 面板边缘的金色提亮线 */
+.panel::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 24px;
+  width: 56px;
+  height: 1px;
+  background: linear-gradient(to right, var(--gold), transparent);
+}
+.panel::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  right: 24px;
+  width: 56px;
+  height: 1px;
+  background: linear-gradient(to left, var(--gold), transparent);
+}
+
+/* 通用:菱形装饰点 */
+.meta-diamond,
+.footer-diamond,
+.gi-divider-diamond {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  background: var(--gold-soft);
+  transform: rotate(45deg);
+  flex: none;
+}
+.gi-divider-diamond {
+  width: 7px;
+  height: 7px;
+  background: var(--gold);
+  box-shadow: 0 0 8px rgba(211, 188, 142, 0.6);
+}
+
+/* 原神经典分割线:线—◆—线 */
+.gi-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+.gi-divider-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--gold-soft) 30%, var(--gold-soft) 70%, transparent);
+}
+
+/* ----- 玩家档案面板 ----- */
+.panel--identity {
+  right: 64px;
+  top: 84px;
+  width: 620px;
+  padding: 30px 36px 26px;
+}
+
+.identity-head {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+/* 神之眼(风) */
+.vision {
+  width: 62px;
+  height: 68px;
+  flex: none;
+  color: var(--gold);
+  filter: drop-shadow(0 0 12px rgba(116, 227, 193, 0.35));
+}
+.vision-anemo {
+  fill: var(--anemo);
+  animation: anemo-breathe 6s ease-in-out infinite;
+}
+@keyframes anemo-breathe {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
+}
+
+.identity-title { flex: 1; min-width: 0; }
+
+.identity-nickname {
+  font-size: 36px;
+  font-weight: normal;
+  line-height: 1.2;
+  letter-spacing: 0.05em;
+  color: var(--ivory);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 2px 18px rgba(9, 24, 26, 0.7);
+}
+
+.identity-meta {
+  margin-top: 7px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  color: var(--ivory-dim);
+}
+.identity-uid b {
+  font-weight: normal;
+  letter-spacing: 0.16em;
+  color: var(--anemo-soft);
+}
+
+.identity-rank { display: flex; gap: 10px; flex: none; }
+.rank-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 9px 13px 7px;
+  border: 1px solid var(--gold-faint);
+  border-radius: 12px;
+  background: rgba(211, 188, 142, 0.06);
+}
+.rank-label { font-size: 11px; letter-spacing: 0.14em; color: var(--ivory-faint); }
+.rank-value {
+  font-size: 24px;
+  line-height: 1;
+  color: var(--gold-bright);
+}
+
+.identity-signature {
+  margin-top: 18px;
+  font-size: 16.5px;
+  line-height: 1.6;
+  letter-spacing: 0.03em;
+  color: var(--anemo-soft);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.signature-quote { color: var(--gold-soft); }
+
+.identity-stats {
+  margin-top: 20px;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+}
+.stat-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+}
+.stat-cell + .stat-cell::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 12%;
+  height: 76%;
+  width: 1px;
+  background: linear-gradient(to bottom, transparent, var(--gold-faint), transparent);
+}
+.stat-value {
+  font-size: 27px;
+  line-height: 1;
+  color: var(--ivory);
+  font-variant-numeric: tabular-nums;
+}
+.stat-label { font-size: 12px; letter-spacing: 0.2em; color: var(--ivory-faint); }
+
+/* ----- 珐露珊养成面板 ----- */
+.panel--build {
+  right: 64px;
+  bottom: 76px;
+  width: 830px;
+  padding: 22px 30px 20px;
+  /* 珐露珊「机关」名片纹样作为极淡底纹,自左向右渐显 */
+  background:
+    linear-gradient(to right, rgba(10, 30, 32, 0.92) 30%, rgba(10, 30, 32, 0.62)),
+    url("assets/background/namecard-faruzan.png") right center / cover no-repeat;
+}
+
+.build-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.build-avatar-wrap { position: relative; flex: none; }
+.build-avatar {
+  width: 64px;
+  height: 64px;
+  display: block;
+  border-radius: 50%;
+  border: 1px solid var(--gold-soft);
+  background: radial-gradient(circle at 50% 30%, rgba(116, 227, 193, 0.25), rgba(12, 32, 34, 0.8));
+  object-fit: cover;
+  box-shadow: 0 0 18px rgba(116, 227, 193, 0.25);
+}
+/* 头像右下角的元素角标 */
+.build-avatar-element {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  width: 22px;
+  height: 22px;
+  padding: 3px;
+  border-radius: 50%;
+  background: rgba(10, 28, 30, 0.95);
+  border: 1px solid var(--gold-faint);
+  fill: var(--anemo);
+}
+
+.build-title { flex: 1; min-width: 0; }
+.build-name {
+  font-size: 22px;
+  font-weight: normal;
+  letter-spacing: 0.08em;
+  color: var(--ivory);
+  white-space: nowrap;
+}
+.build-name-en {
+  font-style: normal;
+  font-size: 12px;
+  letter-spacing: 0.3em;
+  color: var(--ivory-faint);
+  margin-left: 8px;
+}
+
+/* 四星稀有度 */
+.build-rarity {
+  margin-top: 5px;
+  display: flex;
+  gap: 3px;
+}
+.rarity-star {
+  width: 13px;
+  height: 13px;
+  background: linear-gradient(160deg, #f4dfa0, #d3a95c);
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+}
+
+.build-sub {
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--ivory-dim);
+}
+.build-sub b { color: var(--anemo-soft); font-weight: normal; }
+
+.build-weapon {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: none;
+  padding: 8px 16px 8px 8px;
+  border: 1px solid var(--gold-faint);
+  border-radius: 14px;
+  background: rgba(211, 188, 142, 0.05);
+}
+.weapon-icon {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.5));
+}
+.weapon-text { display: flex; flex-direction: column; gap: 3px; }
+.weapon-name { font-size: 15px; color: var(--gold-bright); letter-spacing: 0.04em; }
+.weapon-sub { font-size: 11px; letter-spacing: 0.12em; color: var(--ivory-faint); }
+
+.build-stats {
+  margin-top: 16px;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+}
+.bstat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  padding: 11px 6px 9px;
+  border-radius: 12px;
+  background: rgba(168, 234, 214, 0.045);
+  border: 1px solid rgba(168, 234, 214, 0.1);
+}
+.bstat-label { font-size: 11.5px; letter-spacing: 0.18em; color: var(--ivory-faint); }
+.bstat-value {
+  font-size: 19px;
+  line-height: 1;
+  color: var(--ivory);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.bstat-value--anemo { color: var(--anemo); text-shadow: 0 0 12px rgba(116, 227, 193, 0.45); }
+
+/* ----- 底部铭牌 ----- */
+.card__footer {
+  position: absolute;
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 10.5px;
+  letter-spacing: 0.34em;
+  color: var(--ivory-faint);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* ---------- 动画偏好 ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .card, .card * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .card { opacity: 1; }
+}
