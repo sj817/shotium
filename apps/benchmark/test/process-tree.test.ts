@@ -5,6 +5,7 @@ import {
   collectAncestorPids,
   parseLinuxProcStat,
   partitionProtectedProcesses,
+  ProcessMonitor,
   selectOwnedProcessEntries,
   waitForProcessTree,
 } from '../src/process-tree.ts';
@@ -40,6 +41,33 @@ test('never substitutes an unrelated process when the owned root stays absent', 
       at: new Date().toISOString(), processes: [], rss_bytes: 0, cpu_percent: 0,
     }),
   }), /owned process tree for PID\(s\) 73 was not observable/);
+});
+
+test('required-root monitoring waits for a short-lived client identity before release', async () => {
+  let calls = 0;
+  const root = {
+    pid: 91, parent_pid: 1, started: '2026-08-30 08:00:00',
+    birth_token: 'windows-creation-date:2026-08-30 08:00:00',
+    name: 'node', command: 'client-once', rss_bytes: 4096, cpu_percent: 0,
+  };
+  const snapshot = async (rootPids) => {
+    assert.deepEqual(rootPids, [91]);
+    calls += 1;
+    const processes = calls < 3 ? [] : [root];
+    return {
+      at: new Date().toISOString(),
+      processes,
+      rss_bytes: processes.length ? root.rss_bytes : 0,
+      cpu_percent: 0,
+    };
+  };
+  const monitor = new ProcessMonitor([91], 0, snapshot);
+  await monitor.start({requireRoots: true, timeoutMs: 100});
+  const telemetry = await monitor.stop();
+  assert.ok(calls >= 3);
+  assert.equal(telemetry.trusted, true);
+  assert.deepEqual(telemetry.identities, [root]);
+  assert.deepEqual(telemetry.errors, []);
 });
 
 test('Linux competitor policy disables the unavailable browser sandbox only there', () => {

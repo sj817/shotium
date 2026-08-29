@@ -1,11 +1,31 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import {parseArgs} from './args.ts';
+import {booleanArg, parseArgs} from './args.ts';
 import {createEngine} from './engines.ts';
 import {inspectPng} from './image.ts';
 
 const options = parseArgs(process.argv.slice(2));
 const endpoint = options.endpoint ? JSON.parse(Buffer.from(options.endpoint, 'base64url').toString('utf8')) : null;
+
+async function awaitStartGate(): Promise<void> {
+  if (!booleanArg(options.startGated, false)) return;
+  const token = await new Promise<string>((resolve, reject) => {
+    let input = '';
+    process.stdin.setEncoding('utf8');
+    process.stdin.on('data', (chunk) => {
+      input += chunk;
+      const newline = input.indexOf('\n');
+      if (newline >= 0) resolve(input.slice(0, newline).trim());
+    });
+    process.stdin.once('end', () => reject(new Error('start gate closed before release')));
+    process.stdin.once('error', reject);
+    process.stdin.resume();
+  });
+  if (token !== 'go') throw new Error(`invalid start gate token ${JSON.stringify(token)}`);
+  process.stdin.pause();
+}
+
+await awaitStartGate();
 const engine = await createEngine(options.engine, {
   workers: Number(options.workers) || 4,
   daemonName: options.daemonName || 'benchmark',

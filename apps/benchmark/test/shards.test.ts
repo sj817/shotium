@@ -3,10 +3,11 @@ import test from 'node:test';
 import {SHARD_IDS, SHARD_SCENARIOS} from '../src/constants.ts';
 
 test('benchmark shards partition every scenario exactly once', () => {
-  assert.deepEqual(SHARD_IDS, ['all', 'startup', 'throughput', 'resident', 'resilience']);
+  assert.deepEqual(SHARD_IDS, ['all', 'startup', 'throughput', 'parallel', 'resident', 'resilience']);
   assert.deepEqual(SHARD_SCENARIOS, {
     startup: ['cold', 'cold-settled', 'lifecycle'],
-    throughput: ['warm', 'batch', 'parallel'],
+    throughput: ['warm', 'batch'],
+    parallel: ['parallel'],
     resident: ['resident', 'reuse-page'],
     resilience: ['faults', 'soak'],
   });

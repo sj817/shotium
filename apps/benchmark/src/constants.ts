@@ -35,13 +35,15 @@ export const SHARD_IDS = Object.freeze([
   'all',
   'startup',
   'throughput',
+  'parallel',
   'resident',
   'resilience',
 ]);
 
 export const SHARD_SCENARIOS = Object.freeze({
   startup: Object.freeze(['cold', 'cold-settled', 'lifecycle']),
-  throughput: Object.freeze(['warm', 'batch', 'parallel']),
+  throughput: Object.freeze(['warm', 'batch']),
+  parallel: Object.freeze(['parallel']),
   resident: Object.freeze(['resident', 'reuse-page']),
   resilience: Object.freeze(['faults', 'soak']),
 });

@@ -22,15 +22,19 @@ npm run benchmark -- --shotium-version 0.3.2 --profile smoke --output ./out --se
 ```
 
 如需仅运行一个场景分片，可追加 `--shard startup`、`--shard throughput`、
-`--shard resident` 或 `--shard resilience`。省略该选项（或传入 `--shard all`）时，
-仍按本机单任务方式运行全部场景：
+`--shard parallel`、`--shard resident` 或 `--shard resilience`。省略该选项
+（或传入 `--shard all`）时，仍按本机单任务方式运行全部场景：
 
 ```bash
 npm run benchmark -- --shotium-version 0.3.2 --profile full --shard throughput --output ./out --seed local-check
 ```
 
-CI 会展开为 24 个 `平台 x 场景分片` 矩阵任务。每个分片仍在同一台原生 runner
-上以平衡顺序测试所有可用引擎，因此同一场景内的比较仍是同机比较。四个分片会先
+分片边界固定为：`startup` 包含冷启动、冷启动稳定后首张截图和生命周期；
+`throughput` 包含暖机和批量；`parallel` 单独包含并发场景；`resident` 包含常驻
+客户端和页面复用；`resilience` 包含故障及浸泡测试。
+
+CI 会展开为 30 个 `平台 x 场景分片` 矩阵任务。每个分片仍在同一台原生 runner
+上以平衡顺序测试所有可用引擎，因此同一场景内的比较仍是同机比较。五个分片会先
 合并为一个平台结果，再聚合六个平台；runner 信息保留在各分片中，不会把不同分片
 或不同平台的耗时混在同一个排名里。
 
@@ -51,6 +55,12 @@ JSON/CSV 报告包含原始样本、经过校验的 PNG 元数据、可执行文
 
 使用 `Six-platform benchmark` GitHub Actions workflow 测试已发布的精确语义版本
 或 npm dist-tag。GitHub Release 创建后，发布流程会以精确发布版本触发同一基准测试。
+
+手动定向诊断时，可以把 `platform_filter` 设为一个原生平台、把 `shard_filter`
+设为一个场景分片，或同时指定两者。两个输入均保持 `all` 时仍执行完整的 30 任务。
+任何带筛选的运行都会上传对应分片的数值结果和 Actions 详细证据，但会明确跳过平台
+合并、仓库聚合和结果提交，绝不会把局部诊断伪装成完整归档。发布流程不传这两个可选
+筛选项，因此仍保持六平台全量测试。
 
 在同一 runner 系列积累至少五次可比的 full 结果之前，基准仅记录数据，不设置武断的
 性能回归阈值；后续阈值策略需单独制定和评审。

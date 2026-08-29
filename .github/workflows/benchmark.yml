@@ -29,6 +29,31 @@ on:
         description: Released source SHA; release dispatch fills this automatically
         required: false
         type: string
+      platform_filter:
+        description: Run all platforms or one diagnostic platform / 运行全部平台或单个平台诊断
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - linux-x64
+          - linux-arm64
+          - win32-x64
+          - win32-arm64
+          - darwin-x64
+          - darwin-arm64
+      shard_filter:
+        description: Run all shards or one diagnostic shard / 运行全部分片或单个分片诊断
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - startup
+          - throughput
+          - parallel
+          - resident
+          - resilience
 
 permissions:
   contents: read
@@ -43,6 +68,9 @@ jobs:
       install_spec: ${{ steps.normalize.outputs.install_spec }}
       archive_version: ${{ steps.normalize.outputs.archive_version }}
       resolution_status: ${{ steps.normalize.outputs.resolution_status }}
+      target_matrix: ${{ steps.matrix.outputs.target_matrix }}
+      shard_matrix: ${{ steps.matrix.outputs.shard_matrix }}
+      diagnostic_mode: ${{ steps.matrix.outputs.diagnostic_mode }}
     steps:
       - uses: actions/checkout@v4
 
@@ -101,31 +129,55 @@ jobs:
           echo "archive_version=$archive_version" >> "$GITHUB_OUTPUT"
           echo "resolution_status=$resolution_status" >> "$GITHUB_OUTPUT"
 
+      - name: Resolve the requested platform and shard matrix
+        id: matrix
+        shell: bash
+        env:
+          PLATFORM_FILTER: ${{ inputs.platform_filter }}
+          SHARD_FILTER: ${{ inputs.shard_filter }}
+        run: |
+          platform_filter="${PLATFORM_FILTER:-all}"
+          shard_filter="${SHARD_FILTER:-all}"
+
+          case "$platform_filter" in
+            all)
+              target_matrix='[{"platform":"linux-x64","runner":"ubuntu-24.04"},{"platform":"linux-arm64","runner":"ubuntu-24.04-arm"},{"platform":"win32-x64","runner":"windows-2025"},{"platform":"win32-arm64","runner":"windows-11-arm"},{"platform":"darwin-x64","runner":"macos-15-intel"},{"platform":"darwin-arm64","runner":"macos-15"}]'
+              ;;
+            linux-x64) target_matrix='[{"platform":"linux-x64","runner":"ubuntu-24.04"}]' ;;
+            linux-arm64) target_matrix='[{"platform":"linux-arm64","runner":"ubuntu-24.04-arm"}]' ;;
+            win32-x64) target_matrix='[{"platform":"win32-x64","runner":"windows-2025"}]' ;;
+            win32-arm64) target_matrix='[{"platform":"win32-arm64","runner":"windows-11-arm"}]' ;;
+            darwin-x64) target_matrix='[{"platform":"darwin-x64","runner":"macos-15-intel"}]' ;;
+            darwin-arm64) target_matrix='[{"platform":"darwin-arm64","runner":"macos-15"}]' ;;
+            *) echo "Unsupported platform filter: $platform_filter" >&2; exit 2 ;;
+          esac
+
+          case "$shard_filter" in
+            all) shard_matrix='["startup","throughput","parallel","resident","resilience"]' ;;
+            startup|throughput|parallel|resident|resilience)
+              shard_matrix="[\"$shard_filter\"]"
+              ;;
+            *) echo "Unsupported shard filter: $shard_filter" >&2; exit 2 ;;
+          esac
+
+          diagnostic_mode=false
+          if [ "$platform_filter" != all ] || [ "$shard_filter" != all ]; then
+            diagnostic_mode=true
+          fi
+
+          echo "target_matrix=$target_matrix" >> "$GITHUB_OUTPUT"
+          echo "shard_matrix=$shard_matrix" >> "$GITHUB_OUTPUT"
+          echo "diagnostic_mode=$diagnostic_mode" >> "$GITHUB_OUTPUT"
+
   platform:
     name: ${{ matrix.target.platform }} / ${{ matrix.shard }}
     needs: resolve
     strategy:
       fail-fast: false
-      max-parallel: 24
+      max-parallel: 30
       matrix:
-        target:
-          - platform: linux-x64
-            runner: ubuntu-24.04
-          - platform: linux-arm64
-            runner: ubuntu-24.04-arm
-          - platform: win32-x64
-            runner: windows-2025
-          - platform: win32-arm64
-            runner: windows-11-arm
-          - platform: darwin-x64
-            runner: macos-15-intel
-          - platform: darwin-arm64
-            runner: macos-15
-        shard:
-          - startup
-          - throughput
-          - resident
-          - resilience
+        target: ${{ fromJSON(needs.resolve.outputs.target_matrix) }}
+        shard: ${{ fromJSON(needs.resolve.outputs.shard_matrix) }}
     runs-on: ${{ matrix.target.runner }}
     timeout-minutes: 180
     steps:
@@ -226,7 +278,7 @@ jobs:
   merge-platform:
     name: Merge ${{ matrix.platform }} shards
     needs: [resolve, platform]
-    if: always()
+    if: always() && needs.resolve.outputs.diagnostic_mode != 'true'
     strategy:
       fail-fast: false
       max-parallel: 6
@@ -300,7 +352,7 @@ jobs:
   aggregate:
     name: Aggregate and archive
     needs: [resolve, merge-platform]
-    if: always()
+    if: always() && needs.resolve.outputs.diagnostic_mode != 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     concurrency:

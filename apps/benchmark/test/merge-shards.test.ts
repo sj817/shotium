@@ -89,7 +89,7 @@ function writeShard(root: string, platform: string, shard: string, status = 'pas
   });
 }
 
-test('merges four shards without pretending they shared one host or one evidence artifact', () => {
+test('merges five shards without pretending they shared one host or one evidence artifact', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'shotium-merge-shards-'));
   try {
     const input = path.join(root, 'input');
@@ -102,11 +102,11 @@ test('merges four shards without pretending they shared one host or one evidence
     assert.equal(result.summary.host_mode, 'sharded');
     assert.deepEqual(result.summary.execution_shards.map((entry) => entry.host.runner),
         SHARDS.map((shard) => `runner-${shard}`));
-    assert.equal(result.summary.scenarios.length, 4);
-    assert.equal(result.summary.raw_samples, 4);
+    assert.equal(result.summary.scenarios.length, SHARDS.length);
+    assert.equal(result.summary.raw_samples, SHARDS.length);
     assert.equal(validatePlatformResult(result.summary), result.summary);
     assert.equal(result.artifact.uploaded, true);
-    assert.equal(result.artifact.artifacts.length, 4);
+    assert.equal(result.artifact.artifacts.length, SHARDS.length);
     assert.deepEqual(result.artifact.artifacts.map((entry) => entry.name).sort(),
         SHARDS.map((shard) => `benchmark-evidence-linux-x64-${shard}`).sort());
     const samples = fs.readFileSync(path.join(output, 'samples.jsonl'), 'utf8').trim().split('\n').map((line) =>
@@ -122,7 +122,9 @@ test('writes an auditable incomplete platform result when a shard is missing', (
   try {
     const input = path.join(root, 'input');
     const output = path.join(root, 'output');
-    for (const shard of SHARDS.slice(0, 3)) writeShard(input, 'linux-x64', shard);
+    for (const shard of SHARDS.filter((shard) => shard !== 'resilience')) {
+      writeShard(input, 'linux-x64', shard);
+    }
     const result = mergeShardResults({input, output, platform: 'linux-x64'});
     assert.equal(result.summary.status, 'infra-error');
     assert.equal(result.summary.shards_complete, false);
@@ -158,7 +160,7 @@ test('keeps benchmark completeness separate from evidence upload completeness', 
     });
     const linux = aggregate.manifest.platforms.find((entry) => entry.platform === 'linux-x64');
     assert.equal(linux.evidence_complete, false);
-    assert.equal(linux.artifacts.length, 4);
+    assert.equal(linux.artifacts.length, SHARDS.length);
   } finally {
     fs.rmSync(root, {recursive: true, force: true});
   }

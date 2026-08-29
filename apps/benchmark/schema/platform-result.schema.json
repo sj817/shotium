@@ -26,11 +26,11 @@
     "platform": {
       "enum": ["linux-x64", "linux-arm64", "win32-x64", "win32-arm64", "darwin-x64", "darwin-arm64"]
     },
-    "shard": {"enum": ["all", "startup", "throughput", "resident", "resilience", "merged"]},
+    "shard": {"enum": ["all", "startup", "throughput", "parallel", "resident", "resilience", "merged"]},
     "shards_complete": {"type": "boolean"},
     "missing_shards": {
       "type": "array",
-      "items": {"enum": ["startup", "throughput", "resident", "resilience"]},
+      "items": {"enum": ["startup", "throughput", "parallel", "resident", "resilience"]},
       "uniqueItems": true
     },
     "host_mode": {"enum": ["sharded"]},
@@ -91,7 +91,7 @@
           "failures"
         ],
         "properties": {
-          "shard": {"enum": ["startup", "throughput", "resident", "resilience"]},
+          "shard": {"enum": ["startup", "throughput", "parallel", "resident", "resilience"]},
           "status": {"$ref": "#/$defs/status"},
           "generated_utc": {"type": "string", "minLength": 1},
           "host": {
@@ -308,13 +308,13 @@
         "required": ["shards_complete", "host_mode", "execution_shards"],
         "properties": {
           "host": {"type": "null"},
-          "execution_shards": {"type": "array", "maxItems": 4}
+          "execution_shards": {"type": "array", "maxItems": 5}
         }
       }
     },
     {
       "if": {"properties": {"shards_complete": {"const": true}}, "required": ["shards_complete"]},
-      "then": {"properties": {"execution_shards": {"type": "array", "minItems": 4, "maxItems": 4}}}
+      "then": {"properties": {"execution_shards": {"type": "array", "minItems": 5, "maxItems": 5}}}
     },
     {
       "if": {"properties": {"shards_complete": {"const": false}}, "required": ["shards_complete"]},

@@ -24,17 +24,21 @@ npm run benchmark -- --shotium-version 0.3.2 --profile smoke --output ./out --se
 ```
 
 Run one scenario shard by adding `--shard startup`, `--shard throughput`,
-`--shard resident`, or `--shard resilience`. Omitting the option (or passing
-`--shard all`) keeps the single-machine local run:
+`--shard parallel`, `--shard resident`, or `--shard resilience`. Omitting the
+option (or passing `--shard all`) keeps the single-machine local run:
 
 ```bash
 npm run benchmark -- --shotium-version 0.3.2 --profile full --shard throughput --output ./out --seed local-check
 ```
 
-The CI workflow expands this into a 24-job `platform x shard` matrix. Every
+The shard boundaries are `startup` for cold, cold-settled and lifecycle;
+`throughput` for warm and batch; `parallel` for the concurrency scenarios;
+`resident` for resident and reuse-page; and `resilience` for faults and soak.
+
+The CI workflow expands this into a 30-job `platform x shard` matrix. Every
 shard still runs all available engines on one native runner with balanced engine
 ordering, so comparisons within a scenario remain same-machine comparisons.
-The four shards are merged into one platform result before the six platform
+The five shards are merged into one platform result before the six platform
 results are aggregated. Runner metadata remains attached to each shard; timings
 from different shards or platforms are never combined into one ranking.
 
@@ -58,6 +62,14 @@ for 90 days.
 Use the `Six-platform benchmark` GitHub Actions workflow to test a published
 semver or npm dist-tag. Release publishing dispatches the same workflow with the
 exact published version after the GitHub Release exists.
+
+For a focused manual diagnosis, set `platform_filter` to one native platform,
+`shard_filter` to one scenario shard, or both. Keeping both inputs at `all`
+retains the complete 30-job run. Any filtered run uploads its numerical shard
+result and detailed Actions evidence, but deliberately skips platform merging,
+repository aggregation and result commits; a partial diagnostic is never
+presented as a complete archived benchmark. Release dispatches omit these
+optional filters and therefore keep the full six-platform behavior.
 
 Results are record-only until five comparable full runs have accumulated on the
 same runner family. This harness intentionally does not invent an initial

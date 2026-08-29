@@ -114,9 +114,34 @@ async function waitForRequestStarted(token, timeoutMs) {
 
 async function finishOwnedChild(subprocess, label) {
   const monitor = new ProcessMonitor([subprocess.pid], 50);
-  await monitor.start();
-  const completed = await subprocess;
-  const telemetry = await monitor.stop();
+  let releasedAtMs;
+  let monitorStarted = false;
+  try {
+    await monitor.start({requireRoots: true, timeoutMs: 10_000});
+    monitorStarted = true;
+    if (!subprocess.stdin || subprocess.stdin.destroyed || subprocess.stdin.writableEnded) {
+      throw new InfrastructureError(`${label} start gate was unavailable`);
+    }
+    releasedAtMs = Date.now();
+    subprocess.stdin.end('go\n');
+  } catch (error) {
+    if (monitorStarted) {
+      await monitor.stop().catch(() => {});
+      monitorStarted = false;
+    }
+    if (subprocess.stdin && !subprocess.stdin.destroyed) subprocess.stdin.destroy();
+    if (subprocess.exitCode === null && subprocess.signalCode === null) subprocess.kill('SIGTERM');
+    await subprocess.catch(() => {});
+    throw new InfrastructureError(`${label} PID ownership could not be established before start`, error);
+  }
+  let completed;
+  let telemetry;
+  try {
+    completed = await subprocess;
+  } finally {
+    telemetry = await monitor.stop();
+    monitorStarted = false;
+  }
   if (!telemetry.trusted) {
     throw new InfrastructureError(`${label} PID ownership monitor was unavailable: ${telemetry.errors.join('; ')}`);
   }
@@ -125,13 +150,13 @@ async function finishOwnedChild(subprocess, label) {
   if (remaining.length) {
     throw new InfrastructureError(`${label} left an owned process tree running after cleanup`);
   }
-  return completed;
+  return {completed, releasedAtMs};
 }
 
 async function residentClient(endpoint, definition, label, timeoutMs = 120_000, evidenceFile = null) {
   const encodedEndpoint = Buffer.from(JSON.stringify(endpoint)).toString('base64url');
-  const dispatched = Date.now();
   const childArguments = [clientFile,
+    '--start-gated', 'true',
     '--engine', engineName,
     '--url', definition.url,
     '--endpoint', encodedEndpoint,
@@ -140,8 +165,8 @@ async function residentClient(endpoint, definition, label, timeoutMs = 120_000, 
   ];
   if (evidenceFile) childArguments.push('--evidence-file', evidenceFile);
   const subprocess = execaNode(tsxCli, childArguments,
-      {timeout: timeoutMs, killDescendants: true, reject: false});
-  const completed = await finishOwnedChild(subprocess, label);
+      {stdin: 'pipe', timeout: timeoutMs, killDescendants: true, reject: false});
+  const {completed, releasedAtMs} = await finishOwnedChild(subprocess, label);
   let payload;
   try {
     payload = completed.stdout.trim() ?
@@ -155,7 +180,7 @@ async function residentClient(endpoint, definition, label, timeoutMs = 120_000, 
   return {
     payload,
     to_png_ms: Number.isFinite(payload.shot_completed_epoch_ms) ?
-      payload.shot_completed_epoch_ms - dispatched :
+      payload.shot_completed_epoch_ms - releasedAtMs :
       payload.timings.connect_or_launch_ms + payload.timings.shot_ms,
   };
 }
@@ -345,13 +370,14 @@ async function runLifecycle(samples) {
     const evidenceFile = path.join(sampleDirectory,
         `${engineName}.lifecycle.c${concurrency}.r${repeat}.a${attempt}.s${String(cycle + 1).padStart(5, '0')}.png`);
     const subprocess = execaNode(tsxCli, [clientFile,
+      '--start-gated', 'true',
       '--engine', engineName,
       '--url', definition.url,
       '--workers', String(concurrency),
       '--daemon-name', daemonName('lifecycle', repeat, cycle + 1),
       '--evidence-file', evidenceFile,
-    ], {timeout: 120_000, killDescendants: true, reject: false});
-    const result = await finishOwnedChild(subprocess, `lifecycle cycle ${cycle + 1}`);
+    ], {stdin: 'pipe', timeout: 120_000, killDescendants: true, reject: false});
+    const {completed: result} = await finishOwnedChild(subprocess, `lifecycle cycle ${cycle + 1}`);
     let payload;
     try {
       payload = result.stdout.trim() ? JSON.parse(result.stdout.trim().split(/\r?\n/).at(-1)) : null;

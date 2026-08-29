@@ -230,7 +230,8 @@ export async function waitForProcessTree(rootPids, {
   const deadline = Date.now() + timeoutMs;
   do {
     const tree = await snapshot(rootPids);
-    if (tree.processes.length) return tree;
+    const observed = new Set(tree.processes.map((entry) => entry.pid));
+    if (rootPids.every((pid) => observed.has(pid))) return tree;
     if (Date.now() >= deadline) break;
     await sleep(intervalMs);
   } while (true);
@@ -254,17 +255,41 @@ export class ProcessMonitor {
   identities: Map<string, any>;
   running: boolean;
   loop: Promise<void> | undefined;
+  snapshot: typeof processSnapshot;
 
-  constructor(rootPids, intervalMs = 100) {
+  constructor(rootPids, intervalMs = 100, snapshot = processSnapshot) {
     this.rootPids = rootPids;
     this.intervalMs = intervalMs;
     this.timeline = [];
     this.identities = new Map();
     this.running = false;
+    this.snapshot = snapshot;
   }
 
-  async start() {
+  #record(sample) {
+    this.timeline.push(sample);
+    for (const entry of sample.processes) {
+      this.identities.set(identity(entry), entry);
+    }
+  }
+
+  async start({requireRoots = false, timeoutMs = 2000} = {}) {
     this.running = true;
+    if (requireRoots) {
+      try {
+        const sample = await waitForProcessTree(this.rootPids, {
+          timeoutMs,
+          intervalMs: this.intervalMs,
+          snapshot: this.snapshot,
+        });
+        this.#record(sample);
+      } catch (error) {
+        this.running = false;
+        throw error;
+      }
+      this.loop = this.#sampleLoop();
+      return;
+    }
     // Prime exact root identities before the first systeminformation sample.
     // Short-lived lifecycle clients can otherwise exit while the relatively
     // expensive process-table query is still in flight.
@@ -295,11 +320,8 @@ export class ProcessMonitor {
     while (this.running) {
       const started = performance.now();
       try {
-        const sample = await processSnapshot(this.rootPids);
-        this.timeline.push(sample);
-        for (const entry of sample.processes) {
-          this.identities.set(identity(entry), entry);
-        }
+        const sample = await this.snapshot(this.rootPids);
+        this.#record(sample);
       } catch (error) {
         this.timeline.push({at: new Date().toISOString(), error: String(error)});
       }
