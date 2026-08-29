@@ -113,11 +113,6 @@ class ShotRenderer {
   base::expected<void, std::string> WaitForLoad(const std::string& wait_until,
                                                 base::TimeDelta timeout);
 
-  // Grows the viewport until the whole document fits in it, so that content
-  // below the fold is laid out and painted rather than culled. Returns the
-  // final content size in CSS pixels.
-  gfx::Size ExpandViewportToFit(int minimum_width, int minimum_height);
-
   // Where in the document the picture comes from, in CSS pixels, honouring
   // selector / clip / fullPage in that order of specificity.
   base::expected<gfx::Rect, std::string> ResolveCaptureRect(

@@ -268,6 +268,49 @@ def main():
                  "and the box really is #cc0000",
                  str(pixel(rows, channels, 0, 0)))
 
+    print("\n== selectors beyond the viewport ==")
+    oversized_geometry = {
+        "file": os.path.join(os.path.dirname(features),
+                             "selector_oversized.html"),
+        "width": 400,
+        "height": 300,
+        "allowFileAccess": True,
+    }
+    header, oversized = ask({"selector": "#oversized"}, oversized_geometry)
+    checks.check(header.get("ok") is True,
+                 "an oversized selector renders", header.get("error", ""))
+    checks.check(png_size(oversized) == (800, 600),
+                 "and uses the element's full 800x600 box",
+                 str(png_size(oversized)))
+    _, _, channels, rows = png_pixels(oversized)
+    checks.check(pixel(rows, channels, 100, 100)[:3] == (0x00, 0xCC, 0x00),
+                 "content inside the original viewport is present",
+                 str(pixel(rows, channels, 100, 100)))
+    checks.check(pixel(rows, channels, 300, 100)[:3] == (0xCC, 0x00, 0x00),
+                 "and 50vw stayed 200px instead of reflowing to 400px",
+                 str(pixel(rows, channels, 300, 100)))
+
+    centered_geometry = {
+        "file": os.path.join(os.path.dirname(features),
+                             "selector_centered.html"),
+        "width": 400,
+        "height": 300,
+        "allowFileAccess": True,
+    }
+    header, centered = ask({"selector": "#centered"}, centered_geometry)
+    checks.check(header.get("ok") is True,
+                 "a centered selector larger than the viewport renders",
+                 header.get("error", ""))
+    checks.check(png_size(centered) == (800, 600),
+                 "and negative initial bounds settle to the full 800x600 box",
+                 str(png_size(centered)))
+    _, _, channels, rows = png_pixels(centered)
+    checks.check(pixel(rows, channels, 0, 0)[:3] == (0x00, 0x66, 0xCC) and
+                 pixel(rows, channels, 799, 599)[:3] == (0x00, 0x66, 0xCC),
+                 "and both far corners were painted",
+                 f"{pixel(rows, channels, 0, 0)} / "
+                 f"{pixel(rows, channels, 799, 599)}")
+
     header, scaled = ask({"scale": 2}, geometry)
     checks.check(header.get("ok") is True, "scale 2 renders",
                  header.get("error", ""))

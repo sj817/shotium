@@ -438,52 +438,11 @@ base::expected<void, std::string> ShotRenderer::WaitForLoad(
   }
 }
 
-gfx::Size ShotRenderer::ExpandViewportToFit(int minimum_width,
-                                            int minimum_height) {
-  blink::LocalFrameView* view = frame_->View();
-  gfx::Size viewport(minimum_width, minimum_height);
-  gfx::Size contents = view->LayoutViewport()->ContentsSize();
-
-  // Content below the fold is culled rather than painted, so the viewport has
-  // to grow to cover it before GetPaintRecord has anything to hand back.
-  //
-  // Bounded at three passes because growing the viewport can grow the content:
-  // an element sized in vh units gets taller every time, and the two would
-  // chase each other forever. Three is enough for the ordinary case -- the
-  // document settles on the second -- and for the pathological one it stops
-  // with a viewport that is too small rather than with a hang.
-  for (int pass = 0; pass < 3; ++pass) {
-    const int width = std::min(std::max(viewport.width(), contents.width()),
-                               kMaximumDimension);
-    const int height = std::min(std::max(viewport.height(), contents.height()),
-                                kMaximumDimension);
-    if (width == viewport.width() && height == viewport.height() &&
-        pass != 0) {
-      break;
-    }
-    viewport = gfx::Size(width, height);
-    view->Resize(viewport);
-    page_->GetVisualViewport().SetSize(viewport);
-    view->UpdateAllLifecyclePhases(
-        blink::DocumentUpdateReason::kBeginMainFrame);
-    const gfx::Size grown = view->LayoutViewport()->ContentsSize();
-    if (grown == contents) {
-      break;
-    }
-    contents = grown;
-  }
-  return contents;
-}
-
 base::expected<gfx::Rect, std::string> ShotRenderer::ResolveCaptureRect(
     const ScreenshotRequest& request) {
   const gfx::Rect viewport(0, 0, request.width, request.height);
 
   if (!request.selector.empty()) {
-    // Everything has to be laid out before an element halfway down the page has
-    // a box worth reading.
-    ExpandViewportToFit(request.width, request.height);
-
     blink::Document* document = frame_->GetDocument();
     // A default-constructed ExceptionState records what was thrown instead of
     // throwing it, which is what a selector coming from outside the process
@@ -501,32 +460,66 @@ base::expected<gfx::Rect, std::string> ShotRenderer::ResolveCaptureRect(
       return base::unexpected("no element matches the selector " +
                               request.selector);
     }
-    const blink::LayoutObject* layout = element->GetLayoutObject();
-    if (!layout) {
-      return base::unexpected("the element matching " + request.selector +
-                              " has no box to photograph (display:none?)");
+    auto read_bounds = [&]() -> base::expected<gfx::Rect, std::string> {
+      const blink::LayoutObject* layout = element->GetLayoutObject();
+      if (!layout) {
+        return base::unexpected("the element matching " + request.selector +
+                                " has no box to photograph (display:none?)");
+      }
+      const gfx::Rect bounds = layout->AbsoluteBoundingBoxRect();
+      if (bounds.IsEmpty()) {
+        return base::unexpected("the element matching " + request.selector +
+                                " has a zero-sized box");
+      }
+      return bounds;
+    };
+
+    auto bounds = read_bounds();
+    if (!bounds.has_value()) {
+      return base::unexpected(bounds.error());
     }
-    const gfx::Rect bounds = layout->AbsoluteBoundingBoxRect();
-    if (bounds.IsEmpty()) {
-      return base::unexpected("the element matching " + request.selector +
-                              " has a zero-sized box");
+
+    // record_whole_document retains ordinary content beyond the right and
+    // bottom edges without changing layout. Negative document coordinates are
+    // different: there is no scrollable surface there to record. A common
+    // screenshot-card layout creates them by centering a fixed-size element in
+    // a smaller default viewport. Grow only that case, then re-read the box;
+    // leaving positive overflow alone preserves media queries and vw/vh.
+    for (int pass = 0;
+         pass < 3 && (bounds->x() < 0 || bounds->y() < 0); ++pass) {
+      blink::LocalFrameView* view = frame_->View();
+      const gfx::Size current = view->Size();
+      const int width = std::min(
+          std::max({current.width(), bounds->width(), bounds->right()}),
+          kMaximumDimension);
+      const int height = std::min(
+          std::max({current.height(), bounds->height(), bounds->bottom()}),
+          kMaximumDimension);
+      if (width == current.width() && height == current.height()) {
+        break;
+      }
+      const gfx::Size grown(width, height);
+      view->Resize(grown);
+      page_->GetVisualViewport().SetSize(grown);
+      view->UpdateAllLifecyclePhases(
+          blink::DocumentUpdateReason::kBeginMainFrame);
+      bounds = read_bounds();
+      if (!bounds.has_value()) {
+        return base::unexpected(bounds.error());
+      }
     }
-    return bounds;
+    return *bounds;
   }
 
   if (request.clip.has_value()) {
     const Clip& clip = *request.clip;
     const gfx::Rect rect(clip.x, clip.y, clip.width, clip.height);
-    // The clip may reach past the fold, and content past the fold is not
-    // painted until the viewport covers it.
-    ExpandViewportToFit(std::max(request.width, rect.right()),
-                        std::max(request.height, rect.bottom()));
     return rect;
   }
 
   if (request.full_page) {
     const gfx::Size contents =
-        ExpandViewportToFit(request.width, request.height);
+        frame_->View()->LayoutViewport()->ContentsSize();
     return gfx::Rect(0, 0, std::max(request.width, contents.width()),
                      std::max(request.height, contents.height()));
   }
@@ -577,6 +570,15 @@ base::expected<void, std::string> ShotRenderer::CreatePage(
   // line in the page relative to the oracle as well as painting a strip down
   // the right-hand side.
   settings.SetHideScrollbars(true);
+  if (request.full_page || request.clip.has_value() ||
+      !request.selector.empty()) {
+    // Chrome's Page.captureScreenshot(captureBeyondViewport=true) sets
+    // record_whole_document, which WebViewImpl maps to this setting. It keeps
+    // the caller's layout viewport intact while retaining display items beyond
+    // it, so selector/clip/fullPage do not re-run media queries or change vw/vh
+    // merely because a larger output region was requested.
+    settings.SetMainFrameClipsContent(false);
+  }
 
   // What navigator.userAgent and resolution media queries answer. The scale
   // override is the same lever DevTools' device emulation pulls; it changes
