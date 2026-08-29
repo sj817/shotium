@@ -315,6 +315,54 @@ function historicallyUnsupported(name, platformId) {
   return null;
 }
 
+function normalizedPathSegments(file) {
+  return path.resolve(file).replaceAll('\\', '/').toLowerCase().split('/').filter(Boolean);
+}
+
+export function browserVersionFromLockedMetadata(name, executable, {
+  puppeteerRevisions = {},
+  playwrightBrowsers = [],
+} = {}) {
+  const segments = normalizedPathSegments(executable);
+  if (name.startsWith('puppeteer-')) {
+    const product = name === 'puppeteer-shell' ? 'chrome-headless-shell' : 'chrome';
+    const revision = String(puppeteerRevisions[product] || '').trim();
+    if (!revision || !segments.includes(product)) return null;
+    return segments.some((segment) => segment.endsWith(`-${revision.toLowerCase()}`)) ? revision : null;
+  }
+  if (!name.startsWith('playwright-')) return null;
+  const product = name === 'playwright-shell' ? 'chromium-headless-shell' : 'chromium';
+  const metadata = playwrightBrowsers.find((entry) => entry?.name === product);
+  const browserVersion = String(metadata?.browserVersion || '').trim();
+  if (!metadata || !browserVersion) return null;
+  const revisions = new Set([
+    metadata.revision,
+    ...Object.values(metadata.revisionOverrides || {}),
+  ].map((revision) => String(revision || '').trim()).filter(Boolean));
+  const directoryPrefix = product === 'chromium-headless-shell' ?
+    'chromium_headless_shell-' : 'chromium-';
+  const matchesCacheDirectory = segments.some((segment) =>
+    [...revisions].some((revision) => segment === `${directoryPrefix}${revision.toLowerCase()}`));
+  return matchesCacheDirectory ? browserVersion : null;
+}
+
+async function lockedBrowserVersion(name, executable) {
+  if (name.startsWith('puppeteer-')) {
+    const puppeteer: any = await import('puppeteer');
+    return browserVersionFromLockedMetadata(name, executable, {
+      puppeteerRevisions: puppeteer.PUPPETEER_REVISIONS,
+    });
+  }
+  if (name.startsWith('playwright-')) {
+    const playwrightRoot = path.dirname(require.resolve('playwright-core/package.json'));
+    const metadata = JSON.parse(fs.readFileSync(path.join(playwrightRoot, 'browsers.json'), 'utf8'));
+    return browserVersionFromLockedMetadata(name, executable, {
+      playwrightBrowsers: metadata.browsers,
+    });
+  }
+  return null;
+}
+
 export async function probeEngine(name) {
   const platform = currentPlatformId();
   let executable;
@@ -369,6 +417,7 @@ export async function probeEngine(name) {
   } else {
     const version = await execa(executable, ['--version'], {timeout: 10_000, reject: false});
     if (version.exitCode === 0) binaryVersion = (version.stdout || version.stderr).trim() || null;
+    if (!binaryVersion) binaryVersion = await lockedBrowserVersion(name, executable);
   }
   if (!binaryVersion) {
     return {
