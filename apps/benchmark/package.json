@@ -8,7 +8,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "benchmark": "tsx src/cli.ts",
+    "benchmark": "tsx src/launcher.ts",
     "benchmark:native": "tsx src/native-cli.ts",
     "install-target": "tsx src/install-target.ts",
     "resolve-version": "tsx src/install-target.ts --main-only true --resolve-only true",
