@@ -286,6 +286,32 @@ function shotiumPlatformRoot() {
   return path.dirname(require.resolve(`${platformPackage}/package.json`));
 }
 
+export function isPlaywrightHeadlessShellExecutable(file) {
+  const segments = String(file).replaceAll('\\', '/').toLowerCase().split('/').filter(Boolean);
+  const inPlaywrightShellCache = segments.some((segment) =>
+    /^chromium_headless_shell-\d+$/.test(segment));
+  if (!inPlaywrightShellCache) return false;
+  return ['headless_shell', 'headless_shell.exe',
+    'chrome-headless-shell', 'chrome-headless-shell.exe'].includes(segments.at(-1));
+}
+
+export function playwrightCacheRootFromChromiumExecutable(executable) {
+  const value = String(executable);
+  const pathApi = /^[a-zA-Z]:[\\/]/.test(value) || value.includes('\\') ? path.win32 : path.posix;
+  if (!pathApi.isAbsolute(value)) {
+    throw new Error(`Playwright Chromium executable path is not absolute: ${value}`);
+  }
+  let directory = pathApi.dirname(pathApi.normalize(value));
+  while (pathApi.dirname(directory) !== directory) {
+    if (/^chromium-\d+$/.test(pathApi.basename(directory).toLowerCase())) {
+      return pathApi.dirname(directory);
+    }
+    directory = pathApi.dirname(directory);
+  }
+  throw new Error(
+      `Playwright Chromium executable is not inside a chromium-REV cache directory: ${value}`);
+}
+
 async function executableFor(name) {
   if (name === 'shotium') {
     return findFile(shotiumPlatformRoot(), (file) => file.endsWith('.node'));
@@ -297,12 +323,8 @@ async function executableFor(name) {
   const {chromium} = await import('playwright');
   const chromiumExecutable = chromium.executablePath();
   if (name === 'playwright-chrome') return chromiumExecutable;
-  const browserCache = path.dirname(path.dirname(path.dirname(chromiumExecutable)));
-  return findFile(browserCache, (file) => {
-    const normalized = file.replaceAll('\\', '/').toLowerCase();
-    return normalized.includes('chromium_headless_shell-') &&
-      (normalized.endsWith('/headless_shell') || normalized.endsWith('/headless_shell.exe'));
-  });
+  const browserCache = playwrightCacheRootFromChromiumExecutable(chromiumExecutable);
+  return findFile(browserCache, isPlaywrightHeadlessShellExecutable);
 }
 
 function historicallyUnsupported(name, platformId) {

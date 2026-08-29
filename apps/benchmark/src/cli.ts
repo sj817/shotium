@@ -14,6 +14,7 @@ import {
   currentPlatformId,
 } from './constants.ts';
 import {packageVersions, probeEngine} from './engines.ts';
+import {benchmarkDaemonName} from './daemon-name.ts';
 import {ProductError, isProductError} from './errors.ts';
 import {startFixtureServer, loadCases} from './fixtures.ts';
 import {ensureShotium} from './install-target.ts';
@@ -46,7 +47,7 @@ const logsDirectory = path.join(artifactDirectory, 'logs');
 const tempProfileDirectory = path.join(artifactDirectory, 'temp-profiles');
 const samplesFile = path.join(permanentDirectory, 'samples.jsonl');
 const workerFile = path.join(APP_ROOT, 'src', 'worker.ts');
-const benchmarkDaemonName = `shot-bench-${process.env.GITHUB_RUN_ID || process.pid}-${platform}`;
+const benchmarkRunId = String(process.env.GITHUB_RUN_ID || process.pid);
 let outputInitialized = false;
 let resolvedShotiumVersion: string | null = null;
 let completedRows: any[] = [];
@@ -112,8 +113,10 @@ function buildGroups(engines, profile) {
 async function cleanupOwnedShotiumEndpoints(profile) {
   const shotium = await import('@shotkit/shotium');
   const names = [
-    ...Array.from({length: profile.repeats}, (_, index) => `${benchmarkDaemonName}-resident-${index + 1}`),
-    `${benchmarkDaemonName}-recovery-1`,
+    ...Array.from({length: profile.repeats}, (_, index) => benchmarkDaemonName({
+      runId: benchmarkRunId, platform, scenario: 'resident', repeat: index + 1,
+    })),
+    benchmarkDaemonName({runId: benchmarkRunId, platform, scenario: 'recovery'}),
   ];
   const stale = [];
   for (const name of names) {
@@ -349,7 +352,7 @@ async function main() {
     artifactDirectory,
     telemetryDirectory,
     tempProfileDirectory,
-    daemonName: benchmarkDaemonName,
+    daemonIdentity: {runId: benchmarkRunId, platform},
   };
   const configFile = path.join(artifactDirectory, 'run-config.json');
   writeJson(configFile, config);

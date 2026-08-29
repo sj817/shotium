@@ -6,6 +6,7 @@ import {Bench} from 'tinybench';
 import {parseArgs} from './args.ts';
 import {APP_ROOT, SETTLE} from './constants.ts';
 import {createEngine} from './engines.ts';
+import {benchmarkDaemonName} from './daemon-name.ts';
 import {InfrastructureError, isInfrastructureError} from './errors.ts';
 import {comparePng, inspectPng, saveBaseline} from './image.ts';
 import {
@@ -40,6 +41,16 @@ const pendingEvidence = [];
 const evidenceMemoryTimeline = [];
 let retainedEvidenceBytes = 0;
 fs.mkdirSync(sampleDirectory, {recursive: true});
+
+function daemonName(nameScenario = scenario, nameRepeat = repeat, variant = 0) {
+  return benchmarkDaemonName({
+    runId: String(config.daemonIdentity.runId),
+    platform: String(config.daemonIdentity.platform),
+    scenario: nameScenario,
+    repeat: nameRepeat,
+    variant,
+  });
+}
 
 function errorText(error) {
   return String(error?.stack || error);
@@ -262,7 +273,7 @@ async function runResident(samples) {
       `${engineName}.resident-host-prewarm.r${repeat}.a${attempt}.png`);
   const host = await startResident(engineName, caseDefinitions[0].url, {
     workers: concurrency,
-    daemonName: `${config.daemonName}-resident-${repeat}`,
+    daemonName: daemonName('resident'),
     evidenceFile: hostEvidenceFile,
   });
   try {
@@ -337,7 +348,7 @@ async function runLifecycle(samples) {
       '--engine', engineName,
       '--url', definition.url,
       '--workers', String(concurrency),
-      '--daemon-name', `${config.daemonName}-lifecycle-${repeat}-${cycle}`,
+      '--daemon-name', daemonName('lifecycle', repeat, cycle + 1),
       '--evidence-file', evidenceFile,
     ], {timeout: 120_000, killDescendants: true, reject: false});
     const result = await finishOwnedChild(subprocess, `lifecycle cycle ${cycle + 1}`);
@@ -370,7 +381,7 @@ async function runBrowserProcessExit(samples) {
       `${engineName}.process-exit-precondition.r${repeat}.a${attempt}.png`);
   const host = await startResident(engineName, caseDefinitions[0].url, {
     workers: concurrency,
-    daemonName: `${config.daemonName}-process-exit-${repeat}`,
+    daemonName: daemonName('process-exit'),
     evidenceFile: preconditionFile,
   });
   const token = `${engineName}-process-exit-${repeat}-${attempt}-${process.pid}`;
@@ -436,7 +447,7 @@ async function runBrowserProcessExit(samples) {
       `${engineName}.process-exit-recovered.r${repeat}.a${attempt}.png`);
   const recovered = await startResident(engineName, caseDefinitions[0].url, {
     workers: concurrency,
-    daemonName: `${config.daemonName}-process-exit-recovered-${repeat}`,
+    daemonName: daemonName('process-exit-recovered'),
     evidenceFile: recoveryFile,
   });
   try {
@@ -489,7 +500,7 @@ async function runFaults(engine, samples) {
 
     const daemon: any = await createEngine('shotium-daemon', {
       workers: 2,
-      daemonName: `${config.daemonName}-recovery-${repeat}`,
+      daemonName: daemonName('recovery'),
     });
     try {
       await daemon.launch();
@@ -542,7 +553,7 @@ async function runFaults(engine, samples) {
     '--engine', engineName,
     '--url', `${config.baseUrl}/slow?ms=5000&token=${encodeURIComponent(requestToken)}`,
     '--workers', String(concurrency),
-    '--daemon-name', `${config.daemonName}-interrupted-${repeat}`,
+    '--daemon-name', daemonName('interrupted'),
   ], {timeout: 15_000, killDescendants: true, reject: false});
   const interruptedMonitor = new ProcessMonitor([interrupted.pid], 50);
   await interruptedMonitor.start();
@@ -579,7 +590,7 @@ async function runEngineScenario(samples) {
 
   const engine = await createEngine(engineName, {
     workers: concurrency,
-    daemonName: `${config.daemonName}-${scenario}-${repeat}`,
+    daemonName: daemonName(),
     reusePage: scenario === 'reuse-page',
     profileDir: path.join(config.tempProfileDirectory,
         `${engineName}.${scenario}.r${repeat}.a${attempt}`),
