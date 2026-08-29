@@ -4,7 +4,7 @@ export const messages = {
   'zh-CN': {
     app: {
       eyebrow: '可审计的跨平台性能数据',
-      title: 'Shotium 基准报告',
+      title: 'Shotium 六平台性能报告',
       subtitle: '仅在同一平台、同一场景与同一运行器内比较。数值越低代表相对 Shotium 越快。',
       language: 'English',
       loading: '正在读取基准数据…',
@@ -19,9 +19,10 @@ export const messages = {
       generated: '生成时间',
       source: '源码版本',
       workflow: '查看 CI 运行',
+      metadata: '测试运行信息',
     },
     overview: {
-      title: '总体结论',
+      title: '六平台性能结论',
       complete: '归档完整性',
       quality: '质量状态',
       evidence: '证据状态',
@@ -130,7 +131,7 @@ export const messages = {
   en: {
     app: {
       eyebrow: 'Auditable cross-platform performance data',
-      title: 'Shotium Benchmark Report',
+      title: 'Shotium Six-platform Performance Report',
       subtitle: 'Comparisons stay within the same platform, scenario, and runner. Lower ratios are faster relative to Shotium.',
       language: '中文',
       loading: 'Loading benchmark data…',
@@ -145,9 +146,10 @@ export const messages = {
       generated: 'Generated',
       source: 'Source revision',
       workflow: 'Open CI run',
+      metadata: 'Benchmark run metadata',
     },
     overview: {
-      title: 'Overall conclusion',
+      title: 'Six-platform performance conclusion',
       complete: 'Archive completeness',
       quality: 'Quality status',
       evidence: 'Evidence status',

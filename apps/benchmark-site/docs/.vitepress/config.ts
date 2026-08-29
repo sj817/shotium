@@ -15,7 +15,7 @@ const base = siteBase(process.env.BENCHMARK_SITE_BASE);
 
 export default defineConfig({
   lang: 'zh-CN',
-  title: 'Shotium 基准报告',
+  title: 'Shotium 六平台性能报告',
   description: 'Shotium 六平台公平基准测试、正式排名与失败证据。',
   base,
   cleanUrls: true,
@@ -25,9 +25,9 @@ export default defineConfig({
   ],
   themeConfig: {
     logo: '/favicon.svg',
-    siteTitle: 'Shotium 基准报告',
+    siteTitle: 'Shotium 性能报告',
     nav: [
-      {text: '基准报告', link: '/'},
+      {text: '六平台结果', link: '/#results'},
       {text: 'GitHub', link: 'https://github.com/sj817/shotium'},
     ],
     search: {

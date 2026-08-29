@@ -313,41 +313,16 @@ onMounted(() => {
       <div v-else-if="!run" class="state-panel">{{ t('app.empty') }}</div>
 
       <template v-else>
-        <section class="run-meta" aria-label="Run metadata">
-          <div><span>{{ t('run.version') }}</span><strong>v{{ run.manifest.shotium_version }}</strong></div>
-          <div><span>{{ t('run.profile') }}</span><strong>{{ profileLabel(run.manifest.profile) }}</strong></div>
-          <div><span>{{ t('run.generated') }}</span><strong>{{ formatDate(run.manifest.generated_utc) }}</strong></div>
-          <div><span>{{ t('run.source') }}</span><strong class="mono">{{ run.manifest.source_sha?.slice(0, 12) || '—' }}</strong></div>
-          <a v-if="run.manifest.run_url" :href="run.manifest.run_url" target="_blank" rel="noreferrer">
-            {{ t('run.workflow') }} ↗
-          </a>
-        </section>
-
-        <section class="section-card overview-card">
+        <section id="results" class="section-card overview-card">
           <div class="section-heading">
             <div>
               <p class="section-kicker">01</p>
               <h2>{{ t('overview.title') }}</h2>
             </div>
           </div>
-          <div class="status-grid">
-            <div>
-              <span>{{ t('overview.complete') }}</span>
-              <strong class="status-pill" :class="statusClass(run.manifest.status)">{{ statusLabel(run.manifest.status) }}</strong>
-            </div>
-            <div>
-              <span>{{ t('overview.quality') }}</span>
-              <strong class="status-pill" :class="statusClass(run.manifest.quality_status)">{{ statusLabel(run.manifest.quality_status) }}</strong>
-            </div>
-            <div>
-              <span>{{ t('overview.evidence') }}</span>
-              <strong class="status-pill" :class="statusClass(run.manifest.evidence_status)">{{ statusLabel(run.manifest.evidence_status) }}</strong>
-            </div>
-          </div>
           <p class="conclusion">
             {{ t('overview.conclusion', platformCounts) }}
           </p>
-          <p class="fair-note">{{ t('overview.fairNote') }}</p>
           <div class="platform-overview-grid">
             <button
               v-for="item in platformOverviews"
@@ -365,6 +340,21 @@ onMounted(() => {
               </span>
               <small>{{ t('overview.rankingCoverage', {ranked: item.ranked, cells: item.cells}) }}</small>
             </button>
+          </div>
+          <p class="fair-note">{{ t('overview.fairNote') }}</p>
+          <div class="status-grid compact-status-grid">
+            <div>
+              <span>{{ t('overview.complete') }}</span>
+              <strong class="status-pill" :class="statusClass(run.manifest.status)">{{ statusLabel(run.manifest.status) }}</strong>
+            </div>
+            <div>
+              <span>{{ t('overview.quality') }}</span>
+              <strong class="status-pill" :class="statusClass(run.manifest.quality_status)">{{ statusLabel(run.manifest.quality_status) }}</strong>
+            </div>
+            <div>
+              <span>{{ t('overview.evidence') }}</span>
+              <strong class="status-pill" :class="statusClass(run.manifest.evidence_status)">{{ statusLabel(run.manifest.evidence_status) }}</strong>
+            </div>
           </div>
         </section>
 
@@ -444,6 +434,16 @@ onMounted(() => {
                 </tbody>
               </table>
             </div>
+          </section>
+
+          <section class="run-meta" :aria-label="t('run.metadata')">
+            <div><span>{{ t('run.version') }}</span><strong>v{{ run.manifest.shotium_version }}</strong></div>
+            <div><span>{{ t('run.profile') }}</span><strong>{{ profileLabel(run.manifest.profile) }}</strong></div>
+            <div><span>{{ t('run.generated') }}</span><strong>{{ formatDate(run.manifest.generated_utc) }}</strong></div>
+            <div><span>{{ t('run.source') }}</span><strong class="mono">{{ run.manifest.source_sha?.slice(0, 12) || '—' }}</strong></div>
+            <a v-if="run.manifest.run_url" :href="run.manifest.run_url" target="_blank" rel="noreferrer">
+              {{ t('run.workflow') }} ↗
+            </a>
           </section>
 
           <section class="section-card">

@@ -73,12 +73,12 @@ a {
 }
 
 .hero {
-  min-height: 300px;
+  min-height: 210px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(280px, 420px);
   gap: 48px;
   align-items: end;
-  padding: 72px 0 54px;
+  padding: 38px 0 30px;
 }
 
 .eyebrow,
@@ -101,8 +101,8 @@ a {
 .benchmark-dashboard h1 {
   max-width: 800px;
   margin-bottom: 18px;
-  font-size: clamp(42px, 7vw, 78px);
-  line-height: 0.98;
+  font-size: clamp(38px, 5vw, 62px);
+  line-height: 1.02;
   letter-spacing: -0.055em;
 }
 
@@ -110,8 +110,8 @@ a {
   max-width: 760px;
   margin-bottom: 0;
   color: #536159;
-  font-size: clamp(16px, 1.8vw, 20px);
-  line-height: 1.7;
+  font-size: clamp(15px, 1.5vw, 18px);
+  line-height: 1.55;
 }
 
 .hero-actions {
@@ -294,14 +294,14 @@ pre {
 }
 
 .conclusion {
-  margin: 24px 0 8px;
+  margin: 0 0 18px;
   font-size: 18px;
   font-weight: 690;
   line-height: 1.6;
 }
 
 .fair-note {
-  margin-bottom: 0;
+  margin: 18px 0 12px;
   color: var(--muted);
   font-size: 14px;
   line-height: 1.6;
@@ -311,7 +311,13 @@ pre {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
-  margin-top: 24px;
+  margin-top: 0;
+}
+
+.compact-status-grid > div {
+  min-height: 52px;
+  padding-top: 10px;
+  padding-bottom: 10px;
 }
 
 .platform-overview-grid button {
@@ -689,11 +695,11 @@ pre {
 
   .hero {
     min-height: 0;
-    padding: 46px 0 36px;
+    padding: 26px 0 22px;
   }
 
   .benchmark-dashboard h1 {
-    font-size: 44px;
+    font-size: 32px;
   }
 
   .hero-actions .language-button {
