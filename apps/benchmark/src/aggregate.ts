@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {parseArgs, booleanArg, recoverNpmRunValues} from './args.ts';
-import {APP_ROOT, PLATFORM_IDS, RESULT_STATUSES} from './constants.ts';
+import {APP_ROOT, PLATFORM_IDS, RESULT_STATUSES, SHARD_SCENARIOS} from './constants.ts';
 import {validatePlatformResult} from './schema.ts';
 
 const PERMANENT_FILES = ['summary.json', 'samples.jsonl', 'quality.json', 'failures.json'] as const;
@@ -119,7 +119,7 @@ function scenarioRows(platform: any): string[] {
     const ratio = !scenario.ranking_eligible ? null : scenario.engine === 'shotium' ? 1 :
       Number.isFinite(p50) && Number.isFinite(baselineP50) && baselineP50 > 0 ? p50 / baselineP50 : null;
     rows.push([
-      platform.platform, platform.status, scenario.engine, scenario.scenario,
+      platform.platform, platform.status, scenario.shard || 'all', scenario.engine, scenario.scenario,
       scenario.concurrency, scenario.status, scenario.ranking_eligible, scenario.runs, scenario.shots,
       p50, scenario.latency_ms?.p95 ?? null, scenario.latency_ms?.max ?? scenario.wall_time_ms?.max ?? null,
       scenario.latency_ms?.mad ?? null, scenario.throughput_per_second ?? null,
@@ -144,6 +144,7 @@ const REPORT_COPY = {
     engineHeader: '| engine | availability | reason / binary architecture |',
     scenarioHeader: '| scenario | c | engine | status | ranked | p50 ms | worst ms | throughput/s | vs Shotium |',
     ranked: (eligible: boolean) => eligible ? 'yes' : 'no',
+    sharded: 'Scenario groups ran on separate native runners; every engine comparison remains within one shard and one runner.',
     missingHeading: '## Missing platform outputs',
   },
   'zh-CN': {
@@ -157,6 +158,7 @@ const REPORT_COPY = {
     engineHeader: '| 引擎 | 可用性 | 原因 / 二进制架构 |',
     scenarioHeader: '| 场景 | 并发 | 引擎 | 状态 | 参与排名 | p50 毫秒 | 最差毫秒 | 吞吐量/秒 | 相对 Shotium |',
     ranked: (eligible: boolean) => eligible ? '是' : '否',
+    sharded: '场景分组在不同的原生运行器上执行；每个引擎对比仍严格限定在同一分片、同一运行器内。',
     missingHeading: '## 缺失的平台输出',
   },
 } satisfies Record<ReportLocale, {
@@ -166,6 +168,7 @@ const REPORT_COPY = {
   engineHeader: string;
   scenarioHeader: string;
   ranked: (eligible: boolean) => string;
+  sharded: string;
   missingHeading: string;
 }>;
 
@@ -178,6 +181,7 @@ function report(platforms: any[], manifest: any, locale: ReportLocale): string {
   ];
   for (const platform of platforms) {
     lines.push(`## ${platform.platform}`, '');
+    if (platform.execution_shards) lines.push(copy.sharded, '');
     lines.push(copy.engineHeader, '|:--|:--|:--|');
     for (const engine of platform.engines || []) {
       const detail = engine.reason || `${(engine.architectures || []).join('+') || 'unknown'}; ${engine.executable || ''}`;
@@ -304,15 +308,50 @@ export function aggregateResults(options: Record<string, any>) {
     platforms.push(summary);
     const artifactFile = path.join(source, 'artifact.json');
     let artifact = null;
+    let artifacts = null;
     let artifactError = null;
+    let evidenceCompleteForPlatform = false;
     if (fs.existsSync(artifactFile)) {
       try {
-        artifact = readJson(artifactFile);
-        if (!artifact.name || !/^[a-f0-9]{64}$/.test(String(artifact.sha256))) {
-          throw new Error('artifact record is missing its name or SHA-256');
+        const record = readJson(artifactFile);
+        if (Array.isArray(record.artifacts)) {
+          if (!/^[a-f0-9]{64}$/.test(String(record.sha256))) {
+            throw new Error('sharded artifact index is missing its SHA-256');
+          }
+          const expectedShards = Object.keys(SHARD_SCENARIOS);
+          if (record.artifacts.some((entry) => !entry || typeof entry !== 'object' ||
+              !expectedShards.includes(entry.shard) || !entry.name ||
+              !/^[a-f0-9]{64}$/.test(String(entry.sha256)))) {
+            throw new Error('sharded artifact index contains an invalid artifact');
+          }
+          const shards = new Set(record.artifacts.map((entry) => entry.shard));
+          if (shards.size !== record.artifacts.length) {
+            throw new Error('sharded artifact index contains duplicate shards');
+          }
+          artifacts = record.artifacts.map((entry) => ({
+            shard: entry.shard,
+            name: entry.name,
+            sha256: entry.sha256,
+            run_url: entry.run_url,
+            uploaded: entry.uploaded === true,
+            actions_artifact_id: entry.actions_artifact_id || null,
+            actions_artifact_url: entry.actions_artifact_url || null,
+            actions_artifact_digest: entry.actions_artifact_digest || null,
+          }));
+          artifact = {kind: record.kind, sha256: record.sha256, uploaded: record.uploaded === true};
+          evidenceCompleteForPlatform = record.uploaded === true &&
+            artifacts.length === expectedShards.length && expectedShards.every((shard) => shards.has(shard)) &&
+            artifacts.every((entry) => entry.uploaded === true);
+        } else {
+          artifact = record;
+          if (!artifact.name || !/^[a-f0-9]{64}$/.test(String(artifact.sha256))) {
+            throw new Error('artifact record is missing its name or SHA-256');
+          }
+          evidenceCompleteForPlatform = artifact.uploaded === true;
         }
       } catch (error) {
         artifact = null;
+        artifacts = null;
         artifactError = String(error);
       }
     }
@@ -320,10 +359,13 @@ export function aggregateResults(options: Record<string, any>) {
       platform,
       missing: false,
       status: summary.status,
+      shards_complete: summary.shards_complete !== false,
       summary_sha256: sha256(summaryFile),
       permanent_sha256: permanentHashes,
       artifact_error: artifactError,
-      artifact: artifact ? {
+      evidence_complete: evidenceCompleteForPlatform,
+      artifacts,
+      artifact: artifact?.name ? {
         name: artifact.name,
         sha256: artifact.sha256,
         run_url: artifact.run_url,
@@ -331,13 +373,13 @@ export function aggregateResults(options: Record<string, any>) {
         actions_artifact_id: artifact.actions_artifact_id || null,
         actions_artifact_url: artifact.actions_artifact_url || null,
         actions_artifact_digest: artifact.actions_artifact_digest || null,
-      } : null,
+      } : artifact,
     });
   }
 
-  const complete = platformRecords.every((entry) => !entry.missing && RESULT_STATUSES.includes(entry.status));
-  const evidenceComplete = platformRecords.every((entry) =>
-    !entry.missing && entry.artifact?.uploaded === true);
+  const complete = platformRecords.every((entry) =>
+    !entry.missing && entry.shards_complete !== false && RESULT_STATUSES.includes(entry.status));
+  const evidenceComplete = platformRecords.every((entry) => !entry.missing && entry.evidence_complete === true);
   const qualityStatus = !complete || !evidenceComplete ||
     platformRecords.some((entry) => ['fail', 'infra-error'].includes(entry.status)) ? 'fail' :
     platformRecords.some((entry) => entry.status === 'noisy') ? 'noisy' : 'pass';
@@ -359,7 +401,7 @@ export function aggregateResults(options: Record<string, any>) {
   writeJson(path.join(destination, 'manifest.json'), manifest);
   fs.writeFileSync(path.join(destination, 'report.md'), report(platforms, manifest, 'en'));
   fs.writeFileSync(path.join(destination, 'report.zh-CN.md'), report(platforms, manifest, 'zh-CN'));
-  const header = 'platform,platform_status,engine,scenario,concurrency,status,ranking_eligible,runs,shots,p50_ms,p95_ms,worst_ms,mad_ms,throughput_per_second,failure_rate,rss_slope_bytes_per_minute,ratio_to_shotium';
+  const header = 'platform,platform_status,shard,engine,scenario,concurrency,status,ranking_eligible,runs,shots,p50_ms,p95_ms,worst_ms,mad_ms,throughput_per_second,failure_rate,rss_slope_bytes_per_minute,ratio_to_shotium';
   fs.writeFileSync(path.join(destination, 'summary.csv'), `${[header, ...platforms.flatMap(scenarioRows)].join('\n')}\n`);
 
   const index = rebuildIndex(resultsRoot);

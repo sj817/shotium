@@ -21,6 +21,19 @@ npm ci
 npm run benchmark -- --shotium-version 0.3.2 --profile smoke --output ./out --seed local-check
 ```
 
+如需仅运行一个场景分片，可追加 `--shard startup`、`--shard throughput`、
+`--shard resident` 或 `--shard resilience`。省略该选项（或传入 `--shard all`）时，
+仍按本机单任务方式运行全部场景：
+
+```bash
+npm run benchmark -- --shotium-version 0.3.2 --profile full --shard throughput --output ./out --seed local-check
+```
+
+CI 会展开为 24 个 `平台 x 场景分片` 矩阵任务。每个分片仍在同一台原生 runner
+上以平衡顺序测试所有可用引擎，因此同一场景内的比较仍是同机比较。四个分片会先
+合并为一个平台结果，再聚合六个平台；runner 信息保留在各分片中，不会把不同分片
+或不同平台的耗时混在同一个排名里。
+
 如需在同一台机器上直接比较源码构建的可执行文件，可运行：
 
 ```bash

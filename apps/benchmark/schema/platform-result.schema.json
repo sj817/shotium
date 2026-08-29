@@ -26,9 +26,17 @@
     "platform": {
       "enum": ["linux-x64", "linux-arm64", "win32-x64", "win32-arm64", "darwin-x64", "darwin-arm64"]
     },
+    "shard": {"enum": ["all", "startup", "throughput", "resident", "resilience", "merged"]},
+    "shards_complete": {"type": "boolean"},
+    "missing_shards": {
+      "type": "array",
+      "items": {"enum": ["startup", "throughput", "resident", "resilience"]},
+      "uniqueItems": true
+    },
+    "host_mode": {"enum": ["sharded"]},
     "status": {"$ref": "#/$defs/status"},
     "shotium_version": {"type": "string", "minLength": 1},
-    "profile": {"enum": ["smoke", "full"]},
+    "profile": {"enum": ["smoke", "full", "unknown"]},
     "seed": {"type": "string"},
     "source_revision": {"type": ["string", "null"]},
     "install": {
@@ -64,6 +72,40 @@
           "attempt": {"type": "integer", "minimum": 1, "maximum": 2},
           "concurrency": {"type": "integer", "minimum": 1},
           "iterations": {"type": "integer", "minimum": 1}
+        },
+        "additionalProperties": true
+      }
+    },
+    "execution_shards": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "shard",
+          "status",
+          "generated_utc",
+          "host",
+          "engines",
+          "execution_order",
+          "raw_samples",
+          "failures"
+        ],
+        "properties": {
+          "shard": {"enum": ["startup", "throughput", "resident", "resilience"]},
+          "status": {"$ref": "#/$defs/status"},
+          "generated_utc": {"type": "string", "minLength": 1},
+          "host": {
+            "oneOf": [
+              {"type": "null"},
+              {"$ref": "#/$defs/host"}
+            ]
+          },
+          "engines": {"type": "array", "items": {"$ref": "#/$defs/engine"}},
+          "execution_order": {"type": "array"},
+          "raw_samples": {"type": "integer", "minimum": 0},
+          "failures": {"type": "integer", "minimum": 0},
+          "artifact": {"type": ["object", "null"]},
+          "artifact_error": {"type": ["string", "null"]}
         },
         "additionalProperties": true
       }
@@ -227,7 +269,12 @@
         "properties": {
           "shotium_version": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(?:[-+].+)?$"},
           "install": {"$ref": "#/$defs/install"},
-          "host": {"$ref": "#/$defs/host"},
+          "host": {
+            "oneOf": [
+              {"$ref": "#/$defs/host"},
+              {"type": "null"}
+            ]
+          },
           "packages": {
             "type": "object",
             "required": ["@shotkit/shotium", "tinybench", "execa", "systeminformation", "pngjs", "pixelmatch", "wait-on", "ajv", "tsx", "typescript"]
@@ -238,6 +285,44 @@
           "raw_samples": {"type": "integer", "minimum": 1}
         }
       }
+    },
+    {
+      "if": {
+        "properties": {"status": {"enum": ["pass", "noisy"]}},
+        "required": ["status"],
+        "not": {"required": ["execution_shards"]}
+      },
+      "then": {"properties": {"host": {"$ref": "#/$defs/host"}}}
+    },
+    {
+      "if": {"required": ["execution_shards"]},
+      "then": {
+        "properties": {
+          "host": {"type": "null"}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"shard": {"const": "merged"}}, "required": ["shard"]},
+      "then": {
+        "required": ["shards_complete", "host_mode", "execution_shards"],
+        "properties": {
+          "host": {"type": "null"},
+          "execution_shards": {"type": "array", "maxItems": 4}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"shards_complete": {"const": true}}, "required": ["shards_complete"]},
+      "then": {"properties": {"execution_shards": {"type": "array", "minItems": 4, "maxItems": 4}}}
+    },
+    {
+      "if": {"properties": {"shards_complete": {"const": false}}, "required": ["shards_complete"]},
+      "then": {"properties": {"status": {"const": "infra-error"}}}
+    },
+    {
+      "if": {"properties": {"profile": {"const": "unknown"}}, "required": ["profile"]},
+      "then": {"properties": {"status": {"const": "infra-error"}}}
     }
   ],
   "additionalProperties": true

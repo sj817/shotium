@@ -128,6 +128,42 @@ test('marks a partial matrix incomplete instead of inventing a passing platform'
   }
 });
 
+test('marks the manifest incomplete when a platform is missing a scenario shard', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'shotium-incomplete-shard-test-'));
+  try {
+    const input = path.join(root, 'input');
+    for (const platform of PLATFORM_IDS) {
+      const directory = path.join(input, platform);
+      const summary: any = platformResult(platform);
+      if (platform === 'linux-x64') {
+        summary.status = 'infra-error';
+        summary.shards_complete = false;
+        summary.missing_shards = ['resilience'];
+      }
+      writeJson(path.join(directory, 'summary.json'), summary);
+      fs.writeFileSync(path.join(directory, 'samples.jsonl'), `${JSON.stringify({
+        engine: 'shotium', scenario: 'warm', repeat: 1, attempt: 1, concurrency: 1, status: 'pass',
+      })}\n`);
+      writeJson(path.join(directory, 'quality.json'), [{
+        engine: 'shotium', scenario: 'warm', repeat: 1, attempt: 1, concurrency: 1, status: 'pass',
+      }]);
+      writeJson(path.join(directory, 'failures.json'), []);
+    }
+    const aggregate = aggregateResults({
+      input,
+      resultsRoot: path.join(root, 'results'),
+      shotiumVersion: '0.3.2',
+      timestamp: '2026-08-29T02:15:00Z',
+      runId: '11',
+      runAttempt: '1',
+    });
+    assert.equal(aggregate.manifest.status, 'incomplete');
+    assert.equal(aggregate.manifest.platforms[0].shards_complete, false);
+  } finally {
+    fs.rmSync(root, {recursive: true, force: true});
+  }
+});
+
 test('timestamp format is stable and UTC', () => {
   assert.equal(formatRunTimestamp(new Date('2026-08-29T01:30:45.999Z')), '20260829T013045Z');
 });

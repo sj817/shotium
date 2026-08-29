@@ -5,12 +5,14 @@ import {prepareCoreArgs} from '../src/launcher.ts';
 
 test('launcher starts the benchmark core in a fresh process after target resolution', async () => {
   const coreArgs = await prepareCoreArgs([
-    '--shotium-version', '0.3.2', '--profile', 'smoke', '--skip-install', 'true',
+    '--shotium-version', '0.3.2', '--profile', 'smoke', '--shard', 'startup',
+    '--skip-install', 'true',
   ]);
   const parsed = parseArgs(coreArgs);
   recoverNpmRunValues(parsed, ['shotiumVersion', 'skipInstall']);
   assert.equal(parsed.shotiumVersion, '0.3.2');
   assert.equal(parsed.skipInstall, 'true');
   assert.equal(parsed.profile, 'smoke');
+  assert.equal(parsed.shard, 'startup');
   assert.equal(coreArgs.at(-1), '--skip-install=true');
 });

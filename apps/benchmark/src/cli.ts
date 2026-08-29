@@ -11,6 +11,8 @@ import {
   FIXTURE_ROOT,
   PROFILES,
   SETTLE,
+  SHARD_IDS,
+  SHARD_SCENARIOS,
   currentPlatformId,
 } from './constants.ts';
 import {packageVersions, probeEngine} from './engines.ts';
@@ -33,15 +35,21 @@ const options = parseArgs(process.argv.slice(2), {
   profile: 'full',
   output: path.join(APP_ROOT, 'out', `${Date.now()}-${process.pid}`),
   seed: process.env.GITHUB_SHA || process.env.GITHUB_RUN_ID || 'local',
+  shard: 'all',
 });
-recoverNpmRunValues(options, ['shotiumVersion', 'profile', 'output', 'seed', 'skipInstall']);
+recoverNpmRunValues(options, ['shotiumVersion', 'profile', 'output', 'seed', 'shard', 'skipInstall']);
 const require = createRequire(import.meta.url);
 const tsxCli = require.resolve('tsx/cli');
 
 const platform = currentPlatformId();
+const shard = String(options.shard);
+if (!SHARD_IDS.includes(shard)) {
+  throw new Error(`shard must be ${SHARD_IDS.join(', ')}, got ${shard}`);
+}
 const outputDirectory = path.resolve(options.output);
-const permanentDirectory = path.join(outputDirectory, 'permanent', platform);
-const artifactDirectory = path.join(outputDirectory, 'artifact', platform);
+const shardPath = shard === 'all' ? [] : [shard];
+const permanentDirectory = path.join(outputDirectory, 'permanent', platform, ...shardPath);
+const artifactDirectory = path.join(outputDirectory, 'artifact', platform, ...shardPath);
 const telemetryDirectory = path.join(artifactDirectory, 'telemetry');
 const logsDirectory = path.join(artifactDirectory, 'logs');
 const tempProfileDirectory = path.join(artifactDirectory, 'temp-profiles');
@@ -60,7 +68,7 @@ function writeJson(file, value) {
 }
 
 function appendJsonLine(value) {
-  fs.appendFileSync(samplesFile, `${JSON.stringify(value)}\n`);
+  fs.appendFileSync(samplesFile, `${JSON.stringify({...value, shard})}\n`);
 }
 
 function parseWorkerOutput(stdout) {
@@ -78,8 +86,10 @@ async function gitRevision() {
 function buildGroups(engines, profile) {
   const groups = [];
   let rotation = 0;
+  const selectedScenarios = shard === 'all' ? null : new Set(SHARD_SCENARIOS[shard]);
   const add = (scenario, repeat, concurrency, iterations = 1, timeoutMs = undefined,
       selectedEngines = engines) => {
+    if (selectedScenarios && !selectedScenarios.has(scenario)) return;
     groups.push({
       scenario, repeat, concurrency, iterations, timeoutMs,
       engines: balancedOrder(selectedEngines, rotation++, `${options.seed}:${scenario}`),
@@ -290,6 +300,7 @@ function summarizeScenarios(rows) {
       bucket.some((row) => row.status === 'infra-error') ? 'infra-error' :
         bucket.some((row) => row.status === 'noisy') ? 'noisy' : 'pass';
     return {
+      shard,
       engine: first.engine,
       scenario: first.scenario,
       concurrency: first.concurrency,
@@ -344,6 +355,7 @@ async function main() {
   const fixtureServer = await startFixtureServer();
   const cases = loadCases(fixtureServer.baseUrl, profile.caseLimit);
   const config = {
+    shard,
     profile,
     cases,
     baseUrl: fixtureServer.baseUrl,
@@ -368,6 +380,7 @@ async function main() {
   completedFailures = failures;
   for (const probe of probes.filter((entry) => ['fail', 'infra-error'].includes(entry.status))) {
     failures.push({
+      shard,
       engine: probe.engine,
       phase: 'availability-probe',
       error: String(probe.reason || `${probe.engine} availability probe failed`),
@@ -380,6 +393,7 @@ async function main() {
         const cell = {...group, engine};
         for (let attempt = 1; attempt <= 2; attempt += 1) {
           executionOrder.push({
+            shard,
             engine, scenario: group.scenario, repeat: group.repeat, attempt,
             concurrency: group.concurrency, iterations: group.iterations,
           });
@@ -390,6 +404,7 @@ async function main() {
           appendJsonLine(result);
           rows.push(result);
           quality.push({
+            shard,
             engine,
             scenario: group.scenario,
             repeat: group.repeat,
@@ -401,6 +416,7 @@ async function main() {
           });
           if (!result.ok) {
             failures.push({
+              shard,
               engine,
               scenario: group.scenario,
               repeat: group.repeat,
@@ -440,6 +456,7 @@ async function main() {
     schema_version: 2,
     generated_utc: new Date().toISOString(),
     platform,
+    shard,
     status,
     shotium_version: shotiumVersion,
     profile: options.profile,
@@ -485,7 +502,9 @@ main().catch(async (error) => {
   }
   fs.mkdirSync(permanentDirectory, {recursive: true});
   const fatalStatus = isProductError(error) ? 'fail' : 'infra-error';
-  const failure = {at: new Date().toISOString(), status: fatalStatus, error: String(error?.stack || error)};
+  const failure = {
+    at: new Date().toISOString(), shard, status: fatalStatus, error: String(error?.stack || error),
+  };
   const failures = [...completedFailures, failure];
   writeJson(path.join(permanentDirectory, 'failures.json'), failures);
   writeJson(path.join(permanentDirectory, 'quality.json'), completedQuality);
@@ -494,6 +513,7 @@ main().catch(async (error) => {
     schema_version: 2,
     generated_utc: new Date().toISOString(),
     platform,
+    shard,
     status: fatalStatus,
     shotium_version: String(resolvedShotiumVersion || options.shotiumVersion),
     profile: options.profile,

@@ -31,6 +31,21 @@ export const RESULT_STATUSES = Object.freeze([
   'infra-error',
 ]);
 
+export const SHARD_IDS = Object.freeze([
+  'all',
+  'startup',
+  'throughput',
+  'resident',
+  'resilience',
+]);
+
+export const SHARD_SCENARIOS = Object.freeze({
+  startup: Object.freeze(['cold', 'cold-settled', 'lifecycle']),
+  throughput: Object.freeze(['warm', 'batch', 'parallel']),
+  resident: Object.freeze(['resident', 'reuse-page']),
+  resilience: Object.freeze(['faults', 'soak']),
+});
+
 export const PROFILES = Object.freeze({
   smoke: {
     repeats: 1,

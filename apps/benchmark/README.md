@@ -23,6 +23,21 @@ npm ci
 npm run benchmark -- --shotium-version 0.3.2 --profile smoke --output ./out --seed local-check
 ```
 
+Run one scenario shard by adding `--shard startup`, `--shard throughput`,
+`--shard resident`, or `--shard resilience`. Omitting the option (or passing
+`--shard all`) keeps the single-machine local run:
+
+```bash
+npm run benchmark -- --shotium-version 0.3.2 --profile full --shard throughput --output ./out --seed local-check
+```
+
+The CI workflow expands this into a 24-job `platform x shard` matrix. Every
+shard still runs all available engines on one native runner with balanced engine
+ordering, so comparisons within a scenario remain same-machine comparisons.
+The four shards are merged into one platform result before the six platform
+results are aggregated. Runner metadata remains attached to each shard; timings
+from different shards or platforms are never combined into one ranking.
+
 To compare source-built executables directly on one machine, run:
 
 ```bash

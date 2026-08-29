@@ -102,12 +102,13 @@ jobs:
           echo "resolution_status=$resolution_status" >> "$GITHUB_OUTPUT"
 
   platform:
-    name: ${{ matrix.platform }}
+    name: ${{ matrix.target.platform }} / ${{ matrix.shard }}
     needs: resolve
     strategy:
       fail-fast: false
+      max-parallel: 24
       matrix:
-        include:
+        target:
           - platform: linux-x64
             runner: ubuntu-24.04
           - platform: linux-arm64
@@ -120,7 +121,12 @@ jobs:
             runner: macos-15-intel
           - platform: darwin-arm64
             runner: macos-15
-    runs-on: ${{ matrix.runner }}
+        shard:
+          - startup
+          - throughput
+          - resident
+          - resilience
+    runs-on: ${{ matrix.target.runner }}
     timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
@@ -162,6 +168,7 @@ jobs:
           npm run benchmark -- --
           --shotium-version "${{ needs.resolve.outputs.install_spec }}"
           --profile "${{ inputs.profile }}"
+          --shard "${{ matrix.shard }}"
           --output "${{ github.workspace }}/apps/benchmark/out"
           --seed "${{ inputs.seed || inputs.source_sha || github.sha }}"
 
@@ -172,9 +179,9 @@ jobs:
         working-directory: apps/benchmark
         run: >-
           npm run hash-artifact -- --
-          --input "${{ github.workspace }}/apps/benchmark/out/artifact/${{ matrix.platform }}"
-          --output "${{ github.workspace }}/apps/benchmark/out/permanent/${{ matrix.platform }}/artifact.json"
-          --name "benchmark-evidence-${{ matrix.platform }}-${{ github.run_id }}-a${{ github.run_attempt }}"
+          --input "${{ github.workspace }}/apps/benchmark/out/artifact/${{ matrix.target.platform }}/${{ matrix.shard }}"
+          --output "${{ github.workspace }}/apps/benchmark/out/permanent/${{ matrix.target.platform }}/${{ matrix.shard }}/artifact.json"
+          --name "benchmark-evidence-${{ matrix.target.platform }}-${{ matrix.shard }}-${{ github.run_id }}-a${{ github.run_attempt }}"
           --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
       - name: Upload detailed evidence
@@ -183,8 +190,8 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
-          name: benchmark-evidence-${{ matrix.platform }}-${{ github.run_id }}-a${{ github.run_attempt }}
-          path: apps/benchmark/out/artifact/${{ matrix.platform }}
+          name: benchmark-evidence-${{ matrix.target.platform }}-${{ matrix.shard }}-${{ github.run_id }}-a${{ github.run_attempt }}
+          path: apps/benchmark/out/artifact/${{ matrix.target.platform }}/${{ matrix.shard }}
           if-no-files-found: error
           retention-days: 90
 
@@ -193,7 +200,7 @@ jobs:
         working-directory: apps/benchmark
         run: >-
           npm run record-artifact-upload -- --
-          --record="${{ github.workspace }}/apps/benchmark/out/permanent/${{ matrix.platform }}/artifact.json"
+          --record="${{ github.workspace }}/apps/benchmark/out/permanent/${{ matrix.target.platform }}/${{ matrix.shard }}/artifact.json"
           --uploaded=${{ steps.evidence.outcome == 'success' }}
           --artifact-id="${{ steps.evidence.outputs.artifact-id }}"
           --artifact-url="${{ steps.evidence.outputs.artifact-url }}"
@@ -203,8 +210,8 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: benchmark-permanent-${{ matrix.platform }}
-          path: apps/benchmark/out/permanent/${{ matrix.platform }}
+          name: benchmark-shard-${{ matrix.target.platform }}-${{ matrix.shard }}
+          path: apps/benchmark/out/permanent/${{ matrix.target.platform }}/${{ matrix.shard }}
           if-no-files-found: warn
           retention-days: 30
 
@@ -216,9 +223,83 @@ jobs:
            steps.evidence.outcome == 'failure')
         run: exit 1
 
+  merge-platform:
+    name: Merge ${{ matrix.platform }} shards
+    needs: [resolve, platform]
+    if: always()
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        platform:
+          - linux-x64
+          - linux-arm64
+          - win32-x64
+          - win32-arm64
+          - darwin-x64
+          - darwin-arm64
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/benchmark/package-lock.json
+
+      - name: Install the TypeScript shard merger
+        working-directory: apps/benchmark
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+        run: npm ci --no-audit --no-fund
+
+      - name: Prepare shard input and platform output directories
+        shell: bash
+        run: |
+          mkdir -p "${RUNNER_TEMP}/benchmark-shards/${{ matrix.platform }}"
+          mkdir -p "${GITHUB_WORKSPACE}/apps/benchmark/out/permanent/${{ matrix.platform }}"
+
+      - name: Download every shard result that exists
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: benchmark-shard-${{ matrix.platform }}-*
+          path: ${{ runner.temp }}/benchmark-shards/${{ matrix.platform }}
+          merge-multiple: false
+
+      - name: Merge and validate the platform shards
+        id: merge
+        continue-on-error: true
+        working-directory: apps/benchmark
+        run: >-
+          npm run merge-shards -- --
+          --input "${{ runner.temp }}/benchmark-shards/${{ matrix.platform }}"
+          --output "${{ github.workspace }}/apps/benchmark/out/permanent/${{ matrix.platform }}"
+          --platform "${{ matrix.platform }}"
+
+      - name: Upload merged platform result
+        if: always()
+        id: upload
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-permanent-${{ matrix.platform }}
+          path: apps/benchmark/out/permanent/${{ matrix.platform }}
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Preserve shard merge failures after upload
+        if: >-
+          always() &&
+          (steps.merge.outcome == 'failure' || steps.upload.outcome == 'failure')
+        run: exit 1
+
   aggregate:
     name: Aggregate and archive
-    needs: [resolve, platform]
+    needs: [resolve, merge-platform]
     if: always()
     runs-on: ubuntu-24.04
     timeout-minutes: 30

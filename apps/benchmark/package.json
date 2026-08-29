@@ -12,6 +12,7 @@
     "benchmark:native": "tsx src/native-cli.ts",
     "install-target": "tsx src/install-target.ts",
     "resolve-version": "tsx src/install-target.ts --main-only true --resolve-only true",
+    "merge-shards": "tsx src/merge-shards.ts",
     "aggregate": "tsx src/aggregate.ts",
     "hash-artifact": "tsx src/hash-artifact.ts",
     "record-artifact-upload": "tsx src/record-artifact-upload.ts",
