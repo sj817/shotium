@@ -28,6 +28,65 @@ function identity(entry) {
   return `${entry.pid}:${entry.birth_token}`;
 }
 
+export function parseLinuxProcStat(stat: string) {
+  const open = stat.indexOf('(');
+  const close = stat.lastIndexOf(')');
+  if (open <= 0 || close <= open) {
+    throw new InfrastructureError('Linux /proc stat has an invalid process name field');
+  }
+  const pid = Number(stat.slice(0, open).trim());
+  const fields = stat.slice(close + 2).trim().split(/\s+/);
+  const parentPid = Number(fields[1]);
+  const startTicks = fields[19];
+  if (!Number.isInteger(pid) || pid <= 0 || !Number.isInteger(parentPid) || !startTicks) {
+    throw new InfrastructureError('Linux /proc stat is missing PID, parent PID or starttime');
+  }
+  return {
+    pid,
+    parent_pid: parentPid,
+    started: null,
+    birth_token: `linux-proc-startticks:${startTicks}`,
+    name: stat.slice(open + 1, close),
+  };
+}
+
+export async function processIdentityForPid(pid: number) {
+  if (!Number.isInteger(pid) || pid <= 0) {
+    throw new InfrastructureError(`invalid process id ${pid}`);
+  }
+  if (process.platform !== 'linux') {
+    const snapshot = await processSnapshot([pid]);
+    return snapshot.processes.find((entry) => entry.pid === pid) || null;
+  }
+  let stat;
+  try {
+    stat = fs.readFileSync(`/proc/${pid}/stat`, 'utf8');
+  } catch (error) {
+    if (error?.code === 'ENOENT') return null;
+    throw new InfrastructureError(`could not read /proc identity for ${pid}`, error);
+  }
+  const parsed = parseLinuxProcStat(stat);
+  let command = '';
+  let rssBytes = 0;
+  try {
+    command = fs.readFileSync(`/proc/${pid}/cmdline`, 'utf8').replaceAll('\0', ' ').trim();
+  } catch (error) {
+    if (error?.code !== 'ENOENT') {
+      throw new InfrastructureError(`could not read /proc command for ${pid}`, error);
+    }
+  }
+  try {
+    const status = fs.readFileSync(`/proc/${pid}/status`, 'utf8');
+    const rss = status.match(/^VmRSS:\s+(\d+)\s+kB$/m);
+    if (rss) rssBytes = Number(rss[1]) * 1024;
+  } catch (error) {
+    if (error?.code !== 'ENOENT') {
+      throw new InfrastructureError(`could not read /proc RSS for ${pid}`, error);
+    }
+  }
+  return {...parsed, command, rss_bytes: rssBytes, cpu_percent: 0};
+}
+
 async function birthToken(entry, refresh = false) {
   if (process.platform === 'linux') {
     let stat;
@@ -91,32 +150,53 @@ async function normalizeBirthTokens(entries) {
   return normalized;
 }
 
+function startedAt(entry) {
+  const value = Date.parse(String(entry?.started || ''));
+  return Number.isFinite(value) ? value : null;
+}
+
+export function selectOwnedProcessEntries(list, rootPids) {
+  const byPid = new Map(list.map((entry) => [Number(entry.pid), entry]));
+  const byParent = new Map();
+  for (const entry of list) {
+    const bucket = byParent.get(Number(entry.parentPid)) || [];
+    bucket.push(entry);
+    byParent.set(Number(entry.parentPid), bucket);
+  }
+  const selected = new Map<number, any>();
+  const queue = [];
+  for (const pid of rootPids.map(Number)) {
+    const root = byPid.get(pid);
+    if (root && !selected.has(pid)) {
+      selected.set(pid, root);
+      queue.push(root);
+    }
+  }
+  while (queue.length) {
+    const parent: any = queue.shift();
+    const parentStarted = startedAt(parent);
+    for (const child of byParent.get(Number(parent.pid)) || []) {
+      if (selected.has(child.pid)) continue;
+      const childStarted = startedAt(child);
+      // Windows retains historical parent PIDs after the original parent has
+      // exited. Once that PID is reused, following parentPid alone can absorb
+      // arbitrary system processes into an owned tree. A real child cannot
+      // predate its parent; missing timestamps are therefore not kill proof.
+      if (parentStarted === null || childStarted === null || childStarted < parentStarted) continue;
+      selected.set(child.pid, child);
+      queue.push(child);
+    }
+  }
+  return [...selected.values()];
+}
+
 export async function processSnapshot(rootPids) {
   const data = await readProcesses();
   const list = data.list || [];
   if (!list.length) {
     throw new InfrastructureError('systeminformation returned no process list; PID ownership cannot be verified');
   }
-  const byParent = new Map();
-  for (const entry of list) {
-    const bucket = byParent.get(entry.parentPid) || [];
-    bucket.push(entry);
-    byParent.set(entry.parentPid, bucket);
-  }
-  const roots = new Set(rootPids.map(Number));
-  const selected = new Map<number, any>();
-  const queue = [...roots];
-  while (queue.length) {
-    const pid = queue.shift();
-    const entry = list.find((candidate) => candidate.pid === pid);
-    if (entry && !selected.has(entry.pid)) selected.set(entry.pid, entry);
-    for (const child of byParent.get(pid) || []) {
-      if (selected.has(child.pid)) continue;
-      selected.set(child.pid, child);
-      queue.push(child.pid);
-    }
-  }
-  const entries = await normalizeBirthTokens([...selected.values()]);
+  const entries = await normalizeBirthTokens(selectOwnedProcessEntries(list, rootPids));
   return {
     at: new Date().toISOString(),
     processes: entries.map((entry) => ({
@@ -133,6 +213,29 @@ export async function processSnapshot(rootPids) {
     rss_bytes: entries.reduce((sum, entry) => sum + ((Number(entry.memRss) || 0) * 1024), 0),
     cpu_percent: entries.reduce((sum, entry) => sum + (Number(entry.cpu) || 0), 0),
   };
+}
+
+export async function waitForProcessTree(rootPids, {
+  timeoutMs = 2000,
+  intervalMs = 50,
+  snapshot = processSnapshot,
+}: {
+  timeoutMs?: number;
+  intervalMs?: number;
+  snapshot?: typeof processSnapshot;
+} = {}) {
+  if (!rootPids.length || rootPids.some((pid) => !Number.isInteger(pid) || pid <= 0)) {
+    throw new InfrastructureError('owned process-tree roots must be positive integer PIDs');
+  }
+  const deadline = Date.now() + timeoutMs;
+  do {
+    const tree = await snapshot(rootPids);
+    if (tree.processes.length) return tree;
+    if (Date.now() >= deadline) break;
+    await sleep(intervalMs);
+  } while (true);
+  throw new InfrastructureError(
+      `owned process tree for PID(s) ${rootPids.join(', ')} was not observable within ${timeoutMs}ms`);
 }
 
 export async function verifyProcessMonitoring() {
@@ -162,6 +265,29 @@ export class ProcessMonitor {
 
   async start() {
     this.running = true;
+    // Prime exact root identities before the first systeminformation sample.
+    // Short-lived lifecycle clients can otherwise exit while the relatively
+    // expensive process-table query is still in flight.
+    const primed = [];
+    for (const pid of this.rootPids) {
+      try {
+        const entry = await processIdentityForPid(pid);
+        if (entry) {
+          this.identities.set(identity(entry), entry);
+          primed.push(entry);
+        }
+      } catch (error) {
+        this.timeline.push({at: new Date().toISOString(), error: String(error)});
+      }
+    }
+    if (primed.length) {
+      this.timeline.push({
+        at: new Date().toISOString(),
+        processes: primed,
+        rss_bytes: primed.reduce((sum, entry) => sum + (Number(entry.rss_bytes) || 0), 0),
+        cpu_percent: primed.reduce((sum, entry) => sum + (Number(entry.cpu_percent) || 0), 0),
+      });
+    }
     this.loop = this.#sampleLoop();
   }
 
@@ -204,6 +330,14 @@ export class ProcessMonitor {
 }
 
 async function liveIdentityMap(expectedIdentities: any[] = []) {
+  if (process.platform === 'linux') {
+    const entries: Array<[string, any]> = [];
+    for (const expected of expectedIdentities) {
+      const live = await processIdentityForPid(expected.pid);
+      if (live && identity(live) === identity(expected)) entries.push([identity(live), live]);
+    }
+    return new Map<string, any>(entries);
+  }
   const data = await readProcesses();
   const list = data.list || [];
   if (!list.length) {
@@ -213,6 +347,43 @@ async function liveIdentityMap(expectedIdentities: any[] = []) {
   const liveEntries = await normalizeBirthTokens(list.filter((entry) => expected.has(entry.pid)));
   const entries: Array<[string, any]> = liveEntries.map((entry) => [identity(entry), entry]);
   return new Map<string, any>(entries);
+}
+
+export function collectAncestorPids(list, currentPid: number, currentParentPid: number) {
+  const byPid = new Map(list.map((entry) => [Number(entry.pid), entry]));
+  const protectedPids = new Set<number>([currentPid]);
+  if (Number.isInteger(currentParentPid) && currentParentPid > 0) {
+    protectedPids.add(currentParentPid);
+  }
+  let cursor = currentPid;
+  const visited = new Set<number>();
+  for (let depth = 0; depth < 128; depth += 1) {
+    if (visited.has(cursor)) break;
+    visited.add(cursor);
+    const entry: any = byPid.get(cursor);
+    if (!entry) break;
+    const parentPid = Number(entry.parentPid);
+    if (!Number.isInteger(parentPid) || parentPid <= 0 || visited.has(parentPid)) break;
+    protectedPids.add(parentPid);
+    cursor = parentPid;
+  }
+  return protectedPids;
+}
+
+async function protectedAncestorPids() {
+  const data = await readProcesses();
+  const list = data.list || [];
+  if (!list.length) {
+    throw new InfrastructureError('process ancestry is unavailable; refusing forced cleanup');
+  }
+  return collectAncestorPids(list, process.pid, process.ppid);
+}
+
+export function partitionProtectedProcesses(identities, protectedPids: Set<number>) {
+  return {
+    killable: identities.filter((entry) => !protectedPids.has(entry.pid)),
+    protected: identities.filter((entry) => protectedPids.has(entry.pid)),
+  };
 }
 
 export async function waitForIdentitiesToExit(identities, timeoutMs: number = SETTLE.gracefulExitMs) {
@@ -230,9 +401,10 @@ export async function waitForIdentitiesToExit(identities, timeoutMs: number = SE
 
 export async function terminateOwnedProcesses(identities) {
   const live = await liveIdentityMap(identities);
-  const owned = identities
-      .filter((entry) => entry.pid !== process.pid)
-      .filter((entry) => live.has(identity(entry)))
+  const liveOwned = identities.filter((entry) => live.has(identity(entry)));
+  const protectedPids = await protectedAncestorPids();
+  const partitioned = partitionProtectedProcesses(liveOwned, protectedPids);
+  const owned = partitioned.killable
       .sort((left, right) => right.pid - left.pid);
   for (const entry of owned) {
     try {
@@ -246,7 +418,7 @@ export async function terminateOwnedProcesses(identities) {
     } catch {}
   }
   remaining = await waitForIdentitiesToExit(remaining, SETTLE.forcedExitMs);
-  return remaining;
+  return [...remaining, ...partitioned.protected];
 }
 
 export async function waitForSystemStable({timeoutMs = SETTLE.cooldownTimeoutMs, cpuLimit = SETTLE.cpuLimit}: {

@@ -21,6 +21,17 @@ function imageBuffer(value) {
   throw new Error('engine returned no image bytes');
 }
 
+export function competitorChromiumPolicy(platform = process.platform) {
+  if (platform !== 'linux') {
+    return {puppeteerArgs: [], playwrightChromiumSandbox: undefined};
+  }
+  // GitHub's Ubuntu runners block the user-namespace sandbox with AppArmor.
+  // The benchmark only opens its own local fixtures and gives every launch an
+  // isolated profile, so explicitly match Playwright's sandbox-disabled CI
+  // behavior instead of letting Puppeteer fail before a sample can start.
+  return {puppeteerArgs: ['--no-sandbox'], playwrightChromiumSandbox: false};
+}
+
 export class ShotiumEngine {
   name: string;
   workers: number;
@@ -172,6 +183,7 @@ class ChromeEngine {
 
 async function puppeteerDefinition(name, headless, options) {
   const puppeteer = await importDefault('puppeteer');
+  const policy = competitorChromiumPolicy();
   return new ChromeEngine({
     name,
     reusePage: options.reusePage,
@@ -179,6 +191,7 @@ async function puppeteerDefinition(name, headless, options) {
     launch: async () => {
       const browser = await puppeteer.launch({
         headless,
+        args: policy.puppeteerArgs,
         defaultViewport: {...VIEWPORT, deviceScaleFactor: 1},
         userDataDir: options.profileDir,
       });
@@ -196,6 +209,7 @@ async function puppeteerDefinition(name, headless, options) {
 
 async function playwrightDefinition(name, channel, options) {
   const {chromium} = await import('playwright');
+  const policy = competitorChromiumPolicy();
   const newContext = (browser) => browser.newContext({viewport: VIEWPORT, deviceScaleFactor: 1});
   return new ChromeEngine({
     name,
@@ -206,12 +220,15 @@ async function playwrightDefinition(name, channel, options) {
         const context = await chromium.launchPersistentContext(options.profileDir, {
           headless: true,
           channel,
+          chromiumSandbox: policy.playwrightChromiumSandbox,
           viewport: VIEWPORT,
           deviceScaleFactor: 1,
         });
         return {browser: context.browser(), context};
       }
-      const browser = await chromium.launch({headless: true, channel});
+      const browser = await chromium.launch({
+        headless: true, channel, chromiumSandbox: policy.playwrightChromiumSandbox,
+      });
       return {browser, context: await newContext(browser)};
     },
     connect: async (endpoint) => {

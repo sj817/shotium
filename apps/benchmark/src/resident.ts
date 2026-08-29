@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import {ShotiumEngine} from './engines.ts';
+import {ShotiumEngine, competitorChromiumPolicy} from './engines.ts';
 import {VIEWPORT} from './constants.ts';
 
 function writeEvidence(file, image) {
@@ -14,6 +14,7 @@ async function warmPuppeteer(name, url, evidenceFile) {
   const puppeteer = puppeteerModule.default || puppeteerModule;
   const browser = await puppeteer.launch({
     headless: name === 'puppeteer-shell' ? 'shell' : true,
+    args: competitorChromiumPolicy().puppeteerArgs,
     defaultViewport: {...VIEWPORT, deviceScaleFactor: 1},
   });
   const page = await browser.newPage();
@@ -30,7 +31,11 @@ async function warmPuppeteer(name, url, evidenceFile) {
 async function warmPlaywright(name, url, evidenceFile) {
   const {chromium} = await import('playwright');
   const channel = name === 'playwright-shell' ? 'chromium-headless-shell' : 'chromium';
-  const server = await chromium.launchServer({headless: true, channel});
+  const server = await chromium.launchServer({
+    headless: true,
+    channel,
+    chromiumSandbox: competitorChromiumPolicy().playwrightChromiumSandbox,
+  });
   const browser = await chromium.connect(server.wsEndpoint());
   const context = await browser.newContext({viewport: VIEWPORT, deviceScaleFactor: 1});
   const page = await context.newPage();

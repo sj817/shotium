@@ -10,8 +10,10 @@ import {InfrastructureError, isInfrastructureError} from './errors.ts';
 import {comparePng, inspectPng, saveBaseline} from './image.ts';
 import {
   ProcessMonitor,
+  processIdentityForPid,
   processSnapshot,
   terminateOwnedProcesses,
+  waitForProcessTree,
   waitForIdentitiesToExit,
 } from './process-tree.ts';
 import {startResident} from './resident.ts';
@@ -380,9 +382,11 @@ async function runBrowserProcessExit(samples) {
     if (!host.rootPids?.length) {
       throw new InfrastructureError(`${engineName} did not expose its owned browser PID`);
     }
-    const tree = await processSnapshot(host.rootPids);
-    if (!tree.processes.length) {
-      throw new InfrastructureError(`${engineName} browser process tree was not observable`);
+    let tree;
+    try {
+      tree = await waitForProcessTree(host.rootPids);
+    } catch (error) {
+      throw new InfrastructureError(`${engineName} browser process tree was not observable`, error);
     }
     const encodedEndpoint = Buffer.from(JSON.stringify(host.endpoint)).toString('base64url');
     interrupted = execaNode(tsxCli, [clientFile,
@@ -495,10 +499,11 @@ async function runFaults(engine, samples) {
           `${engineName}.daemon-recovery-precondition.r${repeat}.a${attempt}.png`),
       precondition.image);
       const status = await daemon.status();
-      const tree = await processSnapshot([status.pid]);
-      const daemonIdentity = tree.processes.find((entry) => entry.pid === status.pid);
+      const daemonPid = Number(status.pid);
+      const daemonIdentity = await processIdentityForPid(daemonPid);
       if (!daemonIdentity) throw new Error('Shotium daemon PID identity could not be verified');
-      const worker = tree.processes.find((entry) => entry.pid !== status.pid);
+      const tree = await processSnapshot([daemonPid]);
+      const worker = tree.processes.find((entry) => entry.pid !== daemonPid);
       if (worker) {
         const remaining = await terminateOwnedProcesses([worker]);
         if (remaining.length) throw new Error('Shotium daemon worker could not be terminated for recovery test');
