@@ -14,6 +14,7 @@
     "resolve-version": "tsx src/install-target.ts --main-only true --resolve-only true",
     "merge-shards": "tsx src/merge-shards.ts",
     "aggregate": "tsx src/aggregate.ts",
+    "render-report": "tsx src/render-report.ts",
     "hash-artifact": "tsx src/hash-artifact.ts",
     "record-artifact-upload": "tsx src/record-artifact-upload.ts",
     "browser:install:puppeteer-chrome": "puppeteer browsers install chrome",

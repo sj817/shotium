@@ -8,6 +8,10 @@ six npm-standard platform directories plus `manifest.json`, `report.md` and
 Platform directories contain `summary.json`, `samples.jsonl`, `quality.json`
 and `failures.json`.
 
+The [VitePress benchmark explorer](https://sj817.github.io/shotium/) presents
+the same archive with Chinese-first labels, within-platform formal rankings,
+coverage exclusions, scenario filters and failure evidence.
+
 Only same-runner ratios are reported. `n/a` means the competitor had no native
 browser for that architecture; a supported engine that failed to install or
 start remains a failure. PNGs, stdout/stderr and high-frequency process

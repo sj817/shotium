@@ -360,7 +360,7 @@ jobs:
       cancel-in-progress: false
     permissions:
       contents: write
-      actions: read
+      actions: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -465,3 +465,9 @@ jobs:
             git add benchmark-results/index.json benchmark-results/LATEST.md
             git commit --amend --no-edit
           done
+
+      - name: Deploy the archived benchmark site
+        if: inputs.commit_results && steps.aggregate.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run benchmark-pages.yml --ref main

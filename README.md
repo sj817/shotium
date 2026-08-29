@@ -483,7 +483,7 @@ console.log(`Removed: ${result.removed}, Bytes before: ${result.bytesBefore}, By
 
 ## Performance Benchmarks
 
-The canonical benchmark now runs on six native GitHub runner platforms and keeps raw samples under [`benchmark-results/`](benchmark-results/LATEST.md). The table below is the earlier single-machine Windows result and is retained only as [legacy evidence](benchmark-results/legacy/2026-08-25-windows-local/RESULTS.md); it must not be compared directly with the CI series.
+The canonical benchmark now runs on six native GitHub runner platforms. Browse its ranked, bilingual results in the [VitePress benchmark explorer](https://sj817.github.io/shotium/) or inspect the raw archive under [`benchmark-results/`](benchmark-results/LATEST.md). The table below is the earlier single-machine Windows result and is retained only as [legacy evidence](benchmark-results/legacy/2026-08-25-windows-local/RESULTS.md); it must not be compared directly with the CI series.
 
 ### 1. Throughput & Cold Start
 

@@ -4,6 +4,7 @@ import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {parseArgs, booleanArg, recoverNpmRunValues} from './args.ts';
 import {APP_ROOT, PLATFORM_IDS, RESULT_STATUSES, SHARD_SCENARIOS} from './constants.ts';
+import {renderLatest, renderReport, renderSummaryCsv} from './report.ts';
 import {validatePlatformResult} from './schema.ts';
 
 const PERMANENT_FILES = ['summary.json', 'samples.jsonl', 'quality.json', 'failures.json'] as const;
@@ -72,11 +73,6 @@ function validatePermanentFiles(source: string) {
   return files;
 }
 
-function csv(value: unknown): string {
-  const text = value === null || value === undefined ? '' : String(value);
-  return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
-}
-
 export function formatRunTimestamp(date: Date): string {
   if (!Number.isFinite(date.getTime())) throw new Error('invalid aggregate timestamp');
   return date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
@@ -102,114 +98,6 @@ function findSummaries(root: string): Map<string, string> {
     }
   }
   return found;
-}
-
-function scenarioRows(platform: any): string[] {
-  const shotium = new Map<string, any>();
-  for (const scenario of platform.scenarios || []) {
-    if (scenario.engine === 'shotium' && scenario.status === 'pass' && scenario.ranking_eligible) {
-      shotium.set(`${scenario.scenario}|${scenario.concurrency}`, scenario);
-    }
-  }
-  const rows: string[] = [];
-  for (const scenario of platform.scenarios || []) {
-    const baseline = shotium.get(`${scenario.scenario}|${scenario.concurrency}`);
-    const p50 = scenario.latency_ms?.p50 ?? scenario.wall_time_ms?.p50 ?? null;
-    const baselineP50 = baseline?.latency_ms?.p50 ?? baseline?.wall_time_ms?.p50 ?? null;
-    const ratio = !scenario.ranking_eligible ? null : scenario.engine === 'shotium' ? 1 :
-      Number.isFinite(p50) && Number.isFinite(baselineP50) && baselineP50 > 0 ? p50 / baselineP50 : null;
-    rows.push([
-      platform.platform, platform.status, scenario.shard || 'all', scenario.engine, scenario.scenario,
-      scenario.concurrency, scenario.status, scenario.ranking_eligible, scenario.runs, scenario.shots,
-      p50, scenario.latency_ms?.p95 ?? null, scenario.latency_ms?.max ?? scenario.wall_time_ms?.max ?? null,
-      scenario.latency_ms?.mad ?? null, scenario.throughput_per_second ?? null,
-      scenario.failure_rate ?? null, scenario.rss_slope_bytes_per_minute?.p50 ?? null,
-      ratio === null ? null : Number(ratio.toFixed(4)),
-    ].map(csv).join(','));
-  }
-  return rows;
-}
-
-type ReportLocale = 'en' | 'zh-CN';
-
-const REPORT_COPY = {
-  en: {
-    title: (version: string) => `# Shotium ${version} benchmark`,
-    result: (manifest: any) =>
-      `Result: **${manifest.status}**; quality: **${manifest.quality_status}**; ` +
-      `evidence: **${manifest.evidence_status}**. ` +
-      `Profile \`${manifest.profile}\`, seed \`${manifest.seed}\`.`,
-    ratios: 'Ratios are calculated only against Shotium on the same native runner, scenario and concurrency. ' +
-      'No absolute timing is ranked across operating systems or architectures.',
-    engineHeader: '| engine | availability | reason / binary architecture |',
-    scenarioHeader: '| scenario | c | engine | status | ranked | p50 ms | worst ms | throughput/s | vs Shotium |',
-    ranked: (eligible: boolean) => eligible ? 'yes' : 'no',
-    sharded: 'Scenario groups ran on separate native runners; every engine comparison remains within one shard and one runner.',
-    missingHeading: '## Missing platform outputs',
-  },
-  'zh-CN': {
-    title: (version: string) => `# Shotium ${version} 基准报告`,
-    result: (manifest: any) =>
-      `结果：**${manifest.status}**；质量：**${manifest.quality_status}**；` +
-      `证据：**${manifest.evidence_status}**。` +
-      `配置 \`${manifest.profile}\`，种子 \`${manifest.seed}\`。`,
-    ratios: '性能比仅以同一原生运行器、同一场景和同一并发度下的 Shotium 为基准计算。' +
-      '不同操作系统或处理器架构之间的绝对耗时不参与排名。',
-    engineHeader: '| 引擎 | 可用性 | 原因 / 二进制架构 |',
-    scenarioHeader: '| 场景 | 并发 | 引擎 | 状态 | 参与排名 | p50 毫秒 | 最差毫秒 | 吞吐量/秒 | 相对 Shotium |',
-    ranked: (eligible: boolean) => eligible ? '是' : '否',
-    sharded: '场景分组在不同的原生运行器上执行；每个引擎对比仍严格限定在同一分片、同一运行器内。',
-    missingHeading: '## 缺失的平台输出',
-  },
-} satisfies Record<ReportLocale, {
-  title: (version: string) => string;
-  result: (manifest: any) => string;
-  ratios: string;
-  engineHeader: string;
-  scenarioHeader: string;
-  ranked: (eligible: boolean) => string;
-  sharded: string;
-  missingHeading: string;
-}>;
-
-function report(platforms: any[], manifest: any, locale: ReportLocale): string {
-  const copy = REPORT_COPY[locale];
-  const lines = [
-    copy.title(manifest.shotium_version), '',
-    copy.result(manifest), '',
-    copy.ratios, '',
-  ];
-  for (const platform of platforms) {
-    lines.push(`## ${platform.platform}`, '');
-    if (platform.execution_shards) lines.push(copy.sharded, '');
-    lines.push(copy.engineHeader, '|:--|:--|:--|');
-    for (const engine of platform.engines || []) {
-      const detail = engine.reason || `${(engine.architectures || []).join('+') || 'unknown'}; ${engine.executable || ''}`;
-      lines.push(`| ${engine.engine} | ${engine.status} | ${String(detail).replaceAll('|', '\\|')} |`);
-    }
-    lines.push('', copy.scenarioHeader,
-        '|:--|--:|:--|:--|:--|--:|--:|--:|--:|');
-    const baseline = new Map<string, any>();
-    for (const row of platform.scenarios || []) {
-      if (row.engine === 'shotium' && row.status === 'pass' && row.ranking_eligible) {
-        baseline.set(`${row.scenario}|${row.concurrency}`, row);
-      }
-    }
-    for (const row of platform.scenarios || []) {
-      const p50 = row.latency_ms?.p50 ?? row.wall_time_ms?.p50;
-      const worst = row.latency_ms?.max ?? row.wall_time_ms?.max;
-      const base = baseline.get(`${row.scenario}|${row.concurrency}`);
-      const baseP50 = base?.latency_ms?.p50 ?? base?.wall_time_ms?.p50;
-      const ratio = !row.ranking_eligible ? 'N/A' : row.engine === 'shotium' ? '1.00x' :
-        Number.isFinite(p50) && Number.isFinite(baseP50) && baseP50 > 0 ? `${(p50 / baseP50).toFixed(2)}x` : 'N/A';
-      lines.push(`| ${row.scenario} | ${row.concurrency} | ${row.engine} | ${row.status} | ${copy.ranked(row.ranking_eligible)} | ` +
-        `${p50 ?? 'N/A'} | ${worst ?? 'N/A'} | ${row.throughput_per_second?.toFixed?.(3) ?? 'N/A'} | ${ratio} |`);
-    }
-    lines.push('');
-  }
-  const missing = manifest.platforms.filter((entry: any) => entry.missing).map((entry: any) => entry.platform);
-  if (missing.length) lines.push(copy.missingHeading, '', missing.map((item: string) => `- ${item}`).join('\n'), '');
-  return `${lines.join('\n')}\n`;
 }
 
 function rebuildIndex(resultsRoot: string): any[] {
@@ -399,21 +287,14 @@ export function aggregateResults(options: Record<string, any>) {
     platforms: platformRecords,
   };
   writeJson(path.join(destination, 'manifest.json'), manifest);
-  fs.writeFileSync(path.join(destination, 'report.md'), report(platforms, manifest, 'en'));
-  fs.writeFileSync(path.join(destination, 'report.zh-CN.md'), report(platforms, manifest, 'zh-CN'));
-  const header = 'platform,platform_status,shard,engine,scenario,concurrency,status,ranking_eligible,runs,shots,p50_ms,p95_ms,worst_ms,mad_ms,throughput_per_second,failure_rate,rss_slope_bytes_per_minute,ratio_to_shotium';
-  fs.writeFileSync(path.join(destination, 'summary.csv'), `${[header, ...platforms.flatMap(scenarioRows)].join('\n')}\n`);
+  fs.writeFileSync(path.join(destination, 'report.md'), renderReport(platforms, manifest, 'en'));
+  fs.writeFileSync(path.join(destination, 'report.zh-CN.md'), renderReport(platforms, manifest, 'zh-CN'));
+  fs.writeFileSync(path.join(destination, 'summary.csv'), renderSummaryCsv(platforms));
 
   const index = rebuildIndex(resultsRoot);
   writeJson(path.join(resultsRoot, 'index.json'), {schema_version: 1, generated_utc: new Date().toISOString(), results: index});
   const latest = index[0];
-  fs.writeFileSync(path.join(resultsRoot, 'LATEST.md'), latest ?
-    `# Latest benchmark / 最新基准\n\n${latest.shotium_version} · ${latest.generated_utc}: ` +
-      `[English](${latest.path}/report.md) · ` +
-      `[简体中文](${latest.path}/report.zh-CN.md) ` +
-      `— status/状态 ${latest.status}, quality/质量 ${latest.quality_status}, ` +
-      `evidence/证据 ${latest.evidence_status}.\n` :
-    '# Latest benchmark / 最新基准\n\nNo benchmark results yet. / 暂无基准结果。\n');
+  fs.writeFileSync(path.join(resultsRoot, 'LATEST.md'), renderLatest(latest));
 
   if (options.githubOutput) {
     fs.appendFileSync(String(options.githubOutput), `result_directory=${destination.replaceAll('\\', '/')}\n` +

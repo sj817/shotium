@@ -50,6 +50,24 @@ npm run benchmark:native -- --baseline-executable /path/to/headless_shell --base
 
 The JSON/CSV report contains raw samples, validated PNG metadata, executable
 SHA-256/version metadata, and same-machine `baseline p50 / Shot p50` ratios.
+Each platform also gets its own geometric-mean ranking. It includes only cells
+where Shotium and the compared engine both passed and were ranking-eligible on
+the same scenario and concurrency; lower normalized elapsed time is better.
+Coverage and per-cell wins are shown, and platforms are never mixed together.
+Only engines covering every comparable cell receive a formal rank; partial
+coverage stays visible with its score but is explicitly left unranked.
+
+To regenerate only the derived Markdown/CSV views of an archived result
+(including an older four-shard result), run:
+
+```bash
+npm run render-report -- --result-directory ../../benchmark-results/v0.3.2/<run-directory>
+```
+
+This reads the archived manifest and platform summaries, then replaces only
+`report.md`, `report.zh-CN.md`, `summary.csv`, and the existing index-backed
+`LATEST.md`. It does not alter raw samples, quality records, failures, or the
+manifest. Reports link to the [VitePress benchmark explorer](https://sj817.github.io/shotium/).
 
 `full` adds seven cold repetitions, concurrency 1/2/4, 20 lifecycle cycles and
 a continuous 1000-request (or ten-minute) soak. Every cell waits for host

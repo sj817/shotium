@@ -90,15 +90,19 @@ test('aggregates exactly six native platform results into the standard directory
     assert.equal(aggregate.manifest.status, 'complete');
     assert.equal(aggregate.manifest.evidence_status, 'complete');
     assert.equal(aggregate.manifest.platforms.length, 6);
-    assert.match(fs.readFileSync(path.join(aggregate.destination, 'report.md'), 'utf8'), /No absolute timing is ranked/);
+    assert.match(fs.readFileSync(path.join(aggregate.destination, 'report.md'), 'utf8'), /No cross-platform ranking/);
     const chineseReport = path.join(aggregate.destination, 'report.zh-CN.md');
     assert.equal(fs.existsSync(chineseReport), true);
-    assert.match(fs.readFileSync(chineseReport, 'utf8'), /不同操作系统或处理器架构之间的绝对耗时不参与排名/);
+    assert.match(fs.readFileSync(chineseReport, 'utf8'), /不进行跨平台混排/);
     assert.match(fs.readFileSync(path.join(aggregate.destination, 'summary.csv'), 'utf8'), /ratio_to_shotium/);
     assert.equal(JSON.parse(fs.readFileSync(path.join(results, 'index.json'), 'utf8')).results.length, 1);
     const latest = fs.readFileSync(path.join(results, 'LATEST.md'), 'utf8');
     assert.match(latest, /\[English\]\(v0\.3\.2\/20260829T013045Z-gh123456789-a1\/report\.md\)/);
     assert.match(latest, /\[简体中文\]\(v0\.3\.2\/20260829T013045Z-gh123456789-a1\/report\.zh-CN\.md\)/);
+    assert.match(latest, /https:\/\/sj817\.github\.io\/shotium\//);
+    assert.match(latest, /status complete \/ 状态 完整/);
+    assert.match(latest, /quality pass \/ 质量 通过/);
+    assert.match(latest, /evidence complete \/ 证据 完整/);
   } finally {
     fs.rmSync(root, {recursive: true, force: true});
   }

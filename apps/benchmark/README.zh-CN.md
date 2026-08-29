@@ -46,6 +46,21 @@ npm run benchmark:native -- --baseline-executable /path/to/headless_shell --base
 
 JSON/CSV 报告包含原始样本、经过校验的 PNG 元数据、可执行文件 SHA-256/版本，
 以及同机 `基线 p50 / Shot p50` 比率。
+每个平台还会单独生成几何平均综合排名。只有 Shotium 与对比引擎在同一场景、
+同一并发度下均为“通过”且允许排名的测试项才会参与；归一化相对耗时越低越好。
+报告会列出覆盖数和单项冠军次数，并且绝不跨平台混排。只有覆盖本平台全部可比项的
+引擎才会获得正式名次；部分覆盖仍展示成绩，但会明确标记为不授予名次。
+
+如需只重新生成某次归档的 Markdown/CSV 展示层（包括旧的四分片归档），运行：
+
+```bash
+npm run render-report -- --result-directory ../../benchmark-results/v0.3.2/<归档目录>
+```
+
+该命令读取已归档的 manifest 和各平台 summary，只替换 `report.md`、
+`report.zh-CN.md`、`summary.csv`，以及已有索引对应的 `LATEST.md`；不会修改原始样本、
+质量记录、失败证据或 manifest。报告顶部会链接到
+[VitePress 基准站点](https://sj817.github.io/shotium/)。
 
 `full` 配置包含七次冷启动重复、1/2/4 并发、20 次生命周期循环，以及连续 1000 次
 请求或十分钟的浸泡测试。每个测试单元都会等待主机稳定；非冷启动单元还会等待引擎
