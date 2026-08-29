@@ -26,7 +26,6 @@ import {
 } from './process-tree.ts';
 import {distribution, balancedOrder} from './statistics.ts';
 import {validatePlatformResult} from './schema.ts';
-import {verifyConsumerInstall} from './verify-install.ts';
 
 const options = parseArgs(process.argv.slice(2), {
   shotiumVersion: 'latest',
@@ -328,6 +327,11 @@ async function main() {
   resolvedShotiumVersion = shotiumVersion;
   let install;
   try {
+    // Load the consumer probe only after npm has installed the requested package.
+    // tsx resolves imports while loading a module, so importing this probe at
+    // process startup can retain a missing-package resolution from before the
+    // no-save install completes.
+    const {verifyConsumerInstall} = await import('./verify-install.ts');
     install = await verifyConsumerInstall(
         shotiumVersion, path.join(artifactDirectory, 'samples', 'shotium.api-smoke.png'));
   } catch (error) {
