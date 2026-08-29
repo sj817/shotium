@@ -1,9 +1,3 @@
 # Latest benchmark / 最新基准
 
-No six-platform CI result has been archived yet. / 尚未归档六平台 CI 结果。
-
-The next manual or post-release run with result commits enabled will replace
-this file; each entry links its English and Simplified Chinese reports. 启用结果
-提交后，下一次手动或发版后运行会更新本文件，并同时链接英文和简体中文报告。
-The retired local result is available under
-[legacy](legacy/2026-08-25-windows-local/RESULTS.md).
+0.3.2 · 2026-08-29T17:43:43.000Z: [English](v0.3.2/20260829T174343Z-gh33264499865-a1/report.md) · [简体中文](v0.3.2/20260829T174343Z-gh33264499865-a1/report.zh-CN.md) — status/状态 complete, quality/质量 fail, evidence/证据 complete.

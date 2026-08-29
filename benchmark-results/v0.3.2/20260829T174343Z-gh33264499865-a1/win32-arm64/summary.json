@@ -1,0 +1,2682 @@
+{
+  "schema_version": 2,
+  "generated_utc": "2026-08-29T17:43:08.967Z",
+  "platform": "win32-arm64",
+  "shard": "merged",
+  "shards_complete": true,
+  "missing_shards": [],
+  "invalid_shards": {},
+  "host_mode": "sharded",
+  "status": "noisy",
+  "shotium_version": "0.3.2",
+  "profile": "smoke",
+  "seed": "01059e287ce7",
+  "source_revision": "01059e287ce7c4d3c0d722eaf8e3853f53504ad1",
+  "install": {
+    "main": {
+      "name": "@shotkit/shotium",
+      "version": "0.3.2",
+      "content_sha256": "888b222a5e63c895bee921ce9c4d971f5143d72423b507402923aeb7e7f17760",
+      "files": 26,
+      "bytes": 322824
+    },
+    "platform": {
+      "name": "@shotkit/shotium-win32-arm64",
+      "version": "0.3.2",
+      "content_sha256": "92fad3b9dd5b9028c2e232c4ac693011638c1ba26456bc9bb10a334cb9f49714",
+      "files": 6,
+      "bytes": 43385932
+    },
+    "main_manifest_sha256": "3dcc0ec9ab5c4c58a219867d7d7348da2b6a05248ab455579e626afadddd115b",
+    "platform_manifest_sha256": "b41035b8d7030fa0c658a8faaed53a94caa17968d48aaadf5233dfefa3821a87",
+    "esm": true,
+    "commonjs": true,
+    "api_smoke": {
+      "width": 1280,
+      "height": 720,
+      "bytes": 74888,
+      "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+    }
+  },
+  "host": null,
+  "packages": {
+    "@shotkit/shotium": "0.3.2",
+    "puppeteer": "25.8.0",
+    "playwright": "1.62.1",
+    "tinybench": "5.1.0",
+    "execa": "9.6.0",
+    "systeminformation": "5.33.0",
+    "ajv": "8.17.1",
+    "pngjs": "7.0.0",
+    "pixelmatch": "7.1.0",
+    "wait-on": "8.0.4",
+    "tsx": "4.20.6",
+    "typescript": "5.9.2"
+  },
+  "measurement_contract": {
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "scale": 1,
+    "output": "png",
+    "wait_until": "load",
+    "default_page_policy": "new-page",
+    "default_cache_policy": "disabled-or-no-store",
+    "reuse_page_scenario_is_separate": true
+  },
+  "engines": [
+    {
+      "engine": "shotium",
+      "status": "noisy",
+      "reason": null,
+      "executable": "C:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\@shotkit\\shotium-win32-arm64\\shotium.node",
+      "architectures": [
+        "arm64"
+      ],
+      "sha256": "20b19c6f215404f3021231132624e967cf2d828669ee8d22b59304b42b1f5003",
+      "binary_version": "0.3.2",
+      "binaries": [
+        {
+          "file": "C:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\@shotkit\\shotium-win32-arm64\\shotium.dll",
+          "architectures": [
+            "arm64"
+          ],
+          "native": true,
+          "sha256": "e7fee4a84e770e0c3993ed5ef5cc533a5d7c9f21a6edcc073111ed1a26a180ee"
+        },
+        {
+          "file": "C:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\@shotkit\\shotium-win32-arm64\\shotium.node",
+          "architectures": [
+            "arm64"
+          ],
+          "native": true,
+          "sha256": "20b19c6f215404f3021231132624e967cf2d828669ee8d22b59304b42b1f5003"
+        }
+      ],
+      "shard_statuses": {
+        "startup": "noisy",
+        "throughput": "noisy",
+        "resident": "noisy",
+        "resilience": "noisy"
+      }
+    },
+    {
+      "engine": "puppeteer-shell",
+      "status": "n/a",
+      "reason": "startup: the package has no native browser for this platform architecture; throughput: the package has no native browser for this platform architecture; resident: the package has no native browser for this platform architecture; resilience: the package has no native browser for this platform architecture",
+      "executable": "C:\\Users\\runneradmin\\.cache\\puppeteer\\chrome-headless-shell\\win64-152.0.7977.42\\chrome-headless-shell-win64\\chrome-headless-shell.exe",
+      "architectures": [
+        "x64"
+      ],
+      "binaries": [
+        {
+          "file": "C:\\Users\\runneradmin\\.cache\\puppeteer\\chrome-headless-shell\\win64-152.0.7977.42\\chrome-headless-shell-win64\\chrome-headless-shell.exe",
+          "architectures": [
+            "x64"
+          ],
+          "native": false,
+          "sha256": "6f90e8e5d2f925adbef1e1065df228f75c060d9f1bf5aee9b00bd201edbb9499"
+        }
+      ],
+      "shard_statuses": {
+        "startup": "n/a",
+        "throughput": "n/a",
+        "resident": "n/a",
+        "resilience": "n/a"
+      }
+    },
+    {
+      "engine": "puppeteer-chrome",
+      "status": "n/a",
+      "reason": "startup: the package has no native browser for this platform architecture; throughput: the package has no native browser for this platform architecture; resident: the package has no native browser for this platform architecture; resilience: the package has no native browser for this platform architecture",
+      "executable": "C:\\Users\\runneradmin\\.cache\\puppeteer\\chrome\\win64-152.0.7977.42\\chrome-win64\\chrome.exe",
+      "architectures": [
+        "x64"
+      ],
+      "binaries": [
+        {
+          "file": "C:\\Users\\runneradmin\\.cache\\puppeteer\\chrome\\win64-152.0.7977.42\\chrome-win64\\chrome.exe",
+          "architectures": [
+            "x64"
+          ],
+          "native": false,
+          "sha256": "b3b221d637b5b6a745c51cac1d22a618e7da5e67202be52695999886720c7d56"
+        }
+      ],
+      "shard_statuses": {
+        "startup": "n/a",
+        "throughput": "n/a",
+        "resident": "n/a",
+        "resilience": "n/a"
+      }
+    },
+    {
+      "engine": "playwright-shell",
+      "status": "n/a",
+      "reason": "startup: the package currently supplies an x64 browser on Windows arm64; throughput: the package currently supplies an x64 browser on Windows arm64; resident: the package currently supplies an x64 browser on Windows arm64; resilience: the package currently supplies an x64 browser on Windows arm64",
+      "executable": "C:\\Users\\runneradmin\\AppData\\Local\\ms-playwright\\chromium_headless_shell-1234\\chrome-headless-shell-win64\\chrome-headless-shell.exe",
+      "architectures": [
+        "x64"
+      ],
+      "binaries": [
+        {
+          "file": "C:\\Users\\runneradmin\\AppData\\Local\\ms-playwright\\chromium_headless_shell-1234\\chrome-headless-shell-win64\\chrome-headless-shell.exe",
+          "architectures": [
+            "x64"
+          ],
+          "native": false,
+          "sha256": "ce4635cd0e5dc0e21494542a701f347e91c1f1d821970578d97ed8df4ced50ef"
+        }
+      ],
+      "shard_statuses": {
+        "startup": "n/a",
+        "throughput": "n/a",
+        "resident": "n/a",
+        "resilience": "n/a"
+      }
+    },
+    {
+      "engine": "playwright-chrome",
+      "status": "n/a",
+      "reason": "startup: the package currently supplies an x64 browser on Windows arm64; throughput: the package currently supplies an x64 browser on Windows arm64; resident: the package currently supplies an x64 browser on Windows arm64; resilience: the package currently supplies an x64 browser on Windows arm64",
+      "executable": "C:\\Users\\runneradmin\\AppData\\Local\\ms-playwright\\chromium-1234\\chrome-win64\\chrome.exe",
+      "architectures": [
+        "x64"
+      ],
+      "binaries": [
+        {
+          "file": "C:\\Users\\runneradmin\\AppData\\Local\\ms-playwright\\chromium-1234\\chrome-win64\\chrome.exe",
+          "architectures": [
+            "x64"
+          ],
+          "native": false,
+          "sha256": "409805a16d6416087e6b2f778df1cf8f7bbb267d6b99f6b5bb0a618eace234f2"
+        }
+      ],
+      "shard_statuses": {
+        "startup": "n/a",
+        "throughput": "n/a",
+        "resident": "n/a",
+        "resilience": "n/a"
+      }
+    }
+  ],
+  "scenarios": [
+    {
+      "shard": "startup",
+      "engine": "shotium",
+      "scenario": "cold",
+      "concurrency": 1,
+      "status": "pass",
+      "ranking_eligible": true,
+      "runs": 1,
+      "shots": 1,
+      "wall_time_ms": {
+        "n": 1,
+        "min": 76,
+        "p50": 76,
+        "p95": 76,
+        "max": 76,
+        "mean": 76,
+        "mad": 0
+      },
+      "orchestration_wall_time_ms": {
+        "n": 1,
+        "min": 8517.706,
+        "p50": 8517.706,
+        "p95": 8517.706,
+        "max": 8517.706,
+        "mean": 8517.706,
+        "mad": 0
+      },
+      "latency_ms": {
+        "n": 1,
+        "min": 76,
+        "p50": 76,
+        "p95": 76,
+        "max": 76,
+        "mean": 76,
+        "mad": 0
+      },
+      "peak_rss_bytes": {
+        "n": 1,
+        "min": 205950976,
+        "p50": 205950976,
+        "p95": 205950976,
+        "max": 205950976,
+        "mean": 205950976,
+        "mad": 0
+      },
+      "rss_slope_bytes_per_minute": null,
+      "succeeded_requests": null,
+      "failed_requests": null,
+      "failure_rate": null,
+      "throughput_per_second": 13.157894736842104
+    },
+    {
+      "shard": "startup",
+      "engine": "shotium",
+      "scenario": "cold-settled",
+      "concurrency": 1,
+      "status": "noisy",
+      "ranking_eligible": false,
+      "runs": 1,
+      "shots": 0,
+      "wall_time_ms": {
+        "n": 1,
+        "min": 46168.317,
+        "p50": 46168.317,
+        "p95": 46168.317,
+        "max": 46168.317,
+        "mean": 46168.317,
+        "mad": 0
+      },
+      "orchestration_wall_time_ms": {
+        "n": 1,
+        "min": 53583.484,
+        "p50": 53583.484,
+        "p95": 53583.484,
+        "max": 53583.484,
+        "mean": 53583.484,
+        "mad": 0
+      },
+      "latency_ms": null,
+      "peak_rss_bytes": {
+        "n": 1,
+        "min": 315461632,
+        "p50": 315461632,
+        "p95": 315461632,
+        "max": 315461632,
+        "mean": 315461632,
+        "mad": 0
+      },
+      "rss_slope_bytes_per_minute": {
+        "n": 1,
+        "min": -3043839.615,
+        "p50": -3043839.615,
+        "p95": -3043839.615,
+        "max": -3043839.615,
+        "mean": -3043839.615,
+        "mad": 0
+      },
+      "succeeded_requests": null,
+      "failed_requests": null,
+      "failure_rate": null,
+      "throughput_per_second": null
+    },
+    {
+      "shard": "startup",
+      "engine": "shotium",
+      "scenario": "lifecycle",
+      "concurrency": 1,
+      "status": "pass",
+      "ranking_eligible": true,
+      "runs": 1,
+      "shots": 3,
+      "wall_time_ms": {
+        "n": 1,
+        "min": 339.797,
+        "p50": 339.797,
+        "p95": 339.797,
+        "max": 339.797,
+        "mean": 339.797,
+        "mad": 0
+      },
+      "orchestration_wall_time_ms": {
+        "n": 1,
+        "min": 15222.629,
+        "p50": 15222.629,
+        "p95": 15222.629,
+        "max": 15222.629,
+        "mean": 15222.629,
+        "mad": 0
+      },
+      "latency_ms": {
+        "n": 3,
+        "min": 98.111,
+        "p50": 104.772,
+        "p95": 136.914,
+        "max": 136.914,
+        "mean": 113.266,
+        "mad": 6.661
+      },
+      "peak_rss_bytes": {
+        "n": 1,
+        "min": 482746368,
+        "p50": 482746368,
+        "p95": 482746368,
+        "max": 482746368,
+        "mean": 482746368,
+        "mad": 0
+      },
+      "rss_slope_bytes_per_minute": {
+        "n": 1,
+        "min": 1617676379.155,
+        "p50": 1617676379.155,
+        "p95": 1617676379.155,
+        "max": 1617676379.155,
+        "mean": 1617676379.155,
+        "mad": 0
+      },
+      "succeeded_requests": null,
+      "failed_requests": null,
+      "failure_rate": null,
+      "throughput_per_second": 8.828800725138832
+    },
+    {
+      "shard": "throughput",
+      "engine": "shotium",
+      "scenario": "warm",
+      "concurrency": 1,
+      "status": "noisy",
+      "ranking_eligible": false,
+      "runs": 1,
+      "shots": 0,
+      "wall_time_ms": {
+        "n": 1,
+        "min": 1873.202,
+        "p50": 1873.202,
+        "p95": 1873.202,
+        "max": 1873.202,
+        "mean": 1873.202,
+        "mad": 0
+      },
+      "orchestration_wall_time_ms": {
+        "n": 1,
+        "min": 9549.643,
+        "p50": 9549.643,
+        "p95": 9549.643,
+        "max": 9549.643,
+        "mean": 9549.643,
+        "mad": 0
+      },
+      "latency_ms": null,
+      "peak_rss_bytes": {
+        "n": 1,
+        "min": 323293184,
+        "p50": 323293184,
+        "p95": 323293184,
+        "max": 323293184,
+        "mean": 323293184,
+        "mad": 0
+      },
+      "rss_slope_bytes_per_minute": {
+        "n": 1,
+        "min": 8625797925.51,
+        "p50": 8625797925.51,
+        "p95": 8625797925.51,
+        "max": 8625797925.51,
+        "mean": 8625797925.51,
+        "mad": 0
+      },
+      "succeeded_requests": null,
+      "failed_requests": null,
+      "failure_rate": null,
+      "throughput_per_second": null
+    },
+    {
+      "shard": "throughput",
+      "engine": "shotium",
+      "scenario": "batch",
+      "concurrency": 1,
+      "status": "noisy",
+      "ranking_eligible": false,
+      "runs": 1,
+      "shots": 0,
+      "wall_time_ms": {
+        "n": 1,
+        "min": 46486.259,
+        "p50": 46486.259,
+        "p95": 46486.259,
+        "max": 46486.259,
+        "mean": 46486.259,
+        "mad": 0
+      },
+      "orchestration_wall_time_ms": {
+        "n": 1,
+        "min": 53751.734,
+        "p50": 53751.734,
+        "p95": 53751.734,
+        "max": 53751.734,
+        "mean": 53751.734,
+        "mad": 0
+      },
+      "latency_ms": null,
+      "peak_rss_bytes": {
+        "n": 1,
+        "min": 316612608,
+        "p50": 316612608,
+        "p95": 316612608,
+        "max": 316612608,
+        "mean": 316612608,
+        "mad": 0
+      },
+      "rss_slope_bytes_per_minute": {
+        "n": 1,
+        "min": -22430952.335,
+        "p50": -22430952.335,
+        "p95": -22430952.335,
+        "max": -22430952.335,
+        "mean": -22430952.335,
+        "mad": 0
+      },
+      "succeeded_requests": null,
+      "failed_requests": null,
+      "failure_rate": null,
+      "throughput_per_second": null
+    },
+    {
+      "shard": "throughput",
+      "engine": "shotium",
+      "scenario": "parallel",
+      "concurrency": 1,
+      "status": "noisy",
+      "ranking_eligible": false,
+      "runs": 1,
+      "shots": 0,
+      "wall_time_ms": {
+        "n": 1,
+        "min": 46695.616,
+        "p50": 46695.616,
+        "p95": 46695.616,
+        "max": 46695.616,
+        "mean": 46695.616,
+        "mad": 0
+      },
+      "orchestration_wall_time_ms": {
+        "n": 1,
+        "min": 58765.179,
+        "p50": 58765.179,
+        "p95": 58765.179,
+        "max": 58765.179,
+        "mean": 58765.179,
+        "mad": 0
+      },
+      "latency_ms": null,
+      "peak_rss_bytes": {
+        "n": 1,
+        "min": 309530624,
+        "p50": 309530624,
+        "p95": 309530624,
+        "max": 309530624,
+        "mean": 309530624,
+        "mad": 0
+      },
+      "rss_slope_bytes_per_minute": {
+        "n": 1,
+        "min": -19142711.533,
+        "p50": -19142711.533,
+        "p95": -19142711.533,
+        "max": -19142711.533,
+        "mean": -19142711.533,
+        "mad": 0
+      },
+      "succeeded_requests": null,
+      "failed_requests": null,
+      "failure_rate": null,
+      "throughput_per_second": null
+    },
+    {
+      "shard": "throughput",
+      "engine": "shotium",
+      "scenario": "parallel",
+      "concurrency": 2,
+      "status": "noisy",
+      "ranking_eligible": false,
+      "runs": 1,
+      "shots": 0,
+      "wall_time_ms": {
+        "n": 1,
+        "min": 46950.444,
+        "p50": 46950.444,
+        "p95": 46950.444,
+        "max": 46950.444,
+        "mean": 46950.444,
+        "mad": 0
+      },
+      "orchestration_wall_time_ms": {
+        "n": 1,
+        "min": 54807.967,
+        "p50": 54807.967,
+        "p95": 54807.967,
+        "max": 54807.967,
+        "mean": 54807.967,
+        "mad": 0
+      },
+      "latency_ms": null,
+      "peak_rss_bytes": {
+        "n": 1,
+        "min": 316026880,
+        "p50": 316026880,
+        "p95": 316026880,
+        "max": 316026880,
+        "mean": 316026880,
+        "mad": 0
+      },
+      "rss_slope_bytes_per_minute": {
+        "n": 1,
+        "min": 11584982.972,
+        "p50": 11584982.972,
+        "p95": 11584982.972,
+        "max": 11584982.972,
+        "mean": 11584982.972,
+        "mad": 0
+      },
+      "succeeded_requests": null,
+      "failed_requests": null,
+      "failure_rate": null,
+      "throughput_per_second": null
+    },
+    {
+      "shard": "resident",
+      "engine": "shotium",
+      "scenario": "resident",
+      "concurrency": 1,
+      "status": "noisy",
+      "ranking_eligible": false,
+      "runs": 1,
+      "shots": 0,
+      "wall_time_ms": {
+        "n": 1,
+        "min": 23117.552,
+        "p50": 23117.552,
+        "p95": 23117.552,
+        "max": 23117.552,
+        "mean": 23117.552,
+        "mad": 0
+      },
+      "orchestration_wall_time_ms": {
+        "n": 1,
+        "min": 31091.453,
+        "p50": 31091.453,
+        "p95": 31091.453,
+        "max": 31091.453,
+        "mean": 31091.453,
+        "mad": 0
+      },
+      "latency_ms": null,
+      "peak_rss_bytes": {
+        "n": 1,
+        "min": 554463232,
+        "p50": 554463232,
+        "p95": 554463232,
+        "max": 554463232,
+        "mean": 554463232,
+        "mad": 0
+      },
+      "rss_slope_bytes_per_minute": {
+        "n": 1,
+        "min": 126930778.367,
+        "p50": 126930778.367,
+        "p95": 126930778.367,
+        "max": 126930778.367,
+        "mean": 126930778.367,
+        "mad": 0
+      },
+      "succeeded_requests": null,
+      "failed_requests": null,
+      "failure_rate": null,
+      "throughput_per_second": null
+    },
+    {
+      "shard": "resilience",
+      "engine": "shotium",
+      "scenario": "faults",
+      "concurrency": 1,
+      "status": "noisy",
+      "ranking_eligible": false,
+      "runs": 1,
+      "shots": 0,
+      "wall_time_ms": {
+        "n": 1,
+        "min": 46975.901,
+        "p50": 46975.901,
+        "p95": 46975.901,
+        "max": 46975.901,
+        "mean": 46975.901,
+        "mad": 0
+      },
+      "orchestration_wall_time_ms": {
+        "n": 1,
+        "min": 54888.169,
+        "p50": 54888.169,
+        "p95": 54888.169,
+        "max": 54888.169,
+        "mean": 54888.169,
+        "mad": 0
+      },
+      "latency_ms": null,
+      "peak_rss_bytes": {
+        "n": 1,
+        "min": 311267328,
+        "p50": 311267328,
+        "p95": 311267328,
+        "max": 311267328,
+        "mean": 311267328,
+        "mad": 0
+      },
+      "rss_slope_bytes_per_minute": {
+        "n": 1,
+        "min": -25237365.406,
+        "p50": -25237365.406,
+        "p95": -25237365.406,
+        "max": -25237365.406,
+        "mean": -25237365.406,
+        "mad": 0
+      },
+      "succeeded_requests": null,
+      "failed_requests": null,
+      "failure_rate": null,
+      "throughput_per_second": null
+    },
+    {
+      "shard": "resilience",
+      "engine": "shotium",
+      "scenario": "soak",
+      "concurrency": 4,
+      "status": "noisy",
+      "ranking_eligible": false,
+      "runs": 1,
+      "shots": 0,
+      "wall_time_ms": {
+        "n": 1,
+        "min": 46432.043,
+        "p50": 46432.043,
+        "p95": 46432.043,
+        "max": 46432.043,
+        "mean": 46432.043,
+        "mad": 0
+      },
+      "orchestration_wall_time_ms": {
+        "n": 1,
+        "min": 54233.48,
+        "p50": 54233.48,
+        "p95": 54233.48,
+        "max": 54233.48,
+        "mean": 54233.48,
+        "mad": 0
+      },
+      "latency_ms": null,
+      "peak_rss_bytes": {
+        "n": 1,
+        "min": 311152640,
+        "p50": 311152640,
+        "p95": 311152640,
+        "max": 311152640,
+        "mean": 311152640,
+        "mad": 0
+      },
+      "rss_slope_bytes_per_minute": {
+        "n": 1,
+        "min": 14791687.806,
+        "p50": 14791687.806,
+        "p95": 14791687.806,
+        "max": 14791687.806,
+        "mean": 14791687.806,
+        "mad": 0
+      },
+      "succeeded_requests": null,
+      "failed_requests": null,
+      "failure_rate": null,
+      "throughput_per_second": null
+    }
+  ],
+  "execution_order": [
+    {
+      "shard": "startup",
+      "engine": "shotium",
+      "scenario": "cold",
+      "repeat": 1,
+      "attempt": 1,
+      "concurrency": 1,
+      "iterations": 1
+    },
+    {
+      "shard": "startup",
+      "engine": "shotium",
+      "scenario": "cold-settled",
+      "repeat": 1,
+      "attempt": 1,
+      "concurrency": 1,
+      "iterations": 1
+    },
+    {
+      "shard": "startup",
+      "engine": "shotium",
+      "scenario": "cold-settled",
+      "repeat": 1,
+      "attempt": 2,
+      "concurrency": 1,
+      "iterations": 1
+    },
+    {
+      "shard": "startup",
+      "engine": "shotium",
+      "scenario": "lifecycle",
+      "repeat": 1,
+      "attempt": 1,
+      "concurrency": 1,
+      "iterations": 3
+    },
+    {
+      "shard": "throughput",
+      "engine": "shotium",
+      "scenario": "warm",
+      "repeat": 1,
+      "attempt": 1,
+      "concurrency": 1,
+      "iterations": 5
+    },
+    {
+      "shard": "throughput",
+      "engine": "shotium",
+      "scenario": "warm",
+      "repeat": 1,
+      "attempt": 2,
+      "concurrency": 1,
+      "iterations": 5
+    },
+    {
+      "shard": "throughput",
+      "engine": "shotium",
+      "scenario": "batch",
+      "repeat": 1,
+      "attempt": 1,
+      "concurrency": 1,
+      "iterations": 1
+    },
+    {
+      "shard": "throughput",
+      "engine": "shotium",
+      "scenario": "batch",
+      "repeat": 1,
+      "attempt": 2,
+      "concurrency": 1,
+      "iterations": 1
+    },
+    {
+      "shard": "throughput",
+      "engine": "shotium",
+      "scenario": "parallel",
+      "repeat": 1,
+      "attempt": 1,
+      "concurrency": 1,
+      "iterations": 1
+    },
+    {
+      "shard": "throughput",
+      "engine": "shotium",
+      "scenario": "parallel",
+      "repeat": 1,
+      "attempt": 2,
+      "concurrency": 1,
+      "iterations": 1
+    },
+    {
+      "shard": "throughput",
+      "engine": "shotium",
+      "scenario": "parallel",
+      "repeat": 1,
+      "attempt": 1,
+      "concurrency": 2,
+      "iterations": 1
+    },
+    {
+      "shard": "throughput",
+      "engine": "shotium",
+      "scenario": "parallel",
+      "repeat": 1,
+      "attempt": 2,
+      "concurrency": 2,
+      "iterations": 1
+    },
+    {
+      "shard": "resident",
+      "engine": "shotium",
+      "scenario": "resident",
+      "repeat": 1,
+      "attempt": 1,
+      "concurrency": 1,
+      "iterations": 1
+    },
+    {
+      "shard": "resident",
+      "engine": "shotium",
+      "scenario": "resident",
+      "repeat": 1,
+      "attempt": 2,
+      "concurrency": 1,
+      "iterations": 1
+    },
+    {
+      "shard": "resilience",
+      "engine": "shotium",
+      "scenario": "faults",
+      "repeat": 1,
+      "attempt": 1,
+      "concurrency": 1,
+      "iterations": 1
+    },
+    {
+      "shard": "resilience",
+      "engine": "shotium",
+      "scenario": "faults",
+      "repeat": 1,
+      "attempt": 2,
+      "concurrency": 1,
+      "iterations": 1
+    },
+    {
+      "shard": "resilience",
+      "engine": "shotium",
+      "scenario": "soak",
+      "repeat": 1,
+      "attempt": 1,
+      "concurrency": 4,
+      "iterations": 50
+    },
+    {
+      "shard": "resilience",
+      "engine": "shotium",
+      "scenario": "soak",
+      "repeat": 1,
+      "attempt": 2,
+      "concurrency": 4,
+      "iterations": 50
+    }
+  ],
+  "execution_shards": [
+    {
+      "shard": "startup",
+      "status": "noisy",
+      "generated_utc": "2026-08-29T17:09:37.812Z",
+      "host": {
+        "runner": "GitHub Actions 1000002944",
+        "os": {
+          "platform": "Windows",
+          "distro": "Microsoft Windows 11 Enterprise",
+          "release": "10.0.26200",
+          "codename": "25H2",
+          "kernel": "10.0.26200",
+          "arch": "arm64",
+          "hostname": "runnervmmioek",
+          "fqdn": "runnervmmioek",
+          "codepage": "437",
+          "logofile": "windows",
+          "serial": "00329-00000-00003-AA947",
+          "build": "26200",
+          "servicepack": "0.0",
+          "uefi": true,
+          "hypervisor": true,
+          "remoteSession": false
+        },
+        "cpu": {
+          "manufacturer": "Cobalt 100",
+          "brand": "100",
+          "vendor": "MICROSOFT CORPORATION",
+          "family": "8",
+          "model": "D49",
+          "stepping": "",
+          "revision": "0",
+          "voltage": "",
+          "speed": 3.4,
+          "speedMin": 3.4,
+          "speedMax": 3.4,
+          "governor": "",
+          "cores": 4,
+          "physicalCores": 4,
+          "performanceCores": 4,
+          "efficiencyCores": 0,
+          "processors": 1,
+          "socket": "None",
+          "flags": "de",
+          "virtualization": true,
+          "cache": {
+            "l1d": 0,
+            "l1i": 0,
+            "l2": 4194304,
+            "l3": 134217728
+          }
+        },
+        "memory_bytes": 17169428480,
+        "logical_processors": 4,
+        "node": "v24.19.0",
+        "npm": "npm/11.17.0 node/v24.19.0 win32 arm64 workspaces/false ci/github-actions/dotcom-hosted"
+      },
+      "engines": [
+        {
+          "engine": "shotium",
+          "status": "noisy",
+          "reason": null,
+          "executable": "C:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\@shotkit\\shotium-win32-arm64\\shotium.node",
+          "architectures": [
+            "arm64"
+          ],
+          "sha256": "20b19c6f215404f3021231132624e967cf2d828669ee8d22b59304b42b1f5003",
+          "binary_version": "0.3.2",
+          "binaries": [
+            {
+              "file": "C:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\@shotkit\\shotium-win32-arm64\\shotium.dll",
+              "architectures": [
+                "arm64"
+              ],
+              "native": true,
+              "sha256": "e7fee4a84e770e0c3993ed5ef5cc533a5d7c9f21a6edcc073111ed1a26a180ee"
+            },
+            {
+              "file": "C:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\@shotkit\\shotium-win32-arm64\\shotium.node",
+              "architectures": [
+                "arm64"
+              ],
+              "native": true,
+              "sha256": "20b19c6f215404f3021231132624e967cf2d828669ee8d22b59304b42b1f5003"
+            }
+          ]
+        },
+        {
+          "engine": "puppeteer-shell",
+          "status": "n/a",
+          "reason": "the package has no native browser for this platform architecture",
+          "executable": "C:\\Users\\runneradmin\\.cache\\puppeteer\\chrome-headless-shell\\win64-152.0.7977.42\\chrome-headless-shell-win64\\chrome-headless-shell.exe",
+          "architectures": [
+            "x64"
+          ],
+          "binaries": [
+            {
+              "file": "C:\\Users\\runneradmin\\.cache\\puppeteer\\chrome-headless-shell\\win64-152.0.7977.42\\chrome-headless-shell-win64\\chrome-headless-shell.exe",
+              "architectures": [
+                "x64"
+              ],
+              "native": false,
+              "sha256": "6f90e8e5d2f925adbef1e1065df228f75c060d9f1bf5aee9b00bd201edbb9499"
+            }
+          ]
+        },
+        {
+          "engine": "puppeteer-chrome",
+          "status": "n/a",
+          "reason": "the package has no native browser for this platform architecture",
+          "executable": "C:\\Users\\runneradmin\\.cache\\puppeteer\\chrome\\win64-152.0.7977.42\\chrome-win64\\chrome.exe",
+          "architectures": [
+            "x64"
+          ],
+          "binaries": [
+            {
+              "file": "C:\\Users\\runneradmin\\.cache\\puppeteer\\chrome\\win64-152.0.7977.42\\chrome-win64\\chrome.exe",
+              "architectures": [
+                "x64"
+              ],
+              "native": false,
+              "sha256": "b3b221d637b5b6a745c51cac1d22a618e7da5e67202be52695999886720c7d56"
+            }
+          ]
+        },
+        {
+          "engine": "playwright-shell",
+          "status": "n/a",
+          "reason": "the package currently supplies an x64 browser on Windows arm64",
+          "executable": "C:\\Users\\runneradmin\\AppData\\Local\\ms-playwright\\chromium_headless_shell-1234\\chrome-headless-shell-win64\\chrome-headless-shell.exe",
+          "architectures": [
+            "x64"
+          ],
+          "binaries": [
+            {
+              "file": "C:\\Users\\runneradmin\\AppData\\Local\\ms-playwright\\chromium_headless_shell-1234\\chrome-headless-shell-win64\\chrome-headless-shell.exe",
+              "architectures": [
+                "x64"
+              ],
+              "native": false,
+              "sha256": "ce4635cd0e5dc0e21494542a701f347e91c1f1d821970578d97ed8df4ced50ef"
+            }
+          ]
+        },
+        {
+          "engine": "playwright-chrome",
+          "status": "n/a",
+          "reason": "the package currently supplies an x64 browser on Windows arm64",
+          "executable": "C:\\Users\\runneradmin\\AppData\\Local\\ms-playwright\\chromium-1234\\chrome-win64\\chrome.exe",
+          "architectures": [
+            "x64"
+          ],
+          "binaries": [
+            {
+              "file": "C:\\Users\\runneradmin\\AppData\\Local\\ms-playwright\\chromium-1234\\chrome-win64\\chrome.exe",
+              "architectures": [
+                "x64"
+              ],
+              "native": false,
+              "sha256": "409805a16d6416087e6b2f778df1cf8f7bbb267d6b99f6b5bb0a618eace234f2"
+            }
+          ]
+        }
+      ],
+      "execution_order": [
+        {
+          "shard": "startup",
+          "engine": "shotium",
+          "scenario": "cold",
+          "repeat": 1,
+          "attempt": 1,
+          "concurrency": 1,
+          "iterations": 1
+        },
+        {
+          "shard": "startup",
+          "engine": "shotium",
+          "scenario": "cold-settled",
+          "repeat": 1,
+          "attempt": 1,
+          "concurrency": 1,
+          "iterations": 1
+        },
+        {
+          "shard": "startup",
+          "engine": "shotium",
+          "scenario": "cold-settled",
+          "repeat": 1,
+          "attempt": 2,
+          "concurrency": 1,
+          "iterations": 1
+        },
+        {
+          "shard": "startup",
+          "engine": "shotium",
+          "scenario": "lifecycle",
+          "repeat": 1,
+          "attempt": 1,
+          "concurrency": 1,
+          "iterations": 3
+        }
+      ],
+      "raw_samples": 4,
+      "failures": 0,
+      "artifact": {
+        "name": "benchmark-evidence-win32-arm64-startup-33264499865-a1",
+        "run_url": "https://github.com/sj817/shotium/actions/runs/33264499865",
+        "generated_utc": "2026-08-29T17:09:39.365Z",
+        "sha256": "2590726b5c7d91991a860099e1a65ea9975e7e7b6951a7b6080517df6e5c0a19",
+        "files": [
+          {
+            "path": "baselines/shotium.css-heavy.png",
+            "bytes": 207257,
+            "sha256": "8f83c4f11599c2d0cfd08fc388bd16c1e2455798c3c12a568c689f4bf5fd0a04"
+          },
+          {
+            "path": "baselines/shotium.flex.png",
+            "bytes": 83574,
+            "sha256": "b04b64ac1bcd40810b123a1980bd5d528781d6aedbcaecf7333ef225a3d49244"
+          },
+          {
+            "path": "baselines/shotium.simple.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "logs/shotium.cold-settled.c1.r1.a1.stderr.log",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "logs/shotium.cold-settled.c1.r1.a1.stdout.log",
+            "bytes": 58464,
+            "sha256": "ca2888713d57c9c190b33540f6df1bdfb7806b7866566e1a06c53a9c04e6995a"
+          },
+          {
+            "path": "logs/shotium.cold-settled.c1.r1.a2.stderr.log",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "logs/shotium.cold-settled.c1.r1.a2.stdout.log",
+            "bytes": 57093,
+            "sha256": "c35d594fe7a6e3e7c2c86ac49a937cb9508870b86415cfbd74cc244369c5cc13"
+          },
+          {
+            "path": "logs/shotium.cold.c1.r1.a1.stderr.log",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "logs/shotium.cold.c1.r1.a1.stdout.log",
+            "bytes": 3998,
+            "sha256": "e3e0ba6c0fc0ac82bc11ed1e16afca92ceed4d0f0976c576f61293accc623738"
+          },
+          {
+            "path": "logs/shotium.lifecycle.c1.r1.a1.stderr.log",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "logs/shotium.lifecycle.c1.r1.a1.stdout.log",
+            "bytes": 22507,
+            "sha256": "3da3316e071e36bd8efcf5d5e97aa391433b190d31ad85790e275e91fafa63b4"
+          },
+          {
+            "path": "run-config.json",
+            "bytes": 1548,
+            "sha256": "f0e719cd565b89dc26415c2891234b6893dffe3cae3b5f9a1f602364b0f4e91d"
+          },
+          {
+            "path": "samples/shotium.api-smoke.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.cold-settled.settle.r1.a1.s01.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.cold-settled.settle.r1.a1.s02.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.cold-settled.settle.r1.a1.s03.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.cold-settled.settle.r1.a1.s04.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.cold-settled.settle.r1.a1.s05.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.cold-settled.settle.r1.a1.s06.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.cold-settled.settle.r1.a1.s07.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.cold-settled.settle.r1.a2.s01.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.cold-settled.settle.r1.a2.s02.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.cold-settled.settle.r1.a2.s03.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.cold-settled.settle.r1.a2.s04.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.cold-settled.settle.r1.a2.s05.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.cold-settled.settle.r1.a2.s06.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.cold-settled.settle.r1.a2.s07.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.lifecycle.c1.r1.a1.s00001.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.lifecycle.c1.r1.a1.s00002.png",
+            "bytes": 207257,
+            "sha256": "8f83c4f11599c2d0cfd08fc388bd16c1e2455798c3c12a568c689f4bf5fd0a04"
+          },
+          {
+            "path": "samples/shotium.lifecycle.c1.r1.a1.s00003.png",
+            "bytes": 83574,
+            "sha256": "b04b64ac1bcd40810b123a1980bd5d528781d6aedbcaecf7333ef225a3d49244"
+          },
+          {
+            "path": "samples/shotium.simple.cold.c1.r1.a1.s00001.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "telemetry/shotium.cold-settled.c1.r1.a1.json",
+            "bytes": 590095,
+            "sha256": "915e8ade4ee5bc16d23815769a7760d3ef1a352f437e1381d2f489e07e388df2"
+          },
+          {
+            "path": "telemetry/shotium.cold-settled.c1.r1.a2.json",
+            "bytes": 584967,
+            "sha256": "d62158cb6f3933e2295a0a937176f17cfae3cac09ae74ccc4e7e31ba0bc2ee8b"
+          },
+          {
+            "path": "telemetry/shotium.cold.c1.r1.a1.json",
+            "bytes": 5362,
+            "sha256": "080a42eaef8572aa6aef1379ea4b5ef03a64a0957467583f641ff8af5418a3ee"
+          },
+          {
+            "path": "telemetry/shotium.lifecycle.c1.r1.a1.json",
+            "bytes": 157778,
+            "sha256": "f4eb569ac2342e67b2b793f5ee335bb5327be3934c9141df5ea373789deba48a"
+          }
+        ],
+        "uploaded": true,
+        "upload_recorded_utc": "2026-08-29T17:09:42.356Z",
+        "actions_artifact_id": "9718331138",
+        "actions_artifact_url": "https://github.com/sj817/shotium/actions/runs/33264499865/artifacts/9718331138",
+        "actions_artifact_digest": "46a0966a13c9fb30a2b1aa9443cfa0382017f1eef1f6027cf1da62ef7eaefd5b"
+      },
+      "artifact_error": null
+    },
+    {
+      "shard": "throughput",
+      "status": "noisy",
+      "generated_utc": "2026-08-29T17:11:47.672Z",
+      "host": {
+        "runner": "GitHub Actions 1000002930",
+        "os": {
+          "platform": "Windows",
+          "distro": "Microsoft Windows 11 Enterprise",
+          "release": "10.0.26200",
+          "codename": "25H2",
+          "kernel": "10.0.26200",
+          "arch": "arm64",
+          "hostname": "runnervmmioek",
+          "fqdn": "runnervmmioek",
+          "codepage": "437",
+          "logofile": "windows",
+          "serial": "00329-00000-00003-AA947",
+          "build": "26200",
+          "servicepack": "0.0",
+          "uefi": true,
+          "hypervisor": true,
+          "remoteSession": false
+        },
+        "cpu": {
+          "manufacturer": "Cobalt 100",
+          "brand": "100",
+          "vendor": "MICROSOFT CORPORATION",
+          "family": "8",
+          "model": "D49",
+          "stepping": "",
+          "revision": "0",
+          "voltage": "",
+          "speed": 3.4,
+          "speedMin": 3.4,
+          "speedMax": 3.4,
+          "governor": "",
+          "cores": 4,
+          "physicalCores": 4,
+          "performanceCores": 4,
+          "efficiencyCores": 0,
+          "processors": 1,
+          "socket": "None",
+          "flags": "de",
+          "virtualization": true,
+          "cache": {
+            "l1d": 0,
+            "l1i": 0,
+            "l2": 4194304,
+            "l3": 134217728
+          }
+        },
+        "memory_bytes": 17169428480,
+        "logical_processors": 4,
+        "node": "v24.19.0",
+        "npm": "npm/11.17.0 node/v24.19.0 win32 arm64 workspaces/false ci/github-actions/dotcom-hosted"
+      },
+      "engines": [
+        {
+          "engine": "shotium",
+          "status": "noisy",
+          "reason": null,
+          "executable": "C:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\@shotkit\\shotium-win32-arm64\\shotium.node",
+          "architectures": [
+            "arm64"
+          ],
+          "sha256": "20b19c6f215404f3021231132624e967cf2d828669ee8d22b59304b42b1f5003",
+          "binary_version": "0.3.2",
+          "binaries": [
+            {
+              "file": "C:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\@shotkit\\shotium-win32-arm64\\shotium.dll",
+              "architectures": [
+                "arm64"
+              ],
+              "native": true,
+              "sha256": "e7fee4a84e770e0c3993ed5ef5cc533a5d7c9f21a6edcc073111ed1a26a180ee"
+            },
+            {
+              "file": "C:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\@shotkit\\shotium-win32-arm64\\shotium.node",
+              "architectures": [
+                "arm64"
+              ],
+              "native": true,
+              "sha256": "20b19c6f215404f3021231132624e967cf2d828669ee8d22b59304b42b1f5003"
+            }
+          ]
+        },
+        {
+          "engine": "puppeteer-shell",
+          "status": "n/a",
+          "reason": "the package has no native browser for this platform architecture",
+          "executable": "C:\\Users\\runneradmin\\.cache\\puppeteer\\chrome-headless-shell\\win64-152.0.7977.42\\chrome-headless-shell-win64\\chrome-headless-shell.exe",
+          "architectures": [
+            "x64"
+          ],
+          "binaries": [
+            {
+              "file": "C:\\Users\\runneradmin\\.cache\\puppeteer\\chrome-headless-shell\\win64-152.0.7977.42\\chrome-headless-shell-win64\\chrome-headless-shell.exe",
+              "architectures": [
+                "x64"
+              ],
+              "native": false,
+              "sha256": "6f90e8e5d2f925adbef1e1065df228f75c060d9f1bf5aee9b00bd201edbb9499"
+            }
+          ]
+        },
+        {
+          "engine": "puppeteer-chrome",
+          "status": "n/a",
+          "reason": "the package has no native browser for this platform architecture",
+          "executable": "C:\\Users\\runneradmin\\.cache\\puppeteer\\chrome\\win64-152.0.7977.42\\chrome-win64\\chrome.exe",
+          "architectures": [
+            "x64"
+          ],
+          "binaries": [
+            {
+              "file": "C:\\Users\\runneradmin\\.cache\\puppeteer\\chrome\\win64-152.0.7977.42\\chrome-win64\\chrome.exe",
+              "architectures": [
+                "x64"
+              ],
+              "native": false,
+              "sha256": "b3b221d637b5b6a745c51cac1d22a618e7da5e67202be52695999886720c7d56"
+            }
+          ]
+        },
+        {
+          "engine": "playwright-shell",
+          "status": "n/a",
+          "reason": "the package currently supplies an x64 browser on Windows arm64",
+          "executable": "C:\\Users\\runneradmin\\AppData\\Local\\ms-playwright\\chromium_headless_shell-1234\\chrome-headless-shell-win64\\chrome-headless-shell.exe",
+          "architectures": [
+            "x64"
+          ],
+          "binaries": [
+            {
+              "file": "C:\\Users\\runneradmin\\AppData\\Local\\ms-playwright\\chromium_headless_shell-1234\\chrome-headless-shell-win64\\chrome-headless-shell.exe",
+              "architectures": [
+                "x64"
+              ],
+              "native": false,
+              "sha256": "ce4635cd0e5dc0e21494542a701f347e91c1f1d821970578d97ed8df4ced50ef"
+            }
+          ]
+        },
+        {
+          "engine": "playwright-chrome",
+          "status": "n/a",
+          "reason": "the package currently supplies an x64 browser on Windows arm64",
+          "executable": "C:\\Users\\runneradmin\\AppData\\Local\\ms-playwright\\chromium-1234\\chrome-win64\\chrome.exe",
+          "architectures": [
+            "x64"
+          ],
+          "binaries": [
+            {
+              "file": "C:\\Users\\runneradmin\\AppData\\Local\\ms-playwright\\chromium-1234\\chrome-win64\\chrome.exe",
+              "architectures": [
+                "x64"
+              ],
+              "native": false,
+              "sha256": "409805a16d6416087e6b2f778df1cf8f7bbb267d6b99f6b5bb0a618eace234f2"
+            }
+          ]
+        }
+      ],
+      "execution_order": [
+        {
+          "shard": "throughput",
+          "engine": "shotium",
+          "scenario": "warm",
+          "repeat": 1,
+          "attempt": 1,
+          "concurrency": 1,
+          "iterations": 5
+        },
+        {
+          "shard": "throughput",
+          "engine": "shotium",
+          "scenario": "warm",
+          "repeat": 1,
+          "attempt": 2,
+          "concurrency": 1,
+          "iterations": 5
+        },
+        {
+          "shard": "throughput",
+          "engine": "shotium",
+          "scenario": "batch",
+          "repeat": 1,
+          "attempt": 1,
+          "concurrency": 1,
+          "iterations": 1
+        },
+        {
+          "shard": "throughput",
+          "engine": "shotium",
+          "scenario": "batch",
+          "repeat": 1,
+          "attempt": 2,
+          "concurrency": 1,
+          "iterations": 1
+        },
+        {
+          "shard": "throughput",
+          "engine": "shotium",
+          "scenario": "parallel",
+          "repeat": 1,
+          "attempt": 1,
+          "concurrency": 1,
+          "iterations": 1
+        },
+        {
+          "shard": "throughput",
+          "engine": "shotium",
+          "scenario": "parallel",
+          "repeat": 1,
+          "attempt": 2,
+          "concurrency": 1,
+          "iterations": 1
+        },
+        {
+          "shard": "throughput",
+          "engine": "shotium",
+          "scenario": "parallel",
+          "repeat": 1,
+          "attempt": 1,
+          "concurrency": 2,
+          "iterations": 1
+        },
+        {
+          "shard": "throughput",
+          "engine": "shotium",
+          "scenario": "parallel",
+          "repeat": 1,
+          "attempt": 2,
+          "concurrency": 2,
+          "iterations": 1
+        }
+      ],
+      "raw_samples": 8,
+      "failures": 0,
+      "artifact": {
+        "name": "benchmark-evidence-win32-arm64-throughput-33264499865-a1",
+        "run_url": "https://github.com/sj817/shotium/actions/runs/33264499865",
+        "generated_utc": "2026-08-29T17:11:49.154Z",
+        "sha256": "72cfb94b1ae255e78ddf8250aa28e567f500e683c7b8854ff4588c93d281cd21",
+        "files": [
+          {
+            "path": "logs/shotium.batch.c1.r1.a1.stderr.log",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "logs/shotium.batch.c1.r1.a1.stdout.log",
+            "bytes": 60349,
+            "sha256": "ca2a701d9c8ff9f10fb93cde9178824252b21a3694fc772e0ada209aa083b80c"
+          },
+          {
+            "path": "logs/shotium.batch.c1.r1.a2.stderr.log",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "logs/shotium.batch.c1.r1.a2.stdout.log",
+            "bytes": 60396,
+            "sha256": "4cdb177b6a24ab1fb47478b8731b8d006bd90ab0807e417f4a11805364963453"
+          },
+          {
+            "path": "logs/shotium.parallel.c1.r1.a1.stderr.log",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "logs/shotium.parallel.c1.r1.a1.stdout.log",
+            "bytes": 58838,
+            "sha256": "a9b0d0b94803dfd2348ceb21a1bc529d402ae00040ab5c7e9bf206bba743bd08"
+          },
+          {
+            "path": "logs/shotium.parallel.c1.r1.a2.stderr.log",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "logs/shotium.parallel.c1.r1.a2.stdout.log",
+            "bytes": 61380,
+            "sha256": "9d01a0ab75eacff3306f7c59aa71859fbdbca0a83cc4b69cc4b9dfb23a79a470"
+          },
+          {
+            "path": "logs/shotium.parallel.c2.r1.a1.stderr.log",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "logs/shotium.parallel.c2.r1.a1.stdout.log",
+            "bytes": 61143,
+            "sha256": "1dbf78a46b464a2a8e5521f500a1134e50b796df49ca9b7aba3e2c50ed10e60c"
+          },
+          {
+            "path": "logs/shotium.parallel.c2.r1.a2.stderr.log",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "logs/shotium.parallel.c2.r1.a2.stdout.log",
+            "bytes": 61530,
+            "sha256": "ae91faedb6c955083c850b37c7008d0881427e70880551cfcb4df152e63d48e4"
+          },
+          {
+            "path": "logs/shotium.warm.c1.r1.a1.stderr.log",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "logs/shotium.warm.c1.r1.a1.stdout.log",
+            "bytes": 5309,
+            "sha256": "e7fe04257e5f709400dd20d3370d991377a3c945d3aaa9513cf1d22f8ee008eb"
+          },
+          {
+            "path": "logs/shotium.warm.c1.r1.a2.stderr.log",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "logs/shotium.warm.c1.r1.a2.stdout.log",
+            "bytes": 4986,
+            "sha256": "e3b3492ffaed82afee39cf332c78109e36b84e7974f739cbda73e958a0828ff0"
+          },
+          {
+            "path": "run-config.json",
+            "bytes": 1560,
+            "sha256": "c1789a58d2ed2f54262524485b9a7b06151ec6cb5a4b7055496423cfad2c9035"
+          },
+          {
+            "path": "samples/shotium.api-smoke.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.batch.settle.r1.a1.s01.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.batch.settle.r1.a1.s02.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.batch.settle.r1.a1.s03.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.batch.settle.r1.a1.s04.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.batch.settle.r1.a1.s05.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.batch.settle.r1.a2.s01.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.batch.settle.r1.a2.s02.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.batch.settle.r1.a2.s03.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.batch.settle.r1.a2.s04.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.batch.settle.r1.a2.s05.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.batch.settle.r1.a2.s06.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.batch.settle.r1.a2.s07.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.parallel.settle.r1.a1.s01.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.parallel.settle.r1.a1.s02.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.parallel.settle.r1.a1.s03.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.parallel.settle.r1.a1.s04.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.parallel.settle.r1.a1.s05.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.parallel.settle.r1.a1.s06.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.parallel.settle.r1.a1.s07.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.parallel.settle.r1.a2.s01.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.parallel.settle.r1.a2.s02.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.parallel.settle.r1.a2.s03.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.parallel.settle.r1.a2.s04.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.parallel.settle.r1.a2.s05.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.parallel.settle.r1.a2.s06.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.parallel.settle.r1.a2.s07.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.warm.settle.r1.a1.s01.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.warm.settle.r1.a1.s02.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.warm.settle.r1.a1.s03.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.warm.settle.r1.a1.s04.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.warm.settle.r1.a1.s05.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.warm.settle.r1.a1.s06.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.warm.settle.r1.a1.s07.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.warm.settle.r1.a1.s08.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.warm.settle.r1.a1.s09.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.warm.settle.r1.a1.s10.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.warm.settle.r1.a2.s01.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.warm.settle.r1.a2.s02.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.warm.settle.r1.a2.s03.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.warm.settle.r1.a2.s04.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.warm.settle.r1.a2.s05.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.warm.settle.r1.a2.s06.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.warm.settle.r1.a2.s07.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.warm.settle.r1.a2.s08.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.warm.settle.r1.a2.s09.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.warm.settle.r1.a2.s10.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "telemetry/shotium.batch.c1.r1.a1.json",
+            "bytes": 616519,
+            "sha256": "454761c9cd2560c6627c07cd677cc6f5f838c76f6198ef6f2fb4b08fe1743b25"
+          },
+          {
+            "path": "telemetry/shotium.batch.c1.r1.a2.json",
+            "bytes": 614530,
+            "sha256": "931e288f3908984e631b93149850313538d2714f219792f1a9fcaf94794087ed"
+          },
+          {
+            "path": "telemetry/shotium.parallel.c1.r1.a1.json",
+            "bytes": 600606,
+            "sha256": "21406d43ae3e1450cc698b8f4c68e60cacbe9302585baa8be1cb57890e7e10b3"
+          },
+          {
+            "path": "telemetry/shotium.parallel.c1.r1.a2.json",
+            "bytes": 619314,
+            "sha256": "1af19d3d634527fcac975386a37036a70a7e8237ff7d118ae07b8768ead326be"
+          },
+          {
+            "path": "telemetry/shotium.parallel.c2.r1.a1.json",
+            "bytes": 618340,
+            "sha256": "d9af506a1393c9436234bc6aaa30b35805c4426f3291b76a8a43e138c1f1b5f9"
+          },
+          {
+            "path": "telemetry/shotium.parallel.c2.r1.a2.json",
+            "bytes": 620803,
+            "sha256": "6be0f0595282988371a2e14a1e24ba16a5ce0a6e955d7e9fead21c3a1c3abf37"
+          },
+          {
+            "path": "telemetry/shotium.warm.c1.r1.a1.json",
+            "bytes": 23472,
+            "sha256": "08c9a2bc14a871245b1971c3d05066d519fbaecf0b33eb67472bd2403f3ed8f0"
+          },
+          {
+            "path": "telemetry/shotium.warm.c1.r1.a2.json",
+            "bytes": 19958,
+            "sha256": "4db63c6c32e282a4d53962278dbdcd16d5813ca453a8899acf1705f2f95dc623"
+          }
+        ],
+        "uploaded": true,
+        "upload_recorded_utc": "2026-08-29T17:11:53.063Z",
+        "actions_artifact_id": "9718361849",
+        "actions_artifact_url": "https://github.com/sj817/shotium/actions/runs/33264499865/artifacts/9718361849",
+        "actions_artifact_digest": "89f39dd7c17a901bcb1aeeaa75cd75ed2d396dee4fb88913b240b7ba8ecd9df9"
+      },
+      "artifact_error": null
+    },
+    {
+      "shard": "resident",
+      "status": "noisy",
+      "generated_utc": "2026-08-29T17:05:47.095Z",
+      "host": {
+        "runner": "GitHub Actions 1000002929",
+        "os": {
+          "platform": "Windows",
+          "distro": "Microsoft Windows 11 Enterprise",
+          "release": "10.0.26200",
+          "codename": "25H2",
+          "kernel": "10.0.26200",
+          "arch": "arm64",
+          "hostname": "runnervmmioek",
+          "fqdn": "runnervmmioek",
+          "codepage": "437",
+          "logofile": "windows",
+          "serial": "00329-00000-00003-AA947",
+          "build": "26200",
+          "servicepack": "0.0",
+          "uefi": true,
+          "hypervisor": true,
+          "remoteSession": false
+        },
+        "cpu": {
+          "manufacturer": "Cobalt 100",
+          "brand": "100",
+          "vendor": "MICROSOFT CORPORATION",
+          "family": "8",
+          "model": "D49",
+          "stepping": "",
+          "revision": "0",
+          "voltage": "",
+          "speed": 3.4,
+          "speedMin": 3.4,
+          "speedMax": 3.4,
+          "governor": "",
+          "cores": 4,
+          "physicalCores": 4,
+          "performanceCores": 4,
+          "efficiencyCores": 0,
+          "processors": 1,
+          "socket": "None",
+          "flags": "de",
+          "virtualization": true,
+          "cache": {
+            "l1d": 0,
+            "l1i": 0,
+            "l2": 4194304,
+            "l3": 134217728
+          }
+        },
+        "memory_bytes": 17169428480,
+        "logical_processors": 4,
+        "node": "v24.19.0",
+        "npm": "npm/11.17.0 node/v24.19.0 win32 arm64 workspaces/false ci/github-actions/dotcom-hosted"
+      },
+      "engines": [
+        {
+          "engine": "shotium",
+          "status": "noisy",
+          "reason": null,
+          "executable": "C:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\@shotkit\\shotium-win32-arm64\\shotium.node",
+          "architectures": [
+            "arm64"
+          ],
+          "sha256": "20b19c6f215404f3021231132624e967cf2d828669ee8d22b59304b42b1f5003",
+          "binary_version": "0.3.2",
+          "binaries": [
+            {
+              "file": "C:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\@shotkit\\shotium-win32-arm64\\shotium.dll",
+              "architectures": [
+                "arm64"
+              ],
+              "native": true,
+              "sha256": "e7fee4a84e770e0c3993ed5ef5cc533a5d7c9f21a6edcc073111ed1a26a180ee"
+            },
+            {
+              "file": "C:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\@shotkit\\shotium-win32-arm64\\shotium.node",
+              "architectures": [
+                "arm64"
+              ],
+              "native": true,
+              "sha256": "20b19c6f215404f3021231132624e967cf2d828669ee8d22b59304b42b1f5003"
+            }
+          ]
+        },
+        {
+          "engine": "puppeteer-shell",
+          "status": "n/a",
+          "reason": "the package has no native browser for this platform architecture",
+          "executable": "C:\\Users\\runneradmin\\.cache\\puppeteer\\chrome-headless-shell\\win64-152.0.7977.42\\chrome-headless-shell-win64\\chrome-headless-shell.exe",
+          "architectures": [
+            "x64"
+          ],
+          "binaries": [
+            {
+              "file": "C:\\Users\\runneradmin\\.cache\\puppeteer\\chrome-headless-shell\\win64-152.0.7977.42\\chrome-headless-shell-win64\\chrome-headless-shell.exe",
+              "architectures": [
+                "x64"
+              ],
+              "native": false,
+              "sha256": "6f90e8e5d2f925adbef1e1065df228f75c060d9f1bf5aee9b00bd201edbb9499"
+            }
+          ]
+        },
+        {
+          "engine": "puppeteer-chrome",
+          "status": "n/a",
+          "reason": "the package has no native browser for this platform architecture",
+          "executable": "C:\\Users\\runneradmin\\.cache\\puppeteer\\chrome\\win64-152.0.7977.42\\chrome-win64\\chrome.exe",
+          "architectures": [
+            "x64"
+          ],
+          "binaries": [
+            {
+              "file": "C:\\Users\\runneradmin\\.cache\\puppeteer\\chrome\\win64-152.0.7977.42\\chrome-win64\\chrome.exe",
+              "architectures": [
+                "x64"
+              ],
+              "native": false,
+              "sha256": "b3b221d637b5b6a745c51cac1d22a618e7da5e67202be52695999886720c7d56"
+            }
+          ]
+        },
+        {
+          "engine": "playwright-shell",
+          "status": "n/a",
+          "reason": "the package currently supplies an x64 browser on Windows arm64",
+          "executable": "C:\\Users\\runneradmin\\AppData\\Local\\ms-playwright\\chromium_headless_shell-1234\\chrome-headless-shell-win64\\chrome-headless-shell.exe",
+          "architectures": [
+            "x64"
+          ],
+          "binaries": [
+            {
+              "file": "C:\\Users\\runneradmin\\AppData\\Local\\ms-playwright\\chromium_headless_shell-1234\\chrome-headless-shell-win64\\chrome-headless-shell.exe",
+              "architectures": [
+                "x64"
+              ],
+              "native": false,
+              "sha256": "ce4635cd0e5dc0e21494542a701f347e91c1f1d821970578d97ed8df4ced50ef"
+            }
+          ]
+        },
+        {
+          "engine": "playwright-chrome",
+          "status": "n/a",
+          "reason": "the package currently supplies an x64 browser on Windows arm64",
+          "executable": "C:\\Users\\runneradmin\\AppData\\Local\\ms-playwright\\chromium-1234\\chrome-win64\\chrome.exe",
+          "architectures": [
+            "x64"
+          ],
+          "binaries": [
+            {
+              "file": "C:\\Users\\runneradmin\\AppData\\Local\\ms-playwright\\chromium-1234\\chrome-win64\\chrome.exe",
+              "architectures": [
+                "x64"
+              ],
+              "native": false,
+              "sha256": "409805a16d6416087e6b2f778df1cf8f7bbb267d6b99f6b5bb0a618eace234f2"
+            }
+          ]
+        }
+      ],
+      "execution_order": [
+        {
+          "shard": "resident",
+          "engine": "shotium",
+          "scenario": "resident",
+          "repeat": 1,
+          "attempt": 1,
+          "concurrency": 1,
+          "iterations": 1
+        },
+        {
+          "shard": "resident",
+          "engine": "shotium",
+          "scenario": "resident",
+          "repeat": 1,
+          "attempt": 2,
+          "concurrency": 1,
+          "iterations": 1
+        }
+      ],
+      "raw_samples": 2,
+      "failures": 0,
+      "artifact": {
+        "name": "benchmark-evidence-win32-arm64-resident-33264499865-a1",
+        "run_url": "https://github.com/sj817/shotium/actions/runs/33264499865",
+        "generated_utc": "2026-08-29T17:05:48.635Z",
+        "sha256": "ac3662dd499e5da9e3ae0b5c6228ad0c04d0024daf6086eacf2d0b6a8b38eb2e",
+        "files": [
+          {
+            "path": "logs/shotium.resident.c1.r1.a1.stderr.log",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "logs/shotium.resident.c1.r1.a1.stdout.log",
+            "bytes": 61104,
+            "sha256": "967e6bf186f2d2b434694956f2cd600178cf8a9cfc4182b3dd601c5a258542f9"
+          },
+          {
+            "path": "logs/shotium.resident.c1.r1.a2.stderr.log",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "logs/shotium.resident.c1.r1.a2.stdout.log",
+            "bytes": 63614,
+            "sha256": "9d3d80ddeb7f61205adc594c29de4eda3b74dfd48c940f0bf19062278985b5ae"
+          },
+          {
+            "path": "run-config.json",
+            "bytes": 1552,
+            "sha256": "e5cc75586ab40d934360525619b2de3e98eb6ec4a107578b2d886734503c8d7f"
+          },
+          {
+            "path": "samples/shotium.api-smoke.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.resident-host-prewarm.r1.a1.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.resident-host-prewarm.r1.a2.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.resident-warmup.r1.a1.s01.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.resident-warmup.r1.a1.s02.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.resident-warmup.r1.a1.s03.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.resident-warmup.r1.a1.s04.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.resident-warmup.r1.a1.s05.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.resident-warmup.r1.a1.s06.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.resident-warmup.r1.a1.s07.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.resident-warmup.r1.a1.s08.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.resident-warmup.r1.a1.s09.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.resident-warmup.r1.a1.s10.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.resident-warmup.r1.a2.s01.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.resident-warmup.r1.a2.s02.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.resident-warmup.r1.a2.s03.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.resident-warmup.r1.a2.s04.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.resident-warmup.r1.a2.s05.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.resident-warmup.r1.a2.s06.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.resident-warmup.r1.a2.s07.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.resident-warmup.r1.a2.s08.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.resident-warmup.r1.a2.s09.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.resident-warmup.r1.a2.s10.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "telemetry/shotium.resident.c1.r1.a1.json",
+            "bytes": 632136,
+            "sha256": "0e2334ff15c018cbef3c053c63285e28444873308ad01e537555ad894e6665c3"
+          },
+          {
+            "path": "telemetry/shotium.resident.c1.r1.a2.json",
+            "bytes": 593646,
+            "sha256": "12faa19775e4c2e80f1229abf303b872df6f6f405701a0c29881cc881e3e102d"
+          }
+        ],
+        "uploaded": true,
+        "upload_recorded_utc": "2026-08-29T17:05:51.221Z",
+        "actions_artifact_id": "9718283002",
+        "actions_artifact_url": "https://github.com/sj817/shotium/actions/runs/33264499865/artifacts/9718283002",
+        "actions_artifact_digest": "d8d7a472e6b93421038607e740a7a252d6bf8e83c6ec13f92ebb66b8a928653e"
+      },
+      "artifact_error": null
+    },
+    {
+      "shard": "resilience",
+      "status": "noisy",
+      "generated_utc": "2026-08-29T17:09:13.091Z",
+      "host": {
+        "runner": "GitHub Actions 1000002931",
+        "os": {
+          "platform": "Windows",
+          "distro": "Microsoft Windows 11 Enterprise",
+          "release": "10.0.26200",
+          "codename": "25H2",
+          "kernel": "10.0.26200",
+          "arch": "arm64",
+          "hostname": "runnervmmioek",
+          "fqdn": "runnervmmioek",
+          "codepage": "437",
+          "logofile": "windows",
+          "serial": "00329-00000-00003-AA947",
+          "build": "26200",
+          "servicepack": "0.0",
+          "uefi": true,
+          "hypervisor": true,
+          "remoteSession": false
+        },
+        "cpu": {
+          "manufacturer": "Cobalt 100",
+          "brand": "100",
+          "vendor": "MICROSOFT CORPORATION",
+          "family": "8",
+          "model": "D49",
+          "stepping": "",
+          "revision": "0",
+          "voltage": "",
+          "speed": 3.4,
+          "speedMin": 3.4,
+          "speedMax": 3.4,
+          "governor": "",
+          "cores": 4,
+          "physicalCores": 4,
+          "performanceCores": 4,
+          "efficiencyCores": 0,
+          "processors": 1,
+          "socket": "None",
+          "flags": "de",
+          "virtualization": true,
+          "cache": {
+            "l1d": 0,
+            "l1i": 0,
+            "l2": 4194304,
+            "l3": 134217728
+          }
+        },
+        "memory_bytes": 17169428480,
+        "logical_processors": 4,
+        "node": "v24.19.0",
+        "npm": "npm/11.17.0 node/v24.19.0 win32 arm64 workspaces/false ci/github-actions/dotcom-hosted"
+      },
+      "engines": [
+        {
+          "engine": "shotium",
+          "status": "noisy",
+          "reason": null,
+          "executable": "C:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\@shotkit\\shotium-win32-arm64\\shotium.node",
+          "architectures": [
+            "arm64"
+          ],
+          "sha256": "20b19c6f215404f3021231132624e967cf2d828669ee8d22b59304b42b1f5003",
+          "binary_version": "0.3.2",
+          "binaries": [
+            {
+              "file": "C:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\@shotkit\\shotium-win32-arm64\\shotium.dll",
+              "architectures": [
+                "arm64"
+              ],
+              "native": true,
+              "sha256": "e7fee4a84e770e0c3993ed5ef5cc533a5d7c9f21a6edcc073111ed1a26a180ee"
+            },
+            {
+              "file": "C:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\@shotkit\\shotium-win32-arm64\\shotium.node",
+              "architectures": [
+                "arm64"
+              ],
+              "native": true,
+              "sha256": "20b19c6f215404f3021231132624e967cf2d828669ee8d22b59304b42b1f5003"
+            }
+          ]
+        },
+        {
+          "engine": "puppeteer-shell",
+          "status": "n/a",
+          "reason": "the package has no native browser for this platform architecture",
+          "executable": "C:\\Users\\runneradmin\\.cache\\puppeteer\\chrome-headless-shell\\win64-152.0.7977.42\\chrome-headless-shell-win64\\chrome-headless-shell.exe",
+          "architectures": [
+            "x64"
+          ],
+          "binaries": [
+            {
+              "file": "C:\\Users\\runneradmin\\.cache\\puppeteer\\chrome-headless-shell\\win64-152.0.7977.42\\chrome-headless-shell-win64\\chrome-headless-shell.exe",
+              "architectures": [
+                "x64"
+              ],
+              "native": false,
+              "sha256": "6f90e8e5d2f925adbef1e1065df228f75c060d9f1bf5aee9b00bd201edbb9499"
+            }
+          ]
+        },
+        {
+          "engine": "puppeteer-chrome",
+          "status": "n/a",
+          "reason": "the package has no native browser for this platform architecture",
+          "executable": "C:\\Users\\runneradmin\\.cache\\puppeteer\\chrome\\win64-152.0.7977.42\\chrome-win64\\chrome.exe",
+          "architectures": [
+            "x64"
+          ],
+          "binaries": [
+            {
+              "file": "C:\\Users\\runneradmin\\.cache\\puppeteer\\chrome\\win64-152.0.7977.42\\chrome-win64\\chrome.exe",
+              "architectures": [
+                "x64"
+              ],
+              "native": false,
+              "sha256": "b3b221d637b5b6a745c51cac1d22a618e7da5e67202be52695999886720c7d56"
+            }
+          ]
+        },
+        {
+          "engine": "playwright-shell",
+          "status": "n/a",
+          "reason": "the package currently supplies an x64 browser on Windows arm64",
+          "executable": "C:\\Users\\runneradmin\\AppData\\Local\\ms-playwright\\chromium_headless_shell-1234\\chrome-headless-shell-win64\\chrome-headless-shell.exe",
+          "architectures": [
+            "x64"
+          ],
+          "binaries": [
+            {
+              "file": "C:\\Users\\runneradmin\\AppData\\Local\\ms-playwright\\chromium_headless_shell-1234\\chrome-headless-shell-win64\\chrome-headless-shell.exe",
+              "architectures": [
+                "x64"
+              ],
+              "native": false,
+              "sha256": "ce4635cd0e5dc0e21494542a701f347e91c1f1d821970578d97ed8df4ced50ef"
+            }
+          ]
+        },
+        {
+          "engine": "playwright-chrome",
+          "status": "n/a",
+          "reason": "the package currently supplies an x64 browser on Windows arm64",
+          "executable": "C:\\Users\\runneradmin\\AppData\\Local\\ms-playwright\\chromium-1234\\chrome-win64\\chrome.exe",
+          "architectures": [
+            "x64"
+          ],
+          "binaries": [
+            {
+              "file": "C:\\Users\\runneradmin\\AppData\\Local\\ms-playwright\\chromium-1234\\chrome-win64\\chrome.exe",
+              "architectures": [
+                "x64"
+              ],
+              "native": false,
+              "sha256": "409805a16d6416087e6b2f778df1cf8f7bbb267d6b99f6b5bb0a618eace234f2"
+            }
+          ]
+        }
+      ],
+      "execution_order": [
+        {
+          "shard": "resilience",
+          "engine": "shotium",
+          "scenario": "faults",
+          "repeat": 1,
+          "attempt": 1,
+          "concurrency": 1,
+          "iterations": 1
+        },
+        {
+          "shard": "resilience",
+          "engine": "shotium",
+          "scenario": "faults",
+          "repeat": 1,
+          "attempt": 2,
+          "concurrency": 1,
+          "iterations": 1
+        },
+        {
+          "shard": "resilience",
+          "engine": "shotium",
+          "scenario": "soak",
+          "repeat": 1,
+          "attempt": 1,
+          "concurrency": 4,
+          "iterations": 50
+        },
+        {
+          "shard": "resilience",
+          "engine": "shotium",
+          "scenario": "soak",
+          "repeat": 1,
+          "attempt": 2,
+          "concurrency": 4,
+          "iterations": 50
+        }
+      ],
+      "raw_samples": 4,
+      "failures": 0,
+      "artifact": {
+        "name": "benchmark-evidence-win32-arm64-resilience-33264499865-a1",
+        "run_url": "https://github.com/sj817/shotium/actions/runs/33264499865",
+        "generated_utc": "2026-08-29T17:09:14.577Z",
+        "sha256": "45a3646b30fe4dcaeb8fe0eac60fe2f4632e38a62656e266f9c1b302bd998558",
+        "files": [
+          {
+            "path": "logs/shotium.faults.c1.r1.a1.stderr.log",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "logs/shotium.faults.c1.r1.a1.stdout.log",
+            "bytes": 60035,
+            "sha256": "b38e3ec3872afeecab5f54457efb4f7f3d9d9257b8f82d504d2833b6e935d877"
+          },
+          {
+            "path": "logs/shotium.faults.c1.r1.a2.stderr.log",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "logs/shotium.faults.c1.r1.a2.stdout.log",
+            "bytes": 61315,
+            "sha256": "304c4c4d326d359d5838cb9d09ba6756a217fffc62d9eff06be233336124aa8a"
+          },
+          {
+            "path": "logs/shotium.soak.c4.r1.a1.stderr.log",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "logs/shotium.soak.c4.r1.a1.stdout.log",
+            "bytes": 61179,
+            "sha256": "519e9668cf89ce299b284789f2537f2044e5bd4cad667c95c08019bcb275b13c"
+          },
+          {
+            "path": "logs/shotium.soak.c4.r1.a2.stderr.log",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "logs/shotium.soak.c4.r1.a2.stdout.log",
+            "bytes": 61697,
+            "sha256": "b77692ad270a0feb1fa1488c30f2155ce0d0215416fcfa5a1b55a0e60edddb67"
+          },
+          {
+            "path": "run-config.json",
+            "bytes": 1560,
+            "sha256": "ebb89976896c36b1a05a0842c121e074e0f1e200de861829e3aeccd451aac22a"
+          },
+          {
+            "path": "samples/shotium.api-smoke.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.faults.settle.r1.a1.s01.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.faults.settle.r1.a1.s02.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.faults.settle.r1.a1.s03.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.faults.settle.r1.a1.s04.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.faults.settle.r1.a1.s05.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.faults.settle.r1.a1.s06.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.faults.settle.r1.a1.s07.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.faults.settle.r1.a2.s01.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.faults.settle.r1.a2.s02.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.faults.settle.r1.a2.s03.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.faults.settle.r1.a2.s04.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.faults.settle.r1.a2.s05.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.faults.settle.r1.a2.s06.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.faults.settle.r1.a2.s07.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.soak.settle.r1.a1.s01.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.soak.settle.r1.a1.s02.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.soak.settle.r1.a1.s03.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.soak.settle.r1.a1.s04.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.soak.settle.r1.a1.s05.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.soak.settle.r1.a1.s06.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.soak.settle.r1.a1.s07.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.soak.settle.r1.a2.s01.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.soak.settle.r1.a2.s02.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.soak.settle.r1.a2.s03.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.soak.settle.r1.a2.s04.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.soak.settle.r1.a2.s05.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.soak.settle.r1.a2.s06.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "samples/shotium.soak.settle.r1.a2.s07.png",
+            "bytes": 74888,
+            "sha256": "91b684ba95ed9b77fd05c56c495e1cf81d565c6c30522051aa61a65a10506359"
+          },
+          {
+            "path": "telemetry/shotium.faults.c1.r1.a1.json",
+            "bytes": 688363,
+            "sha256": "5f4e5ffa58b4dcfc51fc3a667733ae9b2bf34822850ad98c84ab09e9dc165cbf"
+          },
+          {
+            "path": "telemetry/shotium.faults.c1.r1.a2.json",
+            "bytes": 623304,
+            "sha256": "58c08cf9ef00b707789209121e6417f3d9ab2ae0d10e63b8270261ada1e5059e"
+          },
+          {
+            "path": "telemetry/shotium.soak.c4.r1.a1.json",
+            "bytes": 624318,
+            "sha256": "9a34394fb0b0bcfdaa4034add7c754fa2fb750e1a27de07d97d89370cb40b13e"
+          },
+          {
+            "path": "telemetry/shotium.soak.c4.r1.a2.json",
+            "bytes": 622293,
+            "sha256": "f2462a3d63ccc63316635a1ac8359077f14e7ec9034e7502cf6eb2625f9a58e4"
+          }
+        ],
+        "uploaded": true,
+        "upload_recorded_utc": "2026-08-29T17:09:23.882Z",
+        "actions_artifact_id": "9718327653",
+        "actions_artifact_url": "https://github.com/sj817/shotium/actions/runs/33264499865/artifacts/9718327653",
+        "actions_artifact_digest": "eb7aa323fe4cb9f391caa825722ac20d91ae6b9bb6aef098ddc61eeaebf2dd82"
+      },
+      "artifact_error": null
+    }
+  ],
+  "raw_samples": 18,
+  "failures": 0
+}

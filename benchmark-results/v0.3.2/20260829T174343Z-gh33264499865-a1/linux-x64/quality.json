@@ -1,0 +1,4787 @@
+[
+  {
+    "shard": "startup",
+    "engine": "playwright-shell",
+    "scenario": "cold",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 165.949,
+      "dispatch_to_launch_ms": 1152,
+      "measurement_started_epoch_ms": 1788022932481,
+      "measurement_completed_epoch_ms": 1788022932803,
+      "cold_start_to_png_ms": 322,
+      "measurement_wall_time_ms": 322,
+      "determinism": {
+        "compared": 1,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 0,
+        "measurement_span_ms": 0,
+        "peak_retained_evidence_bytes": 59831
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "startup",
+    "engine": "puppeteer-chrome",
+    "scenario": "cold",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 391.253,
+      "dispatch_to_launch_ms": 951,
+      "measurement_started_epoch_ms": 1788022941152,
+      "measurement_completed_epoch_ms": 1788022941732,
+      "cold_start_to_png_ms": 580,
+      "measurement_wall_time_ms": 580,
+      "determinism": {
+        "compared": 1,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 4,
+        "measurement_span_ms": 203,
+        "peak_retained_evidence_bytes": 59831
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "startup",
+    "engine": "puppeteer-shell",
+    "scenario": "cold",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 183.501,
+      "dispatch_to_launch_ms": 932,
+      "measurement_started_epoch_ms": 1788022950066,
+      "measurement_completed_epoch_ms": 1788022950392,
+      "cold_start_to_png_ms": 326,
+      "measurement_wall_time_ms": 326,
+      "determinism": {
+        "compared": 1,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 2,
+        "measurement_span_ms": 2,
+        "peak_retained_evidence_bytes": 59831
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "startup",
+    "engine": "shotium",
+    "scenario": "cold",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 22.214,
+      "dispatch_to_launch_ms": 646,
+      "measurement_started_epoch_ms": 1788022958373,
+      "measurement_completed_epoch_ms": 1788022958440,
+      "cold_start_to_png_ms": 67,
+      "measurement_wall_time_ms": 67,
+      "determinism": {
+        "compared": 1,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 0,
+        "measurement_span_ms": 0,
+        "peak_retained_evidence_bytes": 84209
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "startup",
+    "engine": "playwright-chrome",
+    "scenario": "cold",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 346.541,
+      "dispatch_to_launch_ms": 1073,
+      "measurement_started_epoch_ms": 1788022966887,
+      "measurement_completed_epoch_ms": 1788022967406,
+      "cold_start_to_png_ms": 519,
+      "measurement_wall_time_ms": 519,
+      "determinism": {
+        "compared": 1,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 3,
+        "measurement_span_ms": 101,
+        "peak_retained_evidence_bytes": 59831
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "startup",
+    "engine": "playwright-shell",
+    "scenario": "cold-settled",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 146.797,
+      "dispatch_to_launch_ms": 1069,
+      "warmups": 10,
+      "latency_ms": [
+        171.878,
+        116.352,
+        147.91,
+        129.665,
+        99.036,
+        106.131,
+        120.911,
+        118.811,
+        105.18,
+        109.37
+      ],
+      "rss_bytes": [
+        209657856,
+        209657856,
+        209657856,
+        669437952,
+        669437952,
+        669437952,
+        669437952,
+        715259904,
+        715259904,
+        715259904
+      ],
+      "latency_cv": 0.06283,
+      "rss_drift": 0,
+      "system": {
+        "stable": true,
+        "samples": [
+          {
+            "at": "2026-08-29T17:02:58.487Z",
+            "cpu_percent": 16.176470588235293,
+            "available_bytes": 14876889088
+          },
+          {
+            "at": "2026-08-29T17:02:59.496Z",
+            "cpu_percent": 13.533834586466165,
+            "available_bytes": 14879539200
+          },
+          {
+            "at": "2026-08-29T17:03:00.505Z",
+            "cpu_percent": 12.75,
+            "available_bytes": 14883274752
+          },
+          {
+            "at": "2026-08-29T17:03:01.515Z",
+            "cpu_percent": 17.16417910447761,
+            "available_bytes": 14887677952
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1788022981515,
+      "measurement_completed_epoch_ms": 1788022981656,
+      "measurement_wall_time_ms": 140.468,
+      "determinism": {
+        "compared": 1,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 2,
+        "measurement_span_ms": 99,
+        "peak_retained_evidence_bytes": 59831
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "startup",
+    "engine": "shotium",
+    "scenario": "cold-settled",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 20.953,
+      "dispatch_to_launch_ms": 640,
+      "warmups": 4,
+      "latency_ms": [
+        46.494,
+        26.615,
+        26.095,
+        29.25
+      ],
+      "rss_bytes": [
+        171302912,
+        171302912,
+        171302912,
+        171302912
+      ],
+      "latency_cv": 0.06192,
+      "rss_drift": 0,
+      "system": {
+        "stable": true,
+        "samples": [
+          {
+            "at": "2026-08-29T17:03:10.620Z",
+            "cpu_percent": 7.425742574257425,
+            "available_bytes": 15126208512
+          },
+          {
+            "at": "2026-08-29T17:03:11.628Z",
+            "cpu_percent": 17.206982543640898,
+            "available_bytes": 15125774336
+          },
+          {
+            "at": "2026-08-29T17:03:12.636Z",
+            "cpu_percent": 10.25,
+            "available_bytes": 15123771392
+          },
+          {
+            "at": "2026-08-29T17:03:13.644Z",
+            "cpu_percent": 13.032581453634084,
+            "available_bytes": 15124070400
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1788022993644,
+      "measurement_completed_epoch_ms": 1788022993674,
+      "measurement_wall_time_ms": 29.732,
+      "determinism": {
+        "compared": 1,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 0,
+        "measurement_span_ms": 0,
+        "peak_retained_evidence_bytes": 84209
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "startup",
+    "engine": "playwright-chrome",
+    "scenario": "cold-settled",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "noisy",
+    "settle": {
+      "stable": false,
+      "launch_ms": 344.349,
+      "dispatch_to_launch_ms": 1083,
+      "warmups": 10,
+      "latency_ms": [
+        200.24,
+        164.59,
+        227.888,
+        157.321,
+        161.516,
+        136.901,
+        178.226,
+        147.958,
+        140.64,
+        148.177
+      ],
+      "rss_bytes": [
+        208629760,
+        208629760,
+        1108148224,
+        1025953792,
+        1025953792,
+        1138540544,
+        1056411648,
+        1056411648,
+        1056411648,
+        1171197952
+      ],
+      "latency_cv": 0.02946,
+      "rss_drift": 0.10866,
+      "system": {
+        "stable": false,
+        "samples": []
+      },
+      "determinism": {
+        "compared": 0,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 24,
+        "measurement_span_ms": 3398,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": 22776122425.818
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "startup",
+    "engine": "playwright-chrome",
+    "scenario": "cold-settled",
+    "repeat": 1,
+    "attempt": 2,
+    "concurrency": 1,
+    "status": "noisy",
+    "settle": {
+      "stable": false,
+      "launch_ms": 322.366,
+      "dispatch_to_launch_ms": 1105,
+      "warmups": 10,
+      "latency_ms": [
+        191.503,
+        167.967,
+        188.963,
+        157.334,
+        166.411,
+        156.512,
+        148.84,
+        177.11,
+        159.972,
+        168.002
+      ],
+      "rss_bytes": [
+        209829888,
+        209829888,
+        1096257536,
+        1015975936,
+        1015975936,
+        1137692672,
+        1045897216,
+        1045897216,
+        1161629696,
+        1069768704
+      ],
+      "latency_cv": 0.05093,
+      "rss_drift": 0.10818,
+      "system": {
+        "stable": false,
+        "samples": []
+      },
+      "determinism": {
+        "compared": 0,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 25,
+        "measurement_span_ms": 3454,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": 21323215673.795
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "startup",
+    "engine": "puppeteer-chrome",
+    "scenario": "cold-settled",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 399.191,
+      "dispatch_to_launch_ms": 910,
+      "warmups": 4,
+      "latency_ms": [
+        191.99,
+        196.459,
+        165.127,
+        174.286
+      ],
+      "rss_bytes": [
+        137117696,
+        1282351104,
+        1282363392,
+        1282363392
+      ],
+      "latency_cv": 0.09019,
+      "rss_drift": 0.00001,
+      "system": {
+        "stable": true,
+        "samples": [
+          {
+            "at": "2026-08-29T17:03:45.489Z",
+            "cpu_percent": 17.412935323383085,
+            "available_bytes": 14822313984
+          },
+          {
+            "at": "2026-08-29T17:03:46.498Z",
+            "cpu_percent": 20.85427135678392,
+            "available_bytes": 14800769024
+          },
+          {
+            "at": "2026-08-29T17:03:47.505Z",
+            "cpu_percent": 16.377171215880892,
+            "available_bytes": 14800072704
+          },
+          {
+            "at": "2026-08-29T17:03:48.510Z",
+            "cpu_percent": 14.430379746835442,
+            "available_bytes": 14797414400
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1788023028511,
+      "measurement_completed_epoch_ms": 1788023028678,
+      "measurement_wall_time_ms": 167.79,
+      "determinism": {
+        "compared": 1,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 1,
+        "measurement_span_ms": 0,
+        "peak_retained_evidence_bytes": 59831
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "startup",
+    "engine": "puppeteer-shell",
+    "scenario": "cold-settled",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 175.317,
+      "dispatch_to_launch_ms": 906,
+      "warmups": 3,
+      "latency_ms": [
+        154.644,
+        138.5,
+        131.845
+      ],
+      "rss_bytes": [
+        136159232,
+        136159232,
+        136159232
+      ],
+      "latency_cv": 0.08276,
+      "rss_drift": 0,
+      "system": {
+        "stable": true,
+        "samples": [
+          {
+            "at": "2026-08-29T17:03:58.363Z",
+            "cpu_percent": 18.090452261306535,
+            "available_bytes": 14967259136
+          },
+          {
+            "at": "2026-08-29T17:03:59.370Z",
+            "cpu_percent": 16.120906801007557,
+            "available_bytes": 14969323520
+          },
+          {
+            "at": "2026-08-29T17:04:00.377Z",
+            "cpu_percent": 14.000000000000002,
+            "available_bytes": 14970368000
+          },
+          {
+            "at": "2026-08-29T17:04:01.383Z",
+            "cpu_percent": 11.970074812967582,
+            "available_bytes": 14976471040
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1788023041383,
+      "measurement_completed_epoch_ms": 1788023041517,
+      "measurement_wall_time_ms": 134.336,
+      "determinism": {
+        "compared": 1,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 0,
+        "measurement_span_ms": 0,
+        "peak_retained_evidence_bytes": 59831
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "startup",
+    "engine": "shotium",
+    "scenario": "lifecycle",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "cycles": 3,
+      "measurement_started_epoch_ms": 1788023049491,
+      "measurement_completed_epoch_ms": 1788023052162,
+      "measurement_wall_time_ms": 224.357,
+      "determinism": {
+        "compared": 3,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 19,
+        "measurement_span_ms": 2262,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": 702530258.614
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "startup",
+    "engine": "puppeteer-chrome",
+    "scenario": "lifecycle",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "cycles": 3,
+      "measurement_started_epoch_ms": 1788023059937,
+      "measurement_completed_epoch_ms": 1788023065725,
+      "measurement_wall_time_ms": 2126.428,
+      "determinism": {
+        "compared": 3,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 42,
+        "measurement_span_ms": 5369,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": 4637204663.552
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "startup",
+    "engine": "playwright-shell",
+    "scenario": "lifecycle",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "cycles": 3,
+      "measurement_started_epoch_ms": 1788023073527,
+      "measurement_completed_epoch_ms": 1788023078360,
+      "measurement_wall_time_ms": 827.982,
+      "determinism": {
+        "compared": 3,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 37,
+        "measurement_span_ms": 4391,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": 1507956936.284
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "startup",
+    "engine": "playwright-chrome",
+    "scenario": "lifecycle",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "cycles": 3,
+      "measurement_started_epoch_ms": 1788023086180,
+      "measurement_completed_epoch_ms": 1788023091968,
+      "measurement_wall_time_ms": 1732.601,
+      "determinism": {
+        "compared": 3,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 42,
+        "measurement_span_ms": 5404,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": 3017577384.856
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "startup",
+    "engine": "puppeteer-shell",
+    "scenario": "lifecycle",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "cycles": 3,
+      "measurement_started_epoch_ms": 1788023099683,
+      "measurement_completed_epoch_ms": 1788023104360,
+      "measurement_wall_time_ms": 1133.15,
+      "determinism": {
+        "compared": 3,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 33,
+        "measurement_span_ms": 4015,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": 2303959902.445
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "throughput",
+    "engine": "playwright-chrome",
+    "scenario": "warm",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "noisy",
+    "settle": {
+      "stable": false,
+      "launch_ms": 403.421,
+      "dispatch_to_launch_ms": 1289,
+      "warmups": 10,
+      "latency_ms": [
+        217.584,
+        176.171,
+        215.955,
+        149.1,
+        176.079,
+        191.864,
+        155.899,
+        173.314,
+        203.659,
+        153.973
+      ],
+      "rss_bytes": [
+        215441408,
+        215441408,
+        1094455296,
+        1014976512,
+        1014976512,
+        1107087360,
+        1016209408,
+        1016209408,
+        1111449600,
+        1020325888
+      ],
+      "latency_cv": 0.14151,
+      "rss_drift": 0.09334,
+      "system": {
+        "stable": false,
+        "samples": []
+      },
+      "determinism": {
+        "compared": 0,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 28,
+        "measurement_span_ms": 4109,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": 15382936472.716
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "throughput",
+    "engine": "playwright-chrome",
+    "scenario": "warm",
+    "repeat": 1,
+    "attempt": 2,
+    "concurrency": 1,
+    "status": "noisy",
+    "settle": {
+      "stable": false,
+      "launch_ms": 328.025,
+      "dispatch_to_launch_ms": 1075,
+      "warmups": 10,
+      "latency_ms": [
+        179.836,
+        171.907,
+        174.073,
+        162.885,
+        156.514,
+        140.395,
+        150.518,
+        160.67,
+        130.978,
+        138.414
+      ],
+      "rss_bytes": [
+        208736256,
+        208736256,
+        1107664896,
+        1026433024,
+        1026433024,
+        1152094208,
+        1059549184,
+        1059549184,
+        1173045248,
+        1080311808
+      ],
+      "latency_cv": 0.10778,
+      "rss_drift": 0.10506,
+      "system": {
+        "stable": false,
+        "samples": []
+      },
+      "determinism": {
+        "compared": 0,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 24,
+        "measurement_span_ms": 3281,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": 23355490739.602
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "throughput",
+    "engine": "playwright-shell",
+    "scenario": "warm",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 155.706,
+      "dispatch_to_launch_ms": 1069,
+      "warmups": 6,
+      "latency_ms": [
+        156.62,
+        109.855,
+        154.481,
+        127.088,
+        108.766,
+        110.727
+      ],
+      "rss_bytes": [
+        207380480,
+        207380480,
+        207380480,
+        666738688,
+        666738688,
+        666738688
+      ],
+      "latency_cv": 0.08708,
+      "rss_drift": 0,
+      "system": {
+        "stable": true,
+        "samples": [
+          {
+            "at": "2026-08-29T17:02:45.617Z",
+            "cpu_percent": 17.82178217821782,
+            "available_bytes": 14831558656
+          },
+          {
+            "at": "2026-08-29T17:02:46.626Z",
+            "cpu_percent": 9.06801007556675,
+            "available_bytes": 14834708480
+          },
+          {
+            "at": "2026-08-29T17:02:47.638Z",
+            "cpu_percent": 13.681592039800993,
+            "available_bytes": 14843559936
+          },
+          {
+            "at": "2026-08-29T17:02:48.645Z",
+            "cpu_percent": 14.572864321608039,
+            "available_bytes": 14843215872
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1788022968645,
+      "measurement_completed_epoch_ms": 1788022969221,
+      "tinybench": {
+        "aborted": false,
+        "critical": 2.7764451051977996,
+        "df": 4,
+        "hz": 8.803242685910806,
+        "latency": {
+          "aad": 8.704490320000186,
+          "critical": 2.7764451051977996,
+          "df": 4,
+          "mad": 11.568217999999433,
+          "max": 133.38067800000044,
+          "mean": 114.58139240000018,
+          "min": 103.47306599999956,
+          "moe": 15.147776474085815,
+          "p50": 115.49671099999978,
+          "p75": 116.6280140000008,
+          "p99": 132.71057144000045,
+          "p995": 133.04562472000046,
+          "p999": 133.31366734400044,
+          "rme": 13.220101586133099,
+          "samples": [
+            103.47306599999956,
+            103.92849300000034,
+            115.49671099999978,
+            116.6280140000008,
+            133.38067800000044
+          ],
+          "sd": 12.199577740837377,
+          "sem": 5.455817025061137,
+          "variance": 148.8296970547348
+        },
+        "max": 133.38067800000044,
+        "mean": 114.58139240000018,
+        "min": 103.47306599999956,
+        "moe": 15.147776474085815,
+        "p75": 116.6280140000008,
+        "p99": 132.71057144000045,
+        "p995": 133.04562472000046,
+        "p999": 133.31366734400044,
+        "period": 114.58139240000018,
+        "rme": 13.220101586133099,
+        "runtime": "node",
+        "runtimeVersion": "24.19.0",
+        "samples": [
+          103.47306599999956,
+          103.92849300000034,
+          115.49671099999978,
+          116.6280140000008,
+          133.38067800000044
+        ],
+        "sd": 12.199577740837377,
+        "sem": 5.455817025061137,
+        "throughput": {
+          "aad": 0.6719462949812757,
+          "critical": 2.7764451051977996,
+          "df": 4,
+          "mad": 0.9637451761528837,
+          "max": 9.664350720988631,
+          "mean": 8.803242685910806,
+          "min": 7.497337807804491,
+          "moe": 1.1089646149410082,
+          "p50": 8.658255212133287,
+          "p75": 9.622000388286171,
+          "p99": 9.662656707680533,
+          "p995": 9.663503714334581,
+          "p999": 9.664181319657821,
+          "rme": 12.597228708869473,
+          "samples": [
+            7.497337807804491,
+            8.574269300341452,
+            8.658255212133287,
+            9.622000388286171,
+            9.664350720988631
+          ],
+          "sd": 0.89312778380083,
+          "sem": 0.3994188874344783,
+          "variance": 0.7976772381969821
+        },
+        "totalTime": 572.9069620000009,
+        "variance": 148.8296970547348
+      },
+      "measurement_wall_time_ms": 575.267,
+      "determinism": {
+        "compared": 5,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 4,
+        "measurement_span_ms": 297,
+        "peak_retained_evidence_bytes": 299155
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "throughput",
+    "engine": "puppeteer-shell",
+    "scenario": "warm",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 166.681,
+      "dispatch_to_launch_ms": 923,
+      "warmups": 3,
+      "latency_ms": [
+        153.071,
+        133.206,
+        150.838
+      ],
+      "rss_bytes": [
+        137302016,
+        137302016,
+        137302016
+      ],
+      "latency_cv": 0.07468,
+      "rss_drift": 0,
+      "system": {
+        "stable": true,
+        "samples": [
+          {
+            "at": "2026-08-29T17:02:58.915Z",
+            "cpu_percent": 13.131313131313133,
+            "available_bytes": 14995537920
+          },
+          {
+            "at": "2026-08-29T17:02:59.922Z",
+            "cpu_percent": 16,
+            "available_bytes": 14993383424
+          },
+          {
+            "at": "2026-08-29T17:03:00.928Z",
+            "cpu_percent": 13.032581453634084,
+            "available_bytes": 14993944576
+          },
+          {
+            "at": "2026-08-29T17:03:01.934Z",
+            "cpu_percent": 12.151898734177214,
+            "available_bytes": 14995599360
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1788022981934,
+      "measurement_completed_epoch_ms": 1788022982584,
+      "tinybench": {
+        "aborted": false,
+        "critical": 2.7764451051977996,
+        "df": 4,
+        "hz": 7.763707893475859,
+        "latency": {
+          "aad": 9.579845039999999,
+          "critical": 2.7764451051977996,
+          "df": 4,
+          "mad": 14.489665999999488,
+          "max": 147.21678900000006,
+          "mean": 129.7326338000001,
+          "min": 117.29790400000002,
+          "moe": 15.382919795298942,
+          "p50": 132.70741699999962,
+          "p75": 133.22330800000054,
+          "p99": 146.6570497600001,
+          "p995": 146.93691938000006,
+          "p999": 147.16081507600006,
+          "rme": 11.857401907845128,
+          "samples": [
+            117.29790400000002,
+            118.21775100000013,
+            132.70741699999962,
+            133.22330800000054,
+            147.21678900000006
+          ],
+          "sd": 12.388955319275098,
+          "sem": 5.540509252821345,
+          "variance": 153.48621390299473
+        },
+        "max": 147.21678900000006,
+        "mean": 129.7326338000001,
+        "min": 117.29790400000002,
+        "moe": 15.382919795298942,
+        "p75": 133.22330800000054,
+        "p99": 146.6570497600001,
+        "p995": 146.93691938000006,
+        "p999": 147.16081507600006,
+        "period": 129.7326338000001,
+        "rme": 11.857401907845128,
+        "runtime": "node",
+        "runtimeVersion": "24.19.0",
+        "samples": [
+          117.29790400000002,
+          118.21775100000013,
+          132.70741699999962,
+          133.22330800000054,
+          147.21678900000006
+        ],
+        "sd": 12.388955319275098,
+        "sem": 5.540509252821345,
+        "throughput": {
+          "aad": 0.5827409112450826,
+          "critical": 2.7764451051977996,
+          "df": 4,
+          "mad": 0.74267033751602,
+          "max": 8.5253015262745,
+          "mean": 7.763707893475859,
+          "min": 6.792703514271049,
+          "moe": 0.9049483629234204,
+          "p50": 7.535373851787069,
+          "p75": 8.458966538789921,
+          "p99": 8.522648126775117,
+          "p995": 8.523974826524809,
+          "p999": 8.525036186324561,
+          "rme": 11.65613615736217,
+          "samples": [
+            6.792703514271049,
+            7.5061940362567485,
+            7.535373851787069,
+            8.458966538789921,
+            8.5253015262745
+          ],
+          "sd": 0.7288190397986487,
+          "sem": 0.3259377832571806,
+          "variance": 0.5311771927730242
+        },
+        "totalTime": 648.6631690000004,
+        "variance": 153.48621390299473
+      },
+      "measurement_wall_time_ms": 650.615,
+      "determinism": {
+        "compared": 5,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 6,
+        "measurement_span_ms": 396,
+        "peak_retained_evidence_bytes": 299155
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "throughput",
+    "engine": "puppeteer-chrome",
+    "scenario": "warm",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 364.279,
+      "dispatch_to_launch_ms": 921,
+      "warmups": 4,
+      "latency_ms": [
+        192.805,
+        184.867,
+        158.876,
+        163.795
+      ],
+      "rss_bytes": [
+        137048064,
+        1292980224,
+        1292984320,
+        1292984320
+      ],
+      "latency_cv": 0.08161,
+      "rss_drift": 0,
+      "system": {
+        "stable": true,
+        "samples": [
+          {
+            "at": "2026-08-29T17:03:13.036Z",
+            "cpu_percent": 17.587939698492463,
+            "available_bytes": 14835191808
+          },
+          {
+            "at": "2026-08-29T17:03:14.042Z",
+            "cpu_percent": 18.274111675126903,
+            "available_bytes": 14820151296
+          },
+          {
+            "at": "2026-08-29T17:03:15.050Z",
+            "cpu_percent": 14.321608040201006,
+            "available_bytes": 14818381824
+          },
+          {
+            "at": "2026-08-29T17:03:16.056Z",
+            "cpu_percent": 13.316582914572864,
+            "available_bytes": 14807527424
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1788022996056,
+      "measurement_completed_epoch_ms": 1788022996888,
+      "tinybench": {
+        "aborted": false,
+        "critical": 2.7764451051977996,
+        "df": 4,
+        "hz": 6.060903126054811,
+        "latency": {
+          "aad": 9.261757119999965,
+          "critical": 2.7764451051977996,
+          "df": 4,
+          "mad": 9.988894999999502,
+          "max": 177.99385100000018,
+          "mean": 165.9314244000001,
+          "min": 144.238703,
+          "moe": 16.769563517094042,
+          "p50": 166.48296000000028,
+          "p75": 176.47185499999978,
+          "p99": 177.93297116000016,
+          "p995": 177.96341108000016,
+          "p999": 177.98776301600017,
+          "rme": 10.106321679411817,
+          "samples": [
+            144.238703,
+            164.4697530000003,
+            166.48296000000028,
+            176.47185499999978,
+            177.99385100000018
+          ],
+          "sd": 13.505717763705366,
+          "sem": 6.039940600914328,
+          "variance": 182.4044123128667
+        },
+        "max": 177.99385100000018,
+        "mean": 165.9314244000001,
+        "min": 144.238703,
+        "moe": 16.769563517094042,
+        "p75": 176.47185499999978,
+        "p99": 177.93297116000016,
+        "p995": 177.96341108000016,
+        "p999": 177.98776301600017,
+        "period": 165.9314244000001,
+        "rme": 10.106321679411817,
+        "runtime": "node",
+        "runtimeVersion": "24.19.0",
+        "samples": [
+          144.238703,
+          164.4697530000003,
+          166.48296000000028,
+          176.47185499999978,
+          177.99385100000018
+        ],
+        "sd": 13.505717763705366,
+        "sem": 6.039940600914328,
+        "throughput": {
+          "aad": 0.3565164173094816,
+          "critical": 2.7764451051977996,
+          "df": 4,
+          "mad": 0.33999474790540507,
+          "max": 6.932951969208986,
+          "mean": 6.060903126054811,
+          "min": 5.618171607512436,
+          "moe": 0.6556325955775546,
+          "p50": 6.006620737641849,
+          "p75": 6.08014532617434,
+          "p99": 6.8988397034876,
+          "p995": 6.915895836348293,
+          "p999": 6.929540742636847,
+          "rme": 10.8174076031524,
+          "samples": [
+            5.618171607512436,
+            5.666625989736444,
+            6.006620737641849,
+            6.08014532617434,
+            6.932951969208986
+          ],
+          "sd": 0.5280273862542644,
+          "sem": 0.23614102592921463,
+          "variance": 0.2788129206345101
+        },
+        "totalTime": 829.6571220000005,
+        "variance": 182.4044123128667
+      },
+      "measurement_wall_time_ms": 832.135,
+      "determinism": {
+        "compared": 5,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 7,
+        "measurement_span_ms": 761,
+        "peak_retained_evidence_bytes": 299155
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "throughput",
+    "engine": "shotium",
+    "scenario": "warm",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 19.29,
+      "dispatch_to_launch_ms": 653,
+      "warmups": 4,
+      "latency_ms": [
+        48.933,
+        24.558,
+        23.429,
+        25.826
+      ],
+      "rss_bytes": [
+        171610112,
+        171610112,
+        171610112,
+        171610112
+      ],
+      "latency_cv": 0.04874,
+      "rss_drift": 0,
+      "system": {
+        "stable": true,
+        "samples": [
+          {
+            "at": "2026-08-29T17:03:26.212Z",
+            "cpu_percent": 12.935323383084576,
+            "available_bytes": 15044218880
+          },
+          {
+            "at": "2026-08-29T17:03:27.219Z",
+            "cpu_percent": 13.432835820895523,
+            "available_bytes": 15042375680
+          },
+          {
+            "at": "2026-08-29T17:03:28.225Z",
+            "cpu_percent": 9.523809523809524,
+            "available_bytes": 15042441216
+          },
+          {
+            "at": "2026-08-29T17:03:29.234Z",
+            "cpu_percent": 12.311557788944723,
+            "available_bytes": 15047385088
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1788023009234,
+      "measurement_completed_epoch_ms": 1788023009368,
+      "tinybench": {
+        "aborted": false,
+        "critical": 2.7764451051977996,
+        "df": 4,
+        "hz": 38.165031424113224,
+        "latency": {
+          "aad": 2.3779721599998447,
+          "critical": 2.7764451051977996,
+          "df": 4,
+          "mad": 2.3925220000010086,
+          "max": 29.459845999999743,
+          "mean": 26.44450979999983,
+          "min": 23.421641999999338,
+          "moe": 3.537206647764287,
+          "p50": 25.814164000000346,
+          "p75": 29.374103999999534,
+          "p99": 29.456416319999736,
+          "p995": 29.458131159999738,
+          "p999": 29.45950303199974,
+          "rme": 13.375958467433227,
+          "samples": [
+            23.421641999999338,
+            24.1527930000002,
+            25.814164000000346,
+            29.374103999999534,
+            29.459845999999743
+          ],
+          "sd": 2.8487631540266367,
+          "sem": 1.2740056128400525,
+          "variance": 8.11545150773979
+        },
+        "max": 29.459845999999743,
+        "mean": 26.44450979999983,
+        "min": 23.421641999999338,
+        "moe": 3.537206647764287,
+        "p75": 29.374103999999534,
+        "p99": 29.456416319999736,
+        "p995": 29.458131159999738,
+        "p999": 29.45950303199974,
+        "period": 26.44450979999983,
+        "rme": 13.375958467433227,
+        "runtime": "node",
+        "runtimeVersion": "24.19.0",
+        "samples": [
+          23.421641999999338,
+          24.1527930000002,
+          25.814164000000346,
+          29.374103999999534,
+          29.459845999999743
+        ],
+        "sd": 2.8487631540266367,
+        "sem": 1.2740056128400525,
+        "throughput": {
+          "aad": 3.3367850062575513,
+          "critical": 2.7764451051977996,
+          "df": 4,
+          "mad": 3.957131991978919,
+          "max": 42.69555482062395,
+          "mean": 38.165031424113224,
+          "min": 33.9445087391159,
+          "moe": 5.048950383622226,
+          "p50": 38.73842282864503,
+          "p75": 41.40307913871459,
+          "p99": 42.64385579334757,
+          "p995": 42.66970530698576,
+          "p999": 42.69038491789631,
+          "rme": 13.229257766134644,
+          "samples": [
+            33.9445087391159,
+            34.04359159346668,
+            38.73842282864503,
+            41.40307913871459,
+            42.69555482062395
+          ],
+          "sd": 4.0662775041607135,
+          "sem": 1.8184945829363077,
+          "variance": 16.534612740843485
+        },
+        "totalTime": 132.22254899999916,
+        "variance": 8.11545150773979
+      },
+      "measurement_wall_time_ms": 134.216,
+      "determinism": {
+        "compared": 5,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 2,
+        "measurement_span_ms": 1,
+        "peak_retained_evidence_bytes": 421045
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "throughput",
+    "engine": "playwright-shell",
+    "scenario": "batch",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 152.906,
+      "dispatch_to_launch_ms": 1043,
+      "warmups": 3,
+      "latency_ms": [
+        161.416,
+        133.57,
+        145.297
+      ],
+      "rss_bytes": [
+        209301504,
+        209301504,
+        209301504
+      ],
+      "latency_cv": 0.09526,
+      "rss_drift": 0,
+      "system": {
+        "stable": true,
+        "samples": [
+          {
+            "at": "2026-08-29T17:03:38.248Z",
+            "cpu_percent": 11.330049261083744,
+            "available_bytes": 14863212544
+          },
+          {
+            "at": "2026-08-29T17:03:39.255Z",
+            "cpu_percent": 13.06532663316583,
+            "available_bytes": 14858366976
+          },
+          {
+            "at": "2026-08-29T17:03:40.262Z",
+            "cpu_percent": 13.750000000000002,
+            "available_bytes": 14861594624
+          },
+          {
+            "at": "2026-08-29T17:03:41.269Z",
+            "cpu_percent": 9.25,
+            "available_bytes": 14862778368
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1788023021269,
+      "measurement_completed_epoch_ms": 1788023021752,
+      "measurement_wall_time_ms": 482.403,
+      "determinism": {
+        "compared": 3,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 3,
+        "measurement_span_ms": 399,
+        "peak_retained_evidence_bytes": 321944
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "throughput",
+    "engine": "puppeteer-chrome",
+    "scenario": "batch",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 350.975,
+      "dispatch_to_launch_ms": 941,
+      "warmups": 4,
+      "latency_ms": [
+        189.344,
+        186.66,
+        161.359,
+        156.286
+      ],
+      "rss_bytes": [
+        137613312,
+        1289449472,
+        1289449472,
+        1289449472
+      ],
+      "latency_cv": 0.09679,
+      "rss_drift": 0,
+      "system": {
+        "stable": true,
+        "samples": [
+          {
+            "at": "2026-08-29T17:03:52.081Z",
+            "cpu_percent": 17.17171717171717,
+            "available_bytes": 14801625088
+          },
+          {
+            "at": "2026-08-29T17:03:53.086Z",
+            "cpu_percent": 19.94949494949495,
+            "available_bytes": 14787506176
+          },
+          {
+            "at": "2026-08-29T17:03:54.093Z",
+            "cpu_percent": 14.393939393939394,
+            "available_bytes": 14789795840
+          },
+          {
+            "at": "2026-08-29T17:03:55.103Z",
+            "cpu_percent": 14.609571788413097,
+            "available_bytes": 14789451776
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1788023035104,
+      "measurement_completed_epoch_ms": 1788023035665,
+      "measurement_wall_time_ms": 560.815,
+      "determinism": {
+        "compared": 3,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 5,
+        "measurement_span_ms": 301,
+        "peak_retained_evidence_bytes": 321944
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "throughput",
+    "engine": "puppeteer-shell",
+    "scenario": "batch",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 174.22,
+      "dispatch_to_launch_ms": 928,
+      "warmups": 6,
+      "latency_ms": [
+        159.765,
+        126.929,
+        157.835,
+        125.544,
+        128.475,
+        143.152
+      ],
+      "rss_bytes": [
+        137175040,
+        137175040,
+        137175040,
+        616271872,
+        616271872,
+        616271872
+      ],
+      "latency_cv": 0.07126,
+      "rss_drift": 0,
+      "system": {
+        "stable": true,
+        "samples": [
+          {
+            "at": "2026-08-29T17:04:06.096Z",
+            "cpu_percent": 16,
+            "available_bytes": 14892380160
+          },
+          {
+            "at": "2026-08-29T17:04:07.103Z",
+            "cpu_percent": 13.06532663316583,
+            "available_bytes": 14895992832
+          },
+          {
+            "at": "2026-08-29T17:04:08.109Z",
+            "cpu_percent": 12.468827930174564,
+            "available_bytes": 14903103488
+          },
+          {
+            "at": "2026-08-29T17:04:09.116Z",
+            "cpu_percent": 10.606060606060606,
+            "available_bytes": 14910627840
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1788023049116,
+      "measurement_completed_epoch_ms": 1788023049549,
+      "measurement_wall_time_ms": 432.9,
+      "determinism": {
+        "compared": 3,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 3,
+        "measurement_span_ms": 312,
+        "peak_retained_evidence_bytes": 321944
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "throughput",
+    "engine": "playwright-chrome",
+    "scenario": "batch",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "noisy",
+    "settle": {
+      "stable": false,
+      "launch_ms": 331.202,
+      "dispatch_to_launch_ms": 1080,
+      "warmups": 10,
+      "latency_ms": [
+        171.247,
+        163.868,
+        166.698,
+        155.352,
+        145.192,
+        152.618,
+        137.962,
+        149.922,
+        122.648,
+        135.893
+      ],
+      "rss_bytes": [
+        208416768,
+        208416768,
+        1101549568,
+        1020297216,
+        1020297216,
+        1140256768,
+        1050308608,
+        1050308608,
+        1166340096,
+        1073520640
+      ],
+      "latency_cv": 0.10017,
+      "rss_drift": 0.10809,
+      "system": {
+        "stable": false,
+        "samples": []
+      },
+      "determinism": {
+        "compared": 0,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 24,
+        "measurement_span_ms": 3266,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": 23004879574.763
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "throughput",
+    "engine": "playwright-chrome",
+    "scenario": "batch",
+    "repeat": 1,
+    "attempt": 2,
+    "concurrency": 1,
+    "status": "noisy",
+    "settle": {
+      "stable": false,
+      "launch_ms": 308.382,
+      "dispatch_to_launch_ms": 1051,
+      "warmups": 10,
+      "latency_ms": [
+        163.956,
+        162.709,
+        200.659,
+        140.859,
+        129.363,
+        147.623,
+        135.753,
+        153.252,
+        154.624,
+        148.789
+      ],
+      "rss_bytes": [
+        206352384,
+        206352384,
+        1101733888,
+        1021792256,
+        1021792256,
+        1138434048,
+        1053536256,
+        1053536256,
+        1165746176,
+        1074331648
+      ],
+      "latency_cv": 0.02004,
+      "rss_drift": 0.10445,
+      "system": {
+        "stable": false,
+        "samples": []
+      },
+      "determinism": {
+        "compared": 0,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 23,
+        "measurement_span_ms": 3204,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": 23927281701.242
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "throughput",
+    "engine": "shotium",
+    "scenario": "batch",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 18.246,
+      "dispatch_to_launch_ms": 627,
+      "warmups": 4,
+      "latency_ms": [
+        43.394,
+        24.956,
+        23.596,
+        27.574
+      ],
+      "rss_bytes": [
+        171646976,
+        171646976,
+        171646976,
+        171646976
+      ],
+      "latency_cv": 0.07968,
+      "rss_drift": 0,
+      "system": {
+        "stable": true,
+        "samples": [
+          {
+            "at": "2026-08-29T17:04:40.796Z",
+            "cpu_percent": 7.425742574257425,
+            "available_bytes": 15044661248
+          },
+          {
+            "at": "2026-08-29T17:04:41.804Z",
+            "cpu_percent": 16.624685138539043,
+            "available_bytes": 15042109440
+          },
+          {
+            "at": "2026-08-29T17:04:42.810Z",
+            "cpu_percent": 11.72069825436409,
+            "available_bytes": 15039787008
+          },
+          {
+            "at": "2026-08-29T17:04:43.816Z",
+            "cpu_percent": 12.658227848101266,
+            "available_bytes": 15040090112
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1788023083816,
+      "measurement_completed_epoch_ms": 1788023083937,
+      "measurement_wall_time_ms": 121.099,
+      "determinism": {
+        "compared": 3,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 1,
+        "measurement_span_ms": 0,
+        "peak_retained_evidence_bytes": 410380
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "throughput",
+    "engine": "playwright-shell",
+    "scenario": "parallel",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 151.545,
+      "dispatch_to_launch_ms": 1087,
+      "warmups": 4,
+      "latency_ms": [
+        165.778,
+        117.818,
+        131.014,
+        117.562
+      ],
+      "rss_bytes": [
+        649232384,
+        649232384,
+        649232384,
+        649232384
+      ],
+      "latency_cv": 0.063,
+      "rss_drift": 0,
+      "system": {
+        "stable": true,
+        "samples": [
+          {
+            "at": "2026-08-29T17:04:53.064Z",
+            "cpu_percent": 20.100502512562816,
+            "available_bytes": 14884696064
+          },
+          {
+            "at": "2026-08-29T17:04:54.073Z",
+            "cpu_percent": 11.970074812967582,
+            "available_bytes": 14891098112
+          },
+          {
+            "at": "2026-08-29T17:04:55.080Z",
+            "cpu_percent": 17.042606516290725,
+            "available_bytes": 14891892736
+          },
+          {
+            "at": "2026-08-29T17:04:56.087Z",
+            "cpu_percent": 11.055276381909549,
+            "available_bytes": 14896832512
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1788023096087,
+      "measurement_completed_epoch_ms": 1788023096495,
+      "measurement_wall_time_ms": 408.009,
+      "determinism": {
+        "compared": 3,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 4,
+        "measurement_span_ms": 199,
+        "peak_retained_evidence_bytes": 321944
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "throughput",
+    "engine": "puppeteer-chrome",
+    "scenario": "parallel",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "noisy",
+    "settle": {
+      "stable": false,
+      "launch_ms": 360.016,
+      "dispatch_to_launch_ms": 932,
+      "warmups": 10,
+      "latency_ms": [
+        198.637,
+        198.019,
+        134.501,
+        172.298,
+        181.606,
+        157.912,
+        145.015,
+        187.048,
+        151.129,
+        181.472
+      ],
+      "rss_bytes": [
+        136908800,
+        1274720256,
+        1274720256,
+        1274720256,
+        1703268352,
+        1693044736,
+        1693044736,
+        2175365120,
+        2175365120,
+        2175365120
+      ],
+      "latency_cv": 0.1116,
+      "rss_drift": 0,
+      "system": {
+        "stable": false,
+        "samples": []
+      },
+      "determinism": {
+        "compared": 0,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 27,
+        "measurement_span_ms": 3470,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": 44767342117.813
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "throughput",
+    "engine": "puppeteer-chrome",
+    "scenario": "parallel",
+    "repeat": 1,
+    "attempt": 2,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 352.466,
+      "dispatch_to_launch_ms": 909,
+      "warmups": 7,
+      "latency_ms": [
+        192.022,
+        191.596,
+        133.234,
+        160.02,
+        157.492,
+        137.842,
+        160.119
+      ],
+      "rss_bytes": [
+        128430080,
+        1272958976,
+        1272958976,
+        1272958976,
+        1668718592,
+        1668718592,
+        1668718592
+      ],
+      "latency_cv": 0.08019,
+      "rss_drift": 0,
+      "system": {
+        "stable": true,
+        "samples": [
+          {
+            "at": "2026-08-29T17:05:18.932Z",
+            "cpu_percent": 28.57142857142857,
+            "available_bytes": 14759354368
+          },
+          {
+            "at": "2026-08-29T17:05:19.938Z",
+            "cpu_percent": 16.541353383458645,
+            "available_bytes": 14744301568
+          },
+          {
+            "at": "2026-08-29T17:05:20.943Z",
+            "cpu_percent": 16.331658291457288,
+            "available_bytes": 14744608768
+          },
+          {
+            "at": "2026-08-29T17:05:21.950Z",
+            "cpu_percent": 9.571788413098236,
+            "available_bytes": 14746345472
+          },
+          {
+            "at": "2026-08-29T17:05:22.955Z",
+            "cpu_percent": 19.849246231155778,
+            "available_bytes": 14749507584
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1788023122955,
+      "measurement_completed_epoch_ms": 1788023123418,
+      "measurement_wall_time_ms": 462.386,
+      "determinism": {
+        "compared": 3,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 4,
+        "measurement_span_ms": 301,
+        "peak_retained_evidence_bytes": 321944
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "throughput",
+    "engine": "shotium",
+    "scenario": "parallel",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 19.887,
+      "dispatch_to_launch_ms": 623,
+      "warmups": 4,
+      "latency_ms": [
+        45.651,
+        25.353,
+        23.673,
+        27.37
+      ],
+      "rss_bytes": [
+        171872256,
+        171872256,
+        171872256,
+        171872256
+      ],
+      "latency_cv": 0.07269,
+      "rss_drift": 0,
+      "system": {
+        "stable": true,
+        "samples": [
+          {
+            "at": "2026-08-29T17:05:32.618Z",
+            "cpu_percent": 6.9306930693069315,
+            "available_bytes": 15061426176
+          },
+          {
+            "at": "2026-08-29T17:05:33.626Z",
+            "cpu_percent": 14.572864321608039,
+            "available_bytes": 15056363520
+          },
+          {
+            "at": "2026-08-29T17:05:34.631Z",
+            "cpu_percent": 10.050251256281408,
+            "available_bytes": 15051149312
+          },
+          {
+            "at": "2026-08-29T17:05:35.637Z",
+            "cpu_percent": 13.316582914572864,
+            "available_bytes": 15046336512
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1788023135637,
+      "measurement_completed_epoch_ms": 1788023135757,
+      "measurement_wall_time_ms": 119.825,
+      "determinism": {
+        "compared": 3,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 1,
+        "measurement_span_ms": 0,
+        "peak_retained_evidence_bytes": 410380
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "throughput",
+    "engine": "playwright-chrome",
+    "scenario": "parallel",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 311.982,
+      "dispatch_to_launch_ms": 1053,
+      "warmups": 9,
+      "latency_ms": [
+        167.12,
+        163.364,
+        174.576,
+        124.507,
+        158.598,
+        145.289,
+        135.312,
+        141.659,
+        138.462
+      ],
+      "rss_bytes": [
+        207433728,
+        207433728,
+        1102888960,
+        1022492672,
+        1022492672,
+        1148289024,
+        1056739328,
+        1056739328,
+        1056739328
+      ],
+      "latency_cv": 0.02292,
+      "rss_drift": 0,
+      "system": {
+        "stable": true,
+        "samples": [
+          {
+            "at": "2026-08-29T17:05:46.110Z",
+            "cpu_percent": 10.945273631840797,
+            "available_bytes": 14713290752
+          },
+          {
+            "at": "2026-08-29T17:05:47.118Z",
+            "cpu_percent": 16.08040201005025,
+            "available_bytes": 14713974784
+          },
+          {
+            "at": "2026-08-29T17:05:48.126Z",
+            "cpu_percent": 13.5678391959799,
+            "available_bytes": 14716190720
+          },
+          {
+            "at": "2026-08-29T17:05:49.134Z",
+            "cpu_percent": 9.975062344139651,
+            "available_bytes": 14712254464
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1788023149134,
+      "measurement_completed_epoch_ms": 1788023149656,
+      "measurement_wall_time_ms": 522.159,
+      "determinism": {
+        "compared": 3,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 3,
+        "measurement_span_ms": 99,
+        "peak_retained_evidence_bytes": 321944
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "throughput",
+    "engine": "puppeteer-shell",
+    "scenario": "parallel",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 185.363,
+      "dispatch_to_launch_ms": 916,
+      "warmups": 3,
+      "latency_ms": [
+        146.108,
+        134.103,
+        127.578
+      ],
+      "rss_bytes": [
+        137641984,
+        137641984,
+        137641984
+      ],
+      "latency_cv": 0.06915,
+      "rss_drift": 0,
+      "system": {
+        "stable": true,
+        "samples": [
+          {
+            "at": "2026-08-29T17:05:59.388Z",
+            "cpu_percent": 17.08542713567839,
+            "available_bytes": 14939332608
+          },
+          {
+            "at": "2026-08-29T17:06:00.394Z",
+            "cpu_percent": 11.442786069651742,
+            "available_bytes": 14939803648
+          },
+          {
+            "at": "2026-08-29T17:06:01.400Z",
+            "cpu_percent": 15.909090909090908,
+            "available_bytes": 14935711744
+          },
+          {
+            "at": "2026-08-29T17:06:02.406Z",
+            "cpu_percent": 13.784461152882205,
+            "available_bytes": 14935437312
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1788023162406,
+      "measurement_completed_epoch_ms": 1788023162861,
+      "measurement_wall_time_ms": 454.64,
+      "determinism": {
+        "compared": 3,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 2,
+        "measurement_span_ms": 99,
+        "peak_retained_evidence_bytes": 321944
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "throughput",
+    "engine": "puppeteer-chrome",
+    "scenario": "parallel",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 2,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 373.105,
+      "dispatch_to_launch_ms": 916,
+      "warmups": 7,
+      "latency_ms": [
+        146.11,
+        185.871,
+        154.713,
+        146.65,
+        174.167,
+        164.418,
+        158.682
+      ],
+      "rss_bytes": [
+        135929856,
+        1290260480,
+        1290260480,
+        1290260480,
+        1709006848,
+        1710391296,
+        1710391296
+      ],
+      "latency_cv": 0.04723,
+      "rss_drift": 0.00081,
+      "system": {
+        "stable": true,
+        "samples": [
+          {
+            "at": "2026-08-29T17:06:13.870Z",
+            "cpu_percent": 31.122448979591837,
+            "available_bytes": 14755512320
+          },
+          {
+            "at": "2026-08-29T17:06:14.877Z",
+            "cpu_percent": 13.784461152882205,
+            "available_bytes": 14740254720
+          },
+          {
+            "at": "2026-08-29T17:06:15.883Z",
+            "cpu_percent": 16.624685138539043,
+            "available_bytes": 14739087360
+          },
+          {
+            "at": "2026-08-29T17:06:16.890Z",
+            "cpu_percent": 10,
+            "available_bytes": 14750056448
+          },
+          {
+            "at": "2026-08-29T17:06:17.897Z",
+            "cpu_percent": 19.696969696969695,
+            "available_bytes": 14760448000
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1788023177897,
+      "measurement_completed_epoch_ms": 1788023178361,
+      "measurement_wall_time_ms": 464.197,
+      "determinism": {
+        "compared": 3,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 3,
+        "measurement_span_ms": 199,
+        "peak_retained_evidence_bytes": 321944
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "throughput",
+    "engine": "shotium",
+    "scenario": "parallel",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 2,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 18.745,
+      "dispatch_to_launch_ms": 619,
+      "warmups": 4,
+      "latency_ms": [
+        44.97,
+        25.819,
+        23.9,
+        27.779
+      ],
+      "rss_bytes": [
+        171655168,
+        171655168,
+        171655168,
+        171655168
+      ],
+      "latency_cv": 0.07508,
+      "rss_drift": 0,
+      "system": {
+        "stable": true,
+        "samples": [
+          {
+            "at": "2026-08-29T17:06:27.486Z",
+            "cpu_percent": 7.8817733990147785,
+            "available_bytes": 15075790848
+          },
+          {
+            "at": "2026-08-29T17:06:28.494Z",
+            "cpu_percent": 14.249999999999998,
+            "available_bytes": 15070572544
+          },
+          {
+            "at": "2026-08-29T17:06:29.500Z",
+            "cpu_percent": 8.333333333333332,
+            "available_bytes": 15070572544
+          },
+          {
+            "at": "2026-08-29T17:06:30.508Z",
+            "cpu_percent": 13.032581453634084,
+            "available_bytes": 15065669632
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1788023190508,
+      "measurement_completed_epoch_ms": 1788023190637,
+      "measurement_wall_time_ms": 128.665,
+      "determinism": {
+        "compared": 3,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 1,
+        "measurement_span_ms": 0,
+        "peak_retained_evidence_bytes": 410380
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "throughput",
+    "engine": "playwright-chrome",
+    "scenario": "parallel",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 2,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 312.243,
+      "dispatch_to_launch_ms": 1058,
+      "warmups": 9,
+      "latency_ms": [
+        177.876,
+        148.259,
+        161.776,
+        147.302,
+        166.52,
+        126.306,
+        147.415,
+        145.458,
+        129.123
+      ],
+      "rss_bytes": [
+        208396288,
+        208396288,
+        1100660736,
+        1019686912,
+        1019686912,
+        1143476224,
+        1051377664,
+        1051377664,
+        1051377664
+      ],
+      "latency_cv": 0.0714,
+      "rss_drift": 0,
+      "system": {
+        "stable": true,
+        "samples": [
+          {
+            "at": "2026-08-29T17:06:40.923Z",
+            "cpu_percent": 14.07035175879397,
+            "available_bytes": 14736556032
+          },
+          {
+            "at": "2026-08-29T17:06:41.931Z",
+            "cpu_percent": 12.531328320802004,
+            "available_bytes": 14735818752
+          },
+          {
+            "at": "2026-08-29T17:06:42.939Z",
+            "cpu_percent": 13.06532663316583,
+            "available_bytes": 14736449536
+          },
+          {
+            "at": "2026-08-29T17:06:43.947Z",
+            "cpu_percent": 10.804020100502512,
+            "available_bytes": 14737498112
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1788023203947,
+      "measurement_completed_epoch_ms": 1788023204415,
+      "measurement_wall_time_ms": 468.174,
+      "determinism": {
+        "compared": 3,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 2,
+        "measurement_span_ms": 1,
+        "peak_retained_evidence_bytes": 321944
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "throughput",
+    "engine": "puppeteer-shell",
+    "scenario": "parallel",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 2,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 154.052,
+      "dispatch_to_launch_ms": 922,
+      "warmups": 3,
+      "latency_ms": [
+        138.43,
+        138.49,
+        129.306
+      ],
+      "rss_bytes": [
+        134758400,
+        134758400,
+        134758400
+      ],
+      "latency_cv": 0.03903,
+      "rss_drift": 0,
+      "system": {
+        "stable": true,
+        "samples": [
+          {
+            "at": "2026-08-29T17:06:54.100Z",
+            "cpu_percent": 14.77832512315271,
+            "available_bytes": 14953684992
+          },
+          {
+            "at": "2026-08-29T17:06:55.107Z",
+            "cpu_percent": 11.75,
+            "available_bytes": 14953336832
+          },
+          {
+            "at": "2026-08-29T17:06:56.114Z",
+            "cpu_percent": 15.869017632241814,
+            "available_bytes": 14951137280
+          },
+          {
+            "at": "2026-08-29T17:06:57.126Z",
+            "cpu_percent": 9.5,
+            "available_bytes": 14950879232
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1788023217127,
+      "measurement_completed_epoch_ms": 1788023217527,
+      "measurement_wall_time_ms": 400.751,
+      "determinism": {
+        "compared": 3,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 3,
+        "measurement_span_ms": 102,
+        "peak_retained_evidence_bytes": 321944
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "throughput",
+    "engine": "playwright-shell",
+    "scenario": "parallel",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 2,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 160.993,
+      "dispatch_to_launch_ms": 1064,
+      "warmups": 3,
+      "latency_ms": [
+        156.718,
+        146.794,
+        148.101
+      ],
+      "rss_bytes": [
+        207757312,
+        207757312,
+        207757312
+      ],
+      "latency_cv": 0.03582,
+      "rss_drift": 0,
+      "system": {
+        "stable": true,
+        "samples": [
+          {
+            "at": "2026-08-29T17:07:07.285Z",
+            "cpu_percent": 10.44776119402985,
+            "available_bytes": 14872338432
+          },
+          {
+            "at": "2026-08-29T17:07:08.296Z",
+            "cpu_percent": 12.060301507537687,
+            "available_bytes": 14870396928
+          },
+          {
+            "at": "2026-08-29T17:07:09.303Z",
+            "cpu_percent": 13,
+            "available_bytes": 14869004288
+          },
+          {
+            "at": "2026-08-29T17:07:10.311Z",
+            "cpu_percent": 9.022556390977442,
+            "available_bytes": 14874836992
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1788023230311,
+      "measurement_completed_epoch_ms": 1788023230678,
+      "measurement_wall_time_ms": 366.622,
+      "determinism": {
+        "compared": 3,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 1,
+        "measurement_span_ms": 0,
+        "peak_retained_evidence_bytes": 321944
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "resident",
+    "engine": "playwright-shell",
+    "scenario": "reuse-page",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 161.764,
+      "dispatch_to_launch_ms": 1117,
+      "warmups": 6,
+      "latency_ms": [
+        128.333,
+        61.09,
+        81.903,
+        56.103,
+        61.818,
+        59.993
+      ],
+      "rss_bytes": [
+        789053440,
+        789053440,
+        789053440,
+        789053440,
+        789053440,
+        789053440
+      ],
+      "latency_cv": 0.04922,
+      "rss_drift": 0,
+      "system": {
+        "stable": true,
+        "samples": [
+          {
+            "at": "2026-08-29T17:02:18.043Z",
+            "cpu_percent": 22.277227722772277,
+            "available_bytes": 14455545856
+          },
+          {
+            "at": "2026-08-29T17:02:19.052Z",
+            "cpu_percent": 11.528822055137844,
+            "available_bytes": 14450601984
+          },
+          {
+            "at": "2026-08-29T17:02:20.059Z",
+            "cpu_percent": 19.597989949748744,
+            "available_bytes": 14430056448
+          },
+          {
+            "at": "2026-08-29T17:02:21.067Z",
+            "cpu_percent": 10.44776119402985,
+            "available_bytes": 14444363776
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1788022941067,
+      "measurement_completed_epoch_ms": 1788022941420,
+      "tinybench": {
+        "aborted": false,
+        "critical": 2.7764451051977996,
+        "df": 4,
+        "hz": 14.524305924280679,
+        "latency": {
+          "aad": 8.351773679999969,
+          "critical": 2.7764451051977996,
+          "df": 4,
+          "mad": 6.855677999999898,
+          "max": 85.24992199999997,
+          "mean": 70.1917503999999,
+          "min": 57.1094320000002,
+          "moe": 13.581710186608587,
+          "p50": 69.15733499999988,
+          "p75": 76.01301299999977,
+          "p99": 84.88044563999996,
+          "p995": 85.06518381999996,
+          "p999": 85.21297436399996,
+          "rme": 19.34943937031182,
+          "samples": [
+            57.1094320000002,
+            63.429049999999734,
+            69.15733499999988,
+            76.01301299999977,
+            85.24992199999997
+          ],
+          "sd": 10.938313590678597,
+          "sem": 4.89176254959343,
+          "variance": 119.64670420802409
+        },
+        "max": 85.24992199999997,
+        "mean": 70.1917503999999,
+        "min": 57.1094320000002,
+        "moe": 13.581710186608587,
+        "p75": 76.01301299999977,
+        "p99": 84.88044563999996,
+        "p995": 85.06518381999996,
+        "p999": 85.21297436399996,
+        "period": 70.1917503999999,
+        "rme": 19.34943937031182,
+        "runtime": "node",
+        "runtimeVersion": "24.19.0",
+        "samples": [
+          57.1094320000002,
+          63.429049999999734,
+          69.15733499999988,
+          76.01301299999977,
+          85.24992199999997
+        ],
+        "sd": 10.938313590678597,
+        "sem": 4.89176254959343,
+        "throughput": {
+          "aad": 1.6909109623610434,
+          "critical": 2.7764451051977996,
+          "df": 4,
+          "mad": 1.3058646368551177,
+          "max": 17.510242441213503,
+          "mean": 14.524305924280679,
+          "min": 11.730216011224037,
+          "moe": 2.7862208535961717,
+          "p50": 14.459782176395343,
+          "p75": 15.765646813250461,
+          "p99": 17.440458616094983,
+          "p995": 17.475350528654243,
+          "p999": 17.50326405870165,
+          "rme": 19.183160063699635,
+          "samples": [
+            11.730216011224037,
+            13.155642179320045,
+            14.459782176395343,
+            15.765646813250461,
+            17.510242441213503
+          ],
+          "sd": 2.2439410803782773,
+          "sem": 1.0035209586460294,
+          "variance": 5.03527157220923
+        },
+        "totalTime": 350.95875199999955,
+        "variance": 119.64670420802409
+      },
+      "measurement_wall_time_ms": 352.778,
+      "determinism": {
+        "compared": 5,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 1,
+        "measurement_span_ms": 0,
+        "peak_retained_evidence_bytes": 299155
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "resident",
+    "engine": "puppeteer-shell",
+    "scenario": "reuse-page",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 185.066,
+      "dispatch_to_launch_ms": 891,
+      "warmups": 7,
+      "latency_ms": [
+        142.284,
+        80.217,
+        94.692,
+        79.456,
+        93.144,
+        79.919,
+        88.227
+      ],
+      "rss_bytes": [
+        135479296,
+        135479296,
+        135479296,
+        135479296,
+        739827712,
+        739827712,
+        739827712
+      ],
+      "latency_cv": 0.07675,
+      "rss_drift": 0,
+      "system": {
+        "stable": true,
+        "samples": [
+          {
+            "at": "2026-08-29T17:02:31.874Z",
+            "cpu_percent": 22.885572139303484,
+            "available_bytes": 14976745472
+          },
+          {
+            "at": "2026-08-29T17:02:32.880Z",
+            "cpu_percent": 10.275689223057643,
+            "available_bytes": 14970404864
+          },
+          {
+            "at": "2026-08-29T17:02:33.885Z",
+            "cpu_percent": 17.17171717171717,
+            "available_bytes": 14982426624
+          },
+          {
+            "at": "2026-08-29T17:02:34.892Z",
+            "cpu_percent": 12.935323383084576,
+            "available_bytes": 14995570688
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1788022954892,
+      "measurement_completed_epoch_ms": 1788022955284,
+      "tinybench": {
+        "aborted": false,
+        "critical": 2.7764451051977996,
+        "df": 4,
+        "hz": 12.985474305866756,
+        "latency": {
+          "aad": 7.943937359999618,
+          "critical": 2.7764451051977996,
+          "df": 4,
+          "mad": 7.280291999999463,
+          "max": 91.93109599999934,
+          "mean": 77.97362779999985,
+          "min": 67.01887700000043,
+          "moe": 12.26856859427015,
+          "p50": 74.29916899999989,
+          "p75": 83.8760029999994,
+          "p99": 91.60889227999934,
+          "p995": 91.76999413999934,
+          "p999": 91.89887562799935,
+          "rme": 15.734253927159426,
+          "samples": [
+            67.01887700000043,
+            72.74299400000018,
+            74.29916899999989,
+            83.8760029999994,
+            91.93109599999934
+          ],
+          "sd": 9.880747619338464,
+          "sem": 4.418804669072005,
+          "variance": 97.62917351706272
+        },
+        "max": 91.93109599999934,
+        "mean": 77.97362779999985,
+        "min": 67.01887700000043,
+        "moe": 12.26856859427015,
+        "p75": 83.8760029999994,
+        "p99": 91.60889227999934,
+        "p995": 91.76999413999934,
+        "p999": 91.89887562799935,
+        "period": 77.97362779999985,
+        "rme": 15.734253927159426,
+        "runtime": "node",
+        "runtimeVersion": "24.19.0",
+        "samples": [
+          67.01887700000043,
+          72.74299400000018,
+          74.29916899999989,
+          83.8760029999994,
+          91.93109599999934
+        ],
+        "sd": 9.880747619338464,
+        "sem": 4.418804669072005,
+        "throughput": {
+          "aad": 1.2683501223724505,
+          "critical": 2.7764451051977996,
+          "df": 4,
+          "mad": 1.4620684169122207,
+          "max": 14.921169150596086,
+          "mean": 12.985474305866756,
+          "min": 10.87771215084836,
+          "moe": 1.9753847865349665,
+          "p50": 13.459100733683865,
+          "p75": 13.747028339251441,
+          "p99": 14.8742035181423,
+          "p995": 14.897686334369192,
+          "p999": 14.916472587350707,
+          "rme": 15.212265181892509,
+          "samples": [
+            10.87771215084836,
+            11.922361154954023,
+            13.459100733683865,
+            13.747028339251441,
+            14.921169150596086
+          ],
+          "sd": 1.5909173410782826,
+          "sem": 0.7114798642468517,
+          "variance": 2.531017986143593
+        },
+        "totalTime": 389.86813899999925,
+        "variance": 97.62917351706272
+      },
+      "measurement_wall_time_ms": 392.171,
+      "determinism": {
+        "compared": 5,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 2,
+        "measurement_span_ms": 100,
+        "peak_retained_evidence_bytes": 299155
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "resident",
+    "engine": "puppeteer-chrome",
+    "scenario": "reuse-page",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 376.148,
+      "dispatch_to_launch_ms": 910,
+      "warmups": 5,
+      "latency_ms": [
+        186.81,
+        98.463,
+        100.148,
+        82.748,
+        89.133
+      ],
+      "rss_bytes": [
+        136626176,
+        136626176,
+        1197965312,
+        1186906112,
+        1186906112
+      ],
+      "latency_cv": 0.09707,
+      "rss_drift": 0.00932,
+      "system": {
+        "stable": true,
+        "samples": [
+          {
+            "at": "2026-08-29T17:02:45.721Z",
+            "cpu_percent": 26.737967914438503,
+            "available_bytes": 14932766720
+          },
+          {
+            "at": "2026-08-29T17:02:46.728Z",
+            "cpu_percent": 13.96508728179551,
+            "available_bytes": 14910099456
+          },
+          {
+            "at": "2026-08-29T17:02:47.734Z",
+            "cpu_percent": 17.884130982367758,
+            "available_bytes": 14900633600
+          },
+          {
+            "at": "2026-08-29T17:02:48.741Z",
+            "cpu_percent": 14.357682619647354,
+            "available_bytes": 14896803840
+          },
+          {
+            "at": "2026-08-29T17:02:49.747Z",
+            "cpu_percent": 15,
+            "available_bytes": 14898982912
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1788022969747,
+      "measurement_completed_epoch_ms": 1788022970185,
+      "tinybench": {
+        "aborted": false,
+        "critical": 2.7764451051977996,
+        "df": 4,
+        "hz": 11.496231775830314,
+        "latency": {
+          "aad": 4.126088799999925,
+          "critical": 2.7764451051977996,
+          "df": 4,
+          "mad": 1.3343770000010409,
+          "max": 95.48094599999968,
+          "mean": 87.22374599999985,
+          "min": 83.0383839999995,
+          "moe": 6.476119902373752,
+          "p50": 84.37276100000054,
+          "p75": 89.28176799999983,
+          "p99": 95.23297887999968,
+          "p995": 95.35696243999968,
+          "p999": 95.45614928799968,
+          "rme": 7.424721133134736,
+          "samples": [
+            83.0383839999995,
+            83.9448709999997,
+            84.37276100000054,
+            89.28176799999983,
+            95.48094599999968
+          ],
+          "sd": 5.2156782444705865,
+          "sem": 2.3325222206805996,
+          "variance": 27.203299549843777
+        },
+        "max": 95.48094599999968,
+        "mean": 87.22374599999985,
+        "min": 83.0383839999995,
+        "moe": 6.476119902373752,
+        "p75": 89.28176799999983,
+        "p99": 95.23297887999968,
+        "p995": 95.35696243999968,
+        "p999": 95.45614928799968,
+        "period": 87.22374599999985,
+        "rme": 7.424721133134736,
+        "runtime": "node",
+        "runtimeVersion": "24.19.0",
+        "samples": [
+          83.0383839999995,
+          83.9448709999997,
+          84.37276100000054,
+          89.28176799999983,
+          95.48094599999968
+        ],
+        "sd": 5.2156782444705865,
+        "sem": 2.3325222206805996,
+        "throughput": {
+          "aad": 0.5274698820744597,
+          "critical": 2.7764451051977996,
+          "df": 4,
+          "mad": 0.19045720105666142,
+          "max": 12.042623565506839,
+          "mean": 11.496231775830314,
+          "min": 10.47329380251431,
+          "moe": 0.8171530437749208,
+          "p50": 11.852166364450177,
+          "p75": 11.912580102720078,
+          "p99": 12.037421826995368,
+          "p995": 12.040022696251103,
+          "p999": 12.042103391655692,
+          "rme": 7.108007734263882,
+          "samples": [
+            10.47329380251431,
+            11.200495043960172,
+            11.852166364450177,
+            11.912580102720078,
+            12.042623565506839
+          ],
+          "sd": 0.6581112482580167,
+          "sem": 0.29431629757243305,
+          "variance": 0.43311041508372494
+        },
+        "totalTime": 436.11872999999923,
+        "variance": 27.203299549843777
+      },
+      "measurement_wall_time_ms": 438.174,
+      "determinism": {
+        "compared": 5,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 3,
+        "measurement_span_ms": 312,
+        "peak_retained_evidence_bytes": 299155
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "resident",
+    "engine": "playwright-chrome",
+    "scenario": "reuse-page",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 310.559,
+      "dispatch_to_launch_ms": 1045,
+      "warmups": 6,
+      "latency_ms": [
+        158.906,
+        96.904,
+        118.582,
+        82.912,
+        74.145,
+        68.845
+      ],
+      "rss_bytes": [
+        208207872,
+        208207872,
+        208207872,
+        1284239360,
+        1284239360,
+        1284239360
+      ],
+      "latency_cv": 0.09435,
+      "rss_drift": 0,
+      "system": {
+        "stable": true,
+        "samples": [
+          {
+            "at": "2026-08-29T17:03:00.773Z",
+            "cpu_percent": 17,
+            "available_bytes": 14834122752
+          },
+          {
+            "at": "2026-08-29T17:03:01.786Z",
+            "cpu_percent": 14.000000000000002,
+            "available_bytes": 14812467200
+          },
+          {
+            "at": "2026-08-29T17:03:02.793Z",
+            "cpu_percent": 14.713216957605985,
+            "available_bytes": 14807310336
+          },
+          {
+            "at": "2026-08-29T17:03:03.802Z",
+            "cpu_percent": 17.955112219451372,
+            "available_bytes": 14800195584
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1788022983802,
+      "measurement_completed_epoch_ms": 1788022984189,
+      "tinybench": {
+        "aborted": false,
+        "critical": 2.7764451051977996,
+        "df": 4,
+        "hz": 13.086634666869415,
+        "latency": {
+          "aad": 6.342044239999959,
+          "critical": 2.7764451051977996,
+          "df": 4,
+          "mad": 1.98131100000046,
+          "max": 83.21699700000045,
+          "mean": 76.9891668000002,
+          "min": 68.02429200000006,
+          "moe": 9.073831138263827,
+          "p50": 81.23568599999999,
+          "p75": 82.36992800000007,
+          "p99": 83.18311424000044,
+          "p995": 83.20005562000044,
+          "p999": 83.21360872400045,
+          "rme": 11.785854446035911,
+          "samples": [
+            68.02429200000006,
+            70.09893100000045,
+            81.23568599999999,
+            82.36992800000007,
+            83.21699700000045
+          ],
+          "sd": 7.307799172232051,
+          "sem": 3.268147143005512,
+          "variance": 53.40392874167545
+        },
+        "max": 83.21699700000045,
+        "mean": 76.9891668000002,
+        "min": 68.02429200000006,
+        "moe": 9.073831138263827,
+        "p75": 82.36992800000007,
+        "p99": 83.18311424000044,
+        "p995": 83.20005562000044,
+        "p999": 83.21360872400045,
+        "period": 76.9891668000002,
+        "rme": 11.785854446035911,
+        "runtime": "node",
+        "runtimeVersion": "24.19.0",
+        "samples": [
+          68.02429200000006,
+          70.09893100000045,
+          81.23568599999999,
+          82.36992800000007,
+          83.21699700000045
+        ],
+        "sd": 7.307799172232051,
+        "sem": 3.268147143005512,
+        "throughput": {
+          "aad": 1.1171656860064783,
+          "critical": 2.7764451051977996,
+          "df": 4,
+          "mad": 0.2930851126129337,
+          "max": 14.700630768784762,
+          "mean": 13.086634666869415,
+          "min": 12.01677585169283,
+          "moe": 1.5995620078328083,
+          "p50": 12.309860964305763,
+          "p75": 14.265552779970262,
+          "p99": 14.683227649232183,
+          "p995": 14.691929209008473,
+          "p999": 14.698890456829504,
+          "rme": 12.222867441102455,
+          "samples": [
+            12.01677585169283,
+            12.140352969593456,
+            12.309860964305763,
+            14.265552779970262,
+            14.700630768784762
+          ],
+          "sd": 1.2882406272121836,
+          "sem": 0.5761187227646816,
+          "variance": 1.6595639136000404
+        },
+        "totalTime": 384.945834000001,
+        "variance": 53.40392874167545
+      },
+      "measurement_wall_time_ms": 387.124,
+      "determinism": {
+        "compared": 5,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 3,
+        "measurement_span_ms": 200,
+        "peak_retained_evidence_bytes": 299155
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "resident",
+    "engine": "puppeteer-shell",
+    "scenario": "resident",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "warmups": 3,
+      "latency_ms": [
+        1198,
+        1182,
+        1102
+      ],
+      "rss_bytes": [
+        573825024,
+        580845568,
+        584097792
+      ],
+      "latency_cv": 0.04431,
+      "rss_drift": 0.01769,
+      "system": {
+        "stable": true,
+        "samples": [
+          {
+            "at": "2026-08-29T17:03:17.447Z",
+            "cpu_percent": 20,
+            "available_bytes": 14870167552
+          },
+          {
+            "at": "2026-08-29T17:03:18.454Z",
+            "cpu_percent": 13.5,
+            "available_bytes": 14877089792
+          },
+          {
+            "at": "2026-08-29T17:03:19.461Z",
+            "cpu_percent": 13.96508728179551,
+            "available_bytes": 14894239744
+          },
+          {
+            "at": "2026-08-29T17:03:20.469Z",
+            "cpu_percent": 12.75,
+            "available_bytes": 14903353344
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1788023000470,
+      "measurement_completed_epoch_ms": 1788023001804,
+      "measurement_wall_time_ms": 1152,
+      "determinism": {
+        "compared": 1,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 10,
+        "measurement_span_ms": 946,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "resident",
+    "engine": "puppeteer-chrome",
+    "scenario": "resident",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "noisy",
+    "settle": {
+      "stable": false,
+      "warmups": 10,
+      "latency_ms": [
+        1307,
+        1241,
+        1210,
+        1202,
+        1134,
+        1135,
+        1119,
+        1172,
+        1133,
+        1136
+      ],
+      "rss_bytes": [
+        1260642304,
+        1517735936,
+        1522868224,
+        1649299456,
+        1787797504,
+        2059198464,
+        2063147008,
+        2309509120,
+        2326183936,
+        2439507968
+      ],
+      "latency_cv": 0.01892,
+      "rss_drift": 0.05589,
+      "system": {
+        "stable": false,
+        "samples": []
+      },
+      "determinism": {
+        "compared": 0,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 107,
+        "measurement_span_ms": 14066,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": 8068958220.514
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "resident",
+    "engine": "puppeteer-chrome",
+    "scenario": "resident",
+    "repeat": 1,
+    "attempt": 2,
+    "concurrency": 1,
+    "status": "noisy",
+    "settle": {
+      "stable": false,
+      "warmups": 10,
+      "latency_ms": [
+        1180,
+        1134,
+        1115,
+        1154,
+        1145,
+        1116,
+        1123,
+        1125,
+        1161,
+        1159
+      ],
+      "rss_bytes": [
+        1293578240,
+        1346740224,
+        1643663360,
+        1671544832,
+        1920278528,
+        1947856896,
+        2226872320,
+        2222940160,
+        2460450816,
+        2368782336
+      ],
+      "latency_cv": 0.01762,
+      "rss_drift": 0.10027,
+      "system": {
+        "stable": false,
+        "samples": []
+      },
+      "determinism": {
+        "compared": 0,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 105,
+        "measurement_span_ms": 13819,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": 7900205509.766
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "resident",
+    "engine": "playwright-chrome",
+    "scenario": "resident",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "warmups": 3,
+      "latency_ms": [
+        1333,
+        1284,
+        1284
+      ],
+      "rss_bytes": [
+        877326336,
+        880533504,
+        896397312
+      ],
+      "latency_cv": 0.02176,
+      "rss_drift": 0.02166,
+      "system": {
+        "stable": true,
+        "samples": [
+          {
+            "at": "2026-08-29T17:04:19.229Z",
+            "cpu_percent": 2.9268292682926833,
+            "available_bytes": 14682058752
+          },
+          {
+            "at": "2026-08-29T17:04:20.236Z",
+            "cpu_percent": 17.839195979899497,
+            "available_bytes": 14689304576
+          },
+          {
+            "at": "2026-08-29T17:04:21.242Z",
+            "cpu_percent": 12.030075187969924,
+            "available_bytes": 14697328640
+          },
+          {
+            "at": "2026-08-29T17:04:22.250Z",
+            "cpu_percent": 10.050251256281408,
+            "available_bytes": 14717788160
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1788023062250,
+      "measurement_completed_epoch_ms": 1788023063854,
+      "measurement_wall_time_ms": 1394,
+      "determinism": {
+        "compared": 1,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 11,
+        "measurement_span_ms": 1058,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": 7690389614.504
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "resident",
+    "engine": "shotium",
+    "scenario": "resident",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "warmups": 4,
+      "latency_ms": [
+        664,
+        686,
+        665,
+        672
+      ],
+      "rss_bytes": [
+        221798400,
+        225722368,
+        229318656,
+        232480768
+      ],
+      "latency_cv": 0.01586,
+      "rss_drift": 0.02947,
+      "system": {
+        "stable": true,
+        "samples": [
+          {
+            "at": "2026-08-29T17:04:35.483Z",
+            "cpu_percent": 19,
+            "available_bytes": 14938603520
+          },
+          {
+            "at": "2026-08-29T17:04:36.488Z",
+            "cpu_percent": 10.199004975124378,
+            "available_bytes": 14944346112
+          },
+          {
+            "at": "2026-08-29T17:04:37.493Z",
+            "cpu_percent": 9.296482412060302,
+            "available_bytes": 14948401152
+          },
+          {
+            "at": "2026-08-29T17:04:38.498Z",
+            "cpu_percent": 17.794486215538846,
+            "available_bytes": 14964097024
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1788023078498,
+      "measurement_completed_epoch_ms": 1788023079295,
+      "measurement_wall_time_ms": 602,
+      "determinism": {
+        "compared": 1,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 8,
+        "measurement_span_ms": 600,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "resident",
+    "engine": "playwright-shell",
+    "scenario": "resident",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "warmups": 3,
+      "latency_ms": [
+        1254,
+        1229,
+        1237
+      ],
+      "rss_bytes": [
+        574357504,
+        582533120,
+        587087872
+      ],
+      "latency_cv": 0.0103,
+      "rss_drift": 0.02185,
+      "system": {
+        "stable": true,
+        "samples": [
+          {
+            "at": "2026-08-29T17:04:52.850Z",
+            "cpu_percent": 15.763546798029557,
+            "available_bytes": 14722326528
+          },
+          {
+            "at": "2026-08-29T17:04:53.857Z",
+            "cpu_percent": 13.96508728179551,
+            "available_bytes": 14733582336
+          },
+          {
+            "at": "2026-08-29T17:04:54.863Z",
+            "cpu_percent": 12.562814070351758,
+            "available_bytes": 14747381760
+          },
+          {
+            "at": "2026-08-29T17:04:55.870Z",
+            "cpu_percent": 14.249999999999998,
+            "available_bytes": 14749310976
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1788023095871,
+      "measurement_completed_epoch_ms": 1788023097330,
+      "measurement_wall_time_ms": 1267,
+      "determinism": {
+        "compared": 1,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 12,
+        "measurement_span_ms": 1137,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": 15378328910.884
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "resilience",
+    "engine": "puppeteer-chrome",
+    "scenario": "faults",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 356.004,
+      "dispatch_to_launch_ms": 957,
+      "warmups": 4,
+      "latency_ms": [
+        186.566,
+        167.698,
+        159.415,
+        176.503
+      ],
+      "rss_bytes": [
+        153636864,
+        1311846400,
+        1311846400,
+        1311846400
+      ],
+      "latency_cv": 0.0509,
+      "rss_drift": 0,
+      "system": {
+        "stable": true,
+        "samples": [
+          {
+            "at": "2026-08-29T17:02:22.524Z",
+            "cpu_percent": 15.346534653465346,
+            "available_bytes": 14493655040
+          },
+          {
+            "at": "2026-08-29T17:02:23.530Z",
+            "cpu_percent": 20.558375634517766,
+            "available_bytes": 14493716480
+          },
+          {
+            "at": "2026-08-29T17:02:24.535Z",
+            "cpu_percent": 12.781954887218044,
+            "available_bytes": 14500761600
+          },
+          {
+            "at": "2026-08-29T17:02:25.550Z",
+            "cpu_percent": 14.357682619647354,
+            "available_bytes": 14501126144
+          }
+        ]
+      },
+      "determinism": {
+        "compared": 1,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 91,
+        "measurement_span_ms": 11456,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": 11615854698.773
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "resilience",
+    "engine": "puppeteer-shell",
+    "scenario": "faults",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 164.991,
+      "dispatch_to_launch_ms": 918,
+      "warmups": 3,
+      "latency_ms": [
+        148.529,
+        137.593,
+        132.053
+      ],
+      "rss_bytes": [
+        133890048,
+        133890048,
+        133890048
+      ],
+      "latency_cv": 0.06015,
+      "rss_drift": 0,
+      "system": {
+        "stable": true,
+        "samples": [
+          {
+            "at": "2026-08-29T17:02:41.079Z",
+            "cpu_percent": 9.900990099009901,
+            "available_bytes": 14959128576
+          },
+          {
+            "at": "2026-08-29T17:02:42.085Z",
+            "cpu_percent": 13.88888888888889,
+            "available_bytes": 14958018560
+          },
+          {
+            "at": "2026-08-29T17:02:43.091Z",
+            "cpu_percent": 14.321608040201006,
+            "available_bytes": 14959349760
+          },
+          {
+            "at": "2026-08-29T17:02:44.096Z",
+            "cpu_percent": 9.022556390977442,
+            "available_bytes": 14967574528
+          }
+        ]
+      },
+      "determinism": {
+        "compared": 1,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 78,
+        "measurement_span_ms": 9454,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": 4321686923.248
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "resilience",
+    "engine": "playwright-shell",
+    "scenario": "faults",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 152.755,
+      "dispatch_to_launch_ms": 1057,
+      "warmups": 6,
+      "latency_ms": [
+        156.424,
+        118.079,
+        140.566,
+        108.68,
+        99.936,
+        113.119
+      ],
+      "rss_bytes": [
+        207376384,
+        207376384,
+        207376384,
+        668073984,
+        668073984,
+        668073984
+      ],
+      "latency_cv": 0.06254,
+      "rss_drift": 0,
+      "system": {
+        "stable": true,
+        "samples": [
+          {
+            "at": "2026-08-29T17:02:59.048Z",
+            "cpu_percent": 15.346534653465346,
+            "available_bytes": 14808154112
+          },
+          {
+            "at": "2026-08-29T17:03:00.056Z",
+            "cpu_percent": 10.075566750629724,
+            "available_bytes": 14805004288
+          },
+          {
+            "at": "2026-08-29T17:03:01.062Z",
+            "cpu_percent": 14.536340852130325,
+            "available_bytes": 14803226624
+          },
+          {
+            "at": "2026-08-29T17:03:02.070Z",
+            "cpu_percent": 14.713216957605985,
+            "available_bytes": 14801387520
+          }
+        ]
+      },
+      "determinism": {
+        "compared": 1,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 133,
+        "measurement_span_ms": 15757,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": 2040950132.034
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "resilience",
+    "engine": "shotium",
+    "scenario": "faults",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 18.035,
+      "dispatch_to_launch_ms": 613,
+      "warmups": 4,
+      "latency_ms": [
+        45.348,
+        26.229,
+        24.244,
+        26.55
+      ],
+      "rss_bytes": [
+        172314624,
+        172314624,
+        172314624,
+        172314624
+      ],
+      "latency_cv": 0.04865,
+      "rss_drift": 0,
+      "system": {
+        "stable": true,
+        "samples": [
+          {
+            "at": "2026-08-29T17:03:21.318Z",
+            "cpu_percent": 7.462686567164178,
+            "available_bytes": 14972825600
+          },
+          {
+            "at": "2026-08-29T17:03:22.326Z",
+            "cpu_percent": 19.25,
+            "available_bytes": 14973165568
+          },
+          {
+            "at": "2026-08-29T17:03:23.332Z",
+            "cpu_percent": 9.045226130653267,
+            "available_bytes": 14972628992
+          },
+          {
+            "at": "2026-08-29T17:03:24.338Z",
+            "cpu_percent": 10.025062656641603,
+            "available_bytes": 14986149888
+          }
+        ]
+      },
+      "determinism": {
+        "compared": 0,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 93,
+        "measurement_span_ms": 10275,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": 2168425453.193
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "resilience",
+    "engine": "playwright-chrome",
+    "scenario": "faults",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 312.603,
+      "dispatch_to_launch_ms": 1040,
+      "warmups": 9,
+      "latency_ms": [
+        158.628,
+        163.891,
+        182.182,
+        143.637,
+        133.079,
+        151.182,
+        158.426,
+        149.958,
+        146.928
+      ],
+      "rss_bytes": [
+        205516800,
+        205516800,
+        1088786432,
+        1008631808,
+        1008631808,
+        1132486656,
+        1041084416,
+        1041084416,
+        1041084416
+      ],
+      "latency_cv": 0.03927,
+      "rss_drift": 0,
+      "system": {
+        "stable": true,
+        "samples": [
+          {
+            "at": "2026-08-29T17:03:40.812Z",
+            "cpu_percent": 10.5,
+            "available_bytes": 14759493632
+          },
+          {
+            "at": "2026-08-29T17:03:41.819Z",
+            "cpu_percent": 13.316582914572864,
+            "available_bytes": 14754570240
+          },
+          {
+            "at": "2026-08-29T17:03:42.827Z",
+            "cpu_percent": 13.316582914572864,
+            "available_bytes": 14752296960
+          },
+          {
+            "at": "2026-08-29T17:03:43.835Z",
+            "cpu_percent": 10.224438902743142,
+            "available_bytes": 14755905536
+          }
+        ]
+      },
+      "determinism": {
+        "compared": 1,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 145,
+        "measurement_span_ms": 17729,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": 3189716840.035
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "resilience",
+    "engine": "shotium",
+    "scenario": "soak",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 4,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 19.348,
+      "dispatch_to_launch_ms": 616,
+      "warmups": 4,
+      "latency_ms": [
+        45.781,
+        25.357,
+        24.347,
+        26.44
+      ],
+      "rss_bytes": [
+        170807296,
+        170807296,
+        170807296,
+        170807296
+      ],
+      "latency_cv": 0.04124,
+      "rss_drift": 0,
+      "system": {
+        "stable": true,
+        "samples": [
+          {
+            "at": "2026-08-29T17:04:03.989Z",
+            "cpu_percent": 6.532663316582915,
+            "available_bytes": 15057448960
+          },
+          {
+            "at": "2026-08-29T17:04:04.997Z",
+            "cpu_percent": 15.211970074812967,
+            "available_bytes": 15049486336
+          },
+          {
+            "at": "2026-08-29T17:04:06.004Z",
+            "cpu_percent": 9.022556390977442,
+            "available_bytes": 15049834496
+          },
+          {
+            "at": "2026-08-29T17:04:07.010Z",
+            "cpu_percent": 11,
+            "available_bytes": 15047958528
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1788023047010,
+      "requested_soak_iterations": 50,
+      "completed_soak_iterations": 50,
+      "succeeded_soak_iterations": 50,
+      "failed_soak_iterations": 0,
+      "failure_rate": 0,
+      "soak_stop_reason": "iteration-limit",
+      "measurement_completed_epoch_ms": 1788023048832,
+      "measurement_wall_time_ms": 1822.603,
+      "determinism": {
+        "compared": 50,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 17,
+        "measurement_span_ms": 1666,
+        "peak_retained_evidence_bytes": 6872751
+      },
+      "rss_slope_bytes_per_minute": 332745651.308
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "resilience",
+    "engine": "puppeteer-chrome",
+    "scenario": "soak",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 4,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 367.483,
+      "dispatch_to_launch_ms": 902,
+      "warmups": 8,
+      "latency_ms": [
+        185.99,
+        179.7,
+        198.026,
+        158.91,
+        166.432,
+        165.258,
+        164.565,
+        171.853
+      ],
+      "rss_bytes": [
+        134037504,
+        134037504,
+        1424531456,
+        1424531456,
+        1424531456,
+        1839517696,
+        1839517696,
+        1839517696
+      ],
+      "latency_cv": 0.02406,
+      "rss_drift": 0,
+      "system": {
+        "stable": true,
+        "samples": [
+          {
+            "at": "2026-08-29T17:04:22.839Z",
+            "cpu_percent": 18.90547263681592,
+            "available_bytes": 14748082176
+          },
+          {
+            "at": "2026-08-29T17:04:23.844Z",
+            "cpu_percent": 17.08542713567839,
+            "available_bytes": 14743490560
+          },
+          {
+            "at": "2026-08-29T17:04:24.849Z",
+            "cpu_percent": 12.781954887218044,
+            "available_bytes": 14747987968
+          },
+          {
+            "at": "2026-08-29T17:04:25.855Z",
+            "cpu_percent": 14.936708860759493,
+            "available_bytes": 14750756864
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1788023065855,
+      "requested_soak_iterations": 50,
+      "completed_soak_iterations": 50,
+      "succeeded_soak_iterations": 50,
+      "failed_soak_iterations": 0,
+      "failure_rate": 0,
+      "soak_stop_reason": "iteration-limit",
+      "measurement_completed_epoch_ms": 1788023072815,
+      "measurement_wall_time_ms": 6959.846,
+      "determinism": {
+        "compared": 50,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 48,
+        "measurement_span_ms": 6334,
+        "peak_retained_evidence_bytes": 5375507
+      },
+      "rss_slope_bytes_per_minute": 1524658166.011
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "resilience",
+    "engine": "playwright-shell",
+    "scenario": "soak",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 4,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 149.29,
+      "dispatch_to_launch_ms": 1042,
+      "warmups": 7,
+      "latency_ms": [
+        156.868,
+        120.763,
+        146.379,
+        134.493,
+        113.325,
+        94.514,
+        109.557
+      ],
+      "rss_bytes": [
+        207294464,
+        207294464,
+        207294464,
+        675192832,
+        675192832,
+        675192832,
+        675192832
+      ],
+      "latency_cv": 0.09407,
+      "rss_drift": 0,
+      "system": {
+        "stable": true,
+        "samples": [
+          {
+            "at": "2026-08-29T17:04:46.448Z",
+            "cpu_percent": 16.161616161616163,
+            "available_bytes": 14833594368
+          },
+          {
+            "at": "2026-08-29T17:04:47.456Z",
+            "cpu_percent": 10.199004975124378,
+            "available_bytes": 14833078272
+          },
+          {
+            "at": "2026-08-29T17:04:48.464Z",
+            "cpu_percent": 18.090452261306535,
+            "available_bytes": 14828748800
+          },
+          {
+            "at": "2026-08-29T17:04:49.473Z",
+            "cpu_percent": 10.5,
+            "available_bytes": 14831456256
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1788023089474,
+      "requested_soak_iterations": 50,
+      "completed_soak_iterations": 50,
+      "succeeded_soak_iterations": 50,
+      "failed_soak_iterations": 0,
+      "failure_rate": 0,
+      "soak_stop_reason": "iteration-limit",
+      "measurement_completed_epoch_ms": 1788023094311,
+      "measurement_wall_time_ms": 4837.201,
+      "determinism": {
+        "compared": 50,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 34,
+        "measurement_span_ms": 4812,
+        "peak_retained_evidence_bytes": 5375507
+      },
+      "rss_slope_bytes_per_minute": 32177743.128
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "resilience",
+    "engine": "playwright-chrome",
+    "scenario": "soak",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 4,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 305.023,
+      "dispatch_to_launch_ms": 1034,
+      "warmups": 6,
+      "latency_ms": [
+        149.605,
+        156.338,
+        182.389,
+        149.842,
+        133.442,
+        133.417
+      ],
+      "rss_bytes": [
+        207994880,
+        207994880,
+        1094164480,
+        1013723136,
+        1013723136,
+        1013723136
+      ],
+      "latency_cv": 0.06822,
+      "rss_drift": 0,
+      "system": {
+        "stable": true,
+        "samples": [
+          {
+            "at": "2026-08-29T17:05:08.379Z",
+            "cpu_percent": 14.07035175879397,
+            "available_bytes": 14814797824
+          },
+          {
+            "at": "2026-08-29T17:05:09.387Z",
+            "cpu_percent": 17.424242424242426,
+            "available_bytes": 14812995584
+          },
+          {
+            "at": "2026-08-29T17:05:10.394Z",
+            "cpu_percent": 10,
+            "available_bytes": 14810955776
+          },
+          {
+            "at": "2026-08-29T17:05:11.404Z",
+            "cpu_percent": 16.582914572864322,
+            "available_bytes": 14805848064
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1788023111405,
+      "requested_soak_iterations": 50,
+      "completed_soak_iterations": 50,
+      "succeeded_soak_iterations": 50,
+      "failed_soak_iterations": 0,
+      "failure_rate": 0,
+      "soak_stop_reason": "iteration-limit",
+      "measurement_completed_epoch_ms": 1788023117327,
+      "measurement_wall_time_ms": 5922.748,
+      "determinism": {
+        "compared": 50,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 41,
+        "measurement_span_ms": 5846,
+        "peak_retained_evidence_bytes": 5375507
+      },
+      "rss_slope_bytes_per_minute": 449953020.122
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "resilience",
+    "engine": "puppeteer-shell",
+    "scenario": "soak",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 4,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 176.36,
+      "dispatch_to_launch_ms": 892,
+      "warmups": 6,
+      "latency_ms": [
+        152.194,
+        141.367,
+        109.64,
+        125.304,
+        125.393,
+        126.659
+      ],
+      "rss_bytes": [
+        135704576,
+        135704576,
+        135704576,
+        622292992,
+        622292992,
+        622292992
+      ],
+      "latency_cv": 0.00603,
+      "rss_drift": 0,
+      "system": {
+        "stable": true,
+        "samples": [
+          {
+            "at": "2026-08-29T17:05:30.800Z",
+            "cpu_percent": 17.91044776119403,
+            "available_bytes": 14939529216
+          },
+          {
+            "at": "2026-08-29T17:05:31.808Z",
+            "cpu_percent": 10.025062656641603,
+            "available_bytes": 14938644480
+          },
+          {
+            "at": "2026-08-29T17:05:32.816Z",
+            "cpu_percent": 15.326633165829145,
+            "available_bytes": 14939910144
+          },
+          {
+            "at": "2026-08-29T17:05:33.824Z",
+            "cpu_percent": 12.25,
+            "available_bytes": 14948126720
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1788023133824,
+      "requested_soak_iterations": 50,
+      "completed_soak_iterations": 50,
+      "succeeded_soak_iterations": 50,
+      "failed_soak_iterations": 0,
+      "failure_rate": 0,
+      "soak_stop_reason": "iteration-limit",
+      "measurement_completed_epoch_ms": 1788023139106,
+      "measurement_wall_time_ms": 5281.943,
+      "determinism": {
+        "compared": 50,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 38,
+        "measurement_span_ms": 5235,
+        "peak_retained_evidence_bytes": 5375507
+      },
+      "rss_slope_bytes_per_minute": 34387532.475
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  }
+]

@@ -1,5 +1,16 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-08-29T00:00:00.000Z",
-  "results": []
+  "generated_utc": "2026-08-29T18:32:20.840Z",
+  "results": [
+    {
+      "path": "v0.3.2/20260829T174343Z-gh33264499865-a1",
+      "shotium_version": "0.3.2",
+      "generated_utc": "2026-08-29T17:43:43.000Z",
+      "status": "complete",
+      "quality_status": "fail",
+      "evidence_status": "complete",
+      "run_id": "33264499865",
+      "source_sha": "01059e287ce7"
+    }
+  ]
 }

@@ -1,0 +1,10 @@
+[
+  {
+    "shard": "resident",
+    "engine": "shotium",
+    "scenario": "resident",
+    "repeat": 1,
+    "attempt": 2,
+    "error": "InfrastructureError: resident warmup 3 PID ownership monitor was unavailable: \n    at finishOwnedChild (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\worker.ts:121:11)\n    at async residentClient (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\worker.ts:144:21)\n    at async runResident (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\worker.ts:289:20)\n    at async <anonymous> (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\worker.ts:718:13)"
+  }
+]
