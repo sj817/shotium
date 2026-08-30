@@ -179,9 +179,13 @@ jobs:
         target: ${{ fromJSON(needs.resolve.outputs.target_matrix) }}
         shard: ${{ fromJSON(needs.resolve.outputs.shard_matrix) }}
     runs-on: ${{ matrix.target.runner }}
-    timeout-minutes: 180
+    timeout-minutes: 90
     steps:
+      # The harness only reads apps/benchmark; a full checkout is 64k files and
+      # costs 1-2 minutes on the Windows runners.
       - uses: actions/checkout@v4
+        with:
+          sparse-checkout: apps/benchmark
 
       - uses: actions/setup-node@v4
         with:
@@ -294,6 +298,8 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+        with:
+          sparse-checkout: apps/benchmark
 
       - uses: actions/setup-node@v4
         with:

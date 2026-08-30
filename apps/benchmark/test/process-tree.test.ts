@@ -3,12 +3,27 @@ import test from 'node:test';
 import {competitorChromiumPolicy} from '../src/engines.ts';
 import {
   collectAncestorPids,
+  cpuLimitFromBaseline,
   parseLinuxProcStat,
   partitionProtectedProcesses,
   ProcessMonitor,
   selectOwnedProcessEntries,
   waitForProcessTree,
 } from '../src/process-tree.ts';
+
+test('calibrates the host CPU gate from the idle baseline', () => {
+  // Quiet Linux runner: the fixed floor still applies.
+  assert.equal(cpuLimitFromBaseline(5), 25);
+  assert.equal(cpuLimitFromBaseline(14.9), 25);
+  // GitHub Windows/macOS runners idle at 28-41%; the gate follows them instead
+  // of rejecting every cell.
+  assert.equal(cpuLimitFromBaseline(38.4), 48);
+  assert.equal(cpuLimitFromBaseline(41), 51);
+  // A saturated host is still capped so the gate keeps meaning something.
+  assert.equal(cpuLimitFromBaseline(90), 80);
+  assert.equal(cpuLimitFromBaseline(Number.NaN), 25);
+  assert.equal(cpuLimitFromBaseline(30, {floor: 10, margin: 5, ceiling: 50}), 35);
+});
 
 test('waits for an exact owned process root to become observable', async () => {
   let calls = 0;

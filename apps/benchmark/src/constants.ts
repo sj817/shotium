@@ -80,11 +80,24 @@ export const SETTLE = Object.freeze({
   maximumWarmups: 10,
   latencyCvLimit: 0.10,
   rssDriftLimit: 0.03,
+  // Host CPU gate. GitHub's Windows and macOS runners idle at 28-41% CPU, so a
+  // fixed 25% ceiling could never be met there: every cell burned the whole
+  // cooldown timeout, produced zero samples and was retried once. The limit is
+  // therefore calibrated per shard from the idle baseline measured before the
+  // first cell: max(cpuLimit, p95(idle) + cpuLimitMargin), capped at cpuLimitMax.
   cpuLimit: 25,
+  cpuLimitMargin: 10,
+  cpuLimitMax: 80,
+  calibrationMs: 5_000,
   memoryDriftLimit: 0.02,
   stableSamples: 3,
+  // Three one-second samples spanning at least two seconds: a three-second
+  // window is enough to tell "the previous browser is still exiting" from
+  // "quiet". The old 45 s cooldown was a timeout for a condition the runner
+  // could not satisfy, not time the measurement needed.
+  stableSpanMs: 2_000,
   timeoutMs: 45_000,
-  cooldownTimeoutMs: 45_000,
+  cooldownTimeoutMs: 6_000,
   gracefulExitMs: 10_000,
   forcedExitMs: 5_000,
 });

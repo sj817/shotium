@@ -4,7 +4,7 @@ import {execa} from 'execa';
 import si from 'systeminformation';
 import {SETTLE} from './constants.ts';
 import {InfrastructureError} from './errors.ts';
-import {relativeDrift} from './statistics.ts';
+import {median, percentile, relativeDrift, round} from './statistics.ts';
 
 const sleep = (milliseconds: number) => new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
 
@@ -443,39 +443,77 @@ export async function terminateOwnedProcesses(identities) {
   return [...remaining, ...partitioned.protected];
 }
 
+async function primeCpuLoad() {
+  // systeminformation reports load as the delta since its previous call; the
+  // first reading after process start covers the whole process lifetime.
+  try {
+    await si.currentLoad();
+  } catch (error) {
+    throw new InfrastructureError('systeminformation could not sample initial CPU load', error);
+  }
+}
+
+export async function sampleHostLoad() {
+  let load;
+  let memory;
+  try {
+    [load, memory] = await Promise.all([si.currentLoad(), si.mem()]);
+  } catch (error) {
+    throw new InfrastructureError('systeminformation could not sample host stability', error);
+  }
+  return {
+    at: new Date().toISOString(),
+    cpu_percent: load.currentLoad,
+    available_bytes: memory.available,
+  };
+}
+
+export function cpuLimitFromBaseline(idleCpuP95: number, {
+  floor = SETTLE.cpuLimit as number,
+  margin = SETTLE.cpuLimitMargin as number,
+  ceiling = SETTLE.cpuLimitMax as number,
+}: {floor?: number; margin?: number; ceiling?: number} = {}) {
+  if (!Number.isFinite(idleCpuP95)) return floor;
+  return Math.min(ceiling, Math.max(floor, Math.round(idleCpuP95 + margin)));
+}
+
+export async function calibrateHostLoad({durationMs = SETTLE.calibrationMs}: {durationMs?: number} = {}) {
+  await primeCpuLoad();
+  const deadline = Date.now() + durationMs;
+  const samples = [];
+  do {
+    await sleep(1000);
+    samples.push(await sampleHostLoad());
+  } while (Date.now() < deadline);
+  const sorted = samples.map((sample) => sample.cpu_percent).sort((left, right) => left - right);
+  const p50 = median(sorted);
+  const p95 = percentile(sorted, 0.95);
+  return {
+    samples,
+    idle_cpu_p50: round(p50, 2),
+    idle_cpu_p95: round(p95, 2),
+    cpu_limit: cpuLimitFromBaseline(p95),
+  };
+}
+
 export async function waitForSystemStable({timeoutMs = SETTLE.cooldownTimeoutMs, cpuLimit = SETTLE.cpuLimit}: {
   timeoutMs?: number;
   cpuLimit?: number;
 } = {}) {
   const deadline = Date.now() + timeoutMs;
   const samples = [];
-  try {
-    await si.currentLoad();
-  } catch (error) {
-    throw new InfrastructureError('systeminformation could not sample initial CPU load', error);
-  }
+  await primeCpuLoad();
   while (Date.now() < deadline) {
-    let load;
-    let memory;
-    try {
-      [load, memory] = await Promise.all([si.currentLoad(), si.mem()]);
-    } catch (error) {
-      throw new InfrastructureError('systeminformation could not sample host stability', error);
-    }
-    samples.push({
-      at: new Date().toISOString(),
-      cpu_percent: load.currentLoad,
-      available_bytes: memory.available,
-    });
-    const recent = samples.slice(-(SETTLE.stableSamples + 1));
+    samples.push(await sampleHostLoad());
+    const recent = samples.slice(-SETTLE.stableSamples);
     const spanMs = recent.length > 1 ?
       Date.parse(recent.at(-1).at) - Date.parse(recent[0].at) : 0;
-    if (recent.length === SETTLE.stableSamples + 1 && spanMs >= 3000 &&
+    if (recent.length === SETTLE.stableSamples && spanMs >= SETTLE.stableSpanMs &&
         recent.every((sample) => sample.cpu_percent <= cpuLimit) &&
         relativeDrift(recent.map((sample) => sample.available_bytes)) <= SETTLE.memoryDriftLimit) {
-      return {stable: true, samples};
+      return {stable: true, cpu_limit: cpuLimit, samples};
     }
     await sleep(1000);
   }
-  return {stable: false, samples};
+  return {stable: false, cpu_limit: cpuLimit, samples};
 }

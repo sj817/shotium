@@ -71,9 +71,14 @@ manifest. Reports link to the [VitePress benchmark explorer](https://sj817.githu
 
 `full` adds seven cold repetitions, concurrency 1/2/4, 20 lifecycle cycles and
 a continuous 1000-request (or ten-minute) soak. Every cell waits for host
-stability; non-cold cells also wait for measured engine readiness. The harness
-retries one noisy settling attempt, records all samples, and
-terminates only the PID tree it started. The repository stores the compact
+stability; non-cold cells also wait for measured engine readiness. The host
+gate is calibrated per shard: five seconds of idle CPU are sampled before the
+first cell and the limit is `max(25%, idle p95 + 10 points)`, capped at 80%,
+because GitHub's Windows and macOS runners idle at 28-41% and a fixed 25%
+ceiling could never be met there. Stability means three consecutive one-second
+samples under that limit with steady free memory; a cell that cannot get there
+within six seconds is marked noisy and retried once. The harness records all
+samples and terminates only the PID tree it started. The repository stores the compact
 `permanent` output. PNGs, logs and process timelines are CI artifacts retained
 for 90 days.
 

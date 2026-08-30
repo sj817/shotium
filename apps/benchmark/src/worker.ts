@@ -33,6 +33,7 @@ const concurrency = Number(options.concurrency) || 1;
 const iterations = Number(options.iterations) || 1;
 const scenarioTimeoutMs = Number(options.scenarioTimeoutMs) || config.profile.soakTimeoutMs;
 const dispatchedAtMs = Number(options.dispatchedAtMs) || Date.now();
+const hostCpuLimit = Number(config.stability?.cpu_limit) || SETTLE.cpuLimit;
 const caseDefinitions = config.cases;
 const sampleDirectory = path.join(config.artifactDirectory, 'samples');
 const baselineDirectory = path.join(config.artifactDirectory, 'baselines');
@@ -321,7 +322,10 @@ async function runResident(samples) {
       const rssDrift = relativeDrift(warmupRss.slice(-SETTLE.stableSamples));
       if (latencyCv <= SETTLE.latencyCvLimit && rssDrift <= SETTLE.rssDriftLimit) {
         settled = await import('./process-tree.ts').then(({waitForSystemStable}) =>
-          waitForSystemStable({timeoutMs: Math.max(0, deadline - Date.now())}));
+          waitForSystemStable({
+            timeoutMs: Math.min(SETTLE.cooldownTimeoutMs, Math.max(0, deadline - Date.now())),
+            cpuLimit: hostCpuLimit,
+          }));
         if (settled.stable) break;
       }
       if (Date.now() >= deadline) break;
@@ -645,7 +649,7 @@ async function runEngineScenario(samples) {
           `${engineName}.${scenario}.settle.r${repeat}.a${attempt}.s${String(settleEvidenceIndex).padStart(2, '0')}.png`),
       image);
     };
-    const settle = await settleEngine(engine, caseDefinitions[0].url, inspect);
+    const settle = await settleEngine(engine, caseDefinitions[0].url, inspect, {cpuLimit: hostCpuLimit});
     Object.assign(quality, settle);
     if (!settle.stable) return quality;
     if (scenario === 'faults') return {...quality, ...await runFaults(engine, samples)};

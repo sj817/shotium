@@ -182,7 +182,18 @@
         "memory_bytes": {"type": "number", "exclusiveMinimum": 0},
         "logical_processors": {"type": "integer", "minimum": 1},
         "node": {"type": "string", "minLength": 1},
-        "npm": {"type": ["string", "null"]}
+        "npm": {"type": ["string", "null"]},
+        "idle_cpu_baseline": {
+          "type": "object",
+          "required": ["p50_percent", "p95_percent", "cpu_limit_percent", "samples"],
+          "properties": {
+            "p50_percent": {"type": "number", "minimum": 0},
+            "p95_percent": {"type": "number", "minimum": 0},
+            "cpu_limit_percent": {"type": "number", "minimum": 0, "maximum": 100},
+            "samples": {"type": "integer", "minimum": 1}
+          },
+          "additionalProperties": false
+        }
       },
       "additionalProperties": true
     },

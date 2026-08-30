@@ -2,7 +2,8 @@ import {SETTLE} from './constants.ts';
 import {processSnapshot, waitForSystemStable} from './process-tree.ts';
 import {coefficientOfVariation, relativeDrift, round} from './statistics.ts';
 
-export async function settleEngine(engine, url, inspect) {
+export async function settleEngine(engine, url, inspect,
+    {cpuLimit = SETTLE.cpuLimit as number}: {cpuLimit?: number} = {}) {
   const deadline = Date.now() + SETTLE.timeoutMs;
   const latencies = [];
   const rss = [];
@@ -22,7 +23,10 @@ export async function settleEngine(engine, url, inspect) {
     latencyCv = coefficientOfVariation(latencies.slice(-SETTLE.stableSamples));
     rssDrift = relativeDrift(rss.slice(-SETTLE.stableSamples));
     if (latencyCv <= SETTLE.latencyCvLimit && rssDrift <= SETTLE.rssDriftLimit) {
-      const system = await waitForSystemStable({timeoutMs: Math.max(0, deadline - Date.now())});
+      const system = await waitForSystemStable({
+        timeoutMs: Math.min(SETTLE.cooldownTimeoutMs, Math.max(0, deadline - Date.now())),
+        cpuLimit,
+      });
       return {
         stable: system.stable,
         warmups: attempt,

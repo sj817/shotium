@@ -22,6 +22,8 @@ import {startFixtureServer, loadCases} from './fixtures.ts';
 import {ensureShotium} from './install-target.ts';
 import {
   ProcessMonitor,
+  calibrateHostLoad,
+  sampleHostLoad,
   terminateOwnedProcesses,
   verifyProcessMonitoring,
   waitForIdentitiesToExit,
@@ -146,9 +148,17 @@ async function cleanupOwnedShotiumEndpoints(profile) {
   return stale;
 }
 
-async function runCell(group, attempt, configFile, profile) {
+function progress(message) {
+  process.stdout.write(`[${new Date().toISOString()}] ${message}\n`);
+}
+
+function cellLabel(group, attempt) {
+  return `${group.engine} ${group.scenario} c${group.concurrency} r${group.repeat} a${attempt}`;
+}
+
+async function runCell(group, attempt, configFile, profile, stability) {
   const orchestrationStarted = performance.now();
-  const before = await waitForSystemStable();
+  const before = await waitForSystemStable({cpuLimit: stability.cpu_limit});
   if (!before.stable) {
     return {
       ok: true,
@@ -243,7 +253,9 @@ async function runCell(group, attempt, configFile, profile) {
       profileCleanupErrors.push(`${profile}: ${error}`);
     }
   }
-  const after = await waitForSystemStable();
+  // One sample for the record only. The next cell's preflight is the real
+  // post-condition; waiting here as well doubled the fixed cost of every cell.
+  const after = {stable: true, samples: [await sampleHostLoad()]};
   result.attempt = attempt;
   result.external_wall_time_ms = performance.now() - started;
   result.process_cleanup = {
@@ -270,7 +282,7 @@ async function runCell(group, attempt, configFile, profile) {
     result.status = 'fail';
     result.error = `${result.error || ''}\ntemporary browser profiles could not be removed`.trim();
   }
-  if (!before.stable || !after.stable || result.status === 'noisy') result.status = result.ok ? 'noisy' : result.status;
+  if (!before.stable || result.status === 'noisy') result.status = result.ok ? 'noisy' : result.status;
   return result;
 }
 
@@ -335,6 +347,9 @@ async function main() {
   outputInitialized = true;
   fs.writeFileSync(samplesFile, '');
   await verifyProcessMonitoring();
+  const stability = await calibrateHostLoad();
+  progress(`host idle CPU p50 ${stability.idle_cpu_p50}% p95 ${stability.idle_cpu_p95}% ` +
+    `-> stability gate ${stability.cpu_limit}% (${stability.samples.length} samples)`);
 
   const shotiumVersion = booleanArg(options.skipInstall, false) ? options.shotiumVersion :
     await ensureShotium(options.shotiumVersion);
@@ -365,6 +380,11 @@ async function main() {
     telemetryDirectory,
     tempProfileDirectory,
     daemonIdentity: {runId: benchmarkRunId, platform},
+    stability: {
+      cpu_limit: stability.cpu_limit,
+      idle_cpu_p50: stability.idle_cpu_p50,
+      idle_cpu_p95: stability.idle_cpu_p95,
+    },
   };
   const configFile = path.join(artifactDirectory, 'run-config.json');
   writeJson(configFile, config);
@@ -387,17 +407,27 @@ async function main() {
     });
   }
   const executionOrder = [];
+  const groups = buildGroups(runnable, profile);
+  const totalCells = groups.reduce((sum, group) => sum + group.engines.length, 0);
+  let cellIndex = 0;
+  progress(`${platform}/${shard}: ${totalCells} cells across ${runnable.length} engines ` +
+    `(${runnable.join(', ') || 'none'})`);
   try {
-    for (const group of buildGroups(runnable, profile)) {
+    for (const group of groups) {
       for (const engine of group.engines) {
         const cell = {...group, engine};
+        cellIndex += 1;
         for (let attempt = 1; attempt <= 2; attempt += 1) {
           executionOrder.push({
             shard,
             engine, scenario: group.scenario, repeat: group.repeat, attempt,
             concurrency: group.concurrency, iterations: group.iterations,
           });
-          const result = await runCell(cell, attempt, configFile, profile);
+          const result = await runCell(cell, attempt, configFile, profile, stability);
+          progress(`[${cellIndex}/${totalCells}] ${cellLabel(cell, attempt)}: ${result.status} ` +
+            `in ${Math.round(result.external_wall_time_ms / 1000)}s` +
+            (result.quality?.phase ? ` (${result.quality.phase})` : '') +
+            (result.error ? ` - ${String(result.error).split('\n')[0].slice(0, 160)}` : ''));
           result.ranking_eligible = result.status === 'pass' &&
             !['reuse-page', 'faults'].includes(group.scenario);
           if (result.status === 'noisy' && attempt === 1) result.excluded = true;
@@ -471,6 +501,12 @@ async function main() {
       logical_processors: os.cpus().length,
       node: process.version,
       npm: process.env.npm_config_user_agent || null,
+      idle_cpu_baseline: {
+        p50_percent: stability.idle_cpu_p50,
+        p95_percent: stability.idle_cpu_p95,
+        cpu_limit_percent: stability.cpu_limit,
+        samples: stability.samples.length,
+      },
     },
     packages: versions,
     measurement_contract: {
