@@ -1,0 +1,440 @@
+/*
+ * Report styles: the page container, the mapping of Element Plus's CSS
+ * variables onto the design tokens (so every component follows the theme
+ * toggle for free), the glass popper surface, and a handful of helpers.
+ * Components come from Element Plus; nothing here re-implements a control.
+ */
+.bench {
+  --bench-gap: var(--panel-gap);
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding: 24px 24px 56px;
+  font-family: var(--bench-font);
+  font-size: var(--fs-14);
+  line-height: 1.5;
+  color: var(--ink-1);
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  flex-direction: column;
+  gap: var(--bench-gap);
+}
+
+/* Flex items default to min-width:auto, which would let a wide table push a
+   panel (and the page) wider than the viewport. */
+.bench > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/*
+ * GPU containment contract.
+ *
+ * These controls already sit inside a translucent panel. Giving every chip,
+ * tab and card its own backdrop filter creates dozens of overlapping GPU
+ * surfaces but does not add visible detail because the wallpaper contains no
+ * sharp edges. Keep their fills, borders, highlights and shadows; reuse the
+ * parent's glass instead of starting another blur pass.
+ */
+.bench :where(
+  .glass,
+  .verdict-card,
+  .rules-btn,
+  .sidebar-panel,
+  .nav-tab,
+  .platform-tab,
+  .method-link,
+  .method-card,
+  .meta-pill,
+  .health-btn,
+  .el-select__wrapper
+) {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* Skip layout/paint work for report sections until they approach the
+   viewport. The remembered intrinsic size prevents scroll jumps. */
+.bench :where(.platform-detail-panel, .method-panel) {
+  content-visibility: auto;
+}
+
+.bench .platform-detail-panel {
+  contain-intrinsic-size: auto 2200px;
+}
+
+.bench .method-panel {
+  contain-intrinsic-size: auto 480px;
+}
+
+
+.bench *,
+.bench *::before,
+.bench *::after {
+  box-sizing: border-box;
+}
+
+.bench h1,
+.bench h2,
+.bench h3,
+.bench h4,
+.bench p {
+  margin: 0;
+}
+
+.bench h2 {
+  font-size: var(--fs-20);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+.bench h3 {
+  font-size: var(--fs-16);
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+.bench h4 {
+  font-size: var(--fs-13);
+  font-weight: 650;
+  color: var(--ink-2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.bench .num {
+  font-variant-numeric: tabular-nums;
+}
+
+.bench .hint {
+  color: var(--ink-3);
+  font-size: var(--fs-13);
+}
+
+.bench .label {
+  font-size: var(--fs-12);
+  font-weight: 600;
+  color: var(--ink-3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.bench .mono {
+  font-family: var(--bench-mono);
+  font-size: 0.92em;
+  overflow-wrap: anywhere;
+}
+
+.bench .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.bench pre {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-control);
+  background: var(--control-fill);
+  border: 1px solid var(--line-2);
+  font-family: var(--bench-mono);
+  font-size: var(--fs-12);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 320px;
+  overflow: auto;
+  color: var(--ink-1);
+}
+
+/* ---- panels & sections ------------------------------------------------ */
+.panel__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+}
+
+.panel__titles {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.panel__subtitle {
+  white-space: pre-line;
+  line-height: 1.5;
+  color: var(--ink-2);
+  font-size: var(--fs-13);
+}
+
+.section {
+  padding-top: 24px;
+  margin-top: 24px;
+  border-top: 1px solid var(--line-2);
+}
+
+.section__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 14px;
+  margin-bottom: 14px;
+}
+
+/* ---- engine names, dots ------------------------------------------------ */
+.engine {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.engine--shotium {
+  font-weight: 650;
+}
+
+.dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--dot-color, var(--engine-other));
+  flex: none;
+  vertical-align: middle;
+}
+
+.tabdot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 8px;
+  vertical-align: middle;
+  position: relative;
+  top: -1px;
+}
+
+.tip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 6px;
+}
+
+.tip-icon {
+  color: var(--ink-3);
+  font-size: 14px;
+  margin-left: 4px;
+  vertical-align: -2px;
+  cursor: help;
+}
+
+.tip-trigger {
+  border-bottom: 1px dotted currentColor;
+  cursor: help;
+}
+
+.bench :focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+/* ---- Element Plus variables → design tokens --------------------------- */
+.bench,
+.bench-pop {
+  --el-font-family: var(--bench-font);
+  --el-font-size-base: 14px;
+  --el-color-primary: var(--brand);
+  --el-color-primary-dark-2: var(--brand-ink);
+  --el-color-primary-light-3: color-mix(in srgb, var(--brand) 70%, transparent);
+  --el-color-primary-light-5: color-mix(in srgb, var(--brand) 50%, transparent);
+  --el-color-primary-light-7: color-mix(in srgb, var(--brand) 30%, transparent);
+  --el-color-primary-light-8: color-mix(in srgb, var(--brand) 20%, transparent);
+  --el-color-primary-light-9: var(--brand-soft);
+  --el-color-success: var(--status-pass);
+  --el-color-success-light-8: color-mix(in srgb, var(--status-pass) 25%, transparent);
+  --el-color-success-light-9: var(--status-pass-soft);
+  --el-color-warning: var(--status-noisy);
+  --el-color-warning-light-8: color-mix(in srgb, var(--status-noisy) 25%, transparent);
+  --el-color-warning-light-9: var(--status-noisy-soft);
+  --el-color-danger: var(--status-fail);
+  --el-color-danger-light-8: color-mix(in srgb, var(--status-fail) 25%, transparent);
+  --el-color-danger-light-9: var(--status-fail-soft);
+  --el-color-error: var(--status-fail);
+  --el-color-error-light-8: color-mix(in srgb, var(--status-fail) 25%, transparent);
+  --el-color-error-light-9: var(--status-fail-soft);
+  --el-color-info: var(--status-na);
+  --el-color-info-light-8: color-mix(in srgb, var(--status-na) 25%, transparent);
+  --el-color-info-light-9: var(--status-na-soft);
+  --el-text-color-primary: var(--ink-1);
+  --el-text-color-regular: var(--ink-1);
+  --el-text-color-secondary: var(--ink-2);
+  --el-text-color-placeholder: var(--ink-3);
+  --el-text-color-disabled: var(--ink-3);
+  --el-border-color: var(--line-1);
+  --el-border-color-light: var(--line-1);
+  --el-border-color-lighter: var(--line-2);
+  --el-border-color-extra-light: var(--line-2);
+  --el-border-color-dark: var(--line-1);
+  --el-fill-color: var(--control-fill);
+  --el-fill-color-light: var(--control-fill);
+  --el-fill-color-lighter: var(--row-stripe);
+  --el-fill-color-extra-light: var(--row-stripe);
+  --el-fill-color-blank: transparent;
+  --el-bg-color: transparent;
+  --el-bg-color-page: transparent;
+  --el-border-radius-base: 8px;
+  --el-border-radius-small: 6px;
+  --el-disabled-bg-color: var(--control-fill);
+}
+
+.bench .el-card {
+  --el-card-padding: var(--panel-pad);
+  --el-card-border-color: transparent;
+  --el-card-border-radius: var(--radius-panel);
+  --el-card-bg-color: transparent;
+  color: inherit;
+  overflow: visible;
+}
+
+.bench .el-card__header {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.bench .el-table {
+  --el-table-bg-color: transparent;
+  --el-table-tr-bg-color: transparent;
+  --el-table-header-bg-color: transparent;
+  --el-table-row-hover-bg-color: var(--row-hover);
+  --el-table-border-color: var(--line-2);
+  --el-table-text-color: var(--ink-1);
+  --el-table-header-text-color: var(--ink-3);
+  --el-table-expanded-cell-bg-color: transparent;
+  font-variant-numeric: tabular-nums;
+}
+
+.bench .el-table .cell {
+  white-space: nowrap;
+}
+
+.bench .el-tabs__nav-wrap::after {
+  background-color: var(--line-2);
+}
+
+.bench .el-tabs__item {
+  font-weight: 600;
+}
+
+.bench .el-collapse {
+  --el-collapse-border-color: transparent;
+  --el-collapse-header-bg-color: transparent;
+  --el-collapse-content-bg-color: transparent;
+  --el-collapse-header-text-color: var(--ink-1);
+  --el-collapse-content-text-color: var(--ink-1);
+  border: 0;
+}
+
+.bench .el-collapse-item__header {
+  height: auto;
+  line-height: 1.4;
+  padding: 6px 0;
+}
+
+.bench .el-descriptions__label {
+  color: var(--ink-3);
+  font-weight: 600;
+}
+
+.bench .el-descriptions__cell {
+  padding-bottom: 4px;
+}
+
+.bench .el-statistic__head {
+  color: var(--ink-3);
+  font-size: var(--fs-12);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.bench .el-statistic__number {
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.bench .el-alert {
+  --el-alert-padding: 8px 12px;
+}
+
+.bench .el-link {
+  font-weight: 500;
+}
+
+.bench .el-empty {
+  --el-empty-padding: 24px 0;
+}
+
+/* Poppers are teleported to <body>; every popper the report opens carries this class. */
+.bench-pop.el-popper {
+  background: var(--glass-fill-2);
+  -webkit-backdrop-filter: blur(var(--glass-blur-2)) saturate(var(--glass-sat));
+  backdrop-filter: blur(var(--glass-blur-2)) saturate(var(--glass-sat));
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--radius-inner);
+  box-shadow: inset 1px 1px 0 var(--glass-highlight), var(--glass-shadow-pop);
+  color: var(--ink-1);
+  font-family: var(--bench-font);
+  font-size: var(--fs-13);
+  line-height: 1.45;
+  max-width: 340px;
+}
+
+.bench-pop.el-popper .el-popper__arrow::before {
+  background: var(--glass-fill-2);
+  border: 1px solid var(--glass-edge);
+}
+
+.bench-pop .el-select-dropdown__item {
+  color: var(--ink-1);
+}
+
+.bench-pop .el-select-dropdown__item.is-hovering {
+  background: var(--control-fill-hover);
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  .bench-pop.el-popper,
+  .bench-pop.el-popper .el-popper__arrow::before {
+    background: var(--solid-fill-pop);
+  }
+}
+
+@media (max-width: 767px) {
+  .bench {
+    padding: 16px 12px 40px;
+    --bench-gap: 14px;
+  }
+
+  .bench .el-card {
+    --el-card-padding: 16px;
+  }
+
+  .bench h2 {
+    font-size: 18px;
+  }
+
+  .section {
+    padding-top: 18px;
+    margin-top: 18px;
+  }
+}

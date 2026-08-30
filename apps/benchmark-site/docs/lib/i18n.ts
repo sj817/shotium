@@ -1,265 +1,83 @@
-import {createI18n} from 'vue-i18n';
+import {computed, type ComputedRef} from 'vue';
+import {useData} from 'vitepress';
+import {
+  hasMessage,
+  resolveLocale,
+  segments,
+  translate,
+  type Locale,
+  type MessageKey,
+  type Params,
+  type Segment,
+} from './messages';
+import type {ExclusionCode} from './ranking';
+import type {ResultStatus} from './types';
 
-export const messages = {
-  'zh-CN': {
-    app: {
-      eyebrow: '可审计的跨平台性能数据',
-      title: 'Shotium 六平台性能报告',
-      subtitle: '仅在同一平台、同一场景与同一运行器内比较。数值越低代表相对 Shotium 越快。',
-      language: 'English',
-      loading: '正在读取基准数据…',
-      loadError: '报告加载失败',
-      retry: '重试',
-      empty: '仓库中还没有可展示的基准结果。',
-    },
-    run: {
-      label: '测试运行',
-      version: '版本',
-      profile: '覆盖配置',
-      generated: '生成时间',
-      source: '源码版本',
-      workflow: '查看 CI 运行',
-      metadata: '测试运行信息',
-    },
-    overview: {
-      title: '六平台性能结论',
-      complete: '归档完整性',
-      quality: '质量状态',
-      evidence: '证据状态',
-      platforms: '平台结果',
-      conclusion: '六个平台中：{pass} 个通过、{noisy} 个噪声、{fail} 个失败、{infra} 个基础设施错误、{missing} 个缺失。',
-      fairNote: '平台之间不合并绝对耗时；综合排名只使用平台内可参与排名的有效场景。',
-      winner: '正式第一名',
-      noRanking: '无有效排名',
-      rankingCoverage: '正式参赛 {ranked} 个引擎 · {cells} 个平台可比项',
-    },
-    platform: {
-      title: '平台',
-      unavailable: '未生成平台结果',
-      shardsIncomplete: '场景分片不完整',
-      linuxX64: 'Linux x64',
-      linuxArm64: 'Linux ARM64',
-      win32X64: 'Windows x64',
-      win32Arm64: 'Windows ARM64',
-      darwinX64: 'macOS x64',
-      darwinArm64: 'macOS ARM64',
-    },
-    ranking: {
-      title: '平台内综合排名',
-      help: '可比项要求 Shotium 与至少一个竞品合格。引擎 p50 ÷ Shotium p50 后计算几何平均；只有覆盖全部可比项才获正式名次，部分覆盖仅显示参考分。',
-      rank: '排名',
-      engine: '引擎',
-      ratio: '几何平均',
-      compared: '参与数',
-      champions: '冠军数',
-      excluded: '排除信息',
-      noData: '没有满足公平条件的排名数据。',
-      baseline: '基准',
-      exclusions: {
-        engineUnavailable: '引擎不可用（{count}）',
-        missingBaseline: '缺少有效 Shotium 基准（{count}）',
-        missingCell: '缺少对应场景（{count}）',
-        invalidCell: '失败、噪声或不参与排名（{count}）',
-        partialCoverage: '覆盖不完整，不参与正式排名（缺 {count} 项）',
-      },
-    },
-    scenarios: {
-      title: '场景明细',
-      engine: '引擎',
-      scenario: '场景',
-      status: '状态',
-      all: '全部',
-      concurrency: '并发',
-      shard: '分片',
-      ranked: '排名有效',
-      p50: 'p50',
-      p95: 'p95',
-      worst: '最差',
-      throughput: '吞吐/秒',
-      ratio: '相对 Shotium',
-      yes: '是',
-      no: '否',
-      noRows: '当前筛选条件下没有场景。',
-    },
-    quality: {
-      title: '质量与失败信息',
-      rawSamples: '原始样本单元',
-      failures: '失败记录',
-      engines: '可用引擎',
-      unhealthyScenarios: '异常场景',
-      engineExclusions: '引擎排除原因',
-      failureEvidence: '失败证据',
-      noFailures: '没有记录失败证据。',
-      noIssues: '该平台没有异常场景或引擎排除项。',
-      loadError: '读取平台数据失败：{error}',
-      summaryError: '平台汇总错误：{error}',
-    },
-    status: {
-      pass: '通过',
-      fail: '失败',
-      noisy: '噪声',
-      na: '不适用',
-      infraError: '基础设施错误',
-      complete: '完整',
-      incomplete: '不完整',
-      unknown: '未知',
-    },
-    profile: {
-      smoke: '冒烟测试',
-      full: '完整测试',
-    },
-    scenario: {
-      cold: '冷启动',
-      coldSettled: '冷启动稳定后首张',
-      warm: '预热截图',
-      batch: '顺序批量',
-      parallel: '并发截图',
-      resident: '常驻引擎新客户端',
-      reusePage: '复用页面',
-      lifecycle: '启动—截图—关闭循环',
-      faults: '异常与恢复',
-      soak: '持续压力',
-    },
-    shard: {
-      startup: '启动场景',
-      throughput: '吞吐场景',
-      parallel: '并发场景',
-      resident: '常驻场景',
-      resilience: '韧性场景',
-    },
-  },
-  en: {
-    app: {
-      eyebrow: 'Auditable cross-platform performance data',
-      title: 'Shotium Six-platform Performance Report',
-      subtitle: 'Comparisons stay within the same platform, scenario, and runner. Lower ratios are faster relative to Shotium.',
-      language: '中文',
-      loading: 'Loading benchmark data…',
-      loadError: 'Could not load the report',
-      retry: 'Retry',
-      empty: 'No benchmark result has been archived yet.',
-    },
-    run: {
-      label: 'Benchmark run',
-      version: 'Version',
-      profile: 'Profile',
-      generated: 'Generated',
-      source: 'Source revision',
-      workflow: 'Open CI run',
-      metadata: 'Benchmark run metadata',
-    },
-    overview: {
-      title: 'Six-platform performance conclusion',
-      complete: 'Archive completeness',
-      quality: 'Quality status',
-      evidence: 'Evidence status',
-      platforms: 'Platform results',
-      conclusion: 'Across six platforms: {pass} passed, {noisy} noisy, {fail} failed, {infra} infrastructure errors, and {missing} missing.',
-      fairNote: 'Absolute timings are never merged across platforms. Rankings use only eligible same-platform scenarios.',
-      winner: 'Official winner',
-      noRanking: 'No valid ranking',
-      rankingCoverage: '{ranked} officially ranked engines · {cells} comparable cells',
-    },
-    platform: {
-      title: 'Platform',
-      unavailable: 'No platform result was generated',
-      shardsIncomplete: 'Scenario shards are incomplete',
-      linuxX64: 'Linux x64',
-      linuxArm64: 'Linux ARM64',
-      win32X64: 'Windows x64',
-      win32Arm64: 'Windows ARM64',
-      darwinX64: 'macOS x64',
-      darwinArm64: 'macOS ARM64',
-    },
-    ranking: {
-      title: 'Same-platform ranking',
-      help: 'A comparable item requires eligible Shotium data and at least one eligible competitor. Ratios use engine p50 ÷ Shotium p50; only engines covering every comparable item receive an official rank, while partial scores remain reference-only.',
-      rank: 'Rank',
-      engine: 'Engine',
-      ratio: 'Geomean',
-      compared: 'Compared',
-      champions: 'Wins',
-      excluded: 'Exclusions',
-      noData: 'No rows meet the fairness requirements for ranking.',
-      baseline: 'baseline',
-      exclusions: {
-        engineUnavailable: 'Engine unavailable ({count})',
-        missingBaseline: 'No valid Shotium baseline ({count})',
-        missingCell: 'Matching scenario missing ({count})',
-        invalidCell: 'Failed, noisy, or ranking-ineligible ({count})',
-        partialCoverage: 'Partial coverage; excluded from official rank ({count} missing)',
-      },
-    },
-    scenarios: {
-      title: 'Scenario details',
-      engine: 'Engine',
-      scenario: 'Scenario',
-      status: 'Status',
-      all: 'All',
-      concurrency: 'Concurrency',
-      shard: 'Shard',
-      ranked: 'Ranked',
-      p50: 'p50',
-      p95: 'p95',
-      worst: 'Worst',
-      throughput: 'Throughput/s',
-      ratio: 'vs Shotium',
-      yes: 'Yes',
-      no: 'No',
-      noRows: 'No scenarios match these filters.',
-    },
-    quality: {
-      title: 'Quality and failures',
-      rawSamples: 'Raw sample cells',
-      failures: 'Failure records',
-      engines: 'Available engines',
-      unhealthyScenarios: 'Non-passing scenarios',
-      engineExclusions: 'Engine exclusion reasons',
-      failureEvidence: 'Failure evidence',
-      noFailures: 'No failure evidence was recorded.',
-      noIssues: 'This platform has no non-passing scenarios or engine exclusions.',
-      loadError: 'Could not load platform data: {error}',
-      summaryError: 'Platform summary error: {error}',
-    },
-    status: {
-      pass: 'Pass',
-      fail: 'Fail',
-      noisy: 'Noisy',
-      na: 'N/A',
-      infraError: 'Infrastructure error',
-      complete: 'Complete',
-      incomplete: 'Incomplete',
-      unknown: 'Unknown',
-    },
-    profile: {
-      smoke: 'Smoke',
-      full: 'Full',
-    },
-    scenario: {
-      cold: 'Cold start',
-      coldSettled: 'Cold start, settled first shot',
-      warm: 'Warm screenshots',
-      batch: 'Sequential batch',
-      parallel: 'Concurrent screenshots',
-      resident: 'Resident engine, fresh client',
-      reusePage: 'Reused page',
-      lifecycle: 'Start—capture—stop cycle',
-      faults: 'Faults and recovery',
-      soak: 'Soak',
-    },
-    shard: {
-      startup: 'Startup',
-      throughput: 'Throughput',
-      parallel: 'Parallel',
-      resident: 'Resident',
-      resilience: 'Resilience',
-    },
-  },
-} as const;
+export type {Locale, MessageKey, Params, Segment};
 
-export const i18n = createI18n({
-  legacy: false,
-  locale: 'zh-CN',
-  fallbackLocale: 'en',
-  messages,
-});
+export interface I18n {
+  locale: ComputedRef<Locale>;
+  t: (key: MessageKey, params?: Params) => string;
+  seg: (key: MessageKey, params: Params) => Segment[];
+  engineName: (engine: string) => string;
+  engineHelp: (engine: string) => string;
+  platformName: (platform: string) => string;
+  scenarioName: (scenario: string, concurrency?: number) => string;
+  scenarioHelp: (scenario: string) => string | null;
+  shardName: (shard: string) => string;
+  statusLabel: (status: ResultStatus | string | null | undefined) => string;
+  statusHelp: (status: ResultStatus | string | null | undefined) => string;
+  exclusionLabel: (code: ExclusionCode, count: number) => string;
+}
+
+const STATUS_KEY: Record<string, string> = {
+  'pass': 'pass',
+  'fail': 'fail',
+  'noisy': 'noisy',
+  'n/a': 'na',
+  'infra-error': 'infra',
+  'missing': 'missing',
+};
+
+export function createI18n(locale: ComputedRef<Locale>): I18n {
+  const t: I18n['t'] = (key, params) => translate(locale.value, key, params);
+  const fallback = (key: string, raw: string): string => hasMessage(key) ? t(key) : raw;
+  return {
+    locale,
+    t,
+    seg: (key, params) => segments(locale.value, key, params),
+    engineName: (engine) => fallback(`engine.${engine}`, engine),
+    engineHelp: (engine) => {
+      if (engine === 'shotium') return t('engineHelp.shotium');
+      if (engine.endsWith('-shell')) return t('engineHelp.shell');
+      if (engine.endsWith('-chrome')) return t('engineHelp.chrome');
+      return engine;
+    },
+    platformName: (platform) => fallback(`platform.${platform}`, platform),
+    scenarioName: (scenario, concurrency) => {
+      const name = fallback(`scenario.${scenario}`, scenario);
+      return concurrency && concurrency > 1 ? `${name} ×${concurrency}` : name;
+    },
+    scenarioHelp: (scenario) => {
+      const key = `scenarioHelp.${scenario}`;
+      return hasMessage(key) ? t(key) : null;
+    },
+    shardName: (shard) => fallback(`shard.${shard}`, shard),
+    statusLabel: (status) => {
+      const key = `status.${STATUS_KEY[status ?? ''] ?? ''}`;
+      return hasMessage(key) ? t(key) : String(status ?? t('runStatus.unknown'));
+    },
+    statusHelp: (status) => {
+      const key = `statusHelp.${STATUS_KEY[status ?? ''] ?? ''}`;
+      return hasMessage(key) ? t(key) : t('runHelp.unknown');
+    },
+    exclusionLabel: (code, count) => t(`exclusion.${code}`, {count}),
+  };
+}
+
+/** Locale comes from VitePress; the language switch in the nav bar is the only way to change it. */
+export function useI18n(): I18n {
+  const {lang} = useData();
+  const locale = computed(() => resolveLocale(lang.value));
+  return createI18n(locale);
+}

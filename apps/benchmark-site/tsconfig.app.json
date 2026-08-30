@@ -2,14 +2,14 @@
   "extends": "@vue/tsconfig/tsconfig.dom.json",
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
-    "types": ["vite/client", "vitest/globals"],
+    "types": ["vite/client", "element-plus/global"],
     "strict": true,
     "skipLibCheck": true,
-    "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true
+    "noUncheckedIndexedAccess": true
   },
   "include": [
     "docs/.vitepress/theme/**/*.ts",
+    "docs/.vitepress/theme/**/*.vue",
     "docs/components/**/*.vue",
     "docs/lib/**/*.ts",
     "test/**/*.ts"

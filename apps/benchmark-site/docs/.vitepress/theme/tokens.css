@@ -1,0 +1,148 @@
+/*
+ * Design tokens — the only place a colour, a blur radius or a font size is
+ * defined. Everything else (glass.css, report.css, component styles, the SVG
+ * charts) reads these custom properties, so the dark palette below is the
+ * whole dark theme.
+ */
+:root {
+  /* type ------------------------------------------------------------ */
+  --bench-font: 'Inter', 'Punctuation SC', ui-sans-serif, system-ui, -apple-system,
+    'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  --bench-mono: ui-monospace, 'Cascadia Mono', 'SF Mono', Menlo, Consolas, monospace;
+  --fs-12: 12px;
+  --fs-13: 13px;
+  --fs-14: 14px;
+  --fs-16: 16px;
+  --fs-20: 20px;
+  --fs-28: 28px;
+
+  /* geometry -------------------------------------------------------- */
+  --radius-panel: 20px;
+  --radius-inner: 12px;
+  --radius-control: 10px;
+  --radius-chip: 999px;
+  --panel-pad: 24px;
+  --panel-gap: 20px;
+  --page-max: 1200px;
+  --nav-blur-guard: 0px;
+
+  /* neutrals (light) ------------------------------------------------ */
+  --ink-1: #1b2229;
+  --ink-2: #4b5560;
+  --ink-3: #57626e;
+  --ink-inverse: #ffffff;
+  --line-1: rgba(27, 34, 41, 0.14);
+  --line-2: rgba(27, 34, 41, 0.08);
+  --brand: #146c43;
+  --brand-soft: rgba(20, 108, 67, 0.12);
+  --brand-ink: #0f5a37;
+
+  /* wallpaper ------------------------------------------------------- */
+  --wall-base: #e9efec;
+  --wall-a: #a6d9bf;
+  --wall-b: #b3cdf1;
+  --wall-c: #f3cfb0;
+
+  /* glass ----------------------------------------------------------- */
+  --glass-blur-0: 20px;
+  --glass-blur-1: 24px;
+  --glass-blur-2: 16px;
+  --glass-sat: 150%;
+  --glass-fill-0: rgba(255, 255, 255, 0.55);
+  --glass-fill-1: rgba(255, 255, 255, 0.62);
+  --glass-fill-dense: rgba(255, 255, 255, 0.84);
+  --glass-fill-2: rgba(255, 255, 255, 0.92);
+  --glass-edge: rgba(255, 255, 255, 0.7);
+  --glass-highlight: rgba(255, 255, 255, 0.95);
+  --glass-shade: rgba(20, 40, 30, 0.07);
+  --glass-shadow: 0 24px 60px -28px rgba(20, 40, 30, 0.35), 0 2px 6px -2px rgba(20, 40, 30, 0.08);
+  --glass-shadow-pop: 0 18px 40px -18px rgba(20, 40, 30, 0.45), 0 2px 8px -2px rgba(20, 40, 30, 0.12);
+  --solid-fill: #f7f9f8;
+  --solid-fill-pop: #ffffff;
+
+  /* controls & rows ------------------------------------------------- */
+  --control-fill: rgba(255, 255, 255, 0.55);
+  --control-fill-hover: rgba(255, 255, 255, 0.85);
+  --control-fill-active: rgba(20, 108, 67, 0.14);
+  --row-stripe: rgba(27, 34, 41, 0.035);
+  --row-hover: rgba(20, 108, 67, 0.08);
+  --track: rgba(27, 34, 41, 0.08);
+  --bar-muted: rgba(27, 34, 41, 0.3);
+  --focus-ring: 0 0 0 3px rgba(20, 108, 67, 0.35);
+
+  /* engines --------------------------------------------------------- */
+  --engine-shotium: #146c43;
+  --engine-playwright-shell: #b4530a;
+  --engine-playwright-chrome: #e98a3a;
+  --engine-puppeteer-shell: #1e4fb8;
+  --engine-puppeteer-chrome: #5b8def;
+  --engine-other: #6b7480;
+
+  /* status ---------------------------------------------------------- */
+  --status-pass: #155f38;
+  --status-pass-soft: rgba(26, 107, 63, 0.14);
+  --status-noisy: #6f4700;
+  --status-noisy-soft: rgba(196, 132, 0, 0.18);
+  --status-fail: #9e2020;
+  --status-fail-soft: rgba(196, 50, 50, 0.14);
+  --status-na: #4e5963;
+  --status-na-soft: rgba(91, 102, 112, 0.14);
+  --status-infra: #3c48a6;
+  --status-infra-soft: rgba(70, 83, 181, 0.14);
+}
+
+html.dark {
+  --ink-1: #e8ecf1;
+  --ink-2: #b6bfc9;
+  --ink-3: #9da8b4;
+  --ink-inverse: #0f1418;
+  --line-1: rgba(232, 236, 241, 0.16);
+  --line-2: rgba(232, 236, 241, 0.09);
+  --brand: #4fb37f;
+  --brand-soft: rgba(79, 179, 127, 0.16);
+  --brand-ink: #7fd1a3;
+
+  --wall-base: #0f1418;
+  --wall-a: #173d2c;
+  --wall-b: #1d2a44;
+  --wall-c: #3a2e22;
+
+  --glass-fill-0: rgba(20, 24, 32, 0.5);
+  --glass-fill-1: rgba(20, 24, 32, 0.52);
+  --glass-fill-dense: rgba(20, 24, 32, 0.76);
+  --glass-fill-2: rgba(26, 31, 40, 0.92);
+  --glass-edge: rgba(255, 255, 255, 0.12);
+  --glass-highlight: rgba(255, 255, 255, 0.24);
+  --glass-shade: rgba(0, 0, 0, 0.3);
+  --glass-shadow: 0 24px 60px -28px rgba(0, 0, 0, 0.75), 0 2px 6px -2px rgba(0, 0, 0, 0.4);
+  --glass-shadow-pop: 0 18px 40px -18px rgba(0, 0, 0, 0.8), 0 2px 8px -2px rgba(0, 0, 0, 0.5);
+  --solid-fill: #161b21;
+  --solid-fill-pop: #1c222a;
+
+  --control-fill: rgba(255, 255, 255, 0.06);
+  --control-fill-hover: rgba(255, 255, 255, 0.12);
+  --control-fill-active: rgba(79, 179, 127, 0.2);
+  --row-stripe: rgba(255, 255, 255, 0.035);
+  --row-hover: rgba(79, 179, 127, 0.12);
+  --track: rgba(255, 255, 255, 0.1);
+  --bar-muted: rgba(232, 236, 241, 0.34);
+  --focus-ring: 0 0 0 3px rgba(79, 179, 127, 0.45);
+
+  --engine-shotium: #4fb37f;
+  --engine-playwright-shell: #f0904a;
+  --engine-playwright-chrome: #f7bd8a;
+  --engine-puppeteer-shell: #6f9cff;
+  --engine-puppeteer-chrome: #a9c4ff;
+  --engine-other: #8b95a1;
+
+  --status-pass: #6fd39a;
+  --status-pass-soft: rgba(111, 211, 154, 0.16);
+  --status-noisy: #f2c060;
+  --status-noisy-soft: rgba(242, 192, 96, 0.16);
+  --status-fail: #ff8a8a;
+  --status-fail-soft: rgba(255, 138, 138, 0.16);
+  --status-na: #a7b1bc;
+  --status-na-soft: rgba(167, 177, 188, 0.16);
+  --status-infra: #a3aef5;
+  --status-infra-soft: rgba(163, 174, 245, 0.16);
+}

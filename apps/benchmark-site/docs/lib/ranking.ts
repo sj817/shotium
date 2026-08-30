@@ -1,5 +1,22 @@
 import type {EngineSummary, PlatformSummary, ResultStatus, ScenarioSummary} from './types';
 
+/*
+ * Ranking rules (see test/ranking.test.ts):
+ *  - Engines are compared only within one platform; absolute times are never
+ *    merged across platforms.
+ *  - A scenario's p50 is latency_ms.p50, falling back to wall_time_ms.p50, and
+ *    is valid only when > 0.
+ *  - A comparable item is a scenario where Shotium passed, is ranking-eligible
+ *    and has a valid p50, AND at least one competitor passed the same scenario,
+ *    is ranking-eligible and has a valid p50.
+ *  - An engine's score is the geometric mean of (engine p50 ÷ Shotium p50)
+ *    over every comparable item it covers; lower is faster; Shotium is 1×.
+ *  - Only an engine covering every comparable item gets an official rank; a
+ *    partial engine keeps a reference score plus its exclusion reasons.
+ *  - The smallest ratio on an item earns a champion mark; ties count for all.
+ *  - A platform "produced a ranking" only when at least two engines are official.
+ */
+
 export type ExclusionCode =
   'engine-unavailable' | 'missing-baseline' | 'missing-cell' | 'invalid-cell' | 'partial-coverage';
 
@@ -30,6 +47,10 @@ export function scenarioP50(row: ScenarioSummary): number | null {
   return Number.isFinite(value) && Number(value) > 0 ? Number(value) : null;
 }
 
+export function isEligibleCell(row: ScenarioSummary): boolean {
+  return row.status === 'pass' && row.ranking_eligible && scenarioP50(row) !== null;
+}
+
 export function geometricMean(values: number[]): number | null {
   if (!values.length || values.some((value) => !Number.isFinite(value) || value <= 0)) return null;
   return Math.exp(values.reduce((sum, value) => sum + Math.log(value), 0) / values.length);
@@ -39,31 +60,46 @@ function engineMap(summary: PlatformSummary): Map<string, EngineSummary> {
   return new Map(summary.engines.map((engine) => [engine.engine, engine]));
 }
 
-export function rankPlatform(summary: PlatformSummary): RankingRow[] {
-  const engines = engineMap(summary);
-  const names = [...new Set([
+function engineNames(summary: PlatformSummary): string[] {
+  return [...new Set([
     ...summary.engines.map((engine) => engine.engine),
     ...summary.scenarios.map((scenario) => scenario.engine),
   ])];
-  const shotiumBaselines = new Map<string, ScenarioSummary>();
+}
+
+function scenariosByEngine(summary: PlatformSummary): Map<string, Map<string, ScenarioSummary>> {
+  const map = new Map<string, Map<string, ScenarioSummary>>();
   for (const scenario of summary.scenarios) {
-    if (scenario.engine === 'shotium' && scenario.status === 'pass' &&
-        scenario.ranking_eligible && scenarioP50(scenario) !== null) {
-      shotiumBaselines.set(scenarioKey(scenario), scenario);
-    }
-  }
-  const scenariosByEngine = new Map<string, Map<string, ScenarioSummary>>();
-  for (const scenario of summary.scenarios) {
-    const rows = scenariosByEngine.get(scenario.engine) ?? new Map<string, ScenarioSummary>();
+    const rows = map.get(scenario.engine) ?? new Map<string, ScenarioSummary>();
     rows.set(scenarioKey(scenario), scenario);
-    scenariosByEngine.set(scenario.engine, rows);
+    map.set(scenario.engine, rows);
   }
-  const baselines = new Map([...shotiumBaselines].filter(([key]) =>
-    names.some((name) => {
+  return map;
+}
+
+/** Shotium rows that form the comparable set, keyed by `scenario|concurrency`. */
+export function comparableBaselines(summary: PlatformSummary): Map<string, ScenarioSummary> {
+  const names = engineNames(summary);
+  const byEngine = scenariosByEngine(summary);
+  const baselines = new Map<string, ScenarioSummary>();
+  for (const scenario of summary.scenarios) {
+    if (scenario.engine !== 'shotium' || !isEligibleCell(scenario)) continue;
+    const key = scenarioKey(scenario);
+    const contested = names.some((name) => {
       if (name === 'shotium') return false;
-      const candidate = scenariosByEngine.get(name)?.get(key);
-      return candidate?.status === 'pass' && candidate.ranking_eligible && scenarioP50(candidate) !== null;
-    })));
+      const candidate = byEngine.get(name)?.get(key);
+      return candidate !== undefined && isEligibleCell(candidate);
+    });
+    if (contested) baselines.set(key, scenario);
+  }
+  return baselines;
+}
+
+export function rankPlatform(summary: PlatformSummary): RankingRow[] {
+  const engines = engineMap(summary);
+  const names = engineNames(summary);
+  const byEngine = scenariosByEngine(summary);
+  const baselines = comparableBaselines(summary);
 
   const ratiosByEngine = new Map<string, Map<string, number>>();
   const exclusionsByEngine = new Map<string, RankingExclusion[]>();
@@ -76,7 +112,7 @@ export function rankPlatform(summary: PlatformSummary): RankingRow[] {
     } else if (!baselines.size) {
       counts.set('missing-baseline', 1);
     } else {
-      const rows = scenariosByEngine.get(name);
+      const rows = byEngine.get(name);
       for (const [key, baseline] of baselines) {
         const row = rows?.get(key);
         if (!row) {
@@ -142,6 +178,7 @@ export function rankPlatform(summary: PlatformSummary): RankingRow[] {
   });
 }
 
+/** Per-scenario ratio against the Shotium row of the same `scenario|concurrency`, or null when either side is not eligible. */
 export function ratioForScenario(row: ScenarioSummary, summary: PlatformSummary): number | null {
   if (!row.ranking_eligible || row.status !== 'pass') return null;
   const baseline = summary.scenarios.find((candidate) =>

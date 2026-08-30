@@ -1,0 +1,236 @@
+/*
+ * Glass material and VitePress overrides.
+ *
+ * The low-frequency wallpaper is already visually soft, so report panels use
+ * translucent fills, highlights and shadows without re-blurring thousands of
+ * pixels on every wallpaper frame. Only the fixed nav/footer and short-lived
+ * popovers retain a real backdrop filter. This preserves the glass appearance
+ * while keeping the steady-state compositor workload bounded.
+ */
+
+/* ---- wallpaper ------------------------------------------------------ */
+.bench-wall {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  background: var(--wall-base);
+  pointer-events: none;
+  transition: background-color 0.5s;
+  contain: strict;
+  isolation: isolate;
+}
+
+.bench-wall__blob {
+  position: absolute;
+  border-radius: 50%;
+  will-change: transform;
+  contain: paint;
+  backface-visibility: hidden;
+}
+
+.bench-wall__blob--a {
+  width: 80vmax;
+  height: 80vmax;
+  left: -25vmax;
+  top: -30vmax;
+  background: radial-gradient(closest-side, var(--wall-a) 0%, var(--wall-a) 30%, transparent 72%);
+  animation: bench-drift-a 80s steps(1200, jump-none) infinite alternate;
+}
+
+.bench-wall__blob--b {
+  width: 70vmax;
+  height: 70vmax;
+  right: -25vmax;
+  top: 5vmax;
+  background: radial-gradient(closest-side, var(--wall-b) 0%, var(--wall-b) 28%, transparent 72%);
+  animation: bench-drift-b 95s steps(1425, jump-none) infinite alternate;
+}
+
+.bench-wall__blob--c {
+  width: 75vmax;
+  height: 75vmax;
+  left: 10vmax;
+  bottom: -45vmax;
+  background: radial-gradient(closest-side, var(--wall-c) 0%, var(--wall-c) 26%, transparent 72%);
+  animation: bench-drift-c 110s steps(1650, jump-none) infinite alternate;
+}
+
+html.bench-wall-paused .bench-wall__blob {
+  animation-play-state: paused;
+}
+
+@keyframes bench-drift-a {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(14vmax, 10vmax, 0) scale(1.12); }
+}
+
+@keyframes bench-drift-b {
+  from { transform: translate3d(0, 0, 0) scale(1.05); }
+  to { transform: translate3d(-16vmax, 14vmax, 0) scale(0.95); }
+}
+
+@keyframes bench-drift-c {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(18vmax, -12vmax, 0) scale(1.08); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bench-wall__blob {
+    animation: none;
+  }
+}
+
+/* ---- material ------------------------------------------------------- */
+.glass {
+  position: relative;
+  background: var(--glass-fill-1);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--radius-panel);
+  box-shadow:
+    inset 1px 1px 0 var(--glass-highlight),
+    inset -1px -1px 0 var(--glass-shade),
+    var(--glass-shadow);
+  transition: background-color 0.5s;
+  isolation: isolate;
+}
+
+.glass--dense {
+  background: var(--glass-fill-dense);
+}
+
+.glass--pop {
+  background: var(--glass-fill-2);
+  -webkit-backdrop-filter: blur(var(--glass-blur-2)) saturate(var(--glass-sat));
+  backdrop-filter: blur(var(--glass-blur-2)) saturate(var(--glass-sat));
+  border-radius: var(--radius-inner);
+  box-shadow:
+    inset 1px 1px 0 var(--glass-highlight),
+    var(--glass-shadow-pop);
+}
+
+/* ---- VitePress chrome ---------------------------------------------- */
+:root {
+  --vp-c-brand-1: var(--brand);
+  --vp-c-brand-2: var(--brand-ink);
+  --vp-c-brand-3: var(--brand);
+  --vp-c-brand-soft: var(--brand-soft);
+  --vp-c-text-1: var(--ink-1);
+  --vp-c-text-2: var(--ink-2);
+  --vp-c-text-3: var(--ink-3);
+  --vp-c-divider: var(--line-1);
+  --vp-c-gutter: var(--line-1);
+  --vp-c-border: var(--line-1);
+  --vp-nav-bg-color: transparent;
+  --vp-font-family-base: var(--bench-font);
+  --vp-layout-max-width: 1440px;
+}
+
+html,
+body {
+  background: transparent;
+}
+
+.VPNavBar {
+  background: var(--glass-fill-0) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur-0)) saturate(var(--glass-sat));
+  backdrop-filter: blur(var(--glass-blur-0)) saturate(var(--glass-sat));
+  border-bottom: 1px solid var(--glass-edge);
+  box-shadow: inset 0 1px 0 var(--glass-highlight);
+}
+
+.VPNavBar .divider,
+.VPNavBar .divider-line {
+  display: none;
+}
+
+.VPNavBar .content-body {
+  background: transparent !important;
+}
+
+.VPNavScreen {
+  background: var(--glass-fill-2) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur-2)) saturate(var(--glass-sat));
+  backdrop-filter: blur(var(--glass-blur-2)) saturate(var(--glass-sat));
+}
+
+.VPMenu {
+  background: var(--glass-fill-2) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur-2)) saturate(var(--glass-sat));
+  backdrop-filter: blur(var(--glass-blur-2)) saturate(var(--glass-sat));
+  border-color: var(--glass-edge) !important;
+  box-shadow: inset 1px 1px 0 var(--glass-highlight), var(--glass-shadow-pop) !important;
+}
+
+.VPFooter {
+  background: var(--glass-fill-0) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur-0)) saturate(var(--glass-sat));
+  backdrop-filter: blur(var(--glass-blur-0)) saturate(var(--glass-sat));
+  border-top: 1px solid var(--glass-edge) !important;
+  box-shadow: inset 0 1px 0 var(--glass-highlight);
+  padding: 24px 20px !important;
+  text-align: center;
+}
+
+.VPFooter .message,
+.VPFooter .copyright {
+  color: var(--ink-2) !important;
+  font-size: 13px !important;
+  line-height: 1.7 !important;
+}
+
+.VPFooter a {
+  transition: all 0.15s ease;
+  text-decoration: none;
+}
+
+.VPFooter a:hover {
+  text-decoration: underline;
+  opacity: 0.85;
+}
+
+/* ---- fallbacks ------------------------------------------------------ */
+@supports not (backdrop-filter: blur(1px)) {
+  .glass,
+  .glass--dense {
+    background: var(--solid-fill);
+  }
+
+  .glass--pop,
+  .VPMenu,
+  .VPNavScreen {
+    background: var(--solid-fill-pop) !important;
+  }
+
+  .VPNavBar,
+  .VPFooter {
+    background: var(--solid-fill) !important;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .glass,
+  .glass--dense,
+  .glass--pop,
+  .VPNavBar,
+  .VPFooter,
+  .VPMenu,
+  .VPNavScreen {
+    background: var(--solid-fill) !important;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .glass--pop,
+  .VPMenu,
+  .VPNavScreen {
+    background: var(--solid-fill-pop) !important;
+  }
+
+  .bench-wall__blob {
+    animation: none;
+    opacity: 0.6;
+  }
+}
