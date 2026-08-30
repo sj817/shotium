@@ -190,7 +190,8 @@
             "p50_percent": {"type": "number", "minimum": 0},
             "p95_percent": {"type": "number", "minimum": 0},
             "cpu_limit_percent": {"type": "number", "minimum": 0, "maximum": 100},
-            "samples": {"type": "integer", "minimum": 1}
+            "samples": {"type": "integer", "minimum": 1},
+            "sampler_monitors": {"type": "integer", "minimum": 0}
           },
           "additionalProperties": false
         }

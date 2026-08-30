@@ -23,6 +23,8 @@ import {ensureShotium} from './install-target.ts';
 import {
   ProcessMonitor,
   calibrateHostLoad,
+  startProcessSampler,
+  stopProcessSampler,
   sampleHostLoad,
   terminateOwnedProcesses,
   verifyProcessMonitoring,
@@ -346,10 +348,12 @@ async function main() {
   fs.mkdirSync(tempProfileDirectory, {recursive: true});
   outputInitialized = true;
   fs.writeFileSync(samplesFile, '');
+  startProcessSampler();
   await verifyProcessMonitoring();
   const stability = await calibrateHostLoad();
   progress(`host idle CPU p50 ${stability.idle_cpu_p50}% p95 ${stability.idle_cpu_p95}% ` +
-    `-> stability gate ${stability.cpu_limit}% (${stability.samples.length} samples)`);
+    `-> stability gate ${stability.cpu_limit}% (${stability.samples.length} samples, ` +
+    `${stability.sampler_monitors} process monitors running)`);
 
   const shotiumVersion = booleanArg(options.skipInstall, false) ? options.shotiumVersion :
     await ensureShotium(options.shotiumVersion);
@@ -506,6 +510,7 @@ async function main() {
         p95_percent: stability.idle_cpu_p95,
         cpu_limit_percent: stability.cpu_limit,
         samples: stability.samples.length,
+        sampler_monitors: stability.sampler_monitors,
       },
     },
     packages: versions,
@@ -527,10 +532,12 @@ async function main() {
   writeJson(path.join(permanentDirectory, 'summary.json'), summary);
   writeJson(path.join(permanentDirectory, 'quality.json'), quality);
   writeJson(path.join(permanentDirectory, 'failures.json'), failures);
+  stopProcessSampler();
   if (['fail', 'infra-error'].includes(status)) process.exitCode = 1;
 }
 
 main().catch(async (error) => {
+  stopProcessSampler();
   if (!outputInitialized) {
     process.stderr.write(`${String(error?.stack || error)}\n`);
     process.exitCode = 1;

@@ -73,7 +73,9 @@ manifest. Reports link to the [VitePress benchmark explorer](https://sj817.githu
 a continuous 1000-request (or ten-minute) soak. Every cell waits for host
 stability; non-cold cells also wait for measured engine readiness. The host
 gate is calibrated per shard: five seconds of idle CPU are sampled before the
-first cell and the limit is `max(25%, idle p95 + 10 points)`, capped at 80%,
+first cell, with the same two process samplers running that every cell runs
+(on Windows each sample is a PowerShell CIM query through one persistent
+PowerShell session, so its cost is part of the baseline), and the limit is `max(25%, idle p95 + 10 points)`, capped at 80%,
 because GitHub's Windows and macOS runners idle at 28-41% and a fixed 25%
 ceiling could never be met there. Stability means three consecutive one-second
 samples under that limit with steady free memory; a cell that cannot get there

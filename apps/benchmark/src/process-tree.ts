@@ -477,19 +477,47 @@ export function cpuLimitFromBaseline(idleCpuP95: number, {
   return Math.min(ceiling, Math.max(floor, Math.round(idleCpuP95 + margin)));
 }
 
-export async function calibrateHostLoad({durationMs = SETTLE.calibrationMs}: {durationMs?: number} = {}) {
-  await primeCpuLoad();
-  const deadline = Date.now() + durationMs;
+/**
+ * systeminformation reads the Windows process table through a PowerShell
+ * Get-CimInstance query. Without a persistent session every sample spawns a
+ * fresh powershell.exe (≈0.5 s of CPU on a 2-core runner); with two monitors
+ * sampling back to back that alone held GitHub's Windows runners at 35-60% CPU
+ * and made every stability check fail. Keep one PowerShell session per process.
+ */
+export function startProcessSampler() {
+  if (process.platform === 'win32') si.powerShellStart();
+}
+
+export function stopProcessSampler() {
+  if (process.platform === 'win32') si.powerShellRelease();
+}
+
+export async function calibrateHostLoad({durationMs = SETTLE.calibrationMs, monitors = 2}: {
+  durationMs?: number;
+  monitors?: number;
+} = {}) {
+  // Measure the runner the way a cell sees it: the CLI monitors the worker and
+  // the worker monitors itself, so two process samplers run during every
+  // stability check. Their cost belongs in the baseline, not in the noise.
+  const samplers = Array.from({length: monitors}, () => new ProcessMonitor([process.pid], 100));
+  for (const sampler of samplers) await sampler.start();
   const samples = [];
-  do {
-    await sleep(1000);
-    samples.push(await sampleHostLoad());
-  } while (Date.now() < deadline);
+  try {
+    await primeCpuLoad();
+    const deadline = Date.now() + durationMs;
+    do {
+      await sleep(1000);
+      samples.push(await sampleHostLoad());
+    } while (Date.now() < deadline);
+  } finally {
+    for (const sampler of samplers) await sampler.stop();
+  }
   const sorted = samples.map((sample) => sample.cpu_percent).sort((left, right) => left - right);
   const p50 = median(sorted);
   const p95 = percentile(sorted, 0.95);
   return {
     samples,
+    sampler_monitors: monitors,
     idle_cpu_p50: round(p50, 2),
     idle_cpu_p95: round(p95, 2),
     cpu_limit: cpuLimitFromBaseline(p95),
