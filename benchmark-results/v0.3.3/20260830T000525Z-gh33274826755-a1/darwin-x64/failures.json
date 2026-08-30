@@ -1,0 +1,66 @@
+[
+  {
+    "shard": "resident",
+    "engine": "playwright-chrome",
+    "scenario": "resident",
+    "repeat": 5,
+    "attempt": 1,
+    "error": "Error: resident warmup 10 failed\n    at residentClient (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:178:11)\n    at async runResident (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:314:20)\n    at async <anonymous> (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:744:13)"
+  },
+  {
+    "shard": "resident",
+    "engine": "playwright-shell",
+    "scenario": "resident",
+    "repeat": 5,
+    "attempt": 1,
+    "error": "Error: resident warmup 10 failed\n    at residentClient (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:178:11)\n    at async runResident (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:314:20)\n    at async <anonymous> (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:744:13)"
+  },
+  {
+    "shard": "resident",
+    "engine": "playwright-shell",
+    "scenario": "resident",
+    "repeat": 6,
+    "attempt": 1,
+    "error": "Error: resident warmup 10 failed\n    at residentClient (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:178:11)\n    at async runResident (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:314:20)\n    at async <anonymous> (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:744:13)"
+  },
+  {
+    "shard": "resident",
+    "engine": "playwright-chrome",
+    "scenario": "resident",
+    "repeat": 6,
+    "attempt": 2,
+    "error": "Error: resident warmup 8 failed\n    at residentClient (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:178:11)\n    at async runResident (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:314:20)\n    at async <anonymous> (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:744:13)"
+  },
+  {
+    "shard": "resident",
+    "engine": "puppeteer-chrome",
+    "scenario": "resident",
+    "repeat": 7,
+    "attempt": 1,
+    "error": "Error: resident warmup 10 failed\n    at residentClient (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:178:11)\n    at async runResident (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:314:20)\n    at async <anonymous> (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:744:13)"
+  },
+  {
+    "shard": "resident",
+    "engine": "playwright-shell",
+    "scenario": "resident",
+    "repeat": 7,
+    "attempt": 2,
+    "error": "Error: resident warmup 10 failed\n    at residentClient (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:178:11)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async runResident (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:314:20)\n    at async <anonymous> (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:744:13)"
+  },
+  {
+    "shard": "resident",
+    "engine": "puppeteer-shell",
+    "scenario": "resident",
+    "repeat": 7,
+    "attempt": 1,
+    "error": "InfrastructureError: resident warmup 10 PID ownership could not be established before start\n    at finishOwnedChild (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:135:11)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async residentClient (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:169:37)\n    at async runResident (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:314:20)\n    at async <anonymous> (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:744:13)"
+  },
+  {
+    "shard": "resident",
+    "engine": "playwright-chrome",
+    "scenario": "resident",
+    "repeat": 7,
+    "attempt": 2,
+    "error": "Error: resident warmup 8 failed\n    at residentClient (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:178:11)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async runResident (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:314:20)\n    at async <anonymous> (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:744:13)"
+  }
+]

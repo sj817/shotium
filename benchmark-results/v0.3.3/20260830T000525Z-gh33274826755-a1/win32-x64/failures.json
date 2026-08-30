@@ -1,0 +1,8 @@
+[
+  {
+    "at": "2026-08-30T00:04:55.059Z",
+    "shard": "merge",
+    "status": "infra-error",
+    "error": "missing parallel shard"
+  }
+]
