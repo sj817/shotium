@@ -1,21 +1,14 @@
-<p align="center">
-  <img src="docs/assets/hero.webp" width="900"
-       alt="shotium：来自精简 Chromium 的 HTML/CSS 截图引擎，只保留 Blink + Skia + //net，无 V8，单张约 31 ms，npm 下载 19.4 MB，常驻守护进程空闲占用 58 MiB。">
-</p>
-
-<p align="center">
-  <a href="LICENSE"><img alt="License: BSD-3-Clause" src="https://img.shields.io/badge/license-BSD--3--Clause-blue.svg"></a>
-  <a href="https://www.npmjs.com/package/@shotkit/shotium"><img alt="npm version" src="https://img.shields.io/npm/v/@shotkit/shotium.svg"></a>
-  <a href="https://www.npmjs.com/package/@shotkit/shotium"><img alt="npm 下载体积：win32-x64 为 19.4 MB" src="https://img.shields.io/badge/npm%20download-19.4%20MB%20(win32--x64)-green.svg"></a>
-</p>
-
-<p align="center">
-  <a href="README.md">English</a> · <b>简体中文</b>
-</p>
+# shotium
 
 > 基于精简 Chromium Blink 内核的高性能 HTML/CSS 静态截图引擎。Blink 负责布局与绘制，
 > Skia 在 CPU 上光栅化，网络请求交给 Chromium 的 `//net`；V8、浏览器外壳、GPU 进程、
 > DevTools 协议都不在构建产物里。
+
+[![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](LICENSE)
+[![npm version](https://img.shields.io/npm/v/@shotkit/shotium.svg)](https://www.npmjs.com/package/@shotkit/shotium)
+[![Download](https://img.shields.io/badge/npm%20download-19.4%20MB%20(win32--x64)-green.svg)](https://www.npmjs.com/package/@shotkit/shotium)
+
+[English](README.md) · **简体中文**
 
 ---
 
@@ -762,13 +755,13 @@ npm --prefix shotium install && npm --prefix shotium run build
 重新敲进截图里：
 
 ```bash
-npm run docs:assets   # hero.webp、card.webp、example-node.webp、example-cli.webp
+npm run docs:assets   # card.webp、example-node.webp、example-cli.webp
 npm run docs:demo     # demo.gif，按 docs/demo.tape 录制
 npm run docs          # 两步都跑
 ```
 
-- `docs:assets` 用 **shotium 自己**渲染 `hero.html` 与 `card.html`，再把 `card.mjs`
-  和一段真实的命令行会话冻结成代码图。需要 `PATH` 上有
+- `docs:assets` 用 **shotium 自己**渲染 `card.html`，再把 `card.mjs` 和一段真实的
+  命令行会话冻结成代码图。需要 `PATH` 上有
   [freeze](https://github.com/charmbracelet/freeze) 和 ffmpeg；freeze 遇到 `.webp`
   输出路径时写出的其实是 SVG，所以转换交给 ffmpeg 完成。
 - `docs:demo` 用 [vhs](https://github.com/charmbracelet/vhs) 录制

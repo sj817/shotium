@@ -2,10 +2,9 @@
 //
 //   npm run docs:assets
 //
-// Four files land in docs/assets:
+// Three files land in docs/assets:
 //
-//   hero.webp          docs/demo/hero.html, rendered by shotium itself
-//   card.webp          docs/demo/card.html, the document the demo captures
+//   card.webp          docs/demo/card.html, rendered by shotium itself
 //   example-node.webp  docs/demo/card.mjs, frozen as syntax-highlighted code
 //   example-cli.webp   a real CLI session, frozen the same way
 //
@@ -147,7 +146,6 @@ function recordCliSession() {
 prepareWorkspace({ install: true });
 
 await renderWithShotium([
-  { file: 'hero.html', output: join(assetsDir, 'hero.webp'), viewport: { width: 1200, height: 420 } },
   { file: 'card.html', output: join(assetsDir, 'card.webp'), viewport: { width: 720, height: 380 } },
 ]);
 

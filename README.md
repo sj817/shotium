@@ -1,21 +1,14 @@
-<p align="center">
-  <img src="docs/assets/hero.webp" width="900"
-       alt="shotium — HTML and CSS to PNG from a stripped Chromium: Blink + Skia + //net, no V8, about 31 ms per in-process shot, 19.4 MB npm download, 58 MiB idle daemon.">
-</p>
-
-<p align="center">
-  <a href="LICENSE"><img alt="License: BSD-3-Clause" src="https://img.shields.io/badge/license-BSD--3--Clause-blue.svg"></a>
-  <a href="https://www.npmjs.com/package/@shotkit/shotium"><img alt="npm version" src="https://img.shields.io/npm/v/@shotkit/shotium.svg"></a>
-  <a href="https://www.npmjs.com/package/@shotkit/shotium"><img alt="npm download size: 19.4 MB on win32-x64" src="https://img.shields.io/badge/npm%20download-19.4%20MB%20(win32--x64)-green.svg"></a>
-</p>
-
-<p align="center">
-  <b>English</b> · <a href="README.zh.md">简体中文</a>
-</p>
+# shotium
 
 > Static HTML/CSS screenshots from a stripped-down Chromium core. Blink lays out
 > and paints, Skia rasterises on the CPU, Chromium's `//net` fetches — with no V8,
 > no browser shell, no GPU process and no DevTools protocol left in the build.
+
+[![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](LICENSE)
+[![npm version](https://img.shields.io/npm/v/@shotkit/shotium.svg)](https://www.npmjs.com/package/@shotkit/shotium)
+[![Download](https://img.shields.io/badge/npm%20download-19.4%20MB%20(win32--x64)-green.svg)](https://www.npmjs.com/package/@shotkit/shotium)
+
+**English** · [简体中文](README.zh.md)
 
 ---
 
@@ -780,13 +773,13 @@ Every image above is generated from the sources in [`docs/demo/`](docs/demo) —
 nothing was drawn by hand, and nothing was retyped into a screenshot:
 
 ```bash
-npm run docs:assets   # hero.webp, card.webp, example-node.webp, example-cli.webp
+npm run docs:assets   # card.webp, example-node.webp, example-cli.webp
 npm run docs:demo     # demo.gif, recorded from docs/demo.tape
 npm run docs          # both
 ```
 
-- `docs:assets` renders `hero.html` and `card.html` **with shotium itself**, and
-  freezes `card.mjs` and a recorded CLI session into code stills. Needs
+- `docs:assets` renders `card.html` **with shotium itself**, and freezes
+  `card.mjs` and a recorded CLI session into code stills. Needs
   [freeze](https://github.com/charmbracelet/freeze) and ffmpeg on `PATH`; freeze
   writes SVG for a `.webp` output path, so the conversion is done with ffmpeg.
 - `docs:demo` records [`docs/demo.tape`](docs/demo.tape) with

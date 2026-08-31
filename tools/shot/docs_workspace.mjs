@@ -21,7 +21,7 @@ export const isWindows = process.platform === 'win32';
 // The sources copied into the sandbox. card.mjs is also the file frozen into
 // docs/assets/example-node.webp, so the code in the README and the code in the
 // demo cannot drift apart.
-const SOURCES = ['card.html', 'card.mjs', 'hero.html'];
+const SOURCES = ['card.html', 'card.mjs'];
 
 export function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
