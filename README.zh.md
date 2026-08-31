@@ -1,12 +1,33 @@
-# shotium
+<p align="center">
+  <img src="docs/assets/hero.webp" width="900"
+       alt="shotium：来自精简 Chromium 的 HTML/CSS 截图引擎，只保留 Blink + Skia + //net，无 V8，单张约 31 ms，npm 下载 19.4 MB，常驻守护进程空闲占用 58 MiB。">
+</p>
 
-> 基于精简 Chromium Blink 内核的高性能 HTML/CSS 静态截图引擎。
+<p align="center">
+  <a href="LICENSE"><img alt="License: BSD-3-Clause" src="https://img.shields.io/badge/license-BSD--3--Clause-blue.svg"></a>
+  <a href="https://www.npmjs.com/package/@shotkit/shotium"><img alt="npm version" src="https://img.shields.io/npm/v/@shotkit/shotium.svg"></a>
+  <a href="https://www.npmjs.com/package/@shotkit/shotium"><img alt="npm 下载体积：win32-x64 为 19.4 MB" src="https://img.shields.io/badge/npm%20download-19.4%20MB%20(win32--x64)-green.svg"></a>
+</p>
 
-[![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](LICENSE)
-[![npm version](https://img.shields.io/npm/v/@shotkit/shotium.svg)](https://www.npmjs.com/package/@shotkit/shotium)
-[![Download](https://img.shields.io/badge/npm%20download-19.4%20MB%20(win32--x64)-green.svg)](https://www.npmjs.com/package/@shotkit/shotium)
+<p align="center">
+  <a href="README.md">English</a> · <b>简体中文</b>
+</p>
 
-[English](README.md) · **简体中文**
+> 基于精简 Chromium Blink 内核的高性能 HTML/CSS 静态截图引擎。Blink 负责布局与绘制，
+> Skia 在 CPU 上光栅化，网络请求交给 Chromium 的 `//net`；V8、浏览器外壳、GPU 进程、
+> DevTools 协议都不在构建产物里。
+
+---
+
+## 实际运行效果
+
+<p align="center">
+  <img src="docs/assets/demo.gif" width="820"
+       alt="终端录屏：npm install @shotkit/shotium 装上两个包，二十几行的程序对 card.html 截图，输出首次与预热后的耗时以及 card.png 的体积。">
+</p>
+
+安装、二十几行代码、一次截图，全程没有启动浏览器——Blink 就跑在这个 `node` 进程里。录屏中的
+耗时是带着屏幕录制一起测出来的，可对外引用的数字见下方[性能基准](#性能基准测试)。
 
 ---
 
@@ -32,28 +53,74 @@ bun add @shotkit/shotium
 
 ### 2. 基础示例
 
+下面这段就是 [`docs/demo/card.mjs`](docs/demo/card.mjs)，也是上面录屏实际执行的文件，
+因此它不会和真正能跑通的写法脱节：
+
+<p align="center">
+  <img src="docs/assets/example-node.webp" width="820"
+       alt="高亮显示的 JavaScript 代码：从 @shotkit/shotium 引入 shotium 与 screenshot，调用 shotium.start()，以 2 倍像素密度把 card.html 截成 card.png，打印首次与预热后的渲染耗时，最后 await shotium.stop()。">
+</p>
+
+<details>
+<summary>复制源码</summary>
+
 ```ts
+import { statSync } from 'node:fs';
 import shotium, { screenshot } from '@shotkit/shotium';
 
-// 1. 启动引擎
+// One engine per process: Blink's process-wide statics
+// cannot be re-initialised, so start() is idempotent.
 shotium.start();
 
-// 2. 渲染远程 URL、本地 HTML 或内联 HTML 字符串 (data:text/html)
-const { image, stats } = await screenshot({
-  file: 'data:text/html,<h1 style="color: #0969da; font-family: sans-serif;">Hello Shotium</h1>',
-  viewport: { width: 800, height: 400 },
-});
+function shoot() {
+  return screenshot({
+    file: 'card.html',        // URL, local path or file://
+    viewport: { width: 720, height: 380 },
+    scale: 2,                 // device pixel ratio
+    type: 'png',
+    path: 'card.png',         // to disk; `image` is then null
+  });
+}
 
-console.log(`渲染耗时: ${stats.timing.render}ms, 总耗时: ${stats.timing.total}ms`);
+// The first capture also pays for Blink, Skia and font warm-up.
+for (const pass of ['cold', 'warm']) {
+  const { render, total } = (await shoot()).stats.timing;
+  console.log(`${pass}  render ${render.toFixed(1)} ms  total ${total.toFixed(1)} ms`);
+}
 
-// 3. 停止引擎
+const kb = (statSync('card.png').size / 1024).toFixed(1);
+console.log(`card.png  1440x760  ${kb} KB`);
+
 await shotium.stop();
 ```
+
+</details>
+
+`file` 可以是 `https://` URL、本地路径或 `file://` URL。上面这次运行的输入文档是
+[`docs/demo/card.html`](docs/demo/card.html)，输出则是下面这张图——网格、渐变、虚线边框
+和阴影，全部由 Blink 布局、Skia 光栅化：
+
+<p align="center">
+  <img src="docs/assets/card.webp" width="620"
+       alt="渲染出来的卡片：标题写着 Grid, gradients, shadows — no JavaScript，右上角是绿色的 static 标签，下方三个带边框的格子分别写着 Flexbox、@font-face 和 SVG，底部是一条虚线分隔的说明。">
+</p>
+
+### 3. 也可以直接在命令行用
+
+独立可执行文件把同一个引擎带到没有 Node.js 运行时的环境，没有文件可指的时候就从
+`stdin` 读文档：
+
+<p align="center">
+  <img src="docs/assets/example-cli.webp" width="820"
+       alt="终端会话：三条 shotium 命令分别截取本地文件、以 WebP 保存 example.com 的整页、以及通过管道从 stdin 读入文档，最后用 du -h 列出写出的三张图片。">
+</p>
 
 ---
 
 ## 目录
 
+- [实际运行效果](#实际运行效果)
+- [快速上手](#快速上手)
 - [概述与核心特性](#概述与核心特性)
 - [运行模式选型建议](#运行模式选型建议)
 - [技术范围与设计边界](#技术范围与设计边界)
@@ -72,6 +139,7 @@ await shotium.stop();
 - [环境变量](#环境变量)
 - [C ABI / FFI 跨语言集成](#c-abi--ffi-跨语言集成)
 - [源码构建指南](#源码构建指南)
+- [重新生成 README 里的图](#重新生成-readme-里的图)
 - [许可证](#许可证)
 
 ---
@@ -99,6 +167,35 @@ await shotium.stop();
 
 ## 运行模式选型建议
 
+```mermaid
+flowchart TB
+    subgraph inproc["1 · 进程内引擎 —— 常驻 Web / API 服务"]
+        direction LR
+        APP["Express · Fastify · NestJS<br/>你的进程"]
+        LIB["libshotium<br/>Blink + Skia + //net"]
+        APP -- "Node-API 调用<br/>无 IPC，无子进程" --> LIB
+        LIB -- "编码后的字节<br/>约 31 ms 一张" --> APP
+    end
+
+    subgraph resident["2 · 常驻守护进程 —— CLI 工具、CI 流水线、Serverless"]
+        direction LR
+        TASK["短命客户端<br/>用完即退"]
+        DAEMON["shotium 守护进程<br/>已预热，按 name 各一份"]
+        TASK -- "命名管道（Windows）<br/>Unix 域套接字（POSIX）" --> DAEMON
+        DAEMON -- "连接耗时 2.3 ms<br/>不必再付冷启动" --> TASK
+    end
+
+    subgraph standalone["3 · 独立命令行工具 —— Shell 与非 Node 运行时"]
+        direction LR
+        SHELL["Shell 脚本 · Makefile<br/>任意语言"]
+        BIN["shotium 可执行文件<br/>15.3 MB，无运行时依赖"]
+        SHELL -- "命令行参数 · --stdin · --serve" --> BIN
+        BIN -- "PNG · JPEG · WebP 落盘" --> SHELL
+    end
+
+    inproc ~~~ resident ~~~ standalone
+```
+
 | 场景需求 | 推荐模式 | 核心优势 |
 |---|---|---|
 | **常驻 Web / API 服务**（如 Express、Fastify、NestJS） | **进程内引擎 (In-Process)** | 零 IPC 通信开销、零进程拉起成本，延迟最低（~31 ms/张）。 |
@@ -114,7 +211,7 @@ shotium 专为服务端静态 HTML/CSS 渲染设计（如社交分享卡片、�
 ### 支持特性
 
 - **现代 CSS 规范完整支持**：基于 Blink 核心，支持 Flexbox、CSS Grid、Web 字体、SVG、CSS 变量及复杂选择器。
-- **多种输入源形式**：支持远程 URL（`http://`, `https://`）、本地文件路径（绝对/相对路径及 `file://`）以及**内联 HTML 字符串**（`data:text/html,...`）。
+- **多种输入源形式**：支持远程 URL（`http://`, `https://`）与本地文件路径（绝对/相对路径及 `file://`）。运行时拼出来的 HTML 需要先写成文件，或者用命令行的 `--stdin` 管道传入；`data:` URL 会被渲染器拒绝。
 - **原生多图像格式编码**：原生支持输出 PNG、JPEG、WebP 格式，支持画质压缩比与 Alpha 透明通道。
 - **内置 Chromium 网络栈**：直连 Chromium `//net`（支持 HTTPS、HTTP/2、Brotli、重定向、磁盘缓存及 Cookie 管理）。
 - **同进程高性能渲染**：基于 Node-API 与 C ABI 在当前进程内直接渲染，无跨进程内存拷贝。
@@ -134,6 +231,9 @@ shotium 专为服务端静态 HTML/CSS 渲染设计（如社交分享卡片、�
 引擎通过 Node-API 加载 [`shot/shot_api.h`](shot/shot_api.h) 定义的 C ABI，直接运行在当前 Node.js 进程中。`screenshot()` 返回由 Blink 编码完成的图像 Buffer，单张耗时约 **31 ms**。
 
 ```ts
+import { writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import shotium, { screenshot } from '@shotkit/shotium';
 
 // 启动引擎并获取缓存状态
@@ -147,10 +247,13 @@ const res1 = await screenshot({
   quality: 85,
 });
 
-// 2. 渲染动态拼装的内联 HTML 字符串（无需落盘临时文件）
+// 2. 渲染动态拼装的 HTML。渲染器只认 http、https 与 file，
+//    所以这段 HTML 先落成文件再交给它。
 const html = `<div style="padding: 24px; background: #f6f8fa;"><h2>Invoice #1024</h2></div>`;
+const page = join(tmpdir(), 'invoice-1024.html');
+await writeFile(page, html);
 const res2 = await screenshot({
-  file: `data:text/html;charset=utf-8,${encodeURIComponent(html)}`,
+  file: page,
   viewport: { width: 600, height: 300 },
 });
 
@@ -316,7 +419,7 @@ interface ScreenshotResult {
 - **`file` 输入支持**：
   - 远程地址：`https://example.com`
   - 本地路径：`./template.html` 或 `/absolute/path/index.html` 或 `file:///...`
-  - 内联 HTML 字符串：`data:text/html;charset=utf-8,<h1>Hello</h1>`
+  - 运行时拼出来的 HTML：先写成文件，再把该路径传进来。`data:` URL 会被渲染器拒绝；独立命令行工具则可以用 `--stdin` 读入文档。
 - **`cache` 策略选项**（与 Web Fetch API 一致，对主文档及子资源均生效）：
   - `default`：标准 HTTP 缓存策略。
   - `reload`：忽略现有缓存，向服务端请求最新资源并更新缓存。
@@ -374,7 +477,7 @@ interface CaptureStats {
   fromCache: number;    // 由 HTTP 磁盘缓存响应的资源数量
   failed: number;       // 请求失败的资源数量
   bytes: number;        // 解码后的正文字节总数（非传输体积）
-  httpStatus: number;   // 主文档 HTTP 状态码（本地 file: / data: 协议为 0）
+  httpStatus: number;   // 主文档 HTTP 状态码（本地 file: 协议为 0）
   finalUrl: string;     // 经历重定向后的最终 URL
   timing: {
     fetch: number;      // 主文档获取耗时（DNS 解析、TCP 握手、TLS 协商及网络往返）
@@ -391,7 +494,7 @@ interface CaptureStats {
 
 | 场景 | `fetch` 获取耗时 | `render` 渲染耗时 | `total` 总耗时 |
 |---|---|---|---|
-| **本地文件 / 内联 HTML** (`file:` / `data:`) | 0.2 ms | 20 ms | 25 ms |
+| **本地文件**（`file:` 或路径） | 0.2 ms | 20 ms | 25 ms |
 | **HTTPS（首次冷请求）** | 321.1 ms | 16 ms | 350 ms |
 | **HTTPS（缓存命中）** | 0.7 ms | 18 ms | 31 ms |
 
@@ -506,27 +609,35 @@ console.log(`清理条目: ${result.removed}, 清理前体积: ${result.bytesBef
 
 ## 技术架构
 
+```mermaid
+flowchart TB
+    IN["HTML / CSS<br/>URL · 本地路径 · stdin"]
+    NET["//net<br/>HTTPS · HTTP/2 · Brotli<br/>磁盘缓存 · Cookie"]
+    BLINK["Blink<br/>DOM · CSSOM · 字体 · 图像解码"]
+    LIFE["布局与绘制<br/>UpdateAllLifecyclePhases()"]
+    REC["cc::PaintRecord"]
+    SKIA["Skia<br/>CPU 光栅化到 SkSurface"]
+    OUT["PNG · JPEG · WebP<br/>Buffer 或文件"]
+
+    IN --> NET --> BLINK --> LIFE --> REC --> SKIA --> OUT
+
+    subgraph cut["不在构建产物里"]
+        direction TB
+        V8["V8 JavaScript 引擎"]
+        SHELL["浏览器外壳（//content）"]
+        DEVTOOLS["DevTools 协议"]
+        GPU["GPU 进程与合成器"]
+        V8 ~~~ SHELL
+        DEVTOOLS ~~~ GPU
+    end
+
+    BLINK -. "没有要执行、要等待、要沙箱化的东西" .- cut
+
+    classDef gone stroke-dasharray: 5 4,color:#9aa3af,stroke:#9aa3af
+    class V8,SHELL,DEVTOOLS,GPU gone
 ```
-┌────────────────────────────────────────────────────────┐
-│  shotium (TypeScript / Node.js API 层)                  │
-│  生命周期管理 · 串行请求队列 · 参数校验                      │
-└──────────────────────────┬─────────────────────────────┘
-                           │ Node-API：JSON 输入，二进制图像输出
-┌──────────────────────────▼─────────────────────────────┐
-│  shotium.node  ──►  libshotium (C ABI, shot_api.h)      │
-│                     同进程加载，无跨进程 IPC                │
-│                                                        │
-│  Blink 渲染管线:                                        │
-│  DOM ──► 样式与布局计算 ──► 绘制记录 (cc::PaintRecord)  │
-│                                      │                 │
-│  Skia CPU 光栅化 ◄───────────────────┘                 │
-│         │                                              │
-│         ▼                                              │
-│  图像编码器 (PNG / JPEG / WebP)                         │
-│                                                        │
-│  网络子系统: Chromium //net (HTTP/2, HTTPS, 磁盘缓存)    │
-└────────────────────────────────────────────────────────┘
-```
+
+整条管线跑在一个进程的一个线程上：不用拉起渲染进程，不用等合成器出帧，也没有 `<script>` 要执行。
 
 1. **直接调用 Blink 核心**：绕过 `//content` 多进程框架与合成器层，直接创建 `PageNonOrdinary` 并同步调用 `LocalFrameView::UpdateAllLifecyclePhases()` 执行布局排版。
 2. **Skia CPU 内存光栅化**：排版阶段生成的 `cc::PaintRecord` 直接光栅化至内存 `SkSurface`，随后经由 Skia 原生 Codec 压缩为目标图像格式。
@@ -642,6 +753,30 @@ npx node-gyp@13 rebuild -C shotium/native
 cp out/Shot/libshotium.so out/Shot/*.pak shotium/native/build/Release/
 npm --prefix shotium install && npm --prefix shotium run build
 ```
+
+---
+
+## 重新生成 README 里的图
+
+上面每一张图都是由 [`docs/demo/`](docs/demo) 里的源文件生成的，没有手绘，也没有把代码
+重新敲进截图里：
+
+```bash
+npm run docs:assets   # hero.webp、card.webp、example-node.webp、example-cli.webp
+npm run docs:demo     # demo.gif，按 docs/demo.tape 录制
+npm run docs          # 两步都跑
+```
+
+- `docs:assets` 用 **shotium 自己**渲染 `hero.html` 与 `card.html`，再把 `card.mjs`
+  和一段真实的命令行会话冻结成代码图。需要 `PATH` 上有
+  [freeze](https://github.com/charmbracelet/freeze) 和 ffmpeg；freeze 遇到 `.webp`
+  输出路径时写出的其实是 SVG，所以转换交给 ffmpeg 完成。
+- `docs:demo` 用 [vhs](https://github.com/charmbracelet/vhs) 录制
+  [`docs/demo.tape`](docs/demo.tape)，还需要 ttyd、ffmpeg 和 bash。录制过程中会把已发布
+  的包真装进 `docs/.demo-run`，所以录屏是一次真实运行，而不是演给人看的复现。
+- 命令行那张图需要一个 `shotium` 可执行文件：可以用 `SHOTIUM_CLI=...` 指定，也可以放在
+  `out/Shot*` 下。都没有时，会直接复用已经录好的
+  [`docs/demo/cli-session.txt`](docs/demo/cli-session.txt)。
 
 ---
 

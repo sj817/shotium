@@ -389,3 +389,8 @@ third_party/rust/target/
 /apps/benchmark/out*
 node_modules
 apps/demo/faruzan.png
+
+# The sandbox that tools/shot/docs_demo.mjs and tools/shot/docs_assets.mjs
+# rebuild from docs/demo before recording: a copy of the demo sources plus a
+# real `npm install @shotkit/shotium`. Only what lands in docs/assets is kept.
+/docs/.demo-run

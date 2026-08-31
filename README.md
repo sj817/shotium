@@ -1,12 +1,35 @@
-# shotium
+<p align="center">
+  <img src="docs/assets/hero.webp" width="900"
+       alt="shotium — HTML and CSS to PNG from a stripped Chromium: Blink + Skia + //net, no V8, about 31 ms per in-process shot, 19.4 MB npm download, 58 MiB idle daemon.">
+</p>
 
-> High-performance static HTML/CSS screenshot engine built on a stripped-down Chromium core.
+<p align="center">
+  <a href="LICENSE"><img alt="License: BSD-3-Clause" src="https://img.shields.io/badge/license-BSD--3--Clause-blue.svg"></a>
+  <a href="https://www.npmjs.com/package/@shotkit/shotium"><img alt="npm version" src="https://img.shields.io/npm/v/@shotkit/shotium.svg"></a>
+  <a href="https://www.npmjs.com/package/@shotkit/shotium"><img alt="npm download size: 19.4 MB on win32-x64" src="https://img.shields.io/badge/npm%20download-19.4%20MB%20(win32--x64)-green.svg"></a>
+</p>
 
-[![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](LICENSE)
-[![npm version](https://img.shields.io/npm/v/@shotkit/shotium.svg)](https://www.npmjs.com/package/@shotkit/shotium)
-[![Download](https://img.shields.io/badge/npm%20download-19.4%20MB%20(win32--x64)-green.svg)](https://www.npmjs.com/package/@shotkit/shotium)
+<p align="center">
+  <b>English</b> · <a href="README.zh.md">简体中文</a>
+</p>
 
-**English** · [简体中文](README.zh.md)
+> Static HTML/CSS screenshots from a stripped-down Chromium core. Blink lays out
+> and paints, Skia rasterises on the CPU, Chromium's `//net` fetches — with no V8,
+> no browser shell, no GPU process and no DevTools protocol left in the build.
+
+---
+
+## See It Run
+
+<p align="center">
+  <img src="docs/assets/demo.gif" width="820"
+       alt="Terminal recording: npm install @shotkit/shotium adds two packages, a program of a couple of dozen lines captures card.html, and the run prints a cold and a warm capture time followed by the size of card.png.">
+</p>
+
+Install, a couple of dozen lines, one capture — no browser is launched, because Blink is
+running inside that `node` process. The timings in the recording are paid while
+a screen recorder is running; [the benchmarks](#performance-benchmarks) below are
+the numbers to quote.
 
 ---
 
@@ -32,28 +55,76 @@ Prebuilt platform binaries are distributed as optional npm dependencies (coverin
 
 ### 2. Basic Example
 
+The program below is [`docs/demo/card.mjs`](docs/demo/card.mjs) — the same file
+the recording runs, so it cannot drift away from what actually works:
+
+<p align="center">
+  <img src="docs/assets/example-node.webp" width="820"
+       alt="Syntax-highlighted JavaScript: import shotium and screenshot from @shotkit/shotium, call shotium.start(), capture card.html into card.png at a device pixel ratio of 2, print the cold and warm render timings, then await shotium.stop().">
+</p>
+
+<details>
+<summary>Copy the source</summary>
+
 ```ts
+import { statSync } from 'node:fs';
 import shotium, { screenshot } from '@shotkit/shotium';
 
-// 1. Initialize engine
+// One engine per process: Blink's process-wide statics
+// cannot be re-initialised, so start() is idempotent.
 shotium.start();
 
-// 2. Render remote URLs, local HTML files, or inline HTML strings (data:text/html)
-const { image, stats } = await screenshot({
-  file: 'data:text/html,<h1 style="color: #0969da; font-family: sans-serif;">Hello Shotium</h1>',
-  viewport: { width: 800, height: 400 },
-});
+function shoot() {
+  return screenshot({
+    file: 'card.html',        // URL, local path or file://
+    viewport: { width: 720, height: 380 },
+    scale: 2,                 // device pixel ratio
+    type: 'png',
+    path: 'card.png',         // to disk; `image` is then null
+  });
+}
 
-console.log(`Rendered in ${stats.timing.render}ms, Total: ${stats.timing.total}ms`);
+// The first capture also pays for Blink, Skia and font warm-up.
+for (const pass of ['cold', 'warm']) {
+  const { render, total } = (await shoot()).stats.timing;
+  console.log(`${pass}  render ${render.toFixed(1)} ms  total ${total.toFixed(1)} ms`);
+}
 
-// 3. Shut down engine and release resources
+const kb = (statSync('card.png').size / 1024).toFixed(1);
+console.log(`card.png  1440x760  ${kb} KB`);
+
 await shotium.stop();
 ```
+
+</details>
+
+Point `file` at an `https://` URL, a local path or a `file://` URL. The input
+document for the run above is [`docs/demo/card.html`](docs/demo/card.html), and
+this is what comes back out — grid, gradients, dashed borders and box shadows,
+laid out by Blink and rasterised by Skia:
+
+<p align="center">
+  <img src="docs/assets/card.webp" width="620"
+       alt="The rendered card: a heading reading 'Grid, gradients, shadows — no JavaScript', a green 'static' pill, three bordered cells for Flexbox, @font-face and SVG, and a dashed footer.">
+</p>
+
+### 3. Or From the Shell
+
+The standalone executable takes the same engine to environments without a
+Node.js runtime, and reads a document from `stdin` when there is no file to
+point at:
+
+<p align="center">
+  <img src="docs/assets/example-cli.webp" width="820"
+       alt="Terminal session: three shotium invocations capturing a local file, a full page from example.com as WebP, and a document piped in over stdin, then du -h listing the three images that were written.">
+</p>
 
 ---
 
 ## Table of Contents
 
+- [See It Run](#see-it-run)
+- [Quick Start](#quick-start)
 - [Overview & Key Highlights](#overview--key-highlights)
 - [Execution Mode Selection Guide](#execution-mode-selection-guide)
 - [Technical Scope](#technical-scope)
@@ -72,6 +143,7 @@ await shotium.stop();
 - [Environment Variables](#environment-variables)
 - [C ABI / FFI Integration](#c-abi--ffi-integration)
 - [Building from Source](#building-from-source)
+- [Regenerating the README Assets](#regenerating-the-readme-assets)
 - [License](#license)
 
 ---
@@ -99,6 +171,35 @@ By stripping Chromium down to its essential rendering pipeline, it retains only:
 
 ## Execution Mode Selection Guide
 
+```mermaid
+flowchart TB
+    subgraph inproc["1 · In-process engine — long-running Node services"]
+        direction LR
+        APP["Express · Fastify · NestJS<br/>your process"]
+        LIB["libshotium<br/>Blink + Skia + //net"]
+        APP -- "Node-API call<br/>no IPC, no child process" --> LIB
+        LIB -- "encoded bytes<br/>~31 ms per shot" --> APP
+    end
+
+    subgraph resident["2 · Resident daemon — CLI tools, CI jobs, serverless"]
+        direction LR
+        TASK["short-lived client<br/>starts and exits"]
+        DAEMON["shotium daemon<br/>pre-warmed, one per name"]
+        TASK -- "named pipe (Windows)<br/>unix socket (POSIX)" --> DAEMON
+        DAEMON -- "connect in 2.3 ms<br/>no cold start to pay" --> TASK
+    end
+
+    subgraph standalone["3 · Standalone CLI — shells and non-Node runtimes"]
+        direction LR
+        SHELL["shell script · Makefile<br/>any language"]
+        BIN["shotium executable<br/>15.3 MB, no runtime deps"]
+        SHELL -- "argv · --stdin · --serve" --> BIN
+        BIN -- "PNG · JPEG · WebP on disk" --> SHELL
+    end
+
+    inproc ~~~ resident ~~~ standalone
+```
+
 | Use Case | Recommended Mode | Key Benefit |
 |---|---|---|
 | **Long-Running Web / API Services** (Express, Fastify, NestJS) | **In-Process Engine** | Zero IPC overhead, zero process startup cost, lowest per-shot latency (~31 ms). |
@@ -114,7 +215,7 @@ shotium is optimized for server-side static HTML/CSS rendering tasks (such as so
 ### Supported Features
 
 - **Modern CSS Standards**: Powered by Blink, supporting Flexbox, CSS Grid, custom web fonts, SVG, CSS variables, and complex selectors.
-- **Versatile Input Sources**: Supports remote URLs (`http://`, `https://`), local filesystem paths (relative/absolute and `file://`), and **inline HTML strings** (`data:text/html,...`).
+- **Versatile Input Sources**: Supports remote URLs (`http://`, `https://`) and local filesystem paths (relative, absolute, or `file://`). Markup assembled at runtime is written to a file first, or piped into the CLI on `--stdin`; `data:` URLs are rejected.
 - **Native Image Encoding**: Encodes directly to PNG, JPEG, and WebP formats with quality and alpha transparency control.
 - **Embedded Chromium Network Stack**: Direct integration with Chromium `//net` (supporting HTTPS, HTTP/2, Brotli compression, redirects, disk cache, and cookies).
 - **In-Process Performance**: In-process rendering via Node-API and C ABI with no inter-process memory copies.
@@ -134,6 +235,9 @@ shotium is optimized for server-side static HTML/CSS rendering tasks (such as so
 The engine runs directly inside your Node.js process via Node-API, bound to the C ABI defined in [`shot/shot_api.h`](shot/shot_api.h). `screenshot()` returns the image buffer encoded directly by Blink (~**31 ms** per shot).
 
 ```ts
+import { writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import shotium, { screenshot } from '@shotkit/shotium';
 
 // Start engine and retrieve cache status
@@ -147,10 +251,13 @@ const res1 = await screenshot({
   quality: 85,
 });
 
-// 2. Capture dynamically assembled inline HTML string (no temporary files on disk)
+// 2. Capture dynamically assembled HTML. The renderer loads documents from
+// http, https and file only, so the markup goes through a file on the way in.
 const html = `<div style="padding: 24px; background: #f6f8fa;"><h2>Invoice #1024</h2></div>`;
+const page = join(tmpdir(), 'invoice-1024.html');
+await writeFile(page, html);
 const res2 = await screenshot({
-  file: `data:text/html;charset=utf-8,${encodeURIComponent(html)}`,
+  file: page,
   viewport: { width: 600, height: 300 },
 });
 
@@ -246,7 +353,7 @@ shotium --serve --cache-dir /var/tmp/shotium-cache
 
 ```ts
 interface ScreenshotOptions {
-  /** Target URL (http/https/file/data) or local file path */
+  /** Target URL (http/https/file) or local file path */
   file: string;
 
   /** Output image format (default: 'png') */
@@ -316,7 +423,7 @@ interface ScreenshotResult {
 - **`file` Input Schemes**:
   - Remote URLs: `https://example.com`
   - Local Paths: `./template.html`, `/absolute/path/index.html`, `file:///...`
-  - Inline HTML Strings: `data:text/html;charset=utf-8,<h1>Hello</h1>`
+  - Runtime-assembled markup: write it to a file and pass that path. `data:` URLs are rejected by the renderer; the standalone CLI reads a document from `--stdin` instead.
 - **`cache` Strategies** (follows Web Fetch API, applies to document and subresources):
   - `default`: Standard HTTP caching behavior.
   - `reload`: Bypasses existing cache, fetches fresh resources from server, and updates cache.
@@ -374,7 +481,7 @@ interface CaptureStats {
   fromCache: number;    // Number of resource bodies served from HTTP disk cache
   failed: number;       // Number of failed subresource requests
   bytes: number;        // Total decoded body bytes (not transfer size)
-  httpStatus: number;   // Main document HTTP status code (0 for file: / data: URLs)
+  httpStatus: number;   // Main document HTTP status code (0 for file: URLs)
   finalUrl: string;     // Final URL after resolving redirects
   timing: {
     fetch: number;      // Document retrieval: DNS, TCP, TLS, and round-trip latency
@@ -396,7 +503,7 @@ interface CaptureStats {
 
 | Scenario | `fetch` Latency | `render` Latency | `total` Latency |
 |---|---|---|---|
-| **Local file / Inline HTML** (`file:` / `data:`) | 0.2 ms | 20 ms | 25 ms |
+| **Local file** (`file:` or a path) | 0.2 ms | 20 ms | 25 ms |
 | **HTTPS (Cold request)** | 321.1 ms | 16 ms | 350 ms |
 | **HTTPS (Cache hit)** | 0.7 ms | 18 ms | 31 ms |
 
@@ -511,27 +618,36 @@ The canonical benchmark now runs on six native GitHub runner platforms. Browse i
 
 ## Architecture
 
+```mermaid
+flowchart TB
+    IN["HTML / CSS<br/>URL · local path · stdin"]
+    NET["//net<br/>HTTPS · HTTP/2 · Brotli<br/>disk cache · cookies"]
+    BLINK["Blink<br/>DOM · CSSOM · fonts · image decoders"]
+    LIFE["Layout and paint<br/>UpdateAllLifecyclePhases()"]
+    REC["cc::PaintRecord"]
+    SKIA["Skia<br/>CPU raster to SkSurface"]
+    OUT["PNG · JPEG · WebP<br/>Buffer or file"]
+
+    IN --> NET --> BLINK --> LIFE --> REC --> SKIA --> OUT
+
+    subgraph cut["Not in the build"]
+        direction TB
+        V8["V8 JavaScript engine"]
+        SHELL["Browser shell (//content)"]
+        DEVTOOLS["DevTools protocol"]
+        GPU["GPU process + compositor"]
+        V8 ~~~ SHELL
+        DEVTOOLS ~~~ GPU
+    end
+
+    BLINK -. "nothing to run, wait for or sandbox" .- cut
+
+    classDef gone stroke-dasharray: 5 4,color:#9aa3af,stroke:#9aa3af
+    class V8,SHELL,DEVTOOLS,GPU gone
 ```
-┌────────────────────────────────────────────────────────┐
-│  shotium (TypeScript / Node.js API Layer)              │
-│  Lifecycle management · Serialized queue · Validation  │
-└──────────────────────────┬─────────────────────────────┘
-                           │ Node-API: JSON in, encoded bytes out
-┌──────────────────────────▼─────────────────────────────┐
-│  shotium.node  ──►  libshotium (C ABI, shot_api.h)     │
-│                     In-process execution, no IPC       │
-│                                                        │
-│  Blink Rendering Pipeline:                             │
-│  DOM ──► Style / Layout ──► cc::PaintRecord            │
-│                                     │                  │
-│  Skia CPU Rasterization ◄───────────┘                  │
-│         │                                              │
-│         ▼                                              │
-│  Image Codecs (PNG / JPEG / WebP)                      │
-│                                                        │
-│  Network: Chromium //net (HTTP/2, HTTPS, Disk Cache)   │
-└────────────────────────────────────────────────────────┘
-```
+
+The whole pipeline is one thread in one process: no renderer to spawn, no
+compositor frame to wait on, and no `<script>` to execute.
 
 1. **Direct Blink Lifecycle**: Bypasses `//content` and compositor layers by instantiating `PageNonOrdinary` and invoking `LocalFrameView::UpdateAllLifecyclePhases()` synchronously.
 2. **Skia CPU Rasterization**: Draws the generated `cc::PaintRecord` directly to an in-memory `SkSurface`, passing raw pixel buffers to Skia image codecs.
@@ -655,6 +771,31 @@ npx node-gyp@13 rebuild -C shotium/native
 cp out/Shot/libshotium.so out/Shot/*.pak shotium/native/build/Release/
 npm --prefix shotium install && npm --prefix shotium run build
 ```
+
+---
+
+## Regenerating the README Assets
+
+Every image above is generated from the sources in [`docs/demo/`](docs/demo) —
+nothing was drawn by hand, and nothing was retyped into a screenshot:
+
+```bash
+npm run docs:assets   # hero.webp, card.webp, example-node.webp, example-cli.webp
+npm run docs:demo     # demo.gif, recorded from docs/demo.tape
+npm run docs          # both
+```
+
+- `docs:assets` renders `hero.html` and `card.html` **with shotium itself**, and
+  freezes `card.mjs` and a recorded CLI session into code stills. Needs
+  [freeze](https://github.com/charmbracelet/freeze) and ffmpeg on `PATH`; freeze
+  writes SVG for a `.webp` output path, so the conversion is done with ffmpeg.
+- `docs:demo` records [`docs/demo.tape`](docs/demo.tape) with
+  [vhs](https://github.com/charmbracelet/vhs), which also needs ttyd, ffmpeg and
+  bash. It installs the published package into `docs/.demo-run` on camera, so
+  the recording is a real session rather than a reenactment.
+- The CLI still needs a `shotium` executable — `SHOTIUM_CLI=...`, or one under
+  `out/Shot*`. Without one it re-freezes the transcript already recorded in
+  [`docs/demo/cli-session.txt`](docs/demo/cli-session.txt).
 
 ---
 

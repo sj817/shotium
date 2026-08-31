@@ -1,0 +1,87 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>shotium demo card</title>
+<style>
+  :root {
+    --ink: #0b1220;
+    --muted: #5b6b84;
+    --line: #e3e8f0;
+    --brand: #0969da;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font: 15px/1.5 "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    background:
+      radial-gradient(900px 420px at 92% -10%, #dbeafe 0%, transparent 60%),
+      radial-gradient(700px 380px at -10% 110%, #ede9fe 0%, transparent 55%),
+      #ffffff;
+    display: grid;
+    place-items: center;
+  }
+  .card {
+    width: 640px;
+    padding: 28px 32px 26px;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.86);
+    box-shadow: 0 18px 44px rgba(15, 23, 42, 0.10);
+  }
+  header { display: flex; align-items: center; gap: 12px; }
+  .mark {
+    width: 34px; height: 34px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--brand), #7c3aed);
+    display: grid; place-items: center;
+    color: #fff; font-weight: 700; font-size: 17px;
+  }
+  h1 { margin: 0; font-size: 19px; letter-spacing: -0.01em; }
+  .sub { margin: 2px 0 0; font-size: 12.5px; color: var(--muted); }
+  .tag {
+    margin-left: auto; font-size: 11.5px; font-weight: 600;
+    color: #166534; background: #dcfce7;
+    border-radius: 999px; padding: 5px 11px;
+  }
+  .grid {
+    margin-top: 22px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .cell {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 14px;
+    background: #fff;
+  }
+  .cell b { display: block; font-size: 21px; letter-spacing: -0.02em; }
+  .cell span { font-size: 11.5px; color: var(--muted); }
+  footer {
+    margin-top: 20px; padding-top: 14px;
+    border-top: 1px dashed var(--line);
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; color: var(--muted);
+  }
+  code {
+    font: 12px/1 ui-monospace, "Cascadia Mono", Consolas, monospace;
+    background: #f1f5f9; border-radius: 6px; padding: 4px 7px; color: #334155;
+  }
+</style>
+<div class="card">
+  <header>
+    <div class="mark">S</div>
+    <div>
+      <h1>Grid, gradients, shadows — no JavaScript</h1>
+      <p class="sub">Rendered by Blink, rasterised by Skia, encoded in process</p>
+    </div>
+    <div class="tag">static</div>
+  </header>
+
+  <div class="grid">
+    <div class="cell"><b>Flexbox</b><span>and CSS Grid</span></div>
+    <div class="cell"><b>@font-face</b><span>web fonts via //net</span></div>
+    <div class="cell"><b>SVG</b><span>filters, masks, gradients</span></div>
+  </div>
+
+  <footer>Reproduce this card with <code>node card.mjs</code></footer>
+</div>
