@@ -154,6 +154,21 @@ url::Origin InitiatorFor(const network::ResourceRequest& request) {
   return url::Origin::Create(request.url);
 }
 
+// Every terminal outcome of a subresource -- delivered, refused or failed --
+// goes through here. The wait loop in shot_renderer.cc pumps the message loop
+// with a 10 ms watchdog and otherwise only learns that something happened when
+// it is told, so a resource that finishes without saying so costs a full
+// watchdog slice (15.6 ms in practice, the Windows system tick) even though
+// blink was ready immediately. ShotFetch::Finish() already reports http(s)
+// fetches, but that is the fetch completing rather than blink consuming the
+// body, and a file: resource never goes through ShotFetch at all -- which is
+// why an ordinary page with two local images waited ~10 ms for nothing.
+void NotifyCaptureProgress() {
+  if (CaptureContext* capture = CaptureContext::Current()) {
+    capture->NotifyProgress();
+  }
+}
+
 }  // namespace
 
 ShotURLLoader::ShotURLLoader() = default;
@@ -264,6 +279,7 @@ void ShotURLLoader::DeliverFile(const GURL& url,
   }
   if (error) {
     client->DidFail(*error, base::TimeTicks::Now(), 0, 0, 0);
+    NotifyCaptureProgress();
     return;
   }
   DeliverBody(client, response, std::move(contents));
@@ -278,6 +294,7 @@ void ShotURLLoader::OnFetched(blink::URLLoaderClient* client,
         blink::WebURLError(result.net_error,
                            blink::WebURL(blink::KURL(result.final_url))),
         base::TimeTicks::Now(), 0, 0, 0);
+    NotifyCaptureProgress();
     return;
   }
   LOG(INFO) << "shot: load ok " << result.final_url.spec() << " ("
@@ -304,6 +321,7 @@ void ShotURLLoader::DeliverBody(blink::URLLoaderClient* client,
         blink::WebURLError(net::ERR_INSUFFICIENT_RESOURCES,
                            blink::WebURL(response.CurrentRequestUrl())),
         base::TimeTicks::Now(), 0, 0, 0);
+    NotifyCaptureProgress();
     return;
   }
 
@@ -336,10 +354,15 @@ void ShotURLLoader::OnBodyWritten(blink::URLLoaderClient* client,
   if (result != MOJO_RESULT_OK) {
     LOG(ERROR) << "shot: writing the response body failed (mojo result "
                << result << ")";
+    NotifyCaptureProgress();
     return;
   }
   client->DidFinishLoading(base::TimeTicks::Now(), size,
                            static_cast<uint64_t>(size), size);
+  // After DidFinishLoading, not before: consuming the body is what can start
+  // the next request (a stylesheet's @font-face, an image the layout only now
+  // decides to paint), and the loop should re-check with that already true.
+  NotifyCaptureProgress();
 }
 
 scoped_refptr<base::SingleThreadTaskRunner>
