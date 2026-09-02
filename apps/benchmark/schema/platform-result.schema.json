@@ -189,9 +189,11 @@
           "properties": {
             "p50_percent": {"type": "number", "minimum": 0},
             "p95_percent": {"type": "number", "minimum": 0},
-            "cpu_limit_percent": {"type": "number", "minimum": 0, "maximum": 100},
+            "cpu_limit_percent": {"type": "number", "minimum": 0},
             "samples": {"type": "integer", "minimum": 1},
-            "sampler_monitors": {"type": "integer", "minimum": 0}
+            "sampler_monitors": {"type": "integer", "minimum": 0},
+            "sampler_mean_period_ms": {"type": ["number", "null"], "minimum": 0},
+            "cpu_limit_exceeds_ceiling": {"type": "boolean"}
           },
           "additionalProperties": false
         }

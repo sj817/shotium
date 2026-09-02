@@ -23,8 +23,6 @@ import {ensureShotium} from './install-target.ts';
 import {
   ProcessMonitor,
   calibrateHostLoad,
-  startProcessSampler,
-  stopProcessSampler,
   sampleHostLoad,
   terminateOwnedProcesses,
   verifyProcessMonitoring,
@@ -217,10 +215,25 @@ async function runCell(group, attempt, configFile, profile, stability) {
     reject: false,
     env: {...process.env, SHOT_BENCH_CELL: `${group.engine}:${group.scenario}:${group.repeat}:${attempt}`},
   });
-  const monitor = new ProcessMonitor([subprocess.pid], 100);
+  // The outer monitor exists to prove ownership of the worker tree and to clean
+  // it up, not to time anything; the worker samples its own RSS. Poll it slowly
+  // so the expensive process-table query is not competing with the measurement.
+  const monitor = new ProcessMonitor([subprocess.pid], 1000);
   await monitor.start();
-  const completed = await subprocess;
-  const outerTelemetry = await monitor.stop();
+  // A cell that stops producing output is the shape every Windows job took. Say
+  // so while it is happening instead of leaving a silent gap in the log.
+  const heartbeat = setInterval(() => {
+    progress(`  ${cellLabel(group, attempt)}: still running after ` +
+      `${Math.round((performance.now() - started) / 1000)}s`);
+  }, SETTLE.heartbeatMs);
+  let completed;
+  let outerTelemetry;
+  try {
+    completed = await subprocess;
+  } finally {
+    clearInterval(heartbeat);
+    outerTelemetry = await monitor.stop();
+  }
   fs.mkdirSync(logsDirectory, {recursive: true});
   const logBase = `${group.engine}.${group.scenario}.c${group.concurrency}.r${group.repeat}.a${attempt}`;
   fs.writeFileSync(path.join(logsDirectory, `${logBase}.stdout.log`), completed.stdout || '');
@@ -348,12 +361,21 @@ async function main() {
   fs.mkdirSync(tempProfileDirectory, {recursive: true});
   outputInitialized = true;
   fs.writeFileSync(samplesFile, '');
-  startProcessSampler();
+  // Print before the first host probe. Windows used to block inside the process
+  // table query with nothing on stdout, which is indistinguishable from a slow
+  // shard until the job timeout kills it 90 minutes later.
+  progress(`${platform}/${shard}: profile ${options.profile}, budget ` +
+    `${Math.round(profile.shardBudgetMs / 60_000)} min, node ${process.version}`);
   await verifyProcessMonitoring();
   const stability = await calibrateHostLoad();
   progress(`host idle CPU p50 ${stability.idle_cpu_p50}% p95 ${stability.idle_cpu_p95}% ` +
     `-> stability gate ${stability.cpu_limit}% (${stability.samples.length} samples, ` +
-    `${stability.sampler_monitors} process monitors running)`);
+    `${stability.sampler_monitors} process monitors at ` +
+    `${stability.sampler_mean_period_ms ?? '?'}ms mean period)`);
+  if (stability.cpu_limit_exceeds_ceiling) {
+    progress(`warning: the idle floor pushed the CPU gate past ${SETTLE.cpuLimitMax}%; ` +
+      'this runner is too loud for the host CPU check to mean much');
+  }
 
   const shotiumVersion = booleanArg(options.skipInstall, false) ? options.shotiumVersion :
     await ensureShotium(options.shotiumVersion);
@@ -416,9 +438,34 @@ async function main() {
   let cellIndex = 0;
   progress(`${platform}/${shard}: ${totalCells} cells across ${runnable.length} engines ` +
     `(${runnable.join(', ') || 'none'})`);
+  const unavailable = probes.filter((probe) => probe.status !== 'pass');
+  for (const probe of unavailable) {
+    // An engine that cannot run here used to vanish from the log entirely, so a
+    // three-engine linux-arm64 shard looked the same as a five-engine one.
+    progress(`  ${probe.engine}: ${probe.status} - ${probe.reason || 'no reason recorded'}`);
+  }
+  const budgetDeadline = Date.now() + profile.shardBudgetMs;
+  let budgetExhausted = false;
   try {
     for (const group of groups) {
       for (const engine of group.engines) {
+        if (Date.now() >= budgetDeadline) {
+          if (!budgetExhausted) {
+            budgetExhausted = true;
+            // Stop scheduling rather than letting the GitHub job timeout kill the
+            // process: a killed job loses every upload, including the evidence
+            // for the cells that did complete.
+            progress(`shard budget of ${Math.round(profile.shardBudgetMs / 60_000)} min is spent ` +
+              `after ${cellIndex}/${totalCells} cells; writing what completed`);
+            failures.push({
+              shard,
+              phase: 'shard-budget',
+              error: `shard budget of ${Math.round(profile.shardBudgetMs / 60_000)} min expired ` +
+                `after ${cellIndex}/${totalCells} cells`,
+            });
+          }
+          continue;
+        }
         const cell = {...group, engine};
         cellIndex += 1;
         for (let attempt = 1; attempt <= 2; attempt += 1) {
@@ -483,6 +530,35 @@ async function main() {
     shotium.status === 'fail' || engineStates.some((engine) => engine.status === 'fail') ? 'fail' :
       engineStates.some((engine) => engine.status === 'infra-error') ? 'infra-error' :
         engineStates.some((engine) => engine.status === 'noisy') ? 'noisy' : 'pass';
+  // What the shard measured and what should fail the CI job are two different
+  // questions. A baseline engine that renders the same static page differently
+  // twice, blanks a screenshot 200 iterations into a soak, or cannot warm up its
+  // resident mode is a result about that engine - recording it is the point of
+  // this benchmark, and it stays in summary.json and failures.json either way.
+  // The run itself is only untrustworthy when our own engine fails, when the
+  // harness or host breaks, or when the shard ran out of time to finish.
+  const probeStatus = new Map(probes.map((probe) => [probe.engine, probe.status]));
+  const blockingReasons = [];
+  if (!shotium) blockingReasons.push('shotium was never probed');
+  else if (shotium.status === 'fail') blockingReasons.push('shotium failed its own scenarios');
+  else if (shotium.status === 'infra-error') blockingReasons.push('shotium hit an infrastructure error');
+  for (const engine of engineStates) {
+    if (engine.engine === 'shotium' || engine.status !== 'infra-error') continue;
+    // A baseline engine that never became available - no arm64 build, a browser
+    // download that failed - is recorded in summary.json and printed above; it
+    // does not mean this run measured anything wrongly. An infrastructure error
+    // raised after the engine probed clean is ours: the process monitor lost the
+    // tree, a query timed out, evidence could not be written.
+    if (probeStatus.get(engine.engine) !== 'pass') continue;
+    blockingReasons.push(`${engine.engine} hit an infrastructure error while running`);
+  }
+  if (budgetExhausted) blockingReasons.push('the shard budget expired before every cell ran');
+  const baselineResultFailures = engineStates
+      .filter((engine) => engine.engine !== 'shotium' && ['fail', 'infra-error'].includes(engine.status))
+      .map((engine) => `${engine.engine}=${engine.status}`);
+  if (baselineResultFailures.length) {
+    progress(`recorded baseline engine outcomes (not fatal): ${baselineResultFailures.join(', ')}`);
+  }
   const [cpu, osInfo, memory, versions, sourceRevision] = await Promise.all([
     si.cpu(), si.osInfo(), si.mem(), packageVersions(), gitRevision(),
   ]);
@@ -511,6 +587,8 @@ async function main() {
         cpu_limit_percent: stability.cpu_limit,
         samples: stability.samples.length,
         sampler_monitors: stability.sampler_monitors,
+        sampler_mean_period_ms: stability.sampler_mean_period_ms,
+        cpu_limit_exceeds_ceiling: stability.cpu_limit_exceeds_ceiling,
       },
     },
     packages: versions,
@@ -532,12 +610,13 @@ async function main() {
   writeJson(path.join(permanentDirectory, 'summary.json'), summary);
   writeJson(path.join(permanentDirectory, 'quality.json'), quality);
   writeJson(path.join(permanentDirectory, 'failures.json'), failures);
-  stopProcessSampler();
-  if (['fail', 'infra-error'].includes(status)) process.exitCode = 1;
+  if (blockingReasons.length) {
+    progress(`shard failed: ${blockingReasons.join('; ')}`);
+    process.exitCode = 1;
+  }
 }
 
 main().catch(async (error) => {
-  stopProcessSampler();
   if (!outputInitialized) {
     process.stderr.write(`${String(error?.stack || error)}\n`);
     process.exitCode = 1;

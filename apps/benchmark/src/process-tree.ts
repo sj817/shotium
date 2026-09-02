@@ -8,10 +8,32 @@ import {median, percentile, relativeDrift, round} from './statistics.ts';
 
 const sleep = (milliseconds: number) => new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
 
+async function withTimeout<T>(label: string, promise: Promise<T>, timeoutMs: number): Promise<T> {
+  let timer;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(
+            () => reject(new InfrastructureError(`${label} did not return within ${timeoutMs}ms`)),
+            timeoutMs);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function readProcesses() {
   try {
-    return await si.processes();
+    // Bounded on purpose. systeminformation reads the Windows process table
+    // through PowerShell and can block forever there; without this the CLI hung
+    // before its first log line and the GitHub job died 90 minutes later with an
+    // empty log and a zero-byte samples file.
+    return await withTimeout('systeminformation process enumeration',
+        si.processes(), SETTLE.processQueryTimeoutMs);
   } catch (error) {
+    if (error instanceof InfrastructureError) throw error;
     throw new InfrastructureError('systeminformation could not enumerate processes', error);
   }
 }
@@ -256,10 +278,15 @@ export class ProcessMonitor {
   running: boolean;
   loop: Promise<void> | undefined;
   snapshot: typeof processSnapshot;
+  dutyCycle: number;
+  sampleCostMs: number;
 
-  constructor(rootPids, intervalMs = 100, snapshot = processSnapshot) {
+  constructor(rootPids, intervalMs = 100, snapshot = processSnapshot,
+      dutyCycle = SETTLE.samplerDutyCycle as number) {
     this.rootPids = rootPids;
     this.intervalMs = intervalMs;
+    this.dutyCycle = dutyCycle > 0 && dutyCycle <= 1 ? dutyCycle : 1;
+    this.sampleCostMs = 0;
     this.timeline = [];
     this.identities = new Map();
     this.running = false;
@@ -326,7 +353,21 @@ export class ProcessMonitor {
         this.timeline.push({at: new Date().toISOString(), error: String(error)});
       }
       const elapsed = performance.now() - started;
-      await sleep(Math.max(0, this.intervalMs - elapsed));
+      // The requested interval is a floor, not a promise. A process-table query
+      // costs 30-60 ms on Linux and ~700 ms on Windows, so a loop that only
+      // subtracts the elapsed time re-enters immediately on the slow hosts and
+      // spends a whole core enumerating processes. Sleeping in proportion to
+      // what the sample cost keeps one monitor under dutyCycle of a core
+      // wherever it runs, which is what makes the host quiet enough to measure.
+      //
+      // The estimate decays instead of tracking the last sample because
+      // systeminformation serves repeat calls from a ~500 ms cache: those return
+      // in about a millisecond, and throttling on them alone lets the loop back
+      // into the expensive uncached call immediately. Measured on a Windows
+      // runner-class host, two monitors: 111% of a core before, 39% after.
+      this.sampleCostMs = Math.max(elapsed, this.sampleCostMs * 0.85);
+      const dutyBoundMs = this.sampleCostMs * ((1 / this.dutyCycle) - 1);
+      await sleep(Math.max(0, this.intervalMs - elapsed, dutyBoundMs));
     }
   }
 
@@ -347,6 +388,7 @@ export class ProcessMonitor {
       peak_cpu_percent: valid.length ? Math.max(...valid.map((sample) => sample.cpu_percent)) : null,
       observed_mean_period_ms: valid.length > 1 ?
         (Date.parse(valid.at(-1).at) - Date.parse(valid[0].at)) / (valid.length - 1) : null,
+      duty_cycle: this.dutyCycle,
     };
   }
 }
@@ -471,25 +513,14 @@ export async function sampleHostLoad() {
 export function cpuLimitFromBaseline(idleCpuP95: number, {
   floor = SETTLE.cpuLimit as number,
   margin = SETTLE.cpuLimitMargin as number,
-  ceiling = SETTLE.cpuLimitMax as number,
-}: {floor?: number; margin?: number; ceiling?: number} = {}) {
+}: {floor?: number; margin?: number} = {}) {
   if (!Number.isFinite(idleCpuP95)) return floor;
-  return Math.min(ceiling, Math.max(floor, Math.round(idleCpuP95 + margin)));
-}
-
-/**
- * systeminformation reads the Windows process table through a PowerShell
- * Get-CimInstance query. Without a persistent session every sample spawns a
- * fresh powershell.exe (≈0.5 s of CPU on a 2-core runner); with two monitors
- * sampling back to back that alone held GitHub's Windows runners at 35-60% CPU
- * and made every stability check fail. Keep one PowerShell session per process.
- */
-export function startProcessSampler() {
-  if (process.platform === 'win32') si.powerShellStart();
-}
-
-export function stopProcessSampler() {
-  if (process.platform === 'win32') si.powerShellRelease();
+  // No ceiling. macOS measured an 85-91% idle floor and the old 80% cap put the
+  // gate underneath it, so every cell was rejected for load the runner produced
+  // at rest. SETTLE.cpuLimitMax is now only a reporting threshold: when the gate
+  // has to climb above it the host was too loud for the check to mean much, and
+  // the summary says so instead of silently rejecting the whole shard.
+  return Math.max(floor, Math.round(idleCpuP95 + margin));
 }
 
 export async function calibrateHostLoad({durationMs = SETTLE.calibrationMs, monitors = 2}: {
@@ -502,6 +533,7 @@ export async function calibrateHostLoad({durationMs = SETTLE.calibrationMs, moni
   const samplers = Array.from({length: monitors}, () => new ProcessMonitor([process.pid], 100));
   for (const sampler of samplers) await sampler.start();
   const samples = [];
+  const samplerTelemetry = [];
   try {
     await primeCpuLoad();
     const deadline = Date.now() + durationMs;
@@ -510,17 +542,26 @@ export async function calibrateHostLoad({durationMs = SETTLE.calibrationMs, moni
       samples.push(await sampleHostLoad());
     } while (Date.now() < deadline);
   } finally {
-    for (const sampler of samplers) await sampler.stop();
+    for (const sampler of samplers) samplerTelemetry.push(await sampler.stop());
   }
   const sorted = samples.map((sample) => sample.cpu_percent).sort((left, right) => left - right);
   const p50 = median(sorted);
   const p95 = percentile(sorted, 0.95);
+  const cpuLimit = cpuLimitFromBaseline(p95);
+  const samplerPeriods = samplerTelemetry
+      .map((telemetry) => telemetry.observed_mean_period_ms)
+      .filter((period) => Number.isFinite(period));
   return {
     samples,
     sampler_monitors: monitors,
+    sampler_mean_period_ms: samplerPeriods.length ? round(median(samplerPeriods), 1) : null,
     idle_cpu_p50: round(p50, 2),
     idle_cpu_p95: round(p95, 2),
-    cpu_limit: cpuLimitFromBaseline(p95),
+    cpu_limit: cpuLimit,
+    // True when the runner is so loud at rest that the CPU check cannot say much
+    // any more. The shard still runs and still gates on latency and memory; the
+    // flag is here so a quiet-host claim is never made on a busy host.
+    cpu_limit_exceeds_ceiling: cpuLimit > SETTLE.cpuLimitMax,
   };
 }
 

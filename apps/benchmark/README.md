@@ -73,13 +73,25 @@ manifest. Reports link to the [VitePress benchmark explorer](https://sj817.githu
 a continuous 1000-request (or ten-minute) soak. Every cell waits for host
 stability; non-cold cells also wait for measured engine readiness. The host
 gate is calibrated per shard: five seconds of idle CPU are sampled before the
-first cell, with the same two process samplers running that every cell runs
-(on Windows each sample is a PowerShell CIM query through one persistent
-PowerShell session, so its cost is part of the baseline), and the limit is `max(25%, idle p95 + 10 points)`, capped at 80%,
-because GitHub's Windows and macOS runners idle at 28-41% and a fixed 25%
-ceiling could never be met there. Stability means three consecutive one-second
+first cell, with the same two process samplers running that every cell runs, so
+their cost is part of the baseline rather than of the noise. The limit is
+`max(25%, idle p95 + 10 points)` with no ceiling: GitHub's Windows and macOS
+runners idle well above a fixed 25%, and a ceiling below the host's own floor is
+a gate nothing can pass. When the limit lands above 80% the summary records
+`cpu_limit_exceeds_ceiling` so a quiet-host claim is never made on a busy host.
+Each sampler is capped at 20% of one core - a process-table query costs tens of
+milliseconds on Linux and about 700 ms on Windows, and an unthrottled loop spent
+a whole core enumerating processes, which is load the gate then measured as the
+host's. `observed_mean_period_ms` in the telemetry records the sampling
+resolution that cap produced. Stability means three consecutive one-second
 samples under that limit with steady free memory; a cell that cannot get there
-within six seconds is marked noisy and retried once. The harness records all
+within six seconds is marked noisy and retried once. Shards stop scheduling new
+cells once the profile's budget is spent, so results and evidence are written
+instead of being lost to a job timeout. A baseline engine that fails - a browser
+missing for the platform, a screenshot that differs from its own first render, a
+soak that blanks - is recorded in `summary.json` and `failures.json` but does not
+fail the run; only Shotium failing, the harness or host breaking, or the budget
+expiring does. The harness records all
 samples and terminates only the PID tree it started. The repository stores the compact
 `permanent` output. PNGs, logs and process timelines are CI artifacts retained
 for 90 days.

@@ -18,14 +18,11 @@ import {
   waitForIdentitiesToExit,
 } from './process-tree.ts';
 import {startResident} from './resident.ts';
-import {startProcessSampler, stopProcessSampler} from './process-tree.ts';
 import {settleEngine} from './settle.ts';
 import {coefficientOfVariation, distribution, relativeDrift, round} from './statistics.ts';
 
 const options = parseArgs(process.argv.slice(2));
 const require = createRequire(import.meta.url);
-// One persistent PowerShell session for every process-table sample (Windows).
-startProcessSampler();
 const tsxCli = require.resolve('tsx/cli');
 const config = JSON.parse(fs.readFileSync(options.config, 'utf8'));
 const scenario = options.scenario;
@@ -866,6 +863,5 @@ if (!scenarioError && quality) {
   if (!result.ok) process.exitCode = 1;
   await new Promise<void>((resolve) =>
     process.stdout.write(`${JSON.stringify(result)}\n`, () => resolve()));
-  stopProcessSampler();
   process.exit(result.ok ? 0 : 1);
 }

@@ -60,6 +60,7 @@ export const PROFILES = Object.freeze({
     soakIterations: 50,
     soakTimeoutMs: 60_000,
     caseLimit: 3,
+    shardBudgetMs: 15 * 60_000,
   },
   full: {
     repeats: 7,
@@ -72,6 +73,9 @@ export const PROFILES = Object.freeze({
     soakIterations: 1000,
     soakTimeoutMs: 600_000,
     caseLimit: Number.POSITIVE_INFINITY,
+    // The GitHub job times out at 90 minutes and kills the uploads with it.
+    // Stop scheduling cells with enough margin to write and upload what we have.
+    shardBudgetMs: 70 * 60_000,
   },
 });
 
@@ -84,11 +88,27 @@ export const SETTLE = Object.freeze({
   // fixed 25% ceiling could never be met there: every cell burned the whole
   // cooldown timeout, produced zero samples and was retried once. The limit is
   // therefore calibrated per shard from the idle baseline measured before the
-  // first cell: max(cpuLimit, p95(idle) + cpuLimitMargin), capped at cpuLimitMax.
+  // first cell: max(cpuLimit, p95(idle) + cpuLimitMargin).
   cpuLimit: 25,
   cpuLimitMargin: 10,
+  // Soft ceiling. It keeps the gate meaningful on a quiet host, but it is never
+  // allowed to sit below the host's own idle floor: a gate under the floor is
+  // one nothing can pass, and that is exactly how every macOS cell was rejected
+  // for load the runner produced at rest.
   cpuLimitMax: 80,
   calibrationMs: 5_000,
+  // Share of one core a single process sampler may consume. si.processes()
+  // enumerates the whole process table - 30-60 ms via /proc on Linux, ~700 ms
+  // via PowerShell on Windows - and the sample loop used to re-enter as soon as
+  // a sample returned. On Windows and macOS that pinned a core per monitor,
+  // three monitors ran at once, and the host load the gate measured was our own
+  // instrumentation. The requested interval is now a floor and this is the cap.
+  samplerDutyCycle: 0.2,
+  // A hung process-table query must not look like a slow one. Windows had no
+  // bound at all: the CLI blocked forever inside systeminformation and the job
+  // died at the 90-minute GitHub timeout with an empty log.
+  processQueryTimeoutMs: 60_000,
+  heartbeatMs: 60_000,
   memoryDriftLimit: 0.02,
   stableSamples: 3,
   // Three one-second samples spanning at least two seconds: a three-second

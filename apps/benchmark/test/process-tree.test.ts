@@ -19,10 +19,13 @@ test('calibrates the host CPU gate from the idle baseline', () => {
   // of rejecting every cell.
   assert.equal(cpuLimitFromBaseline(38.4), 48);
   assert.equal(cpuLimitFromBaseline(41), 51);
-  // A saturated host is still capped so the gate keeps meaning something.
-  assert.equal(cpuLimitFromBaseline(90), 80);
+  // A saturated host follows its own floor. Capping the gate below the floor is
+  // how every macOS cell was rejected for load the runner produced at rest: the
+  // baseline read 85-91% and the gate sat at 80%.
+  assert.equal(cpuLimitFromBaseline(90), 100);
+  assert.equal(cpuLimitFromBaseline(85.09), 95);
   assert.equal(cpuLimitFromBaseline(Number.NaN), 25);
-  assert.equal(cpuLimitFromBaseline(30, {floor: 10, margin: 5, ceiling: 50}), 35);
+  assert.equal(cpuLimitFromBaseline(30, {floor: 10, margin: 5}), 35);
 });
 
 test('waits for an exact owned process root to become observable', async () => {
