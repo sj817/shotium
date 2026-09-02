@@ -376,15 +376,6 @@ async function main() {
   progress(`${platform}/${shard}: profile ${options.profile}, budget ` +
     `${Math.round(profile.shardBudgetMs / 60_000)} min, node ${process.version}`);
   await verifyProcessMonitoring();
-  const stability = await calibrateHostLoad();
-  progress(`host idle CPU p50 ${stability.idle_cpu_p50}% p95 ${stability.idle_cpu_p95}% ` +
-    `-> stability gate ${stability.cpu_limit}% (${stability.samples.length} samples, ` +
-    `${stability.sampler_monitors} process monitors at ` +
-    `${stability.sampler_mean_period_ms ?? '?'}ms mean period)`);
-  if (stability.cpu_limit_exceeds_ceiling) {
-    progress(`warning: the idle floor pushed the CPU gate past ${SETTLE.cpuLimitMax}%; ` +
-      'this runner is too loud for the host CPU check to mean much');
-  }
 
   const shotiumVersion = booleanArg(options.skipInstall, false) ? options.shotiumVersion :
     await ensureShotium(options.shotiumVersion);
@@ -404,6 +395,21 @@ async function main() {
   }
   const fixtureServer = await startFixtureServer();
   const cases = loadCases(fixtureServer.baseUrl, profile.caseLimit);
+  // Calibrate here rather than at job start. The three browser installs, the npm
+  // install and the consumer smoke test all run first, and five seconds sampled
+  // in their wake measures them rather than the host: darwin-arm64/resident read
+  // a 97.7% *median* idle floor that way and produced a 110% gate, while other
+  // shards on the same runner image read 40% and 67%. A gate that swings from 70
+  // to 110 across one run is not measuring the host.
+  const stability = await calibrateHostLoad();
+  progress(`host idle CPU p50 ${stability.idle_cpu_p50}% p95 ${stability.idle_cpu_p95}% ` +
+    `-> stability gate ${stability.cpu_limit}% (${stability.samples.length} samples, ` +
+    `${stability.sampler_monitors} process monitors at ` +
+    `${stability.sampler_mean_period_ms ?? '?'}ms mean period)`);
+  if (stability.cpu_limit_exceeds_ceiling) {
+    progress(`warning: the idle floor pushed the CPU gate past ${SETTLE.cpuLimitMax}%; ` +
+      'this runner is too loud for the host CPU check to mean much');
+  }
   const config = {
     shard,
     profile,
