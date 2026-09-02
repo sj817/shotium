@@ -68,8 +68,17 @@ void BoxPainterBase::PaintFillLayers(
   // non-transparent background color and the bottom layer encloses all other
   // layers.
   GraphicsContext& context = paint_info.context;
-  if (should_draw_background_in_separate_buffer)
+  // Bound the isolation layer to the box. Skia sizes a layer
+  // with no bounds from the current clip, and in this renderer the clip is the
+  // whole capture -- there is no tiling compositor to make it a tile -- so
+  // every box with background-blend-mode paid for a capture-sized layer.
+  // The fill layers paint inside `rect` anyway.
+  std::optional<GraphicsContextStateSaver> isolation_clip;
+  if (should_draw_background_in_separate_buffer) {
+    isolation_clip.emplace(context);
+    context.Clip(ToEnclosingRect(rect));
     context.BeginLayer();
+  }
 
   FillLayer::IterateFillLayersInReverseOrder(
       &fill_layer, last_layer,
@@ -78,8 +87,10 @@ void BoxPainterBase::PaintFillLayers(
         PaintFillLayer(paint_info, c, paint, rect, bleed, bg_paint_context);
       });
 
-  if (should_draw_background_in_separate_buffer)
+  if (should_draw_background_in_separate_buffer) {
     context.EndLayer();
+    isolation_clip.reset();
+  }
 }
 
 namespace {

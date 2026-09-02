@@ -153,6 +153,9 @@ struct EffectBoundsInfo {
   // the effect is not |effect| (which is the previous effect), but the
   // |current_effect_| when this entry is the top of the stack.
   gfx::RectF bounds;
+  // The ClipRectOp emitted before a backdrop-filter layer,
+  // or kNotFound. Tightened to the layer's content bounds in EndEffect().
+  size_t backdrop_clip_id = kNotFound;
 };
 
 template <typename Result>
@@ -369,6 +372,9 @@ class ConversionContext {
 
   HeapVector<StateEntry> state_stack_;
   HeapVector<EffectBoundsInfo> effect_bounds_stack_;
+  // Set by EmitBackdropFilter(), moved onto the
+  // EffectBoundsInfo by StartEffect().
+  size_t pending_backdrop_clip_id_ = kNotFound;
   ChunkToLayerMapper chunk_to_layer_mapper_;
   bool translated_for_layer_offset_ = false;
 
@@ -692,6 +698,16 @@ size_t ConversionContext<Result>::EmitBackdropFilter(
     const cc::PaintFlags& flags) {
   DCHECK(effect.BackdropFilter());
   const SkPath& backdrop_filter_bounds = effect.BackdropFilterBounds();
+  // Skia ignores the bounds of a layer that has a backdrop
+  // and sizes it -- and the backdrop it copies -- from the clip. Without a
+  // tiling compositor the clip is the whole capture, so every backdrop-filter
+  // element copied the whole page. Clip first; the clip starts at the backdrop
+  // bounds and is widened to the layer's content in EndEffect(), and the
+  // matching restore is emitted there too.
+  push<cc::SaveOp>();
+  pending_backdrop_clip_id_ = push<cc::ClipRectOp>(
+      backdrop_filter_bounds.getBounds(), SkClipOp::kIntersect,
+      /*antialias=*/false);
   size_t save_layer_id = push<cc::SaveLayerFiltersOp>(
       backdrop_filter_bounds.getBounds(),
       std::array<sk_sp<cc::PaintFilter>, 0>{},
@@ -797,6 +813,8 @@ ScrollTranslationAction ConversionContext<Result>::StartEffect(
   PushState(StateEntry::kEffect);
   effect_bounds_stack_.emplace_back(
       EffectBoundsInfo{save_layer_id, current_transform_});
+  effect_bounds_stack_.back().backdrop_clip_id = pending_backdrop_clip_id_;
+  pending_backdrop_clip_id_ = kNotFound;
   current_clip_ = input_clip;
   current_effect_ = &effect;
 
@@ -864,6 +882,18 @@ void ConversionContext<Result>::EndEffect() {
   DCHECK(effect_bounds_stack_.size());
   const auto& bounds_info = effect_bounds_stack_.back();
   gfx::RectF bounds = bounds_info.bounds;
+  const size_t backdrop_clip_id = bounds_info.backdrop_clip_id;
+  if (backdrop_clip_id != kNotFound) {
+    // The layer must hold everything painted under the
+    // effect -- a box-shadow reaches outside the backdrop bounds -- so the
+    // clip emitted before it is widened to the union, now that the content
+    // bounds are known. Same coordinate space as the layer op: both were
+    // emitted under bounds_info.transform.
+    gfx::RectF clip = gfx::SkRectToRectF(
+        current_effect_->BackdropFilterBounds().getBounds());
+    clip.Union(bounds);
+    result_.UpdateSaveLayerBounds(backdrop_clip_id, gfx::RectFToSkRect(clip));
+  }
   if (!current_effect_->Filter()) {
     if (!bounds.IsEmpty()) {
       result_.UpdateSaveLayerBounds(bounds_info.save_layer_id,
@@ -883,6 +913,10 @@ void ConversionContext<Result>::EndEffect() {
   // Propagate the bounds to the parent effect.
   UpdateEffectBounds(bounds, *current_transform_);
   PopState();
+  if (backdrop_clip_id != kNotFound) {
+    // The SaveOp that EmitBackdropFilter() put in front of its clip.
+    AppendRestore();
+  }
 }
 
 template <typename Result>

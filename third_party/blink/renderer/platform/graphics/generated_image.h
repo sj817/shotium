@@ -50,6 +50,16 @@ class PLATFORM_EXPORT GeneratedImage : public Image {
   PaintImage PaintImageForCurrentFrame() override;
 
  protected:
+  // Draws the pattern as a handful of ordinary tile draws instead of a
+  // repeating shader, for the case where the shader would have to materialise a
+  // page-sized bitmap to sample from. Returns false if this pattern is not one
+  // of those, leaving the caller to build the shader.
+  bool DrawPatternAsTiles(GraphicsContext&,
+                          const cc::PaintFlags&,
+                          const gfx::RectF& dest_rect,
+                          const ImageTilingInfo&,
+                          const ImageDrawOptions&);
+
   void DrawPattern(GraphicsContext&,
                    const cc::PaintFlags&,
                    const gfx::RectF& dest_rect,

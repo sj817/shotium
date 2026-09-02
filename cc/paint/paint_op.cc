@@ -1865,12 +1865,35 @@ void SaveLayerFiltersOp::RasterWithFlags(const SaveLayerFiltersOp* op,
       PaintFilter::GetSkFilter(backdrop_filter);
   if (sk_backdrop_filter && !backdrop_filter->GetCropRect() &&
       op->bounds.left() != SK_ScalarInfinity) {
+    // Bound what the filter reads, not only what it writes.
+    // A blur built without a crop rect uses skia's legacy tiling, which takes
+    // the whole source image as its content -- and the source of a backdrop
+    // filter is the page. Resolving the source through a clamped crop of the
+    // rows and columns the kernel can actually reach makes the snapshot and
+    // the blur proportional to the element instead of to the page. The
+    // output is unchanged: no output pixel inside `bounds` reads beyond the
+    // kernel's reach.
+    const SkIRect output = op->bounds.roundOut();
+    const SkIRect input = sk_backdrop_filter->filterBounds(
+        output, SkMatrix::I(), SkImageFilter::kReverse_MapDirection, &output);
+    if (!input.isEmpty() && input.width() < (1 << 20) &&
+        input.height() < (1 << 20)) {
+      sk_backdrop_filter = SkImageFilters::Compose(
+          std::move(sk_backdrop_filter),
+          SkImageFilters::Crop(SkRect::Make(input), SkTileMode::kClamp,
+                               nullptr));
+    }
     sk_backdrop_filter =
         SkImageFilters::Crop(op->bounds, std::move(sk_backdrop_filter));
   }
 
+  // Hand skia the bounds. With no bounds the layer -- and
+  // the backdrop it copies -- is the size of the clip, which in a one-shot
+  // capture is the whole page; every backdrop-filter element then costs a
+  // page-sized copy. Skia expands the bounds by the filter's input itself.
+  const bool has_bounds = op->bounds.left() != SK_ScalarInfinity;
   canvas->saveLayer(SkCanvasPriv::ScaledBackdropLayer(
-      /* bounds */ nullptr, &paint, sk_backdrop_filter.get(),
+      has_bounds ? &op->bounds : nullptr, &paint, sk_backdrop_filter.get(),
       /*backdropScale=*/1.0f, /*saveLayerFlags=*/0,
       PaintFilter::ToSkImageFilters(op->filters)));
 }

@@ -617,6 +617,13 @@ void PaintOpBuffer::UpdateSaveLayerBounds(size_t offset, const SkRect& bounds) {
       CHECK_LE(offset + sizeof(SaveLayerFiltersOp), used_);
       static_cast<SaveLayerFiltersOp*>(op)->bounds = bounds;
       break;
+    // The clip that bounds a backdrop-filter layer is
+    // emitted before the layer's content is known, and tightened here once it
+    // is, exactly like the layer bounds above.
+    case ClipRectOp::kType:
+      CHECK_LE(offset + sizeof(ClipRectOp), used_);
+      static_cast<ClipRectOp*>(op)->rect = bounds;
+      break;
     default:
       NOTREACHED();
   }
