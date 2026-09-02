@@ -33,6 +33,9 @@ importers:
       typescript:
         specifier: 5.9.2
         version: 5.9.2
+      vite:
+        specifier: 6.1.0
+        version: 6.1.0(@types/node@22.18.0)
       vitepress:
         specifier: 1.6.4
         version: 1.6.4(@algolia/client-search@5.57.0)(@types/node@22.18.0)(async-validator@4.2.5)(postcss@8.5.26)(search-insights@2.17.3)(typescript@5.9.2)
