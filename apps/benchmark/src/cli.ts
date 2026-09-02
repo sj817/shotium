@@ -129,7 +129,7 @@ async function runCell(group, attempt, configFile, profile, stability) {
   // spent on the retries that exist because it was not.
   const before = await waitForSystemStable({
     cpuLimit: stability.cpu_limit,
-    timeoutMs: attempt > 1 ? SETTLE.timeoutMs : SETTLE.cooldownTimeoutMs,
+    timeoutMs: attempt > 1 ? SETTLE.retryCooldownTimeoutMs : SETTLE.cooldownTimeoutMs,
   });
   if (!before.stable) {
     return {
@@ -577,7 +577,7 @@ async function main() {
       output: 'png',
       wait_until: 'load',
       visual_readiness: 'fonts-ready-and-two-animation-frames-or-native-paint-clean',
-      compositor_policy: 'all-stages-before-draw-for-browser-adapters',
+      browser_launch_policy: 'package-default-except-linux-sandbox',
       image_correctness: 'pixelmatch-threshold-0.1; exact-rgba-retained-as-diagnostic',
       warmup_policy: 'three-fixed-warmups; latency-and-rss-variation-recorded-not-gated',
       default_page_policy: 'new-page',

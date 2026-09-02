@@ -124,6 +124,11 @@ export const SETTLE = Object.freeze({
   // "quiet". The old 45 s cooldown was a timeout for a condition the runner
   // could not satisfy, not time the measurement needed.
   stableSpanMs: 2_000,
+  // A retry gets a wider window than the first preflight, but not the full
+  // 45-second engine-settle budget. A persistently busy macOS runner spent
+  // 45 seconds on each of nine rejected cells without producing one sample;
+  // 15 seconds still covers browser teardown while bounding that waste.
+  retryCooldownTimeoutMs: 15_000,
   timeoutMs: 45_000,
   cooldownTimeoutMs: 6_000,
   gracefulExitMs: 10_000,

@@ -37,7 +37,6 @@ async function warmPlaywright(name, url, evidenceFile) {
   const server = await chromium.launchServer({
     headless: true,
     channel,
-    args: policy.playwrightArgs,
     chromiumSandbox: policy.playwrightChromiumSandbox,
   });
   const browser = await chromium.connect(server.wsEndpoint());

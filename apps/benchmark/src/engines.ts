@@ -47,29 +47,14 @@ function imageBuffer(value) {
 }
 
 export function competitorChromiumPolicy(platform = process.platform) {
-  // Stock Chrome pipelines compositor stages across frames. Under concurrent
-  // Page.captureScreenshot calls that can expose an activated surface before
-  // all 256 px raster tiles have finished, even after fonts and animation-frame
-  // readiness. Shotium renders synchronously to paint-clean, so ask both browser
-  // adapters to finish every compositor stage before drawing as the equivalent
-  // correctness contract. The flag is symmetric and its cost stays measured.
-  const compositorArgs = ['--run-all-compositor-stages-before-draw'];
   if (platform !== 'linux') {
-    return {
-      puppeteerArgs: compositorArgs,
-      playwrightArgs: compositorArgs,
-      playwrightChromiumSandbox: undefined,
-    };
+    return {puppeteerArgs: [], playwrightChromiumSandbox: undefined};
   }
   // GitHub's Ubuntu runners block the user-namespace sandbox with AppArmor.
   // The benchmark only opens its own local fixtures and gives every launch an
   // isolated profile, so explicitly match Playwright's sandbox-disabled CI
   // behavior instead of letting Puppeteer fail before a sample can start.
-  return {
-    puppeteerArgs: [...compositorArgs, '--no-sandbox'],
-    playwrightArgs: compositorArgs,
-    playwrightChromiumSandbox: false,
-  };
+  return {puppeteerArgs: ['--no-sandbox'], playwrightChromiumSandbox: false};
 }
 
 export class ShotiumEngine {
@@ -279,7 +264,6 @@ async function playwrightDefinition(name, channel, options) {
         const context = await chromium.launchPersistentContext(options.profileDir, {
           headless: true,
           channel,
-          args: policy.playwrightArgs,
           chromiumSandbox: policy.playwrightChromiumSandbox,
           viewport: VIEWPORT,
           deviceScaleFactor: 1,
@@ -289,7 +273,6 @@ async function playwrightDefinition(name, channel, options) {
       const browser = await chromium.launch({
         headless: true,
         channel,
-        args: policy.playwrightArgs,
         chromiumSandbox: policy.playwrightChromiumSandbox,
       });
       return {browser, context: await newContext(browser)};
