@@ -54,7 +54,19 @@ function daemonName(nameScenario = scenario, nameRepeat = repeat, variant = 0) {
 }
 
 function errorText(error) {
-  return String(error?.stack || error);
+  // Follow the cause chain. InfrastructureError carries the error it wrapped,
+  // and dropping it meant a CI artifact reported "PID ownership could not be
+  // established" with no way to tell a ten-second timeout from a process that
+  // had already exited -- the only two things it can mean.
+  const seen = new Set();
+  const parts = [];
+  let current = error;
+  while (current && !seen.has(current)) {
+    seen.add(current);
+    parts.push(String(current?.stack || current));
+    current = current?.cause;
+  }
+  return parts.join('\ncaused by: ');
 }
 
 async function closeWithin(operation, label = 'engine close') {
@@ -131,8 +143,17 @@ async function finishOwnedChild(subprocess, label) {
       monitorStarted = false;
     }
     if (subprocess.stdin && !subprocess.stdin.destroyed) subprocess.stdin.destroy();
-    if (subprocess.exitCode === null && subprocess.signalCode === null) subprocess.kill('SIGTERM');
+    const alreadyExited = subprocess.exitCode !== null || subprocess.signalCode !== null;
+    if (!alreadyExited) subprocess.kill('SIGTERM');
     await subprocess.catch(() => {});
+    if (alreadyExited) {
+      // The client died at the start gate, before it was told to go. Not being
+      // able to observe a process that is no longer there is the engine failing
+      // to start, not the harness failing to watch -- and only the second of
+      // those means this run measured anything wrongly.
+      throw new Error(`${label} client exited before the start gate ` +
+        `(code ${subprocess.exitCode}, signal ${subprocess.signalCode}): ${errorText(error)}`);
+    }
     throw new InfrastructureError(`${label} PID ownership could not be established before start`, error);
   }
   let completed;
