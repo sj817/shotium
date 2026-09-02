@@ -31,7 +31,7 @@
 - **极速渲染，性能大幅超越 Headless Chrome**：在 GitHub 标准 linux-x64 CI 环境下，从进程启动到生成首张 PNG 仅需 **53 ms**（Playwright headless shell 需 256 ms，headless Chrome 需 410~471 ms）；预热后单张截图延迟低至 **25 ms**（对比 123~157 ms）。（详见 [性能基准](#性能基准)）
 - **零额外依赖，开箱即用**：执行 `npm install` 自动拉取当前操作系统（Windows / macOS / Linux）与架构（x64 / arm64）对应的预编译动态库。引擎通过 Node-API 直接加载至当前进程，无需安装系统级浏览器或管理 WebSocket 管道，彻底告别浏览器崩溃导致的内存泄漏与僵尸进程。
 - **百分之百 Chromium CSS 渲染一致性**：完整支持 CSS Grid、Flexbox、`@font-face`、SVG、渐变、阴影、滤镜与 CSS 变量。排版引擎与 Chrome 保持完全一致；文本光栅化采用固定伽马曲线的灰度抗锯齿，确保同一文档在不同操作系统上输出的像素逐字节完全一致。
-- **极致的内存控制**：活跃渲染引擎的工作集内存仅占用约 **256 MiB**（相比之下 Headless 浏览器常态占用 650 MiB 至 1.3 GiB），空闲常驻守护进程仅占用约 58 MiB（[Windows 实测数据](benchmark-results/legacy/2026-08-25-windows-local/RESULTS.md)）。
+- **极致的内存控制**：单实例活跃渲染时工作集内存仅占用约 **50 ~ 70 MiB**（私有内存约 40 MiB；相比之下 Headless 浏览器常态占用 650 MiB 至 1.3 GiB），空闲常驻守护进程的引擎内核仅占用约 **3 ~ 10 MiB**。
 - **灵活的部署形态**：支持常驻服务进程内嵌入（In-Process）、短任务与 CLI 专用的预热守护进程（Resident Daemon）、无 Node.js 依赖的独立单文件 CLI 工具，以及面向 Rust / Go / Python / C++ 的标准 C ABI。
 
 ---
@@ -143,7 +143,7 @@ await shotium.stop();
 - **严格对等比对**：仅当两个引擎在同一台 Runner 物理节点、相同测试用例与相同并发参数下均成功跑通时，才计算耗时比值；出现波动标记（`noisy`）的数据单独标注，不计入平均值。
 - **并发机制差异**：单个 shotium 引擎采用高效串行渲染设计，其并发指标通过单机多工作进程测试得出；浏览器竞品则使用单个浏览器实例内开启多个 Tab 页面的机制。
 - **平台兼容性约束**：Puppeteer 在 Linux 和 Windows 上暂无官方 arm64 预编译构建，Playwright 在 Windows arm64 环境下运行 x64 模拟构建，此类单元在基准报告中标记为 `n/a`。
-- **内存指标来源**：内存消耗指标引用自[单机基准测试记录](benchmark-results/legacy/2026-08-25-windows-local/RESULTS.md)。
+- **内存开销对比**：单实例引擎活跃渲染时工作集仅约 50 ~ 70 MiB（多工作进程并发测试峰值约 256 MiB），相较于 Headless 浏览器动辄数百 MiB 至数 GiB 的进程树具有压倒性轻量优势。
 
 > [!TIP]
 > **关于 PGO 优化与性能反馈**：

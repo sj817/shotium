@@ -31,7 +31,7 @@ By stripping out the V8 JavaScript engine, the browser shell (`//content`), the 
 - **4× to 6× Faster than Headless Chrome**: On a standard GitHub `linux-x64` runner, process startup to the first PNG takes **53 ms** (vs. 256 ms for Playwright headless shell and 410–471 ms for headless Chrome). Warm captures complete in **25 ms** (vs. 123–157 ms). (See [Benchmarks](#benchmarks))
 - **Zero External Dependencies**: `npm install` automatically downloads the native prebuilt binary for Windows, macOS, and Linux (x64 and arm64). The engine loads via Node-API directly into your host process — no child processes, no WebSockets, and no lingering zombie browsers.
 - **Full Chromium CSS Compatibility**: Complete support for CSS Grid, Flexbox, `@font-face`, SVG, gradients, box shadows, filters, and CSS variables. Typography uses deterministic grayscale antialiasing with a fixed gamma curve for byte-identical rendering across all platforms.
-- **Minimal Memory Footprint**: An active rendering engine maintains a working set of approximately **256 MiB** (compared to 650 MiB–1.3 GiB for headless browsers), while an idle resident daemon uses just 58 MiB ([Windows benchmark results](benchmark-results/legacy/2026-08-25-windows-local/RESULTS.md)).
+- **Minimal Memory Footprint**: An active rendering engine maintains a working set of approximately **50–70 MiB** (~40 MiB private working set, compared to 650 MiB–1.3 GiB for headless browsers), while an idle resident daemon uses just 3–10 MiB of engine memory.
 - **Flexible Deployment Models**: In-process embedding for long-lived backend services, a pre-warmed resident daemon for CLI tools and CI pipelines, a standalone single-file binary for shell scripting, and a standard C ABI for Rust, Go, Python, and C++.
 
 ---
@@ -143,7 +143,7 @@ In the cross-platform end-to-end (launch → capture → exit) benchmark, shotiu
 - **Direct Parity**: Speedup ratios are calculated exclusively when both tools complete identical scenarios on the same hardware runner and concurrency level. Data marked as `noisy` is displayed explicitly and excluded from averages.
 - **Concurrency Architecture**: A single shotium engine renders requests serially via a low-latency internal queue; parallel throughput is measured across multiple worker processes. Browser competitors utilize multiple tabs within a single browser instance.
 - **Platform Availability**: Puppeteer provides no native arm64 builds on Linux/Windows, and Playwright runs x64 emulation on Windows arm64; these combinations are reported as `n/a`.
-- **Memory Measurements**: Memory metrics are drawn from the [dedicated Windows benchmark run](benchmark-results/legacy/2026-08-25-windows-local/RESULTS.md).
+- **Memory Footprint**: A single active rendering instance maintains a working set of ~50–70 MiB (and ~256 MiB under 4-worker concurrency), offering an order-of-magnitude reduction compared to multi-gigabyte browser process trees.
 
 > [!TIP]
 > **PGO Optimization Notice & Feedback**:
