@@ -4,8 +4,9 @@
 # one is hours of compute -- see engine-windows.yml. So this workflow covers the
 # half that can be checked in seconds: that the package builds, that the bundle
 # it produces loads and refuses a malformed request, that the generated types
-# describe it, and that the Python check scripts are not broken. It runs on
-# every push, and it is expected to always be green.
+# describe it, that the benchmark harness typechecks and passes its unit tests,
+# and that the Python check scripts are not broken. It runs on every push, and
+# it is expected to always be green.
 #
 # What it deliberately does NOT do is claim the engine works. That claim is made
 # by tools/shot/{serve_check.py,net_check.py,node_check.cjs,daemon_check.cjs}
@@ -20,11 +21,13 @@ on:
     paths:
       - 'shotium/**'
       - 'tools/shot/**'
+      - 'apps/benchmark/**'
       - '.github/workflows/checks.yml'
   pull_request:
     paths:
       - 'shotium/**'
       - 'tools/shot/**'
+      - 'apps/benchmark/**'
       - '.github/workflows/checks.yml'
   workflow_dispatch:
 
@@ -197,6 +200,37 @@ jobs:
             console.log("ok: " + names.length + " files, " + entry.size + " bytes");
           '
           rm -f pack.json
+
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: apps/benchmark
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/benchmark/package-lock.json
+
+      - name: the benchmark harness
+        working-directory: apps/benchmark
+        # No browsers. This job checks the harness, not the engines it drives,
+        # and downloading three Chromiums would cost more than everything else
+        # in this workflow put together.
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+        run: npm ci --no-audit --no-fund
+
+      - name: typecheck and unit tests
+        working-directory: apps/benchmark
+        # Nothing ran these on push before, so a change to the harness was only
+        # ever exercised by dispatching the six-platform benchmark by hand --
+        # which is how a deadlocking process sampler reached all ten Windows
+        # jobs of a full run and burned 15 runner-hours printing nothing.
+        run: npm run check
 
   python:
     runs-on: ubuntu-latest
