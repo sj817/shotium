@@ -1,0 +1,44 @@
+[
+  {
+    "shard": "resilience",
+    "engine": "shotium",
+    "scenario": "faults",
+    "repeat": 1,
+    "attempt": 1,
+    "error": "InfrastructureError: request cancellation PID monitor was unavailable: \n    at runFaults (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\worker.ts:625:11)\n    at async runEngineScenario (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\worker.ts:676:55)\n    at async <anonymous> (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\worker.ts:769:13)"
+  },
+  {
+    "shard": "resilience",
+    "engine": "puppeteer-chrome",
+    "scenario": "soak",
+    "repeat": 1,
+    "attempt": 1,
+    "error": "Error: benchmark worker produced no JSON;"
+  },
+  {
+    "shard": "resilience",
+    "engine": "puppeteer-shell",
+    "scenario": "soak",
+    "repeat": 1,
+    "attempt": 1,
+    "error": "static PNG output differed from the first image for the same engine and case"
+  },
+  {
+    "at": "2026-09-02T13:47:10.449Z",
+    "shard": "merge",
+    "status": "infra-error",
+    "error": "missing startup shard"
+  },
+  {
+    "at": "2026-09-02T13:47:10.449Z",
+    "shard": "merge",
+    "status": "infra-error",
+    "error": "missing parallel shard"
+  },
+  {
+    "at": "2026-09-02T13:47:10.449Z",
+    "shard": "merge",
+    "status": "infra-error",
+    "error": "missing resident shard"
+  }
+]
