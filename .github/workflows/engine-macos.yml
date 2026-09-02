@@ -92,7 +92,7 @@ jobs:
           df -h /
 
       - name: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: src
           # Read by tools/shot/ci_stamp_mtimes.py, which needs the commit that
@@ -152,7 +152,7 @@ jobs:
         run: python3 src/tools/shot/ci_stamp_mtimes.py .
 
       - name: restore the build directory
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         # See engine-windows.yml for why the build directory itself is the
         # cache, and why nothing else is allowed to share the repository's
         # 10 GB with it.
@@ -219,7 +219,7 @@ jobs:
 
       - name: probe log
         if: ${{ always() && github.event.inputs.mode == 'probe' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: probe-mac-${{ github.event.inputs.arch }}
           path: /tmp/probe.txt
@@ -258,7 +258,7 @@ jobs:
 
       - name: save the build directory
         if: ${{ always() && github.event.inputs.mode == 'build' }}
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: src/out/Shot
           key: out-shot-macos-${{ github.event.inputs.arch }}-${{ github.run_id }}
@@ -342,7 +342,7 @@ jobs:
 
       - name: upload
         if: ${{ success() && github.event.inputs.mode == 'build' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.SHOT_STEM }}
           path: src/${{ env.SHOT_ARCHIVE }}
@@ -436,7 +436,7 @@ jobs:
 
       - name: upload the npm package
         if: ${{ success() && github.event.inputs.mode == 'build' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: npm-shotium-mac-${{ github.event.inputs.arch }}
           path: src/${{ env.SHOT_NPM_TARBALL }}

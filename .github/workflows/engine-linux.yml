@@ -96,7 +96,7 @@ jobs:
           df -h /
 
       - name: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: src
           # Read by tools/shot/ci_stamp_mtimes.py, which needs the commit that
@@ -174,7 +174,7 @@ jobs:
         run: python3 src/tools/shot/ci_stamp_mtimes.py .
 
       - name: restore the build directory
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         # See engine-windows.yml for why the build directory itself is the
         # cache and why nothing else shares the budget with it. The key carries
         # the architecture as well as the platform: the two produce entirely
@@ -243,7 +243,7 @@ jobs:
 
       - name: probe log
         if: ${{ always() && github.event.inputs.mode == 'probe' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         # Uploaded whether the probe passed or failed, because the failing case
         # is the one worth having: tools/shot/restore_from_upstream.py --log
         # reads exactly this file and puts back whatever it names.
@@ -288,7 +288,7 @@ jobs:
 
       - name: save the build directory
         if: ${{ always() && github.event.inputs.mode == 'build' }}
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: src/out/Shot
           key: out-shot-linux-${{ github.event.inputs.arch }}-${{ github.run_id }}
@@ -393,7 +393,7 @@ jobs:
 
       - name: keep the symbols before stripping them
         if: ${{ success() && github.event.inputs.mode == 'build' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: unstripped-linux-${{ github.event.inputs.arch }}
           path: |
@@ -487,7 +487,7 @@ jobs:
 
       - name: upload
         if: ${{ success() && github.event.inputs.mode == 'build' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.SHOT_STEM }}
           path: src/${{ env.SHOT_ARCHIVE }}
@@ -556,7 +556,7 @@ jobs:
 
       - name: upload the npm package
         if: ${{ success() && github.event.inputs.mode == 'build' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: npm-shotium-linux-${{ github.event.inputs.arch }}
           path: src/${{ env.SHOT_NPM_TARBALL }}

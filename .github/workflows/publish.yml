@@ -115,7 +115,7 @@ jobs:
       # workflows' runs. contents:write does not cover that.
       actions: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v6
@@ -126,7 +126,7 @@ jobs:
       # write an _authToken line pointing at NODE_AUTH_TOKEN, and an .npmrc
       # naming an empty token is worse than no .npmrc at all -- npm sends the
       # empty credential instead of asking for an OIDC one.
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
 

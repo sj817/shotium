@@ -72,13 +72,13 @@ jobs:
       shard_matrix: ${{ steps.matrix.outputs.shard_matrix }}
       diagnostic_mode: ${{ steps.matrix.outputs.diagnostic_mode }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: pnpm/action-setup@v6
         with:
           version: 9.15.9
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: pnpm
@@ -190,7 +190,7 @@ jobs:
     steps:
       # The harness only reads apps/benchmark; a full checkout is 64k files and
       # costs 1-2 minutes on the Windows runners.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           sparse-checkout: apps/benchmark
 
@@ -198,7 +198,7 @@ jobs:
         with:
           version: 9.15.9
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: pnpm
@@ -255,7 +255,7 @@ jobs:
         if: always()
         id: evidence
         continue-on-error: true
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: benchmark-evidence-${{ matrix.target.platform }}-${{ matrix.shard }}-${{ github.run_id }}-a${{ github.run_attempt }}
           path: apps/benchmark/out/artifact/${{ matrix.target.platform }}/${{ matrix.shard }}
@@ -275,7 +275,7 @@ jobs:
 
       - name: Upload permanent numerical result
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: benchmark-shard-${{ matrix.target.platform }}-${{ matrix.shard }}
           path: apps/benchmark/out/permanent/${{ matrix.target.platform }}/${{ matrix.shard }}
@@ -308,7 +308,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           sparse-checkout: apps/benchmark
 
@@ -316,7 +316,7 @@ jobs:
         with:
           version: 9.15.9
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: pnpm
@@ -337,7 +337,7 @@ jobs:
 
       - name: Download every shard result that exists
         continue-on-error: true
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: benchmark-shard-${{ matrix.platform }}-*
           path: ${{ runner.temp }}/benchmark-shards/${{ matrix.platform }}
@@ -357,7 +357,7 @@ jobs:
         if: always()
         id: upload
         continue-on-error: true
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: benchmark-permanent-${{ matrix.platform }}
           path: apps/benchmark/out/permanent/${{ matrix.platform }}
@@ -383,13 +383,13 @@ jobs:
       contents: write
       actions: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
 
       - name: Check out the benchmark implementation that produced the samples
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}
           path: .benchmark-source
@@ -399,7 +399,7 @@ jobs:
         with:
           version: 9.15.9
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: pnpm
@@ -418,7 +418,7 @@ jobs:
 
       - name: Download every platform result that exists
         continue-on-error: true
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: benchmark-permanent-*
           path: ${{ runner.temp }}/benchmark-input
@@ -447,7 +447,7 @@ jobs:
 
       - name: Upload the aggregated repository payload
         if: always() && steps.aggregate.outcome == 'success'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: benchmark-aggregate-${{ github.run_id }}-a${{ github.run_attempt }}
           path: ${{ steps.aggregate.outputs.result_directory }}

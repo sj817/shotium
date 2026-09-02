@@ -89,7 +89,7 @@ jobs:
           Get-PSDrive -PSProvider FileSystem | Select-Object Name,Used,Free
 
       - name: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: src
           # The history is not a build input, but it is a timestamp input: the
@@ -219,7 +219,7 @@ jobs:
           python src/tools/shot/ci_stamp_mtimes.py .
 
       - name: restore the build directory
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         # This is what makes a killed run useful to the next one. ninja is
         # already incremental; all it needs is its output directory back, so
         # the cache is the build directory itself rather than a compiler cache
@@ -334,7 +334,7 @@ jobs:
 
       - name: save the build directory
         if: always()
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: src/out/Shot
           key: out-shot-windows-${{ github.event.inputs.arch }}-${{ github.run_id }}
@@ -456,7 +456,7 @@ jobs:
 
       - name: upload
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.SHOT_STEM }}
           path: src/${{ env.SHOT_ARCHIVE }}
@@ -593,7 +593,7 @@ jobs:
 
       - name: upload the npm package
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: npm-shotium-win-${{ github.event.inputs.arch }}
           path: src/${{ env.SHOT_NPM_TARBALL }}
