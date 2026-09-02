@@ -125,6 +125,29 @@ async function waitForRequestStarted(token, timeoutMs) {
   throw new Error(`fixture server did not observe request ${token}`);
 }
 
+// Establishes ownership of a client up front instead of hoping a periodic
+// sample lands while it is alive. The two resilience clients are killed on
+// purpose moments after they start, and a process-table query costs about
+// 700 ms on Windows, so the sampling loop can easily never see one: the
+// telemetry then comes back untrusted with an empty error list, and the shard
+// dies reporting `PID monitor was unavailable:` with nothing after the colon.
+// Waiting for the tree once, before the request goes out, is the difference
+// between the harness being unable to watch and it not having got round to it.
+async function startOwnershipMonitor(monitor, subprocess, label) {
+  try {
+    await monitor.start({requireRoots: true, timeoutMs: 10_000});
+  } catch (error) {
+    const alreadyExited = subprocess.exitCode !== null || subprocess.signalCode !== null;
+    if (!alreadyExited) subprocess.kill('SIGTERM');
+    await subprocess.catch(() => {});
+    if (alreadyExited) {
+      throw new Error(`${label} exited before its request started ` +
+        `(code ${subprocess.exitCode}, signal ${subprocess.signalCode}): ${errorText(error)}`);
+    }
+    throw new InfrastructureError(`${label} PID ownership could not be established`, error);
+  }
+}
+
 async function finishOwnedChild(subprocess, label) {
   const monitor = new ProcessMonitor([subprocess.pid], 50);
   let releasedAtMs;
@@ -165,7 +188,8 @@ async function finishOwnedChild(subprocess, label) {
     monitorStarted = false;
   }
   if (!telemetry.trusted) {
-    throw new InfrastructureError(`${label} PID ownership monitor was unavailable: ${telemetry.errors.join('; ')}`);
+    throw new InfrastructureError(`${label} PID ownership monitor was unavailable: ` +
+      `${telemetry.errors.join('; ') || 'no sample observed the client PID'}`);
   }
   let remaining = await waitForIdentitiesToExit(telemetry.identities, SETTLE.forcedExitMs);
   if (remaining.length) remaining = await terminateOwnedProcesses(remaining);
@@ -459,7 +483,8 @@ async function runBrowserProcessExit(samples) {
       '--timeout-ms', '10000',
     ], {timeout: 15_000, killDescendants: true, reject: false});
     interruptedMonitor = new ProcessMonitor([interrupted.pid], 50);
-    await interruptedMonitor.start();
+    await startOwnershipMonitor(interruptedMonitor, interrupted,
+        `${engineName} forced-exit client`);
     await waitForRequestStarted(token, 10_000);
     const browserRemaining = await terminateOwnedProcesses(tree.processes);
     if (browserRemaining.length) {
@@ -607,7 +632,8 @@ async function runFaults(engine, samples) {
     '--daemon-name', daemonName('interrupted'),
   ], {timeout: 15_000, killDescendants: true, reject: false});
   const interruptedMonitor = new ProcessMonitor([interrupted.pid], 50);
-  await interruptedMonitor.start();
+  await startOwnershipMonitor(interruptedMonitor, interrupted,
+      `${engineName} request cancellation client`);
   let interruptedResult;
   let interruptedTelemetry;
   try {
@@ -623,7 +649,8 @@ async function runFaults(engine, samples) {
   }
   if (!interruptedTelemetry.trusted) {
     throw new InfrastructureError(
-        `request cancellation PID monitor was unavailable: ${interruptedTelemetry.errors.join('; ')}`);
+        'request cancellation PID monitor was unavailable: ' +
+        `${interruptedTelemetry.errors.join('; ') || 'no sample observed the client PID'}`);
   }
   let interruptedRemaining = await waitForIdentitiesToExit(
       interruptedTelemetry.identities, SETTLE.forcedExitMs);
