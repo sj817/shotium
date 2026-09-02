@@ -577,6 +577,8 @@ async function main() {
       output: 'png',
       wait_until: 'load',
       visual_readiness: 'fonts-ready-and-two-animation-frames-or-native-paint-clean',
+      compositor_policy: 'all-stages-before-draw-for-browser-adapters',
+      image_correctness: 'pixelmatch-threshold-0.1; exact-rgba-retained-as-diagnostic',
       warmup_policy: 'three-fixed-warmups; latency-and-rss-variation-recorded-not-gated',
       default_page_policy: 'new-page',
       default_cache_policy: 'disabled-or-no-store',

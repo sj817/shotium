@@ -127,9 +127,14 @@ published as labeled outcomes and excluded from paired rankings. Browser
 navigation and screenshot operations use the same 30-second ceiling for all
 engines. After `load`, the Puppeteer and Playwright adapters wait for fonts and
 two animation frames before capture; that wait is included in the measured
-operation and matches Shotium's internal paint-clean lifecycle requirement.
-This prevents concurrent Chrome captures from returning partially rasterised
-256 px tiles without giving the browser adapters free unmeasured work.
+operation. Both browser adapters also use Chrome's
+`--run-all-compositor-stages-before-draw` mode. Together these match Shotium's
+internal paint-clean lifecycle requirement and prevent concurrent Chrome
+captures from returning partially rasterised 256 px tiles without giving the
+browser adapters free unmeasured work. Every exact RGBA difference remains in
+the raw sample for audit, while correctness uses Pixelmatch's standard `0.1`
+perceptual threshold. This accepts one-level GPU/filter rounding that is visually
+identical, but still rejects missing or duplicated compositor tiles.
 Cold-start timing includes importing
 each package inside the timed launch hook. Resident mode starts and settles one
 host per engine, then measures seven new clients against that host instead of

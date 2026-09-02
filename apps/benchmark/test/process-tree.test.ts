@@ -89,13 +89,15 @@ test('required-root monitoring waits for a short-lived client identity before re
   assert.deepEqual(telemetry.errors, []);
 });
 
-test('Linux competitor policy disables the unavailable browser sandbox only there', () => {
+test('competitor policy completes compositor stages symmetrically and disables Linux sandbox', () => {
   assert.deepEqual(competitorChromiumPolicy('linux'), {
-    puppeteerArgs: ['--no-sandbox'],
+    puppeteerArgs: ['--run-all-compositor-stages-before-draw', '--no-sandbox'],
+    playwrightArgs: ['--run-all-compositor-stages-before-draw'],
     playwrightChromiumSandbox: false,
   });
   assert.deepEqual(competitorChromiumPolicy('win32'), {
-    puppeteerArgs: [],
+    puppeteerArgs: ['--run-all-compositor-stages-before-draw'],
+    playwrightArgs: ['--run-all-compositor-stages-before-draw'],
     playwrightChromiumSandbox: undefined,
   });
 });

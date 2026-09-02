@@ -8,7 +8,7 @@ import {APP_ROOT, SETTLE} from './constants.ts';
 import {createEngine} from './engines.ts';
 import {benchmarkDaemonName} from './daemon-name.ts';
 import {InfrastructureError, isInfrastructureError} from './errors.ts';
-import {comparePng, inspectPng, saveBaseline} from './image.ts';
+import {comparePng, inspectPng, isDeterministicComparison, saveBaseline} from './image.ts';
 import {
   ProcessMonitor,
   processIdentityForPid,
@@ -240,7 +240,7 @@ function clientEvidence(definition, evidenceFile, image) {
   return {
     image: {
       ...image,
-      deterministic_against_first: comparison.differing_pixels === 0,
+      deterministic_against_first: isDeterministicComparison(comparison),
       ...comparison,
     },
     sample_file: path.relative(config.outputDirectory, evidenceFile).replaceAll('\\', '/'),
@@ -292,7 +292,7 @@ async function flushEvidence() {
       const comparison = comparePng(fs.readFileSync(baselineFile), evidenceBytes);
       evidence.record.image = {
         ...image,
-        deterministic_against_first: comparison.differing_pixels === 0,
+        deterministic_against_first: isDeterministicComparison(comparison),
         ...comparison,
       };
       evidence.record.sample_file = path.relative(
@@ -823,7 +823,8 @@ if (!scenarioError && quality) {
     quality,
     samples,
     latency_ms: distribution(samples.map((sample) => sample.ms)),
-    error: !deterministic ? 'static PNG output differed from the first image for the same engine and case' :
+    error: !deterministic ?
+      'static PNG output perceptually differed from the first image for the same engine and case' :
       !requestsPassed ? `soak recorded ${quality.failed_soak_iterations} failed requests` : undefined,
   };
 } else {

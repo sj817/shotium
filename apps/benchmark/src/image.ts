@@ -4,6 +4,8 @@ import path from 'node:path';
 import pixelmatch from 'pixelmatch';
 import {PNG} from 'pngjs';
 
+export const PERCEPTUAL_DIFFERENCE_THRESHOLD = 0.1;
+
 export function inspectPng(buffer: Buffer | Uint8Array, expected: {width?: number; height?: number} = {}) {
   const bytes = Buffer.from(buffer);
   const png = PNG.sync.read(bytes);
@@ -37,11 +39,18 @@ export function comparePng(leftBuffer: Buffer, rightBuffer: Buffer) {
   const left = PNG.sync.read(leftBuffer);
   const right = PNG.sync.read(rightBuffer);
   if (left.width !== right.width || left.height !== right.height) {
-    return {comparable: false, differing_pixels: null, ratio: null};
+    return {
+      comparable: false,
+      differing_pixels: null,
+      ratio: null,
+      pixelmatch_differing_pixels: null,
+      pixelmatch_ratio: null,
+      pixelmatch_threshold: PERCEPTUAL_DIFFERENCE_THRESHOLD,
+    };
   }
   const pixelmatchDiffering = pixelmatch(
       left.data, right.data, undefined, left.width, left.height,
-      {threshold: 0, includeAA: true, alpha: 1});
+      {threshold: PERCEPTUAL_DIFFERENCE_THRESHOLD, includeAA: true, alpha: 1});
   let differing = 0;
   for (let offset = 0; offset < left.data.length; offset += 4) {
     if (left.data[offset] !== right.data[offset] ||
@@ -56,8 +65,14 @@ export function comparePng(leftBuffer: Buffer, rightBuffer: Buffer) {
     differing_pixels: differing,
     ratio: differing / (left.width * left.height),
     pixelmatch_differing_pixels: pixelmatchDiffering,
-    comparison: 'exact-rgba',
+    pixelmatch_ratio: pixelmatchDiffering / (left.width * left.height),
+    pixelmatch_threshold: PERCEPTUAL_DIFFERENCE_THRESHOLD,
+    comparison: 'exact-rgba-diagnostic-plus-pixelmatch-correctness',
   };
+}
+
+export function isDeterministicComparison(comparison) {
+  return comparison.comparable === true && comparison.pixelmatch_differing_pixels === 0;
 }
 
 function safeName(value: string) {

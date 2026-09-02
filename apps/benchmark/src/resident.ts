@@ -33,10 +33,12 @@ async function warmPuppeteer(name, url, evidenceFile) {
 async function warmPlaywright(name, url, evidenceFile) {
   const {chromium} = await import('playwright');
   const channel = name === 'playwright-shell' ? 'chromium-headless-shell' : 'chromium';
+  const policy = competitorChromiumPolicy();
   const server = await chromium.launchServer({
     headless: true,
     channel,
-    chromiumSandbox: competitorChromiumPolicy().playwrightChromiumSandbox,
+    args: policy.playwrightArgs,
+    chromiumSandbox: policy.playwrightChromiumSandbox,
   });
   const browser = await chromium.connect(server.wsEndpoint());
   const context = await browser.newContext({viewport: VIEWPORT, deviceScaleFactor: 1});
