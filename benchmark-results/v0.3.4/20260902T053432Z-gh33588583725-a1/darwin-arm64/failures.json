@@ -1,0 +1,34 @@
+[
+  {
+    "shard": "parallel",
+    "engine": "playwright-chrome",
+    "scenario": "parallel",
+    "repeat": 3,
+    "attempt": 1,
+    "error": "static PNG output differed from the first image for the same engine and case"
+  },
+  {
+    "shard": "parallel",
+    "engine": "playwright-chrome",
+    "scenario": "parallel",
+    "repeat": 4,
+    "attempt": 1,
+    "error": "static PNG output differed from the first image for the same engine and case"
+  },
+  {
+    "shard": "parallel",
+    "engine": "playwright-chrome",
+    "scenario": "parallel",
+    "repeat": 6,
+    "attempt": 2,
+    "error": "static PNG output differed from the first image for the same engine and case"
+  },
+  {
+    "shard": "parallel",
+    "engine": "playwright-chrome",
+    "scenario": "parallel",
+    "repeat": 6,
+    "attempt": 2,
+    "error": "static PNG output differed from the first image for the same engine and case"
+  }
+]

@@ -1,0 +1,98 @@
+[
+  {
+    "shard": "parallel",
+    "engine": "playwright-chrome",
+    "scenario": "parallel",
+    "repeat": 2,
+    "attempt": 2,
+    "error": "static PNG output differed from the first image for the same engine and case"
+  },
+  {
+    "shard": "parallel",
+    "engine": "playwright-chrome",
+    "scenario": "parallel",
+    "repeat": 4,
+    "attempt": 1,
+    "error": "static PNG output differed from the first image for the same engine and case"
+  },
+  {
+    "shard": "parallel",
+    "engine": "playwright-chrome",
+    "scenario": "parallel",
+    "repeat": 7,
+    "attempt": 2,
+    "error": "static PNG output differed from the first image for the same engine and case"
+  },
+  {
+    "shard": "parallel",
+    "engine": "playwright-chrome",
+    "scenario": "parallel",
+    "repeat": 2,
+    "attempt": 1,
+    "error": "static PNG output differed from the first image for the same engine and case"
+  },
+  {
+    "shard": "parallel",
+    "engine": "playwright-chrome",
+    "scenario": "parallel",
+    "repeat": 5,
+    "attempt": 2,
+    "error": "static PNG output differed from the first image for the same engine and case"
+  },
+  {
+    "shard": "resident",
+    "engine": "playwright-chrome",
+    "scenario": "resident",
+    "repeat": 2,
+    "attempt": 1,
+    "error": "InfrastructureError: resident warmup 9 PID ownership could not be established before start\n    at finishOwnedChild (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:139:11)\n    at async residentClient (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:173:37)\n    at async runResident (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:318:20)\n    at async <anonymous> (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:751:13)"
+  },
+  {
+    "shard": "resident",
+    "engine": "playwright-chrome",
+    "scenario": "resident",
+    "repeat": 3,
+    "attempt": 1,
+    "error": "InfrastructureError: resident warmup 8 PID ownership could not be established before start\n    at finishOwnedChild (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:139:11)\n    at async residentClient (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:173:37)\n    at async runResident (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:318:20)\n    at async <anonymous> (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:751:13)"
+  },
+  {
+    "shard": "resident",
+    "engine": "puppeteer-chrome",
+    "scenario": "resident",
+    "repeat": 3,
+    "attempt": 1,
+    "error": "Error: resident warmup 10 failed\n    at residentClient (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:182:11)\n    at async runResident (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:318:20)\n    at async <anonymous> (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:751:13)"
+  },
+  {
+    "shard": "resident",
+    "engine": "playwright-chrome",
+    "scenario": "resident",
+    "repeat": 4,
+    "attempt": 1,
+    "error": "Error: resident warmup 10 failed\n    at residentClient (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:182:11)\n    at async runResident (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:318:20)\n    at async <anonymous> (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:751:13)"
+  },
+  {
+    "shard": "resident",
+    "engine": "playwright-chrome",
+    "scenario": "resident",
+    "repeat": 5,
+    "attempt": 1,
+    "error": "Error: resident warmup 9 failed\n    at residentClient (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:182:11)\n    at async runResident (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:318:20)\n    at async <anonymous> (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:751:13)"
+  },
+  {
+    "shard": "resident",
+    "engine": "playwright-chrome",
+    "scenario": "resident",
+    "repeat": 7,
+    "attempt": 1,
+    "error": "Error: resident warmup 10 failed\n    at residentClient (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:182:11)\n    at async runResident (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:318:20)\n    at async <anonymous> (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:751:13)"
+  },
+  {
+    "shard": "resilience",
+    "engine": "playwright-chrome",
+    "scenario": "soak",
+    "repeat": 1,
+    "attempt": 1,
+    "error": "Error: fonts/soak.c4.r1.a1.s00441: Error: PNG appears empty or uniform\n    at inspectPng (/Users/runner/work/shotium/shotium/apps/benchmark/src/image.ts:26:11)\n    at flushEvidence (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:243:21)\n    at <anonymous> (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:757:9)\n    at flushEvidence (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:268:11)\n    at <anonymous> (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:757:9)"
+  }
+]

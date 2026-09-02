@@ -1,0 +1,32 @@
+[
+  {
+    "at": "2026-09-02T05:33:59.195Z",
+    "shard": "merge",
+    "status": "infra-error",
+    "error": "missing startup shard"
+  },
+  {
+    "at": "2026-09-02T05:33:59.195Z",
+    "shard": "merge",
+    "status": "infra-error",
+    "error": "missing throughput shard"
+  },
+  {
+    "at": "2026-09-02T05:33:59.195Z",
+    "shard": "merge",
+    "status": "infra-error",
+    "error": "missing parallel shard"
+  },
+  {
+    "at": "2026-09-02T05:33:59.195Z",
+    "shard": "merge",
+    "status": "infra-error",
+    "error": "missing resident shard"
+  },
+  {
+    "at": "2026-09-02T05:33:59.195Z",
+    "shard": "merge",
+    "status": "infra-error",
+    "error": "missing resilience shard"
+  }
+]

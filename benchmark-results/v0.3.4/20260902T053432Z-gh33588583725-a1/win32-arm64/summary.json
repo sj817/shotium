@@ -1,0 +1,31 @@
+{
+  "schema_version": 2,
+  "generated_utc": "2026-09-02T05:33:59.195Z",
+  "platform": "win32-arm64",
+  "shard": "merged",
+  "shards_complete": false,
+  "missing_shards": [
+    "startup",
+    "throughput",
+    "parallel",
+    "resident",
+    "resilience"
+  ],
+  "invalid_shards": {},
+  "host_mode": "sharded",
+  "status": "infra-error",
+  "shotium_version": "unknown",
+  "profile": "unknown",
+  "seed": "",
+  "source_revision": null,
+  "install": null,
+  "host": null,
+  "packages": {},
+  "engines": [],
+  "scenarios": [],
+  "execution_order": [],
+  "execution_shards": [],
+  "raw_samples": 0,
+  "failures": 5,
+  "error": "missing startup shard; missing throughput shard; missing parallel shard; missing resident shard; missing resilience shard"
+}
