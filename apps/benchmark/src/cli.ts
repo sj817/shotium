@@ -158,7 +158,16 @@ function cellLabel(group, attempt) {
 
 async function runCell(group, attempt, configFile, profile, stability) {
   const orchestrationStarted = performance.now();
-  const before = await waitForSystemStable({cpuLimit: stability.cpu_limit});
+  // A cell rejected because the host was busy used to be retried six seconds
+  // later, against the same busy window, so those rejections came in pairs all
+  // through the log: `faults` leaves four browsers dying and `soak` starts into
+  // the middle of that. waitForSystemStable returns the moment the host is
+  // quiet, so a longer deadline costs nothing when it already is - it is only
+  // spent on the retries that exist because it was not.
+  const before = await waitForSystemStable({
+    cpuLimit: stability.cpu_limit,
+    timeoutMs: attempt > 1 ? SETTLE.timeoutMs : SETTLE.cooldownTimeoutMs,
+  });
   if (!before.stable) {
     return {
       ok: true,
