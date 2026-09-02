@@ -1,0 +1,11 @@
+[
+  {
+    "shard": "resilience",
+    "engine": "playwright-chrome",
+    "scenario": "soak",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 4,
+    "error": "Error: text/soak.c4.r1.a1.s00271: Error: PNG appears empty or uniform\n    at inspectPng (/Users/runner/work/shotium/shotium/apps/benchmark/src/image.ts:26:11)\n    at flushEvidence (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:285:21)\n    at <anonymous> (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:802:9)\n    at flushEvidence (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:310:11)\n    at <anonymous> (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:802:9)"
+  }
+]

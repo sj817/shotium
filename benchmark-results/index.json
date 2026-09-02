@@ -1,7 +1,18 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-02T15:06:07.110Z",
+  "generated_utc": "2026-09-02T17:30:39.117Z",
   "results": [
+    {
+      "path": "v0.3.4/20260902T171742Z-gh33655721129-a1",
+      "shotium_version": "0.3.4",
+      "generated_utc": "2026-09-02T17:17:42.000Z",
+      "status": "complete",
+      "quality_status": "noisy",
+      "evidence_status": "complete",
+      "publishable": true,
+      "run_id": "33655721129",
+      "source_sha": "6bf4cb2fbc8e69e59371281916ce6bf49a73ef24"
+    },
     {
       "path": "v0.3.4/20260902T150606Z-gh33638337916-a1",
       "shotium_version": "0.3.4",
@@ -9,6 +20,7 @@
       "status": "complete",
       "quality_status": "fail",
       "evidence_status": "complete",
+      "publishable": false,
       "run_id": "33638337916",
       "source_sha": "6bf4cb2fbc8e69e59371281916ce6bf49a73ef24"
     },
@@ -19,6 +31,7 @@
       "status": "incomplete",
       "quality_status": "fail",
       "evidence_status": "incomplete",
+      "publishable": false,
       "run_id": "33588583725",
       "source_sha": "6bf4cb2fbc8e69e59371281916ce6bf49a73ef24"
     },
@@ -29,6 +42,7 @@
       "status": "incomplete",
       "quality_status": "fail",
       "evidence_status": "incomplete",
+      "publishable": false,
       "run_id": "33274826755",
       "source_sha": "bac114e9f8c57fb04875ee8ceec7e8e7c11905d4"
     },
@@ -39,6 +53,7 @@
       "status": "complete",
       "quality_status": "fail",
       "evidence_status": "complete",
+      "publishable": false,
       "run_id": "33264499865",
       "source_sha": "01059e287ce7"
     }

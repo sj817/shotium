@@ -1,0 +1,20 @@
+[
+  {
+    "shard": "parallel",
+    "engine": "puppeteer-chrome",
+    "scenario": "parallel",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 4,
+    "error": "static PNG output differed from the first image for the same engine and case"
+  },
+  {
+    "shard": "resilience",
+    "engine": "puppeteer-chrome",
+    "scenario": "soak",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 4,
+    "error": "Error: images/soak.c4.r1.a1.s00763: Error: PNG appears empty or uniform\n    at inspectPng (/home/runner/work/shotium/shotium/apps/benchmark/src/image.ts:26:11)\n    at flushEvidence (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:285:21)\n    at <anonymous> (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:802:9)\n    at flushEvidence (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:310:11)\n    at <anonymous> (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:802:9)"
+  }
+]

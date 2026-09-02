@@ -2,4 +2,4 @@
 
 [Interactive benchmark explorer / 交互式基准站点](https://sj817.github.io/shotium/)
 
-No publishable benchmark result yet; failed and noisy runs remain available in the archive. / 暂无可发布的有效基准结果；失败与波动运行仍保留在归档中。
+0.3.4 · 2026-09-02T17:17:42.000Z: [English](v0.3.4/20260902T171742Z-gh33655721129-a1/report.md) · [简体中文](v0.3.4/20260902T171742Z-gh33655721129-a1/report.zh-CN.md) — status complete / 状态 完整, quality noisy / 质量 噪声过大, evidence complete / 证据 完整.
