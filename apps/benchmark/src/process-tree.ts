@@ -10,6 +10,10 @@ const sleep = (milliseconds: number) => new Promise<void>((resolve) => setTimeou
 
 async function withTimeout<T>(label: string, promise: Promise<T>, timeoutMs: number): Promise<T> {
   let timer;
+  // The losing side of the race is still live. Node treats a rejection nobody
+  // is listening to as fatal, so a query that times out and then fails would
+  // take the process down instead of surfacing as one bad sample.
+  promise.catch(() => {});
   try {
     return await Promise.race([
       promise,
