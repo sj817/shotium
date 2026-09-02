@@ -587,9 +587,14 @@ export async function calibrateHostLoad({durationMs = SETTLE.calibrationMs, moni
   };
 }
 
-export async function waitForSystemStable({timeoutMs = SETTLE.cooldownTimeoutMs, cpuLimit = SETTLE.cpuLimit}: {
+export async function waitForSystemStable({
+  timeoutMs = SETTLE.cooldownTimeoutMs,
+  cpuLimit = SETTLE.cpuLimit,
+  memoryDriftLimit = SETTLE.memoryDriftLimit,
+}: {
   timeoutMs?: number;
   cpuLimit?: number;
+  memoryDriftLimit?: number;
 } = {}) {
   const deadline = Date.now() + timeoutMs;
   const samples = [];
@@ -601,7 +606,7 @@ export async function waitForSystemStable({timeoutMs = SETTLE.cooldownTimeoutMs,
       Date.parse(recent.at(-1).at) - Date.parse(recent[0].at) : 0;
     if (recent.length === SETTLE.stableSamples && spanMs >= SETTLE.stableSpanMs &&
         recent.every((sample) => sample.cpu_percent <= cpuLimit) &&
-        relativeDrift(recent.map((sample) => sample.available_bytes)) <= SETTLE.memoryDriftLimit) {
+        relativeDrift(recent.map((sample) => sample.available_bytes)) <= memoryDriftLimit) {
       return {stable: true, cpu_limit: cpuLimit, samples};
     }
     await sleep(1000);

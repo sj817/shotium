@@ -13,6 +13,31 @@ async function importDefault(name) {
   return module.default || module;
 }
 
+export async function waitForVisualReady(page, timeoutMs = BROWSER_OPERATION_TIMEOUT_MS) {
+  let timer;
+  try {
+    await Promise.race([
+      page.evaluate(async () => {
+        // `load` is a network/document milestone, not a compositor milestone.
+        // Under concurrent headless Chrome captures it can be followed by a
+        // screenshot whose 256 px raster tiles are only partly painted. Shotium
+        // explicitly runs Blink through paint-clean before rasterising, so make
+        // the browser adapters provide that same completed-frame contract. The
+        // wait is intentionally inside the measured shot operation.
+        await document.fonts?.ready;
+        await new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+      }),
+      new Promise((_, reject) => {
+        timer = setTimeout(
+            () => reject(new Error(`visual readiness exceeded ${timeoutMs}ms`)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 function imageBuffer(value) {
   if (Buffer.isBuffer(value)) return value;
   if (Buffer.isBuffer(value?.image)) return value.image;
@@ -167,6 +192,7 @@ class ChromeEngine {
         }
       }
       await page.goto(url, {waitUntil: 'load', timeout: timeoutMs});
+      await waitForVisualReady(page, timeoutMs);
       const screenshotOptions: Record<string, any> = {type: 'png', fullPage};
       if (this.screenshotTimeoutSupported) screenshotOptions.timeout = timeoutMs;
       return {image: Buffer.from(await page.screenshot(screenshotOptions)), stats: null};

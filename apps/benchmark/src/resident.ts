@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import {ShotiumEngine, competitorChromiumPolicy} from './engines.ts';
+import {ShotiumEngine, competitorChromiumPolicy, waitForVisualReady} from './engines.ts';
 import {BROWSER_OPERATION_TIMEOUT_MS, VIEWPORT} from './constants.ts';
 
 function writeEvidence(file, image) {
@@ -20,6 +20,7 @@ async function warmPuppeteer(name, url, evidenceFile) {
   });
   const page = await browser.newPage();
   await page.goto(url, {waitUntil: 'load', timeout: BROWSER_OPERATION_TIMEOUT_MS});
+  await waitForVisualReady(page);
   writeEvidence(evidenceFile, await page.screenshot({type: 'png'}));
   await page.close();
   return {
@@ -41,6 +42,7 @@ async function warmPlaywright(name, url, evidenceFile) {
   const context = await browser.newContext({viewport: VIEWPORT, deviceScaleFactor: 1});
   const page = await context.newPage();
   await page.goto(url, {waitUntil: 'load', timeout: BROWSER_OPERATION_TIMEOUT_MS});
+  await waitForVisualReady(page);
   writeEvidence(evidenceFile, await page.screenshot({
     type: 'png',
     timeout: BROWSER_OPERATION_TIMEOUT_MS,

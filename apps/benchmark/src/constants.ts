@@ -90,7 +90,6 @@ export const PROFILES = Object.freeze({
 
 export const SETTLE = Object.freeze({
   minimumWarmups: 3,
-  maximumWarmups: 10,
   latencyCvLimit: 0.10,
   rssDriftLimit: 0.03,
   // Host CPU gate. GitHub's Windows and macOS runners idle at 28-41% CPU, so a

@@ -94,8 +94,12 @@ manifest. Reports link to the [VitePress benchmark explorer](https://sj817.githu
 
 `full` adds seven cold repetitions, concurrency 1/2/4, 20 lifecycle cycles and
 a continuous 1000-request (or ten-minute) soak. Every cell waits for host
-stability; non-cold cells also wait for measured engine readiness. The host
-gate is calibrated per shard: five seconds of idle CPU are sampled before the
+stability; non-cold cells also run three fixed warmups. Warmup latency CV and
+process-tree RSS drift are recorded as engine diagnostics, but do not gate a
+cell: creating and reaping Chrome renderer processes is real engine behavior,
+not shared-runner instability, and using it as an eligibility condition
+systematically rejected the browser adapters. The host gate is calibrated per
+shard: five seconds of idle CPU are sampled before the
 first cell, with the same two process samplers running that every cell runs, so
 their cost is part of the baseline rather than of the noise. The limit is
 `max(25%, idle p95 + 10 points)` with no ceiling: GitHub's Windows and macOS
@@ -106,9 +110,12 @@ Each sampler is capped at 20% of one core - a process-table query costs tens of
 milliseconds on Linux and about 700 ms on Windows, and an unthrottled loop spent
 a whole core enumerating processes, which is load the gate then measured as the
 host's. `observed_mean_period_ms` in the telemetry records the sampling
-resolution that cap produced. Stability means three consecutive one-second
-samples under that limit with steady free memory; a cell that cannot get there
-within six seconds is marked noisy and retried once. Shards stop scheduling new
+resolution that cap produced. Preflight stability means three consecutive
+one-second samples under that limit with steady free memory. After the fixed
+warmups, the same CPU gate is checked again while the engine remains alive;
+free-memory drift there stays diagnostic because it includes the engine under
+test. A cell that cannot get a quiet host within six seconds is marked noisy and
+retried once. Shards stop scheduling new
 cells once the profile's budget is spent, so results and evidence are written
 instead of being lost to a job timeout. A baseline engine that fails - a browser
 missing for the platform, a screenshot that differs from its own first render, a
@@ -117,8 +124,13 @@ abort the shard before its evidence is uploaded. The aggregate is rejected only
 when a platform or shard is missing, evidence is incomplete, the harness is
 untrusted, or Shotium itself fails; noisy and failed competitor cells are
 published as labeled outcomes and excluded from paired rankings. Browser
-navigation and screenshot operations use
-the same 30-second ceiling for all engines. Cold-start timing includes importing
+navigation and screenshot operations use the same 30-second ceiling for all
+engines. After `load`, the Puppeteer and Playwright adapters wait for fonts and
+two animation frames before capture; that wait is included in the measured
+operation and matches Shotium's internal paint-clean lifecycle requirement.
+This prevents concurrent Chrome captures from returning partially rasterised
+256 px tiles without giving the browser adapters free unmeasured work.
+Cold-start timing includes importing
 each package inside the timed launch hook. Resident mode starts and settles one
 host per engine, then measures seven new clients against that host instead of
 restarting and re-warming it seven times. Batch and parallel modes likewise keep

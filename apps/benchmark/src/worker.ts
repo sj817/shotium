@@ -14,12 +14,13 @@ import {
   processIdentityForPid,
   processSnapshot,
   terminateOwnedProcesses,
+  waitForSystemStable,
   waitForProcessTree,
   waitForIdentitiesToExit,
 } from './process-tree.ts';
 import {startResident} from './resident.ts';
-import {settleEngine} from './settle.ts';
-import {coefficientOfVariation, distribution, relativeDrift, round} from './statistics.ts';
+import {readinessDiagnostics, settleEngine} from './settle.ts';
+import {distribution, round} from './statistics.ts';
 
 const options = parseArgs(process.argv.slice(2));
 const require = createRequire(import.meta.url);
@@ -351,8 +352,7 @@ async function runResident(samples) {
     const deadline = Date.now() + SETTLE.timeoutMs;
     const warmupLatency = [];
     const warmupRss = [];
-    let settled: any = null;
-    for (let warmup = 1; warmup <= SETTLE.maximumWarmups; warmup += 1) {
+    for (let warmup = 1; warmup <= SETTLE.minimumWarmups; warmup += 1) {
       const remainingMs = deadline - Date.now();
       if (remainingMs <= 0) break;
       const warmupEvidenceFile = path.join(sampleDirectory,
@@ -362,27 +362,20 @@ async function runResident(samples) {
           warmupEvidenceFile);
       warmupLatency.push(round(warm.to_png_ms));
       warmupRss.push((await processSnapshot([process.pid])).rss_bytes);
-      if (warmup < SETTLE.minimumWarmups) continue;
-      const latencyCv = coefficientOfVariation(warmupLatency.slice(-SETTLE.stableSamples));
-      const rssDrift = relativeDrift(warmupRss.slice(-SETTLE.stableSamples));
-      if (latencyCv <= SETTLE.latencyCvLimit && rssDrift <= SETTLE.rssDriftLimit) {
-        settled = await import('./process-tree.ts').then(({waitForSystemStable}) =>
-          waitForSystemStable({
-            timeoutMs: Math.min(SETTLE.cooldownTimeoutMs, Math.max(0, deadline - Date.now())),
-            cpuLimit: hostCpuLimit,
-          }));
-        if (settled.stable) break;
-      }
-      if (Date.now() >= deadline) break;
     }
+    const settled = warmupLatency.length === SETTLE.minimumWarmups ? await waitForSystemStable({
+      timeoutMs: Math.min(SETTLE.cooldownTimeoutMs, Math.max(0, deadline - Date.now())),
+      cpuLimit: hostCpuLimit,
+      memoryDriftLimit: Number.POSITIVE_INFINITY,
+    }) : {stable: false, cpu_limit: hostCpuLimit, samples: []};
     const residentSettle = {
       stable: Boolean(settled?.stable),
       warmups: warmupLatency.length,
       latency_ms: warmupLatency,
       rss_bytes: warmupRss,
-      latency_cv: round(coefficientOfVariation(warmupLatency.slice(-SETTLE.stableSamples)), 5),
-      rss_drift: round(relativeDrift(warmupRss.slice(-SETTLE.stableSamples)), 5),
-      system: settled || {stable: false, samples: []},
+      ...readinessDiagnostics(warmupLatency, warmupRss),
+      readiness_gate: 'fixed-warmups-plus-host-cpu',
+      system: settled,
     };
     if (!residentSettle.stable) return residentSettle;
     const measurementStarted = Date.now();

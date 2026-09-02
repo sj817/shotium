@@ -576,6 +576,8 @@ async function main() {
       scale: 1,
       output: 'png',
       wait_until: 'load',
+      visual_readiness: 'fonts-ready-and-two-animation-frames-or-native-paint-clean',
+      warmup_policy: 'three-fixed-warmups; latency-and-rss-variation-recorded-not-gated',
       default_page_policy: 'new-page',
       default_cache_policy: 'disabled-or-no-store',
       reuse_page_scenario_is_separate: true,
