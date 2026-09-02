@@ -7,6 +7,7 @@
 [![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](LICENSE)
 [![npm version](https://img.shields.io/npm/v/@shotkit/shotium.svg)](https://www.npmjs.com/package/@shotkit/shotium)
 [![Download](https://img.shields.io/badge/npm%20download-19.4%20MB%20(win32--x64)-green.svg)](https://www.npmjs.com/package/@shotkit/shotium)
+[![Benchmarks](https://img.shields.io/badge/benchmarks-six%20platforms-orange.svg)](https://sj817.github.io/shotium/)
 
 **English** · [简体中文](README.zh.md)
 

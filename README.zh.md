@@ -7,6 +7,7 @@
 [![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](LICENSE)
 [![npm version](https://img.shields.io/npm/v/@shotkit/shotium.svg)](https://www.npmjs.com/package/@shotkit/shotium)
 [![Download](https://img.shields.io/badge/npm%20download-19.4%20MB%20(win32--x64)-green.svg)](https://www.npmjs.com/package/@shotkit/shotium)
+[![Benchmarks](https://img.shields.io/badge/benchmarks-six%20platforms-orange.svg)](https://sj817.github.io/shotium/)
 
 [English](README.md) · **简体中文**
 
@@ -574,7 +575,7 @@ console.log(`清理条目: ${result.removed}, 清理前体积: ${result.bytesBef
 
 ## 性能基准测试
 
-当前正式基准会在六种原生 GitHub runner 平台执行，逐样本结果统一归档于 [`benchmark-results/`](benchmark-results/LATEST.md)。下表是早期单机 Windows 数据，仅作为 [legacy 证据](benchmark-results/legacy/2026-08-25-windows-local/RESULTS.md) 保留，不能与 CI 系列直接比较。
+当前正式基准会在六种原生 GitHub runner 平台执行。排名后的中英双语结果可在[基准报告站点](https://sj817.github.io/shotium/)浏览，逐样本原始结果统一归档于 [`benchmark-results/`](benchmark-results/LATEST.md)。下表是早期单机 Windows 数据，仅作为 [legacy 证据](benchmark-results/legacy/2026-08-25-windows-local/RESULTS.md) 保留，不能与 CI 系列直接比较。
 
 ### 1. 冷启动与吞吐量
 
