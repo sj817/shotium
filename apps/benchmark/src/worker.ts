@@ -11,7 +11,6 @@ import {InfrastructureError, isInfrastructureError} from './errors.ts';
 import {comparePng, inspectPng, isDeterministicComparison, saveBaseline} from './image.ts';
 import {
   ProcessMonitor,
-  processIdentityForPid,
   processSnapshot,
   terminateOwnedProcesses,
   waitForSystemStable,
@@ -580,9 +579,14 @@ async function runFaults(engine, samples) {
       precondition.image);
       const status = await daemon.status();
       const daemonPid = Number(status.pid);
-      const daemonIdentity = await processIdentityForPid(daemonPid);
+      // systeminformation caches the Windows process table. The daemon can be
+      // started after the last settle sample and serve its precondition before
+      // that cache refreshes, so a one-shot lookup deterministically misses the
+      // live PID on fast Windows runners. Wait for the exact reported root and
+      // keep the identity from that same owned-tree snapshot.
+      const tree = await waitForProcessTree([daemonPid]);
+      const daemonIdentity = tree.processes.find((entry) => entry.pid === daemonPid);
       if (!daemonIdentity) throw new Error('Shotium daemon PID identity could not be verified');
-      const tree = await processSnapshot([daemonPid]);
       const worker = tree.processes.find((entry) => entry.pid !== daemonPid);
       if (worker) {
         const remaining = await terminateOwnedProcesses([worker]);
