@@ -1,0 +1,18 @@
+[
+  {
+    "shard": "parallel",
+    "engine": "puppeteer-chrome",
+    "scenario": "parallel",
+    "repeat": 2,
+    "attempt": 1,
+    "error": "ProtocolError: Page.captureScreenshot timed out. Increase the 'protocolTimeout' setting in launch/connect calls for a higher timeout if needed.\n    at Callback.<instance_members_initializer> (/home/runner/work/shotium/shotium/apps/benchmark/node_modules/puppeteer-core/src/common/CallbackRegistry.ts:139:12)\n    at new Callback (/home/runner/work/shotium/shotium/apps/benchmark/node_modules/puppeteer-core/src/common/CallbackRegistry.ts:144:3)\n    at CallbackRegistry.create (/home/runner/work/shotium/shotium/apps/benchmark/node_modules/puppeteer-core/src/common/CallbackRegistry.ts:38:22)\n    at Connection._rawSend (/home/runner/work/shotium/shotium/apps/benchmark/node_modules/puppeteer-core/src/cdp/Connection.ts:179:22)\n    at CdpCDPSession.send (/home/runner/work/shotium/shotium/apps/benchmark/node_modules/puppeteer-core/src/cdp/CdpSession.ts:107:8)\n    at CdpPage._screenshot (/home/runner/work/shotium/shotium/apps/benchmark/node_modules/puppeteer-core/src/cdp/Page.ts:1198:52)\n    at CdpPage.screenshot (/home/runner/work/shotium/shotium/apps/benchmark/node_modules/puppeteer-core/src/api/Page.ts:2825:29)\n    at async CdpPage.<anonymous> (/home/runner/work/shotium/shotium/apps/benchmark/node_modules/puppeteer-core/src/util/decorators.ts:139:14)\n    at async ChromeEngine.shot (/home/runner/work/shotium/shotium/apps/benchmark/src/engines.ts:161:34)\n    at async capture (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:251:18)"
+  },
+  {
+    "shard": "resilience",
+    "engine": "puppeteer-chrome",
+    "scenario": "soak",
+    "repeat": 1,
+    "attempt": 1,
+    "error": "Error: long-page/soak.c4.r1.a1.s00290: Error: PNG appears empty or uniform\n    at inspectPng (/home/runner/work/shotium/shotium/apps/benchmark/src/image.ts:26:11)\n    at flushEvidence (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:285:21)\n    at <anonymous> (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:802:9)\ntext/soak.c4.r1.a1.s00467: Error: PNG appears empty or uniform\n    at inspectPng (/home/runner/work/shotium/shotium/apps/benchmark/src/image.ts:26:11)\n    at flushEvidence (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:285:21)\n    at <anonymous> (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:802:9)\nflex/soak.c4.r1.a1.s00759: Error: PNG appears empty or uniform\n    at inspectPng (/home/runner/work/shotium/shotium/apps/benchmark/src/image.ts:26:11)\n    at flushEvidence (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:285:21)\n    at <anonymous> (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:802:9)\nflex/soak.c4.r1.a1.s00841: Error: PNG appears empty or uniform\n    at inspectPng (/home/runner/work/shotium/shotium/apps/benchmark/src/image.ts:26:11)\n    at flushEvidence (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:285:21)\n    at <anonymous> (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:802:9)\n    at flushEvidence (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:310:11)\n    at <anonymous> (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:802:9)"
+  }
+]

@@ -1,0 +1,42 @@
+[
+  {
+    "shard": "parallel",
+    "engine": "playwright-chrome",
+    "scenario": "parallel",
+    "repeat": 1,
+    "attempt": 1,
+    "error": "static PNG output differed from the first image for the same engine and case"
+  },
+  {
+    "shard": "parallel",
+    "engine": "playwright-chrome",
+    "scenario": "parallel",
+    "repeat": 2,
+    "attempt": 1,
+    "error": "static PNG output differed from the first image for the same engine and case"
+  },
+  {
+    "shard": "parallel",
+    "engine": "playwright-chrome",
+    "scenario": "parallel",
+    "repeat": 5,
+    "attempt": 1,
+    "error": "static PNG output differed from the first image for the same engine and case"
+  },
+  {
+    "shard": "resident",
+    "engine": "playwright-chrome",
+    "scenario": "resident",
+    "repeat": 4,
+    "attempt": 1,
+    "error": "Error: resident warmup 10 failed\n    at residentClient (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:224:11)\n    at async runResident (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:360:20)\n    at async <anonymous> (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:796:13)"
+  },
+  {
+    "shard": "resilience",
+    "engine": "playwright-chrome",
+    "scenario": "soak",
+    "repeat": 1,
+    "attempt": 1,
+    "error": "Error: benchmark worker produced no JSON;"
+  }
+]

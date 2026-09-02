@@ -1,0 +1,106 @@
+[
+  {
+    "shard": "parallel",
+    "engine": "puppeteer-chrome",
+    "scenario": "parallel",
+    "repeat": 1,
+    "attempt": 2,
+    "error": "Error: benchmark worker produced no JSON;"
+  },
+  {
+    "shard": "parallel",
+    "engine": "playwright-chrome",
+    "scenario": "parallel",
+    "repeat": 2,
+    "attempt": 1,
+    "error": "page.screenshot: Protocol error (Page.captureScreenshot): Unable to capture screenshot\nCall log:\n\u001b[2m  - taking page screenshot\u001b[22m\n\u001b[2m  - waiting for fonts to load...\u001b[22m\n\u001b[2m  - fonts loaded\u001b[22m\n\n    at ChromeEngine.shot (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\engines.ts:161:45)\n    at async capture (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\worker.ts:251:18)\n    at async <anonymous> (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\worker.ts:319:7)\n    at async mapConcurrent (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\worker.ts:322:3)\n    at async runEngineScenario (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\worker.ts:743:7)\n    at async <anonymous> (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\worker.ts:796:13)"
+  },
+  {
+    "shard": "parallel",
+    "engine": "puppeteer-chrome",
+    "scenario": "parallel",
+    "repeat": 4,
+    "attempt": 1,
+    "error": "Error: benchmark worker produced no JSON;"
+  },
+  {
+    "shard": "parallel",
+    "engine": "puppeteer-chrome",
+    "scenario": "parallel",
+    "repeat": 1,
+    "attempt": 1,
+    "error": "Error: benchmark worker produced no JSON;"
+  },
+  {
+    "shard": "parallel",
+    "engine": "puppeteer-chrome",
+    "scenario": "parallel",
+    "repeat": 2,
+    "attempt": 1,
+    "error": "Error: benchmark worker produced no JSON;"
+  },
+  {
+    "shard": "parallel",
+    "engine": "puppeteer-chrome",
+    "scenario": "parallel",
+    "repeat": 3,
+    "attempt": 1,
+    "error": "ProtocolError: Page.captureScreenshot timed out. Increase the 'protocolTimeout' setting in launch/connect calls for a higher timeout if needed.\n    at Callback.<instance_members_initializer> (D:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\puppeteer-core\\src\\common\\CallbackRegistry.ts:139:12)\n    at new Callback (D:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\puppeteer-core\\src\\common\\CallbackRegistry.ts:144:3)\n    at CallbackRegistry.create (D:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\puppeteer-core\\src\\common\\CallbackRegistry.ts:38:22)\n    at Connection._rawSend (D:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\puppeteer-core\\src\\cdp\\Connection.ts:179:22)\n    at CdpCDPSession.send (D:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\puppeteer-core\\src\\cdp\\CdpSession.ts:107:8)\n    at CdpPage._screenshot (D:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\puppeteer-core\\src\\cdp\\Page.ts:1198:52)\n    at CdpPage.screenshot (D:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\puppeteer-core\\src\\api\\Page.ts:2825:29)\n    at async CdpPage.<anonymous> (D:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\puppeteer-core\\src\\util\\decorators.ts:139:14)\n    at async ChromeEngine.shot (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\engines.ts:161:34)\n    at async capture (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\worker.ts:251:18)"
+  },
+  {
+    "shard": "parallel",
+    "engine": "puppeteer-chrome",
+    "scenario": "parallel",
+    "repeat": 6,
+    "attempt": 1,
+    "error": "ProtocolError: Page.captureScreenshot timed out. Increase the 'protocolTimeout' setting in launch/connect calls for a higher timeout if needed.\n    at Callback.<instance_members_initializer> (D:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\puppeteer-core\\src\\common\\CallbackRegistry.ts:139:12)\n    at new Callback (D:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\puppeteer-core\\src\\common\\CallbackRegistry.ts:144:3)\n    at CallbackRegistry.create (D:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\puppeteer-core\\src\\common\\CallbackRegistry.ts:38:22)\n    at Connection._rawSend (D:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\puppeteer-core\\src\\cdp\\Connection.ts:179:22)\n    at CdpCDPSession.send (D:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\puppeteer-core\\src\\cdp\\CdpSession.ts:107:8)\n    at CdpPage._screenshot (D:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\puppeteer-core\\src\\cdp\\Page.ts:1198:52)\n    at CdpPage.screenshot (D:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\puppeteer-core\\src\\api\\Page.ts:2825:29)\n    at async CdpPage.<anonymous> (D:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\puppeteer-core\\src\\util\\decorators.ts:139:14)\n    at async ChromeEngine.shot (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\engines.ts:161:34)\n    at async capture (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\worker.ts:251:18)"
+  },
+  {
+    "shard": "parallel",
+    "engine": "puppeteer-chrome",
+    "scenario": "parallel",
+    "repeat": 7,
+    "attempt": 1,
+    "error": "Error: benchmark worker produced no JSON;"
+  },
+  {
+    "shard": "resident",
+    "engine": "playwright-shell",
+    "scenario": "resident",
+    "repeat": 7,
+    "attempt": 1,
+    "error": "Error: resident warmup 10 failed\n    at residentClient (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\worker.ts:224:11)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async runResident (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\worker.ts:360:20)\n    at async <anonymous> (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\worker.ts:796:13)"
+  },
+  {
+    "shard": "resident",
+    "engine": "puppeteer-chrome",
+    "scenario": "resident",
+    "repeat": 7,
+    "attempt": 2,
+    "error": "Error: resident warmup 10 client exited before the start gate (code null, signal SIGTERM): InfrastructureError: owned process tree for PID(s) 9452 was not observable within 10000ms\n    at waitForProcessTree (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\process-tree.ts:282:9)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async ProcessMonitor.start (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\process-tree.ts:329:24)\n    at async finishOwnedChild (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\worker.ts:156:5)\n    at async residentClient (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\worker.ts:215:37)\n    at async runResident (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\worker.ts:360:20)\n    at async <anonymous> (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\worker.ts:796:13)\n    at finishOwnedChild (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\worker.ts:177:13)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async residentClient (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\worker.ts:215:37)\n    at async runResident (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\worker.ts:360:20)\n    at async <anonymous> (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\worker.ts:796:13)"
+  },
+  {
+    "shard": "resident",
+    "engine": "puppeteer-shell",
+    "scenario": "resident",
+    "repeat": 7,
+    "attempt": 1,
+    "error": "Error: resident warmup 9 failed\n    at residentClient (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\worker.ts:224:11)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async runResident (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\worker.ts:360:20)\n    at async <anonymous> (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\worker.ts:796:13)"
+  },
+  {
+    "shard": "resilience",
+    "engine": "puppeteer-chrome",
+    "scenario": "soak",
+    "repeat": 1,
+    "attempt": 2,
+    "error": "Error: benchmark worker produced no JSON;"
+  },
+  {
+    "shard": "resilience",
+    "engine": "playwright-chrome",
+    "scenario": "soak",
+    "repeat": 1,
+    "attempt": 1,
+    "error": "static PNG output differed from the first image for the same engine and case"
+  }
+]
