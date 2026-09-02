@@ -179,7 +179,10 @@ jobs:
         target: ${{ fromJSON(needs.resolve.outputs.target_matrix) }}
         shard: ${{ fromJSON(needs.resolve.outputs.shard_matrix) }}
     runs-on: ${{ matrix.target.runner }}
-    timeout-minutes: 90
+    # Behind the profile's shard budget, which stops scheduling cells while there
+    # is still time to write and upload. This is the backstop for a shard that
+    # hangs before the budget can apply, not the mechanism that ends a long one.
+    timeout-minutes: 110
     steps:
       # The harness only reads apps/benchmark; a full checkout is 64k files and
       # costs 1-2 minutes on the Windows runners.

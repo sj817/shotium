@@ -73,9 +73,12 @@ export const PROFILES = Object.freeze({
     soakIterations: 1000,
     soakTimeoutMs: 600_000,
     caseLimit: Number.POSITIVE_INFINITY,
-    // The GitHub job times out at 90 minutes and kills the uploads with it.
-    // Stop scheduling cells with enough margin to write and upload what we have.
-    shardBudgetMs: 70 * 60_000,
+    // The GitHub job timeout kills the uploads with it, so stop scheduling with
+    // enough margin to write and upload what we have. 70 minutes left
+    // win32-x64/parallel six cells short of its 105 at concurrency 1/2/4, which
+    // is the slowest cell mix on the slowest runner; the job timeout moved to
+    // 110 to keep the same margin behind this.
+    shardBudgetMs: 85 * 60_000,
   },
 });
 

@@ -426,10 +426,34 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     output: String(options.output),
     platform: String(options.platform),
   });
+  // The same split the shard CLI makes, one layer up: the merged status stays an
+  // honest description of what the platform measured, and the exit code answers
+  // the narrower question of whether this run can be trusted. A platform whose
+  // status is 'fail' only because a baseline engine rendered the same page
+  // differently twice is a recorded result, not a broken run -- and leaving the
+  // old rule here meant four Merge jobs went red for exactly that.
+  const merged: any = result.summary;
+  const shotium = (merged.engines || []).find((engine) => engine.engine === 'shotium');
+  const blocking: string[] = [];
+  if (!merged.shards_complete) {
+    blocking.push(`missing shards: ${(merged.missing_shards || []).join(', ') || 'unknown'}`);
+  }
+  if ((merged.invalid_shards || []).length) {
+    blocking.push(`unreadable shards: ${merged.invalid_shards.length}`);
+  }
+  if (!shotium) blocking.push('no shotium result in any shard');
+  else if (['fail', 'infra-error'].includes(shotium.status)) {
+    blocking.push(`shotium is ${shotium.status} on this platform`);
+  }
+  const baseline = (merged.engines || [])
+      .filter((engine) => engine.engine !== 'shotium' && ['fail', 'infra-error'].includes(engine.status))
+      .map((engine) => `${engine.engine}=${engine.status}`);
   process.stdout.write(`${JSON.stringify({
-    platform: result.summary.platform,
-    status: result.summary.status,
-    shards_complete: result.summary.shards_complete,
+    platform: merged.platform,
+    status: merged.status,
+    shards_complete: merged.shards_complete,
+    baseline_outcomes: baseline,
+    blocking,
   })}\n`);
-  if (['fail', 'infra-error'].includes(result.summary.status)) process.exitCode = 1;
+  if (blocking.length) process.exitCode = 1;
 }
