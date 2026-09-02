@@ -8,6 +8,19 @@ import {median, percentile, relativeDrift, round} from './statistics.ts';
 
 const sleep = (milliseconds: number) => new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
 
+// A PID that vanished between being listed and being read is the normal case
+// when the thing being monitored is a browser's short-lived subprocesses -- a
+// 1000-iteration soak at concurrency 4 starts and reaps hundreds of them. Linux
+// reports that as ENOENT when the /proc directory is already gone and as ESRCH
+// when the task is mid-teardown, and only the first was being treated as gone:
+// the second was raised as an infrastructure error, which marked the whole cell
+// untrusted and failed the shard.
+const PROCESS_GONE_CODES = new Set(['ENOENT', 'ESRCH']);
+
+function processIsGone(error: any) {
+  return PROCESS_GONE_CODES.has(error?.code);
+}
+
 async function withTimeout<T>(label: string, promise: Promise<T>, timeoutMs: number): Promise<T> {
   let timer;
   // The losing side of the race is still live. Node treats a rejection nobody
@@ -88,16 +101,20 @@ export async function processIdentityForPid(pid: number) {
   try {
     stat = fs.readFileSync(`/proc/${pid}/stat`, 'utf8');
   } catch (error) {
-    if (error?.code === 'ENOENT') return null;
+    if (processIsGone(error)) return null;
     throw new InfrastructureError(`could not read /proc identity for ${pid}`, error);
   }
+  // An open that wins the race against exit can still read nothing: the task is
+  // reaped between open and read and /proc hands back an empty file. That is the
+  // same "it is gone" answer as ENOENT, not a malformed stat line.
+  if (!stat.trim()) return null;
   const parsed = parseLinuxProcStat(stat);
   let command = '';
   let rssBytes = 0;
   try {
     command = fs.readFileSync(`/proc/${pid}/cmdline`, 'utf8').replaceAll('\0', ' ').trim();
   } catch (error) {
-    if (error?.code !== 'ENOENT') {
+    if (!processIsGone(error)) {
       throw new InfrastructureError(`could not read /proc command for ${pid}`, error);
     }
   }
@@ -106,7 +123,7 @@ export async function processIdentityForPid(pid: number) {
     const rss = status.match(/^VmRSS:\s+(\d+)\s+kB$/m);
     if (rss) rssBytes = Number(rss[1]) * 1024;
   } catch (error) {
-    if (error?.code !== 'ENOENT') {
+    if (!processIsGone(error)) {
       throw new InfrastructureError(`could not read /proc RSS for ${pid}`, error);
     }
   }
@@ -119,9 +136,10 @@ async function birthToken(entry, refresh = false) {
     try {
       stat = fs.readFileSync(`/proc/${entry.pid}/stat`, 'utf8');
     } catch (error) {
-      if (error?.code === 'ENOENT') return null;
+      if (processIsGone(error)) return null;
       throw new InfrastructureError(`could not read /proc identity for ${entry.pid}`, error);
     }
+    if (!stat.trim()) return null;
     const fields = stat.slice(stat.lastIndexOf(')') + 2).split(' ');
     const startTicks = fields[19];
     if (!startTicks) throw new Error(`Linux process ${entry.pid} has no /proc starttime`);

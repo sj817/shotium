@@ -5,6 +5,7 @@ import {
   collectAncestorPids,
   cpuLimitFromBaseline,
   parseLinuxProcStat,
+  processIdentityForPid,
   partitionProtectedProcesses,
   ProcessMonitor,
   selectOwnedProcessEntries,
@@ -140,4 +141,27 @@ test('forced cleanup always separates the current process ancestry', () => {
   const result = partitionProtectedProcesses(identities, protectedPids);
   assert.deepEqual(result.killable, [{pid: 30}]);
   assert.deepEqual(result.protected, [{pid: 10}, {pid: 20}, {pid: 40}]);
+});
+
+test('a PID that exits mid-sample is gone, not an infrastructure failure', async (t) => {
+  // A soak at concurrency 4 starts and reaps hundreds of browser subprocesses,
+  // so losing the race against exit is the normal case. Linux answers ENOENT
+  // once /proc is gone and ESRCH while the task is still being torn down; a
+  // read that wins the race can also come back empty. Only the first of those
+  // three was treated as gone, and the other two raised an infrastructure error
+  // that marked the cell untrusted and failed the whole shard.
+  if (process.platform !== 'linux') return t.skip('Linux /proc identity path');
+  const {default: fs} = await import('node:fs');
+  const original = fs.readFileSync;
+  t.after(() => { (fs as any).readFileSync = original; });
+  for (const outcome of ['ESRCH', 'ENOENT', 'empty']) {
+    (fs as any).readFileSync = (file: any, ...rest: any[]) => {
+      if (!String(file).startsWith('/proc/')) return (original as any)(file, ...rest);
+      if (outcome === 'empty') return '';
+      const error: any = new Error(outcome);
+      error.code = outcome;
+      throw error;
+    };
+    assert.equal(await processIdentityForPid(999999), null, `${outcome} should read as gone`);
+  }
 });
