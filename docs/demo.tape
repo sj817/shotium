@@ -1,6 +1,6 @@
 # shotium terminal demo.
 #
-# Regenerate with `npm run docs:demo`, which prepares the sandbox in
+# Regenerate with `pnpm run docs:demo`, which prepares the sandbox in
 # docs/.demo-run (a fresh copy of the docs/demo sources, with no node_modules,
 # so that the install below is a real one) and then runs
 # `vhs docs/demo.tape` from the repository root -- Output is resolved there.
@@ -13,7 +13,7 @@
 Output docs/assets/demo.gif
 
 Require node
-Require npm
+Require pnpm
 
 Set Shell "bash"
 Set FontSize 20
@@ -37,8 +37,8 @@ Sleep 1s
 Show
 
 # 1. Install. Two packages: the JS wrapper and one prebuilt platform binary.
-Type "npm install @shotkit/shotium" Enter
-Wait+Screen@120s /found .* vulnerabilities/
+Type "pnpm add @shotkit/shotium" Enter
+Wait+Screen@120s /Done in/
 Sleep 2s
 
 Hide

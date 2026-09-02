@@ -1,6 +1,6 @@
 // Regenerates the still images the README embeds.
 //
-//   npm run docs:assets
+//   pnpm run docs:assets
 //
 // Three files land in docs/assets:
 //

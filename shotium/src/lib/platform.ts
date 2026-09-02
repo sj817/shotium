@@ -8,7 +8,7 @@ const require = createRequire(import.meta.url);
 // Which package carries the engine for this machine.
 //
 // The engine is not in this package and cannot be: it is a Chromium build,
-// 41 MB per platform and architecture, six of them, and `npm install` is never
+// 41 MB per platform and architecture, six of them, and `pnpm install` is never
 // going to produce one. So the bytes live in six packages of their own and
 // this one depends on all six as optionalDependencies with `os` and `cpu` set,
 // which is npm's way of saying "install the one that matches this machine and

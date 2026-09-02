@@ -12,13 +12,13 @@ import {
   PROFILES,
   SETTLE,
   SHARD_IDS,
-  SHARD_SCENARIOS,
   currentPlatformId,
 } from './constants.ts';
 import {packageVersions, probeEngine} from './engines.ts';
 import {benchmarkDaemonName} from './daemon-name.ts';
 import {ProductError, isProductError} from './errors.ts';
 import {startFixtureServer, loadCases} from './fixtures.ts';
+import {buildGroups} from './groups.ts';
 import {ensureShotium} from './install-target.ts';
 import {
   ProcessMonitor,
@@ -29,7 +29,7 @@ import {
   waitForIdentitiesToExit,
   waitForSystemStable,
 } from './process-tree.ts';
-import {distribution, balancedOrder} from './statistics.ts';
+import {distribution} from './statistics.ts';
 import {validatePlatformResult} from './schema.ts';
 
 const options = parseArgs(process.argv.slice(2), {
@@ -83,43 +83,6 @@ async function gitRevision() {
   if (process.env.GITHUB_SHA) return process.env.GITHUB_SHA;
   const result = await execa('git', ['rev-parse', 'HEAD'], {cwd: path.resolve(APP_ROOT, '..', '..'), reject: false});
   return result.exitCode === 0 ? result.stdout.trim() : null;
-}
-
-function buildGroups(engines, profile) {
-  const groups = [];
-  let rotation = 0;
-  const selectedScenarios = shard === 'all' ? null : new Set(SHARD_SCENARIOS[shard]);
-  const add = (scenario, repeat, concurrency, iterations = 1, timeoutMs = undefined,
-      selectedEngines = engines) => {
-    if (selectedScenarios && !selectedScenarios.has(scenario)) return;
-    groups.push({
-      scenario, repeat, concurrency, iterations, timeoutMs,
-      engines: balancedOrder(selectedEngines, rotation++, `${options.seed}:${scenario}`),
-    });
-  };
-  const chunks = (total, count) => Array.from({length: count}, (_, index) =>
-    Math.floor(total / count) + (index < total % count ? 1 : 0));
-  for (const scenario of ['cold', 'cold-settled']) {
-    for (let repeat = 1; repeat <= profile.repeats; repeat += 1) {
-      add(scenario, repeat, 1);
-    }
-  }
-  chunks(profile.warmIterations, profile.warmChunks)
-      .forEach((iterations, index) => add('warm', index + 1, 1, iterations));
-  add('reuse-page', 1, 1, profile.warmIterations, undefined,
-      engines.filter((engine) => engine !== 'shotium'));
-  for (let repeat = 1; repeat <= profile.batchRounds; repeat += 1) add('batch', repeat, 1);
-  for (let repeat = 1; repeat <= profile.repeats; repeat += 1) add('resident', repeat, 1);
-  chunks(profile.lifecycleCycles, profile.lifecycleChunks)
-      .forEach((iterations, index) => add('lifecycle', index + 1, 1, iterations));
-  add('faults', 1, 1);
-  for (const concurrency of profile.concurrencies) {
-    for (let repeat = 1; repeat <= profile.batchRounds; repeat += 1) {
-      add('parallel', repeat, concurrency, 1);
-    }
-  }
-  add('soak', 1, 4, profile.soakIterations, profile.soakTimeoutMs);
-  return groups;
 }
 
 async function cleanupOwnedShotiumEndpoints(profile) {
@@ -448,7 +411,7 @@ async function main() {
     });
   }
   const executionOrder = [];
-  const groups = buildGroups(runnable, profile);
+  const groups = buildGroups(runnable, profile, {shard, seed: String(options.seed)});
   const totalCells = groups.reduce((sum, group) => sum + group.engines.length, 0);
   let cellIndex = 0;
   progress(`${platform}/${shard}: ${totalCells} cells across ${runnable.length} engines ` +
@@ -517,6 +480,7 @@ async function main() {
               scenario: group.scenario,
               repeat: group.repeat,
               attempt,
+              concurrency: group.concurrency,
               error: String(result.error || 'benchmark cell failed without an error message'),
             });
             break;

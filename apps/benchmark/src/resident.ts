@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {ShotiumEngine, competitorChromiumPolicy} from './engines.ts';
-import {VIEWPORT} from './constants.ts';
+import {BROWSER_OPERATION_TIMEOUT_MS, VIEWPORT} from './constants.ts';
 
 function writeEvidence(file, image) {
   if (!file) return;
@@ -16,9 +16,10 @@ async function warmPuppeteer(name, url, evidenceFile) {
     headless: name === 'puppeteer-shell' ? 'shell' : true,
     args: competitorChromiumPolicy().puppeteerArgs,
     defaultViewport: {...VIEWPORT, deviceScaleFactor: 1},
+    protocolTimeout: BROWSER_OPERATION_TIMEOUT_MS,
   });
   const page = await browser.newPage();
-  await page.goto(url, {waitUntil: 'load'});
+  await page.goto(url, {waitUntil: 'load', timeout: BROWSER_OPERATION_TIMEOUT_MS});
   writeEvidence(evidenceFile, await page.screenshot({type: 'png'}));
   await page.close();
   return {
@@ -39,8 +40,11 @@ async function warmPlaywright(name, url, evidenceFile) {
   const browser = await chromium.connect(server.wsEndpoint());
   const context = await browser.newContext({viewport: VIEWPORT, deviceScaleFactor: 1});
   const page = await context.newPage();
-  await page.goto(url, {waitUntil: 'load'});
-  writeEvidence(evidenceFile, await page.screenshot({type: 'png'}));
+  await page.goto(url, {waitUntil: 'load', timeout: BROWSER_OPERATION_TIMEOUT_MS});
+  writeEvidence(evidenceFile, await page.screenshot({
+    type: 'png',
+    timeout: BROWSER_OPERATION_TIMEOUT_MS,
+  }));
   await context.close();
   return {
     endpoint: {wsEndpoint: server.wsEndpoint()},

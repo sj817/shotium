@@ -3,7 +3,7 @@ import {computed, onMounted, ref, watch} from 'vue';
 import {useData} from 'vitepress';
 import zhCn from 'element-plus/es/locale/lang/zh-cn';
 import en from 'element-plus/es/locale/lang/en';
-import {loadIndex, loadRun} from '../lib/data';
+import {isPublishableEntry, loadIndex, loadRun} from '../lib/data';
 import {useI18n} from '../lib/i18n';
 import {buildRunReport} from '../lib/report';
 import {PLATFORM_IDS, type BenchmarkIndex, type LoadedRun, type PlatformId} from '../lib/types';
@@ -32,6 +32,7 @@ const error = ref('');
 const platformId = ref<PlatformId>('linux-x64');
 
 const report = computed(() => (run.value ? buildRunReport(run.value) : null));
+const defaultEntry = computed(() => index.value?.results.find(isPublishableEntry) ?? index.value?.results[0] ?? null);
 
 function isPlatformId(value: string | null): value is PlatformId {
   return value !== null && (PLATFORM_IDS as readonly string[]).includes(value);
@@ -44,7 +45,7 @@ function readUrl(): {run: string | null; platform: string | null} {
 
 function writeUrl() {
   const params = new URLSearchParams(window.location.search);
-  if (selectedPath.value && index.value?.results[0]?.path !== selectedPath.value) params.set('run', selectedPath.value);
+  if (selectedPath.value && defaultEntry.value?.path !== selectedPath.value) params.set('run', selectedPath.value);
   else params.delete('run');
   params.set('platform', platformId.value);
   const query = params.toString();
@@ -64,7 +65,8 @@ async function loadAll() {
     }
     const wanted = readUrl();
     if (isPlatformId(wanted.platform)) platformId.value = wanted.platform;
-    const entry = loaded.results.find((candidate) => candidate.path === wanted.run) ?? loaded.results[0];
+    const entry = loaded.results.find((candidate) => candidate.path === wanted.run) ??
+      loaded.results.find(isPublishableEntry) ?? loaded.results[0];
     selectedPath.value = entry?.path ?? null;
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : String(cause);

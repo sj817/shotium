@@ -29,12 +29,17 @@ jobs:
         with:
           ref: main
 
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+
       - name: Set up Node.js
         uses: actions/setup-node@v5
         with:
           node-version: '24'
-          cache: npm
-          cache-dependency-path: apps/benchmark-site/package-lock.json
+          cache: pnpm
+          cache-dependency-path: apps/benchmark-site/pnpm-lock.yaml
 
       - name: Configure GitHub Pages
         id: pages
@@ -42,13 +47,13 @@ jobs:
 
       - name: Install locked site dependencies
         working-directory: apps/benchmark-site
-        run: npm ci --no-audit --no-fund
+        run: pnpm install --frozen-lockfile
 
       - name: Test and build for the repository Pages path
         working-directory: apps/benchmark-site
         env:
           BENCHMARK_SITE_BASE: ${{ steps.pages.outputs.base_path }}/
-        run: npm run check
+        run: pnpm run check
 
       - name: Upload the Pages artifact
         uses: actions/upload-pages-artifact@v5

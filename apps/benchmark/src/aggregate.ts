@@ -4,7 +4,7 @@ import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {parseArgs, booleanArg, recoverNpmRunValues} from './args.ts';
 import {APP_ROOT, PLATFORM_IDS, RESULT_STATUSES, SHARD_SCENARIOS} from './constants.ts';
-import {renderLatest, renderReport, renderSummaryCsv} from './report.ts';
+import {isPublishableResult, renderLatest, renderReport, renderSummaryCsv} from './report.ts';
 import {validatePlatformResult} from './schema.ts';
 
 const PERMANENT_FILES = ['summary.json', 'samples.jsonl', 'quality.json', 'failures.json'] as const;
@@ -118,6 +118,7 @@ function rebuildIndex(resultsRoot: string): any[] {
         status: value.status,
         quality_status: value.quality_status,
         evidence_status: value.evidence_status || 'unknown',
+        publishable: isPublishableResult(value),
         run_id: value.run_id,
         source_sha: value.source_sha,
       });
@@ -277,6 +278,7 @@ export function aggregateResults(options: Record<string, any>) {
     status: complete ? 'complete' : 'incomplete',
     quality_status: qualityStatus,
     evidence_status: evidenceComplete ? 'complete' : 'incomplete',
+    publishable: complete && qualityStatus === 'pass' && evidenceComplete,
     shotium_version: version,
     profile: String(options.profile || platforms[0]?.profile || 'unknown'),
     seed: String(options.seed || platforms[0]?.seed || ''),
@@ -289,16 +291,18 @@ export function aggregateResults(options: Record<string, any>) {
   writeJson(path.join(destination, 'manifest.json'), manifest);
   fs.writeFileSync(path.join(destination, 'report.md'), renderReport(platforms, manifest, 'en'));
   fs.writeFileSync(path.join(destination, 'report.zh-CN.md'), renderReport(platforms, manifest, 'zh-CN'));
-  fs.writeFileSync(path.join(destination, 'summary.csv'), renderSummaryCsv(platforms));
+  fs.writeFileSync(path.join(destination, 'summary.csv'), renderSummaryCsv(platforms, manifest));
 
   const index = rebuildIndex(resultsRoot);
   writeJson(path.join(resultsRoot, 'index.json'), {schema_version: 1, generated_utc: new Date().toISOString(), results: index});
-  const latest = index[0];
+  const latest = index.find(isPublishableResult);
   fs.writeFileSync(path.join(resultsRoot, 'LATEST.md'), renderLatest(latest));
 
   if (options.githubOutput) {
     fs.appendFileSync(String(options.githubOutput), `result_directory=${destination.replaceAll('\\', '/')}\n` +
-      `result_name=${runName}\nversion=${version}\nmanifest_status=${manifest.status}\n`);
+      `result_name=${runName}\nversion=${version}\nmanifest_status=${manifest.status}\n` +
+      `quality_status=${manifest.quality_status}\nevidence_status=${manifest.evidence_status}\n` +
+      `publishable=${manifest.publishable}\n`);
   }
   return {destination, manifest};
 }

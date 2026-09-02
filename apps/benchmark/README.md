@@ -19,8 +19,8 @@ apps/benchmark/
 ```
 
 ```bash
-npm ci
-npm run benchmark -- --shotium-version 0.3.2 --profile smoke --output ./out --seed local-check
+pnpm install --frozen-lockfile
+pnpm run benchmark -- --shotium-version 0.3.2 --profile smoke --output ./out --seed local-check
 ```
 
 Run one scenario shard by adding `--shard startup`, `--shard throughput`,
@@ -28,7 +28,7 @@ Run one scenario shard by adding `--shard startup`, `--shard throughput`,
 option (or passing `--shard all`) keeps the single-machine local run:
 
 ```bash
-npm run benchmark -- --shotium-version 0.3.2 --profile full --shard throughput --output ./out --seed local-check
+pnpm run benchmark -- --shotium-version 0.3.2 --profile full --shard throughput --output ./out --seed local-check
 ```
 
 The shard boundaries are `startup` for cold, cold-settled and lifecycle;
@@ -39,29 +39,50 @@ The CI workflow expands this into a 30-job `platform x shard` matrix. Every
 shard still runs all available engines on one native runner with balanced engine
 ordering, so comparisons within a scenario remain same-machine comparisons.
 The five shards are merged into one platform result before the six platform
-results are aggregated. Runner metadata remains attached to each shard; timings
-from different shards or platforms are never combined into one ranking.
+results are aggregated. Runner metadata remains attached to each shard; raw
+timings from different shards or platforms are never pooled. When a cross-shard
+summary is needed, only same-cell ratios measured inside a runner are combined
+geometrically.
 
 To compare source-built executables directly on one machine, run:
 
 ```bash
-npm run benchmark:native -- --baseline-executable /path/to/headless_shell --baseline-engine headless-shell --shot-executable /path/to/shotium --iterations 5 --warmup-iterations 1 --output ./out-native
+pnpm run benchmark:native -- --baseline-executable /path/to/headless_shell --baseline-engine headless-shell --shot-executable /path/to/shotium --iterations 5 --warmup-iterations 1 --output ./out-native
 ```
 
 The JSON/CSV report contains raw samples, validated PNG metadata, executable
 SHA-256/version metadata, and same-machine `baseline p50 / Shot p50` ratios.
-Each platform also gets its own geometric-mean ranking. It includes only cells
+The five rows are engine variants: Shotium, plus Puppeteer and Playwright each
+driving Chrome and the headless shell. They are not five independent packages.
+Each passing platform also gets its own geometric-mean ranking. It includes only cells
 where Shotium and the compared engine both passed and were ranking-eligible on
 the same scenario and concurrency; lower normalized elapsed time is better.
 Coverage and per-cell wins are shown, and platforms are never mixed together.
 Only engines covering every comparable cell receive a formal rank; partial
-coverage stays visible with its score but is explicitly left unranked.
+coverage stays visible with its score but is explicitly left unranked. Failed,
+noisy, incomplete, or evidence-incomplete platforms keep their diagnostic rows
+but never produce a formal rank or winner.
+
+This is a fair comparison for one deliberately narrow question: how each
+locked, out-of-the-box engine variant performs the same static HTML/CSS
+screenshot workload with the browser binary it normally ships. It is not a
+package-level verdict on Puppeteer or Playwright, and it does not isolate their
+driver overhead: both competitors use their own locked Chromium revisions,
+while Shotium necessarily uses its stripped Chromium build. A same-browser
+track between Puppeteer and Playwright would answer that separate driver-only
+question, but a three-way same-browser track is not possible because Shotium is
+the browser engine rather than a controller for stock Chrome. The fixture set
+also exercises only the shared static-rendering surface, not JavaScript or
+general browser automation. Every engine receives the same offered concurrency,
+viewport, cache policy, fixtures, PNG format and operation timeout; the result
+still includes each product's real internal process and memory topology rather
+than assuming those implementations consume identical resources.
 
 To regenerate only the derived Markdown/CSV views of an archived result
 (including an older four-shard result), run:
 
 ```bash
-npm run render-report -- --result-directory ../../benchmark-results/v0.3.2/<run-directory>
+pnpm run render-report -- --result-directory ../../benchmark-results/v0.3.2/<run-directory>
 ```
 
 This reads the archived manifest and platform summaries, then replaces only
@@ -90,9 +111,17 @@ cells once the profile's budget is spent, so results and evidence are written
 instead of being lost to a job timeout. A baseline engine that fails - a browser
 missing for the platform, a screenshot that differs from its own first render, a
 soak that blanks - is recorded in `summary.json` and `failures.json` but does not
-fail the run; only Shotium failing, the harness or host breaking, or the budget
-expiring does. The harness records all
-samples and terminates only the PID tree it started. The repository stores the compact
+abort the shard before its evidence is uploaded. The aggregate is nevertheless
+rejected and not published unless all six platforms, every shard, the quality
+gate, and all evidence pass. Browser navigation and screenshot operations use
+the same 30-second ceiling for all engines. Cold-start timing includes importing
+each package inside the timed launch hook. Resident mode starts and settles one
+host per engine, then measures seven new clients against that host instead of
+restarting and re-warming it seven times. Batch and parallel modes likewise keep
+all seven rounds and all per-case samples while reusing one settled engine for
+each engine/concurrency combination; independent launches remain in the cold
+and lifecycle scenarios. The harness records all samples and
+terminates only the PID tree it started. The repository stores the compact
 `permanent` output. PNGs, logs and process timelines are CI artifacts retained
 for 90 days.
 

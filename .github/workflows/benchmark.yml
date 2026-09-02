@@ -74,11 +74,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-          cache: npm
-          cache-dependency-path: apps/benchmark/package-lock.json
+          cache: pnpm
+          cache-dependency-path: apps/benchmark/pnpm-lock.yaml
 
       - name: Install the locked npm resolver
         id: resolver_install
@@ -87,7 +91,7 @@ jobs:
         env:
           PUPPETEER_SKIP_DOWNLOAD: 'true'
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
-        run: npm ci --no-audit --no-fund
+        run: pnpm install --frozen-lockfile
 
       - name: Poll npm and freeze a dist-tag to one exact version
         if: steps.resolver_install.outcome == 'success'
@@ -96,7 +100,7 @@ jobs:
         shell: bash
         working-directory: apps/benchmark
         run: |
-          version=$(npm run --silent resolve-version -- -- \
+          version=$(pnpm --silent run resolve-version -- \
             --shotium-version "${{ inputs.shotium_version }}" \
             --timeout 600000 | tail -n 1)
           test -n "$version"
@@ -182,7 +186,7 @@ jobs:
     # Behind the profile's shard budget, which stops scheduling cells while there
     # is still time to write and upload. This is the backstop for a shard that
     # hangs before the budget can apply, not the mechanism that ends a long one.
-    timeout-minutes: 110
+    timeout-minutes: 60
     steps:
       # The harness only reads apps/benchmark; a full checkout is 64k files and
       # costs 1-2 minutes on the Windows runners.
@@ -190,11 +194,15 @@ jobs:
         with:
           sparse-checkout: apps/benchmark
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-          cache: npm
-          cache-dependency-path: apps/benchmark/package-lock.json
+          cache: pnpm
+          cache-dependency-path: apps/benchmark/pnpm-lock.yaml
 
       - name: Install locked benchmark tools
         id: install
@@ -202,29 +210,29 @@ jobs:
         env:
           PUPPETEER_SKIP_DOWNLOAD: 'true'
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
-        run: npm ci --no-audit --no-fund
+        run: pnpm install --frozen-lockfile
 
       - name: Install Puppeteer Chrome
         continue-on-error: true
         working-directory: apps/benchmark
-        run: npm run browser:install:puppeteer-chrome
+        run: pnpm run browser:install:puppeteer-chrome
 
       - name: Install Puppeteer headless shell
         continue-on-error: true
         working-directory: apps/benchmark
-        run: npm run browser:install:puppeteer-shell
+        run: pnpm run browser:install:puppeteer-shell
 
       - name: Install Playwright Chromium and headless shell
         continue-on-error: true
         working-directory: apps/benchmark
-        run: npm run browser:install:playwright
+        run: pnpm run browser:install:playwright
 
       - name: Run the native benchmark
         id: benchmark
         continue-on-error: true
         working-directory: apps/benchmark
         run: >-
-          npm run benchmark -- --
+          pnpm run benchmark --
           --shotium-version "${{ needs.resolve.outputs.install_spec }}"
           --profile "${{ inputs.profile }}"
           --shard "${{ matrix.shard }}"
@@ -237,7 +245,7 @@ jobs:
         continue-on-error: true
         working-directory: apps/benchmark
         run: >-
-          npm run hash-artifact -- --
+          pnpm run hash-artifact --
           --input "${{ github.workspace }}/apps/benchmark/out/artifact/${{ matrix.target.platform }}/${{ matrix.shard }}"
           --output "${{ github.workspace }}/apps/benchmark/out/permanent/${{ matrix.target.platform }}/${{ matrix.shard }}/artifact.json"
           --name "benchmark-evidence-${{ matrix.target.platform }}-${{ matrix.shard }}-${{ github.run_id }}-a${{ github.run_attempt }}"
@@ -258,7 +266,7 @@ jobs:
         if: always() && steps.hash.outcome == 'success'
         working-directory: apps/benchmark
         run: >-
-          npm run record-artifact-upload -- --
+          pnpm run record-artifact-upload --
           --record="${{ github.workspace }}/apps/benchmark/out/permanent/${{ matrix.target.platform }}/${{ matrix.shard }}/artifact.json"
           --uploaded=${{ steps.evidence.outcome == 'success' }}
           --artifact-id="${{ steps.evidence.outputs.artifact-id }}"
@@ -304,18 +312,22 @@ jobs:
         with:
           sparse-checkout: apps/benchmark
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-          cache: npm
-          cache-dependency-path: apps/benchmark/package-lock.json
+          cache: pnpm
+          cache-dependency-path: apps/benchmark/pnpm-lock.yaml
 
       - name: Install the TypeScript shard merger
         working-directory: apps/benchmark
         env:
           PUPPETEER_SKIP_DOWNLOAD: 'true'
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
-        run: npm ci --no-audit --no-fund
+        run: pnpm install --frozen-lockfile
 
       - name: Prepare shard input and platform output directories
         shell: bash
@@ -336,7 +348,7 @@ jobs:
         continue-on-error: true
         working-directory: apps/benchmark
         run: >-
-          npm run merge-shards -- --
+          pnpm run merge-shards --
           --input "${{ runner.temp }}/benchmark-shards/${{ matrix.platform }}"
           --output "${{ github.workspace }}/apps/benchmark/out/permanent/${{ matrix.platform }}"
           --platform "${{ matrix.platform }}"
@@ -383,18 +395,22 @@ jobs:
           path: .benchmark-source
           sparse-checkout: apps/benchmark
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-          cache: npm
-          cache-dependency-path: .benchmark-source/apps/benchmark/package-lock.json
+          cache: pnpm
+          cache-dependency-path: .benchmark-source/apps/benchmark/pnpm-lock.yaml
 
       - name: Install the TypeScript aggregator
         working-directory: .benchmark-source/apps/benchmark
         env:
           PUPPETEER_SKIP_DOWNLOAD: 'true'
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
-        run: npm ci --no-audit --no-fund
+        run: pnpm install --frozen-lockfile
 
       - name: Prepare an input directory even when every platform failed
         shell: bash
@@ -416,7 +432,7 @@ jobs:
         id: aggregate
         working-directory: .benchmark-source/apps/benchmark
         run: >-
-          npm run aggregate -- --
+          pnpm run aggregate --
           --input "${{ runner.temp }}/benchmark-input"
           --results-root "${{ github.workspace }}/benchmark-results"
           --shotium-version "${{ needs.resolve.outputs.archive_version || inputs.shotium_version }}"
@@ -438,7 +454,10 @@ jobs:
           retention-days: 90
 
       - name: Commit the immutable result to main
-        if: inputs.commit_results && steps.aggregate.outcome == 'success'
+        if: >-
+          inputs.commit_results && !cancelled() &&
+          steps.aggregate.outcome == 'success' &&
+          steps.aggregate.outputs.publishable == 'true'
         shell: bash
         env:
           VERSION: ${{ steps.aggregate.outputs.version }}
@@ -458,8 +477,8 @@ jobs:
               git rebase --abort
               exit 1
             fi
-            npm --prefix .benchmark-source/apps/benchmark ci --no-audit --no-fund
-            npm --prefix .benchmark-source/apps/benchmark run aggregate -- -- \
+            pnpm --dir .benchmark-source/apps/benchmark install --frozen-lockfile
+            pnpm --dir .benchmark-source/apps/benchmark run aggregate -- \
               --input "${RUNNER_TEMP}/benchmark-input" \
               --results-root "${GITHUB_WORKSPACE}/benchmark-results" \
               --shotium-version "${VERSION}" \
@@ -476,7 +495,22 @@ jobs:
           done
 
       - name: Deploy the archived benchmark site
-        if: inputs.commit_results && steps.aggregate.outcome == 'success'
+        if: >-
+          inputs.commit_results && !cancelled() &&
+          steps.aggregate.outcome == 'success' &&
+          steps.aggregate.outputs.publishable == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run benchmark-pages.yml --ref main
+
+      - name: Reject incomplete or untrusted benchmark reports
+        if: >-
+          !cancelled() && steps.aggregate.outcome == 'success' &&
+          steps.aggregate.outputs.publishable != 'true'
+        shell: bash
+        run: >-
+          echo "Benchmark is not publishable:
+          status=${{ steps.aggregate.outputs.manifest_status }},
+          quality=${{ steps.aggregate.outputs.quality_status }},
+          evidence=${{ steps.aggregate.outputs.evidence_status }}" >&2;
+          exit 1

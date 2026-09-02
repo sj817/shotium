@@ -100,6 +100,11 @@ jobs:
           fetch-depth: 0
           submodules: false
 
+      - name: set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+
       - name: depot_tools
         # Invoked by hand for the same reason the Windows job calls
         # win_tools.bat: DEPOT_TOOLS_UPDATE=0 pins the depot_tools this run
@@ -363,20 +368,20 @@ jobs:
           # different build would be checking nothing.
           #
           # Before the node suites, not after: the addon is what they load. An
-          # npm install carries the library and the addon and not the
+          # A package-manager install carries the library and the addon and not the
           # executable, so there is no second path for them to fall back to.
           ( cd shotium/native \
             && SHOT_INCLUDE_DIR="$PWD/../../shot" \
                SHOT_LIB_DIR="$PWD/../../out/Shot" \
-               npx --yes node-gyp@13 rebuild )
+               pnpm dlx node-gyp@13 rebuild )
           cp out/Shot/libshotium.dylib out/Shot/shotium_data.pak \
              out/Shot/shotium_strings.pak shotium/native/build/Release/
 
           # The package is TypeScript, so what the check suites import is a
-          # build output rather than a file in the tree. `npm install`, not
-          # `npm ci` -- see checks.yml for why the lockfile cannot carry the
-          # six optionalDependencies yet.
-          ( cd shotium && npm install --no-audit --no-fund && npm run build )
+          # build output rather than a file in the tree. There is no frozen
+          # lockfile -- see checks.yml for why it cannot carry the six
+          # optionalDependencies yet.
+          ( cd shotium && pnpm install --no-lockfile && pnpm run build )
 
           node tools/shot/node_check.cjs out/Shot/shotium
           node tools/shot/daemon_check.cjs out/Shot/shotium
@@ -411,7 +416,7 @@ jobs:
             ( cd shotium/native \
               && SHOT_INCLUDE_DIR="$PWD/../../shot" \
                  SHOT_LIB_DIR="$PWD/../../out/Shot" \
-                 npx --yes node-gyp@13 rebuild )
+                 pnpm dlx node-gyp@13 rebuild )
             cp out/Shot/libshotium.dylib out/Shot/shotium_data.pak \
                out/Shot/shotium_strings.pak shotium/native/build/Release/
           fi

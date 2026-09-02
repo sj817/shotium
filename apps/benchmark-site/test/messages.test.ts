@@ -22,7 +22,10 @@ describe('messages', () => {
   });
 
   it('knows every status word and reason in both languages', () => {
-    for (const key of ['status.pass', 'status.noisy', 'status.na', 'status.infra', 'reason.partial-coverage', 'reasonHelp.no-competitor']) {
+    for (const key of [
+      'status.pass', 'status.noisy', 'status.na', 'status.infra',
+      'reason.quality', 'reason.partial-coverage', 'reasonHelp.no-competitor',
+    ]) {
       expect(hasMessage(key)).toBe(true);
       expect(translate('en', key as never)).not.toBe(translate('zh-CN', key as never));
     }

@@ -9,7 +9,7 @@
 // It replaces two suites. node_check.cjs used to drive a pool of worker
 // processes -- retry, a worker killed mid-request, a slot refilled -- and
 // a second suite covered the in-process engine beside it. There is no pool
-// any more: an npm install carries the shared library and the addon and not
+// any more: a pnpm install carries the shared library and the addon and not
 // the executable, so this path is the only one, and the two suites had become
 // two names for it.
 //

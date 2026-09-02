@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@9.15.9",
   "engines": {
     "node": ">=22.12"
   },
@@ -12,7 +13,7 @@
     "preview": "vitepress preview docs",
     "typecheck": "vue-tsc -b",
     "test": "vitest run",
-    "check": "npm run typecheck && npm test && npm run build"
+    "check": "pnpm run typecheck && pnpm test && pnpm run build"
   },
   "dependencies": {
     "@element-plus/icons-vue": "2.3.2",

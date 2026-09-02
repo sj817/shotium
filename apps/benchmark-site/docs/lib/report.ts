@@ -14,7 +14,8 @@ import {
  * pin the wording's inputs without touching the DOM.
  */
 
-export type NoRankingReason = 'not-archived' | 'no-competitor' | 'no-comparable' | 'partial-coverage';
+export type NoRankingReason =
+  'not-archived' | 'quality' | 'no-competitor' | 'no-comparable' | 'partial-coverage';
 
 export interface PlatformReport {
   id: PlatformId;
@@ -94,12 +95,16 @@ export function buildPlatformReport(data: PlatformData, manifest: ManifestPlatfo
   const ranks = assignRanks(rows);
   const comparable = rows[0]?.totalBaselines ?? 0;
   const officialCount = rows.filter((row) => row.official).length;
-  const ranked = officialCount >= 2;
+  const qualityPassed = summary.status === 'pass' && summary.shards_complete !== false &&
+    manifest?.missing !== true && manifest?.shards_complete !== false &&
+    manifest?.evidence_complete !== false;
+  const ranked = qualityPassed && officialCount >= 2;
   const competitors = summary.engines.filter((engine) => engine.engine !== 'shotium');
   const competitorAvailable = competitors.some((engine) => engine.status !== 'n/a');
   let noRankingReason: NoRankingReason | null = null;
   if (!ranked) {
-    if (!competitorAvailable) noRankingReason = 'no-competitor';
+    if (!qualityPassed) noRankingReason = 'quality';
+    else if (!competitorAvailable) noRankingReason = 'no-competitor';
     else if (comparable === 0) noRankingReason = 'no-comparable';
     else noRankingReason = 'partial-coverage';
   }

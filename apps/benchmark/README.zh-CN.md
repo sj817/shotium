@@ -17,8 +17,8 @@ apps/benchmark/
 ```
 
 ```bash
-npm ci
-npm run benchmark -- --shotium-version 0.3.2 --profile smoke --output ./out --seed local-check
+pnpm install --frozen-lockfile
+pnpm run benchmark -- --shotium-version 0.3.2 --profile smoke --output ./out --seed local-check
 ```
 
 如需仅运行一个场景分片，可追加 `--shard startup`、`--shard throughput`、
@@ -26,7 +26,7 @@ npm run benchmark -- --shotium-version 0.3.2 --profile smoke --output ./out --se
 （或传入 `--shard all`）时，仍按本机单任务方式运行全部场景：
 
 ```bash
-npm run benchmark -- --shotium-version 0.3.2 --profile full --shard throughput --output ./out --seed local-check
+pnpm run benchmark -- --shotium-version 0.3.2 --profile full --shard throughput --output ./out --seed local-check
 ```
 
 分片边界固定为：`startup` 包含冷启动、冷启动稳定后首张截图和生命周期；
@@ -35,26 +35,40 @@ npm run benchmark -- --shotium-version 0.3.2 --profile full --shard throughput -
 
 CI 会展开为 30 个 `平台 x 场景分片` 矩阵任务。每个分片仍在同一台原生 runner
 上以平衡顺序测试所有可用引擎，因此同一场景内的比较仍是同机比较。五个分片会先
-合并为一个平台结果，再聚合六个平台；runner 信息保留在各分片中，不会把不同分片
-或不同平台的耗时混在同一个排名里。
+合并为一个平台结果，再聚合六个平台；runner 信息保留在各分片中，不会汇总不同分片
+或不同平台的原始耗时。需要跨分片汇总时，只对同一 runner 内测得的同测试项相对比率
+做几何聚合。
 
 如需在同一台机器上直接比较源码构建的可执行文件，可运行：
 
 ```bash
-npm run benchmark:native -- --baseline-executable /path/to/headless_shell --baseline-engine headless-shell --shot-executable /path/to/shotium --iterations 5 --warmup-iterations 1 --output ./out-native
+pnpm run benchmark:native -- --baseline-executable /path/to/headless_shell --baseline-engine headless-shell --shot-executable /path/to/shotium --iterations 5 --warmup-iterations 1 --output ./out-native
 ```
 
 JSON/CSV 报告包含原始样本、经过校验的 PNG 元数据、可执行文件 SHA-256/版本，
 以及同机 `基线 p50 / Shot p50` 比率。
-每个平台还会单独生成几何平均综合排名。只有 Shotium 与对比引擎在同一场景、
+五个测试对象是引擎变体：Shotium，以及 Puppeteer、Playwright 分别驱动完整 Chrome
+和 headless shell；它们并不是五个互相独立的软件包。每个质量通过的平台还会单独
+生成几何平均综合排名。只有 Shotium 与对比引擎在同一场景、
 同一并发度下均为“通过”且允许排名的测试项才会参与；归一化相对耗时越低越好。
 报告会列出覆盖数和单项冠军次数，并且绝不跨平台混排。只有覆盖本平台全部可比项的
-引擎才会获得正式名次；部分覆盖仍展示成绩，但会明确标记为不授予名次。
+引擎才会获得正式名次；部分覆盖仍展示成绩，但会明确标记为不授予名次。失败、波动、
+缺分片或缺证据的平台保留诊断数据，但不生成正式名次或第一名。
+
+这里的公平性只对应一个刻意收窄的问题：每个锁定版本的开箱即用引擎变体，使用它
+通常自带的浏览器二进制，完成同一套静态 HTML/CSS 截图任务时表现如何。它不是对
+Puppeteer 或 Playwright 整个软件包能力的总评，也不能隔离驱动层开销：两者使用各自
+锁定的 Chromium 修订版，而 Shotium 必须使用自己的裁剪 Chromium。Puppeteer 与
+Playwright 可以另设「相同浏览器」赛道回答纯驱动开销问题，但 Shotium 本身就是浏览器
+引擎、并非用于控制原版 Chrome 的驱动，因此无法做三方同浏览器比较。语料也只覆盖
+三者共有的静态渲染面，不代表 JavaScript 或通用浏览器自动化。三者得到相同的外部
+并发度、视口、缓存策略、语料、PNG 格式和操作超时；结果仍会如实包含各产品不同的
+内部进程与内存拓扑，不会假设它们消耗完全相同的资源。
 
 如需只重新生成某次归档的 Markdown/CSV 展示层（包括旧的四分片归档），运行：
 
 ```bash
-npm run render-report -- --result-directory ../../benchmark-results/v0.3.2/<归档目录>
+pnpm run render-report -- --result-directory ../../benchmark-results/v0.3.2/<归档目录>
 ```
 
 该命令读取已归档的 manifest 和各平台 summary，只替换 `report.md`、
@@ -64,7 +78,7 @@ npm run render-report -- --result-directory ../../benchmark-results/v0.3.2/<归�
 
 `full` 配置包含七次冷启动重复、1/2/4 并发、20 次生命周期循环，以及连续 1000 次
 请求或十分钟的浸泡测试。每个测试单元都会等待主机稳定；非冷启动单元还会等待引擎
-达到实测就绪状态。主机稳定门槛按分片校准：第一个单元开始前先采样 5 秒空载 CPU，采样时同时开着每个单元都会开的两个进程监控，这部分开销因此算进基线而不是算进噪声。门槛取 `max(25%, 空载 p95 + 10 个百分点)`，不设上限——GitHub 的 Windows 和 macOS runner 空载 CPU 本身就高，上限低于主机自身的空载水位时，这道门槛没有任何单元能过。门槛超过 80% 时结果里会记 `cpu_limit_exceeds_ceiling`，避免在一台吵闹的机器上声称主机是安静的。每个采样器占用不超过单核的 20%：一次进程表查询在 Linux 上是几十毫秒，在 Windows 上约 700 毫秒，不加节流的循环会把一整个核用来枚举进程，而这份负载正是门槛随后测到的「主机负载」。节流后的实际采样分辨率记在遥测的 `observed_mean_period_ms` 里。稳定的定义是连续三个一秒采样都低于门槛且空闲内存平稳；六秒内达不到的单元标为噪声并重试一次。分片用光配置里的时间预算后就不再排新单元，结果和证据会照常写出，不会被 job 超时一起带走。对照引擎失败——平台上没有对应的浏览器、同一张静态页两次渲染不一致、浸泡测试中途出空图——记录在 `summary.json` 和 `failures.json` 里，但不判整轮失败；只有 Shotium 自身失败、测试框架或主机出错、预算用尽才判失败。测试记录全部样本，并且只终止由自身启动的 PID 进程树。仓库仅保存精简的 `permanent` 输出；PNG、日志和进程时间线作为 CI 工件保留 90 天。
+达到实测就绪状态。主机稳定门槛按分片校准：第一个单元开始前先采样 5 秒空载 CPU，采样时同时开着每个单元都会开的两个进程监控，这部分开销因此算进基线而不是算进噪声。门槛取 `max(25%, 空载 p95 + 10 个百分点)`，不设上限——GitHub 的 Windows 和 macOS runner 空载 CPU 本身就高，上限低于主机自身的空载水位时，这道门槛没有任何单元能过。门槛超过 80% 时结果里会记 `cpu_limit_exceeds_ceiling`，避免在一台吵闹的机器上声称主机是安静的。每个采样器占用不超过单核的 20%：一次进程表查询在 Linux 上是几十毫秒，在 Windows 上约 700 毫秒，不加节流的循环会把一整个核用来枚举进程，而这份负载正是门槛随后测到的「主机负载」。节流后的实际采样分辨率记在遥测的 `observed_mean_period_ms` 里。稳定的定义是连续三个一秒采样都低于门槛且空闲内存平稳；六秒内达不到的单元标为噪声并重试一次。分片用光配置里的时间预算后就不再排新单元，结果和证据会照常写出，不会被 job 超时一起带走。对照引擎失败——平台上没有对应的浏览器、同一张静态页两次渲染不一致、浸泡测试中途出空图——仍记录在 `summary.json` 和 `failures.json` 里，并先上传证据；但聚合结果只有在六个平台、全部分片、质量门和证据全部通过时才允许提交和发布。三套引擎的导航与截图操作统一使用 30 秒上限；冷启动计时统一把软件包导入放在计时内；常驻场景每个引擎只启动并稳定一个宿主，再对该宿主测量七个新客户端，而不是重复七次启动和预热。顺序批量和并发场景同样保留七轮及全部逐用例样本，但每个引擎/并发度只复用一个已稳定实例；冷启动与生命周期场景仍保持独立启动。测试记录全部样本，并且只终止由自身启动的 PID 进程树。仓库仅保存精简的 `permanent` 输出；PNG、日志和进程时间线作为 CI 工件保留 90 天。
 
 使用 `Six-platform benchmark` GitHub Actions workflow 测试已发布的精确语义版本
 或 npm dist-tag。GitHub Release 创建后，发布流程会以精确发布版本触发同一基准测试。

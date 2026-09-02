@@ -103,6 +103,15 @@ const partialOnly = data('linux-arm64', summary('linux-arm64', [
 
 const missing = data('darwin-x64', null);
 
+const failedQuality = data('darwin-x64', {
+  ...summary('darwin-x64', [engine('shotium'), engine('playwright-shell')], [
+    scenario('shotium', 'warm', 10),
+    scenario('playwright-shell', 'warm', 20),
+  ]),
+  status: 'fail',
+  failures: 1,
+});
+
 describe('platform report', () => {
   it('produces a ranking when two engines cover the whole comparable set', () => {
     const report = buildPlatformReport(rankedLinux, null);
@@ -121,6 +130,8 @@ describe('platform report', () => {
     expect(buildPlatformReport(noCompetitor, null).noRankingReason).toBe('no-competitor');
     expect(buildPlatformReport(allNoisy, null).noRankingReason).toBe('no-comparable');
     expect(buildPlatformReport(partialOnly, null).noRankingReason).toBe('partial-coverage');
+    expect(buildPlatformReport(failedQuality, null).noRankingReason).toBe('quality');
+    expect(buildPlatformReport(failedQuality, null).ranked).toBe(false);
     expect(buildPlatformReport(missing, null).noRankingReason).toBe('not-archived');
     expect(buildPlatformReport(missing, null).status).toBe('missing');
   });

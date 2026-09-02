@@ -98,6 +98,11 @@ jobs:
           fetch-depth: 0
           submodules: false   # gclient fetches the DEPS-managed ones itself
 
+      - name: set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+
       - name: depot_tools
         shell: pwsh
         # The bootstrap has to be invoked by hand. gclient.bat only reaches it
@@ -496,7 +501,7 @@ jobs:
           # different build would be checking nothing.
           #
           # Before the node suites, not after: the addon is what they load. An
-          # npm install carries the library and the addon and not the
+          # A package-manager install carries the library and the addon and not the
           # executable, so there is no second path for them to fall back to.
           #
           # node-gyp 13 and not 11, because this runner image ships Visual
@@ -509,17 +514,17 @@ jobs:
           $env:SHOT_INCLUDE_DIR = "$PWD/shot"
           $env:SHOT_LIB_DIR = "$PWD/out/Shot"
           Push-Location shotium/native
-          npx --yes node-gyp@13 rebuild
+          pnpm dlx node-gyp@13 rebuild
           Pop-Location
           Copy-Item out/Shot/shotium.dll,out/Shot/shotium_data.pak,out/Shot/shotium_strings.pak `
                     shotium/native/build/Release/
           # The package is TypeScript, so what the check suites import is a
-          # build output rather than a file in the tree. `npm install`, not
-          # `npm ci` -- see checks.yml for why the lockfile cannot carry the
-          # six optionalDependencies yet.
+          # build output rather than a file in the tree. There is no frozen
+          # lockfile -- see checks.yml for why it cannot carry the six
+          # optionalDependencies yet.
           Push-Location shotium
-          npm install --no-audit --no-fund
-          npm run build
+          pnpm install --no-lockfile
+          pnpm run build
           Pop-Location
           node tools/shot/node_check.cjs out/Shot/shotium.exe
           node tools/shot/daemon_check.cjs out/Shot/shotium.exe
@@ -560,7 +565,7 @@ jobs:
             $env:SHOT_INCLUDE_DIR = "$PWD/shot"
             $env:SHOT_LIB_DIR = "$PWD/out/Shot"
             Push-Location shotium/native
-            npx --yes node-gyp@13 rebuild --arch=$arch
+            pnpm dlx node-gyp@13 rebuild --arch=$arch
             $built = $LASTEXITCODE -eq 0
             Pop-Location
             if (-not $built) { throw "the $arch addon did not cross-compile" }

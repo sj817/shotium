@@ -62,22 +62,22 @@ computed from the loaded run.
 ## Commands
 
 ```bash
-npm ci
-npm run dev        # http://localhost:5173/
-npm run typecheck  # vue-tsc -b
-npm test           # vitest
-npm run build      # vue-tsc -b && vitepress build docs
-npm run check      # typecheck + test + build (what CI runs)
+pnpm install --frozen-lockfile
+pnpm run dev        # http://localhost:5173/
+pnpm run typecheck  # vue-tsc -b
+pnpm test           # vitest
+pnpm run build      # vue-tsc -b && vitepress build docs
+pnpm run check      # typecheck + test + build (what CI runs)
 ```
 
 CI (`.github/workflows/benchmark-pages.yml`, Ubuntu + Node 24) runs
-`npm ci && npm run check` with `BENCHMARK_SITE_BASE=/shotium/` and uploads
+`pnpm install --frozen-lockfile && pnpm run check` with `BENCHMARK_SITE_BASE=/shotium/` and uploads
 `docs/.vitepress/dist`. The build fails if `benchmark-results/index.json` is
 missing rather than publishing an empty report.
 
 ## Visual checks
 
-Playwright is available in `apps/benchmark/node_modules`. With `npm run dev`
+Playwright is available in `apps/benchmark/node_modules`. With `pnpm run dev`
 running, a script that launches `chromium.launch({channel: 'msedge'})`, sets
 `localStorage['vitepress-theme-appearance']` to `dark` and reloads, then takes
 full-page screenshots at 1280 / 1024 / 390 px is the intended check: no

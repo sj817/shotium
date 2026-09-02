@@ -79,17 +79,16 @@ test('Chinese report localizes statuses, profile, scenarios and common reasons',
   assert.match(chinese, /配置：\*\*冒烟测试\*\*/);
   assert.match(chinese, /## 六平台总览/);
   assert.match(chinese, /\| 平台 \| 质量状态 \| 正式第一名 \| 正式参赛引擎数 \| 平台可比项数 \|/);
-  assert.match(chinese, /\| linux-x64 \| 噪声过大 \| browser-a \| 2 \| 2 \|/);
+  assert.match(chinese, /\| linux-x64 \| 噪声过大 \| 无有效排名 \| 0 \| 2 \|/);
   assert.match(chinese, /平台内综合排名/);
-  assert.match(chinese, /相对耗时越低越好/);
-  assert.match(chinese, /参与排名场景数/);
-  assert.match(chinese, /冠军次数/);
-  assert.match(chinese, /覆盖不完整，不授予名次/);
+  assert.match(chinese, /本平台质量状态为“噪声过大”/);
+  assert.match(chinese, /无有效排名/);
+  assert.doesNotMatch(chinese, /结论：browser-a 在本平台排名第一/);
   assert.match(chinese, /\| 预热截图 \|/);
   assert.match(chinese, /启动场景：该软件包没有适用于此平台架构的原生浏览器/);
   assert.doesNotMatch(chinese, /\*\*complete\*\*|\*\*fail\*\*|\*\*smoke\*\*/);
 
-  const english = renderReport([platform()], manifest, 'en');
+  const english = renderReport([{...platform(), status: 'pass'}], manifest, 'en');
   assert.match(english, /Within-platform ranking/);
   assert.match(english, /Six-platform overview/);
   assert.match(english, /lower is better/);
@@ -115,10 +114,20 @@ test('latest report keeps machine-readable status and adds Chinese status values
 });
 
 test('CSV exposes strict paired eligibility and normalized ratios', () => {
-  const csv = renderSummaryCsv([platform()]);
+  const csv = renderSummaryCsv([{...platform(), status: 'pass'}]);
   assert.match(csv, /paired_ranking_eligible/);
   assert.match(csv, /browser-a,warm,1,pass,true,true/);
   assert.match(csv, /browser-a,parallel,2,pass,true,false/);
+
+  const untrusted = renderSummaryCsv([platform()]);
+  assert.match(untrusted, /browser-a,warm,1,pass,true,false/);
+  assert.doesNotMatch(untrusted, /browser-a,warm,1,pass,true,true/);
+
+  const missingEvidence = renderSummaryCsv([{...platform(), status: 'pass'}], {
+    platforms: [{platform: 'linux-x64', missing: false, evidence_complete: false}],
+  });
+  assert.match(missingEvidence, /browser-a,warm,1,pass,true,false/);
+  assert.doesNotMatch(missingEvidence, /browser-a,warm,1,pass,true,true/);
 });
 
 for (const shardCount of [4, 5]) {
@@ -137,6 +146,9 @@ for (const shardCount of [4, 5]) {
       fs.writeFileSync(path.join(resultsRoot, 'index.json'), `${JSON.stringify({results: [{
         path: `v0.3.2/run-${shardCount}`, shotium_version: '0.3.2', generated_utc: '2026-08-30T00:00:00Z',
         status: 'complete', quality_status: 'fail', evidence_status: 'complete',
+      }, {
+        path: 'v0.3.1/valid-run', shotium_version: '0.3.1', generated_utc: '2026-08-29T00:00:00Z',
+        status: 'complete', quality_status: 'pass', evidence_status: 'complete',
       }]})}\n`);
       const result = renderArchivedResult(directory);
       assert.deepEqual(result.platforms, ['linux-x64']);
@@ -145,6 +157,10 @@ for (const shardCount of [4, 5]) {
       assert.match(fs.readFileSync(path.join(directory, 'summary.csv'), 'utf8'), /paired_ranking_eligible/);
       assert.match(fs.readFileSync(path.join(resultsRoot, 'LATEST.md'), 'utf8'),
           /Interactive benchmark explorer \/ 交互式基准站点/);
+      assert.match(fs.readFileSync(path.join(resultsRoot, 'LATEST.md'), 'utf8'),
+          /v0\.3\.1\/valid-run\/report\.md/);
+      assert.doesNotMatch(fs.readFileSync(path.join(resultsRoot, 'LATEST.md'), 'utf8'),
+          new RegExp(`v0\\.3\\.2/run-${shardCount}/report\\.md`));
       assert.equal(fs.readdirSync(directory).some((name) => name.includes('.tmp-') || name.includes('.bak-')), false);
     } finally {
       fs.rmSync(root, {recursive: true, force: true});

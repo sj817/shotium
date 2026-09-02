@@ -17,6 +17,7 @@
     "url": "git+https://github.com/sj817/shotium.git"
   },
   "type": "module",
+  "packageManager": "pnpm@9.15.9",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {

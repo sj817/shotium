@@ -4,6 +4,7 @@
   "private": true,
   "description": "Six-platform, cross-engine Shotium benchmark and release evidence harness.",
   "type": "module",
+  "packageManager": "pnpm@9.15.9",
   "engines": {
     "node": ">=22"
   },
@@ -22,7 +23,7 @@
     "browser:install:playwright": "playwright install chromium",
     "test": "tsx --test test/*.test.ts",
     "typecheck": "tsc --noEmit",
-    "check": "npm run typecheck && npm test"
+    "check": "pnpm run typecheck && pnpm test"
   },
   "dependencies": {
     "ajv": "8.17.1",

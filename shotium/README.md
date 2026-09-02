@@ -12,20 +12,11 @@
 ### 1. Installation
 
 ```bash
-# npm
-npm install @shotkit/shotium
-
-# pnpm
+# pnpm 9.15.9
 pnpm add @shotkit/shotium
-
-# yarn
-yarn add @shotkit/shotium
-
-# bun
-bun add @shotkit/shotium
 ```
 
-Prebuilt platform binaries are installed automatically via npm optional dependencies across six architectures (Windows, macOS, and Linux on x64 and arm64). No local compiler or postinstall build script is required.
+Prebuilt platform binaries are installed automatically via optional dependencies across six architectures (Windows, macOS, and Linux on x64 and arm64). No local compiler or postinstall build script is required.
 
 The package is published as native ESM:
 - `import` is supported on Node.js 18+.

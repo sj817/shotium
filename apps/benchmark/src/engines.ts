@@ -4,7 +4,7 @@ import path from 'node:path';
 import {createRequire} from 'node:module';
 import {execa} from 'execa';
 import {isNativeBinary} from './binary-architecture.ts';
-import {VIEWPORT, currentPlatformId} from './constants.ts';
+import {BROWSER_OPERATION_TIMEOUT_MS, VIEWPORT, currentPlatformId} from './constants.ts';
 
 const require = createRequire(import.meta.url);
 
@@ -121,8 +121,16 @@ class ChromeEngine {
   idlePages: any[];
   attached: boolean;
   profileDir: string | null;
+  screenshotTimeoutSupported: boolean;
 
-  constructor({name, launch, connect, reusePage = false, profileDir = null}) {
+  constructor({
+    name,
+    launch,
+    connect,
+    reusePage = false,
+    profileDir = null,
+    screenshotTimeoutSupported = false,
+  }) {
     this.name = name;
     this.launchHook = launch;
     this.connectHook = connect;
@@ -132,6 +140,7 @@ class ChromeEngine {
     this.idlePages = [];
     this.attached = false;
     this.profileDir = profileDir;
+    this.screenshotTimeoutSupported = screenshotTimeoutSupported;
   }
 
   async launch() {
@@ -158,7 +167,9 @@ class ChromeEngine {
         }
       }
       await page.goto(url, {waitUntil: 'load', timeout: timeoutMs});
-      return {image: Buffer.from(await page.screenshot({type: 'png', fullPage})), stats: null};
+      const screenshotOptions: Record<string, any> = {type: 'png', fullPage};
+      if (this.screenshotTimeoutSupported) screenshotOptions.timeout = timeoutMs;
+      return {image: Buffer.from(await page.screenshot(screenshotOptions)), stats: null};
     } finally {
       if (cacheSession) await cacheSession.detach().catch(() => {});
       if (this.reusePage) this.idlePages.push(page);
@@ -182,25 +193,30 @@ class ChromeEngine {
 }
 
 async function puppeteerDefinition(name, headless, options) {
-  const puppeteer = await importDefault('puppeteer');
   const policy = competitorChromiumPolicy();
   return new ChromeEngine({
     name,
     reusePage: options.reusePage,
     profileDir: options.profileDir || null,
     launch: async () => {
+      // Import inside the timed launch hook, matching Shotium's cold-start
+      // contract instead of preloading only the competitor wrapper.
+      const puppeteer = await importDefault('puppeteer');
       const browser = await puppeteer.launch({
         headless,
         args: policy.puppeteerArgs,
         defaultViewport: {...VIEWPORT, deviceScaleFactor: 1},
         userDataDir: options.profileDir,
+        protocolTimeout: BROWSER_OPERATION_TIMEOUT_MS,
       });
       return {browser, context: browser};
     },
     connect: async (endpoint) => {
+      const puppeteer = await importDefault('puppeteer');
       const browser = await puppeteer.connect({
         browserWSEndpoint: endpoint.wsEndpoint,
         defaultViewport: {...VIEWPORT, deviceScaleFactor: 1},
+        protocolTimeout: BROWSER_OPERATION_TIMEOUT_MS,
       });
       return {browser, context: browser};
     },
@@ -208,14 +224,16 @@ async function puppeteerDefinition(name, headless, options) {
 }
 
 async function playwrightDefinition(name, channel, options) {
-  const {chromium} = await import('playwright');
   const policy = competitorChromiumPolicy();
-  const newContext = (browser) => browser.newContext({viewport: VIEWPORT, deviceScaleFactor: 1});
   return new ChromeEngine({
     name,
     reusePage: options.reusePage,
     profileDir: options.profileDir || null,
+    screenshotTimeoutSupported: true,
     launch: async () => {
+      // Keep package loading inside the same timed region as Shotium.
+      const {chromium} = await import('playwright');
+      const newContext = (browser) => browser.newContext({viewport: VIEWPORT, deviceScaleFactor: 1});
       if (options.profileDir) {
         const context = await chromium.launchPersistentContext(options.profileDir, {
           headless: true,
@@ -232,6 +250,8 @@ async function playwrightDefinition(name, channel, options) {
       return {browser, context: await newContext(browser)};
     },
     connect: async (endpoint) => {
+      const {chromium} = await import('playwright');
+      const newContext = (browser) => browser.newContext({viewport: VIEWPORT, deviceScaleFactor: 1});
       const browser = await chromium.connect(endpoint.wsEndpoint);
       return {browser, context: await newContext(browser)};
     },

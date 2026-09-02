@@ -88,10 +88,17 @@ function runFile(name: string): string {
   return withBase(`/benchmark-results/${props.runPath}/${name}`);
 }
 
-function failureTitle(failure: {engine?: string; scenario?: string; shard?: string; repeat?: number; attempt?: number}): string {
+function failureTitle(failure: {
+  engine?: string;
+  scenario?: string;
+  shard?: string;
+  repeat?: number;
+  attempt?: number;
+  concurrency?: number;
+}): string {
   const parts: string[] = [];
   if (failure.engine) parts.push(engineName(failure.engine));
-  if (failure.scenario) parts.push(scenarioName(failure.scenario));
+  if (failure.scenario) parts.push(scenarioName(failure.scenario, failure.concurrency));
   if (failure.shard) parts.push(shardName(failure.shard));
   if (failure.repeat !== undefined || failure.attempt !== undefined) {
     parts.push(t('quality.repeat', {repeat: failure.repeat ?? '—', attempt: failure.attempt ?? '—'}));

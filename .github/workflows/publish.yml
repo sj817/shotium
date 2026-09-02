@@ -117,6 +117,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+
       # No registry-url, and so no .npmrc: setup-node's registry-url exists to
       # write an _authToken line pointing at NODE_AUTH_TOKEN, and an .npmrc
       # naming an empty token is worse than no .npmrc at all -- npm sends the
@@ -131,7 +136,7 @@ jobs:
         # thing this repository controls, and the failure if it is too old is
         # an authentication error that says nothing about versions.
         run: |
-          npm install -g npm@latest
+          pnpm add --global npm@latest
           echo "node $(node --version), npm $(npm --version)"
 
       - name: what this run is
@@ -185,8 +190,8 @@ jobs:
         # land before anything is irreversible rather than between the sixth
         # package and the seventh.
         run: |
-          npm install --no-audit --no-fund
-          npm run build
+          pnpm install --no-lockfile
+          pnpm run build
           node -e '
             const fs = require("fs");
             for (const f of ["dist/index.js", "dist/index.d.ts",
@@ -362,17 +367,8 @@ jobs:
             echo "### 📦 安装 / Installation"
             echo
             echo '```bash'
-            echo "# npm"
-            echo "npm install @shotkit/shotium@$VERSION"
-            echo
-            echo "# pnpm"
+            echo "# pnpm 9.15.9"
             echo "pnpm add @shotkit/shotium@$VERSION"
-            echo
-            echo "# yarn"
-            echo "yarn add @shotkit/shotium@$VERSION"
-            echo
-            echo "# bun"
-            echo "bun add @shotkit/shotium@$VERSION"
             echo '```'
             echo
             echo "---"

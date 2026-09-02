@@ -28,10 +28,10 @@ By stripping out the V8 JavaScript engine, the browser shell (`//content`), the 
 
 ## Key Highlights
 
-- **4× to 6× Faster than Headless Chrome**: On a standard GitHub `linux-x64` runner, process startup to the first PNG takes **53 ms** (vs. 256 ms for Playwright headless shell and 410–471 ms for headless Chrome). Warm captures complete in **25 ms** (vs. 123–157 ms). (See [Benchmarks](#benchmarks))
-- **Zero External Dependencies**: `npm install` automatically downloads the native prebuilt binary for Windows, macOS, and Linux (x64 and arm64). The engine loads via Node-API directly into your host process — no child processes, no WebSockets, and no lingering zombie browsers.
+- **Auditable Cross-Engine Benchmarks**: Native CI compares Shotium with Puppeteer and Playwright engine variants on six platforms; only complete, quality-passing runs with complete evidence are publishable. (See [Benchmarks](#benchmarks))
+- **Zero External Dependencies**: `pnpm add` automatically downloads the native prebuilt binary for Windows, macOS, and Linux (x64 and arm64). The engine loads via Node-API directly into your host process — no child processes, no WebSockets, and no lingering zombie browsers.
 - **Full Chromium CSS Compatibility**: Complete support for CSS Grid, Flexbox, `@font-face`, SVG, gradients, box shadows, filters, and CSS variables. Typography uses deterministic grayscale antialiasing with a fixed gamma curve for byte-identical rendering across all platforms.
-- **Minimal Memory Footprint**: An active rendering engine maintains a working set of approximately **50–70 MiB** (~40 MiB private working set, compared to 650 MiB–1.3 GiB for headless browsers), while an idle resident daemon uses just 3–10 MiB of engine memory.
+- **Auditable Memory Footprint**: The benchmark records the complete owned process tree, peak RSS, and resident memory drift for every engine variant; comparative memory figures are published only when the run passes the quality and evidence gates.
 - **Flexible Deployment Models**: In-process embedding for long-lived backend services, a pre-warmed resident daemon for CLI tools and CI pipelines, a standalone single-file binary for shell scripting, and a standard C ABI for Rust, Go, Python, and C++.
 
 ---
@@ -41,13 +41,8 @@ By stripping out the V8 JavaScript engine, the browser shell (`//content`), the 
 ### 1. Installation
 
 ```bash
-# npm
-npm install @shotkit/shotium
-
-# pnpm / yarn / bun
+# pnpm 9.15.9
 pnpm add @shotkit/shotium
-yarn add @shotkit/shotium
-bun add @shotkit/shotium
 ```
 
 ### 2. Node.js / TypeScript Example
@@ -114,36 +109,14 @@ For production environments without Node.js or for shell scripts, prebuilt stand
 
 ## Benchmarks
 
-Benchmark figures are sourced from the official [six-platform CI benchmark suite](https://sj817.github.io/shotium/en/). Each tool (shotium, Puppeteer, Playwright) runs identical test scenarios on the same GitHub-hosted runner hardware. Raw results are archived under [`benchmark-results/`](benchmark-results/LATEST.md).
-
-The table below reports p50 latencies (milliseconds; lower is better) on `linux-x64` for version 0.3.3:
-
-| Scenario | shotium | Playwright (headless shell) | Puppeteer (headless shell) | Playwright (Chrome) | Puppeteer (Chrome) |
-|---|--:|--:|--:|--:|--:|
-| Process start to first PNG | **53** | 256 | 282 | 410 | 471 |
-| Warm single capture | **25** | 123 | 132 | noisy | 157 |
-| Full cycle (launch, shoot, exit) | **54** | 263 | 289 | 489 | 565 |
-| 4 concurrent in-flight requests (throughput) | **128 (20.7 req/s)** | 356 (9.7 req/s) | 391 (9.0 req/s) | 407 (8.4 req/s) | failed |
-| Sustained load, 4 concurrency (throughput) | **165 (19.7 req/s)** | 403 (9.1 req/s) | 461 (8.4 req/s) | noisy | infra error |
-
-Across all ten comparable test points on this platform, geometric mean comparison shows Playwright headless shell taking **3.6×**, Puppeteer headless shell **4.2×**, and full headless Chrome **4.8× to 6.3×** the latency of shotium.
-
-In the cross-platform end-to-end (launch → capture → exit) benchmark, shotium ranked first across all supported platforms:
-
-| Platform & Architecture | shotium | Fastest Competitor |
-|---|--:|--:|
-| **linux-x64** | **54 ms** | 263 ms (Playwright shell) |
-| **linux-arm64** | **73 ms** | 238 ms (Playwright shell) |
-| **darwin-arm64** | **98 ms** | 339 ms (Playwright shell) |
-| **win32-x64** | **112 ms** | 608 ms (Playwright shell) |
-| **darwin-x64** | **194 ms** | 1,053 ms (Playwright shell) |
+Benchmark figures come from the official [six-platform CI benchmark suite](https://sj817.github.io/shotium/en/). Shotium and the Puppeteer/Playwright Chrome and headless-shell engine variants run identical test scenarios on the same GitHub-hosted runner for each comparison. Only complete, quality-passing runs with complete evidence are publishable; failed and noisy attempts remain available as diagnostics but are not performance claims. The latest publishable result and its raw archive are linked from [`benchmark-results/LATEST.md`](benchmark-results/LATEST.md). This README deliberately does not pin numbers from an untrusted run.
 
 ### Benchmark Methodology
 
-- **Direct Parity**: Speedup ratios are calculated exclusively when both tools complete identical scenarios on the same hardware runner and concurrency level. Data marked as `noisy` is displayed explicitly and excluded from averages.
-- **Concurrency Architecture**: A single shotium engine renders requests serially via a low-latency internal queue; parallel throughput is measured across multiple worker processes. Browser competitors utilize multiple tabs within a single browser instance.
+- **Direct Parity**: Speedup ratios are calculated exclusively when both engine variants complete identical scenarios on the same hardware runner and concurrency level. Data marked as `noisy` is displayed explicitly and excluded from formal rankings.
+- **Concurrency Architecture**: The harness submits the same request concurrency to one engine instance. It does not force equal internal worker or tab topology, so the result measures each engine variant's real scheduling behavior under that workload.
 - **Platform Availability**: Puppeteer provides no native arm64 builds on Linux/Windows, and Playwright runs x64 emulation on Windows arm64; these combinations are reported as `n/a`.
-- **Memory Footprint**: A single active rendering instance maintains a working set of ~50–70 MiB (and ~256 MiB under 4-worker concurrency), offering an order-of-magnitude reduction compared to multi-gigabyte browser process trees.
+- **Memory Footprint**: RSS and process-tree telemetry are recorded per engine and scenario; memory claims require the same publishability gate as latency claims.
 
 > [!TIP]
 > **PGO Optimization Notice & Feedback**:
@@ -161,7 +134,7 @@ In the cross-platform end-to-end (launch → capture → exit) benchmark, shotiu
 | **JavaScript Execution** | Disabled (V8 removed) | Supported | N/A | Legacy JavaScriptCore |
 | **Execution Architecture** | In-process (Node-API / C ABI) | Separate browser process + IPC | In-process (WASM / JS) | Child process |
 | **Distribution Size** | ~22 MB standalone | Browser download (> 100 MB) | Minimal (pure JS / WASM) | Native OS package |
-| **First Image Latency (linux-x64)** | **53 ms** | 256–471 ms | N/A | N/A |
+| **First Image Latency (linux-x64)** | [See validated benchmark](https://sj817.github.io/shotium/en/) | [See validated benchmark](https://sj817.github.io/shotium/en/) | N/A | N/A |
 
 ### Technology Selection Guide
 
@@ -200,7 +173,7 @@ flowchart TB
         APP["Express · Fastify · NestJS<br/>Host Process"]
         LIB["libshotium<br/>Blink + Skia + //net"]
         APP -- "Node-API Native Call<br/>Zero IPC · Zero Child Processes" --> LIB
-        LIB -- "Image Buffer<br/>~25 ms per warm shot" --> APP
+        LIB -- "Image Buffer<br/>No IPC hop" --> APP
     end
 
     subgraph resident["2 · Resident Daemon Mode — CLI Tools, CI, & Serverless"]
@@ -208,7 +181,7 @@ flowchart TB
         TASK["Short-Lived Client<br/>Run & Exit"]
         DAEMON["shotium Daemon<br/>Pre-warmed · Named Isolation"]
         TASK -- "Named Pipe (Windows)<br/>Unix Domain Socket (POSIX)" --> DAEMON
-        DAEMON -- "2.3 ms Connection Time<br/>Zero Repeated Cold Starts" --> TASK
+        DAEMON -- "Local IPC Connection<br/>No Repeated Engine Start" --> TASK
     end
 
     subgraph standalone["3 · Standalone CLI Mode — Shell Scripts & Polyglot Pipelines"]
@@ -227,7 +200,7 @@ flowchart TB
 | Use Case | Recommended Mode | Rationale |
 |---|---|---|
 | **Web & API Services** (Express, Fastify, NestJS) | [In-Process Engine](#1-in-process-engine) | Zero IPC overhead, zero startup latency, lowest per-request rendering time. |
-| **CLI Tools, CI Pipelines, Serverless Functions** | [Resident Daemon](#2-resident-daemon) | Keeps the engine pre-warmed in the background; clients connect in ~2.3 ms with zero cold starts. |
+| **CLI Tools, CI Pipelines, Serverless Functions** | [Resident Daemon](#2-resident-daemon) | Keeps the engine pre-warmed in the background so clients avoid repeated engine starts. |
 | **Non-Node Environments & Shell Scripts** | [Standalone CLI](#3-standalone-cli) or [C ABI & FFI Integration](#c-abi-ffi-integration) | Single portable binary with pipeline support (`--stdin`) and resident service mode (`--serve`). |
 
 ---
@@ -286,7 +259,7 @@ await shotium.stop();
 
 Designed for short-lived CLI tasks, CI job steps, and serverless handlers where eliminating repeated cold-start latency is essential.
 
-The daemon hosts the engine in a background process accessible via local IPC (named pipes on Windows, Unix domain sockets on POSIX). It pre-warms subsystems by rendering a blank document on boot, allowing clients to connect in ~2.3 ms and achieve warm capture speeds immediately.
+The daemon hosts the engine in a background process accessible via local IPC (named pipes on Windows, Unix domain sockets on POSIX). It pre-warms subsystems by rendering a blank document on boot, allowing clients to avoid repeated engine startup and use the warm capture path immediately.
 
 ```ts
 import { daemon } from '@shotkit/shotium';
@@ -721,9 +694,9 @@ To compile the Node.js native addon against a local shared library build:
 
 ```bash
 export SHOT_INCLUDE_DIR=$PWD/shot SHOT_LIB_DIR=$PWD/out/Shot
-npx node-gyp@13 rebuild -C shotium/native
+pnpm dlx node-gyp@13 rebuild -C shotium/native
 cp out/Shot/libshotium.so out/Shot/*.pak shotium/native/build/Release/
-npm --prefix shotium install && npm --prefix shotium run build
+pnpm --dir shotium install --no-lockfile && pnpm --dir shotium run build
 ```
 
 ---
@@ -733,9 +706,9 @@ npm --prefix shotium install && npm --prefix shotium run build
 All images and demo recordings in this documentation are generated directly from sources in [`docs/demo/`](docs/demo):
 
 ```bash
-npm run docs:assets   # Regenerate card.webp, example-node.webp, example-cli.webp
-npm run docs:demo     # Regenerate demo.gif (recorded via docs/demo.tape)
-npm run docs          # Run full asset generation suite
+pnpm run docs:assets   # Regenerate card.webp, example-node.webp, example-cli.webp
+pnpm run docs:demo     # Regenerate demo.gif (recorded via docs/demo.tape)
+pnpm run docs          # Run full asset generation suite
 ```
 
 - `docs:assets`: Renders `card.html` via shotium, using [freeze](https://github.com/charmbracelet/freeze) and ffmpeg to freeze `card.mjs` and terminal sessions into crisp code graphics.

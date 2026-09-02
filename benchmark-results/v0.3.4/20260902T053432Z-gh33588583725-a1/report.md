@@ -4,7 +4,7 @@
 
 Result: **incomplete**; quality: **fail**; evidence: **incomplete**. Profile **full**, seed `6bf4cb2fbc8e69e59371281916ce6bf49a73ef24`.
 
-Conclusion: this run is incomplete. 4 platform(s) contain valid within-platform comparisons; missing outputs are never inferred.
+Conclusion: this run is incomplete. 0 platform(s) contain valid within-platform comparisons; missing outputs are never inferred.
 
 Every ratio is computed only when Shotium and the compared engine both pass and are ranking-eligible on the same platform, scenario and concurrency. No cross-platform ranking is produced.
 
@@ -12,12 +12,12 @@ Every ratio is computed only when Shotium and the compared engine both pass and 
 
 | platform | quality status | formal winner | formally ranked engines | comparable cells |
 |:--|:--|:--|--:|--:|
-| linux-x64 | fail | shotium | 3 | 9 |
-| linux-arm64 | noisy | shotium | 2 | 9 |
+| linux-x64 | fail | no valid ranking | 0 | 9 |
+| linux-arm64 | noisy | no valid ranking | 0 | 9 |
 | win32-x64 | infra-error | no valid ranking | 0 | 0 |
 | win32-arm64 | infra-error | no valid ranking | 0 | 0 |
-| darwin-x64 | fail | shotium | 2 | 3 |
-| darwin-arm64 | fail | shotium | 2 | 2 |
+| darwin-x64 | fail | no valid ranking | 0 | 3 |
+| darwin-arm64 | fail | no valid ranking | 0 | 2 |
 
 ## linux-x64
 
@@ -25,27 +25,7 @@ Scenario groups ran on separate native runners; every engine comparison remains 
 
 ### Within-platform ranking
 
-Relative elapsed time is normalized to Shotium = 1.000 in each eligible cell; **lower is better**. The score is the geometric mean within this platform only. A formal rank is awarded only to engines covering every comparable platform cell; partial coverage remains visible but is not ranked. Tied cell winners each receive one win.
-
-Conclusion: shotium ranks first on this platform at 1.000× normalized elapsed time across 9 eligible cell(s), with 9 win(s).
-
-| rank | engine | geometric mean relative time | eligible scenarios | eligible cells / platform cells | wins |
-|--:|:--|--:|--:|--:|--:|
-| 1 | shotium | 1.000× | 7 | 9 / 9 | 9 |
-| 2 | playwright-shell | 4.819× | 7 | 9 / 9 | 0 |
-| 3 | puppeteer-shell | 5.364× | 7 | 9 / 9 | 0 |
-| not ranked (partial coverage) | puppeteer-chrome | 8.435× | 6 | 7 / 9 | 0 |
-| not ranked (partial coverage) | playwright-chrome | 7.890× | 3 | 3 / 9 | 0 |
-
-<details><summary>Coverage audit</summary>
-
-- shotium: `batch/c1`, `cold/c1`, `cold-settled/c1`, `lifecycle/c1`, `parallel/c1`, `parallel/c2`, `parallel/c4`, `soak/c4`, `warm/c1`
-- playwright-shell: `batch/c1`, `cold/c1`, `cold-settled/c1`, `lifecycle/c1`, `parallel/c1`, `parallel/c2`, `parallel/c4`, `soak/c4`, `warm/c1`
-- puppeteer-shell: `batch/c1`, `cold/c1`, `cold-settled/c1`, `lifecycle/c1`, `parallel/c1`, `parallel/c2`, `parallel/c4`, `soak/c4`, `warm/c1`
-- puppeteer-chrome: `batch/c1`, `cold/c1`, `cold-settled/c1`, `lifecycle/c1`, `parallel/c1`, `parallel/c2`, `warm/c1`
-- playwright-chrome: `cold/c1`, `lifecycle/c1`, `parallel/c1`
-
-</details>
+Conclusion: platform quality is fail; its measurements remain available for diagnosis, but no formal ranking or winner is produced.
 
 | engine | availability | reason / binary architecture |
 |:--|:--|:--|
@@ -57,46 +37,46 @@ Conclusion: shotium ranks first on this platform at 1.000× normalized elapsed t
 
 | scenario | c | engine | status | ranked | p50 ms | worst ms | throughput/s | vs Shotium |
 |:--|--:|:--|:--|:--|--:|--:|--:|--:|
-| cold | 1 | playwright-chrome | pass | yes | 536 | 600 | 1.810 | 8.25× |
-| cold | 1 | playwright-shell | pass | yes | 332 | 405 | 2.989 | 5.11× |
-| cold | 1 | puppeteer-chrome | pass | yes | 583 | 610 | 1.722 | 8.97× |
-| cold | 1 | puppeteer-shell | pass | yes | 343 | 355 | 2.950 | 5.28× |
-| cold | 1 | shotium | pass | yes | 65 | 72 | 15.054 | 1.00× |
-| cold-settled | 1 | puppeteer-chrome | pass | yes | 168.92 | 192.91 | 5.983 | 10.45× |
+| cold | 1 | playwright-chrome | pass | no | 536 | 600 | 1.810 | N/A |
+| cold | 1 | playwright-shell | pass | no | 332 | 405 | 2.989 | N/A |
+| cold | 1 | puppeteer-chrome | pass | no | 583 | 610 | 1.722 | N/A |
+| cold | 1 | puppeteer-shell | pass | no | 343 | 355 | 2.950 | N/A |
+| cold | 1 | shotium | pass | no | 65 | 72 | 15.054 | N/A |
+| cold-settled | 1 | puppeteer-chrome | pass | no | 168.92 | 192.91 | 5.983 | N/A |
 | cold-settled | 1 | playwright-chrome | noisy | no | 184.866 | 184.866 | 0.048 | N/A |
-| cold-settled | 1 | puppeteer-shell | pass | yes | 130.708 | 141.063 | 7.737 | 8.09× |
-| cold-settled | 1 | shotium | pass | yes | 16.158 | 22.212 | 58.739 | 1.00× |
-| cold-settled | 1 | playwright-shell | pass | yes | 117.893 | 127.631 | 8.387 | 7.30× |
-| lifecycle | 1 | playwright-shell | pass | yes | 279.571 | 330.136 | 3.501 | 4.37× |
-| lifecycle | 1 | playwright-chrome | pass | yes | 607.464 | 652.171 | 1.696 | 9.49× |
-| lifecycle | 1 | puppeteer-shell | pass | yes | 363.373 | 458.215 | 2.679 | 5.68× |
-| lifecycle | 1 | shotium | pass | yes | 64.013 | 129.632 | 13.455 | 1.00× |
-| lifecycle | 1 | puppeteer-chrome | pass | yes | 757.717 | 799.481 | 1.352 | 11.84× |
+| cold-settled | 1 | puppeteer-shell | pass | no | 130.708 | 141.063 | 7.737 | N/A |
+| cold-settled | 1 | shotium | pass | no | 16.158 | 22.212 | 58.739 | N/A |
+| cold-settled | 1 | playwright-shell | pass | no | 117.893 | 127.631 | 8.387 | N/A |
+| lifecycle | 1 | playwright-shell | pass | no | 279.571 | 330.136 | 3.501 | N/A |
+| lifecycle | 1 | playwright-chrome | pass | no | 607.464 | 652.171 | 1.696 | N/A |
+| lifecycle | 1 | puppeteer-shell | pass | no | 363.373 | 458.215 | 2.679 | N/A |
+| lifecycle | 1 | shotium | pass | no | 64.013 | 129.632 | 13.455 | N/A |
+| lifecycle | 1 | puppeteer-chrome | pass | no | 757.717 | 799.481 | 1.352 | N/A |
 | warm | 1 | playwright-chrome | noisy | no | 156.293 | 188.066 | 2.731 | N/A |
-| warm | 1 | shotium | pass | yes | 12.889 | 19.721 | 69.256 | 1.00× |
-| warm | 1 | playwright-shell | pass | yes | 117.402 | 136.254 | 8.403 | 9.11× |
-| warm | 1 | puppeteer-shell | pass | yes | 130.303 | 180.449 | 7.717 | 10.11× |
-| warm | 1 | puppeteer-chrome | pass | yes | 161.309 | 204.583 | 6.147 | 12.52× |
-| batch | 1 | shotium | pass | yes | 28.024 | 259.312 | 20.359 | 1.00× |
-| batch | 1 | puppeteer-shell | pass | yes | 147.279 | 364.756 | 5.854 | 5.26× |
-| batch | 1 | playwright-shell | pass | yes | 134.622 | 355.192 | 6.324 | 4.80× |
-| batch | 1 | puppeteer-chrome | pass | yes | 183.902 | 397.02 | 4.865 | 6.56× |
+| warm | 1 | shotium | pass | no | 12.889 | 19.721 | 69.256 | N/A |
+| warm | 1 | playwright-shell | pass | no | 117.402 | 136.254 | 8.403 | N/A |
+| warm | 1 | puppeteer-shell | pass | no | 130.303 | 180.449 | 7.717 | N/A |
+| warm | 1 | puppeteer-chrome | pass | no | 161.309 | 204.583 | 6.147 | N/A |
+| batch | 1 | shotium | pass | no | 28.024 | 259.312 | 20.359 | N/A |
+| batch | 1 | puppeteer-shell | pass | no | 147.279 | 364.756 | 5.854 | N/A |
+| batch | 1 | playwright-shell | pass | no | 134.622 | 355.192 | 6.324 | N/A |
+| batch | 1 | puppeteer-chrome | pass | no | 183.902 | 397.02 | 4.865 | N/A |
 | batch | 1 | playwright-chrome | noisy | no | 168.929 | 374.159 | 4.347 | N/A |
-| parallel | 1 | playwright-chrome | pass | yes | 173.234 | 377.585 | 5.140 | 6.28× |
-| parallel | 1 | puppeteer-shell | pass | yes | 147.893 | 479.555 | 5.761 | 5.36× |
-| parallel | 1 | puppeteer-chrome | pass | yes | 181.746 | 399.016 | 4.908 | 6.59× |
-| parallel | 1 | shotium | pass | yes | 27.599 | 261.072 | 20.651 | 1.00× |
-| parallel | 1 | playwright-shell | pass | yes | 137.752 | 352.973 | 6.216 | 4.99× |
-| parallel | 2 | puppeteer-chrome | pass | yes | 316.638 | 460.433 | 5.744 | 5.06× |
-| parallel | 2 | shotium | pass | yes | 62.573 | 276.373 | 20.539 | 1.00× |
-| parallel | 2 | playwright-shell | pass | yes | 247.68 | 457.936 | 7.171 | 3.96× |
+| parallel | 1 | playwright-chrome | pass | no | 173.234 | 377.585 | 5.140 | N/A |
+| parallel | 1 | puppeteer-shell | pass | no | 147.893 | 479.555 | 5.761 | N/A |
+| parallel | 1 | puppeteer-chrome | pass | no | 181.746 | 399.016 | 4.908 | N/A |
+| parallel | 1 | shotium | pass | no | 27.599 | 261.072 | 20.651 | N/A |
+| parallel | 1 | playwright-shell | pass | no | 137.752 | 352.973 | 6.216 | N/A |
+| parallel | 2 | puppeteer-chrome | pass | no | 316.638 | 460.433 | 5.744 | N/A |
+| parallel | 2 | shotium | pass | no | 62.573 | 276.373 | 20.539 | N/A |
+| parallel | 2 | playwright-shell | pass | no | 247.68 | 457.936 | 7.171 | N/A |
 | parallel | 2 | playwright-chrome | noisy | no | 319.515 | 483.075 | 3.799 | N/A |
-| parallel | 2 | puppeteer-shell | pass | yes | 255.298 | 393.974 | 6.752 | 4.08× |
-| parallel | 4 | playwright-shell | pass | yes | 426.332 | 786.175 | 7.814 | 3.24× |
+| parallel | 2 | puppeteer-shell | pass | no | 255.298 | 393.974 | 6.752 | N/A |
+| parallel | 4 | playwright-shell | pass | no | 426.332 | 786.175 | 7.814 | N/A |
 | parallel | 4 | playwright-chrome | noisy | no | 558.014 | 724.559 | 2.978 | N/A |
-| parallel | 4 | puppeteer-shell | pass | yes | 502.642 | 699.073 | 7.197 | 3.82× |
+| parallel | 4 | puppeteer-shell | pass | no | 502.642 | 699.073 | 7.197 | N/A |
 | parallel | 4 | puppeteer-chrome | fail | no | 595.886 | 76540.607 | 1.067 | N/A |
-| parallel | 4 | shotium | pass | yes | 131.628 | 328.4 | 20.264 | 1.00× |
+| parallel | 4 | shotium | pass | no | 131.628 | 328.4 | 20.264 | N/A |
 | reuse-page | 1 | playwright-shell | pass | no | 67.145 | 83.32 | 14.437 | N/A |
 | reuse-page | 1 | playwright-chrome | pass | no | 67.933 | 94.144 | 14.176 | N/A |
 | reuse-page | 1 | puppeteer-shell | pass | no | 82.118 | 85.25 | 12.702 | N/A |
@@ -111,11 +91,11 @@ Conclusion: shotium ranks first on this platform at 1.000× normalized elapsed t
 | faults | 1 | shotium | pass | no | 9781.608 | 9781.608 | N/A | N/A |
 | faults | 1 | playwright-shell | pass | no | 14911.922 | 14911.922 | N/A | N/A |
 | faults | 1 | playwright-chrome | noisy | no | 3463.032 | 3463.032 | N/A | N/A |
-| soak | 4 | playwright-shell | pass | yes | 434.917 | 878.386 | 8.707 | 3.08× |
+| soak | 4 | playwright-shell | pass | no | 434.917 | 878.386 | 8.707 | N/A |
 | soak | 4 | puppeteer-chrome | fail | no | 614.702 | 180941.964 | 1.958 | N/A |
 | soak | 4 | playwright-chrome | infra-error | no | 549.083 | 993.122 | 6.996 | N/A |
-| soak | 4 | puppeteer-shell | pass | yes | 483.301 | 905.498 | 8.080 | 3.42× |
-| soak | 4 | shotium | pass | yes | 141.308 | 392.196 | 21.703 | 1.00× |
+| soak | 4 | puppeteer-shell | pass | no | 483.301 | 905.498 | 8.080 | N/A |
+| soak | 4 | shotium | pass | no | 141.308 | 392.196 | 21.703 | N/A |
 
 ## linux-arm64
 
@@ -123,23 +103,7 @@ Scenario groups ran on separate native runners; every engine comparison remains 
 
 ### Within-platform ranking
 
-Relative elapsed time is normalized to Shotium = 1.000 in each eligible cell; **lower is better**. The score is the geometric mean within this platform only. A formal rank is awarded only to engines covering every comparable platform cell; partial coverage remains visible but is not ranked. Tied cell winners each receive one win.
-
-Conclusion: shotium ranks first on this platform at 1.000× normalized elapsed time across 9 eligible cell(s), with 9 win(s).
-
-| rank | engine | geometric mean relative time | eligible scenarios | eligible cells / platform cells | wins |
-|--:|:--|--:|--:|--:|--:|
-| 1 | shotium | 1.000× | 7 | 9 / 9 | 9 |
-| 2 | playwright-shell | 2.729× | 7 | 9 / 9 | 0 |
-| not ranked (partial coverage) | playwright-chrome | 3.721× | 7 | 8 / 9 | 0 |
-
-<details><summary>Coverage audit</summary>
-
-- shotium: `batch/c1`, `cold/c1`, `cold-settled/c1`, `lifecycle/c1`, `parallel/c1`, `parallel/c2`, `parallel/c4`, `soak/c4`, `warm/c1`
-- playwright-shell: `batch/c1`, `cold/c1`, `cold-settled/c1`, `lifecycle/c1`, `parallel/c1`, `parallel/c2`, `parallel/c4`, `soak/c4`, `warm/c1`
-- playwright-chrome: `batch/c1`, `cold/c1`, `cold-settled/c1`, `lifecycle/c1`, `parallel/c2`, `parallel/c4`, `soak/c4`, `warm/c1`
-
-</details>
+Conclusion: platform quality is noisy; its measurements remain available for diagnosis, but no formal ranking or winner is produced.
 
 | engine | availability | reason / binary architecture |
 |:--|:--|:--|
@@ -151,30 +115,30 @@ Conclusion: shotium ranks first on this platform at 1.000× normalized elapsed t
 
 | scenario | c | engine | status | ranked | p50 ms | worst ms | throughput/s | vs Shotium |
 |:--|--:|:--|:--|:--|--:|--:|--:|--:|
-| cold | 1 | playwright-chrome | pass | yes | 387 | 436 | 2.568 | 6.34× |
-| cold | 1 | playwright-shell | pass | yes | 234 | 437 | 3.806 | 3.84× |
-| cold | 1 | shotium | pass | yes | 61 | 65 | 16.204 | 1.00× |
-| cold-settled | 1 | playwright-shell | pass | yes | 100.514 | 117.535 | 9.825 | 2.94× |
-| cold-settled | 1 | playwright-chrome | pass | yes | 139.2 | 151.137 | 7.348 | 4.08× |
-| cold-settled | 1 | shotium | pass | yes | 34.135 | 37.535 | 28.873 | 1.00× |
-| lifecycle | 1 | playwright-shell | pass | yes | 223.327 | 285.695 | 4.295 | 3.22× |
-| lifecycle | 1 | playwright-chrome | pass | yes | 414.74 | 459.802 | 2.399 | 5.97× |
-| lifecycle | 1 | shotium | pass | yes | 69.436 | 97.919 | 13.550 | 1.00× |
-| warm | 1 | playwright-chrome | pass | yes | 132.457 | 170.762 | 7.421 | 4.26× |
-| warm | 1 | playwright-shell | pass | yes | 103.057 | 131.859 | 9.281 | 3.31× |
-| warm | 1 | shotium | pass | yes | 31.115 | 36.981 | 30.619 | 1.00× |
-| batch | 1 | shotium | pass | yes | 41.573 | 263.164 | 17.258 | 1.00× |
-| batch | 1 | playwright-shell | pass | yes | 127.508 | 324.973 | 7.033 | 3.07× |
-| batch | 1 | playwright-chrome | pass | yes | 137.543 | 352.136 | 6.225 | 3.31× |
+| cold | 1 | playwright-chrome | pass | no | 387 | 436 | 2.568 | N/A |
+| cold | 1 | playwright-shell | pass | no | 234 | 437 | 3.806 | N/A |
+| cold | 1 | shotium | pass | no | 61 | 65 | 16.204 | N/A |
+| cold-settled | 1 | playwright-shell | pass | no | 100.514 | 117.535 | 9.825 | N/A |
+| cold-settled | 1 | playwright-chrome | pass | no | 139.2 | 151.137 | 7.348 | N/A |
+| cold-settled | 1 | shotium | pass | no | 34.135 | 37.535 | 28.873 | N/A |
+| lifecycle | 1 | playwright-shell | pass | no | 223.327 | 285.695 | 4.295 | N/A |
+| lifecycle | 1 | playwright-chrome | pass | no | 414.74 | 459.802 | 2.399 | N/A |
+| lifecycle | 1 | shotium | pass | no | 69.436 | 97.919 | 13.550 | N/A |
+| warm | 1 | playwright-chrome | pass | no | 132.457 | 170.762 | 7.421 | N/A |
+| warm | 1 | playwright-shell | pass | no | 103.057 | 131.859 | 9.281 | N/A |
+| warm | 1 | shotium | pass | no | 31.115 | 36.981 | 30.619 | N/A |
+| batch | 1 | shotium | pass | no | 41.573 | 263.164 | 17.258 | N/A |
+| batch | 1 | playwright-shell | pass | no | 127.508 | 324.973 | 7.033 | N/A |
+| batch | 1 | playwright-chrome | pass | no | 137.543 | 352.136 | 6.225 | N/A |
 | parallel | 1 | playwright-chrome | noisy | no | 167.68 | 371.411 | 4.467 | N/A |
-| parallel | 1 | shotium | pass | yes | 44.512 | 264.778 | 16.510 | 1.00× |
-| parallel | 1 | playwright-shell | pass | yes | 132.379 | 352.231 | 6.451 | 2.97× |
-| parallel | 2 | shotium | pass | yes | 86.974 | 301.296 | 16.826 | 1.00× |
-| parallel | 2 | playwright-shell | pass | yes | 204.366 | 362.629 | 8.550 | 2.35× |
-| parallel | 2 | playwright-chrome | pass | yes | 266.92 | 394.053 | 7.000 | 3.07× |
-| parallel | 4 | playwright-shell | pass | yes | 356.323 | 576.342 | 9.585 | 2.05× |
-| parallel | 4 | playwright-chrome | pass | yes | 457.045 | 607.196 | 7.786 | 2.62× |
-| parallel | 4 | shotium | pass | yes | 174.22 | 369.477 | 16.852 | 1.00× |
+| parallel | 1 | shotium | pass | no | 44.512 | 264.778 | 16.510 | N/A |
+| parallel | 1 | playwright-shell | pass | no | 132.379 | 352.231 | 6.451 | N/A |
+| parallel | 2 | shotium | pass | no | 86.974 | 301.296 | 16.826 | N/A |
+| parallel | 2 | playwright-shell | pass | no | 204.366 | 362.629 | 8.550 | N/A |
+| parallel | 2 | playwright-chrome | pass | no | 266.92 | 394.053 | 7.000 | N/A |
+| parallel | 4 | playwright-shell | pass | no | 356.323 | 576.342 | 9.585 | N/A |
+| parallel | 4 | playwright-chrome | pass | no | 457.045 | 607.196 | 7.786 | N/A |
+| parallel | 4 | shotium | pass | no | 174.22 | 369.477 | 16.852 | N/A |
 | reuse-page | 1 | playwright-shell | pass | no | 50.213 | 69.855 | 18.773 | N/A |
 | reuse-page | 1 | playwright-chrome | pass | no | 64.971 | 67.096 | 15.817 | N/A |
 | resident | 1 | playwright-shell | pass | no | 836 | 867 | 1.232 | N/A |
@@ -183,9 +147,9 @@ Conclusion: shotium ranks first on this platform at 1.000× normalized elapsed t
 | faults | 1 | shotium | pass | no | 9137.552 | 9137.552 | N/A | N/A |
 | faults | 1 | playwright-chrome | pass | no | 17250.492 | 17250.492 | N/A | N/A |
 | faults | 1 | playwright-shell | pass | no | 13145.578 | 13145.578 | N/A | N/A |
-| soak | 4 | playwright-chrome | pass | yes | 375.958 | 673.265 | 10.135 | 2.10× |
-| soak | 4 | playwright-shell | pass | yes | 285.434 | 543.489 | 12.844 | 1.59× |
-| soak | 4 | shotium | pass | yes | 179.177 | 424.282 | 17.776 | 1.00× |
+| soak | 4 | playwright-chrome | pass | no | 375.958 | 673.265 | 10.135 | N/A |
+| soak | 4 | playwright-shell | pass | no | 285.434 | 543.489 | 12.844 | N/A |
+| soak | 4 | shotium | pass | no | 179.177 | 424.282 | 17.776 | N/A |
 
 ## win32-x64
 
@@ -193,7 +157,7 @@ Scenario groups ran on separate native runners; every engine comparison remains 
 
 ### Within-platform ranking
 
-Conclusion: no scenario/concurrency pair has both an eligible Shotium result and an eligible competitor result, so no ranking is produced.
+Conclusion: platform quality is infra-error; its measurements remain available for diagnosis, but no formal ranking or winner is produced.
 
 | engine | availability | reason / binary architecture |
 |:--|:--|:--|
@@ -207,7 +171,7 @@ Scenario groups ran on separate native runners; every engine comparison remains 
 
 ### Within-platform ranking
 
-Conclusion: no scenario/concurrency pair has both an eligible Shotium result and an eligible competitor result, so no ranking is produced.
+Conclusion: platform quality is infra-error; its measurements remain available for diagnosis, but no formal ranking or winner is produced.
 
 | engine | availability | reason / binary architecture |
 |:--|:--|:--|
@@ -221,27 +185,7 @@ Scenario groups ran on separate native runners; every engine comparison remains 
 
 ### Within-platform ranking
 
-Relative elapsed time is normalized to Shotium = 1.000 in each eligible cell; **lower is better**. The score is the geometric mean within this platform only. A formal rank is awarded only to engines covering every comparable platform cell; partial coverage remains visible but is not ranked. Tied cell winners each receive one win.
-
-Conclusion: shotium ranks first on this platform at 1.000× normalized elapsed time across 3 eligible cell(s), with 3 win(s).
-
-| rank | engine | geometric mean relative time | eligible scenarios | eligible cells / platform cells | wins |
-|--:|:--|--:|--:|--:|--:|
-| 1 | shotium | 1.000× | 3 | 3 / 3 | 3 |
-| 2 | puppeteer-shell | 6.407× | 3 | 3 / 3 | 0 |
-| not ranked (partial coverage) | playwright-shell | 6.193× | 2 | 2 / 3 | 0 |
-| not ranked (partial coverage) | puppeteer-chrome | 19.514× | 2 | 2 / 3 | 0 |
-| not ranked (partial coverage) | playwright-chrome | 20.834× | 2 | 2 / 3 | 0 |
-
-<details><summary>Coverage audit</summary>
-
-- shotium: `cold/c1`, `lifecycle/c1`, `soak/c4`
-- puppeteer-shell: `cold/c1`, `lifecycle/c1`, `soak/c4`
-- playwright-shell: `cold/c1`, `lifecycle/c1`
-- puppeteer-chrome: `cold/c1`, `lifecycle/c1`
-- playwright-chrome: `cold/c1`, `lifecycle/c1`
-
-</details>
+Conclusion: platform quality is fail; its measurements remain available for diagnosis, but no formal ranking or winner is produced.
 
 | engine | availability | reason / binary architecture |
 |:--|:--|:--|
@@ -253,21 +197,21 @@ Conclusion: shotium ranks first on this platform at 1.000× normalized elapsed t
 
 | scenario | c | engine | status | ranked | p50 ms | worst ms | throughput/s | vs Shotium |
 |:--|--:|:--|:--|:--|--:|--:|--:|--:|
-| cold | 1 | playwright-chrome | pass | yes | 4623 | 15502 | 0.167 | 26.88× |
-| cold | 1 | playwright-shell | pass | yes | 1118 | 2172 | 0.769 | 6.50× |
-| cold | 1 | puppeteer-chrome | pass | yes | 3273 | 7469 | 0.248 | 19.03× |
-| cold | 1 | puppeteer-shell | pass | yes | 1301 | 1805 | 0.764 | 7.56× |
-| cold | 1 | shotium | pass | yes | 172 | 529 | 4.375 | 1.00× |
+| cold | 1 | playwright-chrome | pass | no | 4623 | 15502 | 0.167 | N/A |
+| cold | 1 | playwright-shell | pass | no | 1118 | 2172 | 0.769 | N/A |
+| cold | 1 | puppeteer-chrome | pass | no | 3273 | 7469 | 0.248 | N/A |
+| cold | 1 | puppeteer-shell | pass | no | 1301 | 1805 | 0.764 | N/A |
+| cold | 1 | shotium | pass | no | 172 | 529 | 4.375 | N/A |
 | cold-settled | 1 | puppeteer-chrome | noisy | no | 11176.351 | 13033.562 | N/A | N/A |
 | cold-settled | 1 | playwright-chrome | pass | no | 817.63 | 901.08 | 1.209 | N/A |
 | cold-settled | 1 | puppeteer-shell | pass | no | 312.791 | 418.888 | 2.976 | N/A |
 | cold-settled | 1 | shotium | noisy | no | 20.469 | 26.325 | 0.412 | N/A |
 | cold-settled | 1 | playwright-shell | noisy | no | 319.144 | 339.822 | 0.092 | N/A |
-| lifecycle | 1 | playwright-shell | pass | yes | 1234.88 | 2082.948 | 0.749 | 5.90× |
-| lifecycle | 1 | playwright-chrome | pass | yes | 3379.47 | 4631.868 | 0.281 | 16.15× |
-| lifecycle | 1 | puppeteer-shell | pass | yes | 1586.12 | 1942.095 | 0.660 | 7.58× |
-| lifecycle | 1 | shotium | pass | yes | 209.276 | 555.73 | 4.293 | 1.00× |
-| lifecycle | 1 | puppeteer-chrome | pass | yes | 4188.048 | 5142.899 | 0.243 | 20.01× |
+| lifecycle | 1 | playwright-shell | pass | no | 1234.88 | 2082.948 | 0.749 | N/A |
+| lifecycle | 1 | playwright-chrome | pass | no | 3379.47 | 4631.868 | 0.281 | N/A |
+| lifecycle | 1 | puppeteer-shell | pass | no | 1586.12 | 1942.095 | 0.660 | N/A |
+| lifecycle | 1 | shotium | pass | no | 209.276 | 555.73 | 4.293 | N/A |
+| lifecycle | 1 | puppeteer-chrome | pass | no | 4188.048 | 5142.899 | 0.243 | N/A |
 | warm | 1 | playwright-chrome | noisy | no | 882.866 | 1220.821 | 1.098 | N/A |
 | warm | 1 | shotium | noisy | no | 24.167 | 25.145 | 0.368 | N/A |
 | warm | 1 | playwright-shell | noisy | no | 8723.494 | 9590.523 | N/A | N/A |
@@ -310,8 +254,8 @@ Conclusion: shotium ranks first on this platform at 1.000× normalized elapsed t
 | soak | 4 | playwright-shell | noisy | no | 6376.069 | 6376.069 | N/A | N/A |
 | soak | 4 | puppeteer-chrome | noisy | no | 9222.694 | 9222.694 | N/A | N/A |
 | soak | 4 | playwright-chrome | fail | no | 2954.813 | 7149.026 | 1.093 | N/A |
-| soak | 4 | puppeteer-shell | pass | yes | 808.473 | 1768.91 | 4.783 | 4.59× |
-| soak | 4 | shotium | pass | yes | 176.215 | 870.766 | 18.436 | 1.00× |
+| soak | 4 | puppeteer-shell | pass | no | 808.473 | 1768.91 | 4.783 | N/A |
+| soak | 4 | shotium | pass | no | 176.215 | 870.766 | 18.436 | N/A |
 
 ## darwin-arm64
 
@@ -319,27 +263,7 @@ Scenario groups ran on separate native runners; every engine comparison remains 
 
 ### Within-platform ranking
 
-Relative elapsed time is normalized to Shotium = 1.000 in each eligible cell; **lower is better**. The score is the geometric mean within this platform only. A formal rank is awarded only to engines covering every comparable platform cell; partial coverage remains visible but is not ranked. Tied cell winners each receive one win.
-
-Conclusion: shotium ranks first on this platform at 1.000× normalized elapsed time across 2 eligible cell(s), with 2 win(s).
-
-| rank | engine | geometric mean relative time | eligible scenarios | eligible cells / platform cells | wins |
-|--:|:--|--:|--:|--:|--:|
-| 1 | shotium | 1.000× | 2 | 2 / 2 | 2 |
-| 2 | playwright-shell | 7.947× | 2 | 2 / 2 | 0 |
-| not ranked (partial coverage) | puppeteer-shell | 6.652× | 1 | 1 / 2 | 0 |
-| not ranked (partial coverage) | playwright-chrome | 20.599× | 1 | 1 / 2 | 0 |
-| not ranked (partial coverage) | puppeteer-chrome | 22.709× | 1 | 1 / 2 | 0 |
-
-<details><summary>Coverage audit</summary>
-
-- shotium: `lifecycle/c1`, `warm/c1`
-- playwright-shell: `lifecycle/c1`, `warm/c1`
-- puppeteer-shell: `lifecycle/c1`
-- playwright-chrome: `lifecycle/c1`
-- puppeteer-chrome: `lifecycle/c1`
-
-</details>
+Conclusion: platform quality is fail; its measurements remain available for diagnosis, but no formal ranking or winner is produced.
 
 | engine | availability | reason / binary architecture |
 |:--|:--|:--|
@@ -361,14 +285,14 @@ Conclusion: shotium ranks first on this platform at 1.000× normalized elapsed t
 | cold-settled | 1 | puppeteer-shell | noisy | no | 297.03 | 338.777 | 0.151 | N/A |
 | cold-settled | 1 | shotium | noisy | no | 10.31 | 14.387 | 0.417 | N/A |
 | cold-settled | 1 | playwright-shell | noisy | no | 188.779 | 413.709 | 0.527 | N/A |
-| lifecycle | 1 | playwright-shell | pass | yes | 493.453 | 906.426 | 1.885 | 5.14× |
-| lifecycle | 1 | playwright-chrome | pass | yes | 1977.412 | 3194.205 | 0.476 | 20.60× |
-| lifecycle | 1 | puppeteer-shell | pass | yes | 638.561 | 1166.601 | 1.419 | 6.65× |
-| lifecycle | 1 | shotium | pass | yes | 95.997 | 131.49 | 10.833 | 1.00× |
-| lifecycle | 1 | puppeteer-chrome | pass | yes | 2180.04 | 3540.398 | 0.431 | 22.71× |
+| lifecycle | 1 | playwright-shell | pass | no | 493.453 | 906.426 | 1.885 | N/A |
+| lifecycle | 1 | playwright-chrome | pass | no | 1977.412 | 3194.205 | 0.476 | N/A |
+| lifecycle | 1 | puppeteer-shell | pass | no | 638.561 | 1166.601 | 1.419 | N/A |
+| lifecycle | 1 | shotium | pass | no | 95.997 | 131.49 | 10.833 | N/A |
+| lifecycle | 1 | puppeteer-chrome | pass | no | 2180.04 | 3540.398 | 0.431 | N/A |
 | warm | 1 | playwright-chrome | noisy | no | 258.445 | 421.296 | 3.839 | N/A |
-| warm | 1 | shotium | pass | yes | 11 | 61.271 | 64.737 | 1.00× |
-| warm | 1 | playwright-shell | pass | yes | 135.149 | 232.58 | 7.155 | 12.29× |
+| warm | 1 | shotium | pass | no | 11 | 61.271 | 64.737 | N/A |
+| warm | 1 | playwright-shell | pass | no | 135.149 | 232.58 | 7.155 | N/A |
 | warm | 1 | puppeteer-shell | noisy | no | 185.069 | 264.455 | 2.134 | N/A |
 | warm | 1 | puppeteer-chrome | noisy | no | 6288.231 | 7460.062 | N/A | N/A |
 | batch | 1 | shotium | noisy | no | 24.017 | 268.205 | 21.985 | N/A |

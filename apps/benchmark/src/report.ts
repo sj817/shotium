@@ -2,6 +2,11 @@ type ReportLocale = 'en' | 'zh-CN';
 
 export const BENCHMARK_SITE_URL = 'https://sj817.github.io/shotium/';
 
+export function isPublishableResult(result: any): boolean {
+  return result?.status === 'complete' && result?.quality_status === 'pass' &&
+    result?.evidence_status === 'complete';
+}
+
 type ComparisonEntry = {
   rank: number | null;
   engine: string;
@@ -216,12 +221,21 @@ function comparisonLookup(ranking: PlatformRanking): Map<string, number> {
   return lookup;
 }
 
-export function renderSummaryCsv(platforms: any[]): string {
+function platformRankingAllowed(platform: any, manifestPlatform: any = null): boolean {
+  return platform?.status === 'pass' && platform?.shards_complete !== false &&
+    manifestPlatform?.missing !== true && manifestPlatform?.shards_complete !== false &&
+    manifestPlatform?.evidence_complete !== false;
+}
+
+export function renderSummaryCsv(platforms: any[], manifest: any = null): string {
   const header = 'platform,platform_status,shard,engine,scenario,concurrency,status,ranking_eligible,paired_ranking_eligible,runs,shots,p50_ms,p95_ms,worst_ms,mad_ms,throughput_per_second,failure_rate,rss_slope_bytes_per_minute,ratio_to_shotium';
   const lines = [header];
+  const manifestPlatforms = Array.isArray(manifest?.platforms) ? manifest.platforms : [];
+  const manifestPlatformById = new Map(manifestPlatforms.map((entry: any) => [entry.platform, entry]));
   for (const platform of platforms) {
     const ranking = buildPlatformRanking(platform);
-    const ratios = comparisonLookup(ranking);
+    const ratios = platformRankingAllowed(platform, manifestPlatformById.get(platform.platform)) ?
+      comparisonLookup(ranking) : new Map<string, number>();
     for (const scenario of platform.scenarios || []) {
       const p50 = scenario.latency_ms?.p50 ?? scenario.wall_time_ms?.p50 ?? null;
       const ratio = ratios.get(`${scenario.engine}|${cellKey(scenario)}`) ?? null;
@@ -263,6 +277,8 @@ const COPY = {
     rankingAlign: '|--:|:--|--:|--:|--:|--:|',
     coverageHeading: 'Coverage audit',
     noRanking: 'Conclusion: no scenario/concurrency pair has both an eligible Shotium result and an eligible competitor result, so no ranking is produced.',
+    platformQualityNoRanking: (status: string) =>
+      `Conclusion: platform quality is ${status}; its measurements remain available for diagnosis, but no formal ranking or winner is produced.`,
     platformConclusion: (winners: string, ratio: string, cells: number, wins: number) =>
       `Conclusion: ${winners} ranks first on this platform at ${ratio}× normalized elapsed time across ${cells} eligible cell(s), with ${wins} win(s).`,
     engineHeader: '| engine | availability | reason / binary architecture |',
@@ -294,6 +310,8 @@ const COPY = {
     rankingAlign: '|--:|:--|--:|--:|--:|--:|',
     coverageHeading: '覆盖项审计',
     noRanking: '结论：没有任何场景/并发项同时具备合格的 Shotium 与竞品结果，因此不生成综合排名。',
+    platformQualityNoRanking: (status: string) =>
+      `结论：本平台质量状态为“${status}”；测量数据仅保留用于诊断，不生成正式排名或第一名。`,
     platformConclusion: (winners: string, ratio: string, cells: number, wins: number) =>
       `结论：${winners} 在本平台排名第一，相对耗时为 ${ratio}×，覆盖 ${cells} 个合格测试项，获得 ${wins} 次单项冠军。`,
     engineHeader: '| 引擎 | 可用性 | 原因 / 二进制架构 |',
@@ -308,7 +326,13 @@ export function renderReport(platforms: any[], manifest: any, locale: ReportLoca
   const copy = COPY[locale];
   const rankings = new Map(platforms.map((platform) => [platform.platform, buildPlatformRanking(platform)]));
   const platformById = new Map(platforms.map((platform) => [platform.platform, platform]));
-  const rankedPlatforms = [...rankings.values()].filter((ranking) => ranking.total_cells > 0).length;
+  const manifestPlatforms = Array.isArray(manifest.platforms) ? manifest.platforms : [];
+  const manifestPlatformById = new Map(manifestPlatforms.map((entry: any) => [entry.platform, entry]));
+  const rankedPlatforms = platforms.filter((platform) => {
+    const ranking = rankings.get(platform.platform);
+    return platformRankingAllowed(platform, manifestPlatformById.get(platform.platform)) &&
+      (ranking?.entries.filter((entry) => entry.rank !== null).length || 0) >= 2;
+  }).length;
   const lines = [
     copy.title(manifest.shotium_version), '',
     locale === 'zh-CN' ? `[交互式基准站点](${BENCHMARK_SITE_URL})` :
@@ -316,7 +340,6 @@ export function renderReport(platforms: any[], manifest: any, locale: ReportLoca
     copy.result(manifest), '',
     copy.conclusion(manifest, rankedPlatforms), '', copy.ratios, '',
   ];
-  const manifestPlatforms = Array.isArray(manifest.platforms) ? manifest.platforms : [];
   const overviewPlatforms = [...new Set([
     ...manifestPlatforms.map((entry: any) => String(entry.platform || '')).filter(Boolean),
     ...platforms.map((platform) => String(platform.platform)),
@@ -326,7 +349,8 @@ export function renderReport(platforms: any[], manifest: any, locale: ReportLoca
     const platform = platformById.get(platformId);
     const manifestPlatform = manifestPlatforms.find((entry: any) => entry.platform === platformId);
     const ranking = rankings.get(platformId);
-    const formalEntries = ranking?.entries.filter((entry) => entry.rank !== null) || [];
+    const allowed = platformRankingAllowed(platform, manifestPlatform);
+    const formalEntries = allowed ? ranking?.entries.filter((entry) => entry.rank !== null) || [] : [];
     const winners = formalEntries.filter((entry) => entry.rank === 1).map((entry) => entry.engine);
     const winner = winners.length ? winners.join(locale === 'zh-CN' ? '、' : ', ') : copy.noValidRanking;
     lines.push(`| ${platformId} | ${statusLabel(platform?.status ?? manifestPlatform?.status, locale)} | ` +
@@ -335,10 +359,14 @@ export function renderReport(platforms: any[], manifest: any, locale: ReportLoca
   lines.push('');
   for (const platform of platforms) {
     const ranking = rankings.get(platform.platform)!;
-    const ratios = comparisonLookup(ranking);
+    const allowed = platformRankingAllowed(platform, manifestPlatformById.get(platform.platform));
+    const ratios = allowed ? comparisonLookup(ranking) : new Map<string, number>();
     lines.push(`## ${platform.platform}`, '');
     if (platform.execution_shards) lines.push(copy.sharded, '');
-    if (!ranking.entries.length) {
+    if (!allowed) {
+      lines.push(copy.rankingHeading, '',
+          copy.platformQualityNoRanking(statusLabel(platform.status, locale)), '');
+    } else if (!ranking.entries.length) {
       lines.push(copy.rankingHeading, '', copy.noRanking, '');
     } else {
       const winners = ranking.entries.filter((entry) => entry.rank === 1);
@@ -391,7 +419,8 @@ export function renderLatest(latest: any): string {
   if (!latest) {
     return `# Latest benchmark / 最新基准\n\n` +
       `[Interactive benchmark explorer / 交互式基准站点](${BENCHMARK_SITE_URL})\n\n` +
-      `No benchmark results yet. / 暂无基准结果。\n`;
+      `No publishable benchmark result yet; failed and noisy runs remain available in the archive. / ` +
+      `暂无可发布的有效基准结果；失败与波动运行仍保留在归档中。\n`;
   }
   return `# Latest benchmark / 最新基准\n\n` +
     `[Interactive benchmark explorer / 交互式基准站点](${BENCHMARK_SITE_URL})\n\n` +

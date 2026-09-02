@@ -1,6 +1,6 @@
 // Regenerates docs/assets/demo.gif from docs/demo.tape.
 //
-//   npm run docs:demo
+//   pnpm run docs:demo
 //
 // VHS drives a real terminal (ttyd) and encodes it with ffmpeg, so all three
 // have to be on PATH:

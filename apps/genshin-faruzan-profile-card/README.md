@@ -29,8 +29,8 @@ faruzan-profile-card/
 安装依赖并启动 Vite:
 
 ```powershell
-npm install
-npm run dev
+pnpm install --frozen-lockfile
+pnpm run dev
 ```
 
 浏览器访问终端显示的本地地址。字体与图片均由 Vite 通过 HTTP 提供。

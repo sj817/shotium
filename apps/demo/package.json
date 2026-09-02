@@ -10,6 +10,7 @@
   "author": "",
   "license": "Apache-2.0",
   "type": "module",
+  "packageManager": "pnpm@9.15.9",
   "dependencies": {
     "@shotkit/shotium": "0.3.1",
     "express": "5.2.1"

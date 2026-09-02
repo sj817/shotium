@@ -89,13 +89,16 @@ test('aggregates exactly six native platform results into the standard directory
     assert.equal(path.basename(aggregate.destination), '20260829T013045Z-gh123456789-a1');
     assert.equal(aggregate.manifest.status, 'complete');
     assert.equal(aggregate.manifest.evidence_status, 'complete');
+    assert.equal(aggregate.manifest.publishable, true);
     assert.equal(aggregate.manifest.platforms.length, 6);
     assert.match(fs.readFileSync(path.join(aggregate.destination, 'report.md'), 'utf8'), /No cross-platform ranking/);
     const chineseReport = path.join(aggregate.destination, 'report.zh-CN.md');
     assert.equal(fs.existsSync(chineseReport), true);
     assert.match(fs.readFileSync(chineseReport, 'utf8'), /不进行跨平台混排/);
     assert.match(fs.readFileSync(path.join(aggregate.destination, 'summary.csv'), 'utf8'), /ratio_to_shotium/);
-    assert.equal(JSON.parse(fs.readFileSync(path.join(results, 'index.json'), 'utf8')).results.length, 1);
+    const index = JSON.parse(fs.readFileSync(path.join(results, 'index.json'), 'utf8'));
+    assert.equal(index.results.length, 1);
+    assert.equal(index.results[0].publishable, true);
     const latest = fs.readFileSync(path.join(results, 'LATEST.md'), 'utf8');
     assert.match(latest, /\[English\]\(v0\.3\.2\/20260829T013045Z-gh123456789-a1\/report\.md\)/);
     assert.match(latest, /\[简体中文\]\(v0\.3\.2\/20260829T013045Z-gh123456789-a1\/report\.zh-CN\.md\)/);
@@ -126,7 +129,10 @@ test('marks a partial matrix incomplete instead of inventing a passing platform'
       runId: '1', runAttempt: '2', timestamp: '2026-08-29T02:00:00Z',
     });
     assert.equal(aggregate.manifest.status, 'incomplete');
+    assert.equal(aggregate.manifest.publishable, false);
     assert.equal(aggregate.manifest.platforms.filter((entry: any) => entry.missing).length, 5);
+    assert.match(fs.readFileSync(path.join(root, 'results', 'LATEST.md'), 'utf8'),
+        /No publishable benchmark result yet/);
   } finally {
     fs.rmSync(root, {recursive: true, force: true});
   }

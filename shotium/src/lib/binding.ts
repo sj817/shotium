@@ -95,7 +95,7 @@ export function load(): NativeBinding {
       'shotium: no engine for this platform.\n' +
       `  looked in:\n    ${tried.join('\n    ')}\n` +
       (expected ?
-           `  It ships in ${expected}, which npm installs as an optional ` +
+           `  It ships in ${expected}, which pnpm installs as an optional ` +
                'dependency of this package. If the install skipped optional ' +
                'dependencies, it is not there.\n' :
            `  There is no build for ${process.platform}-${process.arch}.\n`));

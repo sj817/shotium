@@ -30,7 +30,7 @@
 //
 // The executable still exists and is still worth having -- it is what the
 // standalone .7z archives on the releases page carry, for using the engine
-// without node at all. It is just not part of an npm install.
+// without node at all. It is just not part of a pnpm install.
 //
 // --addon is therefore required in practice. A package without one installs
 // and then cannot render: there is nothing else in it that node can call.
@@ -189,7 +189,7 @@ function main() {
           'shared library behind the C ABI, the node addon linked against it,\n' +
           'and the two resource packs it reads.\n\n' +
           'Install [`@shotkit/shotium`](https://www.npmjs.com/package/' +
-          '@shotkit/shotium) instead. It depends on all six and npm installs\n' +
+          '@shotkit/shotium) instead. It depends on all six and pnpm installs\n' +
           'whichever matches the machine.\n');
 
   const bytes = shipped.reduce(

@@ -57,7 +57,7 @@ export function which(command) {
  * Rebuilds docs/.demo-run from docs/demo.
  *
  * @param {object} options
- * @param {boolean} options.install  npm install the published package now.
+ * @param {boolean} options.install  pnpm add the published package now.
  *   docs_assets.mjs needs the module immediately; docs_demo.mjs wants the
  *   install to happen on camera instead, so it passes false.
  */
@@ -71,12 +71,17 @@ export function prepareWorkspace({ install }) {
   }
   writeFileSync(
     join(runDir, 'package.json'),
-    `${JSON.stringify({ name: 'shotium-demo', private: true, type: 'module' }, null, 2)}\n`,
+    `${JSON.stringify({
+      name: 'shotium-demo',
+      private: true,
+      type: 'module',
+      packageManager: 'pnpm@9.15.9',
+    }, null, 2)}\n`,
   );
 
   if (install) {
-    console.log('> npm install @shotkit/shotium');
-    run('npm', ['install', '--no-audit', '--no-fund', '@shotkit/shotium'], { cwd: runDir });
+    console.log('> pnpm add @shotkit/shotium');
+    run('pnpm', ['add', '--save-exact', '--no-lockfile', '@shotkit/shotium'], { cwd: runDir });
   }
   return runDir;
 }

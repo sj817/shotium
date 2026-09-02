@@ -22,6 +22,11 @@ export function resultsUrl(base: string, relativePath: string): string {
   return new URL(`${root}benchmark-results/${normalized}`, document.baseURI).toString();
 }
 
+export function isPublishableEntry(entry: IndexEntry): boolean {
+  return entry.publishable ?? (entry.status === 'complete' && entry.quality_status === 'pass' &&
+    entry.evidence_status === 'complete');
+}
+
 async function fetchJson<T>(base: string, relativePath: string): Promise<T> {
   const response = await fetch(resultsUrl(base, relativePath), {cache: 'no-cache'});
   if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);

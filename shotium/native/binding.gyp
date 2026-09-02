@@ -1,12 +1,12 @@
 {
-  # How the addon is built. It is not built by `npm install`: shot itself is a
+  # How the addon is built. It is not built by `pnpm install`: shot itself is a
   # Chromium fork that takes hours and a checkout to compile, so the library
   # this links against is a release artifact, and the addon is built against it
   # once per platform and shipped prebuilt.
   #
   #   SHOT_INCLUDE_DIR=/path/to/shot   (the directory holding shot_api.h)
   #   SHOT_LIB_DIR=/path/to/out/Shot   (the directory holding the library)
-  #   npx node-gyp rebuild
+  #   pnpm dlx node-gyp rebuild
   "variables": {
     # Not the engine's source directory: a directory holding a copy of
     # shot_api.h and nothing else. An include directory pointed at shot/ makes

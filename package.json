@@ -7,11 +7,12 @@
   "//6": "    module=\"NodeNext\" configuration in",
   "//7": "    tools/typescript/tsconfig_base.json",
   "//8": " 3) Give the README asset generators a home. They are the only",
-  "//9": "    scripts here; nothing in this repository is built by npm.",
+  "//9": "    scripts here; nothing in this repository is built by pnpm.",
   "type": "module",
+  "packageManager": "pnpm@9.15.9",
   "scripts": {
     "docs:assets": "node tools/shot/docs_assets.mjs",
     "docs:demo": "node tools/shot/docs_demo.mjs",
-    "docs": "npm run docs:assets && npm run docs:demo"
+    "docs": "pnpm run docs:assets && pnpm run docs:demo"
   }
 }

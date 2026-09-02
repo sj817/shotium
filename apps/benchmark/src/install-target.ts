@@ -9,13 +9,13 @@ import {APP_ROOT, currentPlatformId} from './constants.ts';
 const require = createRequire(import.meta.url);
 const sleep = (milliseconds: number) => new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
 
-async function npmView(specifier) {
-  const result = await execa('npm', ['view', specifier, 'version', '--json'], {
+async function registryView(specifier) {
+  const result = await execa('pnpm', ['view', specifier, 'version', '--json'], {
     cwd: APP_ROOT,
     timeout: 30_000,
     reject: false,
   });
-  if (result.exitCode !== 0) throw new Error(result.stderr || `npm view ${specifier} failed`);
+  if (result.exitCode !== 0) throw new Error(result.stderr || `pnpm view ${specifier} failed`);
   const parsed = JSON.parse(result.stdout);
   return Array.isArray(parsed) ? parsed.at(-1) : parsed;
 }
@@ -26,7 +26,7 @@ export async function resolveMainShotiumVersion(requested, timeoutMs = 600_000) 
   let lastError;
   while (Date.now() < deadline) {
     try {
-      return await npmView(`@shotkit/shotium@${requested}`);
+      return await registryView(`@shotkit/shotium@${requested}`);
     } catch (error) {
       lastError = error;
       await sleep(Math.min(delay, Math.max(0, deadline - Date.now())));
@@ -42,9 +42,9 @@ export async function resolveShotiumVersion(requested, timeoutMs = 600_000) {
   let lastError;
   while (Date.now() < deadline) {
     try {
-      const version = await npmView(`@shotkit/shotium@${requested}`);
+      const version = await registryView(`@shotkit/shotium@${requested}`);
       const platformPackage = `@shotkit/shotium-${currentPlatformId()}@${version}`;
-      const platformVersion = await npmView(platformPackage);
+      const platformVersion = await registryView(platformPackage);
       if (platformVersion !== version) {
         throw new Error(`${platformPackage} resolved as ${platformVersion}`);
       }
@@ -70,21 +70,31 @@ function installedVersion() {
 export async function ensureShotium(requested, {timeoutMs = 600_000, install = true} = {}) {
   const version = await resolveShotiumVersion(requested, timeoutMs);
   if (!install || installedVersion() === version) return version;
-  const result = await execa('npm', [
-    'install',
-    '--no-save',
-    '--package-lock=false',
-    '--no-audit',
-    '--no-fund',
-    `@shotkit/shotium@${version}`,
-  ], {
-    cwd: APP_ROOT,
-    timeout: timeoutMs,
-    reject: false,
-    stdout: 'inherit',
-    stderr: 'inherit',
-  });
-  if (result.exitCode !== 0) throw new Error(`npm install @shotkit/shotium@${version} failed`);
+  const manifestFile = path.join(APP_ROOT, 'package.json');
+  const originalManifest = fs.readFileSync(manifestFile, 'utf8');
+  let result;
+  try {
+    // pnpm add intentionally writes package.json and has no --no-save mode.
+    // The benchmark needs a runtime-selected exact version, so restore the
+    // tracked manifest byte-for-byte after pnpm has linked the package.
+    result = await execa('pnpm', [
+      'add',
+      '--save-exact',
+      '--no-lockfile',
+      `@shotkit/shotium@${version}`,
+    ], {
+      cwd: APP_ROOT,
+      timeout: timeoutMs,
+      reject: false,
+      stdout: 'inherit',
+      stderr: 'inherit',
+    });
+  } finally {
+    if (fs.readFileSync(manifestFile, 'utf8') !== originalManifest) {
+      fs.writeFileSync(manifestFile, originalManifest);
+    }
+  }
+  if (result.exitCode !== 0) throw new Error(`pnpm add @shotkit/shotium@${version} failed`);
   if (installedVersion() !== version) {
     throw new Error(`installed Shotium is ${installedVersion() || 'missing'}, expected ${version}`);
   }

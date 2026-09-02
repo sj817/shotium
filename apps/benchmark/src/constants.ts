@@ -5,6 +5,11 @@ export const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const APP_ROOT = path.dirname(HERE);
 export const FIXTURE_ROOT = path.join(APP_ROOT, 'fixtures');
 export const VIEWPORT = Object.freeze({width: 1280, height: 720});
+// Keep navigation and screenshot failures comparable across engines. Puppeteer
+// otherwise inherits CDP's 180-second protocol timeout while Shotium rejects a
+// request after 30 seconds and Playwright screenshots have no timeout by
+// default, turning one broken cell into a multi-minute CI straggler.
+export const BROWSER_OPERATION_TIMEOUT_MS = 30_000;
 
 export const PLATFORM_IDS = Object.freeze([
   'linux-x64',
@@ -74,11 +79,12 @@ export const PROFILES = Object.freeze({
     soakTimeoutMs: 600_000,
     caseLimit: Number.POSITIVE_INFINITY,
     // The GitHub job timeout kills the uploads with it, so stop scheduling with
-    // enough margin to write and upload what we have. 70 minutes left
-    // win32-x64/parallel six cells short of its 105 at concurrency 1/2/4, which
-    // is the slowest cell mix on the slowest runner; the job timeout moved to
-    // 110 to keep the same margin behind this.
-    shardBudgetMs: 85 * 60_000,
+    // enough margin to write and upload what we have. Parallel now has 15
+    // engine/concurrency cells rather than 105 engine/round/concurrency cells,
+    // and every browser operation is capped at 30 seconds. A shard still using
+    // 45 minutes is a failed/noisy diagnostic, not work worth extending to the
+    // old 85-minute mask.
+    shardBudgetMs: 45 * 60_000,
   },
 });
 

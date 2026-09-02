@@ -18,7 +18,7 @@ const SAMPLE_INTERVAL_MS = 10;
 const BASELINE_ENGINES = new Set(['headless-shell', 'system-chrome']);
 
 export const nativeUsage = `Usage:
-  npm run benchmark:native -- \\
+  pnpm run benchmark:native -- \\
     --baseline-executable PATH \\
     --baseline-engine headless-shell|system-chrome \\
     --shot-executable PATH [options]

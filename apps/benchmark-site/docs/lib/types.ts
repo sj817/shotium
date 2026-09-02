@@ -17,6 +17,7 @@ export interface IndexEntry {
   status: 'complete' | 'incomplete';
   quality_status: 'pass' | 'fail' | 'noisy' | string;
   evidence_status: 'complete' | 'incomplete' | string;
+  publishable?: boolean;
   run_id: string;
   source_sha: string | null;
 }
@@ -42,6 +43,7 @@ export interface BenchmarkManifest {
   status: 'complete' | 'incomplete';
   quality_status: string;
   evidence_status: string;
+  publishable?: boolean;
   shotium_version: string;
   profile: string;
   seed: string;
@@ -116,6 +118,7 @@ export interface FailureRecord {
   scenario?: string;
   repeat?: number;
   attempt?: number;
+  concurrency?: number;
   error: string;
 }
 

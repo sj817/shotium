@@ -3,7 +3,7 @@ import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {parseArgs, recoverNpmRunValues} from './args.ts';
 import {PLATFORM_IDS} from './constants.ts';
-import {renderLatest, renderReport, renderSummaryCsv} from './report.ts';
+import {isPublishableResult, renderLatest, renderReport, renderSummaryCsv} from './report.ts';
 
 function readJson(file: string): any {
   return JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -60,7 +60,7 @@ export function renderArchivedResult(resultDirectory: string) {
   const outputs = {
     report: renderReport(platforms, manifest, 'en'),
     reportZh: renderReport(platforms, manifest, 'zh-CN'),
-    csv: renderSummaryCsv(platforms),
+    csv: renderSummaryCsv(platforms, manifest),
   };
   writeDerivedFile(path.join(directory, 'report.md'), outputs.report);
   writeDerivedFile(path.join(directory, 'report.zh-CN.md'), outputs.reportZh);
@@ -71,7 +71,8 @@ export function renderArchivedResult(resultDirectory: string) {
   if (fs.existsSync(indexFile)) {
     const index = readJson(indexFile);
     if (Array.isArray(index?.results)) {
-      writeDerivedFile(path.join(resultsRoot, 'LATEST.md'), renderLatest(index.results[0]));
+      writeDerivedFile(path.join(resultsRoot, 'LATEST.md'),
+          renderLatest(index.results.find(isPublishableResult)));
     }
   }
   return {directory, platforms: platforms.map((platform) => platform.platform)};
