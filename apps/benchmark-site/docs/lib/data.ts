@@ -23,7 +23,7 @@ export function resultsUrl(base: string, relativePath: string): string {
 }
 
 export function isPublishableEntry(entry: IndexEntry): boolean {
-  return entry.publishable ?? (entry.status === 'complete' && entry.quality_status === 'pass' &&
+  return entry.publishable ?? (entry.status === 'complete' && ['pass', 'noisy'].includes(entry.quality_status) &&
     entry.evidence_status === 'complete');
 }
 

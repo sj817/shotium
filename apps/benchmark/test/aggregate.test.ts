@@ -111,6 +111,79 @@ test('aggregates exactly six native platform results into the standard directory
   }
 });
 
+test('publishes trusted results when a competitor records a product failure', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'shotium-aggregate-baseline-failure-test-'));
+  try {
+    const input = path.join(root, 'input');
+    for (const platform of PLATFORM_IDS) {
+      const directory = path.join(input, platform);
+      const summary: any = platformResult(platform);
+      if (platform === 'linux-x64') {
+        summary.status = 'fail';
+        summary.engines.push({
+          engine: 'puppeteer-chrome', status: 'fail', reason: null,
+          executable: '/chrome', architectures: ['x64'],
+        });
+      }
+      writeJson(path.join(directory, 'summary.json'), summary);
+      fs.writeFileSync(path.join(directory, 'samples.jsonl'), `${JSON.stringify({
+        engine: 'shotium', scenario: 'warm', repeat: 1, attempt: 1, concurrency: 1, status: 'pass',
+      })}\n`);
+      writeJson(path.join(directory, 'quality.json'), [{
+        engine: 'shotium', scenario: 'warm', repeat: 1, attempt: 1, concurrency: 1, status: 'pass',
+      }]);
+      writeJson(path.join(directory, 'failures.json'), []);
+      writeJson(path.join(directory, 'artifact.json'), {
+        name: `benchmark-evidence-${platform}`, sha256: 'a'.repeat(64), uploaded: true,
+      });
+    }
+    const aggregate = aggregateResults({
+      input, resultsRoot: path.join(root, 'results'), shotiumVersion: '0.3.2',
+      runId: 'baseline-failure', runAttempt: '1', timestamp: '2026-08-29T01:31:00Z',
+    });
+    assert.equal(aggregate.manifest.platforms[0].status, 'fail');
+    assert.equal(aggregate.manifest.platforms[0].quality_status, 'pass');
+    assert.equal(aggregate.manifest.quality_status, 'pass');
+    assert.equal(aggregate.manifest.publishable, true);
+  } finally {
+    fs.rmSync(root, {recursive: true, force: true});
+  }
+});
+
+test('publishes a complete noisy run while retaining the noisy quality label', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'shotium-aggregate-noisy-test-'));
+  try {
+    const input = path.join(root, 'input');
+    for (const platform of PLATFORM_IDS) {
+      const directory = path.join(input, platform);
+      const summary: any = platformResult(platform);
+      if (platform === 'linux-x64') {
+        summary.status = 'noisy';
+        summary.engines[0].status = 'noisy';
+      }
+      writeJson(path.join(directory, 'summary.json'), summary);
+      fs.writeFileSync(path.join(directory, 'samples.jsonl'), `${JSON.stringify({
+        engine: 'shotium', scenario: 'warm', repeat: 1, attempt: 1, concurrency: 1, status: 'pass',
+      })}\n`);
+      writeJson(path.join(directory, 'quality.json'), [{
+        engine: 'shotium', scenario: 'warm', repeat: 1, attempt: 1, concurrency: 1, status: 'pass',
+      }]);
+      writeJson(path.join(directory, 'failures.json'), []);
+      writeJson(path.join(directory, 'artifact.json'), {
+        name: `benchmark-evidence-${platform}`, sha256: 'a'.repeat(64), uploaded: true,
+      });
+    }
+    const aggregate = aggregateResults({
+      input, resultsRoot: path.join(root, 'results'), shotiumVersion: '0.3.2',
+      runId: 'noisy', runAttempt: '1', timestamp: '2026-08-29T01:32:00Z',
+    });
+    assert.equal(aggregate.manifest.quality_status, 'noisy');
+    assert.equal(aggregate.manifest.publishable, true);
+  } finally {
+    fs.rmSync(root, {recursive: true, force: true});
+  }
+});
+
 test('marks a partial matrix incomplete instead of inventing a passing platform', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'shotium-incomplete-test-'));
   try {

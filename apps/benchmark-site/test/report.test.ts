@@ -2,6 +2,7 @@ import {describe, expect, it} from 'vitest';
 import {assignRanks, buildPlatformReport, buildVerdict, matrixCell} from '../docs/lib/report';
 import type {
   EngineSummary,
+  ManifestPlatform,
   PlatformData,
   PlatformId,
   PlatformSummary,
@@ -134,6 +135,16 @@ describe('platform report', () => {
     expect(buildPlatformReport(failedQuality, null).ranked).toBe(false);
     expect(buildPlatformReport(missing, null).noRankingReason).toBe('not-archived');
     expect(buildPlatformReport(missing, null).status).toBe('missing');
+  });
+
+  it('ranks passing pairs when the manifest says a competitor failure did not break platform trust', () => {
+    const manifest: ManifestPlatform = {
+      platform: 'darwin-x64', missing: false, status: 'fail', quality_status: 'pass',
+      shards_complete: true, evidence_complete: true,
+    };
+    const report = buildPlatformReport(failedQuality, manifest);
+    expect(report.ranked).toBe(true);
+    expect(report.noRankingReason).toBeNull();
   });
 
   it('keeps reference scores on an unranked platform without a runner-up', () => {

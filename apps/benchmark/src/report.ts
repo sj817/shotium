@@ -3,7 +3,7 @@ type ReportLocale = 'en' | 'zh-CN';
 export const BENCHMARK_SITE_URL = 'https://sj817.github.io/shotium/';
 
 export function isPublishableResult(result: any): boolean {
-  return result?.status === 'complete' && result?.quality_status === 'pass' &&
+  return result?.status === 'complete' && ['pass', 'noisy'].includes(result?.quality_status) &&
     result?.evidence_status === 'complete';
 }
 
@@ -222,7 +222,11 @@ function comparisonLookup(ranking: PlatformRanking): Map<string, number> {
 }
 
 function platformRankingAllowed(platform: any, manifestPlatform: any = null): boolean {
-  return platform?.status === 'pass' && platform?.shards_complete !== false &&
+  const quality = manifestPlatform?.quality_status;
+  const trusted = quality === undefined ? platform?.status === 'pass' : ['pass', 'noisy'].includes(quality);
+  const shotium = platform?.engines?.find((engine) => engine.engine === 'shotium');
+  return trusted && shotium && !['fail', 'infra-error', 'n/a'].includes(shotium.status) &&
+    platform?.shards_complete !== false &&
     manifestPlatform?.missing !== true && manifestPlatform?.shards_complete !== false &&
     manifestPlatform?.evidence_complete !== false;
 }
@@ -353,19 +357,22 @@ export function renderReport(platforms: any[], manifest: any, locale: ReportLoca
     const formalEntries = allowed ? ranking?.entries.filter((entry) => entry.rank !== null) || [] : [];
     const winners = formalEntries.filter((entry) => entry.rank === 1).map((entry) => entry.engine);
     const winner = winners.length ? winners.join(locale === 'zh-CN' ? '、' : ', ') : copy.noValidRanking;
-    lines.push(`| ${platformId} | ${statusLabel(platform?.status ?? manifestPlatform?.status, locale)} | ` +
+    lines.push(`| ${platformId} | ${statusLabel(
+        manifestPlatform?.quality_status ?? platform?.status ?? manifestPlatform?.status, locale)} | ` +
       `${winner} | ${formalEntries.length} | ${ranking?.total_cells || 0} |`);
   }
   lines.push('');
   for (const platform of platforms) {
     const ranking = rankings.get(platform.platform)!;
-    const allowed = platformRankingAllowed(platform, manifestPlatformById.get(platform.platform));
+    const manifestPlatform: any = manifestPlatformById.get(platform.platform);
+    const allowed = platformRankingAllowed(platform, manifestPlatform);
     const ratios = allowed ? comparisonLookup(ranking) : new Map<string, number>();
     lines.push(`## ${platform.platform}`, '');
     if (platform.execution_shards) lines.push(copy.sharded, '');
     if (!allowed) {
       lines.push(copy.rankingHeading, '',
-          copy.platformQualityNoRanking(statusLabel(platform.status, locale)), '');
+          copy.platformQualityNoRanking(statusLabel(
+              manifestPlatform?.quality_status ?? platform.status, locale)), '');
     } else if (!ranking.entries.length) {
       lines.push(copy.rankingHeading, '', copy.noRanking, '');
     } else {

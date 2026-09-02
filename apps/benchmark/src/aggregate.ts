@@ -78,6 +78,23 @@ export function formatRunTimestamp(date: Date): string {
   return date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
 }
 
+function platformQualityStatus(summary: any): 'pass' | 'noisy' | 'fail' {
+  const engines = Array.isArray(summary?.engines) ? summary.engines : [];
+  const shotium = engines.find((engine) => engine.engine === 'shotium');
+  if (!shotium || ['fail', 'infra-error', 'n/a'].includes(shotium.status) ||
+      summary?.status === 'infra-error' || summary?.error ||
+      (summary?.invalid_shards && Object.keys(summary.invalid_shards).length)) {
+    return 'fail';
+  }
+  // A competitor timeout, crash or bad image is a measured product outcome,
+  // not proof that the harness is untrustworthy. Keep those rows as failures
+  // and exclude them from paired rankings without suppressing every passing
+  // comparison on the platform.
+  if (engines.some((engine) => engine.status === 'infra-error')) return 'fail';
+  if (shotium.status === 'noisy' || engines.some((engine) => engine.status === 'noisy')) return 'noisy';
+  return 'pass';
+}
+
 function findSummaries(root: string): Map<string, string> {
   const found = new Map<string, string>();
   if (!fs.existsSync(root)) return found;
@@ -248,6 +265,7 @@ export function aggregateResults(options: Record<string, any>) {
       platform,
       missing: false,
       status: summary.status,
+      quality_status: platformQualityStatus(summary),
       shards_complete: summary.shards_complete !== false,
       summary_sha256: sha256(summaryFile),
       permanent_sha256: permanentHashes,
@@ -270,15 +288,15 @@ export function aggregateResults(options: Record<string, any>) {
     !entry.missing && entry.shards_complete !== false && RESULT_STATUSES.includes(entry.status));
   const evidenceComplete = platformRecords.every((entry) => !entry.missing && entry.evidence_complete === true);
   const qualityStatus = !complete || !evidenceComplete ||
-    platformRecords.some((entry) => ['fail', 'infra-error'].includes(entry.status)) ? 'fail' :
-    platformRecords.some((entry) => entry.status === 'noisy') ? 'noisy' : 'pass';
+    platformRecords.some((entry) => entry.quality_status === 'fail') ? 'fail' :
+    platformRecords.some((entry) => entry.quality_status === 'noisy') ? 'noisy' : 'pass';
   const manifest = {
     schema_version: 1,
     generated_utc: generated.toISOString(),
     status: complete ? 'complete' : 'incomplete',
     quality_status: qualityStatus,
     evidence_status: evidenceComplete ? 'complete' : 'incomplete',
-    publishable: complete && qualityStatus === 'pass' && evidenceComplete,
+    publishable: complete && qualityStatus !== 'fail' && evidenceComplete,
     shotium_version: version,
     profile: String(options.profile || platforms[0]?.profile || 'unknown'),
     seed: String(options.seed || platforms[0]?.seed || ''),

@@ -59,9 +59,11 @@ where Shotium and the compared engine both passed and were ranking-eligible on
 the same scenario and concurrency; lower normalized elapsed time is better.
 Coverage and per-cell wins are shown, and platforms are never mixed together.
 Only engines covering every comparable cell receive a formal rank; partial
-coverage stays visible with its score but is explicitly left unranked. Failed,
-noisy, incomplete, or evidence-incomplete platforms keep their diagnostic rows
-but never produce a formal rank or winner.
+coverage stays visible with its score but is explicitly left unranked. Failed
+and noisy cells keep their diagnostic rows and never enter a formal rank. A
+platform may still rank its remaining paired passing cells when its shards and
+evidence are complete and Shotium and the harness stayed trusted. Incomplete or
+evidence-incomplete platforms never produce a formal rank or winner.
 
 This is a fair comparison for one deliberately narrow question: how each
 locked, out-of-the-box engine variant performs the same static HTML/CSS
@@ -111,9 +113,11 @@ cells once the profile's budget is spent, so results and evidence are written
 instead of being lost to a job timeout. A baseline engine that fails - a browser
 missing for the platform, a screenshot that differs from its own first render, a
 soak that blanks - is recorded in `summary.json` and `failures.json` but does not
-abort the shard before its evidence is uploaded. The aggregate is nevertheless
-rejected and not published unless all six platforms, every shard, the quality
-gate, and all evidence pass. Browser navigation and screenshot operations use
+abort the shard before its evidence is uploaded. The aggregate is rejected only
+when a platform or shard is missing, evidence is incomplete, the harness is
+untrusted, or Shotium itself fails; noisy and failed competitor cells are
+published as labeled outcomes and excluded from paired rankings. Browser
+navigation and screenshot operations use
 the same 30-second ceiling for all engines. Cold-start timing includes importing
 each package inside the timed launch hook. Resident mode starts and settles one
 host per engine, then measures seven new clients against that host instead of

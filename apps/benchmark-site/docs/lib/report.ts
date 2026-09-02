@@ -95,7 +95,9 @@ export function buildPlatformReport(data: PlatformData, manifest: ManifestPlatfo
   const ranks = assignRanks(rows);
   const comparable = rows[0]?.totalBaselines ?? 0;
   const officialCount = rows.filter((row) => row.official).length;
-  const qualityPassed = summary.status === 'pass' && summary.shards_complete !== false &&
+  const manifestQuality = manifest?.quality_status;
+  const qualityPassed = (manifestQuality === undefined ? summary.status === 'pass' :
+    ['pass', 'noisy'].includes(manifestQuality)) && summary.shards_complete !== false &&
     manifest?.missing !== true && manifest?.shards_complete !== false &&
     manifest?.evidence_complete !== false;
   const ranked = qualityPassed && officialCount >= 2;

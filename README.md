@@ -28,7 +28,7 @@ By stripping out the V8 JavaScript engine, the browser shell (`//content`), the 
 
 ## Key Highlights
 
-- **Auditable Cross-Engine Benchmarks**: Native CI compares Shotium with Puppeteer and Playwright engine variants on six platforms; only complete, quality-passing runs with complete evidence are publishable. (See [Benchmarks](#benchmarks))
+- **Auditable Cross-Engine Benchmarks**: Native CI compares Shotium with Puppeteer and Playwright engine variants on six platforms; complete runs with complete evidence and no blocking harness or Shotium failure are publishable, while noisy or failed cells are labeled and excluded from rankings. (See [Benchmarks](#benchmarks))
 - **Zero External Dependencies**: `pnpm add` automatically downloads the native prebuilt binary for Windows, macOS, and Linux (x64 and arm64). The engine loads via Node-API directly into your host process — no child processes, no WebSockets, and no lingering zombie browsers.
 - **Full Chromium CSS Compatibility**: Complete support for CSS Grid, Flexbox, `@font-face`, SVG, gradients, box shadows, filters, and CSS variables. Typography uses deterministic grayscale antialiasing with a fixed gamma curve for byte-identical rendering across all platforms.
 - **Auditable Memory Footprint**: The benchmark records the complete owned process tree, peak RSS, and resident memory drift for every engine variant; comparative memory figures are published only when the run passes the quality and evidence gates.
@@ -109,7 +109,7 @@ For production environments without Node.js or for shell scripts, prebuilt stand
 
 ## Benchmarks
 
-Benchmark figures come from the official [six-platform CI benchmark suite](https://sj817.github.io/shotium/en/). Shotium and the Puppeteer/Playwright Chrome and headless-shell engine variants run identical test scenarios on the same GitHub-hosted runner for each comparison. Only complete, quality-passing runs with complete evidence are publishable; failed and noisy attempts remain available as diagnostics but are not performance claims. The latest publishable result and its raw archive are linked from [`benchmark-results/LATEST.md`](benchmark-results/LATEST.md). This README deliberately does not pin numbers from an untrusted run.
+Benchmark figures come from the official [six-platform CI benchmark suite](https://sj817.github.io/shotium/en/). Shotium and the Puppeteer/Playwright Chrome and headless-shell engine variants run identical test scenarios on the same GitHub-hosted runner for each comparison. Publication requires all platform shards and evidence plus no blocking harness or Shotium failure. Noisy and failed cells remain visible but are excluded from formal rankings, so a measured competitor failure cannot erase unrelated passing comparisons. The latest publishable result and its raw archive are linked from [`benchmark-results/LATEST.md`](benchmark-results/LATEST.md). This README deliberately does not pin numbers from an untrusted run.
 
 ### Benchmark Methodology
 

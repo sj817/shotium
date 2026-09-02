@@ -5,7 +5,7 @@ import path from 'node:path';
 import test from 'node:test';
 import {renderArchivedResult} from '../src/render-report.ts';
 import {
-  BENCHMARK_SITE_URL, buildPlatformRanking, renderLatest, renderReport, renderSummaryCsv,
+  BENCHMARK_SITE_URL, buildPlatformRanking, isPublishableResult, renderLatest, renderReport, renderSummaryCsv,
 } from '../src/report.ts';
 
 function distribution(p50: number) {
@@ -111,6 +111,28 @@ test('latest report keeps machine-readable status and adds Chinese status values
   assert.match(latest, /status complete \/ 状态 完整/);
   assert.match(latest, /quality fail \/ 质量 失败/);
   assert.match(latest, /evidence complete \/ 证据 完整/);
+});
+
+test('a complete noisy run is publishable but a failed-quality run is not', () => {
+  assert.equal(isPublishableResult({
+    status: 'complete', quality_status: 'noisy', evidence_status: 'complete',
+  }), true);
+  assert.equal(isPublishableResult({
+    status: 'complete', quality_status: 'fail', evidence_status: 'complete',
+  }), false);
+});
+
+test('trusted platform quality keeps paired pass rows rankable after a competitor failure', () => {
+  const trusted = renderReport([platform()], {
+    ...manifest,
+    quality_status: 'noisy',
+    platforms: [{
+      platform: 'linux-x64', missing: false, status: 'fail', quality_status: 'noisy',
+      shards_complete: true, evidence_complete: true,
+    }],
+  }, 'en');
+  assert.match(trusted, /browser-a ranks first/);
+  assert.doesNotMatch(trusted, /no formal ranking or winner/);
 });
 
 test('CSV exposes strict paired eligibility and normalized ratios', () => {

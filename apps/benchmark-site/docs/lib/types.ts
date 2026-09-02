@@ -32,6 +32,7 @@ export interface ManifestPlatform {
   platform: PlatformId;
   missing: boolean;
   status: ResultStatus;
+  quality_status?: ResultStatus;
   shards_complete?: boolean;
   evidence_complete?: boolean;
   artifact_error?: string | null;
