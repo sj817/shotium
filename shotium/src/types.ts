@@ -261,6 +261,18 @@ export interface StartResult {
   /** The directory in use, or `null` when caching is off. */
   cacheDir: string|null;
   /**
+   * The directory the loaded engine came from, or `null` before one is
+   * loaded.
+   *
+   * A package can have two engines within reach -- the platform package an
+   * install brought, and a build made in a checkout -- and which one answers
+   * decides what every other number here describes. Reported rather than
+   * assumed, because the two disagree silently: an engine one release behind
+   * is a working engine, it just does not have the entry point that was added
+   * since.
+   */
+  enginePath: string|null;
+  /**
    * Whether that directory is actually being cached into.
    *
    * A directory that cannot be created or written to costs nothing visible:

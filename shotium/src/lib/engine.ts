@@ -180,7 +180,8 @@ export class Engine {
 
   /**
    * What the engine came up as: whether this lifecycle is started, which cache
-   * directory the engine has, and whether it actually got it.
+   * directory the engine has, whether it actually got it, and where the engine
+   * itself was loaded from.
    *
    * The last of those is the one worth reading. A directory that cannot be
    * created or written to -- no permission, no space, a path that is a file --
@@ -196,11 +197,16 @@ export class Engine {
    */
   status(): StartResult {
     if (!shared) {
-      return {running: false, cacheDir: null, cacheActive: false};
+      return {
+        running: false,
+        cacheDir: null,
+        cacheActive: false,
+        enginePath: binding.directory(),
+      };
     }
-    const reported =
-        JSON.parse(binding.load().status(shared)) as Omit<StartResult, 'running'>;
-    return {running: this.running, ...reported};
+    const reported = JSON.parse(binding.load().status(shared)) as
+        Omit<StartResult, 'running'|'enginePath'>;
+    return {running: this.running, ...reported, enginePath: binding.directory()};
   }
 
   /**

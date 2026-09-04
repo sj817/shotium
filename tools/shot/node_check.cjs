@@ -88,6 +88,17 @@ async function main() {
   check(shotium.runtime.running === true, 'the engine is up');
   check(came.running === true && came.cacheDir === null,
         'and start() reports what it came up as', JSON.stringify(came));
+  // Which engine answered, checked rather than assumed. A checkout that has
+  // ever run `pnpm install` has the published platform package sitting in
+  // node_modules next to the build under test, and running this suite against
+  // the last release instead of the working tree is a failure that looks like
+  // a code bug -- an entry point added since the release is "not a function".
+  const localAddon = path.resolve(
+      'shotium', 'native', 'build', 'Release', 'shotium.node');
+  check(!fs.existsSync(localAddon) ||
+            path.resolve(came.enginePath || '') === path.dirname(localAddon),
+        'and it is the addon built from this checkout',
+        `${came.enginePath}`);
   const {image: first, stats} = await shotium.screenshot(request);
   check(Buffer.isBuffer(first) && first.length > 0, 'a screenshot comes back',
         `${first.length} bytes`);

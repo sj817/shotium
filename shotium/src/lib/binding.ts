@@ -64,22 +64,40 @@ export interface NativeBinding {
       Promise<string>;
 }
 
-// Where the addon and the library beside it live.
+// Where the addon and the library beside it live, in the order they are tried.
 //
-// The platform package is what ships -- the .node sits next to the shared
-// library it is linked against, which is the whole reason the two travel in
-// one package rather than two. native/build/Release is where node-gyp puts a
-// local build; it exists in a checkout and not in an install, so the two never
-// compete in practice. Both paths are relative to this file's build output,
-// which is one directory below the package root.
+// The local build first, and that order is the whole point. The platform
+// package is what ships -- the .node sits next to the shared library it is
+// linked against, which is the whole reason the two travel in one package
+// rather than two -- and native/build/Release is where node-gyp puts a build
+// from this checkout. The two were assumed never to coexist. They do: a
+// checkout that has ever run `pnpm install` has the published platform
+// package for its own platform sitting in node_modules, at whatever version
+// the manifest pins.
+//
+// With the published one first, every local check ran against the last
+// release rather than against the working tree, silently, and a check of a
+// newly added entry point failed with "not a function" while the code under
+// test was correct. There is no version in the failure to notice, because
+// both halves of the published package agree with each other -- the ABI check
+// in native/binding.cc compares the addon against the library beside it, and
+// those two shipped together.
+//
+// A checkout that wants to test the published engine can delete its local
+// build, which is a thing someone does on purpose. The reverse -- a checkout
+// that means to test its own build and does not -- is not something anyone
+// would think to check for.
+//
+// Both paths are relative to this file's build output, which is one directory
+// below the package root.
 function candidates(): string[] {
-  const found: string[] = [];
+  const found: string[] = [
+    path.join(HERE, '..', 'native', 'build', 'Release', 'shotium.node'),
+  ];
   const dir = platformPackage.packageDir();
   if (dir) {
     found.push(path.join(dir, 'shotium.node'));
   }
-  found.push(
-      path.join(HERE, '..', 'native', 'build', 'Release', 'shotium.node'));
   return found;
 }
 
