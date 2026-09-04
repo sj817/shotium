@@ -14,7 +14,12 @@ import {resolveStartOptions} from './config.js';
 import type {ResolvedStartOptions} from './config.js';
 import {endpointFor} from './endpoint.js';
 import {Engine} from './engine.js';
-import {FrameReader, encodeFrame} from './protocol.js';
+import {
+  DAEMON_CAPABILITIES,
+  DAEMON_PROTOCOL_VERSION,
+  FrameReader,
+  encodeFrame,
+} from './protocol.js';
 import type {WireRequest} from './request.js';
 
 // Our own version, for status(). Read rather than imported: an import
@@ -266,6 +271,8 @@ class Daemon extends EventEmitter {
       served: this.served,
       idleTimeoutMs: this.idleTimeoutMs,
       version: VERSION,
+      protocolVersion: DAEMON_PROTOCOL_VERSION,
+      capabilities: [...DAEMON_CAPABILITIES],
     };
   }
 

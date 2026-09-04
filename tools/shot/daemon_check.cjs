@@ -32,6 +32,7 @@ const exe = path.resolve(process.argv[2] || 'out/Shot/shotium.exe');
 const buildDir = path.dirname(exe);
 const corpus = path.resolve('shot/testdata/render_corpus.html');
 const entry = pathToFileURL(path.resolve('shotium/dist/index.js')).href;
+const PROTOCOL_VERSION = 2;
 
 // A second node process, which is what this check is actually about: a caller
 // in a process that did not start the daemon has to find it rather than start
@@ -91,6 +92,8 @@ async function main() {
   const before = await shotium.daemon.status(config);
   check(before.running === false, 'status reports no daemon at the endpoint',
         before.endpoint);
+  check(before.endpoint.includes(`-${config.name}-v${PROTOCOL_VERSION}`),
+        'a named endpoint includes the wire generation', before.endpoint);
 
   console.log('\n== the first request starts one ==');
   const coldStarted = Date.now();
@@ -110,6 +113,11 @@ async function main() {
   check(started.ok && started.pid > 0,
         'and it is a process of its own',
         `pid ${started.pid}, ${cold}ms to connect`);
+  check(started.protocolVersion === PROTOCOL_VERSION &&
+            started.capabilities.includes('screenshot') &&
+            started.capabilities.includes('tiles'),
+        'and advertises the wire generation and operations it speaks',
+        `v${started.protocolVersion}: ${started.capabilities.join(', ')}`);
   check(started.warm === true,
         'that prewarmed before it took the first request');
 

@@ -177,16 +177,18 @@ export interface TileOptions {
  * The region is whatever `fullPage`, `selector`, `clip` or the viewport would
  * have produced as one image, cut into horizontal tiles of at most
  * `tile.height` CSS pixels each. The document is loaded and laid out once for
- * all of them, and only one tile's bitmap exists at a time, so a document of
- * any height costs the memory of one tile. This is also the way to a page
- * taller than one image can be: `fullPage` on its own renders any height into
- * one bitmap, but a bitmap has a ceiling -- 65535 pixels for png and jpeg,
- * 16383 for webp -- and a caller who wants the whole of a longer page gets it
- * here.
+ * all of them, and only one tile's uncompressed bitmap exists at a time. This
+ * is also the way to a page taller than one image can be: `fullPage` on its own
+ * renders any height into one bitmap, but a bitmap has a ceiling -- 65535
+ * pixels for png and jpeg, 16383 for webp -- and a caller who wants the whole
+ * of a longer page gets it here.
  *
  * With `path`, every tile is written to disk and `path` must contain `{n}`,
  * which becomes the tile's 1-based index: `page-{n}.png` gives `page-1.png`,
- * `page-2.png` and so on.
+ * `page-2.png` and so on. This is the bounded-memory mode: image-data memory
+ * stays near one tile. Without `path`, the returned `Buffer`s for completed
+ * tiles accumulate until the promise resolves, so memory grows with their
+ * total encoded size.
  */
 export interface ScreenshotTilesOptions extends ScreenshotOptions {
   tile: TileOptions;
@@ -312,9 +314,15 @@ export interface DaemonOptions extends StartOptions {
   spawn?: boolean;
   /** Where a spawned daemon's diagnostics go. Default `$SHOTIUM_DAEMON_LOG`. */
   logFile?: string;
-  /** How long to wait for a daemon this process started to bind. */
+  /**
+   * How long to wait for a daemon this process started to bind, or for an
+   * explicitly addressed daemon to answer its compatibility handshake.
+   */
   startTimeoutMs?: number;
 }
+
+/** Operations this daemon generation exposes on its local wire protocol. */
+export type DaemonCapability = 'screenshot'|'tiles';
 
 export interface DaemonStatus {
   ok?: boolean;
@@ -333,6 +341,10 @@ export interface DaemonStatus {
   served: number;
   idleTimeoutMs: number;
   version: string;
+  /** Local daemon wire generation; independent of the package and C ABI. */
+  protocolVersion: number;
+  /** Operations available to a client connected to this daemon. */
+  capabilities: DaemonCapability[];
 }
 
 /**

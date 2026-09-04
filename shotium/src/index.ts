@@ -23,6 +23,7 @@ export type {
   CaptureStats,
   CaptureTiming,
   Clip,
+  DaemonCapability,
   DaemonOptions,
   DaemonStatus,
   PageGotoParams,
@@ -193,11 +194,11 @@ export class Runtime {
    * Renders the region in tiles of at most `tile.height` CSS pixels each,
    * top to bottom, and reports what it cost.
    *
-   * One load and layout serve every tile, and only one tile's bitmap exists
-   * at a time, so a document of any height costs the memory of one tile.
-   * This is also how to get the whole of a page taller than one image can be
-   * -- 65535 pixels for png and jpeg, 16383 for webp. See
-   * ScreenshotTilesOptions for `path`.
+   * One load and layout serve every tile, and only one tile's uncompressed
+   * bitmap exists at a time. With `path`, image-data memory stays near one
+   * tile. Without it, completed encoded `Buffer`s accumulate in the returned
+   * result. This is also how to get the whole of a page taller than one image
+   * can be -- 65535 pixels for png and jpeg, 16383 for webp.
    */
   screenshotTiles(options: ScreenshotTilesOptions):
       Promise<ScreenshotTilesResult> {

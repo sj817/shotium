@@ -19,7 +19,12 @@ import type {
 import {resolveStartOptions} from './config.js';
 import {emptyStats} from './engine.js';
 import {endpointFor} from './endpoint.js';
-import {FrameReader, encodeFrame} from './protocol.js';
+import {
+  DAEMON_CAPABILITIES,
+  DAEMON_PROTOCOL_VERSION,
+  FrameReader,
+  encodeFrame,
+} from './protocol.js';
 import {timeoutFor, toRequest, toTilesRequest} from './request.js';
 
 // ESM has no __dirname. This is the same thing, from the module's own URL.
@@ -78,6 +83,7 @@ interface ResolvedDaemonOptions {
   resourceDir?: string;
   name: string|undefined;
   endpoint: string;
+  explicitEndpoint: boolean;
   idleTimeoutMs: number|undefined;
   prewarm: boolean|undefined;
   logFile: string|null;
@@ -274,9 +280,73 @@ function connectOnly(endpoint: string): Promise<DaemonClient> {
   });
 }
 
+class DaemonProtocolError extends Error {
+  override name = 'DaemonProtocolError';
+}
+
+function assertDaemonProtocol(status: DaemonStatus, endpoint: string): void {
+  if (status.protocolVersion !== DAEMON_PROTOCOL_VERSION) {
+    const actual = typeof status.protocolVersion === 'number' ?
+        String(status.protocolVersion) :
+        `legacy/unversioned (package ${status.version || 'unknown'})`;
+    throw new DaemonProtocolError(
+        `shotium: daemon at ${endpoint} uses wire protocol ${actual}; ` +
+        `this client requires ${DAEMON_PROTOCOL_VERSION}. Stop that daemon ` +
+        'explicitly or use a different endpoint.');
+  }
+
+  const advertised = new Set(
+      Array.isArray(status.capabilities) ? status.capabilities : []);
+  const missing = DAEMON_CAPABILITIES.filter(
+      (capability) => !advertised.has(capability));
+  if (missing.length > 0) {
+    throw new DaemonProtocolError(
+        `shotium: daemon at ${endpoint} uses wire protocol ` +
+        `${DAEMON_PROTOCOL_VERSION} but is missing required capabilities: ` +
+        `${missing.join(', ')}. Stop that daemon explicitly or use a ` +
+        'different endpoint.');
+  }
+}
+
+// Exact endpoints opt out of versioned endpoint derivation, so a successful
+// socket connection alone cannot say that the peer is compatible. Ask before
+// returning it to the caller. The check never shuts the peer down: another
+// process may still be using the older generation deliberately.
+async function connectCompatible(
+    endpoint: string, handshakeTimeoutMs: number): Promise<DaemonClient> {
+  const client = await connectOnly(endpoint);
+  let timer: ReturnType<typeof setTimeout>|undefined;
+  try {
+    const status = await Promise.race([
+      client.status(),
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(
+            () => reject(new Error(
+                `timed out after ${handshakeTimeoutMs}ms`)),
+            handshakeTimeoutMs);
+      }),
+    ]);
+    clearTimeout(timer);
+    assertDaemonProtocol(status, endpoint);
+    return client;
+  } catch (error) {
+    clearTimeout(timer);
+    client.close();
+    if (error instanceof DaemonProtocolError) {
+      throw error;
+    }
+    const detail = error instanceof Error ? `: ${error.message}` : '';
+    throw new DaemonProtocolError(
+        `shotium: daemon at ${endpoint} did not complete the wire protocol ` +
+        `handshake${detail}`);
+  }
+}
+
 function resolveDaemonOptions(options: DaemonOptions = {}):
     ResolvedDaemonOptions {
   const resolved = resolveStartOptions(options);
+  const explicitEndpoint = Boolean(
+      options.endpoint || process.env.SHOTIUM_ENDPOINT);
   return {
     ...resolved,
     name: options.name,
@@ -285,6 +355,7 @@ function resolveDaemonOptions(options: DaemonOptions = {}):
       name: options.name,
       endpoint: options.endpoint,
     }),
+    explicitEndpoint,
     idleTimeoutMs: options.idleTimeoutMs,
     prewarm: options.prewarm,
     logFile: options.logFile || process.env.SHOTIUM_DAEMON_LOG || null,
@@ -335,32 +406,42 @@ export interface EnsuredClient {
 
 // Connects, starting a daemon if none answers.
 //
-// The endpoint existing is the readiness signal, so this is a connect loop
-// rather than a handshake: a daemon that has bound can be talked to, and one
-// that has not is indistinguishable from one that was never started. Several
-// processes racing here is fine -- the losers' daemons exit on EADDRINUSE and
-// everyone ends up on the winner.
+// A derived endpoint includes the protocol generation, so binding it is its
+// readiness signal. An exact endpoint has no such boundary and adds the status
+// handshake above. A daemon that has not bound is indistinguishable from one
+// that was never started. Several processes racing here is fine -- the losers'
+// daemons exit on EADDRINUSE and everyone ends up on the winner.
 async function ensureClient(options: DaemonOptions = {}):
     Promise<EnsuredClient> {
   const resolved = resolveDaemonOptions(options);
+  const startTimeoutMs = options.startTimeoutMs === undefined ?
+      START_TIMEOUT_MS :
+      options.startTimeoutMs;
+  const open = () => resolved.explicitEndpoint ?
+      connectCompatible(resolved.endpoint, startTimeoutMs) :
+      connectOnly(resolved.endpoint);
   try {
-    const client = await connectOnly(resolved.endpoint);
+    const client = await open();
     return {client, spawned: false, endpoint: resolved.endpoint};
-  } catch {
+  } catch (error) {
+    if (error instanceof DaemonProtocolError) {
+      throw error;
+    }
     if (options.spawn === false) {
       throw new Error(`shotium: no daemon at ${resolved.endpoint}`);
     }
   }
 
   spawnDaemon(resolved);
-  const deadline = Date.now() +
-      (options.startTimeoutMs === undefined ? START_TIMEOUT_MS :
-                                              options.startTimeoutMs);
+  const deadline = Date.now() + startTimeoutMs;
   for (;;) {
     try {
-      const client = await connectOnly(resolved.endpoint);
+      const client = await open();
       return {client, spawned: true, endpoint: resolved.endpoint};
-    } catch {
+    } catch (error) {
+      if (error instanceof DaemonProtocolError) {
+        throw error;
+      }
       if (Date.now() >= deadline) {
         throw new Error(
             `shotium: the daemon did not come up at ${resolved.endpoint}`);

@@ -177,6 +177,19 @@ async function main() {
   check(tileStats.requests >= 1 && tileStats.timing.total > 0,
         'with one set of stats for the lot');
 
+  for (const height of [1, 32000]) {
+    const {tiles: boundary} = await shotium.screenshotTiles({
+      file: features,
+      viewport: {width: 400, height: 300},
+      clip: {x: 40, y: 60, width: 1, height: 1},
+      tile: {height},
+      allowFileAccess: true,
+    });
+    check(boundary.length === 1 && boundary[0].height === 1,
+          `tile.height accepts the ${height === 1 ? 'lower' : 'upper'} boundary`,
+          JSON.stringify(boundary.map((tile) => tile.height)));
+  }
+
   const {image: whole} = await shotium.screenshot({
     file: tall,
     viewport: {width: 400, height: 300},

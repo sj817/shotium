@@ -8,6 +8,7 @@ import type {
 } from '../types.js';
 
 const DEFAULT_TIMEOUT_MS = 30000;
+const MAX_TILE_HEIGHT = 32000;
 
 // What actually goes down the pipe: ScreenshotOptions with the viewport
 // flattened -- see toRequest below for why.
@@ -96,6 +97,11 @@ function toTilesRequest(options: ScreenshotTilesOptions): WireRequest {
         'shotium: screenshotTiles() needs tile.height, the most CSS pixels ' +
         'one tile covers');
   }
+  if (!Number.isInteger(tile.height) || tile.height < 1 ||
+      tile.height > MAX_TILE_HEIGHT) {
+    throw new TypeError(
+        `shotium: tile.height must be an integer from 1 to ${MAX_TILE_HEIGHT}`);
+  }
   return toWire(options);
 }
 
@@ -136,6 +142,7 @@ function timeoutFor(options: ScreenshotOptions): number {
 
 export {
   DEFAULT_TIMEOUT_MS,
+  MAX_TILE_HEIGHT,
   WIRE_FIELDS,
   timeoutFor,
   toRequest,
