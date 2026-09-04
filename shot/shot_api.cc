@@ -96,6 +96,17 @@ void Clear(T** out) {
   }
 }
 
+// The same for an output that is a number rather than something owned. There
+// is nothing to double-free here, but a caller who asks for a tile that is not
+// there and reads the coordinates anyway should read zeroes rather than
+// whatever was in the variable before -- which is the difference between a
+// wrong answer and last call's answer.
+void Clear(int32_t* out) {
+  if (out) {
+    *out = 0;
+  }
+}
+
 // CaptureStats as a JSON string, for the buffer the C ABI hands back.
 //
 // The object itself is built by StatsToValue, which the resident worker also
@@ -774,6 +785,10 @@ void shot_tile_list_region(const shot_tile_list* tiles,
                            int32_t* out_y,
                            int32_t* out_width,
                            int32_t* out_height) {
+  shot::Clear(out_x);
+  shot::Clear(out_y);
+  shot::Clear(out_width);
+  shot::Clear(out_height);
   if (!tiles || index >= tiles->tiles.size()) {
     return;
   }
