@@ -604,16 +604,22 @@ class ViewportAnchored {
         continue;
       }
       // Where the box would be with nothing shifting it: no scroll offset, no
-      // sticky offset, which is document coordinates. A window that starts
-      // below that has already had this box in an earlier one and is looking
-      // at a repeat. A window that starts above it has not -- the box's own
-      // row is in this window -- and dropping it here would lose it from the
-      // picture entirely rather than de-duplicate it, which is the worse of
-      // the two mistakes.
+      // sticky offset, which is document coordinates. Only a box whose every
+      // row is above this window has already been painted in an earlier one
+      // and is a repeat here. A box that still has rows of its own to come is
+      // not -- dropping it would lose it from the picture entirely rather
+      // than de-duplicate it, which is the worse of the two mistakes.
+      //
+      // The difference between the two is a box lying across the seam: an
+      // earlier window painted it down to the seam and stopped, so the rest of
+      // it can only come from here, where it is stuck. It is painted at the
+      // offset it is stuck to, which repeats the rows the earlier window did
+      // get -- at most the height of the box, and a repeat of what is already
+      // there rather than a hole in it.
       const gfx::Rect flow = box->AbsoluteBoundingBoxRect(
           {blink::MapCoordinatesMode::kIgnoreScrollOffset,
            blink::MapCoordinatesMode::kIgnoreStickyOffset});
-      if (flow.y() < window_top) {
+      if (flow.bottom() <= window_top) {
         stuck_.push_back(sticky);
       }
     }
