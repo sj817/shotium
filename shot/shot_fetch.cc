@@ -7,9 +7,11 @@
 #include <cstdlib>
 #include <deque>
 #include <map>
+#include <set>
 #include <string>
 #include <utility>
 
+#include "base/auto_reset.h"
 #include "base/functional/bind.h"
 #include "base/logging.h"
 #include "base/no_destructor.h"
@@ -59,6 +61,15 @@ constexpr size_t kMaximumBodyBytes = 64u * 1024u * 1024u;
 // failed ten at a time instead. So every request is started at once, and a
 // response whose Content-Length would not fit simply does not begin reading
 // until the ones ahead of it are done. Nothing small ever waits.
+//
+// A response with no Content-Length cannot be held at the start, because
+// there is nothing yet to compare against the budget: chunked encoding says
+// how long a body is by ending it. Those are stopped in the middle instead --
+// //net reads nothing it is not asked for, so a read that stops asking stops
+// costing -- and resumed when there is room again. The one exception is the
+// oldest body still reading, which is never made to wait: if every reader
+// could be stopped by every other, a budget full of bodies of unknown length
+// would wait on itself forever.
 //
 // 24 MB: above any single resource these pages carry, so no request ever waits
 // alone, and a sixth of what the unbounded version reached.
@@ -115,19 +126,89 @@ std::map<std::string, std::deque<base::OnceClosure>>& QueuedPerHost() {
   return *queues;
 }
 
-// What the bodies being read hold between them, and the reads waiting for
-// room, oldest first. Main-thread only: every URLRequest here lives on it.
+// What the response bodies in memory hold between them. Main-thread only:
+// every URLRequest here lives on it, and so does every loader holding one of
+// their bodies afterwards.
 size_t g_bytes_in_flight = 0;
+
+// The bodies currently being read, in the order they started. The lowest is
+// the oldest, and the oldest is never made to wait -- see the note on the
+// budget above.
+std::set<uint64_t>& ActiveReads() {
+  static base::NoDestructor<std::set<uint64_t>> reads;
+  return *reads;
+}
+uint64_t g_next_read_seq = 1;
+
+// Reads that have not started, oldest first: each knows its size and it did
+// not fit. Started one at a time, because each one takes its room as it
+// starts and the next may no longer fit behind it.
 std::deque<base::OnceClosure>& WaitingReads() {
   static base::NoDestructor<std::deque<base::OnceClosure>> queue;
   return *queue;
 }
 
+// Reads that started and then stopped mid-body, because what arrived since
+// put the process over budget. Held as weak pointers rather than closures so
+// that each one is asked again whether it may go, instead of being handed a
+// decision made when it was queued.
+std::deque<base::WeakPtr<ShotFetch>>& PausedReads() {
+  static base::NoDestructor<std::deque<base::WeakPtr<ShotFetch>>> queue;
+  return *queue;
+}
+
 // Room for `wanted` more bytes -- or nothing being read at all, which is what
-// keeps a resource larger than the whole budget from waiting for itself.
+// keeps a resource larger than the whole budget from waiting for itself, and
+// what keeps a body that some loader is still holding from stalling the next
+// request behind it.
 bool MayReadNow(size_t wanted) {
-  return g_bytes_in_flight == 0 || ReadBudgetBytes() == 0 ||
+  return ActiveReads().empty() || ReadBudgetBytes() == 0 ||
          g_bytes_in_flight + wanted <= ReadBudgetBytes();
+}
+
+// Set while reads are being let through, so that one of them finishing --
+// which gives its room back, which lets more through -- does not start a
+// second pass inside the first. The outer pass asks again after every read it
+// resumes, so anything the inner one would have found is found there.
+bool g_resuming = false;
+
+// Lets through what the room just given back allows: first the reads that
+// stopped mid-body, because they are already holding their bytes and
+// finishing one is what gives room back, then the reads that have not
+// started.
+void ResumeReads() {
+  if (g_resuming) {
+    return;
+  }
+  base::AutoReset<bool> resuming(&g_resuming, true);
+
+  for (size_t i = 0; i < PausedReads().size();) {
+    base::WeakPtr<ShotFetch> paused = PausedReads()[i];
+    if (!paused) {
+      PausedReads().erase(PausedReads().begin() + i);
+      continue;
+    }
+    if (!paused->MayContinueReading()) {
+      ++i;
+      continue;
+    }
+    PausedReads().erase(PausedReads().begin() + i);
+    // May finish the request, and so may run this function again -- which the
+    // flag above turns into a no-op, leaving this loop to notice the room.
+    paused->Resume();
+  }
+
+  while (!WaitingReads().empty()) {
+    // A weak-pointer bind whose target is gone reads nothing and takes no
+    // room, so keep going until one of them actually starts reading.
+    const size_t before = g_bytes_in_flight;
+    base::OnceClosure read = std::move(WaitingReads().front());
+    WaitingReads().pop_front();
+    std::move(read).Run();
+    if (g_bytes_in_flight != before) {
+      break;
+    }
+  }
 }
 
 // net::URLRequest enforces its own limit of 20 as well; this one is here so
@@ -167,9 +248,53 @@ constexpr net::NetworkTrafficAnnotationTag kTrafficAnnotation =
 
 }  // namespace
 
+FetchCharge::FetchCharge(size_t bytes) : bytes_(bytes) {
+  g_bytes_in_flight += bytes_;
+}
+
+FetchCharge::FetchCharge(FetchCharge&& other) : bytes_(other.bytes_) {
+  other.bytes_ = 0;
+}
+
+FetchCharge& FetchCharge::operator=(FetchCharge&& other) {
+  if (this != &other) {
+    Release();
+    bytes_ = other.bytes_;
+    other.bytes_ = 0;
+  }
+  return *this;
+}
+
+FetchCharge::~FetchCharge() {
+  Release();
+}
+
+void FetchCharge::GrowTo(size_t total) {
+  if (total <= bytes_) {
+    return;
+  }
+  g_bytes_in_flight += total - bytes_;
+  bytes_ = total;
+}
+
+void FetchCharge::Release() {
+  if (bytes_ == 0) {
+    return;
+  }
+  g_bytes_in_flight -= bytes_;
+  bytes_ = 0;
+  ResumeReads();
+}
+
 ShotFetch::ShotFetch() = default;
 
 ShotFetch::~ShotFetch() {
+  // First, because giving the budget back below lets other reads run, and one
+  // of the places they are reached from is a list of weak pointers that may
+  // still hold one to this. A weak pointer stays valid until the factory is
+  // destroyed, which is after this body, so a read abandoned while paused
+  // would otherwise be resumed on an object halfway through going away.
+  weak_factory_.InvalidateWeakPtrs();
   // Abandoned before it finished -- a loader destroyed to cancel the load, or
   // the whole capture torn down. Whoever is queued behind it should not wait
   // for a request that is no longer running.
@@ -282,25 +407,45 @@ void ShotFetch::ReleaseHostSlot() {
   }
 }
 
-// Gives back what this body was holding and lets the reads waiting behind it
-// start. Called once, whether the request succeeded, failed or was abandoned.
+// Stops this body counting as one that is being read, and gives back whatever
+// of the budget it is still holding.
+//
+// The two are not the same event and only one of them is here. A body that
+// was delivered has stopped reading but has not stopped costing: its claim
+// went with it into the result and comes back when the bytes do. What this
+// releases is the claim of a body that never got that far -- one that failed,
+// or one whose request was abandoned.
 void ShotFetch::ReleaseBudget() {
-  if (counted_bytes_ == 0) {
-    return;
+  StopReading();
+  charge_.Release();
+  // Even with nothing to give back, this request is no longer among those the
+  // oldest is measured against, and the next one along may now be it.
+  ResumeReads();
+}
+
+// Takes this body out of the reads the budget arbitrates between, without
+// touching what it is holding. Called once, whether the body was delivered,
+// failed or abandoned.
+void ShotFetch::StopReading() {
+  if (read_seq_ != 0) {
+    ActiveReads().erase(read_seq_);
+    read_seq_ = 0;
   }
-  g_bytes_in_flight -= counted_bytes_;
-  counted_bytes_ = 0;
-  while (!WaitingReads().empty()) {
-    // A weak-pointer bind whose target is gone reads nothing and takes no
-    // room, so keep going until one of them actually starts reading.
-    const size_t before = g_bytes_in_flight;
-    base::OnceClosure read = std::move(WaitingReads().front());
-    WaitingReads().pop_front();
-    std::move(read).Run();
-    if (g_bytes_in_flight != before) {
-      break;
-    }
+  paused_ = false;
+}
+
+bool ShotFetch::MayContinueReading() const {
+  if (ReadBudgetBytes() == 0 || g_bytes_in_flight <= ReadBudgetBytes()) {
+    return true;
   }
+  // Over budget: only the oldest body still reading goes on, so that there is
+  // always one that will finish and give its room back.
+  return !ActiveReads().empty() && *ActiveReads().begin() == read_seq_;
+}
+
+void ShotFetch::Resume() {
+  paused_ = false;
+  ReadMore();
 }
 
 void ShotFetch::OnReceivedRedirect(net::URLRequest* request,
@@ -348,10 +493,11 @@ void ShotFetch::OnResponseStarted(net::URLRequest* request, int net_error) {
 }
 
 void ShotFetch::BeginReading(size_t expected) {
+  read_seq_ = g_next_read_seq++;
+  ActiveReads().insert(read_seq_);
   if (expected != 0) {
     result_.body.reserve(expected);
-    counted_bytes_ = expected;
-    g_bytes_in_flight += expected;
+    charge_ = FetchCharge(expected);
   }
   ReadMore();
 }
@@ -364,6 +510,17 @@ void ShotFetch::OnReadCompleted(net::URLRequest* request, int bytes_read) {
 
 void ShotFetch::ReadMore() {
   while (true) {
+    if (!MayContinueReading()) {
+      // Over budget with older bodies still reading. Stopping here stops the
+      // cost: //net hands over nothing that was not asked for, so a socket
+      // left unread holds its bytes in the kernel rather than in this
+      // process. ResumeReads() picks this up when there is room.
+      if (!paused_) {
+        paused_ = true;
+        PausedReads().push_back(weak_factory_.GetWeakPtr());
+      }
+      return;
+    }
     const int rv = request_->Read(buffer_.get(), buffer_->size());
     if (rv == net::ERR_IO_PENDING) {
       // OnReadCompleted resumes the loop.
@@ -393,12 +550,9 @@ bool ShotFetch::Consume(int bytes_read) {
   result_.body.append(
       base::as_string_view(buffer_->first(static_cast<size_t>(bytes_read))));
   // A body that outgrew its Content-Length, or arrived without one, is
-  // counted as it comes.
-  const size_t now = result_.body.size();
-  if (now > counted_bytes_) {
-    g_bytes_in_flight += now - counted_bytes_;
-    counted_bytes_ = now;
-  }
+  // counted as it comes. What that costs is decided at the top of ReadMore,
+  // which is where a body that has taken more than its share stops.
+  charge_.GrowTo(result_.body.size());
   return true;
 }
 
@@ -417,11 +571,19 @@ void ShotFetch::Finish(int net_error) {
   // synchronously is not doing so with a live URLRequest underneath it.
   request_.reset();
   buffer_.reset();
-  ReleaseBudget();
+  // The claim on the budget goes with the body. Whoever takes the result
+  // holds the bytes and holds what they cost until it drops them; releasing
+  // here instead would count a body out of the budget while it was still in
+  // the process, which is the whole thing the budget is trying to bound.
+  result_.charge = std::move(charge_);
+  StopReading();
   ReleaseHostSlot();
   if (done_) {
     std::move(done_).Run(std::move(result_));
   }
+  // After the callback, because until it has run nobody else can know what
+  // the body cost or whether it is still being held.
+  ResumeReads();
 }
 
 }  // namespace shot

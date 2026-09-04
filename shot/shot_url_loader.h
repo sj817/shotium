@@ -78,10 +78,13 @@ class ShotURLLoader : public blink::URLLoader {
   // The other half, once ShotFetch has the bytes.
   void OnFetched(blink::URLLoaderClient* client, FetchResult result);
   // Common tail: hands the client the response and streams `contents` down a
-  // mojo data pipe.
+  // mojo data pipe. `charge` is what those bytes cost against the fetch
+  // budget, which this loader takes over for as long as it holds them; a
+  // file: body cost nothing and passes an empty one.
   void DeliverBody(blink::URLLoaderClient* client,
                    const blink::WebURLResponse& response,
-                   std::string contents);
+                   std::string contents,
+                   FetchCharge charge);
   void OnBodyWritten(blink::URLLoaderClient* client,
                      int64_t size,
                      MojoResult result);
@@ -94,6 +97,8 @@ class ShotURLLoader : public blink::URLLoader {
   // Held because mojo::StringDataSource may outlive the call that started the
   // write, and the bytes have to outlive it too.
   std::string body_;
+  // What `body_` costs against the fetch budget, given back with the bytes.
+  FetchCharge body_charge_;
 
   base::WeakPtrFactory<ShotURLLoader> weak_factory_{this};
 };

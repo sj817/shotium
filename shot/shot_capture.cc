@@ -156,6 +156,12 @@ base::expected<RenderInput, std::string> FetchDocument(
   // relatively resolves against where it actually came from.
   input.url = result.final_url;
   input.body = std::move(result.body);
+  // `result.charge` is dropped with `result` at the end of this function,
+  // while the bytes go on to the renderer. Deliberate, and the one place the
+  // budget stops following the bytes: this is the top-level document, one
+  // body, fetched before any subresource exists to be bounded against, and it
+  // is handed to blink immediately. Carrying the claim further would put the
+  // fetcher's budget in the renderer's header for a single buffer.
   input.charset = result.charset;
   // A server that sends no Content-Type gets the same treatment a browser
   // gives it for a top-level load: parse it as HTML.

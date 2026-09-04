@@ -6,6 +6,7 @@
 #define SHOT_SHOT_FETCH_H_
 
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <string>
 
@@ -25,6 +26,47 @@ class HttpRequestHeaders;
 
 namespace shot {
 
+// A claim on the bytes a response body may hold, kept for as long as the body
+// it was taken for is in memory.
+//
+// The claim outlives the request on purpose. A fetch that has finished does
+// not stop costing anything: its body is moved to the loader, which holds it
+// until the data pipe has carried it into blink. Giving the budget back when
+// the request ended would have counted a body out while it was still in the
+// process -- and on a page whose subresources all answer from the disk cache,
+// which is the case the budget was written for, that is every body at once.
+// So the claim travels with the bytes, in FetchResult, and is dropped where
+// they are.
+//
+// Moving one moves the claim; the moved-from object holds nothing. Main-thread
+// only, like everything else the budget touches.
+class FetchCharge {
+ public:
+  FetchCharge() = default;
+  // Takes `bytes` from the budget. Does not wait for room: waiting is the
+  // caller's decision, made before it gets this far.
+  explicit FetchCharge(size_t bytes);
+  FetchCharge(FetchCharge&& other);
+  FetchCharge& operator=(FetchCharge&& other);
+  FetchCharge(const FetchCharge&) = delete;
+  FetchCharge& operator=(const FetchCharge&) = delete;
+  ~FetchCharge();
+
+  size_t bytes() const { return bytes_; }
+
+  // Raises the claim to `total`, for a body that outgrew what was reserved
+  // for it. Never lowers it: a claim that shrank would let a read that is
+  // still holding the memory hand it out to somebody else.
+  void GrowTo(size_t total);
+
+  // Gives the claim back and lets the reads waiting on it go. Idempotent, and
+  // what the destructor does.
+  void Release();
+
+ private:
+  size_t bytes_ = 0;
+};
+
 // What one http(s) GET produced.
 struct FetchResult {
   // net::OK, or the reason it failed. Everything else is only meaningful when
@@ -42,6 +84,11 @@ struct FetchResult {
   scoped_refptr<const net::HttpResponseHeaders> headers;
   std::string body;
   bool was_cached = false;
+
+  // What `body` costs against the read budget. Held by whoever holds the
+  // body: destroy it, or move it somewhere that outlives the bytes, but do
+  // not drop it while the bytes are still around.
+  FetchCharge charge;
 };
 
 // One http(s) GET, buffered whole.
@@ -72,6 +119,16 @@ class ShotFetch : public net::URLRequest::Delegate {
              const url::Origin& initiator,
              DoneCallback done);
 
+  // The read budget's two questions, public because the budget asks them from
+  // outside this object: it holds the paused reads and decides which of them
+  // goes next. Nothing else has any business calling either.
+  //
+  // Whether this body may ask //net for more bytes right now. False when what
+  // is in flight is over budget and something older is reading; the read then
+  // parks itself until Resume() brings it back.
+  bool MayContinueReading() const;
+  void Resume();
+
  private:
   // net::URLRequest::Delegate:
   // Start(), once this request has a place among its host's. Start() calls it
@@ -84,6 +141,7 @@ class ShotFetch : public net::URLRequest::Delegate {
   // directly when there is and queues it when there is not.
   void BeginReading(size_t expected);
   void ReleaseBudget();
+  void StopReading();
 
   void OnReceivedRedirect(net::URLRequest* request,
                           const net::RedirectInfo& redirect_info,
@@ -103,9 +161,15 @@ class ShotFetch : public net::URLRequest::Delegate {
   DoneCallback done_;
   FetchResult result_;
   int redirects_ = 0;
-  // How much of this body is counted against the bytes in flight; kept so
-  // that what was added is what is taken away.
-  size_t counted_bytes_ = 0;
+  // What this body has taken from the read budget so far. Moved into the
+  // result when the body is handed on, so that the claim follows the bytes.
+  FetchCharge charge_;
+  // Where this body comes in the order the bodies started reading, or 0 when
+  // it is not reading. The oldest one is the one that is never made to wait.
+  uint64_t read_seq_ = 0;
+  // Whether this read is sitting in the paused list, so that it is put there
+  // once rather than once per attempt.
+  bool paused_ = false;
   // The host this request counts against, and whether it is counted. Kept
   // rather than re-read from the request, which redirects may have moved.
   std::string host_;
