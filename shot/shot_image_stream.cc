@@ -34,7 +34,9 @@
 #include "cc/paint/discardable_image_map.h"
 #include "cc/paint/display_item_list.h"
 #include "cc/paint/draw_image.h"
+#include "cc/paint/draw_looper.h"
 #include "cc/paint/image_provider.h"
+#include "cc/paint/paint_filter.h"
 #include "cc/paint/paint_flags.h"
 #include "cc/paint/paint_image.h"
 #include "cc/paint/paint_op.h"
@@ -75,14 +77,32 @@ namespace {
 // flight: at 1440 pixels wide one strip is 1.5 MB.
 constexpr int kStripRows = 256;
 
-// How far outside its strip a strip is rastered when the document has effects
-// that read around the pixel they write -- blurs, drop shadows, backdrop
-// filters. Verified against a single-surface raster rather than assumed: on a
-// page of 360 backdrop-filter cards the two differ by at most 5 of 255 in any
-// channel, and the differing rows are spread through the image rather than
-// clustered at the strip edges, which is what a margin that was too small
-// would look like.
-constexpr int kStripMargin = 128;
+// The most rows a strip is rastered outside itself, for a document with
+// effects that read around the pixel they write -- blurs, drop shadows,
+// backdrop filters.
+//
+// How many rows are actually needed is a property of the page, not a number
+// to pick: it is how far the widest effect in the paint reaches, which the
+// filters and the loopers will say when asked, and ReadAroundExtent asks
+// them. This is only the ceiling on the answer.
+//
+// It used to be the answer. 128 rows was verified against a single-surface
+// raster on a page of 360 backdrop-filter cards, where the two differ by at
+// most 5 of 255 in any channel with the differing rows spread through the
+// image -- but that page's filters read about 20 pixels. A page with
+// `filter: blur(300px)` reads three sigma, or 450 rows, and rasters with a
+// difference that starts exactly at a strip boundary, which is what a margin
+// that is too small looks like.
+//
+// A ceiling is still needed because a margin is rows rastered twice, and
+// because a filter can report an unbounded reach. Exceeding it is not a
+// crash, it is a seam: a page whose effects read further than this rasters
+// the way every page did before. What a large margin costs is threads rather
+// than memory -- the strip budget is divided by what one thread holds, so a
+// page needing 1024 rows of margin simply gets fewer of them.
+// SHOT_STRIP_MARGIN moves the ceiling, which is how a suspected seam is
+// confirmed: raise it and see whether the difference goes away.
+constexpr int kMaxStripMargin = 1024;
 
 // An image up to this many pixels is rastered as one strip, on the calling
 // thread. Below this, striping costs more than it parallelises, and one strip
@@ -757,16 +777,57 @@ base::expected<std::unique_ptr<RowEncoder>, std::string> MakeRowEncoder(
 // filters, shadows and loopers, in the ops themselves or in records nested in
 // them. A record without any can be rastered in strips that meet exactly; one
 // with them needs the strips to overlap.
-bool HasNonLocalEffects(const cc::PaintOpBuffer& buffer) {
+// How far outside the pixel it writes one filter reaches, in the space the
+// filter is described in.
+//
+// Asked of a single pixel, so what comes back is the spread itself rather than
+// the spread of anything in particular. A filter with unbounded output -- a
+// colour filter over the whole plane -- answers with something enormous, which
+// the caller clamps; it is not wrong, it just is not a margin anyone can pay.
+float FilterOutset(const cc::PaintFilter* filter) {
+  if (!filter) {
+    return 0;
+  }
+  const SkIRect spread =
+      filter->MapRect(SkIRect::MakeWH(1, 1), /*ctm=*/nullptr,
+                      cc::PaintFilter::MapDirection::kForward_MapDirection);
+  if (spread.isEmpty()) {
+    return 0;
+  }
+  const int outset = std::max({-spread.top(), spread.bottom() - 1,
+                               -spread.left(), spread.right() - 1, 0});
+  return static_cast<float>(outset);
+}
+
+// How far outside the pixel it writes the widest effect in `buffer` reaches,
+// in the buffer's own coordinates. Zero when nothing in it reaches at all,
+// which is the common case and the one that needs no margin.
+//
+// Two different things are being counted. An op that samples the canvas
+// around what it writes -- a blur, a backdrop filter -- samples nothing where
+// a strip's clip cut its input off. And an op drawn through a looper, which
+// is how a box-shadow and a text-shadow are drawn, is culled by cc together
+// with the shape it decorates: an SkPaint has no looper, so the fast bounds
+// the cull is computed from are the shape's alone and a shadow reaching into
+// the strip from a shape above it is dropped. Rows rastered and thrown away
+// answer both.
+float ReadAroundExtent(const cc::PaintOpBuffer& buffer) {
+  float extent = 0;
   for (const cc::PaintOp& op : cc::PaintOpBuffer::Iterator(buffer)) {
     switch (op.GetType()) {
-      case cc::PaintOpType::kSaveLayerFilters:
-        return true;
-      case cc::PaintOpType::kDrawRecord:
-        if (HasNonLocalEffects(
-                static_cast<const cc::DrawRecordOp&>(op).record.buffer())) {
-          return true;
+      case cc::PaintOpType::kSaveLayerFilters: {
+        const auto& save_layer = static_cast<const cc::SaveLayerFiltersOp&>(op);
+        for (const sk_sp<cc::PaintFilter>& filter : save_layer.filters) {
+          extent = std::max(extent, FilterOutset(filter.get()));
         }
+        extent =
+            std::max(extent, FilterOutset(save_layer.backdrop_filter.get()));
+        break;
+      }
+      case cc::PaintOpType::kDrawRecord:
+        extent = std::max(
+            extent, ReadAroundExtent(
+                        static_cast<const cc::DrawRecordOp&>(op).record.buffer()));
         break;
       default:
         break;
@@ -776,18 +837,19 @@ bool HasNonLocalEffects(const cc::PaintOpBuffer& buffer) {
     }
     const cc::PaintFlags& flags =
         static_cast<const cc::PaintOpWithFlags&>(op).flags;
-    if (flags.getImageFilter() || flags.getLooper()) {
-      return true;
+    extent = std::max(extent, FilterOutset(flags.getImageFilter().get()));
+    if (const sk_sp<cc::DrawLooper>& looper = flags.getLooper()) {
+      extent = std::max(extent, looper->MaxOutset());
     }
     if (const cc::PaintShader* shader = flags.getShader();
         shader &&
         shader->shader_type() == cc::PaintShader::Type::kPaintRecord &&
-        shader->paint_record() &&
-        HasNonLocalEffects(shader->paint_record()->buffer())) {
-      return true;
+        shader->paint_record()) {
+      extent =
+          std::max(extent, ReadAroundExtent(shader->paint_record()->buffer()));
     }
   }
-  return false;
+  return extent;
 }
 
 // One level of downscaling, fed a source row at a time, computing what
@@ -1466,14 +1528,29 @@ class ImageStream::Impl {
     job.first_row = device_top;
     job.rows = rows;
     const bool whole_image = device_top == 0 && rows == whole.height();
+    // SHOT_SINGLE_STRIP=1 takes this path whatever the size, which is what
+    // makes a strip's raster checkable: one canvas over every row is the
+    // answer the strips are trying to reproduce, so a page rendered both ways
+    // and compared says whether they do. It is a reference, not an option --
+    // it holds the whole image at once, which is the thing this class exists
+    // not to do.
     const bool one_strip =
         whole_image &&
-        static_cast<int64_t>(whole.width()) * rows <= kSingleStripPixels;
+        (static_cast<int64_t>(whole.width()) * rows <= kSingleStripPixels ||
+         EnvInt("SHOT_SINGLE_STRIP", 0) != 0);
     job.strip_rows = one_strip ? rows : kStripRows;
     job.strips = (rows + job.strip_rows - 1) / job.strip_rows;
-    job.margin = one_strip || !HasNonLocalEffects(job.list->paint_op_buffer())
-                     ? 0
-                     : kStripMargin;
+    // The paint's own reach, in device rows: it is measured in the list's
+    // coordinates, and the list is rastered through `scale`.
+    job.margin = 0;
+    if (!one_strip) {
+      const double reach =
+          ReadAroundExtent(job.list->paint_op_buffer()) * scale;
+      job.margin = static_cast<int>(
+          std::clamp(std::ceil(reach), 0.0,
+                     static_cast<double>(EnvInt("SHOT_STRIP_MARGIN",
+                                                kMaxStripMargin))));
+    }
 
     // Threads: as many as there are cores and strips, within what the strips
     // in flight may hold. A strip costs its rows in the bitmap, plus a margin

@@ -4,6 +4,8 @@
 
 #include "cc/paint/draw_looper.h"
 
+#include <algorithm>
+#include <cmath>
 #include <utility>
 
 #include "third_party/skia/include/core/SkBlurTypes.h"
@@ -18,6 +20,20 @@ namespace cc {
 
 DrawLooper::DrawLooper(std::vector<Layer> l) : layers_(std::move(l)) {}
 DrawLooper::~DrawLooper() = default;
+
+float DrawLooper::MaxOutset() const {
+  // Three sigma, which is where a gaussian has nothing left worth drawing and
+  // the same bound SkImageFilters::Blur reports for itself.
+  constexpr float kBlurReach = 3.0f;
+  float outset = 0;
+  for (const Layer& layer : layers_) {
+    const float reach =
+        std::max(std::abs(layer.offset.fX), std::abs(layer.offset.fY)) +
+        kBlurReach * std::max(layer.blur_sigma, 0.0f);
+    outset = std::max(outset, reach);
+  }
+  return outset;
+}
 
 void DrawLooper::Layer::Apply(SkCanvas* canvas, SkPaint* paint) const {
   if (!(flags & kDontModifyPaintFlag)) {

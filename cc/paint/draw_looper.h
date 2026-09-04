@@ -62,6 +62,18 @@ class CC_PAINT_EXPORT DrawLooper : public SkRefCnt {
     }
   }
 
+  // How far outside the draw it is applied to this looper reaches: the
+  // largest of each layer's offset plus the reach of its blur, in the space
+  // the layers are given in (which for a looper without kPostTransformFlag is
+  // the canvas' local space).
+  //
+  // An SkPaint has no looper, so nothing downstream of ToSkPaint() knows
+  // about one: the fast bounds a draw is culled against are the bounds of the
+  // shape alone, and a shadow that falls inside a clip its shape does not is
+  // culled with it. A caller that rasters through a clip smaller than the
+  // picture has to allow for this, and this is the number to allow.
+  float MaxOutset() const;
+
   bool EqualsForTesting(const DrawLooper& other) const;
 
  private:
