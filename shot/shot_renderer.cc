@@ -1595,6 +1595,7 @@ base::expected<void, std::string> ShotRenderer::RenderDocument(
       const PreparedWindow& prepared = prepared_windows[w];
       scoped_refptr<cc::DiscardableImageMap> map =
           prepared.list->GenerateDiscardableImageMap(cc::ScrollOffsetMap());
+      const int reach = PaintReadAround(*prepared.list);
       for (size_t i = prepared.window.end_slice;
            i-- > prepared.window.first_slice;) {
         drawn_after[i] = later;
@@ -1603,9 +1604,13 @@ base::expected<void, std::string> ShotRenderer::RenderDocument(
         }
         const gfx::Rect& slice = slices[i];
         // One row of slack, as the stream's own query allows for a slice
-        // boundary that falls inside a device pixel.
-        const gfx::Rect painted(slice.x(), slice.y() - prepared.offset,
-                                slice.width(), slice.height() + 1);
+        // boundary that falls inside a device pixel. And the paint's reach,
+        // because the map answers with where an image is: an image a slice
+        // above draws is needed by this one if what this one draws is a shadow
+        // of it.
+        gfx::Rect painted(slice.x(), slice.y() - prepared.offset, slice.width(),
+                          slice.height() + 1);
+        painted.Outset(reach);
         for (const cc::DrawImage* draw :
              map->GetDiscardableImagesInRect(painted)) {
           later.insert(draw->paint_image().stable_id());

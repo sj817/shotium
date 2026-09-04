@@ -1494,6 +1494,18 @@ class StripWorker final : public base::DelegateSimpleThread::Delegate {
 
 }  // namespace
 
+int PaintReadAround(const cc::DisplayItemList& list) {
+  // A filter can report an unbounded reach -- a colour filter covers the
+  // plane -- and this is a number other code does arithmetic on, so it is
+  // clamped to something larger than any document blink lays out. Everything
+  // that reads it treats "further than the image" and "as far as it goes" the
+  // same way.
+  constexpr double kMaxReadAround = 1 << 24;
+  return static_cast<int>(std::clamp(
+      std::ceil(static_cast<double>(ReadAroundExtent(list.paint_op_buffer()))),
+      0.0, kMaxReadAround));
+}
+
 class ImageStream::Impl {
  public:
   Impl(std::unique_ptr<WindowedBitmap> bitmap,
@@ -1540,17 +1552,14 @@ class ImageStream::Impl {
          EnvInt("SHOT_SINGLE_STRIP", 0) != 0);
     job.strip_rows = one_strip ? rows : kStripRows;
     job.strips = (rows + job.strip_rows - 1) / job.strip_rows;
-    // The paint's own reach, in device rows: it is measured in the list's
-    // coordinates, and the list is rastered through `scale`.
-    job.margin = 0;
-    if (!one_strip) {
-      const double reach =
-          ReadAroundExtent(job.list->paint_op_buffer()) * scale;
-      job.margin = static_cast<int>(
-          std::clamp(std::ceil(reach), 0.0,
-                     static_cast<double>(EnvInt("SHOT_STRIP_MARGIN",
-                                                kMaxStripMargin))));
-    }
+    // The paint's own reach, in the list's coordinates. Two things are
+    // measured from it: the rows a strip rasters outside itself, which is a
+    // cost and so has a ceiling, and the row an image is needed down to,
+    // which is not and does not.
+    const int reach = one_strip ? 0 : PaintReadAround(*job.list);
+    job.margin = static_cast<int>(std::clamp(
+        std::ceil(reach * scale), 0.0,
+        static_cast<double>(EnvInt("SHOT_STRIP_MARGIN", kMaxStripMargin))));
 
     // Threads: as many as there are cores and strips, within what the strips
     // in flight may hold. A strip costs its rows in the bitmap, plus a margin
@@ -1601,8 +1610,20 @@ class ImageStream::Impl {
           for (const gfx::Rect& rect : map->GetRectsForImage(id)) {
             bottom_css = std::max(bottom_css, rect.bottom());
           }
+          // Past the rows that draw the image, by what an effect drawn from it
+          // reaches. cc's map records where an image is, not where the shadow
+          // of it lands, and a strip that draws only the shadow still has to
+          // decode the image: a 100 px image with a drop shadow 1500 rows
+          // below it was released after the strip that drew the image and the
+          // shadow came out blank, six strips later.
+          //
+          // And past that again by the margin, because a strip rasters its
+          // margin as well as itself and has to be able to decode everything
+          // it rasters -- even the rows it is going to throw away.
           const int bottom_row =
-              static_cast<int>(std::ceil((bottom_css - cull_rect.y()) * scale));
+              static_cast<int>(
+                  std::ceil((bottom_css + reach - cull_rect.y()) * scale)) +
+              job.margin;
           const int last =
               std::clamp((bottom_row - 1 - device_top) / job.strip_rows, 0,
                          job.strips - 1);

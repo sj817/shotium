@@ -47,6 +47,18 @@ struct ImageStreamStats {
   size_t peak_decoded_bytes = 0;
 };
 
+// How far outside the pixel it writes the furthest-reaching effect in `list`
+// reads, in the list's own coordinates: a blur's three sigma, a drop shadow's
+// offset, the spread of the looper a box-shadow is drawn through. Zero for a
+// document that only draws where it says it draws, which is most of them.
+//
+// Two things are measured from it, and both are why it is asked rather than
+// assumed. A strip is rastered this far outside itself, because an effect
+// reads nothing where the strip's clip cut its input off. And an image is kept
+// this far past the last row that draws it, because the strip that draws only
+// the shadow still has to decode the image the shadow is of.
+int PaintReadAround(const cc::DisplayItemList& list);
+
 // One output image, rastered in horizontal strips from the top down and
 // encoded as each strip completes.
 //
