@@ -87,8 +87,10 @@ class ImageStream {
 
   // Rasters image rows [device_top, device_top + rows) from `list`, whose ops
   // are in the painted document's CSS pixels: pixel (0, 0) of the image is
-  // `cull_rect.origin()` at `scale`. Slices are added top to bottom and must
-  // tile the image exactly.
+  // `cull_rect.origin()` at `scale`. `device_origin` is the row of the global
+  // device grid that local output row zero represents; it is zero for one
+  // image, and the rounded global top for an independently encoded tile.
+  // Slices are added top to bottom and must tile the image exactly.
   //
   // An image's compressed bytes are released the moment the last strip that
   // draws it is encoded, except for the images in `keep_encoded`: those are
@@ -98,6 +100,7 @@ class ImageStream {
       scoped_refptr<const cc::DisplayItemList> list,
       const gfx::Rect& cull_rect,
       double scale,
+      int device_origin,
       int device_top,
       int rows,
       const base::flat_set<cc::PaintImage::Id>& keep_encoded);

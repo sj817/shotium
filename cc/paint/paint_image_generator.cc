@@ -10,6 +10,7 @@
 #include "base/atomic_sequence_num.h"
 #include "third_party/skia/include/core/SkImageInfo.h"
 #include "third_party/skia/include/core/SkSize.h"
+#include "third_party/skia/include/core/SkStream.h"
 
 namespace cc {
 
@@ -22,6 +23,10 @@ PaintImageGenerator::PaintImageGenerator(const SkImageInfo& info,
       frames_(std::move(frames)) {}
 
 PaintImageGenerator::~PaintImageGenerator() = default;
+
+std::unique_ptr<SkStream> PaintImageGenerator::GetEncodedDataStream() const {
+  return nullptr;
+}
 
 bool PaintImageGenerator::DiscardEncodedData() {
   return false;

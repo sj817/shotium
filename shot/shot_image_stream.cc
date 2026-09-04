@@ -8,6 +8,7 @@
 #include <stdio.h>  // jpeglib.h needs FILE.
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdlib>
 #include <map>
@@ -76,6 +77,9 @@ namespace {
 // a whole picture would. Small, because a strip is the unit of memory in
 // flight: at 1440 pixels wide one strip is 1.5 MB.
 constexpr int kStripRows = 256;
+
+// Skia's ordered dither repeats on both device axes at this interval.
+constexpr int kDitherPeriod = 8;
 
 // The most rows a strip is rastered outside itself, for a document with
 // effects that read around the pixel they write -- blurs, drop shadows,
@@ -992,23 +996,22 @@ std::optional<SkBitmap> DecodePngStreaming(const cc::PaintImage& image,
   if (sizes.size() < 2) {
     return std::nullopt;
   }
-  sk_sp<const SkData> data = image.GetEncodedData();
-  if (!data || data->size() < 33 ||
-      !SkPngRustDecoder::IsPng(data->data(), data->size())) {
+  std::unique_ptr<SkStream> stream = image.GetEncodedDataStream();
+  std::array<uint8_t, 33> header;
+  if (!stream || stream->read(header.data(), header.size()) != header.size() ||
+      !SkPngRustDecoder::IsPng(header.data(), header.size())) {
     return std::nullopt;
   }
-  // SAFETY: SkData owns exactly size() bytes at bytes().
-  const base::span<const uint8_t> bytes =
-      UNSAFE_BUFFERS(base::span(data->bytes(), data->size()));
+  const base::span<const uint8_t> bytes(header);
   // IHDR is always the first chunk: 8 bytes of signature, 4 of length, 4 of
   // type, 13 of data whose last byte is the interlace method.
   if (bytes.subspan(12u, 4u) != base::as_byte_span(std::string_view("IHDR")) ||
-      bytes[28] != 0) {
+      bytes[28] != 0 || !stream->rewind()) {
     return std::nullopt;
   }
   SkCodec::Result result = SkCodec::kSuccess;
-  std::unique_ptr<SkCodec> codec = SkPngRustDecoder::Decode(
-      SkMemoryStream::MakeDirect(data->data(), data->size()), &result);
+  std::unique_ptr<SkCodec> codec =
+      SkPngRustDecoder::Decode(std::move(stream), &result);
   if (!codec || codec->dimensions() != full.dimensions()) {
     return std::nullopt;
   }
@@ -1365,6 +1368,8 @@ struct SliceJob {
   SkSurfaceProps props;
   gfx::Rect cull_rect;
   double scale = 1.0;
+  // Global device row represented by row zero of this output image.
+  int device_origin = 0;
   // Image rows [first_row, first_row + rows) in strips of strip_rows.
   int first_row = 0;
   int rows = 0;
@@ -1389,7 +1394,8 @@ struct SliceJob {
 };
 
 void DrawSlice(const SliceJob& job, SkCanvas* canvas, int top) {
-  canvas->translate(0.0f, static_cast<float>(-top));
+  canvas->translate(0.0f,
+                    static_cast<float>(-top - job.device_origin));
   if (job.scale != 1.0) {
     canvas->scale(static_cast<float>(job.scale), static_cast<float>(job.scale));
   }
@@ -1400,7 +1406,7 @@ void DrawSlice(const SliceJob& job, SkCanvas* canvas, int top) {
   job.list->Raster(canvas, job.images);
 }
 
-// Rasters strip `strip` into the bitmap. `scratch` is the caller's margin
+// Rasters strip `strip` into the bitmap. `scratch` is the caller's padded
 // surface, made on first use and sized for the tallest strip.
 base::expected<void, std::string> RasterStrip(const SliceJob& job,
                                               int strip,
@@ -1413,7 +1419,15 @@ base::expected<void, std::string> RasterStrip(const SliceJob& job,
                            SkIRect::MakeLTRB(0, y0, whole.width(), y1))) {
     return base::unexpected("could not address the image's rows");
   }
-  if (job.margin == 0) {
+  // Skia's ordered dither is an 8x8 pattern in surface coordinates. A tile's
+  // row zero can represent a non-zero row of the full image, so pad the
+  // scratch surface until its local row has the same phase as that global
+  // device row. Otherwise independently rastered tiles can differ by one LSB
+  // even when their CTM samples the same CSS coordinate.
+  const int top = std::max(job.first_row, y0 - job.margin);
+  const int bottom = std::min(job.first_row + job.rows, y1 + job.margin);
+  const int phase = (job.device_origin + top) % kDitherPeriod;
+  if (job.margin == 0 && phase == 0) {
     std::unique_ptr<SkCanvas> canvas = SkCanvas::MakeRasterDirect(
         target.info(), target.writable_addr(), target.rowBytes(), &job.props);
     if (!canvas) {
@@ -1424,11 +1438,10 @@ base::expected<void, std::string> RasterStrip(const SliceJob& job,
     return base::ok();
   }
 
-  const int top = std::max(job.first_row, y0 - job.margin);
-  const int bottom = std::min(job.first_row + job.rows, y1 + job.margin);
   if (!scratch) {
     scratch = SkSurfaces::Raster(
-        whole.info().makeWH(whole.width(), job.strip_rows + 2 * job.margin),
+        whole.info().makeWH(whole.width(), job.strip_rows + 2 * job.margin +
+                                               kDitherPeriod - 1),
         &job.props);
     if (!scratch) {
       return base::unexpected("could not allocate a strip surface");
@@ -1439,9 +1452,10 @@ base::expected<void, std::string> RasterStrip(const SliceJob& job,
   canvas->resetMatrix();
   canvas->clear(SK_ColorTRANSPARENT);
   canvas->save();
-  canvas->clipRect(SkRect::MakeWH(static_cast<float>(whole.width()),
-                                  static_cast<float>(bottom - top)));
-  DrawSlice(job, canvas, top);
+  canvas->clipRect(SkRect::MakeXYWH(
+      0.0f, static_cast<float>(phase), static_cast<float>(whole.width()),
+      static_cast<float>(bottom - top)));
+  DrawSlice(job, canvas, top - phase);
   canvas->restore();
   SkPixmap source;
   if (!scratch->peekPixels(&source)) {
@@ -1449,7 +1463,7 @@ base::expected<void, std::string> RasterStrip(const SliceJob& job,
   }
   // Same colour and alpha type on both sides, so this is a row copy.
   if (!source.readPixels(target.info(), target.writable_addr(),
-                         target.rowBytes(), 0, y0 - top)) {
+                         target.rowBytes(), 0, phase + y0 - top)) {
     return base::unexpected("could not copy a strip into the image");
   }
   return base::ok();
@@ -1521,6 +1535,7 @@ class ImageStream::Impl {
       scoped_refptr<const cc::DisplayItemList> list,
       const gfx::Rect& cull_rect,
       double scale,
+      int device_origin,
       int device_top,
       int rows,
       const base::flat_set<cc::PaintImage::Id>& keep_encoded) {
@@ -1537,6 +1552,7 @@ class ImageStream::Impl {
     job.props = props_;
     job.cull_rect = cull_rect;
     job.scale = scale;
+    job.device_origin = device_origin;
     job.first_row = device_top;
     job.rows = rows;
     const bool whole_image = device_top == 0 && rows == whole.height();
@@ -1562,14 +1578,19 @@ class ImageStream::Impl {
         static_cast<double>(EnvInt("SHOT_STRIP_MARGIN", kMaxStripMargin))));
 
     // Threads: as many as there are cores and strips, within what the strips
-    // in flight may hold. A strip costs its rows in the bitmap, plus a margin
-    // surface per thread when there is a margin.
+    // in flight may hold. A strip costs its rows in the bitmap, plus a padded
+    // surface per thread when a margin or dither-phase correction needs one.
     const int64_t strip_bytes =
         static_cast<int64_t>(whole.rowBytes()) * job.strip_rows;
+    const bool uses_scratch =
+        job.margin != 0 ||
+        (job.device_origin + job.first_row) % kDitherPeriod != 0;
     const int64_t per_thread =
-        strip_bytes + (job.margin ? static_cast<int64_t>(whole.rowBytes()) *
-                                        (job.strip_rows + 2 * job.margin)
-                                  : 0);
+        strip_bytes +
+        (uses_scratch ? static_cast<int64_t>(whole.rowBytes()) *
+                            (job.strip_rows + 2 * job.margin +
+                             kDitherPeriod - 1)
+                      : 0);
     const int64_t strip_budget =
         static_cast<int64_t>(std::max(
             1, EnvInt("SHOT_STRIP_BUDGET_MB",
@@ -1595,7 +1616,8 @@ class ImageStream::Impl {
       if (map && !map->empty()) {
         const gfx::Rect slice_css(
             cull_rect.x(),
-            cull_rect.y() + static_cast<int>(std::floor(device_top / scale)),
+            cull_rect.y() + static_cast<int>(std::floor(
+                                (device_origin + device_top) / scale)),
             cull_rect.width(), static_cast<int>(std::ceil(rows / scale)) + 1);
         for (const cc::DrawImage* draw :
              map->GetDiscardableImagesInRect(slice_css)) {
@@ -1625,7 +1647,9 @@ class ImageStream::Impl {
                   std::ceil((bottom_css + reach - cull_rect.y()) * scale)) +
               job.margin;
           const int last =
-              std::clamp((bottom_row - 1 - device_top) / job.strip_rows, 0,
+              std::clamp((bottom_row - 1 - device_origin - device_top) /
+                             job.strip_rows,
+                         0,
                          job.strips - 1);
           last_strips[id] = last;
         }
@@ -1778,11 +1802,12 @@ base::expected<void, std::string> ImageStream::AddSlice(
     scoped_refptr<const cc::DisplayItemList> list,
     const gfx::Rect& cull_rect,
     double scale,
+    int device_origin,
     int device_top,
     int rows,
     const base::flat_set<cc::PaintImage::Id>& keep_encoded) {
-  return impl_->AddSlice(std::move(list), cull_rect, scale, device_top, rows,
-                         keep_encoded);
+  return impl_->AddSlice(std::move(list), cull_rect, scale, device_origin,
+                         device_top, rows, keep_encoded);
 }
 
 base::expected<Bytes, std::string> ImageStream::Finish() {

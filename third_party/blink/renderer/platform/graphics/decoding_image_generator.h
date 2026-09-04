@@ -26,6 +26,7 @@
 #ifndef THIRD_PARTY_BLINK_RENDERER_PLATFORM_GRAPHICS_DECODING_IMAGE_GENERATOR_H_
 #define THIRD_PARTY_BLINK_RENDERER_PLATFORM_GRAPHICS_DECODING_IMAGE_GENERATOR_H_
 
+#include <memory>
 #include <vector>
 
 #include "base/memory/scoped_refptr.h"
@@ -39,6 +40,7 @@
 #include "third_party/skia/include/core/SkYUVAPixmaps.h"
 
 class SkData;
+class SkStream;
 
 namespace blink {
 
@@ -75,6 +77,7 @@ class PLATFORM_EXPORT DecodingImageGenerator final
 
   // PaintImageGenerator implementation.
   sk_sp<const SkData> GetEncodedData() const override;
+  std::unique_ptr<SkStream> GetEncodedDataStream() const override;
   bool DiscardEncodedData() override;
   bool GetPixels(SkPixmap,
                  size_t frame_index,

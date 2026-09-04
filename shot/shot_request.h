@@ -46,6 +46,11 @@ struct Tile {
   int height = 0;
 };
 
+// Blink paints at most this many CSS rows from one scroll position. A tile
+// cannot be taller, and rejecting it while parsing keeps an invalid request
+// from fetching or laying out its document first.
+inline constexpr int kMaximumTileHeight = 32000;
+
 // The quality used for jpeg and webp when the request did not say. Puppeteer
 // leaves it to the encoder default, which for skia's jpeg encoder is 100 -- a
 // file three times the size of one at 90 for no difference a screenshot can

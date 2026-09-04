@@ -27,6 +27,7 @@
 #include "third_party/skia/include/core/SkPixmap.h"
 #include "third_party/skia/include/core/SkRefCnt.h"
 #include "third_party/skia/include/core/SkSize.h"
+#include "third_party/skia/include/core/SkStream.h"
 #include "third_party/skia/include/core/SkYUVAPixmaps.h"
 #include "third_party/skia/include/gpu/ganesh/GrBackendSurface.h"
 #include "third_party/skia/include/private/SkGainmapInfo.h"
@@ -329,9 +330,10 @@ bool PaintImage::DiscardEncodedData() const {
   return discarded;
 }
 
-sk_sp<const SkData> PaintImage::GetEncodedData() const {
-  return paint_image_generator_ ? paint_image_generator_->GetEncodedData()
-                                : nullptr;
+std::unique_ptr<SkStream> PaintImage::GetEncodedDataStream() const {
+  return paint_image_generator_
+             ? paint_image_generator_->GetEncodedDataStream()
+             : nullptr;
 }
 
 bool PaintImage::DecodeYuv(const SkYUVAPixmaps& pixmaps,

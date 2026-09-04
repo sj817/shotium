@@ -314,10 +314,10 @@ base::expected<ScreenshotRequest, std::string> ParseScreenshotRequest(
       return base::unexpected("tile.height is required");
     }
     if (**height < kMinimumDimension ||
-        **height > kMaximumDocumentCoordinate) {
+        **height > kMaximumTileHeight) {
       return base::unexpected(
           OutOfRange("tile.height", kMinimumDimension,
-                     kMaximumDocumentCoordinate));
+                     kMaximumTileHeight));
     }
     request.tile = Tile{**height};
   }

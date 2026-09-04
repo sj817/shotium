@@ -8,6 +8,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <limits>
 #include <map>
 #include <memory>
 #include <optional>
@@ -274,7 +275,7 @@ constexpr int kPaintedExtent = 32767;
 // The most document rows one paint record is asked to cover. Short of the
 // extent so that a box straddling a band's bottom edge keeps its outsets --
 // shadows, anti-aliasing -- inside the band that draws it.
-constexpr int kPaintWindow = 32000;
+constexpr int kPaintWindow = kMaximumTileHeight;
 
 // What one encoded image may measure, per format. JPEG's is the format's own.
 // WebP's is libwebp's hard ceiling, which the encoder reports only as "failed".
@@ -522,23 +523,74 @@ void LogMemoryStage(const char* stage) {
 
 namespace {
 
-// The file a request's `path` names, opened for writing so the encoder can
-// stream into it, or an invalid File when there is no path and the image is
-// to be handed back in memory. `n` numbers a tile into the path's {n}.
-base::expected<base::File, std::string> OpenOutput(
-    const std::string& path_template,
-    size_t n) {
-  if (path_template.empty()) {
-    return base::File();
+// One encoded file before it is made visible at the path the caller named.
+// The temporary file is in the destination directory, so the final replace
+// stays on one filesystem. Its destructor removes an uncommitted file on every
+// early return from paint, raster or encode.
+struct StagedOutput {
+  StagedOutput() = default;
+  StagedOutput(base::File opened,
+               base::FilePath final,
+               base::FilePath temporary)
+      : file(std::move(opened)),
+        final_path(std::move(final)),
+        temporary_path(std::move(temporary)) {}
+  StagedOutput(const StagedOutput&) = delete;
+  StagedOutput& operator=(const StagedOutput&) = delete;
+  StagedOutput(StagedOutput&& other) noexcept
+      : file(std::move(other.file)),
+        final_path(std::move(other.final_path)),
+        temporary_path(
+            std::exchange(other.temporary_path, base::FilePath())) {}
+  StagedOutput& operator=(StagedOutput&& other) noexcept {
+    if (this != &other) {
+      Cleanup();
+      file = std::move(other.file);
+      final_path = std::move(other.final_path);
+      temporary_path =
+          std::exchange(other.temporary_path, base::FilePath());
+    }
+    return *this;
   }
-  std::string path = path_template;
-  base::ReplaceSubstringsAfterOffset(&path, 0, "{n}", base::NumberToString(n));
-  base::File file(base::FilePath::FromUTF8Unsafe(path),
-                  base::File::FLAG_CREATE_ALWAYS | base::File::FLAG_WRITE);
+  ~StagedOutput() { Cleanup(); }
+
+  base::File TakeFile() { return std::move(file); }
+
+  void Cleanup() {
+    file.Close();
+    if (!temporary_path.empty()) {
+      base::DeleteFile(temporary_path);
+      temporary_path = base::FilePath();
+    }
+  }
+
+  base::File file;
+  base::FilePath final_path;
+  base::FilePath temporary_path;
+};
+
+// Opens a staging file for the final path, or an invalid File when there is no
+// path and the image is to be handed back in memory. Tile-template expansion
+// happens at the tiled call site so an ordinary screenshot path stays literal.
+base::expected<StagedOutput, std::string> OpenOutput(
+    const std::string& path) {
+  if (path.empty()) {
+    return StagedOutput();
+  }
+  const base::FilePath final_path = base::FilePath::FromUTF8Unsafe(path);
+  base::FilePath temporary_path;
+  if (!base::CreateTemporaryFileInDir(final_path.DirName(), &temporary_path)) {
+    return base::unexpected("could not create a temporary output beside " +
+                            path);
+  }
+  base::File file(temporary_path,
+                  base::File::FLAG_OPEN | base::File::FLAG_WRITE);
   if (!file.IsValid()) {
-    return base::unexpected("could not open " + path + " for writing");
+    base::DeleteFile(temporary_path);
+    return base::unexpected("could not open a temporary output beside " +
+                            path + " for writing");
   }
-  return file;
+  return StagedOutput(std::move(file), final_path, temporary_path);
 }
 
 // Where OpenOutput() put tile `n`, for the caller's report.
@@ -546,6 +598,201 @@ std::string OutputPath(const std::string& path_template, size_t n) {
   std::string path = path_template;
   base::ReplaceSubstringsAfterOffset(&path, 0, "{n}", base::NumberToString(n));
   return path;
+}
+
+struct CommittedOutput {
+  base::FilePath final_path;
+  base::FilePath backup_path;
+};
+
+// Installs a complete set of staged outputs. Existing destinations are first
+// moved to same-directory backups. If any install fails, everything installed
+// so far is restored before the error is returned.
+bool RollBackOutputs(const std::vector<CommittedOutput>& committed) {
+  bool restored = true;
+  for (auto it = committed.rbegin(); it != committed.rend(); ++it) {
+    if (it->backup_path.empty()) {
+      restored = (!base::PathExists(it->final_path) ||
+                  base::DeleteFile(it->final_path)) &&
+                 restored;
+      continue;
+    }
+    base::File::Error error = base::File::FILE_OK;
+    restored = base::ReplaceFile(it->backup_path, it->final_path, &error) &&
+               restored;
+  }
+  return restored;
+}
+
+base::expected<std::vector<CommittedOutput>, std::string> CommitOutputs(
+    std::vector<StagedOutput>& outputs) {
+  std::vector<CommittedOutput> committed;
+  committed.reserve(outputs.size());
+  for (StagedOutput& output : outputs) {
+    CommittedOutput entry{output.final_path, base::FilePath()};
+    if (base::PathExists(output.final_path)) {
+#if BUILDFLAG(IS_POSIX)
+      int permissions = 0;
+      if (!base::GetPosixFilePermissions(output.final_path, &permissions)) {
+        const bool restored = RollBackOutputs(committed);
+        return base::unexpected(
+            "could not read permissions of " +
+            output.final_path.AsUTF8Unsafe() +
+            (restored ? std::string()
+                      : "; restoring previous outputs failed"));
+      }
+      if (!base::SetPosixFilePermissions(output.temporary_path,
+                                         permissions)) {
+        const bool restored = RollBackOutputs(committed);
+        return base::unexpected(
+            "could not preserve permissions of " +
+            output.final_path.AsUTF8Unsafe() +
+            (restored ? std::string()
+                      : "; restoring previous outputs failed"));
+      }
+#endif
+      if (!base::CreateTemporaryFileInDir(output.final_path.DirName(),
+                                          &entry.backup_path)) {
+        const bool restored = RollBackOutputs(committed);
+        return base::unexpected(
+            "could not create a backup beside " +
+            output.final_path.AsUTF8Unsafe() +
+            (restored ? std::string()
+                      : "; restoring previous outputs failed"));
+      }
+      base::File::Error error = base::File::FILE_OK;
+      if (!base::ReplaceFile(output.final_path, entry.backup_path, &error)) {
+        base::DeleteFile(entry.backup_path);
+        const bool restored = RollBackOutputs(committed);
+        return base::unexpected(
+            "could not back up " + output.final_path.AsUTF8Unsafe() + ": " +
+            base::File::ErrorToString(error) +
+            (restored ? std::string()
+                      : "; restoring previous outputs failed"));
+      }
+    }
+
+    base::File::Error error = base::File::FILE_OK;
+    if (!base::ReplaceFile(output.temporary_path, output.final_path, &error)) {
+      bool restored = true;
+      if (!entry.backup_path.empty()) {
+        base::File::Error restore_error = base::File::FILE_OK;
+        restored = base::ReplaceFile(entry.backup_path, output.final_path,
+                                     &restore_error);
+      }
+      restored = RollBackOutputs(committed) && restored;
+      return base::unexpected(
+          "could not install " + output.final_path.AsUTF8Unsafe() + ": " +
+          base::File::ErrorToString(error) +
+          (restored ? std::string() : "; restoring previous outputs failed"));
+    }
+    output.temporary_path = base::FilePath();
+    committed.push_back(std::move(entry));
+  }
+  return committed;
+}
+
+void FinishOutputs(const std::vector<CommittedOutput>& committed) {
+  for (const CommittedOutput& output : committed) {
+    if (!output.backup_path.empty()) {
+      base::DeleteFile(output.backup_path);
+    }
+  }
+}
+
+// The normal-flow bounds of sticky boxes attached to the document scroller.
+// A paint window whose output begins inside one of these bounds is started at
+// the last scroll position before the box sticks: it can then drop every box
+// that remains stuck, while a box that returns to ordinary flow supplies
+// exactly the output rows still needed.
+struct ViewportStickyFlow {
+  gfx::Rect bounds;
+  int first_unstuck;
+  int last_unstuck;
+};
+
+std::vector<ViewportStickyFlow> ViewportStickyFlows(
+    blink::LocalFrameView* view) {
+  std::vector<ViewportStickyFlow> flows;
+  blink::LayoutView* layout_view = view->GetLayoutView();
+  if (!layout_view) {
+    return flows;
+  }
+  const auto* layout_viewport = view->LayoutViewport();
+  const auto* root_scroll_layer =
+      layout_viewport ? layout_viewport->Layer() : nullptr;
+  if (!root_scroll_layer) {
+    return flows;
+  }
+  for (blink::LayoutObject* object = layout_view; object;
+       object = object->NextInPreOrder()) {
+    const auto* box = blink::DynamicTo<blink::LayoutBoxModelObject>(object);
+    if (!box || !box->HasStickyConstraints()) {
+      continue;
+    }
+    const auto constraints = box->StickyConstraints();
+    const auto* y_data =
+        constraints.AxisData(blink::PhysicalAxis::kVertical);
+    if (!y_data || y_data->is_fixed_to_view ||
+        y_data->containing_scroll_container_layer.Get() != root_scroll_layer) {
+      continue;
+    }
+    const gfx::Rect bounds = box->AbsoluteBoundingBoxRect(
+        {blink::MapCoordinatesMode::kIgnoreScrollOffset,
+         blink::MapCoordinatesMode::kIgnoreStickyOffset});
+    int first_unstuck = std::numeric_limits<int>::min();
+    int last_unstuck = std::numeric_limits<int>::max();
+    // At integral scroll position p neither vertical edge shifts the box
+    // throughout this interval:
+    //
+    //   sticky_bottom - constraining_bottom + bottom_inset <= p
+    //   p <= sticky_top - constraining_top - top_inset.
+    //
+    // Blink applies floor(p), so round the lower edge up and the upper edge
+    // down. Choosing a point in the interval handles both top and bottom
+    // insets instead of assuming the normal-flow top is always unstuck.
+    if (y_data->max_inset) {
+      const blink::LayoutUnit first =
+          y_data->scroll_container_relative_sticky_box_range.End() -
+          y_data->constraining_range.End() + *y_data->max_inset;
+      first_unstuck = first.Ceil();
+    }
+    if (y_data->min_inset) {
+      const blink::LayoutUnit last =
+          y_data->scroll_container_relative_sticky_box_range.offset -
+          y_data->constraining_range.offset - *y_data->min_inset;
+      last_unstuck = last.Floor();
+    }
+    flows.push_back({bounds, first_unstuck, last_unstuck});
+  }
+  return flows;
+}
+
+std::optional<int> WindowTopBeforeSticky(
+    int row,
+    const std::vector<ViewportStickyFlow>& flows) {
+  int first_unstuck = std::numeric_limits<int>::min();
+  int last_unstuck = row;
+  int top = row;
+  for (;;) {
+    int before = top;
+    for (const ViewportStickyFlow& flow : flows) {
+      // Keep every flow intersecting the whole retreat interval active. This
+      // makes the result independent of DOM order and closes transitively over
+      // overlapping or nested sticky boxes.
+      if (flow.bounds.y() <= row && flow.bounds.bottom() > top) {
+        first_unstuck = std::max(first_unstuck, flow.first_unstuck);
+        last_unstuck = std::min(last_unstuck, flow.last_unstuck);
+      }
+    }
+    if (first_unstuck > last_unstuck) {
+      return std::nullopt;
+    }
+    top = last_unstuck;
+    if (top == before) {
+      return top;
+    }
+  }
 }
 
 // What the scroll offset carries with it, at the offset the document is at
@@ -559,10 +806,9 @@ std::string OutputPath(const std::string& path_template, size_t n) {
 // blink can paint in one go is reached -- puts them in every one, which is
 // how a fixed header ends up repeated down a long page.
 //
-// So the first window keeps them and the rest do not. The first window is the
-// one whose viewport is the one the caller asked for, and it is the same
-// answer a page short enough to need no scrolling already gives, since that
-// one is photographed at offset zero and never moves.
+// So the window painted at offset zero keeps them and every actually scrolled
+// window drops them. This also matches a short clipped capture, which never
+// scrolls just because the clip starts below the viewport.
 class ViewportAnchored {
   // Holds pointers into the property trees, which are garbage collected: on
   // the stack they are found by the conservative scan, and anywhere else they
@@ -570,8 +816,7 @@ class ViewportAnchored {
   STACK_ALLOCATED();
 
  public:
-  // `window_top` is the first document row this window is being painted for.
-  ViewportAnchored(blink::LocalFrameView* view, int window_top) {
+  ViewportAnchored(blink::LocalFrameView* view, int output_top) {
     blink::LayoutView* layout_view = view->GetLayoutView();
     if (!layout_view) {
       return;
@@ -588,14 +833,12 @@ class ViewportAnchored {
     for (blink::LayoutObject* object = layout_view; object;
          object = object->NextInPreOrder()) {
       const auto* box = blink::DynamicTo<blink::LayoutBoxModelObject>(object);
-      if (!box || !box->HasStickyConstraints() ||
-          box->StickyPositionOffset().IsZero()) {
-        // Sitting where its flow put it, which makes it ordinary document
-        // content at this offset.
+      if (!box || !box->HasStickyConstraints()) {
         continue;
       }
       const auto* properties = box->FirstFragment().PaintProperties();
-      const auto* sticky = properties ? properties->StickyTranslation() : nullptr;
+      const auto* sticky =
+          properties ? properties->StickyTranslation() : nullptr;
       if (!sticky ||
           &sticky->NearestScrollTranslationNode() != scroll_translation_) {
         // Stuck to a scroller inside the document rather than to the document
@@ -603,25 +846,21 @@ class ViewportAnchored {
         // document position and belongs to whichever window covers it.
         continue;
       }
-      // Where the box would be with nothing shifting it: no scroll offset, no
-      // sticky offset, which is document coordinates. Only a box whose every
-      // row is above this window has already been painted in an earlier one
-      // and is a repeat here. A box that still has rows of its own to come is
-      // not -- dropping it would lose it from the picture entirely rather
-      // than de-duplicate it, which is the worse of the two mistakes.
-      //
-      // The difference between the two is a box lying across the seam: an
-      // earlier window painted it down to the seam and stopped, so the rest of
-      // it can only come from here, where it is stuck. It is painted at the
-      // offset it is stuck to, which repeats the rows the earlier window did
-      // get -- at most the height of the box, and a repeat of what is already
-      // there rather than a hole in it.
       const gfx::Rect flow = box->AbsoluteBoundingBoxRect(
           {blink::MapCoordinatesMode::kIgnoreScrollOffset,
            blink::MapCoordinatesMode::kIgnoreStickyOffset});
-      if (flow.bottom() <= window_top) {
-        stuck_.push_back(sticky);
+      if (flow.y() <= output_top && flow.bottom() > output_top) {
+        // The previous output window stopped inside this box. Keep it even if
+        // Blink reports a sticky offset at the exact scroll boundary: this
+        // window's cull begins at the seam and records only the missing suffix.
+        continue;
       }
+      if (box->StickyPositionOffset().IsZero()) {
+        // Sitting where its flow put it, which makes it ordinary document
+        // content at this offset.
+        continue;
+      }
+      stuck_.push_back(sticky);
     }
   }
 
@@ -1413,6 +1652,8 @@ base::expected<void, std::string> ShotRenderer::RenderDocument(
   // front: PNG writes RGB and WebP has no alpha plane. A streamed image
   // cannot find this out by reading itself back the way a bitmap could.
   const bool opaque = !request.omit_background;
+  const std::vector<ViewportStickyFlow> sticky_flows =
+      ViewportStickyFlows(view);
 
   // The region in slices: a tile each for a tiles request, otherwise as many
   // rows as one paint covers. Consecutive slices are grouped into windows --
@@ -1439,14 +1680,30 @@ base::expected<void, std::string> ShotRenderer::RenderDocument(
   if (!scrolled) {
     windows.push_back({0, region.bottom(), 0, slices.size()});
   }
-  for (size_t i = 0; scrolled && i < slices.size(); ++i) {
-    if (!windows.empty() &&
-        slices[i].bottom() - windows.back().top <= kPaintWindow) {
-      windows.back().bottom = slices[i].bottom();
-      windows.back().end_slice = i + 1;
-      continue;
+  for (size_t first = 0; scrolled && first < slices.size();) {
+    // If the output boundary cuts through a sticky box, begin this paint at a
+    // scroll position where every overlapping box has zero sticky offset. The
+    // output slice still starts at its original row, so the overlap is only
+    // paint context: it lets this window raster the unpainted suffix without
+    // moving or repeating the box.
+    const std::optional<int> top =
+        WindowTopBeforeSticky(slices[first].y(), sticky_flows);
+    if (!top.has_value()) {
+      return base::unexpected(
+          "overlapping viewport-sticky elements have no common unstuck "
+          "paint position");
     }
-    windows.push_back({slices[i].y(), slices[i].bottom(), i, i + 1});
+    size_t end = first;
+    while (end < slices.size() &&
+           slices[end].bottom() - *top <= kPaintedExtent) {
+      ++end;
+    }
+    if (end == first) {
+      return base::unexpected(
+          "a viewport-sticky element needs more than the painted extent");
+    }
+    windows.push_back({*top, slices[end - 1].bottom(), first, end});
+    first = end;
   }
 
   const int width_px = static_cast<int>(std::lround(region.width() * scale));
@@ -1454,6 +1711,12 @@ base::expected<void, std::string> ShotRenderer::RenderDocument(
   auto rows_px = [&](int css_y) {
     return static_cast<int>(std::lround((css_y - region.y()) * scale));
   };
+  std::vector<StagedOutput> staged_outputs;
+  staged_outputs.reserve(tiled ? slices.size() : 1);
+  std::vector<EncodedTile> staged_tiles;
+  if (tiled && !request.path.empty()) {
+    staged_tiles.reserve(slices.size());
+  }
   std::unique_ptr<ImageStream> whole;
   if (!tiled) {
     if (auto size =
@@ -1461,14 +1724,17 @@ base::expected<void, std::string> ShotRenderer::RenderDocument(
         !size.has_value()) {
       return base::unexpected(size.error());
     }
-    auto output = OpenOutput(request.path, 1);
+    auto output = OpenOutput(request.path);
     if (!output.has_value()) {
       return base::unexpected(output.error());
     }
     auto stream = ImageStream::Create(width_px, height_px, request, opaque,
-                                      surface_props, std::move(*output));
+                                      surface_props, output->TakeFile());
     if (!stream.has_value()) {
       return base::unexpected(stream.error());
+    }
+    if (!request.path.empty()) {
+      staged_outputs.push_back(std::move(*output));
     }
     whole = std::move(*stream);
   }
@@ -1523,12 +1789,12 @@ base::expected<void, std::string> ShotRenderer::RenderDocument(
     const gfx::Rect paint_cull(first_slice.x(), first_slice.y() - offset,
                                first_slice.width(),
                                last_slice.bottom() - first_slice.y());
-    // Every window but the first leaves out what is painted against the
-    // viewport, so that a fixed header is in the photograph once rather than
-    // once per scroll position. Read after the scroll, because which sticky
-    // boxes are stuck depends on it.
+    // Every actually scrolled window leaves out what is painted against the
+    // viewport, so a fixed header is in the photograph once rather than once
+    // per scroll position. Read after the scroll, because which sticky boxes
+    // are stuck depends on it.
     std::optional<ViewportAnchored> anchored;
-    if (!prepared_windows.empty()) {
+    if (offset != 0 || !prepared_windows.empty()) {
       anchored.emplace(view, first_slice.y());
     }
 
@@ -1627,8 +1893,9 @@ base::expected<void, std::string> ShotRenderer::RenderDocument(
     for (size_t i = window.first_slice; i < window.end_slice; ++i) {
       const gfx::Rect& slice = slices[i];
       if (tiled) {
-        const int tile_px =
-            static_cast<int>(std::lround(slice.height() * scale));
+        const int top_px = rows_px(slice.y());
+        const int bottom_px = rows_px(slice.bottom());
+        const int tile_px = bottom_px - top_px;
         if (auto size =
                 CheckImageSize(width_px, tile_px, request, /*tiled=*/true);
             !size.has_value()) {
@@ -1636,20 +1903,25 @@ base::expected<void, std::string> ShotRenderer::RenderDocument(
         }
         // Tiles are numbered in the order they are delivered, which is slice
         // order.
-        auto output = OpenOutput(request.path, i + 1);
+        const std::string output_path =
+            request.path.empty() ? std::string()
+                                 : OutputPath(request.path, i + 1);
+        auto output = OpenOutput(output_path);
         if (!output.has_value()) {
           return base::unexpected(output.error());
         }
         auto stream = ImageStream::Create(width_px, tile_px, request, opaque,
-                                          surface_props, std::move(*output));
+                                          surface_props, output->TakeFile());
         if (!stream.has_value()) {
           return base::unexpected(stream.error());
         }
-        // The tile in painted coordinates: document coordinates less the
-        // scroll offset.
-        const gfx::Rect cull_rect(slice.x(), slice.y() - offset, slice.width(),
-                                  slice.height());
+        // Use the same CSS origin and global device grid as the whole image.
+        // A tile-local row y therefore samples global row top_px + y, whose
+        // CSS coordinate is region.y() + (top_px + y) / scale.
+        const gfx::Rect cull_rect(region.x(), region.y() - offset,
+                                  region.width(), region.height());
         if (auto added = (*stream)->AddSlice(list, cull_rect, scale,
+                                             /*device_origin=*/top_px,
                                              /*device_top=*/0, tile_px,
                                              drawn_after[i]);
             !added.has_value()) {
@@ -1665,11 +1937,14 @@ base::expected<void, std::string> ShotRenderer::RenderDocument(
         tile.bytes = std::move(*encoded);
         tile.size = (*stream)->stats().encoded_bytes;
         if (!request.path.empty()) {
-          tile.path = OutputPath(request.path, i + 1);
-        }
-        if (auto delivered = sink.Run(std::move(tile));
-            !delivered.has_value()) {
-          return base::unexpected(delivered.error());
+          tile.path = output_path;
+          staged_outputs.push_back(std::move(*output));
+          staged_tiles.push_back(std::move(tile));
+        } else {
+          if (auto delivered = sink.Run(std::move(tile));
+              !delivered.has_value()) {
+            return base::unexpected(delivered.error());
+          }
         }
         continue;
       }
@@ -1680,7 +1955,8 @@ base::expected<void, std::string> ShotRenderer::RenderDocument(
       const int bottom_px = rows_px(slice.bottom());
       const gfx::Rect cull_rect(region.x(), region.y() - offset, region.width(),
                                 region.height());
-      if (auto added = whole->AddSlice(list, cull_rect, scale, top_px,
+      if (auto added = whole->AddSlice(list, cull_rect, scale,
+                                       /*device_origin=*/0, top_px,
                                        bottom_px - top_px, drawn_after[i]);
           !added.has_value()) {
         return base::unexpected(added.error());
@@ -1697,10 +1973,29 @@ base::expected<void, std::string> ShotRenderer::RenderDocument(
               << (tiled ? " tile(s)" : " slice(s)");
   }
   if (tiled) {
+    if (request.path.empty()) {
+      return base::ok();
+    }
+    auto committed = CommitOutputs(staged_outputs);
+    if (!committed.has_value()) {
+      return base::unexpected(committed.error());
+    }
+    for (EncodedTile& tile : staged_tiles) {
+      if (auto delivered = sink.Run(std::move(tile)); !delivered.has_value()) {
+        const bool restored = RollBackOutputs(*committed);
+        return base::unexpected(
+            delivered.error() +
+            (restored ? std::string()
+                      : "; restoring previous outputs failed"));
+      }
+    }
+    FinishOutputs(*committed);
     return base::ok();
   }
   auto encoded = whole->Finish();
   account(whole->stats(), region);
+  const size_t encoded_bytes = whole->stats().encoded_bytes;
+  whole.reset();
   if (!encoded.has_value()) {
     return base::unexpected(encoded.error());
   }
@@ -1708,9 +2003,23 @@ base::expected<void, std::string> ShotRenderer::RenderDocument(
   EncodedTile tile;
   tile.region = region;
   tile.bytes = std::move(*encoded);
-  tile.size = whole->stats().encoded_bytes;
+  tile.size = encoded_bytes;
   if (!request.path.empty()) {
-    tile.path = OutputPath(request.path, 1);
+    tile.path = request.path;
+    auto committed = CommitOutputs(staged_outputs);
+    if (!committed.has_value()) {
+      return base::unexpected(committed.error());
+    }
+    auto delivered = sink.Run(std::move(tile));
+    if (!delivered.has_value()) {
+      const bool restored = RollBackOutputs(*committed);
+      return base::unexpected(
+          delivered.error() +
+          (restored ? std::string()
+                    : "; restoring previous output failed"));
+    }
+    FinishOutputs(*committed);
+    return base::ok();
   }
   return sink.Run(std::move(tile));
 }

@@ -36,6 +36,7 @@
 #include "third_party/blink/renderer/platform/graphics/skia/skia_utils.h"
 #include "third_party/blink/renderer/platform/image-decoders/image_decoder.h"
 #include "third_party/blink/renderer/platform/image-decoders/segment_reader.h"
+#include "third_party/blink/renderer/platform/image-decoders/skia/segment_stream.h"
 #include "third_party/blink/renderer/platform/instrumentation/tracing/trace_event.h"
 #include "third_party/blink/renderer/platform/wtf/shared_buffer.h"
 #include "third_party/skia/include/core/SkCanvas.h"
@@ -56,6 +57,23 @@ class ScopedSegmentReaderDataLocker {
 
  private:
   blink::SegmentReader* const segment_reader_;
+};
+
+// SegmentReader implementations backed by ParkableImage require callers to
+// keep the data locked while using spans returned by GetSomeData(). Keep that
+// lock, and the reader itself, alive for as long as the codec owns the stream.
+class LockedSegmentStream final : public blink::SegmentStream {
+ public:
+  explicit LockedSegmentStream(scoped_refptr<blink::SegmentReader> reader)
+      : reader_(std::move(reader)) {
+    reader_->LockData();
+    SetReader(reader_);
+  }
+
+  ~LockedSegmentStream() override { reader_->UnlockData(); }
+
+ private:
+  scoped_refptr<blink::SegmentReader> reader_;
 };
 }  // namespace
 
@@ -155,6 +173,17 @@ sk_sp<const SkData> DecodingImageGenerator::GetEncodedData() const {
     data = data_;
   }
   return data ? data->GetAsSkData() : nullptr;
+}
+
+std::unique_ptr<SkStream>
+DecodingImageGenerator::GetEncodedDataStream() const {
+  scoped_refptr<SegmentReader> data;
+  {
+    base::AutoLock lock(data_lock_);
+    data = data_;
+  }
+  return data ? std::make_unique<LockedSegmentStream>(std::move(data))
+              : nullptr;
 }
 
 bool DecodingImageGenerator::DiscardEncodedData() {

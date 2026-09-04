@@ -85,6 +85,11 @@ struct DeliveredTile {
 // CSS pixels, each encoded on its own, in document order. One load and layout
 // serve all of them.
 //
+// Only the bitmap workspace is one tile at a time. Without `path`, the return
+// value owns every completed encoded image, so those bytes accumulate until
+// the caller destroys them. With `path`, image-data memory stays bounded by
+// the tile being encoded; the returned vector contains metadata only.
+//
 // Honours `path` the way CaptureAndDeliver does, with one rule of its own:
 // the path has to contain `{n}`, which becomes the tile's 1-based index, so
 // that `page-{n}.png` writes `page-1.png`, `page-2.png` and so on. A path

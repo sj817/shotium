@@ -170,6 +170,38 @@ TEST_F(ImageDecodingStoreTest, decoderInUseNotEvicted) {
   EXPECT_FALSE(image_decoding_store_.MemoryUsageInBytes());
 }
 
+TEST_F(ImageDecodingStoreTest, RemoveByGeneratorLeavesDecoderInUse) {
+  auto decoder_in_use = std::make_unique<MockImageDecoder>(this);
+  decoder_in_use->SetSize(1, 1);
+  auto decoder_unused = std::make_unique<MockImageDecoder>(this);
+  decoder_unused->SetSize(2, 2);
+  image_decoding_store_.InsertDecoder(generator_.get(),
+                                      cc::PaintImage::kDefaultGeneratorClientId,
+                                      std::move(decoder_in_use));
+  image_decoding_store_.InsertDecoder(generator_.get(),
+                                      cc::PaintImage::kDefaultGeneratorClientId,
+                                      std::move(decoder_unused));
+
+  ImageDecoder* locked_decoder = nullptr;
+  ASSERT_TRUE(image_decoding_store_.LockDecoder(
+      generator_.get(), SkISize::Make(1, 1),
+      ImageDecoder::kAlphaPremultiplied,
+      cc::PaintImage::kDefaultGeneratorClientId, &locked_decoder));
+
+  image_decoding_store_.RemoveCacheIndexedByGenerator(generator_.get());
+  EXPECT_EQ(1, image_decoding_store_.CacheEntries());
+  EXPECT_EQ(4u, image_decoding_store_.MemoryUsageInBytes());
+  EXPECT_EQ(1, decoders_destroyed_);
+
+  image_decoding_store_.UnlockDecoder(generator_.get(),
+                                      cc::PaintImage::kDefaultGeneratorClientId,
+                                      locked_decoder);
+  image_decoding_store_.RemoveCacheIndexedByGenerator(generator_.get());
+  EXPECT_EQ(0, image_decoding_store_.CacheEntries());
+  EXPECT_EQ(0u, image_decoding_store_.MemoryUsageInBytes());
+  EXPECT_EQ(2, decoders_destroyed_);
+}
+
 TEST_F(ImageDecodingStoreTest, removeDecoder) {
   const SkISize size = SkISize::Make(1, 1);
   auto decoder = std::make_unique<MockImageDecoder>(this);
