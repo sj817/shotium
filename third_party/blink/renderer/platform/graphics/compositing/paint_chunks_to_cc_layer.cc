@@ -180,7 +180,8 @@ class ConversionContext {
  private:
   void Convert(PaintChunkIterator& chunk_it,
                PaintChunkIterator end_chunk,
-               const gfx::Rect* additional_cull_rect = nullptr);
+               const gfx::Rect* additional_cull_rect = nullptr,
+               const ChunkTransformFilter* keep_transform = nullptr);
 
  public:
   // The main function of this class. It converts a list of paint chunks into
@@ -230,9 +231,10 @@ class ConversionContext {
   // context object is destructed):
   //   Output: End_C4 End_C3 End_C2 End_C1
   void Convert(const PaintChunkSubset& chunks,
-               const gfx::Rect* additional_cull_rect = nullptr) {
+               const gfx::Rect* additional_cull_rect = nullptr,
+               const ChunkTransformFilter* keep_transform = nullptr) {
     auto chunk_it = chunks.begin();
-    Convert(chunk_it, chunks.end(), additional_cull_rect);
+    Convert(chunk_it, chunks.end(), additional_cull_rect, keep_transform);
     CHECK(chunk_it == chunks.end());
   }
 
@@ -1044,6 +1046,11 @@ void ConversionContext<cc::DisplayItemList>::EmitDrawScrollingContentsOp(
   // The scrolling contents will be recorded into this DisplayItemList as if
   // the scrolling contents creates a layer.
   auto scrolling_contents_list = base::MakeRefCounted<cc::DisplayItemList>();
+  // No transform filter here on purpose. It exists to drop content anchored to
+  // the viewport rather than to the document, and nothing inside another
+  // scroller's contents is: a fixed-position box escapes to the viewport
+  // instead of being recorded here, and a sticky box in here sticks to this
+  // scroller, whose offset is not what the caller is moving.
   ConversionContext<cc::DisplayItemList>(
       PropertyTreeState(scroll_translation, *current_clip_, *current_effect_),
       gfx::Vector2dF(), *scrolling_contents_list, &state_stack_)
@@ -1156,9 +1163,11 @@ bool ConversionContext<Result>::HasDrawing(
 }
 
 template <typename Result>
-void ConversionContext<Result>::Convert(PaintChunkIterator& chunk_it,
-                                        PaintChunkIterator end_chunk,
-                                        const gfx::Rect* additional_cull_rect) {
+void ConversionContext<Result>::Convert(
+    PaintChunkIterator& chunk_it,
+    PaintChunkIterator end_chunk,
+    const gfx::Rect* additional_cull_rect,
+    const ChunkTransformFilter* keep_transform) {
   for (; chunk_it != end_chunk; ++chunk_it) {
     const auto& chunk = *chunk_it;
     if (chunk.effectively_invisible) {
@@ -1166,6 +1175,9 @@ void ConversionContext<Result>::Convert(PaintChunkIterator& chunk_it,
     }
 
     PropertyTreeState chunk_state = chunk.properties.Unalias();
+    if (keep_transform && !(*keep_transform)(chunk_state.Transform())) {
+      continue;
+    }
     if (!HasDrawing(chunk_it, chunk_state)) {
       continue;
     }
@@ -1261,9 +1273,10 @@ void PaintChunksToCcLayer::ConvertInto(
     const gfx::Vector2dF& layer_offset,
     RasterUnderInvalidationCheckingParams* under_invalidation_checking_params,
     cc::DisplayItemList& cc_list,
-    const gfx::Rect* cull_rect) {
+    const gfx::Rect* cull_rect,
+    const ChunkTransformFilter* keep_transform) {
   ConversionContext(layer_state, layer_offset, cc_list)
-      .Convert(chunks, cull_rect);
+      .Convert(chunks, cull_rect, keep_transform);
   if (under_invalidation_checking_params) {
     auto& params = *under_invalidation_checking_params;
     PaintRecorder recorder;

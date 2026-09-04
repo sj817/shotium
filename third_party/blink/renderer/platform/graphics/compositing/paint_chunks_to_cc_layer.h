@@ -5,6 +5,7 @@
 #ifndef THIRD_PARTY_BLINK_RENDERER_PLATFORM_GRAPHICS_COMPOSITING_PAINT_CHUNKS_TO_CC_LAYER_H_
 #define THIRD_PARTY_BLINK_RENDERER_PLATFORM_GRAPHICS_COMPOSITING_PAINT_CHUNKS_TO_CC_LAYER_H_
 
+#include "base/functional/function_ref.h"
 #include "cc/input/layer_selection_bound.h"
 #include "cc/paint/display_item_list.h"
 #include "third_party/blink/renderer/platform/graphics/paint/paint_record.h"
@@ -25,6 +26,18 @@ namespace blink {
 class PaintChunkSubset;
 class PropertyTreeState;
 class RasterInvalidationTracking;
+class TransformPaintPropertyNode;
+
+// Asked of every chunk before it is converted, with the chunk's own
+// transform node. A chunk it answers false for is left out of the output
+// entirely, as though it had not been painted.
+//
+// This exists for rendering a document taller than one paint can reach,
+// which is done by scrolling and painting again: content positioned against
+// the viewport rather than the document is painted at every scroll offset,
+// and is wanted from only one of them.
+using ChunkTransformFilter =
+    base::FunctionRef<bool(const TransformPaintPropertyNode&)>;
 
 struct RasterUnderInvalidationCheckingParams {
   STACK_ALLOCATED();
@@ -63,7 +76,8 @@ class PLATFORM_EXPORT PaintChunksToCcLayer {
                           const gfx::Vector2dF& layer_offset,
                           RasterUnderInvalidationCheckingParams*,
                           cc::DisplayItemList&,
-                          const gfx::Rect* cull_rect = nullptr);
+                          const gfx::Rect* cull_rect = nullptr,
+                          const ChunkTransformFilter* keep_transform = nullptr);
 
   // Similar to ConvertInto(), but returns a PaintRecord.
   static PaintRecord Convert(const PaintChunkSubset&,

@@ -56,10 +56,13 @@
 #include "third_party/blink/renderer/core/frame/local_frame_view.h"
 #include "third_party/blink/renderer/core/frame/settings.h"
 #include "third_party/blink/renderer/core/frame/visual_viewport.h"
+#include "third_party/blink/renderer/core/layout/layout_box_model_object.h"
+#include "third_party/blink/renderer/core/layout/map_coordinates_flags.h"
 #include "third_party/blink/renderer/core/layout/layout_object.h"
 #include "third_party/blink/renderer/core/layout/layout_view.h"
 #include "third_party/blink/renderer/core/loader/empty_clients.h"
 #include "third_party/blink/renderer/core/page/page.h"
+#include "third_party/blink/renderer/core/paint/object_paint_properties.h"
 #include "third_party/blink/renderer/core/paint/paint_layer_scrollable_area.h"
 #include "third_party/blink/renderer/core/scroll/scroll_types.h"
 #include "third_party/blink/renderer/platform/bindings/exception_state.h"
@@ -69,6 +72,8 @@
 #include "third_party/blink/renderer/platform/graphics/paint/paint_artifact.h"
 #include "third_party/blink/renderer/platform/graphics/paint/paint_chunk_subset.h"
 #include "third_party/blink/renderer/platform/graphics/paint/property_tree_state.h"
+#include "third_party/blink/renderer/platform/graphics/paint/transform_paint_property_node.h"
+#include "third_party/blink/renderer/platform/heap/collection_support/heap_vector.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
 #include "third_party/blink/renderer/platform/heap/thread_state.h"
 #include "third_party/blink/renderer/platform/loader/fetch/resource_fetcher.h"
@@ -543,16 +548,126 @@ std::string OutputPath(const std::string& path_template, size_t n) {
   return path;
 }
 
+// What the scroll offset carries with it, at the offset the document is at
+// now.
+//
+// Two kinds of box are painted against the viewport rather than against the
+// document: a position:fixed one always, and a position:sticky one for as
+// long as it is stuck away from the place its flow put it. Painting the
+// document at one scroll offset is a photograph of one viewport and both are
+// right in it. Painting it at several -- which is how a document taller than
+// blink can paint in one go is reached -- puts them in every one, which is
+// how a fixed header ends up repeated down a long page.
+//
+// So the first window keeps them and the rest do not. The first window is the
+// one whose viewport is the one the caller asked for, and it is the same
+// answer a page short enough to need no scrolling already gives, since that
+// one is photographed at offset zero and never moves.
+class ViewportAnchored {
+  // Holds pointers into the property trees, which are garbage collected: on
+  // the stack they are found by the conservative scan, and anywhere else they
+  // would need tracing. It is a local of one paint and nothing outlives that.
+  STACK_ALLOCATED();
+
+ public:
+  // `window_top` is the first document row this window is being painted for.
+  ViewportAnchored(blink::LocalFrameView* view, int window_top) {
+    blink::LayoutView* layout_view = view->GetLayoutView();
+    if (!layout_view) {
+      return;
+    }
+    if (const auto* properties =
+            layout_view->FirstFragment().PaintProperties()) {
+      scroll_translation_ = properties->ScrollTranslation();
+    }
+    if (!scroll_translation_) {
+      return;
+    }
+    // Which sticky boxes are stuck is a property of where the document is
+    // scrolled to, so this is read after the scroll, once per window.
+    for (blink::LayoutObject* object = layout_view; object;
+         object = object->NextInPreOrder()) {
+      const auto* box = blink::DynamicTo<blink::LayoutBoxModelObject>(object);
+      if (!box || !box->HasStickyConstraints() ||
+          box->StickyPositionOffset().IsZero()) {
+        // Sitting where its flow put it, which makes it ordinary document
+        // content at this offset.
+        continue;
+      }
+      const auto* properties = box->FirstFragment().PaintProperties();
+      const auto* sticky = properties ? properties->StickyTranslation() : nullptr;
+      if (!sticky ||
+          &sticky->NearestScrollTranslationNode() != scroll_translation_) {
+        // Stuck to a scroller inside the document rather than to the document
+        // itself. This capture never moves those, so the box sits at one
+        // document position and belongs to whichever window covers it.
+        continue;
+      }
+      // Where the box would be with nothing shifting it: no scroll offset, no
+      // sticky offset, which is document coordinates. A window that starts
+      // below that has already had this box in an earlier one and is looking
+      // at a repeat. A window that starts above it has not -- the box's own
+      // row is in this window -- and dropping it here would lose it from the
+      // picture entirely rather than de-duplicate it, which is the worse of
+      // the two mistakes.
+      const gfx::Rect flow = box->AbsoluteBoundingBoxRect(
+          {blink::MapCoordinatesMode::kIgnoreScrollOffset,
+           blink::MapCoordinatesMode::kIgnoreStickyOffset});
+      if (flow.y() < window_top) {
+        stuck_.push_back(sticky);
+      }
+    }
+  }
+
+  // Whether a chunk with this transform belongs in a window after the first.
+  bool KeepInScrolledWindow(
+      const blink::TransformPaintPropertyNode& transform) const {
+    if (!scroll_translation_) {
+      // Nothing scrolls the document, so nothing is anchored to its offset.
+      return true;
+    }
+    for (const auto* node = &transform; node; node = node->UnaliasedParent()) {
+      if (node == scroll_translation_) {
+        // Reached the document's own scroll: this content moves with the
+        // document, and where it lands is where it belongs.
+        return true;
+      }
+      // Linear, because a page has a handful of stuck boxes at any one
+      // scroll offset and usually none at all, which is a walk of nothing.
+      for (const auto& sticky : stuck_) {
+        if (sticky == node) {
+          return false;
+        }
+      }
+    }
+    // The document's scroll was never on the way up, so this is painted
+    // against the viewport: position:fixed, or the viewport's own furniture.
+    return false;
+  }
+
+ private:
+  const blink::TransformPaintPropertyNode* scroll_translation_ = nullptr;
+  blink::HeapVector<blink::Member<const blink::TransformPaintPropertyNode>>
+      stuck_;
+};
+
 // The document's paint as a cc display list, replayable at the root property
-// tree state: what a compositor would raster a layer from.
+// tree state: what a compositor would raster a layer from. With `anchored`,
+// what that object says is painted against the viewport is left out.
 scoped_refptr<cc::DisplayItemList> BuildDisplayList(
     blink::LocalFrameView* view,
-    const gfx::Rect& cull_rect) {
+    const gfx::Rect& cull_rect,
+    const ViewportAnchored* anchored) {
   auto list = base::MakeRefCounted<cc::DisplayItemList>();
+  auto keep = [&](const blink::TransformPaintPropertyNode& transform) {
+    return anchored->KeepInScrolledWindow(transform);
+  };
+  blink::ChunkTransformFilter filter(keep);
   blink::PaintChunksToCcLayer::ConvertInto(
       blink::PaintChunkSubset(view->GetPaintArtifact()),
       blink::PropertyTreeState::Root(), gfx::Vector2dF(),
-      /*under_invalidation_checking_params=*/nullptr, *list, &cull_rect);
+      /*under_invalidation_checking_params=*/nullptr, *list, &cull_rect,
+      anchored ? &filter : nullptr);
   list->Finalize();
   return list;
 }
@@ -1402,9 +1517,18 @@ base::expected<void, std::string> ShotRenderer::RenderDocument(
     const gfx::Rect paint_cull(first_slice.x(), first_slice.y() - offset,
                                first_slice.width(),
                                last_slice.bottom() - first_slice.y());
+    // Every window but the first leaves out what is painted against the
+    // viewport, so that a fixed header is in the photograph once rather than
+    // once per scroll position. Read after the scroll, because which sticky
+    // boxes are stuck depends on it.
+    std::optional<ViewportAnchored> anchored;
+    if (!prepared_windows.empty()) {
+      anchored.emplace(view, first_slice.y());
+    }
+
     const base::TimeTicks paint_started = base::TimeTicks::Now();
-    scoped_refptr<cc::DisplayItemList> list =
-        BuildDisplayList(view, paint_cull);
+    scoped_refptr<cc::DisplayItemList> list = BuildDisplayList(
+        view, paint_cull, anchored.has_value() ? &*anchored : nullptr);
     if (stats) {
       stats->paint += base::TimeTicks::Now() - paint_started;
     }
