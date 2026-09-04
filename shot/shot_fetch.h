@@ -43,9 +43,6 @@ namespace shot {
 class FetchCharge {
  public:
   FetchCharge() = default;
-  // Takes `bytes` from the budget. Does not wait for room: waiting is the
-  // caller's decision, made before it gets this far.
-  explicit FetchCharge(size_t bytes);
   FetchCharge(FetchCharge&& other);
   FetchCharge& operator=(FetchCharge&& other);
   FetchCharge(const FetchCharge&) = delete;
@@ -54,9 +51,10 @@ class FetchCharge {
 
   size_t bytes() const { return bytes_; }
 
-  // Raises the claim to `total`, for a body that outgrew what was reserved
-  // for it. Never lowers it: a claim that shrank would let a read that is
-  // still holding the memory hand it out to somebody else.
+  // Raises the claim to `total`. Never lowers it: a claim that shrank would
+  // let a read that is still holding the memory hand it out to somebody else.
+  // Taking the room is not the same as waiting for it -- waiting is the
+  // caller's decision, made before it gets this far.
   void GrowTo(size_t total);
 
   // Gives the claim back and lets the reads waiting on it go. Idempotent, and
@@ -124,8 +122,9 @@ class ShotFetch : public net::URLRequest::Delegate {
   // goes next. Nothing else has any business calling either.
   //
   // Whether this body may ask //net for more bytes right now. False when what
-  // is in flight is over budget and something older is reading; the read then
-  // parks itself until Resume() brings it back.
+  // is in flight is over budget and somebody else will bring it back down --
+  // a loader draining a delivered body, or an older read finishing; the read
+  // then parks itself until Resume() brings it back.
   bool MayContinueReading() const;
   void Resume();
 
@@ -140,6 +139,8 @@ class ShotFetch : public net::URLRequest::Delegate {
   // Reads the body, once there is room for it. OnResponseStarted calls this
   // directly when there is and queues it when there is not.
   void BeginReading(size_t expected);
+  // Raises what this body holds, and what it holds as a body still arriving.
+  void HoldBytes(size_t total);
   void ReleaseBudget();
   void StopReading();
 
@@ -164,8 +165,14 @@ class ShotFetch : public net::URLRequest::Delegate {
   // What this body has taken from the read budget so far. Moved into the
   // result when the body is handed on, so that the claim follows the bytes.
   FetchCharge charge_;
+  // The same number, counted again among the bodies that are still arriving
+  // rather than waiting to be consumed. Kept here because the charge stops
+  // being this body's when it moves into the result, and that is the moment
+  // the bytes stop being ones anybody is waiting on //net for.
+  size_t reading_bytes_ = 0;
   // Where this body comes in the order the bodies started reading, or 0 when
-  // it is not reading. The oldest one is the one that is never made to wait.
+  // it is not reading. The oldest one is the one let through when no delivered
+  // body is left to wait for.
   uint64_t read_seq_ = 0;
   // Whether this read is sitting in the paused list, so that it is put there
   // once rather than once per attempt.

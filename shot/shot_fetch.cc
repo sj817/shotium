@@ -60,16 +60,21 @@ constexpr size_t kMaximumBodyBytes = 64u * 1024u * 1024u;
 // the wall clock, because sixty connections that would have failed together
 // failed ten at a time instead. So every request is started at once, and a
 // response whose Content-Length would not fit simply does not begin reading
-// until the ones ahead of it are done. Nothing small ever waits.
+// until there is room for it. Below the budget nothing waits at all.
 //
-// A response with no Content-Length cannot be held at the start, because
-// there is nothing yet to compare against the budget: chunked encoding says
-// how long a body is by ending it. Those are stopped in the middle instead --
-// //net reads nothing it is not asked for, so a read that stops asking stops
-// costing -- and resumed when there is room again. The one exception is the
-// oldest body still reading, which is never made to wait: if every reader
-// could be stopped by every other, a budget full of bodies of unknown length
-// would wait on itself forever.
+// A response with no Content-Length cannot say at the start what it will
+// cost: chunked encoding says how long a body is by ending it. One of those
+// starts reading whenever the budget is not already full, and is stopped in
+// the middle if it fills it -- //net reads nothing it is not asked for, so a
+// read that stops asking stops costing -- and resumed when there is room
+// again.
+//
+// Which leaves the question of who may go on when there is no room, because
+// somebody must or nothing ever finishes. A body a loader is holding needs
+// nothing from here: it drains into blink on its own, and everyone can afford
+// to wait for it. So the answer is only needed when every byte in flight is
+// still arriving, and then it is the oldest of those reads. It finishes, its
+// room comes back, and the next one along becomes the oldest.
 //
 // 24 MB: above any single resource these pages carry, so no request ever waits
 // alone, and a sixth of what the unbounded version reached.
@@ -131,20 +136,64 @@ std::map<std::string, std::deque<base::OnceClosure>>& QueuedPerHost() {
 // their bodies afterwards.
 size_t g_bytes_in_flight = 0;
 
+// The part of that which is still arriving, as against the part some loader is
+// holding until blink has consumed it.
+//
+// The difference decides who has to wait. A body a loader is holding gives its
+// room back on its own -- the data pipe drains as blink reads it, and that
+// needs nothing from any request -- so everything else can afford to wait for
+// it. A body still being read gives its room back only by being read to the
+// end, so when that is all there is, one of them has to be let through.
+size_t g_bytes_reading = 0;
+
+// The most `g_bytes_in_flight` has been. There is no end of capture to report
+// it at -- fetches outlive every object here -- so it is logged as it grows,
+// which is also where the interesting moment is.
+size_t g_peak_bytes_in_flight = 0;
+
+bool FetchProfileEnabled() {
+  static const bool enabled = [] {
+    const char* value = std::getenv("SHOT_PROFILE");
+    int parsed = 0;
+    return value && *value && base::StringToInt(value, &parsed) && parsed != 0;
+  }();
+  return enabled;
+}
+
+void NotePeakBytes() {
+  if (g_bytes_in_flight <= g_peak_bytes_in_flight) {
+    return;
+  }
+  g_peak_bytes_in_flight = g_bytes_in_flight;
+  if (FetchProfileEnabled()) {
+    LOG(INFO) << "shot: fetch peak " << (g_bytes_in_flight >> 10) << " KB in "
+              << "flight (" << (g_bytes_reading >> 10) << " KB arriving, "
+              << ((g_bytes_in_flight - g_bytes_reading) >> 10)
+              << " KB delivered)";
+  }
+}
+
 // The bodies currently being read, in the order they started. The lowest is
-// the oldest, and the oldest is never made to wait -- see the note on the
-// budget above.
+// the oldest, which is the one that goes on when nothing else can give room
+// back -- see the note on the budget above.
 std::set<uint64_t>& ActiveReads() {
   static base::NoDestructor<std::set<uint64_t>> reads;
   return *reads;
 }
 uint64_t g_next_read_seq = 1;
 
-// Reads that have not started, oldest first: each knows its size and it did
-// not fit. Started one at a time, because each one takes its room as it
-// starts and the next may no longer fit behind it.
-std::deque<base::OnceClosure>& WaitingReads() {
-  static base::NoDestructor<std::deque<base::OnceClosure>> queue;
+// A read that has not started: what it said it would take, and how to start
+// it when there is room for that.
+struct WaitingRead {
+  size_t wanted = 0;
+  base::OnceClosure start;
+};
+
+// Those, oldest first, and asked in that order: each takes its room as it
+// starts and the next may no longer fit behind it, and a large one at the
+// front is what keeps the small ones behind it from starving it.
+std::deque<WaitingRead>& WaitingReads() {
+  static base::NoDestructor<std::deque<WaitingRead>> queue;
   return *queue;
 }
 
@@ -157,12 +206,17 @@ std::deque<base::WeakPtr<ShotFetch>>& PausedReads() {
   return *queue;
 }
 
-// Room for `wanted` more bytes -- or nothing being read at all, which is what
-// keeps a resource larger than the whole budget from waiting for itself, and
-// what keeps a body that some loader is still holding from stalling the next
-// request behind it.
+// Room for `wanted` more bytes, or a reason to say yes without it.
+//
+// Over budget this read waits, and waiting is only safe while there is
+// something to wait for. Everything in flight gives its room back without
+// needing a byte from here: a body a loader is holding as blink consumes it,
+// a body still arriving by arriving. With nothing in flight at all there is
+// nothing to wait for, and a read that does not fit even then is a single
+// resource larger than the whole budget -- refusing that would be refusing it
+// forever.
 bool MayReadNow(size_t wanted) {
-  return ActiveReads().empty() || ReadBudgetBytes() == 0 ||
+  return ReadBudgetBytes() == 0 || g_bytes_in_flight == 0 ||
          g_bytes_in_flight + wanted <= ReadBudgetBytes();
 }
 
@@ -198,16 +252,15 @@ void ResumeReads() {
     paused->Resume();
   }
 
-  while (!WaitingReads().empty()) {
-    // A weak-pointer bind whose target is gone reads nothing and takes no
-    // room, so keep going until one of them actually starts reading.
-    const size_t before = g_bytes_in_flight;
-    base::OnceClosure read = std::move(WaitingReads().front());
+  while (!WaitingReads().empty() &&
+         MayReadNow(WaitingReads().front().wanted)) {
+    // Asked one at a time rather than admitted in a batch: the one that starts
+    // here takes its room as it starts, and the next is asked again with that
+    // taken. A weak-pointer bind whose target is gone reads nothing and takes
+    // no room, and the next one along is then simply asked on its own terms.
+    WaitingRead waiting = std::move(WaitingReads().front());
     WaitingReads().pop_front();
-    std::move(read).Run();
-    if (g_bytes_in_flight != before) {
-      break;
-    }
+    std::move(waiting.start).Run();
   }
 }
 
@@ -247,10 +300,6 @@ constexpr net::NetworkTrafficAnnotationTag kTrafficAnnotation =
         })");
 
 }  // namespace
-
-FetchCharge::FetchCharge(size_t bytes) : bytes_(bytes) {
-  g_bytes_in_flight += bytes_;
-}
 
 FetchCharge::FetchCharge(FetchCharge&& other) : bytes_(other.bytes_) {
   other.bytes_ = 0;
@@ -431,6 +480,11 @@ void ShotFetch::StopReading() {
     ActiveReads().erase(read_seq_);
     read_seq_ = 0;
   }
+  // Whatever this body holds it no longer holds as one that is arriving --
+  // either it has been handed on, in which case the claim went with it, or it
+  // is being given back on the next line of the caller.
+  g_bytes_reading -= reading_bytes_;
+  reading_bytes_ = 0;
   paused_ = false;
 }
 
@@ -438,8 +492,15 @@ bool ShotFetch::MayContinueReading() const {
   if (ReadBudgetBytes() == 0 || g_bytes_in_flight <= ReadBudgetBytes()) {
     return true;
   }
-  // Over budget: only the oldest body still reading goes on, so that there is
-  // always one that will finish and give its room back.
+  if (g_bytes_in_flight > g_bytes_reading) {
+    // Some of what is over the budget is a body a loader is holding, and that
+    // comes back as blink consumes it without anything being read for it. So
+    // everything here waits for that rather than adding to it.
+    return false;
+  }
+  // Everything in flight is still arriving, so one of these reads has to be
+  // the one that finishes: the oldest goes on, and when it is done the next
+  // one along is the oldest.
   return !ActiveReads().empty() && *ActiveReads().begin() == read_seq_;
 }
 
@@ -476,17 +537,19 @@ void ShotFetch::OnResponseStarted(net::URLRequest* request, int net_error) {
 
   // Reserve from Content-Length when the server gave a believable one, so a
   // multi-megabyte image is not grown a buffer at a time -- and wait, if that
-  // reservation would not fit alongside the bodies already being read. A
-  // response with no Content-Length reserves nothing and waits for nothing;
-  // its bytes are counted as they arrive.
+  // reservation would not fit alongside the bodies already in memory. A
+  // response with no Content-Length reserves nothing and asks for nothing, so
+  // it waits only while the budget is full; what it turns out to cost is
+  // counted as it arrives, and stops it in the middle if it goes too far.
   const int64_t declared = request->GetExpectedContentSize();
   const size_t expected =
       declared > 0 && static_cast<size_t>(declared) <= kMaximumBodyBytes
           ? static_cast<size_t>(declared)
           : 0;
-  if (expected != 0 && !MayReadNow(expected)) {
-    WaitingReads().push_back(base::BindOnce(
-        &ShotFetch::BeginReading, weak_factory_.GetWeakPtr(), expected));
+  if (!MayReadNow(expected)) {
+    WaitingReads().push_back(
+        {expected, base::BindOnce(&ShotFetch::BeginReading,
+                                  weak_factory_.GetWeakPtr(), expected)});
     return;
   }
   BeginReading(expected);
@@ -497,9 +560,18 @@ void ShotFetch::BeginReading(size_t expected) {
   ActiveReads().insert(read_seq_);
   if (expected != 0) {
     result_.body.reserve(expected);
-    charge_ = FetchCharge(expected);
+    HoldBytes(expected);
   }
   ReadMore();
+}
+
+void ShotFetch::HoldBytes(size_t total) {
+  charge_.GrowTo(total);
+  if (total > reading_bytes_) {
+    g_bytes_reading += total - reading_bytes_;
+    reading_bytes_ = total;
+  }
+  NotePeakBytes();
 }
 
 void ShotFetch::OnReadCompleted(net::URLRequest* request, int bytes_read) {
@@ -552,7 +624,7 @@ bool ShotFetch::Consume(int bytes_read) {
   // A body that outgrew its Content-Length, or arrived without one, is
   // counted as it comes. What that costs is decided at the top of ReadMore,
   // which is where a body that has taken more than its share stops.
-  charge_.GrowTo(result_.body.size());
+  HoldBytes(result_.body.size());
   return true;
 }
 
