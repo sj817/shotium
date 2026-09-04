@@ -69,6 +69,14 @@ extern "C" {
 // before shot_engine_create() and say so plainly if it does not match.
 SHOT_EXPORT int32_t shot_abi_version(void);
 
+// Out parameters: every function below clears all of its outputs before it
+// does anything else, so a caller may reuse the same variables across calls
+// without zeroing them in between and will never be handed the previous
+// call's buffer back. Where a function says exactly one of two outputs is
+// set, the other one is NULL rather than untouched, which is what makes that
+// sentence something a caller can branch on. An out parameter documented as
+// optional may still be NULL, and then nothing is written to it at all.
+
 typedef enum {
   // The screenshot was taken, or the engine came up.
   SHOT_OK = 0,
@@ -134,9 +142,9 @@ SHOT_EXPORT void shot_buffer_free(shot_buffer* buffer);
 // the library must say where they are. Omitting it keeps the executable's
 // behaviour, which is right for a host that put everything in one directory.
 //
-// On failure `*out_engine` is left alone and `*out_error` receives a message
-// the caller can print. `out_error` may be NULL if the caller does not want
-// one; the status is still returned.
+// On failure `*out_engine` is NULL and `*out_error` receives a message the
+// caller can print. `out_error` may be NULL if the caller does not want one;
+// the status is still returned.
 SHOT_EXPORT shot_status shot_engine_create(const char* options_json,
                                            shot_engine** out_engine,
                                            shot_buffer** out_error);

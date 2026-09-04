@@ -81,6 +81,21 @@ void Deliver(shot_buffer** out, std::string_view text) {
   }
 }
 
+// Empties an out-parameter before anything can fill it.
+//
+// The header promises that exactly one of the answer and the error is set,
+// and that promise is only keepable if the ones that are not set are cleared:
+// a caller who reuses a variable across calls would otherwise read the
+// previous call's buffer back out of it and free it twice. Every entry point
+// clears all of its outputs first, so the promise holds from the first line
+// rather than from whichever return the call happened to take.
+template <typename T>
+void Clear(T** out) {
+  if (out) {
+    *out = nullptr;
+  }
+}
+
 // CaptureStats as a JSON string, for the buffer the C ABI hands back.
 //
 // The object itself is built by StatsToValue, which the resident worker also
@@ -549,6 +564,8 @@ void shot_buffer_free(shot_buffer* buffer) {
 shot_status shot_engine_create(const char* options_json,
                                shot_engine** out_engine,
                                shot_buffer** out_error) {
+  shot::Clear(out_engine);
+  shot::Clear(out_error);
   if (!out_engine) {
     shot::Deliver(out_error, "shot_engine_create needs somewhere to put the "
                              "engine");
@@ -593,6 +610,9 @@ shot_status shot_engine_capture(shot_engine* engine,
                                 shot_buffer** out_image,
                                 shot_buffer** out_stats,
                                 shot_buffer** out_error) {
+  shot::Clear(out_image);
+  shot::Clear(out_stats);
+  shot::Clear(out_error);
   if (!engine || !out_image) {
     shot::Deliver(out_error,
                   "shot_engine_capture needs an engine and somewhere to put "
@@ -673,6 +693,9 @@ shot_status shot_engine_capture_tiles(shot_engine* engine,
                                       shot_tile_list** out_tiles,
                                       shot_buffer** out_stats,
                                       shot_buffer** out_error) {
+  shot::Clear(out_tiles);
+  shot::Clear(out_stats);
+  shot::Clear(out_error);
   if (!engine || !out_tiles) {
     shot::Deliver(out_error,
                   "shot_engine_capture_tiles needs an engine and somewhere to "
@@ -797,6 +820,8 @@ void shot_tile_list_free(shot_tile_list* tiles) {
 shot_status shot_engine_status(shot_engine* engine,
                                shot_buffer** out_json,
                                shot_buffer** out_error) {
+  shot::Clear(out_json);
+  shot::Clear(out_error);
   if (!engine || !out_json) {
     shot::Deliver(out_error,
                   "shot_engine_status needs an engine and somewhere to put "
@@ -830,6 +855,8 @@ shot_status shot_cache_list(shot_engine* engine,
                             const char* options_json,
                             shot_buffer** out_json,
                             shot_buffer** out_error) {
+  shot::Clear(out_json);
+  shot::Clear(out_error);
   if (!out_json) {
     shot::Deliver(out_error, "shot_cache_list needs somewhere to put the list");
     return SHOT_ERR_USAGE;
@@ -872,6 +899,8 @@ shot_status shot_cache_clear(shot_engine* engine,
                              const char* options_json,
                              shot_buffer** out_json,
                              shot_buffer** out_error) {
+  shot::Clear(out_json);
+  shot::Clear(out_error);
   if (!out_json) {
     shot::Deliver(out_error,
                   "shot_cache_clear needs somewhere to put the result");
