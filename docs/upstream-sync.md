@@ -122,6 +122,16 @@ xargs -a /tmp/ours.txt git log --oneline $OLD..$NEW --
 
 没有捷径,但量是可控的,而且绝大多数是 `BUILD.gn` 和被砍过的头文件。
 
+其中有几个不是「砍」也不是「改 BUILD.gn」,而是**行为上的分歧**:上游那一行
+是对的,只是对浏览器是对的。这类改动没法靠 diff 认出来 —— 它们看起来就是一行
+普通改动 —— 所以逐条记在这里,同步时按语义重放,不要按行合。
+
+| 文件 | 分歧 | 为什么不能用别的办法 |
+|---|---|---|
+| `third_party/blink/renderer/platform/graphics/parkable_image.cc` | `kDelayParkingImages` 默认关(上游开) | 这个二进制不注册 FeatureList,`IsEnabled` 一律回落到编译期默认值;`FeatureList::SetInstance` 又 CHECK「之前没有任何 feature 被读过」,而引擎起来之前 //base、//net、mojo 都已经读过自己的了。默认值就是唯一的开关。见 `shot/shot_renderer.h` 的 `ParkImagesEnabled` |
+| `cc/paint/draw_looper.h` / `.cc` | 加了 `DrawLooper::MaxOutset()` | 纯新增,上游没有对应物;条带光栅要知道 looper 画出多远,而 `SkPaint` 里没有 looper,`computeFastBounds` 问不出来 |
+| `third_party/blink/renderer/platform/graphics/compositing/paint_chunks_to_cc_layer.{h,cc}` | `ConvertInto` 多两个可选参数(cull rect、chunk 过滤器) | 都是纯新增的可选形参,上游调用点行为不变;超长文档要分多次滚动重画,过滤器是「贴视口的东西只画一遍」的落点 |
+
 ### 4.5 上游新增的文件
 
 上面三个桶都不包含「上游新加、我们目录里本该有」的文件:

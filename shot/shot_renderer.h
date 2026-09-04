@@ -39,9 +39,17 @@ void LogMemoryStage(const char* stage);
 // from SHOT_PARK_IMAGES. On by default: on a page with 72 MB of photographs
 // it takes 47 MB off the peak and does not show up in the wall clock, because
 // the writing happens on a background thread during time the main thread
-// spends waiting for the network anyway. SHOT_PARK_IMAGES=0 turns it off.
-// Read here and in the runtime, which is what opens the file blink parks
-// into.
+// spends waiting for the network anyway. Read here and in the runtime, which
+// is what opens the file blink parks into.
+//
+// SHOT_PARK_IMAGES=0 turns parking off -- entirely, because without that file
+// blink's disk allocator refuses every write. What it does not do is restore
+// what a browser does, which is to park on a two-second delay: this build
+// disables that delay in parkable_image.cc, and there is no way to put it
+// back at runtime. base::FeatureList::IsEnabled falls through to the
+// compiled-in default here, since nothing in this binary ever registers a
+// FeatureList; the feature's default *is* the policy. See
+// docs/upstream-sync.md, which tracks it as a divergence to re-apply.
 bool ParkImagesEnabled();
 
 // One encoded slice of a capture: the image, and where in the document it
