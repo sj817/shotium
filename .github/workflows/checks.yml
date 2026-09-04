@@ -111,20 +111,31 @@ jobs:
           node -e '
             const {Runtime} = require("./dist/index.js");
             const r = new Runtime();
-            const rejects = async (options, what) => {
+            const rejects = async (method, options, what) => {
               // screenshot() is async, so a bad request is a rejected promise
               // rather than a throw.
-              await r.screenshot(options).then(
+              let rejected;
+              await r[method](options).then(
                   () => { throw new Error("accepted " + what); },
-                  () => {});
+                  (error) => { rejected = error; });
+              if (!(rejected instanceof TypeError)) {
+                throw new Error("did not reject " + what + " as a TypeError");
+              }
               if (r.running) throw new Error("started the engine for " + what);
             };
             (async () => {
-              await rejects({}, "a request with no file");
-              await rejects({file: "x", fullpage: true}, "a misspelled option");
+              await rejects("screenshot", {}, "a request with no file");
+              await rejects("screenshot", {file: "x", fullpage: true}, "a misspelled option");
+              for (const height of [0, 32001, 1.5, NaN, Infinity]) {
+                await rejects("screenshotTiles", {file: "x", tile: {height}},
+                              "invalid tile.height " + height);
+              }
               console.log("ok");
             })().catch((e) => { console.error(e.message); process.exit(1); });
           '
+
+      - name: daemon wire generations are isolated and negotiated
+        run: node tools/shot/daemon_protocol_check.cjs
 
       - name: the six platform packages are declared consistently
         working-directory: shotium

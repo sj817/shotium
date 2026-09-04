@@ -188,11 +188,12 @@ jobs:
 
       - name: patch the Skia checkout
         working-directory: src
-        # Skia is DEPS-managed, so the scanline-parallel CPU blur has to be
-        # reapplied after every sync. Keep this after cache restore: the new
-        # source timestamp then invalidates exactly the affected Skia object.
+        # Skia is DEPS-managed, so Shot's Skia changes have to be reapplied
+        # after every sync. Keep this after cache restore: the new source
+        # timestamps then invalidate exactly the affected Skia objects.
         run: |
           git -C third_party/skia apply --verbose ../../patches/third_party_skia_parallel_blur.patch
+          git -C third_party/skia apply --verbose ../../patches/third_party_skia_incremental_row_limit.patch
 
       - name: build the shot ICU data set
         working-directory: src
@@ -387,6 +388,7 @@ jobs:
           # Windows, a unix socket everywhere else -- and the Windows job
           # exercises exactly one of them.
           node tools/shot/daemon_check.cjs out/Shot/shotium
+          node tools/shot/daemon_protocol_check.cjs
 
           python3 tools/shot/charset_check.py out/Shot/shotium
           python3 tools/shot/demo_check.py out/Shot/shotium
