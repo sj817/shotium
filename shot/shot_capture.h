@@ -11,7 +11,9 @@
 
 #include "base/types/expected.h"
 #include "shot/shot_capture_context.h"
+#include "shot/shot_bytes.h"
 #include "shot/shot_request.h"
+#include "ui/gfx/geometry/rect.h"
 
 namespace shot {
 
@@ -30,22 +32,23 @@ class ShotRuntime;
 // this only decides whether the total is handed back. The command line has no
 // use for it.
 //
-// Requires a live ShotRuntime on this thread.
-base::expected<std::vector<uint8_t>, std::string> Capture(
-    ShotRuntime& runtime,
-    const ScreenshotRequest& request,
-    CaptureStats* out_stats = nullptr);
-
 // What one answered request amounts to.
 struct CaptureResult {
-  // The encoded image, or empty when the request named a `path`: the bytes
-  // went there instead and there is nothing left to hand back.
-  std::vector<uint8_t> image;
+  // The encoded image, or empty when the request named a `path`: the engine
+  // streamed the bytes into that file as it encoded them, and there is
+  // nothing left to hand back.
+  Bytes image;
   // How many bytes the image is either way, so that a caller reporting the
   // size does not have to know which of the two happened.
   size_t size = 0;
   bool wrote_path = false;
 };
+
+// Requires a live ShotRuntime on this thread.
+base::expected<CaptureResult, std::string> Capture(
+    ShotRuntime& runtime,
+    const ScreenshotRequest& request,
+    CaptureStats* out_stats = nullptr);
 
 // Capture(), and then the one thing every caller would otherwise do for
 // itself: honouring `path` by writing the file here rather than shipping the
@@ -63,6 +66,32 @@ struct CaptureResult {
 //
 // Requires a live ShotRuntime on this thread.
 base::expected<CaptureResult, std::string> CaptureAndDeliver(
+    ShotRuntime& runtime,
+    const ScreenshotRequest& request,
+    CaptureStats* out_stats = nullptr);
+
+// One tile of a tiles capture, as handed to a caller.
+struct DeliveredTile {
+  // Where it came from: CSS pixels, document coordinates.
+  gfx::Rect region;
+  // The encoded image, or empty when it went to `path`.
+  Bytes image;
+  size_t size = 0;
+  // Where it was written, when the request named a `path`.
+  std::string path;
+};
+
+// A request with `tile` set: the region in slices of at most `tile.height`
+// CSS pixels, each encoded on its own, in document order. One load and layout
+// serve all of them.
+//
+// Honours `path` the way CaptureAndDeliver does, with one rule of its own:
+// the path has to contain `{n}`, which becomes the tile's 1-based index, so
+// that `page-{n}.png` writes `page-1.png`, `page-2.png` and so on. A path
+// without it would have every tile overwrite the last.
+//
+// Requires a live ShotRuntime on this thread.
+base::expected<std::vector<DeliveredTile>, std::string> CaptureTiles(
     ShotRuntime& runtime,
     const ScreenshotRequest& request,
     CaptureStats* out_stats = nullptr);

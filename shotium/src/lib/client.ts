@@ -11,13 +11,16 @@ import type {
   DaemonStatus,
   ScreenshotOptions,
   ScreenshotResult,
+  ScreenshotTile,
+  ScreenshotTilesOptions,
+  ScreenshotTilesResult,
 } from '../types.js';
 
 import {resolveStartOptions} from './config.js';
 import {emptyStats} from './engine.js';
 import {endpointFor} from './endpoint.js';
 import {FrameReader, encodeFrame} from './protocol.js';
-import {timeoutFor, toRequest} from './request.js';
+import {timeoutFor, toRequest, toTilesRequest} from './request.js';
 
 // ESM has no __dirname. This is the same thing, from the module's own URL.
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -33,6 +36,16 @@ const DAEMON_MAIN = path.join(HERE, 'daemon_main.js');
 const START_TIMEOUT_MS = 20000;
 const CONNECT_RETRY_MS = 20;
 
+// One tile's place on a tiles reply; the image is the matching payload frame.
+interface TileReply {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  bytes: number;
+  path?: string;
+}
+
 interface ClientReply {
   id: number;
   ok?: boolean;
@@ -42,11 +55,16 @@ interface ClientReply {
   // its response header. It rides on the failure header too, which is why the
   // rejection below carries it.
   stats?: CaptureStats;
+  // A tiles reply lists its tiles here, and is followed by one payload frame
+  // per entry rather than the single frame a screenshot reply has.
+  tiles?: TileReply[];
 }
 
 interface ClientResult {
   header: ClientReply;
   image: Buffer|null;
+  // The payload frames of a tiles reply, in header order.
+  images: Buffer[];
 }
 
 interface Pending {
@@ -78,6 +96,9 @@ class DaemonClient extends EventEmitter {
   private readonly pending = new Map<number, Pending>();
   private nextId = 1;
   private header: ClientReply|null = null;
+  // The payload frames collected for `header` so far. A screenshot reply has
+  // one; a tiles reply has one per tile the header lists.
+  private payloads: Buffer[] = [];
   private reader = new FrameReader();
 
   constructor(socket: net.Socket, endpoint: string) {
@@ -116,22 +137,35 @@ class DaemonClient extends EventEmitter {
               new Error('shotium: the daemon sent a header that is not JSON'));
           return;
         }
+        this.payloads = [];
+        continue;
+      }
+      this.payloads.push(frame);
+      const expected =
+          this.header.ok && this.header.tiles ? this.header.tiles.length : 1;
+      if (this.payloads.length < expected) {
         continue;
       }
       const header = this.header;
+      const payloads = this.payloads;
       this.header = null;
-      this.settle(header, frame);
+      this.payloads = [];
+      this.settle(header, payloads);
     }
   }
 
-  private settle(header: ClientReply, payload: Buffer): void {
+  private settle(header: ClientReply, payloads: Buffer[]): void {
     const pending = this.pending.get(header.id);
     if (!pending) {
       return;
     }
     this.pending.delete(header.id);
     if (header.ok) {
-      pending.resolve({header, image: header.path ? null : payload});
+      pending.resolve({
+        header,
+        image: header.path ? null : payloads[0],
+        images: payloads,
+      });
     } else {
       const error = new Error(header.error || 'shotium: request failed');
       // Attached rather than dropped: a capture that failed part of the way
@@ -179,6 +213,30 @@ class DaemonClient extends EventEmitter {
       timeout: timeoutFor(options),
     });
     return {image: result.image, stats: result.header.stats ?? emptyStats()};
+  }
+
+  /**
+   * The region in tiles, through the daemon. The same shape the in-process
+   * engine returns; see ScreenshotTilesOptions.
+   */
+  async screenshotTiles(options: ScreenshotTilesOptions):
+      Promise<ScreenshotTilesResult> {
+    const request = toTilesRequest(options);
+    const result = await this.send({
+      op: 'tiles',
+      request,
+      timeout: timeoutFor(options),
+    });
+    const listed = result.header.tiles ?? [];
+    const tiles: ScreenshotTile[] = listed.map((tile, i) => ({
+      image: request.path ? null : result.images[i],
+      x: tile.x,
+      y: tile.y,
+      width: tile.width,
+      height: tile.height,
+      ...(tile.path !== undefined ? {path: tile.path} : {}),
+    }));
+    return {tiles, stats: result.header.stats ?? emptyStats()};
   }
 
   async status(): Promise<DaemonStatus> {
@@ -379,6 +437,20 @@ async function screenshot(options: ScreenshotOptions&{daemon?: DaemonOptions}):
     client.close();
   }
 }
+
+async function screenshotTiles(
+    options: ScreenshotTilesOptions&{daemon?: DaemonOptions}):
+    Promise<ScreenshotTilesResult> {
+  const {daemon, ...rest} = options;
+  const client = await connect(daemon || {});
+  try {
+    return await client.screenshotTiles(rest);
+  } finally {
+    client.close();
+  }
+}
+
+export {screenshotTiles};
 
 export {
   DaemonClient,

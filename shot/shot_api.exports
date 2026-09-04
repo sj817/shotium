@@ -15,6 +15,12 @@ _shot_abi_version
 _shot_engine_create
 _shot_engine_destroy
 _shot_engine_capture
+_shot_engine_capture_tiles
+_shot_tile_list_count
+_shot_tile_list_region
+_shot_tile_list_path
+_shot_tile_list_take_image
+_shot_tile_list_free
 _shot_engine_purge
 _shot_engine_status
 _shot_cache_list

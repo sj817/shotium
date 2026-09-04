@@ -74,6 +74,8 @@ repack("shot_strings") {
 # needs.
 source_set("shot_core") {
   sources = [
+    "shot_bytes.cc",
+    "shot_bytes.h",
     "shot_cache.cc",
     "shot_cache.h",
     "shot_capture.cc",
@@ -82,6 +84,8 @@ source_set("shot_core") {
     "shot_capture_context.h",
     "shot_fetch.cc",
     "shot_fetch.h",
+    "shot_image_stream.cc",
+    "shot_image_stream.h",
     "shot_network.cc",
     "shot_network.h",
     "shot_options.cc",
@@ -118,6 +122,8 @@ source_set("shot_core") {
     "//third_party/blink/public:blink",
     "//third_party/blink/renderer/core",
     "//third_party/blink/renderer/platform",
+    "//third_party:jpeg",
+    "//third_party/libwebp:libwebp",
     "//ui/base",
 
     # display::ScreenInfo, which is how the page is told its device scale

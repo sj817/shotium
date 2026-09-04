@@ -29,6 +29,7 @@
 #include "partition_alloc/memory_reclaimer.h"
 #include "shot/shot_platform.h"
 #include "shot/shot_renderer.h"
+#include "third_party/blink/public/platform/web_runtime_features.h"
 #include "skia/ext/legacy_display_globals.h"
 #include "third_party/blink/public/platform/platform.h"
 #include "third_party/blink/public/platform/scheduler/web_thread_scheduler.h"
@@ -361,6 +362,14 @@ base::expected<std::unique_ptr<ShotRuntime>, std::string> ShotRuntime::Create(
                   &blink::WebFontRendering::SetStatusFontMetrics);
 #endif
 
+  // With RasterInducingScroll on, blink's paint conversion wraps each
+  // scroller's contents in a DrawScrollingContentsOp whose playback CHECKs
+  // for a table of live scroll offsets -- the compositor's, which this
+  // process does not have. Off, a scroller's contents are emitted in place at
+  // the offset it was painted with, which is what a screenshot wants anyway.
+  blink::WebRuntimeFeatures::EnableFeatureFromString("RasterInducingScroll",
+                                                     false);
+
   runtime->platform_ = std::make_unique<ShotPlatform>();
   mojo::BinderMap binders;
   blink::Initialize(runtime->platform_.get(), &binders,
@@ -385,7 +394,6 @@ ShotRenderer& ShotRuntime::renderer() {
 }
 
 void ShotRuntime::PurgeMemory() {
-  renderer_->PurgeMemory();
   // Blink's heap first, and everything else after, because the collection is
   // what makes the rest of it worth doing: the Page, the Document, every
   // LayoutObject and every Resource the capture built are unreachable the
@@ -414,6 +422,7 @@ void ShotRuntime::PurgeMemory() {
   // not idle in the scheduler's sense -- it is blocked on the request stream,
   // with no idle period for the task to be scheduled in.
   ::partition_alloc::MemoryReclaimer::Instance()->ReclaimAll();
+  LogMemoryStage("purged");
 }
 
 void ShotRuntime::ReleaseWorkingSet() {

@@ -1,12 +1,14 @@
 import * as binding from './binding.js';
 import type {Engine as Handle} from './binding.js';
-import {toRequest} from './request.js';
+import {toRequest, toTilesRequest} from './request.js';
 import type {WireRequest} from './request.js';
 import type {
   CaptureStats,
   ReleaseMemoryOptions,
   ScreenshotOptions,
   ScreenshotResult,
+  ScreenshotTilesOptions,
+  ScreenshotTilesResult,
   StartOptions,
   StartResult,
 } from '../types.js';
@@ -323,6 +325,52 @@ export class Engine {
 
     return {
       image: request.path ? null : captured.image,
+      stats: parseStats(captured.stats),
+    };
+  }
+
+  /**
+   * Renders the region in tiles. One load and layout serve every tile, and
+   * only one tile's bitmap exists at a time -- see ScreenshotTilesOptions.
+   */
+  async screenshotTiles(options: ScreenshotTilesOptions):
+      Promise<ScreenshotTilesResult> {
+    return this.captureTiles(toTilesRequest(options));
+  }
+
+  /** The same, for a request already in wire form -- the daemon's case. */
+  async captureTiles(request: WireRequest): Promise<ScreenshotTilesResult> {
+    if (!this.running) {
+      this.start();
+    }
+    const handle = shared!;
+    const native = binding.load();
+
+    // The same queue as capture(): one renderer, one capture at a time.
+    const result = this.tail.catch(() => {}).then(
+        () => native.captureTiles(handle, JSON.stringify(request)));
+    this.tail = result.catch(() => {});
+
+    let captured;
+    try {
+      captured = await result;
+    } catch (error) {
+      const withStats = error as Error&{stats?: string | CaptureStats};
+      if (typeof withStats.stats === 'string') {
+        withStats.stats = JSON.parse(withStats.stats) as CaptureStats;
+      }
+      throw error;
+    }
+
+    return {
+      tiles: captured.tiles.map((tile) => ({
+        image: request.path ? null : tile.image,
+        x: tile.x,
+        y: tile.y,
+        width: tile.width,
+        height: tile.height,
+        ...(tile.path !== undefined ? {path: tile.path} : {}),
+      })),
       stats: parseStats(captured.stats),
     };
   }

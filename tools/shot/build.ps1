@@ -53,24 +53,30 @@ function Invoke-IcuRepack {
 }
 
 # Skia is a DEPS checkout, so gclient restores its upstream source rather than
-# the patch tracked by this repository. Apply it once, and fail loudly if a
-# Skia roll makes the patch stop matching instead of silently building the
-# single-threaded blur again.
+# the patches tracked by this repository. Apply them once, and fail loudly if a
+# Skia roll makes one stop matching instead of silently building without it --
+# a missing parallel blur is merely slow, but a missing row limit means the
+# streaming PNG decode falls back to a full-size bitmap on every image.
 function Invoke-SkiaPatch {
-    $patch = "..\..\patches\third_party_skia_parallel_blur.patch"
-    & git -C third_party\skia apply --check --reverse $patch 2>$null
-    if ($LASTEXITCODE -eq 0) {
-        Write-Output "skia: parallel blur patch already applied"
-        return $true
-    }
+    $patches = @("third_party_skia_parallel_blur.patch",
+                 "third_party_skia_incremental_row_limit.patch")
+    foreach ($name in $patches) {
+        $patch = "..\..\patches\$name"
+        & git -C third_party\skia apply --check --reverse $patch 2>$null
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "skia: $name already applied"
+            continue
+        }
 
-    & git -C third_party\skia apply --check $patch
-    if ($LASTEXITCODE -ne 0) {
-        Write-Output "skia: patches/third_party_skia_parallel_blur.patch no longer applies"
-        return $false
+        & git -C third_party\skia apply --check $patch
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "skia: patches/$name no longer applies"
+            return $false
+        }
+        & git -C third_party\skia apply --verbose $patch
+        if ($LASTEXITCODE -ne 0) { return $false }
     }
-    & git -C third_party\skia apply --verbose $patch
-    return $LASTEXITCODE -eq 0
+    return $true
 }
 
 function Invoke-GnGen {

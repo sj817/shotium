@@ -279,6 +279,10 @@ class RequestHandler {
       return WriteResponse(output_, ErrorHeader(request.error()), {});
     }
 
+    if (request->tile.has_value()) {
+      return AnswerTiles(*request);
+    }
+
     // CaptureAndDeliver rather than Capture: writing the file here rather than
     // shipping the bytes back is worth a whole round trip of a few hundred
     // kilobytes when the caller only wanted it on disk, and it is shot_capture
@@ -305,6 +309,54 @@ class RequestHandler {
     }
 
     return WriteResponse(output_, std::move(header), result->image);
+  }
+
+  // A tiles request. The header lists the tiles and one payload frame follows
+  // per entry, in the same order -- empty when the tile went to `path`:
+  //
+  //   <-  [len][{"ok":true,"tiles":[{"x":0,"y":0,"width":1280,"height":8000,
+  //              "bytes":97756}, ...],"stats":{...}}]
+  //       [len][<PNG>] [len][<PNG>] ...
+  bool AnswerTiles(const ScreenshotRequest& request) {
+    CaptureStats stats;
+    auto tiles = CaptureTiles(*runtime_, request, &stats);
+    if (!tiles.has_value()) {
+      base::DictValue failed = ErrorHeader(tiles.error());
+      failed.Set("stats", StatsToValue(stats));
+      return WriteResponse(output_, std::move(failed), {});
+    }
+
+    base::ListValue listed;
+    for (const DeliveredTile& tile : *tiles) {
+      base::DictValue entry;
+      entry.Set("x", tile.region.x());
+      entry.Set("y", tile.region.y());
+      entry.Set("width", tile.region.width());
+      entry.Set("height", tile.region.height());
+      entry.Set("bytes", static_cast<int>(tile.size));
+      if (!tile.path.empty()) {
+        entry.Set("path", tile.path);
+      }
+      listed.Append(std::move(entry));
+    }
+    base::DictValue header;
+    header.Set("ok", true);
+    header.Set("tiles", std::move(listed));
+    header.Set("stats", StatsToValue(stats));
+    std::optional<std::string> json = base::WriteJson(header);
+    if (!json) {
+      LOG(ERROR) << "shot: could not serialise the response header";
+      return false;
+    }
+    if (!WriteFrame(output_, base::as_byte_span(*json))) {
+      return false;
+    }
+    for (const DeliveredTile& tile : *tiles) {
+      if (!WriteFrame(output_, tile.image)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   const base::raw_ref<ShotRuntime> runtime_;

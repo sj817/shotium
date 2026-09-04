@@ -33,6 +33,25 @@ struct Clip {
   int height = 0;
 };
 
+// Split the captured region into horizontal slices, each encoded on its own.
+//
+// The region is whatever selector / clip / fullPage / the viewport would have
+// produced as one image; `height` is the most CSS pixels one slice covers, and
+// the last slice is whatever is left. The document is loaded and laid out once
+// for all of them -- which is the point, and the reason this is an engine
+// feature rather than a loop over `clip` in the caller. Memory is not the
+// reason any more: every image, tiled or not, is rastered in strips and
+// encoded as it goes, so a tile's height changes only how the result is cut.
+struct Tile {
+  int height = 0;
+};
+
+// The quality used for jpeg and webp when the request did not say. Puppeteer
+// leaves it to the encoder default, which for skia's jpeg encoder is 100 -- a
+// file three times the size of one at 90 for no difference a screenshot can
+// show. 90 is what every screenshot service that documents its default picks.
+constexpr int kDefaultLossyQuality = 90;
+
 struct ScreenshotRequest {
   // Required. A URL, or a path that the caller wants treated as one.
   std::string file;
@@ -67,6 +86,12 @@ struct ScreenshotRequest {
   std::map<std::string, std::string> headers;
 
   std::optional<Clip> clip;
+
+  // Set by a tiles request. A plain screenshot never has it, and a tiles
+  // request always does -- the two are different calls with different answers
+  // (one image against a list of them), and the field is what tells the
+  // engine which was made.
+  std::optional<Tile> tile;
 
   // Viewport. Not in ScreenshotOptions yet; see the comment above.
   int width = 1280;

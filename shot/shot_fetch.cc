@@ -4,10 +4,16 @@
 
 #include "shot/shot_fetch.h"
 
+#include <cstdlib>
+#include <deque>
+#include <map>
+#include <string>
 #include <utility>
 
 #include "base/functional/bind.h"
 #include "base/logging.h"
+#include "base/no_destructor.h"
+#include "base/strings/string_number_conversions.h"
 #include "base/strings/string_view_util.h"
 #include "base/task/single_thread_task_runner.h"
 #include "net/base/isolation_info.h"
@@ -34,6 +40,95 @@ constexpr int kReadBufferSize = 64 * 1024;
 // response with no Content-Length and a server that never stops is an
 // out-of-memory rather than an error message.
 constexpr size_t kMaximumBodyBytes = 64u * 1024u * 1024u;
+
+// How many bytes of response body may be held at once.
+//
+// A body exists in this process from its first byte until blink has consumed
+// it, so what is arriving together is what is resident together. Over the
+// network //net has a per-host connection limit and that keeps the number
+// small by accident: six sockets, six bodies. Against a warm disk cache
+// nothing does -- every entry answers in the same task -- and a page with
+// ninety subresources allocated all ninety bodies at once, which on a page of
+// photographs was seventy megabytes that the same page fetched over the
+// network never came near.
+//
+// What waits is the read, not the request. Holding requests back at the start
+// would have punished the ninety small ones for the six large ones: measured
+// on a page whose sixty font subsets all fail, a cap of six starts cost 20% of
+// the wall clock, because sixty connections that would have failed together
+// failed ten at a time instead. So every request is started at once, and a
+// response whose Content-Length would not fit simply does not begin reading
+// until the ones ahead of it are done. Nothing small ever waits.
+//
+// 24 MB: above any single resource these pages carry, so no request ever waits
+// alone, and a sixth of what the unbounded version reached.
+// SHOT_FETCH_BUDGET_MB overrides it; 0 means no limit.
+constexpr size_t kDefaultBudgetMb = 24;
+
+size_t ReadBudgetBytes() {
+  static const size_t budget = [] {
+    const char* value = std::getenv("SHOT_FETCH_BUDGET_MB");
+    int parsed = 0;
+    if (value && *value && base::StringToInt(value, &parsed) && parsed >= 0) {
+      return static_cast<size_t>(parsed) << 20;
+    }
+    return kDefaultBudgetMb << 20;
+  }();
+  return budget;
+}
+
+// How many requests to one host may be running at once.
+//
+// This is not a policy of ours; it is the number //net already enforces when
+// it has to open a socket, and the reason to state it here is that a cache hit
+// does not open one. Over the network six requests to a host means six of that
+// host's entries being read at a time. Against a warm disk cache the same page
+// opened all thirty-four of its images in one task, and //net holds a buffer
+// per open entry -- which is why the cached run of a page of photographs
+// peaked fifty megabytes above the same page fetched over the network, and why
+// bounding our own reads (below) did not help: the memory was allocated before
+// we asked for a byte.
+//
+// SHOT_FETCH_CONCURRENCY overrides it; 0 means no limit.
+constexpr int kDefaultMaxPerHost = 6;
+
+int MaxPerHost() {
+  static const int limit = [] {
+    const char* value = std::getenv("SHOT_FETCH_CONCURRENCY");
+    int parsed = 0;
+    if (value && *value && base::StringToInt(value, &parsed) && parsed >= 0) {
+      return parsed;
+    }
+    return kDefaultMaxPerHost;
+  }();
+  return limit;
+}
+
+// Per host: how many are running, and the ones waiting to start, oldest first.
+std::map<std::string, int>& InFlightPerHost() {
+  static base::NoDestructor<std::map<std::string, int>> counts;
+  return *counts;
+}
+std::map<std::string, std::deque<base::OnceClosure>>& QueuedPerHost() {
+  static base::NoDestructor<std::map<std::string, std::deque<base::OnceClosure>>>
+      queues;
+  return *queues;
+}
+
+// What the bodies being read hold between them, and the reads waiting for
+// room, oldest first. Main-thread only: every URLRequest here lives on it.
+size_t g_bytes_in_flight = 0;
+std::deque<base::OnceClosure>& WaitingReads() {
+  static base::NoDestructor<std::deque<base::OnceClosure>> queue;
+  return *queue;
+}
+
+// Room for `wanted` more bytes -- or nothing being read at all, which is what
+// keeps a resource larger than the whole budget from waiting for itself.
+bool MayReadNow(size_t wanted) {
+  return g_bytes_in_flight == 0 || ReadBudgetBytes() == 0 ||
+         g_bytes_in_flight + wanted <= ReadBudgetBytes();
+}
 
 // net::URLRequest enforces its own limit of 20 as well; this one is here so
 // that the failure names redirects rather than arriving as a bare ERR_ code.
@@ -74,7 +169,13 @@ constexpr net::NetworkTrafficAnnotationTag kTrafficAnnotation =
 
 ShotFetch::ShotFetch() = default;
 
-ShotFetch::~ShotFetch() = default;
+ShotFetch::~ShotFetch() {
+  // Abandoned before it finished -- a loader destroyed to cancel the load, or
+  // the whole capture torn down. Whoever is queued behind it should not wait
+  // for a request that is no longer running.
+  ReleaseBudget();
+  ReleaseHostSlot();
+}
 
 void ShotFetch::Start(const GURL& url,
                       const net::HttpRequestHeaders& extra_headers,
@@ -83,6 +184,29 @@ void ShotFetch::Start(const GURL& url,
   done_ = std::move(done);
   result_.final_url = url;
 
+  host_ = url.host();
+  int& running = InFlightPerHost()[host_];
+  if (MaxPerHost() > 0 && running >= MaxPerHost()) {
+    // Queued, not refused. The callback still cannot run before this returns,
+    // which is what Start() promises; it merely runs later.
+    QueuedPerHost()[host_].push_back(
+        base::BindOnce(&ShotFetch::StartNow, weak_factory_.GetWeakPtr(), url,
+                       extra_headers, initiator));
+    return;
+  }
+  ++running;
+  holds_slot_ = true;
+  StartNow(url, extra_headers, initiator);
+}
+
+void ShotFetch::StartNow(const GURL& url,
+                         const net::HttpRequestHeaders& extra_headers,
+                         const url::Origin& initiator) {
+  if (!holds_slot_) {
+    // Reached from the queue, where the slot was not taken yet.
+    ++InFlightPerHost()[host_];
+    holds_slot_ = true;
+  }
   net::URLRequestContext* context = ShotNetwork::Get();
   if (!context) {
     // Posting rather than calling: Start() promises the callback does not run
@@ -133,6 +257,52 @@ void ShotFetch::Start(const GURL& url,
   request_->Start();
 }
 
+// Gives back this request's place among its host's and starts the next one
+// waiting for it. Called once, whether the request succeeded, failed or was
+// abandoned.
+void ShotFetch::ReleaseHostSlot() {
+  if (!holds_slot_) {
+    return;
+  }
+  holds_slot_ = false;
+  int& running = InFlightPerHost()[host_];
+  --running;
+  auto queued = QueuedPerHost().find(host_);
+  while (queued != QueuedPerHost().end() && !queued->second.empty() &&
+         (MaxPerHost() <= 0 || running < MaxPerHost())) {
+    // A weak-pointer bind whose target is gone starts nothing and takes no
+    // slot, so keep going until one of them actually starts.
+    const int before = running;
+    base::OnceClosure start = std::move(queued->second.front());
+    queued->second.pop_front();
+    std::move(start).Run();
+    if (running != before) {
+      break;
+    }
+  }
+}
+
+// Gives back what this body was holding and lets the reads waiting behind it
+// start. Called once, whether the request succeeded, failed or was abandoned.
+void ShotFetch::ReleaseBudget() {
+  if (counted_bytes_ == 0) {
+    return;
+  }
+  g_bytes_in_flight -= counted_bytes_;
+  counted_bytes_ = 0;
+  while (!WaitingReads().empty()) {
+    // A weak-pointer bind whose target is gone reads nothing and takes no
+    // room, so keep going until one of them actually starts reading.
+    const size_t before = g_bytes_in_flight;
+    base::OnceClosure read = std::move(WaitingReads().front());
+    WaitingReads().pop_front();
+    std::move(read).Run();
+    if (g_bytes_in_flight != before) {
+      break;
+    }
+  }
+}
+
 void ShotFetch::OnReceivedRedirect(net::URLRequest* request,
                                    const net::RedirectInfo& redirect_info,
                                    bool* defer_redirect) {
@@ -160,12 +330,29 @@ void ShotFetch::OnResponseStarted(net::URLRequest* request, int net_error) {
   request->GetCharset(&result_.charset);
 
   // Reserve from Content-Length when the server gave a believable one, so a
-  // multi-megabyte image is not grown a buffer at a time.
-  const int64_t expected = request->GetExpectedContentSize();
-  if (expected > 0 && static_cast<size_t>(expected) <= kMaximumBodyBytes) {
-    result_.body.reserve(static_cast<size_t>(expected));
+  // multi-megabyte image is not grown a buffer at a time -- and wait, if that
+  // reservation would not fit alongside the bodies already being read. A
+  // response with no Content-Length reserves nothing and waits for nothing;
+  // its bytes are counted as they arrive.
+  const int64_t declared = request->GetExpectedContentSize();
+  const size_t expected =
+      declared > 0 && static_cast<size_t>(declared) <= kMaximumBodyBytes
+          ? static_cast<size_t>(declared)
+          : 0;
+  if (expected != 0 && !MayReadNow(expected)) {
+    WaitingReads().push_back(base::BindOnce(
+        &ShotFetch::BeginReading, weak_factory_.GetWeakPtr(), expected));
+    return;
   }
+  BeginReading(expected);
+}
 
+void ShotFetch::BeginReading(size_t expected) {
+  if (expected != 0) {
+    result_.body.reserve(expected);
+    counted_bytes_ = expected;
+    g_bytes_in_flight += expected;
+  }
   ReadMore();
 }
 
@@ -205,6 +392,13 @@ bool ShotFetch::Consume(int bytes_read) {
   }
   result_.body.append(
       base::as_string_view(buffer_->first(static_cast<size_t>(bytes_read))));
+  // A body that outgrew its Content-Length, or arrived without one, is
+  // counted as it comes.
+  const size_t now = result_.body.size();
+  if (now > counted_bytes_) {
+    g_bytes_in_flight += now - counted_bytes_;
+    counted_bytes_ = now;
+  }
   return true;
 }
 
@@ -223,6 +417,8 @@ void ShotFetch::Finish(int net_error) {
   // synchronously is not doing so with a live URLRequest underneath it.
   request_.reset();
   buffer_.reset();
+  ReleaseBudget();
+  ReleaseHostSlot();
   if (done_) {
     std::move(done_).Run(std::move(result_));
   }

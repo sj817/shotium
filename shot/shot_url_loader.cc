@@ -351,6 +351,12 @@ void ShotURLLoader::OnBodyWritten(blink::URLLoaderClient* client,
   // Dropping the producer closes the pipe, which is how the consumer learns
   // the body is complete. DidFinishLoading has to come after that, not before.
   body_producer_.reset();
+  // And with the write over, the copy this loader was holding for it. blink
+  // has its own by now; on a page of photographs, keeping ours until the
+  // loader happened to be destroyed meant every image in flight was resident
+  // twice.
+  body_.clear();
+  body_.shrink_to_fit();
   if (result != MOJO_RESULT_OK) {
     LOG(ERROR) << "shot: writing the response body failed (mojo result "
                << result << ")";

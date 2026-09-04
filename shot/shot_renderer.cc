@@ -5,7 +5,6 @@
 #include "shot/shot_renderer.h"
 
 #include <algorithm>
-#include <atomic>
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
@@ -19,70 +18,89 @@
 #include "base/functional/bind.h"
 #include "base/functional/callback_helpers.h"
 #include "base/logging.h"
+#include "base/memory/discardable_memory_allocator.h"
 #include "base/memory/raw_ref.h"
 #include "base/run_loop.h"
 #include "base/strings/string_number_conversions.h"
-#include "base/system/sys_info.h"
+#include "base/strings/stringprintf.h"
 #include "base/task/single_thread_task_runner.h"
-#include "base/threading/simple_thread.h"
 #include "base/time/time.h"
 #include "base/timer/timer.h"
-#include "cc/paint/paint_canvas.h"
+#include "build/build_config.h"
+#include "base/containers/flat_set.h"
+#include "base/files/file.h"
+#include "base/files/file_util.h"
+#include "base/threading/scoped_blocking_call.h"
+#include "base/strings/string_util.h"
+#include "cc/paint/discardable_image_map.h"
+#include "cc/paint/display_item_list.h"
+#include "cc/paint/draw_image.h"
 #include "cc/paint/paint_op.h"
+#include "cc/paint/paint_op_buffer.h"
 #include "cc/paint/paint_op_buffer_iterator.h"
-#include "cc/paint/paint_record.h"
-#include "cc/paint/skia_paint_canvas.h"
-#include "skia/ext/legacy_display_globals.h"
+#include "cc/trees/scroll_source_type.h"
 #include "shot/shot_capture_context.h"
+#include "shot/shot_image_stream.h"
 #include "shot/shot_network.h"
 #include "shot/shot_url_loader.h"
-#include "third_party/blink/public/mojom/frame/frame.mojom-blink.h"
-#include "third_party/blink/renderer/core/dom/document.h"
-#include "third_party/blink/renderer/core/dom/element.h"
-#include "third_party/blink/renderer/platform/loader/fetch/resource_fetcher.h"
+#include "skia/ext/legacy_display_globals.h"
 #include "third_party/blink/public/common/tokens/tokens.h"
 #include "third_party/blink/public/common/web_preferences/web_preferences.h"
+#include "third_party/blink/public/mojom/frame/frame.mojom-blink.h"
+#include "third_party/blink/public/mojom/scroll/scroll_enums.mojom-blink.h"
+#include "third_party/blink/renderer/core/dom/document.h"
+#include "third_party/blink/renderer/core/dom/element.h"
 #include "third_party/blink/renderer/core/frame/frame_types.h"
 #include "third_party/blink/renderer/core/frame/local_dom_window.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
 #include "third_party/blink/renderer/core/frame/local_frame_view.h"
-#include "third_party/blink/renderer/core/layout/layout_view.h"
 #include "third_party/blink/renderer/core/frame/settings.h"
 #include "third_party/blink/renderer/core/frame/visual_viewport.h"
 #include "third_party/blink/renderer/core/layout/layout_object.h"
+#include "third_party/blink/renderer/core/layout/layout_view.h"
 #include "third_party/blink/renderer/core/loader/empty_clients.h"
 #include "third_party/blink/renderer/core/page/page.h"
 #include "third_party/blink/renderer/core/paint/paint_layer_scrollable_area.h"
+#include "third_party/blink/renderer/core/scroll/scroll_types.h"
 #include "third_party/blink/renderer/platform/bindings/exception_state.h"
 #include "third_party/blink/renderer/platform/fonts/generic_font_family_settings.h"
 #include "third_party/blink/renderer/platform/graphics/color.h"
+#include "third_party/blink/renderer/platform/graphics/compositing/paint_chunks_to_cc_layer.h"
+#include "third_party/blink/renderer/platform/graphics/paint/paint_artifact.h"
+#include "third_party/blink/renderer/platform/graphics/paint/paint_chunk_subset.h"
+#include "third_party/blink/renderer/platform/graphics/paint/property_tree_state.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
 #include "third_party/blink/renderer/platform/heap/thread_state.h"
+#include "third_party/blink/renderer/platform/loader/fetch/resource_fetcher.h"
 #include "third_party/blink/renderer/platform/scheduler/public/agent_group_scheduler.h"
 #include "third_party/blink/renderer/platform/scheduler/public/main_thread.h"
 #include "third_party/blink/renderer/platform/scheduler/public/main_thread_scheduler.h"
-#include "third_party/blink/renderer/platform/wtf/shared_buffer.h"
-#include "third_party/blink/renderer/platform/wtf/text/atomic_string.h"
 #include "third_party/blink/renderer/platform/weborigin/kurl.h"
 #include "third_party/blink/renderer/platform/weborigin/security_origin.h"
-#include "third_party/skia/include/core/SkBBHFactory.h"
-#include "third_party/skia/include/core/SkBitmap.h"
-#include "third_party/skia/include/core/SkCanvas.h"
-#include "third_party/skia/include/core/SkPicture.h"
-#include "third_party/skia/include/core/SkPictureRecorder.h"
-#include "third_party/skia/include/core/SkPixmap.h"
-#include "third_party/skia/include/core/SkSurface.h"
+#include "partition_alloc/memory_reclaimer.h"
+#include "third_party/blink/renderer/platform/graphics/image_decoding_store.h"
+#include "third_party/blink/renderer/platform/disk_data_allocator.h"
+#include "third_party/blink/renderer/platform/graphics/parkable_image_manager.h"
+#include "third_party/blink/renderer/platform/wtf/allocator/partitions.h"
+#include "third_party/blink/renderer/platform/wtf/shared_buffer.h"
+#include "third_party/blink/renderer/platform/wtf/text/atomic_string.h"
+#include "third_party/icu/source/common/unicode/uscript.h"
+#include "third_party/skia/include/core/SkGraphics.h"
+#include "third_party/skia/include/core/SkRect.h"
 #include "third_party/skia/include/core/SkSurfaceProps.h"
 #include "ui/display/screen_info.h"
 #include "ui/display/screen_infos.h"
-#include "ui/gfx/codec/jpeg_codec.h"
-#include "ui/gfx/codec/png_codec.h"
-#include "ui/gfx/codec/webp_codec.h"
 #include "ui/gfx/geometry/rect.h"
 #include "ui/gfx/geometry/size.h"
-#include "third_party/icu/source/common/unicode/uscript.h"
+#include "ui/gfx/geometry/vector2d_f.h"
 #include "v8/include/cppgc/heap-consistency.h"
 #include "v8/include/cppgc/heap-statistics.h"
+
+#if BUILDFLAG(IS_WIN)
+#include <windows.h>
+
+#include <psapi.h>
+#endif
 
 namespace shot {
 
@@ -226,18 +244,48 @@ constexpr base::TimeDelta kNetworkIdleWindow = base::Milliseconds(500);
 // timeout is not thousands of lifecycle updates.
 constexpr base::TimeDelta kPumpSlice = base::Milliseconds(10);
 
-// The quality used for jpeg and webp when the request did not say. Puppeteer
-// leaves it to the encoder default, which for skia's jpeg encoder is 100 -- a
-// file several times larger than anyone wants from a screenshot.
-constexpr int kDefaultLossyQuality = 90;
+// How long a load may go without a layout while requests are still arriving.
+// Short enough that a stylesheet's fonts are asked for promptly; long enough
+// that a burst of arrivals is laid out once.
+constexpr base::TimeDelta kLifecycleInterval = base::Milliseconds(50);
+
+// Below this the heap is not worth collecting mid-load: the collection costs
+// more than the memory it would return.
+constexpr size_t kWaitCollectFloorBytes = 48u << 20;
 
 // An upper bound on the viewport, so that a document whose height grows every
 // time the viewport does cannot ask for an unallocatable surface.
 constexpr int kMaximumDimension = 32767;
 
-using FontFamilyUpdater = bool (blink::GenericFontFamilySettings::*)(
-    const blink::AtomicString&,
-    UScriptCode);
+// How far from the origin blink paints. Measured rather than read off a
+// header: a box whose *painted* position reaches 32767 CSS pixels, on either
+// axis, has nothing painted from that coordinate on -- the record just stops,
+// with no error. Layout is not the limit (an element laid out at 50,000 and
+// transformed up to 25,000 paints; one laid out at 1,000 and transformed down
+// to 51,000 does not), so content further down is reached by scrolling the
+// document, which moves what it paints back under the origin. That is what
+// the windows in RenderDocument do.
+constexpr int kPaintedExtent = 32767;
+// The most document rows one paint record is asked to cover. Short of the
+// extent so that a box straddling a band's bottom edge keeps its outsets --
+// shadows, anti-aliasing -- inside the band that draws it.
+constexpr int kPaintWindow = 32000;
+
+// What one encoded image may measure, per format. JPEG's is the format's own.
+// WebP's is libwebp's hard ceiling, which the encoder reports only as "failed".
+// PNG's is chosen to match JPEG rather than the format's 2^31, because past
+// this a tiles request is the right call, and a caller who did not make one is
+// better told so than handed a file most viewers refuse to open.
+constexpr int kMaximumPngDimension = 65535;
+constexpr int kMaximumJpegDimension = 65535;
+constexpr int kMaximumWebpDimension = 16383;
+// The largest bitmap one image is rastered into. A gigabyte is, for a
+// 1440-wide capture at scale 1, a document about 180,000 CSS pixels tall.
+constexpr int64_t kMaximumSurfaceBytes = int64_t{1} << 30;
+
+using FontFamilyUpdater =
+    bool (blink::GenericFontFamilySettings::*)(const blink::AtomicString&,
+                                               UScriptCode);
 
 // Runs the message loop until a resource/frame event reports progress, with a
 // short timer as a watchdog for Blink state changes that have no embedder
@@ -351,155 +399,6 @@ void ApplyChromeWebPreferences(blink::Settings& settings) {
   settings.SetTextTrackMarginPercentage(prefs.text_track_margin_percentage);
 }
 
-base::expected<std::vector<uint8_t>, std::string> EncodeImage(
-    const SkBitmap& bitmap,
-    const ScreenshotRequest& request) {
-  if (request.type == "png") {
-    // discard_transparency = false: the corpus exercises alpha compositing, and
-    // dropping the alpha channel here would hide any error in it -- and with
-    // omitBackground it is the whole point of the request.
-    std::optional<std::vector<uint8_t>> png =
-        gfx::PNGCodec::FastEncodeBGRASkBitmap(
-            bitmap, /*discard_transparency=*/false);
-    if (!png) {
-      return base::unexpected("could not encode the image as PNG");
-    }
-    return std::move(*png);
-  }
-
-  const int quality = request.quality.value_or(kDefaultLossyQuality);
-  if (request.type == "jpeg") {
-    std::optional<std::vector<uint8_t>> jpeg =
-        gfx::JPEGCodec::Encode(bitmap, quality);
-    if (!jpeg) {
-      return base::unexpected("could not encode the image as JPEG");
-    }
-    return std::move(*jpeg);
-  }
-  if (request.type == "webp") {
-    std::optional<std::vector<uint8_t>> webp =
-        gfx::WebpCodec::Encode(bitmap, quality);
-    if (!webp) {
-      return base::unexpected("could not encode the image as WebP");
-    }
-    return std::move(*webp);
-  }
-  // ParseScreenshotRequest already rejects anything else, so reaching here
-  // means the two lists have drifted apart.
-  return base::unexpected("unsupported image type: " + request.type);
-}
-
-// Strip-tiled, multi-threaded raster.
-//
-// One SkSurface for the whole capture makes every unbounded saveLayer pay for
-// the entire surface, because skia sizes such a layer from the clip bounds and
-// the clip is the surface. cc never hits this: it rasters tiles, so the clip is
-// a tile. Replaying the same record into horizontal strips restores that bound
-// and, because the strips are independent, spreads the work over the cores.
-//
-// Pixel-moving filters read around the pixel they write, so each strip is
-// rastered with a margin above and below and only its interior is kept.
-struct StripJob {
-  cc::PaintRecord record;
-  // The record as an SkPicture with an R-tree, so a strip replays only the ops
-  // whose bounds intersect it -- whole saveLayer/restore groups included, which
-  // is what cc's DisplayItemList does with its own rtree. Without it every
-  // strip replays every op and an unbounded saveLayer costs a strip's worth of
-  // pixels even when its content is nowhere near the strip, which measured
-  // slower than not striping at all. Null only if recording failed, in which
-  // case the record is replayed directly.
-  sk_sp<SkPicture> picture;
-  SkPixmap target;
-  gfx::Rect cull_rect;
-  double scale = 1.0;
-  SkSurfaceProps props;
-  int strip_height = 0;
-  int margin = 0;
-  int strips = 0;
-  std::atomic<int> next{0};
-  std::atomic<bool> failed{false};
-};
-
-// `scratch` is the caller's reusable strip surface, allocated on first use. It
-// is sized for the tallest strip, so a shorter one -- the last -- simply leaves
-// the rows past its bottom untouched and unread.
-void RasterOneStrip(StripJob& job, int index, sk_sp<SkSurface>& scratch) {
-  const int height = job.target.height();
-  const int y0 = index * job.strip_height;
-  const int y1 = std::min(height, y0 + job.strip_height);
-  const int top = std::max(0, y0 - job.margin);
-  if (!scratch) {
-    // Allocated once per worker rather than once per strip. The allocation and
-    // first touch of a strip-sized bitmap is a large part of what striping costs
-    // over a single surface, and on a tall page there are far more strips than
-    // there are workers.
-    scratch = SkSurfaces::Raster(
-        SkImageInfo::MakeN32Premul(job.target.width(),
-                                   std::min(height, job.strip_height +
-                                                        2 * job.margin)),
-        &job.props);
-    if (!scratch) {
-      job.failed = true;
-      return;
-    }
-  }
-  const sk_sp<SkSurface>& strip = scratch;
-  SkCanvas* sk_canvas = strip->getCanvas();
-  sk_canvas->restoreToCount(1);
-  sk_canvas->resetMatrix();
-  sk_canvas->clear(SK_ColorTRANSPARENT);
-  sk_canvas->translate(0.0f, static_cast<float>(-top));
-  if (job.scale != 1.0) {
-    sk_canvas->scale(static_cast<float>(job.scale),
-                     static_cast<float>(job.scale));
-  }
-  if (job.cull_rect.x() != 0 || job.cull_rect.y() != 0) {
-    sk_canvas->translate(static_cast<float>(-job.cull_rect.x()),
-                         static_cast<float>(-job.cull_rect.y()));
-  }
-  if (job.picture) {
-    sk_canvas->drawPicture(job.picture);
-  } else {
-    cc::SkiaPaintCanvas canvas(sk_canvas);
-    canvas.drawPicture(job.record);
-  }
-  SkPixmap source;
-  if (!strip->peekPixels(&source)) {
-    job.failed = true;
-    return;
-  }
-  // Same colour and alpha type on both sides, so this is a row copy.
-  const SkImageInfo interior =
-      job.target.info().makeWH(job.target.width(), y1 - y0);
-  if (!source.readPixels(interior, job.target.writable_addr(0, y0),
-                         job.target.rowBytes(), 0, y0 - top)) {
-    job.failed = true;
-  }
-}
-
-void RunStripJob(StripJob& job) {
-  sk_sp<SkSurface> scratch;
-  for (;;) {
-    const int index = job.next.fetch_add(1);
-    if (index >= job.strips) {
-      return;
-    }
-    RasterOneStrip(job, index, scratch);
-  }
-}
-
-class StripWorker final : public base::DelegateSimpleThread::Delegate {
- public:
-  explicit StripWorker(StripJob& job) : job_(job) {}
-  void Run() override { RunStripJob(*job_); }
-
- private:
-  const raw_ref<StripJob> job_;
-};
-
-// Diagnostic and tuning knobs, read once. These sit in the per-capture path --
-// one of them inside the lifecycle loop -- and a resident worker would
-// otherwise call getenv on every round for the life of the process.
 int EnvInt(const char* name, int fallback) {
   const char* value = std::getenv(name);
   if (!value || !*value) {
@@ -516,119 +415,226 @@ bool ProfileEnabled() {
   return enabled;
 }
 
-// Striping is not free: the record has to be re-recorded into an SkPicture so
-// that a strip can skip the ops it does not touch, and every strip is rastered
-// into scratch pixels and copied into the destination. On the 0.9 MP benchmark
-// pages that fixed cost measured 1.5x to 2x the raster it was parallelising.
-// Past a few megapixels it stops mattering: at 23 MP the same pages raster 5.5x
-// faster in strips, and even a 23 MP page of flat colour -- the least
-// parallelisable thing there is, pure memory bandwidth -- comes out slightly
-// ahead. The largest loss above the threshold that measurement found was
-// 0.6 ms, on a 5.5 MP page of plain text.
-constexpr int64_t kMinPixelsForStripRaster = 4 * 1000 * 1000;
-
-// Chosen with the margin below in mind: large enough that the margin is a small
-// fraction of the work, small enough to keep every core busy on a page that is
-// only a few strips tall.
-constexpr int kStripHeight = 512;
-
-// How far outside its strip a strip is rastered, for filters that read around
-// the pixel they write. Verified against the single-surface output rather than
-// assumed: on a page of 360 backdrop-filter cards the two differ by at most 5
-// of 255 in any channel, and the differing rows are spread evenly through the
-// image rather than clustered at the strip boundaries, which is what a margin
-// that was too small would look like.
-constexpr int kStripMargin = 128;
-
-// Peak memory for the strip surfaces. Every worker holds one of
-// width x (kStripHeight + 2 * kStripMargin) at 4 bytes a pixel -- 5.9 MB for a
-// 1920-wide page -- on top of the destination bitmap, so on a wide page and a
-// many-core machine the thread count has to answer to memory rather than to the
-// core count alone.
-constexpr int64_t kStripSurfaceBudgetBytes = 128 << 20;
-
-// Whether striping this capture is expected to pay for itself.
-bool ShouldRasterInStrips(const cc::PaintRecord& record,
-                          const SkPixmap& target) {
-  if (EnvInt("SHOT_STRIP", 1) == 0) {
-    return false;
-  }
-  const int64_t pixels = static_cast<int64_t>(target.width()) * target.height();
-  if (pixels < kMinPixelsForStripRaster) {
-    return false;
-  }
-  // Blink hands the same lazily decoded SkImage to every strip that touches it,
-  // and each thread then decodes it independently behind skia's own cache lock.
-  // A page holding one 4000x3000 JPEG went from 82 ms on a single surface to
-  // 296 ms across twenty-four strips, and got slower with every thread added.
-  //
-  // cc does not hit this because it resolves images through an ImageDecodeCache
-  // before raster rather than during it. Until this pipeline does the same, a
-  // record that carries images rasters on one surface.
-  if (record.has_discardable_images()) {
-    return false;
-  }
-  return true;
+// Whether a freed PartitionAlloc span is decommitted rather than left
+// committed against the next allocation of its size, from SHOT_RECLAIM. On by
+// default: without it the memory the capture gives back is invisible to the
+// operating system until an idle purge that a one-shot process never reaches.
+bool ReclaimEnabled() {
+  static const bool enabled = EnvInt("SHOT_RECLAIM", 1) != 0;
+  return enabled;
 }
 
-// Rasters `record` into `target` in parallel strips. Returns false if any strip
-// could not be rastered, in which case `target` holds a partial image and the
-// caller falls back to the single-surface path.
-bool RasterInStrips(const cc::PaintRecord& record,
-                    const SkPixmap& target,
-                    const gfx::Rect& cull_rect,
-                    double scale,
-                    const SkSurfaceProps& props,
-                    int* strips_out,
-                    int* threads_out) {
-  StripJob job;
-  job.record = record;
-  {
-    SkRTreeFactory bbh_factory;
-    SkPictureRecorder recorder;
-    SkCanvas* recording = recorder.beginRecording(
-        SkRect::MakeXYWH(static_cast<float>(cull_rect.x()),
-                         static_cast<float>(cull_rect.y()),
-                         static_cast<float>(cull_rect.width()),
-                         static_cast<float>(cull_rect.height())),
-        &bbh_factory);
-    cc::SkiaPaintCanvas recording_canvas(recording);
-    recording_canvas.drawPicture(record);
-    job.picture = recorder.finishRecordingAsPicture();
-  }
-  job.target = target;
-  job.cull_rect = cull_rect;
-  job.scale = scale;
-  job.props = props;
-  job.strip_height = kStripHeight;
-  job.margin = kStripMargin;
-  job.strips = (target.height() + kStripHeight - 1) / kStripHeight;
+}  // namespace
 
-  const int64_t bytes_per_strip = static_cast<int64_t>(target.width()) *
-                                  (kStripHeight + 2 * kStripMargin) * 4;
-  const int by_memory = static_cast<int>(
-      std::max<int64_t>(1, kStripSurfaceBudgetBytes / bytes_per_strip));
-  const int max_threads =
-      EnvInt("SHOT_RASTER_THREADS", base::SysInfo::NumberOfProcessors());
-  const int threads =
-      std::clamp(std::min({job.strips, max_threads, by_memory}), 1, 64);
+// Opens the scratch file blink parks image bytes into, once per process and
+// only when there is an image to park. A browser's renderer is handed this
+// file at startup; doing the same here charged every capture for a file that
+// a page without images never uses, and left a temporary file behind for each
+// one. Made on the first round of the first load that has an image, which is
+// milliseconds before the first byte could be written to it.
+void ProvideParkingFile() {
+  static bool tried = false;
+  if (tried) {
+    return;
+  }
+  tried = true;
+  base::FilePath parking;
+  if (!base::CreateTemporaryFile(&parking)) {
+    return;
+  }
+  base::File file(parking, base::File::FLAG_CREATE_ALWAYS |
+                               base::File::FLAG_READ | base::File::FLAG_WRITE |
+                               base::File::FLAG_DELETE_ON_CLOSE);
+  if (file.IsValid()) {
+    blink::DiskDataAllocator::Instance().ProvideTemporaryFile(std::move(file));
+  }
+}
 
-  std::vector<std::unique_ptr<StripWorker>> delegates;
-  std::vector<std::unique_ptr<base::DelegateSimpleThread>> pool;
-  for (int i = 1; i < threads; ++i) {
-    delegates.push_back(std::make_unique<StripWorker>(job));
-    pool.push_back(std::make_unique<base::DelegateSimpleThread>(
-        delegates.back().get(), "ShotRaster"));
-    pool.back()->Start();
+bool ParkImagesEnabled() {
+  static const bool enabled = EnvInt("SHOT_PARK_IMAGES", 1) != 0;
+  return enabled;
+}
+
+// Logs where the process's memory is at `stage`, in MB, when SHOT_PROFILE is
+// set: the process totals the OS sees (working set, private commit and the
+// peak working set so far) and the pools inside it that can be asked --
+// PartitionAlloc's committed pages, the cppgc heap, skia's resource and glyph
+// caches, and the discardable segments skia's image cache lives in.
+void LogMemoryStage(const char* stage) {
+  if (!ProfileEnabled()) {
+    return;
   }
-  // The calling thread takes strips too rather than waiting on the pool.
-  RunStripJob(job);
-  for (auto& thread : pool) {
-    thread->Join();
+  size_t working_set = 0;
+  size_t private_bytes = 0;
+  size_t peak_working_set = 0;
+  size_t peak_private = 0;
+#if BUILDFLAG(IS_WIN)
+  PROCESS_MEMORY_COUNTERS_EX counters = {};
+  counters.cb = sizeof(counters);
+  if (::GetProcessMemoryInfo(
+          ::GetCurrentProcess(),
+          reinterpret_cast<PROCESS_MEMORY_COUNTERS*>(&counters),
+          sizeof(counters))) {
+    working_set = counters.WorkingSetSize;
+    private_bytes = counters.PrivateUsage;
+    peak_working_set = counters.PeakWorkingSetSize;
+    // The high-water mark of the commit charge: what a sampler outside the
+    // process would have seen as peak private bytes, whichever stage it
+    // happened in.
+    peak_private = counters.PeakPagefileUsage;
   }
-  *strips_out = job.strips;
-  *threads_out = threads;
-  return !job.failed;
+#endif
+  size_t heap_used = 0;
+  size_t heap_committed = 0;
+  if (blink::ThreadState* thread_state = blink::ThreadState::Current()) {
+    const cppgc::HeapStatistics heap = cppgc::CollectStatistics(
+        thread_state->heap_handle(), cppgc::HeapStatistics::kBrief);
+    heap_used = heap.used_size_bytes;
+    heap_committed = heap.committed_size_bytes;
+  }
+  size_t discardable = 0;
+  if (base::DiscardableMemoryAllocator* allocator =
+          base::DiscardableMemoryAllocator::GetInstance()) {
+    discardable = allocator->GetBytesAllocated();
+  }
+  const auto mb = [](size_t bytes) { return bytes / 1048576.0; };
+  // `pa` is committed, not live; `pa_live` is what is actually allocated, so
+  // the difference is what a reclaim would return. `images` counts the
+  // encoded image sources still alive (ParkableImages), `decoders` the bytes
+  // held by blink's cache of partially-used decoders.
+  LOG(INFO) << base::StringPrintf(
+      "shot: mem %-14s ws=%.1f private=%.1f peak_ws=%.1f peak_priv=%.1f "
+      "pa=%.1f pa_live=%.1f cppgc=%.1f/%.1f skia=%.1f font=%.1f "
+      "discardable=%.1f images=%zu decoders=%.1f",
+      stage, mb(working_set), mb(private_bytes), mb(peak_working_set),
+      mb(peak_private), mb(blink::Partitions::TotalSizeOfCommittedPages()),
+      mb(blink::Partitions::TotalActiveBytes()), mb(heap_used),
+      mb(heap_committed), mb(SkGraphics::GetResourceCacheTotalBytesUsed()),
+      mb(SkGraphics::GetFontCacheUsed()), mb(discardable),
+      blink::ParkableImageManager::Instance().Size(),
+      mb(blink::ImageDecodingStore::Instance().MemoryUsageInBytes()));
+}
+
+namespace {
+
+// The file a request's `path` names, opened for writing so the encoder can
+// stream into it, or an invalid File when there is no path and the image is
+// to be handed back in memory. `n` numbers a tile into the path's {n}.
+base::expected<base::File, std::string> OpenOutput(
+    const std::string& path_template,
+    size_t n) {
+  if (path_template.empty()) {
+    return base::File();
+  }
+  std::string path = path_template;
+  base::ReplaceSubstringsAfterOffset(&path, 0, "{n}", base::NumberToString(n));
+  base::File file(base::FilePath::FromUTF8Unsafe(path),
+                  base::File::FLAG_CREATE_ALWAYS | base::File::FLAG_WRITE);
+  if (!file.IsValid()) {
+    return base::unexpected("could not open " + path + " for writing");
+  }
+  return file;
+}
+
+// Where OpenOutput() put tile `n`, for the caller's report.
+std::string OutputPath(const std::string& path_template, size_t n) {
+  std::string path = path_template;
+  base::ReplaceSubstringsAfterOffset(&path, 0, "{n}", base::NumberToString(n));
+  return path;
+}
+
+// The document's paint as a cc display list, replayable at the root property
+// tree state: what a compositor would raster a layer from.
+scoped_refptr<cc::DisplayItemList> BuildDisplayList(
+    blink::LocalFrameView* view,
+    const gfx::Rect& cull_rect) {
+  auto list = base::MakeRefCounted<cc::DisplayItemList>();
+  blink::PaintChunksToCcLayer::ConvertInto(
+      blink::PaintChunkSubset(view->GetPaintArtifact()),
+      blink::PropertyTreeState::Root(), gfx::Vector2dF(),
+      /*under_invalidation_checking_params=*/nullptr, *list, &cull_rect);
+  list->Finalize();
+  return list;
+}
+
+void DumpOps(const cc::PaintOpBuffer& buffer) {
+  std::map<std::string, int> histogram;
+  int total = 0;
+  for (const cc::PaintOp& op : cc::PaintOpBuffer::Iterator(buffer)) {
+    ++total;
+    ++histogram[cc::PaintOpTypeToString(op.GetType())];
+    auto describe = [&](const char* what, const SkRect& bounds) {
+      LOG(INFO) << "shot: op " << what << " bounds="
+                << (bounds.left() == SK_ScalarInfinity
+                        ? std::string("unset")
+                        : base::NumberToString(bounds.left()) + "," +
+                              base::NumberToString(bounds.top()) + " " +
+                              base::NumberToString(bounds.width()) + "x" +
+                              base::NumberToString(bounds.height()));
+    };
+    switch (op.GetType()) {
+      case cc::PaintOpType::kSaveLayer:
+        describe("SaveLayer", static_cast<const cc::SaveLayerOp&>(op).bounds);
+        break;
+      case cc::PaintOpType::kSaveLayerAlpha:
+        describe("SaveLayerAlpha",
+                 static_cast<const cc::SaveLayerAlphaOp&>(op).bounds);
+        break;
+      case cc::PaintOpType::kSaveLayerFilters:
+        describe("SaveLayerFilters",
+                 static_cast<const cc::SaveLayerFiltersOp&>(op).bounds);
+        break;
+      default:
+        break;
+    }
+  }
+  std::string summary;
+  for (const auto& [name, count] : histogram) {
+    summary += name + "=" + base::NumberToString(count) + " ";
+  }
+  LOG(INFO) << "shot: paint has " << total << " ops: " << summary;
+}
+
+int MaximumImageDimension(const std::string& type) {
+  if (type == "webp") {
+    return kMaximumWebpDimension;
+  }
+  if (type == "jpeg") {
+    return kMaximumJpegDimension;
+  }
+  return kMaximumPngDimension;
+}
+
+// Refuses a bitmap the format or the memory budget cannot take, and says which
+// and what to do about it. `tiled` picks the advice: a tiles request that is
+// too big wants a smaller tile, a plain one wants to become a tiles request.
+base::expected<void, std::string> CheckImageSize(
+    int width,
+    int height,
+    const ScreenshotRequest& request,
+    bool tiled) {
+  const std::string size =
+      base::NumberToString(width) + "x" + base::NumberToString(height);
+  if (width <= 0 || height <= 0) {
+    return base::unexpected("the requested region scales to an empty " + size +
+                            " image");
+  }
+  const char* advice = tiled ? "; lower scale, or use a smaller tile.height"
+                             : "; lower scale, or capture in tiles";
+  const int limit = MaximumImageDimension(request.type);
+  if (width > limit || height > limit) {
+    return base::unexpected("the requested region scales to a " + size +
+                            " image, and " + request.type + " cannot exceed " +
+                            base::NumberToString(limit) + " pixels on a side" +
+                            advice);
+  }
+  const int64_t bytes = int64_t{width} * height * 4;
+  if (bytes > kMaximumSurfaceBytes) {
+    return base::unexpected(
+        "the requested region scales to a " + size + " image, which needs " +
+        base::NumberToString(bytes >> 20) + " MB to raster" + advice);
+  }
+  return base::ok();
 }
 
 }  // namespace
@@ -637,12 +643,6 @@ ShotRenderer::ShotRenderer() = default;
 
 ShotRenderer::~ShotRenderer() {
   TearDown();
-}
-
-void ShotRenderer::PurgeMemory() {
-  surface_.reset();
-  surface_width_ = 0;
-  surface_height_ = 0;
 }
 
 void ShotRenderer::TearDown() {
@@ -664,54 +664,80 @@ base::expected<void, std::string> ShotRenderer::WaitForLoad(
   const bool network_idle = (wait_until == "networkidle");
   const base::TimeTicks deadline = base::TimeTicks::Now() + timeout;
   base::TimeTicks quiet_since;
+  base::TimeTicks last_lifecycle;
   int rounds = 0;
+  int lifecycles = 0;
+  const bool profile_wait = ProfileEnabled() && EnvInt("SHOT_PROFILE_WAIT", 0);
+  // SHOT_WAIT_GC_MB lowers the floor, which is how the collection below is
+  // exercised on a page that does not churn enough to reach it.
+  const size_t collect_floor =
+      static_cast<size_t>(EnvInt(
+          "SHOT_WAIT_GC_MB", static_cast<int>(kWaitCollectFloorBytes >> 20)))
+      << 20;
+  size_t collect_above = collect_floor;
 
   while (true) {
     // The lifecycle has to run inside the loop, not just after it. A
     // @font-face is not fetched because it was parsed; it is fetched because
-    // style resolution found text that uses it, and that happens in
-    // UpdateAllLifecyclePhases. Same for an <img> whose layout decides it is
-    // actually going to be painted. Pumping without running the lifecycle would
-    // wait forever for requests that had never been made.
-    // SHOT_PROFILE=1 splits the lifecycle into style, layout and prepaint+paint
-    // per round, which is how the cost of a slow page is attributed. Running
-    // the phases separately costs a little more than one UpdateAllLifecyclePhases
-    // would, so it is behind the flag rather than always on.
-    if (ProfileEnabled()) {
-      const base::TimeTicks t0 = base::TimeTicks::Now();
-      document->UpdateStyleAndLayoutTree();
-      const base::TimeTicks t1 = base::TimeTicks::Now();
-      frame_->View()->UpdateLifecycleToLayoutClean(
-          blink::DocumentUpdateReason::kBeginMainFrame);
-      const base::TimeTicks t2 = base::TimeTicks::Now();
-      frame_->View()->UpdateAllLifecyclePhases(
-          blink::DocumentUpdateReason::kBeginMainFrame);
-      const base::TimeTicks t3 = base::TimeTicks::Now();
-      const size_t used =
-          cppgc::CollectStatistics(
-              blink::ThreadState::Current()->heap_handle(),
-              cppgc::HeapStatistics::kBrief)
-              .used_size_bytes;
-      LOG(INFO) << "shot: profile round " << rounds
-                << " heap_used_kb=" << (used >> 10)
-                << " style=" << (t1 - t0).InMillisecondsF()
-                << " layout=" << (t2 - t1).InMillisecondsF()
-                << " prepaint+paint=" << (t3 - t2).InMillisecondsF()
-                << " parsed=" << document->HasFinishedParsing()
-                << " loaded=" << document->IsLoadCompleted()
-                << " active=" << document->Fetcher()->ActiveRequestCount();
-    } else {
-      frame_->View()->UpdateAllLifecyclePhases(
-          blink::DocumentUpdateReason::kBeginMainFrame);
+    // shaping found text that uses it, and that happens in layout. Pumping
+    // without running the lifecycle would wait forever for requests that had
+    // never been made.
+    //
+    // But not on every round. A font that arrives makes the whole document
+    // lay out again, and a page whose text spans sixty unicode-range subsets
+    // of one family laid its 40,000 pixels out sixty times -- 12 ms and
+    // 1.5 MB of garbage each -- for a result that needed one. So the
+    // lifecycle runs when it can discover requests: on the first round, when
+    // nothing is in flight (which is also what makes the final layout reflect
+    // the last arrival), and otherwise at most every kLifecycleInterval, so
+    // that a stylesheet that lands while a slow image is still loading still
+    // has its fonts requested promptly.
+    const unsigned in_flight = document->Fetcher()->ActiveRequestCount();
+    const bool run_lifecycle =
+        rounds == 0 || in_flight == 0 ||
+        base::TimeTicks::Now() - last_lifecycle >= kLifecycleInterval;
+    if (run_lifecycle) {
+      RunLifecycle(document, rounds);
+      last_lifecycle = base::TimeTicks::Now();
+      ++lifecycles;
+    }
+
+    // Park the images that have finished arriving: their bytes go to the
+    // runtime's parking file on a background thread and the copy here is
+    // dropped when that lands (a task on this thread, which the pump below
+    // runs). Left to itself the manager would do this two seconds from now.
+    //
+    // The manager would do this two seconds from now, which is two seconds
+    // after this capture has finished. Asking on every round is what makes it
+    // happen while the page is still loading, which is the only time it is
+    // worth anything: the bytes go out on a background thread during a wait
+    // the main thread was going to spend on the network regardless.
+    if (ParkImagesEnabled() &&
+        blink::ParkableImageManager::Instance().Size() > 0) {
+      ProvideParkingFile();
+      blink::ParkableImageManager::Instance().MaybeParkImagesForTesting();
+    }
+
+    // Behind its own switch: the memory read alone costs a millisecond, and
+    // a page that waits three hundred rounds would spend a third of its load
+    // measuring itself.
+    if (profile_wait) {
+      LogMemoryStage(base::StringPrintf("wait %d", rounds).c_str());
     }
 
     const unsigned active = document->Fetcher()->ActiveRequestCount();
-    const bool loaded = document->HasFinishedParsing() &&
+    const bool loaded = run_lifecycle && document->HasFinishedParsing() &&
                         document->IsLoadCompleted() && active == 0;
 
     if (!network_idle) {
       if (loaded) {
-        LOG(INFO) << "shot: load settled after " << rounds << " round(s)";
+        LOG(INFO) << "shot: load settled after " << rounds << " round(s), "
+                  << lifecycles << " layout(s)";
+        if (ParkImagesEnabled()) {
+          // One more turn of the loop for the last images' parking to land
+          // before the raster starts from what is left resident.
+          PumpFor(kPumpSlice);
+        }
         return base::ok();
       }
     } else if (loaded) {
@@ -722,11 +748,51 @@ base::expected<void, std::string> ShotRenderer::WaitForLoad(
       if (quiet_since.is_null()) {
         quiet_since = now;
       } else if (now - quiet_since >= kNetworkIdleWindow) {
-        LOG(INFO) << "shot: network idle after " << rounds << " round(s)";
+        LOG(INFO) << "shot: network idle after " << rounds << " round(s), "
+                  << lifecycles << " layout(s)";
         return base::ok();
       }
     } else {
       quiet_since = base::TimeTicks();
+    }
+
+    // Collection is off for the capture (see RenderDocument), which is right
+    // for a document that is laid out once and wrong for one that is laid out
+    // again every time a font lands: everything the previous layout built is
+    // garbage, and it stayed until the capture ended. So while requests are
+    // still arriving, the heap is collected each time it has doubled since
+    // the last time it was measured -- proportional, so a page whose heap is
+    // genuinely large pays once, and a page that only churns pays a few
+    // milliseconds to stay small.
+    if (run_lifecycle && active > 0 && gc_disabled_) {
+      blink::ThreadState* thread_state = blink::ThreadState::Current();
+      const size_t used =
+          cppgc::CollectStatistics(thread_state->heap_handle(),
+                                   cppgc::HeapStatistics::kBrief)
+              .used_size_bytes;
+      if (used > collect_above) {
+        const base::TimeTicks gc_started = base::TimeTicks::Now();
+        SetGarbageCollection(/*enabled=*/true);
+        thread_state->heap().ForceGarbageCollectionSlow(
+            "shot", "while loading",
+            cppgc::Heap::StackState::kMayContainHeapPointers);
+        SetGarbageCollection(/*enabled=*/false);
+        const size_t after =
+            cppgc::CollectStatistics(thread_state->heap_handle(),
+                                     cppgc::HeapStatistics::kBrief)
+                .used_size_bytes;
+        // Next when it has doubled again -- from what survived, or from what
+        // there was if little of it was garbage.
+        collect_above = std::max(collect_floor,
+                                 2 * (used - after < used / 4 ? used : after));
+        if (ProfileEnabled()) {
+          LOG(INFO) << "shot: profile gc_while_loading="
+                    << (base::TimeTicks::Now() - gc_started).InMillisecondsF()
+                    << " used_before_kb=" << (used >> 10)
+                    << " used_after_kb=" << (after >> 10)
+                    << " next_above_kb=" << (collect_above >> 10);
+        }
+      }
     }
 
     if (rounds < 4) {
@@ -745,8 +811,8 @@ base::expected<void, std::string> ShotRenderer::WaitForLoad(
     }
 
     // ShotURLLoader answers by posting back to this thread, so draining the
-    // queue is what delivers a response; the loop then re-runs the lifecycle so
-    // the newly arrived font or image can affect layout and paint.
+    // queue is what delivers a response; the loop then decides whether the
+    // newly arrived font or image is worth a layout yet.
     const base::TimeTicks pump_started = base::TimeTicks::Now();
     PumpFor(kPumpSlice);
     if (ProfileEnabled()) {
@@ -754,6 +820,52 @@ base::expected<void, std::string> ShotRenderer::WaitForLoad(
                 << (base::TimeTicks::Now() - pump_started).InMillisecondsF();
     }
   }
+}
+
+void ShotRenderer::SetGarbageCollection(bool enabled) {
+  blink::ThreadState* thread_state = blink::ThreadState::Current();
+  if (!thread_state || gc_disabled_ == !enabled) {
+    return;
+  }
+  if (enabled) {
+    cppgc::subtle::NoGarbageCollectionScope::Leave(thread_state->heap_handle());
+  } else {
+    cppgc::subtle::NoGarbageCollectionScope::Enter(thread_state->heap_handle());
+  }
+  gc_disabled_ = !enabled;
+}
+
+void ShotRenderer::RunLifecycle(blink::Document* document, int round) {
+  // SHOT_PROFILE=1 splits the lifecycle into style, layout and prepaint+paint
+  // per round, which is how the cost of a slow page is attributed. Running the
+  // phases separately costs a little more than one UpdateAllLifecyclePhases
+  // would, so it is behind the flag rather than always on.
+  if (!ProfileEnabled()) {
+    frame_->View()->UpdateAllLifecyclePhases(
+        blink::DocumentUpdateReason::kBeginMainFrame);
+    return;
+  }
+  const base::TimeTicks t0 = base::TimeTicks::Now();
+  document->UpdateStyleAndLayoutTree();
+  const base::TimeTicks t1 = base::TimeTicks::Now();
+  frame_->View()->UpdateLifecycleToLayoutClean(
+      blink::DocumentUpdateReason::kBeginMainFrame);
+  const base::TimeTicks t2 = base::TimeTicks::Now();
+  frame_->View()->UpdateAllLifecyclePhases(
+      blink::DocumentUpdateReason::kBeginMainFrame);
+  const base::TimeTicks t3 = base::TimeTicks::Now();
+  const size_t used =
+      cppgc::CollectStatistics(blink::ThreadState::Current()->heap_handle(),
+                               cppgc::HeapStatistics::kBrief)
+          .used_size_bytes;
+  LOG(INFO) << "shot: profile round " << round
+            << " heap_used_kb=" << (used >> 10)
+            << " style=" << (t1 - t0).InMillisecondsF()
+            << " layout=" << (t2 - t1).InMillisecondsF()
+            << " prepaint+paint=" << (t3 - t2).InMillisecondsF()
+            << " parsed=" << document->HasFinishedParsing()
+            << " loaded=" << document->IsLoadCompleted()
+            << " active=" << document->Fetcher()->ActiveRequestCount();
 }
 
 base::expected<gfx::Rect, std::string> ShotRenderer::ResolveCaptureRect(
@@ -803,8 +915,8 @@ base::expected<gfx::Rect, std::string> ShotRenderer::ResolveCaptureRect(
     // screenshot-card layout creates them by centering a fixed-size element in
     // a smaller default viewport. Grow only that case, then re-read the box;
     // leaving positive overflow alone preserves media queries and vw/vh.
-    for (int pass = 0;
-         pass < 3 && (bounds->x() < 0 || bounds->y() < 0); ++pass) {
+    for (int pass = 0; pass < 3 && (bounds->x() < 0 || bounds->y() < 0);
+         ++pass) {
       blink::LocalFrameView* view = frame_->View();
       const gfx::Size current = view->Size();
       const int width = std::min(
@@ -836,8 +948,7 @@ base::expected<gfx::Rect, std::string> ShotRenderer::ResolveCaptureRect(
   }
 
   if (request.full_page) {
-    const gfx::Size contents =
-        frame_->View()->LayoutViewport()->ContentsSize();
+    const gfx::Size contents = frame_->View()->LayoutViewport()->ContentsSize();
     return gfx::Rect(0, 0, std::max(request.width, contents.width()),
                      std::max(request.height, contents.height()));
   }
@@ -932,9 +1043,53 @@ base::expected<void, std::string> ShotRenderer::CreatePage(
   return base::ok();
 }
 
-base::expected<std::vector<uint8_t>, std::string> ShotRenderer::Render(
-    const RenderInput& input,
+base::expected<EncodedTile, std::string> ShotRenderer::Render(
+    RenderInput& input,
     const ScreenshotRequest& request) {
+  if (request.tile.has_value()) {
+    return base::unexpected(
+        "a request with tile set is answered by RenderTiles");
+  }
+  EncodedTile image;
+  auto rendered = RenderDocument(
+      input, request,
+      base::BindRepeating(
+          [](EncodedTile* out,
+             EncodedTile tile) -> base::expected<void, std::string> {
+            *out = std::move(tile);
+            return base::ok();
+          },
+          &image));
+  // What the raster freed -- strips, decoded images, display lists -- goes
+  // back to the system now rather than at the next idle purge, so that a
+  // worker between requests is the size of a worker between requests.
+  if (ReclaimEnabled()) {
+    ::partition_alloc::MemoryReclaimer::Instance()->ReclaimAll();
+  }
+  if (!rendered.has_value()) {
+    return base::unexpected(rendered.error());
+  }
+  return image;
+}
+
+base::expected<void, std::string> ShotRenderer::RenderTiles(
+    RenderInput& input,
+    const ScreenshotRequest& request,
+    const TileSink& sink) {
+  if (!request.tile.has_value()) {
+    return base::unexpected("RenderTiles needs tile.height");
+  }
+  auto rendered = RenderDocument(input, request, sink);
+  if (ReclaimEnabled()) {
+    ::partition_alloc::MemoryReclaimer::Instance()->ReclaimAll();
+  }
+  return rendered;
+}
+
+base::expected<void, std::string> ShotRenderer::RenderDocument(
+    RenderInput& input,
+    const ScreenshotRequest& request,
+    const TileSink& sink) {
   // Whatever happens below, this instance ends the call with no page attached.
   // A resident worker calls Render() many times, and CreatePage() overwrites
   // page_ and frame_ unconditionally -- without this the previous document's
@@ -972,10 +1127,9 @@ base::expected<std::vector<uint8_t>, std::string> ShotRenderer::Render(
   // request asked for.
   blink::ThreadState* thread_state = blink::ThreadState::Current();
   if (thread_state) {
-    const size_t used =
-        cppgc::CollectStatistics(thread_state->heap_handle(),
-                                 cppgc::HeapStatistics::kBrief)
-            .used_size_bytes;
+    const size_t used = cppgc::CollectStatistics(thread_state->heap_handle(),
+                                                 cppgc::HeapStatistics::kBrief)
+                            .used_size_bytes;
     // Below this there is not enough garbage to be worth a stop-the-world
     // sweep, and skipping it lets a run of small captures amortise one
     // collection over several documents rather than paying per capture. It has
@@ -1001,20 +1155,24 @@ base::expected<std::vector<uint8_t>, std::string> ShotRenderer::Render(
       }
     }
   }
-  // Declared after `tear_down` so that it is destroyed first: the teardown this
-  // guards must not run with collection still disabled.
-  std::optional<cppgc::subtle::NoGarbageCollectionScope> no_gc;
-  if (thread_state) {
-    no_gc.emplace(thread_state->heap_handle());
-  }
+  // Released after `tear_down` is declared, so it runs first: the teardown
+  // this guards must not run with collection still disabled. A flag on the
+  // renderer rather than a scope object on this stack because WaitForLoad()
+  // lifts it for a collection of its own when a slow load has churned enough
+  // garbage to be worth one.
+  base::ScopedClosureRunner enable_gc(
+      base::BindOnce(&ShotRenderer::SetGarbageCollection,
+                     base::Unretained(this), /*enabled=*/true));
+  SetGarbageCollection(/*enabled=*/false);
 
-  CaptureStats* stats = CaptureContext::Current()
-                            ? &CaptureContext::Current()->stats()
-                            : nullptr;
+  CaptureStats* stats =
+      CaptureContext::Current() ? &CaptureContext::Current()->stats() : nullptr;
+  LogMemoryStage("start");
   const base::TimeTicks setup_started = base::TimeTicks::Now();
   if (auto created = CreatePage(input, request); !created.has_value()) {
     return base::unexpected(created.error());
   }
+  LogMemoryStage("page");
 
   // ForceSynchronousDocumentInstall parses the bytes into this frame's document
   // with no navigation and no DocumentLoader: exactly one document, delivered
@@ -1037,17 +1195,25 @@ base::expected<std::vector<uint8_t>, std::string> ShotRenderer::Render(
     }
   }
 
-  scoped_refptr<blink::SharedBuffer> data =
-      blink::SharedBuffer::Create(base::span(input.body));
   const base::TimeTicks install_started = base::TimeTicks::Now();
-  frame_->ForceSynchronousDocumentInstall(
-      blink::AtomicString(blink::String::FromUtf8(
-          input.mime_type.empty() ? "text/html" : input.mime_type)),
-      *data, blink::KURL(input.url));
+  {
+    scoped_refptr<blink::SharedBuffer> data =
+        blink::SharedBuffer::Create(base::span(input.body));
+    // The caller's copy is dead the moment blink has one: the parser reads
+    // the buffer below, and nothing after this looks at the bytes again. On a
+    // page whose <style> block is three megabytes, keeping it to the end of
+    // the capture was three megabytes resident for no reader.
+    std::string().swap(input.body);
+    frame_->ForceSynchronousDocumentInstall(
+        blink::AtomicString(blink::String::FromUtf8(
+            input.mime_type.empty() ? "text/html" : input.mime_type)),
+        *data, blink::KURL(input.url));
+  }
 
   if (stats) {
     stats->setup = base::TimeTicks::Now() - setup_started;
   }
+  LogMemoryStage("installed");
   if (ProfileEnabled()) {
     blink::Document* doc = frame_->GetDocument();
     LOG(INFO) << "shot: profile create_page="
@@ -1055,8 +1221,7 @@ base::expected<std::vector<uint8_t>, std::string> ShotRenderer::Render(
               << " install="
               << (base::TimeTicks::Now() - install_started).InMillisecondsF()
               << " parsed=" << (doc && doc->HasFinishedParsing())
-              << " loaded=" << (doc && doc->IsLoadCompleted())
-              << " lifecycle="
+              << " loaded=" << (doc && doc->IsLoadCompleted()) << " lifecycle="
               << (doc ? static_cast<int>(doc->Lifecycle().GetState()) : -1)
               << " has_layout_view=" << (doc && doc->GetLayoutView())
               << " needs_layout="
@@ -1078,6 +1243,7 @@ base::expected<std::vector<uint8_t>, std::string> ShotRenderer::Render(
   if (stats) {
     stats->wait = base::TimeTicks::Now() - wait_started;
   }
+  LogMemoryStage("loaded");
 
   const base::TimeTicks lifecycle_started = base::TimeTicks::Now();
   auto capture = ResolveCaptureRect(request);
@@ -1095,163 +1261,344 @@ base::expected<std::vector<uint8_t>, std::string> ShotRenderer::Render(
   if (stats) {
     stats->lifecycle = base::TimeTicks::Now() - lifecycle_started;
   }
+  LogMemoryStage("lifecycle");
 
-  const gfx::Rect cull_rect = capture.value();
-  const base::TimeTicks paint_started = base::TimeTicks::Now();
-  cc::PaintRecord record = view->GetPaintRecord(&cull_rect);
-  if (stats) {
-    stats->paint = base::TimeTicks::Now() - paint_started;
+  // Where the pixels come from and where they go.
+  //
+  // The document's paint is taken as cc's own display list rather than a
+  // flat record, because a display list carries an R-tree over its paint
+  // chunks: a strip of the image plays only the chunks that touch it, which is
+  // what makes strips cheaper than a surface rather than dearer. One list
+  // serves every slice that is painted at the same scroll position.
+  //
+  // Blink stops painting at kPaintedExtent, so a region that reaches further
+  // down is taken in windows: the document is scrolled so that each window's
+  // top row paints near the origin, and the rows are placed in the image
+  // where they belong. A region inside the extent is one window that is never
+  // scrolled -- exactly what a viewport capture was before windows existed.
+  const gfx::Rect region = capture.value();
+  if (region.right() > kPaintedExtent) {
+    return base::unexpected(
+        "the region is " + base::NumberToString(region.width()) +
+        " CSS pixels wide and the engine paints at most " +
+        base::NumberToString(kPaintedExtent) + "; use a narrower viewport");
   }
-  // SHOT_DUMP_OPS=1 logs what the record is made of, so that a slow raster can
-  // be read off the ops rather than guessed at. An unbounded saveLayer shows up
-  // here as "bounds=unset", which is what every page-sized intermediate this
-  // pipeline has hit looked like before it was bounded.
-  if (EnvInt("SHOT_DUMP_OPS", 0)) {
-    std::map<std::string, int> histogram;
-    int total = 0;
-    for (const cc::PaintOp& op : record) {
-      ++total;
-      ++histogram[cc::PaintOpTypeToString(op.GetType())];
-      auto describe = [&](const char* what, const SkRect& bounds) {
-        LOG(INFO) << "shot: op " << what << " bounds="
-                  << (bounds.left() == SK_ScalarInfinity
-                          ? std::string("unset")
-                          : base::NumberToString(bounds.left()) + "," +
-                                base::NumberToString(bounds.top()) + " " +
-                                base::NumberToString(bounds.width()) + "x" +
-                                base::NumberToString(bounds.height()));
-      };
-      switch (op.GetType()) {
-        case cc::PaintOpType::kSaveLayer:
-          describe("SaveLayer", static_cast<const cc::SaveLayerOp&>(op).bounds);
-          break;
-        case cc::PaintOpType::kSaveLayerAlpha:
-          describe("SaveLayerAlpha",
-                   static_cast<const cc::SaveLayerAlphaOp&>(op).bounds);
-          break;
-        case cc::PaintOpType::kSaveLayerFilters:
-          describe("SaveLayerFilters",
-                   static_cast<const cc::SaveLayerFiltersOp&>(op).bounds);
-          break;
-        default:
-          break;
-      }
-    }
-    std::string summary;
-    for (const auto& [name, count] : histogram) {
-      summary += name + "=" + base::NumberToString(count) + " ";
-    }
-    LOG(INFO) << "shot: record has " << total << " ops: " << summary;
-  }
-
-  const base::TimeTicks raster_started = base::TimeTicks::Now();
+  const bool tiled = request.tile.has_value();
+  const double scale = request.scale;
   const SkSurfaceProps surface_props =
       skia::LegacyDisplayGlobals::GetSkSurfaceProps();
-  const int pixel_width =
-      static_cast<int>(std::lround(cull_rect.width() * request.scale));
-  const int pixel_height =
-      static_cast<int>(std::lround(cull_rect.height() * request.scale));
-  if (pixel_width <= 0 || pixel_height <= 0 ||
-      pixel_width > kMaximumDimension || pixel_height > kMaximumDimension) {
-    return base::unexpected(
-        "the requested region scales to an unusable " +
-        base::NumberToString(pixel_width) + "x" +
-        base::NumberToString(pixel_height) + " image");
-  }
-  // The surface carries the pixel geometry, and skia will not rasterise LCD
-  // text onto a surface whose geometry is unknown -- which is what the default
-  // SkSurfaceProps says. ShotRuntime put the host's geometry in
-  // LegacyDisplayGlobals; this is where it has to be honoured, or the SkFont
-  // edging chosen for the glyphs is silently downgraded at draw time.
-  const bool reuse_surface = surface_ && surface_width_ == pixel_width &&
-                             surface_height_ == pixel_height;
-  if (!reuse_surface) {
-    surface_ = SkSurfaces::Raster(
-        SkImageInfo::MakeN32Premul(pixel_width, pixel_height), &surface_props);
-    if (!surface_) {
-      return base::unexpected("could not allocate a " +
-                              base::NumberToString(pixel_width) + "x" +
-                              base::NumberToString(pixel_height) + " bitmap");
-    }
-    surface_width_ = pixel_width;
-    surface_height_ = pixel_height;
-  }
-  sk_sp<SkSurface> surface = surface_;
-  // Make new and retained surfaces start from the same defined state. This is
-  // required for byte-identical clip/selector output and for omitBackground,
-  // where uncovered pixels must remain transparent.
-  surface->getCanvas()->clear(SK_ColorTRANSPARENT);
+  // Without omitBackground the view paints its base colour under everything
+  // in the region, so every pixel is opaque and the encoders are told so up
+  // front: PNG writes RGB and WebP has no alpha plane. A streamed image
+  // cannot find this out by reading itself back the way a bitmap could.
+  const bool opaque = !request.omit_background;
 
-  // The surface is a raster one, so its pixels are already in memory and the
-  // SkPixmap only points at them; it stays valid because `surface` outlives
-  // this scope.
-  SkPixmap pixmap;
-  if (!surface->peekPixels(&pixmap)) {
-    return base::unexpected("could not read back the raster surface's pixels");
+  // The region in slices: a tile each for a tiles request, otherwise as many
+  // rows as one paint covers. Consecutive slices are grouped into windows --
+  // the most rows one scroll position lets blink paint -- so that a document
+  // is scrolled, and painted, as few times as it takes.
+  const int slice_height = tiled ? request.tile->height : kPaintWindow;
+  if (slice_height > kPaintWindow) {
+    return base::unexpected("tile.height is at most " +
+                            base::NumberToString(kPaintWindow));
+  }
+  std::vector<gfx::Rect> slices;
+  for (int y = region.y(); y < region.bottom(); y += slice_height) {
+    slices.emplace_back(region.x(), y, region.width(),
+                        std::min(slice_height, region.bottom() - y));
+  }
+  struct Window {
+    int top;
+    int bottom;
+    size_t first_slice;
+    size_t end_slice;
+  };
+  std::vector<Window> windows;
+  const bool scrolled = region.bottom() > kPaintedExtent;
+  if (!scrolled) {
+    windows.push_back({0, region.bottom(), 0, slices.size()});
+  }
+  for (size_t i = 0; scrolled && i < slices.size(); ++i) {
+    if (!windows.empty() &&
+        slices[i].bottom() - windows.back().top <= kPaintWindow) {
+      windows.back().bottom = slices[i].bottom();
+      windows.back().end_slice = i + 1;
+      continue;
+    }
+    windows.push_back({slices[i].y(), slices[i].bottom(), i, i + 1});
   }
 
-  int strips = 1;
-  int raster_threads = 1;
-  bool striped = false;
-  if (ShouldRasterInStrips(record, pixmap)) {
-    striped =
-        RasterInStrips(record, pixmap, cull_rect, request.scale, surface_props,
-                       &strips, &raster_threads);
-    if (!striped) {
-      // A strip surface could not be allocated. The destination holds whatever
-      // the strips that did run wrote, so it is cleared and rastered whole
-      // rather than returned as an error: the single-surface path needs less
-      // memory than the strips just failed to get.
-      LOG(WARNING) << "shot: strip raster failed, falling back to one surface";
-      surface->getCanvas()->clear(SK_ColorTRANSPARENT);
-      strips = 1;
-      raster_threads = 1;
+  const int width_px = static_cast<int>(std::lround(region.width() * scale));
+  const int height_px = static_cast<int>(std::lround(region.height() * scale));
+  auto rows_px = [&](int css_y) {
+    return static_cast<int>(std::lround((css_y - region.y()) * scale));
+  };
+  std::unique_ptr<ImageStream> whole;
+  if (!tiled) {
+    if (auto size =
+            CheckImageSize(width_px, height_px, request, /*tiled=*/false);
+        !size.has_value()) {
+      return base::unexpected(size.error());
     }
+    auto output = OpenOutput(request.path, 1);
+    if (!output.has_value()) {
+      return base::unexpected(output.error());
+    }
+    auto stream = ImageStream::Create(width_px, height_px, request, opaque,
+                                      surface_props, std::move(*output));
+    if (!stream.has_value()) {
+      return base::unexpected(stream.error());
+    }
+    whole = std::move(*stream);
   }
-  if (!striped) {
-    SkAutoCanvasRestore restore(surface->getCanvas(), /*doSave=*/true);
-    cc::SkiaPaintCanvas canvas(surface->getCanvas());
-    if (request.scale != 1.0) {
-      canvas.scale(static_cast<float>(request.scale),
-                   static_cast<float>(request.scale));
+  auto account = [&](const ImageStreamStats& s, const gfx::Rect& what) {
+    if (stats) {
+      stats->raster += s.raster;
+      stats->encode += s.encode;
     }
-    // The record is in document coordinates; the surface starts at the origin
-    // of the requested region. Scale first, then translate, so the translation
-    // is measured in the same CSS pixels the record is.
-    if (cull_rect.x() != 0 || cull_rect.y() != 0) {
-      canvas.translate(static_cast<float>(-cull_rect.x()),
-                       static_cast<float>(-cull_rect.y()));
-    }
-    canvas.drawPicture(std::move(record));
-  }
-  LOG(INFO) << "shot: raster " << pixel_width << "x" << pixel_height
-            << " strips=" << strips << " threads=" << raster_threads;
+    LOG(INFO) << "shot: raster " << what.ToString() << " strips=" << s.strips
+              << " threads=" << s.threads
+              << " window_kb=" << (s.peak_window_bytes >> 10)
+              << " decoded_kb=" << (s.peak_decoded_bytes >> 10)
+              << " decode_ms=" << s.decode.InMillisecondsF();
+  };
 
-  // SkPngEncoder is skia's libpng-backed encoder, and this build does not have
-  // it: chromium's skia/BUILD.gn compiles skia_encode_rust_png_srcs instead, so
-  // the only SkPngEncoder in the tree is a header with no implementation behind
-  // it. gfx::PNGCodec is the wrapper that knows which encoder is actually
-  // there, //ui/gfx/codec is already in this binary's dependency graph, and its
-  // return type is exactly what Render() returns.
-  SkBitmap bitmap;
-  if (!bitmap.installPixels(pixmap)) {
-    return base::unexpected("could not wrap the rendered pixels as a bitmap");
+  struct PreparedWindow {
+    Window window;
+    int offset;
+    scoped_refptr<cc::DisplayItemList> list;
+  };
+  std::vector<PreparedWindow> prepared_windows;
+  prepared_windows.reserve(windows.size());
+
+  base::TimeDelta scrolling;
+  for (const Window& window : windows) {
+    // Scroll so the window's top row paints at the origin. The offset reached
+    // can fall short of what was asked for -- the document cannot scroll past
+    // its last viewport's worth -- which only moves the window's painted
+    // coordinates down a little, so everything is measured from the offset
+    // actually reached rather than the one asked for.
+    int offset = 0;
+    if (scrolled) {
+      const base::TimeTicks scroll_started = base::TimeTicks::Now();
+      auto reached = ScrollTo(view, window.top);
+      if (!reached.has_value()) {
+        return base::unexpected(reached.error());
+      }
+      scrolling += base::TimeTicks::Now() - scroll_started;
+      offset = *reached;
+      if (window.bottom - offset > kPaintedExtent) {
+        return base::unexpected(
+            "the document could not be scrolled to " +
+            base::NumberToString(window.top) + " (it stopped at " +
+            base::NumberToString(offset) + "), so rows below " +
+            base::NumberToString(offset + kPaintedExtent) +
+            " cannot be painted");
+      }
+    }
+
+    const gfx::Rect& first_slice = slices[window.first_slice];
+    const gfx::Rect& last_slice = slices[window.end_slice - 1];
+    const gfx::Rect paint_cull(first_slice.x(), first_slice.y() - offset,
+                               first_slice.width(),
+                               last_slice.bottom() - first_slice.y());
+    const base::TimeTicks paint_started = base::TimeTicks::Now();
+    scoped_refptr<cc::DisplayItemList> list =
+        BuildDisplayList(view, paint_cull);
+    if (stats) {
+      stats->paint += base::TimeTicks::Now() - paint_started;
+    }
+    if (ProfileEnabled()) {
+      LOG(INFO) << "shot: profile display_list_kb=" << (list->BytesUsed() >> 10)
+                << " ops=" << list->TotalOpCount();
+    }
+    LogMemoryStage("record");
+    // SHOT_DUMP_OPS=1 logs what the paint is made of, so that a slow raster
+    // can be read off the ops rather than guessed at. An unbounded saveLayer
+    // shows up here as "bounds=unset", which is what every page-sized
+    // intermediate this pipeline has hit looked like before it was bounded.
+    if (EnvInt("SHOT_DUMP_OPS", 0)) {
+      DumpOps(list->paint_op_buffer());
+    }
+
+    prepared_windows.push_back({window, offset, std::move(list)});
+  }
+
+  // A finalized display list owns everything needed to raster its images.
+  // Once every scroll position has one, the Page, DOM, layout tree and resource
+  // cache no longer contribute to the raster/encode peak. Keeping only the
+  // lists also narrows the lifetime of encoded image data: an image used only
+  // in an earlier paint window goes away when that window's list is released,
+  // while an image repeated in a later window remains alive through that list.
+  // This is the same ownership boundary between Blink paint and compositor
+  // raster in a browser, made explicit because Shot performs both in one
+  // process.
+  view = nullptr;
+  SetGarbageCollection(/*enabled=*/true);
+  TearDown();
+  if (thread_state) {
+    // kNoHeapPointers: a precise collection that ignores this thread's stack.
+    // A conservative one keeps alive whatever a stale local in this frame or
+    // its callers still points at -- the Document, its images, their bytes --
+    // and nothing below this line touches a blink object again: the display
+    // lists are cc, and the slices are geometry.
+    thread_state->heap().ForceGarbageCollectionSlow(
+        "shot", "page painted", cppgc::Heap::StackState::kNoHeapPointers);
+  }
+  // The collection frees the page's objects into PartitionAlloc's free lists,
+  // which stay committed. Decommit them now, or the raster below starts from
+  // the page's footprint rather than the display lists'.
+  if (ReclaimEnabled()) {
+    ::partition_alloc::MemoryReclaimer::Instance()->ReclaimAll();
+  }
+  LogMemoryStage("detached");
+
+  // The page is gone, so an image's compressed bytes have exactly one
+  // remaining reader: the slices below. Each slice may drop an image once its
+  // last strip is encoded, unless a later slice -- further down this window or
+  // in the next one, since the windows overlap at their seam -- draws it
+  // again. Walked backwards so that each slice sees the union of what follows.
+  std::vector<base::flat_set<cc::PaintImage::Id>> drawn_after(slices.size());
+  {
+    base::flat_set<cc::PaintImage::Id> later;
+    for (size_t w = prepared_windows.size(); w-- > 0;) {
+      const PreparedWindow& prepared = prepared_windows[w];
+      scoped_refptr<cc::DiscardableImageMap> map =
+          prepared.list->GenerateDiscardableImageMap(cc::ScrollOffsetMap());
+      for (size_t i = prepared.window.end_slice;
+           i-- > prepared.window.first_slice;) {
+        drawn_after[i] = later;
+        if (!map || map->empty()) {
+          continue;
+        }
+        const gfx::Rect& slice = slices[i];
+        // One row of slack, as the stream's own query allows for a slice
+        // boundary that falls inside a device pixel.
+        const gfx::Rect painted(slice.x(), slice.y() - prepared.offset,
+                                slice.width(), slice.height() + 1);
+        for (const cc::DrawImage* draw :
+             map->GetDiscardableImagesInRect(painted)) {
+          later.insert(draw->paint_image().stable_id());
+        }
+      }
+    }
+  }
+
+  for (PreparedWindow& prepared : prepared_windows) {
+    const Window& window = prepared.window;
+    const int offset = prepared.offset;
+    scoped_refptr<cc::DisplayItemList> list = std::move(prepared.list);
+
+    for (size_t i = window.first_slice; i < window.end_slice; ++i) {
+      const gfx::Rect& slice = slices[i];
+      if (tiled) {
+        const int tile_px =
+            static_cast<int>(std::lround(slice.height() * scale));
+        if (auto size =
+                CheckImageSize(width_px, tile_px, request, /*tiled=*/true);
+            !size.has_value()) {
+          return base::unexpected(size.error());
+        }
+        // Tiles are numbered in the order they are delivered, which is slice
+        // order.
+        auto output = OpenOutput(request.path, i + 1);
+        if (!output.has_value()) {
+          return base::unexpected(output.error());
+        }
+        auto stream = ImageStream::Create(width_px, tile_px, request, opaque,
+                                          surface_props, std::move(*output));
+        if (!stream.has_value()) {
+          return base::unexpected(stream.error());
+        }
+        // The tile in painted coordinates: document coordinates less the
+        // scroll offset.
+        const gfx::Rect cull_rect(slice.x(), slice.y() - offset, slice.width(),
+                                  slice.height());
+        if (auto added = (*stream)->AddSlice(list, cull_rect, scale,
+                                             /*device_top=*/0, tile_px,
+                                             drawn_after[i]);
+            !added.has_value()) {
+          return base::unexpected(added.error());
+        }
+        auto encoded = (*stream)->Finish();
+        account((*stream)->stats(), slice);
+        if (!encoded.has_value()) {
+          return base::unexpected(encoded.error());
+        }
+        EncodedTile tile;
+        tile.region = slice;
+        tile.bytes = std::move(*encoded);
+        tile.size = (*stream)->stats().encoded_bytes;
+        if (!request.path.empty()) {
+          tile.path = OutputPath(request.path, i + 1);
+        }
+        if (auto delivered = sink.Run(std::move(tile));
+            !delivered.has_value()) {
+          return base::unexpected(delivered.error());
+        }
+        continue;
+      }
+      // Into the whole image's rows for this slice. The list is placed as the
+      // whole region would be, so that a device row maps to the same CSS row
+      // whichever slice drew it -- there is no seam to hide.
+      const int top_px = rows_px(slice.y());
+      const int bottom_px = rows_px(slice.bottom());
+      const gfx::Rect cull_rect(region.x(), region.y() - offset, region.width(),
+                                region.height());
+      if (auto added = whole->AddSlice(list, cull_rect, scale, top_px,
+                                       bottom_px - top_px, drawn_after[i]);
+          !added.has_value()) {
+        return base::unexpected(added.error());
+      }
+    }
+    list = nullptr;
   }
   if (stats) {
-    stats->raster = base::TimeTicks::Now() - raster_started;
+    stats->lifecycle += scrolling;
   }
+  if (scrolled || tiled) {
+    LOG(INFO) << "shot: banded " << region.ToString() << " into "
+              << windows.size() << " window(s), " << slices.size()
+              << (tiled ? " tile(s)" : " slice(s)");
+  }
+  if (tiled) {
+    return base::ok();
+  }
+  auto encoded = whole->Finish();
+  account(whole->stats(), region);
+  if (!encoded.has_value()) {
+    return base::unexpected(encoded.error());
+  }
+  LogMemoryStage("encoded");
+  EncodedTile tile;
+  tile.region = region;
+  tile.bytes = std::move(*encoded);
+  tile.size = whole->stats().encoded_bytes;
+  if (!request.path.empty()) {
+    tile.path = OutputPath(request.path, 1);
+  }
+  return sink.Run(std::move(tile));
+}
 
-  // Timed separately from the rest because it is the one phase whose cost the
-  // caller can change without changing the page: a full-page PNG of a long
-  // document can outweigh the layout that produced it, and `quality` or a
-  // switch to JPEG is the answer. Folded into "render" it would look like the
-  // document's fault.
-  const base::TimeTicks encode_started = base::TimeTicks::Now();
-  auto encoded = EncodeImage(bitmap, request);
-  if (CaptureContext* context = CaptureContext::Current()) {
-    context->stats().encode = base::TimeTicks::Now() - encode_started;
+base::expected<int, std::string> ShotRenderer::ScrollTo(
+    blink::LocalFrameView* view,
+    int top) {
+  blink::PaintLayerScrollableArea* scroller = view->LayoutViewport();
+  if (!scroller) {
+    return base::unexpected("the document has no layout viewport to scroll");
   }
-  return encoded;
+  scroller->SetScrollOffset(blink::ScrollOffset(0, static_cast<float>(top)),
+                            blink::mojom::blink::ScrollType::kProgrammatic,
+                            cc::ScrollSourceType::kAbsoluteScroll);
+  // Prepaint and paint again with the new scroll translation. There is no
+  // layout in this: scrolling moves where the document is painted, not where
+  // anything in it is.
+  if (!view->UpdateAllLifecyclePhases(
+          blink::DocumentUpdateReason::kBeginMainFrame)) {
+    return base::unexpected(
+        "the document did not reach a painted state after scrolling");
+  }
+  return static_cast<int>(std::lround(scroller->GetScrollOffset().y()));
 }
 
 }  // namespace shot

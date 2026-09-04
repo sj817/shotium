@@ -16,11 +16,16 @@
 namespace shot {
 namespace {
 
-// Viewport and output bounds. The upper one is not a policy about what is
-// reasonable, it is where an int32 pixel count times four bytes stops being
-// allocatable.
+// Viewport bounds. The upper one is the largest layout viewport blink is asked
+// for; the region a capture takes *out* of the document is a separate question
+// with its own limits, in shot_renderer.cc.
 constexpr int kMinimumDimension = 1;
 constexpr int kMaximumDimension = 32767;
+// A clip or a tile can reach as far down a document as layout does. This is
+// well short of LayoutUnit's ceiling and well past any document anyone has
+// photographed; it exists so that a coordinate with a typo in it is refused
+// rather than turned into an empty region somewhere below the page.
+constexpr int kMaximumDocumentCoordinate = 1 << 24;
 constexpr double kMinimumScale = 0.01;
 constexpr double kMaximumScale = 8.0;
 
@@ -283,7 +288,38 @@ base::expected<ScreenshotRequest, std::string> ParseScreenshotRequest(
         parsed_clip.height < kMinimumDimension) {
       return base::unexpected("clip.width and clip.height must be positive");
     }
+    for (const auto& [key, value] :
+         {std::pair<std::string_view, int>{"x", parsed_clip.x},
+          std::pair<std::string_view, int>{"y", parsed_clip.y},
+          std::pair<std::string_view, int>{"width", parsed_clip.width},
+          std::pair<std::string_view, int>{"height", parsed_clip.height}}) {
+      if (value < -kMaximumDocumentCoordinate ||
+          value > kMaximumDocumentCoordinate) {
+        return base::unexpected(
+            base::StrCat({"clip.", key, " is out of range"}));
+      }
+    }
     request.clip = parsed_clip;
+  }
+
+  if (const base::Value* tile = dict.Find("tile")) {
+    if (!tile->is_dict()) {
+      return base::unexpected("tile must be an object");
+    }
+    auto height = ReadInt(tile->GetDict(), "height");
+    if (!height.has_value()) {
+      return base::unexpected(base::StrCat({"tile.", height.error()}));
+    }
+    if (!height->has_value()) {
+      return base::unexpected("tile.height is required");
+    }
+    if (**height < kMinimumDimension ||
+        **height > kMaximumDocumentCoordinate) {
+      return base::unexpected(
+          OutOfRange("tile.height", kMinimumDimension,
+                     kMaximumDocumentCoordinate));
+    }
+    request.tile = Tile{**height};
   }
 
   // Combinations that parse but cannot be honoured. Saying so beats the

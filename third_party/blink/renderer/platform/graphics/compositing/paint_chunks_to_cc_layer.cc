@@ -294,8 +294,9 @@ class ConversionContext {
   // Applies combined transform from |current_transform_| to |target_transform|
   // This function doesn't change |current_transform_|.
   void ApplyTransform(const TransformPaintPropertyNode& target_transform) {
-    if (&target_transform == current_transform_)
+    if (&target_transform == current_transform_) {
       return;
+    }
     gfx::Transform projection;
     bool valid_projection =
         TargetToCurrentProjection(target_transform, projection);
@@ -304,8 +305,9 @@ class ConversionContext {
                            /*antialias=*/false);
     } else if (projection.IsIdentityOr2dTranslation()) {
       gfx::Vector2dF translation = projection.To2dTranslation();
-      if (!translation.IsZero())
+      if (!translation.IsZero()) {
         push<cc::TranslateOp>(translation.x(), translation.y());
+      }
     } else {
       push<cc::ConcatOp>(gfx::TransformToSkM44(projection));
     }
@@ -411,8 +413,9 @@ ConversionContext<Result>::~ConversionContext() {
     }
   }
   EndTransform();
-  if (translated_for_layer_offset_)
+  if (translated_for_layer_offset_) {
     AppendRestore();
+  }
 }
 
 template <typename Result>
@@ -433,8 +436,9 @@ void ConversionContext<Result>::TranslateForLayerOffsetOnce() {
 // Returns whether the clip has been combined.
 static bool CombineClip(const ClipPaintPropertyNode& clip,
                         FloatRoundedRect& combined_clip_rect) {
-  if (clip.PixelMovingFilter())
+  if (clip.PixelMovingFilter()) {
     return true;
+  }
 
   // Don't combine into a clip with clip path.
   const auto* parent = clip.UnaliasedParent();
@@ -461,8 +465,9 @@ static bool CombineClip(const ClipPaintPropertyNode& clip,
   // Don't combine two rounded clip rects.
   bool clip_is_rounded = clip.PaintClipRect().IsRounded();
   bool combined_is_rounded = combined_clip_rect.IsRounded();
-  if (clip_is_rounded && combined_is_rounded)
+  if (clip_is_rounded && combined_is_rounded) {
     return false;
+  }
 
   // If one is rounded and the other contains the rounded bounds, use the
   // rounded as the combined.
@@ -540,8 +545,9 @@ ScrollTranslationAction ConversionContext<Result>::SwitchToClip(
   for (const auto* clip = &target_clip; clip != current_clip_;
        clip = clip->UnaliasedParent()) {
     // This should never happen unless the DCHECK in step 1 failed.
-    if (!clip)
+    if (!clip) {
       break;
+    }
     pending_clips.push_back(clip);
   }
 
@@ -617,8 +623,9 @@ bool HasRealEffects(const EffectPaintPropertyNode& current,
                     const EffectPaintPropertyNode& ancestor) {
   for (const auto* node = &current; node != &ancestor;
        node = node->UnaliasedParent()) {
-    if (node->HasRealEffects())
+    if (node->HasRealEffects()) {
       return true;
+    }
   }
   return false;
 }
@@ -669,16 +676,18 @@ ScrollTranslationAction ConversionContext<Result>::SwitchToEffect(
   for (const auto* effect = &target_effect; effect != &lca_effect;
        effect = effect->UnaliasedParent()) {
     // This should never happen unless the DCHECK in step 1 failed.
-    if (!effect)
+    if (!effect) {
       break;
+    }
     pending_effects.push_back(effect);
   }
 
   // Step 3: Now apply the list of effects in top-down order.
   for (const auto& sub_effect : base::Reversed(pending_effects)) {
 #if DCHECK_IS_ON()
-    if (!has_effect_hierarchy_issue)
+    if (!has_effect_hierarchy_issue) {
       DCHECK_EQ(current_effect_, sub_effect->UnaliasedParent());
+    }
 #endif
     if (auto action = StartEffect(*sub_effect)) {
       return action;
@@ -857,8 +866,9 @@ template <typename Result>
 void ConversionContext<Result>::UpdateEffectBounds(
     const gfx::RectF& bounds,
     const TransformPaintPropertyNode& transform) {
-  if (effect_bounds_stack_.empty() || bounds.IsEmpty())
+  if (effect_bounds_stack_.empty() || bounds.IsEmpty()) {
     return;
+  }
 
   auto& effect_bounds_info = effect_bounds_stack_.back();
   gfx::RectF mapped_bounds = bounds;
@@ -889,8 +899,8 @@ void ConversionContext<Result>::EndEffect() {
     // clip emitted before it is widened to the union, now that the content
     // bounds are known. Same coordinate space as the layer op: both were
     // emitted under bounds_info.transform.
-    gfx::RectF clip = gfx::SkRectToRectF(
-        current_effect_->BackdropFilterBounds().getBounds());
+    gfx::RectF clip =
+        gfx::SkRectToRectF(current_effect_->BackdropFilterBounds().getBounds());
     clip.Union(bounds);
     result_.UpdateSaveLayerBounds(backdrop_clip_id, gfx::RectFToSkRect(clip));
   }
@@ -953,8 +963,9 @@ void ConversionContext<Result>::PopState() {
   DCHECK_EQ(nullptr, previous_transform_);
 
   const auto& previous_state = state_stack_.back();
-  if (previous_state.NeedsRestore())
+  if (previous_state.NeedsRestore()) {
     AppendRestore();
+  }
   current_transform_ = previous_state.transform;
   previous_transform_ = previous_state.previous_transform;
   current_clip_ = previous_state.clip;
@@ -1004,8 +1015,9 @@ ScrollTranslationAction ConversionContext<Result>::SwitchToTransform(
 
 template <typename Result>
 void ConversionContext<Result>::EndTransform() {
-  if (!previous_transform_)
+  if (!previous_transform_) {
     return;
+  }
 
   result_.StartPaint();
   push<cc::RestoreOp>();
@@ -1248,8 +1260,10 @@ void PaintChunksToCcLayer::ConvertInto(
     const PropertyTreeState& layer_state,
     const gfx::Vector2dF& layer_offset,
     RasterUnderInvalidationCheckingParams* under_invalidation_checking_params,
-    cc::DisplayItemList& cc_list) {
-  ConversionContext(layer_state, layer_offset, cc_list).Convert(chunks);
+    cc::DisplayItemList& cc_list,
+    const gfx::Rect* cull_rect) {
+  ConversionContext(layer_state, layer_offset, cc_list)
+      .Convert(chunks, cull_rect);
   if (under_invalidation_checking_params) {
     auto& params = *under_invalidation_checking_params;
     PaintRecorder recorder;

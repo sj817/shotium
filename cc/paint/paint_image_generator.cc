@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "cc/paint/paint_image_generator.h"
+
 #include <utility>
 #include <vector>
-
-#include "cc/paint/paint_image_generator.h"
 
 #include "base/atomic_sequence_num.h"
 #include "third_party/skia/include/core/SkImageInfo.h"
@@ -22,6 +22,10 @@ PaintImageGenerator::PaintImageGenerator(const SkImageInfo& info,
       frames_(std::move(frames)) {}
 
 PaintImageGenerator::~PaintImageGenerator() = default;
+
+bool PaintImageGenerator::DiscardEncodedData() {
+  return false;
+}
 
 PaintImage::ContentId PaintImageGenerator::GetContentIdForFrame(
     size_t frame_index) const {

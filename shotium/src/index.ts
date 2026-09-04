@@ -8,6 +8,8 @@ import type {
   ReleaseMemoryOptions,
   ScreenshotOptions,
   ScreenshotResult,
+  ScreenshotTilesOptions,
+  ScreenshotTilesResult,
   StartOptions,
   StartResult,
 } from './types.js';
@@ -27,8 +29,12 @@ export type {
   ReleaseMemoryOptions,
   ScreenshotOptions,
   ScreenshotResult,
+  ScreenshotTile,
+  ScreenshotTilesOptions,
+  ScreenshotTilesResult,
   StartOptions,
   StartResult,
+  TileOptions,
   Viewport,
 } from './types.js';
 export type {DaemonClient} from './lib/client.js';
@@ -41,6 +47,9 @@ export interface Daemon {
   /** One screenshot through the daemon, connection and all. */
   screenshot(options: ScreenshotOptions&{daemon?: DaemonOptions}):
       Promise<ScreenshotResult>;
+  /** The region in tiles, through the daemon. */
+  screenshotTiles(options: ScreenshotTilesOptions&{daemon?: DaemonOptions}):
+      Promise<ScreenshotTilesResult>;
   /** Starts one if it is not up, and reports what is there either way. */
   start(options?: DaemonOptions): Promise<DaemonStatus&{spawned: boolean}>;
   status(options?: DaemonOptions):
@@ -179,6 +188,21 @@ export class Runtime {
   screenshot(options: ScreenshotOptions): Promise<ScreenshotResult> {
     return this.engine.screenshot(options);
   }
+
+  /**
+   * Renders the region in tiles of at most `tile.height` CSS pixels each,
+   * top to bottom, and reports what it cost.
+   *
+   * One load and layout serve every tile, and only one tile's bitmap exists
+   * at a time, so a document of any height costs the memory of one tile.
+   * This is also how to get the whole of a page taller than one image can be
+   * -- 65535 pixels for png and jpeg, 16383 for webp. See
+   * ScreenshotTilesOptions for `path`.
+   */
+  screenshotTiles(options: ScreenshotTilesOptions):
+      Promise<ScreenshotTilesResult> {
+    return this.engine.screenshotTiles(options);
+  }
 }
 
 /** The shared engine: one per process, started on first use. */
@@ -187,6 +211,10 @@ const runtime = new Runtime();
 /** One screenshot through the shared engine, starting it if it is not up. */
 const screenshot = (options: ScreenshotOptions): Promise<ScreenshotResult> =>
     runtime.screenshot(options);
+/** The region in tiles, through the shared engine. */
+const screenshotTiles =
+    (options: ScreenshotTilesOptions): Promise<ScreenshotTilesResult> =>
+        runtime.screenshotTiles(options);
 
 const start = (options?: StartOptions): StartResult => runtime.start(options);
 const status = (): StartResult => runtime.status();
@@ -220,12 +248,23 @@ const cache = runtime.cache;
 const daemon: Daemon = {
   connect: client.connect,
   screenshot: client.screenshot,
+  screenshotTiles: client.screenshotTiles,
   start: client.start,
   status: client.status,
   stop: client.stop,
 };
 
-export {cache, daemon, releaseMemory, runtime, screenshot, start, status, stop};
+export {
+  cache,
+  daemon,
+  releaseMemory,
+  runtime,
+  screenshot,
+  screenshotTiles,
+  start,
+  status,
+  stop,
+};
 
 // A default as well as the names, because `import shotium from` is what a
 // caller coming from `require` writes first, and the two have to be the same
@@ -237,6 +276,7 @@ export default {
   releaseMemory,
   runtime,
   screenshot,
+  screenshotTiles,
   start,
   status,
   stop,

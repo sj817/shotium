@@ -1,0 +1,87 @@
+diff --git a/include/codec/SkCodec.h b/include/codec/SkCodec.h
+index d5d6aeaa87..17fdaef6fe 100644
+--- a/include/codec/SkCodec.h
++++ b/include/codec/SkCodec.h
+@@ -525,6 +525,18 @@ public:
+         return this->onIncrementalDecode(rowsDecoded);
+     }
+ 
++    /**
++     *  Ask incrementalDecode() to return kIncompleteInput once it has written
++     *  `rows` more complete rows, whether or not the input has more, so that a
++     *  client which only keeps a window of the destination backed by memory
++     *  can consume those rows and call again. 0, the default, is no limit.
++     *
++     *  Honoured by codecs that write non-interlaced rows top to bottom in
++     *  order (the PNG codec); others ignore it and behave as before.
++     */
++    void setIncrementalRowLimit(int rows) { fIncrementalRowLimit = rows; }
++    int incrementalRowLimit() const { return fIncrementalRowLimit; }
++
+     /**
+      * The remaining functions revolve around decoding scanlines.
+      */
+@@ -1016,6 +1028,9 @@ private:
+ 
+     bool fStartedIncrementalDecode = false;
+ 
++    // See setIncrementalRowLimit().
++    int fIncrementalRowLimit = 0;
++
+     // Allows SkAndroidCodec to call handleFrameIndex (potentially decoding a prior frame and
+     // clearing to transparent) without SkCodec itself calling it, too.
+     bool fUsingCallbackForHandleFrameIndex = false;
+diff --git a/src/codec/SkPngRustCodec.cpp b/src/codec/SkPngRustCodec.cpp
+index 869bbc0dbd..c050cbf236 100644
+--- a/src/codec/SkPngRustCodec.cpp
++++ b/src/codec/SkPngRustCodec.cpp
+@@ -893,6 +893,10 @@ SkCodec::Result SkPngRustCodec::incrementalDecodeXForm(DecodingState& decodingSt
+     const int srcHeight = decodingState.fLastRow - decodingState.fFirstRow + 1;
+     const int sampleY = this->swizzler() ? this->swizzler()->sampleY() : 1;
+     const int dstHeight = SkCodecPriv::GetSampledDimension(srcHeight, sampleY);
++    // See SkCodec::setIncrementalRowLimit().
++    const int rowLimit = this->incrementalRowLimit();
++    const int stopAtRow = rowLimit > 0 ? decodingState.fRowsWrittenToOutput + rowLimit
++                                       : SK_MaxS32;
+ 
+     while (true) {
+         rust::Slice<const uint8_t> decodedRow;
+@@ -1003,6 +1007,12 @@ SkCodec::Result SkPngRustCodec::incrementalDecodeXForm(DecodingState& decodingSt
+             decodingDst.fDst = decodingDst.fDst.subspan(
+                     std::min(decodingDst.fDstRowStride, decodingDst.fDst.size()));
+             decodingState.fRowsWrittenToOutput++;
++            if (decodingState.fRowsWrittenToOutput >= stopAtRow) {
++                if (rowsDecodedPtr) {
++                    *rowsDecodedPtr = decodingState.fRowsWrittenToOutput;
++                }
++                return kIncompleteInput;
++            }
+         }
+     }
+ }
+@@ -1011,6 +1021,12 @@ SkCodec::Result SkPngRustCodec::incrementalDecode(DecodingState& decodingState,
+                                                   int* rowsDecodedPtr) {
+     SkASSERT_RELEASE(this->canReadRow());
+     const bool interlaced = fReader->interlaced();
++    // See SkCodec::setIncrementalRowLimit(): hand back after this many
++    // complete rows, as if the input had run out, so a caller can consume
++    // them before the next batch is written.
++    const int rowLimit = this->incrementalRowLimit();
++    const int stopAtRow = rowLimit > 0 ? decodingState.fRowsWrittenToOutput + rowLimit
++                                       : SK_MaxS32;
+     rust::Slice<uint8_t> dstSlice;
+     // If we have interlaced rows we have to copy into a temp buffer.
+     std::vector<uint8_t> fullWidthRow;
+@@ -1088,6 +1104,12 @@ SkCodec::Result SkPngRustCodec::incrementalDecode(DecodingState& decodingState,
+             decodingDst.fDst = decodingDst.fDst.subspan(
+                 std::min(decodingDst.fDstRowStride, decodingDst.fDst.size()));
+             decodingState.fRowsWrittenToOutput++;
++            if (decodingState.fRowsWrittenToOutput >= stopAtRow) {
++                if (rowsDecodedPtr) {
++                    *rowsDecodedPtr = decodingState.fRowsWrittenToOutput;
++                }
++                return kIncompleteInput;
++            }
+         }
+     }
+ }

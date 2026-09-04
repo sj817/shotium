@@ -5,6 +5,7 @@
 #ifndef SHOT_SHOT_FETCH_H_
 #define SHOT_SHOT_FETCH_H_
 
+#include <cstddef>
 #include <memory>
 #include <string>
 
@@ -73,6 +74,17 @@ class ShotFetch : public net::URLRequest::Delegate {
 
  private:
   // net::URLRequest::Delegate:
+  // Start(), once this request has a place among its host's. Start() calls it
+  // directly when there is room and queues it when there is not.
+  void StartNow(const GURL& url,
+                const net::HttpRequestHeaders& extra_headers,
+                const url::Origin& initiator);
+  void ReleaseHostSlot();
+  // Reads the body, once there is room for it. OnResponseStarted calls this
+  // directly when there is and queues it when there is not.
+  void BeginReading(size_t expected);
+  void ReleaseBudget();
+
   void OnReceivedRedirect(net::URLRequest* request,
                           const net::RedirectInfo& redirect_info,
                           bool* defer_redirect) override;
@@ -91,6 +103,13 @@ class ShotFetch : public net::URLRequest::Delegate {
   DoneCallback done_;
   FetchResult result_;
   int redirects_ = 0;
+  // How much of this body is counted against the bytes in flight; kept so
+  // that what was added is what is taken away.
+  size_t counted_bytes_ = 0;
+  // The host this request counts against, and whether it is counted. Kept
+  // rather than re-read from the request, which redirects may have moved.
+  std::string host_;
+  bool holds_slot_ = false;
 
   base::WeakPtrFactory<ShotFetch> weak_factory_{this};
 };

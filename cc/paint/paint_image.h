@@ -273,6 +273,17 @@ class CC_PAINT_EXPORT PaintImage {
               AuxImage aux_image,
               GeneratorClientId client_id) const;
 
+  // Permanently releases encoded bytes held by this image's generators. This
+  // is only valid after a complete, static image has reached its final use;
+  // later decode and serialization attempts may fail.
+  bool DiscardEncodedData() const;
+
+  // The encoded source of a generator-backed image, or null for any other
+  // kind (or once DiscardEncodedData() has run). Lets an embedder decode the
+  // source its own way when the generator's decode cannot do what it needs --
+  // a bounded-memory decode of a large image, say.
+  sk_sp<const SkData> GetEncodedData() const;
+
   // Decode the image into YUV into |pixmaps|.
   //  - SkPixmaps owned by |pixmaps| are preallocated to store the
   //    planar data. They must have have color types, row bytes,

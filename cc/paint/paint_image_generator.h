@@ -32,6 +32,12 @@ class CC_PAINT_EXPORT PaintImageGenerator : public SkRefCnt {
   // Returns a reference to the encoded content of this image.
   virtual sk_sp<const SkData> GetEncodedData() const = 0;
 
+  // Permanently releases the encoded source when an embedder knows that this
+  // generator will never be decoded or serialized again. Decodes which have
+  // already acquired the source may finish. The default implementation does
+  // nothing; generators that support this must make it thread-safe.
+  virtual bool DiscardEncodedData();
+
   // Decode into the given SkPixmap. This will modify the pixels pointed to by
   // `dst_pixmap`, but will not modify any of its properties (e.g, its
   // SkImageInfo).

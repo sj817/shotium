@@ -28,7 +28,11 @@
 
 namespace blink {
 
-BASE_FEATURE(kDelayParkingImages, base::FEATURE_ENABLED_BY_DEFAULT);
+// Off: the delay exists so that a browser does not write an image to disk
+// seconds before the first paint reads it back. A screenshot paints once,
+// after every image has arrived, and wants them parked as they arrive so that
+// their bytes are not all resident at the moment the raster starts.
+BASE_FEATURE(kDelayParkingImages, base::FEATURE_DISABLED_BY_DEFAULT);
 
 namespace {
 

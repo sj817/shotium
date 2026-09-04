@@ -29,6 +29,23 @@ export interface NativeCapture {
   stats?: string;
 }
 
+/** One tile of a tiles capture, as the addon hands it over. */
+export interface NativeTile {
+  image: Buffer;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  /** The file the engine wrote, when the request named a `path`. */
+  path?: string;
+}
+
+/** A tiles capture's answer: the tiles in document order, and the stats. */
+export interface NativeTiles {
+  tiles: NativeTile[];
+  stats?: string;
+}
+
 /** What native/binding.cc exports. See shot/shot_api.h for the C ABI. */
 export interface NativeBinding {
   create(optionsJson: string): Engine;
@@ -36,6 +53,7 @@ export interface NativeBinding {
   purge(engine: Engine, releaseWorkingSet: boolean): void;
   status(engine: Engine): string;
   capture(engine: Engine, requestJson: string): Promise<NativeCapture>;
+  captureTiles(engine: Engine, requestJson: string): Promise<NativeTiles>;
   /**
    * List or clear a cache directory. `engine` is nullable and that is the
    * interface: with one, the operation runs on the engine's thread and borrows

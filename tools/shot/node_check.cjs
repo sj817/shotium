@@ -72,8 +72,9 @@ async function main() {
   // require() of an ES module: node builds the namespace and this is what the
   // caller sees. If the exports drift -- a rename, a default that is not the
   // same object as the names -- it shows up here and nowhere else.
-  for (const name of ['Runtime', 'runtime', 'screenshot', 'daemon', 'cache',
-                      'start', 'stop', 'status', 'releaseMemory']) {
+  for (const name of ['Runtime', 'runtime', 'screenshot', 'screenshotTiles',
+                      'daemon', 'cache', 'start', 'stop', 'status',
+                      'releaseMemory']) {
     check(shotium[name] !== undefined, `\`${name}\` is exported`);
   }
   check(shotium.default.runtime === shotium.runtime,
@@ -134,6 +135,73 @@ async function main() {
   check(viaPath === null, 'a request with `path` gives back a null image');
   check(fs.existsSync(written), 'and the engine wrote the file');
   fs.rmSync(written, {force: true});
+
+  console.log('\n== tiles ==');
+  // Taller than blink paints from one scroll position, so this exercises the
+  // banded path as well as the cut: white to the bottom, then a red strip.
+  const tallHeight = 36000;
+  const tall = path.join(os.tmpdir(), `shot-node-check-tall-${process.pid}.html`);
+  fs.writeFileSync(
+      tall,
+      '<body style="margin:0">' +
+          `<div style="height:${tallHeight - 10}px;background:#fff"></div>` +
+          '<div style="height:10px;background:#f00"></div></body>');
+  const pngHeight = (png) => png.readUInt32BE(20);
+  const {tiles, stats: tileStats} = await shotium.screenshotTiles({
+    file: tall,
+    viewport: {width: 400, height: 300},
+    fullPage: true,
+    tile: {height: 8000},
+  });
+  check(tiles.length === 5, '36000px in 8000px tiles is five tiles',
+        `${tiles.length}`);
+  check(tiles.every((t) => Buffer.isBuffer(t.image) && t.width === 400),
+        'each with an image and the region\'s width');
+  check(tiles.map((t) => t.y).join() === '0,8000,16000,24000,32000',
+        'stacked top to bottom', tiles.map((t) => t.y).join());
+  check(tiles.map((t) => pngHeight(t.image)).join() ===
+            '8000,8000,8000,8000,4000',
+        'and each image is as tall as its tile',
+        tiles.map((t) => pngHeight(t.image)).join());
+  check(tileStats.requests >= 1 && tileStats.timing.total > 0,
+        'with one set of stats for the lot');
+
+  const {image: whole} = await shotium.screenshot({
+    file: tall,
+    viewport: {width: 400, height: 300},
+    fullPage: true,
+    scale: 0.25,
+  });
+  check(pngHeight(whole) === tallHeight / 4,
+        'and fullPage alone still gives the whole page as one image',
+        `${pngHeight(whole)}`);
+
+  let misplaced = null;
+  try {
+    await shotium.screenshot({file: tall, tile: {height: 8000}});
+  } catch (error) {
+    misplaced = error;
+  }
+  check(misplaced instanceof TypeError && /screenshotTiles/.test(misplaced.message),
+        'tile on screenshot() names the call that takes it');
+
+  const tilePath = path.join(os.tmpdir(), `shot-node-check-tile-${process.pid}-{n}.png`);
+  const {tiles: onDisk} = await shotium.screenshotTiles({
+    file: tall,
+    viewport: {width: 400, height: 300},
+    fullPage: true,
+    tile: {height: 8000},
+    path: tilePath,
+  });
+  check(onDisk.every((t) => t.image === null && typeof t.path === 'string'),
+        'with `path`, tiles come back as file names');
+  check(onDisk.every((t) => fs.existsSync(t.path)) &&
+            onDisk[0].path.endsWith('-1.png'),
+        'numbered from 1 and written', onDisk[0].path);
+  for (const t of onDisk) {
+    fs.rmSync(t.path, {force: true});
+  }
+  fs.rmSync(tall, {force: true});
 
   console.log('\n== errors are errors, not crashes ==');
   // This one matters more than it did with a pool behind it. A worker that

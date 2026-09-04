@@ -62,7 +62,8 @@ class PLATFORM_EXPORT PaintChunksToCcLayer {
                           const PropertyTreeState& layer_state,
                           const gfx::Vector2dF& layer_offset,
                           RasterUnderInvalidationCheckingParams*,
-                          cc::DisplayItemList&);
+                          cc::DisplayItemList&,
+                          const gfx::Rect* cull_rect = nullptr);
 
   // Similar to ConvertInto(), but returns a PaintRecord.
   static PaintRecord Convert(const PaintChunkSubset&,

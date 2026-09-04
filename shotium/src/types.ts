@@ -161,6 +161,60 @@ export interface ScreenshotOptions {
   headers?: Record<string, string>;
 }
 
+/** How a tiles capture is cut. */
+export interface TileOptions {
+  /**
+   * The most CSS pixels one tile covers, top to bottom; the last tile is
+   * whatever is left. At most 32000, which is as far as the engine paints
+   * from one scroll position.
+   */
+  height: number;
+}
+
+/**
+ * `screenshotTiles()` takes the same options as `screenshot()`, plus `tile`.
+ *
+ * The region is whatever `fullPage`, `selector`, `clip` or the viewport would
+ * have produced as one image, cut into horizontal tiles of at most
+ * `tile.height` CSS pixels each. The document is loaded and laid out once for
+ * all of them, and only one tile's bitmap exists at a time, so a document of
+ * any height costs the memory of one tile. This is also the way to a page
+ * taller than one image can be: `fullPage` on its own renders any height into
+ * one bitmap, but a bitmap has a ceiling -- 65535 pixels for png and jpeg,
+ * 16383 for webp -- and a caller who wants the whole of a longer page gets it
+ * here.
+ *
+ * With `path`, every tile is written to disk and `path` must contain `{n}`,
+ * which becomes the tile's 1-based index: `page-{n}.png` gives `page-1.png`,
+ * `page-2.png` and so on.
+ */
+export interface ScreenshotTilesOptions extends ScreenshotOptions {
+  tile: TileOptions;
+}
+
+/** One tile of a tiles capture. */
+export interface ScreenshotTile {
+  /** The encoded image, or `null` when `path` was given. */
+  image: Buffer|null;
+  /**
+   * Where the tile came from, in CSS pixels of the document -- the same space
+   * `clip` is given in. Consecutive tiles share `x` and `width`, and each
+   * starts where the previous one ended.
+   */
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  /** The file written, when `path` was given. */
+  path?: string;
+}
+
+/** The tiles of one capture, top to bottom, and what taking them cost. */
+export interface ScreenshotTilesResult {
+  tiles: ScreenshotTile[];
+  stats: CaptureStats;
+}
+
 export interface StartOptions {
   /**
    * Root of the HTTP disk cache. `null` disables caching entirely.

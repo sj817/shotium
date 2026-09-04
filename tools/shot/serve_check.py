@@ -66,6 +66,33 @@ def recv(proc):
     return header, read_frame(proc.stdout)
 
 
+def recv_tiles(proc):
+    """A tiles reply: the header, then one payload frame per tile it lists.
+
+    A failure header is followed by the one empty frame every failure gets,
+    so the stream stays in step either way."""
+    header = json.loads(read_frame(proc.stdout).decode("utf-8"))
+    count = len(header["tiles"]) if header.get("ok") else 1
+    return header, [read_frame(proc.stdout) for _ in range(count)]
+
+
+# A document taller than blink paints from one scroll position (32767 CSS
+# pixels): white all the way down, and a red strip as the last 10px, so that
+# "did the bottom get painted" is one pixel read. A file rather than a data:
+# URL, which the worker does not load.
+TALL_HEIGHT = 36000
+
+
+def tall_document():
+    path = os.path.abspath("shot/testdata/out/tall_check.html")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("<body style='margin:0'>"
+                f"<div style='height:{TALL_HEIGHT - 10}px;background:#fff'>"
+                "</div><div style='height:10px;background:#f00'></div></body>")
+    return path
+
+
 def png_size(data):
     """(width, height) out of the IHDR, which is always the first chunk."""
     return struct.unpack(">II", data[16:24])
@@ -260,6 +287,57 @@ def main():
     checks.check(png_size(selected) == (200, 120),
                  "the selected element is exactly 200x120",
                  str(png_size(selected)))
+
+    print("\n== a document taller than one paint reaches its bottom ==")
+    tall = {"file": tall_document(), "width": 400, "height": 300}
+    header, banded = ask({"fullPage": True, "scale": 0.25}, tall)
+    checks.check(header.get("ok") is True, "fullPage renders a 36000px page",
+                 header.get("error", ""))
+    checks.check(png_size(banded) == (100, TALL_HEIGHT // 4),
+                 "as one image of the whole height", str(png_size(banded)))
+    _, _, channels, rows = png_pixels(banded)
+    bottom = pixel(rows, channels, 50, TALL_HEIGHT // 4 - 2)[:3]
+    checks.check(bottom == (255, 0, 0),
+                 "and the last rows are painted, not left blank",
+                 str(bottom))
+    above = pixel(rows, channels, 50, 32767 // 4 - 2)[:3]
+    checks.check(above == (255, 255, 255),
+                 "with the rows either side of the paint limit intact",
+                 str(above))
+
+    print("\n== tiles ==")
+    send(proc, dict(tall, fullPage=True, tile={"height": 8000}))
+    header, tiles = recv_tiles(proc)
+    checks.check(header.get("ok") is True, "a tiles request renders",
+                 header.get("error", ""))
+    listed = header.get("tiles", [])
+    checks.check(len(listed) == 5 and len(tiles) == 5,
+                 "36000px in 8000px tiles is five tiles",
+                 f"{len(listed)} listed, {len(tiles)} frames")
+    checks.check([t["y"] for t in listed] == [0, 8000, 16000, 24000, 32000],
+                 "stacked top to bottom", str([t["y"] for t in listed]))
+    checks.check([t["height"] for t in listed] == [8000] * 4 + [4000],
+                 "the last tile being what was left",
+                 str([t["height"] for t in listed]))
+    sizes = [png_size(t) for t in tiles]
+    checks.check(sizes == [(400, 8000)] * 4 + [(400, 4000)],
+                 "and each frame is a PNG of its tile's size", str(sizes))
+    checks.check(all(len(t) == e["bytes"] for t, e in zip(tiles, listed)),
+                 "whose lengths match the header")
+    _, _, channels, rows = png_pixels(tiles[-1])
+    bottom = pixel(rows, channels, 200, 3998)[:3]
+    checks.check(bottom == (255, 0, 0), "the last tile ends in the red strip",
+                 str(bottom))
+
+    send(proc, dict(tall, fullPage=True, tile={"height": 8000},
+                    path="tiles.png"))
+    header, _ = recv_tiles(proc)
+    checks.check(header.get("ok") is False and "{n}" in header.get("error", ""),
+                 "a tiles path without {n} is refused by name",
+                 header.get("error", ""))
+    header, payload = ask({}, geometry)
+    checks.check(header.get("ok") is True and png_size(payload) == (400, 300),
+                 "and the stream is still in step afterwards")
     checks.check(selected == clipped,
                  "selector and clip found the same box, to the byte")
 
