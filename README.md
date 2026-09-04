@@ -17,7 +17,7 @@
 
 <p align="center">
   <img src="docs/assets/demo.gif" width="820"
-       alt="Terminal recording demonstrating installation of @shotkit/shotium and running shotium in Node.js on card.html with cold and warm capture timings.">
+       alt="Terminal recording demonstrating installation of @shotkit/shotium and running shotium in Node.js on card.html with cold and warm capture timings, followed by the rendered boarding pass.">
 </p>
 
 **shotium** strips Chromium down to its essential rendering pipeline — the Blink layout engine, Skia 2D graphics library, and `//net` network stack — packaged as a compact ~22 MB npm dependency. It lays out static HTML and CSS with 100% Chrome fidelity, rasterizes on the CPU, and delivers PNG, JPEG, or WebP buffers directly inside your host process.
@@ -29,7 +29,7 @@ By stripping out the V8 JavaScript engine, the browser shell (`//content`), the 
 ## Key Highlights
 
 - **Auditable Cross-Engine Benchmarks**: Native CI compares Shotium with Puppeteer and Playwright engine variants on six platforms; complete runs with complete evidence and no blocking harness or Shotium failure are publishable, while noisy or failed cells are labeled and excluded from rankings. (See [Benchmarks](#benchmarks))
-- **Zero External Dependencies**: `pnpm add` automatically downloads the native prebuilt binary for Windows, macOS, and Linux (x64 and arm64). The engine loads via Node-API directly into your host process — no child processes, no WebSockets, and no lingering zombie browsers.
+- **Zero External Dependencies**: `npm install` automatically downloads the native prebuilt binary for Windows, macOS, and Linux (x64 and arm64). The engine loads via Node-API directly into your host process — no child processes, no WebSockets, and no lingering zombie browsers.
 - **Full Chromium CSS Compatibility**: Complete support for CSS Grid, Flexbox, `@font-face`, SVG, gradients, box shadows, filters, and CSS variables. Typography uses deterministic grayscale antialiasing with a fixed gamma curve for byte-identical rendering across all platforms.
 - **Auditable Memory Footprint**: The benchmark records the complete owned process tree, peak RSS, and resident memory drift for every engine variant; comparative memory figures are published only when the run passes the quality and evidence gates.
 - **Flexible Deployment Models**: In-process embedding for long-lived backend services, a pre-warmed resident daemon for CLI tools and CI pipelines, a standalone single-file binary for shell scripting, and a standard C ABI for Rust, Go, Python, and C++.
@@ -41,8 +41,13 @@ By stripping out the V8 JavaScript engine, the browser shell (`//content`), the 
 ### 1. Installation
 
 ```bash
-# pnpm 9.15.9
+# npm
+npm install @shotkit/shotium
+
+# pnpm / yarn / bun
 pnpm add @shotkit/shotium
+yarn add @shotkit/shotium
+bun add @shotkit/shotium
 ```
 
 ### 2. Node.js / TypeScript Example

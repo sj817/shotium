@@ -17,7 +17,7 @@
 
 <p align="center">
   <img src="docs/assets/demo.gif" width="820"
-       alt="终端录屏演示：安装 @shotkit/shotium 并在 Node.js 中调用 shotium 对 card.html 进行渲染截图，展示冷启动与预热后的渲染耗时及产物体积。">
+       alt="终端录屏演示：安装 @shotkit/shotium 并在 Node.js 中调用 shotium 对 card.html 进行渲染截图，展示冷启动与预热后的渲染耗时、产物体积及最终登机牌效果。">
 </p>
 
 **shotium** 将 Blink 排版引擎、Skia 图形库以及 Chromium 的 `//net` 网络栈深度精简并编译为一个约 22 MB 的 npm 包。它严格遵循 Chromium 标准排版静态 HTML 和 CSS，通过 CPU 进行光栅化并在当前宿主进程内直接返回 PNG、JPEG 或 WebP 格式的图像数据。
