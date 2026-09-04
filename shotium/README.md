@@ -139,7 +139,8 @@ await shotium.stop();
   - Within a single engine instance, concurrent screenshot calls are queued and rendered sequentially.
   - To achieve parallel throughput, scale horizontally across multiple worker processes.
 - **Status Reporting**:
-  - `start()` and `status()` return `{ running, cacheDir, cacheActive }`.
+  - `start()` and `status()` return `{ running, cacheDir, cacheActive, enginePath }`.
+  - `enginePath` identifies the directory the loaded native engine came from and is `null` before the first engine load.
   - If `cacheDir` cannot be opened, `cacheActive` is set to `false`, and the engine operates safely in cacheless mode.
 
 ---
@@ -296,6 +297,12 @@ which becomes the tile's 1-based index: `page-{n}.png` writes `page-1.png`,
 `page-2.png`, and so on. `daemon.screenshotTiles()` and
 `client.screenshotTiles()` take the same options.
 
+`path` is also the bounded-memory mode: the engine writes each encoded tile as
+it finishes, so image-data memory stays near the current tile. Without `path`,
+the promise returns every tile as a `Buffer`; completed buffers therefore stay
+in memory until the promise resolves, and their total encoded size grows with
+the captured height.
+
 #### Very tall pages
 
 `fullPage` renders a document of any height into one image, up to what the
@@ -369,6 +376,8 @@ interface StartResult {
   running: boolean;
   /** Active cache directory path (null when caching is disabled) */
   cacheDir: string | null;
+  /** Directory the loaded native engine came from (null before the first load) */
+  enginePath: string | null;
   /** Whether cache directory was opened successfully and is active */
   cacheActive: boolean;
 }
@@ -456,6 +465,8 @@ interface DaemonStatus {
   served: number;           // Total completed requests
   idleTimeoutMs: number;    // Configured idle timeout
   version: string;          // Engine version
+  protocolVersion: number;  // Local daemon wire protocol generation
+  capabilities: ('screenshot' | 'tiles')[]; // Supported operations
 }
 ```
 

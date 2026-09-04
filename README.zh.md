@@ -280,7 +280,7 @@ await shotium.stop();
 - **`start()` 与 `stop()`**：`stop()` 会排空当前任务队列、标记 `running: false` 并释放工作集内存；之后再次调用 `start()` 可快速重新激活引擎，并完整保留已预热的磁盘缓存。
 - **配置固定原则**：引擎启动参数在首次调用 `start()` 时固化，后续使用不兼容配置调用 `start()` 将明确抛出异常。
 - **串行队列**：并发调用 `screenshot()` 时内部自动排队并按序渲染；如需提升并行能力，请通过 Node.js Worker 进程横向扩展。
-- **状态感知**：`start()` 与 `status()` 均返回 `{ running, cacheDir, cacheActive }`。若缓存目录因权限问题无法读写，`cacheActive` 将为 `false`，引擎自动降级为无缓存模式平稳运行。
+- **状态感知**：`start()` 与 `status()` 均返回 `{ running, cacheDir, cacheActive, enginePath }`。`enginePath` 标识当前已加载原生引擎所在的目录，首次加载前为 `null`。若缓存目录因权限问题无法读写，`cacheActive` 将为 `false`，引擎自动降级为无缓存模式平稳运行。
 
 ### 2. 常驻守护进程
 
@@ -454,6 +454,8 @@ interface StartResult {
   running: boolean;
   /** 当前生效的磁盘缓存目录路径；禁用时为 null */
   cacheDir: string | null;
+  /** 当前已加载原生引擎所在的目录；首次加载前为 null */
+  enginePath: string | null;
   /** 磁盘缓存目录是否已成功初始化并激活使用 */
   cacheActive: boolean;
 }
@@ -539,6 +541,8 @@ interface DaemonStatus {
   served: number;           // 启动以来累计完成的渲染请求数
   idleTimeoutMs: number;    // 配置的空闲自动退出超时时间
   version: string;          // 底层渲染引擎版本号
+  protocolVersion: number;  // 本地守护进程通信协议版本
+  capabilities: ('screenshot' | 'tiles')[]; // 支持的操作
 }
 ```
 
@@ -653,7 +657,7 @@ shot_buffer_free(stats);
 shot_engine_destroy(engine);
 ```
 
-> **ABI 兼容性校验**：当前 ABI 版本为 **2**（自 0.3 版本起新增 `out_stats` 参数及 `shot_engine_status`、`shot_cache_list`、`shot_cache_clear` 接口）。调用动态库前可通过 `shot_abi_version()` 比对头文件中的 `SHOT_ABI_VERSION` 确保兼容性。
+> **ABI 兼容性校验**：当前 ABI 版本为 **3**。ABI 3 新增 `shot_engine_capture_tiles()`，以及用于访问和管理所有权的 `shot_tile_list_count()`、`shot_tile_list_region()`、`shot_tile_list_path()`、`shot_tile_list_take_image()` 和 `shot_tile_list_free()` 接口。调用动态库前可通过 `shot_abi_version()` 比对头文件中的 `SHOT_ABI_VERSION` 确保兼容性。
 
 ---
 
@@ -688,6 +692,10 @@ gclient sync --nohooks --no-history
 gclient runhooks
 
 cd src
+
+# DEPS 管理的 Skia 同步完成后，应用 Shot 所需补丁
+git -C third_party/skia apply --verbose ../../patches/third_party_skia_parallel_blur.patch
+git -C third_party/skia apply --verbose ../../patches/third_party_skia_incremental_row_limit.patch
 
 # 重新打包精简版 ICU 数据文件
 python3 tools/shot/icu_repack.py   third_party/icu/cast/icudtl.dat   third_party/icu/shot/icudtl.dat --preset shot

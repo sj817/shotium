@@ -258,7 +258,7 @@ await shotium.stop();
 - **`start()` & `stop()`**: `stop()` drains in-flight requests, sets `running: false`, and trims the working set. A subsequent `start()` reactivates the engine immediately while preserving warm disk cache entries.
 - **Immutable Configuration**: Startup options are locked on the first `start()` invocation; calling `start()` with conflicting options throws an explicit error.
 - **Serial Queue**: Concurrent `screenshot()` calls are queued and processed sequentially. Scale across worker processes for parallel rendering.
-- **Cache Status Awareness**: `start()` and `status()` return `{ running, cacheDir, cacheActive }`. If the cache directory is inaccessible, `cacheActive` is `false` and the engine gracefully continues in no-cache mode.
+- **Status Awareness**: `start()` and `status()` return `{ running, cacheDir, cacheActive, enginePath }`. `enginePath` identifies the directory the loaded native engine came from and is `null` before the first engine load. If the cache directory is inaccessible, `cacheActive` is `false` and the engine gracefully continues in no-cache mode.
 
 ### 2. Resident Daemon
 
@@ -432,6 +432,8 @@ interface StartResult {
   running: boolean;
   /** Active cache directory path; null when caching is disabled */
   cacheDir: string | null;
+  /** Directory the loaded native engine came from; null before the first load */
+  enginePath: string | null;
   /** Whether the cache directory is actively in use */
   cacheActive: boolean;
 }
@@ -517,6 +519,8 @@ interface DaemonStatus {
   served: number;           // Total requests completed since startup
   idleTimeoutMs: number;    // Configured idle timeout duration
   version: string;          // Core engine version string
+  protocolVersion: number;  // Local daemon wire protocol generation
+  capabilities: ('screenshot' | 'tiles')[]; // Supported operations
 }
 ```
 
@@ -631,7 +635,7 @@ shot_buffer_free(stats);
 shot_engine_destroy(engine);
 ```
 
-> **ABI Versioning**: Current ABI version is **2** (introduced in 0.3 with `out_stats`, `shot_engine_status`, `shot_cache_list`, and `shot_cache_clear`). Call `shot_abi_version()` to verify compatibility against `SHOT_ABI_VERSION`.
+> **ABI Versioning**: Current ABI version is **3**. ABI 3 adds `shot_engine_capture_tiles()` plus the `shot_tile_list_count()`, `shot_tile_list_region()`, `shot_tile_list_path()`, `shot_tile_list_take_image()`, and `shot_tile_list_free()` access and ownership API. Call `shot_abi_version()` to verify compatibility against `SHOT_ABI_VERSION`.
 
 ---
 
@@ -666,6 +670,10 @@ gclient sync --nohooks --no-history
 gclient runhooks
 
 cd src
+
+# Apply Shot's Skia changes after the DEPS-managed checkout is synced
+git -C third_party/skia apply --verbose ../../patches/third_party_skia_parallel_blur.patch
+git -C third_party/skia apply --verbose ../../patches/third_party_skia_incremental_row_limit.patch
 
 # Repack stripped ICU data tables
 python3 tools/shot/icu_repack.py   third_party/icu/cast/icudtl.dat   third_party/icu/shot/icudtl.dat --preset shot
