@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <deque>
 #include <map>
+#include <optional>
 #include <set>
 #include <string>
 #include <utility>
@@ -431,6 +432,18 @@ void ShotFetch::StartNow(const GURL& url,
   request_->Start();
 }
 
+void ShotFetch::FollowDeferredRedirect() {
+  if (!holds_slot_) {
+    // Reached from the destination host's queue. As with StartNow(), the
+    // release loop admits one closure at a time and observes this increment
+    // before deciding whether another one fits.
+    ++InFlightPerHost()[host_];
+    holds_slot_ = true;
+  }
+  request_->FollowDeferredRedirect(/*removed_headers=*/std::nullopt,
+                                   /*modified_headers=*/std::nullopt);
+}
+
 // Gives back this request's place among its host's and starts the next one
 // waiting for it. Called once, whether the request succeeded, failed or was
 // abandoned.
@@ -520,6 +533,31 @@ void ShotFetch::OnReceivedRedirect(net::URLRequest* request,
   }
   VLOG(1) << "shot: redirect " << redirects_ << " -> "
           << redirect_info.new_url.spec();
+
+  const std::string destination_host(redirect_info.new_url.host());
+  if (destination_host == host_) {
+    return;
+  }
+
+  // A redirect is a new request for the purpose of the warm-cache limit. Give
+  // the source host its place back, then take (or wait for) one at the host
+  // that will actually serve the response. Without this transfer, many source
+  // hosts can all redirect into one cache-hot destination and bypass its cap.
+  ReleaseHostSlot();
+  host_ = destination_host;
+  int& running = InFlightPerHost()[host_];
+  if (MaxPerHost() > 0 && running >= MaxPerHost()) {
+    *defer_redirect = true;
+    QueuedPerHost()[host_].push_back(base::BindOnce(
+        &ShotFetch::FollowDeferredRedirect, weak_factory_.GetWeakPtr()));
+    return;
+  }
+
+  // Leave the redirect undeferred: URLRequest follows it after this callback
+  // returns. Its place at the destination is already reserved, so another
+  // redirect arriving in the meantime sees an accurate count.
+  ++running;
+  holds_slot_ = true;
 }
 
 void ShotFetch::OnResponseStarted(net::URLRequest* request, int net_error) {

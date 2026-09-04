@@ -135,6 +135,10 @@ class ShotFetch : public net::URLRequest::Delegate {
   void StartNow(const GURL& url,
                 const net::HttpRequestHeaders& extra_headers,
                 const url::Origin& initiator);
+  // Continues a redirect that waited for a place among the destination
+  // host's requests. The queued closure is weak, so abandoning the fetch while
+  // it waits cancels this as well as the URLRequest.
+  void FollowDeferredRedirect();
   void ReleaseHostSlot();
   // Reads the body, once there is room for it. OnResponseStarted calls this
   // directly when there is and queues it when there is not.

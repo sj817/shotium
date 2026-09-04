@@ -62,6 +62,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
     counts = None
     lock = threading.Lock()
     root = None
+    active_redirect_targets = 0
+    peak_redirect_targets = 0
 
     def log_message(self, *args):
         pass  # The counters are the log.
@@ -72,6 +74,42 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
     def do_GET(self):
         self._count()
+
+        if self.path.startswith("/limit-source/"):
+            # Both 127.0.0.1 and localhost source URLs end here. They converge
+            # on localhost so that the worker has to transfer a per-host slot
+            # when the source was 127.0.0.1.
+            suffix = self.path.removeprefix("/limit-source/")
+            target = (f"http://localhost:{self.server.server_address[1]}"
+                      f"/limit-target/{suffix}")
+            self.send_response(302)
+            self.send_header("Location", target)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+
+        if self.path.startswith("/limit-target/"):
+            with Handler.lock:
+                Handler.active_redirect_targets += 1
+                Handler.peak_redirect_targets = max(
+                    Handler.peak_redirect_targets,
+                    Handler.active_redirect_targets)
+            try:
+                # Long enough for another redirect to overlap if it bypassed
+                # the destination host's slot.
+                time.sleep(0.2)
+                with open(os.path.join(Handler.root, "pic.png"), "rb") as f:
+                    body = f.read()
+                self.send_response(200)
+                self.send_header("Content-Type", "image/png")
+                self.send_header("Content-Length", str(len(body)))
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                self.wfile.write(body)
+            finally:
+                with Handler.lock:
+                    Handler.active_redirect_targets -= 1
+            return
 
         if self.path == "/r/pic.png":
             self.send_response(302)
@@ -145,10 +183,11 @@ def recv(proc):
 
 
 class Worker:
-    def __init__(self, exe, args):
+    def __init__(self, exe, args, env=None):
         self.proc = subprocess.Popen([exe, "--serve", *args],
                                      stdin=subprocess.PIPE,
-                                     stdout=subprocess.PIPE)
+                                     stdout=subprocess.PIPE,
+                                     env=env)
 
     def ask(self, request):
         send(self.proc, request)
@@ -286,7 +325,39 @@ def main():
             "and the late stylesheet is in the picture")
         worker.close()
 
-        print("\n== 4. https, against a real server ==")
+        print("\n== 4. redirects keep the destination host's concurrency limit ==")
+        # Two source hostnames converge on localhost. With a limit of one, the
+        # 127.0.0.1 redirect has to give back its old slot and queue behind any
+        # localhost request already serving its final response.
+        with open(os.path.join(root, "redirect-limit.html"), "w",
+                  encoding="utf-8") as f:
+            port = server.server_address[1]
+            images = []
+            for i in range(8):
+                source = "127.0.0.1" if i % 2 == 0 else "localhost"
+                images.append(
+                    f'<img src="http://{source}:{port}/limit-source/{i}.png" '
+                    'width="64" height="64">')
+            f.write("<!doctype html><body>" + "".join(images) + "</body>")
+        Handler.active_redirect_targets = 0
+        Handler.peak_redirect_targets = 0
+        limited_env = dict(os.environ)
+        limited_env["SHOT_FETCH_CONCURRENCY"] = "1"
+        worker = Worker(exe, [], env=limited_env)
+        header, payload = worker.ask({
+            "file": f"{base}/redirect-limit.html",
+            "pageGotoParams": {"waitUntil": "networkidle"},
+            **viewport,
+        })
+        checks.check(header.get("ok") is True,
+                     "the converging redirects render",
+                     header.get("error", ""))
+        checks.check(Handler.peak_redirect_targets == 1,
+                     "only one final response ran at its host",
+                     f"peak {Handler.peak_redirect_targets}")
+        worker.close()
+
+        print("\n== 5. https, against a real server ==")
         worker = Worker(exe, ["--cache-dir=" + cache])
         header, payload = worker.ask({
             "file": args.https_probe,
