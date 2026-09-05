@@ -889,9 +889,6 @@ deps = {
       },
     ],
   },
-    Var('chromium_git') +
-    '/external/github.com/llvm/llvm-project/clang/tools/clang-format.git@' +
-    Var('clang_format_revision'),
   'src/buildtools/linux64': {
     'packages': [
       {
@@ -940,26 +937,33 @@ deps = {
     '/external/github.com/llvm/llvm-project/libunwind.git' + '@' +
     Var('libunwind_revision'),
   'src/third_party/llvm-libc/src':
+    Var('chromium_git') +
+    '/external/github.com/llvm/llvm-project/libc.git' + '@' +
+    Var('llvm_libc_revision'),
 
   'src/net/third_party/quiche/src':
+    Var('quiche_git') + '/quiche.git' + '@' +  Var('quiche_revision'),
 
   'src/third_party/angle':
-     Var('chromium_git') + '/external/github.com/aengelke/fadec.git' + '@' + 'c9f78f532b9004de278489019ab2c6c28ae9746e',
+    Var('chromium_git') + '/angle/angle.git' + '@' +  Var('angle_revision'),
 
   'src/third_party/highway/src':
+    Var('chromium_git') + '/external/github.com/google/highway.git' + '@' + Var('highway_revision'),
 
   'src/third_party/google_benchmark/src':
+    Var('chromium_git') + '/external/github.com/google/benchmark.git' + '@' + '8abf1e701fbd88c8170f48fe0558247e2e5f8e7d',
 
   'src/third_party/boringssl/src':
-    Var('chromium_git') + '/cast_core/public' + '@' + 'f5ee589bdaea60418f670fa176be15ccb9a34942',
+    Var('boringssl_git') + '/boringssl.git' + '@' +  Var('boringssl_revision'),
 
   'src/third_party/catapult':
     Var('chromium_git') + '/catapult.git' + '@' + Var('catapult_revision'),
 
   'src/third_party/ced/src':
+    Var('chromium_git') + '/external/github.com/google/compact_enc_det.git' + '@' + 'd127078cedef9c6642cbe592dacdd2292b50bb19',
 
   'src/third_party/depot_tools':
-    Var('chromium_git') + '/external/github.com/google/flatbuffers.git' + '@' + 'a86afae9399bbe631d1ea0783f8816e780e236cc',
+    Var('chromium_git') + '/chromium/tools/depot_tools.git' + '@' + '13febbee9ece9e03df923f69d540afc63c6db93e',
 
   'src/third_party/fontconfig/src': {
       'url': Var('chromium_git') + '/external/fontconfig.git' + '@' + 'b707078e6e8bb6fd115e2080e69b3194c05e4f1c',
@@ -971,11 +975,13 @@ deps = {
 
 
   'src/third_party/harfbuzz/src':
+    Var('chromium_git') + '/external/github.com/harfbuzz/harfbuzz.git' + '@' + Var('harfbuzz_revision'),
 
   'src/third_party/emoji-segmenter/src':
-    Var('chromium_git') + '/external/github.com/project-oak/oak.git' + '@' + 'e6c31df79a45e4ad6e25a85872622822c48d7e66',
+    Var('chromium_git') + '/external/github.com/google/emoji-segmenter.git' + '@' + Var('emoji_segmenter_revision'),
 
   'src/third_party/ots/src':
+    Var('chromium_git') + '/external/github.com/khaledhosny/ots.git' + '@' + Var('ots_revision'),
 
   'src/third_party/googletest/src':
     Var('chromium_git') + '/external/github.com/google/googletest.git' + '@' + Var('googletest_revision'),
@@ -998,8 +1004,10 @@ deps = {
   },
 
   'src/third_party/icu':
+    Var('chromium_git') + '/chromium/deps/icu.git' + '@' + '8cc91d9b6ab9991802fd208ee03a69714fd0251c',
 
   'src/third_party/leveldatabase/src':
+    Var('chromium_git') + '/external/leveldb.git' + '@' + '7ee830d02b623e8ffe0b95d59a74db1e58da04c5',
 
   # Userspace interface to kernel DRM services.
   'src/third_party/libdrm/src': {
@@ -1019,6 +1027,7 @@ deps = {
     Var('chromium_git') + '/external/github.com/libexpat/libexpat.git' + '@' + Var('libexpat_revision'),
 
   'src/third_party/libjpeg_turbo':
+    Var('chromium_git') + '/chromium/deps/libjpeg_turbo.git' + '@' + '640f254ad0fa03f6b1f29f89b7dd9366f2f6e533',
 
 
 
@@ -1062,23 +1071,24 @@ deps = {
   # base/location.h, and base/trace_event is implemented on top of perfetto.
   # See docs/cut-progress.md.
   'src/third_party/perfetto':
-    Var('chromium_git') + '/external/github.com/GoogleChromeLabs/pywebsocket3.git' + '@' + '284690c2a68ca1d4fc766807e00b354afd695897',
+    Var('chromium_git') + '/external/github.com/google/perfetto.git' + '@' + '71b477b75d53576fa40f8ba19897a50c83255e03',
 
 
   'src/third_party/re2/src':
+    Var('chromium_git') + '/external/github.com/google/re2.git' + '@' + '972a15cedd008d846f1a39b2e88ce48d7f166cbd',
 
   'src/third_party/skia':
-    Var('chromium_git') + '/external/smhasher.git' + '@' + '0ff96f7835817a27d0487325b6c16033e2992eb5',
+    Var('skia_git') + '/skia.git' + '@' +  Var('skia_revision'),
 
   'src/third_party/snappy/src':
     Var('chromium_git') + '/external/github.com/google/snappy.git' + '@' + '32ded457c0b1fe78ceb8397632c416568d6714a0',
 
   'src/third_party/sqlite/src':
+    Var('chromium_git') + '/chromium/deps/sqlite.git' + '@' + 'ba8c54c83337618a9f15dd368a267e46b672fc84',
   'src/third_party/spirv-headers/src': '{chromium_git}/external/github.com/KhronosGroup/SPIRV-Headers@0d25db97cb9b8f725e4c95e4553001710e7fc39d',
   'src/third_party/spirv-tools/src': '{chromium_git}/external/github.com/KhronosGroup/SPIRV-Tools@e39e5c5838bc4b4162c349f2a2e5f163efe5432f',
   'src/third_party/vulkan-headers/src': '{chromium_git}/external/github.com/KhronosGroup/Vulkan-Headers@0b7f383797fa7be53ae28213e001ae60668ee511',
   'src/third_party/vulkan-loader/src': '{chromium_git}/external/github.com/KhronosGroup/Vulkan-Loader@83ddfc5ec5ca64ddd1055cefa1559c568101075a',
-    Var('chromium_git') + '/external/khronosgroup/webgl.git' + '@' + '064aaf18207438d4f6dd10c98b02b25778257b7f',
 
 
   # Wuffs' canonical repository is at github.com/google/wuffs, but we use
@@ -1090,8 +1100,10 @@ deps = {
   # listed in the https://crrev.com/c/3086053 commit message. One reason is
   # that the w-m-r-c subset is much smaller and changes much less frequently.
   'src/third_party/wuffs/src':
+    Var('skia_git') + '/external/github.com/google/wuffs-mirror-release-c.git' + '@' +  Var('wuffs_revision'),
 
   'src/third_party/zstd/src':
+    Var('chromium_git') + '/external/github.com/facebook/zstd.git' + '@' + '5c7b7bad26808e6b40ac3b3d0075466e27738a9d',
 
 }
 

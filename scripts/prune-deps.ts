@@ -110,6 +110,27 @@ interface Entry {
 // starts at a line `isStart` recognises and ends on the first line after which
 // the bracket depth is back to zero. Comment and blank lines attach to the
 // entry that follows them.
+// DEPS is Python. The first python on PATH (depot_tools carries one on CI)
+// is the cheapest syntax check there is; without any python the check is
+// skipped with a warning rather than failing the prune.
+async function parsesAsPython(file: string): Promise<boolean> {
+  for (const python of ['python3', 'python']) {
+    const r = await execa(python, ['-c', 'import ast, sys; ast.parse(open(sys.argv[1], encoding="utf-8").read())', file], {reject: false});
+    if (r.failed && (r as {code?: string}).code === 'ENOENT') continue;
+    if (r.exitCode !== 0) console.log(pc.red(r.stderr.trim().split('\n').slice(-3).join('\n')));
+    return r.exitCode === 0;
+  }
+  console.log(pc.yellow('no python on PATH; DEPS syntax not checked'));
+  return true;
+}
+
+// Depth alone is not enough: a value written as a string concatenation
+// (`'src/x':\n  Var('git') +\n  '/x.git@' + Var('rev'),`) never opens a
+// bracket, so the entry only ends on the line that ends with the comma.
+function endsEntry(line: string): boolean {
+  return /,\s*$/.test(line.replace(/\s+#[^'"]*$/, ''));
+}
+
 function splitEntries(body: string[], isStart: (line: string) => string | null): {entries: Entry[]; trailing: string[]} {
   const entries: Entry[] = [];
   let pending: string[] = [];
@@ -119,7 +140,7 @@ function splitEntries(body: string[], isStart: (line: string) => string | null):
     if (current) {
       current.lines.push(line);
       depth += depthDelta(line);
-      if (depth <= 0) {
+      if (depth <= 0 && endsEntry(line)) {
         entries.push(current);
         current = null;
         depth = 0;
@@ -134,7 +155,7 @@ function splitEntries(body: string[], isStart: (line: string) => string | null):
     current = {key, lines: [...pending, line]};
     pending = [];
     depth = depthDelta(line);
-    if (depth <= 0) {
+    if (depth <= 0 && endsEntry(line)) {
       entries.push(current);
       current = null;
       depth = 0;
@@ -269,6 +290,12 @@ async function main(inputsArgs: string[], keepArg: string | undefined, dryRun: b
     return 0;
   }
   await writeFile(depsFile, lines.join(eol));
+  // A stray line from a dropped entry is a syntax error that gclient reports
+  // only at sync time, on every platform at once. Parse the result now.
+  if (!(await parsesAsPython(depsFile))) {
+    console.log(pc.red(`${depsFile} does not parse as Python after the rewrite; not touching .gitmodules or the index`));
+    return 1;
+  }
   await writeFile(modulesFile, keptSections.map((s) => s.join('\n')).join('\n'));
   if (staleGitlinks.length > 0) {
     // --cached: the index entry goes, whatever is on disk stays.
