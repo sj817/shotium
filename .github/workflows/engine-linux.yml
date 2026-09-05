@@ -283,6 +283,14 @@ jobs:
         working-directory: src
         run: rm -f out/Shot/shotium out/Shot/libshotium.so
 
+      # A restored build directory can hold a depfile that names a file the
+      # tree no longer has; ninja refuses to start on it ("missing and no
+      # known rule to make it"). Dropping the depfile makes the action rerun.
+      - name: drop depfiles that name deleted files
+        if: ${{ github.event.inputs.mode == 'build' }}
+        working-directory: src
+        run: pnpm depfiles:prune out/Shot
+
       - name: ninja
         if: ${{ github.event.inputs.mode == 'build' }}
         working-directory: src

@@ -58,6 +58,8 @@ import {execa} from 'execa';
 import pc from 'picocolors';
 import {glob} from 'tinyglobby';
 
+import {parseDepfile} from './lib/depfile.ts';
+
 const root = path.resolve(import.meta.dirname, '..');
 const resolve = (p: string) => path.resolve(root, p);
 
@@ -125,6 +127,24 @@ async function exportGraph(buildDirArg: string, outArg: string): Promise<number>
   for (const m of dot.stdout.matchAll(/label="([^"]*)"/g)) nodes.add(m[1].replace(/\\\\/g, '/'));
   await writeFile(path.join(out, 'graph.txt'), [...nodes].sort().join('\n') + '\n');
 
+  // Depfiles: what an action read while it ran, which is the only record of
+  // the files grit inlines into a .pak (png, css, json, the .xtb
+  // translations). Only the depfiles of edges the graph reaches count; a
+  // warm directory also holds depfiles of edges that no longer exist. One is
+  // skipped on purpose: gen/tools/gritsettings/default_resource_ids.d lists
+  // every .grd in resource_ids.spec that happened to exist, and the allocator
+  // skips a missing one (grit/tool/update_resource_ids/reader.py), so those
+  // files are not inputs in any sense that matters.
+  const depfileDeps = new Set<string>();
+  for (const file of await glob('**/*.d', {cwd: buildDir, absolute: true})) {
+    const rel = path.relative(buildDir, file).replace(/\\/g, '/');
+    if (rel === 'gen/tools/gritsettings/default_resource_ids.d') continue;
+    const {target, deps} = parseDepfile(await readFile(file, 'utf8'));
+    if (!target || !nodes.has(target)) continue;
+    for (const dep of deps) depfileDeps.add(dep);
+  }
+  await writeFile(path.join(out, 'depfiles.txt'), [...depfileDeps].sort().join('\n') + '\n');
+
   // The jumbo TUs: gen/<dir>/<target>_shot_jumbo_N.cc, each a list of
   // #include "../../real/source.cc".
   const jumbo = await glob('gen/**/*_shot_jumbo_*.cc', {cwd: buildDir, absolute: true});
@@ -174,6 +194,7 @@ async function readRecords(dir: string): Promise<Set<string>> {
 
   for (const line of (await text('inputs.txt')).split(/\r?\n/)) add(line);
   for (const line of (await text('graph.txt')).split(/\r?\n/)) add(line);
+  for (const line of (await text('depfiles.txt')).split(/\r?\n/)) add(line);
   for (const line of (await text('jumbo.txt')).split(/\r?\n/)) add(line);
   // deps.txt: "obj/x.obj: #deps N, ..." header lines, then one indented path
   // per line.
@@ -210,7 +231,11 @@ const whitelist = [
   '.clang-format', '.rustfmt.toml',
   // build/compute_build_timestamp.py open()s chrome/VERSION from inside an
   // exec_script, which no graph records.
-  'chrome/VERSION', '.gitattributes', '.gitignore', '.gitmodules', '.gn', '.vpython3',
+  'chrome/VERSION',
+  // build/win/set_appcontainer_acls.py appends testing/scripts to sys.path and
+  // imports common, which imports test_env (and xvfb on Linux) from testing/;
+  // an import is not an input either.
+  'testing/scripts/common.py', 'testing/test_env.py', 'testing/xvfb.py', '.gitattributes', '.gitignore', '.gitmodules', '.gn', '.vpython3',
   'AGENTS.md', 'AUTHORS', 'BUILD.gn', 'CLAUDE.md', 'DEPS', 'LICENSE', 'README.md', 'README.zh.md',
   'package.json',
   '.claude/', '.github/', 'apps/', 'benchmark-results/', 'bootstrap/', 'build_overrides/',

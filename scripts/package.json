@@ -11,7 +11,8 @@
     "link-skills": "tsx link-agent-skills.ts",
     "check:types": "tsc --noEmit",
     "trim-tree": "tsx trim-tree.ts",
-    "prune-deps": "tsx prune-deps.ts"
+    "prune-deps": "tsx prune-deps.ts",
+    "prune-stale-depfiles": "tsx prune-stale-depfiles.ts"
   },
   "dependencies": {
     "cac": "7.0.0",

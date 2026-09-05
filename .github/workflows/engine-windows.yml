@@ -330,6 +330,14 @@ jobs:
             if (Test-Path $stale) { Remove-Item -Force $stale }
           }
 
+      # A restored build directory can hold a depfile that names a file the
+      # tree no longer has; ninja refuses to start on it ("missing and no
+      # known rule to make it"). Dropping the depfile makes the action rerun.
+      - name: drop depfiles that name deleted files
+        shell: pwsh
+        working-directory: src
+        run: pnpm depfiles:prune out/Shot
+
       - name: ninja
         shell: pwsh
         working-directory: src

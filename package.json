@@ -27,6 +27,7 @@
     "docs": "pnpm run docs:assets && pnpm run docs:demo",
     "trim-tree": "pnpm -C scripts trim-tree",
     "graph:export": "pnpm -C scripts trim-tree export",
-    "prune-deps": "pnpm -C scripts prune-deps"
+    "prune-deps": "pnpm -C scripts prune-deps",
+    "depfiles:prune": "pnpm -C scripts prune-stale-depfiles"
   }
 }
