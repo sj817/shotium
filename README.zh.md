@@ -709,12 +709,6 @@ gn gen out/Shot
 ninja -C out/Shot shot
 ```
 
-如需进行 PGO（Profile-Guided Optimization，性能引导优化）构建，可运行辅助脚本执行插桩编译、语料训练、Profile 合并与最终优化构建：
-
-```bash
-python3 tools/shot/pgo.py --out out/ShotPgo --jobs 12
-```
-
 ### 测试套件
 
 ```bash
