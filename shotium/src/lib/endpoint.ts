@@ -2,6 +2,8 @@ import crypto from 'node:crypto';
 import os from 'node:os';
 import path from 'node:path';
 
+import {DAEMON_PROTOCOL_VERSION} from './protocol.js';
+
 // What endpointFor() needs to know: a resolved configuration, plus the two
 // ways of overriding the address it would derive from one.
 export interface EndpointOptions {
@@ -14,10 +16,11 @@ export interface EndpointOptions {
 
 // Where a daemon listens, derived from what it was asked to be.
 //
-// The address is a hash of the configuration -- cache root, user agent,
-// resource directory -- rather than a fixed name, because attaching to
-// whatever daemon happens to be up would mean rendering with someone else's
-// settings. Two configurations are two daemons; the same configuration, from
+// The address is a hash of the wire generation and configuration -- cache
+// root, user agent, resource directory -- rather than a fixed name, because
+// attaching to whatever daemon happens to be up would mean either speaking an
+// incompatible protocol or rendering with someone else's settings. Two
+// configurations are two daemons; the same configuration and protocol, from
 // any process, is one.
 //
 // Every field of EndpointOptions is optional, so nothing here fails to compile
@@ -28,14 +31,15 @@ export interface EndpointOptions {
 // what the engine renders, it belongs in the array below.
 //
 // A caller who wants a daemon by name instead of by configuration passes
-// `name`, which replaces the hash. That is the escape hatch for a service that
-// starts its daemon deliberately and wants clients to find it without
-// repeating the configuration.
+// `name`, which replaces the configuration hash but not the wire generation.
+// That is the escape hatch for a service that starts its daemon deliberately
+// and wants clients to find it without repeating the configuration.
 function endpointKey(options: EndpointOptions): string {
   if (options.name) {
-    return String(options.name);
+    return `${String(options.name)}-v${DAEMON_PROTOCOL_VERSION}`;
   }
   const identity = JSON.stringify([
+    DAEMON_PROTOCOL_VERSION,
     options.cacheDir === null || options.cacheDir === undefined ?
         null :
         path.resolve(options.cacheDir),

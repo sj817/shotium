@@ -11,10 +11,12 @@
 #include "base/files/file_util.h"
 #include "base/functional/bind.h"
 #include "base/functional/callback_helpers.h"
+#include "base/functional/function_ref.h"
 #include "base/logging.h"
 #include "base/run_loop.h"
 #include "base/strings/strcat.h"
 #include "base/strings/string_number_conversions.h"
+#include "base/strings/string_util.h"
 #include "base/task/single_thread_task_runner.h"
 #include "base/time/time.h"
 #include "net/base/filename_util.h"
@@ -154,6 +156,12 @@ base::expected<RenderInput, std::string> FetchDocument(
   // relatively resolves against where it actually came from.
   input.url = result.final_url;
   input.body = std::move(result.body);
+  // `result.charge` is dropped with `result` at the end of this function,
+  // while the bytes go on to the renderer. Deliberate, and the one place the
+  // budget stops following the bytes: this is the top-level document, one
+  // body, fetched before any subresource exists to be bounded against, and it
+  // is handed to blink immediately. Carrying the claim further would put the
+  // fetcher's budget in the renderer's header for a single buffer.
   input.charset = result.charset;
   // A server that sends no Content-Type gets the same treatment a browser
   // gives it for a top-level load: parse it as HTML.
@@ -170,12 +178,17 @@ base::expected<RenderInput, std::string> FetchDocument(
   return input;
 }
 
-}  // namespace
-
-base::expected<std::vector<uint8_t>, std::string> Capture(
+// Everything a capture does before and after rendering: the context, the
+// headers, the fetch of the document, the statistics on the way out. `render`
+// is the part that differs between one image and several, and it is handed
+// the document and the context to time itself against.
+base::expected<void, std::string> WithDocument(
     ShotRuntime& runtime,
     const ScreenshotRequest& request,
-    CaptureStats* out_stats) {
+    CaptureStats* out_stats,
+    base::FunctionRef<base::expected<void, std::string>(RenderInput&,
+                                                        CaptureContext&)>
+        render) {
   const base::TimeTicks started = base::TimeTicks::Now();
 
   // Up before the target is even resolved, so that a request refused for its
@@ -237,40 +250,126 @@ base::expected<std::vector<uint8_t>, std::string> Capture(
   capture.stats().http_status = input->http_status;
 
   const base::TimeTicks render_started = base::TimeTicks::Now();
-  auto image = runtime.renderer().Render(*input, request);
-  // Render() reported its own encode time into the same stats block on its way
-  // out, so what is left over here is parse, subresources, style, layout and
-  // paint -- which is what `render` is documented to be.
+  auto rendered = render(*input, capture);
+  // The renderer reported its own encode time into the same stats block on
+  // its way out, so what is left over here is parse, subresources, style,
+  // layout and paint -- which is what `render` is documented to be.
   capture.stats().render =
       (base::TimeTicks::Now() - render_started) - capture.stats().encode;
-  return image;
+  return rendered;
+}
+
+}  // namespace
+
+base::expected<CaptureResult, std::string> Capture(
+    ShotRuntime& runtime,
+    const ScreenshotRequest& request,
+    CaptureStats* out_stats) {
+  CaptureResult result;
+  auto captured = WithDocument(
+      runtime, request, out_stats,
+      [&](RenderInput& input,
+          CaptureContext&) -> base::expected<void, std::string> {
+        auto rendered = runtime.renderer().Render(input, request);
+        if (!rendered.has_value()) {
+          return base::unexpected(rendered.error());
+        }
+        result.image = std::move(rendered->bytes);
+        result.size = rendered->size;
+        result.wrote_path = !rendered->path.empty();
+        return base::ok();
+      });
+  if (!captured.has_value()) {
+    return base::unexpected(captured.error());
+  }
+  return result;
+}
+
+base::expected<std::vector<DeliveredTile>, std::string> CaptureTiles(
+    ShotRuntime& runtime,
+    const ScreenshotRequest& request,
+    CaptureStats* out_stats) {
+  if (!request.tile.has_value()) {
+    return base::unexpected("a tiles capture needs tile.height");
+  }
+  // Checked before anything is fetched: a path that would have every tile
+  // overwrite the last is a mistake worth catching in the first millisecond.
+  const bool to_path = !request.path.empty();
+  if (to_path && request.path.find("{n}") == std::string::npos) {
+    return base::unexpected(
+        "path for a tiles capture must contain {n}, which becomes each "
+        "tile's number: page-{n}.png writes page-1.png, page-2.png, ...");
+  }
+
+  std::vector<DeliveredTile> tiles;
+  auto captured = WithDocument(
+      runtime, request, out_stats,
+      [&](RenderInput& input,
+          CaptureContext&) -> base::expected<void, std::string> {
+        return runtime.renderer().RenderTiles(
+            input, request,
+            base::BindRepeating(
+                [](std::vector<DeliveredTile>* tiles, bool to_path,
+                   const std::string& path_template,
+                   EncodedTile tile) -> base::expected<void, std::string> {
+                  DeliveredTile delivered;
+                  delivered.region = tile.region;
+                  delivered.size = tile.size;
+                  if (!tile.path.empty()) {
+                    // The engine streamed the tile into the file itself.
+                    delivered.path = std::move(tile.path);
+                    tiles->push_back(std::move(delivered));
+                    return base::ok();
+                  }
+                  if (!to_path) {
+                    delivered.image = std::move(tile.bytes);
+                    tiles->push_back(std::move(delivered));
+                    return base::ok();
+                  }
+                  std::string path = path_template;
+                  base::ReplaceSubstringsAfterOffset(
+                      &path, 0, "{n}",
+                      base::NumberToString(tiles->size() + 1));
+                  if (!base::WriteFile(base::FilePath::FromUTF8Unsafe(path),
+                                       tile.bytes)) {
+                    return base::unexpected("could not write " + path);
+                  }
+                  delivered.path = std::move(path);
+                  tiles->push_back(std::move(delivered));
+                  return base::ok();
+                },
+                &tiles, to_path, request.path));
+      });
+  if (!captured.has_value()) {
+    return base::unexpected(captured.error());
+  }
+  return tiles;
 }
 
 base::expected<CaptureResult, std::string> CaptureAndDeliver(
     ShotRuntime& runtime,
     const ScreenshotRequest& request,
     CaptureStats* out_stats) {
-  auto image = Capture(runtime, request, out_stats);
-  if (!image.has_value()) {
-    return base::unexpected(image.error());
+  auto result = Capture(runtime, request, out_stats);
+  if (!result.has_value()) {
+    return base::unexpected(result.error());
   }
-
-  CaptureResult result;
-  result.size = image->size();
-  if (request.path.empty()) {
-    result.image = std::move(*image);
+  if (request.path.empty() || result->wrote_path) {
+    // Nothing named, or the engine streamed the image into the file itself.
     return result;
   }
 
-  // FromUTF8Unsafe rather than a validated conversion because the path came in
-  // as UTF-8 JSON and there is nothing to validate it against; a path that is
-  // not a path fails at the write, which is where the caller can be told about
-  // it by name.
+  // The engine handed the bytes back after all: write them. FromUTF8Unsafe
+  // rather than a validated conversion because the path came in as UTF-8 JSON
+  // and there is nothing to validate it against; a path that is not a path
+  // fails at the write, which is where the caller can be told about it by
+  // name.
   const base::FilePath path = base::FilePath::FromUTF8Unsafe(request.path);
-  if (!base::WriteFile(path, *image)) {
+  if (!base::WriteFile(path, result->image)) {
     return base::unexpected("could not write " + request.path);
   }
-  result.wrote_path = true;
+  result->image = Bytes();
+  result->wrote_path = true;
   return result;
 }
 

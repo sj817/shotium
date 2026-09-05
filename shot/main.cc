@@ -156,13 +156,37 @@ int Main(int argc, const char** argv) {
   // field and not a constant.
   request.allow_file_access = true;
 
+  if (prepared->options.tile_height > 0) {
+    request.tile = shot::Tile{prepared->options.tile_height};
+    // The engine writes the tiles itself, numbering them into the path.
+    // page.png becomes page-{n}.png unless the caller placed {n} already.
+    const base::FilePath& output = prepared->options.output_path;
+    request.path = output.AsUTF8Unsafe().find("{n}") == std::string::npos
+                       ? output.InsertBeforeExtensionASCII("-{n}")
+                             .AsUTF8Unsafe()
+                       : output.AsUTF8Unsafe();
+    auto tiles = shot::CaptureTiles(**runtime, request);
+    if (!tiles.has_value()) {
+      LOG(ERROR) << "shot: " << tiles.error();
+      return shot::kCaptureExitCode;
+    }
+    for (const shot::DeliveredTile& tile : *tiles) {
+      printf("%s\n", tile.path.c_str());
+    }
+    return shot::kSuccessExitCode;
+  }
+
+  // The engine writes the file itself, a row at a time as it encodes, so the
+  // image never has to exist in this process as a whole. The write below is
+  // the fallback for an engine that handed the bytes back instead.
+  request.path = prepared->options.output_path.AsUTF8Unsafe();
   auto image = shot::Capture(**runtime, request);
   if (!image.has_value()) {
     LOG(ERROR) << "shot: " << image.error();
     return shot::kCaptureExitCode;
   }
-
-  if (!base::WriteFile(prepared->options.output_path, image.value())) {
+  if (!image->wrote_path &&
+      !base::WriteFile(prepared->options.output_path, image->image)) {
     LOG(ERROR) << "shot: could not write "
                << prepared->options.output_path.AsUTF8Unsafe();
     return shot::kCaptureExitCode;

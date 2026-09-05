@@ -1,12 +1,14 @@
 import * as binding from './binding.js';
 import type {Engine as Handle} from './binding.js';
-import {toRequest} from './request.js';
+import {toRequest, toTilesRequest} from './request.js';
 import type {WireRequest} from './request.js';
 import type {
   CaptureStats,
   ReleaseMemoryOptions,
   ScreenshotOptions,
   ScreenshotResult,
+  ScreenshotTilesOptions,
+  ScreenshotTilesResult,
   StartOptions,
   StartResult,
 } from '../types.js';
@@ -178,7 +180,8 @@ export class Engine {
 
   /**
    * What the engine came up as: whether this lifecycle is started, which cache
-   * directory the engine has, and whether it actually got it.
+   * directory the engine has, whether it actually got it, and where the engine
+   * itself was loaded from.
    *
    * The last of those is the one worth reading. A directory that cannot be
    * created or written to -- no permission, no space, a path that is a file --
@@ -194,11 +197,16 @@ export class Engine {
    */
   status(): StartResult {
     if (!shared) {
-      return {running: false, cacheDir: null, cacheActive: false};
+      return {
+        running: false,
+        cacheDir: null,
+        cacheActive: false,
+        enginePath: binding.directory(),
+      };
     }
-    const reported =
-        JSON.parse(binding.load().status(shared)) as Omit<StartResult, 'running'>;
-    return {running: this.running, ...reported};
+    const reported = JSON.parse(binding.load().status(shared)) as
+        Omit<StartResult, 'running'|'enginePath'>;
+    return {running: this.running, ...reported, enginePath: binding.directory()};
   }
 
   /**
@@ -323,6 +331,52 @@ export class Engine {
 
     return {
       image: request.path ? null : captured.image,
+      stats: parseStats(captured.stats),
+    };
+  }
+
+  /**
+   * Renders the region in tiles. One load and layout serve every tile, and
+   * only one tile's bitmap exists at a time -- see ScreenshotTilesOptions.
+   */
+  async screenshotTiles(options: ScreenshotTilesOptions):
+      Promise<ScreenshotTilesResult> {
+    return this.captureTiles(toTilesRequest(options));
+  }
+
+  /** The same, for a request already in wire form -- the daemon's case. */
+  async captureTiles(request: WireRequest): Promise<ScreenshotTilesResult> {
+    if (!this.running) {
+      this.start();
+    }
+    const handle = shared!;
+    const native = binding.load();
+
+    // The same queue as capture(): one renderer, one capture at a time.
+    const result = this.tail.catch(() => {}).then(
+        () => native.captureTiles(handle, JSON.stringify(request)));
+    this.tail = result.catch(() => {});
+
+    let captured;
+    try {
+      captured = await result;
+    } catch (error) {
+      const withStats = error as Error&{stats?: string | CaptureStats};
+      if (typeof withStats.stats === 'string') {
+        withStats.stats = JSON.parse(withStats.stats) as CaptureStats;
+      }
+      throw error;
+    }
+
+    return {
+      tiles: captured.tiles.map((tile) => ({
+        image: request.path ? null : tile.image,
+        x: tile.x,
+        y: tile.y,
+        width: tile.width,
+        height: tile.height,
+        ...(tile.path !== undefined ? {path: tile.path} : {}),
+      })),
       stats: parseStats(captured.stats),
     };
   }

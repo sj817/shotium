@@ -192,6 +192,11 @@ void ShotURLLoader::LoadSynchronously(
   const GURL url = request->url;
 
   std::string contents;
+  // What `contents` costs against the fetch budget, for as long as this
+  // function holds them. Declared out here rather than beside the fetch so
+  // that it outlives the copy into the SharedBuffer below: the bytes are
+  // resident until then and the budget should say so.
+  FetchCharge charge;
   if (url.SchemeIsFile()) {
     if (!ReadFileURL(url, response, contents, error)) {
       return;
@@ -221,6 +226,7 @@ void ShotURLLoader::LoadSynchronously(
     }
     response = BuildHttpResponse(result);
     contents = std::move(result.body);
+    charge = std::move(result.charge);
   } else {
     // data: never reaches a loader -- blink decodes it inline -- so anything
     // that gets here and is neither a file nor a network URL is a scheme this
@@ -282,7 +288,7 @@ void ShotURLLoader::DeliverFile(const GURL& url,
     NotifyCaptureProgress();
     return;
   }
-  DeliverBody(client, response, std::move(contents));
+  DeliverBody(client, response, std::move(contents), FetchCharge());
 }
 
 void ShotURLLoader::OnFetched(blink::URLLoaderClient* client,
@@ -300,12 +306,14 @@ void ShotURLLoader::OnFetched(blink::URLLoaderClient* client,
   LOG(INFO) << "shot: load ok " << result.final_url.spec() << " ("
             << result.body.size() << " bytes, " << result.mime_type
             << (result.was_cached ? ", from cache" : "") << ")";
-  DeliverBody(client, BuildHttpResponse(result), std::move(result.body));
+  DeliverBody(client, BuildHttpResponse(result), std::move(result.body),
+              std::move(result.charge));
 }
 
 void ShotURLLoader::DeliverBody(blink::URLLoaderClient* client,
                                 const blink::WebURLResponse& response,
-                                std::string contents) {
+                                std::string contents,
+                                FetchCharge charge) {
   // The body goes down a mojo data pipe, which is how the network service
   // delivers one. That is not ceremony: ResourceLoader::DidReceiveResponse only
   // takes the streaming path -- the one that hands its Resource
@@ -326,6 +334,7 @@ void ShotURLLoader::DeliverBody(blink::URLLoaderClient* client,
   }
 
   body_ = std::move(contents);
+  body_charge_ = std::move(charge);
   const int64_t size = static_cast<int64_t>(body_.size());
   client->DidReceiveResponse(response, std::move(consumer),
                              /*cached_metadata=*/std::nullopt);
@@ -351,6 +360,15 @@ void ShotURLLoader::OnBodyWritten(blink::URLLoaderClient* client,
   // Dropping the producer closes the pipe, which is how the consumer learns
   // the body is complete. DidFinishLoading has to come after that, not before.
   body_producer_.reset();
+  // And with the write over, the copy this loader was holding for it. blink
+  // has its own by now; on a page of photographs, keeping ours until the
+  // loader happened to be destroyed meant every image in flight was resident
+  // twice.
+  body_.clear();
+  body_.shrink_to_fit();
+  // And the budget those bytes were counted against, which is only free
+  // now that they are gone.
+  body_charge_.Release();
   if (result != MOJO_RESULT_OK) {
     LOG(ERROR) << "shot: writing the response body failed (mojo result "
                << result << ")";

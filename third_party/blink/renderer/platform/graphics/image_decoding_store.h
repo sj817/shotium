@@ -240,7 +240,8 @@ class PLATFORM_EXPORT ImageDecodingStore final {
                      cc::PaintImage::GeneratorClientId client_id,
                      const ImageDecoder*);
 
-  // Remove all cache entries indexed by ImageFrameGenerator.
+  // Remove cache entries indexed by ImageFrameGenerator. Entries currently
+  // in use remain cached until their user releases or removes them.
   void RemoveCacheIndexedByGenerator(const ImageFrameGenerator*);
 
   void Clear();
@@ -270,8 +271,8 @@ class PLATFORM_EXPORT ImageDecodingStore final {
       Vector<std::unique_ptr<CacheEntry>>* deletion_list)
       EXCLUSIVE_LOCKS_REQUIRED(lock_);
 
-  // Helper method to remove all cache entries associated with an
-  // ImageFrameGenerator. Ownership of the cache entries is transferred to
+  // Helper method to remove unused cache entries associated with an
+  // ImageFrameGenerator. Ownership of removed entries is transferred to
   // |deletionList|.
   void RemoveCacheIndexedByGeneratorInternal(
       const ImageFrameGenerator*,

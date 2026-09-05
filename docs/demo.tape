@@ -1,8 +1,9 @@
 # shotium terminal demo.
 #
-# Regenerate with `pnpm run docs:demo`, which prepares the sandbox in
-# docs/.demo-run (a fresh copy of the docs/demo sources, with no node_modules,
-# so that the install below is a real one) and then runs
+# Regenerate with `pnpm run docs:demo`, which warms npm's download cache and
+# then prepares docs/.demo-run as a fresh copy of the docs/demo sources with no
+# node_modules. The install below is real without recording network latency.
+# The generator then runs
 # `vhs docs/demo.tape` from the repository root -- Output is resolved there.
 #
 # Needs vhs (https://github.com/charmbracelet/vhs), plus ttyd and ffmpeg on
@@ -10,10 +11,12 @@
 # (powershell on Windows) so that the recording looks the same everywhere;
 # on Windows, Git for Windows supplies one.
 
-Output docs/assets/demo.gif
+# The terminal recording is composited with the rendered card by
+# tools/shot/docs_demo.mjs.
+Output docs/.demo-terminal.gif
 
 Require node
-Require pnpm
+Require npm
 
 Set Shell "bash"
 Set FontSize 20
@@ -32,13 +35,18 @@ Set Framerate 20
 Hide
 Type "cd docs/.demo-run" Enter
 Type "export PS1='$ '" Enter
+Type "export npm_config_audit=false npm_config_fund=false npm_config_update_notifier=false" Enter
 Type "clear" Enter
 Sleep 1s
 Show
 
 # 1. Install. Two packages: the JS wrapper and one prebuilt platform binary.
-Type "pnpm add @shotkit/shotium" Enter
-Wait+Screen@120s /Done in/
+Type "npm install @shotkit/shotium" Enter
+Sleep 800ms
+Hide
+Sleep 15s
+Show
+Wait+Screen@60s /added/
 Sleep 2s
 
 Hide

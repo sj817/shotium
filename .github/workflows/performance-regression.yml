@@ -1,0 +1,128 @@
+name: Candidate versus npm performance
+
+on:
+  workflow_dispatch:
+    inputs:
+      baseline_version:
+        description: Exact published npm version
+        required: true
+        default: '0.3.4'
+        type: string
+      build_runs:
+        description: 'JSON mapping all six npm platforms to successful engine build run IDs at this SHA'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  resolve:
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - id: plan
+        name: Require all six exact-SHA native builds
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD_RUNS: ${{ inputs.build_runs }}
+          BASELINE_VERSION: ${{ inputs.baseline_version }}
+        run: node tools/shot/node_perf_ci.cjs plan
+      - uses: actions/upload-artifact@v7
+        with:
+          name: performance-plan
+          path: performance-plan.json
+
+  platform:
+    needs: resolve
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ fromJSON(needs.resolve.outputs.matrix) }}
+    runs-on: ${{ matrix.target.runner }}
+    timeout-minutes: 180
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 9.15.9
+      - name: Build the candidate JavaScript
+        working-directory: shotium
+        run: |
+          pnpm install --no-lockfile
+          pnpm run build
+          pnpm run check:types
+      - uses: actions/download-artifact@v8
+        with:
+          name: ${{ matrix.target.artifactName }}
+          run-id: ${{ matrix.target.runId }}
+          github-token: ${{ github.token }}
+          path: out/performance/download
+      - name: Install both immutable candidates
+        env:
+          BASELINE_VERSION: ${{ inputs.baseline_version }}
+        run: |
+          npm install --prefix out/performance/baseline --ignore-scripts --no-audit --no-fund "@shotkit/shotium@$BASELINE_VERSION"
+          node tools/shot/node_perf_ci.cjs stage out/performance/download out/performance/candidate
+          python -m pip install Pillow==11.1.0
+      - name: Validate the two real long articles
+        run: python tools/shot/bilibili_check.py --package out/performance/candidate
+      - name: Complete paired performance matrix
+        id: performance
+        run: >-
+          node tools/shot/node_perf.cjs
+          out/performance/baseline/node_modules/@shotkit/shotium
+          out/performance/candidate
+          out/performance/result.json --samples=100 --calibrate --check
+      - name: Independently compare every rendered case
+        if: always() && steps.performance.outcome != 'skipped'
+        run: python tools/shot/node_perf_images.py out/performance/result.json
+      - name: Preserve failures and raw evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: performance-${{ matrix.target.platform }}
+          path: |
+            out/performance/result*
+            out/performance/candidate/provenance.json
+            out/performance/baseline/package-lock.json
+            shot/testdata/out/bilibili-*
+          if-no-files-found: error
+          retention-days: 90
+
+  acceptance:
+    if: always()
+    needs: [resolve, platform]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: performance-*
+          path: out/evidence
+      - name: Require complete results on all six platforms
+        shell: bash
+        run: |
+          python tools/shot/node_perf_report.py out/evidence/performance-*/result.json --output out/performance-acceptance.md
+          test '${{ needs.platform.result }}' = success
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: performance-acceptance
+          path: out/performance-acceptance.md
+          if-no-files-found: error

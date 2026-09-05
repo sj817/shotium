@@ -31,10 +31,12 @@
 
 #include "base/containers/heap_array.h"
 #include "third_party/blink/public/platform/platform.h"
+#include "third_party/blink/renderer/platform/graphics/image_decoding_store.h"
 #include "third_party/blink/renderer/platform/graphics/image_frame_generator.h"
 #include "third_party/blink/renderer/platform/graphics/skia/skia_utils.h"
 #include "third_party/blink/renderer/platform/image-decoders/image_decoder.h"
 #include "third_party/blink/renderer/platform/image-decoders/segment_reader.h"
+#include "third_party/blink/renderer/platform/image-decoders/skia/segment_stream.h"
 #include "third_party/blink/renderer/platform/instrumentation/tracing/trace_event.h"
 #include "third_party/blink/renderer/platform/wtf/shared_buffer.h"
 #include "third_party/skia/include/core/SkCanvas.h"
@@ -56,6 +58,23 @@ class ScopedSegmentReaderDataLocker {
  private:
   blink::SegmentReader* const segment_reader_;
 };
+
+// SegmentReader implementations backed by ParkableImage require callers to
+// keep the data locked while using spans returned by GetSomeData(). Keep that
+// lock, and the reader itself, alive for as long as the codec owns the stream.
+class LockedSegmentStream final : public blink::SegmentStream {
+ public:
+  explicit LockedSegmentStream(scoped_refptr<blink::SegmentReader> reader)
+      : reader_(std::move(reader)) {
+    reader_->LockData();
+    SetReader(reader_);
+  }
+
+  ~LockedSegmentStream() override { reader_->UnlockData(); }
+
+ private:
+  scoped_refptr<blink::SegmentReader> reader_;
+};
 }  // namespace
 
 namespace blink {
@@ -73,8 +92,9 @@ DecodingImageGenerator::CreateAsSkImageGenerator(sk_sp<const SkData> data) {
       segment_reader, data_complete, ImageDecoder::kAlphaPremultiplied,
       ImageDecoder::kDefaultBitDepth, ColorBehavior::kTag,
       cc::AuxImage::kDefault, Platform::GetMaxDecodedImageBytes());
-  if (!decoder || !decoder->IsSizeAvailable())
+  if (!decoder || !decoder->IsSizeAvailable()) {
     return nullptr;
+  }
 
   const gfx::Size size = decoder->Size();
   const SkImageInfo info =
@@ -85,8 +105,9 @@ DecodingImageGenerator::CreateAsSkImageGenerator(sk_sp<const SkData> data) {
       SkISize::Make(size.width(), size.height()), false,
       decoder->GetColorBehavior(), cc::AuxImage::kDefault,
       decoder->GetSupportedDecodeSizes());
-  if (!frame)
+  if (!frame) {
     return nullptr;
+  }
 
   std::vector<FrameMetadata> frames = {FrameMetadata()};
   cc::ImageHeaderMetadata image_metadata =
@@ -146,7 +167,40 @@ sk_sp<const SkData> DecodingImageGenerator::GetEncodedData() const {
   // serializers, which want the data even if it requires copying, and even
   // if the data is incomplete. (Otherwise they would potentially need to
   // decode the partial image in order to re-encode it.)
-  return data_->GetAsSkData();
+  scoped_refptr<SegmentReader> data;
+  {
+    base::AutoLock lock(data_lock_);
+    data = data_;
+  }
+  return data ? data->GetAsSkData() : nullptr;
+}
+
+std::unique_ptr<SkStream>
+DecodingImageGenerator::GetEncodedDataStream() const {
+  scoped_refptr<SegmentReader> data;
+  {
+    base::AutoLock lock(data_lock_);
+    data = data_;
+  }
+  return data ? std::make_unique<LockedSegmentStream>(std::move(data))
+              : nullptr;
+}
+
+bool DecodingImageGenerator::DiscardEncodedData() {
+  scoped_refptr<SegmentReader> data;
+  {
+    base::AutoLock lock(data_lock_);
+    data.swap(data_);
+  }
+  if (!data) {
+    return false;
+  }
+  // A multi-frame image's decoder is cached against the frame generator so a
+  // later frame need not replay the chain, and that decoder holds its own
+  // reference to the source. Nothing will ask for a later frame.
+  ImageDecodingStore::Instance().RemoveCacheIndexedByGenerator(
+      frame_generator_.get());
+  return true;
 }
 
 bool DecodingImageGenerator::GetPixels(SkPixmap dst_pixmap,
@@ -207,9 +261,17 @@ bool DecodingImageGenerator::GetPixels(SkPixmap dst_pixmap,
     TRACE_EVENT1(TRACE_DISABLED_BY_DEFAULT("devtools.timeline"),
                  "Decode LazyPixelRef", "LazyPixelRef", lazy_pixel_ref);
 
-    ScopedSegmentReaderDataLocker lock_data(data_.get());
+    scoped_refptr<SegmentReader> data;
+    {
+      base::AutoLock lock(data_lock_);
+      data = data_;
+    }
+    if (!data) {
+      return false;
+    }
+    ScopedSegmentReaderDataLocker lock_data(data.get());
     decoded = frame_generator_->DecodeAndScale(
-        data_.get(), all_data_received_, static_cast<wtf_size_t>(frame_index),
+        data.get(), all_data_received_, static_cast<wtf_size_t>(frame_index),
         decode_pixmap, client_id);
   }
 
@@ -251,15 +313,24 @@ bool DecodingImageGenerator::GetPixels(SkPixmap dst_pixmap,
 bool DecodingImageGenerator::QueryYUVA(
     const SkYUVAPixmapInfo::SupportedDataTypes& supported_data_types,
     SkYUVAPixmapInfo* yuva_pixmap_info) const {
-  if (!can_yuv_decode_)
+  if (!can_yuv_decode_) {
     return false;
+  }
 
   TRACE_EVENT0("blink", "DecodingImageGenerator::QueryYUVAInfo");
 
   DCHECK(all_data_received_);
 
-  ScopedSegmentReaderDataLocker lock_data(data_.get());
-  return frame_generator_->GetYUVAInfo(data_.get(), supported_data_types,
+  scoped_refptr<SegmentReader> data;
+  {
+    base::AutoLock lock(data_lock_);
+    data = data_;
+  }
+  if (!data) {
+    return false;
+  }
+  ScopedSegmentReaderDataLocker lock_data(data.get());
+  return frame_generator_->GetYUVAInfo(data.get(), supported_data_types,
                                        yuva_pixmap_info);
 }
 
@@ -284,10 +355,12 @@ bool DecodingImageGenerator::GetYUVAPlanes(
   // Verify sizes and extract DecodeToYUV parameters
   for (int i = 0; i < 3; ++i) {
     const SkPixmap& plane = pixmaps.plane(i);
-    if (plane.dimensions().isEmpty() || !plane.rowBytes())
+    if (plane.dimensions().isEmpty() || !plane.rowBytes()) {
       return false;
-    if (plane.colorType() != pixmaps.plane(0).colorType())
+    }
+    if (plane.colorType() != pixmaps.plane(0).colorType()) {
       return false;
+    }
     plane_sizes[i] = plane.dimensions();
     plane_row_bytes[i] = base::checked_cast<wtf_size_t>(plane.rowBytes());
     plane_addrs[i] = plane.writable_addr();
@@ -296,9 +369,17 @@ bool DecodingImageGenerator::GetYUVAPlanes(
     return false;
   }
 
-  ScopedSegmentReaderDataLocker lock_data(data_.get());
+  scoped_refptr<SegmentReader> data;
+  {
+    base::AutoLock lock(data_lock_);
+    data = data_;
+  }
+  if (!data) {
+    return false;
+  }
+  ScopedSegmentReaderDataLocker lock_data(data.get());
   return frame_generator_->DecodeToYUV(
-      data_.get(), static_cast<wtf_size_t>(frame_index),
+      data.get(), static_cast<wtf_size_t>(frame_index),
       pixmaps.plane(0).colorType(), plane_sizes, plane_addrs, plane_row_bytes,
       client_id);
 }
@@ -314,8 +395,9 @@ PaintImage::ContentId DecodingImageGenerator::GetContentIdForFrame(
 
   // If we have all the data for the image, or this particular frame, we can
   // consider the decoded frame constant.
-  if (all_data_received_ || GetFrameMetadata().at(frame_index).complete)
+  if (all_data_received_ || GetFrameMetadata().at(frame_index).complete) {
     return complete_frame_content_id_;
+  }
 
   return PaintImageGenerator::GetContentIdForFrame(frame_index);
 }

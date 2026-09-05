@@ -27,6 +27,7 @@
 #include "third_party/skia/include/core/SkPixmap.h"
 #include "third_party/skia/include/core/SkRefCnt.h"
 #include "third_party/skia/include/core/SkSize.h"
+#include "third_party/skia/include/core/SkStream.h"
 #include "third_party/skia/include/core/SkYUVAPixmaps.h"
 #include "third_party/skia/include/gpu/ganesh/GrBackendSurface.h"
 #include "third_party/skia/include/private/SkGainmapInfo.h"
@@ -90,12 +91,15 @@ bool PaintImage::IsSameForTesting(const PaintImage& other) const {
 // static
 PaintImage::DecodingMode PaintImage::GetConservative(DecodingMode one,
                                                      DecodingMode two) {
-  if (one == two)
+  if (one == two) {
     return one;
-  if (one == DecodingMode::kSync || two == DecodingMode::kSync)
+  }
+  if (one == DecodingMode::kSync || two == DecodingMode::kSync) {
     return DecodingMode::kSync;
-  if (one == DecodingMode::kUnspecified || two == DecodingMode::kUnspecified)
+  }
+  if (one == DecodingMode::kUnspecified || two == DecodingMode::kUnspecified) {
     return DecodingMode::kUnspecified;
+  }
   DCHECK_EQ(one, DecodingMode::kAsync);
   DCHECK_EQ(two, DecodingMode::kAsync);
   return DecodingMode::kAsync;
@@ -119,8 +123,9 @@ PaintImage::GeneratorClientId PaintImage::GetNextGeneratorClientId() {
 
 // static
 PaintImage PaintImage::CreateFromBitmap(SkBitmap bitmap) {
-  if (bitmap.drawsNothing())
+  if (bitmap.drawsNothing()) {
     return PaintImage();
+  }
 
   return PaintImageBuilder::WithDefault()
       .set_id(PaintImage::GetNextId())
@@ -231,8 +236,9 @@ const scoped_refptr<PaintWorkletInput> PaintImage::GetPaintWorkletInput()
 }
 
 bool PaintImage::IsOpaque() const {
-  if (IsPaintWorklet())
+  if (IsPaintWorklet()) {
     return deferred_paint_record_->KnownToBeOpaque();
+  }
   return GetSkImageInfo().isOpaque();
 }
 
@@ -307,6 +313,29 @@ bool PaintImage::Decode(SkPixmap pixmap,
   }
 }
 
+bool PaintImage::DiscardEncodedData() const {
+  // Animated images are not refused: the caller is asserting that no frame of
+  // this image, first or later, will be decoded again, which is its call to
+  // make. A multipart image may still be replaced, so its source stays.
+  if (completion_state_ != CompletionState::kDone || is_multipart_) {
+    return false;
+  }
+  bool discarded = false;
+  if (paint_image_generator_) {
+    discarded |= paint_image_generator_->DiscardEncodedData();
+  }
+  if (gainmap_paint_image_generator_) {
+    discarded |= gainmap_paint_image_generator_->DiscardEncodedData();
+  }
+  return discarded;
+}
+
+std::unique_ptr<SkStream> PaintImage::GetEncodedDataStream() const {
+  return paint_image_generator_
+             ? paint_image_generator_->GetEncodedDataStream()
+             : nullptr;
+}
+
 bool PaintImage::DecodeYuv(const SkYUVAPixmaps& pixmaps,
                            size_t frame_index,
                            AuxImage aux_image,
@@ -335,8 +364,9 @@ bool PaintImage::DecodeFromSkImage(SkPixmap pixmap,
   DCHECK(image);
   if (color_space) {
     image = image->makeColorSpace(skcpu::Recorder::TODO(), color_space, {});
-    if (!image)
+    if (!image) {
       return false;
+    }
   }
   return image->readPixels(pixmap, 0, 0, SkImage::kDisallow_CachingHint);
 }
@@ -354,18 +384,21 @@ PaintImage::FrameKey PaintImage::GetKeyForFrame(size_t frame_index) const {
 
 PaintImage::ContentId PaintImage::GetContentIdForFrame(
     size_t frame_index) const {
-  if (paint_image_generator_)
+  if (paint_image_generator_) {
     return paint_image_generator_->GetContentIdForFrame(frame_index);
+  }
 
   DCHECK_NE(content_id_, kInvalidContentId);
   return content_id_;
 }
 
 bool PaintImage::IsTextureBacked() const {
-  if (texture_backing_)
+  if (texture_backing_) {
     return true;
-  if (cached_sk_image_)
+  }
+  if (cached_sk_image_) {
     return cached_sk_image_->isTextureBacked();
+  }
   return false;
 }
 
@@ -404,8 +437,9 @@ gfx::ContentColorUsage PaintImage::GetContentColorUsage() const {
 }
 
 const ImageHeaderMetadata* PaintImage::GetImageHeaderMetadata() const {
-  if (paint_image_generator_)
+  if (paint_image_generator_) {
     return paint_image_generator_->GetMetadataForDecodeAcceleration();
+  }
   return nullptr;
 }
 
@@ -414,8 +448,9 @@ bool PaintImage::IsYuv(
     AuxImage aux_image,
     SkYUVAPixmapInfo* info) const {
   SkYUVAPixmapInfo temp_info;
-  if (!info)
+  if (!info) {
     info = &temp_info;
+  }
 
   // ImageDecoder will fill out the SkYUVColorSpace in |info| depending on the
   // codec's specification.
@@ -442,8 +477,9 @@ const std::vector<FrameMetadata>& PaintImage::GetFrameMetadata() const {
 }
 
 size_t PaintImage::FrameCount() const {
-  if (!*this)
+  if (!*this) {
     return 0u;
+  }
   return paint_image_generator_
              ? paint_image_generator_->GetFrameMetadata().size()
              : 1u;
@@ -464,8 +500,9 @@ sk_sp<SkImage> PaintImage::GetSkImageForFrame(
 
   // The internally cached SkImage is constructed using the default frame index
   // and GeneratorClientId. Avoid creating a new SkImage.
-  if (index == kDefaultFrameIndex && client_id == kDefaultGeneratorClientId)
+  if (index == kDefaultFrameIndex && client_id == kDefaultGeneratorClientId) {
     return GetSwSkImage();
+  }
 
   sk_sp<SkImage> image =
       SkImages::DeferredFromGenerator(std::make_unique<SkiaPaintImageGenerator>(

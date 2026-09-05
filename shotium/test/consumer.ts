@@ -16,15 +16,19 @@ import shotium, {
   releaseMemory,
   runtime,
   screenshot,
+  screenshotTiles,
   start as startEngine,
   stop as stopEngine,
 } from '@shotkit/shotium';
 import type {
   CacheEntry,
   CaptureStats,
+  DaemonCapability,
   DaemonStatus,
   ScreenshotOptions,
   ScreenshotResult,
+  ScreenshotTilesOptions,
+  ScreenshotTilesResult,
   StartOptions,
   StartResult,
 } from '@shotkit/shotium';
@@ -33,6 +37,7 @@ import type {
 // whole reason the default exists.
 const _sameRuntime: typeof runtime = shotium.runtime;
 const _sameScreenshot: typeof screenshot = shotium.screenshot;
+const _sameScreenshotTiles: typeof screenshotTiles = shotium.screenshotTiles;
 const _sameCache: typeof cache = shotium.cache;
 const _sameStart: typeof startEngine = shotium.start;
 
@@ -54,6 +59,11 @@ const request: ScreenshotOptions = {
   allowFileAccess: false,
   cache: 'only-if-cached',
   headers: {Authorization: 'Bearer token'},
+};
+
+const tileRequest: ScreenshotTilesOptions = {
+  file: 'https://example.com',
+  tile: {height: 32000},
 };
 
 // retry was a supervisor's knob, and there is no supervisor: the pool that
@@ -93,6 +103,16 @@ async function lifecycle(): Promise<void> {
   void stats.timing.paint;
   void stats.timing.raster;
   void stats.finalUrl;
+
+  const tiled: ScreenshotTilesResult =
+      await own.screenshotTiles(tileRequest);
+  void tiled.stats.timing.total;
+  void tiled.tiles[0]?.image;
+  void tiled.tiles[0]?.path;
+  void tiled.tiles[0]?.x;
+  void tiled.tiles[0]?.y;
+  void tiled.tiles[0]?.width;
+  void tiled.tiles[0]?.height;
 
   const _running: boolean = own.running;
   own.releaseMemory({releaseWorkingSet: true});
@@ -146,11 +166,18 @@ async function resident(): Promise<void> {
   const _endpoint: string = client.endpoint;
   const _closed: boolean = client.closed;
   const status: DaemonStatus = await client.status();
+  const capability: DaemonCapability|undefined = status.capabilities[0];
   void status.served;
+  void status.protocolVersion;
+  void status.capabilities;
+  void capability;
   // The daemon returns the same shape the in-process engine does, so moving a
   // program between them is an import change and nothing else.
   const shot: ScreenshotResult = await client.screenshot(request);
   void shot.stats.timing.total;
+  const tiled: ScreenshotTilesResult =
+      await client.screenshotTiles(tileRequest);
+  void tiled.tiles[0]?.height;
   client.close();
 
   const started = await daemon.start(start);
@@ -166,6 +193,7 @@ export {
   _sameCache,
   _sameRuntime,
   _sameScreenshot,
+  _sameScreenshotTiles,
   _sameStart,
   caching,
   implicit,

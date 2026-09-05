@@ -32,6 +32,7 @@ const exe = path.resolve(process.argv[2] || 'out/Shot/shotium.exe');
 const buildDir = path.dirname(exe);
 const corpus = path.resolve('shot/testdata/render_corpus.html');
 const entry = pathToFileURL(path.resolve('shotium/dist/index.js')).href;
+const PROTOCOL_VERSION = 2;
 
 // A second node process, which is what this check is actually about: a caller
 // in a process that did not start the daemon has to find it rather than start
@@ -91,6 +92,8 @@ async function main() {
   const before = await shotium.daemon.status(config);
   check(before.running === false, 'status reports no daemon at the endpoint',
         before.endpoint);
+  check(before.endpoint.includes(`-${config.name}-v${PROTOCOL_VERSION}`),
+        'a named endpoint includes the wire generation', before.endpoint);
 
   console.log('\n== the first request starts one ==');
   const coldStarted = Date.now();
@@ -110,8 +113,43 @@ async function main() {
   check(started.ok && started.pid > 0,
         'and it is a process of its own',
         `pid ${started.pid}, ${cold}ms to connect`);
+  check(started.protocolVersion === PROTOCOL_VERSION &&
+            started.capabilities.includes('screenshot') &&
+            started.capabilities.includes('tiles'),
+        'and advertises the wire generation and operations it speaks',
+        `v${started.protocolVersion}: ${started.capabilities.join(', ')}`);
   check(started.warm === true,
         'that prewarmed before it took the first request');
+
+  console.log('\n== tiles travel as one header and several frames ==');
+  // The one reply shape that is not "header, payload": the client has to read
+  // as many frames as the header lists, and a mistake there desynchronises
+  // every request after it -- which the screenshot below would then show.
+  const tall = path.join(os.tmpdir(), `shotium-daemon-check-tall-${process.pid}.html`);
+  fs.writeFileSync(
+      tall,
+      '<body style="margin:0">' +
+          '<div style="height:35990px;background:#fff"></div>' +
+          '<div style="height:10px;background:#f00"></div></body>');
+  const {tiles, stats: tileStats} = await client.screenshotTiles({
+    file: tall,
+    viewport: {width: 400, height: 300},
+    fullPage: true,
+    tile: {height: 8000},
+  });
+  fs.rmSync(tall, {force: true});
+  check(tiles.length === 5 &&
+            tiles.every((t) => Buffer.isBuffer(t.image) && t.image.length > 0),
+        'five tiles come back, each with its image', `${tiles.length}`);
+  check(tiles.map((t) => t.image.readUInt32BE(20)).join() ===
+            '8000,8000,8000,8000,4000',
+        'each as tall as its tile',
+        tiles.map((t) => t.image.readUInt32BE(20)).join());
+  check(tileStats && tileStats.requests >= 1,
+        'with the statistics in the header');
+  const {image: afterTiles} = await client.screenshot(request);
+  check(Buffer.isBuffer(afterTiles) && afterTiles.equals(first),
+        'and the next screenshot on the same socket is still in step');
 
   console.log('\n== it is the same renderer as an engine in this process ==');
   // This process gets one engine, ever, so this is the only place it may start

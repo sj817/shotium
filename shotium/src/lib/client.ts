@@ -11,13 +11,21 @@ import type {
   DaemonStatus,
   ScreenshotOptions,
   ScreenshotResult,
+  ScreenshotTile,
+  ScreenshotTilesOptions,
+  ScreenshotTilesResult,
 } from '../types.js';
 
 import {resolveStartOptions} from './config.js';
 import {emptyStats} from './engine.js';
 import {endpointFor} from './endpoint.js';
-import {FrameReader, encodeFrame} from './protocol.js';
-import {timeoutFor, toRequest} from './request.js';
+import {
+  DAEMON_CAPABILITIES,
+  DAEMON_PROTOCOL_VERSION,
+  FrameReader,
+  encodeFrame,
+} from './protocol.js';
+import {timeoutFor, toRequest, toTilesRequest} from './request.js';
 
 // ESM has no __dirname. This is the same thing, from the module's own URL.
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -33,6 +41,16 @@ const DAEMON_MAIN = path.join(HERE, 'daemon_main.js');
 const START_TIMEOUT_MS = 20000;
 const CONNECT_RETRY_MS = 20;
 
+// One tile's place on a tiles reply; the image is the matching payload frame.
+interface TileReply {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  bytes: number;
+  path?: string;
+}
+
 interface ClientReply {
   id: number;
   ok?: boolean;
@@ -42,11 +60,16 @@ interface ClientReply {
   // its response header. It rides on the failure header too, which is why the
   // rejection below carries it.
   stats?: CaptureStats;
+  // A tiles reply lists its tiles here, and is followed by one payload frame
+  // per entry rather than the single frame a screenshot reply has.
+  tiles?: TileReply[];
 }
 
 interface ClientResult {
   header: ClientReply;
   image: Buffer|null;
+  // The payload frames of a tiles reply, in header order.
+  images: Buffer[];
 }
 
 interface Pending {
@@ -60,6 +83,7 @@ interface ResolvedDaemonOptions {
   resourceDir?: string;
   name: string|undefined;
   endpoint: string;
+  explicitEndpoint: boolean;
   idleTimeoutMs: number|undefined;
   prewarm: boolean|undefined;
   logFile: string|null;
@@ -78,6 +102,9 @@ class DaemonClient extends EventEmitter {
   private readonly pending = new Map<number, Pending>();
   private nextId = 1;
   private header: ClientReply|null = null;
+  // The payload frames collected for `header` so far. A screenshot reply has
+  // one; a tiles reply has one per tile the header lists.
+  private payloads: Buffer[] = [];
   private reader = new FrameReader();
 
   constructor(socket: net.Socket, endpoint: string) {
@@ -116,22 +143,35 @@ class DaemonClient extends EventEmitter {
               new Error('shotium: the daemon sent a header that is not JSON'));
           return;
         }
+        this.payloads = [];
+        continue;
+      }
+      this.payloads.push(frame);
+      const expected =
+          this.header.ok && this.header.tiles ? this.header.tiles.length : 1;
+      if (this.payloads.length < expected) {
         continue;
       }
       const header = this.header;
+      const payloads = this.payloads;
       this.header = null;
-      this.settle(header, frame);
+      this.payloads = [];
+      this.settle(header, payloads);
     }
   }
 
-  private settle(header: ClientReply, payload: Buffer): void {
+  private settle(header: ClientReply, payloads: Buffer[]): void {
     const pending = this.pending.get(header.id);
     if (!pending) {
       return;
     }
     this.pending.delete(header.id);
     if (header.ok) {
-      pending.resolve({header, image: header.path ? null : payload});
+      pending.resolve({
+        header,
+        image: header.path ? null : payloads[0],
+        images: payloads,
+      });
     } else {
       const error = new Error(header.error || 'shotium: request failed');
       // Attached rather than dropped: a capture that failed part of the way
@@ -181,6 +221,30 @@ class DaemonClient extends EventEmitter {
     return {image: result.image, stats: result.header.stats ?? emptyStats()};
   }
 
+  /**
+   * The region in tiles, through the daemon. The same shape the in-process
+   * engine returns; see ScreenshotTilesOptions.
+   */
+  async screenshotTiles(options: ScreenshotTilesOptions):
+      Promise<ScreenshotTilesResult> {
+    const request = toTilesRequest(options);
+    const result = await this.send({
+      op: 'tiles',
+      request,
+      timeout: timeoutFor(options),
+    });
+    const listed = result.header.tiles ?? [];
+    const tiles: ScreenshotTile[] = listed.map((tile, i) => ({
+      image: request.path ? null : result.images[i],
+      x: tile.x,
+      y: tile.y,
+      width: tile.width,
+      height: tile.height,
+      ...(tile.path !== undefined ? {path: tile.path} : {}),
+    }));
+    return {tiles, stats: result.header.stats ?? emptyStats()};
+  }
+
   async status(): Promise<DaemonStatus> {
     const {header} = await this.send({op: 'status'});
     return header as unknown as DaemonStatus;
@@ -216,9 +280,73 @@ function connectOnly(endpoint: string): Promise<DaemonClient> {
   });
 }
 
+class DaemonProtocolError extends Error {
+  override name = 'DaemonProtocolError';
+}
+
+function assertDaemonProtocol(status: DaemonStatus, endpoint: string): void {
+  if (status.protocolVersion !== DAEMON_PROTOCOL_VERSION) {
+    const actual = typeof status.protocolVersion === 'number' ?
+        String(status.protocolVersion) :
+        `legacy/unversioned (package ${status.version || 'unknown'})`;
+    throw new DaemonProtocolError(
+        `shotium: daemon at ${endpoint} uses wire protocol ${actual}; ` +
+        `this client requires ${DAEMON_PROTOCOL_VERSION}. Stop that daemon ` +
+        'explicitly or use a different endpoint.');
+  }
+
+  const advertised = new Set(
+      Array.isArray(status.capabilities) ? status.capabilities : []);
+  const missing = DAEMON_CAPABILITIES.filter(
+      (capability) => !advertised.has(capability));
+  if (missing.length > 0) {
+    throw new DaemonProtocolError(
+        `shotium: daemon at ${endpoint} uses wire protocol ` +
+        `${DAEMON_PROTOCOL_VERSION} but is missing required capabilities: ` +
+        `${missing.join(', ')}. Stop that daemon explicitly or use a ` +
+        'different endpoint.');
+  }
+}
+
+// Exact endpoints opt out of versioned endpoint derivation, so a successful
+// socket connection alone cannot say that the peer is compatible. Ask before
+// returning it to the caller. The check never shuts the peer down: another
+// process may still be using the older generation deliberately.
+async function connectCompatible(
+    endpoint: string, handshakeTimeoutMs: number): Promise<DaemonClient> {
+  const client = await connectOnly(endpoint);
+  let timer: ReturnType<typeof setTimeout>|undefined;
+  try {
+    const status = await Promise.race([
+      client.status(),
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(
+            () => reject(new Error(
+                `timed out after ${handshakeTimeoutMs}ms`)),
+            handshakeTimeoutMs);
+      }),
+    ]);
+    clearTimeout(timer);
+    assertDaemonProtocol(status, endpoint);
+    return client;
+  } catch (error) {
+    clearTimeout(timer);
+    client.close();
+    if (error instanceof DaemonProtocolError) {
+      throw error;
+    }
+    const detail = error instanceof Error ? `: ${error.message}` : '';
+    throw new DaemonProtocolError(
+        `shotium: daemon at ${endpoint} did not complete the wire protocol ` +
+        `handshake${detail}`);
+  }
+}
+
 function resolveDaemonOptions(options: DaemonOptions = {}):
     ResolvedDaemonOptions {
   const resolved = resolveStartOptions(options);
+  const explicitEndpoint = Boolean(
+      options.endpoint || process.env.SHOTIUM_ENDPOINT);
   return {
     ...resolved,
     name: options.name,
@@ -227,6 +355,7 @@ function resolveDaemonOptions(options: DaemonOptions = {}):
       name: options.name,
       endpoint: options.endpoint,
     }),
+    explicitEndpoint,
     idleTimeoutMs: options.idleTimeoutMs,
     prewarm: options.prewarm,
     logFile: options.logFile || process.env.SHOTIUM_DAEMON_LOG || null,
@@ -277,32 +406,42 @@ export interface EnsuredClient {
 
 // Connects, starting a daemon if none answers.
 //
-// The endpoint existing is the readiness signal, so this is a connect loop
-// rather than a handshake: a daemon that has bound can be talked to, and one
-// that has not is indistinguishable from one that was never started. Several
-// processes racing here is fine -- the losers' daemons exit on EADDRINUSE and
-// everyone ends up on the winner.
+// A derived endpoint includes the protocol generation, so binding it is its
+// readiness signal. An exact endpoint has no such boundary and adds the status
+// handshake above. A daemon that has not bound is indistinguishable from one
+// that was never started. Several processes racing here is fine -- the losers'
+// daemons exit on EADDRINUSE and everyone ends up on the winner.
 async function ensureClient(options: DaemonOptions = {}):
     Promise<EnsuredClient> {
   const resolved = resolveDaemonOptions(options);
+  const startTimeoutMs = options.startTimeoutMs === undefined ?
+      START_TIMEOUT_MS :
+      options.startTimeoutMs;
+  const open = () => resolved.explicitEndpoint ?
+      connectCompatible(resolved.endpoint, startTimeoutMs) :
+      connectOnly(resolved.endpoint);
   try {
-    const client = await connectOnly(resolved.endpoint);
+    const client = await open();
     return {client, spawned: false, endpoint: resolved.endpoint};
-  } catch {
+  } catch (error) {
+    if (error instanceof DaemonProtocolError) {
+      throw error;
+    }
     if (options.spawn === false) {
       throw new Error(`shotium: no daemon at ${resolved.endpoint}`);
     }
   }
 
   spawnDaemon(resolved);
-  const deadline = Date.now() +
-      (options.startTimeoutMs === undefined ? START_TIMEOUT_MS :
-                                              options.startTimeoutMs);
+  const deadline = Date.now() + startTimeoutMs;
   for (;;) {
     try {
-      const client = await connectOnly(resolved.endpoint);
+      const client = await open();
       return {client, spawned: true, endpoint: resolved.endpoint};
-    } catch {
+    } catch (error) {
+      if (error instanceof DaemonProtocolError) {
+        throw error;
+      }
       if (Date.now() >= deadline) {
         throw new Error(
             `shotium: the daemon did not come up at ${resolved.endpoint}`);
@@ -379,6 +518,20 @@ async function screenshot(options: ScreenshotOptions&{daemon?: DaemonOptions}):
     client.close();
   }
 }
+
+async function screenshotTiles(
+    options: ScreenshotTilesOptions&{daemon?: DaemonOptions}):
+    Promise<ScreenshotTilesResult> {
+  const {daemon, ...rest} = options;
+  const client = await connect(daemon || {});
+  try {
+    return await client.screenshotTiles(rest);
+  } finally {
+    client.close();
+  }
+}
+
+export {screenshotTiles};
 
 export {
   DaemonClient,

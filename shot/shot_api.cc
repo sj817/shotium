@@ -6,6 +6,7 @@
 #include "shot/shot_api.h"
 
 #include <atomic>
+#include <cstdlib>
 #include <memory>
 #include <optional>
 #include <string>
@@ -37,6 +38,7 @@
 #include "shot/shot_cache.h"
 #include "shot/shot_capture.h"
 #include "shot/shot_capture_context.h"
+#include "shot/shot_bytes.h"
 #include "shot/shot_network.h"
 #include "shot/shot_request.h"
 #include "shot/shot_runtime.h"
@@ -48,14 +50,14 @@
 struct shot_buffer {
   // May carry a trailing NUL that `size` does not count, so that an error
   // reads as a C string and an image reads as its exact length.
-  std::vector<uint8_t> bytes;
+  shot::Bytes bytes;
   size_t size = 0;
 };
 
 namespace shot {
 namespace {
 
-shot_buffer* MakeImage(std::vector<uint8_t> bytes) {
+shot_buffer* MakeImage(shot::Bytes bytes) {
   auto* buffer = new shot_buffer;
   buffer->size = bytes.size();
   buffer->bytes = std::move(bytes);
@@ -64,9 +66,10 @@ shot_buffer* MakeImage(std::vector<uint8_t> bytes) {
 
 shot_buffer* MakeMessage(std::string_view text) {
   auto* buffer = new shot_buffer;
-  buffer->bytes.assign(text.begin(), text.end());
-  buffer->size = buffer->bytes.size();
-  buffer->bytes.push_back(0);
+  std::vector<uint8_t> bytes(text.begin(), text.end());
+  bytes.push_back(0);
+  buffer->size = text.size();
+  buffer->bytes = shot::Bytes::FromVector(std::move(bytes));
   return buffer;
 }
 
@@ -76,6 +79,32 @@ shot_buffer* MakeMessage(std::string_view text) {
 void Deliver(shot_buffer** out, std::string_view text) {
   if (out) {
     *out = MakeMessage(text);
+  }
+}
+
+// Empties an out-parameter before anything can fill it.
+//
+// The header promises that exactly one of the answer and the error is set,
+// and that promise is only keepable if the ones that are not set are cleared:
+// a caller who reuses a variable across calls would otherwise read the
+// previous call's buffer back out of it and free it twice. Every entry point
+// clears all of its outputs first, so the promise holds from the first line
+// rather than from whichever return the call happened to take.
+template <typename T>
+void Clear(T** out) {
+  if (out) {
+    *out = nullptr;
+  }
+}
+
+// The same for an output that is a number rather than something owned. There
+// is nothing to double-free here, but a caller who asks for a tile that is not
+// there and reads the coordinates anyway should read zeroes rather than
+// whatever was in the variable before -- which is the difference between a
+// wrong answer and last call's answer.
+void Clear(int32_t* out) {
+  if (out) {
+    *out = 0;
   }
 }
 
@@ -235,7 +264,13 @@ class EngineThread : public base::DelegateSimpleThread::Delegate {
     logging::LoggingSettings log_settings;
     log_settings.logging_dest = logging::LOG_TO_STDERR;
     logging::InitLogging(log_settings);
-    logging::SetMinLogLevel(logging::LOGGING_WARNING);
+    // Warnings only, as a library in someone else's process should be.
+    // SHOT_VERBOSE=1 is the executable's --verbose for a host that cannot pass
+    // one, which is how the SHOT_PROFILE lines are read through the addon.
+    const char* verbose = std::getenv("SHOT_VERBOSE");
+    logging::SetMinLogLevel(verbose && *verbose && *verbose != '0'
+                                ? logging::LOGGING_INFO
+                                : logging::LOGGING_WARNING);
 
     // Where shotium_data.pak and shotium_strings.pak are. See the header: the
     // executable finds them next to itself through DIR_MODULE and a shared
@@ -547,6 +582,8 @@ void shot_buffer_free(shot_buffer* buffer) {
 shot_status shot_engine_create(const char* options_json,
                                shot_engine** out_engine,
                                shot_buffer** out_error) {
+  shot::Clear(out_engine);
+  shot::Clear(out_error);
   if (!out_engine) {
     shot::Deliver(out_error, "shot_engine_create needs somewhere to put the "
                              "engine");
@@ -591,6 +628,9 @@ shot_status shot_engine_capture(shot_engine* engine,
                                 shot_buffer** out_image,
                                 shot_buffer** out_stats,
                                 shot_buffer** out_error) {
+  shot::Clear(out_image);
+  shot::Clear(out_stats);
+  shot::Clear(out_error);
   if (!engine || !out_image) {
     shot::Deliver(out_error,
                   "shot_engine_capture needs an engine and somewhere to put "
@@ -605,13 +645,13 @@ shot_status shot_engine_capture(shot_engine* engine,
   // Filled in on the engine thread; read here only after RunSync returns,
   // which is what makes the plain locals safe.
   shot_status status = SHOT_ERR_CAPTURE;
-  std::vector<uint8_t> image;
+  shot::Bytes image;
   std::string error;
   std::string stats;
 
   engine->thread.RunSync(base::BindOnce(
       [](shot_engine* engine, const char* request_json, shot_status* status,
-         std::vector<uint8_t>* image, std::string* stats, std::string* error) {
+         shot::Bytes* image, std::string* stats, std::string* error) {
         auto request = shot::ParseScreenshotRequest(
             request_json, engine->thread.default_allow_file_access());
         if (!request.has_value()) {
@@ -655,9 +695,155 @@ shot_status shot_engine_capture(shot_engine* engine,
   return SHOT_OK;
 }
 
+struct shot_tile_list {
+  struct Entry {
+    gfx::Rect region;
+    std::string path;
+    // Null once taken by shot_tile_list_take_image(), or when the tile went
+    // to a path and there were no bytes to hand back.
+    shot_buffer* image = nullptr;
+  };
+  std::vector<Entry> tiles;
+};
+
+shot_status shot_engine_capture_tiles(shot_engine* engine,
+                                      const char* request_json,
+                                      shot_tile_list** out_tiles,
+                                      shot_buffer** out_stats,
+                                      shot_buffer** out_error) {
+  shot::Clear(out_tiles);
+  shot::Clear(out_stats);
+  shot::Clear(out_error);
+  if (!engine || !out_tiles) {
+    shot::Deliver(out_error,
+                  "shot_engine_capture_tiles needs an engine and somewhere to "
+                  "put the tiles");
+    return SHOT_ERR_USAGE;
+  }
+  if (!request_json) {
+    shot::Deliver(out_error, "shot_engine_capture_tiles needs a request");
+    return SHOT_ERR_USAGE;
+  }
+
+  shot_status status = SHOT_ERR_CAPTURE;
+  std::vector<shot::DeliveredTile> tiles;
+  std::string error;
+  std::string stats;
+
+  engine->thread.RunSync(base::BindOnce(
+      [](shot_engine* engine, const char* request_json, shot_status* status,
+         std::vector<shot::DeliveredTile>* tiles, std::string* stats,
+         std::string* error) {
+        auto request = shot::ParseScreenshotRequest(
+            request_json, engine->thread.default_allow_file_access());
+        if (!request.has_value()) {
+          *status = SHOT_ERR_USAGE;
+          *error = request.error();
+          return;
+        }
+        if (!request->tile.has_value()) {
+          *status = SHOT_ERR_USAGE;
+          *error = "shot_engine_capture_tiles needs tile.height in the request";
+          return;
+        }
+        shot::CaptureStats collected;
+        auto result = shot::CaptureTiles(engine->thread.runtime(), *request,
+                                         &collected);
+        *stats = shot::StatsToJson(collected);
+        if (!result.has_value()) {
+          *status = SHOT_ERR_CAPTURE;
+          *error = result.error();
+          return;
+        }
+        *tiles = std::move(*result);
+        *status = SHOT_OK;
+      },
+      base::Unretained(engine), request_json, base::Unretained(&status),
+      base::Unretained(&tiles), base::Unretained(&stats),
+      base::Unretained(&error)));
+
+  if (out_stats && !stats.empty()) {
+    *out_stats = shot::MakeMessage(stats);
+  }
+  if (status != SHOT_OK) {
+    shot::Deliver(out_error, error);
+    return status;
+  }
+  auto* list = new shot_tile_list;
+  list->tiles.reserve(tiles.size());
+  for (shot::DeliveredTile& tile : tiles) {
+    shot_tile_list::Entry entry;
+    entry.region = tile.region;
+    entry.path = std::move(tile.path);
+    entry.image = shot::MakeImage(std::move(tile.image));
+    list->tiles.push_back(std::move(entry));
+  }
+  *out_tiles = list;
+  return SHOT_OK;
+}
+
+size_t shot_tile_list_count(const shot_tile_list* tiles) {
+  return tiles ? tiles->tiles.size() : 0;
+}
+
+void shot_tile_list_region(const shot_tile_list* tiles,
+                           size_t index,
+                           int32_t* out_x,
+                           int32_t* out_y,
+                           int32_t* out_width,
+                           int32_t* out_height) {
+  shot::Clear(out_x);
+  shot::Clear(out_y);
+  shot::Clear(out_width);
+  shot::Clear(out_height);
+  if (!tiles || index >= tiles->tiles.size()) {
+    return;
+  }
+  const gfx::Rect& region = tiles->tiles[index].region;
+  if (out_x) {
+    *out_x = region.x();
+  }
+  if (out_y) {
+    *out_y = region.y();
+  }
+  if (out_width) {
+    *out_width = region.width();
+  }
+  if (out_height) {
+    *out_height = region.height();
+  }
+}
+
+const char* shot_tile_list_path(const shot_tile_list* tiles, size_t index) {
+  if (!tiles || index >= tiles->tiles.size() ||
+      tiles->tiles[index].path.empty()) {
+    return nullptr;
+  }
+  return tiles->tiles[index].path.c_str();
+}
+
+shot_buffer* shot_tile_list_take_image(shot_tile_list* tiles, size_t index) {
+  if (!tiles || index >= tiles->tiles.size()) {
+    return nullptr;
+  }
+  return std::exchange(tiles->tiles[index].image, nullptr);
+}
+
+void shot_tile_list_free(shot_tile_list* tiles) {
+  if (!tiles) {
+    return;
+  }
+  for (shot_tile_list::Entry& entry : tiles->tiles) {
+    shot_buffer_free(entry.image);
+  }
+  delete tiles;
+}
+
 shot_status shot_engine_status(shot_engine* engine,
                                shot_buffer** out_json,
                                shot_buffer** out_error) {
+  shot::Clear(out_json);
+  shot::Clear(out_error);
   if (!engine || !out_json) {
     shot::Deliver(out_error,
                   "shot_engine_status needs an engine and somewhere to put "
@@ -691,6 +877,8 @@ shot_status shot_cache_list(shot_engine* engine,
                             const char* options_json,
                             shot_buffer** out_json,
                             shot_buffer** out_error) {
+  shot::Clear(out_json);
+  shot::Clear(out_error);
   if (!out_json) {
     shot::Deliver(out_error, "shot_cache_list needs somewhere to put the list");
     return SHOT_ERR_USAGE;
@@ -733,6 +921,8 @@ shot_status shot_cache_clear(shot_engine* engine,
                              const char* options_json,
                              shot_buffer** out_json,
                              shot_buffer** out_error) {
+  shot::Clear(out_json);
+  shot::Clear(out_error);
   if (!out_json) {
     shot::Deliver(out_error,
                   "shot_cache_clear needs somewhere to put the result");

@@ -61,13 +61,21 @@ extern "C" {
 // a status that starts being returned where it was not, a lifetime rule that
 // moves. Adding a JSON field neither side is required to send is not a change
 // under this number, which is the reason the payloads are JSON.
-#define SHOT_ABI_VERSION 2
+#define SHOT_ABI_VERSION 3
 
 // What the library was built as, which is not necessarily what the caller
 // compiled against -- a prebuilt addon and a prebuilt engine are shipped as
 // separate files and nothing stops them being separate versions. Check it
 // before shot_engine_create() and say so plainly if it does not match.
 SHOT_EXPORT int32_t shot_abi_version(void);
+
+// Out parameters: every function below clears all of its outputs before it
+// does anything else, so a caller may reuse the same variables across calls
+// without zeroing them in between and will never be handed the previous
+// call's buffer back. Where a function says exactly one of two outputs is
+// set, the other one is NULL rather than untouched, which is what makes that
+// sentence something a caller can branch on. An out parameter documented as
+// optional may still be NULL, and then nothing is written to it at all.
 
 typedef enum {
   // The screenshot was taken, or the engine came up.
@@ -134,9 +142,9 @@ SHOT_EXPORT void shot_buffer_free(shot_buffer* buffer);
 // the library must say where they are. Omitting it keeps the executable's
 // behaviour, which is right for a host that put everything in one directory.
 //
-// On failure `*out_engine` is left alone and `*out_error` receives a message
-// the caller can print. `out_error` may be NULL if the caller does not want
-// one; the status is still returned.
+// On failure `*out_engine` is NULL and `*out_error` receives a message the
+// caller can print. `out_error` may be NULL if the caller does not want one;
+// the status is still returned.
 SHOT_EXPORT shot_status shot_engine_create(const char* options_json,
                                            shot_engine** out_engine,
                                            shot_buffer** out_error);
@@ -190,6 +198,59 @@ SHOT_EXPORT shot_status shot_engine_capture(shot_engine* engine,
                                             shot_buffer** out_image,
                                             shot_buffer** out_stats,
                                             shot_buffer** out_error);
+
+// The tiles of a tiles capture: images in document order, each with where in
+// the document it came from. Freed with shot_tile_list_free(), which also
+// frees every image not taken out of it first.
+typedef struct shot_tile_list shot_tile_list;
+
+// A screenshot in tiles. The request is a ScreenshotOptions with `tile` set:
+//
+//   {"file":"https://example.com","fullPage":true,"tile":{"height":8000}}
+//
+// The region -- fullPage, selector, clip or the viewport -- is rendered in
+// horizontal slices of at most tile.height CSS pixels, each encoded on its
+// own. The document is loaded and laid out once for all of them. It is the
+// way to the whole of a page taller than a single image can be; it is not a
+// way to spend less memory, because a plain capture already streams its rows.
+//
+// With `path`, every tile is written to disk and the path must contain `{n}`,
+// which becomes the tile's 1-based index; the list then carries the paths and
+// empty images.
+//
+// Everything else -- blocking, serialisation, `out_stats` on success and on
+// failure -- is as for shot_engine_capture(). Exactly one of `*out_tiles` and
+// `*out_error` is set.
+SHOT_EXPORT shot_status shot_engine_capture_tiles(shot_engine* engine,
+                                                  const char* request_json,
+                                                  shot_tile_list** out_tiles,
+                                                  shot_buffer** out_stats,
+                                                  shot_buffer** out_error);
+
+SHOT_EXPORT size_t shot_tile_list_count(const shot_tile_list* tiles);
+
+// Where tile `index` came from, in CSS pixels of the document -- the same
+// space a request's `clip` is given in. Any of the outputs may be NULL.
+SHOT_EXPORT void shot_tile_list_region(const shot_tile_list* tiles,
+                                       size_t index,
+                                       int32_t* out_x,
+                                       int32_t* out_y,
+                                       int32_t* out_width,
+                                       int32_t* out_height);
+
+// The file tile `index` was written to when the request named a `path`, as a
+// NUL-terminated UTF-8 string that lives as long as the list; NULL when the
+// bytes were returned instead.
+SHOT_EXPORT const char* shot_tile_list_path(const shot_tile_list* tiles,
+                                            size_t index);
+
+// Takes tile `index`'s image out of the list. The caller owns it from here and
+// frees it with shot_buffer_free(); the list no longer will. NULL for an index
+// out of range, or a tile already taken.
+SHOT_EXPORT shot_buffer* shot_tile_list_take_image(shot_tile_list* tiles,
+                                                   size_t index);
+
+SHOT_EXPORT void shot_tile_list_free(shot_tile_list* tiles);
 
 // Hands back what the engine is holding but can rebuild: blink's heap, the
 // caches, PartitionAlloc's free lists. `release_working_set` additionally asks

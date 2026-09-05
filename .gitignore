@@ -394,3 +394,12 @@ apps/demo/faruzan.png
 # rebuild from docs/demo before recording: a copy of the demo sources plus a
 # real `npm install @shotkit/shotium`. Only what lands in docs/assets is kept.
 /docs/.demo-run
+/docs/.demo-terminal.gif
+
+# Coding-agent files. CLAUDE.md, AGENTS.md and .claude/skills are the checked-in
+# instructions. .agents/skills holds the links `pnpm skills:link`
+# (scripts/link-agent-skills.ts) makes for agents that look there;
+# CLAUDE.local.md and settings.local.json are per-machine.
+/.agents/skills
+/CLAUDE.local.md
+/.claude/settings.local.json

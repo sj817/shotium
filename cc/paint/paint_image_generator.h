@@ -5,6 +5,7 @@
 #ifndef CC_PAINT_PAINT_IMAGE_GENERATOR_H_
 #define CC_PAINT_PAINT_IMAGE_GENERATOR_H_
 
+#include <memory>
 #include <vector>
 
 #include "cc/paint/frame_metadata.h"
@@ -15,6 +16,8 @@
 #include "third_party/skia/include/core/SkSize.h"
 #include "third_party/skia/include/core/SkYUVAPixmaps.h"
 #include "ui/gfx/hdr_metadata.h"
+
+class SkStream;
 
 namespace cc {
 
@@ -31,6 +34,16 @@ class CC_PAINT_EXPORT PaintImageGenerator : public SkRefCnt {
 
   // Returns a reference to the encoded content of this image.
   virtual sk_sp<const SkData> GetEncodedData() const = 0;
+
+  // Returns a seekable stream over the encoded content without requiring it
+  // to be contiguous. The default implementation returns null.
+  virtual std::unique_ptr<SkStream> GetEncodedDataStream() const;
+
+  // Permanently releases the encoded source when an embedder knows that this
+  // generator will never be decoded or serialized again. Decodes which have
+  // already acquired the source may finish. The default implementation does
+  // nothing; generators that support this must make it thread-safe.
+  virtual bool DiscardEncodedData();
 
   // Decode into the given SkPixmap. This will modify the pixels pointed to by
   // `dst_pixmap`, but will not modify any of its properties (e.g, its

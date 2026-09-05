@@ -309,7 +309,13 @@ void ImageDecodingStore::RemoveCacheIndexedByGeneratorInternal(
   for (wtf_size_t i = 0; i < cache_identifier_list.size(); ++i) {
     DCHECK(decoder_cache_map_.Contains(cache_identifier_list[i]));
     const auto& cache_entry = decoder_cache_map_.at(cache_identifier_list[i]);
-    DCHECK(!cache_entry->UseCount());
+    // A decode that acquired this entry before the generator discarded its
+    // source is allowed to finish. It clears the decoder's source before
+    // releasing its use count, after which normal pruning or generator
+    // teardown can remove the entry. Do not destroy it underneath that decode.
+    if (cache_entry->UseCount()) {
+      continue;
+    }
     RemoveFromCacheInternal(cache_entry, deletion_list);
   }
 }

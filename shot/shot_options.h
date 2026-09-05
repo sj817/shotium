@@ -48,6 +48,9 @@ struct ShotOptions {
   // reporting its own errors with its own flag names.
   bool full_page = false;
   std::string selector;
+  // --tile-height: the region in tiles of at most this many CSS pixels, one
+  // file each. 0 is one image.
+  int tile_height = 0;
   std::string type = "png";
   std::optional<int> quality;
   bool omit_background = false;

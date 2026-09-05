@@ -72,8 +72,9 @@ async function main() {
   // require() of an ES module: node builds the namespace and this is what the
   // caller sees. If the exports drift -- a rename, a default that is not the
   // same object as the names -- it shows up here and nowhere else.
-  for (const name of ['Runtime', 'runtime', 'screenshot', 'daemon', 'cache',
-                      'start', 'stop', 'status', 'releaseMemory']) {
+  for (const name of ['Runtime', 'runtime', 'screenshot', 'screenshotTiles',
+                      'daemon', 'cache', 'start', 'stop', 'status',
+                      'releaseMemory']) {
     check(shotium[name] !== undefined, `\`${name}\` is exported`);
   }
   check(shotium.default.runtime === shotium.runtime,
@@ -87,6 +88,17 @@ async function main() {
   check(shotium.runtime.running === true, 'the engine is up');
   check(came.running === true && came.cacheDir === null,
         'and start() reports what it came up as', JSON.stringify(came));
+  // Which engine answered, checked rather than assumed. A checkout that has
+  // ever run `pnpm install` has the published platform package sitting in
+  // node_modules next to the build under test, and running this suite against
+  // the last release instead of the working tree is a failure that looks like
+  // a code bug -- an entry point added since the release is "not a function".
+  const localAddon = path.resolve(
+      'shotium', 'native', 'build', 'Release', 'shotium.node');
+  check(!fs.existsSync(localAddon) ||
+            path.resolve(came.enginePath || '') === path.dirname(localAddon),
+        'and it is the addon built from this checkout',
+        `${came.enginePath}`);
   const {image: first, stats} = await shotium.screenshot(request);
   check(Buffer.isBuffer(first) && first.length > 0, 'a screenshot comes back',
         `${first.length} bytes`);
@@ -124,7 +136,8 @@ async function main() {
         'clip arrives as a 200x120 image',
         `${clipped.readUInt32BE(16)}x${clipped.readUInt32BE(20)}`);
 
-  const written = path.join(os.tmpdir(), `shot-node-check-path-${process.pid}.png`);
+  const writtenDir = fs.mkdtempSync(path.join(os.tmpdir(), 'shot-node-check-path-'));
+  const written = path.join(writtenDir, 'image.png');
   const {image: viaPath} = await shotium.screenshot({
     file: features,
     viewport: {width: 400, height: 300},
@@ -133,7 +146,129 @@ async function main() {
   });
   check(viaPath === null, 'a request with `path` gives back a null image');
   check(fs.existsSync(written), 'and the engine wrote the file');
+  const oldOutput = fs.readFileSync(written);
+  await assert.rejects(() => shotium.screenshot({file: features, path: written,
+    selector: '#not-present', allowFileAccess: true}), /no element matches/);
+  check(fs.readFileSync(written).equals(oldOutput),
+        'a failed single-file render preserves the previous destination');
+  const {image: replaced} = await shotium.screenshot({...request, path: written});
+  check(replaced === null && sha(fs.readFileSync(written)) === sha(first),
+        'single-file replacement installs the complete new image');
+  if (process.platform !== 'win32') {
+    fs.chmodSync(written, 0o640);
+    await shotium.screenshot({...request, path: written});
+    check((fs.statSync(written).mode & 0o777) === 0o640,
+          'single-file replacement preserves POSIX permissions');
+  }
   fs.rmSync(written, {force: true});
+  fs.mkdirSync(written);
+  await assert.rejects(() => shotium.screenshot({...request, path: written}),
+      /could not write|could not install|could not preserve|could not read permissions/);
+  check(fs.statSync(written).isDirectory() && fs.readdirSync(writtenDir).join() === 'image.png',
+        'a failed single-file install preserves the destination and cleans staging files');
+  fs.rmdirSync(written);
+  fs.rmdirSync(writtenDir);
+
+  console.log('\n== backdrop effects keep display-list pairs balanced ==');
+  for (const fixture of ['gradient', 'filter']) {
+    for (const type of ['png', 'jpeg', 'webp']) {
+      const request = {
+        file: path.resolve(`apps/benchmark/fixtures/${fixture}.html`), type,
+        viewport: {width: 1280, height: 720}, allowFileAccess: true,
+      };
+      const {image, stats} = await shotium.screenshot(request);
+      check(Buffer.isBuffer(image) && image.length > 1000 && stats.failed === 0,
+            `${fixture} with nested backdrop effects renders as ${type}`);
+      // Multiple tiles retain the per-item spatial index, which is where an
+      // unbalanced backdrop save/restore used to underflow the pairing stack.
+      const {tiles, stats: tiledStats} = await shotium.screenshotTiles({
+        ...request, tile: {height: 360},
+      });
+      check(tiles.length === 2 && tiledStats.failed === 0 &&
+                tiles.every(tile => Buffer.isBuffer(tile.image) && tile.image.length > 1000),
+            `${fixture} with nested backdrop effects also renders in ${type} tiles`);
+    }
+  }
+
+  console.log('\n== tiles ==');
+  // Taller than blink paints from one scroll position, so this exercises the
+  // banded path as well as the cut: white to the bottom, then a red strip.
+  const tallHeight = 36000;
+  const tall = path.join(os.tmpdir(), `shot-node-check-tall-${process.pid}.html`);
+  fs.writeFileSync(
+      tall,
+      '<body style="margin:0">' +
+          `<div style="height:${tallHeight - 10}px;background:#fff"></div>` +
+          '<div style="height:10px;background:#f00"></div></body>');
+  const pngHeight = (png) => png.readUInt32BE(20);
+  const {tiles, stats: tileStats} = await shotium.screenshotTiles({
+    file: tall,
+    viewport: {width: 400, height: 300},
+    fullPage: true,
+    tile: {height: 8000},
+  });
+  check(tiles.length === 5, '36000px in 8000px tiles is five tiles',
+        `${tiles.length}`);
+  check(tiles.every((t) => Buffer.isBuffer(t.image) && t.width === 400),
+        'each with an image and the region\'s width');
+  check(tiles.map((t) => t.y).join() === '0,8000,16000,24000,32000',
+        'stacked top to bottom', tiles.map((t) => t.y).join());
+  check(tiles.map((t) => pngHeight(t.image)).join() ===
+            '8000,8000,8000,8000,4000',
+        'and each image is as tall as its tile',
+        tiles.map((t) => pngHeight(t.image)).join());
+  check(tileStats.requests >= 1 && tileStats.timing.total > 0,
+        'with one set of stats for the lot');
+
+  for (const height of [1, 32000]) {
+    const {tiles: boundary} = await shotium.screenshotTiles({
+      file: features,
+      viewport: {width: 400, height: 300},
+      clip: {x: 40, y: 60, width: 1, height: 1},
+      tile: {height},
+      allowFileAccess: true,
+    });
+    check(boundary.length === 1 && boundary[0].height === 1,
+          `tile.height accepts the ${height === 1 ? 'lower' : 'upper'} boundary`,
+          JSON.stringify(boundary.map((tile) => tile.height)));
+  }
+
+  const {image: whole} = await shotium.screenshot({
+    file: tall,
+    viewport: {width: 400, height: 300},
+    fullPage: true,
+    scale: 0.25,
+  });
+  check(pngHeight(whole) === tallHeight / 4,
+        'and fullPage alone still gives the whole page as one image',
+        `${pngHeight(whole)}`);
+
+  let misplaced = null;
+  try {
+    await shotium.screenshot({file: tall, tile: {height: 8000}});
+  } catch (error) {
+    misplaced = error;
+  }
+  check(misplaced instanceof TypeError && /screenshotTiles/.test(misplaced.message),
+        'tile on screenshot() names the call that takes it');
+
+  const tilePath = path.join(os.tmpdir(), `shot-node-check-tile-${process.pid}-{n}.png`);
+  const {tiles: onDisk} = await shotium.screenshotTiles({
+    file: tall,
+    viewport: {width: 400, height: 300},
+    fullPage: true,
+    tile: {height: 8000},
+    path: tilePath,
+  });
+  check(onDisk.every((t) => t.image === null && typeof t.path === 'string'),
+        'with `path`, tiles come back as file names');
+  check(onDisk.every((t) => fs.existsSync(t.path)) &&
+            onDisk[0].path.endsWith('-1.png'),
+        'numbered from 1 and written', onDisk[0].path);
+  for (const t of onDisk) {
+    fs.rmSync(t.path, {force: true});
+  }
+  fs.rmSync(tall, {force: true});
 
   console.log('\n== errors are errors, not crashes ==');
   // This one matters more than it did with a pool behind it. A worker that

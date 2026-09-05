@@ -28,7 +28,22 @@
 
 namespace blink {
 
-BASE_FEATURE(kDelayParkingImages, base::FEATURE_ENABLED_BY_DEFAULT);
+// Off in this fork, where upstream has it on. The delay exists so that a
+// browser does not write an image to disk seconds before the first paint
+// reads it back. A screenshot paints once, after every image has arrived, and
+// wants them parked as they arrive so that their bytes are not all resident at
+// the moment the raster starts.
+//
+// Changed here rather than overridden at startup because there is nothing to
+// override it with: this binary registers no FeatureList, so every
+// base::FeatureList::IsEnabled call in it falls through to the default state
+// written beside the feature. Registering one is not a smaller change --
+// FeatureList::SetInstance CHECKs that no feature was read before it, and by
+// the time an engine exists //base, //net and mojo have all read theirs.
+//
+// Tracked in docs/upstream-sync.md; shot/shot_renderer.h documents what it
+// means for the SHOT_PARK_IMAGES switch.
+BASE_FEATURE(kDelayParkingImages, base::FEATURE_DISABLED_BY_DEFAULT);
 
 namespace {
 

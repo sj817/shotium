@@ -59,6 +59,18 @@ struct CaptureTask {
   shot_buffer* error = nullptr;
 };
 
+// One tiles capture in flight: as CaptureTask, resolving to a list.
+struct TilesTask {
+  napi_deferred deferred = nullptr;
+  napi_async_work work = nullptr;
+  shot_engine* engine = nullptr;
+  std::string request;
+  shot_status status = SHOT_ERR_CAPTURE;
+  shot_tile_list* tiles = nullptr;
+  shot_buffer* stats = nullptr;
+  shot_buffer* error = nullptr;
+};
+
 // One cache operation in flight. The same shape as a capture and deliberately
 // not shared with it: a capture resolves to bytes and this resolves to JSON,
 // and the one field they would have in common is the promise.
@@ -275,6 +287,91 @@ void CompleteCapture(napi_env env, napi_status status, void* data) {
   delete task;
 }
 
+void ExecuteTiles(napi_env env, void* data) {
+  auto* task = static_cast<TilesTask*>(data);
+  task->status = shot_engine_capture_tiles(task->engine, task->request.c_str(),
+                                           &task->tiles, &task->stats,
+                                           &task->error);
+}
+
+// Rejects with the engine's message and the statistics attached, the same
+// way CompleteCapture does.
+void RejectWithStats(napi_env env,
+                     napi_deferred deferred,
+                     shot_buffer* error,
+                     shot_buffer* stats,
+                     const char* fallback) {
+  const char* text = fallback;
+  if (error && shot_buffer_size(error) > 0) {
+    text = reinterpret_cast<const char*>(shot_buffer_data(error));
+  }
+  napi_value message = nullptr;
+  napi_value error_value = nullptr;
+  napi_create_string_utf8(env, text, NAPI_AUTO_LENGTH, &message);
+  napi_create_error(env, nullptr, message, &error_value);
+  napi_set_named_property(env, error_value, "stats", StatsValue(env, stats));
+  napi_reject_deferred(env, deferred, error_value);
+}
+
+void CompleteTiles(napi_env env, napi_status status, void* data) {
+  auto* task = static_cast<TilesTask*>(data);
+
+  if (status == napi_ok && task->status == SHOT_OK) {
+    const size_t count = shot_tile_list_count(task->tiles);
+    napi_value list = nullptr;
+    napi_create_array_with_length(env, count, &list);
+    for (size_t i = 0; i < count; ++i) {
+      // Each image leaves the list as its own external Buffer, owned by that
+      // Buffer from here on; what the list still holds when it is freed below
+      // is only what was not taken.
+      shot_buffer* image = shot_tile_list_take_image(task->tiles, i);
+      napi_value buffer = ImageValue(env, &image);
+      shot_buffer_free(image);
+
+      int32_t x = 0;
+      int32_t y = 0;
+      int32_t width = 0;
+      int32_t height = 0;
+      shot_tile_list_region(task->tiles, i, &x, &y, &width, &height);
+
+      napi_value tile = nullptr;
+      napi_create_object(env, &tile);
+      napi_set_named_property(env, tile, "image", buffer);
+      napi_value number = nullptr;
+      napi_create_int32(env, x, &number);
+      napi_set_named_property(env, tile, "x", number);
+      napi_create_int32(env, y, &number);
+      napi_set_named_property(env, tile, "y", number);
+      napi_create_int32(env, width, &number);
+      napi_set_named_property(env, tile, "width", number);
+      napi_create_int32(env, height, &number);
+      napi_set_named_property(env, tile, "height", number);
+      if (const char* path = shot_tile_list_path(task->tiles, i)) {
+        napi_value text = nullptr;
+        napi_create_string_utf8(env, path, NAPI_AUTO_LENGTH, &text);
+        napi_set_named_property(env, tile, "path", text);
+      }
+      napi_set_element(env, list, static_cast<uint32_t>(i), tile);
+    }
+
+    napi_value result = nullptr;
+    napi_create_object(env, &result);
+    napi_set_named_property(env, result, "tiles", list);
+    napi_set_named_property(env, result, "stats",
+                            StatsValue(env, task->stats));
+    napi_resolve_deferred(env, task->deferred, result);
+  } else {
+    RejectWithStats(env, task->deferred, task->error, task->stats,
+                    "shotium: the tiles capture failed");
+  }
+
+  shot_tile_list_free(task->tiles);
+  shot_buffer_free(task->stats);
+  shot_buffer_free(task->error);
+  napi_delete_async_work(env, task->work);
+  delete task;
+}
+
 void ExecuteCache(napi_env env, void* data) {
   auto* task = static_cast<CacheTask*>(data);
   task->status = task->clearing
@@ -342,6 +439,41 @@ napi_value Capture(napi_env env, napi_callback_info info) {
   napi_create_string_utf8(env, "shot:capture", NAPI_AUTO_LENGTH, &name);
   napi_create_async_work(env, nullptr, name, ExecuteCapture, CompleteCapture,
                          task, &task->work);
+  napi_queue_async_work(env, task->work);
+  return promise;
+}
+
+napi_value CaptureTiles(napi_env env, napi_callback_info info) {
+  size_t argc = 2;
+  napi_value argv[2] = {};
+  napi_get_cb_info(env, info, &argc, argv, nullptr, nullptr);
+
+  EngineHandle* handle = nullptr;
+  if (argc < 2 || !ReadHandle(env, argv[0], &handle)) {
+    return nullptr;
+  }
+
+  auto* task = new TilesTask;
+  task->engine = handle->engine;
+  if (!ReadUtf8(env, argv[1], &task->request)) {
+    delete task;
+    napi_throw_type_error(env, nullptr,
+                          "shotium: captureTiles(engine, requestJson) wants a "
+                          "string");
+    return nullptr;
+  }
+
+  napi_value promise = nullptr;
+  if (napi_create_promise(env, &task->deferred, &promise) != napi_ok) {
+    delete task;
+    napi_throw_error(env, nullptr, "shotium: could not make a promise");
+    return nullptr;
+  }
+
+  napi_value name = nullptr;
+  napi_create_string_utf8(env, "shot:captureTiles", NAPI_AUTO_LENGTH, &name);
+  napi_create_async_work(env, nullptr, name, ExecuteTiles, CompleteTiles, task,
+                         &task->work);
   napi_queue_async_work(env, task->work);
   return promise;
 }
@@ -466,6 +598,8 @@ napi_value Init(napi_env env, napi_value exports) {
        nullptr},
       {"capture", nullptr, Capture, nullptr, nullptr, nullptr, napi_default,
        nullptr},
+      {"captureTiles", nullptr, CaptureTiles, nullptr, nullptr, nullptr,
+       napi_default, nullptr},
       {"purge", nullptr, Purge, nullptr, nullptr, nullptr, napi_default,
        nullptr},
       {"cache", nullptr, Cache, nullptr, nullptr, nullptr, napi_default,

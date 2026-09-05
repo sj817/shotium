@@ -139,7 +139,8 @@ await shotium.stop();
   - Within a single engine instance, concurrent screenshot calls are queued and rendered sequentially.
   - To achieve parallel throughput, scale horizontally across multiple worker processes.
 - **Status Reporting**:
-  - `start()` and `status()` return `{ running, cacheDir, cacheActive }`.
+  - `start()` and `status()` return `{ running, cacheDir, cacheActive, enginePath }`.
+  - `enginePath` identifies the directory the loaded native engine came from and is `null` before the first engine load.
   - If `cacheDir` cannot be opened, `cacheActive` is set to `false`, and the engine operates safely in cacheless mode.
 
 ---
@@ -252,6 +253,83 @@ interface ScreenshotResult {
 }
 ```
 
+### `screenshotTiles(options)`
+
+The same capture, delivered as a stack of images instead of one. The region
+that `fullPage`, `selector`, `clip` or the viewport would have produced is cut
+into horizontal tiles of at most `tile.height` CSS pixels each; the document
+is loaded and laid out once for all of them. Tiles are for callers that need
+the page in pieces -- a chat platform's image size limit, a viewer that pages
+-- not for memory: a plain `fullPage` capture already costs the same however
+tall the page is (see below).
+
+```ts
+const {tiles, stats} = await shotium.screenshotTiles({
+  file: 'https://example.com/a-very-long-article',
+  fullPage: true,
+  tile: {height: 8000},
+});
+for (const {image, y, height} of tiles) {
+  // image: Buffer -- a PNG of this tile
+  // y, height: where it sits in the document, in CSS pixels
+}
+```
+
+```ts
+interface ScreenshotTilesOptions extends ScreenshotOptions {
+  /** Most CSS pixels per tile; the last tile is what is left. At most 32000. */
+  tile: {height: number};
+}
+
+interface ScreenshotTilesResult {
+  /** Top to bottom. Consecutive tiles share x and width; each starts where the previous ended. */
+  tiles: Array<{
+    image: Buffer | null;  // null when path was given
+    x: number; y: number; width: number; height: number;
+    path?: string;         // the file written, when path was given
+  }>;
+  stats: CaptureStats;
+}
+```
+
+With `path`, every tile is written to disk and the path must contain `{n}`,
+which becomes the tile's 1-based index: `page-{n}.png` writes `page-1.png`,
+`page-2.png`, and so on. `daemon.screenshotTiles()` and
+`client.screenshotTiles()` take the same options.
+
+`path` is also the bounded-memory mode: the engine writes each encoded tile as
+it finishes, so image-data memory stays near the current tile. Without `path`,
+the promise returns every tile as a `Buffer`; completed buffers therefore stay
+in memory until the promise resolves, and their total encoded size grows with
+the captured height.
+
+#### Very tall pages
+
+`fullPage` renders a document of any height into one image, up to what the
+format can hold: 65535 pixels on a side for `png` and `jpeg`, 16383 for
+`webp`. A page taller than that is refused with the size and the limit named;
+lower `scale`, or use `screenshotTiles()`, which has no such ceiling. There is
+no engine-side height limit either way -- a document deeper than Blink paints
+from one scroll position is painted in bands and joined without a seam.
+
+#### Memory
+
+The image is never in memory whole. It is rastered in strips of 128 rows and
+encoded as each strip completes; a strip's memory is returned to the system the
+moment the encoder is done with it, so a 1440 x 40000 PNG holds about 10 MB of
+bitmap at any time rather than 236 MB. Images the page draws are decoded when
+a strip first needs them, at the size they are drawn at, and dropped once the
+last strip that draws them is encoded. Measured on a 41,000-pixel article
+(peak private memory of the process, engine included): 94 MB for the viewport,
+115 MB for the whole page as PNG or JPEG. What remains is the document itself
+-- for a page of thirty photographs, the 72 MB of JPEG bytes it embeds -- and
+the encoded output, which for a PNG of photographs can be the largest item;
+`jpeg` or `webp` is the right format for those.
+
+Lossless WebP (`type: 'webp'` with `quality: 100`) is the one exception: libwebp
+needs the whole picture at once, plus working copies of it. Use lossy WebP or
+tiles for a tall page.
+
 #### Parameter Details
 
 - **`file` Input Schemes**:
@@ -298,6 +376,8 @@ interface StartResult {
   running: boolean;
   /** Active cache directory path (null when caching is disabled) */
   cacheDir: string | null;
+  /** Directory the loaded native engine came from (null before the first load) */
+  enginePath: string | null;
   /** Whether cache directory was opened successfully and is active */
   cacheActive: boolean;
 }
@@ -385,6 +465,8 @@ interface DaemonStatus {
   served: number;           // Total completed requests
   idleTimeoutMs: number;    // Configured idle timeout
   version: string;          // Engine version
+  protocolVersion: number;  // Local daemon wire protocol generation
+  capabilities: ('screenshot' | 'tiles')[]; // Supported operations
 }
 ```
 

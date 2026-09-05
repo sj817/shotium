@@ -3,9 +3,12 @@ import type {
   Clip,
   PageGotoParams,
   ScreenshotOptions,
+  ScreenshotTilesOptions,
+  TileOptions,
 } from '../types.js';
 
 const DEFAULT_TIMEOUT_MS = 30000;
+const MAX_TILE_HEIGHT = 32000;
 
 // What actually goes down the pipe: ScreenshotOptions with the viewport
 // flattened -- see toRequest below for why.
@@ -23,6 +26,7 @@ export interface WireRequest {
   allowFileAccess?: boolean;
   cache?: CacheMode;
   headers?: Record<string, string>;
+  tile?: TileOptions;
   width?: number;
   height?: number;
 }
@@ -49,6 +53,7 @@ const WIRE_FIELDS = new Set([
   'allowFileAccess',
   'cache',
   'headers',
+  'tile',
 ]);
 
 // One ScreenshotOptions, checked and flattened into what goes on the wire.
@@ -63,7 +68,44 @@ function toRequest(options: ScreenshotOptions): WireRequest {
   if (typeof options.file !== 'string' || options.file.length === 0) {
     throw new TypeError('shotium: options.file is required');
   }
+  // A tiles request answers with a list and a screenshot with one image; the
+  // two are different calls, and a caller who put `tile` on screenshot() is
+  // told which one they wanted rather than handed the first tile.
+  if ('tile' in options && (options as ScreenshotTilesOptions).tile !==
+                                undefined) {
+    throw new TypeError(
+        'shotium: tile is an option of screenshotTiles(), not screenshot()');
+  }
+  return toWire(options);
+}
 
+/**
+ * One ScreenshotTilesOptions, checked and flattened. The same checks as
+ * toRequest and one more: `tile.height` has to be there, because without it
+ * there is nothing to cut by.
+ */
+function toTilesRequest(options: ScreenshotTilesOptions): WireRequest {
+  if (!options || typeof options !== 'object') {
+    throw new TypeError('shotium: screenshotTiles(options) needs an object');
+  }
+  if (typeof options.file !== 'string' || options.file.length === 0) {
+    throw new TypeError('shotium: options.file is required');
+  }
+  const tile = options.tile;
+  if (!tile || typeof tile !== 'object' || typeof tile.height !== 'number') {
+    throw new TypeError(
+        'shotium: screenshotTiles() needs tile.height, the most CSS pixels ' +
+        'one tile covers');
+  }
+  if (!Number.isInteger(tile.height) || tile.height < 1 ||
+      tile.height > MAX_TILE_HEIGHT) {
+    throw new TypeError(
+        `shotium: tile.height must be an integer from 1 to ${MAX_TILE_HEIGHT}`);
+  }
+  return toWire(options);
+}
+
+function toWire(options: ScreenshotOptions): WireRequest {
   const request: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(options)) {
     if (value === undefined) {
@@ -100,7 +142,9 @@ function timeoutFor(options: ScreenshotOptions): number {
 
 export {
   DEFAULT_TIMEOUT_MS,
+  MAX_TILE_HEIGHT,
   WIRE_FIELDS,
   timeoutFor,
   toRequest,
+  toTilesRequest,
 };

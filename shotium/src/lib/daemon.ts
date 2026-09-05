@@ -14,7 +14,12 @@ import {resolveStartOptions} from './config.js';
 import type {ResolvedStartOptions} from './config.js';
 import {endpointFor} from './endpoint.js';
 import {Engine} from './engine.js';
-import {FrameReader, encodeFrame} from './protocol.js';
+import {
+  DAEMON_CAPABILITIES,
+  DAEMON_PROTOCOL_VERSION,
+  FrameReader,
+  encodeFrame,
+} from './protocol.js';
 import type {WireRequest} from './request.js';
 
 // Our own version, for status(). Read rather than imported: an import
@@ -37,10 +42,21 @@ const DEFAULT_IDLE_TIMEOUT_MS = 300000;
 // almost every message is.
 interface DaemonMessage {
   id?: number|null;
-  op?: 'screenshot'|'status'|'ping'|'shutdown';
+  op?: 'screenshot'|'tiles'|'status'|'ping'|'shutdown';
   request?: WireRequest;
   timeout?: number;
   retry?: number;
+}
+
+// One tile's place and size on a tiles reply. The image itself follows the
+// header as a frame of its own, one per entry, in this order.
+interface TileHeader {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  bytes: number;
+  path?: string;
 }
 
 interface DaemonReply {
@@ -50,6 +66,9 @@ interface DaemonReply {
   bytes?: number;
   path?: string;
   stopping?: boolean;
+  // A tiles reply: the header lists the tiles and as many payload frames
+  // follow as there are entries, instead of the one frame a screenshot gets.
+  tiles?: TileHeader[];
   // What the capture cost, on the success header and on the failure one. The
   // client turns it back into the same CaptureStats the in-process engine
   // returns, so a program moving between the two changes an import and
@@ -252,6 +271,8 @@ class Daemon extends EventEmitter {
       served: this.served,
       idleTimeoutMs: this.idleTimeoutMs,
       version: VERSION,
+      protocolVersion: DAEMON_PROTOCOL_VERSION,
+      capabilities: [...DAEMON_CAPABILITIES],
     };
   }
 
@@ -304,7 +325,7 @@ class Daemon extends EventEmitter {
       socket.end(() => void this.close());
       return;
     }
-    if (op !== 'screenshot') {
+    if (op !== 'screenshot' && op !== 'tiles') {
       this.reply(socket, {id, ok: false, error: `shotium: unknown op "${op}"`});
       return;
     }
@@ -314,8 +335,27 @@ class Daemon extends EventEmitter {
     this.inFlight += 1;
     this.armIdleTimer();
     this.emit('request', {id, file: request.file});
-    this.engine.capture(request)
-        .then(({image, stats}) => {
+    const capture = op === 'tiles' ?
+        this.engine.captureTiles(request).then(({tiles, stats}) => {
+          this.served += 1;
+          const payloads = tiles.map((tile) => tile.image || Buffer.alloc(0));
+          this.replyMany(
+              socket, {
+                id,
+                ok: true,
+                tiles: tiles.map((tile, i) => ({
+                  x: tile.x,
+                  y: tile.y,
+                  width: tile.width,
+                  height: tile.height,
+                  bytes: payloads[i].length,
+                  ...(tile.path !== undefined ? {path: tile.path} : {}),
+                })),
+                stats,
+              },
+              payloads);
+        }) :
+        this.engine.capture(request).then(({image, stats}) => {
           this.served += 1;
           this.reply(
               socket,
@@ -327,7 +367,8 @@ class Daemon extends EventEmitter {
                 stats,
               },
               image);
-        })
+        });
+    capture
         .catch((error: Error&{stats?: CaptureStats}) => {
           // The counters go back with the failure, matching the in-process
           // engine: a capture that timed out after fetching forty subresources
@@ -354,6 +395,18 @@ class Daemon extends EventEmitter {
     }
     socket.write(encodeFrame(Buffer.from(JSON.stringify(header), 'utf8')));
     socket.write(encodeFrame(payload || Buffer.alloc(0)));
+  }
+
+  // A tiles reply: the header, then one frame per tile it lists.
+  private replyMany(
+      socket: net.Socket, header: DaemonReply, payloads: Buffer[]): void {
+    if (socket.destroyed) {
+      return;
+    }
+    socket.write(encodeFrame(Buffer.from(JSON.stringify(header), 'utf8')));
+    for (const payload of payloads) {
+      socket.write(encodeFrame(payload));
+    }
   }
 
   // Idle is "nobody connected and nothing rendering". A client that holds its

@@ -26,9 +26,12 @@
 #ifndef THIRD_PARTY_BLINK_RENDERER_PLATFORM_GRAPHICS_DECODING_IMAGE_GENERATOR_H_
 #define THIRD_PARTY_BLINK_RENDERER_PLATFORM_GRAPHICS_DECODING_IMAGE_GENERATOR_H_
 
+#include <memory>
 #include <vector>
 
 #include "base/memory/scoped_refptr.h"
+#include "base/synchronization/lock.h"
+#include "base/thread_annotations.h"
 #include "third_party/blink/renderer/platform/graphics/paint/paint_image.h"
 #include "third_party/blink/renderer/platform/image-decoders/segment_reader.h"
 #include "third_party/blink/renderer/platform/platform_export.h"
@@ -37,6 +40,7 @@
 #include "third_party/skia/include/core/SkYUVAPixmaps.h"
 
 class SkData;
+class SkStream;
 
 namespace blink {
 
@@ -73,6 +77,8 @@ class PLATFORM_EXPORT DecodingImageGenerator final
 
   // PaintImageGenerator implementation.
   sk_sp<const SkData> GetEncodedData() const override;
+  std::unique_ptr<SkStream> GetEncodedDataStream() const override;
+  bool DiscardEncodedData() override;
   bool GetPixels(SkPixmap,
                  size_t frame_index,
                  PaintImage::GeneratorClientId client_id,
@@ -104,7 +110,8 @@ class PLATFORM_EXPORT DecodingImageGenerator final
                          const cc::ImageHeaderMetadata& image_metadata);
 
   scoped_refptr<ImageFrameGenerator> frame_generator_;
-  const scoped_refptr<SegmentReader> data_;  // Data source.
+  mutable base::Lock data_lock_;
+  scoped_refptr<SegmentReader> data_ GUARDED_BY(data_lock_);  // Data source.
   const bool all_data_received_;
   const bool can_yuv_decode_;
   const PaintImage::ContentId complete_frame_content_id_;

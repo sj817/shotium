@@ -9,7 +9,20 @@
 //   <-  [len][{"ok":true,"bytes":97756}]  [len][<PNG bytes>]
 //   <-  [len][{"ok":false,"error":"..."}] [0]
 
+import type {DaemonCapability} from '../types.js';
+
 const HEADER_BYTES = 4;
+
+// The resident daemon's wire generation, independent of the npm package and
+// the C ABI. Additive package releases may keep this number; a client that
+// cannot safely talk to the previous daemon increments it. Derived endpoints
+// include the generation, while callers that choose an exact endpoint get a
+// status handshake instead.
+const DAEMON_PROTOCOL_VERSION = 2;
+const DAEMON_CAPABILITIES = [
+  'screenshot',
+  'tiles',
+] as const satisfies readonly DaemonCapability[];
 
 function encodeFrame(payload: Buffer): Buffer {
   const header = Buffer.allocUnsafe(HEADER_BYTES);
@@ -50,4 +63,11 @@ class FrameReader {
   }
 }
 
-export {HEADER_BYTES, encodeFrame, encodeRequest, FrameReader};
+export {
+  DAEMON_CAPABILITIES,
+  DAEMON_PROTOCOL_VERSION,
+  HEADER_BYTES,
+  encodeFrame,
+  encodeRequest,
+  FrameReader,
+};

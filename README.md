@@ -17,7 +17,7 @@
 
 <p align="center">
   <img src="docs/assets/demo.gif" width="820"
-       alt="Terminal recording demonstrating installation of @shotkit/shotium and running shotium in Node.js on card.html with cold and warm capture timings.">
+       alt="Terminal recording demonstrating installation of @shotkit/shotium and running shotium in Node.js on card.html with cold and warm capture timings, followed by the rendered boarding pass.">
 </p>
 
 **shotium** strips Chromium down to its essential rendering pipeline — the Blink layout engine, Skia 2D graphics library, and `//net` network stack — packaged as a compact ~22 MB npm dependency. It lays out static HTML and CSS with 100% Chrome fidelity, rasterizes on the CPU, and delivers PNG, JPEG, or WebP buffers directly inside your host process.
@@ -29,7 +29,7 @@ By stripping out the V8 JavaScript engine, the browser shell (`//content`), the 
 ## Key Highlights
 
 - **Auditable Cross-Engine Benchmarks**: Native CI compares Shotium with Puppeteer and Playwright engine variants on six platforms; complete runs with complete evidence and no blocking harness or Shotium failure are publishable, while noisy or failed cells are labeled and excluded from rankings. (See [Benchmarks](#benchmarks))
-- **Zero External Dependencies**: `pnpm add` automatically downloads the native prebuilt binary for Windows, macOS, and Linux (x64 and arm64). The engine loads via Node-API directly into your host process — no child processes, no WebSockets, and no lingering zombie browsers.
+- **Zero External Dependencies**: `npm install` automatically downloads the native prebuilt binary for Windows, macOS, and Linux (x64 and arm64). The engine loads via Node-API directly into your host process — no child processes, no WebSockets, and no lingering zombie browsers.
 - **Full Chromium CSS Compatibility**: Complete support for CSS Grid, Flexbox, `@font-face`, SVG, gradients, box shadows, filters, and CSS variables. Typography uses deterministic grayscale antialiasing with a fixed gamma curve for byte-identical rendering across all platforms.
 - **Auditable Memory Footprint**: The benchmark records the complete owned process tree, peak RSS, and resident memory drift for every engine variant; comparative memory figures are published only when the run passes the quality and evidence gates.
 - **Flexible Deployment Models**: In-process embedding for long-lived backend services, a pre-warmed resident daemon for CLI tools and CI pipelines, a standalone single-file binary for shell scripting, and a standard C ABI for Rust, Go, Python, and C++.
@@ -41,8 +41,13 @@ By stripping out the V8 JavaScript engine, the browser shell (`//content`), the 
 ### 1. Installation
 
 ```bash
-# pnpm 9.15.9
+# npm
+npm install @shotkit/shotium
+
+# pnpm / yarn / bun
 pnpm add @shotkit/shotium
+yarn add @shotkit/shotium
+bun add @shotkit/shotium
 ```
 
 ### 2. Node.js / TypeScript Example
@@ -253,7 +258,7 @@ await shotium.stop();
 - **`start()` & `stop()`**: `stop()` drains in-flight requests, sets `running: false`, and trims the working set. A subsequent `start()` reactivates the engine immediately while preserving warm disk cache entries.
 - **Immutable Configuration**: Startup options are locked on the first `start()` invocation; calling `start()` with conflicting options throws an explicit error.
 - **Serial Queue**: Concurrent `screenshot()` calls are queued and processed sequentially. Scale across worker processes for parallel rendering.
-- **Cache Status Awareness**: `start()` and `status()` return `{ running, cacheDir, cacheActive }`. If the cache directory is inaccessible, `cacheActive` is `false` and the engine gracefully continues in no-cache mode.
+- **Status Awareness**: `start()` and `status()` return `{ running, cacheDir, cacheActive, enginePath }`. `enginePath` identifies the directory the loaded native engine came from and is `null` before the first engine load. If the cache directory is inaccessible, `cacheActive` is `false` and the engine gracefully continues in no-cache mode.
 
 ### 2. Resident Daemon
 
@@ -427,6 +432,8 @@ interface StartResult {
   running: boolean;
   /** Active cache directory path; null when caching is disabled */
   cacheDir: string | null;
+  /** Directory the loaded native engine came from; null before the first load */
+  enginePath: string | null;
   /** Whether the cache directory is actively in use */
   cacheActive: boolean;
 }
@@ -512,6 +519,8 @@ interface DaemonStatus {
   served: number;           // Total requests completed since startup
   idleTimeoutMs: number;    // Configured idle timeout duration
   version: string;          // Core engine version string
+  protocolVersion: number;  // Local daemon wire protocol generation
+  capabilities: ('screenshot' | 'tiles')[]; // Supported operations
 }
 ```
 
@@ -626,7 +635,7 @@ shot_buffer_free(stats);
 shot_engine_destroy(engine);
 ```
 
-> **ABI Versioning**: Current ABI version is **2** (introduced in 0.3 with `out_stats`, `shot_engine_status`, `shot_cache_list`, and `shot_cache_clear`). Call `shot_abi_version()` to verify compatibility against `SHOT_ABI_VERSION`.
+> **ABI Versioning**: Current ABI version is **3**. ABI 3 adds `shot_engine_capture_tiles()` plus the `shot_tile_list_count()`, `shot_tile_list_region()`, `shot_tile_list_path()`, `shot_tile_list_take_image()`, and `shot_tile_list_free()` access and ownership API. Call `shot_abi_version()` to verify compatibility against `SHOT_ABI_VERSION`.
 
 ---
 
@@ -661,6 +670,10 @@ gclient sync --nohooks --no-history
 gclient runhooks
 
 cd src
+
+# Apply Shot's Skia changes after the DEPS-managed checkout is synced
+git -C third_party/skia apply --verbose ../../patches/third_party_skia_parallel_blur.patch
+git -C third_party/skia apply --verbose ../../patches/third_party_skia_incremental_row_limit.patch
 
 # Repack stripped ICU data tables
 python3 tools/shot/icu_repack.py   third_party/icu/cast/icudtl.dat   third_party/icu/shot/icudtl.dat --preset shot

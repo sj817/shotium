@@ -4,12 +4,17 @@
 
 #include "shot/shot_runtime.h"
 
+#include <array>
+#include <cstdlib>
 #include <deque>
 #include <functional>
+#include <tuple>
 #include <utility>
 
 #include "base/files/file_path.h"
 #include "base/functional/bind.h"
+#include "base/logging.h"
+#include "base/time/time.h"
 #include "base/i18n/icu_util.h"
 #include "base/location.h"
 #include "base/memory/discardable_memory_allocator.h"
@@ -26,9 +31,17 @@
 #include "components/discardable_memory/service/discardable_shared_memory_manager.h"
 #include "mojo/core/embedder/embedder.h"
 #include "mojo/public/cpp/bindings/binder_map.h"
+#include "partition_alloc/buildflags.h"
 #include "partition_alloc/memory_reclaimer.h"
+#include "partition_alloc/partition_alloc_config.h"
+#include "partition_alloc/partition_alloc_constants.h"
+#include "partition_alloc/shim/allocator_shim.h"
+#include "partition_alloc/shim/allocator_shim_default_dispatch_to_partition_alloc.h"
+#include "partition_alloc/tagging.h"
+#include "partition_alloc/thread_cache.h"
 #include "shot/shot_platform.h"
 #include "shot/shot_renderer.h"
+#include "third_party/blink/public/platform/web_runtime_features.h"
 #include "skia/ext/legacy_display_globals.h"
 #include "third_party/blink/public/platform/platform.h"
 #include "third_party/blink/public/platform/scheduler/web_thread_scheduler.h"
@@ -161,6 +174,60 @@ base::expected<std::unique_ptr<ShotRuntime>, std::string> ShotRuntime::Create(
     const NetworkConfig& network_config) {
   // Can't use make_unique: the constructor is private.
   std::unique_ptr<ShotRuntime> runtime(new ShotRuntime());
+
+  // PartitionAlloc's per-thread cache. The allocator shim builds its
+  // partition with the cache off and leaves turning it on to the embedder:
+  // chrome does it in PartitionAllocSupport once its feature list is up, and
+  // for a renderer raises the largest cached size to 32 KB. Nothing did it
+  // here, so every allocation past the smallest buckets took the partition's
+  // one lock. On one thread that is a slower malloc; on the raster threads it
+  // is contention. On a page of blurred shadows and dashed borders -- each a
+  // path rastered into a mask, each mask tens of KB allocated and freed --
+  // three strips on three threads took 11.5 ms against 10.6 ms for the page
+  // rastered whole on one, the heaviest strip 12 ms; with the cache on, the
+  // three took 9.2 ms and that strip 9.5. Simple pages gain a third.
+  //
+  // The partition the shim starts with has no thread cache slot, so it is
+  // replaced first, the way chrome's ReconfigureEarlyish and
+  // ReconfigureAfterFeatureListInit do it between them: the reclaimer told
+  // about the first partition, a fresh one configured with nothing chrome
+  // would turn on by a feature -- no BackupRefPtr (this build has none), no
+  // memory tagging, no quarantine -- and the cache enabled on that. What was
+  // allocated before this stays where it is and is freed through the
+  // partition it came from.
+  //
+  // Once per process, not per runtime: an engine is torn down and created
+  // again by a restart, and the partition CHECKs a second enabling. The
+  // caches are created lazily, on a thread's first allocation after this, so
+  // it covers the raster threads whenever they are started.
+  static const bool thread_cache_enabled = [] {
+#if PA_BUILDFLAG(USE_PARTITION_ALLOC_AS_MALLOC) && \
+    PA_CONFIG(THREAD_CACHE_SUPPORTED)
+    allocator_shim::EnablePartitionAllocMemoryReclaimer();
+    allocator_shim::ConfigurePartitions(
+        allocator_shim::EnableBrp(false), /*brp_extra_extras_size=*/0,
+        allocator_shim::EnableMemoryTagging(false),
+        ::partition_alloc::TagViolationReportingMode::kUndefined,
+        allocator_shim::BucketDistribution::kNeutral,
+        ::partition_alloc::internal::SchedulerLoopQuarantineConfig(),
+        ::partition_alloc::internal::SchedulerLoopQuarantineConfig(),
+        ::partition_alloc::internal::SchedulerLoopQuarantineConfig(),
+        allocator_shim::EventuallyZeroFreedMemory(false),
+        allocator_shim::EnableFreeWithSize(false),
+        allocator_shim::EnableStrictFreeSizeCheck(false));
+    for (size_t token = 0; token < allocator_shim::kNumPartitions; ++token) {
+      allocator_shim::internal::PartitionAllocMalloc::Allocator(
+          allocator_shim::AllocToken(token))
+          ->EnableThreadCacheIfSupported();
+    }
+    ::partition_alloc::ThreadCache::SetLargestCachedSize(
+        ::partition_alloc::kThreadCacheLargeSizeThreshold);
+    return true;
+#else
+    return false;
+#endif
+  }();
+  std::ignore = thread_cache_enabled;
 
   // ICU first: WTF's string and text code assumes it during static
   // initialisation of blink.
@@ -361,6 +428,14 @@ base::expected<std::unique_ptr<ShotRuntime>, std::string> ShotRuntime::Create(
                   &blink::WebFontRendering::SetStatusFontMetrics);
 #endif
 
+  // With RasterInducingScroll on, blink's paint conversion wraps each
+  // scroller's contents in a DrawScrollingContentsOp whose playback CHECKs
+  // for a table of live scroll offsets -- the compositor's, which this
+  // process does not have. Off, a scroller's contents are emitted in place at
+  // the offset it was painted with, which is what a screenshot wants anyway.
+  blink::WebRuntimeFeatures::EnableFeatureFromString("RasterInducingScroll",
+                                                     false);
+
   runtime->platform_ = std::make_unique<ShotPlatform>();
   mojo::BinderMap binders;
   blink::Initialize(runtime->platform_.get(), &binders,
@@ -385,7 +460,24 @@ ShotRenderer& ShotRuntime::renderer() {
 }
 
 void ShotRuntime::PurgeMemory() {
-  renderer_->PurgeMemory();
+  // SHOT_PROFILE=1 logs how long each stage below took, the same switch the
+  // renderer's profile lines answer to.
+  static const bool profile = [] {
+    const char* value = std::getenv("SHOT_PROFILE");
+    return value && *value && *value != '0';
+  }();
+  base::TimeTicks stage_started = base::TimeTicks::Now();
+  std::array<double, 5> stage_ms = {};
+  auto stage_done = [&](size_t index) {
+    const base::TimeTicks now = base::TimeTicks::Now();
+    stage_ms.at(index) = (now - stage_started).InMillisecondsF();
+    stage_started = now;
+  };
+  // The page a small capture left for the idle turn, and the bitmap kept for
+  // the next one: an explicit release is the one time neither should be kept.
+  // The page has to go before the collection below, or it is not garbage yet.
+  renderer_->ReleaseRetained();
+  stage_done(0);
   // Blink's heap first, and everything else after, because the collection is
   // what makes the rest of it worth doing: the Page, the Document, every
   // LayoutObject and every Resource the capture built are unreachable the
@@ -393,27 +485,40 @@ void ShotRuntime::PurgeMemory() {
   // caches below hold entries keyed by objects that are still alive until it
   // does, so purging in the other order leaves the largest part behind.
   blink::ThreadState::Current()->CollectAllGarbageForMemoryPressure();
+  stage_done(1);
 
   // The caches that survive a collection because they are deliberate: blink's
   // resource cache, the font cache, the shaping cache, the parkable strings,
   // and the discardable segments skia rasterises through. They register as
   // memory consumers precisely so that something can tell them to shrink.
   memory_consumer_registry_->Get().ReleaseMemory();
+  stage_done(2);
 
   // Skia's own two, which are not memory consumers: the glyph raster cache and
   // SkResourceCache's non-discardable half.
   SkGraphics::PurgeAllCaches();
+  stage_done(3);
 
   // And the free lists underneath all of it. Everything above returns memory
   // to PartitionAlloc, which keeps it: the pages stay committed and charged to
   // this process against the next allocation of that size. Reclaiming is what
-  // turns a purge into a smaller process.
+  // turns a purge into a smaller process. ReclaimAll is the aggressive kind:
+  // it empties the per-thread allocator caches first -- this thread's now, the
+  // others' on their next allocation -- which chrome does on a timer and a
+  // worker between requests, with no timer running, does here.
   //
   // Blink starts a periodic reclaimer of its own (Platform::Initialize, via an
   // idle task) and it has never run here, because a worker between requests is
   // not idle in the scheduler's sense -- it is blocked on the request stream,
   // with no idle period for the task to be scheduled in.
   ::partition_alloc::MemoryReclaimer::Instance()->ReclaimAll();
+  stage_done(4);
+  if (profile) {
+    LOG(INFO) << "shot: profile purge release=" << stage_ms[0]
+              << " gc=" << stage_ms[1] << " consumers=" << stage_ms[2]
+              << " skia=" << stage_ms[3] << " reclaim=" << stage_ms[4];
+  }
+  LogMemoryStage("purged");
 }
 
 void ShotRuntime::ReleaseWorkingSet() {

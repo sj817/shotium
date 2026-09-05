@@ -33,6 +33,7 @@ import argparse
 import hashlib
 import json
 import os
+import stat
 import struct
 import subprocess
 import sys
@@ -64,6 +65,41 @@ def read_frame(stream):
 def recv(proc):
     header = json.loads(read_frame(proc.stdout).decode("utf-8"))
     return header, read_frame(proc.stdout)
+
+
+def recv_tiles(proc):
+    """A tiles reply: the header, then one payload frame per tile it lists.
+
+    A failure header is followed by the one empty frame every failure gets,
+    so the stream stays in step either way."""
+    header = json.loads(read_frame(proc.stdout).decode("utf-8"))
+    count = len(header["tiles"]) if header.get("ok") else 1
+    return header, [read_frame(proc.stdout) for _ in range(count)]
+
+
+# A document taller than blink paints from one scroll position (32767 CSS
+# pixels): white all the way down, and a red strip as the last 10px, so that
+# "did the bottom get painted" is one pixel read. A file rather than a data:
+# URL, which the worker does not load.
+TALL_HEIGHT = 36000
+
+
+def tall_document():
+    path = os.path.abspath("shot/testdata/out/tall_check.html")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("<body style='margin:0'>"
+                f"<div style='height:{TALL_HEIGHT - 10}px;background:#fff'>"
+                "</div><div style='height:10px;background:#f00'></div></body>")
+    return path
+
+
+def fixture(name, contents):
+    path = os.path.abspath(os.path.join("shot/testdata/out", name))
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(contents)
+    return path
 
 
 def png_size(data):
@@ -157,6 +193,14 @@ def main():
         [exe, "--file", corpus, "--width", str(args.width),
          "--height", str(args.height), "--output", cli_png],
         check=True)
+    invalid_cli = subprocess.run(
+        [exe, "--file", corpus, "--tile-height", "32001",
+         "--output", cli_png],
+        capture_output=True, text=True)
+    checks.check(invalid_cli.returncode == 2 and
+                 "1 to 32000" in invalid_cli.stderr,
+                 "the CLI rejects tile heights above the paint limit",
+                 invalid_cli.stderr.strip())
     with open(cli_png, "rb") as f:
         cli_digest = hashlib.sha256(f.read()).hexdigest()
     print(f"\nCLI     sha256 {cli_digest[:32]}")
@@ -260,8 +304,230 @@ def main():
     checks.check(png_size(selected) == (200, 120),
                  "the selected element is exactly 200x120",
                  str(png_size(selected)))
+
+    print("\n== ordinary output paths stay literal ==")
+    literal_path = os.path.abspath(
+        f"shot/testdata/out/literal-{{n}}-{os.getpid()}.png")
+    expanded_path = literal_path.replace("{n}", "1")
+    for candidate in (literal_path, expanded_path):
+        if os.path.isfile(candidate):
+            os.unlink(candidate)
+    header, payload = ask({"path": literal_path}, geometry)
+    checks.check(header.get("ok") is True,
+                 "an ordinary path containing {n} renders",
+                 header.get("error", ""))
+    checks.check(header.get("path") == literal_path and
+                 os.path.isfile(literal_path) and
+                 not os.path.exists(expanded_path) and not payload,
+                 "and reports and writes the literal path only",
+                 str(header.get("path")))
+    if os.path.isfile(literal_path):
+        os.unlink(literal_path)
+
+    if os.name != "nt":
+        mode_path = os.path.abspath(
+            f"shot/testdata/out/mode-{os.getpid()}.png")
+        with open(mode_path, "wb") as f:
+            f.write(b"old screenshot")
+        os.chmod(mode_path, 0o640)
+        header, _ = ask({"path": mode_path}, geometry)
+        checks.check(header.get("ok") is True,
+                     "an existing POSIX output is replaced",
+                     header.get("error", ""))
+        checks.check(stat.S_IMODE(os.stat(mode_path).st_mode) == 0o640,
+                     "without changing its permission bits",
+                     oct(stat.S_IMODE(os.stat(mode_path).st_mode)))
+        os.unlink(mode_path)
+
+    print("\n== a document taller than one paint reaches its bottom ==")
+    tall = {"file": tall_document(), "width": 400, "height": 300}
+    header, banded = ask({"fullPage": True, "scale": 0.25}, tall)
+    checks.check(header.get("ok") is True, "fullPage renders a 36000px page",
+                 header.get("error", ""))
+    checks.check(png_size(banded) == (100, TALL_HEIGHT // 4),
+                 "as one image of the whole height", str(png_size(banded)))
+    _, _, channels, rows = png_pixels(banded)
+    bottom = pixel(rows, channels, 50, TALL_HEIGHT // 4 - 2)[:3]
+    checks.check(bottom == (255, 0, 0),
+                 "and the last rows are painted, not left blank",
+                 str(bottom))
+    above = pixel(rows, channels, 50, 32767 // 4 - 2)[:3]
+    checks.check(above == (255, 255, 255),
+                 "with the rows either side of the paint limit intact",
+                 str(above))
+
+    print("\n== tiles ==")
+    send(proc, dict(tall, fullPage=True, tile={"height": 8000}))
+    header, tiles = recv_tiles(proc)
+    checks.check(header.get("ok") is True, "a tiles request renders",
+                 header.get("error", ""))
+    listed = header.get("tiles", [])
+    checks.check(len(listed) == 5 and len(tiles) == 5,
+                 "36000px in 8000px tiles is five tiles",
+                 f"{len(listed)} listed, {len(tiles)} frames")
+    checks.check([t["y"] for t in listed] == [0, 8000, 16000, 24000, 32000],
+                 "stacked top to bottom", str([t["y"] for t in listed]))
+    checks.check([t["height"] for t in listed] == [8000] * 4 + [4000],
+                 "the last tile being what was left",
+                 str([t["height"] for t in listed]))
+    sizes = [png_size(t) for t in tiles]
+    checks.check(sizes == [(400, 8000)] * 4 + [(400, 4000)],
+                 "and each frame is a PNG of its tile's size", str(sizes))
+    checks.check(all(len(t) == e["bytes"] for t, e in zip(tiles, listed)),
+                 "whose lengths match the header")
+    _, _, channels, rows = png_pixels(tiles[-1])
+    bottom = pixel(rows, channels, 200, 3998)[:3]
+    checks.check(bottom == (255, 0, 0), "the last tile ends in the red strip",
+                 str(bottom))
+
+    send(proc, dict(tall, fullPage=True, tile={"height": 8000},
+                    path="tiles.png"))
+    header, _ = recv_tiles(proc)
+    checks.check(header.get("ok") is False and "{n}" in header.get("error", ""),
+                 "a tiles path without {n} is refused by name",
+                 header.get("error", ""))
+    header, payload = ask({}, geometry)
+    checks.check(header.get("ok") is True and png_size(payload) == (400, 300),
+                 "and the stream is still in step afterwards")
     checks.check(selected == clipped,
                  "selector and clip found the same box, to the byte")
+
+    print("\n== fractional tiles share the whole image's device grid ==")
+    fractional_path = fixture(
+        "fractional_tiles.html",
+        "<style>html,body{margin:0;width:20px}body{height:1001px;"
+        "background:repeating-linear-gradient(to bottom,#123456 0 1px,"
+        "#abcdef 1px 2px)}</style>")
+    fractional = {"file": fractional_path, "width": 20, "height": 100,
+                  "allowFileAccess": True, "fullPage": True, "scale": 1.5}
+    header, fractional_whole = ask({}, fractional)
+    checks.check(header.get("ok") is True, "the fractional whole image renders",
+                 header.get("error", ""))
+    send(proc, dict(fractional, tile={"height": 333}))
+    header, fractional_tiles = recv_tiles(proc)
+    checks.check(header.get("ok") is True, "the fractional tiles render",
+                 header.get("error", ""))
+    whole_width, whole_height, whole_channels, whole_rows = png_pixels(
+        fractional_whole)
+    tile_images = [png_pixels(tile) for tile in fractional_tiles]
+    tile_rows = [row for image in tile_images for row in image[3]]
+    checks.check(sum(image[1] for image in tile_images) == whole_height,
+                 "their heights add up to the whole image",
+                 f"{[image[1] for image in tile_images]} vs {whole_height}")
+    checks.check(all(image[0] == whole_width and image[2] == whole_channels
+                     for image in tile_images) and tile_rows == whole_rows,
+                 "and concatenating them reproduces every whole-image pixel")
+
+    print("\n== scrolled capture windows do not repeat viewport content ==")
+    fixed_path = fixture(
+        "fixed_clip_window.html",
+        "<style>html,body{margin:0;width:100px}body{height:34000px;"
+        "background:#06c}.fixed{position:fixed;inset:0 0 auto;height:20px;"
+        "background:#f00}</style><div class=fixed></div>")
+    fixed = {"file": fixed_path, "width": 100, "height": 720,
+             "allowFileAccess": True, "scale": 0.25}
+    clip = {"x": 0, "y": 1000, "width": 100, "height": 100}
+    header, short_clip = ask({"clip": clip}, fixed)
+    checks.check(header.get("ok") is True, "the short offset clip renders",
+                 header.get("error", ""))
+    clip = {"x": 0, "y": 1000, "width": 100, "height": 32000}
+    header, long_clip = ask({"clip": clip}, fixed)
+    checks.check(header.get("ok") is True, "the windowed offset clip renders",
+                 header.get("error", ""))
+    _, _, channels, short_rows = png_pixels(short_clip)
+    _, _, long_channels, long_rows = png_pixels(long_clip)
+    blue = (0x00, 0x66, 0xCC)
+    checks.check(pixel(short_rows, channels, 12, 2)[:3] == blue and
+                 pixel(long_rows, long_channels, 12, 2)[:3] == blue,
+                 "the same document rows stay clear of the fixed header")
+
+    top_sticky_path = fixture(
+        "top_sticky_window.html",
+        "<style>html,body{margin:0;width:100px}body{background:#06c}"
+        ".before{height:31990px}.sticky{position:sticky;top:0;height:20px;"
+        "background:#0f0}.after{height:3990px}</style>"
+        "<div class=before></div><div class=sticky></div><div class=after></div>")
+    inset_sticky_path = fixture(
+        "inset_sticky_window.html",
+        "<style>html,body{margin:0;width:100px}body{background:#06c}"
+        ".before{height:31990px}.sticky{position:sticky;top:10px;height:20px;"
+        "background:#0f0}.after{height:3990px}</style>"
+        "<div class=before></div><div class=sticky></div><div class=after></div>")
+    bottom_sticky_path = fixture(
+        "bottom_sticky_window.html",
+        "<style>html,body{margin:0;width:100px}body{background:#06c}"
+        ".before{height:33000px}.sticky{position:sticky;bottom:0;height:20px;"
+        "background:#0f0}.after{height:2980px}</style>"
+        "<div class=before></div><div class=sticky></div><div class=after></div>")
+
+    def sticky_rows(path):
+        header, image = ask(
+            {"file": path, "width": 100, "height": 720,
+             "allowFileAccess": True, "fullPage": True, "scale": 0.25}, {})
+        checks.check(header.get("ok") is True,
+                     os.path.basename(path) + " renders", header.get("error", ""))
+        _, _, image_channels, image_rows = png_pixels(image)
+        colours = [pixel(image_rows, image_channels, 12, y)[:3]
+                   for y in range(len(image_rows))]
+        return ([y for y, colour in enumerate(colours) if colour != blue],
+                [y for y, colour in enumerate(colours)
+                 if colour == (0, 255, 0)])
+
+    top_painted, top_green = sticky_rows(top_sticky_path)
+    inset_painted, inset_green = sticky_rows(inset_sticky_path)
+    _, bottom_green = sticky_rows(bottom_sticky_path)
+    checks.check(top_painted == list(range(7997, 8003)) and
+                 top_green == list(range(7998, 8002)),
+                 "a top-sticky box crossing the seam keeps exactly its flow rows",
+                 f"painted {top_painted}, solid {top_green}")
+    checks.check(inset_painted == list(range(7997, 8003)) and
+                 inset_green == list(range(7998, 8002)),
+                 "a sticky inset does not hide the suffix beyond the seam",
+                 f"painted {inset_painted}, solid {inset_green}")
+    checks.check(len(bottom_green) == 5 and bottom_green == list(range(175, 180)),
+                 "a bottom-sticky box is kept in only the requested viewport",
+                 str(bottom_green))
+
+    print("\n== tile files commit as one result ==")
+    atomic_dir = os.path.abspath("shot/testdata/out/atomic_tiles")
+    os.makedirs(atomic_dir, exist_ok=True)
+    first_tile = os.path.join(atomic_dir, "tile-1.png")
+    blocked_tile = os.path.join(atomic_dir, "tile-2.png")
+    sentinel = b"the old first tile"
+    with open(first_tile, "wb") as f:
+        f.write(sentinel)
+    if os.path.isfile(blocked_tile):
+        os.unlink(blocked_tile)
+    os.makedirs(blocked_tile, exist_ok=True)
+    send(proc, dict(fractional, scale=1, tile={"height": 600},
+                    path=os.path.join(atomic_dir, "tile-{n}.png")))
+    header, _ = recv_tiles(proc)
+    checks.check(header.get("ok") is False,
+                 "a tile set reports a failed final commit")
+    with open(first_tile, "rb") as f:
+        restored = f.read()
+    checks.check(restored == sentinel,
+                 "and rolls an earlier destination back to its old bytes")
+    os.rmdir(blocked_tile)
+
+    if os.name != "nt":
+        mode_template = os.path.join(atomic_dir, "mode-{n}.png")
+        mode_tile = mode_template.replace("{n}", "1")
+        with open(mode_tile, "wb") as f:
+            f.write(b"old tile")
+        os.chmod(mode_tile, 0o640)
+        send(proc, dict(fractional, scale=1, tile={"height": 600},
+                        path=mode_template))
+        header, mode_tiles = recv_tiles(proc)
+        checks.check(header.get("ok") is True and not any(mode_tiles),
+                     "an existing POSIX tile is replaced",
+                     header.get("error", ""))
+        checks.check(stat.S_IMODE(os.stat(mode_tile).st_mode) == 0o640,
+                     "without changing the tile's permission bits",
+                     oct(stat.S_IMODE(os.stat(mode_tile).st_mode)))
+        for tile in header.get("tiles", []):
+            if tile.get("path") and os.path.isfile(tile["path"]):
+                os.unlink(tile["path"])
 
     width, height, channels, rows = png_pixels(clipped)
     checks.check(pixel(rows, channels, 0, 0)[:3] == (0xCC, 0x00, 0x00),
@@ -354,6 +620,15 @@ def main():
                  webp[:12].hex())
 
     print("\n== bad input is answered, not fatal ==")
+    send(proc, {"file": corpus, "tile": {"height": 32001}})
+    header, payload = recv(proc)
+    checks.check(header.get("ok") is False and not payload,
+                 "a tile taller than the paint limit is rejected")
+    checks.check("tile.height" in header.get("error", "") and
+                 "32000" in header.get("error", ""),
+                 "and the error names the supported tile.height range",
+                 header.get("error", ""))
+
     send(proc, {"file": corpus, "width": "1248"})
     header, payload = recv(proc)
     checks.check(header.get("ok") is False, "a string where a number belongs is rejected")

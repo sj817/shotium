@@ -206,8 +206,8 @@ enable_expensive_dchecks = false
 # nothing, because Blink decodes all six encodings itself.
 #
 # The directory is generated, not checked in -- third_party/icu is a DEPS
-# checkout, so gclient would discard it either way. tools/shot/build.ps1 and
-# the CI workflow both regenerate it before gn gen.
+# checkout, so gclient would discard it either way. scripts/build-engine.ts
+# and the CI workflow both regenerate it before gn gen.
 icu_data_dir_override = "shot"
 
 # JPEG XL. 2.82 MB across the jxl, jxl_transforms and jxl_rs Rust crates,

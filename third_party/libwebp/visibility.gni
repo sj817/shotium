@@ -8,6 +8,7 @@ allowed_visibility = [
   "//chrome/browser/ui/tab_contents/*",
   "//chrome/renderer:*",
   "//chrome/test:*",
+  "//shot/*",
   "//skia:*",
   "//third_party/blink/renderer/*",
   "//third_party/libwebp/*",

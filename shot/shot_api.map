@@ -21,6 +21,12 @@
     shot_engine_create;
     shot_engine_destroy;
     shot_engine_capture;
+    shot_engine_capture_tiles;
+    shot_tile_list_count;
+    shot_tile_list_region;
+    shot_tile_list_path;
+    shot_tile_list_take_image;
+    shot_tile_list_free;
     shot_engine_purge;
     shot_engine_status;
     shot_cache_list;

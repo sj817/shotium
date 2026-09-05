@@ -6,6 +6,7 @@
 #define CC_PAINT_PAINT_IMAGE_H_
 
 #include <array>
+#include <memory>
 #include <optional>
 #include <string>
 #include <tuple>
@@ -31,6 +32,7 @@
 
 class SkBitmap;
 class SkColorSpace;
+class SkStream;
 struct SkISize;
 
 namespace blink {
@@ -272,6 +274,15 @@ class CC_PAINT_EXPORT PaintImage {
               size_t frame_index,
               AuxImage aux_image,
               GeneratorClientId client_id) const;
+
+  // Permanently releases encoded bytes held by this image's generators. This
+  // is only valid after a complete, static image has reached its final use;
+  // later decode and serialization attempts may fail.
+  bool DiscardEncodedData() const;
+
+  // A seekable stream over the encoded source of a generator-backed image,
+  // preserving segmented storage when the generator supports it.
+  std::unique_ptr<SkStream> GetEncodedDataStream() const;
 
   // Decode the image into YUV into |pixmaps|.
   //  - SkPixmaps owned by |pixmaps| are preallocated to store the

@@ -287,6 +287,53 @@ interface ScreenshotOptions {
 - **`allowFileAccess`** —— 文档能不能读 `file:` 子资源。默认关:库不该替调用方决定
   一份文档可以读它所在机器的文件系统。CLI 对着自己指到的那个文件打开它。
 
+2026-09-04 加了分片:
+
+```ts
+shotium.screenshotTiles(options)   // options = ScreenshotOptions + tile
+interface ScreenshotTilesOptions extends ScreenshotOptions {
+  tile: { height: number }         // 每片最多多少 CSS px,最后一片是余数;上限 32000
+}
+// -> { tiles: [{ image, x, y, width, height, path? }, ...], stats }
+```
+
+- 是一个新方法而不是 `screenshot()` 的一个选项:一个回一张图,一个回一组,返回形态不同
+  的东西不该共用一个名字。`screenshot()` 收到 `tile` 会报错并指向 `screenshotTiles()`。
+- 引擎内一次加载、一次布局,逐片光栅、逐片编码,任何时刻只有一片的位图在内存里。
+  这也是超过单图上限(png/jpeg 65535、webp 16383)的页面唯一的整页出路。
+- 线上协议:请求多一个 `tile` 字段;应答头是 `{ok, tiles:[{x,y,width,height,bytes,path?}], stats}`,
+  后面跟 **每片一帧**,顺序与头中一致。守护进程的 op 叫 `tiles`。
+- C ABI:`shot_engine_capture_tiles()` 回一个 `shot_tile_list`,图一张张 take 出来,零拷贝进 node Buffer。
+- `path` 必须含 `{n}`(1 起的片号),否则整个请求被拒——不然每一片都会覆盖上一片。
+
+同一天修的一个底层事实:Blink 在**绘制坐标** 32767 CSS px 处停止绘制(两个轴都是),
+不报错,记录到那里就没了。布局不受限——布局在 50000、transform 上移到 25000 的元素画得出;
+布局在 1000、transform 下移到 51000 的画不出。所以超过这个高度的区域靠**滚动文档**分段绘制
+(滚动把内容挪回原点附近),再直接光栅到目标位图对应的行上,没有拼接拷贝。
+32767 以内的页面走原路径,像素逐字节不变。
+
+2026-09-04 下午,内存模型整个换掉(用户要求任何场景不超过 200 MB):
+
+- **空引擎只有 15 MB 私有内存**,B 站专栏页 155 MB 里 100 MB 是 Blink 堆的垃圾:60 个字体子集
+  逐个回来、每回来一个整页重排一次、截图期间 GC 关着。修法在等待循环:有请求在飞时最多每 50 ms
+  跑一次 lifecycle(首轮和请求清零时必跑),64 次重排变 6 次;另加一条「堆比上次翻倍就收一次」的
+  兜底(`kWaitCollectFloorBytes`,`SHOT_WAIT_GC_MB` 可调)。
+- **整图位图不再存在**(`shot/shot_image_stream.cc`):整图只保留地址空间(PA 的 `AllocPages`
+  不可访问),按 256 行条带提交、光栅、交给按行编码器、编完立刻 decommit。PNG 走 Skia 的 Rust
+  编码器 `encodeRows`;JPEG 直接用 libjpeg-turbo 按行写(Skia 的编码器固定开 `optimize_coding`,
+  要整图 3 B/px 的系数缓冲,177 MB);有损 WebP 按偶数行带导入 YUV(1.5 B/px);无损 WebP 例外,
+  要整图。输出字节同样是预留地址空间按需提交(`shot::Bytes`),不再有 vector 翻倍复制。
+- **图片按条带解码**(`DecodedImages`,一个 `cc::ImageProvider`):画到才解码,按 mip 层解码
+  (JPEG 直接 1/2、1/4 解码,其他解完整再缩),最后一个画到它的条带编码完就丢。之前的路径是 Skia
+  全尺寸解码然后缓存到截图结束——34 张图的页面攒了 265 MB。绘制记录改用 `cc::DisplayItemList`
+  (带 R-tree,每条带只回放碰到的 chunk);为此关掉 `RasterInducingScroll`,否则滚动容器会
+  被包成需要合成器滚动表的 `DrawScrollingContentsOp`。
+- 实测(峰值私有内存 / 工作集,1440 宽):bili #1 视口 155→94 / 225→136;整页 PNG 392→115 /
+  472→152,耗时 2.1 s→0.9 s;整页 JPEG 559→114;bili #2(34 张图)整页 PNG 490→237——剩下的是
+  72 MB 图片原始字节 + 67 MB 的 PNG 输出本身,换 JPEG 后 ~155。
+- 像素:纯文字页与旧路径逐字节相同(空页 sha 一致);带图页在图片区域有重采样差异(mip 预缩放
+  对 Skia 绘制时过滤),最大差在圆角边缘像素,肉眼不可见。
+
 ---
 
 ## 5. 明确不做

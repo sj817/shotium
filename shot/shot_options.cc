@@ -14,6 +14,7 @@
 #include "base/strings/stringprintf.h"
 #include "build/build_config.h"
 #include "net/base/filename_util.h"
+#include "shot/shot_request.h"
 #include "url/url_constants.h"
 
 #if BUILDFLAG(IS_WIN)
@@ -213,6 +214,18 @@ base::expected<ShotOptions, std::string> ParseShotOptions(
           return base::unexpected("--output requires a value");
         }
         options.output_path = base::FilePath::FromUTF8Unsafe(*value);
+        continue;
+      }
+      if (std::optional<std::string> value =
+              ConsumeValue(argv, &i, argument, "tile-height")) {
+        int parsed = 0;
+        if (!base::StringToInt(*value, &parsed) || parsed < 1 ||
+            parsed > kMaximumTileHeight) {
+          return base::unexpected(
+              "--tile-height must be an integer from 1 to " +
+              base::NumberToString(kMaximumTileHeight));
+        }
+        options.tile_height = parsed;
         continue;
       }
       if (std::optional<std::string> value =
@@ -438,6 +451,9 @@ Options:
   --scale N             Device scale factor, 0.01-8 (default: 1)
   --full-page           Capture the whole document, not just the viewport
   --selector CSS        Capture only the first element matching CSS
+  --tile-height N       Write the capture as tiles of at most N CSS pixels
+                        each, numbered into --output: page-{n}.png, or
+                        page-1.png, page-2.png ... when {n} is not given
   --type TYPE           png, jpeg or webp (default: png)
   --quality N           1-100, jpeg and webp only (default: 90)
   --omit-background     Keep the alpha channel instead of painting white
