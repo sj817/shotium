@@ -24,6 +24,7 @@ import path from 'node:path';
 import {cac} from 'cac';
 import {execa} from 'execa';
 
+import {powershell} from './lib/measured-process.ts';
 import {resolve} from './lib/repo.ts';
 
 interface Peak {
@@ -59,7 +60,7 @@ async function measure(exe: string, args: string[], env: NodeJS.ProcessEnv): Pro
       `[System.IO.File]::WriteAllText(${ps(errFile)}, $errTask.Result)`,
       'Write-Output ("{0} {1} {2}" -f $peakWs, $peakPriv, $p.ExitCode)',
     ].join('\n');
-    const result = await execa('powershell', ['-NoProfile', '-Command', script], {env, reject: false});
+    const result = await execa(powershell(), ['-NoProfile', '-Command', script], {env, reject: false});
     const [ws, priv, code] = result.stdout.trim().split(/\s+/).map(Number);
     const {readFileSync, rmSync} = await import('node:fs');
     const stderr = existsSync(errFile) ? readFileSync(errFile, 'utf8') : '';

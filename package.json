@@ -54,6 +54,20 @@
     "ci:stamp-mtimes": "pnpm -C scripts ci-stamp-mtimes",
     "verify:charset": "pnpm -C scripts check-charset",
     "icu:repack": "pnpm -C scripts icu-repack",
-    "restore:upstream": "pnpm -C scripts restore-from-upstream"
+    "restore:upstream": "pnpm -C scripts restore-from-upstream",
+    "render": "pnpm -C scripts render-regression",
+    "restore:includes": "pnpm -C scripts restore-includes",
+    "restore:includes-by-prefix": "pnpm -C scripts restore-includes-by-prefix",
+    "restore:gn-deps": "pnpm -C scripts restore-gn-deps",
+    "gn:missing-sources": "pnpm -C scripts gn-missing-sources",
+    "gn:undefined-vars": "pnpm -C scripts gn-undefined-vars",
+    "gn:dangling-imports": "pnpm -C scripts gn-dangling-imports",
+    "mojom:dangling-imports": "pnpm -C scripts mojom-dangling-imports",
+    "jumbo:collisions": "pnpm -C scripts jumbo-collision-scan",
+    "size:report": "pnpm -C scripts size-report",
+    "probe:platform": "pnpm -C scripts probe-platform-graph",
+    "gen:idl": "pnpm -C scripts gen-idl",
+    "bootstrap": "pnpm -C scripts bootstrap",
+    "deps-lock": "pnpm -C scripts deps-lock"
   }
 }
