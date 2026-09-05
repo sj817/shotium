@@ -26,6 +26,7 @@
     "docs:demo": "node tools/shot/docs_demo.mjs",
     "docs": "pnpm run docs:assets && pnpm run docs:demo",
     "trim-tree": "pnpm -C scripts trim-tree",
-    "graph:export": "pnpm -C scripts trim-tree export"
+    "graph:export": "pnpm -C scripts trim-tree export",
+    "prune-deps": "pnpm -C scripts prune-deps"
   }
 }
