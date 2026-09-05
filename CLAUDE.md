@@ -79,8 +79,9 @@ carry the native engine (~22 MB each). The same engine is also a standalone
 executable (`shotium.exe`) and a C ABI (`shotium.dll` / `libshotium.so` /
 `libshotium.dylib`) for Rust, Go, Python and C++ callers.
 
-The tree is a *slice* of Chromium, not a fork: 64k tracked files out of
-upstream's 505k, pinned at the baseline recorded in `docs/upstream-sync.md`.
+The tree is a *slice* of Chromium, not a fork: about 29k tracked files out of
+upstream's 505k, pinned at the baseline recorded in `docs/upstream-sync.md`
+and trimmed to what the six engine builds read (`pnpm trim-tree`, below).
 Chromium files that remain are edited in place; there is no patch queue for
 in-tree code. `patches/` holds the three patches applied to DEPS-fetched
 checkouts (ICU, Skia) that are not in git.
@@ -474,6 +475,22 @@ Output: `out/Shot/shotium.exe`, `out/Shot/shotium.dll`, `out/Shot/shotium_data.p
   Read `lib.rs` before removing one.
 - Delete DEPS entries with the directories they fetch, and `.gitmodules` with
   them, or CI's `gclient sync` puts the directory back.
+- The tree is trimmed to the build graph, not by judgement. Every engine
+  build exports what it read (`pnpm graph:export`, uploaded as
+  `graph-<os>-<arch>`): `ninja -t inputs`, `-t graph` (order-only edges),
+  `-t deps`, the depfiles of reachable actions, `build.ninja.d` and the
+  jumbo `#include` lists. `pnpm trim-tree plan --graph <dir>...` unions the
+  six, applies the closure rules written in `scripts/trim-tree.ts` (Python
+  packages around a kept script, `build/` whole, licences, vendored Rust
+  crates, the whitelist) and `apply` runs `git rm` on the explicit list;
+  `pnpm prune-deps --inputs <plan>/untracked-inputs.txt` then cuts DEPS,
+  the hooks, `.gitmodules` and the gitlinks to what those graphs touch.
+  Three things no graph records, and the whitelist carries with a reason:
+  what an `exec_script` opens itself (`chrome/VERSION`), what a Python
+  script imports (`testing/scripts/common.py`), and the depfile of grit's
+  resource-id allocator (it skips missing `.grd` files). After a trim run
+  `pnpm depfiles:prune` on any warm build directory, or ninja refuses to
+  start on a depfile that names a deleted file.
 
 ## Git conventions
 
