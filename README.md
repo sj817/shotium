@@ -687,12 +687,6 @@ gn gen out/Shot
 ninja -C out/Shot shot
 ```
 
-For Profile-Guided Optimization (PGO) builds, use the helper script to run instrumented builds, benchmark training, profile merging, and final optimized compilation:
-
-```bash
-python3 tools/shot/pgo.py --out out/ShotPgo --jobs 12
-```
-
 ### Test Suites
 
 ```bash

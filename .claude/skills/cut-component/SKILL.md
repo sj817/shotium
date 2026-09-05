@@ -98,12 +98,12 @@ Rules:
 ## 3. Delete
 
 - Remove the directory, its targets in `BUILD.gn`, and its entries in any
-  `.gni` source list together. Tools with usage in their headers:
-  `tools/shot/gn_drop_target.py`, `gn_drop_prefix.py`, `gn_drop_if.py`,
-  `gn_drop_missing_sources.py`, `gn_drop_dead_typemaps.py`,
-  `cpp_drop_dead_includes.py`, `cpp_drop_decls.py`, `cpp_drop_macro_calls.py`,
-  `cpp_drop_buildflag.py`, `deps_drop.py`, `strip_component.py`,
-  `cut_orphan_sources.py`, `find_orphan_impls.py`, `find_unreferenced.py`.
+  `.gni` source list together, by hand. The batch editors of the first
+  cutting rounds (`gn_drop_*.py`, `cpp_drop_*.py`, `strip_component.py`,
+  `find_*.py`) were deleted once those rounds were over; `git log -- tools/shot`
+  has them if a whole subtree ever needs the same treatment again.
+- For files no build reads at all, `pnpm trim-tree plan` (with the six
+  platforms' graph exports) is the authority; see `scripts/trim-tree.ts`.
 - **DEPS-fetched directories (most of `third_party/`) need their DEPS entry
   removed in the same change**, or CI's `gclient sync` restores the
   directory. `.gitmodules` is a separate file that git reads and gclient
