@@ -1,0 +1,2792 @@
+{
+  "sources": {
+    "1788403871415": {
+      "filename": "bilibili_dynamic_DYNAMIC_TYPE_ARTICLE_1788403871415.html",
+      "sha256": "6b7f759b3d4b61b5fef30a2400e26f05a3568ddf98807442bdbea1301273c7db"
+    },
+    "1788434008828": {
+      "filename": "bilibili_dynamic_DYNAMIC_TYPE_ARTICLE_1788434008828.html",
+      "sha256": "a6ea203b30a2be30d2f9141f49da01008177bcbc72d975e8c9879b42ed525eda"
+    }
+  },
+  "assets": [
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.1.woff2",
+      "sha256": "ce17577c32af8d4b30ec1de959f2456a716f0c0134cea803cc2c56e9d19e233a",
+      "bytes": 4088,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.1.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.10.woff2",
+      "sha256": "1c4b2715216c34152844b912fe3457e1d1a3853c89d48523c2955135316ae8d4",
+      "bytes": 24308,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.10.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.11.woff2",
+      "sha256": "ee56259342f2cb3f22d43b9a84700d2d81c9f4999c518631d5f2705b529265f2",
+      "bytes": 28288,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.11.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.12.woff2",
+      "sha256": "949ad9d4c82b9fdcba79e16987d561ea80bb62e70db0817dbf73f341f29e0096",
+      "bytes": 30964,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.12.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.13.woff2",
+      "sha256": "8176d05da9bca616a7777dbeeb526d566a2b524f518ebb43aa6c538807ce695a",
+      "bytes": 26272,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.13.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.14.woff2",
+      "sha256": "f36cbd3c557b0ff8d184c072515837ca50d6fc332074cea26ff620d10d5fb38a",
+      "bytes": 23928,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.14.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.15.woff2",
+      "sha256": "a03556303dce638da151fa724bf070b2ba371db09af940d96dc8403e90013bcd",
+      "bytes": 24352,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.15.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.16.woff2",
+      "sha256": "d6b7ac5432255fa54b6eceb99eab701fdd49b3edece22a3c834fa9d6b7cebc35",
+      "bytes": 23504,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.16.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.17.woff2",
+      "sha256": "7fd9bec78d8d5441b0c18901bd2ce195047f9c9a0c8d981318a29a15018901fd",
+      "bytes": 23640,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.17.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.18.woff2",
+      "sha256": "9380b06d8f80a9899e287011e31f1b08312132efe3b0053e2f4a320d00c9aac8",
+      "bytes": 21136,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.18.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.19.woff2",
+      "sha256": "9f0012c5b6c83362fe55ed4ebb15327fa339e81660d461c6e701d247982375a3",
+      "bytes": 25500,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.19.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.2.woff2",
+      "sha256": "ede8879382538194ed14a9b9ef69d6f1c1bee3934ec63419073b29ee4ab26198",
+      "bytes": 3336,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.2.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.20.woff2",
+      "sha256": "f6f3363ec225733703fdf4089471205afd06685bdfcf20cce9f0b8c99b803cf3",
+      "bytes": 26732,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.20.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.21.woff2",
+      "sha256": "0881d7e357581f7b7f70747d6964bd8d28bf330176a77583502ae244cda577f8",
+      "bytes": 25768,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.21.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.22.woff2",
+      "sha256": "7f1a3bb56982adbe87f993ad36c7c03e150820b8f705d5d975add82685b23b0b",
+      "bytes": 22592,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.22.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.23.woff2",
+      "sha256": "d4cbbcd28e02845d4c89d393049c5ef0d53324e9e19eb4bc6e147d2e9a69f967",
+      "bytes": 17552,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.23.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.24.woff2",
+      "sha256": "ac50c8037095c72464df06f832dee4c6bc882c52bee9ed89a414858e243d2860",
+      "bytes": 23352,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.24.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.25.woff2",
+      "sha256": "eda89b77258a95868adaeafdae169d774092e006af36bf10463531f4a36539c5",
+      "bytes": 23336,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.25.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.26.woff2",
+      "sha256": "76674a59df64012f76d00dad9d4edd2511e4ebbc963e1df7569e53d270ff9eda",
+      "bytes": 26476,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.26.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.27.woff2",
+      "sha256": "cc407069c58411c827ea43edfe5c6ef9867798d8f4efc0a376e8d77a743fda9c",
+      "bytes": 35084,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.27.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.28.woff2",
+      "sha256": "de0473478306ae8fabf5ebad9b539929ac2ec342bf9cbdd37314b49626e7618f",
+      "bytes": 31240,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.28.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.29.woff2",
+      "sha256": "382e9b30cc667be4ecbdf710101c65f11a82753c002d89487d17f7289d4a984a",
+      "bytes": 28060,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.29.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.3.woff2",
+      "sha256": "fd7c5b4dd17e697d6cebf08410f61b2e53c375db0d0bdaee0c0423d5b325f208",
+      "bytes": 8144,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.3.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.30.woff2",
+      "sha256": "3946c98cf8d7bb6f107000629da313b5676c69ab5886a8b686828db17de53634",
+      "bytes": 24372,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.30.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.31.woff2",
+      "sha256": "081a0b1f3ae581d321999e1e6dcda3433dba20f213c979497a987ccba6c795c3",
+      "bytes": 25556,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.31.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.32.woff2",
+      "sha256": "e42983b021b165e99bb6fd10bec7972572e252fbcae831908d48b6ffc7fc4de2",
+      "bytes": 22464,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.32.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.33.woff2",
+      "sha256": "faea1168e580a0fd349f0886bbfd6769598383e3805075a51db5464baced53fe",
+      "bytes": 19900,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.33.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.34.woff2",
+      "sha256": "abeeb22e056c422200a14a09fcd19aff27fea82730680a4223895a92b8d6d7d8",
+      "bytes": 25328,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.34.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.35.woff2",
+      "sha256": "f369209e89ff2148f8c50fdfb6adbdf79a93b4cb0862e23ce1accba96cc087e8",
+      "bytes": 21136,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.35.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.36.woff2",
+      "sha256": "84691d5347ac79eb7beb51101de97b2ab44bbfc01751f5db80223a63dea3ee14",
+      "bytes": 24752,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.36.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.37.woff2",
+      "sha256": "abd80a82fa3b1822c0267c7d4fe0fb64282f19e4e2552d00e137b8e72599d732",
+      "bytes": 24096,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.37.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.38.woff2",
+      "sha256": "b2015ccc3f1c933b57fc9665564eeb02eb8849fd4c7c4b0fd6ddbb08bbfa8a51",
+      "bytes": 27184,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.38.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.39.woff2",
+      "sha256": "128cba9de36dadfad6ea5b92b55333216f6da627f9e6f4d8583e134f91a431e2",
+      "bytes": 26988,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.39.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.4.woff2",
+      "sha256": "5a434ea4d0a6bfe160a34c7d93ea2a974b33a63c17aae0d2cac247d28d817f05",
+      "bytes": 32216,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.4.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.40.woff2",
+      "sha256": "e931c28db9b2f999e584969a2b6848515aa664d254ecd35456858489c6c32cbc",
+      "bytes": 28624,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.40.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.41.woff2",
+      "sha256": "33b309bcc5f9795b3a8e216f6d0003976cd3af90291e59a21f9c94d71bc156a5",
+      "bytes": 24400,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.41.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.42.woff2",
+      "sha256": "f95571e35bb1a6e86dac8b6e82e717363974d47293101fd1f03fa22ba20f91ed",
+      "bytes": 21400,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.42.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.43.woff2",
+      "sha256": "d45d59a123cfd665048c7bd110d43c7166a3227c3e7c0562da2dd844d634c841",
+      "bytes": 22468,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.43.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.44.woff2",
+      "sha256": "3de1bb6774c1c50f8885a4c154d2e4e1bdc54c8ce41ccbb2a5d8f1e699a5c4de",
+      "bytes": 27772,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.44.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.45.woff2",
+      "sha256": "c7d8af13e9bf91159299e072211cb90d94e3bf6f51c179961832e6d9dc0e318e",
+      "bytes": 22916,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.45.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.46.woff2",
+      "sha256": "a3f1bf7b51b92b9669bfb49f4c4a7128d7be4d40911d3bfc8b49ad1e08a1cfe7",
+      "bytes": 19104,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.46.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.47.woff2",
+      "sha256": "e75be6f103574a1ea74008061ad5ea53feab6e06e2a69a613334c5478c62ef2d",
+      "bytes": 20248,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.47.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.48.woff2",
+      "sha256": "f2fbdd9bbfba3ae9851c0ee1dc42441988762a88d1552b5e18ec7c9c51d79fa7",
+      "bytes": 24768,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.48.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.49.woff2",
+      "sha256": "0334700f3336b5be1b145c88c4c6dd10becf00b6a149f5feaa3a58b572e83aaa",
+      "bytes": 27928,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.49.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.5.woff2",
+      "sha256": "2cd798734e2717516334369bd17ce2a3154ff0da421c53d273878231a7596112",
+      "bytes": 29724,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.5.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.50.woff2",
+      "sha256": "8462e510b0ecd33de3386b1e92391c7de7c5a10aebe5f7da711fa9c2b1078b90",
+      "bytes": 22172,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.50.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.51.woff2",
+      "sha256": "ada43e1f8a13dddbfe98c1fe8c606ae7a3257e1cecaef305069cd0224e0ffe89",
+      "bytes": 28820,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.51.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.52.woff2",
+      "sha256": "41cf7e2c39fb370709d56cf0ff7aea9e89167402fe66ec42b4953080ea0a69c6",
+      "bytes": 21280,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.52.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.53.woff2",
+      "sha256": "82757146914a9b9de3f7565fa6b8e585300665fe06c49bdcac2a3eedbfa0f572",
+      "bytes": 22596,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.53.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.54.woff2",
+      "sha256": "92d7f4a4c2b5753f1aa78c9f960ca02667c97714c0dadf2612f14ee09776b3f2",
+      "bytes": 22468,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.54.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.55.woff2",
+      "sha256": "6d6f0d7b7af33b41731c1af756d93a971f5952b814d97e7a39814d7edd58d84d",
+      "bytes": 18044,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.55.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.56.woff2",
+      "sha256": "2901348d951aa190a9b376ded8e87fd6fcd3a9a827c6d487b7ca08d546c66182",
+      "bytes": 27172,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.56.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.57.woff2",
+      "sha256": "e2c54b194c4176e7ddf72cd2c26966184a383cff2cef1ebbdde78c98cfcd902f",
+      "bytes": 23044,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.57.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.58.woff2",
+      "sha256": "d26894a5ff5cc8197a25bda0c511334a3172440169bd845f749f64d9f7a1da88",
+      "bytes": 23408,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.58.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.59.woff2",
+      "sha256": "b56227b2d8489247eb8b1924db600d89cb610e2da2e830c1a6e98171590f8c50",
+      "bytes": 18892,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.59.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.6.woff2",
+      "sha256": "bdd08885743fb06d020998654398c20184dbb2982fcea7e9a9c360d71a505c98",
+      "bytes": 30072,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.6.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.60.woff2",
+      "sha256": "d1b577a2cc387ab62777e45598d58e329c448ff0e6a601a61754e6874318afcb",
+      "bytes": 23324,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.60.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.61.woff2",
+      "sha256": "c9dbb15c5cdad4dc47a4a5fecddecdde46d8d95a1c76a63b606d76550e7a36f2",
+      "bytes": 19908,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.61.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.62.woff2",
+      "sha256": "ab6db754de4518e6154543ffaaa427c900dab882fb204c328d44fdbc4864bbfd",
+      "bytes": 15572,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.62.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.63.woff2",
+      "sha256": "cadae3d0bda62133341dba01247ade199469d3ab92e8d22de6c425d64ff2c32d",
+      "bytes": 21344,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.63.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.64.woff2",
+      "sha256": "9af5fea08508f0b753cead545687ef0d97e1d802015d7c3ee5e4afae65fadd7e",
+      "bytes": 21944,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.64.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.65.woff2",
+      "sha256": "662dbaff753f9324b8e1c5fc0cf2e9f08c89242edfdd23ba734ec35502c4b93c",
+      "bytes": 21972,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.65.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.66.woff2",
+      "sha256": "482c4777d19b3acb349ec483e4aa731e028434580eb3752d17feec6325262917",
+      "bytes": 15900,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.66.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.67.woff2",
+      "sha256": "62b37d1215942740cb5541e65aff4947721e4e9523d9c77b081ca9785882966d",
+      "bytes": 12440,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.67.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.68.woff2",
+      "sha256": "301d42dd471f799018c1563f6db7ce0a1d3779ddd39f0faf53fdd7a0f970e3f5",
+      "bytes": 6548,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.68.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.69.woff2",
+      "sha256": "6017006a11d1e0d961b2ac549a33fc990b65048b4e8f7320454dea9036efbada",
+      "bytes": 1996,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.69.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.7.woff2",
+      "sha256": "c4e1c1cdac384c6dd1e5029edf0e11777f24cfd4f4b456d5cc06ec6b8538208e",
+      "bytes": 30856,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.7.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.70.woff2",
+      "sha256": "ae9e0f2ec5f5571edde02a9ae872aec370f3834793cc8baf0e54759d563d8b14",
+      "bytes": 4352,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.70.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.71.woff2",
+      "sha256": "9d47f4e5e95fe45a86a805d91ccc1526ce0f1d953a4358fbd68b3d1aef1597b3",
+      "bytes": 4152,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.71.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.72.woff2",
+      "sha256": "54dda4b8271da7f34ac31b5cb54c443c6e80b5b0bdc1067eb19e368d0f5f2801",
+      "bytes": 4428,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.72.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.73.woff2",
+      "sha256": "ae7a980704f30ec3d5b7e51f2357876f579403bbe21356aacf864dce8dd28f48",
+      "bytes": 1464,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.73.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.74.woff2",
+      "sha256": "ceb2610160e607a23170ed724ce3d9d3b52b4ccd0b166cf4c2880db9a189c9c4",
+      "bytes": 3200,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.74.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.75.woff2",
+      "sha256": "eab54a94f7a31f198c5b2c0cc6ade2e3652d7f4ec2961e8d5c3ece63d815d486",
+      "bytes": 7312,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.75.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.76.woff2",
+      "sha256": "6e29cea782a770cabe8bc064a7e72ade912162a264a896d0bf8a3b21e3e21b1f",
+      "bytes": 30612,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.76.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.77.woff2",
+      "sha256": "e2441667e391a65e792731609474b36ed2372b1f3911fef88f726cd3a953b885",
+      "bytes": 26924,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.77.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.78.woff2",
+      "sha256": "30cfc4fb4c8cd25aacdd5329f2e54252fb8906281d965cbc7d57aad84b06777d",
+      "bytes": 28236,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.78.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.79.woff2",
+      "sha256": "b89d58d8d8b7d0dc6fbdc6b7d5dbef5c96bb7618c1d98e7557b76b6f5132eefe",
+      "bytes": 29580,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.79.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.8.woff2",
+      "sha256": "dda06867ad8966c15706db7947d0c52f5a63d78882be3de5795e132c2c044a00",
+      "bytes": 25444,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.8.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.80.woff2",
+      "sha256": "8f00ea1d48763e28abfa583bba1e57c295a74cb3998e9b6891af0ff16901656d",
+      "bytes": 28324,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.80.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.81.woff2",
+      "sha256": "f256410fda957086d5ce8ced45f4269f3886ef23292d9e84f31973f0ab34f6a0",
+      "bytes": 28808,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.81.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.82.woff2",
+      "sha256": "b307adc67ff71b35c57c294265ae8e8f5015567bfaca3eff98d58e28e31102a5",
+      "bytes": 29192,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.82.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.83.woff2",
+      "sha256": "55b358df4597a9b6b6607d2ed9fdd18e4c92462545e81082b1f635d1590a7da5",
+      "bytes": 28424,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.83.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.84.woff2",
+      "sha256": "d22e38917b161fe5d6edfba7b04e58e31727248947117d55ee8456dbdd29846b",
+      "bytes": 29616,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.84.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.85.woff2",
+      "sha256": "bc41c3f3550fbc3c3d3fb6073dbf9af39af37a42c19bd3f62e59ecd78aab4a78",
+      "bytes": 27680,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.85.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.86.woff2",
+      "sha256": "e9e36b97ddba98173d023d63d7df2775c109a2e92aa97038b14173b36a6b0680",
+      "bytes": 28272,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.86.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.87.woff2",
+      "sha256": "c8ec216eba1ae7f145b187ae810661b902d75fbce7d745d7b00713bd30db1ee6",
+      "bytes": 29292,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.87.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.88.woff2",
+      "sha256": "f85d5887af03afe8bc661aba8c113f4775c3fe4c4e6360fb533ad30dc567022c",
+      "bytes": 27204,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.88.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.89.woff2",
+      "sha256": "66138de7beac3e4f7cfca5af210b7aeb22fe79a203ff8f1c1fdc4ea1ffb6c3fb",
+      "bytes": 27292,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.89.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.9.woff2",
+      "sha256": "20b5acf67e2363496996629b1a18a98bbca7e11bf39209d28be2e75ca1312951",
+      "bytes": 22744,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.9.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.90.woff2",
+      "sha256": "6ce42c523023a8caee82b2c66f22137cec033e8556868f0381e87ab32c69d7d1",
+      "bytes": 26508,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.90.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.91.woff2",
+      "sha256": "d7fcf43b9cc81ed866fe92ded9245883f51e52aed93e2c83d268a8f478bf9013",
+      "bytes": 25920,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.91.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.92.woff2",
+      "sha256": "146f73fdae07dd70447cbedfc748bd6c08ea2efdbd0274eb5cec8b543fe477e3",
+      "bytes": 24332,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.92.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.93.woff2",
+      "sha256": "ec1d143914251101605682cc97926d6cbafaef1917f3c66e8194c9dd20626995",
+      "bytes": 24108,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.93.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.94.woff2",
+      "sha256": "59b6b93a357adeb15f287c4817ce46ae1a5a1a266711e5aad5d7675d83d8e8f0",
+      "bytes": 21352,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.94.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.95.woff2",
+      "sha256": "00fa152741c495b2af9734fa3bd9db1d4d2eb6b20127d61cb6ad6fe85f234a27",
+      "bytes": 5636,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.95.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Bold.96.woff2",
+      "sha256": "954fd87a19d032a110e7df1386f98dc7a4fc9633ad3d511ee57c39092202991d",
+      "bytes": 10444,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Bold.96.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.1.woff2",
+      "sha256": "90bebac707d09af35737e2bd132de20b60115f65caf5c27dea35a3c616038c33",
+      "bytes": 4048,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.1.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.10.woff2",
+      "sha256": "15415ec396b9956d9b5dd4f2f95412b1edd150d4f8384f413c7f54a1421d9049",
+      "bytes": 24388,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.10.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.11.woff2",
+      "sha256": "4c42416c31c2cc44acefc1cd315ebfcfa13f71aa43e927ee5ef0026d87dee240",
+      "bytes": 28304,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.11.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.12.woff2",
+      "sha256": "3b054a778c063df415bc4ef029d02bc5a2b399b65277b2b12e31589e59135f71",
+      "bytes": 29860,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.12.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.13.woff2",
+      "sha256": "0b972527394f1ac45bae02ce9cd6e34a5b5459aca13819e91e0ab0844ff4032d",
+      "bytes": 25776,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.13.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.14.woff2",
+      "sha256": "3442aea7bfc2a30f203e4933e27de368c237ac0368d9432155838cf82facd9dd",
+      "bytes": 23964,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.14.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.15.woff2",
+      "sha256": "2c80d9958b98db3140145bf74c099469af10aebc405514ccba946b582d11119a",
+      "bytes": 24252,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.15.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.16.woff2",
+      "sha256": "564e94e27e3e4c50fde4f5453994022faed63d2d3137afa8b6f6180b87d57324",
+      "bytes": 23404,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.16.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.17.woff2",
+      "sha256": "73fc427f2f5da4d0ec00a3ad26979524ba6746c1e8f4c491e3f982f7e963c889",
+      "bytes": 23512,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.17.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.18.woff2",
+      "sha256": "6b70cbf89431e47035408e6f97bcb3694910cb14ef42937cb62c9c4024e6c178",
+      "bytes": 21028,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.18.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.19.woff2",
+      "sha256": "fed5bf3bd09bef8380103ee9fbc9ebb5584a6daa450069ad31342aa2fd7083ee",
+      "bytes": 25460,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.19.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.2.woff2",
+      "sha256": "8ef8cdc88b5b5f99d5bfdbf3c61d3209ef6e8ee94f3eb1d0fea497e29aaaa1cc",
+      "bytes": 3280,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.2.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.20.woff2",
+      "sha256": "020803e3dce1c2f39bf2968d10c65b9c90c28600f5f4315e6935baaea69e76ef",
+      "bytes": 26736,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.20.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.21.woff2",
+      "sha256": "0ed602778e1ad2b187abbcc981f62c495e4aaa561d19a4cf7394465e98f8e502",
+      "bytes": 25536,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.21.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.22.woff2",
+      "sha256": "7bf009ec7a314236a3d44d3ac98d16bebb61c5bd9eb631c9183c16ac09507207",
+      "bytes": 22416,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.22.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.23.woff2",
+      "sha256": "525392e00aab5a55f31ce57d8e7501d784f9e3c9b6bb3dad1e9f893ccf6d3f84",
+      "bytes": 17296,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.23.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.24.woff2",
+      "sha256": "ebc6eafa010dcaeaed3a9a4ab2c9d2b592e3d73bb68d2d4217ff501d3ba3714c",
+      "bytes": 23124,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.24.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.25.woff2",
+      "sha256": "399b7103557665bacb67a2af5f82a2c17d7cf9a77f159cee8735ba2c24545071",
+      "bytes": 23304,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.25.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.26.woff2",
+      "sha256": "60b19875b749bc69432e7b71998b52a42bc44439c5fb5c104f31a2d2f13f5c71",
+      "bytes": 26092,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.26.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.27.woff2",
+      "sha256": "f24280dd22fbe6c7f71fcc9da527bd384c526fbaf6c2df8037b263c706be2d0b",
+      "bytes": 34356,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.27.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.28.woff2",
+      "sha256": "57f713957d405eb5804edb30045e59c64c990955c0317670c806f466496d7c00",
+      "bytes": 30300,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.28.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.29.woff2",
+      "sha256": "701c546db5c4908dc7827773c1a159af54d4a1c3cddf5ed4d486934efd865d41",
+      "bytes": 27680,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.29.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.3.woff2",
+      "sha256": "aa40a1665c02cf34340b1e4e70cd1aa3c6fd1529e8582c38ad2a0c91b5057206",
+      "bytes": 8240,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.3.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.30.woff2",
+      "sha256": "45b390ce8ccc0ce84360976982fe7658e96ff45d8009b2380dbb4c2ca63b51ea",
+      "bytes": 23800,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.30.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.31.woff2",
+      "sha256": "252ca1f0b387cf77653e41287b85237962c9d6a0637dc2be46587b9470861dce",
+      "bytes": 25020,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.31.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.32.woff2",
+      "sha256": "8cd9a432b1d1443592eeff90deb1a9ace4196f4548fc1a8640ee6ddd49039a65",
+      "bytes": 22472,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.32.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.33.woff2",
+      "sha256": "4ab6877bb5a26a0a0d4dfa264acb33ea8eb3a7637cc50ee931aaef948ee45c46",
+      "bytes": 19988,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.33.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.34.woff2",
+      "sha256": "e12104e1fa728d44be9e903176fac0046a4bf462e1b411730d786bde1b061731",
+      "bytes": 25420,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.34.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.35.woff2",
+      "sha256": "38dc0fc5b92a61a25b591960009a42ad1dceab0eb73c2460ad8001c0ab1d794b",
+      "bytes": 21308,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.35.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.36.woff2",
+      "sha256": "e50f14940c2333c32a131d8e88682d070258c2c83c025e24d5e86ac3075026d7",
+      "bytes": 24628,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.36.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.37.woff2",
+      "sha256": "d587afae106c9f4dedcbfeb89c50560fe58b08986529742682e45cd1e795546c",
+      "bytes": 23932,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.37.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.38.woff2",
+      "sha256": "b69b81935cc44994a0431cd9e94f66e667d08611f70ebaca8412dbdab646510f",
+      "bytes": 26856,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.38.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.39.woff2",
+      "sha256": "d96ee3cc39eb09dac5bb0bdec4011c87a820c0693a76b2cdc07d7a8bd997df92",
+      "bytes": 26612,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.39.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.4.woff2",
+      "sha256": "3e501dee12bb2a47a274531de4662c2cfff7af21a7eb53d177195e13e393bb96",
+      "bytes": 31796,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.4.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.40.woff2",
+      "sha256": "9a690227eacf2039d0fbdb3f22d52d8495c9d6aea9d92141f9e7b9a31666744a",
+      "bytes": 28268,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.40.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.41.woff2",
+      "sha256": "07d6f27ffa132ad6088912fe23a99e24148d3531fc97c997a18bbefa4209a0eb",
+      "bytes": 24160,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.41.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.42.woff2",
+      "sha256": "73a0bfa92a1d482ea2a47c6ca3344f0cfa455b438d3258b1e8f6cac9d5a3ab32",
+      "bytes": 21328,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.42.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.43.woff2",
+      "sha256": "19c00522c01e89a9373d031a2985e079b0482d7b38d8e27fc2da52d4fbf06777",
+      "bytes": 22528,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.43.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.44.woff2",
+      "sha256": "92b92ce22589b41dc96ea381e2348eee88a8627e99f8dfe8b833e18451543677",
+      "bytes": 27672,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.44.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.45.woff2",
+      "sha256": "215a6bdd8b575e608109637a4095e702eac5df58548dbb22441a5bf2822b3dc5",
+      "bytes": 23072,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.45.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.46.woff2",
+      "sha256": "45c7abe255877e311aaa2366c592834581a9ca9f0dc339e5240ffd4a5311a4c2",
+      "bytes": 19396,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.46.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.47.woff2",
+      "sha256": "9e0e82cae1e9985370ce818bf47e49609611be3026013333ce488497118469fa",
+      "bytes": 20140,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.47.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.48.woff2",
+      "sha256": "f162fc3a0945d314c96371302cb6428f13a519f2d863418d9f6d6413825bb3fd",
+      "bytes": 24556,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.48.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.49.woff2",
+      "sha256": "e17409bf4fb905c2ad3a8880a358690148b75985d1397f31b00f18f6367ee980",
+      "bytes": 27736,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.49.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.5.woff2",
+      "sha256": "d4100235521bbc3210b8361bfd9872794124323c01b32e2474d959c3057e30c8",
+      "bytes": 29128,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.5.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.50.woff2",
+      "sha256": "f610776d833f70354847bb60d3957da49fc157b5c8e3dd95670e5b15bb106333",
+      "bytes": 21988,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.50.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.51.woff2",
+      "sha256": "3b5c1bb3a3738f52202a2c1d7bc3f990b1e7184ec2fbb67db0f4267a6d944aba",
+      "bytes": 28468,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.51.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.52.woff2",
+      "sha256": "9d2b59cacc5cab44bebee47de5adadf1da61a7b36ce387aabf814d1112f0aa4a",
+      "bytes": 21100,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.52.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.53.woff2",
+      "sha256": "1d2ee22633aa7c6b9cc6f75441429361b32fa0834e47761e0602e2f45749f1f4",
+      "bytes": 22492,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.53.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.54.woff2",
+      "sha256": "7cfacbaaddbfb0faf50508443f12921fcf78404108c1a0e882c49fbc8f0795ae",
+      "bytes": 22260,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.54.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.55.woff2",
+      "sha256": "ef93b3d58edc876b0519541f28fd47ba5b9d9d14b39bac9108b0ee09e017926f",
+      "bytes": 18124,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.55.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.56.woff2",
+      "sha256": "38e2d51cc055dc907756f6febd2c00bf2d4ed37b10811b3cba619e58bff5563a",
+      "bytes": 27216,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.56.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.57.woff2",
+      "sha256": "97ce6c8f95b78b19952d9e29028c0b13a8f220f79f532271f6d333a51bb08c11",
+      "bytes": 23408,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.57.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.58.woff2",
+      "sha256": "d07f0458e15bea2ed28f3478a1dd83d002c946a158728cf3489ddcf3c9efea2b",
+      "bytes": 23296,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.58.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.59.woff2",
+      "sha256": "a43e378dbc3bd59cdd4474bf3798fd4bf493041a74259d7d83ee86da84f28cfa",
+      "bytes": 18876,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.59.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.6.woff2",
+      "sha256": "2a69443ab25b34b548dec8e17dc1fbe2d9282ef3daf7f637567abf9785830a07",
+      "bytes": 29772,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.6.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.60.woff2",
+      "sha256": "72a75012756893d19cc2c9aeb99a85852bcd752ea977486d7b825f55ba4fc6c5",
+      "bytes": 22884,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.60.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.61.woff2",
+      "sha256": "57105ed603a39ccf143404197d3c4069c9bab062e28bb00806cc1794b7b2f545",
+      "bytes": 19612,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.61.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.62.woff2",
+      "sha256": "451ffbcc2795a408a0e3a5ed94ef4f8cbf7b824d12a21022f414cb8c84f02528",
+      "bytes": 15492,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.62.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.63.woff2",
+      "sha256": "51de5d1c87e5af692d7a6751e197d26f55151b874bd106d9d473fd1446e22f52",
+      "bytes": 21236,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.63.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.64.woff2",
+      "sha256": "efb9187ac82dd3bd6087590efa1fd3e75fb7a86892826a606864c35b8c4d5731",
+      "bytes": 21796,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.64.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.65.woff2",
+      "sha256": "170fd2e5149e31e05e08226b1903bf74e528a89a662afc73aae70caf4a559c2c",
+      "bytes": 21768,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.65.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.66.woff2",
+      "sha256": "e7ba51f2193606d5a33034bb4f8d71ba782973f57c81d014c72398c26b5d66e9",
+      "bytes": 15760,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.66.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.67.woff2",
+      "sha256": "56e07c82b6eb3db28db914eb3f6ce15b8ae6369a760970e073d15e91da8eaee7",
+      "bytes": 12500,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.67.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.68.woff2",
+      "sha256": "567b85bc5fc08386ad2f1391896619df06f82e5876cbd0a2810df0d44133403e",
+      "bytes": 6700,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.68.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.69.woff2",
+      "sha256": "f5290f19251c2bd8d0276f3d13145ca94a548f9efa61303993ed0805c3a82157",
+      "bytes": 2048,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.69.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.7.woff2",
+      "sha256": "10c877dd3100a1401560eab580ac7432fed7e13f06a9e7f52dbec0601a82189f",
+      "bytes": 30208,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.7.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.70.woff2",
+      "sha256": "e00784c265f5162f1db38d64e961bb32911c660f617da045a939ee5e8b1c889b",
+      "bytes": 4476,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.70.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.71.woff2",
+      "sha256": "d7d225971ef7d656557e694c1e31766c2c0b66dbab7a014e718724a0e0fcf9d2",
+      "bytes": 4176,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.71.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.72.woff2",
+      "sha256": "78776a6c73ed766621d1cca1f750d2658c348e3842ce89f07e380d86146f40c1",
+      "bytes": 4284,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.72.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.73.woff2",
+      "sha256": "f06759979e5ad21740fb9d75a9bb4c28e30ec7a5a66d341ce2e4ddec8ab5b502",
+      "bytes": 1512,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.73.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.74.woff2",
+      "sha256": "c199a2c35bc29135cd531486697dba4c051cfeccb99a8f39b49ff67f8aeeaf1e",
+      "bytes": 3220,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.74.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.75.woff2",
+      "sha256": "27755810e87dc8e49761961208ed388cd575fbad8f16b71fdf2b4e839d3b5801",
+      "bytes": 7408,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.75.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.76.woff2",
+      "sha256": "381baccbd27fee305ca5a7ad0fba4933aa7931dd85e505e62321d1a2d3a020f3",
+      "bytes": 30636,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.76.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.77.woff2",
+      "sha256": "7f64aa4c56042d2086e739c60e049a2ecebf5a540b2279da2f02ee2b30d7713f",
+      "bytes": 26888,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.77.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.78.woff2",
+      "sha256": "f2b4a6b5e916cf74a91773b65bccb99654a5120b03a053ac3b14d4142ba7adc2",
+      "bytes": 28316,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.78.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.79.woff2",
+      "sha256": "6b0696ec67cfd6bbf16a31cbaf02b118bff5380a84cf9345c78bc0155d23eba9",
+      "bytes": 29468,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.79.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.8.woff2",
+      "sha256": "6eb4512716db9f375efa12b9454c2e8d460d074df519e74f9bf5ad86c8f5764f",
+      "bytes": 25612,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.8.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.80.woff2",
+      "sha256": "2c6bfe70a6f82c495a85e4b0682196da0e27f6b34f05c3c6302629204083a4e6",
+      "bytes": 28424,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.80.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.81.woff2",
+      "sha256": "0d9e465bb06e084d448e1f251690eb739cda03043aada62b26524d82ae7af37d",
+      "bytes": 28952,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.81.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.82.woff2",
+      "sha256": "cc6962d6777cd07d5135db75e44ba8ff3745e2c9f813782057ddf5c0695c33b9",
+      "bytes": 29036,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.82.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.83.woff2",
+      "sha256": "cc9e6aefc986a06dcdccffe8ba2ac34b440803070fe28ff57e0e2fb301c78ff2",
+      "bytes": 28428,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.83.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.84.woff2",
+      "sha256": "d83d8a223ca35d360ee149bcd48f5e8363450eacd8a448197736d5185f9c11ee",
+      "bytes": 29604,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.84.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.85.woff2",
+      "sha256": "fba696cca620d3719435a0ad1c890a4b7e4872e8e5c4355ce5bcfe4323c7aa8a",
+      "bytes": 27772,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.85.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.86.woff2",
+      "sha256": "4b6e0deba1c9017cdeb5eb4be76ce8fab9dbcc11f075edafe1bdd9d4f79d0d1c",
+      "bytes": 28084,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.86.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.87.woff2",
+      "sha256": "ec726e8cc06266a77c55690a14114dead264bf2beea427257778659977512541",
+      "bytes": 29148,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.87.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.88.woff2",
+      "sha256": "a3843f44d395d8a1ea3a874406cf2d29bec2bad8b241c4e7b88841b070257f72",
+      "bytes": 27296,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.88.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.89.woff2",
+      "sha256": "559f0737efb1cf4b42583097469aad20c842c0b1f3608cd7fc053affb797da9e",
+      "bytes": 27288,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.89.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.9.woff2",
+      "sha256": "7bd6c36d2d9123a74c565e3d5b6e400fb3dacdcee6fa57b9357e16b715e8eb53",
+      "bytes": 22488,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.9.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.90.woff2",
+      "sha256": "ad62f1e0c928eb33499a0ed867cc16bf6e9afb527fc2ee3447e384d288e8f2cc",
+      "bytes": 26464,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.90.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.91.woff2",
+      "sha256": "f5885da59a50115fee55dfd413a6585c2f39df946dfc551d7bdc766acde8ecd7",
+      "bytes": 26092,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.91.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.92.woff2",
+      "sha256": "bd841e2b53d747aab8173117036431a1687d18fb7ad1b6563c78918198b891c9",
+      "bytes": 24560,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.92.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.93.woff2",
+      "sha256": "dcabb51bcf75cc074a8c0b4a3781b01be43f39225c376ae1353699ffde61d03c",
+      "bytes": 24152,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.93.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.94.woff2",
+      "sha256": "4b5ead7fe551842ae53e77f042fd0dea6280b94093aea550020450779e9f3776",
+      "bytes": 21388,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.94.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.95.woff2",
+      "sha256": "e7370d2952ebb618ab70b97eba34c7d9cb5341037809a0be698a9bb9b9a4fa75",
+      "bytes": 5716,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.95.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Light.96.woff2",
+      "sha256": "8e2e94aeb20f240d7a5c0afbd3ce727a123d4b77847ac1808821e02b66e5a929",
+      "bytes": 10344,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Light.96.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.1.woff2",
+      "sha256": "23c254e2996b1983c08404ee679b507a9d537b6d441ce354641d9e97321fde98",
+      "bytes": 4124,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.1.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.10.woff2",
+      "sha256": "0e7f7a5919ff1f433bd2423cd9c2e070e53b749e5f5cd2889efa4674014d1820",
+      "bytes": 24436,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.10.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.11.woff2",
+      "sha256": "7096432c7ee37de7a87baf38df7dca96b3a8b7cd5cb2b718191410fc98bbba32",
+      "bytes": 28360,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.11.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.12.woff2",
+      "sha256": "94d4f64a4a4f1ca1e1f8ebfac9505127afc3802a5846d6ffd6231d4d49cafb63",
+      "bytes": 30472,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.12.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.13.woff2",
+      "sha256": "71d6c26d869f509e1932232c7600a6ba949faff5f483753d7f87a186c4aa044f",
+      "bytes": 25844,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.13.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.14.woff2",
+      "sha256": "b383593b715701a30992e1981d5cd75463a2464b5b562f53762aa53c2e4d9e39",
+      "bytes": 24092,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.14.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.15.woff2",
+      "sha256": "3f1dba70694a596b43ac4e47cfecee9b1895922b8e1a91258e0199401376a90d",
+      "bytes": 24436,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.15.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.16.woff2",
+      "sha256": "4834cc25c6714f10f6e0c51e150311dbc35d4dcf52c9dc0d70dcce1172b64067",
+      "bytes": 23624,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.16.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.17.woff2",
+      "sha256": "e56eab984754b50a2140e68cf9a387ab382476cfb4b2730b47a7f92b9a81ba5f",
+      "bytes": 23740,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.17.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.18.woff2",
+      "sha256": "10df0e564afeb55cf7a339c2d4373577fe493a484d6d0adf12d94abf16930143",
+      "bytes": 21228,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.18.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.19.woff2",
+      "sha256": "27fd32ab97490695cd236625c212ab10bfeeac5b8714f5f5755897fb17abb718",
+      "bytes": 25336,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.19.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.2.woff2",
+      "sha256": "9fa607b486d39ad6204f08003c8ad1427ddd0f694feb97fcdddf453aea1c29e0",
+      "bytes": 3392,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.2.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.20.woff2",
+      "sha256": "dbf6e5562667a6b4b27d021be4547e98c7aa733e2d83e3e6b40ecc9a8ee9f8d2",
+      "bytes": 26880,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.20.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.21.woff2",
+      "sha256": "015e482434d865be2ce81b41af532587c88984a9e77ee1bd4c08b1c3d3e04da3",
+      "bytes": 25724,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.21.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.22.woff2",
+      "sha256": "efd4cf70d13e7751692bf16b818a0cfed37f704f7b65eb908dccee9e773cf685",
+      "bytes": 22492,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.22.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.23.woff2",
+      "sha256": "2ab5e17367c5bac08580e72a23d8026fa8bc3c9f63665751f265c4e50dffea2b",
+      "bytes": 17448,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.23.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.24.woff2",
+      "sha256": "91cc626dc429ba5c2ebc5247b2310bf0d187002865e1d3f4a23012c5448c33fb",
+      "bytes": 23160,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.24.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.25.woff2",
+      "sha256": "8f50caf992972cd0f6c8c666f810b33cc963be24a2c77be9e8e5db53f2651397",
+      "bytes": 23280,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.25.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.26.woff2",
+      "sha256": "44129888c07ce14b07db44c77804dd2f27eff3fac55d4964bfd9bf7b42a3de12",
+      "bytes": 26460,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.26.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.27.woff2",
+      "sha256": "7a6daf85cbba25712931068ada97466ac03c5617ed08f15def5cbc3e20f1a4e6",
+      "bytes": 34852,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.27.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.28.woff2",
+      "sha256": "47468013e4c767fa0f6413755cb64d027af693c4cd6193eae5cdde2020c79d78",
+      "bytes": 31008,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.28.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.29.woff2",
+      "sha256": "7c370508e8b07c8f8c5f4cbe2ae39be72cfbcd19c128a62879444684d1000f42",
+      "bytes": 27968,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.29.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.3.woff2",
+      "sha256": "ccd29add4224242e876c798398f5c79b926be39c6b552317bbf214896705d634",
+      "bytes": 8256,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.3.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.30.woff2",
+      "sha256": "d22845457a99b5c4771f44c0b8a2c0d2a767336fea7ba5024ef689b34dd1c489",
+      "bytes": 24112,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.30.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.31.woff2",
+      "sha256": "d84a4b3321a9fdfa827bc5b1b6b42e7ae4b99fe57bc445bd8b5a1ce1ff7b1019",
+      "bytes": 25340,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.31.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.32.woff2",
+      "sha256": "c67b8ca5a19867cac6b71a5a10eec175eb67a4d8201561cafcb063217870dff7",
+      "bytes": 22408,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.32.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.33.woff2",
+      "sha256": "1e6d58abb3cb18764e39a30915d22841c794f27d5bb32884cedd6ce804979d50",
+      "bytes": 20016,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.33.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.34.woff2",
+      "sha256": "f6c03cba2de7fa692261a736c72ae818a503511621c8907973faaff6bd2b201a",
+      "bytes": 25568,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.34.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.35.woff2",
+      "sha256": "fc12eaf747b69962e5ddc51e3c12577d8b4c1e559a1a4dc56f754dd48d34dd91",
+      "bytes": 21360,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.35.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.36.woff2",
+      "sha256": "ff64e1f0f720d1afa4c48348e1dae15ee249af4e26424e5512306f72f2076aa6",
+      "bytes": 24936,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.36.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.37.woff2",
+      "sha256": "c27c512a3c1fdd320f28a8ff105fdf33a7b914285b83919fdb57aadb631bfb82",
+      "bytes": 24208,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.37.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.38.woff2",
+      "sha256": "fa61b4bc855737a3688845c29375082e64fd1d83843f263dce35a6ebc9e9a484",
+      "bytes": 27084,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.38.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.39.woff2",
+      "sha256": "566d782c78ba937cccd37e8a723523c0c99b49edb958b7f1800a2cd34d5853cf",
+      "bytes": 26880,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.39.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.4.woff2",
+      "sha256": "33c68f1ed909a94f4635e1a13492d7661ff44d0353bb54caa3469eddb3e3e732",
+      "bytes": 32200,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.4.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.40.woff2",
+      "sha256": "e8fa834cb4cbcd656f78873ced1e43c8a8851bec969b502861219b45d379da42",
+      "bytes": 28584,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.40.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.41.woff2",
+      "sha256": "febbb5e406cd4ffd45aa85a4e760344bb35642de50de5bc9210623b5e7dc2bc4",
+      "bytes": 24244,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.41.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.42.woff2",
+      "sha256": "fae189cee387251c90d34115e45be6d388c96c75106f61fea6d8aee87eb4ca20",
+      "bytes": 21444,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.42.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.43.woff2",
+      "sha256": "6d33ad6a5b388d2d3de41a328830a33edf2bbf124ea42327518e20fc04a1882c",
+      "bytes": 22576,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.43.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.44.woff2",
+      "sha256": "b545aaa49143c9eaf22f94b3bf74747bd9356c68c7da9c4fc61d0c01fe8d444d",
+      "bytes": 27872,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.44.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.45.woff2",
+      "sha256": "67fd798df1759217b0af9ea147cf59f6c7ae1e2a5ff3543cbc8afc1103c9d34e",
+      "bytes": 23044,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.45.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.46.woff2",
+      "sha256": "d7fa6ea55599cbbe26e86dec962d0390e7d0ccb85d570b43528d5dda2b817ab1",
+      "bytes": 19320,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.46.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.47.woff2",
+      "sha256": "4630e223802a5c1425e4f3d534c5916fa59b4662a8e9741f83551114ee80594d",
+      "bytes": 20212,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.47.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.48.woff2",
+      "sha256": "f5faeb41f6aded1f755e8ad609ed09e5bb0fc901976917a6f49f11582cee96b3",
+      "bytes": 24716,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.48.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.49.woff2",
+      "sha256": "0fd77bb4311c9d7174fae906edf6c61f41f6573b37c899369ebf370ccb671e1a",
+      "bytes": 27944,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.49.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.5.woff2",
+      "sha256": "02c539964d540afb265c17dd1eb55c58b9fd0bf93edbd1d26f963925335782b3",
+      "bytes": 29608,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.5.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.50.woff2",
+      "sha256": "be66599fc4533423d43379bf228060ef09b79eef23677cee0c98befab2299f79",
+      "bytes": 22324,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.50.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.51.woff2",
+      "sha256": "57f945a07b9213addd596514ccd474fe6de25571bc627651a21d0736704570e3",
+      "bytes": 28680,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.51.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.52.woff2",
+      "sha256": "869b0de2c87d90188c9146a33b0a7f791a4f2565d681ac0150eab108414d8469",
+      "bytes": 21164,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.52.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.53.woff2",
+      "sha256": "22a6cf7d2e410cde7adc2919810c7a16010d3f77f3c6f3b8fafc41fab1960545",
+      "bytes": 22544,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.53.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.54.woff2",
+      "sha256": "cec036f88749ef41b201cec16fd63356a3054f24a2d8220b65965a0e2fad72c4",
+      "bytes": 22372,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.54.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.55.woff2",
+      "sha256": "e562a53e09e0e7963f8b3dcd6be6538c356c8e71b8a7c682bfa80d19b2c3179e",
+      "bytes": 18140,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.55.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.56.woff2",
+      "sha256": "6965db59bb62a9aae8e8ce57d91e2785df546a7379ad0325f91264df63bc9469",
+      "bytes": 27288,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.56.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.57.woff2",
+      "sha256": "b50fc65b937f1a241fa656dfba71696645704ba040b21e40e189f3b54036fa36",
+      "bytes": 23292,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.57.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.58.woff2",
+      "sha256": "5b3154f6fcaaf88613cd1988e13ddbf8417e7a8c7e9192871bc94d474d6cdd76",
+      "bytes": 23416,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.58.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.59.woff2",
+      "sha256": "e78db576b0af0df6f1018fbc490839837b4b88c40f5e972507fe683d473ffa2f",
+      "bytes": 18976,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.59.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.6.woff2",
+      "sha256": "5b3f980bc7dc7b8094acd44c37731c8c3deb6f4dfde67d57bcb526b4a0b4b081",
+      "bytes": 30116,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.6.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.60.woff2",
+      "sha256": "b077795fb840fcfb873e5c0a04cedb6a09bed04c415a7e710fd6b364f443c1fe",
+      "bytes": 23320,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.60.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.61.woff2",
+      "sha256": "43a66cc9b882202378eedcf4ed2f7cb17aea2f260c963cefc4cfc35e56d21d97",
+      "bytes": 19804,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.61.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.62.woff2",
+      "sha256": "07c723a6d390027afd935c747b015094e8ed2ec53c186064696041b92373615c",
+      "bytes": 15608,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.62.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.63.woff2",
+      "sha256": "6367b3dce5eb345afafa3c28221b2e4bba9f7f983464c091d99daf2a5329c2a0",
+      "bytes": 21344,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.63.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.64.woff2",
+      "sha256": "baaeed9aba0d682ed7dcef6b95dacaf7852de770aad44fd4ab68b502b17e8c31",
+      "bytes": 21996,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.64.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.65.woff2",
+      "sha256": "483c95159b76b9377f705888b93d61038eb58b1d185caf5e44450ce9bed81a6c",
+      "bytes": 21992,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.65.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.66.woff2",
+      "sha256": "38ea3dcb4e8d0e4cbe0dc463525db164283de5939566e281bfb05e32a9c06213",
+      "bytes": 15884,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.66.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.67.woff2",
+      "sha256": "1450e7819c9be0c13bc1247ad6cf8455e0f70e79b2c473277c183d0a8f656e3f",
+      "bytes": 12424,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.67.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.68.woff2",
+      "sha256": "884938806d0c0d07582a17dae20e7db2823763f44b5a076ec9d2ca14c89d6042",
+      "bytes": 6576,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.68.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.69.woff2",
+      "sha256": "18ed8354c11de7a6ed2964e46c75d5d38379f94f6b0d6415f025a2300d7f01f2",
+      "bytes": 2032,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.69.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.7.woff2",
+      "sha256": "baf03a287c09de242af7efd24c35067b9db9bf533a351c7af0e9f01b2dea3334",
+      "bytes": 30572,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.7.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.70.woff2",
+      "sha256": "de373db936afa14cfefffc18096cbe2e987bf8e27d3c244a405487e38c57f365",
+      "bytes": 4288,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.70.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.71.woff2",
+      "sha256": "e7450a2f406fd46c068d9af88ac6f40976f84d89e5ffa2c2b16120ae403d7d25",
+      "bytes": 4244,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.71.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.72.woff2",
+      "sha256": "8f103703eaf5e3e15b00ebe5efc6877bb67ba70e785f6bf348cfcde993ed194a",
+      "bytes": 4336,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.72.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.73.woff2",
+      "sha256": "d5c7add711f7c8e9d6bf25d808051811f10ed8ab6fa723f1b5cda9eb645871d0",
+      "bytes": 1512,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.73.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.74.woff2",
+      "sha256": "7bb2546e25a3f33dea800b68ce877daf2bedd084623ea388e507a2f5df035be6",
+      "bytes": 3244,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.74.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.75.woff2",
+      "sha256": "0f64a92fc1a9e147f56f3f0f8c5e75cf476fcf43a7a4e81ba608840dc5c64b71",
+      "bytes": 7312,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.75.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.76.woff2",
+      "sha256": "9dfcf64786126924635fd13a1208c5fab2fe4e2588abcbb6713fe747b23fa409",
+      "bytes": 30636,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.76.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.77.woff2",
+      "sha256": "ea5ded8b5293b50317cd72bf639b106a4df25b9d26f503ae12f89944f40b7a5a",
+      "bytes": 26956,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.77.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.78.woff2",
+      "sha256": "d067ebd912395d99e7ab9184fefd4d26a52de9a521cc1f4e50aaf5063e9e340e",
+      "bytes": 28348,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.78.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.79.woff2",
+      "sha256": "b46643db27c7a1b5d5645bfecf87f6a39ea96a6613b1a5ba7108a06bd660ad73",
+      "bytes": 29476,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.79.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.8.woff2",
+      "sha256": "b825fb7e9deeb2a4d88c51348e135c1239f89b057531dc6012e1277ea6b81406",
+      "bytes": 25616,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.8.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.80.woff2",
+      "sha256": "ae8fc560d4bbb3606dc3ad9471b9d910f3f13eac5b1747a2a32c9b7fc6e46c6f",
+      "bytes": 28404,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.80.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.81.woff2",
+      "sha256": "0be939b888e03f5e3f3ecf5732caf67bfdf344b9980c89af8c8ecc2a8985e890",
+      "bytes": 28888,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.81.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.82.woff2",
+      "sha256": "ba9dcbc3f925154a83b899d7f5b29fd087180193fc3efb9d810dc8ebb972bc43",
+      "bytes": 29256,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.82.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.83.woff2",
+      "sha256": "0dc7f350e61c2630708fd3fe196277f0a2e7fd69c0a2538ebbeb0a993b108656",
+      "bytes": 28460,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.83.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.84.woff2",
+      "sha256": "d2161eb14ae66170827911d23d70e66e1c8d9be4aae1d6dd23abe6e4a4b7de72",
+      "bytes": 29776,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.84.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.85.woff2",
+      "sha256": "6e3562be3ed604fd7248439d39dcfe1fd9b325f39f22ff3255aa4b07ca6e1776",
+      "bytes": 27796,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.85.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.86.woff2",
+      "sha256": "b919b6c9551ce3b913de37a3e368325c581cb3c8ec6815f5a3af9fa19d6208cc",
+      "bytes": 28224,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.86.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.87.woff2",
+      "sha256": "58a32f288812f0b085a8b2ad75484b99882493ecdc8bf62f171456dea9538841",
+      "bytes": 29212,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.87.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.88.woff2",
+      "sha256": "09367dff13f86a2d6984a1fc73c9fae5611626b92bebc213fa216172efca7cc5",
+      "bytes": 27240,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.88.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.89.woff2",
+      "sha256": "4444c85e1e5cf22cc91b6f73cc0a898cf98264717c5f42e9644f5c1901a8ee37",
+      "bytes": 27272,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.89.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.9.woff2",
+      "sha256": "18643e6052f4ac35652305cfa74c4d6abe91a16194774121da0ba848e148563d",
+      "bytes": 22832,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.9.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.90.woff2",
+      "sha256": "99a0b5bc9ccfd8f3d1299a8517459b9156a420e94f9b7a56b831789268d7f53b",
+      "bytes": 26568,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.90.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.91.woff2",
+      "sha256": "2190532f7d180c77a47cec58fb40f5fb26417461687f40beff71937204a2022b",
+      "bytes": 26016,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.91.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.92.woff2",
+      "sha256": "5aec3bfecc38963fd8da8bd92c9220b47c779de1538b40836961124b32c1768f",
+      "bytes": 24552,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.92.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.93.woff2",
+      "sha256": "d678c228e40fb0213b1ddea437bd0705ff89241a923c12aad0b97d06e592332c",
+      "bytes": 24140,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.93.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.94.woff2",
+      "sha256": "97c4621b973ac1e55968e5ca9b7161869c2ad1a899cdb9988849c82226d952e5",
+      "bytes": 21296,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.94.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.95.woff2",
+      "sha256": "038ccfd4b3fa09765ca66ccdac937258689798c5066917e36aa74747f06bc37e",
+      "bytes": 5664,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.95.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Medium.96.woff2",
+      "sha256": "7bc13320c33a692c75e28623d713d57d037780c56360c7b1c6b651c8fd087cea",
+      "bytes": 10452,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Medium.96.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.1.woff2",
+      "sha256": "8a4c366489a29e2d05e6d9d0bcbe4b5729a57d117e0bf8aa978227072ef78225",
+      "bytes": 4008,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.1.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.10.woff2",
+      "sha256": "0488f990a9a9b54f7cbf4d583c9f0c3799c17aeffb8453bea8b94dd97952203b",
+      "bytes": 24280,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.10.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.11.woff2",
+      "sha256": "f432272ab458a710abe2472507ff7e1bf2aa21876c7e40717e262e2f6bd10185",
+      "bytes": 28340,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.11.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.12.woff2",
+      "sha256": "b0e7350eac56f45340e05edc393e798d4a7dbca75b8c038797b63e2f09e972bb",
+      "bytes": 30092,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.12.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.13.woff2",
+      "sha256": "12e3a6cedf1efc8607fc4d43915d59119f539e3a9ee3bf76eaf01c14703f1269",
+      "bytes": 25192,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.13.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.14.woff2",
+      "sha256": "0606d60b85ac044679ecdab410bf0359089422c2ba0b702bd2bc642673523eb7",
+      "bytes": 23956,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.14.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.15.woff2",
+      "sha256": "373fa452aecd9e0570596d3907745f3da92387cff9762d329486f7a4f2005fba",
+      "bytes": 24416,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.15.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.16.woff2",
+      "sha256": "6848118953b1b228c1642d38d6d494113590e82b43ce527bb649a0f3fe17c81f",
+      "bytes": 23436,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.16.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.17.woff2",
+      "sha256": "8ac1ca54d4c724080be633158800b2d5ff5e080f73e0bdd75f5707e9ad3f7d54",
+      "bytes": 23588,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.17.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.18.woff2",
+      "sha256": "2c94c83dee1b6ef4adb3f3781e1c5777efbe31a84d509c646c02343f985ed4ed",
+      "bytes": 21052,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.18.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.19.woff2",
+      "sha256": "acf3f5f875bb5493e8c84e1d429d74cb4e1bec35f84002a80ed2b1c930a9371a",
+      "bytes": 25388,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.19.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.2.woff2",
+      "sha256": "834685aa7c14ee4a0138140961ae404417ef4063f4a4e485e884db5920497948",
+      "bytes": 3228,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.2.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.20.woff2",
+      "sha256": "b153896e298ab8d2c39739eaeb4c9239e636b812bbad0d35deaa9d4610d7fb8f",
+      "bytes": 26808,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.20.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.21.woff2",
+      "sha256": "f3fdf370b45b3f3dd57dabf5b4f13993e618da09ce9a71fd0a1a9a4651aa1d45",
+      "bytes": 25584,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.21.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.22.woff2",
+      "sha256": "a2a6181296ccdb74ccc56d05ed99fbcc205dcfc36d186a407bf1855e2a2e02ea",
+      "bytes": 22380,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.22.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.23.woff2",
+      "sha256": "12b75f4fade5d743b09a3b2f74047ee84aecf64161713f3219cf2df6a2dc40ae",
+      "bytes": 17416,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.23.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.24.woff2",
+      "sha256": "ec683766cf5ba30452f372b73c10d602da0337293c51b43ed39ae6549284753d",
+      "bytes": 23144,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.24.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.25.woff2",
+      "sha256": "1f8d20a272f2e9d73a4da1473b124a2ae7444adea9e2ab590c2b715e417d01b5",
+      "bytes": 23224,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.25.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.26.woff2",
+      "sha256": "738a77165df4a78fad0cccb1c79169e9d353732cce47d0439173082567402a66",
+      "bytes": 26228,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.26.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.27.woff2",
+      "sha256": "3c958054149509114722aa1d22d3fb12f2782ab86547f50cc808981a71d1debf",
+      "bytes": 34488,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.27.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.28.woff2",
+      "sha256": "7a03e08c658a7a2c678c1e88e8bfb896c57af1ecfe779cea81ddb0be919dc388",
+      "bytes": 29680,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.28.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.29.woff2",
+      "sha256": "b9c2f183e0fac69a5df00776eaf31f41e296461ed94cf55228eb2b2cacc18b77",
+      "bytes": 27488,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.29.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.3.woff2",
+      "sha256": "20b814f7ad96976eee3b939e4b809a01af740a8f6d88de61608e17402dc03181",
+      "bytes": 8176,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.3.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.30.woff2",
+      "sha256": "0e2771d755f7d089e76f6adc5d0394e86393e420835cd9fcf2d17c1ab9edf3f5",
+      "bytes": 23572,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.30.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.31.woff2",
+      "sha256": "223dd971a266c6f8c0f5f602baf58701ceb06703aa419ee306290b6e383e886a",
+      "bytes": 25152,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.31.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.32.woff2",
+      "sha256": "164c7e78f901c778ce9bc3269aaf09fed32b9701a6a3fa3591a9bb3352fad432",
+      "bytes": 22128,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.32.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.33.woff2",
+      "sha256": "51608457ac257f73041cc399a4a0c1fd964f79028db622e99c3f27274224023c",
+      "bytes": 19940,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.33.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.34.woff2",
+      "sha256": "2bb7ce9f966b81f90cfdf9142ee2686dbcf14bd3d286eb1e42c0502da182be3b",
+      "bytes": 25564,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.34.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.35.woff2",
+      "sha256": "1b2f452e63ccd56717bc13877e329032dd68497454607f382e4e48b55a01d516",
+      "bytes": 21352,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.35.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.36.woff2",
+      "sha256": "1c21c0b4db171add8c5df60a2fe7d7125d3990b71772945b63cf129c3f2e9d0a",
+      "bytes": 24744,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.36.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.37.woff2",
+      "sha256": "5dba120762135203b31beaa33191f8bd35759dedbbba15c4701db27d40698278",
+      "bytes": 24040,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.37.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.38.woff2",
+      "sha256": "7efb95c4e354b7c9c356069013487fafc86cbcb31951d1d1e7f2d797ce497584",
+      "bytes": 26700,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.38.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.39.woff2",
+      "sha256": "77f84c3a6b33017e34ff1594b8cc7fd5c713afcf2426e21355220a3d7f282963",
+      "bytes": 26340,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.39.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.4.woff2",
+      "sha256": "82a609dabd3d4b6b460420b37aaec26324ebbcd9f0c4635642e660a86c7cd191",
+      "bytes": 32016,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.4.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.40.woff2",
+      "sha256": "d2bcbc3f54392a2faa37bfde0e01c875de506678a47dbe4d01d8a77a8a770a17",
+      "bytes": 28396,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.40.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.41.woff2",
+      "sha256": "e181e804746a9214a6124c51e16a718761778cd89ed5fe26cc1809fe3f4d7532",
+      "bytes": 24212,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.41.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.42.woff2",
+      "sha256": "16fcdb086380c9eb3de9d3c93f70933c624b74179e7351bf69b302624bc903cc",
+      "bytes": 21356,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.42.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.43.woff2",
+      "sha256": "e06f699240f49868d9d4ab2bb5cc2a37c9e1ed6ae9dde858ba3d5bbb2d039e70",
+      "bytes": 22556,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.43.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.44.woff2",
+      "sha256": "4a5c349b9cda95a4378058350e2f1988e202b13de431169955df8b62350e6803",
+      "bytes": 27736,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.44.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.45.woff2",
+      "sha256": "fd1a395c1df4e50f46c6a11290770d07244e21fcceb32bda44f8924143b7c30b",
+      "bytes": 23180,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.45.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.46.woff2",
+      "sha256": "3fdd2a40f76773a3d709c4510d95accabc9748971100ef6f02cb56d26950d464",
+      "bytes": 19408,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.46.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.47.woff2",
+      "sha256": "f422155bbe5eed671784f7fdf204b385d50833048f6070f6c644e3c62be3adf4",
+      "bytes": 20204,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.47.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.48.woff2",
+      "sha256": "44746b058e29db2e1b84972cedb66a97e64670ec33248ef49a6aa0561f6733f9",
+      "bytes": 24388,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.48.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.49.woff2",
+      "sha256": "e2c16fa3ab912b2dc3c1e0dd1f63aea0b95a1aa5dcb3ed358999d6b7a57af282",
+      "bytes": 27820,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.49.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.5.woff2",
+      "sha256": "b74454359b9ff4d9f592bd9cc8891c1fbd807864ad7c425a7b871e4cda141c95",
+      "bytes": 29528,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.5.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.50.woff2",
+      "sha256": "95ac897afc2d75d684d979061f32003361191212d054e759ce9eff6d77dbfecf",
+      "bytes": 22200,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.50.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.51.woff2",
+      "sha256": "b5ddcfb9464e707ef61700b4315d836a4c5c60fa271dca56923c37a31527f771",
+      "bytes": 28624,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.51.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.52.woff2",
+      "sha256": "636a66e6f2aa8f1eb0530490576333543932eabb6dab00722d1fbaa770fc1b0d",
+      "bytes": 21104,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.52.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.53.woff2",
+      "sha256": "61a1e838bd43a67bb28969fd07246bcf631bfe6ccd17ee36f3be88110d2fe4f7",
+      "bytes": 22536,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.53.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.54.woff2",
+      "sha256": "256651f7b7e9e691222edaded672af583fd2e4a44a51e129a6acdb493b050d29",
+      "bytes": 22124,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.54.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.55.woff2",
+      "sha256": "aeacc7884d5e01ed050d37ab181dca7f748ae14f8c00286060f9b0bce445884c",
+      "bytes": 18168,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.55.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.56.woff2",
+      "sha256": "8ceaea683c944e337c3aceae032652c44258c946291bc3e41a73e4696a0f01f8",
+      "bytes": 27328,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.56.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.57.woff2",
+      "sha256": "5b7df36beceb7e3c2eaa880127d449923de6a3e0829c2eb1ffb3cabdf359db43",
+      "bytes": 23304,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.57.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.58.woff2",
+      "sha256": "19f9590561904f38f6839539f052d1488c3903fa2e3f2242d364405355dff605",
+      "bytes": 23404,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.58.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.59.woff2",
+      "sha256": "d69da2ab962927bd96c1d7eda8f373d0d5e8a127e6d6dc440feba782a3a3b0a5",
+      "bytes": 18976,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.59.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.6.woff2",
+      "sha256": "789220b0f71fa75f1aa4113846cc07fe283da7d8cc05f982f5cbf81096f6f2e1",
+      "bytes": 29848,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.6.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.60.woff2",
+      "sha256": "4901a40998f5da089b2583f22daa92d23df299b208fa6dfa25dcd3809eb6cd6f",
+      "bytes": 23060,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.60.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.61.woff2",
+      "sha256": "7c04e0a27a0bfe1c2793f152e49f3b9f18b424210db7754e01e17de017d74fa1",
+      "bytes": 19740,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.61.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.62.woff2",
+      "sha256": "e067fecf5b49020ff63bc7b8e0a5272a5ae6cbb748e51acda86e7ab841613861",
+      "bytes": 15512,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.62.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.63.woff2",
+      "sha256": "4d20c8d6658386b37b29a5e76d614a33099576eb2a3233c1afa52c3d59b176e5",
+      "bytes": 21264,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.63.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.64.woff2",
+      "sha256": "3ed205046f10cc29e4aed49e3613a968768e0d8d9d9ce49dc5c0ab605c5fbb4c",
+      "bytes": 21884,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.64.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.65.woff2",
+      "sha256": "b60243400a1aa85519d97fce5f351a481972404f02d648e64ab2ab01d77e30e0",
+      "bytes": 22100,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.65.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.66.woff2",
+      "sha256": "c3b3c6912d815491a4205880a9e63d9fc9473ec9bbc7fe78d805f082638a5881",
+      "bytes": 15788,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.66.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.67.woff2",
+      "sha256": "f3215047fd3c7d010d664b4e1e49d4e4947db989aec2ac7dba4720e3fe4f37fa",
+      "bytes": 12268,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.67.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.68.woff2",
+      "sha256": "0ff8617607c001b54121f1b61cbab1763f6a17062495ef17c97118386926069c",
+      "bytes": 6580,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.68.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.69.woff2",
+      "sha256": "11562c4d62dba1dab209ecc698530014ed8d1c35b259bf1854cc1be4f0351836",
+      "bytes": 1968,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.69.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.7.woff2",
+      "sha256": "b432085b3cc61d3d3f7b00bfd2bfaeb6d3777ca5ec3b5f39b757ec3005ca685f",
+      "bytes": 30276,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.7.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.70.woff2",
+      "sha256": "3141c83529e50f1dba4fe9ce83c9a9ffe18cc8cbb21d315b7e1751f33940e1c2",
+      "bytes": 4128,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.70.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.71.woff2",
+      "sha256": "7c02ae4f85138a5d7cb5273e81d683439b557bf3c30d33b075110e85f4e498e5",
+      "bytes": 4112,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.71.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.72.woff2",
+      "sha256": "206279f0ba54ea7196b1996461ae47c4d8c0effcd52289f68607b97026240300",
+      "bytes": 3984,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.72.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.73.woff2",
+      "sha256": "df36dc1f9a62034a6b8b65d32e88babdae1d15fed78c042600a9ac114c3e52b9",
+      "bytes": 1452,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.73.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.74.woff2",
+      "sha256": "19c8e255886a9a5bc91dd5b85c4eaf03a2134799911f2332e8f4b6c86dadf8b3",
+      "bytes": 3132,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.74.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.75.woff2",
+      "sha256": "233d22e04061d534b890ce12e7a5173884eaa817dfacfbe6e72c4deb8e13ad5d",
+      "bytes": 6948,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.75.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.76.woff2",
+      "sha256": "572e9693eaffca6fc2aae9bd34124902dc49bebbf93839b826192b0edd6a29e9",
+      "bytes": 30664,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.76.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.77.woff2",
+      "sha256": "477bcf3bb3d9ab93b774db9b1f7bd063c2be47064a76c3eb7c0f6db60fa5f33a",
+      "bytes": 26888,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.77.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.78.woff2",
+      "sha256": "735fef14acac1dcbbefe624a51a7c1168c993d96fb1336124c5881c6f6d4496a",
+      "bytes": 28328,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.78.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.79.woff2",
+      "sha256": "f23cc66a7ca6b9d16ede8207374fb05501c58c14790d3b20944a28b06cf674ea",
+      "bytes": 29600,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.79.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.8.woff2",
+      "sha256": "1d9408524c7dad1e9ff235f0bfa5ee2ab80c30678fddf414e0ca8659068f27a6",
+      "bytes": 25424,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.8.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.80.woff2",
+      "sha256": "9ca3bcfda1212bfaa342d3da3eef0f5bf08f0ee6e3fceadbdcfa775b2bb8078c",
+      "bytes": 28416,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.80.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.81.woff2",
+      "sha256": "3be738b27adea6b8258804b4a14ff8d973d1c51f7ad027eebbe685b77211f744",
+      "bytes": 28940,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.81.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.82.woff2",
+      "sha256": "89a2bf23bea9eae810af3c72f65e21a1bef532e4dfcf7782b739b8f96321ca77",
+      "bytes": 29196,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.82.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.83.woff2",
+      "sha256": "0777d093d439888c1f09d664923fc3c5e52f43b96b6809781a10e8eeab37462b",
+      "bytes": 28440,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.83.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.84.woff2",
+      "sha256": "8a095d3f2745fd58d8b2089bf0983200e0b8bf52a53cd9d3189f7cd47f786744",
+      "bytes": 29612,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.84.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.85.woff2",
+      "sha256": "e105077482e39c067c00a1f73e971682c4d7731d92570c3bb40a92ca3d43d1f4",
+      "bytes": 27792,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.85.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.86.woff2",
+      "sha256": "c1ddf803ed6a5ff366af8b37f3f15db163769a0b21e53963212bb3a4f64a9ca3",
+      "bytes": 28284,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.86.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.87.woff2",
+      "sha256": "4482b62f0e8c084dc2c9c7a7f6c4435aebc348be43418d76dca19b14117a56d4",
+      "bytes": 29212,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.87.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.88.woff2",
+      "sha256": "9961a36dde7c13b09f3f08b72e6648072e90d618e492db31e5b22321de474339",
+      "bytes": 27164,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.88.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.89.woff2",
+      "sha256": "016cd3bd3fc98d97d3b84fdfc92b8faaa42f0125c4f098cb39b522903f2f4c37",
+      "bytes": 27368,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.89.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.9.woff2",
+      "sha256": "b994e407e2d8060952c10a59afdeb5e4e9eb3ae215286f090c8c8691a15a6795",
+      "bytes": 22648,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.9.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.90.woff2",
+      "sha256": "f1a03fd964b1f07571871f3a94b74b8bbff71505111c57bf8e3edcd8642c1b15",
+      "bytes": 26584,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.90.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.91.woff2",
+      "sha256": "14c50c10851e111f242764a8dc7db6dd5913bfb2d3cd0885d80d74b6babe847d",
+      "bytes": 26036,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.91.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.92.woff2",
+      "sha256": "d396cf612740379af99ab5ce167c59b9df12f7ce090d520639379c9a5a28d6ef",
+      "bytes": 24516,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.92.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.93.woff2",
+      "sha256": "a529a0815ff5fc152cdfd6b6d2cd8d6cc901885650467d15d2ba7722aa53b652",
+      "bytes": 24124,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.93.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.94.woff2",
+      "sha256": "81eae320068a003cf531a378ed2408304a419fe10818552a2f6a315861e42cc9",
+      "bytes": 21396,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.94.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.95.woff2",
+      "sha256": "56d9024e1d09107389e33e3d4c8a5d57c19d785d6fd0c09d310c70d0d06de8ef",
+      "bytes": 5500,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.95.woff2"
+    },
+    {
+      "path": "fonts/HarmonyOS_Sans_SC_Regular.96.woff2",
+      "sha256": "9a5e55931fa2bf0374c0eb9d6046f0c594e67ca9057106d8de31d1b693b1ad23",
+      "bytes": 10160,
+      "source": "https://developer.huawei.com/config/commonResource/font/HarmonyOS_Sans_SC_Regular.96.woff2"
+    },
+    {
+      "path": "fonts/embedded-01c7c4cd01380e75.woff2",
+      "sha256": "01c7c4cd01380e75fb1b5ff9900508afcd89a83d0b0e6f70e96ede53183ab53a",
+      "bytes": 90612,
+      "source": "embedded"
+    },
+    {
+      "path": "fonts/embedded-07daacf7fc1956b5.woff2",
+      "sha256": "07daacf7fc1956b5b68d902ab4763a062b196a3665d713e54bff066c667c0674",
+      "bytes": 98124,
+      "source": "embedded"
+    },
+    {
+      "path": "fonts/embedded-086c48dfbea9ddaf.woff2",
+      "sha256": "086c48dfbea9ddaff1320f7e09399b8e2924e88ce67453721255db3bdbb5a353",
+      "bytes": 93824,
+      "source": "embedded"
+    },
+    {
+      "path": "fonts/embedded-10e09574e6159b4d.woff2",
+      "sha256": "10e09574e6159b4de4ac28da50f1f3e73f582c177aed2eea19c82809f6e866c9",
+      "bytes": 956,
+      "source": "embedded"
+    },
+    {
+      "path": "fonts/embedded-1c9b7a62ee6c3f77.woff2",
+      "sha256": "1c9b7a62ee6c3f77c82982a3d0ab7ead8805f5e67ccfc1942037fc65f398f22b",
+      "bytes": 97808,
+      "source": "embedded"
+    },
+    {
+      "path": "fonts/embedded-336cba06364579bf.woff2",
+      "sha256": "336cba06364579bf751872735dbe5ea5dc62fc31791c61c35dcfc806ad5046f1",
+      "bytes": 652,
+      "source": "embedded"
+    },
+    {
+      "path": "fonts/embedded-3a013466c0eee979.woff2",
+      "sha256": "3a013466c0eee979fb9d42c2d7a8887cd3645dc8b897cfc5b71781cf982efc5a",
+      "bytes": 98152,
+      "source": "embedded"
+    },
+    {
+      "path": "fonts/embedded-43eb798d59b557c3.woff2",
+      "sha256": "43eb798d59b557c3d87c1402ce684b3fda1ad66bf7ec8021b0a43dc31ad9c572",
+      "bytes": 93856,
+      "source": "embedded"
+    },
+    {
+      "path": "fonts/embedded-49c50b344b458c13.woff2",
+      "sha256": "49c50b344b458c1322d859f4f0d9db7f770533c1dbdab31defa0987c29925b9b",
+      "bytes": 97280,
+      "source": "embedded"
+    },
+    {
+      "path": "fonts/embedded-67718afd5e939252.woff2",
+      "sha256": "67718afd5e93925277efb878127107f0ff668059ef5fd799fb31ed12aaae7a96",
+      "bytes": 96864,
+      "source": "embedded"
+    },
+    {
+      "path": "fonts/embedded-88097a36a292c145.woff2",
+      "sha256": "88097a36a292c145a14394f1fd5133f76b9a3d6fdb133834b2c94a3db61dd39a",
+      "bytes": 93692,
+      "source": "embedded"
+    },
+    {
+      "path": "fonts/embedded-918edad542a1da60.woff2",
+      "sha256": "918edad542a1da608fd2ba8daebaff9ac802309103fe760eed465b8b4e47faf1",
+      "bytes": 94472,
+      "source": "embedded"
+    },
+    {
+      "path": "fonts/embedded-a9cb1cd82332b23a.woff2",
+      "sha256": "a9cb1cd82332b23a47e3a1239d25d13c86d16c4220695e34b243effa999f45f2",
+      "bytes": 92164,
+      "source": "embedded"
+    },
+    {
+      "path": "fonts/embedded-bc1f491f70fde3c6.woff2",
+      "sha256": "bc1f491f70fde3c6fb908130aa173f34cf3f2529a1f76bf8d41590e32126c6b5",
+      "bytes": 1348,
+      "source": "embedded"
+    },
+    {
+      "path": "fonts/embedded-c261d07880deb915.woff2",
+      "sha256": "c261d07880deb91518e190c19816ddc93a69bf4539b8486cad316b6ed59a065d",
+      "bytes": 94316,
+      "source": "embedded"
+    },
+    {
+      "path": "fonts/embedded-c43d0dd87523c658.woff2",
+      "sha256": "c43d0dd87523c65879334d43651d3fb1815ca1d18d27507356e6704322d63b79",
+      "bytes": 95816,
+      "source": "embedded"
+    },
+    {
+      "path": "fonts/embedded-c503cc5ec5f8b2c7.woff2",
+      "sha256": "c503cc5ec5f8b2c7666b7ecda1adf44bd45f2e6579b2eba0fc292150416588a2",
+      "bytes": 94588,
+      "source": "embedded"
+    },
+    {
+      "path": "fonts/embedded-cb6a1b246318ed38.woff2",
+      "sha256": "cb6a1b246318ed3885d7dffa14a2609297fe80e9b8e500bea33b52fa312a36a4",
+      "bytes": 95864,
+      "source": "embedded"
+    },
+    {
+      "path": "fonts/embedded-e7964fc553a794d0.woff2",
+      "sha256": "e7964fc553a794d00167f168dc174fdd19b083c30ad213bfc2e6a95876912a44",
+      "bytes": 92712,
+      "source": "embedded"
+    },
+    {
+      "path": "images/00a1165ee0a83d860af44541553cf96d1567141152.jpg",
+      "sha256": "2e4a3182666ef78a5330b51070fa9c4eef26b3ca7aab3830d98ada542855ceb9",
+      "bytes": 92153,
+      "width": 1080,
+      "height": 608,
+      "format": "JPEG",
+      "source": "https://i0.hdslb.com/bfs/new_dyn/00a1165ee0a83d860af44541553cf96d1567141152.jpg"
+    },
+    {
+      "path": "images/029ea93421bb50200b987b2c48fee18c1567141152.jpg",
+      "sha256": "c2bde31a993d726e04e6ed205975b91ede45b20575eb168094a5a83bd27d6a4b",
+      "bytes": 95889,
+      "width": 1080,
+      "height": 608,
+      "format": "JPEG",
+      "source": "https://i0.hdslb.com/bfs/new_dyn/029ea93421bb50200b987b2c48fee18c1567141152.jpg"
+    },
+    {
+      "path": "images/14156b6d323c95d04d4aafc13516c4581567141152.jpg",
+      "sha256": "a04e82e624b190683b02dc253ff31d85fcba22edcd43264efb913947c6ade17c",
+      "bytes": 489342,
+      "width": 1080,
+      "height": 1920,
+      "format": "JPEG",
+      "source": "https://i0.hdslb.com/bfs/new_dyn/14156b6d323c95d04d4aafc13516c4581567141152.jpg"
+    },
+    {
+      "path": "images/20001d365162b375f7ce7be496682ca91567141152.png",
+      "sha256": "8757245a3b972ba936cd9e21674e514b0a20f5a82992fbc06060e8a22c8a74ec",
+      "bytes": 2797183,
+      "width": 1440,
+      "height": 1080,
+      "format": "PNG",
+      "source": "https://i0.hdslb.com/bfs/new_dyn/20001d365162b375f7ce7be496682ca91567141152.png"
+    },
+    {
+      "path": "images/21911dd11960cd44828453c0753b7a3a1567141152.jpg",
+      "sha256": "9a0fc8fdb7a7c01b7ac0485021bb2012d6dd760dbe3c61c42dd8af5ec0a5514e",
+      "bytes": 477572,
+      "width": 1080,
+      "height": 1920,
+      "format": "JPEG",
+      "source": "https://i0.hdslb.com/bfs/new_dyn/21911dd11960cd44828453c0753b7a3a1567141152.jpg"
+    },
+    {
+      "path": "images/25d47f742dede03fdca6dae305339d05349984754.png",
+      "sha256": "5f3a0636b221302d21bbed367996a7a9b014121af4b0db89ca011ea73324bb4d",
+      "bytes": 28624,
+      "width": 576,
+      "height": 363,
+      "format": "PNG",
+      "source": "https://i0.hdslb.com/bfs/new_dyn/25d47f742dede03fdca6dae305339d05349984754.png"
+    },
+    {
+      "path": "images/3619fb35782d3bceb3cbdb519b2f56951567141152.jpg",
+      "sha256": "ec117ed9e82010d5ffa6b9a973350fefd75e64540929cb53b4062419f077e77f",
+      "bytes": 1645329,
+      "width": 1080,
+      "height": 1920,
+      "format": "JPEG",
+      "source": "https://i0.hdslb.com/bfs/new_dyn/3619fb35782d3bceb3cbdb519b2f56951567141152.jpg"
+    },
+    {
+      "path": "images/388a59fc51f35958e7807de9daf9ba171567141152.gif",
+      "sha256": "f213412c468530459a7163afc650568337a8e5eaa9c328653b7a830c3f7ab360",
+      "bytes": 7828883,
+      "width": 600,
+      "height": 450,
+      "format": "GIF",
+      "source": "https://i0.hdslb.com/bfs/new_dyn/388a59fc51f35958e7807de9daf9ba171567141152.gif"
+    },
+    {
+      "path": "images/3a73220e3dcd153636aeb79a6e6862ac8a9f59c7.jpg",
+      "sha256": "9906fbe4c1cae88b97a13131fdbd13f9b37275556c3cb86050d9e0162f9402f0",
+      "bytes": 54843,
+      "width": 511,
+      "height": 511,
+      "format": "JPEG",
+      "source": "https://i2.hdslb.com/bfs/face/3a73220e3dcd153636aeb79a6e6862ac8a9f59c7.jpg"
+    },
+    {
+      "path": "images/401919c5cd02d44f2d5de8d331521a991567141152.jpg",
+      "sha256": "84f0b2f67be4fa55388e22d2327a59802647acc68d39f0a2e8c0e4975a75856b",
+      "bytes": 92776,
+      "width": 1080,
+      "height": 914,
+      "format": "JPEG",
+      "source": "https://i0.hdslb.com/bfs/new_dyn/401919c5cd02d44f2d5de8d331521a991567141152.jpg"
+    },
+    {
+      "path": "images/455dd281eee3e17f8d49137387d422f81567141152.jpg",
+      "sha256": "8db787349373f1914a6617655a9c3bbfac2f1135cf6c002ccf018041a380dae7",
+      "bytes": 118464,
+      "width": 1080,
+      "height": 608,
+      "format": "JPEG",
+      "source": "https://i0.hdslb.com/bfs/new_dyn/455dd281eee3e17f8d49137387d422f81567141152.jpg"
+    },
+    {
+      "path": "images/4a2550ebcd14c456bce4ad423d35082afde073f6.jpg",
+      "sha256": "e534a08eef8f40084b2667a4b709e57c0e3b81391de32f7325d279c9c5585831",
+      "bytes": 812735,
+      "width": 1024,
+      "height": 1024,
+      "format": "JPEG",
+      "source": "https://i0.hdslb.com/bfs/face/4a2550ebcd14c456bce4ad423d35082afde073f6.jpg"
+    },
+    {
+      "path": "images/534c214afd8929e6d0cd726f57f2a1751567141152.png",
+      "sha256": "9685d2232bb6c92611c335ff4dd0c6e1a2c1464994a802563178763020a6592d",
+      "bytes": 4011755,
+      "width": 1920,
+      "height": 1080,
+      "format": "PNG",
+      "source": "https://i0.hdslb.com/bfs/new_dyn/534c214afd8929e6d0cd726f57f2a1751567141152.png"
+    },
+    {
+      "path": "images/586c23378a5e438fb3162ed057b30c151567141152.png",
+      "sha256": "ac7ec0f9e7141c9afb1dc1ceafa952c67da98a11b2a0368653d8bd953fe547e1",
+      "bytes": 6572369,
+      "width": 1440,
+      "height": 2560,
+      "format": "PNG",
+      "source": "https://i0.hdslb.com/bfs/new_dyn/586c23378a5e438fb3162ed057b30c151567141152.png"
+    },
+    {
+      "path": "images/59ebb2877982f96a1c1b166401c4dcb81567141152.jpg",
+      "sha256": "23bf65d5fe08a0aff7f9c1a9023eab6596503604dce127635bede2c9183546ee",
+      "bytes": 1928007,
+      "width": 1080,
+      "height": 1920,
+      "format": "JPEG",
+      "source": "https://i0.hdslb.com/bfs/new_dyn/59ebb2877982f96a1c1b166401c4dcb81567141152.jpg"
+    },
+    {
+      "path": "images/66a05e212bc143ddc3de47e3838b9d3c1567141152.jpg",
+      "sha256": "5398dfd5896ab073ba9eeef90334e2af5d91eff33e340c7123351bd612365d16",
+      "bytes": 64997,
+      "width": 1080,
+      "height": 608,
+      "format": "JPEG",
+      "source": "https://i0.hdslb.com/bfs/new_dyn/66a05e212bc143ddc3de47e3838b9d3c1567141152.jpg"
+    },
+    {
+      "path": "images/6b21d6d83b71f395ac7c95b124aa5b8c1567141152.jpg",
+      "sha256": "e6df060c7fbf5b9ecbf1e670821118c59e7ffc22ee97d9f6b9fb858d9de9086a",
+      "bytes": 262546,
+      "width": 1080,
+      "height": 1920,
+      "format": "JPEG",
+      "source": "https://i0.hdslb.com/bfs/new_dyn/6b21d6d83b71f395ac7c95b124aa5b8c1567141152.jpg"
+    },
+    {
+      "path": "images/6f5e4ec8fe315e579486cc35596c13b4349984754.png",
+      "sha256": "5031551ff93dced2c1cc4803819419875feb81bc2dbfe55d2944a44ad40a5c3d",
+      "bytes": 10157877,
+      "width": 3334,
+      "height": 1875,
+      "format": "PNG",
+      "source": "https://i0.hdslb.com/bfs/new_dyn/6f5e4ec8fe315e579486cc35596c13b4349984754.png"
+    },
+    {
+      "path": "images/764ef7b26ed9c35710cd3cf865b8da001567141152.jpg",
+      "sha256": "ede7b20a42f9c5638e18f644a116fa7e9fd3c60b791494c8f20c7e48f071b562",
+      "bytes": 86019,
+      "width": 1080,
+      "height": 608,
+      "format": "JPEG",
+      "source": "https://i0.hdslb.com/bfs/new_dyn/764ef7b26ed9c35710cd3cf865b8da001567141152.jpg"
+    },
+    {
+      "path": "images/77154a7a11f56e836e3e9ae26ebad5381567141152.png",
+      "sha256": "8a23c495c5474020933cfe967107632439678ad9894250d88749fd22311b3f39",
+      "bytes": 2522672,
+      "width": 1920,
+      "height": 1080,
+      "format": "PNG",
+      "source": "https://i0.hdslb.com/bfs/new_dyn/77154a7a11f56e836e3e9ae26ebad5381567141152.png"
+    },
+    {
+      "path": "images/778193ae92dd31273020124b3a7bd3bf1567141152.jpg",
+      "sha256": "7885e4ea11b1b6103bd216a46e8828af2120ebd5b56735ce3c8f698e33d79f26",
+      "bytes": 6331597,
+      "width": 2880,
+      "height": 5120,
+      "format": "JPEG",
+      "source": "https://i0.hdslb.com/bfs/new_dyn/778193ae92dd31273020124b3a7bd3bf1567141152.jpg"
+    },
+    {
+      "path": "images/7fdc317a1de9eec26c229e93d2244aba1567141152.jpg",
+      "sha256": "d3b2edce7b980a77c02604130d467da4cc7066535921ef199c92bfa6b809c789",
+      "bytes": 60254,
+      "width": 1080,
+      "height": 608,
+      "format": "JPEG",
+      "source": "https://i0.hdslb.com/bfs/new_dyn/7fdc317a1de9eec26c229e93d2244aba1567141152.jpg"
+    },
+    {
+      "path": "images/9461181c1050c74f6e0a0119cbb746ed1567141152.jpg",
+      "sha256": "8945bc1551067499cfe2679c2e8f88a00ab085b180573b8c809c5848956b8fda",
+      "bytes": 1671546,
+      "width": 1080,
+      "height": 1920,
+      "format": "JPEG",
+      "source": "https://i0.hdslb.com/bfs/new_dyn/9461181c1050c74f6e0a0119cbb746ed1567141152.jpg"
+    },
+    {
+      "path": "images/a26847cad3f1b576c5a3ac49ec7c0e4d1567141152.png",
+      "sha256": "42cd34a0fe8448c44b5130723d22194f7e4c1494284f911ebd93ebefebdc1de3",
+      "bytes": 766628,
+      "width": 880,
+      "height": 700,
+      "format": "PNG",
+      "source": "https://i0.hdslb.com/bfs/new_dyn/a26847cad3f1b576c5a3ac49ec7c0e4d1567141152.png"
+    },
+    {
+      "path": "images/a5c8e9cb10e8c6c6bed0c6b32c67b4971567141152.png",
+      "sha256": "7550ef3f9254890bdbbf921c8e19677ac1914118d23438ed84d26c50911c3119",
+      "bytes": 2979007,
+      "width": 1920,
+      "height": 1080,
+      "format": "PNG",
+      "source": "https://i0.hdslb.com/bfs/new_dyn/a5c8e9cb10e8c6c6bed0c6b32c67b4971567141152.png"
+    },
+    {
+      "path": "images/a8b3548165c55d98e852c24a76a4d3c61567141152.jpg",
+      "sha256": "0bbcab3f86b67f2c5f3a755443ed6ac30251a4e5a97a5f95c6ab164ee0815b0d",
+      "bytes": 439838,
+      "width": 1080,
+      "height": 1920,
+      "format": "JPEG",
+      "source": "https://i0.hdslb.com/bfs/new_dyn/a8b3548165c55d98e852c24a76a4d3c61567141152.jpg"
+    },
+    {
+      "path": "images/acb61067e0dadb60a382c69eaa9e92931567141152.jpg",
+      "sha256": "11277c3c05ef2eeda48cd5f84e2644016065bef4e0f1b9e25b0208e42dfa761f",
+      "bytes": 75720,
+      "width": 1080,
+      "height": 608,
+      "format": "JPEG",
+      "source": "https://i0.hdslb.com/bfs/new_dyn/acb61067e0dadb60a382c69eaa9e92931567141152.jpg"
+    },
+    {
+      "path": "images/b8f9135e2e60d7d3a9356cc16bcebbe41567141152.gif",
+      "sha256": "786d24f7a757d7a1eb5255ab7ab3771d2e705580ddbe062d076475edc13f595e",
+      "bytes": 7794610,
+      "width": 600,
+      "height": 450,
+      "format": "GIF",
+      "source": "https://i0.hdslb.com/bfs/new_dyn/b8f9135e2e60d7d3a9356cc16bcebbe41567141152.gif"
+    },
+    {
+      "path": "images/bf6af1dbe6e26684db9334630233b6731567141152.jpg",
+      "sha256": "414290ccc213346ff61ff1e374a09f67a75a8b53764034524ee8d21ccad88dfd",
+      "bytes": 301488,
+      "width": 1080,
+      "height": 1920,
+      "format": "JPEG",
+      "source": "https://i0.hdslb.com/bfs/new_dyn/bf6af1dbe6e26684db9334630233b6731567141152.jpg"
+    },
+    {
+      "path": "images/c7c08626d9d35f0b2cae5b19bc8cb0571567141152.gif",
+      "sha256": "5055b4133d9e3abbf72286e1183e9ad397ac5bacec3df7a7dea07f34d42df924",
+      "bytes": 6081954,
+      "width": 600,
+      "height": 338,
+      "format": "GIF",
+      "source": "https://i0.hdslb.com/bfs/new_dyn/c7c08626d9d35f0b2cae5b19bc8cb0571567141152.gif"
+    },
+    {
+      "path": "images/c97bbea5b10a53dec040435f2d9e9ddf1567141152.gif",
+      "sha256": "ffac3cae9a9d6327bd6da9cc8d8c3ab3d0e1c3585a0b5d17a69bf99040b0df3e",
+      "bytes": 3959394,
+      "width": 600,
+      "height": 338,
+      "format": "GIF",
+      "source": "https://i0.hdslb.com/bfs/new_dyn/c97bbea5b10a53dec040435f2d9e9ddf1567141152.gif"
+    },
+    {
+      "path": "images/d3ca1e0cf4e2e0c99d5115ed7b4af2fa1567141152.gif",
+      "sha256": "8aefb1a6022795f6b97122e11fda7fd8d200bea36779a3bbc1e6cd8835f03b32",
+      "bytes": 3480866,
+      "width": 600,
+      "height": 338,
+      "format": "GIF",
+      "source": "https://i0.hdslb.com/bfs/new_dyn/d3ca1e0cf4e2e0c99d5115ed7b4af2fa1567141152.gif"
+    },
+    {
+      "path": "images/d43196809f77903ae8bcc7295a7dc8ad1567141152.jpg",
+      "sha256": "ae60d9c45fe8459d5b97cea28f29ffdf91510ca3e51f363a30a1f8f05a728ab5",
+      "bytes": 99522,
+      "width": 1080,
+      "height": 608,
+      "format": "JPEG",
+      "source": "https://i0.hdslb.com/bfs/new_dyn/d43196809f77903ae8bcc7295a7dc8ad1567141152.jpg"
+    },
+    {
+      "path": "images/d874d7eed20515a8bc2b9544322f2bf61567141152.jpg",
+      "sha256": "e51b175a48e70a765ed368993a702cd2dd88d18339fbd85b03a5aa19e487a136",
+      "bytes": 1655577,
+      "width": 1080,
+      "height": 1920,
+      "format": "JPEG",
+      "source": "https://i0.hdslb.com/bfs/new_dyn/d874d7eed20515a8bc2b9544322f2bf61567141152.jpg"
+    },
+    {
+      "path": "images/db53901f0ca8d5f0a6f63adeaf3799b01567141152.jpg",
+      "sha256": "76a6a2853494083f475efd3239518a214526a6507a0cbdd10558107ba7a2a624",
+      "bytes": 1773265,
+      "width": 1920,
+      "height": 1080,
+      "format": "JPEG",
+      "source": "https://i0.hdslb.com/bfs/new_dyn/db53901f0ca8d5f0a6f63adeaf3799b01567141152.jpg"
+    },
+    {
+      "path": "images/dfcb3e7246d1a73d0a5f3e9fcba0b4511567141152.jpg",
+      "sha256": "cc0f794cc8018c7d00428943208f6de0b7df1cd5c98bda04767c1e4d09482dfd",
+      "bytes": 2045558,
+      "width": 1080,
+      "height": 1920,
+      "format": "JPEG",
+      "source": "https://i0.hdslb.com/bfs/new_dyn/dfcb3e7246d1a73d0a5f3e9fcba0b4511567141152.jpg"
+    },
+    {
+      "path": "images/ecd9b1955857bb28aaeb6a9afb6213261567141152.png",
+      "sha256": "aa74ff9b0e87d819aa9c9dad14cd3e389c49d51cd7fbb631b12c90396bfc2cc5",
+      "bytes": 2448345,
+      "width": 1440,
+      "height": 1080,
+      "format": "PNG",
+      "source": "https://i0.hdslb.com/bfs/new_dyn/ecd9b1955857bb28aaeb6a9afb6213261567141152.png"
+    },
+    {
+      "path": "images/embedded-12e3a7b992a46241.webp",
+      "sha256": "12e3a7b992a462416aec1d6a5f4ae46cbbb91644dbe0a9a111ac3b0341477134",
+      "bytes": 87152,
+      "width": 1000,
+      "height": 1000,
+      "format": "WEBP",
+      "source": "embedded"
+    },
+    {
+      "path": "images/embedded-dc812bee13b7efdb.webp",
+      "sha256": "dc812bee13b7efdb346c9b931dcbf54906398c60cdfab163e20e86b72f1ce31d",
+      "bytes": 112238,
+      "width": 1000,
+      "height": 1000,
+      "format": "WEBP",
+      "source": "embedded"
+    },
+    {
+      "path": "images/frame-logo.png",
+      "sha256": "1cd7c9e1854b6a1ff3996bf85bc653a31c8507ad2f2f6fe5269fd023e7bb7349",
+      "bytes": 436777,
+      "width": 648,
+      "height": 648,
+      "format": "PNG",
+      "source": "karin-plugin-kkk/packages/core/resources/image/frame-logo.png"
+    }
+  ]
+}

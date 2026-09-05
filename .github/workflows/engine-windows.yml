@@ -529,6 +529,8 @@ jobs:
           pnpm run build
           Pop-Location
           node tools/shot/node_check.cjs out/Shot/shotium.exe
+          python tools/shot/bilibili_check.py --package shotium
+          if ($LASTEXITCODE -ne 0) { throw "Bilibili regression checks failed" }
           node tools/shot/daemon_check.cjs out/Shot/shotium.exe
           node tools/shot/daemon_protocol_check.cjs
           python tools/shot/charset_check.py out/Shot/shotium.exe

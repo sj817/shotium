@@ -20,12 +20,14 @@ on:
     branches: [main]
     paths:
       - 'shotium/**'
+      - 'shot/testdata/bilibili/**'
       - 'tools/shot/**'
       - 'apps/benchmark/**'
       - '.github/workflows/checks.yml'
   pull_request:
     paths:
       - 'shotium/**'
+      - 'shot/testdata/bilibili/**'
       - 'tools/shot/**'
       - 'apps/benchmark/**'
       - '.github/workflows/checks.yml'
@@ -136,6 +138,10 @@ jobs:
 
       - name: daemon wire generations are isolated and negotiated
         run: node tools/shot/daemon_protocol_check.cjs
+
+      - name: capture harness syntax
+        run: |
+          node --check tools/shot/bilibili_capture.cjs
 
       - name: the six platform packages are declared consistently
         working-directory: shotium
@@ -263,6 +269,9 @@ jobs:
 
       - name: compile the check scripts
         run: python -m compileall -q tools/shot
+
+      - name: Bilibili fixtures are complete and offline
+        run: python tools/shot/bilibili_check.py --fixtures-only
 
       - name: the PNG decoder in serve_check agrees with a real PNG
         # serve_check.py decodes PNGs by hand rather than depending on Pillow.

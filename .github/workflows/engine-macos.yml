@@ -385,6 +385,7 @@ jobs:
           ( cd shotium && pnpm install --no-lockfile && pnpm run build )
 
           node tools/shot/node_check.cjs out/Shot/shotium
+          python3 tools/shot/bilibili_check.py --package shotium
           node tools/shot/daemon_check.cjs out/Shot/shotium
           node tools/shot/daemon_protocol_check.cjs
 

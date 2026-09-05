@@ -383,6 +383,7 @@ jobs:
             echo "::endgroup::"
             exit "$status"
           }
+          python3 tools/shot/bilibili_check.py --package shotium
           # The daemon runs here as well as on Windows because
           # shotium/src/lib/endpoint.ts has two branches -- a named pipe on
           # Windows, a unix socket everywhere else -- and the Windows job

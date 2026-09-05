@@ -136,7 +136,8 @@ async function main() {
         'clip arrives as a 200x120 image',
         `${clipped.readUInt32BE(16)}x${clipped.readUInt32BE(20)}`);
 
-  const written = path.join(os.tmpdir(), `shot-node-check-path-${process.pid}.png`);
+  const writtenDir = fs.mkdtempSync(path.join(os.tmpdir(), 'shot-node-check-path-'));
+  const written = path.join(writtenDir, 'image.png');
   const {image: viaPath} = await shotium.screenshot({
     file: features,
     viewport: {width: 400, height: 300},
@@ -145,7 +146,49 @@ async function main() {
   });
   check(viaPath === null, 'a request with `path` gives back a null image');
   check(fs.existsSync(written), 'and the engine wrote the file');
+  const oldOutput = fs.readFileSync(written);
+  await assert.rejects(() => shotium.screenshot({file: features, path: written,
+    selector: '#not-present', allowFileAccess: true}), /no element matches/);
+  check(fs.readFileSync(written).equals(oldOutput),
+        'a failed single-file render preserves the previous destination');
+  const {image: replaced} = await shotium.screenshot({...request, path: written});
+  check(replaced === null && sha(fs.readFileSync(written)) === sha(first),
+        'single-file replacement installs the complete new image');
+  if (process.platform !== 'win32') {
+    fs.chmodSync(written, 0o640);
+    await shotium.screenshot({...request, path: written});
+    check((fs.statSync(written).mode & 0o777) === 0o640,
+          'single-file replacement preserves POSIX permissions');
+  }
   fs.rmSync(written, {force: true});
+  fs.mkdirSync(written);
+  await assert.rejects(() => shotium.screenshot({...request, path: written}),
+      /could not write|could not install|could not preserve|could not read permissions/);
+  check(fs.statSync(written).isDirectory() && fs.readdirSync(writtenDir).join() === 'image.png',
+        'a failed single-file install preserves the destination and cleans staging files');
+  fs.rmdirSync(written);
+  fs.rmdirSync(writtenDir);
+
+  console.log('\n== backdrop effects keep display-list pairs balanced ==');
+  for (const fixture of ['gradient', 'filter']) {
+    for (const type of ['png', 'jpeg', 'webp']) {
+      const request = {
+        file: path.resolve(`apps/benchmark/fixtures/${fixture}.html`), type,
+        viewport: {width: 1280, height: 720}, allowFileAccess: true,
+      };
+      const {image, stats} = await shotium.screenshot(request);
+      check(Buffer.isBuffer(image) && image.length > 1000 && stats.failed === 0,
+            `${fixture} with nested backdrop effects renders as ${type}`);
+      // Multiple tiles retain the per-item spatial index, which is where an
+      // unbalanced backdrop save/restore used to underflow the pairing stack.
+      const {tiles, stats: tiledStats} = await shotium.screenshotTiles({
+        ...request, tile: {height: 360},
+      });
+      check(tiles.length === 2 && tiledStats.failed === 0 &&
+                tiles.every(tile => Buffer.isBuffer(tile.image) && tile.image.length > 1000),
+            `${fixture} with nested backdrop effects also renders in ${type} tiles`);
+    }
+  }
 
   console.log('\n== tiles ==');
   // Taller than blink paints from one scroll position, so this exercises the
