@@ -128,7 +128,7 @@ async function main() {
       `configuration endpoint omitted protocol generation: ${derived.endpoint}`);
 
   const endpoint = fakeEndpoint('legacy');
-  let advertised = {version: '0.3.4'};
+  let advertised = {version: '0.4.0'};
   const fake = await fakeDaemon(endpoint, () => advertised);
   try {
     await assert.rejects(

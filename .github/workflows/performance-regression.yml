@@ -6,7 +6,7 @@ on:
       baseline_version:
         description: Exact published npm version
         required: true
-        default: '0.3.4'
+        default: '0.4.0'
         type: string
       build_runs:
         description: 'JSON mapping all six npm platforms to successful engine build run IDs at this SHA'
