@@ -5,6 +5,7 @@
 #include "shot/shot_server.h"
 
 #include <cstdint>
+#include <deque>
 #include <optional>
 #include <string>
 #include <utility>
@@ -224,16 +225,33 @@ class RequestHandler {
   int exit_code() const { return exit_code_; }
 
   void OnRequest(std::vector<uint8_t> bytes) {
-    idle_timer_.Stop();
-    purged_ = false;
-    if (!Answer(bytes)) {
-      // stdout is gone, so there is no way to report anything and no reason to
-      // read another request. In practice stdin is gone too and the reader is
-      // about to say so; this is the case where it is not.
-      Finish(kCaptureExitCode);
+    // Queued, and answered from the queue, rather than answered here. The
+    // renderer pumps a nestable run loop while a page loads, and a request
+    // that arrives during it runs on this thread inside the capture in
+    // progress -- which, answered on the spot, would start a second capture
+    // inside the first and take the worker down. The supervisor keeps one
+    // request in flight per worker, so this is for the caller who pipelines.
+    pending_.push_back(std::move(bytes));
+    if (answering_) {
       return;
     }
-    ArmIdleTimer();
+    answering_ = true;
+    while (!pending_.empty()) {
+      const std::vector<uint8_t> next = std::move(pending_.front());
+      pending_.pop_front();
+      idle_timer_.Stop();
+      purged_ = false;
+      if (!Answer(next)) {
+        // stdout is gone, so there is no way to report anything and no
+        // reason to read another request. In practice stdin is gone too and
+        // the reader is about to say so; this is the case where it is not.
+        answering_ = false;
+        Finish(kCaptureExitCode);
+        return;
+      }
+      ArmIdleTimer();
+    }
+    answering_ = false;
   }
 
   void OnStreamEnd(int code) { Finish(code); }
@@ -367,6 +385,9 @@ class RequestHandler {
   // Which half of the idle sequence has already run since the last request.
   bool purged_ = false;
   int exit_code_ = kSuccessExitCode;
+  // Requests that arrived while one was being answered, in arrival order.
+  std::deque<std::vector<uint8_t>> pending_;
+  bool answering_ = false;
 };
 
 }  // namespace
