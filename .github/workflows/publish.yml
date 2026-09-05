@@ -78,7 +78,7 @@
 # workflow at this commit. It needs every package.json to carry a `repository`
 # that matches this repository, case for case, or the publish fails outright.
 # The six platform manifests inherit theirs from shotium/package.json in
-# tools/shot/make_platform_package.cjs, so a platform tarball built before that
+# scripts/make-platform-package.ts, so a platform tarball built before that
 # field existed cannot be published from here. Rebuild it rather than reaching
 # for --no-provenance; an unattested engine binary is the one package in the
 # seven where the attestation is worth something.

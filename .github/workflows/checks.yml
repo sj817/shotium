@@ -152,11 +152,8 @@ jobs:
       - name: Bilibili fixtures are complete and offline
         run: pnpm verify:bilibili --fixtures-only
 
-      - name: performance harness syntax
-        run: |
-          node --check tools/shot/node_perf.cjs
-          node tools/shot/node_perf_gate.test.cjs
-          node --check tools/shot/node_perf_ci.cjs
+      - name: repository script unit tests
+        run: pnpm scripts:test
 
       - name: the six platform packages are declared consistently
         working-directory: shotium

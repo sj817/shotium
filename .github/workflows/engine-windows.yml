@@ -94,7 +94,7 @@ jobs:
           path: src
           # The history is not a build input, but it is a timestamp input: the
           # step that makes ninja's incremental state usable reads, per file,
-          # the commit that last touched it. See tools/shot/ci_stamp_mtimes.py.
+          # the commit that last touched it. See scripts/ci-stamp-mtimes.ts.
           fetch-depth: 0
           submodules: false   # gclient fetches the DEPS-managed ones itself
 
@@ -225,7 +225,7 @@ jobs:
         # every restored object and ninja rebuilds all 14,906 edges. See the
         # script for what each kind of file gets.
         run: |
-          python src/tools/shot/ci_stamp_mtimes.py .
+          pnpm -C src ci:stamp-mtimes "${{ github.workspace }}"
 
       - name: restore the build directory
         uses: actions/cache/restore@v6
@@ -293,10 +293,10 @@ jobs:
         # numbers were measured against.
         run: |
           New-Item -ItemType Directory -Force third_party/icu/shot | Out-Null
-          python tools/shot/icu_repack.py `
+          pnpm icu:repack `
             third_party/icu/cast/icudtl.dat `
             third_party/icu/shot/icudtl.dat --preset shot
-          if ($LASTEXITCODE -ne 0) { throw "icu_repack.py failed" }
+          if ($LASTEXITCODE -ne 0) { throw "icu repack failed" }
 
       - name: gn gen
         shell: pwsh
@@ -564,7 +564,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "daemon checks failed" }
           pnpm verify:daemon-protocol
           if ($LASTEXITCODE -ne 0) { throw "daemon protocol checks failed" }
-          python tools/shot/charset_check.py out/Shot/shotium.exe
+          pnpm verify:charset out/Shot/shotium.exe
           if ($LASTEXITCODE -ne 0) { throw "charset checks failed" }
           pnpm verify:demos out/Shot/shotium.exe
           if ($LASTEXITCODE -ne 0) { throw "reftests failed" }
@@ -577,7 +577,7 @@ jobs:
         # library, the addon linked against it, and the two resource packs, in
         # a package npm can install. @shotkit/shotium depends on all six as
         # optionalDependencies with os/cpu set, so an install pulls the one
-        # that matches and skips the rest. See tools/shot/make_platform_package.cjs.
+        # that matches and skips the rest. See scripts/make-platform-package.ts.
         #
         # Not the executable. It is a second, independent copy of the same
         # engine -- shot_core is a source_set, so its objects link into both
@@ -611,10 +611,10 @@ jobs:
           if (-not (Test-Path $addon)) {
             throw "no $addon -- the package would install and then be unable to render, since the addon is the only thing in it node can call"
           }
-          node tools/shot/make_platform_package.cjs `
+          pnpm package:platform `
             --build out/Shot --os win --arch $arch --dest dist/npm `
             --addon $addon
-          if ($LASTEXITCODE -ne 0) { throw "make_platform_package failed" }
+          if ($LASTEXITCODE -ne 0) { throw "platform package failed" }
           Push-Location "dist/npm/shotium-win-$arch"
           npm pack --pack-destination ..
           $packed = $LASTEXITCODE

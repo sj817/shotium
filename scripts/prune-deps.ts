@@ -278,18 +278,23 @@ async function main(inputsArgs: string[], keepArg: string | undefined, dryRun: b
   return 0;
 }
 
+// cac 7 registers a boolean option under its camelCase name only, so a value
+// after `--dry-run` would be swallowed as the option's. The flag is taken off
+// argv here and left in the option list for --help.
+const argv = process.argv.slice(2);
+const dryRun = argv.includes('--dry-run');
 const cli = cac('prune-deps');
 cli.command('', 'prune DEPS, hooks and .gitmodules to what the build graph reads')
     .option('--inputs <file>', 'untracked-inputs.txt from `trim-tree plan`; repeat to union')
     .option('--keep <file>', 'extra DEPS paths to keep, one per line, a trailing / for a prefix')
     .option('--dry-run', 'report only')
-    .action(async (options: {inputs?: string | string[]; keep?: string; dryRun?: boolean}) => {
+    .action(async (options: {inputs?: string | string[]; keep?: string}) => {
       const inputs = options.inputs === undefined ? [] : Array.isArray(options.inputs) ? options.inputs : [options.inputs];
-      process.exitCode = await main(inputs, options.keep, options.dryRun === true);
+      process.exitCode = await main(inputs, options.keep, dryRun);
     });
 cli.help();
 try {
-  cli.parse(process.argv, {run: false});
+  cli.parse([...process.argv.slice(0, 2), ...argv.filter((a) => a !== '--dry-run')], {run: false});
   if (!cli.options.help) await cli.runMatchedCommand();
 } catch (error) {
   console.log(pc.red(`prune-deps: ${error instanceof Error ? error.message : String(error)}`));

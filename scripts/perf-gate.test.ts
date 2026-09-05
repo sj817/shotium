@@ -1,14 +1,20 @@
-'use strict';
-const {test} = require('node:test');
-const assert = require('node:assert/strict');
-const {compare, calibrate} = require('./node_perf_gate.cjs');
+// The performance gate's verdicts, on timings shaped like a resident worker's.
+//
+//   pnpm -C scripts test
 
-// Timings the way a resident worker produces them: a stable body with a
-// scattering of slow samples, deterministic so the verdicts reproduce.
-function noisy(base, count = 100, spread = 0.05) {
+import assert from 'node:assert/strict';
+import {test} from 'node:test';
+
+import {calibrate, compare} from './lib/perf-gate.ts';
+
+// A stable body with a scattering of slow samples, deterministic so the
+// verdicts reproduce.
+function noisy(base: number, count = 100, spread = 0.05): number[] {
   let seed = 0x5eed;
   const random = () => {
-    seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5;
+    seed ^= seed << 13;
+    seed ^= seed >>> 17;
+    seed ^= seed << 5;
     return (seed >>> 0) / 0x100000000;
   };
   return Array.from({length: count}, () => base * (1 + (random() - 0.5) * 2 * spread));
@@ -22,12 +28,12 @@ test('a binary timed against itself is equivalent, never slower', () => {
   const b = noisy(4.2, 100, 0.05).map((v, i) => i % 2 ? v * 1.004 : v * 0.996);
   const result = compare(a, b, {tolerance: 0.03});
   assert.equal(result.status, 'equivalent');
-  assert.ok(Object.values(result.verdicts).every(v => v !== 'slower'));
+  assert.ok(Object.values(result.verdicts).every((v) => v !== 'slower'));
 });
 
 test('a real regression is slower whatever the tolerance', () => {
   const baseline = noisy(5.3);
-  const candidate = baseline.map(v => v * 2.8);
+  const candidate = baseline.map((v) => v * 2.8);
   for (const tolerance of [0, 0.03, 0.1, {primary: 0.03, tail: 0.4}]) {
     assert.equal(compare(baseline, candidate, {tolerance}).status, 'slower');
   }
@@ -44,17 +50,15 @@ test('a measured improvement is faster even with tail noise inside the band', ()
 });
 
 test('a faster median cannot hide a slower tail or lower throughput', () => {
-  const baseline = Array(100).fill(10);
+  const baseline = Array<number>(100).fill(10);
   // A tail heavy enough to be certain: the median halves, the mean triples.
-  const certain = compare(baseline, Array(70).fill(5).concat(Array(30).fill(100)),
-                          {tolerance: 0.03});
+  const certain = compare(baseline, Array<number>(70).fill(5).concat(Array<number>(30).fill(100)), {tolerance: 0.03});
   assert.ok(certain.ratios.p50 < 1);
   assert.ok(certain.ratios.mean > 1);
   assert.equal(certain.status, 'slower');
   // Six outliers in a hundred: the mean's direction is not settled, and an
   // unsettled mean is not a pass either way.
-  const sparse = compare(baseline, Array(94).fill(5).concat(Array(6).fill(100)),
-                         {tolerance: 0.03});
+  const sparse = compare(baseline, Array<number>(94).fill(5).concat(Array<number>(6).fill(100)), {tolerance: 0.03});
   assert.ok(sparse.ratios.mean > 1);
   assert.notEqual(sparse.status, 'faster');
   assert.notEqual(sparse.status, 'equivalent');
@@ -125,16 +129,16 @@ test('zero tolerance is the strict gate the calibration floors at', () => {
 });
 
 test('too few samples and invalid or unpaired results fail closed', () => {
-  assert.equal(compare(Array(20).fill(10), Array(20).fill(5)).status, 'insufficient-samples');
+  assert.equal(compare(Array<number>(20).fill(10), Array<number>(20).fill(5)).status, 'insufficient-samples');
   assert.throws(() => compare([1, 2], [1]), /Unpaired/);
   assert.throws(() => compare([1], [NaN]), /finite/);
   assert.throws(() => compare([1], [1], {tolerance: -1}), /non-negative/);
-  assert.throws(() => compare([1], [1], {tolerance: {primary: 0.02}}), /non-negative/);
+  assert.throws(() => compare([1], [1], {tolerance: {primary: 0.02} as never}), /non-negative/);
 });
 
 test('a consistent improvement passes reproducibly and its ratios are honest', () => {
   const baseline = Array.from({length: 100}, (_, i) => 10 + i % 7);
-  const candidate = baseline.map(v => v * 0.8);
+  const candidate = baseline.map((v) => v * 0.8);
   const result = compare(baseline, candidate);
   assert.equal(result.status, 'faster');
   assert.ok(Math.abs(result.ratios.p50 - 0.8) < 1e-12);
@@ -143,7 +147,7 @@ test('a consistent improvement passes reproducibly and its ratios are honest', (
 });
 
 test('calibration reads each band off its own statistic and never drops below the floor', () => {
-  const aa = (p50, mean, p95) => ({intervals: {p50: {hi: p50}, mean: {hi: mean}, p95: {hi: p95}}});
+  const aa = (p50: number, mean: number, p95: number) => ({intervals: {p50: {hi: p50}, mean: {hi: mean}, p95: {hi: p95}}});
   const bands = calibrate([aa(1.010, 1.025, 1.10), aa(1.018, 1.041, 1.35), aa(1.005, 1.012, 1.21)]);
   assert.ok(bands.primary >= 0.02 && bands.primary <= 0.041 + 1e-12);
   assert.ok(bands.tail >= 0.21 && bands.tail <= 0.35 + 1e-12);

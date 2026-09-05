@@ -41,6 +41,9 @@ import {execa} from 'execa';
 import pRetry, {AbortError} from 'p-retry';
 import pc from 'picocolors';
 
+import {PRESETS, repack} from './icu-repack.ts';
+import {formatClasses} from './lib/ninja-log.ts';
+
 const root = path.resolve(import.meta.dirname, '..');
 const outDir = 'out/Shot';
 
@@ -139,11 +142,11 @@ async function repackIcu(): Promise<boolean> {
     return false;
   }
   await mkdir(path.dirname(dst), {recursive: true});
-  const repack = await execa(
-      python, ['tools/shot/icu_repack.py', src, tmp, '--preset', 'shot'],
-      {cwd: root, reject: false, stdio: 'inherit'});
-  if (repack.exitCode !== 0) {
-    say(pc.red('icu: icu_repack.py failed'));
+  try {
+    const preset = PRESETS.shot;
+    repack(src, tmp, preset.names, preset.prefixes);
+  } catch (error) {
+    say(pc.red(`icu: repack failed: ${error instanceof Error ? error.message : String(error)}`));
     return false;
   }
   // Only replace the file when the bytes changed, so ninja does not rebuild
@@ -238,8 +241,7 @@ async function main(): Promise<number> {
 
   say(`log: ${log}`);
   say(`ninja exit: ${code === 0 ? pc.green('0') : pc.red(String(code))}`);
-  await execa(python, ['tools/shot/build_errors.py', log, '--limit', '40'],
-              {cwd: root, reject: false, stdio: 'inherit'});
+  say(formatClasses(await readFile(log, 'utf8'), {limit: 40}));
   return code;
 }
 
