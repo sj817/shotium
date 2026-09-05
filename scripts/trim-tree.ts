@@ -139,9 +139,10 @@ async function exportGraph(buildDirArg: string, outArg: string): Promise<number>
   for (const file of await glob('**/*.d', {cwd: buildDir, absolute: true})) {
     const rel = path.relative(buildDir, file).replace(/\\/g, '/');
     if (rel === 'gen/tools/gritsettings/default_resource_ids.d') continue;
-    const {target, deps} = parseDepfile(await readFile(file, 'utf8'));
-    if (!target || !nodes.has(target)) continue;
-    for (const dep of deps) depfileDeps.add(dep);
+    for (const {target, deps} of parseDepfile(await readFile(file, 'utf8'))) {
+      if (!nodes.has(target)) continue;
+      for (const dep of deps) depfileDeps.add(dep);
+    }
   }
   await writeFile(path.join(out, 'depfiles.txt'), [...depfileDeps].sort().join('\n') + '\n');
 
@@ -235,7 +236,11 @@ const whitelist = [
   // build/win/set_appcontainer_acls.py appends testing/scripts to sys.path and
   // imports common, which imports test_env (and xvfb on Linux) from testing/;
   // an import is not an input either.
-  'testing/scripts/common.py', 'testing/test_env.py', 'testing/xvfb.py', '.gitattributes', '.gitignore', '.gitmodules', '.gn', '.vpython3',
+  'testing/scripts/common.py', 'testing/test_env.py', 'testing/xvfb.py',
+  // tools/win/DebugVisualizers/BUILD.gn passes its .natvis files to the linker
+  // as /NATVIS: ldflags; a flag is not an input, and lld-link fails without
+  // the file.
+  'tools/win/DebugVisualizers/', '.gitattributes', '.gitignore', '.gitmodules', '.gn', '.vpython3',
   'AGENTS.md', 'AUTHORS', 'BUILD.gn', 'CLAUDE.md', 'DEPS', 'LICENSE', 'README.md', 'README.zh.md',
   'package.json',
   '.claude/', '.github/', 'apps/', 'benchmark-results/', 'bootstrap/', 'build_overrides/',

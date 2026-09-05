@@ -30,7 +30,7 @@ const resolve = (p: string) => path.resolve(root, p);
 
 import {parseDepfile} from './lib/depfile.ts';
 
-const dependencies = (text: string) => parseDepfile(text).deps;
+const dependencies = (text: string) => parseDepfile(text).flatMap((rule) => rule.deps);
 
 export async function pruneStaleDepfiles(buildDir: string, dryRun = false): Promise<{scanned: number; removed: string[]}> {
   const files = await glob('**/*.d', {cwd: buildDir, absolute: true, ignore: ['**/node_modules/**']});
