@@ -12,7 +12,7 @@ wrong once, and where the longer documents are. Multi-step procedures live in
    absence is the product, not a gap. A page that needs JavaScript renders
    empty by design. See `docs/shotium-plan.md` section 5 for the full list of
    things this project deliberately does not do.
-2. **Build only through `pnpm build:engine` (`tools/shot/build_engine.ts`),
+2. **Build only through `pnpm build:engine` (`scripts/build-engine.ts`),
    and only into `out/Shot`.** Do not hand-write `gn gen` or `autoninja` for
    the engine. Every other directory under `out/` is a stale experiment; a
    binary from one of them proves nothing.
@@ -49,9 +49,12 @@ wrong once, and where the longer documents are. Multi-step procedures live in
    same bytes on every platform and in every process.
 10. **Commit only when asked.** When you do, one file at a time is fine;
     message format is in [Git conventions](#git-conventions).
-11. **Scripts are TypeScript, and a library beats a hand-written utility.**
-    A new script is a `.ts` file in `tools/shot/` run with `tsx` through
-    `pnpm -C tools/shot` (root `package.json` forwards the common ones). Use a
+11. **Scripts are TypeScript in `scripts/`, and a library beats a hand-written
+    utility.** `scripts/` is the only place new tooling goes: one kebab-case
+    `.ts` file per command, run with `tsx` through `pnpm -C scripts` (root
+    `package.json` forwards the common ones). `tools/shot/`, `tests/render/`
+    and `bootstrap/` hold legacy scripts that move into `scripts/` as they are
+    rewritten and get deleted from where they were. Use a
     library for everything that is not this project's own logic: `execa` for
     processes, `tinyglobby` for globs, `cac` for argument parsing, `p-retry`
     for retries, `sharp` / `pngjs` / `pixelmatch` for pixels. Do not write a
@@ -126,11 +129,11 @@ chromium/                      # this repo; upstream Chromium layout with most o
 ├── apps/benchmark/            # six-platform harness vs Puppeteer/Playwright (own pnpm workspace)
 ├── apps/benchmark-site/       # the published benchmark pages
 ├── tests/render/              # PowerShell pixel regression (needs locally generated baselines)
-├── tools/shot/                # repository scripts (@shotkit/scripts, own pnpm project)
-│   ├── build_engine.ts        # the engine build entry point (pnpm build:engine)
-│   ├── link_agent_skills.ts   # expose .claude/skills to .agents/skills (pnpm skills:link)
-│   ├── package.json           # execa, cac, p-retry, tsx ...; `pnpm -C tools/shot install`
-│   └── *.py *.cjs *.ps1       # legacy scripts, being migrated; see docs/scripts-to-typescript.md
+├── scripts/                   # repository scripts (@shotkit/scripts, own pnpm project); the only home for new tooling
+│   ├── build-engine.ts        # the engine build entry point (pnpm build:engine)
+│   ├── link-agent-skills.ts   # expose .claude/skills to .agents/skills (pnpm skills:link)
+│   └── package.json           # execa, cac, p-retry, tsx ...; `pnpm -C scripts install`
+├── tools/shot/                # legacy .py/.cjs/.ps1 scripts, frozen; each moves to scripts/ as TypeScript and is deleted here
 ├── build/args/shot*.gn        # GN args: shot.gn (base), shot-linux.gn, shot-mac.gn (CI overlays), shot-official.gn
 ├── build/config/shot_build.gni# declares is_shot_build
 ├── patches/                   # patches for DEPS checkouts (icu, skia); applied by the engine-*.yml patch step
@@ -289,7 +292,7 @@ one process cannot tell each other's pointers apart; fontconfig's `free()` of a
 Local builds are Windows-only; Linux and macOS are built by CI.
 
 ```bash
-pnpm -C tools/shot install                                              # once per checkout
+pnpm -C scripts install                                                 # once per checkout
 pnpm build:engine --jobs 16 --log out/Shot/build.log                    # shotium.exe
 pnpm build:engine --target shot_c --jobs 16 --log out/Shot/build.log    # shotium.dll (the addon links this)
 ```
@@ -297,7 +300,7 @@ pnpm build:engine --target shot_c --jobs 16 --log out/Shot/build.log    # shotiu
 Output: `out/Shot/shotium.exe`, `out/Shot/shotium.dll`, `out/Shot/shotium_data.pak`,
 `out/Shot/shotium_strings.pak`. GN target names are still `shot` and `shot_c`.
 
-- `tools/shot/build_engine.ts` applies the Skia patches, regenerates the ICU
+- `scripts/build-engine.ts` applies the Skia patches, regenerates the ICU
   data set, runs `gn gen`, then ninja with the output in the log file. It
   retries two failures that are not build errors: parallel toolchain
   variants racing on `environment.x64` (`PermissionError`), and ninja
@@ -424,11 +427,13 @@ Output: `out/Shot/shotium.exe`, `out/Shot/shotium.dll`, `out/Shot/shotium_data.p
 - No `npx`; use `pnpm dlx` or `node_modules/.bin`. The package manager is
   pinned (`packageManager` in `package.json`).
 
-**Scripts (`tools/shot/*.ts`)**
+**Scripts (`scripts/*.ts`)**
 
-- One file per command, a `// why` header, a `cac` CLI, `process.exitCode`
-  rather than `process.exit()` in the middle. `tsconfig.json` has
-  `erasableSyntaxOnly`, so the files also run under Node's own type stripping.
+- One kebab-case file per command, a `// why` header, a `cac` CLI,
+  `process.exitCode` rather than `process.exit()` in the middle.
+  `tsconfig.json` has `erasableSyntaxOnly`, so the files also run under
+  Node's own type stripping. `checks.yml` typechecks the directory on every
+  push.
 - The library-first rule, made concrete:
 
   | Need | Use | Not |
@@ -441,8 +446,9 @@ Output: `out/Shot/shotium.exe`, `out/Shot/shotium.dll`, `out/Shot/shotium_data.p
   | Tables and colour in output | `picocolors`, `console.table` | manual padding |
   | Tests for a script | `node:test` (`*.test.ts`) | ad-hoc assertion scripts |
 
-- pnpm runs a package script with `cwd = tools/shot`; resolve user-supplied
-  relative paths against `process.env.INIT_CWD`.
+- pnpm runs a package script with `cwd = scripts`; resolve user-supplied
+  relative paths against `process.env.INIT_CWD`, and the repository root as
+  `path.resolve(import.meta.dirname, '..')`.
 - Every script that CI calls has a root `package.json` alias so the workflow
   YAML stays a list of `pnpm <name>` lines rather than inline shell.
 

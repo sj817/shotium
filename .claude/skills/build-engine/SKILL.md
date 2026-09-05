@@ -36,12 +36,12 @@ process, or a jumbo grouping that only fails on another platform.
 ## Build
 
 ```bash
-pnpm -C tools/shot install                                              # once per checkout
+pnpm -C scripts install                                                 # once per checkout
 pnpm build:engine --jobs 16 --log out/Shot/build.log                    # shotium.exe + .pak files
 pnpm build:engine --target shot_c --jobs 16 --log out/Shot/build.log    # shotium.dll, which the Node addon links
 ```
 
-The entry point is `tools/shot/build_engine.ts` (TypeScript, `execa`,
+The entry point is `scripts/build-engine.ts` (TypeScript, `execa`,
 `p-retry`, `cac`); `pnpm build:engine` forwards to it from the repository
 root, and a relative `--log` is relative to where you typed the command.
 Run it in the background and read the log. Expectations:

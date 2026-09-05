@@ -7,8 +7,8 @@
     "node": ">=22.12"
   },
   "scripts": {
-    "build-engine": "tsx build_engine.ts",
-    "link-skills": "tsx link_agent_skills.ts",
+    "build-engine": "tsx build-engine.ts",
+    "link-skills": "tsx link-agent-skills.ts",
     "check:types": "tsc --noEmit"
   },
   "dependencies": {

@@ -1,7 +1,7 @@
 {
-  "//1": "Repository scripts live in tools/shot (@shotkit/scripts, its own pnpm",
+  "//1": "Repository scripts live in scripts/ (@shotkit/scripts, its own pnpm",
   "//2": "project with its own lockfile) and are run through the scripts below,",
-  "//3": "e.g. `pnpm build:engine --target shot_c`. Run `pnpm -C tools/shot install`",
+  "//3": "e.g. `pnpm build:engine --target shot_c`. Run `pnpm -C scripts install`",
   "//4": "once per checkout. There is deliberately no pnpm-workspace.yaml here yet:",
   "//5": "one at the root makes `pnpm install` inside shotium/ and apps/benchmark",
   "//6": "install the workspace instead of that project, and both are installed",
@@ -19,9 +19,9 @@
     "node": ">=22.12"
   },
   "scripts": {
-    "build:engine": "pnpm -C tools/shot build-engine",
-    "skills:link": "pnpm -C tools/shot link-skills",
-    "scripts:check": "pnpm -C tools/shot check:types",
+    "build:engine": "pnpm -C scripts build-engine",
+    "skills:link": "pnpm -C scripts link-skills",
+    "scripts:check": "pnpm -C scripts check:types",
     "docs:assets": "node tools/shot/docs_assets.mjs",
     "docs:demo": "node tools/shot/docs_demo.mjs",
     "docs": "pnpm run docs:assets && pnpm run docs:demo"

@@ -22,6 +22,7 @@ on:
       - 'shotium/**'
       - 'shot/testdata/bilibili/**'
       - 'tools/shot/**'
+      - 'scripts/**'
       - 'apps/benchmark/**'
       - '.github/workflows/checks.yml'
   pull_request:
@@ -29,6 +30,7 @@ on:
       - 'shotium/**'
       - 'shot/testdata/bilibili/**'
       - 'tools/shot/**'
+      - 'scripts/**'
       - 'apps/benchmark/**'
       - '.github/workflows/checks.yml'
   workflow_dispatch:
@@ -47,6 +49,15 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '22'
+
+      - name: repository scripts typecheck
+        working-directory: scripts
+        # scripts/ is where new tooling goes, in TypeScript (CLAUDE.md rule 11).
+        # Its lockfile is committed, so this is the one install here that can
+        # be frozen.
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run check:types
 
       - name: the build tooling
         working-directory: shotium

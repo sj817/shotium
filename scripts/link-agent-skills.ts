@@ -13,7 +13,7 @@ import path from 'node:path';
 
 import {cac} from 'cac';
 
-const root = path.resolve(import.meta.dirname, '..', '..');
+const root = path.resolve(import.meta.dirname, '..');
 const source = path.join(root, '.claude', 'skills');
 const target = path.join(root, '.agents', 'skills');
 const onWindows = process.platform === 'win32';

@@ -24,8 +24,10 @@
 
 写在 `CLAUDE.md` 第 11 条，这里只列要点：
 
-- 新脚本是 `tools/shot/*.ts`，用 `tsx` 运行，根 `package.json` 转发常用命令
-  （`pnpm build:engine`、`pnpm skills:link`、`pnpm scripts:check`）。
+- 脚本只有一个家：根目录 `scripts/`。新脚本是 `scripts/<kebab-case>.ts`，用 `tsx` 运行，
+  根 `package.json` 转发常用命令（`pnpm build:engine`、`pnpm skills:link`、`pnpm scripts:check`）。
+  `tools/shot/`、`tests/render/`、`bootstrap/` 是旧脚本的所在地，冻结：每迁一个就在原地删一个，
+  最后三个目录清空。`checks.yml` 每次 push 对 `scripts/` 做类型检查。
 - 不是本项目自己的逻辑就用库：进程 `execa`，通配 `tinyglobby`，参数 `cac`，
   重试 `p-retry`，像素 `sharp` / `pngjs` / `pixelmatch`，并发 `p-limit`，测试 `node:test`。
 - 不再给现存 `.py` / `.ps1` / `.cjs` 加功能；要改就顺手迁。
@@ -188,8 +190,8 @@ YAML 只剩 `run: pnpm ci:sdk`、`pnpm ci:package`、`pnpm release:collect` 这�
 lockfile 与 `package.json` 的 specifier 不一致而失败。所以工作区 lockfile 在每次发版窗口
 都会坏，这就是 `checks.yml` 一直用 `--no-lockfile` 的原因，进了工作区也改不了。
 
-**现在的做法**：`tools/shot` 是独立 pnpm 项目（自己的 `pnpm-lock.yaml`），根 `package.json`
-用 `pnpm -C tools/shot` 转发，对 shotium 和 apps 零影响。
+**现在的做法**：`scripts/` 是独立 pnpm 项目（自己的 `pnpm-lock.yaml`），根 `package.json`
+用 `pnpm -C scripts` 转发，对 shotium 和 apps 零影响。
 
 **要做成真正的工作区**，成员应该是 `tools/shot` + `apps/*`，shotium 永远在外面：
 
@@ -226,13 +228,13 @@ lockfile 与 `package.json` 的 specifier 不一致而失败。所以工作区 l
 
 ## 8. 本次提交的内容
 
-- `tools/shot/build_engine.ts`：`build.ps1` 的逐项等价移植。`execa` 起进程，`p-retry` 做
+- `scripts/build-engine.ts`：`build.ps1` 的逐项等价移植。`execa` 起进程，`p-retry` 做
   `gn gen` 的八次重试并在非竞态错误上立即放弃，`cac` 解析 `--target` / `--jobs` / `--log`，
   ninja 输出经 `stream/promises.pipeline` 进日志文件。实测：补丁检查、ICU 重打包、
   `gn gen` 27 秒、ninja no-op、`build_errors.py` 汇总，全程 33 秒，二进制未被触碰。
-- `tools/shot/link_agent_skills.ts`：`fs.symlink(..., 'junction')` 建链接，Windows 上
+- `scripts/link-agent-skills.ts`：`fs.symlink(..., 'junction')` 建链接，Windows 上
   `rmdir` 删链接（实测只删 junction，目标目录完好）。
-- `tools/shot/package.json`、`tsconfig.json`、`pnpm-lock.yaml`：独立 pnpm 项目，
+- `scripts/package.json`、`tsconfig.json`、`pnpm-lock.yaml`：独立 pnpm 项目，
   依赖 `cac` 7.0.0、`execa` 10.0.1、`p-retry` 8.0.1、`picocolors` 1.1.1、`tsx` 4.23.13，
   开发依赖 `typescript` 5.9.2、`@types/node` 22.18.0，全部精确钉版。
 - 根 `package.json`：`build:engine`、`skills:link`、`scripts:check` 转发。

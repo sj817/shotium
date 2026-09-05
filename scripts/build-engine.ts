@@ -34,7 +34,7 @@ import {execa} from 'execa';
 import pRetry, {AbortError} from 'p-retry';
 import pc from 'picocolors';
 
-const root = path.resolve(import.meta.dirname, '..', '..');
+const root = path.resolve(import.meta.dirname, '..');
 const outDir = 'out/Shot';
 
 const platformDir: Record<string, string> = {win32: 'win', linux: 'linux64', darwin: 'mac'};
