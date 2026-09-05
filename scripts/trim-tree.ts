@@ -20,10 +20,15 @@
 //            uploads the folder, because a macOS graph cannot be generated
 //            on the Windows host.
 //
-//            Four things no record names and the whitelist carries with a
+//            Three things no record names and the whitelist carries with a
 //            reason: what an exec_script opens itself, what a Python script
-//            imports, files passed to the linker as flags (/NATVIS:), and
-//            grit's resource-id depfile (its allocator skips missing .grd).
+//            imports, and files passed to the linker as flags (/NATVIS:).
+//            A fourth, what grit reads, is only half recorded: a platform's
+//            depfile lists the images that platform's <if expr> selected, so
+//            the union of six graphs still misses a file the seventh
+//            condition would pick, and the resource-id allocator's depfile
+//            skips .grd files it did not find. Rule 9 closes over the .grd
+//            text instead.
 //
 //   plan     Union the exports of every platform, intersect with git's
 //            tracked files, apply the closure rules below, and write the
@@ -45,6 +50,10 @@
 //   7. An extra keep list (--keep FILE, one path or prefix/ per line).
 //   8. Under build/, paths for platforms this project never builds (android,
 //      fuchsia, ios, chromeos ...) are dropped again unless a record names them.
+//   9. Every file a kept .grd or .grdp names (file= and path= attributes,
+//      resolved against the grd's directory and grit's default_N_percent
+//      scale directories) stays, whatever <if expr> it sits under. Linux and
+//      macOS each failed in grit on an image only their condition selects.
 //
 // Usage (from anywhere in the repository):
 //
@@ -296,6 +305,37 @@ interface Plan {
   delete: string[];
 }
 
+// Rule 9. grit resolves a <structure type="chrome_scaled_image"> path under
+// the grd's default_N_percent directories, and everything else beside the grd
+// (a <part> beside the grd or beside the part that named it). Generated inputs
+// (${root_gen_dir}) are not tracked and are skipped. Parts found along the way
+// are read too, until nothing new turns up.
+async function gritResources(keep: Set<string>, tracked: Set<string>): Promise<Set<string>> {
+  const scales = ['default_100_percent', 'default_200_percent', 'default_300_percent'];
+  const found = new Set<string>();
+  const seen = new Set<string>();
+  const queue = [...keep].filter((f) => /\.grdp?$/.test(f));
+  while (queue.length > 0) {
+    const grd = queue.shift()!;
+    if (seen.has(grd)) continue;
+    seen.add(grd);
+    const dir = path.posix.dirname(grd);
+    const text = await readFile(resolve(grd), 'utf8');
+    for (const m of text.matchAll(/\b(?:file|path)="([^"]+)"/g)) {
+      const value = m[1];
+      if (value.includes('${') || value.startsWith('/') || driveLetter.test(value)) continue;
+      for (const base of [dir, ...scales.map((s) => path.posix.join(dir, s))]) {
+        const candidate = path.posix.normalize(path.posix.join(base, value));
+        if (!tracked.has(candidate)) continue;
+        found.add(candidate);
+        if (/\.grdp?$/.test(candidate)) queue.push(candidate);
+      }
+    }
+  }
+  console.log(`rule 9: ${seen.size} grd files, ${found.size} resources`);
+  return found;
+}
+
 async function plan(graphDirs: string[], outArg: string, keepListArg?: string): Promise<number> {
   if (graphDirs.length === 0) {
     console.log(pc.red('plan needs at least one --graph directory'));
@@ -358,6 +398,8 @@ async function plan(graphDirs: string[], outArg: string, keepListArg?: string): 
     for (const dir of ancestors(f)) for (const l of byDir.get(dir) ?? []) keep.add(l);
     for (const l of byDir.get('.') ?? []) keep.add(l);
   }
+  // 9: what the kept .grd files name, on every platform.
+  for (const f of await gritResources(keep, trackedSet)) keep.add(f);
   // 8: foreign platforms under build/, unless a record names the file.
   for (const f of [...keep]) {
     if (isForeignBuildPath(f) && !union.has(f) && !matchesWhitelist(f, extra)) keep.delete(f);

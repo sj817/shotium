@@ -1929,6 +1929,15 @@ buildtools、Linux sysroot、dsymutil),或某个保留的 hook 需要它。`.git
    在 ninja 之前都跑一次。资源 ID 分配器的 `default_resource_ids.d` 是唯一
    故意跳过的:它列出 `resource_ids.spec` 里恰好存在的每个 `.grd`,而分配器
    本来就跳过不存在的(`grit/tool/update_resource_ids/reader.py`)。
+   depfile 还有第二个盲区:它只记**这个平台**的 `<if expr>` 选中的资源。
+   `ui_resources.grd` 里 `IDR_FOLDER_CLOSED` 分三档——mac 用 `mac/folder.png`,
+   Windows 用 `win/folder_closed.png`,其余平台用 `common/folder_closed.png`;
+   六个图的并集里只有 Windows 那一档,因为 Linux 和 mac 的图都是在这一步
+   之前导出的旧格式。Linux 和 mac 各在 grit 上失败了一轮
+   (`grit.exception.FileNotFound`)。修法不是再补白名单,而是规则 9:
+   凡是保留下来的 `.grd`/`.grdp` 用 `file=`/`path=` 点到的文件,按 grd 目录
+   和 `default_N_percent` 三档解析,不管它在哪个 `<if expr>` 下,一律保留
+   (12 个 grd,621 个文件;多保留的只有 `toolkit_views` 那 8 张 drag_tip)。
 
 还有一个 CI 的教训:mac x64 的第一次图上传 `Failed to CreateArtifact:
 ENOTFOUND`,步骤却是绿的。看 `upload the build graph` 的日志,不看它的结论。

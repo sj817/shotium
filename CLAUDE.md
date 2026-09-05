@@ -487,8 +487,13 @@ Output: `out/Shot/shotium.exe`, `out/Shot/shotium.dll`, `out/Shot/shotium_data.p
   the hooks, `.gitmodules` and the gitlinks to what those graphs touch.
   Three things no graph records, and the whitelist carries with a reason:
   what an `exec_script` opens itself (`chrome/VERSION`), what a Python
-  script imports (`testing/scripts/common.py`), and the depfile of grit's
-  resource-id allocator (it skips missing `.grd` files). After a trim run
+  script imports (`testing/scripts/common.py`), and files passed to the
+  linker as flags (`tools/win/DebugVisualizers`). grit is only half
+  recorded: each platform's depfile lists the images its `<if expr>`
+  selected, so the union of six graphs still misses `mac/folder.png` on a
+  Linux-exported graph and vice versa, and the resource-id allocator's
+  depfile skips missing `.grd` files. Rule 9 in `trim-tree.ts` keeps every
+  file a kept `.grd`/`.grdp` names instead. After a trim run
   `pnpm depfiles:prune` on any warm build directory, or ninja refuses to
   start on a depfile that names a deleted file.
 
