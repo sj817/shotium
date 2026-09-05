@@ -40,6 +40,8 @@ const resolve = (p: string) => path.resolve(root, p);
 const toolchain = [
   'third_party/depot_tools',
   'third_party/ninja',
+  // .gn names it as script_executable; the runners have no other python.
+  'third_party/cpython3/host',
   'third_party/llvm-build/Release+Asserts',
   'third_party/rust-toolchain',
   'third_party/libc++/src',

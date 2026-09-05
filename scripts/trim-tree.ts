@@ -10,13 +10,20 @@
 // Three subcommands:
 //
 //   export   Write one build directory's records to a folder: ninja's inputs
-//            for the two engine targets, its deps log (headers, which
-//            `-t inputs` does not know about), gn's build.ninja.d (every
-//            .gn/.gni/exec_script it read), and the sources named by the
-//            jumbo translation units (the merged .cc files are what ninja
-//            sees; the real sources only appear as #include lines). CI runs
-//            this after every engine build and uploads the folder, because a
-//            macOS graph cannot be generated on the Windows host.
+//            for the two engine targets, the nodes of `ninja -t graph` (the
+//            order-only edges `-t inputs` skips), its deps log (headers),
+//            the depfiles of reachable actions (what grit read), gn's
+//            build.ninja.d (every .gn/.gni/exec_script it read), and the
+//            sources named by the jumbo translation units (the merged .cc
+//            files are what ninja sees; the real sources only appear as
+//            #include lines). CI runs this after every engine build and
+//            uploads the folder, because a macOS graph cannot be generated
+//            on the Windows host.
+//
+//            Four things no record names and the whitelist carries with a
+//            reason: what an exec_script opens itself, what a Python script
+//            imports, files passed to the linker as flags (/NATVIS:), and
+//            grit's resource-id depfile (its allocator skips missing .grd).
 //
 //   plan     Union the exports of every platform, intersect with git's
 //            tracked files, apply the closure rules below, and write the
