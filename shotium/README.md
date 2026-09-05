@@ -314,7 +314,7 @@ from one scroll position is painted in bands and joined without a seam.
 
 #### Memory
 
-The image is never in memory whole. It is rastered in strips of 256 rows and
+The image is never in memory whole. It is rastered in strips of 128 rows and
 encoded as each strip completes; a strip's memory is returned to the system the
 moment the encoder is done with it, so a 1440 x 40000 PNG holds about 10 MB of
 bitmap at any time rather than 236 MB. Images the page draws are decoded when

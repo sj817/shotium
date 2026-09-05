@@ -139,9 +139,12 @@ jobs:
       - name: daemon wire generations are isolated and negotiated
         run: node tools/shot/daemon_protocol_check.cjs
 
-      - name: capture harness syntax
+      - name: capture and performance harness syntax
         run: |
           node --check tools/shot/bilibili_capture.cjs
+          node --check tools/shot/node_perf.cjs
+          node tools/shot/node_perf_gate.test.cjs
+          node --check tools/shot/node_perf_ci.cjs
 
       - name: the six platform packages are declared consistently
         working-directory: shotium
