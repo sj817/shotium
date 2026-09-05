@@ -1,6 +1,6 @@
 {
   "name": "@shotkit/shotium",
-  "version": "0.3.4",
+  "version": "0.4.0",
   "description": "Static screenshots from a stripped Chromium: DOM, CSS, layout, paint, no JavaScript engine.",
   "keywords": [
     "screenshot",
@@ -39,12 +39,12 @@
     "node": ">=18"
   },
   "optionalDependencies": {
-    "@shotkit/shotium-darwin-arm64": "0.3.4",
-    "@shotkit/shotium-darwin-x64": "0.3.4",
-    "@shotkit/shotium-linux-arm64": "0.3.4",
-    "@shotkit/shotium-linux-x64": "0.3.4",
-    "@shotkit/shotium-win32-arm64": "0.3.4",
-    "@shotkit/shotium-win32-x64": "0.3.4"
+    "@shotkit/shotium-darwin-arm64": "0.4.0",
+    "@shotkit/shotium-darwin-x64": "0.4.0",
+    "@shotkit/shotium-linux-arm64": "0.4.0",
+    "@shotkit/shotium-linux-x64": "0.4.0",
+    "@shotkit/shotium-win32-arm64": "0.4.0",
+    "@shotkit/shotium-win32-x64": "0.4.0"
   },
   "scripts": {
     "build": "tsdown",
