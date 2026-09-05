@@ -50,6 +50,7 @@
 #include "third_party/blink/public/mojom/frame/frame.mojom-blink.h"
 #include "third_party/blink/public/mojom/scroll/scroll_enums.mojom-blink.h"
 #include "third_party/blink/renderer/core/dom/document.h"
+#include "third_party/blink/renderer/core/dom/document_lifecycle.h"
 #include "third_party/blink/renderer/core/dom/element.h"
 #include "third_party/blink/renderer/core/frame/frame_types.h"
 #include "third_party/blink/renderer/core/frame/local_dom_window.h"
@@ -245,10 +246,23 @@ namespace {
 // next starting.
 constexpr base::TimeDelta kNetworkIdleWindow = base::Milliseconds(500);
 
-// How long to let the message loop run between checks. Short enough that the
-// idle window is measured to within a few percent, long enough that a 30-second
-// timeout is not thousands of lifecycle updates.
+// How long to let the message loop run between checks, at most. Short enough
+// that the idle window is measured to within a few percent, long enough that
+// a 30-second timeout is not thousands of lifecycle updates.
 constexpr base::TimeDelta kPumpSlice = base::Milliseconds(10);
+
+// How long right after something happened. The loop is told when a body
+// arrives and when the load event fires, and nothing else: a font delivered
+// is a font about to be sanitised and decoded, and the end of that is not
+// announced, so a page whose @font-face lives in its external stylesheet --
+// which puts the font after the load event -- spent a whole watchdog slice
+// asleep, 20 ms on Windows, where 10 ms of timer rounds up to the system
+// tick. Waking sooner only when something just happened keeps a slow
+// network from being polled every couple of milliseconds for nothing; the
+// slice doubles back up to kPumpSlice while the loop stays quiet. Measured
+// on that page: 31 ms with a 10 ms slice throughout, 9.5 ms with 2 ms, no
+// better with 1 ms.
+constexpr base::TimeDelta kPumpSliceAfterProgress = base::Milliseconds(2);
 
 // How long a load may go without a layout while requests are still arriving.
 // Short enough that a stylesheet's fonts are asked for promptly; long enough
@@ -301,7 +315,10 @@ using FontFamilyUpdater =
 // timers and IO completions, and "no task queued right now" is not "nothing is
 // coming". Letting real time pass is also what makes the networkidle window
 // measurable at all.
-void PumpFor(base::TimeDelta slice) {
+//
+// Returns whether the loop was woken by progress -- a body delivered, the
+// load event fired -- rather than by the slice running out.
+bool PumpFor(base::TimeDelta slice) {
   base::RunLoop run_loop(base::RunLoop::Type::kNestableTasksAllowed);
   CaptureContext* capture = CaptureContext::Current();
   if (capture) {
@@ -317,6 +334,7 @@ void PumpFor(base::TimeDelta slice) {
   base::OneShotTimer watchdog;
   watchdog.Start(FROM_HERE, slice, run_loop.QuitClosure());
   run_loop.Run();
+  return watchdog.IsRunning();
 }
 
 // One entry of a WebPreferences font map, onto Settings. The map is keyed by
@@ -429,6 +447,16 @@ bool ReclaimEnabled() {
   static const bool enabled = EnvInt("SHOT_RECLAIM", 1) != 0;
   return enabled;
 }
+
+// The size below which a capture is "small" for every memory decision this
+// file makes: the heap is not collected between captures until it holds more
+// than this, a document is not torn down before its raster unless its bytes
+// or the heap exceed it, and the raster's freed spans are left warm unless
+// the raster held more than it. One number, because they are one judgement --
+// below it, the collection, the decommit and the page faults that follow cost
+// a small capture more than keeping the memory ever could; above it, the
+// memory is worth more than the milliseconds.
+constexpr size_t kSmallCaptureBytes = 16u << 20;
 
 }  // namespace
 
@@ -569,9 +597,41 @@ struct StagedOutput {
   base::FilePath temporary_path;
 };
 
-// Opens a staging file for the final path, or an invalid File when there is no
-// path and the image is to be handed back in memory. Tile-template expansion
-// happens at the tiled call site so an ordinary screenshot path stays literal.
+// Opens the path a plain screenshot streams into, or an invalid File when
+// there is no path and the image is handed back in memory.
+//
+// The file is the destination itself, created afresh and truncated -- which
+// is what the published engine's base::WriteFile did, and what a caller who
+// names a path gets: on a failure part-way through, the partial file is
+// deleted and the error reported, and the previous file at that path is gone
+// either way. A temporary beside it with an atomic rename at the end was
+// tried and costs three filesystem operations a capture on Windows, which on
+// a five-millisecond screenshot is the whole budget twice over. Tiles keep
+// the staged form (OpenOutput below), because a set of files that is half
+// new and half old is a different kind of wrong from one file that is
+// incomplete.
+base::expected<StagedOutput, std::string> OpenDirectOutput(
+    const std::string& path) {
+  if (path.empty()) {
+    return StagedOutput();
+  }
+  const base::FilePath final_path = base::FilePath::FromUTF8Unsafe(path);
+  base::File file(final_path,
+                  base::File::FLAG_CREATE_ALWAYS | base::File::FLAG_WRITE);
+  if (!file.IsValid()) {
+    // "could not write <path>" is what the published engine said of a path
+    // it could not deliver to, and what callers match on.
+    return base::unexpected("could not write " + path + ": " +
+                            base::File::ErrorToString(file.error_details()));
+  }
+  // `temporary_path` doubles as "delete this on an early return": the file is
+  // final only once the caller clears it.
+  return StagedOutput(std::move(file), final_path, final_path);
+}
+
+// Opens a staging file beside the final path, for a tile. An invalid File
+// when there is no path and the tile is to be handed back in memory.
+// Tile-template expansion happens at the tiled call site.
 base::expected<StagedOutput, std::string> OpenOutput(
     const std::string& path) {
   if (path.empty()) {
@@ -579,12 +639,8 @@ base::expected<StagedOutput, std::string> OpenOutput(
   }
   const base::FilePath final_path = base::FilePath::FromUTF8Unsafe(path);
   base::FilePath temporary_path;
-  if (!base::CreateTemporaryFileInDir(final_path.DirName(), &temporary_path)) {
-    return base::unexpected("could not create a temporary output beside " +
-                            path);
-  }
-  base::File file(temporary_path,
-                  base::File::FLAG_OPEN | base::File::FLAG_WRITE);
+  base::File file = base::CreateAndOpenTemporaryFileInDir(
+      final_path.DirName(), &temporary_path);
   if (!file.IsValid()) {
     base::DeleteFile(temporary_path);
     return base::unexpected("could not open a temporary output beside " +
@@ -902,8 +958,22 @@ class ViewportAnchored {
 scoped_refptr<cc::DisplayItemList> BuildDisplayList(
     blink::LocalFrameView* view,
     const gfx::Rect& cull_rect,
-    const ViewportAnchored* anchored) {
+    const ViewportAnchored* anchored,
+    bool single_raster) {
   auto list = base::MakeRefCounted<cc::DisplayItemList>();
+  // One small raster replays every kept chunk once. Indexing every state
+  // change for spatial queries adds work without skipping any raster strips.
+  // Keep a single record in that case; its nested images and effects remain
+  // visible to cc's image map and the stream's read-around traversal.
+  if (single_raster && !anchored) {
+    list->StartPaint();
+    list->push<cc::DrawRecordOp>(blink::PaintChunksToCcLayer::Convert(
+        blink::PaintChunkSubset(view->GetPaintArtifact()),
+        blink::PropertyTreeState::Root(), &cull_rect));
+    list->EndPaintOfUnpaired(cull_rect);
+    list->Finalize();
+    return list;
+  }
   auto keep = [&](const blink::TransformPaintPropertyNode& transform) {
     return anchored->KeepInScrolledWindow(transform);
   };
@@ -1013,6 +1083,33 @@ void ShotRenderer::TearDown() {
   page_ = nullptr;
 }
 
+void ShotRenderer::TearDownWhenIdle() {
+  if (!frame_ && !page_) {
+    return;
+  }
+  if (!base::SingleThreadTaskRunner::HasCurrentDefault()) {
+    TearDown();
+    return;
+  }
+  base::SingleThreadTaskRunner::GetCurrentDefault()->PostTask(
+      FROM_HERE, base::BindOnce(&ShotRenderer::TearDownIfStill,
+                                weak_factory_.GetWeakPtr(), page_serial_));
+}
+
+void ShotRenderer::TearDownIfStill(uint64_t serial) {
+  // A newer page means a later capture already tore this one down on its way
+  // in and put its own up; that one is not ours to touch.
+  if (serial == page_serial_) {
+    TearDown();
+  }
+}
+
+void ShotRenderer::ReleaseRetained() {
+  TearDown();
+  small_bitmap_.reset();
+  small_scratch_.clear();
+}
+
 base::expected<void, std::string> ShotRenderer::WaitForLoad(
     const std::string& wait_until,
     base::TimeDelta timeout) {
@@ -1025,12 +1122,15 @@ base::expected<void, std::string> ShotRenderer::WaitForLoad(
   const base::TimeTicks deadline = base::TimeTicks::Now() + timeout;
   base::TimeTicks quiet_since;
   base::TimeTicks last_lifecycle;
+  base::TimeDelta slice = kPumpSliceAfterProgress;
   int rounds = 0;
   int lifecycles = 0;
   const bool profile_wait = ProfileEnabled() && EnvInt("SHOT_PROFILE_WAIT", 0);
   // SHOT_WAIT_GC_MB lowers the floor, which is how the collection below is
-  // exercised on a page that does not churn enough to reach it.
-  const size_t collect_floor =
+  // exercised on a page that does not churn enough to reach it. Read once:
+  // the environment does not change between captures and a resident worker
+  // makes thousands of them.
+  static const size_t collect_floor =
       static_cast<size_t>(EnvInt(
           "SHOT_WAIT_GC_MB", static_cast<int>(kWaitCollectFloorBytes >> 20)))
       << 20;
@@ -1052,6 +1152,13 @@ base::expected<void, std::string> ShotRenderer::WaitForLoad(
     // the last arrival), and otherwise at most every kLifecycleInterval, so
     // that a stylesheet that lands while a slow image is still loading still
     // has its fonts requested promptly.
+    //
+    // On the first round even when a render-blocking stylesheet is still on
+    // its way, though the layout it produces is thrown away when the sheet
+    // lands: that layout is what finds the fonts an inline @font-face
+    // declares, and a font found only after the sheet arrives loads after it
+    // rather than beside it. Skipping the round saved 0.65 ms on a page with
+    // one external sheet and cost 20 ms on the one with a web font.
     const unsigned in_flight = document->Fetcher()->ActiveRequestCount();
     const bool run_lifecycle =
         rounds == 0 || in_flight == 0 ||
@@ -1061,6 +1168,10 @@ base::expected<void, std::string> ShotRenderer::WaitForLoad(
       last_lifecycle = base::TimeTicks::Now();
       ++lifecycles;
     }
+
+    const unsigned active = document->Fetcher()->ActiveRequestCount();
+    const bool loaded = run_lifecycle && document->HasFinishedParsing() &&
+                        document->IsLoadCompleted() && active == 0;
 
     // Park the images that have finished arriving: their bytes go to the
     // runtime's parking file on a background thread and the copy here is
@@ -1072,7 +1183,10 @@ base::expected<void, std::string> ShotRenderer::WaitForLoad(
     // happen while the page is still loading, which is the only time it is
     // worth anything: the bytes go out on a background thread during a wait
     // the main thread was going to spend on the network regardless.
-    if (ParkImagesEnabled() &&
+    // Once loaded, raster needs these bytes immediately; starting a disk
+    // write then buys no overlap and can make the subsequent decode read them
+    // straight back. Park only while there is a load/quiet-window wait left.
+    if ((!loaded || network_idle) && ParkImagesEnabled() &&
         blink::ParkableImageManager::Instance().Size() > 0) {
       ProvideParkingFile();
       blink::ParkableImageManager::Instance().MaybeParkImagesForTesting();
@@ -1085,19 +1199,12 @@ base::expected<void, std::string> ShotRenderer::WaitForLoad(
       LogMemoryStage(base::StringPrintf("wait %d", rounds).c_str());
     }
 
-    const unsigned active = document->Fetcher()->ActiveRequestCount();
-    const bool loaded = run_lifecycle && document->HasFinishedParsing() &&
-                        document->IsLoadCompleted() && active == 0;
-
     if (!network_idle) {
       if (loaded) {
         LOG(INFO) << "shot: load settled after " << rounds << " round(s), "
                   << lifecycles << " layout(s)";
-        if (ParkImagesEnabled()) {
-          // One more turn of the loop for the last images' parking to land
-          // before the raster starts from what is left resident.
-          PumpFor(kPumpSlice);
-        }
+        // Parking is not a load condition. In particular, do not wait for a
+        // watchdog or drain unrelated tasks after the document is ready.
         return base::ok();
       }
     } else if (loaded) {
@@ -1174,11 +1281,14 @@ base::expected<void, std::string> ShotRenderer::WaitForLoad(
     // queue is what delivers a response; the loop then decides whether the
     // newly arrived font or image is worth a layout yet.
     const base::TimeTicks pump_started = base::TimeTicks::Now();
-    PumpFor(kPumpSlice);
+    const bool progressed = PumpFor(slice);
     if (ProfileEnabled()) {
       LOG(INFO) << "shot: profile pump="
-                << (base::TimeTicks::Now() - pump_started).InMillisecondsF();
+                << (base::TimeTicks::Now() - pump_started).InMillisecondsF()
+                << " slice=" << slice.InMillisecondsF()
+                << " progressed=" << progressed;
     }
+    slice = progressed ? kPumpSliceAfterProgress : std::min(kPumpSlice, slice * 2);
   }
 }
 
@@ -1325,6 +1435,7 @@ base::expected<void, std::string> ShotRenderer::CreatePage(
     return base::unexpected("blink main thread scheduler is not available");
   }
 
+  const base::TimeTicks page_started = base::TimeTicks::Now();
   auto* chrome_client = blink::MakeGarbageCollected<ChromeClient>();
   chrome_client->SetDeviceScaleFactor(static_cast<float>(request.scale));
   page_ = blink::Page::CreateNonOrdinary(
@@ -1333,6 +1444,8 @@ base::expected<void, std::string> ShotRenderer::CreatePage(
   if (!page_) {
     return base::unexpected("could not create the page");
   }
+  ++page_serial_;
+  const base::TimeTicks page_created = base::TimeTicks::Now();
 
   // Script never runs: there is no V8 in this binary at all. Saying so up front
   // means the code paths that ask "can this document run script?" answer
@@ -1375,6 +1488,7 @@ base::expected<void, std::string> ShotRenderer::CreatePage(
   // which is exactly what a deviceScaleFactor is.
   page_->SetInspectorDeviceScaleFactorOverride(
       static_cast<float>(request.scale));
+  const base::TimeTicks settings_applied = base::TimeTicks::Now();
 
   auto* frame_client = blink::MakeGarbageCollected<FrameClient>();
   frame_ = blink::MakeGarbageCollected<blink::LocalFrame>(
@@ -1400,6 +1514,16 @@ base::expected<void, std::string> ShotRenderer::CreatePage(
   if (request.omit_background) {
     frame_->View()->SetBaseBackgroundColor(blink::Color::kTransparent);
   }
+  if (ProfileEnabled()) {
+    // Where a page's creation goes: the Page with its scheduler, the settings
+    // on it, and the frame with its view, window and initial document.
+    LOG(INFO) << "shot: profile page="
+              << (page_created - page_started).InMillisecondsF()
+              << " settings="
+              << (settings_applied - page_created).InMillisecondsF()
+              << " frame="
+              << (base::TimeTicks::Now() - settings_applied).InMillisecondsF();
+  }
   return base::ok();
 }
 
@@ -1423,7 +1547,7 @@ base::expected<EncodedTile, std::string> ShotRenderer::Render(
   // What the raster freed -- strips, decoded images, display lists -- goes
   // back to the system now rather than at the next idle purge, so that a
   // worker between requests is the size of a worker between requests.
-  if (ReclaimEnabled()) {
+  if (reclaim_after_render_ && ReclaimEnabled()) {
     ::partition_alloc::MemoryReclaimer::Instance()->ReclaimAll();
   }
   if (!rendered.has_value()) {
@@ -1440,7 +1564,7 @@ base::expected<void, std::string> ShotRenderer::RenderTiles(
     return base::unexpected("RenderTiles needs tile.height");
   }
   auto rendered = RenderDocument(input, request, sink);
-  if (ReclaimEnabled()) {
+  if (reclaim_after_render_ && ReclaimEnabled()) {
     ::partition_alloc::MemoryReclaimer::Instance()->ReclaimAll();
   }
   return rendered;
@@ -1450,13 +1574,49 @@ base::expected<void, std::string> ShotRenderer::RenderDocument(
     RenderInput& input,
     const ScreenshotRequest& request,
     const TileSink& sink) {
-  // Whatever happens below, this instance ends the call with no page attached.
-  // A resident worker calls Render() many times, and CreatePage() overwrites
-  // page_ and frame_ unconditionally -- without this the previous document's
-  // frame would be dropped still attached, taking its Document, its
+  // Three things decided on the way out, in the order the runners below
+  // unwind. Whether this capture succeeded; whether it was large -- a big
+  // image, a big download or a big heap -- in which case its page was torn
+  // down before its raster; and the most its raster held. Render() reads the
+  // last two to decide whether to hand memory back to the system: a large
+  // capture's, yes; a small one's is left warm for the next request, where
+  // decommitting it and faulting it back in costs more than it saves. A
+  // small capture that failed is a small capture: its page is torn down at
+  // once, and what that frees is the same few hundred KB the next page
+  // allocates again. Reclaiming after it used to be the rule, and with the
+  // per-thread allocator caches -- which an aggressive reclaim empties -- a
+  // page that loaded and then missed its selector made the next request 7%
+  // slower than the page that never loaded.
+  bool succeeded = false;
+  bool large_capture = false;
+  size_t peak_raster_bytes = 0;
+  base::ScopedClosureRunner decide_reclaim(base::BindOnce(
+      [](ShotRenderer* self, const bool* large, const size_t* peak) {
+        self->reclaim_after_render_ = *large || *peak > kSmallCaptureBytes;
+      },
+      base::Unretained(this), base::Unretained(&large_capture),
+      base::Unretained(&peak_raster_bytes)));
+
+  // Whatever happens below, this instance ends the call with no page attached
+  // -- though a small capture that succeeded does not wait for that. Its page
+  // is detached on this thread's next idle turn (TearDownWhenIdle), after the
+  // caller has its image: detaching the frame is the one cost left, and
+  // nothing the caller is waiting on depends on it. A failed capture is torn
+  // down here and now, inside the capture's context, so that a loader still
+  // in flight is cancelled where it expects to be. Either way the next call
+  // starts by tearing down whatever is still attached, because CreatePage()
+  // overwrites page_ and frame_ unconditionally -- without this the previous
+  // document's frame would be dropped still attached, taking its Document, its
   // ResourceFetcher and everything they hold with it.
-  base::ScopedClosureRunner tear_down(
-      base::BindOnce(&ShotRenderer::TearDown, base::Unretained(this)));
+  base::ScopedClosureRunner tear_down(base::BindOnce(
+      [](ShotRenderer* self, const bool* succeeded) {
+        if (*succeeded) {
+          self->TearDownWhenIdle();
+        } else {
+          self->TearDown();
+        }
+      },
+      base::Unretained(this), base::Unretained(&succeeded)));
   TearDown();
 
   // Blink's heap is a standalone cppgc heap, because there is no V8 here to own
@@ -1497,8 +1657,7 @@ base::expected<void, std::string> ShotRenderer::RenderDocument(
     // omitted in the other: with collection disabled during captures and no
     // allocation happening between them, this call is the only thing that ever
     // reclaims anything.
-    constexpr size_t kCollectAboveBytes = 16u << 20;
-    if (used > kCollectAboveBytes) {
+    if (used > kSmallCaptureBytes) {
       const base::TimeTicks gc_started = base::TimeTicks::Now();
       thread_state->heap().ForceGarbageCollectionSlow(
           "shot", "between captures",
@@ -1611,12 +1770,23 @@ base::expected<void, std::string> ShotRenderer::RenderDocument(
     return base::unexpected(capture.error());
   }
 
-  // Style, layout, prepaint and paint. The bool is "did the lifecycle reach
-  // paint-clean"; if it did not, the PaintRecord below would be of a
-  // half-updated tree, which is worth failing on rather than shipping.
-  if (!view->UpdateAllLifecyclePhases(
-          blink::DocumentUpdateReason::kBeginMainFrame)) {
-    return base::unexpected("the document did not reach a painted state");
+  // Style, layout, prepaint and paint -- where anything still needs them. The
+  // round of WaitForLoad() that declared the document loaded had just run the
+  // lifecycle and returned without pumping again, so on most captures the
+  // tree is paint-clean already and asking blink to confirm it is a walk of
+  // the frame tree for nothing; a selector whose box had to be grown ran its
+  // own update above. The bool is "did the lifecycle reach paint-clean"; if
+  // it did not, the paint below would be of a half-updated tree, which is
+  // worth failing on rather than shipping.
+  {
+    blink::Document* document = frame_->GetDocument();
+    const bool clean =
+        document && !view->NeedsLayout() &&
+        document->Lifecycle().GetState() >= blink::DocumentLifecycle::kPaintClean;
+    if (!clean && !view->UpdateAllLifecyclePhases(
+                      blink::DocumentUpdateReason::kBeginMainFrame)) {
+      return base::unexpected("the document did not reach a painted state");
+    }
   }
   if (stats) {
     stats->lifecycle = base::TimeTicks::Now() - lifecycle_started;
@@ -1652,8 +1822,9 @@ base::expected<void, std::string> ShotRenderer::RenderDocument(
   // front: PNG writes RGB and WebP has no alpha plane. A streamed image
   // cannot find this out by reading itself back the way a bitmap could.
   const bool opaque = !request.omit_background;
+  const bool scrolled = region.bottom() > kPaintedExtent;
   const std::vector<ViewportStickyFlow> sticky_flows =
-      ViewportStickyFlows(view);
+      scrolled ? ViewportStickyFlows(view) : std::vector<ViewportStickyFlow>();
 
   // The region in slices: a tile each for a tiles request, otherwise as many
   // rows as one paint covers. Consecutive slices are grouped into windows --
@@ -1676,7 +1847,6 @@ base::expected<void, std::string> ShotRenderer::RenderDocument(
     size_t end_slice;
   };
   std::vector<Window> windows;
-  const bool scrolled = region.bottom() > kPaintedExtent;
   if (!scrolled) {
     windows.push_back({0, region.bottom(), 0, slices.size()});
   }
@@ -1708,15 +1878,22 @@ base::expected<void, std::string> ShotRenderer::RenderDocument(
 
   const int width_px = static_cast<int>(std::lround(region.width() * scale));
   const int height_px = static_cast<int>(std::lround(region.height() * scale));
+  // The one line between a small capture and a large one, drawn where the
+  // strips are; see ImageStream::IsSmall.
+  const bool small_capture = ImageStream::IsSmall(width_px, height_px);
   auto rows_px = [&](int css_y) {
     return static_cast<int>(std::lround((css_y - region.y()) * scale));
   };
+  // Tiles are staged beside their paths and installed together at the end.
+  // A plain screenshot streams straight into its path; `direct_output` holds
+  // that file, and deletes it on any early return until the image is whole.
   std::vector<StagedOutput> staged_outputs;
-  staged_outputs.reserve(tiled ? slices.size() : 1);
+  staged_outputs.reserve(tiled ? slices.size() : 0);
   std::vector<EncodedTile> staged_tiles;
   if (tiled && !request.path.empty()) {
     staged_tiles.reserve(slices.size());
   }
+  StagedOutput direct_output;
   std::unique_ptr<ImageStream> whole;
   if (!tiled) {
     if (auto size =
@@ -1724,21 +1901,22 @@ base::expected<void, std::string> ShotRenderer::RenderDocument(
         !size.has_value()) {
       return base::unexpected(size.error());
     }
-    auto output = OpenOutput(request.path);
+    auto output = OpenDirectOutput(request.path);
     if (!output.has_value()) {
       return base::unexpected(output.error());
     }
+    direct_output = std::move(*output);
     auto stream = ImageStream::Create(width_px, height_px, request, opaque,
-                                      surface_props, output->TakeFile());
+                                      surface_props, direct_output.TakeFile(),
+                                      &small_bitmap_, &small_scratch_);
     if (!stream.has_value()) {
       return base::unexpected(stream.error());
-    }
-    if (!request.path.empty()) {
-      staged_outputs.push_back(std::move(*output));
     }
     whole = std::move(*stream);
   }
   auto account = [&](const ImageStreamStats& s, const gfx::Rect& what) {
+    peak_raster_bytes = std::max(peak_raster_bytes,
+                                 s.peak_window_bytes + s.peak_decoded_bytes);
     if (stats) {
       stats->raster += s.raster;
       stats->encode += s.encode;
@@ -1800,7 +1978,8 @@ base::expected<void, std::string> ShotRenderer::RenderDocument(
 
     const base::TimeTicks paint_started = base::TimeTicks::Now();
     scoped_refptr<cc::DisplayItemList> list = BuildDisplayList(
-        view, paint_cull, anchored.has_value() ? &*anchored : nullptr);
+        view, paint_cull, anchored.has_value() ? &*anchored : nullptr,
+        slices.size() == 1 && windows.size() == 1 && small_capture);
     if (stats) {
       stats->paint += base::TimeTicks::Now() - paint_started;
     }
@@ -1830,22 +2009,38 @@ base::expected<void, std::string> ShotRenderer::RenderDocument(
   // raster in a browser, made explicit because Shot performs both in one
   // process.
   view = nullptr;
-  SetGarbageCollection(/*enabled=*/true);
-  TearDown();
-  if (thread_state) {
-    // kNoHeapPointers: a precise collection that ignores this thread's stack.
-    // A conservative one keeps alive whatever a stale local in this frame or
-    // its callers still points at -- the Document, its images, their bytes --
-    // and nothing below this line touches a blink object again: the display
-    // lists are cc, and the slices are geometry.
-    thread_state->heap().ForceGarbageCollectionSlow(
-        "shot", "page painted", cppgc::Heap::StackState::kNoHeapPointers);
-  }
-  // The collection frees the page's objects into PartitionAlloc's free lists,
-  // which stay committed. Decommit them now, or the raster below starts from
-  // the page's footprint rather than the display lists'.
-  if (ReclaimEnabled()) {
-    ::partition_alloc::MemoryReclaimer::Instance()->ReclaimAll();
+  // A large capture -- a big image, a big download, or a heap already past
+  // the small-capture line -- releases the page here, before its raster, so
+  // that the page's allocations do not overlap the image's peak. A small
+  // capture keeps its page through the raster and lets go of it after the
+  // caller has the image (see `tear_down` above): its page is small, and
+  // detaching it, collecting it and decommitting what it freed are three
+  // costs on the caller's clock for memory the next capture will want back.
+  large_capture =
+      !small_capture ||
+      (stats && stats->bytes > static_cast<int64_t>(kSmallCaptureBytes)) ||
+      (thread_state &&
+       cppgc::CollectStatistics(thread_state->heap_handle(),
+                                cppgc::HeapStatistics::kBrief)
+               .used_size_bytes > kSmallCaptureBytes);
+  if (large_capture) {
+    SetGarbageCollection(/*enabled=*/true);
+    TearDown();
+    if (thread_state) {
+      // kNoHeapPointers: a precise collection that ignores this thread's
+      // stack. A conservative one keeps alive whatever a stale local in this
+      // frame or its callers still points at -- the Document, its images,
+      // their bytes -- and nothing below this line touches a blink object
+      // again: the display lists are cc, and the slices are geometry.
+      thread_state->heap().ForceGarbageCollectionSlow(
+          "shot", "page painted", cppgc::Heap::StackState::kNoHeapPointers);
+    }
+    // The collection frees the page's objects into PartitionAlloc's free
+    // lists, which stay committed. Decommit them now, or the raster below
+    // starts from the page's footprint rather than the display lists'.
+    if (ReclaimEnabled()) {
+      ::partition_alloc::MemoryReclaimer::Instance()->ReclaimAll();
+    }
   }
   LogMemoryStage("detached");
 
@@ -1855,7 +2050,7 @@ base::expected<void, std::string> ShotRenderer::RenderDocument(
   // in the next one, since the windows overlap at their seam -- draws it
   // again. Walked backwards so that each slice sees the union of what follows.
   std::vector<base::flat_set<cc::PaintImage::Id>> drawn_after(slices.size());
-  {
+  if (slices.size() > 1) {
     base::flat_set<cc::PaintImage::Id> later;
     for (size_t w = prepared_windows.size(); w-- > 0;) {
       const PreparedWindow& prepared = prepared_windows[w];
@@ -1911,7 +2106,8 @@ base::expected<void, std::string> ShotRenderer::RenderDocument(
           return base::unexpected(output.error());
         }
         auto stream = ImageStream::Create(width_px, tile_px, request, opaque,
-                                          surface_props, output->TakeFile());
+                                          surface_props, output->TakeFile(),
+                                          &small_bitmap_, &small_scratch_);
         if (!stream.has_value()) {
           return base::unexpected(stream.error());
         }
@@ -1974,6 +2170,7 @@ base::expected<void, std::string> ShotRenderer::RenderDocument(
   }
   if (tiled) {
     if (request.path.empty()) {
+      succeeded = true;
       return base::ok();
     }
     auto committed = CommitOutputs(staged_outputs);
@@ -1990,6 +2187,7 @@ base::expected<void, std::string> ShotRenderer::RenderDocument(
       }
     }
     FinishOutputs(*committed);
+    succeeded = true;
     return base::ok();
   }
   auto encoded = whole->Finish();
@@ -2005,23 +2203,19 @@ base::expected<void, std::string> ShotRenderer::RenderDocument(
   tile.bytes = std::move(*encoded);
   tile.size = encoded_bytes;
   if (!request.path.empty()) {
+    // The bytes are in the file already; the tile carries the path instead.
     tile.path = request.path;
-    auto committed = CommitOutputs(staged_outputs);
-    if (!committed.has_value()) {
-      return base::unexpected(committed.error());
-    }
-    auto delivered = sink.Run(std::move(tile));
-    if (!delivered.has_value()) {
-      const bool restored = RollBackOutputs(*committed);
-      return base::unexpected(
-          delivered.error() +
-          (restored ? std::string()
-                    : "; restoring previous output failed"));
-    }
-    FinishOutputs(*committed);
-    return base::ok();
   }
-  return sink.Run(std::move(tile));
+  if (auto delivered = sink.Run(std::move(tile)); !delivered.has_value()) {
+    // `direct_output` deletes the file on the way out: a capture that
+    // reports an error does not leave an image behind that looks like a
+    // success.
+    return base::unexpected(delivered.error());
+  }
+  // The file is whole and delivered; it is the caller's now.
+  direct_output.temporary_path = base::FilePath();
+  succeeded = true;
+  return base::ok();
 }
 
 base::expected<int, std::string> ShotRenderer::ScrollTo(

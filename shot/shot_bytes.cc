@@ -95,6 +95,13 @@ Bytes::Writer::Writer(size_t capacity) {
   if (capacity == 0) {
     return;
   }
+  // Small screenshots usually encode to a few kilobytes. Reserving virtual
+  // address space and committing a megabyte for each one costs more than a
+  // growable buffer; keep the page-backed writer for large outputs.
+  if (capacity <= (16u << 20)) {
+    heap_.reserve(std::min(capacity, size_t{64} << 10));
+    return;
+  }
   const size_t granularity =
       partition_alloc::internal::PageAllocationGranularity();
   reserved_ = RoundUp(capacity, granularity);

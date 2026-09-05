@@ -21,9 +21,11 @@
 #include "base/containers/flat_map.h"
 #include "base/containers/span.h"
 #include "base/functional/bind.h"
+#include "base/functional/callback.h"
 #include "base/logging.h"
 #include "base/memory/ptr_util.h"
 #include "base/memory/raw_ptr.h"
+#include "base/no_destructor.h"
 #include "base/memory/raw_ref.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/synchronization/condition_variable.h"
@@ -72,11 +74,27 @@ namespace shot {
 
 namespace {
 
-// Rows per strip. Even, because WebP's chroma planes are sampled 2x2 and a
-// band handed to libwebp has to start on an even row to convert the same way
-// a whole picture would. Small, because a strip is the unit of memory in
-// flight: at 1440 pixels wide one strip is 1.5 MB.
-constexpr int kStripRows = 256;
+// The least rows per strip. Even, because WebP's chroma planes are sampled
+// 2x2 and a band handed to libwebp has to start on an even row to convert the
+// same way a whole picture would. Small, because a strip is the unit of memory
+// in flight: at 1440 pixels wide one strip is 0.7 MB. A page whose effects
+// read far around what they write gets taller strips -- see StripRowsFor.
+//
+// Small also because a strip is the unit of balance. The threads take strips
+// from a queue, and a queue of three strips over three threads can only give
+// each one strip: a 1280x720 page whose content sits in its middle rows had
+// one thread working 9 ms and two idle after 4, so the page took 9. At 128
+// rows the same page is six strips, the heavy ones are shared out, and it
+// takes 6 ms; simple pages halve their raster the same way. 64 rows measured
+// no better than 128 and costs more margin rows on pages that need them.
+// SHOT_STRIP_ROWS moves the floor, for measuring that again.
+constexpr int kStripRows = 128;
+
+// The most rows a strip may have, and the most memory it may hold. The first
+// bounds what a wide margin can ask for; the second bounds what that costs on
+// a wide page, where a row is expensive and the overdraw is accepted instead.
+constexpr int kMaxStripRows = 2048;
+constexpr int64_t kMaxStripBytes = 32 << 20;
 
 // Skia's ordered dither repeats on both device axes at this interval.
 constexpr int kDitherPeriod = 8;
@@ -101,17 +119,32 @@ constexpr int kDitherPeriod = 8;
 // A ceiling is still needed because a margin is rows rastered twice, and
 // because a filter can report an unbounded reach. Exceeding it is not a
 // crash, it is a seam: a page whose effects read further than this rasters
-// the way every page did before. What a large margin costs is threads rather
-// than memory -- the strip budget is divided by what one thread holds, so a
-// page needing 1024 rows of margin simply gets fewer of them.
+// the way every page did before. What a large margin costs is rows rastered
+// twice, and StripRowsFor answers it with taller strips, so that the rows a
+// strip repeats stay a fraction of the rows it keeps.
 // SHOT_STRIP_MARGIN moves the ceiling, which is how a suspected seam is
 // confirmed: raise it and see whether the difference goes away.
 constexpr int kMaxStripMargin = 1024;
 
+// An image up to this many pixels is a small capture -- see
+// ImageStream::IsSmall. Its bitmap is kept whole and reused, its raster
+// threads keep their strip surfaces, and its decoded images stay until the
+// last strip is encoded.
+constexpr int64_t kSmallCapturePixels = 4 * 1000 * 1000;
+
 // An image up to this many pixels is rastered as one strip, on the calling
-// thread. Below this, striping costs more than it parallelises, and one strip
-// through one canvas reproduces the single-surface raster byte for byte.
-constexpr int64_t kSingleStripPixels = 4 * 1000 * 1000;
+// thread: one strip through one canvas reproduces the single-surface raster
+// byte for byte, and below this the strips cost more to hand out than they
+// save. Above it the raster is split across the raster threads even for a
+// small capture. A 1280x720 page rasters in 1.5 ms on one core and in about
+// half that on three; a page of filters or gradients, in 18 ms and 6.
+constexpr int64_t kStripRasterPixels = 500 * 1000;
+
+// The largest strip surface a raster thread keeps from one small capture to
+// the next. Below it the surface is faulted in once and reused; above it,
+// which takes a margin of hundreds of rows, it is made for the capture and
+// freed with it, as it always was.
+constexpr size_t kRetainedScratchBytes = 2u << 20;
 
 // What the strips in flight may hold between them: committed rows plus the
 // raster threads' own margin surfaces. Sets the thread count on a wide page.
@@ -129,6 +162,17 @@ constexpr int64_t kSingleStripPixels = 4 * 1000 * 1000;
 // its own concurrent decode. SHOT_STRIP_BUDGET_MB moves it either way.
 constexpr int64_t kDefaultStripBudgetMb = 32;
 
+// The threads the budget may not take away. It was measured on a page whose
+// rows are 5.8 KB; a card at scale 8 has rows of 25 KB, and there one
+// thread's strip and margin surface alone exceed the budget, which as written
+// rastered 23 megapixels on one core -- 80 ms, against 50 ms for the
+// whole-bitmap raster this replaced, and 15 strips of 256 rows each with 480
+// rows of margin, so three times the image. Four threads' worth of strips in
+// flight on that page is about 170 MB, still under the 220 MB the whole
+// bitmap and its strip surfaces cost; the memory bound that pays is the one
+// on a tall page, and a tall page's rows are cheap.
+constexpr int kMinRasterThreads = 4;
+
 int EnvInt(const char* name, int fallback) {
   const char* value = std::getenv(name);
   if (!value || !*value) {
@@ -136,6 +180,27 @@ int EnvInt(const char* name, int fallback) {
   }
   int parsed = 0;
   return base::StringToInt(value, &parsed) ? parsed : fallback;
+}
+
+// Rows per strip for a page whose effects read `margin` rows around what they
+// write. The margin is rastered by both strips it borders, so a strip has to
+// be tall enough that the rows it repeats are a fraction of the rows it
+// keeps: twice the margin, which holds the overdraw to twice the image. On a
+// page so wide that such a strip would exceed kMaxStripBytes the overdraw is
+// accepted instead, because a strip larger than the budget is the thing the
+// budget exists to prevent. Even, for WebP's chroma rows.
+int StripRowsFor(int margin, size_t row_bytes) {
+  // Even, for WebP's chroma planes -- see kStripRows.
+  const int64_t floor_rows =
+      std::max(8, EnvInt("SHOT_STRIP_ROWS", kStripRows)) & ~1;
+  const int64_t by_memory = std::max<int64_t>(
+      floor_rows,
+      (kMaxStripBytes / static_cast<int64_t>(std::max<size_t>(1, row_bytes))) &
+          ~int64_t{1});
+  const int64_t wanted =
+      std::max<int64_t>(floor_rows, 2 * static_cast<int64_t>(margin));
+  return static_cast<int>(
+      std::min<int64_t>({wanted, by_memory, int64_t{kMaxStripRows}}));
 }
 
 // The levers that were put in to save memory, each behind its own switch so
@@ -168,7 +233,20 @@ bool ProfileEnabled() {
 // committed rows are always one contiguous window.
 class WindowedBitmap {
  public:
-  static std::unique_ptr<WindowedBitmap> Create(const SkImageInfo& info) {
+  static std::unique_ptr<WindowedBitmap> Create(const SkImageInfo& info,
+                                              SkBitmap* reusable) {
+    if (reusable && ImageStream::IsSmall(info.width(), info.height())) {
+      if (reusable->info() != info || !reusable->getPixels()) {
+        reusable->reset();
+        if (!reusable->tryAllocPixels(info)) {
+          return nullptr;
+        }
+      }
+      return base::WrapUnique(new WindowedBitmap(*reusable));
+    }
+    if (reusable) {
+      reusable->reset();
+    }
     const size_t row_bytes = info.minRowBytes();
     const size_t bytes = row_bytes * static_cast<size_t>(info.height());
     const size_t granularity =
@@ -190,13 +268,24 @@ class WindowedBitmap {
   WindowedBitmap(const WindowedBitmap&) = delete;
   WindowedBitmap& operator=(const WindowedBitmap&) = delete;
 
-  ~WindowedBitmap() { partition_alloc::FreePages(base_, reserved_); }
+  ~WindowedBitmap() {
+    if (base_) {
+      partition_alloc::FreePages(base_, reserved_);
+    }
+  }
 
   const SkPixmap& pixmap() const { return pixmap_; }
+
+  // Whether the rows are the caller's kept bitmap rather than a window: all
+  // of them resident, none of them ever released.
+  bool retained() const { return retained_.getPixels() != nullptr; }
 
   // Backs rows [first, end) with memory. Pages already committed stay as they
   // are; new ones come back zeroed on every platform this runs on.
   [[nodiscard]] bool CommitRows(int first, int end) {
+    if (retained_.getPixels()) {
+      return true;
+    }
     const size_t lo = (static_cast<size_t>(first) * row_bytes_) / page_;
     const size_t hi =
         (static_cast<size_t>(end) * row_bytes_ + page_ - 1) / page_;
@@ -221,6 +310,9 @@ class WindowedBitmap {
 
   // Gives the pages holding only rows above `end` back to the system.
   void ReleaseRows(int end) {
+    if (retained_.getPixels()) {
+      return;
+    }
     const size_t page_end = (static_cast<size_t>(end) * row_bytes_) / page_;
     if (has_window_ && page_end > lo_) {
       partition_alloc::DecommitSystemPages(
@@ -233,6 +325,12 @@ class WindowedBitmap {
   size_t peak_bytes() const { return peak_bytes_; }
 
  private:
+  explicit WindowedBitmap(const SkBitmap& retained)
+      : row_bytes_(retained.rowBytes()),
+        pixmap_(retained.pixmap()),
+        retained_(retained),
+        peak_bytes_(retained.computeByteSize()) {}
+
   WindowedBitmap(const SkImageInfo& info,
                  uintptr_t base,
                  size_t reserved,
@@ -243,11 +341,12 @@ class WindowedBitmap {
         page_(partition_alloc::internal::SystemPageSize()),
         pixmap_(info, reinterpret_cast<void*>(base), row_bytes) {}
 
-  const uintptr_t base_;
-  const size_t reserved_;
+  const uintptr_t base_ = 0;
+  const size_t reserved_ = 0;
   const size_t row_bytes_;
-  const size_t page_;
+  const size_t page_ = 0;
   SkPixmap pixmap_;
+  SkBitmap retained_;
   bool has_window_ = false;
   size_t lo_ = 0;
   size_t hi_ = 0;
@@ -482,7 +581,7 @@ class JpegRowEncoder final : public RowEncoder {
     // process. Measured: 10% smaller files at 1440 x 40944, for 177 MB.
     info_.optimize_coding =
         static_cast<int64_t>(whole_.width()) * whole_.height() <=
-                kSingleStripPixels
+                kSmallCapturePixels
             ? TRUE
             : FALSE;
     jpeg_start_compress(&info_, TRUE);
@@ -575,9 +674,12 @@ class WebpLossyRowEncoder final : public RowEncoder {
                           static_cast<float>(quality_))) {
       return base::unexpected("could not configure the WebP encoder");
     }
-    // The settings skia's encoder picks for lossy.
+    // The settings skia's encoder picks for lossy, plus libwebp's own second
+    // thread, which skia leaves off: the encoder's analysis and its filtering
+    // then overlap, for the same bytes out.
     config.lossless = 0;
     config.method = 3;
+    config.thread_level = 1;
     Bytes::Writer writer(EncodedCapacity(whole_), std::move(output_));
     picture_.writer = &WriteWebp;
     picture_.custom_ptr = &writer;
@@ -720,9 +822,10 @@ class WebpLosslessRowEncoder final : public RowEncoder {
                           static_cast<float>(quality_))) {
       return base::unexpected("could not configure the WebP encoder");
     }
-    // The settings skia's encoder picks for lossless.
+    // The settings skia's encoder picks for lossless, plus the second thread.
     config.lossless = 1;
     config.method = 0;
+    config.thread_level = 1;
     WebPPicture picture;
     if (!WebPPictureInit(&picture)) {
       return base::unexpected("libwebp is not the version this was built for");
@@ -1015,7 +1118,8 @@ std::optional<SkBitmap> DecodePngStreaming(const cc::PaintImage& image,
   if (!codec || codec->dimensions() != full.dimensions()) {
     return std::nullopt;
   }
-  std::unique_ptr<WindowedBitmap> window = WindowedBitmap::Create(full);
+  std::unique_ptr<WindowedBitmap> window =
+      WindowedBitmap::Create(full, /*reusable=*/nullptr);
   if (!window) {
     return std::nullopt;
   }
@@ -1376,6 +1480,11 @@ struct SliceJob {
   int strip_rows = 0;
   int margin = 0;
   int strips = 0;
+  // When the slice began, for the per-strip profile line.
+  base::TimeTicks started;
+  // One kept strip surface per raster thread, indexed by the thread's slot;
+  // null for a large capture, whose surfaces are made and freed with it.
+  raw_ptr<std::vector<SkBitmap>> scratch_cache = nullptr;
 
   int StripTop(int strip) const { return first_row + strip * strip_rows; }
   int StripBottom(int strip) const {
@@ -1408,9 +1517,13 @@ void DrawSlice(const SliceJob& job, SkCanvas* canvas, int top) {
 
 // Rasters strip `strip` into the bitmap. `scratch` is the caller's padded
 // surface, made on first use and sized for the tallest strip.
+// `scratch` is the caller's padded surface, made on first use and sized for
+// the tallest strip; `reusable_scratch`, when given, is where a small one
+// lives from one capture to the next.
 base::expected<void, std::string> RasterStrip(const SliceJob& job,
                                               int strip,
-                                              sk_sp<SkSurface>& scratch) {
+                                              sk_sp<SkSurface>& scratch,
+                                              SkBitmap* reusable_scratch) {
   const int y0 = job.StripTop(strip);
   const int y1 = job.StripBottom(strip);
   const SkPixmap& whole = job.bitmap->pixmap();
@@ -1427,7 +1540,13 @@ base::expected<void, std::string> RasterStrip(const SliceJob& job,
   const int top = std::max(job.first_row, y0 - job.margin);
   const int bottom = std::min(job.first_row + job.rows, y1 + job.margin);
   const int phase = (job.device_origin + top) % kDitherPeriod;
-  if (job.margin == 0 && phase == 0) {
+  // The margin is rows rastered outside the strip, and the image's edge is
+  // where there are none to raster. The one strip of a wide, short image --
+  // more pixels than one strip's worth, fewer rows than one strip -- has no
+  // rows outside it on either side, whatever the paint's reach, and is drawn
+  // straight into the image like a page with no reach at all, not through a
+  // surface padded by that reach, cleared, drawn and copied for nothing.
+  if (top == y0 && bottom == y1 && phase == 0) {
     std::unique_ptr<SkCanvas> canvas = SkCanvas::MakeRasterDirect(
         target.info(), target.writable_addr(), target.rowBytes(), &job.props);
     if (!canvas) {
@@ -1439,10 +1558,19 @@ base::expected<void, std::string> RasterStrip(const SliceJob& job,
   }
 
   if (!scratch) {
-    scratch = SkSurfaces::Raster(
-        whole.info().makeWH(whole.width(), job.strip_rows + 2 * job.margin +
-                                               kDitherPeriod - 1),
-        &job.props);
+    const SkImageInfo info = whole.info().makeWH(
+        whole.width(), job.strip_rows + 2 * job.margin + kDitherPeriod - 1);
+    if (reusable_scratch && info.computeMinByteSize() <= kRetainedScratchBytes) {
+      if (reusable_scratch->info() != info || !reusable_scratch->getPixels()) {
+        reusable_scratch->reset();
+        if (!reusable_scratch->tryAllocPixels(info)) {
+          return base::unexpected("could not allocate a strip surface");
+        }
+      }
+      scratch = SkSurfaces::WrapPixels(reusable_scratch->pixmap(), &job.props);
+    } else {
+      scratch = SkSurfaces::Raster(info, &job.props);
+    }
     if (!scratch) {
       return base::unexpected("could not allocate a strip surface");
     }
@@ -1450,11 +1578,14 @@ base::expected<void, std::string> RasterStrip(const SliceJob& job,
   SkCanvas* canvas = scratch->getCanvas();
   canvas->restoreToCount(1);
   canvas->resetMatrix();
-  canvas->clear(SK_ColorTRANSPARENT);
   canvas->save();
   canvas->clipRect(SkRect::MakeXYWH(
       0.0f, static_cast<float>(phase), static_cast<float>(whole.width()),
       static_cast<float>(bottom - top)));
+  // Cleared inside the clip: the rows drawn and copied are the only ones
+  // read, and a surface sized for the widest strip is mostly not them on a
+  // strip at the image's edge.
+  canvas->clear(SK_ColorTRANSPARENT);
   DrawSlice(job, canvas, top - phase);
   canvas->restore();
   SkPixmap source;
@@ -1469,11 +1600,109 @@ base::expected<void, std::string> RasterStrip(const SliceJob& job,
   return base::ok();
 }
 
-class StripWorker final : public base::DelegateSimpleThread::Delegate {
+// The threads the strips are rastered on, kept rather than started for each
+// capture. Starting a thread costs 50-100 us on Windows and joining it as
+// much again; a 1280x720 page rasters in 1.5 ms, and three of each would have
+// eaten what splitting it three ways saves. Between captures the threads
+// block on the condition and cost nothing. They are never joined: the pool
+// lives as long as the process, and the process's exit is what ends them.
+class RasterPool {
+ public:
+  // Called once per thread of a batch, with that thread's slot, 0 upwards.
+  using Work = base::RepeatingCallback<void(int slot)>;
+
+  static RasterPool& Get() {
+    static base::NoDestructor<RasterPool> pool;
+    return *pool;
+  }
+
+  // Starts `work` on `count` threads. One batch at a time: Wait() for it
+  // before starting the next.
+  void Start(int count, Work work) {
+    // Made outside the lock: a thread runs Loop() the moment it starts, and
+    // Loop() takes the lock.
+    while (threads_.size() < static_cast<size_t>(count)) {
+      auto thread = std::make_unique<base::DelegateSimpleThread>(
+          &worker_, "ShotRaster");
+      thread->Start();
+      threads_.push_back(std::move(thread));
+    }
+    base::AutoLock lock(lock_);
+    CHECK_EQ(pending_, 0);
+    CHECK_EQ(running_, 0);
+    work_ = std::move(work);
+    next_slot_ = 0;
+    pending_ = count;
+    wake_.Broadcast();
+  }
+
+  // Returns once every thread of the batch has returned from `work`.
+  void Wait() {
+    base::AutoLock lock(lock_);
+    while (pending_ > 0 || running_ > 0) {
+      done_.Wait();
+    }
+    work_.Reset();
+  }
+
+ private:
+  friend class base::NoDestructor<RasterPool>;
+
+  class Worker final : public base::DelegateSimpleThread::Delegate {
+   public:
+    explicit Worker(RasterPool* pool) : pool_(pool) {}
+    void Run() override { pool_->Loop(); }
+
+   private:
+    const raw_ptr<RasterPool> pool_;
+  };
+
+  RasterPool() = default;
+
+  void Loop() {
+    base::AutoLock lock(lock_);
+    for (;;) {
+      while (pending_ == 0) {
+        wake_.Wait();
+      }
+      const int slot = next_slot_++;
+      --pending_;
+      ++running_;
+      Work work = work_;
+      {
+        base::AutoUnlock unlock(lock_);
+        work.Run(slot);
+      }
+      if (--running_ == 0 && pending_ == 0) {
+        done_.Signal();
+      }
+    }
+  }
+
+  Worker worker_{this};
+  // Only ever grown, and only by Start(), on the one thread that captures.
+  std::vector<std::unique_ptr<base::DelegateSimpleThread>> threads_;
+  base::Lock lock_;
+  base::ConditionVariable wake_{&lock_};
+  base::ConditionVariable done_{&lock_};
+  Work work_ GUARDED_BY(lock_);
+  int next_slot_ GUARDED_BY(lock_) = 0;
+  int pending_ GUARDED_BY(lock_) = 0;
+  int running_ GUARDED_BY(lock_) = 0;
+};
+
+class StripWorker {
  public:
   explicit StripWorker(SliceJob& job) : job_(job) {}
 
-  void Run() override {
+  // One thread's share of the strips: whichever are next until none are
+  // left. `slot` picks the thread's kept scratch surface, if the job has any.
+  void Run(int slot) {
+    SkBitmap* reusable_scratch =
+        job_->scratch_cache &&
+                slot < static_cast<int>(job_->scratch_cache->size())
+            ? &(*job_->scratch_cache)[static_cast<size_t>(slot)]
+            : nullptr;
     sk_sp<SkSurface> scratch;
     for (;;) {
       int strip = -1;
@@ -1488,7 +1717,15 @@ class StripWorker final : public base::DelegateSimpleThread::Delegate {
         }
         strip = job_->next++;
       }
-      auto rastered = RasterStrip(*job_, strip, scratch);
+      const base::TimeTicks strip_started = base::TimeTicks::Now();
+      auto rastered = RasterStrip(*job_, strip, scratch, reusable_scratch);
+      if (ProfileEnabled()) {
+        LOG(INFO) << "shot: profile strip=" << strip << " slot=" << slot
+                  << " start=+"
+                  << (strip_started - job_->started).InMillisecondsF()
+                  << " dur="
+                  << (base::TimeTicks::Now() - strip_started).InMillisecondsF();
+      }
       base::AutoLock lock(job_->lock);
       if (!rastered.has_value()) {
         if (!job_->failed) {
@@ -1525,10 +1762,12 @@ class ImageStream::Impl {
   Impl(std::unique_ptr<WindowedBitmap> bitmap,
        std::unique_ptr<RowEncoder> encoder,
        const SkSurfaceProps& props,
+       std::vector<SkBitmap>* reusable_scratch,
        ImageStreamStats* stats)
       : bitmap_(std::move(bitmap)),
         encoder_(std::move(encoder)),
         props_(props),
+        reusable_scratch_(reusable_scratch),
         stats_(stats) {}
 
   base::expected<void, std::string> AddSlice(
@@ -1547,6 +1786,7 @@ class ImageStream::Impl {
     const base::TimeTicks started = base::TimeTicks::Now();
 
     SliceJob job;
+    job.started = started;
     job.list = std::move(list);
     job.bitmap = bitmap_.get();
     job.props = props_;
@@ -1564,51 +1804,36 @@ class ImageStream::Impl {
     // not to do.
     const bool one_strip =
         whole_image &&
-        (static_cast<int64_t>(whole.width()) * rows <= kSingleStripPixels ||
+        (static_cast<int64_t>(whole.width()) * rows <= kStripRasterPixels ||
          EnvInt("SHOT_SINGLE_STRIP", 0) != 0);
-    job.strip_rows = one_strip ? rows : kStripRows;
-    job.strips = (rows + job.strip_rows - 1) / job.strip_rows;
     // The paint's own reach, in the list's coordinates. Two things are
     // measured from it: the rows a strip rasters outside itself, which is a
     // cost and so has a ceiling, and the row an image is needed down to,
     // which is not and does not.
     const int reach = one_strip ? 0 : PaintReadAround(*job.list);
-    job.margin = static_cast<int>(std::clamp(
-        std::ceil(reach * scale), 0.0,
-        static_cast<double>(EnvInt("SHOT_STRIP_MARGIN", kMaxStripMargin))));
-
-    // Threads: as many as there are cores and strips, within what the strips
-    // in flight may hold. A strip costs its rows in the bitmap, plus a padded
-    // surface per thread when a margin or dither-phase correction needs one.
-    const int64_t strip_bytes =
-        static_cast<int64_t>(whole.rowBytes()) * job.strip_rows;
-    const bool uses_scratch =
-        job.margin != 0 ||
-        (job.device_origin + job.first_row) % kDitherPeriod != 0;
-    const int64_t per_thread =
-        strip_bytes +
-        (uses_scratch ? static_cast<int64_t>(whole.rowBytes()) *
-                            (job.strip_rows + 2 * job.margin +
-                             kDitherPeriod - 1)
-                      : 0);
-    const int64_t strip_budget =
-        static_cast<int64_t>(std::max(
-            1, EnvInt("SHOT_STRIP_BUDGET_MB",
-                      static_cast<int>(kDefaultStripBudgetMb))))
-        << 20;
-    const int by_budget = static_cast<int>(std::max<int64_t>(
-        1, strip_budget / std::max<int64_t>(1, 2 * per_thread)));
-    const int max_threads =
-        EnvInt("SHOT_RASTER_THREADS", base::SysInfo::NumberOfProcessors());
-    const int threads =
-        std::clamp(std::min({job.strips, max_threads, by_budget}), 1, 16);
-    // Strips that may be rastered ahead of the encoder.
-    const int lookahead = one_strip ? 1 : threads + 2;
+    if (!one_strip) {
+      job.margin = static_cast<int>(std::clamp(
+          std::ceil(reach * scale), 0.0,
+          static_cast<double>(EnvInt("SHOT_STRIP_MARGIN", kMaxStripMargin))));
+    }
+    // After the margin, because the margin decides how tall a strip has to be
+    // for the rows it rasters twice to stay a fraction of the rows it keeps.
+    job.strip_rows =
+        one_strip ? rows : StripRowsFor(job.margin, whole.rowBytes());
+    job.strips = (rows + job.strip_rows - 1) / job.strip_rows;
 
     DecodedImages images(stats_);
     job.images = &images;
-    {
-      // Which strip last draws each image, from where the images are drawn.
+    // Which strip last draws each image, from where the images are drawn --
+    // so that an image's bytes can go the moment its last strip is encoded.
+    // One strip has no "last strip" to speak of: every image is needed until
+    // the only strip there is has been encoded, at which point the display
+    // list that owns the images is released anyway. So a single-strip image
+    // skips the map: walking the paint to index every image, only to answer
+    // "strip 0" for each of them, is work a small capture pays for nothing.
+    // So does a kept bitmap of several strips: nothing is released before
+    // the whole image is encoded, so there is nothing for the map to time.
+    if (job.strips > 1 && !bitmap_->retained()) {
       base::flat_map<cc::PaintImage::Id, int> last_strips;
       std::map<cc::PaintImage::Id, std::vector<cc::PaintImage>> encoded_sources;
       scoped_refptr<cc::DiscardableImageMap> map =
@@ -1656,7 +1881,88 @@ class ImageStream::Impl {
       }
       images.SetLastStrips(std::move(last_strips), job.strips - 1,
                            std::move(encoded_sources));
+    } else if (job.strips > 1) {
+      images.SetLastStrips({}, job.strips - 1, {});
     }
+
+    auto account = [&](base::TimeDelta encoding, int threads)
+        -> base::expected<void, std::string> {
+      next_row_ += rows;
+      stats_->encode += encoding;
+      stats_->raster += base::TimeTicks::Now() - started - encoding;
+      if (ProfileEnabled()) {
+        LOG(INFO) << "shot: profile slice rows=" << rows << " reach=" << reach
+                  << " margin=" << job.margin
+                  << " strip_rows=" << job.strip_rows
+                  << " strips=" << job.strips << " threads=" << threads
+                  << " raster="
+                  << (base::TimeTicks::Now() - started - encoding)
+                         .InMillisecondsF()
+                  << " encode=" << encoding.InMillisecondsF();
+      }
+      stats_->strips += job.strips;
+      stats_->threads = std::max(stats_->threads, threads);
+      stats_->peak_window_bytes =
+          std::max(stats_->peak_window_bytes, bitmap_->peak_bytes());
+      return base::ok();
+    };
+    if (job.strips == 1) {
+      // One synchronous raster has no producer/consumer queue. Avoid its
+      // budget calculation, completion allocation, locks and wakeups as well
+      // as the worker thread itself.
+      if (!bitmap_->CommitRows(job.StripTop(0), job.StripBottom(0))) {
+        return base::unexpected("could not commit memory for the image's rows");
+      }
+      sk_sp<SkSurface> scratch;
+      if (auto rastered = RasterStrip(job, 0, scratch, /*reusable_scratch=*/nullptr);
+          !rastered.has_value()) {
+        return base::unexpected(rastered.error());
+      }
+      const base::TimeTicks encode_started = base::TimeTicks::Now();
+      auto appended = encoder_->Append(rows);
+      const base::TimeDelta encoding = base::TimeTicks::Now() - encode_started;
+      if (!appended.has_value()) {
+        return base::unexpected(appended.error());
+      }
+      bitmap_->ReleaseRows(encoder_->consumed_rows());
+      images.StripEncoded(0);
+      LogMemoryStage("single strip");
+      return account(encoding, 1);
+    }
+
+    // Threads: as many as there are cores and strips, within what the strips
+    // in flight may hold. A strip costs its rows in the bitmap, plus a padded
+    // surface per thread when a margin or dither-phase correction needs one.
+    const int64_t strip_bytes =
+        static_cast<int64_t>(whole.rowBytes()) * job.strip_rows;
+    const bool uses_scratch =
+        job.margin != 0 ||
+        (job.device_origin + job.first_row) % kDitherPeriod != 0;
+    const int64_t per_thread =
+        strip_bytes +
+        (uses_scratch ? static_cast<int64_t>(whole.rowBytes()) *
+                            (job.strip_rows + 2 * job.margin +
+                             kDitherPeriod - 1)
+                      : 0);
+    const int64_t strip_budget =
+        static_cast<int64_t>(std::max(
+            1, EnvInt("SHOT_STRIP_BUDGET_MB",
+                      static_cast<int>(kDefaultStripBudgetMb))))
+        << 20;
+    const int by_budget = static_cast<int>(std::max<int64_t>(
+        1, strip_budget / std::max<int64_t>(1, 2 * per_thread)));
+    const int max_threads =
+        EnvInt("SHOT_RASTER_THREADS", base::SysInfo::NumberOfProcessors());
+    // The budget takes threads away, down to kMinRasterThreads; on a page
+    // whose rows are wide enough that one thread's strips exceed it, the
+    // floor is what keeps the raster off a single core. An explicit
+    // SHOT_RASTER_THREADS still means what it says.
+    const int floor = std::min({job.strips, max_threads, kMinRasterThreads});
+    const int threads = std::clamp(
+        std::max(std::min({job.strips, max_threads, by_budget}), floor), 1,
+        16);
+    // Strips that may be rastered ahead of the encoder.
+    const int lookahead = threads + 2;
 
     {
       base::AutoLock lock(job.lock);
@@ -1668,23 +1974,24 @@ class ImageStream::Impl {
       }
     }
 
-    std::vector<std::unique_ptr<StripWorker>> delegates;
-    std::vector<std::unique_ptr<base::DelegateSimpleThread>> pool;
-    for (int i = 0; i < threads; ++i) {
-      delegates.push_back(std::make_unique<StripWorker>(job));
-      pool.push_back(std::make_unique<base::DelegateSimpleThread>(
-          delegates.back().get(), "ShotRaster"));
-      pool.back()->Start();
+    // A kept bitmap keeps its strip surfaces too, one per thread slot.
+    if (bitmap_->retained() && reusable_scratch_) {
+      if (reusable_scratch_->size() < static_cast<size_t>(threads)) {
+        reusable_scratch_->resize(static_cast<size_t>(threads));
+      }
+      job.scratch_cache = reusable_scratch_.get();
     }
+    StripWorker worker(job);
+    RasterPool& pool = RasterPool::Get();
+    pool.Start(threads, base::BindRepeating(&StripWorker::Run,
+                                            base::Unretained(&worker)));
     auto stop_pool = [&](std::string error) {
       {
         base::AutoLock lock(job.lock);
         job.failed = true;
         job.cv.Broadcast();
       }
-      for (auto& thread : pool) {
-        thread->Join();
-      }
+      pool.Wait();
       return base::unexpected(std::move(error));
     };
 
@@ -1726,18 +2033,9 @@ class ImageStream::Impl {
       }
       job.cv.Broadcast();
     }
-    for (auto& thread : pool) {
-      thread->Join();
-    }
+    pool.Wait();
 
-    next_row_ += rows;
-    stats_->encode += encoding;
-    stats_->raster += base::TimeTicks::Now() - started - encoding;
-    stats_->strips += job.strips;
-    stats_->threads = std::max(stats_->threads, threads);
-    stats_->peak_window_bytes =
-        std::max(stats_->peak_window_bytes, bitmap_->peak_bytes());
-    return base::ok();
+    return account(encoding, threads);
   }
 
   base::expected<Bytes, std::string> Finish() {
@@ -1755,9 +2053,16 @@ class ImageStream::Impl {
   std::unique_ptr<WindowedBitmap> bitmap_;
   std::unique_ptr<RowEncoder> encoder_;
   const SkSurfaceProps props_;
+  // The caller's kept strip surfaces, used only while `bitmap_` is kept too.
+  const raw_ptr<std::vector<SkBitmap>> reusable_scratch_;
   const raw_ptr<ImageStreamStats> stats_;
   int next_row_ = 0;
 };
+
+// static
+bool ImageStream::IsSmall(int width, int height) {
+  return static_cast<int64_t>(width) * height <= kSmallCapturePixels;
+}
 
 // static
 base::expected<std::unique_ptr<ImageStream>, std::string> ImageStream::Create(
@@ -1766,9 +2071,12 @@ base::expected<std::unique_ptr<ImageStream>, std::string> ImageStream::Create(
     const ScreenshotRequest& request,
     bool opaque,
     const SkSurfaceProps& props,
-    base::File output) {
+    base::File output,
+    SkBitmap* reusable_bitmap,
+    std::vector<SkBitmap>* reusable_scratch) {
   std::unique_ptr<WindowedBitmap> bitmap =
-      WindowedBitmap::Create(SkImageInfo::MakeN32Premul(width, height));
+      WindowedBitmap::Create(SkImageInfo::MakeN32Premul(width, height),
+                             reusable_bitmap);
   if (!bitmap) {
     return base::unexpected("could not reserve a " +
                             base::NumberToString(width) + "x" +
@@ -1790,7 +2098,8 @@ base::expected<std::unique_ptr<ImageStream>, std::string> ImageStream::Create(
   }
   auto stream = base::WrapUnique(new ImageStream(nullptr));
   stream->impl_ = std::make_unique<Impl>(std::move(bitmap), std::move(*encoder),
-                                         props, &stream->stats_);
+                                         props, reusable_scratch,
+                                         &stream->stats_);
   return stream;
 }
 

@@ -5,17 +5,20 @@
 #ifndef SHOT_SHOT_RENDERER_H_
 #define SHOT_SHOT_RENDERER_H_
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
 
 #include "base/files/file_path.h"
 #include "base/functional/callback.h"
+#include "base/memory/weak_ptr.h"
 #include "base/time/time.h"
 #include "base/types/expected.h"
 #include "shot/shot_bytes.h"
 #include "shot/shot_request.h"
 #include "third_party/blink/renderer/platform/heap/persistent.h"
+#include "third_party/skia/include/core/SkBitmap.h"
 #include "third_party/skia/include/core/SkRefCnt.h"
 #include "ui/gfx/geometry/rect.h"
 #include "url/gurl.h"
@@ -121,6 +124,12 @@ class ShotRenderer {
   ShotRenderer& operator=(const ShotRenderer&) = delete;
   ~ShotRenderer();
 
+  // Lets go of everything kept between captures for the next one's sake: the
+  // page a small capture left attached for the idle turn to detach, and the
+  // bitmap it rasters into. For an explicit release of memory, which is the
+  // one time keeping either warm is the wrong call.
+  void ReleaseRetained();
+
   // Renders `input` according to `request` and returns the encoded image --
   // in memory, or streamed into `request.path` when that is set, in which
   // case the tile carries the path and size and no bytes.
@@ -157,6 +166,17 @@ class ShotRenderer {
   // Detaches the frame and drops the page. Idempotent, so the scoped call in
   // Render() and the one in the destructor cannot double-detach.
   void TearDown();
+
+  // TearDown(), but on this thread's next idle turn rather than now, and only
+  // if the page attached then is still the one attached now. A small capture
+  // has handed its image over by the time this is called; detaching the
+  // frame is the one cost left, and nothing the caller is waiting on depends
+  // on it. Posted with the page's serial so that a task queued behind a new
+  // capture -- a caller that never pumps between requests -- finds a newer
+  // page and leaves it alone. Falls back to TearDown() now where there is no
+  // task runner to post to.
+  void TearDownWhenIdle();
+  void TearDownIfStill(uint64_t serial);
 
   // Brings up the Page/LocalFrame/Document. Separate from Render() only so the
   // failure points are named.
@@ -197,6 +217,23 @@ class ShotRenderer {
   // RenderDocument() and WaitForLoad(). Held as a flag rather than a scope
   // object because the scope is stack-only and WaitForLoad() lifts it.
   bool gc_disabled_ = false;
+  // Whether Render() / RenderTiles() hand the raster's freed memory back to
+  // the system when RenderDocument() returns. Decided once, on the way out of
+  // RenderDocument(): yes for a failed or large capture, no for a small one
+  // whose freed spans are cheaper to keep warm for the next request than to
+  // decommit and fault back in.
+  bool reclaim_after_render_ = true;
+  // The bitmap a capture that ImageStream::IsSmall() rasters into, kept from
+  // one capture to the next so that the same size need not be allocated and
+  // faulted in again, and the strip surfaces its raster threads use, kept
+  // the same way. A larger capture resets the bitmap and uses the stream's
+  // bounded window instead.
+  SkBitmap small_bitmap_;
+  std::vector<SkBitmap> small_scratch_;
+  // Which page is attached, counting up from CreatePage(); what a deferred
+  // TearDownIfStill() checks before detaching.
+  uint64_t page_serial_ = 0;
+  base::WeakPtrFactory<ShotRenderer> weak_factory_{this};
 };
 
 }  // namespace shot

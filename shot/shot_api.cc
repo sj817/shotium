@@ -6,6 +6,7 @@
 #include "shot/shot_api.h"
 
 #include <atomic>
+#include <cstdlib>
 #include <memory>
 #include <optional>
 #include <string>
@@ -263,7 +264,13 @@ class EngineThread : public base::DelegateSimpleThread::Delegate {
     logging::LoggingSettings log_settings;
     log_settings.logging_dest = logging::LOG_TO_STDERR;
     logging::InitLogging(log_settings);
-    logging::SetMinLogLevel(logging::LOGGING_WARNING);
+    // Warnings only, as a library in someone else's process should be.
+    // SHOT_VERBOSE=1 is the executable's --verbose for a host that cannot pass
+    // one, which is how the SHOT_PROFILE lines are read through the addon.
+    const char* verbose = std::getenv("SHOT_VERBOSE");
+    logging::SetMinLogLevel(verbose && *verbose && *verbose != '0'
+                                ? logging::LOGGING_INFO
+                                : logging::LOGGING_WARNING);
 
     // Where shotium_data.pak and shotium_strings.pak are. See the header: the
     // executable finds them next to itself through DIR_MODULE and a shared

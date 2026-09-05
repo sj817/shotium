@@ -177,7 +177,8 @@ int Main(int argc, const char** argv) {
   }
 
   // The engine writes the file itself, a row at a time as it encodes, so the
-  // image never has to exist in this process as a whole.
+  // image never has to exist in this process as a whole. The write below is
+  // the fallback for an engine that handed the bytes back instead.
   request.path = prepared->options.output_path.AsUTF8Unsafe();
   auto image = shot::Capture(**runtime, request);
   if (!image.has_value()) {

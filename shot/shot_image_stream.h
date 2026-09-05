@@ -25,6 +25,8 @@ namespace cc {
 class DisplayItemList;
 }
 
+class SkBitmap;
+
 namespace shot {
 
 struct ScreenshotRequest;
@@ -62,7 +64,7 @@ int PaintReadAround(const cc::DisplayItemList& list);
 // One output image, rastered in horizontal strips from the top down and
 // encoded as each strip completes.
 //
-// The image is never in memory whole. Its pixels live in a reserved address
+// Large images are never in memory whole. Their pixels live in a reserved address
 // range of which only the rows between the raster threads and the encoder are
 // committed; a row is handed to the OS the moment the encoder is done with it.
 // Images the document draws are decoded when a strip first needs them, at the
@@ -71,15 +73,33 @@ int PaintReadAround(const cc::DisplayItemList& list);
 // images currently in view of those strips, not the 236 MB of the image.
 class ImageStream {
  public:
+  // Whether an image of this size is a small capture: rastered into a bitmap
+  // that is kept whole and reused from one capture to the next, with its
+  // strip surfaces and decoded images kept the same way. Above it the image
+  // is windowed, and only the rows between the raster threads and the
+  // encoder exist. This is the one place that line is drawn: the renderer
+  // asks it to decide what else a small capture may skip -- the display
+  // list's spatial index, the collection before raster, the decommit
+  // afterwards -- so that "small" means the same thing everywhere. Whether a
+  // small capture's raster is split across threads is a separate, lower line
+  // that only the stream knows.
+  static bool IsSmall(int width, int height);
+
   // `opaque` promises that every pixel will end up opaque, which lets PNG and
   // WebP drop the alpha channel before a single row exists.
+  //
+  // `reusable_bitmap` and `reusable_scratch` are the caller's, kept from one
+  // small capture to the next: the whole image's pixels, and one strip
+  // surface per raster thread. A large capture leaves them alone.
   static base::expected<std::unique_ptr<ImageStream>, std::string> Create(
       int width,
       int height,
       const ScreenshotRequest& request,
       bool opaque,
       const SkSurfaceProps& props,
-      base::File output);
+      base::File output,
+      SkBitmap* reusable_bitmap,
+      std::vector<SkBitmap>* reusable_scratch);
 
   ImageStream(const ImageStream&) = delete;
   ImageStream& operator=(const ImageStream&) = delete;
