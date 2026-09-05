@@ -5,15 +5,15 @@ packages, on the same native host, without running builds or other render tests
 at the same time:
 
 ```sh
-node tools/shot/node_perf.cjs BASELINE_PACKAGE CANDIDATE_PACKAGE result.json --calibrate --check
-python tools/shot/node_perf_images.py result.json
+pnpm perf:compare BASELINE_PACKAGE CANDIDATE_PACKAGE result.json --calibrate --check
+pnpm perf:images result.json
 ```
 
 The current branch's requested acceptance scope is Windows x64. After its full
 matrix completes, generate that scope's report with:
 
 ```sh
-python tools/shot/node_perf_report.py result.json --platform win32-x64 --output report.md
+pnpm perf:report result.json --platform win32-x64 --output report.md
 ```
 
 This accepts only the measured Windows x64 scope. The optional workflow below
@@ -25,7 +25,7 @@ startup cases, 3 memory-release/restart cases, 7 queue/multi-process cases,
 both localized Bilibili articles, the existing benchmark corpus, PNG/JPEG/WebP,
 full-page, selector, clip, alpha, file output and scale 0.5/1/1.5/2/4/8 paths.
 The two whole articles and the new tile API have no successful npm equivalent;
-run `bilibili_check.py` separately to validate their full output, every tile,
+run `check-bilibili.ts` separately to validate their full output, every tile,
 every article photo and both footer QR codes. A rejected npm capture is never counted as a fast baseline.
 
 Five warmups precede each resident case. Both versions run in alternating AB/BA

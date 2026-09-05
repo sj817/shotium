@@ -198,9 +198,9 @@ const whitelist = [
   '.clang-format', '.gitattributes', '.gitignore', '.gitmodules', '.gn', '.vpython3',
   'AGENTS.md', 'AUTHORS', 'BUILD.gn', 'CLAUDE.md', 'DEPS', 'LICENSE', 'README.md', 'README.zh.md',
   'package.json',
-  '.claude/', '.github/', 'apps/', 'benchmark-results/', 'bootstrap/', 'build_overrides/',
+  '.claude/', '.github/', 'apps/', 'benchmark-results/', 'build_overrides/',
   'buildtools/', 'build/args/', 'build/config/shot_build.gni', 'docs/', 'patches/', 'scripts/',
-  'shot/', 'shotium/', 'tests/', 'tools/shot/',
+  'shot/', 'shotium/', 'tests/',
   // .sha1 stamps the dsymutil_mac_* gclient hooks download by; no build reads them.
   'tools/clang/dsymutil/',
 ];
@@ -265,7 +265,7 @@ async function plan(graphDirs: string[], outArg: string, keepListArg?: string): 
 
   // 1 + 2 + 7, and the Blink IDL files: no build reads them, but they are
   // the source the committed V8<Enum>/union/dictionary bindings were
-  // generated from (tools/shot/gen_idl_*.py), and a sync regenerates from them.
+  // generated from (scripts/gen-idl.ts), and a sync regenerates from them.
   for (const f of tracked) {
     if (union.has(f) || matchesWhitelist(f, extra)) keep.add(f);
     else if (f.startsWith('third_party/blink/renderer/') && f.endsWith('.idl')) keep.add(f);

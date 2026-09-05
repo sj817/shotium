@@ -20,7 +20,6 @@ on:
     paths:
       - 'shotium/**'
       - 'shot/testdata/bilibili/**'
-      - 'tools/shot/**'
       - 'scripts/**'
       - 'apps/benchmark/**'
       - '.github/workflows/checks.yml'
@@ -28,7 +27,6 @@ on:
     paths:
       - 'shotium/**'
       - 'shot/testdata/bilibili/**'
-      - 'tools/shot/**'
       - 'scripts/**'
       - 'apps/benchmark/**'
       - '.github/workflows/checks.yml'
@@ -269,15 +267,3 @@ jobs:
         # which is how a deadlocking process sampler reached all ten Windows
         # jobs of a full run and burned 15 runner-hours printing nothing.
         run: pnpm run check
-
-  python:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: actions/setup-python@v7
-        with:
-          python-version: '3.12'
-
-      - name: compile the remaining Python scripts
-        run: python -m compileall -q tools/shot

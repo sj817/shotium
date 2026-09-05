@@ -11,7 +11,7 @@
 // output is a JSON document on stdout or at --out.
 //
 //   pnpm deps-lock --deps-file DEPS.pinned --depot-tools D:/Github/depot_tools
-//                  [--custom-deps-file bootstrap/custom-deps-batch1.txt]
+//                  [--custom-deps-file scripts/lib/bootstrap/custom-deps-batch1.txt]
 //                  [--custom-vars '{"checkout_configuration":"small"}']
 //                  [--out lock.json] [--baseline-matrix] [--include-deps]
 

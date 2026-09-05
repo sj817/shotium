@@ -1,6 +1,6 @@
 ---
 name: verify-engine
-description: Run every check that needs a built engine and report on the three-level status ladder: serve_check.py, net_check.py, node_check.cjs, daemon_check.cjs, daemon_protocol_check.cjs, demo_check.py reftests, bilibili_check.py, tests/render. Use for "verify", "did the checks pass", "is it ready to release", and as the last step after any change to shot/, shotium/src, shotium/native or the Blink/Skia/cc code they depend on. CI's checks.yml does not run any of these.
+description: Run every check that needs a built engine and report on the three-level status ladder: check-serve.ts, check-net.ts, check-node.ts, check-daemon.ts, check-daemon-protocol.ts, check-demos.ts reftests, check-bilibili.ts, tests/render. Use for "verify", "did the checks pass", "is it ready to release", and as the last step after any change to shot/, shotium/src, shotium/native or the Blink/Skia/cc code they depend on. CI's checks.yml does not run any of these.
 ---
 
 # Verify the engine
@@ -26,18 +26,18 @@ to verify. Results from `out/ShotWip` or any other directory are void.
 ## 1. Engine-side checks (Python, `shotium.exe` only)
 
 ```powershell
-python tools/shot/serve_check.py out/Shot/shotium.exe
-python tools/shot/net_check.py   out/Shot/shotium.exe
-python tools/shot/demo_check.py  out/Shot/shotium.exe
+pnpm verify:serve out/Shot/shotium.exe
+pnpm verify:net   out/Shot/shotium.exe
+pnpm verify:demos out/Shot/shotium.exe
 ```
 
 | Script | Sections | What a failure means |
 |---|---|---|
-| `serve_check.py` | `--serve` framing; two renders on one process are byte-identical; worker output equals CLI output; `allowFileAccess` actually gates subresources; refused requests are reported, not silently empty | The resident-worker contract is broken, or rendering is nondeterministic within a process |
-| `net_check.py` | http fetch, redirect following and limits, disk cache shared across two worker processes, `networkidle`, and the strongest one: the same document over http and from disk renders to identical bytes | `//net` integration or the loader changed what reaches Blink |
-| `demo_check.py` | 84 reftest pairs in `shot/testdata/demos`: each `NAME.html` must render byte-identical to `NAME-ref.html`; pages without a `-ref` are smoke tests (renders, more than one colour, identical on a second run); WPT-style `fuzzy` meta allows a declared tolerance | A layout or paint feature regressed. Expected: 62 pass, 1 fuzzy, 21 smoke |
+| `pnpm verify:serve` | `--serve` framing; two renders on one process are byte-identical; worker output equals CLI output; `allowFileAccess` actually gates subresources; refused requests are reported, not silently empty | The resident-worker contract is broken, or rendering is nondeterministic within a process |
+| `pnpm verify:net` | http fetch, redirect following and limits, disk cache shared across two worker processes, `networkidle`, and the strongest one: the same document over http and from disk renders to identical bytes | `//net` integration or the loader changed what reaches Blink |
+| `pnpm verify:demos` | 84 reftest pairs in `shot/testdata/demos`: each `NAME.html` must render byte-identical to `NAME-ref.html`; pages without a `-ref` are smoke tests (renders, more than one colour, identical on a second run); WPT-style `fuzzy` meta allows a declared tolerance | A layout or paint feature regressed. Expected: 62 pass, 1 fuzzy, 21 smoke |
 
-`demo_check.py` needs Pillow. All three print their own pass/fail counts.
+All three print their own pass/fail counts.
 
 ## 2. Node-side checks (need the addon)
 
@@ -77,17 +77,17 @@ Three preconditions; missing any one produces a convincing false failure:
 Then:
 
 ```bash
-PATH="$PWD/out/Shot:$PATH" node tools/shot/node_check.cjs   out/Shot/shotium.exe
-PATH="$PWD/out/Shot:$PATH" node tools/shot/daemon_check.cjs out/Shot/shotium.exe
-node tools/shot/daemon_protocol_check.cjs
+PATH="$PWD/out/Shot:$PATH" pnpm verify:node   out/Shot/shotium.exe
+PATH="$PWD/out/Shot:$PATH" pnpm verify:daemon out/Shot/shotium.exe
+pnpm verify:daemon-protocol
 ```
 
 `PATH` must include `out/Shot`: the addon links `shotium.dll` and the loader
-reports `ERR_DLOPEN_FAILED` otherwise. `node_check.cjs` exercises
+reports `ERR_DLOPEN_FAILED` otherwise. `check-node.ts` exercises
 `require()` of the ESM package (needs Node 22.12+ or 20.19+), `screenshot()`
 returning `{image, stats}`, tiles, options validation, and `start()`/`stop()`
-semantics. `daemon_check.cjs` spawns a detached daemon, connects, pipelines
-requests, and stops it. `daemon_protocol_check.cjs` needs no engine and checks
+semantics. `check-daemon.ts` spawns a detached daemon, connects, pipelines
+requests, and stops it. `check-daemon-protocol.ts` needs no engine and checks
 that wire generations are isolated and negotiated.
 
 ## 3. Whole-page fixtures
@@ -96,7 +96,7 @@ When tiles, full-page rendering, the strip rasteriser or image decoding
 changed:
 
 ```bash
-python tools/shot/bilibili_check.py --package shotium
+pnpm verify:bilibili --package shotium
 ```
 
 Two real articles (41k and 46k CSS px tall), every tile, every photo and both
@@ -106,13 +106,13 @@ proves the fixtures are complete.
 ## 4. Pixel regression (optional, needs baselines)
 
 ```powershell
-pwsh tests/render/run.ps1 -ShotExecutable out/Shot/shotium.exe
+pnpm render run --shot out/Shot/shotium.exe
 ```
 
 `tests/render/baselines/` is gitignored. Without a manifest the run fails with
 `Missing baseline manifest`; baselines must be generated with a *pre-change*
-binary via `update-baselines.ps1 -Accept`. If you did not do that before
-building, skip this step, use `demo_check.py` as the pixel evidence, and say
+binary via `pnpm render update-baselines --accept`. If you did not do that before
+building, skip this step, use `check-demos.ts` as the pixel evidence, and say
 which one you used. Thresholds default to exact decoded-pixel equality; a
 changed SHA-256 with identical pixels is an encoder difference, not a
 regression. Relax a per-case threshold only after looking at the generated
@@ -121,7 +121,7 @@ red-on-black diff and recording the reason in `cases.json`.
 ## 5. Acceptance run
 
 ```powershell
-pwsh tools/shot/accept.ps1 -SkipBuild
+pnpm accept --skip-build
 ```
 
 Reports the binary size, renders `shot/testdata/render_corpus.html` at
@@ -132,7 +132,7 @@ different everywhere" from "one element is missing". A region that moved is
 either an intended rendering change (document it in `docs/cut-progress.md`
 section 8.6, where the known differences are listed) or a regression.
 
-`-SkipBuild` is not optional here: without it the script's first act is
+`--skip-build` is not optional here: without it the script's first act is
 `pnpm build:engine`, which is the ~50-minute build you have just finished.
 
 ## 6. Report
