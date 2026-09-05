@@ -100,10 +100,19 @@ jobs:
           fetch-depth: 0
           submodules: false
 
+      - name: set up node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
       - name: set up pnpm
         uses: pnpm/action-setup@v6
         with:
           version: 9.15.9
+
+      - name: repository scripts
+        working-directory: src/scripts
+        run: pnpm install --frozen-lockfile
 
       - name: depot_tools
         # Invoked by hand for the same reason the Windows job calls
@@ -256,6 +265,26 @@ jobs:
         # a runner-hour -- keep compiling past a failure so one log names every
         # broken translation unit, not just the first.
         run: ninja -C out/Shot shot shot_c -j ${{ github.event.inputs.jobs }} -k 0
+
+      # What this run read: ninja's inputs and deps log, gn's build.ninja.d,
+      # the jumbo source lists. A probe exports the graph without the deps log.
+      # `pnpm trim-tree plan` takes the six platforms' exports and computes
+      # which tracked files no build opens. macOS is the one platform whose
+      # graph cannot be generated on the development host.
+      - name: export the build graph
+        if: always()
+        continue-on-error: true
+        working-directory: src
+        run: pnpm graph:export --build-dir out/Shot --out ../graph
+
+      - name: upload the build graph
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: graph-macos-${{ github.event.inputs.arch }}
+          path: graph
+          if-no-files-found: warn
 
       - name: save the build directory
         if: ${{ always() && github.event.inputs.mode == 'build' }}
