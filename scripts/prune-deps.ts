@@ -272,6 +272,9 @@ async function main(inputsArgs: string[], keepArg: string | undefined, dryRun: b
   await writeFile(modulesFile, keptSections.map((s) => s.join('\n')).join('\n'));
   if (staleGitlinks.length > 0) {
     // --cached: the index entry goes, whatever is on disk stays.
+    // git refuses to drop a gitlink while .gitmodules has unstaged edits, and
+    // the rewrite above is exactly such an edit.
+    await execa('git', ['add', '--', 'DEPS', '.gitmodules'], {cwd: root, stdio: 'inherit'});
     await execa('git', ['rm', '-q', '--cached', '--', ...staleGitlinks], {cwd: root, stdio: 'inherit'});
   }
   console.log(pc.green(`\nwrote DEPS and .gitmodules, removed ${staleGitlinks.length} gitlinks from the index`));
