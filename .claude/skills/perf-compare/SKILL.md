@@ -1,6 +1,6 @@
 ---
 name: perf-compare
-description: Compare a locally built candidate against a published npm version of shotium with tools/shot/node_perf.cjs, render the report with node_perf_images.py and node_perf_report.py, and avoid the measurements that lie: remote URLs (network and cache), the process sampler's own load, stale binaries, a platform package shadowing the local addon. Use for "is this faster", "did we regress", "how much did it improve", or the PR performance gate.
+description: Compare a locally built candidate against a published npm version of shotium with tools/shot/node_perf.cjs, render the report with node_perf_images.py and node_perf_report.py, and avoid the measurements that lie: remote URLs (network and cache), the process sampler's own load, a stale local addon that silently wins over the package. Use for "is this faster", "did we regress", "how much did it improve", or the PR performance gate.
 ---
 
 # Candidate vs published npm
@@ -11,10 +11,12 @@ is the commands and the traps.
 ## Preconditions
 
 1. **The candidate is what you think it is.** `out/Shot/shotium.dll` and
-   `shotium/native/build/Release/shotium.node` are newer than the change, and
-   any platform package under `shotium/node_modules/@shotkit/` is moved
-   aside (`/verify-engine` steps 0 and 2). With a package present, the
-   "candidate" is the published engine and the comparison is a coin flip.
+   `shotium/native/build/Release/shotium.node` must both be newer than the
+   change (`/verify-engine` steps 0 and 2). `binding.ts` loads the local addon
+   *before* any platform package, so an installed `@shotkit/` package is not
+   the risk -- a stale local `shotium.node` is. It wins silently, and you
+   measure the previous engine against the published one while believing you
+   measured the change.
 2. **The baseline is an installed package**, not a checkout:
    `npm pack`/`npm install @shotkit/shotium@<version>` into a scratch
    directory, and pass that directory as `BASELINE_PACKAGE`.

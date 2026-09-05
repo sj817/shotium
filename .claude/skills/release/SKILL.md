@@ -41,7 +41,14 @@ Commit and push only that file:
 git add shotium/package.json
 git commit -m "release: v$version"
 git push
-gh run watch -R sj817/shotium $(gh run list -R sj817/shotium --workflow checks.yml --limit 1 --json databaseId --jq '.[0].databaseId')
+SHA=$(git rev-parse HEAD)
+# GitHub takes a few seconds to create the run, and `--limit 1` without
+# `--commit` returns the *previous* run in that window -- which `gh run watch`
+# reports as an instant success, sending you on to the engine builds on the
+# strength of an older release. Select by commit, and wait for it to exist.
+run_id() { gh run list -R sj817/shotium --workflow "$1" --commit "$2" --json databaseId --jq '.[0].databaseId'; }
+until RUN=$(run_id checks.yml "$SHA") && [ -n "$RUN" ]; do sleep 5; done
+gh run watch -R sj817/shotium "$RUN"
 ```
 
 ## 2. Six engine builds on this commit
@@ -74,7 +81,11 @@ Do not tag until all six show `completed success` for `$SHA`.
 ```bash
 git tag -a v$version -m "v$version"
 git push origin v$version
-gh run watch -R sj817/shotium $(gh run list -R sj817/shotium --workflow publish.yml --limit 1 --json databaseId --jq '.[0].databaseId')
+TAG_SHA=$(git rev-parse "v$version^{commit}")
+# Same reason as step 1: never `--limit 1` right after a push.
+run_id() { gh run list -R sj817/shotium --workflow "$1" --commit "$2" --json databaseId --jq '.[0].databaseId'; }
+until RUN=$(run_id publish.yml "$TAG_SHA") && [ -n "$RUN" ]; do sleep 5; done
+gh run watch -R sj817/shotium "$RUN"
 ```
 
 `publish.yml` publishes the six platform packages first, then

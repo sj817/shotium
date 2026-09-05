@@ -114,7 +114,7 @@ chromium/                      # this repo; upstream Chromium layout with most o
 │   ├── src/types.ts           # every published type; adding an option means adding it here
 │   ├── src/daemon_main.ts     # entry point of the detached daemon process
 │   ├── src/lib/engine.ts      # owns the one engine handle a process gets
-│   ├── src/lib/binding.ts     # finds and loads the .node addon (platform package first)
+│   ├── src/lib/binding.ts     # finds and loads the .node addon (local build first)
 │   ├── src/lib/platform.ts    # which of the six platform packages carries this machine's engine
 │   ├── src/lib/client.ts      # daemon client: spawn, connect, request pipeline
 │   ├── src/lib/daemon.ts      # daemon server side
@@ -243,10 +243,14 @@ one process cannot tell each other's pointers apart; fontconfig's `free()` of a
   `runtime.running === false` after `require()`.
 - **Options are validated before the engine is touched** (`toRequest()`), and
   a bad request rejects with a `TypeError` without starting anything.
-- **Engine discovery order** (`binding.ts`): the platform package for this
-  `os`/`cpu`, then `native/build/Release/shotium.node`. A locally installed
-  platform package therefore shadows a freshly built addon; see
-  `/verify-engine`.
+- **Engine discovery order** (`binding.ts`): `native/build/Release/shotium.node`
+  first, then the platform package for this `os`/`cpu`. Local-first is
+  deliberate (`49546216e6eb`): the other order made every local check silently
+  exercise the published engine, and made package resolution walk a large pnpm
+  tree for a result that was never loaded. So the failure to remember is the
+  opposite of the obvious one -- a stale local addon shadows the package, and
+  `native.xxx is not a function` on a new ABI call means the local build is
+  behind, not that a package is in the way. See `/verify-engine`.
 - **The daemon** (`daemon.ts`, `client.ts`, `endpoint.ts`) is a detached
   `node dist/daemon_main.js <base64 config>` process speaking the `--serve`
   framing over a socket whose address is a hash of the wire generation and the
@@ -351,7 +355,7 @@ Output: `out/Shot/shotium.exe`, `out/Shot/shotium.dll`, `out/Shot/shotium_data.p
 | Reftests | `python tools/shot/demo_check.py out/Shot/shotium.exe` | exe | 84 pairs in `shot/testdata/demos`: page vs `-ref` page byte-identical (62 pass, 1 fuzzy, 21 smoke) |
 | Bilibili fixtures | `python tools/shot/bilibili_check.py --package shotium` | addon | two whole articles, every tile, every photo, both QR codes |
 | Pixel regression | `pwsh tests/render/run.ps1 -ShotExecutable out/Shot/shotium.exe` | baselines | decoded-pixel equality against a locally generated baseline |
-| Corpus digest | `tools/shot/accept.ps1` | exe | `shot/testdata/render_corpus.html` SHA-256 unchanged |
+| Acceptance run | `pwsh tools/shot/accept.ps1 -SkipBuild` | exe | Binary size, then renders `shot/testdata/render_corpus.html` at 1248x1320 and pixel-diffs it against the Chrome oracle `shot/testdata/out/oracle.png`, region by region. Without `-SkipBuild` it starts a full build first |
 
 - `PATH` must contain `out/Shot` for the Node checks: the addon links
   `shotium.dll`, and without it you get `ERR_DLOPEN_FAILED`.
@@ -366,8 +370,12 @@ Output: `out/Shot/shotium.exe`, `out/Shot/shotium.dll`, `out/Shot/shotium_data.p
   `Missing baseline manifest` until `update-baselines.ps1 -Accept` has been
   run with a pre-change binary. If you did not generate baselines before
   changing the engine, use `demo_check.py` for pixel evidence and say so.
-- CI's `checks.yml` runs on every push and pull request but never touches an
-  engine. The four scripts above run only in the manually dispatched
+- CI's `checks.yml` never touches an engine, and it is path-filtered: it runs
+  only for pushes to `main` and pull requests touching `shotium/`,
+  `shot/testdata/bilibili/`, `tools/shot/`, `scripts/` or `apps/benchmark/`.
+  A change confined to `shot/`, Blink, `docs/` or `.claude/` produces no run at
+  all, so waiting for it to go green is waiting for something that will never
+  appear. The four scripts above run only in the manually dispatched
   `engine-*.yml` workflows. Changing the public shape of `shotium/src`
   without running `node_check.cjs` and `daemon_check.cjs` locally has shipped
   broken checks before.
@@ -446,9 +454,12 @@ Output: `out/Shot/shotium.exe`, `out/Shot/shotium.dll`, `out/Shot/shotium_data.p
   | Tables and colour in output | `picocolors`, `console.table` | manual padding |
   | Tests for a script | `node:test` (`*.test.ts`) | ad-hoc assertion scripts |
 
-- pnpm runs a package script with `cwd = scripts`; resolve user-supplied
-  relative paths against `process.env.INIT_CWD`, and the repository root as
-  `path.resolve(import.meta.dirname, '..')`.
+- pnpm runs a package script with `cwd = scripts`, so take the repository root
+  as `path.resolve(import.meta.dirname, '..')` and resolve user-supplied
+  relative paths against it. `INIT_CWD` is not an option: the root aliases are
+  `pnpm -C scripts <name>`, and the inner pnpm overwrites `INIT_CWD` with the
+  outer package directory, which is the root again. Say so in `--help`; a path
+  that lands somewhere the caller did not expect is worse than one rule.
 - Every script that CI calls has a root `package.json` alias so the workflow
   YAML stays a list of `pnpm <name>` lines rather than inline shell.
 
@@ -487,7 +498,7 @@ Output: `out/Shot/shotium.exe`, `out/Shot/shotium.dll`, `out/Shot/shotium_data.p
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `checks.yml` | push to `main`, every PR, dispatch | The engine-less half: package builds, types, `require()` does not start the engine, option validation, daemon wire, harness syntax + unit tests, six platform packages consistent, tarball contents, Python scripts compile, Bilibili fixtures offline, PNG decoder sanity. ~40 s, expected always green |
+| `checks.yml` | push to `main` and PRs, path-filtered to `shotium/`, `shot/testdata/bilibili/`, `tools/shot/`, `scripts/`, `apps/benchmark/`; dispatch | The engine-less half: package builds, types, `require()` does not start the engine, option validation, daemon wire, harness syntax + unit tests, six platform packages consistent, tarball contents, Python scripts compile, Bilibili fixtures offline, PNG decoder sanity. ~40 s, expected always green. An engine-only change produces no run at all, which is not the same as a pass |
 | `engine-windows.yml` | dispatch (`arch`, `jobs`, `run_checks`) | depot_tools, SDK, `gclient sync`, timestamp restore, cached `out/`, `gn gen`, `ninja`, package `.7z`, node platform package, run the check suites. Cold ~4 h, warm ~25 min |
 | `engine-linux.yml`, `engine-macos.yml` | dispatch (`mode` = probe or build, `arch`, `jobs`, `run_checks`) | Same, plus `probe` = `gn gen` + `ninja -n` only. Probe green is level 1 of 3, not success |
 | `benchmark.yml` | dispatch (`shotium_version`, `profile`, `commit_results`, `seed`) | 30-job `platform x shard` matrix against Puppeteer/Playwright; commits aggregated results to `benchmark-results/` |

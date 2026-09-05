@@ -5,8 +5,10 @@ description: Run every check that needs a built engine and report on the three-l
 
 # Verify the engine
 
-`checks.yml` runs on every push and never touches an engine. The checks below
-are what actually establish that the engine works, and they run in CI only in
+`checks.yml` never touches an engine, and it is path-filtered: a change
+confined to `shot/`, Blink, `docs/` or `.claude/` produces no run at all, so
+neither its green nor its absence says anything here. The checks below are what
+actually establish that the engine works, and they run in CI only in
 the manually dispatched `engine-*.yml` workflows. The public JS API has
 changed shape before with CI fully green and every one of these scripts
 broken; that is why this is a skill and not a footnote.
@@ -57,13 +59,20 @@ Three preconditions; missing any one produces a convincing false failure:
    cp ../../out/Shot/shotium.dll ../../out/Shot/shotium_data.pak ../../out/Shot/shotium_strings.pak build/Release/
    ```
 
-3. **Move the installed platform package out of the way.**
-   `shotium/src/lib/binding.ts` resolves `@shotkit/shotium-win32-x64` (or the
-   platform's equivalent) *before* `native/build/Release/shotium.node`. A
-   published package under `shotium/node_modules/@shotkit/` shadows the addon
-   you just built and fails with `native.xxx is not a function` for any new
-   ABI call. Rename the directory to `*.off` for the run and rename it back
-   afterwards. Do not delete it.
+3. **Check the addon you just built is newer than the change.**
+   `shotium/src/lib/binding.ts` resolves `native/build/Release/shotium.node`
+   *first* and falls back to `@shotkit/shotium-win32-x64` (or the platform's
+   equivalent) only when the local build is absent. So the platform package
+   does not need moving -- and moving it fixes nothing. What does go wrong is
+   the reverse: a *stale* local addon silently wins, and any new ABI call
+   fails with `native.xxx is not a function`. If you see that after changing
+   `shot_api.h`, rebuild the addon (step 2); do not go looking for a package
+   in the way.
+
+   ```powershell
+   Get-Item shotium/native/build/Release/shotium.node, out/Shot/shotium.dll |
+       Select-Object Name, Length, LastWriteTime
+   ```
 
 Then:
 
@@ -109,13 +118,22 @@ changed SHA-256 with identical pixels is an encoder difference, not a
 regression. Relax a per-case threshold only after looking at the generated
 red-on-black diff and recording the reason in `cases.json`.
 
-## 5. Corpus digest
+## 5. Acceptance run
 
-`tools/shot/accept.ps1` renders `shot/testdata/render_corpus.html` and
-compares it against the Chrome oracle in `shot/testdata/out/oracle.png`. The
-corpus SHA-256 has been stable across the whole cut; a change is either an
-intended rendering change (document it in `docs/cut-progress.md` section 8.6
-where the known differences are listed) or a regression.
+```powershell
+pwsh tools/shot/accept.ps1 -SkipBuild
+```
+
+Reports the binary size, renders `shot/testdata/render_corpus.html` at
+1248x1320, pixel-diffs it against the Chrome oracle in
+`shot/testdata/out/oracle.png`, and then breaks the difference down region by
+region -- a whole-image percentage cannot tell "antialiasing is a shade
+different everywhere" from "one element is missing". A region that moved is
+either an intended rendering change (document it in `docs/cut-progress.md`
+section 8.6, where the known differences are listed) or a regression.
+
+`-SkipBuild` is not optional here: without it the script's first act is
+`pnpm build:engine`, which is the ~50-minute build you have just finished.
 
 ## 6. Report
 

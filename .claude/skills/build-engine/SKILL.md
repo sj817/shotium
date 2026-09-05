@@ -43,12 +43,14 @@ pnpm build:engine --target shot_c --jobs 16 --log out/Shot/build.log    # shotiu
 
 The entry point is `scripts/build-engine.ts` (TypeScript, `execa`,
 `p-retry`, `cac`); `pnpm build:engine` forwards to it from the repository
-root, and a relative `--log` is relative to where you typed the command.
+root, and a relative `--log` is resolved against the repository root -- the
+forward runs a second pnpm, which overwrites `INIT_CWD`, so the directory you
+typed the command in is not recoverable.
 Run it in the background and read the log. Expectations:
 
 | Situation | Duration |
 |---|---|
-| First build into `out/Shot` (~5,800 steps) | ~50 minutes at `-Jobs 16` |
+| First build into `out/Shot` (~5,800 steps) | ~50 minutes at `--jobs 16` |
 | Incremental, only `shot/` touched | a few minutes, mostly link |
 | Incremental touching Blink core headers | tens of minutes (jumbo TUs recompile) |
 
@@ -77,7 +79,7 @@ The log's first `ninja: Entering directory` line must say `out/Shot`.
   so that peak-per-compiler x `j` stays under half of free memory. ninja is
   incremental; stopping to change `--jobs` loses nothing already compiled.
 - ThinLTO link memory is governed by `/opt:lldltojobs=N` in the linker
-  flags, not by `-Jobs`.
+  flags, not by `--jobs`.
 
 ## Reading failures
 

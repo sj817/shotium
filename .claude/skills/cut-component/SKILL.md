@@ -124,7 +124,10 @@ Rules:
 
 In order; no step substitutes for the next:
 
-1. `gn gen out/Shot` (~25 s). Proves only that the graph parses.
+1. `pnpm build:engine --gen-only` (~25 s). Proves only that the graph parses.
+   Not a bare `gn gen`: several Windows toolchain variants race to write
+   `environment.x64`, and the `PermissionError` that produces reads exactly
+   like a broken `BUILD.gn`. The script retries it.
 2. `python tools/shot/missing_inputs.py out/Shot` (~10 s). Walks
    `ninja -t inputs shot shot_c` and stats every file. GN never opens an
    `inputs` entry, `ninja -n` stops at the first missing one, and a warm
@@ -142,9 +145,10 @@ In order; no step substitutes for the next:
    does this and stubs missing directories so one pass lists every gap. One
    out directory answers for one platform. macOS only through
    `engine-macos.yml` in `probe` mode.
-6. `/verify-engine`. The corpus SHA-256 must not change; a rendering
-   difference from a cut is a bug unless documented in
-   `docs/cut-progress.md` section 8.6.
+6. `/verify-engine`, including the acceptance run
+   (`pwsh tools/shot/accept.ps1 -SkipBuild`). No region of the corpus may move
+   against the Chrome oracle; a rendering difference from a cut is a bug unless
+   it is documented in `docs/cut-progress.md` section 8.6.
 
 Report on the three-level ladder. A green Linux probe is level 1 of 3 and
 has been followed by real compile failures (MPRIS includes,
