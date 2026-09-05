@@ -719,6 +719,12 @@ size_t ConversionContext<Result>::EmitBackdropFilter(
   pending_backdrop_clip_id_ = push<cc::ClipRectOp>(
       backdrop_filter_bounds.getBounds(), SkClipOp::kIntersect,
       /*antialias=*/false);
+  // The outer clip has its own Restore in EndEffect(). Register its pair
+  // separately from the saveLayer pair below. A PaintOpBuffer ignores these
+  // markers, but DisplayItemList uses them to build its visual-rect stack;
+  // closing two pairs after opening only one underflows that stack.
+  result_.EndPaintOfPairedBegin();
+  result_.StartPaint();
   size_t save_layer_id = push<cc::SaveLayerFiltersOp>(
       backdrop_filter_bounds.getBounds(),
       std::array<sk_sp<cc::PaintFilter>, 0>{},
