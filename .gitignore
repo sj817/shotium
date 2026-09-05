@@ -397,9 +397,9 @@ apps/demo/faruzan.png
 /docs/.demo-terminal.gif
 
 # Coding-agent files. CLAUDE.md, AGENTS.md and .claude/skills are the checked-in
-# instructions. .agents/skills holds the links tools/shot/link_agent_skills.ps1
-# makes for agents that look there; CLAUDE.local.md and settings.local.json are
-# per-machine.
+# instructions. .agents/skills holds the links `pnpm skills:link`
+# (scripts/link-agent-skills.ts) makes for agents that look there;
+# CLAUDE.local.md and settings.local.json are per-machine.
 /.agents/skills
 /CLAUDE.local.md
 /.claude/settings.local.json
