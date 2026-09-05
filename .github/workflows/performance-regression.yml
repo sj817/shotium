@@ -61,6 +61,9 @@ jobs:
       - uses: pnpm/action-setup@v6
         with:
           version: 9.15.9
+      - name: repository scripts
+        working-directory: scripts
+        run: pnpm install --frozen-lockfile
       - name: Build the candidate JavaScript
         working-directory: shotium
         run: |
@@ -79,9 +82,8 @@ jobs:
         run: |
           npm install --prefix out/performance/baseline --ignore-scripts --no-audit --no-fund "@shotkit/shotium@$BASELINE_VERSION"
           node tools/shot/node_perf_ci.cjs stage out/performance/download out/performance/candidate
-          python -m pip install Pillow==11.1.0
       - name: Validate the two real long articles
-        run: python tools/shot/bilibili_check.py --package out/performance/candidate
+        run: pnpm verify:bilibili --package out/performance/candidate
       - name: Complete paired performance matrix
         id: performance
         run: >-

@@ -169,7 +169,11 @@ function resolveTargets(target: CacheTarget['target']): string[] {
  * object is built once at import time and the engine comes and goes.
  */
 export class Cache {
-  constructor(private readonly engineHandle: () => Handle | null) {}
+  private readonly engineHandle: () => Handle | null;
+
+  constructor(engineHandle: () => Handle | null) {
+    this.engineHandle = engineHandle;
+  }
 
   /**
    * This project's cache directory, absolute and with forward slashes.

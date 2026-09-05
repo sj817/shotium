@@ -521,9 +521,10 @@ jobs:
         # antialiasing cancel out instead of needing a blessed image per
         # platform. Windows was simply the one still not running them.
         run: |
-          python -m pip install --quiet pillow
-          python tools/shot/serve_check.py out/Shot/shotium.exe
-          python tools/shot/net_check.py out/Shot/shotium.exe
+          pnpm verify:serve out/Shot/shotium.exe
+          if ($LASTEXITCODE -ne 0) { throw "serve checks failed" }
+          pnpm verify:net out/Shot/shotium.exe
+          if ($LASTEXITCODE -ne 0) { throw "net checks failed" }
           # The node addon, and the C ABI under it. Built here rather than
           # taken from anywhere else, because the library it links against is
           # the one this job has just produced -- an addon checked against a
@@ -555,13 +556,18 @@ jobs:
           pnpm install --no-lockfile
           pnpm run build
           Pop-Location
-          node tools/shot/node_check.cjs out/Shot/shotium.exe
-          python tools/shot/bilibili_check.py --package shotium
+          pnpm verify:node out/Shot/shotium.exe
+          if ($LASTEXITCODE -ne 0) { throw "node checks failed" }
+          pnpm verify:bilibili --package shotium
           if ($LASTEXITCODE -ne 0) { throw "Bilibili regression checks failed" }
-          node tools/shot/daemon_check.cjs out/Shot/shotium.exe
-          node tools/shot/daemon_protocol_check.cjs
+          pnpm verify:daemon out/Shot/shotium.exe
+          if ($LASTEXITCODE -ne 0) { throw "daemon checks failed" }
+          pnpm verify:daemon-protocol
+          if ($LASTEXITCODE -ne 0) { throw "daemon protocol checks failed" }
           python tools/shot/charset_check.py out/Shot/shotium.exe
-          python tools/shot/demo_check.py out/Shot/shotium.exe
+          if ($LASTEXITCODE -ne 0) { throw "charset checks failed" }
+          pnpm verify:demos out/Shot/shotium.exe
+          if ($LASTEXITCODE -ne 0) { throw "reftests failed" }
 
       - name: npm platform package
         if: success()

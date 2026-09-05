@@ -368,9 +368,8 @@ jobs:
                 && github.event.inputs.arch == 'x64' }}
         working-directory: src
         run: |
-          python3 -m pip install --quiet pillow
-          python3 tools/shot/serve_check.py out/Shot/shotium
-          python3 tools/shot/net_check.py out/Shot/shotium
+          pnpm verify:serve out/Shot/shotium
+          pnpm verify:net out/Shot/shotium
 
           # The node addon, and the C ABI under it. Built here rather than
           # taken from anywhere else, because the library it links against is
@@ -398,29 +397,29 @@ jobs:
           #
           # Which is why the strip step runs after this one rather than before.
           # A stripped library gives back a backtrace of hex addresses.
-          node tools/shot/node_check.cjs out/Shot/shotium || {
+          pnpm verify:node out/Shot/shotium || {
             status=$?
-            echo "::group::node_check died with $status -- backtrace"
+            echo "::group::check-node died with $status -- backtrace"
             readelf -SW out/Shot/libshotium.so | grep -E 'symtab|dynsym' || true
             sudo apt-get update -qq && sudo apt-get install -y -qq gdb || true
             gdb -q -batch \
                 -ex 'set confirm off' \
                 -ex run \
                 -ex 'thread apply all bt 40' \
-                --args node tools/shot/node_check.cjs out/Shot/shotium || true
+                --args node scripts/node_modules/tsx/dist/cli.mjs scripts/check-node.ts out/Shot/shotium || true
             echo "::endgroup::"
             exit "$status"
           }
-          python3 tools/shot/bilibili_check.py --package shotium
+          pnpm verify:bilibili --package shotium
           # The daemon runs here as well as on Windows because
           # shotium/src/lib/endpoint.ts has two branches -- a named pipe on
           # Windows, a unix socket everywhere else -- and the Windows job
           # exercises exactly one of them.
-          node tools/shot/daemon_check.cjs out/Shot/shotium
-          node tools/shot/daemon_protocol_check.cjs
+          pnpm verify:daemon out/Shot/shotium
+          pnpm verify:daemon-protocol
 
           python3 tools/shot/charset_check.py out/Shot/shotium
-          python3 tools/shot/demo_check.py out/Shot/shotium
+          pnpm verify:demos out/Shot/shotium
 
       - name: keep the symbols before stripping them
         if: ${{ success() && github.event.inputs.mode == 'build' }}

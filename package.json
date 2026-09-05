@@ -27,6 +27,14 @@
     "docs": "pnpm run docs:assets && pnpm run docs:demo",
     "trim-tree": "pnpm -C scripts trim-tree",
     "graph:export": "pnpm -C scripts trim-tree export",
-    "prune-deps": "pnpm -C scripts prune-deps"
+    "prune-deps": "pnpm -C scripts prune-deps",
+    "verify:serve": "pnpm -C scripts check-serve",
+    "verify:net": "pnpm -C scripts check-net",
+    "verify:demos": "pnpm -C scripts check-demos",
+    "verify:node": "pnpm -C scripts check-node",
+    "verify:daemon": "pnpm -C scripts check-daemon",
+    "verify:daemon-protocol": "pnpm -C scripts check-daemon-protocol",
+    "verify:bilibili": "pnpm -C scripts check-bilibili",
+    "bilibili:capture": "pnpm -C scripts bilibili-capture"
   }
 }

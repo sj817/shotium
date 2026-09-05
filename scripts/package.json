@@ -11,18 +11,40 @@
     "link-skills": "tsx link-agent-skills.ts",
     "check:types": "tsc --noEmit",
     "trim-tree": "tsx trim-tree.ts",
-    "prune-deps": "tsx prune-deps.ts"
+    "prune-deps": "tsx prune-deps.ts",
+    "check-serve": "tsx check-serve.ts",
+    "check-net": "tsx check-net.ts",
+    "check-demos": "tsx check-demos.ts",
+    "check-node": "tsx check-node.ts",
+    "check-daemon": "tsx check-daemon.ts",
+    "check-daemon-protocol": "tsx check-daemon-protocol.ts",
+    "check-bilibili": "tsx check-bilibili.ts",
+    "bilibili-capture": "tsx bilibili-capture.ts"
   },
   "dependencies": {
+    "@clack/prompts": "0.11.0",
     "cac": "7.0.0",
     "execa": "10.0.1",
+    "p-limit": "7.1.1",
+    "p-map": "7.0.3",
     "p-retry": "8.0.1",
     "picocolors": "1.1.1",
+    "pidusage": "4.0.1",
+    "pixelmatch": "7.1.0",
+    "pngjs": "7.0.0",
+    "sharp": "0.34.4",
+    "simple-statistics": "7.8.8",
     "tinyglobby": "0.2.15",
-    "tsx": "4.23.13"
+    "tsx": "4.23.13",
+    "which": "5.0.0",
+    "zod": "4.1.11"
   },
   "devDependencies": {
     "@types/node": "22.18.0",
+    "@types/pidusage": "2.0.5",
+    "@types/pixelmatch": "5.2.6",
+    "@types/pngjs": "6.0.5",
+    "@types/which": "3.0.4",
     "typescript": "5.9.2"
   }
 }

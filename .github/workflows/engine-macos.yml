@@ -388,10 +388,8 @@ jobs:
                 && github.event.inputs.run_checks == 'true' }}
         working-directory: src
         run: |
-          python3 -m pip install --quiet --break-system-packages pillow || \
-            python3 -m pip install --quiet pillow
-          python3 tools/shot/serve_check.py out/Shot/shotium
-          python3 tools/shot/net_check.py out/Shot/shotium
+          pnpm verify:serve out/Shot/shotium
+          pnpm verify:net out/Shot/shotium
           # The node addon, and the C ABI under it. Built here rather than
           # taken from anywhere else, because the library it links against is
           # the one this job has just produced -- an addon checked against a
@@ -413,13 +411,13 @@ jobs:
           # optionalDependencies yet.
           ( cd shotium && pnpm install --no-lockfile && pnpm run build )
 
-          node tools/shot/node_check.cjs out/Shot/shotium
-          python3 tools/shot/bilibili_check.py --package shotium
-          node tools/shot/daemon_check.cjs out/Shot/shotium
-          node tools/shot/daemon_protocol_check.cjs
+          pnpm verify:node out/Shot/shotium
+          pnpm verify:bilibili --package shotium
+          pnpm verify:daemon out/Shot/shotium
+          pnpm verify:daemon-protocol
 
           python3 tools/shot/charset_check.py out/Shot/shotium
-          python3 tools/shot/demo_check.py out/Shot/shotium
+          pnpm verify:demos out/Shot/shotium
 
       - name: npm platform package
         if: ${{ success() && github.event.inputs.mode == 'build' }}
