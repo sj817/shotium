@@ -32,7 +32,8 @@
 //   3. Python: gn records the exec_script it ran, not the modules that script
 //      imports, so every .py under a directory that holds a kept .py stays.
 //   4. build/ stays whole; the toolchain scripts import each other freely.
-//   5. Licence files in any ancestor directory of a kept file stay.
+//   5. Licence files and nested .gitignore files in any ancestor directory of
+//      a kept file stay.
 //   6. A vendored Rust crate the build reads stays whole (Cargo.toml, LICENSE).
 //   7. An extra keep list (--keep FILE, one path or prefix/ per line).
 //   8. Under build/, paths for platforms this project never builds (android,
@@ -127,9 +128,18 @@ async function exportGraph(buildDirArg: string, outArg: string): Promise<number>
 
   const args = existsSync(path.join(buildDir, 'args.gn')) ? await readFile(path.join(buildDir, 'args.gn'), 'utf8') : '';
   const cpu = /target_cpu\s*=\s*"([^"]+)"/.exec(args)?.[1] ?? os.arch();
-  const meta = {platform: process.platform, targetCpu: cpu, buildDir: buildDirArg, jumboUnits: jumbo.length, date: new Date().toISOString()};
+  const hostOs: Record<string, string> = {win32: 'win', darwin: 'mac'};
+  const targetOs = /target_os\s*=\s*"([^"]+)"/.exec(args)?.[1] ?? hostOs[process.platform] ?? process.platform;
+  const meta = {
+    hostPlatform: process.platform,
+    targetOs,
+    targetCpu: cpu,
+    buildDir: buildDirArg,
+    jumboUnits: jumbo.length,
+    date: new Date().toISOString(),
+  };
   await writeFile(path.join(out, 'meta.json'), JSON.stringify(meta, null, 2) + '\n');
-  console.log(`exported ${buildDirArg} (${meta.platform}/${cpu}, ${jumbo.length} jumbo units) to ${outArg}`);
+  console.log(`exported ${buildDirArg} (${targetOs}/${cpu}, ${jumbo.length} jumbo units) to ${outArg}`);
   return 0;
 }
 
@@ -167,9 +177,20 @@ async function readRecords(dir: string): Promise<Set<string>> {
   return union;
 }
 
+// Tracked files, without the gitlinks: a DEPS checkout registered as a
+// submodule is an index entry of mode 160000, and whether it stays is the
+// DEPS entry's decision (scripts/prune-deps.ts), not the build graph's.
 async function trackedFiles(): Promise<string[]> {
-  const {stdout} = await execa('git', ['--no-optional-locks', 'ls-files', '-z'], {cwd: root, maxBuffer: 1 << 28});
-  return stdout.split('\0').filter(Boolean);
+  const {stdout} = await execa('git', ['--no-optional-locks', 'ls-files', '-s', '-z'], {cwd: root, maxBuffer: 1 << 28});
+  const files: string[] = [];
+  for (const entry of stdout.split('\0')) {
+    if (!entry) continue;
+    // "<mode> <object> <stage>\t<path>"
+    const tab = entry.indexOf('\t');
+    if (tab < 0 || entry.startsWith('160000 ')) continue;
+    files.push(entry.slice(tab + 1));
+  }
+  return files;
 }
 
 // Rule 2. Directories end with '/'; files match exactly.
@@ -180,6 +201,8 @@ const whitelist = [
   '.claude/', '.github/', 'apps/', 'benchmark-results/', 'bootstrap/', 'build_overrides/',
   'buildtools/', 'build/args/', 'build/config/shot_build.gni', 'docs/', 'patches/', 'scripts/',
   'shot/', 'shotium/', 'tests/', 'tools/shot/',
+  // .sha1 stamps the dsymutil_mac_* gclient hooks download by; no build reads them.
+  'tools/clang/dsymutil/',
 ];
 
 // Rule 8. A path under build/ with one of these as a directory name belongs to
@@ -188,7 +211,10 @@ const foreignPlatforms = new Set([
   'android', 'fuchsia', 'ios', 'chromeos', 'cros', 'lacros', 'cast', 'nacl', 'aix', 'zos',
 ]);
 
-const licenceFile = /^(LICENSE|LICENCE|COPYING|NOTICE|PATENTS|README\.chromium)(\.[A-Za-z0-9_-]+)?$/i;
+// Kept beside anything kept, in every ancestor directory: licences, and the
+// nested .gitignore files that hide the DEPS checkouts (third_party/.gitignore
+// is why `git status` does not list third_party/llvm-build).
+const licenceFile = /^(LICENSE|LICENCE|COPYING|NOTICE|PATENTS|README\.chromium|\.gitignore)(\.[A-Za-z0-9_-]+)?$/i;
 
 function matchesWhitelist(file: string, extra: string[]): boolean {
   for (const entry of [...whitelist, ...extra]) {
