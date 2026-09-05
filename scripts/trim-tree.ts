@@ -195,7 +195,10 @@ async function trackedFiles(): Promise<string[]> {
 
 // Rule 2. Directories end with '/'; files match exactly.
 const whitelist = [
-  '.clang-format', '.rustfmt.toml', '.gitattributes', '.gitignore', '.gitmodules', '.gn', '.vpython3',
+  '.clang-format', '.rustfmt.toml',
+  // build/compute_build_timestamp.py open()s chrome/VERSION from inside an
+  // exec_script, which no graph records.
+  'chrome/VERSION', '.gitattributes', '.gitignore', '.gitmodules', '.gn', '.vpython3',
   'AGENTS.md', 'AUTHORS', 'BUILD.gn', 'CLAUDE.md', 'DEPS', 'LICENSE', 'README.md', 'README.zh.md',
   'package.json',
   '.claude/', '.github/', 'apps/', 'benchmark-results/', 'bootstrap/', 'build_overrides/',
