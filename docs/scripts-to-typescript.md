@@ -17,8 +17,8 @@
 - 工作区暂时只收 `tools/shot`。根目录放 `pnpm-workspace.yaml` 会让 `shotium/` 和
   `apps/benchmark` 里的 `pnpm install` 变成安装整个工作区，而 shotium 因为六个平台包的版本
   钉在尚未发布的号上，进不了任何带 `--frozen-lockfile` 的工作区。两条都实测过，见第 6 节。
-- 本次已完成：`build.ps1` → `build_engine.ts`、`link_agent_skills.ps1` → `link_agent_skills.ts`，
-  `tools/shot` 成为独立 pnpm 项目，规则写进 `CLAUDE.md`。
+- 本次已完成：`build.ps1` → `scripts/build-engine.ts`、`link_agent_skills.ps1` →
+  `scripts/link-agent-skills.ts`，`scripts/` 成为独立 pnpm 项目，规则写进 `CLAUDE.md`。
 
 ## 1. 规则
 
@@ -98,9 +98,9 @@ CI 直接调用的脚本（次数为 workflow 里出现的次数）：`make_plat
 
 | 脚本 | 行数 | 手写了什么 | 迁后 | 状态 |
 |---|---:|---|---:|---|
-| `build.ps1` | 121 | gn / ninja 重试、ICU、补丁 | 190 | **已迁** `build_engine.ts` |
-| `link_agent_skills.ps1` | 40 | junction | 70 | **已迁** `link_agent_skills.ts` |
-| `errors.py`、`build_errors.py` | 197 | ninja 日志正则归类 | ~120 | 迁后由 `build_engine.ts` 进程内调用 |
+| `build.ps1` | 121 | gn / ninja 重试、ICU、补丁 | 190 | **已迁** `scripts/build-engine.ts` |
+| `link_agent_skills.ps1` | 40 | junction | 70 | **已迁** `scripts/link-agent-skills.ts` |
+| `errors.py`、`build_errors.py` | 197 | ninja 日志正则归类 | ~120 | 迁后由 `build-engine.ts` 进程内调用 |
 | `check.py` | 248 | compdb 取命令 + `-fsyntax-only` + 12 路并发 | ~150 | `p-limit` |
 | `missing_inputs.py` | 99 | `ninja -t inputs` + stat | ~60 | |
 | `accept.ps1` | 76 | 构建、渲染、diff、体积 | ~60 | 等 `tests/render` 迁完一起 |
@@ -172,8 +172,11 @@ YAML 只剩 `run: pnpm ci:sdk`、`pnpm ci:package`、`pnpm release:collect` 这�
 - 选 `tsx`：`apps/benchmark` 已用，`.ts` 之间 import 不用写扩展名，脚本参数原样透传。
 - Node 原生剥类型（22.18+ 默认开）也能跑，`tsconfig.json` 的 `erasableSyntaxOnly` 保证不写
   它剥不掉的语法（enum、命名空间、参数属性）。CI 的 `checks.yml` 用 Node 22，其余用 24，都满足。
-- pnpm 跑包脚本时 `cwd` 是 `tools/shot`，用户给的相对路径要按 `INIT_CWD` 解析；
-  `build_engine.ts` 第一版就栽在这上面。
+- pnpm 跑包脚本时 `cwd` 是 `scripts/`，用户给的相对路径一律按仓库根
+  （`path.resolve(import.meta.dirname, '..')`）解析，并在 `--help` 里说明。不能用
+  `INIT_CWD`：根目录别名是 `pnpm -C scripts <name>`，里层的 pnpm 会把 `INIT_CWD` 覆盖成
+  外层包目录，也就是仓库根，用户敲命令的目录已经拿不到了。`build-engine.ts` 第一版按
+  `INIT_CWD` 解析，就是这样栽的。
 
 ## 6. 工作区：两条实测约束
 
@@ -214,7 +217,7 @@ lockfile 与 `package.json` 的 specifier 不一致而失败。所以工作区 l
 
 | 阶段 | 内容 | 要改的 workflow | 验收 |
 |---|---|---|---|
-| 1（已完成） | `build_engine.ts`、`link_agent_skills.ts`、`tools/shot` 成为 pnpm 项目、规则入 `CLAUDE.md` | 无 | no-op 构建 33 秒跑通，junction 建删往返 |
+| 1（已完成） | `scripts/build-engine.ts`、`scripts/link-agent-skills.ts`、`scripts/` 成为 pnpm 项目、规则入 `CLAUDE.md` | 无 | no-op 构建 33 秒跑通，junction 建删往返 |
 | 2 | 4.1 验证套件；`errors` / `build_errors` 进程内化 | `engine-*.yml` 的 checks 步骤各 4 行 | 每个套件的通过 / 失败条数与旧版一致；`serve_check` 仍逐字节比较 |
 | 3 | 4.3 `tests/render` + `accept.ps1` | 无 | 同一基线下逐像素结果一致 |
 | 4 | 4.4 性能工具 | `performance-regression.yml`、`benchmark.yml` 调用行 | 同一份 `result.json` 出同一份报告 |

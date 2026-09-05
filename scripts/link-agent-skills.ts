@@ -7,10 +7,16 @@
 // so a rename does not leave the other agents loading a directory that no
 // longer resolves.
 //
+// Only links into this checkout's .claude/skills are ever removed. The
+// directory is gitignored precisely so that it can hold per-machine links to
+// skills that live elsewhere; those are reported and left alone, unless one
+// carries the name of a checked-in skill, in which case the checked-in skill
+// wins and the old target is printed so the change is visible.
+//
 //   pnpm skills:link
 //   pnpm skills:link --remove
 
-import {lstat, mkdir, readdir, rmdir, stat, symlink, unlink} from 'node:fs/promises';
+import {lstat, mkdir, readdir, readlink, rmdir, symlink, unlink} from 'node:fs/promises';
 import path from 'node:path';
 
 import {cac} from 'cac';
@@ -21,68 +27,100 @@ const target = path.join(root, '.agents', 'skills');
 const onWindows = process.platform === 'win32';
 
 const cli = cac('link-skills').option('--remove', 'remove the links instead of creating them');
+// The default command is what makes cac reject `--remov`; without it an
+// unknown option parses silently and the run creates links it was asked to
+// remove.
+cli.command('', 'link .claude/skills into .agents/skills').action(() => {});
 cli.help();
-const {options} = cli.parse();
+let options: Record<string, unknown>;
+try {
+  options = cli.parse().options;
+} catch (error) {
+  console.error(`link-skills: ${error instanceof Error ? error.message : String(error)}`);
+  process.exit(2);
+}
 if (options.help) process.exit(0);
 
-// `stale` is a link whose target is gone -- what a renamed or deleted skill
-// leaves behind. lstat alone cannot see it: it succeeds on a dangling junction,
-// so reporting on lstat only would call the leftover `ok` and keep agents
-// loading a skill directory that no longer resolves.
-type LinkKind = 'link' | 'stale' | 'dir' | 'missing';
+// What is at .agents/skills/<name>. The link kinds are decided by where the
+// link points, read with readlink, not by whether it resolves: lstat succeeds
+// on a dangling junction, and stat succeeds on a junction into a different
+// checkout, so neither can tell a leftover from a correct link.
+//
+//   ok       points at .claude/skills/<name> of this checkout
+//   ours     points elsewhere under this checkout's .claude/skills (a rename
+//            left it behind, or it dangles); safe to remove
+//   foreign  points outside .claude/skills: someone else's link, keep it
+//   dir      a real directory, never touched
+//   missing  nothing there
+type Entry = {kind: 'ok' | 'ours' | 'foreign' | 'dir' | 'missing'; to?: string};
 
-async function linkKind(file: string): Promise<LinkKind> {
+async function inspect(name: string): Promise<Entry> {
+  const link = path.join(target, name);
   let stats;
   try {
-    stats = await lstat(file);
+    stats = await lstat(link);
   } catch {
-    return 'missing';
+    return {kind: 'missing'};
   }
-  if (!stats.isSymbolicLink()) return 'dir';
-  try {
-    await stat(file);
-    return 'link';
-  } catch {
-    return 'stale';
-  }
+  if (!stats.isSymbolicLink()) return {kind: 'dir'};
+  const to = path.resolve(path.dirname(link), await readlink(link));
+  if (samePath(to, path.join(source, name))) return {kind: 'ok', to};
+  const inside = path.relative(source, to);
+  const ours = inside !== '' && !inside.startsWith('..') && !path.isAbsolute(inside);
+  return {kind: ours ? 'ours' : 'foreign', to};
+}
+
+// path.relative is case-insensitive on win32 and case-sensitive elsewhere,
+// which is the file system's own rule on each.
+function samePath(a: string, b: string): boolean {
+  return path.relative(a, b) === '';
 }
 
 // A directory junction is removed with rmdir on Windows; unlink reports EPERM.
 // Neither touches the directory it points at.
-async function removeLink(file: string): Promise<void> {
-  await (onWindows ? rmdir(file) : unlink(file));
+async function removeLink(name: string): Promise<void> {
+  const link = path.join(target, name);
+  await (onWindows ? rmdir(link) : unlink(link));
 }
 
-async function entriesOf(dir: string): Promise<string[]> {
-  try {
-    return (await readdir(dir, {withFileTypes: true}))
-        .filter((entry) => entry.isDirectory() || entry.isSymbolicLink())
-        .map((entry) => entry.name)
-        .sort();
-  } catch {
-    return [];
-  }
+async function makeLink(name: string): Promise<void> {
+  await symlink(path.join(source, name), path.join(target, name), onWindows ? 'junction' : 'dir');
 }
 
-// Both branches enumerate .agents/skills, not .claude/skills: a link is only
-// reachable from the directory it lives in, and the ones worth acting on are
-// exactly the ones whose skill is gone from the source.
-const skills = await entriesOf(source);
-const linked = await entriesOf(target);
+async function names(dir: string): Promise<string[]> {
+  return (await readdir(dir, {withFileTypes: true}))
+      .filter((entry) => entry.isDirectory() || entry.isSymbolicLink())
+      .map((entry) => entry.name)
+      .sort();
+}
 
-async function prune(names: string[], label: string): Promise<void> {
-  for (const name of names) {
-    const link = path.join(target, name);
-    const kind = await linkKind(link);
-    if (kind !== 'link' && kind !== 'stale') continue;
-    await removeLink(link);
-    console.log(`${label} ${name}`);
+// The source must exist: an unreadable .claude/skills is an error, not an
+// empty skill set, or a sparse checkout would prune every link and exit 0.
+// The target may be absent -- that is the state before the first run.
+const skills = await names(source);
+const linked = await names(target).catch((error: NodeJS.ErrnoException) => {
+  if (error.code === 'ENOENT') return [] as string[];
+  throw error;
+});
+
+// Remove the links under `names` that are this checkout's, and say which
+// ones were left because they are not.
+async function prune(candidates: string[], label: string): Promise<void> {
+  for (const name of candidates) {
+    const entry = await inspect(name);
+    if (entry.kind === 'ok' || entry.kind === 'ours') {
+      await removeLink(name);
+      console.log(`${label} ${name}`);
+    } else if (entry.kind === 'foreign') {
+      console.log(`keep    ${name} -> ${entry.to}: not a link into .claude/skills`);
+    }
   }
 }
 
 if (options.remove) {
   await prune(linked, 'removed');
-  // Leave nothing behind if this checkout has no other .agents content.
+  // Leave nothing behind if this checkout has no other .agents content; rmdir
+  // refuses a non-empty directory, which is the signal to stop.
   for (const dir of [target, path.dirname(target)]) {
     try {
       await rmdir(dir);
@@ -94,23 +132,25 @@ if (options.remove) {
   await mkdir(target, {recursive: true});
   await prune(linked.filter((name) => !skills.includes(name)), 'pruned ');
   for (const name of skills) {
-    const link = path.join(target, name);
-    switch (await linkKind(link)) {
-      case 'link':
+    const entry = await inspect(name);
+    switch (entry.kind) {
+      case 'ok':
         console.log(`ok      ${name}`);
         break;
       case 'dir':
         console.log(`skip    ${name}: a real directory is in the way`);
         break;
-      case 'stale':
-        // A skill directory that moved: the link name is still wanted, the
-        // target it holds is not.
-        await removeLink(link);
-        await symlink(path.join(source, name), link, onWindows ? 'junction' : 'dir');
-        console.log(`relink  ${name}`);
+      case 'ours':
+      case 'foreign':
+        // The name belongs to a checked-in skill; whatever the link pointed
+        // at before, it points at that skill now, and the old target is
+        // printed so an overridden per-machine link does not vanish silently.
+        await removeLink(name);
+        await makeLink(name);
+        console.log(`relink  ${name} (was -> ${entry.to})`);
         break;
       case 'missing':
-        await symlink(path.join(source, name), link, onWindows ? 'junction' : 'dir');
+        await makeLink(name);
         console.log(`linked  ${name}`);
         break;
     }

@@ -52,29 +52,42 @@ const python = process.platform === 'win32' ? 'python' : 'python3';
 
 const cli = cac('build-engine')
     .option('--target <name>', 'GN target: shot (shotium.exe) or shot_c (shotium.dll)', {default: 'shot'})
-    .option('--jobs <n>', 'ninja -j', {default: 12})
-    .option('--log <path>', 'where ninja output goes (default: <tmp>/shot-build-<target>.log)')
+    .option('--jobs <n>', 'ninja -j; a positive integer', {default: 12})
+    .option(
+        '--log <path>',
+        'where ninja output goes; a relative path is resolved against the repository root, ' +
+            'not the directory you typed the command in (default: <tmp>/shot-build-<target>.log)')
     .option('--gen-only', 'stop after gn gen: does the graph still parse? (~25 s)');
+// cac validates options only while running a command, so without this default
+// command `--gen-onyl` parses to {genOnyl: true} with no complaint and starts
+// the 50-minute build the flag exists to skip, and a valueless `--jobs` comes
+// back as `true`, which Number() turns into a one-thread build that looks like
+// a hang. With it, both are CACErrors before anything runs.
+cli.command('', 'build the engine').action(() => {});
 cli.help();
-const {options} = cli.parse();
-if (options.help) process.exit(0);
-
-const target: string = options.target;
-// cac hands back `true` for a valueless `--jobs`, and `Number(true)` is 1, so
-// a typo would quietly start a single-threaded full build that looks like a
-// hang for hours. Anything that is not a positive integer is rejected in
-// main() rather than coerced.
-const jobs = typeof options.jobs === 'boolean' ? Number.NaN : Number(options.jobs);
-// pnpm runs package scripts with cwd = the package directory, and this one runs
-// one level down (`pnpm -C scripts build-engine`), so resolve against the
-// repository root: it is the only anchor both levels agree on. See the header.
-const log = options.log ?
-    path.resolve(root, options.log) :
-    path.join(os.tmpdir(), `shot-build-${target}.log`);
 
 function say(message: string): void {
   console.log(message);
 }
+
+let options: Record<string, unknown>;
+try {
+  options = cli.parse().options;
+} catch (error) {
+  say(pc.red(`build-engine: ${error instanceof Error ? error.message : String(error)}`));
+  say('run with --help for the options');
+  process.exit(2);
+}
+if (options.help) process.exit(0);
+
+const target = String(options.target);
+const jobs = Number(options.jobs);
+// pnpm runs package scripts with cwd = the package directory, and this one runs
+// one level down (`pnpm -C scripts build-engine`), so resolve against the
+// repository root: it is the only anchor both levels agree on. See the header.
+const log = options.log ?
+    path.resolve(root, String(options.log)) :
+    path.join(os.tmpdir(), `shot-build-${target}.log`);
 
 function lastLines(text: string | undefined, count: number): string {
   return (text ?? '').split(/\r?\n/).filter(Boolean).slice(-count).join('\n');
