@@ -114,6 +114,17 @@ async function exportGraph(buildDirArg: string, outArg: string): Promise<number>
 
   await copyFile(path.join(buildDir, 'build.ninja.d'), path.join(out, 'build.ninja.d'));
 
+  // ninja -t graph: every node reachable from the two targets, including the
+  // order-only edges that `-t inputs` leaves out. GN attaches a target's
+  // `inputs` (natvis files, .grd files read by the resource-id allocator)
+  // through a phony ".inputs" edge on the order-only side, so a tree trimmed
+  // from `-t inputs` alone passes gn gen and fails `ninja -n`. The dot output
+  // is only mined for its node labels.
+  const dot = await execa(ninja, ['-C', buildDir, '-t', 'graph', 'shot', 'shot_c'], {cwd: root, stderr: 'inherit', maxBuffer: 1 << 30});
+  const nodes = new Set<string>();
+  for (const m of dot.stdout.matchAll(/label="([^"]*)"/g)) nodes.add(m[1].replace(/\\\\/g, '/'));
+  await writeFile(path.join(out, 'graph.txt'), [...nodes].sort().join('\n') + '\n');
+
   // The jumbo TUs: gen/<dir>/<target>_shot_jumbo_N.cc, each a list of
   // #include "../../real/source.cc".
   const jumbo = await glob('gen/**/*_shot_jumbo_*.cc', {cwd: buildDir, absolute: true});
@@ -162,6 +173,7 @@ async function readRecords(dir: string): Promise<Set<string>> {
   };
 
   for (const line of (await text('inputs.txt')).split(/\r?\n/)) add(line);
+  for (const line of (await text('graph.txt')).split(/\r?\n/)) add(line);
   for (const line of (await text('jumbo.txt')).split(/\r?\n/)) add(line);
   // deps.txt: "obj/x.obj: #deps N, ..." header lines, then one indented path
   // per line.
@@ -386,7 +398,7 @@ async function apply(planArg: string): Promise<number> {
 const cli = cac('trim-tree');
 cli.command('export', 'write one build directory\'s records to a folder')
     .option('--build-dir <dir>', 'a generated (ideally built) directory', {default: 'out/Shot'})
-    .option('--out <dir>', 'where to write inputs.txt, deps.txt, build.ninja.d, jumbo.txt, meta.json')
+    .option('--out <dir>', 'where to write inputs.txt, graph.txt, deps.txt, build.ninja.d, jumbo.txt, meta.json')
     .action(async (options: {buildDir: string; out?: string}) => {
       if (!options.out) throw new Error('--out is required');
       process.exitCode = await exportGraph(options.buildDir, options.out);
