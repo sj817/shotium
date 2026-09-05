@@ -38,9 +38,15 @@ namespace {
 // jank that incremental and concurrent GC exist to avoid is not a concern, and
 // a single-threaded collector is one less source of nondeterminism while the
 // rest of the pipeline is being brought up.
+//
+// The pool is sized to one thread, the smallest the platform accepts. Its
+// default is one fewer than the CPU count, capped at 16, and the threads are
+// created in the constructor -- so every process carried up to 16 workers
+// that, with atomic marking and sweeping, never received a single task.
 std::shared_ptr<cppgc::Platform>& ProcessPlatform() {
   static base::NoDestructor<std::shared_ptr<cppgc::Platform>> platform([] {
-    auto default_platform = std::make_shared<cppgc::DefaultPlatform>();
+    auto default_platform =
+        std::make_shared<cppgc::DefaultPlatform>(/*thread_pool_size=*/1);
     // Standalone cppgc requires this before anything else it owns is used. It
     // builds the process-wide GCInfoTable -- the table every
     // MakeGarbageCollected<T> looks T up in to get its trace and finalize
