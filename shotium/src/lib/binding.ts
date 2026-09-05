@@ -90,15 +90,15 @@ export interface NativeBinding {
 //
 // Both paths are relative to this file's build output, which is one directory
 // below the package root.
-function candidates(): string[] {
-  const found: string[] = [
-    path.join(HERE, '..', 'native', 'build', 'Release', 'shotium.node'),
-  ];
+function* candidates(): Generator<string> {
+  // Resolve the platform package only when the local build is absent. In a
+  // checkout, package resolution can traverse a large pnpm tree even though
+  // its result will never be loaded.
+  yield path.join(HERE, '..', 'native', 'build', 'Release', 'shotium.node');
   const dir = platformPackage.packageDir();
   if (dir) {
-    found.push(path.join(dir, 'shotium.node'));
+    yield path.join(dir, 'shotium.node');
   }
-  return found;
 }
 
 let binding: NativeBinding|null = null;
@@ -113,8 +113,9 @@ export function load(): NativeBinding {
   if (binding) {
     return binding;
   }
-  const tried = candidates();
-  for (const candidate of tried) {
+  const tried: string[] = [];
+  for (const candidate of candidates()) {
+    tried.push(candidate);
     if (!fs.existsSync(candidate)) {
       continue;
     }
