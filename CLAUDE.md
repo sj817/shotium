@@ -12,10 +12,10 @@ wrong once, and where the longer documents are. Multi-step procedures live in
    absence is the product, not a gap. A page that needs JavaScript renders
    empty by design. See `docs/shotium-plan.md` section 5 for the full list of
    things this project deliberately does not do.
-2. **Build only through `tools/shot/build.ps1`, and only into `out/Shot`.**
-   Do not hand-write `gn gen` or `autoninja` for the engine. Every other
-   directory under `out/` is a stale experiment; a binary from one of them
-   proves nothing.
+2. **Build only through `pnpm build:engine` (`tools/shot/build_engine.ts`),
+   and only into `out/Shot`.** Do not hand-write `gn gen` or `autoninja` for
+   the engine. Every other directory under `out/` is a stale experiment; a
+   binary from one of them proves nothing.
 3. **"Success" means a binary plus green checks.** Report status on three
    levels and never promote one: graph passes (`gn gen` + `ninja -n`, the CI
    "probe" mode, zero lines compiled) -> compiles (a binary exists) -> binary
@@ -49,6 +49,16 @@ wrong once, and where the longer documents are. Multi-step procedures live in
    same bytes on every platform and in every process.
 10. **Commit only when asked.** When you do, one file at a time is fine;
     message format is in [Git conventions](#git-conventions).
+11. **Scripts are TypeScript, and a library beats a hand-written utility.**
+    A new script is a `.ts` file in `tools/shot/` run with `tsx` through
+    `pnpm -C tools/shot` (root `package.json` forwards the common ones). Use a
+    library for everything that is not this project's own logic: `execa` for
+    processes, `tinyglobby` for globs, `cac` for argument parsing, `p-retry`
+    for retries, `sharp` / `pngjs` / `pixelmatch` for pixels. Do not write a
+    PNG decoder, a glob matcher, an argument parser or a process wrapper by
+    hand, and do not add to the remaining `.py`, `.ps1` and `.cjs` scripts;
+    they are migrated per `docs/scripts-to-typescript.md`. The effort budget
+    is for `shot/`, not for tooling.
 
 ## Project overview
 
@@ -116,7 +126,11 @@ chromium/                      # this repo; upstream Chromium layout with most o
 ├── apps/benchmark/            # six-platform harness vs Puppeteer/Playwright (own pnpm workspace)
 ├── apps/benchmark-site/       # the published benchmark pages
 ├── tests/render/              # PowerShell pixel regression (needs locally generated baselines)
-├── tools/shot/                # every script: build, check, cut, bench, package, docs assets
+├── tools/shot/                # repository scripts (@shotkit/scripts, own pnpm project)
+│   ├── build_engine.ts        # the engine build entry point (pnpm build:engine)
+│   ├── link_agent_skills.ts   # expose .claude/skills to .agents/skills (pnpm skills:link)
+│   ├── package.json           # execa, cac, p-retry, tsx ...; `pnpm -C tools/shot install`
+│   └── *.py *.cjs *.ps1       # legacy scripts, being migrated; see docs/scripts-to-typescript.md
 ├── build/args/shot*.gn        # GN args: shot.gn (base), shot-linux.gn, shot-mac.gn (CI overlays), shot-official.gn
 ├── build/config/shot_build.gni# declares is_shot_build
 ├── patches/                   # patches for DEPS checkouts (icu, skia); applied by the engine-*.yml patch step
@@ -274,18 +288,22 @@ one process cannot tell each other's pointers apart; fontconfig's `free()` of a
 
 Local builds are Windows-only; Linux and macOS are built by CI.
 
-```powershell
-pwsh tools/shot/build.ps1 -Target shot   -Jobs 16 -Log out/Shot/build.log   # shotium.exe
-pwsh tools/shot/build.ps1 -Target shot_c -Jobs 16 -Log out/Shot/build.log   # shotium.dll (the addon links this)
+```bash
+pnpm -C tools/shot install                                              # once per checkout
+pnpm build:engine --jobs 16 --log out/Shot/build.log                    # shotium.exe
+pnpm build:engine --target shot_c --jobs 16 --log out/Shot/build.log    # shotium.dll (the addon links this)
 ```
 
 Output: `out/Shot/shotium.exe`, `out/Shot/shotium.dll`, `out/Shot/shotium_data.pak`,
 `out/Shot/shotium_strings.pak`. GN target names are still `shot` and `shot_c`.
 
-- The script runs `gn gen` first and retries two failures that are not build
-  errors: parallel toolchain variants racing on `environment.x64`
-  (`PermissionError`), and ninja re-running `gn gen` itself.
-- `-Jobs`: 16 is the last known-good for a full build on the development host;
+- `tools/shot/build_engine.ts` applies the Skia patches, regenerates the ICU
+  data set, runs `gn gen`, then ninja with the output in the log file. It
+  retries two failures that are not build errors: parallel toolchain
+  variants racing on `environment.x64` (`PermissionError`), and ninja
+  re-running `gn gen` itself. A relative `--log` is relative to where you
+  typed the command.
+- `--jobs`: 16 is the last known-good for a full build on the development host;
   24 hit `LLVM ERROR: out of memory` in Blink core jumbo TUs. Measure the
   phase you are about to run (`Get-Process clang-cl | Measure-Object WorkingSet64 -Sum`)
   rather than reusing a number. ThinLTO link memory is governed by
@@ -405,6 +423,28 @@ Output: `out/Shot/shotium.exe`, `out/Shot/shotium.dll`, `out/Shot/shotium_data.p
   the C++ side parses `ScreenshotOptions` by the same field names.
 - No `npx`; use `pnpm dlx` or `node_modules/.bin`. The package manager is
   pinned (`packageManager` in `package.json`).
+
+**Scripts (`tools/shot/*.ts`)**
+
+- One file per command, a `// why` header, a `cac` CLI, `process.exitCode`
+  rather than `process.exit()` in the middle. `tsconfig.json` has
+  `erasableSyntaxOnly`, so the files also run under Node's own type stripping.
+- The library-first rule, made concrete:
+
+  | Need | Use | Not |
+  |---|---|---|
+  | Run a process, capture or tee output, retries | `execa` (+ `p-retry`) | `child_process` wrappers, PowerShell `&` |
+  | Find files | `tinyglobby` | recursive `readdir`, `Get-ChildItem -Recurse` |
+  | Parse arguments | `cac` | `process.argv` slicing, `param()` blocks |
+  | Read, compare, resize images | `sharp`, `pngjs`, `pixelmatch` | hand-written PNG decoders, `System.Drawing`, Pillow |
+  | Hash, temp files, paths | `node:crypto`, `node:fs/promises`, `node:path` | `Get-FileHash`, `certutil` |
+  | Tables and colour in output | `picocolors`, `console.table` | manual padding |
+  | Tests for a script | `node:test` (`*.test.ts`) | ad-hoc assertion scripts |
+
+- pnpm runs a package script with `cwd = tools/shot`; resolve user-supplied
+  relative paths against `process.env.INIT_CWD`.
+- Every script that CI calls has a root `package.json` alias so the workflow
+  YAML stays a list of `pnpm <name>` lines rather than inline shell.
 
 **Cutting (deleting Chromium code)**
 
@@ -534,6 +574,7 @@ Procedure: `/perf-compare`; methodology: `tools/shot/PERFORMANCE.md`.
 | `docs/upstream-sync.md` | Baseline hash, why merge is impossible, the four-bucket replay, the deliberate disagreements table, post-sync checks |
 | `docs/cut-progress.md` | 1,800 lines of what was removed and why; sections 8 (V8 removal), 11 (restore vs cut), 14 (driving Blink directly), 17 (size composition), 20 (making it usable), 21 (CI) |
 | `tools/shot/PERFORMANCE.md` | The candidate-vs-npm methodology and stopping rules |
+| `docs/scripts-to-typescript.md` | The inventory of legacy `.py` / `.ps1` / `.cjs` scripts, which library replaces each hand-written part, and the migration order |
 | `apps/benchmark/README.md` | The six-platform harness, shards, and what counts as a run failure |
 | `tests/render/README.md` | Pixel regression and baseline generation |
 | `shot/README.md` | Historical; the first extraction baseline (predates the direct-Blink design) |
@@ -542,8 +583,7 @@ Procedure: `/perf-compare`; methodology: `tools/shot/PERFORMANCE.md`.
 
 - `AGENTS.md` only points here, for Codex and other tools that read that name.
 - Skills are canonical in `.claude/skills/`. Codex and Gemini CLI look in
-  `.agents/skills/`; run `pwsh tools/shot/link_agent_skills.ps1` once per
-  checkout to link them (junctions on Windows, symlinks elsewhere; the
-  directory is gitignored).
+  `.agents/skills/`; run `pnpm skills:link` once per checkout to link them
+  (junctions on Windows, symlinks elsewhere; the directory is gitignored).
 - Host-specific facts belong in auto memory or `CLAUDE.local.md` (gitignored),
   not here.

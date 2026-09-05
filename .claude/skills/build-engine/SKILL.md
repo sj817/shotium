@@ -35,11 +35,15 @@ process, or a jumbo grouping that only fails on another platform.
 
 ## Build
 
-```powershell
-pwsh tools/shot/build.ps1 -Target shot   -Jobs 16 -Log out/Shot/build.log   # shotium.exe + .pak files
-pwsh tools/shot/build.ps1 -Target shot_c -Jobs 16 -Log out/Shot/build.log   # shotium.dll, which the Node addon links
+```bash
+pnpm -C tools/shot install                                              # once per checkout
+pnpm build:engine --jobs 16 --log out/Shot/build.log                    # shotium.exe + .pak files
+pnpm build:engine --target shot_c --jobs 16 --log out/Shot/build.log    # shotium.dll, which the Node addon links
 ```
 
+The entry point is `tools/shot/build_engine.ts` (TypeScript, `execa`,
+`p-retry`, `cac`); `pnpm build:engine` forwards to it from the repository
+root, and a relative `--log` is relative to where you typed the command.
 Run it in the background and read the log. Expectations:
 
 | Situation | Duration |
@@ -64,14 +68,14 @@ The log's first `ninja: Entering directory` line must say `out/Shot`.
 
 ### Parallelism
 
-- `-Jobs` defaults to 12 in the script. 16 is the last value that completed a
+- `--jobs` defaults to 12 in the script. 16 is the last value that completed a
   full build on this host. 24 hit `LLVM ERROR: out of memory` in the
   `blink/renderer/core` jumbo TUs (template-heavy `Vector<>` instantiations),
   and doing so while a `gn gen` ran in parallel made it worse.
 - Measure the phase you are about to run, not one you measured earlier:
   `Get-Process clang-cl | Measure-Object WorkingSet64 -Sum`, then choose `j`
   so that peak-per-compiler x `j` stays under half of free memory. ninja is
-  incremental; stopping to change `-Jobs` loses nothing already compiled.
+  incremental; stopping to change `--jobs` loses nothing already compiled.
 - ThinLTO link memory is governed by `/opt:lldltojobs=N` in the linker
   flags, not by `-Jobs`.
 

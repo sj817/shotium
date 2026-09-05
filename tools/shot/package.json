@@ -1,0 +1,25 @@
+{
+  "name": "@shotkit/scripts",
+  "private": true,
+  "description": "Repository scripts: build, verify, cut, bench, release. TypeScript, run with tsx. Reach for a library before writing a utility; see CLAUDE.md.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "build-engine": "tsx build_engine.ts",
+    "link-skills": "tsx link_agent_skills.ts",
+    "check:types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "cac": "7.0.0",
+    "execa": "10.0.1",
+    "p-retry": "8.0.1",
+    "picocolors": "1.1.1",
+    "tsx": "4.23.13"
+  },
+  "devDependencies": {
+    "@types/node": "22.18.0",
+    "typescript": "5.9.2"
+  }
+}

@@ -28,7 +28,7 @@ $exe = "out\Shot\shotium.exe"
 
 if (-not $SkipBuild) {
     Write-Output "== build =="
-    & .\tools\shot\build.ps1
+    & pnpm build:engine
     if ($LASTEXITCODE -ne 0) {
         Write-Output "BUILD FAILED -- stopping; there is nothing to accept."
         exit 1
