@@ -195,7 +195,7 @@ async function trackedFiles(): Promise<string[]> {
 
 // Rule 2. Directories end with '/'; files match exactly.
 const whitelist = [
-  '.clang-format', '.gitattributes', '.gitignore', '.gitmodules', '.gn', '.vpython3',
+  '.clang-format', '.rustfmt.toml', '.gitattributes', '.gitignore', '.gitmodules', '.gn', '.vpython3',
   'AGENTS.md', 'AUTHORS', 'BUILD.gn', 'CLAUDE.md', 'DEPS', 'LICENSE', 'README.md', 'README.zh.md',
   'package.json',
   '.claude/', '.github/', 'apps/', 'benchmark-results/', 'bootstrap/', 'build_overrides/',

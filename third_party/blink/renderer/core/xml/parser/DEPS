@@ -1,3 +1,0 @@
-include_rules = [
-  "+base/strings/string_view_rust.h",
-]

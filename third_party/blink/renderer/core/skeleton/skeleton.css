@@ -1,8 +1,0 @@
-::skeleton {
-  display: block;
-  contain: strict;
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  background-color: Canvas;
-}

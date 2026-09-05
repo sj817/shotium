@@ -1,4 +1,0 @@
-include_rules = [
-  '+base/logging.h',
-  '+base/logging/logging_settings.h',
-]

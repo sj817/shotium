@@ -1,5 +1,0 @@
-specific_include_rules = {
-    "script_resource_test.cc": [
-        "+url/gurl.h"
-    ],
-}
