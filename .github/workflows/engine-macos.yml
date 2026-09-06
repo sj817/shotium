@@ -157,7 +157,8 @@ jobs:
         # -k 0 so one shard's log names every broken unit in its slice, and
         # continue-on-error so what did compile still reaches the final job,
         # which is where the failure is reported.
-        run: xargs -a /tmp/slice.txt ninja -C out/Shot -j ${{ inputs.jobs }} -k 0
+        # stdin, not xargs -a: BSD xargs on macOS has no -a.
+        run: xargs ninja -C out/Shot -j ${{ inputs.jobs }} -k 0 < /tmp/slice.txt
 
       - name: pack what this shard built
         working-directory: src
