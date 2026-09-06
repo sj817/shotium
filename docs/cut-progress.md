@@ -2056,3 +2056,137 @@ perfetto 的 protoc 输出、boringssl 和 libjpeg_turbo 的汇编 action。LAST
 只是几条链之一;剩下的根因要 `ninja -d explain` 才能定位,而 Windows 的
 workflow 还没有这一步。留作下一项。
 
+
+## 24. CI 分片:把一次编译摊到 N 台免费 runner 上
+
+一台 GitHub 免费 runner 是 4 核,冷构建两小时,而这个项目要出六个平台的产物。
+买机器不在选项里,所以问题是:能不能让 N 台 runner 一起编同一张图。ninja 自己
+不会分布式,但也不需要——跑过同一次 `gn gen` 的 N 台机器共享同一张图,每台编
+其中一片,再把产物连同 ninja 的状态搬到一台机器上链接就行。
+
+先测的是另一条路:在最后那台机器前面放编译缓存。sccache 0.17,1,549 个对象,
+四轮测下来命中率 100%、不可缓存 0,但每次命中仍要预处理 1–2 秒,20 分钟花在
+"缓存命中"上,比搬对象贵。direct 模式更差。搬字节赢了。
+
+### 24.1 ninja 眼里的"最新"只有三样
+
+输出文件本身、`.ninja_log`(每个输出何时被哪条命令产出)、`.ninja_deps`(每个
+对象读过哪些头,以及当时对象的 mtime)。把这三样一起搬过去,ninja 就认。格式
+知识集中在 `scripts/lib/ninja-state.ts`:`.ninja_log` 是 v6 制表符文本,
+`.ninja_deps` 是 v4 二进制(路径记录补齐到 4 字节 + `~id` 校验,输出记录最高位
+置 1),TimeStamp 在 POSIX 是纳秒、在 Windows 是 FILETIME 减 400 年。
+
+搬运时 mtime 是全部关键。复制会给新时间,所以 `merge` 把每个有日志记录的输出
+的 mtime 改回记录值,再**重新读一遍**(`utimes` 收的是 double,放不下纳秒),
+读到什么就写进两份日志——写记录值而不写实际值,下一次构建就会认为对象比自己
+的记录旧。
+
+### 24.2 图里不记但必须一起搬的东西
+
+- **GN 在 gen 时写的文件**:jumbo 单元、grit 的 `*_expected_outputs.txt`、
+  mojom 解析器读的 `.rsp`、Rust sysroot 的 `lib/.empty`(它是隐藏文件,
+  `tinyglobby` 要开 `dot: true` 才看得见)。最终 job 自己的 `gn gen` 会把它们
+  写成比对象还新,于是整片重编。
+- **没有 `deps =` 的边留在磁盘上的 depfile**。缺了 ninja 直接判脏。
+- **两份日志**,见上。
+
+反过来不该搬的:ninja 自己的文件、`args.gn`、ThinLTO 缓存,以及 macOS 上 GN
+链进构建目录的 Xcode SDK(`out/Shot/sdk` 是符号链接,跟进去会把整个 SDK 打包
+再试图写回去,EACCES)。
+
+两份记录比图活得久:热构建目录里的 deps log 和已删 target 的 jumbo 单元。所以
+只算 `ninja -t graph` 能到达的对象——一次未过滤的计划留下了 1,891 个没人编译
+的文件。
+
+### 24.3 一片重复编 43% 的对象,而这是结构性的
+
+每片都得把自己那片需要的生成器链一起编出来。在 Windows 的图上量:全图 3,717
+个对象,任何一片的前置闭包都是同一批 1,574 个——**占对象数 43%,占编译时间
+22%**,于是一片实际做了整图的 41% 而不是 25%。
+
+闭包是普遍的,不是某几片特有的。单独问一个 Blink 对象要什么,答案就是整条链:
+
+| 宿主工具 | 闭包里的对象 | 拽进来的东西 |
+|---|---:|---|
+| `character_data_generator` | 1,525 | base + ICU + boringssl |
+| `root_store_tool` / `signer_set_tool` | 1,079 | base + boringssl + 完整 protobuf |
+| `protoc` / `protozero_plugin` / `cppgen_plugin` | 264–269 | protobuf + abseil + perfetto |
+| `brotli` | 88 | |
+| 七个的并集 | **1,574** | 正好是共享闭包 |
+
+所以"按目标亲和切片"这条路不存在:没有亲和可切,每片要的是同一批。要压掉它
+只能把生成器从图里拿掉(把生成结果像 `icudtl.dat` 那样落盘签入),那是另一档
+的活,风险在 TLS 根存储和 tracing 上,收益只在真冷构建时兑现——热构建目录的
+缓存本来就带着这批对象。
+
+### 24.4 最终 job 就是最后一片
+
+第一版里 `build` job 写着 `needs: compile`,于是它只能在所有分片跑完之后才开
+始,而开头十几分钟做的是分片刚做过的事:checkout、`gclient sync`、`gn gen`。
+在冷的 Windows 上量:分片的 setup 14 分 54 秒,最终 job 的 setup 12 分 48 秒,
+全程 85 分 36 秒——**三分之一是 setup,其中一半是白付的**。
+
+改成:`shards` 是分片总数而不是"额外的 job 数",meta 把 0..N-2 交给 matrix,
+`build` job 领第 N-1 片,N 片就是 N 台机器。它和分片同时开工、同样 setup、编
+自己那一片,然后等其他分片的产物。GitHub 没有"等某个 artifact"的原语,
+`scripts/ci-await-shards.ts` 轮询本次 run 的 artifact 列表。
+
+等待的退出条件是故意放宽的:所有分片 job 都结束了而某个产物始终没出现(分片
+挂了、上传失败),它打印出来然后返回 0,让最终 job 自己把缺的编出来——这正是
+原来 `needs: compile` 配 `always()` 的效果。唯一不肯放过的是"没有任何 job 匹配
+`--job-prefix`":那是命名漂了,返回 0 会把一个拼写错误变成一小时的静默全量重编。
+
+顺带的收益:六平台一次派发从 26 个 job 变成 20 个,正好是免费额度的并发上限,
+以前是要排队的。
+
+### 24.5 七分钟删的是另一块盘
+
+Windows 的 `free up disk` 步骤(删 dotnet、Android SDK、Azure、三个 tool
+cache)在冷 run 34034541857 里花了 **7 分 12 秒**,五个 job 每个都付一遍。它删
+的全在 C:,而构建在 D: —— windows-2025 镜像给 D: 157 GB,这个构建用 25 GB;
+C: 删之前有 34 GB 空闲,删之后 48 GB,没有任何人要过。
+
+删除动作留着,但只在"工作区所在盘剩余不足 80 GB"时才跑,给镜像变化留后路;
+盘表照打,因为真出 ENOSPC 时那是唯一的证据。Linux 同一条规则:ubuntu-24.04
+给的是 145 GB 的根、87 GB 空闲,那 29 秒也是白花的。macOS 不动——起始只有
+43 GB,而且那一步还要顺带 `xcode-select` 选最新的 Xcode。
+
+### 24.6 数字
+
+| 平台 | 分片前(单 job) | 分片后 | 最终 job 也是一片 |
+|---|---|---|---|
+| Linux amd64,冷 | 73 分钟 | 47.1 | **38.6** |
+| Windows amd64,冷 | 110 分钟 | 85.6 | 约 64(setup 实测 14:54 → 5:47) |
+| Linux amd64,热 | — | 19 | 约 11 |
+
+Linux 冷构建 34050536087 的最终 job 时间线,和设计一模一样:setup 5 分 50 秒
+(与分片并行)→ 编自己那片 21 分 55 秒 → 等最慢的分片 3 分 26 秒 → 下载 14 秒
+→ 合并 16 秒 → 链接 4 分 35 秒 → checks 1 分 8 秒。合并之后 ninja 只跑了 **438
+条边,其中 C++ 编译 8 条**——搬运是干净的。
+
+需要提醒的是同一片的耗时在 runner 之间能差 ±25%(两轮里同样大小的片跑出
+21.9 到 35.7 分钟),所以单次对比要当趋势看,不要当精确测量。
+
+剩下的 438 条边几乎全是 Rust:`ninja -d explain` 说
+`liballoc_error_handler_impl.a` 比它归档的 `.o` **早 191 毫秒**,而同一台机器
+上归档必然晚于对象。这是搬运里最后一个已知缺口,值约 3 分钟,单独查。
+
+### 24.7 平台上的坑
+
+- BSD 的 `touch` 没有 `-d @<秒>`,`xargs` 没有 `-a`;macOS 上分别用 `date`
+  先格出 `-t` 的格式、用标准输入喂 slice。
+- depot_tools 在 Windows 上的 `ninja` 是个 `.bat`,cmd 的命令行上限 8 KB,超了
+  **不报错**,只在最后打一行 "The command line is too long"。第一次分片的
+  Windows run 八批里五批根本没开始,两个分片只交了 230 个文件,整轮 2 小时
+  26 分。改成直接调 `third_party/ninja/ninja.exe`,每批 100 个目标。
+- `merge` 不能把状态留在进程内存里:workflow 是一片调用一次。第一版用一个
+  `Set` 记"已经写过的文件",于是后一片的 jumbo 单元覆盖了前一片的,冷 Linux
+  第一轮最终 job 又编了 32 分钟。改成只比文件 mtime,留旧的那份。
+- tar 的默认 posix 格式把 mtime 截到秒;要 `--format=pax`。
+- 在 mtime 打戳之后才写出来的文件也得给内容相符的时间:打过补丁的 Skia/ICU
+  源取"依赖版本"和"最后改 `patches/` 的提交"里较晚的一个,重打包的
+  `icudtl.dat` 取 ICU 版本、`scripts/icu-repack.ts`、`patches/` 三者最晚。少了
+  这一步,每次热构建都要重编 `SkCodec.h` 底下 26 个对象、重链 249 个库。
+- 构建目录缓存只对**写它的那条分支**和默认分支可见。11 个缓存全在特性分支
+  上、`main` 上一个都没有,所以每开一条新分支六个平台全是冷的。合完动引擎的
+  PR 要在 `main` 上补派发一次。
