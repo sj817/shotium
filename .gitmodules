@@ -22,9 +22,6 @@
 [submodule "third_party/highway/src"]
 	path = third_party/highway/src
 	url = https://chromium.googlesource.com/external/github.com/google/highway
-[submodule "third_party/google_benchmark/src"]
-	path = third_party/google_benchmark/src
-	url = https://chromium.googlesource.com/external/github.com/google/benchmark
 [submodule "third_party/boringssl/src"]
 	path = third_party/boringssl/src
 	url = https://boringssl.googlesource.com/boringssl
@@ -63,9 +60,6 @@
 [submodule "third_party/icu"]
 	path = third_party/icu
 	url = https://chromium.googlesource.com/chromium/deps/icu
-[submodule "third_party/leveldatabase/src"]
-	path = third_party/leveldatabase/src
-	url = https://chromium.googlesource.com/external/leveldb
 [submodule "third_party/libdrm/src"]
 	path = third_party/libdrm/src
 	url = https://chromium.googlesource.com/chromiumos/third_party/libdrm
@@ -109,9 +103,6 @@
 [submodule "third_party/skia"]
 	path = third_party/skia
 	url = https://skia.googlesource.com/skia
-[submodule "third_party/snappy/src"]
-	path = third_party/snappy/src
-	url = https://chromium.googlesource.com/external/github.com/google/snappy
 [submodule "third_party/sqlite/src"]
 	path = third_party/sqlite/src
 	url = https://chromium.googlesource.com/chromium/deps/sqlite
@@ -130,6 +121,3 @@
 [submodule "third_party/wuffs/src"]
 	path = third_party/wuffs/src
 	url = https://skia.googlesource.com/external/github.com/google/wuffs-mirror-release-c
-[submodule "third_party/zstd/src"]
-	path = third_party/zstd/src
-	url = https://chromium.googlesource.com/external/github.com/facebook/zstd
