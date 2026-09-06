@@ -595,9 +595,9 @@ Output: `out/Shot/shotium.exe`, `out/Shot/shotium.dll`, `out/Shot/shotium_data.p
   to `main`.** Every engine build so far was dispatched on a feature branch,
   so all eleven caches belonged to branches and none to the default one, and
   each new branch started cold -- an hour of the difference between 86
-  minutes and 35. After merging a branch that touches the engine, dispatch
-  the six builds on `main`; that is what leaves a cache the next branch can
-  restore. `gh api repos/sj817/shotium/actions/caches --jq '.actions_caches[]
+  minutes and 35. After merging a branch that touches the engine, run
+  `pnpm ci:dispatch-engines` (all six, `--ref main` by default, `--wait` to
+  poll); that is what leaves a cache the next branch can restore. `gh api repos/sj817/shotium/actions/caches --jq '.actions_caches[]
   | "\(.ref) \(.key)"'` says which branch each one is on.
 - Names follow one pattern. The workflow name is the file stem
   (`engine-windows`, `perf-gate`); a job is
