@@ -27,7 +27,23 @@ is_component_build = false
 symbol_level = 0
 is_shot_build = true
 use_shot_jumbo_build = true
-shot_jumbo_file_merge_limit = 8
+# 32 sources per unit. Parsing Blink's headers costs a unit about 14 s
+# whatever it contains; measured on the development host, an 8-file core unit
+# takes 13.9 s (1.74 s per file, 1.8 GB), a 32-file one 16.4 s (0.51 s per
+# file, 2.2 GB), a 64-file one 21.1 s (0.33 s, 2.5 GB). shot-mac.gn lowers it
+# for the 7 GB arm64 runner.
+shot_jumbo_file_merge_limit = 32
+
+# Sources excluded from jumbo units by absolute label, for targets whose
+# template forwards no per-target list (see BUILDCONFIG.gn). The viz mojom
+# traits file below defines the same StructTraits alias as a sibling traits
+# file once the two share a unit.
+shot_jumbo_excluded_files = [
+  "//services/viz/public/cpp/compositing/frame_timing_details_mojom_traits.cc",
+  # A DEPS checkout, so its BUILD.gn cannot carry the exclusion: HexDump's
+  # local kPadding shadows base64.cc's anonymous-namespace one (-Wshadow).
+  "//third_party/perfetto/src/base/utils.cc",
+]
 
 # //third_party/icu is a DEPS checkout, so a builder that runs gclient sync
 # gets it from its own upstream and never sees the exclusion list this tree

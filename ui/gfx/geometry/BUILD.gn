@@ -87,6 +87,10 @@ component("geometry") {
 }
 
 component("geometry_skia") {
+  # transform_operations.cc calls TanDegrees unqualified; merged with a file
+  # that brings a second overload into scope the call is ambiguous.
+  shot_jumbo_excluded_sources = [ "transform_operations.cc" ]
+
   sources = [
     "linear_gradient.cc",
     "linear_gradient.h",

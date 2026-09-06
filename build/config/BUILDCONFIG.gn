@@ -829,6 +829,12 @@ declare_args() {
   # units collide. Opting the directory out keeps that builder and this one
   # producing the same graph.
   shot_jumbo_excluded_dirs = []
+
+  # Absolute source labels ("//dir/file.cc") excluded from every jumbo unit.
+  # For sources that reach a target through a template that forwards no
+  # per-target list (mojom's traits_sources); everything else belongs in the
+  # target's own shot_jumbo_excluded_sources, next to the reason.
+  shot_jumbo_excluded_files = []
 }
 
 template("component") {
@@ -876,6 +882,9 @@ template("component") {
   _shot_jumbo_cc_entries = []
   _shot_jumbo_c_entries = []
   _shot_jumbo_mm_entries = []
+  _shot_jumbo_cc_chunks = []
+  _shot_jumbo_c_chunks = []
+  _shot_jumbo_mm_chunks = []
   not_needed([
                "_shot_jumbo_inputs",
                "_shot_jumbo_outputs",
@@ -886,6 +895,9 @@ template("component") {
                "_shot_jumbo_cc_entries",
                "_shot_jumbo_c_entries",
                "_shot_jumbo_mm_entries",
+               "_shot_jumbo_cc_chunks",
+               "_shot_jumbo_c_chunks",
+               "_shot_jumbo_mm_chunks",
              ])
   if (_use_shot_jumbo) {
     _shot_jumbo_merge_limit = shot_jumbo_file_merge_limit
@@ -898,23 +910,52 @@ template("component") {
       _shot_jumbo_excluded = invoker.shot_jumbo_excluded_sources
     }
 
-    _cc_count = 0
-    _cc_next_chunk = 0
-    _c_count = 0
-    _c_next_chunk = 0
-    _mm_count = 0
-    _mm_next_chunk = 0
+    # Units are cut per group, where a source's group is the first directory
+    # component of its path relative to the target (sources in the target's
+    # own directory form the group "_", sources outside it "__"), and a group
+    # is split every _shot_jumbo_merge_limit files. Units are named after the
+    # group and the index within it, not after the position in the source
+    # list: with positional chunks (the old scheme), adding or deleting one
+    # file shifted every later unit's contents and name, and a warm build
+    # directory recompiled the whole target. A group that is not contiguous
+    # in the source list gets positional names for its later runs, so two
+    # units never share a name; that is the only case that still shifts.
+    _cc_group = ""
+    _cc_group_index = 0
+    _cc_groups_seen = []
+    _cc_in_chunk = 0
+    _cc_chunk = -1
+    _c_group = ""
+    _c_group_index = 0
+    _c_groups_seen = []
+    _c_in_chunk = 0
+    _c_chunk = -1
+    _mm_group = ""
+    _mm_group_index = 0
+    _mm_groups_seen = []
+    _mm_in_chunk = 0
+    _mm_chunk = -1
     not_needed([
-                 "_cc_count",
-                 "_cc_next_chunk",
-                 "_c_count",
-                 "_c_next_chunk",
-                 "_mm_count",
-                 "_mm_next_chunk",
+                 "_cc_group",
+                 "_cc_group_index",
+                 "_cc_groups_seen",
+                 "_cc_in_chunk",
+                 "_cc_chunk",
+                 "_c_group",
+                 "_c_group_index",
+                 "_c_groups_seen",
+                 "_c_in_chunk",
+                 "_c_chunk",
+                 "_mm_group",
+                 "_mm_group_index",
+                 "_mm_groups_seen",
+                 "_mm_in_chunk",
+                 "_mm_chunk",
                ])
     foreach(_source, invoker.sources) {
       _extension = get_path_info(_source, "extension")
-      if (_extension == "cc" || _extension == "cpp") {
+      if (_extension == "cc" || _extension == "cpp" || _extension == "c" ||
+          _extension == "mm") {
         _response_entry = rebase_path(_source, root_build_dir)
 
         # Exclusion lists are written either the way the target spells its
@@ -923,64 +964,91 @@ template("component") {
         # only ever matches the second form, so try both.
         if (filter_include([ _source ], _shot_jumbo_excluded) != [] ||
             filter_include([ rebase_path(_source, ".") ],
-                           _shot_jumbo_excluded) != []) {
+                           _shot_jumbo_excluded) != [] ||
+            filter_include([ get_path_info(_source, "abspath") ],
+                           shot_jumbo_excluded_files) != []) {
           _response_entry = "!$_response_entry"
         } else {
           _shot_jumbo_inputs += [ _source ]
         }
+
+        _group_parts = []
+        _group_parts =
+            string_split(get_path_info(rebase_path(_source, "."), "dir"), "/")
+        _group = _group_parts[0]
+        if (_group == ".") {
+          _group = "root"
+        } else if (_group == "..") {
+          _group = "extern"
+        }
+      }
+
+      if (_extension == "cc" || _extension == "cpp") {
         _shot_jumbo_cc_entries += [ _response_entry ]
-        if (_cc_count == _cc_next_chunk) {
-          _output = "$target_gen_dir/${target_name}_shot_jumbo_${_cc_count}.cc"
+        if (_group != _cc_group || _cc_in_chunk == _shot_jumbo_merge_limit) {
+          if (_group != _cc_group) {
+            if (filter_include([ _group ], _cc_groups_seen) != []) {
+              _cc_group_index = 1000 + _cc_chunk + 1
+            } else {
+              _cc_groups_seen += [ _group ]
+              _cc_group_index = 0
+            }
+            _cc_group = _group
+          } else {
+            _cc_group_index += 1
+          }
+          _cc_in_chunk = 0
+          _cc_chunk += 1
+          _output = "$target_gen_dir/${target_name}_shot_jumbo_${_group}_${_cc_group_index}.cc"
           _shot_jumbo_outputs += [ _output ]
           _shot_jumbo_cc_outputs += [ _output ]
-          _cc_next_chunk += _shot_jumbo_merge_limit
         }
-        _cc_count += 1
+        _shot_jumbo_cc_chunks += [ _cc_chunk ]
+        _cc_in_chunk += 1
       } else if (_extension == "c") {
-        _response_entry = rebase_path(_source, root_build_dir)
-
-        # Exclusion lists are written either the way the target spells its
-        # own sources, or relative to the target's directory. A list built
-        # with rebase_path(list, "", subdir) holds system-absolute paths and
-        # only ever matches the second form, so try both.
-        if (filter_include([ _source ], _shot_jumbo_excluded) != [] ||
-            filter_include([ rebase_path(_source, ".") ],
-                           _shot_jumbo_excluded) != []) {
-          _response_entry = "!$_response_entry"
-        } else {
-          _shot_jumbo_inputs += [ _source ]
-        }
         _shot_jumbo_c_entries += [ _response_entry ]
-        if (_c_count == _c_next_chunk) {
-          _output = "$target_gen_dir/${target_name}_shot_jumbo_c_${_c_count}.c"
+        if (_group != _c_group || _c_in_chunk == _shot_jumbo_merge_limit) {
+          if (_group != _c_group) {
+            if (filter_include([ _group ], _c_groups_seen) != []) {
+              _c_group_index = 1000 + _c_chunk + 1
+            } else {
+              _c_groups_seen += [ _group ]
+              _c_group_index = 0
+            }
+            _c_group = _group
+          } else {
+            _c_group_index += 1
+          }
+          _c_in_chunk = 0
+          _c_chunk += 1
+          _output = "$target_gen_dir/${target_name}_shot_jumbo_c_${_group}_${_c_group_index}.c"
           _shot_jumbo_outputs += [ _output ]
           _shot_jumbo_c_outputs += [ _output ]
-          _c_next_chunk += _shot_jumbo_merge_limit
         }
-        _c_count += 1
+        _shot_jumbo_c_chunks += [ _c_chunk ]
+        _c_in_chunk += 1
       } else if (_extension == "mm") {
-        _response_entry = rebase_path(_source, root_build_dir)
-
-        # Exclusion lists are written either the way the target spells its
-        # own sources, or relative to the target's directory. A list built
-        # with rebase_path(list, "", subdir) holds system-absolute paths and
-        # only ever matches the second form, so try both.
-        if (filter_include([ _source ], _shot_jumbo_excluded) != [] ||
-            filter_include([ rebase_path(_source, ".") ],
-                           _shot_jumbo_excluded) != []) {
-          _response_entry = "!$_response_entry"
-        } else {
-          _shot_jumbo_inputs += [ _source ]
-        }
         _shot_jumbo_mm_entries += [ _response_entry ]
-        if (_mm_count == _mm_next_chunk) {
-          _output =
-              "$target_gen_dir/${target_name}_shot_jumbo_mm_${_mm_count}.mm"
+        if (_group != _mm_group || _mm_in_chunk == _shot_jumbo_merge_limit) {
+          if (_group != _mm_group) {
+            if (filter_include([ _group ], _mm_groups_seen) != []) {
+              _mm_group_index = 1000 + _mm_chunk + 1
+            } else {
+              _mm_groups_seen += [ _group ]
+              _mm_group_index = 0
+            }
+            _mm_group = _group
+          } else {
+            _mm_group_index += 1
+          }
+          _mm_in_chunk = 0
+          _mm_chunk += 1
+          _output = "$target_gen_dir/${target_name}_shot_jumbo_mm_${_group}_${_mm_group_index}.mm"
           _shot_jumbo_outputs += [ _output ]
           _shot_jumbo_mm_outputs += [ _output ]
-          _mm_next_chunk += _shot_jumbo_merge_limit
         }
-        _mm_count += 1
+        _shot_jumbo_mm_chunks += [ _mm_chunk ]
+        _mm_in_chunk += 1
       }
     }
 
@@ -994,22 +1062,23 @@ template("component") {
     # GN evaluates this template while generating the build files. Writing the
     # Jumbo translation units here removes one Ninja action per component;
     # write_file() also avoids touching an unchanged output.
+    _shot_jumbo_unit_header =
+        [ "/* Generated by //build/config/BUILDCONFIG.gn. Do not edit. */" ]
+    not_needed([ "_shot_jumbo_unit_header" ])
+
     if (_shot_jumbo_cc_entries != []) {
-      _cc_count = 0
-      _cc_next_chunk = 0
-      _cc_output_index = 0
+      _cc_index = 0
+      _cc_written = -1
       _cc_contents = []
       foreach(_entry, _shot_jumbo_cc_entries) {
-        if (_cc_count == _cc_next_chunk) {
-          if (_cc_count != 0) {
-            write_file(_shot_jumbo_cc_outputs[_cc_output_index], _cc_contents)
-            _cc_output_index += 1
+        _cc_chunk = _shot_jumbo_cc_chunks[_cc_index]
+        if (_cc_chunk != _cc_written) {
+          if (_cc_written != -1) {
+            write_file(_shot_jumbo_cc_outputs[_cc_written], _cc_contents)
           }
           _cc_contents = []
-          _cc_contents += [
-            "/* Generated by //build/config/BUILDCONFIG.gn. Do not edit. */",
-          ]
-          _cc_next_chunk += _shot_jumbo_merge_limit
+          _cc_contents += _shot_jumbo_unit_header
+          _cc_written = _cc_chunk
         }
         if (string_replace(_entry, "!", "", 1) == _entry) {
           _cc_contents += [
@@ -1026,29 +1095,24 @@ template("component") {
             "#endif",
           ]
         }
-        _cc_count += 1
+        _cc_index += 1
       }
-      if (_cc_count != 0) {
-        write_file(_shot_jumbo_cc_outputs[_cc_output_index], _cc_contents)
-      }
+      write_file(_shot_jumbo_cc_outputs[_cc_written], _cc_contents)
     }
 
     if (_shot_jumbo_c_entries != []) {
-      _c_count = 0
-      _c_next_chunk = 0
-      _c_output_index = 0
+      _c_index = 0
+      _c_written = -1
       _c_contents = []
       foreach(_entry, _shot_jumbo_c_entries) {
-        if (_c_count == _c_next_chunk) {
-          if (_c_count != 0) {
-            write_file(_shot_jumbo_c_outputs[_c_output_index], _c_contents)
-            _c_output_index += 1
+        _c_chunk = _shot_jumbo_c_chunks[_c_index]
+        if (_c_chunk != _c_written) {
+          if (_c_written != -1) {
+            write_file(_shot_jumbo_c_outputs[_c_written], _c_contents)
           }
           _c_contents = []
-          _c_contents += [
-            "/* Generated by //build/config/BUILDCONFIG.gn. Do not edit. */",
-          ]
-          _c_next_chunk += _shot_jumbo_merge_limit
+          _c_contents += _shot_jumbo_unit_header
+          _c_written = _c_chunk
         }
         if (string_replace(_entry, "!", "", 1) == _entry) {
           _c_contents += [
@@ -1065,29 +1129,24 @@ template("component") {
             "#endif",
           ]
         }
-        _c_count += 1
+        _c_index += 1
       }
-      if (_c_count != 0) {
-        write_file(_shot_jumbo_c_outputs[_c_output_index], _c_contents)
-      }
+      write_file(_shot_jumbo_c_outputs[_c_written], _c_contents)
     }
 
     if (_shot_jumbo_mm_entries != []) {
-      _mm_count = 0
-      _mm_next_chunk = 0
-      _mm_output_index = 0
+      _mm_index = 0
+      _mm_written = -1
       _mm_contents = []
       foreach(_entry, _shot_jumbo_mm_entries) {
-        if (_mm_count == _mm_next_chunk) {
-          if (_mm_count != 0) {
-            write_file(_shot_jumbo_mm_outputs[_mm_output_index], _mm_contents)
-            _mm_output_index += 1
+        _mm_chunk = _shot_jumbo_mm_chunks[_mm_index]
+        if (_mm_chunk != _mm_written) {
+          if (_mm_written != -1) {
+            write_file(_shot_jumbo_mm_outputs[_mm_written], _mm_contents)
           }
           _mm_contents = []
-          _mm_contents += [
-            "/* Generated by //build/config/BUILDCONFIG.gn. Do not edit. */",
-          ]
-          _mm_next_chunk += _shot_jumbo_merge_limit
+          _mm_contents += _shot_jumbo_unit_header
+          _mm_written = _mm_chunk
         }
         if (string_replace(_entry, "!", "", 1) == _entry) {
           _mm_contents += [
@@ -1104,11 +1163,9 @@ template("component") {
             "#endif",
           ]
         }
-        _mm_count += 1
+        _mm_index += 1
       }
-      if (_mm_count != 0) {
-        write_file(_shot_jumbo_mm_outputs[_mm_output_index], _mm_contents)
-      }
+      write_file(_shot_jumbo_mm_outputs[_mm_written], _mm_contents)
     }
   }
 

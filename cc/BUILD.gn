@@ -35,8 +35,15 @@ cc_component("layer_selection_bound") {
 }
 
 cc_component("cc") {
-  shot_jumbo_excluded_sources =
-      [ "metrics/compositor_frame_reporting_controller.cc" ]
+  # Each defines a file-scope name a sibling in the same jumbo unit also
+  # defines: kVsyncCountsMin, kTracingCategory + IsTracingEnabled,
+  # VerboseLogEnabled.
+  shot_jumbo_excluded_sources = [
+    "metrics/compositor_frame_reporting_controller.cc",
+    "metrics/scroll_jank_v4_histogram_emitter.cc",
+    "metrics/scroll_jank_v4_tracing_recorder.cc",
+    "trees/layer_tree_host_impl.cc",
+  ]
 
   sources = [
     "benchmarks/benchmark_instrumentation.cc",

@@ -13,6 +13,10 @@
 
 import("//build/args/shot.gn")
 
+# The macOS arm64 runner has three cores and 7 GB; three 32-file Blink units
+# at 2.2 GB each do not fit. 16 keeps the per-unit peak near 2 GB.
+shot_jumbo_file_merge_limit = 16
+
 # The runner's Xcode, because the hermetic one comes from an internal CIPD
 # path this checkout cannot reach. build_overrides/build.gni would infer the
 # same answer by asking should_use_hermetic_xcode.py whether that copy is

@@ -7,6 +7,10 @@ import("//mojo/public/tools/bindings/mojom.gni")
 
 component("input") {
   defines = [ "IS_INPUT_IMPL" ]
+
+  # Refers to features:: meaning ::features; after a sibling that declares
+  # input::features in the same unit the lookup lands there instead.
+  shot_jumbo_excluded_sources = [ "input_router_impl.cc" ]
   sources = [
     "child_frame_input_helper.cc",
     "child_frame_input_helper.h",
