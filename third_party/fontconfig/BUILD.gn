@@ -89,15 +89,19 @@ if (use_bundled_fontconfig) {
   }
 
   component("fontconfig") {
-    # fccfg.c and fccache.c each define a file-scope `static free_lock`, which
-    # is two separate functions until Jumbo concatenates them and the second
-    # becomes a redefinition of the first. Only one has to leave the chunk.
+    # Not a jumbo target. fontconfig is C from a DEPS checkout, and its files
+    # reuse file-scope names freely: fccfg.c and fccache.c both define a
+    # `static free_lock`, fcstr.c and fcobjs.c both define FcCharIsPunct,
+    # fcstat.c's FcDirChecksum disagrees with the declaration an earlier file
+    # already saw, and the generated fcobjshash.gperf includes stop parsing
+    # once another file's macros precede them. At 8 files per unit one
+    # exclusion covered it; at 32 there were four more, and C files this size
+    # compile in well under a second each, so there is nothing to save.
     #
-    # This one is not visible from a Windows build at all -- fontconfig is
-    # linux-only here -- and it cannot be checked on a Windows host either,
-    # because third_party/fontconfig/src is a DEPS checkout gated on
-    # checkout_linux and is simply not present.
-    shot_jumbo_excluded_sources = [ "src/src/fccfg.c" ]
+    # None of this is visible from a Windows build -- fontconfig is linux-only
+    # here, and third_party/fontconfig/src is a DEPS checkout gated on
+    # checkout_linux that a Windows host does not even have.
+    never_build_shot_jumbo = true
 
     sources = [
       "include/fontconfig/fontconfig.h",

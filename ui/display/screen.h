@@ -244,10 +244,6 @@ class DISPLAY_EXPORT Screen {
 
   int64_t display_id_for_new_windows_;
   int64_t scoped_display_id_for_new_windows_ = display::kInvalidDisplayId;
-
-#if BUILDFLAG(IS_LINUX)
-  uint32_t screen_saver_suspension_count_ = 0;
-#endif  // BUILDFLAG(IS_LINUX)
 };
 
 #if BUILDFLAG(IS_APPLE)
