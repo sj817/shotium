@@ -158,8 +158,10 @@ runs:
         when=$(git log -1 --format=%ct -- patches)
         base=$(git -C third_party/skia log -1 --format=%ct)
         [ "$base" -gt "$when" ] && when=$base
+        # touch -t, not -d @seconds: BSD touch on macOS has no -d @.
+        stamp=$(date -u -d "@$when" +%Y%m%d%H%M.%S 2>/dev/null || date -u -r "$when" +%Y%m%d%H%M.%S)
         git -C third_party/skia diff --name-only | while read -r f; do
-          touch -d "@$when" "third_party/skia/$f"
+          touch -t "$stamp" "third_party/skia/$f"
         done
 
     - name: build the shot ICU data set
