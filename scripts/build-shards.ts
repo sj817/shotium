@@ -49,7 +49,7 @@ import {glob} from 'tinyglobby';
 
 import {
   type DepsLog, type DepsRecord, type LogEntry, LOG_HEADER,
-  formatDeps, formatLog, fromNinjaTime, parseDeps, parseLog, toNinjaTime,
+  assignShards, formatDeps, formatLog, fromNinjaTime, parseDeps, parseLog, toNinjaTime,
 } from './lib/ninja-state.ts';
 import {resolve as resolveInRepo} from './lib/repo.ts';
 
@@ -176,7 +176,41 @@ async function merge(buildDir: string, shards: string[]): Promise<number> {
   return 0;
 }
 
+// The objects arrive on stdin (`ninja -t inputs shot shot_c | grep '\.o$'`),
+// one per line; the slice for shard `index` of `shards` goes to stdout.
+async function slice(buildDir: string, shards: number, index: number): Promise<number> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of process.stdin) chunks.push(chunk as Buffer);
+  const objects = Buffer.concat(chunks).toString('utf8').split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const {entries} = readState(buildDir);
+  let known = 0;
+  const duration = (o: string): number | undefined => {
+    const e = entries.get(o);
+    if (!e) return undefined;
+    known++;
+    return e.end - e.start;
+  };
+  const mine = assignShards(objects, shards, duration)[index];
+  for (const o of mine) process.stdout.write(o + '\n');
+  console.error(`shard ${index}/${shards}: ${mine.length} of ${objects.length} objects, ${known} costs from .ninja_log, the rest estimated`);
+  return 0;
+}
+
 const cli = cac('build-shards');
+cli.command('slice', 'read objects on stdin, print the ones shard <index> of <shards> should build')
+  .option('--build-dir <dir>', 'ninja build directory whose .ninja_log, if any, gives past durations', {default: 'out/Shot'})
+  .option('--shards <n>', 'number of shards', {default: '1'})
+  .option('--index <i>', 'this shard, 0-based', {default: '0'})
+  .action(async (options: {buildDir: string; shards: string; index: string}) => {
+    const shards = Number(options.shards);
+    const index = Number(options.index);
+    if (!Number.isInteger(shards) || shards < 1 || !Number.isInteger(index) || index < 0 || index >= shards) {
+      console.error(`bad --shards ${options.shards} / --index ${options.index}`);
+      process.exitCode = 2;
+      return;
+    }
+    process.exitCode = await slice(resolveInRepo(options.buildDir), shards, index);
+  });
 cli.command('list', 'print what this build directory has to send to the final job')
   .option('--build-dir <dir>', 'ninja build directory (relative paths resolve against the repository root)', {default: 'out/Shot'})
   .option('--since <seconds>', 'only files newer than this Unix time (`date +%s` at job start)')

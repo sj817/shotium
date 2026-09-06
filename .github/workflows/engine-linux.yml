@@ -169,12 +169,12 @@ jobs:
         working-directory: src
         # -t inputs walks the graph below the two engine targets and names
         # every file it would read, objects included, in every toolchain.
-        # Sorted, then every Nth: neighbouring objects come from the same
-        # target and cost about the same, so the slices stay even.
+        # `slice` spreads them by cost -- last run's durations from the
+        # restored .ninja_log, or an estimate from the path -- longest first
+        # onto the least-loaded shard, so the shards finish together; every
+        # shard computes the same assignment from the same inputs.
         run: |
-          ninja -C out/Shot -t inputs shot shot_c | grep -E '\.o$' | sort > /tmp/objects.txt
-          awk -v n='${{ needs.meta.outputs.shard_count }}' -v i='${{ matrix.shard }}' 'NR % n == i' /tmp/objects.txt > /tmp/slice.txt
-          echo "$(wc -l < /tmp/slice.txt) of $(wc -l < /tmp/objects.txt) objects"
+          ninja -C out/Shot -t inputs shot shot_c | grep -E '\.o$'             | pnpm --silent build:shards slice --build-dir out/Shot                 --shards '${{ needs.meta.outputs.shard_count }}' --index '${{ matrix.shard }}' > /tmp/slice.txt
 
       - name: ninja
         working-directory: src

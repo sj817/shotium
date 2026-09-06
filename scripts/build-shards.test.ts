@@ -6,8 +6,27 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
-  DEPS_HEADER, LOG_HEADER, formatDeps, formatLog, fromNinjaTime, parseDeps, parseLog, toNinjaTime,
+  DEPS_HEADER, LOG_HEADER, assignShards, formatDeps, formatLog, fromNinjaTime, parseDeps, parseLog, toNinjaTime,
 } from './lib/ninja-state.ts';
+
+test('shards: longest first onto the least-loaded shard, deterministic, every object once', () => {
+  const objects = ['a.o', 'b.o', 'c.o', 'd.o', 'e.o', 'f.o'];
+  const cost: Record<string, number> = {'a.o': 10, 'b.o': 9, 'c.o': 8, 'd.o': 2, 'e.o': 2, 'f.o': 1};
+  const shards = assignShards(objects, 3, (o) => cost[o]);
+  assert.deepEqual(shards, [['a.o', 'f.o'], ['b.o', 'e.o'], ['c.o', 'd.o']]);
+  const again = assignShards([...objects].reverse(), 3, (o) => cost[o]);
+  assert.deepEqual(again, shards);
+  assert.deepEqual(shards.flat().sort(), objects);
+});
+
+test('shards: unknown costs come from the path, Blink jumbo units heaviest', () => {
+  const objects = ['obj/third_party/blink/renderer/core/core/core_shot_jumbo_css_0.o', 'obj/base/base/base_shot_jumbo_root_0.o',
+    'obj/net/net/x.o', 'obj/net/net/y.o', 'obj/net/net/z.o', 'obj/net/net/w.o'];
+  const shards = assignShards(objects, 2, () => undefined);
+  assert.equal(shards[0][0], objects[0]);
+  assert.equal(shards[1][0], objects[1]);
+  assert.equal(shards[0].length + shards[1].length, 6);
+});
 
 test('deps log: format then parse gives the same records, ids assigned in order', () => {
   const records = new Map([

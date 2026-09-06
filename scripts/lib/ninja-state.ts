@@ -131,6 +131,35 @@ export function formatDeps(log: DepsLog): Buffer {
   return Buffer.concat(chunks);
 }
 
+// Split objects between N shards so the shards finish together. Cost comes
+// from a previous .ninja_log when the build directory has one (a restored
+// cache does), else from the path: a Blink jumbo unit costs about 15 s on a
+// runner, another jumbo unit a few, a plain file one. Longest-processing-time
+// first onto the least-loaded shard is within 4/3 of optimal and, with the
+// deterministic ordering below, gives every shard the same answer from the
+// same inputs, which is what lets N machines agree without talking.
+export function assignShards(
+  objects: string[], shards: number, durationMs: (object: string) => number | undefined,
+): string[][] {
+  const cost = (o: string): number => {
+    const known = durationMs(o);
+    if (known !== undefined && known > 0) return known;
+    if (!o.includes('_shot_jumbo_')) return 1000;
+    return o.includes('third_party/blink/') ? 15000 : 4000;
+  };
+  const ordered = [...new Set(objects)].map((o) => [o, cost(o)] as const)
+    .sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
+  const out: string[][] = Array.from({length: shards}, () => []);
+  const load = new Array<number>(shards).fill(0);
+  for (const [o, c] of ordered) {
+    let least = 0;
+    for (let i = 1; i < shards; i++) if (load[i] < load[least]) least = i;
+    out[least].push(o);
+    load[least] += c;
+  }
+  return out;
+}
+
 export function toNinjaTime(mtimeNs: bigint, platform: NodeJS.Platform = process.platform): bigint {
   if (platform === 'win32') return mtimeNs / 100n + UNIX_TO_FILETIME - WINDOWS_EPOCH_SHIFT;
   return mtimeNs;
