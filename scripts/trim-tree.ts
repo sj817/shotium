@@ -163,8 +163,12 @@ async function exportGraph(buildDirArg: string, outArg: string): Promise<number>
   await writeFile(path.join(out, 'depfiles.txt'), [...depfileDeps].sort().join('\n') + '\n');
 
   // The jumbo TUs: gen/<dir>/<target>_shot_jumbo_N.cc, each a list of
-  // #include "../../real/source.cc".
-  const jumbo = await glob('gen/**/*_shot_jumbo_*.cc', {cwd: buildDir, absolute: true});
+  // #include "../../real/source.cc". GN writes them at gen time and never
+  // deletes one, so a warm directory keeps the units of every target that
+  // ever existed (807 of 2,801 on the development host: gpu/ipc, viz/service,
+  // services/network, ui/aura ...). Only a unit the graph compiles counts.
+  const jumbo = (await glob('gen/**/*_shot_jumbo_*.cc', {cwd: buildDir, absolute: true}))
+                    .filter((file) => nodes.has(path.relative(buildDir, file).replace(/\\/g, '/')));
   const sources = new Set<string>();
   for (const file of jumbo) {
     for (const line of (await readFile(file, 'utf8')).split(/\r?\n/)) {
@@ -210,13 +214,26 @@ async function readRecords(dir: string): Promise<Set<string>> {
   };
 
   for (const line of (await text('inputs.txt')).split(/\r?\n/)) add(line);
-  for (const line of (await text('graph.txt')).split(/\r?\n/)) add(line);
+  const graphLines = (await text('graph.txt')).split(/\r?\n/);
+  const nodes = new Set(graphLines.map((l) => l.trim().replace(/\\/g, '/')).filter(Boolean));
+  for (const line of graphLines) add(line);
   for (const line of (await text('depfiles.txt')).split(/\r?\n/)) add(line);
   for (const line of (await text('jumbo.txt')).split(/\r?\n/)) add(line);
-  // deps.txt: "obj/x.obj: #deps N, ..." header lines, then one indented path
-  // per line.
+  // deps.txt: "obj/x.obj: #deps N, deps mtime T (VALID|STALE)" header lines,
+  // then one indented path per line. The deps log outlives the graph: a warm
+  // build directory still holds the entries of objects an earlier tree
+  // compiled and this one no longer reaches (the development host's carried
+  // 1,414 such objects, remembering 963 content/ and gpu/ headers no build
+  // reads). Only an entry whose object is a node reachable from shot/shot_c
+  // counts; without a graph.txt (an old export) every entry does.
+  let counted = nodes.size === 0;
   for (const line of (await text('deps.txt')).split(/\r?\n/)) {
-    if (line.startsWith('    ')) add(line);
+    if (line.startsWith('    ')) {
+      if (counted) add(line);
+      continue;
+    }
+    const header = line.indexOf(': #deps');
+    if (header > 0) counted = nodes.size === 0 || (nodes.has(line.slice(0, header).replace(/\\/g, '/')) && !line.endsWith('(STALE)'));
   }
   // build.ninja.d: "build.ninja: a b c \" with line continuations. Paths with
   // spaces are escaped as "\ ", which no path of this repository has.
