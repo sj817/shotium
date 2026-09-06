@@ -20,9 +20,11 @@
 //     explicit input of the libc++ module.pcm, which every CXX edge depends
 //     on, and the rust stdlib .rlibs are inputs of libstd -- a freshly
 //     downloaded toolchain with "now" for a timestamp re-dirtied the entire
-//     build, which ninja -d explain named directly. The one exception is
-//     LASTCHANGE, whose content derives from HEAD, so it carries HEAD's time;
-//     its cone is one translation unit.
+//     build, which ninja -d explain named directly. LASTCHANGE is one of
+//     these: the DEPS hook pins it to the root commit, so its content is a
+//     constant and DEPS's time is right for it too. (It used to follow HEAD,
+//     and through base/check.cc, libbase and every host tool that recompiled
+//     ~1,300 steps on every "warm" run.)
 //
 // The output directory is left alone: its timestamps are what the comparison
 // is against.
@@ -102,11 +104,11 @@ function main(workspaceArg: string, solutionName: string, outDir: string): numbe
     let when = times.get(rel);
     if (when === undefined) {
       // Untracked: a hook wrote it (llvm-build, rust-toolchain, LASTCHANGE)
-      // or it is local debris. DEPS pins the toolchains, so DEPS's time is
-      // their provenance; if a toolchain ever changes without a DEPS edit,
-      // the CR_CLANG_REVISION / rustflags in every command line still force
-      // the rebuild mtimes no longer would.
-      when = path.basename(rel).startsWith('LASTCHANGE') ? head : depsTime;
+      // or it is local debris. DEPS pins the toolchains and the LASTCHANGE
+      // value, so DEPS's time is their provenance; if a toolchain ever
+      // changes without a DEPS edit, the CR_CLANG_REVISION / rustflags in
+      // every command line still force the rebuild mtimes no longer would.
+      when = depsTime;
     }
     stamp(file, when);
   }

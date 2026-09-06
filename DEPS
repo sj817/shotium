@@ -1243,14 +1243,17 @@ hooks = [
     # Update LASTCHANGE.
     'name': 'lastchange',
     'pattern': '.',
-    # --filter overrides the default '^Change-Id:', which exists to skip a
-    # developer's local commits and find the last upstream one. This fork has
-    # no upstream commits: every commit in it is local and none carry a
-    # Change-Id, so the default matches nothing, LASTCHANGE.committime becomes
-    # 0, and build_timestamp is quantised backwards past the epoch into a
-    # negative number that lld refuses to link with.
+    # --filter picks the commit LASTCHANGE describes. Upstream's default
+    # '^Change-Id:' finds the last upstream commit; this fork's commits carry
+    # none, and '.' (any commit) made LASTCHANGE follow HEAD. That hash is read
+    # by nothing this engine ships, but it is an input of base's
+    # check_version_internal.h, and a new value every CI run recompiled
+    # libbase, relinked every host tool (protoc, nasm, the perfetto plugins),
+    # regenerated their outputs and recompiled ~500 Blink units on a "warm"
+    # cache. Pinning the filter to the root commit's subject makes LASTCHANGE
+    # and LASTCHANGE.committime (the build timestamp) constants.
     'action': ['python3', 'src/build/util/lastchange.py',
-               '--filter', '.',
+               '--filter', '^shotium: static screenshots from a stripped Chromium$',
                '-o', 'src/build/util/LASTCHANGE'],
   },
   {

@@ -136,9 +136,9 @@ In order; no step substitutes for the next:
 3. `pnpm check:syntax --dir <affected dir>` or `--from-log` for the
    syntax-only pass.
 4. Full build (`/build-engine`). If a jumbo exclusion was added, read
-   `out/Shot/gen/<path>/<target>_shot_jumbo_N.cc` and confirm the file is
-   absent from a chunk regenerated in this `gn gen` (check the timestamp;
-   older merge limits leave stale chunks in `gen/`).
+   `out/Shot/gen/<path>/<target>_shot_jumbo_<group>_<n>.cc` and confirm the
+   file is absent from a unit regenerated in this `gn gen` (check the
+   timestamp; older merge limits leave stale units in `gen/`).
 5. Linux graph in a second out directory (`import("//build/args/shot-linux.gn")`,
    `use_sysroot = false`, `host_toolchain = "//build/toolchain/linux:clang_x64"`),
    ~30 s, then `pnpm missing-inputs` against it; `pnpm probe:platform`

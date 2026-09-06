@@ -9,6 +9,7 @@
 
 #include "base/check_op.h"
 #include "base/feature_list.h"
+#include "net/base/features.h"
 #include "base/functional/bind.h"
 #include "base/functional/callback.h"
 #include "base/location.h"

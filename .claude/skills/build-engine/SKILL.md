@@ -120,12 +120,16 @@ Cadence: one full build to collect the complete failure set, then
 
 ### Jumbo
 
-`use_shot_jumbo_build` merges sources into one TU per group of
-`shot_jumbo_file_merge_limit` (8) files. The grouping is decided by the
-target's source list, so two files that collide only collide when they land
-in the same chunk, and the chunk boundaries move whenever a platform-specific
-file enters or leaves the list. "It compiles on Windows" is not evidence
-about Linux.
+`use_shot_jumbo_build` merges sources into one TU per unit. A unit holds
+sources from one group, the first directory component of the path relative
+to the target (`css`, `layout`, `root` for the target's own directory,
+`extern` for paths outside it), split every `shot_jumbo_file_merge_limit`
+(32; 16 on macOS) files, and is named `<target>_shot_jumbo_<group>_<n>.cc`.
+Two files collide only when they land in the same unit, and a platform's
+source list decides that: "it compiles on Windows" is not evidence about
+Linux. The limit is 32 because parsing Blink's headers costs a unit about
+14 s whatever it contains (8 files 13.9 s, 32 files 16.4 s, 64 files 21.1 s
+on the development host; 1.8, 2.2 and 2.5 GB peak).
 
 Known failure modes, all seen in this tree:
 
@@ -139,12 +143,15 @@ Known failure modes, all seen in this tree:
 3. **Anonymous-namespace or macro collisions** between files.
 
 Excluding a file: add it to `shot_jumbo_excluded_sources` on the *target that
-owns it*. Two silent failures: writing it on the wrong target (the obj path
+owns it*, with the reason. If the target is in a DEPS checkout or reached
+through a template that forwards nothing (`mojom()` traits sources), use the
+absolute label in `shot_jumbo_excluded_files` in `build/args/shot.gn`. Two silent failures: writing it on the wrong target (the obj path
 `obj/.../core/animation/animation/x.obj` names `core/animation:animation`,
 not `core:core`), and a path form that does not match the target's `sources`
 (some targets use `rebase_path` and carry absolute paths). Verify by reading
-`out/Shot/gen/<path>/<target>_shot_jumbo_N.cc` after `gn gen`, checking the
-timestamp so you are not reading a chunk from an earlier merge limit. Both
+`out/Shot/gen/<path>/<target>_shot_jumbo_<group>_<n>.cc` after `gn gen`,
+checking the timestamp so you are not reading a unit from an earlier merge
+limit (GN never deletes a stale unit). Both
 path forms are tried in `build/config/BUILDCONFIG.gn`; if you change that
 matcher, regress both Blink core and Skia.
 

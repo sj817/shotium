@@ -57,7 +57,11 @@ component("crash_keys") {
 
 component("cpp") {
   output_name = "network_cpp"
-  shot_jumbo_excluded_sources = [ "declarative_performance_observer_parser.cc" ]
+  # Each defines an anonymous-namespace kHeaderName, as do its siblings.
+  shot_jumbo_excluded_sources = [
+    "declarative_performance_observer_parser.cc",
+    "document_isolation_policy_parser.cc",
+  ]
 
   sources = [
     "avail_language_header_parser.cc",

@@ -140,6 +140,11 @@ v8_vendored_source_set("v8_libplatform") {
 
 v8_vendored_source_set("cppgc_base") {
   sources = cppgc_base_sources
+
+  # marker.cc and concurrent-marker.cc each define a file-scope
+  # kDefaultDeadlineCheckInterval (150 and 750); in one jumbo unit that is a
+  # redefinition.
+  shot_jumbo_excluded_sources = [ "v8/src/heap/cppgc-internal/concurrent-marker.cc" ]
   public_deps = [
     ":v8_heap_base",
     ":v8_libbase",

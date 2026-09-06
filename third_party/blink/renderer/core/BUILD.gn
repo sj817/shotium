@@ -244,10 +244,16 @@ component("core") {
   # a duplicated file-scope symbol, or a name that resolves differently once
   # another source's declarations precede it. They still compile on their own.
   shot_jumbo_excluded_sources = [
+    "css/box_shadow_paint_image_generator.cc",
     "css/clip_path_paint_image_generator.cc",
+    "css/css_primitive_value.cc",
     "css/properties/css_direction_aware_resolver.cc",
+    "execution_context/security_context_init.cc",
     "frame/cached_permission_status.cc",
     "html/anchor_element_viewport_position_tracker.cc",
+    "layout/flex/flex_layout_algorithm.cc",
+    "layout/mathml/math_scripts_layout_algorithm.cc",
+    "layout/svg/layout_svg_rect.cc",
     "paint/highlight_painter.cc",
     # Defines IsLinkHighlighted at namespace scope, as does
     # paint_property_tree_builder.cc; the mac source list put both in one

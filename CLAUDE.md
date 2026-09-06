@@ -284,14 +284,23 @@ one process cannot tell each other's pointers apart; fontconfig's `free()` of a
   `cdb -g -G -lines -c "g; kc 40; q"`.
 - `is_shot_build` gates a handful of `BUILD.gn` files and two `.cc` files
   (`IS_SHOT_BUILD`). Most of the cut is deletion, not conditionals.
-- Jumbo builds (`use_shot_jumbo_build`, `shot_jumbo_file_merge_limit = 8`)
-  concatenate sources into one TU per group. Grouping follows the source list,
-  so "compiles on Windows" says nothing about Linux. Known cross-file failure
-  modes: a trailing `#undef` in a header, an unqualified name resolved by an
-  earlier file in the chunk, colliding anonymous namespaces or macros.
-  Exclusions in `shot_jumbo_excluded_sources` fail silently when written on the
-  wrong target or in the wrong path form; verify by reading
-  `out/Shot/gen/<path>/<target>_shot_jumbo_N.cc`.
+- Jumbo builds (`use_shot_jumbo_build`, `shot_jumbo_file_merge_limit = 32`,
+  16 on macOS for the 7 GB arm64 runner) concatenate sources into one TU per
+  unit. A unit holds sources from one group, the first directory component of
+  the source path relative to the target (`css`, `layout`, `root` for the
+  target's own directory, `extern` for paths outside it), split every 32
+  files, and is named `<target>_shot_jumbo_<group>_<n>.cc`; adding or deleting
+  a file re-cuts only that group, where the old positional chunks re-cut the
+  whole target and a warm cache recompiled it. The limit is 32 because parsing
+  Blink's headers costs a unit about 14 s whatever it contains (8 files:
+  13.9 s and 1.8 GB; 32: 16.4 s and 2.2 GB; 64: 21.1 s and 2.5 GB, measured on
+  the development host). Sources differ per platform, so "compiles on Windows"
+  says nothing about Linux. Known cross-file failure modes: a trailing
+  `#undef` in a header, an unqualified name resolved by an earlier file in the
+  unit, colliding anonymous namespaces or macros. Exclusions in
+  `shot_jumbo_excluded_sources` fail silently when written on the wrong target
+  or in the wrong path form; verify by reading
+  `out/Shot/gen/<path>/<target>_shot_jumbo_<group>_<n>.cc`.
 - Three upstream lines are *behavioural disagreements* rather than cuts
   (`parkable_image.cc` feature default, `cc/paint/draw_looper` `MaxOutset()`,
   `paint_chunks_to_cc_layer` extra parameters). They are tabulated in
@@ -316,16 +325,21 @@ Output: `out/Shot/shotium.exe`, `out/Shot/shotium.dll`, `out/Shot/shotium_data.p
   variants racing on `environment.x64` (`PermissionError`), and ninja
   re-running `gn gen` itself. A relative `--log` is relative to where you
   typed the command.
-- `--jobs`: 16 is the last known-good for a full build on the development host;
-  24 hit `LLVM ERROR: out of memory` in Blink core jumbo TUs. Measure the
-  phase you are about to run (`Get-Process clang-cl | Measure-Object WorkingSet64 -Sum`)
+- `--jobs`: 16 is the last known-good for a full build on the development host
+  (64 GB); 24 hit `LLVM ERROR: out of memory` in Blink core jumbo TUs at the
+  old merge limit, and a 32-file unit peaks at 2.2 GB, so 16 is 35 GB. Measure
+  the phase you are about to run (`Get-Process clang-cl | Measure-Object WorkingSet64 -Sum`)
   rather than reusing a number. ThinLTO link memory is governed by
   `/opt:lldltojobs=N`, not `-j`.
 - Stopping a background build kills the shell, not `ninja` or its `clang-cl`
   children. Before starting a build, kill leftovers twice:
   `Get-Process -Name ninja,clang-cl,rustc,lld-link -EA SilentlyContinue | Stop-Process -Force`.
-- First build into `out/Shot` is ~5,800 steps (about 50 minutes); incremental
-  builds touching only `shot/` take minutes.
+- A clean build into `out/Shot` is ~5,200 steps and 23 minutes at
+  `--jobs 16` (shot 22.6, then shot_c 0.4); incremental builds
+  touching only `shot/` take minutes. `build/util/LASTCHANGE` is pinned to the
+  root commit by its DEPS hook: it used to follow HEAD, and through
+  `base/check.cc`, libbase and every host tool it recompiled ~1,300 steps on
+  every "warm" CI run. Do not "fix" it back.
 - Read failures with `pnpm build:errors out/Shot/build.log` (`--targets`,
   `--top 30`, `--files`, `--full`), never the raw log (6 KB of flags per failure).
 - Front-end errors do not need a full build:
