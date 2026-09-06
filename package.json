@@ -69,7 +69,6 @@
     "gen:idl": "pnpm -C scripts gen-idl",
     "bootstrap": "pnpm -C scripts bootstrap",
     "deps-lock": "pnpm -C scripts deps-lock",
-    "depfiles:prune": "pnpm -C scripts prune-stale-depfiles",
-    "build:shards": "pnpm -C scripts build-shards"
+    "depfiles:prune": "pnpm -C scripts prune-stale-depfiles"
   }
 }
