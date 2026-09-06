@@ -46,13 +46,19 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '22'
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 9.15.9
+      - name: repository scripts
+        working-directory: scripts
+        run: pnpm install --frozen-lockfile
       - id: plan
         name: Require all six exact-SHA native builds
         env:
           GH_TOKEN: ${{ github.token }}
           BUILD_RUNS: ${{ inputs.build_runs }}
           BASELINE_VERSION: ${{ inputs.baseline_version }}
-        run: node tools/shot/node_perf_ci.cjs plan
+        run: pnpm perf:ci plan
       - uses: actions/upload-artifact@v7
         with:
           name: performance-plan
@@ -81,6 +87,9 @@ jobs:
       - uses: pnpm/action-setup@v6
         with:
           version: 9.15.9
+      - name: repository scripts
+        working-directory: scripts
+        run: pnpm install --frozen-lockfile
       - name: Build the candidate JavaScript
         working-directory: shotium
         run: |
@@ -98,20 +107,19 @@ jobs:
           BASELINE_VERSION: ${{ inputs.baseline_version }}
         run: |
           npm install --prefix out/performance/baseline --ignore-scripts --no-audit --no-fund "@shotkit/shotium@$BASELINE_VERSION"
-          node tools/shot/node_perf_ci.cjs stage out/performance/download out/performance/candidate
-          python -m pip install Pillow==11.1.0
+          pnpm perf:ci stage out/performance/download out/performance/candidate
       - name: Validate the two real long articles
-        run: python tools/shot/bilibili_check.py --package out/performance/candidate
+        run: pnpm verify:bilibili --package out/performance/candidate
       - name: Complete paired performance matrix
         id: performance
         run: >-
-          node tools/shot/node_perf.cjs
+          pnpm perf:compare
           out/performance/baseline/node_modules/@shotkit/shotium
           out/performance/candidate
           out/performance/result.json --samples=100 --calibrate --check
       - name: Independently compare every rendered case
         if: always() && steps.performance.outcome != 'skipped'
-        run: python tools/shot/node_perf_images.py out/performance/result.json
+        run: pnpm perf:images out/performance/result.json
       - name: Preserve failures and raw evidence
         if: always()
         uses: actions/upload-artifact@v7
@@ -132,6 +140,15 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 9.15.9
+      - name: repository scripts
+        working-directory: scripts
+        run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@v8
         with:
           pattern: performance-*
@@ -139,7 +156,7 @@ jobs:
       - name: Require complete results on all six platforms
         shell: bash
         run: |
-          python tools/shot/node_perf_report.py out/evidence/performance-*/result.json --output out/performance-acceptance.md
+          pnpm perf:report out/evidence/performance-*/result.json --output out/performance-acceptance.md
           test '${{ needs.platform.result }}' = success
       - uses: actions/upload-artifact@v7
         if: always()

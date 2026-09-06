@@ -697,8 +697,8 @@ cd src
 git -C third_party/skia apply --verbose ../../patches/third_party_skia_parallel_blur.patch
 git -C third_party/skia apply --verbose ../../patches/third_party_skia_incremental_row_limit.patch
 
-# 重新打包精简版 ICU 数据文件
-python3 tools/shot/icu_repack.py   third_party/icu/cast/icudtl.dat   third_party/icu/shot/icudtl.dat --preset shot
+# 重新打包精简版 ICU 数据文件（每个 checkout 先执行一次 pnpm -C scripts install）
+pnpm icu:repack third_party/icu/cast/icudtl.dat third_party/icu/shot/icudtl.dat --preset shot
 
 mkdir -p out/Shot
 echo 'import("//build/args/shot.gn")' > out/Shot/args.gn
@@ -712,11 +712,11 @@ ninja -C out/Shot shot
 ### 测试套件
 
 ```bash
-python tools/shot/serve_check.py   out/Shot/shotium.exe  # 协议与图像编解码校验
-python tools/shot/net_check.py     out/Shot/shotium.exe  # HTTP、TLS、重定向与缓存校验
-node   tools/shot/node_check.cjs   out/Shot/shotium.exe  # Node 扩展绑定、任务队列与生命周期
-node   tools/shot/daemon_check.cjs out/Shot/shotium.exe  # 守护进程 IPC 与并发校验
-python tools/shot/demo_check.py    out/Shot/shotium.exe  # 视觉回归参考测试（84 例 reftest）
+pnpm verify:serve  out/Shot/shotium.exe  # 协议与图像编解码校验
+pnpm verify:net    out/Shot/shotium.exe  # HTTP、TLS、重定向与缓存校验
+pnpm verify:node   out/Shot/shotium.exe  # Node 扩展绑定、任务队列与生命周期
+pnpm verify:daemon out/Shot/shotium.exe  # 守护进程 IPC 与并发校验
+pnpm verify:demos  out/Shot/shotium.exe  # 视觉回归参考测试（84 例 reftest）
 ```
 
 基于本地编译的共享库重新构建 Node.js 扩展：

@@ -171,9 +171,9 @@ gclient sync -D --no-history
 | # | 命令 | 它证明什么 | 代价 |
 |---|---|---|---|
 | 1 | `gn gen out/ShotWip` | GN 图能生成 | ~25 秒 |
-| 2 | `python tools/shot/missing_inputs.py` | 图里每条边背后都真有文件 | ~10 秒 |
+| 2 | `pnpm missing-inputs` | 图里每条边背后都真有文件 | ~10 秒 |
 | 3 | `ninja -C out/ShotWip shot shot_c` | 真能编出来 | 小时级 |
-| 4 | `python tools/shot/serve_check.py` 等 | 引擎还对 | 分钟级 |
+| 4 | `pnpm verify:serve` 等 | 引擎还对 | 分钟级 |
 
 第 2 条是这次同步加进来的,因为第 1 条**证明不了**它。
 
@@ -206,7 +206,7 @@ missing and no known rule to make it
 `gn gen` 抓不到这个 —— GN 从没打开过那个文件,它只是把路径抄了过去。
 `ninja -n` 也抓不到 —— 它走同一张图,但遇到第一个缺失就放弃,不会列全。
 抓得到的是问 ninja 要输入集然后逐个 stat,也就是
-`tools/shot/missing_inputs.py`。
+`pnpm missing-inputs`(`scripts/missing-inputs.ts`)。
 
 一个构建目录只回答一个平台。要回答 Linux 就对着一个 Linux 的 out/ 跑 ——
 给非宿主平台 `gn gen` 在任何宿主上都能跑,分钟级,比构建便宜得多。

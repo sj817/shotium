@@ -1,6 +1,6 @@
 ---
 name: cut-component
-description: Remove a component, directory, third-party library, Rust crate or GN target from this Chromium slice and prove the removal is complete: find live callers (git grep plus gn path, never grep counts), decide restore-vs-cut by actual dependencies, delete the DEPS entry with the checkout, then gn gen, missing_inputs.py, check.py, jumbo verification, and the engine checks. Also for the reverse question, "should X be restored or cut". Triggers: cut, remove, delete, trim, "is this still used", shrink the binary, restore X.
+description: Remove a component, directory, third-party library, Rust crate or GN target from this Chromium slice and prove the removal is complete: find live callers (git grep plus gn path, never grep counts), decide restore-vs-cut by actual dependencies, delete the DEPS entry with the checkout, then gn gen, missing-inputs.ts, check-syntax.ts, jumbo verification, and the engine checks. Also for the reverse question, "should X be restored or cut". Triggers: cut, remove, delete, trim, "is this still used", shrink the binary, restore X.
 ---
 
 # Cut a component
@@ -61,8 +61,8 @@ number of grep hits:
 
 | What it depends on | Do this |
 |---|---|
-| It merely *lives* in a removed directory | Restore it unchanged (`tools/shot/restore_from_upstream.py`) |
-| A generated class whose input (`.idl`) still exists | Regenerate (`tools/shot/gen_idl_*.py`) |
+| It merely *lives* in a removed directory | Restore it unchanged (`pnpm restore:upstream`) |
+| A generated class whose input (`.idl`) still exists | Regenerate (`pnpm gen:idl all`) |
 | A runtime service of the removed component that has an equivalent | Replace the implementation; comment the difference |
 | The removed component's own data structures | Cut; there is nothing to restore |
 | An entry point only script could reach | Cut the entry point, keep the mechanism |
@@ -90,7 +90,7 @@ Rules:
   `-Wunreachable-code-return` rejects and misleads the next reader. Delete
   the block and write why.
 - Restoring an `#include` line is not restoring a component:
-  `restore_includes.py` only re-adds includes whose header exists on disk
+  `pnpm restore:includes` only re-adds includes whose header exists on disk
   today.
 - The full decision record is `docs/cut-progress.md` section 11 (and 8.8
   for the V8-removal round).
@@ -108,10 +108,10 @@ Rules:
   removed in the same change**, or CI's `gclient sync` restores the
   directory. `.gitmodules` is a separate file that git reads and gclient
   ignores; keep the two consistent, and delete both entries.
-  `tools/shot/probe_platform_graph.py` reports "in `.gitmodules`, not in
+  `pnpm probe:platform` reports "in `.gitmodules`, not in
   DEPS" as a finding.
 - Regenerating IDL enums or unions: use the generator's `--check` mode
-  (`gen_idl_enums.py`, `gen_idl_unions.py`), which collects identifiers from
+  (`pnpm gen:idl enums --check`, `pnpm gen:idl unions --check`), which collects identifiers from
   call sites with `git grep -ohE` and diffs them against the generated set in
   both directions. Inferred naming rules produced `kRGBAFloat16` where call
   sites said `kRgbaFloat16`; the compiler then reported hundreds of unrelated
@@ -128,12 +128,12 @@ In order; no step substitutes for the next:
    Not a bare `gn gen`: several Windows toolchain variants race to write
    `environment.x64`, and the `PermissionError` that produces reads exactly
    like a broken `BUILD.gn`. The script retries it.
-2. `python tools/shot/missing_inputs.py out/Shot` (~10 s). Walks
+2. `pnpm missing-inputs out/Shot` (~10 s). Walks
    `ninja -t inputs shot shot_c` and stats every file. GN never opens an
    `inputs` entry, `ninja -n` stops at the first missing one, and a warm
    build directory never looks. Skipping this step costs an hour of CI per
    platform on the next cold build.
-3. `python tools/shot/check.py --dir <affected dir>` or `--from-log` for the
+3. `pnpm check:syntax --dir <affected dir>` or `--from-log` for the
    syntax-only pass.
 4. Full build (`/build-engine`). If a jumbo exclusion was added, read
    `out/Shot/gen/<path>/<target>_shot_jumbo_N.cc` and confirm the file is
@@ -141,12 +141,12 @@ In order; no step substitutes for the next:
    older merge limits leave stale chunks in `gen/`).
 5. Linux graph in a second out directory (`import("//build/args/shot-linux.gn")`,
    `use_sysroot = false`, `host_toolchain = "//build/toolchain/linux:clang_x64"`),
-   ~30 s, then `missing_inputs.py` against it; `tools/shot/probe_platform_graph.py`
+   ~30 s, then `pnpm missing-inputs` against it; `pnpm probe:platform`
    does this and stubs missing directories so one pass lists every gap. One
    out directory answers for one platform. macOS only through
    `engine-macos.yml` in `probe` mode.
 6. `/verify-engine`, including the acceptance run
-   (`pwsh tools/shot/accept.ps1 -SkipBuild`). No region of the corpus may move
+   (`pnpm accept --skip-build`). No region of the corpus may move
    against the Chrome oracle; a rendering difference from a cut is a bug unless
    it is documented in `docs/cut-progress.md` section 8.6.
 
@@ -160,7 +160,7 @@ Deleting code is for compiling, not for shrinking the binary. `obj` size is
 not image contribution (ThinLTO already dropped the unreachable: 3.4 MB of
 Skia Graphite bitcode was 162 KB in the image), and `optimize_for_size` on
 Windows was a no-op until `build/config/compiler/BUILD.gn` was fixed to apply
-`-Os` inside the `is_win` branch. Measure with `tools/shot/size_report.py`
+`-Os` inside the `is_win` branch. Measure with `pnpm size:report`
 (`--by-object <name>`) and the method in `docs/cut-progress.md` section 17
 before planning a size cut; what remains in the image is mostly statically
 reachable, and the large remaining items are data (ICU), not code.

@@ -32,7 +32,7 @@ disagree.
 
 Also note, for a follow-up commit *after* the release:
 `.github/workflows/perf-gate.yml` carries the previous version as
-the `baseline_version` default, and `tools/shot/daemon_protocol_check.cjs`
+the `baseline_version` default, and `pnpm verify:daemon-protocol`
 uses a literal version in one fixture.
 
 Commit and push only that file:

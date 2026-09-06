@@ -3,6 +3,15 @@
 > 2026-09-07。规则已定：仓库脚本一律 TypeScript，能用库就不自己写，精力留给 `shot/`。
 > 本文是把现有 `.py` / `.ps1` / `.cjs` 迁过去的评估：每个脚本手写了什么、哪个库能直接顶替、
 > 迁移顺序，以及工作区（pnpm workspace）实测出来的两条硬约束。
+>
+> **迁移已完成（2026-09-06，分支 `build/scripts-typescript`）。** 下文的评估保留作记录。
+> 现状：`tools/shot/`、`bootstrap/`、`tests/render/lib/` 已删空，每个脚本的去处是同名
+> kebab-case 的 `scripts/<name>.ts`（对照第 4 节），命令一律用根 `package.json` 的别名
+> （`pnpm verify:serve`、`pnpm render run`、`pnpm gen:idl all`、`pnpm bootstrap` 等）。
+> 每个脚本都拿旧版对同一输入的输出做过对照，结论写在各自的提交正文里。第 3 节里的
+> `@clack/prompts` 与 `pidusage` 最终没有用上：bootstrap 没有交互，子进程峰值改用
+> Toolhelp32 快照（`scripts/lib/measured-process.ts`）。`tools/shot/PERFORMANCE.md`
+> 成了 `docs/performance.md`。
 
 ## 0. 结论
 

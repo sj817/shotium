@@ -1,11 +1,11 @@
 ---
 name: perf-compare
-description: Compare a locally built candidate against a published npm version of shotium with tools/shot/node_perf.cjs, render the report with node_perf_images.py and node_perf_report.py, and avoid the measurements that lie: remote URLs (network and cache), the process sampler's own load, a stale local addon that silently wins over the package. Use for "is this faster", "did we regress", "how much did it improve", or the PR performance gate.
+description: Compare a locally built candidate against a published npm version of shotium with scripts/perf-compare.ts, render the report with perf-images.ts and perf-report.ts, and avoid the measurements that lie: remote URLs (network and cache), the process sampler's own load, a stale local addon that silently wins over the package. Use for "is this faster", "did we regress", "how much did it improve", or the PR performance gate.
 ---
 
 # Candidate vs published npm
 
-The methodology is in `tools/shot/PERFORMANCE.md`; read it first. This skill
+The methodology is in `docs/performance.md`; read it first. This skill
 is the commands and the traps.
 
 ## Preconditions
@@ -32,9 +32,9 @@ is the commands and the traps.
 ## Run
 
 ```bash
-node tools/shot/node_perf.cjs BASELINE_PACKAGE CANDIDATE_PACKAGE result.json --calibrate --check
-python tools/shot/node_perf_images.py result.json
-python tools/shot/node_perf_report.py result.json --platform win32-x64 --output report.md
+pnpm perf:compare BASELINE_PACKAGE CANDIDATE_PACKAGE result.json --calibrate --check
+pnpm perf:images result.json
+pnpm perf:report result.json --platform win32-x64 --output report.md
 ```
 
 - `--calibrate` measures the host's noise floor first; `--check` validates
@@ -44,7 +44,7 @@ python tools/shot/node_perf_report.py result.json --platform win32-x64 --output 
   scales 0.5 to 8), HTTP/cache cases, fresh-process startup, memory
   release/restart, queue and multi-process cases, daemon cases,
   failure/recovery, and a 1000-pair soak. The two whole articles and the
-  tiles API have no working npm equivalent before 0.3.4; `bilibili_check.py`
+  tiles API have no working npm equivalent before 0.3.4; `check-bilibili.ts`
   validates their output separately.
 - Stopping is budget-driven, not count-driven: at least 20 pairs and 3 s per
   side per case, then until the p50 and mean ratios are known to within 2%
@@ -76,8 +76,8 @@ python tools/shot/node_perf_report.py result.json --platform win32-x64 --output 
 `perf-gate.yml` runs the same comparison on six platforms. It
 is dispatched with `baseline_version` (an exact published version) and
 `build_runs` (JSON mapping the six npm platforms to successful engine build
-run IDs at the current SHA). `node_perf_ci.cjs` drives it;
-`node_perf_gate.cjs` decides pass/fail; `node_perf_gate.test.cjs` is its
+run IDs at the current SHA). `scripts/perf-ci.ts` drives it;
+`scripts/lib/perf-gate.ts` decides pass/fail; `scripts/perf-gate.test.ts` is its
 unit test and runs in `checks.yml` on every push. Change the test before
 changing a threshold.
 

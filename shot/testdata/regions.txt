@@ -1,4 +1,4 @@
-# Regions of render_corpus.html at 1248x1320, for tools/shot/diff_report.py.
+# Regions of render_corpus.html at 1248x1320, for scripts/diff-report.ts.
 #
 # name:x,y,w,h
 #

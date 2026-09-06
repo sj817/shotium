@@ -39,7 +39,7 @@ wrong once, and where the longer documents are. Multi-step procedures live in
    times out silently and returns a partial result that looks complete. Use
    `git grep`, then `gn path out/Shot <target> <dep>`, and treat the compiler
    and linker as the judge.
-8. **After deleting files, run `python tools/shot/missing_inputs.py out/Shot`
+8. **After deleting files, run `pnpm missing-inputs out/Shot`
    before pushing.** GN copies input paths into `build.ninja` without checking
    they exist, and a warm build directory hides the gap until the next cold CI
    build, an hour later.
@@ -50,18 +50,17 @@ wrong once, and where the longer documents are. Multi-step procedures live in
 10. **Commit only when asked.** When you do, one file at a time is fine;
     message format is in [Git conventions](#git-conventions).
 11. **Scripts are TypeScript in `scripts/`, and a library beats a hand-written
-    utility.** `scripts/` is the only place new tooling goes: one kebab-case
+    utility.** `scripts/` is the only place tooling goes: one kebab-case
     `.ts` file per command, run with `tsx` through `pnpm -C scripts` (root
-    `package.json` forwards the common ones). `tools/shot/`, `tests/render/`
-    and `bootstrap/` hold legacy scripts that move into `scripts/` as they are
-    rewritten and get deleted from where they were. Use a
+    `package.json` forwards every one of them, so `pnpm verify:serve` is the
+    spelling to use and to document). Use a
     library for everything that is not this project's own logic: `execa` for
     processes, `tinyglobby` for globs, `cac` for argument parsing, `p-retry`
     for retries, `sharp` / `pngjs` / `pixelmatch` for pixels. Do not write a
     PNG decoder, a glob matcher, an argument parser or a process wrapper by
-    hand, and do not add to the remaining `.py`, `.ps1` and `.cjs` scripts;
-    they are migrated per `docs/scripts-to-typescript.md`. The effort budget
-    is for `shot/`, not for tooling.
+    hand, and do not add `.py`, `.ps1` or `.cjs` scripts: the last of them
+    were ported per `docs/scripts-to-typescript.md`, each against its
+    original's output. The effort budget is for `shot/`, not for tooling.
 
 ## Project overview
 
@@ -129,17 +128,23 @@ chromium/                      # this repo; upstream Chromium layout with most o
 │   └── dist/                  # tsdown output; what npm publishes, never committed
 ├── apps/benchmark/            # six-platform harness vs Puppeteer/Playwright (own pnpm workspace)
 ├── apps/benchmark-site/       # the published benchmark pages
-├── tests/render/              # PowerShell pixel regression (needs locally generated baselines)
-├── scripts/                   # repository scripts (@shotkit/scripts, own pnpm project); the only home for new tooling
+├── tests/render/              # pixel regression corpus: cases/, cases.json (baselines are generated locally, gitignored)
+├── scripts/                   # repository scripts (@shotkit/scripts, own pnpm project); the only home for tooling
 │   ├── build-engine.ts        # the engine build entry point (pnpm build:engine)
-│   ├── link-agent-skills.ts   # expose .claude/skills to .agents/skills (pnpm skills:link)
+│   ├── check-*.ts             # the verification suites (pnpm verify:serve|net|demos|node|daemon|daemon-protocol|bilibili)
+│   ├── render-regression.ts   # pixel regression: run, update-baselines, diff (pnpm render)
+│   ├── build-errors.ts, check-syntax.ts, missing-inputs.ts   # the build loop
+│   ├── perf-*.ts              # candidate-vs-npm comparison, images, report, CI gate (pnpm perf:*)
+│   ├── gen-idl.ts             # IDL enum/union/dictionary generators (pnpm gen:idl)
+│   ├── restore-*.ts, gn-*.ts, mojom-dangling-imports.ts, jumbo-collision-scan.ts   # upstream-sync tools
+│   ├── bootstrap.ts           # fresh isolated checkout up to gn gen (pnpm bootstrap); lib/bootstrap/ holds its phases
+│   ├── trim-tree.ts, prune-deps.ts   # cut the tree and DEPS down to the six-platform build graph
+│   ├── lib/                   # shared pieces: --serve client, png, ninja log, measured process, idl parser
 │   └── package.json           # execa, cac, p-retry, tsx ...; `pnpm -C scripts install`
-├── tools/shot/                # legacy .py/.cjs/.ps1 scripts, frozen; each moves to scripts/ as TypeScript and is deleted here
 ├── build/args/shot*.gn        # GN args: shot.gn (base), shot-linux.gn, shot-mac.gn (CI overlays), shot-official.gn
 ├── build/config/shot_build.gni# declares is_shot_build
 ├── patches/                   # patches for DEPS checkouts (icu, skia); applied by the engine-*.yml patch step
-├── bootstrap/                 # fresh-checkout setup (bootstrap.ps1)
-├── docs/                      # shotium-plan.md, upstream-sync.md, cut-progress.md, demo assets
+├── docs/                      # shotium-plan.md, upstream-sync.md, cut-progress.md, performance.md, demo assets
 ├── benchmark-results/         # committed aggregated benchmark results
 ├── .github/workflows/         # checks, engine-{windows,linux,macos}, benchmark, perf gate, publish
 └── third_party/, base/, net/, third_party/blink/, skia/, cc/, ui/, url/ ...   # Chromium, cut down
@@ -203,7 +208,7 @@ Things that follow from this and are easy to get wrong:
 - **`data:` URLs are not supported** by the engine or the worker, whatever
   older README text says. Test fixtures write a temporary file.
 - **Every capture is byte-identical to every other capture of the same input**
-  on the same platform. `serve_check.py` asserts it; treat any diff between two
+  on the same platform. `check-serve.ts` asserts it; treat any diff between two
   renders of one document as a bug.
 
 ### The C ABI (`shot/shot_api.h`)
@@ -257,7 +262,7 @@ one process cannot tell each other's pointers apart; fontconfig's `free()` of a
   framing over a socket whose address is a hash of the wire generation and the
   configuration. Two configurations are two daemons. The wire generation in
   `protocol.ts` is independent of the package version and the C ABI version;
-  `tools/shot/daemon_protocol_check.cjs` checks negotiation.
+  `pnpm verify:daemon-protocol` checks negotiation.
 - **Public surface** (`index.ts`): `Runtime` (`start`, `stop`, `status`,
   `running`, `screenshot`, `screenshotTiles`, `releaseMemory`, `cache`),
   module-level `screenshot`/`screenshotTiles`, `daemon.{connect,start,status,stop,screenshot,screenshotTiles}`,
@@ -321,10 +326,10 @@ Output: `out/Shot/shotium.exe`, `out/Shot/shotium.dll`, `out/Shot/shotium_data.p
   `Get-Process -Name ninja,clang-cl,rustc,lld-link -EA SilentlyContinue | Stop-Process -Force`.
 - First build into `out/Shot` is ~5,800 steps (about 50 minutes); incremental
   builds touching only `shot/` take minutes.
-- Read failures with `python tools/shot/errors.py out/Shot/build.log` or
-  `build_errors.py --files`, never the raw log (6 KB of flags per failure).
+- Read failures with `pnpm build:errors out/Shot/build.log` (`--targets`,
+  `--top 30`, `--files`, `--full`), never the raw log (6 KB of flags per failure).
 - Front-end errors do not need a full build:
-  `python tools/shot/check.py <file.cc>` runs `-fsyntax-only` from the compdb
+  `pnpm check:syntax <file.cc>` runs `-fsyntax-only` from the compdb
   (8 s for a core/ TU instead of 40 s); `--from-log out/Shot/build.log` re-checks
   only the TUs that failed. Loop that to empty, then build again.
 - Linux GN errors reproduce locally in ~30 s: a second out dir importing
@@ -348,15 +353,15 @@ Output: `out/Shot/shotium.exe`, `out/Shot/shotium.dll`, `out/Shot/shotium_data.p
 
 | Check | Command | Needs | Asserts |
 |---|---|---|---|
-| Worker protocol | `python tools/shot/serve_check.py out/Shot/shotium.exe` | exe | `--serve` framing, two renders on one process byte-identical, worker == CLI bytes, `allowFileAccess` gate |
-| Network stack | `python tools/shot/net_check.py out/Shot/shotium.exe` | exe | http fetch, redirects, disk cache shared across processes, `networkidle`, http bytes == file bytes |
-| Node addon | `PATH="$PWD/out/Shot:$PATH" node tools/shot/node_check.cjs out/Shot/shotium.exe` | dll + addon | `require()` of the ESM package, `screenshot()`, `{image, stats}` shape, tiles |
-| Daemon | `PATH="$PWD/out/Shot:$PATH" node tools/shot/daemon_check.cjs out/Shot/shotium.exe` | dll + addon | spawn, connect, pipeline, stop |
-| Daemon wire | `node tools/shot/daemon_protocol_check.cjs` | none | generation isolation and negotiation |
-| Reftests | `python tools/shot/demo_check.py out/Shot/shotium.exe` | exe | 84 pairs in `shot/testdata/demos`: page vs `-ref` page byte-identical (62 pass, 1 fuzzy, 21 smoke) |
-| Bilibili fixtures | `python tools/shot/bilibili_check.py --package shotium` | addon | two whole articles, every tile, every photo, both QR codes |
-| Pixel regression | `pwsh tests/render/run.ps1 -ShotExecutable out/Shot/shotium.exe` | baselines | decoded-pixel equality against a locally generated baseline |
-| Acceptance run | `pwsh tools/shot/accept.ps1 -SkipBuild` | exe | Binary size, then renders `shot/testdata/render_corpus.html` at 1248x1320 and pixel-diffs it against the Chrome oracle `shot/testdata/out/oracle.png`, region by region. Without `-SkipBuild` it starts a full build first |
+| Worker protocol | `pnpm verify:serve out/Shot/shotium.exe` | exe | `--serve` framing, two renders on one process byte-identical, worker == CLI bytes, `allowFileAccess` gate |
+| Network stack | `pnpm verify:net out/Shot/shotium.exe` | exe | http fetch, redirects, disk cache shared across processes, `networkidle`, http bytes == file bytes |
+| Node addon | `PATH="$PWD/out/Shot:$PATH" pnpm verify:node out/Shot/shotium.exe` | dll + addon | `require()` of the ESM package, `screenshot()`, `{image, stats}` shape, tiles |
+| Daemon | `PATH="$PWD/out/Shot:$PATH" pnpm verify:daemon out/Shot/shotium.exe` | dll + addon | spawn, connect, pipeline, stop |
+| Daemon wire | `pnpm verify:daemon-protocol` | none | generation isolation and negotiation |
+| Reftests | `pnpm verify:demos out/Shot/shotium.exe` | exe | 84 pairs in `shot/testdata/demos`: page vs `-ref` page byte-identical (62 pass, 1 fuzzy, 21 smoke) |
+| Bilibili fixtures | `pnpm verify:bilibili --package shotium` | addon | two whole articles, every tile, every photo, both QR codes |
+| Pixel regression | `pnpm render run --shot out/Shot/shotium.exe` | baselines | decoded-pixel equality against a locally generated baseline |
+| Acceptance run | `pnpm accept --skip-build` | exe | Binary size, then renders `shot/testdata/render_corpus.html` at 1248x1320 and pixel-diffs it against the Chrome oracle `shot/testdata/out/oracle.png`, region by region. Without `--skip-build` it starts a full build first |
 
 - `PATH` must contain `out/Shot` for the Node checks: the addon links
   `shotium.dll`, and without it you get `ERR_DLOPEN_FAILED`.
@@ -367,18 +372,18 @@ Output: `out/Shot/shotium.exe`, `out/Shot/shotium.dll`, `out/Shot/shotium_data.p
   plausibly break. Pages without a `-ref` are smoke tests (renders, more than
   one colour, deterministic on a second run). Bounded differences use WPT's
   `<meta name="fuzzy" content="maxDifference=N;totalPixels=A-B">`.
-- `tests/render/baselines/` is gitignored. `run.ps1` fails with
-  `Missing baseline manifest` until `update-baselines.ps1 -Accept` has been
+- `tests/render/baselines/` is gitignored. `pnpm render run` fails with
+  `Missing baseline manifest` until `pnpm render update-baselines --accept` has been
   run with a pre-change binary. If you did not generate baselines before
-  changing the engine, use `demo_check.py` for pixel evidence and say so.
+  changing the engine, use `check-demos.ts` for pixel evidence and say so.
 - CI's `checks.yml` never touches an engine, and it is path-filtered: it runs
   only for pushes to `main` and pull requests touching `shotium/`,
-  `shot/testdata/bilibili/`, `tools/shot/`, `scripts/` or `apps/benchmark/`.
+  `shot/testdata/bilibili/`, `scripts/` or `apps/benchmark/`.
   A change confined to `shot/`, Blink, `docs/` or `.claude/` produces no run at
   all, so waiting for it to go green is waiting for something that will never
   appear. The four scripts above run only in the manually dispatched
   `engine-*.yml` workflows. Changing the public shape of `shotium/src`
-  without running `node_check.cjs` and `daemon_check.cjs` locally has shipped
+  without running `check-node.ts` and `check-daemon.ts` locally has shipped
   broken checks before.
 
 ## Testing conventions
@@ -390,12 +395,12 @@ Output: `out/Shot/shotium.exe`, `out/Shot/shotium.dll`, `out/Shot/shotium_data.p
 - Anything with antialiasing or blur (no exact restatement possible) gets a
   smoke page without a `-ref`.
 - Engine behaviour that is not pixels (protocol, cache, budget, tiles) goes
-  into `serve_check.py` / `net_check.py` / `node_check.cjs` / `daemon_check.cjs`
+  into `check-serve.ts` / `check-net.ts` / `check-node.ts` / `check-daemon.ts`
   as a numbered section; each script prints `N passed / M failed`.
-- Harness logic has unit tests: `tools/shot/node_perf_gate.test.cjs`
-  (`node` test runner) and `apps/benchmark/test/*.test.ts` (`pnpm run check`).
-  Both run in `checks.yml`.
-- Fixtures must be offline. `bilibili_check.py --fixtures-only` verifies the
+- Harness logic has unit tests: `scripts/perf-gate.test.ts`
+  (`pnpm scripts:test`, `node:test`) and `apps/benchmark/test/*.test.ts`
+  (`pnpm run check`). Both run in `checks.yml`.
+- Fixtures must be offline. `check-bilibili.ts --fixtures-only` verifies the
   Bilibili corpus references nothing on the network.
 - Measure performance with local files, never remote URLs (see
   [Performance](#performance-and-memory)).
@@ -419,13 +424,14 @@ Output: `out/Shot/shotium.exe`, `out/Shot/shotium.dll`, `out/Shot/shotium_data.p
 - Chromium files are edited in place. Cut, do not `#if 0`. If a header is
   needed only for its types and the upstream call sites already test the
   pointer, restore the header unchanged rather than rewriting the callers.
-- Generated IDL enums/unions/dictionaries come from the in-tree generators in
-  `tools/shot/gen_idl_*.py`. The enum and union generators have a `--check`
-  mode that compares their output against identifiers found at call sites.
-  Run it; inferred naming rules have produced code that looked right and
-  broke hundreds of files.
+- Generated IDL enums/unions/dictionaries come from the in-tree generator
+  `scripts/gen-idl.ts` (`pnpm gen:idl all` regenerates and prunes; every
+  generated file carries a `Generated by scripts/gen-idl.ts ... from X.idl`
+  banner). `enums` and `unions` have a `--check` mode that compares their
+  output against identifiers found at call sites. Run it; inferred naming
+  rules have produced code that looked right and broke hundreds of files.
 
-**TypeScript (`shotium/src`, `apps/benchmark/src`, `tools/shot/*.cjs`)**
+**TypeScript (`shotium/src`, `apps/benchmark/src`)**
 
 - ESM, strict TypeScript, no runtime dependencies in the package.
   `pnpm run build` (tsdown) then `pnpm run check:types`.
@@ -524,12 +530,12 @@ Output: `out/Shot/shotium.exe`, `out/Shot/shotium.dll`, `out/Shot/shotium_data.p
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `checks.yml` | push to `main` and PRs, path-filtered to `shotium/`, `shot/testdata/bilibili/`, `tools/shot/`, `scripts/`, `apps/benchmark/`; dispatch | The engine-less half: package builds, types, `require()` does not start the engine, option validation, daemon wire, harness syntax + unit tests, six platform packages consistent, tarball contents, Python scripts compile, Bilibili fixtures offline, PNG decoder sanity. ~40 s, expected always green. An engine-only change produces no run at all, which is not the same as a pass |
+| `checks.yml` | push to `main` and PRs, path-filtered to `shotium/`, `shot/testdata/bilibili/`, `scripts/`, `apps/benchmark/`; dispatch | The engine-less half: package builds, types, `require()` does not start the engine, option validation, daemon wire, harness syntax + unit tests, six platform packages consistent, tarball contents, `scripts/` typechecks and its tests pass, Bilibili fixtures offline. ~40 s, expected always green. An engine-only change produces no run at all, which is not the same as a pass |
 | `engine-windows.yml` | dispatch (`arch` = amd64 or arm64, `jobs`, `run_checks`) | depot_tools, SDK, `gclient sync`, timestamp restore, cached `out/`, `gn gen`, `ninja`, package `.7z`, node platform package, run the check suites. Cold ~4 h, warm ~25 min |
 | `engine-linux.yml`, `engine-macos.yml` | dispatch (`mode` = probe or build, `arch`, `jobs`, `run_checks`) | Same, plus `probe` = `gn gen` + `ninja -n` only. Probe green is level 1 of 3, not success |
 | `benchmark.yml` | dispatch (`shotium_version`, `profile`, `commit_results`, `seed`) | 30-job `platform x shard` matrix against Puppeteer/Playwright; commits aggregated results to `benchmark-results/` |
 | `benchmark-site.yml` | push to `main` touching results or site | Publishes `apps/benchmark-site` |
-| `perf-gate.yml` | dispatch (`baseline_version`, `build_runs` JSON) | Candidate vs published npm on six platforms through `node_perf_ci.cjs`, gated by `node_perf_gate.cjs` |
+| `perf-gate.yml` | dispatch (`baseline_version`, `build_runs` JSON) | Candidate vs published npm on six platforms through `perf-ci.ts`, gated by `lib/perf-gate.ts` |
 | `publish.yml` | tag `v*`, or dispatch with `dry_run` | Collects the six engine artifacts at the tag's commit, publishes seven npm packages, then creates the GitHub release |
 
 - Names follow one pattern. The workflow name is the file stem
@@ -554,7 +560,7 @@ Output: `out/Shot/shotium.exe`, `out/Shot/shotium.dll`, `out/Shot/shotium_data.p
   host error, or an exhausted budget does. The rule lives in both `cli.ts` and
   `merge-shards.ts` and must change in both.
 - Engine build caches are keyed by content-faithful mtimes
-  (`tools/shot/ci_stamp_mtimes.py`); without that step every CI build is cold.
+  (`pnpm ci:stamp-mtimes`); without that step every CI build is cold.
 
 ## Release
 
@@ -603,9 +609,10 @@ Full procedure: `/release`.
   have no comparison engines; read `summary.json`'s engine list before
   comparing numbers across platforms.
 - Binary size: `obj` size is not image contribution (ThinLTO removes the
-  unreachable). Ask `tools/shot/size_report.py`, not the dependency graph.
+  unreachable). Ask `pnpm size:report out/Shot/shotium.exe`, not the
+  dependency graph.
 
-Procedure: `/perf-compare`; methodology: `tools/shot/PERFORMANCE.md`.
+Procedure: `/perf-compare`; methodology: `docs/performance.md`.
 
 ## Environment variables
 
@@ -631,7 +638,7 @@ Procedure: `/perf-compare`; methodology: `tools/shot/PERFORMANCE.md`.
 | `docs/shotium-plan.md` | Decisions (section 0), architecture (1), network stack choice (2), public interface contract (4), explicit non-goals (5) |
 | `docs/upstream-sync.md` | Baseline hash, why merge is impossible, the four-bucket replay, the deliberate disagreements table, post-sync checks |
 | `docs/cut-progress.md` | 1,800 lines of what was removed and why; sections 8 (V8 removal), 11 (restore vs cut), 14 (driving Blink directly), 17 (size composition), 20 (making it usable), 21 (CI) |
-| `tools/shot/PERFORMANCE.md` | The candidate-vs-npm methodology and stopping rules |
+| `docs/performance.md` | The candidate-vs-npm methodology and stopping rules |
 | `docs/scripts-to-typescript.md` | The inventory of legacy `.py` / `.ps1` / `.cjs` scripts, which library replaces each hand-written part, and the migration order |
 | `apps/benchmark/README.md` | The six-platform harness, shards, and what counts as a run failure |
 | `tests/render/README.md` | Pixel regression and baseline generation |

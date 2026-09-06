@@ -120,7 +120,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           path: src
-          # Read by tools/shot/ci_stamp_mtimes.py, which needs the commit that
+          # Read by scripts/ci-stamp-mtimes.ts, which needs the commit that
           # last touched each file for the build cache to be worth anything.
           fetch-depth: 0
           submodules: false
@@ -183,7 +183,7 @@ jobs:
           df -h /
 
       - name: make source timestamps content-faithful
-        run: python3 src/tools/shot/ci_stamp_mtimes.py .
+        run: pnpm -C src ci:stamp-mtimes "$GITHUB_WORKSPACE"
 
       - name: restore the build directory
         uses: actions/cache/restore@v6
@@ -213,7 +213,7 @@ jobs:
         # numbers claim.
         run: |
           mkdir -p third_party/icu/shot
-          python3 tools/shot/icu_repack.py \
+          pnpm icu:repack \
             third_party/icu/cast/icudtl.dat \
             third_party/icu/shot/icudtl.dat --preset shot
 
@@ -235,7 +235,7 @@ jobs:
         # `ninja -n` resolves the entire graph and names every edge it would
         # run, without compiling anything, so a BUILD.gn that references a file
         # the pruning removed fails here in seconds rather than hours. When it
-        # does, tools/shot/restore_from_upstream.py --log takes this output and
+        # does, pnpm restore:upstream --log takes this output and
         # puts those files back from the upstream baseline.
         run: |
           if ! ninja -C out/Shot shot shot_c -n > /tmp/probe.txt 2>&1; then
@@ -243,7 +243,7 @@ jobs:
             tail -40 /tmp/probe.txt
             echo
             echo "If these are missing files, feed this log to"
-            echo "  python3 tools/shot/restore_from_upstream.py --log probe.log"
+            echo "  pnpm restore:upstream --log probe.log"
             exit 1
           fi
           echo "edges ninja would run: $(grep -c '^\[' /tmp/probe.txt || true)"
@@ -421,10 +421,8 @@ jobs:
                 && github.event.inputs.run_checks == 'true' }}
         working-directory: src
         run: |
-          python3 -m pip install --quiet --break-system-packages pillow || \
-            python3 -m pip install --quiet pillow
-          python3 tools/shot/serve_check.py out/Shot/shotium
-          python3 tools/shot/net_check.py out/Shot/shotium
+          pnpm verify:serve out/Shot/shotium
+          pnpm verify:net out/Shot/shotium
           # The node addon, and the C ABI under it. Built here rather than
           # taken from anywhere else, because the library it links against is
           # the one this job has just produced -- an addon checked against a
@@ -446,13 +444,13 @@ jobs:
           # optionalDependencies yet.
           ( cd shotium && pnpm install --no-lockfile && pnpm run build )
 
-          node tools/shot/node_check.cjs out/Shot/shotium
-          python3 tools/shot/bilibili_check.py --package shotium
-          node tools/shot/daemon_check.cjs out/Shot/shotium
-          node tools/shot/daemon_protocol_check.cjs
+          pnpm verify:node out/Shot/shotium
+          pnpm verify:bilibili --package shotium
+          pnpm verify:daemon out/Shot/shotium
+          pnpm verify:daemon-protocol
 
-          python3 tools/shot/charset_check.py out/Shot/shotium
-          python3 tools/shot/demo_check.py out/Shot/shotium
+          pnpm verify:charset out/Shot/shotium
+          pnpm verify:demos out/Shot/shotium
 
       - name: npm platform package
         if: ${{ success() && github.event.inputs.mode == 'build' }}
@@ -462,7 +460,7 @@ jobs:
         # a package npm can install. @shotkit/shotium depends on all six as
         # optionalDependencies with os/cpu set, so an install pulls the one
         # that matches and skips the rest. See
-        # tools/shot/make_platform_package.cjs.
+        # scripts/make-platform-package.ts.
         #
         # Not the executable. It is a second, independent copy of the same
         # engine -- shot_core is a source_set, so its objects link into both
@@ -491,7 +489,7 @@ jobs:
             echo "call. Not shipping that."
             exit 1
           fi
-          node tools/shot/make_platform_package.cjs \
+          pnpm package:platform \
             --build out/Shot --os mac --arch "$arch" --dest dist/npm \
             --addon "$addon"
           ( cd "dist/npm/shotium-mac-$arch" && npm pack --pack-destination .. )

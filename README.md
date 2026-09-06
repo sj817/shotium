@@ -675,8 +675,8 @@ cd src
 git -C third_party/skia apply --verbose ../../patches/third_party_skia_parallel_blur.patch
 git -C third_party/skia apply --verbose ../../patches/third_party_skia_incremental_row_limit.patch
 
-# Repack stripped ICU data tables
-python3 tools/shot/icu_repack.py   third_party/icu/cast/icudtl.dat   third_party/icu/shot/icudtl.dat --preset shot
+# Repack stripped ICU data tables (once per checkout: pnpm -C scripts install)
+pnpm icu:repack third_party/icu/cast/icudtl.dat third_party/icu/shot/icudtl.dat --preset shot
 
 mkdir -p out/Shot
 echo 'import("//build/args/shot.gn")' > out/Shot/args.gn
@@ -690,11 +690,11 @@ ninja -C out/Shot shot
 ### Test Suites
 
 ```bash
-python tools/shot/serve_check.py   out/Shot/shotium.exe  # Protocol and image codec validation
-python tools/shot/net_check.py     out/Shot/shotium.exe  # HTTP, TLS, redirects, and caching validation
-node   tools/shot/node_check.cjs   out/Shot/shotium.exe  # Addon bindings, queue, and lifecycle tests
-node   tools/shot/daemon_check.cjs out/Shot/shotium.exe  # Daemon IPC and concurrency tests
-python tools/shot/demo_check.py    out/Shot/shotium.exe  # Visual regression reftests (84 cases)
+pnpm verify:serve  out/Shot/shotium.exe  # Protocol and image codec validation
+pnpm verify:net    out/Shot/shotium.exe  # HTTP, TLS, redirects, and caching validation
+pnpm verify:node   out/Shot/shotium.exe  # Addon bindings, queue, and lifecycle tests
+pnpm verify:daemon out/Shot/shotium.exe  # Daemon IPC and concurrency tests
+pnpm verify:demos  out/Shot/shotium.exe  # Visual regression reftests (84 cases)
 ```
 
 To compile the Node.js native addon against a local shared library build:
