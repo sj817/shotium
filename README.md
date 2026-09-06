@@ -311,7 +311,10 @@ shotium --file page.html --full-page --type webp --quality 85 -o output.webp
 # 3. Read HTML from standard input pipeline
 cat template.html | shotium --stdin --width 800 --height 600 -o banner.png
 
-# 4. Resident service mode: read length-prefixed JSON requests from stdin
+# 4. Cut a very tall page into tiles; {n} becomes 1, 2, 3 ...
+shotium --file article.html --full-page --tile-height 8000 -o article-{n}.png
+
+# 5. Resident service mode: read length-prefixed JSON requests from stdin
 shotium --serve --cache-dir /var/tmp/shotium-cache
 ```
 
@@ -400,6 +403,59 @@ interface ScreenshotResult {
   - `no-store`: Completely bypasses cache reading and writing.
   - `only-if-cached`: Reads exclusively from disk cache; fails immediately on cache miss without network access.
 - **`headers` Same-Origin Security**: Custom headers (e.g., `Authorization`, `Cookie`) are strictly sent to same-origin targets and are never forwarded to third-party assets (CDNs, fonts, cross-origin images).
+
+---
+
+### `screenshotTiles(options)`
+
+The same capture delivered as a stack of images instead of one. The region that `fullPage`, `selector`, `clip` or the viewport would have produced is cut into horizontal tiles of at most `tile.height` CSS pixels each; the document is loaded, laid out and painted once for all of them.
+
+```ts
+import { screenshotTiles } from '@shotkit/shotium';
+
+// 1. Tiles returned as buffers, top to bottom
+const { tiles, stats } = await screenshotTiles({
+  file: 'https://example.com/a-very-long-article',
+  fullPage: true,
+  tile: { height: 8000 },
+});
+
+for (const { image, y, height } of tiles) {
+  // image: Buffer — a PNG of this tile
+  // y, height: where it sits in the document, in CSS pixels
+}
+
+// 2. Bounded-memory mode: each tile is written as it finishes,
+//    and {n} becomes the tile's 1-based index
+await screenshotTiles({
+  file: './report.html',
+  fullPage: true,
+  tile: { height: 4000 },
+  path: 'report-{n}.png',
+});
+```
+
+```ts
+interface ScreenshotTilesOptions extends ScreenshotOptions {
+  /** Most CSS pixels per tile; the last tile is what is left. Maximum 32000. */
+  tile: { height: number };
+}
+
+interface ScreenshotTilesResult {
+  /** Top to bottom. Consecutive tiles share x and width; each starts where the previous ended. */
+  tiles: Array<{
+    image: Buffer | null;   // null when `path` is specified
+    x: number; y: number; width: number; height: number;
+    path?: string;          // the file written, when `path` is specified
+  }>;
+  stats: CaptureStats;
+}
+```
+
+- **When to Use Tiles**: Reach for them when the consumer needs the page in pieces — a chat platform's image dimension limit, a viewer that pages, a printer. They are not a memory optimization in themselves: a plain `fullPage` capture already rasterizes in strips and encodes rows as they finish, so it costs the same however tall the page is.
+- **`path` Is the Bounded-Memory Mode**: With `path`, every encoded tile is written as it completes and image memory stays near a single tile. Without it, all tiles return as `Buffer`s and the finished ones stay resident until the promise resolves.
+- **Beyond Blink's Paint Limit**: Blink stops painting at 32,767 CSS pixels per axis. Regions taller than that — and every tiles request — are rendered by scrolling the layout viewport in windows of at most 32,000 pixels, which is where the `tile.height` ceiling comes from.
+- **Identical Options Everywhere**: `daemon.screenshotTiles()`, `client.screenshotTiles()` and the CLI's `--tile-height` accept the same region, format and cache options as `screenshot()`.
 
 ---
 
@@ -496,6 +552,11 @@ const client = await daemon.connect({
 
 // 2. Client operations
 const res = await client.screenshot({ file: 'https://example.com' });
+const { tiles } = await client.screenshotTiles({
+  file: './report.html',
+  fullPage: true,
+  tile: { height: 8000 },
+});
 const status = await client.status();
 await client.releaseMemory({ releaseWorkingSet: false });
 client.close();

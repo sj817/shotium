@@ -333,7 +333,10 @@ shotium --file page.html --full-page --type webp --quality 85 -o output.webp
 # 3. 通过标准输入 (stdin) 管道接收 HTML 并输出图片
 cat template.html | shotium --stdin --width 800 --height 600 -o banner.png
 
-# 4. 常驻服务模式：从 stdin 持续接收长度前缀的 JSON 请求
+# 4. 将超长页面切成分片输出，{n} 会被替换为 1、2、3 ...
+shotium --file article.html --full-page --tile-height 8000 -o article-{n}.png
+
+# 5. 常驻服务模式：从 stdin 持续接收长度前缀的 JSON 请求
 shotium --serve --cache-dir /var/tmp/shotium-cache
 ```
 
@@ -422,6 +425,58 @@ interface ScreenshotResult {
   - `no-store`：不读取缓存，亦不将响应内容写入缓存。
   - `only-if-cached`：仅从本地磁盘缓存读取；若缓存未命中则直接报错，不发起网络请求。
 - **`headers` 同源限制**：为保障安全性，自定义 Headers（如 `Authorization`、`Cookie` 等）仅发送至主请求域名，不会泄露给跨域引用的静态资源（如 CDN 样式表、第三方字体或图片）。
+
+---
+
+### `screenshotTiles(options)`
+
+同一次渲染，输出一叠图片而不是一张。`fullPage`、`selector`、`clip` 或视口原本会产生的区域，被横向切成每片至多 `tile.height` CSS 像素的若干块；文档只加载、布局、绘制一次，所有分片共享这一次结果。
+
+```ts
+import { screenshotTiles } from '@shotkit/shotium';
+
+// 1. 以 Buffer 形式返回，自上而下排列
+const { tiles, stats } = await screenshotTiles({
+  file: 'https://example.com/a-very-long-article',
+  fullPage: true,
+  tile: { height: 8000 },
+});
+
+for (const { image, y, height } of tiles) {
+  // image：该分片的 PNG Buffer
+  // y、height：该分片在文档中的位置，单位为 CSS 像素
+}
+
+// 2. 内存受控模式：每片编码完成即落盘，{n} 会被替换为从 1 开始的序号
+await screenshotTiles({
+  file: './report.html',
+  fullPage: true,
+  tile: { height: 4000 },
+  path: 'report-{n}.png',
+});
+```
+
+```ts
+interface ScreenshotTilesOptions extends ScreenshotOptions {
+  /** 每片最多多少 CSS 像素，最后一片是剩余部分。上限 32000。 */
+  tile: { height: number };
+}
+
+interface ScreenshotTilesResult {
+  /** 自上而下排列。相邻分片的 x 与 width 相同，每片从上一片结束处开始。 */
+  tiles: Array<{
+    image: Buffer | null;   // 指定 path 时为 null
+    x: number; y: number; width: number; height: number;
+    path?: string;          // 指定 path 时实际写出的文件
+  }>;
+  stats: CaptureStats;
+}
+```
+
+- **适用场景**：当图片的消费方需要分块时使用——聊天平台的图片尺寸上限、按页翻阅的查看器、打印排版。它本身并不是省内存的手段：普通的 `fullPage` 截图本来就按条带光栅化、编码完一行输出一行，页面再高成本也一样。
+- **`path` 才是内存受控模式**：指定 `path` 时每片编码完即写盘，图像内存始终维持在单片量级；不指定时所有分片以 `Buffer` 返回，已完成的分片会一直驻留内存直到 Promise 兑现。
+- **Blink 的绘制上限**：Blink 单轴最多绘制 32,767 CSS 像素。超过该高度的区域以及所有分片请求，都通过滚动布局视口、每次至多 32,000 像素分段绘制，`tile.height` 的上限正来源于此。
+- **各入口参数一致**：`daemon.screenshotTiles()`、`client.screenshotTiles()` 与 CLI 的 `--tile-height`，接受与 `screenshot()` 完全相同的区域、格式与缓存参数。
 
 ---
 
@@ -518,6 +573,11 @@ const client = await daemon.connect({
 
 // 2. 客户端操作
 const res = await client.screenshot({ file: 'https://example.com' });
+const { tiles } = await client.screenshotTiles({
+  file: './report.html',
+  fullPage: true,
+  tile: { height: 8000 },
+});
 const status = await client.status();
 await client.releaseMemory({ releaseWorkingSet: false });
 client.close();
