@@ -52,6 +52,7 @@
     "package:platform": "pnpm -C scripts make-platform-package",
     "scripts:test": "pnpm -C scripts test",
     "ci:stamp-mtimes": "pnpm -C scripts ci-stamp-mtimes",
+    "ci:await-shards": "pnpm -C scripts ci-await-shards",
     "verify:charset": "pnpm -C scripts check-charset",
     "icu:repack": "pnpm -C scripts icu-repack",
     "restore:upstream": "pnpm -C scripts restore-from-upstream",

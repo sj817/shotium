@@ -552,35 +552,53 @@ Output: `out/Shot/shotium.exe`, `out/Shot/shotium.dll`, `out/Shot/shotium_data.p
 | `perf-gate.yml` | dispatch (`baseline_version`, `build_runs` JSON) | Candidate vs published npm on six platforms through `perf-ci.ts`, gated by `lib/perf-gate.ts` |
 | `publish.yml` | tag `v*`, or dispatch with `dry_run` | Collects the six engine artifacts at the tag's commit, publishes seven npm packages, then creates the GitHub release |
 
-- **Engine builds are sharded.** `shards` (default `auto`: Windows 4+4,
-  Linux 4+3, macOS 2+3, which is 20 compile jobs, the free plan's
-  concurrency, macOS capped at 5) starts N `compile` jobs that each run the
-  same setup (`.github/actions/{linux,macos,windows}-source`) and the same
-  `gn gen`, build a cost-balanced slice of the objects (`pnpm build:shards
-  slice`), tar what they built with their `.ninja_log` and `.ninja_deps`
-  (`build:shards list --since <job start>`), and upload it; the final
-  `build` job downloads the tars, transplants them (`build:shards merge`) and
-  finds only the link left. Cold: Linux amd64 73 -> 47 min, Linux arm64
-  ~73 -> 57, macOS arm64 97 -> 63, Windows amd64 110 -> 86; a warm Linux run
-  18 min. Every shard also compiles the host tools its slice's generators
-  need (icu, boringssl, perfetto, protobuf, base: ~35% of all objects), so
-  a shard does ~60% of a full compile and more shards past four buy little;
-  the next lever is slicing by target so that only the shards that need a
-  generator build it. The transplant works because ninja's "up to date" is
-  outputs plus two logs: `merge` sets each copied output's mtime back to its
-  record (read again exactly; `utimes` takes a double), rewrites both logs,
-  keeps the oldest copy when two shards built the same file, and carries the
-  files GN writes at gen time (jumbo units, grit's `*_expected_outputs.txt`,
-  mojom `.rsp`, the Rust sysroot's `lib/.empty`) and the depfiles of edges
-  without `deps =`, because the final job's own `gn gen` would write them
-  newer than the objects. Formats and the TimeStamp conversion (ns on POSIX,
-  FILETIME minus 400 years on Windows) live in `scripts/lib/ninja-state.ts`.
+- **Engine builds are sharded, and the final job is the last shard.**
+  `shards` (default `auto`: Windows 4+4, Linux 4+3, macOS 2+3, which is 20
+  runners, the free plan's concurrency, macOS capped at 5) is the number of
+  slices, and N slices cost N machines: N-1 `compile` jobs plus the `build`
+  job, which takes the last slice. They all run the same setup
+  (`.github/actions/{linux,macos,windows}-source`) and the same `gn gen`,
+  build a cost-balanced slice of the objects (`pnpm build:shards slice`),
+  and the compile jobs tar what they built with their `.ninja_log` and
+  `.ninja_deps` (`build:shards list --since <job start>`) and upload it.
+  `build` is deliberately not `needs: compile`: it starts with the shards,
+  builds its own slice, then waits on the run's artifact list (`pnpm
+  ci:await-shards`), transplants the tars (`build:shards merge`) and finds
+  only the link left. Waiting instead of depending is worth a whole setup --
+  14.9 min on a Windows shard, 12.8 in the final job, a third of the run --
+  and it is what brings a six-platform dispatch from 26 jobs to 20. Cold:
+  Linux amd64 73 -> 47 min, Linux arm64 ~73 -> 57, macOS arm64 97 -> 63,
+  Windows amd64 110 -> 86 as separate jobs. Every shard also compiles the
+  host tools its slice's generators need, because one object drags in the
+  whole generator closure: `root_store_tool` alone links base, boringssl and
+  ICU. Measured on the Windows graph, that closure is 1,574 of the 3,717
+  objects but only 22% of the compile time, and it makes a shard do 41% of a
+  full compile rather than 25%. So there is no "affinity" to slice by -- the
+  closure is the same for every slice -- and shrinking it means removing
+  generators from the graph, not assigning them better. The transplant works
+  because ninja's "up to date" is outputs plus two logs: `merge` sets each
+  copied output's mtime back to its record (read again exactly; `utimes`
+  takes a double), rewrites both logs, keeps the oldest copy when two shards
+  built the same file, and carries the files GN writes at gen time (jumbo
+  units, grit's `*_expected_outputs.txt`, mojom `.rsp`, the Rust sysroot's
+  `lib/.empty`) and the depfiles of edges without `deps =`, because a
+  shard's own `gn gen` would write them newer than another shard's objects.
+  Formats and the TimeStamp conversion (ns on POSIX, FILETIME minus 400
+  years on Windows) live in `scripts/lib/ninja-state.ts`.
   Platform traps already paid for: BSD `touch` has no `-d @`, BSD `xargs` no
   `-a`, GN links the Xcode SDK into `out/Shot/sdk`, and depot_tools' `ninja`
   on Windows is a `.bat` whose 8 KB command line silently drops batches
   (`third_party/ninja/ninja.exe` is called directly, 100 targets a batch).
   `shards=1` is the old single job. Read a shard's result in the final job's
   `why is the restored build directory dirty` step.
+- **A build-directory cache is only visible to the branch that wrote it and
+  to `main`.** Every engine build so far was dispatched on a feature branch,
+  so all eleven caches belonged to branches and none to the default one, and
+  each new branch started cold -- an hour of the difference between 86
+  minutes and 35. After merging a branch that touches the engine, dispatch
+  the six builds on `main`; that is what leaves a cache the next branch can
+  restore. `gh api repos/sj817/shotium/actions/caches --jq '.actions_caches[]
+  | "\(.ref) \(.key)"'` says which branch each one is on.
 - Names follow one pattern. The workflow name is the file stem
   (`engine-windows`, `perf-gate`); a job is
   `<verb>: shotium[-<os>-<arch>]-v<version>` (`build: shotium-windows-amd64-v0.4.0`,

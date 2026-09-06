@@ -44,7 +44,7 @@ on:
         type: boolean
         default: true
       shards:
-        description: 'compile jobs that split the objects between them before the final job links; auto = 2 for amd64, 3 for arm64; 1 = one job does everything'
+        description: 'jobs that split the objects between them, the final one included; auto = 2 for amd64, 3 for arm64; 1 = one job does everything'
         default: auto
 
 # GN, the SDK and node-gyp spell the 64-bit architecture x64; the names
@@ -63,8 +63,9 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
-      shards: ${{ steps.shards.outputs.list }}
+      compile_shards: ${{ steps.shards.outputs.list }}
       shard_count: ${{ steps.shards.outputs.count }}
+      final_shard: ${{ steps.shards.outputs.final }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -75,14 +76,17 @@ jobs:
       - id: shards
         # `auto` is the per-platform count that keeps a full six-platform
         # dispatch inside the free plan's 20 concurrent jobs (macOS: 5):
-        # Windows 4+4, Linux 4+3, macOS 2+3. The matrix wants a JSON list of
-        # indices; a matrix cannot count on its own.
+        # Windows 4+4, Linux 4+3, macOS 2+3. Those are runners, not extra
+        # runners: the last slice belongs to the final job, so N slices cost
+        # N machines. The matrix wants a JSON list of indices; a matrix
+        # cannot count on its own.
         run: |
           n='${{ inputs.shards }}'
           if [ "$n" = auto ]; then n=$([ '${{ inputs.arch }}' = arm64 ] && echo 3 || echo 2); fi
           case "$n" in ''|*[!0-9]*|0) echo "shards must be auto or a positive integer, got '$n'" >&2; exit 1 ;; esac
           echo "count=$n" >> "$GITHUB_OUTPUT"
-          echo "list=$(jq -cn --argjson n "$n" '[range($n)]')" >> "$GITHUB_OUTPUT"
+          echo "final=$((n - 1))" >> "$GITHUB_OUTPUT"
+          echo "list=$(jq -cn --argjson n "$n" '[range($n - 1)]')" >> "$GITHUB_OUTPUT"
 
   # Sharding. ninja's idea of "up to date" is the outputs plus .ninja_log and
   # .ninja_deps, and N runners that ran the same gn gen share one graph. So
@@ -92,6 +96,11 @@ jobs:
   # (scripts/build-shards.ts merge) and finds only the link left to do.
   # Measured on Linux amd64: 73 minutes cold as one job, 47 as four shards
   # plus the final job; a warm run 18 minutes.
+  #
+  # These jobs are slices 0 to N-2. The last slice is the final job's, and it
+  # starts with them rather than after them: the setup is the same work --
+  # source, DEPS, gn gen, 13 minutes on Windows -- and running it after the
+  # shards instead of beside them added that to every run for nothing.
   #
   # Every shard restores the build-directory cache too, so a warm run costs
   # what it did before sharding: a shard whose slice is already built packs
@@ -109,7 +118,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: ${{ fromJSON(needs.meta.outputs.shards) }}
+        shard: ${{ fromJSON(needs.meta.outputs.compile_shards) }}
 
     env:
       DEPOT_TOOLS_UPDATE: '0'
@@ -179,11 +188,13 @@ jobs:
 
   build:
     name: "${{ inputs.mode }}: shotium-macos-${{ inputs.arch }}-v${{ needs.meta.outputs.version }}"
-    # Runs after the shards even when one of them failed: the merge brings in
-    # whatever they did compile, ninja rebuilds the rest, and the failure is
-    # reported here with the real error rather than as a missing artifact.
-    needs: [meta, compile]
-    if: ${{ always() && needs.meta.result == 'success' && needs.compile.result != 'cancelled' }}
+    # Deliberately not `needs: compile`. This job builds the last slice
+    # itself and waits for the others' artifacts below, so its setup runs
+    # while they compile instead of after them. A shard that fails is not
+    # fatal either way: the merge brings in whatever did compile, ninja
+    # rebuilds the rest, and the failure is reported here with the real
+    # error rather than as a missing artifact.
+    needs: meta
     runs-on: ${{ inputs.arch == 'arm64' && 'macos-15' || 'macos-15-intel' }}
     timeout-minutes: 350
 
@@ -211,8 +222,39 @@ jobs:
           cpu: ${{ env.SHOT_CPU }}
           restore-cache: 'true'
 
+      - name: this job's slice of the objects
+        if: ${{ inputs.mode == 'build' && needs.meta.outputs.shard_count != '1' }}
+        working-directory: src
+        # The last slice, by the same assignment every shard computes.
+        run: |
+          ninja -C out/Shot -t inputs shot shot_c | grep -E '\.o$' \
+            | pnpm --silent build:shards slice --build-dir out/Shot \
+                --shards '${{ needs.meta.outputs.shard_count }}' --index '${{ needs.meta.outputs.final_shard }}' > /tmp/slice.txt
+
+      - name: ninja this job's slice
+        if: ${{ inputs.mode == 'build' && needs.meta.outputs.shard_count != '1' }}
+        working-directory: src
+        continue-on-error: true
+        timeout-minutes: 280
+        run: xargs ninja -C out/Shot -j ${{ inputs.jobs }} -k 0 < /tmp/slice.txt
+
+      - name: wait for the other shards
+        if: ${{ inputs.mode == 'build' && needs.meta.outputs.shard_count != '1' }}
+        working-directory: src
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        # Polls this run's artifact list. It returns as soon as every shard
+        # has uploaded, and also when every shard job has finished without
+        # uploading -- ninja below then builds whatever never arrived.
+        run: |
+          pnpm --silent ci:await-shards \
+            --prefix 'shard-macos-${{ inputs.arch }}-' \
+            --shards '${{ needs.meta.outputs.shard_count }}' \
+            --job-prefix 'compile: shotium-macos-${{ inputs.arch }}-v${{ needs.meta.outputs.version }}'
+
       - name: download the shards
         if: ${{ inputs.mode == 'build' && needs.meta.outputs.shard_count != '1' }}
+        continue-on-error: true   # no artifact at all is a slow build, not a failed one
         uses: actions/download-artifact@v8
         with:
           pattern: shard-macos-${{ inputs.arch }}-*

@@ -64,10 +64,10 @@ gh workflow run engine-macos.yml   -R sj817/shotium --ref main -f mode=build -f 
 gh run list -R sj817/shotium --commit "$SHA"
 ```
 
-- `shards` defaults to `auto` (Windows 4+4, Linux 4+3, macOS 2+3): the
-  six dispatches above are 20 compile jobs plus six final jobs, which is the
-  free plan's concurrency, so dispatch all six at once and let the queue
-  order them. `-f shards=1` is the old single job.
+- `shards` defaults to `auto` (Windows 4+4, Linux 4+3, macOS 2+3). That is
+  the number of slices, and the final job takes the last one, so the six
+  dispatches above are 20 jobs in total -- exactly the free plan's
+  concurrency. Dispatch all six at once. `-f shards=1` is the old single job.
 - `mode` defaults to `probe` on Linux and macOS. A probe run is
   `gn gen` + `ninja -n`, compiles nothing, and produces no artifact.
 - `run_checks` defaults to true; leave it. The run is not green unless the
