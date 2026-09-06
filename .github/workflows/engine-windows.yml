@@ -98,10 +98,19 @@ jobs:
           fetch-depth: 0
           submodules: false   # gclient fetches the DEPS-managed ones itself
 
+      - name: set up node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
       - name: set up pnpm
         uses: pnpm/action-setup@v6
         with:
           version: 9.15.9
+
+      - name: repository scripts
+        working-directory: src/scripts
+        run: pnpm install --frozen-lockfile
 
       - name: depot_tools
         shell: pwsh
@@ -321,6 +330,14 @@ jobs:
             if (Test-Path $stale) { Remove-Item -Force $stale }
           }
 
+      # A restored build directory can hold a depfile that names a file the
+      # tree no longer has; ninja refuses to start on it ("missing and no
+      # known rule to make it"). Dropping the depfile makes the action rerun.
+      - name: drop depfiles that name deleted files
+        shell: pwsh
+        working-directory: src
+        run: pnpm depfiles:prune out/Shot
+
       - name: ninja
         shell: pwsh
         working-directory: src
@@ -333,6 +350,24 @@ jobs:
           # this build directory already carries, so the second one reuses the
           # codegen the first one did and costs minutes rather than an hour.
           ninja -C out/Shot shot shot_c -j ${{ github.event.inputs.jobs }}
+
+      # What this build read: ninja's inputs and deps log, gn's build.ninja.d,
+      # the jumbo source lists. `pnpm trim-tree plan` takes the six platforms'
+      # exports and computes which tracked files no build opens.
+      - name: export the build graph
+        if: always()
+        continue-on-error: true
+        working-directory: src
+        run: pnpm graph:export --build-dir out/Shot --out ../graph
+
+      - name: upload the build graph
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: graph-windows-${{ github.event.inputs.arch }}
+          path: graph
+          if-no-files-found: warn
 
       - name: save the build directory
         if: always()

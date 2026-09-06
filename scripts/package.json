@@ -9,13 +9,17 @@
   "scripts": {
     "build-engine": "tsx build-engine.ts",
     "link-skills": "tsx link-agent-skills.ts",
-    "check:types": "tsc --noEmit"
+    "check:types": "tsc --noEmit",
+    "trim-tree": "tsx trim-tree.ts",
+    "prune-deps": "tsx prune-deps.ts",
+    "prune-stale-depfiles": "tsx prune-stale-depfiles.ts"
   },
   "dependencies": {
     "cac": "7.0.0",
     "execa": "10.0.1",
     "p-retry": "8.0.1",
     "picocolors": "1.1.1",
+    "tinyglobby": "0.2.15",
     "tsx": "4.23.13"
   },
   "devDependencies": {

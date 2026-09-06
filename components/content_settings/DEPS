@@ -1,4 +1,0 @@
-include_rules = [
-  "+components/prefs",
-  "+services/device/public/cpp/device_features.h"
-]

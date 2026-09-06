@@ -1,6 +1,0 @@
-include_rules = [
-  "+components/dbus/thread_linux",
-  "+components/dbus/utils",
-  "+components/dbus/xdg",
-  "+dbus",
-]

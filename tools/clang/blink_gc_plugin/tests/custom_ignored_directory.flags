@@ -1,1 +1,0 @@
--I. -Xclang -plugin-arg-blink-gc-plugin -Xclang ignore-directory=ignored_dir/

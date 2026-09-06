@@ -39,7 +39,6 @@
 *.xslt   text eol=lf
 .clang-format   text eol=lf
 .eslintrc.js   text eol=lf
-.git-blame-ignore-revs   text eol=lf
 .gitattributes   text eol=lf
 .gitignore   text eol=lf
 .vpython   text eol=lf
@@ -56,8 +55,28 @@ WATCHLISTS   text eol=lf
 VERSION   text eol=lf
 DIR_METADATA   text eol=lf
 
-# Skip Tricium by default on files in third_party.
-third_party/** -tricium
+*.ts text eol=lf
+*.mjs text eol=lf
+*.cjs text eol=lf
+*.yml text eol=lf
+*.ps1 text eol=lf
+*.psm1 text eol=lf
+
+# GitHub's language statistics already skip third_party/. These are upstream
+# Chromium's build scripts and code generators, kept because the build runs
+# them, not written here; count them the same way.
+build/** linguist-vendored
+buildtools/** linguist-vendored
+mojo/public/tools/** linguist-vendored
+testing/** linguist-vendored
+tools/grit/** linguist-vendored
+tools/metrics/** linguist-vendored
+tools/clang/** linguist-vendored
+tools/rust/** linguist-vendored
+tools/protoc_wrapper/** linguist-vendored
+tools/i18n/** linguist-vendored
+tools/l10n/** linguist-vendored
+tools/gritsettings/** linguist-vendored
 
 # base/BUILD.gn measures this file's length and compiles the number in as
 # APP_INFO_PLIST_FILE_SIZE, so its byte count is a build input rather than a
