@@ -168,16 +168,20 @@ jobs:
         working-directory: src
         continue-on-error: true
         timeout-minutes: 280
-        # 150 targets per invocation: CreateProcess caps a command line at
-        # 32 KB and ninja takes its targets there. -k 0 so one shard's log
-        # names every broken unit in its slice, and continue-on-error so what
-        # did compile still reaches the final job, which reports the failure.
+        # The checked-in ninja.exe, not depot_tools' `ninja`: on Windows that
+        # is a .bat wrapper, and cmd caps a command line at 8 KB ("The command
+        # line is too long" -- five of eight batches of the first sharded run
+        # never started). CreateProcess allows 32 KB, so 100 targets a batch
+        # is safe with room. -k 0 so one shard's log names every broken unit
+        # in its slice, and continue-on-error so what did compile still
+        # reaches the final job, which reports the failure.
         run: |
+          $ninja = (Resolve-Path third_party/ninja/ninja.exe).Path
           $slice = @(Get-Content "$env:RUNNER_TEMP/slice.txt")
           $failed = $false
-          for ($i = 0; $i -lt $slice.Count; $i += 150) {
-            $end = [math]::Min($i + 149, $slice.Count - 1)
-            ninja -C out/Shot -j ${{ inputs.jobs }} -k 0 @($slice[$i..$end])
+          for ($i = 0; $i -lt $slice.Count; $i += 100) {
+            $end = [math]::Min($i + 99, $slice.Count - 1)
+            & $ninja -C out/Shot -j ${{ inputs.jobs }} -k 0 @($slice[$i..$end])
             if ($LASTEXITCODE -ne 0) { $failed = $true }
           }
           if ($failed) { exit 1 }
