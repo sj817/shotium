@@ -150,7 +150,7 @@ terminates only the PID tree it started. The repository stores the compact
 `permanent` output. PNGs, logs and process timelines are CI artifacts retained
 for 90 days.
 
-Use the `Six-platform benchmark` GitHub Actions workflow to test a published
+Use the `benchmark` GitHub Actions workflow to test a published
 semver or npm dist-tag. Release publishing dispatches the same workflow with the
 exact published version after the GitHub Release exists.
 

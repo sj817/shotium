@@ -70,7 +70,7 @@ pnpm run build      # vue-tsc -b && vitepress build docs
 pnpm run check      # typecheck + test + build (what CI runs)
 ```
 
-CI (`.github/workflows/benchmark-pages.yml`, Ubuntu + Node 24) runs
+CI (`.github/workflows/benchmark-site.yml`, Ubuntu + Node 24) runs
 `pnpm install --frozen-lockfile && pnpm run check` with `BENCHMARK_SITE_BASE=/shotium/` and uploads
 `docs/.vitepress/dist`. The build fails if `benchmark-results/index.json` is
 missing rather than publishing an empty report.

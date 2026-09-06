@@ -177,6 +177,14 @@ gclient sync -D --no-history
 
 第 2 条是这次同步加进来的,因为第 1 条**证明不了**它。
 
+第 3 条之后还有一步:六个平台的引擎构建各自导出构建图(`pnpm graph:export`,
+CI 产物 `graph-<os>-<arch>`),然后 `pnpm trim-tree plan --graph <dir>...` 算出
+上游新带进来的、任何构建都不打开的文件,`pnpm trim-tree apply` 删掉,
+`pnpm prune-deps --inputs <plan>/untracked-inputs.txt` 同步剪 DEPS / hooks /
+`.gitmodules` / gitlink。规则全在 `scripts/trim-tree.ts` 里,不靠人记。
+删完对每个热构建目录跑一次 `pnpm depfiles:prune`:ninja 会拒绝在一个
+depfile 指向已删文件的目录里开工。
+
 ## 6. 陷阱
 
 ### 6.1 热构建目录会把「图里引用、树里没有」藏起来

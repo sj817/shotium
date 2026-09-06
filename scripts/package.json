@@ -54,7 +54,8 @@
     "probe-platform-graph": "tsx probe-platform-graph.ts",
     "gen-idl": "tsx gen-idl.ts",
     "bootstrap": "tsx bootstrap.ts",
-    "deps-lock": "tsx deps-lock.ts"
+    "deps-lock": "tsx deps-lock.ts",
+    "prune-stale-depfiles": "tsx prune-stale-depfiles.ts"
   },
   "dependencies": {
     "cac": "7.0.0",

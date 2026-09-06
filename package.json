@@ -68,6 +68,7 @@
     "probe:platform": "pnpm -C scripts probe-platform-graph",
     "gen:idl": "pnpm -C scripts gen-idl",
     "bootstrap": "pnpm -C scripts bootstrap",
-    "deps-lock": "pnpm -C scripts deps-lock"
+    "deps-lock": "pnpm -C scripts deps-lock",
+    "depfiles:prune": "pnpm -C scripts prune-stale-depfiles"
   }
 }

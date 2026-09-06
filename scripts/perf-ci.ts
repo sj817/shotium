@@ -20,10 +20,13 @@ import {execa} from 'execa';
 
 import {resolve} from './lib/repo.ts';
 
-const targets: Array<[string, string, 'linux' | 'win' | 'mac']> = [
-  ['linux-x64', 'ubuntu-24.04', 'linux'], ['linux-arm64', 'ubuntu-24.04-arm', 'linux'],
-  ['win32-x64', 'windows-2025', 'win'], ['win32-arm64', 'windows-11-arm', 'win'],
-  ['darwin-x64', 'macos-15-intel', 'mac'], ['darwin-arm64', 'macos-15', 'mac'],
+// npm platform id, runner, engine workflow, artifact label. The label is the
+// platform id the engine workflows put on their artifacts and job names
+// (windows/linux/macos, amd64/arm64); npm keeps process.platform's spelling.
+const targets: Array<[string, string, 'linux' | 'windows' | 'macos', string]> = [
+  ['linux-x64', 'ubuntu-24.04', 'linux', 'linux-amd64'], ['linux-arm64', 'ubuntu-24.04-arm', 'linux', 'linux-arm64'],
+  ['win32-x64', 'windows-2025', 'windows', 'windows-amd64'], ['win32-arm64', 'windows-11-arm', 'windows', 'windows-arm64'],
+  ['darwin-x64', 'macos-15-intel', 'macos', 'macos-amd64'], ['darwin-arm64', 'macos-15', 'macos', 'macos-arm64'],
 ];
 
 async function plan(): Promise<void> {
@@ -40,22 +43,21 @@ async function plan(): Promise<void> {
     return response.json() as Promise<Record<string, unknown>>;
   };
   const matrix = [];
-  for (const [platform, runner, artifactOs] of targets) {
+  for (const [platform, runner, workflowOs, label] of targets) {
     const runId = String(runs[platform]);
     if (!/^\d+$/.test(runId)) throw new Error(`Invalid run ID for ${platform}`);
     const run = await api(`actions/runs/${runId}`) as {path: string; head_sha: string; status: string; conclusion: string};
-    const workflowOs = {linux: 'linux', win: 'windows', mac: 'macos'}[artifactOs];
     if (run.path !== `.github/workflows/engine-${workflowOs}.yml`) {
       throw new Error(`${platform}: artifact must come from the matching engine build workflow`);
     }
     if (run.head_sha !== process.env.GITHUB_SHA || run.status !== 'completed' || run.conclusion !== 'success') {
       throw new Error(`${platform}: build must be successful at this workflow SHA ${process.env.GITHUB_SHA}; got ${run.head_sha}/${run.conclusion}`);
     }
-    const artifactName = `npm-shotium-${artifactOs}-${platform.split('-')[1]}`;
+    const artifactName = `npm-shotium-${label}`;
     const artifacts = await api(`actions/runs/${runId}/artifacts?per_page=100`) as {artifacts: Array<{name: string; expired: boolean; id: number; digest?: string}>};
     const matching = artifacts.artifacts.filter((a) => a.name === artifactName && !a.expired);
     if (matching.length !== 1) throw new Error(`${platform}: exact build artifact missing or ambiguous`);
-    matrix.push({platform, runner, runId, artifactName, artifactId: matching[0].id, artifactDigest: matching[0].digest, sourceSha: run.head_sha});
+    matrix.push({platform, label, runner, runId, artifactName, artifactId: matching[0].id, artifactDigest: matching[0].digest, sourceSha: run.head_sha});
   }
   writeFileSync('performance-plan.json', JSON.stringify(matrix, null, 2));
   appendFileSync(process.env.GITHUB_OUTPUT!, `matrix=${JSON.stringify(matrix)}\n`);

@@ -1,0 +1,73 @@
+name: benchmark-site
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - apps/benchmark-site/**
+      - benchmark-results/**
+      - .github/workflows/benchmark-site.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: benchmark-site
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: "build: benchmark-site"
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 9.15.9
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: pnpm
+          cache-dependency-path: apps/benchmark-site/pnpm-lock.yaml
+
+      - name: Configure GitHub Pages
+        id: pages
+        uses: actions/configure-pages@v6
+
+      - name: Install locked site dependencies
+        working-directory: apps/benchmark-site
+        run: pnpm install --frozen-lockfile
+
+      - name: Test and build for the repository Pages path
+        working-directory: apps/benchmark-site
+        env:
+          BENCHMARK_SITE_BASE: ${{ steps.pages.outputs.base_path }}/
+        run: pnpm run check
+
+      - name: Upload the Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: apps/benchmark-site/docs/.vitepress/dist
+
+  deploy:
+    name: "deploy: benchmark-site"
+    needs: build
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

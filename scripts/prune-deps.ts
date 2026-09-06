@@ -40,6 +40,8 @@ const resolve = (p: string) => path.resolve(root, p);
 const toolchain = [
   'third_party/depot_tools',
   'third_party/ninja',
+  // .gn names it as script_executable; the runners have no other python.
+  'third_party/cpython3/host',
   'third_party/llvm-build/Release+Asserts',
   'third_party/rust-toolchain',
   'third_party/libc++/src',
@@ -110,6 +112,27 @@ interface Entry {
 // starts at a line `isStart` recognises and ends on the first line after which
 // the bracket depth is back to zero. Comment and blank lines attach to the
 // entry that follows them.
+// DEPS is Python. The first python on PATH (depot_tools carries one on CI)
+// is the cheapest syntax check there is; without any python the check is
+// skipped with a warning rather than failing the prune.
+async function parsesAsPython(file: string): Promise<boolean> {
+  for (const python of ['python3', 'python']) {
+    const r = await execa(python, ['-c', 'import ast, sys; ast.parse(open(sys.argv[1], encoding="utf-8").read())', file], {reject: false});
+    if (r.failed && (r as {code?: string}).code === 'ENOENT') continue;
+    if (r.exitCode !== 0) console.log(pc.red(r.stderr.trim().split('\n').slice(-3).join('\n')));
+    return r.exitCode === 0;
+  }
+  console.log(pc.yellow('no python on PATH; DEPS syntax not checked'));
+  return true;
+}
+
+// Depth alone is not enough: a value written as a string concatenation
+// (`'src/x':\n  Var('git') +\n  '/x.git@' + Var('rev'),`) never opens a
+// bracket, so the entry only ends on the line that ends with the comma.
+function endsEntry(line: string): boolean {
+  return /,\s*$/.test(line.replace(/\s+#[^'"]*$/, ''));
+}
+
 function splitEntries(body: string[], isStart: (line: string) => string | null): {entries: Entry[]; trailing: string[]} {
   const entries: Entry[] = [];
   let pending: string[] = [];
@@ -119,7 +142,7 @@ function splitEntries(body: string[], isStart: (line: string) => string | null):
     if (current) {
       current.lines.push(line);
       depth += depthDelta(line);
-      if (depth <= 0) {
+      if (depth <= 0 && endsEntry(line)) {
         entries.push(current);
         current = null;
         depth = 0;
@@ -134,7 +157,7 @@ function splitEntries(body: string[], isStart: (line: string) => string | null):
     current = {key, lines: [...pending, line]};
     pending = [];
     depth = depthDelta(line);
-    if (depth <= 0) {
+    if (depth <= 0 && endsEntry(line)) {
       entries.push(current);
       current = null;
       depth = 0;
@@ -269,32 +292,36 @@ async function main(inputsArgs: string[], keepArg: string | undefined, dryRun: b
     return 0;
   }
   await writeFile(depsFile, lines.join(eol));
+  // A stray line from a dropped entry is a syntax error that gclient reports
+  // only at sync time, on every platform at once. Parse the result now.
+  if (!(await parsesAsPython(depsFile))) {
+    console.log(pc.red(`${depsFile} does not parse as Python after the rewrite; not touching .gitmodules or the index`));
+    return 1;
+  }
   await writeFile(modulesFile, keptSections.map((s) => s.join('\n')).join('\n'));
   if (staleGitlinks.length > 0) {
     // --cached: the index entry goes, whatever is on disk stays.
+    // git refuses to drop a gitlink while .gitmodules has unstaged edits, and
+    // the rewrite above is exactly such an edit.
+    await execa('git', ['add', '--', 'DEPS', '.gitmodules'], {cwd: root, stdio: 'inherit'});
     await execa('git', ['rm', '-q', '--cached', '--', ...staleGitlinks], {cwd: root, stdio: 'inherit'});
   }
   console.log(pc.green(`\nwrote DEPS and .gitmodules, removed ${staleGitlinks.length} gitlinks from the index`));
   return 0;
 }
 
-// cac 7 registers a boolean option under its camelCase name only, so a value
-// after `--dry-run` would be swallowed as the option's. The flag is taken off
-// argv here and left in the option list for --help.
-const argv = process.argv.slice(2);
-const dryRun = argv.includes('--dry-run');
 const cli = cac('prune-deps');
 cli.command('', 'prune DEPS, hooks and .gitmodules to what the build graph reads')
     .option('--inputs <file>', 'untracked-inputs.txt from `trim-tree plan`; repeat to union')
     .option('--keep <file>', 'extra DEPS paths to keep, one per line, a trailing / for a prefix')
     .option('--dry-run', 'report only')
-    .action(async (options: {inputs?: string | string[]; keep?: string}) => {
+    .action(async (options: {inputs?: string | string[]; keep?: string; dryRun?: boolean}) => {
       const inputs = options.inputs === undefined ? [] : Array.isArray(options.inputs) ? options.inputs : [options.inputs];
-      process.exitCode = await main(inputs, options.keep, dryRun);
+      process.exitCode = await main(inputs, options.keep, options.dryRun === true);
     });
 cli.help();
 try {
-  cli.parse([...process.argv.slice(0, 2), ...argv.filter((a) => a !== '--dry-run')], {run: false});
+  cli.parse(process.argv, {run: false});
   if (!cli.options.help) await cli.runMatchedCommand();
 } catch (error) {
   console.log(pc.red(`prune-deps: ${error instanceof Error ? error.message : String(error)}`));

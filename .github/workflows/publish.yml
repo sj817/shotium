@@ -89,7 +89,8 @@
 # proves the tarballs and the versions and nothing about the trust
 # configuration.
 
-name: npm publish
+name: publish
+run-name: "publish: ${{ github.ref_name }}${{ inputs.dry_run && ' dry run' || '' }}"
 
 on:
   push:
@@ -103,7 +104,25 @@ on:
         default: true
 
 jobs:
+  # Every job name below carries the package version. A job name can
+  # read an earlier job's outputs but not a file, so one small job
+  # reads package.json first.
+  meta:
+    name: "resolve: shotium"
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: shotium/package.json
+          sparse-checkout-cone-mode: false
+      - id: version
+        run: echo "version=$(jq -r .version shotium/package.json)" >> "$GITHUB_OUTPUT"
+
   publish:
+    name: "publish: shotium-v${{ needs.meta.outputs.version }}"
+    needs: meta
     runs-on: ubuntu-latest
     permissions:
       # The OIDC token. Without it npm has nothing to check and falls back to
@@ -222,7 +241,7 @@ jobs:
 
           gh run list --repo "$GITHUB_REPOSITORY" --commit "$GITHUB_SHA" \
             --status success --limit 100 --json databaseId,name \
-            -q '.[] | select(.name | startswith("engine")) | .databaseId' \
+            -q '.[] | select(.name | startswith("engine-")) | .databaseId' \
             > /tmp/runs.txt
           echo "engine runs that succeeded at $GITHUB_SHA:"
           sed 's/^/  /' /tmp/runs.txt
@@ -244,12 +263,12 @@ jobs:
           }
 
           fail=0
-          # npm platform id : engine workflow's platform id. They differ:
-          # npm wants process.platform, the engine archives were named for
-          # people.
-          for pair in win32-x64:win-x64 win32-arm64:win-arm64 \
-                      darwin-x64:mac-x64 darwin-arm64:mac-arm64 \
-                      linux-x64:linux-x64 linux-arm64:linux-arm64; do
+          # npm platform id : engine artifact id. They differ: npm matches
+          # process.platform and process.arch, the engine artifacts are
+          # named for people (windows/linux/macos, amd64/arm64).
+          for pair in win32-x64:windows-amd64 win32-arm64:windows-arm64 \
+                      darwin-x64:macos-amd64 darwin-arm64:macos-arm64 \
+                      linux-x64:linux-amd64 linux-arm64:linux-arm64; do
             engine=${pair##*:}
             fetch "npm-shotium-$engine" dist/npm     || fail=1
             fetch "shotium-$engine"     dist/archive || fail=1

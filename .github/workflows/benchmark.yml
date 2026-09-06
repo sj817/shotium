@@ -1,4 +1,5 @@
-name: Six-platform benchmark
+name: benchmark
+run-name: "benchmark: ${{ inputs.shotium_version }} ${{ inputs.profile }}"
 
 on:
   workflow_dispatch:
@@ -61,7 +62,7 @@ permissions:
 
 jobs:
   resolve:
-    name: Resolve one immutable npm version
+    name: "resolve: shotium-${{ inputs.shotium_version }}"
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     outputs:
@@ -145,14 +146,14 @@ jobs:
 
           case "$platform_filter" in
             all)
-              target_matrix='[{"platform":"linux-x64","runner":"ubuntu-24.04"},{"platform":"linux-arm64","runner":"ubuntu-24.04-arm"},{"platform":"win32-x64","runner":"windows-2025"},{"platform":"win32-arm64","runner":"windows-11-arm"},{"platform":"darwin-x64","runner":"macos-15-intel"},{"platform":"darwin-arm64","runner":"macos-15"}]'
+              target_matrix='[{"platform":"linux-x64","label":"linux-amd64","runner":"ubuntu-24.04"},{"platform":"linux-arm64","label":"linux-arm64","runner":"ubuntu-24.04-arm"},{"platform":"win32-x64","label":"windows-amd64","runner":"windows-2025"},{"platform":"win32-arm64","label":"windows-arm64","runner":"windows-11-arm"},{"platform":"darwin-x64","label":"macos-amd64","runner":"macos-15-intel"},{"platform":"darwin-arm64","label":"macos-arm64","runner":"macos-15"}]'
               ;;
-            linux-x64) target_matrix='[{"platform":"linux-x64","runner":"ubuntu-24.04"}]' ;;
-            linux-arm64) target_matrix='[{"platform":"linux-arm64","runner":"ubuntu-24.04-arm"}]' ;;
-            win32-x64) target_matrix='[{"platform":"win32-x64","runner":"windows-2025"}]' ;;
-            win32-arm64) target_matrix='[{"platform":"win32-arm64","runner":"windows-11-arm"}]' ;;
-            darwin-x64) target_matrix='[{"platform":"darwin-x64","runner":"macos-15-intel"}]' ;;
-            darwin-arm64) target_matrix='[{"platform":"darwin-arm64","runner":"macos-15"}]' ;;
+            linux-x64) target_matrix='[{"platform":"linux-x64","label":"linux-amd64","runner":"ubuntu-24.04"}]' ;;
+            linux-arm64) target_matrix='[{"platform":"linux-arm64","label":"linux-arm64","runner":"ubuntu-24.04-arm"}]' ;;
+            win32-x64) target_matrix='[{"platform":"win32-x64","label":"windows-amd64","runner":"windows-2025"}]' ;;
+            win32-arm64) target_matrix='[{"platform":"win32-arm64","label":"windows-arm64","runner":"windows-11-arm"}]' ;;
+            darwin-x64) target_matrix='[{"platform":"darwin-x64","label":"macos-amd64","runner":"macos-15-intel"}]' ;;
+            darwin-arm64) target_matrix='[{"platform":"darwin-arm64","label":"macos-arm64","runner":"macos-15"}]' ;;
             *) echo "Unsupported platform filter: $platform_filter" >&2; exit 2 ;;
           esac
 
@@ -174,7 +175,7 @@ jobs:
           echo "diagnostic_mode=$diagnostic_mode" >> "$GITHUB_OUTPUT"
 
   platform:
-    name: ${{ matrix.target.platform }} / ${{ matrix.shard }}
+    name: "bench: shotium-${{ matrix.target.label }}-v${{ needs.resolve.outputs.archive_version }} ${{ matrix.shard }}"
     needs: resolve
     strategy:
       fail-fast: false
@@ -248,7 +249,7 @@ jobs:
           pnpm run hash-artifact --
           --input "${{ github.workspace }}/apps/benchmark/out/artifact/${{ matrix.target.platform }}/${{ matrix.shard }}"
           --output "${{ github.workspace }}/apps/benchmark/out/permanent/${{ matrix.target.platform }}/${{ matrix.shard }}/artifact.json"
-          --name "benchmark-evidence-${{ matrix.target.platform }}-${{ matrix.shard }}-${{ github.run_id }}-a${{ github.run_attempt }}"
+          --name "benchmark-evidence-${{ matrix.target.label }}-${{ matrix.shard }}-${{ github.run_id }}-a${{ github.run_attempt }}"
           --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
       - name: Upload detailed evidence
@@ -257,7 +258,7 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact@v7
         with:
-          name: benchmark-evidence-${{ matrix.target.platform }}-${{ matrix.shard }}-${{ github.run_id }}-a${{ github.run_attempt }}
+          name: benchmark-evidence-${{ matrix.target.label }}-${{ matrix.shard }}-${{ github.run_id }}-a${{ github.run_attempt }}
           path: apps/benchmark/out/artifact/${{ matrix.target.platform }}/${{ matrix.shard }}
           if-no-files-found: error
           retention-days: 90
@@ -277,7 +278,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: benchmark-shard-${{ matrix.target.platform }}-${{ matrix.shard }}
+          name: benchmark-shard-${{ matrix.target.label }}-${{ matrix.shard }}
           path: apps/benchmark/out/permanent/${{ matrix.target.platform }}/${{ matrix.shard }}
           if-no-files-found: warn
           retention-days: 30
@@ -291,20 +292,22 @@ jobs:
         run: exit 1
 
   merge-platform:
-    name: Merge ${{ matrix.platform }} shards
+    name: "merge: shotium-${{ matrix.target.label }}-v${{ needs.resolve.outputs.archive_version }}"
     needs: [resolve, platform]
     if: always() && needs.resolve.outputs.diagnostic_mode != 'true'
     strategy:
       fail-fast: false
       max-parallel: 6
       matrix:
-        platform:
-          - linux-x64
-          - linux-arm64
-          - win32-x64
-          - win32-arm64
-          - darwin-x64
-          - darwin-arm64
+        # platform is the npm id the harness works in; label is the name
+        # people see, on the job and on the artifacts.
+        target:
+          - { platform: linux-x64, label: linux-amd64 }
+          - { platform: linux-arm64, label: linux-arm64 }
+          - { platform: win32-x64, label: windows-amd64 }
+          - { platform: win32-arm64, label: windows-arm64 }
+          - { platform: darwin-x64, label: macos-amd64 }
+          - { platform: darwin-arm64, label: macos-arm64 }
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -332,15 +335,15 @@ jobs:
       - name: Prepare shard input and platform output directories
         shell: bash
         run: |
-          mkdir -p "${RUNNER_TEMP}/benchmark-shards/${{ matrix.platform }}"
-          mkdir -p "${GITHUB_WORKSPACE}/apps/benchmark/out/permanent/${{ matrix.platform }}"
+          mkdir -p "${RUNNER_TEMP}/benchmark-shards/${{ matrix.target.platform }}"
+          mkdir -p "${GITHUB_WORKSPACE}/apps/benchmark/out/permanent/${{ matrix.target.platform }}"
 
       - name: Download every shard result that exists
         continue-on-error: true
         uses: actions/download-artifact@v8
         with:
-          pattern: benchmark-shard-${{ matrix.platform }}-*
-          path: ${{ runner.temp }}/benchmark-shards/${{ matrix.platform }}
+          pattern: benchmark-shard-${{ matrix.target.label }}-*
+          path: ${{ runner.temp }}/benchmark-shards/${{ matrix.target.platform }}
           merge-multiple: false
 
       - name: Merge and validate the platform shards
@@ -349,9 +352,9 @@ jobs:
         working-directory: apps/benchmark
         run: >-
           pnpm run merge-shards --
-          --input "${{ runner.temp }}/benchmark-shards/${{ matrix.platform }}"
-          --output "${{ github.workspace }}/apps/benchmark/out/permanent/${{ matrix.platform }}"
-          --platform "${{ matrix.platform }}"
+          --input "${{ runner.temp }}/benchmark-shards/${{ matrix.target.platform }}"
+          --output "${{ github.workspace }}/apps/benchmark/out/permanent/${{ matrix.target.platform }}"
+          --platform "${{ matrix.target.platform }}"
 
       - name: Upload merged platform result
         if: always()
@@ -359,8 +362,8 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact@v7
         with:
-          name: benchmark-permanent-${{ matrix.platform }}
-          path: apps/benchmark/out/permanent/${{ matrix.platform }}
+          name: benchmark-permanent-${{ matrix.target.label }}
+          path: apps/benchmark/out/permanent/${{ matrix.target.platform }}
           if-no-files-found: warn
           retention-days: 30
 
@@ -371,7 +374,7 @@ jobs:
         run: exit 1
 
   aggregate:
-    name: Aggregate and archive
+    name: "aggregate: shotium-v${{ needs.resolve.outputs.archive_version }}"
     needs: [resolve, merge-platform]
     if: always() && needs.resolve.outputs.diagnostic_mode != 'true'
     runs-on: ubuntu-24.04
@@ -501,7 +504,7 @@ jobs:
           steps.aggregate.outputs.publishable == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh workflow run benchmark-pages.yml --ref main
+        run: gh workflow run benchmark-site.yml --ref main
 
       - name: Reject incomplete or untrusted benchmark reports
         if: >-

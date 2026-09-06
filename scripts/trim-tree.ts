@@ -10,13 +10,25 @@
 // Three subcommands:
 //
 //   export   Write one build directory's records to a folder: ninja's inputs
-//            for the two engine targets, its deps log (headers, which
-//            `-t inputs` does not know about), gn's build.ninja.d (every
-//            .gn/.gni/exec_script it read), and the sources named by the
-//            jumbo translation units (the merged .cc files are what ninja
-//            sees; the real sources only appear as #include lines). CI runs
-//            this after every engine build and uploads the folder, because a
-//            macOS graph cannot be generated on the Windows host.
+//            for the two engine targets, the nodes of `ninja -t graph` (the
+//            order-only edges `-t inputs` skips), its deps log (headers),
+//            the depfiles of reachable actions (what grit read), gn's
+//            build.ninja.d (every .gn/.gni/exec_script it read), and the
+//            sources named by the jumbo translation units (the merged .cc
+//            files are what ninja sees; the real sources only appear as
+//            #include lines). CI runs this after every engine build and
+//            uploads the folder, because a macOS graph cannot be generated
+//            on the Windows host.
+//
+//            Three things no record names and the whitelist carries with a
+//            reason: what an exec_script opens itself, what a Python script
+//            imports, and files passed to the linker as flags (/NATVIS:).
+//            A fourth, what grit reads, is only half recorded: a platform's
+//            depfile lists the images that platform's <if expr> selected, so
+//            the union of six graphs still misses a file the seventh
+//            condition would pick, and the resource-id allocator's depfile
+//            skips .grd files it did not find. Rule 9 closes over the .grd
+//            text instead.
 //
 //   plan     Union the exports of every platform, intersect with git's
 //            tracked files, apply the closure rules below, and write the
@@ -38,6 +50,10 @@
 //   7. An extra keep list (--keep FILE, one path or prefix/ per line).
 //   8. Under build/, paths for platforms this project never builds (android,
 //      fuchsia, ios, chromeos ...) are dropped again unless a record names them.
+//   9. Every file a kept .grd or .grdp names (file= and path= attributes,
+//      resolved against the grd's directory and grit's default_N_percent
+//      scale directories) stays, whatever <if expr> it sits under. Linux and
+//      macOS each failed in grit on an image only their condition selects.
 //
 // Usage (from anywhere in the repository):
 //
@@ -57,6 +73,8 @@ import {cac} from 'cac';
 import {execa} from 'execa';
 import pc from 'picocolors';
 import {glob} from 'tinyglobby';
+
+import {parseDepfile} from './lib/depfile.ts';
 
 const root = path.resolve(import.meta.dirname, '..');
 const resolve = (p: string) => path.resolve(root, p);
@@ -114,9 +132,43 @@ async function exportGraph(buildDirArg: string, outArg: string): Promise<number>
 
   await copyFile(path.join(buildDir, 'build.ninja.d'), path.join(out, 'build.ninja.d'));
 
+  // ninja -t graph: every node reachable from the two targets, including the
+  // order-only edges that `-t inputs` leaves out. GN attaches a target's
+  // `inputs` (natvis files, .grd files read by the resource-id allocator)
+  // through a phony ".inputs" edge on the order-only side, so a tree trimmed
+  // from `-t inputs` alone passes gn gen and fails `ninja -n`. The dot output
+  // is only mined for its node labels.
+  const dot = await execa(ninja, ['-C', buildDir, '-t', 'graph', 'shot', 'shot_c'], {cwd: root, stderr: 'inherit', maxBuffer: 1 << 30});
+  const nodes = new Set<string>();
+  for (const m of dot.stdout.matchAll(/label="([^"]*)"/g)) nodes.add(m[1].replace(/\\\\/g, '/'));
+  await writeFile(path.join(out, 'graph.txt'), [...nodes].sort().join('\n') + '\n');
+
+  // Depfiles: what an action read while it ran, which is the only record of
+  // the files grit inlines into a .pak (png, css, json, the .xtb
+  // translations). Only the depfiles of edges the graph reaches count; a
+  // warm directory also holds depfiles of edges that no longer exist. One is
+  // skipped on purpose: gen/tools/gritsettings/default_resource_ids.d lists
+  // every .grd in resource_ids.spec that happened to exist, and the allocator
+  // skips a missing one (grit/tool/update_resource_ids/reader.py), so those
+  // files are not inputs in any sense that matters.
+  const depfileDeps = new Set<string>();
+  for (const file of await glob('**/*.d', {cwd: buildDir, absolute: true})) {
+    const rel = path.relative(buildDir, file).replace(/\\/g, '/');
+    if (rel === 'gen/tools/gritsettings/default_resource_ids.d') continue;
+    for (const {target, deps} of parseDepfile(await readFile(file, 'utf8'))) {
+      if (!nodes.has(target)) continue;
+      for (const dep of deps) depfileDeps.add(dep);
+    }
+  }
+  await writeFile(path.join(out, 'depfiles.txt'), [...depfileDeps].sort().join('\n') + '\n');
+
   // The jumbo TUs: gen/<dir>/<target>_shot_jumbo_N.cc, each a list of
-  // #include "../../real/source.cc".
-  const jumbo = await glob('gen/**/*_shot_jumbo_*.cc', {cwd: buildDir, absolute: true});
+  // #include "../../real/source.cc". GN writes them at gen time and never
+  // deletes one, so a warm directory keeps the units of every target that
+  // ever existed (807 of 2,801 on the development host: gpu/ipc, viz/service,
+  // services/network, ui/aura ...). Only a unit the graph compiles counts.
+  const jumbo = (await glob('gen/**/*_shot_jumbo_*.cc', {cwd: buildDir, absolute: true}))
+                    .filter((file) => nodes.has(path.relative(buildDir, file).replace(/\\/g, '/')));
   const sources = new Set<string>();
   for (const file of jumbo) {
     for (const line of (await readFile(file, 'utf8')).split(/\r?\n/)) {
@@ -162,11 +214,26 @@ async function readRecords(dir: string): Promise<Set<string>> {
   };
 
   for (const line of (await text('inputs.txt')).split(/\r?\n/)) add(line);
+  const graphLines = (await text('graph.txt')).split(/\r?\n/);
+  const nodes = new Set(graphLines.map((l) => l.trim().replace(/\\/g, '/')).filter(Boolean));
+  for (const line of graphLines) add(line);
+  for (const line of (await text('depfiles.txt')).split(/\r?\n/)) add(line);
   for (const line of (await text('jumbo.txt')).split(/\r?\n/)) add(line);
-  // deps.txt: "obj/x.obj: #deps N, ..." header lines, then one indented path
-  // per line.
+  // deps.txt: "obj/x.obj: #deps N, deps mtime T (VALID|STALE)" header lines,
+  // then one indented path per line. The deps log outlives the graph: a warm
+  // build directory still holds the entries of objects an earlier tree
+  // compiled and this one no longer reaches (the development host's carried
+  // 1,414 such objects, remembering 963 content/ and gpu/ headers no build
+  // reads). Only an entry whose object is a node reachable from shot/shot_c
+  // counts; without a graph.txt (an old export) every entry does.
+  let counted = nodes.size === 0;
   for (const line of (await text('deps.txt')).split(/\r?\n/)) {
-    if (line.startsWith('    ')) add(line);
+    if (line.startsWith('    ')) {
+      if (counted) add(line);
+      continue;
+    }
+    const header = line.indexOf(': #deps');
+    if (header > 0) counted = nodes.size === 0 || (nodes.has(line.slice(0, header).replace(/\\/g, '/')) && !line.endsWith('(STALE)'));
   }
   // build.ninja.d: "build.ninja: a b c \" with line continuations. Paths with
   // spaces are escaped as "\ ", which no path of this repository has.
@@ -195,12 +262,23 @@ async function trackedFiles(): Promise<string[]> {
 
 // Rule 2. Directories end with '/'; files match exactly.
 const whitelist = [
-  '.clang-format', '.gitattributes', '.gitignore', '.gitmodules', '.gn', '.vpython3',
+  '.clang-format', '.rustfmt.toml',
+  // build/compute_build_timestamp.py open()s chrome/VERSION from inside an
+  // exec_script, which no graph records.
+  'chrome/VERSION',
+  // build/win/set_appcontainer_acls.py appends testing/scripts to sys.path and
+  // imports common, which imports test_env (and xvfb on Linux) from testing/;
+  // an import is not an input either.
+  'testing/scripts/common.py', 'testing/test_env.py', 'testing/xvfb.py',
+  // tools/win/DebugVisualizers/BUILD.gn passes its .natvis files to the linker
+  // as /NATVIS: ldflags; a flag is not an input, and lld-link fails without
+  // the file.
+  'tools/win/DebugVisualizers/', '.gitattributes', '.gitignore', '.gitmodules', '.gn', '.vpython3',
   'AGENTS.md', 'AUTHORS', 'BUILD.gn', 'CLAUDE.md', 'DEPS', 'LICENSE', 'README.md', 'README.zh.md',
   'package.json',
-  '.claude/', '.github/', 'apps/', 'benchmark-results/', 'build_overrides/',
+  '.claude/', '.github/', 'apps/', 'benchmark-results/', 'bootstrap/', 'build_overrides/',
   'buildtools/', 'build/args/', 'build/config/shot_build.gni', 'docs/', 'patches/', 'scripts/',
-  'shot/', 'shotium/', 'tests/',
+  'shot/', 'shotium/', 'tests/', 'tools/shot/',
   // .sha1 stamps the dsymutil_mac_* gclient hooks download by; no build reads them.
   'tools/clang/dsymutil/',
 ];
@@ -244,6 +322,37 @@ interface Plan {
   delete: string[];
 }
 
+// Rule 9. grit resolves a <structure type="chrome_scaled_image"> path under
+// the grd's default_N_percent directories, and everything else beside the grd
+// (a <part> beside the grd or beside the part that named it). Generated inputs
+// (${root_gen_dir}) are not tracked and are skipped. Parts found along the way
+// are read too, until nothing new turns up.
+async function gritResources(keep: Set<string>, tracked: Set<string>): Promise<Set<string>> {
+  const scales = ['default_100_percent', 'default_200_percent', 'default_300_percent'];
+  const found = new Set<string>();
+  const seen = new Set<string>();
+  const queue = [...keep].filter((f) => /\.grdp?$/.test(f));
+  while (queue.length > 0) {
+    const grd = queue.shift()!;
+    if (seen.has(grd)) continue;
+    seen.add(grd);
+    const dir = path.posix.dirname(grd);
+    const text = await readFile(resolve(grd), 'utf8');
+    for (const m of text.matchAll(/\b(?:file|path)="([^"]+)"/g)) {
+      const value = m[1];
+      if (value.includes('${') || value.startsWith('/') || driveLetter.test(value)) continue;
+      for (const base of [dir, ...scales.map((s) => path.posix.join(dir, s))]) {
+        const candidate = path.posix.normalize(path.posix.join(base, value));
+        if (!tracked.has(candidate)) continue;
+        found.add(candidate);
+        if (/\.grdp?$/.test(candidate)) queue.push(candidate);
+      }
+    }
+  }
+  console.log(`rule 9: ${seen.size} grd files, ${found.size} resources`);
+  return found;
+}
+
 async function plan(graphDirs: string[], outArg: string, keepListArg?: string): Promise<number> {
   if (graphDirs.length === 0) {
     console.log(pc.red('plan needs at least one --graph directory'));
@@ -265,7 +374,7 @@ async function plan(graphDirs: string[], outArg: string, keepListArg?: string): 
 
   // 1 + 2 + 7, and the Blink IDL files: no build reads them, but they are
   // the source the committed V8<Enum>/union/dictionary bindings were
-  // generated from (scripts/gen-idl.ts), and a sync regenerates from them.
+  // generated from (tools/shot/gen_idl_*.py), and a sync regenerates from them.
   for (const f of tracked) {
     if (union.has(f) || matchesWhitelist(f, extra)) keep.add(f);
     else if (f.startsWith('third_party/blink/renderer/') && f.endsWith('.idl')) keep.add(f);
@@ -306,6 +415,8 @@ async function plan(graphDirs: string[], outArg: string, keepListArg?: string): 
     for (const dir of ancestors(f)) for (const l of byDir.get(dir) ?? []) keep.add(l);
     for (const l of byDir.get('.') ?? []) keep.add(l);
   }
+  // 9: what the kept .grd files name, on every platform.
+  for (const f of await gritResources(keep, trackedSet)) keep.add(f);
   // 8: foreign platforms under build/, unless a record names the file.
   for (const f of [...keep]) {
     if (isForeignBuildPath(f) && !union.has(f) && !matchesWhitelist(f, extra)) keep.delete(f);
@@ -383,7 +494,7 @@ async function apply(planArg: string): Promise<number> {
 const cli = cac('trim-tree');
 cli.command('export', 'write one build directory\'s records to a folder')
     .option('--build-dir <dir>', 'a generated (ideally built) directory', {default: 'out/Shot'})
-    .option('--out <dir>', 'where to write inputs.txt, deps.txt, build.ninja.d, jumbo.txt, meta.json')
+    .option('--out <dir>', 'where to write inputs.txt, graph.txt, deps.txt, build.ninja.d, jumbo.txt, meta.json')
     .action(async (options: {buildDir: string; out?: string}) => {
       if (!options.out) throw new Error('--out is required');
       process.exitCode = await exportGraph(options.buildDir, options.out);

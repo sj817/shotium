@@ -43,6 +43,7 @@ import pc from 'picocolors';
 
 import {PRESETS, repack} from './icu-repack.ts';
 import {formatClasses} from './lib/ninja-log.ts';
+import {pruneStaleDepfiles} from './prune-stale-depfiles.ts';
 
 const root = path.resolve(import.meta.dirname, '..');
 const outDir = 'out/Shot';
@@ -235,6 +236,12 @@ async function main(): Promise<number> {
   // A graph check after a cut wants the retry too -- running gn by hand is
   // where the environment.x64 race gets mistaken for a broken BUILD.gn.
   if (options.genOnly) return 0;
+
+  // A depfile that names a file the tree no longer has makes ninja refuse to
+  // start ("missing and no known rule to make it"); drop it so the action
+  // reruns. Only warm directories ever have one.
+  const stale = await pruneStaleDepfiles(path.join(root, outDir));
+  if (stale.removed.length) say(`removed ${stale.removed.length} stale depfile(s) of ${stale.scanned}`);
 
   say(`ninja -C ${outDir} ${target} -j ${jobs}  (log: ${log})`);
   const code = await ninja();

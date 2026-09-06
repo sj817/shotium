@@ -1,3 +1,0 @@
-include_rules = [
-    "+skia/rusty_jpeg_feature.h",
-]

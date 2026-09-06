@@ -78,8 +78,9 @@ carry the native engine (~22 MB each). The same engine is also a standalone
 executable (`shotium.exe`) and a C ABI (`shotium.dll` / `libshotium.so` /
 `libshotium.dylib`) for Rust, Go, Python and C++ callers.
 
-The tree is a *slice* of Chromium, not a fork: 64k tracked files out of
-upstream's 505k, pinned at the baseline recorded in `docs/upstream-sync.md`.
+The tree is a *slice* of Chromium, not a fork: about 27k tracked files out of
+upstream's 505k, pinned at the baseline recorded in `docs/upstream-sync.md`
+and trimmed to what the six engine builds read (`pnpm trim-tree`, below).
 Chromium files that remain are edited in place; there is no patch queue for
 in-tree code. `patches/` holds the three patches applied to DEPS-fetched
 checkouts (ICU, Skia) that are not in git.
@@ -480,6 +481,31 @@ Output: `out/Shot/shotium.exe`, `out/Shot/shotium.dll`, `out/Shot/shotium_data.p
   Read `lib.rs` before removing one.
 - Delete DEPS entries with the directories they fetch, and `.gitmodules` with
   them, or CI's `gclient sync` puts the directory back.
+- The tree is trimmed to the build graph, not by judgement. Every engine
+  build exports what it read (`pnpm graph:export`, uploaded as
+  `graph-<os>-<arch>`): `ninja -t inputs`, `-t graph` (order-only edges),
+  `-t deps`, the depfiles of reachable actions, `build.ninja.d` and the
+  jumbo `#include` lists. `pnpm trim-tree plan --graph <dir>...` unions the
+  six, applies the closure rules written in `scripts/trim-tree.ts` (Python
+  packages around a kept script, `build/` whole, licences, vendored Rust
+  crates, the whitelist) and `apply` runs `git rm` on the explicit list;
+  `pnpm prune-deps --inputs <plan>/untracked-inputs.txt` then cuts DEPS,
+  the hooks, `.gitmodules` and the gitlinks to what those graphs touch.
+  Three things no graph records, and the whitelist carries with a reason:
+  what an `exec_script` opens itself (`chrome/VERSION`), what a Python
+  script imports (`testing/scripts/common.py`), and files passed to the
+  linker as flags (`tools/win/DebugVisualizers`). grit is only half
+  recorded: each platform's depfile lists the images its `<if expr>`
+  selected, so the union of six graphs still misses `mac/folder.png` on a
+  Linux-exported graph and vice versa, and the resource-id allocator's
+  depfile skips missing `.grd` files. Rule 9 in `trim-tree.ts` keeps every
+  file a kept `.grd`/`.grdp` names instead. Two records also outlive the
+  graph in a warm build directory, the deps log and the jumbo units of
+  targets that no longer exist, so only entries whose object `ninja -t
+  graph` reaches count; a plan from an unfiltered warm directory kept
+  1,891 files no build compiles. After a trim run
+  `pnpm depfiles:prune` on any warm build directory, or ninja refuses to
+  start on a depfile that names a deleted file.
 
 ## Git conventions
 
@@ -505,13 +531,28 @@ Output: `out/Shot/shotium.exe`, `out/Shot/shotium.dll`, `out/Shot/shotium_data.p
 | Workflow | Trigger | What it does |
 |---|---|---|
 | `checks.yml` | push to `main` and PRs, path-filtered to `shotium/`, `shot/testdata/bilibili/`, `scripts/`, `apps/benchmark/`; dispatch | The engine-less half: package builds, types, `require()` does not start the engine, option validation, daemon wire, harness syntax + unit tests, six platform packages consistent, tarball contents, `scripts/` typechecks and its tests pass, Bilibili fixtures offline. ~40 s, expected always green. An engine-only change produces no run at all, which is not the same as a pass |
-| `engine-windows.yml` | dispatch (`arch`, `jobs`, `run_checks`) | depot_tools, SDK, `gclient sync`, timestamp restore, cached `out/`, `gn gen`, `ninja`, package `.7z`, node platform package, run the check suites. Cold ~4 h, warm ~25 min |
+| `engine-windows.yml` | dispatch (`arch` = amd64 or arm64, `jobs`, `run_checks`) | depot_tools, SDK, `gclient sync`, timestamp restore, cached `out/`, `gn gen`, `ninja`, package `.7z`, node platform package, run the check suites. Cold ~4 h, warm ~25 min |
 | `engine-linux.yml`, `engine-macos.yml` | dispatch (`mode` = probe or build, `arch`, `jobs`, `run_checks`) | Same, plus `probe` = `gn gen` + `ninja -n` only. Probe green is level 1 of 3, not success |
 | `benchmark.yml` | dispatch (`shotium_version`, `profile`, `commit_results`, `seed`) | 30-job `platform x shard` matrix against Puppeteer/Playwright; commits aggregated results to `benchmark-results/` |
-| `benchmark-pages.yml` | push to `main` touching results or site | Publishes `apps/benchmark-site` |
-| `performance-regression.yml` | dispatch (`baseline_version`, `build_runs` JSON) | Candidate vs published npm on six platforms through `perf-ci.ts`, gated by `lib/perf-gate.ts` |
+| `benchmark-site.yml` | push to `main` touching results or site | Publishes `apps/benchmark-site` |
+| `perf-gate.yml` | dispatch (`baseline_version`, `build_runs` JSON) | Candidate vs published npm on six platforms through `perf-ci.ts`, gated by `lib/perf-gate.ts` |
 | `publish.yml` | tag `v*`, or dispatch with `dry_run` | Collects the six engine artifacts at the tag's commit, publishes seven npm packages, then creates the GitHub release |
 
+- Names follow one pattern. The workflow name is the file stem
+  (`engine-windows`, `perf-gate`); a job is
+  `<verb>: shotium[-<os>-<arch>]-v<version>` (`build: shotium-windows-amd64-v0.4.0`,
+  `bench: shotium-linux-arm64-v0.4.0 startup`, `check-package: shotium-v0.4.0`)
+  with `windows`/`linux`/`macos` and `amd64`/`arm64`; a dispatched run is
+  named `<workflow>: <inputs>`. Artifacts and release archives carry the
+  same platform id (`shotium-linux-arm64-v0.4.0.7z`, `npm-shotium-macos-amd64`,
+  `graph-windows-amd64`). The version comes from a `meta` job that reads
+  `shotium/package.json`, because a job name can read another job's outputs
+  but not a file. Two things keep the old spelling on purpose: npm package
+  names (`@shotkit/shotium-win32-x64`) because npm matches them against
+  `process.platform`, with `publish.yml` holding the map; and the
+  build-directory cache keys (`out-shot-windows-x64-`), because renaming
+  them would discard six warm build directories. The workflows translate
+  `arch` to GN's `x64` through `SHOT_CPU`.
 - Read a failed run with `gh run view -R sj817/shotium <id> --log-failed`.
 - A CI red in the benchmark is not the same as "the benchmark found
   something": competitor-engine failures are recorded in `summary.json` /

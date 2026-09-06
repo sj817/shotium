@@ -1,0 +1,29 @@
+[
+  {
+    "shard": "parallel",
+    "engine": "puppeteer-chrome",
+    "scenario": "parallel",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 2,
+    "error": "Error: grid/parallel.c2.r1.a1.s00047: Error: PNG appears empty or uniform\n    at inspectPng (/home/runner/work/shotium/shotium/apps/benchmark/src/image.ts:28:11)\n    at flushEvidence (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:285:21)\n    at <anonymous> (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:799:9)\n    at flushEvidence (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:310:11)\n    at <anonymous> (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:799:9)"
+  },
+  {
+    "shard": "parallel",
+    "engine": "puppeteer-chrome",
+    "scenario": "parallel",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 4,
+    "error": "Error: redirect/parallel.c4.r1.a1.s00095: Error: PNG appears empty or uniform\n    at inspectPng (/home/runner/work/shotium/shotium/apps/benchmark/src/image.ts:28:11)\n    at flushEvidence (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:285:21)\n    at <anonymous> (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:799:9)\n    at flushEvidence (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:310:11)\n    at <anonymous> (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:799:9)"
+  },
+  {
+    "shard": "resilience",
+    "engine": "puppeteer-chrome",
+    "scenario": "soak",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 4,
+    "error": "Error: fonts/soak.c4.r1.a1.s00098: Error: PNG appears empty or uniform\n    at inspectPng (/home/runner/work/shotium/shotium/apps/benchmark/src/image.ts:28:11)\n    at flushEvidence (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:285:21)\n    at <anonymous> (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:799:9)\nfonts/soak.c4.r1.a1.s00103: Error: PNG appears empty or uniform\n    at inspectPng (/home/runner/work/shotium/shotium/apps/benchmark/src/image.ts:28:11)\n    at flushEvidence (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:285:21)\n    at <anonymous> (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:799:9)\nsimple/soak.c4.r1.a1.s00181: Error: PNG appears empty or uniform\n    at inspectPng (/home/runner/work/shotium/shotium/apps/benchmark/src/image.ts:28:11)\n    at flushEvidence (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:285:21)\n    at <anonymous> (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:799:9)\nlong-page/soak.c4.r1.a1.s00303: Error: PNG appears empty or uniform\n    at inspectPng (/home/runner/work/shotium/shotium/apps/benchmark/src/image.ts:28:11)\n    at flushEvidence (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:285:21)\n    at <anonymous> (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:799:9)\nfonts/soak.c4.r1.a1.s00355: Error: PNG appears empty or uniform\n    at inspectPng (/home/runner/work/shotium/shotium/apps/benchmark/src/image.ts:28:11)\n    at flushEvidence (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:285:21)\n    at <anonymous> (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:799:9)\nmissing-resource/soak.c4.r1.a1.s00501: Error: PNG appears empty or uniform\n    at inspectPng (/home/runner/work/shotium/shotium/apps/benchmark/src/image.ts:28:11)\n    at flushEvidence (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:285:21)\n    at <anonymous> (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:799:9)\nlong-page/soak.c4.r1.a1.s00527: Error: PNG appears empty or uniform\n    at inspectPng (/home/runner/work/shotium/shotium/apps/benchmark/src/image.ts:28:11)\n    at flushEvidence (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:285:21)\n    at <anonymous> (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:799:9)\ntext/soak.c4.r1.a1.s00584: Error: PNG appears empty or uniform\n    at inspectPng (/home/runner/work/shotium/shotium/apps/benchmark/src/image.ts:28:11)\n    at flushEvidence (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:285:21)\n    at <anonymous> (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:799:9)\ntext/soak.c4.r1.a1.s00620: Error: PNG appears empty or uniform\n    at inspectPng (/home/runner/work/shotium/shotium/apps/benchmark/src/image.ts:28:11)\n    at flushEvidence (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:285:21)\n    at <anonymous> (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:799:9)\n    at flushEvidence (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:310:11)\n    at <anonymous> (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:799:9)"
+  }
+]

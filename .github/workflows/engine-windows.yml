@@ -30,16 +30,17 @@
 # reset the tree to upstream and undo everything this repository is. That is
 # what "managed": False below is for, and it is not optional.
 
-name: engine (windows)
+name: engine-windows
+run-name: "engine-windows: ${{ inputs.arch }} build"
 
 on:
   workflow_dispatch:
     inputs:
       arch:
-        description: 'x64 (native) or arm64 (cross-compiled from this x64 host)'
+        description: 'amd64 (native) or arm64 (cross-compiled from this amd64 host)'
         type: choice
-        options: [x64, arm64]
-        default: x64
+        options: [amd64, arm64]
+        default: amd64
       jobs:
         description: 'ninja -j (4 cores; blink layout TUs peak at ~1.2 GB each)'
         default: '4'
@@ -48,8 +49,33 @@ on:
         type: boolean
         default: true
 
+# GN, the SDK and node-gyp spell the 64-bit architecture x64; the names
+# people see spell it amd64. The build-directory cache is keyed by the GN
+# spelling so that renaming labels did not throw away six warm build
+# directories.
+env:
+  SHOT_CPU: ${{ inputs.arch == 'arm64' && 'arm64' || 'x64' }}
+
 jobs:
+  # Every job name below carries the package version. A job name can
+  # read an earlier job's outputs but not a file, so one small job
+  # reads package.json first.
+  meta:
+    name: "resolve: shotium-windows-${{ inputs.arch }}"
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: shotium/package.json
+          sparse-checkout-cone-mode: false
+      - id: version
+        run: echo "version=$(jq -r .version shotium/package.json)" >> "$GITHUB_OUTPUT"
+
   build:
+    name: "build: shotium-windows-${{ inputs.arch }}-v${{ needs.meta.outputs.version }}"
+    needs: meta
     runs-on: windows-2025
     timeout-minutes: 350   # just under GitHub's six-hour ceiling, so the
                            # "save the cache" step still gets to run
@@ -152,7 +178,7 @@ jobs:
         # third_party/llvm-build and target anything, so nothing else in this
         # job would notice a missing arm64 SDK until the link, hours in.
         run: |
-          $target = "${{ github.event.inputs.arch }}"
+          $target = "${{ env.SHOT_CPU }}"
           $root = "${env:ProgramFiles(x86)}\Windows Kits\10"
           $usable = Get-ChildItem "$root\Include" -Directory -ErrorAction SilentlyContinue |
             Where-Object {
@@ -246,9 +272,9 @@ jobs:
         # not just the links -- measured, not assumed.
         with:
           path: src/out/Shot
-          key: out-shot-windows-${{ github.event.inputs.arch }}-${{ github.run_id }}
+          key: out-shot-windows-${{ env.SHOT_CPU }}-${{ github.run_id }}
           restore-keys: |
-            out-shot-windows-${{ github.event.inputs.arch }}-
+            out-shot-windows-${{ env.SHOT_CPU }}-
 
       - name: patch the DEPS checkouts
         shell: pwsh
@@ -311,7 +337,7 @@ jobs:
           @(
             'import("//build/args/shot.gn")'
             "win_ntddi_version = ""$env:WIN_NTDDI_VERSION"""
-            "target_cpu = ""${{ github.event.inputs.arch }}"""
+            "target_cpu = ""${{ env.SHOT_CPU }}"""
           ) | Out-File -FilePath out/Shot/args.gn -Encoding ascii
           Get-Content out/Shot/args.gn
           gn gen out/Shot
@@ -329,6 +355,14 @@ jobs:
           foreach ($stale in 'out/Shot/shotium.exe', 'out/Shot/shotium.dll') {
             if (Test-Path $stale) { Remove-Item -Force $stale }
           }
+
+      # A restored build directory can hold a depfile that names a file the
+      # tree no longer has; ninja refuses to start on it ("missing and no
+      # known rule to make it"). Dropping the depfile makes the action rerun.
+      - name: drop depfiles that name deleted files
+        shell: pwsh
+        working-directory: src
+        run: pnpm depfiles:prune out/Shot
 
       - name: ninja
         shell: pwsh
@@ -357,7 +391,7 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact@v7
         with:
-          name: graph-windows-${{ github.event.inputs.arch }}
+          name: graph-windows-${{ inputs.arch }}
           path: graph
           if-no-files-found: warn
 
@@ -366,7 +400,7 @@ jobs:
         uses: actions/cache/save@v6
         with:
           path: src/out/Shot
-          key: out-shot-windows-${{ github.event.inputs.arch }}-${{ github.run_id }}
+          key: out-shot-windows-${{ env.SHOT_CPU }}-${{ github.run_id }}
 
       - name: drop the build directories this one replaces
         if: always()
@@ -390,7 +424,7 @@ jobs:
           $keep = 2
           try {
             $stale = gh cache list --repo ${{ github.repository }} `
-                       --key "out-shot-windows-${{ github.event.inputs.arch }}-" --limit 100 `
+                       --key "out-shot-windows-${{ env.SHOT_CPU }}-" --limit 100 `
                        --sort created_at --order desc --json id,key,sizeInBytes |
                      ConvertFrom-Json
           } catch {
@@ -456,7 +490,7 @@ jobs:
           # it in place rather than leaving two versioned directories side by
           # side.
           $version = (Get-Content shotium/package.json -Raw | ConvertFrom-Json).version
-          $stem = "shotium-win-${{ github.event.inputs.arch }}"
+          $stem = "shotium-windows-${{ inputs.arch }}"
           $archive = "$stem-v$version.7z"
           if (Test-Path dist) { Remove-Item -Recurse -Force dist }
           if (Test-Path $archive) { Remove-Item -Force $archive }
@@ -504,7 +538,7 @@ jobs:
         # limitation and read as a broken engine. An arm64 artifact ships
         # checked by nothing but the compiler and the linker.
         if: success() && github.event.inputs.run_checks == 'true'
-             && github.event.inputs.arch == 'x64'
+             && inputs.arch == 'amd64'
         shell: pwsh
         working-directory: src
         # In the order they cost: protocol and geometry first because they are
@@ -597,7 +631,7 @@ jobs:
         # execute an arm64 binary -- so it is cross-compiled here and ships
         # having been checked by nothing but the compiler and the linker.
         run: |
-          $arch = "${{ github.event.inputs.arch }}"
+          $arch = "${{ env.SHOT_CPU }}"
           $addon = "shotium/native/build/Release/shotium.node"
           if (-not (Test-Path $addon)) {
             $env:SHOT_INCLUDE_DIR = "$PWD/shot"
@@ -633,7 +667,7 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v7
         with:
-          name: npm-shotium-win-${{ github.event.inputs.arch }}
+          name: npm-shotium-windows-${{ inputs.arch }}
           path: src/${{ env.SHOT_NPM_TARBALL }}
           if-no-files-found: error
           compression-level: 0

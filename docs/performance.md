@@ -105,7 +105,7 @@ can pass only its own scope; it does not replace a full platform result. Retryin
 must write a new result file: keep earlier failures and uncertainty, and do not
 select only the best run.
 
-The `Candidate versus npm performance` workflow runs the full matrix on all six
+The `perf-gate` workflow runs the full matrix on all six
 published native platforms. First build all six with the engine workflows at
 the same source SHA. Dispatch the performance workflow at that SHA with an exact
 npm baseline version and a `build_runs` JSON object mapping `linux-x64`,
