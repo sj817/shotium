@@ -36,7 +36,25 @@ on:
   workflow_dispatch:
 
 jobs:
-  javascript:
+  # Every job name below carries the package version. A job name can
+  # read an earlier job's outputs but not a file, so one small job
+  # reads package.json first.
+  meta:
+    name: "resolve: shotium"
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: shotium/package.json
+          sparse-checkout-cone-mode: false
+      - id: version
+        run: echo "version=$(jq -r .version shotium/package.json)" >> "$GITHUB_OUTPUT"
+
+  package:
+    name: "check-package: shotium-v${{ needs.meta.outputs.version }}"
+    needs: meta
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -236,7 +254,9 @@ jobs:
           '
           rm -f pack.json
 
-  benchmark:
+  harness:
+    name: "check-harness: shotium-v${{ needs.meta.outputs.version }}"
+    needs: meta
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -272,7 +292,9 @@ jobs:
         # jobs of a full run and burned 15 runner-hours printing nothing.
         run: pnpm run check
 
-  python:
+  scripts:
+    name: "check-scripts: shotium-v${{ needs.meta.outputs.version }}"
+    needs: meta
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

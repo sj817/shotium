@@ -28,11 +28,12 @@ const require = createRequire(import.meta.url);
 // head. It is also what every other package of this shape does -- esbuild,
 // swc, lightningcss all publish darwin-arm64 and win32-x64.
 //
-// The release archives spell it win/mac instead -- shotium-mac-arm64.7z --
-// and that is not going to change either. They are downloaded by people, and
-// `mac` is what people call it. So the two spellings do differ, in the one
-// place where each is right: the registry gets node's, the download page gets
-// the reader's.
+// The release archives and CI artifacts spell it windows/linux/macos and
+// amd64/arm64 instead -- shotium-macos-arm64-v0.4.0.7z -- and that is not
+// going to change either. They are downloaded by people, and that is what
+// people call the machines. So the two spellings do differ, in the one place
+// where each is right: the registry gets node's, the download page gets the
+// reader's; publish.yml holds the six-line map between them.
 const PACKAGES: Readonly<Record<string, string>> = {
   'win32-x64': '@shotkit/shotium-win32-x64',
   'win32-arm64': '@shotkit/shotium-win32-arm64',

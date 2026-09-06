@@ -184,7 +184,7 @@ YAML 只剩 `run: pnpm ci:sdk`、`pnpm ci:package`、`pnpm release:collect` 这�
 在工作区根之下、但没列进 `packages` 的项目里跑 `pnpm install`，pnpm 打印
 `Scope: all N workspace projects`，安装的是工作区，该项目自己一个依赖都不装。
 子项目里放 `.npmrc` 写 `ignore-workspace=true` 不起作用（pnpm 9.15.9），只有命令行
-`--ignore-workspace` 有效。受影响的是 `checks.yml`、`benchmark.yml`、`performance-regression.yml`
+`--ignore-workspace` 有效。受影响的是 `checks.yml`、`benchmark.yml`、`perf-gate.yml`
 和三个 `engine-*.yml` 里所有在 `shotium/`、`apps/benchmark` 内执行的 `pnpm install`。
 
 **约束二：shotium 进不了带 `--frozen-lockfile` 的工作区。** 它的六个平台包钉在本版本号上，
@@ -200,10 +200,10 @@ lockfile 与 `package.json` 的 specifier 不一致而失败。所以工作区 l
 
 1. 根目录 `pnpm-workspace.yaml`：`packages: [tools/shot, apps/*]`，根 `pnpm-lock.yaml` 入库，
    删掉 `apps/benchmark/pnpm-lock.yaml`。
-2. `checks.yml` 的 benchmark job：去掉只取 `apps/benchmark` 的 sparse-checkout（工作区需要根
+2. `checks.yml` 的 harness job：去掉只取 `apps/benchmark` 的 sparse-checkout（工作区需要根
    目录的三个文件），`cache-dependency-path` 改成根 lockfile，安装改成
    `pnpm install --frozen-lockfile --filter shotium-benchmark`。`benchmark.yml`、
-   `performance-regression.yml` 同样。
+   `perf-gate.yml` 同样。
 3. 所有在 `shotium/` 里的 `pnpm install` 加 `--ignore-workspace`（`checks.yml` 一处、
    `engine-*.yml` 三处），`shotium/README.md` 和 `CLAUDE.md` 写明本机也要加。
 4. `apps/benchmark-site`、`apps/demo` 顺带并入，它们没有特殊安装需求。
@@ -220,7 +220,7 @@ lockfile 与 `package.json` 的 specifier 不一致而失败。所以工作区 l
 | 1（已完成） | `scripts/build-engine.ts`、`scripts/link-agent-skills.ts`、`scripts/` 成为 pnpm 项目、规则入 `CLAUDE.md` | 无 | no-op 构建 33 秒跑通，junction 建删往返 |
 | 2 | 4.1 验证套件；`errors` / `build_errors` 进程内化 | `engine-*.yml` 的 checks 步骤各 4 行 | 每个套件的通过 / 失败条数与旧版一致；`serve_check` 仍逐字节比较 |
 | 3 | 4.3 `tests/render` + `accept.ps1` | 无 | 同一基线下逐像素结果一致 |
-| 4 | 4.4 性能工具 | `performance-regression.yml`、`benchmark.yml` 调用行 | 同一份 `result.json` 出同一份报告 |
+| 4 | 4.4 性能工具 | `perf-gate.yml`、`benchmark.yml` 调用行 | 同一份 `result.json` 出同一份报告 |
 | 5 | 4.5 CI 辅助，`icu_repack` 最后 | `engine-*.yml` 调用行 | `icu_repack` 输出逐字节相同 |
 | 6 | 4.8 workflow 内联脚本收进 `ci_*.ts` | 全部 | 一次完整的六平台构建 + 发版干跑 |
 | 7 | 第 6 节的工作区 | 见第 6 节 | `checks.yml` 三个 job 全绿 |

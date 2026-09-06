@@ -1,4 +1,5 @@
-name: Candidate versus npm performance
+name: perf-gate
+run-name: "perf-gate: candidate vs v${{ inputs.baseline_version }}"
 
 on:
   workflow_dispatch:
@@ -18,7 +19,25 @@ permissions:
   actions: read
 
 jobs:
+  # Every job name below carries the package version. A job name can
+  # read an earlier job's outputs but not a file, so one small job
+  # reads package.json first.
+  meta:
+    name: "resolve: shotium"
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: shotium/package.json
+          sparse-checkout-cone-mode: false
+      - id: version
+        run: echo "version=$(jq -r .version shotium/package.json)" >> "$GITHUB_OUTPUT"
+
   resolve:
+    name: "resolve: shotium-v${{ needs.meta.outputs.version }}"
+    needs: meta
     runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.plan.outputs.matrix }}
@@ -40,7 +59,8 @@ jobs:
           path: performance-plan.json
 
   platform:
-    needs: resolve
+    name: "measure: shotium-${{ matrix.target.label }}-v${{ needs.meta.outputs.version }}"
+    needs: [meta, resolve]
     strategy:
       fail-fast: false
       matrix:
@@ -96,7 +116,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: performance-${{ matrix.target.platform }}
+          name: performance-${{ matrix.target.label }}
           path: |
             out/performance/result*
             out/performance/candidate/provenance.json
@@ -106,8 +126,9 @@ jobs:
           retention-days: 90
 
   acceptance:
+    name: "gate: shotium-v${{ needs.meta.outputs.version }}"
     if: always()
-    needs: [resolve, platform]
+    needs: [meta, resolve, platform]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7

@@ -525,13 +525,28 @@ Output: `out/Shot/shotium.exe`, `out/Shot/shotium.dll`, `out/Shot/shotium_data.p
 | Workflow | Trigger | What it does |
 |---|---|---|
 | `checks.yml` | push to `main` and PRs, path-filtered to `shotium/`, `shot/testdata/bilibili/`, `tools/shot/`, `scripts/`, `apps/benchmark/`; dispatch | The engine-less half: package builds, types, `require()` does not start the engine, option validation, daemon wire, harness syntax + unit tests, six platform packages consistent, tarball contents, Python scripts compile, Bilibili fixtures offline, PNG decoder sanity. ~40 s, expected always green. An engine-only change produces no run at all, which is not the same as a pass |
-| `engine-windows.yml` | dispatch (`arch`, `jobs`, `run_checks`) | depot_tools, SDK, `gclient sync`, timestamp restore, cached `out/`, `gn gen`, `ninja`, package `.7z`, node platform package, run the check suites. Cold ~4 h, warm ~25 min |
+| `engine-windows.yml` | dispatch (`arch` = amd64 or arm64, `jobs`, `run_checks`) | depot_tools, SDK, `gclient sync`, timestamp restore, cached `out/`, `gn gen`, `ninja`, package `.7z`, node platform package, run the check suites. Cold ~4 h, warm ~25 min |
 | `engine-linux.yml`, `engine-macos.yml` | dispatch (`mode` = probe or build, `arch`, `jobs`, `run_checks`) | Same, plus `probe` = `gn gen` + `ninja -n` only. Probe green is level 1 of 3, not success |
 | `benchmark.yml` | dispatch (`shotium_version`, `profile`, `commit_results`, `seed`) | 30-job `platform x shard` matrix against Puppeteer/Playwright; commits aggregated results to `benchmark-results/` |
-| `benchmark-pages.yml` | push to `main` touching results or site | Publishes `apps/benchmark-site` |
-| `performance-regression.yml` | dispatch (`baseline_version`, `build_runs` JSON) | Candidate vs published npm on six platforms through `node_perf_ci.cjs`, gated by `node_perf_gate.cjs` |
+| `benchmark-site.yml` | push to `main` touching results or site | Publishes `apps/benchmark-site` |
+| `perf-gate.yml` | dispatch (`baseline_version`, `build_runs` JSON) | Candidate vs published npm on six platforms through `node_perf_ci.cjs`, gated by `node_perf_gate.cjs` |
 | `publish.yml` | tag `v*`, or dispatch with `dry_run` | Collects the six engine artifacts at the tag's commit, publishes seven npm packages, then creates the GitHub release |
 
+- Names follow one pattern. The workflow name is the file stem
+  (`engine-windows`, `perf-gate`); a job is
+  `<verb>: shotium[-<os>-<arch>]-v<version>` (`build: shotium-windows-amd64-v0.4.0`,
+  `bench: shotium-linux-arm64-v0.4.0 startup`, `check-package: shotium-v0.4.0`)
+  with `windows`/`linux`/`macos` and `amd64`/`arm64`; a dispatched run is
+  named `<workflow>: <inputs>`. Artifacts and release archives carry the
+  same platform id (`shotium-linux-arm64-v0.4.0.7z`, `npm-shotium-macos-amd64`,
+  `graph-windows-amd64`). The version comes from a `meta` job that reads
+  `shotium/package.json`, because a job name can read another job's outputs
+  but not a file. Two things keep the old spelling on purpose: npm package
+  names (`@shotkit/shotium-win32-x64`) because npm matches them against
+  `process.platform`, with `publish.yml` holding the map; and the
+  build-directory cache keys (`out-shot-windows-x64-`), because renaming
+  them would discard six warm build directories. The workflows translate
+  `arch` to GN's `x64` through `SHOT_CPU`.
 - Read a failed run with `gh run view -R sj817/shotium <id> --log-failed`.
 - A CI red in the benchmark is not the same as "the benchmark found
   something": competitor-engine failures are recorded in `summary.json` /
