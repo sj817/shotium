@@ -55,12 +55,9 @@ gh run watch -R sj817/shotium "$RUN"
 
 ```bash
 SHA=$(git rev-parse HEAD)
-gh workflow run engine-windows.yml -R sj817/shotium --ref main -f arch=amd64
-gh workflow run engine-windows.yml -R sj817/shotium --ref main -f arch=arm64
-gh workflow run engine-linux.yml   -R sj817/shotium --ref main -f mode=build -f arch=amd64
-gh workflow run engine-linux.yml   -R sj817/shotium --ref main -f mode=build -f arch=arm64
-gh workflow run engine-macos.yml   -R sj817/shotium --ref main -f mode=build -f arch=amd64
-gh workflow run engine-macos.yml   -R sj817/shotium --ref main -f mode=build -f arch=arm64
+# The six dispatches, with mode=build where the workflow has that input.
+# --dry-run prints them without sending; --wait polls until all six finish.
+pnpm ci:dispatch-engines --ref main
 gh run list -R sj817/shotium --commit "$SHA"
 ```
 
