@@ -172,6 +172,16 @@ runs:
         pnpm icu:repack \
           third_party/icu/cast/icudtl.dat \
           third_party/icu/shot/icudtl.dat --preset shot
+        # The repack writes icudtl.dat with "now" for an mtime on every run,
+        # and ninja then redoes the data assembly, the ICU library and every
+        # library that links it (249 LIB edges on Windows). Same rule as the
+        # patches: the latest of the ICU revision, the repack script and the
+        # patches directory.
+        when=$(git -C third_party/icu log -1 --format=%ct)
+        for f in scripts/icu-repack.ts patches; do
+          t=$(git log -1 --format=%ct -- "$f"); [ "$t" -gt "$when" ] && when=$t
+        done
+        touch -t "$(date -u -d "@$when" +%Y%m%d%H%M.%S 2>/dev/null || date -u -r "$when" +%Y%m%d%H%M.%S)" third_party/icu/shot/icudtl.dat
 
     - name: gn gen
       shell: bash
