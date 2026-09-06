@@ -127,7 +127,6 @@ function setMtime(file: string, wantedNs: bigint): bigint {
 
 async function merge(buildDir: string, shards: string[]): Promise<number> {
   const target = readState(buildDir);
-  const seenUnlogged = new Set<string>();
   let logged = 0;
   let unlogged = 0;
   let kept = 0;
@@ -145,9 +144,15 @@ async function merge(buildDir: string, shards: string[]): Promise<number> {
       // identical -- same graph, same sources -- but not the same age, and
       // every consumer in a shard is newer than that shard's copy, so the
       // oldest copy is the one every consumer agrees with. Keep it.
+      //
+      // For a logged output the log says which copy is older. For a gen-time
+      // file the file itself does: the final job's own gn gen ran after every
+      // shard, so its copy is the newest and loses; a cache-restored copy is
+      // the oldest and stays. Nothing here may depend on process memory --
+      // the workflow calls merge once per shard.
       const have = target.entries.get(rel);
       if (entry && have && have.mtime <= entry.mtime) { kept++; continue; }
-      if (!entry && existsSync(to) && !have && mtimeNs(to) <= mtimeNs(from) && seenUnlogged.has(rel)) { kept++; continue; }
+      if (!entry && !have && existsSync(to) && mtimeNs(to) <= mtimeNs(from)) { kept++; continue; }
       mkdirSync(path.dirname(to), {recursive: true});
       await copyFile(from, to);
       if (entry) {
@@ -158,7 +163,6 @@ async function merge(buildDir: string, shards: string[]): Promise<number> {
         logged++;
       } else {
         setMtime(to, mtimeNs(from));
-        seenUnlogged.add(rel);
         unlogged++;
       }
       fromShard++;

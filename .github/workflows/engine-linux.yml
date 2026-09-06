@@ -183,7 +183,7 @@ jobs:
         run: |
           pnpm --silent build:shards list --build-dir out/Shot --since "$(cat /tmp/job-started)" > /tmp/built.txt
           echo "$(wc -l < /tmp/built.txt) outputs built by this shard"
-          tar -C out/Shot -cf "$GITHUB_WORKSPACE/shard.tar" -T /tmp/built.txt .ninja_log .ninja_deps
+          tar --format=posix -C out/Shot -cf "$GITHUB_WORKSPACE/shard.tar" -T /tmp/built.txt .ninja_log .ninja_deps
           ls -l "$GITHUB_WORKSPACE/shard.tar"
 
       - name: upload the shard
