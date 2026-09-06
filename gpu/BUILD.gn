@@ -191,7 +191,6 @@ if (!is_android && !is_fuchsia && !is_chromeos && !is_ios) {
       "//third_party/libprotobuf-mutator",
       "//ui/gfx",
       "//ui/gl",
-      "//ui/gl/init",
     ]
 
     if (use_ozone) {
@@ -297,7 +296,6 @@ test("gl_tests") {
     "//ui/gfx/geometry",
     "//ui/gl",
     "//ui/gl:test_support",
-    "//ui/gl/init",
   ]
 
   deps += [ "//third_party/angle:translator" ]
@@ -653,7 +651,6 @@ test("gpu_perftests") {
     "//testing/perf",
     "//ui/gfx/geometry",
     "//ui/gl",
-    "//ui/gl/init",
   ]
 
   if (use_ozone) {
@@ -692,7 +689,6 @@ test("command_buffer_perftests") {
     "//testing/perf",
     "//ui/gfx/geometry",
     "//ui/gl",
-    "//ui/gl/init",
   ]
 
   if (use_ozone) {

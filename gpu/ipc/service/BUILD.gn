@@ -59,7 +59,6 @@ component("service") {
     "//ui/gfx/geometry",
     "//ui/gl",
     "//ui/gl:buildflags",
-    "//ui/gl/init",
     "//url",
   ]
   deps = [

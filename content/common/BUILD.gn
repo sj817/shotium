@@ -250,7 +250,6 @@ source_set("common") {
     "//ui/gfx/ipc",
     "//ui/gfx/ipc/geometry",
     "//ui/gl",
-    "//ui/gl/init",
     "//ui/native_theme",
     "//url",
     "//url/ipc:url_ipc",

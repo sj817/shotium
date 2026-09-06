@@ -83,7 +83,10 @@ action("workaround_list") {
 # the GPU test config are gone. They drove a real GL context through
 # //ui/gl/init, and that dependency alone pulled ANGLE (271 objects,
 # libEGL/libGLESv2/vulkan-1 shared libraries) and the Vulkan loader into a
-# binary that never touches a GPU. What Blink still reads from here is data:
+# binary that never touches a GPU. //ui/gl/init has since been deleted --
+# nothing depended on it once this edge was gone, and its nineteen files
+# were the only ones in the tree that no platform graph reached. What Blink
+# still reads from here is data:
 # GpuFeatureInfo, GpuDriverBugWorkarounds, the workaround and feature enums,
 # and the finch features.
 component("config") {

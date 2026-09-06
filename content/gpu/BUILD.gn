@@ -69,7 +69,6 @@ target(link_target_type, "gpu_sources") {
     "//third_party/angle:angle_gpu_info_util",
     "//ui/gfx/ipc",
     "//ui/gl",
-    "//ui/gl/init",
   ]
 
   if (!is_chromeos || !is_chrome_branded) {

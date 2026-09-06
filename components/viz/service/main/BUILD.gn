@@ -34,7 +34,6 @@ source_set("main") {
     "//services/service_manager/public/cpp",
     "//services/viz/privileged/mojom",
     "//ui/gfx:memory_buffer",
-    "//ui/gl/init",
   ]
 
   public_deps = [ "//services/network/public/mojom" ]

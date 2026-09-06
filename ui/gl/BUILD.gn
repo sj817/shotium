@@ -165,7 +165,6 @@ component("gl") {
     "gpu_timing.h",
     "presenter.cc",
     "presenter.h",
-    "progress_reporter.h",
     "scoped_binders.cc",
     "scoped_binders.h",
     "scoped_egl_image.cc",
@@ -543,7 +542,6 @@ static_library("test_support") {
 
   public_deps = [
     ":gl",
-    "//ui/gl/init",
   ]
   deps = [
     "//base/test:test_support",
@@ -639,7 +637,6 @@ test("gl_unittests") {
     "//ui/gfx",
     "//ui/gfx:test_support",
     "//ui/gfx/geometry",
-    "//ui/gl/init",
     "//ui/platform_window",
     "//ui/platform_window:platform_impls",
   ]

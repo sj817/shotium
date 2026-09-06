@@ -374,7 +374,6 @@ target(link_target_type, "gles2_sources") {
     "//ui/gl",
     "//ui/gl:buildflags",
     "//ui/gl:gl_headers",
-    "//ui/gl/init",
   ]
 
   if (use_ozone) {
@@ -591,7 +590,6 @@ if (is_android) {
       "//testing/gmock",
       "//testing/gtest",
       "//ui/gl",
-      "//ui/gl/init",
     ]
   }
 }
@@ -612,7 +610,6 @@ if (is_android) {
       "//testing/gmock",
       "//testing/gtest",
       "//ui/gl",
-      "//ui/gl/init",
     ]
   }
 }
