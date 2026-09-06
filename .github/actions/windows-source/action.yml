@@ -18,7 +18,7 @@ inputs:
     description: GN target_cpu, x64 or arm64
     required: true
   restore-cache:
-    description: restore out/Shot from the Actions cache (the final job does, shards do not)
+    description: restore out/Shot from the Actions cache (every job does; a run on a branch only sees its own branch and the default one)
     default: 'true'
 
 runs:
@@ -27,10 +27,25 @@ runs:
     - name: free up disk
       shell: pwsh
       # A Windows runner ships with several toolchains this build has no use
-      # for, and the checkout plus toolchains plus object files do not fit
-      # around them.
+      # for. Deleting them takes 7 minutes 12 seconds -- measured, on the
+      # cold run 34034541857, in every job -- because Remove-Item walks a
+      # quarter of a million small files, and all of it is on C:. The
+      # workspace is on D:, which the image gives 157 GB and this build uses
+      # 25 of, so those seven minutes bought nothing at all and were 8% of
+      # the run.
+      #
+      # The deletions stay for the image that stops being true: they run
+      # when the drive the workspace is on has less than 80 GB left, which
+      # is the checkout plus DEPS plus a full build directory with room to
+      # spare. What is printed either way is the drive table, so a run that
+      # later dies on ENOSPC says here what it had.
       run: |
         Get-PSDrive -PSProvider FileSystem | Select-Object Name,Used,Free
+        $free = (Get-Item $env:GITHUB_WORKSPACE).PSDrive.Free
+        if ($free -gt 80GB) {
+          "workspace drive has $([math]::Round($free / 1GB)) GB free; keeping the preinstalled toolchains"
+          exit 0
+        }
         $junk = @(
           "$env:ProgramFiles\dotnet",
           "${env:ProgramFiles(x86)}\Android",

@@ -17,7 +17,7 @@ inputs:
     description: GN target_cpu, x64 or arm64
     required: true
   restore-cache:
-    description: restore out/Shot from the Actions cache (the final job does, shards do not)
+    description: restore out/Shot from the Actions cache (every job does; a run on a branch only sees its own branch and the default one)
     default: 'true'
 
 runs:
@@ -25,13 +25,20 @@ runs:
   steps:
     - name: free up disk
       shell: bash
-      # GitHub documents 14 GB of SSD and does not say how much of it a job
-      # actually gets. A Chromium checkout plus a build directory does not
-      # fit next to the preinstalled toolchains either way, and the same step
-      # is what makes the Windows job fit. These are the big ones and none of
-      # them is a build input here; df before and after says what it bought.
+      # GitHub documents 14 GB of SSD, but an ubuntu-24.04 runner turns out
+      # to hand the job a 145 GB root with 87 GB free, and this build wants
+      # about 35 of it. So the deletions below are a fallback for an image
+      # that is smaller than the one measured, not something every run
+      # should pay: on Windows the same step cost 7 minutes and freed a
+      # drive nothing used. Under 80 GB free they run; df says either way
+      # what the job had, which is what a later ENOSPC needs.
       run: |
         df -h /
+        free_gb=$(df -BG --output=avail / | tail -1 | tr -dc '0-9')
+        if [ "${free_gb:-0}" -gt 80 ]; then
+          echo "${free_gb} GB free; keeping the preinstalled toolchains"
+          exit 0
+        fi
         sudo rm -rf /usr/share/dotnet /usr/local/lib/android \
                     /opt/ghc /usr/local/share/boost \
                     "$AGENT_TOOLSDIRECTORY" || true

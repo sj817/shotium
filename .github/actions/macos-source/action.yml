@@ -15,7 +15,7 @@ inputs:
     description: GN target_cpu, x64 or arm64
     required: true
   restore-cache:
-    description: restore out/Shot from the Actions cache (the final job does, shards do not)
+    description: restore out/Shot from the Actions cache (every job does; a run on a branch only sees its own branch and the default one)
     default: 'true'
 
 runs:

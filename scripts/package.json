@@ -38,6 +38,7 @@
     "make-platform-package": "tsx make-platform-package.ts",
     "test": "tsx --test *.test.ts",
     "ci-stamp-mtimes": "tsx ci-stamp-mtimes.ts",
+    "ci-await-shards": "tsx ci-await-shards.ts",
     "check-charset": "tsx check-charset.ts",
     "icu-repack": "tsx icu-repack.ts",
     "restore-from-upstream": "tsx restore-from-upstream.ts",
