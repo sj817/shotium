@@ -1,0 +1,190 @@
+name: macos source
+description: >-
+  Everything a macOS engine job does before ninja: free the disk, check out
+  the tree and its DEPS, stamp source mtimes, restore the build directory when
+  asked, patch Skia, build the ICU data set and run gn gen. The compile shards
+  and the final job of engine-macos.yml both use it, and must, because a
+  shard's objects are only valid in the final job if both ran the same gn gen
+  on the same sources. See .github/actions/linux-source for the pattern.
+
+inputs:
+  arch:
+    description: amd64 or arm64, as the workflow input spells it
+    required: true
+  cpu:
+    description: GN target_cpu, x64 or arm64
+    required: true
+  restore-cache:
+    description: restore out/Shot from the Actions cache (the final job does, shards do not)
+    default: 'true'
+
+runs:
+  using: composite
+  steps:
+    - name: free up disk and report the toolchain
+      shell: bash
+      # The spare Xcodes are the only large removable thing on a macOS image
+      # -- several GB each -- and this build uses exactly one. Everything
+      # else worth deleting on Linux is not present here.
+      run: |
+        df -h /
+        ls -d /Applications/Xcode*.app 2>/dev/null || true
+        # The image defaults to Xcode 16.4 but ships up to 26.x, and the
+        # tree is cut from a Chromium that builds against the SDK 26 era:
+        # base/process/launch_mac.cc calls posix_spawn_file_actions_addchdir
+        # under __builtin_available(macOS 26), a name SDK 15.5 does not
+        # declare. Selecting the newest installed Xcode makes that whole
+        # class of failure disappear instead of patching each call site.
+        # Xcode_26.3.app is a symlink to Xcode_26.3.0.app, and the first
+        # attempt selected the symlink and then deleted its target: the
+        # deletion loop compared path strings, "the newest Xcode" pointed at
+        # nothing, and the developer directory collapsed to CommandLineTools
+        # -- which is what gn gen then found. Resolve every path first and
+        # compare resolved paths only.
+        newest="$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)"
+        newest="$(readlink -f "$newest")"
+        sudo xcode-select -s "$newest"
+        for app in /Applications/Xcode*.app; do
+          if [ "$(readlink -f "$app")" != "$newest" ]; then
+            echo "removing $app"
+            sudo rm -rf "$app" || true
+          fi
+        done
+        # Prove the selection survived the deletions before spending an hour
+        # on a sync that would fail at gn gen.
+        xcodebuild -version
+        xcode-select -p
+        df -h /
+
+    - name: checkout
+      uses: actions/checkout@v7
+      with:
+        path: src
+        # Read by scripts/ci-stamp-mtimes.ts, which needs the commit that
+        # last touched each file for the build cache to be worth anything.
+        fetch-depth: 0
+        submodules: false
+
+    - name: set up node
+      uses: actions/setup-node@v6
+      with:
+        node-version: 22
+
+    - name: set up pnpm
+      uses: pnpm/action-setup@v6
+      with:
+        version: 9.15.9
+
+    - name: repository scripts
+      shell: bash
+      working-directory: src/scripts
+      run: pnpm install --frozen-lockfile
+
+    - name: depot_tools
+      shell: bash
+      # Invoked by hand for the same reason the Windows job calls
+      # win_tools.bat: DEPOT_TOOLS_UPDATE=0 pins the depot_tools this run
+      # cloned, and that skips the call that would otherwise bootstrap it.
+      # The bootstrap writes python3_bin_reldir.txt, which the `gn` and
+      # `ninja` wrappers read to find their interpreter -- and gclient sync
+      # succeeds without it, so the failure surfaces later at gn gen than the
+      # step that caused it.
+      run: |
+        git clone --depth 1 \
+          https://chromium.googlesource.com/chromium/tools/depot_tools.git \
+          "$HOME/depot_tools"
+        "$HOME/depot_tools/ensure_bootstrap"
+        test -f "$HOME/depot_tools/python3_bin_reldir.txt" \
+          || { echo "bootstrap produced no python3_bin_reldir.txt"; exit 1; }
+        echo "$HOME/depot_tools" >> "$GITHUB_PATH"
+
+    - name: gclient solution
+      shell: bash
+      # target_os decides which DEPS entries exist at all. The .gclient
+      # checked into this tree says ["win"], so a sync that inherited it
+      # would omit every mac-gated dependency and fail much later, on a
+      # missing include rather than on anything that names the cause.
+      run: |
+        cat > .gclient <<'EOF'
+        solutions = [{
+          "name": "src",
+          "url": "https://github.com/${{ github.repository }}.git",
+          "managed": False,
+          "custom_deps": {},
+          "custom_vars": {"checkout_configuration": "small"},
+        }]
+        target_os = ["mac"]
+        EOF
+        cat .gclient
+
+    - name: gclient sync
+      shell: bash
+      # FORCE_MAC_TOOLCHAIN is deliberately unset: setting it asks for the
+      # hermetic Xcode, which needs access this runner does not have.
+      run: |
+        gclient sync --nohooks --no-history --shallow --verbose
+        gclient runhooks
+        df -h /
+
+    - name: make source timestamps content-faithful
+      shell: bash
+      run: pnpm -C src ci:stamp-mtimes "$GITHUB_WORKSPACE"
+
+    - name: restore the build directory
+      if: inputs.restore-cache == 'true'
+      uses: actions/cache/restore@v6
+      # See engine-windows.yml for why the build directory itself is the
+      # cache, and why nothing else is allowed to share the repository's
+      # 10 GB with it.
+      with:
+        path: src/out/Shot
+        key: out-shot-macos-${{ inputs.cpu }}-${{ github.run_id }}
+        restore-keys: |
+          out-shot-macos-${{ inputs.cpu }}-
+
+    - name: patch the Skia checkout
+      shell: bash
+      working-directory: src
+      # Skia is DEPS-managed, so Shot's Skia changes have to be reapplied
+      # after every sync. git apply leaves the patched files with "now" for
+      # an mtime, newer than every object in a restored build directory, so
+      # a warm run rebuilt them and everything that includes SkCodec.h (26
+      # objects directly, hundreds below). A patched file's honest time is
+      # the later of the dependency's revision and the last commit that
+      # touched the patch: same base plus same patch is the same file.
+      run: |
+        git -C third_party/skia apply --verbose ../../patches/third_party_skia_parallel_blur.patch
+        git -C third_party/skia apply --verbose ../../patches/third_party_skia_incremental_row_limit.patch
+        when=$(git log -1 --format=%ct -- patches)
+        base=$(git -C third_party/skia log -1 --format=%ct)
+        [ "$base" -gt "$when" ] && when=$base
+        git -C third_party/skia diff --name-only | while read -r f; do
+          touch -d "@$when" "third_party/skia/$f"
+        done
+
+    - name: build the shot ICU data set
+      shell: bash
+      working-directory: src
+      # third_party/icu is a DEPS checkout, so the trimmed data set is
+      # generated per run rather than checked in. Failing loudly beats
+      # quietly building against `cast` and shipping 0.81 MB more than the
+      # numbers claim.
+      run: |
+        mkdir -p third_party/icu/shot
+        pnpm icu:repack \
+          third_party/icu/cast/icudtl.dat \
+          third_party/icu/shot/icudtl.dat --preset shot
+
+    - name: gn gen
+      shell: bash
+      working-directory: src
+      # No target_cpu: the build is native, so GN takes the host's. Naming it
+      # would only be a claim that could disagree with the runner.
+      run: |
+        mkdir -p out/Shot
+        cat > out/Shot/args.gn <<'EOF'
+        import("//build/args/shot-mac.gn")
+        EOF
+        cat out/Shot/args.gn
+        gn gen out/Shot
+

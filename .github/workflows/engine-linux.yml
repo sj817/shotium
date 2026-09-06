@@ -46,7 +46,7 @@
 # Discovering a one-line GN error costs half an hour this way instead of the
 # four it takes to reach the link step and fail there.
 name: engine-linux
-run-name: "engine-linux: ${{ inputs.arch }} ${{ inputs.mode }} x${{ inputs.shards }}"
+run-name: "engine-linux: ${{ inputs.arch }} ${{ inputs.mode }} (${{ inputs.shards }} shards)"
 
 on:
   workflow_dispatch:
@@ -69,8 +69,8 @@ on:
         type: boolean
         default: true
       shards:
-        description: 'compile jobs that split the objects between them before the final job links; 1 = one job does everything'
-        default: '4'
+        description: 'compile jobs that split the objects between them before the final job links; auto = 4 for amd64, 3 for arm64; 1 = one job does everything'
+        default: auto
 
 # GN, the SDK and node-gyp spell the 64-bit architecture x64; the names
 # people see spell it amd64. The build-directory cache is keyed by the GN
@@ -89,6 +89,7 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
       shards: ${{ steps.shards.outputs.list }}
+      shard_count: ${{ steps.shards.outputs.count }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -97,11 +98,15 @@ jobs:
       - id: version
         run: echo "version=$(jq -r .version shotium/package.json)" >> "$GITHUB_OUTPUT"
       - id: shards
-        # The compile matrix wants a JSON list of indices; a matrix cannot
-        # count on its own.
+        # `auto` is the per-platform count that keeps a full six-platform
+        # dispatch inside the free plan's 20 concurrent jobs (macOS: 5):
+        # Windows 4+4, Linux 4+3, macOS 2+3. The matrix wants a JSON list of
+        # indices; a matrix cannot count on its own.
         run: |
           n='${{ inputs.shards }}'
-          case "$n" in ''|*[!0-9]*|0) echo "shards must be a positive integer, got '$n'" >&2; exit 1 ;; esac
+          if [ "$n" = auto ]; then n=$([ '${{ inputs.arch }}' = arm64 ] && echo 3 || echo 4); fi
+          case "$n" in ''|*[!0-9]*|0) echo "shards must be auto or a positive integer, got '$n'" >&2; exit 1 ;; esac
+          echo "count=$n" >> "$GITHUB_OUTPUT"
           echo "list=$(jq -cn --argjson n "$n" '[range($n)]')" >> "$GITHUB_OUTPUT"
 
   # Sharding. ninja's idea of "up to date" is the outputs plus .ninja_log and
@@ -110,9 +115,11 @@ jobs:
   # files and host tools that needs), tars what it built with its two logs,
   # and the final job transplants the tars into its own build directory
   # (scripts/build-shards.ts merge) and finds only the link left to do.
-  # A compiler cache in front of the final job was measured first and lost:
-  # every sccache hit still preprocessed the unit, 1-2 s each, 20 minutes on
-  # the final job for nothing.
+  # Measured on Linux amd64: 73 minutes cold as one job, 47 as four shards
+  # plus the final job; a warm run 18 minutes. A compiler cache in front of
+  # the final job was measured first and lost: every sccache hit still
+  # preprocessed the unit, 1-2 s each, 20 minutes on the final job for
+  # nothing.
   #
   # Every shard restores the build-directory cache too, so a warm run costs
   # what it did before sharding: a shard whose slice is already built packs
@@ -122,9 +129,9 @@ jobs:
   # the final job's own gn gen would write them newer than the objects and
   # ninja would rebuild everything below them.
   compile:
-    name: "compile: shotium-linux-${{ inputs.arch }}-v${{ needs.meta.outputs.version }} ${{ matrix.shard }}/${{ inputs.shards }}"
+    name: "compile: shotium-linux-${{ inputs.arch }}-v${{ needs.meta.outputs.version }} ${{ matrix.shard }}/${{ needs.meta.outputs.shard_count }}"
     needs: meta
-    if: inputs.mode == 'build' && inputs.shards != '1'
+    if: inputs.mode == 'build' && needs.meta.outputs.shard_count != '1'
     runs-on: ubuntu-24.04
     timeout-minutes: 350
     strategy:
@@ -166,7 +173,7 @@ jobs:
         # target and cost about the same, so the slices stay even.
         run: |
           ninja -C out/Shot -t inputs shot shot_c | grep -E '\.o$' | sort > /tmp/objects.txt
-          awk -v n='${{ inputs.shards }}' -v i='${{ matrix.shard }}' 'NR % n == i' /tmp/objects.txt > /tmp/slice.txt
+          awk -v n='${{ needs.meta.outputs.shard_count }}' -v i='${{ matrix.shard }}' 'NR % n == i' /tmp/objects.txt > /tmp/slice.txt
           echo "$(wc -l < /tmp/slice.txt) of $(wc -l < /tmp/objects.txt) objects"
 
       - name: ninja
@@ -183,7 +190,7 @@ jobs:
         run: |
           pnpm --silent build:shards list --build-dir out/Shot --since "$(cat /tmp/job-started)" > /tmp/built.txt
           echo "$(wc -l < /tmp/built.txt) outputs built by this shard"
-          tar --format=posix -C out/Shot -cf "$GITHUB_WORKSPACE/shard.tar" -T /tmp/built.txt .ninja_log .ninja_deps
+          tar --format=pax -C out/Shot -cf "$GITHUB_WORKSPACE/shard.tar" -T /tmp/built.txt .ninja_log .ninja_deps
           ls -l "$GITHUB_WORKSPACE/shard.tar"
 
       - name: upload the shard
@@ -232,14 +239,14 @@ jobs:
           restore-cache: 'true'
 
       - name: download the shards
-        if: ${{ inputs.mode == 'build' && inputs.shards != '1' }}
+        if: ${{ inputs.mode == 'build' && needs.meta.outputs.shard_count != '1' }}
         uses: actions/download-artifact@v8
         with:
           pattern: shard-linux-${{ inputs.arch }}-*
           path: shards
 
       - name: merge the shards into the build directory
-        if: ${{ inputs.mode == 'build' && inputs.shards != '1' }}
+        if: ${{ inputs.mode == 'build' && needs.meta.outputs.shard_count != '1' }}
         working-directory: src
         # One shard at a time, deleting each as it goes: the runner's disk
         # holds the build directory plus one unpacked shard, not plus four.
