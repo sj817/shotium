@@ -27,12 +27,14 @@ is_component_build = false
 symbol_level = 0
 is_shot_build = true
 use_shot_jumbo_build = true
-# 32 sources per unit. Parsing Blink's headers costs a unit about 14 s
-# whatever it contains; measured on the development host, an 8-file core unit
-# takes 13.9 s (1.74 s per file, 1.8 GB), a 32-file one 16.4 s (0.51 s per
-# file, 2.2 GB), a 64-file one 21.1 s (0.33 s, 2.5 GB). shot-mac.gn lowers it
-# for the 7 GB arm64 runner.
-shot_jumbo_file_merge_limit = 32
+# 64 sources per unit. Parsing Blink's headers costs a unit about 14 s
+# whatever it contains, so the per-file cost falls as the unit grows: measured
+# on the development host, an 8-file core unit takes 13.9 s (1.74 s per file,
+# 1.8 GB), a 32-file one 16.4 s (0.51 s per file, 2.2 GB), a 64-file one
+# 21.1 s (0.33 s, 2.5 GB). Blink is 43% of the compile time, so the step from
+# 32 to 64 is worth about a third of it. Four 2.5 GB units fit the 16 GB
+# runners at -j 4; shot-mac.gn keeps 16 for the 7 GB arm64 one.
+shot_jumbo_file_merge_limit = 64
 
 # Sources excluded from jumbo units by absolute label, for targets whose
 # template forwards no per-target list (see BUILDCONFIG.gn). The viz mojom
