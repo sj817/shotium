@@ -39,6 +39,7 @@
     "test": "tsx --test *.test.ts",
     "ci-stamp-mtimes": "tsx ci-stamp-mtimes.ts",
     "ci-await-shards": "tsx ci-await-shards.ts",
+    "ci-dispatch-engines": "tsx ci-dispatch-engines.ts",
     "check-charset": "tsx check-charset.ts",
     "icu-repack": "tsx icu-repack.ts",
     "restore-from-upstream": "tsx restore-from-upstream.ts",

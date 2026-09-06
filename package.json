@@ -53,6 +53,7 @@
     "scripts:test": "pnpm -C scripts test",
     "ci:stamp-mtimes": "pnpm -C scripts ci-stamp-mtimes",
     "ci:await-shards": "pnpm -C scripts ci-await-shards",
+    "ci:dispatch-engines": "pnpm -C scripts ci-dispatch-engines",
     "verify:charset": "pnpm -C scripts check-charset",
     "icu:repack": "pnpm -C scripts icu-repack",
     "restore:upstream": "pnpm -C scripts restore-from-upstream",
