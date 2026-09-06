@@ -31,7 +31,7 @@ Edit all seven to `$version`. `checks.yml` fails if the pins and `version`
 disagree.
 
 Also note, for a follow-up commit *after* the release:
-`.github/workflows/performance-regression.yml` carries the previous version as
+`.github/workflows/perf-gate.yml` carries the previous version as
 the `baseline_version` default, and `tools/shot/daemon_protocol_check.cjs`
 uses a literal version in one fixture.
 
@@ -55,11 +55,11 @@ gh run watch -R sj817/shotium "$RUN"
 
 ```bash
 SHA=$(git rev-parse HEAD)
-gh workflow run engine-windows.yml -R sj817/shotium --ref main -f arch=x64
+gh workflow run engine-windows.yml -R sj817/shotium --ref main -f arch=amd64
 gh workflow run engine-windows.yml -R sj817/shotium --ref main -f arch=arm64
-gh workflow run engine-linux.yml   -R sj817/shotium --ref main -f mode=build -f arch=x64
+gh workflow run engine-linux.yml   -R sj817/shotium --ref main -f mode=build -f arch=amd64
 gh workflow run engine-linux.yml   -R sj817/shotium --ref main -f mode=build -f arch=arm64
-gh workflow run engine-macos.yml   -R sj817/shotium --ref main -f mode=build -f arch=x64
+gh workflow run engine-macos.yml   -R sj817/shotium --ref main -f mode=build -f arch=amd64
 gh workflow run engine-macos.yml   -R sj817/shotium --ref main -f mode=build -f arch=arm64
 gh run list -R sj817/shotium --commit "$SHA"
 ```

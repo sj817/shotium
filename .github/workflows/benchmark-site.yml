@@ -1,4 +1,4 @@
-name: Deploy benchmark site to Pages
+name: benchmark-site
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     paths:
       - apps/benchmark-site/**
       - benchmark-results/**
-      - .github/workflows/benchmark-pages.yml
+      - .github/workflows/benchmark-site.yml
   workflow_dispatch:
 
 permissions:
@@ -16,12 +16,12 @@ permissions:
   id-token: write
 
 concurrency:
-  group: benchmark-pages
+  group: benchmark-site
   cancel-in-progress: true
 
 jobs:
   build:
-    name: Build benchmark site
+    name: "build: benchmark-site"
     runs-on: ubuntu-24.04
     steps:
       - name: Check out main
@@ -61,7 +61,7 @@ jobs:
           path: apps/benchmark-site/docs/.vitepress/dist
 
   deploy:
-    name: Deploy benchmark site
+    name: "deploy: benchmark-site"
     needs: build
     runs-on: ubuntu-24.04
     environment:

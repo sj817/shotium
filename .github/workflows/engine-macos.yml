@@ -20,7 +20,8 @@
 # configuration error shows up there in about half an hour instead of four
 # hours later at a link failure, and macOS is the platform most likely to have
 # them: nothing in this tree has ever been compiled for it.
-name: engine (macos)
+name: engine-macos
+run-name: "engine-macos: ${{ inputs.arch }} ${{ inputs.mode }}"
 
 on:
   workflow_dispatch:
@@ -31,10 +32,10 @@ on:
         options: [probe, build]
         default: probe
       arch:
-        description: 'x64 (macos-15-intel, 14 GB RAM) or arm64 (macos-15, 7 GB)'
+        description: 'amd64 (macos-15-intel, 14 GB RAM) or arm64 (macos-15, 7 GB)'
         type: choice
-        options: [x64, arm64]
-        default: x64
+        options: [amd64, arm64]
+        default: amd64
       jobs:
         description: 'ninja -j (blink TUs peak at ~1.2 GB; arm64 has 7 GB total)'
         default: '3'
@@ -43,10 +44,34 @@ on:
         type: boolean
         default: true
 
+# GN, the SDK and node-gyp spell the 64-bit architecture x64; the names
+# people see spell it amd64. The build-directory cache is keyed by the GN
+# spelling so that renaming labels did not throw away six warm build
+# directories.
+env:
+  SHOT_CPU: ${{ inputs.arch == 'arm64' && 'arm64' || 'x64' }}
+
 jobs:
+  # Every job name below carries the package version. A job name can
+  # read an earlier job's outputs but not a file, so one small job
+  # reads package.json first.
+  meta:
+    name: "resolve: shotium-macos-${{ inputs.arch }}"
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: shotium/package.json
+          sparse-checkout-cone-mode: false
+      - id: version
+        run: echo "version=$(jq -r .version shotium/package.json)" >> "$GITHUB_OUTPUT"
+
   build:
-    runs-on: ${{ github.event.inputs.arch == 'arm64'
-                 && 'macos-15' || 'macos-15-intel' }}
+    name: "${{ inputs.mode }}: shotium-macos-${{ inputs.arch }}-v${{ needs.meta.outputs.version }}"
+    needs: meta
+    runs-on: ${{ inputs.arch == 'arm64' && 'macos-15' || 'macos-15-intel' }}
     timeout-minutes: 350
 
     permissions:
@@ -167,9 +192,9 @@ jobs:
         # 10 GB with it.
         with:
           path: src/out/Shot
-          key: out-shot-macos-${{ github.event.inputs.arch }}-${{ github.run_id }}
+          key: out-shot-macos-${{ env.SHOT_CPU }}-${{ github.run_id }}
           restore-keys: |
-            out-shot-macos-${{ github.event.inputs.arch }}-
+            out-shot-macos-${{ env.SHOT_CPU }}-
 
       - name: patch the Skia checkout
         working-directory: src
@@ -231,7 +256,7 @@ jobs:
         if: ${{ always() && github.event.inputs.mode == 'probe' }}
         uses: actions/upload-artifact@v7
         with:
-          name: probe-mac-${{ github.event.inputs.arch }}
+          name: probe-macos-${{ inputs.arch }}
           path: /tmp/probe.txt
           if-no-files-found: ignore
 
@@ -290,7 +315,7 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact@v7
         with:
-          name: graph-macos-${{ github.event.inputs.arch }}
+          name: graph-macos-${{ inputs.arch }}
           path: graph
           if-no-files-found: warn
 
@@ -299,7 +324,7 @@ jobs:
         uses: actions/cache/save@v6
         with:
           path: src/out/Shot
-          key: out-shot-macos-${{ github.event.inputs.arch }}-${{ github.run_id }}
+          key: out-shot-macos-${{ env.SHOT_CPU }}-${{ github.run_id }}
 
       - name: drop the build directories this one replaces
         if: ${{ always() && github.event.inputs.mode == 'build' }}
@@ -310,7 +335,7 @@ jobs:
         # go or they evict the one that is. Never fatal: this is an
         # optimisation, and a finished build is still finished.
         run: |
-          prefix="out-shot-macos-${{ github.event.inputs.arch }}-"
+          prefix="out-shot-macos-${{ env.SHOT_CPU }}-"
           # .[2:] keeps the newest two: this run's entry, and one spare to fall
           # back on if this run's turns out to be unusable.
           ids=$(gh cache list --repo "${{ github.repository }}" \
@@ -363,7 +388,7 @@ jobs:
           echo "using $sevenzip"
           version=$(python3 -c \
             "import json;print(json.load(open('shotium/package.json'))['version'])")
-          stem="shotium-mac-${{ github.event.inputs.arch }}"
+          stem="shotium-macos-${{ inputs.arch }}"
           archive="$stem-v$version.7z"
           rm -rf dist "$archive"
           mkdir -p "dist/$stem"
@@ -450,7 +475,7 @@ jobs:
         # built one already; with run_checks off it has not, and this builds
         # it rather than shipping a package that installs and cannot render.
         run: |
-          arch="${{ github.event.inputs.arch }}"
+          arch="${{ env.SHOT_CPU }}"
           addon="shotium/native/build/Release/shotium.node"
           if [ ! -f "$addon" ]; then
             ( cd shotium/native \
@@ -478,7 +503,7 @@ jobs:
         if: ${{ success() && github.event.inputs.mode == 'build' }}
         uses: actions/upload-artifact@v7
         with:
-          name: npm-shotium-mac-${{ github.event.inputs.arch }}
+          name: npm-shotium-macos-${{ inputs.arch }}
           path: src/${{ env.SHOT_NPM_TARBALL }}
           if-no-files-found: error
           compression-level: 0

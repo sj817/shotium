@@ -5,10 +5,13 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const {execFileSync} = require('node:child_process');
+// npm platform id, runner, engine workflow, artifact label. The label is the
+// platform id the engine workflows put on their artifacts and job names
+// (windows/linux/macos, amd64/arm64); npm keeps process.platform's spelling.
 const targets = [
-  ['linux-x64', 'ubuntu-24.04', 'linux'], ['linux-arm64', 'ubuntu-24.04-arm', 'linux'],
-  ['win32-x64', 'windows-2025', 'win'], ['win32-arm64', 'windows-11-arm', 'win'],
-  ['darwin-x64', 'macos-15-intel', 'mac'], ['darwin-arm64', 'macos-15', 'mac'],
+  ['linux-x64', 'ubuntu-24.04', 'linux', 'linux-amd64'], ['linux-arm64', 'ubuntu-24.04-arm', 'linux', 'linux-arm64'],
+  ['win32-x64', 'windows-2025', 'windows', 'windows-amd64'], ['win32-arm64', 'windows-11-arm', 'windows', 'windows-arm64'],
+  ['darwin-x64', 'macos-15-intel', 'macos', 'macos-amd64'], ['darwin-arm64', 'macos-15', 'macos', 'macos-arm64'],
 ];
 
 async function plan() {
@@ -24,22 +27,21 @@ async function plan() {
     return response.json();
   };
   const matrix = [];
-  for (const [platform, runner, artifactOs] of targets) {
+  for (const [platform, runner, workflowOs, label] of targets) {
     const runId = String(runs[platform]);
     if (!/^\d+$/.test(runId)) throw new Error(`Invalid run ID for ${platform}`);
     const run = await api(`actions/runs/${runId}`);
-    const workflowOs = {linux: 'linux', win: 'windows', mac: 'macos'}[artifactOs];
     if (run.path !== `.github/workflows/engine-${workflowOs}.yml`) {
       throw new Error(`${platform}: artifact must come from the matching engine build workflow`);
     }
     if (run.head_sha !== process.env.GITHUB_SHA || run.status !== 'completed' || run.conclusion !== 'success') {
       throw new Error(`${platform}: build must be successful at this workflow SHA ${process.env.GITHUB_SHA}; got ${run.head_sha}/${run.conclusion}`);
     }
-    const artifactName = `npm-shotium-${artifactOs}-${platform.split('-')[1]}`;
+    const artifactName = `npm-shotium-${label}`;
     const artifacts = await api(`actions/runs/${runId}/artifacts?per_page=100`);
     const matching = artifacts.artifacts.filter(a => a.name === artifactName && !a.expired);
     if (matching.length !== 1) throw new Error(`${platform}: exact build artifact missing or ambiguous`);
-    matrix.push({platform, runner, runId, artifactName, artifactId: matching[0].id,
+    matrix.push({platform, label, runner, runId, artifactName, artifactId: matching[0].id,
       artifactDigest: matching[0].digest, sourceSha: run.head_sha});
   }
   fs.writeFileSync('performance-plan.json', JSON.stringify(matrix, null, 2));
