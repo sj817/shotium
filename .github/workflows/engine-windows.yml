@@ -287,10 +287,12 @@ jobs:
         # (10.8 MB), and icu_use_data_file = false links whichever one it is
         # into the binary.
         #
-        # This runs after the mtime stamping and the cache restore on purpose.
-        # The patched files then carry the current time, which is newer than
-        # any restored object built from the unpatched ones, so ninja rebuilds
-        # exactly those and nothing else.
+        # git apply leaves the patched files with "now" for an mtime, newer
+        # than every object in a restored build directory, so a warm run
+        # rebuilt them and everything that includes SkCodec.h (26 objects
+        # directly, hundreds below). A patched file's honest time is the later
+        # of the dependency's revision and the last commit that touched the
+        # patch: same base plus same patch is the same file. Set below.
         #
         # A failure here is not something to swallow. If a DEPS roll moves the
         # file out from under the patch, the build has to stop and say so --
@@ -303,6 +305,12 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "patches/third_party_skia_parallel_blur.patch did not apply" }
           git -C third_party/skia apply --verbose ../../patches/third_party_skia_incremental_row_limit.patch
           if ($LASTEXITCODE -ne 0) { throw "patches/third_party_skia_incremental_row_limit.patch did not apply" }
+          $patched = [long](git log -1 --format=%ct -- patches)
+          foreach ($dep in 'third_party/icu', 'third_party/skia') {
+            $base = [long](git -C $dep log -1 --format=%ct)
+            $when = [DateTimeOffset]::FromUnixTimeSeconds([math]::Max($patched, $base)).UtcDateTime
+            git -C $dep diff --name-only | ForEach-Object { (Get-Item "$dep/$_").LastWriteTimeUtc = $when }
+          }
 
       - name: build the shot ICU data set
         shell: pwsh
@@ -363,6 +371,14 @@ jobs:
         shell: pwsh
         working-directory: src
         run: pnpm depfiles:prune out/Shot
+
+      - name: why is the restored build directory dirty
+        shell: pwsh
+        working-directory: src
+        # Diagnosis only, nothing is built: -d explain makes ninja say why each
+        # dirty edge is dirty, and the root causes come first. This is how the
+        # Linux job found LASTCHANGE, the Skia patches and angle_commit.h.
+        run: ninja -C out/Shot shot shot_c -n -d explain 2>&1 | Select-Object -First 120
 
       - name: ninja
         shell: pwsh

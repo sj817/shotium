@@ -199,11 +199,21 @@ jobs:
       - name: patch the Skia checkout
         working-directory: src
         # Skia is DEPS-managed, so Shot's Skia changes have to be reapplied
-        # after every sync. Keep this after cache restore: the new source
-        # timestamps then invalidate exactly the affected Skia objects.
+        # after every sync. git apply leaves the patched files with "now" for
+        # an mtime, newer than every object in a restored build directory, so
+        # a warm run rebuilt them and everything that includes SkCodec.h (26
+        # objects directly, hundreds below). A patched file's honest time is
+        # the later of the dependency's revision and the last commit that
+        # touched the patch: same base plus same patch is the same file.
         run: |
           git -C third_party/skia apply --verbose ../../patches/third_party_skia_parallel_blur.patch
           git -C third_party/skia apply --verbose ../../patches/third_party_skia_incremental_row_limit.patch
+          when=$(git log -1 --format=%ct -- patches)
+          base=$(git -C third_party/skia log -1 --format=%ct)
+          [ "$base" -gt "$when" ] && when=$base
+          git -C third_party/skia diff --name-only | while read -r f; do
+            touch -d "@$when" "third_party/skia/$f"
+          done
 
       - name: build the shot ICU data set
         working-directory: src
