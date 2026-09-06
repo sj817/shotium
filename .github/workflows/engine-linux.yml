@@ -142,7 +142,6 @@ jobs:
       - name: remember when this job started
         run: date +%s > /tmp/job-started
 
-    steps:
       # The setup steps live in .github/actions/linux-source so the shards and
       # this job cannot drift apart. A local action has to be on disk before it
       # can be used, hence the sparse checkout of .github first.
