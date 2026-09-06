@@ -47,7 +47,6 @@
 #include "gpu/config/gpu_feature_type.h"
 #include "gpu/config/gpu_finch_features.h"
 #include "gpu/config/gpu_info.h"
-#include "gpu/config/gpu_info_collector.h"
 #include "gpu/config/gpu_mode.h"
 #include "gpu/config/gpu_preferences.h"
 #include "gpu/config/gpu_switches.h"
@@ -65,7 +64,6 @@
 #include "base/synchronization/lock.h"
 #include "ui/gfx/android/android_surface_control_compat.h"
 #include "ui/gl/gl_surface_egl.h"
-#include "ui/gl/init/gl_factory.h"
 #endif  // BUILDFLAG(IS_ANDROID)
 
 namespace gpu {
@@ -1176,15 +1174,8 @@ void CollectDevicePerfInfo(DevicePerfInfo* device_perf_info,
 
 #if BUILDFLAG(IS_WIN)
   device_perf_info->system_commit_limit_mb = GetSystemCommitLimitMb();
-  if (!in_browser_process) {
-    D3D_FEATURE_LEVEL d3d11_feature_level = D3D_FEATURE_LEVEL_1_0_CORE;
-    bool has_discrete_gpu = false;
-    if (CollectD3D11FeatureInfo(&d3d11_feature_level, &has_discrete_gpu)) {
-      device_perf_info->d3d11_feature_level = d3d11_feature_level;
-      device_perf_info->has_discrete_gpu =
-          has_discrete_gpu ? HasDiscreteGpu::kYes : HasDiscreteGpu::kNo;
-    }
-  }
+  // shot: the D3D11 feature-level probe went with gpu_info_collector_win.cc;
+  // nothing in this binary creates a D3D device.
 #endif
 }
 
@@ -1282,39 +1273,5 @@ std::string VulkanVersionToString(uint32_t vulkan_version) {
   }
 }
 #endif  // BUILDFLAG(IS_WIN)
-
-#if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC)
-// GPU picking is only effective with ANGLE/Metal backend on Mac and
-// on Windows with EGL.
-void TrySetNonSoftwareDevicePreferenceForTesting(
-    gl::GpuPreference gpu_preference) {
-  // `SetGpuPreferenceEGL` fails when a preference was previously already set.
-  if (GetSystemDeviceIdEGLForTesting(gpu_preference) != 0) {  // IN-TEST
-    return;
-  }
-
-  GPUInfo gpu_info;
-  CHECK(CollectBasicGraphicsInfo(&gpu_info));
-
-  uint64_t non_software_renderer_device_id = 0;
-  if (!gpu_info.active_gpu().IsSoftwareRenderer()) {
-    non_software_renderer_device_id = gpu_info.active_gpu().system_device_id;
-  } else if (auto it =
-                 std::ranges::find_if(gpu_info.secondary_gpus,
-                                      [](const GPUInfo::GPUDevice& device) {
-                                        return !device.IsSoftwareRenderer();
-                                      });
-             it != gpu_info.secondary_gpus.end()) {
-    non_software_renderer_device_id = it->system_device_id;
-  }
-
-  if (non_software_renderer_device_id != 0) {
-    SetGpuPreferenceEGL(gpu_preference, non_software_renderer_device_id);
-  } else {
-    LOG(WARNING) << "No hardware renderer device available. Tests that require "
-                    "one may fail.";
-  }
-}
-#endif
 
 }  // namespace gpu

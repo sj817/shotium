@@ -79,6 +79,13 @@ action("workaround_list") {
   }
 }
 
+# shot: the GPU-info collectors (gpu_info_collector*.cc), gpu_switching and
+# the GPU test config are gone. They drove a real GL context through
+# //ui/gl/init, and that dependency alone pulled ANGLE (271 objects,
+# libEGL/libGLESv2/vulkan-1 shared libraries) and the Vulkan loader into a
+# binary that never touches a GPU. What Blink still reads from here is data:
+# GpuFeatureInfo, GpuDriverBugWorkarounds, the workaround and feature enums,
+# and the finch features.
 component("config") {
   sources = [
     "device_perf_info.cc",
@@ -103,19 +110,11 @@ component("config") {
     "gpu_finch_features.h",
     "gpu_info.cc",
     "gpu_info.h",
-    "gpu_info_collector.cc",
-    "gpu_info_collector.h",
     "gpu_mode.h",
     "gpu_preferences.cc",
     "gpu_preferences.h",
     "gpu_switches.cc",
     "gpu_switches.h",
-    "gpu_switching.cc",
-    "gpu_switching.h",
-    "gpu_test_config.cc",
-    "gpu_test_config.h",
-    "gpu_test_expectations_parser.cc",
-    "gpu_test_expectations_parser.h",
     "gpu_util.cc",
     "gpu_util.h",
     "skia_limits.cc",
@@ -156,7 +155,6 @@ component("config") {
     "//ui/gl",
     "//ui/gl:buildflags",
     "//ui/gl:gl_headers",
-    "//ui/gl/init",
   ]
 
   if (enable_vulkan) {
@@ -168,36 +166,6 @@ component("config") {
   allow_circular_includes_from =
       [ "//gpu/ipc/common:gpu_preferences_interface" ]
 
-  if (is_android) {
-    sources += [ "gpu_info_collector_android.cc" ]
-  }
-  if (is_win) {
-    sources += [ "gpu_info_collector_win.cc" ]
-    deps += [ "//third_party/microsoft_dxheaders:dxguids" ]
-    libs = [ "dxgi.lib" ]
-  }
-  if (is_mac) {
-    sources += [ "gpu_info_collector_mac.mm" ]
-    frameworks = [ "OpenGL.framework" ]
-
-    # gpu_switching.cc calls CGLChoosePixelFormat, deprecated along with the
-    # rest of OpenGL since 10.14, and -Werror makes that fatal. This is the
-    # SDK's own silencer, and the one upstream already uses for the same
-    # reason in ui/gl, ui/gl/init and gpu/ipc/service.
-    defines += [ "GL_SILENCE_DEPRECATION" ]
-  }
-  if (is_ios) {
-    sources += [ "gpu_info_collector_ios.mm" ]
-  }
-  if (is_linux || is_chromeos) {
-    sources += [ "gpu_info_collector_linux.cc" ]
-  }
-  if (is_linux || is_chromeos || is_apple || is_fuchsia || is_android) {
-    deps += [ "//third_party/angle:angle_gpu_info_util" ]
-  }
-  if (use_ozone) {
-    deps += [ "//ui/ozone" ]
-  }
 }
 
 if (is_android) {
