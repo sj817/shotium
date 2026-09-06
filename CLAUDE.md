@@ -545,13 +545,42 @@ Output: `out/Shot/shotium.exe`, `out/Shot/shotium.dll`, `out/Shot/shotium_data.p
 | Workflow | Trigger | What it does |
 |---|---|---|
 | `checks.yml` | push to `main` and PRs, path-filtered to `shotium/`, `shot/testdata/bilibili/`, `scripts/`, `apps/benchmark/`; dispatch | The engine-less half: package builds, types, `require()` does not start the engine, option validation, daemon wire, harness syntax + unit tests, six platform packages consistent, tarball contents, `scripts/` typechecks and its tests pass, Bilibili fixtures offline. ~40 s, expected always green. An engine-only change produces no run at all, which is not the same as a pass |
-| `engine-windows.yml` | dispatch (`arch` = amd64 or arm64, `jobs`, `run_checks`) | depot_tools, SDK, `gclient sync`, timestamp restore, cached `out/`, `gn gen`, `ninja`, package `.7z`, node platform package, run the check suites. Cold ~4 h, warm ~25 min |
-| `engine-linux.yml`, `engine-macos.yml` | dispatch (`mode` = probe or build, `arch`, `jobs`, `run_checks`) | Same, plus `probe` = `gn gen` + `ninja -n` only. Probe green is level 1 of 3, not success |
+| `engine-windows.yml` | dispatch (`arch` = amd64 or arm64, `jobs`, `run_checks`, `shards`) | depot_tools, SDK, `gclient sync`, timestamp restore, cached `out/`, `gn gen`, `ninja`, package `.7z`, node platform package, run the check suites. Cold ~4 h, warm ~25 min |
+| `engine-linux.yml`, `engine-macos.yml` | dispatch (`mode` = probe or build, `arch`, `jobs`, `run_checks`, `shards`) | Same, plus `probe` = `gn gen` + `ninja -n` only. Probe green is level 1 of 3, not success |
 | `benchmark.yml` | dispatch (`shotium_version`, `profile`, `commit_results`, `seed`) | 30-job `platform x shard` matrix against Puppeteer/Playwright; commits aggregated results to `benchmark-results/` |
 | `benchmark-site.yml` | push to `main` touching results or site | Publishes `apps/benchmark-site` |
 | `perf-gate.yml` | dispatch (`baseline_version`, `build_runs` JSON) | Candidate vs published npm on six platforms through `perf-ci.ts`, gated by `lib/perf-gate.ts` |
 | `publish.yml` | tag `v*`, or dispatch with `dry_run` | Collects the six engine artifacts at the tag's commit, publishes seven npm packages, then creates the GitHub release |
 
+- **Engine builds are sharded.** `shards` (default `auto`: Windows 4+4,
+  Linux 4+3, macOS 2+3, which is 20 compile jobs, the free plan's
+  concurrency, macOS capped at 5) starts N `compile` jobs that each run the
+  same setup (`.github/actions/{linux,macos,windows}-source`) and the same
+  `gn gen`, build a cost-balanced slice of the objects (`pnpm build:shards
+  slice`), tar what they built with their `.ninja_log` and `.ninja_deps`
+  (`build:shards list --since <job start>`), and upload it; the final
+  `build` job downloads the tars, transplants them (`build:shards merge`) and
+  finds only the link left. Cold: Linux amd64 73 -> 47 min, Linux arm64
+  ~73 -> 57, macOS arm64 97 -> 63, Windows amd64 110 -> 86; a warm Linux run
+  18 min. Every shard also compiles the host tools its slice's generators
+  need (icu, boringssl, perfetto, protobuf, base: ~35% of all objects), so
+  a shard does ~60% of a full compile and more shards past four buy little;
+  the next lever is slicing by target so that only the shards that need a
+  generator build it. The transplant works because ninja's "up to date" is
+  outputs plus two logs: `merge` sets each copied output's mtime back to its
+  record (read again exactly; `utimes` takes a double), rewrites both logs,
+  keeps the oldest copy when two shards built the same file, and carries the
+  files GN writes at gen time (jumbo units, grit's `*_expected_outputs.txt`,
+  mojom `.rsp`, the Rust sysroot's `lib/.empty`) and the depfiles of edges
+  without `deps =`, because the final job's own `gn gen` would write them
+  newer than the objects. Formats and the TimeStamp conversion (ns on POSIX,
+  FILETIME minus 400 years on Windows) live in `scripts/lib/ninja-state.ts`.
+  Platform traps already paid for: BSD `touch` has no `-d @`, BSD `xargs` no
+  `-a`, GN links the Xcode SDK into `out/Shot/sdk`, and depot_tools' `ninja`
+  on Windows is a `.bat` whose 8 KB command line silently drops batches
+  (`third_party/ninja/ninja.exe` is called directly, 100 targets a batch).
+  `shards=1` is the old single job. Read a shard's result in the final job's
+  `why is the restored build directory dirty` step.
 - Names follow one pattern. The workflow name is the file stem
   (`engine-windows`, `perf-gate`); a job is
   `<verb>: shotium[-<os>-<arch>]-v<version>` (`build: shotium-windows-amd64-v0.4.0`,
@@ -573,6 +602,12 @@ Output: `out/Shot/shotium.exe`, `out/Shot/shotium.dll`, `out/Shot/shotium_data.p
   `failures.json` and do not fail the run; only a shotium failure, a harness or
   host error, or an exhausted budget does. The rule lives in both `cli.ts` and
   `merge-shards.ts` and must change in both.
+- Files written after the mtime stamp get a content-faithful time too: the
+  patched Skia/ICU sources take the later of the dependency revision and the
+  last commit touching `patches/`, and the repacked `icudtl.dat` the latest
+  of the ICU revision, `scripts/icu-repack.ts` and `patches/`. Without that
+  every warm run rebuilt 26 objects below `SkCodec.h` and relinked the 249
+  libraries below the ICU data.
 - Engine build caches are keyed by content-faithful mtimes
   (`pnpm ci:stamp-mtimes`); without that step every CI build is cold.
 

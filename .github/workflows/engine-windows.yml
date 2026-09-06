@@ -31,7 +31,7 @@
 # what "managed": False below is for, and it is not optional.
 
 name: engine-windows
-run-name: "engine-windows: ${{ inputs.arch }} build"
+run-name: "engine-windows: ${{ inputs.arch }} build (${{ inputs.shards }} shards)"
 
 on:
   workflow_dispatch:
@@ -48,6 +48,9 @@ on:
         description: 'run the check suites if the build finishes'
         type: boolean
         default: true
+      shards:
+        description: 'compile jobs that split the objects between them before the final job links; auto = 4; 1 = one job does everything'
+        default: auto
 
 # GN, the SDK and node-gyp spell the 64-bit architecture x64; the names
 # people see spell it amd64. The build-directory cache is keyed by the GN
@@ -65,6 +68,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
+      shards: ${{ steps.shards.outputs.list }}
+      shard_count: ${{ steps.shards.outputs.count }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -72,10 +77,144 @@ jobs:
           sparse-checkout-cone-mode: false
       - id: version
         run: echo "version=$(jq -r .version shotium/package.json)" >> "$GITHUB_OUTPUT"
+      - id: shards
+        # `auto` is the per-platform count that keeps a full six-platform
+        # dispatch inside the free plan's 20 concurrent jobs (macOS: 5):
+        # Windows 4+4, Linux 4+3, macOS 2+3. The matrix wants a JSON list of
+        # indices; a matrix cannot count on its own.
+        run: |
+          n='${{ inputs.shards }}'
+          if [ "$n" = auto ]; then n=4; fi
+          case "$n" in ''|*[!0-9]*|0) echo "shards must be auto or a positive integer, got '$n'" >&2; exit 1 ;; esac
+          echo "count=$n" >> "$GITHUB_OUTPUT"
+          echo "list=$(jq -cn --argjson n "$n" '[range($n)]')" >> "$GITHUB_OUTPUT"
+
+  # Sharding. ninja's idea of "up to date" is the outputs plus .ninja_log and
+  # .ninja_deps, and N runners that ran the same gn gen share one graph. So
+  # each shard builds every Nth object of the graph (with whatever generated
+  # files and host tools that needs), tars what it built with its two logs,
+  # and the final job transplants the tars into its own build directory
+  # (scripts/build-shards.ts merge) and finds only the link left to do.
+  # Measured on Linux amd64: 73 minutes cold as one job, 47 as four shards
+  # plus the final job; a warm run 18 minutes.
+  #
+  # Every shard restores the build-directory cache too, so a warm run costs
+  # what it did before sharding: a shard whose slice is already built packs
+  # nothing (--since keeps the cache's files out of the tar). What travels
+  # is more than objects: the generated sources GN writes at gen time (the
+  # jumbo units) and the depfiles of edges that keep theirs on disk, because
+  # the final job's own gn gen would write them newer than the objects and
+  # ninja would rebuild everything below them.
+  compile:
+    name: "compile: shotium-windows-${{ inputs.arch }}-v${{ needs.meta.outputs.version }} ${{ matrix.shard }}/${{ needs.meta.outputs.shard_count }}"
+    needs: meta
+    if: needs.meta.outputs.shard_count != '1'
+    runs-on: windows-2025
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(needs.meta.outputs.shards) }}
+
+    env:
+      DEPOT_TOOLS_WIN_TOOLCHAIN: '0'   # use the runner's Visual Studio; Google's
+                                       # packaged toolchain is not public
+      # GYP_MSVS_VERSION is deliberately unset. The runner image currently
+      # carries Visual Studio 18, and vs_toolchain.py picks that up on its own;
+      # naming a version here would only be a claim that goes stale.
+      DEPOT_TOOLS_UPDATE: '0'
+
+    steps:
+      # Everything this job writes from here on is newer than this moment;
+      # everything the build-directory cache restores is older. That is how
+      # the pack step tells the shard's own work from the cache's.
+      - name: remember when this job started
+        shell: pwsh
+        run: '[DateTimeOffset]::UtcNow.ToUnixTimeSeconds() | Set-Content "$env:RUNNER_TEMP/job-started"'
+
+      # The setup steps live in .github/actions/windows-source so the shards and
+      # this job cannot drift apart. A local action has to be on disk before it
+      # can be used, hence the sparse checkout of .github first.
+      - name: this repository's actions
+        uses: actions/checkout@v7
+        with:
+          path: actions
+          sparse-checkout: .github/actions
+
+      - name: source, DEPS, build directory, gn gen
+        uses: ./actions/.github/actions/windows-source
+        with:
+          arch: ${{ inputs.arch }}
+          cpu: ${{ env.SHOT_CPU }}
+          restore-cache: 'true'
+
+      - name: this shard's slice of the objects
+        shell: pwsh
+        working-directory: src
+        # -t inputs walks the graph below the two engine targets and names
+        # every file it would read, objects included, in every toolchain.
+        # `slice` spreads them by cost -- last run's durations from the
+        # restored .ninja_log, or an estimate from the path -- longest first
+        # onto the least-loaded shard, so the shards finish together; every
+        # shard computes the same assignment from the same inputs.
+        run: |
+          $objects = @(ninja -C out/Shot -t inputs shot shot_c | Where-Object { $_ -match '\.obj$' })
+          $slice = @($objects | pnpm --silent build:shards slice --build-dir out/Shot --shards '${{ needs.meta.outputs.shard_count }}' --index '${{ matrix.shard }}')
+          if ($LASTEXITCODE -ne 0) { throw "build:shards slice failed" }
+          ($slice -join "`n") | Set-Content -NoNewline -Encoding ascii "$env:RUNNER_TEMP/slice.txt"
+
+      - name: ninja
+        shell: pwsh
+        working-directory: src
+        continue-on-error: true
+        timeout-minutes: 280
+        # The checked-in ninja.exe, not depot_tools' `ninja`: on Windows that
+        # is a .bat wrapper, and cmd caps a command line at 8 KB ("The command
+        # line is too long" -- five of eight batches of the first sharded run
+        # never started). CreateProcess allows 32 KB, so 100 targets a batch
+        # is safe with room. -k 0 so one shard's log names every broken unit
+        # in its slice, and continue-on-error so what did compile still
+        # reaches the final job, which reports the failure.
+        run: |
+          $ninja = (Resolve-Path third_party/ninja/ninja.exe).Path
+          $slice = @(Get-Content "$env:RUNNER_TEMP/slice.txt")
+          $failed = $false
+          for ($i = 0; $i -lt $slice.Count; $i += 100) {
+            $end = [math]::Min($i + 99, $slice.Count - 1)
+            & $ninja -C out/Shot -j ${{ inputs.jobs }} -k 0 @($slice[$i..$end])
+            if ($LASTEXITCODE -ne 0) { $failed = $true }
+          }
+          if ($failed) { exit 1 }
+
+      - name: pack what this shard built
+        shell: pwsh
+        working-directory: src
+        run: |
+          $since = Get-Content "$env:RUNNER_TEMP/job-started"
+          $built = @(pnpm --silent build:shards list --build-dir out/Shot --since $since)
+          if ($LASTEXITCODE -ne 0) { throw "build:shards list failed" }
+          ($built -join "`n") | Set-Content -NoNewline -Encoding ascii "$env:RUNNER_TEMP/built.txt"
+          "$($built.Count) outputs built by this shard"
+          tar --format=pax -C out/Shot -cf "$env:GITHUB_WORKSPACE/shard.tar" -T "$env:RUNNER_TEMP/built.txt" .ninja_log .ninja_deps
+          if ($LASTEXITCODE -ne 0) { throw "tar failed" }
+          Get-Item "$env:GITHUB_WORKSPACE/shard.tar" | Select-Object Name,@{n='MB';e={[math]::Round($_.Length/1MB)}}
+
+      - name: upload the shard
+        uses: actions/upload-artifact@v7
+        with:
+          name: shard-windows-${{ inputs.arch }}-${{ matrix.shard }}
+          path: shard.tar
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 1
 
   build:
     name: "build: shotium-windows-${{ inputs.arch }}-v${{ needs.meta.outputs.version }}"
-    needs: meta
+    # Runs after the shards even when one of them failed: the merge brings in
+    # whatever they did compile, ninja rebuilds the rest, and the failure is
+    # reported here with the real error rather than as a missing artifact.
+    needs: [meta, compile]
+    if: ${{ always() && needs.meta.result == 'success' && needs.compile.result != 'cancelled' }}
     runs-on: windows-2025
     timeout-minutes: 350   # just under GitHub's six-hour ceiling, so the
                            # "save the cache" step still gets to run
@@ -93,254 +232,47 @@ jobs:
       DEPOT_TOOLS_UPDATE: '0'
 
     steps:
-      - name: free up disk
-        shell: pwsh
-        # A Windows runner ships with several toolchains this build has no use
-        # for, and the checkout plus toolchains plus object files do not fit
-        # around them.
-        run: |
-          Get-PSDrive -PSProvider FileSystem | Select-Object Name,Used,Free
-          $junk = @(
-            "$env:ProgramFiles\dotnet",
-            "${env:ProgramFiles(x86)}\Android",
-            "$env:ProgramFiles\Microsoft SDKs\Azure",
-            "$env:AGENT_TOOLSDIRECTORY\Ruby",
-            "$env:AGENT_TOOLSDIRECTORY\go",
-            "$env:AGENT_TOOLSDIRECTORY\PyPy",
-            "C:\hostedtoolcache\windows\Java_Temurin-Hotspot_jdk"
-          )
-          foreach ($p in $junk) {
-            if (Test-Path $p) { Remove-Item $p -Recurse -Force -ErrorAction SilentlyContinue }
-          }
-          Get-PSDrive -PSProvider FileSystem | Select-Object Name,Used,Free
-
-      - name: checkout
+      # The setup steps live in .github/actions/windows-source so the shards and
+      # this job cannot drift apart. A local action has to be on disk before it
+      # can be used, hence the sparse checkout of .github first.
+      - name: this repository's actions
         uses: actions/checkout@v7
         with:
-          path: src
-          # The history is not a build input, but it is a timestamp input: the
-          # step that makes ninja's incremental state usable reads, per file,
-          # the commit that last touched it. See scripts/ci-stamp-mtimes.ts.
-          fetch-depth: 0
-          submodules: false   # gclient fetches the DEPS-managed ones itself
+          path: actions
+          sparse-checkout: .github/actions
 
-      - name: set up node
-        uses: actions/setup-node@v6
+      - name: source, DEPS, build directory, gn gen
+        uses: ./actions/.github/actions/windows-source
         with:
-          node-version: 22
+          arch: ${{ inputs.arch }}
+          cpu: ${{ env.SHOT_CPU }}
+          restore-cache: 'true'
 
-      - name: set up pnpm
-        uses: pnpm/action-setup@v6
+      - name: download the shards
+        if: ${{ needs.meta.outputs.shard_count != '1' }}
+        uses: actions/download-artifact@v8
         with:
-          version: 9.15.9
+          pattern: shard-windows-${{ inputs.arch }}-*
+          path: shards
 
-      - name: repository scripts
-        working-directory: src/scripts
-        run: pnpm install --frozen-lockfile
-
-      - name: depot_tools
+      - name: merge the shards into the build directory
+        if: ${{ needs.meta.outputs.shard_count != '1' }}
         shell: pwsh
-        # The bootstrap has to be invoked by hand. gclient.bat only reaches it
-        # through update_depot_tools.bat, and DEPOT_TOOLS_UPDATE=0 -- which is
-        # here so a run pins the depot_tools it cloned rather than pulling a
-        # newer one mid-build -- jumps straight past that call. The bootstrap is
-        # not only the self-update: it also writes depot_tools' git wrappers,
-        # and git_cache.py spawns "git.bat" by that literal name. Without it
-        # gclient dies with WinError 2 while merely working out its cache path,
-        # before it has looked at a single dependency.
+        working-directory: src
+        # One shard at a time, deleting each as it goes: the runner's disk
+        # holds the build directory plus one unpacked shard, not plus all.
         run: |
-          git clone --depth 1 https://chromium.googlesource.com/chromium/tools/depot_tools.git C:\depot_tools
-          & C:\depot_tools\bootstrap\win_tools.bat
-          if (-not (Test-Path C:\depot_tools\git.bat)) { throw "depot_tools bootstrap produced no git.bat" }
-          "C:\depot_tools" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-
-      # Deliberately not cached: depot_tools, the gclient git cache, and the
-      # synced working copies. Not because they are cheap -- the sync is 15 to
-      # 30 minutes -- but because the 10 GB the repository gets is shared by
-      # everything, and the build directory is worth about four hours of it.
-      # Anything else put in that budget competes with the one entry that
-      # matters, and loses the comparison while still evicting it.
-
-      - name: windows sdk
-        shell: pwsh
-        # Google's packaged Windows toolchain is not downloadable outside
-        # Google, so this builds against the runner's Visual Studio -- and
-        # therefore against whatever SDK is installed on it, which is never the
-        # exact one build/vs_toolchain.py pins. That pin is a directory name,
-        # not a compatibility statement, so the fix is to name the installed SDK
-        # rather than to demand the packaged one. "Complete" means it has both
-        # the headers and the import libraries *for the target architecture*:
-        # the runner images carry SDK directories that have only one of the
-        # two, and an arm64 cross-compile needs Lib\...\um\arm64, which is a
-        # separate Visual Studio component that may simply not be installed.
-        #
-        # Checking it here is the point. clang-cl and lld-link come from
-        # third_party/llvm-build and target anything, so nothing else in this
-        # job would notice a missing arm64 SDK until the link, hours in.
-        run: |
-          $target = "${{ env.SHOT_CPU }}"
-          $root = "${env:ProgramFiles(x86)}\Windows Kits\10"
-          $usable = Get-ChildItem "$root\Include" -Directory -ErrorAction SilentlyContinue |
-            Where-Object {
-              (Test-Path "$root\Include\$($_.Name)\um\windows.h") -and
-              (Test-Path "$root\Lib\$($_.Name)\um\$target\kernel32.lib")
-            } | Sort-Object { [version]$_.Name }
-          $usable | ForEach-Object { Write-Host "usable SDK: $($_.Name)" }
-          if (-not $usable) {
-            throw "no Windows SDK under $root has both um\windows.h and um\$target\kernel32.lib"
+          foreach ($tarball in Get-ChildItem "$env:GITHUB_WORKSPACE/shards/*/shard.tar") {
+            $dir = Join-Path $tarball.DirectoryName 'out'
+            New-Item -ItemType Directory -Force $dir | Out-Null
+            tar -C $dir -xf $tarball.FullName
+            if ($LASTEXITCODE -ne 0) { throw "could not unpack $($tarball.FullName)" }
+            Remove-Item $tarball.FullName
+            pnpm build:shards merge --build-dir out/Shot --shard $dir
+            if ($LASTEXITCODE -ne 0) { throw "merge failed for $dir" }
+            Remove-Item -Recurse -Force $dir
           }
-
-          # The MSVC runtime for the target has to be there too, and it is a
-          # different component from the SDK.
-          $crt = Get-ChildItem "${env:ProgramFiles}\Microsoft Visual Studio\*\*\VC\Tools\MSVC\*\lib\$target\libcmt.lib" `
-                   -ErrorAction SilentlyContinue | Select-Object -First 1
-          if (-not $crt) {
-            throw "no MSVC libcmt.lib for $target -- the Visual Studio on this runner has no $target toolset"
-          }
-          Write-Host "target CRT: $($crt.FullName)"
-          $sdk = $usable[-1].Name
-          "CHROMIUM_WIN_SDK_VERSION=$sdk" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          Write-Host "building against $sdk"
-
-          # And the NTDDI symbol has to come from the same SDK. An identifier
-          # the preprocessor has never heard of compares as 0, so naming a
-          # newer one than the SDK defines is not an error -- it quietly turns
-          # off every version-guarded declaration, and the failure surfaces
-          # thousands of lines later as "unknown type name". Take the highest
-          # one this SDK actually defines.
-          $ddk = "$root\Include\$sdk\shared\sdkddkver.h"
-          $ntddi = Select-String -Path $ddk -Pattern '^\s*#define\s+(NTDDI_WIN\w+)\s+0x([0-9A-Fa-f]{8})\s*$' |
-            ForEach-Object {
-              [pscustomobject]@{
-                Name  = $_.Matches[0].Groups[1].Value
-                Value = [Convert]::ToUInt32($_.Matches[0].Groups[2].Value, 16)
-              }
-            } | Sort-Object Value | Select-Object -Last 1
-          if (-not $ntddi) { throw "no NTDDI_WIN* symbols in $ddk" }
-          "WIN_NTDDI_VERSION=$($ntddi.Name)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          Write-Host "targeting $($ntddi.Name) (0x$('{0:X8}' -f $ntddi.Value))"
-
-      - name: gclient solution
-        shell: pwsh
-        # "managed": False is the whole point -- see the note at the top.
-        # checkout_configuration=small drops the parts of DEPS that only tests
-        # and the Android build need.
-        run: |
-          @'
-          solutions = [{
-            "name": "src",
-            "url": "https://github.com/${{ github.repository }}.git",
-            "managed": False,
-            "custom_deps": {},
-            "custom_vars": {"checkout_configuration": "small"},
-          }]
-          target_os = ["win"]
-          '@ | Out-File -FilePath .gclient -Encoding ascii
-
-      - name: gclient sync
-        shell: pwsh
-        run: |
-          gclient sync --nohooks --no-history --shallow --verbose
-          gclient runhooks
           Get-PSDrive -PSProvider FileSystem | Select-Object Name,Used,Free
-
-      - name: make source timestamps content-faithful
-        shell: pwsh
-        # Without this the cached build directory is useless: checkout and
-        # gclient stamp every file with "now", so every source looks newer than
-        # every restored object and ninja rebuilds all 14,906 edges. See the
-        # script for what each kind of file gets.
-        run: |
-          pnpm -C src ci:stamp-mtimes "${{ github.workspace }}"
-
-      - name: restore the build directory
-        uses: actions/cache/restore@v6
-        # This is what makes a killed run useful to the next one. ninja is
-        # already incremental; all it needs is its output directory back, so
-        # the cache is the build directory itself rather than a compiler cache
-        # in front of it. (sccache was here first and could not be used: it
-        # talks to the retired v1 Actions cache API, which now answers 400.)
-        #
-        # The key carries the platform because a matrix would otherwise have
-        # every target restoring whichever build directory happened to be
-        # newest, which is worse than starting cold: ninja would rebuild
-        # everything anyway and the wrong entry would be the one kept.
-        #
-        # Excluding anything from this path is a trap worth naming. The .pdb
-        # files are 13% of the directory and look like debug baggage under
-        # symbol_level = 0, but dropping them makes ninja redo 757 CXX edges,
-        # not just the links -- measured, not assumed.
-        with:
-          path: src/out/Shot
-          key: out-shot-windows-${{ env.SHOT_CPU }}-${{ github.run_id }}
-          restore-keys: |
-            out-shot-windows-${{ env.SHOT_CPU }}-
-
-      - name: patch the DEPS checkouts
-        shell: pwsh
-        working-directory: src
-        # gclient restores third_party/icu and third_party/skia from their own
-        # upstreams, so anything this repository changes there has to be
-        # reapplied on every run. The ICU patch is worth 5.8 MB of shotium.exe:
-        # icu_data_dir_override picks the "cast"
-        # filtered data set (5.0 MB) over the platform default "common"
-        # (10.8 MB), and icu_use_data_file = false links whichever one it is
-        # into the binary.
-        #
-        # This runs after the mtime stamping and the cache restore on purpose.
-        # The patched files then carry the current time, which is newer than
-        # any restored object built from the unpatched ones, so ninja rebuilds
-        # exactly those and nothing else.
-        #
-        # A failure here is not something to swallow. If a DEPS roll moves the
-        # file out from under the patch, the build has to stop and say so --
-        # the alternative is a silently different binary, which is the state
-        # this step exists to end.
-        run: |
-          git -C third_party/icu apply --verbose ../../patches/third_party_icu.patch
-          if ($LASTEXITCODE -ne 0) { throw "patches/third_party_icu.patch did not apply" }
-          git -C third_party/skia apply --verbose ../../patches/third_party_skia_parallel_blur.patch
-          if ($LASTEXITCODE -ne 0) { throw "patches/third_party_skia_parallel_blur.patch did not apply" }
-          git -C third_party/skia apply --verbose ../../patches/third_party_skia_incremental_row_limit.patch
-          if ($LASTEXITCODE -ne 0) { throw "patches/third_party_skia_incremental_row_limit.patch did not apply" }
-
-      - name: build the shot ICU data set
-        shell: pwsh
-        working-directory: src
-        # args.gn asks for icu_data_dir_override = "shot", which is not one of
-        # the nine sets third_party/icu ships: it is `cast` with the six CJK
-        # converter tables removed, since Blink decodes those encodings itself.
-        # Like the patch above this has to be redone on every run, because
-        # gclient owns that directory.
-        #
-        # Failing here rather than falling back to `cast` is deliberate. A
-        # missing input would stop gn gen anyway; what must not happen is the
-        # build quietly picking a different data set than the one the size
-        # numbers were measured against.
-        run: |
-          New-Item -ItemType Directory -Force third_party/icu/shot | Out-Null
-          pnpm icu:repack `
-            third_party/icu/cast/icudtl.dat `
-            third_party/icu/shot/icudtl.dat --preset shot
-          if ($LASTEXITCODE -ne 0) { throw "icu repack failed" }
-
-      - name: gn gen
-        shell: pwsh
-        working-directory: src
-        # args.gn imports the checked-in configuration rather than passing it
-        # as --args: the file has quoted values in it, and those do not survive
-        # being interpolated into a command line. Writing the same one byte for
-        # byte every run is also what keeps the restored build directory valid
-        # -- a different args.gn would invalidate every object in it.
-        run: |
-          New-Item -ItemType Directory -Force out/Shot | Out-Null
-          @(
-            'import("//build/args/shot.gn")'
-            "win_ntddi_version = ""$env:WIN_NTDDI_VERSION"""
-            "target_cpu = ""${{ env.SHOT_CPU }}"""
-          ) | Out-File -FilePath out/Shot/args.gn -Encoding ascii
-          Get-Content out/Shot/args.gn
-          gn gen out/Shot
 
       - name: forget the previous binary
         # The build directory is restored from cache, so out/Shot still
@@ -363,6 +295,14 @@ jobs:
         shell: pwsh
         working-directory: src
         run: pnpm depfiles:prune out/Shot
+
+      - name: why is the restored build directory dirty
+        shell: pwsh
+        working-directory: src
+        # Diagnosis only, nothing is built: -d explain makes ninja say why each
+        # dirty edge is dirty, and the root causes come first. This is how the
+        # Linux job found LASTCHANGE, the Skia patches and angle_commit.h.
+        run: ninja -C out/Shot shot shot_c -n -d explain 2>&1 | Select-Object -First 120
 
       - name: ninja
         shell: pwsh

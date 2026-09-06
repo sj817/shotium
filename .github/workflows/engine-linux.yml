@@ -46,7 +46,7 @@
 # Discovering a one-line GN error costs half an hour this way instead of the
 # four it takes to reach the link step and fail there.
 name: engine-linux
-run-name: "engine-linux: ${{ inputs.arch }} ${{ inputs.mode }}"
+run-name: "engine-linux: ${{ inputs.arch }} ${{ inputs.mode }} (${{ inputs.shards }} shards)"
 
 on:
   workflow_dispatch:
@@ -68,6 +68,9 @@ on:
         description: 'run the check suites if the build finishes'
         type: boolean
         default: true
+      shards:
+        description: 'compile jobs that split the objects between them before the final job links; auto = 4 for amd64, 3 for arm64; 1 = one job does everything'
+        default: auto
 
 # GN, the SDK and node-gyp spell the 64-bit architecture x64; the names
 # people see spell it amd64. The build-directory cache is keyed by the GN
@@ -85,6 +88,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
+      shards: ${{ steps.shards.outputs.list }}
+      shard_count: ${{ steps.shards.outputs.count }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -92,10 +97,123 @@ jobs:
           sparse-checkout-cone-mode: false
       - id: version
         run: echo "version=$(jq -r .version shotium/package.json)" >> "$GITHUB_OUTPUT"
+      - id: shards
+        # `auto` is the per-platform count that keeps a full six-platform
+        # dispatch inside the free plan's 20 concurrent jobs (macOS: 5):
+        # Windows 4+4, Linux 4+3, macOS 2+3. The matrix wants a JSON list of
+        # indices; a matrix cannot count on its own.
+        run: |
+          n='${{ inputs.shards }}'
+          if [ "$n" = auto ]; then n=$([ '${{ inputs.arch }}' = arm64 ] && echo 3 || echo 4); fi
+          case "$n" in ''|*[!0-9]*|0) echo "shards must be auto or a positive integer, got '$n'" >&2; exit 1 ;; esac
+          echo "count=$n" >> "$GITHUB_OUTPUT"
+          echo "list=$(jq -cn --argjson n "$n" '[range($n)]')" >> "$GITHUB_OUTPUT"
+
+  # Sharding. ninja's idea of "up to date" is the outputs plus .ninja_log and
+  # .ninja_deps, and N runners that ran the same gn gen share one graph. So
+  # each shard builds every Nth object of the graph (with whatever generated
+  # files and host tools that needs), tars what it built with its two logs,
+  # and the final job transplants the tars into its own build directory
+  # (scripts/build-shards.ts merge) and finds only the link left to do.
+  # Measured on Linux amd64: 73 minutes cold as one job, 47 as four shards
+  # plus the final job; a warm run 18 minutes. A compiler cache in front of
+  # the final job was measured first and lost: every sccache hit still
+  # preprocessed the unit, 1-2 s each, 20 minutes on the final job for
+  # nothing.
+  #
+  # Every shard restores the build-directory cache too, so a warm run costs
+  # what it did before sharding: a shard whose slice is already built packs
+  # nothing (--since keeps the cache's files out of the tar). What travels
+  # is more than objects: the generated sources GN writes at gen time (the
+  # jumbo units) and the depfiles of edges that keep theirs on disk, because
+  # the final job's own gn gen would write them newer than the objects and
+  # ninja would rebuild everything below them.
+  compile:
+    name: "compile: shotium-linux-${{ inputs.arch }}-v${{ needs.meta.outputs.version }} ${{ matrix.shard }}/${{ needs.meta.outputs.shard_count }}"
+    needs: meta
+    if: inputs.mode == 'build' && needs.meta.outputs.shard_count != '1'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(needs.meta.outputs.shards) }}
+
+    env:
+      DEPOT_TOOLS_UPDATE: '0'
+
+    steps:
+      # Everything this job writes from here on is newer than this moment;
+      # everything the build-directory cache restores is older. That is how
+      # the pack step tells the shard's own work from the cache's.
+      - name: remember when this job started
+        run: date +%s > /tmp/job-started
+
+      # The setup steps live in .github/actions/linux-source so the shards and
+      # this job cannot drift apart. A local action has to be on disk before it
+      # can be used, hence the sparse checkout of .github first.
+      - name: this repository's actions
+        uses: actions/checkout@v7
+        with:
+          path: actions
+          sparse-checkout: .github/actions
+
+      - name: source, DEPS, build directory, gn gen
+        uses: ./actions/.github/actions/linux-source
+        with:
+          arch: ${{ inputs.arch }}
+          cpu: ${{ env.SHOT_CPU }}
+          restore-cache: 'true'
+
+      - name: this shard's slice of the objects
+        working-directory: src
+        # -t inputs walks the graph below the two engine targets and names
+        # every file it would read, objects included, in every toolchain.
+        # `slice` spreads them by cost -- last run's durations from the
+        # restored .ninja_log, or an estimate from the path -- longest first
+        # onto the least-loaded shard, so the shards finish together; every
+        # shard computes the same assignment from the same inputs.
+        run: |
+          ninja -C out/Shot -t inputs shot shot_c | grep -E '\.o$' \
+            | pnpm --silent build:shards slice --build-dir out/Shot \
+                --shards '${{ needs.meta.outputs.shard_count }}' --index '${{ matrix.shard }}' > /tmp/slice.txt
+
+      - name: ninja
+        working-directory: src
+        continue-on-error: true
+        timeout-minutes: 280
+        # -k 0 so one shard's log names every broken unit in its slice, and
+        # continue-on-error so what did compile still reaches the final job,
+        # which is where the failure is reported.
+        # stdin, not xargs -a: BSD xargs on macOS has no -a.
+        run: xargs ninja -C out/Shot -j ${{ inputs.jobs }} -k 0 < /tmp/slice.txt
+
+      - name: pack what this shard built
+        working-directory: src
+        run: |
+          pnpm --silent build:shards list --build-dir out/Shot --since "$(cat /tmp/job-started)" > /tmp/built.txt
+          echo "$(wc -l < /tmp/built.txt) outputs built by this shard"
+          tar --format=pax -C out/Shot -cf "$GITHUB_WORKSPACE/shard.tar" -T /tmp/built.txt .ninja_log .ninja_deps
+          ls -l "$GITHUB_WORKSPACE/shard.tar"
+
+      - name: upload the shard
+        uses: actions/upload-artifact@v7
+        with:
+          name: shard-linux-${{ inputs.arch }}-${{ matrix.shard }}
+          path: shard.tar
+          if-no-files-found: error
+          retention-days: 1
+          # Objects are bitcode and generated files are text; level 1 halves
+          # the upload for a few seconds of CPU, higher levels buy little.
+          compression-level: 1
 
   build:
     name: "${{ inputs.mode }}: shotium-linux-${{ inputs.arch }}-v${{ needs.meta.outputs.version }}"
-    needs: meta
+    # Runs after the shards even when one of them failed: the merge brings in
+    # whatever they did compile, ninja rebuilds the rest, and the failure is
+    # reported here with the real error rather than as a missing artifact.
+    needs: [meta, compile]
+    if: ${{ always() && needs.meta.result == 'success' && needs.compile.result != 'cancelled' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 350
 
@@ -107,156 +225,47 @@ jobs:
       DEPOT_TOOLS_UPDATE: '0'
 
     steps:
-      - name: free up disk
-        # GitHub documents 14 GB of SSD and does not say how much of it a job
-        # actually gets. A Chromium checkout plus a build directory does not
-        # fit next to the preinstalled toolchains either way, and the same step
-        # is what makes the Windows job fit. These are the big ones and none of
-        # them is a build input here; df before and after says what it bought.
-        run: |
-          df -h /
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android \
-                      /opt/ghc /usr/local/share/boost \
-                      "$AGENT_TOOLSDIRECTORY" || true
-          sudo apt-get clean
-          df -h /
-
-      - name: checkout
+      # The setup steps live in .github/actions/linux-source so the shards and
+      # this job cannot drift apart. A local action has to be on disk before it
+      # can be used, hence the sparse checkout of .github first.
+      - name: this repository's actions
         uses: actions/checkout@v7
         with:
-          path: src
-          # Read by scripts/ci-stamp-mtimes.ts, which needs the commit that
-          # last touched each file for the build cache to be worth anything.
-          fetch-depth: 0
-          submodules: false
+          path: actions
+          sparse-checkout: .github/actions
 
-      - name: set up node
-        uses: actions/setup-node@v6
+      - name: source, DEPS, build directory, gn gen
+        uses: ./actions/.github/actions/linux-source
         with:
-          node-version: 22
+          arch: ${{ inputs.arch }}
+          cpu: ${{ env.SHOT_CPU }}
+          restore-cache: 'true'
 
-      - name: set up pnpm
-        uses: pnpm/action-setup@v6
+      - name: download the shards
+        if: ${{ inputs.mode == 'build' && needs.meta.outputs.shard_count != '1' }}
+        uses: actions/download-artifact@v8
         with:
-          version: 9.15.9
+          pattern: shard-linux-${{ inputs.arch }}-*
+          path: shards
 
-      - name: repository scripts
-        working-directory: src/scripts
-        run: pnpm install --frozen-lockfile
-
-      - name: depot_tools
-        # The bootstrap has to be invoked by hand, for the same reason the
-        # Windows job calls win_tools.bat: DEPOT_TOOLS_UPDATE=0 is set so a run
-        # pins the depot_tools it cloned instead of pulling a newer one
-        # mid-build, and that skips the call that would otherwise bootstrap it.
-        # The bootstrap is not only the self-update -- it writes
-        # python3_bin_reldir.txt, which the `gn` and `ninja` wrappers read to
-        # find their interpreter.
-        #
-        # gclient sync works without it, which is what makes this worth a
-        # comment: the failure surfaces much later, at gn gen, as
-        #   python3_bin_reldir.txt not found. need to initialize depot_tools
-        # long after the step that should have done it reported success.
+      - name: merge the shards into the build directory
+        if: ${{ inputs.mode == 'build' && needs.meta.outputs.shard_count != '1' }}
+        working-directory: src
+        # One shard at a time, deleting each as it goes: the runner's disk
+        # holds the build directory plus one unpacked shard, not plus four.
         run: |
-          git clone --depth 1 \
-            https://chromium.googlesource.com/chromium/tools/depot_tools.git \
-            "$HOME/depot_tools"
-          "$HOME/depot_tools/ensure_bootstrap"
-          test -f "$HOME/depot_tools/python3_bin_reldir.txt" \
-            || { echo "bootstrap produced no python3_bin_reldir.txt"; exit 1; }
-          echo "$HOME/depot_tools" >> "$GITHUB_PATH"
-
-      - name: gclient solution
-        # target_os is the whole reason a Linux sync produces anything usable:
-        # DEPS gates entries like third_party/fontconfig/src on checkout_linux,
-        # and the local .gclient in this tree says ["win"], so a naive sync here
-        # would silently omit them and fail much later with a missing include.
-        run: |
-          cat > .gclient <<'EOF'
-          solutions = [{
-            "name": "src",
-            "url": "https://github.com/${{ github.repository }}.git",
-            "managed": False,
-            "custom_deps": {},
-            "custom_vars": {"checkout_configuration": "small"},
-          }]
-          target_os = ["linux"]
-          target_cpu = ["x64", "arm64"]
-          EOF
-          cat .gclient
-
-      - name: gclient sync
-        run: |
-          gclient sync --nohooks --no-history --shallow --verbose
-          gclient runhooks
+          # nullglob: with every shard failed before it could upload, the
+          # loop runs zero times and ninja below simply builds everything.
+          shopt -s nullglob
+          for tarball in "$GITHUB_WORKSPACE"/shards/*/shard.tar; do
+            dir="${tarball%/shard.tar}/out"
+            mkdir -p "$dir"
+            tar -C "$dir" -xf "$tarball"
+            rm -f "$tarball"
+            pnpm build:shards merge --build-dir out/Shot --shard "$dir"
+            rm -rf "$dir"
+          done
           df -h /
-
-      - name: build dependencies
-        # --no-prompt because there is no terminal, --no-nacl because it is not
-        # in this build graph.
-        #
-        # These are host packages, and for x64 they are also what the compiler
-        # links against. arm64 links against debian_bullseye_arm64-sysroot
-        # instead, which gclient fetches because .gclient names arm64 in
-        # target_cpu -- so there is no install-sysroot.py step here; DEPS has
-        # already done it.
-        working-directory: src
-        run: |
-          sudo ./build/install-build-deps.sh --no-prompt --no-nacl || \
-          sudo ./build/install-build-deps.sh --no-prompt
-
-      - name: make source timestamps content-faithful
-        run: pnpm -C src ci:stamp-mtimes "$GITHUB_WORKSPACE"
-
-      - name: restore the build directory
-        uses: actions/cache/restore@v6
-        # See engine-windows.yml for why the build directory itself is the
-        # cache and why nothing else shares the budget with it. The key carries
-        # the architecture as well as the platform: the two produce entirely
-        # different objects even from the same host, and restoring one into the
-        # other would rebuild everything having evicted something useful.
-        with:
-          path: src/out/Shot
-          key: out-shot-linux-${{ env.SHOT_CPU }}-${{ github.run_id }}
-          restore-keys: |
-            out-shot-linux-${{ env.SHOT_CPU }}-
-
-      - name: patch the Skia checkout
-        working-directory: src
-        # Skia is DEPS-managed, so Shot's Skia changes have to be reapplied
-        # after every sync. Keep this after cache restore: the new source
-        # timestamps then invalidate exactly the affected Skia objects.
-        run: |
-          git -C third_party/skia apply --verbose ../../patches/third_party_skia_parallel_blur.patch
-          git -C third_party/skia apply --verbose ../../patches/third_party_skia_incremental_row_limit.patch
-
-      - name: build the shot ICU data set
-        working-directory: src
-        # Same as the Windows job: third_party/icu is a DEPS checkout, so the
-        # trimmed data set has to be regenerated on every run rather than
-        # checked in. Failing loudly beats quietly building against `cast` and
-        # shipping a binary 0.81 MB larger than the numbers claim.
-        run: |
-          mkdir -p third_party/icu/shot
-          pnpm icu:repack \
-            third_party/icu/cast/icudtl.dat \
-            third_party/icu/shot/icudtl.dat --preset shot
-
-      - name: gn gen
-        working-directory: src
-        # The args file is imported rather than passed on the command line: it
-        # has quoted values that do not survive interpolation, and writing the
-        # same bytes every run is what keeps a restored build directory valid.
-        # No target_cpu: the build is native, so GN takes the host's. Naming
-        # it would only be a claim that could disagree with the runner.
-        run: |
-          mkdir -p out/Shot
-          {
-            echo 'import("//build/args/shot-linux.gn")'
-            echo 'target_cpu = "${{ env.SHOT_CPU }}"'
-          } > out/Shot/args.gn
-          cat out/Shot/args.gn
-          gn gen out/Shot
 
       - name: probe
         if: ${{ github.event.inputs.mode == 'probe' }}

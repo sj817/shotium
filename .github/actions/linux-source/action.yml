@@ -1,0 +1,200 @@
+name: linux source
+description: >-
+  Everything a Linux engine job does before ninja: free the disk, check out
+  the tree and its DEPS, stamp source mtimes, restore the build directory when
+  asked, patch Skia, build the ICU data set and run gn gen. The compile shards
+  and the final job of engine-linux.yml both use it, and must, because a
+  shard's objects are only valid in the final job if both ran the same gn gen
+  on the same sources. A workflow cannot reference a local action before the
+  repository is checked out, so the caller checks out .github first (a sparse
+  checkout, seconds) and this action does the real one into src/.
+
+inputs:
+  arch:
+    description: amd64 or arm64, as the workflow input spells it
+    required: true
+  cpu:
+    description: GN target_cpu, x64 or arm64
+    required: true
+  restore-cache:
+    description: restore out/Shot from the Actions cache (the final job does, shards do not)
+    default: 'true'
+
+runs:
+  using: composite
+  steps:
+    - name: free up disk
+      shell: bash
+      # GitHub documents 14 GB of SSD and does not say how much of it a job
+      # actually gets. A Chromium checkout plus a build directory does not
+      # fit next to the preinstalled toolchains either way, and the same step
+      # is what makes the Windows job fit. These are the big ones and none of
+      # them is a build input here; df before and after says what it bought.
+      run: |
+        df -h /
+        sudo rm -rf /usr/share/dotnet /usr/local/lib/android \
+                    /opt/ghc /usr/local/share/boost \
+                    "$AGENT_TOOLSDIRECTORY" || true
+        sudo apt-get clean
+        df -h /
+
+    - name: checkout
+      uses: actions/checkout@v7
+      with:
+        path: src
+        # Read by scripts/ci-stamp-mtimes.ts, which needs the commit that
+        # last touched each file for the build cache to be worth anything.
+        fetch-depth: 0
+        submodules: false
+
+    - name: set up node
+      uses: actions/setup-node@v6
+      with:
+        node-version: 22
+
+    - name: set up pnpm
+      uses: pnpm/action-setup@v6
+      with:
+        version: 9.15.9
+
+    - name: repository scripts
+      shell: bash
+      working-directory: src/scripts
+      run: pnpm install --frozen-lockfile
+
+    - name: depot_tools
+      shell: bash
+      # The bootstrap has to be invoked by hand, for the same reason the
+      # Windows job calls win_tools.bat: DEPOT_TOOLS_UPDATE=0 is set so a run
+      # pins the depot_tools it cloned instead of pulling a newer one
+      # mid-run, and with self-update off nothing else fetches the CIPD
+      # python that gclient needs. ensure_bootstrap is that fetch on its own.
+      run: |
+        git clone --depth 1 \
+          https://chromium.googlesource.com/chromium/tools/depot_tools.git \
+          "$HOME/depot_tools"
+        "$HOME/depot_tools/ensure_bootstrap"
+        test -f "$HOME/depot_tools/python3_bin_reldir.txt" \
+          || { echo "bootstrap produced no python3_bin_reldir.txt"; exit 1; }
+        echo "$HOME/depot_tools" >> "$GITHUB_PATH"
+
+    - name: gclient solution
+      shell: bash
+      # target_os is the whole reason a Linux sync produces anything usable:
+      # DEPS gates entries like third_party/fontconfig/src on checkout_linux,
+      # and the local .gclient in this tree says ["win"], so a naive sync here
+      # would silently omit them and fail much later with a missing include.
+      run: |
+        cat > .gclient <<'EOF'
+        solutions = [{
+          "name": "src",
+          "url": "https://github.com/${{ github.repository }}.git",
+          "managed": False,
+          "custom_deps": {},
+          "custom_vars": {"checkout_configuration": "small"},
+        }]
+        target_os = ["linux"]
+        target_cpu = ["x64", "arm64"]
+        EOF
+        cat .gclient
+
+    - name: gclient sync
+      shell: bash
+      run: |
+        gclient sync --nohooks --no-history --shallow --verbose
+        gclient runhooks
+        df -h /
+
+    - name: build dependencies
+      shell: bash
+      # --no-prompt because there is no terminal, --no-nacl because it is not
+      # in this build graph.
+      #
+      # These are host packages, and for x64 they are also what the compiler
+      # links against. arm64 links against debian_bullseye_arm64-sysroot
+      # instead, which gclient fetches because .gclient names arm64 in
+      # target_cpu -- so there is no install-sysroot.py step here; DEPS has
+      # already done it.
+      working-directory: src
+      run: |
+        sudo ./build/install-build-deps.sh --no-prompt --no-nacl || \
+        sudo ./build/install-build-deps.sh --no-prompt
+
+    - name: make source timestamps content-faithful
+      shell: bash
+      run: pnpm -C src ci:stamp-mtimes "$GITHUB_WORKSPACE"
+
+    - name: restore the build directory
+      if: inputs.restore-cache == 'true'
+      uses: actions/cache/restore@v6
+      # See engine-windows.yml for why the build directory itself is the
+      # cache and why nothing else shares the budget with it. The key carries
+      # the architecture as well as the platform: the two produce entirely
+      # different objects even from the same host, and restoring one into the
+      # other would rebuild everything having evicted something useful.
+      with:
+        path: src/out/Shot
+        key: out-shot-linux-${{ inputs.cpu }}-${{ github.run_id }}
+        restore-keys: |
+          out-shot-linux-${{ inputs.cpu }}-
+
+    - name: patch the Skia checkout
+      shell: bash
+      working-directory: src
+      # Skia is DEPS-managed, so Shot's Skia changes have to be reapplied
+      # after every sync. git apply leaves the patched files with "now" for
+      # an mtime, newer than every object in a restored build directory, so
+      # a warm run rebuilt them and everything that includes SkCodec.h (26
+      # objects directly, hundreds below). A patched file's honest time is
+      # the later of the dependency's revision and the last commit that
+      # touched the patch: same base plus same patch is the same file.
+      run: |
+        git -C third_party/skia apply --verbose ../../patches/third_party_skia_parallel_blur.patch
+        git -C third_party/skia apply --verbose ../../patches/third_party_skia_incremental_row_limit.patch
+        when=$(git log -1 --format=%ct -- patches)
+        base=$(git -C third_party/skia log -1 --format=%ct)
+        [ "$base" -gt "$when" ] && when=$base
+        # touch -t, not -d @seconds: BSD touch on macOS has no -d @.
+        stamp=$(date -u -d "@$when" +%Y%m%d%H%M.%S 2>/dev/null || date -u -r "$when" +%Y%m%d%H%M.%S)
+        git -C third_party/skia diff --name-only | while read -r f; do
+          touch -t "$stamp" "third_party/skia/$f"
+        done
+
+    - name: build the shot ICU data set
+      shell: bash
+      working-directory: src
+      # Same as the Windows job: third_party/icu is a DEPS checkout, so the
+      # trimmed data set has to be regenerated on every run rather than
+      # checked in. Failing loudly beats quietly building against `cast` and
+      # shipping a binary 0.81 MB larger than the numbers claim.
+      run: |
+        mkdir -p third_party/icu/shot
+        pnpm icu:repack \
+          third_party/icu/cast/icudtl.dat \
+          third_party/icu/shot/icudtl.dat --preset shot
+        # The repack writes icudtl.dat with "now" for an mtime on every run,
+        # and ninja then redoes the data assembly, the ICU library and every
+        # library that links it (249 LIB edges on Windows). Same rule as the
+        # patches: the latest of the ICU revision, the repack script and the
+        # patches directory.
+        when=$(git -C third_party/icu log -1 --format=%ct)
+        for f in scripts/icu-repack.ts patches; do
+          t=$(git log -1 --format=%ct -- "$f"); [ "$t" -gt "$when" ] && when=$t
+        done
+        touch -t "$(date -u -d "@$when" +%Y%m%d%H%M.%S 2>/dev/null || date -u -r "$when" +%Y%m%d%H%M.%S)" third_party/icu/shot/icudtl.dat
+
+    - name: gn gen
+      shell: bash
+      working-directory: src
+      # The args file is imported rather than passed on the command line: it
+      # has quoted values that do not survive interpolation, and writing the
+      # same bytes every run is what keeps a restored build directory valid
+      # and what makes every shard's graph identical to the final job's.
+      run: |
+        mkdir -p out/Shot
+        {
+          echo 'import("//build/args/shot-linux.gn")'
+          echo 'target_cpu = "${{ inputs.cpu }}"'
+        } > out/Shot/args.gn
+        cat out/Shot/args.gn
+        gn gen out/Shot
