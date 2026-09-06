@@ -2024,6 +2024,19 @@ perfetto 是 DEPS checkout,BUILD.gn 改不了,为此加了全局的
 `shot_jumbo_excluded_files`(按绝对标签匹配),viz 的 mojom traits 源也走它,
 因为 `mojom()` 模板什么参数都不转发。
 
+第二步 32 → 64 是后来做的,当时没做是因为怕冲突。实际只有一处:
+`position_units.cc` 在命名空间作用域声明的 `PreviousPositionOfAlgorithm`,
+和 `visible_units.cc` 里同名的文件内 `static` 模板,在 64 文件的
+`core_shot_jumbo_editing_2` 里同时可见,后者所有调用点变歧义。Windows 和
+Linux 撞的是同一处,一条排除项两个平台都够。19 处对 1 处——上一步暴露的冲突
+不是"单元变大就会更多",而是"第一次合并时把所有历史欠账一次性还清"。
+
+收益按冷构建的分片编译量:Linux amd64 四片,32 文件时 28.3 / 30.9 / 31.1 分钟,
+64 文件时 25.6 / 26.2 / 27.9,约 −10%。和每文件成本推出来的数一致(Blink 占
+编译时间 43%,0.51 → 0.33 秒是其中三分之一,一片有五六成时间在编译)。要提醒
+的是同样大小的片在 GitHub runner 上跑出过 21.9 到 35.7 分钟,±25% 的机器波动
+压在每个数字上,单轮对比只能当趋势。
+
 ### 23.4 ANGLE 只挂在一条边上
 
 `gn path` 只有一条:blink core → `//gpu/config` → `//ui/gl/init` → libANGLE →
