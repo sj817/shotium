@@ -248,6 +248,11 @@ component("core") {
     "css/clip_path_paint_image_generator.cc",
     "css/css_primitive_value.cc",
     "css/properties/css_direction_aware_resolver.cc",
+    # Its PreviousPositionOfAlgorithm template is at namespace scope, and
+    # visible_units.cc has a file-static one of the same name; at 64 sources
+    # per unit the two land together and every call in visible_units.cc is
+    # ambiguous.
+    "editing/position_units.cc",
     "execution_context/security_context_init.cc",
     "frame/cached_permission_status.cc",
     "html/anchor_element_viewport_position_tracker.cc",
