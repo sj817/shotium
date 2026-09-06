@@ -2039,5 +2039,20 @@ translator。271 个对象,外加 libEGL / libGLESv2 / vulkan-1 三个 DLL 和 v
 
 本机 `--jobs 16` 干净全量:23 分钟(shot 22.6 分钟,再加
 shot_c 0.4 分钟),此前约 50 分钟。84 个 reftest、七套 check 全过,41 个
-渲染与裁树前的 CI 引擎逐字节相同。CI 的数字等第一轮跑完再补。
+渲染与裁树前的 CI 引擎逐字节相同。
+
+CI 第一轮(六平台全绿,checks 全过):
+
+| 平台 | 并行 | ninja | 此前 |
+|---|---|---|---|
+| Windows amd64,冷 | -j4 | 92 分钟(5,221 步) | 120 分钟(4,972 步) |
+| Windows amd64,原样重跑 | -j4 | 26 分钟(1,224 步) | 65 分钟(1,318 步) |
+| Linux amd64 | -j4 | 54 分钟(4,437 步,半热) | 73 分钟 |
+| macOS arm64,冷 | -j3 | 87 分钟 | 首次成功 |
+
+Windows 的热路径没有到零:1,224 步里 574 个 CXX、244 个 LIB、165 个
+RUST,最先跑的是 `rustc_print_cfg` 和 `find_stdlib` 两个 action,随后
+perfetto 的 protoc 输出、boringssl 和 libjpeg_turbo 的汇编 action。LASTCHANGE
+只是几条链之一;剩下的根因要 `ninja -d explain` 才能定位,而 Windows 的
+workflow 还没有这一步。留作下一项。
 
