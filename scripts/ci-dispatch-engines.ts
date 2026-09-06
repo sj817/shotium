@@ -18,6 +18,8 @@
 // created after the dispatch. `gh` must be authenticated; nothing here needs
 // the repository checked out.
 
+import path from 'node:path';
+
 import {cac} from 'cac';
 import {execa} from 'execa';
 import pc from 'picocolors';
@@ -96,44 +98,49 @@ async function waitFor(ids: string[], repo: string): Promise<number> {
   return failed.length === 0 ? 0 : 1;
 }
 
-const cli = cac('ci-dispatch-engines');
-cli.command('', 'dispatch the engine builds')
-  .option('--ref <ref>', 'branch or tag to build', {default: 'main'})
-  .option('--repo <owner/name>', 'repository', {default: 'sj817/shotium'})
-  .option('--only <ids>', 'comma-separated subset, e.g. windows-amd64,linux-arm64')
-  .option('--shards <n>', 'slices per platform; auto is the per-platform default', {default: 'auto'})
-  .option('--no-checks', 'skip the check suites (a cache-warming run does not need them)')
-  .option('--wait', 'poll until every run finishes, and exit non-zero if any failed')
-  .option('--dry-run', 'print the gh commands and stop')
-  .action(async (options: {ref: string; repo: string; only?: string; shards: string; checks: boolean; wait?: boolean; dryRun?: boolean}) => {
-    let targets: Target[];
-    try {
-      targets = selectTargets(options.only);
-    } catch (error) {
-      console.error((error as Error).message);
-      process.exitCode = 2;
-      return;
-    }
-    const ids: string[] = [];
-    for (const target of targets) {
-      const args = dispatchArgs(target, options.ref, options.repo, options.checks, options.shards);
-      if (options.dryRun) {
-        console.log('gh ' + args.join(' '));
-        continue;
+// tsx runs this file for the command and imports it for the tests. Without
+// this guard the import parses a command line and dispatches: running the
+// test suite once sent six engine builds, and checks.yml runs that suite.
+if (process.argv[1] && path.resolve(process.argv[1]) === import.meta.filename) {
+  const cli = cac('ci-dispatch-engines');
+  cli.command('', 'dispatch the engine builds')
+    .option('--ref <ref>', 'branch or tag to build', {default: 'main'})
+    .option('--repo <owner/name>', 'repository', {default: 'sj817/shotium'})
+    .option('--only <ids>', 'comma-separated subset, e.g. windows-amd64,linux-arm64')
+    .option('--shards <n>', 'slices per platform; auto is the per-platform default', {default: 'auto'})
+    .option('--no-checks', 'skip the check suites (a cache-warming run does not need them)')
+    .option('--wait', 'poll until every run finishes, and exit non-zero if any failed')
+    .option('--dry-run', 'print the gh commands and stop')
+    .action(async (options: {ref: string; repo: string; only?: string; shards: string; checks: boolean; wait?: boolean; dryRun?: boolean}) => {
+      let targets: Target[];
+      try {
+        targets = selectTargets(options.only);
+      } catch (error) {
+        console.error((error as Error).message);
+        process.exitCode = 2;
+        return;
       }
-      const at = Date.now() - 5000;   // the run's createdAt can precede our clock
-      await gh(args);
-      const id = await findRun(target, options.ref, options.repo, at);
-      if (id) {
-        ids.push(id);
-        console.log(`${pc.cyan(target.id.padEnd(14))} https://github.com/${options.repo}/actions/runs/${id}`);
-      } else {
-        console.log(`${pc.cyan(target.id.padEnd(14))} ${pc.yellow('dispatched, but the run did not appear in the listing')}`);
+      const ids: string[] = [];
+      for (const target of targets) {
+        const args = dispatchArgs(target, options.ref, options.repo, options.checks, options.shards);
+        if (options.dryRun) {
+          console.log('gh ' + args.join(' '));
+          continue;
+        }
+        const at = Date.now() - 5000;   // the run's createdAt can precede our clock
+        await gh(args);
+        const id = await findRun(target, options.ref, options.repo, at);
+        if (id) {
+          ids.push(id);
+          console.log(`${pc.cyan(target.id.padEnd(14))} https://github.com/${options.repo}/actions/runs/${id}`);
+        } else {
+          console.log(`${pc.cyan(target.id.padEnd(14))} ${pc.yellow('dispatched, but the run did not appear in the listing')}`);
+        }
       }
-    }
-    if (options.dryRun || !options.wait || ids.length === 0) return;
-    console.log(`waiting for ${ids.length} runs`);
-    process.exitCode = await waitFor(ids, options.repo);
-  });
-cli.help();
-cli.parse();
+      if (options.dryRun || !options.wait || ids.length === 0) return;
+      console.log(`waiting for ${ids.length} runs`);
+      process.exitCode = await waitFor(ids, options.repo);
+    });
+  cli.help();
+  cli.parse();
+}
