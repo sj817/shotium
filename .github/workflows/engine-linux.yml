@@ -254,6 +254,9 @@ jobs:
         # One shard at a time, deleting each as it goes: the runner's disk
         # holds the build directory plus one unpacked shard, not plus four.
         run: |
+          # nullglob: with every shard failed before it could upload, the
+          # loop runs zero times and ninja below simply builds everything.
+          shopt -s nullglob
           for tarball in "$GITHUB_WORKSPACE"/shards/*/shard.tar; do
             dir="${tarball%/shard.tar}/out"
             mkdir -p "$dir"
