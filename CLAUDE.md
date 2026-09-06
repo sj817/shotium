@@ -79,7 +79,7 @@ carry the native engine (~22 MB each). The same engine is also a standalone
 executable (`shotium.exe`) and a C ABI (`shotium.dll` / `libshotium.so` /
 `libshotium.dylib`) for Rust, Go, Python and C++ callers.
 
-The tree is a *slice* of Chromium, not a fork: about 29k tracked files out of
+The tree is a *slice* of Chromium, not a fork: about 27k tracked files out of
 upstream's 505k, pinned at the baseline recorded in `docs/upstream-sync.md`
 and trimmed to what the six engine builds read (`pnpm trim-tree`, below).
 Chromium files that remain are edited in place; there is no patch queue for
@@ -493,7 +493,11 @@ Output: `out/Shot/shotium.exe`, `out/Shot/shotium.dll`, `out/Shot/shotium_data.p
   selected, so the union of six graphs still misses `mac/folder.png` on a
   Linux-exported graph and vice versa, and the resource-id allocator's
   depfile skips missing `.grd` files. Rule 9 in `trim-tree.ts` keeps every
-  file a kept `.grd`/`.grdp` names instead. After a trim run
+  file a kept `.grd`/`.grdp` names instead. Two records also outlive the
+  graph in a warm build directory, the deps log and the jumbo units of
+  targets that no longer exist, so only entries whose object `ninja -t
+  graph` reaches count; a plan from an unfiltered warm directory kept
+  1,891 files no build compiles. After a trim run
   `pnpm depfiles:prune` on any warm build directory, or ninja refuses to
   start on a depfile that names a deleted file.
 

@@ -1863,7 +1863,7 @@ sha256 b42f1efe5f7f433cebdd9ec5f362d181
 
 一次冷构建约 4 小时,之后源码改动 25 分钟。
 
-## 22. 按六平台构建图裁树:65,061 → 28,994 个文件
+## 22. 按六平台构建图裁树:65,061 → 27,125 个文件
 
 前面二十一节删的是**组件**:看依赖、拆目标、编译器当裁判。这一节删的是
 **从没被任何构建打开过的文件**——Android 的 Java、iOS 的 Objective-C++、
@@ -1882,10 +1882,10 @@ Python 7.4%),让全树 ripgrep 超时,让每次上游同步多看几万个文件
 |---|---|---|
 | `ninja -t inputs shot shot_c` | 两个目标的传递输入 | — |
 | `ninja -t graph` 的节点标签 | 含 order-only 边 | natvis、GN `inputs` 里的 `.grd`:gn gen 过,`ninja -n` 炸 |
-| `ninja -t deps` | 编译器报告读过的头 | 只在真构建过的目标上有 |
+| `ninja -t deps` | 编译器报告读过的头(只算图里可达的目标,跳过 STALE) | 只在真构建过的目标上有 |
 | 可达边的 depfile | 动作运行时读过的文件 | grit 打进 `.pak` 的 png / css / json / `.xtb`,375 个 |
 | `build.ninja.d` | GN 读过的 `.gn` / `.gni` / `exec_script` | — |
-| jumbo TU 的 `#include` | 被合并进 jumbo 单元的真实源文件 | ninja 只看见合并后的 `.cc` |
+| jumbo TU 的 `#include` | 被合并进 jumbo 单元的真实源文件(只算图里可达的单元) | ninja 只看见合并后的 `.cc` |
 
 `plan` 取六平台并集,和 `git ls-files` 求交,再加几条闭包(含保留 `.py` 的目录
 整棵保留,因为 GN 只记 `exec_script` 的脚本不记它 import 的模块;`build/`
@@ -1895,13 +1895,13 @@ Blink 的 `.idl` 源),其余全删。`apply` 用显式路径列表 `git rm`,不�
 ### 22.2 数字
 
 ```
-git ls-files          65,061 → 28,994(另 42 个 gitlink)
-.cc                   17,488 →  8,068        .java   715 → 0
-.h                    15,915 → 10,554        .mm     430 → 140
-.rs                    6,295 →  3,206        .py   2,423 → 724
-.md                    1,137 →    294        .idl    821 → 680(删的是 json_schema_compiler 的测试)
-DEPS 条目                320 →     56        hooks    53 → 14
-.gitmodules              258 →     43        gitlink 110 → 42
+git ls-files          65,061 → 27,125(另 38 个 gitlink)
+.cc                   17,488 →  7,139        .java   715 → 0
+.h                    15,915 →  9,621        .mm     430 → 140
+.rs                    6,295 →  3,186        .py   2,423 → 727
+.md                    1,137 →    292        .idl    821 → 680(删的是 json_schema_compiler 的测试)
+DEPS 条目                320 →     53        hooks    53 → 14
+.gitmodules              258 →     39        gitlink 110 → 38
 ```
 
 DEPS 由 `scripts/prune-deps.ts` 剪:一个条目留下,当且仅当它路径下有文件出现
@@ -1942,7 +1942,29 @@ buildtools、Linux sysroot、dsymutil),或某个保留的 hook 需要它。`.git
 还有一个 CI 的教训:mac x64 的第一次图上传 `Failed to CreateArtifact:
 ENOTFOUND`,步骤却是绿的。看 `upload the build graph` 的日志,不看它的结论。
 
-### 22.4 验证
+### 22.4 比图活得久的两份记录
+
+六个平台第一次全绿之后,把新导出的六个图再跑一遍 `plan`,删除清单不是零,
+是 1,891 个文件——`content/` 498、`components/` 267、`ui/` 243、`services/` 199、
+`gpu/` 180、`sandbox/` 147。它们之前留下来不是因为哪个构建读了,而是因为
+两份记录比图活得久:
+
+- **ninja 的 deps log** 给每个*曾经*编译过的目标都留着条目。开发机的
+  `out/Shot` 里有 1,414 个目标当前图已经不可达(`obj/content/...`、
+  `obj/gpu/ipc/...`、viz/service),它们的头文件照样算作输入。
+- **jumbo 单元**是 GN 在 gen 时写的,从不删。热目录里 2,801 个单元有 807 个
+  属于早就切掉的 target,它们的 `#include` 列表点名了 929 个没人编译的 `.cc`。
+
+修法在 `trim-tree.ts` 的两头:`export` 只收图里可达的 jumbo 单元;`plan` 读
+`deps.txt` 时只算目标是 `graph.txt` 节点的条目,并跳过 `(STALE)`。全量构建下
+可达的 deps 条目覆盖活着的 jumbo 源的 100%(9,586 / 9,586),所以 CI 那六个
+没过滤的 `jumbo.txt` 可以直接不用。验证还是编译器:保留文件里仍然提到这
+1,891 个路径的只有注释,和 `SkUserConfig.h` 里 `SK_DEBUG` 下的一个 include;
+六个平台的 deps log 都没打开过它们。随之 DEPS 再少四条(zstd、leveldb、
+snappy、google_benchmark),Linux 图里 zstd 只剩一个 `headers.linkdeps` 的
+phony 节点。
+
+### 22.5 验证
 
 本机:Windows x64 `pnpm build:engine --gen-only` + `ninja -n` 干净,arm64 探针
 同样干净。Linux 探针在 Windows 宿主上会停在 `brotli.exe` 一类 host 工具的
