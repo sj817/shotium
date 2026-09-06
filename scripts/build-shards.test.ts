@@ -3,7 +3,12 @@
 // So: round trips, the exact byte layout of one small log, and the two
 // TimeStamp conversions against values read from a real build directory.
 import assert from 'node:assert/strict';
+import {mkdirSync, mkdtempSync, rmSync, statSync, utimesSync, writeFileSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import path from 'node:path';
 import test from 'node:test';
+
+import {execaSync} from 'execa';
 
 import {
   DEPS_HEADER, LOG_HEADER, assignShards, formatDeps, formatLog, fromNinjaTime, parseDeps, parseLog, toNinjaTime,
@@ -93,4 +98,49 @@ test('TimeStamp: POSIX is nanoseconds, Windows is FILETIME shifted by 400 years'
   const record = 8103770429633563n;
   assert.equal(toNinjaTime(fileNs, 'win32'), record);
   assert.equal(fromNinjaTime(record, 'win32'), fileNs);
+});
+
+// A cold run of the sharded build left 438 edges for the final job, and
+// ninja named the reason: liballoc_error_handler_impl.a was 191 ms older
+// than the .o it archives, which no single machine can produce. Every job
+// builds that pair -- it is in the generator closure -- so the merge chose
+// the archive from one job and the object from another, and inverted an
+// order that must hold. This builds the same situation in a temporary
+// directory: a shard whose pair is older than the target's own, which is
+// what the final job looks like once it compiles a slice of its own.
+test('merge: an output copied from a shard cannot end up older than an input kept from another', () => {
+  const root = mkdtempSync(path.join(tmpdir(), 'shot-merge-'));
+  const OBJ = 'obj/rust/allocator/impl.o';
+  const LIB = 'obj/rust/allocator/libimpl.a';
+  // Seconds, not nanoseconds: utimes takes a double, and the point of the
+  // test is the ordering, not the resolution.
+  const write = (dir: string, objAt: number, libAt: number): void => {
+    for (const [rel, when] of [[OBJ, objAt], [LIB, libAt]] as [string, number][]) {
+      const file = path.join(dir, rel);
+      mkdirSync(path.dirname(file), {recursive: true});
+      writeFileSync(file, rel);
+      utimesSync(file, when, when);
+    }
+    const stamp = (rel: string): bigint => toNinjaTime(statSync(path.join(dir, rel), {bigint: true}).mtimeNs);
+    writeFileSync(path.join(dir, '.ninja_log'), formatLog(LOG_HEADER, [
+      {start: 0, end: 1, mtime: stamp(OBJ), output: OBJ, hash: 'aa'},
+      {start: 1, end: 2, mtime: stamp(LIB), output: LIB, hash: 'bb'},
+    ]));
+  };
+
+  const target = path.join(root, 'out');
+  const shard = path.join(root, 'shard');
+  // The shard built the pair a minute before the final job built its own.
+  write(target, 1788718341, 1788718342);
+  write(shard, 1788718280, 1788718281);
+
+  const result = execaSync('node', ['--experimental-strip-types', path.join(import.meta.dirname, 'build-shards.ts'),
+    'merge', '--build-dir', target, '--shard', shard], {reject: false});
+  assert.equal(result.exitCode, 0, result.stderr);
+
+  const objAt = statSync(path.join(target, OBJ), {bigint: true}).mtimeNs;
+  const libAt = statSync(path.join(target, LIB), {bigint: true}).mtimeNs;
+  rmSync(root, {recursive: true, force: true});
+  assert.ok(objAt < libAt,
+    `the archive must stay newer than its object: .o ${objAt} vs .a ${libAt}`);
 });
