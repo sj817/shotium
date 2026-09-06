@@ -68,6 +68,9 @@ const GN_TIME_EXCLUDED = [
   '.ninja_*', '**/*.ninja', 'build.ninja.d', 'build.ninja.stamp', 'args.gn', '.landmines',
   '**/*.o', '**/*.obj', '**/*.pdb', '**/*.a', '**/*.lib', '**/*.rlib', '**/*.so', '**/*.dylib',
   '**/*.dll', '**/*.exe', '**/*.pak', 'thinlto-cache/**',
+  // GN on macOS links the Xcode SDK into the build directory (sdk/xcode_links);
+  // following that would ship the SDK and then try to write into it.
+  'sdk/**',
 ];
 
 interface State {
@@ -102,7 +105,7 @@ async function list(buildDir: string, sinceSeconds?: number): Promise<number> {
   }
   const logged = chosen.size;
   // dot: true -- the Rust sysroot's lib/.empty is a gen-time file too.
-  const extra = await glob('**/*', {cwd: buildDir, onlyFiles: true, dot: true, ignore: GN_TIME_EXCLUDED});
+  const extra = await glob('**/*', {cwd: buildDir, onlyFiles: true, dot: true, followSymbolicLinks: false, ignore: GN_TIME_EXCLUDED});
   let unlogged = 0;
   for (const file of extra) {
     const rel = file.replace(/\\/g, '/');
@@ -132,7 +135,7 @@ async function merge(buildDir: string, shards: string[]): Promise<number> {
   let kept = 0;
   for (const shard of shards) {
     const src = readState(shard);
-    const files = await glob('**/*', {cwd: shard, onlyFiles: true, dot: true, ignore: NINJA_STATE});
+    const files = await glob('**/*', {cwd: shard, onlyFiles: true, dot: true, followSymbolicLinks: false, ignore: [...NINJA_STATE, 'sdk/**']});
     let fromShard = 0;
     for (const file of files) {
       const rel = file.replace(/\\/g, '/');
