@@ -174,7 +174,9 @@ jobs:
         # onto the least-loaded shard, so the shards finish together; every
         # shard computes the same assignment from the same inputs.
         run: |
-          ninja -C out/Shot -t inputs shot shot_c | grep -E '\.o$'             | pnpm --silent build:shards slice --build-dir out/Shot                 --shards '${{ needs.meta.outputs.shard_count }}' --index '${{ matrix.shard }}' > /tmp/slice.txt
+          ninja -C out/Shot -t inputs shot shot_c | grep -E '\.o$' \
+            | pnpm --silent build:shards slice --build-dir out/Shot \
+                --shards '${{ needs.meta.outputs.shard_count }}' --index '${{ matrix.shard }}' > /tmp/slice.txt
 
       - name: ninja
         working-directory: src
