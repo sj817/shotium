@@ -15,7 +15,6 @@
 #include "net/base/network_change_notifier.h"
 #include "net/http/http_cache.h"
 #include "net/http/http_transaction_factory.h"
-#include "net/proxy_resolution/configured_proxy_resolution_service.h"
 #include "net/url_request/url_request_context.h"
 #include "net/url_request/url_request_context_builder.h"
 
@@ -134,11 +133,8 @@ base::expected<std::unique_ptr<ShotNetwork>, std::string> ShotNetwork::Create(
   builder.set_user_agent(MutableUserAgent());
   builder.set_accept_language("en-US,en;q=0.9");
 
-  // Direct, always. Honouring the system proxy means PAC and WPAD -- a script
-  // interpreter and a discovery protocol -- and this binary has no script
-  // interpreter left to run a PAC file in.
-  builder.set_proxy_resolution_service(
-      net::ConfiguredProxyResolutionService::CreateDirect());
+  // HttpStreamFactory selects direct connections. This build has no proxy
+  // configuration service, PAC evaluator, or WPAD discovery.
 
   // HTTP/2 on. HTTP/3 is no longer a runtime choice: //net/quic and quiche's
   // quic/ tree are out of this build, so there is nothing left to enable. A

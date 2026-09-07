@@ -25,7 +25,6 @@
 #include "net/http/http_stream_factory.h"
 #include "net/http/http_stream_pool.h"
 #include "net/http/url_security_manager.h"
-#include "net/proxy_resolution/proxy_resolution_service.h"
 #include "net/socket/client_socket_factory.h"
 #include "net/socket/client_socket_pool_manager_impl.h"
 #include "net/socket/next_proto.h"
@@ -96,7 +95,6 @@ HttpNetworkSessionContext::HttpNetworkSessionContext()
       cert_verifier(nullptr),
       transport_security_state(nullptr),
       sct_auditing_delegate(nullptr),
-      proxy_resolution_service(nullptr),
       proxy_delegate(nullptr),
       http_user_agent_settings(nullptr),
       ssl_config_service(nullptr),
@@ -129,7 +127,6 @@ HttpNetworkSession::HttpNetworkSession(const HttpNetworkSessionParams& params,
       reporting_service_(context.reporting_service),
       network_error_logging_service_(context.network_error_logging_service),
 #endif
-      proxy_resolution_service_(context.proxy_resolution_service),
       ssl_config_service_(context.ssl_config_service),
       http_auth_cache_(
           params.key_auth_cache_server_entries_by_network_anonymization_key),
@@ -160,7 +157,6 @@ HttpNetworkSession::HttpNetworkSession(const HttpNetworkSessionParams& params,
       http_stream_factory_(std::make_unique<HttpStreamFactory>(this)),
       params_(params),
       context_(context) {
-  DCHECK(proxy_resolution_service_);
   DCHECK(ssl_config_service_);
   CHECK(http_server_properties_);
   DCHECK(context_.client_socket_factory);

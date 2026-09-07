@@ -90,7 +90,6 @@
 #include "net/net_buildflags.h"
 #include "net/nqe/network_quality_estimator.h"
 #include "net/proxy_resolution/proxy_info.h"
-#include "net/proxy_resolution/proxy_resolution_service.h"
 #include "net/proxy_resolution/proxy_retry_info.h"
 #include "net/ssl/ssl_cert_request_info.h"
 #include "net/ssl/ssl_config_service.h"

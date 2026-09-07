@@ -18,9 +18,8 @@ class HttpNetworkSession;
 
 class NET_EXPORT HttpNetworkLayer : public HttpTransactionFactory {
  public:
-  // Construct a HttpNetworkLayer with an existing HttpNetworkSession which
-  // contains a valid ProxyResolutionService. The HttpNetworkLayer must be
-  // destroyed before |session|.
+  // Construct a HttpNetworkLayer with an existing HttpNetworkSession.
+  // The HttpNetworkLayer must be destroyed before |session|.
   explicit HttpNetworkLayer(HttpNetworkSession* session);
 
   HttpNetworkLayer(const HttpNetworkLayer&) = delete;

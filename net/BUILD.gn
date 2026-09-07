@@ -762,32 +762,8 @@ component("net") {
     "nqe/throughput_analyzer.cc",
     "nqe/throughput_analyzer.h",
     "nqe/weighted_observation.h",
-    "proxy_resolution/configured_proxy_resolution_request.cc",
-    "proxy_resolution/configured_proxy_resolution_request.h",
-    "proxy_resolution/configured_proxy_resolution_service.cc",
-    "proxy_resolution/configured_proxy_resolution_service.h",
-    "proxy_resolution/dhcp_pac_file_fetcher.cc",
-    "proxy_resolution/dhcp_pac_file_fetcher.h",
-    "proxy_resolution/multi_threaded_proxy_resolver.cc",
-    "proxy_resolution/multi_threaded_proxy_resolver.h",
-    "proxy_resolution/network_delegate_error_observer.cc",
-    "proxy_resolution/network_delegate_error_observer.h",
-    "proxy_resolution/pac_file_data.cc",
-    "proxy_resolution/pac_file_data.h",
-    "proxy_resolution/pac_file_decider.cc",
-    "proxy_resolution/pac_file_decider.h",
-    "proxy_resolution/pac_file_fetcher.cc",
-    "proxy_resolution/pac_file_fetcher.h",
-    "proxy_resolution/pac_file_fetcher_impl.cc",
-    "proxy_resolution/pac_file_fetcher_impl.h",
-    "proxy_resolution/polling_proxy_config_service.cc",
-    "proxy_resolution/polling_proxy_config_service.h",
     "proxy_resolution/proxy_config.cc",
     "proxy_resolution/proxy_config.h",
-    "proxy_resolution/proxy_config_service.cc",
-    "proxy_resolution/proxy_config_service.h",
-    "proxy_resolution/proxy_config_service_fixed.cc",
-    "proxy_resolution/proxy_config_service_fixed.h",
     "proxy_resolution/proxy_config_with_annotation.cc",
     "proxy_resolution/proxy_config_with_annotation.h",
     "proxy_resolution/proxy_host_matching_rules.cc",
@@ -796,21 +772,7 @@ component("net") {
     "proxy_resolution/proxy_info.h",
     "proxy_resolution/proxy_list.cc",
     "proxy_resolution/proxy_list.h",
-    "proxy_resolution/proxy_resolution_request.h",
-    "proxy_resolution/proxy_resolution_service.cc",
-    "proxy_resolution/proxy_resolution_service.h",
-    "proxy_resolution/proxy_resolve_dns_operation.h",
-    "proxy_resolution/proxy_resolver.h",
-    "proxy_resolution/proxy_resolver_error_observer.h",
-    "proxy_resolution/proxy_resolver_factory.cc",
-    "proxy_resolution/proxy_resolver_factory.h",
     "proxy_resolution/proxy_retry_info.h",
-    "proxy_resolution/resolve_host_request.cc",
-    "proxy_resolution/resolve_host_request.h",
-    "proxy_resolution/system_proxy_resolution_request.cc",
-    "proxy_resolution/system_proxy_resolution_request.h",
-    "proxy_resolution/system_proxy_resolution_service.cc",
-    "proxy_resolution/system_proxy_resolution_service.h",
     "shared_dictionary/shared_dictionary.h",
     "shared_dictionary/shared_dictionary_constants.h",
     "shared_dictionary/shared_dictionary_getter.h",
@@ -1176,8 +1138,6 @@ component("net") {
       "cert/cert_verify_proc_android.h",
       "cert/test_root_certs_android.cc",
       "cert/x509_util_android.cc",
-      "proxy_resolution/proxy_config_service_android.cc",
-      "proxy_resolution/proxy_config_service_android.h",
       "ssl/ech_mode_getter_android.cc",
       "ssl/ech_mode_getter_android.h",
       "ssl/ssl_platform_key_android.cc",
@@ -1199,8 +1159,6 @@ component("net") {
       "cert/cert_verify_proc_ios.cc",
       "cert/cert_verify_proc_ios.h",
       "cert/test_root_certs_ios.cc",
-      "proxy_resolution/proxy_config_service_ios.cc",
-      "proxy_resolution/proxy_config_service_ios.h",
     ]
   }
 
@@ -1208,12 +1166,7 @@ component("net") {
     sources += [
       "base/network_change_notifier_linux.cc",
       "base/network_change_notifier_linux.h",
-      "proxy_resolution/proxy_config_service_linux.cc",
-      "proxy_resolution/proxy_config_service_linux.h",
     ]
-    if (use_glib) {
-      deps += [ "//ui/base/glib" ]
-    }
   }
 
   if (is_linux || is_chromeos || is_android) {
@@ -1245,14 +1198,6 @@ component("net") {
       "cert/test_keychain_search_list_mac.cc",
       "cert/test_keychain_search_list_mac.h",
       "cert/test_root_certs_builtin.cc",
-      "proxy_resolution/mac/mac_proxy_resolution_status.h",
-      "proxy_resolution/mac/mac_system_proxy_resolution_request.cc",
-      "proxy_resolution/mac/mac_system_proxy_resolution_request.h",
-      "proxy_resolution/mac/mac_system_proxy_resolution_service.cc",
-      "proxy_resolution/mac/mac_system_proxy_resolution_service.h",
-      "proxy_resolution/mac/mac_system_proxy_resolver.h",
-      "proxy_resolution/proxy_config_service_mac.cc",
-      "proxy_resolution/proxy_config_service_mac.h",
       "ssl/client_cert_identity_mac.cc",
       "ssl/client_cert_identity_mac.h",
       "ssl/client_cert_store_mac.cc",
@@ -1277,10 +1222,6 @@ component("net") {
       "base/platform_mime_util_apple.mm",
       "cert/x509_util_apple.cc",
       "cert/x509_util_apple.h",
-      "proxy_resolution/proxy_chain_util_apple.cc",
-      "proxy_resolution/proxy_chain_util_apple.h",
-      "proxy_resolution/proxy_resolver_apple.cc",
-      "proxy_resolution/proxy_resolver_apple.h",
       "socket/socket_apple.cc",
       "socket/socket_apple.h",
     ]
@@ -1310,22 +1251,6 @@ component("net") {
       "http/http_auth_sspi_win.cc",
       "http/http_auth_sspi_win.h",
       "http/url_security_manager_win.cc",
-      "proxy_resolution/win/dhcp_pac_file_adapter_fetcher_win.cc",
-      "proxy_resolution/win/dhcp_pac_file_adapter_fetcher_win.h",
-      "proxy_resolution/win/dhcp_pac_file_fetcher_win.cc",
-      "proxy_resolution/win/dhcp_pac_file_fetcher_win.h",
-      "proxy_resolution/win/dhcpcsvc_init_win.cc",
-      "proxy_resolution/win/dhcpcsvc_init_win.h",
-      "proxy_resolution/win/proxy_config_service_win.cc",
-      "proxy_resolution/win/proxy_config_service_win.h",
-      "proxy_resolution/win/proxy_resolver_winhttp.cc",
-      "proxy_resolution/win/proxy_resolver_winhttp.h",
-      "proxy_resolution/win/windows_system_proxy_resolution_request.cc",
-      "proxy_resolution/win/windows_system_proxy_resolution_request.h",
-      "proxy_resolution/win/windows_system_proxy_resolution_service.cc",
-      "proxy_resolution/win/windows_system_proxy_resolution_service.h",
-      "proxy_resolution/win/windows_system_proxy_resolver.h",
-      "proxy_resolution/win/winhttp_status.h",
       "socket/tcp_socket_io_completion_port_win.cc",
       "socket/tcp_socket_io_completion_port_win.h",
       "socket/tcp_socket_win.cc",
@@ -1540,13 +1465,11 @@ component("net") {
   if (is_win) {
     libs = [
       "crypt32.lib",
-      "dhcpcsvc.lib",
       "iphlpapi.lib",
       "ncrypt.lib",
       "rpcrt4.lib",
       "secur32.lib",
       "urlmon.lib",
-      "winhttp.lib",
     ]
 
     ldflags = [ "/DELAYLOAD:urlmon.dll" ]
@@ -1983,12 +1906,6 @@ static_library("test_support") {
     "log/test_net_log_util.h",
     "nqe/network_quality_estimator_test_util.cc",
     "nqe/network_quality_estimator_test_util.h",
-    "proxy_resolution/mock_pac_file_fetcher.cc",
-    "proxy_resolution/mock_pac_file_fetcher.h",
-    "proxy_resolution/mock_proxy_resolver.cc",
-    "proxy_resolution/mock_proxy_resolver.h",
-    "proxy_resolution/proxy_config_service_common_unittest.cc",
-    "proxy_resolution/proxy_config_service_common_unittest.h",
     "socket/read_buffering_stream_socket.cc",
     "socket/read_buffering_stream_socket.h",
     "socket/socket_test_util.cc",
@@ -2672,17 +2589,6 @@ target(_test_target_type, "net_unittests") {
     "nqe/observation_buffer_unittest.cc",
     "nqe/socket_watcher_unittest.cc",
     "nqe/throughput_analyzer_unittest.cc",
-    "proxy_resolution/configured_proxy_resolution_service_unittest.cc",
-    "proxy_resolution/multi_threaded_proxy_resolver_unittest.cc",
-    "proxy_resolution/network_delegate_error_observer_unittest.cc",
-    "proxy_resolution/pac_file_decider_unittest.cc",
-    "proxy_resolution/pac_file_fetcher_impl_unittest.cc",
-    "proxy_resolution/parse_proxy_list_fuzzer.cc",
-    "proxy_resolution/proxy_config_unittest.cc",
-    "proxy_resolution/proxy_host_matching_rules_unittest.cc",
-    "proxy_resolution/proxy_info_unittest.cc",
-    "proxy_resolution/proxy_list_unittest.cc",
-    "proxy_resolution/system_proxy_resolution_service_unittest-inl.h",
     "shared_dictionary/shared_dictionary_header_checker_source_stream_unittest.cc",
     "shared_dictionary/shared_dictionary_isolation_key_unittest.cc",
     "shared_dictionary/shared_dictionary_network_transaction_factory_unittest.cc",
@@ -2793,7 +2699,6 @@ target(_test_target_type, "net_unittests") {
       "android/network_library_unittest.cc",
       "android/traffic_stats_unittest.cc",
       "cert/cert_verify_proc_android_unittest.cc",
-      "proxy_resolution/proxy_config_service_android_unittest.cc",
       "ssl/ssl_platform_key_android_unittest.cc",
     ]
   }
@@ -2808,7 +2713,6 @@ target(_test_target_type, "net_unittests") {
   if (is_linux) {
     sources += [
       "base/network_change_notifier_linux_unittest.cc",
-      "proxy_resolution/proxy_config_service_linux_unittest.cc",
     ]
   }
 
@@ -2822,7 +2726,6 @@ target(_test_target_type, "net_unittests") {
   if (is_mac) {
     sources += [
       "cert/internal/trust_store_mac_unittest.cc",
-      "proxy_resolution/mac/mac_system_proxy_resolution_service_unittest.cc",
       "socket/ephemeral_port_randomizer_mac_unittest.cc",
       "ssl/client_cert_store_mac_unittest.cc",
       "ssl/ssl_platform_key_mac_unittest.cc",
@@ -2832,7 +2735,6 @@ target(_test_target_type, "net_unittests") {
   if (is_apple) {
     sources += [
       "cert/x509_util_apple_unittest.cc",
-      "proxy_resolution/proxy_chain_util_apple_unittest.cc",
     ]
   }
 
@@ -2844,10 +2746,6 @@ target(_test_target_type, "net_unittests") {
       "http/http_auth_sspi_win_unittest.cc",
       "http/mock_sspi_library_win.cc",
       "http/mock_sspi_library_win.h",
-      "proxy_resolution/win/dhcp_pac_file_adapter_fetcher_win_unittest.cc",
-      "proxy_resolution/win/dhcp_pac_file_fetcher_win_unittest.cc",
-      "proxy_resolution/win/proxy_config_service_win_unittest.cc",
-      "proxy_resolution/win/windows_system_proxy_resolution_service_unittest.cc",
       "ssl/client_cert_store_win_unittest.cc",
       "ssl/ssl_platform_key_win_unittest.cc",
     ]

@@ -38,8 +38,7 @@
 #include "net/log/net_log_event_type.h"
 #include "net/log/net_log_with_source.h"
 #include "net/proxy_resolution/proxy_info.h"
-#include "net/proxy_resolution/proxy_resolution_request.h"
-#include "net/proxy_resolution/proxy_resolution_service.h"
+#include "net/proxy_resolution/proxy_config_with_annotation.h"
 #include "net/socket/next_proto.h"
 #include "net/spdy/spdy_session.h"
 #include "url/gurl.h"
@@ -190,10 +189,6 @@ HttpStreamFactory::JobController::~JobController() {
   bound_job_ = nullptr;
   main_job_.reset();
   alternative_job_.reset();
-  if (proxy_resolve_request_) {
-    DCHECK_EQ(STATE_RESOLVE_PROXY_COMPLETE, next_state_);
-    proxy_resolve_request_.reset();
-  }
   net_log_.EndEvent(NetLogEventType::HTTP_STREAM_JOB_CONTROLLER);
 }
 
@@ -222,7 +217,7 @@ std::unique_ptr<HttpStreamRequest> HttpStreamFactory::JobController::Start(
       NetLogEventType::HTTP_STREAM_JOB_CONTROLLER_BOUND,
       source_net_log.source());
 
-  RunLoop(OK);
+  StartJobs();
   // `this` may be deleted at this point.
 
   return request;
@@ -238,15 +233,12 @@ void HttpStreamFactory::JobController::Preconnect(int num_streams,
   num_streams_ = num_streams;
   preconnect_callback_ = std::move(callback);
 
-  RunLoop(OK);
+  StartJobs();
   // `this` may be deleted at this point.
 }
 
 LoadState HttpStreamFactory::JobController::GetLoadState() const {
   DCHECK(request_);
-  if (next_state_ == STATE_RESOLVE_PROXY_COMPLETE) {
-    return proxy_resolve_request_->GetLoadState();
-  }
   if (bound_job_) {
     return bound_job_->GetLoadState();
   }
@@ -256,8 +248,6 @@ LoadState HttpStreamFactory::JobController::GetLoadState() const {
   if (alternative_job_) {
     return alternative_job_->GetLoadState();
   }
-  // When proxy resolution fails, there is no job created and
-  // NotifyRequestFailed() is executed one message loop iteration later.
   return LOAD_STATE_IDLE;
 }
 
@@ -425,17 +415,6 @@ void HttpStreamFactory::JobController::OnStreamFailed(Job* job, int status) {
   }
 
   NotifyOnStreamCreationAttempted(status);
-  status = ReconsiderProxyAfterError(job, status);
-  if (next_state_ == STATE_RESOLVE_PROXY_COMPLETE) {
-    if (status == ERR_IO_PENDING) {
-      return;
-    }
-    DCHECK_EQ(OK, status);
-    RunLoop(status);
-    // `this` may be deleted at this point.
-    return;
-  }
-
   HistogramProxyUsed(job->proxy_info(), /*success=*/false);
   delegate_->OnStreamFailed(status, *job->net_error_details(),
                             job->proxy_info(), job->resolve_error_info());
@@ -678,110 +657,23 @@ HttpStreamFactory::JobController::websocket_handshake_stream_create_helper() {
   return request_->websocket_handshake_stream_create_helper();
 }
 
-void HttpStreamFactory::JobController::OnIOComplete(int result) {
-  RunLoop(result);
-  // `this` may be deleted at this point.
-}
-
-void HttpStreamFactory::JobController::RunLoop(int result) {
-  int rv = DoLoop(result);
-  if (rv == ERR_IO_PENDING) {
-    return;
-  }
-
-  if (switched_to_http_stream_pool_) {
-    // The request is handed over to the HttpStreamPool. Complete `this`.
-    DCHECK_EQ(rv, OK);
-    MaybeNotifyFactoryOfCompletion();
-    // `this` is deleted.
-    return;
-  }
-
-  if (rv != OK) {
-    // DoLoop can only fail during proxy resolution step which happens before
-    // any jobs are created. Notify |request_| of the failure one message loop
-    // iteration later to avoid re-entrancy.
-    DCHECK(!main_job_);
-    DCHECK(!alternative_job_);
-    TaskRunner(priority_)->PostTask(
-        FROM_HERE,
-        base::BindOnce(&HttpStreamFactory::JobController::NotifyRequestFailed,
-                       ptr_factory_.GetWeakPtr(), rv));
-  }
-}
-
-int HttpStreamFactory::JobController::DoLoop(int rv) {
-  DCHECK_NE(next_state_, STATE_NONE);
-  do {
-    State state = next_state_;
-    next_state_ = STATE_NONE;
-    switch (state) {
-      case STATE_RESOLVE_PROXY:
-        DCHECK_EQ(OK, rv);
-        rv = DoResolveProxy();
-        break;
-      case STATE_RESOLVE_PROXY_COMPLETE:
-        rv = DoResolveProxyComplete(rv);
-        break;
-      case STATE_CREATE_JOBS:
-        DCHECK_EQ(OK, rv);
-        rv = DoCreateJobs();
-        break;
-      default:
-        NOTREACHED() << "bad state";
-    }
-  } while (next_state_ != STATE_NONE && rv != ERR_IO_PENDING);
-  return rv;
-}
-
-int HttpStreamFactory::JobController::DoResolveProxy() {
-  DCHECK(!proxy_resolve_request_);
-
-  next_state_ = STATE_RESOLVE_PROXY_COMPLETE;
-
-  if (request_info_.load_flags & LOAD_BYPASS_PROXY) {
-    proxy_info_.UseDirect();
-    return OK;
-  }
-
-  CompletionOnceCallback io_callback =
-      base::BindOnce(&JobController::OnIOComplete, base::Unretained(this));
-  return session_->proxy_resolution_service()->ResolveProxy(
-      request_info_.url, request_info_.method,
-      request_info_.network_anonymization_key, request_info_.target_network,
-      &proxy_info_, std::move(io_callback), &proxy_resolve_request_, net_log_,
-      priority_);
-}
-
-int HttpStreamFactory::JobController::DoResolveProxyComplete(int rv) {
-  DCHECK_NE(ERR_IO_PENDING, rv);
-
-  proxy_resolve_request_ = nullptr;
+void HttpStreamFactory::JobController::StartJobs() {
+  // Shot only makes direct connections; no PAC fetch or system proxy discovery.
+  proxy_info_.UseDirect();
+  proxy_info_.set_traffic_annotation(MutableNetworkTrafficAnnotationTag(
+      ProxyConfigWithAnnotation::CreateDirect().traffic_annotation()));
   net_log_.AddEvent(
       NetLogEventType::HTTP_STREAM_JOB_CONTROLLER_PROXY_SERVER_RESOLVED, [&] {
-        return NetLogHttpStreamJobProxyChainResolved(
-            proxy_info_.is_empty() ? ProxyChain() : proxy_info_.proxy_chain());
+        return NetLogHttpStreamJobProxyChainResolved(proxy_info_.proxy_chain());
       });
-
-  if (rv != OK) {
-    return rv;
+  CreateJobs();
+  if (switched_to_http_stream_pool_) {
+    MaybeNotifyFactoryOfCompletion();
+    // The request has moved to HttpStreamPool and this controller is deleted.
   }
-  // Remove unsupported proxies from the list.
-  int supported_proxies = ProxyServer::SCHEME_HTTP | ProxyServer::SCHEME_HTTPS |
-                          ProxyServer::SCHEME_SOCKS4 |
-                          ProxyServer::SCHEME_SOCKS5;
-  proxy_info_.RemoveProxiesWithoutScheme(supported_proxies);
-
-  if (proxy_info_.is_empty()) {
-    // No proxies/direct to choose from.
-    return ERR_NO_SUPPORTED_PROXIES;
-  }
-
-  next_state_ = STATE_CREATE_JOBS;
-  return rv;
 }
 
-int HttpStreamFactory::JobController::DoCreateJobs() {
+void HttpStreamFactory::JobController::CreateJobs() {
   DCHECK(!main_job_);
   DCHECK(!alternative_job_);
   DCHECK(request_info_.url.is_valid());
@@ -801,7 +693,7 @@ int HttpStreamFactory::JobController::DoCreateJobs() {
       proxy_info_.is_direct() && !is_websocket_ &&
       request_info_.socket_tag == SocketTag()) {
     SwitchToHttpStreamPool();
-    return OK;
+    return;
   }
 
   if (is_preconnect_) {
@@ -833,7 +725,7 @@ int HttpStreamFactory::JobController::DoCreateJobs() {
       main_job_ = std::move(preconnect_job);
     }
     main_job_->Preconnect(num_streams_);
-    return OK;
+    return;
   }
   main_job_ = job_factory_->CreateJob(
       this, MAIN, session_, request_info_, priority_, proxy_info_,
@@ -876,7 +768,7 @@ int HttpStreamFactory::JobController::DoCreateJobs() {
   if (main_job_) {
     main_job_->Start(request_->stream_type());
   }
-  return OK;
+  return;
 }
 
 void HttpStreamFactory::JobController::BindJob(Job* job) {
@@ -1045,14 +937,6 @@ void HttpStreamFactory::JobController::MaybeNotifyFactoryOfCompletion() {
   factory_->OnJobControllerComplete(this);
 }
 
-void HttpStreamFactory::JobController::NotifyRequestFailed(int rv) {
-  if (!request_) {
-    return;
-  }
-  delegate_->OnStreamFailed(rv, NetErrorDetails(), ProxyInfo(),
-                            ResolveErrorInfo());
-}
-
 HttpStreamFactory::JobController::AdvertisedAlternativeService
 HttpStreamFactory::JobController::GetAdvertisedAltSvcFor(
     const StreamRequestInfo& request_info,
@@ -1180,54 +1064,6 @@ HttpStreamFactory::JobController::CalculateAlternateProtocolUsage(
   // TODO(crbug.com/40232167): Implement better logic to support uncovered
   // cases.
   return ALTERNATE_PROTOCOL_USAGE_UNSPECIFIED_REASON;
-}
-
-int HttpStreamFactory::JobController::ReconsiderProxyAfterError(Job* job,
-                                                                int error) {
-  // ReconsiderProxyAfterError() should only be called when the last job fails.
-  DCHECK_EQ(1, GetJobCount());
-  DCHECK(!proxy_resolve_request_);
-
-  if (!job->should_reconsider_proxy()) {
-    return error;
-  }
-
-  if (request_info_.load_flags & LOAD_BYPASS_PROXY) {
-    return error;
-  }
-
-  // Clear client certificates for all proxies in the chain.
-  // TODO(crbug.com/40284947): client certificates for multi-proxy
-  // chains are not yet supported, and this is only tested with single-proxy
-  // chains.
-  for (auto& proxy_server : proxy_info_.proxy_chain().proxy_servers()) {
-    if (proxy_server.is_secure_http_like()) {
-      session_->ssl_client_context()->ClearClientCertificate(
-          proxy_server.host_port_pair());
-    }
-  }
-
-  if (!proxy_info_.Fallback(error, net_log_)) {
-    // If there is no more proxy to fallback to, fail the transaction
-    // with the last connection error we got.
-    return error;
-  }
-
-  // Abandon all Jobs and start over.
-  job_bound_ = false;
-  bound_job_ = nullptr;
-  alternative_job_.reset();
-  main_job_.reset();
-  ResetErrorStatusForJobs();
-  // Also resets states that related to the old main job. In particular,
-  // cancels |resume_main_job_callback_| so there won't be any delayed
-  // ResumeMainJob() left in the task queue.
-  resume_main_job_callback_.Cancel();
-  main_job_is_resumed_ = false;
-  main_job_is_blocked_ = false;
-
-  next_state_ = STATE_RESOLVE_PROXY_COMPLETE;
-  return OK;
 }
 
 void HttpStreamFactory::JobController::SwitchToHttpStreamPool() {

@@ -48,7 +48,6 @@
 #include "net/log/net_log.h"
 #include "net/net_buildflags.h"
 #include "net/nqe/network_quality_estimator.h"
-#include "net/proxy_resolution/configured_proxy_resolution_service.h"
 #include "net/shared_dictionary/shared_dictionary_network_transaction_factory.h"
 #include "net/socket/network_binding_client_socket_factory.h"
 #include "net/ssl/ech_mode_getter.h"
@@ -93,8 +92,6 @@ void URLRequestContextBuilder::SetHttpNetworkSessionComponents(
       request_context->transport_security_state();
   session_context->sct_auditing_delegate =
       request_context->sct_auditing_delegate();
-  session_context->proxy_resolution_service =
-      request_context->proxy_resolution_service();
   session_context->proxy_delegate = request_context->proxy_delegate();
   session_context->http_user_agent_settings =
       request_context->http_user_agent_settings();
@@ -409,33 +406,8 @@ std::unique_ptr<URLRequestContext> URLRequestContextBuilder::Build() {
     context->set_sct_auditing_delegate(std::move(sct_auditing_delegate_));
   }
 
-  if (!proxy_resolution_service_) {
-#if !BUILDFLAG(IS_LINUX) && !BUILDFLAG(IS_CHROMEOS) && !BUILDFLAG(IS_ANDROID)
-    // TODO(willchan): Switch to using this code when
-    // ProxyConfigService::CreateSystemProxyConfigService()'s
-    // signature doesn't suck.
-    if (!proxy_config_service_) {
-      proxy_config_service_ =
-          ProxyConfigService::CreateSystemProxyConfigService(
-              base::SingleThreadTaskRunner::GetCurrentDefault().get());
-    }
-#endif  // !BUILDFLAG(IS_LINUX) && !BUILDFLAG(IS_CHROMEOS) &&
-        // !BUILDFLAG(IS_ANDROID)
-    proxy_resolution_service_ = CreateProxyResolutionService(
-        std::move(proxy_config_service_), context.get(),
-        context->host_resolver(), context->network_delegate(),
-        context->net_log(), pac_quick_check_enabled_);
-  }
-  ProxyResolutionService* proxy_resolution_service =
-      proxy_resolution_service_.get();
-  context->set_proxy_resolution_service(std::move(proxy_resolution_service_));
-
   if (proxy_delegate_) {
-    ProxyDelegate* proxy_delegate = proxy_delegate_.get();
     context->set_proxy_delegate(std::move(proxy_delegate_));
-
-    proxy_resolution_service->SetProxyDelegate(proxy_delegate);
-    proxy_delegate->SetProxyResolutionService(proxy_resolution_service);
   }
 
 #if BUILDFLAG(ENABLE_REPORTING)
@@ -566,20 +538,6 @@ std::unique_ptr<URLRequestContext> URLRequestContextBuilder::Build() {
   protocol_handlers_.clear();
   context->set_job_factory(std::move(job_factory));
   return context;
-}
-
-std::unique_ptr<ProxyResolutionService>
-URLRequestContextBuilder::CreateProxyResolutionService(
-    std::unique_ptr<ProxyConfigService> proxy_config_service,
-    URLRequestContext* url_request_context,
-    HostResolver* host_resolver,
-    NetworkDelegate* network_delegate,
-    NetLog* net_log,
-    bool pac_quick_check_enabled) {
-  DCHECK(host_resolver);
-  return ConfiguredProxyResolutionService::CreateUsingSystemProxyResolver(
-      std::move(proxy_config_service), host_resolver, net_log,
-      pac_quick_check_enabled);
 }
 
 }  // namespace net

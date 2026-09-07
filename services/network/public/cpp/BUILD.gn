@@ -209,7 +209,6 @@ component("cpp") {
   deps = [
     "//base",
     "//components/link_header_util",
-    "//components/prefs",
     "//components/url_pattern",
     "//ipc",
     "//net",

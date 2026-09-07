@@ -41,12 +41,13 @@
 | 1 | `71ebd6e65771` | SQL/SQLite/VFS/persistent_cache、脚本缓存主链、PFFFT、GL dummy 和 Vulkan data dependency |
 | 2 | `f48e852f6cb8` | 设备绑定认证/不可导出密钥、脚本缓存传输尾巴、content/google_apis/extensions、Mojo JS/TS 工具和浏览器空壳 |
 | 3 | `7bdc3cfe9b56` | media/device/printing/chrome、blockfile、cc 微基准、媒体公共接口、版本/plist 和 Closure 残留 |
+| 4 | `329c2433b200` | Canvas 绘图链、sandbox/storage 服务空壳、栈/堆采样 profiler；176 张像素一致 |
 
 前三批 Windows EXE/DLL、84 demos、serve/net、Node/daemon/协议、Bilibili 和像素基线检查已完成，详见执行记录；六平台实际编译未完成。没有创建 PR 或发布。
 
 ## 剩余大批次清单
 
-### 4. Canvas、服务空壳、采样 profiler（验证完成，待提交）
+### 4. Canvas、服务空壳、采样 profiler（已提交 329c2433b200）
 
 - [x] Canvas 专用 layout/painter、context host/factory、font/performance cache、资源 provider、GPU bitmap/drawing buffer/shared context 完整删除。
 - [x] 保留最小 HTMLCanvasElement，移除仅脚本可用的 bitmap 尺寸状态、paint 请求队列等残留；保留属性宽高比和实际静态行为。ImageElementBase 的普通图片/SVG 职责保留或迁出 canvas 路径。
@@ -67,9 +68,9 @@
 
 ### 6. 网络公共层、旧 IPC、浏览器服务与存储接口
 
-- [ ] services/network/public/cpp 拆资源加载实际类型，去掉 prefs/浏览器 policy/helper 的无用消费者。
+- [ ] services/network/public/cpp 拆资源加载实际类型，去掉浏览器 policy/helper 的无用消费者；prefs 48 文件及 GN 依赖已在第五批删除并验证。
 - [ ] NetworkContext 全服务、代理/设备/存储等未连接协议与冗余 bindings、service_manager public 服务管理契约、独立 cert_verifier 服务残留。
-- [ ] net PAC/WPAD/DHCP/系统代理：Shot 明确直连，切断后台服务/初始化；保留真正直连和 URLRequestContext 接口。
+- [x] net PAC/WPAD/DHCP/系统代理：解析服务及初始化删除，HTTP 建连直接选择 DIRECT；Windows EXE/DLL 和全部运行/176 张像素回归通过。
 - [ ] Network Quality Estimator、NetLog 导出、持久 cookie/字典/报告存储空壳逐个确认并收窄。
 - [ ] memory cache、First-Party Sets/隔离键/权限等 C 项逐项决策；保留已有缓存语义、安全检查、证书/TLS、HTTP2/HPACK。
 - [ ] ipc 老 Channel/Pickle traits 等沿实际消费者拆除；与 Shot 自有 stdio/daemon 协议区分。
@@ -102,13 +103,14 @@
 
 ## 当前接续信息与验证资产
 
-- 当前分支原为 `release`，最近完成提交 `7bdc3cfe9b56`。继续前以实时 git 状态为准。
+- 当前分支原为 `release`，最近完成提交 `329c2433b200`。继续前以实时 git 状态为准。
 - `out/cut-stage6/manifest.json`、`extra-edits.json`、`tail-edits.json` 记录 Canvas 和本批追加 owned paths；源码已应用，原始 hash 不能用于重放。Canvas 删除清单已扩大到 118 个文件并已实体删除，包括绘图值类型/IDL/生成绑定。`ImageElementBase` 已迁到 core/html 公共位置，canvas 目录仅留标签三文件。
 - 暂停时 editing_utilities 的 Canvas image URL 分支已删除。恢复后集中构建仅先发现 thread_pool_impl 缺 FilePath 的直接 include；已修复，失败 TU syntax-only 1/1 通过。
 - `out/cut-stage7/manifest.json` 和 `out/cut-stage8/manifest.json` 的服务/采样 profiler 修改已核对 hash 并应用，后续另有收尾修复，不能重新覆盖。临时文件直接位于对应 stage 路径下，没有 scratch 子目录。
 - 当前整批已实体删除 225 个普通文件，证明在 `out/cut-batch4/deletion-proof.json`；已去掉 34 个核对过的空目录，sandbox/storage 等根目录消失。GN 通过、7,459 个输入全部存在，IDL 131 个枚举引用/43 个 union 名称引用均无缺失。
-- 本批 Windows EXE/DLL 与完整运行回归已通过，176/176 像素对照一致，待提交。用户要求 jobs 31 后已实试，但多个 Blink animation TU 出现 LLVM OOM，记录 `out/Shot/cut-batch4-j31-oom.log`；已停掉明确属于本任务的 31 并发进程树并确认无遗留编译子进程，自动回退 jobs 8。当前日志 `out/Shot/cut-batch4-build.log`，不要与 OOM 日志混淆。
-- `out/cut-stage9` 目前只有下一批只读调查：prefs 没有外部 C++ include，GN 路径 shot_core → network/public/cpp → prefs；旧 IPC 经网络 traits/url IPC 等被带入。尚未应用该批源码修改。
+- 本批 Windows EXE/DLL 与完整运行回归已通过，176/176 像素对照一致，已提交 329c2433b200。用户要求 jobs 31 后已实试，但多个 Blink animation TU 出现 LLVM OOM，记录 `out/Shot/cut-batch4-j31-oom.log`；已停掉明确属于本任务的 31 并发进程树并确认无遗留编译子进程，自动回退 jobs 8。当前日志 `out/Shot/cut-batch4-build.log`，不要与 OOM 日志混淆。
+- 当前第五批已应用：out/cut-stage9/manifest.json 为 owned edits（含修复后的实际源码，scratch 不可重放），deletions.json / deletion-proof.json 记录 116 个实体删除。PAC/WPAD/系统配置/解析服务及 URLRequestContext/HttpNetworkSession 持有关系已删除，HTTP JobController 直接选直连，prefs 48 文件与 GN 依赖删除；已完成 Windows EXE/DLL（jobs 20）、完整运行检查和 176 张像素回归，待提交第五批。后续继续 jobs 20。
+- 旧 IPC 的网络 ParamTraits 仍被 Mojo [Native] ConnectionInfo / EffectiveConnectionType / URLRequestRedirectInfo 真正序列化使用，不能只删除 include；后续需迁为明确 Mojom 字段/枚举及验证 traits，再拆旧 IPC。相关调查位于 out/cut-stage9。
 - 原始裁剪基线位于 `out/cut-baseline`，是本次任务从已验证 out/Shot 保存的对照资产，不是新编译验证对象。新产物一律用 `out/Shot`。
 - Canvas 八组研究样本位于 `out/canvas-assessment`，保存真实 canvas 与普通元素差异。候选必须与 canvas.png 比，不能与 generic.png 比。
 - 完成批次对照：169 demos + 4 render cases + corpus，174 张基线；补上 Canvas 专项 fixture。已有 Chrome oracle 差异 1.5245%，本次不得新增未解释差异。

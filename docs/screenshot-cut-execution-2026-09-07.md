@@ -112,6 +112,28 @@ EXE SHA256：`2d13e25a508001c0959415e09dc180353846bc0c02aa55fe71c654ae6b9b0288`�
 
 并发记录：用户授权临时 31 并发，实试出现 LLVM OOM 后回退 8 完成本批。用户随后清理后台并指定后续用 20 并发，下一批采用 20；没有修改项目永久默认并发。
 
+## 第五批：直连网络路径和 prefs
+
+实际删除 116 个文件：68 个代理解析/配置服务文件和 48 个 prefs 文件。删除 PAC 下载、WPAD/DHCP、系统代理配置与监听、解析线程、平台 resolver、ProxyResolutionService/Request 接口，以及 URLRequestContext/HttpNetworkSession 的持有、关闭和成功通知链。HTTP JobController 直接选择 DIRECT，删除为异步代理解析和切换代理而设的状态机。同步清除所有平台 GN source 项、prefs 依赖、WinHTTP/DHCP 库链接和仅 Linux 代理配置需要的 GLib 依赖。
+
+正常 DNS 网络变化通知、TLS/系统证书、HTTP2、重定向、缓存、资源加载和对外 worker/daemon/API 保留。剩余 11 个 proxy_resolution 文件是 HTTP/认证匹配或网络 Mojom 还使用的配置、列表、结果及重试值类型；这些协议与代理 HTTP socket 耦合仍在任务清单中，不冒充整个代理相关代码已经清完。
+
+| 验证 | 结果 |
+|---|---|
+| GN / 输入 | 6,868 targets、857 files；7,458 个 shot + shot_c 源码输入全部存在 |
+| Windows EXE / DLL | 均用用户指定 20 并发通过，无 OOM；一处注解显式转换错误修复后 syntax-only 1/1 通过，再完成增量构建 |
+| serve / net | 全部通过，包括拒绝请求、重定向/并发限制、跨 worker 缓存和真实 HTTPS |
+| demos | 84 组通过：62 exact、1 fuzzy、21 smoke |
+| Node / daemon / 协议 | 新 addon 与新 DLL，全部通过 |
+| Bilibili / acceptance | 离线长文全部通过；原有 Chrome oracle 差异约 1.5245%，本批没有扩大 |
+| 原始像素对照 | 176/176 逐像素相同，包括两套 Canvas 样本 |
+| Linux probe | 图解析通过、0 缺 BUILD、0 主仓库缺失输入；3 个未检出 Linux DEPS 和 1 个宿主工具链文件不计作实编译通过 |
+| 六平台实编译 | 尚未完成 |
+
+EXE SHA256：`0f4267166f8bf876b8e18e3f7df6f36359d86635cf525cf4733c37ddc18d8cf4`；DLL SHA256：`a8a6f4655e910b7cf95771c1c87b8b432c4954e430e0db626565d17429bd7ad4`。删除与构建图证据在 `out/cut-stage9`，运行及像素证据在 `out/cut-batch5`，编译日志为 `out/Shot/cut-batch5-*.log`。
+
+下一轮旧 IPC 调查已确认五处 Mojo `[Native]` 声明，其中网络 RedirectInfo 和连接类型通过旧 ParamTraits 序列化。拆旧 IPC 前必须迁移这些协议字段/枚举及验证 traits，不能只删 include 或禁用校验。
+
 ## 后续批次
 
 继续处理网络公共层、输入/合成器/GPU、诊断后端等剩余闭包，完整接续清单见 `screenshot-cut-task.md`。不把待处理或已关闭开关标为彻底删除。

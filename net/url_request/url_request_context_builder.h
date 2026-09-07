@@ -42,8 +42,6 @@
 #include "net/http/http_network_session.h"
 #include "net/net_buildflags.h"
 #include "net/network_error_logging/network_error_logging_service.h"
-#include "net/proxy_resolution/proxy_config_service.h"
-#include "net/proxy_resolution/proxy_resolution_service.h"
 #include "net/reporting/reporting_uploader.h"
 #include "net/socket/client_socket_factory.h"
 #include "net/ssl/ssl_config_service.h"
@@ -191,28 +189,6 @@ class NET_EXPORT URLRequestContextBuilder {
   void set_network_quality_estimator(
       NetworkQualityEstimator* network_quality_estimator) {
     network_quality_estimator_ = network_quality_estimator;
-  }
-
-  // These functions are mutually exclusive.  The ProxyConfigService, if
-  // set, will be used to construct a ConfiguredProxyResolutionService.
-  void set_proxy_config_service(
-      std::unique_ptr<ProxyConfigService> proxy_config_service) {
-    proxy_config_service_ = std::move(proxy_config_service);
-  }
-
-  // Sets whether quick PAC checks are enabled. Defaults to true. Ignored if
-  // a ConfiguredProxyResolutionService is set directly.
-  void set_pac_quick_check_enabled(bool pac_quick_check_enabled) {
-    pac_quick_check_enabled_ = pac_quick_check_enabled;
-  }
-
-  // Sets the proxy service. If one is not provided, by default, uses system
-  // libraries to evaluate PAC scripts, if available (And if not, skips PAC
-  // resolution). Subclasses may override CreateProxyResolutionService for
-  // different default behavior.
-  void set_proxy_resolution_service(
-      std::unique_ptr<ProxyResolutionService> proxy_resolution_service) {
-    proxy_resolution_service_ = std::move(proxy_resolution_service);
   }
 
   void set_ssl_config_service(
@@ -418,19 +394,6 @@ class NET_EXPORT URLRequestContextBuilder {
     dns_platform_attempt_factory_ = std::move(dns_platform_attempt_factory);
   }
 
- protected:
-  // Lets subclasses override ProxyResolutionService creation, using a
-  // ProxyResolutionService that uses the URLRequestContext itself to get PAC
-  // scripts. When this method is invoked, the URLRequestContext is not yet
-  // ready to service requests.
-  virtual std::unique_ptr<ProxyResolutionService> CreateProxyResolutionService(
-      std::unique_ptr<ProxyConfigService> proxy_config_service,
-      URLRequestContext* url_request_context,
-      HostResolver* host_resolver,
-      NetworkDelegate* network_delegate,
-      NetLog* net_log,
-      bool pac_quick_check_enabled);
-
  private:
   // Extracts the component pointers required to construct an HttpNetworkSession
   // and copies them into the HttpNetworkSession::Context used to create the
@@ -482,9 +445,6 @@ class NET_EXPORT URLRequestContextBuilder {
   std::string host_mapping_rules_;
   raw_ptr<HostResolverManager> host_resolver_manager_ = nullptr;
   raw_ptr<HostResolver::Factory> host_resolver_factory_ = nullptr;
-  std::unique_ptr<ProxyConfigService> proxy_config_service_;
-  bool pac_quick_check_enabled_ = true;
-  std::unique_ptr<ProxyResolutionService> proxy_resolution_service_;
   std::unique_ptr<SSLConfigService> ssl_config_service_;
   std::unique_ptr<NetworkDelegate> network_delegate_;
   std::unique_ptr<ProxyDelegate> proxy_delegate_;

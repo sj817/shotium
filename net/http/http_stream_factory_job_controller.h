@@ -25,8 +25,6 @@
 
 namespace net {
 
-class ProxyResolutionRequest;
-
 namespace test {
 
 class JobControllerPeer;
@@ -159,27 +157,15 @@ class HttpStreamFactory::JobController
  private:
   friend class test::JobControllerPeer;
 
-  enum State {
-    STATE_RESOLVE_PROXY,
-    STATE_RESOLVE_PROXY_COMPLETE,
-    STATE_CREATE_JOBS,
-    STATE_NONE
-  };
-
   // Represents an alternative service and its state.
   struct AdvertisedAlternativeService {
     AlternativeServiceInfo info;
     AdvertisedAltSvcState state = AdvertisedAltSvcState::kUnknown;
   };
 
-  void OnIOComplete(int result);
-
-  void RunLoop(int result);
-  int DoLoop(int result);
-  int DoResolveProxy();
-  int DoResolveProxyComplete(int result);
+  void StartJobs();
   // Creates Job(s) for |request_info_|. Job(s) will be owned by |this|.
-  int DoCreateJobs();
+  void CreateJobs();
 
   // Called to bind |job| to the |request_| and orphan all other jobs that are
   // still associated with |request_|.
@@ -216,8 +202,6 @@ class HttpStreamFactory::JobController
       const std::string& histogram_name_for_failure);
 
   void MaybeNotifyFactoryOfCompletion();
-
-  void NotifyRequestFailed(int rv);
 
   // Called to resume the main job with delay. Main job is resumed only when
   // |alternative_job_| has failed or |main_job_wait_time_| elapsed.
@@ -259,14 +243,6 @@ class HttpStreamFactory::JobController
   AlternateProtocolUsage CalculateAlternateProtocolUsage(Job* job) const;
 
   void NotifyOnStreamCreationAttempted(base::optional_ref<int> net_error);
-
-  // Called when a Job encountered a network error that could be resolved by
-  // trying a new proxy configuration. If there is another proxy configuration
-  // to try then this method sets |next_state_| appropriately and returns either
-  // OK or ERR_IO_PENDING depending on whether or not the new proxy
-  // configuration is available synchronously or asynchronously.  Otherwise, the
-  // given error code is simply returned.
-  int ReconsiderProxyAfterError(Job* job, int error);
 
   int GetJobCount() const {
     return (main_job_ ? 1 : 0) + (alternative_job_ ? 1 : 0);
@@ -358,8 +334,6 @@ class HttpStreamFactory::JobController
   // Keeps track of the connection keepalive info.
   std::optional<ConnectionManagementConfig> management_config_;
 
-  State next_state_ = STATE_RESOLVE_PROXY;
-  std::unique_ptr<ProxyResolutionRequest> proxy_resolve_request_;
   const StreamRequestInfo request_info_;
   ProxyInfo proxy_info_;
   const std::vector<SSLConfig::CertAndStatus> allowed_bad_certs_;

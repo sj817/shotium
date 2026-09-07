@@ -54,7 +54,6 @@ class NetworkErrorLoggingService;
 #endif
 class NetworkQualityEstimator;
 class ProxyDelegate;
-class ProxyResolutionService;
 class ProxyChain;
 #if BUILDFLAG(ENABLE_REPORTING)
 class ReportingService;
@@ -169,7 +168,6 @@ struct NET_EXPORT HttpNetworkSessionContext {
   raw_ptr<CertVerifier> cert_verifier;
   raw_ptr<TransportSecurityState> transport_security_state;
   raw_ptr<SCTAuditingDelegate> sct_auditing_delegate;
-  raw_ptr<ProxyResolutionService> proxy_resolution_service;
   raw_ptr<ProxyDelegate> proxy_delegate;
   raw_ptr<const HttpUserAgentSettings> http_user_agent_settings;
   raw_ptr<SSLConfigService> ssl_config_service;
@@ -216,9 +214,6 @@ class NET_EXPORT HttpNetworkSession : public base::PowerSuspendObserver {
                                   const ProxyChain& proxy_chain);
 
   CertVerifier* cert_verifier() { return cert_verifier_; }
-  ProxyResolutionService* proxy_resolution_service() {
-    return proxy_resolution_service_;
-  }
   SSLConfigService* ssl_config_service() { return ssl_config_service_; }
   WebSocketEndpointLockManager* websocket_endpoint_lock_manager() {
     return &websocket_endpoint_lock_manager_;
@@ -301,7 +296,6 @@ class NET_EXPORT HttpNetworkSession : public base::PowerSuspendObserver {
   const raw_ptr<ReportingService> reporting_service_;
   const raw_ptr<NetworkErrorLoggingService> network_error_logging_service_;
 #endif
-  const raw_ptr<ProxyResolutionService> proxy_resolution_service_;
   const raw_ptr<SSLConfigService> ssl_config_service_;
 
   HttpAuthCache http_auth_cache_;

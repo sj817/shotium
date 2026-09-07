@@ -43,7 +43,6 @@
 #include "net/log/net_log_values.h"
 #include "net/log/net_log_with_source.h"
 #include "net/proxy_resolution/proxy_config.h"
-#include "net/proxy_resolution/proxy_resolution_service.h"
 #include "net/proxy_resolution/proxy_retry_info.h"
 #include "net/socket/ssl_client_socket.h"
 #include "net/url_request/url_request.h"
@@ -315,8 +314,12 @@ NET_EXPORT base::DictValue GetNetInfo(URLRequestContext* context) {
   // May only be called on the context's thread.
   context->AssertCalledOnValidThread();
 
-  base::DictValue net_info_dict =
-      context->proxy_resolution_service()->GetProxyNetLogValues();
+  base::DictValue net_info_dict;
+  base::DictValue proxy_settings;
+  proxy_settings.Set("original", ProxyConfig::CreateDirect().ToValue());
+  proxy_settings.Set("effective", ProxyConfig::CreateDirect().ToValue());
+  net_info_dict.Set(kNetInfoProxySettings, std::move(proxy_settings));
+  net_info_dict.Set(kNetInfoBadProxies, base::ListValue());
 
   // Log Host Resolver info.
   {

@@ -24,7 +24,6 @@
 #include "net/http/http_stream_pool_group.h"
 #include "net/log/net_log_source_type.h"
 #include "net/log/net_log_with_source.h"
-#include "net/proxy_resolution/proxy_resolution_service.h"
 #include "net/socket/connection_attempts.h"
 #include "net/socket/next_proto.h"
 #include "net/socket/stream_socket.h"
@@ -151,10 +150,6 @@ void HttpStreamPool::Job::OnStreamReady(
   }
 
   negotiated_protocol_ = negotiated_protocol;
-  attempt_manager_->group()
-      ->http_network_session()
-      ->proxy_resolution_service()
-      ->ReportSuccess(delegate_->proxy_info());
   OnDone(OK);
   delegate_->OnStreamReady(this, std::move(stream), negotiated_protocol,
                            session_source);

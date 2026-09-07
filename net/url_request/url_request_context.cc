@@ -35,7 +35,6 @@
 #include "net/log/net_log.h"
 #include "net/log/net_log_source.h"
 #include "net/nqe/network_quality_estimator.h"
-#include "net/proxy_resolution/proxy_resolution_service.h"
 #include "net/socket/client_socket_factory.h"
 #include "net/socket/ssl_client_socket_impl.h"
 #include "net/ssl/ssl_config_service.h"
@@ -72,21 +71,6 @@ URLRequestContext::~URLRequestContext() {
   if (reporting_service())
     reporting_service()->OnShutdown();
 #endif  // BUILDFLAG(ENABLE_REPORTING)
-
-  // Shut down the ProxyResolutionService, as it may have pending URLRequests
-  // using this context. Since this cancels requests, it's not safe to
-  // subclass this, as some parts of the URLRequestContext may then be torn
-  // down before this cancels the ProxyResolutionService's URLRequests.
-  proxy_resolution_service()->OnShutdown();
-
-  // If a ProxyDelegate is set then the builder gave it a pointer to the
-  // ProxyResolutionService, so clear that here to avoid having a dangling
-  // pointer. There's no need to clear the ProxyResolutionService's pointer to
-  // ProxyDelegate because the member destruction order ensures that
-  // ProxyResolutionService is destroyed first.
-  if (proxy_delegate()) {
-    proxy_delegate()->SetProxyResolutionService(nullptr);
-  }
 
   DCHECK(host_resolver());
   host_resolver()->OnShutdown();
@@ -183,10 +167,6 @@ void URLRequestContext::set_host_resolver(
 void URLRequestContext::set_cert_verifier(
     std::unique_ptr<CertVerifier> cert_verifier) {
   cert_verifier_ = std::move(cert_verifier);
-}
-void URLRequestContext::set_proxy_resolution_service(
-    std::unique_ptr<ProxyResolutionService> proxy_resolution_service) {
-  proxy_resolution_service_ = std::move(proxy_resolution_service);
 }
 void URLRequestContext::set_proxy_delegate(
     std::unique_ptr<ProxyDelegate> proxy_delegate) {

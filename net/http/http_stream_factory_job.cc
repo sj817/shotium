@@ -42,7 +42,6 @@
 #include "net/log/net_log_event_type.h"
 #include "net/log/net_log_source.h"
 #include "net/log/net_log_source_type.h"
-#include "net/proxy_resolution/proxy_resolution_service.h"
 #include "net/socket/client_socket_handle.h"
 #include "net/socket/client_socket_pool_manager.h"
 #include "net/socket/connect_job.h"
@@ -1065,7 +1064,6 @@ int HttpStreamFactory::Job::DoCreateStreamComplete(int result) {
     return result;
   }
 
-  session_->proxy_resolution_service()->ReportSuccess(proxy_info_);
   next_state_ = STATE_NONE;
   return OK;
 }
