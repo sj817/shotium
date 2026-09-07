@@ -138,11 +138,6 @@ sk_sp<SkImage> PaintImage::GetSwSkImage() const {
   return cached_sk_image_;
 }
 
-sk_sp<SkImage> PaintImage::GetAcceleratedSkImage() const {
-  DCHECK(!cached_sk_image_ || cached_sk_image_->isTextureBacked());
-  return cached_sk_image_;
-}
-
 bool PaintImage::readPixels(const SkImageInfo& dst_info,
                             void* dst_pixels,
                             size_t dst_row_bytes,
@@ -327,13 +322,6 @@ PaintImage::ContentId PaintImage::GetContentIdForFrame(
   return content_id_;
 }
 
-bool PaintImage::IsTextureBacked() const {
-  if (cached_sk_image_) {
-    return cached_sk_image_->isTextureBacked();
-  }
-  return false;
-}
-
 gfx::Size PaintImage::GetSize(AuxImage aux_image) const {
   return gfx::SkISizeToSize(GetSkISize(aux_image));
 }
@@ -412,7 +400,7 @@ sk_sp<SkImage> PaintImage::GetSkImageForFrame(
     size_t index,
     GeneratorClientId client_id) const {
   DCHECK_LT(index, FrameCount());
-  DCHECK(!IsTextureBacked());
+
 
   // |client_id| and |index| are only relevant for generator backed images which
   // perform lazy decoding and can be multi-frame.

@@ -76,7 +76,6 @@
 // and std::max() is constexpr only since the c++14 stdlib.
 static_assert(std::max(3,4) == 4);
 
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 SK_MAKE_BITMASK_OPS(SkCanvas::PredrawFlags)
@@ -1602,7 +1601,6 @@ bool SkCanvas::internalQuickReject(const SkRect& bounds, const SkPaint& paint,
     return false;
 }
 
-
 SkRect SkCanvas::getLocalClipBounds() const {
     SkIRect ibounds = this->getDeviceClipBounds();
     if (ibounds.isEmpty()) {
@@ -1749,14 +1747,6 @@ void SkCanvas::drawVertices(const SkVertices* vertices, SkBlendMode mode, const 
     }
 #endif
     this->onDrawVerticesObject(vertices, mode, paint);
-}
-
-void SkCanvas::drawMesh(const SkMesh& mesh, sk_sp<SkBlender> blender, const SkPaint& paint) {
-    TRACE_EVENT0("skia", TRACE_FUNC);
-    if (!blender) {
-        blender = SkBlender::Mode(SkBlendMode::kModulate);
-    }
-    this->onDrawMesh(mesh, std::move(blender), paint);
 }
 
 void SkCanvas::drawPath(const SkPath& path, const SkPaint& paint) {
@@ -2563,14 +2553,6 @@ void SkCanvas::onDrawVerticesObject(const SkVertices* vertices, SkBlendMode bmod
     }
 }
 
-void SkCanvas::onDrawMesh(const SkMesh& mesh, sk_sp<SkBlender> blender, const SkPaint& paint) {
-    SkPaint simplePaint = clean_paint_for_drawVertices(paint);
-    auto layer = this->aboutToDraw(simplePaint, nullptr);
-    if (layer) {
-        this->topDevice()->drawMesh(mesh, std::move(blender), paint);
-    }
-}
-
 void SkCanvas::drawPatch(const SkPoint cubics[12], const SkColor colors[4],
                          const SkPoint texCoords[4], SkBlendMode bmode,
                          const SkPaint& paint) {
@@ -2831,7 +2813,6 @@ void SkCanvas::drawArc(const SkRect& oval, SkScalar startAngle,
 ///////////////////////////////////////////////////////////////////////////////
 #ifdef SK_DISABLE_SKPICTURE
 void SkCanvas::drawPicture(const SkPicture* picture, const SkMatrix* matrix, const SkPaint* paint) {}
-
 
 void SkCanvas::onDrawPicture(const SkPicture* picture, const SkMatrix* matrix,
                              const SkPaint* paint) {}

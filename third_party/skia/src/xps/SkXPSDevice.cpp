@@ -1131,10 +1131,6 @@ void SkXPSDevice::drawVertices(const SkVertices*, sk_sp<SkBlender>, const SkPain
     //TODO
 }
 
-void SkXPSDevice::drawMesh(const SkMesh&, sk_sp<SkBlender>, const SkPaint&) {
-    // TODO
-}
-
 void SkXPSDevice::drawPaint(const SkPaint& origPaint) {
     const SkRect r = SkRect::MakeSize(this->fCurrentCanvasSize);
 

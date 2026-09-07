@@ -16,7 +16,6 @@
 #include "include/core/SkImageFilter.h"
 #include "include/core/SkM44.h"
 #include "include/core/SkMatrix.h"
-#include "include/core/SkMesh.h"
 #include "include/core/SkPaint.h"
 #include "include/core/SkPath.h"
 #include "include/core/SkPicture.h"
@@ -90,12 +89,10 @@ namespace SkRecords {
     M(DrawTextBlob)                                                 \
     M(DrawAtlas)                                                    \
     M(DrawVertices)                                                 \
-    M(DrawMesh)                                                     \
     M(DrawShadowRec)                                                \
     M(DrawAnnotation)                                               \
     M(DrawEdgeAAQuad)                                               \
     M(DrawEdgeAAImageSet)
-
 
 // Defines SkRecords::Type, an enum of all record types.
 #define ENUM(T) T##_Type,
@@ -330,10 +327,6 @@ RECORD(DrawVertices, kDraw_Tag|kHasPaint_Tag|kMultiDraw_Tag,
         SkPaint paint;
         sk_sp<SkVertices> vertices;
         SkBlendMode bmode)
-RECORD(DrawMesh, kDraw_Tag|kHasPaint_Tag|kMultiDraw_Tag,
-       SkPaint paint;
-       SkMesh mesh;
-       sk_sp<SkBlender> blender)
 RECORD(DrawShadowRec, kDraw_Tag,
        SkPath path;
        SkDrawShadowRec rec)

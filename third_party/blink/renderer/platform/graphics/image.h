@@ -110,7 +110,6 @@ class PLATFORM_EXPORT Image : public ThreadSafeRefCounted<Image> {
   virtual bool FirstFrameIsComplete() { return false; }
   virtual bool IsLazyDecoded() { return false; }
   virtual size_t FrameCount() { return 0; }
-  virtual bool IsTextureBacked() const { return false; }
 
   // Derived classes should override this if they can assure that the image
   // itself contains only resources from its _own_ security origin. This is not

@@ -45,7 +45,6 @@ struct SkPoint;
 struct SkRSXform;
 struct SkRect;
 
-
 class SK_API SkNWayCanvas : public SkCanvasVirtualEnforcer<SkNoDrawCanvas> {
 public:
     SkNWayCanvas(int width, int height);
@@ -93,7 +92,6 @@ protected:
                              const SkPaint*) override;
     void onDrawAtlas2(const SkImage*, const SkRSXform[], const SkRect[], const SkColor[], int,
                   SkBlendMode, const SkSamplingOptions&, const SkRect*, const SkPaint*) override;
-    void onDrawMesh(const SkMesh&, sk_sp<SkBlender>, const SkPaint&) override;
 
     void onDrawVerticesObject(const SkVertices*, SkBlendMode, const SkPaint&) override;
     void onDrawShadowRec(const SkPath&, const SkDrawShadowRec&) override;
@@ -117,6 +115,5 @@ protected:
 private:
     using INHERITED = SkCanvasVirtualEnforcer<SkNoDrawCanvas>;
 };
-
 
 #endif

@@ -651,7 +651,7 @@ ImagePaintFilter::ImagePaintFilter(PaintImage image,
                                    const SkRect& src_rect,
                                    const SkRect& dst_rect,
                                    PaintFlags::FilterQuality filter_quality)
-    : PaintFilter(kType, nullptr, !image.IsTextureBacked()),
+    : PaintFilter(kType, nullptr, /*has_discardable_images=*/true),
       image_(std::move(image)),
       src_rect_(src_rect),
       dst_rect_(dst_rect),

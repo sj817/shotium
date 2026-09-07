@@ -556,10 +556,6 @@ void SkBitmapDevice::drawVertices(const SkVertices* vertices,
     BDDraw(this).drawVertices(vertices, std::move(blender), paint, skipColorXform);
 }
 
-void SkBitmapDevice::drawMesh(const SkMesh&, sk_sp<SkBlender>, const SkPaint&) {
-    // TODO: Implement, maybe with a subclass of BitmapDevice that has SkSL support.
-}
-
 void SkBitmapDevice::drawAtlas(SkSpan<const SkRSXform> xform,
                                SkSpan<const SkRect> tex,
                                SkSpan<const SkColor> colors,
@@ -577,8 +573,6 @@ void SkBitmapDevice::drawSpecial(SkSpecialImage* src,
                                  SkCanvas::SrcRectConstraint) {
     SkASSERT(!paint.getImageFilter());
     SkASSERT(!paint.getMaskFilter());
-    SkASSERT(!src->isGaneshBacked());
-    SkASSERT(!src->isGraphiteBacked());
 
     SkBitmap resultBM;
     if (SkSpecialImages::AsBitmap(src, &resultBM)) {
@@ -596,8 +590,6 @@ void SkBitmapDevice::drawCoverageMask(const SkSpecialImage* mask,
                                       const SkMatrix& maskToDevice,
                                       const SkSamplingOptions& sampling,
                                       const SkPaint& paint) {
-    SkASSERT(!mask->isGaneshBacked());
-    SkASSERT(!mask->isGraphiteBacked());
 
     SkBitmap maskBM;
     if (!SkSpecialImages::AsBitmap(mask, &maskBM)) {

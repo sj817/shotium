@@ -40,7 +40,6 @@
 #include <new>
 
 class SkBlender;
-class SkMesh;
 class SkPath;
 class SkRRect;
 class SkRegion;
@@ -287,12 +286,6 @@ void SkRecordCanvas::onDrawVerticesObject(const SkVertices* vertices,
                                           const SkPaint& paint) {
     this->append<SkRecords::DrawVertices>(
             paint, sk_ref_sp(const_cast<SkVertices*>(vertices)), bmode);
-}
-
-void SkRecordCanvas::onDrawMesh(const SkMesh& mesh,
-                                sk_sp<SkBlender> blender,
-                                const SkPaint& paint) {
-    this->append<SkRecords::DrawMesh>(paint, mesh, std::move(blender));
 }
 
 void SkRecordCanvas::onDrawPatch(const SkPoint cubics[12],

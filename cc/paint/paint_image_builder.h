@@ -44,7 +44,7 @@ class CC_PAINT_EXPORT PaintImageBuilder {
 
   PaintImageBuilder&& set_image(sk_sp<SkImage> sk_image,
                                 PaintImage::ContentId content_id) {
-    DCHECK(!sk_image->isTextureBacked());
+
     paint_image_.sk_image_ = std::move(sk_image);
     paint_image_.content_id_ = content_id;
     return std::move(*this);

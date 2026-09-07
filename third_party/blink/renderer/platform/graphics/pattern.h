@@ -69,7 +69,6 @@ class PLATFORM_EXPORT Pattern {
   bool IsRepeatY() const { return repeat_mode_ & kRepeatModeY; }
   bool IsRepeatXY() const { return repeat_mode_ == kRepeatModeXY; }
 
-  virtual bool IsTextureBacked() const { return false; }
 
  protected:
   explicit Pattern(RepeatMode);

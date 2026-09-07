@@ -286,11 +286,6 @@ void SkCaptureCanvas::onDrawAtlas2(const SkImage* image,
     }
 }
 
-void SkCaptureCanvas::onDrawMesh(const SkMesh& mesh, sk_sp<SkBlender> blender, const SkPaint& paint) {
-    this->pollCapturingStatus();
-    this->SkNWayCanvas::onDrawMesh(mesh, blender, paint);
-}
-
 void SkCaptureCanvas::onDrawGlyphRunList(const sktext::GlyphRunList& list, const SkPaint& paint) {
     this->pollCapturingStatus();
     this->SkNWayCanvas::onDrawGlyphRunList(list, paint);

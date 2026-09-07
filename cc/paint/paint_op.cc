@@ -324,7 +324,7 @@ std::string PaintOpTypeToString(PaintOpType type) {
 
 bool IsDiscardableImage(const PaintImage& image,
                         gfx::ContentColorUsage* content_color_usage) {
-  if (!image || image.IsTextureBacked()) {
+  if (!image) {
     return false;
   }
   if (content_color_usage) {
@@ -505,12 +505,7 @@ void DrawImageOp::RasterWithFlags(const DrawImageOp* op,
         decoded_image.filter_quality(),
         MatrixToScalingOperation(canvas->getLocalToDeviceAs3x3()));
   } else {
-    if (op->image.IsTextureBacked()) {
-      sk_image = op->image.GetAcceleratedSkImage();
-    }
-    if (!sk_image) {
-      sk_image = op->image.GetSwSkImage();
-    }
+    sk_image = op->image.GetSwSkImage();
     gainmap_sk_image = op->image.gainmap_sk_image_;
     if (!IsScaleAdjustmentIdentity(op->scale_adjustment)) {
       save_restore.emplace(canvas, /*doSave=*/true);
@@ -599,12 +594,7 @@ void DrawImageRectOp::RasterWithFlags(const DrawImageRectOp* op,
     PaintFlags::FilterQuality quality = sampling_to_quality(op->sampling);
     sampling = PaintFlags::FilterQualityToSkSamplingOptions(quality, scale);
 
-    if (op->image.IsTextureBacked()) {
-      sk_image = op->image.GetAcceleratedSkImage();
-    }
-    if (!sk_image) {
-      sk_image = op->image.GetSwSkImage();
-    }
+    sk_image = op->image.GetSwSkImage();
     gainmap_sk_image = op->image.gainmap_sk_image_;
   }
   if (!sk_image) {

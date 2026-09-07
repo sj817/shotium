@@ -40,11 +40,6 @@ Tiling::Tiling(const SkRect& dest_rect,
     float tile_dest_width = dest_rect_.width();
     float tile_dest_height = dest_rect_.height();
     for (size_t i = 0; i < source_count_; ++i) {
-      // Source images that are already textures don't need to be tiled for
-      // upload.
-      if (source_images_[i]->isTextureBacked()) {
-        continue;
-      }
 
       // Find the dest tile width and height that corresponds to sampling
       // `source_max_size` pixels. In this computation, add a padding of 2
@@ -103,14 +98,8 @@ void Tiling::GetTileRect(
 
     const auto& image = source_images_[i];
 
-    // If the image is texture-backed, then use it directly.
-    if (image->isTextureBacked()) {
-      tile_source_rects[i] = source_rect;
-      tile_source_subset_rects[i] = std::nullopt;
-      continue;
-    }
 
-    // Otherwise, find the subset of the image that could be sampled, and report
+    // Find the subset of the image that could be sampled, and report
     // that subset rectangle and the source rectangle to sample it.
     SkIRect subset_rect = SkIRect::MakeEmpty();
     source_rect.roundOut(&subset_rect);

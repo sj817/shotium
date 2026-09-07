@@ -16,7 +16,6 @@ class PLATFORM_EXPORT ImagePattern final : public Pattern {
  public:
   static std::unique_ptr<ImagePattern> Create(scoped_refptr<Image>, RepeatMode);
 
-  bool IsTextureBacked() const override;
 
  protected:
   sk_sp<PaintShader> CreateShader(const SkMatrix&) const override;

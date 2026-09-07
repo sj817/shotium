@@ -98,7 +98,6 @@ public:
                        SkCanvas::SrcRectConstraint) override;
 
     void drawVertices(const SkVertices*, sk_sp<SkBlender>, const SkPaint&, bool) override;
-    void drawMesh(const SkMesh&, sk_sp<SkBlender>, const SkPaint&) override;
 
     void drawDevice(SkDevice*, const SkSamplingOptions&, const SkPaint&) override;
 

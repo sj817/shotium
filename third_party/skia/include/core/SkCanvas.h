@@ -57,7 +57,6 @@ class SkDevice;
 class SkDrawable;
 class SkFont;
 class SkImage;
-class SkMesh;
 class SkPaintFilterCanvas;
 class SkPath;
 class SkPicture;
@@ -736,7 +735,6 @@ public:
                      const SkColorSpace* colorSpace, SaveLayerFlags saveLayerFlags)
             : SaveLayerRec(bounds, paint, backdrop, colorSpace, 1.f, SkTileMode::kClamp,
                            saveLayerFlags, /*filters=*/{}) {}
-
 
         /** Sets fBounds, fBackdrop, fBackdropTileMode, fColorSpace, and fSaveLayerFlags.
 
@@ -2083,28 +2081,6 @@ public:
     */
     void drawVertices(const sk_sp<SkVertices>& vertices, SkBlendMode mode, const SkPaint& paint);
 
-    /**
-        Experimental, under active development, and subject to change without notice.
-
-        Draws a mesh using a user-defined specification (see SkMeshSpecification). Requires
-        a GPU backend or SkSL to be compiled in.
-
-        SkBlender is ignored if SkMesh's specification does not output fragment shader color.
-        Otherwise, it combines
-            - the SkShader if SkPaint contains SkShader
-            - or the opaque SkPaint color if SkPaint does not contain SkShader
-        as the src of the blend and the mesh's fragment color as the dst.
-
-        SkMaskFilter, SkPathEffect, and antialiasing on SkPaint are ignored.
-
-        @param mesh      the mesh vertices and compatible specification.
-        @param blender   combines vertices colors with SkShader if present or SkPaint opaque color
-                         if not. Ignored if the custom mesh does not output color. Defaults to
-                         SkBlendMode::kModulate if nullptr.
-        @param paint     specifies the SkShader, used as SkVertices texture, may be nullptr
-    */
-    void drawMesh(const SkMesh& mesh, sk_sp<SkBlender> blender, const SkPaint& paint);
-
     /** Draws a Coons patch: the interpolation of four cubics with shared corners,
         associating a color, and optionally a texture SkPoint, with each corner.
 
@@ -2283,7 +2259,6 @@ public:
 
     void private_draw_shadow_rec(const SkPath&, const SkDrawShadowRec&);
 
-
 protected:
     // default impl defers to getDevice()->newSurface(info)
     virtual sk_sp<SkSurface> onNewSurface(const SkImageInfo& info, const SkSurfaceProps& props);
@@ -2358,7 +2333,6 @@ protected:
 
     virtual void onDrawVerticesObject(const SkVertices* vertices, SkBlendMode mode,
                                       const SkPaint& paint);
-    virtual void onDrawMesh(const SkMesh&, sk_sp<SkBlender>, const SkPaint&);
     virtual void onDrawAnnotation(const SkRect& rect, const char key[], SkData* value);
     virtual void onDrawShadowRec(const SkPath&, const SkDrawShadowRec&);
 
@@ -2382,8 +2356,6 @@ protected:
     virtual void onResetClip();
 
     virtual void onDiscard();
-
-
 
 private:
     enum class PredrawFlags : unsigned {
@@ -2549,7 +2521,6 @@ private:
     SkCanvas& operator=(const SkCanvas&) = delete;
 
     friend class SkPicturePlayback;
-
 
     /** Experimental
      *  Saves the specified subset of the current pixels in the current layer,

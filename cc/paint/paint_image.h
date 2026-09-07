@@ -330,7 +330,6 @@ class CC_PAINT_EXPORT PaintImage {
   bool IsLazyGenerated() const {
     return paint_record_ || paint_image_generator_;
   }
-  bool IsTextureBacked() const;
   int width() const { return GetSkImageInfo().width(); }
   int height() const { return GetSkImageInfo().height(); }
   SkColorSpace* color_space() const {
@@ -423,8 +422,6 @@ class CC_PAINT_EXPORT PaintImage {
                          GeneratorClientId client_id) const;
   void CreateSkImage();
 
-  // Only supported in non-OOPR contexts by friend callers.
-  sk_sp<SkImage> GetAcceleratedSkImage() const;
 
   // GetSkImage() is being deprecated, see crbug.com/1031051.
   // Prefer using GetSwSkImage() or GetSkImageInfo().

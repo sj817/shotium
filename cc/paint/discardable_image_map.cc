@@ -248,8 +248,6 @@ class DiscardableImageMap::Generator {
                 const gfx::Rect& image_rect,
                 const SkM44& matrix,
                 PaintFlags::FilterQuality filter_quality) {
-    if (paint_image.IsTextureBacked())
-      return;
 
     SkIRect src_irect;
     src_rect.roundOut(&src_irect);

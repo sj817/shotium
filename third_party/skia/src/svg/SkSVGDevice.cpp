@@ -64,7 +64,6 @@
 using namespace skia_private;
 
 class SkBlender;
-class SkMesh;
 class SkVertices;
 struct SkSamplingOptions;
 
@@ -544,8 +543,6 @@ static sk_sp<SkData> EncodePng(SkImage* image, SkSVGCanvas::EncodePngCallback pn
 sk_sp<SkData> AsDataUri(SkImage* image, SkSVGCanvas::EncodePngCallback pngEncoder) {
     static constexpr char jpgDataPrefix[] = "data:image/jpeg;base64,";
     static constexpr char pngDataPrefix[] = "data:image/png;base64,";
-
-    SkASSERT(!image->isTextureBacked());
 
     const char* selectedPrefix = pngDataPrefix;
     size_t selectedPrefixLength = sizeof(pngDataPrefix);
@@ -1220,9 +1217,5 @@ void SkSVGDevice::onDrawGlyphRunList(SkCanvas* canvas,
 }
 
 void SkSVGDevice::drawVertices(const SkVertices*, sk_sp<SkBlender>, const SkPaint&, bool) {
-    // todo
-}
-
-void SkSVGDevice::drawMesh(const SkMesh&, sk_sp<SkBlender>, const SkPaint&) {
     // todo
 }

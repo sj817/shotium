@@ -57,13 +57,12 @@ ImageDataBuffer::ImageDataBuffer(scoped_refptr<StaticBitmapImage> image) {
 #if defined(MEMORY_SANITIZER)
   // Test if software SKImage has an initialized pixmap.
   SkPixmap pixmap;
-  if (!paint_image.IsTextureBacked() &&
-      paint_image.GetSwSkImage()->peekPixels(&pixmap)) {
+  if (paint_image.GetSwSkImage()->peekPixels(&pixmap)) {
     MSAN_CHECK_MEM_IS_INITIALIZED(pixmap.addr(), pixmap.computeByteSize());
   }
 #endif
 
-  if (paint_image.IsTextureBacked() || paint_image.IsLazyGenerated() ||
+  if (paint_image.IsLazyGenerated() ||
       paint_image_info.alphaType() != kUnpremul_SkAlphaType) {
     // Unpremul is handled upfront, using readPixels, which will correctly clamp
     // premul color values that would otherwise cause overflows in the skia

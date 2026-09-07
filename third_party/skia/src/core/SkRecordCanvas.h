@@ -30,7 +30,6 @@ class SkData;
 class SkDrawable;
 class SkImage;
 class SkMatrix;
-class SkMesh;
 class SkPaint;
 class SkPath;
 class SkPicture;
@@ -154,8 +153,6 @@ public:
                       const SkPaint*) override;
 
     void onDrawVerticesObject(const SkVertices*, SkBlendMode, const SkPaint&) override;
-
-    void onDrawMesh(const SkMesh&, sk_sp<SkBlender>, const SkPaint&) override;
 
     void onDrawShadowRec(const SkPath&, const SkDrawShadowRec&) override;
 

@@ -575,7 +575,7 @@ PaintImage BitmapImage::PaintImageForCurrentFrameWithInfo(
                        reset_animation_sequence_id, expected_repetition_count);
 
   // BitmapImage should not be texture backed.
-  DCHECK(!new_frame.IsTextureBacked());
+
 
   // Create the SkImage backing for this PaintImage here to ensure that copies
   // of the PaintImage share the same SkImage. Skia's caching of the decoded

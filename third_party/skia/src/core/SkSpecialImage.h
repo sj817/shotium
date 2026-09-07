@@ -129,8 +129,6 @@ public:
     /**
      *  If the SpecialImage is backed by a gpu texture, return true.
      */
-    virtual bool isGaneshBacked() const { return false; }
-    virtual bool isGraphiteBacked() const { return false; }
 
     /**
      * Return the GrRecordingContext if the SkSpecialImage is GrTexture-backed

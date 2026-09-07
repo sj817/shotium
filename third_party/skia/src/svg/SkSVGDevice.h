@@ -31,7 +31,6 @@ class SkBlender;
 class SkClipStack;
 class SkData;
 class SkImage;
-class SkMesh;
 class SkPaint;
 class SkPath;
 class SkRRect;
@@ -61,7 +60,6 @@ public:
                   const SkPaint& paint) override;
 
     void drawVertices(const SkVertices*, sk_sp<SkBlender>, const SkPaint&, bool) override;
-    void drawMesh(const SkMesh&, sk_sp<SkBlender>, const SkPaint&) override;
 
 private:
     SkSVGDevice(const SkISize& size, std::unique_ptr<SkXMLWriter>, SkSVGCanvas::Options);

@@ -117,44 +117,19 @@ public:
 
     enum class Type {
         kRaster,
-        kRasterPinnable,
         kLazy,
         kLazyPicture,
-        kLazyTexture,
-        kGanesh,
-        kGaneshYUVA,
-        kGraphite,
-        kGraphiteYUVA,
     };
 
     virtual Type type() const = 0;
 
     // True for picture-backed and codec-backed
     bool isLazyGenerated() const override {
-        return this->type() == Type::kLazy || this->type() == Type::kLazyPicture ||
-               this->type() == Type::kLazyTexture;
+        return this->type() == Type::kLazy || this->type() == Type::kLazyPicture;
     }
 
     bool isRasterBacked() const {
-        return this->type() == Type::kRaster || this->type() == Type::kRasterPinnable;
-    }
-
-    // True for images instantiated by Ganesh in GPU memory
-    bool isGaneshBacked() const {
-        return this->type() == Type::kGanesh || this->type() == Type::kGaneshYUVA;
-    }
-
-    // True for images instantiated by Graphite in GPU memory
-    bool isGraphiteBacked() const {
-        return this->type() == Type::kGraphite || this->type() == Type::kGraphiteYUVA;
-    }
-
-    bool isYUVA() const {
-        return this->type() == Type::kGaneshYUVA || this->type() == Type::kGraphiteYUVA;
-    }
-
-    bool isTextureBacked() const override {
-        return this->isGaneshBacked() || this->isGraphiteBacked();
+        return this->type() == Type::kRaster;
     }
 
     // Call when this image is part of the key to a resourcecache entry. This allows the cache

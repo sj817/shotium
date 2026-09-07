@@ -30,8 +30,5 @@ sk_sp<PaintShader> ImagePattern::CreateShader(
       IsRepeatY() ? SkTileMode::kRepeat : SkTileMode::kDecal, &local_matrix);
 }
 
-bool ImagePattern::IsTextureBacked() const {
-  return tile_image_ && tile_image_.IsTextureBacked();
-}
 
 }  // namespace blink

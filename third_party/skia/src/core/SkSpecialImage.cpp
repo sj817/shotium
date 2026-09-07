@@ -159,7 +159,6 @@ sk_sp<SkSpecialImage> MakeFromRaster(const SkIRect& subset,
     }
 
     SkASSERT(image->bounds().contains(subset));
-    SkASSERT(!image->isTextureBacked());
 
     // This will not work if the image is uploaded to a GPU render target.
     SkBitmap bm;
@@ -170,7 +169,7 @@ sk_sp<SkSpecialImage> MakeFromRaster(const SkIRect& subset,
 }
 
 bool AsBitmap(const SkSpecialImage* img, SkBitmap* result) {
-    if (!img || img->isGaneshBacked() || img->isGraphiteBacked()) {
+    if (!img) {
         return false;
     }
     auto rasterImg = static_cast<const SkSpecialImage_Raster*>(img);

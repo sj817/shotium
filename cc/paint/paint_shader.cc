@@ -280,7 +280,7 @@ bool PaintShader::HasDiscardableImages(
     case Type::kSkSLCommand:
       return false;
     case Type::kImage:
-      if (image_ && !image_.IsTextureBacked()) {
+      if (image_) {
         if (content_color_usage) {
           *content_color_usage =
               std::max(*content_color_usage, image_.GetContentColorUsage());

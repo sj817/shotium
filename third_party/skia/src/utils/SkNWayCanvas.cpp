@@ -322,13 +322,6 @@ void SkNWayCanvas::onDrawAtlas2(const SkImage* image, const SkRSXform xform[], c
     }
 }
 
-void SkNWayCanvas::onDrawMesh(const SkMesh& mesh, sk_sp<SkBlender> blender, const SkPaint& paint) {
-    Iter iter(fList);
-    while (iter.next()) {
-        iter->drawMesh(mesh, blender, paint);
-    }
-}
-
 void SkNWayCanvas::onDrawGlyphRunList(const sktext::GlyphRunList& list,
                                       const SkPaint &paint) {
     Iter iter(fList);

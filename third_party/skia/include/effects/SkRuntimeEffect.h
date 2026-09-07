@@ -83,14 +83,6 @@ public:
             // transformed to unpremultiplied extended-range working-space colors.
             kColor_Flag = 0x2,
 
-            // When used with SkMeshSpecification, indicates that the uniform is present in the
-            // vertex shader. Not used with SkRuntimeEffect.
-            kVertex_Flag = 0x4,
-
-            // When used with SkMeshSpecification, indicates that the uniform is present in the
-            // fragment shader. Not used with SkRuntimeEffect.
-            kFragment_Flag = 0x8,
-
             // This flag indicates that the SkSL uniform uses a medium-precision type
             // (i.e., `half` instead of `float`).
             kHalfPrecision_Flag = 0x10,

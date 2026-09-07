@@ -416,14 +416,6 @@ public:
     */
     bool peekPixels(SkPixmap* pixmap) const;
 
-    /** Returns true if the contents of SkImage was created on or uploaded to GPU memory,
-        and is available as a GPU texture.
-
-        @return  true if SkImage is a GPU texture
-
-        example: https://fiddle.skia.org/c/@Image_isTextureBacked
-    */
-    virtual bool isTextureBacked() const = 0;
 
 
     /** Returns true if SkImage can be drawn on either raster surface or GPU surface.

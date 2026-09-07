@@ -56,7 +56,6 @@ PUBLIC_HEADERS = [
     "SkMallocPixelRef.h",
     "SkMaskFilter.h",
     "SkMatrix.h",
-    "SkMesh.h",
     "SkMilestone.h",
     "SkOpenTypeSVGDecoder.h",
     "SkOverdrawCanvas.h",

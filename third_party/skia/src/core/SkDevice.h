@@ -35,7 +35,6 @@
 
 struct SkArc;
 class SkColorSpace;
-class SkMesh;
 struct SkDrawShadowRec;
 class SkImageFilter;
 class SkRasterHandleAllocator;
@@ -160,7 +159,6 @@ public:
      */
     bool peekPixels(SkPixmap*);
 
-
     // -- Device's transform (both current transform affecting draws, and its fixed global mapping)
 
     /**
@@ -274,7 +272,6 @@ public:
 
     virtual SkRecorder* baseRecorder() const { return nullptr; }
 
-
     // Marking an SkDevice immutable declares the intent that rendering to the device is
     // complete, allowing it to be sampled as an image without requiring a copy. Drawing
     // operations may not function and may assert if invoked after setImmutable() is called.
@@ -367,7 +364,6 @@ public:
                               sk_sp<SkBlender>,
                               const SkPaint&,
                               bool skipColorXform = false) = 0;
-    virtual void drawMesh(const SkMesh& mesh, sk_sp<SkBlender>, const SkPaint&) = 0;
     virtual void drawShadow(SkCanvas*, const SkPath&, const SkDrawShadowRec&);
 
     // default implementation calls drawVertices
@@ -586,7 +582,6 @@ protected:
     void drawPath(const SkPath&, const SkPaint&) override {}
     void drawDevice(SkDevice*, const SkSamplingOptions&, const SkPaint&) override {}
     void drawVertices(const SkVertices*, sk_sp<SkBlender>, const SkPaint&, bool) override {}
-    void drawMesh(const SkMesh&, sk_sp<SkBlender>, const SkPaint&) override {}
 
     void onDrawGlyphRunList(SkCanvas*, const sktext::GlyphRunList&, const SkPaint&) override {}
 
