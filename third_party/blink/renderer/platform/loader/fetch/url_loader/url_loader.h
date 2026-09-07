@@ -61,7 +61,6 @@ namespace blink {
 class BackForwardCacheLoaderHelper;
 class BackgroundResponseProcessorFactory;
 class BlobDataHandle;
-class CodeCacheHost;
 class ResourceLoadInfoNotifierWrapper;
 class ResourceRequestSender;
 class SecurityOrigin;
@@ -120,7 +119,6 @@ class BLINK_PLATFORM_EXPORT URLLoader {
       bool no_mime_sniffing,
       std::unique_ptr<ResourceLoadInfoNotifierWrapper>
           resource_load_info_notifier_wrapper,
-      CodeCacheHost* code_cache_host,
       URLLoaderClient* client);
 
   // Freezes the loader. See blink/renderer/platform/loader/README.md for the

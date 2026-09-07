@@ -103,9 +103,6 @@
 [submodule "third_party/skia"]
 	path = third_party/skia
 	url = https://skia.googlesource.com/skia
-[submodule "third_party/sqlite/src"]
-	path = third_party/sqlite/src
-	url = https://chromium.googlesource.com/chromium/deps/sqlite
 [submodule "third_party/spirv-headers/src"]
 	path = third_party/spirv-headers/src
 	url = https://chromium.googlesource.com/external/github.com/KhronosGroup/SPIRV-Headers

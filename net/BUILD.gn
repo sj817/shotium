@@ -113,11 +113,6 @@ buildflag_header("cronet_buildflags") {
   flags = [ "CRONET_BUILD=$is_cronet_build" ]
 }
 
-buildflag_header("disk_cache_buildflags") {
-  header = "buildflags.h"
-  header_dir = "net/disk_cache/"
-  flags = [ "ENABLE_DISK_CACHE_SQL_BACKEND=$enable_disk_cache_sql_backend" ]
-}
 
 proto_library("device_bound_sessions_storage_proto") {
   proto_in_dir = "//"
@@ -128,9 +123,7 @@ source_set("net_features") {
   sources = [ "base/features.h" ]
   deps = [
     ":buildflags",
-    ":disk_cache_buildflags",
     "//base",
-    "//components/unexportable_keys",
     "//crypto:buildflags",
     "//net/base:net_export_header",
   ]
@@ -142,11 +135,16 @@ component("net") {
     # Defines an anonymous-namespace `kValuePortKey`, as does
     # base/host_port_pair.cc; merged into one unit they collide.
     "base/ip_endpoint.cc",
+
     # Uses `interface` as a variable name, which is a macro in the Windows SDK's
     # combaseapi.h (`#define interface __STRUCT__`). It compiles alone because
-    # nothing it includes reaches combaseapi.h; merged with a file that does, the
-    # loop head becomes `for (auto& struct : interfaces)`.
+    # nothing it includes reaches combaseapi.h; merged with a file that does,
+    # the loop head becomes `for (auto& struct : interfaces)`.
     "base/network_interfaces_win.cc",
+    "filter/gzip_source_stream.cc",
+    "http/http_cache_transaction.cc",
+    "http/http_stream_factory_job_controller.cc",
+
     # Opens with `#define __APPLE_USE_RFC_3542`, which only works if it comes
     # before the first include of <netinet/in.h>. Alone it always does; merged
     # after a file that has already pulled that header in, the include guard
@@ -154,9 +152,6 @@ component("net") {
     # needed, but the ordering hazard is the file's, so it stays out of jumbo
     # everywhere it could be grouped.
     "socket/udp_socket_posix.cc",
-    "filter/gzip_source_stream.cc",
-    "http/http_cache_transaction.cc",
-    "http/http_stream_factory_job_controller.cc",
 
     # Has an anonymous-namespace `LoadState(const base::FilePath&)`, which makes
     # every unqualified `LoadState` in the merged unit ambiguous against
@@ -1167,7 +1162,6 @@ component("net") {
   ]
 
   public_deps = [
-    ":disk_cache_buildflags",
     ":net_features",
     ":net_public_deps",
     "//base",
@@ -1279,9 +1273,7 @@ component("net") {
     deps += [
       ":device_bound_sessions_storage_proto",
       "//build:branding_buildflags",
-      "//components/sqlite_proto",
       "//components/unexportable_keys",
-      "//sql",
     ]
   }
 
@@ -1812,66 +1804,6 @@ component("net") {
     deps += [ "//mojo/public/cpp/bindings:default_construct_tag" ]
   }
 
-  if (enable_disk_cache_sql_backend) {
-    sources += [
-      "disk_cache/sql/cache_entry_key.cc",
-      "disk_cache/sql/cache_entry_key.h",
-      "disk_cache/sql/entry_db_handle.cc",
-      "disk_cache/sql/entry_db_handle.h",
-      "disk_cache/sql/entry_write_buffer.cc",
-      "disk_cache/sql/entry_write_buffer.h",
-      "disk_cache/sql/eviction_candidate_aggregator.cc",
-      "disk_cache/sql/eviction_candidate_aggregator.h",
-      "disk_cache/sql/exclusive_operation_coordinator.cc",
-      "disk_cache/sql/exclusive_operation_coordinator.h",
-      "disk_cache/sql/indexed_pair_set.h",
-      "disk_cache/sql/shared_cache_client_remote.h",
-      "disk_cache/sql/sql_async_task_manager.cc",
-      "disk_cache/sql/sql_async_task_manager.h",
-      "disk_cache/sql/sql_async_task_token.cc",
-      "disk_cache/sql/sql_async_task_token.h",
-      "disk_cache/sql/sql_backend_aliases.h",
-      "disk_cache/sql/sql_backend_constants.h",
-      "disk_cache/sql/sql_backend_impl.cc",
-      "disk_cache/sql/sql_backend_impl.h",
-      "disk_cache/sql/sql_entry_impl.cc",
-      "disk_cache/sql/sql_entry_impl.h",
-      "disk_cache/sql/sql_persistent_store.cc",
-      "disk_cache/sql/sql_persistent_store.h",
-      "disk_cache/sql/sql_persistent_store_backend.cc",
-      "disk_cache/sql/sql_persistent_store_backend.h",
-      "disk_cache/sql/sql_persistent_store_backend_shard.cc",
-      "disk_cache/sql/sql_persistent_store_backend_shard.h",
-      "disk_cache/sql/sql_persistent_store_in_memory_index.cc",
-      "disk_cache/sql/sql_persistent_store_in_memory_index.h",
-      "disk_cache/sql/sql_persistent_store_queries.h",
-      "disk_cache/sql/sql_read_cache_memory_monitor.cc",
-      "disk_cache/sql/sql_read_cache_memory_monitor.h",
-      "disk_cache/sql/sql_shared_cache.cc",
-      "disk_cache/sql/sql_shared_cache.h",
-      "disk_cache/sql/sql_shared_cache_blob_handle.h",
-      "disk_cache/sql/sql_shared_cache_handle.cc",
-      "disk_cache/sql/sql_shared_cache_handle.h",
-      "disk_cache/sql/sql_shared_cache_index_database.cc",
-      "disk_cache/sql/sql_shared_cache_index_database.h",
-      "disk_cache/sql/sql_shared_cache_index_database_queries.h",
-      "disk_cache/sql/sql_shared_cache_isolated_database.cc",
-      "disk_cache/sql/sql_shared_cache_isolated_database.h",
-      "disk_cache/sql/sql_shared_cache_isolated_database_queries.h",
-      "disk_cache/sql/sql_shared_cache_isolated_database_reader.cc",
-      "disk_cache/sql/sql_shared_cache_isolated_database_reader.h",
-      "disk_cache/sql/sql_shared_cache_manager.cc",
-      "disk_cache/sql/sql_shared_cache_manager.h",
-      "disk_cache/sql/sql_tracked_sequence_bound.h",
-      "disk_cache/sql/sql_write_buffer_memory_monitor.cc",
-      "disk_cache/sql/sql_write_buffer_memory_monitor.h",
-    ]
-    deps += [
-      "//components/performance_manager/scenario_api",
-      "//components/sqlite_vfs",
-      "//sql",
-    ]
-  }
 }
 
 # Private dependencies for the //net component and for any build targets (e.g.
@@ -2034,7 +1966,6 @@ component("extras") {
     ":net",
     "//base",
     "//crypto",
-    "//sql",
   ]
   public_deps = [ ":shared_dictionary_info" ]
 
@@ -3135,12 +3066,7 @@ target(_test_target_type, "net_unittests") {
       "log/trace_net_log_observer_unittest.cc",
     ]
 
-    deps += [
-      ":extras",
-      "//components/sqlite_proto",
-      "//sql",
-      "//sql:test_support",
-    ]
+    deps += [ ":extras" ]
   }
 
   if (enable_websockets) {
@@ -3467,41 +3393,6 @@ target(_test_target_type, "net_unittests") {
     deps += [ ":device_bound_sessions_storage_proto" ]
   }
 
-  if (enable_disk_cache_sql_backend) {
-    sources += [
-      "disk_cache/sql/cache_entry_key_unittest.cc",
-      "disk_cache/sql/entry_write_buffer_unittest.cc",
-      "disk_cache/sql/eviction_candidate_aggregator_unittest.cc",
-      "disk_cache/sql/exclusive_operation_coordinator_unittest.cc",
-      "disk_cache/sql/indexed_pair_set_unittest.cc",
-      "disk_cache/sql/mock_shared_cache_client_remote.cc",
-      "disk_cache/sql/mock_shared_cache_client_remote.h",
-      "disk_cache/sql/sql_async_task_manager_unittest.cc",
-      "disk_cache/sql/sql_backend_impl_unittest.cc",
-      "disk_cache/sql/sql_persistent_store_in_memory_index_unittest.cc",
-      "disk_cache/sql/sql_persistent_store_unittest.cc",
-      "disk_cache/sql/sql_shared_cache_index_database_unittest.cc",
-      "disk_cache/sql/sql_shared_cache_isolated_database_reader_unittest.cc",
-      "disk_cache/sql/sql_shared_cache_isolated_database_unittest.cc",
-      "disk_cache/sql/sql_shared_cache_manager_unittest.cc",
-      "disk_cache/sql/sql_shared_cache_unittest.cc",
-      "disk_cache/sql/sql_tracked_sequence_bound_unittest.cc",
-      "disk_cache/sql/test_util.cc",
-      "disk_cache/sql/test_util.h",
-    ]
-
-    deps += [ "//components/sqlite_vfs" ]
-
-    # Platforms where sqlite_dev_shell is defined.
-    if (is_win || is_mac || is_linux || is_chromeos) {
-      sources += [
-        "disk_cache/sql/sql_persistent_store_queries_unittest.cc",
-        "disk_cache/sql/sql_shared_cache_index_database_queries_unittest.cc",
-        "disk_cache/sql/sql_shared_cache_isolated_database_queries_unittest.cc",
-      ]
-      data_deps += [ "//third_party/sqlite:sqlite_dev_shell" ]
-    }
-  }
 
   # TODO(crbug.com/40031409): Fix code that adds exit-time destructors and
   # enable the diagnostic by removing this line.

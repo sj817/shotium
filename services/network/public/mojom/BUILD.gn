@@ -45,7 +45,6 @@ mojom("mojom_ip_address") {
       traits_headers =
           [ "//services/network/public/cpp/ip_endpoint_mojom_traits.h" ]
       traits_public_deps = [
-        "//components/unexportable_keys",
         "//net",
         "//services/network/public/cpp:ip_address_mojom_support",
       ]

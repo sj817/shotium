@@ -111,8 +111,7 @@ class URLLoader::Context : public ResourceRequestClient {
              base::TimeDelta timeout_interval,
              SyncLoadResponse* sync_load_response,
              std::unique_ptr<ResourceLoadInfoNotifierWrapper>
-                 resource_load_info_notifier_wrapper,
-             CodeCacheHost* code_cache_host);
+                 resource_load_info_notifier_wrapper);
 
   // ResourceRequestClient overrides:
   void OnUploadProgress(uint64_t position, uint64_t size) override;
@@ -244,8 +243,7 @@ void URLLoader::Context::Start(
     base::TimeDelta timeout_interval,
     SyncLoadResponse* sync_load_response,
     std::unique_ptr<ResourceLoadInfoNotifierWrapper>
-        resource_load_info_notifier_wrapper,
-    CodeCacheHost* code_cache_host) {
+        resource_load_info_notifier_wrapper) {
   DCHECK_EQ(request_id_, -1);
 
   url_ = KURL(request->url);
@@ -270,7 +268,6 @@ void URLLoader::Context::Start(
 
   if (sync_load_response) {
     DCHECK_EQ(freeze_mode_, LoaderFreezeMode::kNone);
-    CHECK(!code_cache_host);
 
     loader_options |= network::mojom::kURLLoadOptionSynchronous;
     request->load_flags |= net::LOAD_IGNORE_LIMITS;
@@ -299,7 +296,6 @@ void URLLoader::Context::Start(
       std::move(request), GetMaybeUnfreezableTaskRunner(), tag, loader_options,
       cors_exempt_header_list_, base::WrapRefCounted(this), url_loader_factory_,
       std::move(throttles), std::move(resource_load_info_notifier_wrapper),
-      code_cache_host,
       base::BindOnce(&BackForwardCacheLoaderHelper::EvictFromBackForwardCache,
                      back_forward_cache_loader_helper_),
       base::BindRepeating(
@@ -465,8 +461,7 @@ void URLLoader::LoadSynchronously(
   context_->Start(std::move(request), std::move(top_frame_origin),
                   download_to_blob, no_mime_sniffing, timeout_interval,
                   &sync_load_response,
-                  std::move(resource_load_info_notifier_wrapper),
-                  /*code_cache_host=*/nullptr);
+                  std::move(resource_load_info_notifier_wrapper));
 
   const KURL final_url(sync_load_response.url);
 
@@ -521,7 +516,6 @@ void URLLoader::LoadAsynchronously(
     bool no_mime_sniffing,
     std::unique_ptr<ResourceLoadInfoNotifierWrapper>
         resource_load_info_notifier_wrapper,
-    CodeCacheHost* code_cache_host,
     URLLoaderClient* client) {
   if (!context_) {
     return;
@@ -535,8 +529,7 @@ void URLLoader::LoadAsynchronously(
   context_->Start(std::move(request), std::move(top_frame_origin),
                   /*download_to_blob=*/false, no_mime_sniffing,
                   base::TimeDelta(), /*sync_load_response=*/nullptr,
-                  std::move(resource_load_info_notifier_wrapper),
-                  code_cache_host);
+                  std::move(resource_load_info_notifier_wrapper));
 }
 
 void URLLoader::Cancel() {

@@ -253,8 +253,10 @@ runs:
         if ($LASTEXITCODE -ne 0) { throw "patches/third_party_skia_parallel_blur.patch did not apply" }
         git -C third_party/skia apply --verbose ../../patches/third_party_skia_incremental_row_limit.patch
         if ($LASTEXITCODE -ne 0) { throw "patches/third_party_skia_incremental_row_limit.patch did not apply" }
+        git -C third_party/perfetto apply --verbose ../../patches/third_party_perfetto_optional_trace_processor.patch
+        if ($LASTEXITCODE -ne 0) { throw "patches/third_party_perfetto_optional_trace_processor.patch did not apply" }
         $patched = [long](git log -1 --format=%ct -- patches)
-        foreach ($dep in 'third_party/icu', 'third_party/skia') {
+        foreach ($dep in 'third_party/icu', 'third_party/skia', 'third_party/perfetto') {
           $base = [long](git -C $dep log -1 --format=%ct)
           $when = [DateTimeOffset]::FromUnixTimeSeconds([math]::Max($patched, $base)).UtcDateTime
           git -C $dep diff --name-only | ForEach-Object { (Get-Item "$dep/$_").LastWriteTimeUtc = $when }
@@ -307,4 +309,3 @@ runs:
         ) | Out-File -FilePath out/Shot/args.gn -Encoding ascii
         Get-Content out/Shot/args.gn
         gn gen out/Shot
-

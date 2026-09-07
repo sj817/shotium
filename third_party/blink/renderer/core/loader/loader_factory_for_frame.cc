@@ -29,7 +29,6 @@
 #include "third_party/blink/renderer/core/frame/local_frame_client.h"
 #include "third_party/blink/renderer/core/loader/document_loader.h"
 #include "third_party/blink/renderer/platform/exported/wrapped_resource_request.h"
-#include "third_party/blink/renderer/platform/loader/fetch/background_code_cache_host.h"
 #include "third_party/blink/renderer/platform/loader/fetch/url_loader/background_url_loader.h"
 #include "third_party/blink/renderer/platform/loader/fetch/url_loader/url_loader_factory.h"
 #include "third_party/blink/renderer/platform/weborigin/kurl.h"
@@ -215,7 +214,7 @@ std::unique_ptr<URLLoader> LoaderFactoryForFrame::CreateURLLoader(
       return std::make_unique<BackgroundURLLoader>(
           std::move(background_resource_fetch_assets),
           GetCorsExemptHeaderList(), unfreezable_task_runner,
-          back_forward_cache_loader_helper, GetBackgroundCodeCacheHost());
+          back_forward_cache_loader_helper);
     }
   }
   // When failed to use BackgroundURLLoader, use the normal URLLoader.
@@ -245,10 +244,6 @@ std::unique_ptr<URLLoader> LoaderFactoryForFrame::CreateURLLoader(
           back_forward_cache_loader_helper, CreateThrottles(network_request));
 }
 
-CodeCacheHost* LoaderFactoryForFrame::GetCodeCacheHost() {
-  return document_loader_->GetCodeCacheHost();
-}
-
 mojo::PendingRemote<mojom::blink::KeepAliveHandle>
 LoaderFactoryForFrame::MaybeIssueKeepAliveHandle(
     const network::ResourceRequest& network_request) {
@@ -267,15 +262,6 @@ LoaderFactoryForFrame::MaybeIssueKeepAliveHandle(
     CHECK(window_->IsContextDestroyed());
   }
   return pending_remote;
-}
-
-scoped_refptr<BackgroundCodeCacheHost>
-LoaderFactoryForFrame::GetBackgroundCodeCacheHost() {
-  if (!background_code_cache_host_) {
-    background_code_cache_host_ =
-        document_loader_->CreateBackgroundCodeCacheHost();
-  }
-  return background_code_cache_host_;
 }
 
 URLLoaderThrottleProvider*

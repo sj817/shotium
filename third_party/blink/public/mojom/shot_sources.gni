@@ -56,7 +56,6 @@ shot_mojom_platform_sources = [
   "lcp_critical_path_predictor/lcp_critical_path_predictor.mojom",
   "leak_detector/leak_detector.mojom",
   "link_to_text/link_to_text.mojom",
-  "loader/code_cache.mojom",
   "loader/content_security_notifier.mojom",
   "loader/fetch_client_settings_object.mojom",
   "loader/fetch_later.mojom",

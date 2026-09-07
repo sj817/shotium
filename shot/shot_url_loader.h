@@ -64,7 +64,6 @@ class ShotURLLoader : public blink::URLLoader {
       bool no_mime_sniffing,
       std::unique_ptr<blink::ResourceLoadInfoNotifierWrapper>
           resource_load_info_notifier_wrapper,
-      blink::CodeCacheHost* code_cache_host,
       blink::URLLoaderClient* client) override;
 
   scoped_refptr<base::SingleThreadTaskRunner> GetTaskRunnerForBodyLoader()

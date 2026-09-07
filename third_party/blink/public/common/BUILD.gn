@@ -82,9 +82,7 @@ component("common") {
 
 buildflag_header("buildflags") {
   header = "buildflags.h"
-  flags = [
-    "ENABLE_JXL_DECODER=$enable_jxl_decoder",
-  ]
+  flags = [ "ENABLE_JXL_DECODER=$enable_jxl_decoder" ]
 }
 
 source_set("common_export") {
@@ -163,7 +161,6 @@ source_set("headers") {
     "input/web_touch_event.h",
     "input/web_touch_point.h",
     "loader/background_resource_fetch_histograms.h",
-    "loader/code_cache_util.h",
     "loader/http_body_element_type.h",
     "loader/inter_process_time_ticks_converter.h",
     "loader/javascript_framework_detection.h",
@@ -299,9 +296,7 @@ source_set("headers") {
 
   # Chromium without blink doesn't use and must not depend on //media
   if (use_blink) {
-    deps += [
-      "//media",
-    ]
+    deps += [ "//media" ]
   }
 
   if (is_android) {

@@ -74,7 +74,6 @@ class MicrotaskQueue;
 namespace blink {
 
 class Agent;
-class CodeCacheHost;
 class ConsoleMessage;
 class ContentSecurityPolicy;
 class ContentSecurityPolicyDelegate;
@@ -131,10 +130,6 @@ class CORE_EXPORT ExecutionContext : public Supplementable<ExecutionContext>,
   void Trace(Visitor*) const override;
 
 
-  // Returns the CodeCacheHost interface associated with the execution
-  // context. This could return nullptr if there is no CodeCacheHost associated
-  // with the current execution context.
-  static CodeCacheHost* GetCodeCacheHostFromContext(ExecutionContext*);
 
   virtual bool IsWindow() const { return false; }
   virtual bool IsWorkerOrWorkletGlobalScope() const { return false; }

@@ -1427,7 +1427,6 @@ component("platform") {
     "//third_party/blink/renderer/platform/network",
     "//third_party/blink/renderer/platform/scheduler",
     "//third_party/fdlibm",
-    "//third_party/pffft",
     "//ui/base",
     "//ui/base:ui_data_pack",
     "//ui/base/cursor",
@@ -1584,11 +1583,6 @@ component("platform") {
   if (current_cpu == "arm64" || current_cpu == "arm64e" ||
       current_cpu == "arm") {
     sources += []
-  }
-
-  if (!is_mac) {
-    include_dirs += [ "//third_party/pffft/src" ]
-    deps += [ "//third_party/pffft" ]
   }
 
   if (!is_debug && !optimize_for_size) {

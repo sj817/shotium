@@ -38,7 +38,6 @@ viz_component("host") {
   deps = [
     "//base",
     "//components/input",
-    "//components/persistent_cache",
     "//gpu/ipc/client",
     "//gpu/ipc/common",
     "//services/viz/privileged/mojom",

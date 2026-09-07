@@ -10,7 +10,6 @@
 #include "base/feature_list.h"
 #include "build/build_config.h"
 #include "net/base/cronet_buildflags.h"
-#include "net/disk_cache/buildflags.h"
 #include "net/net_buildflags.h"
 #include "net/socket/tcp_connect_job.h"
 
@@ -485,17 +484,10 @@ constexpr base::FeatureParam<DiskCacheBackend>::Option
         {DiskCacheBackend::kDefault, "default"},
         {DiskCacheBackend::kSimple, "simple"},
         {DiskCacheBackend::kBlockfile, "blockfile"},
-#if BUILDFLAG(ENABLE_DISK_CACHE_SQL_BACKEND)
-        {DiskCacheBackend::kSql, "sql"},
-#endif  // ENABLE_DISK_CACHE_SQL_BACKEND
 };
 const base::FeatureParam<DiskCacheBackend> kDiskCacheBackendParam{
     &kDiskCacheBackendExperiment, "backend",
-#if BUILDFLAG(ENABLE_DISK_CACHE_SQL_BACKEND)
-    DiskCacheBackend::kSql,
-#else   // ENABLE_DISK_CACHE_SQL_BACKEND
     DiskCacheBackend::kDefault,
-#endif  // ENABLE_DISK_CACHE_SQL_BACKEND
     &kDiskCacheBackendOptions};
 
 BASE_FEATURE_PARAM(bool,
@@ -503,110 +495,6 @@ BASE_FEATURE_PARAM(bool,
                    &kDiskCacheBackendExperiment,
                    false);
 
-#if BUILDFLAG(ENABLE_DISK_CACHE_SQL_BACKEND)
-BASE_FEATURE_PARAM(int,
-                   kSqlDiskCacheForceCheckpointThreshold,
-                   &kDiskCacheBackendExperiment,
-                   "SqlDiskCacheForceCheckpointThreshold",
-                   2000);
-BASE_FEATURE_PARAM(int,
-                   kSqlDiskCacheIdleCheckpointThreshold,
-                   &kDiskCacheBackendExperiment,
-                   "SqlDiskCacheIdleCheckpointThreshold",
-                   1000);
-BASE_FEATURE_PARAM(int,
-                   kSqlDiskCacheOptimisticWriteBufferSize,
-                   &kDiskCacheBackendExperiment,
-                   "SqlDiskCacheOptimisticWriteBufferSize",
-                   32 * 1024 * 1024);
-BASE_FEATURE_PARAM(bool,
-                   kSqlDiskCacheWalMode,
-                   &kDiskCacheBackendExperiment,
-                   "SqlDiskCacheWalMode",
-                   false);
-BASE_FEATURE_PARAM(bool,
-                   kSqlDiskCacheSynchronousOff,
-                   &kDiskCacheBackendExperiment,
-                   "SqlDiskCacheSynchronousOff",
-                   true);
-BASE_FEATURE_PARAM(int,
-                   kSqlDiskCacheShardCount,
-                   &kDiskCacheBackendExperiment,
-                   "SqlDiskCacheShardCount",
-                   3);
-BASE_FEATURE_PARAM(bool,
-                   kSqlDiskCacheLoadIndexOnInit,
-                   &kDiskCacheBackendExperiment,
-                   "SqlDiskCacheLoadIndexOnInit",
-                   false);
-BASE_FEATURE_PARAM(int,
-                   kSqlDiskCacheMaxWriteBufferTotalSize,
-                   &kDiskCacheBackendExperiment,
-                   "SqlDiskCacheMaxWriteBufferTotalSize",
-                   32 * 1024 * 1024);
-BASE_FEATURE_PARAM(int,
-                   kSqlDiskCacheMaxWriteBufferSizePerEntry,
-                   &kDiskCacheBackendExperiment,
-                   "SqlDiskCacheMaxWriteBufferSizePerEntry",
-                   512 * 1024);
-BASE_FEATURE_PARAM(int,
-                   kSqlDiskCacheMaxReadBufferTotalSize,
-                   &kDiskCacheBackendExperiment,
-                   "SqlDiskCacheMaxReadBufferTotalSize",
-                   32 * 1024 * 1024);
-BASE_FEATURE_PARAM(int,
-                   kSqlDiskCacheMaxSharedCacheCopyEntrySize,
-                   &kDiskCacheBackendExperiment,
-                   1024 * 1024);
-BASE_FEATURE_PARAM(int,
-                   kSqlDiskCacheSharedCacheReadBufferSize,
-                   &kDiskCacheBackendExperiment,
-                   512 * 1024);
-BASE_FEATURE_PARAM(bool,
-                   kSqlDiskCacheSerialCheckpoint,
-                   &kDiskCacheBackendExperiment,
-                   "SqlDiskCacheSerialCheckpoint",
-                   true);
-BASE_FEATURE_PARAM(bool,
-                   kSqlDiskCacheSerialInitialize,
-                   &kDiskCacheBackendExperiment,
-                   "SqlDiskCacheSerialInitialize",
-                   true);
-BASE_FEATURE_PARAM(bool,
-                   kSqlDiskCacheSizeAndPriorityAwareEviction,
-                   &kDiskCacheBackendExperiment,
-                   "SqlDiskCacheSizeAndPriorityAwareEviction",
-                   true);
-BASE_FEATURE_PARAM(bool,
-                   kSqlDiskCacheReleaseMemoryAfterWrites,
-                   &kDiskCacheBackendExperiment,
-                   "SqlDiskCacheReleaseMemoryAfterWrites",
-                   true);
-BASE_FEATURE_PARAM(int,
-                   kSqlDiskCacheCacheSize,
-                   &kDiskCacheBackendExperiment,
-                   "SqlDiskCacheCacheSize",
-                   0);
-BASE_FEATURE_PARAM(bool,
-                   kSqlDiskCacheConsolidatedInMemoryIndex,
-                   &kDiskCacheBackendExperiment,
-                   "SqlDiskCacheConsolidatedInMemoryIndex",
-                   true);
-BASE_FEATURE_PARAM(bool,
-                   kSqlDiskCacheIncrementalVacuum,
-                   &kDiskCacheBackendExperiment,
-                   "SqlDiskCacheIncrementalVacuum",
-                   true);
-BASE_FEATURE_PARAM(int,
-                   kSqlDiskCacheIncrementalVacuumPageCount,
-                   &kDiskCacheBackendExperiment,
-                   "SqlDiskCacheIncrementalVacuumPageCount",
-                   100);
-BASE_FEATURE_PARAM(bool,
-                   kSqlDiskCacheReduceUma,
-                   &kDiskCacheBackendExperiment,
-                   false);
-#endif  // ENABLE_DISK_CACHE_SQL_BACKEND
 
 BASE_FEATURE(kIgnoreHSTSForLocalhost, base::FEATURE_ENABLED_BY_DEFAULT);
 

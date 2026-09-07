@@ -145,8 +145,6 @@ target(link_target_type, "renderer") {
   ]
 
   deps = [
-    "//services/metrics/public/cpp:metrics_cpp",
-    "//services/metrics/public/cpp:ukm_builders",
     "//base",
     "//base:i18n",
     "//build:chromecast_buildflags",
@@ -177,6 +175,8 @@ target(link_target_type, "renderer") {
     "//mojo/public/cpp/bindings",
     "//net",
     "//sandbox",
+    "//services/metrics/public/cpp:metrics_cpp",
+    "//services/metrics/public/cpp:ukm_builders",
     "//services/network:network_service",
     "//services/network/public/mojom",
     "//services/service_manager/public/cpp",
@@ -190,7 +190,6 @@ target(link_target_type, "renderer") {
     "//third_party/boringssl",
     "//third_party/icu",
     "//third_party/libyuv",
-    "//third_party/sqlite",
     "//ui/base",
     "//ui/base/clipboard",
     "//ui/base/dragdrop/mojom:mojom_shared",
@@ -223,7 +222,6 @@ target(link_target_type, "renderer") {
     }
   }
 
-
   if (is_linux || is_chromeos) {
     deps += [ "//components/services/font/public/cpp" ]
   }
@@ -244,7 +242,6 @@ target(link_target_type, "renderer") {
 
   # TODO(crbug.com/1293520): Remove this dependency on cast devices.
   if (enable_media_remoting || is_castos || is_cast_android) {
-
     if (enable_media_remoting) {
     }
 
@@ -267,11 +264,9 @@ target(link_target_type, "renderer") {
     deps += [ "//ui/ozone" ]
   }
 
-
   if (enable_ipc_fuzzer) {
     configs += [ "//tools/ipc_fuzzer:ipc_fuzzer_config" ]
   }
-
 }
 
 # See comment at the top of //content/BUILD.gn for how this works.

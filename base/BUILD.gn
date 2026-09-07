@@ -4338,7 +4338,6 @@ test("base_unittests") {
     deps += [ ":stack_canary_linux_unittests" ]
   }
 
-  sources += [ "test/tracing/test_trace_processor_example_unittest.cc" ]
 
   if (is_posix) {
     sources += [
@@ -6515,13 +6514,6 @@ fuzzer_test("pickle_fuzzer") {
     "//base",
     "//base/test:test_support",
   ]
-}
-
-# This group makes visible those targets in subdirectories that are not
-# explicitly depended on.
-group("gn_all") {
-  testonly = true
-  deps = [ "//base/tracing:perfetto_diff_tests" ]
 }
 
 process_version("check_version_internal") {

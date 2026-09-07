@@ -166,7 +166,6 @@ class PLATFORM_EXPORT ResourceLoader final
 
  private:
   friend class SubresourceIntegrityTest;
-  friend class ResourceLoaderIsolatedCodeCacheTest;
 
   // ResourceLoadSchedulerClient.
   void Run() override;
@@ -183,7 +182,6 @@ class PLATFORM_EXPORT ResourceLoader final
   void DidReceiveDataImpl(
       std::variant<SegmentedBuffer, base::span<const char>> data);
 
-  bool ShouldFetchCodeCache();
   void StartFetch();
 
   void Release(ResourceLoadScheduler::ReleaseOption,

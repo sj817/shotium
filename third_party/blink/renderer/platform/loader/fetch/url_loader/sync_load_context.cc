@@ -125,7 +125,6 @@ void SyncLoadContext::StartAsyncWithWaitableEvent(
       loader_options, cors_exempt_header_list, context,
       context->url_loader_factory_, std::move(throttles),
       std::move(resource_load_info_notifier_wrapper),
-      /*code_cache_host=*/nullptr,
       /*evict_from_bfcache_callback=*/
       base::OnceCallback<void(mojom::blink::RendererEvictionReason)>(),
       /*did_buffer_load_while_in_bfcache_callback=*/

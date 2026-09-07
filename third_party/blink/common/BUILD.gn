@@ -168,7 +168,6 @@ shot_compatible_source_set("common") {
     "input/web_mouse_wheel_event.cc",
     "input/web_pointer_event.cc",
     "input/web_touch_event.cc",
-    "loader/code_cache_util.cc",
     "loader/inter_process_time_ticks_converter.cc",
     "loader/lcp_critical_path_predictor_util.cc",
     "loader/loader_constants.cc",
@@ -200,6 +199,7 @@ shot_compatible_source_set("common") {
     "navigation/navigation_policy_mojom_traits.cc",
     "navigation/prefetched_signed_exchange_info_mojom_traits.cc",
     "navigation/preloading_headers.cc",
+
     # These three are the hand-written half of origin_trials: the generated
     # origin_trials.cc covers what runtime_enabled_features.json5 can express,
     # and these carry the three lists it cannot. They were deleted as "trial
@@ -285,8 +285,6 @@ shot_compatible_source_set("common") {
     "//mojo/public/cpp/system",
     "//net",
     "//services/metrics/public/cpp:metrics_cpp",
-    "//services/metrics/public/cpp:ukm_builders",
-    "//services/metrics/public/mojom",
     "//services/metrics/public/cpp:ukm_builders",
     "//services/metrics/public/mojom",
     "//services/network/public/cpp",
@@ -418,9 +416,7 @@ source_set("common_unittests_sources") {
     # TODO(crbug.com/845384): Enable these tests also on Android. Currently
     # they are excluded as they require V8 environment but V8 snapshot is
     # not available in the current minimum test setting.
-    sources += [
-      "messaging/web_message_port_unittest.cc",
-    ]
+    sources += [ "messaging/web_message_port_unittest.cc" ]
   }
 
   if (is_android) {

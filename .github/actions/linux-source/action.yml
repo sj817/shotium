@@ -158,6 +158,7 @@ runs:
       run: |
         git -C third_party/skia apply --verbose ../../patches/third_party_skia_parallel_blur.patch
         git -C third_party/skia apply --verbose ../../patches/third_party_skia_incremental_row_limit.patch
+        git -C third_party/perfetto apply --verbose ../../patches/third_party_perfetto_optional_trace_processor.patch
         when=$(git log -1 --format=%ct -- patches)
         base=$(git -C third_party/skia log -1 --format=%ct)
         [ "$base" -gt "$when" ] && when=$base

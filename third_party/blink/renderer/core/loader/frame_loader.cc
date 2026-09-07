@@ -1854,13 +1854,6 @@ inline void FrameLoader::TakeObjectSnapshot() const {
                       "snapshot", *this);
 }
 
-mojo::PendingRemote<mojom::blink::CodeCacheHost>
-FrameLoader::CreateWorkerCodeCacheHost() {
-  if (!document_loader_)
-    return mojo::NullRemote();
-  return document_loader_->CreateCodeCacheHost();
-}
-
 void FrameLoader::ProcessPendingCrossDocumentFragment() {
   if (!has_pending_cross_document_fragment_) {
     return;

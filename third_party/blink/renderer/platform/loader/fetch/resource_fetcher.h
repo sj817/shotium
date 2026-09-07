@@ -74,7 +74,6 @@ namespace blink {
 
 enum class ResourceType : uint8_t;
 class BackForwardCacheLoaderHelper;
-class CodeCacheHost;
 class DetachableConsoleLogger;
 class DetachableUseCounter;
 class DetachableResourceFetcherProperties;
@@ -128,7 +127,6 @@ class PLATFORM_EXPORT ResourceFetcher
         bool is_from_origin_dirty_style_sheet) = 0;
 
     // Get a code cache host to fetch data from code caches.
-    virtual CodeCacheHost* GetCodeCacheHost() = 0;
   };
 
   // ResourceFetcher creators are responsible for setting consistent objects
@@ -200,7 +198,6 @@ class PLATFORM_EXPORT ResourceFetcher
           service_worker_race_network_request_token,
       bool is_from_origin_dirty_style_sheet);
   // Get a code cache host. This cannot be called after ClearContext is called.
-  CodeCacheHost* GetCodeCacheHost();
 
   Resource* CachedResource(const KURL&) const;
   bool ResourceHasBeenEmulatedLoadStartedForInspector(const KURL&) const;

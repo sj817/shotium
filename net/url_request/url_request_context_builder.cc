@@ -31,7 +31,6 @@
 #include "net/cert/multi_log_ct_verifier.h"
 #include "net/cert/sct_auditing_delegate.h"
 #include "net/cookies/cookie_monster.h"
-#include "net/disk_cache/buildflags.h"
 #include "net/dns/context_host_resolver.h"
 #include "net/dns/dns_platform_attempt_factory.h"
 #include "net/dns/host_resolver.h"
@@ -571,10 +570,6 @@ std::unique_ptr<URLRequestContext> URLRequestContextBuilder::Build() {
           break;
         case HttpCacheParams::IN_MEMORY:
           NOTREACHED();
-#if BUILDFLAG(ENABLE_DISK_CACHE_SQL_BACKEND)
-        case HttpCacheParams::DISK_EXPERIMENTAL_SQL:
-          backend_type = CACHE_BACKEND_EXPERIMENTAL_SQL;
-#endif  // ENABLE_DISK_CACHE_SQL_BACKEND
       }
       http_cache_backend = std::make_unique<HttpCache::DefaultBackend>(
           DISK_CACHE, backend_type, http_cache_params_.file_operations_factory,

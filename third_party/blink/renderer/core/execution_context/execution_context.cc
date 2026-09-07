@@ -56,7 +56,6 @@
 #include "third_party/blink/renderer/platform/context_lifecycle_notifier.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
 #include "third_party/blink/renderer/platform/instrumentation/use_counter.h"
-#include "third_party/blink/renderer/platform/loader/fetch/code_cache_host.h"
 #include "third_party/blink/renderer/platform/loader/fetch/memory_cache.h"
 #include "third_party/blink/renderer/platform/runtime_feature_state/runtime_feature_state_override_context.h"
 #include "third_party/blink/renderer/platform/scheduler/public/event_loop.h"
@@ -87,26 +86,6 @@ ExecutionContext::ExecutionContext(Agent* agent, bool is_window)
 }
 
 ExecutionContext::~ExecutionContext() = default;
-
-// static
-CodeCacheHost* ExecutionContext::GetCodeCacheHostFromContext(
-    ExecutionContext* execution_context) {
-  DCHECK_NE(execution_context, nullptr);
-  if (execution_context->IsWindow()) {
-    auto* window = To<LocalDOMWindow>(execution_context);
-    if (!window->GetFrame() ||
-        !window->GetFrame()->Loader().GetDocumentLoader()) {
-      return nullptr;
-    }
-    return window->GetFrame()->Loader().GetDocumentLoader()->GetCodeCacheHost();
-  }
-
-  // The worker and worklet branches were here: both reached their code cache
-  // host through WorkerOrWorkletGlobalScope. Workers and worklets exist to run
-  // script off the main thread and are cut, so a window is the only context
-  // that gets here with a host.
-  return nullptr;
-}
 
 void ExecutionContext::SetIsInBackForwardCache(bool value) {
   if (!is_in_back_forward_cache_ && value) {

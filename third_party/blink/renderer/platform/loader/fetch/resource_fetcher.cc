@@ -1801,13 +1801,6 @@ std::unique_ptr<URLLoader> ResourceFetcher::CreateURLLoader(
       is_from_origin_dirty_style_sheet);
 }
 
-CodeCacheHost* ResourceFetcher::GetCodeCacheHost() {
-  DCHECK(!GetProperties().IsDetached());
-  // TODO(http://crbug.com/1252983): Revert this to DCHECK.
-  CHECK(loader_factory_);
-  return loader_factory_->GetCodeCacheHost();
-}
-
 void ResourceFetcher::AddToMemoryCacheIfNeeded(const FetchParameters& params,
                                                Resource* resource) {
   if (!ShouldResourceBeAddedToMemoryCache(params, resource)) {

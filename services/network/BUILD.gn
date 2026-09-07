@@ -358,9 +358,9 @@ component("network_service") {
 
   deps = [
     "//base",
-    "//components/cbor",
     "//base:build_time",
     "//build:chromecast_buildflags",
+    "//components/cbor",
     "//components/content_settings/core/common",
     "//components/enterprise/buildflags",
     "//components/network_session_configurator/common",
@@ -409,15 +409,11 @@ component("network_service") {
       "sct_auditing/sct_auditing_reporter.cc",
       "sct_auditing/sct_auditing_reporter.h",
     ]
-    deps += [
-      "//components/version_info",
-    ]
+    deps += [ "//components/version_info" ]
   }
 
   if (is_p2p_enabled) {
-    deps += [
-      "//services/network/public/cpp:cpp_p2p",
-    ]
+    deps += [ "//services/network/public/cpp:cpp_p2p" ]
   }
 
   if (is_android) {
@@ -430,7 +426,6 @@ component("network_service") {
 
   if (is_mac) {
   }
-
 
   defines = [ "IS_NETWORK_SERVICE_IMPL" ]
 }
@@ -621,7 +616,6 @@ source_set("tests") {
     "//services/network/trust_tokens:tests",
     "//services/service_manager/public/cpp",
     "//services/service_manager/public/cpp/test:test_support",
-    "//sql:test_support",
     "//testing/gmock",
     "//testing/gtest",
   ]
@@ -642,9 +636,7 @@ source_set("tests") {
       "test_mojo_proxy_resolver_factory.h",
       "url_request_context_builder_mojo_unittest.cc",
     ]
-    deps += [
-      "//third_party/blink/public/common:preloading_headers",
-    ]
+    deps += [ "//third_party/blink/public/common:preloading_headers" ]
   }
 
   # TODO(crbug.com/40031409): Fix code that adds exit-time destructors and

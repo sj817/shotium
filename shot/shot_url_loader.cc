@@ -249,7 +249,6 @@ void ShotURLLoader::LoadAsynchronously(
     bool no_mime_sniffing,
     std::unique_ptr<blink::ResourceLoadInfoNotifierWrapper>
         resource_load_info_notifier_wrapper,
-    blink::CodeCacheHost* code_cache_host,
     blink::URLLoaderClient* client) {
   const GURL url = request->url;
   LOG(INFO) << "shot: request " << url.spec();

@@ -158,9 +158,8 @@ base::expected<std::unique_ptr<ShotNetwork>, std::string> ShotNetwork::Create(
                               config.cache_dir.AsUTF8Unsafe());
     }
     net::URLRequestContextBuilder::HttpCacheParams params;
-    // Simple, explicitly, rather than DISK's "default backend". One file per
-    // entry, no database: net/disk_cache/simple/ has no sqlite reference in it,
-    // so a disk cache here does not undo enable_disk_cache_sql_backend=false.
+    // Pin the file-per-entry Simple cache independently of net's backend
+    // experiments. SQL storage is not part of this engine.
     params.type = net::URLRequestContextBuilder::HttpCacheParams::DISK_SIMPLE;
     params.path = config.cache_dir;
     params.max_size = config.cache_max_bytes;

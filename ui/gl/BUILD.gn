@@ -57,34 +57,6 @@ source_set("gl_headers") {
   public_deps = [ "//third_party/angle:includes" ]
 }
 
-# On ChromeOS, system services require real ANGLE shared libraries,
-# so we omit dummy stubs to avoid output target collisions.
-use_angle_stubs = use_static_angle && (is_linux || is_win || is_mac)
-
-# Generate stubs for EGL and GLESv2 libraries when linking ANGLE statically.
-# Some bot infrastructure expects these files to exist even in static builds.
-# TODO(crbug.com/514229803): Remove this stub generation once static linking
-# has definitively stuck (at which point the use_static_angle flag itself will
-# also be removed) and the bots no longer expect these files.
-if (use_angle_stubs) {
-  # Define dummy libraries to satisfy symbol uploader and official build infra.
-  shared_library("dummy_libEGL") {
-    output_name = "libEGL"
-    sources = [ "dummy_stub.cc" ]
-  }
-  shared_library("dummy_libGLESv2") {
-    output_name = "libGLESv2"
-    sources = [ "dummy_stub.cc" ]
-  }
-
-  group("generate_angle_stubs") {
-    public_deps = [
-      ":dummy_libEGL",
-      ":dummy_libGLESv2",
-    ]
-  }
-}
-
 component("gl") {
   output_name = "gl_wrapper"  # Avoid colliding with OS X"s libGL.dylib.
 
@@ -218,12 +190,6 @@ component("gl") {
 
   data_deps = []
 
-  if (use_angle_stubs) {
-    # Added via data_deps so that the dummy libraries are generated for build
-    # infrastructure but not linked into dependent targets.
-    data_deps += [ ":generate_angle_stubs" ]
-  }
-
   if (enable_swiftshader) {
     data_deps += [
       "//third_party/swiftshader/src/Vulkan:icd_file",
@@ -245,9 +211,6 @@ component("gl") {
           "//third_party/angle:libEGL",
           "//third_party/angle:libGLESv2",
         ]
-      }
-      if (angle_shared_libvulkan && !is_chromeos) {
-        data_deps += [ "//third_party/vulkan-loader/src:libvulkan" ]
       }
     }
   }
@@ -272,9 +235,6 @@ component("gl") {
         "//third_party/angle:libEGL",
         "//third_party/angle:libGLESv2",
       ]
-    }
-    if (angle_shared_libvulkan && !is_chromeos) {
-      data_deps += [ "//third_party/vulkan-loader/src:libvulkan" ]
     }
   }
 
@@ -353,9 +313,6 @@ component("gl") {
         "//third_party/angle:libGLESv2",
       ]
     }
-    if (angle_shared_libvulkan && !is_chromeos) {
-      data_deps += [ "//third_party/vulkan-loader/src:libvulkan" ]
-    }
   }
 
   if (is_apple) {
@@ -397,7 +354,6 @@ component("gl") {
         "//third_party/swiftshader/src/Vulkan:swiftshader_libvulkan",
       ]
     }
-    data_deps += [ "//third_party/vulkan-loader/src:libvulkan" ]
 
     defines += [ "GL_SILENCE_DEPRECATION" ]
   }
@@ -490,11 +446,6 @@ if (is_mac) {
     }
   }
 
-  copy("vulkan_loader_library_copy") {
-    sources = [ "$root_out_dir/libvulkan.dylib" ]
-    outputs = [ "$root_out_dir/vulkan_intermediates/{{source_file_part}}" ]
-    deps = [ "//third_party/vulkan-loader/src:libvulkan" ]
-  }
 }
 
 static_library("gl_unittest_utils") {

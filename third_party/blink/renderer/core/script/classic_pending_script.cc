@@ -4,7 +4,6 @@
 
 #include "third_party/blink/renderer/core/script/classic_pending_script.h"
 
-#include "third_party/blink/public/mojom/loader/code_cache.mojom-blink.h"
 #include "third_party/blink/public/mojom/script/script_type.mojom-blink-forward.h"
 #include "third_party/blink/public/mojom/script/script_type.mojom-blink.h"
 #include "third_party/blink/renderer/core/dom/document.h"

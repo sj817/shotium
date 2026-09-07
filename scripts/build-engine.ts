@@ -97,31 +97,32 @@ function lastLines(text: string | undefined, count: number): string {
   return (text ?? '').split(/\r?\n/).filter(Boolean).slice(-count).join('\n');
 }
 
-// Skia is a DEPS checkout, so gclient restores its upstream source rather than
-// the patches tracked by this repository. Apply them once, and fail loudly if a
-// Skia roll makes one stop matching instead of silently building without it --
+// DEPS sync restores upstream source rather than this repository's patches.
+// Apply them once and fail loudly if a dependency roll stops matching:
 // a missing parallel blur is merely slow, but a missing row limit means the
-// streaming PNG decode falls back to a full-size bitmap on every image.
-async function applySkiaPatches(): Promise<boolean> {
+// PNG decoder allocates full-size bitmaps, and an unpatched Perfetto reloads
+// the removed SQL processor while generating the build graph.
+async function applyDependencyPatches(): Promise<boolean> {
   const patches = [
-    'third_party_skia_parallel_blur.patch',
-    'third_party_skia_incremental_row_limit.patch',
+    ['skia', 'third_party_skia_parallel_blur.patch'],
+    ['skia', 'third_party_skia_incremental_row_limit.patch'],
+    ['perfetto', 'third_party_perfetto_optional_trace_processor.patch'],
   ];
-  for (const name of patches) {
+  for (const [dependency, name] of patches) {
     const apply = (...args: string[]) => execa(
-        'git', ['-C', 'third_party/skia', 'apply', ...args, `../../patches/${name}`],
+        'git', ['-C', `third_party/${dependency}`, 'apply', ...args, `../../patches/${name}`],
         {cwd: root, reject: false});
 
     if ((await apply('--check', '--reverse')).exitCode === 0) {
-      say(`skia: ${name} already applied`);
+      say(`${dependency}: ${name} already applied`);
       continue;
     }
     if ((await apply('--check')).exitCode !== 0) {
-      say(pc.red(`skia: patches/${name} no longer applies`));
+      say(pc.red(`${dependency}: patches/${name} no longer applies`));
       return false;
     }
     const applied = await execa(
-        'git', ['-C', 'third_party/skia', 'apply', '--verbose', `../../patches/${name}`],
+        'git', ['-C', `third_party/${dependency}`, 'apply', '--verbose', `../../patches/${name}`],
         {cwd: root, reject: false, stdio: 'inherit'});
     if (applied.exitCode !== 0) return false;
   }
@@ -230,7 +231,7 @@ async function main(): Promise<number> {
     say(pc.red(`--jobs takes a positive integer; got ${JSON.stringify(options.jobs)}`));
     return 2;
   }
-  if (!(await applySkiaPatches())) return 1;
+  if (!(await applyDependencyPatches())) return 1;
   if (!(await repackIcu())) return 1;
   if (!(await gnGen())) return 1;
   // A graph check after a cut wants the retry too -- running gn by hand is

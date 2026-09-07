@@ -38,11 +38,10 @@ if (is_android) {
       "//content/test:*",
     ]
     deps = [
-    "//components/persistent_cache",
+      "//components/cbor",
+      "//services/metrics",
+      "//services/metrics/public/cpp:metrics_cpp",
       "//services/metrics/public/cpp:ukm_builders",
-    "//services/metrics",
-    "//services/metrics/public/cpp:metrics_cpp",
-    "//components/cbor",
       "//third_party/rust/font_types/v0_12:lib",
       "//third_party/rust/read_fonts/v0_41:lib",
       "//third_party/rust/skrifa/v0_44:lib",
@@ -148,7 +147,6 @@ source_set("browser") {
     "//components/input",
     "//components/link_header_util",
     "//components/power_monitor",
-    "//components/sqlite_proto",
     "//components/version_info",
     "//components/viz/client",
     "//components/viz/common",
@@ -194,7 +192,6 @@ source_set("browser") {
     "//services/viz/public/mojom",
     "//skia",
     "//skia/public/mojom",
-    "//sql",
     "//storage/browser",
     "//storage/browser/quota:mojo_bindings",
     "//storage/common",
@@ -212,7 +209,6 @@ source_set("browser") {
     "//third_party/libyuv",
     "//third_party/re2",
     "//third_party/snappy",
-    "//third_party/sqlite",
     "//third_party/zlib",
     "//ui/base",
     "//ui/base:buildflags",
@@ -1128,10 +1124,8 @@ source_set("browser") {
   }
 
   if (is_linux || is_mac) {
-    sources += [
-    ]
+    sources += []
   }
-
 
   # TODO(crbug.com/40226169): Remove `permissions_common`.
   # DO NOT add unrelated entries to this block.
@@ -1142,7 +1136,6 @@ source_set("browser") {
     "permissions/permission_util.cc",
     "permissions/permission_util.h",
   ]
-
 
   if (use_viz_debugger) {
     sources += [
@@ -1206,7 +1199,6 @@ source_set("browser") {
     ]
     deps += [ "//services/network/public/cpp:cpp_p2p" ]
   }
-
 
   if (is_linux) {
     sources += []
@@ -1282,13 +1274,11 @@ source_set("browser") {
   # `base::FilePatchWatcher` is not implemented on Fuchsia (see
   # https://crbug.com/851641)
   if (!is_android && !is_ios && !is_fuchsia) {
-    sources += [
-    ]
+    sources += []
   }
 
   if (is_apple) {
-    sources += [
-    ]
+    sources += []
 
     if (!(is_ios && target_platform == "tvos")) {
       sources += [
@@ -1299,8 +1289,7 @@ source_set("browser") {
   }
 
   if (is_ios && target_platform == "iphoneos") {
-    sources += [
-    ]
+    sources += []
     frameworks += [ "CoreNFC.framework" ]
   }
 
@@ -1434,8 +1423,7 @@ source_set("browser") {
   }
 
   if (is_linux) {
-    sources += [
-    ]
+    sources += []
   }
 
   if (is_chromeos) {
@@ -1445,32 +1433,25 @@ source_set("browser") {
   # Desktop/Window/WebContents screen capture implementations, conditionally
   # built depending on the available implementations for each platform.
   if (enable_screen_capture) {
-    sources += [
-    ]
+    sources += []
     if (!is_ios) {
-      sources += [
-      ]
+      sources += []
       public_deps += [ "//ui/base/cursor" ]
 
       if (is_android) {
-        sources += [
-        ]
+        sources += []
       } else {
-        sources += [
-        ]
+        sources += []
       }
     }
     if (use_aura) {
-      sources += [
-      ]
+      sources += []
     }
     if (is_mac || is_win) {
-      sources += [
-      ]
+      sources += []
     }
     if (is_mac) {
-      sources += [
-      ]
+      sources += []
       deps += [
         "//sandbox/mac:seatbelt",
         "//sandbox/mac:seatbelt_extension",
@@ -1481,12 +1462,10 @@ source_set("browser") {
       ]
     }
     if (is_chromeos) {
-      sources += [
-      ]
+      sources += []
     }
     if (is_android) {
-      sources += [
-      ]
+      sources += []
     }
   }
 
@@ -1537,8 +1516,7 @@ source_set("browser") {
   }
 
   if (is_win || is_mac) {
-    sources += [
-    ]
+    sources += []
   }
 
   if (is_android || is_linux) {
@@ -1546,9 +1524,7 @@ source_set("browser") {
   }
 
   if (use_udev) {
-    deps += [
-      "//device/udev_linux",
-    ]
+    deps += [ "//device/udev_linux" ]
   }
 
   if (enable_plugins) {
@@ -1562,8 +1538,6 @@ source_set("browser") {
       "renderer_host/plugin_registry_impl.h",
     ]
   }
-
-
 
   if (use_atk) {
     configs += [
@@ -1585,8 +1559,7 @@ source_set("browser") {
   }
 
   if (is_android || is_ios) {
-    sources += [
-    ]
+    sources += []
   }
 
   if (is_android) {
@@ -1693,9 +1666,7 @@ source_set("browser") {
     ]
 
     if (!is_fuchsia) {
-      sources += [
-      ]
-
+      sources += []
     }
 
     deps += [
@@ -1713,13 +1684,11 @@ source_set("browser") {
   # support extensions.
   if (is_win || is_apple || is_linux || is_chromeos || is_desktop_android ||
       is_fuchsia) {
-    sources += [
-    ]
+    sources += []
   }
 
   if (is_chromeos) {
-    sources += [
-    ]
+    sources += []
   }
 
   if (!is_android && !is_ios && !is_fuchsia) {
@@ -1799,7 +1768,6 @@ source_set("browser") {
     ]
   }
 
-
   if (use_clang_profiling_inside_sandbox && chrome_pgo_phase == 1) {
     sources += [
       "$target_gen_dir/devtools/protocol/native_profiling.cc",
@@ -1814,7 +1782,6 @@ source_set("browser") {
   if (is_chromeos) {
     deps += [ "//ash/constants" ]
   }
-
 }
 
 if (is_android) {

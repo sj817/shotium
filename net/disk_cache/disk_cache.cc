@@ -28,7 +28,6 @@
 #include "net/disk_cache/backend_cleanup_tracker.h"
 #include "net/disk_cache/basic_cache_file.h"
 #include "net/disk_cache/blockfile/backend_impl.h"
-#include "net/disk_cache/buildflags.h"
 #include "net/disk_cache/cache_encryption_delegate.h"
 #include "net/disk_cache/cache_util.h"
 #include "net/disk_cache/disk_cache.h"
@@ -38,9 +37,6 @@
 #include "net/disk_cache/simple/simple_util.h"
 #include "net/disk_cache/trivial_cache_entry_hasher.h"
 
-#if BUILDFLAG(ENABLE_DISK_CACHE_SQL_BACKEND)
-#include "net/disk_cache/sql/sql_backend_impl.h"
-#endif  // ENABLE_DISK_CACHE_SQL_BACKEND
 
 namespace {
 
@@ -196,17 +192,6 @@ void CacheCreator::Run() {
     return;
   }
 
-#if BUILDFLAG(ENABLE_DISK_CACHE_SQL_BACKEND)
-  if (backend_type_ == net::CACHE_BACKEND_EXPERIMENTAL_SQL) {
-    auto sql_cache = std::make_unique<disk_cache::SqlBackendImpl>(
-        path_, max_bytes_, type_, cleanup_tracker_);
-    auto* sql_cache_ptr = sql_cache.get();
-    created_cache_ = std::move(sql_cache);
-    sql_cache_ptr->Init(
-        base::BindOnce(&CacheCreator::OnIOComplete, base::Unretained(this)));
-    return;
-  }
-#endif  // ENABLE_DISK_CACHE_SQL_BACKEND
 
 // Avoid references to blockfile functions on Android to reduce binary size.
 #if BUILDFLAG(IS_ANDROID)

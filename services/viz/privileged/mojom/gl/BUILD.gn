@@ -16,7 +16,6 @@ mojom("gl") {
   parser_deps = [ "//components/viz/common:buildflags" ]
 
   public_deps = [
-    "//components/persistent_cache/mojom",
     "//gpu/ipc/common:interfaces",
     "//gpu/ipc/common:surface_handle",
     "//third_party/blink/public/mojom/tokens",
@@ -41,8 +40,6 @@ mojom("gl") {
   if (use_clang_profiling_inside_sandbox) {
     enabled_features += [ "use_clang_profiling_inside_sandbox" ]
   }
-
-
 
   cpp_typemaps = [
     {

@@ -143,7 +143,6 @@
 #include "third_party/blink/renderer/platform/fonts/font_performance.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
 #include "third_party/blink/renderer/platform/loader/cors/cors.h"
-#include "third_party/blink/renderer/platform/loader/fetch/background_code_cache_host.h"
 #include "third_party/blink/renderer/platform/loader/fetch/fetch_initiator_type_names.h"
 #include "third_party/blink/renderer/platform/loader/fetch/fetch_parameters.h"
 #include "third_party/blink/renderer/platform/loader/fetch/loader_freeze_mode.h"
@@ -413,9 +412,6 @@ struct SameSizeAsDocumentLoader
   AgentClusterKey agent_cluster_key;
   bool is_cross_site_cross_browsing_context_group;
   bool should_have_sticky_user_activation;
-  std::unique_ptr<CodeCacheHost> code_cache_host;
-  mojo::PendingRemote<mojom::blink::CodeCacheHost>
-      pending_code_cache_host_for_background;
   HashMap<KURL, EarlyHintsPreloadEntry> early_hints_preloaded_resources;
   Vector<DocumentLoader::Preconnect> preconnects;
   std::optional<Vector<KURL>> ad_auction_components;
@@ -3832,69 +3828,6 @@ ContentSecurityPolicy* DocumentLoader::CreateCSP() {
   return csp;
 }
 
-bool& GetDisableCodeCacheForTesting() {
-  static bool disable_code_cache_for_testing = false;
-  return disable_code_cache_for_testing;
-}
-
-CodeCacheHost* DocumentLoader::GetCodeCacheHost() {
-  if (!code_cache_host_) {
-    if (GetDisableCodeCacheForTesting()) {
-      return nullptr;
-    }
-    // TODO(crbug.com/1083097) When NavigationThreadingOptimizations feature is
-    // enabled by default CodeCacheHost interface will be sent along with
-    // CommitNavigation message and the following code would not be required and
-    // we should just return nullptr here.
-    mojo::Remote<mojom::blink::CodeCacheHost> remote;
-    frame_->GetBrowserInterfaceBroker().GetInterface(
-        remote.BindNewPipeAndPassReceiver());
-    code_cache_host_ = CodeCacheHost::Create(std::move(remote));
-  }
-  return code_cache_host_.get();
-}
-
-scoped_refptr<BackgroundCodeCacheHost>
-DocumentLoader::CreateBackgroundCodeCacheHost() {
-  if (!pending_code_cache_host_for_background_) {
-    // If the Document was loaded without a navigation,
-    // `pending_code_cache_host_for_background_` is not set. In that case, get
-    // the CodeCacheHost mojo handle from the frame's BrowserInterfaceBroker
-    return base::MakeRefCounted<BackgroundCodeCacheHost>(CreateCodeCacheHost());
-  }
-  return base::MakeRefCounted<BackgroundCodeCacheHost>(
-      std::move(pending_code_cache_host_for_background_));
-}
-
-mojo::PendingRemote<mojom::blink::CodeCacheHost>
-DocumentLoader::CreateCodeCacheHost() {
-  if (GetDisableCodeCacheForTesting())
-    return mojo::NullRemote();
-  mojo::PendingRemote<mojom::blink::CodeCacheHost> pending_code_cache_host;
-  frame_->GetBrowserInterfaceBroker().GetInterface(
-      pending_code_cache_host.InitWithNewPipeAndPassReceiver());
-  return pending_code_cache_host;
-}
-
-void DocumentLoader::SetCodeCacheHost(
-    CrossVariantMojoRemote<mojom::blink::CodeCacheHostInterfaceBase>
-        code_cache_host,
-    CrossVariantMojoRemote<mojom::blink::CodeCacheHostInterfaceBase>
-        code_cache_host_for_background) {
-  code_cache_host_.reset();
-  // When NavigationThreadingOptimizations feature is disabled, code_cache_host
-  // can be a nullptr. When this feature is turned off the CodeCacheHost
-  // interface is requested via BrowserBrokerInterface when required.
-  if (code_cache_host) {
-    code_cache_host_ = CodeCacheHost::Create(
-        mojo::Remote<mojom::blink::CodeCacheHost>(std::move(code_cache_host)));
-  }
-
-  pending_code_cache_host_for_background_ =
-      mojo::PendingRemote<mojom::blink::CodeCacheHost>(
-          std::move(code_cache_host_for_background));
-}
-
 // SetSubresourceFilter() was the embedder's way in: it wrapped a
 // WebDocumentSubresourceFilter so every subsequent subresource load could be
 // checked against a filterlist. Nothing in this build implements that interface
@@ -3947,11 +3880,6 @@ bool DocumentLoader::HasLoadedNonInitialEmptyDocument() const {
 
 bool DocumentLoader::IsForDiscard() const {
   return commit_reason_ == CommitReason::kDiscard;
-}
-
-// static
-void DocumentLoader::DisableCodeCacheForTesting() {
-  GetDisableCodeCacheForTesting() = true;
 }
 
 void DocumentLoader::UpdateSubresourceLoadMetrics(

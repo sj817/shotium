@@ -36,7 +36,6 @@
 #include "base/task/single_thread_task_runner.h"
 #include "base/time/time.h"
 #include "mojo/public/cpp/base/big_buffer.h"
-#include "third_party/blink/public/mojom/loader/code_cache.mojom-blink-forward.h"
 #include "third_party/blink/public/platform/scheduler/web_scoped_virtual_time_pauser.h"
 #include "third_party/blink/renderer/platform/allow_discouraged_type.h"
 #include "third_party/blink/renderer/platform/bindings/parkable_string.h"

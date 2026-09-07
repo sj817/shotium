@@ -320,7 +320,6 @@ target(link_target_type, "gles2_sources") {
     "vertex_attrib_manager.h",
   ]
 
-
   configs += [
     "//build/config:precompiled_headers",
     "//gpu:gpu_gles2_implementation",
@@ -350,7 +349,6 @@ target(link_target_type, "gles2_sources") {
     "//base",
     "//build:chromecast_buildflags",
     "//components/crash/core/common",
-    "//components/persistent_cache",
     "//components/version_info",
     "//components/viz/common/resources:shared_image_format",
     "//gpu/command_buffer/client",
@@ -450,9 +448,7 @@ target(link_target_type, "gles2_sources") {
         deps += [ "//ui/gfx/linux:drm" ]
       }
     }
-
   }
-
 
   if (is_apple) {
     sources += [
@@ -481,7 +477,6 @@ target(link_target_type, "gles2_sources") {
       ]
     }
   }
-
 
   if (is_android) {
     if (!is_debug) {
@@ -517,7 +512,6 @@ target(link_target_type, "gles2_sources") {
 
     # For AImageReader.
     libs = [ "mediandk" ]
-
 
     deps += [
       "//base",

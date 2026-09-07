@@ -101,6 +101,10 @@ enable_dav1d_decoder = false
 # Tracing itself is unaffected: the proto path is untouched, and shot starts no
 # tracing session in the first place.
 use_perfetto_trace_processor = false
+# Chromium's flag only removes its wrapper. Perfetto defaults its own offline
+# SQL processor on in Chromium builds, so disable the upstream product too.
+enable_perfetto_trace_processor = false
+enable_perfetto_unittests = false
 
 # WebRTC's P2P sockets in //services/network. is_p2p_enabled defaults to
 # use_blink, and every P2P declaration in NetworkContext, NetworkService and
@@ -233,12 +237,10 @@ icu_data_dir_override = "shot"
 # Chrome itself.
 enable_jxl_decoder = false
 
-# //net's two paths to //sql, and through it to //third_party/sqlite: the
-# device-bound session store and the SQL disk cache backend. Together they were
-# 1.06 MB of sqlite, //sql and //components/sqlite_vfs. shot has no disk cache
-# and no session storage -- it loads one file:// URL and exits.
+# Device-bound sessions and the SQL cache backend are not part of Shot.
+# HTTP(S) resources use the Simple disk cache configured in shot_network.cc;
+# the worker and daemon retain that cache across captures.
 enable_device_bound_sessions = false
-enable_disk_cache_sql_backend = false
 
 # The rest of //net that a static screenshot cannot reach: the Reporting and
 # Network Error Logging endpoints, WebSockets, multicast DNS discovery, and

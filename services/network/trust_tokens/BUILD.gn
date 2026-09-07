@@ -79,10 +79,8 @@ source_set("trust_tokens") {
     ":storage_proto",
     "//base",
     "//components/cbor",
-    "//components/sqlite_proto",
     "//services/network/public/cpp",
     "//services/network/public/mojom",
-    "//sql",
     "//url",
   ]
 
@@ -105,7 +103,6 @@ source_set("test_support") {
     ":trust_tokens",
     "//base",
     "//base/test:test_support",
-    "//components/cbor",
     "//components/cbor",
     "//net",
     "//net:test_support",
@@ -155,7 +152,6 @@ source_set("tests") {
     "//base",
     "//base/test:fuzztest_support",
     "//base/test:test_support",
-    "//components/sqlite_proto",
     "//net",
     "//net:test_support",
     "//net/traffic_annotation:test_support",

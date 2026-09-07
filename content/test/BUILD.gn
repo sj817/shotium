@@ -53,16 +53,14 @@ static_library("setup_field_trials") {
 
   sources = [ "setup_field_trials.cc" ]
   deps = [
-    "//services/metrics/public/cpp:ukm_builders",
-    "//services/metrics/public/mojom",
-    "//services/metrics",
-    "//services/metrics/public/cpp:ukm_builders",
-    "//components/cbor",
-    "//services/metrics/public/cpp:metrics_cpp",
-    "//components/cbor",
     "//cc/base",
+    "//components/cbor",
     "//components/prefs",
     "//content/public/common",
+    "//services/metrics",
+    "//services/metrics/public/cpp:metrics_cpp",
+    "//services/metrics/public/cpp:ukm_builders",
+    "//services/metrics/public/mojom",
   ]
 }
 
@@ -428,9 +426,7 @@ static_library("test_support") {
     "web_contents_observer_consistency_checker.h",
   ]
 
-  configs += [
-    "//build/config:precompiled_headers",
-  ]
+  configs += [ "//build/config:precompiled_headers" ]
 
   public_deps = [
     ":setup_field_trials",
@@ -524,8 +520,7 @@ static_library("test_support") {
     "//url/mojom:url_mojom_gurl",
   ]
 
-  data_deps = [
-  ]
+  data_deps = []
 
   if (is_android) {
     sources += [
@@ -540,12 +535,10 @@ static_library("test_support") {
       "//ui/android",
     ]
   } else {
-    sources += [
-    ]
+    sources += []
 
     if (!is_fuchsia) {
-      sources += [
-      ]
+      sources += []
     }
 
     if (is_win) {
@@ -561,18 +554,13 @@ static_library("test_support") {
   # HID support is not available without udev.
   is_linux_without_udev = (is_linux || is_chromeos) && !use_udev
   if (!is_linux_without_udev) {
-    sources += [
-    ]
+    sources += []
   }
   if (!is_linux_without_udev && !is_android) {
-    sources += [
-    ]
-    deps += [
-      "//device/base",
-    ]
+    sources += []
+    deps += [ "//device/base" ]
     if (is_chromeos) {
-      deps += [
-      ]
+      deps += []
     }
   }
 
@@ -609,9 +597,7 @@ static_library("test_support") {
       "../public/test/system_media_controls_bridge_test_utils.h",
       "../public/test/text_input_test_utils_mac.mm",
     ]
-    deps += [
-      "//ui/base/mojom",
-    ]
+    deps += [ "//ui/base/mojom" ]
   }
 
   if (is_ios) {
@@ -658,9 +644,7 @@ static_library("test_support") {
   }
 
   if (is_mac) {
-    deps += [
-      "//sandbox/mac:seatbelt",
-    ]
+    deps += [ "//sandbox/mac:seatbelt" ]
   }
 
   if (use_ozone) {
@@ -675,8 +659,7 @@ static_library("test_support") {
   }
 
   if (is_chromeos) {
-    sources += [
-    ]
+    sources += []
   }
 
   if (is_fuchsia) {
@@ -721,8 +704,7 @@ if (is_fuchsia) {
         data += [ "$root_gen_dir/package_metadata/cast_streaming_shell.meta" ]
       }
 
-      data_deps = [
-      ]
+      data_deps = []
     } else {
       data += [ "$root_gen_dir/package_metadata/chrome.meta" ]
       data_deps = [ "//chrome/app:chrome_fuchsia" ]
@@ -732,8 +714,7 @@ if (is_fuchsia) {
 
 group("telemetry_gpu_integration_test_scripts_only") {
   testonly = true
-  deps = [
-  ]
+  deps = []
 
   data = [ "//testing/scripts/run_isolated_script_test.py" ]
   data_deps = [
@@ -777,9 +758,7 @@ group("telemetry_gpu_integration_test_support") {
 
 group("webgpu_cts_scripts") {
   testonly = true
-  data = [
-    "//third_party/node/",
-  ]
+  data = [ "//third_party/node/" ]
 }
 
 group("telemetry_gpu_common_data") {
@@ -896,17 +875,14 @@ static_library("browsertest_support") {
   if (is_android) {
     deps += [ "//content/public/app" ]
   } else {
-    deps += [
-      "//content/public/browser",
-    ]
+    deps += [ "//content/public/browser" ]
   }
 
   if (use_aura && toolkit_views && !is_castos) {
   }
 
   if (use_aura) {
-    sources += [
-    ]
+    sources += []
   }
 
   if (is_mac) {
@@ -1109,16 +1085,14 @@ if (is_android) {
 
   jinja_template("content_browsertests_manifest") {
     testonly = true
-    input =
-    output = content_browsertests_manifest
+    input = (output = content_browsertests_manifest)
     variables = [ "library_name=content_browsertests__library" ]
   }
 
   android_library("content_browsertests_java") {
     testonly = true
     resources_package = "org.chromium.content_browsertests_apk"
-    sources = [
-    ]
+    sources = []
     deps = [
       ":content_browsertests_resources",
       "//base:base_java",
@@ -1133,8 +1107,7 @@ if (is_android) {
 
   android_resources("content_browsertests_resources") {
     testonly = true
-    sources = [
-    ]
+    sources = []
   }
 }
 
@@ -1480,7 +1453,6 @@ test("content_browsertests") {
     "//services/test/echo/public/mojom",
     "//services/viz/privileged/mojom",
     "//services/viz/public/cpp/gpu",
-    "//sql:test_support",
     "//storage/browser",
     "//storage/browser:test_support",
     "//testing/gmock",
@@ -1557,9 +1529,7 @@ test("content_browsertests") {
       ]
     }
   } else {
-    data_deps += [
-      "//testing/buildbot/filters:content_browsertests_filters",
-    ]
+    data_deps += [ "//testing/buildbot/filters:content_browsertests_filters" ]
   }
 
   if (enable_plugins) {
@@ -1568,8 +1538,7 @@ test("content_browsertests") {
 
   if (enable_screen_capture) {
     if (is_android || is_linux || is_chromeos || is_mac || is_win) {
-      sources += [
-      ]
+      sources += []
 
       data += [ "$root_out_dir/content_shell.pak" ]
     }
@@ -1661,11 +1630,9 @@ test("content_browsertests") {
     if (is_component_build) {
       sources += []
     }
-    sources += [
-      "../browser/renderer_host/compositor_impl_android_browsertest.cc",
-    ]
-    sources -= [
-    ]
+    sources +=
+        [ "../browser/renderer_host/compositor_impl_android_browsertest.cc" ]
+    sources -= []
     deps += [
       ":android_test_message_pump_support",
       ":content_browsertests_java",
@@ -1694,9 +1661,7 @@ test("content_browsertests") {
       "../browser/storage_service_sandbox_browsertest.cc",
       "../browser/zoom_browsertest.cc",
     ]
-    deps += [
-      "//content/public/browser:proto",
-    ]
+    deps += [ "//content/public/browser:proto" ]
 
     if (is_chromeos) {
       deps += [ "//ash/constants" ]
@@ -1706,23 +1671,19 @@ test("content_browsertests") {
       data += [ "//content/test/data/clipboard/" ]
     }
     if (!is_ios && !is_fuchsia) {
-      sources += [
-      ]
+      sources += []
     }
   }
   if (is_posix) {
   }
 
   if (is_chromeos) {
-    sources += [
-    ]
+    sources += []
 
-    deps += [
-    ]
+    deps += []
 
     if (is_component_build) {
-      sources += [
-      ]
+      sources += []
     }
   }
 
@@ -1744,8 +1705,7 @@ test("content_browsertests") {
   }
 
   if (is_chromeos) {
-    deps += [
-    ]
+    deps += []
   }
 
   if (use_aura && !is_win) {
@@ -2153,9 +2113,7 @@ test("content_unittests") {
   }
 
   if (is_win || is_mac || is_linux || is_chromeos) {
-    sources += [
-      "../browser/renderer_host/delegated_frame_host_unittest.cc",
-    ]
+    sources += [ "../browser/renderer_host/delegated_frame_host_unittest.cc" ]
   }
 
   if (is_linux || is_chromeos) {
@@ -2256,8 +2214,6 @@ test("content_unittests") {
     "//services/service_manager/public/cpp/test:test_support",
     "//services/viz/public/cpp/gpu",
     "//skia",
-    "//sql",
-    "//sql:test_support",
     "//storage/browser",
     "//storage/browser:test_support",
     "//storage/common",
@@ -2271,7 +2227,6 @@ test("content_unittests") {
     "//third_party/libyuv",
     "//third_party/metrics_proto",
     "//third_party/re2",
-    "//third_party/sqlite",
     "//third_party/zlib/google:compression_utils",
     "//ui/base:ozone_buildflags",
     "//ui/base:test_support",
@@ -2302,8 +2257,7 @@ test("content_unittests") {
   ]
 
   if (is_chromeos) {
-    sources += [
-    ]
+    sources += []
   }
 
   if (enable_nocompile_tests) {
@@ -2382,8 +2336,7 @@ test("content_unittests") {
   }
   if (is_chromeos) {
     sources += []
-    deps += [
-    ]
+    deps += []
   }
   if (is_android) {
     sources += [
@@ -2423,14 +2376,11 @@ test("content_unittests") {
       "../browser/devtools/protocol/webauthn_handler_unittest.cc",
       "../browser/host_zoom_map_impl_unittest.cc",
     ]
-    deps += [
-    ]
+    deps += []
 
     if (!is_fuchsia) {
-      sources += [
-      ]
-      deps += [
-      ]
+      sources += []
+      deps += []
     }
   }
 
@@ -2442,14 +2392,10 @@ test("content_unittests") {
   # HID support is not available without udev.
   is_linux_without_udev = (is_linux || is_chromeos) && !use_udev
   if (!is_linux_without_udev && !is_android) {
-    sources += [
-    ]
-    deps += [
-      "//device/base",
-    ]
+    sources += []
+    deps += [ "//device/base" ]
     if (is_chromeos) {
-      deps += [
-      ]
+      deps += []
     }
     if (is_ios && use_blink) {
       deps += [ "//crypto:test_support" ]

@@ -103,7 +103,6 @@ static_library("test_support") {
     "//gpu/ipc:gpu_thread_holder",
   ]
   deps = [
-    "//components/persistent_cache",
     "//base/test:test_support",
     "//gpu/command_buffer/client:raster",
     "//gpu/command_buffer/common",
@@ -562,8 +561,6 @@ test("gpu_unittests") {
       sources += [ "ipc/service/gpu_channel_manager_unittest.cc" ]
     }
   }
-
-
 
   configs += [ "//build/config:precompiled_headers" ]
 

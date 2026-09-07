@@ -17,7 +17,6 @@
 #include "build/build_config.h"
 #include "crypto/crypto_buildflags.h"
 #include "net/base/net_export.h"
-#include "net/disk_cache/buildflags.h"
 #include "net/net_buildflags.h"
 
 namespace net::features {
@@ -578,9 +577,6 @@ enum class DiskCacheBackend {
   kDefault,
   kSimple,
   kBlockfile,
-#if BUILDFLAG(ENABLE_DISK_CACHE_SQL_BACKEND)
-  kSql,
-#endif  // ENABLE_DISK_CACHE_SQL_BACKEND
 };
 NET_EXPORT BASE_DECLARE_FEATURE(kDiskCacheBackendExperiment);
 NET_EXPORT extern const base::FeatureParam<DiskCacheBackend>
@@ -595,67 +591,6 @@ NET_EXPORT extern const base::FeatureParam<DiskCacheBackend>
 NET_EXPORT BASE_DECLARE_FEATURE_PARAM(bool,
                                       kDiskCacheBackendResetCacheOnGroupChange);
 
-#if BUILDFLAG(ENABLE_DISK_CACHE_SQL_BACKEND)
-// If the number of pages recorded in the WAL file of the SQL disk cache's DB
-// exceeds this value, a checkpoint is executed on committing data.
-NET_EXPORT BASE_DECLARE_FEATURE_PARAM(int,
-                                      kSqlDiskCacheForceCheckpointThreshold);
-// If the number of pages recorded in the WAL file of the SQL disk cache's DB
-// exceeds this value and the browser is idle, a checkpoint is executed.
-NET_EXPORT BASE_DECLARE_FEATURE_PARAM(int,
-                                      kSqlDiskCacheIdleCheckpointThreshold);
-// While the memory usage for the buffer doesn't exceed the number of bytes
-// specified by this param, the SQL backend executes optimistic writes.
-NET_EXPORT BASE_DECLARE_FEATURE_PARAM(int,
-                                      kSqlDiskCacheOptimisticWriteBufferSize);
-// Whether to enable WAL mode for the SQL disk cache backend.
-NET_EXPORT BASE_DECLARE_FEATURE_PARAM(bool, kSqlDiskCacheWalMode);
-// Disables synchronous writes in the SQL disk cache's DB.
-// This is faster but less safe.
-NET_EXPORT BASE_DECLARE_FEATURE_PARAM(bool, kSqlDiskCacheSynchronousOff);
-// The number of shards for the SQL disk cache.
-NET_EXPORT BASE_DECLARE_FEATURE_PARAM(int, kSqlDiskCacheShardCount);
-// Loads the in-memory index on initialization.
-NET_EXPORT BASE_DECLARE_FEATURE_PARAM(bool, kSqlDiskCacheLoadIndexOnInit);
-// Reduces UMA metrics recorded by the SQL disk cache.
-NET_EXPORT BASE_DECLARE_FEATURE_PARAM(bool, kSqlDiskCacheReduceUma);
-// The maximum size of the write buffer for all entries.
-NET_EXPORT BASE_DECLARE_FEATURE_PARAM(int,
-                                      kSqlDiskCacheMaxWriteBufferTotalSize);
-// The maximum size of the write buffer for a single entry.
-NET_EXPORT BASE_DECLARE_FEATURE_PARAM(int,
-                                      kSqlDiskCacheMaxWriteBufferSizePerEntry);
-// The maximum size of the read buffer for all entries.
-NET_EXPORT BASE_DECLARE_FEATURE_PARAM(int, kSqlDiskCacheMaxReadBufferTotalSize);
-// The maximum body size (in bytes) for an entry to be copied to shared cache.
-NET_EXPORT BASE_DECLARE_FEATURE_PARAM(int,
-                                      kSqlDiskCacheMaxSharedCacheCopyEntrySize);
-// The read buffer size (in bytes) when copying entries to shared cache.
-NET_EXPORT BASE_DECLARE_FEATURE_PARAM(int,
-                                      kSqlDiskCacheSharedCacheReadBufferSize);
-// Execute the checkpoint serially.
-NET_EXPORT BASE_DECLARE_FEATURE_PARAM(bool, kSqlDiskCacheSerialCheckpoint);
-// Execute the initialization serially.
-NET_EXPORT BASE_DECLARE_FEATURE_PARAM(bool, kSqlDiskCacheSerialInitialize);
-// Whether to use size and priority aware eviction for the SQL disk cache.
-NET_EXPORT BASE_DECLARE_FEATURE_PARAM(
-    bool,
-    kSqlDiskCacheSizeAndPriorityAwareEviction);
-// Whether to aggressively release SQLite's cached memory after writes.
-NET_EXPORT BASE_DECLARE_FEATURE_PARAM(bool,
-                                      kSqlDiskCacheReleaseMemoryAfterWrites);
-// The size of in-memory cache of SQLite database. 0 invokes SQLite's default.
-// See https://sqlite.org/pragma.html#pragma_cache_size for more details.
-NET_EXPORT BASE_DECLARE_FEATURE_PARAM(int, kSqlDiskCacheCacheSize);
-// Whether to use consolidated in memory index.
-NET_EXPORT BASE_DECLARE_FEATURE_PARAM(bool,
-                                      kSqlDiskCacheConsolidatedInMemoryIndex);
-// Whether to enable incremental vacuum for the SQL disk cache backend.
-NET_EXPORT BASE_DECLARE_FEATURE_PARAM(bool, kSqlDiskCacheIncrementalVacuum);
-// The number of pages to vacuum per step during incremental vacuum.
-NET_EXPORT BASE_DECLARE_FEATURE_PARAM(int,
-                                      kSqlDiskCacheIncrementalVacuumPageCount);
-#endif  // ENABLE_DISK_CACHE_SQL_BACKEND
 
 // If enabled, ignore Strict-Transport-Security for [*.]localhost hosts.
 NET_EXPORT BASE_DECLARE_FEATURE(kIgnoreHSTSForLocalhost);

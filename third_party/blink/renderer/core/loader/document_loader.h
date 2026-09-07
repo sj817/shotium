@@ -89,7 +89,6 @@
 #include "third_party/blink/renderer/platform/exported/wrapped_resource_response.h"
 #include "third_party/blink/renderer/platform/instrumentation/use_counter.h"
 #include "third_party/blink/renderer/platform/loader/fetch/client_hints_preferences.h"
-#include "third_party/blink/renderer/platform/loader/fetch/code_cache_host.h"
 #include "third_party/blink/renderer/platform/loader/fetch/early_hints_preload_entry.h"
 #include "third_party/blink/renderer/platform/loader/fetch/loader_freeze_mode.h"
 #include "third_party/blink/renderer/platform/loader/fetch/resource_error.h"
@@ -107,9 +106,7 @@ class TickClock;
 
 namespace blink {
 
-class BackgroundCodeCacheHost;
 class ContentSecurityPolicy;
-class CodeCacheHost;
 class Document;
 class DocumentParser;
 class Element;
@@ -200,11 +197,6 @@ class CORE_EXPORT DocumentLoader : public GarbageCollected<DocumentLoader>,
   bool LastNavigationHadTransientUserActivation() const override {
     return last_navigation_had_transient_user_activation_;
   }
-  void SetCodeCacheHost(
-      CrossVariantMojoRemote<mojom::blink::CodeCacheHostInterfaceBase>
-          code_cache_host,
-      CrossVariantMojoRemote<mojom::blink::CodeCacheHostInterfaceBase>
-          code_cache_host_for_background) override;
   bool HasLoadedNonInitialEmptyDocument() const override;
   bool IsForDiscard() const override;
 
@@ -432,13 +424,6 @@ class CORE_EXPORT DocumentLoader : public GarbageCollected<DocumentLoader>,
   // activated.
   void NotifyPrerenderingDocumentActivated(
       const mojom::blink::PrerenderPageActivationParams& params);
-
-  CodeCacheHost* GetCodeCacheHost();
-  scoped_refptr<BackgroundCodeCacheHost> CreateBackgroundCodeCacheHost();
-  static void DisableCodeCacheForTesting();
-
-  // This method is used for workers and iframes loaded without navigation.
-  mojo::PendingRemote<mojom::blink::CodeCacheHost> CreateCodeCacheHost();
 
   HashMap<KURL, EarlyHintsPreloadEntry> GetEarlyHintsPreloadedResources();
 
@@ -839,12 +824,6 @@ class CORE_EXPORT DocumentLoader : public GarbageCollected<DocumentLoader>,
   // window was set up. The navigation API is gone and nothing else reads
   // these fields, so they're gone too (WebNavigationParams itself is outside
   // this territory and still carries the fields the browser fills in).
-
-  // This is the interface that handles generated code cache
-  // requests to fetch code cache when loading resources.
-  std::unique_ptr<CodeCacheHost> code_cache_host_;
-  mojo::PendingRemote<mojom::blink::CodeCacheHost>
-      pending_code_cache_host_for_background_;
 
   HashMap<KURL, EarlyHintsPreloadEntry> early_hints_preloaded_resources_;
   Vector<Preconnect> preconnects_;

@@ -40,7 +40,6 @@
 #include "services/network/public/mojom/web_sandbox_flags.mojom-blink-forward.h"
 #include "third_party/blink/public/common/tokens/tokens.h"
 #include "third_party/blink/public/common/user_agent/user_agent_metadata.h"
-#include "third_party/blink/public/mojom/loader/code_cache.mojom-blink-forward.h"
 #include "third_party/blink/public/mojom/loader/request_context_frame_type.mojom-blink-forward.h"
 #include "third_party/blink/public/mojom/page_state/page_state.mojom-blink-forward.h"
 #include "third_party/blink/public/platform/scheduler/web_scoped_virtual_time_pauser.h"
@@ -261,7 +260,6 @@ class CORE_EXPORT FrameLoader final {
 
   bool AllowRequestForThisFrame(const FrameLoadRequest&);
 
-  mojo::PendingRemote<mojom::blink::CodeCacheHost> CreateWorkerCodeCacheHost();
 
   void ProcessPendingCrossDocumentFragment();
 

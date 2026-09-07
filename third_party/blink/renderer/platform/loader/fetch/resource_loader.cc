@@ -76,7 +76,6 @@
 #include "third_party/blink/renderer/platform/loader/cors/cors.h"
 #include "third_party/blink/renderer/platform/loader/cors/cors_error_string.h"
 #include "third_party/blink/renderer/platform/loader/fetch/back_forward_cache_loader_helper.h"
-#include "third_party/blink/renderer/platform/loader/fetch/code_cache_host.h"
 #include "third_party/blink/renderer/platform/loader/fetch/console_logger.h"
 #include "third_party/blink/renderer/platform/loader/fetch/detachable_use_counter.h"
 #include "third_party/blink/renderer/platform/loader/fetch/fetch_context.h"
@@ -90,7 +89,6 @@
 #include "third_party/blink/renderer/platform/loader/fetch/response_body_loader.h"
 #include "third_party/blink/renderer/platform/loader/fetch/shared_buffer_bytes_consumer.h"
 #include "third_party/blink/renderer/platform/loader/fetch/url_loader/background_response_processor.h"
-#include "third_party/blink/renderer/platform/loader/fetch/url_loader/cached_metadata_handler.h"
 #include "third_party/blink/renderer/platform/loader/fetch/url_loader/request_conversion.h"
 #include "third_party/blink/renderer/platform/loader/mixed_content_autoupgrade_status.h"
 #include "third_party/blink/renderer/platform/network/http_names.h"
@@ -1320,17 +1318,9 @@ void ResourceLoader::RequestAsynchronously() {
   bool no_mime_sniffing = resource_->GetResourceRequest().GetRequestContext() ==
                           blink::mojom::blink::RequestContextType::FETCH;
 
-  // Don't pass a CodeCacheHost when DownloadToBlob is true. The detailed
-  // decision logic for whether or not to fetch code cache from the isolated
-  // code cache is implemented in ResourceRequestSender::CodeCacheFetcher. We
-  // only check the DownloadToBlob flag here, which ResourceRequestSender cannot
-  // know.
   loader_->LoadAsynchronously(std::move(network_resource_request_),
                               Context().GetTopFrameOrigin(), no_mime_sniffing,
                               Context().CreateResourceLoadInfoNotifierWrapper(),
-                              !resource_->GetResourceRequest().DownloadToBlob()
-                                  ? fetcher_->GetCodeCacheHost()
-                                  : nullptr,
                               this);
 }
 

@@ -28,7 +28,6 @@
 #include "services/network/public/mojom/url_response_head.mojom-forward.h"
 #include "third_party/blink/public/common/loader/url_loader_throttle.h"
 #include "third_party/blink/public/mojom/blob/blob_registry.mojom-blink.h"
-#include "third_party/blink/public/mojom/loader/code_cache.mojom-blink-forward.h"
 #include "third_party/blink/public/mojom/loader/resource_load_info.mojom.h"
 #include "third_party/blink/public/mojom/navigation/renderer_eviction_reason.mojom-blink-forward.h"
 #include "third_party/blink/public/platform/web_common.h"
@@ -52,8 +51,6 @@ struct URLLoaderCompletionStatus;
 }  // namespace network
 
 namespace blink {
-class CodeCacheFetcher;
-class CodeCacheHost;
 class ResourceLoadInfoNotifierWrapper;
 class ThrottlingURLLoader;
 class MojoURLLoaderClient;
@@ -114,7 +111,6 @@ class BLINK_PLATFORM_EXPORT ResourceRequestSender {
       std::vector<std::unique_ptr<URLLoaderThrottle>> throttles,
       std::unique_ptr<ResourceLoadInfoNotifierWrapper>
           resource_load_info_notifier_wrapper,
-      CodeCacheHost* code_cache_host,
       base::OnceCallback<void(mojom::blink::RendererEvictionReason)>
           evict_from_bfcache_callback,
       base::RepeatingCallback<void(size_t)>
@@ -231,20 +227,13 @@ class BLINK_PLATFORM_EXPORT ResourceRequestSender {
       const PendingRequestInfo& request_info,
       network::mojom::URLResponseHead& response_head) const;
 
-  void DidReceiveCachedCode();
 
-  bool ShouldDeferTask() const;
 
-  void MaybeRunPendingTasks();
 
   // The instance is created on StartAsync() or StartSync(), and it's deleted
   // when the response has finished, or when the request is canceled.
   std::unique_ptr<PendingRequestInfo> request_info_;
 
-  // Set to true when an operation integral to resource loading latency is
-  // delayed waiting on a response from the code cache.
-  bool latency_critical_operation_deferred_ = false;
-  bool used_code_cache_fetcher_ = false;
 
   // Set to true when OnReceivedResponse of the client is called.
   // This is used to prevent OnReceivedResponse from being called twice.
@@ -252,14 +241,6 @@ class BLINK_PLATFORM_EXPORT ResourceRequestSender {
 
   scoped_refptr<base::SequencedTaskRunner> loading_task_runner_;
 
-  // `pending_tasks_` are queued while waiting for the response from the
-  // IsolatedCode Cache Host. Ideally for the code health, we should not have
-  // such deferring logic. However, it is difficult because the current code for
-  // ScriptCachedMetadataHandler is written with the assumption that metadata
-  // comes first.
-  Vector<base::OnceClosure> pending_tasks_;
-
-  scoped_refptr<CodeCacheFetcher> code_cache_fetcher_;
 
   base::WeakPtrFactory<ResourceRequestSender> weak_factory_{this};
 };
