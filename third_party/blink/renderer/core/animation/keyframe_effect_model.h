@@ -281,17 +281,17 @@ class CORE_EXPORT KeyframeEffectModelBase : public EffectModel {
     return has_synthetic_keyframes_;
   }
 
-  void InvalidateCompositorKeyframesSnapshot() const {
-    needs_compositor_keyframes_snapshot_ = true;
+  void InvalidateTransformKeyframeSnapshots() const {
+    needs_transform_keyframe_snapshots_ = true;
   }
 
-  bool SnapshotNeutralCompositorKeyframes(
+  bool SnapshotNeutralTransformKeyframes(
       Element&,
       const ComputedStyle& old_style,
       const ComputedStyle& new_style,
       const ComputedStyle* parent_style) const;
 
-  bool SnapshotAllCompositorKeyframesIfNecessary(
+  bool SnapshotAllTransformKeyframesIfNecessary(
       Element&,
       const ComputedStyle& base_style,
       const ComputedStyle* parent_style) const;
@@ -310,8 +310,6 @@ class CORE_EXPORT KeyframeEffectModelBase : public EffectModel {
   }
 
   bool HasNamedRangeKeyframes() { return has_named_range_keyframes_; }
-
-  bool RequiresPropertyNode() const;
 
   bool IsTransformRelatedEffect() const override;
 
@@ -356,14 +354,14 @@ class CORE_EXPORT KeyframeEffectModelBase : public EffectModel {
   using ShouldSnapshotKeyframeFunction =
       base::FunctionRef<bool(const PropertySpecificKeyframe&)>;
 
-  bool SnapshotCompositableProperties(
+  bool SnapshotTransformProperties(
       Element& element,
       const ComputedStyle& computed_style,
       const ComputedStyle* parent_style,
       ShouldSnapshotPropertyFunction should_process_property,
       ShouldSnapshotKeyframeFunction should_process_keyframe) const;
 
-  bool SnapshotCompositorKeyFrames(
+  bool SnapshotTransformPropertyKeyframes(
       const PropertyHandle& property,
       Element& element,
       const ComputedStyle& computed_style,
@@ -394,7 +392,7 @@ class CORE_EXPORT KeyframeEffectModelBase : public EffectModel {
   scoped_refptr<TimingFunction> default_keyframe_easing_;
 
   mutable bool has_synthetic_keyframes_ = false;
-  mutable bool needs_compositor_keyframes_snapshot_ = true;
+  mutable bool needs_transform_keyframe_snapshots_ = true;
   mutable bool has_revert_ = false;
   mutable bool has_named_range_keyframes_ = false;
 

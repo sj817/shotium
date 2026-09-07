@@ -8,7 +8,6 @@ blink_core_tests_animation = [
   "animation_sim_test.cc",
   "animation_time_delta_test.cc",
   "animation_utils_test.cc",
-  "compositor_animation_curve_test.cc",
   "css/css_scroll_timeline_test.cc",
   "css/css_transition_data_test.cc",
   "css_color_interpolation_type_test.cc",

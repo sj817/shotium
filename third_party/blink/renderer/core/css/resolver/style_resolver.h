@@ -43,7 +43,7 @@
 
 namespace blink {
 
-class CompositorKeyframeValue;
+class TransformKeyframeSnapshot;
 class ContainerSelector;
 class CSSPropertyValueSet;
 class CSSValue;
@@ -105,13 +105,12 @@ class CORE_EXPORT StyleResolver final : public GarbageCollected<StyleResolver> {
 
   float InitialZoom() const;
 
-  static CompositorKeyframeValue* CreateCompositorKeyframeValueSnapshot(
+  static TransformKeyframeSnapshot* CreateTransformKeyframeSnapshot(
       Element&,
       const ComputedStyle& base_style,
       const ComputedStyle* parent_style,
       const PropertyHandle&,
-      const CSSValue*,
-      double offset);
+      const CSSValue*);
 
   // Calculate computed style for a given page index and name.
   //

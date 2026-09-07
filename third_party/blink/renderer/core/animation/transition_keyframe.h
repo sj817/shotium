@@ -6,7 +6,7 @@
 #define THIRD_PARTY_BLINK_RENDERER_CORE_ANIMATION_TRANSITION_KEYFRAME_H_
 
 #include "base/notreached.h"
-#include "third_party/blink/renderer/core/animation/css/compositor_keyframe_value.h"
+#include "third_party/blink/renderer/core/animation/css/transform_keyframe_snapshot.h"
 #include "third_party/blink/renderer/core/animation/keyframe.h"
 #include "third_party/blink/renderer/core/animation/property_handle.h"
 #include "third_party/blink/renderer/core/animation/typed_interpolation_value.h"
@@ -51,7 +51,7 @@ class CORE_EXPORT TransitionKeyframe : public Keyframe {
                  copy_from.composite_,
                  copy_from.easing_),
         value_(copy_from.value_->Clone()),
-        compositor_value_(copy_from.compositor_value_),
+        transform_snapshot_(copy_from.transform_snapshot_),
         is_attr_tainted_(copy_from.is_attr_tainted_) {}
 
   void SetValue(TypedInterpolationValue* value) {
@@ -63,7 +63,7 @@ class CORE_EXPORT TransitionKeyframe : public Keyframe {
     CHECK(!!value->Value());
     value_ = value;
   }
-  void SetCompositorValue(CompositorKeyframeValue*);
+  void SetTransformSnapshot(TransformKeyframeSnapshot*);
   void SetIsAttrTainted(bool is_attr_tainted) {
     is_attr_tainted_ = is_attr_tainted;
   }
@@ -75,17 +75,17 @@ class CORE_EXPORT TransitionKeyframe : public Keyframe {
                              scoped_refptr<TimingFunction> easing,
                              EffectModel::CompositeOperation composite,
                              TypedInterpolationValue* value,
-                             CompositorKeyframeValue* compositor_value,
+                             TransformKeyframeSnapshot* transform_snapshot,
                              bool is_attr_tainted)
         : Keyframe::PropertySpecificKeyframe(offset,
                                              std::move(easing),
                                              composite),
           value_(value),
-          compositor_value_(compositor_value),
+          transform_snapshot_(transform_snapshot),
           is_attr_tainted_(is_attr_tainted) {}
 
-    const CompositorKeyframeValue* GetCompositorKeyframeValue() const final {
-      return compositor_value_.Get();
+    const TransformKeyframeSnapshot* GetTransformKeyframeSnapshot() const final {
+      return transform_snapshot_.Get();
     }
 
     bool IsNeutral() const final { return false; }
@@ -110,7 +110,7 @@ class CORE_EXPORT TransitionKeyframe : public Keyframe {
 
    private:
     Member<TypedInterpolationValue> value_;
-    Member<CompositorKeyframeValue> compositor_value_;
+    Member<TransformKeyframeSnapshot> transform_snapshot_;
     bool is_attr_tainted_;
   };
 
@@ -131,7 +131,7 @@ class CORE_EXPORT TransitionKeyframe : public Keyframe {
       double offset) const final;
 
   Member<TypedInterpolationValue> value_;
-  Member<CompositorKeyframeValue> compositor_value_;
+  Member<TransformKeyframeSnapshot> transform_snapshot_;
   bool is_attr_tainted_ = false;
 };
 

@@ -38,7 +38,7 @@
 #include "third_party/blink/public/mojom/use_counter/metrics/web_feature.mojom-blink.h"
 #include "third_party/blink/public/web/web_print_page_description.h"
 #include "third_party/blink/public/web/web_print_params.h"
-#include "third_party/blink/renderer/core/animation/css/compositor_keyframe_value_factory.h"
+#include "third_party/blink/renderer/core/animation/css/transform_keyframe_snapshot_factory.h"
 #include "third_party/blink/renderer/core/animation/css/css_animations.h"
 #include "third_party/blink/renderer/core/animation/document_animations.h"
 #include "third_party/blink/renderer/core/animation/element_animations.h"
@@ -2086,13 +2086,12 @@ void StyleResolver::ApplyBaseStyle(
                         cascade);
 }
 
-CompositorKeyframeValue* StyleResolver::CreateCompositorKeyframeValueSnapshot(
+TransformKeyframeSnapshot* StyleResolver::CreateTransformKeyframeSnapshot(
     Element& element,
     const ComputedStyle& base_style,
     const ComputedStyle* parent_style,
     const PropertyHandle& property,
-    const CSSValue* value,
-    double offset) {
+    const CSSValue* value) {
   // TODO(alancutter): Avoid creating a StyleResolverState just to apply a
   // single value on a ComputedStyle.
   StyleResolverState state(element.GetDocument(), element,
@@ -2112,7 +2111,7 @@ CompositorKeyframeValue* StyleResolver::CreateCompositorKeyframeValueSnapshot(
     cascade.Apply();
   }
   const ComputedStyle* style = state.TakeStyle();
-  return CompositorKeyframeValueFactory::Create(property, *style, offset);
+  return TransformKeyframeSnapshotFactory::Create(property, *style);
 }
 
 // For now, viewport units are resolved differently for page / page margin
@@ -2644,20 +2643,11 @@ bool StyleResolver::ApplyAnimatedStyle(
     DCHECK(!state.GetFontBuilder().FontDirty());
   }
 
-  if (ElementAnimations* animations =
-          animating_element->GetElementAnimations()) {
-    if (StyleBaseData* base_data = state.StyleBuilder().BaseData()) {
-      if (const CSSBitset* important_set = base_data->GetBaseImportantSet()) {
-        animations->CancelCompositedAnimationsAffectingProperties(
-            *important_set);
-      }
-    }
-  }
-  CSSAnimations::CalculateCompositorAnimationUpdate(
+  CSSAnimations::CalculateTransformSnapshotUpdate(
       state.AnimationUpdate(), *animating_element, element,
       *state.StyleBuilder().GetBaseComputedStyle(), state.ParentStyle(),
-      WasViewportResized(), state.AffectsCompositorSnapshots());
-  CSSAnimations::SnapshotCompositorKeyframes(
+      WasViewportResized(), state.AffectsTransformSnapshots());
+  CSSAnimations::SnapshotTransformKeyframes(
       *animating_element, state.AnimationUpdate(),
       *state.StyleBuilder().GetBaseComputedStyle(), state.ParentStyle());
   CSSAnimations::UpdateAnimationFlags(

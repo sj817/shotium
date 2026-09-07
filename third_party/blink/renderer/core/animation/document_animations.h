@@ -89,13 +89,13 @@ class CORE_EXPORT DocumentAnimations final
   void RetargetAnimationsForPseudoElement(PseudoElement* new_effect_target);
 
   // Updates existing animations as part of generating a new (document
-  // lifecycle) frame. Note that this considers and updates state for
-  // both composited and non-composited animations.
+  // lifecycle) frame. Paint property changes may require an on-demand
+  // timing update before servicing pending play and pause operations.
   void UpdateAnimations(
       DocumentLifecycle::LifecycleState required_lifecycle_state,
-      bool compositor_properties_updated);
+      bool paint_properties_updated);
 
-  void MarkAnimationsCompositorPending();
+  void MarkAnimationsPending();
 
   HeapVector<Member<Animation>> getAnimations(const TreeScope&);
   void PrepareAnimationsForSVGImageReset(
@@ -144,7 +144,7 @@ class CORE_EXPORT DocumentAnimations final
   void RemoveReplacedAnimations(ReplaceableAnimationsMap*);
 
  private:
-  void MarkPendingIfCompositorPropertyAnimationChanges();
+  void UpdateEffectTimingIfNeeded();
 
   Member<Document> document_;
   HeapHashSet<WeakMember<AnimationTimeline>> timelines_;

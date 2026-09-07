@@ -62,7 +62,6 @@ class CORE_EXPORT EffectStack {
   static bool CompareSampledEffects(const Member<SampledEffect>&,
                                     const Member<SampledEffect>&);
   bool IsEmpty() const { return sampled_effects_.empty(); }
-  bool HasActiveAnimationsOnCompositor(const PropertyHandle&) const;
 
   using PropertyHandleFilter = bool (*)(const PropertyHandle&);
   bool AffectsProperties(PropertyHandleFilter) const;

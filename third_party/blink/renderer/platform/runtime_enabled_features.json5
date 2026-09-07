@@ -1227,9 +1227,6 @@
       base_feature: "none",
     },
     {
-      name: "CompositingDecisionAtAnimationPhaseBoundaries"
-    },
-    {
       name: "CompositionForegroundMarkers",
       status: {
         "Android": "stable",
@@ -2486,11 +2483,6 @@
       // https://crbug.com/518266739
       name: "DragImageForLargeImages",
       status: "stable",
-    },
-    {
-      // See: crrev.com/c/7874048
-      // Diagnostic flag to gather data for a case when compositable animations lack snapshots without a known reason.
-      name: "DumpForAbsentKeyframeSnapshots",
     },
     {
       name: "EditingLineMovementWithRubyFix",
@@ -4139,18 +4131,6 @@
         "default": "experimental",
       },
       base_feature: "none",
-    },
-    {
-      // See crbug.com/521921832
-      // Any potential behavioral changes excepting bugfixes from the V2 implementation (including
-      // changes to when the histogram is reported, like early-outs in Animation::PreCommit) are behind
-      // this flag, for safety and consistent reporting on the V1 enum while it is still supported.
-      name: "NewAnimationCompositingChecking",
-      status: "test"
-    },
-    {
-      // Enhanced reporting to dev-tools of the composited/non-composited state of animations.
-      name: "NewAnimationDispositionReporting"
     },
     {
       // https://chromestatus.com/feature/5054329641893888

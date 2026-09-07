@@ -24,7 +24,7 @@ using PropertyHandleSet = HashSet<PropertyHandle>;
 
 class Element;
 class ComputedStyle;
-class CompositorKeyframeValue;
+class TransformKeyframeSnapshot;
 class TimelineRange;
 
 // A base class representing an animation keyframe.
@@ -222,9 +222,8 @@ class CORE_EXPORT Keyframe : public GarbageCollected<Keyframe> {
     virtual bool IsRevertLayer() const = 0;
     virtual bool IsRevertRule() const = 0;
 
-    // FIXME: Remove this once CompositorAnimations no longer depends on
-    // CompositorKeyframeValues
-    virtual bool PopulateCompositorKeyframeValue(
+    // Resolve transform geometry used by the CPU paint property tree.
+    virtual bool PopulateTransformKeyframeSnapshot(
         const PropertyHandle&,
         Element&,
         const ComputedStyle& base_style,
@@ -232,7 +231,7 @@ class CORE_EXPORT Keyframe : public GarbageCollected<Keyframe> {
       return false;
     }
 
-    virtual const CompositorKeyframeValue* GetCompositorKeyframeValue()
+    virtual const TransformKeyframeSnapshot* GetTransformKeyframeSnapshot()
         const = 0;
 
     virtual bool IsCSSPropertySpecificKeyframe() const { return false; }

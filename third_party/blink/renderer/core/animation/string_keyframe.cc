@@ -254,13 +254,13 @@ StringKeyframe::CreatePropertySpecificKeyframe(
 }
 
 bool StringKeyframe::CSSPropertySpecificKeyframe::
-    PopulateCompositorKeyframeValue(const PropertyHandle& property,
+    PopulateTransformKeyframeSnapshot(const PropertyHandle& property,
                                     Element& element,
                                     const ComputedStyle& base_style,
                                     const ComputedStyle* parent_style) const {
-  compositor_keyframe_value_cache_ =
-      StyleResolver::CreateCompositorKeyframeValueSnapshot(
-          element, base_style, parent_style, property, value_.Get(), offset_);
+  transform_keyframe_snapshot_cache_ =
+      StyleResolver::CreateTransformKeyframeSnapshot(
+          element, base_style, parent_style, property, value_.Get());
   return true;
 }
 
@@ -289,7 +289,7 @@ void StringKeyframe::CSSPropertySpecificKeyframe::Trace(
     Visitor* visitor) const {
   visitor->Trace(value_);
   visitor->Trace(tree_scope_);
-  visitor->Trace(compositor_keyframe_value_cache_);
+  visitor->Trace(transform_keyframe_snapshot_cache_);
   Keyframe::PropertySpecificKeyframe::Trace(visitor);
 }
 

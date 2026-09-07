@@ -100,8 +100,7 @@ ScrollTimeline* DeferredTimeline::EffectiveScrollTimeline() {
 }
 
 void DeferredTimeline::OnAttachedTimelineChange() {
-  compositor_timeline_ = nullptr;
-  MarkAnimationsCompositorPending(/* source_changed */ true);
+  MarkAnimationsPending();
 }
 
 }  // namespace blink

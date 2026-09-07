@@ -87,9 +87,8 @@ wtf_size_t AnimationTimeline::AnimationsNeedingUpdateCount() const {
   wtf_size_t count = 0;
   for (const auto& animation : animations_needing_update_) {
     // Exclude animations which are not actively generating frames.
-    if ((!animation->CompositorPending() && !animation->Playing() &&
-         !IsProgressBased()) ||
-        animation->AnimationHasNoEffect()) {
+    if (!animation->HasPendingUpdate() && !animation->Playing() &&
+        !IsProgressBased()) {
       continue;
     }
     count++;
@@ -119,15 +118,6 @@ void AnimationTimeline::ServiceAnimations(TimingUpdateReason reason) {
   TRACE_EVENT0("blink", "AnimationTimeline::serviceAnimations");
 
   auto current_time = CurrentTimeInternal();
-
-  if (IsProgressBased()) {
-    // TODO(crbug.com/508229282): We probably want to move this call to be at
-    // the same time that compositor animations are updated, i.e.
-    // Animation::PreCommit.
-    if (HasPendingCompositorUpdate()) {
-      UpdateCompositorTimeline();
-    }
-  }
 
   last_current_time_ = current_time;
 
@@ -208,18 +198,15 @@ Animation* AnimationTimeline::Play(AnimationEffect* child,
   return animation;
 }
 
-void AnimationTimeline::MarkAnimationsCompositorPending(bool source_changed) {
-  Animation::CompositorPendingReason reason =
-      source_changed ? Animation::CompositorPendingReason::kPendingEffectChange
-                     : Animation::CompositorPendingReason::kPendingUpdate;
+void AnimationTimeline::MarkAnimationsPending() {
   for (const auto& animation : animations_) {
-    animation->SetCompositorPending(reason);
+    animation->SetPendingUpdate();
   }
 }
 
-void AnimationTimeline::MarkPendingIfCompositorPropertyAnimationChanges() {
+void AnimationTimeline::UpdateEffectTimingIfNeeded() {
   for (const auto& animation : animations_) {
-    animation->MarkPendingIfCompositorPropertyAnimationChanges();
+    animation->UpdateEffectTimingIfNeeded();
   }
 }
 

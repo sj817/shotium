@@ -5,9 +5,7 @@
 #ifndef THIRD_PARTY_BLINK_RENDERER_CORE_ANIMATION_ANIMATION_TIMELINE_H_
 #define THIRD_PARTY_BLINK_RENDERER_CORE_ANIMATION_ANIMATION_TIMELINE_H_
 
-#include "base/memory/scoped_refptr.h"
 #include "base/time/time.h"
-#include "cc/animation/animation_timeline.h"
 #include "third_party/blink/renderer/core/animation/animation.h"
 #include "third_party/blink/renderer/core/animation/timeline_range.h"
 #include "third_party/blink/renderer/core/core_export.h"
@@ -126,18 +124,10 @@ class CORE_EXPORT AnimationTimeline : public ScriptWrappable {
     return triggers_;
   }
 
-  cc::AnimationTimeline* CompositorTimeline() const {
-    return compositor_timeline_.get();
-  }
-  virtual cc::AnimationTimeline* EnsureCompositorTimeline() = 0;
-  virtual void UpdateCompositorTimeline() {}
-  virtual bool HasPendingCompositorUpdate() const { return false; }
+  void MarkAnimationsPending();
 
-  void MarkAnimationsCompositorPending(bool source_changed = false);
-
-  // Checks for animations of composited properties that would have no effect
-  // and marks them as pending if this changes.
-  void MarkPendingIfCompositorPropertyAnimationChanges();
+  // Service effect timing before processing pending animation state.
+  void UpdateEffectTimingIfNeeded();
 
   using ReplaceableAnimationsMap =
       HeapHashMap<Member<Element>, Member<GCedHeapVector<Member<Animation>>>>;
@@ -174,7 +164,6 @@ class CORE_EXPORT AnimationTimeline : public ScriptWrappable {
   // Triggers which depend on this timeline.
   HeapHashSet<Member<TimelineTrigger>> triggers_;
 
-  scoped_refptr<cc::AnimationTimeline> compositor_timeline_;
 
   std::optional<base::TimeDelta> last_current_time_;
 

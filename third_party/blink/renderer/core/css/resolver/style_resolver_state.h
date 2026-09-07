@@ -240,10 +240,10 @@ class CORE_EXPORT StyleResolverState {
     conditionally_affects_animations_ = true;
   }
 
-  bool AffectsCompositorSnapshots() const {
-    return affects_compositor_snapshots_;
+  bool AffectsTransformSnapshots() const {
+    return affects_transform_snapshots_;
   }
-  void SetAffectsCompositorSnapshots() { affects_compositor_snapshots_ = true; }
+  void SetAffectsTransformSnapshots() { affects_transform_snapshots_ = true; }
 
   bool RejectedLegacyOverlapping() const {
     return rejected_legacy_overlapping_;
@@ -397,7 +397,7 @@ class CORE_EXPORT StyleResolverState {
   bool conditionally_affects_animations_ = false;
 
   // True if snapshots of composited keyframes require re-validation.
-  bool affects_compositor_snapshots_ = false;
+  bool affects_transform_snapshots_ = false;
 
   // True if the cascade rejected any properties with the kLegacyOverlapping
   // flag.

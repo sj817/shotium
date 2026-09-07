@@ -846,14 +846,6 @@ class CORE_EXPORT LocalFrameView final
   // True if the recorded value has changed.
   bool RecordNaturalDimensions();
 
-  // Return true if this frame, or any of its sub-frames, has an anchor-
-  // positioned element that is anchored against something with a transform, AND
-  // the transform is currently being animated. This means that a transform on
-  // one element may affect layout of another element, which means that the main
-  // thread needs to be involved during the animation.
-  bool HasRunningAnchorTransformAnimation() const;
-
-
  protected:
   void FrameRectsChanged(const gfx::Rect&) override;
   void SelfVisibleChanged() override;

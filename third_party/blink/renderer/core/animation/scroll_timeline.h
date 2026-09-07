@@ -7,7 +7,6 @@
 
 #include "base/gtest_prod_util.h"
 #include "base/time/time.h"
-#include "cc/animation/scroll_timeline.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_scroll_axis.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_typedefs.h"
 #include "third_party/blink/renderer/core/animation/animation_trigger.h"
@@ -47,8 +46,8 @@ class CORE_EXPORT ScrollTimeline : public ScrollSnapshotTimeline {
                       // reference element.
   };
 
-  static constexpr double kScrollTimelineMicrosecondsPerPixel =
-      cc::ScrollTimeline::kScrollTimelineMicrosecondsPerPixel;
+  // Four layout quantization errors of 1/64 px correspond to one microsecond.
+  static constexpr double kScrollTimelineMicrosecondsPerPixel = 16;
 
   static ScrollTimeline* Create(Document&,
                                 ScrollTimelineOptions*,

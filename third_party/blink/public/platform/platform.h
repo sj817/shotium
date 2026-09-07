@@ -404,7 +404,6 @@ class BLINK_PLATFORM_EXPORT Platform {
   // This is true when there exists a renderer compositor in this process. But
   // for unit tests, a single-threaded compositor may be used so it may remain
   // false.
-  virtual bool IsThreadedAnimationEnabled() { return false; }
 
   // Whether the compositor is using gpu and expects gpu resources as inputs,
   // or software based resources.

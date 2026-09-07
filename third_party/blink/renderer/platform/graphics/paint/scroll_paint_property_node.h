@@ -101,14 +101,8 @@ class PLATFORM_EXPORT ScrollPaintPropertyNode final
     visitor->Trace(state_);
   }
 
-  // The empty AnimationState struct is to meet the requirement of
-  // ObjectPaintProperties.
-  struct AnimationState {
-    STACK_ALLOCATED();
-  };
   PaintPropertyChangeType Update(const ScrollPaintPropertyNode& parent,
-                                 State&& state,
-                                 const AnimationState& = AnimationState()) {
+                                 State&& state) {
     auto parent_changed = SetParent(parent);
     auto state_changed = state_.ComputeChange(state);
     if (state_changed != PaintPropertyChangeType::kUnchanged) {

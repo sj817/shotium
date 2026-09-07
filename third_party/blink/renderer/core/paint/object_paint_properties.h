@@ -76,11 +76,9 @@ class CORE_EXPORT ObjectPaintProperties
                                                                             \
   PaintPropertyChangeType Update##function(                                 \
       const type##PaintPropertyNodeOrAlias& parent,                         \
-      type##PaintPropertyNode::State&& state,                               \
-      const type##PaintPropertyNode::AnimationState& animation_state =      \
-          type##PaintPropertyNode::AnimationState()) {                      \
+      type##PaintPropertyNode::State&& state) {                         \
     return Update<type##PaintPropertyNode, type##PaintPropertyNodeOrAlias>( \
-        field_id, parent, std::move(state), animation_state);               \
+        field_id, parent, std::move(state));               \
   }                                                                         \
                                                                             \
   bool Clear##function() { return nodes_.EraseField(field_id); }            \
@@ -501,16 +499,13 @@ class CORE_EXPORT ObjectPaintProperties
 
   // Direct update method implementations.
   PaintPropertyChangeType DirectlyUpdateTransformAndOrigin(
-      TransformPaintPropertyNode::TransformAndOrigin&& transform_and_origin,
-      const TransformPaintPropertyNode::AnimationState& animation_state) {
+      TransformPaintPropertyNode::TransformAndOrigin&& transform_and_origin) {
     CHECK(nodes_.HasField(NodeId::kTransform));
     return GetNode<TransformPaintPropertyNode>(NodeId::kTransform)
-        ->DirectlyUpdateTransformAndOrigin(std::move(transform_and_origin),
-                                           animation_state);
+        ->DirectlyUpdateTransformAndOrigin(std::move(transform_and_origin));
   }
   PaintPropertyChangeType DirectlyUpdateOpacity(
-      float opacity,
-      const EffectPaintPropertyNode::AnimationState& animation_state) {
+      float opacity) {
     const bool has_effect = nodes_.HasField(NodeId::kEffect);
     // TODO(yotha): Remove this check once we make sure crbug.com/1370268
     // is fixed.
@@ -519,7 +514,7 @@ class CORE_EXPORT ObjectPaintProperties
       return PaintPropertyChangeType::kNodeAddedOrRemoved;
     }
     return GetNode<EffectPaintPropertyNode>(NodeId::kEffect)
-        ->DirectlyUpdateOpacity(opacity, animation_state);
+        ->DirectlyUpdateOpacity(opacity);
   }
 
  private:
@@ -529,8 +524,7 @@ class CORE_EXPORT ObjectPaintProperties
   PaintPropertyChangeType Update(
       NodeId node_id,
       const ParentType& parent,
-      NodeType::State&& state,
-      const NodeType::AnimationState& animation_state) {
+      NodeType::State&& state) {
     // First, check if we need to add a new node.
     if (!nodes_.HasField(node_id)) {
       nodes_.SetField(node_id, NodeType::Create(parent, std::move(state)));
@@ -542,7 +536,7 @@ class CORE_EXPORT ObjectPaintProperties
     // If not, we just need to update the existing node.
     auto* node = GetNode<NodeType>(node_id);
     const PaintPropertyChangeType changed =
-        node->Update(parent, std::move(state), animation_state);
+        node->Update(parent, std::move(state));
 #if DCHECK_IS_ON()
     DCHECK(!is_immutable_ || changed == PaintPropertyChangeType::kUnchanged)
         << "Value changed while immutable.";

@@ -25,7 +25,7 @@ namespace blink {
 class CORE_EXPORT ScrollSnapshotTimeline : public AnimationTimeline,
                                            public PostLayoutSnapshotClient {
  public:
-  using ScrollOffsets = cc::ScrollTimeline::ScrollOffsets;
+  using ScrollOffsets = blink::ScrollOffsets;
   using ScrollAxis = V8ScrollAxis::Enum;
   using ViewOffsets = TimelineRange::ViewOffsets;
 
@@ -107,8 +107,6 @@ class CORE_EXPORT ScrollSnapshotTimeline : public AnimationTimeline,
 
   void ResolveTimelineOffsets() const;
 
-  cc::AnimationTimeline* EnsureCompositorTimeline() override;
-  void UpdateCompositorTimeline() override;
 
   static PhysicalAxis ToPhysicalAxis(PhysicalDirection direction) {
     return direction == PhysicalDirection::kUp ||
@@ -201,13 +199,6 @@ class CORE_EXPORT ScrollSnapshotTimeline : public AnimationTimeline,
   bool ShouldScheduleNextService() override;
   void UpdateSnapshotForServiceAnimations() override;
 
-  void SetHasPendingCompositorUpdate(bool has_pending) {
-    has_pending_compositor_update_ = true;
-  }
-  bool HasPendingCompositorUpdate() const override {
-    return has_pending_compositor_update_;
-  }
-
  public:
   // Public for DeferredTimeline::ComputeTimelineState.
   virtual TimelineState ComputeTimelineState() const = 0;
@@ -222,7 +213,6 @@ class CORE_EXPORT ScrollSnapshotTimeline : public AnimationTimeline,
   // Snapshotted value produced by the last SnapshotState call.
   TimelineState timeline_state_snapshotted_;
 
-  bool has_pending_compositor_update_;
 };
 
 template <>

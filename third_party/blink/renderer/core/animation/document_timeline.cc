@@ -30,7 +30,6 @@
 
 #include "third_party/blink/renderer/core/animation/document_timeline.h"
 
-#include "cc/animation/animation_id_provider.h"
 #include "third_party/blink/public/platform/platform.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_document_timeline_options.h"
 #include "third_party/blink/renderer/core/animation/animation.h"
@@ -87,8 +86,6 @@ DocumentTimeline::DocumentTimeline(Document* document,
     timing_ = MakeGarbageCollected<DocumentTimelineTiming>(this);
   else
     timing_ = timing;
-  if (Platform::Current()->IsThreadedAnimationEnabled())
-    EnsureCompositorTimeline();
 
   DCHECK(document);
 }
@@ -200,10 +197,9 @@ void DocumentTimeline::SetPlaybackRate(double playback_rate) {
                                         current_time / playback_rate;
   zero_time_initialized_ = true;
 
-  // Corresponding compositor animation may need to be restarted to pick up
-  // the new playback rate. Marking the effect changed forces this.
+  // Service pending animation timing after the timeline playback rate changes.
   if (should_mark_pending) {
-    MarkAnimationsCompositorPending(true);
+    MarkAnimationsPending();
   }
 }
 
@@ -218,14 +214,6 @@ void DocumentTimeline::InvalidateKeyframeEffects(
     animation->InvalidateKeyframeEffect(tree_scope, reason);
 }
 
-cc::AnimationTimeline* DocumentTimeline::EnsureCompositorTimeline() {
-  if (compositor_timeline_)
-    return compositor_timeline_.get();
-
-  compositor_timeline_ =
-      cc::AnimationTimeline::Create(cc::AnimationIdProvider::NextTimelineId());
-  return compositor_timeline_.get();
-}
 
 void DocumentTimeline::Trace(Visitor* visitor) const {
   visitor->Trace(timing_);

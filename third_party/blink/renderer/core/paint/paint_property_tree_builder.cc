@@ -45,6 +45,7 @@
 #include "third_party/blink/renderer/core/layout/physical_box_fragment.h"
 #include "third_party/blink/renderer/core/layout/svg/layout_svg_resource_clipper.h"
 #include "third_party/blink/renderer/core/layout/svg/layout_svg_root.h"
+#include "third_party/blink/renderer/core/layout/svg/layout_svg_transformable_container.h"
 #include "third_party/blink/renderer/core/layout/svg/layout_svg_viewport_container.h"
 #include "third_party/blink/renderer/core/layout/svg/svg_layout_support.h"
 #include "third_party/blink/renderer/core/layout/svg/svg_resources.h"
@@ -283,13 +284,11 @@ class FragmentPaintPropertyTreeBuilder {
                              gfx::Transform& matrix),
       CompositingReasons compositing_reasons_for_property,
       CompositorElementIdNamespace compositor_namespace,
-      bool (ComputedStyle::*running_on_compositor_test)() const,
       const TransformPaintPropertyNode* (ObjectPaintProperties::*getter)()
           const,
       PaintPropertyChangeType (ObjectPaintProperties::*updater)(
           const TransformPaintPropertyNodeOrAlias&,
-          TransformPaintPropertyNode::State&&,
-          const TransformPaintPropertyNode::AnimationState&),
+          TransformPaintPropertyNode::State&&),
       bool (ObjectPaintProperties::*clearer)());
   ALWAYS_INLINE void UpdateUnboundedWrapperNodes(bool is_active);
   ALWAYS_INLINE void UpdateTranslate();
@@ -1158,24 +1157,49 @@ static bool NeedsTransformForSVGChild(
   return !object.LocalToSVGParentTransform().IsIdentity();
 }
 
+// Keep the origin separate only when the SVG parent transform consists of
+// CSS transforms. SMIL, resource subtrees, zoom and additional SVG transforms
+// require the already-composed parent transform during CPU painting.
+static bool CanSeparateSVGAnimationTransformOrigin(const SVGElement& element) {
+  if (element.HasSMILAnimations()) {
+    return false;
+  }
+  const LayoutObject* object = element.GetLayoutObject();
+  for (const LayoutObject* ancestor = object; ancestor;
+       ancestor = ancestor->Parent()) {
+    if (ancestor->IsSVGResourceContainer()) {
+      return false;
+    }
+  }
+  if (!object) {
+    return true;
+  }
+  if (object->StyleRef().EffectiveZoom() != 1 ||
+      object->TransformAffectsVectorEffect()) {
+    return false;
+  }
+  return !object->IsSVGTransformableContainer() ||
+         !To<LayoutSVGTransformableContainer>(object)->HasAdditionalTransform();
+}
+
 TransformPaintPropertyNode::TransformAndOrigin
 FragmentPaintPropertyTreeBuilder::TransformAndOriginForSVGChild() const {
   if (full_context_.direct_compositing_reasons.Has(
           CompositingReason::kActiveTransformAnimation)) {
-    if (CompositorAnimations::CanStartTransformAnimationOnCompositorForSVG(
+    if (CanSeparateSVGAnimationTransformOrigin(
             *To<SVGElement>(object_.GetNode()))) {
       const gfx::RectF reference_box =
           TransformHelper::ComputeReferenceBox(object_);
-      // Composited transform animation works only if
+      // Separate transform origins are valid only if
       // LocalToSVGParentTransform() reflects the CSS transform properties.
       // If this fails, we need to exclude the case in
-      // CompositorAnimations::CanStartTransformAnimationOnCompositorForSVG().
+      // CanSeparateSVGAnimationTransformOrigin().
       DCHECK_EQ(TransformHelper::ComputeTransform(
                     object_.GetDocument(), object_.StyleRef(), reference_box,
                     ComputedStyle::kIncludeTransformOrigin),
                 object_.LocalToSVGParentTransform());
-      // For composited transform animation to work, we need to store transform
-      // origin separately. It's baked in object_.LocalToSVGParentTransform().
+      // Preserve the separate origin for animated CPU transform geometry; it
+      // is otherwise baked into LocalToSVGParentTransform().
       return {TransformHelper::ComputeTransform(
                   object_.GetDocument(), object_.StyleRef(), reference_box,
                   ComputedStyle::kExcludeTransformOrigin)
@@ -1218,11 +1242,8 @@ void FragmentPaintPropertyTreeBuilder::UpdateTransformForSVGChild(
       state.compositor_element_id = GetCompositorElementId(
           CompositorElementIdNamespace::kPrimaryTransform);
 
-      TransformPaintPropertyNode::AnimationState animation_state;
-      animation_state.is_running_animation_on_compositor =
-          object_.StyleRef().IsRunningTransformAnimationOnCompositor();
       auto effective_change_type = properties_->UpdateTransform(
-          *context_.current.transform, std::move(state), animation_state);
+          *context_.current.transform, std::move(state));
       OnUpdateTransform(effective_change_type);
     } else {
       OnClearTransform(properties_->ClearTransform());
@@ -1338,7 +1359,7 @@ static bool NeedsTransform(const LayoutObject& object,
   return false;
 }
 
-static bool UpdateBoxSizeAndCheckActiveAnimationAxisAlignment(
+static bool ActiveAnimationsPreserveAxisAlignment(
     const LayoutBox& object,
     CompositingReasons compositing_reasons) {
   if (!compositing_reasons.HasAny(
@@ -1354,8 +1375,7 @@ static bool UpdateBoxSizeAndCheckActiveAnimationAxisAlignment(
   const Element* element = To<Element>(object.GetNode());
   auto* animations = element->GetElementAnimations();
   DCHECK(animations);
-  return animations->UpdateBoxSizeAndCheckTransformAxisAlignment(
-      gfx::SizeF(object.StitchedSize()));
+  return animations->PreservesTransformAxisAlignment();
 }
 
 static TransformPaintPropertyNode::TransformAndOrigin TransformAndOriginState(
@@ -1383,12 +1403,10 @@ void FragmentPaintPropertyTreeBuilder::UpdateIndividualTransform(
                            gfx::Transform& matrix),
     CompositingReasons compositing_reasons_for_property,
     CompositorElementIdNamespace compositor_namespace,
-    bool (ComputedStyle::*running_on_compositor_test)() const,
     const TransformPaintPropertyNode* (ObjectPaintProperties::*getter)() const,
     PaintPropertyChangeType (ObjectPaintProperties::*updater)(
         const TransformPaintPropertyNodeOrAlias&,
-        TransformPaintPropertyNode::State&&,
-        const TransformPaintPropertyNode::AnimationState&),
+        TransformPaintPropertyNode::State&&),
     bool (ObjectPaintProperties::*clearer)()) {
   // TODO(crbug.com/1278452): Merge SVG handling into the primary
   // codepath (which is this one).
@@ -1428,12 +1446,6 @@ void FragmentPaintPropertyTreeBuilder::UpdateIndividualTransform(
           }
         }
 
-        // If we are running transform animation on compositor, we should
-        // disable 2d translation optimization to ensure that the compositor
-        // gets the correct origin (which might be omitted by the optimization)
-        // to the compositor, in case later animated values will use the origin.
-        // See http://crbug.com/937929 for why we are not using
-        // style.IsRunningTransformAnimationOnCompositor() etc. here.
         state.transform_and_origin =
             TransformAndOriginState(box, reference_box, compute_matrix);
 
@@ -1460,7 +1472,7 @@ void FragmentPaintPropertyTreeBuilder::UpdateIndividualTransform(
         // fragmentation. It's the size of each individual PhysicalBoxFragment
         // that's interesting, not the total LayoutBox size.
         state.animation_is_axis_aligned =
-            UpdateBoxSizeAndCheckActiveAnimationAxisAlignment(
+            ActiveAnimationsPreserveAxisAlignment(
                 box, full_context_.direct_compositing_reasons);
       }
 
@@ -1470,7 +1482,7 @@ void FragmentPaintPropertyTreeBuilder::UpdateIndividualTransform(
 
       state.flattens_inherited_transform =
           context_.should_flatten_inherited_transform;
-      if (running_on_compositor_test) {
+      if (compositor_namespace != CompositorElementIdNamespace::kPrimary) {
         state.compositor_element_id =
             GetCompositorElementId(compositor_namespace);
       }
@@ -1499,11 +1511,8 @@ void FragmentPaintPropertyTreeBuilder::UpdateIndividualTransform(
         }
       }
 
-      TransformPaintPropertyNode::AnimationState animation_state;
-      animation_state.is_running_animation_on_compositor =
-          running_on_compositor_test && (style.*running_on_compositor_test)();
       auto effective_change_type = (properties_->*updater)(
-          *context_.current.transform, std::move(state), animation_state);
+          *context_.current.transform, std::move(state));
       OnUpdateTransform(effective_change_type);
     } else {
       OnClearTransform((properties_->*clearer)());
@@ -1536,7 +1545,6 @@ void FragmentPaintPropertyTreeBuilder::UpdateTranslate() {
       },
       CompositingReasonCombos::kDirectReasonsForTranslateProperty,
       CompositorElementIdNamespace::kTranslateTransform,
-      &ComputedStyle::IsRunningTranslateAnimationOnCompositor,
       &ObjectPaintProperties::Translate,
       &ObjectPaintProperties::UpdateTranslate,
       &ObjectPaintProperties::ClearTranslate);
@@ -1553,7 +1561,6 @@ void FragmentPaintPropertyTreeBuilder::UpdateRotate() {
       },
       CompositingReasonCombos::kDirectReasonsForRotateProperty,
       CompositorElementIdNamespace::kRotateTransform,
-      &ComputedStyle::IsRunningRotateAnimationOnCompositor,
       &ObjectPaintProperties::Rotate, &ObjectPaintProperties::UpdateRotate,
       &ObjectPaintProperties::ClearRotate);
 }
@@ -1569,7 +1576,6 @@ void FragmentPaintPropertyTreeBuilder::UpdateScale() {
       },
       CompositingReasonCombos::kDirectReasonsForScaleProperty,
       CompositorElementIdNamespace::kScaleTransform,
-      &ComputedStyle::IsRunningScaleAnimationOnCompositor,
       &ObjectPaintProperties::Scale, &ObjectPaintProperties::UpdateScale,
       &ObjectPaintProperties::ClearScale);
 }
@@ -1588,10 +1594,7 @@ void FragmentPaintPropertyTreeBuilder::UpdateOffset() {
             ComputedStyle::kExcludeIndependentTransformProperties);
       },
       {},
-      // TODO(dbaron): When we support animating offset on the
-      // compositor, we need to use an element ID specific to offset.
-      // This is currently unused.
-      CompositorElementIdNamespace::kPrimary, nullptr,
+      CompositorElementIdNamespace::kPrimary,
       &ObjectPaintProperties::Offset, &ObjectPaintProperties::UpdateOffset,
       &ObjectPaintProperties::ClearOffset);
 }
@@ -1611,7 +1614,6 @@ void FragmentPaintPropertyTreeBuilder::UpdateTransform() {
       },
       CompositingReasonsForTransformProperty(),
       CompositorElementIdNamespace::kPrimaryTransform,
-      &ComputedStyle::IsRunningTransformAnimationOnCompositor,
       &ObjectPaintProperties::Transform,
       &ObjectPaintProperties::UpdateTransform,
       &ObjectPaintProperties::ClearTransform);
@@ -1704,8 +1706,7 @@ bool FragmentPaintPropertyTreeBuilder::NeedsEffectFor2DScaleTransform() const {
   if (object_.IsLayoutReplaced()) {
     return false;
   }
-  if (object_.StyleRef().HasWillChangeTransformProperty() ||
-      object_.StyleRef().IsRunningTransformAnimationOnCompositor()) {
+  if (object_.StyleRef().HasWillChangeTransformProperty()) {
     return false;
   }
 
@@ -2168,11 +2169,6 @@ void FragmentPaintPropertyTreeBuilder::UpdateEffect() {
       state.self_or_ancestor_participates_in_view_transition =
           context_.self_or_ancestor_participates_in_view_transition;
 
-      EffectPaintPropertyNode::AnimationState animation_state;
-      animation_state.is_running_opacity_animation_on_compositor =
-          style.IsRunningOpacityAnimationOnCompositor();
-      animation_state.is_running_backdrop_filter_animation_on_compositor =
-          style.IsRunningBackdropFilterAnimationOnCompositor();
 
       const auto* parent_effect = context_.current_effect;
       if (IsA<ViewTransitionTransitionElement>(object_.GetNode())) {
@@ -2181,7 +2177,7 @@ void FragmentPaintPropertyTreeBuilder::UpdateEffect() {
       DCHECK(parent_effect);
 
       auto effective_change_type = properties_->UpdateEffect(
-          *parent_effect, std::move(state), animation_state);
+          *parent_effect, std::move(state));
       OnUpdateEffect(effective_change_type);
 
       CompositingReasons mask_direct_compositing_reasons;
@@ -2292,7 +2288,7 @@ void FragmentPaintPropertyTreeBuilder::UpdateElementCaptureEffect() {
       object_.UniqueId(), CompositorElementIdNamespace::kElementCapture);
 
   OnUpdateEffect(properties_->UpdateElementCaptureEffect(
-      *context_.current_effect, std::move(state), {}));
+      *context_.current_effect, std::move(state)));
   context_.current_effect = properties_->ElementCaptureEffect();
 }
 
@@ -2323,7 +2319,7 @@ void FragmentPaintPropertyTreeBuilder::UpdateViewTransitionScopeRootEffect() {
         }
       }
       auto change_type = properties_->UpdateViewTransitionScopeRootEffect(
-          *context_.current_effect, std::move(state), {});
+          *context_.current_effect, std::move(state));
       needs_full_invalidation =
           change_type >= PaintPropertyChangeType::kNodeAddedOrRemoved;
       OnUpdateEffect(change_type);
@@ -2400,7 +2396,7 @@ void FragmentPaintPropertyTreeBuilder::UpdateViewTransitionEffect() {
       }
 
       OnUpdateEffect(properties_->UpdateViewTransitionEffect(
-          *context_.current_effect, std::move(state), {}));
+          *context_.current_effect, std::move(state)));
     } else {
       OnClearEffect(properties_->ClearViewTransitionEffect());
     }
@@ -2586,11 +2582,8 @@ void FragmentPaintPropertyTreeBuilder::UpdateFilter() {
       state.self_or_ancestor_participates_in_view_transition =
           context_.self_or_ancestor_participates_in_view_transition;
 
-      EffectPaintPropertyNode::AnimationState animation_state;
-      animation_state.is_running_filter_animation_on_compositor =
-          object_.StyleRef().IsRunningFilterAnimationOnCompositor();
       OnUpdateEffect(properties_->UpdateFilter(
-          *context_.current_effect, std::move(state), animation_state));
+          *context_.current_effect, std::move(state)));
 
       if (properties_->Filter()->NeedsPixelMovingFilterClipExpander()) {
         OnUpdateClip(properties_->UpdatePixelMovingFilterClipExpander(
@@ -4655,11 +4648,8 @@ void PaintPropertyTreeBuilder::DirectlyUpdateTransformMatrix(
             ComputedStyle::kExcludeIndependentTransformProperties);
       });
 
-  TransformPaintPropertyNode::AnimationState animation_state;
-  animation_state.is_running_animation_on_compositor =
-      box.StyleRef().IsRunningTransformAnimationOnCompositor();
   auto effective_change_type = properties->DirectlyUpdateTransformAndOrigin(
-      std::move(transform_and_origin), animation_state);
+      std::move(transform_and_origin));
 
   if (effective_change_type > PaintPropertyChangeType::kUnchanged) {
     object.GetFrameView()->SetIntersectionObservationState(
@@ -4678,15 +4668,10 @@ void PaintPropertyTreeBuilder::DirectlyUpdateOpacityValue(
   DCHECK(CanDoDeferredOpacityNodeUpdate(object));
   const ComputedStyle& style = object.StyleRef();
 
-  EffectPaintPropertyNode::AnimationState animation_state;
-  animation_state.is_running_opacity_animation_on_compositor =
-      style.IsRunningOpacityAnimationOnCompositor();
-  animation_state.is_running_backdrop_filter_animation_on_compositor =
-      style.IsRunningBackdropFilterAnimationOnCompositor();
 
   FragmentData* fragment_data = &object.GetMutableForPainting().FirstFragment();
   auto* properties = fragment_data->PaintProperties();
-  properties->DirectlyUpdateOpacity(style.Opacity(), animation_state);
+  properties->DirectlyUpdateOpacity(style.Opacity());
 }
 
 void PaintPropertyTreeBuilder::IssueInvalidationsAfterUpdate() {

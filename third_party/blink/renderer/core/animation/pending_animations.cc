@@ -59,217 +59,63 @@ void PendingAnimations::Add(Animation* animation) {
   }
 }
 
-bool PendingAnimations::Update(
-    bool start_on_compositor) {
+void PendingAnimations::Update(bool update_timing) {
   HeapVector<Member<Animation>> waiting_for_start_time;
-  bool started_synchronized_on_compositor = false;
-
   HeapVector<Member<Animation>> animations;
   HeapVector<Member<Animation>> deferred;
   animations.swap(pending_);
-  int compositor_group = NextCompositorGroup();
 
   for (auto& animation : animations) {
-    bool had_compositor_animation =
-        animation->HasActiveAnimationsOnCompositor() ||
-        animation->CompositorPendingCancel();
-    // Animations with a start time or non-monotonic timeline do not participate
-    // in compositor start-time grouping.
     bool has_monotonic_timeline =
         animation->TimelineInternal() &&
         animation->TimelineInternal()->IsMonotonicallyIncreasing();
-    // Note, not setting a compositor group means animation events may be
-    // dropped or mis-routed since they'll all target group 1. This doesn't
-    // cause any issues currently, since blink::Animation only implements
-    // NotifyAnimationStarted, but it would be an issue if Blink ever wanted to
-    // handle the other events in CompositorAnimationDelegate.
-    bool use_compositor_group =
-        !animation->StartTimeInternal() && has_monotonic_timeline;
-    if (animation->PreCommit(use_compositor_group
-                                 ? compositor_group
-                                 : kCompositorGroupHasStartTime,
-                             start_on_compositor)) {
-      if (animation->HasActiveAnimationsOnCompositor() &&
-          !had_compositor_animation && use_compositor_group) {
-        started_synchronized_on_compositor = true;
-      }
-
+    if (animation->PreparePendingUpdate(update_timing)) {
       if (!animation->TimelineInternal() ||
           !animation->TimelineInternal()->IsActive()) {
         continue;
       }
-
       if (animation->Playing() && !animation->StartTimeInternal()) {
-        // Scroll timelines get their start time set during timeline validation
-        // and do not need to be added to the list. Once the start time is set
-        // they must be re-added to the pending animations.
+        // Scroll timelines resolve their start time during snapshot validation.
         if (has_monotonic_timeline) {
           waiting_for_start_time.push_back(animation.Get());
         }
       } else if (animation->PendingInternal()) {
         if (!has_monotonic_timeline && !animation->CurrentTimeInternal()) {
-          // Animations attached to a scroll-timeline rely on a deferred start
-          // time to determine the initial animation progress. Until the
-          // animation has a current time, keep it in a pending state.
           deferred.push_back(animation);
         } else {
-          DCHECK(animation->TimelineInternal()->IsActive() &&
-                 animation->TimelineInternal()->CurrentTime() &&
+          DCHECK(animation->TimelineInternal()->CurrentTime() &&
                  animation->CurrentTimeInternal());
-          // A pending animation that is not waiting on a start time does not
-          // need
-          // to be synchronized with animations that are starting up.
-          // Nonetheless, it needs to notify the animation to resolve the ready
-          // promise and commit the pending state.
           animation->NotifyReady(
               animation->TimelineInternal()->CurrentTime().value());
         }
       }
     } else if (animation->CurrentTimeInternal()) {
-      // TODO(crbug.com/397451098): We shouldn't need to push these on a
-      // deferred list for re-injection into the pending list. The start of the
-      // animation on the compositor will trigger NotifyReady. Any change to the
-      // animation that would affect the state of the animation must call
-      // SetCompositorPending, which will add it back to the pending list.
       deferred.push_back(animation);
     }
   }
 
-  // If any synchronized animations were started on the compositor, all
-  // remaining synchronized animations need to wait for the synchronized
-  // start time. Otherwise they may start immediately if animating on the main
-  // thread.
-  if (started_synchronized_on_compositor) {
-    FlushWaitingNonCompositedAnimations();
-    waiting_for_compositor_animation_start_.append_range(
-        waiting_for_start_time);
-  } else {
-    // Main-threaded animations previously held up for sync with the compositor
-    // are no longer held up.
-    for (auto& animation : waiting_for_start_time) {
-      if (animation->HasActiveAnimationsOnCompositor()) {
-        // A composited animation needs to continue waiting, otherwise the
-        // start time on the compositor and main-thread will be misaligned.
-        if (animation->CompositorGroup() == compositor_group) {
-          // Composited animation was restarting with a new compositor group.
-          waiting_for_compositor_animation_start_.push_back(animation);
-        }
-        continue;
-      }
-      DCHECK(!animation->StartTimeInternal());
-      DCHECK(animation->TimelineInternal()->IsActive() &&
-             animation->TimelineInternal()->CurrentTime());
-      animation->NotifyReady(
-          animation->TimelineInternal()->CurrentTime().value());
-    }
+  for (auto& animation : waiting_for_start_time) {
+    DCHECK(!animation->StartTimeInternal());
+    DCHECK(animation->TimelineInternal()->IsActive() &&
+           animation->TimelineInternal()->CurrentTime());
+    animation->NotifyReady(
+        animation->TimelineInternal()->CurrentTime().value());
   }
 
-  // FIXME: The postCommit should happen *after* the commit, not before.
-  for (auto& animation : animations)
-    animation->PostCommit();
+  for (auto& animation : animations) {
+    animation->CompletePendingUpdate();
+  }
 
   DCHECK(pending_.empty());
-  DCHECK(start_on_compositor || deferred.empty());
+  DCHECK(update_timing || deferred.empty());
   for (auto& animation : deferred) {
-    animation->SetCompositorPending(
-        Animation::CompositorPendingReason::kPendingUpdate);
+    animation->SetPendingUpdate();
   }
   DCHECK_EQ(pending_.size(), deferred.size());
-
-  if (started_synchronized_on_compositor) {
-    return true;
-  }
-
-  if (waiting_for_compositor_animation_start_.empty()) {
-    return false;
-  }
-
-  // Check if we're still waiting for any compositor animations to start.
-  for (auto& animation : waiting_for_compositor_animation_start_) {
-    if (animation->HasActiveAnimationsOnCompositor()) {
-      return true;
-    }
-  }
-
-  // If not, go ahead and start any animations that were waiting.
-  NotifyCompositorAnimationStarted(
-      base::TimeTicks::Now().since_origin().InSecondsF());
-
-  DCHECK_EQ(pending_.size(), deferred.size());
-  return false;
-}
-
-void PendingAnimations::NotifyCompositorAnimationStarted(
-    double monotonic_animation_start_time,
-    int compositor_group) {
-  TRACE_EVENT0("blink", "PendingAnimations::notifyCompositorAnimationStarted");
-
-  HeapVector<Member<Animation>> animations;
-  animations.swap(waiting_for_compositor_animation_start_);
-
-  for (auto animation : animations) {
-    if (animation->StartTimeInternal() || !animation->PendingInternal() ||
-        !animation->TimelineInternal() ||
-        !animation->TimelineInternal()->IsActive()) {
-      // Already started or no longer relevant.
-      continue;
-    }
-    if (!animation->CurrentTimeInternal()) {
-      // Waiting on a deferred start time.
-      continue;
-    }
-    if (compositor_group && animation->CompositorGroup() != compositor_group) {
-      // Still waiting.
-      waiting_for_compositor_animation_start_.push_back(animation);
-      continue;
-    }
-    if (!animation->TimelineInternal()->IsMonotonicallyIncreasing()) {
-      animation->NotifyReady(
-          animation->TimelineInternal()->CurrentTime().value());
-    } else {
-      animation->NotifyReady(
-          ANIMATION_TIME_DELTA_FROM_SECONDS(monotonic_animation_start_time) -
-          animation->TimelineInternal()->ZeroTime());
-    }
-  }
-}
-
-int PendingAnimations::NextCompositorGroup() {
-  do {
-    // Wrap around, skipping reserved groups.
-    ++compositor_group_;
-  } while (compositor_group_ == kCompositorGroupAutoAssign ||
-           compositor_group_ == kCompositorGroupHasStartTime);
-
-  return compositor_group_;
-}
-
-void PendingAnimations::FlushWaitingNonCompositedAnimations() {
-  if (waiting_for_compositor_animation_start_.empty())
-    return;
-
-  // Start any main thread animations that were scheduled to wait on
-  // compositor synchronization from a previous frame. Otherwise, a
-  // continuous influx of new composited animations could delay the start
-  // of non-composited animations indefinitely (crbug.com/666710).
-  HeapVector<Member<Animation>> animations;
-  animations.swap(waiting_for_compositor_animation_start_);
-  for (auto& animation : animations) {
-    if (animation->HasActiveAnimationsOnCompositor()) {
-      waiting_for_compositor_animation_start_.push_back(animation);
-    } else if (animation->TimelineInternal() &&
-               animation->TimelineInternal()->IsActive() &&
-               animation->TimelineInternal()->CurrentTime().has_value() &&
-               animation->CurrentTimeInternal()) {
-      animation->NotifyReady(
-          animation->TimelineInternal()->CurrentTime().value());
-    }
-  }
 }
 
 void PendingAnimations::Trace(Visitor* visitor) const {
   visitor->Trace(pending_);
-  visitor->Trace(waiting_for_compositor_animation_start_);
   visitor->Trace(timer_);
 }
 

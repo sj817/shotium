@@ -6,7 +6,6 @@
 
 #include "third_party/blink/renderer/core/animation/animation_input_helpers.h"
 #include "third_party/blink/renderer/core/animation/animation_utils.h"
-#include "third_party/blink/renderer/core/animation/compositor_animations.h"
 #include "third_party/blink/renderer/core/animation/css_interpolation_environment.h"
 #include "third_party/blink/renderer/core/animation/interpolation_type.h"
 #include "third_party/blink/renderer/core/animation/interpolation_types_map.h"
@@ -43,16 +42,16 @@ TransitionKeyframe::IterableTransitionKeyframeProperty::begin() const {
       nullptr, MakeGarbageCollected<PropertyIterator>(&property_));
 }
 
-void TransitionKeyframe::SetCompositorValue(
-    CompositorKeyframeValue* compositor_value) {
+void TransitionKeyframe::SetTransformSnapshot(
+    TransformKeyframeSnapshot* transform_snapshot) {
   DCHECK_EQ(Property().GetCSSProperty().IsCompositableProperty(),
-            static_cast<bool>(compositor_value));
-  compositor_value_ = compositor_value;
+            static_cast<bool>(transform_snapshot));
+  transform_snapshot_ = transform_snapshot;
 }
 
 void TransitionKeyframe::Trace(Visitor* visitor) const {
   visitor->Trace(value_);
-  visitor->Trace(compositor_value_);
+  visitor->Trace(transform_snapshot_);
   Keyframe::Trace(visitor);
 }
 
@@ -66,7 +65,7 @@ TransitionKeyframe::CreatePropertySpecificKeyframe(
   EffectModel::CompositeOperation composite =
       composite_.value_or(effect_composite);
   return MakeGarbageCollected<PropertySpecificKeyframe>(
-      CheckedOffset(), &Easing(), composite, value_->Clone(), compositor_value_,
+      CheckedOffset(), &Easing(), composite, value_->Clone(), transform_snapshot_,
       is_attr_tainted_);
 }
 
@@ -79,14 +78,14 @@ TransitionKeyframe::PropertySpecificKeyframe::CreateInterpolation(
   DCHECK(value_->GetType() == other.value_->GetType());
   return MakeGarbageCollected<TransitionInterpolation>(
       property, value_->GetType(), value_->Value().Clone(),
-      other.value_->Value().Clone(), compositor_value_, other.compositor_value_,
+      other.value_->Value().Clone(),
       is_attr_tainted_ || other.is_attr_tainted_);
 }
 
 void TransitionKeyframe::PropertySpecificKeyframe::Trace(
     Visitor* visitor) const {
   visitor->Trace(value_);
-  visitor->Trace(compositor_value_);
+  visitor->Trace(transform_snapshot_);
   Keyframe::PropertySpecificKeyframe::Trace(visitor);
 }
 

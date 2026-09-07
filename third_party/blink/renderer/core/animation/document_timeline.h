@@ -95,7 +95,6 @@ class CORE_EXPORT DocumentTimeline : public AnimationTimeline {
   void ResetForTesting();
   void SetTimingForTesting(PlatformTiming* timing);
 
-  cc::AnimationTimeline* EnsureCompositorTimeline() override;
 
   void Trace(Visitor*) const override;
 

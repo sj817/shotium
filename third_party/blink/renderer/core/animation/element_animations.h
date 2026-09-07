@@ -81,23 +81,14 @@ class CORE_EXPORT ElementAnimations final
     return css_image_animations_;
   }
 
-  void RestartAnimationOnCompositor();
 
   void SetAnimationStyleChange(bool animation_style_change) {
     animation_style_change_ = animation_style_change;
   }
   bool IsAnimationStyleChange() const { return animation_style_change_; }
 
-  bool UpdateBoxSizeAndCheckTransformAxisAlignment(const gfx::SizeF& box_size);
+  bool PreservesTransformAxisAlignment() const;
   bool IsIdentityOrTranslation() const;
-
-  // Animations affecting properties marked as important cannot be composited.
-  // An animation running on the compositor must be cancelled once the affected
-  // property is added to the important set. Note that a animation affecting
-  // an important property still continues to run on the main thread, but the
-  // property value will not applied by the style cascade.
-  void CancelCompositedAnimationsAffectingProperties(
-      const CSSBitset& property_bitset);
 
   void Trace(Visitor*) const override;
 

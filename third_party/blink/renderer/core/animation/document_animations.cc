@@ -218,16 +218,13 @@ void DocumentAnimations::UpdateAnimationTimingIfNeeded() {
 
 void DocumentAnimations::UpdateAnimations(
     DocumentLifecycle::LifecycleState required_lifecycle_state,
-    bool compositor_properties_updated) {
+    bool paint_properties_updated) {
   DCHECK(document_->Lifecycle().GetState() >= required_lifecycle_state);
 
-  if (compositor_properties_updated)
-    MarkPendingIfCompositorPropertyAnimationChanges();
+  if (paint_properties_updated)
+    UpdateEffectTimingIfNeeded();
 
-  if (document_->GetPendingAnimations().Update()) {
-    DCHECK(document_->View());
-    document_->View()->ScheduleAnimation(cc::BeginMainFrameReason::kAnimation);
-  }
+  document_->GetPendingAnimations().Update();
 
   document_->GetFrame()->ScheduleNextServiceForPostLayoutSnapshotClients();
   for (auto& timeline : timelines_) {
@@ -239,15 +236,15 @@ void DocumentAnimations::UpdateAnimations(
   }
 }
 
-void DocumentAnimations::MarkPendingIfCompositorPropertyAnimationChanges() {
+void DocumentAnimations::UpdateEffectTimingIfNeeded() {
   for (auto& timeline : timelines_) {
-    timeline->MarkPendingIfCompositorPropertyAnimationChanges();
+    timeline->UpdateEffectTimingIfNeeded();
   }
 }
 
-void DocumentAnimations::MarkAnimationsCompositorPending() {
+void DocumentAnimations::MarkAnimationsPending() {
   for (auto& timeline : timelines_)
-    timeline->MarkAnimationsCompositorPending();
+    timeline->MarkAnimationsPending();
 }
 
 HeapVector<Member<Animation>> DocumentAnimations::getAnimations(
@@ -393,7 +390,7 @@ void DocumentAnimations::RemoveReplacedAnimations(
            To<KeyframeEffect>((*anim_it)->effect())->Model()->Properties()) {
         auto inserted = replaced_properties.insert(property);
         if (inserted.is_new_entry) {
-          // Top-most compositor order animation affecting this property.
+          // Top-most composite order animation affecting this property.
           replace = false;
         }
       }

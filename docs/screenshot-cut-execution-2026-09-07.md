@@ -229,6 +229,28 @@ EXE46,395,392字节，较第八批减少18,944字节，SHA256 225b15334de211e7c1
 
 下一批16组CPU动画几何与暂停时序基准已由本批新EXE生成，两次像素相同并目视检查；保存于out/cut-animation-cpu，尚未用于验证下一批。普通动画GPU状态、cc/Viz/GPU与网络公共层仍需继续拆除。
 
+## 第十批：普通动画GPU状态与CPU变换快照
+
+共101个变更路径，其中22个实体删除、3个CPU变换快照新文件。移除普通动画的GPU状态、分组/回执、CompositorAnimation包装/委托、eligibility及曲线桥接、合成时间线镜像与同步、非变换专用关键帧快照。七个GPU动画样式标记、属性树AnimationState参数和GPU专用变化分类、锚点GPU动画状态传播、四个运行开关和遗留测试源项一并清除。
+
+CPU动画排队、开始/暂停就绪、未解析滚动时间线延迟、PaintClean后时序延迟和原IsCurrent查询的on-demand副作用保留。仅为transform/translate/rotate/scale保存TransformOperations，用于CPU子像素和轴对齐；neutral keyframes、zoom和viewport刷新保持。SVG原点分离的SMIL/资源祖先/zoom/vector-effect/额外变换判定原样迁入CPU绘制调用方。ScrollOffsets、Timing枚举为Blink本地数据，滚动时间线16微秒/像素不变。cc的实际CPU平滑滚动曲线仍保留；宿主/GPU全链后续继续拆除。
+
+| 验证 | 结果 |
+|---|---|
+| 静态删除闭包 | 22份删除与79份编辑备份SHA256通过；17510个源码/GN/生成输入无删除路径引用，71个owned C++/h预处理配对通过 |
+| GN / 输入 / IDL | 6847 targets/856 files；7429输入全存在；54枚举122引用、union42引用均0缺失 |
+| Windows EXE / DLL | jobs8编译链接通过，无OOM；首轮14个失败TU已集中修复，语法13/14+最后1/1通过 |
+| serve / net / demos | 全通过；84 demos为62 exact/1 fuzzy/21 smoke |
+| Node / daemon / 协议 | 新addon加载相同SHA256的新DLL，全通过 |
+| Bilibili / accept | 全通过；既有Chrome oracle差异1.524%保持 |
+| 原始像素 / 动态clip-path | 182/182解码RGBA完全相同；动态clip-path等于静态中点 |
+| Linux probe / Jumbo | 0缺BUILD/0主仓库缺输入；3项Linux DEPS和1项宿主工具链缺失，40个候选，未实编译 |
+| 六平台实际编译 | 尚未完成 |
+
+新增动画基准含16组几何、暂停、delay/fill、zoom、SVG，旧第九批EXE生成的基准与出处保存在out/cut-animation-cpu。原181张基准SHA256未改变，本批追加一张专项后共182张。
+
+EXE46,332,928字节，DLL46,330,880字节，分别比第九批减少62,464字节。EXE SHA256 b54ec426000f4f9ace00a2d9efc9c13c342f9308a2439e405dbc7444bcb83c31；DLL SHA256 83a1dd6731c0a9746f81a07cb1b96c82812bae37857bcbd00d4276f1a04191e5。源码证据out/cut-stage14，全部验证及像素证据out/cut-batch10，编译日志out/Shot/cut-batch10-*.log。首次诊断涉及直接声明/include、快照谓词、ScrollAxis遮蔽和三个旧参数；全部修复后未恢复被删功能。拖放提案未应用。
+
 ## 后续批次
 
 继续处理网络公共层、输入/合成器/GPU、诊断后端等剩余闭包，完整接续清单见 `screenshot-cut-task.md`。不把待处理或已关闭开关标为彻底删除。

@@ -8,7 +8,6 @@
 
 #include "base/check_op.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_scroll_timeline_options.h"
-#include "third_party/blink/renderer/core/animation/scroll_timeline_util.h"
 #include "third_party/blink/renderer/core/dom/document.h"
 #include "third_party/blink/renderer/core/dom/element.h"
 #include "third_party/blink/renderer/core/dom/shadow_root.h"
@@ -322,7 +321,7 @@ bool ScrollTimeline::Matches(ReferenceType reference_type,
          (reference_element_ == reference_element) && (axis_ == axis);
 }
 
-ScrollAxis ScrollTimeline::GetAxis() const {
+ScrollTimeline::ScrollAxis ScrollTimeline::GetAxis() const {
   return axis_;
 }
 

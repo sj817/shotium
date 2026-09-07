@@ -46,7 +46,7 @@ class AnimationEffectOwner : public GarbageCollectedMixin {
 
   // TODO(majidvp): Remove this. Exposing the animation instance here is not
   // ideal as it punches a hole in our abstraction. This is currently necessary
-  // as CompositorAnimations and EffectStack need to access the animation
+  // as EffectStack needs to access the animation
   // instance but we should try to replace these usage with more appropriate
   // patterns and remove this. http://crbug.com/812410
   virtual Animation* GetAnimation() = 0;

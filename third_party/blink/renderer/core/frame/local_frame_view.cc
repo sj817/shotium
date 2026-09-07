@@ -1013,24 +1013,6 @@ bool LocalFrameView::RecordNaturalDimensions() {
   return true;
 }
 
-bool LocalFrameView::HasRunningAnchorTransformAnimation() const {
-  for (Frame* child = frame_->Tree().FirstChild(); child;
-       child = child->Tree().NextSibling()) {
-    const auto* child_view = DynamicTo<LocalFrameView>(child->View());
-    if (child_view && child_view->HasRunningAnchorTransformAnimation()) {
-      return true;
-    }
-  }
-  if (LayoutView* layout_view = GetLayoutView()) {
-    if (layout_view->PhysicalFragmentCount()) {
-      DCHECK_EQ(layout_view->PhysicalFragmentCount(), 1u);
-      const PhysicalBoxFragment* root_fragment =
-          layout_view->GetPhysicalFragment(0);
-      return root_fragment->HasRunningAnchorTransformAnimation();
-    }
-  }
-  return false;
-}
 
 std::optional<NaturalSizingInfo> LocalFrameView::GetNaturalDimensions() const {
   if (LayoutSVGRoot* content_layout_object = EmbeddedReplacedContent()) {

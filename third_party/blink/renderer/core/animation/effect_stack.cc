@@ -31,7 +31,6 @@
 #include "third_party/blink/renderer/core/animation/effect_stack.h"
 
 #include <algorithm>
-#include "third_party/blink/renderer/core/animation/compositor_animations.h"
 #include "third_party/blink/renderer/core/animation/css/css_animations.h"
 #include "third_party/blink/renderer/core/animation/invalidatable_interpolation.h"
 
@@ -94,17 +93,6 @@ bool EffectStack::CompareSampledEffects(
 
 EffectStack::EffectStack() = default;
 
-bool EffectStack::HasActiveAnimationsOnCompositor(
-    const PropertyHandle& property) const {
-  for (const auto& sampled_effect : sampled_effects_) {
-    if (sampled_effect->Effect() &&
-        sampled_effect->Effect()->HasPlayingAnimation() &&
-        sampled_effect->Effect()->HasActiveAnimationsOnCompositor(property)) {
-      return true;
-    }
-  }
-  return false;
-}
 
 bool EffectStack::AffectsProperties(PropertyHandleFilter filter) const {
   for (const auto& sampled_effect : sampled_effects_) {

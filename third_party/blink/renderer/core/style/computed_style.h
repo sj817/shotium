@@ -2033,23 +2033,11 @@ class ComputedStyle final : public ComputedStyleBase {
     return HasCurrentTransformAnimation() || HasCurrentScaleAnimation() ||
            HasCurrentRotateAnimation() || HasCurrentTranslateAnimation();
   }
-  bool HasCurrentCompositableAnimation() const {
-    return HasCurrentOpacityAnimation() ||
-           HasCurrentTransformRelatedAnimation() ||
-           HasCurrentFilterAnimation() || HasCurrentBackdropFilterAnimation();
-  }
   bool ShouldCompositeForCurrentAnimations() const {
     return HasCurrentOpacityAnimation() ||
            HasCurrentTransformRelatedAnimation() ||
            HasCurrentFilterAnimation() || HasCurrentBackdropFilterAnimation();
   }
-  bool IsRunningTransformRelatedAnimationOnCompositor() const {
-    return IsRunningTransformAnimationOnCompositor() ||
-           IsRunningScaleAnimationOnCompositor() ||
-           IsRunningRotateAnimationOnCompositor() ||
-           IsRunningTranslateAnimationOnCompositor();
-  }
-
   // Opacity utility functions.
   bool HasOpacity() const { return Opacity() < 1.0f; }
 

@@ -79,13 +79,6 @@ class EffectPaintPropertyNodeAlias final
 class PLATFORM_EXPORT EffectPaintPropertyNode final
     : public EffectPaintPropertyNodeOrAlias {
  public:
-  struct AnimationState {
-    AnimationState() {}
-    bool is_running_opacity_animation_on_compositor = false;
-    bool is_running_filter_animation_on_compositor = false;
-    bool is_running_backdrop_filter_animation_on_compositor = false;
-    STACK_ALLOCATED();
-  };
 
   struct FilterInfo {
     CompositorFilterOperations operations;
@@ -176,12 +169,10 @@ class PLATFORM_EXPORT EffectPaintPropertyNode final
     bool is_in_drawable_canvas_subtree = false;
 
     PaintPropertyChangeType ComputeChange(
-        const State& other,
-        const AnimationState& animation_state) const;
+        const State& other) const;
 
     PaintPropertyChangeType ComputeOpacityChange(
-        float opacity,
-        const AnimationState& animation_state) const;
+        float opacity) const;
 
     // Opacity change is simple if
     // - opacity doesn't change from or to 1, or
@@ -215,10 +206,9 @@ class PLATFORM_EXPORT EffectPaintPropertyNode final
 
   PaintPropertyChangeType Update(
       const EffectPaintPropertyNodeOrAlias& parent,
-      State&& state,
-      const AnimationState& animation_state = AnimationState()) {
+      State&& state) {
     auto parent_changed = SetParent(parent);
-    auto state_changed = state_.ComputeChange(state, animation_state);
+    auto state_changed = state_.ComputeChange(state);
     if (state_changed != PaintPropertyChangeType::kUnchanged) {
       state_ = std::move(state);
       AddChanged(state_changed);
@@ -227,8 +217,7 @@ class PLATFORM_EXPORT EffectPaintPropertyNode final
   }
 
   PaintPropertyChangeType DirectlyUpdateOpacity(
-      float opacity,
-      const AnimationState& animation_state);
+      float opacity);
 
   const EffectPaintPropertyNode& Unalias() const = delete;
   bool IsParentAlias() const = delete;

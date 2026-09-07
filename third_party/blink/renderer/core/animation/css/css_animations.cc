@@ -40,8 +40,7 @@
 #include "third_party/blink/renderer/bindings/core/v8/v8_union_cssnumericvalue_double.h"
 #include "third_party/blink/renderer/core/animation/animation.h"
 #include "third_party/blink/renderer/core/animation/animation_utils.h"
-#include "third_party/blink/renderer/core/animation/compositor_animations.h"
-#include "third_party/blink/renderer/core/animation/css/compositor_keyframe_value_factory.h"
+#include "third_party/blink/renderer/core/animation/css/transform_keyframe_snapshot_factory.h"
 #include "third_party/blink/renderer/core/animation/css/css_animation.h"
 #include "third_party/blink/renderer/core/animation/css/css_keyframe_effect_model.h"
 #include "third_party/blink/renderer/core/animation/css/css_timeline_map.h"
@@ -1715,7 +1714,7 @@ bool ComputedTransitionValuesEqual(const PropertyHandle& property,
 
 }  // namespace
 
-void CSSAnimations::CalculateCompositorAnimationUpdate(
+void CSSAnimations::CalculateTransformSnapshotUpdate(
     CSSAnimationUpdate& update,
     Element& animating_element,
     Element& element,
@@ -1726,16 +1725,14 @@ void CSSAnimations::CalculateCompositorAnimationUpdate(
   ElementAnimations* element_animations =
       animating_element.GetElementAnimations();
 
-  // If the change in style is only due to the Blink-side animation update, we
-  // do not need to update the compositor-side animations. The compositor is
-  // already changing the same properties and as such this update would provide
-  // no new information.
+  // Sampling an animation does not change its keyframes. Refresh resolved
+  // geometry only when the underlying style or viewport changes.
   if (!element_animations || element_animations->IsAnimationStyleChange())
     return;
 
   const ComputedStyle* old_style = animating_element.GetComputedStyle();
   if (!old_style || old_style->IsEnsuredInDisplayNone() ||
-      !old_style->HasCurrentCompositableAnimation()) {
+      !old_style->HasCurrentTransformRelatedAnimation()) {
     return;
   }
 
@@ -1754,13 +1751,13 @@ void CSSAnimations::CalculateCompositorAnimationUpdate(
         ((transform_zoom_changed || was_viewport_resized) &&
          (keyframe_effect->Affects(PropertyHandle(GetCSSPropertyTransform())) ||
           keyframe_effect->Affects(PropertyHandle(GetCSSPropertyTranslate())))))
-      keyframe_effect->InvalidateCompositorKeyframesSnapshot();
+      keyframe_effect->InvalidateTransformKeyframeSnapshots();
 
-    if (keyframe_effect->SnapshotAllCompositorKeyframesIfNecessary(
+    if (keyframe_effect->SnapshotAllTransformKeyframesIfNecessary(
             element, style, parent_style)) {
       return true;
     } else if (keyframe_effect->HasSyntheticKeyframes() &&
-               keyframe_effect->SnapshotNeutralCompositorKeyframes(
+               keyframe_effect->SnapshotNeutralTransformKeyframes(
                    element, *old_style, style, parent_style)) {
       return true;
     }
@@ -1770,7 +1767,7 @@ void CSSAnimations::CalculateCompositorAnimationUpdate(
   for (auto& entry : element_animations->Animations()) {
     Animation& animation = *entry.key;
     if (snapshot(animation.effect())) {
-      update.UpdateCompositorKeyframes(&animation);
+      update.UpdateTransformKeyframes(&animation);
     }
   }
 }
@@ -2074,7 +2071,7 @@ AnimationEffect::EventDelegate* CSSAnimations::CreateEventDelegate(
       element, animation_name, previous_phase, previous_iteration);
 }
 
-void CSSAnimations::SnapshotCompositorKeyframes(
+void CSSAnimations::SnapshotTransformKeyframes(
     Element& element,
     CSSAnimationUpdate& update,
     const ComputedStyle& style,
@@ -2084,7 +2081,7 @@ void CSSAnimations::SnapshotCompositorKeyframes(
     const KeyframeEffectModelBase* keyframe_effect =
         GetKeyframeEffectModelBase(effect);
     if (keyframe_effect) {
-      keyframe_effect->SnapshotAllCompositorKeyframesIfNecessary(element, style,
+      keyframe_effect->SnapshotAllTransformKeyframesIfNecessary(element, style,
                                                                  parent_style);
     }
   };
@@ -2200,43 +2197,6 @@ void CSSAnimations::UpdateAnimationFlags(Element& animating_element,
         UpdateAnimationFlagsForAnimation(*entry.key, builder);
     }
 
-    EffectStack& effect_stack = element_animations->GetEffectStack();
-
-    if (builder.HasCurrentOpacityAnimation()) {
-      builder.SetIsRunningOpacityAnimationOnCompositor(
-          effect_stack.HasActiveAnimationsOnCompositor(
-              PropertyHandle(GetCSSPropertyOpacity())));
-    }
-    if (builder.HasCurrentTransformAnimation()) {
-      builder.SetIsRunningTransformAnimationOnCompositor(
-          effect_stack.HasActiveAnimationsOnCompositor(
-              PropertyHandle(GetCSSPropertyTransform())));
-    }
-    if (builder.HasCurrentScaleAnimation()) {
-      builder.SetIsRunningScaleAnimationOnCompositor(
-          effect_stack.HasActiveAnimationsOnCompositor(
-              PropertyHandle(GetCSSPropertyScale())));
-    }
-    if (builder.HasCurrentRotateAnimation()) {
-      builder.SetIsRunningRotateAnimationOnCompositor(
-          effect_stack.HasActiveAnimationsOnCompositor(
-              PropertyHandle(GetCSSPropertyRotate())));
-    }
-    if (builder.HasCurrentTranslateAnimation()) {
-      builder.SetIsRunningTranslateAnimationOnCompositor(
-          effect_stack.HasActiveAnimationsOnCompositor(
-              PropertyHandle(GetCSSPropertyTranslate())));
-    }
-    if (builder.HasCurrentFilterAnimation()) {
-      builder.SetIsRunningFilterAnimationOnCompositor(
-          effect_stack.HasActiveAnimationsOnCompositor(
-              PropertyHandle(GetCSSPropertyFilter())));
-    }
-    if (builder.HasCurrentBackdropFilterAnimation()) {
-      builder.SetIsRunningBackdropFilterAnimationOnCompositor(
-          effect_stack.HasActiveAnimationsOnCompositor(
-              PropertyHandle(GetCSSPropertyBackdropFilter())));
-    }
   }
 }
 
@@ -2295,9 +2255,8 @@ void CSSAnimations::MaybeApplyPendingUpdate(Element* element) {
       animation->Update(kTimingUpdateOnDemand);
   }
 
-  for (const auto& animation : pending_update_.UpdatedCompositorKeyframes()) {
-    animation->SetCompositorPending(
-        Animation::CompositorPendingReason::kPendingEffectChange);
+  for (const auto& animation : pending_update_.UpdatedTransformKeyframes()) {
+    animation->SetPendingUpdate();
   }
 
   for (const auto& entry : pending_update_.AnimationsWithUpdates()) {
@@ -2379,26 +2338,17 @@ void CSSAnimations::MaybeApplyPendingUpdate(Element* element) {
         MakeGarbageCollected<RunningAnimation>(animation, entry));
   }
 
-  // Track retargeted transitions that are running on the compositor in order
-  // to update their start times.
-  HashSet<PropertyHandle> retargeted_compositor_transitions;
   for (const PropertyHandle& property :
        pending_update_.CancelledTransitions()) {
     DCHECK(transitions_.Contains(property));
 
     Animation* animation = transitions_.Take(property)->animation;
-    auto* effect = To<KeyframeEffect>(animation->effect());
-    if (effect && effect->HasActiveAnimationsOnCompositor(property) &&
-        pending_update_.NewTransitions().Contains(property) &&
-        !animation->Limited()) {
-      retargeted_compositor_transitions.insert(property);
-    }
     animation->ClearOwningElement();
     animation->cancel();
     // After cancellation, transitions must be downgraded or they'll fail
     // to be considered when retriggering themselves. This can happen if
     // the transition is captured through getAnimations then played.
-    effect = DynamicTo<KeyframeEffect>(animation->effect());
+    auto* effect = DynamicTo<KeyframeEffect>(animation->effect());
     if (effect)
       effect->DowngradeToNormal();
     animation->Update(kTimingUpdateOnDemand);
@@ -2448,11 +2398,6 @@ void CSSAnimations::MaybeApplyPendingUpdate(Element* element) {
 
     animation->play();
 
-    // Set the current time as the start time for retargeted transitions
-    if (retargeted_compositor_transitions.Contains(property)) {
-      animation->setStartTime(element->GetDocument().Timeline().currentTime(),
-                              ASSERT_NO_EXCEPTION);
-    }
     animation->Update(kTimingUpdateOnDemand);
 
     RunningTransition* running_transition =
@@ -2758,14 +2703,13 @@ void CSSAnimations::CalculateTransitionUpdateForPropertyHandle(
   end_keyframe->SetIsAttrTainted(is_attr_tainted);
   keyframes.push_back(end_keyframe);
 
-  if (property.GetCSSProperty().IsCompositableProperty() &&
-      CompositorAnimations::CompositedPropertyRequiresSnapshot(property)) {
-    CompositorKeyframeValue* from = CompositorKeyframeValueFactory::Create(
-        property, *state.before_change_style, start_keyframe->Offset().value());
-    CompositorKeyframeValue* to = CompositorKeyframeValueFactory::Create(
-        property, after_change_style, end_keyframe->Offset().value());
-    start_keyframe->SetCompositorValue(from);
-    end_keyframe->SetCompositorValue(to);
+  if (TransformKeyframeSnapshotFactory::RequiresSnapshot(property)) {
+    TransformKeyframeSnapshot* from = TransformKeyframeSnapshotFactory::Create(
+        property, *state.before_change_style);
+    TransformKeyframeSnapshot* to = TransformKeyframeSnapshotFactory::Create(
+        property, after_change_style);
+    start_keyframe->SetTransformSnapshot(from);
+    end_keyframe->SetTransformSnapshot(to);
   }
 
   auto* model = MakeGarbageCollected<TransitionKeyframeEffectModel>(keyframes);

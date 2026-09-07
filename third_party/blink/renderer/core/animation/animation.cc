@@ -37,8 +37,6 @@
 #include "base/debug/stack_trace.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/types/optional_util.h"
-#include "cc/animation/animation_timeline.h"
-#include "cc/animation/keyframe_effect.h"
 #include "third_party/blink/public/platform/platform.h"
 #include "third_party/blink/public/platform/task_type.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_animation_play_state.h"
@@ -47,7 +45,6 @@
 #include "third_party/blink/renderer/core/animation/animation_effect.h"
 #include "third_party/blink/renderer/core/animation/animation_timeline.h"
 #include "third_party/blink/renderer/core/animation/animation_utils.h"
-#include "third_party/blink/renderer/core/animation/compositor_animations.h"
 #include "third_party/blink/renderer/core/animation/css/css_animation.h"
 #include "third_party/blink/renderer/core/animation/css/css_animations.h"
 #include "third_party/blink/renderer/core/animation/css/css_transition.h"
@@ -57,7 +54,6 @@
 #include "third_party/blink/renderer/core/animation/keyframe_effect.h"
 #include "third_party/blink/renderer/core/animation/pending_animations.h"
 #include "third_party/blink/renderer/core/animation/scroll_timeline.h"
-#include "third_party/blink/renderer/core/animation/scroll_timeline_util.h"
 #include "third_party/blink/renderer/core/animation/timeline_range.h"
 #include "third_party/blink/renderer/core/animation/timing_calculations.h"
 #include "third_party/blink/renderer/core/css/cssom/css_unit_values.h"
@@ -80,7 +76,6 @@
 #include "third_party/blink/renderer/core/probe/core_probes.h"
 #include "third_party/blink/renderer/core/style/computed_style_constants.h"
 #include "third_party/blink/renderer/core/svg/svg_element.h"
-#include "third_party/blink/renderer/platform/animation/compositor_animation.h"
 #include "third_party/blink/renderer/platform/bindings/script_forbidden_scope.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
 #include "third_party/blink/renderer/platform/heap/persistent.h"
@@ -94,39 +89,6 @@
 namespace blink {
 
 namespace {
-
-// Accessing the compositor animation state should not be done during style,
-// layout or paint to avoid blocking on a previous pending commit.
-#if DCHECK_IS_ON()
-#define VERIFY_PAINT_CLEAN_LOG_ONCE()                                         \
-  if (VLOG_IS_ON(1)) {                                                        \
-    if (document_->Lifecycle().GetState() < DocumentLifecycle::kPaintClean) { \
-      static bool first_call = true;                                          \
-      bool was_first_call = first_call;                                       \
-      first_call = false;                                                     \
-      if (was_first_call) {                                                   \
-        VLOG(1) << __PRETTY_FUNCTION__                                        \
-                << " called during style, layout or paint";                   \
-        if (VLOG_IS_ON(2)) {                                                  \
-          base::debug::StackTrace().Print();                                  \
-        }                                                                     \
-      }                                                                       \
-    }                                                                         \
-  }
-#else
-#define VERIFY_PAINT_CLEAN_LOG_ONCE()
-#endif
-
-// Ensure the time is bounded such that it can be resolved to microsecond
-// accuracy. Beyond this limit, we can effectively stall an animation when
-// ticking (i.e. b + delta == b for high enough floating point value of b).
-// Furthermore, we can encounter numeric overflows when converting to a
-// time format that is backed by a 64-bit integer.
-bool SupportedTimeValue(double time_in_ms) {
-  return std::abs(time_in_ms) < std::pow(std::numeric_limits<double>::radix,
-                                         std::numeric_limits<double>::digits) /
-                                    1000;
-}
 
 enum class PseudoPriority {
   kNone,
@@ -201,59 +163,6 @@ Animation::AnimationClassPriority AnimationPriority(
   else
     priority = Animation::AnimationClassPriority::kDefaultPriority;
   return priority;
-}
-
-// Helper function to record both UMA histogram and UseCounter for animation
-// types
-void RecordAnimationTypeAndUseCounter(BlinkAnimationType animation_type,
-                                      WebFeature web_feature,
-                                      ExecutionContext* execution_context) {
-  UMA_HISTOGRAM_ENUMERATION("Blink.Animation.AnimationType", animation_type,
-                            BlinkAnimationType::kAnimationTypeEnumMax);
-  UseCounter::Count(execution_context, web_feature);
-}
-
-void RecordAnimationTypeMetrics(
-    bool is_svg_animation,
-    CompositorAnimations::FailureReasons failure_reasons,
-    ExecutionContext* execution_context) {
-  RecordAnimationTypeAndUseCounter(BlinkAnimationType::kAllAnimations,
-                                   WebFeature::kAnimationAllTypes,
-                                   execution_context);
-
-  if (is_svg_animation) {
-    RecordAnimationTypeAndUseCounter(BlinkAnimationType::kSvgAnimations,
-                                     WebFeature::kAnimationSvgTypes,
-                                     execution_context);
-  }
-
-  if (failure_reasons == CompositorAnimations::kNoFailure) {
-    // Record all composited animations in the general metric.
-    RecordAnimationTypeAndUseCounter(BlinkAnimationType::kCompositedAnimations,
-                                     WebFeature::kAnimationCompositedTypes,
-                                     execution_context);
-    if (is_svg_animation) {
-      // SVG animations are recorded in both metrics: the general composited
-      // animations metric (above) for overall statistics, and the SVG-specific
-      // metric (below) for tracking SVG animation behavior separately.
-      RecordAnimationTypeAndUseCounter(
-          BlinkAnimationType::kSvgCompositedAnimations,
-          WebFeature::kAnimationSvgCompositedTypes, execution_context);
-    }
-  } else {
-    // Record all non-composited animations in the general metric.
-    RecordAnimationTypeAndUseCounter(
-        BlinkAnimationType::kNonCompositedAnimations,
-        WebFeature::kAnimationNonCompositedTypes, execution_context);
-    // SVG animations are recorded in both metrics: the general non-composited
-    // animations metric (above) for overall statistics, and the SVG-specific
-    // metric (below) for tracking SVG animation behavior separately.
-    if (is_svg_animation) {
-      RecordAnimationTypeAndUseCounter(
-          BlinkAnimationType::kSvgNonCompositedAnimations,
-          WebFeature::kAnimationSvgNonCompositedTypes, execution_context);
-    }
-  }
 }
 
 Element* OriginatingElement(Element* owning_element) {
@@ -405,7 +314,6 @@ Animation::Animation(ExecutionContext* execution_context,
       content_(content),
       timeline_(timeline),
       is_paused_for_testing_(false),
-      is_composited_animation_disabled_for_testing_(false),
       pending_pause_(false),
       pending_play_(false),
       pending_finish_notification_(false),
@@ -413,12 +321,8 @@ Animation::Animation(ExecutionContext* execution_context,
       outdated_(false),
       inactive_(true),
       committed_finish_notification_(false),
-      compositor_state_(nullptr),
-      compositor_pending_(false),
-      compositor_group_(PendingAnimations::kCompositorGroupAutoAssign),
-      effect_suppressed_(false),
-      compositor_property_animations_have_no_effect_(false),
-      animation_has_no_effect_(false) {
+      pending_update_(false),
+      effect_suppressed_(false) {
   if (execution_context && !execution_context->IsContextDestroyed())
     SetExecutionContext(execution_context);
 
@@ -441,20 +345,12 @@ Animation::Animation(ExecutionContext* execution_context,
   probe::DidCreateAnimation(document_, sequence_number_);
 }
 
-Animation::~Animation() {
-  // Verify that compositor_animation_ has been disposed of.
-  DCHECK(!compositor_animation_);
-}
+Animation::~Animation() = default;
 
 void Animation::Dispose() {
   DisassociateTriggers();
   if (timeline_)
     timeline_->AnimationDetached(this);
-  DestroyCompositorAnimation();
-  // If the DocumentTimeline and its Animation objects are
-  // finalized by the same GC, we have to eagerly clear out
-  // this Animation object's compositor animation registration.
-  DCHECK(!compositor_animation_);
 }
 
 AnimationTimeDelta Animation::EffectEnd() const {
@@ -601,7 +497,7 @@ void Animation::setCurrentTime(const V8CSSNumberish* current_time,
   // Update the finished state.
   UpdateFinishedState(UpdateType::kDiscontinuous, NotificationType::kAsync);
 
-  SetCompositorPending(CompositorPendingReason::kPendingUpdate);
+  SetPendingUpdate();
 
   // Notify of potential state change.
   NotifyProbe();
@@ -725,160 +621,27 @@ V8AnimationPlayState Animation::playState() const {
   return V8AnimationPlayState(CalculateAnimationPlayState());
 }
 
-bool Animation::PreCommit(
-    int compositor_group,
-    bool start_on_compositor) {
-  if (CompositorPendingCancel()) {
-    CancelAnimationOnCompositor();
-  }
-
-  bool compositor_property_animations_had_no_effect =
-      compositor_property_animations_have_no_effect_;
-  compositor_property_animations_have_no_effect_ = false;
-  animation_has_no_effect_ = false;
-
-  bool needs_timing_update = false;
-  bool missing_start_time = false;
-  bool effect_changed = false;
-  if (compositor_state_) {
-    // If timing characteristics changed, we need to restart the animation
-    // and recompute a fresh start time.
-    needs_timing_update =
-        (EffectivePlaybackRate() != compositor_state_->playback_rate) ||
-        (start_time_ != compositor_state_->start_time) ||
-        (hold_time_ != compositor_state_->hold_time);
-    missing_start_time =
-        !compositor_state_->start_time &&
-        compositor_state_->pending_action == CompositorAction::kStart;
-    effect_changed = compositor_state_->effect_changed;
-  }
-
-  // Synchronizing a composited animation and its main thread counterpart
-  // often requires a cancel and restart.
-  //
-  // A restart is required if either the keyframe model or compositor timing
-  // have changed.
-  //
-  // Animations no longer in the running play state, needing a restart, or no
-  // longer eligible to be composited are canceled. Eligible running animations
-  // that have either not started on the compositor or have a stale
-  // configuration are started.
-  //
-  // An animation can be playing but not have a current time if attached to a
-  // scroll timeline and waiting on a deferred start time. While the timeline is
-  // unresolved or inactive the deferred start time cannot be resolved. Such
-  // animations should be cancelled and not restarted on the compositor. These
-  // can start on the compositor only after the timeline becomes active, and the
-  // current time resolved.
-  bool needs_restart = effect_changed || needs_timing_update;
-  bool should_cancel_on_compositor =
-      (!Playing() && compositor_state_) || needs_restart ||
-      !start_on_compositor || compositor_property_animations_had_no_effect ||
-      !CurrentTimeInternal();
-  // Start sets the compositor group regardless of whether starting on the
-  // compositor.
-  bool should_start = Playing() && (!compositor_state_ || needs_restart) &&
-                      CurrentTimeInternal();
-
-  if (missing_start_time && !should_cancel_on_compositor) {
-    // Waiting on start time, but the starting animation is still valid.
-    // Defer to the next commit.
-    return false;
-  }
-
-  Document* document = GetDocument();
-  if (should_start && start_on_compositor && Outdated() && document &&
-      document->Lifecycle().GetState() >= DocumentLifecycle::kPaintClean &&
-      ScriptForbiddenScope::WillBeScriptForbidden()) {
-    // Compositor eligibility can query effect timing, which can force an
-    // on-demand timing update and dirty animation style. Defer while in the
-    // post-paint lifecycle so timing can be serviced before this decision.
-    return false;
-  }
-
-  std::optional<int> replaced_cc_animation_id;
-  if (should_cancel_on_compositor) {
-    if (should_start && GetCompositorAnimation() && !needs_timing_update) {
-      // The animation might already be in the process of starting on the
-      // compositor, and the main thread simply hasn't received the ack.
-      // Unless a new start time is required, preserve the CC animation's ID
-      // and the compositor group to avoid a fresh restart on the compositor.
-      replaced_cc_animation_id = GetCompositorAnimation()->CcAnimationId();
-      compositor_group = compositor_group_;
+bool Animation::PreparePendingUpdate(bool update_timing) {
+  if (Playing() && CurrentTimeInternal() && update_timing) {
+    Document* document = GetDocument();
+    if (Outdated() && document &&
+        document->Lifecycle().GetState() >= DocumentLifecycle::kPaintClean &&
+        ScriptForbiddenScope::WillBeScriptForbidden()) {
+      // Timing updates can dirty animation style. Service them in the next
+      // lifecycle rather than while paint is already clean.
+      return false;
     }
-    CancelAnimationOnCompositor();
-  }
-
-  DCHECK(!compositor_state_ || compositor_state_->start_time);
-
-  if (should_start) {
-    compositor_group_ = compositor_group;
-    if (start_on_compositor) {
-      // With NewAnimationCompositingChecking, we avoid re-checking if we've
-      // already encountered a failure earlier. This is currently only triggered
-      // with NPW animations, but more will be added for crbug.com/521921835.
-      // TODO(crbug.com/521921835): Add granular mask/pending disposition to
-      // allow for partial re-checks, as well as differentiating partial checks
-      // and full checks, as currently this blurs the two cases.
-      if (!RuntimeEnabledFeatures::NewAnimationCompositingCheckingEnabled() ||
-          compositing_decision_.disposition ==
-              CompositorAnimations::kNoFailure ||
-          compositing_decision_.disposition ==
-              CompositorAnimations::kUnchecked) {
-        CheckCanStartAnimationOnCompositor(StartOnCompositorReason::kGeneric);
-      }
-
-      // Record animation type metrics
-      auto* keyframe_effect = DynamicTo<KeyframeEffect>(content_.Get());
-      const bool is_svg_animation =
-          keyframe_effect && IsA<SVGElement>(keyframe_effect->EffectTarget());
-      RecordAnimationTypeMetrics(is_svg_animation,
-                                 compositing_decision_.disposition,
-                                 GetExecutionContext());
-
-      if (compositing_decision_.disposition ==
-          CompositorAnimations::kNoFailure) {
-        // We could still have a stale compositor keyframe model ID if
-        // a previous cancel failed due to not having a layout object at the
-        // time of the cancel operation. The start and stop of an animation
-        // for a marquee element does not depend on having a layout object.
-        CancelAnimationOnCompositor();
-        CreateCompositorAnimation(replaced_cc_animation_id);
-        StartAnimationOnCompositor(StartOnCompositorReason::kGeneric);
-        compositor_state_ = std::make_unique<CompositorState>(*this);
-      } else {
-        CancelIncompatibleAnimationsOnCompositor();
-      }
-
-      compositor_property_animations_have_no_effect_ =
-          compositing_decision_.disposition &
-          CompositorAnimations::kAnimationHasNoVisibleChange;
-      animation_has_no_effect_ =
-          compositing_decision_.disposition ==
-          CompositorAnimations::kAnimationHasNoVisibleChange;
-      compositing_decision_.ReportHistogramsAndTracing(*this);
-
-      DCHECK_EQ(V8AnimationPlayState::Enum::kRunning,
-                CalculateAnimationPlayState());
+    if (IsA<KeyframeEffect>(content_.Get())) {
+      // The former eligibility check queried IsCurrent(), which services
+      // on-demand timing. Preserve that main-thread update without GPU state.
+      UpdateIfNecessary();
     }
   }
-
   return true;
 }
 
-void Animation::PostCommit() {
-  compositor_pending_ = false;
-
-  if (!compositor_state_ ||
-      compositor_state_->pending_action == CompositorAction::kNone) {
-    return;
-  }
-
-  DCHECK_EQ(CompositorAction::kStart, compositor_state_->pending_action);
-  if (compositor_state_->start_time) {
-    DCHECK_EQ(start_time_.value(), compositor_state_->start_time.value());
-    compositor_state_->pending_action = CompositorAction::kNone;
-  }
+void Animation::CompletePendingUpdate() {
+  pending_update_ = false;
 }
 
 bool Animation::HasLowerCompositeOrdering(
@@ -976,20 +739,10 @@ bool Animation::HasLowerCompositeOrdering(
 }
 
 void Animation::NotifyReady(AnimationTimeDelta ready_time) {
-  // Complete the pending updates prior to updating the compositor state in
-  // order to ensure a correct start time for the compositor state without the
-  // need to duplicate the calculations.
   if (pending_play_)
     CommitPendingPlay(ready_time);
   else if (pending_pause_)
     CommitPendingPause(ready_time);
-
-  if (compositor_state_ &&
-      compositor_state_->pending_action == CompositorAction::kStart) {
-    DCHECK(!compositor_state_->start_time);
-    compositor_state_->pending_action = CompositorAction::kNone;
-    compositor_state_->start_time = start_time_;
-  }
 
   // Notify of change to play state.
   NotifyProbe();
@@ -1210,7 +963,7 @@ void Animation::setTimeline(AnimationTimeline* timeline) {
     Update(kTimingUpdateOnDemand);
   }
 
-  SetCompositorPending(CompositorPendingReason::kPendingRestart);
+  SetPendingUpdate();
 
   // Inform devtools of a potential change to the play state.
   NotifyProbe();
@@ -1328,7 +1081,7 @@ void Animation::setStartTime(const V8CSSNumberish* start_time,
       (!had_start_time && start_time_)) {
     SetOutdated();
   }
-  SetCompositorPending(CompositorPendingReason::kPendingUpdate);
+  SetPendingUpdate();
 
   NotifyProbe();
 }
@@ -1581,7 +1334,7 @@ void Animation::PauseInternal(ExceptionState& exception_state) {
   pending_pause_ = true;
 
   SetOutdated();
-  SetCompositorPending(CompositorPendingReason::kPendingUpdate);
+  SetPendingUpdate();
 
   // 11. Run the procedure to update an animation’s finished state for animation
   //    with the did seek flag set to false (continuous), and synchronously
@@ -1791,7 +1544,7 @@ void Animation::PlayInternal(AutoRewind auto_rewind,
   committed_finish_notification_ = false;
   SetOutdated();
 
-  SetCompositorPending(CompositorPendingReason::kPendingUpdate);
+  SetPendingUpdate();
 
   // Update an animation’s finished state. As the finished state may be
   // transient, we defer resolving the finished promise until the next
@@ -1978,11 +1731,10 @@ void Animation::UpdateFinishedState(UpdateType update_type,
         ScheduleAsyncFinish();
     }
   } else {
-    // Previously finished animation may restart so they should be added to
-    // pending animations to make sure that a compositor animation is re-created
-    // during future PreCommit.
+    // A previously finished animation may restart. Queue it so its pending
+    // play state and start time are serviced during the next lifecycle.
     if (inactive_) {
-      SetCompositorPending(CompositorPendingReason::kPendingUpdate);
+      SetPendingUpdate();
     }
     inactive_ = pending_finish_notification_ = committed_finish_notification_ =
         false;
@@ -2062,7 +1814,7 @@ void Animation::updatePlaybackRate(double playback_rate,
     case V8AnimationPlayState::Enum::kIdle:
     case V8AnimationPlayState::Enum::kPaused:
       ApplyPendingPlaybackRate();
-      SetCompositorPending(CompositorPendingReason::kPendingUpdate);
+      SetPendingUpdate();
       break;
 
     // 3c If previous play state is finished,
@@ -2099,7 +1851,7 @@ void Animation::updatePlaybackRate(double playback_rate,
       }
       ApplyPendingPlaybackRate();
       UpdateFinishedState(UpdateType::kContinuous, NotificationType::kAsync);
-      SetCompositorPending(CompositorPendingReason::kPendingUpdate);
+      SetPendingUpdate();
       SetOutdated();
       NotifyProbe();
       break;
@@ -2234,7 +1986,7 @@ void Animation::setPlaybackRate(double playback_rate,
                       WebFeature::kAnimationSetPlaybackRateCompensatorySeek);
   }
   InvalidateNormalizedTiming();
-  SetCompositorPending(CompositorPendingReason::kPendingUpdate);
+  SetPendingUpdate();
   SetOutdated();
   NotifyProbe();
 }
@@ -2260,327 +2012,17 @@ void Animation::ForceServiceOnNextFrame() {
     timeline_->ScheduleServiceOnNextFrame();
 }
 
-CompositorAnimations::FailureReasons
-Animation::CheckCanStartAnimationOnCompositor(
-    StartOnCompositorReason start_reason) {
-  // TODO(crbug.com/521921832, crbug.com/521921835): When the V2 enum is
-  // implemented, individual methods should be responsible for clearing only the
-  // flags that they authoritatively check, to allow for more granular checks.
-  compositing_decision_.disposition = CompositorAnimations::kNoFailure;
-
-  CheckCanStartAnimationOnCompositorInternal();
-  bool for_trigger = start_reason == StartOnCompositorReason::kAnimationTrigger;
-
-  // An Animation that is not playing will not produce a visual, so there is no
-  // reason to composite it, unless it is attached to an animation trigger.
-  if (!EffectivelyPlaying() && !for_trigger) {
-    compositing_decision_.disposition |=
-        CompositorAnimations::kInvalidAnimationOrEffect;
-  }
-
-  if (auto* keyframe_effect = DynamicTo<KeyframeEffect>(content_.Get())) {
-    if (!keyframe_effect->IsCurrent() && !for_trigger) {
-      // Unless attached to an animation trigger, there is no reason to
-      // composite an effect that is not current, and
-      // CheckCanStartAnimationOnCompositor might assert about having some but
-      // not all properties if we call it on such an animation.
-      compositing_decision_.disposition |=
-          CompositorAnimations::kInvalidAnimationOrEffect;
-    }
-    compositing_decision_.disposition |=
-        keyframe_effect->CheckCanStartAnimationOnCompositor(
-            compositing_decision_, playback_rate_,
-            start_reason);
-  }
-  return compositing_decision_.disposition;
-}
-
-void Animation::CheckCanStartAnimationOnCompositorInternal() {
-  if (is_composited_animation_disabled_for_testing_) {
-    compositing_decision_.disposition |=
-        CompositorAnimations::kAcceleratedAnimationsDisabled;
-  }
-
-  if (EffectSuppressed()) {
-    compositing_decision_.disposition |=
-        CompositorAnimations::kEffectSuppressedByDevtools;
-  }
-
-  // An Animation with zero playback rate will produce no visual output, so
-  // there is no reason to composite it.
-  if (TimingCalculations::IsWithinAnimationTimeEpsilon(
-          0, EffectivePlaybackRate())) {
-    compositing_decision_.disposition |=
-        CompositorAnimations::kInvalidAnimationOrEffect;
-  }
-
-  // Animation times with large magnitudes cannot be accurately reflected by
-  // TimeTicks. These animations will stall, be finished next frame, or
-  // stuck in the before phase. In any case, there will be no visible changes
-  // after the initial frame.
-  std::optional<AnimationTimeDelta> current_time = CurrentTimeInternal();
-  if (current_time.has_value() &&
-      !SupportedTimeValue(current_time.value().InMillisecondsF())) {
-    compositing_decision_.disposition |=
-        CompositorAnimations::kEffectHasUnsupportedTimingParameters;
-  }
-
-  if (!CurrentTimeInternal()) {
-    compositing_decision_.disposition |=
-        CompositorAnimations::kInvalidAnimationOrEffect;
-  }
-
-  // Cannot composite an infinite duration animation with a negative playback
-  // rate. TODO(crbug.com/1029167): Fix calculation of compositor timing to
-  // enable compositing provided the iteration duration is finite. Having an
-  // infinite number of iterations in the animation should not impede the
-  // ability to composite the animation.
-  if (EffectEnd().is_inf() && EffectivePlaybackRate() < 0) {
-    compositing_decision_.disposition |=
-        CompositorAnimations::kInvalidAnimationOrEffect;
-  }
-
-  // An Animation without a timeline effectively isn't playing, so there is no
-  // reason to composite it. Additionally, mutating the timeline playback rate
-  // is a debug feature available via devtools; we don't support this on the
-  // compositor currently and there is no reason to do so.
-  if (!timeline_ || (timeline_->IsDocumentTimeline() &&
-                     To<DocumentTimeline>(*timeline_).PlaybackRate() != 1)) {
-    compositing_decision_.disposition |=
-        CompositorAnimations::kInvalidAnimationOrEffect;
-  }
-
-  // If the scroll source is not composited, or we have not enabled scroll
-  // driven animations on the compositor, fall back to main thread.
-  // TODO(crbug.com/476553): Once all ScrollNodes including uncomposited ones
-  // are in the compositor, the animation should be composited.
-  if (timeline_ && timeline_->IsScrollSnapshotTimeline() &&
-      !CompositorAnimations::CanStartScrollTimelineOnCompositor(
-          To<ScrollSnapshotTimeline>(*timeline_).ResolvedSource())) {
-    compositing_decision_.disposition |=
-        CompositorAnimations::kTimelineSourceHasInvalidCompositingState;
-  }
-
-  // An Animation without an effect cannot produce a visual, so there is no
-  // reason to composite it.
-  if (!IsA<KeyframeEffect>(content_.Get())) {
-    compositing_decision_.disposition |=
-        CompositorAnimations::kInvalidAnimationOrEffect;
-  }
-}
-
-bool Animation::EffectivelyPlaying() const {
-  if (!RuntimeEnabledFeatures::
-          CompositingDecisionAtAnimationPhaseBoundariesEnabled()) {
-    return Playing();
-  }
-
-  if (!Playing()) {
-    return false;
-  }
-
-  if (timeline_ && !timeline_->IsMonotonicallyIncreasing()) {
-    return content_ && content_->IsInPlay();
-  }
-
-  return true;
-}
-
-void Animation::OnActivePhaseStateChange(bool in_active_phase) {
-  DCHECK(RuntimeEnabledFeatures::
-             CompositingDecisionAtAnimationPhaseBoundariesEnabled());
-
-  if (!timeline_ || timeline_->IsMonotonicallyIncreasing()) {
+void Animation::SetPendingUpdate() {
+  if (pending_update_ || is_paused_for_testing_) {
     return;
   }
-
-  if (in_active_phase) {
-    SetCompositorPending(CompositorPendingReason::kPendingRestart);
-  } else {
-    SetCompositorPending(CompositorPendingReason::kPendingCancel);
-  }
+  pending_update_ = true;
+  document_->GetPendingAnimations().Add(this);
 }
 
-std::optional<base::TimeDelta> Animation::ComputeCompositorHoldTime() const {
-  if (std::optional<AnimationTimeDelta> current_time = CurrentTimeInternal()) {
-    return base::Seconds(current_time.value().InSecondsF());
-  }
-  return std::nullopt;
-}
-
-void AnimationCompositingDecisionState::Reset(
-    bool force_enable_tracing_for_test) {
-  disposition = CompositorAnimations::kUnchecked;
-  if (TRACE_EVENT_CATEGORY_ENABLED(AnimationTraceCategories()) ||
-      force_enable_tracing_for_test) {
-    specific_reasons = MakeGarbageCollected<CompositingDecisionDetailsMap>();
-  } else {
-    specific_reasons = nullptr;
-  }
-}
-
-void AnimationCompositingDecisionState::ReportHistogramsAndTracing(
-    const Animation& animation) {
-  // UMA_HISTOGRAM_ENUMERATION requires that the enum_max must be strictly
-  // greater than the sample value. kFailureReasonCount doesn't include the
-  // kNoFailure value but the histograms do so adding the +1 is necessary.
-  // TODO(dcheng): Fix https://crbug.com/705169 so this isn't needed.
-  constexpr uint32_t kFailureReasonEnumMax =
-      CompositorAnimations::kFailureReasonCount + 1;
-
-  if (disposition == CompositorAnimations::kNoFailure) {
-    UMA_HISTOGRAM_ENUMERATION(
-        "Blink.Animation.CompositedAnimationFailureReason",
-        CompositorAnimations::kNoFailure, kFailureReasonEnumMax);
-    return;
-  }
-
-  for (uint32_t i = 0; i < CompositorAnimations::kFailureReasonCount; i++) {
-    unsigned val = 1 << i;
-    if (disposition & val) {
-      UMA_HISTOGRAM_ENUMERATION(
-          "Blink.Animation.CompositedAnimationFailureReason", i + 1,
-          kFailureReasonEnumMax);
-    }
-  }
-
-  if (specific_reasons) {
-    // The "data" payload was written by
-    // inspector_animation_compositor_event::Data; core/inspector's trace-event
-    // data writers are cut, so only the event itself remains.
-    TRACE_EVENT_INSTANT(
-        AnimationTraceCategories(), "Animation",
-        perfetto::NamedTrack::FromPointer("blink::Animation", &animation));
-    specific_reasons = nullptr;
-  }
-}
-
-void Animation::MarkPendingIfCompositorPropertyAnimationChanges() {
-  // |compositor_property_animations_have_no_effect_| will already be calculated
-  // in |Animation::PreCommit| if the animation is pending.
-  if (compositor_pending_)
-    return;
-
-  bool had_no_effect = compositor_property_animations_have_no_effect_;
-  compositor_property_animations_have_no_effect_ = false;
-
-  auto* keyframe_effect = DynamicTo<KeyframeEffect>(content_.Get());
-  if (!keyframe_effect || !keyframe_effect->IsCurrent()) {
-    // If the animation is not running, we can skip checking for having no
-    // effect. We can also skip the call to |SetCompositorPending| to avoid
-    // marking finished animations as pending.
-    return;
-  }
-
-  if (compositor_property_animations_have_no_effect_ != had_no_effect)
-    SetCompositorPending(CompositorPendingReason::kPendingEffectChange);
-}
-
-void Animation::StartAnimationOnCompositor(
-    StartOnCompositorReason start_reason) {
-  CHECK_EQ(compositing_decision_.disposition, CompositorAnimations::kNoFailure);
-  DCHECK(start_reason != StartOnCompositorReason::kAnimationTrigger ||
-         !Playing());
-
-  // If PlaybackRate is 0, then we will run into divide by 0 issues.
-  DCHECK(!TimingCalculations::IsWithinAnimationTimeEpsilon(
-      0, EffectivePlaybackRate()));
-
-  bool reversed = EffectivePlaybackRate() < 0;
-
-  std::optional<AnimationTimeDelta> start_time;
-  std::optional<base::TimeDelta> hold_time;
-
-  // Start the animation on the compositor with either a start time or a
-  // hold time. The start time is used for synchronous updates where the
-  // compositor start time must be in precise alignment with the specified time
-  // (e.g. after calling setStartTime). Scroll-driven animations always use this
-  // mode even if it causes a discontinuity in the current time calculation.
-
-  // Asynchronous updates such as updating the playback rate preserve current
-  // time for a time-based animation even if the start time is set.
-  // Asynchronous updates have an associated pending play or pending pause
-  // task associated with them.
-  if (start_time_ &&
-      (timeline()->IsScrollSnapshotTimeline() || !PendingInternal())) {
-    start_time = timeline_->ZeroTime() + start_time_.value();
-    if (reversed) {
-      start_time =
-          start_time.value() - (EffectEnd() / fabs(EffectivePlaybackRate()));
-    }
-  } else {
-    hold_time = ComputeCompositorHoldTime();
-  }
-
-  DCHECK_NE(compositor_group_, PendingAnimations::kCompositorGroupAutoAssign);
-  DCHECK(To<KeyframeEffect>(content_.Get()));
-  std::optional<double> start_time_s;
-  if (start_time) {
-    start_time_s = start_time.value().InSecondsF();
-  }
-
-  const Timing::NormalizedTiming& timing = effect()->NormalizedTiming();
-  bool boundary_aligned = EffectivePlaybackRate() >= 0
-                              ? timing.is_end_boundary_aligned
-                              : timing.is_start_boundary_aligned;
-
-  To<KeyframeEffect>(content_.Get())
-      ->StartAnimationOnCompositor(
-          compositor_group_, start_time_s, hold_time, EffectivePlaybackRate(),
-          /*compositor_animation=*/nullptr,
-          timeline()->IsMonotonicallyIncreasing(), boundary_aligned);
-}
-
-// TODO(crbug.com/960944): Rename to SetPendingCommit. This method handles both
-// composited and non-composited animations. The use of 'compositor' in the name
-// is confusing.
-void Animation::SetCompositorPending(CompositorPendingReason reason) {
-  if (compositor_state_ &&
-      (reason == CompositorPendingReason::kPendingCancel ||
-        reason == CompositorPendingReason::kPendingRestart)) {
-    compositor_state_->pending_action = CompositorAction::kCancel;
-  }
-
-  if (compositor_state_) {
-    if (reason == CompositorPendingReason::kPendingEffectChange) {
-      compositor_state_->effect_changed = true;
-    }
-  } else {
-    if (reason == CompositorPendingReason::kPendingCancel) {
-      return;
-    }
-  }
-
-  if (compositor_pending_) {
-    return;
-  }
-
-  if (is_paused_for_testing_) {
-    // Since the pause for testing API does not add the animation to the
-    // list of pending animations, we must deal with any cancellations
-    // immediately.
-    // TODO(kevers): Fully deprecated the pause for testing API.
-    if (CompositorPendingCancel()) {
-      CancelAnimationOnCompositor();
-    }
-    return;
-  }
-
-  // In general, we need to update the compositor-side if anything has changed
-  // on the blink version of the animation. There is also an edge case; if
-  // neither the compositor nor blink side have a start time we still have to
-  // sync them. This can happen if the blink side animation was started, the
-  // compositor side hadn't started on its side yet, and then the blink side
-  // start time was cleared (e.g. by setting current time).
-  if (PendingInternal() || !compositor_state_ ||
-      compositor_state_->effect_changed ||
-      compositor_state_->pending_action == CompositorAction::kCancel ||
-      compositor_state_->playback_rate != EffectivePlaybackRate() ||
-      compositor_state_->start_time != start_time_ ||
-      !compositor_state_->start_time || !start_time_) {
-    compositor_pending_ = true;
-    document_->GetPendingAnimations().Add(this);
-    compositing_decision_.Reset();
+void Animation::UpdateEffectTimingIfNeeded() {
+  if (!pending_update_ && IsA<KeyframeEffect>(content_.Get())) {
+    UpdateIfNecessary();
   }
 }
 
@@ -2670,7 +2112,7 @@ void Animation::UpdateAutoAlignedStartTime() {
 
   AnimationTimeDelta duration = timeline_->GetDuration().value();
   start_time_ = duration * relative_offset;
-  SetCompositorPending(CompositorPendingReason::kPendingEffectChange);
+  SetPendingUpdate();
 }
 
 bool Animation::OnValidateSnapshot(bool snapshot_changed) {
@@ -2786,7 +2228,7 @@ bool Animation::OnValidateSnapshot(bool snapshot_changed) {
     if (content_) {
       content_->Invalidate();
     }
-    SetCompositorPending(CompositorPendingReason::kPendingEffectChange);
+    SetPendingUpdate();
   }
 
   return !needs_update;
@@ -2950,57 +2392,6 @@ bool Animation::ResolveTimelineOffsets(const TimelineRange& timeline_range) {
   return false;
 }
 
-void Animation::CancelAnimationOnCompositor() {
-  VERIFY_PAINT_CLEAN_LOG_ONCE()
-  if (KeyframeEffect* keyframe_effect =
-          DynamicTo<KeyframeEffect>(content_.Get())) {
-    keyframe_effect->CancelAnimationOnCompositor(GetCompositorAnimation());
-  }
-
-  // Do not update the composited paint status here, as we may be in the
-  // process of restarting the animation on the compositor. A downgrade is
-  // enforced during Precommit if we fail to start the animation on the
-  // compositor.
-
-  DestroyCompositorAnimation();
-  compositor_state_.reset();
-}
-
-void Animation::RestartAnimationOnCompositor(CompositorPendingReason reason) {
-  if (!HasActiveAnimationsOnCompositor()) {
-    return;
-  }
-  SetCompositorPending(reason);
-}
-
-bool Animation::CompositorPendingCancelOrEffectChange() const {
-  if (!compositor_state_) {
-    return false;
-  }
-  if (compositor_state_->pending_action == CompositorAction::kCancel) {
-    return true;
-  }
-
-  if (compositor_state_->effect_changed) {
-    return true;
-  }
-
-  return false;
-}
-
-void Animation::CancelIncompatibleAnimationsOnCompositor() {
-  VERIFY_PAINT_CLEAN_LOG_ONCE()
-  if (auto* keyframe_effect = DynamicTo<KeyframeEffect>(content_.Get()))
-    keyframe_effect->CancelIncompatibleAnimationsOnCompositor();
-}
-
-bool Animation::HasActiveAnimationsOnCompositor() const {
-  // TODO(crbug.com/400985367): Ensure we properly handle a composited animation
-  // with an effect change during paint.
-  return compositor_state_ &&
-         compositor_state_->pending_action != CompositorAction::kCancel;
-}
-
 // Update current time of the animation. Refer to step 1 in:
 // https://www.w3.org/TR/web-animations-1/#update-animations-and-send-events
 bool Animation::Update(TimingUpdateReason reason) {
@@ -3028,12 +2419,6 @@ bool Animation::Update(TimingUpdateReason reason) {
 
     content_->UpdateInheritedTime(inherited_time, idle, playback_rate_, reason);
 
-    // After updating the animation time if the animation is no longer current
-    // blink will no longer composite the element (see
-    // CompositingReasonFinder::RequiresCompositingFor*Animation).
-    if (!content_->IsCurrent() && HasActiveAnimationsOnCompositor()) {
-      SetCompositorPending(CompositorPendingReason::kPendingCancel);
-    }
   }
 
   if (idle || CalculateAnimationPlayState() ==
@@ -3076,7 +2461,7 @@ void Animation::EffectInvalidated() {
   SetOutdated();
   UpdateFinishedState(UpdateType::kContinuous, NotificationType::kAsync);
   // FIXME: Needs to consider groups when added.
-  SetCompositorPending(CompositorPendingReason::kPendingEffectChange);
+  SetPendingUpdate();
 }
 
 bool Animation::IsEventDispatchAllowed() const {
@@ -3098,8 +2483,7 @@ std::optional<AnimationTimeDelta> Animation::TimeToEffectChange() {
   }
 
   // If this animation has no effect, we can skip ticking it on main.
-  if (!HasActiveAnimationsOnCompositor() && !animation_has_no_effect_ &&
-      (content_->GetPhase() == Timing::kPhaseActive)) {
+  if (content_->GetPhase() == Timing::kPhaseActive) {
     return AnimationTimeDelta();
   }
 
@@ -3138,7 +2522,6 @@ void Animation::cancel() {
   hold_time_ = std::nullopt;
   start_time_ = std::nullopt;
 
-  SetCompositorPending(CompositorPendingReason::kPendingCancel);
   SetOutdated();
 
   // Force dispatch of canceled event.
@@ -3150,56 +2533,6 @@ void Animation::cancel() {
   NotifyProbe();
 }
 
-void Animation::CreateCompositorAnimation(
-    std::optional<int> replaced_cc_animation_id) {
-  VERIFY_PAINT_CLEAN_LOG_ONCE()
-  if (Platform::Current()->IsThreadedAnimationEnabled() &&
-      !compositor_animation_) {
-    compositor_animation_ =
-        CompositorAnimationHolder::Create(this, replaced_cc_animation_id);
-  }
-
-  AttachCompositedLayers();
-}
-
-void Animation::DestroyCompositorAnimation() {
-  VERIFY_PAINT_CLEAN_LOG_ONCE()
-  DetachCompositedLayers();
-
-  if (compositor_animation_) {
-    compositor_animation_->Detach();
-    compositor_animation_ = nullptr;
-  }
-}
-
-void Animation::AttachCompositedLayers() {
-  VERIFY_PAINT_CLEAN_LOG_ONCE()
-  if (!compositor_animation_) {
-    return;
-  }
-
-  DCHECK(content_);
-  DCHECK(IsA<KeyframeEffect>(*content_));
-
-  To<KeyframeEffect>(content_.Get())->AttachCompositedLayers();
-}
-
-void Animation::DetachCompositedLayers() {
-  VERIFY_PAINT_CLEAN_LOG_ONCE()
-  if (compositor_animation_ &&
-      compositor_animation_->GetAnimation()->IsElementAttached())
-    compositor_animation_->GetAnimation()->DetachElement();
-}
-
-void Animation::NotifyAnimationStarted(base::TimeDelta monotonic_time,
-                                       int group) {
-  // All animations in the same compositor group start at the same time.
-  // Trigger NotifyReady for all animations attached to the group and remove
-  // from the set of pending animations waiting for a start time.
-  document_->GetPendingAnimations().NotifyCompositorAnimationStarted(
-      monotonic_time.InSecondsF(), group);
-}
-
 void Animation::AddedEventListener(
     const AtomicString& event_type,
     RegisteredEventListener& registered_listener) {
@@ -3209,12 +2542,6 @@ void Animation::AddedEventListener(
 }
 
 void Animation::PauseForTesting(AnimationTimeDelta pause_time) {
-  // Normally, cancel is deferred until Precommit, but cannot here since
-  // updated below and must not be stale.
-  if (CompositorPendingCancel()) {
-    CancelAnimationOnCompositor();
-  }
-
   // Do not restart a canceled animation.
   if (CalculateAnimationPlayState() == V8AnimationPlayState::Enum::kIdle) {
     return;
@@ -3223,13 +2550,6 @@ void Animation::PauseForTesting(AnimationTimeDelta pause_time) {
   // Pause a running animation, or update the hold time of a previously paused
   // animation.
   SetCurrentTimeInternal(pause_time);
-  if (HasActiveAnimationsOnCompositor()) {
-    std::optional<AnimationTimeDelta> current_time = CurrentTimeInternal();
-    DCHECK(current_time);
-    To<KeyframeEffect>(content_.Get())
-        ->PauseAnimationForTestingOnCompositor(
-            base::Seconds(current_time.value().InSecondsF()));
-  }
 
   // Do not wait for animation ready to lock in the hold time. Otherwise,
   // the pause won't take effect until the next frame and the hold time will
@@ -3243,15 +2563,8 @@ void Animation::PauseForTesting(AnimationTimeDelta pause_time) {
 
 void Animation::SetEffectSuppressed(bool suppressed) {
   effect_suppressed_ = suppressed;
-  if (suppressed) {
-    SetCompositorPending(CompositorPendingReason::kPendingCancel);
-  }
 }
 
-void Animation::DisableCompositedAnimationForTesting() {
-  is_composited_animation_disabled_for_testing_ = true;
-  CancelAnimationOnCompositor();
-}
 
 void Animation::InvalidateKeyframeEffect(
     const TreeScope& tree_scope,
@@ -3524,44 +2837,11 @@ void Animation::Trace(Visitor* visitor) const {
   visitor->Trace(pending_finished_event_);
   visitor->Trace(pending_cancelled_event_);
   visitor->Trace(pending_remove_event_);
-  visitor->Trace(compositor_animation_);
   visitor->Trace(style_dependent_range_start_);
   visitor->Trace(style_dependent_range_end_);
   visitor->Trace(triggers_);
-  visitor->Trace(compositing_decision_);
   EventTarget::Trace(visitor);
   ExecutionContextLifecycleObserver::Trace(visitor);
-}
-
-Animation::CompositorAnimationHolder*
-Animation::CompositorAnimationHolder::Create(
-    Animation* animation,
-    std::optional<int> replaced_cc_animation_id) {
-  return MakeGarbageCollected<CompositorAnimationHolder>(
-      animation, replaced_cc_animation_id);
-}
-
-Animation::CompositorAnimationHolder::CompositorAnimationHolder(
-    Animation* animation,
-    std::optional<int> replaced_cc_animation_id)
-    : animation_(animation) {
-  compositor_animation_ = CompositorAnimation::Create(replaced_cc_animation_id);
-  compositor_animation_->SetAnimationDelegate(animation_);
-}
-
-void Animation::CompositorAnimationHolder::Dispose() {
-  if (!animation_)
-    return;
-  animation_->Dispose();
-  DCHECK(!animation_);
-  DCHECK(!compositor_animation_);
-}
-
-void Animation::CompositorAnimationHolder::Detach() {
-  DCHECK(compositor_animation_);
-  compositor_animation_->SetAnimationDelegate(nullptr);
-  animation_ = nullptr;
-  compositor_animation_.reset();
 }
 
 void Animation::ResetPlayback() {

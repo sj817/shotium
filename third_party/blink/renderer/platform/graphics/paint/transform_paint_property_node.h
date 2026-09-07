@@ -98,11 +98,6 @@ class PLATFORM_EXPORT TransformPaintPropertyNode final
     gfx::Point3F origin;
   };
 
-  struct AnimationState {
-    AnimationState() {}
-    bool is_running_animation_on_compositor = false;
-    STACK_ALLOCATED();
-  };
 
   // To make it less verbose and more readable to construct and update a node,
   // a struct with default values is used to represent the state.
@@ -132,11 +127,9 @@ class PLATFORM_EXPORT TransformPaintPropertyNode final
     CompositorElementId visible_frame_element_id;
 
     PaintPropertyChangeType ComputeTransformChange(
-        const TransformAndOrigin& other,
-        const AnimationState& animation_state) const;
+        const TransformAndOrigin& other) const;
     PaintPropertyChangeType ComputeChange(
-        const State& other,
-        const AnimationState& animation_state) const;
+        const State& other) const;
 
     bool UsesCompositedScrolling() const {
       return direct_compositing_reasons.Has(
@@ -172,10 +165,9 @@ class PLATFORM_EXPORT TransformPaintPropertyNode final
 
   PaintPropertyChangeType Update(
       const TransformPaintPropertyNodeOrAlias& parent,
-      State&& state,
-      const AnimationState& animation_state = AnimationState()) {
+      State&& state) {
     auto parent_changed = SetParent(parent);
-    auto state_changed = state_.ComputeChange(state, animation_state);
+    auto state_changed = state_.ComputeChange(state);
     if (state_changed != PaintPropertyChangeType::kUnchanged) {
       state_ = std::move(state);
       AddChanged(state_changed);
@@ -210,8 +202,7 @@ class PLATFORM_EXPORT TransformPaintPropertyNode final
   }
 
   PaintPropertyChangeType DirectlyUpdateTransformAndOrigin(
-      TransformAndOrigin&& transform_and_origin,
-      const AnimationState& animation_state);
+      TransformAndOrigin&& transform_and_origin);
 
   // The associated scroll node, or nullptr otherwise.
   const ScrollPaintPropertyNode* ScrollNode() const {

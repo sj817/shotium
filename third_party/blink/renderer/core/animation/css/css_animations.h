@@ -98,7 +98,7 @@ class CORE_EXPORT CSSAnimations final {
                                        const ComputedStyle* parent_style,
                                        StyleResolver*,
                                        bool can_trigger_animations);
-  static void CalculateCompositorAnimationUpdate(
+  static void CalculateTransformSnapshotUpdate(
       CSSAnimationUpdate&,
       Element& animating_element,
       Element&,
@@ -125,7 +125,7 @@ class CORE_EXPORT CSSAnimations final {
       const StyleRecalcContext& style_recalc_context,
       bool can_trigger_animations);
 
-  static void SnapshotCompositorKeyframes(Element&,
+  static void SnapshotTransformKeyframes(Element&,
                                           CSSAnimationUpdate&,
                                           const ComputedStyle&,
                                           const ComputedStyle* parent_style);

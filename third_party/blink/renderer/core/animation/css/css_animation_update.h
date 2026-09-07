@@ -191,8 +191,8 @@ class CORE_EXPORT CSSAnimationUpdate final {
         play_state_list, range_start, range_end, trigger_attachments));
     suppressed_animations_.insert(animation);
   }
-  void UpdateCompositorKeyframes(Animation* animation) {
-    updated_compositor_keyframes_.push_back(animation);
+  void UpdateTransformKeyframes(Animation* animation) {
+    updated_transform_keyframes_.push_back(animation);
   }
 
   void StartTransition(const PropertyHandle&,
@@ -244,8 +244,8 @@ class CORE_EXPORT CSSAnimationUpdate final {
   const HeapVector<UpdatedCSSAnimation>& AnimationsWithUpdates() const {
     return animations_with_updates_;
   }
-  const HeapVector<Member<Animation>>& UpdatedCompositorKeyframes() const {
-    return updated_compositor_keyframes_;
+  const HeapVector<Member<Animation>>& UpdatedTransformKeyframes() const {
+    return updated_transform_keyframes_;
   }
 
   struct NewTransition : public GarbageCollected<NewTransition> {
@@ -343,7 +343,7 @@ class CORE_EXPORT CSSAnimationUpdate final {
            !animation_indices_with_pause_toggled_.empty() ||
            !animations_with_updates_.empty() || !new_transitions_.empty() ||
            !cancelled_transitions_.empty() || !finished_transitions_.empty() ||
-           !updated_compositor_keyframes_.empty() ||
+           !updated_transform_keyframes_.empty() ||
            !changed_scroll_timelines_.empty() ||
            !changed_view_timelines_.empty() ||
            !changed_timeline_attachments_.empty() ||
@@ -355,7 +355,7 @@ class CORE_EXPORT CSSAnimationUpdate final {
     visitor->Trace(new_animations_);
     visitor->Trace(suppressed_animations_);
     visitor->Trace(animations_with_updates_);
-    visitor->Trace(updated_compositor_keyframes_);
+    visitor->Trace(updated_transform_keyframes_);
     visitor->Trace(active_interpolations_for_animations_);
     visitor->Trace(active_interpolations_for_transitions_);
     visitor->Trace(changed_scroll_timelines_);
@@ -379,7 +379,7 @@ class CORE_EXPORT CSSAnimationUpdate final {
   HeapHashSet<Member<const Animation>> suppressed_animations_;
   Vector<wtf_size_t> animation_indices_with_pause_toggled_;
   HeapVector<UpdatedCSSAnimation> animations_with_updates_;
-  HeapVector<Member<Animation>> updated_compositor_keyframes_;
+  HeapVector<Member<Animation>> updated_transform_keyframes_;
 
   NewTransitionMap new_transitions_;
   HashSet<PropertyHandle> cancelled_transitions_;

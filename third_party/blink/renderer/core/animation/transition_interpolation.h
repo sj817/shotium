@@ -8,7 +8,6 @@
 #include <optional>
 
 #include "base/check_op.h"
-#include "third_party/blink/renderer/core/animation/compositor_animations.h"
 #include "third_party/blink/renderer/core/animation/interpolation.h"
 #include "third_party/blink/renderer/core/animation/interpolation_type.h"
 #include "third_party/blink/renderer/core/core_export.h"
@@ -18,44 +17,19 @@ namespace blink {
 class CSSInterpolationEnvironment;
 class TypedInterpolationValue;
 
-// See the documentation of Interpolation for general information about this
-// class hierarchy.
-//
-// The primary difference between TransitionInterpolation and other
-// Interpolation subclasses is that it must store additional data required for
-// retargeting transition effects that were sent to the compositor thread.
-// Retargeting a transition involves interrupting an in-progress transition and
-// creating a new transition from the current state to the new end state.
-//
-// The TransitionInterpolation subclass stores the start and end keyframes as
-// InterpolationValue objects, with an InterpolationType object that applies to
-// both InterpolationValues. It additionally stores CompositorKeyframeValue
-// objects corresponding to start and end keyframes as communicated to the
-// compositor thread. Together, this is equivalent to representing the start and
-// end keyframes as TransitionPropertySpecificKeyframe objects with the added
-// constraint that they share an InterpolationType.
-// TODO(crbug.com/442163): Store information for communication with the
-// compositor without using CompositorKeyframeValue objects.
-//
-// During the effect application phase of animation computation, the current
-// value of the property is applied to the element by calling the Apply
-// function.
+// Interpolates the start and end values of a CSS transition on the main thread.
 class CORE_EXPORT TransitionInterpolation : public Interpolation {
  public:
   TransitionInterpolation(const PropertyHandle& property,
                           const InterpolationType* type,
                           InterpolationValue&& start,
                           InterpolationValue&& end,
-                          CompositorKeyframeValue* compositor_start,
-                          CompositorKeyframeValue* compositor_end,
                           bool is_attr_tainted = false)
       : property_(property),
         type_(type),
         start_(std::move(start)),
         end_(std::move(end)),
         merge_(type->MaybeMergeSingles(start_.Clone(), end_.Clone())),
-        compositor_start_(compositor_start),
-        compositor_end_(compositor_end),
         is_attr_tainted_(is_attr_tainted) {
     // Incredibly speculative CHECKs, to try and get any insight on
     // crbug.com/826627. Somehow a crash is happening in this constructor, which
@@ -68,11 +42,6 @@ class CORE_EXPORT TransitionInterpolation : public Interpolation {
       CHECK(merge_);
       cached_interpolable_value_ = merge_.start_interpolable_value->Clone();
     }
-    DCHECK_EQ(compositor_start_ && compositor_end_,
-
-              property_.GetCSSProperty().IsCompositableProperty() &&
-                  CompositorAnimations::CompositedPropertyRequiresSnapshot(
-                      property_));
   }
 
   void Apply(CSSInterpolationEnvironment&) const;
@@ -93,8 +62,6 @@ class CORE_EXPORT TransitionInterpolation : public Interpolation {
     visitor->Trace(start_);
     visitor->Trace(end_);
     visitor->Trace(merge_);
-    visitor->Trace(compositor_start_);
-    visitor->Trace(compositor_end_);
     visitor->Trace(cached_interpolable_value_);
     Interpolation::Trace(visitor);
   }
@@ -108,8 +75,6 @@ class CORE_EXPORT TransitionInterpolation : public Interpolation {
   const InterpolationValue start_;
   const InterpolationValue end_;
   const PairwiseInterpolationValue merge_;
-  const Member<CompositorKeyframeValue> compositor_start_;
-  const Member<CompositorKeyframeValue> compositor_end_;
   const bool is_attr_tainted_;
 
   mutable std::optional<double> cached_fraction_;

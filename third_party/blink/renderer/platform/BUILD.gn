@@ -356,11 +356,6 @@ component("platform") {
     "accept_languages_watcher.h",
     "animation/animation_translation_util.cc",
     "animation/animation_translation_util.h",
-    "animation/compositor_animation.cc",
-    "animation/compositor_animation.h",
-    "animation/compositor_animation_client.cc",
-    "animation/compositor_animation_client.h",
-    "animation/compositor_animation_delegate.h",
     "animation/timing_function.cc",
     "animation/timing_function.h",
     "back_forward_cache_buffer_limit_tracker.cc",
@@ -1622,7 +1617,6 @@ source_set("blink_platform_unittests_sources") {
 
   sources = [
     "animation/animation_translation_util_test.cc",
-    "animation/compositor_animation_test.cc",
     "animation/timing_function_test.cc",
     "bindings/parkable_string_test.cc",
     "disk_data_allocator_test.cc",

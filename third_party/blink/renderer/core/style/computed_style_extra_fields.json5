@@ -744,64 +744,6 @@
       default_value: "false",
       invalidate: ["compositing"],
     },
-    {
-      name: "IsRunningOpacityAnimationOnCompositor",
-      field_template: "primitive",
-      type_name: "bool",
-      field_group: "*",
-      // This field just affects how changes of animatable values are handled,
-      // so it doesn't contribute to style differences.
-      custom_compare: true,
-      default_value: "false",
-    },
-    {
-      name: "IsRunningTransformAnimationOnCompositor",
-      field_template: "primitive",
-      type_name: "bool",
-      field_group: "*",
-      default_value: "false",
-    },
-    {
-      name: "IsRunningScaleAnimationOnCompositor",
-      field_template: "primitive",
-      type_name: "bool",
-      field_group: "*",
-      default_value: "false",
-    },
-    {
-      name: "IsRunningRotateAnimationOnCompositor",
-      field_template: "primitive",
-      type_name: "bool",
-      field_group: "*",
-      default_value: "false",
-    },
-    {
-      name: "IsRunningTranslateAnimationOnCompositor",
-      field_template: "primitive",
-      type_name: "bool",
-      field_group: "*",
-      default_value: "false",
-    },
-    {
-      name: "IsRunningFilterAnimationOnCompositor",
-      field_template: "primitive",
-      type_name: "bool",
-      field_group: "*",
-      // This field just affects how changes of animatable values are handled,
-      // so it doesn't contribute to style differences.
-      custom_compare: true,
-      default_value: "false",
-    },
-    {
-      name: "IsRunningBackdropFilterAnimationOnCompositor",
-      field_template: "primitive",
-      type_name: "bool",
-      field_group: "*",
-      // This field just affects how changes of animatable values are handled,
-      // so it doesn't contribute to style differences.
-      custom_compare: true,
-      default_value: "false",
-    },
     // A stacking context is painted atomically and defines a stacking order,
     // whereas a containing stacking context defines in which order the stacking
     // contexts below are painted.

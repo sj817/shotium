@@ -16,8 +16,7 @@ namespace {
 
 PaintPropertyChangeType ComputeFilterChange(
     const EffectPaintPropertyNode::FilterInfo* a,
-    const EffectPaintPropertyNode::FilterInfo* b,
-    bool is_running_filter_animation_on_compositor) {
+    const EffectPaintPropertyNode::FilterInfo* b) {
   if (!a && !b) {
     return PaintPropertyChangeType::kUnchanged;
   }
@@ -28,26 +27,21 @@ PaintPropertyChangeType ComputeFilterChange(
     return PaintPropertyChangeType::kChangedOnlyValues;
   }
   if (a->operations != b->operations) {
-    return is_running_filter_animation_on_compositor
-               ? PaintPropertyChangeType::kChangedOnlyCompositedValues
-               : PaintPropertyChangeType::kChangedOnlyValues;
+    return PaintPropertyChangeType::kChangedOnlyValues;
   }
   return PaintPropertyChangeType::kUnchanged;
 }
 
 PaintPropertyChangeType ComputeBackdropFilterChange(
     const EffectPaintPropertyNode::BackdropFilterInfo* a,
-    const EffectPaintPropertyNode::BackdropFilterInfo* b,
-    bool is_running_backdrop_filter_animation_on_compositor) {
+    const EffectPaintPropertyNode::BackdropFilterInfo* b) {
   if (!a && !b)
     return PaintPropertyChangeType::kUnchanged;
   if (!a || !b || a->bounds != b->bounds ||
       a->mask_element_id != b->mask_element_id)
     return PaintPropertyChangeType::kChangedOnlyValues;
   if (a->operations != b->operations) {
-    return is_running_backdrop_filter_animation_on_compositor
-               ? PaintPropertyChangeType::kChangedOnlyCompositedValues
-               : PaintPropertyChangeType::kChangedOnlyValues;
+    return PaintPropertyChangeType::kChangedOnlyValues;
   }
   return PaintPropertyChangeType::kUnchanged;
 }
@@ -55,8 +49,7 @@ PaintPropertyChangeType ComputeBackdropFilterChange(
 } // anonymous namespace
 
 PaintPropertyChangeType EffectPaintPropertyNode::State::ComputeChange(
-    const State& other,
-    const AnimationState& animation_state) const {
+    const State& other) const {
   if (local_transform_space != other.local_transform_space ||
       output_clip != other.output_clip || blend_mode != other.blend_mode ||
       direct_compositing_reasons != other.direct_compositing_reasons ||
@@ -78,34 +71,25 @@ PaintPropertyChangeType EffectPaintPropertyNode::State::ComputeChange(
       IsOpacityChangeSimple(opacity, other.opacity, direct_compositing_reasons,
                             other.direct_compositing_reasons);
   if (opacity_changed && !opacity_change_is_simple) {
-    DCHECK(!animation_state.is_running_opacity_animation_on_compositor);
     return PaintPropertyChangeType::kChangedOnlyValues;
   }
 
   auto filter_changed = ComputeFilterChange(
-      filter_info.get(), other.filter_info.get(),
-      animation_state.is_running_filter_animation_on_compositor);
+      filter_info.get(), other.filter_info.get());
   if (filter_changed == PaintPropertyChangeType::kChangedOnlyValues) {
     return PaintPropertyChangeType::kChangedOnlyValues;
   }
 
   auto backdrop_filter_changed = ComputeBackdropFilterChange(
-      backdrop_filter_info.get(), other.backdrop_filter_info.get(),
-      animation_state.is_running_backdrop_filter_animation_on_compositor);
+      backdrop_filter_info.get(), other.backdrop_filter_info.get());
   if (backdrop_filter_changed == PaintPropertyChangeType::kChangedOnlyValues) {
     return PaintPropertyChangeType::kChangedOnlyValues;
   }
 
-  if (opacity_change_is_simple &&
-      !animation_state.is_running_opacity_animation_on_compositor) {
+  if (opacity_change_is_simple) {
     return PaintPropertyChangeType::kChangedOnlySimpleValues;
   }
 
-  if (opacity_changed ||
-      filter_changed != PaintPropertyChangeType::kUnchanged ||
-      backdrop_filter_changed != PaintPropertyChangeType::kUnchanged) {
-    return PaintPropertyChangeType::kChangedOnlyCompositedValues;
-  }
   return PaintPropertyChangeType::kUnchanged;
 }
 
@@ -193,33 +177,24 @@ void EffectPaintPropertyNodeOrAlias::ClearChangedToRoot(
 }
 
 PaintPropertyChangeType EffectPaintPropertyNode::State::ComputeOpacityChange(
-    float new_opacity,
-    const AnimationState& animation_state) const {
+    float new_opacity) const {
   bool opacity_changed = opacity != new_opacity;
   bool opacity_change_is_simple = State::IsOpacityChangeSimple(
       opacity, new_opacity, direct_compositing_reasons,
       direct_compositing_reasons);
   if (opacity_changed && !opacity_change_is_simple) {
-    DCHECK(!animation_state.is_running_opacity_animation_on_compositor);
     return PaintPropertyChangeType::kChangedOnlyValues;
   }
 
-  bool simple_values_changed =
-      opacity_change_is_simple &&
-      !animation_state.is_running_opacity_animation_on_compositor;
-  if (simple_values_changed) {
+  if (opacity_change_is_simple) {
     return PaintPropertyChangeType::kChangedOnlySimpleValues;
-  }
-  if (opacity_changed) {
-    return PaintPropertyChangeType::kChangedOnlyCompositedValues;
   }
   return PaintPropertyChangeType::kUnchanged;
 }
 
 PaintPropertyChangeType EffectPaintPropertyNode::DirectlyUpdateOpacity(
-    float opacity,
-    const AnimationState& animation_state) {
-  auto change = state_.ComputeOpacityChange(opacity, animation_state);
+    float opacity) {
+  auto change = state_.ComputeOpacityChange(opacity);
   state_.opacity = opacity;
   if (change != PaintPropertyChangeType::kUnchanged)
     AddChanged(change);

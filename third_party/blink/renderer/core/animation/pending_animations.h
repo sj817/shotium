@@ -35,7 +35,6 @@
 #include "third_party/blink/renderer/core/animation/animation.h"
 #include "third_party/blink/renderer/core/core_export.h"
 #include "third_party/blink/renderer/core/dom/document.h"
-#include "third_party/blink/renderer/platform/graphics/compositor_element_id.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
 #include "third_party/blink/renderer/platform/timer.h"
 #include "third_party/blink/renderer/platform/wtf/vector.h"
@@ -43,72 +42,26 @@
 namespace blink {
 
 
-// Handles starting animations when they could potentially require
-// interaction with the compositor. This can include both main-thread
-// and compositor thread animations. For example, when the Document
-// changes visibility state, all animations for the document's
-// timeline are set to "compositor pending" which will include them in
-// a consideration pass here.
-//
-// Manages the starting of pending animations on the compositor following a
-// compositing update.
-//
-// For CSS Animations, used to synchronize the start of main-thread animations
-// with compositor animations when both classes of CSS Animations are triggered
-// by the same recalc.
+// Resolves pending play/pause state after animation timing and layout updates.
+// Hidden documents use a timer; scroll timelines remain pending until resolved.
 class CORE_EXPORT PendingAnimations final
     : public GarbageCollected<PendingAnimations> {
  public:
-  // Compositor group reserved for animations which are to be auto-assigned
-  // groups.
-  static const int kCompositorGroupAutoAssign = 0;
-  // Compositor group reserved for animations which already have a start time.
-  static const int kCompositorGroupHasStartTime = 1;
-
   explicit PendingAnimations(Document& document)
       : timer_(document.GetTaskRunner(TaskType::kInternalDefault),
                this,
                &PendingAnimations::TimerFired),
-        compositor_group_(1),
         inside_timer_fired_(false) {}
 
   void Add(Animation*);
-
-  // Attempts to start/update pending composited and non-composited animations.
-  // At the end of this process all pending animations will fall into one of the
-  // following buckets:
-  // - pending: already composited animations that cannot be restarted this
-  //   cycle and are deferred to be tried next cycle.
-  // - started on compositor: animations that could be composited and are
-  //   successfully started on compositor.
-  // - waiting on start time: animations whose start time needs to be
-  //   synchronized with compositor. These may include non-composited
-  //   animations.
-  // - notified of start time: animations whose start time does not need to be
-  //   synchronized with compositor and thus can be immediately notified.
-  // - ignored: animations that are not started and don't need to be notified
-  //   are simply ignored. This allows the rest of animation machinery to add
-  //   animations to the pending list eagerly knowing that the logic here
-  //   ignores them if no action needs to be taken.
-  //
-  // Returns whether we are waiting for an animation to start and should service
-  // again on the next frame.
-  bool Update(bool start_on_compositor = true);
-  void NotifyCompositorAnimationStarted(double monotonic_animation_start_time,
-                                        int compositor_group = 0);
-
+  void Update(bool update_timing = true);
   void Trace(Visitor*) const;
-
-  int NextCompositorGroup();
 
  private:
   void TimerFired(TimerBase*);
-  void FlushWaitingNonCompositedAnimations();
 
   HeapVector<Member<Animation>> pending_;
-  HeapVector<Member<Animation>> waiting_for_compositor_animation_start_;
   HeapTaskRunnerTimer<PendingAnimations> timer_;
-  int compositor_group_;
   bool inside_timer_fired_;
 };
 

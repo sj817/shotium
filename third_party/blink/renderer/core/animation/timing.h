@@ -36,7 +36,6 @@
 #include "base/check_op.h"
 #include "base/memory/scoped_refptr.h"
 #include "base/memory/values_equivalent.h"
-#include "cc/animation/keyframe_model.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_fill_mode.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_playback_direction.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_timeline_range.h"
@@ -125,8 +124,13 @@ struct CORE_EXPORT Timing {
     V8Delay* ToV8Delay() const;
   };
 
-  using FillMode = cc::KeyframeModel::FillMode;
-  using PlaybackDirection = cc::KeyframeModel::Direction;
+  enum class FillMode { NONE, FORWARDS, BACKWARDS, BOTH, AUTO };
+  enum class PlaybackDirection {
+    NORMAL,
+    REVERSE,
+    ALTERNATE_NORMAL,
+    ALTERNATE_REVERSE
+  };
 
   static double NullValue() { return std::numeric_limits<double>::quiet_NaN(); }
 

@@ -133,13 +133,13 @@ class CORE_EXPORT StringKeyframe : public Keyframe {
     // need to represent a mix of such values.
     const TreeScope* GetTreeScope() const { return tree_scope_.Get(); }
 
-    bool PopulateCompositorKeyframeValue(
+    bool PopulateTransformKeyframeSnapshot(
         const PropertyHandle&,
         Element&,
         const ComputedStyle& base_style,
         const ComputedStyle* parent_style) const final;
-    const CompositorKeyframeValue* GetCompositorKeyframeValue() const final {
-      return compositor_keyframe_value_cache_.Get();
+    const TransformKeyframeSnapshot* GetTransformKeyframeSnapshot() const final {
+      return transform_keyframe_snapshot_cache_.Get();
     }
 
     bool IsNeutral() const final { return !value_; }
@@ -157,7 +157,7 @@ class CORE_EXPORT StringKeyframe : public Keyframe {
 
     Member<const CSSValue> value_;
     Member<const TreeScope> tree_scope_;
-    mutable Member<CompositorKeyframeValue> compositor_keyframe_value_cache_;
+    mutable Member<TransformKeyframeSnapshot> transform_keyframe_snapshot_cache_;
   };
 
   class PropertyResolver : public GarbageCollected<PropertyResolver> {

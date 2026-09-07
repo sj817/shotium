@@ -27,25 +27,13 @@ bool Keeps2dAxisAlignmentStatus(const gfx::Transform& a,
 
 PaintPropertyChangeType
 TransformPaintPropertyNode::State::ComputeTransformChange(
-    const TransformAndOrigin& other,
-    const AnimationState& animation_state) const {
+    const TransformAndOrigin& other) const {
   bool matrix_changed = transform_and_origin.matrix != other.matrix;
   bool origin_changed = transform_and_origin.origin != other.origin;
   bool transform_changed = matrix_changed || origin_changed;
 
   if (!transform_changed)
     return PaintPropertyChangeType::kUnchanged;
-
-  if (animation_state.is_running_animation_on_compositor) {
-    // The compositor handles transform change automatically during composited
-    // transform animation, but it doesn't handle origin changes (which can
-    // still be treated as simple, and can skip the 2d-axis-alignment check
-    // because PropertyTreeManager knows if the whole animation is 2d-axis
-    // aligned when the animation starts).
-    return origin_changed
-               ? PaintPropertyChangeType::kChangedOnlySimpleValues
-               : PaintPropertyChangeType::kChangedOnlyCompositedValues;
-  }
 
   if ((direct_compositing_reasons.Has(CompositingReason::kStickyPosition)) ||
       (direct_compositing_reasons.Has(CompositingReason::kAnchorPosition))) {
@@ -70,8 +58,7 @@ TransformPaintPropertyNode::State::ComputeTransformChange(
 }
 
 PaintPropertyChangeType TransformPaintPropertyNode::State::ComputeChange(
-    const State& other,
-    const AnimationState& animation_state) const {
+    const State& other) const {
   // Whether or not a node is considered a frame root should be invariant.
   DCHECK_EQ(is_frame_paint_offset_translation,
             other.is_frame_paint_offset_translation);
@@ -101,7 +88,7 @@ PaintPropertyChangeType TransformPaintPropertyNode::State::ComputeChange(
     return PaintPropertyChangeType::kChangedOnlyValues;
   }
 
-  return ComputeTransformChange(other.transform_and_origin, animation_state);
+  return ComputeTransformChange(other.transform_and_origin);
 }
 
 void TransformPaintPropertyNode::State::Trace(Visitor* visitor) const {
@@ -123,10 +110,9 @@ const TransformPaintPropertyNode& TransformPaintPropertyNode::Root() {
 
 PaintPropertyChangeType
 TransformPaintPropertyNode::DirectlyUpdateTransformAndOrigin(
-    TransformAndOrigin&& transform_and_origin,
-    const AnimationState& animation_state) {
+    TransformAndOrigin&& transform_and_origin) {
   auto change =
-      state_.ComputeTransformChange(transform_and_origin, animation_state);
+      state_.ComputeTransformChange(transform_and_origin);
   state_.transform_and_origin = std::move(transform_and_origin);
   if (change != PaintPropertyChangeType::kUnchanged)
     AddChanged(change);

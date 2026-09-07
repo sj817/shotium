@@ -50,7 +50,7 @@ void CSSAnimationUpdate::Copy(const CSSAnimationUpdate& update) {
       update.AnimationIndicesWithPauseToggled();
   cancelled_transitions_ = update.CancelledTransitions();
   finished_transitions_ = update.FinishedTransitions();
-  updated_compositor_keyframes_ = update.UpdatedCompositorKeyframes();
+  updated_transform_keyframes_ = update.UpdatedTransformKeyframes();
   changed_scroll_timelines_ = update.changed_scroll_timelines_;
   changed_view_timelines_ = update.changed_view_timelines_;
   has_updated_deferred_timeline_map_ =
@@ -70,7 +70,7 @@ void CSSAnimationUpdate::Clear() {
   animation_indices_with_pause_toggled_.clear();
   cancelled_transitions_.clear();
   finished_transitions_.clear();
-  updated_compositor_keyframes_.clear();
+  updated_transform_keyframes_.clear();
   changed_scroll_timelines_.clear();
   changed_view_timelines_.clear();
   has_updated_deferred_timeline_map_ = false;

@@ -35,22 +35,17 @@
 
 #include "base/gtest_prod_util.h"
 #include "base/time/time.h"
-#include "cc/animation/animation.h"
 #include "third_party/blink/renderer/bindings/core/v8/active_script_wrappable.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_animation_play_state.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_replace_state.h"
 #include "third_party/blink/renderer/core/animation/animation_effect.h"
 #include "third_party/blink/renderer/core/animation/animation_effect_owner.h"
-#include "third_party/blink/renderer/core/animation/compositing/specific_compositing_decision.h"
-#include "third_party/blink/renderer/core/animation/compositor_animations.h"
 #include "third_party/blink/renderer/core/animation/timeline_offset.h"
 #include "third_party/blink/renderer/core/core_export.h"
 #include "third_party/blink/renderer/core/dom/dom_exception.h"
 #include "third_party/blink/renderer/core/dom/events/event_target.h"
 #include "third_party/blink/renderer/core/execution_context/execution_context_lifecycle_observer.h"
 #include "third_party/blink/renderer/core/style/computed_style_constants.h"
-#include "third_party/blink/renderer/platform/animation/compositor_animation_client.h"
-#include "third_party/blink/renderer/platform/animation/compositor_animation_delegate.h"
 #include "third_party/blink/renderer/platform/bindings/exception_state.h"
 #include "third_party/blink/renderer/platform/heap/collection_support/heap_hash_set.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
@@ -60,48 +55,21 @@ namespace blink {
 
 class AnimationTimeline;
 class AnimationTrigger;
+class CSSProperty;
 class Element;
 class StyleChangeReasonForTracing;
 class TreeScope;
 class TimelineRange;
 
-// This should be kept in sync with the `BlinkAnimationType` histogram.
-enum class BlinkAnimationType : int {
-  kAllAnimations = 0,
-  kSvgAnimations = 1,
-  kNonCompositedAnimations = 2,
-  kCompositedAnimations = 3,
-  kSvgNonCompositedAnimations = 4,
-  kSvgCompositedAnimations = 5,
-  kAnimationTypeEnumMax = 6
-};
-
-struct CORE_EXPORT AnimationCompositingDecisionState {
-  DISALLOW_NEW();
-
-  void Trace(Visitor* visitor) const { visitor->Trace(specific_reasons); }
-
-  void Reset(bool force_enable_tracing_for_test = false);
-  void ReportHistogramsAndTracing(const Animation&);
-
-  // TODO(crbug.com/521921832): gradually replace with a more granular enum
-  CompositorAnimations::FailureReasons disposition =
-      CompositorAnimations::kUnchecked;
-  Member<CompositingDecisionDetailsMap> specific_reasons;
-};
-
 class CORE_EXPORT Animation : public EventTarget,
                               public ActiveScriptWrappable<Animation>,
                               public ExecutionContextLifecycleObserver,
-                              public CompositorAnimationDelegate,
-                              public CompositorAnimationClient,
                               public AnimationEffectOwner {
   DEFINE_WRAPPERTYPEINFO();
   USING_PRE_FINALIZER(Animation, Dispose);
 
  public:
-  using CompositingDecisionState = AnimationCompositingDecisionState;
-  using AutoRewind = cc::Animation::AutoRewind;
+  enum class AutoRewind { kDisabled, kEnabled, kForced };
   // Priority for sorting getAnimation by Animation class, arranged from lowest
   // priority to highest priority as per spec:
   // https://w3.org/TR/web-animations-1/#dom-document-getanimations
@@ -208,18 +176,6 @@ class CORE_EXPORT Animation : public EventTarget,
            !Limited() && !is_paused_for_testing_;
   }
 
-  // Differs from Playing() in the case of a non-monotonic timeline outside the
-  // active range. A finished animation is not Playing since no update is
-  // required due to passage of time. This behavior also works for scroll-linked
-  // animations since until the animation exits the finished state, no updates
-  // are required.  When in the before phase, the normal passage of time will
-  // trigger an effect change; however, the same is not true for scroll-linked
-  // animations.
-  bool EffectivelyPlaying() const;
-
-  // Notification that the animation is entering or exiting the active phase.
-  void OnActivePhaseStateChange(bool in_active_phase);
-
   bool Limited() const { return Limited(CurrentTimeInternal()); }
   bool Inactive() const { return inactive_; }
 
@@ -317,7 +273,6 @@ class CORE_EXPORT Animation : public EventTarget,
   // paused() and must never overlap with pausing via pause().
   // Deprecated: Do not use in new tests.
   void PauseForTesting(AnimationTimeDelta hold_time);
-  void DisableCompositedAnimationForTesting();
 
   // This should only be used for CSS
   void Unpause();
@@ -328,56 +283,20 @@ class CORE_EXPORT Animation : public EventTarget,
   void SetOutdated();
   bool Outdated() { return outdated_; }
 
-  enum class CompositorPendingReason {
-    kPendingUpdate,        // Update due to an API call that may affect
-                           // play state or start time.
-    kPendingEffectChange,  // Update that changes the animation effect
-                           // including keyframes or active interval.
-    kPendingCancel,        // Animation has been canceled, but could restart
-                           // conditions permitting.
-    kPendingRestart,       // Animation is to be restarted.
-  };
-
-  void SetCompositorPending(CompositorPendingReason reason);
-
-  CompositorAnimations::FailureReasons CheckCanStartAnimationOnCompositor(
-      StartOnCompositorReason check_reason);
-  void StartAnimationOnCompositor(
-      StartOnCompositorReason check_reason);
-  void CancelAnimationOnCompositor();
-  void RestartAnimationOnCompositor(
-      CompositorPendingReason reason =
-          CompositorPendingReason::kPendingRestart);
-  void CancelIncompatibleAnimationsOnCompositor();
-  bool HasActiveAnimationsOnCompositor() const;
-  // Returns the *current* compositing decision for this animation, which may be
-  // unchecked (not yet evaluated) or partially checked. Currently this is reset
-  // when the animation is set pending, and fully checked after PreCommit. This
-  // will change as crbug.com/521921835 gets checked in.
-  CompositingDecisionState& GetCompositingDecisionState() {
-    return compositing_decision_;
-  }
+  void SetPendingUpdate();
 
   void NotifyReady(AnimationTimeDelta ready_time);
   void CommitPendingPlay(AnimationTimeDelta ready_time);
   void CommitPendingPause(AnimationTimeDelta ready_time);
-  // CompositorAnimationClient implementation.
-  CompositorAnimation* GetCompositorAnimation() const override {
-    return compositor_animation_ ? compositor_animation_->GetAnimation()
-                                 : nullptr;
-  }
-
   bool Affects(const Element&, const CSSProperty&) const;
 
   // Returns whether we should continue with the commit for this animation or
   // wait until next commit.
-  bool PreCommit(int compositor_group,
-                 bool start_on_compositor);
-  void PostCommit();
+  bool PreparePendingUpdate(bool update_timing);
+  void CompletePendingUpdate();
 
   unsigned SequenceNumber() const override { return sequence_number_; }
 
-  int CompositorGroup() const { return compositor_group_; }
 
   static bool CompareAnimations(const Member<Animation>& left,
                                 const Member<Animation>& right);
@@ -397,13 +316,7 @@ class CORE_EXPORT Animation : public EventTarget,
 
   void Trace(Visitor*) const override;
 
-  bool CompositorPending() const { return compositor_pending_; }
-  bool CompositorPendingCancel() const {
-    return compositor_state_ &&
-           compositor_state_->pending_action == CompositorAction::kCancel;
-  }
-  bool CompositorPendingCancelOrEffectChange() const;
-
+  bool HasPendingUpdate() const { return pending_update_; }
   // Methods for handling removal and persistence of animations.
   bool IsReplaceable();
   void RemoveReplacedAnimation();
@@ -424,15 +337,7 @@ class CORE_EXPORT Animation : public EventTarget,
 
   bool IsInDisplayLockedSubtree();
 
-  std::optional<base::TimeDelta> ComputeCompositorHoldTime() const;
-
-  // Updates |animation_missing_compositor_elements_| and marks the
-  // animation as pending if it changes.
-  void MarkPendingIfCompositorPropertyAnimationChanges();
-  bool CompositorPropertyAnimationsHaveNoEffectForTesting() const {
-    return compositor_property_animations_have_no_effect_;
-  }
-  bool AnimationHasNoEffect() const { return animation_has_no_effect_; }
+  void UpdateEffectTimingIfNeeded();
 
   bool WaitingOnDeferredStartTime() {
     return !start_time_ && (pending_play_ || pending_pause_);
@@ -525,19 +430,6 @@ class CORE_EXPORT Animation : public EventTarget,
   void BeginUpdatingState();
   void EndUpdatingState();
 
-  void CheckCanStartAnimationOnCompositorInternal();
-  void CreateCompositorAnimation(std::optional<int> replaced_cc_animation_id);
-  void DestroyCompositorAnimation();
-  void AttachCompositedLayers();
-  void DetachCompositedLayers();
-  // CompositorAnimationDelegate implementation.
-  void NotifyAnimationStarted(base::TimeDelta monotonic_time,
-                              int group) override;
-  void NotifyAnimationFinished(base::TimeDelta monotonic_time,
-                               int group) override {}
-  void NotifyAnimationAborted(base::TimeDelta monotonic_time,
-                              int group) override {}
-
   // Updates the finished state of the animation. If the update is the result of
   // a discontinuous time change then the value for current time is not bound by
   // the limits of the animation. The finished notification may be synchronous
@@ -629,7 +521,6 @@ class CORE_EXPORT Animation : public EventTarget,
 
   // Testing flags.
   bool is_paused_for_testing_;
-  bool is_composited_animation_disabled_for_testing_;
 
   // Pending micro-tasks. These flags are used for tracking purposes only for
   // the Animation.pending attribute, and do not otherwise affect internal flow
@@ -660,74 +551,7 @@ class CORE_EXPORT Animation : public EventTarget,
 
   Member<Event> pending_remove_event_;
 
-  // TODO(crbug.com/960944): Consider reintroducing kPause and cleanup use of
-  // mutually exclusive pending_play_ and pending_pause_ flags.
-  enum class CompositorAction { kNone, kStart, kCancel };
-
-  class CompositorState {
-    USING_FAST_MALLOC(CompositorState);
-
-   public:
-    explicit CompositorState(Animation& animation)
-        : start_time(animation.start_time_),
-          hold_time(animation.hold_time_),
-          playback_rate(animation.EffectivePlaybackRate()),
-          pending_action(animation.start_time_ ? CompositorAction::kNone
-                                               : CompositorAction::kStart) {}
-    CompositorState(const CompositorState&) = delete;
-    CompositorState& operator=(const CompositorState&) = delete;
-
-    std::optional<AnimationTimeDelta> start_time;
-    std::optional<AnimationTimeDelta> hold_time;
-    double playback_rate;
-    bool effect_changed = false;
-    CompositorAction pending_action;
-  };
-
-  // CompositorAnimation objects need to eagerly sever their connection to their
-  // Animation delegate; use a separate 'holder' on-heap object to accomplish
-  // that.
-  class CompositorAnimationHolder final
-      : public GarbageCollected<CompositorAnimationHolder> {
-    USING_PRE_FINALIZER(CompositorAnimationHolder, Dispose);
-
-   public:
-    static CompositorAnimationHolder* Create(
-        Animation*,
-        std::optional<int> replaced_cc_animation_id);
-
-    explicit CompositorAnimationHolder(
-        Animation*,
-        std::optional<int> replaced_cc_animation_id);
-
-    void Detach();
-
-    void Trace(Visitor* visitor) const { visitor->Trace(animation_); }
-
-    CompositorAnimation* GetAnimation() const {
-      return compositor_animation_.get();
-    }
-
-   private:
-    void Dispose();
-
-    std::unique_ptr<CompositorAnimation> compositor_animation_;
-    Member<Animation> animation_;
-  };
-
-  // The most recent/in progress compositing decision. Used to determine
-  // how/whether an animation can be optimized.
-  CompositingDecisionState compositing_decision_;
-
-  // This mirrors the known compositor state. It is created when a compositor
-  // animation is started. Updated once the start time is known and each time
-  // modifications are pushed to the compositor.
-  std::unique_ptr<CompositorState> compositor_state_;
-  bool compositor_pending_;
-  int compositor_group_;
-
-  Member<CompositorAnimationHolder> compositor_animation_;
-
+  bool pending_update_;
   bool effect_suppressed_;
 
   // Animations with an owning element stop ticking if there is an active
@@ -736,13 +560,6 @@ class CORE_EXPORT Animation : public EventTarget,
   base::TimeTicks last_display_lock_update_time_ = base::TimeTicks();
   bool is_in_display_locked_subtree_ = false;
 
-  // True if we animate compositor properties but they would have no effect due
-  // to being optimized out on the compositor. Updated in |Animation::PreCommit|
-  // and |MarkPendingIfCompositorPropertyAnimationChanges|.
-  bool compositor_property_animations_have_no_effect_;
-  // True if the only reason for not running the animation on the compositor is
-  // that the animation would have no effect. Updated in |Animation::PreCommit|.
-  bool animation_has_no_effect_;
   // True is we have paused this animation in anticipation of a future trigger
   // event.
   bool paused_for_trigger_ = false;

@@ -5,13 +5,23 @@
 #ifndef THIRD_PARTY_BLINK_RENDERER_CORE_ANIMATION_TIMELINE_RANGE_H_
 #define THIRD_PARTY_BLINK_RENDERER_CORE_ANIMATION_TIMELINE_RANGE_H_
 
-#include "cc/animation/scroll_timeline.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_timeline_range.h"
 #include "third_party/blink/renderer/core/core_export.h"
 
 namespace blink {
 
 struct TimelineOffset;
+
+// CSS pixel offsets used to resolve scroll and view timeline progress.
+struct ScrollOffsets {
+  ScrollOffsets() = default;
+  ScrollOffsets(double start_offset, double end_offset)
+      : start(start_offset), end(end_offset) {}
+  bool operator==(const ScrollOffsets&) const = default;
+
+  double start = 0;
+  double end = 0;
+};
 
 // A TimelineRange represents a given scroll range within an associated
 // scroller's minimum/maximum scroll. This is useful for ViewTimelines
@@ -37,7 +47,7 @@ struct TimelineOffset;
 // https://drafts.csswg.org/scroll-animations-1/#named-range-animation-declaration
 class CORE_EXPORT TimelineRange {
  public:
-  using ScrollOffsets = cc::ScrollTimeline::ScrollOffsets;
+  using ScrollOffsets = blink::ScrollOffsets;
   using NamedRange = V8TimelineRange::Enum;
 
   // For a view timeline, stores the distances of 'entry-crossing' and

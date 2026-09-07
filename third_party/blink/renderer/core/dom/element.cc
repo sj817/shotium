@@ -4585,7 +4585,6 @@ void Element::DetachLayoutTree(bool performing_reattach) {
         element_animations->CssImageAnimations().Clear();
         element_animations->SetAnimationStyleChange(false);
       }
-      element_animations->RestartAnimationOnCompositor();
     }
 
     data->RemoveAnchorPositionScrollData();

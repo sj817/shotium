@@ -50,7 +50,25 @@
 
 前三批 Windows EXE/DLL、84 demos、serve/net、Node/daemon/协议、Bilibili 和像素基线检查已完成，详见执行记录；六平台实际编译未完成。没有创建 PR 或发布。
 
-## 最新接续状态：第九批验证完成
+## 最新接续状态：第十批验证完成
+
+本段优先于下面历史进度。第九批提交88516c1ec1ad，stage13冻结。第十批使用stage14：79个首次触碰路径（含3个文档、3个新CPU变换快照文件）和22个实体删除，共101个变更路径。Windows EXE/DLL、新Node addon与全部运行检查已完成，没有活动构建或测试。8并发，无OOM；原20并发OOM记录仍有效，永久默认未改。
+
+第十批移除普通动画GPU状态、分组/回执、CompositorAnimation包装与delegate、eligibility/曲线桥接、合成时间线镜像、颜色/透明度/滤镜专用关键帧快照。七个GPU动画样式标记及属性树AnimationState参数/分支、锚点GPU动画状态传播、四个运行开关、遗留测试源项和无用时间范围检查也已删除。
+
+CPU PendingAnimations排队、NotifyReady、未解析滚动时间线延迟、PaintClean后的时序延迟、原IsCurrent触发的on-demand更新保留。快照只保存transform/translate/rotate/scale的TransformOperations用于子像素及轴对齐；neutral keyframes、zoom/viewport刷新保持。SVG原点分离判定移入paint_property_tree_builder.cc，SMIL/资源祖先/zoom/vector-effect/额外SVG变换条件保持。ScrollOffsets和Timing枚举已为Blink本地数据，滚动16微秒/像素保持；ScrollAxis仅保留类内别名，避免遮蔽其他局部类型。
+
+验证：GN6847 targets/856 files，7429输入全存在；IDL dry-run枚举54个/122引用、union42引用均0缺失。首轮14个失败TU已集中修复（缺少CSSProperty声明/PropertyHandle直接include、新快照谓词接口、全局ScrollAxis遮蔽、三个旧AnimationState空参数）；syntax首轮13/14，删无调用SupportedTimeValue后最后1/1 clean，EXE/DLL续编成功。serve/net、84 demos（62 exact/1 fuzzy/21 smoke）、新addon的Node/daemon/协议、Bilibili、accept全通过。182/182原始基准解码RGBA完全一致，动态clip-path与静态中点参考一致；Chrome oracle既有差异1.524%保持。
+
+EXE46,332,928字节，较第九批减少62,464字节，SHA256 b54ec426000f4f9ace00a2d9efc9c13c342f9308a2439e405dbc7444bcb83c31；DLL46,330,880字节，同样减少62,464字节，SHA256 83a1dd6731c0a9746f81a07cb1b96c82812bae37857bcbd00d4276f1a04191e5。运行证据out/cut-batch10/validation.json，源码与22份删除备份SHA256证据out/cut-stage14。17510个源码/GN/生成输入（包括新文件）无删除路径引用，71个owned C++/头文件预处理配对通过，git diff --check通过。新二进制均晚于最后源码修改；Node加载相同SHA256的新DLL。
+
+Linux probe为out/CutBatch10Linux：0缺BUILD/0主仓库缺输入，3项Linux DEPS和1项宿主工具链缺失；Jumbo仍列出40候选，部分文件未扫描，不计实际编译。六平台实际构建尚未完成。
+
+下一批从out/cut-stage14/next-cc-boundary.md接续，必须新建stage15清单，不能重放stage14编辑。已确认PaintChunksToCcLayer::UpdateLayerProperties、ScrollbarDisplayItem::CreateOrReuseLayer、UnacceleratedStaticBitmapImage::CreateFromRaster仅有声明/定义，需拆除其CC层和图片缓存尾巴；实际CPU转换/滚动条绘制不删。ForeignLayerDisplayItem仍有三个view-transition产生方，需沿DocumentLoader的optional导航快照与CSS声明式边界一起裁决。StickyPositionConstraint有真实CPU合并消费者；AnchorPositionScrollData目前通过property_tree.h耦合，需拆纯数据，不能因此永久保留cc宿主。
+
+拖放14文件提案未应用，自动审批拒绝仍未获用户确认；继续其他独立工作。cc宿主/调度/Viz/GPU、网络公共层、诊断与其余根目录闭包未完成，本批通过不代表全目标完成。
+
+## 第九批验证完成（历史基线）
 
 本段优先于下面历史进度。第八批提交13a93d449cfa，stage12冻结。第九批使用stage13：85个首次触碰路径、实体删除20文件，共105个变更路径；Windows EXE/DLL、新Node addon及全部运行检查已完成，没有活动构建或测试。8并发，无OOM；原20并发OOM记录仍有效，未修改永久默认。
 

@@ -126,7 +126,7 @@ bool InvalidatableInterpolation::IsNeutralKeyframeActive() const {
 
 void InvalidatableInterpolation::ClearConversionCache(
     CSSInterpolationEnvironment& environment) const {
-  environment.GetState().SetAffectsCompositorSnapshots();
+  environment.GetState().SetAffectsTransformSnapshots();
   is_conversion_cached_ = false;
   cached_pair_conversion_.Clear();
   conversion_checkers_.clear();

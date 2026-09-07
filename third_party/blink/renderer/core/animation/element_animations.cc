@@ -41,10 +41,6 @@ ElementAnimations::ElementAnimations() : animation_style_change_(false) {}
 
 ElementAnimations::~ElementAnimations() = default;
 
-void ElementAnimations::RestartAnimationOnCompositor() {
-  for (const auto& entry : animations_)
-    entry.key->RestartAnimationOnCompositor();
-}
 
 void ElementAnimations::Trace(Visitor* visitor) const {
   visitor->Trace(css_animations_);
@@ -54,15 +50,14 @@ void ElementAnimations::Trace(Visitor* visitor) const {
   NodeRareDataField::Trace(visitor);
 }
 
-bool ElementAnimations::UpdateBoxSizeAndCheckTransformAxisAlignment(
-    const gfx::SizeF& box_size) {
+bool ElementAnimations::PreservesTransformAxisAlignment() const {
   bool preserves_axis_alignment = true;
   for (auto& entry : animations_) {
     Animation& animation = *entry.key;
     if (auto* effect = DynamicTo<KeyframeEffect>(animation.effect())) {
       if (!effect->IsCurrent() && !effect->IsInEffect())
         continue;
-      if (!effect->UpdateBoxSizeAndCheckTransformAxisAlignment(box_size))
+      if (!effect->PreservesTransformAxisAlignment())
         preserves_axis_alignment = false;
     }
   }
@@ -81,27 +76,5 @@ bool ElementAnimations::IsIdentityOrTranslation() const {
   return true;
 }
 
-void ElementAnimations::CancelCompositedAnimationsAffectingProperties(
-    const CSSBitset& property_bitset) {
-  for (auto& entry : animations_) {
-    if (!entry.key->HasActiveAnimationsOnCompositor()) {
-      continue;
-    }
-    KeyframeEffect* effect = DynamicTo<KeyframeEffect>(entry.key->effect());
-    if (!effect) {
-      continue;
-    }
-
-    for (const auto& property : effect->Model()->DynamicProperties()) {
-      if (property_bitset.Has(property.GetCSSProperty().PropertyID())) {
-        entry.key->SetCompositorPending(
-            Animation::CompositorPendingReason::kPendingCancel);
-        // No need to check the remaining properties once we have forced the
-        // fallback to a main-thread animation.
-        break;
-      }
-    }
-  }
-}
 
 }  // namespace blink

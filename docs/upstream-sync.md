@@ -239,3 +239,9 @@ missing and no known rule to make it
 
 `ninja -n` 只验图。它不验平台选源是否正确,也不验缺失输入是否完整(见 6.1)。
 `probe` 绿了只说明图是连通的,不说明能编出二进制。
+
+### 普通动画与CPU几何快照裁剪（第十批，Windows已验证）
+
+不恢复Blink CompositorAnimation包装、eligibility、回执分组、GPU时间线镜像、动画专用运行开关和IsRunning*AnimationOnCompositor样式字段。普通动画的排队、NotifyReady和PaintClean后的时序延迟保留；原资格查询中的IsCurrent/on-demand副作用在PreparePendingUpdate及UpdateEffectTimingIfNeeded中保留。
+
+关键帧仅为transform/translate/rotate/scale保存TransformKeyframeSnapshot（TransformOperations），供CPU子像素及轴对齐判断；属性变化、neutral keyframes、zoom与viewport刷新逻辑继续生效。SVG原点分离条件位于paint_property_tree_builder.cc的CanSeparateSVGAnimationTransformOrigin，SMIL、资源祖先、zoom、vector-effect和额外SVG容器变换条件不可省略。ScrollOffsets和Timing枚举是Blink本地数据，滚动时间线16微秒/像素保持。cc平滑滚动曲线仍有实际CPU消费者，cc宿主/GPU全链尚待后续大批处理。

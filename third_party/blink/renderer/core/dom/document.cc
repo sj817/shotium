@@ -46,8 +46,6 @@
 #include "base/task/single_thread_task_runner.h"
 #include "base/time/time.h"
 #include "base/trace_event/trace_event.h"
-#include "cc/animation/animation_host.h"
-#include "cc/animation/animation_timeline.h"
 #include "cc/input/overscroll_behavior.h"
 #include "cc/input/scroll_snap_data.h"
 #include "mojo/public/cpp/bindings/lib/wtf_hash_util.h"
@@ -2132,7 +2130,7 @@ void Document::DidChangeVisibilityState() {
       *Event::CreateBubble(event_type_names::kWebkitvisibilitychange));
 
   if (IsPageVisible())
-    GetDocumentAnimations().MarkAnimationsCompositorPending();
+    GetDocumentAnimations().MarkAnimationsPending();
 
 
   InteractiveDetector* interactive_detector = InteractiveDetector::From(*this);

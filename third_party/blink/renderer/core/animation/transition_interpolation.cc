@@ -6,7 +6,6 @@
 
 #include <memory>
 
-#include "third_party/blink/renderer/core/animation/css/compositor_keyframe_value.h"
 #include "third_party/blink/renderer/core/animation/css_interpolation_environment.h"
 #include "third_party/blink/renderer/core/animation/typed_interpolation_value.h"
 

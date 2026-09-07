@@ -7,7 +7,6 @@
 #include <optional>
 
 #include "third_party/blink/renderer/bindings/core/v8/v8_union_cssnumericvalue_double.h"
-#include "third_party/blink/renderer/core/animation/scroll_timeline_util.h"
 #include "third_party/blink/renderer/core/animation/timeline_trigger.h"
 #include "third_party/blink/renderer/core/css/cssom/css_unit_values.h"
 #include "third_party/blink/renderer/core/dom/node.h"
@@ -142,7 +141,7 @@ void ScrollSnapshotTimeline::ServiceAnimations(TimingUpdateReason reason) {
   // to be started and possibly composited.
   bool was_active = last_current_time_ && last_current_time_.has_value();
   if (!was_active && IsActive()) {
-    MarkAnimationsCompositorPending();
+    MarkAnimationsPending();
   }
 
   AnimationTimeline::ServiceAnimations(reason);
@@ -211,10 +210,6 @@ bool ScrollSnapshotTimeline::UpdateSnapshotInternal(bool service_animations) {
   timeline_state_snapshotted_ = new_state;
   ResolveTimelineOffsets();
 
-  if (snapshot_changed) {
-    SetHasPendingCompositorUpdate(true);
-  }
-
   const HeapHashSet<WeakMember<Animation>>& animations = GetAnimations();
 
   auto should_skip_validation = [service_animations](Animation* animation) {
@@ -267,30 +262,6 @@ bool ScrollSnapshotTimeline::UpdateSnapshotInternal(bool service_animations) {
   }
 
   return snapshot_changed;
-}
-
-cc::AnimationTimeline* ScrollSnapshotTimeline::EnsureCompositorTimeline() {
-  if (compositor_timeline_) {
-    return compositor_timeline_.get();
-  }
-
-  compositor_timeline_ = scroll_timeline_util::ToCompositorScrollTimeline(this);
-  return compositor_timeline_.get();
-}
-
-void ScrollSnapshotTimeline::UpdateCompositorTimeline() {
-  if (!compositor_timeline_) {
-    return;
-  }
-
-  has_pending_compositor_update_ = false;
-
-  ToScrollTimeline(compositor_timeline_.get())
-      ->UpdateScrollerIdAndScrollOffsets(
-          scroll_timeline_util::GetCompositorScrollElementId(ResolvedSource()),
-          scroll_timeline_util::ToCompositorScrollDirection(
-              GetResolvedScrollDirection()),
-          GetResolvedScrollOffsets());
 }
 
 void ScrollSnapshotTimeline::CalculateScrollLimits(

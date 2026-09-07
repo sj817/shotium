@@ -147,14 +147,8 @@ class PLATFORM_EXPORT ClipPaintPropertyNode final
     visitor->Trace(clip_cache_);
   }
 
-  // The empty AnimationState struct is to meet the requirement of
-  // ObjectPaintProperties.
-  struct AnimationState {
-    STACK_ALLOCATED();
-  };
   PaintPropertyChangeType Update(const ClipPaintPropertyNodeOrAlias& parent,
-                                 State&& state,
-                                 const AnimationState& = AnimationState()) {
+                                 State&& state) {
     auto parent_changed = SetParent(parent);
     auto state_changed = state_.ComputeChange(state);
     if (state_changed != PaintPropertyChangeType::kUnchanged) {
