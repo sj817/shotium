@@ -351,7 +351,6 @@ if (is_fuchsia) {
 # //media/ffmpeg is deleted; media_use_ffmpeg stays declared only because
 # media_buildflags.h still exports ENABLE_FFMPEG.
 
-
 # //media/base/win:media_foundation_util is deliberately not a subcomponent
 # here. It is the Windows platform decoder glue -- mf_helpers.cc maps
 # AudioDecoderConfig onto MFAudioFormat_* GUIDs and hands D3D11 textures to

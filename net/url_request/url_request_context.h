@@ -28,10 +28,6 @@
 #include "net/traffic_annotation/network_traffic_annotation.h"
 #include "net/url_request/url_request.h"
 
-namespace unexportable_keys {
-class UnexportableKeyService;
-}
-
 namespace net {
 class CertVerifier;
 class ClientSocketFactory;
@@ -63,11 +59,6 @@ class NetworkErrorLoggingService;
 class PersistentReportingAndNelStore;
 class ReportingService;
 #endif  // BUILDFLAG(ENABLE_REPORTING)
-
-namespace device_bound_sessions {
-class SessionService;
-class SessionStore;
-}
 
 // Class that provides application-specific context for URLRequest
 // instances. May only be created by URLRequestContextBuilder.
@@ -178,7 +169,6 @@ class NET_EXPORT URLRequestContext final {
 
   const URLRequestJobFactory* job_factory() const { return job_factory_; }
 
-
   DnsPlatformAttemptFactory* dns_platform_attempt_factory() const {
     return dns_platform_attempt_factory_.get();
   }
@@ -215,32 +205,6 @@ class NET_EXPORT URLRequestContext final {
     return network_error_logging_service_.get();
   }
 #endif  // BUILDFLAG(ENABLE_REPORTING)
-
-  // May return nullptr if the feature is disabled.
-  device_bound_sessions::SessionStore* device_bound_session_store() const {
-#if BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
-    return device_bound_session_store_.get();
-#else
-    return nullptr;
-#endif
-  }
-  // May return nullptr if the feature is disabled.
-  unexportable_keys::UnexportableKeyService* unexportable_key_service() const {
-#if BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
-    return unexportable_key_service_.get();
-#else
-    return nullptr;
-#endif
-  }
-
-  // May return nullptr if the feature is disabled.
-  device_bound_sessions::SessionService* device_bound_session_service() const {
-#if BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
-    return device_bound_session_service_.get();
-#else
-    return nullptr;
-#endif
-  }
 
   bool enable_brotli() const { return enable_brotli_; }
 
@@ -358,17 +322,6 @@ class NET_EXPORT URLRequestContext final {
       std::unique_ptr<TransportSecurityPersister> transport_security_persister);
 
   raw_ptr<NetLog> net_log_ = nullptr;
-#if BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
-  void set_device_bound_session_store(
-      std::unique_ptr<device_bound_sessions::SessionStore>
-          device_bound_session_store);
-  void set_device_bound_session_service(
-      std::unique_ptr<device_bound_sessions::SessionService>
-          device_bound_session_service);
-  void set_unexportable_key_service(
-      std::unique_ptr<unexportable_keys::UnexportableKeyService>
-          unexportable_key_service);
-#endif  // BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
 
   std::unique_ptr<HostResolver> host_resolver_;
   std::unique_ptr<CertVerifier> cert_verifier_;
@@ -416,15 +369,6 @@ class NET_EXPORT URLRequestContext final {
 
   std::unique_ptr<std::set<raw_ptr<const URLRequest, SetExperimental>>>
       url_requests_;
-
-#if BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
-  std::unique_ptr<unexportable_keys::UnexportableKeyService>
-      unexportable_key_service_;
-  std::unique_ptr<device_bound_sessions::SessionStore>
-      device_bound_session_store_;
-  std::unique_ptr<device_bound_sessions::SessionService>
-      device_bound_session_service_;
-#endif  // BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
 
   // Enables Brotli Content-Encoding support.
   bool enable_brotli_ = false;

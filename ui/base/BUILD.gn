@@ -730,8 +730,7 @@ if (use_blink) {
     if (is_win) {
       data += [ "//tools/skia_goldctl/win/goldctl.exe" ]
     } else if (is_mac) {
-      data += [
-      ]
+      data += []
     } else {
       data += []
     }
@@ -1083,10 +1082,7 @@ test("ui_base_unittests") {
 
   if (is_mac || is_win || is_linux || is_chromeos) {
     sources += [ "accelerators/global_accelerator_listener/global_accelerator_listener_unittest.cc" ]
-    deps += [
-      "//ui/base/accelerators/global_accelerator_listener",
-      "//ui/events:events_base",
-    ]
+    deps += [ "//ui/events:events_base" ]
   }
 
   if (is_chromeos) {

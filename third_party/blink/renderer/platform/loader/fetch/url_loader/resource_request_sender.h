@@ -16,7 +16,6 @@
 #include "base/memory/weak_ptr.h"
 #include "base/task/sequenced_task_runner.h"
 #include "base/time/time.h"
-#include "mojo/public/cpp/base/big_buffer.h"
 #include "mojo/public/cpp/system/data_pipe.h"
 #include "net/base/host_port_pair.h"
 #include "net/base/net_errors.h"
@@ -141,7 +140,6 @@ class BLINK_PLATFORM_EXPORT ResourceRequestSender {
   virtual void OnReceivedResponse(
       network::mojom::URLResponseHeadPtr response_head,
       mojo::ScopedDataPipeConsumerHandle body,
-      std::optional<mojo_base::BigBuffer> cached_metadata,
       base::TimeTicks response_ipc_arrival_time);
 
   // Called when a redirect occurs.
@@ -227,20 +225,15 @@ class BLINK_PLATFORM_EXPORT ResourceRequestSender {
       const PendingRequestInfo& request_info,
       network::mojom::URLResponseHead& response_head) const;
 
-
-
-
   // The instance is created on StartAsync() or StartSync(), and it's deleted
   // when the response has finished, or when the request is canceled.
   std::unique_ptr<PendingRequestInfo> request_info_;
-
 
   // Set to true when OnReceivedResponse of the client is called.
   // This is used to prevent OnReceivedResponse from being called twice.
   bool response_sent_to_client_ = false;
 
   scoped_refptr<base::SequencedTaskRunner> loading_task_runner_;
-
 
   base::WeakPtrFactory<ResourceRequestSender> weak_factory_{this};
 };

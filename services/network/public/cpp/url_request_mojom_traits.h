@@ -33,7 +33,6 @@
 #include "services/network/public/mojom/client_security_state.mojom-forward.h"
 #include "services/network/public/mojom/cookie_access_observer.mojom-forward.h"
 #include "services/network/public/mojom/data_pipe_getter.mojom.h"
-#include "services/network/public/mojom/device_bound_sessions.mojom-forward.h"
 #include "services/network/public/mojom/devtools_observer.mojom-forward.h"
 #include "services/network/public/mojom/fetch_retry_options.mojom.h"
 #include "services/network/public/mojom/ip_address_space.mojom-forward.h"
@@ -153,16 +152,6 @@ struct COMPONENT_EXPORT(NETWORK_CPP_BASE)
     return std::move(
         const_cast<network::ResourceRequest::TrustedParams&>(trusted_params)
             .devtools_observer);
-  }
-  static mojo::PendingRemote<network::mojom::DeviceBoundSessionAccessObserver>
-  device_bound_session_observer(
-      const network::ResourceRequest::TrustedParams& trusted_params) {
-    if (!trusted_params.device_bound_session_observer) {
-      return mojo::NullRemote();
-    }
-    return std::move(
-        const_cast<network::ResourceRequest::TrustedParams&>(trusted_params)
-            .device_bound_session_observer);
   }
   static const network::mojom::ClientSecurityStatePtr& client_security_state(
       const network::ResourceRequest::TrustedParams& trusted_params) {
@@ -462,10 +451,6 @@ struct COMPONENT_EXPORT(NETWORK_CPP_BASE)
   static const net::SocketTag& socket_tag(
       const network::ResourceRequest& request) {
     return request.socket_tag;
-  }
-  static bool allows_device_bound_sessions(
-      const network::ResourceRequest& request) {
-    return request.allows_device_bound_sessions;
   }
   static const std::optional<network::PermissionsPolicy>& permissions_policy(
       const network::ResourceRequest& request) {

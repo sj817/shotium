@@ -65,7 +65,6 @@
 #include "third_party/blink/renderer/platform/wtf/std_lib_extras.h"
 #endif  // IS_WIN
 
-
 namespace blink {
 
 namespace {
@@ -124,7 +123,6 @@ class FontResource::BackgroundFontProcessor final
   bool MaybeStartProcessingResponse(
       network::mojom::URLResponseHeadPtr& head,
       mojo::ScopedDataPipeConsumerHandle& body,
-      std::optional<mojo_base::BigBuffer>& cached_metadata_buffer,
       scoped_refptr<base::SequencedTaskRunner> background_task_runner,
       BackgroundResponseProcessor::Client* client) override;
 
@@ -142,7 +140,6 @@ class FontResource::BackgroundFontProcessor final
                         SegmentedBuffer data);
 
   network::mojom::URLResponseHeadPtr head_;
-  std::optional<mojo_base::BigBuffer> cached_metadata_buffer_;
   scoped_refptr<base::SequencedTaskRunner> background_task_runner_;
   BackgroundResponseProcessor::Client* client_;
 
@@ -177,11 +174,9 @@ FontResource::BackgroundFontProcessor::~BackgroundFontProcessor() = default;
 bool FontResource::BackgroundFontProcessor::MaybeStartProcessingResponse(
     network::mojom::URLResponseHeadPtr& head,
     mojo::ScopedDataPipeConsumerHandle& body,
-    std::optional<mojo_base::BigBuffer>& cached_metadata_buffer,
     scoped_refptr<base::SequencedTaskRunner> background_task_runner,
     BackgroundResponseProcessor::Client* client) {
   head_ = std::move(head);
-  cached_metadata_buffer_ = std::move(cached_metadata_buffer);
   background_task_runner_ = background_task_runner;
   client_ = client;
   pipe_drainer_ =
@@ -225,7 +220,7 @@ void FontResource::BackgroundFontProcessor::OnDecodeComplete(
       MakeUnwrappingCrossThreadWeakHandle(std::move(resource_handle_)),
       std::move(result_or_error)));
   client_->DidFinishBackgroundResponseProcessor(
-      std::move(head_), std::move(data), std::move(cached_metadata_buffer_));
+      std::move(head_), std::move(data));
 }
 
 FontResource::BackgroundFontProcessorFactory::BackgroundFontProcessorFactory(

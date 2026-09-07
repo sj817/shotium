@@ -143,7 +143,6 @@ class CORE_EXPORT ThreadableLoader final
                 uint64_t total_bytes_to_be_sent) override;
   void ResponseReceived(Resource*, const ResourceResponse&) override;
   void ResponseBodyReceived(Resource*, BytesConsumer& body) override;
-  void CachedMetadataReceived(Resource*, mojo_base::BigBuffer) override;
   void DataReceived(Resource*, base::span<const char> data) override;
   bool RedirectReceived(Resource*,
                         const ResourceRequest&,

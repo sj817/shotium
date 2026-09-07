@@ -710,7 +710,6 @@ class CORE_EXPORT DocumentLoader : public GarbageCollected<DocumentLoader>,
       service_worker_initial_controller_mode_ =
           mojom::blink::ControllerServiceWorkerMode::kNoController;
 
-
   DocumentPolicy::ParsedDocumentPolicy document_policy_;
   bool was_blocked_by_document_policy_;
   Vector<PolicyParserMessageBuffer::Message> document_policy_parsing_messages_;

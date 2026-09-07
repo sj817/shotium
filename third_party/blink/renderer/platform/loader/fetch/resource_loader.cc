@@ -667,7 +667,6 @@ bool ResourceLoader::WillFollowRedirect(
   DCHECK_EQ(new_request->GetMode(), request_mode);
   DCHECK_EQ(new_request->GetCredentialsMode(), credentials_mode);
 
-
   if (new_request->Url() != KURL(new_url)) {
     CancelForRedirectAccessCheckError(new_request->Url(),
                                       ResourceRequestBlockedReason::kOther);
@@ -695,8 +694,7 @@ FetchContext& ResourceLoader::Context() const {
 
 void ResourceLoader::DidReceiveResponse(
     const WebURLResponse& response,
-    std::variant<mojo::ScopedDataPipeConsumerHandle, SegmentedBuffer> body,
-    std::optional<mojo_base::BigBuffer> cached_metadata) {
+    std::variant<mojo::ScopedDataPipeConsumerHandle, SegmentedBuffer> body) {
   DCHECK(!response.IsNull());
 
   if (resource_->GetResourceRequest().GetKeepalive()) {
@@ -708,8 +706,7 @@ void ResourceLoader::DidReceiveResponse(
         fetcher_->GetProperties().IsDetached());
   }
 
-  DidReceiveResponseInternal(response.ToResourceResponse(),
-                             std::move(cached_metadata));
+  DidReceiveResponseInternal(response.ToResourceResponse());
   if (!IsLoading()) {
     return;
   }
@@ -775,8 +772,7 @@ void ResourceLoader::DidReceiveDataForTesting(base::span<const char> data) {
 }
 
 void ResourceLoader::DidReceiveResponseInternal(
-    const ResourceResponse& response,
-    std::optional<mojo_base::BigBuffer> cached_metadata) {
+    const ResourceResponse& response) {
   const ResourceRequestHead& request = resource_->GetResourceRequest();
 
   AtomicString content_encoding =
@@ -818,12 +814,6 @@ void ResourceLoader::DidReceiveResponseInternal(
         mojom::WebFeature::kAuthorizationCoveredByWildcard);
   }
 
-  if (response.HttpHeaderField(http_names::kSecSessionRegistration) ||
-      response.HttpHeaderField(http_names::kSecureSessionRegistration)) {
-    fetcher_->GetUseCounter().CountUse(
-        WebFeature::kDeviceBoundSessionRegistered);
-  }
-
   if (const AtomicString& value =
           response.HttpHeaderField(http_names::kNoVarySearch);
       !value.IsNull()) {
@@ -835,26 +825,6 @@ void ResourceLoader::DidReceiveResponseInternal(
       fetcher_->GetUseCounter().CountUse(
           WebFeature::kNoVarySearchWithBooleanParams);
     }
-  }
-
-  switch (response.DeviceBoundSessionUsage()) {
-    case network::mojom::DeviceBoundSessionUsage::kDeferred:
-      fetcher_->GetUseCounter().CountUse(
-          WebFeature::kDeviceBoundSessionRequestDeferral);
-      [[fallthrough]];
-    case network::mojom::DeviceBoundSessionUsage::kInScopeRefreshNotYetNeeded:
-    case network::mojom::DeviceBoundSessionUsage::kInScopeRefreshNotAllowed:
-    case network::mojom::DeviceBoundSessionUsage::
-        kInScopeProactiveRefreshNotPossible:
-    case network::mojom::DeviceBoundSessionUsage::
-        kInScopeProactiveRefreshAttempted:
-      fetcher_->GetUseCounter().CountUse(
-          WebFeature::kDeviceBoundSessionRequestInScope);
-      break;
-    case network::mojom::DeviceBoundSessionUsage::kNoSiteMatchNotInScope:
-    case network::mojom::DeviceBoundSessionUsage::kSiteMatchNotInScope:
-    case network::mojom::DeviceBoundSessionUsage::kUnknown:
-      break;
   }
 
   ResourceType resource_type = resource_->GetType();
@@ -976,13 +946,6 @@ void ResourceLoader::DidReceiveResponseInternal(
 
   if (!resource_->Loader()) {
     return;
-  }
-
-  // Not SetSerializedCachedMetadata in a successful revalidation
-  // because resource content would not expect to be changed.
-  if (!resource_->HasSuccessfulRevalidation() && cached_metadata &&
-      cached_metadata->size()) {
-    resource_->SetSerializedCachedMetadata(std::move(*cached_metadata));
   }
 
   if (auto* frame_or_worker_scheduler = fetcher_->GetFrameOrWorkerScheduler()) {
@@ -1264,8 +1227,7 @@ void ResourceLoader::RequestSynchronously() {
     return;
   }
 
-  DidReceiveResponseInternal(response_out.ToResourceResponse(),
-                             /*cached_metadata=*/std::nullopt);
+  DidReceiveResponseInternal(response_out.ToResourceResponse());
   if (!IsLoading()) {
     return;
   }
@@ -1452,7 +1414,7 @@ void ResourceLoader::HandleDataUrl() {
   DCHECK(data);
   const size_t data_size = data->size();
 
-  DidReceiveResponseInternal(response, /*cached_metadata=*/std::nullopt);
+  DidReceiveResponseInternal(response);
   if (!IsLoading()) {
     return;
   }

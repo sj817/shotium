@@ -16,7 +16,6 @@
 #include "crypto/openssl_util.h"
 #include "crypto/scoped_capi_types.h"
 #include "crypto/scoped_cng_types.h"
-#include "crypto/unexportable_key_win.h"
 #include "net/base/net_errors.h"
 #include "net/cert/x509_certificate.h"
 #include "net/ssl/ssl_platform_key_util.h"
@@ -435,27 +434,6 @@ scoped_refptr<SSLPrivateKey> FetchClientCertPrivateKey(
     return WrapCAPIPrivateKey(certificate,
                               crypto::ScopedHCRYPTPROV(prov_or_key), key_spec);
   }
-}
-
-scoped_refptr<SSLPrivateKey> WrapUnexportableKeySlowly(
-    const crypto::UnexportableSigningKey& key) {
-  // Load a duplicated NCRYPT_KEY_HANDLE from `key`.
-  crypto::ScopedNCryptKey key_handle = crypto::DuplicatePlatformKeyHandle(key);
-  if (!key_handle.is_valid()) {
-    return nullptr;
-  }
-
-  int key_type;
-  size_t max_length;
-  if (!GetPublicKeyInfo(key.GetSubjectPublicKeyInfo(), &key_type,
-                        &max_length)) {
-    return nullptr;
-  }
-
-  return base::MakeRefCounted<ThreadedSSLPrivateKey>(
-      std::make_unique<SSLPlatformKeyCNG>(std::move(key_handle), key_type,
-                                          max_length),
-      GetSSLPlatformKeyTaskRunner());
 }
 
 }  // namespace net

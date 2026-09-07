@@ -175,13 +175,6 @@ int PacFileFetcherImpl::Fetch(
       // TODO(crbug.com/517071653): Support targeting a specific network for
       // PAC fetches.
       net::handles::kInvalidNetworkHandle);
-  // DBSC should be disabled for PAC fetches to avoid a circular dependency
-  // leading to a deadlock: fetching a PAC file might trigger a DBSC
-  // session refresh, which in turn might require another PAC fetch
-  // to resolve the proxy for the refresh request (crbug.com/483088603).
-  cur_request_->set_device_bound_session_mode(
-      net::DeviceBoundSessionMode::kDisabled);
-
   cur_request_->set_isolation_info(isolation_info());
 
   // Make sure that the PAC script is downloaded using a direct connection,

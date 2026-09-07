@@ -199,18 +199,4 @@ scoped_refptr<SSLPrivateKey> CreateSSLPrivateKeyForSecKey(
       GetSSLPlatformKeyTaskRunner());
 }
 
-scoped_refptr<SSLPrivateKey> WrapUnexportableKey(
-    const crypto::UnexportableSigningKey& unexportable_key) {
-  bssl::UniquePtr<EVP_PKEY> pubkey = crypto::evp::PublicKeyFromBytes(
-      unexportable_key.GetSubjectPublicKeyInfo());
-  if (!pubkey) {
-    return nullptr;
-  }
-
-  return base::MakeRefCounted<ThreadedSSLPrivateKey>(
-      std::make_unique<SSLPlatformKeySecKey>(std::move(pubkey),
-                                             unexportable_key.GetSecKeyRef()),
-      GetSSLPlatformKeyTaskRunner());
-}
-
 }  // namespace net

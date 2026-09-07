@@ -65,8 +65,7 @@ class BLINK_PLATFORM_EXPORT MojoURLLoaderClient final
   void OnReceiveEarlyHints(network::mojom::EarlyHintsPtr early_hints) override;
   void OnReceiveResponse(
       network::mojom::URLResponseHeadPtr response_head,
-      mojo::ScopedDataPipeConsumerHandle body,
-      std::optional<mojo_base::BigBuffer> cached_metadata) override;
+      mojo::ScopedDataPipeConsumerHandle body) override;
   void OnReceiveRedirect(
       const net::RedirectInfo& redirect_info,
       network::mojom::URLResponseHeadPtr response_head) override;
@@ -87,7 +86,6 @@ class BLINK_PLATFORM_EXPORT MojoURLLoaderClient final
   class DeferredOnReceiveResponse;
   class DeferredOnReceiveRedirect;
   class DeferredOnUploadProgress;
-  class DeferredOnReceiveCachedMetadata;
   class DeferredOnStartLoadingResponseBody;
   class DeferredOnComplete;
 

@@ -82,8 +82,6 @@ class PLATFORM_EXPORT RawResource final : public Resource {
   bool WillFollowRedirect(const ResourceRequest&,
                           const ResourceResponse&) override;
 
-  void SetSerializedCachedMetadata(mojo_base::BigBuffer data) override;
-
   scoped_refptr<BlobDataHandle> DownloadedBlob() const;
 
   void Trace(Visitor* visitor) const override;
@@ -151,7 +149,6 @@ class PLATFORM_EXPORT RawResourceClient : public ResourceClient {
   // [Case 1] A successful load:
   // 0+  RedirectReceived() and/or DataSent()
   // 1   ResponseReceived()
-  // 0-1 SetSerializedCachedMetadata()
   // One of:
   //   0+  DataReceived()
   //   0+  DataDownloaded()
@@ -172,7 +169,6 @@ class PLATFORM_EXPORT RawResourceClient : public ResourceClient {
                         uint64_t /* totalBytesToBeSent */) {}
   virtual void ResponseBodyReceived(Resource*, BytesConsumer&) {}
   virtual void ResponseReceived(Resource*, const ResourceResponse&) {}
-  virtual void CachedMetadataReceived(Resource*, mojo_base::BigBuffer) {}
   virtual bool RedirectReceived(Resource*,
                                 const ResourceRequest&,
                                 const ResourceResponse&) {
@@ -206,7 +202,6 @@ class PLATFORM_EXPORT RawResourceClientStateChecker final {
   void DataSent();
   void ResponseReceived();
   void ResponseBodyReceived();
-  void SetSerializedCachedMetadata();
   void DataReceived();
   void DataDownloaded();
   void DidDownloadToBlob();

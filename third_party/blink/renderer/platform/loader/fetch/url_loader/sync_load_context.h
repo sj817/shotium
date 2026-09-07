@@ -106,8 +106,7 @@ class BLINK_PLATFORM_EXPORT SyncLoadContext : public ResourceRequestClient {
       FollowRedirectCallback follow_redirect_callback) override;
   void OnReceivedResponse(
       network::mojom::URLResponseHeadPtr head,
-      mojo::ScopedDataPipeConsumerHandle body,
-      std::optional<mojo_base::BigBuffer> cached_metadata) override;
+      mojo::ScopedDataPipeConsumerHandle body) override;
   void OnTransferSizeUpdated(base::ByteSize transfer_size_diff) override;
   void OnCompletedRequest(
       const network::URLLoaderCompletionStatus& status) override;

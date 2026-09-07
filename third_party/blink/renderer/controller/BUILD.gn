@@ -13,10 +13,11 @@ if (is_ios) {
 
 visibility = [
   "//:gn_all",
-  "//third_party/blink/*",
+
   # //shot drives Page/LocalFrame/LocalFrameView directly instead of going
   # through public/web; see third_party/blink/renderer/BUILD.gn.
   "//shot/*",
+  "//third_party/blink/*",
 ]
 
 component("controller") {
@@ -45,6 +46,7 @@ component("controller") {
     "blink_leak_detector.h",
     "blink_shutdown.cc",
     "controller_export.h",
+
     # dev_tools_frontend_impl.{cc,h} were here. DevToolsFrontendImpl was the
     # renderer half of the DevTools frontend bridge: it received the DevTools
     # frontend's api_script over mojo and evaluated it against a DevToolsHost
@@ -115,8 +117,7 @@ component("controller") {
   # adding/editing *.idl files, especially because it's very easy to forget to
   # add generated bindings files to the lists defined in
   # generated_in_{core,modules}.gni. Hence, run the check scripts here.
-  deps += [
-  ]
+  deps += []
 }
 
 group("blink_unittests_data") {
@@ -146,7 +147,6 @@ source_set("blink_perf_tests_sources") {
     ":controller",
     "//base",
     "//base/test:test_support",
-    "//content/test:test_support",
     "//third_party/blink/renderer/core",
     "//third_party/blink/renderer/core:perf_tests",
   ]
@@ -191,7 +191,6 @@ source_set("blink_unittests_sources") {
     "//base",
     "//base:i18n",
     "//base/test:test_support",
-    "//content/test:test_support",
     "//gpu:test_support",
     "//testing/gmock",
     "//testing/gtest",
@@ -219,7 +218,7 @@ source_set("blink_unittests_sources") {
 if (is_ios) {
   bundle_data("blink_unittests_pak_bundle_data") {
     testonly = true
-    public_deps = [ "//content/shell:pak" ]
+    public_deps = []
     sources = [ "$root_out_dir/content_shell.pak" ]
     outputs = [ "{{bundle_resources_dir}}/content_shell.pak" ]
   }

@@ -279,18 +279,6 @@ void RawResource::ResponseBodyReceived(
   client->ResponseBodyReceived(this, body_loader.DrainAsBytesConsumer());
 }
 
-void RawResource::SetSerializedCachedMetadata(mojo_base::BigBuffer data) {
-  // Resource ignores the cached metadata.
-  Resource::SetSerializedCachedMetadata(mojo_base::BigBuffer());
-
-  ResourceClientWalker<RawResourceClient> w(Clients());
-  // We rely on the fact that RawResource cannot have multiple clients.
-  CHECK_LE(Clients().size(), 1u);
-  if (RawResourceClient* c = w.Next()) {
-    c->CachedMetadataReceived(this, std::move(data));
-  }
-}
-
 void RawResource::DidSendData(uint64_t bytes_sent,
                               uint64_t total_bytes_to_be_sent) {
   ResourceClientWalker<RawResourceClient> w(Clients());
@@ -350,12 +338,6 @@ NOINLINE void RawResourceClientStateChecker::ResponseReceived() {
   // TODO(crbug.com/1431421): remove |state_| dump when the cause is clarified.
   SECURITY_CHECK(state_ == kStarted) << " state_ was " << state_;
   state_ = kResponseReceived;
-}
-
-NOINLINE void RawResourceClientStateChecker::SetSerializedCachedMetadata() {
-  SECURITY_CHECK(state_ == kStarted || state_ == kResponseReceived ||
-                 state_ == kDataReceivedAsBytesConsumer ||
-                 state_ == kDataReceived);
 }
 
 NOINLINE void RawResourceClientStateChecker::ResponseBodyReceived() {

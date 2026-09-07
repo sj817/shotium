@@ -135,7 +135,6 @@ test("blink_heap_unittests") {
 
   if (is_android) {
     deps += [
-      "//content/shell/android:content_shell_assets",
       "//net/android:net_java",
       "//ui/android:ui_full_java",
     ]
@@ -170,7 +169,6 @@ source_set("blink_heap_unittests_sources") {
     "test/weakness_marking_test.cc",
   ]
 
-
   configs += [
     "//third_party/blink/renderer/platform/wtf:wtf_config",
     "//third_party/blink/renderer:config",
@@ -196,7 +194,6 @@ test("blink_heap_perftests") {
 
   if (is_android) {
     deps += [
-      "//content/shell/android:content_shell_assets",
       "//net/android:net_java",
       "//ui/android:ui_full_java",
     ]

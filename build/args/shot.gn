@@ -27,6 +27,7 @@ is_component_build = false
 symbol_level = 0
 is_shot_build = true
 use_shot_jumbo_build = true
+
 # 64 sources per unit. Parsing Blink's headers costs a unit about 14 s
 # whatever it contains, so the per-file cost falls as the unit grows: measured
 # on the development host, an 8-file core unit takes 13.9 s (1.74 s per file,
@@ -42,6 +43,7 @@ shot_jumbo_file_merge_limit = 64
 # file once the two share a unit.
 shot_jumbo_excluded_files = [
   "//services/viz/public/cpp/compositing/frame_timing_details_mojom_traits.cc",
+
   # A DEPS checkout, so its BUILD.gn cannot carry the exclusion: HexDump's
   # local kPadding shadows base64.cc's anonymous-namespace one (-Wshadow).
   "//third_party/perfetto/src/base/utils.cc",
@@ -101,6 +103,7 @@ enable_dav1d_decoder = false
 # Tracing itself is unaffected: the proto path is untouched, and shot starts no
 # tracing session in the first place.
 use_perfetto_trace_processor = false
+
 # Chromium's flag only removes its wrapper. Perfetto defaults its own offline
 # SQL processor on in Chromium builds, so disable the upstream product too.
 enable_perfetto_trace_processor = false
@@ -123,13 +126,12 @@ is_p2p_enabled = false
 
 # Shot paints Blink's cc::PaintRecord into a CPU SkSurface. It never creates a
 # GL context, a Vulkan device, or a GPU process, so ANGLE's renderer backends
-# and SwiftShader cannot be selected at runtime. They previously survived in
-# the build graph even though ThinLTO removed all of their code from shotium.exe.
-# Vulkan, off. enable_vulkan defaults to is_linux || is_chromeos ||
-# is_android || is_fuchsia, so Windows has never built skia's Vulkan backend
-# and Linux always did -- which is why the first Linux build reached
-# GrVkImage.cpp and found VK_CALL defined two different ways in one Jumbo
-# translation unit.
+# and SwiftShader cannot be selected at runtime. They previously survived in the
+# build graph even though ThinLTO removed all of their code from shotium.exe.
+# Vulkan, off. enable_vulkan defaults to is_linux || is_chromeos || is_android
+# || is_fuchsia, so Windows has never built skia's Vulkan backend and Linux
+# always did -- which is why the first Linux build reached GrVkImage.cpp and
+# found VK_CALL defined two different ways in one Jumbo translation unit.
 #
 # Excluding a file from Jumbo would have silenced that and left the backend in
 # the build. shot rasterises into a CPU SkSurface and never creates a GL
@@ -236,11 +238,6 @@ icu_data_dir_override = "shot"
 # measured, for a format no page in the corpus uses and that ships disabled in
 # Chrome itself.
 enable_jxl_decoder = false
-
-# Device-bound sessions and the SQL cache backend are not part of Shot.
-# HTTP(S) resources use the Simple disk cache configured in shot_network.cc;
-# the worker and daemon retain that cache across captures.
-enable_device_bound_sessions = false
 
 # The rest of //net that a static screenshot cannot reach: the Reporting and
 # Network Error Logging endpoints, WebSockets, multicast DNS discovery, and

@@ -86,11 +86,10 @@ static_library("test_support") {
   deps = [
     "//base",
     "//ui/base",
-    "//ui/menus",
   ]
 
   if (use_aura) {
-    deps += [ "//ui/aura" ]
+    deps += []
   }
 
   if (is_android) {
@@ -98,7 +97,7 @@ static_library("test_support") {
   }
 
   if (!is_ios) {
-    deps += [ "//ui/native_window_tracker" ]
+    deps += []
   }
 }
 

@@ -8,11 +8,6 @@ mojom("mojom") {
   generate_java = true
   sources = [ "image.mojom" ]
 
-  webui_module_path = "chrome://resources/mojo/ui/gfx/image/mojom"
-
-  # Used by content/common so need legacy JS bindings for Blink.
-  generate_legacy_js_bindings = true
-
   public_deps = [ "//skia/public/mojom" ]
 
   shared_cpp_typemap = {

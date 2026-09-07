@@ -62,9 +62,6 @@ rust_static_library("storage_common_rust") {
   crate_root = "file_system/file_system_types.rs"
   sources = [ "file_system/file_system_types.rs" ]
   cxx_bindings = [ "file_system/file_system_types.rs" ]
-  visibility = [
-    "//content/browser:*",
-    "//storage/common:*",
-  ]
+  visibility = [ "//storage/common:*" ]
   deps = [ "//third_party/rust/cxx/v1:lib" ]
 }

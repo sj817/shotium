@@ -436,7 +436,6 @@ void ResourceRequestSender::OnUploadProgress(int64_t position, int64_t size) {
 void ResourceRequestSender::OnReceivedResponse(
     network::mojom::URLResponseHeadPtr response_head,
     mojo::ScopedDataPipeConsumerHandle body,
-    std::optional<mojo_base::BigBuffer> cached_metadata,
     base::TimeTicks response_ipc_arrival_time) {
 
   TRACE_EVENT0("loading", "ResourceRequestSender::OnReceivedResponse");
@@ -457,14 +456,13 @@ void ResourceRequestSender::OnReceivedResponse(
   }
   request_info_->load_timing_info = response_head->load_timing;
 
-
   // OnReceivedResponse() can be called at most once. This check is added to
   // debug crbug.com/463388771.
   CHECK(!response_sent_to_client_);
   response_sent_to_client_ = true;
 
   request_info_->client->OnReceivedResponse(
-      response_head.Clone(), std::move(body), std::move(cached_metadata));
+      response_head.Clone(), std::move(body));
   if (!request_info_) {
     return;
   }
@@ -482,7 +480,6 @@ void ResourceRequestSender::OnReceivedRedirect(
     return;
   }
   CHECK(request_info_->url_loader);
-
 
   request_info_->local_response_start = redirect_ipc_arrival_time;
   request_info_->remote_request_start =

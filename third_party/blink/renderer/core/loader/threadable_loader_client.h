@@ -32,7 +32,6 @@
 #define THIRD_PARTY_BLINK_RENDERER_CORE_LOADER_THREADABLE_LOADER_CLIENT_H_
 
 #include "base/containers/span.h"
-#include "mojo/public/cpp/base/big_buffer.h"
 #include "third_party/blink/renderer/core/core_export.h"
 #include "third_party/blink/renderer/platform/blob/blob_data.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
@@ -59,7 +58,6 @@ class CORE_EXPORT ThreadableLoaderClient : public GarbageCollectedMixin {
                                   const ResourceResponse&) {}
   virtual void DidStartLoadingResponseBody(BytesConsumer&) {}
   virtual void DidReceiveData(base::span<const char>) {}
-  virtual void DidReceiveCachedMetadata(mojo_base::BigBuffer) {}
   virtual void DidFinishLoading(uint64_t /*identifier*/) {}
   virtual void DidFail(uint64_t /*identifier*/, const ResourceError&) {}
   virtual void DidFailRedirectCheck(uint64_t /*identifier*/) {}

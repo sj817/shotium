@@ -50,7 +50,6 @@
 namespace network {
 namespace mojom {
 enum class AlternateProtocolUsage;
-enum class DeviceBoundSessionUsage;
 enum class FetchResponseSource;
 enum class FetchResponseType : int32_t;
 enum class IPAddressSpace : int32_t;
@@ -303,17 +302,7 @@ class BLINK_PLATFORM_EXPORT WebURLResponse {
   void SetRequestIncludeCredentials(bool);
   bool RequestIncludeCredentials() const;
 
-  void SetShouldUseSourceHashForJSCodeCache(bool);
-  bool ShouldUseSourceHashForJSCodeCache() const;
-
   void SetWasFetchedViaCache(bool);
-
-  void SetDeviceBoundSessionUsage(network::mojom::DeviceBoundSessionUsage);
-  network::mojom::DeviceBoundSessionUsage DeviceBoundSessionUsage() const;
-
-  // Whether the request was actually deferred by any device bound sessions.
-  void SetWasDeferredByDeviceBoundSession(bool);
-  bool WasDeferredByDeviceBoundSession() const;
 
   void SetUnencodedDigests(std::vector<network::IntegrityMetadata>);
 

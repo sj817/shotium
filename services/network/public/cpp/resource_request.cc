@@ -15,7 +15,6 @@
 #include "net/log/net_log_source.h"
 #include "services/network/public/cpp/permissions_policy/permissions_policy.h"
 #include "services/network/public/mojom/cookie_access_observer.mojom.h"
-#include "services/network/public/mojom/device_bound_sessions.mojom.h"
 #include "services/network/public/mojom/devtools_observer.mojom.h"
 #include "services/network/public/mojom/trust_token_access_observer.mojom.h"
 #include "services/network/public/mojom/url_request.mojom.h"
@@ -96,20 +95,6 @@ mojo::PendingRemote<mojom::DevToolsObserver> Clone(
   TRACE_EVENT("loading", "DevToolsObserver.copy");
   mojo::Remote<mojom::DevToolsObserver> remote(std::move(*observer));
   mojo::PendingRemote<mojom::DevToolsObserver> new_remote;
-  remote->Clone(new_remote.InitWithNewPipeAndPassReceiver());
-  *observer = remote.Unbind();
-  return new_remote;
-}
-
-mojo::PendingRemote<mojom::DeviceBoundSessionAccessObserver> Clone(
-    mojo::PendingRemote<mojom::DeviceBoundSessionAccessObserver>* observer) {
-  if (!*observer) {
-    return mojo::NullRemote();
-  }
-  TRACE_EVENT("loading", "DeviceBoundSessionAccessObserver.copy");
-  mojo::Remote<mojom::DeviceBoundSessionAccessObserver> remote(
-      std::move(*observer));
-  mojo::PendingRemote<mojom::DeviceBoundSessionAccessObserver> new_remote;
   remote->Clone(new_remote.InitWithNewPipeAndPassReceiver());
   *observer = remote.Unbind();
   return new_remote;
@@ -216,10 +201,6 @@ ResourceRequest::TrustedParams& ResourceRequest::TrustedParams::operator=(
   devtools_observer =
       Clone(&const_cast<mojo::PendingRemote<mojom::DevToolsObserver>&>(
           other.devtools_observer));
-  device_bound_session_observer =
-      Clone(&const_cast<
-            mojo::PendingRemote<mojom::DeviceBoundSessionAccessObserver>&>(
-          other.device_bound_session_observer));
   client_security_state = other.client_security_state.Clone();
   accept_ch_frame_observer =
       Clone(const_cast<mojo::PendingRemote<mojom::AcceptCHFrameObserver>&>(
@@ -388,7 +369,6 @@ bool ResourceRequest::EqualsForTesting(const ResourceRequest& request) const {
          shared_dictionary_writer_enabled ==
              request.shared_dictionary_writer_enabled &&
          socket_tag == request.socket_tag &&
-         allows_device_bound_sessions == request.allows_device_bound_sessions &&
          permissions_policy == request.permissions_policy &&
          fetch_retry_options == request.fetch_retry_options;
 }

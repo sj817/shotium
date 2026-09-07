@@ -648,10 +648,6 @@ void Resource::ResponseReceived(const ResourceResponse& response) {
     SetEncoding(encoding);
 }
 
-void Resource::SetSerializedCachedMetadata(mojo_base::BigBuffer data) {
-  DCHECK(!IsCacheValidator());
-}
-
 String Resource::ReasonNotDeletable() const {
   StringBuilder builder;
   if (HasClientsOrObservers()) {

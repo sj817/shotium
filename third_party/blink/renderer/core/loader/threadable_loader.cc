@@ -329,17 +329,6 @@ void ThreadableLoader::ResponseBodyReceived(Resource* resource,
   client_->DidStartLoadingResponseBody(body);
 }
 
-void ThreadableLoader::CachedMetadataReceived(
-    Resource* resource,
-    mojo_base::BigBuffer cached_metadata) {
-  DCHECK(client_);
-  DCHECK_EQ(resource, GetResource());
-
-  checker_.SetSerializedCachedMetadata();
-
-  client_->DidReceiveCachedMetadata(std::move(cached_metadata));
-}
-
 void ThreadableLoader::DataReceived(Resource* resource,
                                     base::span<const char> data) {
   DCHECK(client_);

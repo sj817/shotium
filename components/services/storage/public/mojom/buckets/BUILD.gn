@@ -54,6 +54,4 @@ mojom("buckets") {
       ]
     },
   ]
-
-  webui_module_path = "/"
 }

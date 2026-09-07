@@ -20,7 +20,6 @@
 #include "base/task/sequenced_task_runner.h"
 #include "base/task/single_thread_task_runner.h"
 #include "base/trace_event/trace_event.h"
-#include "mojo/public/cpp/base/big_buffer.h"
 #include "services/network/public/cpp/loading_params.h"
 #include "services/network/public/cpp/record_ontransfersizeupdate_utils.h"
 #include "services/network/public/cpp/url_loader_completion_status.h"
@@ -388,8 +387,7 @@ void NavigationBodyLoader::OnReceiveEarlyHints(
 
 void NavigationBodyLoader::OnReceiveResponse(
     network::mojom::URLResponseHeadPtr head,
-    mojo::ScopedDataPipeConsumerHandle body,
-    std::optional<mojo_base::BigBuffer> cached_metadata) {
+    mojo::ScopedDataPipeConsumerHandle body) {
   // This has already happened in the browser process.
   NOTREACHED();
 }

@@ -15,7 +15,6 @@ import "services/network/public/mojom/cookie_access_observer.mojom";
 import "services/network/public/mojom/cookie_manager.mojom";
 import "services/network/public/mojom/cors.mojom";
 import "services/network/public/mojom/data_pipe_getter.mojom";
-import "services/network/public/mojom/device_bound_sessions.mojom";
 import "services/network/public/mojom/devtools_observer.mojom";
 import "services/network/public/mojom/fetch_api.mojom";
 import "services/network/public/mojom/fetch_retry_options.mojom";
@@ -131,13 +130,6 @@ struct TrustedUrlRequestParams {
   pending_remote<URLLoaderNetworkServiceObserver>? url_loader_network_observer;
 
   pending_remote<DevToolsObserver>? devtools_observer;
-
-  // Observer which should be notified when this URLRequest leads to an
-  // access of a device bound session. This include registration or
-  // deferral. If this is set to non-null, the observer passed in
-  // URLLoaderFactoryParams will be ignored.
-  pending_remote<DeviceBoundSessionAccessObserver>?
-      device_bound_session_observer;
 
   // Specifies the security state of the client, for cases when the
   // URLLoaderFactory is shared among multiple clients.
@@ -609,11 +601,6 @@ struct URLRequest {
   // The socket tag to associate this request with. This is typically set by the
   // embedder.
   SocketTag socket_tag;
-
-  // Whether this request is allowed to belong to a device bound session. This
-  // includes registering a new session, accepting challenges, or deferring the
-  // request until a session is refreshed.
-  bool allows_device_bound_sessions = true;
 
   // Permissions Policy of the request.
   // If it's nullopt then the request's initiator didn't set the permissions

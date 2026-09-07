@@ -35,10 +35,7 @@ component("public") {
 
   public_deps = [ "//base" ]
 
-  deps = [
-    "//ui/aura",
-    "//ui/base",
-  ]
+  deps = [ "//ui/base" ]
 }
 
 static_library("test_support") {

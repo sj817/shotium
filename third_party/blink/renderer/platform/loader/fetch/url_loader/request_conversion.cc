@@ -435,7 +435,6 @@ void PopulateResourceRequest(const ResourceRequestHead& src,
   // annotation. Blink can no longer produce one, so the field keeps its false
   // default and the network service sees every request as untagged.
 
-  dest->allows_device_bound_sessions = src.AllowsDeviceBoundSessions();
 }
 
 }  // namespace blink

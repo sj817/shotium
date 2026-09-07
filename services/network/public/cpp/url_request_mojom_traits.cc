@@ -24,7 +24,6 @@
 #include "services/network/public/cpp/url_request_param_mojom_traits.h"
 #include "services/network/public/mojom/cookie_access_observer.mojom.h"
 #include "services/network/public/mojom/data_pipe_getter.mojom.h"
-#include "services/network/public/mojom/device_bound_sessions.mojom.h"
 #include "services/network/public/mojom/devtools_observer.mojom.h"
 #include "services/network/public/mojom/fetch_retry_options.mojom.h"
 #include "services/network/public/mojom/ip_address_space.mojom.h"
@@ -78,8 +77,6 @@ bool StructTraits<network::mojom::TrustedUrlRequestParamsDataView,
       mojo::PendingRemote<network::mojom::URLLoaderNetworkServiceObserver>>();
   out->devtools_observer = data.TakeDevtoolsObserver<
       mojo::PendingRemote<network::mojom::DevToolsObserver>>();
-  out->device_bound_session_observer = data.TakeDeviceBoundSessionObserver<
-      mojo::PendingRemote<network::mojom::DeviceBoundSessionAccessObserver>>();
   if (!data.ReadClientSecurityState(&out->client_security_state)) {
     return false;
   }
@@ -230,7 +227,6 @@ bool StructTraits<
   out->client_side_content_decoding_enabled =
       data.client_side_content_decoding_enabled();
   out->required_ip_address_space = data.required_ip_address_space();
-  out->allows_device_bound_sessions = data.allows_device_bound_sessions();
   return true;
 }
 

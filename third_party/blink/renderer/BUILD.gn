@@ -16,8 +16,8 @@ if (is_clang) {
 # Going through public/web instead would mean keeping the API surface that
 # exists to serve //content, which is the thing being removed.
 visibility = [
-  "//third_party/blink/*",
   "//shot/*",
+  "//third_party/blink/*",
 ]
 
 # arguments --------------------------------------------------------------------

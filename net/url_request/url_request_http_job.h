@@ -32,10 +32,6 @@
 #include "net/socket/connection_attempts.h"
 #include "net/url_request/url_request_job.h"
 
-#if BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
-#include "net/device_bound_sessions/session_service.h"
-#endif  // BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
-
 namespace net {
 
 class HttpRequestHeaders;
@@ -141,11 +137,6 @@ class NET_EXPORT_PRIVATE URLRequestHttpJob : public URLRequestJob {
       CookieAccessResultList& excluded_cookies) const;
   void SaveCookiesAndNotifyHeadersComplete(int result);
 
-#if BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
-  // Process the DBSC header, if one exists.
-  void ProcessDeviceBoundSessionsHeader();
-#endif  // BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
-
   // Processes the Strict-Transport-Security header, if one exists.
   void ProcessStrictTransportSecurityHeader();
 
@@ -163,12 +154,6 @@ class NET_EXPORT_PRIVATE URLRequestHttpJob : public URLRequestJob {
                               CompletionOnceCallback callback);
 
   void RestartTransaction();
-#if BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
-  void RestartTransactionForRefresh(
-      const device_bound_sessions::SessionService::DeferralParams&
-          deferral_params,
-      device_bound_sessions::RefreshResult result);
-#endif
   void RestartTransactionWithAuth(const AuthCredentials& credentials);
 
   // Overridden from URLRequestJob:
@@ -335,15 +320,6 @@ class NET_EXPORT_PRIVATE URLRequestHttpJob : public URLRequestJob {
   // The First-Party Set metadata associated with this job. Set when the job is
   // started.
   FirstPartySetMetadata first_party_set_metadata_;
-
-  // The number of times this request was deferred due to a Device Bound
-  // Session.
-  size_t device_bound_session_deferral_count_ = 0;
-
-  // The time of the first deferral due to Device Bound Sessions. This
-  // is used to measure the total delay of Device Bound Session
-  // Deferral.
-  base::TimeTicks device_bound_session_first_deferral_;
 
   // The content encoding types that need to be handled in the client side.
   std::vector<net::SourceStreamType> client_side_content_decoding_types_;

@@ -25,7 +25,6 @@
 #include "base/time/time.h"
 #include "base/timer/elapsed_timer.h"
 #include "base/trace_event/trace_event.h"
-#include "mojo/public/cpp/base/big_buffer.h"
 #include "mojo/public/cpp/bindings/pending_remote.h"
 #include "mojo/public/cpp/bindings/struct_ptr.h"
 #include "mojo/public/cpp/system/data_pipe.h"
@@ -121,8 +120,7 @@ class URLLoader::Context : public ResourceRequestClient {
       FollowRedirectCallback follow_redirect_callback) override;
   void OnReceivedResponse(
       network::mojom::URLResponseHeadPtr head,
-      mojo::ScopedDataPipeConsumerHandle body,
-      std::optional<mojo_base::BigBuffer> cached_metadata) override;
+      mojo::ScopedDataPipeConsumerHandle body) override;
   void OnTransferSizeUpdated(base::ByteSize transfer_size_diff) override;
   void OnCompletedRequest(
       const network::URLLoaderCompletionStatus& status) override;
@@ -346,8 +344,7 @@ void URLLoader::Context::OnReceivedRedirect(
 
 void URLLoader::Context::OnReceivedResponse(
     network::mojom::URLResponseHeadPtr head,
-    mojo::ScopedDataPipeConsumerHandle body,
-    std::optional<mojo_base::BigBuffer> cached_metadata) {
+    mojo::ScopedDataPipeConsumerHandle body) {
   if (!client_) {
     return;
   }
@@ -363,8 +360,7 @@ void URLLoader::Context::OnReceivedResponse(
 
   WebURLResponse response = WebURLResponse::Create(
       url_, *head, has_devtools_request_id_, request_id_);
-  client_->DidReceiveResponse(response, std::move(body),
-                              std::move(cached_metadata));
+  client_->DidReceiveResponse(response, std::move(body));
 }
 
 void URLLoader::Context::OnTransferSizeUpdated(

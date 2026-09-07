@@ -10,7 +10,6 @@
 #include <variant>
 #include <vector>
 
-#include "mojo/public/cpp/base/big_buffer.h"
 #include "mojo/public/cpp/system/data_pipe.h"
 #include "services/network/public/mojom/url_response_head.mojom-forward.h"
 #include "third_party/blink/public/platform/web_common.h"
@@ -38,8 +37,7 @@ class BLINK_PLATFORM_EXPORT BackgroundResponseProcessor {
     virtual ~Client() = default;
     virtual void DidFinishBackgroundResponseProcessor(
         network::mojom::URLResponseHeadPtr head,
-        BodyVariant body,
-        std::optional<mojo_base::BigBuffer> cached_metadata) = 0;
+        BodyVariant body) = 0;
     virtual void PostTaskToMainThread(CrossThreadOnceClosure task) = 0;
   };
 
@@ -49,14 +47,13 @@ class BLINK_PLATFORM_EXPORT BackgroundResponseProcessor {
   // false if `this` can synchronously decide not to process the response.
   // Otherwise returns true, and `Client::DidFinishBackgroundResponseProcessor`
   // will be asynchronously called on the background thread, with the passed
-  // `head` and `cached_metadata`. If `this` consumes the passed data pipe of
+  // `head`. If `this` consumes the passed data pipe of
   // `body`, `Client::DidFinishBackgroundResponseProcessor` will be called with
   // a Deque<Vector<char>> `body`. Otherwise, it will be called with the passed
   // data pipe handle `body`.
   virtual bool MaybeStartProcessingResponse(
       network::mojom::URLResponseHeadPtr& head,
       mojo::ScopedDataPipeConsumerHandle& body,
-      std::optional<mojo_base::BigBuffer>& cached_metadata,
       scoped_refptr<base::SequencedTaskRunner> background_task_runner,
       Client* client) = 0;
 };

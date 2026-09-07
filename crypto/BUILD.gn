@@ -15,39 +15,9 @@ buildflag_header("buildflags") {
   flags = [ "USE_NSS_CERTS=$use_nss_certs" ]
 }
 
-import("//build/rust/rust_static_library.gni")
-import("//build/rust/rust_unit_test.gni")
-
-rust_static_library("tpm") {
-  crate_root = "tpm.rs"
-  sources = [ "tpm.rs" ]
-  cxx_bindings = [ "tpm.rs" ]
-  visibility = [ ":*" ]
-
-  # Required for cxx bridge generated code.
-  allow_unsafe = true
-
-  deps = [ "//base" ]
-}
-
-rust_static_library("tpm_unittests") {
-  testonly = true
-  is_gtest_unittests = true
-  crate_root = "tpm_unittest.rs"
-  sources = [ "tpm_unittest.rs" ]
-  deps = [
-    ":tpm",
-    "//components/cbor",
-    "//testing/rust_gtest_interop",
-  ]
-}
-
 component("crypto") {
   output_name = "crcrypto"  # Avoid colliding with OpenSSL's libcrypto.
-  shot_jumbo_excluded_sources = [
-    "cose.cc",
-    "user_verifying_key.cc",
-  ]
+  shot_jumbo_excluded_sources = [ "cose.cc" ]
   sources = [
     "aead.cc",
     "aead.h",
@@ -64,8 +34,6 @@ component("crypto") {
     "encrypt.h",
     "evp.cc",
     "evp.h",
-    "features.cc",
-    "features.h",
     "hash.cc",
     "hash.h",
     "hmac.cc",
@@ -103,18 +71,9 @@ component("crypto") {
     "signature_verifier.h",
     "subtle_passkey.cc",
     "subtle_passkey.h",
-    "tpm_parser.cc",
-    "tpm_parser.h",
-    "unexportable_key.cc",
-    "unexportable_key.h",
-    "unexportable_key_metrics.cc",
-    "unexportable_key_metrics.h",
-    "unexportable_key_software_unsecure.cc",
-    "user_verifying_key.cc",
-    "user_verifying_key.h",
   ]
 
-  deps = [ ":tpm" ]
+  deps = []
 
   public_deps = [
     ":buildflags",
@@ -124,40 +83,30 @@ component("crypto") {
 
   if (is_apple) {
     sources += [
-      "apple/keychain_util.h",
-      "apple/keychain_util.mm",
-      "apple/keychain_v2.h",
-      "apple/keychain_v2.mm",
       "apple/scoped_keychain_user_interaction_allowed.cc",
       "apple/scoped_keychain_user_interaction_allowed.h",
     ]
 
     if (is_mac) {
       sources += [
-        "apple/scoped_lacontext.h",
-        "apple/scoped_lacontext.mm",
         "apple/security_framework_lock.cc",
         "apple/security_framework_lock.h",
-        "user_verifying_key_mac.mm",
       ]
     }
 
     if (!(is_ios && target_platform == "tvos")) {
-      sources += [
-        "apple/unexportable_key_apple.h",
-        "apple/unexportable_key_apple.mm",
-      ]
+      sources += []
     }
 
     frameworks = [
       "CoreFoundation.framework",
-      "CryptoTokenKit.framework",
+
       "Foundation.framework",
       "Security.framework",
     ]
 
     if (is_mac || (is_ios && target_platform != "tvos")) {
-      frameworks += [ "LocalAuthentication.framework" ]
+      frameworks += []
     }
   }
 
@@ -165,16 +114,12 @@ component("crypto") {
     sources += [
       "scoped_capi_types.h",
       "scoped_cng_types.h",
-      "unexportable_key_win.cc",
-      "unexportable_key_win.h",
-      "user_verifying_key_win.cc",
     ]
     libs = [
       "crypt32.lib",
       "ncrypt.lib",
-      "tbs.lib",
     ]
-    ldflags = [ "/DELAYLOAD:tbs.dll" ]
+    ldflags = []
   }
 
   # Some files are built when NSS is used for the platform certificate library.
@@ -202,33 +147,6 @@ component("crypto") {
   configs += [ "//build/config/compiler:wexit_time_destructors" ]
 }
 
-if (is_apple) {
-  # TODO(https://crbug.com/431952820): move this into a crypto/apple/BUILD.gn
-  source_set("mock_apple_keychain") {
-    sources = [
-      "apple/fake_keychain_v2.h",
-      "apple/fake_keychain_v2.mm",
-      "apple/scoped_fake_keychain_v2.h",
-      "apple/scoped_fake_keychain_v2.mm",
-    ]
-
-    deps = [
-      ":crypto",
-      "//base",
-    ]
-
-    frameworks = [
-      "CoreFoundation.framework",
-      "Foundation.framework",
-      "Security.framework",
-    ]
-
-    if (is_mac || (is_ios && target_platform != "tvos")) {
-      frameworks += [ "LocalAuthentication.framework" ]
-    }
-  }
-}
-
 test("crypto_unittests") {
   sources = [
     "aead_unittest.cc",
@@ -253,16 +171,11 @@ test("crypto_unittests") {
     "sha2_unittest.cc",
     "sign_unittest.cc",
     "signature_verifier_unittest.cc",
-    "tpm_parser_unittest.cc",
-    "unexportable_key_metrics_unittest.cc",
-    "unexportable_key_unittest.cc",
   ]
 
   deps = [
     ":crypto",
     ":test_support",
-    ":tpm",
-    ":tpm_unittests",
     "//base",
     "//base/test:run_all_unittests",
     "//base/test:test_support",
@@ -273,10 +186,7 @@ test("crypto_unittests") {
 
   if (is_apple) {
     if (!(is_ios && target_platform == "tvos")) {
-      sources += [
-        "apple/keychain_util_unittest.mm",
-        "apple/unexportable_key_apple_unittest.mm",
-      ]
+      sources += []
     }
   }
 
@@ -291,7 +201,7 @@ test("crypto_unittests") {
   }
 
   if (is_mac) {
-    sources += [ "user_verifying_key_mac_unittest.mm" ]
+    sources += []
   }
 
   # Some files are built when NSS is used for the platform certificate library.
@@ -308,7 +218,7 @@ test("crypto_unittests") {
   }
 
   if (is_apple) {
-    deps += [ ":mock_apple_keychain" ]
+    deps += []
   }
 
   configs += [ "//build/config/compiler:wexit_time_destructors" ]
@@ -317,16 +227,6 @@ test("crypto_unittests") {
 static_library("test_support") {
   testonly = true
   sources = [
-    "mock_unexportable_key.cc",
-    "mock_unexportable_key.h",
-    "mock_unexportable_key_provider.cc",
-    "mock_unexportable_key_provider.h",
-    "scoped_fake_unexportable_key_provider.cc",
-    "scoped_fake_unexportable_key_provider.h",
-    "scoped_fake_user_verifying_key_provider.cc",
-    "scoped_fake_user_verifying_key_provider.h",
-    "scoped_mock_unexportable_key_provider.cc",
-    "scoped_mock_unexportable_key_provider.h",
     "test_support.cc",
     "test_support.h",
   ]
@@ -350,10 +250,6 @@ static_library("test_support") {
 
   if (is_mac || is_ios) {
     sources += [
-      "apple/fake_keychain_v2.h",
-      "apple/fake_keychain_v2.mm",
-      "apple/scoped_fake_keychain_v2.h",
-      "apple/scoped_fake_keychain_v2.mm",
       "apple/test_helpers.h",
       "apple/test_helpers.mm",
     ]
@@ -364,7 +260,7 @@ static_library("test_support") {
     ]
 
     if (is_mac || (is_ios && target_platform != "tvos")) {
-      frameworks += [ "LocalAuthentication.framework" ]
+      frameworks += []
     }
   }
 

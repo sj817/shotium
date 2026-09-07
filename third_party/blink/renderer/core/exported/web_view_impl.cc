@@ -1956,17 +1956,6 @@ void WebView::ApplyWebPreferences(const web_pref::WebPreferences& prefs,
     RuntimeEnabledFeatures::SetAIWriterAPIEnabled(true);
   }
 
-#if BUILDFLAG(IS_MAC) && BUILDFLAG(USE_EXTERNAL_POPUP_MENU)
-  const bool use_external_popups = !prefs.should_disable_external_popups;
-  if (web_view_impl->GetChromeClient().UseExternalPopupMenus() !=
-      use_external_popups) {
-    // Switching between internal and external popups -- first, cancel any
-    // popups that are open.
-    web_view_impl->CancelPagePopup();
-  }
-  web_view_impl->GetChromeClient().SetUseExternalPopupMenus(
-      use_external_popups);
-#endif  // BUILDFLAG(IS_MAC) && BUILDFLAG(USE_EXTERNAL_POPUP_MENU)
 }
 
 void WebViewImpl::ThemeChanged() {

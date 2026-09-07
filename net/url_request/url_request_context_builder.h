@@ -31,12 +31,10 @@
 #include "base/task/task_traits.h"
 #include "build/build_config.h"
 #include "build/buildflag.h"
-#include "components/unexportable_keys/unexportable_key_service.h"
 #include "net/base/net_export.h"
 #include "net/base/network_delegate.h"
 #include "net/base/network_handle.h"
 #include "net/base/proxy_delegate.h"
-#include "net/device_bound_sessions/session_service.h"
 #include "net/disk_cache/disk_cache.h"
 #include "net/dns/dns_platform_attempt_factory.h"
 #include "net/dns/host_resolver.h"
@@ -78,13 +76,6 @@ class CacheEncryptionDelegate;
 struct ReportingPolicy;
 class PersistentReportingAndNelStore;
 #endif  // BUILDFLAG(ENABLE_REPORTING)
-
-#if BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
-namespace device_bound_sessions {
-class SessionService;
-struct CookieAccessCheckParams;
-}
-#endif  // BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
 
 // A URLRequestContextBuilder creates a single URLRequestContext. It provides
 // methods to manage various URLRequestContext components which should be called
@@ -401,64 +392,6 @@ class NET_EXPORT URLRequestContextBuilder {
     client_socket_factory_ = std::move(client_socket_factory);
   }
 
-#if BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
-  void set_device_bound_session_service(
-      std::unique_ptr<device_bound_sessions::SessionService>
-          device_bound_session_service);
-#endif  // BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
-
-  void set_has_device_bound_session_service(bool enable) {
-#if BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
-    has_device_bound_session_service_ = enable;
-#else
-    NOTREACHED();
-#endif  // BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
-  }
-
-  void set_device_bound_sessions_restricted_sites(
-      const std::vector<SchemefulSite>& restricted_sites) {
-#if BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
-    device_bound_sessions_restricted_sites_ = restricted_sites;
-#else
-    NOTREACHED();
-#endif  // BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
-  }
-
-#if BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
-  void set_device_bound_sessions_cookie_access_callback(
-      base::RepeatingCallback<bool(
-          const device_bound_sessions::CookieAccessCheckParams&)> callback) {
-    device_bound_sessions_cookie_access_callback_ = std::move(callback);
-  }
-#endif  // BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
-
-  // Must be called in conjunction with
-  // `set_has_device_bound_session_service(true)`.
-  void set_unexportable_key_service(
-      std::unique_ptr<unexportable_keys::UnexportableKeyService> uks) {
-#if BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
-    unexportable_key_service_ = std::move(uks);
-#else
-    NOTREACHED();
-#endif  // BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
-  }
-
-  void set_device_bound_sessions_file_path(
-      const base::FilePath& device_bound_sessions_file_path) {
-#if BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
-    device_bound_sessions_file_path_ = device_bound_sessions_file_path;
-#else
-    NOTREACHED();
-#endif  // BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
-  }
-
-#if BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
-  void set_device_bound_sessions_client_cert_handler(
-      device_bound_sessions::SelectClientCertificateHandler handler) {
-    device_bound_sessions_client_cert_handler_ = std::move(handler);
-  }
-#endif  // BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
-
   void set_cache_encryption_delegate(
       std::unique_ptr<net::CacheEncryptionDelegate> cache_encryption_delegate);
 
@@ -576,20 +509,6 @@ class NET_EXPORT URLRequestContextBuilder {
   std::map<std::string, std::unique_ptr<URLRequestJobFactory::ProtocolHandler>>
       protocol_handlers_;
   std::unique_ptr<net::CacheEncryptionDelegate> cache_encryption_delegate_;
-#if BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
-  bool has_device_bound_session_service_ = false;
-  std::vector<SchemefulSite> device_bound_sessions_restricted_sites_;
-  std::unique_ptr<unexportable_keys::UnexportableKeyService>
-      unexportable_key_service_;
-  std::unique_ptr<device_bound_sessions::SessionService>
-      device_bound_session_service_;
-  base::RepeatingCallback<bool(
-      const device_bound_sessions::CookieAccessCheckParams&)>
-      device_bound_sessions_cookie_access_callback_;
-  device_bound_sessions::SelectClientCertificateHandler
-      device_bound_sessions_client_cert_handler_;
-  base::FilePath device_bound_sessions_file_path_;
-#endif  // BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
   // When DnsTransaction receives AttemptMode == kPlatform, it uses
   // URLRequestContext::dns_platform_attempt_factory() to build the DnsAttempt
   // backed by platform-specific APIs. Having said that, currently only Android

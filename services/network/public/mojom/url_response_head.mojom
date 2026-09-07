@@ -9,7 +9,6 @@ import "mojo/public/mojom/base/unguessable_token.mojom";
 import "services/network/public/mojom/alternate_protocol_usage.mojom";
 import "services/network/public/mojom/auth.mojom";
 import "services/network/public/mojom/cors.mojom";
-import "services/network/public/mojom/device_bound_sessions.mojom";
 import "services/network/public/mojom/encoded_body_length.mojom";
 import "services/network/public/mojom/fetch_api.mojom";
 import "services/network/public/mojom/http_request_headers.mojom";
@@ -285,12 +284,6 @@ struct URLResponseHead {
   // See: https://fetch.spec.whatwg.org/#concept-http-network-fetch
   bool request_include_credentials = true;
 
-  // If this response contains JavaScript, then downstream components may cache
-  // the parsed bytecode, but must use a source hash comparison rather than the
-  // response time when determining whether the current version of the script
-  // matches the cached bytecode.
-  bool should_use_source_hash_for_js_code_cache = false;
-
   // True if the request included an available compression dictionary.
   bool did_send_available_dictionary = false;
 
@@ -309,10 +302,6 @@ struct URLResponseHead {
   // This is only non-empty if `client_side_content_decoding_enabled` was set to
   // true on the request.
   array<SourceType> client_side_content_decoding_types;
-
-  // Whether the request is in the scope of a device bound session.
-  DeviceBoundSessionUsage device_bound_session_usage =
-      DeviceBoundSessionUsage.kUnknown;
 
   // True if the synthetic response is used. This indicates the response headers
   // are returned with the locally storead headers. See crbug.com/352578800.

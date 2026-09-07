@@ -16,9 +16,8 @@ if (is_android) {
 
 mojom("dom_node_id") {
   generate_java = true
-  generate_legacy_js_bindings = true
+
   sources = [ "dom/dom_node_id.mojom" ]
-  webui_module_path = "/"
 
   cpp_typemaps = [
     {
@@ -1190,7 +1189,7 @@ mojom_component("web_feature_mojo_bindings") {
 # files because its deps contain too many files in Chromium that would pollute
 # the include paths in generated mojom-blink files for other services.
 mojom("embedded_frame_sink_mojo_bindings") {
-  visibility = [ "//content/*" ]
+  visibility = []
   visibility_blink = [ "//third_party/blink/renderer/platform" ]
   sources = [ "frame_sinks/embedded_frame_sink.mojom" ]
   deps = [ "//services/viz/public/mojom" ]
@@ -1208,10 +1207,7 @@ mojom("embedded_frame_sink_mojo_bindings") {
 }
 
 mojom("memory_usage_monitor_linux_mojo_bindings") {
-  visibility = [
-    "//content/browser",
-    "//third_party/blink/renderer/controller",
-  ]
+  visibility = [ "//third_party/blink/renderer/controller" ]
   visibility_blink = [ "//third_party/blink/renderer/controller:controller" ]
 
   sources = [ "memory_usage_monitor_linux.mojom" ]

@@ -35,7 +35,6 @@
 #include "base/memory_coordinator/memory_consumer.h"
 #include "base/task/single_thread_task_runner.h"
 #include "base/time/time.h"
-#include "mojo/public/cpp/base/big_buffer.h"
 #include "third_party/blink/public/platform/scheduler/web_scoped_virtual_time_pauser.h"
 #include "third_party/blink/renderer/platform/allow_discouraged_type.h"
 #include "third_party/blink/renderer/platform/bindings/parkable_string.h"
@@ -269,7 +268,6 @@ class PLATFORM_EXPORT Resource : public GarbageCollected<Resource>,
 
   size_t DecodedSize() const { return decoded_size_; }
   size_t OverheadSize() const { return overhead_size_; }
-  virtual size_t CodeCacheSize() const { return 0; }
 
   bool IsLoaded() const { return status_ > ResourceStatus::kPending; }
 
@@ -313,7 +311,6 @@ class PLATFORM_EXPORT Resource : public GarbageCollected<Resource>,
   // Sets the serialized metadata retrieved from the platform's cache.
   // The default implementation does nothing. Subclasses interested in the data
   // should implement the resource-specific behavior.
-  virtual void SetSerializedCachedMetadata(mojo_base::BigBuffer data);
 
   AtomicString HttpContentType() const;
 

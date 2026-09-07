@@ -1637,7 +1637,6 @@ mojom::CommitResult DocumentLoader::CommitSameDocumentNavigation(
     }
   }
 
-
   // We are about to dispatch `navigate`, `popstate`, and `hashchange`, then
   // eventually we commit the URL for soft-navigation-heuristics.  This value
   // ensures they all use the same id.
@@ -2914,7 +2913,6 @@ void DocumentLoader::CommitNavigation() {
 
   frame_->DomWindow()->SetCanvasNoiseToken(std::nullopt);
 
-
   MaybeStartLoadingBodyInBackground(body_loader_.get(), frame_, url_,
                                     response_);
 
@@ -3583,29 +3581,6 @@ void DocumentLoader::RecordUseCountersForCommit() {
     CountUse(WebFeature::kWindowOpenedAsPopupOnMobile);
   }
 #endif
-
-  if (response_.HttpHeaderField(http_names::kSecSessionRegistration) ||
-      response_.HttpHeaderField(http_names::kSecureSessionRegistration)) {
-    CountUse(WebFeature::kDeviceBoundSessionRegistered);
-  }
-
-  switch (response_.DeviceBoundSessionUsage()) {
-    case network::mojom::DeviceBoundSessionUsage::kDeferred:
-      CountUse(WebFeature::kDeviceBoundSessionRequestDeferral);
-      [[fallthrough]];
-    case network::mojom::DeviceBoundSessionUsage::kInScopeRefreshNotYetNeeded:
-    case network::mojom::DeviceBoundSessionUsage::kInScopeRefreshNotAllowed:
-    case network::mojom::DeviceBoundSessionUsage::
-        kInScopeProactiveRefreshNotPossible:
-    case network::mojom::DeviceBoundSessionUsage::
-        kInScopeProactiveRefreshAttempted:
-      CountUse(WebFeature::kDeviceBoundSessionRequestInScope);
-      break;
-    case network::mojom::DeviceBoundSessionUsage::kNoSiteMatchNotInScope:
-    case network::mojom::DeviceBoundSessionUsage::kSiteMatchNotInScope:
-    case network::mojom::DeviceBoundSessionUsage::kUnknown:
-      break;
-  }
 
   // At this point, the policy_container_ member has already been moved into the
   // window, so we need to retrieve it from its new location.

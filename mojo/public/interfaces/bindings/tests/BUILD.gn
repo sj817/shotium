@@ -14,8 +14,6 @@ if (is_ios) {
 group("test_data_deps") {
   testonly = true
   data_deps = [
-    ":test_associated_interfaces_js_data_deps",
-    ":test_interfaces_js_data_deps",
     ":validation_test_data",
     ":validation_test_data_list",
   ]
@@ -52,14 +50,11 @@ mojom("test_deserializer_interface") {
   testonly = true
   generate_java = true
   sources = [ "deserializer.test-mojom" ]
-  js_generate_struct_deserializers = true
 }
 
 mojom("test_interfaces") {
   testonly = true
   generate_java = true
-  webui_module_path = "/"
-  generate_legacy_js_bindings = true
 
   sources = [
     "math_calculator.test-mojom",
@@ -282,8 +277,7 @@ mojom("test_export2") {
 mojom("test_mojom_import") {
   testonly = true
   generate_java = true
-  webui_module_path = "/"
-  generate_legacy_js_bindings = true
+
   sources = [ "sample_import.test-mojom" ]
 }
 
@@ -302,8 +296,7 @@ mojom("test_mojom_import_wrapper_wrapper") {
 mojom("test_mojom_import2") {
   testonly = true
   generate_java = true
-  webui_module_path = "/"
-  generate_legacy_js_bindings = true
+
   sources = [ "sample_import2.test-mojom" ]
   public_deps = [
     ":test_mojom_import",
@@ -429,7 +422,6 @@ group("test_generation") {
   testonly = true
   deps = [
     ":other_test_interfaces",
-    ":other_test_interfaces_js",
   ]
 
   if (is_android) {

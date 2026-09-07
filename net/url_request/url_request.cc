@@ -1436,12 +1436,6 @@ void URLRequest::SetIsSharedDictionaryReadAllowedCallback(
   is_shared_dictionary_read_allowed_callback_ = std::move(callback);
 }
 
-void URLRequest::SetDeviceBoundSessionAccessCallback(
-    base::RepeatingCallback<void(const device_bound_sessions::SessionAccess&)>
-        callback) {
-  device_bound_session_access_callback_ = std::move(callback);
-}
-
 void URLRequest::set_socket_tag(const SocketTag& socket_tag) {
   DCHECK(!is_pending_);
   DCHECK(url().SchemeIsHTTPOrHTTPS());

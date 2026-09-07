@@ -36,7 +36,6 @@
 #include <vector>
 
 #include "base/time/time.h"
-#include "mojo/public/cpp/base/big_buffer.h"
 #include "mojo/public/cpp/system/data_pipe.h"
 #include "net/http/http_request_headers.h"
 #include "services/network/public/mojom/referrer_policy.mojom-shared.h"
@@ -89,8 +88,7 @@ class BLINK_PLATFORM_EXPORT URLLoaderClient {
   // Called when response are received.
   virtual void DidReceiveResponse(
       const WebURLResponse&,
-      std::variant<mojo::ScopedDataPipeConsumerHandle, SegmentedBuffer>,
-      std::optional<mojo_base::BigBuffer> cached_metadata) {}
+      std::variant<mojo::ScopedDataPipeConsumerHandle, SegmentedBuffer>) {}
 
   // Called when a chunk of response data is received. |data_length| is the
   // number of bytes pointed to by |data|. This is used only for testing to

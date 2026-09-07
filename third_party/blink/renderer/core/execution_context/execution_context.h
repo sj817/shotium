@@ -129,8 +129,6 @@ class CORE_EXPORT ExecutionContext : public Supplementable<ExecutionContext>,
 
   void Trace(Visitor*) const override;
 
-
-
   virtual bool IsWindow() const { return false; }
   virtual bool IsWorkerOrWorkletGlobalScope() const { return false; }
   virtual bool IsWorkerGlobalScope() const { return false; }
@@ -312,7 +310,6 @@ class CORE_EXPORT ExecutionContext : public Supplementable<ExecutionContext>,
   virtual FrameOrWorkerScheduler* GetScheduler() = 0;
 
   Agent* GetAgent() const { return agent_.Get(); }
-
 
   OriginTrialContext* GetOriginTrialContext() const {
     return origin_trial_context_.Get();
@@ -509,7 +506,6 @@ class CORE_EXPORT ExecutionContext : public Supplementable<ExecutionContext>,
       std::optional<mojom::ConsoleMessageCategory> category) override;
   void AddConsoleMessageImpl(ConsoleMessage*,
                              bool discard_duplicates) override = 0;
-
 
   SecurityContext security_context_;
 

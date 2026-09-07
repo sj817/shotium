@@ -85,9 +85,6 @@ mojom("content_settings_types") {
   sources = [ "content_settings_types.mojom" ]
 
   public_deps = [ "//mojo/public/mojom/base" ]
-
-  webui_module_path = "/"
-  generate_legacy_js_bindings = true
 }
 
 mojom("content_settings_enums") {
@@ -95,9 +92,6 @@ mojom("content_settings_enums") {
   sources = [ "content_settings_enums.mojom" ]
 
   public_deps = [ "//mojo/public/mojom/base" ]
-
-  webui_module_path = "/"
-  generate_legacy_js_bindings = true
 }
 
 mojom("mojo_bindings") {
@@ -109,9 +103,6 @@ mojom("mojo_bindings") {
     ":content_settings_types",
     "//mojo/public/mojom/base",
   ]
-
-  webui_module_path = "/"
-  generate_legacy_js_bindings = true
 
   cpp_typemaps = [
     {

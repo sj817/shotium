@@ -678,8 +678,6 @@ mojom("gpu_preferences_interface") {
 if (enable_vulkan) {
   mojom("vulkan_interface") {
     generate_java = true
-    webui_module_path = "/"
-    generate_legacy_js_bindings = true
 
     sources = [
       "vulkan_info.mojom",
@@ -687,8 +685,6 @@ if (enable_vulkan) {
     ]
 
     public_deps = [ "//mojo/public/mojom/base" ]
-
-    js_generate_struct_deserializers = true
 
     # This imports the |generated_vulkan_type_mappings| definition used below.
     import("//gpu/ipc/common/generated_vulkan_type_mappings.gni")

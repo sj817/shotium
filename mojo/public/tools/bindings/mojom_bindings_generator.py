@@ -50,11 +50,8 @@ from mojom.generate.generator import WriteFile
 
 _BUILTIN_GENERATORS = {
   "c++": "mojom_cpp_generator",
-  "fuzzilli": "mojom_fuzzilli_generator",
-  "javascript": "mojom_js_generator",
   "java": "mojom_java_generator",
   "mojolpm": "mojom_mojolpm_generator",
-  "typescript": "mojom_ts_generator",
   "rust": "mojom_rust_generator",
 }
 
@@ -289,14 +286,12 @@ class MojomProcessor:
           variant=args.variant,
           bytecode_path=args.bytecode_path,
           for_blink=args.for_blink,
-          js_generate_struct_deserializers=args.js_generate_struct_deserializers,
           export_attribute=args.export_attribute,
           export_header=args.export_header,
           generate_non_variant_code=args.generate_non_variant_code,
           disallow_native_types=args.disallow_native_types,
           disallow_interfaces=args.disallow_interfaces,
           generate_message_ids=args.generate_message_ids,
-          generate_fuzzing=args.generate_fuzzing,
           enable_kythe_annotations=args.enable_kythe_annotations,
           extra_cpp_template_paths=args.extra_cpp_template_paths,
           generate_extra_cpp_only=args.generate_extra_cpp_only,
@@ -447,7 +442,7 @@ def main():
     "--generators",
     dest="generators_string",
     metavar="GENERATORS",
-    default="c++,javascript,java,mojolpm",
+    default="c++,java,mojolpm",
     help="comma-separated list of generators",
   )
   generate_parser.add_argument(
@@ -503,12 +498,6 @@ def main():
     "--for_blink",
     action="store_true",
     help="Use WTF types as generated types for mojo string/array/map.",
-  )
-  generate_parser.add_argument(
-    "--js_generate_struct_deserializers",
-    action="store_true",
-    help="Generate javascript deserialize methods for structs in "
-    "mojom-lite.js file",
   )
   generate_parser.add_argument(
     "--export_attribute",
@@ -571,11 +560,6 @@ def main():
     "this flag only matters if --generate_non_variant_code is also "
     "specified.",
     action="store_true",
-  )
-  generate_parser.add_argument(
-    "--generate_fuzzing",
-    action="store_true",
-    help="Generates additional bindings for fuzzing in JS.",
   )
   generate_parser.add_argument(
     "--enable_kythe_annotations",

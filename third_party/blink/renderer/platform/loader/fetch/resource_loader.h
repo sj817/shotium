@@ -35,7 +35,6 @@
 #include "base/containers/span.h"
 #include "base/task/single_thread_task_runner.h"
 #include "base/time/time.h"
-#include "mojo/public/cpp/base/big_buffer.h"
 #include "services/network/public/mojom/fetch_api.mojom-blink-forward.h"
 #include "third_party/blink/public/mojom/blob/blob_registry.mojom-blink.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
@@ -136,8 +135,7 @@ class PLATFORM_EXPORT ResourceLoader final
                    uint64_t total_bytes_to_be_sent) override;
   void DidReceiveResponse(
       const WebURLResponse&,
-      std::variant<mojo::ScopedDataPipeConsumerHandle, SegmentedBuffer>,
-      std::optional<mojo_base::BigBuffer> cached_metadata) override;
+      std::variant<mojo::ScopedDataPipeConsumerHandle, SegmentedBuffer>) override;
   void DidReceiveDataForTesting(base::span<const char> data) override;
   void DidReceiveTransferSizeUpdate(int transfer_size_diff) override;
   void DidFinishLoading(base::TimeTicks response_end_time,
@@ -204,8 +202,7 @@ class PLATFORM_EXPORT ResourceLoader final
   void Dispose();
 
   void DidReceiveResponseInternal(
-      const ResourceResponse&,
-      std::optional<mojo_base::BigBuffer> cached_metadata);
+      const ResourceResponse&);
 
   void DidStartLoadingResponseBodyInternal(BytesConsumer& bytes_consumer);
 

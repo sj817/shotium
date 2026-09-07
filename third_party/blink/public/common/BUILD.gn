@@ -105,7 +105,6 @@ source_set("headers") {
     "//chrome/*",
     "//chromecast/*",
     "//components/*",
-    "//content/*",
     "//fuchsia/*",
     "//services/*",
     "//storage/*",

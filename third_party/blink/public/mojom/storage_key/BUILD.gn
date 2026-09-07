@@ -50,9 +50,4 @@ mojom("storage_key") {
   export_header_blink = "third_party/blink/renderer/platform/platform_export.h"
 
   generate_java = true
-
-  webui_module_path = "/"
-
-  # Used from other Blink locations that rely on legacy bindings.
-  generate_legacy_js_bindings = true
 }

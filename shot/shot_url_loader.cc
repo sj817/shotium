@@ -335,8 +335,7 @@ void ShotURLLoader::DeliverBody(blink::URLLoaderClient* client,
   body_ = std::move(contents);
   body_charge_ = std::move(charge);
   const int64_t size = static_cast<int64_t>(body_.size());
-  client->DidReceiveResponse(response, std::move(consumer),
-                             /*cached_metadata=*/std::nullopt);
+  client->DidReceiveResponse(response, std::move(consumer));
 
   // DataPipeProducer owns the chunking and the writable-watcher loop, so a body
   // larger than the pipe's capacity is written in as many passes as it takes

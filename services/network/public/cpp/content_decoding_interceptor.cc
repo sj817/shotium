@@ -169,8 +169,7 @@ class Interceptor : public network::mojom::URLLoaderClient,
   }
   void OnReceiveResponse(
       network::mojom::URLResponseHeadPtr response_head,
-      mojo::ScopedDataPipeConsumerHandle body,
-      std::optional<mojo_base::BigBuffer> cached_metadata) override {
+      mojo::ScopedDataPipeConsumerHandle body) override {
     // `this` is created after receiving a response. So OnReceiveResponse()
     // must not be called.
     NOTREACHED();

@@ -10,7 +10,6 @@ import("//build/config/python.gni")
 import("//build/config/ui.gni")
 import("//build/nocompile.gni")
 import("//build/toolchain/toolchain.gni")
-import("//content/public/common/features.gni")
 import("//media/media_options.gni")
 import("//testing/libfuzzer/fuzzer_test.gni")
 import("//third_party/blink/renderer/build/scripts/scripts.gni")
@@ -115,10 +114,7 @@ config("core_include_dirs") {
 
 buildflag_header("buildflags") {
   header = "buildflags.h"
-  flags = [
-    "TARGET_OS_IS_ANDROID=$target_os_is_android",
-    "USE_EXTERNAL_POPUP_MENU=$use_external_popup_menu",
-  ]
+  flags = [ "TARGET_OS_IS_ANDROID=$target_os_is_android" ]
 }
 
 import("//build/config/pch.gni")
@@ -248,6 +244,7 @@ component("core") {
     "css/clip_path_paint_image_generator.cc",
     "css/css_primitive_value.cc",
     "css/properties/css_direction_aware_resolver.cc",
+
     # Its PreviousPositionOfAlgorithm template is at namespace scope, and
     # visible_units.cc has a file-static one of the same name; at 64 sources
     # per unit the two land together and every call in visible_units.cc is
@@ -260,6 +257,7 @@ component("core") {
     "layout/mathml/math_scripts_layout_algorithm.cc",
     "layout/svg/layout_svg_rect.cc",
     "paint/highlight_painter.cc",
+
     # Defines IsLinkHighlighted at namespace scope, as does
     # paint_property_tree_builder.cc; the mac source list put both in one
     # jumbo unit.
@@ -1325,7 +1323,6 @@ source_set("unit_tests") {
     ":unit_test_support",
     "//cc",
     "//components/viz/test:test_support",
-    "//content/test:test_support",
     "//gpu/command_buffer/client:raster",
     "//gpu/config",
     "//mojo/public/cpp/system",
@@ -1453,7 +1450,6 @@ source_set("unit_test_support") {
 
   deps = [
     ":core",
-    "//content/test:test_support",
     "//testing/gmock",
     "//testing/gtest",
     "//third_party/blink/renderer/core:testing",

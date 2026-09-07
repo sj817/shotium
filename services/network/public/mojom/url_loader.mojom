@@ -4,7 +4,6 @@
 
 module network.mojom;
 
-import "mojo/public/mojom/base/big_buffer.mojom";
 import "services/network/public/mojom/early_hints.mojom";
 import "services/network/public/mojom/http_request_headers.mojom";
 import "services/network/public/mojom/request_priority.mojom";
@@ -62,16 +61,13 @@ interface URLLoaderClient {
   // Called when the response head is received.
   // The loader is expected to close its end of the pipe after finishing
   // writing the body, so that the client knows when it is done reading.
-  // Optionally, the response can contain cached metadata, such as a V8 code
-  // cache.
   // The client must not discard the data pipe until the OnComplete IPC arrives,
   // even if it knows the body is empty. Otherwise, the request will be handled
   // as cancelled.
   //
   // Called at most once.
   OnReceiveResponse(URLResponseHead head,
-                    handle<data_pipe_consumer>? body,
-                    mojo_base.mojom.BigBuffer? cached_metadata);
+                    handle<data_pipe_consumer>? body);
 
   // Called when the request has been redirected. The receiver is expected to
   // call FollowRedirect or cancel the request.

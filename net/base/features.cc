@@ -403,51 +403,6 @@ BASE_FEATURE(kUseNetworkPathMonitorForNetworkChangeNotifier,
 );
 #endif  // BUILDFLAG(IS_APPLE)
 
-#if BUILDFLAG(IS_WIN)
-BASE_FEATURE(kDeviceBoundSessions, base::FEATURE_ENABLED_BY_DEFAULT);
-#else
-BASE_FEATURE(kDeviceBoundSessions, base::FEATURE_DISABLED_BY_DEFAULT);
-#endif
-BASE_FEATURE(kDeviceBoundSessionsBypassDeferralsForRefreshRequests,
-             base::FEATURE_DISABLED_BY_DEFAULT);
-BASE_FEATURE(kDeviceBoundSessionsRetryTransientRefreshErrors,
-             base::FEATURE_DISABLED_BY_DEFAULT);
-BASE_FEATURE_PARAM(bool,
-                   kDeviceBoundSessionsSigningQuota,
-                   &kDeviceBoundSessions,
-                   "RefreshQuota",
-                   true);
-BASE_FEATURE_PARAM(bool,
-                   kDeviceBoundSessionsCheckSubdomainRegistration,
-                   &kDeviceBoundSessions,
-                   "CheckSubdomainRegistration",
-                   true);
-BASE_FEATURE_PARAM(int,
-                   kDeviceBoundSessionsSchemaVersion,
-                   &kDeviceBoundSessions,
-                   "SchemaVersion",
-                   3);
-
-BASE_FEATURE(kDeviceBoundSessionsFederatedRegistration,
-             base::FEATURE_ENABLED_BY_DEFAULT);
-BASE_FEATURE_PARAM(bool,
-                   kDeviceBoundSessionsFederatedRegistrationCheckWellKnown,
-                   &kDeviceBoundSessionsFederatedRegistration,
-                   "CheckWellKnown",
-                   true);
-
-BASE_FEATURE(kDeviceBoundSessionsForRestrictedSites,
-             base::FEATURE_DISABLED_BY_DEFAULT);
-
-BASE_FEATURE(kDeviceBoundSessionsClientCertSelection,
-             base::FEATURE_ENABLED_BY_DEFAULT);
-
-BASE_FEATURE(kDeviceBoundSessionsForSingleSignOn,
-             base::FEATURE_DISABLED_BY_DEFAULT);
-
-BASE_FEATURE(kDeviceBoundSessionsPersistExpiryOnRefresh,
-             base::FEATURE_ENABLED_BY_DEFAULT);
-
 BASE_FEATURE(kSpdySessionForProxyAdditionalChecks,
              base::FEATURE_ENABLED_BY_DEFAULT);
 
@@ -494,7 +449,6 @@ BASE_FEATURE_PARAM(bool,
                    kDiskCacheBackendResetCacheOnGroupChange,
                    &kDiskCacheBackendExperiment,
                    false);
-
 
 BASE_FEATURE(kIgnoreHSTSForLocalhost, base::FEATURE_ENABLED_BY_DEFAULT);
 

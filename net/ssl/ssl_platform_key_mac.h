@@ -8,7 +8,6 @@
 #include <Security/SecBase.h>
 
 #include "base/memory/scoped_refptr.h"
-#include "crypto/unexportable_key.h"
 #include "net/base/net_export.h"
 
 namespace net {
@@ -21,11 +20,6 @@ class X509Certificate;
 NET_EXPORT scoped_refptr<SSLPrivateKey> CreateSSLPrivateKeyForSecKey(
     const X509Certificate* certificate,
     SecKeyRef key);
-
-// Returns an `SSLPrivateKey` backed by the platform private key contained in
-// `unexportable_key`.
-NET_EXPORT scoped_refptr<SSLPrivateKey> WrapUnexportableKey(
-    const crypto::UnexportableSigningKey& unexportable_key);
 
 }  // namespace net
 

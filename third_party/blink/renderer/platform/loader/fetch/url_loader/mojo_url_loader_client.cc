@@ -59,24 +59,20 @@ class MojoURLLoaderClient::DeferredOnReceiveResponse final
   explicit DeferredOnReceiveResponse(
       network::mojom::URLResponseHeadPtr response_head,
       mojo::ScopedDataPipeConsumerHandle body,
-      std::optional<mojo_base::BigBuffer> cached_metadata,
       base::TimeTicks response_ipc_arrival_time)
       : response_head_(std::move(response_head)),
         body_(std::move(body)),
-        cached_metadata_(std::move(cached_metadata)),
         response_ipc_arrival_time_(response_ipc_arrival_time) {}
 
   void HandleMessage(ResourceRequestSender* resource_request_sender) override {
     resource_request_sender->OnReceivedResponse(
-        std::move(response_head_), std::move(body_),
-        std::move(cached_metadata_), response_ipc_arrival_time_);
+        std::move(response_head_), std::move(body_), response_ipc_arrival_time_);
   }
   bool IsCompletionMessage() const override { return false; }
 
  private:
   network::mojom::URLResponseHeadPtr response_head_;
   mojo::ScopedDataPipeConsumerHandle body_;
-  std::optional<mojo_base::BigBuffer> cached_metadata_;
   const base::TimeTicks response_ipc_arrival_time_;
 };
 
@@ -117,7 +113,6 @@ class MojoURLLoaderClient::DeferredOnUploadProgress final
   const int64_t current_;
   const int64_t total_;
 };
-
 
 class MojoURLLoaderClient::DeferredOnComplete final : public DeferredMessage {
  public:
@@ -304,8 +299,7 @@ void MojoURLLoaderClient::OnReceiveEarlyHints(
 
 void MojoURLLoaderClient::OnReceiveResponse(
     network::mojom::URLResponseHeadPtr response_head,
-    mojo::ScopedDataPipeConsumerHandle body,
-    std::optional<mojo_base::BigBuffer> cached_metadata) {
+    mojo::ScopedDataPipeConsumerHandle body) {
   TRACE_EVENT1("loading", "MojoURLLoaderClient::OnReceiveResponse", "url",
                last_loaded_url_.GetString().Utf8());
 
@@ -320,7 +314,7 @@ void MojoURLLoaderClient::OnReceiveResponse(
   base::WeakPtr<MojoURLLoaderClient> weak_this = weak_factory_.GetWeakPtr();
   if (!NeedsStoringMessage()) {
     resource_request_sender_->OnReceivedResponse(
-        std::move(response_head), std::move(body), std::move(cached_metadata),
+        std::move(response_head), std::move(body),
         response_ipc_arrival_time);
     return;
   }
@@ -345,7 +339,7 @@ void MojoURLLoaderClient::OnReceiveResponse(
     body = std::move(new_body_consumer);
   }
   StoreAndDispatch(std::make_unique<DeferredOnReceiveResponse>(
-      std::move(response_head), std::move(body), std::move(cached_metadata),
+      std::move(response_head), std::move(body),
       response_ipc_arrival_time));
 }
 

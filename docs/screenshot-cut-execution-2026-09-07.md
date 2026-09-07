@@ -32,6 +32,31 @@
 
 中间曾遇到临时源码复制保留旧时间戳，导致 Ninja 漏编加载器对象、运行时新旧接口混用。已刷新所有修改过的 C++ 文件和头文件时间戳、重新构建，并通过上述运行检查。后续临时区改动使用重新写入内容的方式落盘，不沿用临时文件时间戳。
 
+第一批提交：`71ebd6e65771`。
+
+## 第二批：硬件认证、脚本缓存传输和失效构建骨架
+
+删除设备绑定会话的整个网络实现、协议、traits、URLRequest/HTTPJob/Blink 调用链，以及 `components/unexportable_keys`、TPM Rust 解析器、不可导出密钥、用户验证密钥和专用 Apple Keychain 包装。正常 HTTPS、系统证书、TLS 私钥适配和基本密码算法保留。WebFeature 中三个历史编号仅为枚举身份，不再对应实现。
+
+继续清除脚本编译缓存的传输尾巴：URLLoaderClient 的缓存载荷参数、各级回调/转发、Resource 的缓存元数据方法和统计、JS 源码哈希开关均删除。字体响应处理仍处理字体内容本身。
+
+实际删除根目录 `content/`、`google_apis/`、`extensions/`；删除 components 下 15 组只有构建骨架的浏览器设施，以及 ui 下 aura、compositor、menus、webui 等空壳、cert_verifier/test 服务空壳。对应 import、deps、构建开关和 WebUI 资源条件一起清理。
+
+删除 Mojo JS/TS/Fuzzilli 生成器、目标、调用选项、预编译模板、测试目标的失效生成依赖，以及 `mojo/public/js/`、`tools/typescript/`。C++、Rust 和仍有调用的生成工具保留。
+
+| 项目 | 第二批实测结果 |
+|---|---|
+| Windows GN | 6,988 个目标 / 874 个输入构建文件 |
+| 缺失输入 | 7,466 个源码树输入全部存在 |
+| Windows 编译 | EXE / DLL 均通过，0 FAILED、0 编译诊断 |
+| serve / net / demos | 全通过；84 个 demos 全通过，含实际 HTTPS |
+| 删除前后图片 | 169 张 demos、4 张 render cases、1 张 corpus 共 174 张全部逐字节相同 |
+| Node / daemon / daemon protocol / Bilibili | 用本轮重建的 addon 和 DLL，全部通过 |
+| Linux probe | 0 缺少的 BUILD.gn、0 主仓库缺失文件；宿主后缀及 3 个未安装的 Linux DEPS 仍只是本机探测限制 |
+| 六平台实编译 | 待最终批次验证，不把本地测试提升为跨平台通过 |
+
+第二批日志前缀：`out/Shot/cut-batch2-combined-`；图片证据：`out/cut-batch2-combined/pixel-comparison.json`。
+
 ## 后续批次
 
-第二批已在临时区准备设备绑定会话、TPM、用户验证/不可导出密钥及其网络和 Blink 协议链的删除。其余根目录构建空壳、输入/合成器/GPU/media 等混合目标仍在清理范围内。此记录不把“待处理”或“已关闭开关”标为“已彻底删除”。
+第三批正在处理 device、printing、Chrome 版本路径、cc 微基准及其他剩余依赖。输入/合成器/GPU/media 等混合目标仍在清理范围内。此记录不把“待处理”或“已关闭开关”标为“已彻底删除”。

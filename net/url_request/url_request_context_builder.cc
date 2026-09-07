@@ -70,11 +70,6 @@
 #include "net/ssl/ech_mode_getter_android.h"
 #endif  // BUILDFLAG(IS_ANDROID)
 
-#if BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
-#include "net/device_bound_sessions/session_service.h"
-#include "net/device_bound_sessions/session_store.h"
-#endif  // BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
-
 namespace net {
 
 URLRequestContextBuilder::HttpCacheParams::HttpCacheParams() = default;
@@ -246,14 +241,6 @@ void URLRequestContextBuilder::SetWrapHttpNetworkLayerCallback(
   wrap_http_network_layer_callback_ =
       std::move(wrap_http_network_layer_callback);
 }
-
-#if BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
-void URLRequestContextBuilder::set_device_bound_session_service(
-    std::unique_ptr<device_bound_sessions::SessionService>
-        device_bound_session_service) {
-  device_bound_session_service_ = std::move(device_bound_session_service);
-}
-#endif  // BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
 
 void URLRequestContextBuilder::set_cache_encryption_delegate(
     std::unique_ptr<net::CacheEncryptionDelegate> cache_encryption_delegate) {
@@ -487,31 +474,6 @@ std::unique_ptr<URLRequestContext> URLRequestContextBuilder::Build() {
         context->reporting_service());
   }
 #endif  // BUILDFLAG(ENABLE_REPORTING)
-
-#if BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
-  if (has_device_bound_session_service_) {
-    if (unexportable_key_service_) {
-      context->set_unexportable_key_service(
-          std::move(unexportable_key_service_));
-    }
-    if (!device_bound_sessions_file_path_.empty()) {
-      context->set_device_bound_session_store(
-          device_bound_sessions::SessionStore::Create(
-              device_bound_sessions_file_path_,
-              context->unexportable_key_service()));
-    }
-    context->set_device_bound_session_service(
-        device_bound_sessions::SessionService::Create(
-            context.get(), device_bound_sessions_restricted_sites_,
-            std::move(device_bound_sessions_client_cert_handler_),
-            std::move(device_bound_sessions_cookie_access_callback_)));
-  } else {
-    if (device_bound_session_service_) {
-      context->set_device_bound_session_service(
-          std::move(device_bound_session_service_));
-    }
-  }
-#endif  // BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
 
   HttpNetworkSessionContext network_session_context;
   // Unlike the other fields of HttpNetworkSession::Context,

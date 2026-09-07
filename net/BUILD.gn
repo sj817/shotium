@@ -82,7 +82,7 @@ buildflag_header("buildflags") {
     "CHROME_ROOT_STORE_OPTIONAL=$chrome_root_store_optional",
     "CHROME_ROOT_STORE_ONLY=$chrome_root_store_only",
     "CHROME_ROOT_STORE_SUPPORTED=$chrome_root_store_supported",
-    "ENABLE_DEVICE_BOUND_SESSIONS=$enable_device_bound_sessions",
+
     "ENABLE_BRACKETED_PROXY_URIS=$enable_bracketed_proxy_uris",
     "ENABLE_QUIC_PROXY_SUPPORT=$enable_quic_proxy_support",
   ]
@@ -111,12 +111,6 @@ buildflag_header("cronet_buildflags") {
   header = "cronet_buildflags.h"
   header_dir = "net/base"
   flags = [ "CRONET_BUILD=$is_cronet_build" ]
-}
-
-
-proto_library("device_bound_sessions_storage_proto") {
-  proto_in_dir = "//"
-  sources = [ "device_bound_sessions/proto/storage.proto" ]
 }
 
 source_set("net_features") {
@@ -466,36 +460,6 @@ component("net") {
     "cookies/static_cookie_policy.h",
     "cookies/unique_cookie_key.cc",
     "cookies/unique_cookie_key.h",
-    "device_bound_sessions/challenge_result.h",
-    "device_bound_sessions/cookie_craving_display.cc",
-    "device_bound_sessions/cookie_craving_display.h",
-    "device_bound_sessions/deletion_reason.h",
-    "device_bound_sessions/failed_request.cc",
-    "device_bound_sessions/failed_request.h",
-    "device_bound_sessions/inclusion_result.h",
-    "device_bound_sessions/session_access.cc",
-    "device_bound_sessions/session_access.h",
-    "device_bound_sessions/session_display.cc",
-    "device_bound_sessions/session_display.h",
-
-    # session_event.cc constructs and destroys SessionError unconditionally, so
-    # its definition has to be here rather than behind
-    # enable_device_bound_sessions -- with the feature off the build compiled
-    # the user and dropped the definition, and only the link found out.
-    # session_error.cc needs nothing but base/notreached.h and refresh_result.h,
-    # so moving it costs nothing.
-    "device_bound_sessions/session_error.cc",
-    "device_bound_sessions/session_error.h",
-    "device_bound_sessions/session_event.cc",
-    "device_bound_sessions/session_event.h",
-    "device_bound_sessions/session_inclusion_rules_display.cc",
-    "device_bound_sessions/session_inclusion_rules_display.h",
-    "device_bound_sessions/session_key.h",
-    "device_bound_sessions/session_params.h",
-    "device_bound_sessions/session_usage.cc",
-    "device_bound_sessions/session_usage.h",
-    "device_bound_sessions/url_rule_display.cc",
-    "device_bound_sessions/url_rule_display.h",
     "disk_cache/backend_cleanup_tracker.cc",
     "disk_cache/backend_cleanup_tracker.h",
     "disk_cache/backend_experiment.cc",
@@ -1098,7 +1062,6 @@ component("net") {
     "storage_access_api/status.h",
     "url_request/clear_site_data.cc",
     "url_request/clear_site_data.h",
-    "url_request/device_bound_session_mode.h",
     "url_request/redirect_info.cc",
     "url_request/redirect_info.h",
     "url_request/redirect_util.cc",
@@ -1223,57 +1186,6 @@ component("net") {
       "reporting/reporting_target_type.h",
       "reporting/reporting_uploader.cc",
       "reporting/reporting_uploader.h",
-    ]
-  }
-
-  if (enable_device_bound_sessions) {
-    sources += [
-      "device_bound_sessions/cookie_access_check_params.h",
-      "device_bound_sessions/cookie_craving.cc",
-      "device_bound_sessions/cookie_craving.h",
-      "device_bound_sessions/dbsc_request.cc",
-      "device_bound_sessions/dbsc_request.h",
-      "device_bound_sessions/host_patterns.cc",
-      "device_bound_sessions/host_patterns.h",
-      "device_bound_sessions/jwk_utils.cc",
-      "device_bound_sessions/jwk_utils.h",
-      "device_bound_sessions/refresh_result.h",
-      "device_bound_sessions/registration_fetcher.cc",
-      "device_bound_sessions/registration_fetcher.h",
-      "device_bound_sessions/registration_fetcher_param.cc",
-      "device_bound_sessions/registration_fetcher_param.h",
-      "device_bound_sessions/registration_request_param.cc",
-      "device_bound_sessions/registration_request_param.h",
-      "device_bound_sessions/registration_result.cc",
-      "device_bound_sessions/registration_result.h",
-      "device_bound_sessions/session.cc",
-      "device_bound_sessions/session.h",
-      "device_bound_sessions/session_binding_utils.cc",
-      "device_bound_sessions/session_binding_utils.h",
-      "device_bound_sessions/session_challenge_param.cc",
-      "device_bound_sessions/session_challenge_param.h",
-      "device_bound_sessions/session_inclusion_rules.cc",
-      "device_bound_sessions/session_inclusion_rules.h",
-      "device_bound_sessions/session_json_utils.cc",
-      "device_bound_sessions/session_json_utils.h",
-      "device_bound_sessions/session_service.cc",
-      "device_bound_sessions/session_service.h",
-      "device_bound_sessions/session_service_impl.cc",
-      "device_bound_sessions/session_service_impl.h",
-      "device_bound_sessions/session_store.cc",
-      "device_bound_sessions/session_store.h",
-      "device_bound_sessions/session_store_impl.cc",
-      "device_bound_sessions/session_store_impl.h",
-      "device_bound_sessions/unexportable_key_service_factory.cc",
-      "device_bound_sessions/unexportable_key_service_factory.h",
-      "device_bound_sessions/url_fetcher.cc",
-      "device_bound_sessions/url_fetcher.h",
-    ]
-
-    deps += [
-      ":device_bound_sessions_storage_proto",
-      "//build:branding_buildflags",
-      "//components/unexportable_keys",
     ]
   }
 
@@ -1803,7 +1715,6 @@ component("net") {
   if (!is_cronet_build) {
     deps += [ "//mojo/public/cpp/bindings:default_construct_tag" ]
   }
-
 }
 
 # Private dependencies for the //net component and for any build targets (e.g.
@@ -2078,8 +1989,6 @@ static_library("test_support") {
     "cookies/cookie_store_unittest.h",
     "cookies/test_cookie_access_delegate.cc",
     "cookies/test_cookie_access_delegate.h",
-    "device_bound_sessions/test_support.cc",
-    "device_bound_sessions/test_support.h",
     "disk_cache/disk_cache_test_base.cc",
     "disk_cache/disk_cache_test_base.h",
     "disk_cache/disk_cache_test_util.cc",
@@ -2701,7 +2610,6 @@ target(_test_target_type, "net_unittests") {
     "cookies/parsed_cookie_unittest.cc",
     "cookies/site_for_cookies_unittest.cc",
     "cookies/static_cookie_policy_unittest.cc",
-    "device_bound_sessions/session_usage_unittest.cc",
     "disk_cache/backend_cleanup_tracker_unittest.cc",
     "disk_cache/backend_unittest.cc",
     "disk_cache/blockfile/addr_unittest.cc",
@@ -3368,32 +3276,6 @@ target(_test_target_type, "net_unittests") {
     ]
   }
 
-  if (enable_device_bound_sessions) {
-    sources += [
-      "device_bound_sessions/cookie_craving_unittest.cc",
-      "device_bound_sessions/host_patterns_unittest.cc",
-      "device_bound_sessions/jwk_utils_unittest.cc",
-      "device_bound_sessions/mock_session_service.cc",
-      "device_bound_sessions/mock_session_service.h",
-      "device_bound_sessions/mock_session_store.cc",
-      "device_bound_sessions/mock_session_store.h",
-      "device_bound_sessions/registration_fetcher_param_unittest.cc",
-      "device_bound_sessions/registration_fetcher_unittest.cc",
-      "device_bound_sessions/session_binding_utils_unittest.cc",
-      "device_bound_sessions/session_challenge_param_unittest.cc",
-      "device_bound_sessions/session_inclusion_rules_unittest.cc",
-      "device_bound_sessions/session_service_impl_unittest.cc",
-      "device_bound_sessions/session_service_unittest.cc",
-      "device_bound_sessions/session_store_impl_unittest.cc",
-      "device_bound_sessions/session_store_unittest.cc",
-      "device_bound_sessions/session_unittest.cc",
-      "device_bound_sessions/unexportable_key_service_factory_unittest.cc",
-      "device_bound_sessions/url_fetcher_unittest.cc",
-    ]
-    deps += [ ":device_bound_sessions_storage_proto" ]
-  }
-
-
   # TODO(crbug.com/40031409): Fix code that adds exit-time destructors and
   # enable the diagnostic by removing this line.
   configs += [ "//build/config/compiler:no_exit_time_destructors" ]
@@ -3432,15 +3314,6 @@ if (!is_ios) {
       # Needed for isolate script to execute.
       "//testing:run_perf_test",
     ]
-
-    if (enable_device_bound_sessions) {
-      sources += [ "device_bound_sessions/session_store_impl_perftest.cc" ]
-      deps += [
-        ":device_bound_sessions_storage_proto",
-        "//components/unexportable_keys",
-        "//crypto:test_support",
-      ]
-    }
 
     if (enable_websockets) {
       sources += [ "websockets/websocket_frame_perftest.cc" ]

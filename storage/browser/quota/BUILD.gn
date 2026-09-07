@@ -9,7 +9,6 @@ mojom("mojo_bindings") {
     "quota_internals.mojom",
     "quota_manager_observer.mojom",
   ]
-  webui_module_path = "/"
 
   public_deps = [
     "//components/services/storage/public/mojom/buckets",

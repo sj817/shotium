@@ -296,8 +296,6 @@ class PLATFORM_EXPORT ResourceRequestHead {
     fetch_retry_options_ = fetch_retry_options;
   }
 
-
-
   // True if service workers should not get events for the request.
   bool GetSkipServiceWorker() const { return skip_service_worker_; }
   void SetSkipServiceWorker(bool skip_service_worker) {
@@ -622,14 +620,6 @@ class PLATFORM_EXPORT ResourceRequestHead {
 #endif
   }
 
-  bool AllowsDeviceBoundSessions() const {
-    return allows_device_bound_sessions_;
-  }
-
-  void SetAllowsDeviceBoundSessions(bool allows_device_bound_sessions) {
-    allows_device_bound_sessions_ = allows_device_bound_sessions;
-  }
-
  private:
   const CacheControlHeader& GetCacheControlHeader() const;
 
@@ -766,10 +756,6 @@ class PLATFORM_EXPORT ResourceRequestHead {
   bool is_set_url_allowed_ = true;
 #endif
 
-  // Whether this request is allowed to belong to a device bound session. This
-  // includes registering a new session, accepting challenges, or deferring the
-  // request until a session is refreshed.
-  bool allows_device_bound_sessions_ = true;
 };
 
 class PLATFORM_EXPORT ResourceRequestBody {
@@ -844,7 +830,6 @@ class PLATFORM_EXPORT ResourceRequest final : public ResourceRequestHead {
   void SetHttpBody(scoped_refptr<EncodedFormData>);
 
   ResourceRequestBody& MutableBody() { return body_; }
-
 
  private:
   ResourceRequestBody body_;

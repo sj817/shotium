@@ -888,7 +888,6 @@ void FrameLoader::StartNavigation(FrameLoadRequest& request,
   if (frame_->IsMainFrame())
     LocalFrame::ConsumeTransientUserActivation(frame_);
 
-
   bool is_form_submission = request.GetClientNavigationReason() ==
                                 ClientNavigationReason::kFormSubmissionGet ||
                             request.GetClientNavigationReason() ==

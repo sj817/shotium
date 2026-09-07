@@ -39,7 +39,6 @@
 #include "net/ssl/ssl_info.h"
 #include "services/network/public/cpp/cors/cors_error_status.h"
 #include "services/network/public/mojom/cross_origin_embedder_policy.mojom-forward.h"
-#include "services/network/public/mojom/device_bound_sessions.mojom-shared.h"
 #include "services/network/public/mojom/fetch_api.mojom-shared.h"
 #include "services/network/public/mojom/ip_address_space.mojom-shared.h"
 #include "third_party/blink/public/mojom/timing/resource_timing.mojom-blink-forward.h"
@@ -468,29 +467,6 @@ class PLATFORM_EXPORT ResourceResponse final {
     request_include_credentials_ = request_include_credentials;
   }
 
-  bool ShouldUseSourceHashForJSCodeCache() const {
-    return should_use_source_hash_for_js_code_cache_;
-  }
-  void SetShouldUseSourceHashForJSCodeCache(
-      bool should_use_source_hash_for_js_code_cache) {
-    if (should_use_source_hash_for_js_code_cache) {
-      // This flag should only be set for http(s) resources, because others
-      // would end up blocked in the browser process anyway (see
-      // code_cache_host_impl.cc).
-      CHECK(CurrentRequestUrl().ProtocolIsInHttpFamily());
-    }
-    should_use_source_hash_for_js_code_cache_ =
-        should_use_source_hash_for_js_code_cache;
-  }
-
-  void SetDeviceBoundSessionUsage(
-      network::mojom::DeviceBoundSessionUsage usage) {
-    device_bound_session_usage_ = usage;
-  }
-  network::mojom::DeviceBoundSessionUsage DeviceBoundSessionUsage() const {
-    return device_bound_session_usage_;
-  }
-
   const Vector<network::IntegrityMetadata>& GetUnencodedDigests() const;
   void SetUnencodedDigests(Vector<network::IntegrityMetadata> digests);
 
@@ -519,9 +495,6 @@ class PLATFORM_EXPORT ResourceResponse final {
   // https://wicg.github.io/private-network-access/#policy-container-ip-address-space
   network::mojom::IPAddressSpace client_address_space_ =
       network::mojom::IPAddressSpace::kUnknown;
-
-  network::mojom::DeviceBoundSessionUsage device_bound_session_usage_ =
-      network::mojom::DeviceBoundSessionUsage::kUnknown;
 
   bool was_cached_ : 1;
   bool connection_reused_ : 1;
@@ -610,7 +583,6 @@ class PLATFORM_EXPORT ResourceResponse final {
   // the parsed bytecode, but must use a source hash comparison rather than the
   // response time when determining whether the current version of the script
   // matches the cached bytecode.
-  bool should_use_source_hash_for_js_code_cache_ : 1;
 
   // Pre-computed padding.  This should only be non-zero if |response_type| is
   // set to kOpaque.  In addition, it is only set if the response was provided

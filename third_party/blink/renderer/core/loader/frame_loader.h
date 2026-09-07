@@ -260,7 +260,6 @@ class CORE_EXPORT FrameLoader final {
 
   bool AllowRequestForThisFrame(const FrameLoadRequest&);
 
-
   void ProcessPendingCrossDocumentFragment();
 
  private:

@@ -244,12 +244,11 @@ class BackgroundURLLoader::Context
     }
     void OnReceivedResponse(
         network::mojom::URLResponseHeadPtr head,
-        mojo::ScopedDataPipeConsumerHandle body,
-        std::optional<mojo_base::BigBuffer> cached_metadata) override {
+        mojo::ScopedDataPipeConsumerHandle body) override {
       CHECK(background_task_runner_->RunsTasksInCurrentSequence());
       if (background_response_processor_) {
         if (background_response_processor_->MaybeStartProcessingResponse(
-                head, body, cached_metadata, background_task_runner_, this)) {
+                head, body, background_task_runner_, this)) {
           waiting_for_background_response_processor_ = true;
           return;
         }
@@ -257,7 +256,7 @@ class BackgroundURLLoader::Context
       }
       context_->PostTaskToMainThread(CrossThreadBindOnce(
           &Context::OnReceivedResponse, context_, std::move(head),
-          std::move(body), std::move(cached_metadata)));
+          std::move(body)));
     }
     void OnTransferSizeUpdated(base::ByteSize transfer_size_diff) override {
       CHECK(background_task_runner_->RunsTasksInCurrentSequence());
@@ -282,8 +281,7 @@ class BackgroundURLLoader::Context
     // BackgroundResponseProcessor::Client overrides:
     void DidFinishBackgroundResponseProcessor(
         network::mojom::URLResponseHeadPtr head,
-        BodyVariant body,
-        std::optional<mojo_base::BigBuffer> cached_metadata) override {
+        BodyVariant body) override {
       CHECK(background_task_runner_->RunsTasksInCurrentSequence());
       background_response_processor_.reset();
       waiting_for_background_response_processor_ = false;
@@ -293,7 +291,7 @@ class BackgroundURLLoader::Context
       }
       context_->PostTaskToMainThread(CrossThreadBindOnce(
           &Context::DidFinishBackgroundResponseProcessor, context_,
-          std::move(head), std::move(body), std::move(cached_metadata),
+          std::move(head), std::move(body),
           deferred_transfer_size_diff_, std::move(deferred_status_)));
     }
     void PostTaskToMainThread(CrossThreadOnceClosure task) override {
@@ -473,25 +471,21 @@ class BackgroundURLLoader::Context
   }
   void OnReceivedResponse(network::mojom::URLResponseHeadPtr head,
                           BodyVariant body,
-                          std::optional<mojo_base::BigBuffer> cached_metadata,
                           int request_id) {
     DCHECK_CALLED_ON_VALID_SEQUENCE(main_thread_sequence_checker_);
     WebURLResponse response = WebURLResponse::Create(
         url_, *head, has_devtools_request_id_, request_id);
-    client_->DidReceiveResponse(response, std::move(body),
-                                std::move(cached_metadata));
+    client_->DidReceiveResponse(response, std::move(body));
   }
   void DidFinishBackgroundResponseProcessor(
       network::mojom::URLResponseHeadPtr head,
       BodyVariant body,
-      std::optional<mojo_base::BigBuffer> cached_metadata,
       base::ByteSize deferred_transfer_size_diff,
       std::optional<network::URLLoaderCompletionStatus> deferred_status,
       int request_id) {
     DCHECK_CALLED_ON_VALID_SEQUENCE(main_thread_sequence_checker_);
 
-    OnReceivedResponse(std::move(head), std::move(body),
-                       std::move(cached_metadata), request_id);
+    OnReceivedResponse(std::move(head), std::move(body), request_id);
     if (client_ && deferred_transfer_size_diff.is_positive()) {
       OnTransferSizeUpdated(deferred_transfer_size_diff);
     }
@@ -606,7 +600,6 @@ class BackgroundURLLoader::Context
   std::unique_ptr<WeakPersistent<BackForwardCacheLoaderHelper>>
       back_forward_cache_loader_helper_
           GUARDED_BY_CONTEXT(main_thread_sequence_checker_);
-
 
   scoped_refptr<WebBackgroundResourceFetchAssets>
       cross_thread_background_resource_fetch_context_

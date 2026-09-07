@@ -162,10 +162,6 @@ group("protobuf_full") {
       # Used for testing protobuf generation.
       "//base/test:proto_test_support",
 
-      # Generates the proto helper code that //third_party/metrics_proto and
-      # //components/metrics consume.
-      "//components/proto_extras:*",
-
       # requires descriptors & reflection; testonly.
       "//third_party/libprotobuf-mutator:*",
 

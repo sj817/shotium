@@ -24,14 +24,6 @@ mojom("mojom_ip_address") {
     "ip_endpoint.mojom",
   ]
 
-  # WebUI bindings are only needed on ChromeOS.
-  if (is_chromeos) {
-    webui_module_path = "chrome://resources/mojo/services/network/public/mojom"
-
-    # Still used by blink targets.
-    generate_legacy_js_bindings = true
-  }
-
   public_deps = [ "//url/mojom:url_mojom_gurl" ]
 
   shared_cpp_typemaps = [
@@ -572,7 +564,6 @@ mojom("url_loader_base") {
     "cross_origin_opener_policy.mojom",
     "data_pipe_getter.mojom",
     "declarative_performance_observer.mojom",
-    "device_bound_sessions.mojom",
     "devtools_observer.mojom",
     "document_isolation_policy.mojom",
     "early_hints.mojom",
@@ -790,7 +781,6 @@ mojom("url_loader_base") {
         "//services/network/public/mojom/devtools_observer.mojom.h",
         "//services/network/public/mojom/cookie_access_observer.mojom.h",
         "//services/network/public/mojom/trust_token_access_observer.mojom.h",
-        "//services/network/public/mojom/device_bound_sessions.mojom.h",
       ]
       traits_public_deps = [
         ":mojom_network_isolation_key",
@@ -941,94 +931,6 @@ mojom("url_loader_base") {
           [ "//services/network/public/cpp/load_timing_info_mojom_traits.h" ]
       traits_public_deps = [ "//net" ]
     },
-    {
-      types = [
-        {
-          mojom = "network.mojom.DeviceBoundSessionKey"
-          cpp = "::net::device_bound_sessions::SessionKey"
-        },
-        {
-          mojom = "network.mojom.DeviceBoundSessionAccess"
-          cpp = "::net::device_bound_sessions::SessionAccess"
-        },
-        {
-          mojom = "network.mojom.DeviceBoundSessionDeletionReason"
-          cpp = "::net::device_bound_sessions::DeletionReason"
-        },
-        {
-          mojom = "network.mojom.DeviceBoundSessionRefreshResult"
-          cpp = "::net::device_bound_sessions::RefreshResult"
-        },
-        {
-          mojom = "network.mojom.DeviceBoundSessionChallengeResult"
-          cpp = "::net::device_bound_sessions::ChallengeResult"
-        },
-        {
-          mojom = "network.mojom.DeviceBoundSessionInclusionResult"
-          cpp = "::net::device_bound_sessions::InclusionResult"
-        },
-        {
-          mojom = "network.mojom.DeviceBoundSessionParams"
-          cpp = "::net::device_bound_sessions::SessionParams"
-          move_only = true
-        },
-        {
-          mojom = "network.mojom.DeviceBoundSessionCreationDetails"
-          cpp = "::net::device_bound_sessions::CreationEventDetails"
-        },
-        {
-          mojom = "network.mojom.DeviceBoundSessionRefreshDetails"
-          cpp = "::net::device_bound_sessions::RefreshEventDetails"
-        },
-        {
-          mojom = "network.mojom.DeviceBoundSessionChallengeDetails"
-          cpp = "::net::device_bound_sessions::ChallengeEventDetails"
-        },
-        {
-          mojom = "network.mojom.DeviceBoundSessionTerminationDetails"
-          cpp = "::net::device_bound_sessions::TerminationEventDetails"
-        },
-        {
-          mojom = "network.mojom.DeviceBoundSessionEventTypeDetails"
-          cpp = "::net::device_bound_sessions::SessionEventTypeDetails"
-        },
-        {
-          mojom = "network.mojom.DeviceBoundSessionEvent"
-          cpp = "::net::device_bound_sessions::SessionEvent"
-        },
-        {
-          mojom = "network.mojom.DeviceBoundSessionError"
-          cpp = "::net::device_bound_sessions::SessionError::ErrorType"
-        },
-        {
-          mojom = "network.mojom.DeviceBoundSessionFailedRequest"
-          cpp = "::net::device_bound_sessions::FailedRequest"
-        },
-        {
-          mojom = "network.mojom.DeviceBoundSessionDisplay"
-          cpp = "::net::device_bound_sessions::SessionDisplay"
-        },
-        {
-          mojom = "network.mojom.DeviceBoundSessionInclusionRulesDisplay"
-          cpp = "::net::device_bound_sessions::SessionInclusionRulesDisplay"
-        },
-        {
-          mojom = "network.mojom.DeviceBoundSessionUrlRuleDisplay"
-          cpp = "::net::device_bound_sessions::UrlRuleDisplay"
-        },
-        {
-          mojom = "network.mojom.DeviceBoundSessionCookieCravingDisplay"
-          cpp = "::net::device_bound_sessions::CookieCravingDisplay"
-        },
-      ]
-      traits_headers = [
-        "//services/network/public/cpp/device_bound_sessions_mojom_traits.h",
-      ]
-      traits_sources = [
-        "//services/network/public/cpp/device_bound_sessions_mojom_traits.cc",
-      ]
-      traits_public_deps = [ "//net" ]
-    },
   ]
 
   if (is_linux) {
@@ -1105,11 +1007,6 @@ mojom("mojom_schemeful_site") {
       ]
     },
   ]
-
-  webui_module_path = "/"
-
-  # Blink requires the 3 legacy JS bindings types.
-  generate_legacy_js_bindings = true
 }
 
 mojom("mojom_network_param") {
@@ -1950,7 +1847,6 @@ mojom("mojom") {
     ":websocket_mojom",
     "//components/content_settings/core/common:mojo_bindings",
     "//components/os_crypt/async/common:common_mojom",
-    "//components/unexportable_keys/mojom",
     "//mojo/public/mojom/base",
     "//mojo/public/mojom/base:protobuf_support",
     "//sandbox/policy/mojom",

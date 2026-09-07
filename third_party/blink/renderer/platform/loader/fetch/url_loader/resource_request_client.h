@@ -13,7 +13,6 @@
 #include "base/byte_size.h"
 #include "base/functional/callback_forward.h"
 #include "base/time/time.h"
-#include "mojo/public/cpp/base/big_buffer.h"
 #include "mojo/public/cpp/system/data_pipe.h"
 #include "services/network/public/mojom/url_response_head.mojom-forward.h"
 #include "third_party/blink/public/platform/web_common.h"
@@ -57,8 +56,7 @@ class BLINK_PLATFORM_EXPORT ResourceRequestClient
   // been followed).
   virtual void OnReceivedResponse(
       network::mojom::URLResponseHeadPtr head,
-      mojo::ScopedDataPipeConsumerHandle body,
-      std::optional<mojo_base::BigBuffer> cached_metadata) = 0;
+      mojo::ScopedDataPipeConsumerHandle body) = 0;
 
   // Called when the transfer size is updated. This method may be called
   // multiple times or not at all. The transfer size is the length of the

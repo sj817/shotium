@@ -65,7 +65,6 @@
 #include "net/cookies/cookie_store.h"
 #include "net/cookies/cookie_util.h"
 #include "net/cookies/parsed_cookie.h"
-#include "net/device_bound_sessions/session_usage.h"
 #include "net/filter/filter_source_stream.h"
 #include "net/filter/source_stream.h"
 #include "net/filter/source_stream_type.h"
@@ -113,12 +112,6 @@
 #if BUILDFLAG(IS_ANDROID)
 #include "net/android/network_library.h"
 #endif
-
-#if BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
-#include "net/device_bound_sessions/registration_fetcher_param.h"
-#include "net/device_bound_sessions/session_challenge_param.h"
-#include "net/device_bound_sessions/session_service.h"
-#endif  // BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
 
 namespace net {
 
@@ -279,7 +272,6 @@ ContentEncodingType ToContentEncodingType(SourceStreamType type) {
       return ContentEncodingType::kUnknown;
   }
 }
-
 
 // These values are persisted to logs. Entries should not be renumbered and
 // numeric values should never be reused.
@@ -611,9 +603,6 @@ void URLRequestHttpJob::NotifyHeadersComplete() {
   }
 
   ProcessStrictTransportSecurityHeader();
-#if BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
-  ProcessDeviceBoundSessionsHeader();
-#endif  // BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
 
   // Clear |set_cookie_access_result_list_| after any processing in case
   // SaveCookiesAndNotifyHeadersComplete is called again.
@@ -936,45 +925,6 @@ void URLRequestHttpJob::SetCookieHeaderAndStart(
 
   request_->set_maybe_sent_cookies(std::move(maybe_sent_cookies));
 
-#if BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
-  // Check if the right device bound cookies are set for the request, see
-  // https://wicg.github.io/dbsc/ for specification.
-  device_bound_sessions::SessionService* service =
-      request_->context()->device_bound_session_service();
-  if (service) {
-    device_bound_sessions::DbscRequest request(request_);
-    std::optional<device_bound_sessions::SessionService::DeferralParams>
-        deferral = service->ShouldDefer(request, &request_info_.extra_headers,
-                                        first_party_set_metadata_);
-    // If the request needs to be deferred while waiting for refresh, do not
-    // start the transaction at this time. This may also kick off a refresh.
-    if (deferral) {
-      device_bound_session_deferral_count_++;
-      if (device_bound_session_deferral_count_ == 1) {
-        device_bound_session_first_deferral_ = base::TimeTicks::Now();
-      }
-      service->DeferRequestForRefresh(
-          request, *deferral,
-          // restart with new cookies callback
-          base::BindOnce(&URLRequestHttpJob::RestartTransactionForRefresh,
-                         weak_factory_.GetWeakPtr(), *deferral));
-      return;
-    }
-
-    base::UmaHistogramCounts100("Net.DeviceBoundSessions.RequestDeferralCount",
-                                device_bound_session_deferral_count_);
-    base::UmaHistogramEnumeration(
-        "Net.DeviceBoundSessions.RequestDeferralDecision3",
-        net::device_bound_sessions::GetMaxUsage(
-            request_->device_bound_session_usage()));
-    if (device_bound_session_deferral_count_ > 0) {
-      base::UmaHistogramTimes(
-          "Net.DeviceBoundSessions.TotalRequestDeferredDuration",
-          base::TimeTicks::Now() - device_bound_session_first_deferral_);
-    }
-  }
-#endif  // BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
-
   StartTransaction();
 }
 
@@ -1159,27 +1109,6 @@ void URLRequestHttpJob::OnSetCookieResult(const CookieOptions& options,
     NotifyHeadersComplete();
   }
 }
-
-#if BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
-void URLRequestHttpJob::ProcessDeviceBoundSessionsHeader() {
-  DCHECK(response_info_);
-  const SSLInfo& ssl_info = response_info_->ssl_info;
-  // Do not process DBSC headers on connections with certificate errors.
-  if (!ssl_info.is_valid() || IsCertStatusError(ssl_info.cert_status)) {
-    return;
-  }
-
-  device_bound_sessions::SessionService* service =
-      request_->context()->device_bound_session_service();
-  if (!service) {
-    return;
-  }
-
-  device_bound_sessions::DbscRequest request(request_);
-  service->HandleResponseHeaders(request, GetResponseHeaders(),
-                                 first_party_set_metadata_);
-}
-#endif  // BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
 
 void URLRequestHttpJob::ProcessStrictTransportSecurityHeader() {
   DCHECK(response_info_);
@@ -1391,25 +1320,6 @@ void URLRequestHttpJob::RestartTransaction() {
     StartTransaction();
   }
 }
-
-#if BUILDFLAG(ENABLE_DEVICE_BOUND_SESSIONS)
-void URLRequestHttpJob::RestartTransactionForRefresh(
-    const device_bound_sessions::SessionService::DeferralParams&
-        deferral_params,
-    device_bound_sessions::RefreshResult result) {
-  // Some deferrals are not associated with a particular session
-  // (e.g. session service initialization).
-  if (deferral_params.session_id.has_value()) {
-    request_->AddDeviceBoundSessionDeferral(
-        device_bound_sessions::SessionKey{
-            SchemefulSite(device_bound_sessions::DbscRequest(request_).url()),
-            *deferral_params.session_id},
-        result);
-  }
-
-  RestartTransaction();
-}
-#endif
 
 void URLRequestHttpJob::RestartTransactionWithAuth(
     const AuthCredentials& credentials) {
@@ -2074,14 +1984,6 @@ void URLRequestHttpJob::RecordCompletionHistograms(CompletionCause reason) {
             "Net.HttpJob.TotalTimeNotCached.Secure.Quic", total_time);
       }
     }
-  }
-
-  for (const auto& [_, result] : request_->device_bound_session_deferrals()) {
-    base::UmaHistogramEnumeration(
-        request_->failed()
-            ? "Net.DeviceBoundSessions.DeferralResultByOutcome.Failure"
-            : "Net.DeviceBoundSessions.DeferralResultByOutcome.Success",
-        result);
   }
 
   start_time_ = base::TimeTicks();

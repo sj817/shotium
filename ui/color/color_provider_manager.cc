@@ -19,7 +19,6 @@
 #include "ui/color/color_provider.h"
 #include "ui/color/color_provider_key.h"
 #include "ui/color/color_provider_utils.h"
-#include "ui/webui/buildflags.h"
 
 namespace ui {
 

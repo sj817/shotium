@@ -65,8 +65,7 @@ class BLINK_COMMON_EXPORT ThrottlingURLLoader
     // network::mojom::URLLoaderClient.
     virtual void OnReceiveResponse(
         network::mojom::URLResponseHeadPtr response_head,
-        mojo::ScopedDataPipeConsumerHandle body,
-        std::optional<mojo_base::BigBuffer> cached_metadata) = 0;
+        mojo::ScopedDataPipeConsumerHandle body) = 0;
     // Called at the beginning of `ThrottlingURLLoader::OnComplete()`, and
     // overrides all of its behavior.
     // This method receive the same params as if they are coming directly from
@@ -206,8 +205,7 @@ class BLINK_COMMON_EXPORT ThrottlingURLLoader
   void OnReceiveEarlyHints(network::mojom::EarlyHintsPtr early_hints) override;
   void OnReceiveResponse(
       network::mojom::URLResponseHeadPtr response_head,
-      mojo::ScopedDataPipeConsumerHandle body,
-      std::optional<mojo_base::BigBuffer> cached_metadata) override;
+      mojo::ScopedDataPipeConsumerHandle body) override;
   void OnReceiveRedirect(
       const net::RedirectInfo& redirect_info,
       network::mojom::URLResponseHeadPtr response_head) override;
@@ -241,8 +239,7 @@ class BLINK_COMMON_EXPORT ThrottlingURLLoader
 
   void ForwardResponseToClient(
       network::mojom::URLResponseHeadPtr head,
-      mojo::ScopedDataPipeConsumerHandle body,
-      std::optional<mojo_base::BigBuffer> cached_metadata);
+      mojo::ScopedDataPipeConsumerHandle body);
 
   enum DeferredStage {
     DEFERRED_NONE,
@@ -315,7 +312,6 @@ class BLINK_COMMON_EXPORT ThrottlingURLLoader
   // Set if response is deferred.
   std::unique_ptr<ResponseInfo> response_info_;
   mojo::ScopedDataPipeConsumerHandle body_;
-  std::optional<mojo_base::BigBuffer> cached_metadata_;
 
   struct RedirectInfo {
     RedirectInfo(const net::RedirectInfo& in_redirect_info,

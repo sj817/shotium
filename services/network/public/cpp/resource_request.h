@@ -32,7 +32,6 @@
 #include "services/network/public/mojom/client_security_state.mojom.h"
 #include "services/network/public/mojom/cookie_access_observer.mojom-forward.h"
 #include "services/network/public/mojom/cors.mojom-shared.h"
-#include "services/network/public/mojom/device_bound_sessions.mojom-forward.h"
 #include "services/network/public/mojom/devtools_observer.mojom-forward.h"
 #include "services/network/public/mojom/fetch_api.mojom-shared.h"
 #include "services/network/public/mojom/ip_address_space.mojom-shared.h"
@@ -122,8 +121,6 @@ struct COMPONENT_EXPORT(NETWORK_CPP_BASE) ResourceRequest {
     mojo::PendingRemote<mojom::URLLoaderNetworkServiceObserver>
         url_loader_network_observer;
     mojo::PendingRemote<mojom::DevToolsObserver> devtools_observer;
-    mojo::PendingRemote<mojom::DeviceBoundSessionAccessObserver>
-        device_bound_session_observer;
     mojom::ClientSecurityStatePtr client_security_state;
     mojo::PendingRemote<mojom::AcceptCHFrameObserver> accept_ch_frame_observer;
     mojo::PendingRemote<mojom::SharedDictionaryAccessObserver>
@@ -290,11 +287,6 @@ struct COMPONENT_EXPORT(NETWORK_CPP_BASE) ResourceRequest {
   bool client_side_content_decoding_enabled = false;
   std::optional<base::UnguessableToken> prefetch_token;
   net::SocketTag socket_tag;
-
-  // Whether this request is allowed to belong to a device bound session. This
-  // includes registering a new session, accepting challenges, or deferring the
-  // request until a session is refreshed.
-  bool allows_device_bound_sessions = true;
 
   std::optional<network::PermissionsPolicy> permissions_policy;
 

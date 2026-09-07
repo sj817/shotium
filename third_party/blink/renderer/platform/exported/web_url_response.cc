@@ -201,7 +201,6 @@ WebURLResponse WebURLResponse::Create(
   response.SetWasInPrefetchCache(head.was_in_prefetch_cache);
   response.SetWasCookieInRequest(head.was_cookie_in_request);
   response.SetRecursivePrefetchToken(head.recursive_prefetch_token);
-  response.SetDeviceBoundSessionUsage(head.device_bound_session_usage);
 
   if (head.unencoded_digests) {
     // Any `issues` will be taken care of in the network stack; we can simply
@@ -223,9 +222,6 @@ WebURLResponse WebURLResponse::Create(
 
   response.SetAuthChallengeInfo(head.auth_challenge_info);
   response.SetRequestIncludeCredentials(head.request_include_credentials);
-
-  response.SetShouldUseSourceHashForJSCodeCache(
-      head.should_use_source_hash_for_js_code_cache);
 
   const net::HttpResponseHeaders* headers = head.headers.get();
   if (!headers)
@@ -734,25 +730,6 @@ void WebURLResponse::SetRequestIncludeCredentials(
 
 bool WebURLResponse::RequestIncludeCredentials() const {
   return resource_response_->RequestIncludeCredentials();
-}
-
-void WebURLResponse::SetShouldUseSourceHashForJSCodeCache(
-    bool should_use_source_hash_for_js_code_cache) {
-  resource_response_->SetShouldUseSourceHashForJSCodeCache(
-      should_use_source_hash_for_js_code_cache);
-}
-
-bool WebURLResponse::ShouldUseSourceHashForJSCodeCache() const {
-  return resource_response_->ShouldUseSourceHashForJSCodeCache();
-}
-
-void WebURLResponse::SetDeviceBoundSessionUsage(
-    network::mojom::DeviceBoundSessionUsage usage) {
-  resource_response_->SetDeviceBoundSessionUsage(usage);
-}
-network::mojom::DeviceBoundSessionUsage
-WebURLResponse::DeviceBoundSessionUsage() const {
-  return resource_response_->DeviceBoundSessionUsage();
 }
 
 void WebURLResponse::SetUnencodedDigests(

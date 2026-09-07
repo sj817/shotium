@@ -38,13 +38,13 @@ static_library("viz_debugger") {
   defines = [ "VIZ_SERVICE_IMPLEMENTATION" ]
 
   deps = [
-    "//services/metrics/public/cpp:metrics_cpp",
-    "//services/metrics/public/mojom",
     ":viz_service_export",
     "//base",
     "//components/viz/common:buildflags",
     "//components/viz/service/debugger/mojom",
     "//mojo/public/cpp/bindings",
+    "//services/metrics/public/cpp:metrics_cpp",
+    "//services/metrics/public/mojom",
     "//skia",
     "//skia:skia_core_public_headers",
     "//ui/gfx/geometry",
@@ -292,10 +292,6 @@ viz_component("service") {
     "//components/crash/core/common:crash_key",
     "//components/input",
     "//components/input:mojom",
-
-    # Note that dependency on //gpu/ipc/client is for MappableBuffer. This
-    # dependency should not be in public_deps.
-    "//components/version_info",
     "//components/viz/client",
     "//components/viz/common",
     "//gpu/command_buffer/client",
@@ -349,7 +345,6 @@ viz_component("service") {
       "//components/chromeos_camera:mjpeg_decode_accelerator_service",
       "//gpu/command_buffer/service:gles2",
     ]
-
   }
 
   if (is_apple) {
@@ -508,7 +503,6 @@ viz_component("service") {
     ]
   }
 
-
   if (enable_vulkan) {
     deps += [ "//gpu/vulkan" ]
 
@@ -541,10 +535,7 @@ viz_component("service") {
         "//ui/gfx/x",
       ]
     }
-
   }
-
-
 }
 
 viz_source_set("unit_tests") {
@@ -685,7 +676,6 @@ viz_source_set("unit_tests") {
     ]
     deps += [
       "//ui/base:features",
-      "//ui/compositor:test_support",
       "//ui/ozone",
     ]
   }

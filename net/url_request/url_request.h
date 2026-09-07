@@ -43,10 +43,6 @@
 #include "net/cookies/cookie_setting_override.h"
 #include "net/cookies/cookie_util.h"
 #include "net/cookies/site_for_cookies.h"
-#include "net/device_bound_sessions/refresh_result.h"
-#include "net/device_bound_sessions/session_key.h"
-#include "net/device_bound_sessions/session_service.h"
-#include "net/device_bound_sessions/session_usage.h"
 #include "net/dns/public/secure_dns_policy.h"
 #include "net/filter/source_stream_type.h"
 #include "net/http/http_raw_request_headers.h"
@@ -64,7 +60,6 @@
 #include "net/socket/socket_tag.h"
 #include "net/storage_access_api/status.h"
 #include "net/traffic_annotation/network_traffic_annotation.h"
-#include "net/url_request/device_bound_session_mode.h"
 #include "net/url_request/redirect_info.h"
 #include "net/url_request/referrer_policy.h"
 #include "net/url_request/storage_access_status_cache.h"
@@ -87,10 +82,6 @@ class UploadDataStream;
 class URLRequestContext;
 class URLRequestJob;
 class X509Certificate;
-
-namespace device_bound_sessions {
-struct SessionAccess;
-}
 
 //-----------------------------------------------------------------------------
 // A class representing the asynchronous load of a data stream from a URL.
@@ -858,18 +849,6 @@ class NET_EXPORT URLRequest : public base::SupportsUserData {
   void SetIsSharedDictionaryReadAllowedCallback(
       base::RepeatingCallback<bool()> callback);
 
-  // Set a callback that will be invoked each time a device-bound
-  // session is accessed as part of this URL request. Because device-
-  // bound sessions can be accessed asynchronously after this request
-  // completes, this callback must be able to safely outlive `this`.
-  void SetDeviceBoundSessionAccessCallback(
-      base::RepeatingCallback<void(const device_bound_sessions::SessionAccess&)>
-          callback);
-  base::RepeatingCallback<void(const device_bound_sessions::SessionAccess&)>
-  device_bound_session_access_callback() {
-    return device_bound_session_access_callback_;
-  }
-
   // Sets socket tag to be applied to all sockets used to execute this request.
   // Must be set before Start() is called. Only currently supported for HTTP
   // and HTTPS requests on Android; UID tagging requires
@@ -969,42 +948,6 @@ class NET_EXPORT URLRequest : public base::SupportsUserData {
   StorageAccessStatusCache CalculateStorageAccessStatus() const;
 
   base::WeakPtr<URLRequest> GetWeakPtr();
-
-  // Whether this request is allowed to belong to a device bound session. This
-  // includes registering a new session, accepting challenges, or deferring the
-  // request until a session is refreshed.
-  DeviceBoundSessionMode device_bound_session_mode() const {
-    return device_bound_session_mode_;
-  }
-  void set_device_bound_session_mode(DeviceBoundSessionMode mode) {
-    device_bound_session_mode_ = mode;
-  }
-
-  // Whether this request was in the scope of any device-bound session for this
-  // request's site, even if it did not need to be deferred.
-  const base::flat_map<device_bound_sessions::SessionKey,
-                       device_bound_sessions::SessionUsage>&
-  device_bound_session_usage() const {
-    return device_bound_session_usage_;
-  }
-  void set_device_bound_session_usage(
-      const device_bound_sessions::SessionKey& key,
-      device_bound_sessions::SessionUsage usage) {
-    device_bound_session_usage_[key] = usage;
-  }
-
-  // Returns all the device-bound sessions that have deferred this
-  // request.
-  const base::flat_map<device_bound_sessions::SessionKey,
-                       device_bound_sessions::RefreshResult>&
-  device_bound_session_deferrals() const {
-    return device_bound_session_deferrals_;
-  }
-  void AddDeviceBoundSessionDeferral(
-      const device_bound_sessions::SessionKey& deferral,
-      const device_bound_sessions::RefreshResult result) {
-    device_bound_session_deferrals_[deferral] = result;
-  }
 
   // Returns true if the request failed or was canceled.
   bool failed() const;
@@ -1296,23 +1239,6 @@ class NET_EXPORT URLRequest : public base::SupportsUserData {
 
   // The storage access status for this request.
   StorageAccessStatusCache storage_access_status_;
-
-  base::RepeatingCallback<void(const device_bound_sessions::SessionAccess&)>
-      device_bound_session_access_callback_;
-
-  // The mode for device bound sessions.
-  DeviceBoundSessionMode device_bound_session_mode_ =
-      DeviceBoundSessionMode::kAllowed;
-  // How existing device-bound sessions for the request's site interacted with
-  // this request.
-  base::flat_map<device_bound_sessions::SessionKey,
-                 device_bound_sessions::SessionUsage>
-      device_bound_session_usage_;
-  // Which device-bound sessions have deferred this request, and the
-  // result of that refresh.
-  base::flat_map<device_bound_sessions::SessionKey,
-                 device_bound_sessions::RefreshResult>
-      device_bound_session_deferrals_;
 
   THREAD_CHECKER(thread_checker_);
 

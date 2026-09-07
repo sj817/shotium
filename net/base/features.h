@@ -481,57 +481,6 @@ NET_EXPORT BASE_DECLARE_FEATURE(kTruncateBodyToContentLength);
 NET_EXPORT BASE_DECLARE_FEATURE(kUseNetworkPathMonitorForNetworkChangeNotifier);
 #endif  // BUILDFLAG(IS_APPLE)
 
-// This feature will enable the Device Bound Session Credentials protocol to let
-// the server assert sessions (and cookies) are bound to a specific device.
-NET_EXPORT BASE_DECLARE_FEATURE(kDeviceBoundSessions);
-// This feature prevents deadlocks from recursive DBSC token refresh requests
-// by setting `device_bound_session_mode` to `kBypassDeferral` on DBSC refresh
-// requests.
-NET_EXPORT BASE_DECLARE_FEATURE(
-    kDeviceBoundSessionsBypassDeferralsForRefreshRequests);
-// This feature controls whether DBSC retry mechanism is enabled for transient
-// refresh errors (network and proxy errors).
-NET_EXPORT BASE_DECLARE_FEATURE(
-    kDeviceBoundSessionsRetryTransientRefreshErrors);
-// This feature enables the Device Bound Session Credentials signing quota.
-// This behavior is expected by default; disabling it should only be for
-// testing purposes.
-NET_EXPORT BASE_DECLARE_FEATURE_PARAM(bool, kDeviceBoundSessionsSigningQuota);
-// This feature controls whether DBSC checks the .well-known for subdomain
-// registration.
-NET_EXPORT BASE_DECLARE_FEATURE_PARAM(
-    bool,
-    kDeviceBoundSessionsCheckSubdomainRegistration);
-// This feature controls the database schema version for stored sessions.
-NET_EXPORT BASE_DECLARE_FEATURE_PARAM(int, kDeviceBoundSessionsSchemaVersion);
-
-// This feature controls whether DBSC allows federated sessions.
-NET_EXPORT BASE_DECLARE_FEATURE(kDeviceBoundSessionsFederatedRegistration);
-// This param controls whether DBSC checks the .well-known for federated
-// sessions.
-NET_EXPORT BASE_DECLARE_FEATURE_PARAM(
-    bool,
-    kDeviceBoundSessionsFederatedRegistrationCheckWellKnown);
-
-// This feature controls whether DBSC is allowed to register sessions on
-// a certain list of sites, as specified in
-// `device_bound_sessions_restricted_sites` in the
-// `NetworkContextParams`.
-NET_EXPORT BASE_DECLARE_FEATURE(kDeviceBoundSessionsForRestrictedSites);
-
-// This feature controls whether DBSC allows mTLS / client certificate
-// selection for background registration and refresh requests.
-NET_EXPORT BASE_DECLARE_FEATURE(kDeviceBoundSessionsClientCertSelection);
-
-// This feature will enable the browser to use Device Bound Session Credentials
-// for Single Sign On. This feature is only valid if `kDeviceBoundSessions` is
-// enabled.
-NET_EXPORT BASE_DECLARE_FEATURE(kDeviceBoundSessionsForSingleSignOn);
-
-// Controls whether a session's expiry timestamp is updated in memory and
-// persisted to disk when a network refresh finishes with NoSessionConfigChange.
-NET_EXPORT BASE_DECLARE_FEATURE(kDeviceBoundSessionsPersistExpiryOnRefresh);
-
 // Enables more checks when creating a SpdySession for proxy. These checks are
 // already applied to non-proxy SpdySession creations.
 // TODO(crbug.com/343519247): Remove this once we are sure that these checks are
@@ -590,7 +539,6 @@ NET_EXPORT extern const base::FeatureParam<DiskCacheBackend>
 // gradual feature rollouts.
 NET_EXPORT BASE_DECLARE_FEATURE_PARAM(bool,
                                       kDiskCacheBackendResetCacheOnGroupChange);
-
 
 // If enabled, ignore Strict-Transport-Security for [*.]localhost hosts.
 NET_EXPORT BASE_DECLARE_FEATURE(kIgnoreHSTSForLocalhost);
@@ -745,8 +693,6 @@ NET_EXPORT BASE_DECLARE_FEATURE(kNetTaskScheduler2);
 NET_EXPORT BASE_DECLARE_FEATURE_PARAM(bool, kNetTaskSchedulerHttpCache);
 NET_EXPORT BASE_DECLARE_FEATURE_PARAM(bool,
                                       kNetTaskSchedulerHttpCacheTransaction);
-
-
 
 // If enabled, we will add an additional delay to the main job in
 // HttpStreamFactoryJobController.

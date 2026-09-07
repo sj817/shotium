@@ -2,9 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# Exposes the product version as GN variables. This replaces //chrome/version.gni,
-# which was deleted with the rest of //chrome. Every Android version-code table
-# in the original is gone; those products do not exist in this tree.
+# Exposes the product version as GN variables. This replaces
+# //chrome/version.gni, which was deleted with the rest of //chrome. Every
+# Android version-code table in the original is gone; those products do not
+# exist in this tree.
 #
 # The macOS half is here because it is needed, not for symmetry. Written first
 # for Windows, this file dropped chrome_dylib_version along with the Android
@@ -13,8 +14,9 @@
 # gn gen failed with "Undefined identifier: chrome_dylib_version" long after
 # the file that dropped it looked finished.
 #
-# PREFER NOT TO USE THESE. Write an action, or use //build/util/process_version.gni,
-# to generate a file at build time instead. Reading the version here forces GN to
+# PREFER NOT TO USE THESE. Write an action, or use
+# //build/util/process_version.gni, to generate a file at build time instead.
+# Reading the version here forces GN to
 # run version.py during `gn gen`.
 
 # The file containing the product version number.

@@ -377,11 +377,7 @@ class CORE_EXPORT ChromeClientImpl final : public ChromeClient {
 
   // On Mac and Android Java UI, the select popups are rendered by the
   // browser.
-#if BUILDFLAG(USE_EXTERNAL_POPUP_MENU)
-  bool use_external_popup_menus_ = true;
-#else
   bool use_external_popup_menus_ = false;
-#endif
 
   FRIEND_TEST_ALL_PREFIXES(FileChooserQueueTest, DerefQueuedChooser);
 };

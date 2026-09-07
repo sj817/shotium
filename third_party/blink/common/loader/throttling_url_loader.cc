@@ -593,8 +593,7 @@ void ThrottlingURLLoader::OnReceiveEarlyHints(
 
 void ThrottlingURLLoader::OnReceiveResponse(
     network::mojom::URLResponseHeadPtr response_head,
-    mojo::ScopedDataPipeConsumerHandle body,
-    std::optional<mojo_base::BigBuffer> cached_metadata) {
+    mojo::ScopedDataPipeConsumerHandle body) {
   DCHECK_EQ(DEFERRED_NONE, deferred_stage_);
   DCHECK(!loader_completed_);
   DCHECK(deferring_throttles_.empty());
@@ -603,7 +602,7 @@ void ThrottlingURLLoader::OnReceiveResponse(
               response_url_.possibly_invalid_spec());
   if (client_receiver_delegate_) {
     client_receiver_delegate_->OnReceiveResponse(
-        std::move(response_head), std::move(body), std::move(cached_metadata));
+        std::move(response_head), std::move(body));
     return;
   }
 
@@ -614,7 +613,6 @@ void ThrottlingURLLoader::OnReceiveResponse(
   base::ElapsedTimer timer;
   did_receive_response_ = true;
   body_ = std::move(body);
-  cached_metadata_ = std::move(cached_metadata);
 
   // Dispatch BeforeWillProcessResponse().
   if (!throttles_.empty()) {
@@ -667,8 +665,7 @@ void ThrottlingURLLoader::OnReceiveResponse(
     }
   }
 
-  ForwardResponseToClient(std::move(response_head), std::move(body_),
-                          std::move(cached_metadata_));
+  ForwardResponseToClient(std::move(response_head), std::move(body_));
   base::UmaHistogramTimes("Net.URLLoaderThrottle.OnReceiveResponseTime",
                           timer.Elapsed());
 }
@@ -882,7 +879,7 @@ void ThrottlingURLLoader::Resume() {
     case DEFERRED_RESPONSE: {
       client_receiver_.Resume();
       ForwardResponseToClient(std::move(response_info_->response_head),
-                              std::move(body_), std::move(cached_metadata_));
+                              std::move(body_));
       // Note: |this| may be deleted here.
       break;
     }
@@ -956,14 +953,12 @@ void ThrottlingURLLoader::DisconnectClient(std::string_view custom_reason) {
 
 void ThrottlingURLLoader::ForwardResponseToClient(
     network::mojom::URLResponseHeadPtr head,
-    mojo::ScopedDataPipeConsumerHandle body,
-    std::optional<mojo_base::BigBuffer> cached_metadata) {
+    mojo::ScopedDataPipeConsumerHandle body) {
   // OnReceiveResponse() can be called at most once. This check is added to
   // debug crbug.com/463388771.
   CHECK(!has_forwarded_response_);
   has_forwarded_response_ = true;
-  forwarding_client_->OnReceiveResponse(std::move(head), std::move(body),
-                                        std::move(cached_metadata));
+  forwarding_client_->OnReceiveResponse(std::move(head), std::move(body));
 }
 
 const char* ThrottlingURLLoader::GetStageNameForHistogram(DeferredStage stage) {
