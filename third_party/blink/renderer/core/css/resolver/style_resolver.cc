@@ -60,7 +60,6 @@
 #include "third_party/blink/renderer/core/css/css_property_names.h"
 #include "third_party/blink/renderer/core/css/css_rule_list.h"
 #include "third_party/blink/renderer/core/css/css_selector.h"
-#include "third_party/blink/renderer/core/css/css_selector_watch.h"
 #include "third_party/blink/renderer/core/css/css_style_declaration.h"
 #include "third_party/blink/renderer/core/css/css_style_rule.h"
 #include "third_party/blink/renderer/core/css/css_unparsed_declaration_value.h"
@@ -1933,12 +1932,6 @@ void StyleResolver::ApplyBaseStyleNoCache(
   // Finally, some random stuff not related to neither MatchResult nor
   // the matched properties.
 
-  ApplyCallbackSelectors(state);
-  if (element->IsLink() && (element->HasTagName(html_names::kATag) ||
-                            element->HasTagName(html_names::kAreaTag))) {
-    ApplyDocumentRulesSelectors(state, To<ContainerNode>(&element->TreeRoot()));
-  }
-
   ApplyAnchorData(state);
 }
 
@@ -3222,57 +3215,6 @@ void StyleResolver::ApplyPropertiesFromCascade(StyleResolverState& state,
   ApplyLengthConversionFlags(state);
 
   DCHECK(!state.GetFontBuilder().FontDirty());
-}
-
-void StyleResolver::ApplyCallbackSelectors(StyleResolverState& state) {
-  StyleRuleList* rules = CollectMatchingRulesFromUnconnectedRuleSet(
-      state, GetDocument().GetStyleEngine().WatchedSelectorsRuleSet(),
-      /*scope=*/nullptr);
-  if (!rules) {
-    return;
-  }
-  for (const auto& rule : *rules) {
-    state.StyleBuilder().AddCallbackSelector(rule->SelectorsText());
-  }
-}
-
-void StyleResolver::ApplyDocumentRulesSelectors(StyleResolverState& state,
-                                                ContainerNode* scope) {
-  StyleRuleList* rules = CollectMatchingRulesFromUnconnectedRuleSet(
-      state, GetDocument().GetStyleEngine().DocumentRulesSelectorsRuleSet(),
-      scope);
-  if (!rules) {
-    return;
-  }
-  for (const auto& rule : *rules) {
-    state.StyleBuilder().AddDocumentRulesSelector(rule);
-  }
-}
-
-StyleRuleList* StyleResolver::CollectMatchingRulesFromUnconnectedRuleSet(
-    StyleResolverState& state,
-    RuleSet* rule_set,
-    ContainerNode* scope) {
-  if (!rule_set) {
-    return nullptr;
-  }
-
-  MatchResult match_result;
-  ElementRuleCollector collector(state.ElementContext(), StyleRecalcContext(),
-                                 selector_filter_, match_result,
-                                 state.InsideLink());
-  collector.SetMatchingRulesFromNoStyleSheet(true);
-  collector.SetMode(SelectorChecker::kCollectingStyleRules);
-  rule_set->CompactRulesIfNeeded();
-  RuleSetGroup rule_set_group(/*rule_set_group_index=*/0u);
-  rule_set_group.AddRuleSet(rule_set);
-  collector.CollectMatchingRules(MatchRequest(rule_set_group, scope),
-                                 /*part_names=*/nullptr);
-  collector.SortAndTransferMatchedRules(
-      CascadeOrigin::kAuthor, /*is_vtt_embedded_style=*/false, tracker_);
-  collector.SetMatchingRulesFromNoStyleSheet(false);
-
-  return collector.MatchedStyleRuleList();
 }
 
 // Font properties are also handled by FontStyleResolver outside the main

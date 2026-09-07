@@ -530,15 +530,6 @@ String TrustedTypesCheckForJavascriptURLinNavigation(
   return exception_state.HadException() ? String() : value;
 }
 
-String TrustedTypesCheckForExecCommand(
-    const String& html,
-    const ExecutionContext* execution_context,
-    ExceptionState& exception_state) {
-  return TrustedTypesCheckForHTML(
-      html, execution_context, trusted_types_names::kDocument,
-      trusted_types_names::kExecCommand, exception_state);
-}
-
 bool IsTrustedTypesEventHandlerAttribute(const QualifiedName& q_name) {
   return q_name.NamespaceURI().IsNull() &&
          TrustedTypePolicyFactory::IsEventHandlerAttributeName(

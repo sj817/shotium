@@ -41,8 +41,6 @@
 #include "third_party/blink/renderer/core/core_export.h"
 #include "third_party/blink/renderer/core/dom/document.h"
 #include "third_party/blink/renderer/core/dom/events/event_target.h"
-#include "third_party/blink/renderer/core/editing/spellcheck/spell_checker.h"
-#include "third_party/blink/renderer/core/editing/suggestion/text_suggestion_controller.h"
 #include "third_party/blink/renderer/core/execution_context/execution_context.h"
 #include "third_party/blink/renderer/core/frame/dom_window.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
@@ -74,7 +72,6 @@ class Element;
 class ExceptionState;
 class External;
 class FrameConsole;
-class InputMethodController;
 class LocalFrame;
 class MediaQueryList;
 class MessageEvent;
@@ -436,14 +433,6 @@ class CORE_EXPORT LocalDOMWindow final : public DOMWindow,
 
   void DispatchPagehideEvent(PageTransitionEventPersistence persistence);
 
-  InputMethodController& GetInputMethodController() const {
-    return *input_method_controller_;
-  }
-  TextSuggestionController& GetTextSuggestionController() const {
-    return *text_suggestion_controller_;
-  }
-  SpellChecker& GetSpellChecker() const { return *spell_checker_; }
-
   bool CrossOriginIsolatedCapability() const override;
   bool IsIsolatedContext() const override;
 
@@ -626,9 +615,6 @@ class CORE_EXPORT LocalDOMWindow final : public DOMWindow,
   // frame:document lifetime refactoring.
   std::unique_ptr<FrameOrWorkerScheduler> detached_scheduler_;
 
-  Member<InputMethodController> input_method_controller_;
-  Member<SpellChecker> spell_checker_;
-  Member<TextSuggestionController> text_suggestion_controller_;
 
   // Tracks which features have already been potentially violated in this
   // document. This helps to count them only once per page load.

@@ -244,21 +244,11 @@ void TextFieldInputType::HandleKeydownEvent(KeyboardEvent& event) {
     if (HandleKeydownForCustomizableCombobox(event)) {
       event.SetDefaultHandled();
     }
-    // If this is a base appearance combobox, then we should never call into
-    // ChromeClient to do stuff with the "native" datalist popup, so return
-    // early here.
     return;
   }
   if (HandleKeydownForFilterableSelect(event)) {
     event.SetDefaultHandled();
     return;
-  }
-  if (ChromeClient* chrome_client = GetChromeClient()) {
-    if (chrome_client->HandleKeyboardEventOnEditableElement(GetElement(),
-                                                            event)) {
-      event.SetDefaultHandled();
-      return;
-    }
   }
 }
 
@@ -405,7 +395,6 @@ void TextFieldInputType::HandleBlurEvent() {
   InputTypeView::HandleBlurEvent();
   HTMLInputElement& input = GetElement();
 
-  input.EndEditing();
   if (SpinButtonElement* spin_button = GetSpinButtonElement())
     spin_button->ReleaseCapture();
   UpdateWheelEventRegistration(/*is_detaching=*/false);
@@ -531,8 +520,6 @@ void TextFieldInputType::ListAttributeTargetChanged() {
   if (!HasCreatedShadowSubtree()) {
     return;
   }
-  if (ChromeClient* chrome_client = GetChromeClient())
-    chrome_client->TextFieldDataListChanged(GetElement());
   Element* picker = GetElement().UserAgentShadowRoot()->getElementById(
       shadow_element_names::kIdPickerIndicator);
   bool did_have_picker_indicator = picker;
@@ -703,12 +690,6 @@ void TextFieldInputType::HandleBeforeTextInsertedEvent(
 
   event.SetText(LimitLength(event_text, appendable_length));
 
-  if (ChromeClient* chrome_client = GetChromeClient()) {
-    if (selection_length == old_length && selection_length != 0 &&
-        !event_text.empty()) {
-      chrome_client->DidClearValueInTextField(GetElement());
-    }
-  }
 }
 
 bool TextFieldInputType::ShouldRespectListAttribute() {
@@ -795,12 +776,6 @@ void TextFieldInputType::OpenPopupView() {
 void TextFieldInputType::DidSetValueByUserEdit() {
   if (!GetElement().IsFocused())
     return;
-  if (ChromeClient* chrome_client = GetChromeClient()) {
-    if (GetElement().Value().empty()) {
-      chrome_client->DidClearValueInTextField(GetElement());
-    }
-    chrome_client->DidChangeValueInTextField(GetElement());
-  }
   if (GetElement().IsBaseAppearanceCombobox()) {
     // TODO(https://crbug.com/453705243): Make IsBaseAppearanceCombobox return
     // the datalist element since i am always using the datalist afterwards and

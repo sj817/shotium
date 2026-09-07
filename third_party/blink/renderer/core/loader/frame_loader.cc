@@ -99,7 +99,6 @@
 #include "third_party/blink/renderer/core/page/focus_controller.h"
 #include "third_party/blink/renderer/core/page/frame_tree.h"
 #include "third_party/blink/renderer/core/page/page.h"
-#include "third_party/blink/renderer/core/page/plugin_script_forbidden_scope.h"
 #include "third_party/blink/renderer/core/page/scrolling/fragment_anchor.h"
 #include "third_party/blink/renderer/core/page/viewport_description.h"
 #include "third_party/blink/renderer/core/paint/paint_layer_scrollable_area.h"
@@ -819,7 +818,6 @@ void FrameLoader::StartNavigation(FrameLoadRequest& request,
   ModifyRequestForCSP(resource_request, fetch_client_settings_object,
                       origin_window, request.GetFrameType());
 
-  DCHECK(Client()->HasWebView());
   // Check for non-escaped new lines in the url.
   if (url.PotentiallyDanglingMarkup() && url.ProtocolIsInHttpFamily()) {
     Deprecation::CountDeprecation(
@@ -1034,7 +1032,6 @@ void FrameLoader::CommitNavigation(
       "Navigation.FrameLoader.CommitNavigation");
   DCHECK(document_loader_);
   DCHECK(frame_->GetDocument());
-  DCHECK(Client()->HasWebView());
 
   if (!frame_->IsNavigationAllowed() ||
       frame_->GetDocument()->PageDismissalEventBeingDispatched() !=
@@ -1289,7 +1286,6 @@ bool FrameLoader::DetachDocument() {
   DCHECK(frame_->GetDocument());
   DCHECK(document_loader_);
 
-  PluginScriptForbiddenScope forbid_plugin_destructor_scripting;
   ClientNavigationState* client_navigation = client_navigation_.get();
 
   // Don't allow this frame to navigate anymore. This line is needed for

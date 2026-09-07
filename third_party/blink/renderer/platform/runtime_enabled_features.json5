@@ -759,13 +759,6 @@
       base_feature: "none",
     },
     {
-      name: "AutofillEvent",
-      origin_trial_feature_name: "AutofillEvent",
-      origin_trial_allows_third_party: true,
-      status: "experimental",
-      public: true,
-    },
-    {
       // Pins a generic font-family on the autofill preview pseudo-elements so
       // an author @font-face cannot oracle the previewed text.
       // crbug.com/517710554.
@@ -1156,21 +1149,6 @@
       // mouse out.
       // This was added in M146 and can be removed after M148.
       name: "ClickFocusDoesntPersistStatusBubble",
-      status: "stable",
-    },
-    {
-      // Uses ComputeContainerNode() instead of AnchorNode() for clipboard event
-      // targeting so that kBeforeAnchor/kAfterAnchor selections correctly target
-      // the containing parent element rather than the element itself.
-      // See https://crbug.com/40684204
-      name: "ClipboardEventTargetUsesContainerNode",
-      status: "stable",
-    },
-    {
-      // Fix middle-click paste (kSelection buffer) from leaking images on
-      // the kStandard buffer via the image fallback in GetFragmentFromClipboard.
-      // crbug.com/497251066
-      name: "ClipboardPasteImageRespectBuffer",
       status: "stable",
     },
     {
@@ -2542,17 +2520,6 @@
       name: "DumpForAbsentKeyframeSnapshots",
     },
     {
-      // See https://crbug.com/443612843
-      name: "EditContextAssignmentAsPerSpec",
-      status: "test"
-    },
-    {
-      // See https://crbug.com/379170477
-      name: "EditContextHandleTextOrSelectionUpdateDuringComposition",
-      status: "test",
-      settable_from_internals: true
-    },
-    {
       name: "EditingLineMovementWithRubyFix",
       status: "stable",
     },
@@ -3788,14 +3755,6 @@
       status: "stable",
     },
     {
-      // Allow triggering the word suggestion from left click.
-      // From crbug.com/433209485
-      name: "LeftClickToHandleSuggestion",
-      status: {
-        "Android": "stable"
-      }
-    },
-    {
       // Keeps the legacy container attributes (startContainer/endContainer)
       // on AbstractRange. These attributes move to a new NodeRange interface
       // between AbstractRange and Range/StaticRange. This is forced to the
@@ -4981,14 +4940,6 @@
       // It's controlled by the corresponding Chromium feature,
       // net::features::kRelatedWebsitePartitionAPI, which needs to be
       // enabled to make the whole feature work.
-    },
-    {
-      // Kill switch for https://crbug.com/376516545.
-      // Releases paint holding (deferred compositor commits) early for pages
-      // that finish parsing and produce a first paint but never reach First
-      // Contentful Paint (e.g. background-color only pages).
-      name: "ReleasePaintHoldingWithoutContentfulPaint",
-      status: "stable",
     },
     {
       name: "RelOpenerBcgDependencyHint",

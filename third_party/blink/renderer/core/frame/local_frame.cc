@@ -83,10 +83,6 @@
 #include "third_party/blink/public/platform/web_content_settings_client.h"
 #include "third_party/blink/public/platform/web_string.h"
 #include "third_party/blink/public/platform/web_url_request.h"
-#include "third_party/blink/public/web/web_autofill_client.h"
-#include "third_party/blink/public/web/web_frame.h"
-#include "third_party/blink/public/web/web_local_frame_client.h"
-#include "third_party/blink/renderer/core/clipboard/system_clipboard.h"
 #include "third_party/blink/renderer/core/core_export.h"
 #include "third_party/blink/renderer/core/core_initializer.h"
 #include "third_party/blink/renderer/core/core_probe_sink.h"
@@ -110,18 +106,12 @@
 #include "third_party/blink/renderer/core/editing/editor.h"
 #include "third_party/blink/renderer/core/editing/ephemeral_range.h"
 #include "third_party/blink/renderer/core/editing/frame_selection.h"
-#include "third_party/blink/renderer/core/editing/ime/input_method_controller.h"
 #include "third_party/blink/renderer/core/editing/markers/document_marker.h"
 #include "third_party/blink/renderer/core/editing/markers/document_marker_controller.h"
 #include "third_party/blink/renderer/core/editing/markers/grammar_marker.h"
 #include "third_party/blink/renderer/core/editing/markers/spelling_marker.h"
 #include "third_party/blink/renderer/core/editing/serializers/create_markup_options.h"
 #include "third_party/blink/renderer/core/editing/serializers/serialization.h"
-#include "third_party/blink/renderer/core/editing/spellcheck/on_demand_spell_check_controller.h"
-#include "third_party/blink/renderer/core/editing/spellcheck/spell_check_requester.h"
-#include "third_party/blink/renderer/core/editing/spellcheck/spell_check_requester_helper.h"
-#include "third_party/blink/renderer/core/editing/spellcheck/spell_checker.h"
-#include "third_party/blink/renderer/core/editing/suggestion/text_suggestion_controller.h"
 #include "third_party/blink/renderer/core/editing/surrounding_text.h"
 #include "third_party/blink/renderer/core/editing/visible_position.h"
 #include "third_party/blink/renderer/core/editing/visible_selection.h"
@@ -182,7 +172,6 @@
 #include "third_party/blink/renderer/core/page/focus_controller.h"
 #include "third_party/blink/renderer/core/page/page.h"
 #include "third_party/blink/renderer/core/page/page_animator.h"
-#include "third_party/blink/renderer/core/page/plugin_script_forbidden_scope.h"
 #include "third_party/blink/renderer/core/paint/object_painter.h"
 #include "third_party/blink/renderer/core/paint/paint_auto_dark_mode.h"
 #include "third_party/blink/renderer/core/paint/paint_layer_scrollable_area.h"
@@ -479,7 +468,6 @@ void LocalFrame::Trace(Visitor* visitor) const {
   visitor->Trace(selection_);
   visitor->Trace(event_handler_);
   visitor->Trace(console_);
-  visitor->Trace(system_clipboard_);
   visitor->Trace(virtual_keyboard_overlay_changed_observers_);
   visitor->Trace(pause_handle_receivers_);
   visitor->Trace(frame_color_overlay_);
@@ -665,7 +653,6 @@ bool LocalFrame::DetachImpl(FrameDetachType type) {
     provisional_owner->SetProvisionalFrame(nullptr);
   }
 
-  PluginScriptForbiddenScope forbid_plugin_destructor_scripting;
   // In a kSwap detach, if we have a navigation going, its moved to the frame
   // being swapped in, so we don't need to notify the client about the
   // navigation stopping here. That will be up to the provisional frame being
@@ -1040,11 +1027,6 @@ void LocalFrame::SetDOMWindow(LocalDOMWindow* dom_window) {
   DCHECK(dom_window);
   if (DomWindow()) {
     DomWindow()->Reset();
-    // SystemClipboard uses HeapMojo wrappers. HeapMojo
-    // wrappers uses LocalDOMWindow (ExecutionContext) to reset the mojo
-    // objects when the ExecutionContext was destroyed. So when new
-    // LocalDOMWindow was set, we need to create new SystemClipboard.
-    system_clipboard_ = nullptr;
   }
   dom_window_ = dom_window;
   dom_window->Initialize();
@@ -1772,10 +1754,6 @@ Document* LocalFrame::DocumentAtPoint(
   return result.InnerNode() ? &result.InnerNode()->GetDocument() : nullptr;
 }
 
-void LocalFrame::RemoveSpellingMarkersUnderWords(const Vector<String>& words) {
-  GetSpellChecker().RemoveSpellingMarkersUnderWords(words);
-}
-
 bool LocalFrame::ShouldThrottleRendering() const {
   return View() && View()->ShouldThrottleRendering();
 }
@@ -2406,7 +2384,6 @@ void LocalFrame::ForceSynchronousDocumentInstall(const AtomicString& mime_type,
                                                  const SegmentedBuffer& data,
                                                  const KURL& url) {
   CHECK(GetDocument()->IsInitialEmptyDocument());
-  DCHECK(!Client()->IsLocalFrameClientImpl());
   DCHECK(GetPage());
 
   // Any Document requires Shutdown() before detach, even the initial empty
@@ -2904,14 +2881,6 @@ bool LocalFrame::IsCapturingMedia() const {
   return is_capturing_media_callback_ && is_capturing_media_callback_.Run();
 }
 
-SystemClipboard* LocalFrame::GetSystemClipboard() {
-  if (!system_clipboard_) {
-    system_clipboard_ = MakeGarbageCollected<SystemClipboard>(this);
-  }
-
-  return system_clipboard_.Get();
-}
-
 void LocalFrame::EvictFromBackForwardCache(
     mojom::blink::RendererEvictionReason reason,
     SourceLocation* source_location) {
@@ -3322,21 +3291,6 @@ void LocalFrame::ExtractSmartClipDataInternal(const gfx::Rect& rect_in_viewport,
 // removed in this cut -- see the comment on GetTextFragmentHandler()'s
 // declaration in the header.
 
-SpellChecker& LocalFrame::GetSpellChecker() const {
-  DCHECK(DomWindow());
-  return DomWindow()->GetSpellChecker();
-}
-
-InputMethodController& LocalFrame::GetInputMethodController() const {
-  DCHECK(DomWindow());
-  return DomWindow()->GetInputMethodController();
-}
-
-TextSuggestionController& LocalFrame::GetTextSuggestionController() const {
-  DCHECK(DomWindow());
-  return DomWindow()->GetTextSuggestionController();
-}
-
 void LocalFrame::WriteIntoTrace(perfetto::TracedValue ctx) const {
   perfetto::TracedDictionary dict = std::move(ctx).WriteDictionary();
   dict.Add("document", GetDocument());
@@ -3581,28 +3535,4 @@ void LocalFrame::OnFrameVisibilityChangedForMediaPlayback(bool is_hidden) {
 }
 
 // TODO(crbug.com/447973489) - Add test coverage for this method
-#if BUILDFLAG(IS_ANDROID)
-void LocalFrame::PerformFullContentSpellCheck() {
-  if (!base::FeatureList::IsEnabled(
-          blink::features::kAndroidSpellcheckFullApiBlink)) {
-    return;
-  }
-
-  // Interacting with the IME UI (which triggers this Mojo call) counts as a
-  // user interaction. Refresh the transient activation window so the
-  // on-demand spellchecker's security circuit break allows the request.
-  NotifyUserActivation(
-      mojom::blink::UserActivationNotificationType::kInteraction);
-
-  ContainerNode* container_node = HighestEditableRoot(
-      Selection().ComputeVisibleSelectionInDomTree().Start());
-  if (!container_node) {
-    return;
-  }
-
-  GetSpellChecker().GetOnDemandSpellCheckController().RequestFullChecking(
-      container_node);
-}
-#endif  // BUILDFLAG(IS_ANDROID)
-
 }  // namespace blink

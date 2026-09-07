@@ -6,7 +6,6 @@
 
 #include "base/metrics/field_trial_params.h"
 #include "third_party/blink/public/mojom/frame/user_activation_notification_type.mojom-blink.h"
-#include "third_party/blink/public/mojom/input/input_handler.mojom-blink.h"
 #include "third_party/blink/renderer/core/dom/element.h"
 #include "third_party/blink/renderer/core/dom/events/event_path.h"
 #include "third_party/blink/renderer/core/dom/pseudo_element.h"
@@ -983,51 +982,6 @@ WebInputEventResult PointerEventManager::DirectDispatchMousePointerEvent(
       event.PositionInScreen(), event.GetType());
 
   return WebInputEventResult::kHandledSuppressed;
-}
-
-void PointerEventManager::SendEffectivePanActionAtPointer(
-    const WebPointerEvent& event,
-    const Node* node_at_pointer) {
-  if (IsAnyTouchActive())
-    return;
-
-  if (ShouldAdjustStylusPointerEvent(event)) {
-    Node* adjusted_node = nullptr;
-    // Check if node adjustment allows stylus writing. Use a cloned event to
-    // avoid adjusting actual pointer's position.
-    std::unique_ptr<WebInputEvent> cloned_event = event.Clone();
-    WebPointerEvent& cloned_pointer_event =
-        static_cast<WebPointerEvent&>(*cloned_event);
-    AdjustPointerEvent(cloned_pointer_event, adjusted_node);
-    if (adjusted_node) {
-      node_at_pointer = adjusted_node;
-    }
-  }
-
-  TouchAction effective_touch_action = TouchAction::kAuto;
-  if (node_at_pointer) {
-    effective_touch_action = touch_action_util::EffectiveTouchActionAtPointer(
-        event, node_at_pointer);
-  }
-
-  mojom::blink::PanAction effective_pan_action;
-  if ((effective_touch_action & TouchAction::kPan) == TouchAction::kNone) {
-    // Stylus writing or move cursor are applicable only when touch action
-    // allows panning in at least one direction.
-    effective_pan_action = mojom::blink::PanAction::kNone;
-  } else if ((effective_touch_action & TouchAction::kInternalNotWritable) !=
-             TouchAction::kInternalNotWritable) {
-    // kInternalNotWritable bit is re-enabled, if tool type is not stylus.
-    // Hence, if this bit is not set, stylus writing is possible.
-    effective_pan_action = mojom::blink::PanAction::kStylusWritable;
-  } else if ((effective_touch_action & TouchAction::kInternalPanXScrolls) !=
-             TouchAction::kInternalPanXScrolls) {
-    effective_pan_action = mojom::blink::PanAction::kMoveCursorOrScroll;
-  } else {
-    effective_pan_action = mojom::blink::PanAction::kScroll;
-  }
-
-  frame_->GetChromeClient().SetPanAction(frame_, effective_pan_action);
 }
 
 namespace {

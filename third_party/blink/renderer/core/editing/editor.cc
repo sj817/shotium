@@ -26,11 +26,9 @@
 
 #include "third_party/blink/renderer/core/editing/editor.h"
 
-#include "third_party/blink/public/web/web_local_frame_client.h"
 #include "third_party/blink/renderer/core/clipboard/data_object.h"
 #include "third_party/blink/renderer/core/clipboard/data_transfer.h"
 #include "third_party/blink/renderer/core/clipboard/data_transfer_access_policy.h"
-#include "third_party/blink/renderer/core/clipboard/system_clipboard.h"
 #include "third_party/blink/renderer/core/css/css_computed_style_declaration.h"
 #include "third_party/blink/renderer/core/css/css_property_names.h"
 #include "third_party/blink/renderer/core/css/css_property_value_set.h"
@@ -42,8 +40,6 @@
 #include "third_party/blink/renderer/core/dom/text.h"
 #include "third_party/blink/renderer/core/editing/commands/apply_style_command.h"
 #include "third_party/blink/renderer/core/editing/commands/delete_selection_command.h"
-#include "third_party/blink/renderer/core/editing/commands/indent_outdent_command.h"
-#include "third_party/blink/renderer/core/editing/commands/insert_list_command.h"
 #include "third_party/blink/renderer/core/editing/commands/replace_selection_command.h"
 #include "third_party/blink/renderer/core/editing/commands/selection_for_undo_step.h"
 #include "third_party/blink/renderer/core/editing/commands/simplify_markup_command.h"
@@ -56,14 +52,12 @@
 #include "third_party/blink/renderer/core/editing/ephemeral_range.h"
 #include "third_party/blink/renderer/core/editing/finder/find_buffer.h"
 #include "third_party/blink/renderer/core/editing/frame_selection.h"
-#include "third_party/blink/renderer/core/editing/ime/input_method_controller.h"
 #include "third_party/blink/renderer/core/editing/kill_ring.h"
 #include "third_party/blink/renderer/core/editing/markers/document_marker.h"
 #include "third_party/blink/renderer/core/editing/markers/document_marker_controller.h"
 #include "third_party/blink/renderer/core/editing/selection_template.h"
 #include "third_party/blink/renderer/core/editing/serializers/serialization.h"
 #include "third_party/blink/renderer/core/editing/set_selection_options.h"
-#include "third_party/blink/renderer/core/editing/spellcheck/spell_checker.h"
 #include "third_party/blink/renderer/core/editing/visible_position.h"
 #include "third_party/blink/renderer/core/editing/visible_units.h"
 #include "third_party/blink/renderer/core/events/keyboard_event.h"
@@ -355,9 +349,6 @@ bool Editor::DeleteSelectionAfterDraggingWithEvents(
   if (frame_->GetDocument()->GetFrame() != frame_)
     return false;
 
-  // No DOM mutation if EditContext is active.
-  if (frame_->GetInputMethodController().GetActiveEditContext())
-    return true;
 
   if (should_delete && drag_source->isConnected()) {
     DeleteSelectionWithSmartDelete(delete_mode,
@@ -399,9 +390,6 @@ bool Editor::ReplaceSelectionAfterDraggingWithEvents(
   if (frame_->GetDocument()->GetFrame() != frame_)
     return false;
 
-  // No DOM mutation if EditContext is active.
-  if (frame_->GetInputMethodController().GetActiveEditContext())
-    return true;
 
   if (should_insert && drop_target->isConnected()) {
     ReplaceSelectionAfterDragging(fragment, insert_mode, drag_source_type,
@@ -420,7 +408,6 @@ void Editor::RespondToChangedContents(const Position& position) {
   // Used to notify the AXObjectCache that editable text content changed; no
   // accessibility tree exists to notify anymore.
 
-  GetSpellChecker().RespondToChangedContents();
   frame_->Client()->DidChangeContents();
 }
 
@@ -616,18 +603,6 @@ void Editor::CountEvent(ExecutionContext* execution_context,
         WebFeature::kWebkitEditableContentChangedOnContentEditable,
         WebFeature::kWebkitEditableContentChangedOnNotNode);
   }
-}
-
-void Editor::CopyImage(const HitTestResult& result) {
-  WriteImageNodeToClipboard(*frame_->GetSystemClipboard(),
-                            *result.InnerNodeOrImageMapImage(),
-                            result.AltDisplayString());
-}
-
-void Editor::CopyImage(const HitTestResult& result,
-                       const scoped_refptr<Image>& image) {
-  WriteImageToClipboard(*frame_->GetSystemClipboard(), image, NullUrl(),
-                        result.AltDisplayString());
 }
 
 bool Editor::CanUndo() {
@@ -921,29 +896,7 @@ Range* Editor::FindRangeOfString(
 }
 
 void Editor::RespondToChangedSelection() {
-  GetSpellChecker().RespondToChangedSelection();
-  SyncSelection(blink::SyncCondition::kNotForced);
   SetStartNewKillRingSequence(true);
-}
-
-void Editor::SyncSelection(SyncCondition force_sync) {
-  TRACE_EVENT0("blink", "Editor::SyncSelection");
-
-  // When EditContext is active, it takes care of selection synchronization.
-  if (frame_->GetInputMethodController().GetActiveEditContext()) {
-    return;
-  }
-
-  // Update frame Client() provided the iframe has not been removed already. See
-  // https://crbug.com/459123383 .
-  if (frame_->Client()) {
-    frame_->Client()->DidChangeSelection(
-        !GetFrameSelection().GetSelectionInDomTree().IsRange(), force_sync);
-  }
-}
-
-SpellChecker& Editor::GetSpellChecker() const {
-  return GetFrame().GetSpellChecker();
 }
 
 FrameSelection& Editor::GetFrameSelection() const {

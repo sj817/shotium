@@ -47,14 +47,11 @@ class CompositeEditCommand;
 class DataTransfer;
 class DragData;
 class EditingBehavior;
-class EditorCommand;
 class FrameSelection;
 class LocalFrame;
 class HitTestResult;
 class KeyboardEvent;
 class KillRing;
-class SpellChecker;
-enum class SyncCondition;
 class CSSPropertyValueSet;
 class TextEvent;
 class UndoStack;
@@ -79,7 +76,6 @@ class CORE_EXPORT Editor final : public GarbageCollected<Editor> {
     last_edit_command_ = last_edit_command;
   }
 
-  void HandleKeyboardEvent(KeyboardEvent*);
   bool HandleTextEvent(TextEvent*);
 
   bool CanEdit() const;
@@ -91,10 +87,6 @@ class CORE_EXPORT Editor final : public GarbageCollected<Editor> {
   bool CanDelete() const;
 
   static void CountEvent(ExecutionContext*, const Event&);
-  void CopyImage(const HitTestResult&);
-  void CopyImage(const HitTestResult& result,
-                 const scoped_refptr<Image>& image);
-
   void RespondToChangedContents(const Position&);
   void NotifyAccessibilityOfDeletionOrInsertionInTextField(
       const SelectionForUndoStep&,
@@ -114,17 +106,6 @@ class CORE_EXPORT Editor final : public GarbageCollected<Editor> {
   void SetShouldStyleWithCss(bool flag) { should_style_with_css_ = flag; }
   bool ShouldStyleWithCss() const { return should_style_with_css_; }
 
-  EditorCommand CreateCommand(const String& command_name)
-      const;  // Command source is CommandFromMenuOrKeyBinding.
-  EditorCommand CreateCommand(const String& command_name,
-                              EditorCommandSource) const;
-
-  // |Editor::executeCommand| is implementation of |WebFrame::executeCommand|
-  // rather than |Document::execCommand|.
-  bool ExecuteCommand(const String&);
-  bool ExecuteCommand(const String& command_name, const String& value);
-  bool IsCommandEnabled(const String&) const;
-
   bool InsertText(const String&, KeyboardEvent* triggering_event);
   bool InsertTextWithoutSendingTextEvent(
       const String&,
@@ -142,8 +123,6 @@ class CORE_EXPORT Editor final : public GarbageCollected<Editor> {
   bool CanRedo();
   void Redo();
 
-  // Exposed for IdleSpellCheckController only.
-  // Supposed to be used as |const UndoStack&|.
   UndoStack& GetUndoStack() const { return *undo_stack_; }
 
   void SetBaseWritingDirection(mojo_base::mojom::blink::TextDirection);
@@ -193,7 +172,6 @@ class CORE_EXPORT Editor final : public GarbageCollected<Editor> {
                                     const gfx::Point& end_point) const;
 
   void RespondToChangedSelection();
-  void SyncSelection(blink::SyncCondition force_sync);
 
   void ReplaceSelectionWithFragment(DocumentFragment*,
                                     bool select_replacement,
@@ -271,10 +249,8 @@ class CORE_EXPORT Editor final : public GarbageCollected<Editor> {
     return *frame_;
   }
 
-  SpellChecker& GetSpellChecker() const;
   FrameSelection& GetFrameSelection() const;
 
-  bool HandleEditingKeyboardEvent(KeyboardEvent*);
 };
 
 inline void Editor::SetStartNewKillRingSequence(bool flag) {

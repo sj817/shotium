@@ -58,7 +58,6 @@ class HTMLImageElement;
 class HTMLSpanElement;
 struct LocalCaretRect;
 class Node;
-class SystemClipboard;
 
 // This file contains a set of helper functions used by the editing commands
 
@@ -141,12 +140,6 @@ inline ContainerNode* ParentCrossingShadowBoundaries<EditingInFlatTreeStrategy>(
     const Node& node) {
   return FlatTreeTraversal::Parent(node);
 }
-
-void WriteImageToClipboard(SystemClipboard& system_clipboard,
-                           const scoped_refptr<Image>& image,
-                           const KURL& url_string,
-                           const String& title);
-void WriteImageNodeToClipboard(SystemClipboard&, const Node&, const String&);
 
 // Returns true for nodes that either have no content, or have content that is
 // ignored (skipped over) while editing. There are no VisiblePositions inside
@@ -418,8 +411,7 @@ DispatchEventResult DispatchBeforeInputDataTransfer(Node*,
 // insertReplacementText.
 CORE_EXPORT void InsertTextAndSendInputEventsOfTypeInsertReplacementText(
     LocalFrame&,
-    const String&,
-    bool allow_edit_context = false);
+    const String&);
 }  // namespace blink
 
 #endif  // THIRD_PARTY_BLINK_RENDERER_CORE_EDITING_EDITING_UTILITIES_H_

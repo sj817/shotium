@@ -56,7 +56,6 @@ BASE_FEATURE(kAndroidDesktopWebPrefsLargeDisplays,
              base::FEATURE_DISABLED_BY_DEFAULT);
 
 BASE_FEATURE(kAndroidSpellcheckNativeUi, base::FEATURE_DISABLED_BY_DEFAULT);
-BASE_FEATURE(kAndroidSpellcheckFullApiBlink, base::FEATURE_DISABLED_BY_DEFAULT);
 
 // If enabled, the platform in the User-Agent metadata for Android desktop will
 // be "Android" instead of "Linux".
@@ -144,12 +143,6 @@ BASE_FEATURE(kAudioWorkletThreadRealtimePeriodMac,
 // A thread pool system for effective usage of RealtimeAudioWorkletThread
 // instances.
 BASE_FEATURE(kAudioWorkletThreadPool, base::FEATURE_ENABLED_BY_DEFAULT);
-
-// If enabled, Blink informs WebAutofillClient not only about keydown events on
-// text-type <input> but also on <textarea> and contenteditables, and
-// WebAutofillClient may default-handle any of these events.
-BASE_FEATURE(kAutofillKeydownEditableElement,
-             base::FEATURE_DISABLED_BY_DEFAULT);
 
 // https://crbug.com/1472970
 BASE_FEATURE(kAutoSpeculationRules, base::FEATURE_DISABLED_BY_DEFAULT);
@@ -766,22 +759,6 @@ BASE_FEATURE_PARAM(size_t,
 BASE_FEATURE(kImageLoadingPrioritizationFix, base::FEATURE_ENABLED_BY_DEFAULT);
 
 BASE_FEATURE(kImageReplacement, base::FEATURE_DISABLED_BY_DEFAULT);
-
-#if !BUILDFLAG(IS_ANDROID)
-BASE_FEATURE(kInitialWebUIWithoutExtensions, base::FEATURE_DISABLED_BY_DEFAULT);
-#endif  // !BUILDFLAG(IS_ANDROID)
-
-BASE_FEATURE(kInitialWebUISurfaceSync, base::FEATURE_DISABLED_BY_DEFAULT);
-BASE_FEATURE_PARAM(size_t,
-                   kInitialWebUISurfaceSyncDeadlineInFrames,
-                   &kInitialWebUISurfaceSync,
-                   "deadline_in_frames",
-                   600 /* 10 seconds at 60 FPS */);
-BASE_FEATURE_PARAM(size_t,
-                   kInitialWebUISurfaceSyncRendererCommitDelayInMs,
-                   &kInitialWebUISurfaceSync,
-                   "renderer_commit_delay_ms",
-                   10000 /* 10 seconds */);
 
 BASE_FEATURE(kIndexedDBCompressValuesWithSnappy,
              base::FEATURE_ENABLED_BY_DEFAULT);
@@ -1692,8 +1669,6 @@ BASE_FEATURE(kOriginAgentClusterDefaultEnabled,
              "OriginAgentClusterDefaultEnable",
              base::FEATURE_ENABLED_BY_DEFAULT);
 
-// Enable defer commits to avoid flash of unstyled content, for all navigations.
-BASE_FEATURE(kPaintHolding, base::FEATURE_ENABLED_BY_DEFAULT);
 
 
 // Enables the use of the PaintCache for Path2D objects that are rasterized

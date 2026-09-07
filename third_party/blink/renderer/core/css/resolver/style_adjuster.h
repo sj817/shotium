@@ -45,7 +45,7 @@ class StyleAdjuster {
   CORE_EXPORT static void AdjustComputedStyle(StyleResolverState&, Element*);
   static void AdjustStyleForCombinedText(ComputedStyleBuilder&);
   static void AdjustStyleForTextCombine(ComputedStyleBuilder&);
-  static void AdjustStyleForEditing(ComputedStyleBuilder&, Element*);
+  static void AdjustStyleForEditing(ComputedStyleBuilder&);
   static void AdjustStyleForDisplay(ComputedStyleBuilder&,
                                     const ComputedStyle& layout_parent_style,
                                     const Element*,

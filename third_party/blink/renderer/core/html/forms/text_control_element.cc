@@ -45,7 +45,6 @@
 #include "third_party/blink/renderer/core/editing/selection_template.h"
 #include "third_party/blink/renderer/core/editing/serializers/serialization.h"
 #include "third_party/blink/renderer/core/editing/set_selection_options.h"
-#include "third_party/blink/renderer/core/editing/spellcheck/spell_checker.h"
 #include "third_party/blink/renderer/core/editing/text_affinity.h"
 #include "third_party/blink/renderer/core/editing/visible_position.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
@@ -189,10 +188,8 @@ void TextControlElement::DefaultEventHandler(Event& event) {
 
   if (event.type() == event_type_names::kWebkitEditableContentChanged &&
       GetLayoutObject() && GetLayoutObject()->IsTextControl()) {
-    last_change_was_user_edit_ = !GetDocument().IsRunningExecCommand();
-    if (last_change_was_user_edit_) {
-      SetUserHasEditedTheField();
-    }
+    last_change_was_user_edit_ = true;
+    SetUserHasEditedTheField();
 
     if (IsFocused()) {
       // Updating the cache in SelectionChanged() isn't enough because
@@ -923,20 +920,6 @@ void TextControlElement::ParseAttribute(
              params.name == html_names::kDisabledAttr) {
     DisabledOrReadonlyAttributeChanged(params.name);
     HTMLFormControlElementWithState::ParseAttribute(params);
-    if (params.new_value.IsNull())
-      return;
-
-    if (HTMLElement* inner_editor = InnerEditorElement()) {
-      if (auto* frame = GetDocument().GetFrame())
-        frame->GetSpellChecker().RemoveSpellingAndGrammarMarkers(*inner_editor);
-    }
-  } else if (params.name == html_names::kSpellcheckAttr) {
-    if (HTMLElement* inner_editor = InnerEditorElement()) {
-      if (auto* frame = GetDocument().GetFrame()) {
-        frame->GetSpellChecker().RespondToChangedEnablement(
-            *inner_editor, IsSpellCheckingEnabled());
-      }
-    }
   } else {
     HTMLFormControlElementWithState::ParseAttribute(params);
   }

@@ -67,9 +67,6 @@
 #include "third_party/blink/renderer/core/dom/scriptable_document_parser.h"
 #include "third_party/blink/renderer/core/editing/editor.h"
 #include "third_party/blink/renderer/core/editing/frame_selection.h"
-#include "third_party/blink/renderer/core/editing/ime/input_method_controller.h"
-#include "third_party/blink/renderer/core/editing/spellcheck/spell_checker.h"
-#include "third_party/blink/renderer/core/editing/suggestion/text_suggestion_controller.h"
 #include "third_party/blink/renderer/core/events/error_event.h"
 #include "third_party/blink/renderer/core/events/hash_change_event.h"
 #include "third_party/blink/renderer/core/events/message_event.h"
@@ -195,11 +192,6 @@ LocalDOMWindow::LocalDOMWindow(LocalFrame& frame, WindowAgent* agent)
                        /*Same value as IsWindow(). is_window=*/true),
       visualViewport_(MakeGarbageCollected<DOMVisualViewport>(this)),
       should_print_when_finished_loading_(false),
-      input_method_controller_(
-          MakeGarbageCollected<InputMethodController>(*this, frame)),
-      spell_checker_(MakeGarbageCollected<SpellChecker>(*this)),
-      text_suggestion_controller_(
-          MakeGarbageCollected<TextSuggestionController>(*this)),
       token_(frame.GetLocalFrameToken()),
       network_state_observer_(MakeGarbageCollected<NetworkStateObserver>(this)),
       closewatcher_stack_(
@@ -2114,9 +2106,6 @@ void LocalDOMWindow::Trace(Visitor* visitor) const {
   visitor->Trace(event_listener_observers_);
   visitor->Trace(current_event_);
   visitor->Trace(trusted_types_);
-  visitor->Trace(input_method_controller_);
-  visitor->Trace(spell_checker_);
-  visitor->Trace(text_suggestion_controller_);
   visitor->Trace(network_state_observer_);
   visitor->Trace(closewatcher_stack_);
   visitor->Trace(soft_navigation_heuristics_);

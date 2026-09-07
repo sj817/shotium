@@ -28,7 +28,6 @@ mojom("compositing") {
 
   public_deps = [
     ":features",
-    "//components/input:mojom",
     "//gpu/ipc/common:interfaces",
     "//gpu/ipc/common:surface_handle",
     "//mojo/public/mojom/base",

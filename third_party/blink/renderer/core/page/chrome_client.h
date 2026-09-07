@@ -32,7 +32,6 @@
 #include "cc/input/overscroll_behavior.h"
 #include "cc/metrics/begin_main_frame_metrics.h"
 #include "cc/paint/draw_image.h"
-#include "cc/trees/paint_holding_reason.h"
 #include "components/viz/common/surfaces/frame_sink_id.h"
 #include "third_party/blink/public/common/dom_storage/session_storage_namespace_id.h"
 #include "third_party/blink/public/common/input/web_gesture_event.h"
@@ -40,7 +39,6 @@
 #include "third_party/blink/public/common/page/drag_operation.h"
 #include "third_party/blink/public/mojom/devtools/console_message.mojom-blink-forward.h"
 #include "third_party/blink/public/mojom/input/focus_type.mojom-blink-forward.h"
-#include "third_party/blink/public/mojom/input/input_handler.mojom-blink-forward.h"
 #include "third_party/blink/public/mojom/scroll/scroll_into_view_params.mojom-blink.h"
 #include "third_party/blink/renderer/core/core_export.h"
 #include "third_party/blink/renderer/core/dom/document.h"
@@ -199,19 +197,6 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
   // browser.
   virtual void DraggableRegionsChanged() = 0;
 
-  // Allow document lifecycle updates to be run in order to produce composited
-  // outputs. Updates are blocked from occurring during loading navigation in
-  // order to prevent contention and allow Blink to proceed more quickly. This
-  // signals that enough progress has been made and document lifecycle updates
-  // are desirable. This will allow visual updates to occur unless the caller
-  // also uses StartDeferringCommits().
-  //
-  // This may only be called for the main frame, and takes it as
-  // reference to make it clear that callers may only call this while a local
-  // main frame is present and the values does not persist between instances of
-  // local main frames.
-  virtual void BeginLifecycleUpdates(LocalFrame& main_frame) = 0;
-
   // Notifies clients immediately before a newly committed main frame is pushed
   // to the compositor thread.
   struct CORE_EXPORT CommitObserver : public GarbageCollectedMixin {
@@ -227,10 +212,6 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
   virtual void WillCommitCompositorFrame() = 0;
   virtual void RequestFrameWithoutVSyncFromRoot(LocalFrame& frame) {}
 
-  virtual bool StartDeferringCommits(LocalFrame& main_frame,
-                                     base::TimeDelta timeout,
-                                     cc::PaintHoldingReason reason) = 0;
-  virtual void StopDeferringCommits(LocalFrame& main_frame) = 0;
   virtual std::unique_ptr<cc::ScopedPauseRendering> PauseRendering(
       LocalFrame& main_frame) = 0;
 
@@ -451,8 +432,6 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
   virtual void SetNeedsUnbufferedInputForDebugger(LocalFrame*, bool) = 0;
   virtual void RequestUnbufferedInputEvents(LocalFrame*) = 0;
   virtual void SetTouchAction(LocalFrame*, TouchAction) = 0;
-  virtual void SetPanAction(LocalFrame*,
-                            mojom::blink::PanAction pan_action) = 0;
 
   // Checks if there is an opened popup, called by LayoutMenuList::showPopUp().
   virtual bool HasOpenedPopup() const = 0;
@@ -489,59 +468,12 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
   virtual gfx::Size MinimumWindowSize() const { return gfx::Size(100, 100); }
 
 
-  virtual void DidChangeFormRelatedElementDynamically(
-      LocalFrame*,
-      HTMLElement*,
-      WebFormRelatedChangeType) {}
-  virtual void DidChangeValueInTextField(HTMLFormControlElement&) {}
-  virtual void DidClearValueInTextField(HTMLFormControlElement&) {}
-  virtual void DidUserChangeContentEditableContent(Element&) {}
-  virtual void DidEndEditingOnTextField(HTMLInputElement&) {}
-  virtual bool HandleKeyboardEventOnEditableElement(HTMLElement&,
-                                                    KeyboardEvent&) {
-    return false;
-  }
-  virtual void TextFieldDataListChanged(HTMLInputElement&) {}
-
-  // Called when the selected option of a <select> control is changed as a
-  // result of user activation - see
-  // https://html.spec.whatwg.org/multipage/interaction.html#tracking-user-activation
-  virtual void DidChangeSelectionInSelectControl(HTMLFormControlElement&) {}
-
-  virtual void SelectFieldOptionsChanged(HTMLFormControlElement&) {}
-  virtual void AjaxSucceeded(LocalFrame*) {}
-  // Called when the value of `element` has been changed by JavaScript.
-  // `old_value` contains the value before being changed.
-  // `was_autofilled` is the state of the field prior to the JS change.
-  // `value_changed` denotes whether `old_value` is different from the element's
-  // current value (the boolean is passed around instead of being recomputed for
-  // performance reasons).
-  virtual void JavaScriptSetValue(HTMLFormControlElement&,
-                                  const String& old_value,
-                                  bool was_autofilled,
-                                  bool value_changed) {}
-
-  // Returns true if the given HTMLFormControlElement is eligible for Autofill
-  // by the embedder's Autofill client.
-  virtual bool IsAutofillableElement(const HTMLFormControlElement&) {
-    return false;
-  }
-
   // Input method editor related functions.
   virtual void ShowVirtualKeyboardOnElementFocus(LocalFrame&) {}
 
   virtual gfx::Transform GetDeviceEmulationTransform() const {
     return gfx::Transform();
   }
-
-  // Called immediately before initiating DOM event dispatch for a pointerdown
-  // event. This is called exactly once per event for the innermost hit-tested
-  // node (`pointer_down_node`) before DOM event propagation begins.
-  virtual void WillDispatchPointerDown(Node& pointer_down_node) {}
-
-  // Called immediately after a mousedown event or gesture tap has been
-  // dispatched to `mouse_down_node`.
-  virtual void DidDispatchMouseDown(Node&) {}
 
   virtual void DidUpdateBrowserControls() const {}
 
@@ -593,9 +525,7 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
       LocalFrame* frame,
       std::unique_ptr<gfx::DelegatedInkMetadata> metadata) {}
 
-  virtual void FormElementReset(HTMLFormElement& element) {}
 
-  virtual void PasswordFieldReset(HTMLInputElement& element) {}
 
   virtual float ZoomFactorForViewportLayout() { return 1; }
 

@@ -63,7 +63,6 @@ class BLINK_EXPORT WebFormElement final : public WebElement {
   WebString GetName() const;
   WebString Method() const;
 
-  std::vector<WebFormControlElement> GetFormControlElements() const;
 
 #if INSIDE_BLINK
   WebFormElement(HTMLFormElement*);

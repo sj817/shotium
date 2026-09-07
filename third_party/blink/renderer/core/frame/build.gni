@@ -184,7 +184,6 @@ blink_core_sources_frame = [
   "web_feature_forward.h",
   "universal_global_scope.cc",
   "universal_global_scope.h",
-  "web_local_frame_client.cc",
   "window_controls_overlay_changed_delegate.cc",
   "window_controls_overlay_changed_delegate.h",
   "window_event_handlers.h",

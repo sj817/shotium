@@ -209,7 +209,6 @@ class WebSettings {
   // event handlers specified. User can also trigger click handlers for such
   // elements using SPACE or ENTER keys.
   virtual void SetSpatialNavigationEnabled(bool) = 0;
-  virtual void SetSpellCheckEnabledByDefault(bool) = 0;
   virtual void SetStandardFontFamily(const WebString&,
                                      UScriptCode = USCRIPT_COMMON) = 0;
   virtual void SetStrictMixedContentChecking(bool) = 0;

@@ -35,7 +35,6 @@ CHROME_VERSION   153.0.8010.0
 
 | 类 | 数量 | 动作 |
 |---|---|---|
-| `ScrollAnimationState` / `ScrollAnimator` / `ProgrammaticScrollAnimator` | 滚动动画只保留 CPU 状态、原有曲线和 RTL 位置换算，删除向合成器提交/接管/回调的状态；调度失败后立即滚到目标并返回，不再把已清空曲线的动画改回待启动 | Shot 没有合成器 host，原有实现实际走 CPU fallback；完成、取消、滚动锚定调整和生命周期服务仍需保留。本项属于第六批未验证修改，构建与像素结果以裁剪执行记录为准 |
 | 我们动过、上游也有 | **1,193** | **手工合,唯一要人看的** |
 | 没动过、上游也有 | 61,620 | 直接取上游新版 |
 | 没动过、上游已经删了 | 1,554 | 跟着删,逐个判断 |
@@ -43,6 +42,14 @@ CHROME_VERSION   153.0.8010.0
 
 `1193 + 61620 + 1554 + 58 = 64425`,对得上。**同步的全部难度就在第一行那
 1,193 个里面**,剩下 98% 是机械操作。
+
+### 2.1 静态截图裁剪的同步边界
+
+不要因上游重新出现 include 或 GN 源项就恢复已删除的浏览器模块。当前逐批删除与验证清单在 docs/screenshot-cut-execution-2026-09-07.md，完整接续边界在 docs/screenshot-cut-task.md。
+
+- 滚动动画保留 ScrollAnimationState/ScrollAnimator 的 CPU 曲线、RTL 换算、完成/取消和锚定状态，合成器提交与接管已删除。第六批已通过 Windows 与177张像素验证。
+- 第七批已删除 components/input、Blink IME/EditContext、浏览器公共宿主接口、Widget输入Mojo、CSS selector watcher、Autofill专用缓存/事件、execCommand、拼写检查/文字建议与SystemClipboard。GN/IDL/Mojo同步删除，Windows与179张像素验证通过。
+- 表单关联、校验、默认值、真实焦点和plaintext-only样式必须保留。其他GPU/拖放/诊断残留仍按完整清单继续处理，不以未完成项作为恢复已删模块的理由。
 
 ## 3. 远程仓库
 

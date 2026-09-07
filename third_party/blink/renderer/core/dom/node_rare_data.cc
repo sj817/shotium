@@ -31,7 +31,6 @@
 #include "third_party/blink/renderer/core/dom/pseudo_element.h"
 #include "third_party/blink/renderer/core/dom/scroll_marker_group_data.h"
 #include "third_party/blink/renderer/core/dom/shadow_root.h"
-#include "third_party/blink/renderer/core/editing/ime/edit_context.h"
 #include "third_party/blink/renderer/core/html/custom/custom_element_definition.h"
 #include "third_party/blink/renderer/core/html/custom/custom_element_registry.h"
 #include "third_party/blink/renderer/core/html/custom/element_internals.h"
@@ -355,13 +354,6 @@ const AtomicString& NodeRareData::IsValue() const {
 }
 NodeRareData* NodeRareData::SetIsValue(const AtomicString& is_value) {
   return SetWrappedField<AtomicString>(FieldId::kIsValue, is_value);
-}
-
-EditContext* NodeRareData::GetEditContext() const {
-  return static_cast<EditContext*>(GetField(FieldId::kEditContext));
-}
-NodeRareData* NodeRareData::SetEditContext(EditContext* edit_context) {
-  return SetField(FieldId::kEditContext, edit_context);
 }
 
 NodeRareData* NodeRareData::SetPart(DOMTokenList* part) {

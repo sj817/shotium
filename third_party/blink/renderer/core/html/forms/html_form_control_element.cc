@@ -26,7 +26,6 @@
 
 #include "base/feature_list.h"
 #include "third_party/blink/public/common/features.h"
-#include "third_party/blink/public/web/web_form_related_change_type.h"
 #include "third_party/blink/renderer/core/css/selector_checker.h"
 #include "third_party/blink/renderer/core/dom/dom_node_ids.h"
 #include "third_party/blink/renderer/core/dom/element.h"
@@ -124,20 +123,6 @@ void HTMLFormControlElement::Reset() {
   ResetImpl();
 }
 
-void HTMLFormControlElement::AttachLayoutTree(AttachContext& context) {
-  HTMLElement::AttachLayoutTree(context);
-  if (!GetLayoutObject()) {
-    FocusabilityLost();
-  }
-}
-
-void HTMLFormControlElement::DetachLayoutTree(bool performing_reattach) {
-  HTMLElement::DetachLayoutTree(performing_reattach);
-  if (!performing_reattach) {
-    FocusabilityLost();
-  }
-}
-
 void HTMLFormControlElement::AttributeChanged(
     const AttributeModificationParams& params) {
   HTMLElement::AttributeChanged(params);
@@ -222,13 +207,6 @@ void HTMLFormControlElement::SetAutofillState(WebAutofillState autofill_state) {
   PseudoStateChanged(CSSSelector::kPseudoWebKitAutofill);
   PseudoStateChanged(CSSSelector::kPseudoAutofillSelected);
   PseudoStateChanged(CSSSelector::kPseudoAutofillPreviewed);
-}
-
-bool HTMLFormControlElement::IsAutofillable() const {
-  if (Page* page = GetDocument().GetPage()) {
-    return page->GetChromeClient().IsAutofillableElement(*this);
-  }
-  return false;
 }
 
 bool HTMLFormControlElement::MatchesToolSubmitActivePseudoClass() const {

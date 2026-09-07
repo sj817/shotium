@@ -43,7 +43,6 @@
 #include "third_party/blink/renderer/core/editing/editor.h"
 #include "third_party/blink/renderer/core/editing/ephemeral_range.h"
 #include "third_party/blink/renderer/core/editing/frame_selection.h"
-#include "third_party/blink/renderer/core/editing/ime/input_method_controller.h"
 #include "third_party/blink/renderer/core/editing/plain_text_range.h"
 #include "third_party/blink/renderer/core/editing/selection_modifier.h"
 #include "third_party/blink/renderer/core/editing/selection_template.h"
@@ -604,9 +603,6 @@ void TypingCommand::CloseTyping(LocalFrame* frame) {
 }
 
 void TypingCommand::CloseTypingIfNeeded(LocalFrame* frame) {
-  if (frame->GetDocument()->IsRunningExecCommand() ||
-      frame->GetInputMethodController().HasComposition())
-    return;
   if (TypingCommand* last_typing_command =
           LastTypingCommandIfStillOpenForTyping(frame))
     last_typing_command->CloseTyping();

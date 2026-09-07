@@ -60,7 +60,6 @@
 #include "third_party/blink/public/platform/web_worker_fetch_context.h"
 #include "third_party/blink/public/web/web_frame_load_type.h"
 #include "third_party/blink/public/web/web_history_commit_type.h"
-#include "third_party/blink/public/web/web_manifest_manager.h"
 #include "third_party/blink/public/web/web_navigation_params.h"
 #include "third_party/blink/public/web/web_performance_metrics_for_reporting.h"
 #include "third_party/blink/renderer/core/core_export.h"
@@ -101,12 +100,8 @@ class ResourceRequest;
 class ResourceResponse;
 class SourceLocation;
 class WebDedicatedWorkerHostFactoryClient;
-class WebLocalFrame;
-class WebSpellCheckPanelHostClient;
-class WebTextCheckClient;
 class URLLoader;
 class ResourceLoadInfoNotifierWrapper;
-enum class SyncCondition;
 struct JavaScriptFrameworkDetectionResult;
 
 namespace scheduler {
@@ -122,10 +117,6 @@ class CORE_EXPORT LocalFrameClient : public FrameClient {
   // to. ContentCaptureManager and its only caller in LocalFrame are cut, so
   // nothing asks for the client any more.
 
-  virtual WebLocalFrame* GetWebFrame() const { return nullptr; }
-
-  virtual bool HasWebView() const = 0;  // mainly for assertions
-  virtual bool IsForInitialWebUI() const { return false; }
 
   virtual base::UnguessableToken GetDevToolsFrameToken() const = 0;
 
@@ -259,12 +250,6 @@ class CORE_EXPORT LocalFrameClient : public FrameClient {
       bool after_input_or_scroll,
       PerformanceTimelineEntryIdInfo navigation_id) {}
 
-  // Transmits the change in the set of watched CSS selectors property that
-  // match any element on the frame.
-  virtual void SelectorMatchChanged(
-      const Vector<String>& added_selectors,
-      const Vector<String>& removed_selectors) = 0;
-
   virtual void DidCreateDocumentLoader(DocumentLoader*) = 0;
 
   virtual String UserAgentOverride() = 0;
@@ -318,7 +303,6 @@ class CORE_EXPORT LocalFrameClient : public FrameClient {
 
   unsigned BackForwardLength() override { return 0; }
 
-  virtual bool IsLocalFrameClientImpl() const { return false; }
 
   virtual AssociatedInterfaceProvider*
   GetRemoteNavigationAssociatedInterfaces() = 0;
@@ -327,9 +311,7 @@ class CORE_EXPORT LocalFrameClient : public FrameClient {
 
   virtual void AbortClientNavigation(bool for_new_navigation) {}
 
-  virtual WebSpellCheckPanelHostClient* SpellCheckPanelHostClient() const = 0;
 
-  virtual WebTextCheckClient* GetTextCheckerClient() const = 0;
 
   virtual scoped_refptr<network::SharedURLLoaderFactory>
   GetURLLoaderFactory() = 0;
@@ -344,15 +326,6 @@ class CORE_EXPORT LocalFrameClient : public FrameClient {
 
   virtual String evaluateInInspectorOverlayForTesting(const String& script) = 0;
 
-  virtual bool HandleCurrentKeyboardEvent() { return false; }
-
-  // Called when the selection may have changed (Note, that due to
-  // http://crbug.com/632920 the selection may not have changed). Additionally,
-  // in some circumstances the browser selection may be known to not match the
-  // last synced value, in which case SyncCondition::kForced is passed to force
-  // an update even if the selection appears unchanged since the last call.
-  virtual void DidChangeSelection(bool is_selection_empty,
-                                  blink::SyncCondition force_sync) {}
 
   virtual void DidChangeContents() {}
 

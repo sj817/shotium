@@ -129,7 +129,6 @@ class FrameConsole;
 class FrameOverlay;
 class FrameSelection;
 class IdlenessDetector;
-class InputMethodController;
 class InterfaceRegistry;
 class LayoutView;
 class LocalDOMWindow;
@@ -140,15 +139,11 @@ class NodeTraversal;
 class PerformanceMonitor;
 class PolicyContainer;
 class PostLayoutSnapshotClient;
-class SpellChecker;
 class StorageKey;
 class StyleEnvironmentVariables;
-class SystemClipboard;
 class TextFragmentHandler;
-class TextSuggestionController;
 class URLLoader;
 class VirtualKeyboardOverlayChangedObserver;
-class WebAutofillClient;
 class WebContentSettingsClient;
 class WebInputEventAttribution;
 class WindowControlsOverlayChangedDelegate;
@@ -280,9 +275,6 @@ class CORE_EXPORT LocalFrame final
   EventHandlerRegistry& GetEventHandlerRegistry() const;
   FrameLoader& Loader() const;
   FrameSelection& Selection() const;
-  InputMethodController& GetInputMethodController() const;
-  TextSuggestionController& GetTextSuggestionController() const;
-  SpellChecker& GetSpellChecker() const;
   FrameConsole& Console() const;
   BackgroundColorPaintImageGenerator* GetBackgroundColorPaintImageGenerator();
   BoxShadowPaintImageGenerator* GetBoxShadowPaintImageGenerator();
@@ -447,7 +439,6 @@ class CORE_EXPORT LocalFrame final
   PositionForPoint(const PhysicalOffset& frame_point);
   Document* DocumentAtPoint(const PhysicalOffset&);
 
-  void RemoveSpellingMarkersUnderWords(const Vector<String>& words);
 
   bool ShouldThrottleRendering() const;
 
@@ -711,7 +702,6 @@ class CORE_EXPORT LocalFrame final
     return is_window_controls_overlay_visible_;
   }
 
-  SystemClipboard* GetSystemClipboard();
 
 
   // Return true if the frame is able to access an event with the given
@@ -884,9 +874,6 @@ class CORE_EXPORT LocalFrame final
     is_caret_browsing_overridden_ = overridden;
   }
 
-#if BUILDFLAG(IS_ANDROID)
-  void PerformFullContentSpellCheck();
-#endif  // BUILDFLAG(IS_ANDROID)
  private:
   friend class FrameNavigationDisabler;
   // LocalFrameMojoHandler is a part of LocalFrame.
@@ -1049,8 +1036,6 @@ class CORE_EXPORT LocalFrame final
   int num_burst_download_requests_ = 0;
   base::TimeTicks burst_download_start_time_;
 
-  // Access to the global sanitized system clipboard.
-  Member<SystemClipboard> system_clipboard_;
 
   // Access to background-color paint image generator. Initialized per local
   // root and reused among sub frames.

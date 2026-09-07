@@ -61,7 +61,6 @@ class PictureInPictureController;
 class ServiceWorkerGlobalScope;
 class Settings;
 class ShadowRoot;
-class WebLocalFrameClient;
 class WorkerGlobalScope;
 
 class CORE_EXPORT CoreInitializer {

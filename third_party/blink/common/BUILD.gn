@@ -157,7 +157,6 @@ shot_compatible_source_set("common") {
     "frame/view_transition_state_mojom_traits.cc",
     "input/synthetic_web_input_event_builders.cc",
     "input/web_coalesced_input_event.cc",
-    "input/web_coalesced_input_event_mojom_traits.cc",
     "input/web_gesture_event.cc",
     "input/web_input_event.cc",
     "input/web_keyboard_event.cc",

@@ -300,10 +300,6 @@ void HTMLSelectElement::setValueForBinding(const String& value) {
                       was_autofilled && !value_changed
                           ? WebAutofillState::kAutofilled
                           : WebAutofillState::kNotFilled);
-  if (Page* page = GetDocument().GetPage(); page) {
-    page->GetChromeClient().JavaScriptSetValue(*this, old_value, was_autofilled,
-                                               value_changed);
-  }
 }
 
 void HTMLSelectElement::SelectOptionByValue(const String& value,
@@ -955,14 +951,6 @@ void HTMLSelectElement::OptionInserted(HTMLOptionElement& option,
     CountedElementInserted(&option, nearest_ancestor_select_child);
   }
 
-  if (!GetDocument().IsActive())
-    return;
-
-  GetDocument()
-      .GetFrame()
-      ->GetPage()
-      ->GetChromeClient()
-      .SelectFieldOptionsChanged(*this);
 }
 
 void HTMLSelectElement::UpdateAllSelectedcontents() {
@@ -1010,14 +998,6 @@ void HTMLSelectElement::OptionRemoved(HTMLOptionElement& option,
     CountedElementRemoved(&option, nearest_ancestor_select_child);
   }
 
-  if (!GetDocument().IsActive())
-    return;
-
-  GetDocument()
-      .GetFrame()
-      ->GetPage()
-      ->GetChromeClient()
-      .SelectFieldOptionsChanged(*this);
 }
 
 void HTMLSelectElement::OptGroupInsertedOrRemoved(
@@ -1082,12 +1062,6 @@ void HTMLSelectElement::SelectOption(HTMLOptionElement* element,
   }
 
   NotifyFormStateChanged();
-  if (GetDocument().IsActive()) {
-    GetDocument()
-        .GetPage()
-        ->GetChromeClient()
-        .DidChangeSelectionInSelectControl(*this);
-  }
 
   // We set the Autofilled state again because setting the autofill value
   // triggers JavaScript events and the site may override the autofilled

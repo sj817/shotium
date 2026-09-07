@@ -135,16 +135,6 @@ typedef (HTMLScriptElement or SVGScriptElement) HTMLOrSVGScriptElement;
     readonly attribute Window? defaultView;
     [Affects=Nothing] boolean hasFocus();
     [CEReactions, MeasureAs=DocumentDesignMode] attribute DOMString designMode;
-    // Only the execCommand("insertHTML",..) sub-command needs to be Trusted
-    // Types checked. Other sub-commands will string-ify its input. This, we
-    // pass in a type union instead of using a [StringContext=] annotation.
-    [CEReactions, RaisesException] boolean execCommand(DOMString commandId, optional boolean showUI = false, optional (DOMString or TrustedHTML) value = "");
-    [RaisesException] boolean queryCommandEnabled(DOMString commandId);
-    [RaisesException] boolean queryCommandIndeterm(DOMString commandId);
-    [RaisesException] boolean queryCommandState(DOMString commandId);
-    [RaisesException] boolean queryCommandSupported(DOMString commandId);
-    [RaisesException] DOMString queryCommandValue(DOMString commandId);
-
     [LegacyLenientThis] attribute EventHandler onreadystatechange;
 
     // HTML obsolete features
@@ -212,7 +202,6 @@ typedef (HTMLScriptElement or SVGScriptElement) HTMLOrSVGScriptElement;
     [RuntimeEnabled=AriaNotify,MeasureAs=AriaNotify] void ariaNotify(DOMString announcement, optional AriaNotificationOptions options = {});
 
     // Event handler attributes
-    [RuntimeEnabled=AutofillEvent] attribute EventHandler onautofill;
     attribute EventHandler onbeforecopy;
     attribute EventHandler onbeforecut;
     attribute EventHandler onbeforepaste;

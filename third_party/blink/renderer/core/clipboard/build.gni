@@ -18,9 +18,6 @@ blink_core_sources_clipboard = [
   "data_transfer_item_list.h",
   "dragged_isolated_file_system.cc",
   "dragged_isolated_file_system.h",
-  "paste_mode.h",
-  "system_clipboard.cc",
-  "system_clipboard.h",
 ]
 
 blink_core_tests_clipboard = []

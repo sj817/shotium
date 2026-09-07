@@ -416,8 +416,7 @@ void KeyboardEventManager::DefaultKeyboardEventHandler(
   if (event->type() == event_type_names::kKeydown) {
     const String& key = event->key();
     const bool is_process_key = event->keyCode() == kVKeyProcessKey;
-    // Editor commands can consume Home/End before focusgroup navigation.
-    // For non-process-key Home/End events, try focusgroup navigation first.
+    // Handle non-process-key Home/End events as focusgroup navigation.
     // HandleKeyboardEvent performs the runtime feature check before
     // dispatching.
     if (!is_process_key && (key == keywords::kHome || key == keywords::kEnd)) {
@@ -427,9 +426,6 @@ void KeyboardEventManager::DefaultKeyboardEventHandler(
       }
     }
 
-    frame_->GetEditor().HandleKeyboardEvent(event);
-    if (event->DefaultHandled())
-      return;
 
     // Do not perform the default action when inside a IME composition context.
     // TODO(dtapuska): Replace this with isComposing support. crbug.com/625686
@@ -451,9 +447,6 @@ void KeyboardEventManager::DefaultKeyboardEventHandler(
       DefaultNavigationKeyEventHandler(event, possible_focused_node);
     }
   } else if (event->type() == event_type_names::kKeypress) {
-    frame_->GetEditor().HandleKeyboardEvent(event);
-    if (event->DefaultHandled())
-      return;
     if (event->key() == keywords::kCapitalEnter) {
       DefaultEnterEventHandler(event);
     } else if (event->charCode() == ' ') {

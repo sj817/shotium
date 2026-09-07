@@ -66,14 +66,12 @@ import "third_party/blink/public/mojom/messaging/transferable_message.mojom";
 import "third_party/blink/public/mojom/navigation/navigation_params.mojom";
 import "third_party/blink/public/mojom/opengraph/metadata.mojom";
 import "third_party/blink/public/mojom/page/draggable_region.mojom";
-import "third_party/blink/public/mojom/page/widget.mojom";
 import "third_party/blink/public/mojom/scroll/scroll_into_view_params.mojom";
 import "third_party/blink/public/mojom/security_context/insecure_request_policy.mojom";
 import "third_party/blink/public/mojom/timing/resource_timing.mojom";
 import "third_party/blink/public/mojom/tokens/tokens.mojom";
 import "third_party/blink/public/mojom/unbounded_element/unbounded_element.mojom";
 import "third_party/blink/public/mojom/use_counter/metrics/web_feature.mojom";
-import "third_party/blink/public/mojom/widget/platform_widget.mojom";
 import "third_party/blink/public/mojom/window_features/window_features.mojom";
 import "ui/base/ime/mojom/virtual_keyboard_types.mojom";
 import "ui/base/mojom/window_open_disposition.mojom";
@@ -517,16 +515,6 @@ interface LocalFrameHost {
                 array<MenuItem> menu_items,
                 bool right_aligned,
                 bool allow_multiple_selection);
-
-  // Similar to content.mojom.FrameHost::CreateNewWindow, except used for
-  // sub-widgets, like <select> dropdowns. Upon return, the renderer side popup
-  // will be live until the PopupWidgetHost is disconnected by the browser.
-  // This is used on platforms that do not use the native controls via
-  // ShowPopupMenu, OpenDateTimeDialog, or OpenColorChooser.
-  CreateNewPopupWidget(
-      pending_associated_receiver<PopupWidgetHost> popup_host,
-      pending_associated_receiver<WidgetHost> blink_widget_host,
-      pending_associated_remote<Widget> blink_widget);
 
   // Sent when the renderer loads a resource from its memory cache. This message
   // lets the browser know we loaded a resource from the memory cache and is

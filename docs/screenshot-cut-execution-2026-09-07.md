@@ -160,6 +160,28 @@ EXE SHA256：`0f4267166f8bf876b8e18e3f7df6f36359d86635cf525cf4733c37ddc18d8cf4`�
 
 EXE 为 46,838,784 字节（较第五批减少 1,134,592 字节），SHA256：`9989fced172bb90ea3f24eaeb0cea9da865e24e7d7d5b7148a324b4fa5ef089f`。DLL 为 46,836,736 字节，SHA256：`b882dc9c7c42e00a4bc884db0a2eca7b39de6084258fb49d8f1a979e7ad0a2fa`。源码/删除证据在 out/cut-stage10；构建日志在 out/Shot/cut-batch6-*.log；运行、177 张对照和二进制证据在 out/cut-batch6。文件行数删除不等于同等二进制收益，以上大小来自真实产物。
 
+## 第七批：输入、编辑命令、Autofill 与系统剪贴板
+
+本批实体删除 216 文件，并同步调用方、IDL、生成类型、运行开关、GN 源列表和 Mojo 类型映射。components/input 的 80 文件、Blink IME/EditContext、公共浏览器宿主头文件、Widget 输入协议、CSS selector watcher、Autofill 事件和专用表单缓存、execCommand 与格式化命令、拼写检查/文字建议、SystemClipboard 及其协议已删除。
+
+保留影响截图的表单关联与校验、disabled fieldset/legend、radio group、shadow reference target 遍历、plaintext-only 空白处理和真实焦点/选择状态。系统剪贴板消失后 DataObjectItem 的文件令牌克隆补上直接 Mojo include；删除样式回调字段后，样式生成器的无用对齐类型一起移除。未恢复浏览器实现。
+
+| 验证 | 结果 |
+|---|---|
+| GN / 输入 | 6847 targets / 856 build files；7431 个源码输入全部存在 |
+| Windows EXE / DLL | jobs 8 编译链接成功；样式生成器与直接 include 问题已修复，失败 TU 1/1 syntax clean，无 OOM |
+| IDL enum | dry-run 检查 54 枚举、122 引用值，0 缺失 |
+| serve / net / demos | 全通过；62 exact / 1 fuzzy / 21 smoke，84 demos |
+| Node / daemon / 协议 | 新 addon 与相同 SHA256 的新 DLL，全部通过 |
+| Bilibili / accept | 全通过；原有 Chrome oracle 差异约 1.5245% 保持 |
+| PNG 原始对照 | 179/179 解码像素完全相同；新增输入框和表单关联基准 |
+| Linux probe | 0 缺 BUILD / 0 主仓库缺输入；3 Linux DEPS 和1宿主工具链缺项仍在 |
+| Linux Jumbo | 扫描列出40个符号候选、部分生成源码不可用；不是编译结果，六平台实编译仍未完成 |
+
+EXE 46,483,968 字节，较第六批减少 354,816 字节；SHA256 835d04bd053c17b507f7cae54198de70183a0d4b2ec9ae6d23665facc67a470f。DLL 46,481,920 字节，SHA256 6d4912d96a203e3b41b45da83fb4e7d5a4d1ca603d40e3e263676de3d5420486。out/cut-stage11 保存 owned/delete/hash 证明，out/cut-batch7 保存运行与179张像素结果，out/Shot/cut-batch7-*.log 保存构建日志。5个空目录已精确非递归移除，components/input 与 Blink editing/ime、spellcheck、suggestion 实际不再存在。
+
+拖放链尚未删除：自动审批两次拒绝14文件提案，当前仍等待用户明确确认。DataTransfer/DragController 及通用输入尾巴不能列为已完成，也不能将这一批等同整个根目录清理结束。
+
 ## 后续批次
 
 继续处理网络公共层、输入/合成器/GPU、诊断后端等剩余闭包，完整接续清单见 `screenshot-cut-task.md`。不把待处理或已关闭开关标为彻底删除。

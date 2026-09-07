@@ -36,7 +36,6 @@ class CustomElementDefinition;
 class DOMTokenList;
 class DatasetDOMStringMap;
 class DisplayLockContext;
-class EditContext;
 class Element;
 class ElementAnimationTriggerData;
 class ElementAnimations;
@@ -256,8 +255,6 @@ class CORE_EXPORT NodeRareData final : public GarbageCollected<NodeRareData> {
   const AtomicString& IsValue() const;
   [[nodiscard]] NodeRareData* SetIsValue(const AtomicString& is_value);
 
-  EditContext* GetEditContext() const;
-  [[nodiscard]] NodeRareData* SetEditContext(EditContext* edit_context);
 
   [[nodiscard]] NodeRareData* SetPart(DOMTokenList* part);
   DOMTokenList* GetPart() const;
@@ -563,7 +560,6 @@ class CORE_EXPORT NodeRareData final : public GarbageCollected<NodeRareData> {
     kElementAnimations = 6,
     kIntersectionObserverData = 7,
     kPseudoElementData = 8,
-    kEditContext = 9,
     kPart = 10,
     kCssomMapWrapper = 11,
     kElementInternals = 12,

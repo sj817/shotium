@@ -58,20 +58,6 @@ WebString WebFormElement::Method() const {
   return ConstUnwrap<HTMLFormElement>()->method();
 }
 
-std::vector<WebFormControlElement> WebFormElement::GetFormControlElements()
-    const {
-  const HTMLFormElement* form = ConstUnwrap<HTMLFormElement>();
-  std::vector<WebFormControlElement> form_control_elements;
-  for (const auto& element : form->AllContainedFormElementsForAutofill()) {
-    if (auto* form_control =
-            blink::DynamicTo<HTMLFormControlElement>(element.Get())) {
-      form_control_elements.push_back(form_control);
-    }
-  }
-
-  return form_control_elements;
-}
-
 WebFormElement::WebFormElement(HTMLFormElement* e) : WebElement(e) {}
 
 DEFINE_WEB_NODE_TYPE_CASTS(WebFormElement,

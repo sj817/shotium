@@ -41,7 +41,6 @@ ALIGNMENT_ORDER = [
     'TextOverflowData',
     'TransformOperations',
     'Vector<AtomicString>',
-    'Vector<String>',
     'Vector<TimelineAxis>',
     'Vector<TimelineInset>',
     'scoped_refptr',

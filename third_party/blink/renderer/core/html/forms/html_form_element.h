@@ -101,8 +101,6 @@ class CORE_EXPORT HTMLFormElement final : public HTMLElement {
   void requestSubmit(HTMLElement* submitter, ExceptionState& exception_state);
   void reset();
 
-  void AttachLayoutTree(AttachContext& context) override;
-  void DetachLayoutTree(bool performing_reattach) override;
 
   void SubmitImplicitly(const Event&, bool from_implicit_submission_trigger);
 
@@ -135,20 +133,10 @@ class CORE_EXPORT HTMLFormElement final : public HTMLElement {
 
   // Returns the listed elements (form controls) associated with `this`.
   const ListedElement::List& ListedElements() const {
-    return CollectAndCacheListedElements(/*collect_for_autofill*/ false);
+    return CollectAndCacheListedElements();
   }
 
   void NotifyEmailVerificationTokenFieldChanged();
-
-  // Returns the contained form control elements associated with `this`, also
-  // including descendants of `this` that are form control elements and inside
-  // Shadow DOM. The result will contain the form control elements of <form>s
-  // nested inside `this`. In principle, form nesting is prohibited by the HTML
-  // standard, but in practice it can still occur - e.g., by dynamically
-  // appending <form> children to (a descendant of) `this`.
-  const ListedElement::List& AllContainedFormElementsForAutofill() const {
-    return CollectAndCacheListedElements(/*collect_for_autofill*/ true);
-  }
 
   const HeapVector<Member<HTMLImageElement>>& ImageElements();
 
@@ -165,7 +153,6 @@ class CORE_EXPORT HTMLFormElement final : public HTMLElement {
   FormData* ConstructEntryList(Element* submitter,
                                const TextEncoding& encoding);
 
-  void InvalidateListedElementsForAutofill();
   void InvalidateListedElements();
 
   // The declarative WebMCP tool feature (`toolname`/`tooldescription`
@@ -207,27 +194,12 @@ class CORE_EXPORT HTMLFormElement final : public HTMLElement {
 
   void CollectListedElementsForReferenceTarget(
       const Node& root,
-      ListedElement::List& elements,
-      ListedElement::List* elements_for_autofill = nullptr) const;
-  void CollectListedElements(
-      const Node* root,
-      ListedElement::List& elements,
-      ListedElement::List* elements_for_autofill = nullptr,
-      bool in_shadow_tree = false) const;
+      ListedElement::List& elements) const;
+  void CollectListedElements(const Node* root,
+                             ListedElement::List& elements) const;
   void CollectImageElements(Node& root, HeapVector<Member<HTMLImageElement>>&);
 
-  // Utility function used by ListedElements and
-  // AllContainedFormElementsForAutofill. Takes care of caching two lists of
-  // listed elements, one including shadow- contained elements, and one "normal"
-  // list without those. If `collect_for_autofill` is `true`, then the list will
-  // also contain descendants of `this` that are form control elements and
-  // inside Shadow DOM. Note that if `collect_for_autofill` is true, then,
-  // additionally, the result will contain the form control elements of <form>s
-  // nested inside `this`. In principle, form nesting is prohibited by the HTML
-  // standard, but in practice it can still occur - e.g., by dynamically
-  // appending <form> children to (a descendant of) `this`.
-  const ListedElement::List& CollectAndCacheListedElements(
-      bool collect_for_autofill) const;
+  const ListedElement::List& CollectAndCacheListedElements() const;
 
   // Returns true if the submission should proceed.
   bool ValidateInteractively();
@@ -251,9 +223,6 @@ class CORE_EXPORT HTMLFormElement final : public HTMLElement {
 
   // Do not access listed_elements_ directly. Use ListedElements() instead.
   ListedElement::List listed_elements_;
-  // Do not access listed_elements_for_autofill_ directly. Use
-  // AllContainedFormElementsForAutofill() instead.
-  ListedElement::List listed_elements_for_autofill_;
   // Do not access image_elements_ directly. Use ImageElements() instead.
   HeapVector<Member<HTMLImageElement>> image_elements_;
 
@@ -273,7 +242,6 @@ class CORE_EXPORT HTMLFormElement final : public HTMLElement {
   bool is_constructing_entry_list_ = false;
 
   bool listed_elements_are_dirty_ : 1;
-  bool listed_elements_for_autofill_are_dirty_ : 1;
   bool image_elements_are_dirty_ : 1;
   bool has_elements_associated_by_parser_ : 1;
   bool has_elements_associated_by_form_attribute_ : 1;

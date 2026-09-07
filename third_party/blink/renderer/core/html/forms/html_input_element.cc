@@ -52,7 +52,6 @@
 #include "third_party/blink/renderer/core/dom/space_split_string.h"
 #include "third_party/blink/renderer/core/editing/editing_utilities.h"
 #include "third_party/blink/renderer/core/editing/frame_selection.h"
-#include "third_party/blink/renderer/core/editing/spellcheck/spell_checker.h"
 #include "third_party/blink/renderer/core/editing/visible_units.h"
 #include "third_party/blink/renderer/core/events/before_text_inserted_event.h"
 #include "third_party/blink/renderer/core/events/keyboard_event.h"
@@ -380,19 +379,6 @@ void HTMLInputElement::UpdateSelectionOnFocus(
   } else {
     TextControlElement::UpdateSelectionOnFocus(selection_behavior, options);
   }
-}
-
-void HTMLInputElement::EndEditing() {
-  DCHECK(GetDocument().IsActive());
-  if (!GetDocument().IsActive())
-    return;
-
-  if (!IsTextField())
-    return;
-
-  LocalFrame* frame = GetDocument().GetFrame();
-  frame->GetSpellChecker().DidEndEditingOnTextField(this);
-  frame->GetPage()->GetChromeClient().DidEndEditingOnTextField(*this);
 }
 
 void HTMLInputElement::DispatchFocusInEvent(
@@ -1393,10 +1379,6 @@ void HTMLInputElement::setValueForBinding(const String& value,
            was_autofilled && !value_changed && !value.empty()
                ? WebAutofillState::kAutofilled
                : WebAutofillState::kNotFilled);
-  if (Page* page = GetDocument().GetPage(); page) {
-    page->GetChromeClient().JavaScriptSetValue(*this, old_value, was_autofilled,
-                                               value_changed);
-  }
 }
 
 void HTMLInputElement::SetValue(const String& value,
@@ -1429,10 +1411,6 @@ void HTMLInputElement::SetValue(const String& value,
 
     if (value_changed) {
       NotifyFormStateChanged();
-      if (sanitized_value.empty() && HasBeenPasswordField() &&
-          GetDocument().GetPage()) {
-        GetDocument().GetPage()->GetChromeClient().PasswordFieldReset(*this);
-      }
     }
   }
 

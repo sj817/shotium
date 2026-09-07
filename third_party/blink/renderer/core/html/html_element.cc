@@ -77,7 +77,6 @@
 #include "third_party/blink/renderer/core/editing/editing_utilities.h"
 #include "third_party/blink/renderer/core/editing/serializers/markup_accumulator.h"
 #include "third_party/blink/renderer/core/editing/serializers/serialization.h"
-#include "third_party/blink/renderer/core/editing/spellcheck/spell_checker.h"
 #include "third_party/blink/renderer/core/event_type_names.h"
 #include "third_party/blink/renderer/core/events/command_event.h"
 #include "third_party/blink/renderer/core/events/keyboard_event.h"
@@ -884,19 +883,7 @@ void HTMLElement::AttributeChanged(const AttributeModificationParams& params) {
   if (params.name == html_names::kHiddenAttr && !params.new_value.IsNull()) {
     if (AdjustedFocusedElementInTreeScope() == this)
       blur();
-  } else if (params.name == html_names::kSpellcheckAttr) {
-    if (GetDocument().GetFrame()) {
-      GetDocument().GetFrame()->GetSpellChecker().RespondToChangedEnablement(
-          *this, IsSpellCheckingEnabled());
-    }
   } else if (params.name == html_names::kContenteditableAttr) {
-    if (GetDocument().GetFrame()) {
-      GetDocument()
-          .GetFrame()
-          ->GetSpellChecker()
-          .RemoveSpellingAndGrammarMarkers(
-              *this, SpellChecker::ElementsType::kOnlyNonEditable);
-    }
     if (AdjustedFocusedElementInTreeScope() != this)
       return;
     // The attribute change may cause IsFocusable() to return false
@@ -3320,15 +3307,6 @@ void HTMLElement::setDraggable(bool value) {
                value ? keywords::kTrue : keywords::kFalse);
 }
 
-bool HTMLElement::spellcheck() const {
-  return IsSpellCheckingEnabled();
-}
-
-void HTMLElement::setSpellcheck(bool enable) {
-  setAttribute(html_names::kSpellcheckAttr,
-               enable ? keywords::kTrue : keywords::kFalse);
-}
-
 void HTMLElement::click() {
   DispatchSimulatedClick(nullptr, SimulatedClickCreationScope::kFromScript);
   if (IsA<HTMLInputElement>(this)) {
@@ -3831,14 +3809,7 @@ void HTMLElement::DefaultEventHandler(Event& event) {
   }
 
   if (auto* keyboard_event = DynamicTo<KeyboardEvent>(event)) {
-    if (base::FeatureList::IsEnabled(
-            blink::features::kAutofillKeydownEditableElement) &&
-        event.type() == event_type_names::kKeydown) {
-      HandleKeydownEvent(*keyboard_event);
-      if (event.DefaultHandled()) {
-        return;
-      }
-    } else if (event.type() == event_type_names::kKeypress) {
+    if (event.type() == event_type_names::kKeypress) {
       HandleKeypressEvent(*keyboard_event);
       if (event.DefaultHandled()) {
         return;
@@ -3890,29 +3861,6 @@ bool HTMLElement::MatchesReadOnlyPseudoClass() const {
 // or editable and are neither input elements nor textarea elements
 bool HTMLElement::MatchesReadWritePseudoClass() const {
   return IsEditableOrEditingHost(*this);
-}
-
-void HTMLElement::HandleKeydownEvent(KeyboardEvent& event) {
-  const bool is_focused_contenteditable = [this]() {
-    if (!IsFocusedElementInDocument()) {
-      return false;
-    }
-    // blink::IsEditable() may depend on the computed style, so we may need to
-    // update the style.
-    GetDocument().UpdateStyleAndLayoutTree();
-    return blink::IsEditable(*this);
-  }();
-
-  if (is_focused_contenteditable) {
-    // Handles only contenteditables. TextFieldInputType and HTMLTextAreaElement
-    // analogously handle the event for <input> and <textarea>.
-    GetDocument().UpdateStyleAndLayoutTree();
-    if (Page* page = GetDocument().GetPage();
-        page && page->GetChromeClient().HandleKeyboardEventOnEditableElement(
-                    *this, event)) {
-      event.SetDefaultHandled();
-    }
-  }
 }
 
 void HTMLElement::HandleKeypressEvent(KeyboardEvent& event) {

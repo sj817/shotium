@@ -3543,22 +3543,6 @@ class ComputedStyleBuilder final : public ComputedStyleBuilderBase {
     return nullptr;
   }
 
-  /// CallbackSelector
-  void AddCallbackSelector(const String& selector) {
-    if (!CallbackSelectors().Contains(selector)) {
-      MutableCallbackSelectorsInternal().push_back(selector);
-    }
-  }
-
-  // DocumentRulesSelectors
-  void AddDocumentRulesSelector(StyleRule* selector) {
-    if (!DocumentRulesSelectors()) {
-      MutableDocumentRulesSelectorsInternal() =
-          MakeGarbageCollected<GCedHeapHashSet<WeakMember<StyleRule>>>();
-    }
-    DocumentRulesSelectors()->insert(selector);
-  }
-
   // ::selection, etc
   StyleHighlightData& AccessHighlightData() {
     return MutableHighlightDataInternal();

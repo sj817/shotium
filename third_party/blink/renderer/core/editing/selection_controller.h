@@ -59,7 +59,6 @@ class CORE_EXPORT SelectionController final
       const PhysicalOffset&);
   bool HandleMouseReleaseEvent(const MouseEventWithHitTestResults&,
                                const PhysicalOffset&);
-  bool HandlePasteGlobalSelection(const WebMouseEvent&);
   bool HandleGestureLongPress(const HitTestResult&);
   void HandleGestureTwoFingerTap(const GestureEventWithHitTestResults&);
 
@@ -99,16 +98,10 @@ class CORE_EXPORT SelectionController final
   bool SelectClosestWordFromHitTestResult(const HitTestResult&,
                                           AppendTrailingWhitespace,
                                           SelectInputEventType);
-  void SelectClosestMisspellingFromHitTestResult(const HitTestResult&,
-                                                 AppendTrailingWhitespace);
   // Returns |true| if a word was selected.
   template <typename MouseEventObject>
   bool SelectClosestWordFromMouseEvent(const MouseEventObject* mouse_event,
                                        const HitTestResult& result);
-  template <typename MouseEventObject>
-  void SelectClosestMisspellingFromMouseEvent(
-      const MouseEventObject* mouse_event,
-      const HitTestResult& hit_test_result);
   template <typename MouseEventObject>
   void SelectClosestWordOrLinkFromMouseEvent(
       const MouseEventObject* mouse_event,

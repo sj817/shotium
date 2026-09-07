@@ -59,7 +59,6 @@
 #include "third_party/blink/public/mojom/permissions/permission_status.mojom-blink-forward.h"
 #include "third_party/blink/public/mojom/permissions_policy/document_policy_feature.mojom-blink-forward.h"
 #include "third_party/blink/public/mojom/scroll/scrollbar_mode.mojom-blink-forward.h"
-#include "third_party/blink/public/web/web_form_related_change_type.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_typedefs.h"
 #include "third_party/blink/renderer/core/animation/animation_clock.h"
 #include "third_party/blink/renderer/core/core_export.h"
@@ -415,7 +414,6 @@ class CORE_EXPORT Document : public ContainerNode,
 
   // DOM methods & attributes for Document
 
-  DEFINE_ATTRIBUTE_EVENT_LISTENER(autofill, kAutofill)
   DEFINE_ATTRIBUTE_EVENT_LISTENER(beforecopy, kBeforecopy)
   DEFINE_ATTRIBUTE_EVENT_LISTENER(beforecut, kBeforecut)
   DEFINE_ATTRIBUTE_EVENT_LISTENER(beforepaste, kBeforepaste)
@@ -610,13 +608,6 @@ class CORE_EXPORT Document : public ContainerNode,
   // associated to a <form> element. This includes elements inside Shadow DOM.
   const ListedElement::List& UnassociatedListedElements() const;
   void MarkUnassociatedListedElementsDirty();
-
-  // Returns all `HTMLFormElement`s that have no shadow-including
-  // `HTMLFormElement` ancestor. Note that the form elements are returned in BFS
-  // order.
-  const HeapVector<Member<HTMLFormElement>>& GetOutermostForms();
-  // Invalidates the cache for outermost form elements.
-  void MarkOutermostFormsDirty();
 
   // "defaultView" attribute defined in HTML spec.
   DOMWindow* defaultView() const;
@@ -906,11 +897,6 @@ class CORE_EXPORT Document : public ContainerNode,
   void DispatchUnloadEvents(UnloadEventTimingInfo* unload_timing_info);
 
   void DispatchFreezeEvent();
-
-  void DispatchAutofillEvent(
-      HeapVector<std::pair<Member<Element>, String>> autofill_values,
-      const base::UnguessableToken& fill_id,
-      bool supports_refill);
 
   enum PageDismissalType {
     kNoDismissal,
@@ -1355,25 +1341,6 @@ class CORE_EXPORT Document : public ContainerNode,
 
   DocumentMarkerController& Markers() const { return *markers_; }
 
-  // Support for Javascript execCommand, and related methods
-  // See "core/editing/commands/document_exec_command.cc" for implementations.
-  bool execCommand(const String& command,
-                   bool show_ui,
-                   const V8UnionStringOrTrustedHTML* value,
-                   ExceptionState&);
-
-  bool execCommand(const String& command,
-                   bool show_ui,
-                   const String& value,
-                   ExceptionState&);
-
-  bool IsRunningExecCommand() const { return is_running_exec_command_; }
-  bool queryCommandEnabled(const String& command, ExceptionState&);
-  bool queryCommandIndeterm(const String& command, ExceptionState&);
-  bool queryCommandState(const String& command, ExceptionState&);
-  bool queryCommandSupported(const String& command, ExceptionState&);
-  String queryCommandValue(const String& command, ExceptionState&);
-
   KURL OpenSearchDescriptionURL();
 
   // designMode support
@@ -1467,8 +1434,6 @@ class CORE_EXPORT Document : public ContainerNode,
   const Vector<DraggableRegionValue>& DraggableRegions() const;
   void SetDraggableRegions(const Vector<DraggableRegionValue>&);
 
-  void AddedEventListener(const AtomicString& event_type,
-                          RegisteredEventListener&) final;
   void RemovedEventListener(const AtomicString& event_type,
                             const RegisteredEventListener&) final;
   void RemoveAllEventListeners() final;
@@ -1719,8 +1684,6 @@ class CORE_EXPORT Document : public ContainerNode,
   // Signals the ChromeClient that a (Form|Listed)Element changed dynamically,
   // passing the changed element as well as the type of the change.
   // TODO(crbug.com/1483242): Fire the signal for elements that become hidden.
-  void DidChangeFormRelatedElementDynamically(HTMLElement*,
-                                              WebFormRelatedChangeType);
 
   // Please familiarize yourself with http://goo.gle/devtools-console-policy
   // prior to adding new console messages, and make sure that you understand the
@@ -1897,13 +1860,6 @@ class CORE_EXPORT Document : public ContainerNode,
 
 
   DisplayLockDocumentState& GetDisplayLockDocumentState() const;
-
-  // Deferred compositor commits are disallowed by default, and are only allowed
-  // for html documents fetched via the http family of protocols.
-  bool DeferredCompositorCommitIsAllowed() const;
-  void SetDeferredCompositorCommitIsAllowed(bool new_value) {
-    deferred_compositor_commit_is_allowed_ = new_value;
-  }
 
   // Returns whether the document is inside the scope specified in the Web App
   // Manifest. If the document doesn't run in a context of a Web App or has no
@@ -2308,22 +2264,6 @@ class CORE_EXPORT Document : public ContainerNode,
    private:
     ListedElement::List list_;
     // Set this flag if the stored unassociated listed elements were changed.
-    bool dirty_ = false;
-  };
-
-  // Helper class to cache the outermost <form> elements of a document.
-  class OutermostFormsList {
-    DISALLOW_NEW();
-
-   public:
-    void MarkDirty();
-    const HeapVector<Member<HTMLFormElement>>& Get(Document& owner);
-    void Trace(Visitor*) const;
-
-   private:
-    void LogSyntheticSelectMetrics(Document& owner) const;
-
-    HeapVector<Member<HTMLFormElement>> list_;
     bool dirty_ = false;
   };
 
@@ -2776,7 +2716,6 @@ class CORE_EXPORT Document : public ContainerNode,
   DocumentEncodingData encoding_data_;
 
   bool design_mode_ = false;
-  bool is_running_exec_command_ = false;
 
   HeapHashSet<WeakMember<const LiveNodeListBase>>
       lists_invalidated_at_document_;
@@ -2961,7 +2900,6 @@ class CORE_EXPORT Document : public ContainerNode,
 
   UnassociatedListedElementsList unassociated_listed_elements_;
 
-  OutermostFormsList outermost_forms_;
 
   // |ukm_recorder_| and |source_id_| will allow objects that are part of
   // the document to record UKM.
@@ -2986,7 +2924,6 @@ class CORE_EXPORT Document : public ContainerNode,
 
   // The number of canvas elements on the document
 
-  bool deferred_compositor_commit_is_allowed_ = false;
 
   Member<LazyLoadMediaObserver> lazy_load_media_observer_;
 

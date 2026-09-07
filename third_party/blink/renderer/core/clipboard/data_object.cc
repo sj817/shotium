@@ -36,14 +36,11 @@
 #include "base/notreached.h"
 #include "base/task/single_thread_task_runner.h"
 #include "third_party/abseil-cpp/absl/functional/overload.h"
-#include "third_party/abseil-cpp/absl/numeric/int128.h"
 #include "third_party/blink/public/platform/file_path_conversion.h"
 #include "third_party/blink/public/platform/platform.h"
 #include "third_party/blink/public/platform/web_drag_data.h"
 #include "third_party/blink/renderer/core/clipboard/clipboard_utilities.h"
 #include "third_party/blink/renderer/core/clipboard/dragged_isolated_file_system.h"
-#include "third_party/blink/renderer/core/clipboard/paste_mode.h"
-#include "third_party/blink/renderer/core/clipboard/system_clipboard.h"
 #include "third_party/blink/renderer/core/execution_context/execution_context.h"
 #include "third_party/blink/renderer/core/fileapi/file_reader_client.h"
 #include "third_party/blink/renderer/core/fileapi/file_reader_data.h"
@@ -57,56 +54,6 @@
 #include "ui/base/clipboard/clipboard_constants.h"
 
 namespace blink {
-
-// static
-DataObject* DataObject::CreateFromClipboard(ExecutionContext* context,
-                                            SystemClipboard* system_clipboard,
-                                            PasteMode paste_mode) {
-  DataObject* data_object = Create();
-#if DCHECK_IS_ON()
-  HashSet<String> types_seen;
-#endif
-  absl::uint128 sequence_number = system_clipboard->SequenceNumber();
-  for (const String& type : system_clipboard->ReadAvailableTypes()) {
-    if (paste_mode == PasteMode::kPlainTextOnly &&
-        type != ui::kMimeTypePlainText) {
-      continue;
-    }
-    mojom::blink::ClipboardFilesPtr files;
-    if (type == ui::kMimeTypeUriList) {
-      files = system_clipboard->ReadFiles();
-      if (files) {
-        // Ignore ReadFiles() result if clipboard sequence number has changed.
-        if (system_clipboard->SequenceNumber() != sequence_number) {
-          files->files.clear();
-        } else {
-          for (const mojom::blink::DataTransferFilePtr& file : files->files) {
-            data_object->AddFilename(
-                context, FilePathToString(file->path),
-                FilePathToString(file->display_name), files->file_system_id,
-                base::MakeRefCounted<FileSystemAccessDropData>(
-                    std::move(file->file_system_access_token)));
-          }
-        }
-      }
-    }
-    if (files && !files->files.empty()) {
-      DraggedIsolatedFileSystem::PrepareForDataObject(data_object);
-    } else {
-      data_object->item_list_.push_back(DataObjectItem::CreateFromClipboard(
-          system_clipboard, type, sequence_number));
-    }
-#if DCHECK_IS_ON()
-    DCHECK(types_seen.insert(type).is_new_entry);
-#endif
-  }
-  return data_object;
-}
-
-DataObject* DataObject::CreateFromClipboard(SystemClipboard* system_clipboard,
-                                            PasteMode paste_mode) {
-  return CreateFromClipboard(/*context=*/nullptr, system_clipboard, paste_mode);
-}
 
 // static
 DataObject* DataObject::CreateFromString(const String& data) {

@@ -1651,13 +1651,6 @@ bool Node::ShouldHaveFocusAppearance() const {
   return true;
 }
 
-void Node::FocusabilityLost() {
-  if (IsA<HTMLFormElement>(this) || IsA<HTMLFormControlElement>(this)) {
-    GetDocument().DidChangeFormRelatedElementDynamically(
-        DynamicTo<HTMLElement>(this), WebFormRelatedChangeType::kHide);
-  }
-}
-
 LinkHighlightCandidate Node::IsLinkHighlightCandidate() const {
   if (const LayoutObject* layout_object = GetLayoutObject()) {
     const ECursor cursor = layout_object->StyleRef().Cursor();

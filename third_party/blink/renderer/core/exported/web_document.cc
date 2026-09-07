@@ -44,7 +44,6 @@
 #include "third_party/blink/public/web/web_element_collection.h"
 #include "third_party/blink/public/web/web_form_control_element.h"
 #include "third_party/blink/public/web/web_form_element.h"
-#include "third_party/blink/renderer/core/css/css_selector_watch.h"
 #include "third_party/blink/renderer/core/css/style_engine.h"
 #include "third_party/blink/renderer/core/css/style_sheet_contents.h"
 #include "third_party/blink/renderer/core/dom/document.h"
@@ -229,13 +228,6 @@ WebElement WebDocument::ScrollingElement() {
   return WebElement(Unwrap<Document>()->scrollingElement());
 }
 
-std::vector<WebFormElement> WebDocument::GetOutermostForms() const {
-  HeapVector<Member<HTMLFormElement>> forms =
-      const_cast<Document*>(ConstUnwrap<Document>())->GetOutermostForms();
-  return base::ToVector(
-      forms, [](HTMLFormElement* element) { return WebFormElement(element); });
-}
-
 WebURL WebDocument::CompleteURL(const WebString& partial_url) const {
   return ConstUnwrap<Document>()->CompleteURL(partial_url);
 }
@@ -273,17 +265,6 @@ WebStyleSheetKey WebDocument::InsertStyleSheet(
 void WebDocument::RemoveInsertedStyleSheet(const WebStyleSheetKey& key,
                                            WebCssOrigin origin) {
   Unwrap<Document>()->GetStyleEngine().RemoveInjectedSheet(key, origin);
-}
-
-void WebDocument::WatchCSSSelectors(
-    const std::vector<WebString>& web_selectors) {
-  Document* document = Unwrap<Document>();
-  CSSSelectorWatch* watch = CSSSelectorWatch::FromIfExists(*document);
-  if (!watch && web_selectors.empty()) {
-    return;
-  }
-  CSSSelectorWatch::From(*document).WatchCSSSelectors(
-      Vector<String>(web_selectors));
 }
 
 std::vector<WebDraggableRegion> WebDocument::DraggableRegions() const {
@@ -378,33 +359,5 @@ uint64_t WebDocument::CookieModificationCount() const {
 // document. WebMCP was removed wholesale (no ModelContextSupplement,
 // ScriptToolDeclaration, or model-context mojom left), and nothing outside
 // this file called these wrappers, so they are gone rather than stubbed.
-
-bool WebDocument::IsAutofillEventEnabled() const {
-  const Document* document = ConstUnwrap<Document>();
-  CHECK(document);
-  return RuntimeEnabledFeatures::AutofillEventEnabled(
-      document->GetExecutionContext());
-}
-
-void WebDocument::DispatchAutofillEvent(
-    std::vector<std::pair<WebFormControlElement, WebString>> field_data,
-    const base::UnguessableToken& fill_id,
-    bool supports_refill) {
-  Document* document = Unwrap<Document>();
-  CHECK(document);
-
-  HeapVector<std::pair<Member<Element>, String>> converted_field_data;
-  for (auto& pair : field_data) {
-    if (pair.first.IsNull()) {
-      continue;
-    }
-    HTMLFormControlElement* control_element = pair.first;
-    converted_field_data.push_back(
-        std::make_pair(control_element, String(std::move(pair.second))));
-  }
-
-  document->DispatchAutofillEvent(std::move(converted_field_data), fill_id,
-                                  supports_refill);
-}
 
 }  // namespace blink

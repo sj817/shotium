@@ -58,8 +58,6 @@ class CORE_EXPORT HTMLFormControlElement : public HTMLElement,
 
   void Reset();
 
-  void AttachLayoutTree(AttachContext& context) override;
-  void DetachLayoutTree(bool performing_reattach) override;
 
   HTMLFormElement* formOwner() const final;
   HTMLElement* formForBinding() const final;
@@ -132,7 +130,6 @@ class CORE_EXPORT HTMLFormControlElement : public HTMLElement,
   void SetAutofillState(WebAutofillState = WebAutofillState::kAutofilled);
   // Returns true if this element can be autofilled by the embedder's Autofill
   // agent.
-  bool IsAutofillable() const;
 
   bool MatchesToolSubmitActivePseudoClass() const;
 

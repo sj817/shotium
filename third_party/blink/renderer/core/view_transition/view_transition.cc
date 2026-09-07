@@ -527,13 +527,6 @@ void ViewTransition::ProcessCurrentState() {
             base::FeatureList::IsEnabled(
                 features::kDelayLayerTreeViewDeletionOnLocalSwap)));
 
-        if (document_->GetFrame()->IsLocalRoot()) {
-          // We need to ensure commits aren't deferred since we rely on commits
-          // to send directives to the compositor and initiate pause of
-          // rendering after one frame.
-          document_->GetPage()->GetChromeClient().StopDeferringCommits(
-              *document_->GetFrame());
-        }
         document_->GetPage()->GetChromeClient().RegisterForCommitObservation(
             this);
 

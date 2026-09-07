@@ -276,8 +276,6 @@ class CORE_EXPORT StyleEngine final : public GarbageCollected<StyleEngine>,
   void AdoptedStyleSheetAdded(TreeScope& tree_scope, CSSStyleSheet* sheet);
   void AdoptedStyleSheetRemoved(TreeScope& tree_scope, CSSStyleSheet* sheet);
 
-  void WatchedSelectorsChanged();
-  void DocumentRulesSelectorsChanged();
   void InitialStyleChanged();
   void InvalidateInitialStyle();
   void UAStyleChanged();
@@ -298,15 +296,6 @@ class CORE_EXPORT StyleEngine final : public GarbageCollected<StyleEngine>,
   void RemoveInjectedSheet(const StyleSheetKey&,
                            WebCssOrigin = WebCssOrigin::kAuthor);
   CSSStyleSheet& CreateInspectorStyleSheet();
-  RuleSet* WatchedSelectorsRuleSet() {
-    DCHECK(global_rule_set_);
-    return global_rule_set_->WatchedSelectorsRuleSet();
-  }
-  RuleSet* DocumentRulesSelectorsRuleSet() {
-    DCHECK(global_rule_set_);
-    return global_rule_set_->DocumentRulesSelectorsRuleSet();
-  }
-
   RuleSet* RuleSetForSheet(CSSStyleSheet&, const MixinMap& mixins) const;
 
   // See StyleSheetContents::CreateUnconnectedRuleSet.

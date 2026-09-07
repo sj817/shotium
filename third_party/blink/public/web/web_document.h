@@ -135,10 +135,6 @@ class BLINK_EXPORT WebDocument : public WebNode {
   std::vector<WebFormElement> Forms() const;
   WebElement ScrollingElement();
 
-  // Returns all form elements that have no shadow-including ancestor that is
-  // also a form element. This includes form elements inside shadow trees.
-  std::vector<WebFormElement> GetOutermostForms() const;
-
   WebURL CompleteURL(const WebString&) const;
   WebElement GetElementById(const WebString&) const;
   WebElement FocusedElement() const;
@@ -158,11 +154,6 @@ class BLINK_EXPORT WebDocument : public WebNode {
   // InsertStyleSheet().
   void RemoveInsertedStyleSheet(const WebStyleSheetKey&,
                                 WebCssOrigin = WebCssOrigin::kAuthor);
-
-  // Arranges to call WebLocalFrameClient::didMatchCSS(frame(), ...) when one of
-  // the selectors matches or stops matching an element in this document.
-  // Each call to this method overrides any previous calls.
-  void WatchCSSSelectors(const std::vector<WebString>& selectors);
 
   std::vector<WebDraggableRegion> DraggableRegions() const;
 
@@ -211,20 +202,6 @@ class BLINK_EXPORT WebDocument : public WebNode {
   // CancelScriptTool() used to run WebMCP script tools against this
   // document via ModelContextSupplement. WebMCP was removed wholesale, so
   // there is no script tool machinery left to wrap.
-
-  // Returns whether the AutofillEvent runtime feature is enabled for this
-  // document's execution context (including origin trial tokens).
-  bool IsAutofillEventEnabled() const;
-
-  // Dispatches an autofill event on the document with the given field data.
-  // This is called by the autofill agent before filling form fields.
-  // The `fill_id` is passed so that refill requests can be associated with
-  // the original fill operation. If `supports_refill` is false, the event's
-  // refill() method will be null.
-  void DispatchAutofillEvent(
-      std::vector<std::pair<WebFormControlElement, WebString>> autofill_values,
-      const base::UnguessableToken& fill_id,
-      bool supports_refill);
 
 #if INSIDE_BLINK
   WebDocument(Document*);

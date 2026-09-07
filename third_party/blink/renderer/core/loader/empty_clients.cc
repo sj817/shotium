@@ -86,12 +86,6 @@ std::optional<int> EmptyChromeClient::GetMaxRenderBufferBounds(
 
 void EmptyChromeClient::OpenTextDataListChooser(HTMLInputElement&) {}
 
-bool EmptyChromeClient::StartDeferringCommits(LocalFrame& main_frame,
-                                              base::TimeDelta timeout,
-                                              cc::PaintHoldingReason reason) {
-  return false;
-}
-
 void EmptyLocalFrameClient::BeginNavigation(
     const ResourceRequest&,
     const KURL& requestor_base_url,
@@ -131,15 +125,6 @@ LocalFrame* EmptyLocalFrameClient::CreateFrame(const AtomicString&,
 
 // CreateWebMediaPlayer() and CreateRemotePlaybackClient() removed along with
 // the LocalFrameClient hooks they overrode.
-
-WebTextCheckClient* EmptyLocalFrameClient::GetTextCheckerClient() const {
-  return text_check_client_;
-}
-
-void EmptyLocalFrameClient::SetTextCheckerClientForTesting(
-    WebTextCheckClient* client) {
-  text_check_client_ = client;
-}
 
 Frame* EmptyLocalFrameClient::FindFrame(const AtomicString& name) const {
   return nullptr;

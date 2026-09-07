@@ -37,8 +37,6 @@ blink_core_sources_page = [
   "page_hidden_state.h",
   "page_visibility_observer.cc",
   "page_visibility_observer.h",
-  "plugin_script_forbidden_scope.cc",
-  "plugin_script_forbidden_scope.h",
   "popup_opening_observer.h",
   "print_context.cc",
   "print_context.h",

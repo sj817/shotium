@@ -47,8 +47,6 @@
 #include "third_party/blink/renderer/core/editing/position_iterator.h"
 #include "third_party/blink/renderer/core/editing/selection_template.h"
 #include "third_party/blink/renderer/core/editing/set_selection_options.h"
-#include "third_party/blink/renderer/core/editing/spellcheck/spell_checker.h"
-#include "third_party/blink/renderer/core/editing/suggestion/text_suggestion_controller.h"
 #include "third_party/blink/renderer/core/editing/visible_position.h"
 #include "third_party/blink/renderer/core/frame/local_dom_window.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
@@ -132,13 +130,6 @@ PositionInFlatTreeWithAffinity PositionWithAffinityOfHitTestResult(
     const HitTestResult& hit_test_result) {
   return FromPositionInDomTree<EditingInFlatTreeStrategy>(
       hit_test_result.GetPosition());
-}
-
-DocumentMarkerGroup* SpellCheckMarkerGroupAtPosition(
-    DocumentMarkerController& document_marker_controller,
-    const PositionInFlatTree& position) {
-  return document_marker_controller.FirstMarkerGroupAroundPosition(
-      position, DocumentMarker::MarkerTypes::Misspelling());
 }
 
 void MarkSelectionEndpointsForRepaint(const SelectionInFlatTree& selection) {
@@ -542,18 +533,6 @@ bool SelectionController::HandleSingleClick(
     return false;
   }
 
-  // SelectionControllerTest_SetCaretAtHitTestResultWithDisconnectedPosition
-  // makes the IsValidFor() check fail.
-  bool event_should_trigger_suggestion =
-      event.Event().FromTouch() ||
-      (RuntimeEnabledFeatures::LeftClickToHandleSuggestionEnabled() &&
-       event.Event().button == WebPointerProperties::Button::kLeft);
-  if (is_editable && event_should_trigger_suggestion &&
-      position_to_use.IsValidFor(*frame_->GetDocument())) {
-    frame_->GetTextSuggestionController().HandlePotentialSuggestionTap(
-        position_to_use.GetPosition());
-  }
-
   return false;
 }
 
@@ -824,59 +803,6 @@ bool SelectionController::SelectClosestWordFromHitTestResult(
           .Build());
 }
 
-void SelectionController::SelectClosestMisspellingFromHitTestResult(
-    const HitTestResult& result,
-    AppendTrailingWhitespace append_trailing_whitespace) {
-  Node* inner_node = result.InnerPossiblyPseudoNode();
-
-  if (!inner_node || !inner_node->GetLayoutObject())
-    return;
-
-  const PositionInFlatTreeWithAffinity pos =
-      CreateVisiblePosition(PositionWithAffinityOfHitTestResult(result))
-          .ToPositionWithAffinity();
-  if (pos.IsNull()) {
-    UpdateSelectionForMouseDownDispatchingSelectStart(
-        inner_node, SelectionInFlatTree(),
-        SetSelectionOptions::Builder()
-            .SetGranularity(TextGranularity::kWord)
-            .Build());
-    return;
-  }
-
-  const PositionInFlatTree& marker_position =
-      pos.GetPosition().ParentAnchoredEquivalent();
-  const DocumentMarkerGroup* const marker_group =
-      SpellCheckMarkerGroupAtPosition(inner_node->GetDocument().Markers(),
-                                      marker_position);
-  if (!marker_group) {
-    UpdateSelectionForMouseDownDispatchingSelectStart(
-        inner_node, SelectionInFlatTree(),
-        SetSelectionOptions::Builder()
-            .SetGranularity(TextGranularity::kWord)
-            .Build());
-    return;
-  }
-
-  const SelectionInFlatTree new_selection =
-      CreateVisibleSelection(
-          SelectionInFlatTree::Builder()
-              .Collapse(marker_group->StartPositionInFlatTree())
-              .Extend(marker_group->EndPositionInFlatTree())
-              .Build())
-          .AsSelection();
-  const SelectionInFlatTree& adjusted_selection =
-      append_trailing_whitespace == AppendTrailingWhitespace::kShouldAppend
-          ? AdjustSelectionWithTrailingWhitespace(new_selection)
-          : new_selection;
-  UpdateSelectionForMouseDownDispatchingSelectStart(
-      inner_node,
-      ExpandSelectionToRespectUserSelectAll(inner_node, adjusted_selection),
-      SetSelectionOptions::Builder()
-          .SetGranularity(TextGranularity::kWord)
-          .Build());
-}
-
 template <typename MouseEventObject>
 bool SelectionController::SelectClosestWordFromMouseEvent(
     const MouseEventObject* mouse_event,
@@ -896,20 +822,6 @@ bool SelectionController::SelectClosestWordFromMouseEvent(
                                             mouse_event->FromTouch()
                                                 ? SelectInputEventType::kTouch
                                                 : SelectInputEventType::kMouse);
-}
-
-template <typename MouseEventObject>
-void SelectionController::SelectClosestMisspellingFromMouseEvent(
-    const MouseEventObject* mouse_event,
-    const HitTestResult& hit_test_result) {
-  if (!mouse_down_may_start_select_)
-    return;
-
-  SelectClosestMisspellingFromHitTestResult(
-      hit_test_result, (mouse_event->ClickCount() == 2 &&
-                        frame_->GetEditor().IsSelectTrailingWhitespaceEnabled())
-                           ? AppendTrailingWhitespace::kShouldAppend
-                           : AppendTrailingWhitespace::kDontAppend);
 }
 
 template <typename MouseEventObject>
@@ -1268,53 +1180,8 @@ bool SelectionController::HandleMouseReleaseEvent(
 
   Selection().SelectFrameElementInParentIfFullySelected();
 
-  if (event.Event().button == WebPointerProperties::Button::kMiddle &&
-      !event.IsOverLink()) {
-    // Ignore handled, since we want to paste to where the caret was placed
-    // anyway.
-    handled = HandlePasteGlobalSelection(event.Event()) || handled;
-  }
 
   return handled;
-}
-
-bool SelectionController::HandlePasteGlobalSelection(
-    const WebMouseEvent& mouse_event) {
-  // If the event was a middle click, attempt to copy global selection in after
-  // the newly set caret position.
-  //
-  // This code is called from either the mouse up or mouse down handling. There
-  // is some debate about when the global selection is pasted:
-  //   xterm: pastes on up.
-  //   GTK: pastes on down.
-  //   Qt: pastes on up.
-  //   Firefox: pastes on up.
-  //   Chromium: pastes on up.
-  //
-  // There is something of a webcompat angle to this well, as highlighted by
-  // crbug.com/14608. Pages can clear text boxes 'onclick' and, if we paste on
-  // down then the text is pasted just before the onclick handler runs and
-  // clears the text box. So it's important this happens after the event
-  // handlers have been fired.
-  if (mouse_event.GetType() != WebInputEvent::Type::kMouseUp)
-    return false;
-
-  if (!frame_->GetPage())
-    return false;
-
-  // Do not paste if the user has opted out of middle-click pasting.
-  if (auto* settings = frame_->GetSettings();
-      settings && !settings->GetMiddleClickPasteAllowed()) {
-    return false;
-  }
-
-  Frame* focus_frame =
-      frame_->GetPage()->GetFocusController().FocusedOrMainFrame();
-  // Do not paste here if the focus was moved somewhere else.
-  if (frame_ == focus_frame)
-    return frame_->GetEditor().ExecuteCommand("PasteGlobalSelection");
-
-  return false;
 }
 
 bool SelectionController::HandleGestureLongPress(
@@ -1354,20 +1221,6 @@ void SelectionController::HandleGestureTwoFingerTap(
   SetCaretAtHitTestResult(targeted_event.GetHitTestResult());
 }
 
-static bool HitTestResultIsMisspelled(const HitTestResult& result) {
-  PositionWithAffinity pos_with_affinity = result.GetPosition();
-  if (pos_with_affinity.IsNull())
-    return false;
-  // TODO(xiaochengh): Don't use |ParentAnchoredEquivalent()|.
-  const Position marker_position =
-      pos_with_affinity.GetPosition().ParentAnchoredEquivalent();
-  if (!SpellChecker::IsSpellCheckingEnabledAt(marker_position))
-    return false;
-  return SpellCheckMarkerGroupAtPosition(
-      result.InnerPossiblyPseudoNode()->GetDocument().Markers(),
-      ToPositionInFlatTree(marker_position));
-}
-
 template <typename MouseEventObject>
 void SelectionController::UpdateSelectionForContextMenuEvent(
     const MouseEventObject* mouse_event,
@@ -1394,11 +1247,6 @@ void SelectionController::UpdateSelectionForContextMenuEvent(
   base::AutoReset<bool> mouse_down_may_start_select_change(
       &mouse_down_may_start_select_, true);
 
-  if (mouse_event->GetMenuSourceType() !=
-          ui::mojom::blink::MenuSourceType::kTouchHandle &&
-      HitTestResultIsMisspelled(hit_test_result)) {
-    return SelectClosestMisspellingFromMouseEvent(mouse_event, hit_test_result);
-  }
 
   if (!frame_->GetEditor().Behavior().ShouldSelectOnContextualMenuClick())
     return;

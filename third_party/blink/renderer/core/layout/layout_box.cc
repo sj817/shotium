@@ -43,7 +43,6 @@
 #include "third_party/blink/renderer/core/dom/scroll_marker_group_pseudo_element.h"
 #include "third_party/blink/renderer/core/dom/scroll_marker_pseudo_element.h"
 #include "third_party/blink/renderer/core/editing/editing_utilities.h"
-#include "third_party/blink/renderer/core/editing/ime/input_method_controller.h"
 #include "third_party/blink/renderer/core/editing/position_with_affinity.h"
 #include "third_party/blink/renderer/core/frame/local_dom_window.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
@@ -971,7 +970,6 @@ void LayoutBox::LayoutSubtreeRoot() {
   const auto& space = previous_result->GetConstraintSpaceForCaching();
   DCHECK_EQ(space.GetWritingMode(), StyleRef().GetWritingMode());
   const LayoutResult* result = BlockNode(this).Layout(space);
-  GetDocument().GetFrame()->GetInputMethodController().DidLayoutSubtree(*this);
 
   if (IsOutOfFlowPositioned()) {
     result->CopyMutableOutOfFlowData(*previous_result);
@@ -1151,10 +1149,6 @@ void LayoutBox::UpdateAfterLayout() {
     Layer()->UpdateTransform();
     Layer()->UpdateScrollingAfterLayout();
   }
-
-  GetFrame()->GetInputMethodController().DidUpdateLayout(*this);
-  if (IsPositioned())
-    GetFrame()->GetInputMethodController().DidLayoutSubtree(*this);
 
   if (StyleRef().HasColumnRule() && IsFragmentationContextRoot() &&
       !RuntimeEnabledFeatures::CSSGapDecorationEnabled()) {

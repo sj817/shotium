@@ -122,10 +122,6 @@ bool FocusgroupController::HandleHomeEndKeyboardEvent(KeyboardEvent* event,
     return false;
   }
 
-  if (focused->editContext()) {
-    return false;
-  }
-
   Element* owner =
       utils::FindNearestFocusgroupAncestor(focused, FocusgroupType::kLinear);
   if (!owner || !utils::IsFocusgroupItemWithOwner(focused, owner)) {

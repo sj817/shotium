@@ -193,7 +193,6 @@ class CORE_EXPORT LocalFrameView final
   void ClearLayoutSubtreeRoot(const LayoutObject&);
 
   // Returns true if commits will be deferred for first contentful paint.
-  bool WillDoPaintHoldingForFCP() const;
 
   unsigned LayoutCountForTesting() const { return layout_count_for_testing_; }
   // Returns the number of block layout calls.
@@ -761,7 +760,6 @@ class CORE_EXPORT LocalFrameView final
   // deferred commits so the page doesn't wait for the full paint holding
   // timeout. Called from both the First Paint and FinishedParsing paths
   // to handle either ordering.
-  void MaybeStopDeferringCommitsWithoutContentfulPaint();
 
   // Report the First Contentful Paint signal to the LocalFrameView.
   // This causes Deferred Commits to be restarted and tells the UKM
@@ -1218,7 +1216,6 @@ class CORE_EXPORT LocalFrameView final
   // True if the frame has deferred commits at least once per document load.
   // We won't defer again for the same document. This is only meaningful for
   // main frames.
-  bool have_deferred_main_frame_commits_ = false;
 
   bool throttled_for_view_transition_ = false;
 

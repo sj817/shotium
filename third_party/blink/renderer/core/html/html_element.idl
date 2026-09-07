@@ -37,15 +37,10 @@
     [CEReactions, Reflect] attribute DOMString accessKey;
     [RuntimeEnabled=AccessKeyLabel] readonly attribute DOMString accessKeyLabel;
     [CEReactions] attribute boolean draggable;
-    [CEReactions] attribute boolean spellcheck;
     [RuntimeEnabled=WebAutocorrectByDefault, CEReactions] attribute boolean autocorrect;
     [Measure] attribute DOMString autocapitalize;
 
     [RaisesException] ElementInternals attachInternals(optional AttachInternalsOptions options);
-
-    // EditContext
-    // https://w3c.github.io/edit-context/
-    [RaisesException=Setter] attribute EditContext? editContext;
 
     // HTMLElement includes ElementContentEditable
     // https://html.spec.whatwg.org/C/#contenteditable

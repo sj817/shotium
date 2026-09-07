@@ -279,11 +279,6 @@ WebFormElement WebFormControlElement::Form() const {
   return WebFormElement(ConstUnwrap<HTMLFormControlElement>()->Form());
 }
 
-WebFormElement WebFormControlElement::GetOwningFormForAutofill() const {
-  return WebFormElement(
-      ConstUnwrap<HTMLFormControlElement>()->GetOwningFormForAutofill());
-}
-
 int32_t WebFormControlElement::GetAxId() const {
   return ConstUnwrap<HTMLFormControlElement>()->GetAxId();
 }

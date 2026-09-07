@@ -51,7 +51,6 @@
 #include "third_party/blink/public/mojom/scroll/scrollbar_mode.mojom-blink.h"
 #include "third_party/blink/public/mojom/use_counter/metrics/web_feature.mojom-blink.h"
 #include "third_party/blink/public/platform/task_type.h"
-#include "third_party/blink/public/web/web_local_frame_client.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_scroll_into_view_options.h"
 #include "third_party/blink/renderer/core/animation/document_animations.h"
 #include "third_party/blink/renderer/core/animation/document_timeline.h"
@@ -223,7 +222,6 @@ void LogCursorSizeCounter(LocalFrame* frame, const ui::Cursor& cursor) {
 // flash between navigations. The delay should be small enough so that it won't
 // confuse users expecting a new page to appear after navigation and the omnibar
 // has updated the url display.
-constexpr int kCommitDelayDefaultInMs = 500;  // 30 frames @ 60hz
 
 }  // namespace
 
@@ -1742,10 +1740,6 @@ void LocalFrameView::DidAttachDocument() {
       InitializeRootScroller();
   }
 
-  if (frame_->IsMainFrame()) {
-    // Allow for commits to be deferred because this is a new document.
-    have_deferred_main_frame_commits_ = false;
-  }
 }
 
 void LocalFrameView::InitializeRootScroller() {
@@ -4249,47 +4243,6 @@ void LocalFrameView::BeginLifecycleUpdates() {
   // Do not report paint timing for the initially empty document.
   if (GetFrame().GetDocument()->IsInitialEmptyDocument())
     MarkIneligibleToPaint();
-
-  // Non-main-frame lifecycle and commit deferral are controlled by their
-  // main frame.
-  if (!GetFrame().IsMainFrame())
-    return;
-
-  ChromeClient& chrome_client = GetFrame().GetPage()->GetChromeClient();
-
-  // Determine if we want to defer commits to the compositor once lifecycle
-  // updates start. Doing so allows us to update the page lifecycle but not
-  // present the results to screen until we see first contentful paint is
-  // available or until a timer expires.
-  // This is enabled only when the document loading is regular HTML served
-  // over HTTP/HTTPs. And only defer commits once. This method gets called
-  // multiple times, and we do not want to defer a second time if we have
-  // already done so once and resumed commits already.
-  if (WillDoPaintHoldingForFCP()) {
-    have_deferred_main_frame_commits_ = true;
-    int commit_delay_ms = kCommitDelayDefaultInMs;
-    if (base::FeatureList::IsEnabled(
-            blink::features::kInitialWebUISurfaceSync) &&
-        GetFrame().Client() && GetFrame().Client()->IsForInitialWebUI()) {
-      // Extend the standard deferral limit specifically for initial WebUI
-      // frames which is expected to take more time.
-      commit_delay_ms = static_cast<int>(
-          blink::features::kInitialWebUISurfaceSyncRendererCommitDelayInMs
-              .Get());
-    }
-    chrome_client.StartDeferringCommits(
-        GetFrame(), base::Milliseconds(commit_delay_ms),
-        cc::PaintHoldingReason::kFirstContentfulPaint);
-  }
-
-  chrome_client.BeginLifecycleUpdates(GetFrame());
-}
-
-bool LocalFrameView::WillDoPaintHoldingForFCP() const {
-  Document* document = GetFrame().GetDocument();
-  return document && document->DeferredCompositorCommitIsAllowed() &&
-         !have_deferred_main_frame_commits_ &&
-         GetFrame().IsOutermostMainFrame();
 }
 
 bool LocalFrameView::MapToVisualRectInRemoteRootFrame(
@@ -4368,40 +4321,8 @@ void LocalFrameView::ResetUkmAggregatorForTesting() {
   ukm_aggregator_.reset();
 }
 
-void LocalFrameView::MaybeStopDeferringCommitsWithoutContentfulPaint() {
-  if (!RuntimeEnabledFeatures::
-          ReleasePaintHoldingWithoutContentfulPaintEnabled()) {
-    return;
-  }
-  if (!frame_->IsMainFrame()) {
-    return;
-  }
-  // If the document has finished parsing, first paint has been rendered and FCP
-  // hasn't fired, stop deferring commits. This handles pages that only have
-  // non-contentful paint (e.g., background-color only, no text or images).
-  Document* document = frame_->GetDocument();
-  if (!document || !document->HasFinishedParsing()) {
-    return;
-  }
-
-  PaintTiming& paint_timing = PaintTiming::From(*document);
-  // Wait for the first paint to be rendered before stopping deferring commits.
-  if (paint_timing.FirstPaintRendered().is_null()) {
-    return;
-  }
-  // Stop deferring commits was already called on FCP, so we don't need to do it
-  // again.
-  if (!paint_timing.FirstContentfulPaintRenderedButNotPresentedAsMonotonicTime()
-           .is_null()) {
-    return;
-  }
-  GetPage()->GetChromeClient().StopDeferringCommits(*frame_);
-}
-
 void LocalFrameView::OnFirstContentfulPaint() {
   if (frame_->IsMainFrame()) {
-    // Restart commits that may have been deferred.
-    GetPage()->GetChromeClient().StopDeferringCommits(*frame_);
     if (frame_->GetDocument()->ShouldMarkFontPerformance())
       FontPerformance::MarkFirstContentfulPaint();
   }

@@ -58,22 +58,6 @@
 
 namespace blink {
 
-namespace {
-
-void InvalidateAncestorFormsForAutofill(ContainerNode& insertion_point) {
-  // Let any forms in the shadow including ancestors know that this
-  // ListedElement has changed.
-  ContainerNode* starting_node = &insertion_point;
-  for (ContainerNode* parent = starting_node; parent;
-       parent = parent->ParentOrShadowHostNode()) {
-    if (HTMLFormElement* form = DynamicTo<HTMLFormElement>(parent)) {
-      form->InvalidateListedElementsForAutofill();
-    }
-  }
-}
-
-}  // namespace
-
 class FormAttributeTargetObserver : public IdTargetObserver {
  public:
   FormAttributeTargetObserver(const AtomicString& id, ListedElement*);
@@ -146,13 +130,7 @@ void ListedElement::InsertedInto(ContainerNode& insertion_point) {
         .InvalidateStatefulFormControlList();
   }
 
-  // Trigger for elements outside of forms.
-  if (!form_ && insertion_point.isConnected()) {
-    element.GetDocument().DidChangeFormRelatedElementDynamically(
-        &element, WebFormRelatedChangeType::kAdd);
-  }
 
-  InvalidateAncestorFormsForAutofill(insertion_point);
 }
 
 void ListedElement::RemovedFrom(ContainerNode& insertion_point) {
@@ -203,14 +181,7 @@ void ListedElement::RemovedFrom(ContainerNode& insertion_point) {
         .InvalidateStatefulFormControlList();
   }
 
-  InvalidateAncestorFormsForAutofill(insertion_point);
 
-  if (insertion_point.isConnected()) {
-    // We don't insist on form_ being non-null as the form does not take care of
-    // reporting the removal.
-    element.GetDocument().DidChangeFormRelatedElementDynamically(
-        &element, WebFormRelatedChangeType::kRemove);
-  }
 }
 
 void ListedElement::FormRemovedFromTree(const Node& form_root) {
@@ -252,11 +223,6 @@ void ListedElement::WillChangeForm() {
 }
 
 void ListedElement::DidChangeForm() {
-  if (!form_was_set_by_parser_ && form_ && form_->isConnected()) {
-    auto& element = ToHTMLElement();
-    element.GetDocument().DidChangeFormRelatedElementDynamically(
-        &element, WebFormRelatedChangeType::kReassociate);
-  }
   FormOwnerSetNeedsValidityCheck();
 }
 
@@ -683,28 +649,6 @@ void ListedElement::TakeStateAndRestore() {
     ToHTMLElement().GetDocument().GetFormController().RestoreControlStateFor(
         *this);
   }
-}
-
-HTMLFormElement* ListedElement::GetOwningFormForAutofill() const {
-  // The owning form is the furthest ancestor form element, if there is one.
-  HTMLFormElement* owner = nullptr;
-  // Look for ancestors of the associated form of this element inside the same
-  // tree.
-  for (Node* ancestor = Form(); ancestor; ancestor = ancestor->parentNode()) {
-    if (auto* form = DynamicTo<HTMLFormElement>(ancestor)) {
-      owner = form;
-    }
-  }
-
-  // If this element is inside Shadow DOM, also consider ancestors of this
-  // element.
-  for (Node* ancestor = ToHTMLElement().OwnerShadowHost(); ancestor;
-       ancestor = ancestor->ParentOrShadowHostNode()) {
-    if (auto* form = DynamicTo<HTMLFormElement>(ancestor)) {
-      owner = form;
-    }
-  }
-  return owner;
 }
 
 void ListedElement::SetFormAttributeTargetObserver(

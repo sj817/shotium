@@ -125,7 +125,6 @@ class DOMRectList;
 class DOMRectReadOnly;
 class DOMStringMap;
 class DOMTokenList;
-class EditContext;
 class Element;
 class ElementAnimations;
 class ElementInternals;
@@ -199,12 +198,6 @@ using AttributeNamesView =
     bindings::TransformedView<AttributeCollection, AttributeToNameTransform>;
 
 using ColumnPseudoElementsVector = GCedHeapVector<Member<ColumnPseudoElement>>;
-
-enum SpellcheckAttributeState {
-  kSpellcheckAttributeTrue,
-  kSpellcheckAttributeFalse,
-  kSpellcheckAttributeDefault
-};
 
 enum class ElementFlags {
   kTabIndexWasSetExplicitly = 1 << 0,
@@ -1713,7 +1706,6 @@ class CORE_EXPORT Element : public ContainerNode {
   }
   void SetIsInTopLayer(bool);
 
-  bool IsSpellCheckingEnabled() const;
 
   // FIXME: public for LayoutTreeBuilder, we shouldn't expose this though.
   const ComputedStyle* StyleForLayoutObject(const StyleRecalcContext&);
@@ -1768,12 +1760,9 @@ class CORE_EXPORT Element : public ContainerNode {
   bool headingReset() const;
   int GetComputedHeadingOffset(int max_offset);
 
-  void setEditContext(EditContext* editContext, ExceptionState&);
-  EditContext* editContext() const;
 
   void Trace(Visitor*) const override;
 
-  SpellcheckAttributeState GetSpellcheckAttributeState() const;
 
   ElementIntersectionObserverData* IntersectionObserverData() const;
   ElementIntersectionObserverData& EnsureIntersectionObserverData();
@@ -2569,10 +2558,6 @@ class CORE_EXPORT Element : public ContainerNode {
   virtual int DefaultTabIndex() const;
 
   bool WasLastFocusFromUserGestureInternal() const;
-
-  inline void UpdateCallbackSelectors(const ComputedStyle* old_style,
-                                      const ComputedStyle* new_style);
-  // NotifyIfMatchedDocumentRulesSelectorsChanged() was here; see element.cc.
 
   // Clone is private so that non-virtual CloneElementWithChildren and
   // CloneElementWithoutChildren are used instead.

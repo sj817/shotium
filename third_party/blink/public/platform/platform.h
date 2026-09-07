@@ -112,7 +112,6 @@ class UserMetricsAction;
 class WebCrypto;
 class WebDedicatedWorker;
 class WebDedicatedWorkerHostFactoryClient;
-class WebLocalFrame;
 class WebSandboxSupport;
 class WebSecurityOrigin;
 class WebThemeEngine;

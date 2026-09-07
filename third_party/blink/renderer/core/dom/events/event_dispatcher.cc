@@ -34,7 +34,6 @@
 #include "build/build_config.h"
 #include "third_party/blink/public/common/features.h"
 #include "third_party/blink/public/common/input/web_keyboard_event.h"
-#include "third_party/blink/public/web/web_local_frame_client.h"
 #include "third_party/blink/renderer/core/dom/element.h"
 #include "third_party/blink/renderer/core/dom/events/event_dispatch_forbidden_scope.h"
 #include "third_party/blink/renderer/core/dom/events/event_dispatch_result.h"
@@ -449,14 +448,6 @@ inline void EventDispatcher::DispatchEventPostProcess(
         }
       }
     }
-  } else {
-#if BUILDFLAG(IS_MAC)
-    // If a keypress event is prevented, the cursor position may be out of
-    // sync as RenderWidgetHostViewCocoa::insertText assumes that the text
-    // has been accepted. See https://crbug.com/1204523 for details.
-    if (event_->type() == event_type_names::kKeypress && view_)
-      view_->GetFrame().GetEditor().SyncSelection(SyncCondition::kForced);
-#endif  // BUILDFLAG(IS_MAC)
   }
 
   if (event_->IsMouseEvent() && event_->type() == event_type_names::kMouseup) {

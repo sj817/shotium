@@ -534,41 +534,6 @@ void StyleEngine::MediaQueryAffectingValueChanged(TreeScope& tree_scope,
   InvalidateFunctionalMediaDependentStylesIfNeeded();
 }
 
-void StyleEngine::WatchedSelectorsChanged() {
-  DCHECK(global_rule_set_);
-  global_rule_set_->InitWatchedSelectorsRuleSet(GetDocument());
-  // TODO(futhark@chromium.org): Should be able to use RuleSetInvalidation here.
-  MarkAllElementsForStyleRecalc(StyleChangeReasonForTracing::Create(
-      style_change_reason::kDeclarativeContent));
-}
-
-void StyleEngine::DocumentRulesSelectorsChanged() {
-  DCHECK(global_rule_set_);
-  Member<RuleSet> old_rule_set =
-      global_rule_set_->DocumentRulesSelectorsRuleSet();
-  global_rule_set_->UpdateDocumentRulesSelectorsRuleSet(GetDocument());
-  Member<RuleSet> new_rule_set =
-      global_rule_set_->DocumentRulesSelectorsRuleSet();
-  DCHECK_NE(old_rule_set, new_rule_set);
-
-  HeapHashSet<Member<RuleSet>> changed_rule_sets;
-  if (old_rule_set) {
-    changed_rule_sets.insert(old_rule_set);
-  }
-  if (new_rule_set) {
-    changed_rule_sets.insert(new_rule_set);
-  }
-
-  const unsigned changed_rule_flags = GetRuleSetFlags(changed_rule_sets);
-  InvalidateForRuleSetChanges(GetDocument(), changed_rule_sets,
-                              changed_rule_flags, kInvalidateAllScopes);
-
-  // The global rule set must be updated immediately, so that any DOM mutations
-  // that happen after this (but before the next style update) can use the
-  // updated invalidation sets.
-  UpdateActiveStyle();
-}
-
 bool StyleEngine::ShouldUpdateDocumentStyleSheetCollection() const {
   return document_scope_dirty_;
 }

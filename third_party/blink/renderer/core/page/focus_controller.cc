@@ -49,7 +49,6 @@
 #include "third_party/blink/renderer/core/dom/shadow_root.h"
 #include "third_party/blink/renderer/core/editing/editing_utilities.h"  // For firstPositionInOrBeforeNode
 #include "third_party/blink/renderer/core/editing/frame_selection.h"
-#include "third_party/blink/renderer/core/editing/ime/input_method_controller.h"
 #include "third_party/blink/renderer/core/frame/frame_client.h"
 #include "third_party/blink/renderer/core/frame/local_dom_window.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
@@ -2295,9 +2294,6 @@ bool FocusController::SetFocusedElement(Element* element,
   if (old_focused_element && IsRootEditableElement(*old_focused_element) &&
       !RelinquishesEditingFocus(*old_focused_element))
     return false;
-
-  if (old_focused_frame)
-    old_focused_frame->GetInputMethodController().WillChangeFocus();
 
   Document* new_document = nullptr;
   if (element)

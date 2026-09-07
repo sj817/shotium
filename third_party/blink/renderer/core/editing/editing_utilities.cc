@@ -33,7 +33,6 @@
 #include "third_party/blink/renderer/core/clipboard/data_object.h"
 #include "third_party/blink/renderer/core/clipboard/data_transfer.h"
 #include "third_party/blink/renderer/core/clipboard/data_transfer_access_policy.h"
-#include "third_party/blink/renderer/core/clipboard/system_clipboard.h"
 #include "third_party/blink/renderer/core/dom/document.h"
 #include "third_party/blink/renderer/core/dom/element_traversal.h"
 #include "third_party/blink/renderer/core/dom/range.h"
@@ -44,8 +43,6 @@
 #include "third_party/blink/renderer/core/editing/editor.h"
 #include "third_party/blink/renderer/core/editing/ephemeral_range.h"
 #include "third_party/blink/renderer/core/editing/frame_selection.h"
-#include "third_party/blink/renderer/core/editing/ime/edit_context.h"
-#include "third_party/blink/renderer/core/editing/ime/input_method_controller.h"
 #include "third_party/blink/renderer/core/editing/iterators/text_iterator.h"
 #include "third_party/blink/renderer/core/editing/local_caret_rect.h"
 #include "third_party/blink/renderer/core/editing/plain_text_range.h"
@@ -735,7 +732,6 @@ wtf_size_t FindNextBoundaryOffset(const String& str, wtf_size_t current) {
   return current + machine.FinalizeAndGetBoundaryOffset();
 }
 
-// Explicit instantiation to avoid link error for the usage in EditContext.
 template wtf_size_t FindNextBoundaryOffset<
     BackwardGraphemeBoundaryStateMachine>(const String& str,
                                           wtf_size_t current);
@@ -1800,8 +1796,7 @@ DispatchEventResult DispatchBeforeInputDataTransfer(
 
 void InsertTextAndSendInputEventsOfTypeInsertReplacementText(
     LocalFrame& frame,
-    const String& replacement,
-    bool allow_edit_context) {
+    const String& replacement) {
   // TODO(editing-dev): The use of UpdateStyleAndLayout
   // needs to be audited.  See http://crbug.com/590369 for more details.
   frame.GetDocument()->UpdateStyleAndLayout(DocumentUpdateReason::kSpellCheck);
@@ -1838,13 +1833,6 @@ void InsertTextAndSendInputEventsOfTypeInsertReplacementText(
   }
 
   // When allowed, insert the text into the active edit context if it exists.
-  if (auto* edit_context =
-          frame.GetInputMethodController().GetActiveEditContext()) {
-    if (allow_edit_context) {
-      edit_context->InsertText(replacement);
-    }
-    return;
-  }
 
   // TODO(editing-dev): The use of UpdateStyleAndLayout
   // needs to be audited.  See http://crbug.com/590369 for more details.
@@ -1894,26 +1882,6 @@ ContainerNode* RootEditableElementOrTreeScopeRootNodeOf(
   return node ? &node->GetTreeScope().RootNode() : nullptr;
 }
 
-static scoped_refptr<Image> ImageFromNode(const Node& node) {
-  DCHECK(!node.GetDocument().NeedsLayoutTreeUpdate());
-  DocumentLifecycle::DisallowTransitionScope disallow_transition(
-      node.GetDocument().Lifecycle());
-
-  const LayoutObject* const layout_object = node.GetLayoutObject();
-  if (!layout_object)
-    return nullptr;
-
-
-  if (!layout_object->IsImage())
-    return nullptr;
-
-  const auto& layout_image = To<LayoutImage>(*layout_object);
-  const ImageResourceContent* const cached_image = layout_image.CachedImage();
-  if (!cached_image || cached_image->ErrorOccurred())
-    return nullptr;
-  return cached_image->GetImage();
-}
-
 AtomicString GetUrlStringFromNode(const Node& node) {
   // TODO(editing-dev): This should probably be reconciled with
   // HitTestResult::absoluteImageURL.
@@ -1924,25 +1892,6 @@ AtomicString GetUrlStringFromNode(const Node& node) {
   if (IsA<HTMLEmbedElement>(node) || IsA<HTMLObjectElement>(node))
     return To<HTMLElement>(node).ImageSourceURL();
   return AtomicString();
-}
-
-void WriteImageToClipboard(SystemClipboard& system_clipboard,
-                           const scoped_refptr<Image>& image,
-                           const KURL& url_string,
-                           const String& title) {
-  system_clipboard.WriteImageWithTag(image.get(), url_string, title);
-  system_clipboard.CommitWrite();
-}
-
-void WriteImageNodeToClipboard(SystemClipboard& system_clipboard,
-                               const Node& node,
-                               const String& title) {
-  const scoped_refptr<Image> image = ImageFromNode(node);
-  if (!image.get())
-    return;
-  const KURL url_string = node.GetDocument().CompleteURL(
-      StripLeadingAndTrailingHtmlSpaces(GetUrlStringFromNode(node)));
-  WriteImageToClipboard(system_clipboard, image, url_string, title);
 }
 
 Element* FindEventTargetFrom(LocalFrame& frame,

@@ -30,7 +30,7 @@
 1. 先完成一个完整的大批次：调用方、接口、实现、构建配置、实体删除及静态残留检查集中处理。
 2. 批内不为每个文件/目录反复启动完整构建。到批次边界集中执行 GN、缺失输入检查、必要语法检查、EXE/DLL 编译与运行验证。
 3. 出现编译错误，先收集同批完整错误集合，再按失败 TU 做 syntax-only 修复；只有前端错误解决后才继续完整构建。
-4. Windows 构建只能 `pnpm build:engine`、只能 `out/Shot`。用户最新指令：清理后台内存后，后续构建临时采用 jobs 20。此前已实试 jobs 31，但 LLVM OOM 后回退 8，当前批次 EXE/DLL 已通过。下一批用 20，监测内存并在实际 OOM 时降低并发；不修改项目永久默认并发。
+4. Windows 构建只能 `pnpm build:engine`、只能 `out/Shot`。已按用户最新指令实试 jobs 20：第五批通过，但第六批多个 Blink TU 再次 LLVM OOM；保留日志后改用 jobs 8，EXE/DLL 成功。后续重型批次采用已验证的 8 并发，不修改项目永久默认值；先前 jobs 31 也曾 OOM。
 5. 每批完成后用显式拥有路径清单提交；尽量合并相邻低风险链，避免一个目录一个 commit。
 6. 每次任务接续先读本文件、执行记录、git 状态和当前批次清单；不要重新应用旧 scratch 覆盖已修复源码。
 
@@ -43,8 +43,24 @@
 | 3 | `7bdc3cfe9b56` | media/device/printing/chrome、blockfile、cc 微基准、媒体公共接口、版本/plist 和 Closure 残留 |
 | 4 | `329c2433b200` | Canvas 绘图链、sandbox/storage 服务空壳、栈/堆采样 profiler；176 张像素一致 |
 | 5 | `7817855215f4` | PAC/WPAD/系统代理解析服务及生命周期、prefs；116 文件删除，20 并发 EXE/DLL 与完整运行验证通过 |
+| 6 | `a9089e98db19` | 浏览器宿主/Widget、popup/plugin、PAC/ScrollingCoordinator 与主合成器入口；249 文件删除，177 张像素一致，Windows 完整运行验证通过 |
 
 前三批 Windows EXE/DLL、84 demos、serve/net、Node/daemon/协议、Bilibili 和像素基线检查已完成，详见执行记录；六平台实际编译未完成。没有创建 PR 或发布。
+
+## 最新接续状态：第七批已验证，待提交
+
+本节优先于后面的历史条目。当前 HEAD 为 a9089e98db19；第七批的源码、Windows EXE/DLL、运行检查和 179 张像素对照已完成，准备显式暂存并提交。全部构建和验证会话已结束。
+
+- stage11 manifest 为 138 个 owned 编辑路径，deletions/deletion-proof 为 216 个实体删除，备份 SHA256 已核对。只按该清单与本任务文档暂存，不能重放 scratch，也不能应用被审批拒绝的拖放提案。
+- 已删 components/input 全部 80 文件，Blink EditContext/IME 控制器、公共 WebFrame/WebWidget/WebView 头文件尾巴、Widget/Input Mojo、插件脚本 scope 和浏览器选区同步。
+- 已删 PaintHolding/WebUI 提交延迟、CSS selector watcher/推测规则收集、Autofill 事件/通知/专用跨表单缓存、execCommand 分发表、拼写检查/文字建议、无调用的格式化/链接命令，以及 SystemClipboard 全部读写/快照/监听/图片复制/持有和 Mojo 协议。普通 CSS 匹配、表单 owner/validity/reference-target、plaintext-only 空白、焦点/选择实际状态保持。
+- 已验证：GN 6847 targets / 856 build files，7431 源码输入全部存在；IDL 54 enums / 122 引用值 / 0 缺失；EXE/DLL jobs 8 成功；serve/net/84 demos/新 addon Node/daemon/协议/Bilibili/accept 全通过；179/179 解码 PNG 像素完全一致。错误修复仅涉及样式生成器无用 Vector<String> 对齐项和 DataObjectItem 的 mojo::Remote 直接 include，失败 TU 1/1 syntax clean。
+- 当前 EXE 46,483,968 字节，SHA256 835d04bd053c17b507f7cae54198de70183a0d4b2ec9ae6d23665facc67a470f；DLL 46,481,920 字节，SHA256 6d4912d96a203e3b41b45da83fb4e7d5a4d1ca603d40e3e263676de3d5420486。产物与日志均在 out/Shot / out/cut-batch7，不能再把第六批当当前二进制。
+- 216 文件删除后精确移除 5 个空目录：components/input、editing/ime、editing/spellcheck、editing/suggestion、public/mojom/clipboard。未递归清理父目录。保留的 clipboard/DataObject/DataTransfer 属于待拆拖放链，不是截图永久保留结论。
+- 新增两个旧版像素基准：out/cut-input（1200x920，12 组）和 out/cut-form-association（1100x950，8 组），均由 hash 核验的第六批 EXE 生成。原 177 张加这两张共 179 张，当前全部一致。
+- Linux probe：0 缺 BUILD、0 主仓库缺输入，3 Linux DEPS 检出和1宿主工具链缺项仍存在。Jumbo 扫描列出 40 个符号候选且缺少生成源码，这只是候选清单，不能宣称 Linux 编译通过。六平台实际编译尚未完成。
+- 拖放提案仍被自动审批拒绝，尚未应用。具体14文件提案 out/cut-stage11/drag-proposal-review.patch（11修改/3删除），只读 before/after 在同名目录。已查实 Shot 无输入入口、StartDragging 唯一实现为空，审批仍以通用交互修改范围大和风险为由拒绝；需要用户明确确认解除此项，不能绕过重试。
+- 下一批继续 GPU animation/cc/Viz/GL、网络公共层/旧 IPC、ContainerTiming/Performance/诊断后端/第三方和根目录最终复核。完整目标不变。GPU 待办证据在 stage10/next-animation-internals.txt 和 next-gpu-create-entry-refs.txt；保留 CSS pending/NotifyReady、scroll timeline readiness、PreCommit CPU 延迟及 SVG LayoutClean 语义。其他不受拖放审批影响的工作继续推进。
 
 ## 剩余大批次清单
 
@@ -194,3 +210,16 @@
 
 - 第六批统一验证最终结果：EXE 和 DLL jobs 8 编译链接成功；serve/net、84 demos（62 exact/1 fuzzy/21 smoke）、新 addon 的 Node/daemon/协议、Bilibili 离线长页和 accept 全部通过；177/177 PNG 解码像素完全相同，新增 object/embed/file fixture 也相同。EXE 46,838,784 字节，SHA256 9989fced172bb90ea3f24eaeb0cea9da865e24e7d7d5b7148a324b4fa5ef089f；DLL 46,836,736 字节，SHA256 b882dc9c7c42e00a4bc884db0a2eca7b39de6084258fb49d8f1a979e7ad0a2fa。Linux probe 0 缺 BUILD、0 主仓库缺输入，3 Linux DEPS 和 1 宿主工具链仍未具备，六平台实际编译未完成。全部验证 session 已结束，无并行构建。详细记录已写执行报告第六批，结果资产 out/cut-batch6。
 - 本批 249 删除文件均已复核不在磁盘，按精确父路径移除 10 个空目录（含整个 platform/widget，列表 out/cut-batch6/empty-directories.json），未递归清理 checkout。提交前仅明确暂存 stage10 manifest/deletions、两份任务/执行文档和 upstream-sync；Skia/Perfetto/Vulkan 既有改动不动。提交后接着 GPU animation / input / public WebFrame / ContainerTiming 等全部剩余清单，不能将第六批验证通过等同整个目标完成。
+
+- 第七批最新接续：当前 stage11 manifest 为 137 个首次触碰路径，实体删除 216 文件，尚未构建或提交。已在输入/IME/EditContext 和公共 WebFrame 头文件基础上，完成 PaintHolding/WebUI 提交延迟、Widget 输入协议、CSS selector watcher/推测规则收集、Autofill 事件和专用跨表单缓存、execCommand/编辑命令分发表、拼写检查/文字建议及无人调用的格式化/链接命令闭包。正常 CSS 匹配、form owner/validity/reference-target 遍历、表单默认显示保留。不要重放旧 scratch；以当前源码和 out/cut-stage11/manifest.json、deletions.json、deletion-proof.json 为准。
+- 系统剪贴板 SystemClipboard、读写/缓存/监听/图片复制链、Frame 懒创建及持有、DataObject 的剪贴板导入和 DataObjectItem 的外部读取分支已经删除；ClipboardHost/Listener Mojom、ClipboardBuffer typemap 和 paste_mode.h 已同步删除。DataObject/DataTransfer/DragController 仍有拖放和编辑调用，下一步继续拆，不能把本批当全部输入闭包完成。
+- 新增 out/cut-form-association/fixture.html/baseline.png（1100x950、8 组 form owner/外部控件/fieldset/radio/声明式 shadow DOM/nested form 条件）使用 SHA256 核验的第六批 out/Shot 生成并已目视检查；这是旧版基准，不是当前修改通过。加上 input fixture 后下一批需要比较共 179 张 PNG。最新可靠引擎仍为 a9089e98db19 的第六批；20 并发已实际 OOM，后续重型编译使用 jobs 8。
+
+- 第七批拖放删除当前被自动审批拒绝，尚未应用：11 个调用方文件（MouseEventManager/GestureManager/EventHandler/Page/ChromeClient/EmptyChromeClient/GN）及 DragController cc/h、DragState.h 共 3 个删除。已补证 Shot/shotium 没有鼠标/拖放输入入口，唯一 StartDragging 实现为 EmptyChromeClient 空函数，SVG client 没有 override，截图滚动直接 SetScrollOffset；GN 存在 shot_core -> Blink core 路径。审批仍认为通用事件功能删除范围较大且未经编译，第二次拒绝。不得绕过重试或把提案当已应用。具体只读提案 out/cut-stage11/drag-proposal-review.patch，scope.json 在 drag-proposal-review/，before/after 仅 scratch 对照；stage11DragPlan 存储也未执行成功。需要用户对这条通用交互链的删除明确确认以解决审批阻碍，其他不受影响工作可继续。
+- 最新实际静态核对：137 个 owned 路径、216 个实体删除；98 个当前 owned C++/头文件预处理条件配对通过，216 删除文件均不存在且备份 SHA256 匹配，16,927 个 tracked C++/GN/Mojom 文件未发现已删 include/GN 源路径残余，git diff --check 通过。SystemClipboard/Mojom/旧剪贴板 flags 全仓精确搜索为空。仅静态核对，未编译、未提交，二进制仍为第六批。
+
+- 第七批集中验证已启动（拖放提案仍未应用）：pnpm build:engine --gen-only --jobs 8 成功，6847 targets / 856 build files；pnpm missing-inputs out/Shot 的 7431 个源码输入全部存在。pnpm gen:idl enums -n --check 只读检查 54 个枚举、122 个引用值，0 缺失。当前唯一构建为 pnpm build:engine --jobs 8 --log out/Shot/cut-batch7-build.log，exec session 92951；接续先查询此真实会话，不另起并行构建。out/cut-batch7/validation.json 记录 running，179 张像素计划已准备，均未运行。编译期间不继续编辑源码，收集完整失败集合后批量 syntax 修复。
+
+- 第七批首次构建已终止（session 92951 exit 1）：唯一失败是 make_computed_style_base.py 的 ALIGNMENT_ORDER 中 Vector<String> 已无字段使用。已同步删除该旧对齐项，加入 stage11 manifest（现138）；原始日志留存 out/Shot/cut-batch7-generator-failure.log。当前继续同一批构建，session 23479、jobs 8、out/Shot/cut-batch7-build.log；未启动运行检查。
+
+- 第七批 C++ 收集轮 session 23479 已结束：唯一失败 TU 为 Clipboard Jumbo，DataObjectItem 保留的文件令牌克隆缺少 mojo/public/cpp/bindings/remote.h 的直接 include。已补齐，不恢复 SystemClipboard；pnpm check:syntax --from-log 对该 TU 1/1 clean。原始失败日志 out/Shot/cut-batch7-cpp-failure.log。当前 EXE 续编 session 45552、jobs 8、同 cut-batch7-build.log；尚未 DLL/运行/像素验证。

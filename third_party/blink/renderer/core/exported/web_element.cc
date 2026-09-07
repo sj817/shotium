@@ -51,7 +51,6 @@
 #include "third_party/blink/renderer/core/dom/focus_params.h"
 #include "third_party/blink/renderer/core/editing/editing_utilities.h"
 #include "third_party/blink/renderer/core/editing/frame_selection.h"
-#include "third_party/blink/renderer/core/editing/ime/input_method_controller.h"
 #include "third_party/blink/renderer/core/editing/selection_template.h"
 #include "third_party/blink/renderer/core/editing/visible_selection.h"
 #include "third_party/blink/renderer/core/events/clipboard_event.h"
@@ -438,11 +437,6 @@ void WebElement::PasteText(const WebString& text,
           create_data_transfer(text)) != DispatchEventResult::kNotCanceled) {
     return;
   }
-  // No DOM mutation if EditContext is active.
-  if (frame->GetInputMethodController().GetActiveEditContext()) {
-    return;
-  }
-  // Fires "textInput" and "input".
   target->DispatchEvent(*TextEvent::CreateForPlainTextPaste(
       frame->DomWindow(), text,
       /*should_smart_replace=*/smart_replace));

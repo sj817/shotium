@@ -78,7 +78,6 @@ class WebElementCollection;
 class BLINK_EXPORT WebNode {
  public:
   enum class EventType {
-    kAutofill,
     kSelectionchange,
     kBeforeinput,
     kInput,

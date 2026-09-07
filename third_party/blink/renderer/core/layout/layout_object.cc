@@ -56,7 +56,6 @@
 #include "third_party/blink/renderer/core/editing/editing_utilities.h"
 #include "third_party/blink/renderer/core/editing/ephemeral_range.h"
 #include "third_party/blink/renderer/core/editing/frame_selection.h"
-#include "third_party/blink/renderer/core/editing/ime/input_method_controller.h"
 #include "third_party/blink/renderer/core/editing/layout_selection.h"
 #include "third_party/blink/renderer/core/editing/position_with_affinity.h"
 #include "third_party/blink/renderer/core/editing/text_affinity.h"
@@ -3252,8 +3251,6 @@ void LayoutObject::StyleWillChange(StyleDifference diff,
       // tree.
       if (PaintLayer* layer = EnclosingLayer())
         layer->DirtyVisibleContentStatus();
-      GetDocument().GetFrame()->GetInputMethodController().DidChangeVisibility(
-          *this);
     }
   }
 
@@ -3461,11 +3458,6 @@ void LayoutObject::StyleDidChange(
         !old_style->IsRunningTransformRelatedAnimationOnCompositor()) {
       SetNeedsLayout(layout_invalidation_reason::kStyleChange);
     }
-  }
-  const bool style_focusability = new_style.IsFocusable();
-  const bool old_style_focusability = old_style && old_style->IsFocusable();
-  if (!style_focusability && old_style_focusability) {
-    node_->FocusabilityLost();
   }
 }
 
@@ -3998,10 +3990,6 @@ void LayoutObject::WillBeDestroyed() {
   DCHECK(!IsText());
 
   const LocalFrame* frame = GetFrame();
-  if (frame) {
-    frame->GetInputMethodController().LayoutObjectWillBeDestroyed(*this);
-  }
-
   // Destroy any leftover anonymous children.
   LayoutObjectChildList* children = VirtualChildren();
   if (children)

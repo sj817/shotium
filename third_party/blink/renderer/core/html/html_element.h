@@ -162,8 +162,6 @@ class CORE_EXPORT HTMLElement : public Element {
   virtual bool draggable() const;
   void setDraggable(bool);
 
-  bool spellcheck() const;
-  void setSpellcheck(bool);
 
   bool translate() const;
   void setTranslate(bool);
@@ -483,7 +481,6 @@ class CORE_EXPORT HTMLElement : public Element {
 
   TranslateAttributeMode GetTranslateAttributeMode() const;
 
-  void HandleKeydownEvent(KeyboardEvent&);
   void HandleKeypressEvent(KeyboardEvent&);
 
   void SetPopoverInvoker(Element* invoker);

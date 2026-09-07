@@ -14,17 +14,8 @@
       "interfaceHeaderDir": "third_party/blink/renderer/core/events"
     },
     {
-      "name": "AutofillEvent",
-      "interfaceHeaderDir": "third_party/blink/renderer/core/html/forms",
-      "RuntimeEnabled": "AutofillEvent"
-    },
-    {
       "name": "BeforeUnloadEvent",
       "interfaceHeaderDir": "third_party/blink/renderer/core/events"
-    },
-    {
-      "name": "CharacterBoundsUpdateEvent",
-      "interfaceHeaderDir": "third_party/blink/renderer/core/editing/ime"
     },
     {
       "name": "ClipboardEvent",
@@ -165,14 +156,6 @@
     {
       "name": "TextEvent",
       "interfaceHeaderDir": "third_party/blink/renderer/core/events"
-    },
-    {
-      "name": "TextFormatUpdateEvent",
-      "interfaceHeaderDir": "third_party/blink/renderer/core/editing/ime"
-    },
-    {
-      "name": "TextUpdateEvent",
-      "interfaceHeaderDir": "third_party/blink/renderer/core/editing/ime"
     },
     {
       "name": "ToggleEvent",

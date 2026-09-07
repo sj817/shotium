@@ -953,12 +953,6 @@ WebInputEventResult EventHandler::HandleMousePressEvent(
   if (!mouse_event.FromTouch())
     frame_->Selection().SetCaretBlinkingSuspended(true);
 
-  if (mev.GetHitTestResult().InnerNode() &&
-      mouse_event.button == WebPointerProperties::Button::kLeft) {
-    HitTestResult result = mev.GetHitTestResult();
-    result.SetToShadowHostIfInUAShadowRoot();
-    frame_->GetChromeClient().WillDispatchPointerDown(*result.InnerNode());
-  }
 
   WebInputEventResult event_result = DispatchMousePointerEvent(
       WebInputEvent::Type::kPointerDown, mev.InnerPossiblyPseudoElement(),
@@ -1021,13 +1015,6 @@ WebInputEventResult EventHandler::HandleMousePressEvent(
     event_result = mouse_event_manager_->HandleMousePressEvent(mev);
   }
 
-  if (mev.GetHitTestResult().InnerNode() &&
-      mouse_event.button == WebPointerProperties::Button::kLeft) {
-    DCHECK_EQ(WebInputEvent::Type::kMouseDown, mouse_event.GetType());
-    HitTestResult result = mev.GetHitTestResult();
-    result.SetToShadowHostIfInUAShadowRoot();
-    frame_->GetChromeClient().DidDispatchMouseDown(*result.InnerNode());
-  }
 
   return event_result;
 }
@@ -1223,12 +1210,6 @@ WebInputEventResult EventHandler::HandleMouseMoveOrLeaveEvent(
       // scrollbar hovering.
       scrollbar->MouseMoved(mev.Event());
     }
-
-    // Set Effective pan action before Pointer cursor is updated.
-    const WebPointerEvent web_pointer_event(WebInputEvent::Type::kPointerMove,
-                                            mev.Event().FlattenTransform());
-    pointer_event_manager_->SendEffectivePanActionAtPointer(web_pointer_event,
-                                                            mev.InnerNode());
 
     LocalFrameView* view = frame_->View();
     if (!is_remote_frame && view) {

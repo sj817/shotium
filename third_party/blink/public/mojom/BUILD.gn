@@ -75,7 +75,6 @@ mojom("mojom_platform") {
     "choosers/color_chooser.mojom",
     "choosers/date_time_chooser.mojom",
     "choosers/popup_menu.mojom",
-    "clipboard/clipboard.mojom",
     "close_watcher/close_listener.mojom",
     "commit_result/commit_result.mojom",
     "confidence_level.mojom",
@@ -130,15 +129,11 @@ mojom("mojom_platform") {
     "image_replacement/image_replacement.mojom",
     "input/focus_type.mojom",
     "input/gesture_event.mojom",
-    "input/handwriting_gesture_result.mojom",
-    "input/ime_host.mojom",
     "input/input_event.mojom",
     "input/input_event_result.mojom",
-    "input/input_handler.mojom",
     "input/pointer_lock_context.mojom",
     "input/pointer_lock_result.mojom",
     "input/scroll_direction.mojom",
-    "input/stylus_writing_gesture.mojom",
     "input/touch_event.mojom",
     "keyboard_lock/keyboard_lock.mojom",
     "lcp_critical_path_predictor/lcp_critical_path_predictor.mojom",
@@ -253,7 +248,6 @@ mojom("mojom_platform") {
     "websockets/websocket_connector.mojom",
     "webtransport/web_transport_connector.mojom",
     "widget/device_emulation_params.mojom",
-    "widget/platform_widget.mojom",
     "widget/record_content_to_visible_time_request.mojom",
     "widget/visual_properties.mojom",
     "window_features/window_features.mojom",
@@ -273,10 +267,6 @@ mojom("mojom_platform") {
   if (is_shot_build) {
     sources = []
     sources = shot_mojom_platform_sources
-  }
-
-  if (is_android && !is_shot_build) {
-    sources += [ "input/synchronous_compositor.mojom" ]
   }
 
   if (is_win && !is_shot_build) {
@@ -395,16 +385,6 @@ mojom("mojom_platform") {
       traits_headers =
           [ "//third_party/blink/public/common/page/drag_mojom_traits.h" ]
       traits_public_deps = [ "//third_party/blink/public/common:headers" ]
-    },
-    {
-      types = [
-        {
-          mojom = "blink.mojom.Event"
-          cpp = "::std::unique_ptr<::blink::WebCoalescedInputEvent>"
-          move_only = true
-        },
-      ]
-      traits_headers = [ "//third_party/blink/public/common/input/web_coalesced_input_event_mojom_traits.h" ]
     },
     {
       types = [
@@ -537,16 +517,6 @@ mojom("mojom_platform") {
     },
   ]
   cpp_typemaps = [
-    {
-      types = [
-        {
-          mojom = "blink.mojom.ClipboardBuffer"
-          cpp = "::ui::ClipboardBuffer"
-        },
-      ]
-      traits_headers = [ "//ui/base/mojom/clipboard_blink_mojom_traits.h" ]
-      traits_public_deps = [ "//ui/base/clipboard:clipboard_types" ]
-    },
     {
       types = [
         {
@@ -687,8 +657,6 @@ mojom("android_mojo_bindings") {
     "blob/file_backed_blob_factory.mojom",
     "blob/serialized_blob.mojom",
     "font_unique_name_lookup/font_unique_name_lookup.mojom",
-    "input/input_host.mojom",
-    "input/input_messages.mojom",
   ]
 
   public_deps = [
@@ -798,7 +766,6 @@ mojom("mojom_core") {
     "page/page.mojom",
     "page/page_visibility_state.mojom",
     "page/prerender_page_param.mojom",
-    "page/widget.mojom",
     "page_state/page_state.mojom",
 
     # transferable_message.mojom depends the other messaging/ mojom files here.

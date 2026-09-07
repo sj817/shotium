@@ -29,7 +29,6 @@
 
 #include "third_party/blink/renderer/core/editing/commands/editing_commands_utilities.h"
 
-#include "third_party/blink/public/web/web_local_frame_client.h"
 #include "third_party/blink/renderer/core/clipboard/data_transfer.h"
 #include "third_party/blink/renderer/core/dom/text.h"
 #include "third_party/blink/renderer/core/editing/commands/selection_for_undo_step.h"
@@ -798,11 +797,6 @@ void ChangeSelectionAfterCommand(LocalFrame* frame,
                                  const SetSelectionOptions& options) {
   if (new_selection.IsNone())
     return;
-  // See <rdar://problem/5729315> Some shouldChangeSelectedDOMRange contain
-  // Ranges for selections that are no longer valid
-  const bool selection_did_not_change_dom_position =
-      new_selection == frame->Selection().GetSelectionInDomTree() &&
-      options.IsDirectional() == frame->Selection().IsDirectional();
   const bool handle_visible =
       frame->Selection().IsHandleVisible() && new_selection.IsRange();
   frame->Selection().SetSelection(new_selection,
@@ -811,21 +805,6 @@ void ChangeSelectionAfterCommand(LocalFrame* frame,
                                       .SetIsDirectional(options.IsDirectional())
                                       .Build());
 
-  // Some editing operations change the selection visually without affecting its
-  // position within the DOM. For example when you press return in the following
-  // (the caret is marked by ^):
-  // <div contentEditable="true"><div>^Hello</div></div>
-  // WebCore inserts <div><br></div> *before* the current block, which correctly
-  // moves the paragraph down but which doesn't change the caret's DOM position
-  // (["hello", 0]). In these situations the above FrameSelection::setSelection
-  // call does not call LocalFrameClient::DidChangeSelection(), which, on the
-  // Mac, sends selection change notifications and starts a new kill ring
-  // sequence, but we want to do these things (matches AppKit).
-  if (!selection_did_not_change_dom_position)
-    return;
-  frame->Client()->DidChangeSelection(
-      !frame->Selection().GetSelectionInDomTree().IsRange(),
-      blink::SyncCondition::kNotForced);
 }
 
 InputEvent::EventIsComposing IsComposingFromCommand(

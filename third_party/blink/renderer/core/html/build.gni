@@ -50,8 +50,6 @@ blink_core_sources_html = [
   "document_all_name_collection.h",
   "document_name_collection.cc",
   "document_name_collection.h",
-  "forms/autofill_event.cc",
-  "forms/autofill_event.h",
   "forms/base_button_input_type.cc",
   "forms/base_button_input_type.h",
   "forms/base_checkable_input_type.cc",

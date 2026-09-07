@@ -26,7 +26,6 @@
 #include "third_party/blink/public/common/input/web_input_event.h"
 #include "third_party/blink/public/platform/platform.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_keyboard_event_init.h"
-#include "third_party/blink/renderer/core/editing/ime/input_method_controller.h"
 #include "third_party/blink/renderer/core/event_interface_names.h"
 #include "third_party/blink/renderer/core/frame/local_dom_window.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
@@ -67,15 +66,6 @@ KeyboardEvent::KeyLocationCode GetKeyLocationCode(const WebInputEvent& key) {
   return KeyboardEvent::kDomKeyLocationStandard;
 }
 
-bool HasCurrentComposition(LocalDOMWindow* dom_window) {
-  if (!dom_window)
-    return false;
-  LocalFrame* local_frame = dom_window->GetFrame();
-  if (!local_frame)
-    return false;
-  return local_frame->GetInputMethodController().HasComposition();
-}
-
 static String FromUtf8(const std::string& s) {
   return String::FromUtf8(s);
 }
@@ -106,8 +96,7 @@ KeyboardEvent::KeyboardEvent(const WebKeyboardEvent& key,
           static_cast<ui::DomCode>(key.dom_code)))),
       key_(FromUtf8(
           ui::KeycodeConverter::DomKeyToKeyString(ui::DomKey(key.dom_key)))),
-      location_(GetKeyLocationCode(key)),
-      is_composing_(HasCurrentComposition(dom_window)) {
+      location_(GetKeyLocationCode(key)) {
   InitLocationModifiers(location_);
 
   // Firefox: 0 for keydown/keyup events, character code for keypress

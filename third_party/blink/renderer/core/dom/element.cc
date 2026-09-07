@@ -79,7 +79,6 @@
 #include "third_party/blink/renderer/core/css/css_numeric_literal_value.h"
 #include "third_party/blink/renderer/core/css/css_primitive_value.h"
 #include "third_party/blink/renderer/core/css/css_property_value_set.h"
-#include "third_party/blink/renderer/core/css/css_selector_watch.h"
 #include "third_party/blink/renderer/core/css/css_style_sheet.h"
 #include "third_party/blink/renderer/core/css/css_value.h"
 #include "third_party/blink/renderer/core/css/cssom/inline_style_property_map.h"
@@ -160,8 +159,6 @@
 #include "third_party/blink/renderer/core/editing/editor.h"
 #include "third_party/blink/renderer/core/editing/ephemeral_range.h"
 #include "third_party/blink/renderer/core/editing/frame_selection.h"
-#include "third_party/blink/renderer/core/editing/ime/edit_context.h"
-#include "third_party/blink/renderer/core/editing/ime/input_method_controller.h"
 #include "third_party/blink/renderer/core/editing/selection_template.h"
 #include "third_party/blink/renderer/core/editing/serializers/serialization.h"
 #include "third_party/blink/renderer/core/editing/set_selection_options.h"
@@ -4018,11 +4015,6 @@ Node::InsertionNotificationRequest Element::InsertedInto(
     }
   }
 
-  EditContext* edit_context = editContext();
-  if (edit_context && edit_context->GetExecutionContext() != context) {
-    edit_context->SetExecutionContext(context);
-  }
-
   if (GetDocument().StatePreservingAtomicMoveInProgress() &&
       Fullscreen::IsFullscreenElement(*this)) {
     // We don't actually need to cross frame boundaries, but we do need to mark
@@ -4379,7 +4371,6 @@ void Element::RemovedFrom(ContainerNode& insertion_point) {
       frame->GetEditor().GetUndoStack().ElementRemoved(this);
     }
     frame->GetEditor().ElementRemoved(this);
-    frame->GetSpellChecker().ElementRemoved(this);
     frame->GetEventHandler().ElementRemoved(this);
   }
 
@@ -4630,7 +4621,6 @@ void Element::DetachLayoutTree(bool performing_reattach) {
   DetachTransitionPseudoElements(performing_reattach);
 
   if (!performing_reattach) {
-    UpdateCallbackSelectors(GetComputedStyle(), nullptr);
     SetComputedStyle(nullptr);
   }
 
@@ -5590,7 +5580,6 @@ StyleRecalcChange Element::RecalcOwnStyle(
     if (ComputedStyle::DiffAffectsContainerQueries(old_style, new_style)) {
       child_change = child_change.ForceRecalcDescendantContainers();
     }
-    UpdateCallbackSelectors(old_style, new_style);
   }
 
   // We do not allow locked content to resume recalc when computing styles for
@@ -6036,27 +6025,6 @@ void Element::HandleSubtreeModifications() {
   }
 }
 
-void Element::UpdateCallbackSelectors(const ComputedStyle* old_style,
-                                      const ComputedStyle* new_style) {
-  Vector<String> empty_vector;
-  const Vector<String>& old_callback_selectors =
-      old_style ? old_style->CallbackSelectors() : empty_vector;
-  const Vector<String>& new_callback_selectors =
-      new_style ? new_style->CallbackSelectors() : empty_vector;
-  if (old_callback_selectors.empty() && new_callback_selectors.empty()) {
-    return;
-  }
-  if (old_callback_selectors != new_callback_selectors) {
-    CSSSelectorWatch::From(GetDocument())
-        .UpdateSelectorMatches(old_callback_selectors, new_callback_selectors);
-  }
-}
-
-// Element::NotifyIfMatchedDocumentRulesSelectorsChanged() was here. It told
-// DocumentSpeculationRules when an <a> or <area> gained, lost or changed the
-// set of speculation document-rule selectors it matched, so the candidate
-// list could be re-derived. core/speculation_rules is cut.
-
 TextDirection Element::ParentDirectionality() const {
   Node* parent = parentNode();
   if (Element* parent_element = DynamicTo<Element>(parent)) {
@@ -6453,124 +6421,6 @@ ShadowRoot& Element::CreateAndAttachShadowRoot(ShadowRootMode type,
 // into element.h, due to the dependency on NodeRareData.)
 ShadowRoot* Element::GetShadowRootInternal() const {
   return RareData()->GetShadowRoot();
-}
-
-EditContext* Element::editContext() const {
-  if (const NodeRareData* data = RareData()) {
-    return data->GetEditContext();
-  }
-  return nullptr;
-}
-
-void Element::setEditContext(EditContext* edit_context,
-                             ExceptionState& exception_state) {
-  CHECK(DynamicTo<HTMLElement>(this));
-
-  // https://w3c.github.io/edit-context/#extensions-to-the-htmlelement-interface
-  // Step 1: If this's local name is neither a valid shadow host name nor
-  // "canvas", then throw a "NotSupportedError" DOMException.
-  const AtomicString& local_name = localName();
-  if (!(IsCustomElement() && CustomElement::IsValidName(local_name)) &&
-      !IsValidShadowHostName(local_name) &&
-      local_name != html_names::kCanvasTag) {
-    exception_state.ThrowDOMException(
-        DOMExceptionCode::kNotSupportedError,
-        "This element does not support EditContext");
-    return;
-  }
-
-  if (RuntimeEnabledFeatures::EditContextAssignmentAsPerSpecEnabled()) {
-    // Step 2: If edit_context is not null, then:
-    // Step 2.1: If edit_context's associated element is equal to this, then
-    // terminate these steps.
-    // Step 2.2: If edit_context's associated element is not null, then throw a
-    // "NotSupportedError" DOMException.
-    if (edit_context && edit_context->attachedElements().size() > 0) {
-      if (edit_context->attachedElements()[0] != this) {
-        exception_state.ThrowDOMException(
-            DOMExceptionCode::kNotSupportedError,
-            "An EditContext can be only be associated with a single element");
-      }
-      return;
-    }
-
-    // Step 3: Let old_edit_context be the value of this's internal
-    // [[EditContext]] slot.
-    auto* old_edit_context = editContext();
-
-    // Step 4: If old_edit_context is not null and old_edit_context is this's
-    // node document's active EditContext, then:
-    if (old_edit_context && IsFocusedElementInDocument()) {
-      // Step 4.1: Deactivate old_edit_context
-      // Note: `Blur` might fire events (like compositionend), which could
-      // modify old_edit_context's associations. This is why we re-check the
-      // associations below.
-      old_edit_context->Blur();
-
-      // Step 4.2: If old_edit_context's associated element is not equal to
-      // this, then terminate these steps.
-      if (!old_edit_context->attachedElements().size() ||
-          old_edit_context->attachedElements()[0] != this) {
-        return;
-      }
-      // Step 4.3: If edit_context is not null, edit_context's associated
-      // element is not null and edit_context's associated element is not equal
-      // to this
-      if (edit_context && edit_context->attachedElements().size() > 0) {
-        if (edit_context->attachedElements()[0] != this) {
-          exception_state.ThrowDOMException(
-              DOMExceptionCode::kNotSupportedError,
-              "An EditContext can be only be associated with a single element");
-        }
-        return;
-      }
-    }
-
-    // Step 5: If old_edit_context is not null, set old_edit_context's
-    // associated element to null.
-    if (old_edit_context) {
-      old_edit_context->DetachElement(DynamicTo<HTMLElement>(this));
-    }
-  } else {
-    if (edit_context && edit_context->attachedElements().size() > 0 &&
-        edit_context->attachedElements()[0] != this) {
-      exception_state.ThrowDOMException(
-          DOMExceptionCode::kNotSupportedError,
-          "An EditContext can be only be associated with a single element");
-      return;
-    }
-
-    // If an element is in focus when being attached to a new EditContext,
-    // its old EditContext, if it has any, will get blurred,
-    // and the new EditContext will automatically get focused.
-    if (auto* old_edit_context = editContext()) {
-      if (IsFocusedElementInDocument()) {
-        old_edit_context->Blur();
-      }
-
-      old_edit_context->DetachElement(DynamicTo<HTMLElement>(this));
-    }
-  }
-
-  // Step 6: If edit_context is not null, then set edit_context's associated
-  // element to this.
-  if (edit_context) {
-    edit_context->AttachElement(DynamicTo<HTMLElement>(this));
-
-    if (IsFocusedElementInDocument()) {
-      edit_context->Focus();
-    }
-  }
-
-  data_ = EnsureRareData().SetEditContext(edit_context);
-
-  // EditContext affects the -webkit-user-modify CSS property of the element
-  // (which is what Chromium uses internally to determine editability) so
-  // we need to recalc styles. This is an inherited property, so we invalidate
-  // the subtree rather than just the node itself.
-  SetNeedsStyleRecalc(
-      StyleChangeType::kSubtreeStyleChange,
-      StyleChangeReasonForTracing::Create(style_change_reason::kEditContext));
 }
 
 struct Element::AffectedByPseudoStateChange {
@@ -11445,49 +11295,6 @@ void Element::SetIsInTopLayer(bool in_top_layer) {
       SetForceReattachLayoutTree();
     }
   }
-}
-
-SpellcheckAttributeState Element::GetSpellcheckAttributeState() const {
-  const AtomicString& value = FastGetAttribute(html_names::kSpellcheckAttr);
-  if (value == g_null_atom) {
-    return kSpellcheckAttributeDefault;
-  }
-  if (EqualIgnoringAsciiCase(value, "true") ||
-      EqualIgnoringAsciiCase(value, "")) {
-    return kSpellcheckAttributeTrue;
-  }
-  if (EqualIgnoringAsciiCase(value, "false")) {
-    return kSpellcheckAttributeFalse;
-  }
-
-  return kSpellcheckAttributeDefault;
-}
-
-bool Element::IsSpellCheckingEnabled() const {
-  // TODO(crbug.com/1365686): This is not compliant with the spec
-  // https://html.spec.whatwg.org/#concept-spellcheck-default
-  for (const Element* element = this; element;
-       element = element->ParentOrShadowHostElement()) {
-    switch (element->GetSpellcheckAttributeState()) {
-      case kSpellcheckAttributeTrue:
-        return true;
-      case kSpellcheckAttributeFalse:
-        return false;
-      case kSpellcheckAttributeDefault:
-        if (const auto* input = DynamicTo<HTMLInputElement>(element)) {
-          if (input->HasBeenPasswordField()) {
-            return false;
-          }
-        }
-        break;
-    }
-  }
-
-  if (!GetDocument().GetPage()) {
-    return true;
-  }
-
-  return GetDocument().GetPage()->GetSettings().GetSpellCheckEnabledByDefault();
 }
 
 #if DCHECK_IS_ON()

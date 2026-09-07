@@ -99,9 +99,6 @@ BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kAndroidDesktopWebPrefsLargeDisplays);
 // grammar errors in textboxes.
 BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kAndroidSpellcheckNativeUi);
 
-// If enabled, provides API support for custom spell check menus that are
-// rendered by Android applications.
-BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kAndroidSpellcheckFullApiBlink);
 
 // If enabled, the platform in the User-Agent metadata for Android desktop will
 // be "Android" instead of "Linux".
@@ -126,7 +123,6 @@ BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kAudioWorkletThreadRealtimePeriodMac);
 
 BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kAudioWorkletThreadPool);
 
-BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kAutofillKeydownEditableElement);
 
 // https://crbug.com/1472970
 BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kAutoSpeculationRules);
@@ -534,30 +530,6 @@ BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kImageLoadingPrioritizationFix);
 
 // If enabled, allows the browser to render new content in place of an image.
 BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kImageReplacement);
-
-#if !BUILDFLAG(IS_ANDROID)
-// If enabled, the initial WebUI will not interact with extensions. This feature
-// intends to optimize performance by reducting extension related tasks.
-// See crbug.com/450192387.
-BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kInitialWebUIWithoutExtensions);
-#endif  // !BUILDFLAG(IS_ANDROID)
-
-// If enabled, the initial WebUI surface will sync with the browser without
-// deferring the browser view show.
-BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kInitialWebUISurfaceSync);
-// Specifies the maximum deadline duration (in frames) to wait for the initial
-// WebUI surface synchronization. Calculated based on desired time duration
-// assuming a standard display rate of 60 FPS (e.g., 5 seconds = 300 frames).
-// A sentinel value of std::numeric_limits<size_t>::max() disables the
-// deadline override, allowing an infinite timeout.
-BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE_PARAM(
-    size_t,
-    kInitialWebUISurfaceSyncDeadlineInFrames);
-// Specifies the custom renderer-side commit deferral delay (in milliseconds)
-// used during paint holding for the initial WebUI rendering frame.
-BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE_PARAM(
-    size_t,
-    kInitialWebUISurfaceSyncRendererCommitDelayInMs);
 
 // Use Snappy to compress values for IndexedDB before wiring them to the
 // browser.
@@ -1272,7 +1244,6 @@ BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kOriginAgentClusterDefaultEnabled);
 
 BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kPath2DPaintCache);
 
-BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kPaintHolding);
 
 BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(
     kPopulateDOMNodeIdInFocusedNodeDetails);

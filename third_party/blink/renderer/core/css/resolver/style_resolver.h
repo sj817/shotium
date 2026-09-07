@@ -381,13 +381,6 @@ class CORE_EXPORT StyleResolver final : public GarbageCollected<StyleResolver> {
                           const StyleRecalcContext&);
   void ApplyAnchorData(StyleResolverState&);
 
-  void ApplyCallbackSelectors(StyleResolverState&);
-  void ApplyDocumentRulesSelectors(StyleResolverState&, ContainerNode* scope);
-  StyleRuleList* CollectMatchingRulesFromUnconnectedRuleSet(
-      StyleResolverState&,
-      RuleSet*,
-      ContainerNode* scope);
-
   Document& GetDocument() const { return *document_; }
 
   bool IsForcedColorsModeEnabled() const;

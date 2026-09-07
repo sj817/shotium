@@ -186,7 +186,6 @@
 #include "third_party/blink/renderer/core/editing/drag_caret.h"
 #include "third_party/blink/renderer/core/editing/editing_utilities.h"
 #include "third_party/blink/renderer/core/editing/frame_selection.h"
-#include "third_party/blink/renderer/core/editing/ime/edit_context.h"
 #include "third_party/blink/renderer/core/editing/markers/document_marker_controller.h"
 #include "third_party/blink/renderer/core/editing/position_with_affinity.h"
 #include "third_party/blink/renderer/core/editing/serializers/serialization.h"
@@ -225,7 +224,6 @@
 #include "third_party/blink/renderer/core/html/custom/custom_element_registry_assignment.h"
 #include "third_party/blink/renderer/core/html/document_all_name_collection.h"
 #include "third_party/blink/renderer/core/html/document_name_collection.h"
-#include "third_party/blink/renderer/core/html/forms/autofill_event.h"
 #include "third_party/blink/renderer/core/html/forms/email_input_type.h"
 #include "third_party/blink/renderer/core/html/forms/form_controller.h"
 #include "third_party/blink/renderer/core/html/forms/html_form_element.h"
@@ -303,7 +301,6 @@
 #include "third_party/blink/renderer/core/page/frame_tree.h"
 #include "third_party/blink/renderer/core/page/page.h"
 #include "third_party/blink/renderer/core/page/page_animator.h"
-#include "third_party/blink/renderer/core/page/plugin_script_forbidden_scope.h"
 #include "third_party/blink/renderer/core/page/scrolling/fragment_anchor.h"
 #include "third_party/blink/renderer/core/page/scrolling/root_scroller_controller.h"
 #include "third_party/blink/renderer/core/page/scrolling/snap_coordinator.h"
@@ -393,7 +390,6 @@ namespace blink {
 
 namespace {
 
-constexpr char kSelectName[] = "select";
 
 class IntrinsicSizeResizeObserverDelegate : public ResizeObserver::Delegate {
  public:
@@ -456,59 +452,6 @@ bool DefaultFaviconAllowedByCSP(const Document* document, const IconURL& icon) {
       icon.icon_url_, icon.icon_url_, RedirectStatus::kNoRedirect,
       ReportingDisposition::kSuppressReporting,
       ContentSecurityPolicy::CheckHeaderType::kCheckAll);
-}
-
-// This function is a heuristic to detect potential synthetic selects.
-// It is a necessary but not sufficient condition for an element to be
-// considered a synthetic select.
-//
-// Synthetic selects are select elements that are built using
-// <div>s, <span>s, <button>s etc. with CSS and JavaScript
-// instead of the native <select> element.
-// For more details, see go/analyzing-synthetic-selects.
-bool CanBeSyntheticSelect(Element& element) {
-  return !element.HasTagName(html_names::kSelectTag) &&
-         (element.hasAttribute(html_names::kAriaExpandedAttr) ||
-          element.hasAttribute(html_names::kAriaHaspopupAttr));
-}
-
-bool HasSelectInTagName(Element& element) {
-  return element.localName().ContainsIgnoringAsciiCase(kSelectName);
-}
-
-bool HasSelectInClassAttribute(Element& element) {
-  return element.GetClassAttribute().ContainsIgnoringAsciiCase(kSelectName);
-}
-
-bool HasSelectInNameAttribute(Element& element) {
-  return element.getAttribute(html_names::kNameAttr)
-      .ContainsIgnoringAsciiCase(kSelectName);
-}
-
-bool IsRoleCombobox(Element& element) {
-  DEFINE_STATIC_LOCAL(const AtomicString, combobox, ("combobox"));
-  return element.getAttribute(html_names::kRoleAttr) == combobox;
-}
-
-bool IsAriaHasPopupListbox(Element& element) {
-  DEFINE_STATIC_LOCAL(const AtomicString, listbox, ("listbox"));
-  return element.getAttribute(html_names::kAriaHaspopupAttr) == listbox;
-}
-
-// This function is a heuristic to detect synthetic selects.
-//
-// Synthetic selects are select elements that are built using
-// <div>s, <span>s, <button>s etc. with CSS and JavaScript
-// instead of the native <select> element.
-// For more details, see go/analyzing-synthetic-selects.
-bool IsSyntheticSelect(Element& element) {
-  if (!CanBeSyntheticSelect(element)) {
-    return false;
-  }
-
-  return HasSelectInTagName(element) || HasSelectInClassAttribute(element) ||
-         HasSelectInNameAttribute(element) || IsRoleCombobox(element) ||
-         IsAriaHasPopupListbox(element);
 }
 
 // The sampling rate for UKM.
@@ -762,86 +705,6 @@ const ListedElement::List& Document::UnassociatedListedElements() const {
 
 void Document::MarkUnassociatedListedElementsDirty() {
   unassociated_listed_elements_.MarkDirty();
-}
-
-void Document::OutermostFormsList::MarkDirty() {
-  dirty_ = true;
-  list_.clear();
-}
-
-void Document::OutermostFormsList::Trace(Visitor* visitor) const {
-  visitor->Trace(list_);
-}
-
-const HeapVector<Member<HTMLFormElement>>& Document::OutermostFormsList::Get(
-    Document& owner) {
-  if (dirty_) {
-    // Use BFS to avoid unnecessarily visiting the descendants of form elements.
-    HeapDeque<Member<Node>> nodes_to_visit;
-    nodes_to_visit.push_back(&owner.GetTreeScope().RootNode());
-    while (!nodes_to_visit.empty()) {
-      Node* current = nodes_to_visit.TakeFirst();
-      if (HTMLFormElement* form = DynamicTo<HTMLFormElement>(*current)) {
-        list_.push_back(form);
-      } else {
-        for (Node& child :
-             ShadowIncludingTreeOrderTraversal::ChildrenOf(*current)) {
-          nodes_to_visit.push_back(&child);
-        }
-      }
-    }
-    LogSyntheticSelectMetrics(owner);
-    dirty_ = false;
-  }
-  return list_;
-}
-
-// For every form found in the document, logs the number of synthetic select
-// and potential synthetic select elements.
-//
-// An element is classified as a synthetic select if and only if it
-//   * has 'aria-expanded' attribute, or
-//   * has 'aria-haspopup' attribute
-// and one of the following conditions
-//   * has 'select' substring in the HTML tag name,
-//   * has 'select' substring in the HTML class attribute,
-//   * has 'select' substring in the HTML name attribute,
-//   * 'aria-role' attribute is equal to 'combobox',
-//   * 'aria-haspopup' attribute is equal to 'listbox'
-// is true.
-//
-// The element which satisfies one of the first 2 conditions
-// but does satisfy any of the last 5 conditions
-// is considered a potential synthetic select.
-void Document::OutermostFormsList::LogSyntheticSelectMetrics(
-    Document& owner) const {
-  for (Node* form : list_) {
-    bool found_synthetic_select = false;
-    bool found_potential_synthetic_select = false;
-
-    for (Element& element : Traversal<Element>::DescendantsOf(*form)) {
-      if (found_synthetic_select && found_potential_synthetic_select) {
-        return;
-      }
-
-      if (!found_synthetic_select && IsSyntheticSelect(element)) {
-        found_synthetic_select = true;
-        UseCounter::Count(owner, WebFeature::kAutofillSyntheticSelect);
-      } else if (!found_potential_synthetic_select &&
-                 CanBeSyntheticSelect(element)) {
-        found_potential_synthetic_select = true;
-        UseCounter::Count(owner, WebFeature::kAutofillMaybeSyntheticSelect);
-      }
-    }
-  }
-}
-
-const HeapVector<Member<HTMLFormElement>>& Document::GetOutermostForms() {
-  return outermost_forms_.Get(*this);
-}
-
-void Document::MarkOutermostFormsDirty() {
-  outermost_forms_.MarkDirty();
 }
 
 Document::URLCache::URLCache()
@@ -3338,16 +3201,6 @@ void Document::Shutdown() {
   execution_context_ = nullptr;
 }
 
-void Document::AddedEventListener(
-    const AtomicString& event_type,
-    RegisteredEventListener& registered_listener) {
-  ContainerNode::AddedEventListener(event_type, registered_listener);
-  if (event_type == event_type_names::kAutofill &&
-      RuntimeEnabledFeatures::AutofillEventEnabled(GetExecutionContext())) {
-    UseCounter::Count(*this, WebFeature::kAutofillEvent);
-  }
-}
-
 void Document::RemovedEventListener(
     const AtomicString& event_type,
     const RegisteredEventListener& registered_listener) {
@@ -4351,7 +4204,6 @@ void Document::DispatchUnloadEvents(UnloadEventTimingInfo* unload_timing_info) {
               perfetto::Flow::FromPointer(this));
   base::ScopedUmaHistogramTimer histogram_timer(
       "Navigation.Document.DispatchUnloadEvents");
-  PluginScriptForbiddenScope forbid_plugin_destructor_scripting;
   PageDismissalScope in_page_dismissal;
   if (parser_) {
     parser_->StopParsing();
@@ -4365,9 +4217,6 @@ void Document::DispatchUnloadEvents(UnloadEventTimingInfo* unload_timing_info) {
     return;
   }
 
-  Element* current_focused_element = FocusedElement();
-  if (auto* input = DynamicTo<HTMLInputElement>(current_focused_element))
-    input->EndEditing();
 
   // Since we do not allow registering the unload event handlers in
   // fenced frames, it should not be fired by fencedframes.
@@ -4446,20 +4295,6 @@ void Document::DispatchFreezeEvent() {
   DispatchEvent(*Event::Create(event_type_names::kFreeze));
   SetFreezingInProgress(false);
   UseCounter::Count(*this, WebFeature::kPageLifeCycleFreeze);
-}
-
-void Document::DispatchAutofillEvent(
-    HeapVector<std::pair<Member<Element>, String>> autofill_values,
-    const base::UnguessableToken& fill_id,
-    bool supports_refill) {
-  if (!RuntimeEnabledFeatures::AutofillEventEnabled(GetExecutionContext())) {
-    return;
-  }
-
-  AutofillEvent* event = AutofillEvent::Create(event_type_names::kAutofill,
-                                               std::move(autofill_values),
-                                               fill_id, supports_refill);
-  DispatchEvent(*event);
 }
 
 Document::PageDismissalType Document::PageDismissalEventBeingDispatched()
@@ -5593,12 +5428,6 @@ bool Document::SetFocusedElement(Element* new_focused_element,
         }
       }
     }
-    // EditContext's activation is synced with the associated element being
-    // focused or not. If an element loses focus, its associated EditContext
-    // is deactivated.
-    if (auto* old_edit_context = old_focused_element->editContext()) {
-      old_edit_context->Blur();
-    }
   }
 
   // Blur/focusout handlers could have moved the new element out of this
@@ -5713,15 +5542,6 @@ bool Document::SetFocusedElement(Element* new_focused_element,
   UpdateStyleAndLayoutTree();
   if (LocalFrame* frame = GetFrame())
     frame->Selection().DidChangeFocus();
-
-  // EditContext's activation is synced with the associated element being
-  // focused or not. If an element receives focus, its associated EditContext
-  // is activated.
-  if (new_focused_element) {
-    if (auto* edit_context = new_focused_element->editContext()) {
-      edit_context->Focus();
-    }
-  }
 
   return !focus_change_blocked;
 }
@@ -7408,13 +7228,6 @@ void Document::FinishedParsing() {
   }
 
   if (LocalFrame* frame = GetFrame()) {
-    // If First Paint has already happened but FCP hasn't (e.g., a page with
-    // only background-color content), release paint holding now that we know
-    // parsing is complete and no more static text/images will arrive.
-    if (frame->View()) {
-      frame->View()->MaybeStopDeferringCommitsWithoutContentfulPaint();
-    }
-
     // Guarantee at least one call to the client specifying a title. (If
     // |title_| is not empty, then the title has already been dispatched.)
     if (title_.empty())
@@ -8465,21 +8278,6 @@ Document& Document::EnsureTemplateDocument() {
   return *template_document_.Get();
 }
 
-void Document::DidChangeFormRelatedElementDynamically(
-    HTMLElement* element,
-    WebFormRelatedChangeType form_related_change) {
-  if (!GetFrame() || !GetFrame()->GetPage() || !HasFinishedParsing() ||
-      !GetFrame()->IsAttached()) {
-    return;
-  }
-
-  GetFrame()
-      ->GetPage()
-      ->GetChromeClient()
-      .DidChangeFormRelatedElementDynamically(GetFrame(), element,
-                                              form_related_change);
-}
-
 float Document::DevicePixelRatio() const {
   return GetFrame() ? GetFrame()->DevicePixelRatio() : 1.0;
 }
@@ -8919,7 +8717,6 @@ void Document::Trace(Visitor* visitor) const {
   visitor->Trace(data_);
   visitor->Trace(meta_theme_color_elements_);
   visitor->Trace(unassociated_listed_elements_);
-  visitor->Trace(outermost_forms_);
   visitor->Trace(intrinsic_size_observer_);
   visitor->Trace(lazy_loaded_auto_sized_img_observer_);
   visitor->Trace(focused_element_change_observers_);
@@ -9312,16 +9109,6 @@ void Document::RemoveFocusedElementChangeObserver(
 void Document::WriteIntoTrace(perfetto::TracedValue ctx) const {
   perfetto::TracedDictionary dict = std::move(ctx).WriteDictionary();
   dict.Add("url", Url());
-}
-
-bool Document::DeferredCompositorCommitIsAllowed() const {
-  // Don't defer commits if a transition is in progress. It requires commits to
-  // send directives to the compositor and uses a separate mechanism to pause
-  // all rendering when needed.
-  if (ViewTransitionUtils::GetTransition(*this)) {
-    return false;
-  }
-  return deferred_compositor_commit_is_allowed_;
 }
 
 Document::PaintPreviewScope::PaintPreviewScope(Document& document,

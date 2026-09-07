@@ -956,13 +956,6 @@
       invalidate: ["ViewportPaintProperties"],
     },
 
-    // Spellchecking is enabled by default for elements that do not specify it explicitly
-    // using the "spellcheck" attribute.
-    {
-      name: "spellCheckEnabledByDefault",
-      initial: true,
-    },
-
     // Whether download UI should be hidden for the current page content.
     {
       name: "hideDownloadUI",

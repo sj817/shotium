@@ -416,19 +416,6 @@ void HTMLTextAreaElement::UpdateSelectionOnFocus(
 }
 
 void HTMLTextAreaElement::DefaultEventHandler(Event& event) {
-  if (auto* keyboard_event = DynamicTo<KeyboardEvent>(event);
-      base::FeatureList::IsEnabled(
-          blink::features::kAutofillKeydownEditableElement) &&
-      keyboard_event && event.type() == event_type_names::kKeydown &&
-      IsFocused() && !IsDisabledOrReadOnly() && GetDocument().GetPage() &&
-      GetDocument()
-          .GetPage()
-          ->GetChromeClient()
-          .HandleKeyboardEventOnEditableElement(*this, *keyboard_event)) {
-    event.SetDefaultHandled();
-    return;
-  }
-
   if (GetLayoutObject() &&
       (IsA<MouseEvent>(event) || IsA<DragEvent>(event) ||
        event.HasInterface(event_interface_names::kWheelEvent) ||
@@ -476,14 +463,6 @@ void HTMLTextAreaElement::SubtreeHasChanged() {
     CommitOpaqueRangeEdit();
   }
 
-  if (!IsFocused())
-    return;
-
-  DCHECK(GetDocument().IsActive());
-  if (value_.empty()) {
-    GetDocument().GetPage()->GetChromeClient().DidClearValueInTextField(*this);
-  }
-  GetDocument().GetPage()->GetChromeClient().DidChangeValueInTextField(*this);
 }
 
 void HTMLTextAreaElement::HandleBeforeTextInsertedEvent(
@@ -521,10 +500,6 @@ void HTMLTextAreaElement::HandleBeforeTextInsertedEvent(
       unsigned_max_length > base_length ? unsigned_max_length - base_length : 0;
   event->SetText(SanitizeUserInputValue(event->GetText(), appendable_length));
 
-  if (selection_length == current_length && selection_length != 0 &&
-      !event->GetText().empty()) {
-    GetDocument().GetPage()->GetChromeClient().DidClearValueInTextField(*this);
-  }
 }
 
 String HTMLTextAreaElement::SanitizeUserInputValue(const String& proposed_value,
@@ -567,10 +542,6 @@ void HTMLTextAreaElement::setValueForBinding(const String& value) {
            TextControlSetValueSelection::kSetSelectionToEnd,
            was_autofilled && !value_changed ? WebAutofillState::kAutofilled
                                             : WebAutofillState::kNotFilled);
-  if (Page* page = GetDocument().GetPage(); page) {
-    page->GetChromeClient().JavaScriptSetValue(*this, old_value, was_autofilled,
-                                               value_changed);
-  }
 }
 
 void HTMLTextAreaElement::SetValue(const String& value,

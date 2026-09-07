@@ -71,8 +71,6 @@ namespace {
 
 const AtomicString& GetEventTypeName(WebNode::EventType event_type) {
   switch (event_type) {
-    case WebNode::EventType::kAutofill:
-      return event_type_names::kAutofill;
     case WebNode::EventType::kSelectionchange:
       return event_type_names::kSelectionchange;
     case WebNode::EventType::kBeforeinput:

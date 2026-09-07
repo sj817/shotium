@@ -44,7 +44,6 @@
 #include "third_party/blink/public/mojom/frame/viewport_intersection_state.mojom-blink.h"
 #include "third_party/blink/public/mojom/input/focus_type.mojom-blink-forward.h"
 #include "third_party/blink/public/platform/browser_interface_broker_proxy.h"
-#include "third_party/blink/public/platform/web_spell_check_panel_host_client.h"
 #include "third_party/blink/renderer/core/core_export.h"
 #include "third_party/blink/renderer/core/frame/local_frame_client.h"
 #include "third_party/blink/renderer/core/page/chrome_client.h"
@@ -119,17 +118,12 @@ class CORE_EXPORT EmptyChromeClient : public ChromeClient {
   void DraggableRegionsChanged() override {}
   void SetOverscrollBehavior(LocalFrame& frame,
                              const cc::OverscrollBehavior&) override {}
-  void BeginLifecycleUpdates(LocalFrame& main_frame) override {}
   void RegisterForCommitObservation(CommitObserver*) override {}
   void UnregisterFromCommitObservation(CommitObserver*) override {}
   void WillCommitCompositorFrame() override {}
   std::unique_ptr<cc::ScopedPauseRendering> PauseRendering(
       LocalFrame&) override;
   std::optional<int> GetMaxRenderBufferBounds(LocalFrame& frame) const override;
-  bool StartDeferringCommits(LocalFrame& main_frame,
-                             base::TimeDelta timeout,
-                             cc::PaintHoldingReason reason) override;
-  void StopDeferringCommits(LocalFrame& main_frame) override {}
   void StartDragging(LocalFrame*,
                      const WebDragData&,
                      DragOperationsMask,
@@ -235,11 +229,6 @@ class CORE_EXPORT EmptyChromeClient : public ChromeClient {
   void SetNeedsUnbufferedInputForDebugger(LocalFrame*, bool) override {}
   void RequestUnbufferedInputEvents(LocalFrame*) override {}
   void SetTouchAction(LocalFrame*, TouchAction) override {}
-  void SetPanAction(LocalFrame*, mojom::blink::PanAction pan_action) override {}
-  void DidChangeFormRelatedElementDynamically(
-      LocalFrame*,
-      HTMLElement*,
-      WebFormRelatedChangeType) override {}
   void RegisterPopupOpeningObserver(PopupOpeningObserver*) override {}
   void UnregisterPopupOpeningObserver(PopupOpeningObserver*) override {}
   void NotifyPopupOpeningObservers() const override {}
@@ -290,7 +279,6 @@ class CORE_EXPORT EmptyLocalFrameClient : public LocalFrameClient {
   EmptyLocalFrameClient& operator=(const EmptyLocalFrameClient&) = delete;
   ~EmptyLocalFrameClient() override = default;
 
-  bool HasWebView() const override { return true; }  // mainly for assertions
 
   bool InShadowTree() const override { return false; }
 
@@ -379,8 +367,6 @@ class CORE_EXPORT EmptyLocalFrameClient : public LocalFrameClient {
     return false;
   }
   void DidDispatchPingLoader(const KURL&) override {}
-  void SelectorMatchChanged(const Vector<String>&,
-                            const Vector<String>&) override {}
   LocalFrame* CreateFrame(const AtomicString&, HTMLFrameOwnerElement*) override;
 
   // CreateWebMediaPlayer() and CreateRemotePlaybackClient() removed along with
@@ -396,16 +382,11 @@ class CORE_EXPORT EmptyLocalFrameClient : public LocalFrameClient {
   AssociatedInterfaceProvider* GetRemoteNavigationAssociatedInterfaces()
       override;
 
-  WebSpellCheckPanelHostClient* SpellCheckPanelHostClient() const override {
-    return nullptr;
-  }
 
   WebContentSettingsClient* GetContentSettingsClient() override {
     return nullptr;
   }
 
-  void SetTextCheckerClientForTesting(WebTextCheckClient*);
-  WebTextCheckClient* GetTextCheckerClient() const override;
 
   scoped_refptr<network::SharedURLLoaderFactory> GetURLLoaderFactory()
       override {
@@ -451,25 +432,8 @@ class CORE_EXPORT EmptyLocalFrameClient : public LocalFrameClient {
   bool IsDomStorageDisabled() const override { return false; }
 
  protected:
-  // Not owned
-  WebTextCheckClient* text_check_client_;
 
   std::unique_ptr<AssociatedInterfaceProvider> associated_interface_provider_;
-};
-
-class EmptySpellCheckPanelHostClient : public WebSpellCheckPanelHostClient {
-  USING_FAST_MALLOC(EmptySpellCheckPanelHostClient);
-
- public:
-  EmptySpellCheckPanelHostClient() = default;
-  EmptySpellCheckPanelHostClient(const EmptySpellCheckPanelHostClient&) =
-      delete;
-  EmptySpellCheckPanelHostClient& operator=(
-      const EmptySpellCheckPanelHostClient&) = delete;
-
-  void ShowSpellingUI(bool) override {}
-  bool IsShowingSpellingUI() override { return false; }
-  void UpdateSpellingUIWithMisspelledWord(const WebString&) override {}
 };
 
 CORE_EXPORT ChromeClient& GetStaticEmptyChromeClientInstance();
