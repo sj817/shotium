@@ -120,8 +120,6 @@ component("base") {
     "default_style.h",
     "device_form_factor.h",
     "device_form_factor_desktop.cc",
-    "ime/utf_offset.cc",
-    "ime/utf_offset.h",
     "l10n/chromium_language_matcher.cc",
     "l10n/chromium_language_matcher.h",
     "l10n/formatter.cc",
@@ -182,41 +180,6 @@ component("base") {
       "resource/resource_bundle_win.h",
       "resource/resource_data_dll_win.cc",
       "resource/resource_data_dll_win.h",
-      "win/accessibility_ids_win.h",
-      "win/atl_module.h",
-      "win/event_creation_utils.cc",
-      "win/event_creation_utils.h",
-      "win/foreground_helper.cc",
-      "win/foreground_helper.h",
-      "win/hidden_window.cc",
-      "win/hidden_window.h",
-      "win/hwnd_metrics.cc",
-      "win/hwnd_metrics.h",
-      "win/hwnd_subclass.cc",
-      "win/hwnd_subclass.h",
-      "win/internal_constants.h",
-      "win/lock_state.cc",
-      "win/lock_state.h",
-      "win/message_box_win.cc",
-      "win/message_box_win.h",
-      "win/mouse_wheel_util.cc",
-      "win/mouse_wheel_util.h",
-      "win/power_setting_change_listener.cc",
-      "win/power_setting_change_listener.h",
-      "win/scoped_ole_initializer.cc",
-      "win/scoped_ole_initializer.h",
-      "win/session_change_observer.cc",
-      "win/session_change_observer.h",
-      "win/shell.cc",
-      "win/shell.h",
-      "win/touch_input.cc",
-      "win/touch_input.h",
-      "win/win_cursor.cc",
-      "win/win_cursor.h",
-      "win/win_cursor_factory.cc",
-      "win/win_cursor_factory.h",
-      "win/window_event_target.cc",
-      "win/window_event_target.h",
     ]
     ldflags = [ "/DELAYLOAD:dwmapi.dll" ]
     libs += [
@@ -227,58 +190,14 @@ component("base") {
 
   if (is_mac) {
     sources += [
-      "cocoa/accessibility_focus_overrider.h",
-      "cocoa/accessibility_focus_overrider.mm",
-      "cocoa/animation_utils.h",
-      "cocoa/appkit_utils.h",
-      "cocoa/appkit_utils.mm",
-      "cocoa/base_view.h",
-      "cocoa/base_view.mm",
-      "cocoa/cocoa_base_utils.h",
-      "cocoa/cocoa_base_utils.mm",
-      "cocoa/command_dispatcher.h",
-      "cocoa/command_dispatcher.mm",
-      "cocoa/constrained_window/constrained_window_animation.h",
-      "cocoa/constrained_window/constrained_window_animation.mm",
-      "cocoa/cursor_accessibility_scale_factor.h",
-      "cocoa/cursor_accessibility_scale_factor.mm",
-      "cocoa/cursor_utils.h",
-      "cocoa/cursor_utils.mm",
       "cocoa/defaults_utils.h",
       "cocoa/defaults_utils.mm",
-      "cocoa/find_pasteboard.h",
-      "cocoa/find_pasteboard.mm",
-      "cocoa/nsmenu_additions.h",
-      "cocoa/nsmenu_additions.mm",
-      "cocoa/nsmenuitem_additions.h",
-      "cocoa/nsmenuitem_additions.mm",
-      "cocoa/nswindow_test_util.cc",
-      "cocoa/nswindow_test_util.h",
-      "cocoa/permissions_utils.h",
-      "cocoa/permissions_utils.mm",
-      "cocoa/remote_accessibility_api.h",
-      "cocoa/remote_accessibility_api.mm",
-      "cocoa/secure_password_input.h",
-      "cocoa/secure_password_input.mm",
-      "cocoa/tool_tip_base_view.h",
-      "cocoa/tool_tip_base_view.mm",
-      "cocoa/touch_bar_util.h",
-      "cocoa/touch_bar_util.mm",
-      "cocoa/tracking_area.h",
-      "cocoa/tracking_area.mm",
-      "cocoa/user_interface_item_command_handler.h",
-      "cocoa/views_hostable.h",
-      "cocoa/window_size_constants.h",
       "resource/resource_bundle_mac.mm",
     ]
   }
 
   if (is_apple) {
     sources += [
-      "cocoa/quartz_util.h",
-      "cocoa/quartz_util.mm",
-      "cocoa/remote_layer_api.h",
-      "cocoa/remote_layer_api.mm",
       "l10n/l10n_util_mac.h",
       "l10n/l10n_util_mac.mm",
     ]
@@ -312,13 +231,6 @@ component("base") {
       sources += [
         "linux/linux_desktop.cc",
         "linux/linux_desktop.h",
-      ]
-    }
-
-    if (is_mac) {
-      sources += [
-        "cocoa/bubble_closer.h",
-        "cocoa/bubble_closer.mm",
       ]
     }
 
@@ -692,49 +604,6 @@ static_library("test_support") {
     ]
   }
 
-  if (build_ime) {
-    sources += [
-      "ime/dummy_input_method.cc",
-      "ime/dummy_input_method.h",
-      "ime/dummy_text_input_client.cc",
-      "ime/dummy_text_input_client.h",
-      "ime/fake_text_input_client.cc",
-      "ime/fake_text_input_client.h",
-    ]
-
-    deps += [
-      "//ui/base/ime",
-      "//ui/events",
-    ]
-
-    if (is_win) {
-      deps += [ "//ui/base/ime/win" ]
-    }
-  }
-
-  if (is_chromeos) {
-    sources += [
-      "ime/ash/mock_component_extension_ime_manager.cc",
-      "ime/ash/mock_component_extension_ime_manager.h",
-      "ime/ash/mock_component_extension_ime_manager_delegate.cc",
-      "ime/ash/mock_component_extension_ime_manager_delegate.h",
-      "ime/ash/mock_ime_candidate_window_handler.cc",
-      "ime/ash/mock_ime_candidate_window_handler.h",
-      "ime/ash/mock_ime_engine_handler.cc",
-      "ime/ash/mock_ime_engine_handler.h",
-      "ime/ash/mock_ime_input_context_handler.cc",
-      "ime/ash/mock_ime_input_context_handler.h",
-      "ime/ash/mock_input_method_manager.cc",
-      "ime/ash/mock_input_method_manager.h",
-      "ime/ash/mock_input_method_manager_impl.cc",
-      "ime/ash/mock_input_method_manager_impl.h",
-    ]
-    deps += [
-      "//ui/base/ime/ash",
-      "//ui/base/ime/ash:typing_session_manager",
-    ]
-  }
-
   if (is_android) {
     sources += [ "test/ui_controls_android.cc" ]
     deps += [ "//ui/android" ]
@@ -823,20 +692,11 @@ source_set("run_all_unittests") {
   ]
 }
 
-if (is_win) {
-  executable("shell_test_helper") {
-    testonly = true
-    sources = [ "win/shell_test_helper.cc" ]
-    deps = [ "//base" ]
-  }
-}
-
 test("ui_base_unittests") {
   use_xvfb = use_xvfb_in_this_config
 
   sources = [
     "class_property_unittest.cc",
-    "ime/utf_offset_unittest.cc",
     "l10n/l10n_util_unittest.cc",
     "l10n/time_format_unittest.cc",
     "pointer/touch_ui_controller_unittest.cc",
@@ -892,17 +752,7 @@ test("ui_base_unittests") {
 
   if (is_mac) {
     sources += [
-      "cocoa/appkit_utils_unittest.mm",
-      "cocoa/base_view_unittest.mm",
-      "cocoa/bubble_closer_unittest.mm",
-      "cocoa/cocoa_base_utils_unittest.mm",
-      "cocoa/command_dispatcher_unittest.mm",
-      "cocoa/constrained_window/constrained_window_animation_unittest.mm",
       "cocoa/defaults_utils_unittest.mm",
-      "cocoa/nsmenu_additions_unittest.mm",
-      "cocoa/nsmenuitem_additions_unittest.mm",
-      "cocoa/touch_bar_util_unittest.mm",
-      "cocoa/tracking_area_unittest.mm",
       "l10n/l10n_util_mac_unittest.mm",
       "test/view_tree_validator_unittest.mm",
     ]
@@ -942,56 +792,20 @@ test("ui_base_unittests") {
 
   if (build_ime) {
     sources += [
-      "ime/candidate_window_unittest.cc",
-      "ime/composition_text_unittest.cc",
-      "ime/input_method_base_unittest.cc",
       "ime/mojom/ime_mojom_traits_unittest.cc",
       "ime/mojom/text_edit_command_mojom_traits_unittest.cc",
-      "ime/surrounding_text_tracker_unittest.cc",
     ]
     deps += [
       "//mojo/public/cpp/test_support:test_utils",
-      "//ui/base/ime",
+      "//ui/base/ime:ime_types",
       "//ui/base/ime:text_edit_commands",
       "//ui/base/ime/mojom:test_interfaces",
     ]
-    if (is_win) {
-      sources += [
-        "ime/win/on_screen_keyboard_display_manager_unittest.cc",
-        "ime/win/tsf_input_scope_unittest.cc",
-        "ime/win/tsf_text_store_unittest.cc",
-      ]
-      deps += [ "//ui/base/ime/win" ]
-    }
     if (is_chromeos) {
-      sources += [
-        "ime/ash/component_extension_ime_manager_unittest.cc",
-        "ime/ash/extension_ime_util_unittest.cc",
-        "ime/ash/ime_keyboard_unittest.cc",
-        "ime/ash/input_method_ash_unittest.cc",
-        "ime/ash/input_method_descriptor_unittest.cc",
-        "ime/ash/input_method_util_unittest.cc",
-        "ime/ash/typing_session_manager_unittest.cc",
-      ]
       deps += [
         "//ash/constants",
         "//build:branding_buildflags",
-        "//ui/base/ime/ash",
-        "//ui/base/ime/ash:typing_session_manager",
       ]
-    }
-    if (is_linux && use_aura) {
-      sources += [
-        "ime/input_method_minimal_unittest.cc",
-        "ime/linux/input_method_auralinux_unittest.cc",
-      ]
-      deps += [ "//ui/base/ime/linux" ]
-    }
-    if (is_linux && !is_castos) {
-      sources += [ "ime/linux/composition_text_util_pango_unittest.cc" ]
-    }
-    if (is_chromeos || use_ozone) {
-      sources += [ "ime/character_composer_unittest.cc" ]
     }
   }
 
@@ -1013,19 +827,11 @@ test("ui_base_unittests") {
   }
 
   if (is_win) {
-    sources += [
-      "view_prop_unittest.cc",
-      "win/hwnd_subclass_unittest.cc",
-      "win/shell_unittest.cc",
-      "win/win_cursor_factory_unittest.cc",
-    ]
+    sources += [ "view_prop_unittest.cc" ]
     deps += [
       "//ui/base/cursor",
       "//ui/base/cursor/mojom:cursor_type_shared",
     ]
-    if (!is_component_build && !is_asan) {
-      data_deps += [ ":shell_test_helper" ]
-    }
   }
 
   if (is_android) {

@@ -278,10 +278,8 @@ def dev_list():
         "libnspr4-dev",
         "libnss3-dev",
         "libpam0g-dev",
-        "libpci-dev",
         "libpulse-dev",
         "libsctp-dev",
-        "libspeechd-dev",
         "libsqlite3-dev",
         "libssl-dev",
         "libsystemd-dev",
@@ -410,9 +408,7 @@ def lib_list():
         "libpam0g",
         "libpango-1.0-0",
         "libpangocairo-1.0-0",
-        "libpci3",
         "libpixman-1-0",
-        "libspeechd2",
         "libstdc++6",
         "libsqlite3-0",
         "libuuid1",
@@ -533,7 +529,6 @@ def lib32_list(options):
         # 32-bit libraries needed e.g. to compile V8 snapshot for Android or armhf
         "linux-libc-dev:i386",
         "libexpat1:i386",
-        "libpci3:i386",
     ]
 
     # When cross building for arm/Android on 64-bit systems the host binaries

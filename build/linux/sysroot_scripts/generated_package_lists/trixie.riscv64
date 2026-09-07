@@ -467,8 +467,6 @@ https://snapshot.debian.org/archive/debian/20250129T203412Z/pool/main/p/pango1.0
 https://snapshot.debian.org/archive/debian/20250129T203412Z/pool/main/p/pango1.0/pango1.0-tools_1.56.1-1_riscv64.deb
 https://snapshot.debian.org/archive/debian/20250129T203412Z/pool/main/p/patch/patch_2.7.6-7+b2_riscv64.deb
 https://snapshot.debian.org/archive/debian/20250129T203412Z/pool/main/p/pci.ids/pci.ids_0.0~2025.01.13-1_all.deb
-https://snapshot.debian.org/archive/debian/20250129T203412Z/pool/main/p/pciutils/libpci-dev_3.13.0-1+b1_riscv64.deb
-https://snapshot.debian.org/archive/debian/20250129T203412Z/pool/main/p/pciutils/libpci3_3.13.0-1+b1_riscv64.deb
 https://snapshot.debian.org/archive/debian/20250129T203412Z/pool/main/p/pcre2/libpcre2-16-0_10.44-5_riscv64.deb
 https://snapshot.debian.org/archive/debian/20250129T203412Z/pool/main/p/pcre2/libpcre2-32-0_10.44-5_riscv64.deb
 https://snapshot.debian.org/archive/debian/20250129T203412Z/pool/main/p/pcre2/libpcre2-8-0_10.44-5_riscv64.deb
@@ -547,8 +545,6 @@ https://snapshot.debian.org/archive/debian/20250129T203412Z/pool/main/s/shared-m
 https://snapshot.debian.org/archive/debian/20250129T203412Z/pool/main/s/shine/libshine3_3.1.1-2+b2_riscv64.deb
 https://snapshot.debian.org/archive/debian/20250129T203412Z/pool/main/s/snappy/libsnappy-dev_1.2.1-1+b1_riscv64.deb
 https://snapshot.debian.org/archive/debian/20250129T203412Z/pool/main/s/snappy/libsnappy1v5_1.2.1-1+b1_riscv64.deb
-https://snapshot.debian.org/archive/debian/20250129T203412Z/pool/main/s/speech-dispatcher/libspeechd-dev_0.11.5-5.1_riscv64.deb
-https://snapshot.debian.org/archive/debian/20250129T203412Z/pool/main/s/speech-dispatcher/libspeechd2_0.11.5-5.1_riscv64.deb
 https://snapshot.debian.org/archive/debian/20250129T203412Z/pool/main/s/speex/libspeex1_1.2.1-3_riscv64.deb
 https://snapshot.debian.org/archive/debian/20250129T203412Z/pool/main/s/sqlite3/libsqlite3-0_3.46.1-1_riscv64.deb
 https://snapshot.debian.org/archive/debian/20250129T203412Z/pool/main/s/srt/libsrt1.5-gnutls_1.5.4-1_riscv64.deb

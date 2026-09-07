@@ -470,8 +470,6 @@ https://snapshot.debian.org/archive/debian/20250129T203412Z/pool/main/p/pango1.0
 https://snapshot.debian.org/archive/debian/20250129T203412Z/pool/main/p/pango1.0/pango1.0-tools_1.46.2-3_ppc64el.deb
 https://snapshot.debian.org/archive/debian/20250129T203412Z/pool/main/p/patch/patch_2.7.6-7_ppc64el.deb
 https://snapshot.debian.org/archive/debian/20250129T203412Z/pool/main/p/pci.ids/pci.ids_0.0~2021.02.08-1_all.deb
-https://snapshot.debian.org/archive/debian/20250129T203412Z/pool/main/p/pciutils/libpci-dev_3.7.0-5_ppc64el.deb
-https://snapshot.debian.org/archive/debian/20250129T203412Z/pool/main/p/pciutils/libpci3_3.7.0-5_ppc64el.deb
 https://snapshot.debian.org/archive/debian/20250129T203412Z/pool/main/p/pcre2/libpcre2-16-0_10.36-2+deb11u1_ppc64el.deb
 https://snapshot.debian.org/archive/debian/20250129T203412Z/pool/main/p/pcre2/libpcre2-32-0_10.36-2+deb11u1_ppc64el.deb
 https://snapshot.debian.org/archive/debian/20250129T203412Z/pool/main/p/pcre2/libpcre2-8-0_10.36-2+deb11u1_ppc64el.deb
@@ -550,8 +548,6 @@ https://snapshot.debian.org/archive/debian/20250129T203412Z/pool/main/s/shared-m
 https://snapshot.debian.org/archive/debian/20250129T203412Z/pool/main/s/shine/libshine3_3.1.1-2_ppc64el.deb
 https://snapshot.debian.org/archive/debian/20250129T203412Z/pool/main/s/snappy/libsnappy-dev_1.1.8-1_ppc64el.deb
 https://snapshot.debian.org/archive/debian/20250129T203412Z/pool/main/s/snappy/libsnappy1v5_1.1.8-1_ppc64el.deb
-https://snapshot.debian.org/archive/debian/20250129T203412Z/pool/main/s/speech-dispatcher/libspeechd-dev_0.11.4-2~bpo11+1_ppc64el.deb
-https://snapshot.debian.org/archive/debian/20250129T203412Z/pool/main/s/speech-dispatcher/libspeechd2_0.11.4-2~bpo11+1_ppc64el.deb
 https://snapshot.debian.org/archive/debian/20250129T203412Z/pool/main/s/speex/libspeex1_1.2~rc1.2-1.1_ppc64el.deb
 https://snapshot.debian.org/archive/debian/20250129T203412Z/pool/main/s/sqlite3/libsqlite3-0_3.34.1-3_ppc64el.deb
 https://snapshot.debian.org/archive/debian/20250129T203412Z/pool/main/s/srt/libsrt1.4-gnutls_1.4.2-1.3_ppc64el.deb

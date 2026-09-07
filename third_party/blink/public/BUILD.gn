@@ -296,7 +296,7 @@ source_set("blink_headers") {
     "//third_party/cppgc",
     "//third_party/blink/renderer/platform:make_platform_generated",
     "//ui/base/dragdrop/mojom:mojom_shared",
-    "//ui/base/ime",
+    "//ui/base/ime:ime_types",
     "//ui/base/ime/mojom",
     "//url",
   ]

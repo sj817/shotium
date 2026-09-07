@@ -17,7 +17,6 @@ if (use_gio) {
   }
 }
 
-# Looking for libspeechd? Use //third_party/speech-dispatcher
 
 if (use_system_freetype) {
   assert(!is_castos)
