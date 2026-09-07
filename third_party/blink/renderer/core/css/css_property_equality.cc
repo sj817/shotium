@@ -1540,7 +1540,6 @@ bool CSSPropertyEquality::PropertiesEqual(const PropertyHandle& property,
     case CSSPropertyID::kInherits:
     case CSSPropertyID::kInitialValue:
     case CSSPropertyID::kLineGapOverride:
-    case CSSPropertyID::kNavigation:
     case CSSPropertyID::kNegative:
     case CSSPropertyID::kOverrideColors:
     case CSSPropertyID::kPad:
@@ -1558,7 +1557,6 @@ bool CSSPropertyEquality::PropertiesEqual(const PropertyHandle& property,
     case CSSPropertyID::kSymbols:
     case CSSPropertyID::kSyntax:
     case CSSPropertyID::kSystem:
-    case CSSPropertyID::kTypes:
     case CSSPropertyID::kUnicodeRange:
     // Invalid properties
     case CSSPropertyID::kAll:

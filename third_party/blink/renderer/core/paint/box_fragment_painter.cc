@@ -67,7 +67,6 @@
 #include "third_party/blink/renderer/core/paint/url_metadata_utils.h"
 #include "third_party/blink/renderer/core/paint/view_painter.h"
 #include "third_party/blink/renderer/core/scroll/scroll_types.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition_utils.h"
 #include "third_party/blink/renderer/platform/geometry/contoured_rect.h"
 #include "third_party/blink/renderer/platform/graphics/graphics_context_state_saver.h"
 #include "third_party/blink/renderer/platform/graphics/paint/display_item_cache_skipper.h"
@@ -455,30 +454,6 @@ PaintInfo FloatPaintInfo(const PaintInfo& paint_info) {
   return float_paint_info;
 }
 
-bool ShouldDelegatePaintingToViewTransition(const PhysicalBoxFragment& fragment,
-                                            PaintPhase paint_phase) {
-  if (!fragment.GetLayoutObject()) {
-    return false;
-  }
-
-  switch (paint_phase) {
-    case PaintPhase::kSelfBlockBackgroundOnly:
-    case PaintPhase::kSelfOutlineOnly:
-    case PaintPhase::kBlockBackground:
-    case PaintPhase::kDescendantBlockBackgroundsOnly:
-    case PaintPhase::kForcedColorsModeBackplate:
-    case PaintPhase::kFloat:
-    case PaintPhase::kForeground:
-    case PaintPhase::kOutline:
-    case PaintPhase::kDescendantOutlinesOnly:
-    case PaintPhase::kOverlayOverflowControls:
-    case PaintPhase::kSelectionDragImage:
-    case PaintPhase::kTextClip:
-    case PaintPhase::kMask:
-      return false;
-  }
-}
-
 }  // anonymous namespace
 
 // BoxFragmentPainter::PaintAdHighlightIfNeeded() was here. It tinted the
@@ -748,10 +723,6 @@ void BoxFragmentPainter::PaintObject(const PaintInfo& paint_info,
                                      bool suppress_box_decoration_background) {
   const PaintPhase paint_phase = paint_info.phase;
   const PhysicalBoxFragment& fragment = GetPhysicalFragment();
-
-  if (ShouldDelegatePaintingToViewTransition(fragment, paint_phase)) {
-    return;
-  }
 
   if (fragment.IsFrameSet()) {
     FrameSetPainter(fragment, display_item_client_)
@@ -1318,10 +1289,6 @@ void BoxFragmentPainter::PaintBoxDecorationBackground(
         contents_paint_state ? contents_paint_state->GetPaintInfo()
                              : paint_info,
         visual_rect, paint_rect, *background_client);
-
-    Element* element = DynamicTo<Element>(layout_object.GetNode());
-    RecordRegionCaptureAndTrackedElementData(element, paint_info, paint_rect,
-                                             *background_client);
   }
 
   if (!suppress_box_decoration_background && box_fragment_.GetGapGeometry() &&
@@ -1925,23 +1892,16 @@ void BoxFragmentPainter::PaintInlineItems(const PaintInfo& paint_info,
 // boxes don't have their own background.
 inline void BoxFragmentPainter::PaintLineBox(
     const PhysicalFragment& line_box_fragment,
-    const DisplayItemClient& display_item_client,
     const FragmentItem& line_box_item,
     const PaintInfo& paint_info,
     const PhysicalOffset& child_offset) {
   if (paint_info.phase != PaintPhase::kForeground)
     return;
 
-  PhysicalRect border_box = line_box_fragment.LocalRect();
-  border_box.offset += child_offset;
   const wtf_size_t line_fragment_id = line_box_item.FragmentId();
   DCHECK_GE(line_fragment_id, FragmentItem::kInitialLineFragmentId);
   ScopedDisplayItemFragment display_item_fragment(paint_info.context,
                                                   line_fragment_id);
-
-  Element* element = DynamicTo<Element>(line_box_fragment.GetNode());
-  RecordRegionCaptureAndTrackedElementData(element, paint_info, border_box,
-                                           display_item_client);
 
   // Paint the background of the `::first-line` line box.
   if (LineBoxFragmentPainter::NeedsPaint(line_box_fragment)) {
@@ -1984,8 +1944,7 @@ void BoxFragmentPainter::PaintLineBoxChildItems(
       const PhysicalLineBoxFragment* line_box_fragment =
           child_item->LineBoxFragment();
       DCHECK(line_box_fragment);
-      PaintLineBox(*line_box_fragment, *child_item->GetDisplayItemClient(),
-                   *child_item, paint_info, child_offset);
+      PaintLineBox(*line_box_fragment, *child_item, paint_info, child_offset);
       InlinePaintContext::ScopedLineBox scoped_line_box(*children,
                                                         inline_context_);
       InlineCursor line_box_cursor = children->CursorForDescendants();
@@ -2184,8 +2143,7 @@ void BoxFragmentPainter::PaintTextClipMask(const PaintInfo& paint_info,
   PaintInfo mask_paint_info(
       paint_info.context, CullRect(mask_rect), PaintPhase::kTextClip,
       paint_info.DescendantPaintingBlocked(),
-      paint_info.IsPrivacyPreserving() ? PaintFlag::kPrivacyPreserving
-                                       : PaintFlag::kNoFlag);
+      PaintFlag::kNoFlag);
   if (!object_has_multiple_boxes) {
     PaintObject(mask_paint_info, paint_offset);
     return;
@@ -2251,15 +2209,14 @@ BoxPainterBase::FillLayerInfo BoxFragmentPainter::GetFillLayerInfo(
     const Color& color,
     const FillLayer& bg_layer,
     BackgroundBleedAvoidance bleed_avoidance,
-    bool is_painting_background_in_contents_space,
-    PaintFlags paint_flags) const {
+    bool is_painting_background_in_contents_space) const {
   const PhysicalBoxFragment& fragment = GetPhysicalFragment();
   return BoxPainterBase::FillLayerInfo(
       fragment.GetLayoutObject()->GetDocument(), fragment.Style(),
       fragment.IsScrollContainer(), color, bg_layer, bleed_avoidance,
       box_fragment_.SidesToInclude(),
       fragment.GetLayoutObject()->IsLayoutInline(),
-      is_painting_background_in_contents_space, paint_flags);
+      is_painting_background_in_contents_space);
 }
 
 template <typename T>
@@ -3072,24 +3029,6 @@ gfx::Rect BoxFragmentPainter::VisualRect(const PhysicalOffset& paint_offset) {
   PhysicalRect ink_overflow = box_item_->InkOverflowRect();
   ink_overflow.Move(paint_offset);
   return ToEnclosingRect(ink_overflow);
-}
-
-void BoxFragmentPainter::RecordRegionCaptureAndTrackedElementData(
-    Element* element,
-    const PaintInfo& paint_info,
-    const PhysicalRect& paint_rect,
-    const DisplayItemClient& display_item_client) {
-  if (element && element->GetRegionCaptureCropId()) {
-    paint_info.context.GetPaintController().RecordRegionCaptureData(
-        display_item_client, *(element->GetRegionCaptureCropId()),
-        ToPixelSnappedRect(paint_rect));
-  }
-
-  if (element && element->GetTrackedElementSubRects()) {
-    const auto* sub_rects = element->GetTrackedElementSubRects();
-    paint_info.context.GetPaintController().RecordTrackedElementData(
-        display_item_client, ToPixelSnappedRect(paint_rect), *sub_rects);
-  }
 }
 
 }  // namespace blink

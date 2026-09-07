@@ -19,8 +19,6 @@
 #include "third_party/blink/renderer/platform/graphics/paint/layer_selection_data.h"
 #include "third_party/blink/renderer/platform/graphics/paint/property_tree_state.h"
 #include "third_party/blink/renderer/platform/graphics/paint/raster_invalidation_tracking.h"
-#include "third_party/blink/renderer/platform/graphics/paint/region_capture_data.h"
-#include "third_party/blink/renderer/platform/graphics/paint/tracked_element_data.h"
 #include "third_party/blink/renderer/platform/heap/collection_support/heap_vector.h"
 #include "third_party/blink/renderer/platform/platform_export.h"
 #include "third_party/blink/renderer/platform/wtf/allocator/allocator.h"
@@ -65,9 +63,7 @@ struct PLATFORM_EXPORT PaintChunk {
         background_color(other.background_color),
         properties(other.properties),
         hit_test_data(std::move(other.hit_test_data)),
-        region_capture_data(std::move(other.region_capture_data)),
         layer_selection_data(std::move(other.layer_selection_data)),
-        tracked_element_rects(std::move(other.tracked_element_rects)),
         bounds(other.bounds),
         drawable_bounds(other.drawable_bounds),
         rect_known_to_be_opaque(other.rect_known_to_be_opaque),
@@ -84,8 +80,6 @@ struct PLATFORM_EXPORT PaintChunk {
   void Trace(Visitor* visitor) const {
     visitor->Trace(properties);
     visitor->Trace(hit_test_data);
-    visitor->Trace(region_capture_data);
-    visitor->Trace(tracked_element_rects);
     visitor->Trace(layer_selection_data);
   }
 
@@ -163,9 +157,7 @@ struct PLATFORM_EXPORT PaintChunk {
   TraceablePropertyTreeStateOrAlias properties;
 
   Member<HitTestData> hit_test_data;
-  Member<RegionCaptureData> region_capture_data;
   Member<LayerSelectionData> layer_selection_data;
-  Member<TrackedElementRects> tracked_element_rects;
 
   // The following fields depend on the display items in this chunk.
   // They are updated when a display item is added into the chunk.

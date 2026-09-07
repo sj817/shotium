@@ -10,8 +10,6 @@ import "ui/gfx/mojom/delegated_ink_metadata.mojom";
 import "services/viz/public/mojom/compositing/offset_tag.mojom";
 import "services/viz/public/mojom/compositing/frame_deadline.mojom";
 import "services/viz/public/mojom/compositing/frame_interval_inputs.mojom";
-import "services/viz/public/mojom/compositing/region_capture_bounds.mojom";
-import "services/viz/public/mojom/compositing/tracked_element_rects.mojom";
 import "services/viz/public/mojom/compositing/trees_in_viz_timing.mojom";
 import "services/viz/public/mojom/compositing/selection.mojom";
 import "services/viz/public/mojom/compositing/surface_id.mojom";
@@ -70,10 +68,6 @@ struct CompositorFrameMetadata {
   // transition between different compositor frames / render passes.
   array<CompositorFrameTransitionDirective> transition_directives;
 
-  // Contains a map of region capture crop identifiers to gfx::Rects
-  // representing their coordinates in the root render pass system.
-  RegionCaptureBounds capture_bounds;
-
   // Indicates if this frame is embedding ViewTransitionElementResourceIds which need to
   // be replaced by corresponding live render passes or cached textures in the
   // Viz process.
@@ -94,7 +88,4 @@ struct CompositorFrameMetadata {
   FrameIntervalInputs frame_interval_inputs;
 
   TreesInVizTiming trees_in_viz_timing;
-
-  // Tracked element rects for the frame.
-  TrackedElementRects tracked_element_rects;
 };

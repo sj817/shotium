@@ -95,10 +95,8 @@ EffectPaintPropertyNode::State FrameCaret::CaretEffectNodeState(
       (CompositorElementIdFromUniqueObjectId(
           NewUniqueObjectId(), CompositorElementIdNamespace::kPrimaryEffect)));
   state.compositor_element_id = element_id;
-  if (!display_item_client_->IsInCanvasSubtree()) {
-    state.direct_compositing_reasons = {
-        CompositingReason::kActiveOpacityAnimation};
-  }
+  state.direct_compositing_reasons = {
+      CompositingReason::kActiveOpacityAnimation};
   return state;
 }
 

@@ -53,7 +53,6 @@ class SkMatrix;
 namespace cc {
 class PaintCanvas;
 class PaintFlags;
-class ImageDecodeCache;
 }  // namespace cc
 
 namespace gfx {
@@ -79,8 +78,6 @@ class PLATFORM_EXPORT Image : public ThreadSafeRefCounted<Image> {
   Image(const Image&) = delete;
   Image& operator=(const Image&) = delete;
   virtual ~Image();
-
-  static cc::ImageDecodeCache& SharedCCDecodeCache(SkColorType);
 
   static scoped_refptr<Image> LoadPlatformResource(
       int resource_id,

@@ -17,10 +17,6 @@
 #include "third_party/skia/include/core/SkColor.h"
 #include "ui/gfx/geometry/rect.h"
 
-namespace cc {
-struct LayerDebugInfo;
-}
-
 namespace blink {
 
 struct RasterInvalidationInfo {
@@ -96,8 +92,6 @@ class PLATFORM_EXPORT RasterInvalidationTracking
                                const gfx::Rect& new_interest_rect);
 
   void AsJSON(JSONObject*, bool detailed) const;
-
-  void AddToLayerDebugInfo(cc::LayerDebugInfo&) const;
 
   // The record containing under-invalidated pixels in dark red.
   PaintRecord UnderInvalidationRecord() const {

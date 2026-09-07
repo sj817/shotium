@@ -117,7 +117,6 @@ class CORE_EXPORT ObjectPaintProperties
     kPaintOffsetTranslation = kFirstTransform,
     kStickyTranslation = 1,
     kAnchorPositionScrollTranslation = 2,
-    kElementCanvasTransform = 3,
     // Transform nodes for CSS transform operations.
     kFirstCSSTransform = 4,
     kTranslate = kFirstCSSTransform,
@@ -142,9 +141,6 @@ class CORE_EXPORT ObjectPaintProperties
 
     // Effects
     kFirstEffect = 17,
-    kElementCaptureEffect = kFirstEffect,
-    kViewTransitionScopeRootEffect = 18,
-    kViewTransitionEffect = 19,
     kUnboundedWrapperEffect = 20,
     kEffect = 21,
     kFilter = 22,
@@ -152,8 +148,7 @@ class CORE_EXPORT ObjectPaintProperties
     kClipPathMask = 24,
     kVerticalScrollbarEffect = 25,
     kHorizontalScrollbarEffect = 26,
-    kScrollCornerEffect = 27,
-    kLastEffect = kScrollCornerEffect,
+    kLastEffect = kHorizontalScrollbarEffect,
     kEffectAlias = 28,
 
     // Clips
@@ -198,10 +193,6 @@ class CORE_EXPORT ObjectPaintProperties
   // |
   // +-[ AnchorPositionScrollTranslation ]
   //  /    This applies the scrolling offset induced by CSS anchor positioning.
-  // |
-  // +-[ ElementCanvasTransform ]
-  //  /    This applies the transform mapping the element's border box to canvas
-  // |     coordinate space for HTML-in-Canvas children.
   // |
   // +-[ Translate ]
   //   |   The transform from CSS 'translate' (including the effects of
@@ -301,7 +292,6 @@ class CORE_EXPORT ObjectPaintProperties
   ADD_TRANSFORM(StickyTranslation, NodeId::kStickyTranslation)
   ADD_TRANSFORM(AnchorPositionScrollTranslation,
                 NodeId::kAnchorPositionScrollTranslation)
-  ADD_TRANSFORM(ElementCanvasTransform, NodeId::kElementCanvasTransform)
   ADD_TRANSFORM(Translate, NodeId::kTranslate)
   ADD_TRANSFORM(Rotate, NodeId::kRotate)
   ADD_TRANSFORM(Scale, NodeId::kScale)
@@ -325,20 +315,7 @@ class CORE_EXPORT ObjectPaintProperties
   //
   // The hierarchy of the effect subtree created by a LayoutObject is as
   // follows:
-  // [ ElementCaptureEffect ]
-  // |     Isolated group to force an element to be painted separately.
-  // +-[ ViewTransitionScopeRoot ]
-  //   |   Provides the root stacking context for an active view transition on
-  //   |   an element or a local subframe document. This is used to implement
-  //  /    the view transition layer stacking context:
-  // | https://drafts.csswg.org/css-view-transitions-1/#view-transition-layer
-  // +-[ ViewTransitionEffect ]
-  //   |   Provides the stacking context to paint all content for a Document,
-  //   |   including top layer elements, into an image used for ViewTransition.
-  //  /    This implements the capturing the image for the document element at:
-  // |
-  // https://drafts.csswg.org/css-view-transitions-1/#capture-the-image-algorithm
-  // +-[ Effect ]
+  // [ Effect ]
   //   |   Isolated group to apply various CSS effects, including opacity,
   //   |   mix-blend-mode, backdrop-filter, and for isolation if a mask needs
   //  /    to be applied or backdrop-dependent children are present, or to
@@ -356,19 +333,14 @@ class CORE_EXPORT ObjectPaintProperties
   //   |   Isolated group for CSS filter. This is separate from Effect in case
   //  /    there are masks which should be applied to the output of the filter
   // |     instead of the input.
-  // +-[ VerticalScrollbarEffect / HorizontalScrollbarEffect / ScrollCorner ]
+  // +-[ VerticalScrollbarEffect / HorizontalScrollbarEffect ]
   // |     Overlay Scrollbars on Aura and Android need effect node for fade
-  // |     animation. Also used in ViewTransitions to separate out scrollbars
-  // |     from the root snapshot.
+  // |     animation.
   //
   // ... +-[ EffectIsolationNode ]
   //       This serves as a parent to subtree effects on an element with paint
   //       containment, It is the deepest child of any effect tree on the
   //       contain: paint element.
-  ADD_EFFECT(ElementCaptureEffect, NodeId::kElementCaptureEffect)
-  ADD_EFFECT(ViewTransitionScopeRootEffect,
-             NodeId::kViewTransitionScopeRootEffect)
-  ADD_EFFECT(ViewTransitionEffect, NodeId::kViewTransitionEffect)
   ADD_EFFECT(UnboundedWrapperEffect, NodeId::kUnboundedWrapperEffect)
   ADD_EFFECT(Effect, NodeId::kEffect)
   ADD_EFFECT(Filter, NodeId::kFilter)
@@ -376,7 +348,6 @@ class CORE_EXPORT ObjectPaintProperties
   ADD_EFFECT(ClipPathMask, NodeId::kClipPathMask)
   ADD_EFFECT(VerticalScrollbarEffect, NodeId::kVerticalScrollbarEffect)
   ADD_EFFECT(HorizontalScrollbarEffect, NodeId::kHorizontalScrollbarEffect)
-  ADD_EFFECT(ScrollCornerEffect, NodeId::kScrollCornerEffect)
   ADD_ALIAS_NODE(Effect, EffectIsolationNode, NodeId::kEffectAlias)
 
   // Clip node declarations.

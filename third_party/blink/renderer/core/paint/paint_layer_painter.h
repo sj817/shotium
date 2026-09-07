@@ -61,14 +61,6 @@ class CORE_EXPORT PaintLayerPainter {
   void PaintWithPhase(PaintPhase, GraphicsContext&, PaintFlags);
   void PaintForegroundPhases(GraphicsContext&, PaintFlags);
   void PaintOverlayOverflowControls(GraphicsContext&, PaintFlags);
-  void PaintTransitionScopeSnapshotIfNeeded(
-      GraphicsContext&,
-      const LayoutBoxModelObject&,
-      const EffectPaintPropertyNodeOrAlias*);
-  PaintResult PaintTransitionPseudos(GraphicsContext&,
-                                     const LayoutBoxModelObject&,
-                                     PaintFlags);
-
   PaintLayer& paint_layer_;
 };
 

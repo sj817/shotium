@@ -178,17 +178,4 @@ PhysicalRect LayoutVideo::ReplacedContentRectFrom(
   return replaced_content_rect;
 }
 
-bool LayoutVideo::SupportsAcceleratedRendering() const {
-  NOT_DESTROYED();
-  return !!MediaElement()->CcLayer();
-}
-
-CompositingReasons LayoutVideo::AdditionalCompositingReasons() const {
-  NOT_DESTROYED();
-  if (GetDisplayMode() == kVideo && SupportsAcceleratedRendering()) {
-    return {CompositingReason::kVideo};
-  }
-  return {};
-}
-
 }  // namespace blink

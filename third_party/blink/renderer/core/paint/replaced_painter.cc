@@ -211,8 +211,7 @@ void ReplacedPainter::Paint(const PaintInfo& paint_info) {
                              selection_painting_int_rect);
     Color selection_bg = HighlightStyleUtils::HighlightBackgroundColor(
         layout_replaced_.GetDocument(), layout_replaced_.StyleRef(),
-        layout_replaced_.GetNode(), std::nullopt, kPseudoIdSelection,
-        paint_info.IsPrivacyPreserving(), SearchTextIsActiveMatch::kNo);
+        layout_replaced_.GetNode(), std::nullopt, kPseudoIdSelection, SearchTextIsActiveMatch::kNo);
     local_paint_info.context.FillRect(
         selection_painting_int_rect, selection_bg,
         PaintAutoDarkMode(layout_replaced_.StyleRef(),
@@ -418,9 +417,6 @@ void ReplacedPainter::PaintBoxDecorationBackground(
   ObjectPainter(layout_replaced_)
       .RecordHitTestData(paint_info, ToPixelSnappedRect(paint_rect),
                          *background_client);
-  BoxPainter(layout_replaced_)
-      .RecordTrackedElementAndRegionCaptureData(paint_info, paint_rect,
-                                                *background_client);
 
   // Record the scroll hit test after the non-scrolling background so
   // background squashing is not affected. Hit test order would be equivalent

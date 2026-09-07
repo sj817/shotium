@@ -171,13 +171,6 @@
     //  90 is when rotated counter clockwise.
     [MeasureAs=WindowOrientation, RuntimeEnabled=OrientationEvent] readonly attribute long orientation;
 
-    // Event handler attribute for the pageswap event.
-    [RuntimeEnabled=PageSwapEvent] attribute EventHandler onpageswap;
-
-    // Event handler attribute for the pagereveal event.
-    // https://html.spec.whatwg.org/multipage/nav-history-apis.html#the-pagerevealevent-interface
-    attribute EventHandler onpagereveal;
-
     // https://dom.spec.whatwg.org/#interface-window-extensions
     [Replaceable, GetterCallWith=ScriptState, MeasureAs=WindowEvent] readonly attribute any event;
 

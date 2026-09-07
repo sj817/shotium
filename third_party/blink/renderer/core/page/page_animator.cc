@@ -24,10 +24,6 @@
 #include "third_party/blink/renderer/core/paint/paint_layer_scrollable_area.h"
 #include "third_party/blink/renderer/core/svg/svg_document_extensions.h"
 #include "third_party/blink/renderer/core/timing/time_clamper.h"
-#include "third_party/blink/renderer/core/view_transition/page_reveal_event.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition_supplement.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition_utils.h"
 #include "third_party/blink/renderer/platform/bindings/exception_state.h"
 #include "third_party/blink/renderer/platform/instrumentation/tracing/trace_event.h"
 #include "third_party/blink/renderer/platform/runtime_enabled_features.h"
@@ -194,48 +190,6 @@ void PageAnimator::ServiceScriptedAnimations(
 
   // https://html.spec.whatwg.org/multipage/webappapis.html#event-loop-processing-model
 
-  // 6. For each doc of docs, reveal doc.
-  //
-  // The event will be dispatched if the filter returns true. The sequencing
-  // here is important:
-  // 1. Resolve the view transition based on @view-transition and set it to
-  //    the event. This happens in the filter so before the event is fired.
-  // 2. Dispatch the pagereveal event
-  // 3. Activate the view transition
-  auto page_reveal_event_filter = BindRepeating([](const LocalDOMWindow* window,
-                                                   Event* event) {
-    PageRevealEvent* page_reveal = DynamicTo<PageRevealEvent>(event);
-    if (!page_reveal) {
-      return false;
-    }
-
-    // pagereveal is only fired on Documents.
-    CHECK(window);
-    CHECK(window->document());
-    CHECK(!window->HasBeenRevealed());
-
-    if (auto* supplement = window->document()->GetViewTransitionsIfExists()) {
-      supplement->ResolveCrossDocumentViewTransition();
-    }
-
-    return true;
-  });
-
-  run_for_all_active_controllers_with_timing([&](wtf_size_t i) {
-    LocalDOMWindow* window = active_controllers[i]->GetWindow();
-    bool pagereveal_dispatched = active_controllers[i]->DispatchEvents(
-        blink::BindRepeating(page_reveal_event_filter, WrapPersistent(window)));
-
-    if (pagereveal_dispatched) {
-      window->SetHasBeenRevealed(true);
-      if (ViewTransition* transition =
-              ViewTransitionUtils::GetTransition(*window->document());
-          transition && transition->IsForNavigationOnNewDocument()) {
-        transition->ActivateFromSnapshot();
-      }
-    }
-  });
-
   // 7. For each doc of docs, flush autofocus candidates for doc if its node
   // navigable is a top-level traversable.
   run_for_all_active_controllers_with_timing([&](wtf_size_t i) {
@@ -302,7 +256,6 @@ void PageAnimator::ServiceScriptedAnimations(
                  event->type() != event_type_names::kScrollsnapchanging &&
                  event->type() != event_type_names::kScrollend &&
                  event->type() != event_type_names::kResize &&
-                 event->type() != event_type_names::kPagereveal &&
                  event->InterfaceName() !=
                      event_interface_names::kMediaQueryListEvent;
         }));

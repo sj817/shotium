@@ -41,8 +41,6 @@
 #include "base/trace_event/typed_macros.h"
 #include "cc/base/features.h"
 #include "cc/input/main_thread_scrolling_reason.h"
-#include "cc/tiles/frame_viewer_instrumentation.h"
-#include "cc/view_transition/view_transition_request.h"
 #include "third_party/abseil-cpp/absl/cleanup/cleanup.h"
 #include "third_party/blink/public/common/features.h"
 #include "third_party/blink/public/mojom/frame/frame.mojom-blink.h"
@@ -142,9 +140,6 @@
 #include "third_party/blink/renderer/core/style/position_try_fallbacks.h"
 #include "third_party/blink/renderer/core/svg/svg_document_extensions.h"
 #include "third_party/blink/renderer/core/svg/svg_svg_element.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition_request.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition_utils.h"
 #include "third_party/blink/renderer/platform/bindings/script_forbidden_scope.h"
 #include "third_party/blink/renderer/platform/fonts/font_performance.h"
 #include "third_party/blink/renderer/platform/graphics/dark_mode_settings_builder.h"
@@ -2222,7 +2217,7 @@ void LocalFrameView::UpdateLifecyclePhasesInternal(
     {
       // We need scoping braces here because this
       // DisallowLayoutInvalidationScope is meant to be in effect during
-      // pre-paint, but not during ResizeObserver or ViewTransition.
+      // pre-paint, but not during ResizeObserver.
 #if DCHECK_IS_ON()
       DisallowLayoutInvalidationScope disallow_layout_invalidation(this);
 #endif
@@ -2241,18 +2236,10 @@ void LocalFrameView::UpdateLifecyclePhasesInternal(
       run_more_lifecycle_phases = RunPrePaintLifecyclePhase(target_state);
     }
 
-    if (!run_more_lifecycle_phases) {
-      // If we won't be proceeding to paint, update view transition stylesheet
-      // here.
-      bool needs_to_repeat_lifecycle = RunViewTransitionSteps(target_state);
-      if (needs_to_repeat_lifecycle)
-        continue;
-    }
-
-      DCHECK(ShouldThrottleRendering() ||
-             Lifecycle().GetState() >= DocumentLifecycle::kPrePaintClean);
-      if (ShouldThrottleRendering() || !run_more_lifecycle_phases)
-        return;
+    DCHECK(ShouldThrottleRendering() ||
+           Lifecycle().GetState() >= DocumentLifecycle::kPrePaintClean);
+    if (ShouldThrottleRendering() || !run_more_lifecycle_phases)
+      return;
 
     // Some features may require several passes over style and layout
     // within the same lifecycle update.
@@ -2301,12 +2288,7 @@ void LocalFrameView::UpdateLifecyclePhasesInternal(
       continue;
     }
 
-    // ViewTransition mutates the tree and mirrors post layout transform for
-    // transitioning elements to UA created elements. This may dirty
-    // style/layout requiring another lifecycle update.
-    needs_to_repeat_lifecycle = RunViewTransitionSteps(target_state);
-    if (!needs_to_repeat_lifecycle)
-      break;
+    break;
   }
 
   UpdateIntersectionObserverStatus();
@@ -2372,47 +2354,6 @@ bool LocalFrameView::RunSnapshotPostLayoutStateSteps(
         re_run_lifecycles |= !valid;
       });
   return re_run_lifecycles;
-}
-
-bool LocalFrameView::RunViewTransitionSteps(
-    DocumentLifecycle::LifecycleState target_state) {
-  DCHECK(frame_ && frame_->GetDocument());
-  DCHECK(frame_->IsLocalRoot() || !IsAttached());
-
-  if (target_state < DocumentLifecycle::kPrePaintClean)
-    return false;
-
-  bool re_run_lifecycle = false;
-  ForAllNonThrottledLocalFrameViews(
-      [&re_run_lifecycle, target_state](LocalFrameView& frame_view) {
-        const auto* document = frame_view.GetFrame().GetDocument();
-        if (!document)
-          return;
-
-        DCHECK_GE(document->Lifecycle().GetState(),
-                  DocumentLifecycle::kPrePaintClean);
-        bool frame_is_dirty = false;
-        ViewTransitionUtils::ForEachTransition(
-            *document, [&](ViewTransition& transition) {
-              if (frame_is_dirty) {
-                // If a view transition invalidated style/layout, we need to
-                // rerun the lifecycle before processing any more transitions
-                // in this document.
-                return;
-              }
-              if (target_state == DocumentLifecycle::kPaintClean) {
-                transition.RunViewTransitionStepsDuringMainFrame();
-              } else {
-                transition.RunViewTransitionStepsOutsideMainFrame();
-              }
-              frame_is_dirty = document->Lifecycle().GetState() <
-                                   DocumentLifecycle::kPrePaintClean ||
-                               frame_view.NeedsLayout();
-            });
-        re_run_lifecycle |= frame_is_dirty;
-      });
-
-  return re_run_lifecycle;
 }
 
 bool LocalFrameView::RunResizeObserverSteps(
@@ -4166,7 +4107,7 @@ bool LocalFrameView::ShouldThrottleRenderingForTest() const {
 
 bool LocalFrameView::CanThrottleRendering() const {
   if (lifecycle_updates_throttled_ || IsSubtreeThrottled() ||
-      IsDisplayLocked() || throttled_for_view_transition_) {
+      IsDisplayLocked()) {
     return true;
   }
   // We only throttle hidden cross-origin frames. This is to avoid a situation
@@ -4190,21 +4131,6 @@ void LocalFrameView::UpdateRenderThrottlingStatus(bool hidden_for_throttling,
   if (was_throttled != CanThrottleRendering())
     RenderThrottlingStatusChanged();
 
-}
-
-void LocalFrameView::SetThrottledForViewTransition(bool throttled) {
-  if (throttled_for_view_transition_ == throttled) {
-    return;
-  }
-
-  bool was_throttled = CanThrottleRendering();
-  throttled_for_view_transition_ = throttled;
-
-  // Invalidating paint here will cause the iframe to draw with no content
-  // instead of showing old content.
-  if (was_throttled != CanThrottleRendering()) {
-    RenderThrottlingStatusChanged();
-  }
 }
 
 void LocalFrameView::BeginLifecycleUpdates() {
@@ -4384,14 +4310,8 @@ bool LocalFrameView::UpdatePaintDebugInfoEnabled() {
   DCHECK(paint_debug_info_enabled_);
 #else
   bool should_enable =
-      cc::frame_viewer_instrumentation::IsTracingLayerTreeSnapshots() ||
       RuntimeEnabledFeatures::PaintUnderInvalidationCheckingEnabled() ||
       WebTestSupport::IsRunningWebTest();
-  // Upstream also enables this when an InspectorLayerTreeAgent is attached.
-  // CoreProbeSink has no kInspector*Agent bits at all in this tree -- the
-  // inspector went with the devtools cut -- so no agent can ever be attached
-  // and the disjunct is unconditionally false. This is the DCHECK-off branch,
-  // which is why a dcheck_always_on build never compiled it and never noticed.
   if (should_enable != paint_debug_info_enabled_) {
     paint_debug_info_enabled_ = should_enable;
     return true;

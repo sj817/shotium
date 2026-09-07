@@ -55,7 +55,6 @@
 #include "third_party/blink/renderer/core/css/style_rule_location.h"
 #include "third_party/blink/renderer/core/css/style_rule_namespace.h"
 #include "third_party/blink/renderer/core/css/style_rule_nested_declarations.h"
-#include "third_party/blink/renderer/core/css/style_rule_view_transition.h"
 #include "third_party/blink/renderer/core/css/style_scope.h"
 #include "third_party/blink/renderer/core/css/style_sheet_contents.h"
 #include "third_party/blink/renderer/core/dom/document.h"
@@ -890,8 +889,6 @@ StyleRuleBase* CSSParserImpl::ConsumeAtRuleContents(
 
   stream.EnsureLookAhead();
   switch (id) {
-    case CSSAtRuleID::kCSSAtRuleViewTransition:
-      return ConsumeViewTransitionRule(stream);
     case CSSAtRuleID::kCSSAtRuleContainer:
       return ConsumeContainerRule(stream, nesting_type,
                                   parent_rule_for_nesting);
@@ -2173,38 +2170,6 @@ StyleRuleBase* CSSParserImpl::ConsumeScopeRule(
   return MakeGarbageCollected<StyleRuleScope>(*style_scope, std::move(rules));
 }
 
-StyleRuleViewTransition* CSSParserImpl::ConsumeViewTransitionRule(
-    CSSParserTokenStream& stream) {
-  // NOTE: @view-transition prelude should be empty.
-  wtf_size_t prelude_offset_start = stream.LookAheadOffset();
-  wtf_size_t prelude_offset_end = stream.LookAheadOffset();
-  if (!ConsumeEndOfPreludeForAtRuleWithBlock(
-          stream, CSSAtRuleID::kCSSAtRuleViewTransition)) {
-    return nullptr;
-  }
-
-  CSSParserTokenStream::BlockGuard guard(stream);
-  if (observer_) {
-    observer_->StartRuleHeader(StyleRule::kViewTransition,
-                               prelude_offset_start);
-    observer_->EndRuleHeader(prelude_offset_end);
-    observer_->StartRuleBody(stream.Offset());
-  }
-  ConsumeBlockContents(stream, StyleRule::kViewTransition,
-                       CSSNestingType::kNone,
-                       /*parent_rule_for_nesting=*/nullptr,
-                       /*nested_declarations_start_index=*/kNotFound,
-                       /*child_rules=*/nullptr);
-
-  if (observer_) {
-    observer_->EndRuleBody(stream.LookAheadOffset());
-  }
-
-  return MakeGarbageCollected<StyleRuleViewTransition>(
-      *CreateCSSPropertyValueSet(parsed_properties_, context_->Mode(),
-                                 context_->GetDocument()));
-}
-
 StyleRuleContainer* CSSParserImpl::ConsumeContainerRule(
     CSSParserTokenStream& stream,
     CSSNestingType nesting_type,
@@ -3334,7 +3299,6 @@ bool CSSParserImpl::ConsumeDeclaration(CSSParserTokenStream& stream,
       rule_type == StyleRule::kFontPaletteValues ||
       rule_type == StyleRule::kProperty || rule_type == StyleRule::kLocation ||
       rule_type == StyleRule::kCounterStyle ||
-      rule_type == StyleRule::kViewTransition ||
       rule_type == StyleRule::kFunction || rule_type == StyleRule::kMixin;
 
   uint64_t id = parsing_descriptor

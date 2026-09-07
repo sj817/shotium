@@ -8,7 +8,6 @@
 #include "third_party/blink/renderer/core/layout/constraint_space_builder.h"
 #include "third_party/blink/renderer/core/layout/geometry/writing_mode_converter.h"
 #include "third_party/blink/renderer/core/layout/layout_box.h"
-#include "third_party/blink/renderer/core/layout/layout_image_replacement.h"
 #include "third_party/blink/renderer/core/layout/layout_replaced.h"
 #include "third_party/blink/renderer/core/layout/layout_video.h"
 #include "third_party/blink/renderer/platform/geometry/layout_unit.h"
@@ -26,8 +25,6 @@ const LayoutResult* ReplacedLayoutAlgorithm::Layout() {
 
   if (Node().IsMedia()) {
     LayoutMediaChildren();
-  } else if (Node().IsImageReplacement()) {
-    LayoutImageReplacementChildren();
   }
 
   return container_builder_.ToBoxFragment();
@@ -70,24 +67,6 @@ void ReplacedLayoutAlgorithm::LayoutMediaChildren() {
         new_rect.offset, result->GetPhysicalFragment().Size());
     container_builder_.AddResult(*result, offset);
   }
-}
-
-void ReplacedLayoutAlgorithm::LayoutImageReplacementChildren() {
-  // LayoutImageReplacement should only have one child (the replacement iframe's
-  // layout node).
-  CHECK(Node().FirstChild());
-  CHECK(!Node().FirstChild().NextSibling());
-  const BlockNode child = To<BlockNode>(Node().FirstChild());
-
-  ConstraintSpaceBuilder space_builder(GetConstraintSpace().GetWritingMode(),
-                                       child.Style().GetWritingDirection(),
-                                       /* is_new_fc */ true);
-  space_builder.SetAvailableSize(ChildAvailableSize());
-  space_builder.SetIsFixedInlineSize(true);
-  space_builder.SetIsFixedBlockSize(true);
-
-  const LayoutResult* result = child.Layout(space_builder.ToConstraintSpace());
-  container_builder_.AddResult(*result, BorderPadding().StartOffset());
 }
 
 }  // namespace blink

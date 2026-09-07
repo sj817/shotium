@@ -14,21 +14,14 @@
 #include "third_party/blink/renderer/platform/heap/persistent.h"
 #include "third_party/blink/renderer/platform/wtf/casting.h"
 
-namespace cc {
-class ScrollbarLayerBase;
-}
-
 namespace blink {
 
 class DisplayItemClient;
 class GraphicsContext;
 class TransformPaintPropertyNode;
 
-// During paint, we create a ScrollbarDisplayItem for a non-custom scrollbar.
-// During PaintArtifactCompositor::Update(), we decide whether to composite the
-// scrollbar and, if not composited, call Paint() to actually paint the
-// scrollbar into a paint record, otherwise call CreateLayer() to create a cc
-// scrollbar layer.
+// Records a non-custom scrollbar. Paint() resolves its current thumb, track
+// and buttons into a CPU paint record.
 class PLATFORM_EXPORT ScrollbarDisplayItem final : public DisplayItem {
  public:
   ScrollbarDisplayItem(DisplayItemClientId,
@@ -51,16 +44,10 @@ class PLATFORM_EXPORT ScrollbarDisplayItem final : public DisplayItem {
     return data_->element_id_;
   }
 
-  // Paints the scrollbar into the internal paint record, for non-composited
-  // scrollbar.
+  // Paints the scrollbar into the internal paint record.
   PaintRecord Paint() const;
 
   bool NeedsUpdateDisplay() const;
-
-  // Create or reuse the cc scrollbar layer, for composited scrollbar.
-  scoped_refptr<cc::ScrollbarLayerBase> CreateOrReuseLayer(
-      cc::ScrollbarLayerBase* existing_layer,
-      gfx::Vector2dF offset_of_decomposited_transforms) const;
 
   // Records a scrollbar into a GraphicsContext. Must check
   // PaintController::UseCachedItem() before calling this function.

@@ -136,6 +136,7 @@ xargs -a /tmp/ours.txt git log --oneline $OLD..$NEW --
 
 | 文件 | 分歧 | 为什么不能用别的办法 |
 |---|---|---|
+| CC / Canvas 绘图属性 / 元素捕获 / View transition | 删除合成器运行链、Canvas 绘图变换与隐私标记、元素/区域捕获和追踪元数据、浏览器 ImageReplacement；删除过渡运行时、专用 UA 资源与 @view-transition 规则对象，该 at-rule 由通用未知规则路径跳过 | 无 Shot 创建或消费方。保留 CPU PaintRecord/SkCanvas、SVG 滤镜与真实来源安全检查、Canvas 备用布局、图片/表单/iframe 正常处理；view-transition-name/group/class/scope 普通属性和选择器解析仍影响静态分组及 @supports，不能一起删。导航初始化保持原调用时点。第十一批待集中编译及 183 张原始像素验证，不能当作已通过 |
 | `HttpStreamFactory::JobController` / `URLRequestContextBuilder` / net proxy resolution | 建连入口直接选择 DIRECT；移除代理解析服务、异步解析状态、PAC/WPAD/系统监听及 context/session 持有关系 | Shot 的对外接口没有代理配置；先前 CreateDirect 仍带入整套解析服务和平台依赖。普通 DNS 网络变化通知、TLS、HTTP2 和缓存继续保留 |
 | Blink AnimationWorklet / NativePaint / ClipPaintPropertyNode | 删除无实现注册的Worklet控制器与背景色、box-shadow、clip-path生成器和状态；裁剪矩形收窄为当前CPU布局范围 | 无JS和合成器线程；主线程CSS动画、普通阴影、背景色、SVG和shape裁剪继续保留。第八批Windows EXE/DLL与完整运行检查通过，181张像素一致；动态clip专项输出与静态中点一致。六平台实际编译待完成 |
 | CSS Paint API / cc Worklet派发 | 移除CSS paint()解析/样式缓存/跨线程值、Canvas记录器尾巴、cc AnimationWorklet任务与时间事件、PaintWorklet异步派发和调度等待 | 无JS注册和具体Worklet创建方；无效CSS声明fallback和正常CPU动画/绘制保留。自定义/原生Worklet属性动画、tracker及专用帧状态同步删除；PaintWorkletInput/DeferredPaintRecord、图片记录映射/provider、绘制和序列化支路均删除；普通CPU PaintRecord与解码/动画/HDR保留，本批Windows完整验证通过，181/181像素一致；普通CPU绘制记录不可误删 |

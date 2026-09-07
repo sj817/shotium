@@ -104,9 +104,6 @@
 #include "third_party/blink/renderer/core/style/computed_style.h"
 #include "third_party/blink/renderer/core/style/computed_style_constants.h"
 #include "third_party/blink/renderer/core/svg/svg_element.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition_pseudo_element_base.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition_utils.h"
 #include "third_party/blink/renderer/platform/runtime_enabled_features.h"
 #include "third_party/blink/renderer/platform/wtf/text/atomic_string.h"
 #include "third_party/blink/renderer/platform/wtf/text/string_view.h"
@@ -562,13 +559,6 @@ bool NeedsScopeActivation(
   // This can happen for stylesheets imported using "@import scope(...)".
   return context.style_scope && (context.selector->IsScopeContaining() ||
                                  context.selector->IsLastInComplexSelector());
-}
-
-ViewTransition* GetTransitionForScope(const Element& element) {
-  if (element.IsPseudoElement()) {
-    return nullptr;
-  }
-  return ViewTransitionUtils::GetTransition(element);
 }
 
 }  // namespace
@@ -2378,25 +2368,6 @@ bool SelectorChecker::CheckPseudoClass(const SelectorCheckingContext& context,
       return IsLastOfType(element, element.TagQName());
     }
     case CSSSelector::kPseudoOnlyChild: {
-      PseudoId pseudo_id_to_check =
-          element.IsPseudoElement() ? element.GetPseudoId() : context.pseudo_id;
-      if (IsTransitionPseudoElement(pseudo_id_to_check)) {
-        ViewTransition* transition =
-            ViewTransitionUtils::GetTransition(element);
-        if (!transition) {
-          return false;
-        }
-        DCHECK((transition->Scope() == &element && context.pseudo_id) ||
-               element.IsPseudoElement());
-        DCHECK(context.pseudo_argument || element.IsPseudoElement());
-        const AtomicString& pseudo_argument =
-            element.IsPseudoElement()
-                ? To<PseudoElement>(element).GetPseudoArgument()
-                : *context.pseudo_argument;
-        return transition->MatchForOnlyChild(pseudo_id_to_check,
-                                             pseudo_argument);
-      }
-
       ContainerNode* parent = element.ParentElementOrDocumentFragment();
       if (mode_ == kResolvingStyle) {
         if (parent) {
@@ -3197,26 +3168,10 @@ bool SelectorChecker::CheckPseudoClass(const SelectorCheckingContext& context,
     case CSSSelector::kPseudoRelativeAnchor:
       DCHECK(context.relative_anchor_element);
       return context.relative_anchor_element == &element;
-    case CSSSelector::kPseudoActiveViewTransition: {
-      // The pseudo is only valid if there is a transition.
-      auto* transition = GetTransitionForScope(element);
-      if (!transition) {
-        return false;
-      }
-
-      // Ask the transition to match for active-view-transition.
-      return transition->MatchForActiveViewTransition();
-    }
-    case CSSSelector::kPseudoActiveViewTransitionType: {
-      // The pseudo is only valid if there is a transition.
-      auto* transition = GetTransitionForScope(element);
-      if (!transition) {
-        return false;
-      }
-
-      // Ask the transition to match based on the argument list.
-      return transition->MatchForActiveViewTransitionType(selector.IdentList());
-    }
+    case CSSSelector::kPseudoActiveViewTransition:
+    case CSSSelector::kPseudoActiveViewTransitionType:
+      // Parsed for CSS feature queries; captures have no active transition.
+      return false;
     case CSSSelector::kPseudoUnparsed:
       // Only kept around for parsing; can never match anything
       // (because we don't know what it's supposed to mean).
@@ -3382,73 +3337,9 @@ bool SelectorChecker::CheckPseudoElement(const SelectorCheckingContext& context,
     case CSSSelector::kPseudoViewTransitionGroupChildren:
     case CSSSelector::kPseudoViewTransitionImagePair:
     case CSSSelector::kPseudoViewTransitionOld:
-    case CSSSelector::kPseudoViewTransitionNew: {
-      const PseudoId selector_pseudo_id =
-          CSSSelector::GetPseudoId(selector.GetPseudoType());
-      if (context.pseudo_id == kPseudoIdNone) {
-        ViewTransition* transition =
-            ViewTransitionUtils::GetTransition(element);
-        if (transition && transition->Scope() == &element) {
-          // We don't strictly need to use dynamic_pseudo since we don't rely on
-          // SetHasPseudoElementStyle but we need to return a match to
-          // invalidate the originating element and set dynamic_pseudo to avoid
-          // collecting it as a matched rule in ElementRuleCollector.
-          result.dynamic_pseudo = selector_pseudo_id;
-          return true;
-        }
-      }
-
-      // Here, and below, the IsPseudoElement check is for a new pseudo-element
-      // rules matching approach, where the matching is done based on actual
-      // PseudoElement object and not Element + pseudo_id. We need to keep both
-      // versions as sometimes the matching is happening the old way and
-      // sometimes the new one.
-      PseudoId pseudo_id_to_check =
-          element.IsPseudoElement() ? element.GetPseudoId() : context.pseudo_id;
-      if (selector_pseudo_id != pseudo_id_to_check) {
-        return false;
-      }
-      result.dynamic_pseudo = context.pseudo_id;
-      if (selector_pseudo_id == kPseudoIdViewTransition) {
-        return true;
-      }
-
-      CHECK(!selector.IdentList().empty());
-      const AtomicString& name_or_wildcard = selector.IdentList()[0];
-
-      const String& pseudo_argument =
-          element.IsPseudoElement()
-              ? To<PseudoElement>(element).GetPseudoArgument()
-              : pseudo_argument_;
-      // note that the pseudo_ident_list is the class list, and
-      // pseudo_argument is the name, while in the selector the IdentList() is
-      // both the name and the classes.
-      if (name_or_wildcard != CSSSelector::UniversalSelectorAtom() &&
-          name_or_wildcard != pseudo_argument) {
-        return false;
-      }
-
-      // https://drafts.csswg.org/css-view-transitions-2/#typedef-pt-class-selector
-      // A named view transition pseudo-element selector which has one or more
-      // <custom-ident> values in its <pt-class-selector> would only match an
-      // element if the class list value in named elements for the
-      // pseudo-element’s view-transition-name contains all of those values.
-
-      const Vector<AtomicString>& pseudo_ident_list =
-          element.IsPseudoElement()
-              ? To<ViewTransitionPseudoElementBase>(element)
-                    .ViewTransitionClassList()
-              : pseudo_ident_list_;
-      // selector.IdentList() is equivalent to
-      // <pt-name-selector><pt-class-selector>, as in [name, class, class, ...]
-      // so we check that all of its items excluding the first one are
-      // contained in the pseudo-element's classes (pseudo_ident_list).
-      return std::ranges::all_of(base::span(selector.IdentList()).subspan(1ul),
-                                 [&](const AtomicString& class_from_selector) {
-                                   return std::ranges::contains(
-                                       pseudo_ident_list, class_from_selector);
-                                 });
-    }
+    case CSSSelector::kPseudoViewTransitionNew:
+      // The screenshot DOM has no transition snapshot pseudo-elements.
+      return false;
     case CSSSelector::kPseudoScrollbarButton:
     case CSSSelector::kPseudoScrollbarCorner:
     case CSSSelector::kPseudoScrollbarThumb:
@@ -3774,12 +3665,6 @@ bool SelectorChecker::CheckVirtualPseudo(const SelectorCheckingContext& context,
       return false;
   }
 }
-
-bool SelectorChecker::MatchesActiveViewTransitionPseudoClass(
-    const Element& element) {
-  return GetTransitionForScope(element) != nullptr;
-}
-
 
 bool SelectorChecker::MatchesFocusPseudoClass(
     const Element& element,

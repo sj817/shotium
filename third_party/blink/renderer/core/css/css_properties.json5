@@ -9015,16 +9015,6 @@
       is_property: false,
     },
     {
-      name: "navigation",
-      is_descriptor: true,
-      is_property: false,
-    },
-    {
-      name: "types",
-      is_descriptor: true,
-      is_property: false,
-    },
-    {
       name: "result",
       is_descriptor: true,
       is_property: false,

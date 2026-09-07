@@ -281,25 +281,6 @@ ReleaseCallback CopyOutputSharedImageResult::TakeSharedImageOwnership() {
   return std::move(release_callback_);
 }
 
-CopyOutputBitmapWithMetadata::CopyOutputBitmapWithMetadata() = default;
-
-CopyOutputBitmapWithMetadata::CopyOutputBitmapWithMetadata(SkBitmap bitmap)
-    : CopyOutputBitmapWithMetadata(std::move(bitmap), TrackedElementRects()) {}
-
-CopyOutputBitmapWithMetadata::CopyOutputBitmapWithMetadata(
-    SkBitmap bitmap,
-    TrackedElementRects tracked_element_rects)
-    : bitmap(std::move(bitmap)),
-      tracked_element_rects(std::move(tracked_element_rects)) {}
-
-CopyOutputBitmapWithMetadata::CopyOutputBitmapWithMetadata(
-    const CopyOutputBitmapWithMetadata& other) = default;
-
-CopyOutputBitmapWithMetadata& CopyOutputBitmapWithMetadata::operator=(
-    const CopyOutputBitmapWithMetadata& other) = default;
-
-CopyOutputBitmapWithMetadata::~CopyOutputBitmapWithMetadata() = default;
-
 CopyOutputResult::ScopedSkBitmap::ScopedSkBitmap() = default;
 
 CopyOutputResult::ScopedSkBitmap::ScopedSkBitmap(
@@ -360,22 +341,6 @@ SkBitmap CopyOutputResult::ScopedSkBitmap::GetOutScopedBitmap() const {
     bitmap.readPixels(bitmap_copy.pixmap(), 0, 0);
   }
   return bitmap_copy;
-}
-
-base::expected<CopyOutputBitmapWithMetadata, CopyOutputResult::Error>
-CopyOutputResult::ScopedSkBitmap::GetOutScopedBitmapAndMetadata() const {
-  SkBitmap bitmap = GetOutScopedBitmap();
-  if (bitmap.drawsNothing()) {
-    if (result_) {
-      return base::unexpected<CopyOutputResult::Error>(result_->error());
-    }
-    return base::unexpected<CopyOutputResult::Error>(
-        CopyOutputResult::Error::kUnknown);
-  }
-
-  return CopyOutputBitmapWithMetadata(
-      std::move(bitmap),
-      result_ ? result_->tracked_element_rects_ : TrackedElementRects());
 }
 
 VIZ_COMMON_EXPORT SharedImageFormat

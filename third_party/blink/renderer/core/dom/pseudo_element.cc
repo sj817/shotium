@@ -61,9 +61,6 @@
 #include "third_party/blink/renderer/core/style/computed_style.h"
 #include "third_party/blink/renderer/core/style/computed_style_constants.h"
 #include "third_party/blink/renderer/core/style/content_data.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition_pseudo_element_base.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition_utils.h"
 #include "third_party/blink/renderer/platform/instrumentation/use_counter.h"
 #include "third_party/blink/renderer/platform/runtime_enabled_features.h"
 
@@ -133,9 +130,7 @@ PseudoElement* PseudoElement::Create(Element* parent,
   if (pseudo_id == kPseudoIdFirstLetter) {
     return MakeGarbageCollected<FirstLetterPseudoElement>(parent);
   } else if (IsTransitionPseudoElement(pseudo_id)) {
-    auto* transition = ViewTransitionUtils::GetTransition(*parent);
-    DCHECK(transition);
-    return transition->CreatePseudoElement(parent, pseudo_id, pseudo_argument);
+    return nullptr;
   } else if (ResolvePseudoIdAlias(pseudo_id) == kPseudoIdScrollMarkerGroup) {
     return MakeGarbageCollected<ScrollMarkerGroupPseudoElement>(parent,
                                                                 pseudo_id);
@@ -296,32 +291,9 @@ const QualifiedName& PseudoElementTagName(PseudoId pseudo_id) {
 AtomicString PseudoElement::PseudoElementNameForEvents(Element* element) {
   DCHECK(element);
   auto pseudo_id = element->GetPseudoIdForStyling();
-
-  switch (pseudo_id) {
-    case kPseudoIdNone:
-      return g_null_atom;
-    case kPseudoIdViewTransitionGroup:
-    case kPseudoIdViewTransitionGroupChildren:
-    case kPseudoIdViewTransitionImagePair:
-    case kPseudoIdViewTransitionNew:
-    case kPseudoIdViewTransitionOld: {
-      auto* pseudo = To<ViewTransitionPseudoElementBase>(element);
-      DCHECK(pseudo);
-      StringBuilder builder;
-      builder.Append(PseudoElementTagName(pseudo_id).LocalName());
-      builder.Append("(");
-      if (pseudo->is_generated_name_) {
-        builder.Append("match-element");
-      } else {
-        builder.Append(pseudo->view_transition_name());
-      }
-      builder.Append(")");
-      return AtomicString(builder.ReleaseString());
-    }
-    default:
-      break;
-  }
-  return PseudoElementTagName(pseudo_id).LocalName();
+  return pseudo_id == kPseudoIdNone
+             ? g_null_atom
+             : PseudoElementTagName(pseudo_id).LocalName();
 }
 
 PseudoId PseudoElement::GetPseudoIdForStyling() const {

@@ -126,7 +126,6 @@ mojom("mojom_platform") {
     "hyphenation/hyphenation.mojom",
     "idle/idle_manager.mojom",
     "image_downloader/image_downloader.mojom",
-    "image_replacement/image_replacement.mojom",
     "input/focus_type.mojom",
     "input/gesture_event.mojom",
     "input/input_event.mojom",
@@ -759,7 +758,6 @@ mojom("mojom_core") {
     "frame/triggering_event_info.mojom",
     "frame/user_activation_notification_type.mojom",
     "frame/user_activation_update_types.mojom",
-    "frame/view_transition_state.mojom",
     "frame/viewport_intersection_state.mojom",
     "page/display_cutout.mojom",
     "page/draggable_region.mojom",
@@ -971,21 +969,6 @@ mojom("mojom_core") {
     {
       types = [
         {
-          mojom = "blink.mojom.ViewTransitionState"
-          cpp = "::blink::ViewTransitionState"
-        },
-        {
-          mojom = "blink.mojom.ViewTransitionElement"
-          cpp = "::blink::ViewTransitionElement"
-        },
-      ]
-      traits_headers =
-          [ "//third_party/blink/public/common/frame/view_transition_state.h" ]
-      traits_private_headers = [ "//third_party/blink/public/common/frame/view_transition_state_mojom_traits.h" ]
-    },
-    {
-      types = [
-        {
           mojom = "blink.mojom.TransferableMessage"
           cpp = "::blink::TransferableMessage"
           move_only = true
@@ -1001,21 +984,6 @@ mojom("mojom_core") {
   cpp_typemaps += shared_cpp_typemaps
 
   blink_cpp_typemaps = [
-    {
-      types = [
-        {
-          mojom = "blink.mojom.ViewTransitionState"
-          cpp = "::blink::ViewTransitionState"
-        },
-        {
-          mojom = "blink.mojom.ViewTransitionElement"
-          cpp = "::blink::ViewTransitionElement"
-        },
-      ]
-      traits_headers =
-          [ "//third_party/blink/public/common/frame/view_transition_state.h" ]
-      traits_private_headers = [ "//third_party/blink/public/common/frame/view_transition_state_mojom_traits.h" ]
-    },
   ]
   blink_cpp_typemaps += shared_cpp_typemaps
 

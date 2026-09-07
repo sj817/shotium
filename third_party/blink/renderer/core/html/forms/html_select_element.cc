@@ -379,12 +379,6 @@ void HTMLSelectElement::SetSuggestedOption(HTMLOptionElement* option) {
   if (option && option->OwnerSelectElement() != this) {
     return;
   }
-  if (RuntimeEnabledFeatures::CanvasDrawElementEnabled(GetExecutionContext()) &&
-      IsCanvasOrInCanvasSubtree()) {
-    // Hide suggested values when under canvas, to prevent leaking this
-    // information to javascript.
-    option = nullptr;
-  }
   if (suggested_option_ == option) {
     return;
   }
@@ -880,16 +874,6 @@ int HTMLSelectElement::SelectedListIndex() const {
     ++index;
   }
   return -1;
-}
-
-void HTMLSelectElement::DidChangeIsInCanvasSubtree() {
-  HTMLFormControlElementWithState::DidChangeIsInCanvasSubtree();
-  if (IsInCanvasSubtree() &&
-      RuntimeEnabledFeatures::CanvasDrawElementEnabled(GetExecutionContext())) {
-    // Hide suggested values when under canvas, to prevent leaking this
-    // information to javascript.
-    SetSuggestedOption(nullptr);
-  }
 }
 
 void HTMLSelectElement::OptionSelectionStateChanged(HTMLOptionElement* option,

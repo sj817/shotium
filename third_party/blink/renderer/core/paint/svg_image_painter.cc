@@ -51,10 +51,6 @@ void SVGImagePainter::Paint(const PaintInfo& paint_info) {
     return;
   }
 
-  if (paint_info.IsPrivacyPreserving() &&
-      !layout_svg_image_.ImageResource()->IsCorsSameOrigin()) {
-    return;
-  }
 
   if (SVGModelObjectPainter::CanUseCullRect(layout_svg_image_.StyleRef())) {
     // CanUseCullRect returns false if there is a pixel moving filter, which
@@ -75,8 +71,6 @@ void SVGImagePainter::Paint(const PaintInfo& paint_info) {
                                     paint_behavior);
     if (paint_behavior.Has(ScopedSVGPaintState::PaintComponent::kContent)) {
       SVGModelObjectPainter::RecordHitTestData(layout_svg_image_, paint_info);
-      SVGModelObjectPainter::RecordRegionCaptureData(layout_svg_image_,
-                                                     paint_info);
       if (!DrawingRecorder::UseCachedDrawingIfPossible(
               paint_info.context, layout_svg_image_, paint_info.phase)) {
         SVGDrawingRecorder recorder(paint_info.context, layout_svg_image_,

@@ -108,8 +108,7 @@ class StyleAdjuster {
   static void RunUncacheableStyleAdjustment(
       ComputedStyleBuilder& builder,
       Element& element,
-      const Element* element_or_pseudo_element,
-      const Element* styled_element);
+      const Element* element_or_pseudo_element);
 
   // Whether a cache entry for A would have the same style adjustments as
   // for B, or vice versa.

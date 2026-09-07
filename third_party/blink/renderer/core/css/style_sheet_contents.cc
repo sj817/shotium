@@ -654,7 +654,6 @@ static bool ChildRulesHaveFailedOrCanceledSubresources(
       case StyleRuleBase::kFontPaletteValues:
       case StyleRuleBase::kFontFeatureValues:
       case StyleRuleBase::kFontFeature:
-      case StyleRuleBase::kViewTransition:
       case StyleRuleBase::kFunction:
       case StyleRuleBase::kPositionTry:
       case StyleRuleBase::kCustomMedia:

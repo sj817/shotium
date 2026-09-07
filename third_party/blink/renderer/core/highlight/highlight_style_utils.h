@@ -74,7 +74,6 @@ class CORE_EXPORT HighlightStyleUtils {
                             PseudoId pseudo,
                             const CSSProperty& property,
                             std::optional<Color> current_color,
-                            bool preserve_privacy,
                             SearchTextIsActiveMatch);
   static std::optional<Color> MaybeResolveColor(
       const Document&,
@@ -82,7 +81,6 @@ class CORE_EXPORT HighlightStyleUtils {
       const ComputedStyle* pseudo_style,
       PseudoId pseudo,
       const CSSProperty& property,
-      bool preserve_privacy,
       SearchTextIsActiveMatch);
   static std::optional<AppliedTextDecoration> SelectionTextDecoration(
       const Document& document,
@@ -96,7 +94,6 @@ class CORE_EXPORT HighlightStyleUtils {
       Node*,
       std::optional<Color>,
       PseudoId,
-      bool preserve_privacy,
       SearchTextIsActiveMatch,
       const AtomicString& pseudo_argument = g_null_atom);
   static HighlightTextPaintStyle HighlightPaintingStyle(

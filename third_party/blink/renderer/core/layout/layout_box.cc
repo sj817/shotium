@@ -1185,10 +1185,7 @@ LayoutUnit LayoutBox::OverrideIntrinsicContentInlineSize() const {
     const auto* context = GetDisplayLockContext();
     const bool is_locked = context && context->IsLocked();
     const auto* elem = DynamicTo<Element>(GetNode());
-    const bool is_vt_scope =
-        style.HasSizeContainmentForViewTransitionScope() &&
-        RuntimeEnabledFeatures::ScopedViewTransitionSizeContainmentEnabled();
-    if (is_locked || is_vt_scope) {
+    if (is_locked) {
       if (elem) {
         if (const auto inline_size = elem->LastRememberedInlineSize()) {
           // ResizeObserverSize is adjusted to be in CSS space, we need to
@@ -1224,10 +1221,7 @@ LayoutUnit LayoutBox::OverrideIntrinsicContentBlockSize() const {
     const auto* context = GetDisplayLockContext();
     const bool is_locked = context && context->IsLocked();
     const auto* elem = DynamicTo<Element>(GetNode());
-    const bool is_vt_scope =
-        style.HasSizeContainmentForViewTransitionScope() &&
-        RuntimeEnabledFeatures::ScopedViewTransitionSizeContainmentEnabled();
-    if (is_locked || is_vt_scope) {
+    if (is_locked) {
       if (elem) {
         if (const auto block_size = elem->LastRememberedBlockSize()) {
           // ResizeObserverSize is adjusted to be in CSS space, we need to

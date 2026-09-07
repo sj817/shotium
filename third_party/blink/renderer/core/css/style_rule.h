@@ -79,7 +79,6 @@ class CORE_EXPORT StyleRuleBase : public GarbageCollected<StyleRuleBase> {
     kScope,
     kSupports,
     kStartingStyle,
-    kViewTransition,
     kFunction,
     kMixin,
     kResult,
@@ -131,7 +130,6 @@ class CORE_EXPORT StyleRuleBase : public GarbageCollected<StyleRuleBase> {
   bool IsSupportsRule() const { return GetType() == kSupports; }
   bool IsImportRule() const { return GetType() == kImport; }
   bool IsStartingStyleRule() const { return GetType() == kStartingStyle; }
-  bool IsViewTransitionRule() const { return GetType() == kViewTransition; }
   bool IsConditionRule() const {
     return GetType() == kContainer || GetType() == kMedia ||
            GetType() == kSupports || GetType() == kStartingStyle;

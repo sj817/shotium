@@ -727,8 +727,6 @@ BASE_FEATURE_PARAM(size_t,
 
 BASE_FEATURE(kImageLoadingPrioritizationFix, base::FEATURE_ENABLED_BY_DEFAULT);
 
-BASE_FEATURE(kImageReplacement, base::FEATURE_DISABLED_BY_DEFAULT);
-
 BASE_FEATURE(kIndexedDBCompressValuesWithSnappy,
              base::FEATURE_ENABLED_BY_DEFAULT);
 constexpr base::FeatureParam<int>

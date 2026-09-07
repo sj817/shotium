@@ -136,7 +136,6 @@
 #include "third_party/blink/renderer/core/timing/event_timing.h"
 #include "third_party/blink/renderer/core/timing/soft_navigation_heuristics.h"
 #include "third_party/blink/renderer/core/timing/window_performance.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition_supplement.h"
 #include "third_party/blink/renderer/core/xml/document_xslt.h"
 #include "third_party/blink/renderer/core/xml/xslt_processor.h"
 #include "third_party/blink/renderer/platform/bindings/script_forbidden_scope.h"
@@ -413,7 +412,6 @@ struct SameSizeAsDocumentLoader
   std::unique_ptr<ExtraData> extra_data;
   AtomicString reduced_accept_language;
   network::mojom::NavigationDeliveryType navigation_delivery_type;
-  std::optional<ViewTransitionState> view_transition_state;
   std::optional<FencedFrame::RedactedFencedFrameProperties>
       fenced_frame_properties;
   net::StorageAccessApiStatus storage_access_api_status;
@@ -580,7 +578,6 @@ DocumentLoader::DocumentLoader(
       extra_data_(std::move(extra_data)),
       reduced_accept_language_(params_->reduced_accept_language),
       navigation_delivery_type_(params_->navigation_delivery_type),
-      view_transition_state_(std::move(params_->view_transition_state)),
       storage_access_api_status_(params_->load_with_storage_access),
       browsing_context_group_token_(params_->browsing_context_group_token),
       modified_runtime_features_(std::move(params_->modified_runtime_features)),
@@ -2147,14 +2144,7 @@ void DocumentLoader::DidInstallNewDocument(Document* document) {
 
   WarnIfSandboxIneffective(document->domWindow());
 
-  StartViewTransitionIfNeeded(*document);
-
-  // This also enqueues the event for a Document that's loading while
-  // prerendered; however, the event still fires at the correct time (first
-  // render opportunity after activation) since the event is fired as part of
-  // updating the rendering which is suppressed until the prerender is
-  // activated.
-  document->EnqueuePageRevealEvent();
+  document->InitializeRouteNavigationState();
 }
 
 void DocumentLoader::WillCommitNavigation() {
@@ -3669,12 +3659,6 @@ void DocumentLoader::NotifyPrerenderingDocumentActivated(
   }
 
   GetTiming().SetActivationStart(*params.activation_start);
-
-  if (params.view_transition_state) {
-    CHECK(!view_transition_state_);
-    view_transition_state_ = std::move(params.view_transition_state);
-  }
-  StartViewTransitionIfNeeded(*frame_->GetDocument());
 }
 
 HashMap<KURL, EarlyHintsPreloadEntry>
@@ -3799,14 +3783,6 @@ WebArchiveInfo DocumentLoader::GetArchiveInfo() const {
       WebURL(),
       base::Time(),
   };
-}
-
-void DocumentLoader::StartViewTransitionIfNeeded(Document& document) {
-  if (view_transition_state_) {
-    ViewTransitionSupplement::CreateFromSnapshotForNavigation(
-        document, std::move(*view_transition_state_));
-    view_transition_state_.reset();
-  }
 }
 
 bool DocumentLoader::HasLoadedNonInitialEmptyDocument() const {

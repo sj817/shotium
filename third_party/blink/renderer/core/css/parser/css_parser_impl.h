@@ -31,7 +31,6 @@ class CSSParserObserver;
 class CSSParserTokenStream;
 struct CSSUrlRequestModifiers;
 class StyleRule;
-class StyleRuleViewTransition;
 class StyleRuleBase;
 class StyleRuleCharset;
 class StyleRuleCounterStyle;
@@ -73,7 +72,6 @@ class CORE_EXPORT CSSParserImpl {
   static constexpr AllowedRules kRegularRules =
       AllowedRules{QualifiedRuleType::kStyle} |
       AllowedRules{
-          CSSAtRuleID::kCSSAtRuleViewTransition,
           CSSAtRuleID::kCSSAtRuleFontFace,
           CSSAtRuleID::kCSSAtRuleFontPaletteValues,
           CSSAtRuleID::kCSSAtRuleKeyframes,
@@ -160,7 +158,6 @@ class CORE_EXPORT CSSParserImpl {
                               CSSAtRuleID::kCSSAtRuleLayer,
                               CSSAtRuleID::kCSSAtRuleScope,
                               CSSAtRuleID::kCSSAtRuleStartingStyle,
-                              CSSAtRuleID::kCSSAtRuleViewTransition,
                               CSSAtRuleID::kCSSAtRuleApplyMixin,
                           };
 
@@ -333,8 +330,6 @@ class CORE_EXPORT CSSParserImpl {
   StyleRuleBase* ConsumeScopeRule(CSSParserTokenStream&,
                                   CSSNestingType,
                                   StyleRule* parent_rule_for_nesting);
-  StyleRuleViewTransition* ConsumeViewTransitionRule(
-      CSSParserTokenStream& stream);
   StyleRuleContainer* ConsumeContainerRule(CSSParserTokenStream& stream,
                                            CSSNestingType,
                                            StyleRule* parent_rule_for_nesting);

@@ -7,7 +7,6 @@
 #include <cinttypes>
 
 #include "third_party/blink/renderer/platform/graphics/paint/drawing_display_item.h"
-#include "third_party/blink/renderer/platform/graphics/paint/foreign_layer_display_item.h"
 #include "third_party/blink/renderer/platform/graphics/paint/paint_artifact.h"
 #include "third_party/blink/renderer/platform/graphics/paint/scrollbar_display_item.h"
 #include "third_party/blink/renderer/platform/runtime_enabled_features.h"
@@ -30,8 +29,6 @@ void DisplayItem::Destruct() {
     return;
   if (auto* drawing = DynamicTo<DrawingDisplayItem>(this)) {
     drawing->~DrawingDisplayItem();
-  } else if (auto* foreign_layer = DynamicTo<ForeignLayerDisplayItem>(this)) {
-    foreign_layer->~ForeignLayerDisplayItem();
   } else {
     To<ScrollbarDisplayItem>(this)->~ScrollbarDisplayItem();
   }
@@ -56,10 +53,6 @@ bool DisplayItem::EqualsForUnderInvalidation(const DisplayItem& other) const {
   if (auto* drawing = DynamicTo<DrawingDisplayItem>(this)) {
     return drawing->EqualsForUnderInvalidationImpl(
         To<DrawingDisplayItem>(other));
-  }
-  if (auto* foreign_layer = DynamicTo<ForeignLayerDisplayItem>(this)) {
-    return foreign_layer->EqualsForUnderInvalidationImpl(
-        To<ForeignLayerDisplayItem>(other));
   }
   return To<ScrollbarDisplayItem>(this)->EqualsForUnderInvalidationImpl(
       To<ScrollbarDisplayItem>(other));
@@ -155,25 +148,9 @@ static String DrawingTypeAsDebugString(DisplayItem::Type type) {
   return StrCat({"Drawing", SpecialDrawingTypeAsDebugString(type)});
 }
 
-static String ForeignLayerTypeAsDebugString(DisplayItem::Type type) {
-  switch (type) {
-    DEBUG_STRING_CASE(ForeignLayerCanvas);
-    DEBUG_STRING_CASE(ForeignLayerDevToolsOverlay);
-    DEBUG_STRING_CASE(ForeignLayerVideo);
-    DEBUG_STRING_CASE(ForeignLayerLinkHighlight);
-    DEBUG_STRING_CASE(ForeignLayerViewportScroll);
-    DEBUG_STRING_CASE(ForeignLayerViewportScrollbar);
-    DEBUG_STRING_CASE(ForeignLayerViewTransitionContent);
-    DEFAULT_CASE;
-  }
-}
-
 String DisplayItem::TypeAsDebugString(Type type) {
   if (IsDrawingType(type))
     return DrawingTypeAsDebugString(type);
-
-  if (IsForeignLayerType(type))
-    return ForeignLayerTypeAsDebugString(type);
 
   PAINT_PHASE_BASED_DEBUG_STRINGS(Clip);
   PAINT_PHASE_BASED_DEBUG_STRINGS(Scroll);
@@ -182,8 +159,6 @@ String DisplayItem::TypeAsDebugString(Type type) {
 
   switch (type) {
     DEBUG_STRING_CASE(HitTest);
-    DEBUG_STRING_CASE(RegionCapture);
-    DEBUG_STRING_CASE(TrackedElement);
     DEBUG_STRING_CASE(ScrollHitTest);
     DEBUG_STRING_CASE(ResizerScrollHitTest);
     DEBUG_STRING_CASE(ScrollbarHitTest);
@@ -229,8 +204,6 @@ void DisplayItem::PropertiesAsJSON(JSONObject& json,
     return;
   if (auto* drawing = DynamicTo<DrawingDisplayItem>(this)) {
     drawing->PropertiesAsJSONImpl(json);
-  } else if (auto* foreign_layer = DynamicTo<ForeignLayerDisplayItem>(this)) {
-    foreign_layer->PropertiesAsJSONImpl(json);
   } else {
     To<ScrollbarDisplayItem>(this)->PropertiesAsJSONImpl(json);
   }

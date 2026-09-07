@@ -78,8 +78,6 @@ enum class CompositingReason {
   // For composited scrolling, determined after paint.
   kOverflowScrolling,
 
-  // Element is participating in element capture.
-  kElementCapture,
 
   // The following reasons are not used in paint properties, but are
   // determined after paint, for debugging. See PaintArtifactCompositor.
@@ -91,7 +89,6 @@ enum class CompositingReason {
   kCaret,
   kVideo,
   kCanvas,
-  kCanvasChild,
   kPlugin,
   kScrollbar,
   kLinkHighlight,
@@ -123,7 +120,6 @@ class CompositingReasonCombos {
           kUndoOverscroll,
           kVideo,
           kCanvas,
-          kCanvasChild,
           kPlugin,
           kIFrame,
           kAffectedBySafeAreaBottom,
@@ -167,8 +163,6 @@ class CompositingReasonCombos {
       kActiveBackdropFilterAnimation,
       kViewTransitionPseudoElement,
       kTransform3DSceneLeaf,
-      kElementCapture,
-      kCanvasChild,
       kUnboundedElement};
   static constexpr CompositingReasons kDirectReasonsForFilterProperty = {
       kActiveFilterAnimation, kWillChangeFilter};

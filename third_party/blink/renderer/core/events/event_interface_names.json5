@@ -108,15 +108,6 @@
       "RuntimeEnabled": "OverscrollGestures"
     },
     {
-      "name": "PageRevealEvent",
-      "interfaceHeaderDir": "third_party/blink/renderer/core/view_transition"
-    },
-    {
-      "name": "PageSwapEvent",
-      "interfaceHeaderDir": "third_party/blink/renderer/core/view_transition",
-      "RuntimeEnabled": "PageSwapEvent"
-    },
-    {
       "name": "PageTransitionEvent",
       "interfaceHeaderDir": "third_party/blink/renderer/core/events"
     },

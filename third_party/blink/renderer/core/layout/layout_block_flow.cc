@@ -91,7 +91,7 @@ bool IsInnerEditorChild(const LayoutBlockFlow& block) {
 
 bool IsMergeableAnonymousBlock(const LayoutBlockFlow& block) {
   return block.IsAnonymousBlockFlow() && !block.BeingDestroyed() &&
-         !block.IsViewTransitionRoot() && !IsInnerEditorChild(block);
+         !IsInnerEditorChild(block);
 }
 
 inline const LayoutObject* PreviousSiblingIgnoringOutsideListMarker(
@@ -380,11 +380,6 @@ static bool AllowsCollapseAnonymousBlockChild(const LayoutBlockFlow& parent,
   // destroyed. See crbug.com/282088
   if (child.BeingDestroyed())
     return false;
-  // The ViewTransitionRoot is also anonymous by design and shouldn't be
-  // elided.
-  if (child.IsViewTransitionRoot()) {
-    return false;
-  }
   return !child.ChildrenInline() || AllowsInlineChildren(parent);
 }
 

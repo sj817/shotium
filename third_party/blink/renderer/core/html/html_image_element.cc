@@ -53,13 +53,10 @@
 #include "third_party/blink/renderer/core/html/parser/html_parser_idioms.h"
 #include "third_party/blink/renderer/core/html/parser/html_srcset_parser.h"
 #include "third_party/blink/renderer/core/html_names.h"
-#include "third_party/blink/renderer/core/image_replacement/document_image_replacements.h"
-#include "third_party/blink/renderer/core/image_replacement/image_replacement.h"
 #include "third_party/blink/renderer/core/inspector/console_message.h"
 #include "third_party/blink/renderer/core/layout/adjust_for_absolute_zoom.h"
 #include "third_party/blink/renderer/core/layout/layout_block_flow.h"
 #include "third_party/blink/renderer/core/layout/layout_image.h"
-#include "third_party/blink/renderer/core/layout/layout_image_replacement.h"
 #include "third_party/blink/renderer/core/loader/resource/image_resource.h"
 #include "third_party/blink/renderer/core/loader/resource/image_resource_content.h"
 #include "third_party/blink/renderer/core/media_type_names.h"
@@ -437,59 +434,6 @@ bool HTMLImageElement::HasSizesAttribute() const {
   return FastHasAttribute(html_names::kSizesAttr);
 }
 
-bool HTMLImageElement::IsUrlInCandidateSet(const AtomicString& url) const {
-  if (url.empty()) {
-    return false;
-  }
-
-  const KURL target_kurl =
-      GetDocument().CompleteURL(StripLeadingAndTrailingHtmlSpaces(url));
-  if (!target_kurl.IsValid() || target_kurl.IsEmpty()) {
-    return false;
-  }
-
-  const AtomicString& src_attr = FastGetAttribute(html_names::kSrcAttr);
-  if (!src_attr.empty() &&
-      GetDocument().CompleteURL(StripLeadingAndTrailingHtmlSpaces(src_attr)) ==
-          target_kurl) {
-    return true;
-  }
-
-  Vector<ImageCandidate> candidates;
-  String img_srcset = FastGetAttribute(html_names::kSrcsetAttr);
-  if (!img_srcset.empty()) {
-    ParseImageCandidatesFromSrcsetAttribute(img_srcset, candidates,
-                                            &GetDocument());
-    for (const auto& candidate : candidates) {
-      if (GetDocument().CompleteURL(StripLeadingAndTrailingHtmlSpaces(
-              candidate.ToString())) == target_kurl) {
-        return true;
-      }
-    }
-  }
-
-  if (auto* picture_parent = DynamicTo<HTMLPictureElement>(parentNode())) {
-    for (HTMLSourceElement& source :
-         Traversal<HTMLSourceElement>::ChildrenOf(*picture_parent)) {
-      String source_srcset = source.FastGetAttribute(html_names::kSrcsetAttr);
-      if (source_srcset.empty()) {
-        continue;
-      }
-      candidates.clear();
-      ParseImageCandidatesFromSrcsetAttribute(source_srcset, candidates,
-                                              &GetDocument());
-      for (const auto& candidate : candidates) {
-        if (GetDocument().CompleteURL(StripLeadingAndTrailingHtmlSpaces(
-                candidate.ToString())) == target_kurl) {
-          return true;
-        }
-      }
-    }
-  }
-
-  return false;
-}
-
 // http://picture.responsiveimages.org/#update-source-set
 ImageCandidate HTMLImageElement::FindBestFitImageFromPictureParent() {
   DCHECK(IsMainThread());
@@ -543,12 +487,8 @@ LayoutObject* HTMLImageElement::CreateLayoutObject(const ComputedStyle& style) {
   switch (layout_disposition_) {
     case LayoutDisposition::kFallbackContent:
       return LayoutObject::CreateBlockFlowOrListItem(this, style);
-    case LayoutDisposition::kImageReplacement:
     case LayoutDisposition::kPrimaryContent: {
-      LayoutImage* image =
-          layout_disposition_ == LayoutDisposition::kImageReplacement
-              ? MakeGarbageCollected<LayoutImageReplacement>(this)
-              : MakeGarbageCollected<LayoutImage>(this);
+      auto* image = MakeGarbageCollected<LayoutImage>(this);
       image->SetImageResource(MakeGarbageCollected<LayoutImageResource>());
       image->SetImageDevicePixelRatio(image_device_pixel_ratio_);
       if (base::FeatureList::IsEnabled(features::kSpeculativeImageDecodes) ||
@@ -623,10 +563,6 @@ void HTMLImageElement::RemovedFrom(ContainerNode& insertion_point) {
     if (was_removed_from_parent) {
       SelectSourceURL(ImageLoader::kUpdateIgnorePreviousError);
     }
-  }
-  if (insertion_point.isConnected() &&
-      !GetDocument().StatePreservingAtomicMoveInProgress()) {
-    ResetImageReplacement();
   }
   if (GetDocument().View()) {
     GetDocument().View()->UnregisterFromLifecycleNotifications(this);
@@ -867,7 +803,6 @@ void HTMLImageElement::OnResize() {
 
 void HTMLImageElement::DidMoveToNewDocument(Document& old_document) {
   GetImageLoader().ElementDidMoveToNewDocument();
-  ResetImageReplacement(&old_document);
   HTMLElement::DidMoveToNewDocument(old_document);
   SelectSourceURL(ImageLoader::kUpdateIgnorePreviousError);
 }
@@ -1061,23 +996,6 @@ void HTMLImageElement::EnsurePrimaryContent() {
 }
 
 void HTMLImageElement::ResetLayoutDisposition() {
-  // If the element has an image replacement, and the source URL hasn't changed
-  // since the image replacement was created, or the original source is still
-  // part of the picture's candidate set, then we don't need to reset the layout
-  // disposition.
-  if (HasImageReplacement()) {
-    if (DocumentImageReplacements* replacements =
-            DocumentImageReplacements::FromIfExists(GetDocument())) {
-      if (ImageReplacement* replacement =
-              replacements->GetImageReplacement(this)) {
-        if (replacement->OriginalImageSourceURL() == ImageSourceURL() ||
-            IsUrlInCandidateSet(replacement->OriginalImageSourceURL())) {
-          return;
-        }
-      }
-    }
-  }
-
   if (GetImageLoader().ImageIsPotentiallyAvailable()) {
     EnsurePrimaryContent();
   } else {
@@ -1086,19 +1004,6 @@ void HTMLImageElement::ResetLayoutDisposition() {
 }
 
 void HTMLImageElement::OnImageLoadComplete() {
-  if (DocumentImageReplacements* replacements =
-          DocumentImageReplacements::FromIfExists(GetDocument())) {
-    if (ImageReplacement* replacement =
-            replacements->GetImageReplacement(this)) {
-      if (replacement->ResumeReplacementAfterImageLoad()) {
-        // Replacement is now complete and the layout disposition is now
-        // kImageReplacement. We don't need to reset it, so we skip the call
-        // to ResetLayoutDisposition() below.
-        return;
-      }
-    }
-  }
-
   ResetLayoutDisposition();
 }
 
@@ -1129,17 +1034,6 @@ void HTMLImageElement::SetLayoutDisposition(
 
   DCHECK(!GetDocument().InStyleRecalc());
 
-  if (HasImageReplacement()) {
-    CHECK_NE(layout_disposition, LayoutDisposition::kImageReplacement);
-    ImageReplacement::ResetImageReplacement(base::PassKey<HTMLImageElement>(),
-                                            *this, GetDocument());
-    if (RuntimeEnabledFeatures::UAImageReplacementAPIEnabled(
-            GetExecutionContext())) {
-      EnqueueEvent(*Event::Create(event_type_names::kUareplaceend),
-                   TaskType::kDOMManipulation);
-    }
-  }
-
   if (ShadowRoot* shadow_root = UserAgentShadowRoot()) {
     EventDispatchForbiddenScope::AllowUserAgentEvents allow_events;
     shadow_root->RemoveChildren();
@@ -1152,16 +1046,10 @@ void HTMLImageElement::SetLayoutDisposition(
     UnsetHasCustomStyleCallbacks();
   }
 
-  if (layout_disposition_ == LayoutDisposition::kFallbackContent ||
-      layout_disposition_ == LayoutDisposition::kImageReplacement) {
+  if (layout_disposition_ == LayoutDisposition::kFallbackContent) {
     EventDispatchForbiddenScope::AllowUserAgentEvents allow_events;
     EnsureUserAgentShadowRoot();
-    if (layout_disposition_ == LayoutDisposition::kImageReplacement) {
-      ImageReplacement::CreateImageReplacementShadowTree(
-          base::PassKey<HTMLImageElement>(), *this);
-    } else {
-      HTMLImageFallbackHelper::CreateAltTextShadowTree(*this);
-    }
+    HTMLImageFallbackHelper::CreateAltTextShadowTree(*this);
   }
 
   // ComputedStyle depends on layout_disposition_. Trigger recalc.
@@ -1183,39 +1071,6 @@ void HTMLImageElement::AssociateWith(HTMLFormElement* form) {
     form_was_set_by_parser_ = true;
     form_->Associate(*this);
     form_->DidAssociateByParser();
-  }
-}
-
-bool HTMLImageElement::replacedByUserAgent() const {
-  return HasImageReplacement();
-}
-
-bool HTMLImageElement::HasImageReplacement() const {
-  return layout_disposition_ == LayoutDisposition::kImageReplacement;
-}
-
-void HTMLImageElement::ResetImageReplacement(Document* document) {
-  if (!document) {
-    document = &GetDocument();
-  }
-  if (!HasImageReplacement()) {
-    ImageReplacement::ResetImageReplacement(base::PassKey<HTMLImageElement>(),
-                                            *this, *document);
-  } else {
-    // We go back to displaying the primary content. There should be a valid
-    // image resource available (we wouldn't have started image replacement
-    // if the image had not loaded/if there was an error). This will also
-    // unregister the image replacement.
-    EnsurePrimaryContent();
-  }
-}
-
-void HTMLImageElement::StartImageReplacement() {
-  SetLayoutDisposition(LayoutDisposition::kImageReplacement);
-  if (RuntimeEnabledFeatures::UAImageReplacementAPIEnabled(
-          GetExecutionContext())) {
-    EnqueueEvent(*Event::Create(event_type_names::kUareplacestart),
-                 TaskType::kDOMManipulation);
   }
 }
 

@@ -133,9 +133,6 @@
 #include "third_party/blink/renderer/core/trustedtypes/trusted_script.h"
 #include "third_party/blink/renderer/core/trustedtypes/trusted_types_names.h"
 #include "third_party/blink/renderer/core/trustedtypes/trusted_types_util.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition_pseudo_element_base.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition_supplement.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition_utils.h"
 #include "third_party/blink/renderer/core/xml_names.h"
 #include "third_party/blink/renderer/core/xmlns_names.h"
 #include "third_party/blink/renderer/platform/bindings/exception_state.h"
@@ -432,40 +429,7 @@ Node* Node::PseudoAwarePreviousSibling() const {
     return nullptr;
   }
 
-  switch (pseudo_id) {
-    // The pseudos of the view transition subtree have a known structure and
-    // cannot create other pseudos so these are handled separately of the above
-    // cases. For details on view-transition pseudo ordering, see
-    // https://chromium.googlesource.com/chromium/src/+/main/third_party/blink/renderer/core/view_transition/README.md#pseudo-element-traversal
-    case kPseudoIdViewTransitionNew:
-      CHECK_EQ(parent->GetPseudoId(), kPseudoIdViewTransitionImagePair);
-      return parent->GetPseudoElement(
-          kPseudoIdViewTransitionOld,
-          To<ViewTransitionPseudoElementBase>(this)->view_transition_name());
-    case kPseudoIdViewTransitionGroup: {
-      auto* pseudo = To<ViewTransitionPseudoElementBase>(this);
-      auto* parent_pseudo = To<ViewTransitionPseudoElementBase>(parent);
-      const Vector<AtomicString>& names =
-          parent_pseudo->GetContainedViewTransitionNames();
-      wtf_size_t found_index = names.Find(pseudo->view_transition_name());
-      CHECK_NE(found_index, kNotFound);
-      if (found_index == 0) {
-        return nullptr;
-      }
-      return parent->GetPseudoElement(kPseudoIdViewTransitionGroup,
-                                      names[found_index - 1]);
-    }
-    case kPseudoIdViewTransitionGroupChildren:
-      CHECK_EQ(parent->GetPseudoId(), kPseudoIdViewTransitionGroup);
-      return parent->GetPseudoElement(
-          kPseudoIdViewTransitionImagePair,
-          To<ViewTransitionPseudoElementBase>(this)->view_transition_name());
-    case kPseudoIdViewTransitionImagePair:
-    case kPseudoIdViewTransitionOld:
-      return nullptr;
-    default:
-      NOTREACHED();
-  }
+  NOTREACHED();
 }
 
 Node* Node::PseudoAwareNextSibling() const {
@@ -515,76 +479,11 @@ Node* Node::PseudoAwareNextSibling() const {
     return nullptr;
   }
 
-  switch (pseudo_id) {
-    case kPseudoIdViewTransitionOld:
-      CHECK_EQ(parent->GetPseudoId(), kPseudoIdViewTransitionImagePair);
-      return parent->GetPseudoElement(
-          kPseudoIdViewTransitionNew,
-          To<ViewTransitionPseudoElementBase>(this)->view_transition_name());
-    case kPseudoIdViewTransitionGroup: {
-      auto* pseudo = To<ViewTransitionPseudoElementBase>(this);
-      auto* parent_pseudo = To<ViewTransitionPseudoElementBase>(parent);
-      const Vector<AtomicString>& names =
-          parent_pseudo->GetContainedViewTransitionNames();
-      wtf_size_t found_index = names.Find(pseudo->view_transition_name());
-      CHECK_NE(found_index, kNotFound);
-      if (found_index == names.size() - 1) {
-        return nullptr;
-      }
-      return parent->GetPseudoElement(kPseudoIdViewTransitionGroup,
-                                      names[found_index + 1]);
-    }
-    case kPseudoIdViewTransitionImagePair:
-      CHECK_EQ(parent->GetPseudoId(), kPseudoIdViewTransitionGroup);
-      return parent->GetPseudoElement(
-          kPseudoIdViewTransitionGroupChildren,
-          To<ViewTransitionPseudoElementBase>(this)->view_transition_name());
-    case kPseudoIdViewTransitionGroupChildren:
-    case kPseudoIdViewTransitionNew:
-      return nullptr;
-    default:
-      NOTREACHED();
-  }
+  NOTREACHED();
 }
 
 Node* Node::PseudoAwareFirstChild() const {
   if (const auto* current_element = DynamicTo<Element>(this)) {
-    // See comments in PseudoAwarePreviousSibling for details on view-transition
-    // pseudo traversal.
-    if (GetPseudoId() == kPseudoIdViewTransition) {
-      const Vector<AtomicString>& names =
-          To<ViewTransitionPseudoElementBase>(this)->GetViewTransitionNames();
-      if (names.empty()) {
-        return nullptr;
-      }
-      return current_element->GetPseudoElement(kPseudoIdViewTransitionGroup,
-                                               names.front());
-    }
-    if (GetPseudoId() == kPseudoIdViewTransitionGroup) {
-      return current_element->GetPseudoElement(
-          kPseudoIdViewTransitionImagePair,
-          To<ViewTransitionPseudoElementBase>(this)->view_transition_name());
-    }
-    if (GetPseudoId() == kPseudoIdViewTransitionImagePair) {
-      const AtomicString& name =
-          To<ViewTransitionPseudoElementBase>(this)->view_transition_name();
-      if (Node* first = current_element->GetPseudoElement(
-              kPseudoIdViewTransitionOld, name)) {
-        return first;
-      }
-
-      return current_element->GetPseudoElement(kPseudoIdViewTransitionNew,
-                                               name);
-    }
-    if (GetPseudoId() == kPseudoIdViewTransitionGroupChildren) {
-      const Vector<AtomicString>& nested_names =
-          To<ViewTransitionPseudoElementBase>(current_element)
-              ->GetContainedViewTransitionNames();
-      CHECK(!nested_names.empty());
-      return current_element->GetPseudoElement(kPseudoIdViewTransitionGroup,
-                                               nested_names.front());
-    }
-
     for (PseudoId pseudo_id : kElementChildPseudoOrder) {
       switch (pseudo_id) {
         case kPseudoIdColumn:
@@ -618,43 +517,6 @@ Node* Node::PseudoAwareFirstChild() const {
 
 Node* Node::PseudoAwareLastChild() const {
   if (const auto* current_element = DynamicTo<Element>(this)) {
-    // See comments in PseudoAwarePreviousSibling for details on view-transition
-    // pseudo traversal.
-    if (GetPseudoId() == kPseudoIdViewTransition) {
-      const Vector<AtomicString>& names =
-          To<ViewTransitionPseudoElementBase>(this)
-              ->GetContainedViewTransitionNames();
-      if (names.empty()) {
-        return nullptr;
-      }
-      return current_element->GetPseudoElement(kPseudoIdViewTransitionGroup,
-                                               names.back());
-    }
-    if (GetPseudoId() == kPseudoIdViewTransitionGroup) {
-      if (!To<ViewTransitionPseudoElementBase>(current_element)
-               ->GetContainedViewTransitionNames()
-               .empty()) {
-        return current_element->GetPseudoElement(
-            kPseudoIdViewTransitionGroupChildren,
-            To<ViewTransitionPseudoElementBase>(this)->view_transition_name());
-      } else {
-        return current_element->GetPseudoElement(
-            kPseudoIdViewTransitionImagePair,
-            To<ViewTransitionPseudoElementBase>(this)->view_transition_name());
-      }
-    }
-    if (GetPseudoId() == kPseudoIdViewTransitionImagePair) {
-      const AtomicString& name =
-          To<ViewTransitionPseudoElementBase>(this)->view_transition_name();
-      if (Node* last = current_element->GetPseudoElement(
-              kPseudoIdViewTransitionNew, name)) {
-        return last;
-      }
-
-      return current_element->GetPseudoElement(kPseudoIdViewTransitionOld,
-                                               name);
-    }
-
     for (PseudoId pseudo_id : base::Reversed(kElementChildPseudoOrder)) {
       switch (pseudo_id) {
         case kPseudoIdColumn:

@@ -32,7 +32,6 @@ import("//third_party/blink/renderer/core/fullscreen/build.gni")
 import("//third_party/blink/renderer/core/geometry/build.gni")
 import("//third_party/blink/renderer/core/highlight/build.gni")
 import("//third_party/blink/renderer/core/html/build.gni")
-import("//third_party/blink/renderer/core/image_replacement/build.gni")
 import("//third_party/blink/renderer/core/input/build.gni")
 import("//third_party/blink/renderer/core/intersection_observer/build.gni")
 import("//third_party/blink/renderer/core/layout/build.gni")
@@ -57,7 +56,6 @@ import("//third_party/blink/renderer/core/timing/build.gni")
 import("//third_party/blink/renderer/core/trustedtypes/build.gni")
 import("//third_party/blink/renderer/core/typed_arrays/build.gni")
 import("//third_party/blink/renderer/core/url/build.gni")
-import("//third_party/blink/renderer/core/view_transition/build.gni")
 import("//third_party/blink/renderer/core/xml/build.gni")
 import("//third_party/blink/renderer/platform/blink_fuzzer_test.gni")
 import("//third_party/blink/renderer/platform/platform_generated.gni")
@@ -290,8 +288,6 @@ component("core") {
   sources += rebase_path(blink_core_sources_clipboard, "", "clipboard")
   sources += rebase_path(blink_core_sources_css, "", "css")
   sources += rebase_path(blink_core_sources_display_lock, "", "display_lock")
-  sources +=
-      rebase_path(blink_core_sources_view_transition, "", "view_transition")
   sources += rebase_path(blink_core_sources_dom, "", "dom")
   sources += rebase_path(blink_core_sources_editing, "", "editing")
   sources += rebase_path(blink_core_sources_events, "", "events")
@@ -308,8 +304,6 @@ component("core") {
   sources += rebase_path(blink_core_sources_geometry, "", "geometry")
   sources += rebase_path(blink_core_sources_highlight, "", "highlight")
   sources += rebase_path(blink_core_sources_html, "", "html")
-  sources +=
-      rebase_path(blink_core_sources_image_replacement, "", "image_replacement")
   sources += rebase_path(blink_core_sources_input, "", "input")
   sources += rebase_path(blink_core_sources_intersection_observer,
                          "",
@@ -1263,8 +1257,6 @@ source_set("unit_tests") {
   sources += rebase_path(blink_core_tests_clipboard, "", "clipboard")
   sources += rebase_path(blink_core_tests_css, "", "css")
   sources += rebase_path(blink_core_tests_display_lock, "", "display_lock")
-  sources +=
-      rebase_path(blink_core_tests_view_transition, "", "view_transition")
   sources += rebase_path(blink_core_tests_dom, "", "dom")
   sources += rebase_path(blink_core_tests_editing, "", "editing")
   sources += rebase_path(blink_core_tests_events, "", "events")

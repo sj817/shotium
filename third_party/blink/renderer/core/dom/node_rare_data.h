@@ -9,15 +9,8 @@
 #include "third_party/blink/renderer/core/dom/focusgroup_flags.h"
 #include "third_party/blink/renderer/core/dom/node_rare_data_field.h"
 #include "third_party/blink/renderer/core/dom/pseudo_element_data.h"
-#include "third_party/blink/renderer/platform/graphics/paint/tracked_element_data.h"
 #include "third_party/blink/renderer/platform/heap/trace_traits.h"
-#include "third_party/blink/renderer/platform/region_capture_crop_id.h"
-#include "third_party/blink/renderer/platform/restriction_target_id.h"
 #include "third_party/blink/renderer/platform/wtf/text/atomic_string.h"
-
-namespace viz {
-enum class TrackedElementFeature;
-}  // namespace viz
 
 namespace gfx {
 class Rect;
@@ -288,32 +281,6 @@ class CORE_EXPORT NodeRareData final : public GarbageCollected<NodeRareData> {
   OutOfFlowData* GetOutOfFlowData() const;
   void ClearOutOfFlowData();
 
-  // Returns the crop-ID if one was set, or nullptr otherwise.
-  const RegionCaptureCropId* GetRegionCaptureCropId() const;
-  // Sets a crop-ID on the item. Must be called at most once. Cannot be used
-  // to unset a previously set crop-ID.
-  [[nodiscard]] NodeRareData* SetRegionCaptureCropId(
-      std::unique_ptr<RegionCaptureCropId> crop_id);
-
-  const TrackedElementSubRect* GetTrackedElementSubRect(
-      viz::TrackedElementFeature feature) const;
-  [[nodiscard]] NodeRareData* SetTrackedElementSubRect(
-      viz::TrackedElementFeature feature,
-      const TrackedElementSubRect& rect);
-  void ClearTrackedElementSubRect(viz::TrackedElementFeature feature);
-
-  const TrackedElementSubRects* GetTrackedElementSubRects() const;
-
-  // Returns the ID backing a RestrictionTarget if one was set on the Element,
-  // or nullptr otherwise.
-  const RestrictionTargetId* GetRestrictionTargetId() const;
-  // Returns the ID backing a RestrictionTarget if one was set on the Element,
-  // or nullptr otherwise.
-  // Sets an ID backing a RestrictionTarget associated with the Element.
-  // Must be called at most once. Cannot be used to unset a previously set IDs.
-  [[nodiscard]] NodeRareData* SetRestrictionTargetId(
-      std::unique_ptr<RestrictionTargetId> id);
-
   using ResizeObserverDataMap =
       HeapHashMap<Member<ResizeObserver>, Member<ResizeObservation>>;
   ResizeObserverDataMap* ResizeObserverData() const;
@@ -565,7 +532,6 @@ class CORE_EXPORT NodeRareData final : public GarbageCollected<NodeRareData> {
     kElementInternals = 12,
     kDisplayLockContext = 13,
     kContainerQueryData = 14,
-    kRegionCaptureCropId = 15,
     kResizeObserverData = 16,
     kCustomElementDefinition = 17,
     kPopoverData = 18,
@@ -577,7 +543,6 @@ class CORE_EXPORT NodeRareData final : public GarbageCollected<NodeRareData> {
     kMayBeImplicitAnchor = 24,
     kLastRememberedBlockSize = 25,
     kLastRememberedInlineSize = 26,
-    kRestrictionTargetId = 27,
     kStyleScopeData = 28,
     kOutOfFlowData = 29,
     kInvokerData = 30,
@@ -596,7 +561,6 @@ class CORE_EXPORT NodeRareData final : public GarbageCollected<NodeRareData> {
     kOverscrollAreaTracker = 40,
     kAltContentData = 41,
     kOverscrollContainer = 42,
-    kTrackedElementRect = 43,
     kNodeLists = 44,
     kMutationObserverData = 45,
     kFlatTreeNodeData = 46,
@@ -605,7 +569,6 @@ class CORE_EXPORT NodeRareData final : public GarbageCollected<NodeRareData> {
     kDOMNodeId = 49,
     kFocusgroupTokenList = 50,
     kUnboundedEventTask = 52,
-    kCanvasTransform = 53,
     kNumFields = 54,
   };
 

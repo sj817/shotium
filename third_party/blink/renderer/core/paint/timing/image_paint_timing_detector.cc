@@ -8,8 +8,6 @@
 
 #include "base/check_deref.h"
 #include "base/feature_list.h"
-#include "cc/layers/layer.h"
-#include "cc/trees/layer_tree_host.h"
 #include "third_party/blink/public/common/features.h"
 #include "third_party/blink/renderer/core/dom/dom_node_ids.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"

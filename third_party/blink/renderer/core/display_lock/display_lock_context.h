@@ -279,10 +279,6 @@ class CORE_EXPORT DisplayLockContext final
 
   void ScheduleTopLayerCheck();
 
-  // State control for view transition element render affecting state.
-  void ResetDescendantIsViewTransitionElement();
-  void SetDescendantIsViewTransitionElement();
-
   void SetAffectedByAnchorPositioning(bool);
 
   // Mark this display lock as needing to recompute whether it has anchors
@@ -410,10 +406,6 @@ class CORE_EXPORT DisplayLockContext final
   // Determines if the subtree has a top layer element. This is a walk from each
   // top layer node up the ancestor chain looking for `element_`.
   void DetermineIfSubtreeHasTopLayerElement();
-
-  // Determines if there are view transition elements in the subtree of this
-  // element.
-  void DetermineIfDescendantIsViewTransitionElement();
 
   // Detaching the layout tree from the top layers nested under this lock.
   void DetachDescendantTopLayerElements();
@@ -568,7 +560,6 @@ class CORE_EXPORT DisplayLockContext final
     kAutoStateUnlockedUntilLifecycle,
     kAutoUnlockedForPrint,
     kSubtreeHasTopLayerElement,
-    kDescendantIsViewTransitionElement,
     kDescendantIsAnchorTarget,
     kHasScrollerWithScrollMarkerGroup,
     kNumRenderAffectingStates

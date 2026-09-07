@@ -17,8 +17,6 @@
 #include "third_party/blink/renderer/core/page/page.h"
 #include "third_party/blink/renderer/core/paint/fragment_data_iterator.h"
 #include "third_party/blink/renderer/core/paint/object_paint_properties.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition_utils.h"
 
 #if DCHECK_IS_ON()
 
@@ -166,8 +164,6 @@ void UpdateDebugNames(const LayoutObject& object,
   SetDebugName(properties.StickyTranslation(), "StickyTranslation", object);
   SetDebugName(properties.AnchorPositionScrollTranslation(),
                "AnchorPositionScrollTranslation", object);
-  SetDebugName(properties.ElementCanvasTransform(), "ElementCanvasTransform",
-               object);
   SetDebugName(properties.Translate(), "Translate", object);
   SetDebugName(properties.Rotate(), "Rotate", object);
   SetDebugName(properties.Scale(), "Scale", object);
@@ -204,16 +200,9 @@ void UpdateDebugNames(const LayoutObject& object,
                object);
   SetDebugName(properties.HorizontalScrollbarEffect(),
                "HorizontalScrollbarEffect", object);
-  SetDebugName(properties.ScrollCornerEffect(), "ScrollCornerEffect", object);
   SetDebugName(properties.Mask(), "Mask", object);
   SetDebugName(properties.ClipPathMask(), "ClipPathMask", object);
-  SetDebugName(properties.ElementCaptureEffect(), "ElementCaptureEffect",
-               object);
   SetDebugName(properties.EffectIsolationNode(), "EffectIsolationNode", object);
-  SetDebugName(properties.ViewTransitionEffect(), "ViewTransitionEffect",
-               object);
-  SetDebugName(properties.ViewTransitionScopeRootEffect(),
-               "ViewTransitionScopeRootEffect", object);
 
   SetDebugName(properties.Scroll(), "Scroll", object);
 }

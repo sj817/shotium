@@ -16,7 +16,6 @@
 #include "third_party/blink/renderer/core/layout/physical_fragment.h"
 #include "third_party/blink/renderer/core/layout/transform_utils.h"
 #include "third_party/blink/renderer/core/style/style_overflow_clip_margin.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition_transition_element.h"
 #include "third_party/blink/renderer/platform/geometry/layout_unit.h"
 #include "third_party/blink/renderer/platform/runtime_enabled_features.h"
 
@@ -241,15 +240,7 @@ PhysicalRect ScrollableOverflowCalculator::ScrollableOverflowForPropagation(
     const PhysicalBoxFragment& child_fragment) {
   // Don't propagate any overflow if:
   //  - We are hidden for painting purposes (empty-cells within a table).
-  //  - We are a ::view-transition pseudo. They are positioned as a child of
-  //    its owning element, but not subject to that elements overflow clip or
-  //    scroll translation. See:
-  //    https://drafts.csswg.org/css-view-transitions-2/#scoped-view-transition-layout
-  //    Note that both the scope and its container will ignore overflow from
-  //    this pseudo; this should be correct as a consequence of the fact that
-  //    the scope is treated as having contain:layout.
-  if (child_fragment.IsHiddenForPaint() ||
-      IsA<ViewTransitionTransitionElement>(child_fragment.GetNode())) {
+  if (child_fragment.IsHiddenForPaint()) {
     return {};
   }
 

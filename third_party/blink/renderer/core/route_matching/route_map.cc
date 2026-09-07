@@ -10,7 +10,6 @@
 #include "third_party/blink/renderer/core/frame/local_dom_window.h"
 #include "third_party/blink/renderer/core/route_matching/navigation_state.h"
 #include "third_party/blink/renderer/core/url_pattern/url_pattern.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition_utils.h"
 #include "third_party/blink/renderer/platform/runtime_enabled_features.h"
 #include "third_party/blink/renderer/platform/weborigin/kurl.h"
 
@@ -95,7 +94,7 @@ void RouteMap::SetNavigationStarted() {
   auto* navigation_state = NavigationState::Get(&GetDocument());
   DCHECK(navigation_state);
 
-  // Need to update active style right away, or view transitions might glitch.
+  // Navigation queries must see the updated state before the next style pass.
   StyleEngine& style_engine = GetDocument().GetStyleEngine();
   style_engine.SetNeedsActiveStyleUpdate(GetDocument());
   style_engine.UpdateActiveStyle();
@@ -112,33 +111,8 @@ bool RouteMap::AttemptSetNavigationFinished() {
   if (!NavigationState::Get(&GetDocument())) {
     return true;
   }
-  if (ViewTransitionUtils::GetTransition(GetDocument())) {
-    // Even if the document has finished loading, the navigation needs to remain
-    // active, since there are ongoing view transitions. When view transitions
-    // are done, this function will be called again.
-    return false;
-  }
   NotifyStyleEngineIfNeeded();
   return true;
-}
-
-void RouteMap::OnPreviewStart() {
-  auto* navigation_state = NavigationState::Get(&GetDocument());
-  CHECK(navigation_state);
-  CHECK(!navigation_state->IsInPreview());
-  CHECK(RuntimeEnabledFeatures::TwoPhaseViewTransitionEnabled());
-  navigation_state->SetIsInPreview(true);
-  NotifyStyleEngineIfNeeded();
-}
-
-void RouteMap::OnPreviewFinished() {
-  auto* navigation_state = NavigationState::Get(&GetDocument());
-  if (!navigation_state || !navigation_state->IsInPreview()) {
-    return;
-  }
-  CHECK(RuntimeEnabledFeatures::TwoPhaseViewTransitionEnabled());
-  navigation_state->SetIsInPreview(false);
-  NotifyStyleEngineIfNeeded();
 }
 
 bool RouteMap::MatchesCurrentNavigation(NavigationPreposition preposition,

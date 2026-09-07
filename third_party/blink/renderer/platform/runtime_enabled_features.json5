@@ -380,18 +380,6 @@
       name: "AIPageContentSkipUnclickableFixedOverlays",
       status: "stable",
     },
-    // When enabled, iframe element coordinates will be tracked using the
-    // Element::SetTrackedElementSubRect() method.
-    {
-      name: "AIPageContentTrackedElementsIframe",
-      status: "stable"
-    },
-    // When enabled, native or heuristics password element coordinates will be
-    // tracked using the Element::SetTrackedElementSubRect() method.
-    {
-      name: "AIPageContentTrackedElementsPassword",
-      status: "test"
-    },
     // Clamp AIPageContent visible bounding boxes to the local-root viewport
     // after visual-viewport mapping to normalize viewport-relative geometry.
     {
@@ -998,13 +986,6 @@
       origin_trial_feature_name: "Canvas2dMesh",
       origin_trial_allows_third_party: true,
       status: "test",
-    },
-    {
-      // https://github.com/WICG/html-in-canvas/blob/main/README.md
-      // Note the API name has changed to `drawElementImage`.
-      name: "CanvasDrawElement",
-      origin_trial_feature_name: "HTMLInCanvas",
-      status: "experimental",
     },
     {
       name: "CanvasFloatingPoint",
@@ -2331,11 +2312,6 @@
       status: { "Android": "stable" },
     },
     {
-      // https://chromestatus.com/feature/5067126381215744
-      name: "DocumentActiveViewTransition",
-      status: "stable",
-    },
-    {
       name: "DocumentCookie",
     },
     {
@@ -2503,15 +2479,6 @@
       // axis.
       name: "ElasticOverscrollUseEventDeltaForAxisSelection",
       status: "stable",
-    },
-    {
-      name: "ElementCanvasTransform",
-      status: "experimental",
-    },
-    {
-      public: true,
-      name: "ElementCapture",
-      status: {"Android": "experimental", "iOS": "", "default": "stable"},
     },
     {
       // ElementInternals.behaviors allows web authors to attach
@@ -4457,10 +4424,6 @@
       status: "experimental",
     },
     {
-      name: "PageSwapEvent",
-      status: "stable",
-    },
-    {
       name: "PaintCaretAfterInnerEditorPaint",
       status: "stable",
     },
@@ -4881,11 +4844,6 @@
       status: "stable",
     },
     {
-      public: true,
-      name: "RegionCapture",
-      status: {"Android": "experimental", "iOS": "", "default": "stable"},
-    },
-    {
       name: "RelatedWebsitePartitionAPI",
       base_feature: "none",
 
@@ -5154,10 +5112,6 @@
       // Spec: https://wicg.github.io/sanitizer-api/
       // Tracking bug: crbug.com/356601280
       name: "SanitizerAPI",
-      status: "stable",
-    },
-    {
-      name: "ScopedViewTransitionSizeContainment",
       status: "stable",
     },
     {
@@ -5473,9 +5427,6 @@
       status: "experimental",
     },
     {
-      name: "SerializeViewTransitionStateInSPA",
-    },
-    {
       name: "SerialPortConnected",
       status: {"Android": "", "default": "experimental"},
       base_feature: "none",
@@ -5637,11 +5588,6 @@
     {
       // See crbug.com/446113738.
       name: "SkipUnselectableElementsInParagraphBoundary",
-      status: "stable",
-    },
-    {
-      // See crbug.com/502616235.
-      name: "SkipViewTransitionSnapshotResumeRendering",
       status: "stable",
     },
     {
@@ -6339,10 +6285,6 @@
       status: "experimental",
     },
     {
-      name: "UAImageReplacementAPI",
-      origin_trial_feature_name: "UAImageReplacementAPI",
-    },
-    {
       // The Unbounded Element API. See crbug.com/508672616.
       // Note that this flag is enabled by default, to enable WebUI and other
       // privileged UI to depend on this feature. The flag is here as a kill
@@ -6528,34 +6470,6 @@
     },
     {
       name: "ViewportSegments",
-      status: "stable",
-    },
-    {
-      name: "ViewTransitionAsyncFinished",
-      status: "stable",
-    },
-    {
-      name: "ViewTransitionDelayUnpauseOnTeardown",
-      status: "stable",
-    },
-    {
-      name: "ViewTransitionDOMCallbackAfterCommit",
-      status: "stable",
-    },
-    {
-      name: "ViewTransitionHoistBackdropFilterEffect",
-      status: "stable",
-    },
-    {
-      name: "ViewTransitionLongCallbackTimeoutForTesting",
-      status: "test",
-    },
-    {
-      name: "ViewTransitionUpdateLifecycleBeforeReady",
-      status: "stable",
-    },
-    {
-      name: "ViewTransitionWaitUntil",
       status: "stable",
     },
     {

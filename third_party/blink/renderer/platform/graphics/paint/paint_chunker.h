@@ -58,7 +58,7 @@ class PLATFORM_EXPORT PaintChunker final {
   // Sets the forcing new chunk status on. When the status is on, even the
   // properties haven't change, we'll force a new paint chunk for the next
   // display item and then automatically resets the status. Some special display
-  // item (e.g. ForeignLayerDisplayItem) also automatically sets the status on
+  // item (e.g. ScrollbarDisplayItem) also automatically sets the status on
   // before and after the item to force a dedicated paint chunk.
   void SetWillForceNewChunk() {
     will_force_new_chunk_ = true;
@@ -89,21 +89,6 @@ class PLATFORM_EXPORT PaintChunker final {
       const gfx::Rect& scroll_hit_test_rect,
       cc::HitTestOpaqueness,
       const gfx::Rect& scrolling_contents_cull_rect);
-
-  // The id will be used when we need to create a new current chunk.
-  // Otherwise it's ignored. Returns true if a new chunk is added.
-  bool AddRegionCaptureDataToCurrentChunk(const PaintChunk::Id& id,
-                                          const DisplayItemClient& client,
-                                          const RegionCaptureCropId& crop_id,
-                                          const gfx::Rect& bounds);
-
-  // The id will be used when we need to create a new current chunk.
-  // Otherwise it's ignored. Returns true if a new chunk is added.
-  bool AddTrackedElementDataToCurrentChunk(
-      const PaintChunk::Id& id,
-      const DisplayItemClient& client,
-      const gfx::Rect& element_paint_rect,
-      const TrackedElementSubRects& tracked_element_sub_rects);
 
   // The id will be used when we need to create a new current chunk.
   // Otherwise it's ignored. Returns true if a new chunk is added.

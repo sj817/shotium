@@ -55,7 +55,6 @@ class StyleRuleFontFeatureValues;
 class StyleRuleFontPaletteValues;
 class StyleRuleKeyframes;
 class StyleRulePositionTry;
-class StyleRuleViewTransition;
 struct MixinMap;
 
 using AddRuleFlags = unsigned;
@@ -473,9 +472,6 @@ class CORE_EXPORT RuleSet final : public GarbageCollected<RuleSet> {
   base::span<const RuleData> PartPseudoRules() const {
     return part_pseudo_rules_;
   }
-  base::span<const RuleData> ActiveViewTransitionRules() const {
-    return active_view_transition_rules_;
-  }
   base::span<const RuleData> UnboundedPseudoClassRules() const {
     return unbounded_pseudo_class_rules_;
   }
@@ -503,10 +499,6 @@ class CORE_EXPORT RuleSet final : public GarbageCollected<RuleSet> {
   const HeapVector<CascadeLayered<StyleRuleFontFeatureValues>>&
   FontFeatureValuesRules() const {
     return font_feature_values_rules_;
-  }
-  const HeapVector<CascadeLayered<StyleRuleViewTransition>>&
-  ViewTransitionRules() const {
-    return view_transition_rules_;
   }
   const HeapVector<CascadeLayered<StyleRulePositionTry>>& PositionTryRules()
       const {
@@ -649,7 +641,6 @@ class CORE_EXPORT RuleSet final : public GarbageCollected<RuleSet> {
                                 const CascadeLayer*);
   void AddPositionTryRule(StyleRulePositionTry*, const CascadeLayer*);
   void AddFunctionRule(StyleRuleFunction*, const CascadeLayer*);
-  void AddViewTransitionRule(StyleRuleViewTransition*, const CascadeLayer*);
 
   bool MatchMediaForAddRules(const MediaQueryEvaluator& evaluator,
                              const MediaQuerySet* media_queries);
@@ -770,7 +761,6 @@ class CORE_EXPORT RuleSet final : public GarbageCollected<RuleSet> {
   HeapVector<RuleData> slotted_pseudo_element_rules_;
   // Separate bucket for :active-view-transition rules, to support a default
   // view-transition-name in user-agent style.
-  HeapVector<RuleData> active_view_transition_rules_;
   HeapVector<RuleData> unbounded_pseudo_class_rules_;
   HeapVector<RuleData> root_element_rules_;
   RuleFeatureSet features_;
@@ -779,7 +769,6 @@ class CORE_EXPORT RuleSet final : public GarbageCollected<RuleSet> {
   HeapVector<Member<StyleRuleFontPaletteValues>> font_palette_values_rules_;
   HeapVector<CascadeLayered<StyleRuleFontFeatureValues>>
       font_feature_values_rules_;
-  HeapVector<CascadeLayered<StyleRuleViewTransition>> view_transition_rules_;
   HeapVector<CascadeLayered<StyleRuleKeyframes>> keyframes_rules_;
   HeapVector<CascadeLayered<StyleRuleProperty>> property_rules_;
   HeapVector<CascadeLayered<StyleRuleCounterStyle>> counter_style_rules_;

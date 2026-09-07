@@ -132,7 +132,7 @@ class CORE_EXPORT BlockNode : public LayoutInputNode {
       InlineNode* first_child_out = nullptr) const;
 
   bool IsInlineLevel() const;
-  bool IsInTopOrViewTransitionLayer() const;
+  bool IsInTopLayer() const;
 
   bool IsMulticolContainer() const { return box_->IsMulticolContainer(); }
 

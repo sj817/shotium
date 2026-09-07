@@ -13,7 +13,6 @@
 
 namespace blink {
 
-class ViewTransitionSupplement;
 class FragmentData;
 class LayoutObject;
 class PaintLayer;
@@ -84,7 +83,6 @@ class CORE_EXPORT CullRectUpdater {
 
   PaintLayer& starting_layer_;
   PropertyTreeState root_state_{PropertyTreeState::kUninitialized};
-  ViewTransitionSupplement* view_transition_supplement_;
   float expansion_ratio_;
 };
 

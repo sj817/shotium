@@ -38,11 +38,6 @@ class ContentData;
 
 class CORE_EXPORT PseudoElement : public Element {
  public:
-  // |pseudo_argument| is used to uniquely identify a pseudo-element
-  // from a set of pseudo-elements which share the same |pseudo_id|. The current
-  // usage of this ID is limited to pseudo-elements generated for a
-  // ViewTransition. See
-  // third_party/blink/renderer/core/view_transition/README.md
   static PseudoElement* Create(
       Element* parent,
       PseudoId pseudo_id,

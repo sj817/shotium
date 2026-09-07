@@ -16,8 +16,6 @@
 #include "third_party/blink/renderer/core/intersection_observer/intersection_observer_entry.h"
 #include "third_party/blink/renderer/core/layout/layout_block.h"
 #include "third_party/blink/renderer/core/style/computed_style.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition_utils.h"
 
 // Used to hold the console-warning strings and rate-limit for
 // DisplayLockDocumentState::IssueForcedRenderWarning(), which warned devs
@@ -258,35 +256,6 @@ bool DisplayLockDocumentState::MarkAncestorContextsHaveTopLayerElement(
     }
   }
   return had_locked_ancestor;
-}
-
-void DisplayLockDocumentState::NotifyViewTransitionPseudoTreeChanged() {
-  // Reset the view transition element flag.
-  // TODO(vmpstr): This should be optimized to keep track of elements that
-  // actually have this flag set.
-  for (auto context : display_lock_contexts_)
-    context->ResetDescendantIsViewTransitionElement();
-
-  // Process the view transition elements to check if their ancestors are
-  // locks that need to be made relevant.
-  UpdateViewTransitionElementAncestorLocks();
-}
-
-void DisplayLockDocumentState::UpdateViewTransitionElementAncestorLocks() {
-  auto* transition = ViewTransitionUtils::GetTransition(*document_);
-  if (!transition)
-    return;
-
-  const auto& transitioning_elements = transition->GetTransitioningElements();
-  for (auto element : transitioning_elements) {
-    auto* ancestor = element.Get();
-    // When the element which has c-v:auto is itself a view transition element,
-    // we keep it locked. So start with the parent.
-    while ((ancestor = FlatTreeTraversal::ParentElement(*ancestor))) {
-      if (auto* context = ancestor->GetDisplayLockContext())
-        context->SetDescendantIsViewTransitionElement();
-    }
-  }
 }
 
 void DisplayLockDocumentState::NotifySelectionRemoved() {

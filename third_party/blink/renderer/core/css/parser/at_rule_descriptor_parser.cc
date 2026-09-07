@@ -292,8 +292,6 @@ CSSValue* ConsumeDescriptor(StyleRule::RuleType rule_type,
       return Parser::ParseAtPropertyDescriptor(id, stream, context);
     case StyleRule::kCounterStyle:
       return Parser::ParseAtCounterStyleDescriptor(id, stream, context);
-    case StyleRule::kViewTransition:
-      return Parser::ParseAtViewTransitionDescriptor(id, stream, context);
     case StyleRule::kFunction:
     case StyleRule::kMixin:
       return Parser::ParseAtFunctionOrMixinDescriptor(rule_type, id, stream,
@@ -502,71 +500,6 @@ CSSValue* AtRuleDescriptorParser::ParseAtPropertyDescriptor(
 
   if (!parsed_value || !stream.AtEnd()) {
     stream.SkipUntilPeekedTypeIs();  // For the inspector.
-    return nullptr;
-  }
-
-  return parsed_value;
-}
-
-CSSValue* AtRuleDescriptorParser::ParseAtViewTransitionDescriptor(
-    AtRuleDescriptorID id,
-    CSSParserTokenStream& stream,
-    const CSSParserContext& context) {
-  CSSValue* parsed_value = nullptr;
-  switch (id) {
-    case AtRuleDescriptorID::Navigation:
-      stream.ConsumeWhitespace();
-      if (RuntimeEnabledFeatures::TwoPhaseViewTransitionEnabled()) {
-        parsed_value = css_parsing_utils::ConsumeIdent<
-            CSSValueID::kAuto, CSSValueID::kNone, CSSValueID::kPreview>(stream);
-      } else {
-        parsed_value =
-            css_parsing_utils::ConsumeIdent<CSSValueID::kAuto,
-                                            CSSValueID::kNone>(stream);
-      }
-      break;
-    case AtRuleDescriptorID::Types: {
-      stream.ConsumeWhitespace();
-      if (CSSIdentifierValue* none =
-              css_parsing_utils::ConsumeIdent<CSSValueID::kNone>(stream)) {
-        parsed_value = none;
-        break;
-      }
-
-      CSSValueList* types = CSSValueList::CreateSpaceSeparated();
-      while (!stream.AtEnd()) {
-        stream.ConsumeWhitespace();
-        if (stream.AtEnd()) {
-          break;
-        }
-        if (stream.Peek().GetType() != kIdentToken) {
-          return nullptr;
-        }
-        if (stream.Peek().Id() == CSSValueID::kNone) {
-          return nullptr;
-        }
-        CSSParserLocalContext local_context =
-            CSSParserLocalContext::CreateWithoutPropertyForAtRules();
-        CSSCustomIdentValue* ident = css_parsing_utils::ConsumeCustomIdent(
-            stream, context, local_context);
-        if (!ident || ident->Value().starts_with("-ua-")) {
-          return nullptr;
-        }
-        types->Append(*ident);
-      }
-
-      if (!types->length()) {
-        return nullptr;
-      }
-
-      parsed_value = types;
-      break;
-    }
-    default:
-      break;
-  }
-
-  if (!parsed_value || !stream.AtEnd()) {
     return nullptr;
   }
 

@@ -6,7 +6,6 @@
 
 #include "base/trace_event/traced_value.h"
 #include "cc/input/scrollbar.h"
-#include "cc/layers/scrollbar_layer_base.h"
 #include "third_party/blink/renderer/platform/graphics/graphics_context.h"
 #include "third_party/blink/renderer/platform/graphics/paint/drawing_recorder.h"
 #include "third_party/blink/renderer/platform/graphics/paint/paint_controller.h"
@@ -72,39 +71,6 @@ PaintRecord ScrollbarDisplayItem::Paint() const {
 
 bool ScrollbarDisplayItem::NeedsUpdateDisplay() const {
   return data_->scrollbar_->NeedsUpdateDisplay();
-}
-
-scoped_refptr<cc::ScrollbarLayerBase> ScrollbarDisplayItem::CreateOrReuseLayer(
-    cc::ScrollbarLayerBase* existing_layer,
-    gfx::Vector2dF offset_of_decomposited_transforms) const {
-  DCHECK(!IsTombstone());
-  // This function is called when the scrollbar is composited. We don't need
-  // record_ which is for non-composited scrollbars.
-  data_->record_ = PaintRecord();
-
-  auto* scrollbar = data_->scrollbar_.get();
-  auto layer = cc::ScrollbarLayerBase::CreateOrReuse(scrollbar, existing_layer);
-  layer->SetIsDrawable(true);
-  layer->SetContentsOpaque(IsOpaque());
-  layer->SetHitTestOpaqueness(data_->hit_test_opaqueness_);
-  layer->SetElementId(data_->element_id_);
-  layer->SetScrollElementId(
-      data_->scroll_translation_
-          ? data_->scroll_translation_->ScrollNode()->GetCompositorElementId()
-          : CompositorElementId());
-  layer->SetOffsetToTransformParent(
-      gfx::Vector2dF(VisualRect().OffsetFromOrigin()) +
-      offset_of_decomposited_transforms);
-  layer->SetBounds(VisualRect().size());
-
-  // TODO(crbug.com/1414885): This may be duplicate with
-  // ScrollableArea::ScrollableArea::SetScrollbarNeedsPaintInvalidation()
-  // which calls PaintArtifactCompositor::SetScrollbarNeedsDisplay().
-  if (NeedsUpdateDisplay()) {
-    layer->SetNeedsDisplay();
-    scrollbar->ClearNeedsUpdateDisplay();
-  }
-  return layer;
 }
 
 bool ScrollbarDisplayItem::IsOpaque() const {

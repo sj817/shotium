@@ -14,7 +14,6 @@
 #include "third_party/blink/renderer/platform/graphics/paint/ignore_paint_timing_scope.h"
 #include "third_party/blink/renderer/platform/graphics/paint/paint_chunk_subset.h"
 #include "third_party/blink/renderer/platform/graphics/paint/paint_under_invalidation_checker.h"
-#include "third_party/blink/renderer/platform/graphics/paint/tracked_element_data.h"
 #include "third_party/blink/renderer/platform/instrumentation/tracing/trace_event.h"
 #include "third_party/blink/renderer/platform/runtime_enabled_features.h"
 #include "third_party/blink/renderer/platform/wtf/text/string_builder_stream.h"
@@ -169,34 +168,6 @@ void PaintController::RecordHitTestData(const DisplayItemClient& client,
   ValidateNewChunkClient(client);
   if (paint_chunker_.AddHitTestDataToCurrentChunk(
           id, client, rect, touch_action, blocking_wheel, opaqueness)) {
-    CheckNewChunk();
-  }
-}
-
-void PaintController::RecordRegionCaptureData(
-    const DisplayItemClient& client,
-    const RegionCaptureCropId& crop_id,
-    const gfx::Rect& rect) {
-  DCHECK(!crop_id->is_zero());
-  PaintChunk::Id id(client.Id(), DisplayItem::kRegionCapture,
-                    current_fragment_);
-  CheckNewChunkId(id);
-  ValidateNewChunkClient(client);
-  if (paint_chunker_.AddRegionCaptureDataToCurrentChunk(id, client, crop_id,
-                                                        rect))
-    CheckNewChunk();
-}
-
-void PaintController::RecordTrackedElementData(
-    const DisplayItemClient& client,
-    const gfx::Rect& element_paint_rect,
-    const TrackedElementSubRects& tracked_element_sub_rects) {
-  PaintChunk::Id id(client.Id(), DisplayItem::kTrackedElement,
-                    current_fragment_);
-  CheckNewChunkId(id);
-  ValidateNewChunkClient(client);
-  if (paint_chunker_.AddTrackedElementDataToCurrentChunk(
-          id, client, element_paint_rect, tracked_element_sub_rects)) {
     CheckNewChunk();
   }
 }
@@ -559,9 +530,6 @@ void PaintController::ProcessNewItem(const DisplayItemClient& client,
 
 void PaintController::CheckNewChunkId(const PaintChunk::Id& id) {
 #if DCHECK_IS_ON()
-  if (DisplayItem::IsForeignLayerType(id.type))
-    return;
-
   DEFINE_STATIC_LOCAL(std::optional<PaintChunk::Id>, last_duplicated_id, ());
   DEFINE_STATIC_LOCAL(std::optional<base::debug::StackTrace>, previous_stack,
                       ());

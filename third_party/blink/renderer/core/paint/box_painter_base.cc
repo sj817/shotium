@@ -556,8 +556,7 @@ BoxPainterBase::FillLayerInfo::FillLayerInfo(
     BackgroundBleedAvoidance bleed_avoidance,
     PhysicalBoxSides sides_to_include,
     bool is_inline,
-    bool is_painting_background_in_contents_space,
-    PaintFlags paint_flags)
+    bool is_painting_background_in_contents_space)
     : image(layer.GetImage()),
       color(bg_color),
       respect_image_orientation(style.ImageOrientation()),
@@ -608,9 +607,7 @@ BoxPainterBase::FillLayerInfo::FillLayerInfo(
 
   is_printing = doc.Printing();
 
-  should_paint_image = image && image->CanRender() &&
-                       (!(paint_flags & PaintFlag::kPrivacyPreserving) ||
-                        image->IsCorsSameOrigin());
+  should_paint_image = image && image->CanRender();
   if (should_paint_image) {
     respect_image_orientation =
         image->ForceOrientationIfNecessary(respect_image_orientation);
@@ -1189,8 +1186,7 @@ void BoxPainterBase::PaintFillLayer(
 
   const FillLayerInfo fill_layer_info =
       GetFillLayerInfo(color, bg_layer, bleed_avoidance,
-                       paint_info.IsPaintingBackgroundInContentsSpace(),
-                       paint_info.GetPaintFlags());
+                       paint_info.IsPaintingBackgroundInContentsSpace());
   // If we're not actually going to paint anything, abort early.
   if (!fill_layer_info.should_paint_image &&
       !fill_layer_info.should_paint_color)
@@ -1605,12 +1601,9 @@ void BoxPainterBase::PaintBorder(
   }
 
   // border-image is not affected by border-radius.
-  if (!(info.IsPrivacyPreserving() && style.BorderImage().GetImage() &&
-        !style.BorderImage().GetImage()->IsCorsSameOrigin())) {
-    if (NinePieceImagePainter::Paint(info.context, obj, document, node, rect,
-                                     style, style.BorderImage())) {
-      return;
-    }
+  if (NinePieceImagePainter::Paint(info.context, obj, document, node, rect,
+                                   style, style.BorderImage())) {
+    return;
   }
 
   BoxBorderPainter::PaintBorder(info.context, rect, style, bleed_avoidance,
@@ -1629,12 +1622,9 @@ void BoxPainterBase::PaintMaskImages(
 
   PaintFillLayers(paint_info, Color::kTransparent, style_.MaskLayers(),
                   paint_rect, bg_paint_context);
-  if (!(paint_info.IsPrivacyPreserving() && style_.MaskBoxImage().GetImage() &&
-        !style_.MaskBoxImage().GetImage()->IsCorsSameOrigin())) {
-    NinePieceImagePainter::Paint(paint_info.context, obj, document_, node_,
-                                 paint_rect, style_, style_.MaskBoxImage(),
-                                 sides_to_include);
-  }
+  NinePieceImagePainter::Paint(paint_info.context, obj, document_, node_,
+                               paint_rect, style_, style_.MaskBoxImage(),
+                               sides_to_include);
 }
 
 bool BoxPainterBase::ShouldSkipPaintUnderInvalidationChecking(

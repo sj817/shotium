@@ -12,7 +12,6 @@
 #include "components/viz/common/quads/compositor_frame_metadata.h"
 #include "components/viz/common/quads/compositor_render_pass.h"
 #include "components/viz/common/resources/transferable_resource.h"
-#include "components/viz/common/surfaces/region_capture_bounds.h"
 #include "components/viz/common/viz_common_export.h"
 
 namespace base::trace_event {

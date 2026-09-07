@@ -82,8 +82,8 @@ PaintPropertyChangeType TransformPaintPropertyNode::State::ComputeChange(
       scroll_parent_scroll_translation !=
           other.scroll_parent_scroll_translation ||
       !base::ValuesEquivalent(sticky_constraint, other.sticky_constraint) ||
-      !base::ValuesEquivalent(anchor_position_scroll_data,
-                              other.anchor_position_scroll_data) ||
+      !base::ValuesEquivalent(anchor_scroll_snapshot,
+                              other.anchor_scroll_snapshot) ||
       visible_frame_element_id != other.visible_frame_element_id) {
     return PaintPropertyChangeType::kChangedOnlyValues;
   }

@@ -314,8 +314,6 @@ class CORE_EXPORT Node : public EventTarget {
       kPseudoIdInterestButton,
       kPseudoIdScrollMarkerGroupAfter,
       kPseudoIdSkeleton,
-      kPseudoIdViewTransition,  // layout traversals special case this when it
-                                // is a child of the document
   };
 
   const KURL& baseURI() const;

@@ -59,7 +59,6 @@
 #include "third_party/blink/renderer/core/css/style_rule_import.h"
 #include "third_party/blink/renderer/core/css/style_rule_location.h"
 #include "third_party/blink/renderer/core/css/style_rule_nested_declarations.h"
-#include "third_party/blink/renderer/core/css/style_rule_view_transition.h"
 #include "third_party/blink/renderer/core/css/style_sheet_contents.h"
 #include "third_party/blink/renderer/core/dom/document.h"
 #include "third_party/blink/renderer/core/html/shadow/shadow_element_names.h"
@@ -659,17 +658,6 @@ void RuleSet::FindBestBucketAndAdd(CSSSelector& component,
     AddToBucket(scrollbar_rules_, rule_data);
     return;
   }
-  if (values.pseudo_type == CSSSelector::kPseudoActiveViewTransition) {
-    if (bucket_coverage == BucketCoverage::kCompute) {
-      MarkAsCoveredByBucketing(component, [](const CSSSelector& selector) {
-        return selector.Match() == CSSSelector::kPseudoClass &&
-               selector.GetPseudoType() ==
-                   CSSSelector::kPseudoActiveViewTransition;
-      });
-    }
-    AddToBucket(active_view_transition_rules_, rule_data);
-    return;
-  }
   if (values.pseudo_type == CSSSelector::kPseudoUnbounded) {
     if (bucket_coverage == BucketCoverage::kCompute) {
       MarkAsCoveredByBucketing(component, [](const CSSSelector& selector) {
@@ -975,13 +963,6 @@ void RuleSet::AddFunctionRule(StyleRuleFunction* rule,
   function_rules_.push_back((CascadeLayered<StyleRuleFunction>(rule, layer)));
 }
 
-void RuleSet::AddViewTransitionRule(StyleRuleViewTransition* rule,
-                                    const CascadeLayer* layer) {
-  need_compaction_ = true;
-  view_transition_rules_.push_back(
-      CascadeLayered<StyleRuleViewTransition>(rule, layer));
-}
-
 void RuleSet::AddChildRules(StyleRule* parent_rule,
                             base::span<const Member<StyleRuleBase>> rules,
                             const MediaQueryEvaluator& medium,
@@ -1031,9 +1012,6 @@ void RuleSet::AddChildRules(StyleRule* parent_rule,
     } else if (auto* counter_style_rule =
                    DynamicTo<StyleRuleCounterStyle>(rule)) {
       AddCounterStyleRule(counter_style_rule, cascade_layer);
-    } else if (auto* view_transition_rule =
-                   DynamicTo<StyleRuleViewTransition>(rule)) {
-      AddViewTransitionRule(view_transition_rule, cascade_layer);
     } else if (auto* position_try_rule =
                    DynamicTo<StyleRulePositionTry>(rule)) {
       AddPositionTryRule(position_try_rule, cascade_layer);
@@ -1425,9 +1403,6 @@ void RuleSet::AddFilteredRulesFromOtherSet(
     AddFilteredRulesFromOtherBucket(other, other.slotted_pseudo_element_rules_,
                                     only_include,
                                     &slotted_pseudo_element_rules_);
-    AddFilteredRulesFromOtherBucket(other, other.active_view_transition_rules_,
-                                    only_include,
-                                    &active_view_transition_rules_);
     AddFilteredRulesFromOtherBucket(other, other.unbounded_pseudo_class_rules_,
                                     only_include,
                                     &unbounded_pseudo_class_rules_);
@@ -1772,7 +1747,6 @@ void RuleSet::CompactRules() {
   shadow_host_rules_.shrink_to_fit();
   part_pseudo_rules_.shrink_to_fit();
   slotted_pseudo_element_rules_.shrink_to_fit();
-  active_view_transition_rules_.shrink_to_fit();
   unbounded_pseudo_class_rules_.shrink_to_fit();
 
   page_rules_.shrink_to_fit();
@@ -1783,7 +1757,6 @@ void RuleSet::CompactRules() {
   counter_style_rules_.shrink_to_fit();
   position_try_rules_.shrink_to_fit();
   layer_intervals_.shrink_to_fit();
-  view_transition_rules_.shrink_to_fit();
   bloom_hash_backing_.shrink_to_fit();
 
 #if EXPENSIVE_DCHECKS_ARE_ON()
@@ -1849,7 +1822,6 @@ void RuleSet::AssertRuleListsSorted() const {
   DCHECK(IsRuleListSorted(universal_rules_));
   DCHECK(IsRuleListSorted(shadow_host_rules_));
   DCHECK(IsRuleListSorted(part_pseudo_rules_));
-  DCHECK(IsRuleListSorted(active_view_transition_rules_));
   DCHECK(IsRuleListSorted(unbounded_pseudo_class_rules_));
 }
 
@@ -1906,14 +1878,12 @@ void RuleSet::Trace(Visitor* visitor) const {
   visitor->Trace(shadow_host_rules_);
   visitor->Trace(part_pseudo_rules_);
   visitor->Trace(slotted_pseudo_element_rules_);
-  visitor->Trace(active_view_transition_rules_);
   visitor->Trace(unbounded_pseudo_class_rules_);
 
   visitor->Trace(page_rules_);
   visitor->Trace(font_face_rules_);
   visitor->Trace(font_palette_values_rules_);
   visitor->Trace(font_feature_values_rules_);
-  visitor->Trace(view_transition_rules_);
   visitor->Trace(keyframes_rules_);
   visitor->Trace(property_rules_);
   visitor->Trace(counter_style_rules_);

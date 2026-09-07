@@ -142,15 +142,7 @@ mojom("mojom_layer_trees") {
   sources = [
     "element_id.mojom",
     "hit_test_opaqueness.mojom",
-    "layer_selection_bound.mojom",
-    "layer_tree_debug_state.mojom",
-    "layer_type.mojom",
-    "missing_tile_reason.mojom",
     "paint_flags.mojom",
-    "render_surface_reason.mojom",
-    "scrollbar_animator.mojom",
-    "synced_scroll_offset.mojom",
-    "ui_resource_id.mojom",
   ]
   cpp_typemaps = [
     {
@@ -187,71 +179,6 @@ mojom("mojom_layer_trees") {
       ]
       traits_headers = [ "paint_flags_mojom_traits.h" ]
       traits_public_deps = [ "//cc/paint" ]
-    },
-    {
-      types = [
-        {
-          mojom = "cc.mojom.RenderSurfaceReason"
-          cpp = "::cc::RenderSurfaceReason"
-        },
-      ]
-      traits_headers = [ "render_surface_reason_mojom_traits.h" ]
-    },
-    {
-      types = [
-        {
-          mojom = "cc.mojom.ScrollbarAnimator"
-          cpp = "::cc::LayerTreeSettings::ScrollbarAnimator"
-        },
-      ]
-      traits_headers = [ "scrollbar_animator_mojom_traits.h" ]
-    },
-    {
-      types = [
-        {
-          mojom = "cc.mojom.SyncedScrollOffset"
-          cpp = "::scoped_refptr<::cc::SyncedScrollOffset>"
-          nullable_is_same_type = true
-          copyable_pass_by_value = true
-        },
-      ]
-      traits_headers = [ "//cc/mojom/synced_scroll_offset_mojom_traits.h" ]
-      traits_sources = [ "//cc/mojom/synced_scroll_offset_mojom_traits.cc" ]
-      traits_public_deps = [ "//ui/gfx/geometry/mojom" ]
-    },
-    {
-      types = [
-        {
-          mojom = "cc.mojom.UIResourceId"
-          cpp = "::cc::UIResourceId"
-          copyable_pass_by_value = true
-        },
-      ]
-      traits_headers = [ "ui_resource_id_mojom_traits.h" ]
-    },
-    {
-      types = [
-        {
-          mojom = "cc.mojom.LayerTreeDebugState"
-          cpp = "::cc::LayerTreeDebugState"
-        },
-      ]
-      traits_headers = [ "layer_tree_debug_state_mojom_traits.h" ]
-    },
-    {
-      types = [
-        {
-          mojom = "cc.mojom.LayerSelectionBound"
-          cpp = "::cc::LayerSelectionBound"
-        },
-        {
-          mojom = "cc.mojom.LayerSelection"
-          cpp = "::cc::LayerSelection"
-        },
-      ]
-      traits_headers = [ "//cc/mojom/layer_selection_bound_mojom_traits.h" ]
-      traits_sources = [ "//cc/mojom/layer_selection_bound_mojom_traits.cc" ]
-      traits_public_deps = [ "//cc:layer_selection_bound" ]
     },
   ]
   public_deps = [

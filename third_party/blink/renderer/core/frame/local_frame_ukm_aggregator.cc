@@ -13,8 +13,6 @@
 #include "base/rand_util.h"
 #include "base/strings/strcat.h"
 #include "base/time/default_tick_clock.h"
-#include "cc/metrics/begin_main_frame_metrics.h"
-#include "cc/metrics/frame_sequence_tracker_collection.h"
 #include "services/metrics/public/cpp/metrics_utils.h"
 #include "services/metrics/public/cpp/ukm_builders.h"
 #include "services/metrics/public/cpp/ukm_recorder.h"
@@ -293,51 +291,6 @@ void LocalFrameUkmAggregator::BeginMainFrame() {
   in_main_frame_update_ = true;
   request_timestamp_for_current_frame_ = animation_request_timestamp_;
   animation_request_timestamp_.reset();
-}
-
-std::unique_ptr<cc::BeginMainFrameMetrics>
-LocalFrameUkmAggregator::GetBeginMainFrameMetrics() {
-  DCHECK(InMainFrameUpdate());
-
-  // Use the main_frame_percentage_records_ because they are the ones that
-  // only count time between the Begin and End of a main frame update.
-  // Do not report hit testing because it is a sub-portion of the other
-  // metrics and would result in double counting.
-  std::unique_ptr<cc::BeginMainFrameMetrics> metrics_data =
-      std::make_unique<cc::BeginMainFrameMetrics>();
-  metrics_data->handle_input_events = base::Microseconds(
-      absolute_metric_records_[static_cast<unsigned>(
-                                   MetricId::kHandleInputEvents)]
-          .main_frame_count);
-  metrics_data->animate = base::Microseconds(
-      absolute_metric_records_[static_cast<unsigned>(MetricId::kAnimate)]
-          .main_frame_count);
-  metrics_data->style_update = base::Microseconds(
-      absolute_metric_records_[static_cast<unsigned>(MetricId::kStyle)]
-          .main_frame_count);
-  metrics_data->layout_update = base::Microseconds(
-      absolute_metric_records_[static_cast<unsigned>(MetricId::kLayout)]
-          .main_frame_count);
-  metrics_data->accessibility = base::Microseconds(
-      absolute_metric_records_[static_cast<unsigned>(MetricId::kAccessibility)]
-          .main_frame_count);
-  metrics_data->prepaint = base::Microseconds(
-      absolute_metric_records_[static_cast<unsigned>(MetricId::kPrePaint)]
-          .main_frame_count);
-  metrics_data->compositing_inputs = base::Microseconds(
-      absolute_metric_records_[static_cast<unsigned>(
-                                   MetricId::kCompositingInputs)]
-          .main_frame_count);
-  metrics_data->paint = base::Microseconds(
-      absolute_metric_records_[static_cast<unsigned>(MetricId::kPaint)]
-          .main_frame_count);
-  metrics_data->composite_commit = base::Microseconds(
-      absolute_metric_records_[static_cast<unsigned>(
-                                   MetricId::kCompositingCommit)]
-          .main_frame_count);
-  metrics_data->should_measure_smoothness =
-      (fcp_state_ >= kThisFrameReachedFCP);
-  return metrics_data;
 }
 
 void LocalFrameUkmAggregator::SetTickClockForTesting(

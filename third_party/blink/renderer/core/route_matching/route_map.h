@@ -75,8 +75,6 @@ class CORE_EXPORT RouteMap final : public GarbageCollected<RouteMap>,
   // transition.
   bool AttemptSetNavigationFinished();
 
-  void OnPreviewStart();
-  void OnPreviewFinished();
 
   // Return true if the URLPattern matches the current NavigationState, with the
   // preposition given.

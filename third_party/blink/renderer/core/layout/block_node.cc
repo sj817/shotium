@@ -1317,8 +1317,8 @@ bool BlockNode::IsInlineLevel() const {
   return GetLayoutBox()->IsInline();
 }
 
-bool BlockNode::IsInTopOrViewTransitionLayer() const {
-  return GetLayoutBox()->IsInTopOrViewTransitionLayer();
+bool BlockNode::IsInTopLayer() const {
+  return GetLayoutBox()->IsInTopLayer();
 }
 
 LogicalSize BlockNode::GetReplacedAspectRatio() const {

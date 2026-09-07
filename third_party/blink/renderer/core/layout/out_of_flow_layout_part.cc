@@ -49,8 +49,6 @@
 #include "third_party/blink/renderer/core/paint/paint_layer.h"
 #include "third_party/blink/renderer/core/paint/paint_layer_scrollable_area.h"
 #include "third_party/blink/renderer/core/style/computed_style.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition_utils.h"
 #include "third_party/blink/renderer/platform/heap/collection_support/clear_collection_scope.h"
 #include "third_party/blink/renderer/platform/runtime_enabled_features.h"
 
@@ -250,7 +248,7 @@ class OOFCandidateStyleIterator {
   void Initialize() {
     style_ = &original_style_;
 
-    // Not all OOFs have an element. LayoutViewTransitionRoot is one example.
+    // Anonymous out-of-flow layout objects have no element.
     if (element_) {
       position_try_fallbacks_ = style_->GetPositionTryFallbacks();
 
@@ -650,7 +648,7 @@ void OutOfFlowLayoutPart::Run() {
         continue;
       }
       BlockNode block_child = To<BlockNode>(child);
-      if (!block_child.IsInTopOrViewTransitionLayer() ||
+      if (!block_child.IsInTopLayer() ||
           !block_child.IsOutOfFlowPositioned()) {
         continue;
       }

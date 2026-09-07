@@ -94,16 +94,6 @@ class PLATFORM_EXPORT DisplayItem {
     kTableCollapsedBorders,
     kDrawingLast = kTableCollapsedBorders,
 
-    kForeignLayerFirst,
-    kForeignLayerCanvas = kForeignLayerFirst,
-    kForeignLayerDevToolsOverlay,
-    kForeignLayerVideo,
-    kForeignLayerLinkHighlight,
-    kForeignLayerViewportScroll,
-    kForeignLayerViewportScrollbar,
-    kForeignLayerViewTransitionContent,
-    kForeignLayerLast = kForeignLayerViewTransitionContent,
-
     kClipPaintPhaseFirst,
     kClipPaintPhaseLast = kClipPaintPhaseFirst + kPaintPhaseMax,
 
@@ -129,10 +119,8 @@ class PLATFORM_EXPORT DisplayItem {
     // for LayoutReplaced.
 
     // Used for paint chunks that contain region capture data.
-    kRegionCapture,
 
     // Used for paint chunks that contain tracking highlight data.
-    kTrackedElement,
 
     // Used both for specifying the paint-order scroll location, and for non-
     // composited scroll hit testing (see: hit_test_data.h).
@@ -241,8 +229,6 @@ class PLATFORM_EXPORT DisplayItem {
 
   DEFINE_CATEGORY_METHODS(Drawing)
   DEFINE_PAINT_PHASE_CONVERSION_METHOD(Drawing)
-
-  DEFINE_CATEGORY_METHODS(ForeignLayer)
 
   DEFINE_PAINT_PHASE_CONVERSION_METHOD(Clip)
   DEFINE_PAINT_PHASE_CONVERSION_METHOD(Scroll)

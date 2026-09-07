@@ -31,10 +31,6 @@ bool ApplyPaintResource(
     return false;
   }
 
-  if (paint_flags & PaintFlag::kPrivacyPreserving &&
-      !uri_resource->GetElement()->IsInCanvasSubtree()) {
-    return false;
-  }
 
   AutoDarkMode auto_dark_mode(PaintAutoDarkMode(
       context_paint.object.StyleRef(), DarkModeFilter::ElementRole::kSVG));

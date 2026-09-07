@@ -56,7 +56,6 @@
 #include "third_party/blink/renderer/core/css/css_style_rule.h"
 #include "third_party/blink/renderer/core/css/css_style_sheet.h"
 #include "third_party/blink/renderer/core/css/css_supports_rule.h"
-#include "third_party/blink/renderer/core/css/css_view_transition_rule.h"
 #include "third_party/blink/renderer/core/css/media_list.h"
 #include "third_party/blink/renderer/core/css/media_query_exp.h"
 #include "third_party/blink/renderer/core/css/navigation_query.h"
@@ -78,7 +77,6 @@
 #include "third_party/blink/renderer/core/css/style_rule_location.h"
 #include "third_party/blink/renderer/core/css/style_rule_namespace.h"
 #include "third_party/blink/renderer/core/css/style_rule_nested_declarations.h"
-#include "third_party/blink/renderer/core/css/style_rule_view_transition.h"
 #include "third_party/blink/renderer/core/css/style_sheet_contents.h"
 #include "third_party/blink/renderer/core/dom/document.h"
 #include "third_party/blink/renderer/core/frame/web_feature.h"
@@ -187,9 +185,6 @@ void StyleRuleBase::Trace(Visitor* visitor) const {
     case kStartingStyle:
       To<StyleRuleStartingStyle>(this)->TraceAfterDispatch(visitor);
       return;
-    case kViewTransition:
-      To<StyleRuleViewTransition>(this)->TraceAfterDispatch(visitor);
-      return;
     case kFunction:
       To<StyleRuleFunction>(this)->TraceAfterDispatch(visitor);
       return;
@@ -291,9 +286,6 @@ void StyleRuleBase::FinalizeGarbageCollectedObject() {
       return;
     case kStartingStyle:
       To<StyleRuleStartingStyle>(this)->~StyleRuleStartingStyle();
-      return;
-    case kViewTransition:
-      To<StyleRuleViewTransition>(this)->~StyleRuleViewTransition();
       return;
     case kFunction:
       To<StyleRuleFunction>(this)->~StyleRuleFunction();
@@ -422,10 +414,6 @@ CSSRule* StyleRuleBase::CreateCSSOMWrapper(wtf_size_t position_hint,
     case kStartingStyle:
       rule = MakeGarbageCollected<CSSStartingStyleRule>(
           To<StyleRuleStartingStyle>(self), parent_sheet);
-      break;
-    case kViewTransition:
-      rule = MakeGarbageCollected<CSSViewTransitionRule>(
-          To<StyleRuleViewTransition>(self), parent_sheet);
       break;
     case kPositionTry:
       rule = MakeGarbageCollected<CSSPositionTryRule>(
@@ -784,9 +772,6 @@ StyleRuleBase* StyleRuleBase::Clone(
     case kCharset:
       return MakeGarbageCollected<StyleRuleCharset>(
           To<StyleRuleCharset>(*this));
-    case kViewTransition:
-      return MakeGarbageCollected<StyleRuleViewTransition>(
-          To<StyleRuleViewTransition>(*this));
     case kPositionTry: {
       auto* position_try = To<StyleRulePositionTry>(this);
       return MakeGarbageCollected<StyleRulePositionTry>(

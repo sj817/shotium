@@ -165,10 +165,6 @@ static bool ShouldSkipForRasterInvalidation(
     }
   }
 
-  // Foreign layers take care of raster invalidation by themselves.
-  if (DisplayItem::IsForeignLayerType(chunk_it->id.type))
-    return true;
-
   return false;
 }
 

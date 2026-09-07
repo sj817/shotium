@@ -199,7 +199,6 @@ void LayoutSVGText::Paint(const PaintInfo& paint_info) const {
 
   if (block_info.phase == PaintPhase::kForeground) {
     SVGModelObjectPainter::RecordHitTestData(*this, block_info);
-    SVGModelObjectPainter::RecordRegionCaptureData(*this, block_info);
   }
   LayoutSVGBlock::Paint(block_info);
 

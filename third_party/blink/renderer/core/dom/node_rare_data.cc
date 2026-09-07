@@ -44,7 +44,6 @@
 #include "third_party/blink/renderer/core/resize_observer/resize_observation.h"
 #include "third_party/blink/renderer/core/resize_observer/resize_observer.h"
 #include "third_party/blink/renderer/core/style/content_data.h"
-#include "third_party/blink/renderer/platform/graphics/paint/tracked_element_data.h"
 #include "third_party/blink/renderer/platform/heap/collection_support/heap_hash_map.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
 #include "third_party/blink/renderer/platform/heap/member.h"
@@ -431,72 +430,6 @@ OutOfFlowData* NodeRareData::GetOutOfFlowData() const {
 
 void NodeRareData::ClearOutOfFlowData() {
   SetFieldToNullIfExists(FieldId::kOutOfFlowData);
-}
-
-const RegionCaptureCropId* NodeRareData::GetRegionCaptureCropId() const {
-  auto* value = GetWrappedField<std::unique_ptr<RegionCaptureCropId>>(
-      FieldId::kRegionCaptureCropId);
-  return value ? value->get() : nullptr;
-}
-NodeRareData* NodeRareData::SetRegionCaptureCropId(
-    std::unique_ptr<RegionCaptureCropId> crop_id) {
-  CHECK(!GetRegionCaptureCropId());
-  CHECK(crop_id);
-  CHECK(!crop_id->value().is_zero());
-  return SetWrappedField<std::unique_ptr<RegionCaptureCropId>>(
-      FieldId::kRegionCaptureCropId, std::move(crop_id));
-}
-
-const RestrictionTargetId* NodeRareData::GetRestrictionTargetId() const {
-  auto* value = GetWrappedField<std::unique_ptr<RestrictionTargetId>>(
-      FieldId::kRestrictionTargetId);
-  return value ? value->get() : nullptr;
-}
-NodeRareData* NodeRareData::SetRestrictionTargetId(
-    std::unique_ptr<RestrictionTargetId> id) {
-  CHECK(!GetRestrictionTargetId());
-  CHECK(id);
-  CHECK(!id->value().is_zero());
-  return SetWrappedField<std::unique_ptr<RestrictionTargetId>>(
-      FieldId::kRestrictionTargetId, std::move(id));
-}
-
-const TrackedElementSubRect* NodeRareData::GetTrackedElementSubRect(
-    viz::TrackedElementFeature feature) const {
-  if (auto* map = GetTrackedElementSubRects()) {
-    auto it = map->find(feature);
-    if (it != map->end()) {
-      return &it->second;
-    }
-  }
-  return nullptr;
-}
-
-void NodeRareData::ClearTrackedElementSubRect(
-    viz::TrackedElementFeature feature) {
-  if (auto* map = GetWrappedField<TrackedElementSubRects>(
-          FieldId::kTrackedElementRect)) {
-    map->erase(feature);
-    // If no more features are tracking this element, remove the field entirely.
-    if (map->empty()) {
-      SetFieldToNullIfExists(FieldId::kTrackedElementRect);
-    }
-  }
-}
-
-NodeRareData* NodeRareData::SetTrackedElementSubRect(
-    viz::TrackedElementFeature feature,
-    const TrackedElementSubRect& rect) {
-  CHECK(!rect.id.value().is_zero());
-  auto [map, vec] =
-      EnsureWrappedField<TrackedElementSubRects>(FieldId::kTrackedElementRect);
-  auto [_, inserted] = map.get().try_emplace(feature, rect);
-  CHECK(inserted);
-  return vec;
-}
-
-const TrackedElementSubRects* NodeRareData::GetTrackedElementSubRects() const {
-  return GetWrappedField<TrackedElementSubRects>(FieldId::kTrackedElementRect);
 }
 
 NodeRareData::ResizeObserverDataMap* NodeRareData::ResizeObserverData() const {

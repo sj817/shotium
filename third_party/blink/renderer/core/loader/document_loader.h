@@ -43,7 +43,6 @@
 #include "services/metrics/public/cpp/ukm_source_id.h"
 #include "services/network/public/cpp/permissions_policy/permissions_policy_declaration.h"
 #include "third_party/blink/public/common/fenced_frame/redacted_fenced_frame_config.h"
-#include "third_party/blink/public/common/frame/view_transition_state.h"
 #include "third_party/blink/public/common/loader/loading_behavior_flag.h"
 #include "third_party/blink/public/common/permissions_policy/document_policy.h"
 #include "third_party/blink/public/common/scheduler/task_attribution_id.h"
@@ -626,10 +625,6 @@ class CORE_EXPORT DocumentLoader : public GarbageCollected<DocumentLoader>,
 
   bool IsSameOriginInitiator() const;
 
-  // This initiates a view transition if the `view_transition_state_` has been
-  // specified.
-  void StartViewTransitionIfNeeded(Document& document);
-
   // InjectAutoSpeculationRules()/InjectSpeculationRulesFromString() were here.
   // They synthesised prefetch/prerender rules for pages built with a detected
   // JavaScript framework, from a remotely-configured table. core/speculation_
@@ -838,10 +833,6 @@ class CORE_EXPORT DocumentLoader : public GarbageCollected<DocumentLoader>,
   const AtomicString reduced_accept_language_;
 
   const network::mojom::NavigationDeliveryType navigation_delivery_type_;
-
-  // Provides state from the previous Document that will be replaced by this
-  // navigation for a ViewTransition.
-  std::optional<ViewTransitionState> view_transition_state_;
 
   std::optional<FencedFrame::RedactedFencedFrameProperties>
       fenced_frame_properties_;

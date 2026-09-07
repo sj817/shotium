@@ -86,14 +86,6 @@ class CORE_EXPORT DisplayLockDocumentState final
   // Notify the display locks that selection was removed.
   void NotifySelectionRemoved();
 
-  // Notify the display locks that view transition pseudo-elements have
-  // changed.
-  void NotifyViewTransitionPseudoTreeChanged();
-
-  // Updates only the ancestor locks of the view transition elements. This is an
-  // optimization to be used by the display lock context.
-  void UpdateViewTransitionElementAncestorLocks();
-
   // This is called when the forced scope is created or destroyed in
   // |ScopedForcedUpdate::Impl|. This is used to ensure that we can create new
   // locks that are immediately forced by the existing forced scope.

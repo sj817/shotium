@@ -28,40 +28,13 @@
 #include "third_party/blink/renderer/core/html/canvas/html_canvas_element.h"
 
 #include "third_party/blink/renderer/core/dom/document.h"
-#include "third_party/blink/renderer/core/css/style_change_reason.h"
-#include "third_party/blink/renderer/core/layout/layout_object_inlines.h"
 #include "third_party/blink/renderer/platform/instrumentation/use_counter.h"
-#include "third_party/blink/renderer/platform/runtime_enabled_features.h"
 
 namespace blink {
 HTMLCanvasElement::HTMLCanvasElement(Document& document)
     : HTMLElement(html_names::kCanvasTag, document) {
   UseCounter::Count(GetDocument(), WebFeature::kHTMLCanvasElement);
   SetHasCustomStyleCallbacks();
-}
-
-void HTMLCanvasElement::AttributeChanged(
-    const AttributeModificationParams& params) {
-  HTMLElement::AttributeChanged(params);
-
-  if (RuntimeEnabledFeatures::CanvasDrawElementEnabled(GetExecutionContext()) &&
-      params.name == html_names::kLayoutsubtreeAttr) {
-    bool had_layoutsubtree = !params.old_value.IsNull();
-    bool has_layoutsubtree = !params.new_value.IsNull();
-    if (had_layoutsubtree != has_layoutsubtree) {
-      InvalidateLayoutSubtree();
-    }
-  }
-}
-
-void HTMLCanvasElement::InvalidateLayoutSubtree() {
-  SetNeedsStyleRecalc(
-      kSubtreeStyleChange,
-      StyleChangeReasonForTracing::Create(style_change_reason::kAttribute));
-  SetForceReattachLayoutTree();
-  if (auto* object = GetLayoutObject()) {
-    object->SetNeedsLayout(layout_invalidation_reason::kAttributeChanged);
-  }
 }
 
 bool HTMLCanvasElement::layoutSubtree() const {

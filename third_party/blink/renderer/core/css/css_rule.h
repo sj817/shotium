@@ -92,7 +92,6 @@ class CORE_EXPORT CSSRule : public ScriptWrappable {
     kResultRule,
     kScopeRule,
     kStartingStyleRule,
-    kViewTransitionRule,
     // go/keep-sorted end
   };
 

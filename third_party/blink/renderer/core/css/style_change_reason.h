@@ -26,7 +26,6 @@ extern const char kDesignMode[];
 extern const char kDialog[];
 extern const char kDisplayLock[];
 extern const char kEnvironmentVariableChanged[];
-extern const char kViewTransition[];
 extern const char kFrame[];
 extern const char kFlatTreeChange[];
 extern const char kFonts[];

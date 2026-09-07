@@ -28,8 +28,6 @@
 #include "third_party/blink/renderer/core/paint/paint_layer.h"
 #include "third_party/blink/renderer/core/paint/paint_layer_scrollable_area.h"
 #include "third_party/blink/renderer/core/svg/svg_element.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition_utils.h"
 
 namespace blink {
 
@@ -347,34 +345,6 @@ bool ObjectTypeSupportsCompositedTransformAnimation(
   return object.IsBox();
 }
 
-// Defined by the Element Capture specification:
-// https://screen-share.github.io/element-capture/#elements-eligible-for-restriction
-bool IsEligibleForElementCapture(const LayoutObject& object) {
-  // The element forms a stacking context.
-  if (!object.IsStackingContext()) {
-    return false;
-  }
-
-  // The element is flattened in 3D.
-  if (!object.CreatesGroup()) {
-    return false;
-  }
-
-  // The element forms a backdrop root.
-  // See ViewTransitionUtils::IsViewTransitionParticipant and
-  // NeedsEffectIgnoringClipPath for how View Transitions meets this
-  // requirement.
-  // TODO(https://issuetracker.google.com/291602746): handle backdrop root case.
-
-  // The element has exactly one box fragment.
-  if (object.IsBox() && To<LayoutBox>(object).PhysicalFragmentCount() > 1) {
-    return false;
-  }
-
-  // Meets all of the conditions for element capture.
-  return true;
-}
-
 }  // anonymous namespace
 
 CompositingReasons CompositingReasonFinder::DirectReasonsForPaintProperties(
@@ -388,17 +358,6 @@ CompositingReasons CompositingReasonFinder::DirectReasonsForPaintProperties(
 
   auto* element = DynamicTo<Element>(object.GetNode());
 
-  if (element &&
-      RuntimeEnabledFeatures::CanvasDrawElementEnabled(
-          object.GetDocument().GetExecutionContext()) &&
-      element->IsInCanvasSubtree() &&
-      !object.StyleRef().IsRenderedInTopLayer(*element)) [[unlikely]] {
-    if (!reasons.Has(CompositingReason::kCanvasChild)) {
-      // Disable compositing for elements in canvas subtrees other than the
-      // direct children of canvas elements.
-      return {};
-    }
-  }
 
   reasons.PutAll(CompositingReasonsFor3DSceneLeaf(object));
 
@@ -454,36 +413,6 @@ CompositingReasons CompositingReasonFinder::DirectReasonsForPaintProperties(
 
   reasons.PutAll(BackfaceInvisibility3DAncestorReason(*layer));
 
-  switch (style.StyleType()) {
-    case kPseudoIdViewTransition:
-    case kPseudoIdViewTransitionGroup:
-    case kPseudoIdViewTransitionGroupChildren:
-    case kPseudoIdViewTransitionImagePair:
-    case kPseudoIdViewTransitionNew:
-    case kPseudoIdViewTransitionOld:
-      reasons.Put(CompositingReason::kViewTransitionPseudoElement);
-      break;
-    default:
-      break;
-  }
-
-  ViewTransitionUtils::ForEachTransition(
-      object.GetDocument(), [&](ViewTransition& transition) {
-        // This ensures compositing for elements that are actively participating
-        // in a transition because they are tagged with view-transition-name.
-        // It does not apply to the ::view-transition* pseudo-elements.
-        if (transition.NeedsViewTransitionEffectNode(object)) {
-          reasons.Put(CompositingReason::kViewTransitionElement);
-        }
-      });
-
-  if (element && element->GetRestrictionTargetId()) {
-    const bool is_eligible = IsEligibleForElementCapture(object);
-    element->SetIsEligibleForElementCapture(is_eligible);
-    if (is_eligible) {
-      reasons.Put(CompositingReason::kElementCapture);
-    }
-  }
 
   if (object.IsBackdropForOverscrollAreaParent()) {
     reasons.Put(CompositingReason::kFixedBackdropInOverscrollAreaParent);
@@ -497,11 +426,6 @@ bool CompositingReasonFinder::ShouldForcePreferCompositingToLCDText(
     CompositingReasons reasons) {
   DCHECK_EQ(reasons, DirectReasonsForPaintProperties(object));
 
-  if (RuntimeEnabledFeatures::CanvasDrawElementEnabled(
-          object.GetDocument().GetExecutionContext()) &&
-      object.IsInCanvasSubtree()) {
-    return false;
-  }
 
   if (!reasons.empty()) {
     return true;

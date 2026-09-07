@@ -550,7 +550,7 @@ void FragmentBuilder::AddOutOfFlowChildCandidate(
     bool allow_top_layer_nodes) {
   DCHECK(child);
   // Top-layer elements are processed separately in the OutOfFlowLayoutPart.
-  if (child.IsInTopOrViewTransitionLayer() && !allow_top_layer_nodes) {
+  if (child.IsInTopLayer() && !allow_top_layer_nodes) {
     return;
   }
 

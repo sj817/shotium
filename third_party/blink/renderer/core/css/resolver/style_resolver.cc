@@ -129,7 +129,6 @@
 #include "third_party/blink/renderer/core/style/style_initial_data.h"
 #include "third_party/blink/renderer/core/style_property_shorthand.h"
 #include "third_party/blink/renderer/core/svg/svg_element.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition_transition_element.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
 #include "third_party/blink/renderer/platform/instrumentation/use_counter.h"
 #include "third_party/blink/renderer/platform/runtime_enabled_features.h"
@@ -1144,12 +1143,6 @@ void StyleResolver::ForEachUARulesForElement(const Element& element,
     func(default_style_sheets.DefaultPseudoElementStyleOrNull(),
          kPseudoElementUASheet);
   }
-  if (IsTransitionPseudoElement(pseudo_id)) {
-    if (auto* rule_set =
-            GetDocument().GetStyleEngine().ActiveViewTransitionStyle(element)) {
-      func(rule_set, kViewTransitionUASheet);
-    }
-  }
 }
 
 void StyleResolver::MatchUARules(const Element& element,
@@ -1168,11 +1161,6 @@ void StyleResolver::MatchUARules(const Element& element,
   };
   ForEachUARulesForElement(element, &collector, func);
 
-  // View transitions can come and go without much notice for us.
-  // Instead of trying to figure out when to invalidate the cache,
-  // we just disable it entirely when view transitions are in use.
-  const bool can_use_cache = (cache_key & (1 << kViewTransitionUASheet)) == 0;
-
   RuleSetGroup* rule_set_group = nullptr;
   HeapVector<std::pair<unsigned, RuleSetGroup>>& rule_set_group_cache =
       CSSDefaultStyleSheets::Instance().RuleSetGroupCache();
@@ -1182,16 +1170,10 @@ void StyleResolver::MatchUARules(const Element& element,
       break;
     }
   }
-  if (rule_set_group == nullptr || !can_use_cache) {
-    // We need to create a new RuleSetGroup.
-    if (rule_set_group == nullptr) {
-      rule_set_group_cache.emplace_back(
-          cache_key, RuleSetGroup(/*rule_set_group_index=*/0u));
-      rule_set_group = &rule_set_group_cache.back().second;
-    } else {
-      // Reuse the memory from the previous one, but discard its contents.
-      *rule_set_group = RuleSetGroup(/*rule_set_group_index=*/0u);
-    }
+  if (rule_set_group == nullptr) {
+    rule_set_group_cache.emplace_back(
+        cache_key, RuleSetGroup(/*rule_set_group_index=*/0u));
+    rule_set_group = &rule_set_group_cache.back().second;
     auto func2 = [rule_set_group](RuleSet* rules, unsigned rule_set_index) {
       rule_set_group->AddRuleSet(rules);
     };
@@ -1418,8 +1400,7 @@ const ComputedStyle* StyleResolver::ResolveStyle(
     StyleAdjuster::RunUncacheableStyleAdjustment(
         state.StyleBuilder(), *element,
         IsForPseudoElement(*element, style_request) ? state.GetPseudoElement()
-                                                    : element,
-        state.GetStyledElement());
+                                                    : element);
   }
 
   ApplyAnchorData(state);
@@ -1861,8 +1842,7 @@ void StyleResolver::ApplyBaseStyleNoCache(
 
   StyleAdjuster::RunUncacheableStyleAdjustment(
       builder, *element,
-      state.IsForPseudoElement() ? state.GetPseudoElement() : element,
-      state.GetStyledElement());
+      state.IsForPseudoElement() ? state.GetPseudoElement() : element);
 
   // Everything below here depends on the MatchResult flags
   // (e.g., what selectors were used to find the matched properties),
@@ -2037,8 +2017,7 @@ void StyleResolver::ApplyBaseStyle(
     StyleAdjuster::RunUncacheableStyleAdjustment(
         state.StyleBuilder(), *element,
         IsForPseudoElement(*element, style_request) ? state.GetPseudoElement()
-                                                    : element,
-        state.GetStyledElement());
+                                                    : element);
 
     // Normally done by StyleResolver::MaybeAddToMatchedPropertiesCache(),
     // when applying the cascade. Note that this is probably redundant
@@ -2526,23 +2505,6 @@ void StyleResolver::CollectPseudoRulesForElement(
   if (pseudo_id == kPseudoIdSearchText) {
     // TODO(crbug.com/339298411): handle :current?
     style_request.search_text_request = StyleRequest::kNotCurrent;
-  }
-
-  if (IsTransitionPseudoElement(pseudo_id) &&
-      pseudo_id != kPseudoIdViewTransition) {
-    // Check view transition classes in addition to view transition names.
-    auto* view_transition_element =
-        element.GetPseudoElement(kPseudoIdViewTransition);
-    if (view_transition_element) {
-      auto* view_transition_group_element =
-          To<ViewTransitionTransitionElement>(*view_transition_element)
-              .FindViewTransitionGroupPseudoElement(pseudo_argument);
-      if (view_transition_group_element) {
-        style_request.pseudo_ident_list =
-            To<ViewTransitionPseudoElementBase>(*view_transition_group_element)
-                .ViewTransitionClassList();
-      }
-    }
   }
 
   collector.SetPseudoElementStyleRequest(style_request);

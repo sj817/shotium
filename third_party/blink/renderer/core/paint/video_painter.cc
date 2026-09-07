@@ -30,10 +30,6 @@ void VideoPainter::PaintReplaced(const PaintInfo& paint_info,
   if (!should_display_poster)
     return;
 
-  if (paint_info.IsPrivacyPreserving() &&
-      !layout_video_.ImageResource()->IsCorsSameOrigin()) {
-    return;
-  }
 
   PhysicalRect replaced_rect = layout_video_.ReplacedContentRect();
   replaced_rect.Move(paint_offset);

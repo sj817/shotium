@@ -51,7 +51,6 @@
 #include "third_party/blink/renderer/core/layout/layout_embedded_content.h"
 #include "third_party/blink/renderer/core/layout/layout_object_inlines.h"
 #include "third_party/blink/renderer/core/layout/layout_result.h"
-#include "third_party/blink/renderer/core/layout/layout_view_transition_root.h"
 #include "third_party/blink/renderer/core/layout/length_utils.h"
 #include "third_party/blink/renderer/core/layout/list/layout_inline_list_item.h"
 #include "third_party/blink/renderer/core/layout/list/layout_list_item.h"
@@ -65,9 +64,6 @@
 #include "third_party/blink/renderer/core/paint/paint_layer_scrollable_area.h"
 #include "third_party/blink/renderer/core/paint/view_painter.h"
 #include "third_party/blink/renderer/core/svg/svg_document_extensions.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition_skip_reason.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition_utils.h"
 #include "third_party/blink/renderer/platform/geometry/infinite_int_rect.h"
 #include "third_party/blink/renderer/platform/graphics/paint/paint_controller.h"
 #include "third_party/blink/renderer/platform/instrumentation/histogram.h"
@@ -235,35 +231,6 @@ LayoutUnit LayoutView::ComputeMinimumWidth() {
       .sizes.min_size;
 }
 
-void LayoutView::AddChild(LayoutObject* new_child, LayoutObject* before_child) {
-  NOT_DESTROYED();
-  if (new_child->StyleRef().StyleType() == kPseudoIdViewTransition) {
-    // The view-transition pseudo tree is needs to be laid out within the
-    // "snapshot containing block". This is implemented by inserting an
-    // anonymous LayoutViewTransitionRoot between the ::view-transition and
-    // LayoutView.
-    CHECK(!before_child);
-
-    // The view-transition root may already exist if the pseudo is being
-    // reinserted due to a positioned state change.
-    if (!GetViewTransitionRoot()) {
-      LayoutViewTransitionRoot* snapshot_containing_block =
-          MakeGarbageCollected<LayoutViewTransitionRoot>(GetDocument());
-      LayoutBlockFlow::AddChild(snapshot_containing_block,
-                                /*before_child=*/nullptr);
-    }
-    GetViewTransitionRoot()->AddChild(new_child);
-
-    ViewTransition* transition =
-        ViewTransitionUtils::GetTransition(GetDocument());
-    CHECK(transition);
-    transition->UpdateSnapshotContainingBlockStyle();
-    return;
-  }
-
-  LayoutBlockFlow::AddChild(new_child, before_child);
-}
-
 bool LayoutView::IsChildAllowed(LayoutObject* child,
                                 const ComputedStyle&) const {
   NOT_DESTROYED();
@@ -392,12 +359,6 @@ VariableLengthTransformResult LayoutView::GetVariableLengthTransformResult(
   NOT_DESTROYED();
   CHECK(text.HasVariableLengthTransform());
   return text_to_variable_length_transform_result_.at(&text);
-}
-
-LayoutViewTransitionRoot* LayoutView::GetViewTransitionRoot() const {
-  NOT_DESTROYED();
-  // Returns nullptr if LastChild isn't a ViewTransitionRoot.
-  return DynamicTo<LayoutViewTransitionRoot>(LastChild());
 }
 
 void LayoutView::InvalidatePaintForViewAndDescendants() {
@@ -554,72 +515,29 @@ PhysicalRect LayoutView::ViewRect() const {
   if (!frame_view_)
     return PhysicalRect();
 
-  // TODO(bokan): This shouldn't be just for the outermost main frame, we
-  // should do it for all frames. crbug.com/1311518.
-  if (frame_view_->GetFrame().IsOutermostMainFrame()) {
-    if (auto* transition = ViewTransitionUtils::GetTransition(GetDocument());
-        transition && transition->IsRootTransitioning()) {
-      // If we're capturing a transition snapshot, the root transition
-      // needs to produce the snapshot at a known stable size, excluding
-      // all insetting UI like mobile URL bars and virtual keyboards.
-
-      // This adjustment should always be an expansion of the current
-      // viewport.
-      if (transition->GetSnapshotRootSize().width() <
-              frame_view_->Size().width() ||
-          transition->GetSnapshotRootSize().height() <
-              frame_view_->Size().height()) {
-        // TODO(https://issues.chromium.org/362991812) This can happen when
-        // layout is deferred during a resize or rotation, causing a temporary
-        // mismatch. We need skip the transition which would have happened later
-        // anyway.
-        transition->SkipTransitionSoon(
-            ViewTransition::PromiseResponse::kRejectInvalidState,
-            ViewTransitionSkipReason::kSnapshotRootChangedSize);
-        return PhysicalRect(PhysicalOffset(),
-                            PhysicalSize(frame_view_->Size()));
-      }
-
-      return PhysicalRect(
-          PhysicalOffset(transition->GetFrameToSnapshotRootOffset()),
-          PhysicalSize(transition->GetSnapshotRootSize()));
-    }
-  }
-
   return PhysicalRect(PhysicalOffset(), PhysicalSize(frame_view_->Size()));
 }
 
 PhysicalRect LayoutView::OverflowClipRect(
     OverlayScrollbarClipBehavior overlay_scrollbar_clip_behavior) const {
   NOT_DESTROYED();
-  return OverflowClipRectInternal(overlay_scrollbar_clip_behavior,
-                                  false /* for_scroll_node */);
+  return OverflowClipRectInternal(overlay_scrollbar_clip_behavior);
 }
 
 PhysicalRect LayoutView::OverflowClipRectForScrollNode() const {
   NOT_DESTROYED();
-  return OverflowClipRectInternal(kIgnoreOverlayScrollbarSize,
-                                  true /* for_scroll_node */);
+  return OverflowClipRectInternal(kIgnoreOverlayScrollbarSize);
 }
 
 PhysicalRect LayoutView::OverflowClipRectInternal(
-    OverlayScrollbarClipBehavior overlay_scrollbar_clip_behavior,
-    bool for_scroll_node) const {
+    OverlayScrollbarClipBehavior overlay_scrollbar_clip_behavior) const {
   NOT_DESTROYED();
   PhysicalRect rect = ViewRect();
   if (rect.IsEmpty()) {
     return LayoutBox::OverflowClipRect(overlay_scrollbar_clip_behavior);
   }
 
-  // When capturing the root snapshot for a transition, we paint the
-  // background color where the scrollbar would be so keep the clip rect
-  // the full ViewRect size.
-  // NOTE: When calculating the rect for scroll node, we don't want this
-  // behavior because scroll node dimensions (e.g. thumb length) shouldn't
-  // be affected by the view transition.
-  auto* transition = ViewTransitionUtils::GetTransition(GetDocument());
-  bool is_in_transition = transition && transition->IsRootTransitioning();
-  if (IsScrollContainer() && (for_scroll_node || !is_in_transition)) {
+  if (IsScrollContainer()) {
     ExcludeScrollbars(rect, overlay_scrollbar_clip_behavior);
   }
 

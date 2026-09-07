@@ -194,18 +194,6 @@ class CORE_EXPORT HTMLImageElement
   // populated from LCPScriptObserver::GetExecutingScriptUrls() and had no
   // other reader.
 
-  // Returns true if the image has an active image replacement.
-  bool HasImageReplacement() const;
-  // Resets corresponding ImageReplacement (if any), and goes back to displaying
-  // the primary content (if StartImageReplacement() was previously called).
-  // Uses the element's current document if |document| is not specified.
-  void ResetImageReplacement(Document* document = nullptr);
-  void StartImageReplacement();
-
-  bool replacedByUserAgent() const;
-  DEFINE_ATTRIBUTE_EVENT_LISTENER(uareplacestart, kUareplacestart)
-  DEFINE_ATTRIBUTE_EVENT_LISTENER(uareplaceend, kUareplaceend)
-
  protected:
   // Controls how an image element appears in the layout. See:
   // https://html.spec.whatwg.org/C/#image-request
@@ -221,8 +209,6 @@ class CORE_EXPORT HTMLImageElement
     // `broken` state when the resource load failed with an error that has the
     // |shouldCollapseInitiator| flag set.
     kCollapsed,
-    // The image is being replaced by a remote image.
-    kImageReplacement,
   };
 
   void DidMoveToNewDocument(Document& old_document) override;
@@ -264,7 +250,6 @@ class CORE_EXPORT HTMLImageElement
   Image* ImageContents() override;
 
   void ResetFormOwner();
-  bool IsUrlInCandidateSet(const AtomicString& url) const;
   ImageCandidate FindBestFitImageFromPictureParent();
   void SetBestFitURLAndDPRFromImageCandidate(const ImageCandidate&);
   gfx::Size DensityCorrectedIntrinsicDimensions() const;
@@ -274,8 +259,6 @@ class CORE_EXPORT HTMLImageElement
 
   // LocalFrameView::LifecycleNotificationObserver
   void DidFinishLayout() override;
-
-  void ResetImageReplacementInternal(Document& document);
 
   Member<HTMLImageLoader> image_loader_;
   Member<ViewportChangeListener> listener_;

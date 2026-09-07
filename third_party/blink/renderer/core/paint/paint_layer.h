@@ -378,7 +378,7 @@ class CORE_EXPORT PaintLayer : public GarbageCollected<PaintLayer>,
 
   Node* EnclosingNode() const;
 
-  bool IsInTopOrViewTransitionLayer() const;
+  bool IsInTopLayer() const;
 
   // FIXME: This should probably return a ScrollableArea but a lot of internal
   // methods are mistakenly exposed.
@@ -615,8 +615,7 @@ class CORE_EXPORT PaintLayer : public GarbageCollected<PaintLayer>,
       double* z_offset_for_descendants,
       double* z_offset,
       HitTestingTransformState* local_transform_state,
-      bool depth_sort_descendants,
-      bool transition_pseudo_pass = false);
+      bool depth_sort_descendants);
 
   HitTestingTransformState CreateLocalTransformState(
       const PaintLayer& transform_container,
@@ -829,7 +828,6 @@ class CORE_EXPORT PaintLayer : public GarbageCollected<PaintLayer>,
                            DescendantDependentFlagsStopsAtThrottledFrames);
   FRIEND_TEST_ALL_PREFIXES(PaintLayerTest,
                            PaintLayerTransformUpdatedOnStyleTransformAnimation);
-  FRIEND_TEST_ALL_PREFIXES(PaintLayerTest, PaintLayerCanvasTransformUpdated);
   FRIEND_TEST_ALL_PREFIXES(
       PaintLayerOverlapTest,
       FixedUnderTransformDoesNotExpandBoundingBoxForOverlap);

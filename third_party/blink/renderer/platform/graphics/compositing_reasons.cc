@@ -114,8 +114,6 @@ constexpr auto kReasonMetadata = std::to_array<ReasonMetadata>({
      "clip-path"},
     {CompositingReason::kOverflowScrolling, "OverflowScrolling",
      "Is a scrollable overflow element using accelerated scrolling."},
-    {CompositingReason::kElementCapture, "ElementCapture",
-     "This element is undergoing element-level capture."},
     {CompositingReason::kOverlap, "Overlap",
      "Overlaps other composited content."},
     {CompositingReason::kBackfaceVisibilityHidden, "BackfaceVisibilityHidden",
@@ -127,8 +125,6 @@ constexpr auto kReasonMetadata = std::to_array<ReasonMetadata>({
     {CompositingReason::kCanvas, "Canvas",
      "Is an accelerated canvas, or is a display list backed canvas that was "
      "promoted to a layer based on a performance heuristic."},
-    {CompositingReason::kCanvasChild, "CanvasChild",
-     "Is the direct child of a canvas with 'layoutSubtree' attribute."},
     {CompositingReason::kPlugin, "Plugin", "Is an accelerated plugin."},
     {CompositingReason::kScrollbar, "Scrollbar",
      "Is an accelerated scrollbar."},

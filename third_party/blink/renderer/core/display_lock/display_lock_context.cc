@@ -37,7 +37,6 @@
 #include "third_party/blink/renderer/core/page/page_animator.h"
 #include "third_party/blink/renderer/core/paint/paint_layer.h"
 #include "third_party/blink/renderer/core/paint/pre_paint_tree_walk.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition_utils.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
 #include "third_party/blink/renderer/platform/instrumentation/use_counter.h"
 #include "third_party/blink/renderer/platform/wtf/text/string_builder.h"
@@ -72,7 +71,6 @@ DisplayLockContext::DisplayLockContext(Element* element)
   DetermineIfSubtreeHasFocus();
   DetermineIfSubtreeHasSelection();
   DetermineIfSubtreeHasTopLayerElement();
-  DetermineIfDescendantIsViewTransitionElement();
 }
 
 void DisplayLockContext::SetRequestedState(EContentVisibility state) {
@@ -887,7 +885,6 @@ void DisplayLockContext::DidMoveToNewDocument(Document& old_document) {
   DetermineIfSubtreeHasFocus();
   DetermineIfSubtreeHasSelection();
   DetermineIfSubtreeHasTopLayerElement();
-  DetermineIfDescendantIsViewTransitionElement();
 }
 
 void DisplayLockContext::WillStartLifecycleUpdate(const LocalFrameView& view) {
@@ -1162,24 +1159,6 @@ void DisplayLockContext::DetermineIfSubtreeHasTopLayerElement() {
   }
 }
 
-void DisplayLockContext::DetermineIfDescendantIsViewTransitionElement() {
-  ResetDescendantIsViewTransitionElement();
-  if (ConnectedToView()) {
-    document_->GetDisplayLockDocumentState()
-        .UpdateViewTransitionElementAncestorLocks();
-  }
-}
-
-void DisplayLockContext::ResetDescendantIsViewTransitionElement() {
-  SetRenderAffectingState(
-      RenderAffectingState::kDescendantIsViewTransitionElement, false);
-}
-
-void DisplayLockContext::SetDescendantIsViewTransitionElement() {
-  SetRenderAffectingState(
-      RenderAffectingState::kDescendantIsViewTransitionElement, true);
-}
-
 void DisplayLockContext::ClearHasTopLayerElement() {
   // Note that this is asynchronous because it can happen during a layout detach
   // which is a bad time to relock a content-visibility auto element (since it
@@ -1311,7 +1290,6 @@ void DisplayLockContext::NotifyRenderAffectingStateChanged() {
         !state(RenderAffectingState::kAutoStateUnlockedUntilLifecycle) &&
         !state(RenderAffectingState::kAutoUnlockedForPrint) &&
         !state(RenderAffectingState::kSubtreeHasTopLayerElement) &&
-        !state(RenderAffectingState::kDescendantIsViewTransitionElement) &&
         !state(RenderAffectingState::kDescendantIsAnchorTarget)));
 
   if (should_be_locked && !IsLocked())
@@ -1381,8 +1359,6 @@ const char* DisplayLockContext::RenderAffectingStateName(int state) const {
       return "AutoUnlockedForPrint";
     case RenderAffectingState::kSubtreeHasTopLayerElement:
       return "SubtreeHasTopLayerElement";
-    case RenderAffectingState::kDescendantIsViewTransitionElement:
-      return "DescendantIsViewTransitionElement";
     case RenderAffectingState::kDescendantIsAnchorTarget:
       return "kDescendantIsAnchorTarget";
     case RenderAffectingState::kHasScrollerWithScrollMarkerGroup:

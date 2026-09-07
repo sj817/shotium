@@ -213,18 +213,6 @@ struct PaintPropertyTreeBuilderFragmentContext {
   const EffectPaintPropertyNodeOrAlias* current_effect;
   bool this_or_ancestor_opacity_is_zero = false;
 
-  // Set to true when we visit a view transition element and is propagated to
-  // all non-alias effects.
-  bool self_or_ancestor_participates_in_view_transition = false;
-
-  // Set to true when we visit an object with filter operations that have a
-  // tainted origin, and propagated to all its descendants.
-  bool is_in_tainted_subtree = false;
-
-  // Set to true when we visit a canvas child and is propagated to all
-  // descendant effects.
-  bool is_in_drawable_canvas_subtree = false;
-
   // Whether newly created children should flatten their inherited transform
   // (equivalently, draw into the plane of their parent). Should generally
   // be updated whenever |transform| is; flattening only needs to happen
@@ -252,15 +240,6 @@ struct PaintPropertyTreeBuilderFragmentContext {
   // transforms to the layout shift root.
   gfx::Vector2dF translation_2d_to_layout_shift_root_delta;
 
-  // These node pointers provide the transform/clip space to be used by the
-  // ::view-transition pseudo element. The transform/clip ancestor for ::v-t is
-  // distinct from other descendants of the scope element. This is because some
-  // of the scope element's paint properties, like Transform, should apply to
-  // the ::v-t, but others like ScrollTranslation and OverflowClip should not.
-  const ClipPaintPropertyNodeOrAlias* clip_ancestor_for_transition_pseudo_root =
-      nullptr;
-  const TransformPaintPropertyNodeOrAlias*
-      transform_ancestor_for_transition_pseudo_root = nullptr;
 };
 
 struct PaintPropertyTreeBuilderContext final {

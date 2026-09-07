@@ -26,11 +26,8 @@ mojom("mojom") {
     "compositing/frame_sink_bundle.mojom",
     "compositing/frame_sink_bundle_id.mojom",
     "compositing/frame_timing_details.mojom",
-    "compositing/layer.mojom",
-    "compositing/layer_context.mojom",
     "compositing/paint_filter.mojom",
     "compositing/quads.mojom",
-    "compositing/region_capture_bounds.mojom",
     "compositing/resource_id.mojom",
     "compositing/returned_resource.mojom",
     "compositing/selection.mojom",
@@ -38,8 +35,6 @@ mojom("mojom") {
     "compositing/subtree_capture_id.mojom",
     "compositing/texture_releaser.mojom",
     "compositing/thread.mojom",
-    "compositing/tiling.mojom",
-    "compositing/tracked_element_rects.mojom",
     "compositing/transferable_resource.mojom",
     "compositing/trees_in_viz_timing.mojom",
     "compositing/vertical_scroll_direction.mojom",
@@ -91,16 +86,6 @@ mojom("mojom") {
         },
       ]
       traits_headers = [ "//services/viz/public/cpp/compositing/frame_sink_bundle_id_mojom_traits.h" ]
-      traits_public_deps = [ "//components/viz/common" ]
-    },
-    {
-      types = [
-        {
-          mojom = "viz.mojom.RegionCaptureBounds"
-          cpp = "::viz::RegionCaptureBounds"
-        },
-      ]
-      traits_headers = [ "//services/viz/public/cpp/compositing/region_capture_bounds_mojom_traits.h" ]
       traits_public_deps = [ "//components/viz/common" ]
     },
     {
@@ -238,19 +223,6 @@ mojom("mojom") {
       traits_sources = [ "//services/viz/public/cpp/compositing/compositor_frame_metadata_mojom_traits.cc" ]
       traits_headers = [ "//services/viz/public/cpp/compositing/compositor_frame_metadata_mojom_traits.h" ]
       traits_public_deps = [ "//components/viz/common" ]
-    },
-    {
-      types = [
-        {
-          mojom = "viz.mojom.TrackedElementRects"
-          cpp = "::viz::TrackedElementRects"
-        },
-      ]
-      traits_headers = [ "//services/viz/public/cpp/compositing/tracked_element_rects_mojom_traits.h" ]
-      traits_public_deps = [
-        "//components/viz/common",
-        "//third_party/blink/public/mojom/tokens:tokens_traits",
-      ]
     },
     {
       types = [
@@ -564,19 +536,6 @@ mojom("mojom") {
     {
       types = [
         {
-          mojom = "viz.mojom.TrackedElementRects"
-          cpp = "::viz::TrackedElementRects"
-        },
-      ]
-      traits_headers = [ "//services/viz/public/cpp/compositing/tracked_element_rects_mojom_traits.h" ]
-      traits_public_deps = [
-        "//components/viz/common",
-        "//third_party/blink/public/mojom/tokens:tokens_traits",
-      ]
-    },
-    {
-      types = [
-        {
           mojom = "viz.mojom.TreesInVizTiming"
           cpp = "::viz::TreesInVizTiming"
           move_only = true
@@ -629,7 +588,6 @@ mojom("mojom") {
         "//services/viz/public/cpp/compositing/quads_mojom_traits.h",
         "//services/viz/public/cpp/compositing/selection_mojom_traits.h",
         "//services/viz/public/cpp/compositing/shared_quad_state_mojom_traits.h",
-        "//services/viz/public/cpp/compositing/tracked_element_rects_mojom_traits.h",
         "//services/viz/public/cpp/compositing/transferable_resource_mojom_traits.h",
         "//ui/gfx/mojom/selection_bound_mojom_traits.h",
         "//ui/gfx/mojom/transform_mojom_traits.h",

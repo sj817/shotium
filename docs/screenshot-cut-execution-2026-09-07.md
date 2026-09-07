@@ -254,3 +254,31 @@ EXE46,332,928字节，DLL46,330,880字节，分别比第九批减少62,464字节
 ## 后续批次
 
 继续处理网络公共层、输入/合成器/GPU、诊断后端等剩余闭包，完整接续清单见 `screenshot-cut-task.md`。不把待处理或已关闭开关标为彻底删除。
+
+## 最新接续状态：第十一批验证通过，待提交
+
+本段优先于后面的历史进度。基准提交 cd916149eb10080a0c176826e9308f96ef5dd82d；第十一批使用 out/cut-stage15，共 229 个 owned 路径（225 源码/构建输入、4 文档）和 576 个实体删除，总计 805 个变更路径。当前全部 Windows 验证通过、尚未提交；所有构建/测试会话已结束。
+
+已移除 View transition 创建入口、Document/DocumentLoader/LocalFrameView/PageAnimator 生命周期、样式调度/显示锁、DOM 伪树、布局/绘制/属性树、跨文档协议/traits、事件/字典和 GN；ForeignLayerDisplayItem 及调用方、无调用的图层/图片缓存入口和 AddToLayerDebugInfo 等也已删除。原 EnqueuePageRevealEvent 的 RouteMap 导航初始化副作用迁为 InitializeRouteNavigationState，仍在原调用时点执行。
+
+CC 的 LayerTreeHost/Impl、layers、scheduler、raster、GPU tiles、帧率/合成指标、动画宿主/时间线、mojo_embedder、ViewTransitionRequest 已实体删除，主目标收窄为 CPU 几何/scroll-snap/sticky 算法和当前公共值类型。动画目标仅保留两种 CPU 滚动曲线及头文件/export。Viz BindLayerContext/LayerContextSettings、layer/layer_context/tiling 及八组 CC 图层协议/traits、旧测试和 Android target 同时移除；基础/调试/资源/指标尾巴另删除 46 文件。保留 CPU paint、图片、滤镜、绘制容器和 StickyPositionConstraint::CanMerge；其余 Viz/GPU、公共帧元数据与浏览器控制参数仍需下一批收窄。
+
+CanvasChildPaintRecord/State、CanvasDrawElement/CanvasForDrawing、ElementCanvasTransform、drawable 子树、专用合成原因及调用方全部移除。唯一隐私绘制标记 producer 已随 Canvas 绘图分支删除，继而清除 kPrivacyPreserving、tainted 属性树传播及不可达绘制分支；普通 CORS/资源来源检查、SVG 滤镜和 HTML/CSS 绘制保留。HTMLCanvasElement 仍保留标签备用内容、属性宽高比及原有布局；PaintLayerPainter 对 Canvas 子分层仍取原 feature-disabled 路径。HTMLMediaElement 空 cc::Layer 与 LayoutVideo 加速判断删除，video poster 保留。AnchorPositionScrollData 比较载荷迁为 Blink AnchorScrollSnapshot，字段、默认值与实际布局计算不变。
+
+元素/区域捕获及追踪已贯通删除：Element/NodeRareData ID 与 subrect 存储、资格判断、强制 effect、密码/iframe 坐标 producer、布局强制 box、HTML/SVG painter、PaintController/Chunker、PaintChunk 成员和 GC/比较/调试输出、CC/Viz 帧字段、CopyOutput 元数据、Mojo/traits/typemap 和 GN。无外部调用的 VideoCaptureTarget 与 CopyOutputBitmapWithMetadata 一并移除；密码控件状态/显示、iframe 正常属性与 srcdoc、实际截图输出保留。浏览器 ImageReplacement 的工厂无调用方，专用远程 iframe、图片布局分支、生命周期/事件、Mojo、开关和八个文件已移除，普通图片加载、解码、object-fit 与失败替代文本不变。
+
+过渡 CSS 尾巴再删除六文件：CSSOM 包装/StyleRuleViewTransition、IDL 和专用 transition.css UA 资源；同步移除规则创建/存储/GC/复制、navigation/types 私有 descriptor、GN/GRD。@view-transition 通过通用未知 at-rule 跳过；普通 view-transition-name/group/class/scope 属性、选择器识别与静态分组/@supports 保留。TwoPhaseViewTransition 尚被普通导航解析使用，本批未改该导航语义。同步分歧已写 docs/upstream-sync.md。
+
+所有实体删除均先确认工作区内普通文件，写精确备份并校验 SHA256 后逐文件删除。清单与证据在 out/cut-stage15 的 manifest.json、deletions.json、deletion-proof.json。最终静态证明：229 owned / 576 删除、16935 个输入扫描、186 个 C++/头文件预处理配对，0 问题。首次备份与基准提交无实质内容差异（11 个仅换行格式差异）。构建图 GN 6839 targets / 852 files、7409 个输入全部存在，IDL 枚举/union dry-run 无缺失。验证后按精确路径非递归删除 10 个空目录，清单 out/cut-batch11/empty-directories.json。
+
+原第十批 182 张基准加 out/cut-view-transition/baseline.png，共 183 张不可覆盖。新增过渡基准含 @view-transition 后普通规则、九组属性/层叠/scope/@supports/变换/裁剪/SVG，来自第十批已验证 EXE（SHA256 b54ec426000f4f9ace00a2d9efc9c13c342f9308a2439e405dbc7444bcb83c31），两次渲染一致并目视检查。原始基准哈希保持不变，当前新二进制已完成全部逐像素对照。
+
+本批已照用户最新要求实际运行 jobs 20，但出现 20 次 LLVM OOM 和 PowerShell 宿主 OOM，保存 out/Shot/cut-batch11-cpp-oom.log 后改用 8。源码错误集中修复并完成当前图 79/79 单元语法检查；续编发现的过渡滚动角残留整链删除，相关 2/2 单元通过，普通滚动条/滚动角 CPU 绘制保留。随后完整编译成功，不改变永久构建默认。
+
+Windows EXE/DLL 均以 jobs 8 编译链接成功，0 失败 edge；新 addon 已重建，旁置 DLL/资源与 out/Shot 哈希一致。serve、net、84 demos（62 exact / 1 fuzzy / 21 smoke）、Node、daemon、协议、Bilibili 离线长页与 accept 全部通过。183/183 张 PNG 解码像素完全一致，动态 clip-path 与等价静态中点完全一致；Chrome oracle 差异仍为 1.524%。EXE 45,542,912 字节，较第十批减少 790,016 字节；DLL 45,540,864 字节。
+
+EXE SHA256：7aee9e13c9505a25a66a99e1f1040fc924434d35146af8e6a5bca4d06667a2d3；DLL SHA256：881a850e5a2a5b8a6a18211f3d0bdf69d29f8012b2936616d05979fe4176a2b5。证据、日志和像素比较位于 out/cut-batch11；最终 EXE 日志 cut-batch11-build-final.log，DLL 日志 cut-batch11-dll.log。
+
+Linux probe 为 0 缺 BUILD、0 主仓库缺输入，仍有 3 个 Linux DEPS 检出项和 1 个宿主工具链输入缺失；jumbo 静态扫描列出 39 个候选，部分平台/生成输入未扫描。这是图与静态证据，六平台实际编译仍未完成。其余 Viz/GPU、协议、网络/诊断、第三方和根目录总复核继续处理，整个目标 active。
+
+拖放 14 文件提案未应用，自动审批曾拒绝且尚未获用户确认；范围在 out/cut-stage11/drag-proposal-review/scope.json。当前独立裁剪不包含该提案，不得重试或拆分。不得创建 PR、push 或发布。

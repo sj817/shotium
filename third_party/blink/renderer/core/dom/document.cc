@@ -334,10 +334,6 @@
 #include "third_party/blink/renderer/core/timing/window_performance.h"
 #include "third_party/blink/renderer/core/trustedtypes/trusted_html.h"
 #include "third_party/blink/renderer/core/trustedtypes/trusted_types_util.h"
-#include "third_party/blink/renderer/core/view_transition/page_reveal_event.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition_skip_reason.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition_supplement.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition_utils.h"
 #include "third_party/blink/renderer/core/xml/parser/xml_document_parser.h"
 #include "third_party/blink/renderer/core/xml/parser/xml_document_parser_rs.h"
 #include "third_party/blink/renderer/core/xml_names.h"
@@ -2138,7 +2134,6 @@ void Document::DidChangeVisibilityState() {
     interactive_detector->OnPageHiddenChanged(hidden());
   }
 
-  GetViewTransitions().DidChangeVisibilityState();
 }
 
 String Document::nodeName() const {
@@ -2479,7 +2474,6 @@ void Document::UpdateStyleAndLayoutTreeForThisDocument() {
     UnblockLoadEventAfterLayoutTreeUpdate();
   };
 
-  ViewTransitionUtils::WillUpdateStyleAndLayoutTree(*this);
 
   bool needs_slot_assignment = IsSlotAssignmentDirty();
   bool needs_layout_tree_update = false;
@@ -3167,14 +3161,6 @@ void Document::Shutdown() {
 
 
 
-  // Because the document view transition supplement can get destroyed before
-  // the execution context notification, we should clean up the transition
-  // objects here.
-  ViewTransitionUtils::ForEachTransition(*this, [](ViewTransition& transition) {
-    transition.SkipTransition(ViewTransition::PromiseResponse::kRejectAbort,
-                              ViewTransitionSkipReason::kContextDestroyed);
-  });
-
   // Preserve the global custom element registry on the TreeScope before the
   // window reference is cleared. This ensures that
   // Document.customElementRegistry continues to return the correct registry
@@ -3758,10 +3744,6 @@ void Document::setBody(HTMLElement* prp_new_body,
 void Document::WillInsertBody() {
   if (Loader())
     fetcher_->LoosenLoadThrottlingPolicy();
-
-  if (view_transitions_) {
-    view_transitions_->WillInsertBody();
-  }
 
   if (render_blocking_resource_manager_) {
     render_blocking_resource_manager_->WillInsertDocumentBody();
@@ -4760,11 +4742,6 @@ void Document::ResumeBlockedScriptExecution() {
   if (prerender_script_runner_delayer_) {
     prerender_script_runner_delayer_->Deactivate();
   }
-}
-
-ViewTransitionSupplement& Document::CreateViewTransitions() {
-  view_transitions_ = MakeGarbageCollected<ViewTransitionSupplement>(*this);
-  return *view_transitions_;
 }
 
 CSSStyleSheet& Document::ElementSheet() {
@@ -8719,7 +8696,6 @@ void Document::Trace(Visitor* visitor) const {
 #if BUILDFLAG(IS_ANDROID)
   visitor->Trace(payment_link_handler_);
 #endif  // BUILDFLAG(IS_ANDROID)
-  visitor->Trace(view_transitions_);
   visitor->Trace(overscroll_command_targets_);
   visitor->Trace(overscroll_command_invokers_);
 
@@ -9124,24 +9100,15 @@ void Document::ResetAgent(Agent& agent) {
   agent_ = agent;
 }
 
-void Document::EnqueuePageRevealEvent() {
+void Document::InitializeRouteNavigationState() {
   CHECK(dom_window_);
 
   if (RuntimeEnabledFeatures::RouteMatchingEnabled()) {
     // Set up a route map and navigation state now, and perform an active style
     // update right away, in case there are any @navigation rules.
-    //
-    // TODO(crbug.com/436805487): This seems rather heavy. Should it be
-    // conditioned on active view transitions or something?
     auto& route_map = RouteMap::Ensure(*this);
     route_map.EstablishNavigationStateFromActivation();
   }
-
-  dom_window_->SetHasBeenRevealed(false);
-  auto* page_reveal_event = MakeGarbageCollected<PageRevealEvent>();
-  page_reveal_event->SetTarget(dom_window_);
-  page_reveal_event->SetCurrentTarget(dom_window_);
-  EnqueueAnimationFrameEvent(page_reveal_event);
 }
 
 Resource* Document::GetPendingLinkPreloadForTesting(const KURL& url) {

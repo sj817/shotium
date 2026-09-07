@@ -6,10 +6,10 @@
 #define THIRD_PARTY_BLINK_RENDERER_PLATFORM_GRAPHICS_PAINT_TRANSFORM_PAINT_PROPERTY_NODE_H_
 
 #include <algorithm>
+#include <memory>
 
 #include "base/check_op.h"
 #include "base/dcheck_is_on.h"
-#include "cc/trees/property_tree.h"
 #include "cc/trees/sticky_position_constraint.h"
 #include "third_party/blink/renderer/platform/graphics/compositing_reasons.h"
 #include "third_party/blink/renderer/platform/graphics/compositor_element_id.h"
@@ -18,8 +18,10 @@
 #include "third_party/blink/renderer/platform/graphics/paint/paint_property_node.h"
 #include "third_party/blink/renderer/platform/platform_export.h"
 #include "third_party/blink/renderer/platform/wtf/allocator/allocator.h"
+#include "third_party/blink/renderer/platform/wtf/vector.h"
 #include "ui/gfx/geometry/point3_f.h"
 #include "ui/gfx/geometry/transform.h"
+#include "ui/gfx/geometry/vector2d.h"
 
 namespace blink {
 
@@ -121,7 +123,17 @@ class PLATFORM_EXPORT TransformPaintPropertyNode final
     CompositingReasons direct_compositing_reasons;
     CompositorElementId compositor_element_id;
     std::unique_ptr<CompositorStickyConstraint> sticky_constraint;
-    std::unique_ptr<cc::AnchorPositionScrollData> anchor_position_scroll_data;
+    // Preserve anchor dependency changes even when the resolved translation
+    // stays the same. This snapshot is compared by ComputeChange().
+    struct AnchorScrollSnapshot {
+      Vector<CompositorElementId> adjustment_container_ids;
+      gfx::Vector2d accumulated_scroll_origin;
+      bool needs_scroll_adjustment_in_x = false;
+      bool needs_scroll_adjustment_in_y = false;
+
+      bool operator==(const AnchorScrollSnapshot&) const = default;
+    };
+    std::unique_ptr<AnchorScrollSnapshot> anchor_scroll_snapshot;
     // If a visible frame is rooted at this node, this represents the element
     // ID of the containing document.
     CompositorElementId visible_frame_element_id;
@@ -234,10 +246,6 @@ class PLATFORM_EXPORT TransformPaintPropertyNode final
 
   const CompositorStickyConstraint* GetStickyConstraint() const {
     return state_.sticky_constraint.get();
-  }
-
-  const cc::AnchorPositionScrollData* GetAnchorPositionScrollData() const {
-    return state_.anchor_position_scroll_data.get();
   }
 
   // If this is a scroll offset translation (i.e., has an associated scroll

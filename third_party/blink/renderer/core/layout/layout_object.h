@@ -65,7 +65,6 @@
 #include "third_party/blink/renderer/core/paint/pre_paint_disable_side_effects_scope.h"
 #include "third_party/blink/renderer/core/style/computed_style.h"
 #include "third_party/blink/renderer/core/style/style_difference.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition_utils.h"
 #include "third_party/blink/renderer/platform/graphics/compositing_reasons.h"
 #include "third_party/blink/renderer/platform/graphics/image_orientation.h"
 #include "third_party/blink/renderer/platform/graphics/paint/display_item_client.h"
@@ -756,7 +755,7 @@ class CORE_EXPORT LayoutObject : public GarbageCollected<LayoutObject>,
   // Returns true if the LayoutObject is rendered in the top layer or the layer
   // for view transitions. Such objects are rendered as subsequent siblings of
   // the root element box and have specific stacking requirements.
-  bool IsInTopOrViewTransitionLayer() const;
+  bool IsInTopLayer() const;
 
   void NotifyPriorityScrollAnchorStatusChanged();
 
@@ -964,10 +963,6 @@ class CORE_EXPORT LayoutObject : public GarbageCollected<LayoutObject>,
     NOT_DESTROYED();
     return false;
   }
-  virtual bool IsLayoutImageReplacement() const {
-    NOT_DESTROYED();
-    return false;
-  }
   virtual bool IsLayoutReplaced() const {
     NOT_DESTROYED();
     return false;
@@ -1023,14 +1018,6 @@ class CORE_EXPORT LayoutObject : public GarbageCollected<LayoutObject>,
     return false;
   }
   virtual bool IsImage() const {
-    NOT_DESTROYED();
-    return false;
-  }
-  virtual bool IsViewTransitionContent() const {
-    NOT_DESTROYED();
-    return false;
-  }
-  virtual bool IsViewTransitionRoot() const {
     NOT_DESTROYED();
     return false;
   }
@@ -1584,17 +1571,9 @@ class CORE_EXPORT LayoutObject : public GarbageCollected<LayoutObject>,
     return has_transform_related_property_;
   }
   // Compared to StyleRef().HasTransform(), this excludes objects that ignore
-  // transform-related styles (e.g. LayoutInline), and includes elements with a
-  // canvas transform in a canvas subtree.
+  // transform-related styles (e.g. LayoutInline).
   bool HasTransform() const {
     NOT_DESTROYED();
-    if (IsInCanvasSubtree() && IsBox()) [[unlikely]] {
-      if (const auto* element = DynamicTo<Element>(GetNode())) {
-        if (element->GetUsedCanvasTransform()) {
-          return true;
-        }
-      }
-    }
     return HasTransformRelatedProperty() && StyleRef().HasTransform();
   }
   // Similar to the above.

@@ -49,7 +49,6 @@
 #include "third_party/blink/renderer/core/frame/local_frame_ukm_aggregator.h"
 #include "third_party/blink/renderer/core/layout/hit_test_request.h"
 #include "third_party/blink/renderer/core/paint/layout_object_counter.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition_request_forward.h"
 #include "third_party/blink/renderer/platform/geometry/physical_offset.h"
 #include "third_party/blink/renderer/platform/graphics/color.h"
 #include "third_party/blink/renderer/platform/graphics/compositor_element_id.h"
@@ -664,8 +663,6 @@ class CORE_EXPORT LocalFrameView final
                                     bool display_locked,
                                     bool recurse = false) override;
 
-  void SetThrottledForViewTransition(bool throttled);
-
   void BeginLifecycleUpdates();
 
   // Records a timestamp in PaintTiming when the frame is first not
@@ -1046,8 +1043,6 @@ class CORE_EXPORT LocalFrameView final
   bool RunResizeObserverSteps(DocumentLifecycle::LifecycleState target_state);
   void ClearResizeObserverLimit();
 
-  bool RunViewTransitionSteps(DocumentLifecycle::LifecycleState target_state);
-
   bool CheckLayoutInvalidationIsAllowed() const;
 
   // This runs the intersection observer steps for observations that need to
@@ -1208,8 +1203,6 @@ class CORE_EXPORT LocalFrameView final
   // True if the frame has deferred commits at least once per document load.
   // We won't defer again for the same document. This is only meaningful for
   // main frames.
-
-  bool throttled_for_view_transition_ = false;
 
   bool visual_viewport_or_overlay_needs_repaint_ = false;
 

@@ -77,7 +77,6 @@
 #include "third_party/blink/renderer/core/css/style_environment_variables.h"
 #include "third_party/blink/renderer/core/css/style_rule_font_feature_values.h"
 #include "third_party/blink/renderer/core/css/style_rule_font_palette_values.h"
-#include "third_party/blink/renderer/core/css/style_rule_view_transition.h"
 #include "third_party/blink/renderer/core/css/style_sheet_collection.h"
 #include "third_party/blink/renderer/core/css/style_sheet_contents.h"
 #include "third_party/blink/renderer/core/css/vision_deficiency.h"
@@ -124,9 +123,6 @@
 #include "third_party/blink/renderer/core/style/filter_operations.h"
 #include "third_party/blink/renderer/core/style/style_initial_data.h"
 #include "third_party/blink/renderer/core/svg/svg_resource.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition_supplement.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition_utils.h"
 #include "third_party/blink/renderer/platform/bindings/script_forbidden_scope.h"
 #include "third_party/blink/renderer/platform/fonts/font_selector.h"
 #include "third_party/blink/renderer/platform/geometry/physical_size.h"
@@ -156,7 +152,6 @@ enum RuleSetFlags {
   kFontPaletteValuesRules = 1 << 5,
   kPositionTryRules = 1 << 6,
   kFontFeatureValuesRules = 1 << 7,
-  kViewTransitionRules = 1 << 8,
   kFunctionRules = 1 << 9,
 };
 
@@ -188,9 +183,6 @@ unsigned GetRuleSetFlags(const HeapHashSet<Member<RuleSet>> rule_sets) {
     }
     if (!rule_set->PositionTryRules().empty()) {
       flags |= kPositionTryRules;
-    }
-    if (!rule_set->ViewTransitionRules().empty()) {
-      flags |= kViewTransitionRules;
     }
     if (!rule_set->FunctionRules().empty()) {
       flags |= kFunctionRules;
@@ -2669,47 +2661,6 @@ void StyleEngine::EnsureUAStyleForForcedColors() {
   }
 }
 
-RuleSet* StyleEngine::ActiveViewTransitionStyle(const Element& element) const {
-  ViewTransition* transition = ViewTransitionUtils::GetTransition(element);
-  if (!transition) {
-    return nullptr;
-  }
-
-  CSSStyleSheet* css_style_sheet = transition->UAStyleSheet();
-  return &css_style_sheet->Contents()->EnsureRuleSet(
-      CSSDefaultStyleSheets::ScreenEval(), /*mixins=*/{});
-}
-
-void StyleEngine::UpdateViewTransitionOptIn() {
-  bool cross_document_enabled = false;
-
-  // TODO(https://crbug.com/1463966): This will likely need to change to a
-  // CSSValueList if we want to support multiple tokens as a trigger.
-  Vector<String> types;
-  std::optional<Vector<String>> preview_types =
-      view_transition_preview_rule_.value
-          ? std::make_optional(view_transition_preview_rule_.value->GetTypes())
-          : std::nullopt;
-  if (view_transition_rule_.value) {
-    switch (view_transition_rule_.value->GetNavigation()) {
-      case StyleRuleViewTransition::NavigationType::kAuto:
-        cross_document_enabled = true;
-        types = view_transition_rule_.value->GetTypes();
-        break;
-      case StyleRuleViewTransition::NavigationType::kNone:
-        cross_document_enabled = false;
-        break;
-      case StyleRuleViewTransition::NavigationType::kUnspecified:
-        break;
-      default:
-        NOTREACHED();
-    }
-  }
-
-  GetDocument().GetViewTransitions().OnViewTransitionsStyleUpdated(
-      cross_document_enabled, types, preview_types);
-}
-
 bool StyleEngine::HasRulesForId(const AtomicString& id) const {
   DCHECK(global_rule_set_);
   return global_rule_set_->GetRuleFeatureSet()
@@ -3150,14 +3101,6 @@ void StyleEngine::ApplyRuleSetChanges(
     MarkPositionTryStylesDirty(changed_rule_sets);
   }
 
-  if (changed_rule_flags & kViewTransitionRules) {
-    // Since a shadow-tree isn't an independent navigable, @view-transition
-    // doesn't apply within one.
-    if (tree_scope.RootNode().IsDocumentNode()) {
-      AddViewTransitionRules(new_style_sheets);
-    }
-  }
-
   if (changed_rule_flags & kFunctionRules) {
     // Changes in function can affect function-using declarations
     // in arbitrary ways.
@@ -3496,43 +3439,6 @@ bool StyleEngine::UserKeyframeStyleShouldOverride(
   }
   return CascadeLayerMap::CompareLayerOrder(user_cascade_layer_map_,
                                             existing_rule, new_rule) <= 0;
-}
-
-void StyleEngine::AddViewTransitionRules(const ActiveStyleSheetVector& sheets) {
-  view_transition_rule_ = CascadeLayered<StyleRuleViewTransition>();
-
-  for (const ActiveStyleSheet& active_sheet : sheets) {
-    RuleSet* rule_set = active_sheet.second;
-    if (!rule_set || rule_set->ViewTransitionRules().empty()) {
-      continue;
-    }
-
-    const CascadeLayerMap* layer_map =
-        document_->GetScopedStyleResolver()
-            ? document_->GetScopedStyleResolver()->GetCascadeLayerMap()
-            : nullptr;
-    for (const CascadeLayered<StyleRuleViewTransition>& rule :
-         rule_set->ViewTransitionRules()) {
-      if (rule.value->GetNavigation() ==
-          StyleRuleViewTransition::NavigationType::kPreview) {
-        CHECK(RuntimeEnabledFeatures::TwoPhaseViewTransitionEnabled());
-        if (!view_transition_preview_rule_.value ||
-            CascadeLayerMap::CompareLayerOrder(
-                layer_map, view_transition_preview_rule_, rule) <= 0) {
-          view_transition_preview_rule_ = rule;
-        }
-        continue;
-      }
-
-      if (!view_transition_rule_.value ||
-          CascadeLayerMap::CompareLayerOrder(layer_map, view_transition_rule_,
-                                             rule) <= 0) {
-        view_transition_rule_ = rule;
-      }
-    }
-  }
-
-  UpdateViewTransitionOptIn();
 }
 
 void StyleEngine::AddFontPaletteValuesRules(const RuleSet& rule_set) {
@@ -4783,8 +4689,6 @@ void StyleEngine::Trace(Visitor* visitor) const {
   visitor->Trace(text_tracks_);
   visitor->Trace(vtt_originating_element_);
   visitor->Trace(parent_for_detached_subtree_);
-  visitor->Trace(view_transition_rule_);
-  visitor->Trace(view_transition_preview_rule_);
   visitor->Trace(style_image_cache_);
   visitor->Trace(fill_or_clip_path_uri_value_cache_);
   visitor->Trace(style_containment_scope_tree_);

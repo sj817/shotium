@@ -41,7 +41,6 @@ class HitTestCache;
 class HitTestLocation;
 class HitTestResult;
 class LayoutText;
-class LayoutViewTransitionRoot;
 class LocalFrameView;
 
 struct VariableLengthTransformResult {
@@ -109,9 +108,6 @@ class CORE_EXPORT LayoutView : public LayoutBlockFlow {
     NOT_DESTROYED();
     return kNormalPaintLayer;
   }
-
-  void AddChild(LayoutObject* new_child,
-                LayoutObject* before_child = nullptr) override;
 
   bool IsChildAllowed(LayoutObject*, const ComputedStyle&) const override;
 
@@ -355,8 +351,6 @@ class CORE_EXPORT LayoutView : public LayoutBlockFlow {
   VariableLengthTransformResult GetVariableLengthTransformResult(
       const LayoutText& text);
 
-  LayoutViewTransitionRoot* GetViewTransitionRoot() const;
-
   void CacheScrollDimensions();
   bool SetScrollbarSizesForViewportUnits(const gfx::Size& size);
 
@@ -382,8 +376,7 @@ class CORE_EXPORT LayoutView : public LayoutBlockFlow {
     return false;
   }
 
-  PhysicalRect OverflowClipRectInternal(OverlayScrollbarClipBehavior,
-                                        bool for_scroll_node) const;
+  PhysicalRect OverflowClipRectInternal(OverlayScrollbarClipBehavior) const;
 
   // The page area (content area) size of the first page, when printing. This
   // size should always be consulted when printing, also when not paginating

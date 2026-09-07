@@ -136,7 +136,6 @@ source_set("headers") {
     "frame/history_user_activation_state.h",
     "frame/user_activation_state.h",
     "frame/user_activation_update_source.h",
-    "frame/view_transition_state.h",
     "history/session_history_constants.h",
     "input/pointer_id.h",
     "input/synthetic_web_input_event_builders.h",

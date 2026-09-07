@@ -25,7 +25,6 @@
 
 #include "third_party/blink/renderer/core/html/media/html_video_element.h"
 
-#include "cc/layers/layer.h"
 #include "third_party/blink/renderer/core/css/css_property_names.h"
 #include "third_party/blink/renderer/core/dom/attribute.h"
 #include "third_party/blink/renderer/core/dom/document.h"
@@ -235,10 +234,7 @@ void HTMLVideoElement::StyleDidChange(const ComputedStyle* old_style,
   const auto new_dynamic_range_limit = new_style.GetDynamicRangeLimit();
   filter_quality_ = new_filter_quality;
   dynamic_range_limit_ = new_dynamic_range_limit;
-  // There is no cc::Layer to push these onto any more (no player, so
-  // CcLayer() is always null); the CSS-derived values are still computed and
-  // cached above so this function's contract with LayoutVideo::StyleDidChange
-  // is unchanged.
+  // Retain CSS-derived paint settings for the poster image.
 }
 
 }  // namespace blink

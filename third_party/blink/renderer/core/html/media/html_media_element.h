@@ -72,10 +72,6 @@
 #include "third_party/blink/renderer/platform/weborigin/kurl.h"
 #include "third_party/blink/renderer/platform/wtf/vector.h"
 
-namespace cc {
-class Layer;
-}
-
 namespace blink {
 
 class AudioTrack;
@@ -133,9 +129,6 @@ class CORE_EXPORT HTMLMediaElement
 
   bool SupportsSave() const;
   bool SupportsLoop() const;
-
-  cc::Layer* CcLayer() const { return cc_layer_; }
-  void SetCcLayerForTesting(cc::Layer* layer) { cc_layer_ = layer; }
 
   void ScheduleAutomaticTextTrackSelection();
 
@@ -391,8 +384,6 @@ class CORE_EXPORT HTMLMediaElement
 
   // Cached duration; always NaN because no media is ever loaded.
   double duration_ = std::numeric_limits<double>::quiet_NaN();
-
-  cc::Layer* cc_layer_ = nullptr;
 
   bool should_perform_automatic_track_selection_ : 1 = true;
   bool text_tracks_visible_ : 1 = false;

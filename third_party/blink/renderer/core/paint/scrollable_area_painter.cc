@@ -400,7 +400,6 @@ void ScrollableAreaPainter::PaintScrollCorner(
     const PaintInfo& paint_info,
     const PhysicalOffset& paint_offset,
     const CullRect& cull_rect) {
-  GraphicsContext& context = paint_info.context;
   gfx::Rect visual_rect = scrollable_area_.ScrollCornerRect();
   // TODO(crbug.com/40105990): We should not round paint_offset but should
   // consider subpixel accumulation when painting scroll corners.
@@ -409,16 +408,6 @@ void ScrollableAreaPainter::PaintScrollCorner(
     return;
 
   const auto& client = scrollable_area_.GetScrollCornerDisplayItemClient();
-
-  // Make sure to set up the effect node before painting custom or native
-  // scrollbar.
-  std::optional<ScopedPaintChunkProperties> chunk_properties;
-  const auto* properties =
-      scrollable_area_.GetLayoutBox()->FirstFragment().PaintProperties();
-  if (const auto* effect = properties->ScrollCornerEffect()) {
-    chunk_properties.emplace(context.GetPaintController(), *effect, client,
-                             DisplayItem::kScrollCorner);
-  }
 
   if (const auto* scroll_corner = scrollable_area_.ScrollCorner()) {
     CustomScrollbarTheme::PaintIntoRect(*scroll_corner, paint_info,

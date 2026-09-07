@@ -8,7 +8,6 @@
 
 #include "base/compiler_specific.h"
 #include "base/logging.h"
-#include "cc/layers/layer.h"
 #include "third_party/blink/renderer/platform/geometry/geometry_as_json.h"
 #include "third_party/blink/renderer/platform/graphics/color.h"
 #include "third_party/blink/renderer/platform/graphics/paint/paint_canvas.h"
@@ -122,19 +121,6 @@ void RasterInvalidationTracking::AsJSON(JSONObject* json, bool detailed) const {
       under_invalidations_json->PushObject(std::move(under_invalidation_json));
     }
     json->SetArray("underInvalidations", std::move(under_invalidations_json));
-  }
-}
-
-void RasterInvalidationTracking::AddToLayerDebugInfo(
-    cc::LayerDebugInfo& debug_info) const {
-  // This is not sorted because the output is for client programs, and the
-  // invalidations may be accumulated in debug_info.
-  for (auto& info : invalidations_) {
-    if (info.rect.IsEmpty())
-      continue;
-    debug_info.invalidations.push_back(
-        {gfx::Rect(info.rect), PaintInvalidationReasonToString(info.reason),
-         info.client_debug_name.Utf8()});
   }
 }
 

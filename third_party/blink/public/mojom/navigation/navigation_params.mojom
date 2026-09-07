@@ -25,7 +25,6 @@ import "third_party/blink/public/mojom/fenced_frame/fenced_frame_config.mojom";
 import "third_party/blink/public/mojom/fetch/fetch_api_request.mojom";
 import "third_party/blink/public/mojom/frame/agent_cluster_key.mojom";
 import "third_party/blink/public/mojom/frame/frame_policy.mojom";
-import "third_party/blink/public/mojom/frame/view_transition_state.mojom";
 import "third_party/blink/public/mojom/lcp_critical_path_predictor/lcp_critical_path_predictor.mojom";
 import "third_party/blink/public/mojom/loader/mixed_content.mojom";
 import "third_party/blink/public/mojom/loader/referrer.mojom";
@@ -646,13 +645,6 @@ struct CommitNavigationParams {
   // `PerformanceNavigationTiming` APIs.
   network.mojom.NavigationDeliveryType navigation_delivery_type = kDefault;
 
-  // Holds texture references (stored in the GPU process), geometry state, and
-  // select CSS property values from the previous Document displayed by this
-  // frame. This is used to support transitions when navigating between
-  // same-origin Documents. Note that this is only set and used for same-origin
-  // navigations. See https://drafts.csswg.org/css-view-transitions-2/ for
-  // details.
-  blink.mojom.ViewTransitionState? view_transition_state;
 
   // If any, the task ID of the initiator of the navigation. This is restricted
   // to same-document main-frame navigation initiated by the top-level document.
@@ -774,18 +766,4 @@ struct CommitNavigationParams {
   // the renderer cannot independently determine if a frame is a MIME
   // handler (which requires browser-side state).
   bool is_secure_context_root = false;
-};
-
-// Parameters used to dispatch the `pageswap` event on the old Document for
-// a navigation. Only generated for same-origin navigations.
-struct PageSwapEventParams {
-  // The URL of the destination page.
-  url.mojom.Url url;
-
-  // Used to retrieve the destination history item to create a
-  // NavigationHistoryEntry. Only provided for traverse navigations.
-  mojo_base.mojom.ByteString page_state;
-
-  // The type of navigation which will hide/unload this Document.
-  NavigationTypeForNavigationApi navigation_type;
 };

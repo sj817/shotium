@@ -32,7 +32,6 @@
 
 #include "base/numerics/checked_math.h"
 #include "build/build_config.h"
-#include "cc/tiles/software_image_decode_cache.h"
 #include "third_party/blink/public/mojom/webpreferences/web_preferences.mojom-blink.h"
 #include "third_party/blink/public/platform/platform.h"
 #include "third_party/blink/public/platform/web_data.h"
@@ -77,25 +76,6 @@ Image* Image::NullImage() {
   DCHECK(IsMainThread());
   DEFINE_STATIC_REF(Image, null_image, (BitmapImage::Create()));
   return null_image;
-}
-
-// static
-cc::ImageDecodeCache& Image::SharedCCDecodeCache(SkColorType color_type) {
-  // This denotes the allocated locked memory budget for the cache used for
-  // book-keeping. The cache indicates when the total memory locked exceeds this
-  // budget in cc::DecodedDrawImage.
-  DCHECK(color_type == kN32_SkColorType || color_type == kRGBA_F16_SkColorType);
-  static const size_t kLockedMemoryLimitBytes = 64 * 1024 * 1024;
-  if (color_type == kRGBA_F16_SkColorType) {
-    DEFINE_THREAD_SAFE_STATIC_LOCAL(
-        cc::SoftwareImageDecodeCache, image_decode_cache,
-        (kRGBA_F16_SkColorType, kLockedMemoryLimitBytes));
-    return image_decode_cache;
-  }
-  DEFINE_THREAD_SAFE_STATIC_LOCAL(cc::SoftwareImageDecodeCache,
-                                  image_decode_cache,
-                                  (kN32_SkColorType, kLockedMemoryLimitBytes));
-  return image_decode_cache;
 }
 
 scoped_refptr<Image> Image::LoadPlatformResource(

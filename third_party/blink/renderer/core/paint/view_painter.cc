@@ -21,8 +21,6 @@
 #include "third_party/blink/renderer/core/paint/paint_info.h"
 #include "third_party/blink/renderer/core/paint/paint_layer.h"
 #include "third_party/blink/renderer/core/paint/paint_layer_scrollable_area.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition_utils.h"
 #include "third_party/blink/renderer/platform/graphics/paint/drawing_recorder.h"
 #include "third_party/blink/renderer/platform/graphics/paint/geometry_mapper.h"
 #include "third_party/blink/renderer/platform/graphics/paint/scoped_paint_chunk_properties.h"
@@ -92,31 +90,11 @@ void ViewPainter::PaintBoxDecorationBackground(const PaintInfo& paint_info) {
       painting_background_in_contents_space ||
       ObjectPainter(layout_view).ShouldRecordSpecialHitTestData(paint_info);
 
-  Element* element = DynamicTo<Element>(layout_view.GetNode());
-
-  bool paints_element_tracking_id_or_region_capture_data =
-      element &&
-      (element->GetRegionCaptureCropId() ||
-       element->GetTrackedElementSubRects()) &&
-      // TODO(wangxianzhu): This is to avoid the side-effect of
-      // HitTestOpaqueness on region capture data. Verify if the side-effect
-      // really matters.
-      !(painting_background_in_contents_space &&
-        paint_info.ShouldSkipBackground());
   bool paints_scroll_hit_test =
       !painting_background_in_contents_space &&
       layout_view.FirstFragment().PaintProperties()->Scroll();
-  bool is_represented_via_pseudo_elements = [&layout_view]() {
-    if (auto* transition =
-            ViewTransitionUtils::GetTransition(layout_view.GetDocument())) {
-      return transition->IsRepresentedViaPseudoElements(layout_view);
-    }
-    return false;
-  }();
   if (!layout_view.HasBoxDecorationBackground() && !paints_hit_test_data &&
-      !paints_scroll_hit_test &&
-      !paints_element_tracking_id_or_region_capture_data &&
-      !is_represented_via_pseudo_elements) {
+      !paints_scroll_hit_test) {
     return;
   }
 
@@ -160,8 +138,7 @@ void ViewPainter::PaintBoxDecorationBackground(const PaintInfo& paint_info) {
       ShouldApplyRootBackgroundBehavior(document);
 
   bool should_paint_background = !paint_info.ShouldSkipBackground() &&
-                                 (layout_view.HasBoxDecorationBackground() ||
-                                  is_represented_via_pseudo_elements);
+                                 layout_view.HasBoxDecorationBackground();
 
   LayoutObject* root_object = nullptr;
   if (auto* document_element = document.documentElement())
@@ -221,13 +198,6 @@ void ViewPainter::PaintBoxDecorationBackground(const PaintInfo& paint_info) {
     ObjectPainter(layout_view)
         .RecordHitTestData(paint_info, pixel_snapped_background_rect,
                            *background_client);
-  }
-
-  if (paints_element_tracking_id_or_region_capture_data) {
-    BoxPainter(layout_view)
-        .RecordTrackedElementAndRegionCaptureData(
-            paint_info, PhysicalRect(pixel_snapped_background_rect),
-            *background_client);
   }
 
   // Record the scroll hit test after the non-scrolling background so

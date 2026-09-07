@@ -129,8 +129,7 @@ class BoxPainterBase {
                   BackgroundBleedAvoidance,
                   PhysicalBoxSides sides_to_include,
                   bool is_inline,
-                  bool is_painting_background_in_contents_space,
-                  PaintFlags paint_flags);
+                  bool is_painting_background_in_contents_space);
 
     // FillLayerInfo is a temporary, stack-allocated container which cannot
     // outlive the StyleImage.  This would normally be a raw pointer, if not for
@@ -184,8 +183,7 @@ class BoxPainterBase {
       const Color&,
       const FillLayer&,
       BackgroundBleedAvoidance,
-      bool is_painting_background_in_contents_space,
-      PaintFlags paint_flags) const = 0;
+      bool is_painting_background_in_contents_space) const = 0;
   // The node that the paint-timing path attributes a fill-layer image to,
   // resolved by the subclass with LayoutObject::GeneratingNode(). Kept separate
   // from `node_` so DevTools and image-animation paths continue to see the raw

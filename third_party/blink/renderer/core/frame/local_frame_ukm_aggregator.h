@@ -22,8 +22,6 @@ class TickClock;
 }
 
 namespace cc {
-struct BeginMainFrameMetrics;
-
 using ActiveFrameSequenceTrackers = uint16_t;
 }
 
@@ -356,12 +354,6 @@ class CORE_EXPORT LocalFrameUkmAggregator
   void DidReachFirstContentfulPaint();
 
   bool InMainFrameUpdate() { return in_main_frame_update_; }
-
-  // Populate a BeginMainFrameMetrics structure with the latency numbers for
-  // the most recent frame. Must be called when within a main frame update.
-  // That is, after calling BeginMainFrame and before calling
-  // RecordEndOfFrameMetrics.
-  std::unique_ptr<cc::BeginMainFrameMetrics> GetBeginMainFrameMetrics();
 
   void OnCommitRequested();
 

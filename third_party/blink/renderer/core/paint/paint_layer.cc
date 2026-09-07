@@ -99,8 +99,6 @@
 #include "third_party/blink/renderer/core/style/computed_style.h"
 #include "third_party/blink/renderer/core/style/reference_clip_path_operation.h"
 #include "third_party/blink/renderer/core/style/reference_offset_path_operation.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition_utils.h"
 #include "third_party/blink/renderer/platform/geometry/contoured_rect.h"
 #include "third_party/blink/renderer/platform/geometry/length_functions.h"
 #include "third_party/blink/renderer/platform/graphics/compositor_filter_operations.h"
@@ -301,11 +299,6 @@ void PaintLayer::UpdateTransform() {
   }
   const LayoutBox* box = GetLayoutBox();
   DCHECK(box);
-  if (const auto* element = DynamicTo<Element>(box->GetNode())) {
-    if (const auto* canvas_transform = element->GetUsedCanvasTransform()) {
-      transform_->PreConcat(*canvas_transform);
-    }
-  }
   const PhysicalRect reference_box = ComputeReferenceBox(*box);
   box->StyleRef().ApplyTransform(
       *transform_, box, reference_box,
@@ -1120,8 +1113,8 @@ Node* PaintLayer::EnclosingNode() const {
   NOTREACHED();
 }
 
-bool PaintLayer::IsInTopOrViewTransitionLayer() const {
-  return GetLayoutObject().IsInTopOrViewTransitionLayer();
+bool PaintLayer::IsInTopLayer() const {
+  return GetLayoutObject().IsInTopLayer();
 }
 
 // Compute the z-offset of the point in the transformState.
@@ -1336,17 +1329,6 @@ PaintLayer* PaintLayer::HitTestLayer(
     check_position_visibility_scope.emplace(*this);
   }
 
-  // TODO(vmpstr): We need to add a simple document flag which says whether
-  // there is an ongoing transition, since this may be too heavy of a check for
-  // each hit test.
-  if (auto* transition =
-          ViewTransitionUtils::TransitionForParticipantOrScope(layout_object)) {
-    // This means that the contents of the object are drawn elsewhere.
-    if (transition->IsRepresentedViaPseudoElements(layout_object)) {
-      return nullptr;
-    }
-  }
-
   ShouldRespectOverflowClipType clip_behavior = kRespectOverflowClip;
   if (result.GetHitTestRequest().IgnoreClipping() ||
       (RuntimeEnabledFeatures::UnboundedElementEnabled() &&
@@ -1494,24 +1476,6 @@ PaintLayer* PaintLayer::HitTestLayer(
   PaintLayer* candidate_layer = nullptr;
 
   PaintLayer* hit_layer = nullptr;
-  if (auto* element = DynamicTo<Element>(layout_object.GetNode())) {
-    if (element->GetPseudoElement(kPseudoIdViewTransition)) {
-      hit_layer = HitTestChildren(
-          kAllChildren, transform_container, container_fragment, result,
-          recursion_data, container_transform_state,
-          z_offset_for_descendants_ptr, z_offset, local_transform_state,
-          depth_sort_descendants, true /* transition_pseudo_pass */);
-      if (hit_layer) {
-        if (!depth_sort_descendants) {
-          return hit_layer;
-        }
-        // Depth-sorting may override z-index, so we need to check below for
-        // other hit_layer candidates.
-        candidate_layer = hit_layer;
-      }
-    }
-  }
-
   // Collect the fragments. This will compute the clip rectangles for each
   // layer fragment.
   PaintLayerFragments layer_fragments;
@@ -1912,8 +1876,7 @@ PaintLayer* PaintLayer::HitTestChildren(
     double* z_offset_for_descendants,
     double* z_offset,
     HitTestingTransformState* local_transform_state,
-    bool depth_sort_descendants,
-    bool transition_pseudo_pass) {
+    bool depth_sort_descendants) {
   if (!HasSelfPaintingLayerDescendant()) {
     return nullptr;
   }
@@ -1936,16 +1899,6 @@ PaintLayer* PaintLayer::HitTestChildren(
     // Replaced normal flow stacking contexts are hit-tested inline by their
     // respective layout painters to keep hit testing in sync with paint order.
     if (child_layer->ShouldPaintReplacedNormalFlowInline()) {
-      return false;
-    }
-
-    bool is_scoped_transition_pseudo =
-        !GetLayoutObject().IsViewTransitionRoot() &&
-        ViewTransitionUtils::IsViewTransitionRoot(
-            child_layer->GetLayoutObject());
-    if (is_scoped_transition_pseudo != transition_pseudo_pass) {
-      // A scoped ::view-transition pseudo is handled separately since it paints
-      // on top of all other children of the scope regardless of their z-index.
       return false;
     }
 
@@ -2522,20 +2475,6 @@ FilterOperations PaintLayer::FilterOperationsIncludingReflection() const {
   if (GetLayoutObject().HasReflection() && GetLayoutObject().IsBox()) {
     BoxReflection reflection = BoxReflectionForPaintLayer(*this, style);
 
-    if (RuntimeEnabledFeatures::CanvasDrawElementEnabled(
-            GetLayoutObject().GetDocument().GetExecutionContext()) &&
-        GetLayoutObject().IsInCanvasSubtree()) {
-      if (const auto* reflect_style = style.BoxReflect()) {
-        if (auto* style_image = reflect_style->Mask().GetImage()) {
-          // Strip the mask image if it is being rendered into a canvas and it
-          // is cross-origin.
-          if (!style_image->IsCorsSameOrigin()) {
-            reflection =
-                BoxReflection(reflection.Direction(), reflection.Offset());
-          }
-        }
-      }
-    }
 
     filter_operations.Operations().push_back(
         MakeGarbageCollected<BoxReflectFilterOperation>(reflection));

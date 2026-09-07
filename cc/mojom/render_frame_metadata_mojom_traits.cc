@@ -9,7 +9,6 @@
 #include "base/debug/crash_logging.h"
 #include "build/build_config.h"
 #include "services/viz/public/cpp/compositing/selection_mojom_traits.h"
-#include "services/viz/public/cpp/compositing/tracked_element_rects_mojom_traits.h"
 #include "services/viz/public/cpp/compositing/vertical_scroll_direction_mojom_traits.h"
 #include "third_party/skia/include/core/SkColor.h"
 #include "ui/gfx/geometry/mojom/geometry_mojom_traits.h"
@@ -83,10 +82,6 @@ bool StructTraits<
     return false;
   }
 #endif
-  if (!data.ReadTrackedElementRects(&out->tracked_element_rects)) {
-    SetFailedCheckCrashKey("tracked_element_rects");
-    return false;
-  }
   if (!data.ReadViewportSizeInPixels(&out->viewport_size_in_pixels)) {
     SetFailedCheckCrashKey("viewport_size_in_pixels");
     return false;

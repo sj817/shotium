@@ -96,14 +96,14 @@ bool HasNonTrivialSpellingGrammarStyles(const FragmentItem& fragment_item,
     // or ‘-webkit-text-stroke-width’ differs from the originating style.
     Color pseudo_color = HighlightStyleUtils::ResolveColor(
         document, originating_style, pseudo_style, pseudo,
-        GetCSSPropertyColor(), {}, false, SearchTextIsActiveMatch::kNo);
+        GetCSSPropertyColor(), {}, SearchTextIsActiveMatch::kNo);
     if (pseudo_color !=
         originating_style.VisitedDependentColor(GetCSSPropertyColor())) {
       return true;
     }
     if (HighlightStyleUtils::ResolveColor(
             document, originating_style, pseudo_style, pseudo,
-            GetCSSPropertyWebkitTextFillColor(), {}, false,
+            GetCSSPropertyWebkitTextFillColor(), {},
             SearchTextIsActiveMatch::kNo) !=
         originating_style.VisitedDependentColor(
             GetCSSPropertyWebkitTextFillColor())) {
@@ -111,7 +111,7 @@ bool HasNonTrivialSpellingGrammarStyles(const FragmentItem& fragment_item,
     }
     if (HighlightStyleUtils::ResolveColor(
             document, originating_style, pseudo_style, pseudo,
-            GetCSSPropertyWebkitTextStrokeColor(), {}, false,
+            GetCSSPropertyWebkitTextStrokeColor(), {},
             SearchTextIsActiveMatch::kNo) !=
         originating_style.VisitedDependentColor(
             GetCSSPropertyWebkitTextStrokeColor())) {
@@ -122,8 +122,7 @@ bool HasNonTrivialSpellingGrammarStyles(const FragmentItem& fragment_item,
     // If there is a background color.
     if (!HighlightStyleUtils::ResolveColor(document, originating_style,
                                            pseudo_style, pseudo,
-                                           GetCSSPropertyBackgroundColor(), {},
-                                           false, SearchTextIsActiveMatch::kNo)
+                                           GetCSSPropertyBackgroundColor(), {}, SearchTextIsActiveMatch::kNo)
              .IsFullyTransparent()) {
       return true;
     }
@@ -157,7 +156,7 @@ bool HasNonTrivialSpellingGrammarStyles(const FragmentItem& fragment_item,
     if (originating_style.GetTextEmphasisMark() != TextEmphasisMark::kNone &&
         HighlightStyleUtils::ResolveColor(
             document, originating_style, pseudo_style, pseudo,
-            GetCSSPropertyTextEmphasisColor(), {}, false,
+            GetCSSPropertyTextEmphasisColor(), {},
             SearchTextIsActiveMatch::kNo) !=
             originating_style.VisitedDependentColor(
                 GetCSSPropertyTextEmphasisColor())) {
@@ -358,7 +357,7 @@ void HighlightPainter::SelectionPaintState::PaintSelectionBackground(
     const std::optional<AffineTransform>& rotation) {
   const Color color = HighlightStyleUtils::HighlightBackgroundColor(
       document, style, node, selection_style_.style.current_color,
-      kPseudoIdSelection, paint_info.IsPrivacyPreserving(),
+      kPseudoIdSelection,
       SearchTextIsActiveMatch::kNo);
   HighlightPainter::PaintHighlightBackground(context, style, color,
                                              PhysicalSelectionRect(), rotation);
@@ -462,20 +461,15 @@ HighlightPainter::HighlightPainter(
             *text_node, fragment_paint_info_.from, fragment_paint_info_.to);
         DCHECK(fragment_dom_offsets_);
         markers_ = controller.ComputeMarkersToPaint(*text_node);
-        if (!paint_info.IsPrivacyPreserving()) {
-          // When preserving privacy, only paint custom highlights and
-          // find-in-page. This check only protects markers painted with the
-          // highlight overlay system.
-          target_ = controller.MarkersFor(
-              *text_node, DocumentMarker::kTextFragment,
-              fragment_dom_offsets_->start, fragment_dom_offsets_->end);
-          spelling_ = controller.MarkersFor(
-              *text_node, DocumentMarker::kSpelling,
-              fragment_dom_offsets_->start, fragment_dom_offsets_->end);
-          grammar_ = controller.MarkersFor(*text_node, DocumentMarker::kGrammar,
-                                           fragment_dom_offsets_->start,
-                                           fragment_dom_offsets_->end);
-        }
+        target_ = controller.MarkersFor(
+            *text_node, DocumentMarker::kTextFragment,
+            fragment_dom_offsets_->start, fragment_dom_offsets_->end);
+        spelling_ = controller.MarkersFor(
+            *text_node, DocumentMarker::kSpelling,
+            fragment_dom_offsets_->start, fragment_dom_offsets_->end);
+        grammar_ = controller.MarkersFor(*text_node, DocumentMarker::kGrammar,
+                                         fragment_dom_offsets_->start,
+                                         fragment_dom_offsets_->end);
         if (RuntimeEnabledFeatures::SearchTextHighlightPseudoEnabled() &&
             !fragment_item_.IsSvgText()) {
           search_ = controller.MarkersFor(
@@ -610,11 +604,6 @@ void HighlightPainter::PaintNonCssMarkers(Phase phase) {
       case DocumentMarker::kPreviewStylusGesture:
       case DocumentMarker::kActiveSuggestion:
       case DocumentMarker::kSuggestion: {
-        // Editing markers are transient and reflect uncommitted content, so do
-        // not draw them.
-        if (paint_info_.IsPrivacyPreserving()) {
-          break;
-        }
 
         const auto& styleable_marker = To<StyleableMarker>(*marker);
         if (phase == kBackground) {
@@ -644,9 +633,7 @@ void HighlightPainter::PaintNonCssMarkers(Phase phase) {
         break;
       }
       case DocumentMarker::kGlic: {
-        // GLIC markers may be related to agentic AI or other features that the
-        // document origin would not normally have access to.
-        if (phase == kBackground && !paint_info_.IsPrivacyPreserving()) {
+        if (phase == kBackground) {
           PaintBackgroundForGlicMarker(marker, text, paint_start_offset,
                                        paint_end_offset);
         }

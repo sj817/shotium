@@ -1299,20 +1299,10 @@ class ComputedStyle final : public ComputedStyleBase {
   }
 
   StyleIntrinsicLength EffectiveContainIntrinsicWidth() const {
-    StyleIntrinsicLength length = ContainIntrinsicWidth();
-    if (HasSizeContainmentForViewTransitionScope() &&
-        RuntimeEnabledFeatures::ScopedViewTransitionSizeContainmentEnabled()) {
-      length.SetHasAuto();
-    }
-    return length;
+    return ContainIntrinsicWidth();
   }
   StyleIntrinsicLength EffectiveContainIntrinsicHeight() const {
-    StyleIntrinsicLength length = ContainIntrinsicHeight();
-    if (HasSizeContainmentForViewTransitionScope() &&
-        RuntimeEnabledFeatures::ScopedViewTransitionSizeContainmentEnabled()) {
-      length.SetHasAuto();
-    }
-    return length;
+    return ContainIntrinsicHeight();
   }
 
   StyleIntrinsicLength EffectiveContainIntrinsicInlineSize() const {
@@ -1642,8 +1632,7 @@ class ComputedStyle final : public ComputedStyleBase {
   static unsigned EffectiveContainment(unsigned contain,
                                        unsigned container_type,
                                        EContentVisibility content_visibility,
-                                       bool skips_contents,
-                                       bool has_size_containment_for_vt_scope) {
+                                       bool skips_contents) {
     unsigned effective = contain;
 
     if (container_type & kContainerTypeInlineSize) {
@@ -1662,9 +1651,7 @@ class ComputedStyle final : public ComputedStyleBase {
       effective |= kContainsLayout;
       effective |= kContainsPaint;
     }
-    if (skips_contents || (has_size_containment_for_vt_scope &&
-                           RuntimeEnabledFeatures::
-                               ScopedViewTransitionSizeContainmentEnabled())) {
+    if (skips_contents) {
       effective |= kContainsSize;
     }
 
@@ -1673,10 +1660,7 @@ class ComputedStyle final : public ComputedStyleBase {
 
   unsigned EffectiveContainment() const {
     return ComputedStyle::EffectiveContainment(
-        Contain(), ContainerType(), ContentVisibility(), SkipsContents(),
-        HasSizeContainmentForViewTransitionScope() &&
-            RuntimeEnabledFeatures::
-                ScopedViewTransitionSizeContainmentEnabled());
+        Contain(), ContainerType(), ContentVisibility(), SkipsContents());
   }
 
   bool ContainsStyle() const { return EffectiveContainment() & kContainsStyle; }
@@ -2202,7 +2186,7 @@ class ComputedStyle final : public ComputedStyleBase {
     if (HasNonInitialBackdropFilter()) {
       return true;
     }
-    if (ViewTransitionName() || ElementIsViewTransitionParticipant()) {
+    if (ViewTransitionName()) {
       return true;
     }
     return false;
@@ -3137,10 +3121,7 @@ class ComputedStyleBuilder final : public ComputedStyleBuilderBase {
   // contain
   bool ShouldApplyAnyContainment(const Element& element) const {
     unsigned effective_containment = ComputedStyle::EffectiveContainment(
-        Contain(), ContainerType(), ContentVisibility(), SkipsContents(),
-        HasSizeContainmentForViewTransitionScope() &&
-            RuntimeEnabledFeatures::
-                ScopedViewTransitionSizeContainmentEnabled());
+        Contain(), ContainerType(), ContentVisibility(), SkipsContents());
     return ComputedStyle::ShouldApplyAnyContainment(element, GetDisplayStyle(),
                                                     effective_containment);
   }

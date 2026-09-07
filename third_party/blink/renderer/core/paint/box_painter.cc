@@ -15,25 +15,6 @@
 
 namespace blink {
 
-void BoxPainter::RecordTrackedElementAndRegionCaptureData(
-    const PaintInfo& paint_info,
-    const PhysicalRect& paint_rect,
-    const DisplayItemClient& background_client) {
-  const Element* element = DynamicTo<Element>(layout_box_.GetNode());
-  if (element) {
-    const RegionCaptureCropId* crop_id = element->GetRegionCaptureCropId();
-    if (crop_id) {
-      paint_info.context.GetPaintController().RecordRegionCaptureData(
-          background_client, *crop_id, ToPixelSnappedRect(paint_rect));
-    }
-
-    if (const auto* sub_rects = element->GetTrackedElementSubRects()) {
-      paint_info.context.GetPaintController().RecordTrackedElementData(
-          background_client, ToPixelSnappedRect(paint_rect), *sub_rects);
-    }
-  }
-}
-
 void BoxPainter::RecordScrollHitTestData(
     const PaintInfo& paint_info,
     const DisplayItemClient& background_client,
@@ -43,17 +24,9 @@ void BoxPainter::RecordScrollHitTestData(
   }
 
   // Scroll hit test data are only needed for compositing. This flag is used for
-  // printing and drag images which do not need hit testing. An exception is
-  // content under <canvas>, which disables compositing but which needs scroll
-  // hit test data.
+  // printing and drag images which do not need hit testing.
   if (paint_info.ShouldOmitCompositingInfo()) {
-    bool painting_canvas_child =
-        RuntimeEnabledFeatures::CanvasDrawElementEnabled(
-            layout_box_.GetDocument().GetExecutionContext()) &&
-        layout_box_.IsInCanvasSubtree();
-    if (!painting_canvas_child) {
-      return;
-    }
+    return;
   }
 
   // If an object is not visible, it does not scroll.

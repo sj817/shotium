@@ -21,7 +21,6 @@
 #include "third_party/blink/renderer/platform/graphics/paint/paint_chunk.h"
 #include "third_party/blink/renderer/platform/graphics/paint/paint_chunker.h"
 #include "third_party/blink/renderer/platform/graphics/paint/paint_under_invalidation_checker.h"
-#include "third_party/blink/renderer/platform/graphics/paint/region_capture_data.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
 #include "third_party/blink/renderer/platform/heap/member.h"
 #include "third_party/blink/renderer/platform/heap/persistent.h"
@@ -170,15 +169,6 @@ class PLATFORM_EXPORT PaintController {
                          bool blocking_wheel,
                          cc::HitTestOpaqueness,
                          DisplayItem::Type type = DisplayItem::kHitTest);
-
-  void RecordRegionCaptureData(const DisplayItemClient& client,
-                               const RegionCaptureCropId& crop_id,
-                               const gfx::Rect& rect);
-
-  void RecordTrackedElementData(
-      const DisplayItemClient& client,
-      const gfx::Rect& element_paint_rect,
-      const TrackedElementSubRects& tracked_element_sub_rects);
 
   void RecordScrollHitTestData(
       const DisplayItemClient&,

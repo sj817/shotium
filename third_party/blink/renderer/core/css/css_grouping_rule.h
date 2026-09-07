@@ -166,7 +166,6 @@ constexpr bool IsCSSGroupingRuleType(CSSRule::Type type) {
     case CSSRule::kPositionTryRule:
     case CSSRule::kPropertyRule:
     case CSSRule::kStyleRule:
-    case CSSRule::kViewTransitionRule:
       // go/keep-sorted end
       return false;
   }

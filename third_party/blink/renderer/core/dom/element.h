@@ -63,16 +63,12 @@
 #include "third_party/blink/renderer/platform/bindings/exception_state.h"
 #include "third_party/blink/renderer/platform/bindings/frozen_array.h"
 #include "third_party/blink/renderer/platform/bindings/transform_view.h"
-#include "third_party/blink/renderer/platform/graphics/paint/tracked_element_data.h"
 #include "third_party/blink/renderer/platform/heap/collection_support/heap_hash_map.h"
 #include "third_party/blink/renderer/platform/heap/collection_support/heap_linked_hash_set.h"
 #include "third_party/blink/renderer/platform/heap/collection_support/heap_vector.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
-#include "third_party/blink/renderer/platform/region_capture_crop_id.h"
-#include "third_party/blink/renderer/platform/restriction_target_id.h"
 #include "third_party/blink/renderer/platform/text/text_direction.h"
 #include "third_party/blink/renderer/platform/theme_types.h"
-#include "third_party/blink/renderer/platform/tracked_element_id.h"
 #include "third_party/blink/renderer/platform/wtf/text/atomic_string.h"
 #include "third_party/blink/renderer/platform/wtf/text/atomic_string_table.h"
 #include "third_party/blink/renderer/platform/wtf/wtf_size_t.h"
@@ -83,10 +79,6 @@ class RectF;
 class Transform;
 class Vector2dF;
 }  // namespace gfx
-
-namespace viz {
-enum class TrackedElementFeature;
-}  // namespace viz
 
 namespace blink {
 
@@ -114,8 +106,6 @@ class CustomElementRegistry;
 class DisplayLockContext;
 class DisplayStyle;
 class Document;
-class DOMMatrix;
-class DOMMatrixInit;
 class DOMPoint;
 class DOMPointInit;
 class DOMQuad;
@@ -206,8 +196,6 @@ enum class ElementFlags {
   kContainsFullScreenElement = 1 << 3,
   kIsInTopLayer = 1 << 4,
   kContainsPersistentVideo = 1 << 5,
-  kIsEligibleForElementCapture = 1 << 6,
-  kHasCheckedElementCaptureEligibility = 1 << 7,
   kIsUnboundedElementActive = 1 << 8,
 
   kNumberOfElementFlags = 9,  // Size of bitfield used to store the flags.
@@ -1012,50 +1000,6 @@ class CORE_EXPORT Element : public ContainerNode {
 
   void SetNeedsCompositingUpdate();
 
-  // Associates the element with a RegionCaptureCropId, which is the object
-  // internally backing a CropTarget.
-  // This method may be called at most once. The ID must be non-null.
-  void SetRegionCaptureCropId(std::unique_ptr<RegionCaptureCropId> id);
-
-  // If SetRegionCaptureCropId(id) was previously called on `this`,
-  // returns the non-empty `id` which it previously provided.
-  // Otherwise, returns a nullptr.
-  const RegionCaptureCropId* GetRegionCaptureCropId() const;
-
-  // Associates the element with a TrackedElementSubRect, which is the object
-  // internally backing a TrackedElement.
-  // This method may be called at most once per feature.
-  void SetTrackedElementSubRect(viz::TrackedElementFeature feature,
-                                const TrackedElementSubRect& rect);
-
-  // If SetTrackedElementSubRect() was previously called on `this` for
-  // `feature`, returns the rect which it previously provided. Otherwise,
-  // returns a nullptr.
-  const TrackedElementSubRect* GetTrackedElementSubRect(
-      viz::TrackedElementFeature feature) const;
-
-  // Clears the TrackedElementSubRect associated with the element for `feature`.
-  void ClearTrackedElementSubRect(viz::TrackedElementFeature feature);
-
-  // Returns a map that contains all the TrackedElementSubRects set on `this`.
-  // Returns a nullptr if no TrackedElementSubRects were set.
-  const TrackedElementSubRects* GetTrackedElementSubRects() const;
-
-  // Associates the element with a RestrictionTargetId, which is the object
-  // internally backing a RestrictionTarget.
-  // This method may be called at most once. The ID must be non-null.
-  void SetRestrictionTargetId(std::unique_ptr<RestrictionTargetId> id);
-
-  // If SetRestrictionTargetId(id) was previously called on `this`,
-  // returns the non-empty `id` which it previously provided.
-  // Otherwise, returns a nullptr.
-  const RestrictionTargetId* GetRestrictionTargetId() const;
-
-  // Set whether the element is eligible for element level capture. This is
-  // based on how the element is painted. Should only be called if the element
-  // has a RestrictionTargetId.
-  void SetIsEligibleForElementCapture(bool value);
-
   ShadowRoot* attachShadow(const ShadowRootInit*, ExceptionState&);
 
   // Returns true if the attachment was successful.
@@ -1133,21 +1077,6 @@ class CORE_EXPORT Element : public ContainerNode {
   bool IsCanvasOrInCanvasSubtree() const;
   // Called when `IsInCanvasSubtree()` changes.
   virtual void DidChangeIsInCanvasSubtree();
-  HTMLCanvasElement* CanvasForDrawing() const;
-
-  DOMMatrix* getCanvasTransform();
-  void setCanvasTransform(DOMMatrixInit* matrix,
-                          ExceptionState& exception_state);
-  bool HasCanvasTransform() const;
-  // Returns the transform that should be used for mapping the border-box,
-  // before CSS transforms, to the canvas coordinate space. When the element is
-  // in a canvas subtree, this affects the geometry of the element (e.g., for
-  // hit-testing, `getBoundingClientRect()`) and can be used to make the
-  // element's geometry match its drawn position in a canvas. Returns nullptr
-  // if the element is not in a canvas subtree.
-  const gfx::Transform* GetUsedCanvasTransform() const;
-  const gfx::Transform* GetCanvasTransformInternal() const;
-  void SetCanvasTransformInternal(const gfx::Transform& transform);
 
   bool IsDefined() const {
     // An element whose custom element state is "uncustomized" or "custom"
@@ -1208,8 +1137,6 @@ class CORE_EXPORT Element : public ContainerNode {
   void FocusStateChanged();
   void FocusVisibleStateChanged();
   void FocusWithinStateChanged();
-  void ActiveViewTransitionStateChanged();
-  void ActiveViewTransitionTypeStateChanged();
   void OverscrollTargetStateChanged();
 
   void SetDragged(bool) override;
@@ -1518,12 +1445,6 @@ class CORE_EXPORT Element : public ContainerNode {
   void BeginParsingChildren() { SetIsFinishedParsingChildren(false); }
 
   // Returns the pseudo-element for the given PseudoId type.
-  // |pseudo_argument| is used to uniquely identify a pseudo-element
-  // from a set of pseudo-elements which share the same |pseudo_id|. The current
-  // usage of this ID is limited to pseudo-elements generated for a
-  // ViewTransition. See
-  // third_party/blink/renderer/core/view_transition/README.md
-  //
   // Also see GetStyledPseudoElement() below.
   PseudoElement* GetPseudoElement(
       PseudoId,
@@ -1893,10 +1814,6 @@ class CORE_EXPORT Element : public ContainerNode {
   Element* GetStyledPseudoElement(PseudoId pseudo_id,
                                   const AtomicString& pseudo_argument) const;
 
-  // Performs an update of the view-transition pseudo-elements.
-  void UpdateTransitionPseudoElements(const StyleRecalcChange,
-                                      const StyleRecalcContext&);
-
   // Returns true if the element has the 'inert' attribute, forcing itself and
   // all its subtree to be inert.
   // TODO(crbug.com/370065759): This API is only used in HasEditableLevel().
@@ -2086,14 +2003,6 @@ class CORE_EXPORT Element : public ContainerNode {
   // Returns true if this element is a native password field or has been
   // identified as a custom password field via CSS or JS heuristics.
   virtual bool IsNativeOrHeuristicPassword() const;
-
-  // Returns true if the element's coordinates should currently be tracked
-  // by the compositor for redaction purposes.
-  virtual bool ShouldTrackPassword() const;
-
-  // Updates the TrackedElementSubRect on feature `kPasswordTracking` for this
-  // element.
-  void UpdatePasswordTracking();
 
   bool HasElementFlag(ElementFlags mask) const;
   void SetElementFlag(ElementFlags, bool value = true);
@@ -2327,7 +2236,6 @@ class CORE_EXPORT Element : public ContainerNode {
   void RebuildPseudoElementLayoutTree(PseudoId, WhitespaceAttacher&);
   void RebuildColumnLayoutTrees(WhitespaceAttacher&);
   void RebuildFirstLetterLayoutTree();
-  void RebuildTransitionLayoutTree(WhitespaceAttacher&);
   void RebuildOverscrollAreaLayoutTree(WhitespaceAttacher&);
   void RebuildShadowRootLayoutTree(WhitespaceAttacher&);
   inline void CheckForEmptyStyleChange(const Node* node_before_change,
@@ -2442,7 +2350,6 @@ class CORE_EXPORT Element : public ContainerNode {
   void DetachOverscrollPseudoElements(bool performing_reattach);
 
   void AttachColumnPseudoElements(AttachContext& context);
-  void AttachTransitionPseudoElements(AttachContext& context);
 
   void DetachPrecedingPseudoElements(bool performing_reattach) {
     DetachPseudoElement(kPseudoIdScrollMarker, performing_reattach);
@@ -2468,7 +2375,6 @@ class CORE_EXPORT Element : public ContainerNode {
   }
 
   void DetachColumnPseudoElements(bool performing_reattach);
-  void DetachTransitionPseudoElements(bool performing_reattach);
 
   void RecomputeDirectionFromParent();
 

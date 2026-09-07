@@ -198,7 +198,6 @@ void CaretDisplayItemClient::UpdateStyleAndLayoutIfNeeded(
   if (!new_layout_block) {
     color_ = Color();
     local_rect_ = PhysicalRect();
-    is_in_canvas_subtree_ = false;
     return;
   }
 
@@ -222,24 +221,6 @@ void CaretDisplayItemClient::UpdateStyleAndLayoutIfNeeded(
     color_ = new_color;
   }
 
-  if (RuntimeEnabledFeatures::CanvasDrawElementEnabled(
-          layout_block_->GetDocument().GetExecutionContext())) {
-    bool was_in_canvas_subtree = is_in_canvas_subtree_;
-
-    is_in_canvas_subtree_ = false;
-    if (Node* anchor_node = caret_position.AnchorNode()) {
-      Element* element = DynamicTo<Element>(anchor_node);
-      if (!element) {
-        element = anchor_node->parentElement();
-      }
-      if (element) {
-        is_in_canvas_subtree_ = element->IsInCanvasSubtree();
-      }
-    }
-    if (was_in_canvas_subtree != is_in_canvas_subtree_) {
-      needs_paint_invalidation_ = true;
-    }
-  }
 
   // https://drafts.csswg.org/css-ui/#caret-color When caret-shape is block,
   // ensuring good visibility and contrast is best achieved with a
@@ -354,17 +335,6 @@ void CaretDisplayItemClient::InvalidatePaintInCurrentLayoutBlock(
   context.painting_layer->SetNeedsRepaint();
   ObjectPaintInvalidatorWithContext(*layout_block_, context)
       .InvalidateDisplayItemClient(*this, PaintInvalidationReason::kCaret);
-}
-
-void CaretDisplayItemClient::SetNeedsNonCompositedPaintInvalidation() {
-  if (!layout_block_) {
-    return;
-  }
-  // Elements under canvas can only be rendered with `drawElementImage` and do
-  // not support compositing.
-  if (is_in_canvas_subtree_) {
-    needs_paint_invalidation_ = true;
-  }
 }
 
 void CaretDisplayItemClient::PaintCaret(

@@ -749,11 +749,8 @@ void LayoutObject::RemoveChild(LayoutObject* old_child) {
   LayoutBoxModelObject::AttemptToMerge(previous_sibling, next_sibling);
 }
 
-bool LayoutObject::IsInTopOrViewTransitionLayer() const {
+bool LayoutObject::IsInTopLayer() const {
   NOT_DESTROYED();
-  if (IsViewTransitionRoot()) {
-    return true;
-  }
   if (Element* element = DynamicTo<Element>(GetNode())) {
     return StyleRef().IsRenderedInTopLayer(*element);
   }
@@ -1892,9 +1889,6 @@ LayoutObject* LayoutObject::NearestAncestorForElement() const {
 
 bool LayoutObject::ComputeIsFixedContainer(const ComputedStyle& style) const {
   NOT_DESTROYED();
-  if (IsViewTransitionRoot()) {
-    return true;
-  }
   bool is_document_element = IsDocumentElement();
   // https://www.w3.org/TR/filter-effects-1/#FilterProperty
   if (!is_document_element && style.HasNonInitialFilter()) {

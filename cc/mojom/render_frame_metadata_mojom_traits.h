@@ -11,7 +11,6 @@
 #include "build/build_config.h"
 #include "cc/mojom/render_frame_metadata.mojom-shared.h"
 #include "cc/trees/render_frame_metadata.h"
-#include "components/viz/common/surfaces/tracked_element_rects.h"
 #include "services/viz/public/cpp/compositing/local_surface_id_mojom_traits.h"
 #include "skia/public/mojom/skcolor4f_mojom_traits.h"
 #include "third_party/skia/include/core/SkColor.h"
@@ -103,11 +102,6 @@ struct COMPONENT_EXPORT(CC_SHARED_MOJOM_TRAITS)
   static int64_t primary_main_frame_item_sequence_number(
       const cc::RenderFrameMetadata& metadata) {
     return metadata.primary_main_frame_item_sequence_number;
-  }
-
-  static const viz::TrackedElementRects& tracked_element_rects(
-      const cc::RenderFrameMetadata& metadata) {
-    return metadata.tracked_element_rects;
   }
 
 #if BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_IOS)

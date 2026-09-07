@@ -14,7 +14,6 @@
 #include "base/memory/scoped_refptr.h"
 #include "base/threading/thread_checker.h"
 #include "components/viz/common/resources/release_callback.h"
-#include "components/viz/common/surfaces/tracked_element_rects.h"
 #include "components/viz/common/viz_common_export.h"
 #include "gpu/command_buffer/client/client_shared_image.h"
 #include "gpu/command_buffer/client/shared_image_interface.h"
@@ -209,14 +208,6 @@ class VIZ_COMMON_EXPORT CopyOutputResult {
   // Returns the color space of the image data returned by ReadRGBAPlane().
   virtual gfx::ColorSpace GetRGBAColorSpace() const;
 
-  void SetTrackedElementRects(TrackedElementRects tracked_element_rects) {
-    tracked_element_rects_ = std::move(tracked_element_rects);
-  }
-
-  const TrackedElementRects& GetTrackedElementRects() const {
-    return tracked_element_rects_;
-  }
-
  protected:
   // Lock the content of SkBitmap returned from AsSkBitmap() call.
   // Return true, if lock operation is successful, implementations should
@@ -250,8 +241,6 @@ class VIZ_COMMON_EXPORT CopyOutputResult {
 
   // Cached bitmap returned by the default implementation of AsSkBitmap().
   mutable SkBitmap cached_bitmap_;
-
-  TrackedElementRects tracked_element_rects_;
 };
 
 // Subclass of CopyOutputResult that provides a RGBA result from an
@@ -311,21 +300,6 @@ class VIZ_COMMON_EXPORT CopyOutputSharedImageResult : public CopyOutputResult {
   ReleaseCallback release_callback_;
 };
 
-// Output bitmap and metadata.
-struct VIZ_COMMON_EXPORT CopyOutputBitmapWithMetadata {
-  CopyOutputBitmapWithMetadata();
-  explicit CopyOutputBitmapWithMetadata(SkBitmap bitmap);
-  CopyOutputBitmapWithMetadata(SkBitmap bitmap,
-                               TrackedElementRects tracked_element_rects);
-  CopyOutputBitmapWithMetadata(const CopyOutputBitmapWithMetadata& other);
-  CopyOutputBitmapWithMetadata& operator=(
-      const CopyOutputBitmapWithMetadata& other);
-  ~CopyOutputBitmapWithMetadata();
-
-  SkBitmap bitmap;
-  TrackedElementRects tracked_element_rects;
-};
-
 // Scoped class for accessing SkBitmap in CopyOutputRequest.
 // It cannot be used across threads.
 class VIZ_COMMON_EXPORT CopyOutputResult::ScopedSkBitmap {
@@ -346,15 +320,6 @@ class VIZ_COMMON_EXPORT CopyOutputResult::ScopedSkBitmap {
   // Returns a SkBitmap which can be used out the scope of the ScopedSkBitmap.
   // It makes a copy of the content in CopyOutputResult if it is needed.
   SkBitmap GetOutScopedBitmap() const;
-
-  // Returns a base::expected<CopyOutputBitmapWithMetadata,
-  // CopyOutputResult::Error>. On success, the expected value contains a
-  // CopyOutputBitmapWithMetadata, where the encapsulated SkBitmap is guaranteed
-  // to be non-empty. On failure, the expected value contains an enum describing
-  // the error. This function makes a copy of the content in CopyOutputResult if
-  // needed.
-  base::expected<CopyOutputBitmapWithMetadata, CopyOutputResult::Error>
-  GetOutScopedBitmapAndMetadata() const;
 
  private:
   friend class CopyOutputResult;

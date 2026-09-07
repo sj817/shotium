@@ -657,7 +657,6 @@ class CORE_EXPORT PaintLayerScrollableArea final
     return last_cull_rect_update_scroll_position_;
   }
 
-  CompositorElementId GetScrollCornerElementId() const;
 
   void StopApplyingScrollStart() final;
   bool IsApplyingScrollStart() const final;

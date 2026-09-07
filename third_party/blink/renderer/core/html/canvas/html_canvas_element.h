@@ -51,8 +51,6 @@ class CORE_EXPORT HTMLCanvasElement final : public HTMLElement {
   bool CanStartSelection() const override;
 
  private:
-  void AttributeChanged(const AttributeModificationParams&) override;
-  void InvalidateLayoutSubtree();
   void ChildrenChanged(const ChildrenChange&) override;
 };
 

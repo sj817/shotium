@@ -73,9 +73,6 @@
       name: "line-gap-override",
     },
     {
-      name: "navigation",
-    },
-    {
       name: "negative",
     },
     {
@@ -128,9 +125,6 @@
     },
     {
       name: "system",
-    },
-    {
-      name: "types",
     },
     {
       name: "unicode-range",

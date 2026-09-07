@@ -5,8 +5,6 @@
 #include "third_party/blink/renderer/platform/graphics/unaccelerated_static_bitmap_image.h"
 
 #include "base/process/memory.h"
-#include "cc/raster/playback_image_provider.h"
-#include "skia/ext/legacy_display_globals.h"
 #include "third_party/blink/public/platform/platform.h"
 #include "third_party/blink/renderer/platform/graphics/graphics_context.h"
 #include "third_party/blink/renderer/platform/graphics/image.h"
@@ -18,7 +16,6 @@
 #include "third_party/blink/renderer/platform/wtf/cross_thread_copier_skia.h"
 #include "third_party/blink/renderer/platform/wtf/cross_thread_functional.h"
 #include "third_party/skia/include/core/SkImage.h"
-#include "third_party/skia/include/core/SkSurface.h"
 
 namespace blink {
 
@@ -53,45 +50,6 @@ UnacceleratedStaticBitmapImage::Create(PaintImage image,
                                        ImageOrientation orientation) {
   return base::AdoptRef(
       new UnacceleratedStaticBitmapImage(std::move(image), orientation));
-}
-
-scoped_refptr<StaticBitmapImage>
-UnacceleratedStaticBitmapImage::CreateFromRaster(
-    const gfx::Size& size,
-    base::FunctionRef<void(cc::PaintCanvas&)> draw_callback,
-    scoped_refptr<const cc::AnimatedImageFrameIndexMap>
-        animated_image_frame_index_map) {
-  SkImageInfo info = SkImageInfo::MakeN32Premul(size.width(), size.height(),
-                                                SkColorSpace::MakeSRGB());
-  SkSurfaceProps props = skia::LegacyDisplayGlobals::ComputeSurfaceProps(
-      /*can_use_lcd_text=*/false);
-  sk_sp<SkSurface> surface = SkSurfaces::Raster(info, &props);
-  if (!surface) {
-    return nullptr;
-  }
-
-  cc::TargetColorParams target_color_params;
-  target_color_params.color_space = gfx::ColorSpace::CreateSRGB();
-  cc::PlaybackImageProvider::Settings settings;
-  settings.raster_mode = cc::PlaybackImageProvider::RasterMode::kSoftware;
-
-  cc::PlaybackImageProvider image_provider(
-      &Image::SharedCCDecodeCache(kN32_SkColorType), target_color_params,
-      std::move(settings));
-  image_provider.SetAnimatedImageFrameIndexes(animated_image_frame_index_map);
-
-  cc::SkiaPaintCanvas canvas(surface->getCanvas(), &image_provider);
-  draw_callback(canvas);
-  sk_sp<SkImage> sk_image = surface->makeImageSnapshot();
-  cc::PaintImage paint_image;
-  if (sk_image) {
-    paint_image =
-        PaintImageBuilder::WithDefault()
-            .set_id(cc::PaintImage::GetNextId())
-            .set_image(std::move(sk_image), cc::PaintImage::GetNextContentId())
-            .TakePaintImage();
-  }
-  return UnacceleratedStaticBitmapImage::Create(std::move(paint_image));
 }
 
 UnacceleratedStaticBitmapImage::UnacceleratedStaticBitmapImage(

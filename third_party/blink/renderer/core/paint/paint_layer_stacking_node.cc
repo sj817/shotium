@@ -316,7 +316,7 @@ void PaintLayerStackingNode::RebuildZOrderLists() {
     LayoutBlockFlow* root_block = layer_->GetLayoutObject().View();
     for (LayoutObject* child = root_block->FirstChild(); child;
          child = child->NextSibling()) {
-      if (child->IsInTopOrViewTransitionLayer() && child->IsStacked()) {
+      if (child->IsInTopLayer() && child->IsStacked()) {
         pos_z_order_list_.push_back(To<LayoutBoxModelObject>(child)->Layer());
       }
     }
@@ -331,7 +331,7 @@ void PaintLayerStackingNode::CollectLayers(
     PaintLayers& overscroll_area_parents) {
   paint_layer.SetNeedsReorderOverlayOverflowControls(false);
 
-  if (paint_layer.IsInTopOrViewTransitionLayer()) {
+  if (paint_layer.IsInTopLayer()) {
     return;
   }
 

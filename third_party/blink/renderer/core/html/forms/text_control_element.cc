@@ -1068,7 +1068,6 @@ void TextControlElement::SetInnerEditorValue(const String& value) {
 
   if (text_is_changed) {
     MaybeSetHasBeenHeuristicCustomPasswordJS();
-    UpdatePasswordTracking();
 
     // Used to notify AXObjectCache that the text form control changed.
     // AXObjectCache is gone (no accessibility tree in a screenshot
@@ -1530,12 +1529,6 @@ bool TextControlElement::ShouldSkipNextSetValueAutoDiff() const {
   return skip_next_set_value_auto_diff_;
 }
 
-bool TextControlElement::ShouldTrackPassword() const {
-  // Don't track the password field for redaction if it's empty.
-  return HTMLFormControlElementWithState::ShouldTrackPassword() &&
-         !Value().empty();
-}
-
 bool TextControlElement::IsNativeOrHeuristicPassword() const {
   return HTMLFormControlElementWithState::IsNativeOrHeuristicPassword() ||
          HasBeenHeuristicCustomPasswordJS();
@@ -1549,7 +1542,6 @@ void TextControlElement::MaybeSetHasBeenHeuristicCustomPasswordJS() {
   }
 
   has_been_heuristic_custom_password_js_ = new_value;
-  UpdatePasswordTracking();
 }
 
 }  // namespace blink

@@ -85,8 +85,7 @@ class CORE_EXPORT BoxFragmentPainter : public BoxPainterBase {
       const Color&,
       const FillLayer&,
       BackgroundBleedAvoidance,
-      bool is_painting_background_in_contents_space,
-      PaintFlags paint_flags) const override;
+      bool is_painting_background_in_contents_space) const override;
 
   void PaintTextClipMask(const PaintInfo&,
                          const gfx::Rect& mask_rect,
@@ -158,7 +157,6 @@ class CORE_EXPORT BoxFragmentPainter : public BoxPainterBase {
                               const PaintInfo&,
                               const PhysicalOffset& paint_offset);
   void PaintLineBox(const PhysicalFragment& line_box_fragment,
-                    const DisplayItemClient& display_item_client,
                     const FragmentItem& line_box_item,
                     const PaintInfo&,
                     const PhysicalOffset& paint_offset);
@@ -207,12 +205,6 @@ class CORE_EXPORT BoxFragmentPainter : public BoxPainterBase {
                                const DisplayItemClient& background_client);
 
   bool ShouldRecordHitTestData(const PaintInfo&);
-
-  static void RecordRegionCaptureAndTrackedElementData(
-      Element* element,
-      const PaintInfo& paint_info,
-      const PhysicalRect& paint_rect,
-      const DisplayItemClient& display_item_client);
 
   // This struct has common data needed while traversing trees for the hit
   // testing.

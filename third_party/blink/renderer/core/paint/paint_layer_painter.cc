@@ -6,7 +6,6 @@
 
 #include <optional>
 
-#include "cc/layers/view_transition_content_layer.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
 #include "third_party/blink/renderer/core/frame/local_frame_view.h"
 #include "third_party/blink/renderer/core/frame/settings.h"
@@ -30,9 +29,7 @@
 #include "third_party/blink/renderer/core/paint/scrollable_area_painter.h"
 #include "third_party/blink/renderer/core/paint/svg_mask_painter.h"
 #include "third_party/blink/renderer/core/paint/timing/paint_timing_detector.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition.h"
 #include "third_party/blink/renderer/platform/graphics/paint/drawing_recorder.h"
-#include "third_party/blink/renderer/platform/graphics/paint/foreign_layer_display_item.h"
 #include "third_party/blink/renderer/platform/graphics/paint/geometry_mapper.h"
 #include "third_party/blink/renderer/platform/graphics/paint/scoped_display_item_fragment.h"
 #include "third_party/blink/renderer/platform/graphics/paint/scoped_effectively_invisible.h"
@@ -115,26 +112,6 @@ class PaintTimelineReporter {
 };
 
 PaintTimelineReporter* PaintTimelineReporter::current_reporting_ = nullptr;
-
-// Check if the specified node is the scope for a (non-document) scoped view
-// transition, and if so return the scope snapshot layer, which is used to
-// "pause" the rendering inside the scope during the callback.
-scoped_refptr<cc::ViewTransitionContentLayer> GetTransitionScopeSnapshotLayer(
-    const Node* scope) {
-  const Element* scope_element = DynamicTo<Element>(scope);
-  if (!scope_element || scope_element->IsDocumentElement() ||
-      scope_element->IsPseudoElement()) {
-    // Ignore document transitions here, since they use different mechanisms to
-    // pause rendering. (Main frame or local root document transitions pause the
-    // compositor with ProxyMain::SetPauseRendering, and same-site subframe
-    // document transitions paint the snapshot in EmbeddedContentPainter.)
-    return nullptr;
-  }
-  if (auto* transition = ViewTransitionUtils::GetTransition(*scope_element)) {
-    return transition->GetScopeSnapshotLayer();
-  }
-  return nullptr;
-}
 
 }  // namespace
 
@@ -340,17 +317,6 @@ PaintResult PaintLayerPainter::Paint(GraphicsContext& context,
   IgnorePaintTimingScope::SetIsDocumentElementInvisible(
       is_document_element_invisible);
 
-  // Canvas children need to ensure that a composited cc::Layer exists for
-  // canvas draw element, even if no other content is painted.
-  bool force_chunk_for_canvas_draw_element = false;
-  if (const auto* properties = object.FirstFragment().PaintProperties()) {
-    if (const auto* effect = properties->Effect()) {
-      if (effect->HasCanvasChildState()) {
-        force_chunk_for_canvas_draw_element = true;
-      }
-    }
-  }
-
   bool is_self_painting_layer = paint_layer_.IsSelfPaintingLayer();
   bool should_paint_content =
       paint_layer_.HasVisibleContent() &&
@@ -366,8 +332,7 @@ PaintResult PaintLayerPainter::Paint(GraphicsContext& context,
       // regardless of LayoutView's visual rect, so don't check intersection
       // between the visual rect and the cull rect (custom for each page).
       (IsA<LayoutView>(object) && object.GetDocument().Printing()) ||
-      // Canvas children must paint, regardless of intersection.
-      force_chunk_for_canvas_draw_element || is_unbounded_active) {
+      is_unbounded_active) {
     result = kMayBeClippedByCullRect;
   } else {
     gfx::Rect visual_rect = FirstFragmentVisualRect(object);
@@ -426,19 +391,6 @@ PaintResult PaintLayerPainter::Paint(GraphicsContext& context,
 
   std::optional<ScopedPaintChunkProperties> layer_chunk_properties;
 
-  // The parent effect (before creating layer_chunk_properties for the current
-  // object) is used to paint the foreign layer for the transition scope
-  // snapshot. This is because the scope's paint properties includes the effect
-  // that is capturing the scope snapshot. The foreign layer is the destination
-  // of that capture, so painting it inside the effect would be circular.
-  const EffectPaintPropertyNodeOrAlias* parent_effect = nullptr;
-  {
-    auto& parent_props = controller.CurrentPaintChunkProperties();
-    if (parent_props.IsInitialized()) {
-      parent_effect = &parent_props.Effect();
-    }
-  }
-
   if (should_paint_content) {
     // If we will create a new paint chunk for this layer, this gives the chunk
     // a stable id.
@@ -446,12 +398,11 @@ PaintResult PaintLayerPainter::Paint(GraphicsContext& context,
         controller, object.FirstFragment().LocalBorderBoxProperties(),
         paint_layer_, DisplayItem::kLayerChunk);
 
-    bool ensure_chunk = force_chunk_for_canvas_draw_element;
     // When a reference filter applies to the layer, ensure a chunk is
     // generated so that the filter paints even if no other content is painted
     // by the layer (see `SVGContainerPainter::Paint`).
     auto* properties = object.FirstFragment().PaintProperties();
-    ensure_chunk |= properties && properties->Filter() &&
+    bool ensure_chunk = properties && properties->Filter() &&
                     properties->Filter()->HasReferenceFilter();
     ensure_chunk |= properties && properties->Effect() &&
                     properties->Effect()->HasReferenceFilter();
@@ -528,78 +479,10 @@ PaintResult PaintLayerPainter::Paint(GraphicsContext& context,
                                                   paint_flags);
       }
     }
-    if (PaintTransitionPseudos(context, object, paint_flags) ==
-        kMayBeClippedByCullRect) {
-      result = kMayBeClippedByCullRect;
-    }
-    if (should_paint_content && !selection_drag_image_only) {
-      PaintTransitionScopeSnapshotIfNeeded(context, object, parent_effect);
-    }
   }
 
   paint_layer_.SetPreviousPaintResult(result);
   return result;
-}
-
-void PaintLayerPainter::PaintTransitionScopeSnapshotIfNeeded(
-    GraphicsContext& context,
-    const LayoutBoxModelObject& object,
-    const EffectPaintPropertyNodeOrAlias* effect) {
-  auto& controller = context.GetPaintController();
-  auto layer = GetTransitionScopeSnapshotLayer(object.GetNode());
-  if (!layer) {
-    return;
-  }
-
-  gfx::Point paint_offset;
-  if (layer->is_live_content_layer()) {
-    PhysicalRect box_border_rect =
-        paint_layer_.LocalBoundingBoxIncludingSelfPaintingDescendants();
-    PhysicalRect ink_overflow_rect = object.ApplyFiltersToRect(box_border_rect);
-    paint_offset = ToRoundedPoint(ink_overflow_rect.offset);
-    layer->SetBounds(ink_overflow_rect.PixelSnappedSize());
-    layer->SetPaintOffset(paint_offset);
-  } else {
-    paint_offset = layer->paint_offset();
-  }
-  layer->SetIsDrawable(true);
-
-  PropertyTreeStateOrAlias properties =
-      controller.CurrentPaintChunkProperties();
-  DCHECK(effect);
-  properties.SetEffect(*effect);
-
-  RecordForeignLayer(context, paint_layer_,
-                     DisplayItem::kForeignLayerViewTransitionContent,
-                     std::move(layer), paint_offset, &properties);
-}
-
-PaintResult PaintLayerPainter::PaintTransitionPseudos(
-    GraphicsContext& context,
-    const LayoutBoxModelObject& object,
-    PaintFlags paint_flags) {
-  const Element* element = DynamicTo<Element>(object.GetNode());
-  if (!element) {
-    return kFullyPainted;
-  }
-  LayoutBoxModelObject* pseudo_layout_object = DynamicTo<LayoutBoxModelObject>(
-      element->PseudoElementLayoutObject(kPseudoIdViewTransition));
-  if (!pseudo_layout_object) {
-    return kFullyPainted;
-  }
-  auto* transition = ViewTransitionUtils::GetTransition(*element);
-  if (!transition || transition->IsCapturing()) {
-    // Don't paint the pseudos during the capture phase. This avoids scaling
-    // problems in the scope snapshot layer when participants overflow.
-    // Note: PaintTransitionScopeSnapshotIfNeeded will paint the scope snapshot
-    // layer during capture, ensuring that the scope remains visible.
-    return kFullyPainted;
-  }
-  PaintLayer* pseudo_layer = pseudo_layout_object->Layer();
-  if (!pseudo_layer || pseudo_layer->Parent() != &paint_layer_) {
-    return kFullyPainted;
-  }
-  return PaintLayerPainter(*pseudo_layer).Paint(context, paint_flags);
 }
 
 PaintResult PaintLayerPainter::PaintChildren(
@@ -615,22 +498,8 @@ PaintResult PaintLayerPainter::PaintChildren(
     return result;
   }
 
-  auto* canvas = DynamicTo<HTMLCanvasElement>(layout_object.GetNode());
-  if (canvas) {
-    if (RuntimeEnabledFeatures::CanvasDrawElementEnabled(
-            canvas->GetExecutionContext()) &&
-        canvas->layoutSubtree()) {
-      // We need to paint the children for later use by drawElementImage, but
-      // make sure we enforce privacy-preserving paint behavior.
-      paint_flags |= PaintFlag::kPrivacyPreserving;
-      // TODO(https://crbug.com/480074850): Determine how hit test data works
-      // in non-composited subtrees, and test if this is needed.
-      paint_flags |= PaintFlag::kOmitCompositingInfo;
-
-    } else {
-      // Prevent canvas fallback content from being rendered.
-      return result;
-    }
+  if (IsA<HTMLCanvasElement>(layout_object.GetNode())) {
+    return result;
   }
 
   PaintLayerPaintOrderIterator iterator(&paint_layer_, children_to_visit);
@@ -641,14 +510,6 @@ PaintResult PaintLayerPainter::PaintChildren(
     // correct paint order with siblings. Skip them here to avoid
     // double-painting.
     if (child->ShouldPaintReplacedNormalFlowInline()) {
-      continue;
-    }
-
-    if (!layout_object.IsViewTransitionRoot() &&
-        ViewTransitionUtils::IsViewTransitionRoot(child->GetLayoutObject())) {
-      // Skip scoped ::view-transition pseudo, which is painted separately by
-      // PaintTransitionPseudos so that it is top of all other children of the
-      // scope regardless of their z-index.
       continue;
     }
 

@@ -77,8 +77,6 @@ void SVGShapePainter::Paint(const PaintInfo& paint_info) {
     if (paint_behavior.Has(ScopedSVGPaintState::PaintComponent::kContent)) {
       SVGModelObjectPainter::RecordHitTestData(layout_svg_shape_,
                                                content_paint_info);
-      SVGModelObjectPainter::RecordRegionCaptureData(layout_svg_shape_,
-                                                     content_paint_info);
       if (!DrawingRecorder::UseCachedDrawingIfPossible(
               content_paint_info.context, layout_svg_shape_,
               content_paint_info.phase)) {

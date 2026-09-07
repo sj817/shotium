@@ -67,7 +67,6 @@ constexpr AtRuleEntry kAtRuleEntries[] = {
     {"top-left-corner", CSSAtRuleID::kCSSAtRuleTopLeftCorner, WebFeature::kCSSAtRulePageMargin},
     {"top-right", CSSAtRuleID::kCSSAtRuleTopRight, WebFeature::kCSSAtRulePageMargin},
     {"top-right-corner", CSSAtRuleID::kCSSAtRuleTopRightCorner, WebFeature::kCSSAtRulePageMargin},
-    {"view-transition", CSSAtRuleID::kCSSAtRuleViewTransition, WebFeature::kCSSAtRuleViewTransition},
 };
 // clang-format on
 

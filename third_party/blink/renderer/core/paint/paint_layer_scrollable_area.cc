@@ -54,7 +54,6 @@
 #include "cc/input/scroll_snap_data.h"
 #include "cc/input/scroll_utils.h"
 #include "cc/input/snap_selection_strategy.h"
-#include "cc/layers/picture_layer.h"
 #include "third_party/blink/public/common/features.h"
 #include "third_party/blink/public/mojom/scroll/scroll_into_view_params.mojom-blink.h"
 #include "third_party/blink/public/mojom/scroll/scrollbar_mode.mojom-blink.h"
@@ -120,8 +119,6 @@
 #include "third_party/blink/renderer/core/style/computed_style_constants.h"
 #include "third_party/blink/renderer/core/timing/dom_window_performance.h"
 #include "third_party/blink/renderer/core/timing/event_timing.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition_utils.h"
 #include "third_party/blink/renderer/platform/graphics/paint/drawing_recorder.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
 #include "third_party/blink/renderer/platform/runtime_enabled_features.h"
@@ -675,19 +672,6 @@ gfx::Size PaintLayerScrollableArea::ContentsSize() const {
 gfx::Size PaintLayerScrollableArea::PixelSnappedContentsSize(
     const PhysicalOffset& paint_offset) const {
   PhysicalSize size = overflow_rect_.size;
-
-  // If we're capturing a transition snapshot, ensure the content size is
-  // considered at least as large as the container. Otherwise, the snapshot
-  // will be clipped by PendingLayer to the content size.
-  if (IsA<LayoutView>(GetLayoutBox())) {
-    if (auto* transition =
-            ViewTransitionUtils::GetTransition(GetLayoutBox()->GetDocument());
-        transition && transition->IsRootTransitioning()) {
-      PhysicalSize container_size(transition->GetSnapshotRootSize());
-      size.width = std::max(container_size.width, size.width);
-      size.height = std::max(container_size.height, size.height);
-    }
-  }
 
   return ToPixelSnappedRect(PhysicalRect(paint_offset, size)).size();
 }
@@ -1892,13 +1876,6 @@ void PaintLayerScrollableArea::DidUpdateCullRect() {
   }
 }
 
-CompositorElementId PaintLayerScrollableArea::GetScrollCornerElementId() const {
-  CompositorElementId scrollable_element_id = GetScrollElementId();
-  DCHECK(scrollable_element_id);
-  return CompositorElementIdWithNamespace(
-      scrollable_element_id, CompositorElementIdNamespace::kScrollCorner);
-}
-
 void PaintLayerScrollableArea::SetHasHorizontalScrollbar(bool has_scrollbar) {
   if (IsHorizontalScrollbarFrozen())
     return;
@@ -2699,11 +2676,6 @@ bool PaintLayerScrollableArea::PrefersNonCompositedScrolling() const {
       }
     }
   }
-  if (RuntimeEnabledFeatures::CanvasDrawElementEnabled(
-          GetLayoutBox()->GetDocument().GetExecutionContext()) &&
-      GetLayoutBox()->IsInCanvasSubtree()) {
-    return true;
-  }
   return false;
 }
 
@@ -3053,13 +3025,6 @@ bool PaintLayerScrollableArea::MayCompositeScrollbar(
     return false;
   }
   if (scrollbar.IsCustomScrollbar()) {
-    return false;
-  }
-  // Disable composited scrollbars under canvas.
-  const auto* box = GetLayoutBox();
-  if (RuntimeEnabledFeatures::CanvasDrawElementEnabled(
-          box->GetDocument().GetExecutionContext()) &&
-      box->IsInCanvasSubtree()) {
     return false;
   }
   // Compositing of scrollbar is decided in PaintArtifactCompositor. We assume

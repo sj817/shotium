@@ -45,8 +45,6 @@ class CORE_EXPORT LayoutVideo final : public LayoutMedia {
   PhysicalRect ReplacedContentRectFrom(
       const PhysicalRect& base_content_rect) const final;
 
-  bool SupportsAcceleratedRendering() const;
-
   enum DisplayMode { kPoster, kVideo };
   DisplayMode GetDisplayMode() const;
 
@@ -88,12 +86,6 @@ class CORE_EXPORT LayoutVideo final : public LayoutMedia {
 
   void PaintReplaced(const PaintInfo&,
                      const PhysicalOffset& paint_offset) const override;
-
-  bool CanHaveAdditionalCompositingReasons() const override {
-    NOT_DESTROYED();
-    return true;
-  }
-  CompositingReasons AdditionalCompositingReasons() const override;
 
   PhysicalNaturalSizingInfo natural_dimensions_ =
       PhysicalNaturalSizingInfo::None();

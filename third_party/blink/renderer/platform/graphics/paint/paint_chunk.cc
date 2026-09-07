@@ -20,9 +20,7 @@ struct SameSizeAsPaintChunk {
   PaintChunk::BackgroundColorInfo background_color;
   TraceablePropertyTreeState properties;
   Member<HitTestData> hit_test_data;
-  Member<RegionCaptureData> region_capture_data;
   Member<LayerSelectionData> layer_selection;
-  Member<TrackedElementRects> tracked_element_rects;
   gfx::Rect bounds;
   gfx::Rect drawable_bounds;
   gfx::Rect rect_known_to_be_opaque;
@@ -38,10 +36,6 @@ bool PaintChunk::EqualsForUnderInvalidationChecking(
   return size() == other.size() && id == other.id &&
          properties == other.properties && bounds == other.bounds &&
          base::ValuesEquivalent(hit_test_data, other.hit_test_data) &&
-         base::ValuesEquivalent(region_capture_data,
-                                other.region_capture_data) &&
-         base::ValuesEquivalent(tracked_element_rects,
-                                other.tracked_element_rects) &&
          drawable_bounds == other.drawable_bounds &&
          raster_effect_outset == other.raster_effect_outset &&
          hit_test_opaqueness == other.hit_test_opaqueness &&
@@ -61,12 +55,6 @@ size_t PaintChunk::MemoryUsageInBytes() const {
 #if BUILDFLAG(IS_ANDROID)
     total_size += hit_test_data->xr_regions.CapacityInBytes();
 #endif
-  }
-  if (region_capture_data) {
-    total_size += sizeof(*region_capture_data);
-  }
-  if (tracked_element_rects) {
-    total_size += sizeof(*tracked_element_rects);
   }
   if (layer_selection_data) {
     total_size += sizeof(*layer_selection_data);
@@ -93,14 +81,6 @@ static String ToStringImpl(const PaintChunk& c,
     if (c.hit_test_data) {
       sb.Append(" hit_test_data=");
       sb.Append(c.hit_test_data->ToString());
-    }
-    if (c.region_capture_data) {
-      sb.Append(" region_capture_data=");
-      sb.Append(c.region_capture_data->ToString());
-    }
-    if (c.tracked_element_rects) {
-      sb.Append(" tracked_element_rects=");
-      sb.Append(c.tracked_element_rects->ToString());
     }
   }
   sb.Append(')');

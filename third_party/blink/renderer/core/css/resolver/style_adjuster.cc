@@ -97,7 +97,6 @@
 #include "third_party/blink/renderer/core/svg/svg_tspan_element.h"
 #include "third_party/blink/renderer/core/svg/svg_use_element.h"
 #include "third_party/blink/renderer/core/svg_names.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition.h"
 #include "third_party/blink/renderer/platform/geometry/length.h"
 #include "third_party/blink/renderer/platform/instrumentation/use_counter.h"
 #include "third_party/blink/renderer/platform/runtime_enabled_features.h"
@@ -724,30 +723,12 @@ void StyleAdjuster::AdjustOverflow(ComputedStyleBuilder& builder,
   }
 }
 
-static bool IsCanvasWithDrawElements(const Element* element) {
-  if (!element || !element->IsCanvasOrInCanvasSubtree() ||
-      !RuntimeEnabledFeatures::CanvasDrawElementEnabled(
-          element->GetExecutionContext())) {
-    return false;
-  }
-
-  if (const auto* canvas = DynamicTo<HTMLCanvasElement>(element)) {
-    return canvas->layoutSubtree();
-  }
-
-  return false;
-}
-
 void StyleAdjuster::AdjustStyleForDisplay(
     ComputedStyleBuilder& builder,
     const ComputedStyle& layout_parent_style,
     const Element* element,
     Document* document) {
-  bool force_canvas_child_layout_subtree_styles =
-      element && element->CanvasForDrawing();
-
-  if ((layout_parent_style.BlockifiesChildren() && !HostIsInputFile(element)) ||
-      force_canvas_child_layout_subtree_styles) {
+  if (layout_parent_style.BlockifiesChildren() && !HostIsInputFile(element)) {
     builder.SetIsInBlockifyingDisplay();
     if (builder.Display() != EDisplay::kContents) {
       builder.SetDisplay(EquivalentBlockDisplay(builder.Display()));
@@ -759,20 +740,14 @@ void StyleAdjuster::AdjustStyleForDisplay(
         layout_parent_style.IsDisplayWebkitBox() ||
         layout_parent_style.IsDisplayGrid() ||
         layout_parent_style.IsDisplayGridLanes() ||
-        layout_parent_style.IsDisplayMath() ||
-        force_canvas_child_layout_subtree_styles) {
+        layout_parent_style.IsDisplayMath()) {
       builder.SetIsInsideDisplayIgnoringFloatingChildren();
     }
 
-    if (force_canvas_child_layout_subtree_styles) {
-      builder.SetPosition(EPosition::kStatic);
-      builder.SetContain(builder.Contain() | kContainsPaint);
-    }
   }
 
   if (layout_parent_style.InlinifiesChildren() &&
-      !builder.HasOutOfFlowPosition() && ShouldBeInlinified(element) &&
-      !force_canvas_child_layout_subtree_styles) {
+      !builder.HasOutOfFlowPosition() && ShouldBeInlinified(element)) {
     if (builder.IsFloating()) {
       builder.SetFloating(EFloat::kNone);
       if (document) {
@@ -1227,17 +1202,10 @@ void StyleAdjuster::AdjustComputedStyle(StyleResolverState& state,
 
   builder.SetForcesStackingContext(false);
 
-  // https://github.com/WICG/html-in-canvas
-  // The `layoutsubtree` attribute ... causes descendants of the <canvas> with
-  // the `drawable` attribute to have a stacking context and become a containing
-  // block for all descendants.
-  bool is_drawable_canvas_descendant = element && element->CanvasForDrawing();
-
   // z-index is only applicable if positioned, or if a flex/grid/etc item.
   if (builder.GetPosition() != EPosition::kStatic ||
       LayoutParentStyleForcesZIndexToCreateStackingContext(
-          layout_parent_style) ||
-      is_drawable_canvas_descendant) {
+          layout_parent_style)) {
     builder.SetAllowsZIndex(true);
     if (!builder.HasAutoZIndex()) {
       builder.SetForcesStackingContext(true);
@@ -1253,8 +1221,7 @@ void StyleAdjuster::AdjustComputedStyle(StyleResolverState& state,
   if (is_document_element || is_replaced_normal_flow_video ||
       (element && IsA<SVGForeignObjectElement>(*element)) || is_in_top_layer ||
       builder.StyleType() == kPseudoIdBackdrop ||
-      builder.StyleType() == kPseudoIdViewTransition ||
-      IsCanvasWithDrawElements(element)) {
+      builder.StyleType() == kPseudoIdViewTransition) {
     builder.SetForcesStackingContext(true);
   }
 
@@ -1365,38 +1332,7 @@ void StyleAdjuster::AdjustComputedStyle(StyleResolverState& state,
 void StyleAdjuster::RunUncacheableStyleAdjustment(
     ComputedStyleBuilder& builder,
     Element& element,
-    const Element* element_or_pseudo_element,
-    const Element* styled_element) {
-  // Elements are almost never view transition scopes (i.e., we get an
-  // early-out), so it's just as cheap to do the logic here as in
-  // AdjustComputedStyle().
-  if (element.GetDocument().GetViewTransitionsIfExists()) {
-    if (const ViewTransition* view_transition =
-            ViewTransitionUtils::GetTransition(element);
-        view_transition && view_transition->Scope() == &element) {
-      bool is_document_element =
-          element.GetDocument().documentElement() == element;
-      if (!is_document_element) {
-        builder.SetContain(builder.Contain() | kContainsLayout);
-        if (view_transition->NeedsContainmentForDurationOfCapture() &&
-            RuntimeEnabledFeatures::
-                ScopedViewTransitionSizeContainmentEnabled()) {
-          builder.SetHasSizeContainmentForViewTransitionScope(true);
-        }
-        builder.SetViewTransitionScope(EViewTransitionScope::kAll);
-      }
-      builder.SetForcesStackingContext(true);
-    }
-
-    // We need to use styled element here to ensure coverage for
-    // pseudo-elements.
-    if (styled_element &&
-        ViewTransitionUtils::IsViewTransitionElementExcludingRootFromSupplement(
-            *styled_element)) {
-      builder.SetElementIsViewTransitionParticipant();
-    }
-  }
-
+    const Element* element_or_pseudo_element) {
   // The layout theme has its own style adjustment, mostly related to
   // the appearance property (although it can also modify display,
   // seemingly for historical reasons).
@@ -1497,8 +1433,7 @@ StyleAdjuster::ElementTypeForCache StyleAdjuster::GetElementTypeCacheKey(
     return {ElementType::kIsNotElement};
   }
 
-  // Has special handling in a number of places (including depending on
-  // parents' layoutSubtree() status).
+  // Canvas and its descendants have special handling for inherited state.
   if (element.IsCanvasOrInCanvasSubtree()) {
     return {ElementType::kIsNotElement};
   }
@@ -1538,10 +1473,7 @@ StyleAdjuster::ElementTypeForCache StyleAdjuster::GetElementTypeCacheKey(
 
   switch (element.GetElementType()) {
     case ElementType::kHTMLCanvasElement:
-      // <canvas> has special handling for touch-action and stacking contexts
-      // depending on whether it has layoutSubtree() or not, and also
-      // CanExecuteScripts(). It seems rare enough that we don't bother checking
-      // the properties on the elements, and just exclude all canvas elements.
+      // Canvas retains tag-specific presentation and touch-action handling.
       return {ElementType::kIsNotElement};
 
     case ElementType::kHTMLTextAreaElement:

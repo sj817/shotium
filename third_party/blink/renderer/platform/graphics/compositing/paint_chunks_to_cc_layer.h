@@ -6,10 +6,8 @@
 #define THIRD_PARTY_BLINK_RENDERER_PLATFORM_GRAPHICS_COMPOSITING_PAINT_CHUNKS_TO_CC_LAYER_H_
 
 #include "base/functional/function_ref.h"
-#include "cc/input/layer_selection_bound.h"
 #include "cc/paint/display_item_list.h"
 #include "third_party/blink/renderer/platform/graphics/paint/paint_record.h"
-#include "third_party/blink/renderer/platform/graphics/paint/tracked_element_data.h"
 #include "third_party/blink/renderer/platform/platform_export.h"
 #include "third_party/blink/renderer/platform/wtf/allocator/allocator.h"
 #include "third_party/blink/renderer/platform/wtf/text/wtf_string.h"
@@ -18,7 +16,6 @@
 
 namespace cc {
 class DisplayItemList;
-class Layer;
 }  // namespace cc
 
 namespace blink {
@@ -84,11 +81,6 @@ class PLATFORM_EXPORT PaintChunksToCcLayer {
                              const PropertyTreeState& layer_state,
                              const gfx::Rect* cull_rect = nullptr);
 
-  static void UpdateLayerProperties(cc::Layer& layer,
-                                    const PropertyTreeState& layer_state,
-                                    const PaintChunkSubset&,
-                                    cc::LayerSelection& layer_selection,
-                                    bool selection_only);
 };
 
 }  // namespace blink

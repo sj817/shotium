@@ -250,7 +250,6 @@ class CORE_EXPORT TextControlElement : public HTMLFormControlElementWithState {
 
   // Element:
   bool IsNativeOrHeuristicPassword() const override;
-  bool ShouldTrackPassword() const override;
 
   void RemovedFrom(ContainerNode&) override;
   void DisconnectAllOpaqueRanges();

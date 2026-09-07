@@ -122,10 +122,6 @@ void ImagePainter::PaintReplaced(const PaintInfo& paint_info,
     if (content_rect.IsEmpty()) {
       return;
     }
-    if (paint_info.IsPrivacyPreserving() &&
-        !layout_image_.ImageResource()->IsCorsSameOrigin()) {
-      return;
-    }
   } else {
     if (paint_info.phase == PaintPhase::kSelectionDragImage)
       return;

@@ -7,7 +7,6 @@
 
 #include <string>
 
-#include "components/viz/common/surfaces/tracked_element_rects.h"
 #include "components/viz/common/viz_common_export.h"
 #include "ui/gfx/geometry/rect.h"
 #include "ui/gfx/geometry/vector2d.h"
@@ -42,10 +41,6 @@ struct VIZ_COMMON_EXPORT RenderPassGeometry {
   // If request is not scaled, the origin of |result_selection| in window
   // coordinate space. Otherwise undefined.
   gfx::Vector2d readback_offset;
-
-  // Tracked element rects for the CopyOutputRequest, transformed into the
-  // coordinate space of |result_selection|.
-  TrackedElementRects tracked_element_rects;
 
   RenderPassGeometry();
   RenderPassGeometry(const RenderPassGeometry&);

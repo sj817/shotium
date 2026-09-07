@@ -13,17 +13,13 @@
 #include "build/build_config.h"
 #include "components/viz/common/quads/compositor_frame_metadata.h"
 #include "components/viz/common/quads/offset_tag.h"
-#include "components/viz/common/surfaces/region_capture_bounds.h"
-#include "components/viz/common/surfaces/tracked_element_rects.h"
 #include "mojo/public/cpp/bindings/deserialization_error.h"
 #include "services/viz/public/cpp/compositing/begin_frame_args_mojom_traits.h"
 #include "services/viz/public/cpp/compositing/compositor_frame_transition_directive_mojom_traits.h"
 #include "services/viz/public/cpp/compositing/frame_deadline_mojom_traits.h"
 #include "services/viz/public/cpp/compositing/frame_interval_inputs_mojom_traits.h"
 #include "services/viz/public/cpp/compositing/offset_tag_mojom_traits.h"
-#include "services/viz/public/cpp/compositing/region_capture_bounds_mojom_traits.h"
 #include "services/viz/public/cpp/compositing/surface_range_mojom_traits.h"
-#include "services/viz/public/cpp/compositing/tracked_element_rects_mojom_traits.h"
 #include "services/viz/public/mojom/compositing/compositor_frame_metadata.mojom-shared.h"
 #include "ui/gfx/mojom/delegated_ink_metadata_mojom_traits.h"
 #include "ui/gfx/mojom/display_color_spaces_mojom_traits.h"
@@ -158,11 +154,6 @@ struct StructTraits<viz::mojom::CompositorFrameMetadataDataView,
     return metadata.transition_directives;
   }
 
-  static const viz::RegionCaptureBounds& capture_bounds(
-      const viz::CompositorFrameMetadata& metadata) {
-    return metadata.capture_bounds;
-  }
-
   static const std::vector<viz::OffsetTagDefinition>& offset_tag_definitions(
       const viz::CompositorFrameMetadata& metadata) {
     return metadata.offset_tag_definitions;
@@ -191,11 +182,6 @@ struct StructTraits<viz::mojom::CompositorFrameMetadataDataView,
   static const viz::TreesInVizTiming& trees_in_viz_timing(
       const viz::CompositorFrameMetadata& metadata) {
     return metadata.trees_in_viz_timing_details;
-  }
-
-  static const viz::TrackedElementRects& tracked_element_rects(
-      const viz::CompositorFrameMetadata& metadata) {
-    return metadata.tracked_element_rects;
   }
 
   static base::expected<void, DeserializationError> Read(

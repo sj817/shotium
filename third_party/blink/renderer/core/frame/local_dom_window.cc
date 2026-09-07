@@ -121,7 +121,6 @@
 #include "third_party/blink/renderer/core/timing/window_performance.h"
 #include "third_party/blink/renderer/core/trustedtypes/trusted_type_policy_factory.h"
 #include "third_party/blink/renderer/core/trustedtypes/trusted_types_util.h"
-#include "third_party/blink/renderer/core/view_transition/view_transition_supplement.h"
 #include "third_party/blink/renderer/platform/back_forward_cache_buffer_limit_tracker.h"
 #include "third_party/blink/renderer/platform/bindings/exception_messages.h"
 #include "third_party/blink/renderer/platform/bindings/source_location.h"
@@ -2300,15 +2299,6 @@ void LocalDOMWindow::SetStorageAccessApiStatus(
     net::StorageAccessApiStatus status) {
   CHECK_GE(status, storage_access_api_status_);
   storage_access_api_status_ = status;
-}
-
-void LocalDOMWindow::SetHasBeenRevealed(bool revealed) {
-  if (has_been_revealed_ == revealed) {
-    return;
-  }
-  has_been_revealed_ = revealed;
-  CHECK(document_);
-  document_->GetViewTransitions().DidChangeRevealState();
 }
 
 void LocalDOMWindow::UpdateEventListenerCountsToDocumentForReuseIfNeeded() {

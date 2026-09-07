@@ -43,9 +43,6 @@ class AtRuleDescriptorParser {
   static CSSValue* ParseAtFontPaletteValuesDescriptor(AtRuleDescriptorID,
                                                       CSSParserTokenStream&,
                                                       const CSSParserContext&);
-  static CSSValue* ParseAtViewTransitionDescriptor(AtRuleDescriptorID,
-                                                   CSSParserTokenStream&,
-                                                   const CSSParserContext&);
   static CSSValue* ParseAtFunctionOrMixinDescriptor(StyleRule::RuleType,
                                                     AtRuleDescriptorID,
                                                     CSSParserTokenStream&,

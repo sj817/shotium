@@ -95,9 +95,6 @@ StructTraits<viz::mojom::CompositorFrameMetadataDataView,
   if (!data.ReadTransitionDirectives(&out->transition_directives)) {
     return base::unexpected(DeserializationError());
   }
-  if (!data.ReadCaptureBounds(&out->capture_bounds)) {
-    return base::unexpected(DeserializationError());
-  }
   if (!data.ReadOffsetTagDefinitions(&out->offset_tag_definitions)) {
     return base::unexpected(DeserializationError());
   }
@@ -108,9 +105,6 @@ StructTraits<viz::mojom::CompositorFrameMetadataDataView,
     return base::unexpected(DeserializationError());
   }
   if (!data.ReadTreesInVizTiming(&out->trees_in_viz_timing_details)) {
-    return base::unexpected(DeserializationError());
-  }
-  if (!data.ReadTrackedElementRects(&out->tracked_element_rects)) {
     return base::unexpected(DeserializationError());
   }
 

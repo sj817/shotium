@@ -57,7 +57,6 @@
 #include "third_party/blink/renderer/core/css/style_image_cache.h"
 #include "third_party/blink/renderer/core/css/style_invalidation_root.h"
 #include "third_party/blink/renderer/core/css/style_recalc_root.h"
-#include "third_party/blink/renderer/core/css/style_rule_view_transition.h"
 #include "third_party/blink/renderer/core/css/try_value_flips.h"
 #include "third_party/blink/renderer/core/css/vision_deficiency.h"
 #include "third_party/blink/renderer/core/dom/document.h"
@@ -767,10 +766,6 @@ class CORE_EXPORT StyleEngine final : public GarbageCollected<StyleEngine>,
   void Trace(Visitor*) const override;
   const char* GetHumanReadableName() const override { return "StyleEngine"; }
 
-  RuleSet* ActiveViewTransitionStyle(const Element&) const;
-
-  void UpdateViewTransitionOptIn();
-
   const ActiveStyleSheetVector& ActiveUserStyleSheets() const {
     return active_user_style_sheets_;
   }
@@ -844,7 +839,6 @@ class CORE_EXPORT StyleEngine final : public GarbageCollected<StyleEngine>,
                                        MediaValueChange);
   void MediaQueryAffectingValueChanged(HeapHashSet<Member<TextTrack>>&,
                                        MediaValueChange);
-  void EnsureUAStyleForTransitionPseudos();
 
   const RuleFeatureSet& GetRuleFeatureSet() const {
     DCHECK(global_rule_set_);
@@ -931,7 +925,6 @@ class CORE_EXPORT StyleEngine final : public GarbageCollected<StyleEngine>,
   bool UserKeyframeStyleShouldOverride(
       const CascadeLayered<StyleRuleKeyframes>& new_rule,
       const CascadeLayered<StyleRuleKeyframes>& existing_rule) const;
-  void AddViewTransitionRules(const ActiveStyleSheetVector& sheets);
 
   CounterStyleMap& EnsureUserCounterStyleMap();
 
@@ -1223,10 +1216,6 @@ class CORE_EXPORT StyleEngine final : public GarbageCollected<StyleEngine>,
   // subtree is stored here during in_dom_removal_ and is marked for whitespace
   // re-attachment after the removal.
   Member<LayoutObject> parent_for_detached_subtree_;
-
-  // The @view-transition rule currently applying to the document.
-  CascadeLayered<StyleRuleViewTransition> view_transition_rule_;
-  CascadeLayered<StyleRuleViewTransition> view_transition_preview_rule_;
 
   // Cache for sharing ImageResourceContent between CSSValues referencing the
   // same URL.

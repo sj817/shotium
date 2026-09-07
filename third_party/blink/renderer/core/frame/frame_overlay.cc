@@ -33,7 +33,6 @@
 
 #include "base/memory/ptr_util.h"
 #include "cc/input/main_thread_scrolling_reason.h"
-#include "cc/layers/picture_layer.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
 #include "third_party/blink/renderer/core/frame/visual_viewport.h"
 #include "third_party/blink/renderer/core/layout/layout_view.h"
