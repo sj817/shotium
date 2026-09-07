@@ -26,7 +26,6 @@
 
 namespace blink {
 class Element;
-class InteractionEffectsMonitor;
 class HTMLVideoElement;
 class PerformanceEventTiming;
 class QualifiedName;
@@ -104,11 +103,6 @@ class CORE_EXPORT SoftNavigationHeuristics
   bool IsTrackingSoftNavigationsForTest() const {
     return !interaction_id_to_context_.empty();
   }
-
-  void RegisterInteractionEffectsMonitor(InteractionEffectsMonitor*);
-  void UnregisterInteractionEffectsMonitor(InteractionEffectsMonitor*);
-  void ForEachInteractionEffectsMonitor(
-      base::FunctionRef<void(InteractionEffectsMonitor&)>);
 
   void OnContextDisposed(SoftNavigationContext*);
   void UpdateSoftLcpMetricsForContext(SoftNavigationContext*);
@@ -191,8 +185,6 @@ class CORE_EXPORT SoftNavigationHeuristics
   // Used to map DOM modifications to `SoftNavigationContext`s for paint
   // attribution. Only set when `IsPrePaintBasedAttributionEnabled()` is true.
   Member<SoftNavigationPaintAttributionTracker> paint_attribution_tracker_;
-
-  HeapHashSet<Member<InteractionEffectsMonitor>> interaction_effects_monitors_;
 
   // This count is incremented when a soft navigation is sent to the
   // frame client for reporting, so that it will be monotonically increasing

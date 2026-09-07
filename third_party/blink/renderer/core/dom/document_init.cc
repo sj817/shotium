@@ -35,7 +35,6 @@
 #include "third_party/blink/public/mojom/security_context/insecure_request_policy.mojom-blink.h"
 #include "third_party/blink/renderer/core/dom/document.h"
 #include "third_party/blink/renderer/core/dom/dom_implementation.h"
-#include "third_party/blink/renderer/core/dom/sink_document.h"
 #include "third_party/blink/renderer/core/dom/xml_document.h"
 #include "third_party/blink/renderer/core/frame/local_dom_window.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
@@ -45,12 +44,10 @@
 #include "third_party/blink/renderer/core/html/html_view_source_document.h"
 #include "third_party/blink/renderer/core/html/image_document.h"
 #include "third_party/blink/renderer/core/html/json_document.h"
-#include "third_party/blink/renderer/core/html/plugin_document.h"
 #include "third_party/blink/renderer/core/html/text_document.h"
 #include "third_party/blink/renderer/core/loader/document_loader.h"
 #include "third_party/blink/renderer/core/page/chrome_client.h"
 #include "third_party/blink/renderer/core/page/page.h"
-#include "third_party/blink/renderer/core/page/plugin_data.h"
 #include "third_party/blink/renderer/platform/network/mime/content_type.h"
 #include "third_party/blink/renderer/platform/network/mime/mime_type_registry.h"
 #include "third_party/blink/renderer/platform/network/network_utils.h"
@@ -151,14 +148,11 @@ DocumentInit& DocumentInit::ForPrerendering(bool is_prerendering) {
 // static
 DocumentInit::Type DocumentInit::ComputeDocumentType(
     LocalFrame* frame,
-    const String& mime_type,
-    bool* is_for_external_handler) {
+    const String& mime_type) {
   if (frame && frame->InViewSourceMode()) {
     return Type::kViewSource;
   }
 
-  // Plugins cannot take HTML and XHTML from us, and we don't even need to
-  // initialize the plugin database for those.
   if (mime_type == "text/html") {
     return Type::kHTML;
   }
@@ -176,29 +170,6 @@ DocumentInit::Type DocumentInit::ComputeDocumentType(
     return Type::kImage;
   }
 
-  if (frame && frame->GetPage() && frame->Loader().AllowPlugins())
-      [[unlikely]] {
-    PluginData* plugin_data = GetPluginData(frame);
-
-    // Everything else except text/plain can be overridden by plugins.
-    // Disallowing plugins to use text/plain prevents plugins from hijacking a
-    // fundamental type that the browser is expected to handle, and also serves
-    // as an optimization to prevent loading the plugin database in the common
-    // case.
-    if (mime_type != "text/plain" && plugin_data &&
-        plugin_data->SupportsMimeType(mime_type)) {
-      // Plugins handled by MimeHandlerView do not create a PluginDocument. They
-      // are rendered inside cross-process frames and the notion of a PluginView
-      // (which is associated with PluginDocument) is irrelevant here.
-      if (plugin_data->IsExternalPluginMimeType(mime_type)) {
-        if (is_for_external_handler)
-          *is_for_external_handler = true;
-        return Type::kHTML;
-      }
-      return Type::kPlugin;
-    }
-  }
-
   if (MIMETypeRegistry::IsSupportedJavaScriptMIMEType(mime_type) ||
       MIMETypeRegistry::IsJSONMimeType(mime_type) ||
       MIMETypeRegistry::IsPlainTextMIMEType(mime_type)) {
@@ -212,15 +183,10 @@ DocumentInit::Type DocumentInit::ComputeDocumentType(
   return Type::kHTML;
 }
 
-// static
-PluginData* DocumentInit::GetPluginData(LocalFrame* frame) {
-  return frame->GetPage()->GetPluginData();
-}
-
 DocumentInit& DocumentInit::WithTypeFrom(const String& mime_type) {
   mime_type_ = mime_type;
   type_ = ComputeDocumentType(window_ ? window_->GetFrame() : nullptr,
-                              mime_type_, &is_for_external_handler_);
+                              mime_type_);
   return *this;
 }
 
@@ -316,14 +282,6 @@ Document* DocumentInit::CreateDocument() const {
       return XMLDocument::CreateXHTML(*this);
     case Type::kImage:
       return MakeGarbageCollected<ImageDocument>(*this);
-    case Type::kPlugin: {
-      DCHECK(window_);
-      if (window_->IsSandboxed(
-              network::mojom::blink::WebSandboxFlags::kPlugins)) {
-        return MakeGarbageCollected<SinkDocument>(*this);
-      }
-      return MakeGarbageCollected<PluginDocument>(*this);
-    }
     case Type::kMedia:
       // MediaDocument used to synthesize a <video autoplay controls> wrapper
       // around a direct navigation to a raw media URL. There is no

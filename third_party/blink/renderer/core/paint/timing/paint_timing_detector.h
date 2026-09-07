@@ -100,7 +100,6 @@ class CORE_EXPORT PaintTimingDetector
     return TRACE_EVENT_CATEGORY_ENABLED("loading");
   }
 
-  gfx::RectF BlinkSpaceToDIPs(const gfx::RectF& float_rect) const;
   gfx::RectF CalculateVisualRect(const gfx::Rect& visual_rect,
                                  const PropertyTreeStateOrAlias&) const;
 

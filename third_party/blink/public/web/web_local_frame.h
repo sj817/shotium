@@ -21,19 +21,16 @@
 #include "components/viz/common/surfaces/frame_sink_id.h"
 #include "services/network/public/mojom/permissions_policy/permissions_policy_feature.mojom-shared.h"
 #include "services/network/public/mojom/web_sandbox_flags.mojom-shared.h"
-#include "third_party/blink/public/common/context_menu_data/untrustworthy_context_menu_params.h"
 #include "third_party/blink/public/common/frame/user_activation_update_source.h"
 #include "third_party/blink/public/common/tokens/tokens.h"
 #include "third_party/blink/public/mojom/back_forward_cache_not_restored_reasons.mojom-forward.h"
 #include "third_party/blink/public/mojom/blob/blob_url_store.mojom-shared.h"
 #include "third_party/blink/public/mojom/browser_interface_broker.mojom-shared.h"
 #include "third_party/blink/public/mojom/commit_result/commit_result.mojom-shared.h"
-#include "third_party/blink/public/mojom/context_menu/context_menu.mojom-shared.h"
 #include "third_party/blink/public/mojom/devtools/devtools_agent.mojom-shared.h"
 #include "third_party/blink/public/mojom/devtools/inspector_issue.mojom-shared.h"
 #include "third_party/blink/public/mojom/dom_storage/storage_area.mojom-shared.h"
 #include "third_party/blink/public/mojom/frame/lifecycle.mojom-shared.h"
-#include "third_party/blink/public/mojom/frame/media_player_action.mojom-shared.h"
 #include "third_party/blink/public/mojom/frame/user_activation_notification_type.mojom-shared.h"
 #include "third_party/blink/public/mojom/lcp_critical_path_predictor/lcp_critical_path_predictor.mojom-forward.h"
 #include "third_party/blink/public/mojom/navigation/navigation_params.mojom-shared.h"
@@ -95,7 +92,6 @@ class WebHitTestResult;
 class WebInputMethodController;
 class WebPerformanceMetricsForReporting;
 class WebPerformanceMetricsForNestedContexts;
-class WebPlugin;
 class WebPrintClient;
 class WebRange;
 class WebSpellCheckPanelHostClient;
@@ -573,23 +569,6 @@ class BLINK_EXPORT WebLocalFrame : public WebFrame {
   // viewport coordinates.
   virtual void CopyImageAtForTesting(const gfx::Point&) = 0;
 
-  // Shows a context menu with the given information from an external context
-  // menu request. The given client will be called with the result.
-  //
-  // The request ID will be returned by this function. This is passed to the
-  // client functions for identification.
-  //
-  // If the client is destroyed, CancelContextMenu() should be called with the
-  // request ID returned by this function.
-  //
-  // Note: if you end up having clients outliving the WebLocalFrame, we should
-  // add a CancelContextMenuCallback function that takes a request id.
-  virtual void ShowContextMenuFromExternal(
-      const UntrustworthyContextMenuParams& params,
-      CrossVariantMojoAssociatedRemote<
-          blink::mojom::ContextMenuClientInterfaceBase>
-          context_menu_client) = 0;
-
   // Events --------------------------------------------------------------
 
   // Usage count for chrome.loadtimes deprecation.
@@ -685,7 +664,6 @@ class BLINK_EXPORT WebLocalFrame : public WebFrame {
 
   // Get the plugin to print, if any. The |constrain_to_node| parameter is the
   // same as the one for PrintBegin() below.
-  virtual WebPlugin* GetPluginToPrint(const WebNode& constrain_to_node) = 0;
 
   // Reformats the WebFrame for printing. WebPrintParams specifies the printable
   // content size, paper size, printable area size, printer DPI and print

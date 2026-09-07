@@ -46,7 +46,6 @@ class HTMLFrameOwnerElement;
 class InputDeviceCapabilities;
 class LocalFrame;
 class Page;
-class RemoteFrame;
 
 class CORE_EXPORT FocusController final
     : public GarbageCollected<FocusController> {
@@ -92,12 +91,6 @@ class CORE_EXPORT FocusController final
                     InputDeviceCapabilities* source_capabilities = nullptr) {
     return AdvanceFocus(type, false, source_capabilities);
   }
-  bool AdvanceFocusAcrossFrames(
-      mojom::blink::FocusType,
-      RemoteFrame* from,
-      LocalFrame* to,
-      InputDeviceCapabilities* source_capabilities = nullptr);
-
   static Element* FindScopeOwnerSlotOrScrollMarkerOrReadingFlowContainer(
       const Element&);
 

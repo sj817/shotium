@@ -38,7 +38,6 @@
 #include "third_party/blink/renderer/core/html/html_image_loader.h"
 #include "third_party/blink/renderer/core/html/html_object_element.h"
 #include "third_party/blink/renderer/core/html/parser/html_parser_idioms.h"
-#include "third_party/blink/renderer/core/html/plugin_document.h"
 #include "third_party/blink/renderer/core/html_names.h"
 #include "third_party/blink/renderer/core/layout/layout_embedded_content.h"
 #include "third_party/blink/renderer/core/layout/layout_embedded_object.h"
@@ -59,19 +58,6 @@ const AttrNameToTrustedType& HTMLEmbedElement::GetCheckedAttributeTypes()
       ({{"src", std::pair{SpecificTrustedType::kScriptURL,
                           trusted_types_names::kHTMLEmbedElement}}}));
   return attribute_map;
-}
-
-static inline LayoutEmbeddedContent* FindPartLayoutObject(const Node* n) {
-  if (!n->GetLayoutObject())
-    n = Traversal<HTMLObjectElement>::FirstAncestor(*n);
-
-  if (n)
-    return DynamicTo<LayoutEmbeddedContent>(n->GetLayoutObject());
-  return nullptr;
-}
-
-LayoutEmbeddedContent* HTMLEmbedElement::ExistingLayoutEmbeddedContent() const {
-  return FindPartLayoutObject(this);
 }
 
 bool HTMLEmbedElement::IsPresentationAttribute(
@@ -139,12 +125,6 @@ void HTMLEmbedElement::ParseAttribute(
   }
 }
 
-void HTMLEmbedElement::ParametersForPlugin(PluginParameters& plugin_params) {
-  AttributeCollection attributes = Attributes();
-  for (const Attribute& attribute : attributes)
-    plugin_params.AppendAttribute(attribute);
-}
-
 // FIXME: This should be unified with HTMLObjectElement::UpdatePlugin and
 // moved down into html_plugin_element.cc
 void HTMLEmbedElement::UpdatePluginInternal() {
@@ -160,26 +140,12 @@ void HTMLEmbedElement::UpdatePluginInternal() {
   if (!AllowedToLoadFrameURL(url_))
     return;
 
-  PluginParameters plugin_params;
-  ParametersForPlugin(plugin_params);
-
   // FIXME: Can we not have GetLayoutObject() here now that beforeload events
   // are gone?
   if (!GetLayoutObject())
     return;
 
-  // Overwrites the URL and MIME type of a Flash embed to use an HTML5 embed.
-  KURL overriden_url =
-      GetDocument().GetFrame()->Client()->OverrideFlashEmbedWithHTML(
-          GetDocument().CompleteURL(url_));
-  if (!overriden_url.IsEmpty()) {
-    Deprecation::CountDeprecation(GetDocument().GetExecutionContext(),
-                                      WebFeature::kOverrideFlashEmbedwithHTML);
-    url_ = overriden_url.GetString();
-    SetServiceType("text/html");
-  }
-
-  RequestObject(plugin_params);
+  RequestObject();
 }
 
 bool HTMLEmbedElement::LayoutObjectIsNeeded(const DisplayStyle& style) const {

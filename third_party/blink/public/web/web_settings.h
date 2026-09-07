@@ -177,7 +177,6 @@ class WebSettings {
   virtual void SetPasswordEchoDurationInSeconds(double) = 0;
   virtual void SetPasswordEchoEnabledPhysical(bool) = 0;
   virtual void SetPasswordEchoEnabledTouch(bool) = 0;
-  virtual void SetPluginsEnabled(bool) = 0;
   virtual void SetPresentationReceiver(bool) = 0;
   virtual void SetAvailablePointerTypes(int) = 0;
   virtual void SetPrimaryPointerType(blink::mojom::PointerType) = 0;

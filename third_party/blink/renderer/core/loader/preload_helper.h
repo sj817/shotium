@@ -72,14 +72,6 @@ class PreloadHelper final {
     kLinkCalledFromMarkup,
   };
 
-  static void DnsPrefetchIfNeeded(const LinkLoadParameters&,
-                                  Document*,
-                                  LocalFrame*,
-                                  LinkCaller);
-  static void PreconnectIfNeeded(const LinkLoadParameters&,
-                                 Document*,
-                                 LocalFrame*,
-                                 LinkCaller);
   static void PrefetchIfNeeded(const LinkLoadParameters&,
                                Document&,
                                PendingLinkPreload*);

@@ -57,7 +57,6 @@ class CORE_EXPORT PreloadRequest {
 
   enum RequestType {
     kRequestTypePreload,
-    kRequestTypePreconnect,
     kRequestTypeLinkRelPreload
   };
 
@@ -103,7 +102,6 @@ class CORE_EXPORT PreloadRequest {
 
   const String& ResourceURL() const { return resource_url_; }
   const KURL& BaseURL() const { return base_url_; }
-  bool IsPreconnect() const { return request_type_ == kRequestTypePreconnect; }
   network::mojom::ReferrerPolicy GetReferrerPolicy() const {
     return referrer_policy_;
   }

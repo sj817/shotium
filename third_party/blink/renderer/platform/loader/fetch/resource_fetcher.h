@@ -358,11 +358,6 @@ class PLATFORM_EXPORT ResourceFetcher
                                       network::mojom::RequestDestination,
                                       const AtomicString& initiator_name);
 
-  // This is called from leak detectors (Real-world leak detector & web test
-  // leak detector) to clean up loaders after page navigation before instance
-  // counting.
-  void PrepareForLeakDetection();
-
   using ResourceFetcherSet = GCedHeapHashSet<WeakMember<ResourceFetcher>>;
   static const ResourceFetcherSet& MainThreadFetchers();
 

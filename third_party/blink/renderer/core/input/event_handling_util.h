@@ -49,26 +49,6 @@ LocalFrame* GetTargetSubframe(const MouseEventWithHitTestResults&,
 
 LocalFrame* SubframeForTargetNode(Node*, bool* is_remote_frame = nullptr);
 
-// If an active unbounded element is present inside a descendant subframe of
-// `from_frame`, and `point_in_root_frame` lands on that unbounded element (or
-// its descendants) outside the subframe's normal bounds, this struct holds
-// the target subframe and the subframe-relative hit test information.
-struct UnboundedSubframeHitTestResult {
-  STACK_ALLOCATED();
-
- public:
-  LocalFrame* frame = nullptr;
-  HitTestLocation location;
-  HitTestResult result;
-};
-
-// Checks if `point_in_root_frame` targets an active unbounded element inside a
-// descendant subframe of `from_frame`. If so, returns the subframe and its
-// subframe-relative hit test location and result.
-std::optional<UnboundedSubframeHitTestResult> SubframeForActiveUnboundedElement(
-    LocalFrame* from_frame,
-    const gfx::PointF& point_in_root_frame);
-
 // Intervention: if an input event lands on a cross-origin iframe or fencedframe
 // that has moved or resized recently (recent==500ms), and which contains an
 // IntersectionObserver that is tracking visibility, then the event is quietly

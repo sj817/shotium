@@ -8,7 +8,6 @@
 
 #include "base/check_deref.h"
 #include "base/feature_list.h"
-#include "cc/layers/heads_up_display_layer.h"
 #include "cc/layers/layer.h"
 #include "cc/trees/layer_tree_host.h"
 #include "third_party/blink/public/common/features.h"
@@ -22,7 +21,6 @@
 #include "third_party/blink/renderer/core/page/chrome_client.h"
 #include "third_party/blink/renderer/core/page/page.h"
 #include "third_party/blink/renderer/core/paint/timing/effective_visual_size_result.h"
-#include "third_party/blink/renderer/core/paint/timing/image_element_timing.h"
 #include "third_party/blink/renderer/core/paint/timing/largest_contentful_paint_calculator.h"
 #include "third_party/blink/renderer/core/paint/timing/largest_contentful_paint_manager.h"
 #include "third_party/blink/renderer/core/paint/timing/paint_timing.h"
@@ -36,7 +34,6 @@
 #include "third_party/blink/renderer/platform/heap/thread_state.h"
 #include "third_party/blink/renderer/platform/loader/fetch/media_timing.h"
 #include "third_party/blink/renderer/platform/runtime_enabled_features.h"
-#include "third_party/blink/renderer/platform/widget/frame_widget.h"
 #include "ui/gfx/geometry/rect_conversions.h"
 
 namespace blink {
@@ -60,53 +57,11 @@ ImagePaintTimingDetector::ImagePaintTimingDetector(
     PaintTimingDetector* detector)
     : paint_timing_detector_(detector) {}
 
-void ImagePaintTimingDetector::SendRectsToHud() {
-  LocalFrameView* frame_view =
-      paint_timing_detector_->GetPaintTiming().GetDocument()->View();
-  CHECK(frame_view);
-  auto* hud_layer =
-      paint_timing::GetHUDLayerIfContentfulPaintRectsEnabled(frame_view);
-
-  if (!hud_layer) {
-    return;
-  }
-
-  LocalFrame& main_frame = frame_view->GetFrame().LocalFrameRoot();
-  FrameWidget* widget = main_frame.GetWidgetForLocalRoot();
-  if (!widget) {
-    return;
-  }
-
-  bool is_recording_lcp = !!GetLargestContentfulPaintManager();
-
-  for (const auto& info : images_queued_for_paint_time_) {
-    if (info->frame_index == frame_index_) {
-      ImageRecord* record = info->image_record;
-      cc::WebVitalMetricType type;
-
-      if (record->GetSoftNavigationContext()) {
-        type = cc::WebVitalMetricType::kInteractionContentfulPaint;
-      } else if (is_recording_lcp) {
-        type = cc::WebVitalMetricType::kNavigationContentfulPaint;
-      } else {
-        continue;
-      }
-
-      hud_layer->AddWebVitalsDebugRect(
-          {type, gfx::ToEnclosedRect(
-                     widget->DIPsToBlinkSpace(record->RootVisualRect()))});
-    }
-  }
-}
-
 OptionalPaintTimingDetectorCallback<ImageRecord>
 ImagePaintTimingDetector::TakePaintTimingCallback() {
   viewport_size_ = std::nullopt;
   if (!added_entry_in_latest_frame_)
     return std::nullopt;
-
-  // Do this before incrementing frame_index_;
-  SendRectsToHud();
 
   added_entry_in_latest_frame_ = false;
   return BindOnce(
@@ -495,8 +450,7 @@ uint64_t ImagePaintTimingDetector::ViewportSize() {
       paint_timing_detector_->GetPaintTiming().GetDocument()->GetPage();
   gfx::Rect viewport_int_rect =
       page->GetVisualViewport().VisibleContentRect(kExcludeScrollbars);
-  gfx::RectF viewport =
-      paint_timing_detector_->BlinkSpaceToDIPs(gfx::RectF(viewport_int_rect));
+  gfx::RectF viewport(viewport_int_rect);
   viewport_size_ = viewport.size().GetArea();
   return *viewport_size_;
 }

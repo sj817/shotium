@@ -88,8 +88,6 @@
 #include "third_party/blink/renderer/core/frame/local_frame.h"
 #include "third_party/blink/renderer/core/frame/local_frame_view.h"
 #include "third_party/blink/renderer/core/frame/settings.h"
-#include "third_party/blink/renderer/core/frame/web_frame_widget_impl.h"
-#include "third_party/blink/renderer/core/frame/web_local_frame_impl.h"
 #include "third_party/blink/renderer/core/fullscreen/fullscreen.h"
 #include "third_party/blink/renderer/core/html/custom/custom_element.h"
 #include "third_party/blink/renderer/core/html/custom/custom_element_registry.h"
@@ -151,7 +149,6 @@
 #include "third_party/blink/renderer/platform/scheduler/public/post_cancellable_task.h"
 #include "third_party/blink/renderer/platform/text/bidi_paragraph.h"
 #include "third_party/blink/renderer/platform/weborigin/scheme_registry.h"
-#include "third_party/blink/renderer/platform/widget/frame_widget.h"
 #include "third_party/blink/renderer/platform/wtf/std_lib_extras.h"
 #include "third_party/blink/renderer/platform/wtf/text/atomic_string.h"
 #include "third_party/blink/renderer/platform/wtf/text/character_names.h"
@@ -1557,20 +1554,6 @@ void HTMLElement::SetUnboundedElementActive(bool active,
     return;
   }
   SetElementFlag(ElementFlags::kIsUnboundedElementActive, active);
-  WebFrameWidgetImpl* widget = nullptr;
-  if (auto* frame = GetDocument().GetFrame()) {
-    if (auto* web_frame =
-            WebLocalFrameImpl::FromFrame(&frame->LocalFrameRoot())) {
-      widget = web_frame->FrameWidgetImpl();
-    }
-  }
-  if (widget) {
-    if (active) {
-      widget->IncrementActiveUnboundedElementCount();
-    } else {
-      widget->DecrementActiveUnboundedElementCount();
-    }
-  }
   if (!GetDocument().GetStyleEngine().InDetachLayoutTree() &&
       !GetDocument().InStyleRecalc()) {
     PseudoStateChanged(CSSSelector::kPseudoUnbounded);
@@ -1622,25 +1605,6 @@ void HTMLElement::SetUnboundedElementActive(bool active,
   }
 }
 
-void HTMLElement::AttachLayoutTree(AttachContext& context) {
-  Element::AttachLayoutTree(context);
-  if (RuntimeEnabledFeatures::UnboundedElementEnabled() &&
-      IsUnboundedElementActive() && !GetLayoutObject()) {
-    if (auto* frame = GetDocument().GetFrame()) {
-      if (auto* web_frame =
-              WebLocalFrameImpl::FromFrame(&frame->LocalFrameRoot())) {
-        if (auto* widget = web_frame->FrameWidgetImpl()) {
-          // When an active unbounded element loses its layout object (e.g. via
-          // display: none), explicitly dismiss the surface so the browser
-          // process tears down the Viz plumbing and closes the native OS
-          // window.
-          widget->OnDismissed();
-        }
-      }
-    }
-  }
-}
-
 UnboundedEventData* HTMLElement::GetUnboundedEventData() const {
   if (const NodeRareData* data = RareData()) {
     return data->GetUnboundedEventData();
@@ -1652,17 +1616,6 @@ UnboundedEventData& HTMLElement::EnsureUnboundedEventData() {
   auto pair = EnsureRareData().EnsureUnboundedEventData();
   data_ = pair.second;
   return pair.first.get();
-}
-
-gfx::Rect HTMLElement::LastSentUnboundedBounds() const {
-  if (const NodeRareData* data = RareData()) {
-    return data->LastSentUnboundedBounds();
-  }
-  return gfx::Rect();
-}
-
-void HTMLElement::SetLastSentUnboundedBounds(const gfx::Rect& bounds) {
-  data_ = EnsureRareData().SetLastSentUnboundedBounds(bounds);
 }
 
 bool HTMLElement::togglePopover(ExceptionState& exception_state) {

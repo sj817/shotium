@@ -506,14 +506,6 @@ gfx::Size RootFrameViewport::ContentsSize() const {
   return LayoutViewport().ContentsSize();
 }
 
-bool RootFrameViewport::UsesCompositedScrolling() const {
-  return LayoutViewport().UsesCompositedScrolling();
-}
-
-bool RootFrameViewport::ShouldScrollOnMainThread() const {
-  return LayoutViewport().ShouldScrollOnMainThread();
-}
-
 bool RootFrameViewport::ScrollbarsCanBeActive() const {
   return LayoutViewport().ScrollbarsCanBeActive();
 }
@@ -530,18 +522,6 @@ bool RootFrameViewport::ShouldPlaceVerticalScrollbarOnLeft() const {
 
 void RootFrameViewport::ScrollControlWasSetNeedsPaintInvalidation() {
   LayoutViewport().ScrollControlWasSetNeedsPaintInvalidation();
-}
-
-cc::Layer* RootFrameViewport::LayerForHorizontalScrollbar() const {
-  return LayoutViewport().LayerForHorizontalScrollbar();
-}
-
-cc::Layer* RootFrameViewport::LayerForVerticalScrollbar() const {
-  return LayoutViewport().LayerForVerticalScrollbar();
-}
-
-cc::Layer* RootFrameViewport::LayerForScrollCorner() const {
-  return LayoutViewport().LayerForScrollCorner();
 }
 
 // This method distributes the scroll between the visual and layout viewport.
@@ -677,10 +657,10 @@ void RootFrameViewport::ServiceScrollAnimations(double monotonic_time) {
   GetVisualViewport().ServiceScrollAnimations(monotonic_time);
 }
 
-void RootFrameViewport::UpdateCompositorScrollAnimations() {
-  ScrollableArea::UpdateCompositorScrollAnimations();
-  LayoutViewport().UpdateCompositorScrollAnimations();
-  GetVisualViewport().UpdateCompositorScrollAnimations();
+void RootFrameViewport::UpdateScrollAnimationState() {
+  ScrollableArea::UpdateScrollAnimationState();
+  LayoutViewport().UpdateScrollAnimationState();
+  GetVisualViewport().UpdateScrollAnimationState();
 }
 
 void RootFrameViewport::CancelProgrammaticScrollAnimation() {
@@ -711,11 +691,6 @@ void RootFrameViewport::SetSnapContainerData(
 bool RootFrameViewport::SetTargetSnapAreaElementIds(
     cc::TargetSnapAreaElementIds snap_target_ids) {
   return LayoutViewport().SetTargetSnapAreaElementIds(snap_target_ids);
-}
-
-void RootFrameViewport::DropCompositorScrollDeltaNextCommit() {
-  LayoutViewport().DropCompositorScrollDeltaNextCommit();
-  GetVisualViewport().DropCompositorScrollDeltaNextCommit();
 }
 
 bool RootFrameViewport::SnapContainerDataNeedsUpdate() const {

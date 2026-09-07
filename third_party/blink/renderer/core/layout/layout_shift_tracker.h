@@ -182,11 +182,6 @@ class CORE_EXPORT LayoutShiftTracker final
   void AttributionsToTracedValue(TracedValue&) const;
   double SubframeWeightingFactor() const;
 
-  // Sends layout shift rects to the heads-up display (HUD) layer, if
-  // visualization is enabled (by --show-layout-shift-regions or devtools
-  // "Layout Shift Regions" option).
-  void SendLayoutShiftRectsToHud(const Vector<gfx::Rect>& rects);
-
   void UpdateInputTimestamps(base::TimeTicks timestamp);
   bool HasRecentInput();
 

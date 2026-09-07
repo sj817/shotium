@@ -352,7 +352,7 @@ class CORE_EXPORT DisplayLockContext final
   bool MarkForStyleRecalcIfNeeded();
   bool MarkForLayoutIfNeeded();
   bool MarkAncestorsForPrePaintIfNeeded();
-  bool MarkNeedsRepaintAndPaintArtifactCompositorUpdate();
+  bool MarkNeedsRepaint();
   bool MarkNeedsCullRectUpdate();
   bool MarkForCompositingUpdatesIfNeeded();
   bool MarkForVisualOverflowRecalcIfNeeded();

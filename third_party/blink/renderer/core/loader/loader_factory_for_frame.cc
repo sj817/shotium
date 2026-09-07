@@ -4,8 +4,6 @@
 
 #include "third_party/blink/renderer/core/loader/loader_factory_for_frame.h"
 
-#include <ranges>
-
 #include "base/functional/bind.h"
 #include "base/memory/scoped_refptr.h"
 #include "base/numerics/safe_conversions.h"
@@ -21,8 +19,6 @@
 #include "third_party/blink/public/platform/cross_variant_mojo_util.h"
 #include "third_party/blink/public/platform/platform.h"
 #include "third_party/blink/public/platform/web_background_resource_fetch_assets.h"
-#include "third_party/blink/public/web/web_local_frame.h"
-#include "third_party/blink/public/web/web_local_frame_client.h"
 #include "third_party/blink/renderer/core/fileapi/public_url_manager.h"
 #include "third_party/blink/renderer/core/frame/local_dom_window.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
@@ -88,19 +84,6 @@ Vector<String>& CorsExemptHeaderList() {
   DEFINE_STATIC_LOCAL(ThreadSpecific<Vector<String>>, cors_exempt_header_list,
                       ());
   return *cors_exempt_header_list;
-}
-
-Vector<std::unique_ptr<URLLoaderThrottle>> CreateThrottlesImpl(
-    URLLoaderThrottleProvider* throttle_provider,
-    const LocalFrameToken local_frame_token,
-    const network::ResourceRequest* network_request) {
-  if (!throttle_provider) {
-    return {};
-  }
-  CHECK(network_request);
-
-  return ToVector(std::views::as_rvalue(
-      throttle_provider->CreateThrottles(local_frame_token, *network_request)));
 }
 
 }  // namespace
@@ -241,7 +224,7 @@ std::unique_ptr<URLLoader> LoaderFactoryForFrame::CreateURLLoader(
       ->CreateURLLoader(
           network_request, freezable_task_runner, unfreezable_task_runner,
           MaybeIssueKeepAliveHandle(network_request),
-          back_forward_cache_loader_helper, CreateThrottles(network_request));
+          back_forward_cache_loader_helper, {});
 }
 
 mojo::PendingRemote<mojom::blink::KeepAliveHandle>
@@ -262,29 +245,6 @@ LoaderFactoryForFrame::MaybeIssueKeepAliveHandle(
     CHECK(window_->IsContextDestroyed());
   }
   return pending_remote;
-}
-
-URLLoaderThrottleProvider*
-LoaderFactoryForFrame::GetURLLoaderThrottleProvider() {
-  // LocalFrameClient member may not be valid in some tests.
-  if (!window_->GetFrame()->Client() ||
-      !window_->GetFrame()->Client()->GetWebFrame() ||
-      !window_->GetFrame()->Client()->GetWebFrame()->Client()) {
-    return nullptr;
-  }
-  return window_->GetFrame()
-      ->Client()
-      ->GetWebFrame()
-      ->Client()
-      ->GetURLLoaderThrottleProvider();
-}
-
-Vector<std::unique_ptr<URLLoaderThrottle>>
-LoaderFactoryForFrame::CreateThrottles(
-    const network::ResourceRequest& network_request) {
-  return CreateThrottlesImpl(GetURLLoaderThrottleProvider(),
-                             window_->GetFrame()->GetLocalFrameToken(),
-                             &network_request);
 }
 
 }  // namespace blink

@@ -17,7 +17,6 @@
 #include "third_party/blink/renderer/core/layout/hit_test_request.h"
 #include "third_party/blink/renderer/core/layout/hit_test_result.h"
 #include "third_party/blink/renderer/core/layout/layout_view.h"
-#include "third_party/blink/renderer/core/page/pointer_lock_controller.h"
 #include "third_party/blink/renderer/core/scroll/scrollable_area.h"
 #include "ui/gfx/geometry/point_conversions.h"
 
@@ -57,25 +56,20 @@ WebInputEventResult MouseWheelEventManager::HandleWheelEvent(
     return WebInputEventResult::kNotHandled;
   }
 
-  if (Element* pointer_locked_element =
-          PointerLockController::GetPointerLockedElement(frame_)) {
-    UpdateWheelTarget(pointer_locked_element);
-  } else {
-    // Synthetic wheel events generated from GestureDoubleTap are phaseless.
-    // Wheel events generated from plugin and tests may not have phase info.
-    const bool has_phase_info =
-        event.phase != WebMouseWheelEvent::kPhaseNone ||
-        event.momentum_phase != WebMouseWheelEvent::kPhaseNone;
+  // Synthetic wheel events generated from GestureDoubleTap are phaseless.
+  // Wheel events generated from plugin and tests may not have phase info.
+  const bool has_phase_info =
+      event.phase != WebMouseWheelEvent::kPhaseNone ||
+      event.momentum_phase != WebMouseWheelEvent::kPhaseNone;
 
-    const int kWheelEventPhaseStartedEventMask =
-        WebMouseWheelEvent::kPhaseBegan | WebMouseWheelEvent::kPhaseMayBegin;
-    // Find and save the wheel_target_, this target will be used for the rest
-    // of the current scrolling sequence. In the absence of phase info, send the
-    // event to the target under the cursor.
-    if (event.phase & kWheelEventPhaseStartedEventMask || !wheel_target_ ||
-        !has_phase_info) {
-      UpdateWheelTarget(FindTargetNode(event, doc, view));
-    }
+  const int kWheelEventPhaseStartedEventMask =
+      WebMouseWheelEvent::kPhaseBegan | WebMouseWheelEvent::kPhaseMayBegin;
+  // Find and save the wheel_target_, this target will be used for the rest
+  // of the current scrolling sequence. In the absence of phase info, send the
+  // event to the target under the cursor.
+  if (event.phase & kWheelEventPhaseStartedEventMask || !wheel_target_ ||
+      !has_phase_info) {
+    UpdateWheelTarget(FindTargetNode(event, doc, view));
   }
 
   LocalFrame* subframe =

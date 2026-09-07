@@ -125,14 +125,6 @@ bool PaintChunker::IncrementDisplayItemIndex(const DisplayItemClient& client,
     if (scrollbar->IsOpaque()) {
       chunk.rect_known_to_be_opaque = item.VisualRect();
     }
-  } else if (const auto* foreign_item =
-                 DynamicTo<ForeignLayerDisplayItem>(item)) {
-    // Assume all OOP iframes contain text to prevent applying
-    // 2DScaleTransformWithCompositedDescendants on 2D-transformed ancestors,
-    // which can cause text blurriness in iframes.
-    if (foreign_item->GetId().type == DisplayItem::kForeignLayerRemoteFrame) {
-      chunk.has_text = true;
-    }
   }
 
   chunk.raster_effect_outset =
@@ -307,9 +299,8 @@ void PaintChunker::CreateScrollHitTestChunk(
 #if DCHECK_IS_ON()
   CheckNotFinished();
   if (id.type == DisplayItem::Type::kResizerScrollHitTest ||
-      id.type == DisplayItem::Type::kWebPluginHitTest ||
       id.type == DisplayItem::Type::kScrollbarHitTest) {
-    // Resizer, plugin, and scrollbar hit tests are only used to prevent
+    // Resizer and scrollbar hit tests are only used to prevent
     // composited scrolling and should not have a scroll offset node.
     DCHECK(!scroll_translation);
   } else if (id.type == DisplayItem::Type::kScrollHitTest) {

@@ -14,7 +14,6 @@
 #include "third_party/blink/renderer/core/paint/timing/paint_timing_record.h"
 #include "third_party/blink/renderer/core/timing/dom_window_performance.h"
 #include "third_party/blink/renderer/core/timing/interaction_contentful_paint.h"
-#include "third_party/blink/renderer/core/timing/interaction_effects_monitor.h"
 #include "third_party/blink/renderer/core/timing/largest_contentful_paint.h"
 #include "third_party/blink/renderer/core/timing/soft_navigation_heuristics.h"
 #include "third_party/blink/renderer/core/timing/window_performance.h"
@@ -41,10 +40,6 @@ SoftNavigationContext::SoftNavigationContext(
   TRACE_EVENT_INSTANT("loading", "SoftNavigationContextCreated", track_,
                       "context", *this);
 
-  GetSoftNavigationHeuristics()->ForEachInteractionEffectsMonitor(
-      [&](InteractionEffectsMonitor& monitor) {
-        monitor.OnSoftNavigationContextCreated();
-      });
 }
 
 PerformanceTimelineEntryIdInfo SoftNavigationContext::GetInteractionIdInfo()
@@ -160,13 +155,6 @@ bool SoftNavigationContext::OnPaintFinished() {
                         track_, "context", this, "numModdedNewNodes",
                         num_modded_new_nodes, "newPaintedArea",
                         new_painted_area);
-  }
-
-  if (new_painted_area > 0) {
-    GetSoftNavigationHeuristics()->ForEachInteractionEffectsMonitor(
-        [&](InteractionEffectsMonitor& monitor) {
-          monitor.OnContentfulPaint(this, new_painted_area);
-        });
   }
 
   num_modified_dom_nodes_last_animation_frame_ = num_modified_dom_nodes_;

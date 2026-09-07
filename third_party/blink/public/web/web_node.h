@@ -56,7 +56,6 @@ class Node;
 class WebDocument;
 class WebElement;
 class WebElementCollection;
-class WebPluginContainer;
 
 // BLINK_WEB_NODE_LOCATION_FROM_HERE is used to optimize away much of
 // the code size cost of cppgc::SourceLocation::Current for builds that
@@ -176,7 +175,6 @@ class BLINK_EXPORT WebNode {
 
   void RevealAutoExpandableAncestors() const;
 
-  WebPluginContainer* PluginContainer() const;
 
   bool IsInsideFocusableElementOrARIAWidget() const;
 

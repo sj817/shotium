@@ -78,9 +78,6 @@ void LayoutImage::InsertedIntoTree() {
   // and it did not have a node, it would not be possible to know if the node
   // would be required for timing. Notify at this point now it is attached to
   // its parent.
-  //
-  // TODO(crbug.com/535432431): This may no longer be necessary once
-  // ImageElementTiming is a PaintTiming client.
   if (!GetNode() && GetDocument().domWindow() && image_content &&
       image_content->IsLoaded()) {
     PaintTimingDetector::From(GetDocument())

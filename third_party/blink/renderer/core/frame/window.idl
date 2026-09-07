@@ -146,10 +146,6 @@
     // https://github.com/WICG/ViewportAPI
     [Replaceable, SameObject] readonly attribute VisualViewport visualViewport;
 
-    // Viewport API
-    // https://drafts.csswg.org/css-viewport-1/
-    [Replaceable, SameObject, RuntimeEnabled=ViewportSegments] readonly attribute Viewport viewport;
-
     // client
     [MeasureAs=WindowScreenX, Replaceable] readonly attribute long screenX;
     [MeasureAs=WindowScreenY, Replaceable] readonly attribute long screenY;

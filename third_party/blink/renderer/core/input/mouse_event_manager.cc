@@ -43,7 +43,6 @@
 #include "third_party/blink/renderer/core/page/drag_state.h"
 #include "third_party/blink/renderer/core/page/focus_controller.h"
 #include "third_party/blink/renderer/core/page/page.h"
-#include "third_party/blink/renderer/core/page/pointer_lock_controller.h"
 #include "third_party/blink/renderer/core/paint/paint_layer.h"
 #include "third_party/blink/renderer/core/paint/paint_layer_scrollable_area.h"
 #include "third_party/blink/renderer/core/paint/timing/paint_timing.h"
@@ -400,10 +399,6 @@ void MouseEventManager::RecomputeMouseHoverStateIfNeeded() {
   // Don't dispatch a synthetic mouse move event if the mouse cursor is not
   // visible to the user.
   if (!frame_->GetPage()->IsCursorVisible())
-    return;
-
-  // Don't dispatch a synthetic event if pointer is locked.
-  if (frame_->GetPage()->GetPointerLockController().GetElement())
     return;
 
   // Don't dispatch a synthetic event if a drag is ongoing.

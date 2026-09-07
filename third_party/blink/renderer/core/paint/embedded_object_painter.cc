@@ -56,10 +56,6 @@ void EmbeddedObjectPainter::PaintReplaced(const PaintInfo& paint_info,
     return;
   }
 
-  std::optional<ScopedPaintChunkProperties> removed_svg_filter_paint =
-      EmbeddedContentPainter::RemoveSvgFilterPaint(layout_embedded_object_,
-                                                   paint_info);
-
   if (paint_info.phase == PaintPhase::kSelectionDragImage)
     return;
 

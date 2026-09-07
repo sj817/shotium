@@ -27,7 +27,6 @@
 #include "third_party/blink/renderer/core/preferences/preference_overrides.h"
 #include "third_party/blink/renderer/platform/graphics/color_space_gamut.h"
 #include "third_party/blink/renderer/platform/network/network_state_notifier.h"
-#include "third_party/blink/renderer/platform/widget/frame_widget.h"
 #include "ui/base/mojom/window_show_state.mojom-blink.h"
 #include "ui/display/screen_info.h"
 
@@ -297,12 +296,7 @@ mojom::blink::DisplayMode MediaValues::CalculateDisplayMode(LocalFrame* frame) {
     return mode;
   }
 
-  FrameWidget* widget = frame->GetWidgetForLocalRoot();
-  if (!widget) {  // Is null in non-ordinary Pages.
-    return mojom::blink::DisplayMode::kBrowser;
-  }
-
-  return widget->DisplayMode();
+  return mojom::blink::DisplayMode::kBrowser;
 }
 
 ui::mojom::blink::WindowShowState MediaValues::CalculateWindowShowState(
@@ -317,32 +311,12 @@ ui::mojom::blink::WindowShowState MediaValues::CalculateWindowShowState(
     return show_state;
   }
 
-  FrameWidget* widget = frame->GetWidgetForLocalRoot();
-  if (!widget) {  // Is null in non-ordinary Pages.
-    return ui::mojom::blink::WindowShowState::kDefault;
-  }
-
-  return widget->WindowShowState();
+  return ui::mojom::blink::WindowShowState::kDefault;
 }
 
 bool MediaValues::CalculateResizable(LocalFrame* frame) {
   DCHECK(frame);
-
-  bool resizable = frame->GetPage()->GetSettings().GetResizable();
-  // Initial state set in /third_party/blink/renderer/core/frame/settings.json5
-  // should match with this.
-  if (!resizable) {
-    // Only non-default value should be returned "early" from the settings
-    // without checking from widget. Settings are only used for testing.
-    return resizable;
-  }
-
-  FrameWidget* widget = frame->GetWidgetForLocalRoot();
-  if (!widget) {
-    return true;
-  }
-
-  return widget->Resizable();
+  return frame->GetPage()->GetSettings().GetResizable();
 }
 
 bool MediaValues::CalculateThreeDEnabled(LocalFrame* frame) {
@@ -516,41 +490,18 @@ NavigationControls MediaValues::CalculateNavigationControls(LocalFrame* frame) {
   return frame->GetSettings()->GetNavigationControls();
 }
 
-int MediaValues::CalculateHorizontalViewportSegments(LocalFrame* frame) {
-  if (!frame->GetWidgetForLocalRoot()) {
-    return 1;
-  }
-
-  std::vector<gfx::Rect> viewport_segments =
-      frame->GetWidgetForLocalRoot()->ViewportSegments();
-  HashSet<int> unique_x;
-  for (const auto& segment : viewport_segments) {
-    // HashSet can't have 0 as a key, so add 1 to all the values we see.
-    unique_x.insert(segment.x() + 1);
-  }
-
-  return static_cast<int>(unique_x.size());
+int MediaValues::CalculateHorizontalViewportSegments(LocalFrame*) {
+  // A screenshot has one continuous viewport.
+  return 1;
 }
 
-int MediaValues::CalculateVerticalViewportSegments(LocalFrame* frame) {
-  if (!frame->GetWidgetForLocalRoot()) {
-    return 1;
-  }
-
-  std::vector<gfx::Rect> viewport_segments =
-      frame->GetWidgetForLocalRoot()->ViewportSegments();
-  HashSet<int> unique_y;
-  for (const auto& segment : viewport_segments) {
-    // HashSet can't have 0 as a key, so add 1 to all the values we see.
-    unique_y.insert(segment.y() + 1);
-  }
-
-  return static_cast<int>(unique_y.size());
+int MediaValues::CalculateVerticalViewportSegments(LocalFrame*) {
+  return 1;
 }
 
 mojom::blink::DevicePostureType MediaValues::CalculateDevicePosture(
-    LocalFrame* frame) {
-  return frame->GetDevicePosture();
+    LocalFrame*) {
+  return mojom::blink::DevicePostureType::kContinuous;
 }
 
 Scripting MediaValues::CalculateScripting(LocalFrame* frame) {

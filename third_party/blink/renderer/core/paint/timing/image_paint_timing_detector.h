@@ -144,7 +144,6 @@ class CORE_EXPORT ImagePaintTimingDetector final
     const PresentationReason presentation_reason;
   };
 
-  void SendRectsToHud();
 
   // Returns the viewport size, initializing the cached `viewport_size_` if
   // needed.

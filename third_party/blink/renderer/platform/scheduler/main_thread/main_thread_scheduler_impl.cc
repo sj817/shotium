@@ -2577,10 +2577,6 @@ void MainThreadSchedulerImpl::OnTaskCompleted(
 
   if (queue) {
     queue->OnTaskRunTimeReported(task_timing);
-
-    if (FrameSchedulerImpl* frame_scheduler = queue->GetFrameScheduler()) {
-      frame_scheduler->OnTaskCompleted(task_timing);
-    }
   }
 
   // TODO(altimin): Per-page metrics should also be considered.

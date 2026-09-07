@@ -92,15 +92,12 @@ class PLATFORM_EXPORT DisplayItem {
     kScrollbarTickmarks,
     kSelectionTint,
     kTableCollapsedBorders,
-    kWebPlugin,
-    kDrawingLast = kWebPlugin,
+    kDrawingLast = kTableCollapsedBorders,
 
     kForeignLayerFirst,
     kForeignLayerCanvas = kForeignLayerFirst,
     kForeignLayerDevToolsOverlay,
-    kForeignLayerPlugin,
     kForeignLayerVideo,
-    kForeignLayerRemoteFrame,
     kForeignLayerLinkHighlight,
     kForeignLayerViewportScroll,
     kForeignLayerViewportScrollbar,
@@ -130,7 +127,6 @@ class PLATFORM_EXPORT DisplayItem {
     kHitTest,
     // Web plugin needs a separate id to avoid conflict with the hit test data
     // for LayoutReplaced.
-    kWebPluginHitTest,
 
     // Used for paint chunks that contain region capture data.
     kRegionCapture,

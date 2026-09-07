@@ -64,7 +64,6 @@
 #include "third_party/blink/renderer/core/paint/object_paint_properties.h"
 #include "third_party/blink/renderer/platform/animation/animation_translation_util.h"
 #include "third_party/blink/renderer/platform/animation/compositor_animation.h"
-#include "third_party/blink/renderer/platform/graphics/compositing/paint_artifact_compositor.h"
 #include "third_party/blink/renderer/platform/graphics/platform_paint_worklet_layer_painter.h"
 #include "third_party/blink/renderer/platform/instrumentation/use_counter.h"
 #include "third_party/blink/renderer/platform/runtime_enabled_features.h"
@@ -190,23 +189,6 @@ bool IsNoOpVariableAnimation(const PropertyHandle& property,
   return property.GetCSSProperty().PropertyID() == CSSPropertyID::kVariable;
 }
 
-bool CompositedAnimationRequiresProperties(const PropertyHandle& property,
-                                           LayoutObject* layout_object) {
-  switch (property.GetCSSProperty().PropertyID()) {
-    case CSSPropertyID::kRotate:
-    case CSSPropertyID::kScale:
-    case CSSPropertyID::kTranslate:
-    case CSSPropertyID::kTransform:
-      return !layout_object || layout_object->IsTransformApplicable();
-    case CSSPropertyID::kOpacity:
-    case CSSPropertyID::kBackdropFilter:
-    case CSSPropertyID::kFilter:
-      return true;
-    default:
-      return false;
-  }
-}
-
 bool IsPartOfSVGResource(const LayoutObject& layout_object) {
   const LayoutObject* current = &layout_object;
   while (current) {
@@ -260,7 +242,6 @@ CompositorAnimations::CheckCanStartEffectOnCompositor(
     const Animation* animation_to_add,
     AnimationCompositingDecisionState& state,
     const EffectModel& effect,
-    const PaintArtifactCompositor* paint_artifact_compositor,
     double animation_playback_rate) {
   if (state.specific_reasons) {
     state.specific_reasons->ResetDetails(
@@ -477,9 +458,7 @@ CompositorAnimations::CheckCanStartEffectOnCompositor(
     }
   }
 
-  if (missing_style_or_layout || CompositorPropertyAnimationsHaveNoEffect(
-                                     target_element, animation_to_add, effect,
-                                     paint_artifact_compositor)) {
+  if (missing_style_or_layout) {
     state.disposition |= kAnimationHasNoVisibleChange;
   }
 
@@ -498,83 +477,6 @@ CompositorAnimations::CheckCanStartEffectOnCompositor(
   }
 
   return state.disposition;
-}
-
-bool CompositorAnimations::CompositorPropertyAnimationsHaveNoEffect(
-    const Element& target_element,
-    const Animation* animation_to_add,
-    const EffectModel& effect,
-    const PaintArtifactCompositor* paint_artifact_compositor) {
-  LayoutObject* layout_object = target_element.GetLayoutObject();
-
-  if (!paint_artifact_compositor) {
-    // TODO(pdr): This should return true. This likely only affects tests.
-    return false;
-  }
-
-  if (layout_object && layout_object->StyleRef().SubtreeWillChangeContents()) {
-    // If the element has will-change: contents, then this function cannot
-    // return a meaningful result, as we decline to generate layers in this
-    // case. See also crbug.com/40061259 - some assumptions made in the below
-    // function are weakened in this case, resulting in DCHECK failures.
-    return false;
-  }
-
-  bool any_compositor_properties_missing = false;
-  bool any_compositor_properties_present = false;
-
-  const auto& keyframe_effect = To<KeyframeEffectModelBase>(effect);
-  const auto& groups = keyframe_effect.GetPropertySpecificKeyframeGroups();
-  bool has_paint_properties =
-      layout_object && layout_object->FirstFragment().PaintProperties();
-  for (const PropertyHandle& property : groups.Keys()) {
-    if (!CompositedAnimationRequiresProperties(property, layout_object))
-      continue;
-
-    if (!has_paint_properties) {
-      // We have an animated property that requires a property node but no paint
-      // properties.
-      any_compositor_properties_missing = true;
-      break;
-    }
-
-    CompositorElementId target_element_id =
-        CompositorElementIdFromUniqueObjectId(
-            layout_object->UniqueId(),
-            CompositorAnimations::CompositorElementNamespaceForProperty(
-                property.GetCSSProperty().PropertyID()));
-    DCHECK(target_element_id);
-    if (paint_artifact_compositor->HasComposited(target_element_id))
-      any_compositor_properties_present = true;
-    else
-      any_compositor_properties_missing = true;
-  }
-
-  // Because animations are a direct compositing reason for paint properties,
-  // the only case when we wouldn't have compositor paint properties if when
-  // they were optimized out due to not having an effect. An example of this is
-  // hidden animations that do not paint.
-  if (any_compositor_properties_missing) {
-    // Because we're only considering properties that are animated on this
-    // element, we should either have all properties or be missing all
-    // properties.
-    DCHECK(!any_compositor_properties_present);
-    return true;
-  }
-
-  // Properties composited via native paint worklets do not necessarily have
-  // a paint property. In such cases, the unique ID is assigned at paint time
-  // when the deferred image for the paint worklet is constructed.  If no ID
-  // has been assigned yet, it may be because the element is outside the paint
-  // apron. The animation should not run on the compositor until painted.
-  if (animation_to_add && animation_to_add->GetNativePaintWorkletReasons() !=
-                              Animation::kNoPaintWorklet) {
-    if (!layout_object || !layout_object->FirstFragment().HasUniqueId()) {
-      return true;
-    }
-  }
-
-  return false;
 }
 
 CompositorAnimations::FailureReasons
@@ -647,11 +549,10 @@ CompositorAnimations::CheckCanStartAnimationOnCompositor(
     const Animation* animation_to_add,
     AnimationCompositingDecisionState& state,
     const EffectModel& effect,
-    const PaintArtifactCompositor* paint_artifact_compositor,
     double animation_playback_rate) {
   CheckCanStartEffectOnCompositor(
       timing, normalized_timing, target_element, animation_to_add, state,
-      effect, paint_artifact_compositor, animation_playback_rate);
+      effect, animation_playback_rate);
   CheckCanStartElementOnCompositor(target_element, effect, state);
   return state.disposition;
 }

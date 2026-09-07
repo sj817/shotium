@@ -31,7 +31,6 @@ BLINK_COMMON_EXPORT extern const char kDumpRuntimeCallStats[];
 BLINK_COMMON_EXPORT extern const char kEnableDesktopAndroidScrollbars[];
 BLINK_COMMON_EXPORT extern const char
     kEnableGpuMemoryBufferCompositorResources[];
-BLINK_COMMON_EXPORT extern const char kEnableLeakDetectionHeapSnapshot[];
 BLINK_COMMON_EXPORT extern const char kEnablePreferCompositingToLCDText[];
 BLINK_COMMON_EXPORT extern const char kEnableRasterSideDarkModeForImages[];
 BLINK_COMMON_EXPORT extern const char kEnableRGBA4444Textures[];

@@ -20,8 +20,6 @@ blink_core_sources_timing = [
   "largest_contentful_paint.h",
   "interaction_contentful_paint.cc",
   "interaction_contentful_paint.h",
-  "interaction_effects_monitor.cc",
-  "interaction_effects_monitor.h",
   "layout_shift.cc",
   "layout_shift.h",
   "layout_shift_attribution.cc",

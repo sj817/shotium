@@ -41,6 +41,7 @@
 #include "base/i18n/time_formatting.h"
 #include "base/metrics/histogram_functions.h"
 #include "base/notreached.h"
+#include "base/rand_util.h"
 #include "base/strings/stringprintf.h"
 #include "base/task/single_thread_task_runner.h"
 #include "base/time/time.h"
@@ -131,7 +132,6 @@
 #include "third_party/blink/renderer/core/display_lock/display_lock_document_state.h"
 #include "third_party/blink/renderer/core/display_lock/display_lock_utilities.h"
 #include "third_party/blink/renderer/core/dom/attr.h"
-#include "third_party/blink/renderer/core/dom/beforeunload_event_listener.h"
 #include "third_party/blink/renderer/core/dom/cdata_section.h"
 #include "third_party/blink/renderer/core/dom/column_pseudo_element.h"
 #include "third_party/blink/renderer/core/dom/comment.h"
@@ -199,7 +199,6 @@
 #include "third_party/blink/renderer/core/events/visual_viewport_scroll_event.h"
 #include "third_party/blink/renderer/core/events/visual_viewport_scrollend_event.h"
 #include "third_party/blink/renderer/core/execution_context/window_agent.h"
-#include "third_party/blink/renderer/core/exported/web_view_impl.h"
 #include "third_party/blink/renderer/core/fetch/fetch_later_util.h"
 #include "third_party/blink/renderer/core/frame/csp/content_security_policy.h"
 #include "third_party/blink/renderer/core/frame/dom_visual_viewport.h"
@@ -216,11 +215,8 @@
 #include "third_party/blink/renderer/core/frame/settings.h"
 #include "third_party/blink/renderer/core/frame/viewport_data.h"
 #include "third_party/blink/renderer/core/frame/visual_viewport.h"
-#include "third_party/blink/renderer/core/frame/web_frame_widget_impl.h"
-#include "third_party/blink/renderer/core/frame/web_local_frame_impl.h"
 #include "third_party/blink/renderer/core/geometry/dom_point.h"
 #include "third_party/blink/renderer/core/geometry/dom_quad.h"
-#include "third_party/blink/renderer/core/html/anchor_element_metrics_sender.h"
 #include "third_party/blink/renderer/core/html/collection_type.h"
 #include "third_party/blink/renderer/core/html/custom/custom_element.h"
 #include "third_party/blink/renderer/core/html/custom/custom_element_definition.h"
@@ -265,7 +261,6 @@
 #include "third_party/blink/renderer/core/html/parser/html_parser_idioms.h"
 #include "third_party/blink/renderer/core/html/parser/text_resource_decoder.h"
 #include "third_party/blink/renderer/core/html/parser/text_resource_decoder_builder.h"
-#include "third_party/blink/renderer/core/html/plugin_document.h"
 #include "third_party/blink/renderer/core/html/window_name_collection.h"
 #include "third_party/blink/renderer/core/html_element_factory.h"
 #include "third_party/blink/renderer/core/html_element_type_helpers.h"
@@ -309,13 +304,11 @@
 #include "third_party/blink/renderer/core/page/page.h"
 #include "third_party/blink/renderer/core/page/page_animator.h"
 #include "third_party/blink/renderer/core/page/plugin_script_forbidden_scope.h"
-#include "third_party/blink/renderer/core/page/pointer_lock_controller.h"
 #include "third_party/blink/renderer/core/page/scrolling/fragment_anchor.h"
 #include "third_party/blink/renderer/core/page/scrolling/root_scroller_controller.h"
 #include "third_party/blink/renderer/core/page/scrolling/snap_coordinator.h"
 #include "third_party/blink/renderer/core/page/scrolling/top_document_root_scroller_controller.h"
 #include "third_party/blink/renderer/core/page/spatial_navigation_controller.h"
-#include "third_party/blink/renderer/core/page/validation_message_client.h"
 #include "third_party/blink/renderer/core/paint/paint_layer.h"
 #include "third_party/blink/renderer/core/paint/paint_layer_scrollable_area.h"
 #include "third_party/blink/renderer/core/paint/timing/first_meaningful_paint_detector.h"
@@ -383,7 +376,6 @@
 #include "third_party/blink/renderer/platform/weborigin/origin_access_entry.h"
 #include "third_party/blink/renderer/platform/weborigin/scheme_registry.h"
 #include "third_party/blink/renderer/platform/weborigin/security_origin.h"
-#include "third_party/blink/renderer/platform/widget/frame_widget.h"
 #include "third_party/blink/renderer/platform/wtf/cross_thread_functional.h"
 #include "third_party/blink/renderer/platform/wtf/functional.h"
 #include "third_party/blink/renderer/platform/wtf/hash_functions.h"
@@ -1015,7 +1007,6 @@ Document::Document(const DocumentInit& initializer,
                          ? ukm::UkmRecorder::GetNewSourceID()
                          : initializer.UkmSourceId()),
       viewport_data_(MakeGarbageCollected<ViewportData>(*this)),
-      is_for_external_handler_(initializer.IsForExternalHandler()),
       base_auction_nonce_(initializer.BaseAuctionNonce()),
       display_lock_document_state_(
           MakeGarbageCollected<DisplayLockDocumentState>(this)),
@@ -2561,7 +2552,6 @@ void Document::UpdateStyleAndLayoutTree(LayoutUpgrade& upgrade) {
     return;
   }
 
-  HTMLFrameOwnerElement::PluginDisposeSuspendScope suspend_plugin_dispose;
   ScriptForbiddenScope forbid_script;
 
   if (HTMLFrameOwnerElement* owner = LocalOwner()) {
@@ -3052,7 +3042,6 @@ void Document::UpdateStyleAndLayout(DocumentUpdateReason reason) {
   if (reason != DocumentUpdateReason::kBeginMainFrame && frame_view)
     frame_view->WillStartForcedLayout(reason);
 
-  HTMLFrameOwnerElement::PluginDisposeSuspendScope suspend_plugin_dispose;
   ScriptForbiddenScope forbid_script;
 
   DCHECK(!frame_view || !frame_view->IsInPerformLayout())
@@ -3104,22 +3093,6 @@ void Document::LayoutUpdated() {
   }
 
   Markers().InvalidateRectsForAllTextMatchMarkers();
-}
-
-void Document::AttachCompositorTimeline(cc::AnimationTimeline* timeline) const {
-  if (!Platform::Current()->IsThreadedAnimationEnabled() ||
-      !GetSettings()->GetAcceleratedCompositingEnabled())
-    return;
-
-  if (cc::AnimationHost* host =
-          GetPage()->GetChromeClient().GetCompositorAnimationHost(
-              *GetFrame())) {
-    if (timeline->animation_host()) {
-      DCHECK_EQ(timeline->animation_host(), host);
-      return;
-    }
-    host->AddAnimationTimeline(timeline);
-  }
 }
 
 void Document::ClearFocusedElementIfNeeded() {
@@ -3251,7 +3224,6 @@ void Document::Shutdown() {
   // https://crrev.com/200984
   // TODO(dcheng): This is a temporary workaround, Document::Shutdown() should
   // not be running script at all.
-  HTMLFrameOwnerElement::PluginDisposeSuspendScope suspend_plugin_dispose;
   // Don't allow script to run in the middle of DetachLayoutTree() because a
   // detaching Document is not in a consistent state.
   ScriptForbiddenScope forbid_script;
@@ -3294,21 +3266,11 @@ void Document::Shutdown() {
 
   probe::DocumentDetached(this);
 
-  if (AnchorElementMetricsSender* sender =
-          AnchorElementMetricsSender::GetForFrame(GetFrame())) {
-    sender->DocumentDetached(*this);
-  }
-
   if (SvgExtensions())
     AccessSVGExtensions().PauseAnimations();
 
   http_refresh_scheduler_->Cancel();
 
-  GetDocumentAnimations().DetachCompositorTimelines();
-  GetDocumentAnimations().DetachCompositorTriggers();
-
-  if (GetFrame()->IsLocalRoot())
-    GetPage()->GetChromeClient().AttachRootLayer(nullptr, GetFrame());
 
   MutationObserver::CleanSlotChangeList(*this);
 
@@ -3345,7 +3307,6 @@ void Document::Shutdown() {
   lifecycle_.AdvanceTo(DocumentLifecycle::kStopped);
   DCHECK(!View()->IsAttached());
 
-  mime_handler_view_before_unload_event_listener_ = nullptr;
 
 
   // Because the document view transition supplement can get destroyed before
@@ -5818,13 +5779,7 @@ void Document::SendFocusNotification(Element* new_focused_element,
         bounds_in_viewport.Union(outline_rect);
     }
 
-    if (GetFrame()->GetWidgetForLocalRoot()) {
-      element_bounds_in_dips =
-          GetFrame()->GetWidgetForLocalRoot()->BlinkSpaceToEnclosedDIPs(
-              bounds_in_viewport);
-    } else {
-      element_bounds_in_dips = bounds_in_viewport;
-    }
+    element_bounds_in_dips = bounds_in_viewport;
   }
 
   auto dom_node_id = mojom::blink::DOMNodeId::New(kInvalidDOMNodeId);
@@ -5847,9 +5802,6 @@ void Document::NotifyFocusedElementChanged(Element* old_focused_element,
   DCHECK(!new_focused_element || new_focused_element->GetDocument() == this);
 
   if (GetPage()) {
-    GetPage()->GetValidationMessageClient().DidChangeFocusTo(
-        new_focused_element);
-
     SendFocusNotification(new_focused_element, focus_type);
 
     Document* old_document =
@@ -5857,10 +5809,6 @@ void Document::NotifyFocusedElementChanged(Element* old_focused_element,
     if (old_document && old_document != this && old_document->GetFrame())
       old_document->GetFrame()->Client()->FocusedElementChanged(nullptr);
 
-    // Ensures that further text input state can be sent even when previously
-    // focused input and the newly focused input share the exact same state.
-    if (GetFrame()->GetWidgetForLocalRoot())
-      GetFrame()->GetWidgetForLocalRoot()->ClearTextInputState();
     GetFrame()->Client()->FocusedElementChanged(new_focused_element);
 
     GetPage()->GetChromeClient().SetKeyboardFocusURL(new_focused_element);
@@ -7794,9 +7742,6 @@ void Document::SetTextScaleMetaTagPresent(bool present) {
           GetSettings()->GetAccessibilityFontScaleFactor());
     }
 
-    if (auto* view = GetPage()->GetChromeClient().GetWebView()) {
-      view->OnTextScaleMetaTagPresentChanged();
-    }
   }
 }
 
@@ -8185,20 +8130,6 @@ HTMLElement* Document::TopmostPopoverOrHint() const {
   return nullptr;
 }
 
-bool Document::HasActiveUnboundedElements() const {
-  if (!RuntimeEnabledFeatures::UnboundedElementEnabled()) {
-    return false;
-  }
-  if (auto* frame = GetFrame()) {
-    if (auto* web_frame =
-            WebLocalFrameImpl::FromFrame(&frame->LocalFrameRoot())) {
-      if (auto* widget = web_frame->FrameWidgetImpl()) {
-        return widget->HasActiveUnboundedElements();
-      }
-    }
-  }
-  return false;
-}
 void Document::SetPopoverPointerdownTarget(const HTMLElement* popover) {
   CHECK(!RuntimeEnabledFeatures::LightDismissFromClickEnabled());
   DCHECK(!popover || popover->IsPopover());
@@ -8230,26 +8161,6 @@ MenuSafeTriangle* Document::GetMenuSafeTriangle() {
 void Document::SetMenuSafeTriangle(MenuSafeTriangle* new_safe_triangle) {
   CHECK_NE(!menu_safe_triangle_, !new_safe_triangle);
   menu_safe_triangle_ = new_safe_triangle;
-}
-
-void Document::exitPointerLock() {
-  if (!GetPage())
-    return;
-  if (Element* target = GetPage()->GetPointerLockController().GetElement()) {
-    if (target->GetDocument() != this)
-      return;
-    GetPage()->GetPointerLockController().ExitPointerLock();
-  }
-}
-
-Element* Document::PointerLockElement() const {
-  if (!GetPage() || GetPage()->GetPointerLockController().LockPending())
-    return nullptr;
-  if (Element* element = GetPage()->GetPointerLockController().GetElement()) {
-    if (element->GetDocument() == this)
-      return element;
-  }
-  return nullptr;
 }
 
 void Document::DecrementLoadEventDelayCount() {
@@ -8313,10 +8224,6 @@ Node* EventTargetNodeForDocument(Document* doc) {
   if (!doc)
     return nullptr;
   Node* node = doc->FocusedElement();
-  auto* plugin_document = DynamicTo<PluginDocument>(doc);
-  if (plugin_document && !node) {
-    node = plugin_document->PluginNode();
-  }
   if (!node && IsA<HTMLDocument>(doc))
     node = doc->body();
   if (!node)
@@ -9004,7 +8911,6 @@ void Document::Trace(Visitor* visitor) const {
   visitor->Trace(slot_assignment_engine_);
   visitor->Trace(viewport_data_);
   visitor->Trace(lazy_load_media_observer_);
-  visitor->Trace(mime_handler_view_before_unload_event_listener_);
   visitor->Trace(cookie_jar_);
   visitor->Trace(element_cached_attr_associated_elements_map_);
   visitor->Trace(display_lock_document_state_);
@@ -9159,21 +9065,6 @@ bool Document::ChildrenCanHaveStyle() const {
   if (LayoutObject* view = GetLayoutView())
     return view->CanHaveChildren();
   return false;
-}
-
-void Document::SetShowBeforeUnloadDialog(bool show_dialog) {
-  if (!mime_handler_view_before_unload_event_listener_) {
-    if (!show_dialog)
-      return;
-
-    mime_handler_view_before_unload_event_listener_ =
-        MakeGarbageCollected<BeforeUnloadEventListener>(this);
-    domWindow()->addEventListener(
-        event_type_names::kBeforeunload,
-        mime_handler_view_before_unload_event_listener_, false);
-  }
-  mime_handler_view_before_unload_event_listener_->SetShowBeforeUnloadDialog(
-      show_dialog);
 }
 
 bool Document::IsScriptBlockedUntilPrerenderActivation() const {

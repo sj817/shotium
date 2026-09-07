@@ -854,12 +854,6 @@ void FrameSchedulerImpl::OnRemovedAggressiveThrottlingOptOut() {
     parent_page_scheduler_->OnThrottlingStatusUpdated();
 }
 
-void FrameSchedulerImpl::OnTaskCompleted(TaskQueue::TaskTiming* timing) {
-  if (delegate_) {
-    delegate_->OnTaskCompleted(timing->start_time(), timing->end_time());
-  }
-}
-
 void FrameSchedulerImpl::WriteIntoTrace(perfetto::TracedValue context) const {
   auto dict = std::move(context).WriteDictionary();
   dict.Add("frame_visible", frame_visible_);

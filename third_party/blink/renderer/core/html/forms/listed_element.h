@@ -42,7 +42,6 @@ class FormData;
 class HTMLElement;
 class HTMLFormElement;
 class Node;
-class ValidationMessageClient;
 class ValidityState;
 
 enum class DisabledChangedReason {
@@ -120,17 +119,9 @@ class CORE_EXPORT ListedElement : public GarbageCollectedMixin {
   virtual String validationMessage() const;
   virtual String ValidationSubMessage() const;
   virtual void setCustomValidity(const String&);
-  void UpdateVisibleValidationMessage();
-  void HideVisibleValidationMessage();
   bool checkValidity(List* unhandled_invalid_controls = nullptr);
   bool reportValidity();
-  // This must be called only after the caller check the element is focusable.
-  void ShowValidationMessage();
-  bool IsValidationMessageVisible() const;
-  void FindCustomValidationMessageTextDirection(const String& message,
-                                                TextDirection& message_dir,
-                                                String& sub_message,
-                                                TextDirection& sub_message_dir);
+  void FocusValidationAnchor();
   virtual Element& ValidationAnchor() const;
   Element& GetHostOrFocusDelegate() const;
   bool ValidationAnchorOrHostIsFocusable() const;
@@ -251,13 +242,11 @@ class CORE_EXPORT ListedElement : public GarbageCollectedMixin {
   enum class StartingNodeType { IS_PARENT, IS_INSERTION_POINT };
   void FieldSetAncestorsSetNeedsValidityCheck(Node*, StartingNodeType);
 
-  ValidationMessageClient* GetValidationMessageClient() const;
 
   Member<FormAttributeTargetObserver> form_attribute_target_observer_;
   Member<HTMLFormElement> form_;
   Member<ValidityState> validity_state_;
   String custom_validation_message_;
-  bool has_validation_message_ : 1;
   // If form_was_set_by_parser_ is true, form_ is always non-null.
   bool form_was_set_by_parser_ : 1;
 

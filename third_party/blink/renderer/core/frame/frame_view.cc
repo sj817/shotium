@@ -8,7 +8,7 @@
 #include "third_party/blink/renderer/core/display_lock/display_lock_utilities.h"
 #include "third_party/blink/renderer/core/frame/frame_client.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
-#include "third_party/blink/renderer/core/frame/remote_frame.h"
+#include "third_party/blink/renderer/core/frame/local_frame_view.h"
 #include "third_party/blink/renderer/core/html/html_frame_owner_element.h"
 #include "third_party/blink/renderer/core/intersection_observer/intersection_geometry.h"
 #include "third_party/blink/renderer/core/intersection_observer/intersection_observer.h"
@@ -26,10 +26,7 @@ FrameView::FrameView(const gfx::Rect& frame_rect)
     : EmbeddedContentView(frame_rect) {}
 
 Frame& FrameView::GetFrame() const {
-  if (const LocalFrameView* lfv = DynamicTo<LocalFrameView>(*this)) {
-    return lfv->GetFrame();
-  }
-  return To<RemoteFrameView>(*this).GetFrame();
+  return To<LocalFrameView>(*this).GetFrame();
 }
 
 bool FrameView::CanThrottleRenderingForPropagation() const {

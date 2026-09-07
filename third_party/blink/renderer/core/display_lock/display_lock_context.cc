@@ -38,7 +38,6 @@
 #include "third_party/blink/renderer/core/paint/paint_layer.h"
 #include "third_party/blink/renderer/core/paint/pre_paint_tree_walk.h"
 #include "third_party/blink/renderer/core/view_transition/view_transition_utils.h"
-#include "third_party/blink/renderer/platform/graphics/compositing/paint_artifact_compositor.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
 #include "third_party/blink/renderer/platform/instrumentation/use_counter.h"
 #include "third_party/blink/renderer/platform/wtf/text/string_builder.h"
@@ -316,7 +315,7 @@ void DisplayLockContext::Lock() {
   // subtree scrollers' scroll offsets are not affected.
   StashScrollOffsetIfAvailable();
 
-  MarkNeedsRepaintAndPaintArtifactCompositorUpdate();
+  MarkNeedsRepaint();
 }
 
 // Did* function for the lifecycle phases. These functions, along with
@@ -600,7 +599,7 @@ void DisplayLockContext::Unlock() {
   // reach the rest of the phases as well.
   MarkForLayoutIfNeeded();
   MarkAncestorsForPrePaintIfNeeded();
-  MarkNeedsRepaintAndPaintArtifactCompositorUpdate();
+  MarkNeedsRepaint();
   MarkNeedsCullRectUpdate();
 
   // Custom highlight markers are produced by walking ranges with
@@ -754,11 +753,10 @@ bool DisplayLockContext::MarkAncestorsForPrePaintIfNeeded() {
   return compositing_dirtied || visual_overflow_dirtied;
 }
 
-bool DisplayLockContext::MarkNeedsRepaintAndPaintArtifactCompositorUpdate() {
+bool DisplayLockContext::MarkNeedsRepaint() {
   DCHECK(ConnectedToView());
   if (auto* layout_object = element_->GetLayoutObject()) {
     layout_object->PaintingLayer()->SetNeedsRepaint();
-    document_->View()->SetPaintArtifactCompositorNeedsUpdate();
     return true;
   }
   return false;

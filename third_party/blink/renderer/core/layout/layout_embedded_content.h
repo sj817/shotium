@@ -36,7 +36,6 @@ namespace blink {
 
 class EmbeddedContentView;
 class FrameView;
-class WebPluginContainerImpl;
 
 // LayoutObject for frames via LayoutFrame and LayoutIFrame, and plugins via
 // LayoutEmbeddedObject.
@@ -55,7 +54,6 @@ class CORE_EXPORT LayoutEmbeddedContent : public LayoutReplaced {
   // with the root Document Frame.
   FrameView* ChildFrameView() const;
   LayoutView* ChildLayoutView() const;
-  WebPluginContainerImpl* Plugin() const;
   EmbeddedContentView* GetEmbeddedContentView() const;
 
   // Subtracts border/padding, and other offsets if they exist.
@@ -99,7 +97,6 @@ class CORE_EXPORT LayoutEmbeddedContent : public LayoutReplaced {
                       const StyleChangeContext&) final;
   void PaintReplaced(const PaintInfo&,
                      const PhysicalOffset& paint_offset) const override;
-  CursorDirective GetCursor(const PhysicalOffset&, ui::Cursor&) const final;
 
   bool CanBeSelectionLeafInternal() const final {
     NOT_DESTROYED();
@@ -111,7 +108,6 @@ class CORE_EXPORT LayoutEmbeddedContent : public LayoutReplaced {
     return To<HTMLFrameOwnerElement>(GetNode());
   }
 
-  void CountSvgFilterPaint() const;
 
  private:
   void WillBeDestroyed() final;

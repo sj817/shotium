@@ -6,9 +6,6 @@
 
 #include <algorithm>
 
-#include "cc/layers/heads_up_display_layer.h"
-#include "cc/layers/picture_layer.h"
-#include "cc/trees/layer_tree_host.h"
 #include "third_party/blink/public/common/features.h"
 #include "third_party/blink/public/common/input/web_pointer_event.h"
 #include "third_party/blink/renderer/core/dom/dom_node_ids.h"
@@ -30,7 +27,6 @@
 #include "third_party/blink/renderer/platform/graphics/paint/geometry_mapper.h"
 #include "third_party/blink/renderer/platform/graphics/paint/property_tree_state.h"
 #include "third_party/blink/renderer/platform/runtime_enabled_features.h"
-#include "third_party/blink/renderer/platform/widget/frame_widget.h"
 #include "ui/gfx/geometry/rect.h"
 #include "ui/gfx/geometry/rect_conversions.h"
 
@@ -577,9 +573,6 @@ void LayoutShiftTracker::NotifyPrePaintFinishedInternal() {
     ReportShift(score_delta, weighted_score_delta);
   }
 
-  if (!region_.IsEmpty() && !HasRecentInput()) {
-    SendLayoutShiftRectsToHud(region_.GetRects());
-  }
 }
 
 void LayoutShiftTracker::NotifyPrePaintFinished() {
@@ -600,29 +593,6 @@ LayoutShift::AttributionList LayoutShiftTracker::CreateAttributionList() const {
     gfx::RectF old_css_rect = att.old_visual_rect;
     gfx::RectF new_css_rect = att.new_visual_rect;
 
-    if (RuntimeEnabledFeatures::ReportLayoutShiftRectsInCssPixelsEnabled()) {
-      // Convert attribution rectangles from physical pixels to CSS pixels.
-      // Attribution rectangles are stored in root coordinate space, so we use
-      // the main frame's device scale factor.
-      LocalFrame& main_frame = frame_view_->GetFrame().LocalFrameRoot();
-      FrameWidget* widget = main_frame.GetWidgetForLocalRoot();
-
-      // Widget should always exist when Performance API is active (ordinary
-      // Pages). However, handle gracefully for robustness (e.g., during
-      // initialization).
-      if (widget) {
-        // Use BlinkSpaceToDIPs with RectF to preserve fractional values
-        old_css_rect = widget->BlinkSpaceToDIPs(old_css_rect);
-        new_css_rect = widget->BlinkSpaceToDIPs(new_css_rect);
-      } else {
-        // Widget is null in non-ordinary Pages or very early initialization.
-        // Return rects in physical pixels (feature effectively disabled).
-        // This matches PaintTimingDetector's fallback behavior.
-        VLOG(1)
-            << "LayoutShiftTracker: Widget null in CreateAttributionList(). "
-            << "Attribution rects will be in physical pixels.";
-      }
-    }
     list.push_back(LayoutShiftAttribution::Create(
         DOMNodeIds::NodeForId(att.node_id),
         DOMRectReadOnly::FromRectF(old_css_rect),
@@ -880,21 +850,6 @@ void LayoutShiftTracker::AttributionsToTracedValue(TracedValue& value) const {
     it++;
   }
   value.EndArray();
-}
-
-void LayoutShiftTracker::SendLayoutShiftRectsToHud(
-    const Vector<gfx::Rect>& int_rects) {
-  if (auto* hud_layer =
-          paint_timing::GetHUDLayerIfLayoutShiftRectsEnabled(frame_view_)) {
-    cc::Region blink_region;
-    for (const gfx::Rect& rect : int_rects) {
-      blink_region.Union(rect);
-    }
-    for (gfx::Rect rect : blink_region) {
-      hud_layer->AddWebVitalsDebugRect(
-          {cc::WebVitalMetricType::kLayoutShift, rect});
-    }
-  }
 }
 
 void LayoutShiftTracker::Dispose() {

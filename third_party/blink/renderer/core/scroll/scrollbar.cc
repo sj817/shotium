@@ -540,11 +540,6 @@ void Scrollbar::MouseMoved(const WebMouseEvent& evt) {
 void Scrollbar::MouseEntered() {
   if (scrollable_area_)
     scrollable_area_->MouseEnteredScrollbar(*this);
-  if (theme_.UsesFluentOverlayScrollbars() && scrollable_area_) {
-    scrollable_area_->GetLayoutBox()
-        ->GetFrameView()
-        ->SetPaintArtifactCompositorNeedsUpdate();
-  }
 }
 
 void Scrollbar::MouseExited() {
@@ -557,9 +552,6 @@ void Scrollbar::MouseExited() {
     // track. Overlay Fluent scrollbars always need to invalidate the thumb to
     // change between solid/transparent colors.
     SetNeedsPaintInvalidation(kThumbPart);
-    scrollable_area_->GetLayoutBox()
-        ->GetFrameView()
-        ->SetPaintArtifactCompositorNeedsUpdate();
   }
 }
 

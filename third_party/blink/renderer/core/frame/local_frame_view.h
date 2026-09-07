@@ -68,11 +68,8 @@
 
 namespace cc {
 class AnimatedImageFrameIndexMap;
-class AnimationHost;
-class AnimationTimeline;
 class Layer;
 class PaintRecord;
-enum class PropertyChangeForcesCommitCriteria;
 struct PaintBenchmarkResult;
 }
 
@@ -82,10 +79,6 @@ class SizeF;
 
 namespace ui {
 class Cursor;
-}
-
-namespace viz {
-class FrameTimingDetails;
 }
 
 namespace blink {
@@ -113,18 +106,15 @@ class LocalFrame;
 class Page;
 class PaginationState;
 class PaintArtifact;
-class PaintArtifactCompositor;
 class PaintController;
 class PaintControllerPersistentData;
 class PaintLayer;
 class PaintLayerScrollableArea;
-class RemoteFrameView;
 class RootFrameViewport;
 class ScrollableArea;
 class Scrollbar;
 class ScrollMarkerGroupPseudoElement;
 class TransformState;
-class WebPluginContainerImpl;
 struct DraggableRegionValue;
 struct NaturalSizingInfo;
 struct PhysicalRect;
@@ -132,7 +122,6 @@ struct PhysicalRect;
 enum class PaintBenchmarkMode;
 
 typedef uint64_t DOMTimeStamp;
-using LayerTreeFlags = unsigned;
 
 struct LifecycleData {
   LifecycleData() {}
@@ -270,7 +259,6 @@ class CORE_EXPORT LocalFrameView final
     return needs_update_delayed_intersection_;
   }
 
-  void SetPaintArtifactCompositorNeedsUpdate();
 
   // Methods for getting/setting the size Blink should use to layout the
   // contents.
@@ -371,7 +359,6 @@ class CORE_EXPORT LocalFrameView final
 
   // Called when this view is going to be removed from its owning
   // LocalFrame.
-  void WillBeRemovedFromFrame();
 
   bool IsUpdatingLifecycle() const;
 
@@ -511,12 +498,6 @@ class CORE_EXPORT LocalFrameView final
   // FIXME: Remove this method once plugin loading is decoupled from layout.
   void FlushAnyPendingPostLayoutTasks();
 
-  // These methods are for testing.
-  void SetTracksRasterInvalidations(bool);
-  bool IsTrackingRasterInvalidations() const {
-    return is_tracking_raster_invalidations_;
-  }
-
   using ScrollableAreaMap =
       HeapHashMap<CompositorElementId, Member<PaintLayerScrollableArea>>;
   using ScrollableAreaSet = HeapHashSet<Member<PaintLayerScrollableArea>>;
@@ -531,8 +512,6 @@ class CORE_EXPORT LocalFrameView final
   void RemoveScrollableArea(PaintLayerScrollableArea&);
   const ScrollableAreaMap& ScrollableAreas() const { return scrollable_areas_; }
 
-  void AddScrollableAreaWithScrollNode(PaintLayerScrollableArea&);
-  void RemoveScrollableAreaWithScrollNode(PaintLayerScrollableArea&);
 
   void ServiceScrollAnimations(base::TimeTicks);
 
@@ -557,10 +536,6 @@ class CORE_EXPORT LocalFrameView final
   LayoutEmbeddedContent* GetLayoutEmbeddedContent() const override;
   void AttachToLayout() override;
   void DetachFromLayout() override;
-  using PluginSet = HeapHashSet<Member<WebPluginContainerImpl>>;
-  const PluginSet& Plugins() const { return plugins_; }
-  void AddPlugin(WebPluginContainerImpl*);
-  void RemovePlugin(WebPluginContainerImpl*);
   // Custom scrollbars in PaintLayerScrollableArea need to be called with
   // StyleChanged whenever window focus is changed.
   void RemoveScrollbar(Scrollbar*);
@@ -732,9 +707,7 @@ class CORE_EXPORT LocalFrameView final
 
   void SetNeedsEnqueueScrollEvent(PaintLayerScrollableArea*);
 
-  std::unique_ptr<JSONObject> CompositedLayersAsJSON(LayerTreeFlags);
 
-  String MainThreadScrollingReasonsAsText();
 
   // Maps |rect| from the local root into the remote root frame. The
   // |apply_viewport_clip| flag controls whether we intersect with the remote
@@ -760,20 +733,14 @@ class CORE_EXPORT LocalFrameView final
   // Return the ScrollableArea in a FrameView with the given ElementId, if any.
   // This is not recursive and will only return ScrollableAreas owned by this
   // LocalFrameView (or possibly the LocalFrameView itself).
-  ScrollableArea* ScrollableAreaWithElementId(const CompositorElementId&);
 
   // When the frame is a local root and not a main frame, any recursive
   // scrolling should continue in the parent process.
   void ScrollRectToVisibleInRemoteParent(const PhysicalRect&,
                                          mojom::blink::ScrollIntoViewParamsPtr);
 
-  PaintArtifactCompositor* GetPaintArtifactCompositor() const;
 
-  cc::Layer* RootCcLayer();
-  const cc::Layer* RootCcLayer() const;
 
-  cc::AnimationHost* GetCompositorAnimationHost() const;
-  cc::AnimationTimeline* GetScrollAnimationTimeline() const;
 
   LayoutShiftTracker& GetLayoutShiftTracker() { return *layout_shift_tracker_; }
 
@@ -810,7 +777,6 @@ class CORE_EXPORT LocalFrameView final
   }
 #endif
 
-  bool LifecycleUpdatePending() const;
   void RegisterForLifecycleNotifications(LifecycleNotificationObserver*);
   void UnregisterFromLifecycleNotifications(LifecycleNotificationObserver*);
 
@@ -843,7 +809,6 @@ class CORE_EXPORT LocalFrameView final
 
   void SetCullRectNeedsUpdateForFrames(bool disable_expansion);
 
-  void RunPaintBenchmark(int repeat_count, cc::PaintBenchmarkResult& result);
 
   PaintControllerPersistentData& GetPaintControllerPersistentDataForTesting() {
     return EnsurePaintControllerPersistentData();
@@ -883,9 +848,6 @@ class CORE_EXPORT LocalFrameView final
   // True if the recorded value has changed.
   bool RecordNaturalDimensions();
 
-  void RequestSameDocumentNavigationPresentationTime(
-      base::OnceCallback<void(const viz::FrameTimingDetails&)>);
-
   // Return true if this frame, or any of its sub-frames, has an anchor-
   // positioned element that is anchored against something with a transform, AND
   // the transform is currently being animated. This means that a transform on
@@ -893,7 +855,6 @@ class CORE_EXPORT LocalFrameView final
   // thread needs to be involved during the animation.
   bool HasRunningAnchorTransformAnimation() const;
 
-  mojom::blink::WebFeature SvgFilterPaintedCounter() const override;
 
  protected:
   void FrameRectsChanged(const gfx::Rect&) override;
@@ -998,8 +959,6 @@ class CORE_EXPORT LocalFrameView final
 
   LayoutSVGRoot* EmbeddedReplacedContent() const;
 
-  cc::PropertyChangeForcesCommitCriteria ForceCommitCriteria() const;
-
   void PrepareForLifecycleUpdateRecursive();
 
   // Returns whether the lifecycle was successfully updated to the
@@ -1030,7 +989,6 @@ class CORE_EXPORT LocalFrameView final
   void PerformPostLayoutTasks(bool view_size_changed);
 
   void PaintTree(PaintBenchmarkMode, std::optional<PaintController>&);
-  void PushPaintArtifactToCompositor(bool repainted);
 
   void ClearLayoutSubtreeRootsAndMarkContainingBlocks();
 
@@ -1079,8 +1037,6 @@ class CORE_EXPORT LocalFrameView final
       base::FunctionRef<bool(LocalFrameView&)>);
   void ForAllThrottledLocalFrameViews(base::FunctionRef<void(LocalFrameView&)>);
 
-  void ForAllRemoteFrameViews(base::FunctionRef<void(RemoteFrameView&)>);
-
   // Recomputes the values returned by HasActiveIntersectionObservations() and
   // NeedsOcclusionTracking().
   void UpdateIntersectionObserverStatus() override;
@@ -1095,8 +1051,6 @@ class CORE_EXPORT LocalFrameView final
   bool RunSnapshotPostLayoutStateSteps(
       DocumentLifecycle::LifecycleState target_state,
       DocumentUpdateReason reason);
-
-  bool ShouldDeferLayoutSnap() const;
 
   bool NotifyResizeObservers();
   bool RunResizeObserverSteps(DocumentLifecycle::LifecycleState target_state);
@@ -1127,10 +1081,6 @@ class CORE_EXPORT LocalFrameView final
   // Returns true if we should paint the color adjust background from the
   // StyleEngine instead of the base background color.
   bool ShouldUseColorAdjustBackground() const;
-
-  // Append view transition requests from this view into the given vector.
-  void AppendViewTransitionRequests(
-      Vector<std::unique_ptr<ViewTransitionRequest>>&);
 
   bool AnyFrameIsPrintingOrPaintingPreview();
 
@@ -1181,7 +1131,6 @@ class CORE_EXPORT LocalFrameView final
   ScrollableAreaSet animating_scrollable_areas_;
   // All scrollable areas in the frame's document.
   ScrollableAreaMap scrollable_areas_;
-  ScrollableAreaSet scrollable_areas_with_scroll_node_;
 
   BoxModelObjectSet background_attachment_fixed_objects_;
   Member<FrameViewAutoSizeInfo> auto_size_info_;
@@ -1200,7 +1149,6 @@ class CORE_EXPORT LocalFrameView final
   bool has_been_disposed_ = false;
 #endif
 
-  PluginSet plugins_;
   HeapHashSet<Member<Scrollbar>> scrollbars_;
 
   // TODO(bokan): This is unneeded when root-layer-scrolls is turned on.
@@ -1282,14 +1230,10 @@ class CORE_EXPORT LocalFrameView final
 
   LifecycleData lifecycle_data_;
 
-  // For testing.
-  bool is_tracking_raster_invalidations_ = false;
 
-  // Used by |PaintTree()| to collect the updated |PaintArtifact| which will be
-  // passed to the compositor. It caches display items and subsequences across
-  // frame updates and repaints.
+  // PaintTree caches display items and subsequences across frame updates and
+  // repaints. The resulting PaintArtifact is converted for CPU rendering.
   Member<PaintControllerPersistentData> paint_controller_persistent_data_;
-  Member<PaintArtifactCompositor> paint_artifact_compositor_;
 
   scoped_refptr<LocalFrameUkmAggregator> ukm_aggregator_;
   unsigned forced_layout_stack_depth_;
@@ -1352,12 +1296,6 @@ class CORE_EXPORT LocalFrameView final
   // alignment should be used in the scroll.
   Member<GCedHeapHashMap<Member<ScrollMarkerGroupPseudoElement>, bool>>
       pending_scroll_marker_selection_updates_;
-
-  // This is a callback requested when a same document navigation was committed.
-  // We only record this once (if RecordSameDocumentPresentationTimeOnce is
-  // enabled). We do this within the lifecycle before the commit step.
-  base::OnceCallback<void(const viz::FrameTimingDetails&)>
-      same_document_presentation_time_callback_;
 
 #if DCHECK_IS_ON()
   bool is_updating_descendant_dependent_flags_;

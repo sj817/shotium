@@ -50,7 +50,6 @@
 #include "third_party/blink/renderer/core/frame/local_frame.h"
 #include "third_party/blink/renderer/core/frame/local_frame_client.h"
 #include "third_party/blink/renderer/core/frame/settings.h"
-#include "third_party/blink/renderer/core/html/anchor_element_metrics_sender.h"
 #include "third_party/blink/renderer/core/html/anchor_element_utils.h"
 #include "third_party/blink/renderer/core/html/html_area_element.h"
 #include "third_party/blink/renderer/core/html/html_image_element.h"
@@ -539,35 +538,10 @@ Node::InsertionNotificationRequest HTMLAnchorElementBase::InsertedInto(
   InsertionNotificationRequest request =
       HTMLElement::InsertedInto(insertion_point);
 
-  if (isConnected()) {
-    if (auto* sender =
-            AnchorElementMetricsSender::GetForFrame(GetDocument().GetFrame())) {
-      sender->AddAnchorElement(*this);
-    }
-  }
-
-  // Used to tell DocumentSpeculationRules a new link entered the document so
-  // it could re-match <script type=speculationrules> rules against it; gone
-  // with script.
-
   if (FastHasAttribute(html_names::kNameAttr)) {
     ProcessElementRenderBlocking(FastGetAttribute(html_names::kNameAttr));
   }
   return request;
-}
-
-void HTMLAnchorElementBase::RemovedFrom(ContainerNode& insertion_point) {
-  HTMLElement::RemovedFrom(insertion_point);
-
-  if (insertion_point.isConnected()) {
-    if (auto* sender =
-            AnchorElementMetricsSender::GetForFrame(GetDocument().GetFrame())) {
-      sender->RemoveAnchorElement(*this);
-    }
-  }
-
-  // Used to tell DocumentSpeculationRules a link left the document; gone
-  // with script (see InsertedInto() above).
 }
 
 void HTMLAnchorElementBase::Trace(Visitor* visitor) const {

@@ -53,8 +53,6 @@
 #include "third_party/blink/renderer/core/frame/navigator.h"
 #include "third_party/blink/renderer/core/frame/page_scale_constraints.h"
 #include "third_party/blink/renderer/core/frame/page_scale_constraints_set.h"
-#include "third_party/blink/renderer/core/frame/remote_frame.h"
-#include "third_party/blink/renderer/core/frame/remote_frame_view.h"
 #include "third_party/blink/renderer/core/frame/settings.h"
 #include "third_party/blink/renderer/core/frame/viewport_data.h"
 #include "third_party/blink/renderer/core/frame/visual_viewport.h"
@@ -67,20 +65,14 @@
 #include "third_party/blink/renderer/core/loader/idleness_detector.h"
 #include "third_party/blink/renderer/core/page/autoscroll_controller.h"
 #include "third_party/blink/renderer/core/page/chrome_client.h"
-#include "third_party/blink/renderer/core/page/context_menu_controller.h"
 #include "third_party/blink/renderer/core/page/drag_controller.h"
 #include "third_party/blink/renderer/core/page/focus_controller.h"
-#include "third_party/blink/renderer/core/page/link_highlight.h"
 #include "third_party/blink/renderer/core/page/page_animator.h"
 #include "third_party/blink/renderer/core/page/page_hidden_state.h"
-#include "third_party/blink/renderer/core/page/plugin_data.h"
-#include "third_party/blink/renderer/core/page/pointer_lock_controller.h"
 #include "third_party/blink/renderer/core/page/scoped_browsing_context_group_pauser.h"
 #include "third_party/blink/renderer/core/page/scoped_page_pauser.h"
-#include "third_party/blink/renderer/core/page/scrolling/scrolling_coordinator.h"
 #include "third_party/blink/renderer/core/page/scrolling/top_document_root_scroller_controller.h"
 #include "third_party/blink/renderer/core/page/spatial_navigation_controller.h"
-#include "third_party/blink/renderer/core/page/validation_message_client_impl.h"
 #include "third_party/blink/renderer/core/paint/paint_layer_scrollable_area.h"
 #include "third_party/blink/renderer/core/preferences/preference_overrides.h"
 #include "third_party/blink/renderer/core/probe/core_probes.h"
@@ -160,11 +152,6 @@ void SetSafeAreaMaxEnvVariables(
 }
 
 }  // namespace
-
-// Function defined in third_party/blink/public/web/blink.h.
-void ResetPluginCache() {
-  Page::ResetPluginData();
-}
 
 // Set of all live pages; includes internal Page objects that are
 // not observable from scripts.
@@ -250,22 +237,13 @@ Page::Page(base::PassKey<Page>,
       drag_caret_(MakeGarbageCollected<DragCaret>()),
       drag_controller_(MakeGarbageCollected<DragController>(this)),
       focus_controller_(MakeGarbageCollected<FocusController>(this)),
-      context_menu_controller_(
-          MakeGarbageCollected<ContextMenuController>(this)),
       page_scale_constraints_set_(
           MakeGarbageCollected<PageScaleConstraintsSet>(this)),
-      pointer_lock_controller_(
-          MakeGarbageCollected<PointerLockController>(this)),
       browser_controls_(MakeGarbageCollected<BrowserControls>(*this)),
       console_message_storage_(MakeGarbageCollected<ConsoleMessageStorage>()),
       global_root_scroller_controller_(
           MakeGarbageCollected<TopDocumentRootScrollerController>(*this)),
       visual_viewport_(MakeGarbageCollected<VisualViewport>(*this)),
-      link_highlight_(MakeGarbageCollected<LinkHighlight>(*this)),
-      plugin_data_(nullptr),
-      // TODO(pdr): Initialize |validation_message_client_| lazily.
-      validation_message_client_(
-          MakeGarbageCollected<ValidationMessageClientImpl>(*this)),
       opened_by_dom_(false),
       tab_key_cycles_through_elements_(true),
       inspector_device_scale_factor_override_(1),
@@ -367,13 +345,6 @@ ViewportDescription Page::GetViewportDescription() const {
              : ViewportDescription();
 }
 
-ScrollingCoordinator* Page::GetScrollingCoordinator() {
-  if (!scrolling_coordinator_ && settings_->GetAcceleratedCompositingEnabled())
-    scrolling_coordinator_ = MakeGarbageCollected<ScrollingCoordinator>(this);
-
-  return scrolling_coordinator_.Get();
-}
-
 PageScaleConstraintsSet& Page::GetPageScaleConstraintsSet() {
   return *page_scale_constraints_set_;
 }
@@ -410,25 +381,9 @@ const VisualViewport& Page::GetVisualViewport() const {
   return *visual_viewport_;
 }
 
-LinkHighlight& Page::GetLinkHighlight() {
-  return *link_highlight_;
-}
-
 void Page::SetMainFrame(Frame* main_frame) {
-  // TODO(https://crbug.com/952836): Assert that this is only called during
-  // initialization or swaps between local and remote frames.
   main_frame_ = main_frame;
-
-  // Now that the page has a main frame, connect it to related pages if needed.
-  // However, if the main frame is a fake RemoteFrame used for a new Page to
-  // host a provisional main LocalFrame, don't connect it just yet, as this Page
-  // should not be interacted with until the provisional main LocalFrame gets
-  // swapped in. After the LocalFrame gets swapped in, we will call this
-  // function again and connect this Page to the related pages at that time.
-  auto* remote_main_frame = DynamicTo<RemoteFrame>(main_frame);
-  if (!remote_main_frame || remote_main_frame->IsRemoteFrameHostRemoteBound()) {
-    LinkRelatedPagesIfNeeded();
-  }
+  LinkRelatedPagesIfNeeded();
 }
 
 void Page::LinkRelatedPagesIfNeeded() {
@@ -493,11 +448,6 @@ LocalFrame* Page::DeprecatedLocalMainFrame() const {
 }
 
 void Page::DocumentDetached(Document* document) {
-  pointer_lock_controller_->DocumentDetached(document);
-  context_menu_controller_->DocumentDetached(document);
-  if (validation_message_client_)
-    validation_message_client_->DocumentDetached(*document);
-
   GetChromeClient().DocumentDetached(*document);
 }
 
@@ -667,22 +617,6 @@ void Page::UAStyleChanged() {
   }
 }
 
-PluginData* Page::GetPluginData() {
-  if (!plugin_data_)
-    plugin_data_ = MakeGarbageCollected<PluginData>();
-
-  plugin_data_->UpdatePluginList();
-  return plugin_data_.Get();
-}
-
-void Page::ResetPluginData() {
-  for (Page* page : AllPages()) {
-    if (page->plugin_data_) {
-      page->plugin_data_->ResetPluginData();
-    }
-  }
-}
-
 static void RestoreSVGImageAnimations() {
   for (const Page* page : AllPages()) {
     if (auto* svg_image_chrome_client =
@@ -690,11 +624,6 @@ static void RestoreSVGImageAnimations() {
       svg_image_chrome_client->RestoreAnimationIfNeeded();
     }
   }
-}
-
-void Page::SetValidationMessageClientForTesting(
-    ValidationMessageClient* client) {
-  validation_message_client_ = client;
 }
 
 void Page::SetPaused(bool paused) {
@@ -995,7 +924,6 @@ void Page::SettingsChanged(ChangeType change_type) {
     case ChangeType::kViewportPaintProperties:
       if (GetVisualViewport().IsActiveViewport()) {
         GetVisualViewport().SetNeedsPaintPropertyUpdate();
-        GetVisualViewport().InitializeScrollbars();
       }
       if (auto* local_frame = DynamicTo<LocalFrame>(MainFrame())) {
         if (LocalFrameView* view = local_frame->View())
@@ -1106,8 +1034,6 @@ void Page::SettingsChanged(ChangeType change_type) {
         if (doc)
           HTMLMediaElement::OnMediaControlsEnabledChange(doc);
       }
-      break;
-    case ChangeType::kPlugins:
       break;
     case ChangeType::kPaint: {
       InvalidatePaint();
@@ -1235,7 +1161,6 @@ void Page::DidCommitLoad(LocalFrame* frame) {
   // A LocalFrame::UpdateAdHighlight() call was here, to re-apply DevTools'
   // "Highlight ads" setting after a commit that races the setting change.
   // The overlay is gone with ad tagging.
-  GetLinkHighlight().ResetForPageNavigation();
 }
 
 void Page::AcceptLanguagesChanged() {
@@ -1260,40 +1185,22 @@ void Page::Trace(Visitor* visitor) const {
   visitor->Trace(drag_caret_);
   visitor->Trace(drag_controller_);
   visitor->Trace(focus_controller_);
-  visitor->Trace(context_menu_controller_);
   visitor->Trace(page_scale_constraints_set_);
   visitor->Trace(page_visibility_observer_set_);
-  visitor->Trace(pointer_lock_controller_);
-  visitor->Trace(scrolling_coordinator_);
   visitor->Trace(browser_controls_);
   visitor->Trace(console_message_storage_);
   visitor->Trace(global_root_scroller_controller_);
   visitor->Trace(visual_viewport_);
-  visitor->Trace(link_highlight_);
   visitor->Trace(spatial_navigation_controller_);
   visitor->Trace(svg_document_resource_tracker_);
   visitor->Trace(main_frame_);
   visitor->Trace(previous_main_frame_for_local_swap_);
-  visitor->Trace(plugin_data_);
-  visitor->Trace(validation_message_client_);
   visitor->Trace(next_related_page_);
   visitor->Trace(prev_related_page_);
   visitor->Trace(agent_group_scheduler_);
   visitor->Trace(close_task_handler_);
   visitor->Trace(opener_);
   Supplementable<Page>::Trace(visitor);
-}
-
-void Page::DidInitializeCompositing(cc::AnimationHost& host) {
-  GetLinkHighlight().AnimationHostInitialized(host);
-}
-
-void Page::WillStopCompositing() {
-  GetLinkHighlight().WillCloseAnimationHost();
-  // We may have disconnected the associated LayerTreeHost during
-  // the frame lifecycle so ensure the PageAnimator is reset to the
-  // default state.
-  animator_->SetSuppressFrameRequestsWorkaroundFor704763Only(false);
 }
 
 void Page::WillBeDestroyed() {
@@ -1327,12 +1234,8 @@ void Page::WillBeDestroyed() {
     next_related_page_ = nullptr;
   }
 
-  if (scrolling_coordinator_)
-    scrolling_coordinator_->WillBeDestroyed();
 
   GetChromeClient().ChromeDestroyed();
-  if (validation_message_client_)
-    validation_message_client_->WillBeDestroyed();
   main_frame_ = nullptr;
 
   for (auto& observer : page_visibility_observer_set_) {
@@ -1460,11 +1363,6 @@ void Page::SetPageLifecycleState(
 void Page::Animate(base::TimeTicks monotonic_frame_begin_time) {
   GetAutoscrollController().Animate();
   Animator().ServiceScriptedAnimations(monotonic_frame_begin_time);
-  // The ValidationMessage overlay manages its own internal Page that isn't
-  // hooked up the normal BeginMainFrame flow, so we manually tick its
-  // animations here.
-  GetValidationMessageClient().ServiceScriptedAnimations(
-      monotonic_frame_begin_time);
 }
 
 void Page::UpdateLifecycle(LocalFrame& root,
@@ -1506,20 +1404,6 @@ void Page::UpdateBrowsingContextGroup(
 }
 
 template class CORE_TEMPLATE_EXPORT Supplement<Page>;
-
-const char InternalSettingsPageSupplementBase::kSupplementName[] =
-    "InternalSettings";
-
-// static
-void Page::PrepareForLeakDetection() {
-  // Internal settings are ScriptWrappable and thus may retain documents
-  // depending on whether the garbage collector(s) are able to find the settings
-  // object through the Page supplement. Prepares for leak detection by removing
-  // all InternalSetting objects from Pages.
-  for (Page* page : OrdinaryPages()) {
-    page->RemoveSupplement<InternalSettingsPageSupplementBase>();
-  }
-}
 
 void Page::UpgradePrerenderUntilScriptToFullPrerender() {
   CHECK(IsPrerendering());

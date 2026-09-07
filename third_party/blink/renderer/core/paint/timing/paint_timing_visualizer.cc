@@ -103,8 +103,7 @@ void PaintTimingVisualizer::RecordMainFrameViewport(
       scrollable_area->VisibleContentRect(kExcludeScrollbars);
 
   FloatClipRect float_clip_visual_rect((gfx::RectF(viewport_rect)));
-  gfx::RectF float_visual_rect =
-      detector.BlinkSpaceToDIPs(float_clip_visual_rect.Rect());
+  gfx::RectF float_visual_rect = float_clip_visual_rect.Rect();
 
   std::unique_ptr<TracedValue> value = std::make_unique<TracedValue>();
   CreateQuad(value.get(), "viewport_rect", gfx::QuadF(float_visual_rect));

@@ -12,8 +12,6 @@
 #include "third_party/blink/renderer/core/dom/document.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
 #include "third_party/blink/renderer/core/frame/local_frame_view.h"
-#include "third_party/blink/renderer/core/frame/web_frame_widget_impl.h"
-#include "third_party/blink/renderer/core/frame/web_local_frame_impl.h"
 #include "third_party/blink/renderer/core/html/html_element.h"
 #include "third_party/blink/renderer/core/html/html_image_element.h"
 #include "third_party/blink/renderer/core/layout/layout_box_model_object.h"
@@ -24,7 +22,6 @@
 #include "third_party/blink/renderer/core/page/chrome_client.h"
 #include "third_party/blink/renderer/core/page/page.h"
 #include "third_party/blink/renderer/core/paint/paint_layer.h"
-#include "third_party/blink/renderer/core/paint/timing/image_element_timing.h"
 #include "third_party/blink/renderer/core/paint/timing/image_paint_timing_detector.h"
 #include "third_party/blink/renderer/core/paint/timing/largest_contentful_paint_calculator.h"
 #include "third_party/blink/renderer/core/paint/timing/paint_timing.h"
@@ -192,8 +189,6 @@ bool PaintTimingDetector::NotifyBackgroundImagePaint(
   }
 
   auto& paint_timing = PaintTiming::From(object->GetDocument());
-  paint_timing.GetImageElementTiming()->NotifyBackgroundImagePaint(
-      node, style_image, current_paint_chunk_properties, image_border);
 
   if (!IsBackgroundImageContentful(*object, image)) {
     return false;
@@ -217,8 +212,6 @@ bool PaintTimingDetector::NotifyImagePaint(
     const PropertyTreeStateOrAlias& current_paint_chunk_properties,
     const gfx::Rect& image_border) {
   auto& paint_timing = PaintTiming::From(object.GetDocument());
-  paint_timing.GetImageElementTiming()->NotifyImagePaint(
-      object, media_timing, current_paint_chunk_properties, image_border);
 
   if (IgnorePaintTimingScope::ShouldIgnore()) {
     return false;
@@ -282,8 +275,6 @@ void PaintTimingDetector::NotifyBackgroundImageFinished(
 void PaintTimingDetector::NotifyImageRemoved(
     const LayoutObject& object,
     const ImageResourceContent* cached_image) {
-  paint_timing_->GetImageElementTiming()->NotifyImageRemoved(object,
-                                                             cached_image);
   image_paint_timing_detector_->NotifyImageRemoved(object, cached_image);
 }
 
@@ -340,15 +331,6 @@ void PaintTimingDetector::DidChangePerformanceTiming() {
       paint_timing_->GetDocument());
 }
 
-gfx::RectF PaintTimingDetector::BlinkSpaceToDIPs(const gfx::RectF& rect) const {
-  FrameWidget* widget = GetFrame().GetWidgetForLocalRoot();
-  // May be nullptr in tests.
-  if (!widget) {
-    return rect;
-  }
-  return widget->BlinkSpaceToDIPs(rect);
-}
-
 gfx::RectF PaintTimingDetector::CalculateVisualRect(
     const gfx::Rect& visual_rect,
     const PropertyTreeStateOrAlias& current_paint_chunk_properties) const {
@@ -365,7 +347,7 @@ gfx::RectF PaintTimingDetector::CalculateVisualRect(
                                                 .LocalBorderBoxProperties(),
                                             float_clip_visual_rect);
   if (local_root.IsOutermostMainFrame()) {
-    return BlinkSpaceToDIPs(float_clip_visual_rect.Rect());
+    return float_clip_visual_rect.Rect();
   }
 
   // TODO(crbug.com/1346602): Enabling frames from a fenced frame tree to map
@@ -375,7 +357,7 @@ gfx::RectF PaintTimingDetector::CalculateVisualRect(
   // frames) to avoid introducing a side channel but this will require design
   // work to fix in the long term.
   if (local_root.IsInFencedFrameTree()) {
-    return BlinkSpaceToDIPs(float_clip_visual_rect.Rect());
+    return float_clip_visual_rect.Rect();
   }
 
   // OOPIF. The final rect lives in the iframe's root frame space. We need to
@@ -384,7 +366,7 @@ gfx::RectF PaintTimingDetector::CalculateVisualRect(
       PhysicalRect::EnclosingRect(float_clip_visual_rect.Rect());
   GetFrame().LocalFrameRoot().View()->MapToVisualRectInRemoteRootFrame(
       layout_visual_rect);
-  return BlinkSpaceToDIPs(gfx::RectF(layout_visual_rect));
+  return gfx::RectF(layout_visual_rect);
 }
 
 void PaintTimingDetector::ReportIgnoredContent() {

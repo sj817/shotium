@@ -70,7 +70,6 @@
 #include "third_party/blink/renderer/core/dom/element.h"
 #include "third_party/blink/renderer/core/dom/ignore_opens_during_unload_count_incrementer.h"
 #include "third_party/blink/renderer/core/events/page_transition_event.h"
-#include "third_party/blink/renderer/core/exported/web_plugin_container_impl.h"
 #include "third_party/blink/renderer/core/fetch/fetch_later_util.h"
 #include "third_party/blink/renderer/core/frame/csp/content_security_policy.h"
 #include "third_party/blink/renderer/core/frame/csp/csp_source.h"
@@ -82,7 +81,6 @@
 #include "third_party/blink/renderer/core/frame/policy_container.h"
 #include "third_party/blink/renderer/core/frame/settings.h"
 #include "third_party/blink/renderer/core/frame/visual_viewport.h"
-#include "third_party/blink/renderer/core/frame/web_local_frame_impl.h"
 #include "third_party/blink/renderer/core/html/forms/html_form_element.h"
 #include "third_party/blink/renderer/core/html/html_frame_owner_element.h"
 #include "third_party/blink/renderer/core/html_names.h"
@@ -101,10 +99,8 @@
 #include "third_party/blink/renderer/core/page/focus_controller.h"
 #include "third_party/blink/renderer/core/page/frame_tree.h"
 #include "third_party/blink/renderer/core/page/page.h"
-#include "third_party/blink/renderer/core/page/plugin_data.h"
 #include "third_party/blink/renderer/core/page/plugin_script_forbidden_scope.h"
 #include "third_party/blink/renderer/core/page/scrolling/fragment_anchor.h"
-#include "third_party/blink/renderer/core/page/scrolling/scrolling_coordinator.h"
 #include "third_party/blink/renderer/core/page/viewport_description.h"
 #include "third_party/blink/renderer/core/paint/paint_layer_scrollable_area.h"
 #include "third_party/blink/renderer/core/probe/core_probes.h"
@@ -518,15 +514,6 @@ void FrameLoader::DidFinishNavigation(NavigationFinishState state) {
   Frame* parent = frame_->Tree().Parent();
   if (parent)
     parent->CheckCompleted();
-}
-
-bool FrameLoader::AllowPlugins() {
-  // With Oilpan, a FrameLoader might be accessed after the Page has been
-  // detached. FrameClient will not be accessible, so bail early.
-  if (!Client())
-    return false;
-  Settings* settings = frame_->GetSettings();
-  return settings && settings->GetPluginsEnabled();
 }
 
 void FrameLoader::DetachDocumentLoader(Member<DocumentLoader>& loader,
@@ -1001,26 +988,7 @@ static void FillStaticResponseIfNeeded(WebNavigationParams* params,
   if (MIMETypeRegistry::IsSupportedMIMEType(mime_type))
     return;
 
-  PluginData* plugin_data = frame->GetPluginData();
-  if (!mime_type.empty() && plugin_data &&
-      plugin_data->SupportsMimeType(mime_type)) {
-    return;
-  }
-
-  // Typically, PlzNavigate checks that the MIME type can be handled on the
-  // browser side before sending it to the renderer. However, there are rare
-  // scenarios where it's possible for the renderer to send a commit request
-  // with a MIME type the renderer cannot handle:
-  //
-  // - (hypothetical) some sort of race between enabling/disabling plugins
-  //   and when it's checked by the navigation URL loader / handled in the
-  //   renderer.
-  // - mobile emulation disables plugins on the renderer side, but the browser
-  //   navigation code is not aware of this.
-  //
-  // Similar to the missing archive resource case above, synthesise a resource
-  // to commit.
-  //
+  // Unsupported MIME types commit an empty document.
   // WebNavigationParams::FillStaticResponse() fills the response of |params|
   // using |params|'s |url| which is the initial URL even after redirections. So
   // updates the URL to the current URL before calling FillStaticResponse().
@@ -1029,7 +997,7 @@ static void FillStaticResponseIfNeeded(WebNavigationParams* params,
       params, "text/html", "UTF-8",
       base::span_from_cstring(
           "<html><body>"
-          "<!-- no enabled plugin supports this MIME type -->"
+          "<!-- unsupported MIME type -->"
           "</body></html>"));
 }
 
@@ -1166,14 +1134,6 @@ void FrameLoader::CommitNavigation(
       probe::DidStartProvisionalLoad(frame_.Get());
     }
 
-    DCHECK(Client()->HasWebView());
-
-    // If `frame_` is provisional, `DetachDocument()` is largely a no-op other
-    // than cleaning up the initial (and unused) empty document. Otherwise, this
-    // unloads the previous Document and detaches subframes. If
-    // `DetachDocument()` returns false, JS caused `frame_` to be removed, so
-    // just return.
-    const bool is_provisional = frame_->IsProvisional();
     // For an XSLT document, set SentDidFinishLoad now to prevent the
     // DocumentLoader from reporting an error when detaching the pre-XSLT
     // document.
@@ -1184,20 +1144,8 @@ void FrameLoader::CommitNavigation(
       previous_document_loader_for_xslt_ = document_loader_.Get();
     }
     if (!DetachDocument()) {
-      DCHECK(!is_provisional);
       return;
     }
-
-    // If the frame is provisional, swap it in now. However, if `SwapIn()`
-    // returns false, JS caused `frame_` to be removed, so just return. In case
-    // this triggers a local RenderFrame swap, it might trigger the unloading
-    // of the old RenderFrame's document, updating the contents of the
-    // OldDocumentInfoForCommit set in `scoped_old_document_info` above.
-    // NOTE: it's important that SwapIn() happens before DetachDocument(),
-    // because this ensures that the unload timing info generated by detaching
-    // the provisional frame's document isn't the one that gets used.
-    if (is_provisional && !frame_->SwapIn())
-      return;
   }
 
   tls_version_warning_origins_.clear();
@@ -1740,25 +1688,13 @@ void FrameLoader::CancelClientNavigation(CancelNavigationReason reason) {
 
   // No navigation API listeners exist to inform of the cancellation.
 
-  ResourceError error = ResourceError::CancelledError(client_navigation_->url);
   ClearClientNavigation();
-  if (WebPluginContainerImpl* plugin = frame_->GetWebPluginContainer())
-    plugin->DidFailLoading(error);
   Client()->AbortClientNavigation(reason ==
                                   CancelNavigationReason::kNewNavigation);
 }
 
 void FrameLoader::DispatchDocumentElementAvailable() {
   ScriptForbiddenScope forbid_scripts;
-
-  // Notify the browser about documents loading in the top frame.
-  if (frame_->GetDocument()->Url().IsValid() && frame_->IsMainFrame()) {
-    // For now, don't remember plugin zoom values.  We don't want to mix them
-    // with normal web content (i.e. a fixed layout plugin would usually want
-    // them different).
-    frame_->GetLocalFrameHostRemote().MainDocumentElementAvailable(
-        frame_->GetDocument()->IsPluginDocument());
-  }
 
   Client()->DocumentElementAvailable();
 }

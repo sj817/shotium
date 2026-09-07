@@ -10,7 +10,6 @@
 #include "base/task/single_thread_task_runner.h"
 #include "third_party/blink/public/mojom/loader/keep_alive_handle.mojom-blink.h"
 #include "third_party/blink/public/mojom/loader/keep_alive_handle_factory.mojom-blink.h"
-#include "third_party/blink/public/platform/url_loader_throttle_provider.h"
 #include "third_party/blink/renderer/core/core_export.h"
 #include "third_party/blink/renderer/platform/heap/member.h"
 #include "third_party/blink/renderer/platform/loader/fetch/resource_fetcher.h"
@@ -46,10 +45,6 @@ class CORE_EXPORT LoaderFactoryForFrame final
  private:
   mojo::PendingRemote<mojom::blink::KeepAliveHandle> MaybeIssueKeepAliveHandle(
       const network::ResourceRequest& network_request);
-
-  URLLoaderThrottleProvider* GetURLLoaderThrottleProvider();
-  Vector<std::unique_ptr<URLLoaderThrottle>> CreateThrottles(
-      const network::ResourceRequest&);
 
   const Member<DocumentLoader> document_loader_;
   const Member<LocalDOMWindow> window_;

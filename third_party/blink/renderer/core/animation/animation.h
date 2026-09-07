@@ -61,7 +61,6 @@ namespace blink {
 class AnimationTimeline;
 class AnimationTrigger;
 class Element;
-class PaintArtifactCompositor;
 class StyleChangeReasonForTracing;
 class TreeScope;
 class TimelineRange;
@@ -349,16 +348,9 @@ class CORE_EXPORT Animation : public EventTarget,
   void SetCompositorPending(CompositorPendingReason reason);
 
   CompositorAnimations::FailureReasons CheckCanStartAnimationOnCompositor(
-      const PaintArtifactCompositor* paint_artifact_compositor,
       StartOnCompositorReason check_reason);
   void StartAnimationOnCompositor(
-      const PaintArtifactCompositor* paint_artifact_compositor,
       StartOnCompositorReason check_reason);
-  // Returns true if the cc::Animation related to this animation will be under
-  // the influence of the compositor animation trigger attempting to push the
-  // animation to the compositor. Returns false otherwise.
-  bool StartTriggeredAnimationOnCompositor(
-      const PaintArtifactCompositor* paint_artifact_compositor);
   void CancelAnimationOnCompositor();
   void RestartAnimationOnCompositor(
       CompositorPendingReason reason =
@@ -372,16 +364,6 @@ class CORE_EXPORT Animation : public EventTarget,
   CompositingDecisionState& GetCompositingDecisionState() {
     return compositing_decision_;
   }
-
-  // The compositor started playing this animation on the impl thread.
-  // Synchronize to the impl thread start time. This is only called for
-  // triggered[1] animations.
-  // [1] https://drafts.csswg.org/animation-triggers-1/
-  void NotifyAnimationStartedAsync(base::TimeDelta monotonic_time,
-                                   AutoRewind auto_rewind);
-  // The compositor paused this animation on the impl thread.
-  // This is only called for triggered animations.
-  void NotifyAnimationPausedAsync(base::TimeDelta monotonic_time);
 
   void NotifyReady(AnimationTimeDelta ready_time);
   void CommitPendingPlay(AnimationTimeDelta ready_time);
@@ -397,7 +379,6 @@ class CORE_EXPORT Animation : public EventTarget,
   // Returns whether we should continue with the commit for this animation or
   // wait until next commit.
   bool PreCommit(int compositor_group,
-                 const PaintArtifactCompositor*,
                  bool start_on_compositor);
   void PostCommit();
 
@@ -454,8 +435,7 @@ class CORE_EXPORT Animation : public EventTarget,
 
   // Updates |animation_missing_compositor_elements_| and marks the
   // animation as pending if it changes.
-  void MarkPendingIfCompositorPropertyAnimationChanges(
-      const PaintArtifactCompositor*);
+  void MarkPendingIfCompositorPropertyAnimationChanges();
   bool CompositorPropertyAnimationsHaveNoEffectForTesting() const {
     return compositor_property_animations_have_no_effect_;
   }
@@ -569,8 +549,6 @@ class CORE_EXPORT Animation : public EventTarget,
   void CheckCanStartAnimationOnCompositorInternal();
   void CreateCompositorAnimation(std::optional<int> replaced_cc_animation_id);
   void DestroyCompositorAnimation();
-  void AttachCompositorTimeline();
-  void DetachCompositorTimeline();
   void AttachCompositedLayers();
   void DetachCompositedLayers();
   // CompositorAnimationDelegate implementation.

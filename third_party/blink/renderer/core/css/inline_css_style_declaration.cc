@@ -42,7 +42,6 @@ void InlineCSSStyleDeclaration::DidMutate(MutationType type) {
     return;
   }
 
-  parent_element_->NotifyInlineStyleMutation();
   parent_element_->ClearMutableInlineStyleIfEmpty();
 
   const bool only_changed_independent_properties =

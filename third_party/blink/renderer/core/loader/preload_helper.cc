@@ -15,7 +15,6 @@
 #include "third_party/blink/public/common/features.h"
 #include "third_party/blink/public/mojom/fetch/fetch_api_request.mojom-blink.h"
 #include "third_party/blink/public/platform/platform.h"
-#include "third_party/blink/public/platform/web_prescient_networking.h"
 #include "third_party/blink/renderer/core/css/media_list.h"
 #include "third_party/blink/renderer/core/css/media_query_evaluator.h"
 #include "third_party/blink/renderer/core/css/parser/sizes_attribute_parser.h"
@@ -27,7 +26,6 @@
 #include "third_party/blink/renderer/core/frame/navigator.h"
 #include "third_party/blink/renderer/core/frame/settings.h"
 #include "third_party/blink/renderer/core/frame/viewport_data.h"
-#include "third_party/blink/renderer/core/frame/web_local_frame_impl.h"
 #include "third_party/blink/renderer/core/html/blocking_attribute.h"
 #include "third_party/blink/renderer/core/html/parser/html_preload_scanner.h"
 #include "third_party/blink/renderer/core/html/parser/html_srcset_parser.h"
@@ -92,21 +90,6 @@ class LoadDictionaryWhenIdleTask final : public IdleTask {
   Member<ResourceFetcher> resource_fetcher_;
   Member<PendingLinkPreload> pending_preload_;
 };
-
-void SendMessageToConsoleForPossiblyNullDocument(
-    ConsoleMessage* console_message,
-    Document* document,
-    LocalFrame* frame) {
-  DCHECK(document || frame);
-  DCHECK(!document || document->GetFrame() == frame);
-  // Route the console message through Document if possible, so that script line
-  // numbers can be included. Otherwise, route directly to the FrameConsole, to
-  // ensure we never drop a message.
-  if (document)
-    document->AddConsoleMessage(console_message);
-  else
-    frame->Console().AddMessage(console_message);
-}
 
 bool IsSupportedType(ResourceType resource_type, const String& mime_type) {
   if (resource_type == ResourceType::kAudio ||
@@ -187,30 +170,6 @@ bool IsValidButUnsupportedAsAttribute(const String& as) {
          as == "embed" || as == "manifest" || as == "object" ||
          as == "paintworklet" || as == "report" || as == "sharedworker" ||
          as == "video" || as == "worker" || as == "xslt";
-}
-
-bool IsNetworkHintAllowed(PreloadHelper::LoadLinksFromHeaderMode mode,
-                          bool is_header_on_subresource) {
-  if (is_header_on_subresource &&
-      blink::features::kRestrictLinkHeaderOnSubresourceNetworkHint.Get()) {
-    return false;
-  }
-  switch (mode) {
-    case PreloadHelper::LoadLinksFromHeaderMode::kDocumentBeforeCommit:
-      return true;
-    case PreloadHelper::LoadLinksFromHeaderMode::
-        kDocumentAfterCommitWithoutViewport:
-      return false;
-    case PreloadHelper::LoadLinksFromHeaderMode::
-        kDocumentAfterCommitWithViewport:
-      return false;
-    case PreloadHelper::LoadLinksFromHeaderMode::kDocumentAfterLoadCompleted:
-      return false;
-    case PreloadHelper::LoadLinksFromHeaderMode::kSubresourceFromMemoryCache:
-      return true;
-    case PreloadHelper::LoadLinksFromHeaderMode::kSubresourceNotFromMemoryCache:
-      return true;
-  }
 }
 
 bool IsResourceLoadAllowed(PreloadHelper::LoadLinksFromHeaderMode mode,
@@ -305,87 +264,6 @@ PreloadHelper::OriginStatusOnSubresource GetOriginStatus(bool from_same_origin,
 constexpr double kUkmSamplingRate = 0.0025;
 
 }  // namespace
-
-void PreloadHelper::DnsPrefetchIfNeeded(
-    const LinkLoadParameters& params,
-    Document* document,
-    LocalFrame* frame,
-    LinkCaller caller) {
-  if (document && document->Loader() && document->Loader()->Archive()) {
-    return;
-  }
-  if (params.rel.IsDNSPrefetch()) {
-    UseCounter::Count(document, WebFeature::kLinkRelDnsPrefetch);
-    if (caller == kLinkCalledFromHeader)
-      UseCounter::Count(document, WebFeature::kLinkHeaderDnsPrefetch);
-    Settings* settings = frame ? frame->GetSettings() : nullptr;
-    // FIXME: The href attribute of the link element can be in "//hostname"
-    // form, and we shouldn't attempt to complete that as URL
-    // <https://bugs.webkit.org/show_bug.cgi?id=48857>.
-    if (settings && settings->GetDNSPrefetchingEnabled() &&
-        params.href.IsValid() && !params.href.IsEmpty()) {
-      if (settings->GetLogDnsPrefetchAndPreconnect()) {
-        SendMessageToConsoleForPossiblyNullDocument(
-            MakeGarbageCollected<ConsoleMessage>(
-                mojom::blink::ConsoleMessageSource::kOther,
-                mojom::blink::ConsoleMessageLevel::kVerbose,
-                StrCat({"DNS prefetch triggered for ", params.href.Host()})),
-            document, frame);
-      }
-      WebPrescientNetworking* web_prescient_networking =
-          frame ? frame->PrescientNetworking() : nullptr;
-      if (web_prescient_networking) {
-        web_prescient_networking->PrefetchDNS(params.href);
-      }
-    }
-  }
-}
-
-void PreloadHelper::PreconnectIfNeeded(
-    const LinkLoadParameters& params,
-    Document* document,
-    LocalFrame* frame,
-    LinkCaller caller) {
-  if (document && document->Loader() && document->Loader()->Archive()) {
-    return;
-  }
-  if (params.rel.IsPreconnect() && params.href.IsValid() &&
-      params.href.ProtocolIsInHttpFamily()) {
-    UseCounter::Count(document, WebFeature::kLinkRelPreconnect);
-    if (caller == kLinkCalledFromHeader)
-      UseCounter::Count(document, WebFeature::kLinkHeaderPreconnect);
-    Settings* settings = frame ? frame->GetSettings() : nullptr;
-    if (settings && settings->GetLogDnsPrefetchAndPreconnect()) {
-      SendMessageToConsoleForPossiblyNullDocument(
-          MakeGarbageCollected<ConsoleMessage>(
-              mojom::blink::ConsoleMessageSource::kOther,
-              mojom::blink::ConsoleMessageLevel::kVerbose,
-              StrCat({"Preconnect triggered for ", params.href.GetString()})),
-          document, frame);
-      if (params.cross_origin != kCrossOriginAttributeNotSet) {
-        SendMessageToConsoleForPossiblyNullDocument(
-            MakeGarbageCollected<ConsoleMessage>(
-                mojom::blink::ConsoleMessageSource::kOther,
-                mojom::blink::ConsoleMessageLevel::kVerbose,
-                StrCat({"Preconnect CORS setting is ",
-                        (params.cross_origin == kCrossOriginAttributeAnonymous)
-                            ? "anonymous"
-                            : "use-credentials"})),
-            document, frame);
-      }
-    }
-    WebPrescientNetworking* web_prescient_networking =
-        frame ? frame->PrescientNetworking() : nullptr;
-    if (web_prescient_networking) {
-      web_prescient_networking->Preconnect(
-          params.href, params.cross_origin != kCrossOriginAttributeAnonymous);
-    }
-    if (document && document->Fetcher()) {
-      document->Fetcher()->RecordPreconnect(params.href, params.cross_origin,
-                                            /*early_hints=*/false);
-    }
-  }
-}
 
 // Until the preload cache is defined in terms of range requests and media
 // fetches we can't reliably preload audio/video content and expect it to be
@@ -689,13 +567,11 @@ void PreloadHelper::LoadLinksFromHeader(
     if (!header.Valid() || header.Url().empty() || header.Rel().empty()) {
       continue;
     }
-    bool is_network_hint_allowed =
-        IsNetworkHintAllowed(mode, is_subresource_load);
     bool is_resource_load_allowed = IsResourceLoadAllowed(
         mode, header.IsViewportDependent(), is_subresource_load);
     bool is_compression_dictionary_load_allowed =
         IsCompressionDictionaryLoadAllowed(mode, is_subresource_load);
-    if (!is_network_hint_allowed && !is_resource_load_allowed &&
+    if (!is_resource_load_allowed &&
         !is_compression_dictionary_load_allowed) {
       // Skip this `header`; it won't initiate any types of preloading.
       continue;
@@ -753,11 +629,6 @@ void PreloadHelper::LoadLinksFromHeader(
     // Sanity check to avoid re-entrancy here.
     if (params.href == base_url) {
       continue;
-    }
-    if (is_network_hint_allowed) {
-      DnsPrefetchIfNeeded(params, document, &frame, kLinkCalledFromHeader);
-
-      PreconnectIfNeeded(params, document, &frame, kLinkCalledFromHeader);
     }
     if (is_resource_load_allowed || is_compression_dictionary_load_allowed) {
       DCHECK(document);

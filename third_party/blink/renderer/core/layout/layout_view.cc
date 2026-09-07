@@ -41,7 +41,6 @@
 #include "third_party/blink/renderer/core/frame/settings.h"
 #include "third_party/blink/renderer/core/frame/visual_viewport.h"
 #include "third_party/blink/renderer/core/html/html_iframe_element.h"
-#include "third_party/blink/renderer/core/html/plugin_document.h"
 #include "third_party/blink/renderer/core/input/event_handler.h"
 #include "third_party/blink/renderer/core/layout/block_node.h"
 #include "third_party/blink/renderer/core/layout/constraint_space_builder.h"
@@ -180,9 +179,6 @@ bool LayoutView::HitTestNoLifecycleUpdate(const HitTestLocation& location,
       if (result.GetHitTestRequest().IgnoreClipping()) {
         hit_test_area.Unite(
             frame_view->DocumentToFrame(PhysicalRect(DocumentRect())));
-      } else if (RuntimeEnabledFeatures::UnboundedElementEnabled() &&
-                 GetDocument().HasActiveUnboundedElements()) {
-        hit_test_area = PhysicalRect(InfiniteIntRect());
       }
     }
 
@@ -282,14 +278,6 @@ bool LayoutView::CanHaveChildren() const {
   // Although it is not spec compliant, many websites intentionally call
   // Window.print() on display:none iframes. https://crbug.com/819327.
   if (GetDocument().Printing())
-    return true;
-  // A PluginDocument needs a layout tree during loading, even if it is inside a
-  // display: none iframe.  This is because WebLocalFrameImpl::DidFinish expects
-  // the PluginDocument's <embed> element to have an EmbeddedContentView, which
-  // it acquires during LocalFrameView::UpdatePlugins, which operates on the
-  // <embed> element's layout object (LayoutEmbeddedObject).
-  if (IsA<PluginDocument>(GetDocument()) ||
-      GetDocument().IsForExternalHandler())
     return true;
   return !owner->IsDisplayNone();
 }
@@ -1065,10 +1053,6 @@ void LayoutView::StyleDidChange(
     if (!old_style || old_style->UsedColorScheme() !=
                           visual_viewport.UsedColorSchemeScrollbars()) {
       visual_viewport.UsedColorSchemeChanged();
-    }
-    if (old_style && old_style->ScrollbarThumbColorResolved() !=
-                         visual_viewport.CSSScrollbarThumbColor()) {
-      visual_viewport.ScrollbarColorChanged();
     }
   }
 }

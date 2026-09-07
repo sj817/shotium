@@ -50,7 +50,6 @@ namespace blink {
 
 class AnimationTimeline;
 class Document;
-class PaintArtifactCompositor;
 
 class CORE_EXPORT SVGImageAnimationsToReset final
     : public GarbageCollected<SVGImageAnimationsToReset> {
@@ -94,24 +93,13 @@ class CORE_EXPORT DocumentAnimations final
   // both composited and non-composited animations.
   void UpdateAnimations(
       DocumentLifecycle::LifecycleState required_lifecycle_state,
-      const PaintArtifactCompositor*,
       bool compositor_properties_updated);
-
-  size_t GetAnimationsCount();
 
   void MarkAnimationsCompositorPending();
 
   HeapVector<Member<Animation>> getAnimations(const TreeScope&);
   void PrepareAnimationsForSVGImageReset(
       SVGImageAnimationsToReset& animations_to_reset);
-
-  // Detach compositor timelines to prevent further ticking of any animations
-  // associated with the timelines.  Detached timelines may be subsequently
-  // reattached if needed.
-  void DetachCompositorTimelines();
-
-  // Detach animation triggers on the compositor.
-  void DetachCompositorTriggers();
 
   const HeapHashSet<WeakMember<AnimationTimeline>>& GetTimelinesForTesting()
       const {
@@ -130,8 +118,6 @@ class CORE_EXPORT DocumentAnimations final
       CSSAnimation& animation,
       const TriggerAttachmentMap& relevant_attachments);
 
-  void AddAnimationTrigger(AnimationTrigger& trigger);
-
   // This attaches CSS Animations to AnimationTriggers declared by
   // trigger-instantiating properties like timeline-trigger or event-trigger.
   // It matches the CSS Animations to the AnimationTriggers by matching the
@@ -144,9 +130,6 @@ class CORE_EXPORT DocumentAnimations final
   CSSAnimationsNeedingTriggerAttachmentForTesting() const {
     return css_animations_needing_trigger_attachment_;
   }
-
-  void UpdateCompositorAnimationTriggers(
-      const PaintArtifactCompositor* paint_artifact_compositor);
 
   DeferredTimeline& GetGlobalDeferredTimeline(const AtomicString& name) {
     return *global_deferred_timelines_.Find(*document_, name);
@@ -161,12 +144,10 @@ class CORE_EXPORT DocumentAnimations final
   void RemoveReplacedAnimations(ReplaceableAnimationsMap*);
 
  private:
-  void MarkPendingIfCompositorPropertyAnimationChanges(
-      const PaintArtifactCompositor*);
+  void MarkPendingIfCompositorPropertyAnimationChanges();
 
   Member<Document> document_;
   HeapHashSet<WeakMember<AnimationTimeline>> timelines_;
-  HeapHashSet<WeakMember<AnimationTrigger>> triggers_;
   // Animations which should be attached to triggers after style and layout
   // updates.
   HeapHashSet<WeakMember<CSSAnimation>>

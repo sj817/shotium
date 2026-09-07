@@ -54,7 +54,6 @@ class ConsoleMessage;
 class ExecutionContext;
 class FetchClientSettingsObject;
 class Frame;
-class FrameFetchContext;
 class LocalFrame;
 class KURL;
 class ResourceResponse;
@@ -84,17 +83,6 @@ class CORE_EXPORT MixedContentChecker final {
                                const String& devtools_id,
                                ReportingDisposition reporting_disposition,
                                mojom::blink::ContentSecurityNotifier& notifier);
-
-  // ShouldBlockFetchOnWorker(WorkerFetchContext&, ...) and
-  // IsWebSocketAllowed(WorkerFetchContext&, ...) used to check mixed-content
-  // for fetches made from a worker or worklet global scope. Workers require
-  // a script engine to run, which this renderer no longer has, so
-  // WorkerFetchContext and the global scopes it served are gone; only the
-  // LocalFrame-based overloads below remain.
-
-  static bool IsWebSocketAllowed(const FrameFetchContext&,
-                                 LocalFrame*,
-                                 const KURL&);
 
   static bool IsMixedContent(const SecurityOrigin*, const KURL&);
   static bool IsMixedContent(const String& origin_protocol, const KURL&);
@@ -176,9 +164,6 @@ class CORE_EXPORT MixedContentChecker final {
       mojom::blink::RequestContextType,
       bool allowed,
       SourceLocation*);
-  static ConsoleMessage* CreateConsoleMessageAboutWebSocket(const KURL&,
-                                                            const KURL&,
-                                                            bool allowed);
   static void Count(Frame*,
                     mojom::blink::RequestContextType,
                     const LocalFrame*);

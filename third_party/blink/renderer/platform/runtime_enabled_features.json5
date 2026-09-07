@@ -1276,19 +1276,6 @@
       }
     },
     {
-      // When enabled, EventTriggers[1] will function via cc::EventTrigger
-      // objects that live on the compositor thread.
-      // [1] https://drafts.csswg.org/css-animations-2/#event-triggers
-      name: "CompositorEventTrigger"
-    },
-    {
-      // When enabled, TimelineTriggers[1] will function via cc::TimelineTrigger
-      // objects that live on the compositor thread.
-      // [1] https://drafts.csswg.org/css-animations-2/#timeline-triggers
-      name: "CompositorTimelineTrigger",
-      status: "stable",
-    },
-    {
       name: "CompressionDictionaryTransport",
       base_feature: "none",
       public: true,
@@ -2913,12 +2900,6 @@
       base_feature: "FileHandlingAPI",
     },
     {
-      // For <input type=file>, fires change event when same file is chosen
-      // again, and retains files when cancel is pressed.
-      name: "FilePickerEventsFix",
-      status: "stable",
-    },
-    {
       name: "FileSystem",
       public: true,
       status: "stable",
@@ -3401,10 +3382,6 @@
     {
       name: "GroupEffect",
       status: "test",
-    },
-    {
-      name: "HandleShadowDOMInSubstringUtil",
-      status: "stable",
     },
     {
       name: "HandwritingRecognition",
@@ -4567,17 +4544,6 @@
       name: "OverscrollGestures",
       status: "experimental",
     },
-    {
-      name: "PagePopup",
-      // Android does not have support for PagePopup
-      status: {"Android": "", "iOS": "", "default": "stable"},
-    },
-    {
-      name: "PagePopupCopyPaste",
-      depends_on: ["PagePopup"],
-      status: "stable",
-    },
-
     {
       name: "PageSwapEvent",
       status: "stable",

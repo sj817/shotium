@@ -104,7 +104,6 @@
 #include "third_party/blink/renderer/core/page/page.h"
 #include "third_party/blink/renderer/core/page/scrolling/fragment_anchor.h"
 #include "third_party/blink/renderer/core/page/scrolling/root_scroller_controller.h"
-#include "third_party/blink/renderer/core/page/scrolling/scrolling_coordinator.h"
 #include "third_party/blink/renderer/core/page/scrolling/snap_coordinator.h"
 #include "third_party/blink/renderer/core/page/scrolling/sticky_position_scrolling_constraints.h"
 #include "third_party/blink/renderer/core/page/scrolling/top_document_root_scroller_controller.h"
@@ -185,13 +184,6 @@ PaintLayerScrollableArea::~PaintLayerScrollableArea() {
 PaintLayerScrollableArea* PaintLayerScrollableArea::FromNode(const Node& node) {
   const LayoutBox* box = node.GetLayoutBox();
   return box ? box->GetScrollableArea() : nullptr;
-}
-
-void PaintLayerScrollableArea::DidCompositorScroll(const gfx::PointF& position,
-                                                   cc::ScrollSourceType type) {
-  ScrollableArea::DidCompositorScroll(position, type);
-  // This should be alive if it receives composited scroll callbacks.
-  CHECK(!HasBeenDisposed());
 }
 
 void PaintLayerScrollableArea::DisposeImpl() {
@@ -471,12 +463,6 @@ void PaintLayerScrollableArea::UpdateScrollOffset(
       frame_view->SetNeedsUpdateGeometries();
   }
 
-  if (auto* scrolling_coordinator = GetScrollingCoordinator()) {
-    if (!scrolling_coordinator->UpdateCompositorScrollOffset(*frame, *this)) {
-      GetLayoutBox()->GetFrameView()->SetPaintArtifactCompositorNeedsUpdate();
-    }
-  }
-
   if (scroll_type == mojom::blink::ScrollType::kUser ||
       scroll_type == mojom::blink::ScrollType::kCompositor) {
     Page* page = frame->GetPage();
@@ -567,11 +553,6 @@ void PaintLayerScrollableArea::InvalidatePaintForScrollOffsetChange() {
     box->SetBackgroundNeedsFullPaintInvalidation();
   }
 
-  if (auto* compositor = frame_view->GetPaintArtifactCompositor()) {
-    if (compositor->ShouldAlwaysUpdateOnScroll()) {
-      compositor->SetNeedsUpdate();
-    }
-  }
 }
 
 // See the comment in .h about background-attachment:fixed.
@@ -1907,15 +1888,6 @@ void PaintLayerScrollableArea::DidUpdateCullRect() {
       if (auto* scroll_node = properties->MutableScroll()) {
         scroll_node->SetScrollingContentsCullRect(
             fragment.GetContentsCullRect().Rect());
-        if (auto* compositor =
-                GetLayoutBox()->GetFrameView()->GetPaintArtifactCompositor()) {
-          if (compositor->DirectlyUpdateScrollingContentsCullRect(
-                  *scroll_node)) {
-            scroll_node->CompositorSimpleValuesUpdated();
-          } else {
-            compositor->SetNeedsUpdate();
-          }
-        }
       }
     }
   }
@@ -2714,45 +2686,6 @@ void PaintLayerScrollableArea::UpdateScrollableAreaSet() {
   // accessibility tree exists to notify anymore.
 }
 
-ScrollingCoordinator* PaintLayerScrollableArea::GetScrollingCoordinator()
-    const {
-  LocalFrame* frame = GetLayoutBox()->GetFrame();
-  if (!frame)
-    return nullptr;
-
-  Page* page = frame->GetPage();
-  if (!page)
-    return nullptr;
-
-  return page->GetScrollingCoordinator();
-}
-
-bool PaintLayerScrollableArea::ShouldScrollOnMainThread() const {
-  DCHECK_GE(GetDocument()->Lifecycle().GetState(),
-            DocumentLifecycle::kPaintClean);
-  if (HasBeenDisposed()) {
-    return true;
-  }
-
-  if (!GetLayoutBox()->GetFrame()->Client()->GetWebFrame()) {
-    // If there's no WebFrame, then there's no WebFrameWidget, and we can't do
-    // threaded scrolling. This currently only happens in a WebPagePopup.
-    return true;
-  }
-
-  if (const auto* paint_artifact_compositor =
-          GetLayoutBox()->GetFrameView()->GetPaintArtifactCompositor()) {
-    if (const auto* properties =
-            GetLayoutBox()->FirstFragment().PaintProperties()) {
-      if (const auto* scroll = properties->Scroll()) {
-        return !paint_artifact_compositor->GetMainThreadRepaintReasons(*scroll)
-                    .empty();
-      }
-    }
-  }
-  return true;
-}
-
 bool PaintLayerScrollableArea::PrefersNonCompositedScrolling() const {
   if (RuntimeEnabledFeatures::PreferNonCompositedScrollingEnabled()) {
     return true;
@@ -2773,18 +2706,6 @@ bool PaintLayerScrollableArea::PrefersNonCompositedScrolling() const {
     return true;
   }
   return false;
-}
-
-bool PaintLayerScrollableArea::UsesCompositedScrolling() const {
-  const auto* properties = GetLayoutBox()->FirstFragment().PaintProperties();
-  if (!properties || !properties->Scroll()) {
-    return false;
-  }
-  const auto* paint_artifact_compositor =
-      GetLayoutBox()->GetFrameView()->GetPaintArtifactCompositor();
-  return paint_artifact_compositor &&
-         paint_artifact_compositor->UsesCompositedScrolling(
-             *properties->Scroll());
 }
 
 bool PaintLayerScrollableArea::VisualViewportSuppliesScrollbars() const {
@@ -2882,16 +2803,6 @@ bool PaintLayerScrollableArea::ScheduleAnimation() {
     return true;
   }
   return false;
-}
-
-cc::AnimationHost* PaintLayerScrollableArea::GetCompositorAnimationHost()
-    const {
-  return layer_->GetLayoutObject().GetFrameView()->GetCompositorAnimationHost();
-}
-
-cc::AnimationTimeline*
-PaintLayerScrollableArea::GetCompositorAnimationTimeline() const {
-  return layer_->GetLayoutObject().GetFrameView()->GetScrollAnimationTimeline();
 }
 
 bool PaintLayerScrollableArea::HasTickmarks() const {
@@ -3224,14 +3135,6 @@ void PaintLayerScrollableArea::InvalidatePaintOfScrollbarIfNeeded(
     if (may_be_composited != previously_might_be_composited) {
       needs_paint_invalidation = true;
       previously_might_be_composited = may_be_composited;
-    } else if (may_be_composited &&
-               (RuntimeEnabledFeatures::RasterInducingScrollEnabled() ||
-                UsesCompositedScrolling())) {
-      // Don't invalidate composited scrollbar if the change is only inside of
-      // the scrollbar. ScrollbarDisplayItem will handle such change.
-      // TODO(crbug.com/1505560): Avoid paint invalidation for non-composited
-      // scrollbars for changes inside of the scrollbar.
-      needs_paint_invalidation = false;
     }
   }
 
@@ -3372,16 +3275,6 @@ gfx::Size PaintLayerScrollableArea::PixelSnappedBorderBoxSize() const {
   return PhysicalRect(GetLayoutBox()->FirstFragment().PaintOffset(),
                       GetLayoutBox()->StitchedSize())
       .PixelSnappedSize();
-}
-
-void PaintLayerScrollableArea::DropCompositorScrollDeltaNextCommit() {
-  auto* frame_view = GetLayoutBox()->GetFrameView();
-  CHECK(frame_view);
-  if (auto* paint_artifact_compositor =
-          frame_view->GetPaintArtifactCompositor()) {
-    paint_artifact_compositor->DropCompositorScrollDeltaNextCommit(
-        GetScrollElementId());
-  }
 }
 
 gfx::Rect PaintLayerScrollableArea::ScrollingBackgroundVisualRect(

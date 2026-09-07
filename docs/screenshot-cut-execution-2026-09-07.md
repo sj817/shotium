@@ -134,6 +134,32 @@ EXE SHA256：`0f4267166f8bf876b8e18e3f7df6f36359d86635cf525cf4733c37ddc18d8cf4`�
 
 下一轮旧 IPC 调查已确认五处 Mojo `[Native]` 声明，其中网络 RedirectInfo 和连接类型通过旧 ParamTraits 序列化。拆旧 IPC 前必须迁移这些协议字段/枚举及验证 traits，不能只删 include 或禁用校验。
 
+## 第六批：浏览器宿主、弹窗、插件和合成器入口
+
+已完成源码裁剪与 Windows 运行验证，实体删除 249 个文件；同时删除对应 GN/Mojo/IDL 源项和调用，清除 10 个空目录，包括整个 Blink platform/widget。此批不涉及新的 DEPS 检出包。
+
+| 范围 | 实际处理与保留边界 |
+|---|---|
+| 浏览器嵌入层 | 删除 WebViewImpl、WebFrameWidgetImpl、WebPagePopupImpl、Local/RemoteFrameImpl、ChromeClientImpl 和浏览器 FrameClient 实现，以及 DevTools 屏幕模拟、Find、序列化等失去入口的实现。Shot 继续直接创建 Page/Frame，保留真实生命周期和最小 EmptyClients；public WebFrame/WebView 接口尾巴仍待后续处理。 |
+| 弹窗、选择器与插件 | 删除平台 widget、上下文菜单、日期/颜色/选项弹窗、文件选择、插件容器/文档/注册表、外部插件处理和协议。保留表单外观/属性/有效性、object/embed 的图片或子文档加载、安全检查和备用内容；HTMLPlugInElement 的这部分仍有截图用途。 |
+| 合成器与滚动 | 删除 PaintArtifactCompositor、PropertyTreeManager、PendingLayer、ContentLayerClientImpl、ScrollingCoordinator、LinkHighlight、VisualViewport 的 cc 图层，以及主合成宿主/触发器挂接和提交回调。主线程滚动状态迁入 ScrollAnimationState，保留曲线、坐标换算、clamp、完成/取消、调度失败即时滚动。CPU paint chunks 转换与真实 property tree 保留。 |
+| 浏览器诊断 | 删除 BlinkLeakDetector 与专用清理入口、ImageElementTiming/TextElementTiming/ElementTimingUtils，以及失去消费者的呈现回调生产端。保留当前 LCP/FCP 记录和真实加载完成条件；ContainerTiming/Performance 等后续仍要继续拆。 |
+
+普通 HTML/CSS、SVG/SMIL、图片、字体、MathML、CPU 绘制和公开 Shot API 保持。没有恢复 V8 或创建浏览器/GPU 空适配层。文件夹残留要按实际内容判断：platform/widget 已实际消失，graphics/compositing 仍保留 Shot 使用的 paint_chunks_to_cc_layer 与 chunk_to_layer_mapper；整个 gpu/cc/ui 的最终收口尚未完成。
+
+| 验证 | 结果 |
+|---|---|
+| Windows GN / 输入 | 6868 targets、857 build files；7448 个源码输入全部存在。修正了 shot_sources.gni 对已删 fullscreen_video_element.mojom 的遗漏。 |
+| Windows EXE / DLL | 均通过。按用户要求实试 20 并发时 LLVM OOM，并收集到普通 C++ 错误；批量修复后 26/26 失败 TU 的 syntax-only 通过，改用 8 并发完成剩余构建，无 OOM。 |
+| serve / net / demos | 全部通过；84 demos 为 62 exact、1 fuzzy、21 smoke，真实 HTTPS 与缓存/重定向检查通过。 |
+| Node / daemon / 协议 | 新 addon、新 DLL，全部通过。 |
+| Bilibili / acceptance | 离线长页及图片/分片检查通过；原有 Chrome oracle 差异约 1.5245%，本批没有增加。 |
+| 原始像素对照 | 177/177 解码后逐像素相同；原有 176 张加 16 个 object/embed/表单情况的专用页面。 |
+| Linux probe | 图解析通过；0 缺 BUILD、0 主仓库缺失输入；3 个 Linux DEPS 检出和 1 个宿主工具链文件未具备，此项不算实编译。 |
+| 六平台实编译 | 尚未完成，不能从 Windows 与 Linux probe 外推。 |
+
+EXE 为 46,838,784 字节（较第五批减少 1,134,592 字节），SHA256：`9989fced172bb90ea3f24eaeb0cea9da865e24e7d7d5b7148a324b4fa5ef089f`。DLL 为 46,836,736 字节，SHA256：`b882dc9c7c42e00a4bc884db0a2eca7b39de6084258fb49d8f1a979e7ad0a2fa`。源码/删除证据在 out/cut-stage10；构建日志在 out/Shot/cut-batch6-*.log；运行、177 张对照和二进制证据在 out/cut-batch6。文件行数删除不等于同等二进制收益，以上大小来自真实产物。
+
 ## 后续批次
 
 继续处理网络公共层、输入/合成器/GPU、诊断后端等剩余闭包，完整接续清单见 `screenshot-cut-task.md`。不把待处理或已关闭开关标为彻底删除。

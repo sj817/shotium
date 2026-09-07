@@ -1010,7 +1010,6 @@ Node* ContainerNode::RemoveChild(Node* old_child,
   }
 
   {
-    HTMLFrameOwnerElement::PluginDisposeSuspendScope suspend_plugin_dispose;
     TreeOrderedMap::RemoveScope tree_remove_scope;
     StyleEngine& engine = GetDocument().GetStyleEngine();
     StyleEngine::DetachLayoutTreeScope detach_scope(engine);
@@ -1080,7 +1079,6 @@ void ContainerNode::ParserRemoveChild(Node& old_child) {
 
   probe::WillRemoveDOMNode(&old_child);
 
-  HTMLFrameOwnerElement::PluginDisposeSuspendScope suspend_plugin_dispose;
   TreeOrderedMap::RemoveScope tree_remove_scope;
   StyleEngine& engine = GetDocument().GetStyleEngine();
   StyleEngine::DetachLayoutTreeScope detach_scope(engine);
@@ -1124,7 +1122,6 @@ void ContainerNode::RemoveChildren() {
   HeapVector<Member<Node>> removed_nodes;
   const bool children_changed = ChildrenChangedAllChildrenRemovedNeedsList();
   {
-    HTMLFrameOwnerElement::PluginDisposeSuspendScope suspend_plugin_dispose;
     TreeOrderedMap::RemoveScope tree_remove_scope;
     StyleEngine& engine = GetDocument().GetStyleEngine();
     StyleEngine::DetachLayoutTreeScope detach_scope(engine);

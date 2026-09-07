@@ -77,7 +77,6 @@
 #include "third_party/blink/renderer/core/html/html_body_element.h"
 #include "third_party/blink/renderer/core/html/html_frame_element_base.h"
 #include "third_party/blink/renderer/core/html_names.h"
-#include "third_party/blink/renderer/core/input/context_menu_allowed_scope.h"
 #include "third_party/blink/renderer/core/input/event_handler.h"
 #include "third_party/blink/renderer/core/layout/geometry/box_strut.h"
 #include "third_party/blink/renderer/core/layout/hit_test_request.h"
@@ -101,35 +100,11 @@
 #include "third_party/blink/renderer/platform/runtime_enabled_features.h"
 #include "third_party/blink/renderer/platform/text/text_direction.h"
 #include "third_party/blink/renderer/platform/text/unicode_utilities.h"
-#include "third_party/blink/renderer/platform/widget/frame_widget.h"
 #include "ui/gfx/geometry/quad_f.h"
 
 #define EDIT_DEBUG 0
 
 namespace blink {
-
-namespace {
-
-class ScopedHandlingInputEvent {
- public:
-  explicit ScopedHandlingInputEvent(FrameWidget* widget) : widget_(widget) {
-    if (widget_) {
-      was_handling_input_event_ = widget_->HandlingInputEvent();
-      widget_->SetHandlingInputEvent(true);
-    }
-  }
-  ~ScopedHandlingInputEvent() {
-    if (widget_) {
-      widget_->SetHandlingInputEvent(was_handling_input_event_);
-    }
-  }
-
- private:
-  FrameWidget* widget_ = nullptr;
-  bool was_handling_input_event_ = false;
-};
-
-}  // namespace
 
 static inline bool ShouldAlwaysUseDirectionalSelection(LocalFrame* frame) {
   return frame->GetEditor().Behavior().ShouldConsiderSelectionAsDirectional();
@@ -460,13 +435,6 @@ void FrameSelection::SetSelectionForAccessibility(
     const SelectionInDomTree& selection,
     const SetSelectionOptions& options) {
   ClearDocumentCachedRange();
-
-  FrameWidget* widget = nullptr;
-  if (base::FeatureList::IsEnabled(
-          features::kSetSelectionForAccessibilityHandlingInputEvent)) {
-    widget = frame_->GetWidgetForLocalRoot();
-  }
-  ScopedHandlingInputEvent scoped_handling_input_event(widget);
 
   const bool did_set = SetSelectionDeprecated(selection, options);
   CacheRangeOfDocument(CreateRange(selection.ComputeRange()));
@@ -1107,7 +1075,6 @@ void FrameSelection::SelectAll(SetSelectionBy set_selection_by,
   // TODO(editing-dev): Should we pass in set_selection_by?
   NotifyTextControlOfSelectionChange(SetSelectionBy::kUser);
   if (IsHandleVisible()) {
-    ContextMenuAllowedScope scope;
     frame_->GetEventHandler().ShowNonLocatedContextMenu(
         nullptr, ui::mojom::blink::MenuSourceType::kTouch);
   }
@@ -1510,7 +1477,6 @@ bool FrameSelection::SelectAroundCaret(
           .Build());
 
   if (context_menu_visibility == ContextMenuVisibility::kVisible) {
-    ContextMenuAllowedScope scope;
     frame_->GetEventHandler().ShowNonLocatedContextMenu(
         /*override_target_element=*/nullptr,
         ui::mojom::blink::MenuSourceType::kTouch);

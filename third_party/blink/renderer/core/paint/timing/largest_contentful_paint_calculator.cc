@@ -13,7 +13,6 @@
 #include "third_party/blink/renderer/core/html/html_image_element.h"
 #include "third_party/blink/renderer/core/html/loading_attribute.h"
 #include "third_party/blink/renderer/core/loader/document_loader.h"
-#include "third_party/blink/renderer/core/paint/timing/image_element_timing.h"
 #include "third_party/blink/renderer/core/paint/timing/image_paint_timing_detector.h"
 #include "third_party/blink/renderer/core/paint/timing/paint_timing.h"
 #include "third_party/blink/renderer/core/paint/timing/paint_timing_detector.h"
@@ -210,10 +209,10 @@ void LargestContentfulPaintCalculator::UpdateWebExposedLargestContentfulImage(
   largest_reported_size_ = largest_image.EffectiveVisualSize();
   const KURL& url = media_timing->Url();
   const String& image_string = url.GetString();
-  const String& image_url =
-      url.ProtocolIsData()
-          ? image_string.substr(0, ImageElementTiming::kInlineImageMaxChars)
-          : image_string;
+  constexpr unsigned kInlineImageMaxChars = 100;
+  const String& image_url = url.ProtocolIsData()
+                                ? image_string.substr(0, kInlineImageMaxChars)
+                                : image_string;
   // Do not expose element attribution from shadow trees.
   Element* image_element =
       image_node->IsInShadowTree() ? nullptr : To<Element>(image_node);
@@ -738,9 +737,7 @@ LargestContentfulPaintCalculator::ComputeEffectiveVisualSize(
   // "8.11 Let boundingClientArea be clientContentRect’s width *
   //       clientContentRect’s height."
   //
-  // Transform visual rect to window before downscaling.
-  gfx::RectF bounding_client_rect =
-      detector.BlinkSpaceToDIPs(gfx::RectF(image_border));
+  gfx::RectF bounding_client_rect(image_border);
   const uint64_t bounding_client_area = bounding_client_rect.size().GetArea();
 
   // "8.12 Let scaleFactor be boundingClientArea / naturalArea."

@@ -86,15 +86,10 @@ class CORE_EXPORT RootFrameViewport final
   gfx::Vector2d MaximumScrollOffsetInt() const override;
   ScrollOffset MaximumScrollOffset() const override;
   gfx::Size ContentsSize() const override;
-  bool UsesCompositedScrolling() const override;
-  bool ShouldScrollOnMainThread() const override;
   bool ScrollbarsCanBeActive() const override;
   bool UserInputScrollable(ScrollbarOrientation) const override;
   bool ShouldPlaceVerticalScrollbarOnLeft() const override;
   void ScrollControlWasSetNeedsPaintInvalidation() override;
-  cc::Layer* LayerForHorizontalScrollbar() const override;
-  cc::Layer* LayerForVerticalScrollbar() const override;
-  cc::Layer* LayerForScrollCorner() const override;
   int HorizontalScrollbarHeight(OverlayScrollbarClipBehavior =
                                     kIgnoreOverlayScrollbarSize) const override;
   int VerticalScrollbarWidth(OverlayScrollbarClipBehavior =
@@ -110,7 +105,7 @@ class CORE_EXPORT RootFrameViewport final
   bool ScrollAnimatorEnabled() const override;
   ChromeClient* GetChromeClient() const override;
   void ServiceScrollAnimations(double) override;
-  void UpdateCompositorScrollAnimations() override;
+  void UpdateScrollAnimationState() override;
   void CancelProgrammaticScrollAnimation() override;
   mojom::blink::ScrollBehavior ScrollBehaviorStyle() const override;
   mojom::blink::ColorScheme UsedColorSchemeScrollbars() const override;
@@ -174,7 +169,6 @@ class CORE_EXPORT RootFrameViewport final
   std::optional<cc::ElementId> GetTargetedSnapAreaId() override;
   void SetTargetedSnapAreaId(const std::optional<cc::ElementId>&) override;
 
-  void DropCompositorScrollDeltaNextCommit() override;
 
  protected:
   // ScrollableArea implementation

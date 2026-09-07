@@ -31,10 +31,8 @@
 #include "base/metrics/field_trial_params.h"
 #include "third_party/blink/public/common/features.h"
 #include "third_party/blink/public/platform/platform.h"
-#include "third_party/blink/public/platform/web_prescient_networking.h"
 #include "third_party/blink/renderer/core/dom/document.h"
 #include "third_party/blink/renderer/core/frame/settings.h"
-#include "third_party/blink/renderer/core/frame/web_local_frame_impl.h"
 #include "third_party/blink/renderer/core/loader/document_loader.h"
 #include "third_party/blink/renderer/platform/loader/fetch/resource.h"
 #include "third_party/blink/renderer/platform/loader/fetch/resource_fetcher.h"
@@ -95,34 +93,12 @@ void HTMLResourcePreloader::Trace(Visitor* visitor) const {
   visitor->Trace(document_);
 }
 
-static void PreconnectHost(LocalFrame* local_frame, PreloadRequest* request) {
-  DCHECK(request);
-  DCHECK(request->IsPreconnect());
-  KURL host(request->BaseURL(), request->ResourceURL());
-  if (!host.IsValid() || !host.ProtocolIsInHttpFamily()) {
-    return;
-  }
-  WebPrescientNetworking* web_prescient_networking =
-      local_frame->PrescientNetworking();
-  if (web_prescient_networking) {
-    web_prescient_networking->Preconnect(
-        host, request->CrossOrigin() != kCrossOriginAttributeAnonymous);
-  }
-}
-
 // static
 bool HTMLResourcePreloader::ShouldPreload(
     const Document* document,
     ResourceType type,
-    bool is_preconnect,
     FetchParameters::DeferOption defer_option,
     mojom::blink::FetchPriorityHint priority_hint) {
-  // Preconnects are handled separately by HTMLResourcePreloader::Preload
-  // and should never be filtered by this logic.
-  if (is_preconnect) {
-    return true;
-  }
-
   if (!base::FeatureList::IsEnabled(features::kLightweightNoStatePrefetch)) {
     return true;
   }
@@ -146,11 +122,6 @@ bool HTMLResourcePreloader::ShouldPreload(
 }
 
 void HTMLResourcePreloader::Preload(std::unique_ptr<PreloadRequest> preload) {
-  if (preload->IsPreconnect()) {
-    PreconnectHost(document_->GetFrame(), preload.get());
-    return;
-  }
-
   if (!AllowPreloadRequest(preload.get())) {
     return;
   }
@@ -163,7 +134,7 @@ void HTMLResourcePreloader::Preload(std::unique_ptr<PreloadRequest> preload) {
 
 bool HTMLResourcePreloader::AllowPreloadRequest(PreloadRequest* preload) const {
   return ShouldPreload(document_, preload->GetResourceType(),
-                       preload->IsPreconnect(), preload->DeferOption(),
+                       preload->DeferOption(),
                        preload->FetchPriorityHint());
 }
 

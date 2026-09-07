@@ -38,10 +38,6 @@ class CORE_EXPORT EventTrigger : public AnimationTrigger {
   void Trace(Visitor* visitor) const override;
 
  private:
-  // cc::AnimationTriggerDelegate implementation.
-  void NotifyActivated(base::TimeTicks monotonic_time) override {}
-  void NotifyDeactivated(base::TimeTicks monotonic_time) override {}
-
   void DidAddAnimation() override;
   void DidRemoveAnimation(Animation* animation) override;
   void ClearListenerIfNecessary();

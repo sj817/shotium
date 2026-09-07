@@ -25,12 +25,9 @@
 #include "third_party/blink/renderer/core/layout/layout_embedded_content.h"
 
 #include "third_party/blink/public/common/features.h"
-#include "third_party/blink/renderer/core/exported/web_plugin_container_impl.h"
 #include "third_party/blink/renderer/core/frame/embedded_content_view.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
 #include "third_party/blink/renderer/core/frame/local_frame_view.h"
-#include "third_party/blink/renderer/core/frame/remote_frame.h"
-#include "third_party/blink/renderer/core/frame/remote_frame_view.h"
 #include "third_party/blink/renderer/core/html/html_frame_element_base.h"
 #include "third_party/blink/renderer/core/html/html_plugin_element.h"
 #include "third_party/blink/renderer/core/layout/hit_test_location.h"
@@ -74,14 +71,6 @@ LayoutView* LayoutEmbeddedContent::ChildLayoutView() const {
     if (Document* content_document = owner_element->contentDocument())
       return content_document->GetLayoutView();
   }
-  return nullptr;
-}
-
-WebPluginContainerImpl* LayoutEmbeddedContent::Plugin() const {
-  NOT_DESTROYED();
-  EmbeddedContentView* embedded_content_view = GetEmbeddedContentView();
-  if (embedded_content_view && embedded_content_view->IsPluginView())
-    return To<WebPluginContainerImpl>(embedded_content_view);
   return nullptr;
 }
 
@@ -349,19 +338,7 @@ void LayoutEmbeddedContent::PaintReplaced(
   NOT_DESTROYED();
   if (ChildPaintBlockedByDisplayLock())
     return;
-  CountSvgFilterPaint();
   EmbeddedContentPainter(*this).PaintReplaced(paint_info, paint_offset);
-}
-
-CursorDirective LayoutEmbeddedContent::GetCursor(const PhysicalOffset& point,
-                                                 ui::Cursor& cursor) const {
-  NOT_DESTROYED();
-  if (Plugin()) {
-    // A plugin is responsible for setting the cursor when the pointer is over
-    // it.
-    return kDoNotSetCursor;
-  }
-  return LayoutReplaced::GetCursor(point, cursor);
 }
 
 PhysicalRect LayoutEmbeddedContent::ReplacedContentRectFrom(
@@ -447,8 +424,6 @@ void LayoutEmbeddedContent::UpdateGeometry(
   // needs to take transform and into account. A few callers still use the
   // family of conversion function, including but not exhaustive:
   // LocalFrameView::updateViewportIntersectionIfNeeded()
-  // RemoteFrameView::frameRectsChanged().
-  // WebPluginContainerImpl::reportGeometry()
   // TODO(trchen): Remove this hack once we fixed all callers.
   frame_rect.set_origin(gfx::ToRoundedPoint(absolute_bounding_box.origin()));
 
@@ -476,27 +451,6 @@ bool LayoutEmbeddedContent::IsThrottledFrameView() const {
   if (auto* local_frame_view = DynamicTo<LocalFrameView>(ChildFrameView()))
     return local_frame_view->ShouldThrottleRendering();
   return false;
-}
-
-void LayoutEmbeddedContent::CountSvgFilterPaint() const {
-  if (!GetEmbeddedContentView()) {
-    return;
-  }
-  // This is an iteration of all (local) parents on every paint, but embedded
-  // content is rare enough that we do not expect this to be a problem.
-  const LayoutObject* target = this;
-  while (target) {
-    if (target->StyleRef().HasReferenceFilter()) {
-      UseCounter::Count(GetDocument(),
-                        GetEmbeddedContentView()->SvgFilterPaintedCounter());
-      return;
-    }
-    if (IsA<LayoutView>(*target)) {
-      target = target->GetFrame()->OwnerLayoutObject();
-    } else {
-      target = target->Parent();
-    }
-  }
 }
 
 }  // namespace blink

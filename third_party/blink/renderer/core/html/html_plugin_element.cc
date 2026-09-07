@@ -39,7 +39,6 @@
 #include "third_party/blink/renderer/core/dom/node.h"
 #include "third_party/blink/renderer/core/dom/shadow_root.h"
 #include "third_party/blink/renderer/core/execution_context/agent.h"
-#include "third_party/blink/renderer/core/exported/web_plugin_container_impl.h"
 #include "third_party/blink/renderer/core/frame/csp/content_security_policy.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
 #include "third_party/blink/renderer/core/frame/local_frame_client.h"
@@ -47,7 +46,6 @@
 #include "third_party/blink/renderer/core/frame/settings.h"
 #include "third_party/blink/renderer/core/html/html_image_loader.h"
 #include "third_party/blink/renderer/core/html/html_slot_element.h"
-#include "third_party/blink/renderer/core/html/plugin_document.h"
 #include "third_party/blink/renderer/core/html_names.h"
 #include "third_party/blink/renderer/core/input/event_handler.h"
 #include "third_party/blink/renderer/core/inspector/console_message.h"
@@ -56,7 +54,6 @@
 #include "third_party/blink/renderer/core/layout/layout_image.h"
 #include "third_party/blink/renderer/core/loader/mixed_content_checker.h"
 #include "third_party/blink/renderer/core/page/page.h"
-#include "third_party/blink/renderer/core/page/plugin_data.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
 #include "third_party/blink/renderer/platform/instrumentation/use_counter.h"
 #include "third_party/blink/renderer/platform/loader/fetch/resource_request.h"
@@ -90,40 +87,6 @@ String ResolveMIMEType(const String& specified_type, const KURL& url) {
 
 }  // anonymous namespace
 
-const Vector<String>& PluginParameters::Names() const {
-  return names_;
-}
-
-const Vector<String>& PluginParameters::Values() const {
-  return values_;
-}
-
-void PluginParameters::AppendAttribute(const Attribute& attribute) {
-  names_.push_back(attribute.LocalName().GetString());
-  values_.push_back(attribute.Value().GetString());
-}
-void PluginParameters::AppendNameWithValue(const String& name,
-                                           const String& value) {
-  names_.push_back(name);
-  values_.push_back(value);
-}
-
-void PluginParameters::MapDataParamToSrc() {
-  if (std::ranges::any_of(names_, [](auto name) {
-        return EqualIgnoringAsciiCase(name, "src");
-      })) {
-    return;
-  }
-
-  auto data = std::ranges::find_if(
-      names_, [](auto name) { return EqualIgnoringAsciiCase(name, "data"); });
-
-  if (data != names_.end()) {
-    AppendNameWithValue(
-        "src", values_[base::checked_cast<wtf_size_t>(data - names_.begin())]);
-  }
-}
-
 HTMLPlugInElement::HTMLPlugInElement(const QualifiedName& tag_name,
                                      Document& doc,
                                      const CreateElementFlags flags)
@@ -144,38 +107,11 @@ HTMLPlugInElement::~HTMLPlugInElement() {
 
 void HTMLPlugInElement::Trace(Visitor* visitor) const {
   visitor->Trace(image_loader_);
-  visitor->Trace(persisted_plugin_);
   HTMLFrameOwnerElement::Trace(visitor);
 }
 
 bool HTMLPlugInElement::HasPendingActivity() const {
   return image_loader_ && image_loader_->HasPendingActivity();
-}
-
-void HTMLPlugInElement::SetPersistedPlugin(WebPluginContainerImpl* plugin) {
-  if (persisted_plugin_ == plugin)
-    return;
-  if (persisted_plugin_) {
-    persisted_plugin_->Hide();
-    DisposePluginSoon(persisted_plugin_.Release());
-  }
-  persisted_plugin_ = plugin;
-}
-
-void HTMLPlugInElement::SetFocused(bool focused,
-                                   mojom::blink::FocusType focus_type) {
-  WebPluginContainerImpl* plugin = OwnedPlugin();
-  if (plugin)
-    plugin->SetFocused(focused, focus_type);
-  HTMLFrameOwnerElement::SetFocused(focused, focus_type);
-}
-
-bool HTMLPlugInElement::CanProcessDrag() const {
-  // Be careful to call PluginEmbeddedContentView only once, because calling
-  // it can change things such that another call will return a different
-  // result.
-  WebPluginContainerImpl* plugin = PluginEmbeddedContentView();
-  return plugin && plugin->CanProcessDrag();
 }
 
 bool HTMLPlugInElement::CanStartSelection() const {
@@ -189,13 +125,6 @@ bool HTMLPlugInElement::WillRespondToMouseClickEvents() {
   return r && (r->IsEmbeddedObject() || r->IsLayoutEmbeddedContent());
 }
 
-void HTMLPlugInElement::RemoveAllEventListeners() {
-  HTMLFrameOwnerElement::RemoveAllEventListeners();
-  WebPluginContainerImpl* plugin = OwnedPlugin();
-  if (plugin)
-    plugin->EventListenersRemoved();
-}
-
 void HTMLPlugInElement::DidMoveToNewDocument(Document& old_document) {
   if (image_loader_)
     image_loader_->ElementDidMoveToNewDocument();
@@ -207,12 +136,6 @@ void HTMLPlugInElement::AttachLayoutTree(AttachContext& context) {
 
   LayoutObject* layout_object = GetLayoutObject();
   if (!layout_object || UseFallbackContent()) {
-    // If we don't have a layoutObject we have to dispose of any plugins
-    // which we persisted over a reattach.
-    if (persisted_plugin_) {
-      HTMLFrameOwnerElement::PluginDisposeSuspendScope suspend_plugin_dispose;
-      SetPersistedPlugin(nullptr);
-    }
     return;
   }
 
@@ -234,7 +157,6 @@ void HTMLPlugInElement::AttachLayoutTree(AttachContext& context) {
   } else if (!IsImageType() && NeedsPluginUpdate() &&
              GetLayoutEmbeddedObject() &&
              !GetLayoutEmbeddedObject()->ShowsUnavailablePluginIndicator() &&
-             GetObjectContentType() != ObjectContentType::kPlugin &&
              !is_delaying_load_event_) {
     // If we're in a content-visibility subtree that can prevent layout, then
     // add our layout object to the frame view's update list. This is typically
@@ -279,19 +201,6 @@ Node::InsertionNotificationRequest HTMLPlugInElement::InsertedInto(
   return HTMLFrameOwnerElement::InsertedInto(insertion_point);
 }
 
-void HTMLPlugInElement::RemovedFrom(ContainerNode& insertion_point) {
-  // Plugins can persist only through reattachment during a lifecycle
-  // update. This method shouldn't be called in that lifecycle phase.
-  DCHECK(!persisted_plugin_);
-
-  HTMLFrameOwnerElement::RemovedFrom(insertion_point);
-}
-
-bool HTMLPlugInElement::ShouldAccelerate() const {
-  WebPluginContainerImpl* plugin = OwnedPlugin();
-  return plugin && plugin->CcLayer();
-}
-
 network::ParsedPermissionsPolicy HTMLPlugInElement::ConstructContainerPolicy()
     const {
   return GetLegacyFramePolicies();
@@ -309,25 +218,7 @@ void HTMLPlugInElement::DetachLayoutTree(bool performing_reattach) {
     GetDocument().DecrementLoadEventDelayCount();
   }
 
-  bool keep_plugin = performing_reattach && !dispose_view_;
-
-  // Only try to persist a plugin we actually own.
-  WebPluginContainerImpl* plugin = OwnedPlugin();
-  if (plugin && keep_plugin) {
-    SetPersistedPlugin(
-        To<WebPluginContainerImpl>(ReleaseEmbeddedContentView()));
-  } else {
-    // A persisted plugin isn't processed and hooked up immediately
-    // (synchronously) when attaching the layout object, so it's possible that
-    // it's still around. That's fine if we're allowed to keep it. Otherwise,
-    // get rid of it now.
-    if (persisted_plugin_ && !keep_plugin)
-      SetPersistedPlugin(nullptr);
-
-    // Clear the plugin; will trigger disposal of it with Oilpan.
-    if (!persisted_plugin_)
-      SetEmbeddedContentView(nullptr);
-  }
+  SetEmbeddedContentView(nullptr);
 
   // We should attempt to use the same view afterwards, so that we don't lose
   // state. But only if we're reattaching. Otherwise we need to throw it away,
@@ -336,8 +227,6 @@ void HTMLPlugInElement::DetachLayoutTree(bool performing_reattach) {
   if (!performing_reattach)
     SetDisposeView();
 
-  RemovePluginFromFrameView(plugin);
-  ResetInstance();
 
   HTMLFrameOwnerElement::DetachLayoutTree(performing_reattach);
 }
@@ -356,7 +245,7 @@ LayoutObject* HTMLPlugInElement::CreateLayoutObject(
     return image;
   }
 
-  plugin_is_available_ = true;
+  embedded_content_is_available_ = true;
   return MakeGarbageCollected<LayoutEmbeddedObject>(this);
 }
 
@@ -364,28 +253,6 @@ void HTMLPlugInElement::FinishParsingChildren() {
   HTMLFrameOwnerElement::FinishParsingChildren();
   if (!UseFallbackContent())
     SetNeedsPluginUpdate(true);
-}
-
-void HTMLPlugInElement::ResetInstance() {
-  // This used to drop the cached script-side wrapper object of the plugin's
-  // scriptable object. There is no scripting engine and therefore no such
-  // cache; the
-  // element holds no per-instance script state to reset. Kept because
-  // WebPluginContainerImpl and the load path below still announce the event.
-}
-
-WebPluginContainerImpl* HTMLPlugInElement::PluginEmbeddedContentView() const {
-  if (LayoutEmbeddedContent* layout_embedded_content =
-          LayoutEmbeddedContentForJSBindings())
-    return layout_embedded_content->Plugin();
-  return nullptr;
-}
-
-WebPluginContainerImpl* HTMLPlugInElement::OwnedPlugin() const {
-  EmbeddedContentView* view = OwnedEmbeddedContentView();
-  if (view && view->IsPluginView())
-    return To<WebPluginContainerImpl>(view);
-  return nullptr;
 }
 
 bool HTMLPlugInElement::IsPresentationAttribute(
@@ -437,41 +304,7 @@ void HTMLPlugInElement::DefaultEventHandler(Event& event) {
     if (embedded_object->ShowsUnavailablePluginIndicator())
       return;
   }
-  if (WebPluginContainerImpl* plugin = OwnedPlugin()) {
-    plugin->HandleEvent(event);
-    if (event.DefaultHandled())
-      return;
-  }
   HTMLFrameOwnerElement::DefaultEventHandler(event);
-}
-
-LayoutEmbeddedContent* HTMLPlugInElement::LayoutEmbeddedContentForJSBindings()
-    const {
-  // Needs to load the plugin immediatedly because this function is called
-  // when JavaScript code accesses the plugin.
-  // FIXME: Check if dispatching events here is safe.
-  GetDocument().UpdateStyleAndLayout(DocumentUpdateReason::kJavaScript);
-  if (auto* view = GetDocument().View())
-    view->FlushAnyPendingPostLayoutTasks();
-
-  return ExistingLayoutEmbeddedContent();
-}
-
-bool HTMLPlugInElement::IsKeyboardFocusableSlow(
-    UpdateBehavior update_behavior) const {
-  if (HTMLFrameOwnerElement::IsKeyboardFocusableSlow(update_behavior)) {
-    return true;
-  }
-
-  WebPluginContainerImpl* embedded_content_view = nullptr;
-  if (LayoutEmbeddedContent* layout_embedded_content =
-          ExistingLayoutEmbeddedContent()) {
-    embedded_content_view = layout_embedded_content->Plugin();
-  }
-
-  return GetDocument().IsActive() && embedded_content_view &&
-         embedded_content_view->SupportsKeyboardFocus() &&
-         IsFocusable(update_behavior);
 }
 
 bool HTMLPlugInElement::HasCustomFocusLogic() const {
@@ -480,19 +313,6 @@ bool HTMLPlugInElement::HasCustomFocusLogic() const {
 
 bool HTMLPlugInElement::IsPluginElement() const {
   return true;
-}
-
-bool HTMLPlugInElement::IsErrorplaceholder() {
-  // Be careful to call PluginEmbeddedContentView only once, because calling
-  // it can change things such that another call will return a different
-  // result.
-  WebPluginContainerImpl* plugin = PluginEmbeddedContentView();
-  return plugin && plugin->IsErrorplaceholder();
-}
-
-void HTMLPlugInElement::DisconnectContentFrame() {
-  HTMLFrameOwnerElement::DisconnectContentFrame();
-  SetPersistedPlugin(nullptr);
 }
 
 bool HTMLPlugInElement::IsFocusableStyle(UpdateBehavior update_behavior) const {
@@ -506,7 +326,7 @@ bool HTMLPlugInElement::IsFocusableStyle(UpdateBehavior update_behavior) const {
       !HTMLFrameOwnerElement::IsFocusableStyle(update_behavior)) {
     return false;
   }
-  return plugin_is_available_;
+  return embedded_content_is_available_;
 }
 
 HTMLPlugInElement::ObjectContentType HTMLPlugInElement::GetObjectContentType()
@@ -517,22 +337,8 @@ HTMLPlugInElement::ObjectContentType HTMLPlugInElement::GetObjectContentType()
     return ObjectContentType::kFrame;
   }
 
-  // If Chrome is started with the --disable-plugins switch, pluginData is 0.
-  PluginData* plugin_data = GetDocument().GetFrame()->GetPluginData();
-  bool plugin_supports_mime_type =
-      plugin_data && plugin_data->SupportsMimeType(mime_type);
-  if (plugin_supports_mime_type &&
-      plugin_data->IsExternalPluginMimeType(mime_type)) {
-    return ObjectContentType::kExternalPlugin;
-  }
-
-  if (MIMETypeRegistry::IsSupportedImageMIMEType(mime_type)) {
-    return plugin_supports_mime_type ? ObjectContentType::kPlugin
-                                     : ObjectContentType::kImage;
-  }
-
-  if (plugin_supports_mime_type)
-    return ObjectContentType::kPlugin;
+  if (MIMETypeRegistry::IsSupportedImageMIMEType(mime_type))
+    return ObjectContentType::kImage;
   if (MIMETypeRegistry::IsSupportedNonImageMIMEType(mime_type))
     return ObjectContentType::kFrame;
   return ObjectContentType::kNone;
@@ -560,7 +366,7 @@ bool HTMLPlugInElement::AllowedToLoadFrameURL(const String& url) {
   return true;
 }
 
-bool HTMLPlugInElement::RequestObject(const PluginParameters& plugin_params) {
+bool HTMLPlugInElement::RequestObject() {
   if (url_.empty() && service_type_.empty())
     return false;
 
@@ -572,36 +378,13 @@ bool HTMLPlugInElement::RequestObject(const PluginParameters& plugin_params) {
     return false;
 
   ObjectContentType object_type = GetObjectContentType();
-  bool handled_externally =
-      object_type == ObjectContentType::kExternalPlugin &&
-      AllowedToLoadPlugin(completed_url) &&
-      GetDocument().GetFrame()->Client()->IsPluginHandledExternally(
-          *this, completed_url, ResolveMIMEType(service_type_, completed_url));
-  if (handled_externally)
-    ResetInstance();
   if (object_type == ObjectContentType::kFrame ||
-      object_type == ObjectContentType::kImage || handled_externally) {
+      object_type == ObjectContentType::kImage) {
     if (object_type == ObjectContentType::kFrame) {
       UseCounter::Count(GetDocument(),
                         WebFeature::kPluginElementLoadedDocument);
     } else if (object_type == ObjectContentType::kImage) {
       UseCounter::Count(GetDocument(), WebFeature::kPluginElementLoadedImage);
-    } else {
-      UseCounter::Count(GetDocument(),
-                        WebFeature::kPluginElementLoadedExternal);
-    }
-
-    if (ContentFrame() && ContentFrame()->IsRemoteFrame()) {
-      // During lazy reattaching, the plugin element loses EmbeddedContentView.
-      // Since the ContentFrame() is not torn down the options here are to
-      // either re-create a new RemoteFrameView or reuse the old one. The former
-      // approach requires CommitNavigation for OOPF to be sent back here in
-      // the parent process. It is easier to just reuse the current FrameView
-      // instead until plugin element issue are properly resolved (for context
-      // see https://crbug.com/781880).
-      DCHECK(!OwnedEmbeddedContentView());
-      SetEmbeddedContentView(ContentFrame()->View());
-      DCHECK(OwnedEmbeddedContentView());
     }
 
     // If the plugin element already contains a subframe,
@@ -611,84 +394,12 @@ bool HTMLPlugInElement::RequestObject(const PluginParameters& plugin_params) {
     return LoadOrRedirectSubframe(completed_url, GetNameAttribute(), true);
   }
 
-  // If an object's content can't be handled and it has no fallback, let
-  // it be handled as a plugin to show the broken plugin icon.
-  bool use_fallback =
-      object_type == ObjectContentType::kNone && HasFallbackContent();
-  return LoadPlugin(completed_url, service_type_, plugin_params, use_fallback);
-}
-
-bool HTMLPlugInElement::LoadPlugin(const KURL& url,
-                                   const String& mime_type,
-                                   const PluginParameters& plugin_params,
-                                   bool use_fallback) {
-  if (!AllowedToLoadPlugin(url)) {
-    return false;
-  }
-
-  LocalFrame* frame = GetDocument().GetFrame();
-  if (!frame->Loader().AllowPlugins())
-    return false;
-
-  auto* layout_object = GetLayoutEmbeddedObject();
-  // FIXME: This code should not depend on layoutObject!
-  if (!layout_object || use_fallback)
-    return false;
-
-  VLOG(1) << this << " Plugin URL: " << url_;
-  VLOG(1) << "Loaded URL: " << url.GetString();
-  loaded_url_ = url;
-
-  if (persisted_plugin_) {
-    auto* plugin = persisted_plugin_.Get();
-    SetEmbeddedContentView(persisted_plugin_.Release());
-    layout_object->GetFrameView()->AddPlugin(plugin);
-  } else {
-    bool load_manually =
-        IsA<PluginDocument>(GetDocument()) && !GetDocument().ContainsPlugins();
-    WebPluginContainerImpl* plugin = frame->Client()->CreatePlugin(
-        *this, url, plugin_params.Names(), plugin_params.Values(), mime_type,
-        load_manually);
-    if (!plugin) {
-      layout_object = GetLayoutEmbeddedObject();
-      // LayoutObject can be destroyed between the previous check and here.
-      if (layout_object && !layout_object->ShowsUnavailablePluginIndicator()) {
-        plugin_is_available_ = false;
-        layout_object->SetPluginAvailability(
-            LayoutEmbeddedObject::kPluginMissing);
-      }
-      return false;
-    }
-
-    SetEmbeddedContentView(plugin);
-    layout_object->GetFrameView()->AddPlugin(plugin);
-  }
-
-  // Disable back/forward cache when a document uses a plugin. This is not
-  // done in the constructor since `HTMLPlugInElement` is a base class for
-  // HTMLObjectElement and HTMLEmbedElement which can host child browsing
-  // contexts instead.
-  GetExecutionContext()->GetScheduler()->RegisterStickyFeature(
-      SchedulingPolicy::Feature::kContainsPlugins,
-      {SchedulingPolicy::DisableBackForwardCache()});
-
-  GetDocument().SetContainsPlugins();
-  // TODO(esprehn): WebPluginContainerImpl::SetCcLayer() also schedules a
-  // compositing update, do we need both?
-  SetNeedsCompositingUpdate();
-  if (layout_object->HasLayer())
-    layout_object->Layer()->SetNeedsCompositingInputsUpdate();
-  return true;
+  return false;
 }
 
 void HTMLPlugInElement::DispatchErrorEvent() {
   ReportFallbackResourceTimingIfNeeded();
-  if (IsA<PluginDocument>(GetDocument()) && GetDocument().LocalOwner()) {
-    GetDocument().LocalOwner()->DispatchEvent(
-        *Event::Create(event_type_names::kError));
-  } else {
-    DispatchEvent(*Event::Create(event_type_names::kError));
-  }
+  DispatchEvent(*Event::Create(event_type_names::kError));
 }
 
 bool HTMLPlugInElement::AllowedToLoadObject(const KURL& url,
@@ -713,7 +424,7 @@ bool HTMLPlugInElement::AllowedToLoadObject(const KURL& url,
   auto* csp = GetExecutionContext()->GetContentSecurityPolicy();
   if (!csp->AllowObjectFromSource(url)) {
     if (auto* layout_object = GetLayoutEmbeddedObject()) {
-      plugin_is_available_ = false;
+      embedded_content_is_available_ = false;
       layout_object->SetPluginAvailability(
           LayoutEmbeddedObject::kPluginBlockedByContentSecurityPolicy);
     }
@@ -728,40 +439,6 @@ bool HTMLPlugInElement::AllowedToLoadObject(const KURL& url,
              ResourceRequest::RedirectStatus::kNoRedirect, url,
              /* devtools_id= */ String(), ReportingDisposition::kReport,
              GetDocument().Loader()->GetContentSecurityNotifier());
-}
-
-bool HTMLPlugInElement::AllowedToLoadPlugin(const KURL& url) {
-  if (GetExecutionContext()->IsSandboxed(
-          network::mojom::blink::WebSandboxFlags::kPlugins)) {
-    GetExecutionContext()->AddConsoleMessage(
-        MakeGarbageCollected<ConsoleMessage>(
-            mojom::blink::ConsoleMessageSource::kSecurity,
-            mojom::blink::ConsoleMessageLevel::kError,
-            StrCat({"Failed to load '", url.ElidedString(),
-                    "' as a plugin, because the frame into which the plugin is "
-                    "loading is sandboxed."})));
-    return false;
-  }
-  return true;
-}
-
-void HTMLPlugInElement::RemovePluginFromFrameView(
-    WebPluginContainerImpl* plugin) {
-  if (!plugin)
-    return;
-
-  auto* layout_object = GetLayoutEmbeddedObject();
-  if (!layout_object)
-    return;
-
-  auto* frame_view = layout_object->GetFrameView();
-  if (!frame_view)
-    return;
-
-  if (!frame_view->Plugins().Contains(plugin))
-    return;
-
-  frame_view->RemovePlugin(plugin);
 }
 
 void HTMLPlugInElement::DidAddUserAgentShadowRoot(ShadowRoot&) {

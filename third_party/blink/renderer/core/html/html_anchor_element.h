@@ -114,7 +114,6 @@ class CORE_EXPORT HTMLAnchorElementBase : public HTMLElement,
   bool draggable() const final;
   bool IsInteractiveContent() const final;
   InsertionNotificationRequest InsertedInto(ContainerNode&) override;
-  void RemovedFrom(ContainerNode&) override;
   void NavigateToHyperlink(ResourceRequest,
                            NavigationPolicy,
                            bool is_trusted,

@@ -20,23 +20,6 @@
     ],
   },
   observers: {
-    // EvaluateScriptBlock, ExecuteScript, InvokeCallback, InvokeEventHandler,
-    // WillHandlePromise and UserEntryPoint were dropped from this list: they
-    // took ScriptState/v8::Local handles and were deleted from core_probes.pidl
-    // along with V8. AnimationFrameTimingMonitor never actually implemented
-    // Will()/Did() overloads for them (see animation_frame_timing_monitor.h),
-    // so removing them here only stops the generator from trying to call
-    // methods that were never there.
-    AnimationFrameTimingMonitor: {
-      include_path: "third_party/blink/renderer/core/frame",
-      probes: [
-        "DidFinishSyncXHR",
-        "DidRunJavaScriptDialog",
-        "RecalculateStyle",
-        "UpdateLayout",
-        "FrameRelatedTask",
-      ]
-    },
     // CallFunction and ExecuteScript were dropped from this list for the same
     // reason (V8 handles, probe deleted). PerformanceMonitor's Will/Did
     // overloads for them are removed in performance_monitor.h/.cc.

@@ -27,7 +27,6 @@
 #include "third_party/blink/public/strings/grit/blink_strings.h"
 #include "third_party/blink/renderer/core/css_value_keywords.h"
 #include "third_party/blink/renderer/core/dom/document.h"
-#include "third_party/blink/renderer/core/exported/web_plugin_container_impl.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
 #include "third_party/blink/renderer/core/frame/local_frame_view.h"
 #include "third_party/blink/renderer/core/html/html_plugin_element.h"
@@ -90,7 +89,6 @@ void LayoutEmbeddedObject::PaintReplaced(
     const PaintInfo& paint_info,
     const PhysicalOffset& paint_offset) const {
   NOT_DESTROYED();
-  CountSvgFilterPaint();
   EmbeddedObjectPainter(*this).PaintReplaced(paint_info, paint_offset);
 }
 

@@ -12,8 +12,6 @@
 #include "third_party/blink/renderer/core/frame/local_frame.h"
 #include "third_party/blink/renderer/core/frame/local_frame_view.h"
 #include "third_party/blink/renderer/core/frame/web_feature.h"
-#include "third_party/blink/renderer/core/frame/web_frame_widget_impl.h"
-#include "third_party/blink/renderer/core/frame/web_local_frame_impl.h"
 #include "third_party/blink/renderer/core/html/html_element.h"
 #include "third_party/blink/renderer/core/layout/layout_embedded_content.h"
 #include "third_party/blink/renderer/core/layout/layout_view.h"
@@ -32,13 +30,9 @@ HitTestResult HitTestResultInFrame(
   if (!frame || !frame->ContentLayoutObject())
     return result;
   if (LocalFrameView* frame_view = frame->View()) {
-    if (!RuntimeEnabledFeatures::UnboundedElementEnabled() ||
-        !frame->GetDocument() ||
-        !frame->GetDocument()->HasActiveUnboundedElements()) {
-      PhysicalRect rect(PhysicalOffset(), PhysicalSize(frame_view->Size()));
-      if (!location.Intersects(rect)) {
-        return result;
-      }
+    PhysicalRect rect(PhysicalOffset(), PhysicalSize(frame_view->Size()));
+    if (!location.Intersects(rect)) {
+      return result;
     }
   }
   frame->ContentLayoutObject()->HitTest(location, result);
@@ -176,66 +170,11 @@ LocalFrame* SubframeForTargetNode(Node* node, bool* is_remote_frame) {
   return &local_frame_view->GetFrame();
 }
 
-std::optional<UnboundedSubframeHitTestResult> SubframeForActiveUnboundedElement(
-    LocalFrame* from_frame,
-    const gfx::PointF& point_in_root_frame) {
-  if (!RuntimeEnabledFeatures::UnboundedElementEnabled() || !from_frame) {
-    return std::nullopt;
-  }
-  auto* web_frame = WebLocalFrameImpl::FromFrame(&from_frame->LocalFrameRoot());
-  if (!web_frame) {
-    return std::nullopt;
-  }
-  auto* widget = web_frame->FrameWidgetImpl();
-  if (!widget) {
-    return std::nullopt;
-  }
-  auto* active_element = widget->GetActiveUnboundedElement();
-  if (!active_element) {
-    return std::nullopt;
-  }
-  auto* subframe = active_element->GetDocument().GetFrame();
-  if (!subframe || subframe == from_frame ||
-      !subframe->Tree().IsDescendantOf(from_frame) ||
-      !subframe->ContentLayoutObject()) {
-    return std::nullopt;
-  }
-  PhysicalOffset subframe_point =
-      ContentPointFromRootFrame(subframe, point_in_root_frame);
-  HitTestLocation subframe_location(subframe_point);
-  HitTestRequest request(HitTestRequest::kReadOnly |
-                         HitTestRequest::kIgnoreClipping |
-                         HitTestRequest::kAllowChildFrameContent);
-  HitTestResult subframe_result(request, subframe_location);
-  if (!subframe->ContentLayoutObject()->HitTest(subframe_location,
-                                                subframe_result)) {
-    return std::nullopt;
-  }
-  Node* inner_node = subframe_result.InnerNode();
-  if (!inner_node || (inner_node != active_element &&
-                      !inner_node->IsDescendantOf(active_element))) {
-    return std::nullopt;
-  }
-  return UnboundedSubframeHitTestResult{
-      .frame = subframe,
-      .location = subframe_location,
-      .result = subframe_result,
-  };
-}
-
 LocalFrame* GetTargetSubframe(
     const MouseEventWithHitTestResults& hit_test_result,
     bool* is_remote_frame) {
   if (hit_test_result.IsOverEmbeddedContentView()) {
     return SubframeForTargetNode(hit_test_result.InnerNode(), is_remote_frame);
-  }
-
-  if (Node* inner_node = hit_test_result.InnerNode()) {
-    if (auto unbounded_result = SubframeForActiveUnboundedElement(
-            inner_node->GetDocument().GetFrame(),
-            hit_test_result.Event().PositionInRootFrame())) {
-      return unbounded_result->frame;
-    }
   }
 
   return nullptr;

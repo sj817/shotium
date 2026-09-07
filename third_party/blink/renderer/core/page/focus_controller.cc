@@ -54,7 +54,6 @@
 #include "third_party/blink/renderer/core/frame/local_dom_window.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
 #include "third_party/blink/renderer/core/frame/local_frame_view.h"
-#include "third_party/blink/renderer/core/frame/remote_frame.h"
 #include "third_party/blink/renderer/core/frame/settings.h"
 #include "third_party/blink/renderer/core/html/forms/html_form_control_element.h"
 #include "third_party/blink/renderer/core/html/forms/html_form_element.h"
@@ -2016,30 +2015,6 @@ bool FocusController::AdvanceFocus(
   }
 }
 
-bool FocusController::AdvanceFocusAcrossFrames(
-    mojom::blink::FocusType type,
-    RemoteFrame* from,
-    LocalFrame* to,
-    InputDeviceCapabilities* source_capabilities) {
-  Element* start = nullptr;
-
-  // If we are shifting focus from a child frame to its parent, the
-  // child frame has no more focusable elements, and we should continue
-  // looking for focusable elements in the parent, starting from the element
-  // of the child frame. This applies both to fencedframes and iframes.
-  Element* start_candidate = DynamicTo<HTMLFrameOwnerElement>(from->Owner());
-  if (start_candidate && start_candidate->GetDocument().GetFrame() == to) {
-    start = start_candidate;
-  }
-
-  // If we're coming from a parent frame, we need to restart from the first or
-  // last focusable element.
-  bool initial_focus = to->Tree().Parent() == from;
-
-  return AdvanceFocusInDocumentOrder(to, start, type, initial_focus,
-                                     source_capabilities);
-}
-
 #if DCHECK_IS_ON()
 inline bool IsNonFocusableShadowHost(const Element& element) {
   return IsShadowHostWithoutCustomFocusLogic(element) && !element.IsFocusable();
@@ -2090,17 +2065,6 @@ bool FocusController::AdvanceFocusInDocumentOrder(
   Element* element =
       FindFocusableElementAcrossFocusScopes(type, scope, owner_map);
   if (!element) {
-    // If there's a RemoteFrame on the ancestor chain, we need to continue
-    // searching for focusable elements there.
-    if (frame->LocalFrameRoot() != frame->Tree().Top()) {
-      document->ClearFocusedElement();
-      document->SetSequentialFocusNavigationStartingPoint(nullptr);
-      SetFocusedFrame(nullptr);
-      To<RemoteFrame>(frame->LocalFrameRoot().Tree().Parent())
-          ->AdvanceFocus(type, &frame->LocalFrameRoot());
-      return true;
-    }
-
     // We didn't find an element to focus, so we should try to pass focus to
     // Chrome.
     if ((!initial_focus || document->GetFrame()->IsFencedFrameRoot()) &&
@@ -2133,16 +2097,8 @@ bool FocusController::AdvanceFocusInDocumentOrder(
     return true;
   }
 
-  // Focus frames rather than frame owners.  Note that we should always attempt
-  // to descend into frame owners with remote frames, since we don't know ahead
-  // of time whether they contain focusable elements.  If a remote frame
-  // doesn't contain any focusable elements, the search will eventually return
-  // back to this frame and continue looking for focusable elements after the
-  // frame owner.
   auto* owner = DynamicTo<HTMLFrameOwnerElement>(element);
-  bool has_remote_frame =
-      owner && owner->ContentFrame() && owner->ContentFrame()->IsRemoteFrame();
-  if (owner && (has_remote_frame || !IsA<HTMLPlugInElement>(*element) ||
+  if (owner && (!IsA<HTMLPlugInElement>(*element) ||
                 !element->IsKeyboardFocusableSlow())) {
     // FIXME: We should not focus frames that have no scrollbars, as focusing
     // them isn't useful to the user.
@@ -2152,16 +2108,8 @@ bool FocusController::AdvanceFocusInDocumentOrder(
 
     document->ClearFocusedElement();
 
-    // If ContentFrame is remote, continue the search for focusable elements in
-    // that frame's process. The target ContentFrame's process will grab focus
-    // from inside AdvanceFocusInDocumentOrder().
-    //
-    // ClearFocusedElement() fires events that might detach the contentFrame,
-    // hence the need to null-check it again.
-    if (auto* remote_frame = DynamicTo<RemoteFrame>(owner->ContentFrame()))
-      remote_frame->AdvanceFocus(type, frame);
-    else
-      SetFocusedFrame(owner->ContentFrame());
+    // Clearing focus can detach the content frame; SetFocusedFrame accepts null.
+    SetFocusedFrame(owner->ContentFrame());
 
     return true;
   }

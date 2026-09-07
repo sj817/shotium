@@ -63,9 +63,6 @@
 #undef CreateWindow
 
 namespace cc {
-enum class PropertyChangeForcesCommitCriteria;
-class AnimationHost;
-class AnimationTimeline;
 struct ElementId;
 class Layer;
 struct OverscrollBehavior;
@@ -92,8 +89,6 @@ class ColorChooserClient;
 class DateTimeChooser;
 class DateTimeChooserClient;
 class Element;
-class ExternalDateTimeChooser;
-class FileChooser;
 class Frame;
 class FullscreenOptions;
 class HTMLFormControlElement;
@@ -107,11 +102,8 @@ class LocalFrame;
 class LocalFrameView;
 class Node;
 class Page;
-class PagePopup;
-class PagePopupClient;
 class PopupOpeningObserver;
 class WebDragData;
-class WebViewImpl;
 
 enum class FullscreenRequestType;
 
@@ -128,7 +120,6 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
   ChromeClient& operator=(const ChromeClient&) = delete;
   virtual ~ChromeClient() = default;
 
-  virtual WebViewImpl* GetWebView() const = 0;
 
   // Converts the scalar value from window coordinates to viewport scale.
   virtual float WindowToViewportScalar(LocalFrame*,
@@ -240,11 +231,6 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
                                      base::TimeDelta timeout,
                                      cc::PaintHoldingReason reason) = 0;
   virtual void StopDeferringCommits(LocalFrame& main_frame) = 0;
-  virtual void RequestMainFrameOnCompositorAnimation(
-      LocalFrame&,
-      cc::PropertyChangeForcesCommitCriteria criteria,
-      bool force_propagation) = 0;
-
   virtual std::unique_ptr<cc::ScopedPauseRendering> PauseRendering(
       LocalFrame& main_frame) = 0;
 
@@ -436,25 +422,10 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
       LocalFrame*,
       DateTimeChooserClient*,
       const DateTimeChooserParameters&) = 0;
-  virtual ExternalDateTimeChooser* GetExternalDateTimeChooserForTesting() {
-    return nullptr;
-  }
-
   virtual void OpenTextDataListChooser(HTMLInputElement&) = 0;
 
-  virtual void OpenFileChooser(LocalFrame*, scoped_refptr<FileChooser>) = 0;
 
   // Pass nullptr as the cc::Layer to detach the root layer.
-  // This sets the cc::Layer for the LocalFrame's WebWidget, if it has
-  // one. Otherwise it sets it for the WebViewImpl.
-  virtual void AttachRootLayer(scoped_refptr<cc::Layer>,
-                               LocalFrame* local_root) = 0;
-
-  virtual cc::AnimationHost* GetCompositorAnimationHost(LocalFrame&) const = 0;
-
-  virtual cc::AnimationTimeline* GetScrollAnimationTimeline(
-      LocalFrame&) const = 0;
-
   virtual void EnterFullscreen(LocalFrame&,
                                const FullscreenOptions*,
                                FullscreenRequestType) {}
@@ -486,8 +457,6 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
   // Checks if there is an opened popup, called by LayoutMenuList::showPopUp().
   virtual bool HasOpenedPopup() const = 0;
   virtual PopupMenu* OpenPopupMenu(LocalFrame&, HTMLSelectElement&) = 0;
-  virtual PagePopup* OpenPagePopup(PagePopupClient*) = 0;
-  virtual void ClosePagePopup(PagePopup*) = 0;
   virtual DOMWindow* PagePopupWindowForTesting() const = 0;
 
   // Allow overriding whether external popup menus are used.
@@ -519,7 +488,6 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
 
   virtual gfx::Size MinimumWindowSize() const { return gfx::Size(100, 100); }
 
-  virtual bool IsChromeClientImpl() const { return false; }
 
   virtual void DidChangeFormRelatedElementDynamically(
       LocalFrame*,

@@ -197,9 +197,6 @@ void ElementInternals::setValidity(ValidityStateFlags* flags,
     return;
   }
 
-  if (validation_anchor_ && validation_anchor_ != anchor) {
-    HideVisibleValidationMessage();
-  }
   validity_flags_ = flags;
   validation_anchor_ = anchor;
   SetCustomValidationMessage(message);

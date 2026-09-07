@@ -37,19 +37,14 @@
 #include "third_party/blink/public/common/features.h"
 #include "third_party/blink/public/mojom/frame/frame.mojom-blink.h"
 #include "third_party/blink/public/mojom/frame/frame_owner_properties.mojom-blink.h"
-#include "third_party/blink/public/web/web_local_frame.h"
-#include "third_party/blink/public/web/web_local_frame_client.h"
 #include "third_party/blink/renderer/core/buildflags.h"
 #include "third_party/blink/renderer/core/dom/document_type.h"
 #include "third_party/blink/renderer/core/dom/events/event.h"
-#include "third_party/blink/renderer/core/dom/increment_load_event_delay_count.h"
 #include "third_party/blink/renderer/core/execution_context/window_agent_factory.h"
 #include "third_party/blink/renderer/core/frame/frame_owner.h"
 #include "third_party/blink/renderer/core/frame/local_dom_window.h"
 #include "third_party/blink/renderer/core/frame/page_dismissal_scope.h"
-#include "third_party/blink/renderer/core/frame/remote_frame_owner.h"
 #include "third_party/blink/renderer/core/frame/settings.h"
-#include "third_party/blink/renderer/core/frame/web_remote_frame_impl.h"
 #include "third_party/blink/renderer/core/html/html_frame_element_base.h"
 #include "third_party/blink/renderer/core/html/html_object_element.h"
 #include "third_party/blink/renderer/core/input/event_handler.h"
@@ -71,9 +66,8 @@ namespace blink {
 
 // static
 Frame* Frame::ResolveFrame(const FrameToken& frame_token) {
-  if (frame_token.Is<RemoteFrameToken>())
-    return RemoteFrame::FromFrameToken(frame_token.GetAs<RemoteFrameToken>());
-  DCHECK(frame_token.Is<LocalFrameToken>());
+  if (!frame_token.Is<LocalFrameToken>())
+    return nullptr;
   return LocalFrame::FromFrameToken(frame_token.GetAs<LocalFrameToken>());
 }
 
@@ -472,35 +466,6 @@ void Frame::Initialize() {
     page_->SetMainFrame(this);
 }
 
-void Frame::FocusImpl() {
-  // This uses FocusDocumentView rather than SetFocusedFrame so that blur
-  // events are properly dispatched on any currently focused elements.
-  // It is currently only used when replicating focus changes for
-  // cross-process frames so |notify_embedder| is false to avoid sending
-  // DidFocus updates from FocusController to the browser process,
-  // which already knows the latest focused frame.
-  GetPage()->GetFocusController().FocusDocumentView(
-      this, false /* notify_embedder */);
-}
-
-void Frame::ApplyFrameOwnerProperties(
-    mojom::blink::FrameOwnerPropertiesPtr properties) {
-  // At the moment, this is only used to replicate frame owner properties
-  // for frames with a remote owner.
-  auto* owner = To<RemoteFrameOwner>(Owner());
-
-  owner->SetBrowsingContextContainerName(properties->name);
-  owner->SetScrollbarMode(properties->scrollbar_mode);
-  owner->SetMarginWidth(properties->margin_width);
-  owner->SetMarginHeight(properties->margin_height);
-  owner->SetAllowFullscreen(properties->allow_fullscreen);
-  owner->SetAllowPaymentRequest(properties->allow_payment_request);
-  owner->SetIsDisplayNone(properties->is_display_none);
-  owner->SetResponsiveSizing(properties->responsive_sizing);
-  owner->SetColorScheme(properties->color_scheme);
-  owner->SetPreferredColorScheme(properties->preferred_color_scheme);
-}
-
 void Frame::InsertAfter(Frame* new_child, Frame* previous_sibling) {
   // Parent must match the one set in the constructor
   CHECK_EQ(new_child->parent_, this);
@@ -701,232 +666,6 @@ bool Frame::AllowFocusWithoutUserActivation() {
   // Inside a fenced frame tree, a frame can only request focus is its focus
   // controller already has focus.
   return GetPage()->GetFocusController().IsFocused();
-}
-
-bool Frame::Swap(WebLocalFrame* new_web_frame) {
-  return SwapImpl(new_web_frame, mojo::NullAssociatedRemote(),
-                  mojo::NullAssociatedReceiver(),
-                  /*devtools_frame_token=*/std::nullopt);
-}
-
-bool Frame::Swap(
-    WebRemoteFrame* new_web_frame,
-    mojo::PendingAssociatedRemote<mojom::blink::RemoteFrameHost>
-        remote_frame_host,
-    mojo::PendingAssociatedReceiver<mojom::blink::RemoteFrame>
-        remote_frame_receiver,
-    const std::optional<base::UnguessableToken>& devtools_frame_token) {
-  return SwapImpl(new_web_frame, std::move(remote_frame_host),
-                  std::move(remote_frame_receiver), devtools_frame_token);
-}
-
-bool Frame::SwapImpl(
-    WebFrame* new_web_frame,
-    mojo::PendingAssociatedRemote<mojom::blink::RemoteFrameHost>
-        remote_frame_host,
-    mojo::PendingAssociatedReceiver<mojom::blink::RemoteFrame>
-        remote_frame_receiver,
-    const std::optional<base::UnguessableToken>& devtools_frame_token) {
-  TRACE_EVENT0("navigation", "Frame::SwapImpl");
-  std::string_view histogram_suffix =
-      (new_web_frame->IsWebLocalFrame() ? "Local" : "Remote");
-  base::ScopedUmaHistogramTimer histogram_timer(
-      base::StrCat({"Navigation.Frame.SwapImpl.", histogram_suffix}));
-  DCHECK(IsAttached());
-
-  using std::swap;
-
-  // Important: do not cache frame tree pointers (e.g.  `previous_sibling_`,
-  // `next_sibling_`, `first_child_`, `last_child_`) here. It is possible for
-  // `Detach()` to mutate the frame tree and cause cached values to become
-  // invalid.
-  FrameOwner* owner = owner_;
-  FrameSwapScope frame_swap_scope(owner);
-  Page* page = page_;
-  AtomicString name = Tree().GetName();
-
-  // TODO(dcheng): This probably isn't necessary if we fix the ordering of
-  // events in `Swap()`, e.g. `Detach()` should not happen before
-  // `new_web_frame` is swapped in.
-  // If there is a local parent, it might incorrectly declare itself complete
-  // during the detach phase of this swap. Suppress its completion until swap is
-  // over, at which point its completion will be correctly dependent on its
-  // newly swapped-in child.
-  auto* parent_local_frame = DynamicTo<LocalFrame>(parent_.Get());
-  std::unique_ptr<IncrementLoadEventDelayCount> delay_parent_load =
-      parent_local_frame ? std::make_unique<IncrementLoadEventDelayCount>(
-                               *parent_local_frame->GetDocument())
-                         : nullptr;
-
-  const FrameDetachType swap_type = new_web_frame->IsWebLocalFrame()
-                                        ? FrameDetachType::kSwapForLocal
-                                        : FrameDetachType::kSwapForRemote;
-  // Unload the current Document in this frame: this calls unload handlers,
-  // detaches child frames, etc. Since this runs script, make sure this frame
-  // wasn't detached before continuing with the swap.
-  if (!Detach(swap_type)) {
-    // If the Swap() fails, it should be because the frame has been detached
-    // already. Otherwise the caller will not detach the frame when we return
-    // false, and the browser and renderer will disagree about the destruction
-    // of |this|.
-    CHECK(IsDetached());
-    return false;
-  }
-
-  // Otherwise, on a successful `Detach()` for swap, `this` is now detached--but
-  // crucially--still linked into the frame tree.
-
-  if (provisional_frame_) {
-    // `this` is about to be replaced, so if `provisional_frame_` is set, it
-    // should match `frame` which is being swapped in.
-    DCHECK_EQ(provisional_frame_, WebFrame::ToCoreFrame(*new_web_frame));
-    provisional_frame_ = nullptr;
-  }
-
-  if (new_web_frame->IsWebRemoteFrame()) {
-    DCHECK(remote_frame_host && remote_frame_receiver);
-    CHECK(!WebFrame::ToCoreFrame(*new_web_frame));
-    To<WebRemoteFrameImpl>(new_web_frame)
-        ->InitializeCoreFrame(
-            *page, owner, WebFrame::FromCoreFrame(parent_), nullptr,
-            FrameInsertType::kInsertLater, name, &window_agent_factory(),
-            devtools_frame_token.value_or(devtools_frame_token_),
-            std::move(remote_frame_host), std::move(remote_frame_receiver));
-    // At this point, a `RemoteFrame` will have already updated
-    // `Page::MainFrame()` or `FrameOwner::ContentFrame()` as appropriate, and
-    // its `parent_` pointer is also populated.
-  } else {
-    // This is local frame created by `WebLocalFrame::CreateProvisional()`. The
-    // `parent` pointer was set when it was constructed; however,
-    // `Page::MainFrame()` or `FrameOwner::ContentFrame()` updates are deferred
-    // until after `new_frame` is linked into the frame tree.
-    // TODO(dcheng): Make local and remote frame updates more uniform.
-    DCHECK(!remote_frame_host && !remote_frame_receiver);
-  }
-
-  Frame* new_frame = WebFrame::ToCoreFrame(*new_web_frame);
-  CHECK(new_frame);
-
-  // At this point, `new_frame->parent_` is correctly set, but `new_frame`'s
-  // sibling pointers are both still null and not yet updated. In addition, the
-  // parent frame (if any) still has not updated its `first_child_` and
-  // `last_child_` pointers.
-  CHECK_EQ(new_frame->parent_, parent_);
-  CHECK(!new_frame->previous_sibling_);
-  CHECK(!new_frame->next_sibling_);
-  if (previous_sibling_) {
-    previous_sibling_->next_sibling_ = new_frame;
-  }
-  swap(previous_sibling_, new_frame->previous_sibling_);
-  if (next_sibling_) {
-    next_sibling_->previous_sibling_ = new_frame;
-  }
-  swap(next_sibling_, new_frame->next_sibling_);
-
-  if (parent_) {
-    if (parent_->first_child_ == this) {
-      parent_->first_child_ = new_frame;
-    }
-    if (parent_->last_child_ == this) {
-      parent_->last_child_ = new_frame;
-    }
-    // Not strictly necessary, but keep state as self-consistent as possible.
-    parent_ = nullptr;
-  }
-
-  if (Frame* opener = opener_) {
-    SetOpenerDoNotNotify(nullptr);
-    new_frame->SetOpenerDoNotNotify(opener);
-  }
-  opened_frame_tracker_.TransferTo(new_frame);
-
-  // Clone the state of the current Frame into the one being swapped in.
-  if (auto* new_local_frame = DynamicTo<LocalFrame>(new_frame)) {
-    TRACE_EVENT0("navigation", "Frame::SwapImpl.CloneState");
-    base::ScopedUmaHistogramTimer clone_state_timer(
-        "Navigation.Frame.SwapImpl.CloneState");
-    // A `LocalFrame` being swapped in is created provisionally, so
-    // `Page::MainFrame()` or `FrameOwner::ContentFrame()` needs to be updated
-    // to point to the newly swapped-in frame.
-    DCHECK_EQ(owner, new_local_frame->Owner());
-    if (owner) {
-      owner->SetContentFrame(*new_local_frame);
-
-      if (auto* frame_owner_element = DynamicTo<HTMLFrameOwnerElement>(owner)) {
-        frame_owner_element->SetEmbeddedContentView(new_local_frame->View());
-      }
-    } else {
-      Page* new_page = new_local_frame->GetPage();
-      if (page != new_page) {
-        // The new frame can only belong to a different Page when doing a main
-        // frame LocalFrame <-> LocalFrame swap, where we want to detach the
-        // LocalFrame of the old Page before swapping in the new provisional
-        // LocalFrame into the new Page.
-        CHECK(IsLocalFrame());
-
-        // First, finish handling the old page. At this point, the old Page's
-        // main LocalFrame had already been detached by the `Detach()` call
-        // above, and we should create and swap in a placeholder RemoteFrame to
-        // ensure the old Page still has a main frame until it gets deleted
-        // later on, when its WebView gets deleted. Attach the newly created
-        // placeholder RemoteFrame as the main frame of the old Page.
-        WebRemoteFrame* old_page_placeholder_remote_frame =
-            WebRemoteFrame::Create(mojom::blink::TreeScopeType::kDocument,
-                                   RemoteFrameToken());
-        To<WebRemoteFrameImpl>(old_page_placeholder_remote_frame)
-            ->InitializeCoreFrame(
-                *page, /*owner=*/nullptr, /*parent=*/nullptr,
-                /*previous_sibling=*/nullptr, FrameInsertType::kInsertLater,
-                name, &window_agent_factory(), devtools_frame_token_,
-                mojo::NullAssociatedRemote(), mojo::NullAssociatedReceiver());
-        page->SetMainFrame(
-            WebFrame::ToCoreFrame(*old_page_placeholder_remote_frame));
-
-        // Take properties from the old page, such as its list of related pages.
-        new_page->TakePropertiesForLocalMainFrameSwap(page);
-
-        // On the new Page, we have a different placeholder main RemoteFrame,
-        // which was created when the new Page's WebView was created from
-        // AgentSchedulingGroup::CreateWebView(). The placeholder main
-        // RemoteFrame needs to be detached before the new Page's provisional
-        // LocalFrame can take its place as the new Page's main frame.
-        CHECK_NE(new_page->MainFrame(), this);
-        CHECK(new_page->MainFrame()->IsRemoteFrame());
-        CHECK(!DynamicTo<RemoteFrame>(new_page->MainFrame())
-                   ->IsRemoteFrameHostRemoteBound());
-        // Trigger the detachment of the new page's placeholder main
-        // RemoteFrame. Note that we also use `FrameDetachType::kSwapForLocal`
-        // here instead of kRemove to avoid triggering destructive action on the
-        // new Page and the provisional LocalFrame that will be swapped in (e.g.
-        // clearing the opener, or detaching the provisional frame).
-        new_page->MainFrame()->Detach(FrameDetachType::kSwapForLocal);
-      }
-
-      // Set the provisioanl LocalFrame to become the new page's main frame.
-      new_page->SetMainFrame(new_local_frame);
-      // We've done this in init() already, but any changes to the state have
-      // only been dispatched to the active frame tree and pending frames
-      // did not get them.
-      new_local_frame->OnPageLifecycleStateUpdated();
-
-      // This trace event is needed to detect the main frame of the
-      // renderer in telemetry metrics. See crbug.com/692112#c11.
-      TRACE_EVENT_INSTANT("loading", "markAsMainFrame", "frame",
-                          ::blink::GetFrameIdForTracing(new_local_frame));
-    }
-  }
-
-  if (auto* frame_owner_element = DynamicTo<HTMLFrameOwnerElement>(owner)) {
-    if (auto* new_local_frame = DynamicTo<LocalFrame>(new_frame)) {
-      probe::FrameOwnerContentUpdated(new_local_frame, frame_owner_element);
-    } else if (auto* old_local_frame = DynamicTo<LocalFrame>(this)) {
-      // TODO(dcheng): What is this probe for? Shouldn't it happen *before*
-      // detach?
-      probe::FrameOwnerContentUpdated(old_local_frame, frame_owner_element);
-    }
-  }
-
-  return true;
 }
 
 // static

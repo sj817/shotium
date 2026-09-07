@@ -764,13 +764,10 @@ void SVGImage::ServiceAnimations(
   frame_view->UpdateAllLifecyclePhasesExceptPaint(
       DocumentUpdateReason::kSVGImage);
 
-  // We run UpdateAnimations after the paint phase, but per the above comment,
-  // we don't want to run lifecycle through to paint for SVG images. Since we
-  // know SVG images never have composited animations, we can update animations
-  // directly without worrying about including PaintArtifactCompositor's
-  // analysis of whether animations should be composited.
+  // Service animation timing at layout-clean without painting the SVG image.
+  // Its paint cache is updated only when actually generating painted output.
   frame->GetDocument()->GetDocumentAnimations().UpdateAnimations(
-      DocumentLifecycle::kLayoutClean, nullptr, false);
+      DocumentLifecycle::kLayoutClean, false);
   if (RuntimeEnabledFeatures::SvgImageAnimationResetEnabled()) {
     UpdateCachedAnimationState();
   }

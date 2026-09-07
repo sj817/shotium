@@ -2,16 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# What is left of core/inspector. The DevTools agent, the protocol session
-# handlers and the inspector agents are all cut; DevToolsEmulator is not part
-# of them in any meaningful sense.
-#
-# It applies device emulation to a WebViewImpl -- device scale factor, viewport
-# size, screen orientation, forced text autosizing, LCD text preference -- and
-# WebViewImpl, WebSettingsImpl and ChromeClientImpl all call into it on the
-# ordinary rendering path, not just when a DevTools frontend is attached. It
-# also has no reference to V8 or to the protocol; it went only because it was
-# sitting in the same directory as the things that did.
+# Console diagnostics remain in this direct-Page screenshot engine.
+# DevToolsEmulator belonged to the removed WebView embedding layer.
 #
 # ConsoleMessage is here for the same reason: it is the object every part of
 # blink builds to report a problem, ~180 call sites construct one, and it holds
@@ -27,8 +19,6 @@ blink_core_sources_inspector = [
   "console_message.h",
   "console_message_storage.cc",
   "console_message_storage.h",
-  "dev_tools_emulator.cc",
-  "dev_tools_emulator.h",
   "agent_registry.h",
   "invalidation_set_to_selector_map.cc",
 

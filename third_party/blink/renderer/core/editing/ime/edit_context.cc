@@ -29,7 +29,6 @@
 #include "third_party/blink/renderer/core/frame/local_dom_window.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
 #include "third_party/blink/renderer/core/frame/local_frame_client.h"
-#include "third_party/blink/renderer/core/frame/web_frame_widget_impl.h"
 #include "third_party/blink/renderer/core/geometry/dom_rect.h"
 #include "third_party/blink/renderer/core/html/html_element.h"
 #include "third_party/blink/renderer/platform/bindings/exception_state.h"
@@ -529,12 +528,6 @@ bool EditContext::SetCompositionFromExistingText(
 void EditContext::CancelComposition() {
   if (!has_composition_) {
     return;
-  }
-
-  if (auto* web_frame = WebLocalFrameImpl::FromFrame(DomWindow()->GetFrame())) {
-    if (auto* widget = web_frame->LocalRootFrameWidget()) {
-      widget->CancelComposition();
-    }
   }
 
   OnCancelComposition();

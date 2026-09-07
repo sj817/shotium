@@ -41,7 +41,6 @@
 #include "third_party/blink/renderer/core/resize_observer/resize_observer_utilities.h"
 #include "third_party/blink/renderer/core/route_matching/route_map.h"
 #include "third_party/blink/renderer/core/view_transition/view_transition_pseudo_element_base.h"
-#include "third_party/blink/renderer/platform/graphics/compositing/paint_artifact_compositor.h"
 #include "third_party/blink/renderer/platform/graphics/compositor_element_id.h"
 #include "third_party/blink/renderer/platform/graphics/paint/clip_paint_property_node.h"
 #include "third_party/blink/renderer/platform/heap/cross_thread_handle.h"

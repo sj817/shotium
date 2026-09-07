@@ -11,7 +11,6 @@
 namespace blink {
 
 class LayoutEmbeddedContent;
-class ScopedPaintChunkProperties;
 struct PaintInfo;
 
 class EmbeddedContentPainter {
@@ -22,12 +21,6 @@ class EmbeddedContentPainter {
       : layout_embedded_content_(layout_embedded_content) {}
 
   void PaintReplaced(const PaintInfo&, const PhysicalOffset& paint_offset);
-
-  // Returns scoped paint properties that omit SVG filter effects for security,
-  // when painting remote frames and plugins.
-  [[nodiscard]] static std::optional<ScopedPaintChunkProperties>
-  RemoveSvgFilterPaint(const LayoutEmbeddedContent& layout_embedded_content,
-                       const PaintInfo& paint_info);
 
  private:
   const LayoutEmbeddedContent& layout_embedded_content_;

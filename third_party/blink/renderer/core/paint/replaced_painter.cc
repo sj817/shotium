@@ -157,12 +157,9 @@ void ReplacedPainter::Paint(const PaintInfo& paint_info) {
       layout_replaced_.CanResize()) {
     auto* scrollable_area = layout_replaced_.GetScrollableArea();
     DCHECK(scrollable_area);
-    if (!scrollable_area->HasLayerForScrollCorner()) {
-      ScrollableAreaPainter(*scrollable_area)
-          .PaintResizer(local_paint_info, paint_offset,
-                        local_paint_info.GetCullRect());
-    }
-    // Otherwise the resizer will be painted by the scroll corner layer.
+    ScrollableAreaPainter(*scrollable_area)
+        .PaintResizer(local_paint_info, paint_offset,
+                      local_paint_info.GetCullRect());
   }
 
   // Custom ::highlight() backgrounds and the ::selection tint are both painted

@@ -544,18 +544,6 @@ std::optional<LayoutUnit> NodeRareData::LastRememberedInlineSize() const {
   return GetOptionalField<LayoutUnit>(FieldId::kLastRememberedInlineSize);
 }
 
-gfx::Rect NodeRareData::LastSentUnboundedBounds() const {
-  if (auto* value =
-          GetWrappedField<gfx::Rect>(FieldId::kLastSentUnboundedBounds)) {
-    return *value;
-  }
-  return gfx::Rect();
-}
-NodeRareData* NodeRareData::SetLastSentUnboundedBounds(
-    const gfx::Rect& bounds) {
-  return SetWrappedField<gfx::Rect>(FieldId::kLastSentUnboundedBounds, bounds);
-}
-
 UnboundedEventData* NodeRareData::GetUnboundedEventData() const {
   return static_cast<UnboundedEventData*>(
       GetField(FieldId::kUnboundedEventTask));

@@ -223,7 +223,6 @@ interface CoreProbes {
   // ClassicScript& plus v8::Local<v8::Script>/v8::ScriptCompiler types to hook
   // V8's code cache. There is no V8 code cache in this build -- deleted.
   void NodeCreated([Keep] Node* node);
-  void FileChooserOpened([Keep] LocalFrame* frame, HTMLInputElement* element, bool multiple, bool* suppressed, bool* canceled);
   // The five Player* probes were here. They fed the DevTools Media domain --
   // the panel that shows a media element's errors, events, log messages and
   // pipeline properties -- and PlayerCreated took a `const MediaPlayer&`, whose

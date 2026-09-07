@@ -64,7 +64,6 @@ class CORE_EXPORT SettingsDelegate {
     kTextTrackKindUserPreference,
     kDOMWorlds,
     kMediaControls,
-    kPlugins,
     kPaint,
     kScrollbarLayout,
     kColorScheme,

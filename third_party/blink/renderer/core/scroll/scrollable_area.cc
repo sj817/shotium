@@ -54,7 +54,6 @@
 #include "third_party/blink/renderer/core/frame/local_frame.h"
 #include "third_party/blink/renderer/core/frame/local_frame_view.h"
 #include "third_party/blink/renderer/core/frame/visual_viewport.h"
-#include "third_party/blink/renderer/core/html/anchor_element_viewport_position_tracker.h"
 #include "third_party/blink/renderer/core/input/event_handler.h"
 #include "third_party/blink/renderer/core/layout/layout_box.h"
 #include "third_party/blink/renderer/core/layout/layout_embedded_content.h"
@@ -76,7 +75,6 @@
 #include "third_party/blink/renderer/core/scroll/scrollbar_theme.h"
 #include "third_party/blink/renderer/platform/geometry/layout_unit.h"
 #include "third_party/blink/renderer/platform/graphics/color.h"
-#include "third_party/blink/renderer/platform/graphics/compositing/paint_artifact_compositor.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
 #include "third_party/blink/renderer/platform/heap/persistent.h"
 #include "third_party/blink/renderer/platform/instrumentation/tracing/trace_event.h"
@@ -790,27 +788,6 @@ void ScrollableArea::SetScrollbarNeedsPaintInvalidation(
   else
     vertical_scrollbar_needs_paint_invalidation_ = true;
 
-  // Invalidate the scrollbar directly if it's already composited.
-  // GetLayoutBox() may be null in some unit tests.
-  if (auto* box = GetLayoutBox()) {
-    if (auto* scrollbar = GetScrollbar(orientation)) {
-      if (auto* compositor =
-              box->GetFrameView()->GetPaintArtifactCompositor()) {
-        CompositorElementId element_id = GetScrollbarElementId(orientation);
-        if (scrollbar->IsSolidColor()) {
-          // This will call SetNeedsDisplay() if the color changes (which is
-          // the only reason for a SolidColorScrollbarLayer to update display).
-          if (compositor->SetScrollbarSolidColor(
-                  element_id, scrollbar->GetTheme().ThumbColor(*scrollbar))) {
-            scrollbar->ClearNeedsUpdateDisplay();
-          }
-        } else if (compositor->SetScrollbarNeedsDisplay(element_id)) {
-          scrollbar->ClearNeedsUpdateDisplay();
-        }
-      }
-    }
-  }
-
   // TODO(crbug.com/1505560): we don't need to invalidate paint of scrollbar
   // for changes inside of the scrollbar. We'll invalidate raster if needed
   // after paint. We can remove some of paint invalidation code in this class,
@@ -820,8 +797,6 @@ void ScrollableArea::SetScrollbarNeedsPaintInvalidation(
 }
 
 void ScrollableArea::SetScrollCornerNeedsPaintInvalidation() {
-  if (cc::Layer* layer = LayerForScrollCorner())
-    layer->SetNeedsDisplay();
   scroll_corner_needs_paint_invalidation_ = true;
   ScrollControlWasSetNeedsPaintInvalidation();
 }
@@ -832,18 +807,6 @@ void ScrollableArea::SetScrollControlsNeedFullPaintInvalidation() {
   if (auto* vertical_scrollbar = VerticalScrollbar())
     vertical_scrollbar->SetNeedsPaintInvalidation(kAllParts);
   SetScrollCornerNeedsPaintInvalidation();
-}
-
-bool ScrollableArea::HasLayerForHorizontalScrollbar() const {
-  return LayerForHorizontalScrollbar();
-}
-
-bool ScrollableArea::HasLayerForVerticalScrollbar() const {
-  return LayerForVerticalScrollbar();
-}
-
-bool ScrollableArea::HasLayerForScrollCorner() const {
-  return LayerForScrollCorner();
 }
 
 void ScrollableArea::ServiceScrollAnimations(double monotonic_time) {
@@ -865,13 +828,13 @@ void ScrollableArea::ServiceScrollAnimations(double monotonic_time) {
     DeregisterForAnimation();
 }
 
-void ScrollableArea::UpdateCompositorScrollAnimations() {
+void ScrollableArea::UpdateScrollAnimationState() {
   if (ProgrammaticScrollAnimator* programmatic_scroll_animator =
           ExistingProgrammaticScrollAnimator())
-    programmatic_scroll_animator->UpdateCompositorAnimations();
+    programmatic_scroll_animator->UpdateAnimationState();
 
   if (ScrollAnimatorBase* scroll_animator = ExistingScrollAnimator())
-    scroll_animator->UpdateCompositorAnimations();
+    scroll_animator->UpdateAnimationState();
 }
 
 void ScrollableArea::CancelScrollAnimation() {
@@ -931,33 +894,7 @@ void ScrollableArea::SetScrollbarsHiddenIfOverlayInternal(bool hidden) {
   ScrollbarVisibilityChanged();
 }
 
-bool ScrollableArea::UsesCompositedOverlayScrollbars() const {
-  if (!GetPageScrollbarTheme().UsesOverlayScrollbars()) {
-    return false;
-  }
-  if (!RuntimeEnabledFeatures::RasterInducingScrollEnabled() &&
-      !UsesCompositedScrolling()) {
-    return false;
-  }
-  if (const auto* scrollbar = HorizontalScrollbar()) {
-    if (MayCompositeScrollbar(*scrollbar)) {
-      return true;
-    }
-  }
-  if (const auto* scrollbar = VerticalScrollbar()) {
-    if (MayCompositeScrollbar(*scrollbar)) {
-      return true;
-    }
-  }
-  return false;
-}
-
 void ScrollableArea::FadeOverlayScrollbarsTimerFired(TimerBase*) {
-  // Scrollbars can become composited in the time it takes the timer set in
-  // ShowNonMacOverlayScrollbars to be fired.
-  if (UsesCompositedOverlayScrollbars()) {
-    return;
-  }
   SetScrollbarsHiddenIfOverlay(true);
 }
 
@@ -966,11 +903,6 @@ void ScrollableArea::ShowNonMacOverlayScrollbars() {
       !GetPageScrollbarTheme().BlinkControlsOverlayVisibility())
     return;
 
-  // Don't do this for composited scrollbars. These scrollbars are handled
-  // by separate code in cc::ScrollbarAnimationController.
-  if (UsesCompositedOverlayScrollbars()) {
-    return;
-  }
 
   SetScrollbarsHiddenIfOverlay(false);
 
@@ -1100,47 +1032,6 @@ gfx::Size ScrollableArea::ExcludeScrollbars(const gfx::Size& size) const {
                    std::max(0, size.height() - HorizontalScrollbarHeight()));
 }
 
-void ScrollableArea::DidCompositorScroll(const gfx::PointF& position,
-                                         cc::ScrollSourceType source_type) {
-  ScrollOffset new_offset(ScrollPositionToOffset(position));
-  ScrollMarkerGroupPseudoElement* group = GetScrollMarkerGroup();
-  // A non-latched compositor scroll update might be in service of a
-  // targeted (i.e. smooth scrollIntoView) or non-targeted scroll (e.g
-  // smooth scrollTo or a gesture scroll). If we are still executing a
-  // targeted scroll, the associated ScrollMarkerGroupPseudoElement's
-  // selected marker will still be pinned and we should not change that.
-  bool targeted_scroll = group && group->SelectedMarkerIsPinned();
-  // If `source_type=cc::ScrollSourceType::kNone` then compositor scroll was
-  // triggered from `ScrollAnimator` or `ProgrammaticScrollAnimator` so we need
-  // to use `ScrollSourceType` cached in `ScrollAnimator` or
-  // `ProgrammaticScrollAnimator` accordingly.
-  if (source_type == cc::ScrollSourceType::kNone && ExistingScrollAnimator()) {
-    source_type = ExistingScrollAnimator()->GetScrollSourceType();
-  }
-  if (source_type == cc::ScrollSourceType::kNone &&
-      ExistingProgrammaticScrollAnimator()) {
-    source_type = ExistingProgrammaticScrollAnimator()->GetScrollSourceType();
-  }
-
-  bool vertical_scrollbar_thumb_pressed =
-      VerticalScrollbar() && VerticalScrollbar()->PressedPart() == kThumbPart;
-  bool horizontal_scrollbar_thumb_pressed =
-      HorizontalScrollbar() &&
-      HorizontalScrollbar()->PressedPart() == kThumbPart;
-  if (source_type == cc::ScrollSourceType::kRelativeScroll &&
-      (vertical_scrollbar_thumb_pressed ||
-       horizontal_scrollbar_thumb_pressed)) {
-    // Manipulating the scrollbar “thumb” explicitly should be an absolute
-    // scroll https://drafts.csswg.org/css-scroll-snap-1/#scroll-types.
-    // TODO(crbug.com/414556050): This should be ideally done on the compositor.
-    source_type = cc::ScrollSourceType::kAbsoluteScroll;
-  }
-
-  SetScrollOffset(new_offset, mojom::blink::ScrollType::kCompositor,
-                  source_type, mojom::blink::ScrollBehavior::kInstant,
-                  targeted_scroll);
-}
-
 Scrollbar* ScrollableArea::GetScrollbar(
     ScrollbarOrientation orientation) const {
   return orientation == kHorizontalScrollbar ? HorizontalScrollbar()
@@ -1168,11 +1059,6 @@ void ScrollableArea::OnScrollFinished(bool enqueue_scrollend) {
     active_smooth_scroll_type_.reset();
     UpdateSnappedTargetsAndEnqueueScrollSnapChange();
     if (Node* node = EventTargetNode()) {
-      if (auto* viewport_position_tracker =
-              AnchorElementViewportPositionTracker::MaybeGetOrCreateFor(
-                  node->GetDocument())) {
-        viewport_position_tracker->OnScrollEnd();
-      }
       // TODO(https://crbug.com/41406914): This is temporary. Remove once we
       // start to migrate to scroll-promises.
       node->GetDocument().Markers().StartGlicMarkerAnimationIfNeeded();

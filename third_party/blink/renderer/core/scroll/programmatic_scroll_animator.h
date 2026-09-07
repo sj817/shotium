@@ -7,7 +7,7 @@
 
 #include "base/time/time.h"
 #include "cc/animation/scroll_offset_animation_curve.h"
-#include "third_party/blink/renderer/core/scroll/scroll_animator_compositor_coordinator.h"
+#include "third_party/blink/renderer/core/scroll/scroll_animation_state.h"
 #include "third_party/blink/renderer/core/scroll/scrollable_area.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
 #include "third_party/blink/renderer/platform/heap/prefinalizer.h"
@@ -24,7 +24,7 @@ class ScrollableArea;
 // For scroll animations triggered by user input, see ScrollAnimator and
 // ScrollAnimatorMac.
 
-class ProgrammaticScrollAnimator : public ScrollAnimatorCompositorCoordinator {
+class ProgrammaticScrollAnimator : public ScrollAnimationState {
   USING_PRE_FINALIZER(ProgrammaticScrollAnimator, Dispose);
 
  public:
@@ -43,17 +43,14 @@ class ProgrammaticScrollAnimator : public ScrollAnimatorCompositorCoordinator {
                        ScrollableArea::ScrollCallback on_finish =
                            ScrollableArea::ScrollCallback());
 
-  // ScrollAnimatorCompositorCoordinator implementation.
+  // ScrollAnimationState implementation.
   void ResetAnimationState() override;
   void CancelAnimation() override;
-  void TakeOverCompositorAnimation() override {}
   ScrollableArea* GetScrollableArea() const override {
     return scrollable_area_.Get();
   }
   void TickAnimation(base::TimeTicks monotonic_time) override;
-  void UpdateCompositorAnimations() override;
-  void NotifyCompositorAnimationFinished(int group_id) override;
-  void NotifyCompositorAnimationAborted(int group_id) override {}
+  void UpdateAnimationState() override;
   ScrollOffset TargetOffset() const { return target_offset_; }
   cc::ScrollSourceType GetScrollSourceType() { return source_type_; }
 

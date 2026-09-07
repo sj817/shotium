@@ -40,15 +40,12 @@
 #include "third_party/blink/renderer/core/dom/shadow_root.h"
 #include "third_party/blink/renderer/core/events/current_input_event.h"
 #include "third_party/blink/renderer/core/execution_context/execution_context.h"
-#include "third_party/blink/renderer/core/exported/web_plugin_container_impl.h"
 #include "third_party/blink/renderer/core/fetch/fetch_later_util.h"
 #include "third_party/blink/renderer/core/frame/csp/content_security_policy.h"
 #include "third_party/blink/renderer/core/frame/local_dom_window.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
 #include "third_party/blink/renderer/core/frame/local_frame_client.h"
 #include "third_party/blink/renderer/core/frame/local_frame_view.h"
-#include "third_party/blink/renderer/core/frame/remote_frame.h"
-#include "third_party/blink/renderer/core/frame/remote_frame_view.h"
 #include "third_party/blink/renderer/core/frame/settings.h"
 #include "third_party/blink/renderer/core/html/canvas/html_canvas_element.h"
 #include "third_party/blink/renderer/core/html/lazy_load_frame_observer.h"
@@ -84,14 +81,6 @@
 namespace blink {
 
 namespace {
-
-using PluginSet = HeapHashSet<Member<WebPluginContainerImpl>>;
-PluginSet& PluginsPendingDispose() {
-  using PluginSetHolder = DisallowNewWrapper<PluginSet>;
-  DEFINE_STATIC_LOCAL(Persistent<PluginSetHolder>, holder,
-                      (MakeGarbageCollected<PluginSetHolder>()));
-  return holder->Value();
-}
 
 bool DoesParentAllowLazyLoadingChildren(Document& document) {
   LocalFrame* containing_frame = document.GetFrame();
@@ -162,21 +151,6 @@ SubframeLoadingDisabler::SubtreeRootSet&
 SubframeLoadingDisabler::DisabledSubtreeRoots() {
   DEFINE_STATIC_LOCAL(SubtreeRootSet, nodes, ());
   return nodes;
-}
-
-// static
-int HTMLFrameOwnerElement::PluginDisposeSuspendScope::suspend_count_ = 0;
-
-void HTMLFrameOwnerElement::PluginDisposeSuspendScope::
-    PerformDeferredPluginDispose() {
-  DCHECK_EQ(suspend_count_, 1);
-  suspend_count_ = 0;
-
-  PluginSet dispose_set;
-  PluginsPendingDispose().swap(dispose_set);
-  for (const auto& plugin : dispose_set) {
-    plugin->Dispose();
-  }
 }
 
 HTMLFrameOwnerElement::HTMLFrameOwnerElement(const QualifiedName& tag_name,
@@ -418,14 +392,6 @@ FocusgroupFlags HTMLFrameOwnerElement::NativeArrowKeyAxes() const {
   return FocusgroupFlags::kInline | FocusgroupFlags::kBlock;
 }
 
-void HTMLFrameOwnerElement::DisposePluginSoon(WebPluginContainerImpl* plugin) {
-  if (PluginDisposeSuspendScope::suspend_count_) {
-    PluginsPendingDispose().insert(plugin);
-    PluginDisposeSuspendScope::suspend_count_ |= 1;
-  } else
-    plugin->Dispose();
-}
-
 void HTMLFrameOwnerElement::NaturalSizingInfoChanged() {
   if (auto* frame_view = DynamicTo<FrameView>(OwnedEmbeddedContentView())) {
     last_natural_sizing_info_ = frame_view->GetNaturalDimensions();
@@ -627,10 +593,7 @@ void HTMLFrameOwnerElement::SetEmbeddedContentView(
   if (old_view) {
     if (old_view->IsAttached()) {
       old_view->DetachFromLayout();
-      if (old_view->IsPluginView())
-        DisposePluginSoon(To<WebPluginContainerImpl>(old_view));
-      else
-        old_view->Dispose();
+      old_view->Dispose();
     }
   }
 

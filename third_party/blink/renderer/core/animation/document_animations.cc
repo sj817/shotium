@@ -32,8 +32,6 @@
 
 #include <algorithm>
 
-#include "cc/animation/animation_host.h"
-#include "cc/animation/animation_timeline.h"
 #include "third_party/blink/public/platform/platform.h"
 #include "third_party/blink/renderer/core/animation/animation_clock.h"
 #include "third_party/blink/renderer/core/animation/animation_timeline.h"
@@ -222,19 +220,16 @@ void DocumentAnimations::UpdateAnimationTimingIfNeeded() {
 
 void DocumentAnimations::UpdateAnimations(
     DocumentLifecycle::LifecycleState required_lifecycle_state,
-    const PaintArtifactCompositor* paint_artifact_compositor,
     bool compositor_properties_updated) {
   DCHECK(document_->Lifecycle().GetState() >= required_lifecycle_state);
 
   if (compositor_properties_updated)
-    MarkPendingIfCompositorPropertyAnimationChanges(paint_artifact_compositor);
+    MarkPendingIfCompositorPropertyAnimationChanges();
 
-  if (document_->GetPendingAnimations().Update(paint_artifact_compositor)) {
+  if (document_->GetPendingAnimations().Update()) {
     DCHECK(document_->View());
     document_->View()->ScheduleAnimation(cc::BeginMainFrameReason::kAnimation);
   }
-
-  UpdateCompositorAnimationTriggers(paint_artifact_compositor);
 
   document_->GetWorkletAnimationController().UpdateAnimationStates();
   document_->GetFrame()->ScheduleNextServiceForPostLayoutSnapshotClients();
@@ -247,25 +242,10 @@ void DocumentAnimations::UpdateAnimations(
   }
 }
 
-void DocumentAnimations::MarkPendingIfCompositorPropertyAnimationChanges(
-    const PaintArtifactCompositor* paint_artifact_compositor) {
+void DocumentAnimations::MarkPendingIfCompositorPropertyAnimationChanges() {
   for (auto& timeline : timelines_) {
-    timeline->MarkPendingIfCompositorPropertyAnimationChanges(
-        paint_artifact_compositor);
+    timeline->MarkPendingIfCompositorPropertyAnimationChanges();
   }
-}
-
-size_t DocumentAnimations::GetAnimationsCount() {
-  wtf_size_t total_animations_count = 0;
-  if (document_->View()) {
-    if (document_->View()->GetCompositorAnimationHost()) {
-      for (auto& timeline : timelines_) {
-        if (timeline->HasAnimations())
-          total_animations_count += timeline->AnimationsNeedingUpdateCount();
-      }
-    }
-  }
-  return total_animations_count;
 }
 
 void DocumentAnimations::MarkAnimationsCompositorPending() {
@@ -352,50 +332,9 @@ void DocumentAnimations::PrepareAnimationsForSVGImageReset(
   }
 }
 
-void DocumentAnimations::DetachCompositorTimelines() {
-  if (!Platform::Current()->IsThreadedAnimationEnabled() ||
-      !document_->GetSettings()->GetAcceleratedCompositingEnabled() ||
-      !document_->GetPage())
-    return;
-
-  for (auto& timeline : timelines_) {
-    cc::AnimationTimeline* compositor_timeline = timeline->CompositorTimeline();
-    if (!compositor_timeline)
-      continue;
-
-    if (cc::AnimationHost* host =
-            document_->GetPage()->GetChromeClient().GetCompositorAnimationHost(
-                *document_->GetFrame())) {
-      host->DetachAnimationTimeline(compositor_timeline);
-    }
-  }
-}
-
-void DocumentAnimations::DetachCompositorTriggers() {
-  if (!Platform::Current()->IsThreadedAnimationEnabled() ||
-      !document_->GetSettings()->GetAcceleratedCompositingEnabled() ||
-      !document_->GetPage()) {
-    return;
-  }
-
-  for (auto& trigger : triggers_) {
-    cc::AnimationTrigger* compositor_trigger = trigger->CompositorTrigger();
-    if (!compositor_trigger) {
-      continue;
-    }
-
-    if (cc::AnimationHost* host =
-            document_->GetPage()->GetChromeClient().GetCompositorAnimationHost(
-                *document_->GetFrame())) {
-      host->DetachTrigger(compositor_trigger);
-    }
-  }
-}
-
 void DocumentAnimations::Trace(Visitor* visitor) const {
   visitor->Trace(document_);
   visitor->Trace(timelines_);
-  visitor->Trace(triggers_);
   visitor->Trace(css_animations_needing_trigger_attachment_);
   visitor->Trace(global_deferred_timelines_);
 }
@@ -477,22 +416,6 @@ void DocumentAnimations::RemoveReplacedAnimations(
     Animation* animation = *it;
     event_loop->EnqueueMicrotask(BindOnce(&Animation::RemoveReplacedAnimation,
                                           WrapWeakPersistent(animation)));
-  }
-}
-
-void DocumentAnimations::AddAnimationTrigger(AnimationTrigger& trigger) {
-  triggers_.insert(&trigger);
-}
-
-void DocumentAnimations::UpdateCompositorAnimationTriggers(
-    const PaintArtifactCompositor* paint_artifact_compositor) {
-  if (!RuntimeEnabledFeatures::AnimationTriggerEnabled() ||
-      !Platform::Current()->IsThreadedAnimationEnabled()) {
-    return;
-  }
-
-  for (AnimationTrigger* trigger : triggers_) {
-    trigger->UpdateCompositorTrigger(paint_artifact_compositor);
   }
 }
 

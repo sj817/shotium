@@ -122,10 +122,6 @@ CSSDefaultStyleSheets::CSSDefaultStyleSheets()
   InitializeDefaultStyles();
 }
 
-void CSSDefaultStyleSheets::PrepareForLeakDetection() {
-  Reset();
-}
-
 void CSSDefaultStyleSheets::ResetTextTrackStyleSheet() {
   if (!text_track_style_sheet_) {
     return;
@@ -252,7 +248,7 @@ void CSSDefaultStyleSheets::VerifyUniversalRuleCount() {
 }
 
 void CSSDefaultStyleSheets::InitializeDefaultStyles() {
-  // This must be called only from constructor / PrepareForLeakDetection.
+  // This must be called only from constructor / Reset.
   default_html_style_ = MakeGarbageCollected<RuleSet>();
   default_mathml_style_ = MakeGarbageCollected<RuleSet>();
   default_svg_style_ = MakeGarbageCollected<RuleSet>();

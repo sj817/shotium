@@ -101,7 +101,6 @@ class V8UnionNodeOrStringOrTrustedScript;
 class V8UnionStringOrTrustedHTML;
 class V8UnionStringOrTrustedScript;
 class V8UnionSetHTMLUnsafeOptionsOrTrustedParserOptions;
-class WebPluginContainerImpl;
 struct PhysicalRect;
 
 const int kElementNamespaceTypeShift = 5;
@@ -1136,8 +1135,6 @@ class CORE_EXPORT Node : public EventTarget {
   virtual LayoutBox* AutoscrollBox();
   virtual void StopAutoscroll();
 
-  // If the node is a plugin, then this returns its WebPluginContainer.
-  WebPluginContainerImpl* GetWebPluginContainer() const;
 
   void RegisterScrollTimeline(ScrollTimeline*);
   void UnregisterScrollTimeline(ScrollTimeline*);

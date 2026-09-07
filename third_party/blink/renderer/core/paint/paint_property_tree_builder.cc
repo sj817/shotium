@@ -55,7 +55,6 @@
 #include "third_party/blink/renderer/core/layout/table/layout_table_section.h"
 #include "third_party/blink/renderer/core/layout/transform_utils.h"
 #include "third_party/blink/renderer/core/overscroll/overscroll_area_tracker.h"
-#include "third_party/blink/renderer/core/page/link_highlight.h"
 #include "third_party/blink/renderer/core/page/page.h"
 #include "third_party/blink/renderer/core/page/scrolling/snap_coordinator.h"
 #include "third_party/blink/renderer/core/page/scrolling/sticky_position_scrolling_constraints.h"
@@ -89,7 +88,6 @@
 #include "third_party/blink/renderer/platform/geometry/physical_offset.h"
 #include "third_party/blink/renderer/platform/geometry/stroke_data.h"
 #include "third_party/blink/renderer/platform/graphics/blend_mode.h"
-#include "third_party/blink/renderer/platform/graphics/compositing/paint_artifact_compositor.h"
 #include "third_party/blink/renderer/platform/graphics/paint/effect_paint_property_node.h"
 #include "third_party/blink/renderer/platform/graphics/paint/geometry_mapper.h"
 #include "third_party/blink/renderer/platform/runtime_enabled_features.h"
@@ -177,11 +175,6 @@ void VisualViewportPaintPropertyTreeBuilder::Update(
     // properties of the visual viewport.
     if (auto* layout_view = main_frame_view.GetLayoutView())
       layout_view->Layer()->SetNeedsRepaint();
-  }
-
-  if (property_changed >
-      PaintPropertyChangeType::kChangedOnlyCompositedValues) {
-    main_frame_view.SetPaintArtifactCompositorNeedsUpdate();
   }
 
 #if DCHECK_IS_ON()
@@ -1122,66 +1115,19 @@ void FragmentPaintPropertyTreeBuilder::UpdateElementCanvasTransform() {
       state.rendering_context_id = context_.rendering_context_id;
       state.compositor_element_id = GetCompositorElementId(
           CompositorElementIdNamespace::kElementCanvasTransform);
-      auto change = properties_->UpdateElementCanvasTransform(
+      properties_->UpdateElementCanvasTransform(
           *context_.current.transform, std::move(state));
       // Do not call `OnUpdateTransform()` here because canvas transform changes
       // do not affect the element's rendering and should not trigger a paint
       // invalidation.
-      if (change >= PaintPropertyChangeType::kChangedOnlySimpleValues) {
-        object_.GetFrameView()->SetPaintArtifactCompositorNeedsUpdate();
-      }
     } else {
       // Do not call `OnClearTransform()` here to avoid a paint invalidation.
-      if (properties_->ClearElementCanvasTransform()) {
-        object_.GetFrameView()->SetPaintArtifactCompositorNeedsUpdate();
-      }
+      properties_->ClearElementCanvasTransform();
     }
   }
 
   if (properties_->ElementCanvasTransform()) {
     context_.current.transform = properties_->ElementCanvasTransform();
-  }
-}
-
-// Directly updates the associated cc transform node if possible, and
-// downgrades the |PaintPropertyChangeType| if successful.
-static void DirectlyUpdateCcTransform(
-    const TransformPaintPropertyNode& transform,
-    const LayoutObject& object,
-    PaintPropertyChangeType& change_type) {
-  // We only assume worst-case overlap testing due to animations (see:
-  // |GeometryMapper::VisualRectForCompositingOverlap()|) so we can only use
-  // the direct transform update (which skips checking for compositing changes)
-  // when animations are present.
-  if (change_type == PaintPropertyChangeType::kChangedOnlySimpleValues &&
-      transform.HasActiveTransformAnimation()) {
-    if (auto* paint_artifact_compositor =
-            object.GetFrameView()->GetPaintArtifactCompositor()) {
-      bool updated =
-          paint_artifact_compositor->DirectlyUpdateTransform(transform);
-      if (updated) {
-        change_type = PaintPropertyChangeType::kChangedOnlyCompositedValues;
-        transform.CompositorSimpleValuesUpdated();
-      }
-    }
-  }
-}
-
-static void DirectlyUpdateCcOpacity(const LayoutObject& object,
-                                    ObjectPaintProperties& properties,
-                                    PaintPropertyChangeType& change_type) {
-  if (change_type == PaintPropertyChangeType::kChangedOnlySimpleValues &&
-      properties.Effect()->HasDirectCompositingReasons()) {
-    if (auto* paint_artifact_compositor =
-            object.GetFrameView()->GetPaintArtifactCompositor()) {
-      bool updated =
-          paint_artifact_compositor->DirectlyUpdateCompositedOpacityValue(
-              *properties.Effect());
-      if (updated) {
-        change_type = PaintPropertyChangeType::kChangedOnlyCompositedValues;
-        properties.Effect()->CompositorSimpleValuesUpdated();
-      }
-    }
   }
 }
 
@@ -1279,8 +1225,6 @@ void FragmentPaintPropertyTreeBuilder::UpdateTransformForSVGChild(
           object_.StyleRef().IsRunningTransformAnimationOnCompositor();
       auto effective_change_type = properties_->UpdateTransform(
           *context_.current.transform, std::move(state), animation_state);
-      DirectlyUpdateCcTransform(*properties_->Transform(), object_,
-                                effective_change_type);
       OnUpdateTransform(effective_change_type);
     } else {
       OnClearTransform(properties_->ClearTransform());
@@ -1562,8 +1506,6 @@ void FragmentPaintPropertyTreeBuilder::UpdateIndividualTransform(
           running_on_compositor_test && (style.*running_on_compositor_test)();
       auto effective_change_type = (properties_->*updater)(
           *context_.current.transform, std::move(state), animation_state);
-      DirectlyUpdateCcTransform(*(properties_->*getter)(), object_,
-                                effective_change_type);
       OnUpdateTransform(effective_change_type);
     } else {
       OnClearTransform((properties_->*clearer)());
@@ -2256,10 +2198,6 @@ void FragmentPaintPropertyTreeBuilder::UpdateEffect() {
 
       auto effective_change_type = properties_->UpdateEffect(
           *parent_effect, std::move(state), animation_state);
-      // If we have simple value change, which means opacity, we should try to
-      // directly update it on the PaintArtifactCompositor in order to avoid
-      // doing a full rebuild.
-      DirectlyUpdateCcOpacity(object_, *properties_, effective_change_type);
       OnUpdateEffect(effective_change_type);
 
       CompositingReasons mask_direct_compositing_reasons;
@@ -2520,11 +2458,6 @@ void FragmentPaintPropertyTreeBuilder::UpdateViewTransitionClip() {
       context_.current.clip = transition->GetCaptureClip(object_);
     }
   }
-}
-
-static bool IsLinkHighlighted(const LayoutObject& object) {
-  return object.GetFrame()->GetPage()->GetLinkHighlight().IsHighlighting(
-      object);
 }
 
 static bool IsClipPathDescendant(const LayoutObject& object) {
@@ -2947,7 +2880,7 @@ void FragmentPaintPropertyTreeBuilder::UpdateLocalBorderBoxContext() {
   const ClipPaintPropertyNodeOrAlias* new_clip = nullptr;
   const EffectPaintPropertyNodeOrAlias* new_effect = nullptr;
 
-  if (object_.HasLayer() || properties_ || IsLinkHighlighted(object_) ||
+  if (object_.HasLayer() || properties_ ||
       object_.CanContainFixedPositionObjects() ||
       object_.CanContainAbsolutePositionObjects()) {
     new_transform = context_.current.transform;
@@ -3514,13 +3447,7 @@ void FragmentPaintPropertyTreeBuilder::UpdateScrollAndScrollTranslation() {
                     ->InternalOverscrollArea() ==
                 EInternalOverscrollArea::kOverlay);
       }
-      object_.GetFrameView()->AddScrollableAreaWithScrollNode(
-          *To<LayoutBox>(object_).GetScrollableArea());
     } else {
-      if (properties_->Scroll() && To<LayoutBox>(object_).GetScrollableArea()) {
-        object_.GetFrameView()->RemoveScrollableAreaWithScrollNode(
-            *To<LayoutBox>(object_).GetScrollableArea());
-      }
       OnClearScroll(properties_->ClearScroll());
       OnClearEffect(properties_->ClearVerticalScrollbarEffect());
       OnClearEffect(properties_->ClearHorizontalScrollbarEffect());
@@ -3776,33 +3703,6 @@ void FragmentPaintPropertyTreeBuilder::UpdateScrollTranslation() {
 
   auto effective_change_type = properties_->UpdateScrollTranslation(
       *context_.current.transform, std::move(state));
-  // Even if effective_change_type is kUnchanged, we might still need to
-  // DirectlyUpdateScrollOffsetTransform, in case the cc::TransformNode
-  // was also updated in LayerTreeHost::ApplyCompositorChanges.
-  if (effective_change_type <=
-          PaintPropertyChangeType::kChangedOnlySimpleValues &&
-      // In platform code, only scroll translations with scroll nodes are
-      // treated as scroll translations with overlap testing treatment.
-      // A scroll translation without a scroll node (see NeedsScrollNode)
-      // needs full PaintArtifactCompositor update on scroll.
-      properties_->Scroll()) {
-    if (auto* paint_artifact_compositor =
-            object_.GetFrameView()->GetPaintArtifactCompositor()) {
-      bool updated =
-          paint_artifact_compositor->DirectlyUpdateScrollOffsetTransform(
-              *properties_->ScrollTranslation());
-      if (updated && effective_change_type ==
-                         PaintPropertyChangeType::kChangedOnlySimpleValues) {
-        effective_change_type =
-            PaintPropertyChangeType::kChangedOnlyCompositedValues;
-        properties_->ScrollTranslation()->CompositorSimpleValuesUpdated();
-        if (paint_artifact_compositor->UsesRasterInducingScroll(
-                *properties_->Scroll())) {
-          paint_artifact_compositor->SetNeedsUpdateForRasterInducingScroll();
-        }
-      }
-    }
-  }
   OnUpdateScrollTranslation(effective_change_type);
 }
 
@@ -4826,7 +4726,6 @@ void PaintPropertyTreeBuilder::DirectlyUpdateTransformMatrix(
   const PhysicalRect reference_box = ComputeReferenceBox(box);
   FragmentData* fragment_data = &object.GetMutableForPainting().FirstFragment();
   auto* properties = fragment_data->PaintProperties();
-  auto* transform = properties->Transform();
   auto transform_and_origin = TransformAndOriginState(
       box, reference_box,
       [](const LayoutBox& box, const PhysicalRect& reference_box,
@@ -4845,16 +4744,10 @@ void PaintPropertyTreeBuilder::DirectlyUpdateTransformMatrix(
       box.StyleRef().IsRunningTransformAnimationOnCompositor();
   auto effective_change_type = properties->DirectlyUpdateTransformAndOrigin(
       std::move(transform_and_origin), animation_state);
-  DirectlyUpdateCcTransform(*transform, object, effective_change_type);
 
   if (effective_change_type > PaintPropertyChangeType::kUnchanged) {
     object.GetFrameView()->SetIntersectionObservationState(
         LocalFrameView::kDesired);
-  }
-
-  if (effective_change_type >=
-      PaintPropertyChangeType::kChangedOnlySimpleValues) {
-    object.GetFrameView()->SetPaintArtifactCompositorNeedsUpdate();
   }
 
   PaintPropertiesChangeInfo properties_changed{
@@ -4877,17 +4770,7 @@ void PaintPropertyTreeBuilder::DirectlyUpdateOpacityValue(
 
   FragmentData* fragment_data = &object.GetMutableForPainting().FirstFragment();
   auto* properties = fragment_data->PaintProperties();
-  auto effective_change_type =
-      properties->DirectlyUpdateOpacity(style.Opacity(), animation_state);
-  // If we have simple value change, which means opacity, we should try to
-  // directly update it on the PaintArtifactCompositor in order to avoid
-  // needing to run the property tree builder at all.
-  DirectlyUpdateCcOpacity(object, *properties, effective_change_type);
-
-  if (effective_change_type >=
-      PaintPropertyChangeType::kChangedOnlySimpleValues) {
-    object.GetFrameView()->SetPaintArtifactCompositorNeedsUpdate();
-  }
+  properties->DirectlyUpdateOpacity(style.Opacity(), animation_state);
 }
 
 void PaintPropertyTreeBuilder::IssueInvalidationsAfterUpdate() {
@@ -4921,7 +4804,6 @@ void PaintPropertyTreeBuilder::IssueInvalidationsAfterUpdate() {
         object_.IsInCanvasSubtree()) {
       context_.painting_layer->SetNeedsRepaint();
     }
-    object_.GetFrameView()->SetPaintArtifactCompositorNeedsUpdate();
   }
 
   CullRectUpdater::PaintPropertiesChanged(object_, properties_changed_);

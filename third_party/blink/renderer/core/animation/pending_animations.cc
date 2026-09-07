@@ -60,7 +60,6 @@ void PendingAnimations::Add(Animation* animation) {
 }
 
 bool PendingAnimations::Update(
-    const PaintArtifactCompositor* paint_artifact_compositor,
     bool start_on_compositor) {
   HeapVector<Member<Animation>> waiting_for_start_time;
   bool started_synchronized_on_compositor = false;
@@ -89,7 +88,7 @@ bool PendingAnimations::Update(
     if (animation->PreCommit(use_compositor_group
                                  ? compositor_group
                                  : kCompositorGroupHasStartTime,
-                             paint_artifact_compositor, start_on_compositor)) {
+                             start_on_compositor)) {
       if (animation->HasActiveAnimationsOnCompositor() &&
           !had_compositor_animation && use_compositor_group) {
         started_synchronized_on_compositor = true;
@@ -276,7 +275,7 @@ void PendingAnimations::Trace(Visitor* visitor) const {
 
 void PendingAnimations::TimerFired(TimerBase*) {
   base::AutoReset<bool> mark_inside(&inside_timer_fired_, true);
-  Update(nullptr, false);
+  Update(false);
 }
 
 }  // namespace blink

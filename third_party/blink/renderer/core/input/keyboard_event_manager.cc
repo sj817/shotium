@@ -36,7 +36,6 @@
 #include "third_party/blink/renderer/core/page/spatial_navigation.h"
 #include "third_party/blink/renderer/core/page/spatial_navigation_controller.h"
 #include "third_party/blink/renderer/platform/keyboard_codes.h"
-#include "third_party/blink/renderer/platform/widget/frame_widget.h"
 #include "third_party/blink/renderer/platform/windows_keyboard_codes.h"
 #include "ui/events/keycodes/dom/keycode_converter.h"
 
@@ -267,18 +266,6 @@ WebInputEventResult KeyboardEventManager::KeyEvent(
   // browser display mode since it must always behave like the the drive-by web.
   bool should_send_key_events_to_js =
       !frame_->GetSettings()->GetDontSendKeyEventsToJavascript();
-
-  if (!should_send_key_events_to_js &&
-      frame_->GetDocument()->IsInWebAppScope()) {
-    mojom::blink::DisplayMode display_mode =
-        frame_->GetWidgetForLocalRoot()->DisplayMode();
-    should_send_key_events_to_js =
-        display_mode == mojom::blink::DisplayMode::kMinimalUi ||
-        display_mode == mojom::blink::DisplayMode::kStandalone ||
-        display_mode == mojom::blink::DisplayMode::kFullscreen ||
-        display_mode == mojom::blink::DisplayMode::kUnframed ||
-        display_mode == mojom::blink::DisplayMode::kWindowControlsOverlay;
-  }
 
   // We have 2 level of not exposing key event to js, not send and send but not
   // cancellable.

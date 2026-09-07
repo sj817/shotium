@@ -61,7 +61,6 @@
 #include "third_party/blink/renderer/core/html/forms/html_input_element.h"
 #include "third_party/blink/renderer/core/html/html_anchor_element.h"
 #include "third_party/blink/renderer/core/html/html_plugin_element.h"
-#include "third_party/blink/renderer/core/html/plugin_document.h"
 #include "third_party/blink/renderer/core/input/event_handler.h"
 #include "third_party/blink/renderer/core/input_type_names.h"
 #include "third_party/blink/renderer/core/layout/hit_test_request.h"
@@ -296,19 +295,6 @@ void DragController::PerformDrop(DragData* drag_data,
       prevented_default = event_handler.PerformDragAndDrop(
                               CreateMouseEvent(drag_data), data_transfer) !=
                           WebInputEventResult::kNotHandled;
-      if (!prevented_default && document_under_mouse_) {
-        // When drop target is plugin element and it can process drag, we
-        // should prevent default behavior.
-        const HitTestLocation location(local_root.View()->ConvertFromRootFrame(
-            PhysicalOffset::FromPointFRound(drag_data->ClientPosition())));
-        const HitTestResult result =
-            event_handler.HitTestResultAtLocation(location);
-        auto* html_plugin_element =
-            DynamicTo<HTMLPlugInElement>(result.InnerNode());
-        prevented_default |=
-            html_plugin_element && html_plugin_element->CanProcessDrag();
-      }
-
       // Invalidate clipboard here for security.
       data_transfer->SetAccessPolicy(DataTransferAccessPolicy::kNumb);
     }
@@ -540,7 +526,7 @@ DragOperation DragController::OperationForLoad(DragData* drag_data,
       PhysicalOffset::FromPointFRound(drag_data->ClientPosition()));
 
   if (doc &&
-      (did_initiate_drag_ || IsA<PluginDocument>(doc) || IsEditable(*doc)))
+      (did_initiate_drag_ || IsEditable(*doc)))
     return DragOperation::kNone;
   return GetDragOperation(drag_data);
 }
@@ -599,7 +585,6 @@ DispatchEventResult DragController::DispatchTextInputEventFor(
 bool DragController::ConcludeEditDrag(DragData* drag_data) {
   DCHECK(drag_data);
 
-  HTMLInputElement* file_input = file_input_element_under_mouse_;
   if (file_input_element_under_mouse_) {
     file_input_element_under_mouse_->SetCanReceiveDroppedFiles(false);
     file_input_element_under_mouse_ = nullptr;
@@ -621,16 +606,6 @@ bool DragController::ConcludeEditDrag(DragData* drag_data) {
           DispatchEventResult::kNotCanceled)
     return true;
 
-  if (drag_data->ContainsFiles() && file_input) {
-    // fileInput should be the element we hit tested for, unless it was made
-    // display:none in a drop event handler.
-    if (file_input->GetLayoutObject())
-      DCHECK_EQ(file_input, element);
-    if (file_input->IsDisabledFormControl())
-      return false;
-
-    return file_input->ReceiveDroppedFiles(drag_data);
-  }
 
   if (!page_->GetDragController().CanProcessDrag(
           drag_data, inner_frame->LocalFrameRoot())) {
@@ -793,10 +768,7 @@ bool DragController::CanProcessDrag(DragData* drag_data,
   if (drag_data->ContainsFiles() && AsFileInput(result.InnerNode()))
     return true;
 
-  if (auto* plugin = DynamicTo<HTMLPlugInElement>(result.InnerNode())) {
-    if (!plugin->CanProcessDrag() && !IsEditable(*result.InnerNode()))
-      return false;
-  } else if (!IsEditable(*result.InnerNode())) {
+  if (!IsEditable(*result.InnerNode())) {
     return false;
   }
 

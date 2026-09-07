@@ -50,7 +50,6 @@
 #include "third_party/blink/renderer/core/inspector/console_message.h"
 #include "third_party/blink/renderer/core/layout/layout_object.h"
 #include "third_party/blink/renderer/core/page/page.h"
-#include "third_party/blink/renderer/core/page/validation_message_client.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
 #include "third_party/blink/renderer/platform/runtime_enabled_features.h"
 #include "third_party/blink/renderer/platform/text/bidi_paragraph.h"
@@ -87,8 +86,7 @@ class FormAttributeTargetObserver : public IdTargetObserver {
 };
 
 ListedElement::ListedElement()
-    : has_validation_message_(false),
-      form_was_set_by_parser_(false),
+    : form_was_set_by_parser_(false),
       will_validate_initialized_(false),
       will_validate_(true),
       is_valid_(true),
@@ -160,8 +158,6 @@ void ListedElement::InsertedInto(ContainerNode& insertion_point) {
 void ListedElement::RemovedFrom(ContainerNode& insertion_point) {
   FieldSetAncestorsSetNeedsValidityCheck(&insertion_point,
                                          StartingNodeType::IS_INSERTION_POINT);
-  HideVisibleValidationMessage();
-  has_validation_message_ = false;
   // Two values that might change as a result of being removed are
   // `ancestor_disabled_state_` and `data_list_ancestor_state_`. Both of
   // these values feed into the WillValidate cache. If this ListedElement is
@@ -415,9 +411,7 @@ void ListedElement::UpdateWillValidateCache(WillValidateReason reason) {
     // SetNeedsValidityCheck() does it in the right away. This relies on
     // the assumption that Valid() is always true if willValidate() is false.
 
-    if (!will_validate_) {
-      HideVisibleValidationMessage();
-    }
+
   } else {
     // We don't need to do any of the work above for insertion or removal,
     // because:
@@ -507,68 +501,6 @@ void ListedElement::setCustomValidity(const String& error) {
   SetNeedsValidityCheck();
 }
 
-void ListedElement::FindCustomValidationMessageTextDirection(
-    const String& message,
-    TextDirection& message_dir,
-    String& sub_message,
-    TextDirection& sub_message_dir) {
-  message_dir = BidiParagraph::BaseDirectionForStringOrLtr(message);
-  if (!sub_message.empty()) {
-    sub_message_dir = ToHTMLElement().GetLayoutObject()->StyleRef().Direction();
-  }
-}
-
-void ListedElement::UpdateVisibleValidationMessage() {
-  Element& element = ValidationAnchor();
-  Page* page = element.GetDocument().GetPage();
-  if (!page || !page->IsPageVisible() || element.GetDocument().UnloadStarted())
-    return;
-  if (page->Paused())
-    return;
-  String message;
-  if (element.GetLayoutObject() && WillValidate() &&
-      ToHTMLElement().IsShadowIncludingInclusiveAncestorOf(element))
-    message = validationMessage().StripWhiteSpace();
-
-  has_validation_message_ = true;
-  ValidationMessageClient* client = &page->GetValidationMessageClient();
-  TextDirection message_dir = TextDirection::kLtr;
-  TextDirection sub_message_dir = TextDirection::kLtr;
-  String sub_message = ValidationSubMessage().StripWhiteSpace();
-  if (message.empty()) {
-    client->HideValidationMessage(element);
-  } else {
-    FindCustomValidationMessageTextDirection(message, message_dir, sub_message,
-                                             sub_message_dir);
-  }
-  client->ShowValidationMessage(element, message, message_dir, sub_message,
-                                sub_message_dir);
-}
-
-void ListedElement::HideVisibleValidationMessage() {
-  if (!has_validation_message_)
-    return;
-
-  if (auto* client = GetValidationMessageClient())
-    client->HideValidationMessage(ValidationAnchor());
-}
-
-bool ListedElement::IsValidationMessageVisible() const {
-  if (!has_validation_message_)
-    return false;
-
-  if (auto* client = GetValidationMessageClient()) {
-    return client->IsValidationMessageVisible(ValidationAnchor());
-  }
-  return false;
-}
-
-ValidationMessageClient* ListedElement::GetValidationMessageClient() const {
-  if (Page* page = ToHTMLElement().GetDocument().GetPage())
-    return &page->GetValidationMessageClient();
-  return nullptr;
-}
-
 Element& ListedElement::ValidationAnchor() const {
   return const_cast<HTMLElement&>(ToHTMLElement());
 }
@@ -610,7 +542,7 @@ bool ListedElement::checkValidity(List* unhandled_invalid_controls) {
   return false;
 }
 
-void ListedElement::ShowValidationMessage() {
+void ListedElement::FocusValidationAnchor() {
   Element& element = ValidationAnchor();
   element.scrollIntoViewIfNeeded(false);
   if (element.IsFocusable()) {
@@ -619,7 +551,6 @@ void ListedElement::ShowValidationMessage() {
     Element& host = GetHostOrFocusDelegate();
     host.Focus();
   }
-  UpdateVisibleValidationMessage();
 }
 
 bool ListedElement::reportValidity() {
@@ -629,7 +560,7 @@ bool ListedElement::reportValidity() {
     return is_valid;
   DCHECK_EQ(unhandled_invalid_controls.size(), 1u);
   DCHECK_EQ(unhandled_invalid_controls[0].Get(), this);
-  ShowValidationMessage();
+  FocusValidationAnchor();
   return false;
 }
 
@@ -664,16 +595,6 @@ void ListedElement::SetNeedsValidityCheck() {
     element.PseudoStateChanged(CSSSelector::kPseudoUserInvalid);
   }
 
-  // Updates only if this control already has a validation message.
-  if (IsValidationMessageVisible()) {
-    // Calls UpdateVisibleValidationMessage() even if is_valid_ is not
-    // changed because a validation message can be changed.
-    element.GetDocument()
-        .GetTaskRunner(TaskType::kDOMManipulation)
-        ->PostTask(FROM_HERE,
-                   BindOnce(&ListedElement::UpdateVisibleValidationMessage,
-                            WrapPersistent(this)));
-  }
 }
 
 void ListedElement::DisabledAttributeChanged(DisabledChangedReason reason) {

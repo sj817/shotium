@@ -33,33 +33,25 @@
 #define THIRD_PARTY_BLINK_RENDERER_CORE_HTML_FORMS_FILE_INPUT_TYPE_H_
 
 #include "third_party/blink/renderer/core/core_export.h"
-#include "third_party/blink/renderer/core/html/forms/file_chooser.h"
 #include "third_party/blink/renderer/core/html/forms/input_type.h"
 #include "third_party/blink/renderer/core/html/forms/keyboard_clickable_input_type_view.h"
-#include "third_party/blink/renderer/core/page/popup_opening_observer.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
 
 namespace blink {
 
-class DragData;
 class FileList;
 
 class CORE_EXPORT FileInputType final : public InputType,
-                                        public KeyboardClickableInputTypeView,
-                                        private FileChooserClient {
+                                        public KeyboardClickableInputTypeView {
  public:
   FileInputType(HTMLInputElement&);
 
   void Trace(Visitor*) const override;
   using InputType::GetElement;
   static Vector<String> FilesFromFormControlState(const FormControlState&);
-  static FileList* CreateFileList(ExecutionContext& context,
-                                  const FileChooserFileInfoList& files,
-                                  const base::FilePath& base_dir);
 
   void CountUsage() override;
 
-  void SetFilesFromPaths(const Vector<String>&) override;
   bool CanSetStringValue() const;
   bool ValueMissing(const String&) const;
 
@@ -69,9 +61,6 @@ class CORE_EXPORT FileInputType final : public InputType,
   void RestoreFormControlState(const FormControlState&) override;
   void AppendToFormData(FormData&) const override;
   String ValueMissingText() const override;
-  void HandleDOMActivateEvent(Event&) override;
-  void OpenPopupView() override;
-  bool IsPickerVisible() const override;
   void AdjustStyle(ComputedStyleBuilder&) override;
   LayoutObject* CreateLayoutObject(const ComputedStyle&) const override;
   FileList* Files() override;
@@ -84,8 +73,6 @@ class CORE_EXPORT FileInputType final : public InputType,
                 bool value_changed,
                 TextFieldEventBehavior,
                 TextControlSetValueSelection) override;
-  bool ReceiveDroppedFiles(const DragData*) override;
-  String DroppedFileSystemId() override;
   void CreateShadowSubtree() override;
   HTMLInputElement* UploadButton() const override;
   void DisabledAttributeChanged(DisabledChangedReason) override;
@@ -95,29 +82,10 @@ class CORE_EXPORT FileInputType final : public InputType,
   String FileStatusText() const override;
   void UpdateView() override;
 
-  // KeyboardClickableInputTypeView overrides.
-  void HandleKeypressEvent(KeyboardEvent&) override;
-  void HandleKeyupEvent(KeyboardEvent&) override;
-
-  // FileChooserClient implementation.
-  void FilesChosen(FileChooserFileInfoList files,
-                   const base::FilePath& base_dir) override;
-  void FileChooserCanceled() override;
-  LocalFrame* FrameOrNull() const override;
-
-  // PopupOpeningObserver implementation.
-  void WillOpenPopup() override;
-
-  void SetFilesFromDirectory(const String&);
   Node* FileStatusElement() const;
 
   Member<FileList> file_list_;
-  String dropped_file_system_id_;
-  // True if we should force a 'change' event to be dispatched even if the
-  // file list has not changed. This is set when the user explicitly chooses
-  // files via a file chooser, to ensure that choosing the same file again
-  // still fires a 'change' event rather than a 'cancel' event.
-  bool force_change_event_ = false;
+
 };
 
 template <>

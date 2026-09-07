@@ -133,7 +133,7 @@ bool NodeIsZoomTarget(Node* node) {
 
 bool ProvidesContextMenuItems(Node* node) {
   // This function tries to match the nodes that receive special context-menu
-  // items in ContextMenuController::ShowContextMenu(), and should be kept up
+  // items in the browser context menu, and should be kept up
   // to date with those.
   DCHECK(node->GetLayoutObject() || node->IsShadowRoot());
   if (!node->GetLayoutObject())

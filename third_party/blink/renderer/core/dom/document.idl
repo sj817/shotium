@@ -167,12 +167,6 @@ typedef (HTMLScriptElement or SVGScriptElement) HTMLOrSVGScriptElement;
 
     readonly attribute Element? scrollingElement;
 
-    // Pointer Lock
-    // https://w3c.github.io/pointerlock/#extensions-to-the-document-interface
-    attribute EventHandler onpointerlockchange;
-    attribute EventHandler onpointerlockerror;
-    [MeasureAs=DocumentExitPointerLock] void exitPointerLock();
-
     // Custom Elements
     // https://w3c.github.io/webcomponents/spec/custom/#extensions-to-document-interface-to-register
     // https://w3c.github.io/webcomponents/spec/custom/#extensions-to-document-interface-to-instantiate

@@ -173,34 +173,6 @@ const char* RequestContextName(mojom::blink::RequestContextType context) {
 // to avoid confusion around off-the-main-thread fetch.
 // TODO(hiroshige): Consider merging them once FetchClientSettingsObject
 // becomes the source of CSP/InsecureRequestPolicy also in frames.
-bool IsWebSocketAllowedInFrame(const BaseFetchContext& fetch_context,
-                               const SecurityContext* security_context,
-                               Settings* settings,
-                               const KURL& url) {
-  fetch_context.CountUsage(WebFeature::kMixedContentPresent);
-  fetch_context.CountUsage(WebFeature::kMixedContentWebSocket);
-
-  // If we're in strict mode, we'll automagically fail everything, and
-  // intentionally skip the client checks in order to prevent degrading the
-  // site's security UI.
-  bool strict_mode =
-      (security_context->GetInsecureRequestPolicy() &
-       mojom::blink::InsecureRequestPolicy::kBlockAllMixedContent) !=
-          mojom::blink::InsecureRequestPolicy::kLeaveInsecureRequestsAlone ||
-      settings->GetStrictMixedContentChecking();
-  if (strict_mode)
-    return false;
-  return settings && settings->GetAllowRunningOfInsecureContent();
-}
-
-// IsWebSocketAllowedInWorker(const WorkerFetchContext&, WorkerSettings*,
-// const KURL&) used to run this same strict-mode check for a WebSocket
-// opened from a worker or worklet global scope. Workers require a script
-// engine to run, which this renderer no longer has, so WorkerFetchContext
-// and WorkerSettings are gone along with it; only the LocalFrame path below
-// (MixedContentChecker::IsWebSocketAllowed(const FrameFetchContext&, ...))
-// remains.
-
 bool IsUrlPotentiallyTrustworthy(const KURL& url) {
   // This saves a copy of the url, which can be expensive for large data URLs.
   // TODO(crbug.com/1322100): Remove this logic once
@@ -626,94 +598,6 @@ bool MixedContentChecker::ShouldBlockFetch(
 // this renderer no longer has, so WorkerFetchContext, WorkerSettings and
 // the global scopes they served are gone along with it; only the
 // LocalFrame-driven ShouldBlockFetch(...) above remains.
-
-// static
-ConsoleMessage* MixedContentChecker::CreateConsoleMessageAboutWebSocket(
-    const KURL& main_resource_url,
-    const KURL& url,
-    bool allowed) {
-  String message = StrCat(
-      {"Mixed Content: The page at '", main_resource_url.ElidedString(),
-       "' was loaded over HTTPS, but attempted to connect to the insecure "
-       "WebSocket endpoint '",
-       url.ElidedString(), "'. ",
-       allowed
-           ? "This endpoint should be available via WSS. Insecure access is "
-             "deprecated."
-           : "This request has been blocked; this endpoint must be "
-             "available over WSS."});
-  mojom::ConsoleMessageLevel message_level =
-      allowed ? mojom::ConsoleMessageLevel::kWarning
-              : mojom::ConsoleMessageLevel::kError;
-  return MakeGarbageCollected<ConsoleMessage>(
-      mojom::ConsoleMessageSource::kSecurity, message_level, message);
-}
-
-// static
-bool MixedContentChecker::IsWebSocketAllowed(
-    const FrameFetchContext& frame_fetch_context,
-    LocalFrame* frame,
-    const KURL& url) {
-  Frame* mixed_frame = InWhichFrameIsContentMixed(frame, url);
-  if (!mixed_frame)
-    return true;
-
-  Settings* settings = mixed_frame->GetSettings();
-  // Use the current local frame's client; the embedder doesn't distinguish
-  // mixed content signals from different frames on the same page.
-  WebContentSettingsClient* content_settings_client =
-      frame->GetContentSettingsClient();
-  const SecurityContext* security_context = mixed_frame->GetSecurityContext();
-
-  if (ContentSecurityPolicy* policy =
-          frame->DomWindow()->GetContentSecurityPolicy()) {
-    policy->ReportMixedContent(url,
-                               ResourceRequest::RedirectStatus::kNoRedirect);
-  }
-  bool allowed = IsWebSocketAllowedInFrame(frame_fetch_context,
-                                           security_context, settings, url);
-  if (content_settings_client) {
-    allowed =
-        content_settings_client->AllowRunningInsecureContent(allowed, url);
-  }
-
-  // Skip mixed content check when we can determine that the request is a Local
-  // Network Access (LNA) request. LNA checks later on will ensure that (a) the
-  // request is actually an LNA request, and (b) the user has given permission
-  // for the LNA request to go through.
-  //
-  // Reference:
-  // https://wicg.github.io/local-network-access/
-  if (!allowed &&
-      base::FeatureList::IsEnabled(
-          network::features::kLocalNetworkAccessChecks) &&
-      base::FeatureList::IsEnabled(
-          network::features::kLocalNetworkAccessChecksWebSockets)) {
-    if (IsUrlLNARequest(url)) {
-      allowed = true;
-    }
-  }
-
-  if (allowed) {
-    frame_fetch_context.GetContentSecurityNotifier().NotifyInsecureContentRan(
-        url, (mixed_frame == &frame->Tree().Top())
-                 ? mojom::blink::ContentSecurityNotifier::
-                       InsecureContentOrigin::kTopFrame
-                 : mojom::blink::ContentSecurityNotifier::
-                       InsecureContentOrigin::kCurrentFrame);
-  }
-
-  frame->GetDocument()->AddConsoleMessage(CreateConsoleMessageAboutWebSocket(
-      MainResourceUrlForFrame(mixed_frame), url, allowed));
-  // AuditsIssue::ReportMixedContentIssue(...) was here.
-  return allowed;
-}
-
-// MixedContentChecker::IsWebSocketAllowed(WorkerFetchContext&, const KURL&)
-// used to run this same check for a WebSocket opened from a worker or
-// worklet global scope. Workers require a script engine to run, which this
-// renderer no longer has, so WorkerFetchContext and WorkerSettings are gone
-// along with it; only the LocalFrame overload above remains.
 
 bool MixedContentChecker::IsMixedFormAction(
     LocalFrame* frame,

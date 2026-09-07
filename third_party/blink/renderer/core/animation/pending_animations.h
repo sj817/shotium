@@ -42,7 +42,6 @@
 
 namespace blink {
 
-class PaintArtifactCompositor;
 
 // Handles starting animations when they could potentially require
 // interaction with the compositor. This can include both main-thread
@@ -94,8 +93,7 @@ class CORE_EXPORT PendingAnimations final
   //
   // Returns whether we are waiting for an animation to start and should service
   // again on the next frame.
-  bool Update(const PaintArtifactCompositor* paint_artifact_compositor,
-              bool start_on_compositor = true);
+  bool Update(bool start_on_compositor = true);
   void NotifyCompositorAnimationStarted(double monotonic_animation_start_time,
                                         int compositor_group = 0);
 

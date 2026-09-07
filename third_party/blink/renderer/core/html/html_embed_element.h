@@ -66,11 +66,9 @@ class CORE_EXPORT HTMLEmbedElement final : public HTMLPlugInElement {
   bool IsURLAttribute(const Attribute&) const override;
   const QualifiedName& SubResourceAttributeName() const override;
 
-  LayoutEmbeddedContent* ExistingLayoutEmbeddedContent() const override;
 
   void UpdatePluginInternal() override;
 
-  void ParametersForPlugin(PluginParameters& plugin_params);
 
   NamedItemType GetNamedItemType() const override {
     return NamedItemType::kName;

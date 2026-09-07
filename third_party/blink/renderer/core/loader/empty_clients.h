@@ -47,7 +47,6 @@
 #include "third_party/blink/public/platform/web_spell_check_panel_host_client.h"
 #include "third_party/blink/renderer/core/core_export.h"
 #include "third_party/blink/renderer/core/frame/local_frame_client.h"
-#include "third_party/blink/renderer/core/frame/remote_frame_client.h"
 #include "third_party/blink/renderer/core/page/chrome_client.h"
 #include "third_party/blink/renderer/core/page/page.h"
 #include "third_party/blink/renderer/platform/cursors.h"
@@ -95,7 +94,6 @@ class CORE_EXPORT EmptyChromeClient : public ChromeClient {
   ~EmptyChromeClient() override = default;
 
   // ChromeClient implementation.
-  WebViewImpl* GetWebView() const override { return nullptr; }
   void ChromeDestroyed() override {}
   void SetWindowRect(const gfx::Rect&, LocalFrame&) override {}
   void MoveWindowTo(const gfx::Point&, LocalFrame&) override {}
@@ -132,10 +130,6 @@ class CORE_EXPORT EmptyChromeClient : public ChromeClient {
                              base::TimeDelta timeout,
                              cc::PaintHoldingReason reason) override;
   void StopDeferringCommits(LocalFrame& main_frame) override {}
-  void RequestMainFrameOnCompositorAnimation(
-      LocalFrame&,
-      cc::PropertyChangeForcesCommitCriteria criteria,
-      bool force_propagation) override {}
   void StartDragging(LocalFrame*,
                      const WebDragData&,
                      DragOperationsMask,
@@ -184,8 +178,6 @@ class CORE_EXPORT EmptyChromeClient : public ChromeClient {
   }
   bool HasOpenedPopup() const override { return false; }
   PopupMenu* OpenPopupMenu(LocalFrame&, HTMLSelectElement&) override;
-  PagePopup* OpenPagePopup(PagePopupClient*) override { return nullptr; }
-  void ClosePagePopup(PagePopup*) override {}
   DOMWindow* PagePopupWindowForTesting() const override { return nullptr; }
 
   bool TabsToLinks() override { return false; }
@@ -230,20 +222,10 @@ class CORE_EXPORT EmptyChromeClient : public ChromeClient {
       DateTimeChooserClient*,
       const DateTimeChooserParameters&) override;
   void OpenTextDataListChooser(HTMLInputElement&) override;
-  void OpenFileChooser(LocalFrame*, scoped_refptr<FileChooser>) override;
   void SetCursor(const ui::Cursor&, LocalFrame* local_root) override {}
   void SetCursorOverridden(bool) override {}
   ui::Cursor LastSetCursorForTesting() const override {
     return PointerCursor();
-  }
-  void AttachRootLayer(scoped_refptr<cc::Layer>,
-                       LocalFrame* local_root) override;
-  cc::AnimationHost* GetCompositorAnimationHost(LocalFrame&) const override {
-    return nullptr;
-  }
-  cc::AnimationTimeline* GetScrollAnimationTimeline(
-      LocalFrame&) const override {
-    return nullptr;
   }
   void SetEventListenerProperties(LocalFrame*,
                                   cc::EventListenerClass,
@@ -401,12 +383,6 @@ class CORE_EXPORT EmptyLocalFrameClient : public LocalFrameClient {
                             const Vector<String>&) override {}
   LocalFrame* CreateFrame(const AtomicString&, HTMLFrameOwnerElement*) override;
 
-  WebPluginContainerImpl* CreatePlugin(HTMLPlugInElement&,
-                                       const KURL&,
-                                       const Vector<String>&,
-                                       const Vector<String>&,
-                                       const String&,
-                                       bool) override;
   // CreateWebMediaPlayer() and CreateRemotePlaybackClient() removed along with
   // the LocalFrameClient hooks they overrode.
 

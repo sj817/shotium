@@ -225,11 +225,6 @@ std::vector<WebString> CopyForceEnabledOriginTrials(
   return base::ToVector(force_enabled_origin_trials, ToWebString);
 }
 
-bool IsPagePopupRunningInWebTest(LocalFrame* frame) {
-  return frame && frame->GetPage()->GetChromeClient().IsPopup() &&
-         WebTestSupport::IsRunningWebTest();
-}
-
 void WarnIfSandboxIneffective(LocalDOMWindow* window) {
   if (window->document()->IsInitialEmptyDocument()) {
     return;
@@ -2284,13 +2279,7 @@ scoped_refptr<SecurityOrigin> DocumentLoader::CalculateOrigin(
   // from an existing document's origin or from `origin_to_commit_`. If this is
   // true, we won't try to compare the nonce of this origin (if it's opaque) to
   // the browser-calculated origin later on.
-  if (IsPagePopupRunningInWebTest(frame_)) {
-    // If we are a page popup in LayoutTests ensure we use the popup
-    // owner's security origin so the tests can possibly access the
-    // document via internals API.
-    auto* owner_context = frame_->PagePopupOwner()->GetExecutionContext();
-    origin = owner_context->GetSecurityOrigin()->IsolatedCopy();
-  } else if (owner_document && owner_document->domWindow()) {
+  if (owner_document && owner_document->domWindow()) {
     // Prefer taking `origin` from `owner_document` if one is available - this
     // will correctly inherit/alias `SecurityOrigin::domain_` from the
     // `owner_document` (note that the
@@ -2625,20 +2614,7 @@ void DocumentLoader::InitializeWindow(Document* owner_document) {
   }
 
   AgentClusterKey agent_cluster_key = agent_cluster_key_;
-  if (IsPagePopupRunningInWebTest(frame_)) {
-    // Additionally, if we are a page popup in LayoutTests ensure we use the
-    // popup owner's AgentClusterKey so the tests can possibly access the
-    // document via internals API.
-    agent_cluster_key = frame_->PagePopupOwner()
-                            ->GetExecutionContext()
-                            ->GetAgent()
-                            ->GetAgentClusterKey();
-
-    // Note: this code must be kept in sync with
-    // WindowAgentFactory::GetAgentForOrigin(), as the two conditions below hand
-    // out universal WindowAgent objects, and thus override the AgentClusterKey
-    // provided by the browser process.
-  } else if (HasPotentialUniversalAccessPrivilege(frame_.Get()) ||
+  if (HasPotentialUniversalAccessPrivilege(frame_.Get()) ||
              security_origin->IsLocal()) {
     // In this case we either have AllowUniversalAccessFromFileURLs enabled, or
     // WebSecurity is disabled, or it's a local scheme such as file://; any of

@@ -44,7 +44,6 @@
 #include "third_party/blink/public/platform/interface_registry.h"
 #include "third_party/blink/public/platform/platform.h"
 #include "third_party/blink/public/web/blink.h"
-#include "third_party/blink/renderer/controller/blink_leak_detector.h"
 #include "third_party/blink/renderer/controller/memory_saver_controller.h"
 #include "third_party/blink/renderer/core/animation/animation_clock.h"
 #include "third_party/blink/renderer/core/dom/document.h"
@@ -258,12 +257,6 @@ void BlinkInitializer::RegisterInterfaces(mojo::BinderMap& binders) {
           CrossThreadBindRepeating(&MemoryUsageMonitorPosix::Bind)),
       main_thread_task_runner);
 #endif
-
-  binders.Add<mojom::blink::LeakDetector>(
-      ConvertToBaseRepeatingCallback(CrossThreadBindRepeating(
-          &BlinkLeakDetector::Bind,
-          blink::RetainedRef(main_thread_task_runner))),
-      main_thread_task_runner);
 
   binders.Add<mojom::blink::DiskAllocator>(
       ConvertToBaseRepeatingCallback(

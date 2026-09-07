@@ -1725,16 +1725,6 @@ WebInputEventResult EventHandler::HandleGestureEvent(
     UpdateGestureTargetNodeForMouseEvent(targeted_event);
 
   // Route to the correct frame.
-  if (auto unbounded_result =
-          event_handling_util::SubframeForActiveUnboundedElement(
-              frame_, targeted_event.Event().PositionInRootFrame())) {
-    GestureEventWithHitTestResults subframe_event(targeted_event.Event(),
-                                                  unbounded_result->location,
-                                                  unbounded_result->result);
-    return unbounded_result->frame->GetEventHandler().HandleGestureEventInFrame(
-        subframe_event);
-  }
-
   if (LocalFrame* inner_frame =
           targeted_event.GetHitTestResult().InnerNodeFrame()) {
     return inner_frame->GetEventHandler().HandleGestureEventInFrame(

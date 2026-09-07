@@ -81,9 +81,6 @@ class SecurityContext;
 class Settings;
 struct FrameLoadRequest;
 class WindowAgentFactory;
-class WebFrame;
-class WebLocalFrame;
-class WebRemoteFrame;
 
 enum class FrameDetachType { kRemove, kSwapForLocal, kSwapForRemote };
 
@@ -110,10 +107,9 @@ class CORE_EXPORT Frame : public GarbageCollected<Frame> {
   virtual void Navigate(FrameLoadRequest&, WebFrameLoadType) = 0;
 
   // Releases the resources associated with a frame. Used for:
-  // - closing a `WebView`, which detaches the main frame
+  // - destroying a Page, which detaches the main frame
   // - removing a `FrameOwner` from the DOM, which detaches the `FrameOwner`'s
   //   content frame
-  // - preparing a frame to be replaced in `Frame::Swap()`.
   //
   // Since `Detach()` fires JS events and detaches all child frames, and JS can
   // modify the DOM in ways that trigger frame removal, it is possible to
@@ -393,25 +389,6 @@ class CORE_EXPORT Frame : public GarbageCollected<Frame> {
   // Detaches a frame from its parent frame if it has one.
   void DetachFromParent();
 
-  // Swap out this frame for a new local frame. Note that this frame and the
-  // local frame can belong to different Pages in case of main frame
-  // LocalFrame <-> LocalFrame swaps. In that case, the frame actually being
-  // swapped in this frame's place in the old Page will be a placeholder
-  // RemoteFrame, while the new LocalFrame will get swapped in into a new Page.
-  // See comments in SwapImpl()'s implementation for more details.
-  bool Swap(WebLocalFrame*);
-
-  // Swap out this frame for a new remote frame. This method takes the
-  // mojo interfaces because they are provided in the construction IPC
-  // as opposed to being fetched via an AssociatedInterfaceProvider which
-  // WebLocalFrame uses.
-  bool Swap(WebRemoteFrame*,
-            mojo::PendingAssociatedRemote<mojom::blink::RemoteFrameHost>
-                remote_frame_host,
-            mojo::PendingAssociatedReceiver<mojom::blink::RemoteFrame>
-                remote_frame_receiver,
-            const std::optional<base::UnguessableToken>& devtools_frame_token);
-
   // Removes the given child from this frame.
   void RemoveChild(Frame* child);
 
@@ -473,11 +450,6 @@ class CORE_EXPORT Frame : public GarbageCollected<Frame> {
 
   virtual void DidChangeVisibleToHitTesting() = 0;
 
-  void FocusImpl();
-
-  void ApplyFrameOwnerProperties(
-      mojom::blink::FrameOwnerPropertiesPtr properties);
-
   void NotifyUserActivationInFrameTreeStickyOnly();
   void NotifyUserActivationInFrameTree(
       mojom::blink::UserActivationNotificationType notification_type,
@@ -509,14 +481,6 @@ class CORE_EXPORT Frame : public GarbageCollected<Frame> {
   void InsertAfter(Frame* new_child, Frame* previous_sibling);
 
   void CancelFormSubmissionWithVersion(uint64_t version);
-
-  bool SwapImpl(
-      WebFrame*,
-      mojo::PendingAssociatedRemote<mojom::blink::RemoteFrameHost>
-          remote_frame_host,
-      mojo::PendingAssociatedReceiver<mojom::blink::RemoteFrame>
-          remote_frame_receiver,
-      const std::optional<base::UnguessableToken>& devtools_frame_token);
 
   // Notifies a specific frame that it now has user activation. Used to prevent
   // duplicated logic in `NotifyUserActivationInFrameTree()`, which notifies

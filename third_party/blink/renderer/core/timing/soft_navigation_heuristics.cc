@@ -32,7 +32,6 @@
 #include "third_party/blink/renderer/core/paint/timing/paint_timing_detector.h"
 #include "third_party/blink/renderer/core/paint/timing/paint_timing_record.h"
 #include "third_party/blink/renderer/core/timing/dom_window_performance.h"
-#include "third_party/blink/renderer/core/timing/interaction_effects_monitor.h"
 #include "third_party/blink/renderer/core/timing/performance_timing_for_reporting.h"
 #include "third_party/blink/renderer/core/timing/soft_navigation_context.h"
 #include "third_party/blink/renderer/core/timing/soft_navigation_paint_attribution_tracker.h"
@@ -273,11 +272,6 @@ void SoftNavigationHeuristics::Shutdown() {
                                         required_paint_area);
     context->Shutdown();
   }
-
-  for (const auto& monitor : interaction_effects_monitors_) {
-    monitor->Shutdown();
-  }
-  interaction_effects_monitors_.clear();
 
   interaction_id_to_context_.clear();
 }
@@ -668,7 +662,6 @@ void SoftNavigationHeuristics::Trace(Visitor* visitor) const {
   visitor->Trace(window_);
   visitor->Trace(paint_attribution_tracker_);
   visitor->Trace(contexts_waiting_for_paint_timestamp_);
-  visitor->Trace(interaction_effects_monitors_);
   visitor->Trace(interaction_id_to_context_);
 }
 
@@ -739,33 +732,6 @@ uint64_t SoftNavigationHeuristics::CalculateRequiredPaintArea() const {
     return required_paint_area;
   }
   return kMinRequiredArea;
-}
-
-void SoftNavigationHeuristics::ForEachInteractionEffectsMonitor(
-    base::FunctionRef<void(InteractionEffectsMonitor&)> callback) {
-  for (const auto& monitor : interaction_effects_monitors_) {
-    callback(*monitor.Get());
-  }
-}
-
-void SoftNavigationHeuristics::RegisterInteractionEffectsMonitor(
-    InteractionEffectsMonitor* monitor) {
-  // This should not be called after detach.
-  CHECK(window_->GetFrame());
-  auto result = interaction_effects_monitors_.insert(monitor);
-  CHECK(result.is_new_entry);
-}
-
-void SoftNavigationHeuristics::UnregisterInteractionEffectsMonitor(
-    InteractionEffectsMonitor* monitor) {
-  // `interaction_effects_monitors_` is cleared on detach, and the observer
-  // might be unregistered after that.
-  if (!window_->GetFrame()) {
-    return;
-  }
-  auto iter = interaction_effects_monitors_.find(monitor);
-  CHECK_NE(iter, interaction_effects_monitors_.end());
-  interaction_effects_monitors_.erase(monitor);
 }
 
 // static

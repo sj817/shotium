@@ -10,21 +10,3 @@ enum DevicePostureType {
   kContinuous,
   kFolded,
 };
-
-// This interface is used to get the posture of the device from
-// DevicePostureService. This service is hosted in the browser process and
-// exposes the Posture and Viewport Segments to the renderer via LocalFrame.
-interface DevicePostureProvider {
-  // Associates an interface to the posture provider. The initial posture
-  // will also be returned.
-  AddListenerAndGetCurrentPosture(
-    pending_remote<DevicePostureClient> client)
-      => (DevicePostureType posture);
-};
-
-// Interface that client of the DevicePostureProvider interface must implement
-// to observe posture changes.
-interface DevicePostureClient {
-  // Interface used to notify posture changes.
-  OnPostureChanged(DevicePostureType posture);
-};

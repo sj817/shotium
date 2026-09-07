@@ -75,7 +75,7 @@ class CORE_EXPORT TreeScope : public GarbageCollectedMixin {
   // accessor JS used to reach via `document.adoptedStyleSheets`) was here.
   // It's a script-only entry point -- with no script left to call it, it's
   // gone; AdoptedStyleSheets() below is the surviving internal mechanism that
-  // frame_serializer.cc and the style engine still use.
+  // the style engine still uses.
   DomSelection* getSelection() { return GetSelection(); }
   HeapVector<Member<Animation>> getAnimations();
   Element* elementFromPoint(double x, double y) {
@@ -84,7 +84,6 @@ class CORE_EXPORT TreeScope : public GarbageCollectedMixin {
   HeapVector<Member<Element>> elementsFromPoint(double x, double y) {
     return ElementsFromPoint(x, y);
   }
-  Element* pointerLockElement();
   Element* fullscreenElement();
   Element* pictureInPictureElement();
 

@@ -723,12 +723,6 @@ HeapVector<Member<Animation>> TreeScope::getAnimations() {
   return GetDocument().GetDocumentAnimations().getAnimations(*this);
 }
 
-Element* TreeScope::pointerLockElement() {
-  UseCounter::Count(GetDocument(), WebFeature::kShadowRootPointerLockElement);
-  const Element* target = GetDocument().PointerLockElement();
-  return target ? AdjustedElement(*target) : nullptr;
-}
-
 Element* TreeScope::fullscreenElement() {
   return Fullscreen::FullscreenElementForBindingFrom(*this);
 }

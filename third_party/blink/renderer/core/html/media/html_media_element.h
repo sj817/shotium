@@ -333,7 +333,6 @@ class CORE_EXPORT HTMLMediaElement
 
  private:
   // Friend class for testing.
-  friend class ContextMenuControllerTest;
   friend class HTMLMediaElementTest;
 
   bool HasPendingActivityInternal() const;

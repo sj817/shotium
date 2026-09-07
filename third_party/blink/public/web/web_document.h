@@ -68,7 +68,6 @@ class WebElement;
 class WebFormElement;
 class WebFormControlElement;
 class WebElementCollection;
-class WebLocalFrame;
 class WebURL;
 struct WebDistillabilityFeatures;
 
@@ -109,12 +108,8 @@ class BLINK_EXPORT WebDocument : public WebNode {
   // The url of the OpenSearch Description Document (if any).
   WebURL OpenSearchDescriptionURL() const;
 
-  // Returns the frame the document belongs to or 0 if the document is
-  // frameless.
-  WebLocalFrame* GetFrame() const;
   bool IsHTMLDocument() const;
   bool IsXHTMLDocument() const;
-  bool IsPluginDocument() const;
   bool IsActive() const;
   WebURL BaseURL() const;
   ukm::SourceId GetUkmSourceId() const;
@@ -173,7 +168,6 @@ class BLINK_EXPORT WebDocument : public WebNode {
 
   WebDistillabilityFeatures DistillabilityFeatures();
 
-  void SetShowBeforeUnloadDialog(bool show_dialog);
 
   cc::ElementId GetVisualViewportScrollingElementIdForTesting();
 

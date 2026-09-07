@@ -7,7 +7,6 @@
 #include <optional>
 
 #include "base/feature_list.h"
-#include "cc/layers/heads_up_display_layer.h"
 #include "third_party/blink/renderer/core/css/properties/longhands.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
 #include "third_party/blink/renderer/core/frame/local_frame_view.h"
@@ -16,12 +15,9 @@
 #include "third_party/blink/renderer/core/paint/timing/paint_timing.h"
 #include "third_party/blink/renderer/core/paint/timing/paint_timing_detector.h"
 #include "third_party/blink/renderer/core/paint/timing/paint_timing_utils.h"
-#include "third_party/blink/renderer/core/paint/timing/text_element_timing.h"
 #include "third_party/blink/renderer/core/timing/soft_navigation_context.h"
 #include "third_party/blink/renderer/core/timing/soft_navigation_heuristics.h"
 #include "third_party/blink/renderer/platform/runtime_enabled_features.h"
-#include "third_party/blink/renderer/platform/widget/frame_widget.h"
-#include "third_party/blink/renderer/platform/widget/widget_base.h"
 
 namespace blink {
 
@@ -29,47 +25,10 @@ TextPaintTimingDetector::TextPaintTimingDetector(
     PaintTimingDetector* paint_timing_detector)
     : paint_timing_detector_(paint_timing_detector) {}
 
-void TextPaintTimingDetector::SendRectsToHud() {
-  LocalFrameView* frame_view =
-      paint_timing_detector_->GetPaintTiming().GetDocument()->View();
-  auto* hud_layer =
-      paint_timing::GetHUDLayerIfContentfulPaintRectsEnabled(frame_view);
-  if (!hud_layer) {
-    return;
-  }
-
-  LocalFrame& main_frame = frame_view->GetFrame().LocalFrameRoot();
-  FrameWidget* widget = main_frame.GetWidgetForLocalRoot();
-  if (!widget) {
-    return;
-  }
-
-  bool is_recording_lcp = IsRecordingLargestTextPaint();
-
-  for (const auto& record : texts_queued_for_paint_time_) {
-    if (record->FrameIndex() == frame_index_) {
-      cc::WebVitalMetricType type;
-      if (record->GetSoftNavigationContext()) {
-        type = cc::WebVitalMetricType::kInteractionContentfulPaint;
-      } else if (is_recording_lcp) {
-        type = cc::WebVitalMetricType::kNavigationContentfulPaint;
-      } else {
-        continue;
-      }
-      hud_layer->AddWebVitalsDebugRect(
-          {type, gfx::ToEnclosedRect(
-                     widget->DIPsToBlinkSpace(record->RootVisualRect()))});
-    }
-  }
-}
-
 OptionalPaintTimingDetectorCallback<TextRecord>
 TextPaintTimingDetector::TakePaintTimingCallback() {
   if (!added_entry_in_latest_frame_)
     return std::nullopt;
-
-  // Do this before incrementing frame_index_;
-  SendRectsToHud();
 
   added_entry_in_latest_frame_ = false;
   return blink::BindOnce(
@@ -121,7 +80,7 @@ void TextPaintTimingDetector::RecordAggregatedText(
   uint64_t effective_visual_size = mapped_visual_rect.size().GetArea();
 
   TextRecord* record =
-      CreateTextRecord(aggregator, effective_visual_size, property_tree_state,
+      CreateTextRecord(aggregator, effective_visual_size,
                        aggregated_visual_rect, mapped_visual_rect);
 
   if (IgnorePaintTimingScope::IgnoreDepth()) {
@@ -133,8 +92,7 @@ void TextPaintTimingDetector::RecordAggregatedText(
 
   // Mark the text as recorded regardless of if this is needed for any
   // PaintTiming clients so the text isn't reconsidered as a candidate.
-  auto result = recorded_set_.Set(&aggregator, TextPaintStatus::kPainted);
-  bool is_repaint = !result.is_new_entry;
+  recorded_set_.Set(&aggregator, TextPaintStatus::kPainted);
 
   if (auto* manager = GetLargestContentfulPaintManager()) {
     manager->InitializePaintTracking(record);
@@ -148,13 +106,10 @@ void TextPaintTimingDetector::RecordAggregatedText(
       context->AddPaintedArea(record);
     }
   }
-  record->SetIsNeededForElementTiming(
-      !is_repaint && TextElementTiming::NeededForTiming(*record->GetNode()));
 
   // If any client needs this `record`, register for presentation time.
   if (record->IsNeededForLargestContentfulPaint() ||
-      record->IsNeededForInteractionContentfulPaint() ||
-      record->IsNeededForElementTiming()) {
+      record->IsNeededForInteractionContentfulPaint()) {
     QueueToMeasurePaintTime(record);
   }
 
@@ -218,7 +173,6 @@ void TextPaintTimingDetector::AssignPaintTimeToQueuedRecords(
 TextRecord* TextPaintTimingDetector::CreateTextRecord(
     const LayoutObject& object,
     uint64_t effective_visual_size,
-    const PropertyTreeStateOrAlias& property_tree_state,
     const gfx::Rect& frame_visual_rect,
     const gfx::RectF& root_visual_rect) {
   Node* node = object.GetNode();
@@ -226,13 +180,10 @@ TextRecord* TextPaintTimingDetector::CreateTextRecord(
 
   if (effective_visual_size == 0u) {
     return MakeGarbageCollected<TextRecord>(
-        node, effective_visual_size, gfx::RectF(), gfx::Rect(), gfx::RectF());
+        node, effective_visual_size, gfx::Rect(), gfx::RectF());
   } else {
     return MakeGarbageCollected<TextRecord>(
-        node, effective_visual_size,
-        TextElementTiming::ComputeIntersectionRect(object, frame_visual_rect,
-                                                   property_tree_state),
-        frame_visual_rect, root_visual_rect);
+        node, effective_visual_size, frame_visual_rect, root_visual_rect);
   }
 }
 

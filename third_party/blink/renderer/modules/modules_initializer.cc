@@ -64,9 +64,6 @@ void ModulesInitializer::ProvideModulesToPage(
 
 void ModulesInitializer::ForceNextWebGLContextCreationToFail() const {}
 
-void ModulesInitializer::
-    CollectAllGarbageForAnimationAndPaintWorkletForTesting() const {}
-
 void ModulesInitializer::CloneSessionStorage(Page*,
                                              const SessionStorageNamespaceId&) {
 }

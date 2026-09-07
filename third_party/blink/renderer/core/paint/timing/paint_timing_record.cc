@@ -55,12 +55,10 @@ bool PaintTimingRecord::WasNodeRemoved() const {
 
 TextRecord::TextRecord(Node* node,
                        uint64_t effective_visual_size,
-                       const gfx::RectF& element_timing_rect,
                        const gfx::Rect& frame_visual_rect,
                        const gfx::RectF& root_visual_rect)
     : PaintTimingRecord(node, frame_visual_rect, root_visual_rect),
-      effective_visual_size_(effective_visual_size),
-      element_timing_rect_(element_timing_rect) {}
+      effective_visual_size_(effective_visual_size) {}
 
 ImageRecord::ImageRecord(
     Node* node,

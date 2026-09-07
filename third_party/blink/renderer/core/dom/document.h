@@ -81,7 +81,6 @@
 #include "third_party/blink/renderer/core/dom/tree_scope.h"
 #include "third_party/blink/renderer/core/dom/user_action_element_set.h"
 #include "third_party/blink/renderer/core/editing/forward.h"
-#include "third_party/blink/renderer/core/frame/widget_creation_observer.h"
 #include "third_party/blink/renderer/core/html/forms/listed_element.h"
 #include "third_party/blink/renderer/core/html/parser/parser_synchronization_policy.h"
 #include "third_party/blink/renderer/core/probe/async_task_context.h"
@@ -112,10 +111,6 @@
 namespace base {
 class SingleThreadTaskRunner;
 class UnguessableToken;
-}
-
-namespace cc {
-class AnimationTimeline;
 }
 
 namespace gfx {
@@ -152,7 +147,6 @@ class Agent;
 class AnimationClock;
 class AriaNotificationOptions;
 class Attr;
-class BeforeUnloadEventListener;
 class BoxQuadOptions;
 class ViewTransitionSupplement;
 class CaretPosition;
@@ -292,7 +286,6 @@ enum class DocumentClass {
   kHTML,
   kXHTML,
   kImage,
-  kPlugin,
   kMedia,
   kSVG,
   kXML,
@@ -427,8 +420,6 @@ class CORE_EXPORT Document : public ContainerNode,
   DEFINE_ATTRIBUTE_EVENT_LISTENER(beforecut, kBeforecut)
   DEFINE_ATTRIBUTE_EVENT_LISTENER(beforepaste, kBeforepaste)
   DEFINE_ATTRIBUTE_EVENT_LISTENER(freeze, kFreeze)
-  DEFINE_ATTRIBUTE_EVENT_LISTENER(pointerlockchange, kPointerlockchange)
-  DEFINE_ATTRIBUTE_EVENT_LISTENER(pointerlockerror, kPointerlockerror)
   DEFINE_ATTRIBUTE_EVENT_LISTENER(readystatechange, kReadystatechange)
   DEFINE_ATTRIBUTE_EVENT_LISTENER(resume, kResume)
   DEFINE_ATTRIBUTE_EVENT_LISTENER(search, kSearch)
@@ -645,9 +636,6 @@ class CORE_EXPORT Document : public ContainerNode,
   bool IsSVGDocument() const {
     return document_classes_.Has(DocumentClass::kSVG);
   }
-  bool IsPluginDocument() const {
-    return document_classes_.Has(DocumentClass::kPlugin);
-  }
   bool IsMediaDocument() const {
     return document_classes_.Has(DocumentClass::kMedia);
   }
@@ -710,7 +698,6 @@ class CORE_EXPORT Document : public ContainerNode,
   // remains in prerendering state (document.prerendering stays true).
   void UnblockScriptExecutionForPrerenderUpgrade();
 
-  bool IsForExternalHandler() const { return is_for_external_handler_; }
 
   StyleEngine& GetStyleEngine() const {
     DCHECK(style_engine_.Get());
@@ -1535,8 +1522,6 @@ class CORE_EXPORT Document : public ContainerNode,
     load_event_progress_ = kBeforeUnloadEventHandled;
   }
 
-  void SetContainsPlugins() { contains_plugins_ = true; }
-  bool ContainsPlugins() const { return contains_plugins_; }
 
   void EnqueueMoveEvent();
   void EnqueueResizeEvent();
@@ -1566,8 +1551,6 @@ class CORE_EXPORT Document : public ContainerNode,
 
   void DispatchMediaQueryListEvents();
 
-  void exitPointerLock();
-  Element* PointerLockElement() const;
 
   // Used to allow element that loads data without going through a FrameLoader
   // to delay the 'load' event.
@@ -1634,7 +1617,6 @@ class CORE_EXPORT Document : public ContainerNode,
     return *worklet_animation_controller_;
   }
 
-  void AttachCompositorTimeline(cc::AnimationTimeline*) const;
 
   enum class TopLayerReason {
     kFullscreen,
@@ -1679,7 +1661,6 @@ class CORE_EXPORT Document : public ContainerNode,
     --popover_hiding_nesting_count_;
   }
 
-  bool HasActiveUnboundedElements() const;
 
   HeapHashSet<Member<HTMLElement>>& AllOpenPopovers() {
     return all_open_popovers_;
@@ -1938,11 +1919,6 @@ class CORE_EXPORT Document : public ContainerNode,
 
   bool HaveRenderBlockingStylesheetsLoaded() const;
   bool HaveRenderBlockingResourcesLoaded() const;
-
-  // Sets a beforeunload handler for documents which are embedding plugins. This
-  // includes PluginDocument as well as an HTMLDocument which embeds a plugin
-  // inside a cross-process frame (MimeHandlerView).
-  void SetShowBeforeUnloadDialog(bool show_dialog);
 
   void ColorSchemeChanged();
 
@@ -2735,8 +2711,6 @@ class CORE_EXPORT Document : public ContainerNode,
   bool is_dns_prefetch_enabled_;
   bool have_explicitly_disabled_dns_prefetch_;
 
-  // TODO(crbug.com/40511450): Remove once PPAPI is gone.
-  bool contains_plugins_ = false;
 
   bool has_render_blocking_expect_link_elements_ = false;
 
@@ -3014,12 +2988,6 @@ class CORE_EXPORT Document : public ContainerNode,
 
   bool deferred_compositor_commit_is_allowed_ = false;
 
-  // True when the document was created (in DomImplementation) for specific MIME
-  // types that are handled externally. The document in this case is the
-  // counterpart to a PluginDocument except that it contains a FrameView as
-  // opposed to a PluginView.
-  bool is_for_external_handler_;
-
   Member<LazyLoadMediaObserver> lazy_load_media_observer_;
 
   // Tracks which document policies have already been parsed, so as not to
@@ -3028,12 +2996,6 @@ class CORE_EXPORT Document : public ContainerNode,
   Vector<bool> parsed_document_policies_;
 
   AtomicString override_last_modified_;
-
-  // When the document contains MimeHandlerView, this variable might hold a
-  // beforeunload handler. This will be set by the blink embedder when
-  // necessary.
-  Member<BeforeUnloadEventListener>
-      mime_handler_view_before_unload_event_listener_;
 
   // Used to communicate state associated with resource management to the
   // embedder.

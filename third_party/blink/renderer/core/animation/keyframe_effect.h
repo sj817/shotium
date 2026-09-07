@@ -45,7 +45,6 @@ struct AnimationCompositingDecisionState;
 class Element;
 class ExceptionState;
 class KeyframeEffectModelBase;
-class PaintArtifactCompositor;
 class SampledEffect;
 
 // Represents the effect of an Animation on an Element's properties.
@@ -95,7 +94,6 @@ class CORE_EXPORT KeyframeEffect final : public AnimationEffect {
   void NotifySampledEffectRemovedFromEffectStack();
 
   CompositorAnimations::FailureReasons CheckCanStartAnimationOnCompositor(
-      const PaintArtifactCompositor*,
       AnimationCompositingDecisionState& state,
       double animation_playback_rate,
       StartOnCompositorReason start_reason);

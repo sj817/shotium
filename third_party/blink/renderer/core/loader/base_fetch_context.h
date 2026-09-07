@@ -27,7 +27,6 @@ namespace blink {
 class DetachableConsoleLogger;
 class DetachableResourceFetcherProperties;
 class KURL;
-class WebSocketHandshakeThrottle;
 
 // A core-level implementation of FetchContext that does not depend on
 // Frame. This class provides basic default implementation for some methods.
@@ -77,10 +76,6 @@ class CORE_EXPORT BaseFetchContext : public FetchContext {
   // GetSubresourceFilter() was here. Every implementation returned the
   // SubresourceFilter the embedder handed the DocumentLoader, and no embedder
   // in this build can build a WebDocumentSubresourceFilter.
-  virtual bool ShouldBlockWebSocketByMixedContentCheck(const KURL&) const = 0;
-  virtual std::unique_ptr<WebSocketHandshakeThrottle>
-  CreateWebSocketHandshakeThrottle() = 0;
-
   virtual bool IsFrameContext() const { return false; }
 
  protected:

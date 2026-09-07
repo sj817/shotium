@@ -18,7 +18,6 @@
 #include "cc/trees/layer_tree_host.h"
 #include "cc/trees/property_tree.h"
 #include "third_party/blink/renderer/platform/graphics/compositing/chunk_to_layer_mapper.h"
-#include "third_party/blink/renderer/platform/graphics/compositing/property_tree_manager.h"
 #include "third_party/blink/renderer/platform/graphics/graphics_context.h"
 #include "third_party/blink/renderer/platform/graphics/paint/display_item_list.h"
 #include "third_party/blink/renderer/platform/graphics/paint/drawing_display_item.h"

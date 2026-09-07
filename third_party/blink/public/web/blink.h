@@ -87,11 +87,6 @@ BLINK_EXPORT void SetBrowserCanHandleFocusForWebTest(bool);
 BLINK_EXPORT void SetFontAntialiasingEnabledForTest(bool);
 BLINK_EXPORT bool FontAntialiasingEnabledForTest();
 
-// Purge the plugin list cache. This can cause a web-visible and out-of-spec
-// change to `navigator.plugins` if the plugin list has changed (see
-// https://crbug.com/735854).
-BLINK_EXPORT void ResetPluginCache();
-
 // Logs stats. Intended to be called during shutdown.
 BLINK_EXPORT void LogStatsDuringShutdown();
 

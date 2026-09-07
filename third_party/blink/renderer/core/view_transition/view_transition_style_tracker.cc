@@ -60,7 +60,6 @@
 #include "third_party/blink/renderer/platform/data_resource_helper.h"
 #include "third_party/blink/renderer/platform/graphics/paint/geometry_mapper.h"
 #include "third_party/blink/renderer/platform/runtime_enabled_features.h"
-#include "third_party/blink/renderer/platform/widget/frame_widget.h"
 #include "third_party/blink/renderer/platform/wtf/text/atomic_string.h"
 #include "third_party/blink/renderer/platform/wtf/text/string_builder.h"
 #include "ui/display/screen_info.h"
@@ -1321,8 +1320,6 @@ bool ViewTransitionStyleTracker::Start() {
   // new elements in the DOM.
   InvalidateStyleAndCompositing();
 
-  if (auto* page = document_->GetPage())
-    page->Animator().SetHasViewTransition(true);
   return true;
 }
 
@@ -2032,9 +2029,6 @@ gfx::Outsets GetFixedToSnapshotViewportOutsets(Document& document) {
       bottom += controls.BottomHeight() - controls.BottomMinHeight();
     }
 
-    bottom += document.GetFrame()
-                  ->GetWidgetForLocalRoot()
-                  ->GetVirtualKeyboardResizeHeight();
   }
 
   PhysicalBoxStrut scrollbar_strut =
@@ -2600,15 +2594,6 @@ void ViewTransitionStyleTracker::SnapBrowserControlsToFullyShown() {
     root_scroller.ScrollBy(ScrollOffset(0, counter_scroll),
                            mojom::blink::ScrollType::kCompositor);
 
-    // The next commit should overwrite any scrolling that occurred on the
-    // compositor thread since it last committed values. Since the compositor
-    // may still be animating the browser controls, and we add the full
-    // controls distance here, any deltas that have occurred since this
-    // BeginMainFrame would be double-applied. More generally, the snapshot
-    // transform matrices will be computed in this Blink frame; any deltas
-    // that have occurred on the compositor since this frame was issued won't
-    // be accounted for in snapshot transforms.
-    root_scroller.DropCompositorScrollDeltaNextCommit();
   } else {
     controls.SetShownRatio(1, 1);
   }

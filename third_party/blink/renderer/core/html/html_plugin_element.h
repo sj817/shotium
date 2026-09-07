@@ -35,24 +35,6 @@ namespace blink {
 class HTMLImageLoader;
 class LayoutEmbeddedContent;
 class LayoutEmbeddedObject;
-class WebPluginContainerImpl;
-
-class PluginParameters {
- public:
-  PluginParameters() {}
-  PluginParameters(Vector<String>& param_names, Vector<String>& param_values)
-      : names_(param_names), values_(param_values) {}
-
-  const Vector<String>& Names() const;
-  const Vector<String>& Values() const;
-  void AppendAttribute(const Attribute&);
-  void AppendNameWithValue(const String& name, const String& value);
-  void MapDataParamToSrc();
-
- private:
-  Vector<String> names_;
-  Vector<String> values_;
-};
 
 class CORE_EXPORT HTMLPlugInElement
     : public HTMLFrameOwnerElement,
@@ -65,10 +47,6 @@ class CORE_EXPORT HTMLPlugInElement
 
   bool HasPendingActivity() const final;
 
-  void SetFocused(bool, mojom::blink::FocusType) override;
-  void ResetInstance();
-  WebPluginContainerImpl* OwnedPlugin() const;
-  bool CanProcessDrag() const;
   const String& Url() const { return url_; }
 
   // Public for FrameView::addPartToUpdate()
@@ -78,7 +56,6 @@ class CORE_EXPORT HTMLPlugInElement
   }
   void UpdatePlugin();
 
-  bool ShouldAccelerate() const;
 
   network::ParsedPermissionsPolicy ConstructContainerPolicy() const override;
 
@@ -94,7 +71,6 @@ class CORE_EXPORT HTMLPlugInElement
   // Node functions:
   InsertionNotificationRequest InsertedInto(
       ContainerNode& insertion_point) override;
-  void RemovedFrom(ContainerNode& insertion_point) override;
   void DidMoveToNewDocument(Document& old_document) override;
   void AttachLayoutTree(AttachContext&) override;
 
@@ -105,20 +81,15 @@ class CORE_EXPORT HTMLPlugInElement
       const AtomicString&,
       HeapVector<CSSPropertyValue, 8>&) override;
   // HTMLFrameOwnerElement overrides:
-  void DisconnectContentFrame() override;
   void NaturalSizingInfoChanged() final;
 
   virtual bool HasFallbackContent() const;
-  // Create or update the LayoutEmbeddedContent and return it, triggering layout
-  // if necessary.
-  virtual LayoutEmbeddedContent* LayoutEmbeddedContentForJSBindings() const;
 
   LayoutEmbeddedObject* GetLayoutEmbeddedObject() const;
   bool AllowedToLoadFrameURL(const String& url);
-  bool RequestObject(const PluginParameters& plugin_params);
+  bool RequestObject();
 
   void DispatchErrorEvent();
-  bool IsErrorplaceholder();
   void ReattachOnPluginChangeIfNeeded(bool require_layout);
 
   void SetUrl(const StringView& url) {
@@ -137,14 +108,10 @@ class CORE_EXPORT HTMLPlugInElement
 
   String service_type_;
   String url_;
-  KURL loaded_url_;
   Member<HTMLImageLoader> image_loader_;
   bool is_delaying_load_event_;
 
  private:
-  // EventTarget overrides:
-  void RemoveAllEventListeners() final;
-
   // Node overrides:
   bool CanContainRangeEndPoint() const override { return false; }
   bool CanStartSelection() const override;
@@ -160,8 +127,6 @@ class CORE_EXPORT HTMLPlugInElement
   }
   bool IsFocusableStyle(UpdateBehavior update_behavior =
                             UpdateBehavior::kStyleAndLayout) const final;
-  bool IsKeyboardFocusableSlow(UpdateBehavior update_behavior =
-                                   UpdateBehavior::kStyleAndLayout) const final;
   void DidAddUserAgentShadowRoot(ShadowRoot&) final;
   const ComputedStyle* CustomStyleForLayoutObject(
       const StyleRecalcContext&) final;
@@ -170,42 +135,18 @@ class CORE_EXPORT HTMLPlugInElement
   bool HasCustomFocusLogic() const override;
   bool IsPluginElement() const final;
 
-  // TODO(joelhockey): Clean up PluginEmbeddedContentView and
-  // OwnedEmbeddedContentView.  It would be good to remove and/or rename some of
-  // these. PluginEmbeddedContentView and OwnedPlugin both return the plugin
-  // that is stored as HTMLFrameOwnerElement::embedded_content_view_.  However
-  // PluginEmbeddedContentView will synchronously create the plugin if required
-  // by calling LayoutEmbeddedContentForJSBindings.  This can cause
-  // navigations, and it also means that two successive calls to
-  // PluginEmbeddedContentView might not return the same result.
-  WebPluginContainerImpl* PluginEmbeddedContentView() const;
-
-  // Return any existing LayoutEmbeddedContent without triggering relayout, or 0
-  // if it doesn't yet exist.
-  virtual LayoutEmbeddedContent* ExistingLayoutEmbeddedContent() const = 0;
   virtual void UpdatePluginInternal() = 0;
 
-  bool LoadPlugin(const KURL&,
-                  const String& mime_type,
-                  const PluginParameters& plugin_params,
-                  bool use_fallback);
-  // Perform checks after we have determined that a plugin will be used to
-  // show the object (i.e after `AllowedToLoadObject()`).
-  bool AllowedToLoadPlugin(const KURL&);
   // Perform checks based on the URL and MIME-type of the object to load.
   bool AllowedToLoadObject(const KURL&, const String& mime_type);
-  void RemovePluginFromFrameView(WebPluginContainerImpl* plugin);
 
   enum class ObjectContentType {
     kNone,
     kImage,
     kFrame,
-    kPlugin,
-    kExternalPlugin,
   };
   ObjectContentType GetObjectContentType() const;
 
-  void SetPersistedPlugin(WebPluginContainerImpl*);
 
   void UpdateServiceTypeIfEmpty();
 
@@ -213,15 +154,7 @@ class CORE_EXPORT HTMLPlugInElement
   // Represents |layoutObject() && layoutObject()->isEmbeddedObject() &&
   // !layoutEmbeddedItem().showsUnavailablePluginIndicator()|.  We want to
   // avoid accessing |layoutObject()| in layoutObjectIsFocusable().
-  bool plugin_is_available_ = false;
-
-  // Normally the plugin is stored in
-  // HTMLFrameOwnerElement::embedded_content_view. However, plugins can persist
-  // even when not rendered. In order to prevent confusing code which may assume
-  // that OwnedEmbeddedContentView() != null means the frame is active, we save
-  // off embedded_content_view_ here while the plugin is persisting but not
-  // being displayed.
-  Member<WebPluginContainerImpl> persisted_plugin_;
+  bool embedded_content_is_available_ = false;
 
   // True when the element has changed in such a way (new URL, for instance)
   // that we cannot re-use the old view when re-attaching.

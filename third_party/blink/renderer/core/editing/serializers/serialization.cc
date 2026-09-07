@@ -783,7 +783,6 @@ static Document* CreateStagingDocumentForMarkupSanitization(
                                        /*color_provider_colors=*/nullptr);
 
   page->GetSettings().SetScriptEnabled(false);
-  page->GetSettings().SetPluginsEnabled(false);
   page->GetSettings().SetAcceleratedCompositingEnabled(false);
   page->GetSettings().SetParserScriptingFlagPolicy(
       ParserScriptingFlagPolicy::kEnabled);

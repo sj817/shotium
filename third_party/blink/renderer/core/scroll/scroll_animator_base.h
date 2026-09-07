@@ -32,7 +32,7 @@
 #define THIRD_PARTY_BLINK_RENDERER_CORE_SCROLL_SCROLL_ANIMATOR_BASE_H_
 
 #include "third_party/blink/renderer/core/core_export.h"
-#include "third_party/blink/renderer/core/scroll/scroll_animator_compositor_coordinator.h"
+#include "third_party/blink/renderer/core/scroll/scroll_animation_state.h"
 #include "third_party/blink/renderer/core/scroll/scroll_types.h"
 #include "third_party/blink/renderer/core/scroll/scrollable_area.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
@@ -50,7 +50,7 @@ class ScrollableArea;
 // disabled.  In this case, all scrolls are instantaneous.
 
 class CORE_EXPORT ScrollAnimatorBase
-    : public ScrollAnimatorCompositorCoordinator {
+    : public ScrollAnimationState {
  public:
   static ScrollAnimatorBase* Create(ScrollableArea*);
 
@@ -83,16 +83,13 @@ class CORE_EXPORT ScrollAnimatorBase
 
   virtual void AdjustAnimation(const gfx::Vector2d& adjustment) {}
 
-  // ScrollAnimatorCompositorCoordinator implementation.
+  // ScrollAnimationState implementation.
   ScrollableArea* GetScrollableArea() const override {
     return scrollable_area_.Get();
   }
   void TickAnimation(base::TimeTicks monotonic_time) override {}
   void CancelAnimation() override {}
-  void TakeOverCompositorAnimation() override {}
-  void UpdateCompositorAnimations() override {}
-  void NotifyCompositorAnimationFinished(int group_id) override {}
-  void NotifyCompositorAnimationAborted(int group_id) override {}
+  void UpdateAnimationState() override {}
 
   void Trace(Visitor*) const override;
 

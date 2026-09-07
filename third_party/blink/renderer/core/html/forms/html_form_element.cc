@@ -46,7 +46,6 @@
 #include "third_party/blink/renderer/core/frame/local_dom_window.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
 #include "third_party/blink/renderer/core/frame/local_frame_client.h"
-#include "third_party/blink/renderer/core/frame/remote_frame.h"
 #include "third_party/blink/renderer/core/html/collection_type.h"
 #include "third_party/blink/renderer/core/html/custom/custom_element.h"
 #include "third_party/blink/renderer/core/html/custom/element_internals.h"
@@ -264,8 +263,6 @@ void HTMLFormElement::SubmitImplicitly(const Event& event,
 
 bool HTMLFormElement::ValidateInteractively() {
   UseCounter::Count(GetDocument(), WebFeature::kFormValidationStarted);
-  for (const auto& element : ListedElements())
-    element->HideVisibleValidationMessage();
 
   ListedElement::List unhandled_invalid_controls;
   if (!CheckInvalidControlsAndCollectUnhandled(&unhandled_invalid_controls))
@@ -273,18 +270,16 @@ bool HTMLFormElement::ValidateInteractively() {
   UseCounter::Count(GetDocument(),
                     WebFeature::kFormValidationAbortedSubmission);
   // Because the form has invalid controls, we abort the form submission and
-  // show a validation message on a focusable form control.
+  // focus the first focusable form control.
 
   // Needs to update layout now because we'd like to call isFocusable(), which
   // has !layoutObject()->needsLayout() assertion.
   GetDocument().UpdateStyleAndLayout(DocumentUpdateReason::kFocus);
 
-  // Focus on the first focusable control and show a validation message.
+  // Focus on the first focusable control.
   for (const auto& unhandled : unhandled_invalid_controls) {
     if (unhandled->ValidationAnchorOrHostIsFocusable()) {
-      unhandled->ShowValidationMessage();
-      UseCounter::Count(GetDocument(),
-                        WebFeature::kFormValidationShowedMessage);
+      unhandled->FocusValidationAnchor();
       break;
     }
   }

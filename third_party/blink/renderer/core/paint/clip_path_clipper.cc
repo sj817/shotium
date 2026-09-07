@@ -159,7 +159,7 @@ bool AdjustClipPathStatusForCompositingFailureReasons(
     bool for_painting) {
   CompositorAnimations::FailureReasons failure_reasons =
       animation.CheckCanStartAnimationOnCompositor(
-          nullptr, StartOnCompositorReason::kGeneric);
+          StartOnCompositorReason::kGeneric);
   if (failure_reasons == CompositorAnimations::kNoFailure) {
     SetCompositeClipPathStatus(layout_object.GetNode(),
                                CompositedPaintStatus::kComposited);

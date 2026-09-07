@@ -24,7 +24,6 @@
 #include <algorithm>
 
 #include "third_party/blink/public/platform/platform.h"
-#include "third_party/blink/public/platform/web_prescient_networking.h"
 #include "third_party/blink/renderer/core/core_initializer.h"
 #include "third_party/blink/renderer/core/dom/document.h"
 #include "third_party/blink/renderer/core/dom/element.h"
@@ -158,15 +157,6 @@ bool ChromeClient::OpenJavaScriptPrompt(LocalFrame* frame,
 void ChromeClient::MouseDidMoveOverElement(LocalFrame& frame,
                                            const HitTestLocation& location,
                                            const HitTestResult& result) {
-  if (!result.GetScrollbar() && result.InnerNode() &&
-      result.InnerNode()->GetDocument().IsDNSPrefetchEnabled()) {
-    WebPrescientNetworking* web_prescient_networking =
-        frame.PrescientNetworking();
-    if (web_prescient_networking) {
-      web_prescient_networking->PrefetchDNS(result.AbsoluteLinkURL());
-    }
-  }
-
   ShowMouseOverURL(result);
 
   if (result.GetScrollbar())

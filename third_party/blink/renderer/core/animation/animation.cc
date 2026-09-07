@@ -728,7 +728,6 @@ V8AnimationPlayState Animation::playState() const {
 
 bool Animation::PreCommit(
     int compositor_group,
-    const PaintArtifactCompositor* paint_artifact_compositor,
     bool start_on_compositor) {
   if (CompositorPendingCancel()) {
     CancelAnimationOnCompositor();
@@ -827,8 +826,7 @@ bool Animation::PreCommit(
               CompositorAnimations::kNoFailure ||
           compositing_decision_.disposition ==
               CompositorAnimations::kUnchecked) {
-        CheckCanStartAnimationOnCompositor(paint_artifact_compositor,
-                                           StartOnCompositorReason::kGeneric);
+        CheckCanStartAnimationOnCompositor(StartOnCompositorReason::kGeneric);
       }
 
       // Record animation type metrics
@@ -847,8 +845,7 @@ bool Animation::PreCommit(
         // for a marquee element does not depend on having a layout object.
         CancelAnimationOnCompositor();
         CreateCompositorAnimation(replaced_cc_animation_id);
-        StartAnimationOnCompositor(paint_artifact_compositor,
-                                   StartOnCompositorReason::kGeneric);
+        StartAnimationOnCompositor(StartOnCompositorReason::kGeneric);
         compositor_state_ = std::make_unique<CompositorState>(*this);
       } else {
         CancelIncompatibleAnimationsOnCompositor();
@@ -1009,52 +1006,6 @@ bool Animation::HasLowerCompositeOrdering(
   // If the anmiations are not-CSS WebAnimation just compare them via generation
   // time/ sequence number.
   return animation1->SequenceNumber() < animation2->SequenceNumber();
-}
-
-void Animation::NotifyAnimationStartedAsync(base::TimeDelta monotonic_time,
-                                            Animation::AutoRewind auto_rewind) {
-  DCHECK(compositor_state_);
-  DCHECK(pending_play_);
-
-  double monotonic_animation_start_time = monotonic_time.InSecondsF();
-
-  // Prepare for an effective NotifyReady.
-  compositor_state_->pending_action = CompositorAction::kStart;
-  compositor_state_->start_time.reset();
-
-  AnimationTimeDelta ready_time =
-      ANIMATION_TIME_DELTA_FROM_SECONDS(monotonic_animation_start_time) -
-      TimelineInternal()->ZeroTime();
-  NotifyReady(ready_time);
-
-  double playback_rate = EffectivePlaybackRate();
-
-  compositor_state_->hold_time = hold_time_;
-  compositor_state_->playback_rate = playback_rate;
-
-  cc::Animation* cc_animation = GetCompositorAnimation()->CcAnimation();
-  cc_animation->PlayInternal(base::TimeTicks() + monotonic_time, auto_rewind,
-                             playback_rate);
-}
-
-void Animation::NotifyAnimationPausedAsync(base::TimeDelta monotonic_time) {
-  DCHECK(compositor_state_);
-  DCHECK(pending_pause_);
-
-  double monotonic_animation_start_time = monotonic_time.InSecondsF();
-
-  AnimationTimeDelta ready_time =
-      ANIMATION_TIME_DELTA_FROM_SECONDS(monotonic_animation_start_time) -
-      TimelineInternal()->ZeroTime();
-  NotifyReady(ready_time);
-
-  DCHECK(!start_time_.has_value());
-  compositor_state_->start_time = std::nullopt;
-  compositor_state_->hold_time = hold_time_;
-
-  cc::Animation* cc_animation = GetCompositorAnimation()->CcAnimation();
-  DCHECK(hold_time_);
-  cc_animation->Pause(ComputeCompositorHoldTime().value());
 }
 
 void Animation::NotifyReady(AnimationTimeDelta ready_time) {
@@ -1890,19 +1841,7 @@ void Animation::PlayInternal(AutoRewind auto_rewind,
   committed_finish_notification_ = false;
   SetOutdated();
 
-  CompositorPendingReason reason = CompositorPendingReason::kPendingUpdate;
-  if (RuntimeEnabledFeatures::CompositorTimelineTriggerEnabled() &&
-      !triggers_.empty() && HasActiveAnimationsOnCompositor()) {
-    // If this is a triggered animation, we may have already created a
-    // compositor animation that is sitting "idle" on the compositor thread.
-    // As such, PreCommit may not see a need to create a playing compositor
-    // animation and fail to fulfil this play request.
-    // This cancel ensures that we fulfil this play request even if PreCommit
-    // can't detect any timing changes that warrant creating a playing
-    // animation.
-    reason = CompositorPendingReason::kPendingCancel;
-  }
-  SetCompositorPending(reason);
+  SetCompositorPending(CompositorPendingReason::kPendingUpdate);
 
   // Update an animation’s finished state. As the finished state may be
   // transient, we defer resolving the finished promise until the next
@@ -2373,7 +2312,6 @@ void Animation::ForceServiceOnNextFrame() {
 
 CompositorAnimations::FailureReasons
 Animation::CheckCanStartAnimationOnCompositor(
-    const PaintArtifactCompositor* paint_artifact_compositor,
     StartOnCompositorReason start_reason) {
   // TODO(crbug.com/521921832, crbug.com/521921835): When the V2 enum is
   // implemented, individual methods should be responsible for clearing only the
@@ -2401,7 +2339,7 @@ Animation::CheckCanStartAnimationOnCompositor(
     }
     compositing_decision_.disposition |=
         keyframe_effect->CheckCanStartAnimationOnCompositor(
-            paint_artifact_compositor, compositing_decision_, playback_rate_,
+            compositing_decision_, playback_rate_,
             start_reason);
   }
   return compositing_decision_.disposition;
@@ -2567,8 +2505,7 @@ void AnimationCompositingDecisionState::ReportHistogramsAndTracing(
   }
 }
 
-void Animation::MarkPendingIfCompositorPropertyAnimationChanges(
-    const PaintArtifactCompositor* paint_artifact_compositor) {
+void Animation::MarkPendingIfCompositorPropertyAnimationChanges() {
   // |compositor_property_animations_have_no_effect_| will already be calculated
   // in |Animation::PreCommit| if the animation is pending.
   if (compositor_pending_)
@@ -2585,13 +2522,6 @@ void Animation::MarkPendingIfCompositorPropertyAnimationChanges(
     return;
   }
 
-  Element* target = keyframe_effect->EffectTarget();
-  if (target && keyframe_effect->Model() && keyframe_effect->IsCurrent()) {
-    compositor_property_animations_have_no_effect_ =
-        CompositorAnimations::CompositorPropertyAnimationsHaveNoEffect(
-            *target, this, *keyframe_effect->Model(),
-            paint_artifact_compositor);
-  }
   if (compositor_property_animations_have_no_effect_ != had_no_effect)
     SetCompositorPending(CompositorPendingReason::kPendingEffectChange);
 }
@@ -2612,7 +2542,6 @@ void Animation::OnPaintWorkletImageCreated() {
 }
 
 void Animation::StartAnimationOnCompositor(
-    const PaintArtifactCompositor* paint_artifact_compositor,
     StartOnCompositorReason start_reason) {
   CHECK_EQ(compositing_decision_.disposition, CompositorAnimations::kNoFailure);
   DCHECK(start_reason != StartOnCompositorReason::kAnimationTrigger ||
@@ -3348,7 +3277,6 @@ void Animation::CreateCompositorAnimation(
       !compositor_animation_) {
     compositor_animation_ =
         CompositorAnimationHolder::Create(this, replaced_cc_animation_id);
-    AttachCompositorTimeline();
   }
 
   AttachCompositedLayers();
@@ -3359,42 +3287,8 @@ void Animation::DestroyCompositorAnimation() {
   DetachCompositedLayers();
 
   if (compositor_animation_) {
-    DetachCompositorTimeline();
     compositor_animation_->Detach();
     compositor_animation_ = nullptr;
-  }
-}
-
-void Animation::AttachCompositorTimeline() {
-  VERIFY_PAINT_CLEAN_LOG_ONCE()
-  DCHECK(compositor_animation_);
-
-  // Register ourselves on the compositor timeline. This will cause our cc-side
-  // animation animation to be registered.
-  cc::AnimationTimeline* compositor_timeline =
-      timeline_ ? timeline_->EnsureCompositorTimeline() : nullptr;
-  if (!compositor_timeline)
-    return;
-
-  if (CompositorAnimation* compositor_animation = GetCompositorAnimation()) {
-    compositor_timeline->AttachAnimation(compositor_animation->CcAnimation());
-  }
-
-  // Note that while we attach here but we don't detach because the
-  // |compositor_timeline| is detached in its destructor.
-  document_->AttachCompositorTimeline(compositor_timeline);
-}
-
-void Animation::DetachCompositorTimeline() {
-  VERIFY_PAINT_CLEAN_LOG_ONCE()
-  DCHECK(compositor_animation_);
-  cc::AnimationTimeline* compositor_timeline =
-      timeline_ ? timeline_->CompositorTimeline() : nullptr;
-  if (!compositor_timeline)
-    return;
-
-  if (CompositorAnimation* compositor_animation = GetCompositorAnimation()) {
-    compositor_timeline->DetachAnimation(compositor_animation->CcAnimation());
   }
 }
 
@@ -3415,60 +3309,6 @@ void Animation::DetachCompositedLayers() {
   if (compositor_animation_ &&
       compositor_animation_->GetAnimation()->IsElementAttached())
     compositor_animation_->GetAnimation()->DetachElement();
-}
-
-bool Animation::StartTriggeredAnimationOnCompositor(
-    const PaintArtifactCompositor* paint_artifact_compositor) {
-  CompositorAnimation* compositor_anim = GetCompositorAnimation();
-  bool has_cc_animation = compositor_anim && compositor_anim->CcAnimation();
-
-  if (Playing() && !has_cc_animation) {
-    // Do not create a cc::Animation for an animation that is currently running
-    // on the main thread. This avoids the conflict of running the animation
-    // running on the main thread and on the compositor thread simultaneously.
-    return false;
-  }
-
-  if (has_cc_animation) {
-    return true;
-  }
-
-  // We would like to avoid the CheckCanComposite check as it can be expensive.
-  // If compositing has previously failed for reasons other than those
-  // whitelisted in kRecheckCompositingReasons, the trigger is not going to
-  // affect that compositing decision and we can avoid the check altogether.
-  bool should_check_compositing_reasons =
-      ((compositing_decision_.disposition &
-        ~AnimationTrigger::kRecheckCompositingReasons) ==
-       CompositorAnimations::kNoFailure);
-
-  if (!should_check_compositing_reasons) {
-    return false;
-  }
-
-  CheckCanStartAnimationOnCompositor(
-      paint_artifact_compositor, StartOnCompositorReason::kAnimationTrigger);
-
-  if (compositing_decision_.disposition != CompositorAnimations::kNoFailure) {
-    return false;
-  }
-
-  CreateCompositorAnimation(std::nullopt);
-  compositor_state_ = std::make_unique<CompositorState>(*this);
-  compositor_group_ = document_->GetPendingAnimations().NextCompositorGroup();
-  StartAnimationOnCompositor(paint_artifact_compositor,
-                             StartOnCompositorReason::kAnimationTrigger);
-
-  base::TimeDelta hold_time = *ComputeCompositorHoldTime();
-  // TODO(crbug.com/451238244): If finished, use FINISHED run state. To do this,
-  // we will need to ensure that triggered animations in the FINISHED state
-  // don't get deleted by
-  // KeyframeEffect::RemoveKeyframeModelsCompletedOnMainThread.
-  GetCompositorAnimation()->CcAnimation()->Pause(
-      hold_time, paused_for_trigger_ ? cc::KeyframeModel::PAUSED_EXCLUSIVE
-                                     : cc::KeyframeModel::PAUSED);
-
-  return true;
 }
 
 void Animation::NotifyAnimationStarted(base::TimeDelta monotonic_time,

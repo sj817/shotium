@@ -68,7 +68,6 @@
 #include "third_party/blink/public/platform/web_content_settings_client.h"
 #include "third_party/blink/public/platform/web_effective_connection_type.h"
 #include "third_party/blink/public/platform/web_file_system_type.h"
-#include "third_party/blink/public/platform/web_prescient_networking.h"
 #include "third_party/blink/public/platform/web_set_sink_id_callbacks.h"
 #include "third_party/blink/public/platform/web_source_location.h"
 #include "third_party/blink/public/platform/web_url_error.h"
@@ -118,8 +117,6 @@ class WebEncryptedMediaClient;
 class WebLocalFrame;
 class WebMediaStreamDeviceObserver;
 class WebNavigationControl;
-class WebPlugin;
-class WebPrescientNetworking;
 class WebRelatedAppsFetcher;
 class WebSocketHandshakeThrottle;
 class WebString;
@@ -131,9 +128,7 @@ class WebView;
 struct FramePolicy;
 struct JavaScriptFrameworkDetectionResult;
 struct WebConsoleMessage;
-struct ContextMenuData;
 struct WebPictureInPictureWindowOptions;
-struct WebPluginParams;
 struct WebWindowFeatures;
 
 enum class SyncCondition {
@@ -173,7 +168,6 @@ class BLINK_EXPORT WebLocalFrameClient {
   // Factory methods -----------------------------------------------------
 
   // May return null.
-  virtual WebPlugin* CreatePlugin(const WebPluginParams&) { return nullptr; }
 
   // May return null.
   // CreateServiceWorkerProvider() was here. WebServiceWorkerProvider is
@@ -194,11 +188,6 @@ class BLINK_EXPORT WebLocalFrameClient {
   // Returns a new WebWorkerFetchContext for dedicated workers.
   virtual scoped_refptr<WebWorkerFetchContext> CreateWorkerFetchContext(
       WebDedicatedWorkerHostFactoryClient*) {
-    return nullptr;
-  }
-
-  // May return null.
-  virtual std::unique_ptr<WebPrescientNetworking> CreatePrescientNetworking() {
     return nullptr;
   }
 
@@ -496,11 +485,6 @@ class BLINK_EXPORT WebLocalFrameClient {
 
   // UI ------------------------------------------------------------------
 
-  // Update a context menu data for testing.
-  virtual void UpdateContextMenuDataForTesting(
-      const ContextMenuData&,
-      const std::optional<gfx::Point>&) {}
-
   // Called when a new element gets focused. |from_element| is the previously
   // focused element, |to_element| is the newly focused one. Either can be null.
   virtual void FocusedElementChanged(const WebElement& element) {}
@@ -658,12 +642,6 @@ class BLINK_EXPORT WebLocalFrameClient {
 
   // Visibility ----------------------------------------------------------
 
-  // Overwrites the given URL to use an HTML5 embed if possible.
-  // An empty URL is returned if the URL is not overriden.
-  virtual WebURL OverrideFlashEmbedWithHTML(const WebURL& url) {
-    return WebURL();
-  }
-
   // Loading --------------------------------------------------------------
 
   virtual scoped_refptr<network::SharedURLLoaderFactory> GetURLLoaderFactory() {
@@ -694,15 +672,6 @@ class BLINK_EXPORT WebLocalFrameClient {
   }
 
   // Misc ----------------------------------------------------------------
-
-  // Returns true when the contents of plugin are handled externally. This means
-  // the plugin element will own a content frame but the frame is than used
-  // externally to load the required handlers.
-  virtual bool IsPluginHandledExternally(const WebElement& plugin_element,
-                                         const WebURL& url,
-                                         const WebString& suggested_mime_type) {
-    return false;
-  }
 
   // Specifies whether to disable DOM storage interfaces such as localStorage
   // and sessionStorage.

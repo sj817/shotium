@@ -37,7 +37,6 @@ void InlineStylePropertyMap::SetProperty(CSSPropertyID property_id,
   DCHECK_NE(property_id, CSSPropertyID::kVariable);
   StyleAttributeMutationScope mutation_scope(owner_element_.Get());
   owner_element_->EnsureMutableInlineStyle().SetProperty(property_id, value);
-  owner_element_->NotifyInlineStyleMutation();
   owner_element_->InvalidateStyleAttribute(false);
   mutation_scope.DidInvalidateStyleAttr();
   mutation_scope.EnqueueMutationRecord();
@@ -56,7 +55,6 @@ bool InlineStylePropertyMap::SetShorthandProperty(
   if (result == MutableCSSPropertyValueSet::kParseError) {
     return false;
   }
-  owner_element_->NotifyInlineStyleMutation();
   owner_element_->InvalidateStyleAttribute(false);
   mutation_scope.DidInvalidateStyleAttr();
   mutation_scope.EnqueueMutationRecord();
@@ -74,7 +72,6 @@ void InlineStylePropertyMap::SetCustomProperty(
       CSSPropertyName(property_name),
       *MakeGarbageCollected<CSSUnparsedDeclarationValue>(
           variable_data, variable_value.ParserContext()));
-  owner_element_->NotifyInlineStyleMutation();
   owner_element_->InvalidateStyleAttribute(false);
   mutation_scope.DidInvalidateStyleAttr();
   mutation_scope.EnqueueMutationRecord();

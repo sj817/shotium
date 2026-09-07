@@ -92,7 +92,6 @@
 #include "third_party/blink/renderer/core/events/touch_event.h"
 #include "third_party/blink/renderer/core/events/ui_event.h"
 #include "third_party/blink/renderer/core/events/wheel_event.h"
-#include "third_party/blink/renderer/core/exported/web_plugin_container_impl.h"
 #include "third_party/blink/renderer/core/frame/event_handler_registry.h"
 #include "third_party/blink/renderer/core/frame/local_dom_window.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
@@ -123,7 +122,6 @@
 #include "third_party/blink/renderer/core/layout/layout_shift_tracker.h"
 #include "third_party/blink/renderer/core/layout/layout_view.h"
 #include "third_party/blink/renderer/core/mathml_names.h"
-#include "third_party/blink/renderer/core/page/context_menu_controller.h"
 #include "third_party/blink/renderer/core/page/page.h"
 #include "third_party/blink/renderer/core/page/scrolling/top_document_root_scroller_controller.h"
 #include "third_party/blink/renderer/core/paint/paint_layer.h"
@@ -3338,12 +3336,7 @@ void Node::DefaultEventHandler(Event& event) {
     if (DispatchDOMActivateEvent(detail, event) !=
         DispatchEventResult::kNotCanceled)
       event.SetDefaultHandled();
-  } else if (event_type == event_type_names::kContextmenu &&
-             IsA<MouseEvent>(event)) {
-    if (Page* page = GetDocument().GetPage()) {
-      page->GetContextMenuController().HandleContextMenuEvent(
-          To<MouseEvent>(&event));
-    }
+
   } else if (event_type == event_type_names::kTextInput) {
     if (event.HasInterface(event_interface_names::kTextEvent)) {
       if (LocalFrame* frame = GetDocument().GetFrame()) {
@@ -3633,16 +3626,6 @@ LayoutBox* Node::AutoscrollBox() {
 }
 
 void Node::StopAutoscroll() {}
-
-WebPluginContainerImpl* Node::GetWebPluginContainer() const {
-  if (!IsA<HTMLObjectElement>(this) && !IsA<HTMLEmbedElement>(this)) {
-    return nullptr;
-  }
-
-  if (auto* embedded = DynamicTo<LayoutEmbeddedContent>(GetLayoutObject()))
-    return embedded->Plugin();
-  return nullptr;
-}
 
 bool Node::HasMediaControlAncestor() const {
   const Node* current = this;

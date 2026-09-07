@@ -145,7 +145,6 @@ static String SpecialDrawingTypeAsDebugString(DisplayItem::Type type) {
     DEBUG_STRING_CASE(ScrollCorner);
     DEBUG_STRING_CASE(SelectionTint);
     DEBUG_STRING_CASE(TableCollapsedBorders);
-    DEBUG_STRING_CASE(WebPlugin);
 
     DEFAULT_CASE;
   }
@@ -160,9 +159,7 @@ static String ForeignLayerTypeAsDebugString(DisplayItem::Type type) {
   switch (type) {
     DEBUG_STRING_CASE(ForeignLayerCanvas);
     DEBUG_STRING_CASE(ForeignLayerDevToolsOverlay);
-    DEBUG_STRING_CASE(ForeignLayerPlugin);
     DEBUG_STRING_CASE(ForeignLayerVideo);
-    DEBUG_STRING_CASE(ForeignLayerRemoteFrame);
     DEBUG_STRING_CASE(ForeignLayerLinkHighlight);
     DEBUG_STRING_CASE(ForeignLayerViewportScroll);
     DEBUG_STRING_CASE(ForeignLayerViewportScrollbar);
@@ -185,7 +182,6 @@ String DisplayItem::TypeAsDebugString(Type type) {
 
   switch (type) {
     DEBUG_STRING_CASE(HitTest);
-    DEBUG_STRING_CASE(WebPluginHitTest);
     DEBUG_STRING_CASE(RegionCapture);
     DEBUG_STRING_CASE(TrackedElement);
     DEBUG_STRING_CASE(ScrollHitTest);

@@ -823,8 +823,6 @@ bool InputType::SetFiles(FileList*) {
 
 void InputType::SetFilesAndDispatchEvents(FileList*) {}
 
-void InputType::SetFilesFromPaths(const Vector<String>& paths) {}
-
 String InputType::ValueInFilenameValueMode() const {
   NOTREACHED();
 }
@@ -907,14 +905,6 @@ void InputType::WarnIfValueIsInvalidAndElementIsVisible(
 }
 
 void InputType::WarnIfValueIsInvalid(const String&) const {}
-
-bool InputType::ReceiveDroppedFiles(const DragData*) {
-  NOTREACHED();
-}
-
-String InputType::DroppedFileSystemId() {
-  NOTREACHED();
-}
 
 bool InputType::ShouldRespectListAttribute() {
   return false;

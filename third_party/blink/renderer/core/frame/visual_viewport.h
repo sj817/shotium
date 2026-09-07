@@ -51,17 +51,13 @@
 namespace cc {
 class AnimationHost;
 class AnimationTimeline;
-class SolidColorScrollbarLayer;
 }
 
 namespace blink {
 
 enum class PaintPropertyChangeType : unsigned char;
-class EffectPaintPropertyNode;
-class GraphicsContext;
 class LocalFrame;
 class Page;
-class PaintArtifactCompositor;
 class RootFrameViewport;
 class ScrollPaintPropertyNode;
 class TracedValue;
@@ -70,21 +66,8 @@ struct PaintPropertyTreeBuilderFragmentContext;
 
 enum class OverscrollType { kNone, kTransform };
 
-// Represents the visual viewport the user is currently seeing the page through.
-// This class corresponds to the InnerViewport on the compositor. It is a
-// ScrollableArea; it's offset is set through the GraphicsLayer <-> CC sync
-// mechanisms. Its contents is the page's main LocalFrameView, which corresponds
-// to the outer viewport. The inner viewport is always contained in the outer
-// viewport and can pan within it.
-//
-// When attached, we will create the following layers:
-// - scroll_layer_ (transform: scroll_translation_node_)
-// - scrollbar_layer_horizontal_ (optional, transform: DET_or_parent)
-// - scrollbar_layer_vertical_ (optional, transform: DET_or_parent)
-// (DET_or_parent: device_emulation_transform_node_ if exists,
-//  or the parent transform state)
-//
-// After PrePaint, the property trees will look like this:
+// The visual viewport pans and scales within the main frame layout viewport.
+// Its transforms remain part of the CPU paint property tree after PrePaint:
 //
 // Transform tree:
 //  parent transform state
@@ -92,10 +75,6 @@ enum class OverscrollType { kNone, kTransform };
 //     +- overscroll_elasticity_transform_node_
 //        +- page_scale_node__
 //           +- scroll_translation_node_ (scroll: scroll_node_)
-// Effect tree:
-//  parent effect state
-//  +- horizontal_scrollbar_effect_node_
-//  +- vertical_scrollbar_effect_node_
 //
 // A VisualViewport is created for each blink::Page which means we'll have a
 // VisualViewport for each renderer in a page. However, only the VisualViewport
@@ -111,8 +90,6 @@ class CORE_EXPORT VisualViewport : public GarbageCollected<VisualViewport>,
   ~VisualViewport() override;
 
   void Trace(Visitor*) const override;
-
-  void InitializeScrollbars();
 
   // Sets the location of the visual viewport relative to the outer viewport.
   // The coordinates are in partial CSS pixels.
@@ -223,13 +200,7 @@ class CORE_EXPORT VisualViewport : public GarbageCollected<VisualViewport>,
   void UpdateScrollOffset(const ScrollOffset&,
                           mojom::blink::ScrollType,
                           cc::ScrollSourceType) override;
-  cc::Layer* LayerForScrolling() const;
-  cc::Layer* LayerForHorizontalScrollbar() const override;
-  cc::Layer* LayerForVerticalScrollbar() const override;
   bool ScheduleAnimation() override;
-  bool UsesCompositedScrolling() const override { return true; }
-  cc::AnimationHost* GetCompositorAnimationHost() const override;
-  cc::AnimationTimeline* GetCompositorAnimationTimeline() const override;
   gfx::Rect VisibleContentRect(IncludeScrollbarsInRect) const override;
   scoped_refptr<base::SingleThreadTaskRunner> GetTimerTaskRunner()
       const override;
@@ -237,14 +208,6 @@ class CORE_EXPORT VisualViewport : public GarbageCollected<VisualViewport>,
   ScrollbarTheme& GetPageScrollbarTheme() const override;
   bool VisualViewportSuppliesScrollbars() const override;
   const Document* GetDocument() const override;
-
-  // VisualViewport scrolling may involve pinch zoom and gets routed through
-  // WebViewImpl explicitly rather than via
-  // ScrollingCoordinator::DidCompositorScroll() since it needs to be set in
-  // tandem with the page scale delta.
-  void DidCompositorScroll(const gfx::PointF&, cc::ScrollSourceType) final {
-    NOTREACHED();
-  }
 
   // Visual Viewport API implementation.
   double OffsetLeft() const;
@@ -287,10 +250,7 @@ class CORE_EXPORT VisualViewport : public GarbageCollected<VisualViewport>,
 
   void DisposeImpl() override;
 
-  void Paint(GraphicsContext&) const;
-
   void UsedColorSchemeChanged();
-  void ScrollbarColorChanged();
 
   // Returns whether this VisualViewport is "active", that is, whether it'll
   // affect paint property trees. If false, this renderer cannot be
@@ -306,9 +266,6 @@ class CORE_EXPORT VisualViewport : public GarbageCollected<VisualViewport>,
     overscroll_type_ = type;
     SetNeedsPaintPropertyUpdate();
   }
-  std::optional<blink::Color> CSSScrollbarThumbColor() const;
-
-  void DropCompositorScrollDeltaNextCommit() override;
 
  protected:
   // ScrollableArea implementation
@@ -325,15 +282,8 @@ class CORE_EXPORT VisualViewport : public GarbageCollected<VisualViewport>,
                              bool is_pinch_gesture_active,
                              const gfx::PointF& location);
 
-  void CreateLayers();
-
   void EnqueueScrollEvent();
   void EnqueueResizeEvent();
-
-  EScrollbarWidth CSSScrollbarWidth() const;
-  int ScrollbarThickness() const;
-  void UpdateScrollbarLayer(ScrollbarOrientation);
-  void UpdateScrollbarColor(cc::SolidColorScrollbarLayer&);
 
   void NotifyRootFrameViewport() const;
 
@@ -348,8 +298,6 @@ class CORE_EXPORT VisualViewport : public GarbageCollected<VisualViewport>,
     return *page_;
   }
 
-  PaintArtifactCompositor* GetPaintArtifactCompositor() const;
-
   std::unique_ptr<TracedValue> ViewportToTracedValue() const;
 
   // Contracts the given size by the thickness of any visible scrollbars. Does
@@ -360,19 +308,11 @@ class CORE_EXPORT VisualViewport : public GarbageCollected<VisualViewport>,
 
   Member<Page> page_;
 
-  scoped_refptr<cc::Layer> scroll_layer_;
-  scoped_refptr<cc::SolidColorScrollbarLayer> scrollbar_layer_horizontal_;
-  scoped_refptr<cc::SolidColorScrollbarLayer> scrollbar_layer_vertical_;
-
-  TraceablePropertyTreeStateOrAlias parent_property_tree_state_{
-      TraceablePropertyTreeStateOrAlias::kUninitialized};
   Member<TransformPaintPropertyNode> device_emulation_transform_node_;
   Member<TransformPaintPropertyNode> overscroll_elasticity_transform_node_;
   Member<TransformPaintPropertyNode> page_scale_node_;
   Member<TransformPaintPropertyNode> scroll_translation_node_;
   Member<ScrollPaintPropertyNode> scroll_node_;
-  Member<EffectPaintPropertyNode> horizontal_scrollbar_effect_node_;
-  Member<EffectPaintPropertyNode> vertical_scrollbar_effect_node_;
 
   // Offset of the visual viewport from the main frame's origin, in CSS pixels.
   ScrollOffset offset_;
@@ -396,8 +336,7 @@ class CORE_EXPORT VisualViewport : public GarbageCollected<VisualViewport>,
 
   // For page scale animation on page_scale_node_.
   CompositorElementId page_scale_element_id_;
-  // For scrolling, on scroll_layer_, scroll_node_, and scroll element ids of
-  // scrollbar layers.
+  // Identifies the visual viewport scroll node.
   CompositorElementId scroll_element_id_;
 
   bool needs_paint_property_update_;

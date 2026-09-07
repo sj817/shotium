@@ -613,9 +613,6 @@ void StyleAdjuster::AdjustStyleForHTMLElement(ComputedStyleBuilder& builder,
 
     case ElementType::kHTMLEmbedElement:
     case ElementType::kHTMLObjectElement: {
-      auto& html_plugin_element = To<HTMLPlugInElement>(element);
-      builder.SetRequiresAcceleratedCompositingForExternalReasons(
-          html_plugin_element.ShouldAccelerate());
       if (builder.Display() == EDisplay::kContents) {
         builder.SetDisplay(EDisplay::kNone);
       }

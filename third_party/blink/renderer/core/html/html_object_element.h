@@ -127,7 +127,6 @@ class CORE_EXPORT HTMLObjectElement final : public HTMLPlugInElement,
   const QualifiedName& SubResourceAttributeName() const override;
   const AtomicString ImageSourceURL() const override;
 
-  LayoutEmbeddedContent* ExistingLayoutEmbeddedContent() const override;
 
   void UpdatePluginInternal() override;
   void UpdateDocNamedItem();
@@ -136,7 +135,6 @@ class CORE_EXPORT HTMLObjectElement final : public HTMLPlugInElement,
 
   // FIXME: This function should not deal with url or serviceType
   // so that we can better share code between <object> and <embed>.
-  void ParametersForPlugin(PluginParameters& plugin_params);
 
   bool HasValidClassId() const;
 

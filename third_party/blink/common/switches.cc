@@ -69,11 +69,6 @@ const char kEnableDesktopAndroidScrollbars[] =
 const char kEnableGpuMemoryBufferCompositorResources[] =
     "enable-gpu-memory-buffer-compositor-resources";
 
-// Enables taking a heap snapshot and dumping it to file when using leak
-// detection.
-const char kEnableLeakDetectionHeapSnapshot[] =
-    "enable-leak-detection-heap-snapshot";
-
 // Enable the creation of compositing layers when it would prevent LCD text.
 const char kEnablePreferCompositingToLCDText[] =
     "enable-prefer-compositing-to-lcd-text";

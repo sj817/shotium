@@ -1791,14 +1791,6 @@ void HTMLInputElement::setFiles(FileList* files) {
   input_type_->SetFiles(files);
 }
 
-bool HTMLInputElement::ReceiveDroppedFiles(const DragData* drag_data) {
-  return input_type_->ReceiveDroppedFiles(drag_data);
-}
-
-String HTMLInputElement::DroppedFileSystemId() {
-  return input_type_->DroppedFileSystemId();
-}
-
 bool HTMLInputElement::CanReceiveDroppedFiles() const {
   return can_receive_dropped_files_;
 }
@@ -2550,10 +2542,6 @@ void HTMLInputElement::EnsurePrimaryContent() {
 
 bool HTMLInputElement::HasFallbackContent() const {
   return input_type_view_->HasFallbackContent();
-}
-
-void HTMLInputElement::SetFilesFromPaths(const Vector<String>& paths) {
-  return input_type_->SetFilesFromPaths(paths);
 }
 
 void HTMLInputElement::ChildrenChanged(const ChildrenChange& change) {

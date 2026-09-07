@@ -35,7 +35,6 @@
 #include "third_party/blink/renderer/core/dom/shadow_root.h"
 #include "third_party/blink/renderer/core/dom/tag_collection.h"
 #include "third_party/blink/renderer/core/dom/text.h"
-#include "third_party/blink/renderer/core/exported/web_plugin_container_impl.h"
 #include "third_party/blink/renderer/core/frame/deprecation/deprecation.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
 #include "third_party/blink/renderer/core/frame/local_frame_client.h"
@@ -72,12 +71,6 @@ const AttrNameToTrustedType& HTMLObjectElement::GetCheckedAttributeTypes()
         {"codebase", std::pair{SpecificTrustedType::kScriptURL,
                                trusted_types_names::kHTMLObjectElement}}}));
   return attribute_map;
-}
-
-LayoutEmbeddedContent* HTMLObjectElement::ExistingLayoutEmbeddedContent()
-    const {
-  // This will return 0 if the layoutObject is not a LayoutEmbeddedContent.
-  return GetLayoutEmbeddedContent();
 }
 
 bool HTMLObjectElement::IsPresentationAttribute(
@@ -126,18 +119,6 @@ void HTMLObjectElement::ParseAttribute(
   } else {
     HTMLPlugInElement::ParseAttribute(params);
   }
-}
-
-void HTMLObjectElement::ParametersForPlugin(PluginParameters& plugin_params) {
-  // Turn the attributes of the <object> element into arrays, but don't override
-  // <param> values.
-  for (const Attribute& attribute : Attributes()) {
-    plugin_params.AppendAttribute(attribute);
-  }
-
-  // Some plugins don't understand the "data" attribute of the OBJECT tag (i.e.
-  // Real and WMP require "src" attribute).
-  plugin_params.MapDataParamToSrc();
 }
 
 bool HTMLObjectElement::HasFallbackContent() const {
@@ -211,9 +192,6 @@ void HTMLObjectElement::UpdatePluginInternal() {
     return;
   }
 
-  PluginParameters plugin_params;
-  ParametersForPlugin(plugin_params);
-
   if (!AllowedToLoadFrameURL(url_)) {
     DispatchErrorEvent();
     return;
@@ -224,25 +202,11 @@ void HTMLObjectElement::UpdatePluginInternal() {
   if (!GetLayoutObject())
     return;
 
-  // Overwrites the URL and MIME type of a Flash embed to use an HTML5 embed.
-  KURL overriden_url =
-      GetDocument().GetFrame()->Client()->OverrideFlashEmbedWithHTML(
-          GetDocument().CompleteURL(url_));
-  if (!overriden_url.IsEmpty()) {
-    Deprecation::CountDeprecation(GetDocument().GetExecutionContext(),
-                                  WebFeature::kOverrideFlashEmbedwithHTML);
-    url_ = overriden_url.GetString();
-    SetServiceType("text/html");
-  }
-
-  if (!HasValidClassId() || !RequestObject(plugin_params)) {
+  if (!HasValidClassId() || !RequestObject()) {
     if (!url_.empty())
       DispatchErrorEvent();
     if (HasFallbackContent())
       RenderFallbackContent(ErrorEventPolicy::kDoNotDispatch);
-  } else {
-    if (IsErrorplaceholder())
-      DispatchErrorEvent();
   }
 }
 
@@ -412,8 +376,6 @@ void HTMLObjectElement::AssociateWith(HTMLFormElement* form) {
 bool HTMLObjectElement::DidFinishLoading() const {
   if (!isConnected())
     return false;
-  if (OwnedPlugin())
-    return true;
   if (auto* frame = ContentFrame()) {
     if (!frame->IsLoading())
       return true;

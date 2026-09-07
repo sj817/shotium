@@ -5,7 +5,6 @@
 #ifndef THIRD_PARTY_BLINK_RENDERER_CORE_ANIMATION_TIMELINE_TRIGGER_H_
 #define THIRD_PARTY_BLINK_RENDERER_CORE_ANIMATION_TIMELINE_TRIGGER_H_
 
-#include "cc/animation/timeline_trigger.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_timeline_trigger_options.h"
 #include "third_party/blink/renderer/core/animation/animation_trigger.h"
 #include "third_party/blink/renderer/core/animation/scroll_timeline.h"
@@ -27,7 +26,6 @@ class CORE_EXPORT TimelineTrigger : public AnimationTrigger {
   using State = TimelineTriggerRange::State;
   using RangeBoundary = TimelineTriggerRange::Boundary;
   using TriggerBoundaries = TimelineTriggerRange::TriggerBoundaries;
-  using CcBoundaries = cc::TimelineTrigger::Boundaries;
 
   explicit TimelineTrigger(TimelineTriggerRangeList* ranges);
   static TimelineTrigger* Create(
@@ -92,15 +90,6 @@ class CORE_EXPORT TimelineTrigger : public AnimationTrigger {
 
   void Trace(Visitor* visitor) const override;
 
-  void CreateCompositorTrigger() override;
-
-  // TODO(crbug.com/473568234): Support multiple timelines.
-  std::optional<CcBoundaries> ComputeCcBoundaries(
-      cc::AnimationTimeline* cc_timeline) {
-    return GetRange() ? GetRange()->ComputeCcBoundaries(cc_timeline)
-                      : std::nullopt;
-  }
-
   Document* GetDocument() override {
     return Timeline() ? Timeline()->GetDocument() : nullptr;
   }
@@ -114,11 +103,6 @@ class CORE_EXPORT TimelineTrigger : public AnimationTrigger {
                         ExceptionState& exception_state) override;
   void DidAddAnimation() override;
   void DidRemoveAnimation(Animation* animation) override;
-
-  // These functions are called when the cc::AnimationTrigger associated with
-  // this trigger observes the related conditions on the compositor thread.
-  void NotifyActivated(base::TimeTicks activate_time) override;
-  void NotifyDeactivated(base::TimeTicks deactivate_time) override;
 
   void HandlePostTripAdd(Animation* animation,
                          Behavior activate_behavior,

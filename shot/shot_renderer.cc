@@ -1453,7 +1453,6 @@ base::expected<void, std::string> ShotRenderer::CreatePage(
   blink::Settings& settings = page_->GetSettings();
   ApplyChromeWebPreferences(settings);
   settings.SetScriptEnabled(false);
-  settings.SetPluginsEnabled(false);
 
   // The encoding from the Content-Type header, where there was one. This is the
   // *default* encoding rather than an override, so a document that declares its

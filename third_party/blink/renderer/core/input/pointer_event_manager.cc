@@ -24,7 +24,6 @@
 #include "third_party/blink/renderer/core/layout/layout_object.h"
 #include "third_party/blink/renderer/core/page/chrome_client.h"
 #include "third_party/blink/renderer/core/page/page.h"
-#include "third_party/blink/renderer/core/page/pointer_lock_controller.h"
 #include "third_party/blink/renderer/core/page/touch_adjustment.h"
 #include "third_party/blink/renderer/core/paint/paint_layer.h"
 #include "third_party/blink/renderer/core/scroll/scrollbar.h"
@@ -706,32 +705,7 @@ WebInputEventResult PointerEventManager::HandlePointerEvent(
       }
     }
 
-    // If the page has pointer lock active and the event was from
-    // mouse use the locked target as the target.
-    // TODO(nzolghadr): Consideration for locked element might fit
-    // better in ComputerPointerEventTarget but at this point it is
-    // not quite possible as we haven't merged the locked event
-    // dispatch with this path.
-    Node* target;
-    Element* pointer_locked_element =
-        PointerLockController::GetPointerLockedElement(frame_);
-    if (pointer_locked_element &&
-        event.pointer_type == WebPointerProperties::PointerType::kMouse) {
-      // The locked element could be in another frame. So we need to delegate
-      // sending the event to that frame.
-      LocalFrame* target_frame =
-          pointer_locked_element->GetDocument().GetFrame();
-      if (!target_frame)
-        return WebInputEventResult::kHandledSystem;
-      if (target_frame != frame_) {
-        target_frame->GetEventHandler().HandlePointerEvent(
-            event, coalesced_events, predicted_events);
-        return WebInputEventResult::kHandledSystem;
-      }
-      target = pointer_locked_element;
-    } else {
-      target = ComputePointerEventTarget(event).target_element;
-    }
+    Node* target = ComputePointerEventTarget(event).target_element;
 
     PointerEvent* pointer_event = pointer_event_factory_->Create(
         event, coalesced_events, predicted_events,

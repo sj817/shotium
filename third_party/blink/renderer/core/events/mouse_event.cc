@@ -38,7 +38,6 @@
 #include "third_party/blink/renderer/core/layout/layout_object.h"
 #include "third_party/blink/renderer/core/layout/layout_view.h"
 #include "third_party/blink/renderer/core/page/page.h"
-#include "third_party/blink/renderer/core/page/pointer_lock_controller.h"
 #include "third_party/blink/renderer/core/paint/paint_layer.h"
 #include "third_party/blink/renderer/core/paint/paint_layer_scrollable_area.h"
 #include "third_party/blink/renderer/core/svg/svg_element.h"
@@ -180,13 +179,6 @@ void MouseEvent::SetCoordinatesFromWebPointerProperties(
   if (dom_window && dom_window->GetFrame() && dom_window->GetFrame()->View()) {
     LocalFrame* frame = dom_window->GetFrame();
     gfx::PointF root_frame_point = web_pointer_properties.PositionInWidget();
-    if (Page* p = frame->GetPage()) {
-      if (p->GetPointerLockController().GetElement() &&
-          !p->GetPointerLockController().LockPending()) {
-        p->GetPointerLockController().GetPointerLockPosition(&root_frame_point,
-                                                             &screen_point);
-      }
-    }
     gfx::PointF frame_point =
         frame->View()->ConvertFromRootFrame(root_frame_point);
     inverse_zoom_factor = 1.0f / frame->LayoutZoomFactor();

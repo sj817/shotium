@@ -49,13 +49,11 @@
 #include "third_party/blink/public/mojom/back_forward_cache_not_restored_reasons.mojom-blink.h"
 #include "third_party/blink/public/mojom/blob/blob_url_store.mojom-blink-forward.h"
 #include "third_party/blink/public/mojom/confidence_level.mojom-blink.h"
-#include "third_party/blink/public/mojom/device_posture/device_posture_provider.mojom-blink-forward.h"
 #include "third_party/blink/public/mojom/devtools/devtools_agent.mojom-blink-forward.h"
 #include "third_party/blink/public/mojom/favicon/favicon_url.mojom-blink-forward.h"
 #include "third_party/blink/public/mojom/frame/back_forward_cache_controller.mojom-blink-forward.h"
 #include "third_party/blink/public/mojom/frame/frame.mojom-blink-forward.h"
 #include "third_party/blink/public/mojom/frame/frame_owner_properties.mojom-blink-forward.h"
-#include "third_party/blink/public/mojom/frame/media_player_action.mojom-blink-forward.h"
 #include "third_party/blink/public/mojom/frame/reporting_observer.mojom-blink-forward.h"
 #include "third_party/blink/public/mojom/frame/sudden_termination_disabler_type.mojom-blink-forward.h"
 #include "third_party/blink/public/mojom/frame/viewport_intersection_state.mojom-blink.h"
@@ -79,7 +77,6 @@
 #include "third_party/blink/renderer/core/frame/frame_types.h"
 #include "third_party/blink/renderer/core/frame/frame_visibility_observer.h"
 #include "third_party/blink/renderer/core/frame/local_frame_view.h"
-#include "third_party/blink/renderer/core/frame/widget_creation_observer.h"
 #include "third_party/blink/renderer/core/loader/back_forward_cache_loader_helper_impl.h"
 #include "third_party/blink/renderer/core/loader/frame_loader.h"
 #include "third_party/blink/renderer/platform/graphics/touch_action.h"
@@ -131,7 +128,6 @@ class EventTarget;
 class FrameConsole;
 class FrameOverlay;
 class FrameSelection;
-class FrameWidget;
 class IdlenessDetector;
 class InputMethodController;
 class InterfaceRegistry;
@@ -142,7 +138,6 @@ class LocalFrameMojoHandler;
 class Node;
 class NodeTraversal;
 class PerformanceMonitor;
-class PluginData;
 class PolicyContainer;
 class PostLayoutSnapshotClient;
 class SpellChecker;
@@ -156,8 +151,6 @@ class VirtualKeyboardOverlayChangedObserver;
 class WebAutofillClient;
 class WebContentSettingsClient;
 class WebInputEventAttribution;
-class WebPluginContainerImpl;
-class WebPrescientNetworking;
 class WindowControlsOverlayChangedDelegate;
 enum class BackForwardCacheAware;
 enum class MediaValueChange;
@@ -279,10 +272,6 @@ class CORE_EXPORT LocalFrame final
   LocalFrameView* View() const override;
   Document* GetDocument() const;
   void DocumentDetached();
-  void SetPagePopupOwner(Element&);
-  Element* PagePopupOwner() const { return page_popup_owner_.Get(); }
-  bool HasPagePopupOwner() const { return page_popup_owner_ != nullptr; }
-
   // Root of the layout tree for the document contained in this frame.
   LayoutView* ContentLayoutObject() const;
 
@@ -320,9 +309,6 @@ class CORE_EXPORT LocalFrame final
   // inspector's threading support) and had no caller anywhere in the tree.
 
   // GetOrResetContentCaptureManager() was here.
-
-  void AddWidgetCreationObserver(WidgetCreationObserver* observer);
-  void NotifyFrameWidgetCreated();
 
   // Returns the current state of caret browsing mode.
   bool IsCaretBrowsingEnabled() const;
@@ -400,8 +386,6 @@ class CORE_EXPORT LocalFrame final
   // All public functions below this point are candidates to move out of
   // LocalFrame into another class.
 
-  // See layers_as_json.h for accepted flags.
-  String GetLayerTreeAsTextForTesting(unsigned flags = 0) const;
 
   // Begin printing.
   // If too large (in the inline direction), the frame content will fit to the
@@ -451,7 +435,6 @@ class CORE_EXPORT LocalFrame final
       StyleEnvironmentVariables& vars,
       const std::vector<gfx::Rect>& viewport_segments);
 
-  mojom::blink::DevicePostureType GetDevicePosture();
 
   String SelectedText() const;
   String SelectedText(const TextIteratorBehavior& behavior) const;
@@ -513,19 +496,10 @@ class CORE_EXPORT LocalFrame final
 
   LocalFrameClient* Client() const;
 
-  // Returns the widget for this frame, or from the nearest ancestor which is a
-  // local root. It is never null for frames in ordinary Pages (which means the
-  // Page is inside a WebView), except very early in initialization. For frames
-  // in a non-ordinary Page (without a WebView, such as in unit tests, popups,
-  // devtools), it will always be null.
-  FrameWidget* GetWidgetForLocalRoot();
-
   WebContentSettingsClient* GetContentSettingsClient();
   const mojom::RendererContentSettingsPtr& GetContentSettings() const;
 
-  WebAutofillClient* GetAutofillClient();
 
-  PluginData* GetPluginData() const;
 
   PerformanceMonitor* GetPerformanceMonitor() {
     return performance_monitor_.Get();
@@ -550,13 +524,6 @@ class CORE_EXPORT LocalFrame final
 
   bool IsInert() const { return is_inert_; }
 
-  // If the frame hosts a PluginDocument, this method returns the
-  // WebPluginContainerImpl that hosts the plugin. If the provided node is a
-  // plugin, then it returns its WebPluginContainerImpl. Otherwise, uses the
-  // currently focused element (if any).
-  // TODO(slangley): Refactor this method to extract the logic of looking up
-  // focused element or passed node into explicit methods.
-  WebPluginContainerImpl* GetWebPluginContainer(Node* = nullptr) const;
 
   // Called on a view for a LocalFrame with a RemoteFrame parent. This makes
   // viewport intersection and occlusion/obscuration available that accounts for
@@ -615,13 +582,6 @@ class CORE_EXPORT LocalFrame final
   // be removed.
   bool IsProvisional() const;
 
-  // Returns the Page's `previous_main_frame_for_local_swap_` if set, or the
-  // LocalFrame for which `provisional_frame_ == this`. The LocalFrame returned
-  // will be swapped out in place of `this` as part of a
-  // LocalFrame <-> LocalFrame swap during navigation commit. This function may
-  // only be called on a provisional frame.
-  LocalFrame* GetPreviousLocalFrameForLocalSwap();
-
   // Ad Tagging is gone. IsAdFrame()/IsAdRoot()/SetAdEvidence()/AdEvidence()/
   // IsFrameCreatedByAdScript()/IsAdScriptInStack()/CreationAdScript()/
   // UpdateAdHighlight() were here. The two things that could ever decide a
@@ -644,7 +604,6 @@ class CORE_EXPORT LocalFrame final
   }
 
   mojom::blink::ReportingServiceProxy* GetReportingService();
-  mojom::blink::DevicePostureProvider* GetDevicePostureProvider();
 
   // Returns the frame host ptr. The interface returned is backed by an
   // associated interface with the legacy Chrome IPC channel.
@@ -713,21 +672,6 @@ class CORE_EXPORT LocalFrame final
 
   void DidChangeVisibleToHitTesting() override;
 
-  WebPrescientNetworking* PrescientNetworking();
-  void SetPrescientNetworkingForTesting(
-      std::unique_ptr<WebPrescientNetworking> prescient_networking);
-
-  void CopyImageAtViewportPoint(const gfx::Point& viewport_point);
-  void MediaPlayerActionAtViewportPoint(
-      const gfx::Point& viewport_position,
-      const blink::mojom::blink::MediaPlayerActionType type,
-      bool enable);
-  void RequestVideoFrameAtWithBoundsHint(
-      const gfx::Point& viewport_position,
-      const gfx::Size& max_size,
-      int max_area,
-      base::OnceCallback<void(const SkBitmap&, const gfx::Rect&)> callback);
-
   // Handle the request as a download. If the request is for a blob: URL,
   // a BlobURLToken should be provided as |blob_url_token| to ensure the
   // correct blob gets downloaded.
@@ -745,7 +689,6 @@ class CORE_EXPORT LocalFrame final
 
   void NotifyUserActivation(
       mojom::blink::UserActivationNotificationType notification_type);
-  void SaveImageAt(const gfx::Point& window_point);
   void AdvanceFocusForIME(mojom::blink::FocusType focus_type);
   // PostMessageEvent() (which dispatched a postMessage() call's payload as a
   // MessageEvent on this frame's DOMWindow) is gone; see local_frame.cc.
@@ -753,12 +696,7 @@ class CORE_EXPORT LocalFrame final
   // the incoming message directly.
 
   void SetScaleFactor(float scale);
-  void ClosePageForTesting();
   void SetInitialFocus(bool reverse);
-
-#if BUILDFLAG(IS_MAC)
-  uint32_t GetCharacterIndexAtPoint(const gfx::Point& point);
-#endif
 
   void UpdateWindowControlsOverlay(const gfx::Rect& bounding_rect_in_dips);
   void RegisterWindowControlsOverlayChangedDelegate(
@@ -775,8 +713,6 @@ class CORE_EXPORT LocalFrame final
 
   SystemClipboard* GetSystemClipboard();
 
-  // Indicate that this frame was attached as a MainFrame.
-  void WasAttachedAsLocalMainFrame();
 
   // Return true if the frame is able to access an event with the given
   // attribution (i.e. the event is targeted for an origin that the frame may
@@ -793,11 +729,6 @@ class CORE_EXPORT LocalFrame final
   DocumentToken GetDocumentToken() const;
 
   LoaderFreezeMode GetLoaderFreezeMode();
-
-  // Swaps `this` LocalFrame in to replace the current frame  (e.g. in the case
-  // of subframes, `Owner()->frame()`, or in the case of the main frame,
-  // `GetPage()->Frame()`). Must only be called on provisional frames.
-  bool SwapIn();
 
   void SetEvictCachedSessionStorageOnFreezeOrUnload();
 
@@ -994,8 +925,6 @@ class CORE_EXPORT LocalFrame final
   void UpdateBackForwardCacheDisablingFeatures(
       BlockingDetails details) override;
   const base::UnguessableToken& GetAgentClusterId() const override;
-  void OnTaskCompleted(base::TimeTicks start_time,
-                       base::TimeTicks end_time) override;
   // MainFrameInteractive() and MainFrameFirstMeaningfulPaint() removed in
   // this cut: both overrides did nothing but feed V8's compile-hints
   // producers (Page::GetV8CrowdsourcedCompileHintsProducer(),
@@ -1048,15 +977,12 @@ class CORE_EXPORT LocalFrame final
   // so its boundingRect can start with the current value.
   gfx::Rect virtual_keyboard_overlay_rect_;
 
-  HeapHashSet<WeakMember<WidgetCreationObserver>> widget_creation_observers_;
 
   mutable FrameLoader loader_;
 
   // Cleared by LocalFrame::detach(), so as to keep the observable lifespan
   // of LocalFrame::view().
   Member<LocalFrameView> view_;
-  // Usually 0. Non-null if this is the top frame of PagePopup.
-  Member<Element> page_popup_owner_;
 
   const Member<Editor> editor_;
   const Member<FrameSelection> selection_;
@@ -1116,7 +1042,6 @@ class CORE_EXPORT LocalFrame final
 
   std::optional<base::UnguessableToken> embedding_token_;
 
-  std::unique_ptr<WebPrescientNetworking> prescient_networking_;
 
   Member<LocalFrameMojoHandler> mojo_handler_;
 

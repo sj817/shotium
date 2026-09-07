@@ -14,7 +14,6 @@
 #include "third_party/blink/renderer/core/frame/local_frame_view.h"
 #include "third_party/blink/renderer/core/frame/pagination_state.h"
 #include "third_party/blink/renderer/core/frame/visual_viewport.h"
-#include "third_party/blink/renderer/core/frame/web_frame_widget_impl.h"
 #include "third_party/blink/renderer/core/html/canvas/html_canvas_element.h"
 #include "third_party/blink/renderer/core/html/html_element.h"
 #include "third_party/blink/renderer/core/html_names.h"
@@ -30,7 +29,6 @@
 #include "third_party/blink/renderer/core/layout/pagination_utils.h"
 #include "third_party/blink/renderer/core/layout/physical_box_fragment.h"
 #include "third_party/blink/renderer/core/page/chrome_client.h"
-#include "third_party/blink/renderer/core/page/link_highlight.h"
 #include "third_party/blink/renderer/core/page/page.h"
 #include "third_party/blink/renderer/core/paint/clip_path_clipper.h"
 #include "third_party/blink/renderer/core/paint/object_paint_invalidator.h"
@@ -47,11 +45,6 @@
 namespace blink {
 
 namespace {
-
-bool IsLinkHighlighted(const LayoutObject& object) {
-  return object.GetFrame()->GetPage()->GetLinkHighlight().IsHighlighting(
-      object);
-}
 
 bool IsInFragmentationContext(const PhysicalBoxFragment* fragment) {
   DCHECK(!RuntimeEnabledFeatures::FragmentedOofInCbEnabled());
@@ -525,10 +518,8 @@ FragmentData* PrePaintTreeWalk::GetOrCreateFragmentData(
     }
   } else {
     if (pre_paint_info.is_inside_fragment_child) {
-      if (!object.HasInlineFragments() && !IsLinkHighlighted(object)) {
-        // We don't need any additional fragments for culled inlines - unless
-        // this is the highlighted link (in which case even culled inlines get
-        // paint effects).
+      if (!object.HasInlineFragments()) {
+        // Culled inlines do not need additional fragments.
         return nullptr;
       }
 
@@ -703,29 +694,6 @@ void PrePaintTreeWalk::WalkInternal(const LayoutObject& object,
     DCHECK(!html_element || object.StyleRef().IsUnboundedElementActive() ==
                                 html_element->IsUnboundedElementActive());
     context.inside_active_unbounded = true;
-    gfx::Rect current_bounds =
-        object.AbsoluteBoundingBoxRectForUnboundedElement();
-    auto* frame = object.GetFrame();
-    if (frame) {
-      if (auto* view = frame->View()) {
-        current_bounds = view->FrameToViewport(current_bounds);
-      }
-      if (auto* widget = frame->GetWidgetForLocalRoot()) {
-        current_bounds = gfx::ToRoundedRect(
-            widget->BlinkSpaceToDIPs(gfx::RectF(current_bounds)));
-      }
-    }
-    if (html_element &&
-        current_bounds != html_element->LastSentUnboundedBounds()) {
-      const_cast<HTMLElement*>(html_element)
-          ->SetLastSentUnboundedBounds(current_bounds);
-      if (frame) {
-        if (auto* widget = static_cast<WebFrameWidgetImpl*>(
-                frame->GetWidgetForLocalRoot())) {
-          widget->UpdateUnboundedElementBounds(current_bounds);
-        }
-      }
-    }
   }
   object.GetMutableForPainting().UpdateIsActiveUnboundedElementOrDescendant(
       context.inside_active_unbounded);
@@ -962,17 +930,6 @@ void PrePaintTreeWalk::WalkMissedChildren(
       Walk(descendant_object, descendant_context, /* pre_paint_info */ nullptr);
     }
   }
-}
-
-LocalFrameView* FindWebViewPluginContentFrameView(
-    const LayoutEmbeddedContent& embedded_content) {
-  for (Frame* frame = embedded_content.GetFrame()->Tree().FirstChild(); frame;
-       frame = frame->Tree().NextSibling()) {
-    if (frame->IsLocalFrame() &&
-        To<LocalFrame>(frame)->OwnerLayoutObject() == &embedded_content)
-      return To<LocalFrame>(frame)->View();
-  }
-  return nullptr;
 }
 
 void PrePaintTreeWalk::WalkFragmentationContextRootChildren(
@@ -1577,15 +1534,6 @@ void PrePaintTreeWalk::Walk(const LayoutObject& object,
           }
           if (embedded_view->IsLocalFrameView()) {
             Walk(*To<LocalFrameView>(embedded_view), context);
-          } else if (embedded_view->IsPluginView()) {
-            // If it is a webview plugin, walk into the content frame view.
-            if (auto* plugin_content_frame_view =
-                    FindWebViewPluginContentFrameView(
-                        *layout_embedded_content)) {
-              Walk(*plugin_content_frame_view, context);
-            }
-          } else {
-            // We need to do nothing for RemoteFrameView. See crbug.com/579281.
           }
         }
       }

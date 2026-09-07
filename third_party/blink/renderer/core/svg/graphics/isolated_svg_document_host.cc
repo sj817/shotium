@@ -110,7 +110,6 @@ IsolatedSVGDocumentHost::IsolatedSVGDocumentHost(
 
     Settings& settings = page->GetSettings();
     settings.SetScriptEnabled(false);
-    settings.SetPluginsEnabled(false);
 
     if (inherited_settings) {
       CopySettingsFrom(settings, *inherited_settings);

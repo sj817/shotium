@@ -22,11 +22,9 @@
 
 #include "third_party/blink/renderer/core/html/forms/file_input_type.h"
 
-#include "third_party/blink/public/platform/file_path_conversion.h"
 #include "third_party/blink/public/strings/grit/blink_strings.h"
 #include "third_party/blink/renderer/core/dom/events/event.h"
 #include "third_party/blink/renderer/core/dom/shadow_root.h"
-#include "third_party/blink/renderer/core/events/keyboard_event.h"
 #include "third_party/blink/renderer/core/fileapi/file.h"
 #include "third_party/blink/renderer/core/fileapi/file_list.h"
 #include "third_party/blink/renderer/core/frame/web_feature.h"
@@ -36,39 +34,17 @@
 #include "third_party/blink/renderer/core/html/shadow/shadow_element_names.h"
 #include "third_party/blink/renderer/core/html_names.h"
 #include "third_party/blink/renderer/core/input_type_names.h"
-#include "third_party/blink/renderer/core/inspector/console_message.h"
 #include "third_party/blink/renderer/core/keywords.h"
 #include "third_party/blink/renderer/core/layout/layout_block_flow.h"
-#include "third_party/blink/renderer/core/page/chrome_client.h"
-#include "third_party/blink/renderer/core/page/drag_data.h"
-#include "third_party/blink/renderer/core/probe/core_probes.h"
 #include "third_party/blink/renderer/platform/bindings/exception_state.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
 #include "third_party/blink/renderer/platform/instrumentation/use_counter.h"
-#include "third_party/blink/renderer/platform/runtime_enabled_features.h"
 #include "third_party/blink/renderer/platform/text/platform_locale.h"
 #include "third_party/blink/renderer/platform/wtf/text/strcat.h"
 #include "third_party/blink/renderer/platform/wtf/text/string_builder.h"
 #include "third_party/blink/renderer/platform/wtf/text/wtf_string.h"
 
 namespace blink {
-
-using mojom::blink::FileChooserParams;
-
-namespace {
-
-Vector<String> CollectAcceptTypes(const HTMLInputElement& input) {
-  Vector<String> mime_types = input.AcceptMIMETypes();
-  Vector<String> extensions = input.AcceptFileExtensions();
-
-  Vector<String> accept_types;
-  accept_types.reserve(mime_types.size() + extensions.size());
-  accept_types.append_range(mime_types);
-  accept_types.append_range(extensions);
-  return accept_types;
-}
-
-}  // namespace
 
 FileInputType::FileInputType(HTMLInputElement& element)
     : InputType(Type::kFile, element),
@@ -166,79 +142,6 @@ String FileInputType::ValueMissingText() const {
                               : IDS_FORM_VALIDATION_VALUE_MISSING_FILE);
 }
 
-void FileInputType::HandleDOMActivateEvent(Event& event) {
-  if (GetElement().IsDisabledFormControl())
-    return;
-
-  HTMLInputElement& input = GetElement();
-  Document& document = input.GetDocument();
-
-  if (!LocalFrame::HasTransientUserActivation(document.GetFrame())) {
-    String message =
-        "File chooser dialog can only be shown with a user activation.";
-    document.AddConsoleMessage(MakeGarbageCollected<ConsoleMessage>(
-        mojom::ConsoleMessageSource::kJavaScript,
-        mojom::ConsoleMessageLevel::kWarning, message));
-    return;
-  }
-  if (RuntimeEnabledFeatures::FileColorPickerConsumeActivationEnabled()) {
-    LocalFrame::ConsumeTransientUserActivation(document.GetFrame());
-  }
-
-  OpenPopupView();
-  event.SetDefaultHandled();
-}
-
-void FileInputType::OpenPopupView() {
-  HTMLInputElement& input = GetElement();
-  Document& document = input.GetDocument();
-
-  bool suppressed = false;
-  bool canceled = false;
-  probe::FileChooserOpened(document.GetFrame(), &input, input.Multiple(),
-                           &suppressed, &canceled);
-  if (suppressed) {
-    if (canceled) {
-      SetFilesAndDispatchEvents(nullptr);
-    }
-    return;
-  }
-
-  if (ChromeClient* chrome_client = GetChromeClient()) {
-    FileChooserParams params;
-    bool is_directory =
-        input.FastHasAttribute(html_names::kWebkitdirectoryAttr);
-    if (is_directory)
-      params.mode = FileChooserParams::Mode::kUploadFolder;
-    else if (input.FastHasAttribute(html_names::kMultipleAttr))
-      params.mode = FileChooserParams::Mode::kOpenMultiple;
-    else
-      params.mode = FileChooserParams::Mode::kOpen;
-    params.title = g_empty_string;
-    params.need_local_path = is_directory;
-    params.accept_types = CollectAcceptTypes(input);
-    params.selected_files = file_list_->PathsForUserVisibleFiles();
-    params.use_media_capture = RuntimeEnabledFeatures::MediaCaptureEnabled() &&
-                               input.FastHasAttribute(html_names::kCaptureAttr);
-    params.requestor = document.Url();
-
-    UseCounter::Count(
-        document, GetElement().GetExecutionContext()->IsSecureContext()
-                      ? WebFeature::kInputTypeFileSecureOriginOpenChooser
-                      : WebFeature::kInputTypeFileInsecureOriginOpenChooser);
-    chrome_client->OpenFileChooser(document.GetFrame(), NewFileChooser(params));
-
-    input.PseudoStateChanged(CSSSelector::kPseudoOpen);
-  }
-}
-
-bool FileInputType::IsPickerVisible() const {
-  if (FileChooser* chooser = FileChooserOrNull()) {
-    return chooser->FrameOrNull();
-  }
-  return false;
-}
-
 void FileInputType::AdjustStyle(ComputedStyleBuilder& builder) {
   builder.SetShouldIgnoreOverflowPropertyForInlineBlockBaseline();
 }
@@ -291,75 +194,6 @@ void FileInputType::SetValue(const String&,
   file_list_->clear();
   GetElement().SetNeedsValidityCheck();
   UpdateView();
-}
-
-FileList* FileInputType::CreateFileList(ExecutionContext& context,
-                                        const FileChooserFileInfoList& files,
-                                        const base::FilePath& base_dir) {
-  auto* file_list(MakeGarbageCollected<FileList>());
-  wtf_size_t size = files.size();
-
-  // If a directory is being selected, the UI allows a directory to be chosen
-  // and the paths provided here should start with |base_dir|.
-  // We want to store only the relative path starting with the basename of
-  // |base_dir|.
-  if (size && !base_dir.empty()) {
-    base::FilePath root_path = base_dir.DirName();
-    wtf_size_t root_length = FilePathToString(root_path).length();
-    DCHECK(root_length);
-    if (!root_path.EndsWithSeparator())
-      root_length += 1;
-    if (base_dir == root_path)
-      root_length = 0;
-    for (const auto& file : files) {
-      // Normalize backslashes to slashes before exposing the relative path to
-      // script.
-      String string_path = FilePathToString(file->get_native_file()->file_path);
-      String display_name = file->get_native_file()->display_name;
-      if (display_name.empty()) {
-        display_name =
-            FilePathToString(file->get_native_file()->file_path.BaseName());
-      }
-      String relative_path;
-#if BUILDFLAG(IS_ANDROID)
-      // Android content-URIs or virtual document paths do not use tree paths
-      // with separators like posix, so we build relative path using pre-filled
-      // base_subdirs.
-      if (base_dir.IsContentUri() ||
-          !file->get_native_file()->base_subdirs.empty()) {
-        StringBuilder builder;
-        for (const auto& subdir : file->get_native_file()->base_subdirs) {
-          builder.Append(subdir);
-          builder.Append("/");
-        }
-        builder.Append(display_name);
-        relative_path = builder.ToString();
-      }
-#endif
-      if (relative_path.empty()) {
-        DCHECK(
-            string_path.StartsWithIgnoringAsciiCase(FilePathToString(base_dir)))
-            << "A path in a FileChooserFileInfo " << string_path
-            << " should start with " << FilePathToString(base_dir);
-        relative_path = string_path.substr(root_length).Replace('\\', '/');
-      }
-      file_list->Append(File::CreateWithRelativePath(
-          &context, string_path, display_name, relative_path));
-    }
-    return file_list;
-  }
-
-  // FileChooserFileInfo used to be a union of a plain native file and a
-  // File System Access filesystem file; the union's `file_system` arm fed
-  // File::CreateForFileSystemFile() here. File System Access went with
-  // modules, so nothing can construct that arm anymore -- every element of
-  // `files` is a native file, unconditionally.
-  for (const auto& file : files) {
-    file_list->Append(File::CreateForUserProvidedFile(
-        &context, FilePathToString(file->get_native_file()->file_path),
-        file->get_native_file()->display_name));
-  }
-  return file_list;
 }
 
 void FileInputType::CountUsage() {
@@ -452,10 +286,7 @@ bool FileInputType::SetFiles(FileList* files) {
 }
 
 void FileInputType::SetFilesAndDispatchEvents(FileList* files) {
-  bool force = force_change_event_;
-  force_change_event_ = false;
-
-  if (SetFiles(files) || force) {
+  if (SetFiles(files)) {
     // This call may cause destruction of this instance.
     // input instance is safe since it is ref-counted.
     GetElement().DispatchInputEvent();
@@ -465,98 +296,6 @@ void FileInputType::SetFilesAndDispatchEvents(FileList* files) {
   } else {
     GetElement().DispatchCancelEvent();
   }
-}
-
-void FileInputType::FilesChosen(FileChooserFileInfoList files,
-                                const base::FilePath& base_dir) {
-  for (wtf_size_t i = 0; i < files.size();) {
-    // Drop files of which names can not be converted to WTF String. We
-    // can't expose such files via File API.
-    if (files[i]->is_native_file() &&
-        FilePathToString(files[i]->get_native_file()->file_path).empty()) {
-      files.EraseAt(i);
-      // Do not increment |i|.
-      continue;
-    }
-    ++i;
-  }
-  if (RuntimeEnabledFeatures::FilePickerEventsFixEnabled() &&
-      HasConnectedFileChooser()) {
-    force_change_event_ = true;
-  }
-  if (!will_be_destroyed_) {
-    SetFilesAndDispatchEvents(
-        CreateFileList(*GetElement().GetExecutionContext(), files, base_dir));
-  }
-  if (HasConnectedFileChooser())
-    DisconnectFileChooser();
-
-  GetElement().PseudoStateChanged(CSSSelector::kPseudoOpen);
-}
-
-void FileInputType::FileChooserCanceled() {
-  if (!will_be_destroyed_) {
-    GetElement().DispatchCancelEvent();
-  }
-  if (HasConnectedFileChooser()) {
-    DisconnectFileChooser();
-  }
-
-  GetElement().PseudoStateChanged(CSSSelector::kPseudoOpen);
-}
-
-LocalFrame* FileInputType::FrameOrNull() const {
-  return GetElement().GetDocument().GetFrame();
-}
-
-void FileInputType::SetFilesFromDirectory(const String& path) {
-  FileChooserParams params;
-  params.mode = FileChooserParams::Mode::kUploadFolder;
-  params.title = g_empty_string;
-  params.selected_files.push_back(StringToFilePath(path));
-  params.accept_types = CollectAcceptTypes(GetElement());
-  params.requestor = GetElement().GetDocument().Url();
-  NewFileChooser(params)->EnumerateChosenDirectory();
-}
-
-void FileInputType::SetFilesFromPaths(const Vector<String>& paths) {
-  if (paths.empty())
-    return;
-
-  HTMLInputElement& input = GetElement();
-  if (input.FastHasAttribute(html_names::kWebkitdirectoryAttr)) {
-    SetFilesFromDirectory(paths[0]);
-    return;
-  }
-
-  FileChooserFileInfoList files;
-  for (const auto& path : paths)
-    files.push_back(CreateFileChooserFileInfoNative(path));
-
-  if (input.FastHasAttribute(html_names::kMultipleAttr)) {
-    FilesChosen(std::move(files), base::FilePath());
-  } else {
-    FileChooserFileInfoList first_file_only;
-    first_file_only.push_back(std::move(files[0]));
-    FilesChosen(std::move(first_file_only), base::FilePath());
-  }
-}
-
-bool FileInputType::ReceiveDroppedFiles(const DragData* drag_data) {
-  Vector<String> paths;
-  drag_data->AsFilePaths(paths);
-  if (paths.empty())
-    return false;
-
-  if (!GetElement().FastHasAttribute(html_names::kWebkitdirectoryAttr)) {
-    dropped_file_system_id_ = drag_data->DroppedFileSystemId();
-  }
-  SetFilesFromPaths(paths);
-  return true;
-}
-
-String FileInputType::DroppedFileSystemId() {
-  return dropped_file_system_id_;
 }
 
 String FileInputType::DefaultToolTip(const InputTypeView&) const {
@@ -580,39 +319,6 @@ void FileInputType::CopyNonAttributeProperties(const HTMLInputElement& source) {
   const FileList* source_list = source.files();
   for (unsigned i = 0; i < source_list->length(); ++i)
     file_list_->Append(source_list->item(i)->Clone());
-}
-
-void FileInputType::HandleKeypressEvent(KeyboardEvent& event) {
-  if (GetElement().FastHasAttribute(html_names::kWebkitdirectoryAttr)) {
-    // Override to invoke the action on Enter key up (not press) to avoid
-    // repeats committing the file chooser.
-    if (event.key() == keywords::kCapitalEnter) {
-      event.SetDefaultHandled();
-      return;
-    }
-  }
-  KeyboardClickableInputTypeView::HandleKeypressEvent(event);
-}
-
-void FileInputType::HandleKeyupEvent(KeyboardEvent& event) {
-  if (GetElement().FastHasAttribute(html_names::kWebkitdirectoryAttr)) {
-    // Override to invoke the action on Enter key up (not press) to avoid
-    // repeats committing the file chooser.
-    if (event.key() == keywords::kCapitalEnter) {
-      GetElement().DispatchSimulatedClick(&event);
-      event.SetDefaultHandled();
-      return;
-    }
-  }
-  KeyboardClickableInputTypeView::HandleKeyupEvent(event);
-}
-
-void FileInputType::WillOpenPopup() {
-  // TODO(tkent): Should we disconnect the file chooser? crbug.com/637639
-  if (HasConnectedFileChooser()) {
-    UseCounter::Count(GetElement().GetDocument(),
-                      WebFeature::kPopupOpenWhileFileChooserOpened);
-  }
 }
 
 String FileInputType::FileStatusText() const {

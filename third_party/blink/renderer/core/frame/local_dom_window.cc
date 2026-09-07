@@ -80,7 +80,6 @@
 #include "third_party/blink/renderer/core/frame/bar_prop.h"
 #include "third_party/blink/renderer/core/frame/csp/content_security_policy.h"
 #include "third_party/blink/renderer/core/frame/document_policy_violation_report_body.h"
-#include "third_party/blink/renderer/core/frame/dom_viewport.h"
 #include "third_party/blink/renderer/core/frame/dom_visual_viewport.h"
 #include "third_party/blink/renderer/core/frame/event_handler_registry.h"
 #include "third_party/blink/renderer/core/frame/external.h"
@@ -100,7 +99,6 @@
 #include "third_party/blink/renderer/core/html/custom/custom_element_registry_assignment.h"
 #include "third_party/blink/renderer/core/html/forms/form_controller.h"
 #include "third_party/blink/renderer/core/html/html_frame_owner_element.h"
-#include "third_party/blink/renderer/core/html/plugin_document.h"
 #include "third_party/blink/renderer/core/input/event_handler.h"
 #include "third_party/blink/renderer/core/inspector/console_message.h"
 #include "third_party/blink/renderer/core/layout/adjust_for_absolute_zoom.h"
@@ -111,7 +109,6 @@
 #include "third_party/blink/renderer/core/page/chrome_client.h"
 #include "third_party/blink/renderer/core/page/create_window.h"
 #include "third_party/blink/renderer/core/page/page.h"
-#include "third_party/blink/renderer/core/page/scrolling/scrolling_coordinator.h"
 #include "third_party/blink/renderer/core/page/scrolling/sync_scroll_attempt_heuristic.h"
 #include "third_party/blink/renderer/core/paint/paint_layer_scrollable_area.h"
 #include "third_party/blink/renderer/core/probe/core_probes.h"
@@ -146,7 +143,6 @@
 #include "third_party/blink/renderer/platform/timer.h"
 #include "third_party/blink/renderer/platform/weborigin/kurl.h"
 #include "third_party/blink/renderer/platform/weborigin/security_origin.h"
-#include "third_party/blink/renderer/platform/widget/frame_widget.h"
 #include "third_party/blink/renderer/platform/wtf/cross_thread_copier_std.h"
 #include "third_party/blink/renderer/platform/wtf/cross_thread_functional.h"
 #include "third_party/blink/renderer/platform/wtf/text/strcat.h"
@@ -197,7 +193,6 @@ LocalDOMWindow::LocalDOMWindow(LocalFrame& frame, WindowAgent* agent)
       // ExecutionContext no longer holds one.
       ExecutionContext(agent,
                        /*Same value as IsWindow(). is_window=*/true),
-      viewport_(MakeGarbageCollected<DOMViewport>(this)),
       visualViewport_(MakeGarbageCollected<DOMVisualViewport>(this)),
       should_print_when_finished_loading_(false),
       input_method_controller_(
@@ -1567,10 +1562,6 @@ double LocalDOMWindow::scrollY() const {
                                              GetFrame()->LayoutZoomFactor());
 }
 
-DOMViewport* LocalDOMWindow::viewport() {
-  return viewport_.Get();
-}
-
 DOMVisualViewport* LocalDOMWindow::visualViewport() {
   return visualViewport_.Get();
 }
@@ -2119,7 +2110,6 @@ void LocalDOMWindow::Trace(Visitor* visitor) const {
   visitor->Trace(media_);
   visitor->Trace(custom_elements_);
   visitor->Trace(external_);
-  visitor->Trace(viewport_);
   visitor->Trace(visualViewport_);
   visitor->Trace(event_listener_observers_);
   visitor->Trace(current_event_);

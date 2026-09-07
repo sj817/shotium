@@ -201,7 +201,6 @@ class CORE_EXPORT FrameLoader final {
   void DispatchUnloadEventAndFillOldDocumentInfoIfNeeded(
       bool will_commit_new_document_in_this_frame);
 
-  bool AllowPlugins();
 
   void SaveScrollAnchor();
   void SaveScrollState();

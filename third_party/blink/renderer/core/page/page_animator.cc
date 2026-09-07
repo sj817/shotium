@@ -6,7 +6,6 @@
 
 #include "base/auto_reset.h"
 #include "base/time/time.h"
-#include "cc/animation/animation_host.h"
 #include "third_party/blink/renderer/core/animation/document_animations.h"
 #include "third_party/blink/renderer/core/animation/document_timeline.h"
 #include "third_party/blink/renderer/core/css/css_value.h"
@@ -22,7 +21,6 @@
 #include "third_party/blink/renderer/core/page/chrome_client.h"
 #include "third_party/blink/renderer/core/page/page.h"
 #include "third_party/blink/renderer/core/page/scrolling/sync_scroll_attempt_heuristic.h"
-#include "third_party/blink/renderer/core/page/validation_message_client.h"
 #include "third_party/blink/renderer/core/paint/paint_layer_scrollable_area.h"
 #include "third_party/blink/renderer/core/svg/svg_document_extensions.h"
 #include "third_party/blink/renderer/core/timing/time_clamper.h"
@@ -116,7 +114,6 @@ void PageAnimator::ServiceScriptedAnimations(
   // impact is understood.
   SyncScrollAttemptHeuristic heuristic(page_->MainFrame());
   ServiceScriptedAnimations(monotonic_animation_start_time, controllers);
-  page_->GetValidationMessageClient().LayoutOverlay();
 }
 
 void PageAnimator::ServiceScriptedAnimations(
@@ -145,10 +142,6 @@ void PageAnimator::ServiceScriptedAnimations(
             .InMillisecondsF());
     if (can_throttle) {
       continue;
-    }
-    auto* animator = controller->GetPageAnimator();
-    if (animator && controller->HasFrameCallback()) {
-      animator->SetCurrentFrameHadRaf();
     }
     if (!controller->HasScheduledFrameTasks()) {
       continue;
@@ -371,27 +364,6 @@ void PageAnimator::PostAnimate() {
   next_frame_has_pending_raf_ = false;
 }
 
-void PageAnimator::SetHasCanvasInvalidation() {
-  has_canvas_invalidation_ = true;
-}
-
-void PageAnimator::ReportFrameAnimations(cc::AnimationHost* animation_host) {
-  if (animation_host) {
-    animation_host->SetHasCanvasInvalidation(has_canvas_invalidation_);
-    animation_host->SetHasInlineStyleMutation(has_inline_style_mutation_);
-    animation_host->SetHasSmilAnimation(has_smil_animation_);
-    animation_host->SetCurrentFrameHadRaf(current_frame_had_raf_);
-    animation_host->SetNextFrameHasPendingRaf(next_frame_has_pending_raf_);
-    animation_host->SetHasViewTransition(has_view_transition_);
-  }
-  has_canvas_invalidation_ = false;
-  has_inline_style_mutation_ = false;
-  has_smil_animation_ = false;
-  current_frame_had_raf_ = false;
-  // next_frame_has_pending_raf_ is reset at PostAnimate().
-  // has_view_transition_ is reset when the transition ends.
-}
-
 void PageAnimator::SetSuppressFrameRequestsWorkaroundFor704763Only(
     bool suppress_frame_requests) {
   // If we are enabling the suppression and it was already enabled then we must
@@ -401,24 +373,8 @@ void PageAnimator::SetSuppressFrameRequestsWorkaroundFor704763Only(
   suppress_frame_requests_workaround_for704763_only_ = suppress_frame_requests;
 }
 
-void PageAnimator::SetHasInlineStyleMutation() {
-  has_inline_style_mutation_ = true;
-}
-
-void PageAnimator::SetHasSmilAnimation() {
-  has_smil_animation_ = true;
-}
-
-void PageAnimator::SetCurrentFrameHadRaf() {
-  current_frame_had_raf_ = true;
-}
-
 void PageAnimator::SetNextFrameHasPendingRaf() {
   next_frame_has_pending_raf_ = true;
-}
-
-void PageAnimator::SetHasViewTransition(bool has_view_transition) {
-  has_view_transition_ = has_view_transition;
 }
 
 DISABLE_CFI_PERF

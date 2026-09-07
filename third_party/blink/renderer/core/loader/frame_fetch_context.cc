@@ -41,6 +41,7 @@ BASE_FEATURE(kFastMemoryCacheWithDevTools, base::FEATURE_ENABLED_BY_DEFAULT);
 
 #include "base/command_line.h"
 #include "base/feature_list.h"
+#include "base/functional/callback_helpers.h"
 #include "base/memory/scoped_refptr.h"
 #include "base/metrics/histogram_functions.h"
 #include "base/metrics/histogram_macros.h"
@@ -65,10 +66,6 @@ BASE_FEATURE(kFastMemoryCacheWithDevTools, base::FEATURE_ENABLED_BY_DEFAULT);
 #include "third_party/blink/public/platform/scheduler/web_scoped_virtual_time_pauser.h"
 #include "third_party/blink/public/platform/web_content_settings_client.h"
 #include "third_party/blink/public/platform/web_effective_connection_type.h"
-#include "third_party/blink/public/platform/websocket_handshake_throttle.h"
-#include "third_party/blink/public/web/web_frame.h"
-#include "third_party/blink/public/web/web_local_frame.h"
-#include "third_party/blink/public/web/web_local_frame_client.h"
 #include "third_party/blink/renderer/core/css/media_values.h"
 #include "third_party/blink/renderer/core/dom/document.h"
 #include "third_party/blink/renderer/core/fileapi/public_url_manager.h"
@@ -1132,30 +1129,6 @@ void FrameFetchContext::CountDeprecation(WebFeature feature) const {
     return;
   }
   Deprecation::CountDeprecation(document_->domWindow(), feature);
-}
-
-bool FrameFetchContext::ShouldBlockWebSocketByMixedContentCheck(
-    const KURL& url) const {
-  if (GetResourceFetcherProperties().IsDetached()) {
-    // TODO(yhirano): Implement the detached case.
-    return false;
-  }
-  return !MixedContentChecker::IsWebSocketAllowed(*this, GetFrame(), url);
-}
-
-std::unique_ptr<WebSocketHandshakeThrottle>
-FrameFetchContext::CreateWebSocketHandshakeThrottle() {
-  if (GetResourceFetcherProperties().IsDetached()) {
-    // TODO(yhirano): Implement the detached case.
-    return nullptr;
-  }
-  if (!GetFrame()) {
-    return nullptr;
-  }
-  return WebFrame::FromCoreFrame(GetFrame())
-      ->ToWebLocalFrame()
-      ->Client()
-      ->CreateWebSocketHandshakeThrottle();
 }
 
 bool FrameFetchContext::ShouldBlockFetchByMixedContentCheck(

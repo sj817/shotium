@@ -27,7 +27,6 @@
 #include "third_party/blink/renderer/core/view_transition/view_transition.h"
 #include "third_party/blink/renderer/core/view_transition/view_transition_utils.h"
 #include "third_party/blink/renderer/platform/bindings/exception_state.h"
-#include "third_party/blink/renderer/platform/graphics/compositing/paint_artifact_compositor.h"
 #include "third_party/blink/renderer/platform/runtime_enabled_features.h"
 
 namespace blink {
@@ -225,13 +224,6 @@ void ViewTransitionSupplement::OnTransitionFinished(
     AdvanceCapturedTransitions();
   }
 
-  // Notify the animator if the set of active view transitions is empty.
-  if (!document_transition_ && element_transitions_.empty()) {
-    if (auto* page = document_->GetPage()) {
-      page->Animator().SetHasViewTransition(false);
-    }
-  }
-
   if (RuntimeEnabledFeatures::NavigationStateEnabled()) {
     // This view transition, which is now finished, may be the one reason why
     // there's still a "current navigation state". Therefore, attempt finish any
@@ -419,9 +411,6 @@ void ViewTransitionSupplement::AddPendingRequest(
   // Schedule a new frame.
   document_->View()->ScheduleAnimation();
 
-  // Ensure paint artifact compositor does an update, since that's the
-  // mechanism we use to pass transition requests to the compositor.
-  document_->View()->SetPaintArtifactCompositorNeedsUpdate();
 }
 
 VectorOf<std::unique_ptr<ViewTransitionRequest>>

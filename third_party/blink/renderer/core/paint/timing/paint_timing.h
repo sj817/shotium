@@ -25,10 +25,8 @@
 namespace blink {
 struct DOMPaintTimingInfo;
 class LargestContentfulPaintManager;
-class ImageElementTiming;
 class LocalFrame;
 class PaintTimingDetector;
-class TextElementTiming;
 
 // PaintTiming is responsible for tracking paint-related timings for a given
 // document.
@@ -42,13 +40,6 @@ class CORE_EXPORT PaintTiming final : public GarbageCollected<PaintTiming>,
  public:
   using ReportTimeCallback =
       base::OnceCallback<void(const viz::FrameTimingDetails&)>;
-
-  // `CallbackManager` is a unit-test specific interface to capture callbacks so
-  // that the lifecycle can be be controlled synchronously.
-  class CallbackManager : public GarbageCollectedMixin {
-   public:
-    virtual void RegisterCallback(ReportTimeCallback) = 0;
-  };
 
   struct PaintTimingInfo {
     // https://w3c.github.io/paint-timing/#paint-timing-info-rendering-update-end-time
@@ -188,7 +179,6 @@ class CORE_EXPORT PaintTiming final : public GarbageCollected<PaintTiming>,
 
   void OnRestoredFromBackForwardCache();
 
-  void MarkPaintTiming();
 
   void OnInputOrScroll();
 
@@ -201,11 +191,6 @@ class CORE_EXPORT PaintTiming final : public GarbageCollected<PaintTiming>,
     return largest_contentful_paint_manager_;
   }
 
-  // Sets the `CallbackManager` to handle presentation time callbacks. Used for
-  // unit tests.
-  void SetCallbackManagerForTest(CallbackManager* manager) {
-    callback_manager_ = manager;
-  }
 
   // TODO(crbug.com/503420427): Consider removing this and proxying through
   // PaintTiming.
@@ -213,7 +198,6 @@ class CORE_EXPORT PaintTiming final : public GarbageCollected<PaintTiming>,
     return *paint_timing_detector_.Get();
   }
 
-  ImageElementTiming* GetImageElementTiming() { return image_element_timing_; }
 
  private:
   friend class RecodingTimeAfterBackForwardCacheRestoreFrameCallback;
@@ -221,7 +205,7 @@ class CORE_EXPORT PaintTiming final : public GarbageCollected<PaintTiming>,
   LocalFrame* GetFrame() const;
   void NotifyPaintTimingChanged();
 
-  void MarkPaintTimingInternal();
+  void DiscardPresentationCallbacks();
 
   // Set*() set the timing for the given paint event to the given timestamp if
   // the value is currently zero, and queue a presentation promise to record the
@@ -284,13 +268,10 @@ class CORE_EXPORT PaintTiming final : public GarbageCollected<PaintTiming>,
   base::TimeTicks first_meaningful_paint_presentation_;
   base::TimeTicks first_meaningful_paint_candidate_;
   base::TimeTicks first_eligible_to_paint_;
-  base::TimeTicks last_rendering_update_end_time_;
 
   base::TimeTicks lcp_mouse_over_dispatch_time_;
 
   Member<PaintTimingDetector> paint_timing_detector_;
-  Member<ImageElementTiming> image_element_timing_;
-  Member<TextElementTiming> text_element_timing_;
   Member<LargestContentfulPaintManager> largest_contentful_paint_manager_;
   Member<FirstMeaningfulPaintDetector> fmp_detector_;
   // The callback ID for requestAnimationFrame to record its time after the page
@@ -298,9 +279,6 @@ class CORE_EXPORT PaintTiming final : public GarbageCollected<PaintTiming>,
   int raf_after_bfcache_restore_measurement_callback_id_ = 0;
 
   HashSet<PaintEvent> pending_paint_events_;
-
-  // Set in some unit tests.
-  Member<CallbackManager> callback_manager_;
 };
 
 }  // namespace blink

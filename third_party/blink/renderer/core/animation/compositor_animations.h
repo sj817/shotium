@@ -53,7 +53,6 @@ class CompositorAnimation;
 class Element;
 class KeyframeEffectModelBase;
 class Node;
-class PaintArtifactCompositor;
 class SVGElement;
 
 // Enum indicating why we're calling StartAnimationOnCompositor.
@@ -150,13 +149,7 @@ class CORE_EXPORT CompositorAnimations {
       const Animation*,
       AnimationCompositingDecisionState&,
       const EffectModel&,
-      const PaintArtifactCompositor*,
       double animation_playback_rate);
-  static bool CompositorPropertyAnimationsHaveNoEffect(
-      const Element& target_element,
-      const Animation* animation,
-      const EffectModel& effect,
-      const PaintArtifactCompositor*);
   static void CancelIncompatibleAnimationsOnCompositor(const Element&,
                                                        const Animation&,
                                                        const EffectModel&);
@@ -234,7 +227,6 @@ class CORE_EXPORT CompositorAnimations {
       const Animation*,
       AnimationCompositingDecisionState&,
       const EffectModel&,
-      const PaintArtifactCompositor*,
       double animation_playback_rate);
   static FailureReasons CheckCanStartElementOnCompositor(
       const Element& element,

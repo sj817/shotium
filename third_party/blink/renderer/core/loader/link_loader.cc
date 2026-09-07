@@ -55,7 +55,6 @@
 
 namespace blink {
 
-class WebPrescientNetworking;
 
 namespace {
 
@@ -112,12 +111,6 @@ bool LinkLoader::LoadLink(const LinkLoadParameters& params,
   }
 
   // If any loading process is in progress, abort it.
-
-  PreloadHelper::DnsPrefetchIfNeeded(params, &document, document.GetFrame(),
-                                     PreloadHelper::kLinkCalledFromMarkup);
-
-  PreloadHelper::PreconnectIfNeeded(params, &document, document.GetFrame(),
-                                    PreloadHelper::kLinkCalledFromMarkup);
 
   PreloadHelper::PreloadIfNeeded(
       params, document, NullUrl(), PreloadHelper::kLinkCalledFromMarkup,

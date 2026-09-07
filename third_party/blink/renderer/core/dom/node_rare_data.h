@@ -334,9 +334,6 @@ class CORE_EXPORT NodeRareData final : public GarbageCollected<NodeRareData> {
   std::optional<LayoutUnit> LastRememberedBlockSize() const;
   std::optional<LayoutUnit> LastRememberedInlineSize() const;
 
-  gfx::Rect LastSentUnboundedBounds() const;
-  [[nodiscard]] NodeRareData* SetLastSentUnboundedBounds(
-      const gfx::Rect& bounds);
   UnboundedEventData* GetUnboundedEventData() const;
   std::pair<std::reference_wrapper<UnboundedEventData>, NodeRareData*>
   EnsureUnboundedEventData();
@@ -611,7 +608,6 @@ class CORE_EXPORT NodeRareData final : public GarbageCollected<NodeRareData> {
     kFocusgroupData = 48,
     kDOMNodeId = 49,
     kFocusgroupTokenList = 50,
-    kLastSentUnboundedBounds = 51,
     kUnboundedEventTask = 52,
     kCanvasTransform = 53,
     kNumFields = 54,

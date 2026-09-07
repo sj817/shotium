@@ -72,7 +72,6 @@ class LayoutBox;
 class LayoutCustomScrollbarPart;
 struct PaintInvalidatorContext;
 class PaintLayer;
-class ScrollingCoordinator;
 class ScrollMarkerGroupPseudoElement;
 class SnappedQueryScrollSnapshot;
 class ScrollMarkerGroupData;
@@ -297,10 +296,7 @@ class CORE_EXPORT PaintLayerScrollableArea final
   bool IsThrottled() const override;
   ChromeClient* GetChromeClient() const override;
 
-  void DidCompositorScroll(const gfx::PointF&,
-                           cc::ScrollSourceType type) override;
 
-  bool ShouldScrollOnMainThread() const override;
 
   bool IsActive() const override;
   bool IsScrollCornerVisible() const override;
@@ -352,8 +348,6 @@ class CORE_EXPORT PaintLayerScrollableArea final
   bool ShouldPlaceVerticalScrollbarOnLeft() const override;
   mojom::blink::ScrollBehavior ScrollBehaviorStyle() const override;
   mojom::blink::ColorScheme UsedColorSchemeScrollbars() const override;
-  cc::AnimationHost* GetCompositorAnimationHost() const override;
-  cc::AnimationTimeline* GetCompositorAnimationTimeline() const override;
   bool HasTickmarks() const override;
   Vector<gfx::Rect> GetTickmarks() const override;
 
@@ -474,7 +468,6 @@ class CORE_EXPORT PaintLayerScrollableArea final
   gfx::Rect ScrollCornerAndResizerRect() const;
 
   // Returns true if the scroll node is currently composited in cc.
-  bool UsesCompositedScrolling() const override;
 
   bool PrefersNonCompositedScrolling() const;
 
@@ -678,7 +671,6 @@ class CORE_EXPORT PaintLayerScrollableArea final
     EnsureRareData().targeted_snap_area_id_ = id;
   }
 
-  void DropCompositorScrollDeltaNextCommit() override;
 
   SnappedQueryScrollSnapshot& EnsureSnappedQueryScrollSnapshot();
   SnappedQueryScrollSnapshot* GetSnappedQueryScrollSnapshot();
@@ -777,7 +769,6 @@ class CORE_EXPORT PaintLayerScrollableArea final
 
   void UpdateScrollableAreaSet();
 
-  ScrollingCoordinator* GetScrollingCoordinator() const;
 
   PaintLayerScrollableAreaRareData* RareData() { return rare_data_.Get(); }
   const PaintLayerScrollableAreaRareData* RareData() const {

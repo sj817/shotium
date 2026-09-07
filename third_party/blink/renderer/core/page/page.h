@@ -74,29 +74,23 @@ class AutoscrollController;
 class BrowserControls;
 class ChromeClient;
 class ConsoleMessageStorage;
-class ContextMenuController;
 class Document;
 class DragCaret;
 class DragController;
 class FocusController;
 class Frame;
-class LinkHighlight;
 class LocalFrame;
 class MediaFeatureOverrides;
 class PageAnimator;
 struct PageScaleConstraints;
 class PageScaleConstraintsSet;
-class PluginData;
-class PointerLockController;
 class PreferenceOverrides;
 class ScopedPagePauser;
-class ScrollingCoordinator;
 class ScrollbarTheme;
 class Settings;
 class SpatialNavigationController;
 class SVGDocumentResourceTracker;
 class TopDocumentRootScrollerController;
-class ValidationMessageClient;
 class VisualViewport;
 
 typedef uint64_t LinkHash;
@@ -187,13 +181,6 @@ class CORE_EXPORT Page final : public GarbageCollected<Page>,
 
   ViewportDescription GetViewportDescription() const;
 
-  // Returns the plugin data.
-  PluginData* GetPluginData();
-
-  // Resets the plugin data for all pages in the renderer process and notifies
-  // PluginsChangedObservers.
-  static void ResetPluginData();
-
   void SetMainFrame(Frame*);
   Frame* MainFrame() const { return main_frame_.Get(); }
 
@@ -242,18 +229,6 @@ class CORE_EXPORT Page final : public GarbageCollected<Page>,
   FocusController& GetFocusController() const { return *focus_controller_; }
   SpatialNavigationController& GetSpatialNavigationController();
   SVGDocumentResourceTracker& GetSVGDocumentResourceTracker();
-  ContextMenuController& GetContextMenuController() const {
-    return *context_menu_controller_;
-  }
-  PointerLockController& GetPointerLockController() const {
-    return *pointer_lock_controller_;
-  }
-  ValidationMessageClient& GetValidationMessageClient() const {
-    return *validation_message_client_;
-  }
-  void SetValidationMessageClientForTesting(ValidationMessageClient*);
-
-  ScrollingCoordinator* GetScrollingCoordinator();
 
   Settings& GetSettings() const { return *settings_; }
 
@@ -281,7 +256,6 @@ class CORE_EXPORT Page final : public GarbageCollected<Page>,
   VisualViewport& GetVisualViewport();
   const VisualViewport& GetVisualViewport() const;
 
-  LinkHighlight& GetLinkHighlight();
 
   void SetTabKeyCyclesThroughElements(bool b) {
     tab_key_cycles_through_elements_ = b;
@@ -376,8 +350,6 @@ class CORE_EXPORT Page final : public GarbageCollected<Page>,
 
   void Trace(Visitor*) const override;
 
-  void DidInitializeCompositing(cc::AnimationHost&);
-  void WillStopCompositing();
 
   void WillBeDestroyed();
 
@@ -477,7 +449,6 @@ class CORE_EXPORT Page final : public GarbageCollected<Page>,
   // with the 'persisted' property set to 'true'.
   bool DispatchedPagehidePersistedAndStillHidden();
 
-  static void PrepareForLeakDetection();
 
   // Fully invalidate paint of all local frames in this page.
   void InvalidatePaint();
@@ -577,24 +548,18 @@ class CORE_EXPORT Page final : public GarbageCollected<Page>,
   const Member<DragCaret> drag_caret_;
   const Member<DragController> drag_controller_;
   const Member<FocusController> focus_controller_;
-  const Member<ContextMenuController> context_menu_controller_;
   const Member<PageScaleConstraintsSet> page_scale_constraints_set_;
   HeapLinkedHashSet<WeakMember<PageVisibilityObserver>>
       page_visibility_observer_set_;
-  const Member<PointerLockController> pointer_lock_controller_;
-  Member<ScrollingCoordinator> scrolling_coordinator_;
   const Member<BrowserControls> browser_controls_;
   const Member<ConsoleMessageStorage> console_message_storage_;
   const Member<TopDocumentRootScrollerController>
       global_root_scroller_controller_;
   const Member<VisualViewport> visual_viewport_;
-  const Member<LinkHighlight> link_highlight_;
   Member<SpatialNavigationController> spatial_navigation_controller_;
   Member<SVGDocumentResourceTracker> svg_document_resource_tracker_;
 
-  Member<PluginData> plugin_data_;
 
-  Member<ValidationMessageClient> validation_message_client_;
 
 
   Deprecation deprecation_;
@@ -724,12 +689,6 @@ class CORE_EXPORT Page final : public GarbageCollected<Page>,
 };
 
 extern template class CORE_EXTERN_TEMPLATE_EXPORT Supplement<Page>;
-
-class CORE_EXPORT InternalSettingsPageSupplementBase : public Supplement<Page> {
- public:
-  using Supplement<Page>::Supplement;
-  static const char kSupplementName[];
-};
 
 }  // namespace blink
 

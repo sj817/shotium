@@ -8,7 +8,6 @@ static_library("test_support") {
   testonly = true
 
   sources = [
-    "test_web_frame_content_dumper.cc",
     "test_web_frame_helper.cc",
   ]
 

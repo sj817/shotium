@@ -47,7 +47,6 @@ class Document;
 class ExecutionContext;
 class LocalDOMWindow;
 class LocalFrame;
-class PluginData;
 
 class CORE_EXPORT DocumentInit final {
   STACK_ALLOCATED();
@@ -83,7 +82,6 @@ class CORE_EXPORT DocumentInit final {
     kHTML,
     kXHTML,
     kImage,
-    kPlugin,
     kMedia,
     kSVG,
     kXML,
@@ -119,17 +117,11 @@ class CORE_EXPORT DocumentInit final {
 
   // Compute the type of document to be loaded inside a `frame`, given its
   // `mime_type`.
-  //
-  // In case of plugin handled by MimeHandlerview (which do not create a
-  // PluginDocument), the type is Type::KHTML and `is_for_external_handler` is
-  // set to true.
   static Type ComputeDocumentType(LocalFrame* frame,
-                                  const String& mime_type,
-                                  bool* is_for_external_handler = nullptr);
+                                  const String& mime_type);
   DocumentInit& WithTypeFrom(const String& mime_type);
   Type GetType() const { return type_; }
   const String& GetMimeType() const { return mime_type_; }
-  bool IsForExternalHandler() const { return is_for_external_handler_; }
 
   // Used when creating Documents not attached to a window.
   DocumentInit& WithExecutionContext(ExecutionContext*);
@@ -156,7 +148,6 @@ class CORE_EXPORT DocumentInit final {
  private:
   DocumentInit() = default;
 
-  static PluginData* GetPluginData(LocalFrame* frame);
 
   Type type_ = Type::kUnspecified;
   bool is_prerendering_ = false;
@@ -185,7 +176,6 @@ class CORE_EXPORT DocumentInit final {
   // Seed for all PAAPI Auction Nonces generated for this document.
   base::Uuid base_auction_nonce_;
 
-  bool is_for_external_handler_ = false;
 
 #if DCHECK_IS_ON()
   bool for_test_ = false;

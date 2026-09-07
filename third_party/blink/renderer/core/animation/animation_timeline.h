@@ -137,8 +137,7 @@ class CORE_EXPORT AnimationTimeline : public ScriptWrappable {
 
   // Checks for animations of composited properties that would have no effect
   // and marks them as pending if this changes.
-  void MarkPendingIfCompositorPropertyAnimationChanges(
-      const PaintArtifactCompositor*);
+  void MarkPendingIfCompositorPropertyAnimationChanges();
 
   using ReplaceableAnimationsMap =
       HeapHashMap<Member<Element>, Member<GCedHeapVector<Member<Animation>>>>;

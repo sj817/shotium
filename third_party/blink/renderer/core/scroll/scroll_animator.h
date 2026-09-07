@@ -37,8 +37,6 @@
 #include "build/build_config.h"
 #include "third_party/blink/renderer/core/core_export.h"
 #include "third_party/blink/renderer/core/scroll/scroll_animator_base.h"
-#include "third_party/blink/renderer/platform/animation/compositor_animation_client.h"
-#include "third_party/blink/renderer/platform/animation/compositor_animation_delegate.h"
 #include "third_party/blink/renderer/platform/timer.h"
 
 namespace blink {
@@ -57,46 +55,9 @@ namespace blink {
 // for more info about the animation curve logic (including velocity-matched
 // target updating).
 //
-// Having established an animation curve, the logic for servicing the animation
-// is highly dependent on compositing.  There are four scenarios to consider:
-//
-// (1) Scroll animation running on the compositor, scheduled by the compositor
-//     (LayerTreeHostImpl::ScrollAnimated) in response to a scroll wheel input
-//     event handled by the compositor thread.  Blink doesn't know about these.
-//
-// (2) Scroll animation running on the compositor, scheduled by Blink.  For
-//     example, a keyboard scroll of a composited scroller.
-//
-// (3) Scroll animation of a composited scroller, running on the main thread due
-//     to main-thread scrolling reasons (for example, non-composited fixed-
-//     position elements that need to be repainted on scroll).
-//
-// (4) Scroll animation of a non-composited scroller, running on the main
-//     thread.
-//
-// In scenarios (1) and (2) the animation is created as a cc::Animation with
-// TargetProperty::SCROLL_OFFSET and added to a cc::Animation that is
-// serviced on the compositor thread (in cc::AnimationHost::TickAnimations).
-// This lets the animation play smoothly even if the main thread is janked.
-//
-// In scenarios (3) and (4), we schedule the animation ticks on the main thread
-// using ScrollableArea::ScheduleAnimation, and update the scroll offset during
-// ScrollAnimator::TickAnimation.
-//
-// There is a special main-thread scrolling reason kHandlingScrollFromMainThread
-// set in scenarios (2) and (3) for the duration of the scroll, to prevent
-// interference from events that would otherwise trigger scenario (1).
-//
-// There is a complicated handoff from (1) to (3) in the event that a main-
-// thread scrolling reason is added in the middle of an animation.  This is
-// handled by TakeOverCompositorAnimation, which aborts the animation in cc and
-// sends an AnimationEvent::TAKEOVER back to the main thread containing a copy
-// of the curve.  That calls back into NotifyAnimationTakeover which starts a
-// new animation on main to play the "remainder" of the curve.
-//
-// The logic for Blink-side scheduling of compositor-serviced scroll offset
-// animations is shared with ProgrammaticScrollAnimator, and lives mostly in the
-// common base class ScrollAnimatorCompositorCoordinator.
+// Animation ticks run through ScrollableArea::ScheduleAnimation and update
+// the scroll offset on the main thread. Shared lifecycle state lives in
+// ScrollAnimationState.
 
 class CORE_EXPORT ScrollAnimator : public ScrollAnimatorBase {
  public:
@@ -120,20 +81,13 @@ class CORE_EXPORT ScrollAnimator : public ScrollAnimatorBase {
   ScrollOffset DesiredTargetOffset() const override;
   void AdjustAnimation(const gfx::Vector2d& adjustment) override;
 
-  // ScrollAnimatorCompositorCoordinator implementation.
+  // ScrollAnimationState implementation.
   void TickAnimation(base::TimeTicks monotonic_time) override;
   void CancelAnimation() override;
-  void TakeOverCompositorAnimation() override;
   void ResetAnimationState() override;
-  void UpdateCompositorAnimations() override;
-  void NotifyCompositorAnimationFinished(int group_id) override;
-  void NotifyCompositorAnimationAborted(int group_id) override;
+  void UpdateAnimationState() override;
 
   void Trace(Visitor*) const override;
-
- protected:
-  // Returns whether or not the animation was sent to the compositor.
-  virtual bool SendAnimationToCompositor();
 
  private:
   // Returns true if the animation was scheduled successfully. If animation

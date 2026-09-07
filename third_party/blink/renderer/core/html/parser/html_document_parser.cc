@@ -1531,7 +1531,7 @@ void HTMLDocumentParser::ProcessPreloadData(
     // kLightweightNoStatePrefetch mode) that the preloader would
     // just discard later.
     if (!HTMLResourcePreloader::ShouldPreload(
-            GetDocument(), request->GetResourceType(), request->IsPreconnect(),
+            GetDocument(), request->GetResourceType(),
             request->DeferOption(), request->FetchPriorityHint())) {
       continue;
     }

@@ -47,7 +47,6 @@
 #include "third_party/blink/renderer/bindings/core/v8/v8_dom_matrix_init.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_get_animations_options.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_keyframe_animation_options.h"
-#include "third_party/blink/renderer/bindings/core/v8/v8_pointer_lock_options.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_scroll_container.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_scroll_into_view_options.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_scroll_to_options.h"
@@ -250,7 +249,6 @@
 #include "third_party/blink/renderer/core/page/focus_controller.h"
 #include "third_party/blink/renderer/core/page/page.h"
 #include "third_party/blink/renderer/core/page/page_animator.h"
-#include "third_party/blink/renderer/core/page/pointer_lock_controller.h"
 #include "third_party/blink/renderer/core/page/scrolling/root_scroller_controller.h"
 #include "third_party/blink/renderer/core/page/scrolling/sync_scroll_attempt_heuristic.h"
 #include "third_party/blink/renderer/core/page/spatial_navigation.h"
@@ -4282,11 +4280,6 @@ void Element::RemovedFrom(ContainerNode& insertion_point) {
     }
   }
   Document& document = GetDocument();
-  Page* page = document.GetPage();
-  if (page) {
-    page->GetPointerLockController().ElementRemoved(this);
-  }
-
   document.UnobserveForIntrinsicSize(this);
   if (auto* local_frame_view = document.View();
       local_frame_view &&
@@ -4577,7 +4570,6 @@ void Element::AttachLayoutTree(AttachContext& context) {
 }
 
 void Element::DetachLayoutTree(bool performing_reattach) {
-  HTMLFrameOwnerElement::PluginDisposeSuspendScope suspend_plugin_dispose;
 
   // Pseudo-elements that may have child pseudo-elements (such as ::column) must
   // be cleared before clearing the rare data vector below.
@@ -6426,7 +6418,6 @@ ShadowRoot& Element::CreateAndAttachShadowRoot(ShadowRootMode type,
   NestingLevelIncrementer slot_assignment_recalc_forbidden_scope(
       GetDocument().SlotAssignmentRecalcForbiddenRecursionDepth());
 #endif
-  HTMLFrameOwnerElement::PluginDisposeSuspendScope suspend_plugin_dispose;
   EventDispatchForbiddenScope assert_no_event_dispatch;
   ScriptForbiddenScope forbid_script;
 
@@ -9686,11 +9677,7 @@ void Element::setPointerCapture(PointerId pointer_id,
       exception_state.ThrowDOMException(
           DOMExceptionCode::kNotFoundError,
           "No active pointer with the given id is found.");
-    } else if (!isConnected() ||
-               (GetDocument().GetPage() && GetDocument()
-                                               .GetPage()
-                                               ->GetPointerLockController()
-                                               .GetElement())) {
+    } else if (!isConnected()) {
       exception_state.ThrowDOMException(DOMExceptionCode::kInvalidStateError,
                                         "InvalidStateError");
     } else {
@@ -12021,13 +12008,6 @@ MutableCSSPropertyValueSet& Element::EnsureMutableInlineStyle() {
 void Element::ClearMutableInlineStyleIfEmpty() {
   if (EnsureMutableInlineStyle().IsEmpty()) {
     EnsureUniqueElementData().inline_style_.Clear();
-  }
-}
-
-void Element::NotifyInlineStyleMutation() {
-  if (GetLayoutObject() && GetLayoutObject()->PreviousVisibilityVisible() &&
-      GetDocument().GetPage()) {
-    GetDocument().GetPage()->Animator().SetHasInlineStyleMutation();
   }
 }
 

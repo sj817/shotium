@@ -49,7 +49,6 @@ class MODULES_EXPORT ModulesInitializer : public CoreInitializer {
                             const SessionStorageNamespaceId&) const override;
   void ForceNextWebGLContextCreationToFail() const override;
 
-  void CollectAllGarbageForAnimationAndPaintWorkletForTesting() const override;
 
   void CloneSessionStorage(
       Page* clone_from_page,

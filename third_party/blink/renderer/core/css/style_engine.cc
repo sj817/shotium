@@ -119,7 +119,6 @@
 #include "third_party/blink/renderer/core/loader/render_blocking_resource_manager.h"
 #include "third_party/blink/renderer/core/page/page.h"
 #include "third_party/blink/renderer/core/preferences/preference_overrides.h"
-#include "third_party/blink/renderer/core/page/page_popup_controller.h"
 #include "third_party/blink/renderer/core/probe/core_probes.h"
 #include "third_party/blink/renderer/core/style/computed_style.h"
 #include "third_party/blink/renderer/core/style/filter_operations.h"
@@ -145,9 +144,6 @@ namespace {
 
 CSSFontSelector* CreateCSSFontSelectorFor(Document& document) {
   DCHECK(document.GetFrame());
-  if (document.GetFrame()->PagePopupOwner()) [[unlikely]] {
-    return PagePopupController::CreateCSSFontSelector(document);
-  }
   return MakeGarbageCollected<CSSFontSelector>(document);
 }
 

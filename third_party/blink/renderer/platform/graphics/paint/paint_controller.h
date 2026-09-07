@@ -36,8 +36,6 @@ namespace blink {
 
 enum class PaintBenchmarkMode {
   kNormal,
-  kForceRasterInvalidationAndConvert,
-  kForcePaintArtifactCompositorUpdate,
   // Tests PaintController performance of moving cached subsequences.
   kForcePaint,
   // Tests performance of core paint tree walk and moving cached display items.

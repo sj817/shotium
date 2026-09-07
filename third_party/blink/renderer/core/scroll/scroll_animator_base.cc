@@ -97,7 +97,7 @@ ScrollOffset ScrollAnimatorBase::CurrentOffset() const {
 
 void ScrollAnimatorBase::Trace(Visitor* visitor) const {
   visitor->Trace(scrollable_area_);
-  ScrollAnimatorCompositorCoordinator::Trace(visitor);
+  ScrollAnimationState::Trace(visitor);
 }
 
 }  // namespace blink

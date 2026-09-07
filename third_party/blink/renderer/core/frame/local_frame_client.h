@@ -96,14 +96,12 @@ class HistoryItem;
 class KURL;
 class LocalDOMWindow;
 class LocalFrame;
-class RemoteFrame;
 class ResourceError;
 class ResourceRequest;
 class ResourceResponse;
 class SourceLocation;
 class WebDedicatedWorkerHostFactoryClient;
 class WebLocalFrame;
-class WebPluginContainerImpl;
 class WebSpellCheckPanelHostClient;
 class WebTextCheckClient;
 class URLLoader;
@@ -280,14 +278,6 @@ class CORE_EXPORT LocalFrameClient : public FrameClient {
   virtual LocalFrame* CreateFrame(const AtomicString& name,
                                   HTMLFrameOwnerElement*) = 0;
 
-  // TODO(crbug.com/40511450): Remove `load_manually` once PPAPI is gone.
-  virtual WebPluginContainerImpl* CreatePlugin(HTMLPlugInElement&,
-                                               const KURL&,
-                                               const Vector<String>&,
-                                               const Vector<String>&,
-                                               const String&,
-                                               bool load_manually) = 0;
-
   // CreateWebMediaPlayer() and CreateRemotePlaybackClient() removed in this
   // cut. Both had exactly one implementation, in the now-deleted
   // modules/media, and both were reached only from HTMLMediaElement, which is
@@ -329,10 +319,6 @@ class CORE_EXPORT LocalFrameClient : public FrameClient {
   unsigned BackForwardLength() override { return 0; }
 
   virtual bool IsLocalFrameClientImpl() const { return false; }
-
-  // Overwrites the given URL to use an HTML5 embed if possible. An empty URL is
-  // returned if the URL is not overriden.
-  virtual KURL OverrideFlashEmbedWithHTML(const KURL&) { return KURL(); }
 
   virtual AssociatedInterfaceProvider*
   GetRemoteNavigationAssociatedInterfaces() = 0;
@@ -377,15 +363,6 @@ class CORE_EXPORT LocalFrameClient : public FrameClient {
   virtual void OnLargeStickyAdDetected() {}
 
   virtual void FocusedElementChanged(Element* element) {}
-
-  // Returns true when the contents of plugin are handled externally. This means
-  // the plugin element will own a content frame but the frame is than used
-  // externally to load the required handelrs.
-  virtual bool IsPluginHandledExternally(HTMLPlugInElement&,
-                                         const KURL&,
-                                         const String&) {
-    return false;
-  }
 
   // Returns a new WebWorkerFetchContext for worklets.
   virtual scoped_refptr<WebWorkerFetchContext> CreateWorkletFetchContext() {

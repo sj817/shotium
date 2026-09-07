@@ -146,7 +146,6 @@ class Locale;
 class MutableCSSPropertyValueSet;
 class NamedNodeMap;
 class OverscrollAreaTracker;
-class PointerLockOptions;
 class PopoverData;
 class PseudoElement;
 class ResizeObservation;
@@ -1826,7 +1825,6 @@ class CORE_EXPORT Element : public ContainerNode {
   // WebDocumentSubresourceFilter any more -- so no element in this build can
   // be ad-related.
 
-  void NotifyInlineStyleMutation();
 
   // For undo stack cleanup
   bool HasUndoStack() const;

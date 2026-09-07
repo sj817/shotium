@@ -33,6 +33,7 @@
 #include "base/containers/to_vector.h"
 #include "base/memory/scoped_refptr.h"
 #include "base/unguessable_token.h"
+#include "services/network/public/cpp/resource_request.h"
 #include "net/storage_access_api/status.h"
 #include "services/network/public/mojom/referrer_policy.mojom-blink.h"
 #include "third_party/blink/public/common/loader/referrer_utils.h"
@@ -57,7 +58,6 @@
 #include "third_party/blink/renderer/core/execution_context/execution_context.h"
 #include "third_party/blink/renderer/core/frame/local_dom_window.h"
 #include "third_party/blink/renderer/core/frame/visual_viewport.h"
-#include "third_party/blink/renderer/core/frame/web_local_frame_impl.h"
 #include "third_party/blink/renderer/core/html/forms/html_form_control_element.h"
 #include "third_party/blink/renderer/core/html/forms/html_form_element.h"
 #include "third_party/blink/renderer/core/html/html_all_collection.h"
@@ -67,7 +67,6 @@
 #include "third_party/blink/renderer/core/html/html_element.h"
 #include "third_party/blink/renderer/core/html/html_head_element.h"
 #include "third_party/blink/renderer/core/html/html_link_element.h"
-#include "third_party/blink/renderer/core/html/plugin_document.h"
 #include "third_party/blink/renderer/core/layout/layout_object.h"
 #include "third_party/blink/renderer/core/page/page.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
@@ -138,20 +137,12 @@ WebURL WebDocument::OpenSearchDescriptionURL() const {
       ->OpenSearchDescriptionURL();
 }
 
-WebLocalFrame* WebDocument::GetFrame() const {
-  return WebLocalFrameImpl::FromFrame(ConstUnwrap<Document>()->GetFrame());
-}
-
 bool WebDocument::IsHTMLDocument() const {
   return IsA<HTMLDocument>(ConstUnwrap<Document>());
 }
 
 bool WebDocument::IsXHTMLDocument() const {
   return ConstUnwrap<Document>()->IsXHTMLDocument();
-}
-
-bool WebDocument::IsPluginDocument() const {
-  return IsA<PluginDocument>(ConstUnwrap<Document>());
 }
 
 bool WebDocument::IsActive() const {
@@ -308,15 +299,6 @@ std::vector<WebDraggableRegion> WebDocument::DraggableRegions() const {
 
 WebDistillabilityFeatures WebDocument::DistillabilityFeatures() {
   return DocumentStatisticsCollector::CollectStatistics(*Unwrap<Document>());
-}
-
-void WebDocument::SetShowBeforeUnloadDialog(bool show_dialog) {
-  if (!IsHTMLDocument()) {
-    return;
-  }
-
-  Document* doc = Unwrap<Document>();
-  doc->SetShowBeforeUnloadDialog(show_dialog);
 }
 
 cc::ElementId WebDocument::GetVisualViewportScrollingElementIdForTesting() {

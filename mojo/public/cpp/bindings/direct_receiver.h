@@ -27,10 +27,6 @@
 #include "mojo/public/cpp/system/message_pipe.h"
 #include "third_party/ipcz/include/ipcz/ipcz.h"
 
-namespace blink {
-class WidgetInputHandlerImpl;
-}  // namespace blink
-
 namespace cc::mojo_embedder {
 class AsyncLayerTreeFrameSink;
 }  // namespace cc::mojo_embedder
@@ -140,7 +136,6 @@ class DirectReceiverKey {
   friend class cc::mojo_embedder::AsyncLayerTreeFrameSink;
   friend class cc::slim::FrameSinkImpl;
   friend class mojo::test::direct_receiver_unittest::ServiceImpl;
-  friend class blink::WidgetInputHandlerImpl;
   friend class viz::CompositorFrameSinkImpl;
   friend class viz::FrameSinkManagerImpl;
   friend class network::NetworkContext;

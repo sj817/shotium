@@ -39,7 +39,6 @@
 #include "third_party/blink/renderer/core/frame/visual_viewport.h"
 #include "third_party/blink/renderer/core/html/forms/color_chooser.h"
 #include "third_party/blink/renderer/core/html/forms/date_time_chooser.h"
-#include "third_party/blink/renderer/core/html/forms/file_chooser.h"
 #include "third_party/blink/renderer/core/html/forms/html_form_element.h"
 
 namespace blink {
@@ -87,12 +86,6 @@ std::optional<int> EmptyChromeClient::GetMaxRenderBufferBounds(
 
 void EmptyChromeClient::OpenTextDataListChooser(HTMLInputElement&) {}
 
-void EmptyChromeClient::OpenFileChooser(LocalFrame*,
-                                        scoped_refptr<FileChooser>) {}
-
-void EmptyChromeClient::AttachRootLayer(scoped_refptr<cc::Layer>, LocalFrame*) {
-}
-
 bool EmptyChromeClient::StartDeferringCommits(LocalFrame& main_frame,
                                               base::TimeDelta timeout,
                                               cc::PaintHoldingReason reason) {
@@ -133,16 +126,6 @@ void EmptyLocalFrameClient::DispatchWillSendSubmitEvent(HTMLFormElement*) {}
 
 LocalFrame* EmptyLocalFrameClient::CreateFrame(const AtomicString&,
                                                HTMLFrameOwnerElement*) {
-  return nullptr;
-}
-
-WebPluginContainerImpl* EmptyLocalFrameClient::CreatePlugin(
-    HTMLPlugInElement&,
-    const KURL&,
-    const Vector<String>&,
-    const Vector<String>&,
-    const String&,
-    bool) {
   return nullptr;
 }
 

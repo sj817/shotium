@@ -110,7 +110,6 @@ class CORE_EXPORT TextRecord final : public PaintTimingRecord {
  public:
   TextRecord(Node* node,
              uint64_t new_recorded_size,
-             const gfx::RectF& element_timing_rect,
              const gfx::Rect& frame_visual_rect,
              const gfx::RectF& root_visual_rect);
 
@@ -122,19 +121,10 @@ class CORE_EXPORT TextRecord final : public PaintTimingRecord {
   uint32_t FrameIndex() const { return frame_index_; }
   void SetFrameIndex(uint32_t index) { frame_index_ = index; }
 
-  bool IsNeededForElementTiming() const {
-    return is_needed_for_element_timing_;
-  }
-  void SetIsNeededForElementTiming(bool value) {
-    is_needed_for_element_timing_ = value;
-  }
-  const gfx::RectF& ElementTimingRect() const { return element_timing_rect_; }
 
  private:
   uint32_t frame_index_ = 0;
   const uint64_t effective_visual_size_;
-  const gfx::RectF element_timing_rect_;
-  bool is_needed_for_element_timing_ = false;
 };
 
 // TODO(yoav): Rename all mentions of "image" to "media"

@@ -3164,12 +3164,6 @@ void ResourceFetcher::EmulateLoadStartedForInspector(
                                  params.GetRenderBlockingBehavior());
 }
 
-void ResourceFetcher::PrepareForLeakDetection() {
-  // Stop loaders including keepalive ones that may persist after page
-  // navigation and thus affect instance counters of leak detection.
-  StopFetchingIncludingKeepaliveLoaders();
-}
-
 void ResourceFetcher::StopFetchingInternal(StopFetchingTarget target) {
   // TODO(toyoshim): May want to suspend scheduler while canceling loaders so
   // that the cancellations below do not awake unnecessary scheduling.

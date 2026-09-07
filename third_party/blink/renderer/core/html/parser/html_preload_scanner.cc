@@ -257,22 +257,18 @@ class TokenPreloadScanner::StartTagScanner {
     PreloadRequest::RequestType request_type =
         PreloadRequest::kRequestTypePreload;
     std::optional<ResourceType> type;
-    if (ShouldPreconnect()) {
-      request_type = PreloadRequest::kRequestTypePreconnect;
-    } else {
-      if (IsLinkRelPreload()) {
-        request_type = PreloadRequest::kRequestTypeLinkRelPreload;
-        type = ResourceTypeForLinkPreload();
-        if (type == std::nullopt) {
-          return nullptr;
-        }
-      } else if (IsLinkRelModulePreload()) {
-        request_type = PreloadRequest::kRequestTypeLinkRelPreload;
-        type = ResourceType::kScript;
-      }
-      if (!ShouldPreload(type)) {
+    if (IsLinkRelPreload()) {
+      request_type = PreloadRequest::kRequestTypeLinkRelPreload;
+      type = ResourceTypeForLinkPreload();
+      if (type == std::nullopt) {
         return nullptr;
       }
+    } else if (IsLinkRelModulePreload()) {
+      request_type = PreloadRequest::kRequestTypeLinkRelPreload;
+      type = ResourceType::kScript;
+    }
+    if (!ShouldPreload(type)) {
+      return nullptr;
     }
 
     float source_size = source_size_;
@@ -497,7 +493,6 @@ class TokenPreloadScanner::StartTagScanner {
           rel.IsStyleSheet() && !rel.IsAlternate() &&
           rel.GetIconType() == mojom::blink::FaviconIconType::kInvalid &&
           !rel.IsDNSPrefetch();
-      link_is_preconnect_ = rel.IsPreconnect();
       link_is_preload_ = rel.IsLinkPreload();
       link_is_modulepreload_ = rel.IsModulePreload();
     } else if (Match(attribute_name, html_names::kMediaAttr)) {
@@ -670,14 +665,7 @@ class TokenPreloadScanner::StartTagScanner {
       return ResourceType::kImage;
     if (Match(tag_impl_, html_names::kLinkTag) && link_is_style_sheet_)
       return ResourceType::kCSSStyleSheet;
-    if (link_is_preconnect_)
-      return ResourceType::kRaw;
     NOTREACHED();
-  }
-
-  bool ShouldPreconnect() const {
-    return Match(tag_impl_, html_names::kLinkTag) && link_is_preconnect_ &&
-           !url_to_load_.empty();
   }
 
   bool IsLinkRelPreload() const {
@@ -789,7 +777,6 @@ class TokenPreloadScanner::StartTagScanner {
   ImageCandidate srcset_image_candidate_;
   String charset_;
   bool link_is_style_sheet_ = false;
-  bool link_is_preconnect_ = false;
   bool link_is_preload_ = false;
   bool link_is_modulepreload_ = false;
   bool matched_ = true;

@@ -62,12 +62,6 @@ namespace base {
 class SingleThreadTaskRunner;
 }  // namespace base
 
-namespace cc {
-class AnimationHost;
-class AnimationTimeline;
-class Layer;
-}  // namespace cc
-
 namespace blink {
 class ChromeClient;
 class Document;
@@ -270,13 +264,6 @@ class CORE_EXPORT ScrollableArea : public GarbageCollectedMixin {
     return programmatic_scroll_animator_.Get();
   }
 
-  virtual cc::AnimationHost* GetCompositorAnimationHost() const {
-    return nullptr;
-  }
-  virtual cc::AnimationTimeline* GetCompositorAnimationTimeline() const {
-    return nullptr;
-  }
-
   // This is used to determine whether the incoming fractional scroll offset
   // should be truncated to integer. Current rule is that if
   // preferCompositingToLCDTextEnabled() is disabled (which is true on low-dpi
@@ -406,14 +393,9 @@ class CORE_EXPORT ScrollableArea : public GarbageCollectedMixin {
   // animations.
   virtual bool ScheduleAnimation() { return false; }
   virtual void ServiceScrollAnimations(double monotonic_time);
-  virtual void UpdateCompositorScrollAnimations();
+  virtual void UpdateScrollAnimationState();
   virtual void RegisterForAnimation() {}
   virtual void DeregisterForAnimation() {}
-
-  // TODO(crbug.com/40517276): Remove this function after launching
-  // RasterInducingScroll.
-  virtual bool UsesCompositedScrolling() const = 0;
-  virtual bool ShouldScrollOnMainThread() const { return false; }
 
   // Overlay scrollbars can "fade-out" when inactive. This value should only be
   // updated if BlinkControlsOverlayVisibility is true in the
@@ -446,12 +428,6 @@ class CORE_EXPORT ScrollableArea : public GarbageCollectedMixin {
   }
 
   // These methods always return nullptr except for VisualViewport.
-  virtual cc::Layer* LayerForHorizontalScrollbar() const { return nullptr; }
-  virtual cc::Layer* LayerForVerticalScrollbar() const { return nullptr; }
-  virtual cc::Layer* LayerForScrollCorner() const { return nullptr; }
-  bool HasLayerForHorizontalScrollbar() const;
-  bool HasLayerForVerticalScrollbar() const;
-  bool HasLayerForScrollCorner() const;
 
   bool HorizontalScrollbarNeedsPaintInvalidation() const {
     return horizontal_scrollbar_needs_paint_invalidation_;
@@ -534,10 +510,6 @@ class CORE_EXPORT ScrollableArea : public GarbageCollectedMixin {
   virtual scoped_refptr<base::SingleThreadTaskRunner> GetTimerTaskRunner()
       const = 0;
 
-  // Callback for compositor-side scrolling.
-  virtual void DidCompositorScroll(const gfx::PointF& position,
-                                   cc::ScrollSourceType source_type);
-
   virtual void ScrollbarFrameRectChanged() {}
 
   virtual ScrollbarTheme& GetPageScrollbarTheme() const = 0;
@@ -599,7 +571,6 @@ class CORE_EXPORT ScrollableArea : public GarbageCollectedMixin {
   }
   virtual void SetTargetedSnapAreaId(const std::optional<cc::ElementId>&) {}
 
-  virtual void DropCompositorScrollDeltaNextCommit() {}
 
   virtual void SetSnappedQueryTargetIds(
       std::optional<cc::TargetSnapAreaElementIds>) {}
@@ -645,7 +616,7 @@ class CORE_EXPORT ScrollableArea : public GarbageCollectedMixin {
       ScrollDirectionPhysical) const;
 
   // Needed to let the animators call scrollOffsetChanged.
-  friend class ScrollAnimatorCompositorCoordinator;
+  friend class ScrollAnimationState;
   void ScrollOffsetChanged(const ScrollOffset&,
                            mojom::blink::ScrollType,
                            cc::ScrollSourceType);
@@ -776,7 +747,6 @@ class CORE_EXPORT ScrollableArea : public GarbageCollectedMixin {
 
   // TODO(crbug.com/40517276): Rename this to ShouldCompositeScrollbar().
   virtual bool MayCompositeScrollbar(const Scrollbar&) const { return true; }
-  bool UsesCompositedOverlayScrollbars() const;
 
   // This animator is used to handle painting animations for MacOS scrollbars
   // using AppKit-specific code (Cocoa APIs). It requires input from

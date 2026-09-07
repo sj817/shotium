@@ -74,7 +74,6 @@ mojom("mojom_platform") {
     "call_stack_generator/call_stack_generator.mojom",
     "choosers/color_chooser.mojom",
     "choosers/date_time_chooser.mojom",
-    "choosers/file_chooser.mojom",
     "choosers/popup_menu.mojom",
     "clipboard/clipboard.mojom",
     "close_watcher/close_listener.mojom",
@@ -85,7 +84,6 @@ mojom("mojom_platform") {
     "content_extraction/inner_text.mojom",
     "content_extraction/script_tools.mojom",
     "content_index/content_index.mojom",
-    "context_menu/context_menu.mojom",
     "cookie_store/cookie_store.mojom",
     "cpu_performance.mojom",
     "crash/crash_memory_metrics_reporter.mojom",
@@ -144,7 +142,6 @@ mojom("mojom_platform") {
     "input/touch_event.mojom",
     "keyboard_lock/keyboard_lock.mojom",
     "lcp_critical_path_predictor/lcp_critical_path_predictor.mojom",
-    "leak_detector/leak_detector.mojom",
     "link_to_text/link_to_text.mojom",
     "loader/content_security_notifier.mojom",
     "loader/fetch_client_settings_object.mojom",
@@ -154,7 +151,6 @@ mojom("mojom_platform") {
     "loader/keep_alive_handle_factory.mojom",
     "loader/local_resource_loader_config.mojom",
     "loader/mixed_content.mojom",
-    "loader/navigation_predictor.mojom",
     "loader/pause_subresource_loading_handle.mojom",
     "loader/referrer.mojom",
     "loader/request_context_frame_type.mojom",
@@ -173,7 +169,6 @@ mojom("mojom_platform") {
     "manifest/manifest_migration_behavior.mojom",
     "manifest/manifest_observer.mojom",
     "media/capture_handle_config.mojom",
-    "media/fullscreen_video_element.mojom",
     "mediastream/aec_dump.mojom",
     "mime/mime_registry.mojom",
     "navigation/navigation_api_history_entry_arrays.mojom",
@@ -201,7 +196,6 @@ mojom("mojom_platform") {
     "permissions_policy/policy_value.mojom",
     "persistent_renderer_prefs.mojom",
     "picture_in_picture_window_options/picture_in_picture_window_options.mojom",
-    "plugins/plugin_registry.mojom",
     "preloading/anchor_element_interaction_host.mojom",
     "prerender/prerender.mojom",
     "presentation/presentation.mojom",
@@ -287,16 +281,6 @@ mojom("mojom_platform") {
 
   if (is_win && !is_shot_build) {
     sources += [ "dwrite_font_proxy/dwrite_font_proxy.mojom" ]
-  }
-
-  if (is_mac) {
-    # Carved out of the shot build once, but local_frame_mojo_handler.h
-    # includes the generated -blink.h under IS_MAC with no shot condition,
-    # and its mac members (TextInputHost, GetCharacterIndexAtPoint and
-    # friends) are compiled into LocalFrame regardless. The interface is the
-    # cheap half; the carve-out only broke the build on the one platform
-    # Windows CI never judged.
-    sources += [ "input/text_input_host.mojom" ]
   }
 
   if (is_chromeos && !is_shot_build) {
@@ -504,16 +488,6 @@ mojom("mojom_platform") {
         },
       ]
       traits_headers = [ "//third_party/blink/public/common/web_preferences/web_preferences_mojom_traits.h" ]
-    },
-    {
-      types = [
-        {
-          mojom = "blink.mojom.UntrustworthyContextMenuParams"
-          cpp = "::blink::UntrustworthyContextMenuParams"
-        },
-      ]
-      traits_headers = [ "//third_party/blink/public/common/context_menu_data/context_menu_mojom_traits.h" ]
-      traits_public_deps = [ "//ui/base/mojom:ui_base_types" ]
     },
     {
       types = [
@@ -810,7 +784,6 @@ mojom("mojom_core") {
     "frame/fullscreen.mojom",
     "frame/intrinsic_sizing_info.mojom",
     "frame/lifecycle.mojom",
-    "frame/media_player_action.mojom",
     "frame/remote_frame.mojom",
     "frame/reporting_observer.mojom",
     "frame/sudden_termination_disabler_type.mojom",

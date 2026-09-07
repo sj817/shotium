@@ -40,7 +40,6 @@
 #include "third_party/blink/renderer/core/paint/paint_invalidator.h"
 #include "third_party/blink/renderer/core/paint/paint_layer.h"
 #include "third_party/blink/renderer/platform/graphics/color.h"
-#include "third_party/blink/renderer/platform/graphics/compositing/paint_artifact_compositor.h"
 #include "third_party/blink/renderer/platform/graphics/dark_mode_filter.h"
 #include "third_party/blink/renderer/platform/graphics/graphics_context.h"
 #include "third_party/blink/renderer/platform/graphics/paint/drawing_recorder.h"
@@ -192,8 +191,7 @@ void CaretDisplayItemClient::UpdateStyleAndLayoutIfNeeded(
 
     if (new_layout_block) {
       needs_paint_invalidation_ = true;
-      // The caret property tree space may have changed.
-      layout_block_->GetFrameView()->SetPaintArtifactCompositorNeedsUpdate();
+
     }
   }
 
@@ -207,8 +205,7 @@ void CaretDisplayItemClient::UpdateStyleAndLayoutIfNeeded(
   const PhysicalBoxFragment* const new_box_fragment =
       rect_and_block.box_fragment;
   if (new_box_fragment != box_fragment_) {
-    // The caret property tree space may have changed.
-    layout_block_->GetFrameView()->SetPaintArtifactCompositorNeedsUpdate();
+
 
     if (new_box_fragment)
       needs_paint_invalidation_ = true;
@@ -241,10 +238,6 @@ void CaretDisplayItemClient::UpdateStyleAndLayoutIfNeeded(
     }
     if (was_in_canvas_subtree != is_in_canvas_subtree_) {
       needs_paint_invalidation_ = true;
-      if (layout_block_) {
-        // The caret property tree space may have changed.
-        layout_block_->GetFrameView()->SetPaintArtifactCompositorNeedsUpdate();
-      }
     }
   }
 

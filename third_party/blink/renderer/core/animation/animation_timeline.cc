@@ -217,11 +217,9 @@ void AnimationTimeline::MarkAnimationsCompositorPending(bool source_changed) {
   }
 }
 
-void AnimationTimeline::MarkPendingIfCompositorPropertyAnimationChanges(
-    const PaintArtifactCompositor* paint_artifact_compositor) {
+void AnimationTimeline::MarkPendingIfCompositorPropertyAnimationChanges() {
   for (const auto& animation : animations_) {
-    animation->MarkPendingIfCompositorPropertyAnimationChanges(
-        paint_artifact_compositor);
+    animation->MarkPendingIfCompositorPropertyAnimationChanges();
   }
 }
 

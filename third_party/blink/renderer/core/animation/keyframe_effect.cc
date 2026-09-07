@@ -238,7 +238,6 @@ void KeyframeEffect::NotifySampledEffectRemovedFromEffectStack() {
 
 CompositorAnimations::FailureReasons
 KeyframeEffect::CheckCanStartAnimationOnCompositor(
-    const PaintArtifactCompositor* paint_artifact_compositor,
     Animation::CompositingDecisionState& state,
     double animation_playback_rate,
     StartOnCompositorReason start_reason) {
@@ -263,7 +262,7 @@ KeyframeEffect::CheckCanStartAnimationOnCompositor(
 
     CompositorAnimations::CheckCanStartAnimationOnCompositor(
         SpecifiedTiming(), NormalizedTiming(), *effect_target_, GetAnimation(),
-        state, *Model(), paint_artifact_compositor, animation_playback_rate);
+        state, *Model(), animation_playback_rate);
   }
 
   return state.disposition;

@@ -220,8 +220,6 @@ blink_core_sources_bindings_core_v8 = [
   "v8_playback_direction.h",
   "v8_pointer_event_init.cc",
   "v8_pointer_event_init.h",
-  "v8_pointer_lock_options.cc",
-  "v8_pointer_lock_options.h",
   "v8_private_token.cc",
   "v8_private_token.h",
   "v8_private_token_version.h",

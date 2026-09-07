@@ -41,7 +41,6 @@ namespace blink {
 
 class AXObject;
 class ComputedStyleBuilder;
-class DragData;
 class ExceptionState;
 class FileList;
 class OpaqueRange;
@@ -254,12 +253,8 @@ class CORE_EXPORT HTMLInputElement
   FileList* files() const;
   void setFiles(FileList*);
 
-  void SetFilesFromPaths(const Vector<String>&);
 
-  // Returns true if the given DragData has more than one dropped files.
-  bool ReceiveDroppedFiles(const DragData*);
 
-  String DroppedFileSystemId();
 
   // These functions are used for laying out the input active during a
   // drag-and-drop operation.

@@ -16,9 +16,6 @@ interface mixin DocumentOrShadowRoot {
     [Measure] sequence<Element> elementsFromPoint(double x, double y);
     readonly attribute Element? activeElement;
     [SameObject] readonly attribute StyleSheetList styleSheets;
-    // PointerLock API
-    // https://w3c.github.io/pointerlock/
-    readonly attribute Element? pointerLockElement;
     // Fullscreen API
     // https://fullscreen.spec.whatwg.org/
     [LegacyLenientSetter] readonly attribute Element? fullscreenElement;

@@ -62,7 +62,6 @@ class CORE_EXPORT TextPaintTimingDetector final
   void Trace(Visitor*) const;
 
  private:
-  void SendRectsToHud();
   friend class LargestContentfulPaintCalculatorTest;
 
   // The state of `LayoutObject`s being tracked in the `recorded_set_`.
@@ -77,7 +76,6 @@ class CORE_EXPORT TextPaintTimingDetector final
   TextRecord* CreateTextRecord(
       const LayoutObject& object,
       uint64_t visual_size,
-      const PropertyTreeStateOrAlias& property_tree_state,
       const gfx::Rect& frame_visual_rect,
       const gfx::RectF& root_visual_rect);
 

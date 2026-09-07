@@ -56,7 +56,6 @@ class CORE_EXPORT HTMLResourcePreloader
   // like `kLightweightNoStatePrefetch`.
   static bool ShouldPreload(const Document* document,
                             ResourceType type,
-                            bool is_preconnect,
                             FetchParameters::DeferOption defer_option,
                             mojom::blink::FetchPriorityHint priority_hint);
 

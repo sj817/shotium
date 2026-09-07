@@ -38,13 +38,11 @@
 #include "third_party/blink/public/web/web_window_features.h"
 #include "third_party/blink/renderer/core/core_initializer.h"
 #include "third_party/blink/renderer/core/dom/document.h"
-#include "third_party/blink/renderer/core/exported/web_view_impl.h"
 #include "third_party/blink/renderer/core/frame/csp/content_security_policy.h"
 #include "third_party/blink/renderer/core/frame/frame_client.h"
 #include "third_party/blink/renderer/core/frame/local_dom_window.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
 #include "third_party/blink/renderer/core/frame/local_frame_client.h"
-#include "third_party/blink/renderer/core/frame/web_local_frame_impl.h"
 #include "third_party/blink/renderer/core/inspector/console_message.h"
 #include "third_party/blink/renderer/core/loader/frame_load_request.h"
 #include "third_party/blink/renderer/core/page/chrome_client.h"
@@ -53,7 +51,6 @@
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
 #include "third_party/blink/renderer/platform/loader/fetch/resource_request.h"
 #include "third_party/blink/renderer/platform/weborigin/kurl.h"
-#include "third_party/blink/renderer/platform/widget/frame_widget.h"
 #include "third_party/blink/renderer/platform/wtf/text/number_parsing_options.h"
 #include "third_party/blink/renderer/platform/wtf/text/string_to_number.h"
 #include "third_party/blink/renderer/platform/wtf/text/string_view.h"
@@ -283,24 +280,11 @@ Frame* CreateNewWindow(LocalFrame& opener_frame,
                       LocalFrame::HasTransientUserActivation(&opener_frame));
   }
 
-  int min_size = kMinimumWindowSize;
-  // The minimum size from popups opened from unframed apps differs from
-  // normal apps. When window.open is called, display-mode for the new frame is
-  // still undefined as the app hasn't loaded yet, thus opener frame is used.
-  bool new_popup = request.GetNavigationPolicy() ==
-                   NavigationPolicy::kNavigationPolicyNewPopup;
-  bool unframed = false;
-  if (auto* widget = opener_frame.GetWidgetForLocalRoot()) {
-    unframed = widget->DisplayMode() == mojom::blink::DisplayMode::kUnframed;
-  }
-  if (new_popup && unframed) {
-    min_size = kMinimumUnframedWindowSize;
-  }
   if (features.width) {
-    features.width = std::max(features.width, min_size);
+    features.width = std::max(features.width, kMinimumWindowSize);
   }
   if (features.height) {
-    features.height = std::max(features.height, min_size);
+    features.height = std::max(features.height, kMinimumWindowSize);
   }
 
   // Sandboxed frames cannot open new auxiliary browsing contexts.
