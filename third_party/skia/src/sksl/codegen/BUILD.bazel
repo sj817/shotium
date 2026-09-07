@@ -38,29 +38,6 @@ skia_filegroup(
         "SkSLNativeShader.h",
     ],
     visibility = [
-        "//src/gpu:__pkg__",
-    ],
-)
-
-skia_cc_library(
-    name = "gpu",
-    srcs = [
-        "SkSLPipelineStageCodeGenerator.cpp",
-    ],
-    hdrs = [
-        "SkSLPipelineStageCodeGenerator.h",
-        ":codegen_shared_exported",
-    ],
-    features = ["layering_check"],
-    visibility = [
-        "//src/gpu/ganesh:__pkg__",
-        "//src/gpu/graphite:__pkg__",
-        "//tools/skslc:__pkg__",
-    ],
-    deps = [
-        "//:core",
-        "//src/core:core_priv",
-        "//src/gpu",
     ],
 )
 
@@ -76,7 +53,6 @@ skia_cc_library(
     ],
     features = ["layering_check"],
     visibility = [
-        "//src/gpu/ganesh/gl:__pkg__",
         "//tools/skslc:__pkg__",
     ],
     deps = [
@@ -99,7 +75,6 @@ skia_cc_library(
     ],
     features = ["layering_check"],
     visibility = [
-        "//src/gpu/ganesh/d3d:__pkg__",
         "//tools/skslc:__pkg__",
     ],
     deps = [
@@ -123,8 +98,6 @@ skia_cc_library(
     features = ["layering_check"],
     visibility = [
         "//dm:__pkg__",
-        "//src/gpu/ganesh/mtl:__pkg__",
-        "//src/gpu/mtl:__pkg__",
         "//tools/skslc:__pkg__",
     ],
     deps = [
@@ -147,7 +120,6 @@ skia_cc_library(
     features = ["layering_check"],
     visibility = [
         "//dm:__pkg__",
-        "//src/gpu/vk:__pkg__",
         "//tools/skslc:__pkg__",
     ],
     deps = [
@@ -167,7 +139,6 @@ skia_cc_library(
     ],
     features = ["layering_check"],
     visibility = [
-        "//src/gpu/graphite/vk:__pkg__",
         "//tools/skslc:__pkg__",
     ],
     deps = [
@@ -190,7 +161,6 @@ skia_cc_library(
     features = ["layering_check"],
     visibility = [
         "//dm:__pkg__",
-        "//src/gpu/graphite/dawn:__pkg__",
         "//tools/skslc:__pkg__",
     ],
     deps = [

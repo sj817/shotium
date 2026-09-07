@@ -476,7 +476,6 @@ ganesh_tests_sources = [
   "$_tests/GrDDLImageTest.cpp",
   "$_tests/GrFinishedFlushTest.cpp",
   "$_tests/GrGpuBufferTest.cpp",
-  "$_tests/GrMemoryPoolTest.cpp",
   "$_tests/GrMeshTest.cpp",
   "$_tests/GrMipMappedTest.cpp",
   "$_tests/GrOpListFlushTest.cpp",

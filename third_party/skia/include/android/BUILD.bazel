@@ -10,13 +10,10 @@ skia_filegroup(
     name = "private_hdrs",
     srcs = [
         "AHardwareBufferUtils.h",
-        "GrAHardwareBufferUtils.h",
         "SkCanvasAndroid.h",
         "SkImageAndroid.h",
-        "SkSurfaceAndroid.h",
     ],
     visibility = [
-        "//src/gpu/ganesh:__pkg__",
     ],
 )
 
@@ -26,11 +23,4 @@ skia_filegroup(
         "SkAnimatedImage.h",
     ],
     visibility = ["//src/android:__pkg__"],
-)
-
-skia_filegroup(
-    name = "graphite_android_hdrs",
-    srcs = [
-        "SkSurfaceAndroid.h",
-    ],
 )

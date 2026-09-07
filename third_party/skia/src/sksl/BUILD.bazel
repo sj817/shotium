@@ -157,7 +157,6 @@ skia_cc_library(
     textual_hdrs = [":txts"],
     visibility = [
         "//src/core:__pkg__",
-        "//src/gpu/graphite:__pkg__",
     ],
 )
 
@@ -166,7 +165,7 @@ skia_filegroup(
     srcs = [
         "SkSLGraphiteModules.h",
     ],
-    visibility = ["//src/gpu/graphite:__pkg__"],
+    visibility = ["//visibility:private"],
 )
 
 skia_filegroup(
@@ -174,5 +173,5 @@ skia_filegroup(
     srcs = [
         "SkSLGraphiteModules.cpp",
     ],
-    visibility = ["//src/gpu/graphite:__pkg__"],
+    visibility = ["//visibility:private"],
 )

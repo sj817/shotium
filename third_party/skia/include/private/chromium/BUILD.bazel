@@ -14,27 +14,6 @@ skia_filegroup(
     ],
 )
 
-# This group is mapped to //gn/gpu.gni:skia_gpu_chromium_public.
-skia_filegroup(
-    name = "ganesh_private_hdrs",
-    srcs = [
-        "GrDeferredDisplayList.h",
-        "GrDeferredDisplayListRecorder.h",
-        "GrPromiseImageTexture.h",
-        "GrSurfaceCharacterization.h",
-        "SkImageChromium.h",
-    ],
-    visibility = ["//src/gpu/ganesh:__pkg__"],
-)
-
-# This group is mapped to //gn/gpu.gni:skia_gpu_vk_chromium.
-skia_filegroup(
-    name = "vk_ganesh_hdrs",
-    srcs = [
-        "GrVkSecondaryCBDrawContext.h",
-    ],
-)
-
 # This group is mapped to //gn/core.gni:skia_discardable_memory_chromium.
 skia_filegroup(
     name = "discardable_memory_hdrs",

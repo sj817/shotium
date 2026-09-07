@@ -85,12 +85,6 @@ skia_cc_library(
     ],
     features = ["layering_check"],
     visibility = [
-        "//src/gpu:__pkg__",
-        "//src/gpu/ganesh/gl:__pkg__",
-        "//src/gpu/ganesh/vk:__pkg__",
-        "//src/gpu/graphite:__pkg__",
-        "//src/gpu/graphite/dawn:__pkg__",
-        "//src/gpu/graphite/vk:__pkg__",
         "//src/sksl/codegen:__pkg__",
     ],
     deps = [

@@ -22,9 +22,6 @@ skia_filegroup(
     name = "core_foundation_hdrs",
     srcs = ["SkCFObject.h"],
     visibility = [
-        "//src/gpu/ganesh/mtl:__pkg__",
-        "//src/gpu/graphite:__subpackages__",  # TODO(kjlubick) remove after decoupling
-        "//src/gpu/graphite/mtl:__pkg__",
         "//src/ports:__pkg__",
     ],
 )
@@ -105,7 +102,6 @@ skia_filegroup(
     name = "imagegenerator_cg_hdrs",
     srcs = ["SkImageGeneratorCG.h"],
     visibility = [
-        "//src/gpu/ganesh/mtl:__pkg__",
         "//src/ports:__pkg__",
     ],
 )
@@ -126,7 +122,6 @@ skia_filegroup(
     name = "mac_typeface",
     srcs = ["SkTypeface_mac.h"],
     visibility = [
-        "//src/gpu/ganesh/mtl:__pkg__",
         "//src/ports:__pkg__",
     ],
 )
