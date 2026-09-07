@@ -23,7 +23,6 @@
 #include <cstdint>
 #include <memory>
 
-class GrDirectContext;
 class SharedGenerator;
 class SkBitmap;
 class SkCachedData;
@@ -64,7 +63,7 @@ public:
     }
     bool onIsProtected() const override;
 
-    bool onReadPixels(GrDirectContext*, const SkImageInfo&, void*, size_t, int srcX, int srcY,
+    bool onReadPixels(const SkImageInfo&, void*, size_t, int srcX, int srcY,
                       CachingHint) const override;
     sk_sp<const SkData> onRefEncoded() const override;
 
@@ -72,7 +71,7 @@ public:
 
     sk_sp<SkSurface> onMakeSurface(SkRecorder*, const SkImageInfo&) const override;
 
-    bool getROPixels(GrDirectContext*, SkBitmap*, CachingHint) const override;
+    bool getROPixels(SkBitmap*, CachingHint) const override;
     SkImage_Base::Type type() const override { return SkImage_Base::Type::kLazy; }
 
     sk_sp<SkImage> onReinterpretColorSpace(sk_sp<SkColorSpace>) const final;
@@ -86,7 +85,6 @@ public:
     sk_sp<SharedGenerator> generator() const;
 
 protected:
-    virtual bool readPixelsProxy(GrDirectContext*, const SkPixmap&) const { return false; }
 
 private:
 

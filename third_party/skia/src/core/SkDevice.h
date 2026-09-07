@@ -40,7 +40,6 @@ struct SkDrawShadowRec;
 class SkImageFilter;
 class SkRasterHandleAllocator;
 class SkSpecialImage;
-class GrRecordingContext;
 class SkData;
 class SkDrawable;
 class SkImage;
@@ -63,13 +62,6 @@ class GlyphRunList;
 namespace skif {
 class Backend;
 class Mapping;
-}
-namespace skgpu::ganesh {
-class Device;
-}
-namespace skgpu::graphite {
-class Device;
-class Recorder;
 }
 namespace sktext::gpu {
 class SubRunControl;
@@ -281,12 +273,8 @@ public:
 
     virtual void* getRasterHandle() const { return nullptr; }
 
-    virtual GrRecordingContext* recordingContext() const { return nullptr; }
-    virtual skgpu::graphite::Recorder* recorder() const { return nullptr; }
     virtual SkRecorder* baseRecorder() const { return nullptr; }
 
-    virtual skgpu::ganesh::Device* asGaneshDevice() { return nullptr; }
-    virtual skgpu::graphite::Device* asGraphiteDevice() { return nullptr; }
 
     // Marking an SkDevice immutable declares the intent that rendering to the device is
     // complete, allowing it to be sampled as an image without requiring a copy. Drawing

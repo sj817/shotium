@@ -424,10 +424,8 @@ void SkBitmapDevice::drawImageRect(const SkImage* image, const SkRect* src, cons
     SkASSERT(dst.isSorted());
 
     SkBitmap bitmap;
-    // TODO: Elevate direct context requirement to public API and remove cheat.
     auto imageBase = as_IB(image);
-    auto dContext = imageBase->directContext();
-    if (!imageBase->getROPixels(dContext, &bitmap)) {
+    if (!imageBase->getROPixels(&bitmap)) {
         return;
     }
     sk_sp<SkMipmap> mips = imageBase->refMips();

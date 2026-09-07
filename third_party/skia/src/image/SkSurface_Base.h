@@ -23,18 +23,12 @@
 #include <cstdint>
 #include <memory>
 
-class GrBackendSemaphore;
-class GrBackendTexture;
-class GrRecordingContext;
 class SkCapabilities;
 class SkColorSpace;
 class SkPaint;
 class SkPixmap;
-class GrSurfaceCharacterization;
 class SkSurfaceProps;
-enum GrSurfaceOrigin : int;
 enum SkYUVColorSpace : int;
-namespace skgpu { namespace graphite { class Recorder; } }
 struct SkIRect;
 struct SkISize;
 struct SkImageInfo;
@@ -45,19 +39,8 @@ public:
     SkSurface_Base(const SkImageInfo&, const SkSurfaceProps*, sk_sp<SkPixelStorage>);
     ~SkSurface_Base() override;
 
-    // From SkSurface.h
-    bool replaceBackendTexture(const GrBackendTexture&,
-                               GrSurfaceOrigin,
-                               ContentChangeMode,
-                               TextureReleaseProc,
-                               ReleaseContext) override {
-        return false;
-    }
-
     enum class Type {
         kNull,     // intentionally associating 0 with a null canvas
-        kGanesh,
-        kGraphite,
         kRaster,
     };
 
@@ -65,13 +48,6 @@ public:
 
     // True for surfaces instantiated by pixels in CPU memory
     bool isRasterBacked() const { return this->type() == Type::kRaster; }
-    // True for surfaces instantiated by Ganesh in GPU memory
-    bool isGaneshBacked() const { return this->type() == Type::kGanesh; }
-    // True for surfaces instantiated by Graphite in GPU memory
-    bool isGraphiteBacked() const { return this->type() == Type::kGraphite; }
-
-    virtual GrRecordingContext* onGetRecordingContext() const;
-    virtual skgpu::graphite::Recorder* onGetRecorder() const;
     virtual SkRecorder* onGetBaseRecorder() const;
 
     /**
@@ -152,19 +128,6 @@ public:
      *  Called only when we _didn't_ copy-on-write; we assume the copies start mutable.
      */
     virtual void onRestoreBackingMutability() {}
-
-    /**
-     * Caused the current backend 3D API to wait on the passed in semaphores before executing new
-     * commands on the gpu. Any previously submitting commands will not be blocked by these
-     * semaphores.
-     */
-    virtual bool onWait(int numSemaphores, const GrBackendSemaphore* waitSemaphores,
-                        bool deleteSemaphoresAfterWait) {
-        return false;
-    }
-
-    virtual bool onCharacterize(GrSurfaceCharacterization*) const { return false; }
-    virtual bool onIsCompatible(const GrSurfaceCharacterization&) const { return false; }
 
     virtual sk_sp<const SkCapabilities> onCapabilities() = 0;
 

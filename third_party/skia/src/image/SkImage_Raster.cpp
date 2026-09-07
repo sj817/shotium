@@ -32,7 +32,6 @@
 #include <cstdint>
 #include <utility>
 
-class GrDirectContext;
 class SkSurfaceProps;
 
 // fixes skbug.com/40036261
@@ -72,8 +71,7 @@ SkImage_Raster::SkImage_Raster(const SkBitmap& bm, sk_sp<SkMipmap> mips, bool bi
 
 SkImage_Raster::~SkImage_Raster() {}
 
-bool SkImage_Raster::onReadPixels(GrDirectContext*,
-                                  const SkImageInfo& dstInfo,
+bool SkImage_Raster::onReadPixels(const SkImageInfo& dstInfo,
                                   void* dstPixels,
                                   size_t dstRowBytes,
                                   int srcX,
@@ -87,7 +85,7 @@ bool SkImage_Raster::onPeekPixels(SkPixmap* pm) const {
     return fBitmap.peekPixels(pm);
 }
 
-bool SkImage_Raster::getROPixels(GrDirectContext*, SkBitmap* dst, CachingHint) const {
+bool SkImage_Raster::getROPixels(SkBitmap* dst, CachingHint) const {
     *dst = fBitmap;
     return true;
 }
@@ -206,7 +204,7 @@ sk_sp<SkImage_Raster> SkImage_Raster::MakeFromBitmap(const SkBitmap& bm,
             new SkImage_Raster(bm, std::move(mips), SkCopyPixelsMode::kNever == cpm));
 }
 
-bool SkImage_Raster::onAsLegacyBitmap(GrDirectContext*, SkBitmap* bitmap) const {
+bool SkImage_Raster::onAsLegacyBitmap(SkBitmap* bitmap) const {
     // When we're a snapshot from a surface, our bitmap may not be marked immutable
     // even though logically always we are, but in that case we can't physically share our
     // pixelref since the caller might call setImmutable() themselves
@@ -217,7 +215,7 @@ bool SkImage_Raster::onAsLegacyBitmap(GrDirectContext*, SkBitmap* bitmap) const 
         bitmap->setPixelRef(sk_ref_sp(fBitmap.pixelRef()), origin.x(), origin.y());
         return true;
     }
-    return this->SkImage_Base::onAsLegacyBitmap(nullptr, bitmap);
+    return this->SkImage_Base::onAsLegacyBitmap(bitmap);
 }
 
 sk_sp<SkShader> SkImage_Raster::makeShaderForPaint(const SkPaint& paint,

@@ -21,10 +21,6 @@
 #include <cstdint>
 #include <memory>
 
-class GrBackendSemaphore;
-class GrBackendTexture;
-class GrRecordingContext;
-class GrSurfaceCharacterization;
 class SkBitmap;
 class SkCanvas;
 class SkCapabilities;
@@ -32,13 +28,9 @@ class SkColorSpace;
 class SkPaint;
 class SkRecorder;
 class SkSurface;
-enum GrSurfaceOrigin : int;
 struct SkIRect;
 struct SkISize;
 
-namespace skgpu::graphite {
-class Recorder;
-}
 
 namespace SkSurfaces {
 
@@ -150,7 +142,7 @@ SK_API sk_sp<SkSurface> WrapPixels(const SkImageInfo& imageInfo,
 
 /** \class SkSurface
     SkSurface is responsible for managing the pixels that a canvas draws into. The pixels can be
-    allocated either in CPU memory (a raster surface) or on the GPU (a GrRenderTarget surface).
+    allocated in CPU memory (a raster surface).
     SkSurface takes care of allocating a SkCanvas that will draw into the surface. Call
     surface->getCanvas() to use that canvas (but don't delete it, it is owned by the surface).
     SkSurface always has non-zero dimensions. If there is a request for a new surface, and either
@@ -161,17 +153,6 @@ SK_API sk_sp<SkSurface> WrapPixels(const SkImageInfo& imageInfo,
 */
 class SK_API SkSurface : public SkRefCnt {
 public:
-    /** Is this surface compatible with the provided characterization?
-
-        This method can be used to determine if an existing SkSurface is a viable destination
-        for an GrDeferredDisplayList.
-
-        @param characterization  The characterization for which a compatibility check is desired
-        @return                  true if this surface is compatible with the characterization;
-                                 false otherwise
-    */
-    bool isCompatible(const GrSurfaceCharacterization& characterization) const;
-
     /** Returns pixel count in each row; may be zero or greater.
 
         @return  number of pixel columns
@@ -215,68 +196,11 @@ public:
     */
     void notifyContentWillChange(ContentChangeMode mode);
 
-    /** Returns the recording context being used by the SkSurface.
-
-        @return the recording context, if available; nullptr otherwise
-     */
-    GrRecordingContext* recordingContext() const;
-
-    /** Returns the recorder being used by the SkSurface.
-
-        @return the recorder, if available; nullptr otherwise
-     */
-    skgpu::graphite::Recorder* recorder() const;
-
     /** Returns the base SkRecorder being used by the SkSurface.
 
         @return the recorder; should be non-null for drawable surfaces
     */
     SkRecorder* baseRecorder() const;
-
-    enum class BackendHandleAccess {
-        kFlushRead,     //!< back-end object is readable
-        kFlushWrite,    //!< back-end object is writable
-        kDiscardWrite,  //!< back-end object must be overwritten
-
-        // Legacy names, remove when clients are migrated
-        kFlushRead_BackendHandleAccess = kFlushRead,
-        kFlushWrite_BackendHandleAccess = kFlushWrite,
-        kDiscardWrite_BackendHandleAccess = kDiscardWrite,
-    };
-
-    // Legacy names, remove when clients are migrated
-    static constexpr BackendHandleAccess kFlushRead_BackendHandleAccess =
-            BackendHandleAccess::kFlushRead;
-    static constexpr BackendHandleAccess kFlushWrite_BackendHandleAccess =
-            BackendHandleAccess::kFlushWrite;
-    static constexpr BackendHandleAccess kDiscardWrite_BackendHandleAccess =
-            BackendHandleAccess::kDiscardWrite;
-
-    /** Caller data passed to TextureReleaseProc; may be nullptr. */
-    using ReleaseContext = void*;
-    /** User function called when supplied texture may be deleted. */
-    using TextureReleaseProc = void (*)(ReleaseContext);
-
-    /** If the surface was made via MakeFromBackendTexture then it's backing texture may be
-        substituted with a different texture. The contents of the previous backing texture are
-        copied into the new texture. SkCanvas state is preserved. The original sample count is
-        used. The GrBackendFormat and dimensions of replacement texture must match that of
-        the original.
-
-        Upon success textureReleaseProc is called when it is safe to delete the texture in the
-        backend API (accounting only for use of the texture by this surface). If SkSurface creation
-        fails textureReleaseProc is called before this function returns.
-
-        @param backendTexture      the new backing texture for the surface
-        @param mode                Retain or discard current Content
-        @param TextureReleaseProc  function called when texture can be released
-        @param ReleaseContext      state passed to textureReleaseProc
-     */
-    virtual bool replaceBackendTexture(const GrBackendTexture& backendTexture,
-                                       GrSurfaceOrigin origin,
-                                       ContentChangeMode mode = kRetain_ContentChangeMode,
-                                       TextureReleaseProc = nullptr,
-                                       ReleaseContext = nullptr) = 0;
 
     /** Returns SkCanvas that draws into SkSurface. Subsequent calls return the same SkCanvas.
         SkCanvas returned is managed and owned by SkSurface, and is deleted when SkSurface
@@ -632,41 +556,6 @@ public:
         @return  LCD striping orientation and setting for device independent fonts
     */
     const SkSurfaceProps& props() const { return fProps; }
-
-    /** Inserts a list of GPU semaphores that the current GPU-backed API must wait on before
-        executing any more commands on the GPU for this surface. We only guarantee blocking
-        transfer and fragment shader work, but may block earlier stages as well depending on the
-        backend.
-        If this call returns false, then the GPU back-end will not wait on any passed in
-        semaphores, and the client will still own the semaphores, regardless of the value of
-        deleteSemaphoresAfterWait.
-
-        If deleteSemaphoresAfterWait is false then Skia will not delete the semaphores. In this case
-        it is the client's responsibility to not destroy or attempt to reuse the semaphores until it
-        knows that Skia has finished waiting on them. This can be done by using finishedProcs
-        on flush calls.
-
-        @param numSemaphores               size of waitSemaphores array
-        @param waitSemaphores              array of semaphore containers
-        @paramm deleteSemaphoresAfterWait  who owns and should delete the semaphores
-        @return                            true if GPU is waiting on semaphores
-    */
-    bool wait(int numSemaphores, const GrBackendSemaphore* waitSemaphores,
-              bool deleteSemaphoresAfterWait = true);
-
-    /** Initializes GrSurfaceCharacterization that can be used to perform GPU back-end
-        processing in a separate thread. Typically this is used to divide drawing
-        into multiple tiles. GrDeferredDisplayListRecorder records the drawing commands
-        for each tile.
-
-        Return true if SkSurface supports characterization. raster surface returns false.
-
-        @param characterization  properties for parallel drawing
-        @return                  true if supported
-
-        example: https://fiddle.skia.org/c/@Surface_characterize
-    */
-    bool characterize(GrSurfaceCharacterization* characterization) const;
 
 protected:
     SkSurface(int width, int height, const SkSurfaceProps* surfaceProps);

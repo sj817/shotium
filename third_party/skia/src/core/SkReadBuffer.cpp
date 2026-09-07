@@ -386,14 +386,14 @@ static sk_sp<SkImage> add_mipmaps(sk_sp<SkImage> img, sk_sp<SkData> data,
         if (mip->dimensions() != pm.dimensions()) {
             return img;
         }
-        if (!mip->readPixels(nullptr, pm, 0, 0)) {
+        if (!mip->readPixels(pm, 0, 0)) {
             return img;
         }
     }
     if (!buffer.isValid()) {
         return img;
     }
-    sk_sp<SkImage> raster = img->makeRasterImage(nullptr);
+    sk_sp<SkImage> raster = img->makeRasterImage();
     if (!raster) {
         return img;
     }

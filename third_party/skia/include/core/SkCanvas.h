@@ -47,7 +47,6 @@
 #endif
 
 class AutoLayerForImageFilter;
-class GrRecordingContext;
 
 class SkBitmap;
 class SkBlender;
@@ -83,7 +82,6 @@ class GlyphRun;
 class GlyphRunList;
 }  // namespace sktext
 
-namespace skgpu::graphite { class Recorder; }
 namespace sktext::gpu { class Slug; }
 namespace SkRecords { class Draw; }
 namespace skiatest {
@@ -321,20 +319,6 @@ public:
         example: https://fiddle.skia.org/c/@Canvas_makeSurface
     */
     sk_sp<SkSurface> makeSurface(const SkImageInfo& info, const SkSurfaceProps* props = nullptr);
-
-    /** Returns Ganesh context of the GPU surface associated with SkCanvas.
-
-        @return  GPU context, if available; nullptr otherwise
-
-        example: https://fiddle.skia.org/c/@Canvas_recordingContext
-     */
-    virtual GrRecordingContext* recordingContext() const;
-
-    /** Returns Recorder for the GPU surface associated with SkCanvas.
-
-        @return  Recorder, if available; nullptr otherwise
-     */
-    virtual skgpu::graphite::Recorder* recorder() const;
 
     /** Returns Recorder for the surface associated with SkCanvas.
 

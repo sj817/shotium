@@ -1653,14 +1653,6 @@ SkM44 SkCanvas::getLocalToDevice() const {
     return fMCRec->fMatrix;
 }
 
-GrRecordingContext* SkCanvas::recordingContext() const {
-    return this->topDevice()->recordingContext();
-}
-
-skgpu::graphite::Recorder* SkCanvas::recorder() const {
-    return this->topDevice()->recorder();
-}
-
 SkRecorder* SkCanvas::baseRecorder() const {
     return this->topDevice()->baseRecorder();
 }

@@ -40,8 +40,7 @@ SkMipmapAccessor::SkMipmapAccessor(const SkImage_Base* image, const SkMatrix& in
     auto load_upper_from_base = [&]() {
         // only do this once
         if (fBaseStorage.getPixels() == nullptr) {
-            auto dContext = as_IB(image)->directContext();
-            (void)image->getROPixels(dContext, &fBaseStorage);
+            (void)image->getROPixels(&fBaseStorage);
             fUpper.reset(fBaseStorage.info(), fBaseStorage.getPixels(), fBaseStorage.rowBytes());
         }
     };

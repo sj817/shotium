@@ -66,7 +66,7 @@ sk_sp<SkData> Encode(GrDirectContext* ctx, const SkImage* img, const Options& op
         return nullptr;
     }
     SkBitmap bm;
-    if (!as_IB(img)->getROPixels(ctx, &bm)) {
+    if (!as_IB(img)->getROPixels(&bm)) {
         return nullptr;
     }
     return Encode(bm.pixmap(), options);
@@ -94,7 +94,7 @@ sk_sp<SkData> Encode(GrDirectContext* ctx, const SkImage* img, const Options& op
         return nullptr;
     }
     SkBitmap bm;
-    if (!as_IB(img)->getROPixels(ctx, &bm)) {
+    if (!as_IB(img)->getROPixels(&bm)) {
         return nullptr;
     }
     return Encode(bm.pixmap(), options);
@@ -136,7 +136,7 @@ sk_sp<SkData> Encode(GrDirectContext* ctx, const SkImage* img, const Options& op
         return nullptr;
     }
     SkBitmap bm;
-    if (!as_IB(img)->getROPixels(ctx, &bm)) {
+    if (!as_IB(img)->getROPixels(&bm)) {
         return nullptr;
     }
     return Encode(bm.pixmap(), options);

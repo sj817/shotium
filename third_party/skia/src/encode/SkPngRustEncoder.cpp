@@ -37,7 +37,7 @@ sk_sp<SkData> Encode(GrDirectContext* ctx, const SkImage* img, const Options& op
     }
 
     SkBitmap bm;
-    if (!as_IB(img)->getROPixels(ctx, &bm)) {
+    if (!as_IB(img)->getROPixels(&bm)) {
         return nullptr;
     }
 

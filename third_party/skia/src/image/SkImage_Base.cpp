@@ -51,11 +51,9 @@ void SkImage_Base::onAsyncRescaleAndReadPixels(const SkImageInfo& info,
         src.installPixels(peek);
         srcRect = origSrcRect;
     } else {
-        // Context TODO: Elevate GrDirectContext requirement to public API.
-        auto dContext = as_IB(this)->directContext();
         src.setInfo(this->imageInfo().makeDimensions(origSrcRect.size()));
         src.allocPixels();
-        if (!this->readPixels(dContext, src.pixmap(), origSrcRect.x(), origSrcRect.y())) {
+        if (!this->readPixels(src.pixmap(), origSrcRect.x(), origSrcRect.y())) {
             callback(context, nullptr);
             return;
         }
@@ -64,7 +62,7 @@ void SkImage_Base::onAsyncRescaleAndReadPixels(const SkImageInfo& info,
     return SkRescaleAndReadPixels(src, info, srcRect, rescaleGamma, rescaleMode, callback, context);
 }
 
-bool SkImage_Base::onAsLegacyBitmap(GrDirectContext* dContext, SkBitmap* bitmap) const {
+bool SkImage_Base::onAsLegacyBitmap(SkBitmap* bitmap) const {
     // As the base-class, all we can do is make a copy (regardless of mode).
     // Subclasses that want to be more optimal should override.
     SkImageInfo info = fInfo.makeColorType(kN32_SkColorType).makeColorSpace(nullptr);
@@ -72,8 +70,7 @@ bool SkImage_Base::onAsLegacyBitmap(GrDirectContext* dContext, SkBitmap* bitmap)
         return false;
     }
 
-    if (!this->readPixels(
-                dContext, bitmap->info(), bitmap->getPixels(), bitmap->rowBytes(), 0, 0)) {
+    if (!this->readPixels(bitmap->info(), bitmap->getPixels(), bitmap->rowBytes(), 0, 0)) {
         bitmap->reset();
         return false;
     }

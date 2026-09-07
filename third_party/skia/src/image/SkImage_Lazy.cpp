@@ -109,7 +109,7 @@ SkImage_Lazy::SkImage_Lazy(Validator* validator)
     SkASSERT(fSharedGenerator);
 }
 
-bool SkImage_Lazy::getROPixels(GrDirectContext* ctx, SkBitmap* bitmap,
+bool SkImage_Lazy::getROPixels(SkBitmap* bitmap,
                                SkImage::CachingHint chint) const {
     auto check_output_bitmap = [bitmap]() {
         SkASSERT(bitmap->isImmutable());
@@ -130,10 +130,10 @@ bool SkImage_Lazy::getROPixels(GrDirectContext* ctx, SkBitmap* bitmap,
             return false;
         }
         bool success = false;
-        {   // make sure ScopedGenerator goes out of scope before we try readPixelsProxy
+        {
             success = ScopedGenerator(fSharedGenerator)->getPixels(pmap);
         }
-        if (!success && !this->readPixelsProxy(ctx, pmap)) {
+        if (!success) {
             return false;
         }
         SkBitmapCache::Add(std::move(cacheRec), bitmap);
@@ -143,10 +143,10 @@ bool SkImage_Lazy::getROPixels(GrDirectContext* ctx, SkBitmap* bitmap,
             return false;
         }
         bool success = false;
-        {   // make sure ScopedGenerator goes out of scope before we try readPixelsProxy
+        {
             success = ScopedGenerator(fSharedGenerator)->getPixels(bitmap->pixmap());
         }
-        if (!success && !this->readPixelsProxy(ctx, bitmap->pixmap())) {
+        if (!success) {
             return false;
         }
         bitmap->setImmutable();
@@ -164,15 +164,14 @@ bool SkImage_Lazy::onIsProtected() const {
     return generator->isProtected();
 }
 
-bool SkImage_Lazy::onReadPixels(GrDirectContext* dContext,
-                                const SkImageInfo& dstInfo,
+bool SkImage_Lazy::onReadPixels(const SkImageInfo& dstInfo,
                                 void* dstPixels,
                                 size_t dstRB,
                                 int srcX,
                                 int srcY,
                                 CachingHint chint) const {
     SkBitmap bm;
-    if (this->getROPixels(dContext, &bm, chint)) {
+    if (this->getROPixels(&bm, chint)) {
         return bm.readPixels(dstInfo, dstPixels, dstRB, srcX, srcY);
     }
     return false;
@@ -197,7 +196,7 @@ sk_sp<SkImage> SkImage_Lazy::onMakeSubset(SkRecorder*,
                                           RequiredProperties props) const {
     // TODO: can we do this more efficiently, by telling the generator we want to
     //       "realize" a subset?
-    sk_sp<SkImage> nonLazyImg = this->makeRasterImage(nullptr);
+    sk_sp<SkImage> nonLazyImg = this->makeRasterImage();
     if (!nonLazyImg) {
         return nullptr;
     }

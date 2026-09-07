@@ -22,8 +22,6 @@
 #include <cstddef>
 #include <cstdint>
 
-class GrDirectContext;
-class GrImageContext;
 class SkBitmap;
 class SkColorSpace;
 class SkPixmap;
@@ -48,15 +46,13 @@ public:
                                   RequiredProperties) const override;
 
     sk_sp<SkImage> makeSubset(SkRecorder*, const SkIRect&, RequiredProperties) const override;
-    size_t textureSize() const override { return 0; }
 
     // Methods that we want to use elsewhere in Skia, but not be a part of the public API.
     virtual bool onPeekPixels(SkPixmap*) const { return false; }
 
     virtual const SkBitmap* onPeekBitmap() const { return nullptr; }
 
-    virtual bool onReadPixels(GrDirectContext*,
-                              const SkImageInfo& dstInfo,
+    virtual bool onReadPixels(const SkImageInfo& dstInfo,
                               void* dstPixels,
                               size_t dstRowBytes,
                               int srcX,
@@ -98,10 +94,7 @@ public:
                                                    ReadPixelsCallback,
                                                    ReadPixelsContext) const;
 
-    virtual GrImageContext* context() const { return nullptr; }
 
-    /** this->context() try-casted to GrDirectContext. Useful for migrations – avoid otherwise! */
-    virtual GrDirectContext* directContext() const { return nullptr; }
 
     // If this image is the current cached image snapshot of a surface then this is called when the
     // surface is destroyed to indicate no further writes may happen to surface backing store.
@@ -109,14 +102,14 @@ public:
 
     // return a read-only copy of the pixels. We promise to not modify them,
     // but only inspect them (or encode them).
-    virtual bool getROPixels(GrDirectContext*, SkBitmap*,
+    virtual bool getROPixels(SkBitmap*,
                              CachingHint = kAllow_CachingHint) const = 0;
 
     virtual sk_sp<SkImage> onMakeSubset(SkRecorder*, const SkIRect&, RequiredProperties) const = 0;
 
     virtual sk_sp<const SkData> onRefEncoded() const { return nullptr; }
 
-    virtual bool onAsLegacyBitmap(GrDirectContext*, SkBitmap*) const;
+    virtual bool onAsLegacyBitmap(SkBitmap*) const;
 
     // Create the surface used by makeScaled. If this is a GPU backed image, the surface
     // should be Ganesh or Graphite backed (as appropriate), otherwise this can raster backed.

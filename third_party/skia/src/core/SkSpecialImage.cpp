@@ -163,7 +163,7 @@ sk_sp<SkSpecialImage> MakeFromRaster(const SkIRect& subset,
 
     // This will not work if the image is uploaded to a GPU render target.
     SkBitmap bm;
-    if (as_IB(image)->getROPixels(nullptr, &bm)) {
+    if (as_IB(image)->getROPixels(&bm)) {
         return MakeFromRaster(subset, bm, props);
     }
     return nullptr;

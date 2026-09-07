@@ -20,7 +20,6 @@
 #include <memory>
 #include <optional>
 
-class GrDirectContext;
 class SkBitmap;
 class SkColorSpace;
 class SkData;
@@ -426,10 +425,6 @@ public:
     */
     virtual bool isTextureBacked() const = 0;
 
-    /** Returns an approximation of the amount of texture memory used by the image. Returns
-        zero if the image is not texture backed or if the texture has an external format.
-     */
-    virtual size_t textureSize() const = 0;
 
     /** Returns true if SkImage can be drawn on either raster surface or GPU surface.
         If recorder is nullptr, tests if SkImage draws on raster surface;
@@ -488,10 +483,7 @@ public:
         Returns false if abs(srcX) >= Image width(), or if abs(srcY) >= Image height().
 
         If cachingHint is kAllow_CachingHint, pixels may be retained locally.
-        If cachingHint is kDisallow_CachingHint, pixels are not added to the local cache.
-
-        @param context      the GrDirectContext in play, if it exists
-        @param dstInfo      destination width, height, SkColorType, SkAlphaType, SkColorSpace
+        If cachingHint is kDisallow_CachingHint, pixels are not added to the local cache.        @param dstInfo      destination width, height, SkColorType, SkAlphaType, SkColorSpace
         @param dstPixels    destination pixel storage
         @param dstRowBytes  destination row length
         @param srcX         column index whose absolute value is less than width()
@@ -499,8 +491,7 @@ public:
         @param cachingHint  whether the pixels should be cached locally
         @return             true if pixels are copied to dstPixels
     */
-    bool readPixels(GrDirectContext* context,
-                    const SkImageInfo& dstInfo,
+    bool readPixels(const SkImageInfo& dstInfo,
                     void* dstPixels,
                     size_t dstRowBytes,
                     int srcX, int srcY,
@@ -531,28 +522,17 @@ public:
         Returns false if abs(srcX) >= Image width(), or if abs(srcY) >= Image height().
 
         If cachingHint is kAllow_CachingHint, pixels may be retained locally.
-        If cachingHint is kDisallow_CachingHint, pixels are not added to the local cache.
-
-        @param context      the GrDirectContext in play, if it exists
-        @param dst          destination SkPixmap: SkImageInfo, pixels, row bytes
+        If cachingHint is kDisallow_CachingHint, pixels are not added to the local cache.        @param dst          destination SkPixmap: SkImageInfo, pixels, row bytes
         @param srcX         column index whose absolute value is less than width()
         @param srcY         row index whose absolute value is less than height()
         @param cachingHint  whether the pixels should be cached locallyZ
         @return             true if pixels are copied to dst
     */
-    bool readPixels(GrDirectContext* context,
-                    const SkPixmap& dst,
+    bool readPixels(const SkPixmap& dst,
                     int srcX,
                     int srcY,
                     CachingHint cachingHint = kAllow_CachingHint) const;
 
-#ifndef SK_IMAGE_READ_PIXELS_DISABLE_LEGACY_API
-    /** Deprecated. Use the variants that accept a GrDirectContext. */
-    bool readPixels(const SkImageInfo& dstInfo, void* dstPixels, size_t dstRowBytes,
-                    int srcX, int srcY, CachingHint cachingHint = kAllow_CachingHint) const;
-    bool readPixels(const SkPixmap& dst, int srcX, int srcY,
-                    CachingHint cachingHint = kAllow_CachingHint) const;
-#endif
 
     /** The result from asyncRescaleAndReadPixels() or asyncRescaleAndReadPixelsYUV420(). */
     class AsyncReadResult {
@@ -793,17 +773,6 @@ public:
      */
     sk_sp<SkImage> withDefaultMipmaps() const;
 
-    /** Returns raster image or lazy image. Copies SkImage backed by GPU texture into
-        CPU memory if needed. Returns original SkImage if decoded in raster bitmap,
-        or if encoded in a stream.
-
-        Returns nullptr if backed by GPU texture and copy fails.
-
-        @return  raster image, lazy image, or nullptr
-
-        example: https://fiddle.skia.org/c/@Image_makeNonTextureImage
-    */
-    sk_sp<SkImage> makeNonTextureImage(GrDirectContext* = nullptr) const;
 
     /** Returns raster image. Copies SkImage backed by GPU texture into CPU memory,
         or decodes SkImage from lazy image. Returns original SkImage if decoded in
@@ -818,14 +787,8 @@ public:
 
         example: https://fiddle.skia.org/c/@Image_makeRasterImage
     */
-    sk_sp<SkImage> makeRasterImage(GrDirectContext*,
-                                   CachingHint cachingHint = kDisallow_CachingHint) const;
+    sk_sp<SkImage> makeRasterImage(CachingHint cachingHint = kDisallow_CachingHint) const;
 
-#if !defined(SK_IMAGE_READ_PIXELS_DISABLE_LEGACY_API)
-    sk_sp<SkImage> makeRasterImage(CachingHint cachingHint = kDisallow_CachingHint) const {
-        return this->makeRasterImage(nullptr, cachingHint);
-    }
-#endif
 
     /** Deprecated.
      */

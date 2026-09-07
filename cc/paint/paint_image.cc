@@ -135,9 +135,6 @@ const sk_sp<SkImage>& PaintImage::GetSkImage() const {
 }
 
 sk_sp<SkImage> PaintImage::GetSwSkImage() const {
-  if (cached_sk_image_ && cached_sk_image_->isTextureBacked()) {
-    return cached_sk_image_->makeNonTextureImage();
-  }
   return cached_sk_image_;
 }
 

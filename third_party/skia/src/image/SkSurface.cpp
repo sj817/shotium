@@ -28,11 +28,7 @@
 #include <cstdint>
 #include <utility>
 
-class GrBackendSemaphore;
-class GrRecordingContext;  // IWYU pragma: keep
 class SkPaint;
-class GrSurfaceCharacterization;
-namespace skgpu { namespace graphite { class Recorder; } }
 
 SkSurfaceProps::SkSurfaceProps()
     : fFlags(0)
@@ -229,23 +225,4 @@ void SkSurface::writePixels(const SkBitmap& src, int x, int y) {
     }
 }
 
-GrRecordingContext* SkSurface::recordingContext() const {
-    return asConstSB(this)->onGetRecordingContext();
-}
-
-skgpu::graphite::Recorder* SkSurface::recorder() const { return asConstSB(this)->onGetRecorder(); }
-
 SkRecorder* SkSurface::baseRecorder() const { return asConstSB(this)->onGetBaseRecorder(); }
-
-bool SkSurface::wait(int numSemaphores, const GrBackendSemaphore* waitSemaphores,
-                     bool deleteSemaphoresAfterWait) {
-    return asSB(this)->onWait(numSemaphores, waitSemaphores, deleteSemaphoresAfterWait);
-}
-
-bool SkSurface::characterize(GrSurfaceCharacterization* characterization) const {
-    return asConstSB(this)->onCharacterize(characterization);
-}
-
-bool SkSurface::isCompatible(const GrSurfaceCharacterization& characterization) const {
-    return asConstSB(this)->onIsCompatible(characterization);
-}

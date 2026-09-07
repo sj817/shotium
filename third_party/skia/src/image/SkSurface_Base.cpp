@@ -26,10 +26,8 @@
 #include <atomic>
 #include <cstdint>
 
-class GrRecordingContext;
 class SkPaint;
 class SkSurfaceProps;
-namespace skgpu { namespace graphite { class Recorder; } }
 
 SkSurface_Base::SkSurface_Base(int width, int height, const SkSurfaceProps* props,
                                sk_sp<SkPixelStorage> storage)
@@ -48,9 +46,6 @@ SkSurface_Base::~SkSurface_Base() {
     }
 }
 
-GrRecordingContext* SkSurface_Base::onGetRecordingContext() const { return nullptr; }
-
-skgpu::graphite::Recorder* SkSurface_Base::onGetRecorder() const { return nullptr; }
 SkRecorder* SkSurface_Base::onGetBaseRecorder() const { return nullptr; }
 
 void SkSurface_Base::onDraw(SkCanvas* canvas, SkScalar x, SkScalar y,

@@ -525,7 +525,7 @@ static sk_sp<SkData> EncodePng(const SkPixmap& pixmap, SkSVGCanvas::EncodePngCal
 
 static sk_sp<SkData> EncodePng(SkImage* image, SkSVGCanvas::EncodePngCallback pngEncoder) {
     // GrDirectContext is nullptr because we shouldn't have any texture-based images passed in.
-    sk_sp<SkImage> rasterImage = image->makeRasterImage(nullptr);
+    sk_sp<SkImage> rasterImage = image->makeRasterImage();
     if (!rasterImage) {
       return nullptr;
     }
@@ -1081,7 +1081,7 @@ void SkSVGDevice::drawImageRect(const SkImage* image, const SkRect* src, const S
                                 SkCanvas::SrcRectConstraint constraint) {
     SkBitmap bm;
     // TODO: support gpu images
-    if (!as_IB(image)->getROPixels(nullptr, &bm)) {
+    if (!as_IB(image)->getROPixels(&bm)) {
         return;
     }
 

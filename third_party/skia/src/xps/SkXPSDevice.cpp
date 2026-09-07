@@ -1990,7 +1990,7 @@ void SkXPSDevice::drawImageRect(const SkImage* image,
     // TODO: support gpu images
     SkBitmap bitmap;
     auto imageBase = as_IB(image);
-    if (!imageBase->getROPixels(nullptr, &bitmap)) {
+    if (!imageBase->getROPixels(&bitmap)) {
         return;
     }
 

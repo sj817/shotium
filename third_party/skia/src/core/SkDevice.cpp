@@ -174,7 +174,7 @@ void SkDevice::drawImageLattice(const SkImage* image, const SkCanvas::Lattice& l
     while (iter.next(&srcR, &dstR, &isFixedColor, &c)) {
         // TODO: support this fast-path for GPU images
         if (isFixedColor || (srcR.width() <= 1.0f && srcR.height() <= 1.0f &&
-                             image->readPixels(nullptr, info, &c, 4, srcR.fLeft, srcR.fTop))) {
+                             image->readPixels(info, &c, 4, srcR.fLeft, srcR.fTop))) {
               // Fast draw with drawRect, if this is a patch containing a single color
               // or if this is a patch containing a single pixel.
               if (0 != c || !paint.isSrcOver()) {
