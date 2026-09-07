@@ -1,3 +1,5 @@
+stage22 当前接续：stage21 已提交 4ace701b670c。CanvasKit（Emscripten JS/WASM）和 Skottie（Lottie）278 个文件及配套独立 GN、Bazel、presubmit 引用已移除；Skia 独立根 BUILD.gn/.gn、WASM/iOS示例入口和无用 fuzz.gni 同批删除。295 个源码/构建路径，约 74,699 行删除，原文 SHA 与备份在 out/cut-stage22-skia-{modules,standalone}/；保留主仓 //skia 的构建、原生 SkCanvas、SVG/字体/CPU绘制及共享实现。GN parse、限定 diff、Python/Bazel兼容语法检查通过，无当前图/编译/运行验证。历史 RELEASE_NOTES 中的模块说明保留为历史。GPU/Graphite、剩余独立构建元数据、其他无用模块及整个原始清单仍待继续，不能把本批当作 Skia 内部裁剪完成。
+
 stage21 当前接续：stage20 已提交 d1e909e8c184，以下旧的“未提交”记录是历史。新增清理 base/net/DNS/services 的 FuzzTest 元数据、net_fuzztests/coep_fuzztest/base fuzztest_support，WTF/controller/CBOR 配套以及 WebP 8 个、rapidhash 1 个 fuzzing 目标；删除 libFuzzer proto/renderer 两个无实现 BUILD.gn。12 个源码路径，10 个现存 GN 文件语法解析通过，限定 diff 检查通过；尚未生成当前图、编译或运行。WebP 子仓仍含实际 fuzzing 源文件，通用模板和 Route core 依赖未闭合，均继续待办。证据在 out/cut-stage21-{network-fuzztests,library-fuzztests,proto-renderer}/。
 
 stage20：并行完成 net/DNS/Mojo 9 个 fuzzing 支持目标、base fuzzing_buildflags 和 Linux fuzzing 覆盖率分支、Blink/Skia 49 个目标及 1 个模板清理。14 个源码路径，793 行删除；本批 GN 文件语法解析和限定 diff 检查通过，未生成当前构建图或编译。通用 FuzzTest/libFuzzer 和受 Route 范围约束的 core 包装器仍待闭合。

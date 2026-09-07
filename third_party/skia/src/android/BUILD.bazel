@@ -13,7 +13,6 @@ skia_cc_library(
     features = ["layering_check"],
     visibility = [
         "//dm:__pkg__",
-        "//modules/canvaskit:__pkg__",
     ],
     deps = [
         "//:core",

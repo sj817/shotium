@@ -18,7 +18,6 @@ skia_cc_library(
     features = ["layering_check"],
     local_defines = ["SKSHAPER_IMPLEMENTATION=1"],
     visibility = [
-        "//modules/skottie:__subpackages__",
         "//modules/svg:__subpackages__",
     ],
     deps = [

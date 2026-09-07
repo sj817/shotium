@@ -94,7 +94,6 @@ skia_cc_library_with_testutil(
     ],
     features = ["layering_check"],
     priv_visibility = [
-        "//modules/skottie:__pkg__",
         "//src/gpu/ganesh/gl/glx:__pkg__",
         "//src/gpu/ganesh/gl/mac:__pkg__",
         "//src/gpu/ganesh/gl/win:__pkg__",

@@ -132,8 +132,6 @@ skia_cc_library(
         "//experimental/rust_ico/decoder/impl:__pkg__",
         "//experimental/rust_jpeg/decoder:__pkg__",
         "//experimental/rust_jpeg/decoder/impl:__pkg__",
-        "//modules/skottie:__pkg__",
-        "//modules/skottie/src:__pkg__",
         "//modules/skresources:__pkg__",
         "//rust/exif:__pkg__",
         "//src/android:__pkg__",

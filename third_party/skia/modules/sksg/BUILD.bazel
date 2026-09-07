@@ -24,9 +24,9 @@ skia_cc_library(
 
 skia_cc_library(
     name = "sksg_priv",
+    visibility = ["//visibility:private"],
     hdrs = ["//modules/sksg/src:private_hdrs"],
     features = ["layering_check"],
-    visibility = ["//modules/skottie:__pkg__"],
     deps = [
         ":sksg",
         "//:core",

@@ -59,9 +59,7 @@ config("skia_config") {
     "SK_LEGACY_DESERIAL_IMAGE_PROC",
 
     # Let Skia and Skia clients know whether to use `libpng`-based or
-    # Rust-based PNG decoder and encoder.  This mimics what is done in
-    # `third_party/skia/BUILD.gn`'s `png_decode_rust` and `png_encode_rust`
-    # targets.
+    # Rust-based PNG decoder and encoder selected by this build.
     "SK_CODEC_DECODES_PNG",
     "SK_CODEC_DECODES_PNG_WITH_RUST",
     "SK_CODEC_ENCODES_PNG",

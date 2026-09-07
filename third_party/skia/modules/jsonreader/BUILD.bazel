@@ -15,7 +15,6 @@ skia_cc_library(
         "SkJSONReader.h",
     ],
     visibility = [
-        "//modules/skottie:__pkg__",
         "//tools:__pkg__",
         "//tools/sksltrace:__pkg__",
     ],

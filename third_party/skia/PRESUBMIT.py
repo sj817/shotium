@@ -340,7 +340,7 @@ def _CheckBazelBUILDFiles(input_api, output_api):
     is_bazel = affected_file_path.endswith('BUILD.bazel')
     # This list lines up with the one in autoroller_lib.py (see G3).
     excluded_paths = ["infra/", "bazel/rbe/", "bazel/external/", "bazel/common_config_settings/",
-                      "modules/canvaskit/go/", "experimental/", "bazel/platform", "third_party/",
+                      "experimental/", "bazel/platform", "third_party/",
                       "tests/", "resources/", "bazel/deps_parser/", "bazel/exporter_tool/",
                       "tools/ganesh/gl/interface/", "bazel/utils/", "include/config/",
                       "bench/", "example/external_client/"]
@@ -526,7 +526,6 @@ def _CheckBannedAPIs(input_api, output_api):
        ['^bench/',
         '^docs/',
         '^gm/',
-        '^modules/skottie/tests/',
         '^src/sksl/lex/Main.cpp',
         '^tests/',
         '^tools/']
