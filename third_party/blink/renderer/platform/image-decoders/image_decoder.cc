@@ -34,7 +34,6 @@
 #include "base/numerics/safe_conversions.h"
 #include "base/trace_event/trace_event.h"
 #include "build/build_config.h"
-#include "media/media_buildflags.h"
 #include "skia/ext/cicp.h"
 #include "third_party/blink/public/common/buildflags.h"
 #include "third_party/blink/public/common/features.h"
@@ -52,10 +51,6 @@
 #include "ui/gfx/geometry/size.h"
 #include "ui/gfx/geometry/size_conversions.h"
 #include "ui/gfx/skia_span_util.h"
-
-#if BUILDFLAG(ENABLE_DAV1D_DECODER)
-#include "third_party/blink/renderer/platform/image-decoders/avif/avif_image_decoder.h"
-#endif
 
 #if BUILDFLAG(ENABLE_JXL_DECODER)
 #include "third_party/blink/renderer/platform/image-decoders/jxl/jxl_image_decoder.h"
@@ -84,11 +79,6 @@ cc::ImageType FileExtensionToImageType(String image_extension) {
   if (image_extension == "bmp") {
     return cc::ImageType::kBMP;
   }
-#if BUILDFLAG(ENABLE_DAV1D_DECODER)
-  if (image_extension == "avif") {
-    return cc::ImageType::kAVIF;
-  }
-#endif
 #if BUILDFLAG(ENABLE_JXL_DECODER)
   if (base::FeatureList::IsEnabled(features::kJXLImageFormat) &&
       image_extension == "jxl") {
@@ -234,11 +224,6 @@ String SniffMimeTypeInternal(scoped_refptr<SegmentReader> reader,
   if (MatchesBMPSignature(contents)) {
     return "image/bmp";
   }
-#if BUILDFLAG(ENABLE_DAV1D_DECODER)
-  if (AVIFImageDecoder::MatchesAVIFSignature(fast_reader)) {
-    return "image/avif";
-  }
-#endif
 #if BUILDFLAG(ENABLE_JXL_DECODER)
   if (base::FeatureList::IsEnabled(features::kJXLImageFormat) &&
       JXLImageDecoder::MatchesJXLSignature(fast_reader)) {
@@ -354,12 +339,6 @@ std::unique_ptr<ImageDecoder> ImageDecoder::CreateByMimeType(
     decoder =
         CreateBmpImageDecoder(alpha_option, high_bit_depth_decoding_option,
                               color_behavior, max_decoded_bytes);
-#if BUILDFLAG(ENABLE_DAV1D_DECODER)
-  } else if (mime_type == "image/avif") {
-    decoder = std::make_unique<AVIFImageDecoder>(
-        alpha_option, high_bit_depth_decoding_option, color_behavior, aux_image,
-        max_decoded_bytes, animation_option);
-#endif
 #if BUILDFLAG(ENABLE_JXL_DECODER)
   } else if (mime_type == "image/jxl" &&
              base::FeatureList::IsEnabled(features::kJXLImageFormat)) {
@@ -396,26 +375,6 @@ bool ImageDecoder::HasSufficientDataToSniffMimeType(const SharedBuffer& data,
   if (data.size() < kLongestSignatureLength) {
     return false;
   }
-
-#if BUILDFLAG(ENABLE_DAV1D_DECODER)
-  {
-    // Check for an ISO BMFF File Type Box. Assume that 'largesize' is not used.
-    // The first eight bytes would be a big-endian 32-bit unsigned integer
-    // 'size' and a four-byte 'type'.
-    struct {
-      uint8_t size[4];  // unsigned int(32) size;
-      char type[4];     // unsigned int(32) type = boxtype;
-    } box;
-    static_assert(sizeof(box) == 8, "");
-    static_assert(8 <= kLongestSignatureLength, "");
-    bool ok = data.GetBytes(base::byte_span_from_ref(box));
-    DCHECK(ok);
-    if (std::string_view(box.type, 4) == "ftyp") {
-      // Returns whether we have received the File Type Box in its entirety.
-      return base::U32FromBigEndian(box.size) <= data.size();
-    }
-  }
-#endif
 
   return true;
 }
@@ -491,16 +450,6 @@ ImageDecoder::CompressionFormat ImageDecoder::GetCompressionFormat(
       NOTREACHED();
     }
   }
-
-#if BUILDFLAG(ENABLE_DAV1D_DECODER)
-  // Attempt to sniff whether an AVIF image is using a lossy or lossless
-  // compression algorithm.
-  // TODO(wtc): Implement this. Figure out whether to return kUndefinedFormat or
-  // a new kAVIFAnimationFormat in the case of an animated AVIF image.
-  if (EqualIgnoringAsciiCase(mime_type, "image/avif")) {
-    return kLossyFormat;
-  }
-#endif
 
   if (IsLossyImageMIMEType(mime_type)) {
     return kLossyFormat;

@@ -26,7 +26,6 @@
 #include "base/types/optional_ref.h"
 #include "cc/base/devtools_instrumentation.h"
 #include "cc/base/features.h"
-#include "cc/benchmarks/benchmark_instrumentation.h"
 #include "cc/input/browser_controls_offset_manager.h"
 #include "cc/input/browser_controls_offset_tag_modifications.h"
 #include "cc/metrics/compositor_timing_history.h"
@@ -802,9 +801,6 @@ void ProxyImpl::ScheduledActionSendBeginMainFrame(
     const viz::BeginFrameArgs& args) {
   DCHECK(IsImplThread());
 
-  benchmark_instrumentation::ScopedBeginFrameTask begin_frame_task(
-      benchmark_instrumentation::kSendBeginFrame,
-      args.frame_id.sequence_number);
   std::unique_ptr<BeginMainFrameAndCommitState> begin_main_frame_state(
       new BeginMainFrameAndCommitState);
   begin_main_frame_state->begin_frame_args = args;
@@ -1105,7 +1101,6 @@ ProxyImpl::DataForCommit::~DataForCommit() = default;
 bool ProxyImpl::DataForCommit::IsValid() const {
   return commit_completion_event.get() && commit_state.get() && unsafe_state;
 }
-
 
 void ProxyImpl::SetRequestHighFramerate(bool flag) {
   scheduler_->SetRequestHighFramerate(flag);

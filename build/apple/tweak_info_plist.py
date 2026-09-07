@@ -117,7 +117,7 @@ def _AddVersionKeys(
     if not version:
         # Pull in the Chrome version number.
         VERSION_TOOL = os.path.join(TOP, 'build/util/version.py')
-        VERSION_FILE = os.path.join(TOP, 'chrome/VERSION')
+        VERSION_FILE = os.path.join(TOP, 'shot/VERSION')
         (stdout, retval) = _GetOutput(
             [
                 VERSION_TOOL,

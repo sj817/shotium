@@ -5,7 +5,7 @@
 import("//build/buildflag_header.gni")
 import("//build/config/cast.gni")
 import("//build/config/sanitizers/sanitizers.gni")
-import("//media/media_options.gni")
+
 import("//testing/test.gni")
 
 # Most consumers of sandbox::policy should depend on this target.
@@ -95,21 +95,13 @@ component("policy") {
       "linux/sandbox_seccomp_bpf_linux.cc",
       "linux/sandbox_seccomp_bpf_linux.h",
     ]
-    if (allow_oop_video_decoder) {
-      sources += [
-        "linux/bpf_hardware_video_decoding_policy_linux.cc",
-        "linux/bpf_hardware_video_decoding_policy_linux.h",
-      ]
-    }
+
     if (is_linux) {
       deps += [ "//net" ]  # TODO(crbug.com/40220507): remove this.
     }
-    configs += [
-      "//media:media_config",
-    ]
+    configs += []
     deps += [
       ":chromecast_sandbox_allowlist_buildflags",
-      "//media:media_buildflags",
       "//sandbox:sandbox_buildflags",
       "//sandbox/linux:sandbox_services",
       "//sandbox/linux:seccomp_bpf",

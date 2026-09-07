@@ -280,8 +280,6 @@ class CORE_EXPORT WebLocalFrameImpl final
   void PrintPage(uint32_t page_to_print, cc::PaintCanvas*) override;
   void PrintEnd() override;
   void DispatchAfterPrintEvent() override;
-  bool GetPrintPresetOptionsForPlugin(const WebNode&,
-                                      WebPrintPresetOptions*) override;
   bool CapturePaintPreview(const gfx::Rect& bounds,
                            cc::PaintCanvas* canvas,
                            bool include_linked_destinations,
@@ -532,7 +530,6 @@ class CORE_EXPORT WebLocalFrameImpl final
  protected:
   // AddMessageToConsoleImpl() removed with the public API it overrode.
 
-
  private:
   friend LocalFrameClientImpl;
 
@@ -618,11 +615,9 @@ class CORE_EXPORT WebLocalFrameImpl final
   // widget for layout.
   Member<WebFrameWidgetImpl> frame_widget_;
 
-
   WebAutofillClient* autofill_client_ = nullptr;
 
   WebRecordReplayClient* record_replay_client_ = nullptr;
-
 
   WebContentSettingsClient* content_settings_client_ = nullptr;
 

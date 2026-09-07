@@ -31,7 +31,6 @@
 
 #include "base/feature_list.h"
 #include "third_party/blink/public/platform/task_type.h"
-#include "third_party/blink/renderer/bindings/core/v8/v8_can_play_type_result.h"
 #include "third_party/blink/renderer/core/css/style_change_reason.h"
 #include "third_party/blink/renderer/core/css/style_engine.h"
 #include "third_party/blink/renderer/core/dom/attribute.h"
@@ -118,27 +117,6 @@ void RemoveElementFromDocumentMap(HTMLMediaElement* element,
 }  // anonymous namespace
 
 // static
-MIMETypeRegistry::SupportsType HTMLMediaElement::GetSupportsType(
-    const ContentType& content_type) {
-  String type = content_type.GetType().DeprecatedLower();
-  // The codecs string is not lower-cased because MP4 values are case sensitive
-  // per http://tools.ietf.org/html/rfc4281#page-7.
-  String type_codecs = content_type.Parameter("codecs");
-
-  if (type.empty())
-    return MIMETypeRegistry::kNotSupported;
-
-  // 4.8.12.3 MIME types - The canPlayType(type) method must return the empty
-  // string if type is a type that the user agent knows it cannot render or is
-  // the type "application/octet-stream"
-  if (type == "application/octet-stream")
-    return MIMETypeRegistry::kNotSupported;
-
-  // |contentType| could be handled using ParsedContentType, but there are
-  // still a lot of sites using codec strings that don't work with the
-  // stricter parsing rules.
-  return MIMETypeRegistry::SupportsMediaMIMEType(type, type_codecs);
-}
 
 // static
 void HTMLMediaElement::OnMediaControlsEnabledChange(Document*) {
@@ -398,29 +376,6 @@ void HTMLMediaElement::load() {
   // independently of this by HTMLVideoElement's own HTMLImageLoader.
 }
 
-V8CanPlayTypeResult HTMLMediaElement::canPlayType(
-    const String& mime_type) const {
-  MIMETypeRegistry::SupportsType support =
-      GetSupportsType(ContentType(mime_type));
-
-  V8CanPlayTypeResult can_play =
-      V8CanPlayTypeResult(V8CanPlayTypeResult::Enum::k);
-
-  // 4.8.12.3
-  switch (support) {
-    case MIMETypeRegistry::kNotSupported:
-      break;
-    case MIMETypeRegistry::kMaybeSupported:
-      can_play = V8CanPlayTypeResult(V8CanPlayTypeResult::Enum::kMaybe);
-      break;
-    case MIMETypeRegistry::kSupported:
-      can_play = V8CanPlayTypeResult(V8CanPlayTypeResult::Enum::kProbably);
-      break;
-  }
-
-  return can_play;
-}
-
 bool HTMLMediaElement::TextTracksAreReady() const {
   // https://html.spec.whatwg.org/#text-track-readiness-state
   // The text tracks of a media element are ready when both the element's list
@@ -525,11 +480,7 @@ bool HTMLMediaElement::Autoplay() const {
 
 std::optional<DOMExceptionCode> HTMLMediaElement::Play() {
   DVLOG(2) << "play(" << static_cast<void*>(this) << ")";
-  // Every src this build could ever be given is unsupported: the entire
-  // decode pipeline was cut, so GetSupportsType() (see canPlayType()) can
-  // never return anything but kNotSupported. NotSupportedError is exactly
-  // what a real browser returns from play() when the source can't be
-  // decoded, so this is the honest answer, not a placeholder one.
+  // There is no media decode pipeline in this engine.
   return DOMExceptionCode::kNotSupportedError;
 }
 

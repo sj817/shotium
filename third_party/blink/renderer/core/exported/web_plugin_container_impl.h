@@ -68,7 +68,6 @@ class WebKeyboardEvent;
 class WebPlugin;
 class WheelEvent;
 struct WebPrintParams;
-struct WebPrintPresetOptions;
 
 class CORE_EXPORT WebPluginContainerImpl final
     : public GarbageCollected<WebPluginContainerImpl>,
@@ -158,7 +157,6 @@ class CORE_EXPORT WebPluginContainerImpl final
   bool SupportsPaginatedPrint() const;
   // Returns true on success and sets the out parameter to the print preset
   // options for the document.
-  bool GetPrintPresetOptionsFromDocument(WebPrintPresetOptions*) const;
   // Sets up printing at the specified WebPrintParams. Returns the number of
   // pages to be printed at these settings.
   int PrintBegin(const WebPrintParams& print_params) const;

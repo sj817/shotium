@@ -26,13 +26,15 @@
 #ifndef THIRD_PARTY_BLINK_RENDERER_CORE_HTML_TRACK_TRACK_BASE_H_
 #define THIRD_PARTY_BLINK_RENDERER_CORE_HTML_TRACK_TRACK_BASE_H_
 
-#include "third_party/blink/public/platform/web_media_player.h"
 #include "third_party/blink/renderer/core/core_export.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
 #include "third_party/blink/renderer/platform/supplementable.h"
 #include "third_party/blink/renderer/platform/wtf/text/atomic_string.h"
 
 namespace blink {
+
+// Track DOM categories do not require a media playback interface.
+enum class TrackType { kTextTrack, kAudioTrack, kVideoTrack };
 
 class HTMLMediaElement;
 
@@ -58,7 +60,7 @@ class CORE_EXPORT TrackBase : public Supplementable<TrackBase> {
 
   String id() const { return id_; }
 
-  WebMediaPlayer::TrackType GetType() const { return type_; }
+  TrackType GetType() const { return type_; }
 
   AtomicString label() const { return label_; }
   AtomicString language() const { return language_; }
@@ -71,12 +73,12 @@ class CORE_EXPORT TrackBase : public Supplementable<TrackBase> {
   void Trace(Visitor*) const override;
 
  protected:
-  TrackBase(WebMediaPlayer::TrackType,
+  TrackBase(TrackType,
             const AtomicString& label,
             const AtomicString& language,
             const String& id);
 
-  WebMediaPlayer::TrackType type_;
+  TrackType type_;
   AtomicString label_;
   AtomicString language_;
   String id_;

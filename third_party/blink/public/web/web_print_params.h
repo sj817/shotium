@@ -31,12 +31,20 @@
 #ifndef THIRD_PARTY_BLINK_PUBLIC_WEB_WEB_PRINT_PARAMS_H_
 #define THIRD_PARTY_BLINK_PUBLIC_WEB_WEB_PRINT_PARAMS_H_
 
-#include "printing/mojom/print.mojom-shared.h"
 #include "third_party/blink/public/web/web_print_page_description.h"
 #include "ui/gfx/geometry/rect_f.h"
 #include "ui/gfx/geometry/size_f.h"
 
 namespace blink {
+
+// Scaling policy for Blink paginated layout; no printer service is involved.
+enum class PrintScalingOption {
+  kNone,
+  kFitToPrintableArea,
+  kSourceSize,
+  kFitToPaper,
+  kCenterShrinkToFitPaper,
+};
 
 struct WebPrintParams {
   // Specifies the selected printer default printable area details in
@@ -69,8 +77,8 @@ struct WebPrintParams {
 
   // Specifies whether to reduce/enlarge/retain the print contents to fit the
   // printable area.
-  printing::mojom::PrintScalingOption print_scaling_option =
-      printing::mojom::PrintScalingOption::kFitToPrintableArea;
+  PrintScalingOption print_scaling_option =
+      PrintScalingOption::kFitToPrintableArea;
 
   // Specifies whether paginated layout needs to be applied.
   bool use_paginated_layout = true;
@@ -89,7 +97,7 @@ struct WebPrintParams {
   WebPrintParams(const gfx::SizeF& paper_size, bool use_paginated_layout)
       : printable_area_in_css_pixels(paper_size),
         default_page_description(paper_size),
-        print_scaling_option(printing::mojom::PrintScalingOption::kSourceSize),
+        print_scaling_option(PrintScalingOption::kSourceSize),
         use_paginated_layout(use_paginated_layout) {}
 };
 

@@ -9,7 +9,6 @@
 #include "base/metrics/histogram_macros.h"
 #include "base/notreached.h"
 #include "base/numerics/safe_conversions.h"
-#include "media/media_buildflags.h"
 #include "third_party/blink/public/common/buildflags.h"
 #include "third_party/blink/public/common/features.h"
 #include "third_party/blink/public/mojom/use_counter/metrics/web_feature.mojom-blink.h"
@@ -37,10 +36,6 @@ BitmapImageMetrics::StringToDecodedImageType(const String& type) {
     return BitmapImageMetrics::DecodedImageType::kICO;
   if (type == "bmp")
     return BitmapImageMetrics::DecodedImageType::kBMP;
-#if BUILDFLAG(ENABLE_DAV1D_DECODER)
-  if (type == "avif")
-    return BitmapImageMetrics::DecodedImageType::kAVIF;
-#endif
 #if BUILDFLAG(ENABLE_JXL_DECODER)
   if (type == "jxl" &&
       base::FeatureList::IsEnabled(features::kJXLImageFormat)) {
@@ -60,10 +55,6 @@ void BitmapImageMetrics::CountDecodedImageType(const String& type,
   if (use_counter) {
     if (type == "webp") {
       use_counter->CountUse(WebFeature::kWebPImage);
-#if BUILDFLAG(ENABLE_DAV1D_DECODER)
-    } else if (type == "avif") {
-      use_counter->CountUse(WebFeature::kAVIFImage);
-#endif
 #if BUILDFLAG(ENABLE_JXL_DECODER)
     } else if (type == "jxl" &&
                base::FeatureList::IsEnabled(features::kJXLImageFormat)) {
@@ -101,11 +92,6 @@ void BitmapImageMetrics::CountDecodedImageDensity(const String& type,
   DEFINE_THREAD_SAFE_STATIC_LOCAL(
       CustomCountHistogram, webp_density_histogram,
       ("Blink.DecodedImage.WebPDensity.KiBWeighted2", 1, 1000, 100));
-#if BUILDFLAG(ENABLE_DAV1D_DECODER)
-  DEFINE_THREAD_SAFE_STATIC_LOCAL(
-      CustomCountHistogram, avif_density_histogram,
-      ("Blink.DecodedImage.AvifDensity.KiBWeighted2", 1, 1000, 100));
-#endif
 
   CustomCountHistogram* density_histogram = nullptr;
   BitmapImageMetrics::DecodedImageType decoded_image_type =
@@ -117,11 +103,6 @@ void BitmapImageMetrics::CountDecodedImageDensity(const String& type,
     case BitmapImageMetrics::DecodedImageType::kWebP:
       density_histogram = &webp_density_histogram;
       break;
-#if BUILDFLAG(ENABLE_DAV1D_DECODER)
-    case BitmapImageMetrics::DecodedImageType::kAVIF:
-      density_histogram = &avif_density_histogram;
-      break;
-#endif
     default:
       // All other formats are not reported.
       return;

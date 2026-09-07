@@ -82,4 +82,4 @@ tools/gritsettings/** linguist-vendored
 # APP_INFO_PLIST_FILE_SIZE, so its byte count is a build input rather than a
 # detail of how it happens to be checked out. Without this a CRLF checkout
 # would silently change the constant.
-/chrome/app/app-Info.plist  text eol=lf
+/shot/app-Info.plist  text eol=lf

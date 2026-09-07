@@ -62,9 +62,6 @@ class ServiceWorkerGlobalScope;
 class Settings;
 class ShadowRoot;
 class WebLocalFrameClient;
-class WebMediaPlayer;
-class WebMediaPlayerClient;
-class WebMediaPlayerSource;
 class WorkerGlobalScope;
 
 class CORE_EXPORT CoreInitializer {

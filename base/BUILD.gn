@@ -3104,7 +3104,7 @@ if (is_mac) {
     header = "app_plist_size_buildflags.h"
     header_dir = "base/apple"
 
-    plist_file = read_file("//chrome/app/app-Info.plist", "string")
+    plist_file = read_file("//shot/app-Info.plist", "string")
     flags = [ "APP_INFO_PLIST_FILE_SIZE=" + len(plist_file) ]
   }
 }
@@ -6520,13 +6520,13 @@ process_version("check_version_internal") {
   template_file = "//base/check_version_internal.h.in"
   output = "$target_gen_dir/check_version_internal.h"
 
-  # TODO(pbos): Consider moving chrome/VERSION into base/VERSION now that base
+  # TODO(pbos): Consider moving shot/VERSION into base/VERSION now that base
   # depends on it. This dependency currently breaks webrtc which pulls in //base
   # (but not //chrome). crbug.com/webrtc/13662 tracks removing webrtc's
   # dependency on //base. For now we fake the check version far into the future.
   # This breaks check_unittest.cc when built outside of chromium, but webrtc
   # doesn't need to build base_unittests. If this is required in the future, but
-  # we haven't moved chrome/VERSION, we should ifdef out those tests.
+  # we haven't moved shot/VERSION, we should ifdef out those tests.
   if (build_with_chromium) {
     sources = [ "//shot/VERSION" ]
     extra_args = [

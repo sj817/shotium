@@ -4,7 +4,6 @@
 
 #include "third_party/blink/renderer/core/layout/pagination_utils.h"
 
-#include "printing/mojom/print.mojom-blink.h"
 #include "third_party/blink/public/web/web_print_page_description.h"
 #include "third_party/blink/public/web/web_print_params.h"
 #include "third_party/blink/renderer/core/css/resolver/style_resolver.h"
@@ -28,11 +27,11 @@ namespace {
 
 bool ShouldCenterPageOnPaper(const WebPrintParams& params) {
   if (params.print_scaling_option ==
-      printing::mojom::blink::PrintScalingOption::kCenterShrinkToFitPaper) {
+      PrintScalingOption::kCenterShrinkToFitPaper) {
     return true;
   }
   DCHECK(params.print_scaling_option ==
-         printing::mojom::blink::PrintScalingOption::kSourceSize);
+         PrintScalingOption::kSourceSize);
   return false;
 }
 

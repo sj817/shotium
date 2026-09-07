@@ -185,15 +185,9 @@ void CueTimeline::TimeMarchesOn() {
   // media element (not the disabled ones) whose start times are less than or
   // equal to the current playback position and whose end times are greater
   // than the current playback position.
+  // Without a playback clock there are no active media cues. Keep the
+  // existing clearing and track-DOM bookkeeping below.
   CueList current_cues;
-
-  // The user agent must synchronously unset [the text track cue active] flag
-  // whenever ... the media element's readyState is changed back to
-  // kHaveNothing.
-  if (media_element.getReadyState() != HTMLMediaElement::kHaveNothing &&
-      media_element.GetWebMediaPlayer()) {
-    current_cues = cue_tree_.AllOverlaps(movie_time, movie_time);
-  }
 
   CueList previous_cues;
 

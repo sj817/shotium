@@ -105,10 +105,8 @@ class NET_EXPORT URLRequestContextBuilder {
     enum Type {
       // In-memory cache.
       IN_MEMORY,
-      // Disk cache using "default" backend.
+      // Disk cache using the default Simple backend.
       DISK,
-      // Disk cache using "blockfile" backend (BackendImpl).
-      DISK_BLOCKFILE,
       // Disk cache using "simple" backend (SimpleBackendImpl).
       DISK_SIMPLE,
     };

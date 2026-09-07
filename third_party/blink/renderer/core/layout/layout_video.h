@@ -73,7 +73,6 @@ class CORE_EXPORT LayoutVideo final : public LayoutMedia {
  private:
   void UpdateAfterLayout() final;
   void UpdateFromElement() final;
-  void InvalidateCompositing();
 
   PhysicalNaturalSizingInfo GetNaturalDimensions() const override;
   void UpdateNaturalSize();

@@ -24,10 +24,8 @@ import subprocess
 import sys
 import tempfile
 import re
-import itertools
 
 PROTOC_INCLUDE_POINT = "// @@protoc_insertion_point(includes)"
-
 
 def FormatGeneratorOptions(options):
   if not options:
@@ -36,41 +34,17 @@ def FormatGeneratorOptions(options):
     return options
   return options + ":"
 
-
 def VerifyProtoNames(protos):
   for filename in protos:
     if "-" in filename:
       raise RuntimeError("Proto file names must not contain hyphens "
                          "(see http://crbug.com/386125 for more information).")
 
-
 def StripProtoExtension(filename):
   if not filename.endswith(".proto"):
     raise RuntimeError("Invalid proto filename extension: "
                        "{0} .".format(filename))
   return filename.rsplit(".", 1)[0]
-
-
-# Rewrites import lines containing '@bufbuild/protobuf/*' to
-# '/@bufbuild/protobuf/*/index.js' in generated .ts files.
-def RewriteImports(ts_files):
-  for file_path in ts_files:
-    try:
-      with open(file_path, 'r+', encoding='utf-8') as f:
-        lines = f.readlines()
-        modified = False
-        for i, line in enumerate(itertools.islice(lines, 50)):
-          if "@bufbuild/protobuf/" in line:
-            lines[i] = re.sub(r"'@bufbuild\/protobuf\/(\w+)'",
-                              r"'/@bufbuild/protobuf/\1/index.js'", line)
-            modified = True
-        if modified:
-          f.seek(0)
-          f.writelines(lines)
-          f.truncate()
-    except FileNotFoundError:
-      print(f"Error: File not found at path: {file_path}")
-
 
 def WriteIncludes(headers, include):
   for filename in headers:
@@ -95,7 +69,6 @@ def WriteIncludes(headers, include):
       for line in contents:
         print(line, file=f)
 
-
 def main(argv):
   parser = argparse.ArgumentParser()
   parser.add_argument("--protoc", required=True,
@@ -107,15 +80,6 @@ def main(argv):
                       help="Output directory for standard C++ generator.")
   parser.add_argument("--py-out-dir",
                       help="Output directory for standard Python generator.")
-  parser.add_argument("--js-out-dir",
-                      help="Output directory for standard JS generator.")
-  parser.add_argument("--protoc-gen-js",
-                      help="Relative path to javascript compiler.")
-  parser.add_argument("--ts-out-dir",
-                      help="Output directory for standard TS generator.")
-  parser.add_argument("--protoc-gen-ts",
-                      help="Relative path to typescript compiler.")
-
   parser.add_argument("--plugin-out-dir",
                       help="Output directory for custom generator plugin.")
 
@@ -158,7 +122,6 @@ def main(argv):
 
   protos = options.protos
   headers = []
-  ts_protos = []
   VerifyProtoNames(protos)
 
   if options.fatal_warnings:
@@ -166,24 +129,6 @@ def main(argv):
 
   if options.py_out_dir:
     protoc_cmd += ["--python_out", options.py_out_dir]
-
-  if options.js_out_dir:
-    protoc_cmd += [
-        "--js_out",
-        "one_output_file_per_input_file,binary:" + options.js_out_dir,
-        "--plugin=protoc-gen-js=" + os.path.realpath(options.protoc_gen_js),
-    ]
-  if options.ts_out_dir:
-    protoc_cmd += [
-        "--ts_proto_out=" + options.ts_out_dir,
-        "--ts_proto_opt=env=browser,esModuleInterop=true,importSuffix=.js",
-        "--ts_proto_opt=useOptionals=all",
-        "--plugin=protoc-gen-ts_proto=" +
-        os.path.realpath(options.protoc_gen_ts),
-    ]
-    for filename in protos:
-      stripped_name = StripProtoExtension(filename)
-      ts_protos.append(os.path.join(options.ts_out_dir, stripped_name + ".ts"))
 
   if options.cc_out_dir:
     cc_out_dir = options.cc_out_dir
@@ -251,11 +196,8 @@ def main(argv):
     with open(options.descriptor_set_dependency_file, 'w') as f:
       f.write(dependency_file_data)
 
-  RewriteImports(ts_protos)
-
   if options.include:
     WriteIncludes(headers, options.include)
-
 
 if __name__ == "__main__":
   try:

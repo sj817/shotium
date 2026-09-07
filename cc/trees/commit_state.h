@@ -17,7 +17,6 @@
 #include "base/memory/raw_ptr.h"
 #include "base/memory/raw_ptr_exclusion.h"
 #include "base/time/time.h"
-#include "cc/benchmarks/micro_benchmark_impl.h"
 #include "cc/cc_export.h"
 #include "cc/debug/layer_tree_debug_state.h"
 #include "cc/input/event_listener_properties.h"
@@ -159,8 +158,6 @@ struct CC_EXPORT CommitState {
       pending_presentation_callbacks;
   std::vector<PresentationTimeCallbackBuffer::SuccessfulCallbackWithDetails>
       pending_successful_presentation_callbacks;
-
-  std::vector<std::unique_ptr<MicroBenchmarkImpl>> benchmarks;
 
   // A list of view transitions that need to be transported from Blink to
   // Viz, as a CompositorFrameTransitionDirective.

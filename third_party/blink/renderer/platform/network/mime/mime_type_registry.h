@@ -41,7 +41,6 @@ class PLATFORM_EXPORT MIMETypeRegistry {
 
  public:
   // For Media MIME type checks.
-  enum SupportsType { kNotSupported, kSupported, kMaybeSupported };
 
   static String GetMIMETypeForExtension(const StringView& extension);
   static String GetWellKnownMIMETypeForExtension(const StringView& extension);
@@ -75,26 +74,6 @@ class PLATFORM_EXPORT MIMETypeRegistry {
   // Checks to see if a non-image mime type is suitable for being loaded as a
   // document in a frame. Includes supported JavaScript MIME types.
   static bool IsSupportedNonImageMIMEType(const String& mime_type);
-
-  // Checks to see if the mime type and codecs are supported media MIME types.
-  static bool IsSupportedMediaMIMEType(const String& mime_type,
-                                       const String& codecs);
-
-  // Does similar to isSupportedMediaMIMEType, but returns a little more
-  // detailed information in SupportsType enum.
-  static SupportsType SupportsMediaMIMEType(const String& mime_type,
-                                            const String& codecs);
-
-  // Checks to see if the mime type and codecs are supported by the MediaSource
-  // implementation.
-  // kNotSupported indicates definitive lack of support.
-  // kSupported indicates the mime type is supported, any non-empty codecs
-  // requirement is met for the mime type, and all of the passed codecs are
-  // supported for the mime type.
-  // kMaybeSupported indicates the mime type is supported, but the mime type
-  // requires a codecs parameter that is missing.
-  static SupportsType SupportsMediaSourceMIMEType(const String& mime_type,
-                                                  const String& codecs);
 
   // Checks to see if a mime type is a valid Java applet mime type
   static bool IsJavaAppletMIMEType(const String& mime_type);

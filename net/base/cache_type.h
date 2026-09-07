@@ -5,7 +5,6 @@
 #ifndef NET_BASE_CACHE_TYPE_H_
 #define NET_BASE_CACHE_TYPE_H_
 
-
 namespace net {
 
 // The types of caches that can be created.
@@ -29,7 +28,6 @@ enum CacheType {
 // The types of disk cache backend, only used at backend instantiation.
 enum BackendType {
   CACHE_BACKEND_DEFAULT,
-  CACHE_BACKEND_BLOCKFILE,  // The |BackendImpl|.
   CACHE_BACKEND_SIMPLE,     // The |SimpleBackendImpl|.
 };
 

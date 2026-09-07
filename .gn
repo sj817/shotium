@@ -134,8 +134,6 @@ exec_script_allowlist =
       # Was //chrome/version.gni before //chrome was deleted.
       "//build/util/version_vars.gni",
 
-      "//printing/BUILD.gn",
-
       "//remoting/host/installer/linux/BUILD.gn",
       "//remoting/remoting_version.gni",
       "//remoting/host/installer/win/generate_clsids.gni",

@@ -109,7 +109,6 @@ struct WebConsoleMessage;
 struct WebPolicyContainer;
 struct WebPrintPageDescription;
 struct WebPrintParams;
-struct WebPrintPresetOptions;
 
 #if BUILDFLAG(IS_WIN)
 struct WebFontFamilyNames;
@@ -712,11 +711,6 @@ class BLINK_EXPORT WebLocalFrame : public WebFrame {
   // this frame from the owner WebView.
   // This function should be called after pairs of PrintBegin() and PrintEnd().
   virtual void DispatchAfterPrintEvent() = 0;
-
-  // Returns true on success and sets the out parameter to the print preset
-  // options for the document.
-  virtual bool GetPrintPresetOptionsForPlugin(const WebNode&,
-                                              WebPrintPresetOptions*) = 0;
 
   // Paint Preview ------------------------------------------------------------
 

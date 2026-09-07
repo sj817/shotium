@@ -50,7 +50,6 @@ class LayerImpl;
 class LayerTreeHost;
 class LayerTreeHostCommon;
 class LayerTreeImpl;
-class MicroBenchmark;
 class PictureLayer;
 class PropertyTrees;
 
@@ -288,7 +287,6 @@ class CC_EXPORT Layer : public base::RefCounted<Layer>,
   // If this returns true, then `SetNeedsDisplay` will be called in response to
   // the HDR headroom of the display that the content is rendering to changing.
   virtual bool RequiresSetNeedsDisplayOnHdrHeadroomChange() const;
-
 
   // For layer tree mode only.
   // Set or get the rounded corner radii which is applied to the layer and its
@@ -737,13 +735,6 @@ class CC_EXPORT Layer : public base::RefCounted<Layer>,
   const LayerDebugInfo* debug_info() const { return debug_info_.Read(*this); }
   LayerDebugInfo& EnsureDebugInfo();
   void ClearDebugInfo();
-
-  // For telemetry testing. Runs a given test behaviour implemented in
-  // |benchmark| for this layer. The base class does nothing as benchmarks
-  // only exist for subclass layer types. For each subclass that the
-  // MicroBenchmark supports, the class should override this method and run the
-  // |benchmark| against this layer.
-  virtual void RunMicroBenchmark(MicroBenchmark* benchmark);
 
   // Internal method to create the compositor thread type for this Layer.
   // Subclasses should override this method if they want to return their own

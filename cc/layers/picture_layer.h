@@ -11,7 +11,6 @@
 #include "base/memory/raw_ptr.h"
 #include "cc/base/devtools_instrumentation.h"
 #include "cc/base/invalidation_region.h"
-#include "cc/benchmarks/micro_benchmark_controller.h"
 #include "cc/layers/layer.h"
 #include "cc/layers/recording_source.h"
 
@@ -41,7 +40,6 @@ class CC_EXPORT PictureLayer : public Layer {
   bool RequiresSetNeedsDisplayOnHdrHeadroomChange() const override;
   sk_sp<const SkPicture> GetPicture() const override;
   bool Update() override;
-  void RunMicroBenchmark(MicroBenchmark* benchmark) override;
   void CaptureContent(const gfx::Rect& rect,
                       std::vector<NodeInfo>* content) const override;
 

@@ -44,7 +44,6 @@
 #include "build/build_config.h"
 #include "cc/layers/picture_layer.h"
 #include "components/viz/common/features.h"
-#include "media/base/media_switches.h"
 #include "third_party/blink/public/common/associated_interfaces/associated_interface_provider.h"
 #include "third_party/blink/public/common/features.h"
 #include "third_party/blink/public/common/fingerprinting_protection/noise_token.h"
@@ -65,7 +64,6 @@
 #include "third_party/blink/public/platform/interface_registry.h"
 #include "third_party/blink/public/platform/platform.h"
 #include "third_party/blink/public/platform/web_font_prewarmer.h"
-#include "third_party/blink/public/platform/web_media_player.h"
 #include "third_party/blink/public/platform/web_network_state_notifier.h"
 #include "third_party/blink/public/platform/web_runtime_features.h"
 #include "third_party/blink/public/platform/web_text_input_info.h"
@@ -4048,7 +4046,6 @@ void WebViewImpl::OutermostMainFrameScrollOffsetChanged() {
     SetDeviceEmulationTransform(device_emulation_transform);
   }
 }
-
 
 void WebViewImpl::SetBackgroundColorOverrideForFullscreenController(
     std::optional<SkColor> optional_color) {

@@ -524,9 +524,6 @@ std::unique_ptr<URLRequestContext> URLRequestContextBuilder::Build() {
         case HttpCacheParams::DISK:
           backend_type = CACHE_BACKEND_DEFAULT;
           break;
-        case HttpCacheParams::DISK_BLOCKFILE:
-          backend_type = CACHE_BACKEND_BLOCKFILE;
-          break;
         case HttpCacheParams::DISK_SIMPLE:
           backend_type = CACHE_BACKEND_SIMPLE;
           break;

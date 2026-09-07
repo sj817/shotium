@@ -58,7 +58,6 @@ class AppendQuadsData;
 struct AppendQuadsContext;
 struct LayerDebugInfo;
 class LayerTreeImpl;
-class MicroBenchmarkImpl;
 class PrioritizedTile;
 class SimpleEnclosedRegion;
 class Tile;
@@ -471,8 +470,6 @@ class CC_EXPORT LayerImpl {
   // visible layer properties on the pending tree.
   void SetNeedsPushProperties(uint8_t changed_props = kChangedGeneralProperty);
   bool needs_push_properties() const { return needs_push_properties_; }
-
-  virtual void RunMicroBenchmark(MicroBenchmarkImpl* benchmark);
 
   void UpdateDebugInfo(LayerDebugInfo* debug_info);
 

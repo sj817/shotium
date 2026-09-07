@@ -6,7 +6,6 @@
 
 #include <utility>
 
-#include "base/barrier_closure.h"
 #include "base/files/file_path.h"
 #include "base/files/file_util.h"
 #include "base/functional/bind.h"
@@ -27,7 +26,6 @@
 #include "net/base/net_errors.h"
 #include "net/disk_cache/backend_cleanup_tracker.h"
 #include "net/disk_cache/basic_cache_file.h"
-#include "net/disk_cache/blockfile/backend_impl.h"
 #include "net/disk_cache/cache_encryption_delegate.h"
 #include "net/disk_cache/cache_util.h"
 #include "net/disk_cache/disk_cache.h"
@@ -36,7 +34,6 @@
 #include "net/disk_cache/simple/simple_file_enumerator.h"
 #include "net/disk_cache/simple/simple_util.h"
 #include "net/disk_cache/trivial_cache_entry_hasher.h"
-
 
 namespace {
 
@@ -151,11 +148,6 @@ CacheCreator::CacheCreator(
 CacheCreator::~CacheCreator() = default;
 
 void CacheCreator::Run() {
-#if BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_FUCHSIA)
-  static const bool kSimpleBackendIsDefault = true;
-#else
-  static const bool kSimpleBackendIsDefault = false;
-#endif
   if (!retry_ && reset_handling_ == disk_cache::ResetHandling::kReset) {
     // Pretend that we failed to create a cache, so that we can handle `kReset`
     // and `kResetOnError` in a unified way, in CacheCreator::OnIOComplete.
@@ -163,8 +155,7 @@ void CacheCreator::Run() {
     return;
   }
   if (backend_type_ == net::CACHE_BACKEND_SIMPLE ||
-      (backend_type_ == net::CACHE_BACKEND_DEFAULT &&
-       kSimpleBackendIsDefault)) {
+      backend_type_ == net::CACHE_BACKEND_DEFAULT) {
     std::unique_ptr<disk_cache::CacheEntryHasher> cache_entry_hasher;
     if (cache_encryption_delegate_) {
       cache_entry_hasher = cache_encryption_delegate_->GetCacheEntryHasher();
@@ -192,23 +183,7 @@ void CacheCreator::Run() {
     return;
   }
 
-
-// Avoid references to blockfile functions on Android to reduce binary size.
-#if BUILDFLAG(IS_ANDROID)
   FailAttempt();
-#else
-  auto cache = std::make_unique<disk_cache::BackendImpl>(
-      path_, cleanup_tracker_.get(),
-      /*cache_thread = */ nullptr, type_, net_log_);
-  disk_cache::BackendImpl* new_cache = cache.get();
-  created_cache_ = std::move(cache);
-  if (!new_cache->SetMaxSize(max_bytes_)) {
-    FailAttempt();
-    return;
-  }
-  new_cache->Init(
-      base::BindOnce(&CacheCreator::OnIOComplete, base::Unretained(this)));
-#endif
 }
 
 void CacheCreator::FailAttempt() {
@@ -515,19 +490,13 @@ void FlushCacheThreadForTesting() {
   // For simple backend.
   base::ThreadPoolInstance::Get()->FlushForTesting();
 
-  // Block backend.
-  BackendImpl::FlushForTesting();
 }
 
 void FlushCacheThreadAsynchronouslyForTesting(base::OnceClosure callback) {
-  auto repeating_callback = base::BarrierClosure(2, std::move(callback));
-
   // For simple backend.
   base::ThreadPoolInstance::Get()->FlushAsyncForTesting(  // IN-TEST
-      base::BindPostTaskToCurrentDefault(repeating_callback));
+      base::BindPostTaskToCurrentDefault(std::move(callback)));
 
-  // Block backend.
-  BackendImpl::FlushAsynchronouslyForTesting(repeating_callback);
 }
 
 void WaitForBackendCleanupForTesting(const base::FilePath& path,  // IN-TEST

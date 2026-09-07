@@ -66,7 +66,6 @@ class WebDragData;
 class WebPluginContainer;
 class WebURLResponse;
 struct WebPrintParams;
-struct WebPrintPresetOptions;
 struct WebURLError;
 
 class WebPlugin {
@@ -152,12 +151,6 @@ class WebPlugin {
   // Whether the plugin supports its own paginated print. The other print
   // interface methods are called only if this method returns true.
   virtual bool SupportsPaginatedPrint() { return false; }
-  // Returns true on success and sets the out parameter to the print preset
-  // options for the document.
-  virtual bool GetPrintPresetOptionsFromDocument(WebPrintPresetOptions*) {
-    return false;
-  }
-
   // Begins a print session with the given `print_params`. A call to
   // `PrintPage()` can only be made after after a successful call to
   // `PrintBegin()`. Returns the number of pages required for the print output.

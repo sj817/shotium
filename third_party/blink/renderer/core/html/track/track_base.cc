@@ -34,7 +34,7 @@
 
 namespace blink {
 
-TrackBase::TrackBase(WebMediaPlayer::TrackType type,
+TrackBase::TrackBase(TrackType type,
                      const AtomicString& label,
                      const AtomicString& language,
                      const String& id)

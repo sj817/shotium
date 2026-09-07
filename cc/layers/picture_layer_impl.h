@@ -35,7 +35,6 @@
 namespace cc {
 
 class AppendQuadsData;
-class MicroBenchmarkImpl;
 class Tile;
 
 class CC_EXPORT PictureLayerImpl
@@ -114,8 +113,6 @@ class CC_EXPORT PictureLayerImpl
   // Mask-related functions.
 
   size_t GPUMemoryUsageInBytes() const override;
-
-  void RunMicroBenchmark(MicroBenchmarkImpl* benchmark) override;
 
   bool CanHaveTilings() const;
 

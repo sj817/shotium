@@ -46,7 +46,6 @@
 #include "cc/layers/heads_up_display_layer_impl.h"
 #include "cc/layers/layer.h"
 #include "cc/layers/painted_scrollbar_layer.h"
-#include "cc/metrics/ukm_dropped_frames_data.h"
 #include "cc/paint/paint_worklet_layer_painter.h"
 #include "cc/resources/ui_resource_manager.h"
 #include "cc/tiles/raster_dark_mode_filter.h"
@@ -140,8 +139,7 @@ std::unique_ptr<LayerTreeHost> LayerTreeHost::CreateSingleThreaded(
 }
 
 LayerTreeHost::LayerTreeHost(InitParams params, CompositorMode mode)
-    : micro_benchmark_controller_(this),
-      image_worker_task_runner_(std::move(params.image_worker_task_runner)),
+    : image_worker_task_runner_(std::move(params.image_worker_task_runner)),
       compositor_mode_(mode),
       ui_resource_manager_(std::make_unique<UIResourceManager>()),
       client_(params.client),
@@ -494,8 +492,6 @@ std::unique_ptr<CommitState> LayerTreeHost::WillCommit(
       ui_resource_manager_->TakeUIResourcesRequests();
   activated_commit_state->ui_resource_sizes =
       ui_resource_manager_->GetUIResourceSizes();
-  activated_commit_state->benchmarks =
-      micro_benchmark_controller_.CreateImplBenchmarks();
 
   commit_completion_event_ = std::move(completion);
   return activated_commit_state;
@@ -793,7 +789,6 @@ void LayerTreeHost::OnDeferCommitsChanged(bool defer_status,
   client_->OnDeferCommitsChanged(defer_status, reason);
 }
 
-
 ScopedRequestHighFramerate::ScopedRequestHighFramerate(LayerTreeHost* host)
     : host_(host->weak_ptr_factory_.GetWeakPtr()) {
   host->SetRequestHighFramerate(true);
@@ -965,7 +960,6 @@ bool LayerTreeHost::UpdateLayers() {
   client_->WillUpdateLayers();
   bool result = DoUpdateLayers();
   client_->DidUpdateLayers();
-  micro_benchmark_controller_.DidUpdateLayers();
 
   base::TimeDelta elapsed_delta = timer.Elapsed();
   if (pending_commit_state()->begin_main_frame_metrics) {
@@ -1311,21 +1305,6 @@ void LayerTreeHost::AnimateLayers(base::TimeTicks monotonic_time) {
     // A commit is required to push animation changes to the compositor.
     SetNeedsCommit();
   }
-}
-
-int LayerTreeHost::ScheduleMicroBenchmark(
-    const std::string& benchmark_name,
-    base::DictValue settings,
-    MicroBenchmark::DoneCallback callback) {
-  DCHECK(IsMainThread());
-  return micro_benchmark_controller_.ScheduleRun(
-      benchmark_name, std::move(settings), std::move(callback));
-}
-
-bool LayerTreeHost::SendMessageToMicroBenchmark(int id,
-                                                base::DictValue message) {
-  DCHECK(IsMainThread());
-  return micro_benchmark_controller_.SendMessage(id, std::move(message));
 }
 
 void LayerTreeHost::SetLayerTreeMutator(

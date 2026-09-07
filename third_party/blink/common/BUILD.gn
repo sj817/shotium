@@ -304,7 +304,7 @@ shot_compatible_source_set("common") {
 
   # If use_blink is used then it needs to depend on //media
   if (use_blink) {
-    deps += [ "//media" ]
+    deps += []
   }
 
   if (is_android) {
@@ -335,7 +335,7 @@ test("blink_common_unittests") {
     "//ui/gfx:test_support",
   ]
   if (is_android) {
-    deps += [ "//media/base/android:media_java" ]
+    deps += []
   }
   if (is_ios) {
     bundle_deps = [ ":blink_common_unittests_pak_bundle_data" ]

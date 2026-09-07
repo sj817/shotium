@@ -66,7 +66,7 @@ source_set("ipc_common_sources") {
     ]
   }
   if (is_android) {
-    visibility += [ "//media/gpu" ]
+    visibility += []
   }
 
   configs += [
@@ -661,7 +661,7 @@ mojom("gpu_preferences_interface") {
         },
       ]
       traits_headers = [ "gpu_preferences_mojom_traits.h" ]
-      traits_public_deps = [ "//media:media_buildflags" ]
+      traits_public_deps = []
       if (use_ozone) {
         traits_public_deps += [ "//ui/base:features" ]
       }

@@ -143,10 +143,6 @@ void ClientLayerTreeHostImpl::FinishCommit(
                      std::get<2>(entry));
   }
 
-  for (auto& benchmark : state.benchmarks) {
-    ScheduleMicroBenchmark(std::move(benchmark));
-  }
-
   new_local_surface_id_expected_ = false;
 
   // Dump property trees and layers if VerboseLogEnabled().
@@ -241,8 +237,6 @@ void ClientLayerTreeHostImpl::CommitComplete() {
     tile_manager_.decoded_image_tracker().SetSyncTreeFrameNumber(
         sync_tree()->source_frame_number());
   }
-
-  micro_benchmark_controller_.DidCompleteCommit();
 
   if (mutator_host_->CurrentFrameHadRAF()) {
     frame_trackers_.StartSequence(FrameSequenceTrackerType::kRAF);

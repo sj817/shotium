@@ -164,7 +164,7 @@ class CORE_EXPORT TextTrack : public EventTarget, public TrackBase {
 template <>
 struct DowncastTraits<TextTrack> {
   static bool AllowFrom(const TrackBase& track) {
-    return track.GetType() == WebMediaPlayer::kTextTrack;
+    return track.GetType() == TrackType::kTextTrack;
   }
 };
 

@@ -19,7 +19,6 @@
 #include "base/trace_event/traced_value.h"
 #include "cc/base/math_util.h"
 #include "cc/base/simple_enclosed_region.h"
-#include "cc/benchmarks/micro_benchmark_impl.h"
 #include "cc/debug/debug_colors.h"
 #include "cc/debug/layer_tree_debug_state.h"
 #include "cc/input/scroll_state.h"
@@ -920,10 +919,6 @@ std::string LayerImpl::ToString() const {
 }
 
 size_t LayerImpl::GPUMemoryUsageInBytes() const { return 0; }
-
-void LayerImpl::RunMicroBenchmark(MicroBenchmarkImpl* benchmark) {
-  benchmark->RunOnLayer(this);
-}
 
 gfx::Transform LayerImpl::DrawTransform() const {
   // Only drawn layers have up-to-date draw properties.

@@ -109,6 +109,11 @@ void SendMessageToConsoleForPossiblyNullDocument(
 }
 
 bool IsSupportedType(ResourceType resource_type, const String& mime_type) {
+  if (resource_type == ResourceType::kAudio ||
+      resource_type == ResourceType::kVideo) {
+    // There is no media decoder or playback consumer for these preloads.
+    return false;
+  }
   if (mime_type.empty())
     return true;
   switch (resource_type) {
@@ -122,7 +127,7 @@ bool IsSupportedType(ResourceType resource_type, const String& mime_type) {
       return MIMETypeRegistry::IsSupportedFontMIMEType(mime_type);
     case ResourceType::kAudio:
     case ResourceType::kVideo:
-      return MIMETypeRegistry::IsSupportedMediaMIMEType(mime_type, String());
+      return false;
     case ResourceType::kTextTrack:
       return MIMETypeRegistry::IsSupportedTextTrackMIMEType(mime_type);
     case ResourceType::kRaw:

@@ -31,7 +31,7 @@ declare_args() {
   enable_mojom_typemapping = true
 
   # Controls message ID scrambling behavior. If |true|, message IDs are
-  # scrambled (i.e. randomized based on the contents of //chrome/VERSION) on
+  # scrambled (i.e. randomized based on the contents of //shot/VERSION) on
   # non-Chrome OS desktop platforms. Enabled on official builds by default.
   # Set to |true| to enable message ID scrambling on a specific build.
   # See also `enable_scrambled_message_ids` below for more details.

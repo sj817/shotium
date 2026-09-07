@@ -95,9 +95,7 @@ class TextTrackList;
 class TimeRanges;
 class VideoTrack;
 class VideoTrackList;
-class V8CanPlayTypeResult;
 class V8TextTrackKind;
-class WebMediaPlayer;
 
 class CORE_EXPORT HTMLMediaElement
     : public HTMLElement,
@@ -114,8 +112,6 @@ class CORE_EXPORT HTMLMediaElement
 
   bool IsMediaElement() const override { return true; }
 
-  static MIMETypeRegistry::SupportsType GetSupportsType(const ContentType&);
-
   static bool IsHLSURL(const KURL&);
 
   // Called by Page when the "media controls enabled" setting changes. Used
@@ -125,10 +121,6 @@ class CORE_EXPORT HTMLMediaElement
   static void OnMediaControlsEnabledChange(Document*);
 
   void Trace(Visitor*) const override;
-
-  // There is no media playback pipeline in this build, so there is no
-  // WebMediaPlayer to return; see the file comment.
-  WebMediaPlayer* GetWebMediaPlayer() const { return nullptr; }
 
   // Returns true if the loaded media has a video/audio track. Always false:
   // without a player nothing is ever demuxed, so no track is ever reported.
@@ -171,7 +163,6 @@ class CORE_EXPORT HTMLMediaElement
 
   TimeRanges* buffered() const;
   void load();
-  V8CanPlayTypeResult canPlayType(const String& mime_type) const;
 
   // ready state
   enum ReadyState {

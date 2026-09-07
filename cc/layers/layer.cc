@@ -1750,8 +1750,6 @@ void Layer::AddDrawableDescendants(int num) {
     mutable_parent()->AddDrawableDescendants(num);
 }
 
-void Layer::RunMicroBenchmark(MicroBenchmark* benchmark) {}
-
 void Layer::SetElementId(ElementId id) {
   DCHECK(IsPropertyChangeAllowed());
   if (inputs_.Read(*this).element_id == id)

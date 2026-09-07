@@ -66,29 +66,6 @@ shot_jumbo_excluded_dirs = [
 # effect" error.
 icu_use_data_file = false
 
-# //media's software codec dependencies. third_party/ffmpeg, third_party/libvpx
-# and third_party/dav1d were deleted, but the buildflags they gate defaulted to
-# true, so media/base/media.cc still tried to include ffmpeg_features.h and
-# supported_types.cc still asked libvpx which VP9 profiles it was built with.
-#
-# Turning the args off is the fix rather than editing those files: the #if
-# blocks are exactly the mechanism upstream provides for a build without these
-# codecs, and IsDecoderVp9ProfileSupported() answering "no" is then true rather
-# than assumed. A screenshot of a static page decodes no video.
-media_use_ffmpeg = false
-media_use_libvpx = false
-media_use_symphonia = false
-
-# AVIF still images. blink's AVIFImageDecoder is written against crabbyavif, and
-# third_party/crabbyavif is not in this checkout. enable_dav1d_decoder defaults
-# to use_blink, so the decoder was compiling with no library behind it.
-#
-# Every reference to it in image_decoder.cc -- the include, the signature sniff,
-# the "image/avif" branch of Create() -- is already inside
-# BUILDFLAG(ENABLE_DAV1D_DECODER), so turning the arg off removes the format
-# cleanly. The corpus is PNG and JPEG; those decoders are unaffected.
-enable_dav1d_decoder = false
-
 # base::TraceLog's protobuf-to-legacy-JSON converter. This is perfetto's trace
 # processor -- a SQLite-backed query engine for trace files -- and it is in
 # base only so that a tracing session can be handed back as legacy JSON.

@@ -263,9 +263,9 @@ async function trackedFiles(): Promise<string[]> {
 // Rule 2. Directories end with '/'; files match exactly.
 const whitelist = [
   '.clang-format', '.rustfmt.toml',
-  // build/compute_build_timestamp.py open()s chrome/VERSION from inside an
+  // build/compute_build_timestamp.py open()s shot/VERSION from inside an
   // exec_script, which no graph records.
-  'chrome/VERSION',
+  'shot/VERSION',
   // build/win/set_appcontainer_acls.py appends testing/scripts to sys.path and
   // imports common, which imports test_env (and xvfb on Linux) from testing/;
   // an import is not an input either.

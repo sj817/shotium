@@ -13,7 +13,6 @@
 #include "cc/metrics/frame_info.h"
 #include "cc/metrics/frame_sequence_metrics.h"
 #include "cc/metrics/frame_sequence_tracker.h"
-#include "cc/metrics/ukm_dropped_frames_data.h"
 
 namespace cc {
 

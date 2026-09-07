@@ -17,7 +17,6 @@
 #include "cc/metrics/frame_info.h"
 #include "cc/metrics/frame_sequence_metrics.h"
 #include "cc/metrics/frame_sorter.h"
-#include "cc/metrics/ukm_dropped_frames_data.h"
 
 namespace viz {
 struct BeginFrameArgs;
@@ -173,8 +172,6 @@ class CC_EXPORT FrameSequenceTrackerCollection : public FrameSorterObserver {
   std::map<base::TimeTicks, FrameInfo::SmoothEffectDrivingThread>
       scroll_thread_history_;
 
-  // Pointer to shared memory map for PDF4 UKMs
-  raw_ptr<UkmDroppedFramesDataShared> ukm_dropped_frames_data_ = nullptr;
 };
 
 }  // namespace cc

@@ -189,10 +189,6 @@ void PictureLayer::SetIsBackdropFilterMask(bool is_backdrop_filter_mask) {
   SetNeedsCommit();
 }
 
-void PictureLayer::RunMicroBenchmark(MicroBenchmark* benchmark) {
-  benchmark->RunOnLayer(this);
-}
-
 void PictureLayer::CaptureContent(const gfx::Rect& rect,
                                   std::vector<NodeInfo>* content) const {
   if (!draws_content())

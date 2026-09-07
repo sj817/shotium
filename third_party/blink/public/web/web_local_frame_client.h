@@ -40,9 +40,6 @@
 #include "base/i18n/rtl.h"
 #include "base/notreached.h"
 #include "base/unguessable_token.h"
-#include "media/base/audio_processing.h"
-#include "media/base/output_device_info.h"
-#include "media/base/speech_recognition_client.h"
 #include "services/network/public/cpp/permissions_policy/permissions_policy_declaration.h"
 #include "services/network/public/mojom/web_sandbox_flags.mojom-shared.h"
 #include "third_party/blink/public/common/dom_storage/session_storage_namespace_id.h"
@@ -71,7 +68,6 @@
 #include "third_party/blink/public/platform/web_content_settings_client.h"
 #include "third_party/blink/public/platform/web_effective_connection_type.h"
 #include "third_party/blink/public/platform/web_file_system_type.h"
-#include "third_party/blink/public/platform/web_media_player.h"
 #include "third_party/blink/public/platform/web_prescient_networking.h"
 #include "third_party/blink/public/platform/web_set_sink_id_callbacks.h"
 #include "third_party/blink/public/platform/web_source_location.h"
@@ -116,15 +112,10 @@ enum class TreeScopeType;
 
 class AssociatedInterfaceProvider;
 class WebBackgroundResourceFetchAssets;
-class WebContentDecryptionModule;
 class WebDedicatedWorkerHostFactoryClient;
 class WebDocumentLoader;
 class WebEncryptedMediaClient;
 class WebLocalFrame;
-class WebMediaPlayer;
-class WebMediaPlayerClient;
-class WebMediaPlayerEncryptedMediaClient;
-class WebMediaPlayerSource;
 class WebMediaStreamDeviceObserver;
 class WebNavigationControl;
 class WebPlugin;
@@ -185,20 +176,6 @@ class BLINK_EXPORT WebLocalFrameClient {
   virtual WebPlugin* CreatePlugin(const WebPluginParams&) { return nullptr; }
 
   // May return null.
-  // WebContentDecryptionModule* may be null if one has not yet been set.
-  virtual std::unique_ptr<WebMediaPlayer> CreateMediaPlayer(
-      const WebMediaPlayerSource&,
-      WebMediaPlayerClient*,
-      blink::MediaInspectorContext*,
-      WebMediaPlayerEncryptedMediaClient*,
-      WebContentDecryptionModule*,
-      const WebString& sink_id,
-      const cc::LayerTreeSettings* settings,
-      scoped_refptr<base::TaskRunner> compositor_worker_task_runner) {
-    return nullptr;
-  }
-
-  // May return null.
   // CreateServiceWorkerProvider() was here. WebServiceWorkerProvider is
   // the renderer's handle to a service worker registration; a service
   // worker is a script, and nothing can register one here.
@@ -206,12 +183,6 @@ class BLINK_EXPORT WebLocalFrameClient {
   // May return null.
   virtual std::unique_ptr<WebContentSettingsClient>
   CreateWorkerContentSettingsClient() {
-    return nullptr;
-  }
-
-  // May return null if speech recognition is not supported.
-  virtual std::unique_ptr<media::SpeechRecognitionClient>
-  CreateSpeechRecognitionClient() {
     return nullptr;
   }
 
@@ -685,16 +656,6 @@ class BLINK_EXPORT WebLocalFrameClient {
   // SendAccessibilitySerialization() plumbing, and IsAccessibilityEnabled()
   // are gone.
 
-  // Audio Output Devices API --------------------------------------------
-
-  // Checks that the given audio sink exists and is authorized. This is mainly
-  // used as a testing hook, if std::nullopt is returned it will fall back
-  // checking that a sink exists.
-  virtual std::optional<media::OutputDeviceStatus>
-  CheckIfAudioSinkExistsAndIsAuthorized(const WebString& sink_id) {
-    return std::nullopt;
-  }
-
   // Visibility ----------------------------------------------------------
 
   // Overwrites the given URL to use an HTML5 embed if possible.
@@ -774,11 +735,6 @@ class BLINK_EXPORT WebLocalFrameClient {
 
   virtual void OnFrameVisibilityChanged(mojom::FrameVisibility render_status) {}
 
-  // Called after a navigation which set the shared memory region for
-  // tracking dropped frames UKM.
-  virtual void SetUpSharedMemoryForDroppedFrames(
-      base::ReadOnlySharedMemoryRegion dropped_frames_memory) {}
-
   // Returns the last commited URL used for UKM. This is slightly different
   // than the document's URL because it will contain a data URL if a base URL
   // was used for its load or if an unreachable URL was used.
@@ -814,7 +770,6 @@ class BLINK_EXPORT WebLocalFrameClient {
       const WebURL& base_url) {
     return nullptr;
   }
-
 
   virtual base::ScopedClosureRunner CreateScopedClientNavigationThrottler() {
     return {};

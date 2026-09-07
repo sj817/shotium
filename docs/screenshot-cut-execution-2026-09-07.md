@@ -57,6 +57,33 @@
 
 第二批日志前缀：`out/Shot/cut-batch2-combined-`；图片证据：`out/cut-batch2-combined/pixel-comparison.json`。
 
+第二批提交：`f48e852f6cb8`。
+
+## 第三批：媒体、旧缓存、设备/打印与版本构建残留
+
+已实际删除根目录 `device/`、`printing/`、`chrome/`、`media/`，以及 `cc/benchmarks/`、`net/disk_cache/blockfile/`、`third_party/closure_compiler/`。Chrome 版本读取改为现有 `shot/VERSION`，macOS plist 移至 `shot/app-Info.plist`。打印预设协议删除；页面缩放仍用 Blink 自己的同值枚举，不改变 CSS 打印布局。
+
+删除微基准控制器的成员与调用、无消费者的 dropped-frame 共享内存和视频粗糙度统计，删除媒体播放/音频设备/解密/捕获接口及其导出包装、线程接口、无播放器的绘制分支。保留 video 的海报图片与 HTML 布局，保留普通 MIME 分类。Simple 和内存缓存仍在，旧 blockfile 工厂、枚举、测试等待入口及实现一并清理。Protobuf JS/TS 的 GN 与 Python 调用链同步删除。
+
+删除实体文件前，先编译修改后的消费者，确认候选未被其他工作修改，再核对 EXE/DLL 的 Ninja 输入和 GN 重生成输入均不读取候选。第三批的两组实体删除清单分别为 35 和 432 个文件。
+
+| 项目 | 第三批实测结果 |
+|---|---|
+| Windows GN | 6,945 个目标 / 867 个输入构建文件 |
+| 删除后的缺失输入检查 | 7,464 个源码树输入全部存在 |
+| Windows EXE / DLL | 均通过；最后一次构建 0 FAILED / 0 编译诊断 |
+| serve / net / demos | 全通过；84 项 demos，含实际 HTTPS |
+| 像素比较 | 169 张 demos + 4 张 render + 1 张 corpus，共 174 张逐字节相同 |
+| Node / daemon / 协议 / Bilibili | 本轮 DLL 与重建 addon，全部通过 |
+| acceptance | 与原有 Chrome oracle 的 1.5245% 差异未扩大；与本轮删除前 corpus 逐字节相同 |
+| IDL 枚举检查 | 155 个引用值，0 个未生成 |
+| Linux probe | 0 缺 BUILD.gn / 0 主仓库缺失输入；本机宿主及未安装 Linux DEPS 限制同前 |
+| 六平台实编译 | 尚未完成，不把本机结果当跨平台证明 |
+
+第一次高并发构建出现 LLVM 内存耗尽，降低并发后通过；随后媒体拆除暴露的残留调用与间接 include 已修复并重编译。没有通过重新引入 media 或 blockfile 消除错误。
+
+日志前缀：`out/Shot/cut-media-`；删除证明与像素证据：`out/cut-stage4/deletion-proof.json`、`out/cut-stage5/deletion-proof.json`、`out/cut-stage5/pixel-comparison.json`。
+
 ## 后续批次
 
-第三批正在处理 device、printing、Chrome 版本路径、cc 微基准及其他剩余依赖。输入/合成器/GPU/media 等混合目标仍在清理范围内。此记录不把“待处理”或“已关闭开关”标为“已彻底删除”。
+下一批处理 Canvas、输入/合成器/GPU 等混合目标的剩余依赖。此记录不把“待处理”或“已关闭开关”标为“已彻底删除”。

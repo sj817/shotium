@@ -7,7 +7,7 @@ import("//build/compiled_action.gni")
 import("//build/config/compiler/compiler.gni")
 import("//build/config/ui.gni")
 import("//build/nocompile.gni")
-import("//media/media_options.gni")
+
 import("//testing/libfuzzer/fuzzer_test.gni")
 import("//testing/test.gni")
 import("//third_party/blink/renderer/platform/blink_fuzzer_test.gni")
@@ -401,7 +401,6 @@ component("platform") {
     "bindings/union_base.h",
     "bindings/v8_binding.cc",
     "bindings/v8_binding.h",
-    "content_decryption_module_result.h",
     "context_lifecycle_notifier.cc",
     "context_lifecycle_notifier.h",
     "context_lifecycle_observer.cc",
@@ -426,26 +425,17 @@ component("platform") {
     "exported/weak_wrapper_resource_load_info_notifier.cc",
     "exported/web_blob_info.cc",
     "exported/web_cache.cc",
-    "exported/web_content_decryption_module.cc",
-    "exported/web_content_decryption_module_access.cc",
-    "exported/web_content_decryption_module_result.cc",
-    "exported/web_content_decryption_module_session.cc",
     "exported/web_crypto_algorithm.cc",
     "exported/web_crypto_key.cc",
     "exported/web_crypto_key_algorithm.cc",
     "exported/web_crypto_result.cc",
     "exported/web_data.cc",
     "exported/web_drag_data.cc",
-    "exported/web_encrypted_media_client.cc",
-    "exported/web_encrypted_media_key_information.cc",
-    "exported/web_encrypted_media_request.cc",
     "exported/web_font_description.cc",
     "exported/web_http_body.cc",
     "exported/web_icon_sizes_parser.cc",
     "exported/web_image_generator.cc",
     "exported/web_media_player_client.cc",
-    "exported/web_media_player_encrypted_media_client.cc",
-    "exported/web_media_player_source.cc",
     "exported/web_network_state_notifier.cc",
     "exported/web_runtime_features.cc",
     "exported/web_security_origin.cc",
@@ -1451,7 +1441,6 @@ component("platform") {
     "//components/viz/client",
     "//components/viz/common",
     "//crypto",
-    "//media",
     "//mojo/public/cpp/bindings:wtf_support",
     "//services/network/public/mojom:mojom_shared",
     "//services/service_manager/public/cpp",
@@ -1711,7 +1700,6 @@ static_library("test_support") {
 
   deps = [
     "//base/test:test_support",
-    "//media:test_support",
     "//mojo/core/embedder",
     "//mojo/public/cpp/bindings",
     "//services/service_manager/public/cpp",
@@ -1745,16 +1733,11 @@ test("blink_platform_unittests") {
   }
 
   if (is_android) {
-    deps += [
-      # Required because of an indirect dependency on //media/base/android via
-      # platform/media:unit_tests.
-      "//media/base/android:media_java",
-    ]
+    deps += []
   }
   if (is_ios) {
     bundle_deps = [
       ":blink_platform_unittests_bundle_data",
-      "//media:unit_tests_bundle_data",
       "//testing/buildbot/filters:blink_platform_unittests_filters_bundle_data",
     ]
   }
@@ -1997,8 +1980,6 @@ source_set("blink_platform_unittests_sources") {
     "//cc:test_support",
     "//components/input",
     "//components/viz/common/resources:shared_image_format",
-    "//media:media_buildflags",
-    "//media:test_support",
     "//mojo/core/embedder",
     "//mojo/public/cpp/bindings/tests:for_blink_tests",
     "//mojo/public/cpp/test_support:test_utils",
@@ -2343,19 +2324,6 @@ blink_fuzzer_test("web_icon_sizes_fuzzer") {
   deps = [ ":platform" ]
   dict = "//testing/libfuzzer/fuzzers/dicts/web_icon_sizes.dict"
   additional_configs = [ "//third_party/blink/renderer:inside_blink" ]
-}
-
-if (enable_dav1d_decoder) {
-  # Fuzzer for blink::AVIFImageDecoder
-  blink_fuzzer_test("blink_avif_decoder_fuzzer") {
-    sources = [ "image-decoders/avif/avif_image_decoder_fuzzer.cc" ]
-    deps = [
-      ":blink_image_decoder_fuzzer_test_support",
-      ":platform",
-    ]
-    seed_corpuses = [ "//third_party/blink/web_tests/images/resources/avif" ]
-    additional_configs = [ "//third_party/blink/renderer:inside_blink" ]
-  }
 }
 
 if (enable_jxl_decoder) {

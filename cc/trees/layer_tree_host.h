@@ -30,8 +30,6 @@
 #include "base/time/time.h"
 #include "base/types/optional_ref.h"
 #include "cc/base/completion_event.h"
-#include "cc/benchmarks/micro_benchmark.h"
-#include "cc/benchmarks/micro_benchmark_controller.h"
 #include "cc/cc_export.h"
 #include "cc/input/browser_controls_offset_tag_modifications.h"
 #include "cc/input/browser_controls_state.h"
@@ -441,14 +439,6 @@ class CC_EXPORT LayerTreeHost : public MutatorHostDelegate {
   // Debugging and benchmarks ---------------------------------
   void SetDebugState(const LayerTreeDebugState& debug_state);
   const LayerTreeDebugState& GetDebugState() const;
-
-  // Returns the id of the benchmark on success, 0 otherwise.
-  int ScheduleMicroBenchmark(const std::string& benchmark_name,
-                             base::DictValue settings,
-                             MicroBenchmark::DoneCallback callback);
-
-  // Returns true if the message was successfully delivered and handled.
-  bool SendMessageToMicroBenchmark(int id, base::DictValue message);
 
   // When the main thread informs the compositor thread that it is ready to
   // commit, generally it would remain blocked until the main thread state is
@@ -1020,8 +1010,6 @@ class CC_EXPORT LayerTreeHost : public MutatorHostDelegate {
   }
 
   void OnCommitForSwapPromises();
-
-  MicroBenchmarkController micro_benchmark_controller_;
 
   // The pointer that input uses to communicate with the layer tree host impl.
   // Must be dereferenced only from the input-handling thread. This is the same

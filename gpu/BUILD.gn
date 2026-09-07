@@ -110,7 +110,6 @@ static_library("test_support") {
     "//gpu/ipc/client",
     "//gpu/ipc/common",
     "//gpu/ipc/service",
-    "//media",
     "//testing/gmock",
     "//testing/gtest",
     "//ui/gfx:test_support",
@@ -620,9 +619,6 @@ test("gpu_unittests") {
   if (is_ios) {
     bundle_deps =
         [ "//testing/buildbot/filters:gpu_unittests_filters_bundle_data" ]
-  }
-
-  if (is_apple) {
   }
 
   # TODO(crbug.com/40031409): Fix code that adds exit-time destructors and

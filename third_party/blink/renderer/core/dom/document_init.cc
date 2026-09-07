@@ -45,7 +45,6 @@
 #include "third_party/blink/renderer/core/html/html_view_source_document.h"
 #include "third_party/blink/renderer/core/html/image_document.h"
 #include "third_party/blink/renderer/core/html/json_document.h"
-#include "third_party/blink/renderer/core/html/media/html_media_element.h"
 #include "third_party/blink/renderer/core/html/plugin_document.h"
 #include "third_party/blink/renderer/core/html/text_document.h"
 #include "third_party/blink/renderer/core/loader/document_loader.h"
@@ -175,10 +174,6 @@ DocumentInit::Type DocumentInit::ComputeDocumentType(
   if (MIMETypeRegistry::IsSupportedImageResourceMIMEType(mime_type) ||
       mime_type == "multipart/x-mixed-replace") {
     return Type::kImage;
-  }
-
-  if (HTMLMediaElement::GetSupportsType(ContentType(mime_type))) {
-    return Type::kMedia;
   }
 
   if (frame && frame->GetPage() && frame->Loader().AllowPlugins())

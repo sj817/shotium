@@ -96,15 +96,6 @@ PhysicalNaturalSizingInfo LayoutVideo::GetNaturalDimensions() const {
       }
       break;
     case kVideo:
-      // Otherwise, the natural dimensions are that of the video.
-      if (const auto* player = video->GetWebMediaPlayer()) {
-        gfx::Size video_size = player->NaturalSize();
-        if (!video_size.IsEmpty()) {
-          PhysicalSize natural_size(video_size);
-          natural_size.Scale(StyleRef().EffectiveZoom());
-          return PhysicalNaturalSizingInfo::MakeFixed(natural_size);
-        }
-      }
       break;
   }
 
@@ -146,7 +137,6 @@ void LayoutVideo::PaintReplaced(const PaintInfo& paint_info,
 void LayoutVideo::UpdateAfterLayout() {
   NOT_DESTROYED();
   LayoutMedia::UpdateAfterLayout();
-  InvalidateCompositing();
 }
 
 HTMLVideoElement* LayoutVideo::VideoElement() const {
@@ -167,23 +157,8 @@ void LayoutVideo::StyleDidChange(
 void LayoutVideo::UpdateFromElement() {
   NOT_DESTROYED();
   LayoutMedia::UpdateFromElement();
-  InvalidateCompositing();
   UpdateNaturalSize();
   SetShouldDoFullPaintInvalidation();
-}
-
-void LayoutVideo::InvalidateCompositing() {
-  NOT_DESTROYED();
-  WebMediaPlayer* media_player = MediaElement()->GetWebMediaPlayer();
-  if (!media_player)
-    return;
-
-  if (!VideoElement()->InActiveDocument())
-    return;
-
-  VideoElement()->SetNeedsCompositingUpdate();
-  if (HasLayer())
-    Layer()->SetNeedsCompositingInputsUpdate();
 }
 
 PhysicalRect LayoutVideo::ReplacedContentRectFrom(

@@ -123,7 +123,7 @@ def main():
     if args.build_type == 'official':
         if os.name == 'nt':
             version_path = os.path.join(
-                THIS_DIR, os.pardir, 'chrome', 'VERSION'
+                THIS_DIR, os.pardir, 'shot', 'VERSION'
             )
             with open(version_path) as f:
                 patch_line = f.readlines()[3].strip()

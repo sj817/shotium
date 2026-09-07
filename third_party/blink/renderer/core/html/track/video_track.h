@@ -50,7 +50,7 @@ class CORE_EXPORT VideoTrack final : public ScriptWrappable, public TrackBase {
 template <>
 struct DowncastTraits<VideoTrack> {
   static bool AllowFrom(const TrackBase& track) {
-    return track.GetType() == WebMediaPlayer::kVideoTrack;
+    return track.GetType() == TrackType::kVideoTrack;
   }
 };
 

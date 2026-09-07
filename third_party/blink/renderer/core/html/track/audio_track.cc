@@ -14,7 +14,7 @@ AudioTrack::AudioTrack(const String& id,
                        const AtomicString& language,
                        bool enabled,
                        bool exclusive)
-    : TrackBase(WebMediaPlayer::kAudioTrack, label, language, id),
+    : TrackBase(TrackType::kAudioTrack, label, language, id),
       enabled_(enabled),
       exclusive_(exclusive),
       kind_(IsValidKindKeyword(kind) ? kind : g_empty_atom) {}

@@ -48,13 +48,6 @@ component("ozone") {
     ]
   }
 
-  if (use_udev) {
-    sources += [
-      "device/udev/device_manager_udev.cc",
-      "device/udev/device_manager_udev.h",
-    ]
-    deps += [ "//device/udev_linux" ]
-  }
 }
 
 source_set("unittests") {

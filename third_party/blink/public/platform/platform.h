@@ -45,16 +45,12 @@
 #include "base/time/time.h"
 #include "build/build_config.h"
 #include "components/viz/common/surfaces/frame_sink_id.h"
-#include "media/base/audio_capturer_source.h"
-#include "media/base/audio_latency.h"
-#include "media/base/audio_renderer_sink.h"
 #include "third_party/blink/public/common/security/protocol_handler_security_level.h"
 #include "third_party/blink/public/common/user_agent/user_agent_metadata.h"
 #include "third_party/blink/public/mojom/cpu_performance.mojom-shared.h"
 #include "third_party/blink/public/mojom/peerconnection/webrtc_ip_handling_policy.mojom-forward.h"
 #include "third_party/blink/public/platform/cross_variant_mojo_util.h"
 #include "third_party/blink/public/platform/url_loader_throttle_provider.h"
-#include "third_party/blink/public/platform/web_audio_device.h"
 #include "third_party/blink/public/platform/web_data.h"
 #include "third_party/blink/public/platform/web_string.h"
 #include "third_party/blink/public/platform/websocket_handshake_throttle_provider.h"
@@ -81,15 +77,6 @@ class ColorSpace;
 namespace gpu {
 class GpuChannelHost;
 }
-
-namespace media {
-struct AudioSinkParameters;
-struct AudioSourceParameters;
-class DecoderFactory;
-class MediaLog;
-class MediaPermission;
-class GpuVideoAcceleratorFactories;
-}  // namespace media
 
 namespace net {
 class SchemefulSite;
@@ -122,8 +109,6 @@ class MainThread;
 class ThreadSafeBrowserInterfaceBrokerProxy;
 class URLLoaderThrottle;
 class UserMetricsAction;
-class WebAudioLatencyHint;
-class WebAudioSinkDescriptor;
 class WebCrypto;
 class WebDedicatedWorker;
 class WebDedicatedWorkerHostFactoryClient;
@@ -133,7 +118,6 @@ class WebSandboxSupport;
 class WebSecurityOrigin;
 class WebThemeEngine;
 class WebURL;
-class WebVideoCaptureImplManager;
 struct WebContentSecurityPolicyHeader;
 
 namespace scheduler {
@@ -201,20 +185,7 @@ class BLINK_PLATFORM_EXPORT Platform {
 
   // Audio --------------------------------------------------------------
 
-  virtual double AudioHardwareSampleRate() { return 0; }
-  virtual size_t AudioHardwareBufferSize() { return 0; }
-  virtual unsigned AudioHardwareOutputChannels() { return 0; }
   virtual base::TimeDelta GetHungRendererDelay() { return base::TimeDelta(); }
-
-  // Creates an audio output device platform interface for Web Audio API.
-  virtual std::unique_ptr<WebAudioDevice> CreateAudioDevice(
-      const WebAudioSinkDescriptor& sink_descriptor,
-      unsigned number_of_output_channels,
-      const WebAudioLatencyHint& latency_hint,
-      std::optional<float> context_sample_rate,
-      media::AudioRendererSink::RenderCallback*) {
-    return nullptr;
-  }
 
   // IDN conversion ------------------------------------------------------
 
@@ -368,12 +339,6 @@ class BLINK_PLATFORM_EXPORT Platform {
     return CompositorThreadTaskRunner();
   }
 
-  // Returns the task runner of the media thread.
-  // This method should only be called on the main thread, or it crashes.
-  virtual scoped_refptr<base::SequencedTaskRunner> MediaThreadTaskRunner() {
-    return nullptr;
-  }
-
 #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
   // This is called after the thread is created, so the embedder
   // can initiate an IPC to change its thread type (on Linux we can't
@@ -443,14 +408,6 @@ class BLINK_PLATFORM_EXPORT Platform {
     return base::kInvalidThreadId;
   }
 
-  // Returns the sequenced task runner used to funnel video frames from
-  // MediaStreamVideoSource. It may conditionally be the same as the result
-  // from GetIOTaskRunner().
-  virtual scoped_refptr<base::SequencedTaskRunner>
-  GetMediaStreamVideoSourceVideoTaskRunner() const {
-    return GetIOTaskRunner();
-  }
-
   // Returns an interface to run nested message loop. Used for debugging.
   class NestedMessageLoopRunner {
    public:
@@ -518,8 +475,6 @@ class BLINK_PLATFORM_EXPORT Platform {
   // the context cannot be created or initialized.
   virtual std::unique_ptr<WebGraphicsContext3DProvider>
   CreateSharedOffscreenGraphicsContext3DProvider();
-
-
 
   // When true, animations will run on a compositor thread independently from
   // the blink main thread.
@@ -602,61 +557,6 @@ class BLINK_PLATFORM_EXPORT Platform {
       base::OnceCallback<void(scoped_refptr<gpu::GpuChannelHost>)>;
   virtual void EstablishGpuChannel(EstablishGpuChannelCallback callback);
 
-  // Media stream ----------------------------------------------------
-  virtual scoped_refptr<media::AudioCapturerSource> NewAudioCapturerSource(
-      blink::WebLocalFrame* web_frame,
-      const media::AudioSourceParameters& params) {
-    return nullptr;
-  }
-
-  virtual bool RTCSmoothnessAlgorithmEnabled() { return true; }
-
-  // WebRTC ----------------------------------------------------------
-
-  virtual std::optional<double> GetWebRtcMaxCaptureFrameRate() {
-    return std::nullopt;
-  }
-
-  // NewAudioRendererSink() and GetAudioSourceLatencyType() were here. They
-  // took a WebAudioDeviceSourceType, whose header went with
-  // public/platform/audio; nothing else in the tree named either the enum or
-  // the two methods, so all three go together rather than the header coming
-  // back for its own sake.
-
-  virtual bool ShouldEnforceWebRTCRoutingPreferences() { return true; }
-
-  virtual media::MediaPermission* GetWebRTCMediaPermission(
-      WebLocalFrame* web_frame) {
-    return nullptr;
-  }
-
-  virtual bool UsesFakeCodecForPeerConnection() { return false; }
-
-  virtual bool IsWebRtcEncryptionEnabled() { return true; }
-
-  // TODO(qingsi): Consolidate the legacy |ip_handling_policy| with
-  // |allow_mdns_obfuscation| following the latest spec on IP handling modes
-  // with mDNS introduced
-  // (https://tools.ietf.org/html/draft-ietf-rtcweb-ip-handling-12);
-  virtual void GetWebRTCRendererPreferences(
-      WebLocalFrame* web_frame,
-      mojom::WebRtcIpHandlingPolicy* ip_handling_policy,
-      uint16_t* udp_min_port,
-      uint16_t* udp_max_port,
-      bool* allow_mdns_obfuscation) {}
-
-  virtual bool IsWebRtcHWEncodingEnabled() { return true; }
-
-  virtual bool IsWebRtcHWDecodingEnabled() { return true; }
-
-  virtual bool AllowsLoopbackInPeerConnection() { return false; }
-
-  // VideoCapture -------------------------------------------------------
-
-  virtual WebVideoCaptureImplManager* GetVideoCaptureImplManager() {
-    return nullptr;
-  }
-
   // WebWorker ----------------------------------------------------------
 
   virtual std::unique_ptr<WebDedicatedWorkerHostFactoryClient>
@@ -721,24 +621,6 @@ class BLINK_PLATFORM_EXPORT Platform {
   // for security.
   virtual ThreadSafeBrowserInterfaceBrokerProxy* GetBrowserInterfaceBroker();
 
-  // Media Log -----------------------------------------------------------
-
-  // MediaLog is used by WebCodecs to report events and errors up to the
-  // chrome://media-internals page and the DevTools media tab.
-  // |owner_task_runner| must be bound to the main thead or the worker thread
-  // on which WebCodecs will using the MediaLog. It is safe to add logs to
-  // MediaLog from any thread, but it must be destroyed on |owner_task_runner|.
-  // MediaLog owners should destroy the MediaLog if the ExecutionContext is
-  // destroyed, since |inspector_context| may no longer be valid at that point.
-  // |is_on_worker| is used to avoid logging to the chrome://media-internal
-  // page, which can only be logged to from the window main thread.
-  // Note: |inspector_context| is only used on |owner_task_runner|, so
-  // destroying the MediaLog on |owner_task_runner| should avoid races.
-  virtual std::unique_ptr<media::MediaLog> GetMediaLog(
-      MediaInspectorContext* inspector_context,
-      scoped_refptr<base::SingleThreadTaskRunner> owner_task_runner,
-      bool is_on_worker);
-
   // Navigation Metrics --------------------------------------------------
 
   // Record the start/end time when creating a set of child RemoteFrames/proxies
@@ -755,14 +637,6 @@ class BLINK_PLATFORM_EXPORT Platform {
       const base::TimeDelta& elapsed_time) {}
 
   // GpuVideoAcceleratorFactories --------------------------------------
-
-  virtual media::GpuVideoAcceleratorFactories* GetGpuFactories() {
-    return nullptr;
-  }
-
-  virtual base::WeakPtr<media::DecoderFactory> GetMediaDecoderFactory() {
-    return nullptr;
-  }
 
   virtual void SetRenderingColorSpace(const gfx::ColorSpace& color_space) {}
 

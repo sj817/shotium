@@ -295,7 +295,7 @@ source_set("headers") {
 
   # Chromium without blink doesn't use and must not depend on //media
   if (use_blink) {
-    deps += [ "//media" ]
+    deps += []
   }
 
   if (is_android) {

@@ -29,7 +29,6 @@
 #include "base/time/time.h"
 #include "base/types/optional_ref.h"
 #include "cc/base/delayed_unique_notifier.h"
-#include "cc/benchmarks/micro_benchmark_controller_impl.h"
 #include "cc/cc_export.h"
 #include "cc/input/actively_scrolling_type.h"
 #include "cc/input/browser_controls_offset_manager_client.h"
@@ -750,8 +749,6 @@ class CC_EXPORT LayerTreeHostImpl : public TileManagerClient,
 
   virtual bool IsUIResourceOpaque(UIResourceId uid) const;
 
-  void ScheduleMicroBenchmark(std::unique_ptr<MicroBenchmarkImpl> benchmark);
-
   viz::RegionCaptureBounds CollectRegionCaptureBounds();
   viz::TrackedElementRects CollectTrackedElementRects(
       bool is_for_compositor_frame_metadata,
@@ -842,7 +839,6 @@ class CC_EXPORT LayerTreeHostImpl : public TileManagerClient,
 
   void SetRenderFrameObserver(
       std::unique_ptr<RenderFrameMetadataObserver> observer);
-
 
   // Notifies FrameTrackers, impl side callbacks that the compsitor frame
   // was presented.
@@ -1222,7 +1218,6 @@ class CC_EXPORT LayerTreeHostImpl : public TileManagerClient,
   std::unordered_set<ElementId, ElementIdHash> flashed_scrollbars_;
 
   raw_ptr<RenderingStatsInstrumentation> rendering_stats_instrumentation_;
-  MicroBenchmarkControllerImpl micro_benchmark_controller_;
   std::unique_ptr<SynchronousTaskGraphRunner>
       single_thread_synchronous_task_graph_runner_;
 

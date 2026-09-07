@@ -23,7 +23,6 @@
 #include "components/viz/common/features.h"
 #include "components/viz/common/switches.h"
 #include "gpu/config/gpu_finch_features.h"
-#include "media/base/media_switches.h"
 #include "third_party/blink/public/common/features.h"
 #include "third_party/blink/public/common/switches.h"
 #include "third_party/blink/public/platform/platform.h"

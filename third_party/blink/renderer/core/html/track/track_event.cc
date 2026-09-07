@@ -25,7 +25,6 @@
 
 #include "third_party/blink/renderer/core/html/track/track_event.h"
 
-#include "third_party/blink/public/platform/web_media_player.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_track_event_init.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_union_audiotrack_texttrack_videotrack.h"
 #include "third_party/blink/renderer/core/event_interface_names.h"

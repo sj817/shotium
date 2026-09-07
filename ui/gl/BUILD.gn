@@ -445,7 +445,6 @@ if (is_mac) {
       ]
     }
   }
-
 }
 
 static_library("gl_unittest_utils") {
@@ -491,9 +490,7 @@ static_library("test_support") {
     "test/gl_test_support.h",
   ]
 
-  public_deps = [
-    ":gl",
-  ]
+  public_deps = [ ":gl" ]
   deps = [
     "//base/test:test_support",
     "//gpu/config",
@@ -595,10 +592,7 @@ test("gl_unittests") {
   data_deps = [ "//testing/buildbot/filters:gl_unittests_filters" ]
 
   if (is_win) {
-    deps += [
-      "//media/base/win:test_support",
-      "//ui/base:pixel_diff_test_support",
-    ]
+    deps += [ "//ui/base:pixel_diff_test_support" ]
     libs = [ "dxguid.lib" ]
   }
 

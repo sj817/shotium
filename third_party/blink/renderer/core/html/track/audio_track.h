@@ -55,7 +55,7 @@ class CORE_EXPORT AudioTrack final : public ScriptWrappable, public TrackBase {
 template <>
 struct DowncastTraits<AudioTrack> {
   static bool AllowFrom(const TrackBase& track) {
-    return track.GetType() == WebMediaPlayer::kAudioTrack;
+    return track.GetType() == TrackType::kAudioTrack;
   }
 };
 

@@ -273,7 +273,6 @@ source_set("ozone_switches") {
 
   visibility += [
     "//chrome/test:browser_tests_runner",
-    "//media/mojo/services",
     "//ui/base/clipboard:clipboard_test",
     "//ui/display:display_unittests",
   ]
@@ -382,7 +381,7 @@ action("generate_ozone_platform_list") {
         "--default=$ozone_platform",
       ] + ozone_platforms
 
-  visibility += [ "//media:*" ]
+  visibility += []
 }
 
 source_set("ozone_gpu_test_support") {

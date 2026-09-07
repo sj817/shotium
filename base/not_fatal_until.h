@@ -8,7 +8,7 @@
 namespace base {
 
 // Add new entries a few milestones into the future whenever necessary.
-// M here refers to milestones, see chrome/VERSION's MAJOR field that updates
+// M here refers to milestones, see shot/VERSION's MAJOR field that updates
 // when chromium branches.
 //
 // To clean up old entries remove the already-fatal argument from CHECKs as well

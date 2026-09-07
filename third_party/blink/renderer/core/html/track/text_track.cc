@@ -73,7 +73,7 @@ TextTrack::TextTrack(const V8TextTrackKind& kind,
                      HTMLElement& source_element,
                      const AtomicString& id,
                      TextTrackType type)
-    : TrackBase(WebMediaPlayer::kTextTrack, label, language, id),
+    : TrackBase(TrackType::kTextTrack, label, language, id),
       active_cues_(nullptr),
       track_list_(nullptr),
       source_element_(source_element),

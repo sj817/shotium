@@ -6,7 +6,6 @@
 
 #include "base/files/file_path.h"
 #include "base/strings/string_util.h"
-#include "media/base/mime_util.h"
 #include "mojo/public/cpp/bindings/remote.h"
 #include "net/base/mime_util.h"
 #include "third_party/blink/public/common/mime_util/mime_util.h"
@@ -33,10 +32,6 @@ struct MimeRegistryPtrHolder {
   mojo::Remote<mojom::blink::MimeRegistry> mime_registry;
 };
 
-std::string ToASCIIOrEmpty(const WebString& string) {
-  return string.ContainsOnlyAscii() ? string.Ascii() : std::string();
-}
-
 template <typename CharType>
 std::string ToLowerASCIIInternal(base::span<const CharType> chars) {
   std::string lower_ascii;
@@ -47,7 +42,7 @@ std::string ToLowerASCIIInternal(base::span<const CharType> chars) {
   return lower_ascii;
 }
 
-// Does the same as ToASCIIOrEmpty, but also makes the chars lower.
+// Returns lowercase ASCII, or empty for non-ASCII input.
 std::string ToLowerASCIIOrEmpty(const String& str) {
   if (str.empty() || !str.ContainsOnlyAsciiOrEmpty()) {
     return std::string();
@@ -55,13 +50,6 @@ std::string ToLowerASCIIOrEmpty(const String& str) {
   return VisitCharacters(
       str, [](auto chars) { return ToLowerASCIIInternal(chars); });
 }
-
-STATIC_ASSERT_ENUM(MIMETypeRegistry::kNotSupported,
-                   media::SupportsType::kNotSupported);
-STATIC_ASSERT_ENUM(MIMETypeRegistry::kSupported,
-                   media::SupportsType::kSupported);
-STATIC_ASSERT_ENUM(MIMETypeRegistry::kMaybeSupported,
-                   media::SupportsType::kMaybeSupported);
 
 }  // namespace
 
@@ -129,34 +117,6 @@ bool MIMETypeRegistry::IsJSONMimeType(const String& mime_type) {
 
 bool MIMETypeRegistry::IsSupportedNonImageMIMEType(const String& mime_type) {
   return blink::IsSupportedNonImageMimeType(ToLowerASCIIOrEmpty(mime_type));
-}
-
-bool MIMETypeRegistry::IsSupportedMediaMIMEType(const String& mime_type,
-                                                const String& codecs) {
-  return SupportsMediaMIMEType(mime_type, codecs) != kNotSupported;
-}
-
-MIMETypeRegistry::SupportsType MIMETypeRegistry::SupportsMediaMIMEType(
-    const String& mime_type,
-    const String& codecs) {
-  const std::string ascii_mime_type = ToLowerASCIIOrEmpty(mime_type);
-  std::vector<std::string> codec_vector;
-  media::SplitCodecs(ToASCIIOrEmpty(codecs), &codec_vector);
-  return static_cast<SupportsType>(
-      media::IsSupportedMediaFormat(ascii_mime_type, codec_vector));
-}
-
-MIMETypeRegistry::SupportsType MIMETypeRegistry::SupportsMediaSourceMIMEType(
-    const String& mime_type,
-    const String& codecs) {
-  // This used to ask media::StreamParserFactory::IsTypeSupported(). That
-  // factory lived in //media/filters, which is cut along with the rest of the
-  // demux/decode pipeline, so there is no MSE parser left to ask.
-  //
-  // kNotSupported is the true answer, not a placeholder: this build cannot
-  // append a byte to a SourceBuffer for any MIME type, so `isTypeSupported()`
-  // returning false for everything is exactly what the engine can do.
-  return kNotSupported;
 }
 
 bool MIMETypeRegistry::IsJavaAppletMIMEType(const String& mime_type) {

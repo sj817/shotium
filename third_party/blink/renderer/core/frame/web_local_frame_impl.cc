@@ -144,7 +144,6 @@
 #include "third_party/blink/public/web/web_print_client.h"
 #include "third_party/blink/public/web/web_print_page_description.h"
 #include "third_party/blink/public/web/web_print_params.h"
-#include "third_party/blink/public/web/web_print_preset_options.h"
 #include "third_party/blink/public/web/web_range.h"
 #include "third_party/blink/public/web/web_script_source.h"
 #include "third_party/blink/renderer/bindings/core/v8/sanitize_script_errors.h"
@@ -1758,16 +1757,6 @@ void WebLocalFrameImpl::PrintEnd() {
   DCHECK(print_context_);
   print_context_->EndPrintMode();
   print_context_.Clear();
-}
-
-bool WebLocalFrameImpl::GetPrintPresetOptionsForPlugin(
-    const WebNode& node,
-    WebPrintPresetOptions* preset_options) {
-  WebPluginContainerImpl* plugin_container = GetPluginToPrintHelper(node);
-  if (!plugin_container || !plugin_container->SupportsPaginatedPrint())
-    return false;
-
-  return plugin_container->GetPrintPresetOptionsFromDocument(preset_options);
 }
 
 bool WebLocalFrameImpl::CapturePaintPreview(const gfx::Rect& bounds,

@@ -53,7 +53,6 @@
 #include "cc/base/histograms.h"
 #include "cc/base/math_util.h"
 #include "cc/base/switches.h"
-#include "cc/benchmarks/benchmark_instrumentation.h"
 #include "cc/debug/rendering_stats_instrumentation.h"
 #include "cc/input/browser_controls_offset_manager.h"
 #include "cc/input/browser_controls_offset_tag_modifications.h"
@@ -612,7 +611,6 @@ LayerTreeHostImpl::LayerTreeHostImpl(
       mutator_host_(std::move(mutator_host)),
       dark_mode_filter_(dark_mode_filter),
       rendering_stats_instrumentation_(rendering_stats_instrumentation),
-      micro_benchmark_controller_(this),
       task_graph_runner_(task_graph_runner),
       id_(id),
       consecutive_frame_with_damage_count_(settings.damaged_frame_limit),
@@ -1578,8 +1576,6 @@ void LayerTreeHostImpl::SetViewportDamage(const gfx::Rect& damage_rect) {
 void LayerTreeHostImpl::SetRootLayerDamageRect(const gfx::Rect& damage_rect) {
   root_layer_damage_rect_.Union(damage_rect);
 }
-
-
 
 DrawResult LayerTreeHostImpl::PrepareToDraw(FrameData* frame,
                                             bool expects_to_draw) {
@@ -3005,12 +3001,6 @@ std::optional<SubmitInfo> LayerTreeHostImpl::DrawLayers(FrameData* frame) {
   if (!GetSettings().is_layer_tree_for_ui) {
     devtools_instrumentation::DidDrawFrame(
         id_, frame->begin_frame_ack.frame_id.sequence_number);
-  }
-  if (!GetSettings().TreesInVizInClientProcess()) {
-    // In TreesInViz mode, content area data only get recorded in viz side.
-    // Therefore, only issue trace event in viz.
-    benchmark_instrumentation::IssueImplThreadRenderingStatsEvent(
-        rendering_stats_instrumentation_->TakeImplThreadRenderingStats());
   }
 
   if (settings_.enable_compositing_based_throttling &&
@@ -5908,11 +5898,6 @@ void LayerTreeHostImpl::MarkUIResourceNotEvicted(UIResourceId uid) {
   if (evicted_ui_resources_.empty()) {
     delegate_->OnCanDrawStateChanged(CanDraw());
   }
-}
-
-void LayerTreeHostImpl::ScheduleMicroBenchmark(
-    std::unique_ptr<MicroBenchmarkImpl> benchmark) {
-  micro_benchmark_controller_.ScheduleRun(std::move(benchmark));
 }
 
 void LayerTreeHostImpl::InsertLatencyInfoSwapPromiseMonitor(

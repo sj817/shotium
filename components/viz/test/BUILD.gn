@@ -120,7 +120,6 @@ viz_static_library("test_support") {
   public_deps = [
     ":buildflags",
     "//gpu/ipc:gl_in_process_context",
-    "//media:media_buildflags",
   ]
 
   if (enable_vulkan) {

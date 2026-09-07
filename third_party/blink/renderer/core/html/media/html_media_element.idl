@@ -25,8 +25,6 @@
 
 // https://html.spec.whatwg.org/C/#media-elements
 
-enum CanPlayTypeResult { "" /* empty string */, "maybe", "probably" };
-
 [
     Exposed=Window,
     ActiveScriptWrappable
@@ -49,7 +47,6 @@ enum CanPlayTypeResult { "" /* empty string */, "maybe", "probably" };
     [RuntimeEnabled=LazyLoadVideoAndAudio, CEReactions, Reflect, ReflectOnly=("lazy","eager"), ReflectMissing="eager", ReflectInvalid="eager"] attribute DOMString loading;
     readonly attribute TimeRanges buffered;
     void load();
-    CanPlayTypeResult canPlayType(DOMString type);
 
     // ready state
     const unsigned short HAVE_NOTHING = 0;

@@ -13,19 +13,35 @@
 #include "base/feature_list.h"
 #include "base/strings/string_util.h"
 #include "build/build_config.h"
-#include "media/media_buildflags.h"
 #include "net/base/mime_util.h"
 #include "third_party/blink/public/common/buildflags.h"
 #include "third_party/blink/public/common/features.h"
 
-#if !BUILDFLAG(IS_IOS)
-// iOS doesn't use and must not depend on //media
-#include "media/base/mime_util.h"
-#endif
-
 namespace blink {
 
 namespace {
+
+// Container MIME classification retained from the previous desktop build.
+// This selects the same document/fallback path; it does not advertise a decoder.
+constexpr auto kMediaContainerTypes = base::MakeFixedFlatSet<std::string_view>({
+    "audio/wav",
+    "audio/x-wav",
+    "audio/webm",
+    "video/webm",
+    "audio/ogg",
+    "video/ogg",
+    "application/ogg",
+    "audio/flac",
+    "audio/mpeg",
+    "audio/mp3",
+    "audio/x-mp3",
+    "audio/mp4",
+    "video/mp4",
+    "audio/matroska",
+    "video/matroska",
+    "audio/x-matroska",
+    "video/x-matroska",
+});
 
 // From WebKit's WebCore/platform/MIMETypeRegistry.cpp:
 
@@ -42,9 +58,6 @@ constexpr auto kSupportedImageTypes = base::MakeFixedFlatSet<std::string_view>({
     "image/x-icon",              // ico
     "image/x-xbitmap",           // xbm
     "image/x-png",
-#if BUILDFLAG(ENABLE_DAV1D_DECODER)
-    "image/avif",
-#endif
 });
 
 //  Support every script type mentioned in the spec, as it notes that "User
@@ -133,9 +146,7 @@ bool IsSupportedNonImageMimeType(std::string_view mime_type) {
   std::string mime_lower = base::ToLowerASCII(mime_type);
   return kSupportedNonImageTypes.contains(mime_lower) ||
          kSupportedJavascriptTypes.contains(mime_lower) ||
-#if !BUILDFLAG(IS_IOS)
-         media::IsSupportedMediaMimeType(mime_lower) ||
-#endif
+         kMediaContainerTypes.contains(mime_lower) ||
          (mime_lower.starts_with("text/") &&
           !kUnsupportedTextTypes.contains(mime_lower)) ||
          (mime_lower.starts_with("application/") &&
