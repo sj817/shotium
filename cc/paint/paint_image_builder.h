@@ -7,12 +7,10 @@
 
 #include <utility>
 
-#include "cc/paint/deferred_paint_record.h"
 #include "cc/paint/paint_export.h"
 #include "cc/paint/paint_image.h"
 #include "cc/paint/paint_image_generator.h"
 #include "cc/paint/paint_op_buffer.h"
-#include "cc/paint/paint_worklet_input.h"
 #include "cc/paint/skia_paint_image_generator.h"
 #include "cc/paint/texture_backing.h"
 #include "third_party/skia/include/core/SkImage.h"
@@ -141,11 +139,6 @@ class CC_PAINT_EXPORT PaintImageBuilder {
     return std::move(*this);
   }
 
-  PaintImageBuilder&& set_deferred_paint_record(
-      scoped_refptr<DeferredPaintRecord> input) {
-    paint_image_.deferred_paint_record_ = std::move(input);
-    return std::move(*this);
-  }
   PaintImage TakePaintImage();
 
  private:

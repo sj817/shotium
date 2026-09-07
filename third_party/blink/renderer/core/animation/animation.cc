@@ -61,7 +61,6 @@
 #include "third_party/blink/renderer/core/animation/timeline_range.h"
 #include "third_party/blink/renderer/core/animation/timing_calculations.h"
 #include "third_party/blink/renderer/core/css/cssom/css_unit_values.h"
-#include "third_party/blink/renderer/core/css/native_paint_image_generator.h"
 #include "third_party/blink/renderer/core/css/properties/css_property_ref.h"
 #include "third_party/blink/renderer/core/css/properties/longhands.h"
 #include "third_party/blink/renderer/core/css/resolver/style_resolver.h"
@@ -864,38 +863,6 @@ bool Animation::PreCommit(
     }
   }
 
-  // If we fail to start an animation on the compositor that animates via a
-  // native paint worklet, then update the corresponding paint status entry.
-  // A preliminary compositing decision made during PrePaint or Paint is a
-  // necessary but insufficient condition for compositing. PreCommit has final
-  // say and if not composited, we need to downgrade the compositor paint
-  // status. An exception on the downgrade for the case of no visible change.
-  // For example, a box with a background-color animation that is outside the
-  // paint apron, might be still in the kNeedsRepaint state. Once painted, the
-  // animation may be able to start on the compositor.
-  NativePaintWorkletReasons npw_reasons = GetNativePaintWorkletReasons();
-  if (should_start && !compositor_state_ &&
-      npw_reasons != NativePaintWorkletProperties::kNoPaintWorklet &&
-      compositing_decision_.disposition !=
-          CompositorAnimations::kAnimationHasNoVisibleChange) {
-    KeyframeEffect* keyframe_effect = DynamicTo<KeyframeEffect>(content_.Get());
-    Element* target =
-        keyframe_effect ? keyframe_effect->EffectTarget() : nullptr;
-    ElementAnimations* element_animations =
-        target ? target->GetElementAnimations() : nullptr;
-    if (element_animations) {
-      if (npw_reasons &
-          NativePaintWorkletProperties::kBackgroundColorPaintWorklet) {
-        element_animations->SetCompositedBackgroundColorStatus(
-            ElementAnimations::CompositedPaintStatus::kNotComposited);
-      }
-      if (npw_reasons & NativePaintWorkletProperties::kClipPathPaintWorklet) {
-        element_animations->SetCompositedClipPathStatus(
-            ElementAnimations::CompositedPaintStatus::kNotComposited);
-      }
-    }
-  }
-
   return true;
 }
 
@@ -1374,23 +1341,6 @@ void Animation::setEffect(AnimationEffect* new_effect) {
   // 2. If new effect is the same object as old effect, abort this procedure.
   if (new_effect == old_effect)
     return;
-
-  if (old_effect) {
-    Element* old_target = nullptr;
-    Element* new_target = nullptr;
-    if (auto* keyframe_effect = DynamicTo<KeyframeEffect>(new_effect)) {
-      new_target = keyframe_effect->target();
-    }
-    if (auto* keyframe_effect = DynamicTo<KeyframeEffect>(old_effect)) {
-      old_target = keyframe_effect->target();
-    }
-    if (new_target != old_target &&
-        prior_native_paint_worklet_reasons_ != Animation::kNoPaintWorklet) {
-      // Next call to UpdateCompositedPaintStatus will update the start of the
-      // old target as well as the new.
-      prior_native_paint_worklet_target_ = old_target;
-    }
-  }
 
   // 3. If animation has a pending pause task, reschedule that task to run as
   //    soon as animation is ready.
@@ -2526,21 +2476,6 @@ void Animation::MarkPendingIfCompositorPropertyAnimationChanges() {
     SetCompositorPending(CompositorPendingReason::kPendingEffectChange);
 }
 
-void Animation::OnPaintWorkletImageCreated() {
-  // If already queued up to make a compositing decision no further steps are
-  // required.
-  if (compositor_pending_) {
-    return;
-  }
-
-  if (!HasActiveAnimationsOnCompositor()) {
-    // We hit this state if target element is outside of the paint apron when
-    // the animation is created. Until painted, the animation has no visible
-    // effect. Once painted, we need to restart the animation on the compositor.
-    SetCompositorPending(CompositorPendingReason::kPaintWorkletImageCreated);
-  }
-}
-
 void Animation::StartAnimationOnCompositor(
     StartOnCompositorReason start_reason) {
   CHECK_EQ(compositing_decision_.disposition, CompositorAnimations::kNoFailure);
@@ -2596,52 +2531,10 @@ void Animation::StartAnimationOnCompositor(
           timeline()->IsMonotonicallyIncreasing(), boundary_aligned);
 }
 
-Animation::NativePaintWorkletReasons Animation::GetNativePaintWorkletReasons()
-    const {
-  if (native_paint_worklet_reasons_) {
-    return native_paint_worklet_reasons_.value();
-  }
-  NativePaintWorkletReasons reasons = kNoPaintWorklet;
-  if (const KeyframeEffect* keyframe_effect =
-          DynamicTo<KeyframeEffect>(effect())) {
-    // Suppress composited background color animations when in forced colors
-    // mode to avoid clobbering a transparent fill. Normally, a composited
-    // background color needs to paint even if transparent as the fill might not
-    // remain transparent.
-    // TODO(kevers): There is room to optimize here as if in forced color mode
-    // and forced colors are active for the element, we can optimize out the
-    // animation as having no visual effect.
-    if (RuntimeEnabledFeatures::CompositeBGColorAnimationEnabled() &&
-        GetDocument() && !GetDocument()->InForcedColorsMode() &&
-        keyframe_effect->Affects(
-            PropertyHandle(GetCSSPropertyBackgroundColor()))) {
-      reasons |= kBackgroundColorPaintWorklet;
-    }
-    if (RuntimeEnabledFeatures::CompositeClipPathAnimationEnabled() &&
-        keyframe_effect->Affects(PropertyHandle(GetCSSPropertyClipPath()))) {
-      reasons |= kClipPathPaintWorklet;
-    }
-  }
-  native_paint_worklet_reasons_ = reasons;
-  return reasons;
-}
-
 // TODO(crbug.com/960944): Rename to SetPendingCommit. This method handles both
 // composited and non-composited animations. The use of 'compositor' in the name
 // is confusing.
 void Animation::SetCompositorPending(CompositorPendingReason reason) {
-  // Determine if we need to reset the cached state for a property that is
-  // composited via a native paint worklet. If reset, it forces Paint to
-  // re-evaluate whether to paint with a native paint worklet.
-  if (reason == CompositorPendingReason::kPaintWorkletImageCreated ||
-      reason == CompositorPendingReason::kPendingDowngrade ||
-      reason == CompositorPendingReason::kPendingSafeRestart) {
-    reason = CompositorPendingReason::kPendingRestart;
-    // Composited paint status has already be set so we can skip the update.
-  } else {
-    UpdateCompositedPaintStatus(reason);
-  }
-
   if (compositor_state_ &&
       (reason == CompositorPendingReason::kPendingCancel ||
         reason == CompositorPendingReason::kPendingRestart)) {
@@ -3145,16 +3038,6 @@ bool Animation::Update(TimingUpdateReason reason) {
 
   if (idle || CalculateAnimationPlayState() ==
                   V8AnimationPlayState::Enum::kFinished) {
-    // See crbug.com/420284818. Reset composited paint status to avoid
-    // staleness that can occur during the process of tearing down an
-    // animation. This is known to occur when a retargeted transition is
-    // finished before PreCommit has run the first time and a compositor state
-    // has been created.
-    if (!inactive_ && !HasActiveAnimationsOnCompositor()) {
-      UpdateCompositedPaintStatus(
-          CompositorPendingReason::kPendingEffectChange);
-    }
-
     // Animations linked to scroll-timelines remain active since a scroll update
     // can effectively roll back time.
     if (reason == kTimingUpdateForAnimationFrame &&
@@ -3190,9 +3073,6 @@ void Animation::UpdateIfNecessary() {
 }
 
 void Animation::EffectInvalidated() {
-  prior_native_paint_worklet_reasons_ = native_paint_worklet_reasons_;
-  native_paint_worklet_reasons_ = std::nullopt;
-
   SetOutdated();
   UpdateFinishedState(UpdateType::kContinuous, NotificationType::kAsync);
   // FIXME: Needs to consider groups when added.
@@ -3359,7 +3239,6 @@ void Animation::PauseForTesting(AnimationTimeDelta pause_time) {
   pending_play_ = false;
   hold_time_ = pause_time;
   start_time_ = std::nullopt;
-  UpdateCompositedPaintStatus(CompositorPendingReason::kPendingUpdate);
 }
 
 void Animation::SetEffectSuppressed(bool suppressed) {
@@ -3638,49 +3517,6 @@ bool Animation::IsInDisplayLockedSubtree() {
   return is_in_display_locked_subtree_;
 }
 
-void Animation::UpdateCompositedPaintStatus(CompositorPendingReason reason) {
-  // Calling Animation::setEffect can result in a change to the animation
-  // effect target. In such cases, we need to update the composited paint
-  // status on the old target.
-  if (prior_native_paint_worklet_target_) {
-    ElementAnimations* element_animations =
-        prior_native_paint_worklet_target_->GetElementAnimations();
-    if (element_animations) {
-      // Possible to not have element animations on the old target if the
-      // effect change introduced ahead of a style update.
-      element_animations->RecalcCompositedStatus(
-          prior_native_paint_worklet_target_, reason);
-    }
-    prior_native_paint_worklet_target_ = nullptr;
-  }
-
-  if (GetNativePaintWorkletReasons() == Animation::kNoPaintWorklet) {
-    if (!prior_native_paint_worklet_reasons_ ||
-        prior_native_paint_worklet_reasons_ == Animation::kNoPaintWorklet) {
-      return;
-    }
-  }
-
-  prior_native_paint_worklet_reasons_ = GetNativePaintWorkletReasons();
-
-  KeyframeEffect* keyframe_effect = DynamicTo<KeyframeEffect>(content_.Get());
-  if (!keyframe_effect) {
-    return;
-  }
-
-  // TODO(crbug.com/383562308): If the target changed since the last update, we
-  // need to trigger an update for the previous and current target.
-  Element* target = keyframe_effect->EffectTarget();
-  if (!target) {
-    return;
-  }
-
-  ElementAnimations* element_animations = target->GetElementAnimations();
-  DCHECK(element_animations);
-
-  element_animations->RecalcCompositedStatus(target, reason);
-}
-
 void Animation::Trace(Visitor* visitor) const {
   visitor->Trace(content_);
   visitor->Trace(document_);
@@ -3691,7 +3527,6 @@ void Animation::Trace(Visitor* visitor) const {
   visitor->Trace(compositor_animation_);
   visitor->Trace(style_dependent_range_start_);
   visitor->Trace(style_dependent_range_end_);
-  visitor->Trace(prior_native_paint_worklet_target_);
   visitor->Trace(triggers_);
   visitor->Trace(compositing_decision_);
   EventTarget::Trace(visitor);

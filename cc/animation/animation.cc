@@ -76,15 +76,6 @@ scoped_refptr<const ElementAnimations> Animation::element_animations() const {
 }
 
 void Animation::AttachElement(ElementId element_id) {
-  DCHECK_NE(element_id, kReservedElementIdForPaintWorklet);
-  AttachElementInternal(element_id);
-}
-
-void Animation::AttachPaintWorkletElement() {
-  AttachElementInternal(kReservedElementIdForPaintWorklet);
-}
-
-void Animation::AttachElementInternal(ElementId element_id) {
   keyframe_effect()->AttachElement(element_id);
   // Register animation only if layer AND host attached.
   if (animation_host())
@@ -166,7 +157,6 @@ void Animation::PushPropertiesTo(Animation* animation_impl) {
 }
 
 bool Animation::Tick(base::TimeTicks tick_time) {
-  DCHECK(!IsWorkletAnimation());
   return keyframe_effect()->Tick(tick_time);
 }
 
@@ -232,21 +222,8 @@ void Animation::DelegateAnimationEvent(const AnimationPlaybackEvent& event) {
             event.monotonic_time, event.target_property,
             event.animation_start_time, event.curve->Clone());
         break;
-
-      case AnimationPlaybackEvent::Type::kTimeUpdated:
-        DCHECK(!event.is_impl_only);
-        animation_delegate_->NotifyLocalTimeUpdated(event.local_time);
-        break;
     }
   }
-}
-
-bool Animation::RequiresInvalidation() const {
-  return keyframe_effect()->RequiresInvalidation();
-}
-
-bool Animation::AffectsNativeProperty() const {
-  return keyframe_effect()->AffectsNativeProperty();
 }
 
 void Animation::SetNeedsCommit() {
@@ -412,10 +389,6 @@ std::string Animation::ToString() const {
       "Animation{id=%d, element_id=%s, keyframe_models=[%s]}", id_,
       keyframe_effect()->element_id().ToString().c_str(),
       keyframe_effect()->KeyframeModelsToString().c_str());
-}
-
-bool Animation::IsWorkletAnimation() const {
-  return false;
 }
 
 void Animation::AddKeyframeModel(

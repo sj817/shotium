@@ -82,8 +82,7 @@ bool PaintImage::IsSameForTesting(const PaintImage& other) const {
          id_ == other.id_ && animation_type_ == other.animation_type_ &&
          completion_state_ == other.completion_state_ &&
          is_multipart_ == other.is_multipart_ &&
-         texture_backing_ == other.texture_backing_ &&
-         deferred_paint_record_ == other.deferred_paint_record_;
+         texture_backing_ == other.texture_backing_;
   // Do not check may_be_lcp_candidate_ as it should not affect any rendering
   // operation, only metrics collection.
 }
@@ -197,10 +196,6 @@ SkImageInfo PaintImage::GetSkImageInfo(AuxImage aux_image) const {
                    : info;
       } else if (cached_sk_image_) {
         return cached_sk_image_->imageInfo();
-      } else if (deferred_paint_record_) {
-        auto size = deferred_paint_record_->GetSize();
-        return SkImageInfo::MakeUnknown(base::ClampCeil(size.width()),
-                                        base::ClampCeil(size.height()));
       }
       return SkImageInfo::MakeUnknown();
     case AuxImage::kGainmap:
@@ -225,20 +220,7 @@ void PaintImage::UnbindTextureBacking() const {
   texture_backing_->Unbind();
 }
 
-const scoped_refptr<PaintWorkletInput> PaintImage::GetPaintWorkletInput()
-    const {
-  if (!IsPaintWorklet()) {
-    return nullptr;
-  }
-  scoped_refptr<PaintWorkletInput> paint_worklet_input(
-      static_cast<PaintWorkletInput*>(deferred_paint_record().get()));
-  return paint_worklet_input;
-}
-
 bool PaintImage::IsOpaque() const {
-  if (IsPaintWorklet()) {
-    return deferred_paint_record_->KnownToBeOpaque();
-  }
   return GetSkImageInfo().isOpaque();
 }
 
@@ -407,11 +389,6 @@ gfx::Size PaintImage::GetSize(AuxImage aux_image) const {
 }
 
 gfx::ContentColorUsage PaintImage::GetContentColorUsage() const {
-  // Right now, JS paint worklets can only be in sRGB
-  if (IsPaintWorklet()) {
-    return gfx::ContentColorUsage::kSRGB;
-  }
-
   // Gainmap images are always HDR.
   if (HasGainmapInfo()) {
     return gfx::ContentColorUsage::kHDR;
@@ -463,10 +440,6 @@ bool PaintImage::IsYuv(
              gainmap_paint_image_generator_->QueryYUVA(supported_data_types,
                                                        info);
   }
-}
-
-bool PaintImage::NeedsLayer() const {
-  return IsPaintWorklet() && deferred_paint_record_->NeedsLayer();
 }
 
 const std::vector<FrameMetadata>& PaintImage::GetFrameMetadata() const {

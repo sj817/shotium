@@ -40,13 +40,11 @@ class DiscardableImageMap::Generator {
             const PaintOpBuffer& buffer,
             const gfx::Rect& bounds,
             const ScrollOffsetMap& raster_inducing_scroll_offsets,
-            DecodingModeMap* decoding_mode_map,
-            PaintWorkletInputs* paint_worklet_inputs)
+            DecodingModeMap* decoding_mode_map)
       : map_(map),
         canvas_(gfx::RectToSkIRect(bounds)),
         raster_inducing_scroll_offsets_(raster_inducing_scroll_offsets),
-        decoding_mode_map_(decoding_mode_map),
-        paint_worklet_inputs_(paint_worklet_inputs) {
+        decoding_mode_map_(decoding_mode_map) {
     GatherDiscardableImages(buffer, nullptr);
   }
 
@@ -300,11 +298,6 @@ class DiscardableImageMap::Generator {
       rects.push_back(image_rect);
     }
 
-    if (paint_worklet_inputs_ && paint_image.IsPaintWorklet()) {
-      paint_worklet_inputs_->emplace_back(paint_image.GetPaintWorkletInput(),
-                                          paint_image.stable_id());
-    }
-
     if (decoding_mode_map_ && paint_image.IsLazyGenerated()) {
       auto decoding_mode_it = decoding_mode_map_->find(paint_image.stable_id());
       // Use the decoding mode if we don't have one yet, otherwise use the more
@@ -330,12 +323,7 @@ class DiscardableImageMap::Generator {
     }
 
     bool add_image = true;
-    if (paint_image.IsPaintWorklet()) {
-      // PaintWorklet-backed images don't go through the image decode pipeline
-      // (they are painted pre-raster from LayerTreeHostImpl), so do not need to
-      // be added to the |map_.images_|.
-      add_image = false;
-    } else if (only_gather_animated_images_) {
+    if (only_gather_animated_images_) {
       // If we are iterating images in a record shader, only track them if they
       // are animated. We defer decoding of images in record shaders to skia,
       // but we still need to track animated images to invalidate and advance
@@ -354,7 +342,6 @@ class DiscardableImageMap::Generator {
   SkNoDrawCanvas canvas_;
   const ScrollOffsetMap& raster_inducing_scroll_offsets_;
   DecodingModeMap* const decoding_mode_map_;
-  PaintWorkletInputs* const paint_worklet_inputs_;
   bool only_gather_animated_images_ = false;
   bool collect_invisible_images_ = false;
 };  // DiscardableImageMap::Generator
@@ -369,13 +356,11 @@ scoped_refptr<DiscardableImageMap> DiscardableImageMap::Generate(
     const PaintOpBuffer& paint_op_buffer,
     const gfx::Rect& bounds,
     const ScrollOffsetMap& raster_inducing_scroll_offsets,
-    DecodingModeMap* decoding_mode_map,
-    PaintWorkletInputs* paint_worklet_inputs) {
+    DecodingModeMap* decoding_mode_map) {
   TRACE_EVENT0("cc", "DiscardableImageMap::Generate");
   scoped_refptr<DiscardableImageMap> image_map(new DiscardableImageMap());
   Generator generator(*image_map, paint_op_buffer, bounds,
-                      raster_inducing_scroll_offsets, decoding_mode_map,
-                      paint_worklet_inputs);
+                      raster_inducing_scroll_offsets, decoding_mode_map);
   CHECK(!image_map->images_rtree_);
   return image_map;
 }

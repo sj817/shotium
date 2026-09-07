@@ -29,15 +29,6 @@ class Animation;
 
 struct PropertyAnimationState;
 
-// Specially designed for a custom property animation on a paint worklet
-// element. It doesn't require an element id to run on the compositor thread.
-// However, our animation system requires the element to be on the property
-// tree in order to keep ticking the animation. Therefore, we use a reserved
-// element id for this animation so that the compositor animation system
-// recognize it. We do not use ElementId because it's an invalid element id.
-inline constexpr ElementId kReservedElementIdForPaintWorklet(
-    std::numeric_limits<ElementId::InternalValue>::max() - 1);
-
 // A KeyframeEffect owns a group of KeyframeModels for a single target
 // (identified by an ElementId). It is responsible for managing the
 // KeyframeModels' running states (starting, running, paused, etc), as well as
@@ -127,8 +118,6 @@ class CC_ANIMATION_EXPORT KeyframeEffect : public gfx::KeyframeEffect {
   // nor aborted.
   bool HasTickingKeyframeModel() const;
 
-  bool RequiresInvalidation() const;
-  bool AffectsNativeProperty() const;
 
   bool AnimationsPreserveAxisAlignment() const;
 

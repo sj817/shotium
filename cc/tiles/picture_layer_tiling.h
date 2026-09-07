@@ -20,7 +20,6 @@
 #include "cc/base/region.h"
 #include "cc/base/tiling_data.h"
 #include "cc/cc_export.h"
-#include "cc/paint/paint_worklet_input.h"
 #include "cc/paint/scroll_offset_map.h"
 #include "cc/raster/raster_source.h"
 #include "cc/tiles/tile.h"
@@ -57,7 +56,6 @@ class CC_EXPORT PictureLayerTilingClient {
       const PictureLayerTiling* tiling) const = 0;
   virtual bool HasValidTilePriorities() const = 0;
   virtual bool RequiresHighResToDraw() const = 0;
-  virtual const PaintWorkletRecordMap& GetPaintWorkletRecords() const = 0;
   virtual std::vector<const DrawImage*> GetDiscardableImagesInRect(
       const gfx::Rect& rect) const = 0;
   virtual ScrollOffsetMap GetRasterInducingScrollOffsets() const = 0;
@@ -133,9 +131,6 @@ class CC_EXPORT PictureLayerTiling {
   gfx::Size raster_size() const { return raster_source()->size(); }
   const scoped_refptr<RasterSource>& raster_source() const {
     return raster_source_;
-  }
-  const PaintWorkletRecordMap& GetPaintWorkletRecords() const {
-    return client_->GetPaintWorkletRecords();
   }
   ScrollOffsetMap GetRasterInducingScrollOffsets() const {
     return client_->GetRasterInducingScrollOffsets();

@@ -771,8 +771,7 @@ bool IntersectionGeometry::ApplyClip(const LayoutObject* target,
                                      bool root_scrolls_target,
                                      CachedRects* cached_rects) {
   VisualRectFlags flags = {VisualRectFlag::kEdgeInclusive,
-                           VisualRectFlag::kDontApplyMainFrameOverflowClip,
-                           VisualRectFlag::kUsePreciseClipPath};
+                           VisualRectFlag::kDontApplyMainFrameOverflowClip};
   if (!ShouldRespectFilters()) {
     flags.Put(VisualRectFlag::kIgnoreFilters);
   }

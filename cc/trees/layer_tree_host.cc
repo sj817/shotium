@@ -46,7 +46,6 @@
 #include "cc/layers/heads_up_display_layer_impl.h"
 #include "cc/layers/layer.h"
 #include "cc/layers/painted_scrollbar_layer.h"
-#include "cc/paint/paint_worklet_layer_painter.h"
 #include "cc/resources/ui_resource_manager.h"
 #include "cc/tiles/raster_dark_mode_filter.h"
 #include "cc/trees/client_layer_tree_host_impl.h"
@@ -1305,30 +1304,6 @@ void LayerTreeHost::AnimateLayers(base::TimeTicks monotonic_time) {
     // A commit is required to push animation changes to the compositor.
     SetNeedsCommit();
   }
-}
-
-void LayerTreeHost::SetLayerTreeMutator(
-    std::unique_ptr<LayerTreeMutator> mutator) {
-  DCHECK(IsMainThread());
-  // The animation worklet system assumes that the mutator will never be called
-  // from the main thread, which will not be the case if we're running in
-  // single-threaded mode.
-  if (!task_runner_provider_->HasImplThread()) {
-    DLOG(ERROR) << "LayerTreeMutator not supported in single-thread mode";
-    return;
-  }
-  proxy_->SetMutator(std::move(mutator));
-}
-
-void LayerTreeHost::SetPaintWorkletLayerPainter(
-    std::unique_ptr<PaintWorkletLayerPainter> painter) {
-  DCHECK(IsMainThread());
-  // The paint worklet system assumes that the painter will never be called from
-  // the main thread, which will not be the case if we're running in
-  // single-threaded mode.
-  DCHECK(task_runner_provider_->HasImplThread())
-      << "PaintWorkletLayerPainter not supported in single-thread mode";
-  proxy_->SetPaintWorkletLayerPainter(std::move(painter));
 }
 
 bool LayerTreeHost::IsSingleThreaded() const {

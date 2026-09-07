@@ -2414,17 +2414,6 @@ void LayerTreeImpl::AnnotateAnimatedImages(
   }
 }
 
-void LayerTreeImpl::NotifyLayerHasPaintWorkletsChanged(PictureLayerImpl* layer,
-                                                       bool has_worklets) {
-  if (has_worklets) {
-    layer_list_.SetPictureLayerWithWorklet(layer);
-  } else {
-    layer_list_.RemovePictureLayerWithWorklet(layer);
-  }
-  DCHECK_EQ(has_worklets, std::ranges::contains(
-                              layer_list_.PictureLayersWithWorklets(), layer));
-}
-
 void LayerTreeImpl::RegisterScrollbar(ScrollbarLayerImplBase* scrollbar_layer) {
   ElementId scroll_element_id = scrollbar_layer->scroll_element_id();
   if (!scroll_element_id)

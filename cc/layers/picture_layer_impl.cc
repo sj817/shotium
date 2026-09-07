@@ -197,7 +197,7 @@ void PictureLayerImpl::MovePropertiesToActiveLayer(LayerImpl* active_layer) {
   if (changed_other_props) {
     layer_impl->UpdateRasterSourceInternal(
         raster_source_, std::move(invalidation_), tilings_.get(),
-        &paint_worklet_records_, discardable_image_map_.get());
+        discardable_image_map_.get());
     DCHECK(invalidation_.IsEmpty());
   }
 
@@ -530,14 +530,13 @@ void PictureLayerImpl::CommitPendingRasterSource() {
   UpdateRasterSourceInternal(
       std::move(pending_raster_source_), std::move(pending_invalidation_),
       // These pointers being null indicates we are committing.
-      nullptr, nullptr, nullptr);
+      nullptr, nullptr);
 }
 
 void PictureLayerImpl::UpdateRasterSourceInternal(
     scoped_refptr<RasterSource> raster_source,
     Region new_invalidation,
     const PictureLayerTilingSet* pending_set,
-    const PaintWorkletRecordMap* pending_paint_worklet_records,
     const DiscardableImageMap* pending_discardable_image_map) {
   CHECK(!!pending_set || layer_tree_impl()->IsSyncTree());
   CHECK(raster_source);
@@ -602,8 +601,6 @@ void PictureLayerImpl::UpdateRasterSourceInternal(
     // from the pending tree.
     if (pending_discardable_image_map != discardable_image_map_) {
       bool had_animated_images = HasAnimatedImages();
-      CHECK(pending_paint_worklet_records);
-      paint_worklet_records_ = *pending_paint_worklet_records;
       discardable_image_map_ = pending_discardable_image_map;
       if (had_animated_images != HasAnimatedImages()) {
         layer_tree_impl()->NotifyLayerHasAnimatedImagesChanged(
@@ -655,7 +652,7 @@ void PictureLayerImpl::SetRasterSourceForTesting(
     const Region& invalidation) {
   LayerTreeImpl::DiscardableImageMapUpdater updater(layer_tree_impl());
   UpdateRasterSourceInternal(std::move(raster_source), std::move(invalidation),
-                             nullptr, nullptr, nullptr);
+                             nullptr, nullptr);
 }
 
 void PictureLayerImpl::RegenerateDiscardableImageMap() {
@@ -663,19 +660,15 @@ void PictureLayerImpl::RegenerateDiscardableImageMap() {
   bool had_animated_images = HasAnimatedImages();
   if (const auto* display_list = raster_source_->GetDisplayItemList().get()) {
     DiscardableImageMap::DecodingModeMap decoding_mode_map;
-    DiscardableImageMap::PaintWorkletInputs paint_worklet_inputs;
     discardable_image_map_ = display_list->GenerateDiscardableImageMap(
-        GetRasterInducingScrollOffsets(), &decoding_mode_map,
-        &paint_worklet_inputs);
+        GetRasterInducingScrollOffsets(), &decoding_mode_map);
     auto* controller = layer_tree_impl()->image_animation_controller();
     for (const auto& data :
          discardable_image_map_->animated_images_metadata()) {
       controller->UpdateAnimatedImage(data.second);
     }
-    SetPaintWorkletInputs(paint_worklet_inputs);
     layer_tree_impl()->UpdateImageDecodingHints(decoding_mode_map);
   } else {
-    SetPaintWorkletInputs({});
     discardable_image_map_ = nullptr;
   }
   if (had_animated_images != HasAnimatedImages()) {
@@ -897,10 +890,6 @@ const PictureLayerTiling* PictureLayerImpl::GetPendingOrActiveTwinTiling(
 
 bool PictureLayerImpl::RequiresHighResToDraw() const {
   return layer_tree_impl()->RequiresHighResToDraw();
-}
-
-const PaintWorkletRecordMap& PictureLayerImpl::GetPaintWorkletRecords() const {
-  return paint_worklet_records_;
 }
 
 bool PictureLayerImpl::IsDirectlyCompositedImage() const {
@@ -1955,70 +1944,6 @@ void PictureLayerImpl::InvalidateRasterInducingScrolls(
     invalidation_.Union(invalidation);
     tilings_->Invalidate(invalidation);
     SetNeedsPushProperties(kChangedGeneralProperty);
-  }
-}
-
-void PictureLayerImpl::SetPaintWorkletRecord(
-    scoped_refptr<const PaintWorkletInput> input,
-    PaintRecord record) {
-  DCHECK(paint_worklet_records_.contains(input));
-  paint_worklet_records_[input].second = std::move(record);
-}
-
-void PictureLayerImpl::SetPaintWorkletInputs(
-    const DiscardableImageMap::PaintWorkletInputs& inputs) {
-  // PaintWorklets are not supported when committing directly to the active
-  // tree, so in that case the |inputs| should always be empty.
-  DCHECK(layer_tree_impl()->IsPendingTree() || inputs.empty());
-
-  bool had_paint_worklets = !paint_worklet_records_.empty();
-  PaintWorkletRecordMap new_records;
-  for (const auto& input_with_id : inputs) {
-    const auto& input = input_with_id.first;
-    const auto& paint_image_id = input_with_id.second;
-    auto it = new_records.find(input);
-    // We should never have multiple PaintImages sharing the same paint worklet.
-    DCHECK(it == new_records.end() || it->second.first == paint_image_id);
-    // Attempt to re-use an existing PaintRecord if possible.
-    new_records[input] = std::make_pair(
-        paint_image_id, std::move(paint_worklet_records_[input].second));
-    // The move constructor of std::optional does not clear the source to
-    // nullopt.
-    paint_worklet_records_[input].second = std::nullopt;
-  }
-  paint_worklet_records_.swap(new_records);
-
-  // The pending tree tracks which PictureLayerImpls have PaintWorkletInputs as
-  // an optimization to avoid walking all picture layers.
-  bool has_paint_worklets = !paint_worklet_records_.empty();
-  if ((has_paint_worklets != had_paint_worklets) &&
-      layer_tree_impl()->IsPendingTree()) {
-    // TODO(xidachen): We don't need additional tracking on LayerTreeImpl. The
-    // tracking in AnimatedPaintWorkletTracker should be enough.
-    layer_tree_impl()->NotifyLayerHasPaintWorkletsChanged(this,
-                                                          has_paint_worklets);
-  }
-  if (layer_tree_impl()->IsPendingTree()) {
-    layer_tree_impl()
-        ->paint_worklet_tracker()
-        .UpdatePaintWorkletInputProperties(inputs);
-  }
-}
-
-void PictureLayerImpl::InvalidatePaintWorklets(
-    const PaintWorkletInput::PropertyKey& key,
-    const PaintWorkletInput::PropertyValue& prev,
-    const PaintWorkletInput::PropertyValue& next) {
-  for (auto& entry : paint_worklet_records_) {
-    const std::vector<PaintWorkletInput::PropertyKey>& prop_ids =
-        entry.first->GetPropertyKeys();
-    // If the PaintWorklet depends on the property whose value was changed by
-    // the animation system, then invalidate its associated PaintRecord so that
-    // we can repaint the PaintWorklet during impl side invalidation.
-    if (std::ranges::contains(prop_ids, key) &&
-        entry.first->ValueChangeShouldCauseRepaint(prev, next)) {
-      entry.second.second = std::nullopt;
-    }
   }
 }
 

@@ -244,13 +244,6 @@ void KeyframeEffect::AddKeyframeModel(
             keyframe_model->TargetProperty() ==
                 existing_keyframe_model->TargetProperty() &&
             cc_keyframe_model->group() == cc_existing_keyframe_model->group();
-        if (same_group_and_target && keyframe_model->TargetProperty() ==
-                                         TargetProperty::NATIVE_PROPERTY) {
-          same_group_and_target =
-              cc_keyframe_model->native_property_type() ==
-              cc_existing_keyframe_model->native_property_type();
-        }
-
         // Keyframe models in the same group might target the same property
         // if one or both is an outgoing animation (i.e. about to be
         // removed).
@@ -449,12 +442,6 @@ bool KeyframeEffect::DispatchAnimationEventToKeyframeModel(
       SetNeedsPushProperties();
       dispatched = true;
       break;
-
-    case AnimationPlaybackEvent::Type::kTimeUpdated:
-      // TIME_UPDATED events are used to synchronize effect time between cc and
-      // main thread worklet animations. Keyframe models are not involved in
-      // this process.
-      NOTREACHED();
   }
   return dispatched;
 }
@@ -462,28 +449,6 @@ bool KeyframeEffect::DispatchAnimationEventToKeyframeModel(
 bool KeyframeEffect::HasTickingKeyframeModel() const {
   for (const auto& keyframe_model : keyframe_models()) {
     if (!keyframe_model->is_finished())
-      return true;
-  }
-  return false;
-}
-
-bool KeyframeEffect::RequiresInvalidation() const {
-  for (const auto& it : keyframe_models()) {
-    if (it->TargetProperty() == TargetProperty::NATIVE_PROPERTY ||
-        it->TargetProperty() == TargetProperty::CSS_CUSTOM_PROPERTY) {
-      return true;
-    }
-  }
-  return false;
-}
-
-bool KeyframeEffect::AffectsNativeProperty() const {
-  for (const auto& it : keyframe_models()) {
-    // TODO(crbug.com/40796582): include the SCROLL_OFFSET here so that we won't
-    // create a compositor animation frame sequence tracker when there is a
-    // composited scroll.
-    if (it->TargetProperty() != TargetProperty::CSS_CUSTOM_PROPERTY &&
-        it->TargetProperty() != TargetProperty::NATIVE_PROPERTY)
       return true;
   }
   return false;
@@ -734,11 +699,7 @@ void KeyframeEffect::PushPropertiesTo(
     if (keyframe_effect_impl->has_attached_element())
       keyframe_effect_impl->animation_->DetachElement();
     if (element_id_) {
-      if (element_id_ == kReservedElementIdForPaintWorklet) {
-        keyframe_effect_impl->animation_->AttachPaintWorkletElement();
-      } else {
-        keyframe_effect_impl->animation_->AttachElement(element_id_);
-      }
+      keyframe_effect_impl->animation_->AttachElement(element_id_);
     }
   }
 

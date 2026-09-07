@@ -218,53 +218,11 @@ inline bool CalculateCanTraversePhysicalFragments(const LayoutObject& obj) {
   return true;
 }
 
-bool HasNativeBackgroundPainter(Node* node) {
-  if (!RuntimeEnabledFeatures::CompositeBGColorAnimationEnabled())
-    return false;
-
-  Element* element = DynamicTo<Element>(node);
-  if (!element)
-    return false;
-
-  ElementAnimations* element_animations = element->GetElementAnimations();
-  if (!element_animations)
-    return false;
-
-  return element_animations->CompositedBackgroundColorStatus() ==
-         ElementAnimations::CompositedPaintStatus::kComposited;
-}
-
-bool HasClipPathPaintWorklet(Node* node) {
-  if (!RuntimeEnabledFeatures::CompositeClipPathAnimationEnabled())
-    return false;
-
-  Element* element = DynamicTo<Element>(node);
-  if (!element)
-    return false;
-
-  ElementAnimations* element_animations = element->GetElementAnimations();
-  if (!element_animations)
-    return false;
-
-  return element_animations->CompositedClipPathStatus() ==
-         ElementAnimations::CompositedPaintStatus::kComposited;
-}
-
-StyleDifference AdjustForCompositableAnimationPaint(
-    const ComputedStyle* old_style,
-    const ComputedStyle* new_style,
-    Node* node,
-    StyleDifference diff) {
-  DCHECK(new_style);
-
-  bool skip_background_color_paint_invalidation =
-      !diff.background_color_changed || HasNativeBackgroundPainter(node);
-  if (!skip_background_color_paint_invalidation)
+StyleDifference AdjustForAnimatedPaint(StyleDifference diff) {
+  if (diff.background_color_changed)
     diff.SetNeedsNormalPaintInvalidation();
 
-  bool skip_clip_path_paint_invalidation =
-      !diff.clip_path_changed || HasClipPathPaintWorklet(node);
-  if (!skip_clip_path_paint_invalidation)
+  if (diff.clip_path_changed)
     diff.SetNeedsNormalPaintInvalidation();
 
   return diff;
@@ -3054,9 +3012,8 @@ void LayoutObject::SetStyle(const ComputedStyle* style,
 
   diff = AdjustStyleDifference(diff);
 
-  // A change to a property that can be animated on the compositor or an
-  // animation affecting that property may require paint invalidation.
-  diff = AdjustForCompositableAnimationPaint(style_, style, GetNode(), diff);
+  // Background color and clip-path changes require CPU paint invalidation.
+  diff = AdjustForAnimatedPaint(diff);
 
   StyleChangeContext style_change_context;
 
@@ -3141,9 +3098,7 @@ void LayoutObject::SetStyle(const ComputedStyle* style,
     }
   }
 
-  // Main thread clip path animations always require paint property updates,
-  // and cc thread clip path animations require updates when stopping or
-  // starting. See: AdjustForCompositableAnimationPaint.
+  // Clip-path changes also require paint property updates.
   if (old_style && diff.NeedsNormalPaintInvalidation() &&
       diff.clip_path_changed) {
     SetNeedsPaintPropertyUpdate();
@@ -3489,8 +3444,7 @@ void LayoutObject::ApplyFirstLineChanges(const ComputedStyle* old_style) {
       if (const auto* new_first_line_style = FirstLineStyleWithoutFallback()) {
         diff = old_first_line_style->VisualInvalidationDiff(
             GetDocument(), *new_first_line_style);
-        diff = AdjustForCompositableAnimationPaint(
-            old_first_line_style, new_first_line_style, GetNode(), diff);
+        diff = AdjustForAnimatedPaint(diff);
         // Highlight pseudo styles are stored  in StyleHighlightData and are
         // intentionally ignored by VisualInvalidationDiff, because highlight
         // repaints are normally driven by HighlightRegistry.

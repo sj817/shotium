@@ -11,7 +11,6 @@
 #include "base/check.h"
 #include "cc/animation/animation_export.h"
 #include "cc/paint/element_id.h"
-#include "cc/paint/paint_worklet_input.h"
 #include "ui/gfx/animation/keyframe/keyframe_model.h"
 
 namespace base {
@@ -33,20 +32,10 @@ class CC_ANIMATION_EXPORT KeyframeModel : public gfx::KeyframeModel {
 
   static const int kInvalidGroup = -1;
 
-  // Bundles a property id with its name and native type.
+  // Identifies the property animated by a compositor keyframe model.
   class CC_ANIMATION_EXPORT TargetPropertyId {
    public:
-    // For a property that is neither TargetProperty::CSS_CUSTOM_PROPERTY nor
-    // TargetProperty::NATIVE_PROPERTY.
     explicit TargetPropertyId(int target_property_type);
-    // For TargetProperty::CSS_CUSTOM_PROPERTY, the string is the custom
-    // property name.
-    TargetPropertyId(int target_property_type,
-                     const std::string& custom_property_name);
-    // For TargetProperty::NATIVE_PROPERTY.
-    TargetPropertyId(
-        int target_property_type,
-        PaintWorkletInput::NativePropertyType native_property_type);
     TargetPropertyId(const TargetPropertyId&);
     TargetPropertyId(TargetPropertyId&&);
     ~TargetPropertyId();
@@ -54,20 +43,9 @@ class CC_ANIMATION_EXPORT KeyframeModel : public gfx::KeyframeModel {
     TargetPropertyId& operator=(TargetPropertyId&& other);
 
     int target_property_type() const { return target_property_type_; }
-    const std::string& custom_property_name() const {
-      return custom_property_name_;
-    }
-    PaintWorkletInput::NativePropertyType native_property_type() const {
-      return native_property_type_;
-    }
 
    private:
     int target_property_type_;
-    // Name of the animated custom property. Empty if it is an animated native
-    // property.
-    std::string custom_property_name_;
-    // Type of the animated native property.
-    PaintWorkletInput::NativePropertyType native_property_type_;
   };
 
   static std::unique_ptr<KeyframeModel> Create(
@@ -135,14 +113,6 @@ class CC_ANIMATION_EXPORT KeyframeModel : public gfx::KeyframeModel {
     affects_pending_elements_ = affects_pending_elements;
   }
   bool affects_pending_elements() const { return affects_pending_elements_; }
-
-  const std::string& custom_property_name() const {
-    return target_property_id_.custom_property_name();
-  }
-
-  PaintWorkletInput::NativePropertyType native_property_type() const {
-    return target_property_id_.native_property_type();
-  }
 
   bool StartShouldBeDeferred() const override;
 

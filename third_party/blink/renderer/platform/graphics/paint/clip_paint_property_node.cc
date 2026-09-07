@@ -20,8 +20,7 @@ PaintPropertyChangeType ClipPaintPropertyNode::State::ComputeChange(
           other.layout_clip_rect_excluding_overlay_scrollbars ||
       !ClipPathEquals(other.clip_path) ||
       pixel_moving_filter != other.pixel_moving_filter ||
-      expanded_layout_clip_rect_ != other.expanded_layout_clip_rect_ ||
-      precise_layout_clip_rect_ != other.precise_layout_clip_rect_) {
+      layout_clip_rect_ != other.layout_clip_rect_) {
     return PaintPropertyChangeType::kChangedOnlyValues;
   }
   return PaintPropertyChangeType::kUnchanged;
@@ -89,7 +88,7 @@ std::unique_ptr<JSONObject> ClipPaintPropertyNode::ToJSON() const {
   json->SetString("rect", String(state_.paint_clip_rect_.Rect().ToString()));
   if (state_.layout_clip_rect_excluding_overlay_scrollbars &&
       *state_.layout_clip_rect_excluding_overlay_scrollbars !=
-          state_.expanded_layout_clip_rect_) {
+          state_.layout_clip_rect_) {
     json->SetString(
         "rectExcludingOverlayScrollbars",
         String(state_.layout_clip_rect_excluding_overlay_scrollbars->Rect()
@@ -97,14 +96,6 @@ std::unique_ptr<JSONObject> ClipPaintPropertyNode::ToJSON() const {
   }
   if (state_.clip_path) {
     json->SetBoolean("hasClipPath", true);
-  }
-  if (IsForCompositeClipPathAnimation()) {
-    json->SetBoolean("isForCompositeClipPathAnimation", true);
-    json->SetString(
-        "expandedLayoutClipRect",
-        String(state_.expanded_layout_clip_rect_.Rect().ToString()));
-    json->SetString("preciseLayoutClipRect",
-                    String(state_.precise_layout_clip_rect_.Rect().ToString()));
   }
   if (state_.pixel_moving_filter) {
     json->SetString("pixelMovingFilter",

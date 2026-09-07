@@ -76,10 +76,8 @@ class LayerTreeHostImpl;
 class ClientLayerTreeHostImpl;
 class LayerTreeHostImplDelegate;
 class LayerTreeHostSingleThreadDelegate;
-class LayerTreeMutator;
 class MutatorEvents;
 class MutatorHost;
-class PaintWorkletLayerPainter;
 class RasterDarkModeFilter;
 class RenderFrameMetadataObserver;
 class RenderingStatsInstrumentation;
@@ -233,15 +231,6 @@ class CC_EXPORT LayerTreeHost : public MutatorHostDelegate {
   // Returns the settings used by this host. These settings are constants given
   // at startup.
   const LayerTreeSettings& GetSettings() const;
-
-  // Sets the LayerTreeMutator interface used to directly mutate the compositor
-  // state on the compositor thread. (Compositor-Worker)
-  void SetLayerTreeMutator(std::unique_ptr<LayerTreeMutator> mutator);
-
-  // Sets the LayerTreePainter interface used to dispatch the JS paint callback
-  // to a worklet thread.
-  void SetPaintWorkletLayerPainter(
-      std::unique_ptr<PaintWorkletLayerPainter> painter);
 
   // Attaches a SwapPromise to the Layer tree, that passes through the
   // LayerTreeHost and LayerTreeHostImpl with the next commit and frame
@@ -892,16 +881,9 @@ class CC_EXPORT LayerTreeHost : public MutatorHostDelegate {
                            ElementListType list_type,
                            float maximum_scale) override;
 
-  void OnCustomPropertyMutated(
-      PaintWorkletInput::PropertyKey property_key,
-      PaintWorkletInput::PropertyValue property_value) override {}
-
   bool RunsOnCurrentThread() const override;
 
   void ScrollOffsetAnimationFinished(ElementId element_id) override {}
-
-  void NotifyAnimationWorkletStateChange(AnimationWorkletMutationState state,
-                                         ElementListType tree_type) override {}
 
   void QueueImageDecode(const DrawImage& image,
                         base::OnceCallback<void(bool)> callback,

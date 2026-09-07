@@ -132,10 +132,6 @@ class CC_EXPORT CompositorFrameReportingController {
     begin_main_frame_start_time_ = begin_main_frame_start_time;
   }
 
-  void SetNeedsRasterPropertiesAnimated(bool needs_raster_properties_animated) {
-    needs_raster_properties_animated_ = needs_raster_properties_animated;
-  }
-
   bool HasReporterAt(PipelineStage stage) const;
 
   void SetVisible(bool visible);
@@ -255,9 +251,6 @@ class CC_EXPORT CompositorFrameReportingController {
   bool visible_ = true;
   bool waiting_for_did_present_after_visible_ = false;
 
-  // Indicates whether or not we expect the next frame to contain an animation
-  // which requires impl invalidation.
-  bool needs_raster_properties_animated_ = false;
 };
 
 }  // namespace cc

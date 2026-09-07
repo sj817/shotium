@@ -73,8 +73,6 @@
 #include "cc/metrics/stub_compositor_frame_reporting_controller.h"
 #include "cc/metrics/submit_info.h"
 #include "cc/paint/display_item_list.h"
-#include "cc/paint/paint_worklet_job.h"
-#include "cc/paint/paint_worklet_layer_painter.h"
 #include "cc/raster/gpu_raster_buffer_provider.h"
 #include "cc/raster/one_copy_raster_buffer_provider.h"
 #include "cc/raster/raster_buffer_provider.h"
@@ -1587,13 +1585,6 @@ DrawResult LayerTreeHostImpl::PrepareToDraw(FrameData* frame,
     input_delegate_->WillDraw();
   }
 
-  // Tick worklet animations here, just before draw, to give animation worklets
-  // as much time as possible to produce their output for this frame. Note that
-  // an animation worklet is asked to produce its output at the beginning of the
-  // frame along side other animations but its output arrives asynchronously so
-  // we tick worklet animations and apply that output here instead.
-  mutator_host_->TickWorkletAnimations();
-
   bool ok = active_tree_->UpdateDrawProperties(
       /*update_tiles=*/true, /*update_image_animation_controller=*/true);
   DCHECK(ok) << "UpdateDrawProperties failed during draw";
@@ -2006,11 +1997,8 @@ bool LayerTreeHostImpl::HasPendingTree() {
 }
 
 void LayerTreeHostImpl::NotifyReadyToActivate() {
-  // The TileManager may call this method while the pending tree is still being
-  // painted, as it isn't aware of the ongoing paint. We shouldn't tell the
-  // scheduler we are ready to activate in that case, as if we do it will
-  // immediately activate once we call NotifyPaintWorkletStateChange, rather
-  // than wait for the TileManager to actually raster the content!
+  // Ignore tile completion callbacks until the synchronous tree update has
+  // finished invalidating images and setting up the raster content.
   if (!pending_tree_fully_painted_) {
     return;
   }
@@ -3609,8 +3597,6 @@ bool LayerTreeHostImpl::WillBeginImplFrame(const viz::BeginFrameArgs& args) {
   impl_thread_phase_ = ImplThreadPhase::INSIDE_IMPL_FRAME;
   current_begin_frame_tracker_.Start(args);
   frame_trackers_.NotifyBeginImplFrame(args);
-  compositor_frame_reporting_controller_->SetNeedsRasterPropertiesAnimated(
-      paint_worklet_tracker_.HasInputPropertiesAnimatedOnImpl());
   if (!GetSettings().is_layer_tree_for_ui) {
     devtools_instrumentation::DidBeginFrame(id_, args.frame_time,
                                             args.frame_id.sequence_number);
@@ -4396,16 +4382,6 @@ LayerTreeHostImpl::CreateRasterBufferProvider() {
       raster_caps_.tile_overlay_candidate);
 }
 
-void LayerTreeHostImpl::SetLayerTreeMutator(
-    std::unique_ptr<LayerTreeMutator> mutator) {
-  mutator_host_->SetLayerTreeMutator(std::move(mutator));
-}
-
-void LayerTreeHostImpl::SetPaintWorkletLayerPainter(
-    std::unique_ptr<PaintWorkletLayerPainter> painter) {
-  paint_worklet_painter_ = std::move(painter);
-}
-
 void LayerTreeHostImpl::QueueImageDecode(int request_id,
                                          const DrawImage& image,
                                          bool speculative) {
@@ -4453,7 +4429,6 @@ LayerTreeHostImpl::TakeCompletedImageDecodeRequests() {
 std::unique_ptr<MutatorEvents> LayerTreeHostImpl::TakeMutatorEvents() {
   std::unique_ptr<MutatorEvents> events = mutator_host_->CreateEvents();
   std::swap(events, mutator_events_);
-  mutator_host_->TakeTimeUpdatedEvents(events.get());
   return events;
 }
 
@@ -5064,11 +5039,6 @@ bool LayerTreeHostImpl::ScrollbarAnimationMouseUp(ElementId element_id) const {
   return false;
 }
 
-void LayerTreeHostImpl::TickScrollAnimations() const {
-  return mutator_host_->TickScrollAnimations(CurrentBeginFrameArgs().frame_time,
-                                             GetScrollTree());
-}
-
 double LayerTreeHostImpl::PredictViewportBoundsDelta(
     double current_bounds_delta,
     gfx::Vector2dF scroll_distance) const {
@@ -5291,27 +5261,9 @@ bool LayerTreeHostImpl::AnimateLayers(base::TimeTicks monotonic_time,
     SetNeedsOneBeginImplFrame();
     frame_trackers_.StartSequence(
         FrameSequenceTrackerType::kCompositorAnimation);
-    if (mutator_host_->HasInvalidationAnimation()) {
-      frame_trackers_.StartSequence(
-          FrameSequenceTrackerType::kCompositorRasterAnimation);
-    } else {
-      frame_trackers_.StopSequence(
-          FrameSequenceTrackerType::kCompositorRasterAnimation);
-    }
-    if (mutator_host_->HasNativePropertyAnimation()) {
-      frame_trackers_.StartSequence(
-          FrameSequenceTrackerType::kCompositorNativeAnimation);
-    } else {
-      frame_trackers_.StopSequence(
-          FrameSequenceTrackerType::kCompositorNativeAnimation);
-    }
   } else {
     frame_trackers_.StopSequence(
         FrameSequenceTrackerType::kCompositorAnimation);
-    frame_trackers_.StopSequence(
-        FrameSequenceTrackerType::kCompositorRasterAnimation);
-    frame_trackers_.StopSequence(
-        FrameSequenceTrackerType::kCompositorNativeAnimation);
   }
 
   if (tick_result.needs_next_frame && mutator_host_->HasViewTransition()) {
@@ -5989,13 +5941,6 @@ void LayerTreeHostImpl::SetElementFilterMutated(
   }
 }
 
-void LayerTreeHostImpl::OnCustomPropertyMutated(
-    PaintWorkletInput::PropertyKey property_key,
-    PaintWorkletInput::PropertyValue property_value) {
-  paint_worklet_tracker_.OnCustomPropertyMutated(std::move(property_key),
-                                                 std::move(property_value));
-}
-
 bool LayerTreeHostImpl::RunsOnCurrentThread() const {
   // If there is no impl thread, then we assume the current thread is ok.
   return !task_runner_provider_->HasImplThread() ||
@@ -6096,21 +6041,6 @@ void LayerTreeHostImpl::ElasticOverscrollAnimationFinished(
     ElementId finished_id) {
   if (input_delegate_) {
     input_delegate_->ElasticOverscrollAnimationFinished(finished_id);
-  }
-}
-
-void LayerTreeHostImpl::NotifyAnimationWorkletStateChange(
-    AnimationWorkletMutationState state,
-    ElementListType tree_type) {
-  delegate_->NotifyAnimationWorkletStateChange(state, tree_type);
-  if (state != AnimationWorkletMutationState::CANCELED) {
-    // We have at least one active worklet animation. We need to request a new
-    // frame to keep the animation ticking.
-    SetNeedsOneBeginImplFrame();
-    if (state == AnimationWorkletMutationState::COMPLETED_WITH_UPDATE &&
-        tree_type == ElementListType::ACTIVE) {
-      SetNeedsRedraw(/*animation_only=*/false, /*skip_if_inside_draw=*/false);
-    }
   }
 }
 

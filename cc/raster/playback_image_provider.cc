@@ -39,7 +39,6 @@ PlaybackImageProvider& PlaybackImageProvider::operator=(
 
 ImageProvider::ScopedResult PlaybackImageProvider::GetRasterContent(
     const DrawImage& draw_image) {
-  DCHECK(!draw_image.paint_image().IsPaintWorklet());
   // Return an empty decoded image if we are skipping all images during this
   // raster.
   if (!settings_.has_value())

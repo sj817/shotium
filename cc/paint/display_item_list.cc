@@ -316,8 +316,7 @@ void DisplayItemList::AddToValue(base::trace_event::TracedValue* state,
 
 scoped_refptr<DiscardableImageMap> DisplayItemList::GenerateDiscardableImageMap(
     const ScrollOffsetMap& raster_inducing_scroll_offsets,
-    DiscardableImageMap::DecodingModeMap* decoding_mode_map,
-    DiscardableImageMap::PaintWorkletInputs* paint_worklet_inputs) const {
+    DiscardableImageMap::DecodingModeMap* decoding_mode_map) const {
 #if DCHECK_IS_ON()
   DCHECK(IsFinalized());
 #endif
@@ -325,7 +324,7 @@ scoped_refptr<DiscardableImageMap> DisplayItemList::GenerateDiscardableImageMap(
   // Bounds are only used to size an SkNoDrawCanvas.
   return DiscardableImageMap::Generate(
       paint_op_buffer_, bounds().value_or(kMaxBounds),
-      raster_inducing_scroll_offsets, decoding_mode_map, paint_worklet_inputs);
+      raster_inducing_scroll_offsets, decoding_mode_map);
 }
 
 bool DisplayItemList::GetColorIfSolidInRect(const gfx::Rect& rect,

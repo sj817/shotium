@@ -137,6 +137,8 @@ xargs -a /tmp/ours.txt git log --oneline $OLD..$NEW --
 | 文件 | 分歧 | 为什么不能用别的办法 |
 |---|---|---|
 | `HttpStreamFactory::JobController` / `URLRequestContextBuilder` / net proxy resolution | 建连入口直接选择 DIRECT；移除代理解析服务、异步解析状态、PAC/WPAD/系统监听及 context/session 持有关系 | Shot 的对外接口没有代理配置；先前 CreateDirect 仍带入整套解析服务和平台依赖。普通 DNS 网络变化通知、TLS、HTTP2 和缓存继续保留 |
+| Blink AnimationWorklet / NativePaint / ClipPaintPropertyNode | 删除无实现注册的Worklet控制器与背景色、box-shadow、clip-path生成器和状态；裁剪矩形收窄为当前CPU布局范围 | 无JS和合成器线程；主线程CSS动画、普通阴影、背景色、SVG和shape裁剪继续保留。第八批Windows EXE/DLL与完整运行检查通过，181张像素一致；动态clip专项输出与静态中点一致。六平台实际编译待完成 |
+| CSS Paint API / cc Worklet派发 | 移除CSS paint()解析/样式缓存/跨线程值、Canvas记录器尾巴、cc AnimationWorklet任务与时间事件、PaintWorklet异步派发和调度等待 | 无JS注册和具体Worklet创建方；无效CSS声明fallback和正常CPU动画/绘制保留。自定义/原生Worklet属性动画、tracker及专用帧状态同步删除；PaintWorkletInput/DeferredPaintRecord、图片记录映射/provider、绘制和序列化支路均删除；普通CPU PaintRecord与解码/动画/HDR保留，本批Windows完整验证通过，181/181像素一致；普通CPU绘制记录不可误删 |
 | `HTMLCanvasElement` / `ImageElementBase` / Blink graphics | 删除 Web Canvas 绘图上下文、资源 provider、GPU bitmap 和脚本绘图值类型；普通图片基类迁到 `core/html`，标签保留备用内容与属性宽高比 | 没有 JS 或原生绘图调用方，但标签静态布局影响截图；176 张删除前后像素对照一致，不能把标签改成普通元素或恢复整套绘图系统 |
 | `preload_helper.cc` / `document_init.cc` / Blink MIME registry | 删除无播放器的 audio/video preload 与媒体文档探测；普通非图片 MIME 分类仍保留原容器集合 | 引擎没有解复用、解码或播放入口，不应为播放能力保留整套 media 类型、线程与缓存依赖；视频 poster 仍走图片加载与绘制 |
 | `third_party/blink/renderer/platform/graphics/parkable_image.cc` | `kDelayParkingImages` 默认关(上游开) | 这个二进制不注册 FeatureList,`IsEnabled` 一律回落到编译期默认值;`FeatureList::SetInstance` 又 CHECK「之前没有任何 feature 被读过」,而引擎起来之前 //base、//net、mojo 都已经读过自己的了。默认值就是唯一的开关。见 `shot/shot_renderer.h` 的 `ParkImagesEnabled` |

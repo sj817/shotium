@@ -23,16 +23,6 @@ static bool SupportsFoldingAlpha(const PaintOp* op) {
   if (op->GetType() == PaintOpType::kDrawTextBlob) {
     return false;
   }
-  // Paint worklet ignores alpha on the flags.
-  if (op->GetType() == PaintOpType::kDrawImage &&
-      static_cast<const DrawImageOp*>(op)->image.IsPaintWorklet()) {
-    return false;
-  }
-  if (op->GetType() == PaintOpType::kDrawImageRect &&
-      static_cast<const DrawImageRectOp*>(op)->image.IsPaintWorklet()) {
-    return false;
-  }
-
   return true;
 }
 

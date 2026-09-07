@@ -40,12 +40,6 @@ ElementId CalculateTargetElementId(const ElementAnimations* element_animations,
   return element_animations->element_id();
 }
 
-bool UsingPaintWorklet(int property_index) {
-  // The set of properties where its animation uses paint worklet infra.
-  return property_index == TargetProperty::CSS_CUSTOM_PROPERTY ||
-         property_index == TargetProperty::NATIVE_PROPERTY;
-}
-
 }  // namespace
 
 scoped_refptr<ElementAnimations> ElementAnimations::Create(
@@ -185,18 +179,6 @@ void ElementAnimations::OnFloatAnimated(const float& value,
                                         int target_property_id,
                                         gfx::KeyframeModel* keyframe_model) {
   switch (keyframe_model->TargetProperty()) {
-    case TargetProperty::CSS_CUSTOM_PROPERTY:
-    case TargetProperty::NATIVE_PROPERTY:
-      // Custom properties are only tracked on the pending tree, where they may
-      // be used as inputs for PaintWorklets (which are only dispatched from the
-      // pending tree). As such, we don't need to notify in the case where a
-      // KeyframeModel only affects active elements.
-      if (KeyframeModelAffectsPendingElements(keyframe_model))
-        OnCustomPropertyAnimated(
-            PaintWorkletInput::PropertyValue(value),
-            KeyframeModel::ToCcKeyframeModel(keyframe_model),
-            target_property_id);
-      break;
     case TargetProperty::OPACITY: {
       float opacity = std::clamp(value, 0.0f, 1.0f);
       if (KeyframeModelAffectsActiveElements(keyframe_model))
@@ -231,17 +213,6 @@ void ElementAnimations::OnFilterAnimated(const FilterOperations& filters,
     default:
       NOTREACHED();
   }
-}
-
-void ElementAnimations::OnColorAnimated(const SkColor& value,
-                                        int target_property_id,
-                                        gfx::KeyframeModel* keyframe_model) {
-  DCHECK_EQ(keyframe_model->TargetProperty(),
-            TargetProperty::CSS_CUSTOM_PROPERTY);
-  // TODO(crbug.com/40219248): Remove FromColor and make all SkColor4f.
-  OnCustomPropertyAnimated(
-      PaintWorkletInput::PropertyValue(SkColor4f::FromColor(value)),
-      KeyframeModel::ToCcKeyframeModel(keyframe_model), target_property_id);
 }
 
 void ElementAnimations::OnTransformAnimated(
@@ -303,12 +274,6 @@ static inline bool IsInvalidOrOne(float scale) {
 void ElementAnimations::UpdateClientAnimationState() {
   if (!element_id())
     return;
-  // For a custom property animation, or an animation that uses paint worklet,
-  // it is not associated with any property node, and thus this function is not
-  // needed.
-  if (element_id() == kReservedElementIdForPaintWorklet) {
-    return;
-  }
   DCHECK(animation_host_);
   if (!animation_host_->mutator_host_delegate()) {
     return;
@@ -386,9 +351,6 @@ void ElementAnimations::UpdateClientAnimationState() {
 
 void ElementAnimations::AttachToCurve(gfx::AnimationCurve* c) {
   switch (c->Type()) {
-    case gfx::AnimationCurve::COLOR:
-      gfx::ColorAnimationCurve::ToColorAnimationCurve(c)->set_target(this);
-      break;
     case gfx::AnimationCurve::FLOAT:
       gfx::FloatAnimationCurve::ToFloatAnimationCurve(c)->set_target(this);
       break;
@@ -495,28 +457,6 @@ void ElementAnimations::OnOpacityAnimated(ElementListType list_type,
       target_element_id, list_type, opacity);
 }
 
-void ElementAnimations::OnCustomPropertyAnimated(
-    PaintWorkletInput::PropertyValue property_value,
-    KeyframeModel* keyframe_model,
-    int target_property_id) {
-  DCHECK(animation_host_);
-  DCHECK(animation_host_->mutator_host_delegate());
-  // No-op background-color animations can have no unique_id. See
-  // CompositorAnimations::IsNoOpBackgroundColorAnimation for details.
-  if (!keyframe_model->element_id()) {
-    return;
-  }
-  ElementId id = CalculateTargetElementId(this, keyframe_model);
-  PaintWorkletInput::PropertyKey property_key =
-      target_property_id == TargetProperty::NATIVE_PROPERTY
-          ? PaintWorkletInput::PropertyKey(
-                keyframe_model->native_property_type(), id)
-          : PaintWorkletInput::PropertyKey(
-                keyframe_model->custom_property_name(), id);
-  animation_host_->mutator_host_delegate()->OnCustomPropertyMutated(
-      std::move(property_key), std::move(property_value));
-}
-
 void ElementAnimations::OnTransformAnimated(
     ElementListType list_type,
     const gfx::Transform& transform,
@@ -565,18 +505,6 @@ PropertyToElementIdMap ElementAnimations::GetPropertyToElementIdMap() const {
   for (int property_index = TargetProperty::FIRST_TARGET_PROPERTY;
        property_index <= TargetProperty::LAST_TARGET_PROPERTY;
        ++property_index) {
-    // We skip the set of properties that uses paint worklet, because the
-    // animation is not directly associated with the element its compositing
-    // layer targets and we use reserved element id when we attach a layer for
-    // the animation. In that case, the DCHECK here is no longer applicable.
-    // For example, when we have two paint worklet elements with two different
-    // custom property animations, then these two KeyframeModels would have
-    // different element_id and thus fail the first DCHECK here.
-    // It is not valid to include these properties in the PropertyToElementIdMap
-    // as they do not map to a single element id. Therefore, these properties
-    // should not be included in the map.
-    if (UsingPaintWorklet(property_index))
-      continue;
     TargetProperty::Type property =
         static_cast<TargetProperty::Type>(property_index);
     ElementId element_id_for_property;

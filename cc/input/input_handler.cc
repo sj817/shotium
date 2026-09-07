@@ -509,9 +509,6 @@ InputHandlerScrollResult InputHandler::ScrollUpdate(
     scroll_result.needs_main_thread_repaint = true;
   }
 
-  // Run animations which need to respond to updated scroll offset.
-  compositor_delegate_->TickScrollAnimations();
-
   return scroll_result;
 }
 

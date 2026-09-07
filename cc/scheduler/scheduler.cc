@@ -168,17 +168,6 @@ void Scheduler::SetBeginFrameSource(viz::BeginFrameSource* source) {
     begin_frame_source_->AddObserver(this);
 }
 
-void Scheduler::NotifyAnimationWorkletStateChange(AnimationWorkletState state,
-                                                  TreeType tree) {
-  state_machine_->NotifyAnimationWorkletStateChange(state, tree);
-  ProcessScheduledActions();
-}
-
-void Scheduler::NotifyPaintWorkletStateChange(PaintWorkletState state) {
-  state_machine_->NotifyPaintWorkletStateChange(state);
-  ProcessScheduledActions();
-}
-
 void Scheduler::SetNeedsBeginMainFrame(bool now, bool unthrottled) {
   state_machine_->SetNeedsBeginMainFrame(now, unthrottled);
   ProcessScheduledActions();

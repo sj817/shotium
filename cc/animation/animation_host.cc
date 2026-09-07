@@ -9,8 +9,6 @@
 #include <utility>
 
 #include "base/auto_reset.h"
-#include "base/functional/bind.h"
-#include "base/functional/callback.h"
 #include "base/memory/ptr_util.h"
 #include "base/memory/raw_ptr.h"
 #include "base/trace_event/trace_event.h"
@@ -28,29 +26,11 @@
 #include "cc/animation/scroll_offset_animations_impl.h"
 #include "cc/animation/scroll_timeline.h"
 #include "cc/animation/timeline_trigger.h"
-#include "cc/animation/worklet_animation.h"
+#include "cc/trees/property_tree.h"
 #include "ui/gfx/animation/keyframe/timing_function.h"
 #include "ui/gfx/geometry/vector2d_f.h"
 
 namespace cc {
-
-namespace {
-
-AnimationWorkletMutationState ToAnimationWorkletMutationState(
-    MutateStatus status) {
-  switch (status) {
-    case MutateStatus::kCompletedWithUpdate:
-      return AnimationWorkletMutationState::COMPLETED_WITH_UPDATE;
-
-    case MutateStatus::kCompletedNoUpdate:
-      return AnimationWorkletMutationState::COMPLETED_NO_UPDATE;
-
-    case MutateStatus::kCanceled:
-      return AnimationWorkletMutationState::CANCELED;
-  }
-}
-
-}  // namespace
 
 std::unique_ptr<AnimationHost> AnimationHost::CreateMainInstance() {
   return base::WrapUnique(new AnimationHost(ThreadInstance::kMain));
@@ -601,43 +581,6 @@ bool AnimationHost::NeedsTickAnimations() const {
   return false;
 }
 
-void AnimationHost::TickMutator(base::TimeTicks monotonic_time,
-                                const ScrollTree& scroll_tree,
-                                bool is_active_tree) {
-  LayerTreeMutator* mutator = mutator_.Write(*this).get();
-  if (!mutator || !mutator->HasMutators())
-    return;
-
-  DCHECK(IsOwnerThread());
-  DCHECK(!InProtectedSequence());
-  std::unique_ptr<MutatorInputState> state = CollectWorkletAnimationsState(
-      monotonic_time, scroll_tree, is_active_tree);
-  if (state->IsEmpty())
-    return;
-
-  ElementListType tree_type =
-      is_active_tree ? ElementListType::ACTIVE : ElementListType::PENDING;
-
-  auto on_done = base::BindOnce(
-      [](base::WeakPtr<AnimationHost> animation_host, ElementListType tree_type,
-         MutateStatus status) {
-        if (animation_host->mutator_host_delegate()) {
-          animation_host->mutator_host_delegate()
-              ->NotifyAnimationWorkletStateChange(
-                  ToAnimationWorkletMutationState(status), tree_type);
-        }
-      },
-      weak_factory_.GetWeakPtr(), tree_type);
-
-  MutateQueuingStrategy queuing_strategy =
-      is_active_tree ? MutateQueuingStrategy::kQueueAndReplaceNormalPriority
-                     : MutateQueuingStrategy::kQueueHighPriority;
-  if (mutator->Mutate(std::move(state), queuing_strategy, std::move(on_done))) {
-    mutator_host_delegate()->NotifyAnimationWorkletStateChange(
-        AnimationWorkletMutationState::STARTED, tree_type);
-  }
-}
-
 bool AnimationHost::ActivateAnimations(MutatorEvents* mutator_events) {
   if (!NeedsTickAnimations())
     return false;
@@ -668,15 +611,6 @@ AnimationTickResult AnimationHost::TickAnimations(
   }
 
   TRACE_EVENT0("cc", "AnimationHost::TickAnimations");
-  // We tick animations in the following order:
-  // 1. regular animations 2. mutator 3. worklet animations
-  //
-  // Mutator may depend on scroll offset as its time input e.g., when there is
-  // a worklet animation attached to a scroll timeline.
-  // This ordering ensures we use the latest scroll offset as the input to the
-  // mutator even if there are active scroll animations.
-  // The ticking of worklet animations is deferred until draw to ensure that
-  // mutator output takes effect in the same impl frame that it was mutated.
   if (is_active_tree && !NeedsTickAnimations()) {
     return {};
   }
@@ -707,50 +641,6 @@ AnimationTickResult AnimationHost::TickAnimations(
     }
   }
 
-  // TODO(majidvp): At the moment we call this for both active and pending
-  // trees similar to other animations. However our final goal is to only call
-  // it once, ideally after activation, and only when the input
-  // to an active timeline has changed. http://crbug.com/767210
-  // Note that the TickMutator does not set the animated flag since these
-  // mutations are processed asynchronously. Additional actions required to
-  // handle these mutations are performed on receiving the asynchronous results.
-  TickMutator(monotonic_time, scroll_tree, is_active_tree);
-
-  return result;
-}
-
-void AnimationHost::TickScrollAnimations(base::TimeTicks monotonic_time,
-                                         const ScrollTree& scroll_tree) {
-  // TODO(majidvp): We need to return a boolean here so that LTHI knows
-  // whether it needs to schedule another frame.
-  TickMutator(monotonic_time, scroll_tree, true /* is_active_tree */);
-}
-
-void AnimationHost::TickWorkletAnimations() {
-  for (auto& animation : ticking_animations_.Read(*this)) {
-    if (!animation->IsWorkletAnimation())
-      continue;
-    animation->Tick(base::TimeTicks());
-  }
-}
-
-std::unique_ptr<MutatorInputState> AnimationHost::CollectWorkletAnimationsState(
-    base::TimeTicks monotonic_time,
-    const ScrollTree& scroll_tree,
-    bool is_active_tree) {
-  TRACE_EVENT0("cc", "AnimationHost::CollectWorkletAnimationsState");
-  std::unique_ptr<MutatorInputState> result =
-      std::make_unique<MutatorInputState>();
-
-  for (auto& animation : ticking_animations_.Read(*this)) {
-    if (!animation->IsWorkletAnimation())
-      continue;
-
-    ToWorkletAnimation(animation.get())
-        ->UpdateInputState(result.get(), monotonic_time, scroll_tree,
-                           is_active_tree);
-  }
-
   return result;
 }
 
@@ -768,17 +658,6 @@ bool AnimationHost::UpdateAnimationState(bool start_ready_animations,
     it->UpdateState(start_ready_animations, animation_events);
 
   return true;
-}
-
-void AnimationHost::TakeTimeUpdatedEvents(MutatorEvents* events) {
-  auto* animation_events = static_cast<AnimationEvents*>(events);
-  if (!animation_events->needs_time_updated_events())
-    return;
-
-  for (auto& it : ticking_animations_.Read(*this))
-    it->TakeTimeUpdatedEvent(animation_events);
-
-  animation_events->set_needs_time_updated_events(false);
 }
 
 void AnimationHost::PromoteScrollTimelinesPendingToActive() {
@@ -983,41 +862,6 @@ AnimationHost::element_animations_for_testing() const {
   return element_to_animations_map_.Read(*this);
 }
 
-void AnimationHost::SetLayerTreeMutator(
-    std::unique_ptr<LayerTreeMutator> mutator) {
-  mutator_.Write(*this) = std::move(mutator);
-  mutator_.Write(*this)->SetDelegate(this);
-}
-
-WorkletAnimation* AnimationHost::FindWorkletAnimation(WorkletAnimationId id) {
-  // TODO(majidvp): Use a map to make lookup O(1)
-  auto animation =
-      std::ranges::find_if(ticking_animations_.Read(*this), [id](auto& it) {
-        return it->IsWorkletAnimation() &&
-               ToWorkletAnimation(it.get())->worklet_animation_id() == id;
-      });
-
-  if (animation == ticking_animations_.Read(*this).end())
-    return nullptr;
-
-  return ToWorkletAnimation(animation->get());
-}
-
-void AnimationHost::SetMutationUpdate(
-    std::unique_ptr<MutatorOutputState> output_state) {
-  if (!output_state)
-    return;
-
-  TRACE_EVENT0("cc", "AnimationHost::SetMutationUpdate");
-  for (auto& animation_state : output_state->animations) {
-    WorkletAnimationId id = animation_state.worklet_animation_id;
-
-    WorkletAnimation* to_update = FindWorkletAnimation(id);
-    if (to_update)
-      to_update->SetOutputState(animation_state);
-  }
-}
-
 void AnimationHost::SetAnimationCounts(size_t total_animations_count) {
   // Though these changes are pushed as part of AnimationHost::PushPropertiesTo
   // we don't SetNeedsPushProperties as pushing the values requires a commit.
@@ -1036,20 +880,6 @@ void AnimationHost::SetAnimationCounts(size_t total_animations_count) {
 
 size_t AnimationHost::MainThreadAnimationsCount() const {
   return main_thread_animations_count_.Read(*this);
-}
-
-bool AnimationHost::HasInvalidationAnimation() const {
-  for (const auto& it : ticking_animations_.Read(*this))
-    if (it->RequiresInvalidation())
-      return true;
-  return false;
-}
-
-bool AnimationHost::HasNativePropertyAnimation() const {
-  for (const auto& it : ticking_animations_.Read(*this))
-    if (it->AffectsNativeProperty())
-      return true;
-  return false;
 }
 
 AnimationHost::PendingCompositorMetricsTrackerInfos

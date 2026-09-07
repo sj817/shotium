@@ -28,7 +28,6 @@
 #include "third_party/blink/renderer/core/css/css_image_set_option_value.h"
 #include "third_party/blink/renderer/core/css/css_image_set_value.h"
 #include "third_party/blink/renderer/core/css/css_image_value.h"
-#include "third_party/blink/renderer/core/css/css_paint_value.h"
 #include "third_party/blink/renderer/core/css/css_property_names.h"
 #include "third_party/blink/renderer/core/css/css_to_length_conversion_data.h"
 #include "third_party/blink/renderer/core/css/css_uri_value.h"
@@ -69,11 +68,9 @@ class StyleImageLoader {
   using ContainerSizes = CSSToLengthConversionData::ContainerSizes;
 
   StyleImageLoader(Document& document,
-                   ComputedStyleBuilder& builder,
                    const PreCachedContainerSizes& pre_cached_container_sizes,
                    float device_scale_factor)
       : document_(document),
-        builder_(builder),
         pre_cached_container_sizes_(pre_cached_container_sizes),
         device_scale_factor_(device_scale_factor) {}
 
@@ -91,7 +88,6 @@ class StyleImageLoader {
                               const CSSLengthResolver&);
 
   Document& document_;
-  ComputedStyleBuilder& builder_;
   const PreCachedContainerSizes& pre_cached_container_sizes_;
   const float device_scale_factor_;
 };
@@ -104,13 +100,6 @@ StyleImage* StyleImageLoader::Load(
   if (auto* image_value = DynamicTo<CSSImageValue>(value)) {
     return image_value->CacheImage(document_, cross_origin,
                                    override_image_resolution);
-  }
-
-  if (auto* paint_value = DynamicTo<CSSPaintValue>(value)) {
-    auto* image = MakeGarbageCollected<StyleGeneratedImage>(*paint_value,
-                                                            ContainerSizes());
-    builder_.AddPaintImage(image);
-    return image;
   }
 
   if (auto* crossfade_value = DynamicTo<cssvalue::CSSCrossfadeValue>(value)) {
@@ -152,11 +141,6 @@ StyleImage* StyleImageLoader::CrossfadeArgument(
   // not accept 'none'. Map 'none' to a null StyleImage.
   if (auto* identifier_value = DynamicTo<CSSIdentifierValue>(value)) {
     DCHECK_EQ(identifier_value->GetValueID(), CSSValueID::kNone);
-    return nullptr;
-  }
-  // Reject paint() functions. They make assumptions about the client (being
-  // a LayoutObject) that we can't meet with the current implementation.
-  if (IsA<CSSPaintValue>(value)) {
     return nullptr;
   }
   return Load(value, length_resolver, cross_origin);
@@ -202,12 +186,6 @@ ElementStyleResources::ElementStyleResources(Element& element,
 bool ElementStyleResources::IsPending(const CSSValue& value) const {
   if (auto* img_value = DynamicTo<CSSImageValue>(value)) {
     return img_value->IsCachePending();
-  }
-
-  // paint(...) is always treated as pending because it needs to call
-  // AddPaintImage() on the ComputedStyle.
-  if (IsA<CSSPaintValue>(value)) {
-    return true;
   }
 
   // cross-fade(...) is always treated as pending (to avoid adding more complex
@@ -410,7 +388,7 @@ void ElementStyleResources::LoadPendingImages(
   // If we eagerly loaded the images we'd fetch a.png, even though it's not
   // used. If we didn't null check below we'd crash since the none actually
   // removed all background images.
-  StyleImageLoader loader(element_.GetDocument(), builder,
+  StyleImageLoader loader(element_.GetDocument(),
                           pre_cached_container_sizes_, device_scale_factor_);
   for (CSSPropertyID property : pending_image_properties_) {
     switch (property) {

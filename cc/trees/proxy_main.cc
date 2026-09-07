@@ -26,13 +26,11 @@
 #include "cc/base/devtools_instrumentation.h"
 #include "cc/base/features.h"
 #include "cc/input/browser_controls_offset_tag_modifications.h"
-#include "cc/paint/paint_worklet_layer_painter.h"
 #include "cc/resources/ui_resource_manager.h"
 #include "cc/scheduler/commit_earlyout_reason.h"
 #include "cc/trees/latency_info_swap_promise.h"
 #include "cc/trees/layer_tree_frame_sink.h"
 #include "cc/trees/layer_tree_host.h"
-#include "cc/trees/layer_tree_mutator.h"
 #include "cc/trees/mutator_host.h"
 #include "cc/trees/paint_holding_reason.h"
 #include "cc/trees/proxy_impl.h"
@@ -951,23 +949,6 @@ void ProxyMain::QueueImageDecode(int request_id,
       base::BindOnce(&ProxyImpl::QueueImageDecodeOnImpl,
                      base::Unretained(proxy_impl_.get()), request_id,
                      std::make_unique<DrawImage>(image), speculative));
-}
-
-void ProxyMain::SetMutator(std::unique_ptr<LayerTreeMutator> mutator) {
-  TRACE_EVENT0("cc", "ProxyMain::SetMutator");
-  ImplThreadTaskRunner()->PostTask(
-      FROM_HERE,
-      base::BindOnce(&ProxyImpl::InitializeMutatorOnImpl,
-                     base::Unretained(proxy_impl_.get()), std::move(mutator)));
-}
-
-void ProxyMain::SetPaintWorkletLayerPainter(
-    std::unique_ptr<PaintWorkletLayerPainter> painter) {
-  TRACE_EVENT0("cc", "ProxyMain::SetPaintWorkletLayerPainter");
-  ImplThreadTaskRunner()->PostTask(
-      FROM_HERE,
-      base::BindOnce(&ProxyImpl::InitializePaintWorkletLayerPainterOnImpl,
-                     base::Unretained(proxy_impl_.get()), std::move(painter)));
 }
 
 bool ProxyMain::MainFrameWillHappenForTesting() {

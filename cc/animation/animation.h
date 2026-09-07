@@ -90,7 +90,6 @@ class CC_ANIMATION_EXPORT Animation : public base::RefCounted<Animation>,
   }
 
   void AttachElement(ElementId element_id);
-  void AttachPaintWorkletElement();
   void DetachElement();
 
   void AddKeyframeModel(std::unique_ptr<KeyframeModel> keyframe_model);
@@ -114,9 +113,6 @@ class CC_ANIMATION_EXPORT Animation : public base::RefCounted<Animation>,
 
   virtual void UpdateState(bool start_ready_keyframe_models,
                            AnimationEvents* events);
-  // Adds TIME_UPDATED event generated in the current frame to the given
-  // animation events.
-  virtual void TakeTimeUpdatedEvent(AnimationEvents* events) {}
   virtual bool Tick(base::TimeTicks tick_time);
   bool IsScrollLinkedAnimation() const;
 
@@ -128,13 +124,6 @@ class CC_ANIMATION_EXPORT Animation : public base::RefCounted<Animation>,
   // Delegates animation event that was successfully dispatched or doesn't need
   // to be dispatched.
   void DispatchAndDelegateAnimationEvent(const AnimationPlaybackEvent& event);
-
-  // Returns true if this animation effects pending tree, such as a custom
-  // property animation with paint worklet.
-  bool RequiresInvalidation() const;
-  // Returns true if this animation effects active tree, such as a transform
-  // animation.
-  bool AffectsNativeProperty() const;
 
   void SetNeedsPushProperties();
 
@@ -183,8 +172,6 @@ class CC_ANIMATION_EXPORT Animation : public base::RefCounted<Animation>,
   void Reverse(base::TimeTicks monotonic_time,
                AutoRewind auto_rewind = AutoRewind::kEnabled);
 
-  virtual bool IsWorkletAnimation() const;
-
   void SetKeyframeEffectForTesting(std::unique_ptr<KeyframeEffect>);
 
   // ProtectedSequenceSynchronizer implementation
@@ -202,7 +189,6 @@ class CC_ANIMATION_EXPORT Animation : public base::RefCounted<Animation>,
   void DelegateAnimationEvent(const AnimationPlaybackEvent& event);
 
   // Common code between AttachElement and AttachNoElement.
-  void AttachElementInternal(ElementId element_id);
 
  protected:
   explicit Animation(int id);

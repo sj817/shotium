@@ -88,9 +88,6 @@ class CC_EXPORT SingleThreadProxy : public Proxy,
   void QueueImageDecode(int request_id,
                         const DrawImage& image,
                         bool speculative) override;
-  void SetMutator(std::unique_ptr<LayerTreeMutator> mutator) override;
-  void SetPaintWorkletLayerPainter(
-      std::unique_ptr<PaintWorkletLayerPainter> painter) override;
   bool MainFrameWillHappenForTesting() override;
   void RequestBeginMainFrameNotExpected(bool new_state) override;
   void SetSourceURL(ukm::SourceId source_id, const GURL& url) override;
@@ -167,11 +164,6 @@ class CC_EXPORT SingleThreadProxy : public Proxy,
       uint32_t frame_token,
       PresentationTimeCallbackBuffer::PendingCallbacks callbacks,
       const viz::FrameTimingDetails& details) override;
-  void NotifyAnimationWorkletStateChange(
-      AnimationWorkletMutationState state,
-      ElementListType element_list_type) override;
-  void NotifyPaintWorkletStateChange(
-      Scheduler::PaintWorkletState state) override;
   void NotifyCompositorMetricsTrackerResults(
       CustomTrackerResults results) override;
   bool IsInSynchronousComposite() const override;

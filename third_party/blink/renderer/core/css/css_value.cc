@@ -68,7 +68,6 @@
 #include "third_party/blink/renderer/core/css/css_light_dark_value_pair.h"
 #include "third_party/blink/renderer/core/css/css_math_function_value.h"
 #include "third_party/blink/renderer/core/css/css_numeric_literal_value.h"
-#include "third_party/blink/renderer/core/css/css_paint_value.h"
 #include "third_party/blink/renderer/core/css/css_palette_mix_value.h"
 #include "third_party/blink/renderer/core/css/css_param_value_pair.h"
 #include "third_party/blink/renderer/core/css/css_path_value.h"
@@ -261,8 +260,6 @@ bool CSSValue::operator==(const CSSValue& other) const {
                                                                     other);
       case kColorImageClass:
         return CompareCSSValues<cssvalue::CSSColorImageValue>(*this, other);
-      case kPaintClass:
-        return CompareCSSValues<CSSPaintValue>(*this, other);
       case kCustomIdentClass:
         return CompareCSSValues<CSSCustomIdentValue>(*this, other);
       case kImageClass:
@@ -454,8 +451,6 @@ String CSSValue::CssText() const {
       return To<cssvalue::CSSColorImageValue>(this)->CustomCSSText();
     case kCrossfadeClass:
       return To<cssvalue::CSSCrossfadeValue>(this)->CustomCSSText();
-    case kPaintClass:
-      return To<CSSPaintValue>(this)->CustomCSSText();
     case kCustomIdentClass:
       return To<CSSCustomIdentValue>(this)->CustomCSSText();
     case kImageClass:
@@ -640,7 +635,6 @@ unsigned CSSValue::Hash() const {
     case kImageClass:
     case kCursorImageClass:
     case kCrossfadeClass:
-    case kPaintClass:
     case kLinearGradientClass:
     case kRadialGradientClass:
     case kConicGradientClass:
@@ -813,9 +807,6 @@ void CSSValue::Trace(Visitor* visitor) const {
       return;
     case kCrossfadeClass:
       To<cssvalue::CSSCrossfadeValue>(this)->TraceAfterDispatch(visitor);
-      return;
-    case kPaintClass:
-      To<CSSPaintValue>(this)->TraceAfterDispatch(visitor);
       return;
     case kCustomIdentClass:
       To<CSSCustomIdentValue>(this)->TraceAfterDispatch(visitor);
@@ -1065,8 +1056,6 @@ String CSSValue::ClassTypeToString() const {
       return "CursorImageClass";
     case kCrossfadeClass:
       return "CrossfadeClass";
-    case kPaintClass:
-      return "PaintClass";
     case kLinearGradientClass:
       return "LinearGradientClass";
     case kRadialGradientClass:
@@ -1229,8 +1218,6 @@ bool CSSValue::HasRandomFunctions() const {
           ->HasRandomFunctions();
     case kSuperellipseClass:
       return To<cssvalue::CSSSuperellipseValue>(this)->HasRandomFunctions();
-    case kPaintClass:
-      return To<CSSPaintValue>(this)->HasRandomFunctions();
     case kCounterClass:
       return To<cssvalue::CSSCounterValue>(this)->HasRandomFunctions();
     case kCounterContentClass:

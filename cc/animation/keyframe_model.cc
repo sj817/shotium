@@ -44,23 +44,7 @@ KeyframeModel* KeyframeModel::ToCcKeyframeModel(
 }
 
 KeyframeModel::TargetPropertyId::TargetPropertyId(int target_property_type)
-    : target_property_type_(target_property_type),
-      custom_property_name_(""),
-      native_property_type_(PaintWorkletInput::NativePropertyType::kInvalid) {}
-
-KeyframeModel::TargetPropertyId::TargetPropertyId(
-    int target_property_type,
-    const std::string& custom_property_name)
-    : target_property_type_(target_property_type),
-      custom_property_name_(custom_property_name),
-      native_property_type_(PaintWorkletInput::NativePropertyType::kInvalid) {}
-
-KeyframeModel::TargetPropertyId::TargetPropertyId(
-    int target_property_type,
-    PaintWorkletInput::NativePropertyType native_property_type)
-    : target_property_type_(target_property_type),
-      custom_property_name_(""),
-      native_property_type_(native_property_type) {}
+    : target_property_type_(target_property_type) {}
 
 KeyframeModel::TargetPropertyId::TargetPropertyId(
     const TargetPropertyId& other) = default;
@@ -193,11 +177,8 @@ void KeyframeModel::PushPropertiesTo(KeyframeModel* other) const {
 std::string KeyframeModel::ToString() const {
   return base::StringPrintf(
       "KeyframeModel{id=%d, group=%d, target_property_type=%d, "
-      "custom_property_name=%s, native_property_type=%d, run_state=%s, "
-      "element_id=%s}",
+      "run_state=%s, element_id=%s}",
       id(), group_, TargetProperty(),
-      target_property_id_.custom_property_name().c_str(),
-      static_cast<int>(target_property_id_.native_property_type()),
       gfx::KeyframeModel::ToString(run_state()).c_str(),
       element_id_.ToString().c_str());
 }

@@ -64,7 +64,6 @@
 #include "third_party/blink/renderer/core/animation/timing.h"
 #include "third_party/blink/renderer/core/animation/timing_calculations.h"
 #include "third_party/blink/renderer/core/animation/transition_interpolation.h"
-#include "third_party/blink/renderer/core/animation/worklet_animation_base.h"
 #include "third_party/blink/renderer/core/css/css_keyframe_rule.h"
 #include "third_party/blink/renderer/core/css/css_keyframes_rule.h"
 #include "third_party/blink/renderer/core/css/css_primitive_value.h"
@@ -72,7 +71,6 @@
 #include "third_party/blink/renderer/core/css/css_unparsed_declaration_value.h"
 #include "third_party/blink/renderer/core/css/css_value_list.h"
 #include "third_party/blink/renderer/core/css/media_values.h"
-#include "third_party/blink/renderer/core/css/native_paint_image_generator.h"
 #include "third_party/blink/renderer/core/css/parser/css_variable_parser.h"
 #include "third_party/blink/renderer/core/css/post_style_update_scope.h"
 #include "third_party/blink/renderer/core/css/properties/computed_style_utils.h"
@@ -1737,8 +1735,7 @@ void CSSAnimations::CalculateCompositorAnimationUpdate(
 
   const ComputedStyle* old_style = animating_element.GetComputedStyle();
   if (!old_style || old_style->IsEnsuredInDisplayNone() ||
-      (!old_style->HasCurrentCompositableAnimation() &&
-       !element_animations->HasCompositedPaintWorkletAnimation())) {
+      !old_style->HasCurrentCompositableAnimation()) {
     return;
   }
 
@@ -1770,29 +1767,11 @@ void CSSAnimations::CalculateCompositorAnimationUpdate(
     return false;
   };
 
-  Animation::NativePaintWorkletReasons properties_for_force_update = 0;
-
   for (auto& entry : element_animations->Animations()) {
     Animation& animation = *entry.key;
     if (snapshot(animation.effect())) {
       update.UpdateCompositorKeyframes(&animation);
     }
-    if (force_update) {
-      properties_for_force_update |= animation.GetNativePaintWorkletReasons();
-    }
-  }
-
-  if (properties_for_force_update !=
-      Animation::NativePaintWorkletProperties::kNoPaintWorklet) {
-    CHECK(NativePaintImageGenerator::NativePaintWorkletAnimationsEnabled());
-    element_animations->RecalcCompositedStatusForKeyframeChange(
-        animating_element, properties_for_force_update);
-  }
-
-  for (auto& entry : element_animations->GetWorkletAnimations()) {
-    WorkletAnimationBase& animation = *entry;
-    if (snapshot(animation.GetEffect()))
-      animation.InvalidateCompositingState();
   }
 }
 
@@ -2128,10 +2107,6 @@ void CSSAnimations::SnapshotCompositorKeyframes(
 
 namespace {
 
-bool AffectsBackgroundColor(const AnimationEffect& effect) {
-  return effect.Affects(PropertyHandle(GetCSSPropertyBackgroundColor()));
-}
-
 bool HasAnimationTrigger(size_t animation_index,
                          ComputedStyleBuilder& builder) {
   CSSAnimationData* data = builder.Animations();
@@ -2155,11 +2130,6 @@ void UpdateAnimationFlagsForEffect(const AnimationEffect& effect,
     builder.SetHasCurrentFilterAnimation(true);
   if (effect.Affects(PropertyHandle(GetCSSPropertyBackdropFilter())))
     builder.SetHasCurrentBackdropFilterAnimation(true);
-  if (effect.Affects(PropertyHandle(GetCSSPropertyClipPath()))) {
-    builder.SetHasCurrentClipPathAnimation(true);
-  }
-  if (AffectsBackgroundColor(effect))
-    builder.SetHasCurrentBackgroundColorAnimation(true);
 }
 
 // Called for animations that are newly created or updated.
@@ -2228,13 +2198,6 @@ void CSSAnimations::UpdateAnimationFlags(Element& animating_element,
     for (auto& entry : element_animations->Animations()) {
       if (!is_suppressed(*entry.key))
         UpdateAnimationFlagsForAnimation(*entry.key, builder);
-    }
-
-    for (auto& entry : element_animations->GetWorkletAnimations()) {
-      // TODO(majidvp): we should check the effect's phase before updating the
-      // style once the timing of effect is ready to use.
-      // https://crbug.com/814851.
-      UpdateAnimationFlagsForEffect(*entry->GetEffect(), builder);
     }
 
     EffectStack& effect_stack = element_animations->GetEffectStack();

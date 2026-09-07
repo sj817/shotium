@@ -106,8 +106,6 @@ class CORE_EXPORT CSSImageGeneratorValue : public CSSValue {
   bool IsCorsSameOrigin() const;
   bool KnownToBeOpaque(const Document&, const ComputedStyle&) const;
 
-  bool IsUsingCustomProperty(const AtomicString& custom_property_name,
-                             const Document&) const;
   bool IsUsingCurrentColor() const;
   bool IsUsingContainerRelativeUnits() const;
 

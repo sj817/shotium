@@ -164,7 +164,6 @@ void CompositorFrameReportingController::WillBeginImplFrame(
   reporter->set_tick_clock(tick_clock_);
   reporter->StartStage(StageType::kBeginImplFrameToSendBeginMainFrame,
                        begin_time);
-  reporter->set_want_new_tree(needs_raster_properties_animated_);
   reporter->set_will_throttle_main(will_throttle_main);
   reporters_[PipelineStage::kBeginImplFrame] = std::move(reporter);
 }

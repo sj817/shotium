@@ -26,8 +26,6 @@ class FrameTimingDetails;
 
 namespace cc {
 
-enum class AnimationWorkletMutationState;
-enum class ElementListType;
 
 // LayerTreeHostImpl->Proxy callback interface.
 class LayerTreeHostImplDelegate {
@@ -81,13 +79,6 @@ class LayerTreeHostImplDelegate {
       uint32_t frame_token,
       PresentationTimeCallbackBuffer::PendingCallbacks callbacks,
       const viz::FrameTimingDetails& details) = 0;
-
-  virtual void NotifyAnimationWorkletStateChange(
-      AnimationWorkletMutationState state,
-      ElementListType tree_type) = 0;
-
-  virtual void NotifyPaintWorkletStateChange(
-      Scheduler::PaintWorkletState state) = 0;
 
   virtual void NotifyCompositorMetricsTrackerResults(
       CustomTrackerResults results) = 0;

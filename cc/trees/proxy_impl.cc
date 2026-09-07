@@ -30,7 +30,6 @@
 #include "cc/input/browser_controls_offset_tag_modifications.h"
 #include "cc/metrics/compositor_timing_history.h"
 #include "cc/paint/paint_image.h"
-#include "cc/paint/paint_worklet_layer_painter.h"
 #include "cc/scheduler/scheduler_state_machine.h"
 #include "cc/trees/client_layer_tree_host_impl.h"
 #include "cc/trees/commit_state.h"
@@ -38,7 +37,6 @@
 #include "cc/trees/layer_tree_frame_sink.h"
 #include "cc/trees/layer_tree_host.h"
 #include "cc/trees/layer_tree_impl.h"
-#include "cc/trees/layer_tree_mutator.h"
 #include "cc/trees/layer_tree_settings.h"
 #include "cc/trees/mutator_host.h"
 #include "cc/trees/proxy_main.h"
@@ -179,20 +177,6 @@ ProxyImpl::~ProxyImpl() {
   // holding while still on the compositor thread. This also ensures any
   // callbacks holding a ProxyImpl pointer are cancelled.
   smoothness_priority_expiration_notifier_.Shutdown();
-}
-
-void ProxyImpl::InitializeMutatorOnImpl(
-    std::unique_ptr<LayerTreeMutator> mutator) {
-  TRACE_EVENT0("cc", "ProxyImpl::InitializeMutatorOnImpl");
-  DCHECK(IsImplThread());
-  host_impl_->SetLayerTreeMutator(std::move(mutator));
-}
-
-void ProxyImpl::InitializePaintWorkletLayerPainterOnImpl(
-    std::unique_ptr<PaintWorkletLayerPainter> painter) {
-  TRACE_EVENT0("cc", "ProxyImpl::InitializePaintWorkletLayerPainterOnImpl");
-  DCHECK(IsImplThread());
-  host_impl_->SetPaintWorkletLayerPainter(std::move(painter));
 }
 
 void ProxyImpl::UpdateBrowserControlsStateOnImpl(
@@ -732,27 +716,6 @@ void ProxyImpl::DidPresentCompositorFrameOnImplThread(
                      std::move(activated.main_successful_callbacks), details));
   if (scheduler_)
     scheduler_->DidPresentCompositorFrame(frame_token, details);
-}
-
-void ProxyImpl::NotifyAnimationWorkletStateChange(
-    AnimationWorkletMutationState state,
-    ElementListType element_list_type) {
-  DCHECK(IsImplThread());
-  Scheduler::AnimationWorkletState animation_worklet_state =
-      (state == AnimationWorkletMutationState::STARTED)
-          ? Scheduler::AnimationWorkletState::PROCESSING
-          : Scheduler::AnimationWorkletState::IDLE;
-  Scheduler::TreeType tree_type = (element_list_type == ElementListType::ACTIVE)
-                                      ? Scheduler::TreeType::ACTIVE
-                                      : Scheduler::TreeType::PENDING;
-  scheduler_->NotifyAnimationWorkletStateChange(animation_worklet_state,
-                                                tree_type);
-}
-
-void ProxyImpl::NotifyPaintWorkletStateChange(
-    Scheduler::PaintWorkletState state) {
-  DCHECK(IsImplThread());
-  scheduler_->NotifyPaintWorkletStateChange(state);
 }
 
 void ProxyImpl::NotifyCompositorMetricsTrackerResults(

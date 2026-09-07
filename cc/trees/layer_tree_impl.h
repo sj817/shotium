@@ -608,15 +608,10 @@ class CC_EXPORT LayerTreeImpl {
   bool IsUIResourceOpaque(UIResourceId uid) const;
 
   auto picture_layers() const { return layer_list_.PictureLayers(); }
-  auto picture_layers_with_paint_worklets() const {
-    return layer_list_.PictureLayersWithWorklets();
-  }
 
   void NotifyLayerHasAnimatedImagesChanged(PictureLayerImpl* layer,
                                            bool has_animated_images);
   void AnnotateAnimatedImages(AnimatedImageDriverMap&) const;
-  void NotifyLayerHasPaintWorkletsChanged(PictureLayerImpl* layer,
-                                          bool has_worklets);
 
   void RegisterScrollbar(ScrollbarLayerImplBase* scrollbar_layer);
   void UnregisterScrollbar(ScrollbarLayerImplBase* scrollbar_layer);
@@ -762,10 +757,6 @@ class CC_EXPORT LayerTreeImpl {
   LayerTreeLifecycle& lifecycle() { return lifecycle_; }
 
   std::string LayerListAsJson() const;
-
-  AnimatedPaintWorkletTracker& paint_worklet_tracker() {
-    return host_impl_->paint_worklet_tracker();
-  }
 
   const gfx::Transform& DrawTransform() const {
     return host_impl_->DrawTransform();

@@ -26,7 +26,6 @@
 #include "third_party/blink/renderer/core/css/css_image_generator_value.h"
 
 #include "third_party/blink/renderer/core/css/css_gradient_value.h"
-#include "third_party/blink/renderer/core/css/css_paint_value.h"
 #include "third_party/blink/renderer/core/loader/resource/image_resource_observer.h"
 #include "third_party/blink/renderer/platform/graphics/image.h"
 
@@ -150,9 +149,6 @@ scoped_refptr<Image> CSSImageGeneratorValue::GetImage(
     case kLinearGradientClass:
       return To<CSSLinearGradientValue>(this)->GetImage(
           client, node, style, container_sizes, target_size);
-    case kPaintClass:
-      return To<CSSPaintValue>(this)->GetImage(client, node, style,
-                                               target_size);
     case kRadialGradientClass:
       return To<CSSRadialGradientValue>(this)->GetImage(
           client, node, style, container_sizes, target_size);
@@ -166,16 +162,6 @@ scoped_refptr<Image> CSSImageGeneratorValue::GetImage(
     default:
       NOTREACHED();
   }
-}
-
-bool CSSImageGeneratorValue::IsUsingCustomProperty(
-    const AtomicString& custom_property_name,
-    const Document& document) const {
-  if (GetClassType() == kPaintClass) {
-    return To<CSSPaintValue>(this)->IsUsingCustomProperty(custom_property_name,
-                                                          document);
-  }
-  return false;
 }
 
 bool CSSImageGeneratorValue::IsUsingCurrentColor() const {
@@ -211,8 +197,6 @@ bool CSSImageGeneratorValue::IsCorsSameOrigin() const {
   switch (GetClassType()) {
     case kLinearGradientClass:
       return To<CSSLinearGradientValue>(this)->IsCorsSameOrigin();
-    case kPaintClass:
-      return To<CSSPaintValue>(this)->IsCorsSameOrigin();
     case kRadialGradientClass:
       return To<CSSRadialGradientValue>(this)->IsCorsSameOrigin();
     case kConicGradientClass:
@@ -230,8 +214,6 @@ bool CSSImageGeneratorValue::KnownToBeOpaque(const Document& document,
   switch (GetClassType()) {
     case kLinearGradientClass:
       return To<CSSLinearGradientValue>(this)->KnownToBeOpaque(document, style);
-    case kPaintClass:
-      return To<CSSPaintValue>(this)->KnownToBeOpaque(document, style);
     case kRadialGradientClass:
       return To<CSSRadialGradientValue>(this)->KnownToBeOpaque(document, style);
     case kConicGradientClass:

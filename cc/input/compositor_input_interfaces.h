@@ -153,7 +153,6 @@ class CompositorDelegateForInput {
   virtual bool ScrollAnimationCreate(const ScrollNode& scroll_node,
                                      const gfx::Vector2dF& scroll_amount,
                                      base::TimeDelta delayed_by) = 0;
-  virtual void TickScrollAnimations() const = 0;
   virtual std::unique_ptr<LatencyInfoSwapPromiseMonitor>
   CreateLatencyInfoSwapPromiseMonitor(ui::LatencyInfo* latency) = 0;
   virtual std::unique_ptr<EventsMetricsManager::ScopedMonitor>

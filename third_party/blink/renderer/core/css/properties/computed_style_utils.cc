@@ -45,11 +45,6 @@
 #include "third_party/blink/renderer/core/css/css_value_list.h"
 #include "third_party/blink/renderer/core/css/css_value_pair.h"
 #include "third_party/blink/renderer/core/css/css_view_value.h"
-#include "third_party/blink/renderer/core/css/cssom/cross_thread_color_value.h"
-#include "third_party/blink/renderer/core/css/cssom/cross_thread_keyword_value.h"
-#include "third_party/blink/renderer/core/css/cssom/cross_thread_unit_value.h"
-#include "third_party/blink/renderer/core/css/cssom/cross_thread_unparsed_value.h"
-#include "third_party/blink/renderer/core/css/cssom/cross_thread_unsupported_value.h"
 #include "third_party/blink/renderer/core/css/cssom/css_keyword_value.h"
 #include "third_party/blink/renderer/core/css/cssom/css_unit_value.h"
 #include "third_party/blink/renderer/core/css/cssom/css_unparsed_value.h"
@@ -5245,29 +5240,6 @@ CSSValue* ComputedStyleUtils::ValueForPositionArea(
       CSSIdentifierValue::Create(first_keyword),
       CSSIdentifierValue::Create(second_keyword),
       CSSValuePair::kDropIdenticalValues);
-}
-
-std::unique_ptr<CrossThreadStyleValue>
-ComputedStyleUtils::CrossThreadStyleValueFromCSSStyleValue(
-    CSSStyleValue* style_value) {
-  switch (style_value->GetType()) {
-    case CSSStyleValue::StyleValueType::kKeywordType:
-      return std::make_unique<CrossThreadKeywordValue>(
-          To<CSSKeywordValue>(style_value)->value());
-    case CSSStyleValue::StyleValueType::kUnitType:
-      return std::make_unique<CrossThreadUnitValue>(
-          To<CSSUnitValue>(style_value)->value(),
-          To<CSSUnitValue>(style_value)->GetInternalUnit());
-    case CSSStyleValue::StyleValueType::kUnsupportedColorType:
-      return std::make_unique<CrossThreadColorValue>(
-          To<CSSUnsupportedColor>(style_value)->Value());
-    case CSSStyleValue::StyleValueType::kUnparsedType:
-      return std::make_unique<CrossThreadUnparsedValue>(
-          To<CSSUnparsedValue>(style_value)->toString());
-    default:
-      return std::make_unique<CrossThreadUnsupportedValue>(
-          style_value->toString());
-  }
 }
 
 const CSSValue* ComputedStyleUtils::ComputedPropertyValue(

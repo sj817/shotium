@@ -27,8 +27,6 @@ namespace cc {
 class CompletionEvent;
 class LayerTreeFrameSink;
 class LayerTreeHost;
-class LayerTreeMutator;
-class PaintWorkletLayerPainter;
 class ProxyImpl;
 class RenderFrameMetadataObserver;
 
@@ -145,9 +143,6 @@ class CC_EXPORT ProxyMain : public Proxy {
   void QueueImageDecode(int request_id,
                         const DrawImage& image,
                         bool speculative) override;
-  void SetMutator(std::unique_ptr<LayerTreeMutator> mutator) override;
-  void SetPaintWorkletLayerPainter(
-      std::unique_ptr<PaintWorkletLayerPainter> painter) override;
   bool MainFrameWillHappenForTesting() override;
   void ReleaseLayerTreeFrameSink() override;
   void UpdateBrowserControlsState(

@@ -308,21 +308,6 @@ class CC_EXPORT SchedulerStateMachine {
   // Indicates the active tree's visible tiles are ready to be drawn.
   void NotifyReadyToDraw();
 
-  enum class AnimationWorkletState { PROCESSING, IDLE };
-  enum class PaintWorkletState { PROCESSING, IDLE };
-  enum class TreeType { ACTIVE, PENDING };
-
-  // Indicates if currently processing animation worklets for the active or
-  // pending tree. This is used to determine if the draw deadline should be
-  // extended or activation delayed.
-  void NotifyAnimationWorkletStateChange(AnimationWorkletState state,
-                                         TreeType tree);
-
-  // Sets whether asynchronous paint worklets are running. Paint worklets
-  // running should block activation of the pending tree, as it isn't fully
-  // painted until they are done.
-  void NotifyPaintWorkletStateChange(PaintWorkletState state);
-
   void SetNeedsImplSideInvalidation(bool needs_first_draw_on_activation);
 
   bool has_pending_tree() const { return has_pending_tree_; }
@@ -519,16 +504,6 @@ class CC_EXPORT SchedulerStateMachine {
   bool next_invalidation_needs_first_draw_on_activation_ = false;
   bool should_defer_invalidation_for_fast_main_frame_ = true;
   bool begin_frame_is_animate_only_ = false;
-
-  // Number of async mutation cycles for the active tree that are in-flight or
-  // queued.  Can be 0, 1 or 2.
-  int processing_animation_worklets_for_active_tree_ = 0;
-  // Indicates if an aysnc mutation cycle is in-flight or queued for the pending
-  // tree.  Only one can be running or queued at any time.
-  bool processing_animation_worklets_for_pending_tree_ = false;
-  // Indicates if asychronous paint worklet painting is ongoing for the pending
-  // tree. During this time we should not activate the pending tree.
-  bool processing_paint_worklets_for_pending_tree_ = false;
 
   bool previous_pending_tree_was_impl_side_ = false;
   bool current_pending_tree_is_impl_side_ = false;

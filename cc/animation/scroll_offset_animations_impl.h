@@ -69,8 +69,6 @@ class CC_ANIMATION_EXPORT ScrollOffsetAnimationImpl : public AnimationDelegate {
       int target_property,
       base::TimeTicks animation_start_time,
       std::unique_ptr<gfx::AnimationCurve> curve) override {}
-  void NotifyLocalTimeUpdated(
-      std::optional<base::TimeDelta> local_time) override {}
 
   // Aborts the currently running scroll offset animation on an element and
   // starts a new one offsetted by adjustment.

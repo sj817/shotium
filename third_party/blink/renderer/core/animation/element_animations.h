@@ -35,8 +35,6 @@
 #include "third_party/blink/renderer/core/animation/css/css_animations.h"
 #include "third_party/blink/renderer/core/animation/css/css_image_animations.h"
 #include "third_party/blink/renderer/core/animation/effect_stack.h"
-#include "third_party/blink/renderer/core/animation/native_paint_worklet_data.h"
-#include "third_party/blink/renderer/core/animation/worklet_animation_base.h"
 #include "third_party/blink/renderer/core/core_export.h"
 #include "third_party/blink/renderer/core/css/properties/css_bitset.h"
 #include "third_party/blink/renderer/core/dom/node_rare_data_field.h"
@@ -49,7 +47,6 @@ namespace blink {
 class CSSAnimations;
 
 using AnimationCountedSet = HeapHashCountedSet<WeakMember<Animation>>;
-using WorkletAnimationSet = HeapHashSet<WeakMember<WorkletAnimationBase>>;
 
 class CORE_EXPORT ElementAnimations final
     : public GarbageCollected<ElementAnimations>,
@@ -59,8 +56,6 @@ class CORE_EXPORT ElementAnimations final
   ElementAnimations(const ElementAnimations&) = delete;
   ElementAnimations& operator=(const ElementAnimations&) = delete;
   ~ElementAnimations();
-
-  using CompositedPaintStatus = NativePaintWorkletData::CompositedPaintStatus;
 
   // Animations that are currently active for this element, their effects will
   // be applied during a style recalc. CSS Transitions are included in this
@@ -75,12 +70,10 @@ class CORE_EXPORT ElementAnimations final
 
   // Animations which have effects targeting this element.
   AnimationCountedSet& Animations() { return animations_; }
-  // Worklet Animations which have effects targeting this element.
-  WorkletAnimationSet& GetWorkletAnimations() { return worklet_animations_; }
 
   bool IsEmpty() const {
     return effect_stack_.IsEmpty() && css_animations_.IsEmpty() &&
-           animations_.empty() && worklet_animations_.empty();
+           animations_.empty();
   }
 
   CSSImageAnimations& CssImageAnimations() { return css_image_animations_; }
@@ -98,43 +91,6 @@ class CORE_EXPORT ElementAnimations final
   bool UpdateBoxSizeAndCheckTransformAxisAlignment(const gfx::SizeF& box_size);
   bool IsIdentityOrTranslation() const;
 
-  bool HasCompositedPaintWorkletAnimation();
-
-  void RecalcCompositedStatusForKeyframeChange(
-      Element& element,
-      Animation::NativePaintWorkletReasons properties);
-  void RecalcCompositedStatus(Element* element,
-                              Animation::CompositorPendingReason reason);
-
-  // TODO(crbug.com/1301961): Consider converting to an array or flat map of
-  // fields for paint properties that can be composited.
-
-  NativePaintWorkletData* EnsureBackgroundColorNpwData(Element* element);
-  NativePaintWorkletData* GetBackgroundColorNpwData() {
-    return background_color_npw_data_;
-  }
-
-  CompositedPaintStatus CompositedBackgroundColorStatus() {
-    return background_color_npw_data_
-               ? background_color_npw_data_->GetCompositedPaintStatus()
-               : CompositedPaintStatus::kNoAnimation;
-  }
-
-  bool SetCompositedBackgroundColorStatus(CompositedPaintStatus status);
-
-  Animation* PaintWorkletClipPathAnimation() {
-    return clip_path_npw_data_ ? clip_path_npw_data_->GetAnimation() : nullptr;
-  }
-
-  CompositedPaintStatus CompositedClipPathStatus() {
-    return clip_path_npw_data_ ? clip_path_npw_data_->GetCompositedPaintStatus()
-                               : CompositedPaintStatus::kNoAnimation;
-  }
-
-  bool SetCompositedClipPathStatus(CompositedPaintStatus status);
-
-  NativePaintWorkletData* EnsureClipPathNpwData(Element* element);
-
   // Animations affecting properties marked as important cannot be composited.
   // An animation running on the compositor must be cancelled once the affected
   // property is added to the important set. Note that a animation affecting
@@ -145,18 +101,11 @@ class CORE_EXPORT ElementAnimations final
 
   void Trace(Visitor*) const override;
 
- protected:
-  bool SetCompositedPaintStatus(Member<NativePaintWorkletData>& data,
-                                CompositedPaintStatus status);
-
  private:
   EffectStack effect_stack_;
   CSSAnimations css_animations_;
   CSSImageAnimations css_image_animations_;
   AnimationCountedSet animations_;
-  WorkletAnimationSet worklet_animations_;
-  Member<NativePaintWorkletData> background_color_npw_data_;
-  Member<NativePaintWorkletData> clip_path_npw_data_;
 
   // When an Element is being animated, its entire style will be dirtied every
   // frame by the running animation - even if the animation is only changing a

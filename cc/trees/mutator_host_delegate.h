@@ -9,7 +9,6 @@
 
 #include "cc/base/protected_sequence_synchronizer.h"
 #include "cc/paint/element_id.h"
-#include "cc/paint/paint_worklet_input.h"
 #include "cc/trees/property_animation_state.h"
 #include "cc/trees/target_property.h"
 
@@ -23,13 +22,6 @@ namespace cc {
 class FilterOperations;
 
 enum class ElementListType { ACTIVE, PENDING };
-
-enum class AnimationWorkletMutationState {
-  STARTED,
-  COMPLETED_WITH_UPDATE,
-  COMPLETED_NO_UPDATE,
-  CANCELED
-};
 
 class CC_EXPORT MutatorHostDelegate : public ProtectedSequenceSynchronizer {
  public:
@@ -69,14 +61,6 @@ class CC_EXPORT MutatorHostDelegate : public ProtectedSequenceSynchronizer {
                                    float maximum_scale) = 0;
 
   virtual void ScrollOffsetAnimationFinished(ElementId element_id) = 0;
-
-  virtual void NotifyAnimationWorkletStateChange(
-      AnimationWorkletMutationState state,
-      ElementListType tree_type) = 0;
-
-  virtual void OnCustomPropertyMutated(
-      PaintWorkletInput::PropertyKey property_key,
-      PaintWorkletInput::PropertyValue property_value) = 0;
 
   virtual bool RunsOnCurrentThread() const = 0;
 };

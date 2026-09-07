@@ -240,8 +240,6 @@ component("core") {
   # a duplicated file-scope symbol, or a name that resolves differently once
   # another source's declarations precede it. They still compile on their own.
   shot_jumbo_excluded_sources = [
-    "css/box_shadow_paint_image_generator.cc",
-    "css/clip_path_paint_image_generator.cc",
     "css/css_primitive_value.cc",
     "css/properties/css_direction_aware_resolver.cc",
 
@@ -1414,7 +1412,6 @@ source_set("unit_test_support") {
   sources = [
     "css/css_test_helpers.cc",
     "css/css_test_helpers.h",
-    "css/mock_css_paint_image_generator.h",
     "editing/testing/editing_test_base.cc",
     "editing/testing/editing_test_base.h",
     "editing/testing/selection_sample.cc",

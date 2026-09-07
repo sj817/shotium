@@ -175,7 +175,6 @@ class CORE_EXPORT StyleImage : public GarbageCollected<StyleImage> {
     return is_image_resource_set_;
   }
   ALWAYS_INLINE bool IsMaskSource() const { return is_mask_source_; }
-  ALWAYS_INLINE bool IsPaintImage() const { return is_paint_image_; }
   ALWAYS_INLINE bool IsCrossfadeImage() const { return is_crossfade_; }
 
   virtual bool IsLoadedAfterMouseover() const { return false; }
@@ -189,15 +188,13 @@ class CORE_EXPORT StyleImage : public GarbageCollected<StyleImage> {
         is_generated_image_(false),
         is_image_resource_set_(false),
         is_crossfade_(false),
-        is_mask_source_(false),
-        is_paint_image_(false) {}
+        is_mask_source_(false) {}
   bool is_image_resource_ : 1;
   bool is_pending_image_ : 1;
   bool is_generated_image_ : 1;
   bool is_image_resource_set_ : 1;
   bool is_crossfade_ : 1;
   bool is_mask_source_ : 1;
-  bool is_paint_image_ : 1;
 
   virtual bool IsEqual(const StyleImage&) const = 0;
 

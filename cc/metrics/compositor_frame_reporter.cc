@@ -2074,9 +2074,6 @@ FrameInfo CompositorFrameReporter::GenerateFrameInfo() const {
 
       final_state_raster_property = final_state;
       final_state_raster_scroll = final_state;
-      if (want_new_tree_ && !created_new_tree_) {
-        final_state_raster_property = FrameFinalState::kDropped;
-      }
       if (scrolling_thread == FrameInfo::SmoothEffectDrivingThread::kRaster) {
         if (invalidate_raster_scroll_ && !created_new_tree_) {
           final_state_raster_scroll = FrameFinalState::kDropped;
@@ -2112,9 +2109,6 @@ FrameInfo CompositorFrameReporter::GenerateFrameInfo() const {
       }
 
       final_state_raster_property = final_state;
-      if (want_new_tree_ && !created_new_tree_) {
-        final_state_raster_property = FrameFinalState::kDropped;
-      }
       final_state_raster_scroll = final_state;
       if (scrolling_thread == FrameInfo::SmoothEffectDrivingThread::kRaster &&
           !invalidate_raster_scroll_) {

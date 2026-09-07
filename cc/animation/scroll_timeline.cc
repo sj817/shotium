@@ -8,7 +8,6 @@
 #include <vector>
 
 #include "cc/animation/animation_id_provider.h"
-#include "cc/animation/worklet_animation.h"
 #include "cc/trees/property_tree.h"
 #include "cc/trees/scroll_node.h"
 #include "ui/gfx/geometry/point_f.h"
@@ -165,11 +164,6 @@ void ScrollTimeline::ActivateTimeline() {
   active_direction_.Write(*this) = pending_direction_.Read(*this);
   active_offsets_.Write(*this) = pending_offsets_.Read(*this);
   last_tick_time_.Write(*this) = std::nullopt;
-  for (auto& kv : id_to_animation_map_.Write(*this)) {
-    auto& animation = kv.second;
-    if (animation->IsWorkletAnimation())
-      ToWorkletAnimation(animation.get())->ReleasePendingTreeLock();
-  }
 }
 
 bool ScrollTimeline::TickScrollLinkedAnimations(
@@ -201,9 +195,6 @@ bool ScrollTimeline::TickScrollLinkedAnimations(
   // efficient solution.
   for (auto& animation : ticking_animations) {
     if (animation->animation_timeline() != this)
-      continue;
-    // Worklet animations are ticked at a later stage.
-    if (animation->IsWorkletAnimation())
       continue;
 
     if (!animation->IsScrollLinkedAnimation())

@@ -38,8 +38,7 @@ class CSSImageGeneratorValue;
 class Document;
 class ImageResourceObserver;
 
-// This class represents a generated <image> such as a gradient or paint(...)
-// function. Use only for images that have no intrinsic dimensions.
+// A generated gradient image with no intrinsic dimensions.
 class CORE_EXPORT StyleGeneratedImage final : public StyleImage {
  public:
   using ContainerSizes = CSSToLengthConversionData::ContainerSizes;
@@ -72,8 +71,6 @@ class CORE_EXPORT StyleGeneratedImage final : public StyleImage {
                                 const gfx::SizeF& target_size) const override;
   bool KnownToBeOpaque(const Document&, const ComputedStyle&) const override;
 
-  bool IsUsingCustomProperty(const AtomicString& custom_property_name,
-                             const Document&) const;
   bool IsUsingCurrentColor() const;
 
   bool DependsOnCurrentColor() const override { return IsUsingCurrentColor(); }

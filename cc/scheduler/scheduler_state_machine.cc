@@ -319,12 +319,6 @@ void SchedulerStateMachine::AsProtozeroInto(
       current_pending_tree_is_impl_side_);
   minor_state->set_previous_pending_tree_was_impl_side(
       previous_pending_tree_was_impl_side_);
-  minor_state->set_processing_animation_worklets_for_active_tree(
-      processing_animation_worklets_for_active_tree_);
-  minor_state->set_processing_animation_worklets_for_pending_tree(
-      processing_animation_worklets_for_pending_tree_);
-  minor_state->set_processing_paint_worklets_for_pending_tree(
-      processing_paint_worklets_for_pending_tree_);
   minor_state->set_should_warm_up(should_warm_up_);
 }
 
@@ -480,28 +474,8 @@ bool SchedulerStateMachine::ShouldActivateSyncTree() const {
     return false;
   }
 
-  // Delay pending tree activation until paint worklets have completed painting
-  // the pending tree. This must occur before the |ShouldAbortCurrentFrame|
-  // check as we cannot have an unpainted active tree.
-  //
-  // Note that paint worklets continue to paint when the page is not visible, so
-  // any abort will eventually happen when they complete.
-  if (processing_paint_worklets_for_pending_tree_) {
-    TRACE_EVENT_INSTANT(TRACE_DISABLED_BY_DEFAULT("cc.debug"),
-                        "Not activating due to processing paint worklets");
-    return false;
-  }
-
   if (ShouldAbortCurrentFrame())
     return true;
-
-  // Delay pending tree activation until animation worklets have completed
-  // their asynchronous updates to pick up initial values.
-  if (processing_animation_worklets_for_pending_tree_) {
-    TRACE_EVENT_INSTANT(TRACE_DISABLED_BY_DEFAULT("cc.debug"),
-                        "Not activating due to processing animation worklets");
-    return false;
-  }
 
   // At this point, only activate if we are ready to activate.
   if (!pending_tree_is_ready_for_activation_) {
@@ -994,11 +968,6 @@ void SchedulerStateMachine::WillCommit(bool commit_has_no_updates) {
 }
 
 void SchedulerStateMachine::WillActivate() {
-  // We cannot activate the pending tree while paint worklets are still being
-  // processed; the pending tree *must* be fully painted before it can ever be
-  // activated because we cannot paint the active tree.
-  DCHECK(!processing_paint_worklets_for_pending_tree_);
-
   if (layer_tree_frame_sink_state_ ==
       LayerTreeFrameSinkState::WAITING_FOR_FIRST_ACTIVATION)
     layer_tree_frame_sink_state_ = LayerTreeFrameSinkState::ACTIVE;
@@ -1392,11 +1361,6 @@ bool SchedulerStateMachine::ShouldTriggerBeginImplFrameDeadlineImmediately()
   if (IsDrawThrottled())
     return false;
 
-  // Delay immediate draws when we have pending animation worklet updates to
-  // give them time to produce output before we draw.
-  if (processing_animation_worklets_for_active_tree_)
-    return false;
-
   if (active_tree_needs_first_draw_)
     return true;
 
@@ -1719,12 +1683,6 @@ void SchedulerStateMachine::DidLoseLayerTreeFrameSink() {
 }
 
 bool SchedulerStateMachine::NotifyReadyToActivate() {
-  // It is not valid for clients to try and activate the pending tree whilst
-  // paint worklets are still being processed; the pending tree *must* be fully
-  // painted before it can ever be activated (even if e.g. it is not visible),
-  // because we cannot paint the active tree.
-  DCHECK(!processing_paint_worklets_for_pending_tree_);
-
   if (!has_pending_tree_ || pending_tree_is_ready_for_activation_)
     return false;
 
@@ -1738,38 +1696,6 @@ bool SchedulerStateMachine::IsReadyToActivate() {
 
 void SchedulerStateMachine::NotifyReadyToDraw() {
   active_tree_is_ready_to_draw_ = true;
-}
-
-void SchedulerStateMachine::NotifyAnimationWorkletStateChange(
-    AnimationWorkletState state,
-    TreeType tree) {
-  if (tree == TreeType::ACTIVE) {
-    switch (state) {
-      case AnimationWorkletState::PROCESSING:
-        DCHECK_GE(processing_animation_worklets_for_active_tree_, 0);
-        DCHECK_LE(processing_animation_worklets_for_active_tree_, 1);
-        processing_animation_worklets_for_active_tree_++;
-        break;
-
-      case AnimationWorkletState::IDLE:
-        DCHECK_LE(processing_animation_worklets_for_active_tree_, 2);
-        DCHECK_GE(processing_animation_worklets_for_active_tree_, 1);
-        processing_animation_worklets_for_active_tree_--;
-    }
-  } else {
-    processing_animation_worklets_for_pending_tree_ =
-        (state == AnimationWorkletState::PROCESSING);
-  }
-}
-
-void SchedulerStateMachine::NotifyPaintWorkletStateChange(
-    PaintWorkletState state) {
-  bool processing_paint_worklets_for_pending_tree =
-      (state == PaintWorkletState::PROCESSING);
-  DCHECK_NE(processing_paint_worklets_for_pending_tree,
-            processing_paint_worklets_for_pending_tree_);
-  processing_paint_worklets_for_pending_tree_ =
-      processing_paint_worklets_for_pending_tree;
 }
 
 void SchedulerStateMachine::DidCreateAndInitializeLayerTreeFrameSink() {

@@ -49,7 +49,6 @@
 #include "third_party/blink/renderer/core/css/css_math_expression_node.h"
 #include "third_party/blink/renderer/core/css/css_math_function_value.h"
 #include "third_party/blink/renderer/core/css/css_numeric_literal_value.h"
-#include "third_party/blink/renderer/core/css/css_paint_value.h"
 #include "third_party/blink/renderer/core/css/css_palette_mix_value.h"
 #include "third_party/blink/renderer/core/css/css_param_value_pair.h"
 #include "third_party/blink/renderer/core/css/css_path_value.h"
@@ -948,7 +947,6 @@ bool IsGeneratedImage(const CSSValueID id) {
     case CSSValueID::kWebkitRepeatingRadialGradient:
     case CSSValueID::kWebkitGradient:
     case CSSValueID::kWebkitCrossFade:
-    case CSSValueID::kPaint:
     case CSSValueID::kCrossFade:
       return true;
     case CSSValueID::kImage:
@@ -3590,75 +3588,6 @@ static CSSValue* ConsumeImageFunction(CSSParserTokenStream& stream,
   return MakeGarbageCollected<cssvalue::CSSColorImageValue>(color_value);
 }
 
-static CSSValue* ConsumePaint(CSSParserTokenStream& stream,
-                              const CSSParserContext& context,
-                              CSSParserLocalContext& local_context) {
-  CSSCustomIdentValue* name =
-      ConsumeCustomIdent(stream, context, local_context);
-  if (!name) {
-    return nullptr;
-  }
-
-  if (stream.AtEnd()) {
-    return MakeGarbageCollected<CSSPaintValue>(name);
-  }
-
-  if (!RuntimeEnabledFeatures::CSSPaintAPIArgumentsEnabled()) {
-    // Arguments not enabled, but exists. Invalid.
-    return nullptr;
-  }
-
-  // Begin parse paint arguments.
-  if (!ConsumeCommaIncludingWhitespace(stream)) {
-    return nullptr;
-  }
-
-  // Consume arguments.
-  // TODO(renjieliu): We may want to optimize the implementation by resolve
-  // variables early if paint function is registered.
-  Vector<CSSParserToken> argument_tokens;
-  HeapVector<Member<CSSVariableData>> variable_data;
-  bool first_argument = true;
-  while (!stream.AtEnd()) {
-    stream.ConsumeWhitespace();
-    if (!first_argument) {
-      if (stream.Peek().GetType() != kCommaToken) {
-        return nullptr;
-      }
-      ConsumeCommaIncludingWhitespace(stream);
-      if (stream.AtEnd()) {
-        return nullptr;
-      }
-    }
-    bool important_ignored;
-    CSSVariableData* argument = CSSVariableParser::ConsumeUnparsedDeclaration(
-        stream, /*allow_important_annotation=*/false,
-        /*is_animation_tainted=*/false,
-        /*must_contain_variable_reference=*/false,
-        /*restricted_value=*/false, /*comma_ends_declaration=*/true,
-        important_ignored, context);
-    if (!argument) {
-      return nullptr;
-    }
-    if (argument->NeedsVariableResolution()) {
-      // If we see an un-substituted var() or similar, it is a sign that
-      // we are in parsing (as opposed to resolving, where it would be
-      // substituted). We need to return an error so that the value as a whole
-      // becomes an unparsed value; we will be called back during resolving
-      // with all substitutions done.
-      //
-      // This is something most properties do implicitly, since var() would
-      // be a parse error. But since we accept pretty much any token sequence
-      // as arguments to paint(), we need to make this check explicitly here.
-      return nullptr;
-    }
-    variable_data.push_back(argument);
-    first_argument = false;
-  }
-
-  return MakeGarbageCollected<CSSPaintValue>(name, std::move(variable_data));
-}
-
 static CSSValue* ConsumeGeneratedImage(CSSParserTokenStream& stream,
                                        const CSSParserContext& context,
                                        CSSParserLocalContext& local_context) {
@@ -3720,10 +3649,7 @@ static CSSValue* ConsumeGeneratedImage(CSSParserTokenStream& stream,
     } else if (RuntimeEnabledFeatures::CSSImageFunctionEnabled() &&
                id == CSSValueID::kImage) {
       result = ConsumeImageFunction(stream, context, local_context);
-    } else if (id == CSSValueID::kPaint) {
-      result = context.IsSecureContext()
-                   ? ConsumePaint(stream, context, local_context)
-                   : nullptr;
+
     }
     if (!result || !stream.AtEnd()) {
       return nullptr;
@@ -3735,8 +3661,7 @@ static CSSValue* ConsumeGeneratedImage(CSSParserTokenStream& stream,
   WebFeature feature;
   if (id == CSSValueID::kWebkitCrossFade) {
     feature = WebFeature::kWebkitCrossFade;
-  } else if (id == CSSValueID::kPaint) {
-    feature = WebFeature::kCSSPaintFunction;
+
   } else {
     feature = WebFeature::kCSSGradient;
   }

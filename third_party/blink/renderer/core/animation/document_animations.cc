@@ -39,7 +39,6 @@
 #include "third_party/blink/renderer/core/animation/css/css_animation.h"
 #include "third_party/blink/renderer/core/animation/keyframe_effect.h"
 #include "third_party/blink/renderer/core/animation/pending_animations.h"
-#include "third_party/blink/renderer/core/animation/worklet_animation_controller.h"
 #include "third_party/blink/renderer/core/css/style_engine.h"
 #include "third_party/blink/renderer/core/dom/document.h"
 #include "third_party/blink/renderer/core/dom/element.h"
@@ -68,7 +67,6 @@ void UpdateAnimationTiming(
     TimingUpdateReason reason) {
   for (auto& timeline : timelines)
     timeline->ServiceAnimations(reason);
-  document.GetWorkletAnimationController().UpdateAnimationTimings(reason);
 }
 }  // namespace
 
@@ -231,7 +229,6 @@ void DocumentAnimations::UpdateAnimations(
     document_->View()->ScheduleAnimation(cc::BeginMainFrameReason::kAnimation);
   }
 
-  document_->GetWorkletAnimationController().UpdateAnimationStates();
   document_->GetFrame()->ScheduleNextServiceForPostLayoutSnapshotClients();
   for (auto& timeline : timelines_) {
     // ScrollSnapshotTimelines are already handled as PostLayoutSnapshotClients

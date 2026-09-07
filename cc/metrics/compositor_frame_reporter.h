@@ -450,7 +450,6 @@ class CC_EXPORT CompositorFrameReporter {
   void set_is_forked(bool is_forked) { is_forked_ = is_forked; }
   void set_is_backfill(bool is_backfill) { is_backfill_ = is_backfill; }
   void set_created_new_tree(bool new_tree) { created_new_tree_ = new_tree; }
-  void set_want_new_tree(bool want_new_tree) { want_new_tree_ = want_new_tree; }
   void set_invalidate_raster_scroll(bool invalidate_raster_scroll) {
     invalidate_raster_scroll_ = invalidate_raster_scroll;
   }
@@ -674,9 +673,7 @@ class CC_EXPORT CompositorFrameReporter {
   std::queue<std::unique_ptr<CompositorFrameReporter>>
       owned_partial_update_dependents_;
 
-  // Indicates whether or not an impl-side invalidation was necessary for a
-  // raster-dependent effect, and whether or not it occurred.
-  bool want_new_tree_ = false;
+  // Whether an impl-side invalidation produced a new tree.
   bool created_new_tree_ = false;
 
   bool invalidate_raster_scroll_ = false;

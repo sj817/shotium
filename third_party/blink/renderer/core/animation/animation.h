@@ -336,13 +336,6 @@ class CORE_EXPORT Animation : public EventTarget,
     kPendingCancel,        // Animation has been canceled, but could restart
                            // conditions permitting.
     kPendingRestart,       // Animation is to be restarted.
-    kPendingSafeRestart,   // Animation is to be restarted. We can be certain
-                           // that the CompositorPaintStatus won't change.  A compositing decision made in PrePaint for a native-paint-worklet is still valid.
-    kPaintWorkletImageCreated,  // A compositable animation was held in limbo
-                                // awaiting paint of the paint worklet image. It
-                                // can now be started on the compositor.
-    kPendingDowngrade  // Paint is forcing the animation to downgrade to
-                       // run on the main thread.
   };
 
   void SetCompositorPending(CompositorPendingReason reason);
@@ -441,11 +434,6 @@ class CORE_EXPORT Animation : public EventTarget,
   }
   bool AnimationHasNoEffect() const { return animation_has_no_effect_; }
 
-  // A native paint worklet animation has no visible effect until the deferred
-  // paint image has been generated. If the animation is not currently
-  // composited we need to restart it on the compositor.
-  void OnPaintWorkletImageCreated();
-
   bool WaitingOnDeferredStartTime() {
     return !start_time_ && (pending_play_ || pending_pause_);
   }
@@ -457,15 +445,6 @@ class CORE_EXPORT Animation : public EventTarget,
       AnimationTimeDelta start_time = AnimationTimeDelta()) {
     start_time_ = start_time;
   }
-
-  enum NativePaintWorkletProperties {
-    kNoPaintWorklet = 0,
-    kBackgroundColorPaintWorklet = 1,
-    kClipPathPaintWorklet = 2
-  };
-
-  using NativePaintWorkletReasons = uint32_t;
-  NativePaintWorkletReasons GetNativePaintWorkletReasons() const;
 
   static RangeBoundary* ToRangeBoundary(std::optional<TimelineOffset> offset,
                                         float zoom);
@@ -580,12 +559,6 @@ class CORE_EXPORT Animation : public EventTarget,
   // Tracking the state of animations in dev tools.
   void NotifyProbe();
 
-  // Update the cached value for the status of native paint worklets. Any
-  // time an animation becomes compositor pending that affects one or more
-  // properties animated via native paint worklets, a fresh decision is required
-  // in PrePaint or Paint to determine eligibility to run on the compositor.
-  void UpdateCompositedPaintStatus(CompositorPendingReason reason);
-
   // Updates the start time for a running animation that is linked to a scroll
   // timeline. As the animation is linked to a timeline range, we don't
   // necessarily know the start time when calling play or pause. Instead, we
@@ -686,16 +659,6 @@ class CORE_EXPORT Animation : public EventTarget,
   Member<Event> pending_cancelled_event_;
 
   Member<Event> pending_remove_event_;
-
-  // Cache whether animation can potentially have native paint worklets.
-  // In the event of the keyframes changing, we need a new evaluation, of
-  // the composited status for native paint worklet eligible properties.
-  // A change in the playState can also necessitate a composited style update.
-  mutable std::optional<NativePaintWorkletReasons>
-      native_paint_worklet_reasons_;
-  mutable std::optional<NativePaintWorkletReasons>
-      prior_native_paint_worklet_reasons_;
-  Member<Element> prior_native_paint_worklet_target_;
 
   // TODO(crbug.com/960944): Consider reintroducing kPause and cleanup use of
   // mutually exclusive pending_play_ and pending_pause_ flags.

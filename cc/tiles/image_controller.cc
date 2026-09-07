@@ -262,10 +262,6 @@ void ImageController::ConvertImagesToTasks(
 
   for (auto it = sync_decoded_images->begin();
        it != sync_decoded_images->end();) {
-    // PaintWorklet images should not be included in this set; they have already
-    // been painted before raster and so do not need raster-time work.
-    DCHECK(!it->paint_image().IsPaintWorklet());
-
     ImageDecodeCache::TaskResult result = cache_->GetTaskForImageAndRef(
         image_cache_client_id_, *it, tracing_info);
     *has_at_raster_images |= result.is_at_raster_decode;

@@ -2036,18 +2036,12 @@ class ComputedStyle final : public ComputedStyleBase {
   bool HasCurrentCompositableAnimation() const {
     return HasCurrentOpacityAnimation() ||
            HasCurrentTransformRelatedAnimation() ||
-           HasCurrentFilterAnimation() || HasCurrentBackdropFilterAnimation() ||
-           (RuntimeEnabledFeatures::CompositeClipPathAnimationEnabled() &&
-            HasCurrentClipPathAnimation()) ||
-           (RuntimeEnabledFeatures::CompositeBGColorAnimationEnabled() &&
-            HasCurrentBackgroundColorAnimation());
+           HasCurrentFilterAnimation() || HasCurrentBackdropFilterAnimation();
   }
   bool ShouldCompositeForCurrentAnimations() const {
     return HasCurrentOpacityAnimation() ||
            HasCurrentTransformRelatedAnimation() ||
-           HasCurrentFilterAnimation() || HasCurrentBackdropFilterAnimation() ||
-           (RuntimeEnabledFeatures::CompositeClipPathAnimationEnabled() &&
-            HasCurrentClipPathAnimation());
+           HasCurrentFilterAnimation() || HasCurrentBackdropFilterAnimation();
   }
   bool IsRunningTransformRelatedAnimationOnCompositor() const {
     return IsRunningTransformAnimationOnCompositor() ||
@@ -2253,12 +2247,6 @@ class ComputedStyle final : public ComputedStyleBase {
   bool HasSVGEffect() const {
     return HasFilter() || HasClipPath() || HasMask();
   }
-
-  // Returns true if any property has an <image> value that is a CSS paint
-  // function that is using a given custom property.
-  bool HasCSSPaintImagesUsingCustomProperty(
-      const AtomicString& custom_property_name,
-      const Document&) const;
 
   // FIXME: reflections should belong to this helper function but they are
   // currently handled through their self-painting layers. So the layout code
@@ -2796,20 +2784,12 @@ class ComputedStyle final : public ComputedStyleBase {
   bool DiffNeedsNormalPaintInvalidation(const Document&,
                                         const ComputedStyle& other,
                                         uint64_t field_diff) const;
-  bool DiffNeedsPaintInvalidationForPaintImage(const StyleImage&,
-                                               const ComputedStyle& other,
-                                               const Document&) const;
   bool DiffNeedsRecomputeVisualOverflow(const ComputedStyle& other,
                                         uint64_t field_diff) const;
   bool DiffCompositingReasonsChanged(const ComputedStyle& other,
                                      uint64_t field_diff) const;
   bool PotentialCompositingReasonsFor3DTransformChanged(
       const ComputedStyle& other) const;
-
-  bool PropertiesEqual(const Vector<CSSPropertyID>& properties,
-                       const ComputedStyle& other) const;
-  CORE_EXPORT bool CustomPropertiesEqual(const Vector<AtomicString>& properties,
-                                         const ComputedStyle& other) const;
 
   CORE_EXPORT blink::Color GetCurrentColor(
       bool* is_current_color = nullptr) const;
@@ -3553,14 +3533,6 @@ class ComputedStyleBuilder final : public ComputedStyleBuilderBase {
       const HashSet<AtomicString>& custom_highlight_names) {
     SetCustomHighlightNamesInternal(
         std::make_unique<HashSet<AtomicString>>(custom_highlight_names));
-  }
-
-  // PaintImage
-  void AddPaintImage(StyleImage* image) {
-    if (!PaintImagesInternal()) {
-      MutablePaintImagesInternal() = MakeGarbageCollected<PaintImages>();
-    }
-    MutablePaintImagesInternal()->Images().push_back(image);
   }
 
   // ColorScheme and ForcedColors

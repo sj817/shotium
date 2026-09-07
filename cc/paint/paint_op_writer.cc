@@ -682,19 +682,10 @@ sk_sp<PaintShader> PaintOpWriter::TransformShaderIfNecessary(
   const auto& ctm = current_ctm.asM33();
 
   if (type == PaintShader::Type::kImage) {
-    if (!original->paint_image().IsPaintWorklet()) {
-      return original->CreateDecodedImage(ctm, quality, options_.image_provider,
-                                          paint_image_transfer_cache_entry_id,
-                                          &quality, paint_image_needs_mips,
-                                          mailbox_out);
-    }
-    sk_sp<PaintShader> record_shader =
-        original->CreatePaintWorkletRecord(options_.image_provider);
-    if (!record_shader) {
-      return nullptr;
-    }
-    return record_shader->CreateScaledPaintRecord(
-        ctm, options_.max_texture_size, paint_record_post_scale);
+    return original->CreateDecodedImage(ctm, quality, options_.image_provider,
+                                        paint_image_transfer_cache_entry_id,
+                                        &quality, paint_image_needs_mips,
+                                        mailbox_out);
   }
 
   if (type == PaintShader::Type::kPaintRecord) {

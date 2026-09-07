@@ -41,11 +41,6 @@ enum class VisualRectFlag {
   // frame's root scroller. See kSkipUnnecessaryRemoteFrameGeometryPropagation.
   kApplyRemoteViewportTransform,
 
-  // Use the real clip-path bounding rect, ignoring any large clip path bounding
-  // rect designed to facilitate painting of composited clip path animations.
-  // Used for intersection observers.
-  kUsePreciseClipPath,
-
   // Skip all ancestor clips, including the viewport clip. Callers that need to
   // derive both the unclipped and clipped rects can map once with this flag to
   // obtain the unclipped geometry and once without it for the fully clipped

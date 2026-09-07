@@ -14,7 +14,6 @@
 #include "cc/input/overscroll_behavior.h"
 #include "third_party/blink/public/platform/platform.h"
 #include "third_party/blink/renderer/core/animation/element_animations.h"
-#include "third_party/blink/renderer/core/css/clip_path_paint_image_generator.h"
 #include "third_party/blink/renderer/core/css/properties/css_bitset.h"
 #include "third_party/blink/renderer/core/dom/dom_node_ids.h"
 #include "third_party/blink/renderer/core/dom/flat_tree_traversal.h"
@@ -483,7 +482,6 @@ class FragmentPaintPropertyTreeBuilder {
   // True if, among all transform-relaed properties, there is a
   // non-identity transform that *is not* a 2D scale.
   bool has_non_scale2d_transform_ = false;
-  std::optional<gfx::RectF> paint_clip_path_rect_;
   // Used for intersection observers, so that the current clip is available.
   std::optional<gfx::RectF> precise_clip_path_rect_;
 };
@@ -1642,22 +1640,10 @@ void FragmentPaintPropertyTreeBuilder::UpdateTransform() {
   }
 }
 
-static bool NeedsClipPathClipOrMask(
-    const LayoutObject& object,
-    bool fully_resolve_composited_state = false) {
-  // Ensure clip path status is populated even if the other checks fail.s
-  bool has_composite_clip_path_animation =
-      ClipPathClipper::HasCompositeClipPathAnimation(
-          object,
-          fully_resolve_composited_state
-              ? ClipPathClipper::CompositedStateResolutionType::kFullResolve
-              : ClipPathClipper::CompositedStateResolutionType::
-                    kInitialResolve);
-  // We only apply clip-path if the LayoutObject has a layer or is an SVG
-  // child. See NeedsEffect() for additional information on the former.
-  return !object.IsText() && (has_composite_clip_path_animation ||
-                              (object.StyleRef().HasClipPath() &&
-                               (object.HasLayer() || object.IsSVGChild())));
+static bool NeedsClipPathClipOrMask(const LayoutObject& object) {
+  // Clip paths apply to objects with a layer and to SVG children.
+  return !object.IsText() && object.StyleRef().HasClipPath() &&
+         (object.HasLayer() || object.IsSVGChild());
 }
 
 static bool NeedsEffectForViewTransition(const LayoutObject& object) {
@@ -2082,9 +2068,7 @@ void FragmentPaintPropertyTreeBuilder::UpdateEffect() {
             *context_.current.clip,
             ClipPaintPropertyNode::State(
                 *context_.current.transform, combined_clip,
-                FloatRoundedRect(gfx::ToEnclosingRect(
-                    paint_clip_path_rect_.value_or(combined_clip))),
-                paint_clip_path_rect_)));
+                FloatRoundedRect(gfx::ToEnclosingRect(combined_clip)))));
         // We don't use MaskClip as the output clip of Effect, Mask and
         // ClipPathMask because we only want to apply MaskClip to the contents,
         // not the masks.
@@ -2703,46 +2687,9 @@ static std::optional<FloatRoundedRect> PathToRRect(const Path& path) {
 void FragmentPaintPropertyTreeBuilder::UpdateClipPathClip() {
   if (NeedsPaintPropertyUpdate()) {
     DCHECK(!precise_clip_path_rect_.has_value());
-    if (NeedsClipPathClipOrMask(object_,
-                                /*fully_resolve_composited_state=*/true)) {
+    if (NeedsClipPathClipOrMask(object_)) {
       precise_clip_path_rect_ =
           ClipPathClipper::LocalClipPathBoundingBox(object_);
-
-      if (ClipPathClipper::HasCompositeClipPathAnimation(
-              object_,
-              ClipPathClipper::CompositedStateResolutionType::kReadCache)) {
-        needs_mask_based_clip_path_ = true;
-
-        // If there's a composited clip path animation, we use a larger bounding
-        // rect that can encompass the entire animation, that way no new main
-        // frames are needed to resize the clip area. If the mask image size is
-        // unconstrained, perf issues could result, so we fall back.
-        paint_clip_path_rect_ = object_.GetFrame()
-                                    ->GetClipPathPaintImageGenerator()
-                                    ->GetAnimationBoundingRect(object_);
-
-        // A null return indicates that neither the cull rect or the animation
-        // keyframes can be used to limit the mask image size. Additionally,
-        // fallback in the case of clip-path: none and perspective transform, as
-        // cull rects are set to infinite in that case as well.
-        bool has_any_perspective =
-            object_.StyleRef().HasPerspective() ||
-            object_.StyleRef().Transform().HasPerspective() ||
-            context_.current.transform->Unalias().Matrix().HasPerspective();
-
-        if (!paint_clip_path_rect_ ||
-            (has_any_perspective &&
-             gfx::ToEnclosingRect(*paint_clip_path_rect_) ==
-                 InfiniteIntRect())) {
-          paint_clip_path_rect_ = std::nullopt;
-          needs_mask_based_clip_path_ = false;
-          ClipPathClipper::FallbackClipPathAnimationDueToAbsentBounds(object_);
-        } else if (!precise_clip_path_rect_) {
-          // In the case where clip-path: none, it is okay for the precise clip
-          // path to equal the expanded rect, since we need to assign it a value
-          precise_clip_path_rect_ = paint_clip_path_rect_;
-        }
-      }
 
       if (precise_clip_path_rect_) {
         // SVG "children" does not have a paint offset, but for
@@ -2754,10 +2701,6 @@ void FragmentPaintPropertyTreeBuilder::UpdateClipPathClip() {
                 ? gfx::Vector2dF(context_.current.paint_offset)
                 : gfx::Vector2dF();
         precise_clip_path_rect_->Offset(paint_offset);
-
-        if (paint_clip_path_rect_) {
-          paint_clip_path_rect_->Offset(paint_offset);
-        }
 
         if (std::optional<Path> path =
                 ClipPathClipper::PathBasedClip(object_, paint_offset)) {
@@ -3916,16 +3859,6 @@ void FragmentPaintPropertyTreeBuilder::SetNeedsPaintPropertyUpdateIfNeeded() {
     layer->UpdateFilterReferenceBox();
   }
 
-  if (!ClipPathClipper::ClipPathStatusResolved(object_)) {
-    // Being here means we cleared the update flag without setting status. This
-    // is a bug, though as long as we re-set the flag it shouldn't result in
-    // painting artifacts as early outs of the tree walk usually imply the
-    // object isn't painted. Do this now so CC clip paths can function properly.
-    // TODO(crbug.com/495205055): Remove this.
-    object_.GetMutableForPainting().SetOnlyThisNeedsPaintPropertyUpdate();
-    return;
-  }
-
   if (!object_.IsBox()) {
     // We could check the change of the clip-path bounding box, but checking
     // layout change is much simpler and good enough for the rare cases of
@@ -4534,18 +4467,6 @@ void PaintPropertyTreeBuilder::UpdateForSelf() {
     }
   }
 
-  // Our own FragmentData will not have been populated at this point, but
-  // clip-path animations need to know whether there are >1 fragments to
-  // determine composited eligibility. So, we use the information collected
-  // earlier in the walk.
-  const bool object_is_fragmented =
-      (object_.IsBox() && To<LayoutBox>(object_).PhysicalFragmentCount() > 1) ||
-      (pre_paint_info_ && object_.IsInline() &&
-       pre_paint_info_->is_inside_fragment_child &&
-       !pre_paint_info_->is_last_for_node);
-  ClipPathClipper::FallbackClipPathAnimationIfNecessary(
-      object_, /* should_force_fallback = */ object_is_fragmented);
-
   UpdatePaintingLayer();
   UpdateFragmentData();
   InitPaintProperties();
@@ -4554,11 +4475,6 @@ void PaintPropertyTreeBuilder::UpdateForSelf() {
                                            GetFragmentData());
   builder.UpdateForSelf();
   properties_changed_.Merge(builder.PropertiesChanged());
-
-  // Clip path status should have been resolved when initializing the paint
-  // properties or when updating ClipPathClip, via a call to
-  // NeedsClipPathClipOrMask.
-  CHECK(ClipPathClipper::ClipPathStatusResolved(object_));
 
   if (!PrePaintDisableSideEffectsScope::IsDisabled()) {
     object_.GetMutableForPainting()

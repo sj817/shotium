@@ -40,9 +40,7 @@ struct BrowserControlsOffsetTagModifications;
 class LayerTreeFrameSink;
 class LayerTreeHost;
 class ClientLayerTreeHostImpl;
-class LayerTreeMutator;
 class LayerTreeSettings;
-class PaintWorkletLayerPainter;
 class ProxyMain;
 class RenderFrameMetadataObserver;
 class ScopedCommitCompletionEvent;
@@ -75,9 +73,6 @@ class CC_EXPORT ProxyImpl : public LayerTreeHostImplDelegate,
   void InitializeLayerTreeFrameSinkOnImpl(
       LayerTreeFrameSink* layer_tree_frame_sink,
       base::WeakPtr<ProxyMain> proxy_main_frame_sink_bound_weak_ptr);
-  void InitializeMutatorOnImpl(std::unique_ptr<LayerTreeMutator> mutator);
-  void InitializePaintWorkletLayerPainterOnImpl(
-      std::unique_ptr<PaintWorkletLayerPainter> painter);
   void SetDeferBeginMainFrameFromMain(bool defer_begin_main_frame);
   void SetPauseRendering(bool pause_rendering,
                          bool delay_until_visibility_change);
@@ -181,11 +176,6 @@ class CC_EXPORT ProxyImpl : public LayerTreeHostImplDelegate,
       uint32_t frame_token,
       PresentationTimeCallbackBuffer::PendingCallbacks activated,
       const viz::FrameTimingDetails& details) override;
-  void NotifyAnimationWorkletStateChange(
-      AnimationWorkletMutationState state,
-      ElementListType element_list_type) override;
-  void NotifyPaintWorkletStateChange(
-      Scheduler::PaintWorkletState state) override;
   void NotifyCompositorMetricsTrackerResults(
       CustomTrackerResults results) override;
   void DidObserveFirstScrollDelay(

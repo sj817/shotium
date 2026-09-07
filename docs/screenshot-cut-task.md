@@ -45,22 +45,23 @@
 | 5 | `7817855215f4` | PAC/WPAD/系统代理解析服务及生命周期、prefs；116 文件删除，20 并发 EXE/DLL 与完整运行验证通过 |
 | 6 | `a9089e98db19` | 浏览器宿主/Widget、popup/plugin、PAC/ScrollingCoordinator 与主合成器入口；249 文件删除，177 张像素一致，Windows 完整运行验证通过 |
 
+| 7 | `bea94b044ba3` | 输入路由/IME/EditContext、浏览器公共接口、Autofill/拼写建议/编辑命令/SystemClipboard；216 文件删除，179 张像素一致 |
+
 前三批 Windows EXE/DLL、84 demos、serve/net、Node/daemon/协议、Bilibili 和像素基线检查已完成，详见执行记录；六平台实际编译未完成。没有创建 PR 或发布。
 
-## 最新接续状态：第七批已验证，待提交
+## 最新接续状态：第八批 Windows 完整验证通过，准备提交
 
-本节优先于后面的历史条目。当前 HEAD 为 a9089e98db19；第七批的源码、Windows EXE/DLL、运行检查和 179 张像素对照已完成，准备显式暂存并提交。全部构建和验证会话已结束。
+本段优先于下面历史进度。stage12 删除74文件、142个首次触碰路径，合计213个变更路径；源码已冻结并完成 Windows EXE/DLL、Node addon 和全部运行检查，没有活动构建会话。20并发已实际LLVM OOM，本批采用8并发，未修改永久默认。提交后冻结stage12，下一批新建stage13，禁止重放旧编辑计划。
 
-- stage11 manifest 为 138 个 owned 编辑路径，deletions/deletion-proof 为 216 个实体删除，备份 SHA256 已核对。只按该清单与本任务文档暂存，不能重放 scratch，也不能应用被审批拒绝的拖放提案。
-- 已删 components/input 全部 80 文件，Blink EditContext/IME 控制器、公共 WebFrame/WebWidget/WebView 头文件尾巴、Widget/Input Mojo、插件脚本 scope 和浏览器选区同步。
-- 已删 PaintHolding/WebUI 提交延迟、CSS selector watcher/推测规则收集、Autofill 事件/通知/专用跨表单缓存、execCommand 分发表、拼写检查/文字建议、无调用的格式化/链接命令，以及 SystemClipboard 全部读写/快照/监听/图片复制/持有和 Mojo 协议。普通 CSS 匹配、表单 owner/validity/reference-target、plaintext-only 空白、焦点/选择实际状态保持。
-- 已验证：GN 6847 targets / 856 build files，7431 源码输入全部存在；IDL 54 enums / 122 引用值 / 0 缺失；EXE/DLL jobs 8 成功；serve/net/84 demos/新 addon Node/daemon/协议/Bilibili/accept 全通过；179/179 解码 PNG 像素完全一致。错误修复仅涉及样式生成器无用 Vector<String> 对齐项和 DataObjectItem 的 mojo::Remote 直接 include，失败 TU 1/1 syntax clean。
-- 当前 EXE 46,483,968 字节，SHA256 835d04bd053c17b507f7cae54198de70183a0d4b2ec9ae6d23665facc67a470f；DLL 46,481,920 字节，SHA256 6d4912d96a203e3b41b45da83fb4e7d5a4d1ca603d40e3e263676de3d5420486。产物与日志均在 out/Shot / out/cut-batch7，不能再把第六批当当前二进制。
-- 216 文件删除后精确移除 5 个空目录：components/input、editing/ime、editing/spellcheck、editing/suggestion、public/mojom/clipboard。未递归清理父目录。保留的 clipboard/DataObject/DataTransfer 属于待拆拖放链，不是截图永久保留结论。
-- 新增两个旧版像素基准：out/cut-input（1200x920，12 组）和 out/cut-form-association（1100x950，8 组），均由 hash 核验的第六批 EXE 生成。原 177 张加这两张共 179 张，当前全部一致。
-- Linux probe：0 缺 BUILD、0 主仓库缺输入，3 Linux DEPS 检出和1宿主工具链缺项仍存在。Jumbo 扫描列出 40 个符号候选且缺少生成源码，这只是候选清单，不能宣称 Linux 编译通过。六平台实际编译尚未完成。
-- 拖放提案仍被自动审批拒绝，尚未应用。具体14文件提案 out/cut-stage11/drag-proposal-review.patch（11修改/3删除），只读 before/after 在同名目录。已查实 Shot 无输入入口、StartDragging 唯一实现为空，审批仍以通用交互修改范围大和风险为由拒绝；需要用户明确确认解除此项，不能绕过重试。
-- 下一批继续 GPU animation/cc/Viz/GL、网络公共层/旧 IPC、ContainerTiming/Performance/诊断后端/第三方和根目录最终复核。完整目标不变。GPU 待办证据在 stage10/next-animation-internals.txt 和 next-gpu-create-entry-refs.txt；保留 CSS pending/NotifyReady、scroll timeline readiness、PreCommit CPU 延迟及 SVG LayoutClean 语义。其他不受拖放审批影响的工作继续推进。
+本批完整拆除 Blink/cc AnimationWorklet、NativePaint 背景色/阴影/clip-path生成器和状态、CSS paint()解析与样式缓存、跨线程CSS值/派发、Canvas记录器尾巴、Worklet任务/时间事件/Host与Scheduler异步等待、自定义/原生属性动画与tracker、PaintWorkletInput/DeferredPaintRecord、图层/瓦片图片记录映射和专用provider、PaintImage/Shader/绘制与序列化延迟支路。普通CSS动画、滚动时间线、CPU背景/阴影、SVG/shape裁剪、CPU PaintRecord与图片解码/动画/HDR保留。pending_tree_fully_painted_仍是同步UpdateDrawProperties/图片失效完成前的raster与activation门控，不能因旧名误删。
+
+验证结果：GN6847 targets/856 files；7429输入全存在；IDL dry-run54枚举122引用0缺失。首轮3个C++失败TU已补直接include/删除旧Worklet绑定，3/3 syntax clean，EXE/DLL随后成功。serve/net、84 demos（62 exact/1 fuzzy/21 smoke）、Node/daemon/协议、Bilibili、accept全部通过；181/181解码像素完全相同。新动态clip-path专项已正常输出，且与静态中点参考0像素差；旧版此fixture退出无图，故只记录该具体回归修复。原Chrome oracle差异约1.524%保持。
+
+EXE46,414,336字节，SHA256 3429614bb621a7c55ba505e1c0a913561a7f34681b63e1c924281ce0f0ea6472；DLL46,411,264字节，SHA256 30804661fdf9d119061d256fa47053050edde6fd3f49ebb9cd49491f23750576。运行/像素/二进制证据在out/cut-batch8；源码manifest/deletions/static-proof在out/cut-stage12。74份备份哈希通过，16,853 tracked源码/GN无删除路径残余，126个owned C++/头文件预处理配对通过。
+
+Linux probe使用out/CutBatch8Linux：0缺BUILD/0主仓库缺输入，3项Linux DEPS和1项宿主工具链缺失；Jumbo扫描40个候选，不代表Linux编译通过。第一次嵌套out/cut-batch8/LinuxProbe因脚本相对路径假设误报，正确目录重跑已通过。六平台实际构建仍未完成。
+
+继续项：普通compositor动画状态、cc/Viz/GPU全闭包，以及泛用WorkletToken/Mojo联合、网络destination、IDL Exposed和线程类别；CPU PendingAnimations/PreCommit/NotifyReady不可误删。拖放14文件提案未应用，自动审批拒绝仍未获用户确认；继续其他独立工作。本批不是根目录全目标完成。
 
 ## 剩余大批次清单
 
@@ -223,3 +224,8 @@
 - 第七批首次构建已终止（session 92951 exit 1）：唯一失败是 make_computed_style_base.py 的 ALIGNMENT_ORDER 中 Vector<String> 已无字段使用。已同步删除该旧对齐项，加入 stage11 manifest（现138）；原始日志留存 out/Shot/cut-batch7-generator-failure.log。当前继续同一批构建，session 23479、jobs 8、out/Shot/cut-batch7-build.log；未启动运行检查。
 
 - 第七批 C++ 收集轮 session 23479 已结束：唯一失败 TU 为 Clipboard Jumbo，DataObjectItem 保留的文件令牌克隆缺少 mojo/public/cpp/bindings/remote.h 的直接 include。已补齐，不恢复 SystemClipboard；pnpm check:syntax --from-log 对该 TU 1/1 clean。原始失败日志 out/Shot/cut-batch7-cpp-failure.log。当前 EXE 续编 session 45552、jobs 8、同 cut-batch7-build.log；尚未 DLL/运行/像素验证。
+
+- 第七批提交已确认为 bea94b044ba3，344 files changed / +114 / -45599；提交后根仓库工作区干净，随后仅更新本接续文档。stage11 清单冻结，不再往已提交批次追加源码；下一次实际编辑需新建 stage12 清单。没有运行中的构建/测试，无 PR/推送/发布。
+- GPU 动画下一切口已从当前源码重新核实：Platform::IsThreadedAnimationEnabled 默认 false，Shot 和 SVG 平台没有 override，CheckCanStartElementOnCompositor 明确因此加入 kAcceleratedAnimationsDisabled，CreateCompositorAnimation 也受同一门控；证据 out/cut-batch7/animation-platform-gates.txt、animation-compositor-gate.txt、next-animation-entries.txt。不能直接删除整个 PendingAnimations：Update() 默认 true 的 PreCommit 仍有 Playing+CurrentTime+Outdated+PaintClean+ScriptForbidden 的 CPU 延迟；TimerFired 调用 Update(false)，DocumentAnimations 生命周期调用 Update()，NotifyReady 与 scroll timeline 未解析时 deferred 均是实际动画语义。下一批先分离这部分 CPU 收尾，再拆 CompositorState/group/ack/CompositorAnimation/NPW 整链。当前没有应用 GPU 动画新修改。
+
+- 第八批首轮3个失败TU修复后，EXE/DLL与全部运行/181张像素检查通过，所有构建会话已结束。RequiresPropertyNode仍被普通eligibility使用，留待下一动画状态闭包，不能为了删名字误改CPU动画判定。

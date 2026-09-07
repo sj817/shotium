@@ -15,7 +15,6 @@
 #include "cc/input/browser_controls_offset_manager.h"
 #include "cc/layers/picture_layer_impl.h"
 #include "cc/metrics/frame_sequence_tracker.h"
-#include "cc/paint/paint_worklet_layer_painter.h"
 #include "cc/trees/layer_tree_host_impl_delegate.h"
 #include "cc/trees/layer_tree_impl.h"
 #include "cc/trees/property_tree.h"
@@ -201,22 +200,6 @@ void ClientLayerTreeHostImpl::CommitComplete() {
     ActivateAnimations();
   }
 
-  // We clear the entries that were never mutated by CC animations from the last
-  // commit until now. Moreover, we reset the values of input properties and
-  // relies on the fact that CC animation will mutate those values when pending
-  // tree is animated below.
-  // With that, when CC finishes animating an input property, the value of that
-  // property stays at finish state until a commit kicks in, which is consistent
-  // with current composited animations.
-  base::flat_set<PaintWorkletInput::PropertyKey> used_properties;
-  for (auto* layer : sync_tree()->picture_layers_with_paint_worklets()) {
-    for (const auto& map_entry : layer->GetPaintWorkletRecords()) {
-      const auto& property_keys = map_entry.first->GetPropertyKeys();
-      used_properties.insert(property_keys.begin(), property_keys.end());
-    }
-  }
-  paint_worklet_tracker_.ClearUnusedInputProperties(std::move(used_properties));
-
   // Start animations before UpdateDrawProperties and PrepareTiles, as they can
   // change the results. When doing commit to the active tree, this must happen
   // after ActivateAnimations() in order for this ticking to be propagated
@@ -373,39 +356,6 @@ void ClientLayerTreeHostImpl::
       pending_invalidation_raster_inducing_scrolls_);
   pending_invalidation_raster_inducing_scrolls_.clear();
 
-  base::flat_map<PaintWorkletInput::PropertyKey,
-                 std::pair<PaintWorkletInput::PropertyValue,
-                           PaintWorkletInput::PropertyValue>>
-      animated_properties =
-          paint_worklet_tracker_.TakeAndResetAnimatedProperties();
-  bool worklets_invalidated = false;
-
-  for (auto* layer : sync_tree()->picture_layers_with_paint_worklets()) {
-    for (const auto& map_entry : layer->GetPaintWorkletRecords()) {
-      for (const auto& property_key : map_entry.first->GetPropertyKeys()) {
-        const auto& it = animated_properties.find(property_key);
-        if (it != animated_properties.end()) {
-          worklets_invalidated = true;
-          layer->InvalidatePaintWorklets(property_key, it->second.first,
-                                         it->second.second);
-        }
-      }
-    }
-  }
-
-  if (worklets_invalidated) {
-    delegate_->SetNeedsImplSideInvalidation(
-        true /* needs_first_draw_on_activation */);
-    if (sync_tree()->property_change_forces_commit_criteria() ==
-        PropertyChangeForcesCommitCriteria::kAny) {
-      SetNeedsCommit();
-    }
-  }
-
-  PaintImageIdFlatSet dirty_paint_worklet_ids;
-  PaintWorkletJobMap dirty_paint_worklets =
-      GatherDirtyPaintWorklets(&dirty_paint_worklet_ids);
-
   PaintImageIdFlatSet images_to_invalidate =
       tile_manager_.TakeImagesToInvalidateOnSyncTree();
 
@@ -417,9 +367,6 @@ void ClientLayerTreeHostImpl::
   if (image_animation_controller_->HasAdvancedAnimationClients()) {
     SetNeedsCommit();
   }
-
-  images_to_invalidate.insert(dirty_paint_worklet_ids.begin(),
-                              dirty_paint_worklet_ids.end());
 
   sync_tree()->InvalidateRegionForImages(images_to_invalidate);
 
@@ -434,80 +381,13 @@ void ClientLayerTreeHostImpl::
 
   sync_tree()->SetCreatedBeginFrameArgs(CurrentBeginFrameArgs());
 
-  if (!paint_worklet_painter_) {
-    // Blink should not send us any PaintWorklet inputs until we have a painter
-    // registered.
-    DCHECK(sync_tree()->picture_layers_with_paint_worklets().empty());
-    pending_tree_fully_painted_ = true;
-    NotifyPendingTreeFullyPainted();
-    return;
-  }
-
-  if (!dirty_paint_worklets.size()) {
-    pending_tree_fully_painted_ = true;
-    NotifyPendingTreeFullyPainted();
-    return;
-  }
-
-  delegate_->NotifyPaintWorkletStateChange(
-      Scheduler::PaintWorkletState::PROCESSING);
-  auto done_callback =
-      base::BindOnce(&ClientLayerTreeHostImpl::OnPaintWorkletResultsReady,
-                     base::Unretained(this));
-  paint_worklet_painter_->DispatchWorklets(std::move(dirty_paint_worklets),
-                                           std::move(done_callback));
-}
-
-void ClientLayerTreeHostImpl::OnPaintWorkletResultsReady(
-    PaintWorkletJobMap results) {
-#if DCHECK_IS_ON()
-  // Nothing else should have painted the PaintWorklets while we were waiting,
-  // and the results should have painted every PaintWorklet, so these should be
-  // the same.
-  PaintImageIdFlatSet dirty_paint_worklet_ids;
-  DCHECK_EQ(results.size(),
-            GatherDirtyPaintWorklets(&dirty_paint_worklet_ids).size());
-#endif
-
-  for (const auto& entry : results) {
-    for (const PaintWorkletJob& job : entry.second->data) {
-      LayerImpl* layer_impl =
-          pending_tree_->FindPendingTreeLayerById(job.layer_id());
-      // Painting the pending tree occurs asynchronously but stalls the pending
-      // tree pipeline, so nothing should have changed while we were doing that.
-      DCHECK(layer_impl);
-      static_cast<PictureLayerImpl*>(layer_impl)
-          ->SetPaintWorkletRecord(job.input(), job.output());
-    }
-  }
-
-  // While the pending tree is being painted by PaintWorklets, we restrict the
-  // tiles the TileManager is able to see. This may cause the TileManager to
-  // believe that it has finished rastering all the necessary tiles. When we
-  // finish painting the tree and release all the tiles, we need to mark the
-  // tile priorities as dirty so that the TileManager logic properly re-runs.
-  tile_priorities_dirty_ = true;
-
-  // Set the painted state before calling the scheduler, to ensure any callback
-  // running as a result sees the correct painted state.
   pending_tree_fully_painted_ = true;
-  delegate_->NotifyPaintWorkletStateChange(Scheduler::PaintWorkletState::IDLE);
-
-  // The pending tree may have been force activated from the signal to the
-  // scheduler above, in which case there is no longer a tree to paint.
-  if (pending_tree_) {
-    NotifyPendingTreeFullyPainted();
-  }
+  NotifyPendingTreeFullyPainted();
 }
 
 void ClientLayerTreeHostImpl::NotifyPendingTreeFullyPainted() {
   // The pending tree must be fully painted at this point.
   DCHECK(pending_tree_fully_painted_ && !settings_.trees_in_viz_in_viz_process);
-
-  // Nobody should claim the pending tree is fully painted if there is an
-  // ongoing dispatch.
-  DCHECK(!paint_worklet_painter_ ||
-         !paint_worklet_painter_->HasOngoingDispatch());
 
   // Start working on newly created tiles immediately if needed.
   // TODO(vmpstr): Investigate always having PrepareTiles issue
@@ -538,51 +418,6 @@ void ClientLayerTreeHostImpl::AnimatePendingTreeAfterCommit() {
   if (input_delegate_) {
     input_delegate_->TickAnimations(monotonic_time);
   }
-}
-
-PaintWorkletJobMap ClientLayerTreeHostImpl::GatherDirtyPaintWorklets(
-    PaintImageIdFlatSet* dirty_paint_worklet_ids) const {
-  PaintWorkletJobMap dirty_paint_worklets;
-  for (PictureLayerImpl* layer :
-       sync_tree()->picture_layers_with_paint_worklets()) {
-    for (const auto& entry : layer->GetPaintWorkletRecordMap()) {
-      const scoped_refptr<const PaintWorkletInput>& input = entry.first;
-      const PaintImage::Id& paint_image_id = entry.second.first;
-      const std::optional<PaintRecord>& record = entry.second.second;
-      // If we already have a record we can reuse it and so the
-      // PaintWorkletInput isn't dirty.
-      if (record) {
-        continue;
-      }
-
-      // Mark this PaintWorklet as needing invalidation.
-      dirty_paint_worklet_ids->insert(paint_image_id);
-
-      // Create an entry in the appropriate PaintWorkletJobVector for this dirty
-      // PaintWorklet.
-      int worklet_id = input->WorkletId();
-      auto& job_vector = dirty_paint_worklets[worklet_id];
-      if (!job_vector) {
-        job_vector = base::MakeRefCounted<PaintWorkletJobVector>();
-      }
-
-      PaintWorkletJob::AnimatedPropertyValues animated_property_values;
-      for (const auto& element : input->GetPropertyKeys()) {
-        DCHECK(!animated_property_values.contains(element));
-        const PaintWorkletInput::PropertyValue& animated_property_value =
-            paint_worklet_tracker_.GetPropertyAnimationValue(element);
-        // No value indicates that the input property was not mutated by CC
-        // animation.
-        if (animated_property_value.has_value()) {
-          animated_property_values.emplace(element, animated_property_value);
-        }
-      }
-
-      job_vector->data.emplace_back(layer->id(), input,
-                                    std::move(animated_property_values));
-    }
-  }
-  return dirty_paint_worklets;
 }
 
 }  // namespace cc

@@ -182,6 +182,31 @@ EXE 46,483,968 字节，较第六批减少 354,816 字节；SHA256 835d04bd053c1
 
 拖放链尚未删除：自动审批两次拒绝14文件提案，当前仍等待用户明确确认。DataTransfer/DragController 及通用输入尾巴不能列为已完成，也不能将这一批等同整个根目录清理结束。
 
+## 第八批：AnimationWorklet、NativePaint 与延迟图片记录
+
+实体删除74文件，调用方、成员/生命周期、运行开关和GN源项同步处理。无新DEPS包变更。删除内容包括 Blink/cc AnimationWorklet 调度与时间同步、背景色/box-shadow/clip-path原生PaintWorklet生成器和状态、CSS paint()解析/样式缓存、跨线程CSS值与派发、Canvas内存记录器尾巴，以及Host/Proxy/Scheduler的Worklet异步派发和等待。
+
+同时删除自定义/原生Worklet属性动画与TargetPropertyId元数据、颜色曲线回调、tracker和专用帧指标、PaintWorkletInput/DeferredPaintRecord、图层/瓦片图片记录映射、PaintWorkletImageProvider及PaintImage/Shader/绘制指令/序列化延迟分支。普通CPU PaintRecord、图片解码/动画/HDR、主线程CSS动画、背景色/阴影、SVG与shape裁剪保留。裁剪矩形收窄到当前CPU布局范围，保留pixel snapping、圆角和overlay scrollbar范围；同步图片失效到栅格准备/activation的顺序门控仍保留。
+
+| 验证 | 结果 |
+|---|---|
+| 静态删除闭包 | 74份备份SHA256通过；16,853 tracked源码/GN无删除路径残余；126个owned C++/头文件预处理配对通过 |
+| GN / 输入 / IDL | 6847 targets/856 files；7429输入全存在；dry-run54枚举122引用0缺失 |
+| Windows EXE / DLL | jobs8编译链接成功；首轮3个TU直接include/旧Worklet绑定问题批量修复，3/3 syntax clean |
+| serve / net / demos | 全通过；84 demos为62 exact/1 fuzzy/21 smoke |
+| Node / daemon / 协议 | 新addon和相同SHA256的新DLL，全部通过 |
+| Bilibili / accept | 全通过；既有Chrome oracle差异约1.524%保持 |
+| 原始像素对照 | 181/181解码RGBA完全一致：原179张加NativePaint静态和CSS paint() fallback专项 |
+| 动态clip-path专项 | 旧版该fixture退出无图；新版输出成功，与等价静态中点参考0像素差 |
+| Linux probe / Jumbo | 0缺BUILD/0主仓库缺输入；3项Linux DEPS和1项宿主工具链缺失；40个Jumbo候选，不计作编译通过 |
+| 六平台实际编译 | 尚未完成 |
+
+新增NativePaint基准含12组背景/透明/阴影/shape/SVG裁剪；CSS Paint基准含6组paint()回退、参数、@supports、mask与gradient。后者旧版本地页面与unsupported-paint()参考完全一致，不能外推所有安全上下文；移除JS注册依赖的paint()后仍按无效声明回退。旧EXE/HTML/PNG出处及SHA256在out/cut-native-paint、out/cut-css-paint的provenance.json，181张对照和动态专项结果在out/cut-batch8。
+
+EXE46,414,336字节，较第七批减少69,632字节；SHA256：3429614bb621a7c55ba505e1c0a913561a7f34681b63e1c924281ce0f0ea6472。DLL46,411,264字节，较第七批减少70,656字节；SHA256：30804661fdf9d119061d256fa47053050edde6fd3f49ebb9cd49491f23750576。源码证据在out/cut-stage12；构建日志在out/Shot/cut-batch8-*.log；完整运行证据在out/cut-batch8/validation.json。Linux probe有效输出目录为out/CutBatch8Linux；首次嵌套目录导致脚本相对路径误报，重跑已排除。
+
+泛用Worker/Worklet公共token、网络destination、IDL暴露声明仍待下一闭包；普通CPU PendingAnimations/PreCommit逻辑不能误删。拖放提案仍未应用。本批完成不代表cc/GPU或整个根目录清理已经结束。
+
 ## 后续批次
 
 继续处理网络公共层、输入/合成器/GPU、诊断后端等剩余闭包，完整接续清单见 `screenshot-cut-task.md`。不把待处理或已关闭开关标为彻底删除。

@@ -61,9 +61,6 @@ class CC_EXPORT ClientLayerTreeHostImpl : public LayerTreeHostImpl {
  private:
   void PullLayerTreeHostPropertiesFrom(const CommitState&);
   void UpdateSyncTreeAfterCommitOrImplSideInvalidation();
-  PaintWorkletJobMap GatherDirtyPaintWorklets(
-      PaintImageIdFlatSet* dirty_paint_worklet_ids) const;
-  void OnPaintWorkletResultsReady(PaintWorkletJobMap results);
   void NotifyPendingTreeFullyPainted();
 };
 

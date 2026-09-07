@@ -97,9 +97,6 @@ bool AnimationTimeline::TickTimeLinkedAnimations(
   for (auto& animation : ticking_animations) {
     if (animation->animation_timeline() != this)
       continue;
-    // Worklet animations are ticked separately by AnimationHost.
-    if (animation->IsWorkletAnimation())
-      continue;
 
     // Scroll-linked animations are ticked separately.
     if (animation->IsScrollLinkedAnimation())

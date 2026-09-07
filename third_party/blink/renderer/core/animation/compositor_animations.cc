@@ -47,9 +47,6 @@
 #include "third_party/blink/renderer/core/animation/css/compositor_keyframe_value.h"
 #include "third_party/blink/renderer/core/animation/element_animations.h"
 #include "third_party/blink/renderer/core/animation/keyframe_effect_model.h"
-#include "third_party/blink/renderer/core/css/background_color_paint_image_generator.h"
-#include "third_party/blink/renderer/core/css/box_shadow_paint_image_generator.h"
-#include "third_party/blink/renderer/core/css/clip_path_paint_image_generator.h"
 #include "third_party/blink/renderer/core/css/properties/computed_style_utils.h"
 #include "third_party/blink/renderer/core/css/properties/longhands.h"
 #include "third_party/blink/renderer/core/dom/dom_node_ids.h"
@@ -64,7 +61,6 @@
 #include "third_party/blink/renderer/core/paint/object_paint_properties.h"
 #include "third_party/blink/renderer/platform/animation/animation_translation_util.h"
 #include "third_party/blink/renderer/platform/animation/compositor_animation.h"
-#include "third_party/blink/renderer/platform/graphics/platform_paint_worklet_layer_painter.h"
 #include "third_party/blink/renderer/platform/instrumentation/use_counter.h"
 #include "third_party/blink/renderer/platform/runtime_enabled_features.h"
 #include "ui/gfx/animation/keyframe/animation_curve.h"
@@ -116,17 +112,6 @@ bool IsTransformRelatedCSSProperty(const PropertyHandle property) {
          property.GetCSSProperty().IDEquals(CSSPropertyID::kTranslate);
 }
 
-bool HasNativePaintWorketReason(
-    Animation::NativePaintWorkletReasons npw_reasons,
-    Animation::NativePaintWorkletProperties property) {
-  if (RuntimeEnabledFeatures::ConcurrentNativePaintWorkletsEnabled()) {
-    return npw_reasons & property;
-  }
-  // By default, only a single property can be animated on the compositor
-  // thread within a single animation.
-  return npw_reasons == property;
-}
-
 bool HasIncompatibleAnimations(const Element& target_element,
                                const Animation& animation_to_add,
                                const EffectModel& effect_to_add) {
@@ -173,20 +158,6 @@ void DefaultToUnsupportedProperty(AnimationCompositingDecisionState& state,
   if (state.specific_reasons) {
     state.specific_reasons->AddUnsupportedProperty(property);
   }
-}
-
-// True if it is a no-op custom property animation.
-bool IsNoOpVariableAnimation(const PropertyHandle& property,
-                             const LayoutObject* layout_object) {
-  // If a CSS paint worklet was painted, a unique id will be generated. See
-  // CSSPaintValue::GetImage for details.
-  // TODO(kevers): Verify that we properly latch to the animation if initially
-  // outside the paint apron and scrolled into the viewport.
-  if (layout_object->FirstFragment().HasUniqueId()) {
-    return false;
-  }
-
-  return property.GetCSSProperty().PropertyID() == CSSPropertyID::kVariable;
 }
 
 bool IsPartOfSVGResource(const LayoutObject& layout_object) {
@@ -301,53 +272,14 @@ CompositorAnimations::CheckCanStartEffectOnCompositor(
       }
     }
 
-    // Presently native paint worklets only work with monotonic timelines.
-    Animation::NativePaintWorkletReasons npw_reasons =
-        Animation::NativePaintWorkletProperties::kNoPaintWorklet;
-    if (animation_to_add) {
-      AnimationTimeline* timeline = animation_to_add->TimelineInternal();
-      if (timeline && timeline->IsMonotonicallyIncreasing()) {
-        npw_reasons = animation_to_add->GetNativePaintWorkletReasons();
-      }
-    }
-
     if (layout_object) {
       // Not having a layout object is a reason for not compositing marked
       // in CompositorAnimations::CheckCanStartElementOnCompositor.
       switch (property.GetCSSProperty().PropertyID()) {
-        case CSSPropertyID::kBackgroundColor: {
-          NativePaintImageGenerator* generator = nullptr;
-          if (HasNativePaintWorketReason(
-                  npw_reasons, Animation::NativePaintWorkletProperties::
-                                   kBackgroundColorPaintWorklet)) {
-            DCHECK(RuntimeEnabledFeatures::CompositeBGColorAnimationEnabled());
-            generator = target_element.GetDocument()
-                            .GetFrame()
-                            ->GetBackgroundColorPaintImageGenerator();
-          }
-          if (!generator ||
-              !generator->GetAnimationIfCompositable(&target_element)) {
-            DefaultToUnsupportedProperty(state, property);
-          }
+        case CSSPropertyID::kBackgroundColor:
+        case CSSPropertyID::kClipPath:
+          DefaultToUnsupportedProperty(state, property);
           break;
-        }
-
-        case CSSPropertyID::kClipPath: {
-          NativePaintImageGenerator* generator = nullptr;
-          if (HasNativePaintWorketReason(
-                  npw_reasons, Animation::NativePaintWorkletProperties::
-                                   kClipPathPaintWorklet)) {
-            DCHECK(RuntimeEnabledFeatures::CompositeClipPathAnimationEnabled());
-            generator = target_element.GetDocument()
-                            .GetFrame()
-                            ->GetClipPathPaintImageGenerator();
-          }
-          if (!generator ||
-              !generator->GetAnimationIfCompositable(&target_element)) {
-            DefaultToUnsupportedProperty(state, property);
-          }
-          break;
-        }
 
         default:
           break;
@@ -393,33 +325,6 @@ CompositorAnimations::CheckCanStartEffectOnCompositor(
           // Handled above. No additional checks required on a per-keyframe
           // basis.
           break;
-        case CSSPropertyID::kVariable: {
-          // Custom properties are supported only for certain property types,
-          // and only when a paint worklet is registered for that property.
-          const CompositorKeyframeValue* keyframe_value =
-              keyframe->GetCompositorKeyframeValue();
-          if (keyframe_value) {
-            DCHECK(keyframe_value->IsDouble() || keyframe_value->IsColor());
-            // If a custom property is not used by CSS Paint, then we should not
-            // support that on the compositor thread.
-            if (layout_object &&
-                !layout_object->StyleRef().HasCSSPaintImagesUsingCustomProperty(
-                    property.CustomPropertyName(),
-                    layout_object->GetDocument())) {
-              DefaultToUnsupportedProperty(state, property);
-            }
-            // TODO: Add support for keyframes containing different types
-            if (!keyframes.front() ||
-                !keyframes.front()->GetCompositorKeyframeValue() ||
-                keyframes.front()->GetCompositorKeyframeValue()->GetType() !=
-                    keyframe_value->GetType()) {
-              state.disposition |= kMixedKeyframeValueTypes;
-            }
-          } else {
-            property_not_supported = true;
-          }
-          break;
-        }
         default:
           property_not_supported = true;
       }
@@ -782,17 +687,6 @@ void AddKeyframeToCurve(gfx::KeyframedFloatAnimationCurve& curve,
   curve.AddKeyframe(std::move(float_keyframe));
 }
 
-void AddKeyframeToCurve(gfx::KeyframedColorAnimationCurve& curve,
-                        Keyframe::PropertySpecificKeyframe* keyframe,
-                        const CompositorKeyframeValue* value,
-                        const TimingFunction& keyframe_timing_function) {
-  std::unique_ptr<gfx::ColorKeyframe> color_keyframe =
-      gfx::ColorKeyframe::Create(base::Seconds(keyframe->Offset()),
-                                 To<CompositorKeyframeColor>(value)->ToColor(),
-                                 keyframe_timing_function.CloneToCC());
-  curve.AddKeyframe(std::move(color_keyframe));
-}
-
 void AddKeyframeToCurve(gfx::KeyframedTransformAnimationCurve& curve,
                         Keyframe::PropertySpecificKeyframe* keyframe,
                         const CompositorKeyframeValue* value,
@@ -827,14 +721,6 @@ void AddKeyframesToCurve(PlatformAnimationCurveType& curve,
     AddKeyframeToCurve(curve, keyframe, value, *keyframe_timing_function,
                        parameters...);
   }
-}
-
-void AddKeyframesForPaintWorkletAnimation(
-    gfx::KeyframedFloatAnimationCurve& curve) {
-  curve.AddKeyframe(gfx::FloatKeyframe::Create(
-      base::Seconds(0.0), 0.0, gfx::LinearTimingFunction::Create()));
-  curve.AddKeyframe(gfx::FloatKeyframe::Create(
-      base::Seconds(1.0), 1.0, gfx::LinearTimingFunction::Create()));
 }
 
 }  // namespace
@@ -944,45 +830,6 @@ void CompositorAnimations::GetAnimationOnCompositor(
         }
         break;
       }
-      case CSSPropertyID::kBackgroundColor:
-      case CSSPropertyID::kClipPath: {
-        CompositorPaintWorkletInput::NativePropertyType native_property_type =
-            property.GetCSSProperty().PropertyID() ==
-                    CSSPropertyID::kBackgroundColor
-                ? CompositorPaintWorkletInput::NativePropertyType::
-                      kBackgroundColor
-                : CompositorPaintWorkletInput::NativePropertyType::kClipPath;
-        auto float_curve = gfx::KeyframedFloatAnimationCurve::Create();
-
-        AddKeyframesForPaintWorkletAnimation(*float_curve);
-
-        float_curve->SetTimingFunction(timing.timing_function->CloneToCC());
-        float_curve->set_scaled_duration(scale);
-        curve = std::move(float_curve);
-        target_property_id = cc::KeyframeModel::TargetPropertyId(
-            cc::TargetProperty::NATIVE_PROPERTY, native_property_type);
-        break;
-      }
-      case CSSPropertyID::kVariable: {
-        // Create curve based on the keyframe value type
-        if (values.front()->GetCompositorKeyframeValue()->IsColor()) {
-          auto color_curve = gfx::KeyframedColorAnimationCurve::Create();
-          AddKeyframesToCurve(*color_curve, values);
-          color_curve->SetTimingFunction(timing.timing_function->CloneToCC());
-          color_curve->set_scaled_duration(scale);
-          curve = std::move(color_curve);
-        } else {
-          auto float_curve = gfx::KeyframedFloatAnimationCurve::Create();
-          AddKeyframesToCurve(*float_curve, values);
-          float_curve->SetTimingFunction(timing.timing_function->CloneToCC());
-          float_curve->set_scaled_duration(scale);
-          curve = std::move(float_curve);
-        }
-        target_property_id = cc::KeyframeModel::TargetPropertyId(
-            cc::TargetProperty::CSS_CUSTOM_PROPERTY,
-            property.CustomPropertyName().Utf8());
-        break;
-      }
       default:
         NOTREACHED();
     }
@@ -1000,14 +847,10 @@ void CompositorAnimations::GetAnimationOnCompositor(
                                      base::Seconds(start_time.value()));
     }
 
-    // By default, it is a kInvalidElementId.
-    CompositorElementId id;
-    if (!IsNoOpVariableAnimation(property, target_element.GetLayoutObject())) {
-      id = CompositorElementIdFromUniqueObjectId(
-              target_element.GetLayoutObject()->UniqueId(),
-              CompositorElementNamespaceForProperty(
-                  property.GetCSSProperty().PropertyID()));
-    }
+    CompositorElementId id = CompositorElementIdFromUniqueObjectId(
+        target_element.GetLayoutObject()->UniqueId(),
+        CompositorElementNamespaceForProperty(
+            property.GetCSSProperty().PropertyID()));
     keyframe_model->set_element_id(id);
     keyframe_model->set_iterations(compositor_timing.adjusted_iteration_count);
     keyframe_model->set_iteration_start(compositor_timing.iteration_start);

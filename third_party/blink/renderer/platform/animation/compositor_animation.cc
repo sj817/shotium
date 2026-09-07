@@ -7,7 +7,6 @@
 #include "cc/animation/animation_id_provider.h"
 #include "cc/animation/animation_timeline.h"
 #include "third_party/blink/renderer/platform/animation/compositor_animation_delegate.h"
-#include "third_party/blink/renderer/platform/wtf/text/wtf_string.h"
 
 namespace blink {
 
@@ -21,18 +20,6 @@ std::unique_ptr<CompositorAnimation> CompositorAnimation::Create(
     compositor_animation->CcAnimation()->set_is_replacement();
   }
   return compositor_animation;
-}
-
-std::unique_ptr<CompositorAnimation>
-CompositorAnimation::CreateWorkletAnimation(
-    cc::WorkletAnimationId worklet_animation_id,
-    const String& name,
-    double playback_rate,
-    std::unique_ptr<cc::AnimationOptions> options,
-    std::unique_ptr<cc::AnimationEffectTimings> effect_timings) {
-  return std::make_unique<CompositorAnimation>(cc::WorkletAnimation::Create(
-      worklet_animation_id, name.Utf8(), playback_rate, std::move(options),
-      std::move(effect_timings)));
 }
 
 CompositorAnimation::CompositorAnimation(scoped_refptr<cc::Animation> animation)
@@ -65,10 +52,6 @@ void CompositorAnimation::AttachElement(const CompositorElementId& id) {
   animation_->AttachElement(id);
 }
 
-void CompositorAnimation::AttachPaintWorkletElement() {
-  animation_->AttachPaintWorkletElement();
-}
-
 void CompositorAnimation::DetachElement() {
   animation_->DetachElement();
 }
@@ -95,10 +78,6 @@ void CompositorAnimation::PauseKeyframeModelForTesting(
 
 void CompositorAnimation::AbortKeyframeModel(int keyframe_model_id) {
   animation_->AbortKeyframeModel(keyframe_model_id);
-}
-
-void CompositorAnimation::UpdatePlaybackRate(double playback_rate) {
-  cc::ToWorkletAnimation(animation_.get())->UpdatePlaybackRate(playback_rate);
 }
 
 void CompositorAnimation::NotifyAnimationStarted(base::TimeTicks monotonic_time,
@@ -139,13 +118,6 @@ void CompositorAnimation::NotifyAnimationTakeover(
         (monotonic_time - base::TimeTicks()).InSecondsF(),
         (animation_start_time - base::TimeTicks()).InSecondsF(),
         std::move(curve));
-  }
-}
-
-void CompositorAnimation::NotifyLocalTimeUpdated(
-    std::optional<base::TimeDelta> local_time) {
-  if (delegate_) {
-    delegate_->NotifyLocalTimeUpdated(local_time);
   }
 }
 

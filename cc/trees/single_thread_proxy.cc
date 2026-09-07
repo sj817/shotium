@@ -23,7 +23,6 @@
 #include "cc/input/browser_controls_offset_manager.h"
 #include "cc/input/browser_controls_offset_tag_modifications.h"
 #include "cc/metrics/compositor_timing_history.h"
-#include "cc/paint/paint_worklet_layer_painter.h"
 #include "cc/resources/ui_resource_manager.h"
 #include "cc/scheduler/commit_earlyout_reason.h"
 #include "cc/scheduler/scheduler.h"
@@ -514,17 +513,6 @@ void SingleThreadProxy::QueueImageDecode(int request_id,
   host_impl_->QueueImageDecode(request_id, image, speculative);
 }
 
-void SingleThreadProxy::SetMutator(std::unique_ptr<LayerTreeMutator> mutator) {
-  DCHECK(task_runner_provider_->IsMainThread());
-  DebugScopedSetImplThread impl(task_runner_provider_);
-  host_impl_->SetLayerTreeMutator(std::move(mutator));
-}
-
-void SingleThreadProxy::SetPaintWorkletLayerPainter(
-    std::unique_ptr<PaintWorkletLayerPainter> painter) {
-  NOTREACHED();
-}
-
 void SingleThreadProxy::OnCanDrawStateChanged(bool can_draw) {
   DCHECK(!task_runner_provider_->HasImplThread() ||
          task_runner_provider_->IsImplThread());
@@ -753,21 +741,6 @@ void SingleThreadProxy::DidPresentCompositorFrameOnImplThread(
   if (scheduler_on_impl_thread_) {
     scheduler_on_impl_thread_->DidPresentCompositorFrame(frame_token, details);
   }
-}
-
-void SingleThreadProxy::NotifyAnimationWorkletStateChange(
-    AnimationWorkletMutationState state,
-    ElementListType element_list_type) {
-  DCHECK(!task_runner_provider_->HasImplThread() ||
-         task_runner_provider_->IsImplThread());
-  DebugScopedSetMainThread main(task_runner_provider_);
-  layer_tree_host_->NotifyAnimationWorkletStateChange(state, element_list_type);
-}
-
-void SingleThreadProxy::NotifyPaintWorkletStateChange(
-    Scheduler::PaintWorkletState state) {
-  // Off-Thread PaintWorklet is only supported on the threaded compositor.
-  NOTREACHED();
 }
 
 void SingleThreadProxy::NotifyCompositorMetricsTrackerResults(

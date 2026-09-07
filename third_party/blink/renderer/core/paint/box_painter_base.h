@@ -150,7 +150,6 @@ class BoxPainterBase {
     bool background_forced_to_white = false;
     // True if we paint background color off main thread, design doc here:
     // https://docs.google.com/document/d/1usCnwWs8HsH5FU_185q6MsrZehFmpl5QgbbB4pvHIjI/edit
-    bool should_paint_color_with_paint_worklet_image;
   };
 
  protected:

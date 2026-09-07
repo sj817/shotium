@@ -45,19 +45,16 @@
 #include "cc/metrics/frame_sequence_tracker_collection.h"
 #include "cc/metrics/scroll_jank_os_reporter.h"
 #include "cc/metrics/submit_info.h"
-#include "cc/paint/paint_worklet_job.h"
 #include "cc/scheduler/begin_frame_tracker.h"
 #include "cc/scheduler/commit_earlyout_reason.h"
 #include "cc/scheduler/draw_result.h"
 #include "cc/scheduler/video_frame_controller.h"
 #include "cc/tiles/tile_manager.h"
 #include "cc/tiles/tile_manager_client.h"
-#include "cc/trees/animated_paint_worklet_tracker.h"
 #include "cc/trees/frame_data.h"
 #include "cc/trees/image_animation_controller.h"
 #include "cc/trees/layer_tree_frame_sink_client.h"
 #include "cc/trees/layer_tree_host.h"
-#include "cc/trees/layer_tree_mutator.h"
 #include "cc/trees/layer_tree_settings.h"
 #include "cc/trees/managed_memory_policy.h"
 #include "cc/trees/mutator_host_delegate.h"
@@ -108,7 +105,6 @@ class LayerImpl;
 class LayerTreeFrameSink;
 class LayerTreeHostImplDelegate;
 class LayerTreeImpl;
-class PaintWorkletLayerPainter;
 class MemoryHistory;
 class MutatorEvents;
 class MutatorHost;
@@ -258,7 +254,6 @@ class CC_EXPORT LayerTreeHostImpl : public TileManagerClient,
   void StopSequence(FrameSequenceTrackerType type) override;
   void PinchBegin() const override;
   void PinchEnd() const override;
-  void TickScrollAnimations() const override;
   void ScrollbarAnimationMouseLeave(ElementId element_id) const override;
   void ScrollbarAnimationMouseMove(
       ElementId element_id,
@@ -392,16 +387,9 @@ class CC_EXPORT LayerTreeHostImpl : public TileManagerClient,
   void MaximumScaleChanged(ElementId element_id,
                            ElementListType list_type,
                            float maximum_scale) override;
-  void OnCustomPropertyMutated(
-      PaintWorkletInput::PropertyKey property_key,
-      PaintWorkletInput::PropertyValue property_value) override;
-
   bool RunsOnCurrentThread() const override;
 
   void ScrollOffsetAnimationFinished(ElementId element_id) override;
-
-  void NotifyAnimationWorkletStateChange(AnimationWorkletMutationState state,
-                                         ElementListType tree_type) override;
 
   virtual bool PrepareTiles();
 
@@ -807,14 +795,6 @@ class CC_EXPORT LayerTreeHostImpl : public TileManagerClient,
                                  const gfx::PointF& target_offset,
                                  float autoscroll_velocity);
 
-  void SetLayerTreeMutator(std::unique_ptr<LayerTreeMutator> mutator);
-
-  void SetPaintWorkletLayerPainter(
-      std::unique_ptr<PaintWorkletLayerPainter> painter);
-  PaintWorkletLayerPainter* GetPaintWorkletLayerPainterForTesting() const {
-    return paint_worklet_painter_.get();
-  }
-
   void QueueImageDecode(int request_id,
                         const DrawImage& image,
                         bool speculative);
@@ -854,9 +834,6 @@ class CC_EXPORT LayerTreeHostImpl : public TileManagerClient,
 
   void set_pending_tree_fully_painted_for_testing(bool painted) {
     pending_tree_fully_painted_ = painted;
-  }
-  AnimatedPaintWorkletTracker& paint_worklet_tracker() {
-    return paint_worklet_tracker_;
   }
 
   bool can_use_msaa() const { return raster_caps().can_use_msaa; }
@@ -1303,25 +1280,14 @@ class CC_EXPORT LayerTreeHostImpl : public TileManagerClient,
       compositor_frame_reporting_controller_;
   FrameSequenceTrackerCollection frame_trackers_;
 
-  // PaintWorklet painting is controlled from the LayerTreeHostImpl, dispatched
-  // to the worklet thread via |paint_worklet_painter_|.
-  std::unique_ptr<PaintWorkletLayerPainter> paint_worklet_painter_;
-
-  // While PaintWorklet painting is ongoing the PendingTree is not yet fully
-  // painted and cannot be rastered or activated. This boolean tracks whether or
-  // not we are in that state.
+  // Raster queues and activation wait for the synchronous tree update to
+  // finish preparing content, including image invalidation.
   bool pending_tree_fully_painted_ = false;
 
 #if DCHECK_IS_ON()
   // Use to track when doing a synchronous draw.
   bool doing_sync_draw_ = false;
 #endif
-
-  // Provides support for PaintWorklets which depend on input properties that
-  // are being animated by the compositor (aka 'animated' PaintWorklets).
-  // Responsible for storing animated custom property values and for
-  // invalidating PaintWorklets as the property values change.
-  AnimatedPaintWorkletTracker paint_worklet_tracker_;
 
   AverageLagTrackingManager lag_tracking_manager_;
 

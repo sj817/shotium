@@ -1223,9 +1223,6 @@ class DecodedImages final : public cc::ImageProvider {
 
   ScopedResult GetRasterContent(const cc::DrawImage& draw_image) override {
     const cc::PaintImage& image = draw_image.paint_image();
-    if (image.IsPaintWorklet()) {
-      return ScopedResult();
-    }
     if (!image.IsLazyGenerated()) {
       return ScopedResult(cc::DecodedDrawImage(
           image.GetSwSkImage(), nullptr, SkSize::Make(0, 0),

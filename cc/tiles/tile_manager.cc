@@ -35,7 +35,6 @@
 #include "cc/base/histograms.h"
 #include "cc/layers/picture_layer_impl.h"
 #include "cc/paint/display_item_list.h"
-#include "cc/raster/paint_worklet_image_provider.h"
 #include "cc/raster/playback_image_provider.h"
 #include "cc/raster/raster_buffer.h"
 #include "cc/raster/raster_buffer_provider.h"
@@ -64,37 +63,6 @@ perfetto::NamedTrack GetTracingTrack(const TileManager* tile_manager) {
 // a tile is of solid color.
 const bool kUseColorEstimator = true;
 
-// This class is wrapper for both ImageProvider and PaintWorkletImageProvider,
-// which is used in RasterSource::PlaybackSettings. It looks at the draw image
-// and decides which one of the two providers to dispatch the request to.
-class DispatchingImageProvider : public ImageProvider {
- public:
-  DispatchingImageProvider(
-      PlaybackImageProvider playback_image_provider,
-      PaintWorkletImageProvider paint_worklet_image_provider)
-      : playback_image_provider_(std::move(playback_image_provider)),
-        paint_worklet_image_provider_(std::move(paint_worklet_image_provider)) {
-  }
-  DispatchingImageProvider(const DispatchingImageProvider&) = delete;
-  ~DispatchingImageProvider() override = default;
-
-  DispatchingImageProvider& operator=(const DispatchingImageProvider&) = delete;
-
-  DispatchingImageProvider(DispatchingImageProvider&& other) = default;
-
-  ImageProvider::ScopedResult GetRasterContent(
-      const DrawImage& draw_image) override {
-    return draw_image.paint_image().IsPaintWorklet()
-               ? paint_worklet_image_provider_.GetPaintRecordResult(
-                     draw_image.paint_image().GetPaintWorkletInput())
-               : playback_image_provider_.GetRasterContent(draw_image);
-  }
-
- private:
-  PlaybackImageProvider playback_image_provider_;
-  PaintWorkletImageProvider paint_worklet_image_provider_;
-};
-
 class RasterTaskImpl : public TileTask {
  public:
   RasterTaskImpl(TileManager* tile_manager,
@@ -108,7 +76,7 @@ class RasterTaskImpl : public TileTask {
                  std::unique_ptr<RasterBuffer> raster_buffer,
                  TileTask::Vector* dependencies,
                  bool is_gpu_rasterization,
-                 DispatchingImageProvider image_provider,
+                 PlaybackImageProvider image_provider,
                  GURL url,
                  ScrollOffsetMap raster_inducing_scroll_offsets)
       : TileTask(
@@ -205,7 +173,7 @@ class RasterTaskImpl : public TileTask {
   const uint64_t new_content_id_;
   const int source_frame_number_;
   std::unique_ptr<RasterBuffer> raster_buffer_;
-  DispatchingImageProvider image_provider_;
+  PlaybackImageProvider image_provider_;
   const GURL url_;
   const ScrollOffsetMap raster_inducing_scroll_offsets_;
 };
@@ -1611,22 +1579,12 @@ scoped_refptr<TileTask> TileManager::CreateRasterTask(
 
   PlaybackImageProvider image_provider(
       image_controller_.cache(), target_color_params, std::move(settings));
-  // We make a deliberate copy of the PaintWorklet map here, as the
-  // PictureLayerImpl's map could be mutated or destroyed whilst raster from an
-  // earlier snapshot is still ongoing on the raster worker threads.
-  PaintWorkletRecordMap paint_worklet_records =
-      prioritized_tile.GetPaintWorkletRecords();
-  PaintWorkletImageProvider paint_worklet_image_provider(
-      std::move(paint_worklet_records));
-  DispatchingImageProvider dispatching_image_provider(
-      std::move(image_provider), std::move(paint_worklet_image_provider));
-
   return base::MakeRefCounted<RasterTaskImpl>(
       this, tile, std::move(resource), prioritized_tile.raster_source(),
       playback_settings, prioritized_tile.priority().resolution,
       invalidated_rect, prepare_tiles_count_, std::move(raster_buffer),
       &decode_tasks, use_gpu_rasterization_,
-      std::move(dispatching_image_provider), active_url_,
+      std::move(image_provider), active_url_,
       prioritized_tile.GetRasterInducingScrollOffsets());
 }
 

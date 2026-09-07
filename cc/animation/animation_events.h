@@ -6,7 +6,6 @@
 #define CC_ANIMATION_ANIMATION_EVENTS_H_
 
 #include <memory>
-#include <optional>
 #include <variant>
 #include <vector>
 
@@ -18,7 +17,7 @@
 namespace cc {
 
 struct CC_ANIMATION_EXPORT AnimationPlaybackEvent {
-  enum class Type { kStarted, kFinished, kAborted, kTakeOver, kTimeUpdated };
+  enum class Type { kStarted, kFinished, kAborted, kTakeOver };
 
   typedef size_t KeyframeEffectId;
   struct UniqueKeyframeModelId {
@@ -32,11 +31,6 @@ struct CC_ANIMATION_EXPORT AnimationPlaybackEvent {
                          int group_id,
                          int target_property,
                          base::TimeTicks monotonic_time);
-
-  // Constructs AnimationPlaybackEvent of TIME_UPDATED type.
-  AnimationPlaybackEvent(int timeline_id,
-                         int animation_id,
-                         std::optional<base::TimeDelta> local_time);
 
   AnimationPlaybackEvent(const AnimationPlaybackEvent& other);
   AnimationPlaybackEvent& operator=(const AnimationPlaybackEvent& other);
@@ -55,8 +49,6 @@ struct CC_ANIMATION_EXPORT AnimationPlaybackEvent {
   // For continuing a scroll offset animation on the main thread.
   base::TimeTicks animation_start_time;
   std::unique_ptr<gfx::AnimationCurve> curve;
-
-  std::optional<base::TimeDelta> local_time;
 };
 
 // This describes the occurrence of an event for an animation-trigger[1]
@@ -84,11 +76,6 @@ class CC_ANIMATION_EXPORT AnimationEvents : public MutatorEvents {
   ~AnimationEvents() override;
   bool IsEmpty() const override;
 
-  bool needs_time_updated_events() const { return needs_time_updated_events_; }
-  void set_needs_time_updated_events(bool value) {
-    needs_time_updated_events_ = value;
-  }
-
   using Event = std::variant<AnimationPlaybackEvent, AnimationTriggerEvent>;
 
   const std::vector<Event>& events() const { return events_; }
@@ -96,7 +83,6 @@ class CC_ANIMATION_EXPORT AnimationEvents : public MutatorEvents {
 
  private:
   std::vector<Event> events_;
-  bool needs_time_updated_events_ = false;
 };
 
 }  // namespace cc

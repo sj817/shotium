@@ -5,8 +5,6 @@
 #include "third_party/blink/renderer/core/css/properties/css_property.h"
 
 #include "base/compiler_specific.h"
-#include "third_party/blink/renderer/core/css/cssom/cross_thread_unsupported_value.h"
-#include "third_party/blink/renderer/core/css/cssom/style_value_factory.h"
 #include "third_party/blink/renderer/core/css/properties/computed_style_utils.h"
 #include "third_party/blink/renderer/core/css/properties/longhands/variable.h"
 #include "third_party/blink/renderer/core/style/computed_style.h"
@@ -34,26 +32,6 @@ bool CSSProperty::IsShorthand(const CSSPropertyName& name) {
 
 bool CSSProperty::IsRepeated(const CSSPropertyName& name) {
   return !name.IsCustomProperty() && Get(name.Id()).IsRepeated();
-}
-
-std::unique_ptr<CrossThreadStyleValue>
-CSSProperty::CrossThreadStyleValueFromComputedStyle(
-    const ComputedStyle& computed_style,
-    const LayoutObject* layout_object,
-    bool allow_visited_style,
-    CSSValuePhase value_phase) const {
-  const CSSValue* css_value = CSSValueFromComputedStyle(
-      computed_style, layout_object, allow_visited_style, value_phase);
-  if (!css_value) {
-    return std::make_unique<CrossThreadUnsupportedValue>("");
-  }
-  CSSStyleValue* style_value =
-      StyleValueFactory::CssValueToStyleValue(GetCSSPropertyName(), *css_value);
-  if (!style_value) {
-    return std::make_unique<CrossThreadUnsupportedValue>("");
-  }
-  return ComputedStyleUtils::CrossThreadStyleValueFromCSSStyleValue(
-      style_value);
 }
 
 const CSSValue* CSSProperty::CSSValueFromComputedStyle(

@@ -47,7 +47,7 @@ ImageDataBuffer::ImageDataBuffer(scoped_refptr<StaticBitmapImage> image) {
   if (!image)
     return;
   PaintImage paint_image = image->PaintImageForCurrentFrame();
-  if (!paint_image || paint_image.IsPaintWorklet())
+  if (!paint_image)
     return;
 
   SkImageInfo paint_image_info = paint_image.GetSkImageInfo();

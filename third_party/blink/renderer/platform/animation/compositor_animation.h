@@ -12,10 +12,8 @@
 #include "base/memory/scoped_refptr.h"
 #include "cc/animation/animation.h"
 #include "cc/animation/animation_delegate.h"
-#include "cc/animation/worklet_animation.h"
 #include "third_party/blink/renderer/platform/graphics/compositor_element_id.h"
 #include "third_party/blink/renderer/platform/platform_export.h"
-#include "third_party/blink/renderer/platform/wtf/text/wtf_string.h"
 
 namespace gfx {
 class AnimationCurve;
@@ -33,13 +31,6 @@ class PLATFORM_EXPORT CompositorAnimation : public cc::AnimationDelegate {
   // passed in to ensure the same id is used.
   static std::unique_ptr<CompositorAnimation> Create(
       std::optional<int> replaced_cc_animation_id = std::nullopt);
-  static std::unique_ptr<CompositorAnimation> CreateWorkletAnimation(
-      cc::WorkletAnimationId,
-      const String& name,
-      double playback_rate,
-      std::unique_ptr<cc::AnimationOptions>,
-      std::unique_ptr<cc::AnimationEffectTimings> effect_timings);
-
   explicit CompositorAnimation(scoped_refptr<cc::Animation>);
   CompositorAnimation(const CompositorAnimation&) = delete;
   CompositorAnimation& operator=(const CompositorAnimation&) = delete;
@@ -55,7 +46,6 @@ class PLATFORM_EXPORT CompositorAnimation : public cc::AnimationDelegate {
   void SetAnimationDelegate(CompositorAnimationDelegate*);
 
   void AttachElement(const CompositorElementId&);
-  void AttachPaintWorkletElement();
   void DetachElement();
   bool IsElementAttached() const;
 
@@ -65,7 +55,6 @@ class PLATFORM_EXPORT CompositorAnimation : public cc::AnimationDelegate {
                                     base::TimeDelta hold_time);
   void AbortKeyframeModel(int keyframe_model_id);
 
-  void UpdatePlaybackRate(double playback_rate);
 
  private:
   // cc::AnimationDelegate implementation.
@@ -82,8 +71,6 @@ class PLATFORM_EXPORT CompositorAnimation : public cc::AnimationDelegate {
                                int target_property,
                                base::TimeTicks animation_start_time,
                                std::unique_ptr<gfx::AnimationCurve>) override;
-  void NotifyLocalTimeUpdated(
-      std::optional<base::TimeDelta> local_time) override;
 
   scoped_refptr<cc::Animation> animation_;
   raw_ptr<CompositorAnimationDelegate> delegate_;

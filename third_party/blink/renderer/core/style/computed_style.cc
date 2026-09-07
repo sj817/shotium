@@ -38,7 +38,6 @@
 #include "third_party/blink/public/mojom/css/preferred_color_scheme.mojom-blink.h"
 #include "third_party/blink/renderer/core/animation/css/css_animation_data.h"
 #include "third_party/blink/renderer/core/animation/css/css_transition_data.h"
-#include "third_party/blink/renderer/core/css/css_paint_value.h"
 #include "third_party/blink/renderer/core/css/css_primitive_value.h"
 #include "third_party/blink/renderer/core/css/css_property_equality.h"
 #include "third_party/blink/renderer/core/css/css_property_names.h"
@@ -1062,86 +1061,7 @@ bool ComputedStyle::DiffNeedsNormalPaintInvalidation(
     return true;
   }
 
-  if (PaintImagesInternal()) {
-    for (const auto& image : PaintImagesInternal()->Images()) {
-      DCHECK(image);
-      if (DiffNeedsPaintInvalidationForPaintImage(*image, other, document)) {
-        return true;
-      }
-    }
-  }
-
   return false;
-}
-
-bool ComputedStyle::DiffNeedsPaintInvalidationForPaintImage(
-    const StyleImage& image,
-    const ComputedStyle& other,
-    const Document& document) const {
-  // https://crbug.com/835589: early exit when paint target is associated with
-  // a link.
-  if (InsideLink() != EInsideLink::kNotInsideLink) {
-    return false;
-  }
-
-  CSSPaintValue* value = To<CSSPaintValue>(image.CssValue());
-
-  // NOTE: If the invalidation properties vectors are null, we are invalid as
-  // we haven't yet been painted (and can't provide the invalidation
-  // properties yet).
-  if (!value->NativeInvalidationProperties(document) ||
-      !value->CustomInvalidationProperties(document)) {
-    return true;
-  }
-
-  if (!PropertiesEqual(*value->NativeInvalidationProperties(document), other)) {
-    return true;
-  }
-
-  if (!CustomPropertiesEqual(*value->CustomInvalidationProperties(document),
-                             other)) {
-    return true;
-  }
-
-  return false;
-}
-
-bool ComputedStyle::PropertiesEqual(const Vector<CSSPropertyID>& properties,
-                                    const ComputedStyle& other) const {
-  for (CSSPropertyID property_id : properties) {
-    // TODO(ikilpatrick): remove IsInterpolableProperty check once
-    // CSSPropertyEquality::PropertiesEqual correctly handles all properties.
-    const CSSProperty& property = CSSProperty::Get(property_id);
-    if (!property.IsInterpolable() ||
-        !CSSPropertyEquality::PropertiesEqual(PropertyHandle(property), *this,
-                                              other)) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-bool ComputedStyle::CustomPropertiesEqual(
-    const Vector<AtomicString>& properties,
-    const ComputedStyle& other) const {
-  // Short-circuit if neither of the styles have custom properties.
-  if (!HasVariables() && !other.HasVariables()) {
-    return true;
-  }
-
-  for (const AtomicString& property_name : properties) {
-    if (!base::ValuesEquivalent(GetVariableData(property_name),
-                                other.GetVariableData(property_name))) {
-      return false;
-    }
-    if (!base::ValuesEquivalent(GetVariableValue(property_name),
-                                other.GetVariableValue(property_name))) {
-      return false;
-    }
-  }
-
-  return true;
 }
 
 bool ComputedStyle::PotentialCompositingReasonsFor3DTransformChanged(
@@ -1201,23 +1121,6 @@ bool ComputedStyle::DiffCompositingReasonsChanged(const ComputedStyle& other,
     return true;
   }
 
-  return false;
-}
-
-bool ComputedStyle::HasCSSPaintImagesUsingCustomProperty(
-    const AtomicString& custom_property_name,
-    const Document& document) const {
-  if (PaintImagesInternal()) {
-    for (const auto& image : PaintImagesInternal()->Images()) {
-      DCHECK(image);
-      // IsPaintImage is true for CSS Paint images only, please refer to the
-      // constructor of StyleGeneratedImage.
-      if (image->IsPaintImage()) {
-        return To<StyleGeneratedImage>(image.Get())
-            ->IsUsingCustomProperty(custom_property_name, document);
-      }
-    }
-  }
   return false;
 }
 
@@ -2427,13 +2330,6 @@ bool ComputedStyle::HasBackground() const {
       false, *this,
       /*is_current_color=*/nullptr);
   if (!color.IsFullyTransparent()) {
-    return true;
-  }
-  // When background color animation is running on the compositor thread, we
-  // need to trigger repaint even if the background is transparent to collect
-  // artifacts in order to run the animation on the compositor.
-  if (RuntimeEnabledFeatures::CompositeBGColorAnimationEnabled() &&
-      HasCurrentBackgroundColorAnimation()) {
     return true;
   }
   return HasBackgroundImage();

@@ -7,7 +7,6 @@
 
 #include "base/memory/raw_ptr_exclusion.h"
 #include "cc/cc_export.h"
-#include "cc/paint/paint_worklet_input.h"
 #include "cc/raster/raster_source.h"
 #include "cc/tiles/picture_layer_tiling.h"
 #include "cc/tiles/tile.h"
@@ -33,9 +32,6 @@ class CC_EXPORT PrioritizedTile {
   Tile* tile() const { return tile_; }
   const scoped_refptr<RasterSource>& raster_source() const {
     return source_tiling_->raster_source();
-  }
-  const PaintWorkletRecordMap& GetPaintWorkletRecords() const {
-    return source_tiling_->GetPaintWorkletRecords();
   }
   ScrollOffsetMap GetRasterInducingScrollOffsets() const {
     return source_tiling_->GetRasterInducingScrollOffsets();

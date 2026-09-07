@@ -12,7 +12,6 @@
 #include "cc/animation/filter_animation_curve.h"
 #include "cc/animation/scroll_offset_animation_curve.h"
 #include "cc/paint/element_id.h"
-#include "cc/paint/paint_worklet_input.h"
 #include "cc/trees/property_animation_state.h"
 #include "cc/trees/target_property.h"
 #include "ui/gfx/animation/keyframe/animation_curve.h"
@@ -40,7 +39,6 @@ enum class ElementListType;
 // blob that has properties that can be animated.
 class CC_ANIMATION_EXPORT ElementAnimations
     : public gfx::FloatAnimationCurve::Target,
-      public gfx::ColorAnimationCurve::Target,
       public gfx::TransformAnimationCurve::Target,
       public ScrollOffsetAnimationCurve::Target,
       public FilterAnimationCurve::Target,
@@ -126,9 +124,6 @@ class CC_ANIMATION_EXPORT ElementAnimations
   void OnFilterAnimated(const FilterOperations& filter,
                         int target_property_id,
                         gfx::KeyframeModel* keyframe_model) override;
-  void OnColorAnimated(const SkColor& color,
-                       int target_property_id,
-                       gfx::KeyframeModel* keyframe_model) override;
   void OnTransformAnimated(const gfx::TransformOperations& operations,
                            int target_property_id,
                            gfx::KeyframeModel* keyframe_model) override;
@@ -168,17 +163,6 @@ class CC_ANIMATION_EXPORT ElementAnimations
   void OnOpacityAnimated(ElementListType list_type,
                          float opacity,
                          gfx::KeyframeModel* keyframe_model);
-  // In addition to custom property animations, these also represent animations
-  // of native properties whose values are known to the Blink PaintWorklet
-  // responsible for painting them but not known to the compositor. The
-  // compositor animates a simple float progress which is then passed into blink
-  // code to interpolate. Unlike other native properties listed above, CC is not
-  // capable of drawing interpolations of these properties and defers to
-  // NativePaintWorklet subclasses to interpret the animation progress as it
-  // pertains to how to paint the native property.
-  void OnCustomPropertyAnimated(PaintWorkletInput::PropertyValue property_value,
-                                KeyframeModel* keyframe_model,
-                                int target_property_id);
   void OnTransformAnimated(ElementListType list_type,
                            const gfx::Transform& transform,
                            gfx::KeyframeModel* keyframe_model);

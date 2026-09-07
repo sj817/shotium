@@ -11,12 +11,10 @@
 
 #include "base/memory/raw_ptr.h"
 #include "base/memory/scoped_refptr.h"
-#include "base/memory/weak_ptr.h"
 #include "base/time/time.h"
 #include "cc/animation/animation_export.h"
 #include "cc/animation/keyframe_model.h"
 #include "cc/base/protected_sequence_synchronizer.h"
-#include "cc/trees/layer_tree_mutator.h"
 #include "cc/trees/mutator_host.h"
 #include "cc/trees/mutator_host_delegate.h"
 #include "ui/gfx/geometry/point_f.h"
@@ -32,7 +30,6 @@ class ElementAnimations;
 class LayerTreeHost;
 class ScrollOffsetAnimations;
 class ScrollOffsetAnimationsImpl;
-class WorkletAnimation;
 
 enum class ThreadInstance { kMain, kImpl };
 
@@ -45,7 +42,6 @@ enum class ThreadInstance { kMain, kImpl };
 // An AnimationHost talks to its correspondent LayerTreeHost via
 // MutatorHostDelegate interface.
 class CC_ANIMATION_EXPORT AnimationHost : public MutatorHost,
-                                          public LayerTreeMutatorDelegate,
                                           public ProtectedSequenceSynchronizer {
  public:
   using ElementToAnimationsMap =
@@ -134,8 +130,6 @@ class CC_ANIMATION_EXPORT AnimationHost : public MutatorHost,
 
   void SetMutatorHostDelegate(MutatorHostDelegate* delegate) override;
 
-  void SetLayerTreeMutator(std::unique_ptr<LayerTreeMutator> mutator) override;
-
   void PushPropertiesTo(MutatorHost* host_impl,
                         const PropertyTrees& property_trees) override;
 
@@ -150,12 +144,8 @@ class CC_ANIMATION_EXPORT AnimationHost : public MutatorHost,
                                      const ScrollTree& scroll_tree,
                                      bool is_active_tree,
                                      MutatorEvents* events) override;
-  void TickScrollAnimations(base::TimeTicks monotonic_time,
-                            const ScrollTree& scroll_tree) override;
-  void TickWorkletAnimations() override;
   bool UpdateAnimationState(bool start_ready_animations,
                             MutatorEvents* events) override;
-  void TakeTimeUpdatedEvents(MutatorEvents* events) override;
   // Should be called when the pending tree is promoted to active, as this may
   // require updating the ElementId for the ScrollTimeline scroll source.
   void PromoteScrollTimelinesPendingToActive() override;
@@ -229,17 +219,7 @@ class CC_ANIMATION_EXPORT AnimationHost : public MutatorHost,
   const AnimationsList& ticking_animations_for_testing() const;
   const ElementToAnimationsMap& element_animations_for_testing() const;
 
-  // LayerTreeMutatorDelegate.
-  void SetMutationUpdate(
-      std::unique_ptr<MutatorOutputState> output_state) override;
-
   size_t MainThreadAnimationsCount() const override;
-  // Returns true if there is any animation that affects pending tree, such as
-  // custom property animations via paint worklet.
-  bool HasInvalidationAnimation() const override;
-  // Returns true if there is any animation that affects active tree, such as
-  // transform animation.
-  bool HasNativePropertyAnimation() const override;
   bool CurrentFrameHadRAF() const override;
   bool NextFrameHasPendingRAF() const override;
   PendingCompositorMetricsTrackerInfos
@@ -285,26 +265,11 @@ class CC_ANIMATION_EXPORT AnimationHost : public MutatorHost,
   void EraseTimeline(scoped_refptr<AnimationTimeline> timeline);
   void EraseTrigger(scoped_refptr<AnimationTrigger> trigger);
 
-  // Return true if there are any animations that get mutated.
-  void TickMutator(base::TimeTicks monotonic_time,
-                   const ScrollTree& scroll_tree,
-                   bool is_active_tree);
-
   // Update animation triggers[1].
   // [1] https://drafts.csswg.org/web-animations/#animation-triggers
   void UpdateTriggers(const ScrollTree& scroll_tree,
                       AnimationEvents* events,
                       base::TimeTicks monotonic_time) const;
-
-  // Return the state representing all ticking worklet animations.
-  std::unique_ptr<MutatorInputState> CollectWorkletAnimationsState(
-      base::TimeTicks timeline_time,
-      const ScrollTree& scroll_tree,
-      bool is_active_tree);
-
-  // Returns a pointer to a worklet animation by worklet animation id or null
-  // if there is no match.
-  WorkletAnimation* FindWorkletAnimation(WorkletAnimationId id);
 
   ProtectedSequenceReadable<ElementToAnimationsMap> element_to_animations_map_;
   ProtectedSequenceReadable<AnimationsList> ticking_animations_;
@@ -345,8 +310,6 @@ class CC_ANIMATION_EXPORT AnimationHost : public MutatorHost,
 
   ProtectedSequenceWritable<bool> needs_push_properties_{false};
 
-  ProtectedSequenceReadable<std::unique_ptr<LayerTreeMutator>> mutator_;
-
   ProtectedSequenceReadable<size_t> main_thread_animations_count_{0};
   ProtectedSequenceReadable<bool> current_frame_had_raf_{false};
   ProtectedSequenceReadable<bool> next_frame_has_pending_raf_{false};
@@ -357,8 +320,6 @@ class CC_ANIMATION_EXPORT AnimationHost : public MutatorHost,
 
   ProtectedSequenceWritable<PendingCompositorMetricsTrackerInfos>
       pending_compositor_metrics_tracker_infos_;
-
-  base::WeakPtrFactory<AnimationHost> weak_factory_{this};
 };
 
 }  // namespace cc

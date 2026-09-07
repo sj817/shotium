@@ -62,12 +62,6 @@ bool HeadlessSchedulerStateMachine::
     return false;
   }
 
-  // Delay immediate draws when we have pending animation worklet updates to
-  // give them time to produce output before we draw.
-  if (processing_animation_worklets_for_active_tree_) {
-    return false;
-  }
-
   // In full-pipe mode, we just gave all pipeline stages a chance to contribute.
   // We shouldn't wait any longer in any case - even if there are no updates.
   return true;

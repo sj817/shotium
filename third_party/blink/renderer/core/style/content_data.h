@@ -148,9 +148,6 @@ class ImageContentData final : public ContentData {
     if (image_->IsImageResourceSet()) {
       str.Append("[resourceset]");
     }
-    if (image_->IsPaintImage()) {
-      str.Append("[paint]");
-    }
     if (image_->IsCrossfadeImage()) {
       str.Append("[crossfade]");
     }

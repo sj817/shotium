@@ -261,7 +261,6 @@ class V8UnionStringOrTrustedHTML;
 class ViewportData;
 class VisitedLinkState;
 class WebMouseEvent;
-class WorkletAnimationController;
 class V8VisibilityState;
 
 template <typename EventType>
@@ -1578,9 +1577,6 @@ class CORE_EXPORT Document : public ContainerNode,
   }
   DocumentTimeline& Timeline() const { return *timeline_; }
   PendingAnimations& GetPendingAnimations() { return *pending_animations_; }
-  WorkletAnimationController& GetWorkletAnimationController() {
-    return *worklet_animation_controller_;
-  }
 
 
   enum class TopLayerReason {
@@ -2874,7 +2870,6 @@ class CORE_EXPORT Document : public ContainerNode,
   Member<DocumentAnimations> document_animations_;
   Member<DocumentTimeline> timeline_;
   Member<PendingAnimations> pending_animations_;
-  Member<WorkletAnimationController> worklet_animation_controller_;
   AnimationClock animation_clock_;
 
   Member<Document> template_document_;

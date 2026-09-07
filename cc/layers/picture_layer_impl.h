@@ -78,7 +78,6 @@ class CC_EXPORT PictureLayerImpl
       const PictureLayerTiling* tiling) const override;
   bool HasValidTilePriorities() const override;
   bool RequiresHighResToDraw() const override;
-  const PaintWorkletRecordMap& GetPaintWorkletRecords() const override;
   std::vector<const DrawImage*> GetDiscardableImagesInRect(
       const gfx::Rect& rect) const override;
   ScrollOffsetMap GetRasterInducingScrollOffsets() const override;
@@ -151,24 +150,6 @@ class CC_EXPORT PictureLayerImpl
   LCDTextDisallowedReason ComputeLCDTextDisallowedReasonForTesting() const;
 
   const Region& InvalidationForTesting() const { return invalidation_; }
-
-  // Set the paint result (PaintRecord) for a given PaintWorkletInput.
-  void SetPaintWorkletRecord(scoped_refptr<const PaintWorkletInput>,
-                             PaintRecord);
-
-  // Retrieve the map of PaintWorkletInputs to their painted results
-  // (PaintRecords). If a PaintWorkletInput has not been painted yet, it will
-  // map to nullptr.
-  const PaintWorkletRecordMap& GetPaintWorkletRecordMap() const {
-    return paint_worklet_records_;
-  }
-
-  // Invalidates all PaintWorklets in this layer who depend on the given
-  // property to be painted. Used when the value for the property is changed by
-  // an animation, at which point the PaintWorklet must be re-painted.
-  void InvalidatePaintWorklets(const PaintWorkletInput::PropertyKey& key,
-                               const PaintWorkletInput::PropertyValue& prev,
-                               const PaintWorkletInput::PropertyValue& next);
 
   void set_has_non_animated_image_update_rect() {
     has_non_animated_image_update_rect_ = true;
@@ -252,7 +233,6 @@ class CC_EXPORT PictureLayerImpl
       scoped_refptr<RasterSource> raster_source,
       Region new_invalidation,
       const PictureLayerTilingSet* pending_set,
-      const PaintWorkletRecordMap* pending_paint_worklet_records,
       const DiscardableImageMap* pending_discardable_image_map);
 
   void UpdateDirectlyCompositedImageFromRasterSource();
@@ -267,11 +247,6 @@ class CC_EXPORT PictureLayerImpl
   void UpdateIdealScales();
   float MaximumTilingContentsScale() const;
   std::unique_ptr<PictureLayerTilingSet> CreatePictureLayerTilingSet();
-
-  // Set the collection of PaintWorkletInput as well as their PaintImageId that
-  // are part of this layer.
-  void SetPaintWorkletInputs(
-      const DiscardableImageMap::PaintWorkletInputs& inputs);
 
   LCDTextDisallowedReason ComputeLCDTextDisallowedReason(
       bool raster_translation_aligns_pixels) const;
@@ -384,13 +359,6 @@ class CC_EXPORT PictureLayerImpl
   gfx::Rect viewport_rect_for_tile_priority_in_content_space_;
 
   gfx::Size gpu_raster_max_texture_size_;
-
-  // The set of PaintWorkletInputs that are part of this PictureLayerImpl, and
-  // their painted results (if any). During commit, Blink hands us a set of
-  // PaintWorkletInputs that are part of this layer. These are then painted
-  // asynchronously on a worklet thread, triggered from
-  // |LayerTreeHostImpl::UpdateSyncTreeAfterCommitOrImplSideInvalidation|.
-  PaintWorkletRecordMap paint_worklet_records_;
 
   TileSizeCalculator tile_size_calculator_{this};
 

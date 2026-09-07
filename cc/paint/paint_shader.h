@@ -109,12 +109,10 @@ class CC_PAINT_EXPORT PaintShader : public SkRefCnt {
       const SkMatrix* local_matrix = nullptr,
       SkColor4f fallback_color = SkColors::kTransparent);
 
-  // |tile_rect| is not null only if the |image| is paint worklet backed.
   static sk_sp<PaintShader> MakeImage(const PaintImage& image,
                                       SkTileMode tx,
                                       SkTileMode ty,
-                                      const SkMatrix* local_matrix,
-                                      const SkRect* tile_rect = nullptr);
+                                      const SkMatrix* local_matrix);
 
   static sk_sp<PaintShader> MakePaintRecord(
       PaintRecord record,
@@ -270,10 +268,6 @@ class CC_PAINT_EXPORT PaintShader : public SkRefCnt {
       PaintFlags::FilterQuality* raster_quality,
       bool* needs_mips,
       gpu::Mailbox* mailbox) const;
-
-  // Creates a paint record shader for worklet-backed images.
-  sk_sp<PaintShader> CreatePaintWorkletRecord(
-      ImageProvider* image_provider) const;
 
   void SetColorsAndPositions(const SkColor4f* colors,
                              const SkScalar* positions,

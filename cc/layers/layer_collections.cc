@@ -38,7 +38,6 @@ void OwnedLayerImplList::clear() {
   layer_maps_need_rebuild_ = false;
   picture_layer_map_.clear();
   picture_layers_with_animated_images_.clear();
-  picture_layers_with_worklets_.clear();
   num_picture_layers_ = 0u;
 }
 
@@ -52,11 +51,6 @@ void OwnedLayerImplList::push_back(std::unique_ptr<LayerImpl>&& value) {
   }
   if (layer->GetLayerType() == mojom::LayerType::kPicture) {
     num_picture_layers_++;
-    if (static_cast<PictureLayerImpl*>(layer)
-            ->GetPaintWorkletRecordMap()
-            .size()) {
-      picture_layers_with_worklets_.insert(id);
-    }
     if (static_cast<PictureLayerImpl*>(layer)->HasAnimatedImages()) {
       picture_layers_with_animated_images_.insert(id);
     }
@@ -98,21 +92,6 @@ void OwnedLayerImplList::RemovePictureLayerWithAnimatedImages(
 OwnedLayerImplList::Range<PictureLayerImpl, OwnedLayerImplList::SetType>
 OwnedLayerImplList::PictureLayersWithAnimatedImages() const {
   return {*this, picture_layers_with_animated_images_};
-}
-
-void OwnedLayerImplList::SetPictureLayerWithWorklet(PictureLayerImpl* layer) {
-  DCHECK(contains(layer->id()));
-  picture_layers_with_worklets_.insert(layer->id());
-}
-
-void OwnedLayerImplList::RemovePictureLayerWithWorklet(
-    PictureLayerImpl* layer) {
-  picture_layers_with_worklets_.erase(layer->id());
-}
-
-OwnedLayerImplList::Range<PictureLayerImpl, OwnedLayerImplList::SetType>
-OwnedLayerImplList::PictureLayersWithWorklets() const {
-  return {*this, picture_layers_with_worklets_};
 }
 
 OwnedLayerImplList::const_iterator OwnedLayerImplList::find(int id) const {

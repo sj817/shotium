@@ -1298,31 +1298,7 @@ void DrawImageOp::RasterWithFlags(const DrawImageOp* op,
                                   const PaintFlags* flags,
                                   SkCanvas* canvas,
                                   const PlaybackParams& params) {
-  DCHECK(!op->image.IsPaintWorklet());
   SkPaint paint = flags ? flags->ToSkPaint() : SkPaint();
-
-  if (params.image_provider && op->image.IsDeferredPaintRecord()) {
-    ImageProvider::ScopedResult result =
-        params.image_provider->GetRasterContent(DrawImage(op->image));
-
-    // Check that we are not using loopers with paint worklets, since converting
-    // PaintFlags to SkPaint drops loopers.
-    DCHECK(!flags->getLooper());
-
-    DCHECK(IsScaleAdjustmentIdentity(op->scale_adjustment));
-    SkAutoCanvasRestore save_restore(canvas, true);
-    canvas->translate(op->left, op->top);
-
-    // Compositor thread animations can cause PaintWorklet jobs to be dispatched
-    // to the worklet thread even after main has torn down the worklet (e.g.
-    // because a navigation is happening). In that case the PaintWorklet jobs
-    // will fail and there will be no result to raster here. This state is
-    // transient as the next main frame commit will remove the PaintWorklets.
-    if (result && result.has_paint_record()) {
-      result.ReleaseAsRecord().Playback(canvas, params);
-    }
-    return;
-  }
 
   // Retrieve the SkImages and sampling.
   sk_sp<SkImage> sk_image;
@@ -1408,43 +1384,6 @@ void DrawImageRectOp::RasterWithFlags(const DrawImageRectOp* op,
                                       const PaintFlags* flags,
                                       SkCanvas* canvas,
                                       const PlaybackParams& params) {
-  // TODO(crbug.com/40613771): make sure to support the case where paint worklet
-  // generated images are used in other raster work such as canvas2d.
-  if (op->image.IsDeferredPaintRecord()) {
-    // When rasterizing on the main thread (e.g. paint invalidation checking,
-    // see https://crbug.com/990382), an image provider may not be available, so
-    // we should draw nothing.
-    if (!params.image_provider)
-      return;
-    ImageProvider::ScopedResult result =
-        params.image_provider->GetRasterContent(DrawImage(op->image));
-
-    // Check that we are not using loopers with paint worklets, since converting
-    // PaintFlags to SkPaint drops loopers.
-    DCHECK(!flags->getLooper());
-    SkPaint paint = flags ? flags->ToSkPaint() : SkPaint();
-
-    DCHECK(IsScaleAdjustmentIdentity(op->scale_adjustment));
-    SkAutoCanvasRestore save_restore(canvas, true);
-    canvas->concat(SkMatrix::RectToRect(op->src, op->dst));
-    canvas->clipRect(op->src);
-    if (op->image.NeedsLayer()) {
-      // TODO(crbug.com/343439032): See if we can be less aggressive about use
-      // of a save layer operation for CSS paint worklets since expensive.
-      canvas->saveLayer(&op->src, &paint);
-    }
-
-    // Compositor thread animations can cause PaintWorklet jobs to be dispatched
-    // to the worklet thread even after main has torn down the worklet (e.g.
-    // because a navigation is happening). In that case the PaintWorklet jobs
-    // will fail and there will be no result to raster here. This state is
-    // transient as the next main frame commit will remove the PaintWorklets.
-    if (result && result.has_paint_record()) {
-      result.ReleaseAsRecord().Playback(canvas, params);
-    }
-    return;
-  }
-
   // Retrieve the SkImages, adjusted source rect, and sampling.
   sk_sp<SkImage> sk_image;
   sk_sp<SkImage> gainmap_sk_image;

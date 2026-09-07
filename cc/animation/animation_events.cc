@@ -17,24 +17,7 @@ AnimationPlaybackEvent::AnimationPlaybackEvent(
       group_id(group_id),
       target_property(target_property),
       monotonic_time(monotonic_time),
-      is_impl_only(false),
-      local_time() {}
-
-AnimationPlaybackEvent::AnimationPlaybackEvent(
-    int timeline_id,
-    int animation_id,
-    std::optional<base::TimeDelta> local_time)
-    : type(Type::kTimeUpdated),
-      // Initializing model_id with an invalid value (0).
-      // Also initializing keyframe_id with 0 which in its case is a valid
-      // value. However this is safe since keyframe_id and model_id are not used
-      // when routing a TIME_UPDATED event.
-      uid({timeline_id, animation_id, 0}),
-      group_id(),
-      target_property(),
-      monotonic_time(),
-      is_impl_only(false),
-      local_time(local_time) {}
+      is_impl_only(false) {}
 
 AnimationPlaybackEvent::AnimationPlaybackEvent(
     const AnimationPlaybackEvent& other) {
@@ -47,7 +30,6 @@ AnimationPlaybackEvent::AnimationPlaybackEvent(
   animation_start_time = other.animation_start_time;
   if (other.curve)
     curve = other.curve->Clone();
-  local_time = other.local_time;
 }
 
 AnimationPlaybackEvent& AnimationPlaybackEvent::operator=(
@@ -61,27 +43,23 @@ AnimationPlaybackEvent& AnimationPlaybackEvent::operator=(
   animation_start_time = other.animation_start_time;
   if (other.curve)
     curve = other.curve->Clone();
-  local_time = other.local_time;
   return *this;
 }
 
 AnimationPlaybackEvent::~AnimationPlaybackEvent() = default;
 
-AnimationEvents::AnimationEvents() : needs_time_updated_events_(false) {}
+AnimationEvents::AnimationEvents() = default;
 
 AnimationEvents::~AnimationEvents() = default;
 
 bool AnimationEvents::IsEmpty() const {
-  return events().empty() && !needs_time_updated_events_;
+  return events().empty();
 }
 
 bool AnimationPlaybackEvent::ShouldDispatchToKeyframeEffectAndModel() const {
-  // TIME_UPDATED events are used to synchronize effect time between cc and
-  // main thread worklet animations. Keyframe models are not involved in
-  // this process.
   // is_impl_only events are not dispatched because they don't have
   // corresponding main thread components.
-  return type != Type::kTimeUpdated && !is_impl_only;
+  return !is_impl_only;
 }
 
 AnimationTriggerEvent::AnimationTriggerEvent(int trigger_id,

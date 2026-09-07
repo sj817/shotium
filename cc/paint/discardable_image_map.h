@@ -19,7 +19,6 @@
 #include "cc/paint/paint_export.h"
 #include "cc/paint/paint_flags.h"
 #include "cc/paint/paint_image.h"
-#include "cc/paint/paint_worklet_input.h"
 #include "cc/paint/scroll_offset_map.h"
 #include "third_party/abseil-cpp/absl/container/inlined_vector.h"
 #include "third_party/skia/include/core/SkCanvas.h"
@@ -63,19 +62,13 @@ class CC_PAINT_EXPORT DiscardableImageMap
 
   using DecodingModeMap =
       base::flat_map<PaintImage::Id, PaintImage::DecodingMode>;
-  using PaintWorkletInputWithImageId =
-      std::pair<scoped_refptr<PaintWorkletInput>, PaintImage::Id>;
-  using PaintWorkletInputs = std::vector<PaintWorkletInputWithImageId>;
-
   static scoped_refptr<DiscardableImageMap> Generate(
       const PaintOpBuffer& paint_op_buffer,
       const gfx::Rect& bounds,
       const ScrollOffsetMap& raster_inducing_scroll_offsets,
-      // These data are not stored in DiscardableImageMap because they should
-      // be consumed immediately. The caller can omit these parameters if they
-      // won't be used.
-      DecodingModeMap* decoding_mode_map = nullptr,
-      PaintWorkletInputs* paint_worklet_inputs = nullptr);
+      // Decoding hints are consumed immediately instead of being stored in
+      // the map. Callers can omit the output when they do not need hints.
+      DecodingModeMap* decoding_mode_map = nullptr);
 
   bool empty() const {
     DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);

@@ -15,7 +15,6 @@
 
 #include "base/gtest_prod_util.h"
 #include "base/memory/scoped_refptr.h"
-#include "cc/paint/deferred_paint_record.h"
 #include "cc/paint/image_animation_count.h"
 #include "cc/paint/paint_export.h"
 #include "cc/paint/paint_record.h"
@@ -43,7 +42,6 @@ namespace cc {
 
 struct FrameMetadata;
 class PaintImageGenerator;
-class PaintWorkletInput;
 class TextureBacking;
 class TextureBackingContext;
 
@@ -336,22 +334,16 @@ class CC_PAINT_EXPORT PaintImage {
   DecodingMode decoding_mode() const { return decoding_mode_; }
 
   explicit operator bool() const {
-    return deferred_paint_record_ || cached_sk_image_ || texture_backing_;
+    return cached_sk_image_ || texture_backing_;
   }
   bool IsLazyGenerated() const {
     return paint_record_ || paint_image_generator_;
   }
-  bool IsDeferredPaintRecord() const { return !!deferred_paint_record_; }
-  bool IsPaintWorklet() const {
-    return deferred_paint_record_ &&
-           deferred_paint_record_->IsPaintWorkletInput();
-  }
-  bool NeedsLayer() const;
   bool IsTextureBacked() const;
   int width() const { return GetSkImageInfo().width(); }
   int height() const { return GetSkImageInfo().height(); }
   SkColorSpace* color_space() const {
-    return IsPaintWorklet() ? nullptr : GetSkImageInfo().colorSpace();
+    return GetSkImageInfo().colorSpace();
   }
   gfx::Size GetSize(AuxImage aux_image) const;
   SkISize GetSkISize(AuxImage aux_image) const {
@@ -393,12 +385,6 @@ class CC_PAINT_EXPORT PaintImage {
   // Returns an SkImage for the frame at |index|.
   sk_sp<SkImage> GetSkImageForFrame(size_t index,
                                     GeneratorClientId client_id) const;
-
-  const scoped_refptr<PaintWorkletInput> GetPaintWorkletInput() const;
-
-  const scoped_refptr<DeferredPaintRecord>& deferred_paint_record() const {
-    return deferred_paint_record_;
-  }
 
   bool IsOpaque() const;
   bool HasGainmapInfo() const {
@@ -522,9 +508,6 @@ class CC_PAINT_EXPORT PaintImage {
   //    skia's cache.
   // 2) Ensures that accesses to it are thread-safe.
   sk_sp<SkImage> cached_sk_image_;
-
-  // The input parameters that are needed to execute the JS paint callback.
-  scoped_refptr<DeferredPaintRecord> deferred_paint_record_;
 };
 
 // Lookup table to get the animation frame to be used for rasterization.

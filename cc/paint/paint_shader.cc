@@ -192,16 +192,11 @@ sk_sp<PaintShader> PaintShader::MakeSweepGradient(
 sk_sp<PaintShader> PaintShader::MakeImage(const PaintImage& image,
                                           SkTileMode tx,
                                           SkTileMode ty,
-                                          const SkMatrix* local_matrix,
-                                          const SkRect* tile_rect) {
+                                          const SkMatrix* local_matrix) {
   sk_sp<PaintShader> shader(new PaintShader(Type::kImage));
 
   shader->image_ = image;
   shader->SetMatrixAndTiling(local_matrix, tx, ty);
-  if (tile_rect) {
-    DCHECK(image.IsPaintWorklet());
-    shader->tile_ = *tile_rect;
-  }
 
   shader->ResolveSkObjects();
   return shader;
@@ -419,21 +414,6 @@ sk_sp<PaintShader> PaintShader::CreateScaledPaintRecord(
   return shader;
 }
 
-sk_sp<PaintShader> PaintShader::CreatePaintWorkletRecord(
-    ImageProvider* image_provider) const {
-  DCHECK_EQ(shader_type_, Type::kImage);
-  DCHECK(image_ && image_.IsPaintWorklet());
-
-  ImageProvider::ScopedResult result =
-      image_provider->GetRasterContent(DrawImage(image_));
-  if (!result || !result.has_paint_record()) {
-    return nullptr;
-  }
-  SkMatrix local_matrix = GetLocalMatrix();
-  return PaintShader::MakePaintRecord(result.ReleaseAsRecord(), tile_, tx_, ty_,
-                                      &local_matrix);
-}
-
 sk_sp<PaintShader> PaintShader::CreateDecodedImage(
     const SkMatrix& ctm,
     PaintFlags::FilterQuality quality,
@@ -588,7 +568,7 @@ void PaintShader::ResolveSkObjects(const gfx::SizeF* raster_scale,
                                    ImageProvider* image_provider) {
   switch (shader_type_) {
     case Type::kImage:
-      if (image_ && !image_.IsPaintWorklet()) {
+      if (image_) {
         sk_cached_image_ = image_.GetSkImage();
       }
       break;

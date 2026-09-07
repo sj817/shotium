@@ -104,7 +104,6 @@ class CORE_EXPORT CSSValue : public GarbageCollected<CSSValue> {
   bool IsDynamicRangeLimitMixValue() const {
     return class_type_ == kDynamicRangeLimitMixClass;
   }
-  bool IsPaintValue() const { return class_type_ == kPaintClass; }
   bool IsFontFeatureValue() const { return class_type_ == kFontFeatureClass; }
   bool IsFontFamilyValue() const { return class_type_ == kFontFamilyClass; }
   bool IsFontFaceSrcValue() const { return class_type_ == kFontFaceSrcClass; }
@@ -326,7 +325,6 @@ class CORE_EXPORT CSSValue : public GarbageCollected<CSSValue> {
 
     // Image generator classes.
     kCrossfadeClass,
-    kPaintClass,
     kLinearGradientClass,
     kRadialGradientClass,
     kConicGradientClass,

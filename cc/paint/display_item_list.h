@@ -162,8 +162,7 @@ class CC_PAINT_EXPORT DisplayItemList
 
   scoped_refptr<DiscardableImageMap> GenerateDiscardableImageMap(
       const ScrollOffsetMap& raster_inducing_scroll_offsets,
-      DiscardableImageMap::DecodingModeMap* = nullptr,
-      DiscardableImageMap::PaintWorkletInputs* = nullptr) const;
+      DiscardableImageMap::DecodingModeMap* = nullptr) const;
 
   void EmitTraceSnapshot() const;
 

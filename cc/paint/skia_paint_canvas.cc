@@ -312,7 +312,6 @@ void SkiaPaintCanvas::drawImage(const PaintImage& image,
                                 SkScalar top,
                                 const SkSamplingOptions& sampling,
                                 const PaintFlags* flags) {
-  DCHECK(!image.IsPaintWorklet());
   std::optional<ScopedRasterFlags> scoped_flags;
   if (flags) {
     scoped_flags.emplace(flags, image_provider_, canvas_->getTotalMatrix(),

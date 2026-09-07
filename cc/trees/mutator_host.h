@@ -22,7 +22,6 @@ namespace cc {
 
 class MutatorEvents;
 class MutatorHostDelegate;
-class LayerTreeMutator;
 class PropertyTrees;
 class ScrollTree;
 
@@ -63,9 +62,6 @@ class MutatorHost {
 
   virtual void SetMutatorHostDelegate(MutatorHostDelegate* delegate) = 0;
 
-  virtual void SetLayerTreeMutator(
-      std::unique_ptr<LayerTreeMutator> mutator) = 0;
-
   virtual void PushPropertiesTo(MutatorHost* host_impl,
                                 const PropertyTrees& property_trees) = 0;
 
@@ -83,15 +79,8 @@ class MutatorHost {
                                              const ScrollTree& scroll_tree,
                                              bool is_active_tree,
                                              MutatorEvents* events) = 0;
-  // Tick animations that depends on scroll offset.
-  virtual void TickScrollAnimations(base::TimeTicks monotonic_time,
-                                    const ScrollTree& scroll_tree) = 0;
-  virtual void TickWorkletAnimations() = 0;
   virtual bool UpdateAnimationState(bool start_ready_animations,
                                     MutatorEvents* events) = 0;
-  // Returns TIME_UPDATED events generated in this frame to be handled by
-  // BeginMainFrame.
-  virtual void TakeTimeUpdatedEvents(MutatorEvents* events) = 0;
   virtual void PromoteScrollTimelinesPendingToActive() = 0;
 
   virtual std::unique_ptr<MutatorEvents> CreateEvents() = 0;
@@ -158,8 +147,6 @@ class MutatorHost {
   virtual void HandleRemovedScrollAnimatingElements(bool commits_to_active) = 0;
 
   virtual size_t MainThreadAnimationsCount() const = 0;
-  virtual bool HasInvalidationAnimation() const = 0;
-  virtual bool HasNativePropertyAnimation() const = 0;
   virtual bool CurrentFrameHadRAF() const = 0;
   virtual bool NextFrameHasPendingRAF() const = 0;
   virtual bool HasCanvasInvalidation() const = 0;

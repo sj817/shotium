@@ -619,9 +619,6 @@
       implied_by: ["EventTrigger", "TimelineTrigger"],
     },
     {
-      name: "AnimationWorklet",
-    },
-    {
       // crbug.com/445727139
       name: "AnnotationSpaceOnStart",
       status: "stable",
@@ -1218,20 +1215,6 @@
       status: "stable",
     },
     {
-      name: "CompositeBGColorAnimation",
-      public: true,
-      status: "stable",
-      base_feature: "none",
-    },
-    {
-      name: "CompositeBoxShadowAnimation",
-    },
-    {
-      name: "CompositeClipPathAnimation",
-      status: "stable",
-      public: true,
-    },
-    {
       name: "CompositedSelectionUpdate",
       public: true,
       status: {
@@ -1268,12 +1251,6 @@
         "Android": "",
         "default": "stable",
       }
-    },
-    {
-      // If enabled, allow concurrent animations via native paint worklets to
-      // run on the compositor thread.
-      name: "ConcurrentNativePaintWorklets",
-      status: "experimental",
     },
     {
       name: "ConditionalTracingLoAF",
@@ -1759,10 +1736,6 @@
     {
       name: "CSSOverscrollBehaviorChain",
       status: "stable",
-    },
-    {
-      name: "CSSPaintAPIArguments",
-      status: "experimental",
     },
     {
       // Ignore the stylesheet encoding when parsing URLs, always using UTF-8.

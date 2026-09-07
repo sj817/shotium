@@ -100,7 +100,6 @@
 #include "third_party/blink/renderer/core/animation/document_animations.h"
 #include "third_party/blink/renderer/core/animation/document_timeline.h"
 #include "third_party/blink/renderer/core/animation/pending_animations.h"
-#include "third_party/blink/renderer/core/animation/worklet_animation_controller.h"
 #include "third_party/blink/renderer/core/core_export.h"
 #include "third_party/blink/renderer/core/css/css_font_selector.h"
 #include "third_party/blink/renderer/core/css/css_property_value_set.h"
@@ -858,8 +857,6 @@ Document::Document(const DocumentInit& initializer,
       document_animations_(MakeGarbageCollected<DocumentAnimations>(this)),
       timeline_(MakeGarbageCollected<DocumentTimeline>(this)),
       pending_animations_(MakeGarbageCollected<PendingAnimations>(*this)),
-      worklet_animation_controller_(
-          MakeGarbageCollected<WorkletAnimationController>(this)),
       // Use the source id from the document initializer if it is available.
       // Otherwise, generate a new source id to cover any cases that don't
       // receive a valid source id, this for example includes but is not limited
@@ -8700,7 +8697,6 @@ void Document::Trace(Visitor* visitor) const {
   visitor->Trace(document_animations_);
   visitor->Trace(timeline_);
   visitor->Trace(pending_animations_);
-  visitor->Trace(worklet_animation_controller_);
   visitor->Trace(execution_context_);
   visitor->Trace(agent_);
   visitor->Trace(intersection_observer_controller_);

@@ -22,7 +22,6 @@
 namespace blink {
 
 class ComputedStyle;
-class CrossThreadStyleValue;
 class ExecutionContext;
 class LayoutObject;
 
@@ -144,12 +143,6 @@ class CORE_EXPORT CSSProperty : public CSSUnresolvedProperty {
                                             const LayoutObject*,
                                             bool allow_visited_style,
                                             CSSValuePhase) const;
-  std::unique_ptr<CrossThreadStyleValue> CrossThreadStyleValueFromComputedStyle(
-      const ComputedStyle& computed_style,
-      const LayoutObject* layout_object,
-      bool allow_visited_style,
-      CSSValuePhase value_phase) const;
-
   const CSSProperty& ToPhysical(WritingDirectionMode writing_direction) const {
     if (!IsInLogicalPropertyGroup()) {
       // Avoid the potentially expensive virtual function call.

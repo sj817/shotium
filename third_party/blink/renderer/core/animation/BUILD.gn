@@ -279,8 +279,6 @@ blink_core_sources("animation") {
     "length_units_checker.h",
     "list_interpolation_functions.cc",
     "list_interpolation_functions.h",
-    "native_paint_worklet_data.cc",
-    "native_paint_worklet_data.h",
     "non_interpolable_value.h",
     "number_property_functions.cc",
     "number_property_functions.h",
@@ -343,9 +341,6 @@ blink_core_sources("animation") {
     "underlying_value_owner.h",
     "view_timeline.cc",
     "view_timeline.h",
-    "worklet_animation_base.h",
-    "worklet_animation_controller.cc",
-    "worklet_animation_controller.h",
   ]
 
   deps = [

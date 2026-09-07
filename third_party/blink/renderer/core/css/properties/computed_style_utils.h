@@ -492,8 +492,6 @@ class CORE_EXPORT ComputedStyleUtils {
       const LayoutObject*,
       bool allow_visited_style,
       CSSValuePhase value_phase);
-  static std::unique_ptr<CrossThreadStyleValue>
-  CrossThreadStyleValueFromCSSStyleValue(CSSStyleValue* style_value);
   static CSSValue* ValueForNameScope(const StyleNameScope& name_scope);
 
   // Returns the computed CSSValue of the given property from the style,

@@ -169,9 +169,6 @@ class CC_EXPORT OwnedLayerImplList {
   void SetPictureLayerWithAnimatedImages(PictureLayerImpl* layer);
   void RemovePictureLayerWithAnimatedImages(PictureLayerImpl* layer);
 
-  Range<PictureLayerImpl, SetType> PictureLayersWithWorklets() const;
-  void SetPictureLayerWithWorklet(PictureLayerImpl* layer);
-  void RemovePictureLayerWithWorklet(PictureLayerImpl* layer);
 
   std::unique_ptr<LayerImpl> ReleaseLayerForTesting(int layer_id);
 
@@ -190,7 +187,6 @@ class CC_EXPORT OwnedLayerImplList {
   VectorType layers_;
   SetType layers_that_should_push_properties_;
   SetType picture_layers_with_animated_images_;
-  SetType picture_layers_with_worklets_;
   uint32_t num_picture_layers_ = 0u;
   mutable MapType layer_map_;
   mutable MapType picture_layer_map_;

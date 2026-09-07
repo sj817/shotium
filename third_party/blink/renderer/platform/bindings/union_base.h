@@ -16,9 +16,7 @@ namespace blink {
 // there is nothing to remember, only which arm of the union is active. The
 // struct never had any V8 in it -- only the ToV8Traits<IDLUndefined>
 // specialisation that consumed it did -- so the generated union classes can go
-// on naming it, and so can the two call sites in core that construct one
-// (style_property_map_read_only_main_thread.cc and
-// paint_worklet_style_property_map.cc).
+// on naming it, as can style_property_map_read_only_main_thread.cc.
 //
 // It is parked here, rather than in a header of its own, because every union
 // class already includes this one and nothing else needs it. If

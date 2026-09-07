@@ -7,8 +7,7 @@
 #include <optional>
 
 #include "base/containers/adapters.h"
-#include "third_party/blink/renderer/core/animation/element_animations.h"
-#include "third_party/blink/renderer/core/css/background_color_paint_image_generator.h"
+#include "third_party/blink/renderer/core/animation/css/css_image_animations.h"
 #include "third_party/blink/renderer/core/dom/document.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
 #include "third_party/blink/renderer/core/frame/settings.h"
@@ -51,8 +50,6 @@
 #include "ui/gfx/geometry/rect_conversions.h"
 
 namespace blink {
-
-using CompositedPaintStatus = ElementAnimations::CompositedPaintStatus;
 
 void BoxPainterBase::PaintFillLayers(
     const PaintInfo& paint_info,
@@ -103,76 +100,6 @@ void ApplySpreadToShadowShape(ContouredRect& shadow_shape, float spread) {
 
   shadow_shape.OutsetWithCornerCorrection(spread);
   shadow_shape.ConstrainRadii();
-}
-
-BackgroundColorPaintImageGenerator* GetBackgroundColorPaintImageGenerator(
-    const Document& document) {
-  if (!RuntimeEnabledFeatures::CompositeBGColorAnimationEnabled())
-    return nullptr;
-
-  return document.GetFrame()->GetBackgroundColorPaintImageGenerator();
-}
-
-void SetHasNativeBackgroundPainter(Node* node, bool state) {
-  Element* element = DynamicTo<Element>(node);
-  if (!element)
-    return;
-
-  ElementAnimations* element_animations = element->GetElementAnimations();
-  DCHECK(element_animations || !state);
-  if (element_animations) {
-    element_animations->SetCompositedBackgroundColorStatus(
-        state ? CompositedPaintStatus::kComposited
-              : CompositedPaintStatus::kNotComposited);
-  }
-}
-
-Animation* GetCompositableBackgroundColorAnimation(Node* node) {
-  Element* element = DynamicTo<Element>(node);
-  if (!element) {
-    return nullptr;
-  }
-
-  BackgroundColorPaintImageGenerator* generator =
-      GetBackgroundColorPaintImageGenerator(node->GetDocument());
-  // The generator can be null in testing environment.
-  if (!generator) {
-    return nullptr;
-  }
-
-  Animation* animation = generator->GetAnimationIfCompositable(element);
-  if (!animation) {
-    return nullptr;
-  }
-
-  return animation;
-}
-
-void DowngradeBackgroundColorAnimation(Node* node) {
-  Element* element = To<Element>(node);
-  ElementAnimations* element_animations = element->GetElementAnimations();
-  for (auto& entry : element_animations->Animations()) {
-    Animation& animation = *entry.key;
-    if (animation.GetNativePaintWorkletReasons() &
-        static_cast<Animation::NativePaintWorkletReasons>(
-            Animation::NativePaintWorkletProperties::
-                kBackgroundColorPaintWorklet)) {
-      if (animation.HasActiveAnimationsOnCompositor()) {
-        animation.SetCompositorPending(
-            Animation::CompositorPendingReason::kPendingDowngrade);
-      }
-    }
-  }
-}
-
-CompositedPaintStatus CompositedBackgroundColorStatus(Node* node) {
-  Element* element = DynamicTo<Element>(node);
-  if (!element)
-    return CompositedPaintStatus::kNotComposited;
-
-  ElementAnimations* element_animations = element->GetElementAnimations();
-  DCHECK(element_animations);
-  return element_animations->CompositedBackgroundColorStatus();
 }
 
 void ClipToBorderEdge(GraphicsContext& context,
@@ -689,20 +616,10 @@ BoxPainterBase::FillLayerInfo::FillLayerInfo(
         image->ForceOrientationIfNecessary(respect_image_orientation);
   }
 
-  bool composite_bgcolor_animation =
-      RuntimeEnabledFeatures::CompositeBGColorAnimationEnabled() &&
-      style.HasCurrentBackgroundColorAnimation() &&
-      layer.GetType() == EFillLayerType::kBackground &&
-      !(paint_flags & PaintFlag::kOmitCompositingInfo);
-  // When background color animation is running on the compositor thread, we
-  // need to trigger repaint even if the background is transparent to collect
-  // artifacts in order to run the animation on the compositor.
   should_paint_color =
       is_bottom_layer &&
-      (!color.IsFullyTransparent() || composite_bgcolor_animation) &&
+      !color.IsFullyTransparent() &&
       (!should_paint_image || !layer.ImageOccludesNextLayers(doc, style));
-  should_paint_color_with_paint_worklet_image =
-      should_paint_color && composite_bgcolor_animation;
 }
 
 namespace {
@@ -892,77 +809,6 @@ void DrawTiledBackground(
                          image_node_animation_info);
 }
 
-scoped_refptr<Image> GetBGColorPaintWorkletImage(const Document& document,
-                                                 Node* node,
-                                                 const gfx::SizeF& image_size) {
-  BackgroundColorPaintImageGenerator* generator =
-      GetBackgroundColorPaintImageGenerator(document);
-  // The generator can be null in testing environment.
-  if (!generator)
-    return nullptr;
-
-  return generator->Paint(image_size, node);
-}
-
-// Returns true if the background color was painted by the paint worklet.
-bool PaintBGColorWithPaintWorklet(const Document& document,
-                                  const BoxPainterBase::FillLayerInfo& info,
-                                  Node* node,
-                                  const ComputedStyle& style,
-                                  const FloatRoundedRect& dest_rect,
-                                  GraphicsContext& context) {
-  if (!info.should_paint_color_with_paint_worklet_image)
-    return false;
-
-  CompositedPaintStatus status = CompositedBackgroundColorStatus(node);
-  Animation* animation = nullptr;
-  switch (status) {
-    case CompositedPaintStatus::kNoAnimation:
-    case CompositedPaintStatus::kNotComposited:
-      // Once an animation has been downgraded to run on the main thread, it
-      // cannot restart on the compositor without a pending animation update.
-      return false;
-
-    case CompositedPaintStatus::kNeedsRepaint:
-    case CompositedPaintStatus::kComposited:
-      animation = GetCompositableBackgroundColorAnimation(node);
-      if (animation) {
-        SetHasNativeBackgroundPainter(node, true);
-      } else {
-        SetHasNativeBackgroundPainter(node, false);
-        // Typically, this branch is only reached for the kNeedsRepaint case;
-        // however, it can occur if a blur filter is introduced to an ancestor
-        // of the element being animated, which breaks eligibility for
-        // compositing.
-        if (status == CompositedPaintStatus::kComposited) {
-          // TODO(kevers): Investigate if fallback to main in this degenerate
-          // case can occur too late to prevent a rendering glitch.
-          DowngradeBackgroundColorAnimation(node);
-        }
-        return false;
-      }
-      break;
-  }
-
-  scoped_refptr<Image> paint_worklet_image =
-      GetBGColorPaintWorkletImage(document, node, dest_rect.Rect().size());
-  // We can fail to create a paint worklet image if missing a generator, which
-  // is possible in a testing environment; however, in this case we won't have
-  // a compositable animation and would have bailed earlier. At this stage,
-  // image creation must succeed.
-  CHECK(paint_worklet_image) << "Failed to create paint worklet image";
-  gfx::RectF src_rect(dest_rect.Rect().size());
-  context.DrawImageRRect(
-      *paint_worklet_image, Image::kSyncDecode, ImageAutoDarkMode::Disabled(),
-      ImagePaintTimingInfo(
-          /* image_may_be_lcp_candidate */ false,
-          /* report_paint_timing */ false),
-      dest_rect, src_rect, SkBlendMode::kSrcOver, kRespectImageOrientation,
-      Image::kClampImageToSourceRect);
-  animation->OnPaintWorkletImageCreated();
-  return true;
-}
-
 bool NotifyImageTimingOnWillDrawImage(
     Node* generating_node,
     const Image& image,
@@ -1110,14 +956,9 @@ inline bool PaintFastBottomLayer(const Document& document,
 
   // Paint the color if needed.
   if (info.should_paint_color) {
-    // Try to paint the background with a paint worklet first in case it will be
-    // animated. Otherwise, paint it directly into the context.
-    if (!PaintBGColorWithPaintWorklet(document, info, node, style, color_border,
-                                      context)) {
-      context.FillRoundedRect(
-          color_border, info.color,
-          PaintAutoDarkMode(style, DarkModeFilter::ElementRole::kBackground));
-    }
+    context.FillRoundedRect(
+        color_border, info.color,
+        PaintAutoDarkMode(style, DarkModeFilter::ElementRole::kBackground));
   }
 
   // Paint the image if needed.
@@ -1260,15 +1101,9 @@ void PaintFillLayerBackground(const Document& document,
   // painting area.
   if (info.should_paint_color) {
     gfx::Rect background_rect = ToPixelSnappedRect(scrolled_paint_rect);
-    // Try to paint the background with a paint worklet first in case it will be
-    // animated. Otherwise, paint it directly into the context.
-    if (!PaintBGColorWithPaintWorklet(document, info, node, style,
-                                      FloatRoundedRect(background_rect),
-                                      context)) {
-      context.FillRect(
-          background_rect, info.color,
-          PaintAutoDarkMode(style, DarkModeFilter::ElementRole::kBackground));
-    }
+    context.FillRect(
+        background_rect, info.color,
+        PaintAutoDarkMode(style, DarkModeFilter::ElementRole::kBackground));
   }
 
   // No progressive loading of the background image.

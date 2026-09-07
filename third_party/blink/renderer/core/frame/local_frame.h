@@ -114,9 +114,6 @@ class SharedURLLoaderFactory;
 namespace blink {
 
 class AssociatedInterfaceProvider;
-class BackgroundColorPaintImageGenerator;
-class BoxShadowPaintImageGenerator;
-class ClipPathPaintImageGenerator;
 class Color;
 class CoreProbeSink;
 class Document;
@@ -276,10 +273,6 @@ class CORE_EXPORT LocalFrame final
   FrameLoader& Loader() const;
   FrameSelection& Selection() const;
   FrameConsole& Console() const;
-  BackgroundColorPaintImageGenerator* GetBackgroundColorPaintImageGenerator();
-  BoxShadowPaintImageGenerator* GetBoxShadowPaintImageGenerator();
-  ClipPathPaintImageGenerator* GetClipPathPaintImageGenerator();
-  void SetClipPathPaintImageGeneratorForTesting(ClipPathPaintImageGenerator*);
   // GetLCPP() and LCPCriticalPathPredictor removed in this cut: the
   // predictor's implementation lived under the (deleted) chrome-facing LCPP
   // module and was fed hints over a (deleted) mojo interface from the
@@ -764,9 +757,6 @@ class CORE_EXPORT LocalFrame final
     ancestor_or_self_has_cspee_ = has_policy;
   }
 
-  void SetBackgroundColorPaintImageGeneratorForTesting(
-      BackgroundColorPaintImageGenerator* generator);
-
   std::optional<SkColor> GetFrameOverlayColor() const;
 
   // Returns a PendingRemote resolved via this frame's BrowserInterfaceBroker
@@ -1036,22 +1026,6 @@ class CORE_EXPORT LocalFrame final
   int num_burst_download_requests_ = 0;
   base::TimeTicks burst_download_start_time_;
 
-
-  // Access to background-color paint image generator. Initialized per local
-  // root and reused among sub frames.
-  Member<BackgroundColorPaintImageGenerator>
-      background_color_paint_image_generator_;
-
-  // TODO(crbug.com/1264553) : use a map from property id to
-  // NativePaintImageGenerator, then we could avoid needing to switch on the
-  // property in compositor_animations.cc
-  // Access to box shadow paint image
-  // generator. Initialized per local root and reused among sub frames.
-  Member<BoxShadowPaintImageGenerator> box_shadow_paint_image_generator_;
-
-  // Access to clip-path paint image generator. Initialized per local root and
-  // reused among sub frames.
-  Member<ClipPathPaintImageGenerator> clip_path_paint_image_generator_;
 
   using SavedScrollOffsets = GCedHeapHashMap<Member<Node>, ScrollOffset>;
   Member<SavedScrollOffsets> saved_scroll_offsets_;

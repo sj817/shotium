@@ -359,10 +359,6 @@ void KeyframeEffect::AttachCompositedLayers() {
   DCHECK(GetAnimation());
   CompositorAnimation* compositor_animation =
       GetAnimation()->GetCompositorAnimation();
-  if (compositor_animation && !Model()->RequiresPropertyNode()) {
-    compositor_animation->AttachPaintWorkletElement();
-    return;
-  }
   CompositorAnimations::AttachCompositedLayers(*effect_target_,
                                                compositor_animation);
 }
@@ -452,7 +448,7 @@ void KeyframeEffect::RestartRunningAnimationOnCompositor() {
     return;
 
   animation->RestartAnimationOnCompositor(
-      Animation::CompositorPendingReason::kPendingSafeRestart);
+      Animation::CompositorPendingReason::kPendingRestart);
 }
 
 bool KeyframeEffect::IsIdentityOrTranslation() const {

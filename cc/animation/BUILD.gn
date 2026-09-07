@@ -42,8 +42,6 @@ cc_component("animation") {
     "scroll_timeline.h",
     "timeline_trigger.cc",
     "timeline_trigger.h",
-    "worklet_animation.cc",
-    "worklet_animation.h",
   ]
 
   defines = [ "CC_ANIMATION_IMPLEMENTATION=1" ]
