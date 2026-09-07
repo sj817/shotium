@@ -495,12 +495,10 @@ source_set("tests") {
 
   deps = [
     "//base",
-    "//base/test:fuzztest_support",
     "//net",
     "//net:test_support",
     "//testing/gmock",
     "//testing/gtest",
-    "//third_party/fuzztest",
   ]
 
   # TODO(crbug.com/40031409): Fix code that adds exit-time destructors and

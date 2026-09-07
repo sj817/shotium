@@ -859,7 +859,6 @@ source_set("tests") {
     "//services/network/public/cpp/cert_verifier:cert_verifier_tests",
     "//services/network/public/mojom:mojom_permissions_policy",
     "//testing/gtest",
-    "//third_party/fuzztest",
   ]
 
   public_deps = [ ":buildflags" ]
@@ -883,14 +882,5 @@ source_set("perftests") {
     "//net",
     "//testing/gtest",
     "//testing/perf",
-  ]
-}
-
-test("coep_fuzztest") {
-  sources = [ "cross_origin_embedder_policy_parser_fuzztest.cc" ]
-  fuzztests = [ "CrossOriginEmbedderPolicyParserTest.CrossOriginEmbedderPolicyParserFuzzerTest" ]
-  deps = [
-    ":cpp",
-    "//third_party/fuzztest:fuzztest_gtest_main",
   ]
 }

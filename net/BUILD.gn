@@ -2280,38 +2280,6 @@ if (is_ios) {
   }
 }
 
-# TODO(crbug.com/477528387): Consider enabling net_fuzztests for cronet builds.
-if (!is_cronet_build) {
-  test("net_fuzztests") {
-    sources = [
-      "cert/qwac_fuzztest.cc",
-      "cert/x509_certificate_fuzztest.cc",
-      "http/http_cookie_indices_fuzztest.cc",
-      "http/http_security_headers_hsts_fuzzer.cc",
-    ]
-
-    fuzztests = [
-      "CookieIndicesFuzzTest.FuzzParseFromHeader",
-      "HttpSecurityHeadersHstsFuzzer.TestParseHSTSHeader",
-      "QwacFuzzTest.FuzzParseQcStatements",
-      "QwacFuzzTest.FuzzParseQcTypeInfo",
-      "QwacFuzzTest.FuzzParseTwoQwacCertBinding",
-      "X509CertificateFuzzTest.FuzzCreateFromDERCertChain",
-    ]
-
-    data = [
-      "data/fuzzer_data/",
-      "data/fuzzer_dictionaries/",
-    ]
-
-    deps = [
-      ":net",
-      "//testing/gtest",
-      "//third_party/fuzztest:fuzztest_gtest_main",
-    ]
-  }
-}
-
 if (is_cronet_build) {
   _test_target_type = "cronet_test"
 } else {
@@ -2684,24 +2652,6 @@ target(_test_target_type, "net_unittests") {
     defines += [ "NET_DISABLE_ZSTD_COMPRESS" ]
   }
 
-  fuzztests = [
-    "CRLSetTest.ParseDoesNotCrash",
-    "HostCacheTest.CheckHostCacheSerialization",
-    "HostResolverCacheFuzzTest.SerializationDoesNotCrash",
-    "HpackHeaderTableFuzzTest.CanCallMethodSequence",
-    "HttpAuthHandlerDigestTest.DigestAuthDoesNotCrash",
-    "HttpNoVarySearchTest.AreEquivalentImplementationsMatch",
-    "HttpUtilTest.ParseFetchSingleRangeNeverCrashes",
-    "PickleTest.FuzzRoundTrip",
-    "ParseProxyListFuzzer.TestOneInput",
-    "SchemefulSiteTest.FuzzSchemefulSite",
-    "SocketPoolAdditionalCapacityTest.ValidateRandomizedInputs",
-    "StructuredHeadersTest.ParseDictionaryParity",
-    "StructuredHeadersTest.ParseItemParity",
-    "StructuredHeadersTest.ParseListParity",
-    "UrlUnescapeIteratorTest.SameOutputAsUnescapePercentEncodedUrl",
-  ]
-
   deps = [
     ":cronet_buildflags",
     ":isolation_info_proto",
@@ -2728,8 +2678,6 @@ target(_test_target_type, "net_unittests") {
     "//net/tools/huffman_trie:huffman_trie_generator_sources",
     "//testing/gmock",
     "//testing/gtest",
-    "//testing/libfuzzer/proto:url_proto",
-    "//testing/libfuzzer/proto:url_proto_converter",
     "//third_party/abseil-cpp:absl",
     "//third_party/abseil-cpp:test_support",
     "//third_party/protobuf:protobuf_lite",

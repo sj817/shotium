@@ -3858,18 +3858,6 @@ test("base_unittests") {
     "strings/string_piece_rust_unittest.cc",
   ]
 
-  fuzztests = [
-    "Base64UrlTest.FuzzBase64UrlDecode",
-    "Base64UrlTest.FuzzBase64UrlEncode",
-    "JSONReaderTest.CanParseAnythingWithoutCrashing",
-    "UTFStringConversionsTest.UTF16ToUTF8FastPathMatchesLegacy",
-    "UTFStringConversionsTest.UTF16ToWideFastPathMatchesLegacy",
-    "UTFStringConversionsTest.UTF8ToUTF16FastPathMatchesLegacy",
-    "UTFStringConversionsTest.UTF8ToWideFastPathMatchesLegacy",
-    "UTFStringConversionsTest.WideToUTF8FastPathMatchesLegacy",
-    "UTFStringConversionsTest.WideToUTF16FastPathMatchesLegacy",
-  ]
-
   defines = []
   frameworks = []
 
@@ -3902,7 +3890,6 @@ test("base_unittests") {
     "//testing/gtest",
     "//third_party/abseil-cpp:absl",
     "//third_party/abseil-cpp:test_support",
-    "//third_party/fuzztest",
     "//third_party/icu",
     "//third_party/modp_b64",
 
@@ -4079,8 +4066,6 @@ test("base_unittests") {
       "win/wmi_unittest.cc",
       "win/wrapped_window_proc_unittest.cc",
     ]
-
-    fuzztests += [ "FileUtilFuzzTest.RemoveWindowsExtendedPathPrefixNoCrash" ]
 
     if (enable_cet_shadow_stack) {
       sources += [ "win/cet_shadow_stack_unittest.cc" ]

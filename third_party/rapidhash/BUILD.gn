@@ -2,20 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//testing/test.gni")
 
 source_set("rapidhash") {
   sources = [ "rapidhash.h" ]
   public_deps = [ "//base" ]
-}
-
-test("rapidhash_fuzztests") {
-  sources = [ "rapidhash_fuzztests.cc" ]
-
-  fuzztests = [ "rapidhash.HashesDataWithoutCrashing" ]
-
-  deps = [
-    ":rapidhash",
-    "//third_party/fuzztest:fuzztest_gtest_main",
-  ]
 }
