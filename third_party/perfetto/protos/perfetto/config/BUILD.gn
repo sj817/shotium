@@ -57,6 +57,6 @@ perfetto_proto_library("@TYPE@") {
   ]
 
   generate_descriptor = "config.descriptor"
-  generator_visibility = [ "../../../src/proto_utils:gen_cc_config_descriptor" ]
+  generator_visibility = []
   descriptor_root_source = "trace_config.proto"
 }

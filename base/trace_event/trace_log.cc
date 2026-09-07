@@ -42,20 +42,6 @@
 #include "third_party/perfetto/protos/perfetto/config/interceptor_config.gen.h"
 #include "third_party/perfetto/protos/perfetto/trace/track_event/track_event.pbzero.h"
 
-#if BUILDFLAG(USE_PERFETTO_TRACE_PROCESSOR)
-#include <utility>
-
-#include "base/check_op.h"
-#include "base/compiler_specific.h"
-#include "base/functional/bind.h"
-#include "base/location.h"
-#include "base/memory/ref_counted_memory.h"
-#include "base/memory/scoped_refptr.h"
-#include "third_party/perfetto/include/perfetto/ext/trace_processor/export_json.h"  // nogncheck
-#include "third_party/perfetto/include/perfetto/trace_processor/basic_types.h"  // nogncheck
-#include "third_party/perfetto/include/perfetto/trace_processor/status.h"  // nogncheck
-#include "third_party/perfetto/include/perfetto/trace_processor/trace_processor_storage.h"  // nogncheck
-#endif
 
 namespace base::trace_event {
 
@@ -261,80 +247,6 @@ void AddTraceEventWithThreadIdAndTimestamps(
 
 }  // namespace
 
-#if BUILDFLAG(USE_PERFETTO_TRACE_PROCESSOR)
-namespace {
-// Perfetto provides us with a fully formed JSON trace file, while
-// TraceResultBuffer wants individual JSON fragments without a containing
-// object. We therefore need to strip away the outer object, including the
-// metadata fields, from the JSON stream.
-static constexpr char kJsonPrefix[] = "{\"traceEvents\":[\n";
-static constexpr char kJsonJoiner[] = ",\n";
-static constexpr char kJsonSuffix[] = "],\"metadata\":";
-}  // namespace
-
-class JsonStringOutputWriter
-    : public perfetto::trace_processor::json::OutputWriter {
- public:
-  JsonStringOutputWriter(scoped_refptr<SequencedTaskRunner> flush_task_runner,
-                         TraceLog::OutputCallback flush_callback)
-      : flush_task_runner_(flush_task_runner),
-        flush_callback_(std::move(flush_callback)) {
-    buffer_->as_string().reserve(kBufferReserveCapacity);
-  }
-
-  ~JsonStringOutputWriter() override { Flush(/*has_more=*/false); }
-
-  perfetto::trace_processor::util::Status AppendString(
-      const std::string& string) override {
-    if (!did_strip_prefix_) {
-      DCHECK_EQ(string, kJsonPrefix);
-      did_strip_prefix_ = true;
-      return perfetto::trace_processor::util::OkStatus();
-    } else if (buffer_->as_string().empty() &&
-               !UNSAFE_TODO(
-                   strncmp(string.c_str(), kJsonJoiner, strlen(kJsonJoiner)))) {
-      // We only remove the leading joiner comma for the first chunk in a buffer
-      // since the consumer is expected to insert commas between the buffers we
-      // provide.
-      buffer_->as_string() += string.substr(strlen(kJsonJoiner));
-    } else if (!UNSAFE_TODO(
-                   strncmp(string.c_str(), kJsonSuffix, strlen(kJsonSuffix)))) {
-      return perfetto::trace_processor::util::OkStatus();
-    } else {
-      buffer_->as_string() += string;
-    }
-    if (buffer_->as_string().size() > kBufferLimitInBytes) {
-      Flush(/*has_more=*/true);
-      // Reset the buffer_ after moving it above.
-      buffer_ = new RefCountedString();
-      buffer_->as_string().reserve(kBufferReserveCapacity);
-    }
-    return perfetto::trace_processor::util::OkStatus();
-  }
-
- private:
-  void Flush(bool has_more) {
-    if (flush_task_runner_) {
-      flush_task_runner_->PostTask(
-          FROM_HERE,
-          base::BindOnce(flush_callback_, std::move(buffer_), has_more));
-    } else {
-      flush_callback_.Run(std::move(buffer_), has_more);
-    }
-  }
-
-  static constexpr size_t kBufferLimitInBytes = 100 * 1024;
-  // Since we write each string before checking the limit, we'll always go
-  // slightly over and hence we reserve some extra space to avoid most
-  // reallocs.
-  static constexpr size_t kBufferReserveCapacity = kBufferLimitInBytes * 5 / 4;
-
-  scoped_refptr<SequencedTaskRunner> flush_task_runner_;
-  TraceLog::OutputCallback flush_callback_;
-  scoped_refptr<RefCountedString> buffer_ = new RefCountedString();
-  bool did_strip_prefix_ = false;
-};
-#endif  // BUILDFLAG(USE_PERFETTO_TRACE_PROCESSOR)
 
 // static
 TraceLog* TraceLog::GetInstance() {
@@ -521,90 +433,11 @@ void TraceLog::CancelTracing(const OutputCallback& cb) {
 void TraceLog::FlushInternal(const TraceLog::OutputCallback& cb,
                              bool use_worker_thread,
                              bool discard_events) {
-#if BUILDFLAG(USE_PERFETTO_TRACE_PROCESSOR)
-  TrackEvent::Flush();
-
-  if (!tracing_session_ || discard_events) {
-    tracing_session_.reset();
-    scoped_refptr<RefCountedString> empty_result = new RefCountedString;
-    cb.Run(empty_result, /*has_more_events=*/false);
-    return;
-  }
-
-  bool convert_to_json = true;
-  for (const auto& data_source : perfetto_config_.data_sources()) {
-    if (data_source.config().has_chrome_config() &&
-        data_source.config().chrome_config().has_convert_to_legacy_json()) {
-      convert_to_json =
-          data_source.config().chrome_config().convert_to_legacy_json();
-      break;
-    }
-  }
-
-  if (convert_to_json) {
-    perfetto::trace_processor::Config processor_config;
-    trace_processor_ =
-        perfetto::trace_processor::TraceProcessorStorage::CreateInstance(
-            processor_config);
-    json_output_writer_ = std::make_unique<JsonStringOutputWriter>(
-        use_worker_thread ? SingleThreadTaskRunner::GetCurrentDefault()
-                          : nullptr,
-        cb);
-  } else {
-    proto_output_callback_ = std::move(cb);
-  }
-
-  if (use_worker_thread) {
-    tracing_session_->ReadTrace(
-        [this](perfetto::TracingSession::ReadTraceCallbackArgs args) {
-          OnTraceData(args.data, args.size, args.has_more);
-        });
-  } else {
-    auto data = tracing_session_->ReadTraceBlocking();
-    OnTraceData(data.data(), data.size(), /*has_more=*/false);
-  }
-#else
   // Trace processor isn't enabled so we can't convert the resulting trace into
   // JSON.
   NOTREACHED() << "JSON tracing isn't supported";
-#endif  // BUILDFLAG(USE_PERFETTO_TRACE_PROCESSOR)
 }
 
-#if BUILDFLAG(USE_PERFETTO_TRACE_PROCESSOR)
-void TraceLog::OnTraceData(const char* data, size_t size, bool has_more) {
-  if (proto_output_callback_) {
-    scoped_refptr<RefCountedString> chunk = new RefCountedString();
-    if (size) {
-      chunk->as_string().assign(data, size);
-    }
-    proto_output_callback_.Run(std::move(chunk), has_more);
-    if (!has_more) {
-      proto_output_callback_.Reset();
-      tracing_session_.reset();
-    }
-    return;
-  }
-  if (size) {
-    auto data_copy = std::make_unique<uint8_t[]>(size);
-    UNSAFE_TODO(memcpy(&data_copy[0], data, size));
-    auto status = trace_processor_->Parse(std::move(data_copy), size);
-    DCHECK(status.ok()) << status.message();
-  }
-  if (has_more) {
-    return;
-  }
-
-  auto status = trace_processor_->NotifyEndOfFile();
-  DCHECK(status.ok()) << status.message();
-
-  status = perfetto::trace_processor::json::ExportJson(
-      trace_processor_.get(), json_output_writer_.get());
-  DCHECK(status.ok()) << status.message();
-  trace_processor_.reset();
-  tracing_session_.reset();
-  json_output_writer_.reset();
-}
-#endif  // BUILDFLAG(USE_PERFETTO_TRACE_PROCESSOR)
 
 }  // namespace base::trace_event
 

@@ -23,8 +23,7 @@ perfetto_proto_library("@TYPE@") {
   ]
   sources = [ "metrics.proto" ]
   generate_descriptor = "metrics.descriptor"
-  generator_visibility =
-      [ "../../../src/trace_processor/metrics:gen_cc_metrics_descriptor" ]
+  generator_visibility = []
   descriptor_root_source = "metrics.proto"
 }
 

@@ -22,7 +22,6 @@ import("test.gni")
 _base_unittests_targets = []
 _profiling_unittests_targets = []
 _tracing_unittests_targets = []
-_trace_processor_unittests_targets = []
 _misc_unittests_targets = []
 
 # We also generate a "perfetto_unittests" binary, that includes all the
@@ -50,10 +49,6 @@ if ((is_linux || is_android) && !perfetto_build_with_embedder) {
 
 if (enable_perfetto_tools) {
   _misc_unittests_targets += [ "src/tools:unittests" ]
-}
-
-if (enable_perfetto_protovm_compiler) {
-  _misc_unittests_targets += [ "src/protovm/compiler:unittests" ]
 }
 
 if (enable_perfetto_ipc) {
@@ -96,21 +91,6 @@ if (enable_perfetto_traced_perf) {
   _profiling_unittests_targets += [ "src/profiling/perf:producer_unittests" ]
 }
 
-if (enable_perfetto_trace_processor) {
-  _trace_processor_unittests_targets += [
-    "src/trace_processor:unittests",
-    "src/proto_utils:unittests",
-  ]
-
-  if (enable_perfetto_trace_processor_sqlite) {
-    _trace_processor_unittests_targets += [
-      "src/trace_processor/metrics:unittests",
-      "src/trace_processor/shell:unittests",
-      "src/trace_processor/trace_summary:unittests",
-    ]
-  }
-}
-
 if (enable_perfetto_traced_relay) {
   _tracing_unittests_targets += [ "src/traced_relay:unittests" ]
 }
@@ -120,9 +100,8 @@ if (enable_perfetto_android_java_sdk) {
       [ "src/android_sdk/perfetto_sdk_for_jni:unittests" ]
 }
 
-_trace_processor_unittests_targets += [ "src/trace_redaction:unittests" ]
-
-# This list MUST be defined in the end of the file, to concat all the updated sub-lists.
+# This list MUST be defined in the end of the file, to concat all the updated
+# sub-lists.
 _unittests_subset_binaries = [
   {
     name = "perfetto_base_unittests"
@@ -135,10 +114,6 @@ _unittests_subset_binaries = [
   {
     name = "perfetto_tracing_unittests"
     targets = _tracing_unittests_targets
-  },
-  {
-    name = "perfetto_trace_processor_unittests"
-    targets = _trace_processor_unittests_targets
   },
   {
     name = "perfetto_misc_unittests"
@@ -158,14 +133,16 @@ template("perfetto_generate_unittests") {
   foreach(subset, _unittests_subset_binaries) {
     # Generate subset test binaries only in standalone build
     if (perfetto_build_standalone) {
-      # In some build configurations "subset.targets" may be empty, so we skip it.
+      # In some build configurations "subset.targets" may be empty, so we skip
+      # it.
       if (subset.targets != []) {
         test(subset.name) {
           deps = subset.targets + _default_unittests_deps
         }
 
-        # Adding this subset binary as a dependency to "perfetto_unittests" automatically
-        # add it to the "all_targets" list as a transitive dependency.
+        # Adding this subset binary as a dependency to "perfetto_unittests"
+        # automatically add it to the "all_targets" list as a transitive
+        # dependency.
         _all_test_targets += [ ":${subset.name}" ]
       }
     }

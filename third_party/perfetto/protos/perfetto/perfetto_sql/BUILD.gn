@@ -18,6 +18,6 @@ import("../../../gn/proto_library.gni")
 perfetto_proto_library("@TYPE@") {
   sources = [ "structured_query.proto" ]
   generate_descriptor = "perfettosql.descriptor"
-  generator_visibility = [ "../../../src/trace_processor/perfetto_sql/generator:gen_cc_perfetto_sql_descriptor" ]
+  generator_visibility = []
   descriptor_root_source = "structured_query.proto"
 }

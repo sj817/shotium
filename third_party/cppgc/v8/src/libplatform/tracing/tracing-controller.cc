@@ -20,30 +20,11 @@
 #include "protos/perfetto/config/trace_config.gen.h"
 #include "protos/perfetto/config/track_event/track_event_config.gen.h"
 #endif  // V8_USE_PERFETTO_SDK
-#ifdef V8_USE_PERFETTO_JSON_EXPORT
-#include "perfetto/ext/trace_processor/export_json.h"
-#include "perfetto/trace_processor/trace_processor.h"
-#endif  // V8_USE_PERFETTO_JSON_EXPORT
 #include "src/base/platform/platform.h"
 #include "src/base/platform/semaphore.h"
 #include "src/libplatform/tracing/trace-event-listener.h"
 #endif  // V8_USE_PERFETTO
 
-#ifdef V8_USE_PERFETTO_JSON_EXPORT
-class JsonOutputWriter : public perfetto::trace_processor::json::OutputWriter {
- public:
-  explicit JsonOutputWriter(std::ostream* stream) : stream_(stream) {}
-
-  perfetto::trace_processor::util::Status AppendString(
-      const std::string& string) override {
-    *stream_ << string;
-    return perfetto::trace_processor::util::OkStatus();
-  }
-
- private:
-  std::ostream* stream_;
-};
-#endif  // V8_USE_PERFETTO_JSON_EXPORT
 
 namespace v8 {
 namespace platform {
@@ -189,12 +170,6 @@ void TracingController::StartTracing(TraceConfig* trace_config) {
   DCHECK_NOT_NULL(output_stream_);
   DCHECK(output_stream_->good());
 
-#ifdef V8_USE_PERFETTO_JSON_EXPORT
-  perfetto::trace_processor::Config processor_config;
-  trace_processor_ =
-      perfetto::trace_processor::TraceProcessorStorage::CreateInstance(
-          processor_config);
-#endif  // V8_USE_PERFETTO_JSON_EXPORT
 
   ::perfetto::TraceConfig perfetto_trace_config;
   perfetto_trace_config.add_buffers()->set_size_kb(4096);
@@ -240,19 +215,7 @@ void TracingController::StopTracing() {
 
   std::vector<char> trace = tracing_session_->ReadTraceBlocking();
 
-#ifdef V8_USE_PERFETTO_JSON_EXPORT
-  std::unique_ptr<uint8_t[]> trace_bytes(new uint8_t[trace.size()]);
-  std::copy(&trace[0], &trace[0] + trace.size(), &trace_bytes[0]);
-  trace_processor_->Parse(std::move(trace_bytes), trace.size());
-  trace_processor_->NotifyEndOfFile();
-  JsonOutputWriter output_writer(output_stream_);
-  auto status = perfetto::trace_processor::json::ExportJson(
-      trace_processor_.get(), &output_writer, nullptr, nullptr, nullptr);
-  DCHECK(status.ok());
-  trace_processor_.reset();
-#else
   output_stream_->write(&trace[0], trace.size());
-#endif  // V8_USE_PERFETTO_JSON_EXPORT
 
   if (listener_for_testing_) listener_for_testing_->ParseFromArray(trace);
 #else

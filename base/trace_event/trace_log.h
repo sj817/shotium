@@ -23,18 +23,10 @@
 #include "third_party/perfetto/include/perfetto/tracing/core/trace_config.h"  // IWYU pragma: keep
 #include "third_party/perfetto/include/perfetto/tracing/tracing.h"
 
-namespace perfetto {
-namespace trace_processor {
-class TraceProcessorStorage;
-}  // namespace trace_processor
-}  // namespace perfetto
-
 namespace base {
 class RefCountedString;
 
 namespace trace_event {
-
-class JsonStringOutputWriter;
 
 class BASE_EXPORT TraceLog {
  public:
@@ -93,20 +85,12 @@ class BASE_EXPORT TraceLog {
                      bool use_worker_thread,
                      bool discard_events);
 
-  void OnTraceData(const char* data, size_t size, bool has_more);
-
   // This lock protects TraceLog member accesses (except for members protected
   // by thread_info_lock_) from arbitrary threads.
   mutable Lock lock_;
 
   std::unique_ptr<perfetto::TracingSession> tracing_session_;
   perfetto::TraceConfig perfetto_config_;
-#if BUILDFLAG(USE_PERFETTO_TRACE_PROCESSOR)
-  std::unique_ptr<perfetto::trace_processor::TraceProcessorStorage>
-      trace_processor_;
-  std::unique_ptr<JsonStringOutputWriter> json_output_writer_;
-  OutputCallback proto_output_callback_;
-#endif  // BUILDFLAG(USE_PERFETTO_TRACE_PROCESSOR)
 };
 
 }  // namespace trace_event

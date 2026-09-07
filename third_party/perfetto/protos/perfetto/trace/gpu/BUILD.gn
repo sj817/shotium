@@ -30,7 +30,7 @@ perfetto_proto_library("@TYPE@") {
 perfetto_proto_library("gpu_track_event_@TYPE@") {
   sources = [ "gpu_track_event.proto" ]
   public_deps = [ "../track_event:@TYPE@" ]
-  generator_visibility = [ "../../../../src/trace_processor/importers/proto:gen_cc_gpu_track_event_descriptor" ]
+  generator_visibility = []
   generate_descriptor = "gpu_track_event.descriptor"
   descriptor_root_source = "gpu_track_event.proto"
 
@@ -44,7 +44,7 @@ perfetto_proto_library("gpu_interned_data_@TYPE@") {
   sources = [ "gpu_interned_data.proto" ]
   deps = [ ":@TYPE@" ]
   public_deps = [ "../interned_data:@TYPE@" ]
-  generator_visibility = [ "../../../../src/trace_processor/importers/proto:gen_cc_gpu_interned_data_descriptor" ]
+  generator_visibility = []
   generate_descriptor = "gpu_interned_data.descriptor"
   descriptor_root_source = "gpu_interned_data.proto"
 

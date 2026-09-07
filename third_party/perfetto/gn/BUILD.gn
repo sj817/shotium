@@ -234,13 +234,11 @@ group("gtest_main") {
 protobuf_full_deps_allowlist = [
   "../buildtools/grpc:*",
   "../src/ipc/protoc_plugin:*",
-  "../src/tools:tracing_proto_extensions_lib",
+
   "../src/protozero/protoc_plugin:*",
   "../src/protozero:multifile_error_collector",
   "../src/protozero/filtering:filter_util",
-  "../src/trace_processor:trace_processor_shell_lib",
-  "../src/trace_processor/shell:*",
-  "../src/protovm/compiler:*",
+
   "../tools/*",
   "../src/tools/*",
   "../contrib/rust-sdk/tools/*",
@@ -383,7 +381,7 @@ if (enable_perfetto_trace_processor_sqlite) {
       if (build_with_chromium) {
         public_deps = [ "//third_party/sqlite:sqlite_dev" ]
       } else {
-        public_deps = [ "//third_party/sqlite:sqlite" ]
+        public_deps = [ "//third_party/sqlite" ]
       }
       public_configs = [ ":sqlite_third_party_include_path" ]
     }
@@ -403,7 +401,7 @@ if (enable_perfetto_trace_processor_mac_instruments) {
     if (perfetto_root_path == "//") {
       public_deps = [ "//buildtools:expat" ]
     } else {
-      public_deps = [ "//third_party/expat:expat" ]
+      public_deps = [ "//third_party/expat" ]
     }
   }
 }
@@ -516,7 +514,7 @@ perfetto_android_library("error_prone_annotations") {
 
 if (enable_perfetto_etm_importer) {
   group("open_csd") {
-    visibility = [ "//src/trace_processor/importers/etm" ]
+    visibility = []
     public_deps = [ "//buildtools:open_csd" ]
   }
 }
@@ -536,8 +534,8 @@ if (enable_perfetto_re2) {
     if (perfetto_root_path == "//") {
       public_deps = [ "//buildtools:re2" ]
     } else {
-      # This part will be overridden by the various build generators (Android.bp,
-      # Bazel) to point to the right path.
+      # This part will be overridden by the various build generators
+      # (Android.bp, Bazel) to point to the right path.
       public_deps = [ "//third_party/re2" ]
     }
   }

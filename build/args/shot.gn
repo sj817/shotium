@@ -64,23 +64,7 @@ shot_jumbo_excluded_dirs = [
 # effect" error.
 icu_use_data_file = false
 
-# base::TraceLog's protobuf-to-legacy-JSON converter. This is perfetto's trace
-# processor -- a SQLite-backed query engine for trace files -- and it is in
-# base only so that a tracing session can be handed back as legacy JSON.
-#
-# Same reasoning as the codec args above: the code in trace_log.cc that builds
-# a TraceProcessorStorage, parses into it and calls json::ExportJson() is
-# already inside BUILDFLAG(USE_PERFETTO_TRACE_PROCESSOR), so turning the arg
-# off is the supported way to build without it rather than editing trace_log.cc
-# around the parts we cannot link. It supplied five of the binary's undefined
-# symbols and, had it linked, a query engine's worth of bytes.
-#
-# Tracing itself is unaffected: the proto path is untouched, and shot starts no
-# tracing session in the first place.
-use_perfetto_trace_processor = false
-
-# Chromium's flag only removes its wrapper. Perfetto defaults its own offline
-# SQL processor on in Chromium builds, so disable the upstream product too.
+# The standalone Perfetto offline trace processor is not part of shotium.
 enable_perfetto_trace_processor = false
 enable_perfetto_unittests = false
 
