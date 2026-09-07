@@ -31,7 +31,7 @@
 #include "third_party/blink/renderer/core/core_export.h"
 #include "third_party/blink/renderer/core/dom/create_element_flags.h"
 #include "third_party/blink/renderer/core/frame/local_frame_view.h"
-#include "third_party/blink/renderer/core/html/canvas/image_element_base.h"
+#include "third_party/blink/renderer/core/html/image_element_base.h"
 #include "third_party/blink/renderer/core/html/forms/form_associated.h"
 #include "third_party/blink/renderer/core/html/html_element.h"
 #include "third_party/blink/renderer/core/html/html_image_loader.h"
@@ -140,11 +140,6 @@ class CORE_EXPORT HTMLImageElement
   bool IsPrimaryContent() const;
 
   void SetAutoSizesUsecounter();
-
-  // CanvasImageSource interface implementation.
-  gfx::SizeF DefaultDestinationSize(
-      const gfx::SizeF&,
-      const RespectImageOrientationEnum) const override;
 
   // public so that HTMLPictureElement can call this as well.
   void SelectSourceURL(ImageLoader::UpdateFromElementBehavior behavior =

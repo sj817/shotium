@@ -128,6 +128,7 @@ xargs -a /tmp/ours.txt git log --oneline $OLD..$NEW --
 
 | 文件 | 分歧 | 为什么不能用别的办法 |
 |---|---|---|
+| `HTMLCanvasElement` / `ImageElementBase` / Blink graphics | 删除 Web Canvas 绘图上下文、资源 provider、GPU bitmap 和脚本绘图值类型；普通图片基类迁到 `core/html`，标签保留备用内容与属性宽高比 | 没有 JS 或原生绘图调用方，但标签静态布局影响截图；176 张删除前后像素对照一致，不能把标签改成普通元素或恢复整套绘图系统 |
 | `preload_helper.cc` / `document_init.cc` / Blink MIME registry | 删除无播放器的 audio/video preload 与媒体文档探测；普通非图片 MIME 分类仍保留原容器集合 | 引擎没有解复用、解码或播放入口，不应为播放能力保留整套 media 类型、线程与缓存依赖；视频 poster 仍走图片加载与绘制 |
 | `third_party/blink/renderer/platform/graphics/parkable_image.cc` | `kDelayParkingImages` 默认关(上游开) | 这个二进制不注册 FeatureList,`IsEnabled` 一律回落到编译期默认值;`FeatureList::SetInstance` 又 CHECK「之前没有任何 feature 被读过」,而引擎起来之前 //base、//net、mojo 都已经读过自己的了。默认值就是唯一的开关。见 `shot/shot_renderer.h` 的 `ParkImagesEnabled` |
 | `cc/paint/draw_looper.h` / `.cc` | 加了 `DrawLooper::MaxOutset()` | 纯新增,上游没有对应物;条带光栅要知道 looper 画出多远,而 `SkPaint` 里没有 looper,`computeFastBounds` 问不出来 |

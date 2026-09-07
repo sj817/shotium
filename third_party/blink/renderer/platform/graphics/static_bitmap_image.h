@@ -8,19 +8,10 @@
 #include "base/byte_size.h"
 #include "base/notreached.h"
 #include "components/viz/common/resources/shared_image_format_utils.h"
-#include "gpu/command_buffer/client/client_shared_image.h"
-#include "gpu/command_buffer/common/shared_image_usage.h"
 #include "third_party/blink/renderer/platform/graphics/image.h"
 #include "third_party/blink/renderer/platform/wtf/casting.h"
-#include "third_party/khronos/GLES2/gl2.h"
 #include "third_party/skia/include/core/SkRefCnt.h"
 #include "ui/gfx/hdr_metadata.h"
-
-namespace gpu {
-namespace gles2 {
-class GLES2Interface;
-}
-}  // namespace gpu
 
 namespace blink {
 
@@ -57,32 +48,6 @@ class PLATFORM_EXPORT StaticBitmapImage : public Image {
   // Creates a non-gpu copy of the image, or returns this if image is already
   // non-gpu.
   virtual scoped_refptr<StaticBitmapImage> MakeUnaccelerated() { return this; }
-
-  // Methods overridden by AcceleratedStaticBitmapImage only
-  // Assumes the destination texture has already been allocated.
-  // `src_rect` is always in top-left coordinate space.
-  virtual bool CopyToTexture(gpu::gles2::GLES2Interface* dest_gl,
-                             GLenum dest_target,
-                             GLuint dest_texture_id,
-                             GLint dest_level,
-                             SkAlphaType dest_alpha_type,
-                             GrSurfaceOrigin destination_origin,
-                             const gfx::Point& dest_point,
-                             const gfx::Rect& src_rect) {
-    NOTREACHED();
-  }
-
-  virtual void EnsureSyncTokenVerified() { NOTREACHED(); }
-  virtual scoped_refptr<gpu::ClientSharedImage> GetSharedImage() const {
-    NOTREACHED();
-  }
-  virtual gpu::SyncToken GetSyncToken() const {
-    NOTREACHED();
-  }
-  virtual void UpdateSyncToken(const gpu::SyncToken&) { NOTREACHED(); }
-  virtual void UpdateSyncTokenFromExportResult(gpu::SharedImageExportResult) {
-    NOTREACHED();
-  }
 
   bool IsPremultiplied() const {
     return GetAlphaType() == SkAlphaType::kPremul_SkAlphaType;
@@ -135,10 +100,7 @@ class PLATFORM_EXPORT StaticBitmapImage : public Image {
   // the image data.
   ImageOrientation orientation_ = ImageOrientationEnum::kDefault;
 
-  // The following property is here because the SkImage API doesn't expose the
-  // info. It is applied to both UnacceleratedStaticBitmapImage and
-  // AcceleratedStaticBitmapImage. To change this property, the call site would
-  // have to call SetOriginClean().
+  // SkImage does not carry the web resource security origin.
   bool is_origin_clean_ = true;
 };
 

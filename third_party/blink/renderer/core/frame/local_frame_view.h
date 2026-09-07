@@ -457,10 +457,8 @@ class CORE_EXPORT LocalFrameView final
   // Called just before the impl commit. This runs post-lifecycle steps
   // immediately if they are required to happen before the commit (e.g.
   // canvas.onpaint).
-  void WillCommit();
   // Called after the main frame is complete. If post-lifecycle steps have not
   // run yet, they will execute here.
-  void DidBeginMainFrame();
   bool InvalidationDisallowed() const;
 
   void ScheduleVisualUpdateForVisualOverflowIfNeeded();
@@ -832,8 +830,6 @@ class CORE_EXPORT LocalFrameView final
   void NotifyVideoIsDominantVisibleStatus(HTMLVideoElement* element,
                                           bool is_dominant);
 
-  void DidPaintCanvasChild(HTMLCanvasElement& canvas, Element& child);
-  void RequestCanvasOnpaint(HTMLCanvasElement&, Element* child = nullptr);
 
   scoped_refptr<const cc::AnimatedImageFrameIndexMap>
   GetAnimatedImageFrameIndexes() const;
@@ -1142,7 +1138,6 @@ class CORE_EXPORT LocalFrameView final
 
   void UpdateCanCompositeBackgroundAttachmentFixed();
 
-  void RunCanvasOnpaintSteps();
 
   typedef HeapHashSet<Member<LayoutEmbeddedContent>> EmbeddedContentSet;
   EmbeddedContentSet part_update_set_;
@@ -1312,16 +1307,6 @@ class CORE_EXPORT LocalFrameView final
 
   HeapHashSet<WeakMember<LifecycleNotificationObserver>> lifecycle_observers_;
 
-  // Map of canvas elements which need onpaint. The value is a set of children
-  // of the <canvas> which painted during the current paint lifecycle update.
-  // The set of children may be empty if the onpaint event has been requested
-  // with `requestPaint`. This map is cleared at the end of the lifecycle
-  // update.
-  using CanvasOnpaintMap =
-      HeapHashMap<Member<HTMLCanvasElement>,
-                  Member<GCedHeapLinkedHashSet<Member<Element>>>>;
-  CanvasOnpaintMap canvas_elements_needing_onpaint_;
-  bool did_run_post_lifecycle_steps_before_commit_ = false;
   scoped_refptr<const cc::AnimatedImageFrameIndexMap>
       animated_image_frame_indexes_;
 

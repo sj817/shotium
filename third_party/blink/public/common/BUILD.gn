@@ -107,7 +107,6 @@ source_set("headers") {
     "//components/*",
     "//fuchsia/*",
     "//services/*",
-    "//storage/*",
     "//third_party/blink/*",
   ]
 

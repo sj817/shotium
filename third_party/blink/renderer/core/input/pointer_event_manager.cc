@@ -16,7 +16,6 @@
 #include "third_party/blink/renderer/core/frame/local_dom_window.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
 #include "third_party/blink/renderer/core/frame/local_frame_view.h"
-#include "third_party/blink/renderer/core/html/canvas/html_canvas_element.h"
 #include "third_party/blink/renderer/core/html/html_dialog_element.h"
 #include "third_party/blink/renderer/core/input/event_handler.h"
 #include "third_party/blink/renderer/core/input/event_handling_util.h"
@@ -204,14 +203,6 @@ WebInputEventResult PointerEventManager::DispatchPointerEvent(
   if (should_filter &&
       !HasPointerEventListener(frame_->GetEventHandlerRegistry()))
     return WebInputEventResult::kNotHandled;
-
-  if (event_type == event_type_names::kPointerdown) {
-    auto* html_canvas_element = DynamicTo<HTMLCanvasElement>(target->ToNode());
-    if (html_canvas_element &&
-        html_canvas_element->NeedsUnbufferedInputEvents()) {
-      frame_->GetChromeClient().RequestUnbufferedInputEvents(frame_);
-    }
-  }
 
   bool listeners_exist =
       !check_for_listener || target->HasEventListeners(event_type);

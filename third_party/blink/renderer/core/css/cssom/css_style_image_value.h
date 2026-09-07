@@ -9,14 +9,13 @@
 
 #include "third_party/blink/renderer/core/core_export.h"
 #include "third_party/blink/renderer/core/css/cssom/css_resource_value.h"
-#include "third_party/blink/renderer/core/html/canvas/canvas_image_source.h"
+#include "ui/gfx/geometry/size.h"
 
 namespace blink {
 
 // CSSStyleImageValue is the base class for Typed OM representations of images.
 // The corresponding idl file is CSSImageValue.idl.
-class CORE_EXPORT CSSStyleImageValue : public CSSResourceValue,
-                                       public CanvasImageSource {
+class CORE_EXPORT CSSStyleImageValue : public CSSResourceValue {
   DEFINE_WRAPPERTYPEINFO();
 
  public:
@@ -28,11 +27,6 @@ class CORE_EXPORT CSSStyleImageValue : public CSSResourceValue,
   double intrinsicWidth(bool& is_null) const;
   double intrinsicHeight(bool& is_null) const;
   double intrinsicRatio(bool& is_null) const;
-
-  // CanvasImageSource
-  bool WouldTaintOrigin() const final { return true; }
-  gfx::SizeF ElementSize(const gfx::SizeF& default_object_size,
-                         const RespectImageOrientationEnum) const final;
 
  protected:
   CSSStyleImageValue() = default;

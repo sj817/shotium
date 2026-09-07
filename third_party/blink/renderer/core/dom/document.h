@@ -159,7 +159,6 @@ class CaretPosition;
 class CaretPositionFromPointOptions;
 class CDATASection;
 class CSSStyleSheet;
-class CanvasFontCache;
 class CharacterData;
 class CheckPseudoHasCacheScope;
 class ChromeClient;
@@ -1801,7 +1800,6 @@ class CORE_EXPORT Document : public ContainerNode,
   }
   bool InPseudoHasChecking() const { return in_pseudo_has_checking_; }
 
-  CanvasFontCache* GetCanvasFontCache();
 
   // Used by unit tests so that all parsing will be synchronous for
   // controlling parsing and chunking precisely.
@@ -1916,8 +1914,6 @@ class CORE_EXPORT Document : public ContainerNode,
 
   LazyLoadMediaObserver& EnsureLazyLoadMediaObserver();
 
-  void IncrementNumberOfCanvases();
-  unsigned GetNumberOfCanvases() const { return num_canvases_; }
 
   DisplayLockDocumentState& GetDisplayLockDocumentState() const;
 
@@ -2980,7 +2976,6 @@ class CORE_EXPORT Document : public ContainerNode,
 
   ParserSynchronizationPolicy parser_sync_policy_ = kAllowDeferredParsing;
 
-  Member<CanvasFontCache> canvas_font_cache_;
 
   Member<IntersectionObserverController> intersection_observer_controller_;
 
@@ -3016,7 +3011,6 @@ class CORE_EXPORT Document : public ContainerNode,
   bool is_vertical_scroll_enforced_ = false;
 
   // The number of canvas elements on the document
-  unsigned num_canvases_ = 0;
 
   bool deferred_compositor_commit_is_allowed_ = false;
 

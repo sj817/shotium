@@ -373,7 +373,6 @@ component("network_service") {
     "//services/network/public/mojom",
     "//services/network/public/proto",
     "//services/network/trust_tokens",
-    "//services/proxy_resolver/public/mojom",
     "//services/service_manager/public/cpp",
     "//services/service_manager/public/mojom",
     "//third_party/liburlpattern",
@@ -385,7 +384,6 @@ component("network_service") {
   if (is_linux || is_chromeos) {
     deps += [
       ":network_sandbox_hook",
-      "//sandbox/linux:sandbox_services",  # TODO(crbug.com/40220505): remove.
     ]
   }
 
@@ -412,7 +410,6 @@ component("network_service") {
   }
 
   if (is_win) {
-    deps += [ "//sandbox/win:sandbox" ]
   }
 
   defines = [ "IS_NETWORK_SERVICE_IMPL" ]
@@ -426,8 +423,6 @@ if (is_linux || is_chromeos) {
     ]
     deps = [
       "//base",
-      "//sandbox/linux:sandbox_services",
-      "//sandbox/policy",
     ]
     configs += [ "//build/config/compiler:wexit_time_destructors" ]
   }

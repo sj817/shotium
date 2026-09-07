@@ -1340,13 +1340,9 @@ LayoutBlockFlow* LayoutObject::FragmentItemsContainer() const {
 LayoutBox* LayoutObject::ContainingNGBox() const {
   NOT_DESTROYED();
   if (auto* parent = Parent()) {
-    // Media and Canvas elements may have children that participate
+    // Media elements may have children that participate
     // in layout with fragments that need invalidation after subtree layout.
     if (parent->IsMedia()) {
-      return To<LayoutBox>(parent);
-    }
-    if (parent->IsCanvas() && RuntimeEnabledFeatures::CanvasDrawElementEnabled(
-                                  GetDocument().GetExecutionContext())) {
       return To<LayoutBox>(parent);
     }
   }

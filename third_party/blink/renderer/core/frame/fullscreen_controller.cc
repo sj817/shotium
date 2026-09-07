@@ -81,48 +81,14 @@ mojom::blink::FullscreenOptionsPtr ToMojoOptions(
   return fullscreen_options;
 }
 
-bool IsCanvasOrHasCanvasChild(Node* root) {
-  if (!root) {
-    return false;
-  }
-  if (auto* canvas = DynamicTo<HTMLCanvasElement>(root)) {
-    return canvas->IsDisplayed();
-  }
-  for (Node* child = root->firstChild(); child; child = child->nextSibling()) {
-    if (IsCanvasOrHasCanvasChild(child)) {
-      return true;
-    }
-  }
-  return false;
-}
 
 bool ShouldRequestHighFramerate(Element* fullscreen_element,
                                 FullscreenRequestType request_type) {
-  // The heuristic is:
-  // - For XR, we assume that the user wants the highest possible refresh rate.
-  // - If a descendant of the fullscreen element is a canvas, this is an
-  //   indication that the user may be using a game, or a similar high-end
-  //   experience. This has false positives, for instance if the canvas element
-  //   is small. We prefer to err on the side of requesting high framerate more
-  //   often, rather than going into the intricacies of detecting the canvas
-  //   size (see below). Also, we do not revise the policy as long as the same
-  //   element is in the foreground.
-  //
-  // Note that there are still cases where we miss: for instance if your canvas
-  // is in another frame, or it is created after the outer <div> becomes
-  // fullscreen.
-  //
-  // An alternative implementation would be to use IntersectionObserver to tell
-  // whether a canvas element is "effectively fullscreen", the same way this is
-  // done for <video> tags. This was not selected here, to avoid adding runtime
-  // to many pages (as canvas is popular on the web). However, this does not
-  // catch an important use case: gaming not in fullscreen mode. For this one,
-  // there is separate detection of pointer lock.
   if (request_type == FullscreenRequestType::kForXrArWithCamera ||
       request_type == FullscreenRequestType::kForXrOverlay) {
     return true;
   }
-  return IsCanvasOrHasCanvasChild(fullscreen_element);
+  return false;
 }
 
 }  // namespace

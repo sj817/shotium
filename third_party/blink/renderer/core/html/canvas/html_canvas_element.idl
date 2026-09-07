@@ -24,30 +24,5 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-// https://html.spec.whatwg.org/C/canvas.html#htmlcanvaselement
-[
-    Exposed=Window
-] interface HTMLCanvasElement : HTMLElement
-{
-    [HTMLConstructor] constructor();
-    // Note: Due to dependencies on modules, getContext is defined in a partial
-    // interface in html_canvas_element_module.idl
-
-    [RaisesException=Setter, CEReactions] attribute unsigned long width;
-    [RaisesException=Setter, CEReactions] attribute unsigned long height;
-
-    [RuntimeEnabled=CanvasDrawElement] attribute boolean layoutSubtree;
-    [RuntimeEnabled=CanvasDrawElement] attribute EventHandler onpaint;
-    [RuntimeEnabled=CanvasDrawElement] void requestPaint();
-    [RuntimeEnabled=CanvasDrawElement, RaisesException] DOMMatrix getElementTransform((Element or ElementImage) element, DOMMatrix draw_transform);
-    [RuntimeEnabled=CanvasDrawElement, RaisesException] ElementImage captureElementImage(Element element);
-
-    [MeasureAs=CanvasToDataURL, RaisesException] DOMString toDataURL(optional DOMString type = "image/png", optional any quality);
-
-    [MeasureAs=CanvasToBlob, RaisesException] void toBlob(BlobCallback _callback, optional DOMString type = "image/png", optional any quality);
-
-    [RuntimeEnabled=CanvasHDR, RaisesException] void configureHighDynamicRange(CanvasHighDynamicRangeOptions options);
-};
-
-// https://html.spec.whatwg.org/C/#blobcallback
-callback BlobCallback = void (Blob? blob);
+// Only the static HTML element identity remains; there is no script API.
+[Exposed=Window] interface HTMLCanvasElement : HTMLElement {};

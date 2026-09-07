@@ -189,25 +189,6 @@ void HTMLVideoElement::RequestSaveVideoFrame() {
   }
 }
 
-scoped_refptr<Image> HTMLVideoElement::GetSourceImageForCanvas(
-    SourceImageStatus* status,
-    const gfx::SizeF&) {
-  scoped_refptr<Image> snapshot = CreateStaticBitmapImage();
-  if (!snapshot) {
-    *status = kInvalidSourceImageStatus;
-    return nullptr;
-  }
-
-  *status = kNormalSourceImageStatus;
-  return snapshot;
-}
-
-gfx::SizeF HTMLVideoElement::ElementSize(
-    const gfx::SizeF&,
-    const RespectImageOrientationEnum) const {
-  return gfx::SizeF(videoWidth(), videoHeight());
-}
-
 gfx::Size HTMLVideoElement::videoVisibleSize() const {
   return gfx::Size();
 }

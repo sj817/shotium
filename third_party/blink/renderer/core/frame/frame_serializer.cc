@@ -87,6 +87,7 @@
 #include "third_party/blink/renderer/core/layout/layout_object.h"
 #include "third_party/blink/renderer/core/loader/resource/font_resource.h"
 #include "third_party/blink/renderer/core/loader/resource/image_resource_content.h"
+#include "third_party/blink/renderer/platform/loader/fetch/resource_response.h"
 #include "third_party/blink/renderer/core/page/chrome_client.h"
 #include "third_party/blink/renderer/core/page/page.h"
 #include "third_party/blink/renderer/core/style/style_fetched_image.h"
@@ -1061,7 +1062,7 @@ function main(metadata) {
         if (cached_image) {
           resource_serializer_->AddImageToResources(
               cached_image,
-              document.CompleteURL(svg_image->SourceURL().GetString()));
+              cached_image->GetResponse().CurrentRequestUrl());
         }
       }
     } else if (const auto* input = DynamicTo<HTMLInputElement>(element)) {

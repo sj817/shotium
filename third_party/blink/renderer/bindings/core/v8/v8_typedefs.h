@@ -27,7 +27,6 @@
 #include "third_party/blink/renderer/bindings/core/v8/v8_union_double_string_timelinerangeoffset.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_union_file_formdata_usvstring.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_union_file_usvstring.h"
-#include "third_party/blink/renderer/bindings/core/v8/v8_union_float16array_float32array_uint8clampedarray.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_union_htmlscriptelement_svgscriptelement.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_union_sanitizerattributenamespace_string.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_union_sanitizerelementnamespace_string.h"
@@ -52,7 +51,6 @@ using V8CustomMediaQuery = V8UnionBooleanOrMediaList;
 using V8FormDataEntryValue = V8UnionFileOrUSVString;
 using V8GeometryNode = V8UnionCSSPseudoElementOrDocumentOrElementOrText;
 using V8HTMLOrSVGScriptElement = V8UnionHTMLScriptElementOrSVGScriptElement;
-using V8ImageDataArray = V8UnionFloat16ArrayOrFloat32ArrayOrUint8ClampedArray;
 using V8KeyframeOffset = V8UnionDoubleOrStringOrTimelineRangeOffset;
 using V8SanitizerAttribute = V8UnionSanitizerAttributeNamespaceOrString;
 using V8SanitizerElement = V8UnionSanitizerElementNamespaceOrString;

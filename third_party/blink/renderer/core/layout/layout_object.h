@@ -872,10 +872,6 @@ class CORE_EXPORT LayoutObject : public GarbageCollected<LayoutObject>,
     NOT_DESTROYED();
     return false;
   }
-  virtual bool IsCanvas() const {
-    NOT_DESTROYED();
-    return false;
-  }
   virtual bool IsCounter() const {
     NOT_DESTROYED();
     return false;

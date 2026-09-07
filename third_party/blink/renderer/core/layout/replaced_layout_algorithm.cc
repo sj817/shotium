@@ -26,10 +26,6 @@ const LayoutResult* ReplacedLayoutAlgorithm::Layout() {
 
   if (Node().IsMedia()) {
     LayoutMediaChildren();
-  } else if (Node().IsCanvas() &&
-             RuntimeEnabledFeatures::CanvasDrawElementEnabled(
-                 Node().GetDocument().GetExecutionContext())) {
-    LayoutCanvasChildren();
   } else if (Node().IsImageReplacement()) {
     LayoutImageReplacementChildren();
   }
@@ -42,30 +38,6 @@ MinMaxSizesResult ReplacedLayoutAlgorithm::ComputeMinMaxSizes(
   NOTREACHED();
 }
 
-// This is necessary for CanvasRenderingContext2D.drawElementImage().
-void ReplacedLayoutAlgorithm::LayoutCanvasChildren() {
-  for (LayoutInputNode child = Node().FirstChild(); child;
-       child = child.NextSibling()) {
-    DCHECK(!child.IsFloating());
-    DCHECK(!child.IsOutOfFlowPositioned());
-
-    ConstraintSpaceBuilder space_builder(GetConstraintSpace().GetWritingMode(),
-                                         child.Style().GetWritingDirection(),
-                                         /* is_new_fc= */ true);
-
-    space_builder.SetAvailableSize(ChildAvailableSize());
-    space_builder.SetPercentageResolutionSize(ChildAvailableSize());
-    space_builder.SetIsPaintedAtomically(true);
-
-    const LayoutResult* result =
-        To<BlockNode>(child).Layout(space_builder.ToConstraintSpace());
-    // Since this only works with drawElementImage(), we ignore relative
-    // placement and put the element at (0,0) because it will be drawn
-    // explicitly by the user.
-    container_builder_.AddResult(*result,
-                                 LogicalOffset(LayoutUnit(), LayoutUnit()));
-  }
-}
 
 void ReplacedLayoutAlgorithm::LayoutMediaChildren() {
   WritingModeConverter converter(GetConstraintSpace().GetWritingDirection(),

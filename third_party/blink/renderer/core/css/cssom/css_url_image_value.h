@@ -23,11 +23,7 @@ class CORE_EXPORT CSSURLImageValue final : public CSSStyleImageValue {
   // CSSStyleImageValue
   std::optional<gfx::Size> IntrinsicSize() const final;
 
-  // CanvasImageSource
   ResourceStatus Status() const final;
-  scoped_refptr<Image> GetSourceImageForCanvas(SourceImageStatus*,
-                                               const gfx::SizeF&) final;
-  bool IsAccelerated() const final;
 
   // CSSStyleValue
   StyleValueType GetType() const final { return kURLImageType; }
@@ -36,8 +32,6 @@ class CORE_EXPORT CSSURLImageValue final : public CSSStyleImageValue {
   void Trace(Visitor*) const override;
 
  private:
-  scoped_refptr<Image> GetImage() const;
-
   Member<const CSSImageValue> value_;
 };
 

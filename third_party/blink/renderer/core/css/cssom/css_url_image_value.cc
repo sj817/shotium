@@ -34,31 +34,6 @@ ResourceStatus CSSURLImageValue::Status() const {
   return value_->CachedImage()->CachedImage()->GetContentStatus();
 }
 
-scoped_refptr<Image> CSSURLImageValue::GetSourceImageForCanvas(
-    SourceImageStatus* status,
-    const gfx::SizeF&) {
-  scoped_refptr<Image> image = GetImage();
-  *status = image ? kNormalSourceImageStatus : kInvalidSourceImageStatus;
-  return image;
-}
-
-scoped_refptr<Image> CSSURLImageValue::GetImage() const {
-  if (value_->IsCachePending()) {
-    return nullptr;
-  }
-  // cachedImage can be null if image is StyleInvalidImage
-  ImageResourceContent* cached_image = value_->CachedImage()->CachedImage();
-  if (cached_image) {
-    // getImage() returns the nullImage() if the image is not available yet
-    return cached_image->GetImage()->ImageForDefaultFrame();
-  }
-  return nullptr;
-}
-
-bool CSSURLImageValue::IsAccelerated() const {
-  return GetImage() && GetImage()->IsTextureBacked();
-}
-
 const CSSValue* CSSURLImageValue::ToCSSValue() const {
   return value_.Get();
 }

@@ -56,16 +56,6 @@ constexpr EnvironmentParams kAudioPoolEnvironmentParams{
 constexpr EnvironmentParams kBackgroundPoolEnvironmentParams{
     "Background", base::ThreadType::kBackground};
 
-// Used for ThreadGroupProfiler to tag profiles collected for different thread
-// groups.
-enum ThreadGroupType {
-  FOREGROUND = 0,
-  UTILITY,
-  BACKGROUND,
-  PRESENTATION,
-  AUDIO
-};
-
 constexpr size_t kMaxBestEffortTasks = 2;
 
 // Indicates whether BEST_EFFORT tasks are disabled by a command line switch.
@@ -108,7 +98,7 @@ ThreadPoolImpl::ThreadPoolImpl(
                 "."),
       kForegroundPoolEnvironmentParams.name_suffix,
       kForegroundPoolEnvironmentParams.thread_type_hint,
-      ThreadGroupType::FOREGROUND, task_tracker_->GetTrackedRef(),
+      task_tracker_->GetTrackedRef(),
       tracked_ref_factory_.GetTrackedRef(), monitor_worker_thread_priorities,
       record_lock_contention);
 
@@ -123,7 +113,7 @@ ThreadPoolImpl::ThreadPoolImpl(
         use_background_threads
             ? kBackgroundPoolEnvironmentParams.thread_type_hint
             : kForegroundPoolEnvironmentParams.thread_type_hint,
-        ThreadGroupType::BACKGROUND, task_tracker_->GetTrackedRef(),
+        task_tracker_->GetTrackedRef(),
         tracked_ref_factory_.GetTrackedRef(), monitor_worker_thread_priorities,
         record_lock_contention);
   }
@@ -180,7 +170,7 @@ void ThreadPoolImpl::Start(const ThreadPoolInstance::InitParams& init_params,
                   "."),
         kUtilityPoolEnvironmentParams.name_suffix,
         kUtilityPoolEnvironmentParams.thread_type_hint,
-        ThreadGroupType::UTILITY, task_tracker_->GetTrackedRef(),
+        task_tracker_->GetTrackedRef(),
         tracked_ref_factory_.GetTrackedRef());
     foreground_thread_group_
         ->HandoffTaskSourcesToOtherThreadGroupAtMostThreadType(
@@ -194,8 +184,7 @@ void ThreadPoolImpl::Start(const ThreadPoolInstance::InitParams& init_params,
                   {histogram_label_, kAudioPoolEnvironmentParams.name_suffix},
                   "."),
         kAudioPoolEnvironmentParams.name_suffix,
-        kAudioPoolEnvironmentParams.thread_type_hint, ThreadGroupType::AUDIO,
-        task_tracker_->GetTrackedRef(), tracked_ref_factory_.GetTrackedRef());
+        kAudioPoolEnvironmentParams.thread_type_hint, task_tracker_->GetTrackedRef(), tracked_ref_factory_.GetTrackedRef());
     presentation_thread_group_ = std::make_unique<ThreadGroupImpl>(
         histogram_label_.empty()
             ? std::string()
@@ -204,7 +193,7 @@ void ThreadPoolImpl::Start(const ThreadPoolInstance::InitParams& init_params,
                          "."),
         kPresentationPoolEnvironmentParams.name_suffix,
         kPresentationPoolEnvironmentParams.thread_type_hint,
-        ThreadGroupType::PRESENTATION, task_tracker_->GetTrackedRef(),
+        task_tracker_->GetTrackedRef(),
         tracked_ref_factory_.GetTrackedRef());
 
     foreground_thread_group_
@@ -444,8 +433,6 @@ void ThreadPoolImpl::Shutdown() {
 
   // Ensures that there are enough background worker to run BLOCK_SHUTDOWN
   // tasks.
-  // Shutdown must happen after service thread STOP as ThreadGroupProfiler
-  // destructor expects exclusive access to the instance during destruction.
   foreground_thread_group_->OnShutdownStarted();
   if (utility_thread_group_) {
     utility_thread_group_->OnShutdownStarted();

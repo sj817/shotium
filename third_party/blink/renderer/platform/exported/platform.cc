@@ -44,7 +44,6 @@
 #include "third_party/blink/public/common/thread_safe_browser_interface_broker_proxy.h"
 #include "third_party/blink/public/platform/scheduler/web_thread_scheduler.h"
 #include "third_party/blink/public/platform/web_dedicated_worker_host_factory_client.h"
-#include "third_party/blink/public/platform/web_graphics_context_3d_provider.h"
 #include "third_party/blink/renderer/platform/bindings/parkable_string_manager.h"
 #include "third_party/blink/renderer/platform/font_family_names.h"
 #include "third_party/blink/renderer/platform/geometry/length.h"
@@ -267,31 +266,9 @@ Platform::CompositorThreadTaskRunner() {
   return nullptr;
 }
 
-std::unique_ptr<WebGraphicsContext3DProvider>
-Platform::CreateWebGLGraphicsContextProvider(
-    bool prefer_low_power_gpu,
-    bool fail_if_major_performance_caveat,
-    WebGLContextType context_type,
-    const WebURL& document_url,
-    WebGLContextInfo*) {
-  return nullptr;
-}
 
-std::unique_ptr<WebGraphicsContext3DProvider>
-Platform::CreateRasterGraphicsContextProvider(const WebURL& document_url,
-                                              RasterContextType context_type) {
-  return nullptr;
-}
 
-std::unique_ptr<WebGraphicsContext3DProvider>
-Platform::CreateSharedOffscreenGraphicsContext3DProvider() {
-  return nullptr;
-}
 
-scoped_refptr<viz::RasterContextProvider>
-Platform::SharedMainThreadContextProvider() {
-  return nullptr;
-}
 
 scoped_refptr<viz::RasterContextProvider>
 Platform::SharedCompositorWorkerContextProvider(
@@ -299,11 +276,6 @@ Platform::SharedCompositorWorkerContextProvider(
   return nullptr;
 }
 
-void Platform::SharedMediaContextProvider(
-    base::OnceCallback<void(scoped_refptr<viz::RasterContextProvider>)>
-        callback) {
-  std::move(callback).Run(nullptr);
-}
 
 scoped_refptr<gpu::GpuChannelHost> Platform::EstablishGpuChannelSync() {
   return nullptr;

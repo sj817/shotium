@@ -96,7 +96,6 @@
 #include "third_party/blink/renderer/core/fullscreen/fullscreen.h"
 #include "third_party/blink/renderer/core/highlight/highlight_registry.h"
 #include "third_party/blink/renderer/core/html/anchor_element_viewport_position_tracker.h"
-#include "third_party/blink/renderer/core/html/canvas/canvas_paint_event.h"
 #include "third_party/blink/renderer/core/html/canvas/html_canvas_element.h"
 #include "third_party/blink/renderer/core/html/forms/text_control_element.h"
 #include "third_party/blink/renderer/core/html/html_embed_element.h"
@@ -206,32 +205,6 @@
 namespace blink {
 namespace {
 
-std::optional<cc::PaintRecord> GetCanvasSnapshot(DOMNodeId id) {
-  if (auto* nested_canvas =
-          DynamicTo<HTMLCanvasElement>(DOMNodeIds::NodeForId(id))) {
-    if (!nested_canvas->OriginClean() || !nested_canvas->GetLayoutObject()) {
-      return cc::PaintRecord();
-    }
-    if (scoped_refptr<StaticBitmapImage> snapshot =
-            nested_canvas->Snapshot(kFrontBuffer)) {
-      PaintRecordBuilder builder;
-      gfx::RectF dest_rect(gfx::SizeF(nested_canvas->Size()));
-      gfx::RectF src_rect(gfx::SizeF(nested_canvas->Size()));
-      {
-        DrawingRecorder recorder(
-            builder.Context(), *nested_canvas->GetLayoutObject(),
-            DisplayItem::kDocumentBackground, gfx::Rect(nested_canvas->Size()));
-        builder.Context().DrawImage(*snapshot, Image::kSyncDecode,
-                                    ImageAutoDarkMode::Disabled(),
-                                    ImagePaintTimingInfo(), dest_rect,
-                                    &src_rect, SkBlendMode::kSrcOver);
-      }
-      return builder.EndRecording();
-    }
-    return cc::PaintRecord();
-  }
-  return std::nullopt;
-}
 
 // Logs a UseCounter for the size of the cursor that will be set. This will be
 // used for compatibility analysis to determine whether the maximum size can be
@@ -365,7 +338,6 @@ void LocalFrameView::Trace(Visitor* visitor) const {
   visitor->Trace(paint_artifact_compositor_);
   visitor->Trace(layout_shift_tracker_);
   visitor->Trace(lifecycle_observers_);
-  visitor->Trace(canvas_elements_needing_onpaint_);
   visitor->Trace(fullscreen_video_elements_);
   visitor->Trace(pending_transform_updates_);
   visitor->Trace(pending_opacity_updates_);
@@ -968,37 +940,6 @@ bool LocalFrameView::InvalidationDisallowed() const {
   return GetFrame().LocalFrameRoot().View()->invalidation_disallowed_;
 }
 
-void LocalFrameView::WillCommit() {
-  bool needs_post_lifecycle_steps_before_commit = false;
-  if (RuntimeEnabledFeatures::CanvasDrawElementEnabled(
-          GetFrame().GetDocument()->GetExecutionContext())) {
-    ForAllNonThrottledLocalFrameViews(
-        [&needs_post_lifecycle_steps_before_commit](
-            LocalFrameView& frame_view) -> bool {
-          if (!needs_post_lifecycle_steps_before_commit &&
-              frame_view.canvas_elements_needing_onpaint_.empty()) {
-            // Keep traversing
-            return true;
-          }
-          needs_post_lifecycle_steps_before_commit = true;
-          // Stop traversing
-          return false;
-        });
-  }
-
-  if (needs_post_lifecycle_steps_before_commit) {
-    RunPostLifecycleSteps();
-    did_run_post_lifecycle_steps_before_commit_ = true;
-  }
-}
-
-void LocalFrameView::DidBeginMainFrame() {
-  if (!did_run_post_lifecycle_steps_before_commit_) {
-    RunPostLifecycleSteps();
-  }
-  did_run_post_lifecycle_steps_before_commit_ = false;
-}
-
 void LocalFrameView::RunPostLifecycleSteps() {
   {
     InvalidationDisallowedScope invalidation_disallowed(*this);
@@ -1020,47 +961,6 @@ void LocalFrameView::RunPostLifecycleSteps() {
     });
   }
 
-  RunCanvasOnpaintSteps();
-}
-
-void LocalFrameView::RunCanvasOnpaintSteps() {
-  if (!RuntimeEnabledFeatures::CanvasDrawElementEnabled(
-          GetFrame().GetDocument()->GetExecutionContext())) {
-    return;
-  }
-
-  ForAllNonThrottledLocalFrameViews([](LocalFrameView& frame_view) {
-    if (frame_view.canvas_elements_needing_onpaint_.empty()) {
-      return;
-    }
-    CanvasOnpaintMap canvas_elements_needing_onpaint;
-    canvas_elements_needing_onpaint.swap(
-        frame_view.canvas_elements_needing_onpaint_);
-
-    // Sort canvases in reverse shadow-including tree order so that descendant
-    // <canvas> elements fire `paint` events before their ancestors.
-    HeapVector<Member<HTMLCanvasElement>> sorted_canvases;
-    sorted_canvases.reserve(canvas_elements_needing_onpaint.size());
-    for (const auto& entry : canvas_elements_needing_onpaint) {
-      sorted_canvases.push_back(entry.key);
-    }
-    std::sort(sorted_canvases.begin(), sorted_canvases.end(),
-              [](const Member<HTMLCanvasElement>& a,
-                 const Member<HTMLCanvasElement>& b) {
-                return b->compareDocumentPosition(
-                           a, Node::kTreatShadowTreesAsComposed) &
-                       Node::kDocumentPositionFollowing;
-              });
-
-    for (const auto& canvas : sorted_canvases) {
-      auto* value = canvas_elements_needing_onpaint.at(canvas);
-      const HeapVector<Member<Element>> children(*value);
-      CanvasPaintEventInit* init = CanvasPaintEventInit::Create();
-      init->setChangedElements(std::move(children));
-      canvas->DispatchEvent(
-          *CanvasPaintEvent::Create(event_type_names::kPaint, init));
-    }
-  });
 }
 
 void LocalFrameView::RunIntersectionObserverSteps() {
@@ -3163,8 +3063,6 @@ void LocalFrameView::PushPaintArtifactToCompositor(bool repainted) {
   if (!paint_artifact_compositor_) {
     paint_artifact_compositor_ = MakeGarbageCollected<PaintArtifactCompositor>(
         page->GetScrollingCoordinator()->GetScrollCallbacks());
-    paint_artifact_compositor_->SetGetCanvasSnapshotCallback(
-        blink::BindRepeating(&GetCanvasSnapshot));
     page->GetChromeClient().AttachRootLayer(
         paint_artifact_compositor_->RootLayer(), &GetFrame());
   }
@@ -5027,35 +4925,6 @@ void LocalFrameView::NotifyVideoIsDominantVisibleStatus(
 
 bool LocalFrameView::HasDominantVideoElement() const {
   return !fullscreen_video_elements_.empty();
-}
-
-void LocalFrameView::DidPaintCanvasChild(HTMLCanvasElement& canvas,
-                                         Element& child) {
-  DCHECK(RuntimeEnabledFeatures::CanvasDrawElementEnabled(
-      GetFrame().GetDocument()->GetExecutionContext()));
-  if (IsUpdatingLifecycle()) {
-    auto add_result = canvas_elements_needing_onpaint_.insert(&canvas, nullptr);
-    if (add_result.is_new_entry) {
-      add_result.stored_value->value =
-          MakeGarbageCollected<GCedHeapLinkedHashSet<Member<Element>>>();
-    }
-    add_result.stored_value->value->insert(&child);
-  }
-}
-
-void LocalFrameView::RequestCanvasOnpaint(HTMLCanvasElement& canvas,
-                                          Element* child) {
-  DCHECK(RuntimeEnabledFeatures::CanvasDrawElementEnabled(
-      GetFrame().GetDocument()->GetExecutionContext()));
-  auto add_result = canvas_elements_needing_onpaint_.insert(&canvas, nullptr);
-  if (add_result.is_new_entry) {
-    add_result.stored_value->value =
-        MakeGarbageCollected<GCedHeapLinkedHashSet<Member<Element>>>();
-  }
-  if (child) {
-    add_result.stored_value->value->insert(child);
-  }
-  ScheduleAnimation();
 }
 
 scoped_refptr<const cc::AnimatedImageFrameIndexMap>

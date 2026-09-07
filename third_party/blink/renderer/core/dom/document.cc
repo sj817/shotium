@@ -221,7 +221,6 @@
 #include "third_party/blink/renderer/core/geometry/dom_point.h"
 #include "third_party/blink/renderer/core/geometry/dom_quad.h"
 #include "third_party/blink/renderer/core/html/anchor_element_metrics_sender.h"
-#include "third_party/blink/renderer/core/html/canvas/canvas_font_cache.h"
 #include "third_party/blink/renderer/core/html/collection_type.h"
 #include "third_party/blink/renderer/core/html/custom/custom_element.h"
 #include "third_party/blink/renderer/core/html/custom/custom_element_definition.h"
@@ -2284,8 +2283,6 @@ void Document::DidChangeVisibilityState() {
   if (IsPageVisible())
     GetDocumentAnimations().MarkAnimationsCompositorPending();
 
-  if (hidden() && canvas_font_cache_)
-    canvas_font_cache_->PruneAll();
 
   InteractiveDetector* interactive_detector = InteractiveDetector::From(*this);
   if (interactive_detector) {
@@ -3267,8 +3264,6 @@ void Document::Shutdown() {
   // easy to accidentally violate this condition, and the ordering of the
   // scopers above is subtle due to legacy interactions with plugins.
 
-  if (num_canvases_ > 0)
-    UMA_HISTOGRAM_COUNTS_100("Blink.Canvas.NumCanvasesPerPage", num_canvases_);
 
   GetViewportData().Shutdown();
 
@@ -3431,12 +3426,6 @@ void Document::RemoveAllEventListeners() {
 // screenshot has no accessibility tree, so this whole management surface
 // was removed along with AXContext/AXObjectCache themselves.
 
-CanvasFontCache* Document::GetCanvasFontCache() {
-  if (!canvas_font_cache_)
-    canvas_font_cache_ = MakeGarbageCollected<CanvasFontCache>(*this);
-
-  return canvas_font_cache_.Get();
-}
 
 DocumentParser* Document::CreateParser() {
   if (auto* html_document = DynamicTo<HTMLDocument>(this)) {
@@ -9009,7 +8998,6 @@ void Document::Trace(Visitor* visitor) const {
   visitor->Trace(worklet_animation_controller_);
   visitor->Trace(execution_context_);
   visitor->Trace(agent_);
-  visitor->Trace(canvas_font_cache_);
   visitor->Trace(intersection_observer_controller_);
   visitor->Trace(property_registry_);
   visitor->Trace(policy_);
@@ -9142,10 +9130,6 @@ LazyLoadMediaObserver& Document::EnsureLazyLoadMediaObserver() {
     lazy_load_media_observer_ = MakeGarbageCollected<LazyLoadMediaObserver>();
   }
   return *lazy_load_media_observer_;
-}
-
-void Document::IncrementNumberOfCanvases() {
-  num_canvases_++;
 }
 
 DisplayLockDocumentState& Document::GetDisplayLockDocumentState() const {

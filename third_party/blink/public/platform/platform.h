@@ -112,7 +112,6 @@ class UserMetricsAction;
 class WebCrypto;
 class WebDedicatedWorker;
 class WebDedicatedWorkerHostFactoryClient;
-class WebGraphicsContext3DProvider;
 class WebLocalFrame;
 class WebSandboxSupport;
 class WebSecurityOrigin;
@@ -429,53 +428,6 @@ class BLINK_PLATFORM_EXPORT Platform {
 
   typedef uint64_t WebMemoryAllocatorDumpGuid;
 
-  // GPU ----------------------------------------------------------------
-  //
-  enum WebGLContextType {
-    kWebGL1ContextType,  // WebGL 1.0 context, use only for WebGL canvases
-    kWebGL2ContextType,  // WebGL 2.0 context, use only for WebGL canvases
-  };
-  struct WebGLContextInfo {
-    unsigned vendor_id = 0;
-    unsigned device_id = 0;
-    unsigned reset_notification_strategy = 0;
-    bool sandboxed = false;
-    bool amd_switchable = false;
-    bool optimus = false;
-    bool using_gpu_compositing = false;
-    bool using_passthrough_command_decoder = false;
-    gl::ANGLEImplementation angle_implementation =
-        gl::ANGLEImplementation::kNone;
-    WebString vendor_info;
-    WebString renderer_info;
-    WebString driver_version;
-    WebString error_message;
-  };
-  // Returns a newly allocated and initialized offscreen context provider,
-  // backed by an independent context. Returns null if the context cannot be
-  // created or initialized.
-  virtual std::unique_ptr<WebGraphicsContext3DProvider>
-  CreateWebGLGraphicsContextProvider(bool prefer_low_power_gpu,
-                                     bool fail_if_major_performance_caveat,
-                                     WebGLContextType context_type,
-                                     const WebURL& document_url,
-                                     WebGLContextInfo*);
-
-  enum class RasterContextType {
-    kSharedGpuContextWorker,
-    kVideoTrackRecorder,
-    kWebCodecsReadback,
-  };
-  virtual std::unique_ptr<WebGraphicsContext3DProvider>
-  CreateRasterGraphicsContextProvider(const WebURL& document_url,
-                                      RasterContextType context_type);
-
-  // Returns a newly allocated and initialized offscreen context provider,
-  // backed by the process-wide shared main thread context. Returns null if
-  // the context cannot be created or initialized.
-  virtual std::unique_ptr<WebGraphicsContext3DProvider>
-  CreateSharedOffscreenGraphicsContext3DProvider();
-
   // When true, animations will run on a compositor thread independently from
   // the blink main thread.
   // This is true when there exists a renderer compositor in this process. But
@@ -527,10 +479,6 @@ class BLINK_PLATFORM_EXPORT Platform {
   // Whether the scroll animator that produces smooth scrolling is enabled.
   virtual bool IsScrollAnimatorEnabled() { return true; }
 
-  // Returns a context provider that will be bound on the main thread
-  // thread.
-  virtual scoped_refptr<viz::RasterContextProvider>
-  SharedMainThreadContextProvider();
 
   // Returns a worker context provider that will be bound on the compositor
   // thread.
@@ -538,10 +486,6 @@ class BLINK_PLATFORM_EXPORT Platform {
   SharedCompositorWorkerContextProvider(
       cc::RasterDarkModeFilter* dark_mode_filter);
 
-  // Returns a worker context provider that will be bound on the media thread.
-  virtual void SharedMediaContextProvider(
-      base::OnceCallback<void(scoped_refptr<viz::RasterContextProvider>)>
-          callback);
 
   // Synchronously establish a channel to the GPU plugin if not previously
   // established or if it has been lost (for example if the GPU plugin crashed).

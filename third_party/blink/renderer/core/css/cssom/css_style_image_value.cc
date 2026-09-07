@@ -33,10 +33,4 @@ double CSSStyleImageValue::intrinsicRatio(bool& is_null) const {
   return static_cast<double>(size.value().width()) / size.value().height();
 }
 
-gfx::SizeF CSSStyleImageValue::ElementSize(
-    const gfx::SizeF& default_object_size,
-    const RespectImageOrientationEnum) const {
-  return gfx::SizeF(IntrinsicSize().value_or(gfx::Size()));
-}
-
 }  // namespace blink

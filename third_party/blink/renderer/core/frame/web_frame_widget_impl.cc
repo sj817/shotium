@@ -1565,21 +1565,6 @@ void WebFrameWidgetImpl::UpdateCompositorScrollState(
 
 void WebFrameWidgetImpl::UpdateAnimatedImageState(
     const cc::CompositorCommitData& commit_data) {
-  for (auto id : commit_data.advanced_image_animation_clients) {
-    if (Element* client = DynamicTo<Element>(
-            DOMNodeIds::NodeForId(DOMNodeIdFromCompositorElementId(id)))) {
-      if (auto* canvas = DynamicTo<HTMLCanvasElement>(client->parentNode())) {
-        if (auto* layout_object = client->GetLayoutObject()) {
-          // The canvas child element needs to update
-          // animated_image_frame_index_map in paint_property_tree_builder.cc
-          layout_object->SetNeedsPaintPropertyUpdate();
-        }
-        if (auto* view = canvas->GetDocument().View()) {
-          view->RequestCanvasOnpaint(*canvas, client);
-        }
-      }
-    }
-  }
   if (LocalRootImpl() && LocalRootImpl()->GetFrameView()) {
     LocalRootImpl()->GetFrameView()->SetAnimatedImageFrameIndexes(
         commit_data.animated_image_frame_index_map);
@@ -1787,7 +1772,7 @@ void WebFrameWidgetImpl::DidBeginMainFrame() {
   CHECK(local_root_frame);
 
   if (LocalFrameView* frame_view = local_root_frame->View()) {
-    frame_view->DidBeginMainFrame();
+    frame_view->RunPostLifecycleSteps();
   }
 
   if (Page* page = local_root_frame->GetPage()) {
@@ -2963,11 +2948,6 @@ void WebFrameWidgetImpl::BeginCommitCompositorFrame() {
     }
   }
 
-  LocalFrame* local_root_frame = LocalRootImpl()->GetFrame();
-  CHECK(local_root_frame);
-  if (LocalFrameView* frame_view = local_root_frame->View()) {
-    frame_view->WillCommit();
-  }
 }
 
 void WebFrameWidgetImpl::EndCommitCompositorFrame(

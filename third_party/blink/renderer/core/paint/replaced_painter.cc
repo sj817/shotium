@@ -113,25 +113,7 @@ void ReplacedPainter::Paint(const PaintInfo& paint_info) {
   PhysicalRect border_rect(paint_offset, layout_replaced_.StitchedSize());
 
   if (ShouldPaintBoxDecorationBackground(local_paint_info)) {
-    bool should_paint_background = false;
-    // TODO(crbug.com/40280438): Without this condition, scaled canvas would
-    // become pixelated on Linux.
-    if (!layout_replaced_.IsCanvas()) {
-      should_paint_background = true;
-    } else if (layout_replaced_.HasBoxDecorationBackground()) {
-      should_paint_background = true;
-    } else if (layout_replaced_.HasEffectiveAllowedTouchAction() ||
-               layout_replaced_.InsideBlockingWheelEventHandler()) {
-      should_paint_background = true;
-    } else {
-      Element* element = DynamicTo<Element>(layout_replaced_.GetNode());
-      if (element && element->GetRegionCaptureCropId()) {
-        should_paint_background = true;
-      }
-    }
-    if (should_paint_background) {
-      PaintBoxDecorationBackground(local_paint_info, paint_offset);
-    }
+    PaintBoxDecorationBackground(local_paint_info, paint_offset);
 
     // We're done. We don't bother painting any children.
     if (layout_replaced_.DrawsBackgroundOntoContentLayer() ||
@@ -153,7 +135,7 @@ void ReplacedPainter::Paint(const PaintInfo& paint_info) {
 
   if (local_paint_info.phase != PaintPhase::kForeground &&
       local_paint_info.phase != PaintPhase::kSelectionDragImage &&
-      (!layout_replaced_.CanHaveChildren() || layout_replaced_.IsCanvas())) {
+      !layout_replaced_.CanHaveChildren()) {
     return;
   }
 

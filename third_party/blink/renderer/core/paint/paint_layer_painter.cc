@@ -615,7 +615,6 @@ PaintResult PaintLayerPainter::PaintChildren(
     return result;
   }
 
-  bool painting_canvas_child = false;
   auto* canvas = DynamicTo<HTMLCanvasElement>(layout_object.GetNode());
   if (canvas) {
     if (RuntimeEnabledFeatures::CanvasDrawElementEnabled(
@@ -628,7 +627,6 @@ PaintResult PaintLayerPainter::PaintChildren(
       // in non-composited subtrees, and test if this is needed.
       paint_flags |= PaintFlag::kOmitCompositingInfo;
 
-      painting_canvas_child = true;
     } else {
       // Prevent canvas fallback content from being rendered.
       return result;
@@ -673,10 +671,6 @@ PaintResult PaintLayerPainter::PaintChildren(
       }
     }
 
-    if (painting_canvas_child && child->SelfOrDescendantNeedsRepaint()) {
-      auto* child_el = To<Element>(child->GetLayoutObject().GetNode());
-      layout_object.GetFrameView()->DidPaintCanvasChild(*canvas, *child_el);
-    }
   }
 
   return result;

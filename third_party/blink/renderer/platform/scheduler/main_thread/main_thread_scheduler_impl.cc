@@ -1103,7 +1103,6 @@ void MainThreadSchedulerImpl::SetAllRenderWidgetsHidden(bool hidden) {
   if (hidden) {
     TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("renderer.scheduler"),
                  "MainThreadSchedulerImpl::OnRendererVisible");
-    main_thread_only().renderer_hidden_metadata.reset();
 
     idle_helper_.EnableLongIdlePeriod();
 
@@ -1118,9 +1117,6 @@ void MainThreadSchedulerImpl::SetAllRenderWidgetsHidden(bool hidden) {
   } else {
     TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("renderer.scheduler"),
                  "MainThreadSchedulerImpl::OnRendererHidden");
-    main_thread_only().renderer_hidden_metadata.emplace(
-        "MainThreadSchedulerImpl.RendererHidden", /* is_hidden */ 1,
-        base::SampleMetadataScope::kProcess);
 
     main_thread_only().renderer_hidden = false;
     EndIdlePeriod();
@@ -1689,15 +1685,6 @@ void MainThreadSchedulerImpl::UpdatePolicyLocked(UpdateType update_type) {
 
   UpdateStateForAllTaskQueues(old_policy);
 
-  if (are_all_pages_frozen) {
-    if (!main_thread_only().renderer_frozen_metadata.has_value()) {
-      main_thread_only().renderer_frozen_metadata.emplace(
-          "MainThreadSchedulerImpl.RendererFrozen2", /* is_frozen */ 1,
-          base::SampleMetadataScope::kProcess);
-    }
-  } else {
-    main_thread_only().renderer_frozen_metadata.reset();
-  }
 
   MaybeUpdateThreadTypeLease();
 

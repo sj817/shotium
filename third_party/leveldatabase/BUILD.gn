@@ -125,7 +125,6 @@ component("leveldatabase") {
 
   public_deps = [ "//base" ]
   deps = [
-    "//components/services/storage/public/cpp/filesystem",
     "//build:chromeos_buildflags",
     "//third_party/re2",
     "//third_party/snappy",
@@ -161,7 +160,6 @@ static_library("leveldb_static") {
 
   public_deps = [ "//base" ]
   deps = [
-    "//components/services/storage/public/cpp/filesystem",
     "//build:chromeos_buildflags",
     "//third_party/re2",
     "//third_party/snappy",

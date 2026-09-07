@@ -233,7 +233,6 @@ if (use_blink) {
     ]
 
     if (is_mac) {
-      deps += [ "//sandbox/mac:seatbelt" ]
     }
   }
 

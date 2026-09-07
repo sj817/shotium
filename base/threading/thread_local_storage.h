@@ -18,7 +18,6 @@
 
 namespace base {
 
-class SamplingHeapProfiler;
 
 namespace debug {
 class GlobalActivityTracker;
@@ -156,7 +155,6 @@ class BASE_EXPORT ThreadLocalStorage {
   // TLS during thread destruction must first check this method before calling
   // Slot::Get().
   friend class SequenceCheckerImpl;
-  friend class SamplingHeapProfiler;
   friend class ThreadCheckerImpl;
   friend class internal::ThreadLocalStorageTestInternal;
   friend class trace_event::MallocDumpProvider;

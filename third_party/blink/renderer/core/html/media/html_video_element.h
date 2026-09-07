@@ -28,7 +28,6 @@
 
 #include "cc/paint/paint_flags.h"
 #include "third_party/blink/renderer/core/core_export.h"
-#include "third_party/blink/renderer/core/html/canvas/canvas_image_source.h"
 #include "third_party/blink/renderer/core/html/html_image_loader.h"
 #include "third_party/blink/renderer/core/html/media/html_media_element.h"
 
@@ -45,8 +44,7 @@ namespace blink {
 
 class StaticBitmapImage;
 
-class CORE_EXPORT HTMLVideoElement final : public HTMLMediaElement,
-                                           public CanvasImageSource {
+class CORE_EXPORT HTMLVideoElement final : public HTMLMediaElement {
   DEFINE_WRAPPERTYPEINFO();
 
  public:
@@ -104,18 +102,7 @@ class CORE_EXPORT HTMLVideoElement final : public HTMLMediaElement,
     return nullptr;
   }
 
-  // CanvasImageSource implementation
-  scoped_refptr<Image> GetSourceImageForCanvas(SourceImageStatus*,
-                                               const gfx::SizeF&) override;
-  bool IsVideoElement() const override { return true; }
-  bool WouldTaintOrigin() const override { return !IsMediaDataCorsSameOrigin(); }
-  gfx::SizeF ElementSize(const gfx::SizeF&,
-                         const RespectImageOrientationEnum) const override;
-  const KURL& SourceURL() const override { return currentSrc(); }
   bool IsHTMLVideoElement() const override { return true; }
-  // Video elements currently always go through RAM when used as a canvas image
-  // source.
-  bool IsAccelerated() const override { return false; }
 
   void StyleDidChange(const ComputedStyle* old_style,
                       const ComputedStyle& new_style);

@@ -624,7 +624,6 @@ mojom("url_loader_base") {
     ":mojom_unencoded_digest",
     ":mojom_web_sandbox_flags",
     "//mojo/public/mojom/base",
-    "//services/proxy_resolver/public/mojom",
     "//url/mojom:url_mojom_gurl",
     "//url/mojom:url_mojom_origin",
   ]
@@ -1472,7 +1471,6 @@ mojom("cookies_mojom") {
     "//components/content_settings/core/common:content_settings_types",
     "//components/content_settings/core/common:mojo_bindings",
     "//mojo/public/mojom/base",
-    "//sandbox/policy/mojom",
     "//url/mojom:url_mojom_gurl",
     "//url/mojom:url_mojom_origin",
   ]
@@ -1849,8 +1847,6 @@ mojom("mojom") {
     "//components/os_crypt/async/common:common_mojom",
     "//mojo/public/mojom/base",
     "//mojo/public/mojom/base:protobuf_support",
-    "//sandbox/policy/mojom",
-    "//services/proxy_resolver/public/mojom",
     "//url/mojom:url_mojom_gurl",
     "//url/mojom:url_mojom_origin",
     "//url/mojom:url_mojom_scheme_host_port",

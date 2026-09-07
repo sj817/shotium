@@ -869,36 +869,6 @@ bool Element::IsFocusableStyle(UpdateBehavior update_behavior) const {
     }
   }
 
-  // If a canvas represents embedded content, its descendants are not rendered.
-  // But they are still allowed to be focusable as long as their style allows
-  // focus, their canvas is rendered, and its style allows focus.
-  if (IsCanvasOrInCanvasSubtree()) {
-    const ComputedStyle* style = GetComputedStyle();
-    if (!style || !style->IsFocusable()) {
-      return false;
-    }
-
-    const HTMLCanvasElement* canvas = nullptr;
-    for (const Element* element = this; element;) {
-      canvas = DynamicTo<HTMLCanvasElement>(element);
-      if (canvas) {
-        break;
-      }
-      if (const Element* parent =
-              FlatTreeTraversal::ParentElementSkippingSlots(*element)) {
-        element = parent;
-      } else if (element->isConnected()) {
-        element = element->GetDocument().LocalOwner();
-      } else {
-        break;
-      }
-    }
-    DCHECK(canvas);
-    if (LayoutObject* layout_object = canvas->GetLayoutObject()) {
-      return layout_object->IsCanvas() &&
-             layout_object->StyleRef().IsFocusable();
-    }
-  }
 
   return false;
 }

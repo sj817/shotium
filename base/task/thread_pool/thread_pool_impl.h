@@ -12,6 +12,7 @@
 #include "base/base_export.h"
 #include "base/containers/flat_map.h"
 #include "base/dcheck_is_on.h"
+#include "base/files/file_path.h"
 #include "base/functional/callback.h"
 #include "base/memory/ptr_util.h"
 #include "base/sequence_checker.h"

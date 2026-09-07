@@ -31,11 +31,6 @@ bool LayoutBlockFlow::CreatesNewFormattingContext() const {
     return true;
   }
 
-  if (RuntimeEnabledFeatures::CanvasDrawElementEnabled(
-          GetDocument().GetExecutionContext()) &&
-      Parent()->IsCanvas()) {
-    return true;
-  }
 
   // https://drafts.csswg.org/css-align/#distribution-block
   // All values other than normal force the block container to establish an

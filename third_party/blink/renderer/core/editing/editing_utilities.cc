@@ -61,7 +61,6 @@
 #include "third_party/blink/renderer/core/editing/visible_units.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
 #include "third_party/blink/renderer/core/frame/local_frame_view.h"
-#include "third_party/blink/renderer/core/html/canvas/html_canvas_element.h"
 #include "third_party/blink/renderer/core/html/forms/html_input_element.h"
 #include "third_party/blink/renderer/core/html/forms/html_select_element.h"
 #include "third_party/blink/renderer/core/html/forms/html_text_area_element.h"
@@ -1904,10 +1903,6 @@ static scoped_refptr<Image> ImageFromNode(const Node& node) {
   if (!layout_object)
     return nullptr;
 
-  if (layout_object->IsCanvas()) {
-    return To<HTMLCanvasElement>(const_cast<Node&>(node))
-        .Snapshot(kFrontBuffer);
-  }
 
   if (!layout_object->IsImage())
     return nullptr;
@@ -1926,8 +1921,7 @@ AtomicString GetUrlStringFromNode(const Node& node) {
     return To<HTMLElement>(node).FastGetAttribute(html_names::kSrcAttr);
   if (IsA<SVGImageElement>(node))
     return To<SVGElement>(node).ImageSourceURL();
-  if (IsA<HTMLEmbedElement>(node) || IsA<HTMLObjectElement>(node) ||
-      IsA<HTMLCanvasElement>(node))
+  if (IsA<HTMLEmbedElement>(node) || IsA<HTMLObjectElement>(node))
     return To<HTMLElement>(node).ImageSourceURL();
   return AtomicString();
 }

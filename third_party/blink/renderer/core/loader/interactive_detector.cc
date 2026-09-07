@@ -6,7 +6,6 @@
 
 #include "base/metrics/histogram_functions.h"
 #include "base/metrics/histogram_macros.h"
-#include "base/profiler/sample_metadata.h"
 #include "base/task/single_thread_task_runner.h"
 #include "base/time/default_tick_clock.h"
 #include "third_party/blink/public/common/features.h"
@@ -275,11 +274,6 @@ void InteractiveDetector::HandleForInputDelay(
         "latency",
         perfetto::NamedTrack("Long Input Delay", g_num_long_input_events),
         event_timestamp + delay);
-    // Apply metadata on stack samples.
-    base::ApplyMetadataToPastSamples(
-        event_timestamp, event_timestamp + delay,
-        "PageLoad.InteractiveTiming.LongInputDelay", g_num_long_input_events, 1,
-        base::SampleMetadataScope::kProcess);
     g_num_long_input_events++;
   }
 

@@ -108,7 +108,6 @@ static_library("app") {
     deps += [
       "//base:base_static",
       "//components/crash/core/common",
-      "//sandbox",
     ]
   }
 

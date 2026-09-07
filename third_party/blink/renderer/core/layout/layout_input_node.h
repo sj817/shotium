@@ -104,7 +104,6 @@ class CORE_EXPORT LayoutInputNode {
   bool IsFieldsetContainer() const { return IsBlock() && box_->IsFieldset(); }
   bool IsInitialLetterBox() const { return box_->IsInitialLetterBox(); }
   bool IsMedia() const { return box_->IsMedia(); }
-  bool IsCanvas() const { return box_->IsCanvas(); }
   bool IsImageReplacement() const { return box_->IsLayoutImageReplacement(); }
 
   bool IsSemiReplaced() const { return IsBlock() && box_->IsSemiReplaced(); }

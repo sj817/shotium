@@ -14,7 +14,6 @@
 #include "base/metrics/histogram_functions.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/notimplemented.h"
-#include "base/profiler/sample_metadata.h"
 #include "base/strings/strcat.h"
 #include "base/synchronization/waitable_event.h"
 #include "base/time/time.h"
@@ -223,8 +222,6 @@ void ProxyMain::BeginMainFrame(
                     perfetto::protos::pbzero::MainFramePipeline::Step::
                         BEGIN_MAIN_FRAME);
               });
-  base::ScopedSampleMetadata metadata("ProxyMain::BeginMainFrame", 1,
-                                      base::SampleMetadataScope::kProcess);
 
   // This needs to run unconditionally, so do it before any early-returns.
   if (layer_tree_host_->scheduling_delegate()) {

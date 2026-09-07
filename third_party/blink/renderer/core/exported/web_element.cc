@@ -61,7 +61,6 @@
 #include "third_party/blink/renderer/core/frame/local_frame_ukm_aggregator.h"
 #include "third_party/blink/renderer/core/frame/visual_viewport.h"
 #include "third_party/blink/renderer/core/geometry/dom_rect_list.h"
-#include "third_party/blink/renderer/core/html/canvas/html_canvas_element.h"
 #include "third_party/blink/renderer/core/html/custom/custom_element.h"
 #include "third_party/blink/renderer/core/html/forms/html_form_control_element.h"
 #include "third_party/blink/renderer/core/html/forms/html_label_element.h"
@@ -547,13 +546,6 @@ SkBitmap WebElement::ImageContents() {
     return {};
   }
 
-  if (auto* canvas = blink::DynamicTo<HTMLCanvasElement>(element)) {
-    scoped_refptr<StaticBitmapImage> image = canvas->Snapshot(kBackBuffer);
-    if (!image) {
-      return {};
-    }
-    return image->AsSkBitmapForCurrentFrame(kRespectImageOrientation);
-  }
 
   Image* image = GetImage();
   if (!image)

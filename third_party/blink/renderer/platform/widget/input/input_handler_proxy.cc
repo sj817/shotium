@@ -16,7 +16,6 @@
 #include "base/metrics/field_trial_params.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/notreached.h"
-#include "base/profiler/sample_metadata.h"
 #include "base/task/common/task_annotator.h"
 #include "base/task/single_thread_task_runner.h"
 #include "base/time/default_tick_clock.h"
@@ -362,11 +361,6 @@ void InputHandlerProxy::HandleInputEventWithLatencyInfo(
   auto event_with_callback = std::make_unique<EventWithCallback>(
       std::move(event), std::move(callback), std::move(metrics));
 
-  enum {
-    NO_SCROLL_PINCH = 0,
-    ONGOING_SCROLL_PINCH = 1,
-    SCROLL_PINCH = 2,
-  };
   // Note: Other input can race ahead of gesture input as they don't have to go
   // through the queue, but we believe it's OK to do so.
   //
@@ -374,9 +368,6 @@ void InputHandlerProxy::HandleInputEventWithLatencyInfo(
   // rather than during the start of the VSync. Confirm if this is another
   // source of input events missing submitted frames.
   if (!IsGestureScrollOrPinch(event_with_callback->event().GetType())) {
-    base::ScopedSampleMetadata metadata("Input.GestureScrollOrPinch",
-                                        NO_SCROLL_PINCH,
-                                        base::SampleMetadataScope::kProcess);
     DispatchSingleInputEvent(std::move(event_with_callback));
     return;
   } else if (event_with_callback->event().IsGestureScroll() &&
@@ -385,11 +376,6 @@ void InputHandlerProxy::HandleInputEventWithLatencyInfo(
         current_begin_frame_args_);
   }
 
-  base::ScopedSampleMetadata metadata(
-      "Input.GestureScrollOrPinch",
-      currently_active_gesture_device_.has_value() ? ONGOING_SCROLL_PINCH
-                                                   : SCROLL_PINCH,
-      base::SampleMetadataScope::kProcess);
   const auto& gesture_event =
       static_cast<const WebGestureEvent&>(event_with_callback->event());
 

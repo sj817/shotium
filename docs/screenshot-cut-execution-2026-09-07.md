@@ -84,6 +84,34 @@
 
 日志前缀：`out/Shot/cut-media-`；删除证明与像素证据：`out/cut-stage4/deletion-proof.json`、`out/cut-stage5/deletion-proof.json`、`out/cut-stage5/pixel-comparison.json`。
 
+## 第四批：Canvas 绘图、服务空壳和采样 profiler
+
+删除 Web Canvas 绘图上下文、context host/factory、字体与性能缓存、专用 layout/painter、ImageData/TextMetrics/ElementImage 等脚本值类型及生成绑定，以及资源 provider、drawing buffer、GPU bitmap、Offscreen 占位和绘制事件队列。`core/html/canvas` 只剩 HTML 标签的 `.cc/.h/.idl` 三文件。普通图片与 SVG 继续使用的 `ImageElementBase` 迁到 `core/html`；SVG 序列化直接读取图片响应 URL。
+
+`<canvas>` 保留备用内容、属性宽高比、已有静态布局行为。直接改成普通元素的研究样本出现差异，本批保留最小兼容后两套专项样本均与原实现逐像素相同。Skia CPU SkCanvas、SVG、图片与字体绘制保留。
+
+合并删除 `sandbox/`、`storage/`、代理解析服务协议和 storage/quarantine 服务骨架；删除栈采样、堆采样和线程池 profiler 钩子、企业管理与默认应用工具。真实 tracing 消费者仍使用的五个 module cache 文件留到诊断后端批次处理。网络 cookie 值类型和受限接口保留，删除没有服务实现的特权 CookieManager 接口。
+
+实际删除 225 个普通文件、34 个核对过的空目录，路径及删除前 hash 位于 `out/cut-batch4/deletion-proof.json`。这些路径没有独立 DEPS/gitlink 入口。公共 paint/property tree 的 Canvas 子树状态和浏览器 compositor 的共享 GPU 接口尚未全部拆除，已列入后续整批；不把本批结果称作整个 GPU 或合成器已删除。
+
+| 验证 | 结果 |
+|---|---|
+| Windows GN / 输入 | 6,871 targets、858 files；shot + shot_c 的 7,459 个源码输入全部存在 |
+| IDL | 131 个枚举值引用、43 个 union 名称引用均无缺失 |
+| EXE / DLL | 两者编译通过，0 FAILED edge；失败 TU 的间接 include、SVG URL 调用和 Canvas 输入尾巴已修复，syntax-only 通过 |
+| serve / net | 全部通过，包括真实 HTTPS 和网络/文件像素一致性 |
+| demos | 84 组通过：62 exact、1 fuzzy、21 smoke |
+| Node / daemon / 协议 | 使用重新构建的 addon 和同 hash 新 DLL，全部通过 |
+| Bilibili | 两篇离线长文、分片、照片和二维码全部通过 |
+| 原始像素对照 | 169 demos + 4 render cases + corpus + 2 Canvas 专项，共 176/176 逐像素一致 |
+| acceptance | 完成；既有 Chrome oracle 差异约 1.5245%，本次 corpus 与裁剪前完全一致 |
+| Linux probe | 0 缺 BUILD、0 主仓库缺失输入；宿主工具后缀及未装 Linux DEPS/toolchain 不代表 Linux 实编译 |
+| 六平台实际构建 | 尚未完成，后续最终提交验证 |
+
+EXE SHA256：`2d13e25a508001c0959415e09dc180353846bc0c02aa55fe71c654ae6b9b0288`；DLL SHA256：`3cb9c9088092cfe50f05c510fa9e9dc2ab1b0336404ae12bd9cf16c07af52028`。日志、二进制证据和像素清单位于 `out/cut-batch4`。
+
+并发记录：用户授权临时 31 并发，实试出现 LLVM OOM 后回退 8 完成本批。用户随后清理后台并指定后续用 20 并发，下一批采用 20；没有修改项目永久默认并发。
+
 ## 后续批次
 
-下一批处理 Canvas、输入/合成器/GPU 等混合目标的剩余依赖。此记录不把“待处理”或“已关闭开关”标为“已彻底删除”。
+继续处理网络公共层、输入/合成器/GPU、诊断后端等剩余闭包，完整接续清单见 `screenshot-cut-task.md`。不把待处理或已关闭开关标为彻底删除。

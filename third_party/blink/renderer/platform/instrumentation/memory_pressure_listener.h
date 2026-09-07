@@ -55,10 +55,6 @@ class PLATFORM_EXPORT MemoryPressureListenerRegistry final {
   // PartialLowEndModeOnMidEndDevices is enabled on Android devices.
   static bool IsLowEndDeviceOrPartialLowEndModeEnabled();
 
-  // Returns true when IsLowEndDevice() Or PartialLowEndModeOnMidEndDevices is
-  // enabled and canvas font cache is not excluded from the features.
-  static bool
-  IsLowEndDeviceOrPartialLowEndModeEnabledIncludingCanvasFontCache();
 
   // Caches whether this device is a low-end device and the device physical
   // memory in static members. instance() is not used as it's a heap allocated

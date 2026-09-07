@@ -220,11 +220,6 @@ class PLATFORM_EXPORT PaintArtifactCompositor final
 
   void SetTracksRasterInvalidations(bool);
 
-  using GetCanvasSnapshotCallback =
-      base::RepeatingCallback<std::optional<cc::PaintRecord>(DOMNodeId)>;
-  void SetGetCanvasSnapshotCallback(GetCanvasSnapshotCallback callback) {
-    get_canvas_snapshot_callback_ = std::move(callback);
-  }
 
   bool HasCanvasChildPaintRecord(DOMNodeId child_id) const;
   std::optional<CanvasChildPaintRecord> GetCanvasChildPaintRecord(
@@ -360,7 +355,6 @@ class PLATFORM_EXPORT PaintArtifactCompositor final
   class OldPendingLayerMatcher;
   PendingLayers pending_layers_;
   HashMap<DOMNodeId, wtf_size_t> canvas_child_layer_map_;
-  GetCanvasSnapshotCallback get_canvas_snapshot_callback_;
 
   class Layerizer;
 

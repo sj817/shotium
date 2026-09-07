@@ -9,7 +9,6 @@
 #include <string_view>
 
 #include "base/metrics/histogram.h"
-#include "base/profiler/thread_group_profiler.h"
 #include "base/sequence_token.h"
 #include "base/strings/strcat.h"
 #include "base/strings/stringprintf.h"
@@ -239,7 +238,6 @@ ThreadGroupImpl::ThreadGroupImpl(
     std::string_view histogram_label,
     std::string_view thread_group_label,
     ThreadType thread_type_hint,
-    int64_t thread_group_type,
     TrackedRef<TaskTracker> task_tracker,
     TrackedRef<Delegate> delegate,
     bool monitor_worker_thread_priorities,
@@ -249,7 +247,6 @@ ThreadGroupImpl::ThreadGroupImpl(
                   thread_type_hint,
                   std::move(task_tracker),
                   std::move(delegate)),
-      thread_group_type_(thread_group_type),
       tracked_ref_factory_(this),
       monitor_worker_thread_priorities_(monitor_worker_thread_priorities),
       record_lock_contention_(record_lock_contention),
@@ -297,11 +294,6 @@ void ThreadGroupImpl::Start(
     EnsureEnoughWorkersLockRequired(&executor);
   }
 
-  if (ThreadGroupProfiler::IsProfilingEnabled()) {
-    // This call posts a task, so do it outside of the lock.
-    thread_group_profiler_.emplace(service_thread_task_runner,
-                                   thread_group_type_);
-  }
 }
 
 ThreadGroupImpl::~ThreadGroupImpl() {
@@ -411,9 +403,6 @@ void ThreadGroupImpl::WorkerDelegate::OnMainEntry(WorkerThread* worker) {
   worker_only().worker_thread_ = static_cast<WorkerThread*>(worker);
   SetBlockingObserverForCurrentThread(this);
 
-  if (outer_->thread_group_profiler_) {
-    outer_->thread_group_profiler_->OnWorkerThreadStarted(worker);
-  }
 
   if (outer_->worker_started_for_testing_) {
     // When |worker_started_for_testing_| is set, the thread that starts
@@ -449,9 +438,6 @@ void ThreadGroupImpl::WorkerDelegate::OnMainExit(WorkerThread* worker_base) {
   worker_only().win_thread_environment.reset();
 #endif  // BUILDFLAG(IS_WIN)
 
-  if (outer_->thread_group_profiler_) {
-    outer_->thread_group_profiler_->OnWorkerThreadExiting(worker_base);
-  }
 
   // Count cleaned up workers for tests. It's important to do this here
   // instead of at the end of CleanupLockRequired() because some side-effects
@@ -507,16 +493,6 @@ RegisteredTaskSource ThreadGroupImpl::WorkerDelegate::GetWork(
   {
     CheckedAutoLock auto_lock(outer_->lock_);
     task_source = GetWorkLockRequired(&executor, worker);
-  }
-  // Notify the profiler on the worker thread status when profiling is enabled.
-  // This must be called without holding lock_ as lock_ is not a universal
-  // predecessor that does not satisfy OnWorkerThreadIdle's CheckedLock.
-  if (outer_->thread_group_profiler_) {
-    // GetWork is only called when waking up, i.e. from an idle state. No need
-    // to mark it idle again if no task source available.
-    if (task_source) {
-      outer_->thread_group_profiler_->OnWorkerThreadActive(worker);
-    }
   }
   return task_source;
 }
@@ -641,9 +617,6 @@ RegisteredTaskSource ThreadGroupImpl::WorkerDelegate::SwapProcessedTask(
                                            static_cast<WorkerThread*>(worker));
   }
   // Must be called without holding a lock.
-  if (outer_->thread_group_profiler_ && !next_task_source) {
-    outer_->thread_group_profiler_->OnWorkerThreadIdle(worker);
-  }
   return next_task_source;
 }
 
@@ -867,10 +840,6 @@ void ThreadGroupImpl::WorkerDelegate::IncrementMaxTasksLockRequired()
 }
 
 void ThreadGroupImpl::JoinForTesting() {
-  // profiler needs to shutdown first to not block worker thread joins.
-  if (thread_group_profiler_) {
-    thread_group_profiler_->Shutdown();
-  }
   decltype(workers_) workers_copy;
   {
     CheckedAutoLock auto_lock(lock_);
@@ -975,9 +944,6 @@ void ThreadGroupImpl::OnShutdownStarted() {
     return;
   }
 
-  if (thread_group_profiler_) {
-    thread_group_profiler_->Shutdown();
-  }
 
   // Start a MAY_BLOCK scope on each worker that is already running a task.
   for (scoped_refptr<WorkerThread>& worker : workers_) {
