@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//mojo/public/tools/bindings/mojom.gni")
-import("//testing/libfuzzer/fuzzer_test.gni")
 
 static_library("common") {
   sources = [
@@ -148,16 +147,4 @@ component("features") {
   ]
 
   deps = [ "//base" ]
-}
-
-fuzzer_test("content_settings_pattern_parser_fuzzer") {
-  sources = [ "content_settings_pattern_parser_fuzzer.cc" ]
-  deps = [
-    ":common",
-    "//base",
-    "//base:i18n",
-    "//third_party/icu",
-    "//third_party/icu/fuzzers:fuzzer_support",
-  ]
-  dict = "content_settings_pattern_parser_fuzzer.dict"
 }

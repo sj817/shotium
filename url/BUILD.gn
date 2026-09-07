@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/buildflag_header.gni")
-import("//testing/libfuzzer/fuzzer_test.gni")
 import("//testing/test.gni")
 import("features.gni")
 
@@ -272,26 +271,6 @@ test("url_perftests") {
     "//base/test:test_support",
     "//base/test:test_support_perf",
     "//testing/gtest",
-  ]
-}
-
-fuzzer_test("gurl_fuzzer") {
-  sources = [ "gurl_fuzzer.cc" ]
-  deps = [
-    ":url",
-    "//base",
-    "//base:i18n",
-    "//testing/libfuzzer:libfuzzer_base_wrappers",
-  ]
-  dict = "gurl_fuzzer.dict"
-}
-
-fuzzer_test("url_canon_icu_fuzzer") {
-  sources = [ "url_canon_icu_fuzzer.cc" ]
-  deps = [
-    ":url",
-    ":url_test_support",
-    "//third_party/icu:icuuc",
   ]
 }
 

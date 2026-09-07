@@ -76,15 +76,6 @@ _java_template_sources = [
   "$mojom_generator_root/generators/java_templates/union.java.tmpl",
 ]
 
-_mojolpm_template_sources = [
-  "$mojom_generator_root/generators/mojolpm_templates/mojolpm.cc.tmpl",
-  "$mojom_generator_root/generators/mojolpm_templates/mojolpm.h.tmpl",
-  "$mojom_generator_root/generators/mojolpm_templates/mojolpm.proto.tmpl",
-  "$mojom_generator_root/generators/mojolpm_templates/mojolpm_from_proto_macros.tmpl",
-  "$mojom_generator_root/generators/mojolpm_templates/mojolpm_macros.tmpl",
-  "$mojom_generator_root/generators/mojolpm_templates/mojolpm_to_proto_macros.tmpl",
-]
-
 _rust_template_sources = [
   "$mojom_generator_root/generators/rust_templates/enum.tmpl",
   "$mojom_generator_root/generators/rust_templates/interface.tmpl",
@@ -138,21 +129,6 @@ action("precompile_rust_templates") {
   ]
 }
 
-action("precompile_mojolpm_templates") {
-  script = mojom_generator_script
-  sources = mojom_generator_sources + _mojolpm_template_sources
-  inputs = jinja2_sources
-  outputs = [ "$target_gen_dir/mojolpm_templates.zip" ]
-  args = [
-    "-o",
-    rebase_path(target_gen_dir, root_build_dir),
-    "--use_bundled_pylibs",
-    "precompile",
-    "-g",
-    "mojolpm",
-  ]
-}
-
 # Compat alias so the public label still resolves. mojom.gni and mojom_rust.gni
 # are part of the public SDK and may be consumed by other repos on the old
 # label. Anyone still pointing at :precompile_templates keeps the old
@@ -162,7 +138,6 @@ group("precompile_templates") {
   public_deps = [
     ":precompile_cpp_templates",
     ":precompile_java_templates",
-    ":precompile_mojolpm_templates",
     ":precompile_rust_templates",
   ]
 }

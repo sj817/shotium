@@ -9,7 +9,6 @@ import("//build/config/freetype/freetype.gni")
 import("//build/config/rust.gni")
 import("//build/config/sanitizers/sanitizers.gni")
 import("//build/rust/rust_static_library.gni")
-import("//testing/libfuzzer/fuzzer_test.gni")
 import("//testing/test.gni")
 import("//third_party/skia/gn/shared_sources.gni")
 import("//third_party/skia/modules/pathops/pathops.gni")
@@ -1231,7 +1230,6 @@ test("skia_unittests") {
     additional_manifest_fragments =
         [ "//build/config/fuchsia/test/test_fonts.shard.test-cml" ]
   }
-
 }
 
 if (!is_ios) {

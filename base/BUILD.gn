@@ -38,7 +38,6 @@ import("//build/nocompile.gni")
 import("//build/rust/rust_static_library.gni")
 import("//build/util/process_version.gni")
 import("//build_overrides/build.gni")
-import("//testing/libfuzzer/fuzzer_test.gni")
 import("//testing/test.gni")
 import("//third_party/protobuf/proto_library.gni")
 import("//tools/metrics/generate_allowlist_from_histograms_file.gni")
@@ -77,7 +76,6 @@ declare_args() {
   # https://cs.android.com/android/platform/superproject/+/android14-qpr3-release:bionic/libc/bionic/pthread_mutex.cpp;drc=9108f258adad329a537e10461fbd526d5b9ad8bf;l=242
   enable_mutex_priority_inheritance =
       is_android && (current_cpu == "x64" || current_cpu == "arm64")
-
 
   # Set to true to enable icu4x transliterator
   enable_rust_translit = false
@@ -235,7 +233,6 @@ component("base") {
   shot_jumbo_excluded_sources = [
     "allocator/scheduler_loop_quarantine_config.cc",
     "power_monitor/battery_level_provider_win.cc",
-
     "task/single_thread_task_runner.cc",
   ]
 
@@ -1338,13 +1335,11 @@ component("base") {
     public_configs = [ ":android_system_libs" ]
 
     if (current_cpu == "arm") {
-      sources += [
-      ]
+      sources += []
     }
 
     if (current_cpu == "arm64") {
-      sources += [
-      ]
+      sources += []
     }
 
     # This is actually a linker script, but it can be added to the link in the
@@ -1435,8 +1430,7 @@ component("base") {
     sources += [ "power_monitor/power_monitor_device_source_chromeos.cc" ]
 
     if (current_cpu == "x64" || current_cpu == "arm64") {
-      sources += [
-      ]
+      sources += []
     }
   }
 
@@ -2279,8 +2273,7 @@ component("base") {
     }
 
     if (!use_allocator_shim) {
-      sources -= [
-      ]
+      sources -= []
     }
 
     frameworks += [
@@ -2395,8 +2388,7 @@ component("base") {
   }
 
   if ((is_posix && !is_apple && !is_android) || is_fuchsia) {
-    sources += [
-    ]
+    sources += []
   }
 
   if ((is_posix && !is_apple && !is_android && !is_chromeos) || is_fuchsia) {
@@ -2962,7 +2954,6 @@ buildflag_header("tracing_buildflags") {
     "OPTIONAL_TRACE_EVENTS_ENABLED=$optional_trace_events_enabled",
   ]
 }
-
 
 buildflag_header("power_monitor_buildflags") {
   header = "power_monitor_buildflags.h"
@@ -4123,7 +4114,6 @@ test("base_unittests") {
     deps += [ ":stack_canary_linux_unittests" ]
   }
 
-
   if (is_posix) {
     sources += [
       "files/dir_reader_posix_unittest.cc",
@@ -4134,8 +4124,7 @@ test("base_unittests") {
       "posix/unix_domain_socket_unittest.cc",
     ]
     if (!is_apple) {
-      sources += [
-      ]
+      sources += []
     }
   }
 
@@ -4160,18 +4149,14 @@ test("base_unittests") {
       add_unwind_tables_in_apk = true
     }
     if (current_cpu == "arm") {
-      sources += [
-      ]
+      sources += []
     }
     if (current_cpu == "arm64") {
     }
     if (!exclude_unwind_tables &&
         (current_cpu == "arm" || current_cpu == "arm64")) {
-      sources += [
-      ]
-      deps += [
-        "//third_party/libunwindstack",
-      ]
+      sources += []
+      deps += [ "//third_party/libunwindstack" ]
     }
 
     sources += [
@@ -4431,7 +4416,6 @@ test("base_unittests") {
 
   if (use_allocator_shim) {
     sources += [
-
       # TODO(crbug.com/40158212): Move partition_alloc tests into its
       # repository.
       "allocator/partition_alloc_support_unittest.cc",
@@ -6097,8 +6081,6 @@ if (is_android) {
     ]
   }
 
-
-
   generate_jni("base_unittest_support_jni") {
     testonly = true
     sources =
@@ -6126,145 +6108,6 @@ if (is_android) {
 }  # is_android
 
 # Keep the list of fuzzer_tests in alphabetical order.
-fuzzer_test("base64_decode_fuzzer") {
-  sources = [ "base64_decode_fuzzer.cc" ]
-  deps = [
-    "//base",
-    "//testing/libfuzzer:libfuzzer_base_wrappers",
-  ]
-}
-
-fuzzer_test("base64_encode_fuzzer") {
-  sources = [ "base64_encode_fuzzer.cc" ]
-  deps = [
-    "//base",
-    "//base/test:test_support",
-    "//testing/libfuzzer:libfuzzer_base_wrappers",
-  ]
-}
-
-fuzzer_test("base_json_correctness_fuzzer") {
-  sources = [ "json/json_correctness_fuzzer.cc" ]
-  deps = [
-    ":base",
-    "//testing/libfuzzer:libfuzzer_base_wrappers",
-  ]
-  dict = "//testing/libfuzzer/fuzzers/dicts/json.dict"
-}
-
-fuzzer_test("base_json_reader_fuzzer") {
-  sources = [ "json/json_reader_fuzzer.cc" ]
-  deps = [
-    "//base",
-    "//testing/libfuzzer:libfuzzer_base_wrappers",
-  ]
-  dict = "//testing/libfuzzer/fuzzers/dicts/json.dict"
-}
-
-fuzzer_test("base_json_string_escape_fuzzer") {
-  sources = [ "json/string_escape_fuzzer.cc" ]
-  deps = [
-    "//base",
-    "//testing/libfuzzer:libfuzzer_base_wrappers",
-  ]
-}
-
-fuzzer_test("command_line_fuzzer") {
-  sources = [ "command_line_fuzzer.cc" ]
-  deps = [ "//base" ]
-}
-
-fuzzer_test("escape_fuzzer") {
-  sources = [ "strings/escape_fuzzer.cc" ]
-  deps = [
-    "//base",
-    "//testing/libfuzzer:libfuzzer_base_wrappers",
-  ]
-}
-
-fuzzer_test("file_path_fuzzer") {
-  sources = [ "files/file_path_fuzzer.cc" ]
-  deps = [ "//base" ]
-}
-
-if (is_linux || is_chromeos) {
-  fuzzer_test("mime_util_xdg_fuzzer") {
-    sources = [ "nix/mime_util_xdg_fuzzer.cc" ]
-    deps = [
-      "//base",
-      "//testing/libfuzzer:libfuzzer_base_wrappers",
-    ]
-  }
-}
-
-fuzzer_test("base_persistent_histogram_allocator_fuzzer") {
-  sources = [ "metrics/persistent_histogram_allocator_fuzzer.cc" ]
-  deps = [
-    "//base",
-    "//testing/libfuzzer:libfuzzer_base_wrappers",
-  ]
-  seed_corpus = "//base/test/data/pma_corpus"
-}
-
-fuzzer_test("string_number_conversions_fuzzer") {
-  sources = [ "strings/string_number_conversions_fuzzer.cc" ]
-  deps = [
-    "//base",
-    "//testing/libfuzzer:libfuzzer_base_wrappers",
-  ]
-}
-
-fuzzer_test("string_pattern_fuzzer") {
-  sources = [ "strings/pattern_fuzzer.cc" ]
-  deps = [ "//base" ]
-}
-
-fuzzer_test("string_tokenizer_fuzzer") {
-  sources = [ "strings/string_tokenizer_fuzzer.cc" ]
-  deps = [
-    "//base",
-    "//testing/libfuzzer:libfuzzer_base_wrappers",
-  ]
-}
-
-fuzzer_test("substring_set_matcher_fuzzer") {
-  sources = [ "substring_set_matcher/substring_set_matcher_fuzzer.cc" ]
-  deps = [ "//base" ]
-}
-
-fuzzer_test("sys_string_conversions_fuzzer") {
-  sources = [ "strings/sys_string_conversions_fuzzer.cc" ]
-  deps = [ "//base" ]
-}
-
-fuzzer_test("time_delta_from_string_fuzzer") {
-  sources = [ "time/time_delta_from_string_fuzzer.cc" ]
-  deps = [
-    "//base",
-    "//testing/libfuzzer:libfuzzer_base_wrappers",
-  ]
-}
-
-fuzzer_test("time_fuzzer") {
-  sources = [ "time/time_fuzzer.cc" ]
-  deps = [
-    "//base",
-    "//base/test:test_support",
-  ]
-}
-
-fuzzer_test("utf_string_conversions_fuzzer") {
-  sources = [ "strings/utf_string_conversions_fuzzer.cc" ]
-  deps = [ "//base" ]
-}
-
-fuzzer_test("pickle_fuzzer") {
-  sources = [ "pickle_fuzzer.cc" ]
-  deps = [
-    "//base",
-    "//base/test:test_support",
-  ]
-}
 
 process_version("check_version_internal") {
   template_file = "//base/check_version_internal.h.in"

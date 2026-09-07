@@ -4,7 +4,6 @@
 
 import("//build/buildflag_header.gni")
 import("//build/config/cronet/config.gni")
-import("//testing/libfuzzer/fuzzer_test.gni")
 
 buildflag_header("buildflags") {
   header = "cbor_buildflags.h"

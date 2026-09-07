@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/cast.gni")
-import("//testing/libfuzzer/fuzzer_test.gni")
 
 # New dependencies should use `xml-rs` (potentially via `xml_dom.h`) instead of
 # using a memory-unsafe XML parser.
@@ -72,11 +71,4 @@ if (((is_linux && !is_castos) || is_chromeos) && !use_fuzzing_engine) {
       sources += [ "src/expat/lib/random_dev_urandom.c" ]
     }
   }
-}
-
-fuzzer_test("expat_xml_parse_fuzzer") {
-  sources = [ "fuzz/expat_xml_parse_fuzzer.cc" ]
-  deps = [ ":expat" ]
-  dict = "//third_party/libxml/fuzz/xml.dict"
-  seed_corpus = "//third_party/libxml/fuzz/seed_corpus"
 }

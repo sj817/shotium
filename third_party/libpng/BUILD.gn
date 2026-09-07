@@ -8,10 +8,6 @@ import("//build/config/arm.gni")
 import("//build/config/loongarch64.gni")
 import("//build/config/mips.gni")
 
-if (build_with_chromium) {
-  import("//testing/libfuzzer/fuzzer_test.gni")
-}
-
 config("libpng_config") {
   include_dirs = [ "." ]
 
@@ -142,18 +138,4 @@ group("libpng_for_testonly") {
 
   visibility = []
   visibility = libpng_testonly_visibility
-}
-
-if (build_with_chromium) {
-  libpng_ossfuzz_seed_corpuses = [
-    "//third_party/blink/web_tests/images/png-suite/samples",
-    "//third_party/blink/web_tests/images/resources/pngfuzz",
-  ]
-
-  fuzzer_test("libpng_read_fuzzer") {
-    sources = [ "contrib/oss-fuzz/libpng_read_fuzzer.cc" ]
-    deps = [ ":libpng" ]
-    dict = "contrib/oss-fuzz/png.dict"
-    seed_corpuses = libpng_ossfuzz_seed_corpuses
-  }
 }

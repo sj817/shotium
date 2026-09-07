@@ -9,7 +9,6 @@ import os
 import mojom.generate.generator as generator
 import mojom.generate.module as mojom
 import mojom.generate.pack as pack
-# Also imported from this module by the Mojolpm generator.
 from generators.cpp_util import IsNativeOnlyKind
 from mojom.generate.template_expander import (
   UseJinja,

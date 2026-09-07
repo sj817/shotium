@@ -21,7 +21,6 @@ def __step_config(ctx, step_config, use_windows_worker = None):
                 "./obj/chrome/test/fuzzing/jsfuzzer/jsfuzzer.o",
                 "./obj/chrome/test/fuzzing/jsfuzzer_proto_gen/jsfuzzer.pb.o",
                 "./obj/chrome/test/fuzzing/jsfuzzer_proto_gen/jsfuzzer_sub.pb.o",
-                "./obj/chrome/test/fuzzing/renderer_fuzzing/renderer_in_process_mojolpm_fuzzer/renderer_in_process_mojolpm_fuzzer.o",
                 "./obj/chrome/test/fuzzing/webidl_fuzzing/webidl_fuzzer_grammar/webidl_fuzzer_grammar.o",
                 "./obj/chrome/test/fuzzing/webidl_fuzzing/webidl_fuzzer_grammar_proto_gen/webidl_fuzzer_grammar.pb.o",
                 "./obj/chrome/test/fuzzing/webidl_fuzzing/webidl_in_process_fuzzer/webidl_in_process_fuzzer.o",

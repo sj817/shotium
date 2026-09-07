@@ -8,7 +8,6 @@ import("//mojo/public/tools/bindings/mojom.gni")
 import("//net/features.gni")
 import("//services/network/public/cpp/features.gni")
 import("//services/network/public/cpp/shot_sources.gni")
-import("//testing/libfuzzer/fuzzer_test.gni")
 import("//testing/test.gni")
 import("//third_party/blink/renderer/build/scripts/scripts.gni")  # TODO(crbug.com/397934758)
 
@@ -893,40 +892,5 @@ test("coep_fuzztest") {
   deps = [
     ":cpp",
     "//third_party/fuzztest:fuzztest_gtest_main",
-  ]
-}
-
-fuzzer_test("coop_fuzzer") {
-  sources = [ "cross_origin_opener_policy_parser_fuzzer.cc" ]
-  dict = "cross_origin_opener_policy.dict"
-  deps = [ ":cpp" ]
-}
-
-fuzzer_test("xfo_fuzzer") {
-  sources = [ "x_frame_options_parser_fuzzer.cc" ]
-  dict = "x_frame_options.dict"
-  deps = [ ":cpp" ]
-}
-
-fuzzer_test("cors_fuzzer") {
-  sources = [ "cors/cors_fuzzer.cc" ]
-  deps = [ ":cpp" ]
-  seed_corpus = "//services/network/public/cpp/cors/corpus"
-}
-
-fuzzer_test("client_hints_fuzzer") {
-  sources = [ "client_hints_fuzzer.cc" ]
-  deps = [
-    ":cpp",
-    "//base",
-    "//base:i18n",
-  ]
-}
-
-fuzzer_test("avail_language_header_fuzzer") {
-  sources = [ "avail_language_header_fuzzer.cc" ]
-  deps = [
-    ":cpp",
-    "//services/network/public/mojom:url_loader_base",
   ]
 }

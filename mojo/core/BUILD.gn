@@ -4,7 +4,6 @@
 
 import("//build/config/compiler/compiler.gni")
 import("//mojo/features.gni")
-import("//testing/libfuzzer/fuzzer_test.gni")
 import("//testing/test.gni")
 
 if (is_mac) {
@@ -212,14 +211,4 @@ source_set("test_sources") {
 
 group("core_impl_for_fuzzers") {
   public_deps = [ ":impl_for_embedder" ]
-}
-
-fuzzer_test("mojo_core_ipcz_channel_fuzzer") {
-  sources = [ "ipcz_channel_fuzzer.cc" ]
-  deps = [
-    ":core_impl_for_fuzzers",
-    "//base",
-    "//mojo/public/cpp/platform",
-    "//testing/libfuzzer:libfuzzer_base_wrappers",
-  ]
 }

@@ -51,7 +51,6 @@ from mojom.generate.generator import WriteFile
 _BUILTIN_GENERATORS = {
   "c++": "mojom_cpp_generator",
   "java": "mojom_java_generator",
-  "mojolpm": "mojom_mojolpm_generator",
   "rust": "mojom_rust_generator",
 }
 
@@ -219,10 +218,6 @@ def LoadTypemaps(typemaps, langs):
             if not lang in declared:
               declared[lang] = []
             declared[lang] += names
-
-  if 'c++' in loaded_typemap:
-    # The fuzzer also uses C++ typemappings.
-    loaded_typemap['mojolpm'] = loaded_typemap['c++']
 
   return loaded_typemap, declared
 
@@ -442,7 +437,7 @@ def main():
     "--generators",
     dest="generators_string",
     metavar="GENERATORS",
-    default="c++,java,mojolpm",
+    default="c++,java",
     help="comma-separated list of generators",
   )
   generate_parser.add_argument(

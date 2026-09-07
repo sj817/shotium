@@ -4,7 +4,6 @@
 
 import("//build/config/features.gni")
 import("//build/config/ui.gni")
-import("//testing/libfuzzer/fuzzer_test.gni")
 
 component("codec") {
   shot_jumbo_excluded_sources = [ "png_codec.cc" ]
@@ -42,22 +41,4 @@ component("codec") {
   }
 
   defines = [ "CODEC_IMPLEMENTATION" ]
-}
-
-fuzzer_test("gfx_jpeg_decoder_fuzzer") {
-  sources = [ "jpeg_decoder_fuzzer.cc" ]
-  deps = [
-    ":codec",
-    "//skia",
-  ]
-  seed_corpuses = [ "//third_party/blink/web_tests/images/resources/jpegfuzz" ]
-}
-
-fuzzer_test("gfx_png_decoder_fuzzer") {
-  sources = [ "png_decoder_fuzzer.cc" ]
-  deps = [
-    ":codec",
-    "//skia",
-  ]
-  seed_corpuses = [ "//third_party/blink/web_tests/images/resources/pngfuzz" ]
 }

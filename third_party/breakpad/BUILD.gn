@@ -5,7 +5,6 @@
 import("//build/config/rust.gni")
 import("//build/symlink.gni")
 import("//build/toolchain/toolchain.gni")
-import("//testing/libfuzzer/fuzzer_test.gni")
 import("//testing/test.gni")
 
 if (is_win) {
@@ -99,36 +98,17 @@ _symupload_toolchain_has_exe_suffix = host_os == "win"
 # `default_system_allocator_toolchain` toolchains in order to support this use
 # case.
 template("copy_exe") {
-  _build = true
-  if (defined(invoker.fuzzer) && invoker.fuzzer) {
-    # TODO(danakj): The fuzzer_test() template sometimes doesn't generate
-    # anything, but we can't tell from here whether it did or not. We can only
-    # depend on the target when it will build something. It should provide some
-    # way to know if it builds. For now we know that the fuzzer_test in this
-    # file is not built with `high_end_fuzzer_targets`.
-    if ((!use_libfuzzer && !use_centipede) || high_end_fuzzer_targets) {
-      _build = false
-    }
-  }
-
-  if (_build) {
-    if (invoker.has_exe_suffix) {
-      _exe = ".exe"
-    } else {
-      _exe = ""
-    }
-
-    copy(target_name) {
-      forward_variables_from(invoker,
-                             TESTONLY_AND_VISIBILITY + [ "public_deps" ])
-      public_deps = [ invoker.target ]
-      sources = [ get_label_info(invoker.target, "root_out_dir") + "/" +
-                  get_label_info(invoker.target, "name") + _exe ]
-      outputs = [ "$root_out_dir/{{source_file_part}}" ]
-    }
+  if (invoker.has_exe_suffix) {
+    _exe = ".exe"
   } else {
-    not_needed(invoker, "*")
-    not_needed([ "target_name" ])
+    _exe = ""
+  }
+  copy(target_name) {
+    forward_variables_from(invoker, TESTONLY_AND_VISIBILITY + [ "public_deps" ])
+    public_deps = [ invoker.target ]
+    sources = [ get_label_info(invoker.target, "root_out_dir") + "/" +
+                get_label_info(invoker.target, "name") + _exe ]
+    outputs = [ "$root_out_dir/{{source_file_part}}" ]
   }
 }
 
@@ -185,17 +165,9 @@ config("default_logging_severity_config") {
   defines = [ "BPLOG_MINIMUM_SEVERITY=SEVERITY_ERROR" ]
 }
 
-config("fuzzing_logging_severity_config") {
-  defines = [ "BPLOG_MINIMUM_SEVERITY=SEVERITY_CRITICAL" ]
-}
-
 default_breakpad_configs = [ ":tools_config" ]
 
-if (use_fuzzing_engine) {
-  default_breakpad_configs += [ ":fuzzing_logging_severity_config" ]
-} else {
-  default_breakpad_configs += [ ":default_logging_severity_config" ]
-}
+default_breakpad_configs += [ ":default_logging_severity_config" ]
 
 # {micro,mini}dump_stackwalk and minidump_dump are tool-type executables
 # that do not build on Windows.
@@ -306,45 +278,6 @@ if (!is_win) {
       configs += default_breakpad_configs
     }
 
-    fuzzer_test("minidump_fuzzer") {
-      sources = [
-        "breakpad/src/processor/exploitability.cc",
-        "breakpad/src/processor/minidump.cc",
-        "breakpad/src/processor/minidump_processor.cc",
-        "minidump_fuzzer.cc",
-      ]
-
-      deps = [
-        ":stackwalk_common",
-        "//base",
-      ]
-
-      additional_configs = [ ":fuzzing_logging_severity_config" ]
-      include_dirs = [ "breakpad/src" ]
-
-      libfuzzer_options = [
-        # Suppress stdout from stackwalk_common, as it uses printf() directly.
-        "close_fd_mask=1",
-        "max_len=128000",
-      ]
-
-      sources += [
-        "breakpad/src/processor/exploitability_linux.cc",
-        "breakpad/src/processor/exploitability_linux.h",
-        "breakpad/src/processor/exploitability_win.cc",
-        "breakpad/src/processor/exploitability_win.h",
-        "breakpad/src/processor/symbolic_constants_win.cc",
-        "breakpad/src/processor/symbolic_constants_win.h",
-      ]
-
-      if (is_linux || is_chromeos) {
-        sources += [
-          "breakpad/src/processor/disassembler_objdump.cc",
-          "breakpad/src/processor/disassembler_objdump.h",
-        ]
-      }
-    }
-
     executable("microdump_stackwalk") {
       sources = [
         "breakpad/src/processor/microdump.cc",
@@ -429,12 +362,6 @@ if (!is_win) {
       target = ":$target_name($_tests_launcher_toolchain)"
     }
     copy_exe("minidump_dump") {
-      has_exe_suffix = _tests_launcher_toolchain_has_exe_suffix
-      target = ":$target_name($_tests_launcher_toolchain)"
-    }
-    copy_exe("minidump_fuzzer") {
-      testonly = true
-      fuzzer = true
       has_exe_suffix = _tests_launcher_toolchain_has_exe_suffix
       target = ":$target_name($_tests_launcher_toolchain)"
     }

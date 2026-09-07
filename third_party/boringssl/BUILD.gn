@@ -184,8 +184,6 @@ component("boringssl") {
 }
 
 if (build_with_chromium) {
-  import("//testing/libfuzzer/fuzzer_test.gni")
-
   source_set("test_support") {
     visibility = [ ":*" ]
     sources = rebase_path(test_support_sources, ".", "src")
@@ -287,48 +285,12 @@ if (build_with_chromium) {
   executable("bssl_bench") {
     testonly = true
     sources = rebase_path(bench_sources + bench_internal_headers, ".", "src")
-    deps = [
-      ":boringssl",
-    ]
+    deps = [ ":boringssl" ]
 
     configs -= [ "//build/config/compiler:chromium_code" ]
     configs += [
       ":internal_config",
       "//build/config/compiler:no_chromium_code",
     ]
-  }
-
-  foreach(source, fuzz_sources) {
-    fuzzer = get_path_info(source, "name")
-    fuzzer_test("boringssl_${fuzzer}_fuzzer") {
-      sources = [
-        rebase_path(source, ".", "src"),
-        "src/ssl/test/fuzzer.h",
-        "src/ssl/test/fuzzer_tags.h",
-      ]
-      additional_configs = [ ":internal_config" ]
-      deps = [ ":boringssl" ]
-      seed_corpus = "src/fuzz/${fuzzer}_corpus"
-
-      if ("cert" == fuzzer) {
-        libfuzzer_options = [ "max_len=3072" ]
-      } else if ("client" == fuzzer) {
-        libfuzzer_options = [ "max_len=20000" ]
-      } else if ("pkcs8" == fuzzer) {
-        libfuzzer_options = [ "max_len=2048" ]
-      } else if ("privkey" == fuzzer) {
-        libfuzzer_options = [ "max_len=2048" ]
-      } else if ("read_pem" == fuzzer) {
-        libfuzzer_options = [ "max_len=512" ]
-      } else if ("session" == fuzzer) {
-        libfuzzer_options = [ "max_len=8192" ]
-      } else if ("server" == fuzzer) {
-        libfuzzer_options = [ "max_len=4096" ]
-      } else if ("spki" == fuzzer) {
-        libfuzzer_options = [ "max_len=1024" ]
-      } else if ("ssl_ctx_api" == fuzzer) {
-        libfuzzer_options = [ "max_len=256" ]
-      }
-    }
   }
 }

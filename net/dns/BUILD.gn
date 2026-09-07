@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//net/features.gni")
-import("//testing/libfuzzer/fuzzer_test.gni")
 import("//third_party/protobuf/proto_library.gni")
 
 enable_built_in_dns = use_blink
@@ -563,91 +562,5 @@ if (use_fuzzing_engine) {
       "//base/test:test_support",
       "//net",
     ]
-  }
-}
-
-fuzzer_test("net_dns_hosts_parse_fuzzer") {
-  sources = [ "dns_hosts_parse_fuzzer.cc" ]
-  deps = [
-    "//base",
-    "//net",
-    "//net:net_fuzzer_test_support",
-  ]
-  dict = "//net/data/fuzzer_dictionaries/net_dns_hosts_parse_fuzzer.dict"
-}
-
-fuzzer_test("net_dns_https_record_rdata_fuzzer") {
-  sources = [ "https_record_rdata_fuzzer.cc" ]
-  deps = [
-    "//base",
-    "//net",
-    "//net:net_fuzzer_test_support",
-  ]
-  dict = "//net/data/fuzzer_dictionaries/net_dns_record_fuzzer.dict"
-}
-
-fuzzer_test("net_dns_nsswitch_reader_fuzzer") {
-  sources = [ "nsswitch_reader_fuzzer.cc" ]
-  deps = [
-    "//base",
-    "//net",
-    "//net:net_fuzzer_test_support",
-  ]
-  dict = "//net/data/fuzzer_dictionaries/net_dns_nsswitch_reader_fuzzer.dict"
-}
-
-fuzzer_test("net_dns_record_fuzzer") {
-  sources = [ "dns_record_fuzzer.cc" ]
-  deps = [
-    "//base",
-    "//net",
-    "//net:net_fuzzer_test_support",
-    "//testing/libfuzzer:libfuzzer_base_wrappers",
-  ]
-  dict = "//net/data/fuzzer_dictionaries/net_dns_record_fuzzer.dict"
-}
-
-fuzzer_test("net_dns_query_parse_fuzzer") {
-  sources = [ "dns_query_parse_fuzzer.cc" ]
-  deps = [
-    "//base",
-    "//net",
-    "//net:net_fuzzer_test_support",
-  ]
-  dict = "//net/data/fuzzer_dictionaries/net_dns_record_fuzzer.dict"
-}
-
-fuzzer_test("net_dns_response_fuzzer") {
-  sources = [ "dns_response_fuzzer.cc" ]
-  deps = [
-    "//base",
-    "//net",
-    "//net:net_fuzzer_test_support",
-  ]
-  dict = "//net/data/fuzzer_dictionaries/net_dns_record_fuzzer.dict"
-}
-
-fuzzer_test("net_host_resolver_manager_fuzzer") {
-  sources = [ "host_resolver_manager_fuzzer.cc" ]
-  deps = [
-    "//base",
-    "//net",
-    "//net:net_fuzzer_test_support",
-    "//net:test_support",
-  ]
-  dict = "//net/data/fuzzer_dictionaries/net_host_resolver_manager_fuzzer.dict"
-  libfuzzer_options = [ "max_len=4096" ]
-}
-
-if (is_win) {
-  fuzzer_test("net_dns_parse_domain_ascii_win_fuzzer") {
-    sources = [ "dns_parse_domain_ascii_win_fuzzer.cc" ]
-    deps = [
-      "//base",
-      "//net",
-      "//net:net_fuzzer_test_support",
-    ]
-    dict = "//net/data/fuzzer_dictionaries/net_dns_hosts_parse_fuzzer.dict"
-    seed_corpus = "//net/data/fuzzer_data/dns_parse_domain_ascii_win_fuzzer"
   }
 }

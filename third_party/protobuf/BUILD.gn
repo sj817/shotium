@@ -179,10 +179,6 @@ group("protobuf_full") {
       # The protobuf-based SQLite and GPU fuzzers need protobuf_full and are not
       # included in Chrome.
 
-      # The protobuf-based Mojo LPM fuzzer needs protobuf_full and is not
-      # included in Chrome.
-      "//mojo/public/tools/fuzzers:mojolpm",
-
       # The root store tool is not part of Chrome itself, and needs to parse
       # human-readable protobufs. Protobuf is stored in //net/cert however as
       # browser needs to be able to parse serialized protobuf (which is exposed

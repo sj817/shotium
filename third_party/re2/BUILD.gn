@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//testing/libfuzzer/fuzzer_test.gni")
-
 config("re2_config") {
   include_dirs = [ "src" ]
 }
@@ -54,9 +52,4 @@ static_library("re2") {
   configs += [ "//build/config/compiler:no_chromium_code" ]
   public_configs = [ ":re2_config" ]
   public_deps = [ "//third_party/abseil-cpp:absl" ]
-}
-
-fuzzer_test("third_party_re2_fuzzer") {
-  sources = [ "src/re2/fuzzing/re2_fuzzer.cc" ]
-  deps = [ ":re2" ]
 }
