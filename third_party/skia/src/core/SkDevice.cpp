@@ -26,7 +26,6 @@
 #include "include/core/SkTypes.h"
 #include "include/core/SkVertices.h"
 #include "include/private/SkFloatingPoint.h"
-#include "include/private/chromium/Slug.h"  // IWYU pragma: keep
 #include "src/core/SkColorPriv.h"
 #include "src/core/SkEnumerate.h"
 #include "src/core/SkImageFilterTypes.h"
@@ -476,15 +475,6 @@ void SkDevice::simplifyGlyphRunRSXFormAndRedraw(SkCanvas* canvas,
             }
         }
     }
-}
-
-sk_sp<sktext::gpu::Slug> SkDevice::convertGlyphRunListToSlug(
-        const sktext::GlyphRunList& glyphRunList, const SkPaint& paint) {
-    return nullptr;
-}
-
-void SkDevice::drawSlug(SkCanvas*, const sktext::gpu::Slug*, const SkPaint&) {
-    SK_ABORT("Slug drawing not supported.");
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////

@@ -16,12 +16,11 @@ namespace skia {
 namespace {
 
 sk_sp<SkData> EncodePngAsSkData(
-    GrDirectContext* context,
     const SkImage* src,
     SkPngRustEncoder::CompressionLevel compression_level) {
   const SkPngRustEncoder::Options options = {.fCompressionLevel =
                                                  compression_level};
-  return SkPngRustEncoder::Encode(context, src, options);
+  return SkPngRustEncoder::Encode(src, options);
 }
 
 }  // namespace
@@ -31,14 +30,13 @@ sk_sp<SkData> EncodePngAsSkData(const SkPixmap& src) {
   return SkPngRustEncoder::Encode(src, kDefaultOptions);
 }
 
-sk_sp<SkData> EncodePngAsSkData(GrDirectContext* context, const SkImage* src) {
-  return EncodePngAsSkData(context, src,
+sk_sp<SkData> EncodePngAsSkData(const SkImage* src) {
+  return EncodePngAsSkData(src,
                            SkPngRustEncoder::CompressionLevel::kMedium);
 }
 
-sk_sp<SkData> FastEncodePngAsSkData(GrDirectContext* context,
-                                    const SkImage* src) {
-  return EncodePngAsSkData(context, src,
+sk_sp<SkData> FastEncodePngAsSkData(const SkImage* src) {
+  return EncodePngAsSkData(src,
                            SkPngRustEncoder::CompressionLevel::kLow);
 }
 

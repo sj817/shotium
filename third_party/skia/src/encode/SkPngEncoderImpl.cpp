@@ -46,7 +46,6 @@
 #include <png.h>
 #include <pngconf.h>
 
-class GrDirectContext;
 class SkImage;
 
 static_assert(PNG_FILTER_NONE  == (int)SkPngEncoder::FilterFlag::kNone,  "Skia libpng filter err.");
@@ -514,7 +513,7 @@ sk_sp<SkData> Encode(const SkPixmap& src, const Options& options) {
     return Encode(&stream, src, options) ? stream.detachAsData() : nullptr;
 }
 
-sk_sp<SkData> Encode(GrDirectContext* ctx, const SkImage* img, const Options& options) {
+sk_sp<SkData> Encode(const SkImage* img, const Options& options) {
     if (!img) {
         return nullptr;
     }

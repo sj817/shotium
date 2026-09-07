@@ -24,7 +24,6 @@ class SkStrikeCache;
 class SkStrikeClientImpl;
 class SkStrikeServerImpl;
 class SkSurfaceProps;
-namespace sktext::gpu { class Slug; }
 
 using SkDiscardableHandleId = uint32_t;
 // This class is not thread-safe.
@@ -142,7 +141,6 @@ public:
 
     // Given a buffer, unflatten into a slug making sure to do the typefaceID translation from
     // renderer to GPU. Returns nullptr if there was a problem.
-    sk_sp<sktext::gpu::Slug> deserializeSlugForTest(const void* data, size_t size) const;
 
 private:
     std::unique_ptr<SkStrikeClientImpl> fImpl;

@@ -190,7 +190,6 @@ skia_core_sources = [
   "$_include/private/chromium/SkChromeRemoteGlyphCache.h",
   "$_include/private/chromium/SkDiscardableMemory.h",
   "$_include/private/chromium/SkPMColor.h",
-  "$_include/private/chromium/Slug.h",
   "$_src/capture/SkCapture.cpp",
   "$_src/capture/SkCapture.h",
   "$_src/capture/SkCaptureCanvas.cpp",
@@ -710,7 +709,6 @@ skia_core_sources = [
   "$_src/shaders/SkWorkingColorSpaceShader.h",
   "$_src/text/GlyphRun.cpp",
   "$_src/text/GlyphRun.h",
-  "$_src/text/SlugFromBuffer.cpp",
   "$_src/text/StrikeForGPU.cpp",
   "$_src/text/StrikeForGPU.h",
 ]

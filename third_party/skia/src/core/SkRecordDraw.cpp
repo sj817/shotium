@@ -29,7 +29,6 @@
 #include "include/private/SkAssert.h"
 #include "include/private/SkTDArray.h"
 #include "include/private/SkTemplates.h"
-#include "include/private/chromium/Slug.h"
 #include "src/core/SkCanvasPriv.h"
 #include "src/core/SkDrawShadowInfo.h"
 #include "src/core/SkImageFilter_Base.h"
@@ -161,7 +160,6 @@ DRAW(DrawRRect, drawRRect(r.rrect, r.paint))
 DRAW(DrawRect, drawRect(r.rect, r.paint))
 DRAW(DrawRegion, drawRegion(r.region, r.paint))
 DRAW(DrawTextBlob, drawTextBlob(r.blob.get(), r.x, r.y, r.paint))
-DRAW(DrawSlug, drawSlug(r.slug.get(), r.paint))
 DRAW(DrawAtlas, drawAtlas(r.atlas.get(),
                           {r.xforms.data(), r.count},
                           {r.texs.data(), r.count},
@@ -498,11 +496,6 @@ private:
     Bounds bounds(const DrawTextBlob& op) const {
         SkRect dst = op.blob->bounds();
         dst.offset(op.x, op.y);
-        return this->adjustAndMap(dst, &op.paint);
-    }
-
-    Bounds bounds(const DrawSlug& op) const {
-        SkRect dst = op.slug->sourceBoundsWithOrigin();
         return this->adjustAndMap(dst, &op.paint);
     }
 

@@ -27,7 +27,6 @@
 #include <cstdint>
 #include <memory>
 
-class GrDirectContext;
 class SkImage;
 
 // A WebP encoder only, on top of (subset of) libwebp
@@ -256,7 +255,7 @@ bool EncodeAnimated(SkWStream* stream, SkSpan<const SkEncoder::Frame> frames, co
     return stream->write(assembled.bytes, assembled.size);
 }
 
-sk_sp<SkData> Encode(GrDirectContext* ctx, const SkImage* img, const Options& options) {
+sk_sp<SkData> Encode(const SkImage* img, const Options& options) {
     if (!img) {
         return nullptr;
     }

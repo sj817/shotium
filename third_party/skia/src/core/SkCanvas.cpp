@@ -40,7 +40,6 @@
 #include "include/private/SkTPin.h"
 #include "include/private/SkTemplates.h"
 #include "include/private/SkTo.h"
-#include "include/private/chromium/Slug.h"
 #include "include/utils/SkNoDrawCanvas.h"
 #include "src/core/SkBlenderBase.h"
 #include "src/core/SkBlurMaskFilterImpl.h"
@@ -77,7 +76,6 @@
 // and std::max() is constexpr only since the c++14 stdlib.
 static_assert(std::max(3,4) == 4);
 
-using Slug = sktext::gpu::Slug;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -2451,47 +2449,6 @@ void SkCanvas::onDrawGlyphRunList(const sktext::GlyphRunList& glyphRunList, cons
     auto layer = this->aboutToDraw(paint, &bounds, PredrawFlags::kSkipMaskFilterAutoLayer);
     if (layer) {
         this->topDevice()->drawGlyphRunList(this, glyphRunList, layer->paint());
-    }
-}
-
-sk_sp<Slug> SkCanvas::convertBlobToSlug(
-        const SkTextBlob& blob, SkPoint origin, const SkPaint& paint) {
-    TRACE_EVENT0("skia", TRACE_FUNC);
-    AutoGlyphRunBuilder scratchBuilder(this);
-    auto glyphRunList = scratchBuilder->blobToGlyphRunList(blob, origin);
-    return this->onConvertGlyphRunListToSlug(glyphRunList, paint);
-}
-
-sk_sp<Slug> SkCanvas::onConvertGlyphRunListToSlug(const sktext::GlyphRunList& glyphRunList,
-                                                  const SkPaint& paint) {
-    SkRect bounds = glyphRunList.sourceBoundsWithOrigin();
-    if (bounds.isEmpty() || !bounds.isFinite() || this->nothingToDraw(paint)) {
-        return nullptr;
-    }
-    // See comment in onDrawGlyphRunList()
-    auto layer = this->aboutToDraw(paint, &bounds, PredrawFlags::kSkipMaskFilterAutoLayer);
-    if (layer) {
-        return this->topDevice()->convertGlyphRunListToSlug(glyphRunList, layer->paint());
-    }
-    return nullptr;
-}
-
-void SkCanvas::drawSlug(const Slug* slug, const SkPaint& paint) {
-    TRACE_EVENT0("skia", TRACE_FUNC);
-    if (slug) {
-        this->onDrawSlug(slug, paint);
-    }
-}
-
-void SkCanvas::onDrawSlug(const Slug* slug, const SkPaint& paint) {
-    SkRect bounds = slug->sourceBoundsWithOrigin();
-    if (this->internalQuickReject(bounds, paint)) {
-        return;
-    }
-    // See comment in onDrawGlyphRunList()
-    auto layer = this->aboutToDraw(paint, &bounds, PredrawFlags::kSkipMaskFilterAutoLayer);
-    if (layer) {
-        this->topDevice()->drawSlug(this, slug, layer->paint());
     }
 }
 

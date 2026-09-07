@@ -65,7 +65,6 @@ class Mapping;
 }
 namespace sktext::gpu {
 class SubRunControl;
-class Slug;
 }
 
 struct SkStrikeDeviceInfo {
@@ -316,10 +315,6 @@ public:
     void drawGlyphRunList(SkCanvas*,
                           const sktext::GlyphRunList& glyphRunList,
                           const SkPaint& paint);
-    // Slug handling routines.
-    virtual sk_sp<sktext::gpu::Slug> convertGlyphRunListToSlug(
-            const sktext::GlyphRunList& glyphRunList, const SkPaint& paint);
-    virtual void drawSlug(SkCanvas*, const sktext::gpu::Slug* slug, const SkPaint& paint);
 
     virtual void drawPaint(const SkPaint& paint) = 0;
     virtual void drawPoints(SkCanvas::PointMode, SkSpan<const SkPoint>, const SkPaint&) = 0;
@@ -593,7 +588,6 @@ protected:
     void drawVertices(const SkVertices*, sk_sp<SkBlender>, const SkPaint&, bool) override {}
     void drawMesh(const SkMesh&, sk_sp<SkBlender>, const SkPaint&) override {}
 
-    void drawSlug(SkCanvas*, const sktext::gpu::Slug*, const SkPaint&) override {}
     void onDrawGlyphRunList(SkCanvas*, const sktext::GlyphRunList&, const SkPaint&) override {}
 
     bool isNoPixelsDevice() const override { return true; }

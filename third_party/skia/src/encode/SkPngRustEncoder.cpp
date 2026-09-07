@@ -31,7 +31,7 @@ sk_sp<SkData> Encode(const SkPixmap& src, const Options& options) {
     return stream.detachAsData();
 }
 
-sk_sp<SkData> Encode(GrDirectContext* ctx, const SkImage* img, const Options& options) {
+sk_sp<SkData> Encode(const SkImage* img, const Options& options) {
     if (!img) {
         return nullptr;
     }

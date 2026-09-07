@@ -54,7 +54,6 @@ struct SkRect;
 namespace sktext {
 class GlyphRunList;
 namespace gpu {
-class Slug;
 }
 }  // namespace sktext
 
@@ -116,7 +115,6 @@ public:
                         SkScalar x,
                         SkScalar y,
                         const SkPaint& paint) override;
-    void onDrawSlug(const sktext::gpu::Slug* slug, const SkPaint& paint) override;
     void onDrawGlyphRunList(const sktext::GlyphRunList& glyphRunList,
                             const SkPaint& paint) override;
     void onDrawPatch(const SkPoint cubics[12],

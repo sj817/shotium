@@ -47,7 +47,6 @@ protected:
                         SkScalar x,
                         SkScalar y,
                         const SkPaint& paint) override;
-    void onDrawSlug(const sktext::gpu::Slug* slug, const SkPaint& paint) override;
     void onDrawPatch(const SkPoint cubics[12],
                      const SkColor colors[4],
                      const SkPoint texCoords[4],
@@ -118,8 +117,6 @@ protected:
     bool onAccessTopLayerPixels(SkPixmap* pixmap) override;
     SkImageInfo onImageInfo() const override;
     bool onGetProps(SkSurfaceProps* props, bool top) const override;
-    sk_sp<sktext::gpu::Slug> onConvertGlyphRunListToSlug(
-            const sktext::GlyphRunList& glyphRunList, const SkPaint& paint) override;
 
     // NOTE: We intentionally do not override onDiscard() to notify the base canvas's surface that
     // it can be discarded. This would produce redundant discards, since presumably whatever draw

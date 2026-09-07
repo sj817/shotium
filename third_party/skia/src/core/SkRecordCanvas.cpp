@@ -27,7 +27,6 @@
 #include "include/private/SkFloatingPoint.h"
 #include "include/private/SkTemplates.h"
 #include "include/private/SkTo.h"
-#include "include/private/chromium/Slug.h"
 #include "src/core/SkBigPicture.h"
 #include "src/core/SkCanvasPriv.h"
 #include "src/core/SkRecord.h"
@@ -263,10 +262,6 @@ void SkRecordCanvas::onDrawTextBlob(const SkTextBlob* blob,
                                     SkScalar y,
                                     const SkPaint& paint) {
     this->append<SkRecords::DrawTextBlob>(paint, sk_ref_sp(blob), x, y);
-}
-
-void SkRecordCanvas::onDrawSlug(const sktext::gpu::Slug* slug, const SkPaint& paint) {
-    this->append<SkRecords::DrawSlug>(paint, sk_ref_sp(slug));
 }
 
 void SkRecordCanvas::onDrawGlyphRunList(const sktext::GlyphRunList& glyphRunList,

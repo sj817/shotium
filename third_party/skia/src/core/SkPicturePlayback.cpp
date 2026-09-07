@@ -45,7 +45,6 @@ class SkPath;
 class SkTextBlob;
 class SkVertices;
 
-namespace sktext { namespace gpu { class Slug; } }
 
 using namespace skia_private;
 
@@ -638,13 +637,6 @@ void SkPicturePlayback::handleOp(SkReadBuffer* reader,
             BREAK_ON_READ_ERROR(reader);
 
             canvas->drawTextBlob(blob, x, y, paint);
-        } break;
-        case DRAW_SLUG: {
-            const SkPaint& paint = fPictureData->requiredPaint(reader);
-            const sktext::gpu::Slug* slug = fPictureData->getSlug(reader);
-            BREAK_ON_READ_ERROR(reader);
-
-            canvas->drawSlug(slug, paint);
         } break;
         case DRAW_VERTICES_OBJECT: {
             const SkPaint& paint = fPictureData->requiredPaint(reader);

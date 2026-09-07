@@ -14,7 +14,6 @@
 #include "include/core/SkSurface.h"
 #include "include/private/SkAssert.h"
 #include "include/private/SkLog.h"
-#include "include/private/chromium/Slug.h"
 #include "include/utils/SkNWayCanvas.h"
 #include "src/capture/SkCaptureManager.h"
 #include "src/core/SkCanvasPriv.h"
@@ -85,11 +84,6 @@ SkImageInfo SkCaptureCanvas::onImageInfo() const {
 
 bool SkCaptureCanvas::onGetProps(SkSurfaceProps* props, bool top) const {
     return fBaseCanvas->onGetProps(props, top);
-}
-
-sk_sp<sktext::gpu::Slug> SkCaptureCanvas::onConvertGlyphRunListToSlug(
-        const sktext::GlyphRunList& glyphRunList, const SkPaint& paint) {
-    return fBaseCanvas->onConvertGlyphRunListToSlug(glyphRunList, paint);
 }
 
 //////////////////// Function forwarding ///////////////////////
@@ -308,11 +302,6 @@ void SkCaptureCanvas::onDrawTextBlob(const SkTextBlob* blob,
                                      const SkPaint& paint) {
     this->pollCapturingStatus();
     this->SkNWayCanvas::onDrawTextBlob(blob, x, y, paint);
-}
-
-void SkCaptureCanvas::onDrawSlug(const sktext::gpu::Slug* slug, const SkPaint& paint) {
-    this->pollCapturingStatus();
-    this->SkNWayCanvas::onDrawSlug(slug, paint);
 }
 
 void SkCaptureCanvas::onDrawPicture(const SkPicture* picture,

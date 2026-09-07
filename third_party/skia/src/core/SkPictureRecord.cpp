@@ -21,7 +21,6 @@
 #include "include/core/SkTextBlob.h"
 #include "include/core/SkTileMode.h"
 #include "include/private/SkTo.h"
-#include "include/private/chromium/Slug.h"
 #include "src/core/SkCanvasPriv.h"
 #include "src/core/SkDrawShadowInfo.h"
 #include "src/core/SkMatrixPriv.h"
@@ -606,16 +605,6 @@ void SkPictureRecord::onDrawTextBlob(const SkTextBlob* blob, SkScalar x, SkScala
     this->validate(initialOffset, size);
 }
 
-void SkPictureRecord::onDrawSlug(const sktext::gpu::Slug* slug, const SkPaint& paint) {
-    // op + paint index + slug id
-    size_t size = 3 * kUInt32Size;
-    size_t initialOffset = this->addDraw(DRAW_SLUG, &size);
-
-    this->addPaint(paint);
-    this->addSlug(slug);
-    this->validate(initialOffset, size);
-}
-
 void SkPictureRecord::onDrawPicture(const SkPicture* picture, const SkMatrix* matrix,
                                     const SkPaint* paint) {
     // op + picture index
@@ -958,11 +947,6 @@ void SkPictureRecord::addText(const void* text, size_t byteLength) {
 void SkPictureRecord::addTextBlob(const SkTextBlob* blob) {
     // follow the convention of recording a 1-based index
     this->addInt(find_or_append(fTextBlobs, blob) + 1);
-}
-
-void SkPictureRecord::addSlug(const sktext::gpu::Slug* slug) {
-    // follow the convention of recording a 1-based index
-    this->addInt(find_or_append(fSlugs, slug) + 1);
 }
 
 void SkPictureRecord::addVertices(const SkVertices* vertices) {

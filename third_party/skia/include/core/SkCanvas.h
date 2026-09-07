@@ -82,7 +82,6 @@ class GlyphRun;
 class GlyphRunList;
 }  // namespace sktext
 
-namespace sktext::gpu { class Slug; }
 namespace SkRecords { class Draw; }
 namespace skiatest {
 template <typename Key>
@@ -2384,14 +2383,7 @@ protected:
 
     virtual void onDiscard();
 
-    /**
-     */
-    virtual sk_sp<sktext::gpu::Slug> onConvertGlyphRunListToSlug(
-            const sktext::GlyphRunList& glyphRunList, const SkPaint& paint);
 
-    /**
-     */
-    virtual void onDrawSlug(const sktext::gpu::Slug* slug, const SkPaint& paint);
 
 private:
     enum class PredrawFlags : unsigned {
@@ -2556,18 +2548,8 @@ private:
     SkCanvas& operator=(SkCanvas&&) = delete;
     SkCanvas& operator=(const SkCanvas&) = delete;
 
-    friend class sktext::gpu::Slug;
     friend class SkPicturePlayback;
-    /**
-     * Convert a SkTextBlob to a sktext::gpu::Slug using the current canvas state.
-     */
-    sk_sp<sktext::gpu::Slug> convertBlobToSlug(const SkTextBlob& blob, SkPoint origin,
-                                               const SkPaint& paint);
 
-    /**
-     * Draw an sktext::gpu::Slug given the current canvas state.
-     */
-    void drawSlug(const sktext::gpu::Slug* slug, const SkPaint& paint);
 
     /** Experimental
      *  Saves the specified subset of the current pixels in the current layer,

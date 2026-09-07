@@ -9,7 +9,6 @@
 
 #include "third_party/skia/include/core/SkRefCnt.h"
 
-class GrDirectContext;
 class SkData;
 class SkImage;
 class SkPixmap;
@@ -17,10 +16,8 @@ class SkPixmap;
 namespace skia {
 
 SK_API sk_sp<SkData> EncodePngAsSkData(const SkPixmap& src);
-SK_API sk_sp<SkData> EncodePngAsSkData(GrDirectContext* context,
-                                       const SkImage* src);
-SK_API sk_sp<SkData> FastEncodePngAsSkData(GrDirectContext* context,
-                                           const SkImage* src);
+SK_API sk_sp<SkData> EncodePngAsSkData(const SkImage* src);
+SK_API sk_sp<SkData> FastEncodePngAsSkData(const SkImage* src);
 SK_API std::string EncodePngAsDataUri(const SkPixmap& src);
 
 // This is not thread safe and should only be called via startup

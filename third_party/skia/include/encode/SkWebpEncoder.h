@@ -16,7 +16,6 @@
 class SkPixmap;
 class SkWStream;
 class SkData;
-class GrDirectContext;
 class SkImage;
 struct skcms_ICCProfile;
 
@@ -58,14 +57,12 @@ SK_API bool Encode(SkWStream* dst, const SkPixmap& src, const Options& options);
 SK_API sk_sp<SkData> Encode(const SkPixmap& src, const Options& options);
 
 /**
-*  Encode the provided image and return the resulting bytes. If the image was created as
-*  a texture-backed image on a GPU context, that |ctx| must be provided so the pixels
-*  can be read before being encoded. For raster-backed images, |ctx| can be nullptr.
+*  Encode the provided image and return the resulting bytes.
 *  |options| may be used to control the encoding behavior.
 *
 *  Returns nullptr if the pixels could not be read or encoding otherwise fails.
 */
-SK_API sk_sp<SkData> Encode(GrDirectContext* ctx, const SkImage* img, const Options& options);
+SK_API sk_sp<SkData> Encode(const SkImage* img, const Options& options);
 
 /**
  *  Encode the |src| frames to the |dst| stream.

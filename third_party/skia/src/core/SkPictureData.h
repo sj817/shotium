@@ -22,7 +22,6 @@
 #include "include/core/SkTypes.h"
 #include "include/core/SkVertices.h"
 #include "include/private/SkTArray.h"
-#include "include/private/chromium/Slug.h"
 #include "src/core/SkPictureFlat.h"
 #include "src/core/SkReadBuffer.h"
 
@@ -71,7 +70,6 @@ public:
 #define SK_PICT_PAINT_BUFFER_TAG    SkSetFourByteTag('p', 'n', 't', ' ')
 #define SK_PICT_PATH_BUFFER_TAG     SkSetFourByteTag('p', 't', 'h', ' ')
 #define SK_PICT_TEXTBLOB_BUFFER_TAG SkSetFourByteTag('b', 'l', 'o', 'b')
-#define SK_PICT_SLUG_BUFFER_TAG     SkSetFourByteTag('s', 'l', 'u', 'g')
 #define SK_PICT_VERTICES_BUFFER_TAG SkSetFourByteTag('v', 'e', 'r', 't')
 #define SK_PICT_IMAGE_BUFFER_TAG    SkSetFourByteTag('i', 'm', 'a', 'g')
 
@@ -143,9 +141,6 @@ public:
         return read_index_base_1_or_null(reader, fTextBlobs);
     }
 
-    const sktext::gpu::Slug* getSlug(SkReadBuffer* reader) const {
-        return read_index_base_1_or_null(reader, fSlugs);
-    }
 
     const SkVertices* getVertices(SkReadBuffer* reader) const {
         return read_index_base_1_or_null(reader, fVertices);
@@ -173,7 +168,6 @@ private:
     skia_private::TArray<sk_sp<const SkTextBlob>>  fTextBlobs;
     skia_private::TArray<sk_sp<const SkVertices>>  fVertices;
     skia_private::TArray<sk_sp<const SkImage>>     fImages;
-    skia_private::TArray<sk_sp<const sktext::gpu::Slug>> fSlugs;
 
     SkTypefacePlayback                 fTFPlayback;
     std::unique_ptr<SkFactoryPlayback> fFactoryPlayback;

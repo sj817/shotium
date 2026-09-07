@@ -23,10 +23,7 @@ void PictureDebugUtil::SerializeAsBase64(const SkPicture* picture,
                                          std::string* output) {
   SkSerialProcs procs{
       .fImageProc = [](SkImage* img, void*) -> SkSerialReturnType {
-        // Note: if the picture contains texture-backed (gpu) images, they will
-        // fail to be read-back and therefore fail to be encoded unless we can
-        // thread the correct GrDirectContext through to here.
-        return skia::EncodePngAsSkData(nullptr, img);
+        return skia::EncodePngAsSkData(img);
       }};
   sk_sp<SkData> data = picture->serialize(&procs);
   *output = base::Base64Encode(

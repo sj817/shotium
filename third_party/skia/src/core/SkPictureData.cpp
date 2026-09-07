@@ -48,7 +48,6 @@ SkPictureData::SkPictureData(const SkPictureRecord& record,
     , fTextBlobs(record.getTextBlobs())
     , fVertices(record.getVertices())
     , fImages(record.getImages())
-    , fSlugs(record.getSlugs())
     , fInfo(info) {
 
     fOpData = record.opData();
@@ -172,13 +171,6 @@ void SkPictureData::flattenToBuffer(SkWriteBuffer& buffer, bool textBlobsOnly) c
         write_tag_size(buffer, SK_PICT_TEXTBLOB_BUFFER_TAG, fTextBlobs.size());
         for (const auto& blob : fTextBlobs) {
             SkTextBlobPriv::Flatten(*blob, buffer);
-        }
-    }
-
-    if (!textBlobsOnly) {
-        write_tag_size(buffer, SK_PICT_SLUG_BUFFER_TAG, fSlugs.size());
-        for (const auto& slug : fSlugs) {
-            slug->doFlatten(buffer);
         }
     }
 
@@ -494,9 +486,6 @@ void SkPictureData::parseBufferTag(SkReadBuffer& buffer, uint32_t tag, uint32_t 
             } break;
         case SK_PICT_TEXTBLOB_BUFFER_TAG:
             new_array_from_buffer(buffer, size, fTextBlobs, SkTextBlobPriv::MakeFromBuffer);
-            break;
-        case SK_PICT_SLUG_BUFFER_TAG:
-            new_array_from_buffer(buffer, size, fSlugs, sktext::gpu::Slug::MakeFromBuffer);
             break;
         case SK_PICT_VERTICES_BUFFER_TAG:
             new_array_from_buffer(buffer, size, fVertices, SkVerticesPriv::Decode);

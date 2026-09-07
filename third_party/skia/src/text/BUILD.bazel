@@ -11,7 +11,6 @@ TEXT_FILES = [
     "GlyphRun.h",
     "StrikeForGPU.cpp",
     "StrikeForGPU.h",
-    "SlugFromBuffer.cpp",
 ]
 
 split_srcs_and_hdrs(

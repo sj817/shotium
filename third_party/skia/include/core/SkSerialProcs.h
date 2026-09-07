@@ -22,9 +22,6 @@ class SkTypeface;
 class SkReadBuffer;
 class SkStream;
 enum SkAlphaType : int;
-namespace sktext::gpu {
-    class Slug;
-}
 
 using SkSerialReturnType = sk_sp<const SkData>;
 /**
@@ -73,13 +70,6 @@ using SkDeserialImageFromDataProc = sk_sp<SkImage> (*)(sk_sp<SkData>,
                                                        void* ctx);
 
 /**
- * Slugs are currently only deserializable with a GPU backend. Clients will not be able to
- * provide a custom mechanism here, but can enable Slug deserialization by calling
- * sktext::gpu::AddDeserialProcs to add Skia's implementation.
- */
-using SkSlugProc = sk_sp<sktext::gpu::Slug> (*)(SkReadBuffer&, void* ctx);
-
-/**
  *  Called with the encoded form of a typeface (previously written with a custom
  *  SkSerialTypefaceProc proc). Return a typeface object, or nullptr indicating failure.
  *  TODO: Users must not attempt to fork or duplicate the passed stream and hold on to the result.
@@ -108,8 +98,6 @@ struct SK_API SkDeserialProcs {
     SkDeserialImageFromDataProc  fImageDataProc = nullptr;
     void*                        fImageCtx = nullptr;
 
-    SkSlugProc                   fSlugProc = nullptr;
-    void*                        fSlugCtx = nullptr;
 
     SkDeserialTypefaceStreamProc fTypefaceStreamProc = nullptr;
     void*                        fTypefaceCtx = nullptr;

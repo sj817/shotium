@@ -28,7 +28,6 @@
 #include "include/private/SkTArray.h"
 #include "include/private/SkTDArray.h"
 #include "include/private/SkTo.h"
-#include "include/private/chromium/Slug.h"
 #include "src/core/SkPictureFlat.h"
 #include "src/core/SkTHash.h"
 #include "src/core/SkWriter32.h"
@@ -82,9 +81,6 @@ public:
         return fTextBlobs;
     }
 
-    const skia_private::TArray<sk_sp<const sktext::gpu::Slug>>& getSlugs() const {
-        return fSlugs;
-    }
 
     const skia_private::TArray<sk_sp<const SkVertices>>& getVertices() const {
         return fVertices;
@@ -183,7 +179,6 @@ private:
     void addSampling(const SkSamplingOptions&);
     void addText(const void* text, size_t byteLength);
     void addTextBlob(const SkTextBlob* blob);
-    void addSlug(const sktext::gpu::Slug* slug);
     void addVertices(const SkVertices*);
 
     int find(const SkBitmap& bitmap);
@@ -210,7 +205,6 @@ protected:
 
     void onDrawTextBlob(const SkTextBlob* blob, SkScalar x, SkScalar y,
                                 const SkPaint& paint) override;
-    void onDrawSlug(const sktext::gpu::Slug* slug, const SkPaint& paint) override;
     void onDrawPatch(const SkPoint cubics[12], const SkColor colors[4],
                      const SkPoint texCoords[4], SkBlendMode, const SkPaint& paint) override;
 
@@ -284,7 +278,6 @@ private:
     skia_private::TArray<sk_sp<SkDrawable>>       fDrawables;
     skia_private::TArray<sk_sp<const SkTextBlob>> fTextBlobs;
     skia_private::TArray<sk_sp<const SkVertices>> fVertices;
-    skia_private::TArray<sk_sp<const sktext::gpu::Slug>> fSlugs;
 
     uint32_t fRecordFlags;
     int      fInitialSaveCount;

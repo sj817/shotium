@@ -61,7 +61,7 @@ sk_sp<SkData> Encode(const SkPixmap& src, const Options& options) {
     return Encode(&stream, src, options) ? stream.detachAsData() : nullptr;
 }
 
-sk_sp<SkData> Encode(GrDirectContext* ctx, const SkImage* img, const Options& options) {
+sk_sp<SkData> Encode(const SkImage* img, const Options& options) {
     if (!img) {
         return nullptr;
     }
@@ -89,7 +89,7 @@ bool Encode(SkWStream*, const SkYUVAPixmaps&, const SkColorSpace*, const Options
     return false;
 }
 
-sk_sp<SkData> Encode(GrDirectContext* ctx, const SkImage* img, const Options& options) {
+sk_sp<SkData> Encode(const SkImage* img, const Options& options) {
     if (!img) {
         return nullptr;
     }
@@ -131,7 +131,7 @@ sk_sp<SkData> Encode(const SkPixmap& src, const Options& options) {
     return Encode(&stream, src, options) ? stream.detachAsData() : nullptr;
 }
 
-sk_sp<SkData> Encode(GrDirectContext* ctx, const SkImage* img, const Options& options) {
+sk_sp<SkData> Encode(const SkImage* img, const Options& options) {
     if (!img) {
         return nullptr;
     }

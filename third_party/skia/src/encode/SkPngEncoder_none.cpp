@@ -10,7 +10,6 @@
 #include "include/encode/SkPngEncoder.h"
 #include "include/private/SkAssert.h"
 
-class GrDirectContext;
 class SkImage;
 class SkPixmap;
 class SkWStream;
@@ -27,7 +26,7 @@ sk_sp<SkData> Encode(const SkPixmap&, const Options&) {
     return nullptr;
 }
 
-sk_sp<SkData> Encode(GrDirectContext*, const SkImage*, const Options&) {
+sk_sp<SkData> Encode(const SkImage*, const Options&) {
     SkDEBUGFAIL("Using encoder stub");
     return nullptr;
 }

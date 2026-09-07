@@ -10,7 +10,6 @@ licenses(["notice"])
 skia_filegroup(
     name = "shared_private_hdrs",
     srcs = [
-        "Slug.h",
     ],
 )
 
@@ -28,7 +27,6 @@ skia_filegroup(
         "SkChromeRemoteGlyphCache.h",
         "SkDiscardableMemory.h",
         "SkPMColor.h",
-        "Slug.h",
     ],
     visibility = ["//src/core:__pkg__"],
 )
