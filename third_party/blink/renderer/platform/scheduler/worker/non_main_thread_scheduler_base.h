@@ -57,9 +57,7 @@ class PLATFORM_EXPORT NonMainThreadSchedulerBase : public ThreadSchedulerBase {
   base::TimeTicks MonotonicallyIncreasingVirtualTime();
 
   scoped_refptr<NonMainThreadTaskQueue> CreateTaskQueue(
-      base::sequence_manager::QueueName name,
-      NonMainThreadTaskQueue::QueueCreationParams params =
-          NonMainThreadTaskQueue::QueueCreationParams());
+      base::sequence_manager::QueueName name);
 
  protected:
   // ThreadSchedulerBase:
@@ -71,7 +69,6 @@ class PLATFORM_EXPORT NonMainThreadSchedulerBase : public ThreadSchedulerBase {
       base::sequence_manager::SequenceManager* sequence_manager,
       TaskType default_task_type);
 
-  friend class WorkerSchedulerImpl;
   friend class NonMainThreadImpl;
 
   NonMainThreadSchedulerHelper& GetHelper() override { return helper_; }

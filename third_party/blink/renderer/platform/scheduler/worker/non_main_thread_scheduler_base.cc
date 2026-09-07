@@ -21,13 +21,11 @@ NonMainThreadSchedulerBase::~NonMainThreadSchedulerBase() = default;
 
 scoped_refptr<NonMainThreadTaskQueue>
 NonMainThreadSchedulerBase::CreateTaskQueue(
-    base::sequence_manager::QueueName name,
-    NonMainThreadTaskQueue::QueueCreationParams params) {
+    base::sequence_manager::QueueName name) {
   helper_.CheckOnValidThread();
   return helper_.NewTaskQueue(
       base::sequence_manager::TaskQueue::Spec(name).SetShouldMonitorQuiescence(
-          true),
-      params);
+          true));
 }
 
 base::TimeTicks

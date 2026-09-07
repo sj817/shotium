@@ -46,22 +46,27 @@
 | 6 | `a9089e98db19` | 浏览器宿主/Widget、popup/plugin、PAC/ScrollingCoordinator 与主合成器入口；249 文件删除，177 张像素一致，Windows 完整运行验证通过 |
 
 | 7 | `bea94b044ba3` | 输入路由/IME/EditContext、浏览器公共接口、Autofill/拼写建议/编辑命令/SystemClipboard；216 文件删除，179 张像素一致 |
+| 8 | `13a93d449cfa` | AnimationWorklet、NativePaint、CSS paint()和延迟图片记录；74 文件删除，181 张像素一致 |
 
 前三批 Windows EXE/DLL、84 demos、serve/net、Node/daemon/协议、Bilibili 和像素基线检查已完成，详见执行记录；六平台实际编译未完成。没有创建 PR 或发布。
 
-## 最新接续状态：第八批 Windows 完整验证通过，准备提交
+## 最新接续状态：第九批验证完成
 
-本段优先于下面历史进度。stage12 删除74文件、142个首次触碰路径，合计213个变更路径；源码已冻结并完成 Windows EXE/DLL、Node addon 和全部运行检查，没有活动构建会话。20并发已实际LLVM OOM，本批采用8并发，未修改永久默认。提交后冻结stage12，下一批新建stage13，禁止重放旧编辑计划。
+本段优先于下面历史进度。第八批提交13a93d449cfa，stage12冻结。第九批使用stage13：85个首次触碰路径、实体删除20文件，共105个变更路径；Windows EXE/DLL、新Node addon及全部运行检查已完成，没有活动构建或测试。8并发，无OOM；原20并发OOM记录仍有效，未修改永久默认。
 
-本批完整拆除 Blink/cc AnimationWorklet、NativePaint 背景色/阴影/clip-path生成器和状态、CSS paint()解析与样式缓存、跨线程CSS值/派发、Canvas记录器尾巴、Worklet任务/时间事件/Host与Scheduler异步等待、自定义/原生属性动画与tracker、PaintWorkletInput/DeferredPaintRecord、图层/瓦片图片记录映射和专用provider、PaintImage/Shader/绘制与序列化延迟支路。普通CSS动画、滚动时间线、CPU背景/阴影、SVG/shape裁剪、CPU PaintRecord与图片解码/动画/HDR保留。pending_tree_fully_painted_仍是同步UpdateDrawProperties/图片失效完成前的raster与activation门控，不能因旧名误删。
+本批删除FileReader/Sync脚本入口和返回union8文件、WorkerScheduler/页面代理/Web调度队列7文件、合成线程和专用scheduler5文件。同时删除无创建方的Worklet/ShadowRealm/V8/WebNN token、Mojom/traits/GN映射、Worklet请求destination、CSSOM暴露声明、V8三类队列和任务类别、Worker生命周期限流、后台输入子队列及无用音频实时参数。持久枚举原值不重编号，映射完整性表明确保留2/11/27编号空位。
 
-验证结果：GN6847 targets/856 files；7429输入全存在；IDL dry-run54枚举122引用0缺失。首轮3个C++失败TU已补直接include/删除旧Worklet绑定，3/3 syntax clean，EXE/DLL随后成功。serve/net、84 demos（62 exact/1 fuzzy/21 smoke）、Node/daemon/协议、Bilibili、accept全部通过；181/181解码像素完全相同。新动态clip-path专项已正常输出，且与静态中点参考0像素差；旧版此fixture退出无图，故只记录该具体回归修复。原Chrome oracle差异约1.524%保持。
+保留字体/HTML预扫描实际使用的NonMainThread、默认/控制/idle队列、GC与任务清理顺序。MainThreadSchedulerImpl仍是Shot创建真实AgentGroupScheduler的入口，不可改成空SimpleMainThreadScheduler。FileReaderLoader/client/data仍被DataObject读取Blob使用；普通Worker公共token仍受网络/GPU协议耦合，后续继续处理。未改动未获批的拖放提案。
 
-EXE46,414,336字节，SHA256 3429614bb621a7c55ba505e1c0a913561a7f34681b63e1c924281ce0f0ea6472；DLL46,411,264字节，SHA256 30804661fdf9d119061d256fa47053050edde6fd3f49ebb9cd49491f23750576。运行/像素/二进制证据在out/cut-batch8；源码manifest/deletions/static-proof在out/cut-stage12。74份备份哈希通过，16,853 tracked源码/GN无删除路径残余，126个owned C++/头文件预处理配对通过。
+验证：GN6847 targets/856 files、7429输入全存在、IDL dry-run枚举与union检查通过。首轮2个失败TU（枚举保留编号表、ThreadScheduler直接include）已修复，2/2 syntax clean；续编EXE/DLL成功。serve/net、84 demos（62 exact/1 fuzzy/21 smoke）、Node/daemon/协议、Bilibili、accept全通过，181/181原始基准解码像素一致，动态clip-path与静态中点参考一致。Chrome oracle既有差异1.524%保持。
 
-Linux probe使用out/CutBatch8Linux：0缺BUILD/0主仓库缺输入，3项Linux DEPS和1项宿主工具链缺失；Jumbo扫描40个候选，不代表Linux编译通过。第一次嵌套out/cut-batch8/LinuxProbe因脚本相对路径假设误报，正确目录重跑已通过。六平台实际构建仍未完成。
+EXE46,395,392字节，SHA256 225b15334de211e7c1216bbfcbe78bf51b749d8e2b63acf164384a8317bca0d4；DLL46,393,344字节，SHA256 e4563b7c2a6fdbd4d8760c46881e7429d8a001f1515ce9017b50861a4879dd21。运行证据out/cut-batch9/validation.json，源码证据out/cut-stage13；20份删除备份SHA256通过，16,835个tracked源码/GN无删除路径残余，42个owned C++/头文件预处理配对通过。
 
-继续项：普通compositor动画状态、cc/Viz/GPU全闭包，以及泛用WorkletToken/Mojo联合、网络destination、IDL Exposed和线程类别；CPU PendingAnimations/PreCommit/NotifyReady不可误删。拖放14文件提案未应用，自动审批拒绝仍未获用户确认；继续其他独立工作。本批不是根目录全目标完成。
+Linux probe为out/CutBatch9Linux：0缺BUILD/0主仓库缺输入，3项Linux DEPS和1项宿主工具链缺失；Jumbo列出40候选，部分文件未扫描，不计为Linux实编译。六平台实际构建仍未完成。
+
+下一批普通动画/cc闭包从out/cut-stage13/next-animation-boundary.md及next-animation-complete-callers.txt接续，使用新stage14清单，禁止重放stage13编辑。已有out/cut-animation-cpu/fixture.html与baseline.png：16组transform/paused/delay/fill/zoom/SVG行为，第九批新EXE渲染两次像素一致，出处与SHA256在provenance.json。下一批像素对照应增至182张。CPU PendingAnimations/NotifyReady、PreCommit的post-paint deferral和IsCurrent触发UpdateIfNecessary副作用、关键帧变换快照参与的子像素与轴对齐判断必须保留。不得按Compositor名称整块删掉。
+
+拖放14文件提案未应用，自动审批拒绝仍未获用户确认；继续其他独立工作。普通动画GPU状态、cc/Viz/GPU运行链、网络公共层、诊断与其余根目录闭包仍未完成，本批通过不等于全目标完成。
 
 ## 剩余大批次清单
 

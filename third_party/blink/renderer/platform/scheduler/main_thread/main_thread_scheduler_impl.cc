@@ -304,33 +304,11 @@ MainThreadSchedulerImpl::MainThreadSchedulerImpl(
       back_forward_cache_ipc_tracking_task_queue_->CreateTaskRunner(
           TaskType::kMainThreadTaskQueueIPCTracking);
 
-  v8_task_queue_ = NewTaskQueue(MainThreadTaskQueue::QueueCreationParams(
-      MainThreadTaskQueue::QueueType::kV8));
-  v8_user_visible_task_queue_ = NewTaskQueue(
-      MainThreadTaskQueue::QueueCreationParams(
-          MainThreadTaskQueue::QueueType::kV8UserVisible)
-          .SetPrioritisationType(
-              MainThreadTaskQueue::QueueTraits::PrioritisationType::kLow)
-          .SetCanBeDeferredForRendering(base::FeatureList::IsEnabled(
-              features::kDeferRendererTasksAfterInput)));
-  v8_best_effort_task_queue_ = NewTaskQueue(
-      MainThreadTaskQueue::QueueCreationParams(
-          MainThreadTaskQueue::QueueType::kV8BestEffort)
-          .SetPrioritisationType(
-              MainThreadTaskQueue::QueueTraits::PrioritisationType::kBestEffort)
-          .SetCanBeDeferredForRendering(base::FeatureList::IsEnabled(
-              features::kDeferRendererTasksAfterInput)));
   non_waking_task_queue_ =
       NewTaskQueue(MainThreadTaskQueue::QueueCreationParams(
                        MainThreadTaskQueue::QueueType::kNonWaking)
                        .SetNonWaking(true));
 
-  v8_task_runner_ =
-      v8_task_queue_->CreateTaskRunner(TaskType::kMainThreadTaskQueueV8);
-  v8_user_visible_task_runner_ = v8_user_visible_task_queue_->CreateTaskRunner(
-      TaskType::kMainThreadTaskQueueV8UserVisible);
-  v8_best_effort_task_runner_ = v8_best_effort_task_queue_->CreateTaskRunner(
-      TaskType::kMainThreadTaskQueueV8BestEffort);
   control_task_runner_ = helper_.ControlMainThreadTaskQueue()->CreateTaskRunner(
       TaskType::kMainThreadTaskQueueControl);
   non_waking_task_runner_ = non_waking_task_queue_->CreateTaskRunner(
@@ -762,11 +740,6 @@ MainThreadSchedulerImpl::IdleTaskRunner() {
 scoped_refptr<base::SingleThreadTaskRunner>
 MainThreadSchedulerImpl::DeprecatedDefaultTaskRunner() {
   return helper_.DeprecatedDefaultTaskRunner();
-}
-
-scoped_refptr<MainThreadTaskQueue> MainThreadSchedulerImpl::V8TaskQueue() {
-  helper_.CheckOnValidThread();
-  return v8_task_queue_;
 }
 
 scoped_refptr<base::SingleThreadTaskRunner>
@@ -2281,21 +2254,6 @@ void MainThreadSchedulerImpl::PostDelayedIdleTask(
 
 void MainThreadSchedulerImpl::RemoveCancelledIdleTasks() {
   idle_helper_.RemoveCancelledIdleTasks();
-}
-
-scoped_refptr<base::SingleThreadTaskRunner>
-MainThreadSchedulerImpl::V8TaskRunner() {
-  return v8_task_runner_;
-}
-
-scoped_refptr<base::SingleThreadTaskRunner>
-MainThreadSchedulerImpl::V8UserVisibleTaskRunner() {
-  return v8_user_visible_task_runner_;
-}
-
-scoped_refptr<base::SingleThreadTaskRunner>
-MainThreadSchedulerImpl::V8BestEffortTaskRunner() {
-  return v8_best_effort_task_runner_;
 }
 
 scoped_refptr<base::SingleThreadTaskRunner>

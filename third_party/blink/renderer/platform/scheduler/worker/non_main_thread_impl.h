@@ -29,12 +29,8 @@ namespace blink {
 namespace scheduler {
 
 class NonMainThreadSchedulerBase;
-class WorkerSchedulerProxy;
 
-// Thread implementation for a thread created by Blink. Although the name says
-// "worker", the thread represented by this class is used not only for Web
-// Workers but for many other use cases, like for WebAudio, Web Database, etc.
-//
+// Background thread implementation used by font decoding and HTML preloading.
 class PLATFORM_EXPORT NonMainThreadImpl : public NonMainThread {
  public:
   explicit NonMainThreadImpl(const ThreadCreationParams& params);
@@ -49,10 +45,6 @@ class PLATFORM_EXPORT NonMainThreadImpl : public NonMainThread {
 
   scheduler::NonMainThreadSchedulerBase* GetNonMainThreadScheduler() {
     return thread_->GetNonMainThreadScheduler();
-  }
-
-  scheduler::WorkerSchedulerProxy* worker_scheduler_proxy() const {
-    return worker_scheduler_proxy_.get();
   }
 
   // This should be eventually removed. It's needed for a very specific case
@@ -83,7 +75,6 @@ class PLATFORM_EXPORT NonMainThreadImpl : public NonMainThread {
 
     explicit SimpleThreadImpl(const String& name_prefix,
                               const base::SimpleThread::Options& options,
-                              base::TimeDelta realtime_period,
                               bool supports_gc,
                               NonMainThreadImpl* worker_thread,
                               base::MessagePumpType message_pump_type);
@@ -118,12 +109,6 @@ class PLATFORM_EXPORT NonMainThreadImpl : public NonMainThread {
    private:
     void Run() override;
 
-#if BUILDFLAG(IS_APPLE)
-    base::TimeDelta GetRealtimePeriod() override { return realtime_period_; }
-
-    const base::TimeDelta realtime_period_;
-#endif
-
     const base::MessagePumpType message_pump_type_;
 
     // Internal queue not exposed externally nor to the scheduler used for
@@ -154,14 +139,8 @@ class PLATFORM_EXPORT NonMainThreadImpl : public NonMainThread {
   };
 
   std::unique_ptr<SimpleThreadImpl> thread_;
-  const ThreadType thread_type_;
-  std::unique_ptr<scheduler::WorkerSchedulerProxy> worker_scheduler_proxy_;
   bool supports_gc_;
 
-#if BUILDFLAG(IS_APPLE)
-  FRIEND_TEST_ALL_PREFIXES(NonMainThreadImplRealtimePeriodTest,
-                           RealtimePeriodConfiguration);
-#endif
 };
 
 }  // namespace scheduler

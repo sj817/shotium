@@ -255,21 +255,6 @@ ThreadSafeBrowserInterfaceBrokerProxy* Platform::GetBrowserInterfaceBroker() {
   return &proxy;
 }
 
-void Platform::CreateAndSetCompositorThread() {
-  Thread::CreateAndSetCompositorThread();
-}
-
-scoped_refptr<base::SingleThreadTaskRunner>
-Platform::CompositorThreadTaskRunner() {
-  if (NonMainThread* compositor_thread = Thread::CompositorThread())
-    return compositor_thread->GetTaskRunner();
-  return nullptr;
-}
-
-
-
-
-
 scoped_refptr<viz::RasterContextProvider>
 Platform::SharedCompositorWorkerContextProvider(
     cc::RasterDarkModeFilter* dark_mode_filter) {

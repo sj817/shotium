@@ -234,10 +234,6 @@ class PLATFORM_EXPORT MainThreadSchedulerImpl
                            base::TimeDelta delay,
                            Thread::IdleTask) override;
   void RemoveCancelledIdleTasks() override;
-  scoped_refptr<base::SingleThreadTaskRunner> V8TaskRunner() override;
-  scoped_refptr<base::SingleThreadTaskRunner> V8UserVisibleTaskRunner()
-      override;
-  scoped_refptr<base::SingleThreadTaskRunner> V8BestEffortTaskRunner() override;
   scoped_refptr<base::SingleThreadTaskRunner> CleanupTaskRunner() override;
   base::TimeTicks MonotonicallyIncreasingVirtualTime() override;
   void AddTaskObserver(base::TaskObserver* task_observer) override;
@@ -408,7 +404,6 @@ class PLATFORM_EXPORT MainThreadSchedulerImpl
   Vector<base::OnceClosure>& GetOnTaskCompletionCallbacks() override;
 
   scoped_refptr<MainThreadTaskQueue> ControlTaskQueue();
-  scoped_refptr<MainThreadTaskQueue> V8TaskQueue();
 
   virtual void PerformMicrotaskCheckpoint();
 
@@ -714,15 +709,9 @@ class PLATFORM_EXPORT MainThreadSchedulerImpl
 
   TaskQueueVoterMap task_runners_;
 
-  scoped_refptr<MainThreadTaskQueue> v8_task_queue_;
-  scoped_refptr<MainThreadTaskQueue> v8_user_visible_task_queue_;
-  scoped_refptr<MainThreadTaskQueue> v8_best_effort_task_queue_;
   scoped_refptr<MainThreadTaskQueue> memory_purge_task_queue_;
   scoped_refptr<MainThreadTaskQueue> non_waking_task_queue_;
 
-  scoped_refptr<base::SingleThreadTaskRunner> v8_task_runner_;
-  scoped_refptr<base::SingleThreadTaskRunner> v8_user_visible_task_runner_;
-  scoped_refptr<base::SingleThreadTaskRunner> v8_best_effort_task_runner_;
   scoped_refptr<base::SingleThreadTaskRunner> control_task_runner_;
   scoped_refptr<base::SingleThreadTaskRunner> non_waking_task_runner_;
   scoped_refptr<base::SingleThreadTaskRunner>

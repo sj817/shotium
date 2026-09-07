@@ -4,7 +4,7 @@
 
 // Spec: https://drafts.css-houdini.org/css-typed-om/#the-stylepropertymap
 [
-    Exposed=(Window,LayoutWorklet,PaintWorklet)
+    Exposed=Window
 ] interface StylePropertyMapReadOnly {
     iterable<CSSOMString, sequence<CSSStyleValue>>;
     [RaisesException, CallWith=ExecutionContext] (undefined or CSSStyleValue) get(CSSOMString property);

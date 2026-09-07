@@ -45,7 +45,6 @@ class TaskTimeObserver;
 
 namespace blink {
 
-class FrameOrWorkerScheduler;
 class MainThread;
 class NonMainThread;
 class ThreadScheduler;
@@ -58,24 +57,10 @@ struct PLATFORM_EXPORT ThreadCreationParams {
 
   ThreadCreationParams& SetThreadNameForTest(const char* name);
 
-  // Sets a scheduler for the context which was responsible for the creation
-  // of this thread.
-  ThreadCreationParams& SetFrameOrWorkerScheduler(FrameOrWorkerScheduler*);
-
   ThreadCreationParams& SetSupportsGC(bool supports_gc);
 
   ThreadType thread_type;
   const char* name;
-  raw_ptr<FrameOrWorkerScheduler> frame_or_worker_scheduler;  // NOT OWNED
-
-  // Do NOT set the thread priority for non-WebAudio usages. Please consult
-  // scheduler-dev@ first in order to use an elevated thread priority.
-  base::ThreadType base_thread_type = base::ThreadType::kDefault;
-
-  // The interval at which the thread expects to have work to do. Zero if
-  // unknown. Used when configuring a thread with `base_thread_type`
-  // base::ThreadType::kRealtimeAudio.
-  base::TimeDelta realtime_period;
 
   bool supports_gc = false;
 };
@@ -94,19 +79,11 @@ class PLATFORM_EXPORT Thread {
   // TaskObserver is an observer fired before and after a task is executed.
   using TaskObserver = base::TaskObserver;
 
-  // Create and save (as a global variable) the compositor thread. The thread
-  // will be accessible through CompositorThread().
-  static void CreateAndSetCompositorThread();
-
   // Return an interface to the current thread.
   static Thread* Current();
 
   // Return an interface to the main thread.
   static blink::MainThread* MainThread();
-
-  // Return an interface to the compositor thread (if initialized). This can be
-  // null if the renderer was created with threaded rendering disabled.
-  static NonMainThread* CompositorThread();
 
   Thread();
   Thread(const Thread&) = delete;

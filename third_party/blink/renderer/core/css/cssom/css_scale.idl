@@ -6,7 +6,7 @@
 // "transform".
 // Spec: https://drafts.css-houdini.org/css-typed-om/#cssscale
 [
-    Exposed=(Window,LayoutWorklet,PaintWorklet)
+    Exposed=Window
 ] interface CSSScale : CSSTransformComponent {
     [RaisesException] constructor(CSSNumberish x, CSSNumberish y, optional CSSNumberish z);
     [RaisesException=Setter] attribute CSSNumberish x;

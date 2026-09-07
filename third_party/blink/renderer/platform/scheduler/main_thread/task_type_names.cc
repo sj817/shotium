@@ -105,12 +105,6 @@ perfetto::StaticString TaskTypeNames::TaskTypeToString(TaskType task_type) {
       return "InternalUserInteraction";
     case TaskType::kInternalInspector:
       return "InternalInspector";
-    case TaskType::kMainThreadTaskQueueV8:
-      return "MainThreadTaskQueueV8";
-    case TaskType::kMainThreadTaskQueueV8UserVisible:
-      return "MainThreadTaskQueueV8UserVisible";
-    case TaskType::kMainThreadTaskQueueV8BestEffort:
-      return "MainThreadTaskQueueV8BestEffort";
     case TaskType::kMainThreadTaskQueueCompositor:
       return "MainThreadTaskQueueCompositor";
     case TaskType::kMainThreadTaskQueueDefault:
@@ -127,16 +121,10 @@ perfetto::StaticString TaskTypeNames::TaskTypeToString(TaskType task_type) {
       return "MainThreadTaskQueueNonWaking";
     case TaskType::kInternalIntersectionObserver:
       return "InternalIntersectionObserver";
-    case TaskType::kCompositorThreadTaskQueueDefault:
-      return "CompositorThreadTaskQueueDefault";
     case TaskType::kCompositorThreadTaskQueueInput:
       return "CompositorThreadTaskQueueInput";
     case TaskType::kWorkerThreadTaskQueueDefault:
       return "WorkerThreadTaskQueueDefault";
-    case TaskType::kWorkerThreadTaskQueueV8:
-      return "WorkerThreadTaskQueueV8";
-    case TaskType::kWorkerThreadTaskQueueCompositor:
-      return "WorkerThreadTaskQueueCompositor";
     case TaskType::kWorkerAnimation:
       return "WorkerAnimation";
     case TaskType::kInternalTranslation:

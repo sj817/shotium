@@ -21,7 +21,6 @@ namespace {
 // LINT.IfChange
 constexpr char kEmpty[] = "";
 constexpr char kAudio[] = "audio";
-constexpr char kAudioWorklet[] = "audioworklet";
 constexpr char kDocument[] = "document";
 constexpr char kEmbed[] = "embed";
 constexpr char kFont[] = "font";
@@ -31,7 +30,6 @@ constexpr char kImage[] = "image";
 constexpr char kJson[] = "json";
 constexpr char kManifest[] = "manifest";
 constexpr char kObject[] = "object";
-constexpr char kPaintWorklet[] = "paintworklet";
 constexpr char kReport[] = "report";
 constexpr char kScript[] = "script";
 constexpr char kServiceWorker[] = "serviceworker";
@@ -53,7 +51,6 @@ constexpr auto kRequestDestinationToStringMap =
     base::MakeFixedFlatMap<network::mojom::RequestDestination, const char*>(
         {{network::mojom::RequestDestination::kEmpty, kEmpty},
          {network::mojom::RequestDestination::kAudio, kAudio},
-         {network::mojom::RequestDestination::kAudioWorklet, kAudioWorklet},
          {network::mojom::RequestDestination::kDocument, kDocument},
          {network::mojom::RequestDestination::kEmbed, kEmbed},
          {network::mojom::RequestDestination::kFont, kFont},
@@ -62,7 +59,6 @@ constexpr auto kRequestDestinationToStringMap =
          {network::mojom::RequestDestination::kImage, kImage},
          {network::mojom::RequestDestination::kManifest, kManifest},
          {network::mojom::RequestDestination::kObject, kObject},
-         {network::mojom::RequestDestination::kPaintWorklet, kPaintWorklet},
          {network::mojom::RequestDestination::kReport, kReport},
          {network::mojom::RequestDestination::kScript, kScript},
          {network::mojom::RequestDestination::kServiceWorker, kServiceWorker},
@@ -89,7 +85,6 @@ constexpr auto kRequestDestinationFromStringMap =
                            network::mojom::RequestDestination>(
         {{kEmpty, network::mojom::RequestDestination::kEmpty},
          {kAudio, network::mojom::RequestDestination::kAudio},
-         {kAudioWorklet, network::mojom::RequestDestination::kAudioWorklet},
          {kDocument, network::mojom::RequestDestination::kDocument},
          {kEmbed, network::mojom::RequestDestination::kEmbed},
          {kFont, network::mojom::RequestDestination::kFont},
@@ -98,7 +93,6 @@ constexpr auto kRequestDestinationFromStringMap =
          {kImage, network::mojom::RequestDestination::kImage},
          {kManifest, network::mojom::RequestDestination::kManifest},
          {kObject, network::mojom::RequestDestination::kObject},
-         {kPaintWorklet, network::mojom::RequestDestination::kPaintWorklet},
          {kReport, network::mojom::RequestDestination::kReport},
          {kScript, network::mojom::RequestDestination::kScript},
          {kServiceWorker, network::mojom::RequestDestination::kServiceWorker},
@@ -127,6 +121,8 @@ constexpr auto kRequestDestinationFromStringMap =
 // These must be kept in sync with the mojom definition to ensure the static
 // asserts below work correctly.
 constexpr int kDeprecatedRequestDestinationValues[] = {
+    2,   // Removed audio worklet destination.
+    11,  // Removed paint worklet destination.
     27,  // kSharedStorageWorklet
 };
 

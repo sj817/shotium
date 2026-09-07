@@ -37,11 +37,6 @@ void SimpleMainThreadScheduler::RemoveRAILModeObserver(
     RAILModeObserver const* observer) {}
 
 scoped_refptr<base::SingleThreadTaskRunner>
-SimpleMainThreadScheduler::V8TaskRunner() {
-  return base::SingleThreadTaskRunner::GetCurrentDefault();
-}
-
-scoped_refptr<base::SingleThreadTaskRunner>
 SimpleMainThreadScheduler::CleanupTaskRunner() {
   return base::SingleThreadTaskRunner::GetCurrentDefault();
 }

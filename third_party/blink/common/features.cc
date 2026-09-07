@@ -43,11 +43,6 @@ BASE_FEATURE(kAIPageContentMissingSubframesFailSilently,
              base::FEATURE_ENABLED_BY_DEFAULT);
 
 
-// Controls whether JavaScript execution inside AudioWorkletProcessor::Process()
-// runs under strict IEEE-754 floating-point semantics (disabling FTZ/DAZ).
-// Enabled by default as a remote kill-switch.
-BASE_FEATURE(kAudioWorkletJSDenormalEnabler,
-             base::FEATURE_ENABLED_BY_DEFAULT);
 
 #if BUILDFLAG(IS_ANDROID)
 // If enabled, then use desktop page webprefs for Android devices that have
@@ -125,24 +120,6 @@ BASE_FEATURE(kAllowURNsInIframes, base::FEATURE_ENABLED_BY_DEFAULT);
 // warning for now.
 BASE_FEATURE(kDisplayWarningDeprecateURNIframesUseFencedFrames,
              base::FEATURE_DISABLED_BY_DEFAULT);
-
-// A server-side switch for the kRealtimeAudio thread type of
-// RealtimeAudioWorkletThread object. This can be controlled by a field trial,
-// it will use the kNormal type thread when disabled.
-BASE_FEATURE(kAudioWorkletThreadRealtimePriority,
-             base::FEATURE_ENABLED_BY_DEFAULT);
-
-#if BUILDFLAG(IS_APPLE)
-// When enabled, RealtimeAudioWorkletThread scheduling is optimized taking into
-// account how often the worklet logic is executed (which is determined by the
-// AudioContext buffer duration).
-BASE_FEATURE(kAudioWorkletThreadRealtimePeriodMac,
-             base::FEATURE_ENABLED_BY_DEFAULT);
-#endif
-
-// A thread pool system for effective usage of RealtimeAudioWorkletThread
-// instances.
-BASE_FEATURE(kAudioWorkletThreadPool, base::FEATURE_ENABLED_BY_DEFAULT);
 
 // https://crbug.com/1472970
 BASE_FEATURE(kAutoSpeculationRules, base::FEATURE_DISABLED_BY_DEFAULT);
@@ -545,14 +522,6 @@ BASE_FEATURE(kDevToolsWebMCPSupport, base::FEATURE_ENABLED_BY_DEFAULT);
 
 BASE_FEATURE(kDevToolsAdsPanel, base::FEATURE_ENABLED_BY_DEFAULT);
 
-BASE_FEATURE(kDirectCompositorThreadIpc,
-#if BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC) || \
-    BUILDFLAG(IS_WIN)
-             base::FEATURE_ENABLED_BY_DEFAULT
-#else
-             base::FEATURE_DISABLED_BY_DEFAULT
-#endif
-);
 
 BASE_FEATURE(kDisableArrayBufferSizeLimitsForTesting,
              base::FEATURE_DISABLED_BY_DEFAULT);

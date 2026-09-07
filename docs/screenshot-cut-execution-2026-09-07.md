@@ -207,6 +207,28 @@ EXE46,414,336字节，较第七批减少69,632字节；SHA256：3429614bb621a7c5
 
 泛用Worker/Worklet公共token、网络destination、IDL暴露声明仍待下一闭包；普通CPU PendingAnimations/PreCommit逻辑不能误删。拖放提案仍未应用。本批完成不代表cc/GPU或整个根目录清理已经结束。
 
+## 第九批：公共脚本协议与后台调度
+
+删除20文件：FileReader/Sync脚本入口和返回union8文件、WorkerScheduler/页面代理/脚本队列7文件、合成器线程和专用scheduler5文件。无实际创建方的Worklet/ShadowRealm/V8/WebNN token与Mojom/traits/GN映射、Worklet destination、CSSOM暴露声明，以及V8三类任务队列/runner/统计分类、Worker生命周期限流和专用队列参数同步移除。持久枚举的现有值不重编号。
+
+字体处理和HTML预扫描实际调用NonMainThread::CreateThread，保留其默认/控制/idle任务队列、任务完成回调、GC和清理顺序。去掉原先无消费者的音频实时参数后仍使用相同默认线程优先级与message pump。共享FileReaderLoader仍被DataObject的blob读取使用，本批只删除脚本API；未改动未获批的拖放提案。Worker公共token及其网络/GPU协议仍有后续工作。
+
+| 验证 | 结果 |
+|---|---|
+| 静态删除闭包 | 20份删除备份SHA256通过；16,835 tracked源码/GN无删除路径残余；42个owned C++/头文件预处理配对通过 |
+| GN / 输入 / IDL | 6847 targets/856 files；7429输入全存在；dry-run枚举54个/122引用和union42引用均0缺失 |
+| Windows EXE / DLL | jobs8编译链接成功；首轮2个失败TU已修复，2/2 syntax clean，无OOM |
+| serve / net / demos | 全通过；62 exact/1 fuzzy/21 smoke，共84 demos |
+| Node / daemon / 协议 | 新addon加载相同SHA256的新DLL，全部通过 |
+| Bilibili / accept | 全通过；既有Chrome oracle差异1.524%保持 |
+| 原始像素 / 动态clip-path | 181/181解码RGBA完全相同；clip-path与静态中点参考相同 |
+| Linux probe / Jumbo | 0缺BUILD/0主仓库缺输入；3项Linux DEPS和1项宿主工具链缺失，40个Jumbo候选；未实编译 |
+| 六平台实际编译 | 尚未完成 |
+
+EXE46,395,392字节，较第八批减少18,944字节，SHA256 225b15334de211e7c1216bbfcbe78bf51b749d8e2b63acf164384a8317bca0d4。DLL46,393,344字节，减少17,920字节，SHA256 e4563b7c2a6fdbd4d8760c46881e7429d8a001f1515ce9017b50861a4879dd21。首轮错误为RequestDestination映射校验遗漏删除后保留的2/11编号，以及ThreadScheduler直接include；没有恢复已删除入口。源码证据在out/cut-stage13，完整运行/二进制/像素证据在out/cut-batch9，编译日志在out/Shot/cut-batch9-*.log。
+
+下一批16组CPU动画几何与暂停时序基准已由本批新EXE生成，两次像素相同并目视检查；保存于out/cut-animation-cpu，尚未用于验证下一批。普通动画GPU状态、cc/Viz/GPU与网络公共层仍需继续拆除。
+
 ## 后续批次
 
 继续处理网络公共层、输入/合成器/GPU、诊断后端等剩余闭包，完整接续清单见 `screenshot-cut-task.md`。不把待处理或已关闭开关标为彻底删除。

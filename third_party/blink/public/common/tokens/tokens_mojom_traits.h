@@ -130,102 +130,6 @@ struct BLINK_COMMON_EXPORT
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-// WORKLET TOKENS
-
-template <>
-struct StructTraits<blink::mojom::AnimationWorkletTokenDataView,
-                    blink::AnimationWorkletToken>
-    : public blink::TokenMojomTraitsHelper<
-          blink::mojom::AnimationWorkletTokenDataView,
-          blink::AnimationWorkletToken> {};
-
-template <>
-struct StructTraits<blink::mojom::AudioWorkletTokenDataView,
-                    blink::AudioWorkletToken>
-    : public blink::TokenMojomTraitsHelper<
-          blink::mojom::AudioWorkletTokenDataView,
-          blink::AudioWorkletToken> {};
-
-template <>
-struct StructTraits<blink::mojom::LayoutWorkletTokenDataView,
-                    blink::LayoutWorkletToken>
-    : public blink::TokenMojomTraitsHelper<
-          blink::mojom::LayoutWorkletTokenDataView,
-          blink::LayoutWorkletToken> {};
-
-template <>
-struct StructTraits<blink::mojom::PaintWorkletTokenDataView,
-                    blink::PaintWorkletToken>
-    : public blink::TokenMojomTraitsHelper<
-          blink::mojom::PaintWorkletTokenDataView,
-          blink::PaintWorkletToken> {};
-
-template <>
-struct StructTraits<blink::mojom::SharedStorageWorkletTokenDataView,
-                    blink::SharedStorageWorkletToken>
-    : public blink::TokenMojomTraitsHelper<
-          blink::mojom::SharedStorageWorkletTokenDataView,
-          blink::SharedStorageWorkletToken> {};
-
-template <>
-struct BLINK_COMMON_EXPORT
-    UnionTraits<blink::mojom::WorkletTokenDataView, blink::WorkletToken> {
- private:
-  using DataView = blink::mojom::WorkletTokenDataView;
-
- public:
-  static bool Read(DataView input, blink::WorkletToken* output);
-
-  static blink::mojom::WorkletTokenDataView::Tag GetTag(
-      const blink::WorkletToken& token) {
-    switch (token.variant_index()) {
-      case blink::WorkletToken::IndexOf<blink::AnimationWorkletToken>():
-        return DataView::Tag::kAnimationWorkletToken;
-      case blink::WorkletToken::IndexOf<blink::AudioWorkletToken>():
-        return DataView::Tag::kAudioWorkletToken;
-      case blink::WorkletToken::IndexOf<blink::LayoutWorkletToken>():
-        return DataView::Tag::kLayoutWorkletToken;
-      case blink::WorkletToken::IndexOf<blink::PaintWorkletToken>():
-        return DataView::Tag::kPaintWorkletToken;
-      case blink::WorkletToken::IndexOf<blink::SharedStorageWorkletToken>():
-        return DataView::Tag::kSharedStorageWorkletToken;
-    }
-    base::ImmediateCrash();
-  }
-
-  static const blink::AnimationWorkletToken& animation_worklet_token(
-      const blink::WorkletToken& token) {
-    return token.GetAs<blink::AnimationWorkletToken>();
-  }
-  static const blink::AudioWorkletToken& audio_worklet_token(
-      const blink::WorkletToken& token) {
-    return token.GetAs<blink::AudioWorkletToken>();
-  }
-  static const blink::LayoutWorkletToken& layout_worklet_token(
-      const blink::WorkletToken& token) {
-    return token.GetAs<blink::LayoutWorkletToken>();
-  }
-  static const blink::PaintWorkletToken& paint_worklet_token(
-      const blink::WorkletToken& token) {
-    return token.GetAs<blink::PaintWorkletToken>();
-  }
-  static const blink::SharedStorageWorkletToken& shared_storage_worklet_token(
-      const blink::WorkletToken& token) {
-    return token.GetAs<blink::SharedStorageWorkletToken>();
-  }
-};
-
-////////////////////////////////////////////////////////////////////////////////
-// SHADOW REALM TOKENS
-
-template <>
-struct StructTraits<blink::mojom::ShadowRealmTokenDataView,
-                    blink::ShadowRealmToken>
-    : public blink::TokenMojomTraitsHelper<
-          blink::mojom::ShadowRealmTokenDataView,
-          blink::ShadowRealmToken> {};
-
-////////////////////////////////////////////////////////////////////////////////
 // OTHER TOKENS
 //
 // Keep this section last.
@@ -255,20 +159,6 @@ struct BLINK_COMMON_EXPORT
         return DataView::Tag::kServiceWorkerToken;
       case blink::ExecutionContextToken::IndexOf<blink::SharedWorkerToken>():
         return DataView::Tag::kSharedWorkerToken;
-      case blink::ExecutionContextToken::IndexOf<
-          blink::AnimationWorkletToken>():
-        return DataView::Tag::kAnimationWorkletToken;
-      case blink::ExecutionContextToken::IndexOf<blink::AudioWorkletToken>():
-        return DataView::Tag::kAudioWorkletToken;
-      case blink::ExecutionContextToken::IndexOf<blink::LayoutWorkletToken>():
-        return DataView::Tag::kLayoutWorkletToken;
-      case blink::ExecutionContextToken::IndexOf<blink::PaintWorkletToken>():
-        return DataView::Tag::kPaintWorkletToken;
-      case blink::ExecutionContextToken::IndexOf<
-          blink::SharedStorageWorkletToken>():
-        return DataView::Tag::kSharedStorageWorkletToken;
-      case blink::ExecutionContextToken::IndexOf<blink::ShadowRealmToken>():
-        return DataView::Tag::kShadowRealmToken;
     }
     base::ImmediateCrash();
   }
@@ -289,30 +179,6 @@ struct BLINK_COMMON_EXPORT
       const blink::ExecutionContextToken& token) {
     return token.GetAs<blink::SharedWorkerToken>();
   }
-  static const blink::AnimationWorkletToken& animation_worklet_token(
-      const blink::ExecutionContextToken& token) {
-    return token.GetAs<blink::AnimationWorkletToken>();
-  }
-  static const blink::AudioWorkletToken& audio_worklet_token(
-      const blink::ExecutionContextToken& token) {
-    return token.GetAs<blink::AudioWorkletToken>();
-  }
-  static const blink::LayoutWorkletToken& layout_worklet_token(
-      const blink::ExecutionContextToken& token) {
-    return token.GetAs<blink::LayoutWorkletToken>();
-  }
-  static const blink::PaintWorkletToken& paint_worklet_token(
-      const blink::ExecutionContextToken& token) {
-    return token.GetAs<blink::PaintWorkletToken>();
-  }
-  static const blink::SharedStorageWorkletToken& shared_storage_worklet_token(
-      const blink::ExecutionContextToken& token) {
-    return token.GetAs<blink::SharedStorageWorkletToken>();
-  }
-  static const blink::ShadowRealmToken& shadow_realm_token(
-      const blink::ExecutionContextToken& token) {
-    return token.GetAs<blink::ShadowRealmToken>();
-  }
 };
 
 template <>
@@ -322,11 +188,6 @@ struct StructTraits<
     : public blink::TokenMojomTraitsHelper<
           blink::mojom::SameDocNavigationScreenshotDestinationTokenDataView,
           blink::SameDocNavigationScreenshotDestinationToken> {};
-
-template <>
-struct StructTraits<blink::mojom::V8ContextTokenDataView, blink::V8ContextToken>
-    : public blink::TokenMojomTraitsHelper<blink::mojom::V8ContextTokenDataView,
-                                           blink::V8ContextToken> {};
 
 template <>
 struct StructTraits<blink::mojom::ViewTransitionTokenDataView,
@@ -379,34 +240,6 @@ struct BLINK_COMMON_EXPORT
     return token.GetAs<blink::ServiceWorkerToken>();
   }
 };
-
-template <>
-struct StructTraits<blink::mojom::WebNNContextTokenDataView,
-                    blink::WebNNContextToken>
-    : public blink::TokenMojomTraitsHelper<
-          blink::mojom::WebNNContextTokenDataView,
-          blink::WebNNContextToken> {};
-
-template <>
-struct StructTraits<blink::mojom::WebNNPendingConstantTokenDataView,
-                    blink::WebNNPendingConstantToken>
-    : public blink::TokenMojomTraitsHelper<
-          blink::mojom::WebNNPendingConstantTokenDataView,
-          blink::WebNNPendingConstantToken> {};
-
-template <>
-struct StructTraits<blink::mojom::WebNNTensorTokenDataView,
-                    blink::WebNNTensorToken>
-    : public blink::TokenMojomTraitsHelper<
-          blink::mojom::WebNNTensorTokenDataView,
-          blink::WebNNTensorToken> {};
-
-template <>
-struct StructTraits<blink::mojom::WebNNGraphTokenDataView,
-                    blink::WebNNGraphToken>
-    : public blink::TokenMojomTraitsHelper<
-          blink::mojom::WebNNGraphTokenDataView,
-          blink::WebNNGraphToken> {};
 
 }  // namespace mojo
 

@@ -7,7 +7,6 @@
 #include <memory>
 
 #include "base/check.h"
-#include "base/feature_list.h"
 #include "base/functional/bind.h"
 #include "base/location.h"
 #include "base/memory/scoped_refptr.h"
@@ -20,14 +19,11 @@
 #include "base/task/single_thread_task_runner.h"
 #include "base/threading/thread_restrictions.h"
 #include "base/time/default_tick_clock.h"
-#include "mojo/public/cpp/bindings/direct_receiver.h"
-#include "third_party/blink/public/common/features.h"
 #include "third_party/blink/public/platform/task_type.h"
 #include "third_party/blink/renderer/platform/heap/blink_gc_memory_dump_provider.h"
 #include "third_party/blink/renderer/platform/heap/thread_state.h"
 #include "third_party/blink/renderer/platform/runtime_enabled_features.h"
 #include "third_party/blink/renderer/platform/scheduler/common/task_priority.h"
-#include "third_party/blink/renderer/platform/scheduler/worker/worker_scheduler_proxy.h"
 #include "third_party/blink/renderer/platform/scheduler/worker/worker_thread_scheduler.h"
 
 namespace blink {
@@ -45,23 +41,12 @@ std::unique_ptr<NonMainThread> NonMainThread::CreateThread(
 namespace scheduler {
 
 NonMainThreadImpl::NonMainThreadImpl(const ThreadCreationParams& params)
-    : thread_type_(params.thread_type),
-      worker_scheduler_proxy_(params.frame_or_worker_scheduler
-                                  ? std::make_unique<WorkerSchedulerProxy>(
-                                        params.frame_or_worker_scheduler)
-                                  : nullptr),
-      supports_gc_(params.supports_gc) {
+    : supports_gc_(params.supports_gc) {
   base::SimpleThread::Options options;
-  options.thread_type = params.base_thread_type;
 
   base::MessagePumpType message_pump_type = base::MessagePumpType::DEFAULT;
-  if (params.thread_type == ThreadType::kCompositorThread &&
-      base::FeatureList::IsEnabled(features::kDirectCompositorThreadIpc) &&
-      mojo::IsDirectReceiverSupported()) {
-    message_pump_type = base::MessagePumpType::IO;
-  }
   thread_ = std::make_unique<SimpleThreadImpl>(
-      params.name ? params.name : String(), options, params.realtime_period,
+      params.name ? params.name : String(), options,
       supports_gc_, const_cast<scheduler::NonMainThreadImpl*>(this),
       message_pump_type);
 }
@@ -80,8 +65,7 @@ void NonMainThreadImpl::Init() {
 std::unique_ptr<NonMainThreadSchedulerBase>
 NonMainThreadImpl::CreateNonMainThreadScheduler(
     base::sequence_manager::SequenceManager* sequence_manager) {
-  return std::make_unique<WorkerThreadScheduler>(thread_type_, sequence_manager,
-                                                 worker_scheduler_proxy_.get());
+  return std::make_unique<WorkerThreadScheduler>(sequence_manager);
 }
 
 blink::ThreadScheduler* NonMainThreadImpl::Scheduler() {
@@ -114,16 +98,10 @@ void NonMainThreadImpl::RemoveTaskTimeObserver(
 NonMainThreadImpl::SimpleThreadImpl::SimpleThreadImpl(
     const String& name_prefix,
     const base::SimpleThread ::Options& options,
-    base::TimeDelta realtime_period,
     bool supports_gc,
     NonMainThreadImpl* worker_thread,
     base::MessagePumpType message_pump_type)
     : SimpleThread(name_prefix.Utf8(), options),
-#if BUILDFLAG(IS_APPLE)
-      realtime_period_((options.thread_type == base::ThreadType::kRealtimeAudio)
-                           ? realtime_period
-                           : base::TimeDelta()),
-#endif
       message_pump_type_(message_pump_type),
       thread_(worker_thread),
       supports_gc_(supports_gc) {

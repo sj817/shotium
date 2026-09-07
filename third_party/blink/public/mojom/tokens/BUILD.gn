@@ -52,34 +52,6 @@ mojom_component("tokens") {
           cpp = "::blink::WorkerToken"
         },
 
-        # WORKLET TOKENS
-        {
-          mojom = "blink.mojom.AnimationWorkletToken"
-          cpp = "::blink::AnimationWorkletToken"
-        },
-        {
-          mojom = "blink.mojom.AudioWorkletToken"
-          cpp = "::blink::AudioWorkletToken"
-        },
-        {
-          mojom = "blink.mojom.PaintWorkletToken"
-          cpp = "::blink::PaintWorkletToken"
-        },
-        {
-          mojom = "blink.mojom.SharedStorageWorkletToken"
-          cpp = "::blink::SharedStorageWorkletToken"
-        },
-        {
-          mojom = "blink.mojom.WorkletToken"
-          cpp = "::blink::WorkletToken"
-        },
-
-        # SHADOW REALM TOKENS
-        {
-          mojom = "blink.mojom.ShadowRealmToken"
-          cpp = "::blink::ShadowRealmToken"
-        },
-
         # OTHER TOKENS
         #
         # Keep this section last.
@@ -96,32 +68,12 @@ mojom_component("tokens") {
           cpp = "::blink::SameDocNavigationScreenshotDestinationToken"
         },
         {
-          mojom = "blink.mojom.V8ContextToken"
-          cpp = "::blink::V8ContextToken"
-        },
-        {
           mojom = "blink.mojom.ViewTransitionToken"
           cpp = "::blink::ViewTransitionToken"
         },
         {
           mojom = "blink.mojom.WebGPUExecutionContextToken"
           cpp = "::blink::WebGPUExecutionContextToken"
-        },
-        {
-          mojom = "blink.mojom.WebNNContextToken"
-          cpp = "::blink::WebNNContextToken"
-        },
-        {
-          mojom = "blink.mojom.WebNNPendingConstantToken"
-          cpp = "::blink::WebNNPendingConstantToken"
-        },
-        {
-          mojom = "blink.mojom.WebNNTensorToken"
-          cpp = "::blink::WebNNTensorToken"
-        },
-        {
-          mojom = "blink.mojom.WebNNGraphToken"
-          cpp = "::blink::WebNNGraphToken"
         },
       ]
       traits_headers = [

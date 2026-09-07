@@ -35,7 +35,7 @@ namespace blink {
 class FrameScheduler;
 class WebSchedulingTaskQueue;
 
-// This is the base class of FrameScheduler and WorkerScheduler.
+// Shared scheduling state used by frames and their resource loaders.
 class PLATFORM_EXPORT FrameOrWorkerScheduler {
   USING_FAST_MALLOC(FrameOrWorkerScheduler);
 

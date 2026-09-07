@@ -138,7 +138,6 @@ class CORE_EXPORT ExecutionContext : public Supplementable<ExecutionContext>,
   virtual bool IsSharedWorkerGlobalScope() const { return false; }
   virtual bool IsServiceWorkerGlobalScope() const { return false; }
   virtual bool IsAudioWorkletGlobalScope() const { return false; }
-  virtual bool IsLayoutWorkletGlobalScope() const { return false; }
   virtual bool IsThreadedWorkletGlobalScope() const { return false; }
   virtual bool IsShadowRealmGlobalScope() const { return false; }
   virtual bool IsSharedStorageWorkletGlobalScope() const { return false; }

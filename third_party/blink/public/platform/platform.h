@@ -317,34 +317,6 @@ class BLINK_PLATFORM_EXPORT Platform {
     return false;
   }
 
-  // Threads -------------------------------------------------------
-
-  // The two compositor-related functions below are called by the embedder.
-  // TODO(yutak): Perhaps we should move these to somewhere else?
-
-  // Create and initialize the compositor thread. After this function
-  // completes, you can access CompositorThreadTaskRunner().
-  void CreateAndSetCompositorThread();
-
-  // Returns the task runner of the compositor thread. This is available
-  // once CreateAndSetCompositorThread() is called.
-  scoped_refptr<base::SingleThreadTaskRunner> CompositorThreadTaskRunner();
-
-  // Returns the video frame compositor thread task runner. This may
-  // conditionally be the same as the compositor thread task runner.
-  virtual scoped_refptr<base::SingleThreadTaskRunner>
-  VideoFrameCompositorTaskRunner() {
-    return CompositorThreadTaskRunner();
-  }
-
-#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
-  // This is called after the thread is created, so the embedder
-  // can initiate an IPC to change its thread type (on Linux we can't
-  // increase the nice value, so we need to ask the browser process). This
-  // function is only called from the main thread.
-  virtual void SetThreadType(base::PlatformThreadId, base::ThreadType) {}
-#endif
-
   // Resources -----------------------------------------------------------
 
   // Returns true if GetDataResource would return non-null data for the

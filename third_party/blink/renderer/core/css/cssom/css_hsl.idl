@@ -5,7 +5,7 @@
 // Represents an hsl color.
 // https://drafts.css-houdini.org/css-typed-om-1/#csshsl
 [
-  Exposed=(Window,LayoutWorklet,PaintWorklet),
+  Exposed=Window,
   RuntimeEnabled=CSSColorTypedOM
 ] interface CSSHSL : CSSColorValue {
     [RaisesException] constructor(CSSNumericValue h, CSSNumberish s, CSSNumberish l, optional CSSNumberish alpha = 1);

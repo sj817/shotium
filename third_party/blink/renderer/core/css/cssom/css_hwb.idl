@@ -5,7 +5,7 @@
 // Represents an hwb color.
 // https://drafts.css-houdini.org/css-typed-om-1/#csshwb
 [
-  Exposed = (Window, LayoutWorklet, PaintWorklet), RuntimeEnabled =
+  Exposed=Window, RuntimeEnabled =
   CSSColorTypedOM
 ] interface CSSHWB : CSSColorValue {
   [RaisesException] constructor(CSSNumericValue h, CSSNumberish w,

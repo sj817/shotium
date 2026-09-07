@@ -54,7 +54,6 @@ class SimpleMainThreadScheduler : public MainThreadScheduler {
 
 
   // Return the thread task runner (there's no separate task runner for them).
-  scoped_refptr<base::SingleThreadTaskRunner> V8TaskRunner() override;
   scoped_refptr<base::SingleThreadTaskRunner> CleanupTaskRunner() override;
   scoped_refptr<base::SingleThreadTaskRunner> NonWakingTaskRunner() override;
 

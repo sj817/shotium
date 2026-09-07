@@ -6,7 +6,7 @@
 // image types.
 // https://drafts.css-houdini.org/css-typed-om/#imagevalue-objects
 [
-    Exposed=(Window,LayoutWorklet,PaintWorklet),
+    Exposed=Window,
     ImplementedAs=CSSStyleImageValue
 ] interface CSSImageValue : CSSStyleValue {
 };

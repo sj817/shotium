@@ -13,10 +13,6 @@
 namespace blink {
 namespace scheduler {
 
-BASE_FEATURE(kDedicatedWorkerThrottling,
-             "BlinkSchedulerWorkerThrottling",
-             base::FEATURE_DISABLED_BY_DEFAULT);
-
 // Enable setting high priority database task type from field trial parameters.
 BASE_FEATURE(kHighPriorityDatabaseTaskType,
              base::FEATURE_DISABLED_BY_DEFAULT);

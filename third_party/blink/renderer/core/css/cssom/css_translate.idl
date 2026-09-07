@@ -6,7 +6,7 @@
 // like "transform".
 // Spec: https://drafts.css-houdini.org/css-typed-om/#csstranslate
 [
-    Exposed=(Window,LayoutWorklet,PaintWorklet)
+    Exposed=Window
 ] interface CSSTranslate : CSSTransformComponent {
     [RaisesException] constructor(CSSNumericValue x, CSSNumericValue y,
         optional CSSNumericValue z);

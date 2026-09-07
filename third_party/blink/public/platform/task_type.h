@@ -303,9 +303,6 @@ enum class TaskType : unsigned char {
   // like UMA of per-thread task queues. Do not specify these task types when to
   // get a task queue/runner.
 
-  kMainThreadTaskQueueV8 = 37,
-  kMainThreadTaskQueueV8UserVisible = 84,
-  kMainThreadTaskQueueV8BestEffort = 87,
   kMainThreadTaskQueueCompositor = 38,
   kMainThreadTaskQueueDefault = 39,
   kMainThreadTaskQueueInput = 40,
@@ -318,11 +315,8 @@ enum class TaskType : unsigned char {
   kMainThreadTaskQueueMemoryPurge = 62,
   kMainThreadTaskQueueNonWaking = 69,
   kMainThreadTaskQueueIPCTracking = 74,
-  kCompositorThreadTaskQueueDefault = 45,
   kCompositorThreadTaskQueueInput = 49,
   kWorkerThreadTaskQueueDefault = 46,
-  kWorkerThreadTaskQueueV8 = 47,
-  kWorkerThreadTaskQueueCompositor = 48,
 
   kMaxValue = kBackForwardCachePostedMessage,
 };

@@ -51,10 +51,8 @@ namespace blink {
 class BlobDataHandle;
 // Reads a Blob's content and forwards it to the FileReaderClient.
 //
-// Blobs are typically stored on disk, and should be read asynchronously
-// whenever possible. Synchronous loading is implemented to support Web Platform
-// features that we cannot (yet) remove, such as FileReaderSync and synchronous
-// XMLHttpRequest.
+// The remaining synchronous reader is used by DataObject's blob-to-buffer
+// conversion. The script-facing FileReader APIs have been removed.
 //
 // Each FileReaderLoader instance is only good for reading one Blob, and will
 // leak resources if used multiple times.

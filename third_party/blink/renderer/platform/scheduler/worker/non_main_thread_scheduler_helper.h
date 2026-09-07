@@ -34,17 +34,13 @@ class PLATFORM_EXPORT NonMainThreadSchedulerHelper : public SchedulerHelper {
   ~NonMainThreadSchedulerHelper() override;
 
   scoped_refptr<NonMainThreadTaskQueue> NewTaskQueue(
-      const base::sequence_manager::TaskQueue::Spec& spec,
-      NonMainThreadTaskQueue::QueueCreationParams params =
-          NonMainThreadTaskQueue::QueueCreationParams());
+      const base::sequence_manager::TaskQueue::Spec& spec);
 
   scoped_refptr<NonMainThreadTaskQueue> DefaultNonMainThreadTaskQueue();
   scoped_refptr<NonMainThreadTaskQueue> ControlNonMainThreadTaskQueue();
 
   const scoped_refptr<base::SingleThreadTaskRunner>& ControlTaskRunner()
       override;
-
-  const scoped_refptr<base::SingleThreadTaskRunner>& InputTaskRunner();
 
  protected:
   void ShutdownAllQueues() override;
@@ -55,13 +51,10 @@ class PLATFORM_EXPORT NonMainThreadSchedulerHelper : public SchedulerHelper {
   // which is unnecessary for internal queues since they match the lifetime of
   // the default thread task runner.
   scoped_refptr<NonMainThreadTaskQueue> NewTaskQueueInternal(
-      const base::sequence_manager::TaskQueue::Spec& spec,
-      NonMainThreadTaskQueue::QueueCreationParams params =
-          NonMainThreadTaskQueue::QueueCreationParams());
+      const base::sequence_manager::TaskQueue::Spec& spec);
 
   raw_ptr<NonMainThreadSchedulerBase> non_main_thread_scheduler_;  // NOT OWNED
   const scoped_refptr<NonMainThreadTaskQueue> default_task_queue_;
-  const scoped_refptr<NonMainThreadTaskQueue> input_task_queue_;
   const scoped_refptr<NonMainThreadTaskQueue> control_task_queue_;
 };
 

@@ -6,7 +6,7 @@
 // It can be used to convert between color spaces.
 // https://drafts.css-houdini.org/css-typed-om-1/#colorvalue-objects
 [
-    Exposed=(Window,LayoutWorklet,PaintWorklet),
+    Exposed=Window,
     RuntimeEnabled=CSSColorTypedOM
 ] interface CSSColorValue {
 

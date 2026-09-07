@@ -75,9 +75,6 @@ class PLATFORM_EXPORT MainThreadTaskQueue
     kFrameDeferrable = 13,
     kFramePausable = 14,
     kFrameUnpausable = 15,
-    kV8 = 16,
-    kV8UserVisible = 27,
-    kV8BestEffort = 28,
     // 17 : kIPC, obsolete
     kInput = 18,
 

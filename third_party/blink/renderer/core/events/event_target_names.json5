@@ -20,7 +20,6 @@
     "Node",
     "EventTargetImpl",
     "AbortSignal",
-    "FileReader",
     "InputMethodContext",
     "AudioTrackList",
     "TextTrack",

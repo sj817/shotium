@@ -10,17 +10,12 @@
 #include "base/time/time.h"
 #include "third_party/blink/renderer/platform/scheduler/public/thread.h"
 
-namespace v8 {
-class Isolate;
-}
-
 namespace base {
 class TaskObserver;
 }
 
 namespace blink {
 
-class CompositorThreadScheduler;
 class MainThreadScheduler;
 
 // This class is used to submit tasks and pass other information from Blink to
@@ -29,10 +24,6 @@ class PLATFORM_EXPORT ThreadScheduler {
  public:
   // Return the current thread's ThreadScheduler.
   static ThreadScheduler* Current();
-
-  // Returns compositor thread scheduler for the compositor thread
-  // of the current process.
-  static blink::CompositorThreadScheduler* CompositorThreadScheduler();
 
   virtual ~ThreadScheduler() = default;
 
@@ -59,22 +50,6 @@ class PLATFORM_EXPORT ThreadScheduler {
 
   // Releases memory associated with cancelled idle tasks (best effort).
   virtual void RemoveCancelledIdleTasks() = 0;
-
-  // Returns a task runner for kV8 tasks. Can be called from any thread.
-  virtual scoped_refptr<base::SingleThreadTaskRunner> V8TaskRunner() = 0;
-
-  // Returns a task runner for V8 user visible tasks. Can be called from any
-  // thread.
-  virtual scoped_refptr<base::SingleThreadTaskRunner>
-  V8UserVisibleTaskRunner() {
-    return nullptr;
-  }
-
-  // Returns a task runner for V8 best effort tasks. Can be called from any
-  // thread.
-  virtual scoped_refptr<base::SingleThreadTaskRunner> V8BestEffortTaskRunner() {
-    return nullptr;
-  }
 
   // Returns a task runner for tasks to deallocate objects on the appropriate
   // thread. This runner should only be used for freeing of resources.

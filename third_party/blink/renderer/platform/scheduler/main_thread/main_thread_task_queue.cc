@@ -56,12 +56,6 @@ QueueName MainThreadTaskQueue::NameForQueueType(
       return QueueName::TEST_TQ;
     case MainThreadTaskQueue::QueueType::kFrameLoadingControl:
       return QueueName::FRAME_LOADING_CONTROL_TQ;
-    case MainThreadTaskQueue::QueueType::kV8:
-      return QueueName::V8_TQ;
-    case MainThreadTaskQueue::QueueType::kV8UserVisible:
-      return QueueName::V8_USER_VISIBLE_TQ;
-    case MainThreadTaskQueue::QueueType::kV8BestEffort:
-      return QueueName::V8_BEST_EFFORT_TQ;
     case MainThreadTaskQueue::QueueType::kInput:
       return QueueName::INPUT_TQ;
     case MainThreadTaskQueue::QueueType::kDetached:

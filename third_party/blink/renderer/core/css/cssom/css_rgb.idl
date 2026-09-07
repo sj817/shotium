@@ -5,7 +5,7 @@
 // Represents an RGB color.
 // Spec: https://drafts.css-houdini.org/css-typed-om-1/#cssrgb
 [
-    Exposed=(Window,LayoutWorklet,PaintWorklet),
+    Exposed=Window,
     RuntimeEnabled=CSSColorTypedOM
 ] interface CSSRGB : CSSColorValue {
     [RaisesException] constructor(CSSNumberish r, CSSNumberish g, CSSNumberish b, optional CSSNumberish alpha = 1);

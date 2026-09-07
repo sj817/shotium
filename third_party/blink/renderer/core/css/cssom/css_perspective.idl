@@ -8,7 +8,7 @@ typedef (CSSNumericValue or CSSKeywordish) CSSPerspectiveValue;
 // like "transform".
 // Spec: https://drafts.css-houdini.org/css-typed-om/#cssperspective
 [
-    Exposed=(Window,LayoutWorklet,PaintWorklet)
+    Exposed=Window
 ] interface CSSPerspective : CSSTransformComponent {
     [RaisesException] constructor(CSSPerspectiveValue length);
     [RaisesException=Setter] attribute CSSPerspectiveValue length;

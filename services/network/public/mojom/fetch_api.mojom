@@ -26,7 +26,6 @@ enum RequestMode {
 enum RequestDestination {
   kEmpty = 0,
   kAudio = 1,
-  kAudioWorklet = 2,
   // kDocument is for a main resource request in a main frame.
   kDocument = 3,
   kEmbed = 4,
@@ -36,7 +35,6 @@ enum RequestDestination {
   kImage = 8,
   kManifest = 9,
   kObject = 10,
-  kPaintWorklet = 11,
   kReport = 12,
   kScript = 13,
   kServiceWorker = 14,

@@ -36,7 +36,6 @@
 #include "third_party/blink/renderer/platform/scheduler/main_thread/policy_updater.h"
 #include "third_party/blink/renderer/platform/scheduler/main_thread/task_type_names.h"
 #include "third_party/blink/renderer/platform/scheduler/public/web_scheduling_queue_type.h"
-#include "third_party/blink/renderer/platform/scheduler/worker/worker_scheduler_proxy.h"
 #include "third_party/perfetto/include/perfetto/tracing/traced_value.h"
 
 namespace blink {
@@ -627,9 +626,6 @@ QueueTraits FrameSchedulerImpl::CreateQueueTraitsForTaskType(TaskType type) {
           .SetPrioritisationType(
               QueueTraits::PrioritisationType::kPostMessageForwarding);
     case TaskType::kDeprecatedNone:
-    case TaskType::kMainThreadTaskQueueV8:
-    case TaskType::kMainThreadTaskQueueV8UserVisible:
-    case TaskType::kMainThreadTaskQueueV8BestEffort:
     case TaskType::kMainThreadTaskQueueCompositor:
     case TaskType::kMainThreadTaskQueueDefault:
     case TaskType::kMainThreadTaskQueueInput:
@@ -637,11 +633,8 @@ QueueTraits FrameSchedulerImpl::CreateQueueTraitsForTaskType(TaskType type) {
     case TaskType::kMainThreadTaskQueueControl:
     case TaskType::kMainThreadTaskQueueMemoryPurge:
     case TaskType::kMainThreadTaskQueueIPCTracking:
-    case TaskType::kCompositorThreadTaskQueueDefault:
     case TaskType::kCompositorThreadTaskQueueInput:
     case TaskType::kWorkerThreadTaskQueueDefault:
-    case TaskType::kWorkerThreadTaskQueueV8:
-    case TaskType::kWorkerThreadTaskQueueCompositor:
     case TaskType::kMainThreadTaskQueueNonWaking:
     // The web scheduling API task types are used by WebSchedulingTaskQueues.
     // The associated TaskRunner should be obtained by creating a

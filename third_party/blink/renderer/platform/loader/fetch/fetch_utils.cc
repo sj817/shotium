@@ -123,14 +123,12 @@ net::NetworkTrafficAnnotationTag FetchUtils::GetTrafficAnnotationTag(
     case network::mojom::RequestDestination::kEmailVerification:
       NOTREACHED();
     case network::mojom::RequestDestination::kAudio:
-    case network::mojom::RequestDestination::kAudioWorklet:
     case network::mojom::RequestDestination::kCompressionDictionary:
     case network::mojom::RequestDestination::kEmpty:
     case network::mojom::RequestDestination::kFont:
     case network::mojom::RequestDestination::kImage:
     case network::mojom::RequestDestination::kJson:
     case network::mojom::RequestDestination::kManifest:
-    case network::mojom::RequestDestination::kPaintWorklet:
     case network::mojom::RequestDestination::kReport:
     case network::mojom::RequestDestination::kScript:
     case network::mojom::RequestDestination::kServiceWorker:

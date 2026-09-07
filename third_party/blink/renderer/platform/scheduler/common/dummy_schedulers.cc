@@ -291,11 +291,6 @@ class DummyWebMainThreadScheduler : public WebThreadScheduler,
     return base::SingleThreadTaskRunner::GetCurrentDefault();
   }
 
-  scoped_refptr<base::SingleThreadTaskRunner> V8TaskRunner() override {
-    DCHECK(IsMainThread());
-    return base::SingleThreadTaskRunner::GetCurrentDefault();
-  }
-
   scoped_refptr<base::SingleThreadTaskRunner> CleanupTaskRunner() override {
     DCHECK(IsMainThread());
     return base::SingleThreadTaskRunner::GetCurrentDefault();

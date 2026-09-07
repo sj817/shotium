@@ -319,8 +319,6 @@ blink_core_sources_bindings_core_v8 = [
   "v8_union_arraybuffer_arraybufferview_blob_usvstring.h",
   "v8_union_arraybuffer_arraybufferview_string.cc",
   "v8_union_arraybuffer_arraybufferview_string.h",
-  "v8_union_arraybuffer_string.cc",
-  "v8_union_arraybuffer_string.h",
   "v8_union_audiotrack_texttrack_videotrack.cc",
   "v8_union_audiotrack_texttrack_videotrack.h",
   "v8_union_autokeyword_double.cc",

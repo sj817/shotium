@@ -41,7 +41,6 @@ class ActiveScriptWrappableCreationKey final {
   friend class EncoderBase;
   friend class EventSource;
   friend class FetchEvent;
-  friend class FileReader;
   friend class FileWriter;
   friend class FontFace;
   template <typename NativeFrameType>

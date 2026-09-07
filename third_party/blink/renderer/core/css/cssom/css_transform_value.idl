@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 [
-    Exposed=(Window,LayoutWorklet,PaintWorklet)
+    Exposed=Window
 ] interface CSSTransformValue : CSSStyleValue {
     [RaisesException] constructor(sequence<CSSTransformComponent> transforms);
     iterable<CSSTransformComponent>;

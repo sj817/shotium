@@ -69,51 +69,6 @@ bool UnionTraits<blink::mojom::WorkerTokenDataView, blink::WorkerToken>::Read(
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// WORKLET TOKENS
-
-//////////////
-// WorkletToken
-
-// static
-bool UnionTraits<blink::mojom::WorkletTokenDataView, blink::WorkletToken>::Read(
-    DataView input,
-    blink::WorkletToken* output) {
-  switch (input.tag()) {
-    case DataView::Tag::kAnimationWorkletToken: {
-      blink::AnimationWorkletToken token;
-      bool ret = input.ReadAnimationWorkletToken(&token);
-      *output = token;
-      return ret;
-    }
-    case DataView::Tag::kAudioWorkletToken: {
-      blink::AudioWorkletToken token;
-      bool ret = input.ReadAudioWorkletToken(&token);
-      *output = token;
-      return ret;
-    }
-    case DataView::Tag::kLayoutWorkletToken: {
-      blink::LayoutWorkletToken token;
-      bool ret = input.ReadLayoutWorkletToken(&token);
-      *output = token;
-      return ret;
-    }
-    case DataView::Tag::kPaintWorkletToken: {
-      blink::PaintWorkletToken token;
-      bool ret = input.ReadPaintWorkletToken(&token);
-      *output = token;
-      return ret;
-    }
-    case DataView::Tag::kSharedStorageWorkletToken: {
-      blink::SharedStorageWorkletToken token;
-      bool ret = input.ReadSharedStorageWorkletToken(&token);
-      *output = token;
-      return ret;
-    }
-  }
-  return false;
-}
-
-////////////////////////////////////////////////////////////////////////////////
 // OTHER TOKENS
 //
 // Keep this section last.
@@ -152,42 +107,6 @@ bool UnionTraits<
     case DataView::Tag::kSharedWorkerToken: {
       blink::SharedWorkerToken token;
       bool ret = input.ReadSharedWorkerToken(&token);
-      *output = token;
-      return ret;
-    }
-    case DataView::Tag::kAnimationWorkletToken: {
-      blink::AnimationWorkletToken token;
-      bool ret = input.ReadAnimationWorkletToken(&token);
-      *output = token;
-      return ret;
-    }
-    case DataView::Tag::kAudioWorkletToken: {
-      blink::AudioWorkletToken token;
-      bool ret = input.ReadAudioWorkletToken(&token);
-      *output = token;
-      return ret;
-    }
-    case DataView::Tag::kLayoutWorkletToken: {
-      blink::LayoutWorkletToken token;
-      bool ret = input.ReadLayoutWorkletToken(&token);
-      *output = token;
-      return ret;
-    }
-    case DataView::Tag::kPaintWorkletToken: {
-      blink::PaintWorkletToken token;
-      bool ret = input.ReadPaintWorkletToken(&token);
-      *output = token;
-      return ret;
-    }
-    case DataView::Tag::kSharedStorageWorkletToken: {
-      blink::SharedStorageWorkletToken token;
-      bool ret = input.ReadSharedStorageWorkletToken(&token);
-      *output = token;
-      return ret;
-    }
-    case DataView::Tag::kShadowRealmToken: {
-      blink::ShadowRealmToken token;
-      bool ret = input.ReadShadowRealmToken(&token);
       *output = token;
       return ret;
     }
