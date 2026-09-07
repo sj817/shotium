@@ -130,11 +130,6 @@ class CC_PAINT_EXPORT RecordPaintCanvas : public PaintCanvas {
                     SkScalar x,
                     SkScalar y,
                     const PaintFlags& flags) override;
-  void drawTextBlob(sk_sp<SkTextBlob> blob,
-                    SkScalar x,
-                    SkScalar y,
-                    NodeId node_id,
-                    const PaintFlags& flags) override;
   void drawPicture(PaintRecord record) override;
   void drawPicture(PaintRecord record, bool local_ctm) override;
 
@@ -142,7 +137,6 @@ class CC_PAINT_EXPORT RecordPaintCanvas : public PaintCanvas {
                 const SkRect& rect,
                 sk_sp<SkData> data) override;
   void recordCustomData(uint32_t id) override;
-  void setNodeId(int) override;
 
   // Don't shadow non-virtual helper functions.
   using PaintCanvas::clipPath;

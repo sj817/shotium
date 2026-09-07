@@ -318,9 +318,6 @@ void GraphicsContext::SetInDrawingRecorder(bool val) {
 
 void GraphicsContext::SetDOMNodeId(DOMNodeId new_node_id) {
   DCHECK(NeedsDOMNodeId());
-  if (canvas_)
-    canvas_->setNodeId(new_node_id);
-
   dom_node_id_ = new_node_id;
 }
 
@@ -448,7 +445,7 @@ void GraphicsContext::DrawText(const Font& font,
                                const AutoDarkMode& auto_dark_mode) {
   DarkModeFlags dark_mode_flags(this, auto_dark_mode, flags);
   if (sk_sp<SkTextBlob> text_blob = paint_controller_.CachedTextBlob()) {
-    canvas_->drawTextBlob(text_blob, point.x(), point.y(), node_id,
+    canvas_->drawTextBlob(text_blob, point.x(), point.y(),
                           dark_mode_flags);
     return;
   }

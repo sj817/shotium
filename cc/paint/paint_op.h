@@ -83,7 +83,6 @@ enum class PaintOpType : uint8_t {
   kSaveLayerFilters,
   kScale,
   kSetMatrix,
-  kSetNodeId,
   kTranslate,
   kLastPaintOpType = kTranslate,
 };
@@ -881,11 +880,6 @@ class CC_PAINT_EXPORT DrawTextBlobOp final
                  SkScalar x,
                  SkScalar y,
                  const PaintFlags& paint_flags);
-  DrawTextBlobOp(sk_sp<SkTextBlob> blob,
-                 SkScalar x,
-                 SkScalar y,
-                 NodeId node_id,
-                 const PaintFlags& paint_flags);
   ~DrawTextBlobOp();
   static void RasterWithFlags(const DrawTextBlobOp* op,
                               const PaintFlags* flags,
@@ -898,8 +892,6 @@ class CC_PAINT_EXPORT DrawTextBlobOp final
   sk_sp<SkTextBlob> blob;
   SkScalar x;
   SkScalar y;
-  // This field isn't serialized.
-  NodeId node_id = kInvalidNodeId;
 
  private:
   DrawTextBlobOp();
@@ -1078,23 +1070,6 @@ class CC_PAINT_EXPORT SetMatrixOp final : public PaintOpBaseInternal {
 
  private:
   SetMatrixOp() : PaintOpBaseInternal(kType) {}
-};
-
-class CC_PAINT_EXPORT SetNodeIdOp final : public PaintOpBaseInternal {
- public:
-  static constexpr PaintOpType kType = PaintOpType::kSetNodeId;
-  explicit SetNodeIdOp(int node_id)
-      : PaintOpBaseInternal(kType), node_id(node_id) {}
-  static void Raster(const SetNodeIdOp* op,
-                     SkCanvas* canvas,
-                     const PlaybackParams& params);
-  bool IsValid() const { return true; }
-  bool EqualsForTesting(const SetNodeIdOp& other) const;
-
-  int node_id;
-
- private:
-  SetNodeIdOp() : PaintOpBaseInternal(kType) {}
 };
 
 class CC_PAINT_EXPORT TranslateOp final : public PaintOpBaseInternal {

@@ -25,7 +25,6 @@
 #include "third_party/skia/include/core/SkPoint.h"
 #include "third_party/skia/include/core/SkRefCnt.h"
 #include "third_party/skia/include/core/SkTextBlob.h"
-#include "third_party/skia/include/docs/SkPDFDocument.h"
 #include "third_party/skia/src/core/SkCanvasPriv.h"
 
 namespace cc {
@@ -350,18 +349,6 @@ void SkiaPaintCanvas::drawTextBlob(sk_sp<SkTextBlob> blob,
                                  });
 }
 
-void SkiaPaintCanvas::drawTextBlob(sk_sp<SkTextBlob> blob,
-                                   SkScalar x,
-                                   SkScalar y,
-                                   NodeId node_id,
-                                   const PaintFlags& flags) {
-  if (node_id)
-    SkPDF::SetNodeId(canvas_, node_id);
-  drawTextBlob(blob, x, y, flags);
-  if (node_id)
-    SkPDF::SetNodeId(canvas_, 0);
-}
-
 void SkiaPaintCanvas::drawPicture(PaintRecord record) {
   drawPicture(std::move(record), PlaybackCallbacks::CustomDataRasterCallback(),
               /*local_ctm=*/true);
@@ -392,10 +379,6 @@ void SkiaPaintCanvas::Annotate(AnnotationType type,
       break;
     }
   }
-}
-
-void SkiaPaintCanvas::setNodeId(int node_id) {
-  SkPDF::SetNodeId(canvas_, node_id);
 }
 
 void SkiaPaintCanvas::drawPicture(

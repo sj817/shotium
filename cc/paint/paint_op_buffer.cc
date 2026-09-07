@@ -177,7 +177,7 @@ void PaintOpBuffer::Append(
       } break;
       case PaintOpType::kDrawTextBlob: {
         const auto& o = static_cast<const DrawTextBlobOp&>(op);
-        push<DrawTextBlobOp>(o.blob, o.x, o.y, o.node_id, o.flags);
+        push<DrawTextBlobOp>(o.blob, o.x, o.y, o.flags);
       } break;
       case PaintOpType::kDrawVertices: {
         const auto& o = static_cast<const DrawVerticesOp&>(op);
@@ -218,10 +218,6 @@ void PaintOpBuffer::Append(
       case PaintOpType::kSetMatrix: {
         const auto& o = static_cast<const SetMatrixOp&>(op);
         push<SetMatrixOp>(o.matrix);
-      } break;
-      case PaintOpType::kSetNodeId: {
-        const auto& o = static_cast<const SetNodeIdOp&>(op);
-        push<SetNodeIdOp>(o.node_id);
       } break;
       case PaintOpType::kTranslate: {
         const auto& o = static_cast<const TranslateOp&>(op);

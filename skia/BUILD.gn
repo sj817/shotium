@@ -535,20 +535,6 @@ component("skia") {
     deps += [ "//third_party/expat" ]
   }
 
-  if (skia_support_pdf) {
-    # Blink includes Skia's JPEG encoder and decoder which pdf uses.
-    assert(use_blink)
-    deps += [
-      # Needed for HarfBuzz hb_subet subsetting.
-      "//third_party/harfbuzz",
-      "//third_party/zlib",
-    ]
-    public += skia_pdf_public
-    sources += skia_pdf_sources
-  } else {
-    sources += [ "//third_party/skia/src/pdf/SkDocument_PDF_None.cpp" ]
-  }
-
   # TODO(crbug.com/40031409): Fix code that adds exit-time destructors and
   # enable the diagnostic by removing this line.
   configs += [ "//build/config/compiler:no_exit_time_destructors" ]

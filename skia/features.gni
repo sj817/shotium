@@ -4,9 +4,5 @@
 
 import("//build/config/features.gni")
 
-# enable_printing came from //printing/buildflags, deleted along with //printing.
-# Skia's PDF backend has no consumer left: it existed for print preview.
-skia_support_pdf = false
-
 # Skia needs XMP support for gainmap HDR image decoding in blink.
 skia_support_xmp = use_blink

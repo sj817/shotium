@@ -183,12 +183,6 @@ class CC_PAINT_EXPORT PaintCanvas {
                             SkScalar y,
                             const PaintFlags& flags) = 0;
 
-  virtual void drawTextBlob(sk_sp<SkTextBlob> blob,
-                            SkScalar x,
-                            SkScalar y,
-                            NodeId node_id,
-                            const PaintFlags& flags) = 0;
-
   // Draws `record` into the canvas. Unlike SkCanvas::drawPicture, this only
   // plays back the PaintRecord and does not add an additional clip.  This is
   // closer to SkPicture::playback.
@@ -203,7 +197,6 @@ class CC_PAINT_EXPORT PaintCanvas {
   virtual void drawPicture(PaintRecord record, bool local_ctm) = 0;
 
   virtual SkM44 getLocalToDevice() const = 0;
-
 
   // Used for printing
   enum class AnnotationType {
@@ -227,9 +220,6 @@ class CC_PAINT_EXPORT PaintCanvas {
 
   // Subclasses can override to handle custom data.
   virtual void recordCustomData(uint32_t id) {}
-
-  // Used for marked content in PDF files.
-  virtual void setNodeId(int) = 0;
 
  private:
   raw_ptr<printing::MetafileSkia> metafile_ = nullptr;

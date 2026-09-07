@@ -80,7 +80,6 @@ skia_cc_library(
     visibility = [
         "//experimental/rust_ico/decoder/impl:__pkg__",
         "//src/encode:__pkg__",
-        "//src/pdf:__pkg__",
         "//src/ports:__pkg__",
     ],
     deps = [
@@ -135,7 +134,6 @@ skia_cc_library(
         "//modules/skresources:__pkg__",
         "//rust/exif:__pkg__",
         "//src/android:__pkg__",
-        "//src/pdf:__pkg__",
         "//tools/ganesh:__pkg__",
     ],
     deps = [

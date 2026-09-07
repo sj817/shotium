@@ -278,18 +278,6 @@ alias(
 )
 ###
 
-alias(
-    name = "pdf_writer",
-    actual = "//src/pdf:pdf",
-    visibility = ["//visibility:public"],
-)
-
-alias(
-    name = "pdf_jpeg_helpers",
-    actual = "//src/pdf:jpeg_helpers",
-    visibility = ["//visibility:public"],
-)
-
 ###
 
 alias(

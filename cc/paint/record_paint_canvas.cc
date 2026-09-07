@@ -330,14 +330,6 @@ void RecordPaintCanvas::drawTextBlob(sk_sp<SkTextBlob> blob,
   push<DrawTextBlobOp>(std::move(blob), x, y, flags);
 }
 
-void RecordPaintCanvas::drawTextBlob(sk_sp<SkTextBlob> blob,
-                                     SkScalar x,
-                                     SkScalar y,
-                                     NodeId node_id,
-                                     const PaintFlags& flags) {
-  push<DrawTextBlobOp>(std::move(blob), x, y, node_id, flags);
-}
-
 void RecordPaintCanvas::drawPicture(PaintRecord record) {
   // TODO(enne): If this is small, maybe flatten it?
   push<DrawRecordOp>(std::move(record));
@@ -356,10 +348,6 @@ void RecordPaintCanvas::Annotate(AnnotationType type,
 
 void RecordPaintCanvas::recordCustomData(uint32_t id) {
   push<CustomDataOp>(id);
-}
-
-void RecordPaintCanvas::setNodeId(int node_id) {
-  push<SetNodeIdOp>(node_id);
 }
 
 InspectableRecordPaintCanvas::InspectableRecordPaintCanvas(

@@ -656,11 +656,7 @@ void DrawTextBlobs(const ShapeResultBloberizer::BlobBuffer& blobs,
         break;
       }
     }
-    if (node_id != cc::kInvalidNodeId) {
-      canvas.drawTextBlob(blob_info.blob, point.x(), point.y(), node_id, flags);
-    } else {
-      canvas.drawTextBlob(blob_info.blob, point.x(), point.y(), flags);
-    }
+    canvas.drawTextBlob(blob_info.blob, point.x(), point.y(), flags);
   }
 }
 

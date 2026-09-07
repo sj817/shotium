@@ -151,7 +151,6 @@
 #include "third_party/blink/renderer/platform/wtf/text/string_builder.h"
 #include "third_party/blink/renderer/platform/wtf/text/wtf_string.h"
 #include "third_party/blink/renderer/platform/wtf/wtf_size_t.h"
-#include "third_party/skia/include/docs/SkPDFDocument.h"
 #include "ui/gfx/geometry/rect_conversions.h"
 
 namespace blink {
@@ -2282,27 +2281,6 @@ String LayoutObject::DebugName() const {
 
 DOMNodeId LayoutObject::OwnerNodeId(bool is_internal_content) const {
   NOT_DESTROYED();
-  if (RuntimeEnabledFeatures::HTMLPrintingArtifactAnnotationsEnabled() &&
-      is_internal_content) {
-    if (auto* node = GetNode()) {
-      if (node->IsTextNode()) {
-        node = node->parentNode();
-      }
-      if (node->IsElementNode()) {
-        auto* element = DynamicTo<Element>(node);
-        if (element->GetIdAttribute() == keywords::kInternalPrintHeader) {
-          return SkPDF::NodeID::PaginationHeaderArtifact;
-        } else if (element->GetIdAttribute() ==
-                   keywords::kInternalPrintFooter) {
-          return SkPDF::NodeID::PaginationFooterArtifact;
-        } else if (element->GetIdAttribute() ==
-                   keywords::kInternalPrintPageNumber) {
-          return SkPDF::NodeID::PaginationArtifact;
-        }
-      }
-    }
-  }
-
   // For SVG child elements inside an SVG root with role="img", use the SVG
   // root's DOM node ID. This ensures that painted content from SVG children
   // (e.g. <path>, <rect>) is associated with the SVG root's /Figure structure

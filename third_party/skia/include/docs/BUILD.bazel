@@ -10,10 +10,6 @@ XPS_HDRS = ["SkXPSDocument.h"]
 
 MULTI_PICTURE_DOCUMENT_HDRS = ["SkMultiPictureDocument.h"]
 
-PDF_HDRS = ["SkPDFDocument.h"]
-
-PDF_JPEG_HDRS = ["SkPDFJpegHelpers.h"]
-
 # Not yet referenced by Bazel build.
 # In separate group for exporting to xps.gni:skia_xps_public.
 skia_filegroup(
@@ -27,22 +23,8 @@ skia_filegroup(
     visibility = ["//src/utils:__pkg__"],
 )
 
-skia_filegroup(
-    name = "pdf_hdrs",
-    srcs = PDF_HDRS,
-    visibility = ["//src/pdf:__pkg__"],
-)
-
-skia_filegroup(
-    name = "pdf_jpeg_hdrs",
-    srcs = PDF_JPEG_HDRS,
-    visibility = ["//src/pdf:__pkg__"],
-)
-
 generate_cpp_files_for_headers(
     name = "headers_to_compile",
     headers = XPS_HDRS +
-              MULTI_PICTURE_DOCUMENT_HDRS +
-              PDF_HDRS +
-              PDF_JPEG_HDRS,
+              MULTI_PICTURE_DOCUMENT_HDRS,
 )

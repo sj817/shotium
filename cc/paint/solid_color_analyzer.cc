@@ -351,7 +351,6 @@ std::optional<SkColor4f> SolidColorAnalyzer::DetermineIfSolidColor(
       // Don't affect the canvas, so ignore.
       case PaintOpType::kAnnotate:
       case PaintOpType::kCustomData:
-      case PaintOpType::kSetNodeId:
       case PaintOpType::kNoop:
         break;
 

@@ -45,7 +45,6 @@
 #include "third_party/skia/include/core/SkTextBlob.h"
 #include "third_party/skia/include/core/SkTiledImageUtils.h"
 #include "third_party/skia/include/core/SkVertices.h"
-#include "third_party/skia/include/docs/SkPDFDocument.h"
 #include "third_party/skia/include/effects/SkImageFilters.h"
 #include "third_party/skia/src/core/SkCanvasPriv.h"
 #include "ui/gfx/geometry/skia_conversions.h"
@@ -170,7 +169,6 @@ PaintFlags::ScalingOperation MatrixToScalingOperation(SkMatrix m) {
   M(SaveLayerFiltersOp)      \
   M(ScaleOp)                 \
   M(SetMatrixOp)             \
-  M(SetNodeIdOp)             \
   M(TranslateOp)
 
 static constexpr size_t kNumOpTypes = PaintOp::kNumOpTypes;
@@ -809,17 +807,10 @@ void DrawTextBlobOp::RasterWithFlags(const DrawTextBlobOp* op,
                                      const PaintFlags* flags,
                                      SkCanvas* canvas,
                                      const PlaybackParams& params) {
-  if (op->node_id)
-    SkPDF::SetNodeId(canvas, op->node_id);
-
   flags->DrawToSk(canvas, [op](SkCanvas* c, const SkPaint& p) {
     DCHECK(op->blob);
     c->drawTextBlob(op->blob.get(), op->x, op->y, p);
   });
-
-  if (op->node_id) {
-    SkPDF::SetNodeId(canvas, 0);
-  }
 }
 
 void RestoreOp::Raster(const RestoreOp* op,
@@ -927,12 +918,6 @@ void SetMatrixOp::Raster(const SetMatrixOp* op,
                          SkCanvas* canvas,
                          const PlaybackParams& params) {
   canvas->setMatrix(params.original_ctm * op->matrix);
-}
-
-void SetNodeIdOp::Raster(const SetNodeIdOp* op,
-                         SkCanvas* canvas,
-                         const PlaybackParams& params) {
-  SkPDF::SetNodeId(canvas, op->node_id);
 }
 
 void TranslateOp::Raster(const TranslateOp* op,
@@ -1054,7 +1039,7 @@ bool DrawVerticesOp::EqualsForTesting(const DrawVerticesOp& other) const {
 
 bool DrawTextBlobOp::EqualsForTesting(const DrawTextBlobOp& other) const {
   return flags.EqualsForTesting(other.flags) &&  // IN-TEST
-         x == other.x && y == other.y && node_id == other.node_id;
+         x == other.x && y == other.y;
 }
 
 bool NoopOp::EqualsForTesting(const NoopOp& other) const {
@@ -1107,10 +1092,6 @@ bool ScaleOp::EqualsForTesting(const ScaleOp& other) const {
 
 bool SetMatrixOp::EqualsForTesting(const SetMatrixOp& other) const {
   return matrix == other.matrix;
-}
-
-bool SetNodeIdOp::EqualsForTesting(const SetNodeIdOp& other) const {
-  return node_id == other.node_id;
 }
 
 bool TranslateOp::EqualsForTesting(const TranslateOp& other) const {
@@ -1254,8 +1235,6 @@ bool PaintOp::GetBounds(const PaintOp& op, SkRect* rect) {
     case PaintOpType::kScale:
       return false;
     case PaintOpType::kSetMatrix:
-      return false;
-    case PaintOpType::kSetNodeId:
       return false;
     case PaintOpType::kTranslate:
       return false;
@@ -1609,17 +1588,6 @@ DrawTextBlobOp::DrawTextBlobOp(sk_sp<SkTextBlob> blob,
       blob(std::move(blob)),
       x(x),
       y(y) {}
-
-DrawTextBlobOp::DrawTextBlobOp(sk_sp<SkTextBlob> blob,
-                               SkScalar x,
-                               SkScalar y,
-                               NodeId node_id,
-                               const PaintFlags& paint_flags)
-    : PaintOpWithFlagsBaseInternal(kType, paint_flags),
-      blob(std::move(blob)),
-      x(x),
-      y(y),
-      node_id(node_id) {}
 
 DrawTextBlobOp::~DrawTextBlobOp() = default;
 
