@@ -39,13 +39,9 @@ roots = [
 ]
 
 ignorelist = [
-  # Don't count our local Vulkan headers as Skia headers;
-  # we don't want #include <vulkan/vulkan_foo.h> rewritten to point to them.
-  'include/third_party/vulkan',
   # Some node_modules/ files (used by CanvasKit et al) have c++ code which we should ignore.
   'node_modules',
   'include/third_party/skcms',
-  'src/gpu/vk/vulkanmemoryallocator',
 ]
 
 assert '/' in [os.sep, os.altsep]
