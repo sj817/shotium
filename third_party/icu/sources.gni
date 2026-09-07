@@ -636,7 +636,6 @@ icuuc_sources = [
   "source/common/messagepattern.cpp",
   "source/common/mlbe.cpp",
   "source/common/mlbe.h",
-  "source/common/msvcres.h",
   "source/common/mutex.h",
   "source/common/norm2allmodes.h",
   "source/common/norm2_nfc_data.h",

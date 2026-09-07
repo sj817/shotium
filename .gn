@@ -38,10 +38,6 @@ default_args = {
   fuchsia_sdk_readelf_exec =
       "//third_party/llvm-build/Release+Asserts/bin/llvm-readelf"
 
-  # Overwrite default args declared in the pdfium library
-  pdf_partition_alloc_dir = "//base/allocator/partition_allocator"
-
-  devtools_visibility = [ "*" ]
 
   clang_unsafe_buffers_paths = "//build/config/unsafe_buffers_paths.txt"
   clang_warning_suppression_file = "//build/config/warning_suppression.txt"

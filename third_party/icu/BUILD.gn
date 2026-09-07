@@ -27,13 +27,6 @@ group("icu") {
   ]
 }
 
-# Allow access to normalization test data from unit/integration tests.
-copy("normalization_test") {
-  testonly = true
-  sources = [ "source/data/unidata/NormalizationTest.txt" ]
-  outputs = [ "$root_out_dir/testdata/{{source_file_part}}" ]
-}
-
 # Shared config used by ICU and all dependents.
 config("icu_config") {
   defines = [
@@ -170,11 +163,6 @@ config("icu_code") {
           # to lower its standards when compiling ICU.
           "-Wno-newline-eof",
         ] + icu_fuchsia_extra_compile_flags
-  }
-  if (current_cpu == "wasm") {
-    # Tell ICU that we are a 32 bit platform, otherwise,
-    # double-conversion-utils.h doesn't know how to operate.
-    defines += [ "__i386__" ]
   }
 }
 
@@ -518,8 +506,6 @@ if (icu_data_dir_override != "") {
   data_dir = "ios"
 } else if (is_chromeos) {
   data_dir = "chromeos"
-} else if (current_cpu == "wasm") {
-  data_dir = "flutter"
 } else if (icu_is_in_fuchsia && icu_fuchsia_override_data_dir != "") {
   # See //config.gni for details.
   data_dir = icu_fuchsia_override_data_dir
@@ -569,40 +555,26 @@ if (icu_use_data_file) {
     }
   }
 } else {
-  if (current_cpu == "wasm") {
-    data_assembly = "$target_gen_dir/${data_bundle_prefix}_dat.cpp"
-  } else {
-    data_assembly = "$target_gen_dir/${data_bundle_prefix}_dat.S"
-  }
+  data_assembly = "$target_gen_dir/${data_bundle_prefix}_dat.S"
+
   inline_data_assembly = "$target_gen_dir/${data_bundle_prefix}_dat.cc"
   action("make_data_assembly") {
-    if (current_cpu == "wasm") {
-      # See scripts/make_data_cpp.py for details on building ICU for wasm.
-      script = "scripts/make_data_cpp.py"
-      inputs = [ "$data_dir/$data_bundle" ]
-      outputs = [ data_assembly ]
-      args = [
-        rebase_path(inputs[0], root_build_dir),
-        rebase_path(data_assembly, root_build_dir),
-      ]
-    } else {
-      script = "scripts/make_data_assembly.py"
-      inputs = [ "$data_dir/$data_bundle" ]
-      outputs = [ data_assembly ]
-      args = [
-        rebase_path(inputs[0], root_build_dir),
-        rebase_path(data_assembly, root_build_dir),
-      ]
-      if (is_mac || is_ios) {
-        args += [ "--mac" ]
-      } else if (is_win) {
-        if (target_cpu == "arm64" || target_cpu == "x64") {
-          args += [ "--win64" ]
-        } else if (target_cpu == "arm" || target_cpu == "x86") {
-          args += [ "--win32" ]
-        } else {
-          assert(false)
-        }
+    script = "scripts/make_data_assembly.py"
+    inputs = [ "$data_dir/$data_bundle" ]
+    outputs = [ data_assembly ]
+    args = [
+      rebase_path(inputs[0], root_build_dir),
+      rebase_path(data_assembly, root_build_dir),
+    ]
+    if (is_mac || is_ios) {
+      args += [ "--mac" ]
+    } else if (is_win) {
+      if (target_cpu == "arm64" || target_cpu == "x64") {
+        args += [ "--win64" ]
+      } else if (target_cpu == "arm" || target_cpu == "x86") {
+        args += [ "--win32" ]
+      } else {
+        assert(false)
       }
     }
   }

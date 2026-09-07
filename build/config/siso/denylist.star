@@ -59,13 +59,6 @@ def __step_config(ctx, step_config):
         # metadata files to determine JS source files to load at runtime, making
         # input tracking too complex for static analysis without Starlark handlers.
         "third_party/closure_compiler/js_binary.py",
-        "third_party/dawn/generator/dawn_version_generator.py",
-        "third_party/dawn/src/tint/cmd/bench/generate_benchmark_inputs.py",
-        "third_party/dawn/tools/generate-sources-gn.py",
-        "third_party/dawn/tools/run.py",
-        "third_party/dawn/webgpu-cts/scripts/compile_src.py",
-        "third_party/dawn/webgpu-cts/scripts/copy_files.py",
-        "third_party/dawn/webgpu-cts/scripts/gen_ts_dep_lists.py",
         "third_party/devtools-frontend/src/scripts/build/build_inspector_overlay.py",
         "third_party/inspector_protocol/check_protocol_compatibility.py",
         "third_party/inspector_protocol/code_generator.py",
