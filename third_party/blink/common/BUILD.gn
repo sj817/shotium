@@ -5,7 +5,6 @@
 import("//build/config/features.gni")
 import("//build/config/rust.gni")
 import("//build/nocompile.gni")
-import("//testing/libfuzzer/fuzzer_test.gni")
 import("//testing/test.gni")
 import("//third_party/blink/renderer/build/scripts/scripts.gni")
 import("//third_party/protobuf/proto_library.gni")
@@ -378,32 +377,6 @@ if (is_ios) {
   bundle_data_from_filelist("blink_common_unittests_pak_bundle_data") {
     testonly = true
     filelist_name = "blink_common_unittests_bundle_data.filelist"
-  }
-}
-
-if (use_fuzzing_engine_with_lpm) {
-  fuzzer_test("storage_key_proto_fuzzer") {
-    sources = [ "storage_key/storage_key_proto_fuzzer.cc" ]
-    deps = [
-      ":common",
-      "//base/test:test_support",
-      "//third_party/blink/public/common:storage_key_proto",
-      "//third_party/blink/public/common:storage_key_proto_converter",
-      "//third_party/libprotobuf-mutator",
-    ]
-
-    # TODO(crbug.com/505034799): Migrate to FUZZ_TEST.
-    is_fuzztest_compatible = false
-  }
-
-  fuzzer_test("storage_key_string_fuzzer") {
-    sources = [ "storage_key/storage_key_string_fuzzer.cc" ]
-    deps = [
-      ":common",
-      "//base/test:test_support",
-      "//third_party/blink/public/common",
-    ]
-    seed_corpus = "//third_party/blink/common/storage_key/storage_key_corpus"
   }
 }
 

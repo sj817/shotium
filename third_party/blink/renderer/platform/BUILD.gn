@@ -8,9 +8,7 @@ import("//build/config/compiler/compiler.gni")
 import("//build/config/ui.gni")
 import("//build/nocompile.gni")
 
-import("//testing/libfuzzer/fuzzer_test.gni")
 import("//testing/test.gni")
-import("//third_party/blink/renderer/platform/blink_fuzzer_test.gni")
 if (is_android) {
   import("//build/config/android/rules.gni")
 }
@@ -1417,8 +1415,6 @@ static_library("test_support") {
     "testing/paint_test_configurations.h",
     "testing/picture_matchers.cc",
     "testing/picture_matchers.h",
-    "testing/renderer_fuzzing_support.cc",
-    "testing/renderer_fuzzing_support.h",
     "testing/scoped_fake_ukm_recorder.cc",
     "testing/scoped_fake_ukm_recorder.h",
     "testing/scoped_main_thread_overrider.cc",
@@ -1445,14 +1441,6 @@ static_library("test_support") {
     "testing/url_test_helpers.cc",
     "testing/url_test_helpers.h",
   ]
-
-  # fuzzed_data_provider may not work with a custom toolchain.
-  if (custom_toolchain == "" && is_clang) {
-    sources += [
-      "testing/fuzzed_data_provider.cc",
-      "testing/fuzzed_data_provider.h",
-    ]
-  }
 
   configs += [
     ":blink_platform_pch",
@@ -1482,7 +1470,6 @@ static_library("test_support") {
     "//mojo/public/cpp/bindings",
     "//skia",
     "//skia:skcms",
-    "//testing/libfuzzer/renderer_fuzzing",
     "//third_party/blink/public/common",
     "//third_party/blink/renderer/modules",
     "//third_party/blink/renderer/platform/network:test_support",
@@ -1919,31 +1906,6 @@ if (current_cpu == "x86" || current_cpu == "x64") {
   }
 }
 
-test("blink_fuzzer_unittests") {
-  deps = [
-    ":test_support",
-    "//base/test:test_support",
-    "//mojo/core/embedder",
-    "//skia:test_fonts",
-    "//third_party/blink/public:test_support",
-  ]
-
-  sources = [ "testing/run_all_tests.cc" ]
-
-  if (is_linux || is_chromeos || is_fuchsia) {
-    deps += [
-      "//third_party/blink/renderer/platform/scheduler:scheduler_fuzzer_tests",
-    ]
-  }
-
-  if (is_fuchsia) {
-    additional_manifest_fragments = [
-      "//build/config/fuchsia/test/test_fonts.shard.test-cml",
-      "//build/config/fuchsia/test/mark_vmo_executable.shard.test-cml",
-    ]
-  }
-}
-
 # This source set is used for fuzzers that need an environment similar to unit
 # tests.
 source_set("blink_fuzzer_test_support") {
@@ -1976,284 +1938,6 @@ if (is_android) {
       "//ui/android:ui_no_recycler_view_java",
     ]
   }
-}
-
-# This source set is used by image decoder fuzzers to initialize their decoders.
-source_set("blink_image_decoder_fuzzer_test_support") {
-  testonly = true
-  visibility = []  # Allow re-assignment of list.
-  visibility = [ "*" ]
-  sources = [
-    "image-decoders/image_decoder_fuzzer_utils.cc",
-    "image-decoders/image_decoder_fuzzer_utils.h",
-  ]
-  deps = [ ":platform" ]
-  if (enable_jxl_decoder) {
-    deps += [ "//third_party/rust/jxl/v0_5/wrapper:jxl_rs" ]
-  }
-}
-
-# Fuzzer for blink::unicode::MathVariant.
-blink_fuzzer_test("math_transform_fuzzer") {
-  sources = [ "math_transform_fuzzer.cc" ]
-  deps = [ ":platform" ]
-  libfuzzer_options = [ "max_len=10" ]
-  dict = "//testing/libfuzzer/fuzzers/dicts/math_transform.dict"
-  additional_configs = [ "//third_party/blink/renderer:inside_blink" ]
-}
-
-blink_fuzzer_test("layout_locale_fuzzer") {
-  sources = [ "text/layout_locale_fuzzer.cc" ]
-  deps = [ ":platform" ]
-  additional_configs = [ "//third_party/blink/renderer:inside_blink" ]
-}
-
-blink_fuzzer_test("segmented_string_fuzzer") {
-  sources = [ "text/segmented_string_fuzzer.cc" ]
-  deps = [ ":platform" ]
-  additional_configs = [ "//third_party/blink/renderer:inside_blink" ]
-}
-
-# Fuzzer for blink::FindCategory.
-blink_fuzzer_test("mathml_operator_dictionary_fuzzer") {
-  sources = [ "text/mathml_operator_dictionary_fuzzer.cc" ]
-  deps = [ ":platform" ]
-  libfuzzer_options = [ "max_len=10" ]
-  dict = "//testing/libfuzzer/fuzzers/dicts/mathml_operator_dictionary.dict"
-  additional_configs = [ "//third_party/blink/renderer:inside_blink" ]
-}
-
-# Fuzzer for blink::OpenTypeMathSupportTest.
-blink_fuzzer_test("open_type_math_support_fuzzer") {
-  sources = [ "fonts/opentype/open_type_math_support_fuzzer.cc" ]
-  deps = [
-    ":platform",
-    "//testing/libfuzzer:libfuzzer_base_wrappers",
-  ]
-  seed_corpuses = [
-    "//third_party/blink/web_tests/external/wpt/fonts/math",
-    "//testing/libfuzzer/fuzzers/woff2_corpus",
-  ]
-  additional_configs = [ "//third_party/blink/renderer:inside_blink" ]
-}
-
-# Fuzzer for blink::StretchyOperatorShaper
-blink_fuzzer_test("stretchy_operator_shaper_fuzzer") {
-  sources = [ "fonts/shaping/stretchy_operator_shaper_fuzzer.cc" ]
-  deps = [
-    ":platform",
-    "//testing/libfuzzer:libfuzzer_base_wrappers",
-  ]
-  seed_corpuses = [
-    "//third_party/blink/web_tests/external/wpt/fonts/math",
-    "//testing/libfuzzer/fuzzers/woff2_corpus",
-  ]
-  additional_configs = [ "//third_party/blink/renderer:inside_blink" ]
-}
-
-# Fuzzer for blink::MHTMLParser.
-blink_fuzzer_test("mhtml_parser_fuzzer") {
-  sources = []
-  deps = [
-    ":platform",
-    "//testing/libfuzzer:libfuzzer_base_wrappers",
-  ]
-  dict = "//testing/libfuzzer/fuzzers/dicts/mhtml.dict"
-  seed_corpus = "//third_party/blink/web_tests/mhtml"
-  additional_configs = [
-    "//third_party/blink/renderer/platform/wtf:wtf_config",
-    "//third_party/blink/renderer:config",
-    "//third_party/blink/renderer:inside_blink",
-  ]
-}
-
-# Fuzzer for blink::WebIconSizesParser.
-blink_fuzzer_test("web_icon_sizes_fuzzer") {
-  sources = [ "exported/web_icon_sizes_fuzzer.cc" ]
-  deps = [ ":platform" ]
-  dict = "//testing/libfuzzer/fuzzers/dicts/web_icon_sizes.dict"
-  additional_configs = [ "//third_party/blink/renderer:inside_blink" ]
-}
-
-if (enable_jxl_decoder) {
-  # Fuzzer for blink::JXLImageDecoder
-  blink_fuzzer_test("blink_jxl_decoder_fuzzer") {
-    sources = [ "image-decoders/jxl/jxl_image_decoder_fuzzer.cc" ]
-    deps = [
-      ":blink_image_decoder_fuzzer_test_support",
-      ":platform",
-      "//third_party/rust/jxl/v0_5/wrapper:jxl_rs",
-    ]
-    seed_corpuses =
-        [ "//third_party/blink/web_tests/external/wpt/jpegxl/resources" ]
-    additional_configs = [ "//third_party/blink/renderer:inside_blink" ]
-  }
-}
-
-# Fuzzer for blink::ICOImageDecoder.
-blink_fuzzer_test("blink_ico_decoder_fuzzer") {
-  sources = [ "image-decoders/ico/ico_image_decoder_fuzzer.cc" ]
-  deps = [
-    ":platform",
-    "//testing/libfuzzer:libfuzzer_base_wrappers",
-  ]
-  seed_corpuses = [ "//third_party/blink/web_tests/images/resources/icofuzz" ]
-
-  additional_configs = [ "//third_party/blink/renderer:inside_blink" ]
-}
-
-# Fuzzer for blink::GIFImageDecoder
-blink_fuzzer_test("blink_gif_decoder_fuzzer") {
-  sources = [ "image-decoders/gif/gif_image_decoder_fuzzer.cc" ]
-  deps = [
-    ":platform",
-    "//testing/libfuzzer:libfuzzer_base_wrappers",
-  ]
-  seed_corpuses = [ "//third_party/blink/web_tests/images/resources/giffuzz" ]
-
-  additional_configs = [ "//third_party/blink/renderer:inside_blink" ]
-}
-
-blink_fuzzer_test("blink_png_decoder_fuzzer") {
-  sources = [ "image-decoders/png/png_image_decoder_fuzzer.cc" ]
-  deps = [
-    ":blink_image_decoder_fuzzer_test_support",
-    ":platform",
-  ]
-  dict = "//testing/libfuzzer/fuzzers/dicts/png.dict"
-  seed_corpuses = [
-    "//third_party/blink/web_tests/images/png-suite/samples",
-    "//third_party/blink/web_tests/images/resources/pngfuzz",
-  ]
-
-  additional_configs = [ "//third_party/blink/renderer:inside_blink" ]
-}
-
-blink_fuzzer_test("blink_jpeg_decoder_fuzzer") {
-  sources = [ "image-decoders/jpeg/jpeg_image_decoder_fuzzer.cc" ]
-  deps = [
-    ":blink_image_decoder_fuzzer_test_support",
-    ":platform",
-  ]
-  seed_corpuses = [ "//third_party/blink/web_tests/images/resources/jpegfuzz" ]
-
-  additional_configs = [ "//third_party/blink/renderer:inside_blink" ]
-}
-
-blink_fuzzer_test("blink_bmp_decoder_fuzzer") {
-  sources = [ "image-decoders/bmp/bmp_image_decoder_fuzzer.cc" ]
-  deps = [
-    ":blink_image_decoder_fuzzer_test_support",
-    ":platform",
-  ]
-  seed_corpuses = [ "//third_party/blink/web_tests/images/bmp-suite/good" ]
-
-  additional_configs = [ "//third_party/blink/renderer:inside_blink" ]
-}
-
-blink_fuzzer_test("blink_bmp_rust_decoder_fuzzer") {
-  sources = [ "image-decoders/bmp/bmp_rust_image_decoder_fuzzer.cc" ]
-  deps = [
-    ":blink_image_decoder_fuzzer_test_support",
-    ":platform",
-  ]
-  seed_corpuses = [ "//third_party/blink/web_tests/images/bmp-suite/good" ]
-
-  additional_configs = [ "//third_party/blink/renderer:inside_blink" ]
-}
-
-# Fuzzer for blink::WEBPImageDecoder.
-blink_fuzzer_test("blink_webp_decoder_fuzzer") {
-  sources = [ "image-decoders/webp/webp_image_decoder_fuzzer.cc" ]
-  deps = [
-    ":platform",
-    "//testing/libfuzzer:libfuzzer_base_wrappers",
-  ]
-  seed_corpuses = [ "//third_party/blink/web_tests/images/resources/webpfuzz" ]
-
-  additional_configs = [ "//third_party/blink/renderer:inside_blink" ]
-}
-
-# Fuzzer for blink::DateTimeFormat.
-blink_fuzzer_test("blink_date_time_format_fuzzer") {
-  sources = [ "text/date_time_format_fuzzer.cc" ]
-  deps = [
-    ":platform",
-    "//testing/libfuzzer:libfuzzer_base_wrappers",
-  ]
-  dict = "//testing/libfuzzer/fuzzers/dicts/date.dict"
-  seed_corpus = "text/date_time_format_fuzzer_seed_corpus"
-  additional_configs = [ "//third_party/blink/renderer:inside_blink" ]
-}
-
-# Fuzzer for blink::JSONParser.
-blink_fuzzer_test("blink_json_parser_fuzzer") {
-  sources = [ "json/json_parser_fuzzer.cc" ]
-  deps = [
-    ":platform",
-    "//testing/libfuzzer:libfuzzer_base_wrappers",
-  ]
-  dict = "//testing/libfuzzer/fuzzers/dicts/json.dict"
-  additional_configs = [ "//third_party/blink/renderer:inside_blink" ]
-}
-
-# Fuzzer for blink::SecurityOrigin.
-blink_fuzzer_test("blink_security_origin_fuzzer") {
-  sources = [ "weborigin/security_origin_fuzzer.cc" ]
-  deps = [ ":platform" ]
-  dict = "//url/gurl_fuzzer.dict"
-  additional_configs = [ "//third_party/blink/renderer:inside_blink" ]
-}
-
-blink_fuzzer_test("blink_harfbuzz_shaper_fuzzer") {
-  sources = [ "fonts/shaping/harfbuzz_shaper_fuzzer.cc" ]
-  deps = [
-    ":platform",
-    "//third_party/icu",
-  ]
-  libfuzzer_options = [ "max_len=256" ]
-  additional_configs = [ "//third_party/blink/renderer:inside_blink" ]
-}
-
-blink_fuzzer_test("blink_http_parsers_fuzzer") {
-  sources = [ "network/http_parsers_fuzzer.cc" ]
-  deps = [
-    ":platform",
-    "//testing/libfuzzer:libfuzzer_base_wrappers",
-  ]
-  dict = "network/HTTPParsersFuzzer.dict"
-  additional_configs = [ "//third_party/blink/renderer:inside_blink" ]
-}
-
-blink_fuzzer_test("blink_storage_key_fuzzer") {
-  sources = [ "storage/blink_storage_key_fuzzer.cc" ]
-  deps = [ "//third_party/blink/public/common" ]
-  seed_corpus = "//third_party/blink/common/storage_key/storage_key_corpus"
-  additional_configs = [ "//third_party/blink/renderer:inside_blink" ]
-}
-
-# Fuzzer template for blink::TextCodec.
-template("blink_text_codec_fuzzer") {
-  forward_variables_from(invoker, "*")
-  config(target_name + "_config") {
-    defines = [ "$target_name" ]
-  }
-  name = target_name
-  blink_fuzzer_test("blink_text_codec_" + name + "_fuzzer") {
-    sources = [ "text_codec_fuzzer.cc" ]
-    deps = [ ":platform" ]
-    additional_configs = [
-      ":" + name + "_config",
-      "//third_party/blink/renderer:inside_blink",
-    ]
-    seed_corpus = "text_codec_fuzzer_seed_corpus"
-  }
-}
-
-blink_text_codec_fuzzer("UTF_8") {
-}
-
-blink_text_codec_fuzzer("WINDOWS_1252") {
 }
 
 # NOTE: These are legacy unit tests and tests that require a Platform

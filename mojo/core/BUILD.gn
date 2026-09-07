@@ -27,7 +27,6 @@ component("embedder_internal") {
 # on anything under //mojo/public beyond strict C type definitions.
 source_set("impl_for_embedder") {
   visibility = [
-    ":core_impl_for_fuzzers",
     ":embedder_internal",
   ]
 
@@ -38,7 +37,6 @@ source_set("impl_for_embedder") {
     "core_ipcz.h",
     "embedder/configuration.h",
     "embedder/process_error_callback.h",
-    "fuzzing_utils.h",
     "handle_signals_state.h",
     "ipcz_api.h",
     "ipcz_driver/base_shared_memory_service.h",
@@ -63,7 +61,6 @@ source_set("impl_for_embedder") {
     "configuration.cc",
     "connection_params.cc",
     "core_ipcz.cc",
-    "fuzzing_utils.cc",
     "ipcz_api.cc",
     "ipcz_driver/base_shared_memory_service.cc",
     "ipcz_driver/data_pipe.cc",
@@ -207,8 +204,4 @@ source_set("test_sources") {
   # TODO(crbug.com/40031409): Fix code that adds exit-time destructors and
   # enable the diagnostic by removing this line.
   configs += [ "//build/config/compiler:no_exit_time_destructors" ]
-}
-
-group("core_impl_for_fuzzers") {
-  public_deps = [ ":impl_for_embedder" ]
 }

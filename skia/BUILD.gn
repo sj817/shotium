@@ -1196,8 +1196,6 @@ test("skia_unittests") {
     sources -= [ "ext/platform_canvas_unittest.cc" ]
   }
 
-  fuzztests = [ "ImageOperationsResize.ResizeFuzzTest" ]
-
   deps = [
     ":skcms",
     ":skia",
@@ -1206,7 +1204,6 @@ test("skia_unittests") {
     "//base/test:test_support",
     "//mojo/core/test:run_all_unittests",
     "//testing/gtest",
-    "//third_party/fuzztest",
     "//ui/gfx",
     "//ui/gfx/geometry",
   ]
@@ -1242,20 +1239,4 @@ if (!is_ios) {
       "//build/win:default_exe_manifest",
     ]
   }
-
-  executable("filter_fuzz_stub") {
-    testonly = true
-    sources = [ "tools/filter_fuzz_stub/filter_fuzz_stub.cc" ]
-
-    deps = [
-      ":skia",
-      "//base",
-      "//base/test:test_support",
-      "//build/win:default_exe_manifest",
-    ]
-  }
-}
-
-group("fuzzers") {
-  deps = [ "//skia/tools/fuzzers" ]
 }

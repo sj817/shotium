@@ -5,22 +5,11 @@
 #ifndef BASE_IMMEDIATE_CRASH_H_
 #define BASE_IMMEDIATE_CRASH_H_
 
-#include "base/fuzzing_buildflags.h"
 #include "build/build_config.h"
 
 #if !(defined(OFFICIAL_BUILD) || BUILDFLAG(IS_WIN))
 #include <stdlib.h>
 #endif
-
-#if BUILDFLAG(USE_FUZZING_ENGINE) && BUILDFLAG(IS_LINUX)
-// The fuzzing coverage display wants to record coverage even
-// for failure cases. It's Linux-only. So on Linux, dump coverage
-// before we immediately exit. We provide a weak symbol so that
-// this causes no link problems on configurations that don't involve
-// coverage. (This wouldn't work on Windows due to limitations of
-// weak symbol linkage.)
-extern "C" int __attribute__((weak)) __llvm_profile_write_file(void);
-#endif  // BUILDFLAG(USE_FUZZING_ENGINE) && BUILDFLAG(IS_LINUX)
 
 // Crashes in the fastest possible way with no attempt at logging.
 // There are several constraints; see http://crbug.com/664209 for more context.
@@ -152,26 +141,6 @@ extern "C" int __attribute__((weak)) __llvm_profile_write_file(void);
 namespace base {
 
 [[noreturn]] IMMEDIATE_CRASH_ALWAYS_INLINE void ImmediateCrash() {
-#if BUILDFLAG(USE_FUZZING_ENGINE) && BUILDFLAG(IS_LINUX)
-  // A fuzzer run will often handle many successful cases then
-  // find one which crashes and dies. It's important that the
-  // coverage of those successful cases is represented when we're
-  // considering fuzzing coverage. At the moment fuzzing coverage
-  // is only measured on Linux, which is why this is Linux-
-  // specific.
-  // exit() arranges to write out coverage information because
-  // an atexit handler is registered to do so, but there is no
-  // such action in the std::abort case. Instead, manually write
-  // out such coverage.
-  // We could extend this step to all coverage builds, but
-  // at present failing tests don't get coverage reported,
-  // so we're retaining that behavior.
-  // TODO(crbug.com/40948553): consider doing this for all coverage builds
-  if (__llvm_profile_write_file) {
-    __llvm_profile_write_file();
-  }
-#endif  // BUILDFLAG(USE_FUZZING_ENGINE) && BUILDFLAG(IS_LINUX)
-
 #if defined(OFFICIAL_BUILD) || BUILDFLAG(IS_WIN)
   // We can't use abort() on Windows because it results in the
   // abort/retry/ignore dialog which disrupts automated tests.

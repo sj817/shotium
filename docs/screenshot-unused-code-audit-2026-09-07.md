@@ -1,4 +1,8 @@
+stage20：并行完成 net/DNS/Mojo 9 个 fuzzing 支持目标、base fuzzing_buildflags 和 Linux fuzzing 覆盖率分支、Blink/Skia 49 个目标及 1 个模板清理。14 个源码路径，793 行删除；本批 GN 文件语法解析和限定 diff 检查通过，未生成当前构建图或编译。通用 FuzzTest/libFuzzer 和受 Route 范围约束的 core 包装器仍待闭合。
+
 # 静态截图无用代码与残留依赖审计
+
+stage20 回填：net/DNS/Mojo 的 9 个旧 fuzzing 支持/协议目标与两个专用辅助源文件已移除，普通生产库保留。精确清单见 out/cut-stage20-fuzzer-support/manifest.json。仅语法解析和残留核查，当前未提交/编译，通用测试支持链仍在清理。
 
 ## stage19 回填：ICU 直接源码维护
 

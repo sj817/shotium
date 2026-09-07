@@ -205,7 +205,6 @@ source_set("asan_raw_ptr_service") {
       ":dcheck_is_on",
       ":debugging_buildflags",
       ":feature_buildflags",
-      ":fuzzing_buildflags",
       ":synchronization_buildflags",
       ":tracing_buildflags",
       "//base/allocator/partition_allocator/src/partition_alloc",
@@ -2963,11 +2962,6 @@ buildflag_header("power_monitor_buildflags") {
   flags = [ "HAS_BATTERY_LEVEL_PROVIDER_IMPL=$_has_battery_provider_impl" ]
 }
 
-buildflag_header("fuzzing_buildflags") {
-  header = "fuzzing_buildflags.h"
-  flags = [ "USE_FUZZING_ENGINE=$use_fuzzing_engine" ]
-}
-
 if (is_mac) {
   buildflag_header("plist_size_buildflags") {
     header = "app_plist_size_buildflags.h"
@@ -2987,8 +2981,6 @@ static_library("base_static") {
     "base_switches.h",
     "immediate_crash.h",
   ]
-
-  deps = [ ":fuzzing_buildflags" ]
 
   if (is_win) {
     sources += [
