@@ -372,8 +372,6 @@ component("network_service") {
     "//services/network/public/mojom",
     "//services/network/public/proto",
     "//services/network/trust_tokens",
-    "//services/service_manager/public/cpp",
-    "//services/service_manager/public/mojom",
     "//third_party/liburlpattern",
     "//third_party/re2",
     "//third_party/zstd:decompress",
@@ -588,8 +586,6 @@ source_set("tests") {
     "//services/network/public/proto",
     "//services/network/trust_tokens",
     "//services/network/trust_tokens:tests",
-    "//services/service_manager/public/cpp",
-    "//services/service_manager/public/cpp/test:test_support",
     "//testing/gmock",
     "//testing/gtest",
   ]

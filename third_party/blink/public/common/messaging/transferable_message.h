@@ -13,10 +13,8 @@
 #include "third_party/blink/public/common/scheduler/task_attribution_id.h"
 #include "third_party/blink/public/mojom/array_buffer/array_buffer_contents.mojom.h"
 #include "third_party/blink/public/mojom/messaging/delegated_capability.mojom-shared.h"
-#include "third_party/blink/public/mojom/messaging/static_bitmap_image.mojom.h"
 #include "third_party/blink/public/mojom/messaging/task_attribution_id.mojom.h"
 #include "third_party/blink/public/mojom/messaging/user_activation_snapshot.mojom.h"
-#include "third_party/skia/include/core/SkBitmap.h"
 
 namespace blink {
 
@@ -35,9 +33,6 @@ struct BLINK_COMMON_EXPORT TransferableMessage : public CloneableMessage {
   // The contents of any ArrayBuffers being transferred as part of this message.
   std::vector<mojom::SerializedArrayBufferContentsPtr>
       array_buffer_contents_array;
-  // The contents of any ImageBitmaps being transferred as part of this message.
-  std::vector<mojom::SerializedStaticBitmapImagePtr>
-      image_bitmap_contents_array;
 
   // The state of user activation.
   mojom::UserActivationSnapshotPtr user_activation;

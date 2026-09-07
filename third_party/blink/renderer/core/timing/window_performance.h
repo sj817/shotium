@@ -35,7 +35,6 @@
 
 #include "base/feature_list.h"
 #include "base/time/time.h"
-#include "components/viz/common/frame_sinks/begin_frame_args.h"
 #include "third_party/blink/public/mojom/timing/resource_timing.mojom-blink-forward.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_navigation_type.h"
 #include "third_party/blink/renderer/core/core_export.h"
@@ -55,10 +54,6 @@
 #include "third_party/blink/renderer/platform/weborigin/kurl.h"
 #include "third_party/blink/renderer/platform/wtf/wtf_size_t.h"
 #include "ui/events/types/scroll_input_type.h"
-
-namespace viz {
-class FrameTimingDetails;
-}
 
 namespace blink {
 
@@ -149,7 +144,6 @@ class CORE_EXPORT WindowPerformance final : public Performance,
   void SetRenderStartTimeForPendingEvents(base::TimeTicks render_start_time);
 
   void OnPaintFinished();
-  void OnBeginMainFrame(viz::BeginFrameId frame_id);
 
   void AddElementTiming(const AtomicString& name,
                         const String& url,
@@ -258,10 +252,6 @@ class CORE_EXPORT WindowPerformance final : public Performance,
   void FlushEventTimingsOnPageHidden();
   void AddLongAnimationFrameEntry(PerformanceEntry*);
 
-  void OnPresentationPromiseResolved(
-      uint64_t presentation_index,
-      uint64_t expected_frame_source_id,
-      const viz::FrameTimingDetails& presentation_details);
   // Report buffered events with presentation time following their registered
   // order; stop as soon as seeing an event with pending presentation promise.
   void TryFlushEventTimingQueue();
@@ -290,21 +280,9 @@ class CORE_EXPORT WindowPerformance final : public Performance,
   // timestamps right before start showing each dialog.
   Deque<base::TimeTicks> show_modal_dialog_timestamps_;
 
-  // Frame source id from BeginMainFrame args. Event Timing compares it with
-  // frame source id from presentation feedback to identify GPU crashes.
-  // crbug.com/324877581
-  uint64_t begin_main_frame_source_id_ = 0;
   // Event Timing entries are grouped together by animation frame (or by task
   // for cases where there is no next paint).
   uint64_t current_frame_index_ = 1;
-  // This value tracks the last time we requested presentation time, in order to
-  // make sure we request at most once per animation frame, and only if at least
-  // one event in that group actually requires visual feedback
-  // (NeedsNextPaintMeasurement).
-  // TODO(crbug.com/40821329): Integration with PaintTimingMixin should remove
-  // the need to manually track this.
-  uint64_t last_presentation_requested_for_frame_index_ = 0;
-
   // Store all event timing and latency related data, including
   // PerformanceEventTiming, frame_index, keycode and pointerId.
   // We use the data to calculate events latencies.

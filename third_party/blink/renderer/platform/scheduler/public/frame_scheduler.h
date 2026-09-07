@@ -38,7 +38,6 @@ class FrameScheduler : public FrameOrWorkerScheduler {
     virtual const base::UnguessableToken& GetAgentClusterId() const = 0;
 
     virtual void MainFrameInteractive() {}
-    virtual void MainFrameFirstMeaningfulPaint() {}
 
     // Returns a `DocumentResourceCoordinator` to inform of feature usage by the
     // frame. May be nullptr when the PerformanceManagerInstrumentation feature
@@ -158,10 +157,6 @@ class FrameScheduler : public FrameOrWorkerScheduler {
   // Tells the scheduler the Frame's Document is interactive. Only for main
   // frames.
   virtual void OnMainFrameInteractive() = 0;
-
-  // Tells the scheduler that the first meaningful paint has occurred for this
-  // frame.
-  virtual void OnFirstMeaningfulPaint() = 0;
 
   // Tells the scheduler that a new document has been installed for this frame.
   virtual void OnDidInstallNewDocument() = 0;

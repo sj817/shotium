@@ -88,7 +88,6 @@
 #include "net/log/net_log_values.h"
 #include "net/log/net_log_with_source.h"
 #include "net/net_buildflags.h"
-#include "net/nqe/network_quality_estimator.h"
 #include "net/proxy_resolution/proxy_info.h"
 #include "net/proxy_resolution/proxy_retry_info.h"
 #include "net/ssl/ssl_cert_request_info.h"
@@ -698,12 +697,6 @@ void URLRequestHttpJob::StartTransactionInternal() {
 
   int rv = OK;
 
-  // Notify NetworkQualityEstimator.
-  NetworkQualityEstimator* network_quality_estimator =
-      request()->context()->network_quality_estimator();
-  if (network_quality_estimator) {
-    network_quality_estimator->NotifyStartTransaction(*request_);
-  }
 
   if (transaction_.get()) {
     rv = transaction_->RestartWithAuth(
@@ -1994,12 +1987,6 @@ void URLRequestHttpJob::DoneWithRequest(CompletionCause reason) {
   }
   done_ = true;
 
-  // Notify NetworkQualityEstimator.
-  NetworkQualityEstimator* network_quality_estimator =
-      request()->context()->network_quality_estimator();
-  if (network_quality_estimator) {
-    network_quality_estimator->NotifyRequestCompleted(*request());
-  }
 
   RecordCompletionHistograms(reason);
   request()->set_received_response_content_length(
@@ -2023,12 +2010,6 @@ HttpResponseHeaders* URLRequestHttpJob::GetResponseHeaders() const {
 void URLRequestHttpJob::NotifyURLRequestDestroyed() {
   awaiting_callback_ = false;
 
-  // Notify NetworkQualityEstimator.
-  NetworkQualityEstimator* network_quality_estimator =
-      request()->context()->network_quality_estimator();
-  if (network_quality_estimator) {
-    network_quality_estimator->NotifyURLRequestDestroyed(*request());
-  }
 }
 
 bool URLRequestHttpJob::ShouldAddCookieHeader() const {

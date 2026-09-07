@@ -27,7 +27,6 @@
 #include "base/task/single_thread_task_runner.h"
 #include "base/time/time.h"
 #include "build/build_config.h"
-#include "components/performance_manager/scenario_api/performance_scenario_observer.h"
 #include "third_party/blink/public/common/features.h"
 #include "third_party/blink/public/platform/scheduler/web_thread_scheduler.h"
 #include "third_party/blink/renderer/platform/allow_discouraged_type.h"
@@ -49,14 +48,11 @@
 #include "third_party/blink/renderer/platform/scheduler/main_thread/page_scheduler_impl.h"
 #include "third_party/blink/renderer/platform/scheduler/main_thread/pending_user_input.h"
 #include "third_party/blink/renderer/platform/scheduler/main_thread/performance_helper.h"
-#include "third_party/blink/renderer/platform/scheduler/main_thread/render_widget_signals.h"
 #include "third_party/blink/renderer/platform/scheduler/main_thread/use_case.h"
 #include "third_party/blink/renderer/platform/scheduler/main_thread/user_model.h"
-#include "third_party/blink/renderer/platform/scheduler/main_thread/widget_scheduler_impl.h"
 #include "third_party/blink/renderer/platform/scheduler/public/frame_scheduler.h"
 #include "third_party/blink/renderer/platform/scheduler/public/main_thread_scheduler.h"
 #include "third_party/blink/renderer/platform/scheduler/public/rail_mode_observer.h"
-#include "third_party/blink/renderer/platform/scheduler/public/widget_scheduler.h"
 #include "third_party/blink/renderer/platform/wtf/allocator/allocator.h"
 #include "third_party/blink/renderer/platform/wtf/hash_set.h"
 #include "third_party/blink/renderer/platform/wtf/vector.h"
@@ -96,7 +92,6 @@ class CPUTimeBudgetPool;
 class FrameSchedulerImpl;
 class PageSchedulerImpl;
 class WebRenderWidgetSchedulingState;
-class WidgetSchedulerImpl;
 
 
 
@@ -105,9 +100,7 @@ class PLATFORM_EXPORT MainThreadSchedulerImpl
       public MainThreadScheduler,
       public WebThreadScheduler,
       public IdleHelper::Delegate,
-      public RenderWidgetSignals::Observer,
-      public trace_event::TraceSessionObserver,
-      public performance_scenarios::PerformanceScenarioObserver {
+      public trace_event::TraceSessionObserver {
  public:
   // Duration after which rendering is considered starved, in which case the
   // compositor task queues will have an increased priority until the next
@@ -181,17 +174,6 @@ class PLATFORM_EXPORT MainThreadSchedulerImpl
 
   ~MainThreadSchedulerImpl() override;
 
-  // PerformanceScenarioObserver implementation:
-  void OnInputScenarioChanged(
-      performance_scenarios::ScenarioScope scope,
-      performance_scenarios::InputScenario old_scenario,
-      performance_scenarios::InputScenario new_scenario) override;
-
-  void OnLoadingScenarioChanged(
-      performance_scenarios::ScenarioScope scope,
-      performance_scenarios::LoadingScenario old_scenario,
-      performance_scenarios::LoadingScenario new_scenario) override;
-
   // WebThreadScheduler implementation:
   scoped_refptr<base::SingleThreadTaskRunner> DeprecatedDefaultTaskRunner()
       override;
@@ -203,8 +185,6 @@ class PLATFORM_EXPORT MainThreadSchedulerImpl
   void PauseTimersForAndroidWebView() override;
   void ResumeTimersForAndroidWebView() override;
 #endif
-  void OnUrgentMessageReceived() override;
-  void OnUrgentMessageProcessed() override;
 
   // WebThreadScheduler and ThreadScheduler implementation:
   void Shutdown() override;
@@ -244,28 +224,6 @@ class PLATFORM_EXPORT MainThreadSchedulerImpl
   scoped_refptr<base::SingleThreadTaskRunner> ControlTaskRunner() override;
   const base::TickClock* GetTickClock() const override;
   MainThreadSchedulerHelper& GetHelper() override { return helper_; }
-
-  // RenderWidgetSignals::Observer implementation:
-  void SetAllRenderWidgetsHidden(bool hidden) override;
-
-  scoped_refptr<WidgetScheduler> CreateWidgetScheduler(
-      WidgetScheduler::Delegate* delegate);
-  void WillBeginFrame(const viz::BeginFrameArgs& args);
-  void BeginFrameNotExpectedSoon();
-  void BeginMainFrameNotExpectedUntil(base::TimeTicks time);
-  void DidCommitFrameToCompositor();
-  void DidHandleInputEventOnCompositorThread(
-      const WebInputEvent& web_input_event,
-      WidgetScheduler::InputEventState event_state);
-  void WillPostInputEventToMainThread(
-      WebInputEvent::Type web_input_event_type,
-      const WebInputEventAttribution& web_input_event_attribution);
-  void WillHandleInputEventOnMainThread(
-      WebInputEvent::Type web_input_event_type,
-      const WebInputEventAttribution& web_input_event_attribution);
-  void DidHandleInputEventOnMainThread(const WebInputEvent& web_input_event,
-                                       WebInputEventResult result,
-                                       bool is_frame_expected);
 
   // Use a separate task runner so that IPC tasks are not logged via the same
   // task queue that executes them. Otherwise this would result in an infinite
@@ -374,7 +332,6 @@ class PLATFORM_EXPORT MainThreadSchedulerImpl
   const SchedulingSettings& scheduling_settings() const;
 
   void OnWebSchedulingTaskQueuePriorityChanged(MainThreadTaskQueue*);
-  void OnWidgetSchedulerWillShutdown(WidgetSchedulerImpl*);
 
   base::WeakPtr<MainThreadSchedulerImpl> GetWeakPtr();
 
@@ -475,7 +432,6 @@ class PLATFORM_EXPORT MainThreadSchedulerImpl
     bool should_freeze_compositor_task_queue = false;
     bool should_pause_task_queues = false;
     bool should_pause_task_queues_for_android_webview = false;
-    bool should_prioritize_ipc_tasks = false;
     TaskPriority find_in_page_priority =
         FindInPageBudgetPoolController::kFindInPageBudgetNotExhaustedPriority;
     UseCase use_case = UseCase::kNone;
@@ -506,16 +462,6 @@ class PLATFORM_EXPORT MainThreadSchedulerImpl
       base::TimeTicks now,
       base::TimeDelta* next_long_idle_period_delay_out) override;
   void IsNotQuiescent() override {}
-  void OnPendingTasksChanged(bool has_tasks) override;
-
-  // Enables or disables the BeginMainFrameNotExpected signals from all widgets.
-  void DispatchRequestBeginMainFrameNotExpected(bool has_tasks);
-
-  // Requests the BeginMainFrameNotExpected signals for a single widget, which
-  // is done asynchronously during initialization if needed.
-  void InitializeRequestBeginMainFrameNotExpected(
-      scoped_refptr<WidgetSchedulerImpl>);
-
   void EndIdlePeriod();
 
   // Update a policy which increases priority for the next beginMainFrame after
@@ -533,12 +479,6 @@ class PLATFORM_EXPORT MainThreadSchedulerImpl
   // Shuts down empty detached task queues, which are being kept alive to run
   // pending tasks.
   void ShutdownEmptyDetachedTaskQueues();
-
-  static bool ShouldPrioritizeInputEvent(const WebInputEvent& web_input_event);
-
-  // The amount of time which idle periods can continue being scheduled when the
-  // renderer has been hidden, before going to sleep for good.
-  static const int kEndIdleWhenHiddenDelayMillis = 10000;
 
   // Schedules an immediate PolicyUpdate, if there isn't one already pending and
   // sets |policy_may_need_update_|. Note |any_thread_lock_| must be
@@ -580,20 +520,9 @@ class PLATFORM_EXPORT MainThreadSchedulerImpl
       base::TimeDelta* expected_use_case_duration) const
       EXCLUSIVE_LOCKS_REQUIRED(any_thread_lock_);
 
-  bool ComputeIsInputHandlingFromUseCase(UseCase) const;
-  bool ComputeIsInputHandlingFromPerformanceScenario(
-      performance_scenarios::InputScenario) const;
-  bool ComputeIsLoadingFromPerformanceScenario(
-      performance_scenarios::LoadingScenario) const;
-
   // Helper for computing the RAILMode based on the given UseCase and current
   // scheduler state.
   RAILMode ComputeCurrentRAILMode(UseCase) const;
-
-  // An input event of some sort happened, the policy may need updating.
-  void UpdateForInputEventOnCompositorThread(
-      const WebInputEvent& event,
-      WidgetScheduler::InputEventState input_event_state);
 
   // The task cost estimators and the UserModel need to be reset upon page
   // nagigation. This function does that. Must be called from the main thread.
@@ -692,7 +621,6 @@ class PLATFORM_EXPORT MainThreadSchedulerImpl
   std::unique_ptr<base::sequence_manager::TaskQueue::QueueEnabledVoter>
       idle_queue_voter_;
   IdleHelper idle_helper_;
-  RenderWidgetSignals render_widget_scheduler_signals_;
 
   std::unique_ptr<FindInPageBudgetPoolController>
       find_in_page_budget_pool_controller_;
@@ -722,7 +650,6 @@ class PLATFORM_EXPORT MainThreadSchedulerImpl
 
   base::RepeatingClosure update_policy_closure_;
   DeadlineTaskRunner delayed_update_policy_runner_;
-  CancelableClosureHolder end_renderer_hidden_idle_period_closure_;
 
   // We have decided to improve thread safety at the cost of some boilerplate
   // (the accessors) for the following data members.
@@ -755,8 +682,6 @@ class PLATFORM_EXPORT MainThreadSchedulerImpl
     TraceableState<bool, "renderer.scheduler.status">
         in_idle_period_for_testing;
     TraceableState<bool, "renderer"> is_audio_playing;
-    TraceableState<bool, "renderer.scheduler.status">
-        compositor_will_send_main_frame_not_expected;
     TraceableState<bool, "renderer.scheduler.status"> has_navigated;
     TraceableState<bool, "renderer.scheduler.status"> pause_timers_for_webview;
     // If true, indicates that CPU performance management is applied.
@@ -809,8 +734,6 @@ class PLATFORM_EXPORT MainThreadSchedulerImpl
     // pending tasks that need to run.
     HashSet<scoped_refptr<MainThreadTaskQueue>> detached_task_queues;
 
-    // `WidgetScheduler`s that have not been shut down.
-    HashSet<scoped_refptr<WidgetSchedulerImpl>> widget_schedulers;
     raw_ptr<base::MessagePump> message_pump;
 
     // Multiplier to apply to the message busy loop maximum duration
@@ -905,12 +828,6 @@ class PLATFORM_EXPORT MainThreadSchedulerImpl
   std::optional<base::PlatformThread::RaiseThreadTypeLease>
       raise_thread_type_lease_;
   size_t default_thread_type_usage_count_ = 0;
-
-  // This is accessed from both the main and IO (IPC) threads. It's incremented
-  // when an urgent IPC task is posted and decremented when that IPC task runs
-  // (or doesn't, e.g. if the interface is closed). This gets checked at the end
-  // of every task to determine if the policy should be updated.
-  std::atomic<uint64_t> num_pending_urgent_ipc_messages_{0};
 
   base::WeakPtrFactory<MainThreadSchedulerImpl> weak_factory_{this};
 };

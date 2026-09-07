@@ -47,7 +47,6 @@
 #include "net/http/transport_security_state.h"
 #include "net/log/net_log.h"
 #include "net/net_buildflags.h"
-#include "net/nqe/network_quality_estimator.h"
 #include "net/shared_dictionary/shared_dictionary_network_transaction_factory.h"
 #include "net/socket/network_binding_client_socket_factory.h"
 #include "net/ssl/ech_mode_getter.h"
@@ -81,7 +80,6 @@ URLRequestContextBuilder::~URLRequestContextBuilder() = default;
 void URLRequestContextBuilder::SetHttpNetworkSessionComponents(
     const URLRequestContext* request_context,
     HttpNetworkSessionContext* session_context,
-    bool suppress_setting_socket_performance_watcher_factory,
     ClientSocketFactory* client_socket_factory) {
   session_context->client_socket_factory =
       client_socket_factory ? client_socket_factory
@@ -101,14 +99,6 @@ void URLRequestContextBuilder::SetHttpNetworkSessionComponents(
   session_context->http_server_properties =
       request_context->http_server_properties();
   session_context->net_log = request_context->net_log();
-  session_context->network_quality_estimator =
-      request_context->network_quality_estimator();
-  if (request_context->network_quality_estimator() &&
-      !suppress_setting_socket_performance_watcher_factory) {
-    session_context->socket_performance_watcher_factory =
-        request_context->network_quality_estimator()
-            ->GetSocketPerformanceWatcherFactory();
-  }
 #if BUILDFLAG(ENABLE_REPORTING)
   session_context->reporting_service = request_context->reporting_service();
   session_context->network_error_logging_service =
@@ -265,7 +255,6 @@ std::unique_ptr<URLRequestContext> URLRequestContextBuilder::Build() {
   context->set_check_cleartext_permitted(check_cleartext_permitted_);
   context->set_require_network_anonymization_key(
       require_network_anonymization_key_);
-  context->set_network_quality_estimator(network_quality_estimator_);
 
   if (http_user_agent_settings_) {
     context->set_http_user_agent_settings(std::move(http_user_agent_settings_));
@@ -452,7 +441,6 @@ std::unique_ptr<URLRequestContext> URLRequestContextBuilder::Build() {
   // |client_socket_factory| is not mirrored in URLRequestContext.
   SetHttpNetworkSessionComponents(
       context.get(), &network_session_context,
-      suppress_setting_socket_performance_watcher_factory_for_testing_,
       client_socket_factory_raw_);
 
   context->set_dns_platform_attempt_factory(

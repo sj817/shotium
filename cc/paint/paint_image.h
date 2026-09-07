@@ -18,7 +18,6 @@
 #include "cc/paint/image_animation_count.h"
 #include "cc/paint/paint_export.h"
 #include "cc/paint/paint_record.h"
-#include "gpu/command_buffer/common/mailbox.h"
 #include "third_party/skia/include/core/SkImage.h"
 #include "third_party/skia/include/core/SkImageInfo.h"
 #include "third_party/skia/include/core/SkRefCnt.h"
@@ -42,8 +41,6 @@ namespace cc {
 
 struct FrameMetadata;
 class PaintImageGenerator;
-class TextureBacking;
-class TextureBackingContext;
 
 enum class ImageType {
   kPNG,
@@ -308,12 +305,6 @@ class CC_PAINT_EXPORT PaintImage {
                   int src_x,
                   int src_y) const;
 
-  // Returned mailbox must not outlive this PaintImage.
-  gpu::Mailbox GetMailbox() const;
-
-  void BindTextureBacking(scoped_refptr<TextureBackingContext>) const;
-  void UnbindTextureBacking() const;
-
   Id stable_id() const { return id_; }
   Id sync_animation_target_id() const { return sync_animation_target_id_; }
   SkImageInfo GetSkImageInfo(AuxImage aux_image = AuxImage::kDefault) const;
@@ -334,7 +325,7 @@ class CC_PAINT_EXPORT PaintImage {
   DecodingMode decoding_mode() const { return decoding_mode_; }
 
   explicit operator bool() const {
-    return cached_sk_image_ || texture_backing_;
+    return !!cached_sk_image_;
   }
   bool IsLazyGenerated() const {
     return paint_record_ || paint_image_generator_;
@@ -415,12 +406,10 @@ class CC_PAINT_EXPORT PaintImage {
   // Used internally for PaintImages created at raster.
   static const Id kNonLazyStableId;
   friend class ScopedRasterFlags;
-  friend class PaintOpReader;
 
   friend class PlaybackImageProvider;
   friend class DrawImageRectOp;
   friend class DrawImageOp;
-  friend class DrawSkottieOp;
   friend class ToneMapUtil;
 
   // TODO(crbug.com/40110279): Remove these once GetSkImage()
@@ -462,7 +451,6 @@ class CC_PAINT_EXPORT PaintImage {
   // yet) gain map application.
   gfx::HDRMetadata hdr_metadata_;
 
-  sk_sp<TextureBacking> texture_backing_;
 
   Id id_ = 0;
   AnimationType animation_type_ = AnimationType::kStatic;

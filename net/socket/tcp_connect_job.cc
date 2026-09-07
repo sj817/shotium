@@ -36,7 +36,6 @@
 #include "net/dns/public/secure_dns_policy.h"
 #include "net/http/http_server_properties.h"
 #include "net/log/net_log_event_type.h"
-#include "net/nqe/network_quality_estimator.h"
 #include "net/socket/socket_tag.h"
 #include "net/socket/ssl_client_socket.h"
 #include "net/socket/tcp_connect_job_connector.h"
@@ -484,7 +483,7 @@ base::TimeDelta TcpConnectJob::GetIPv6FallbackTime(
   if (base::FeatureList::IsEnabled(features::kIPv6FallbackBasedOnRTT)) {
     std::optional<base::TimeDelta> rtt =
         [&]() -> std::optional<base::TimeDelta> {
-      // 1. Try to get destination-specific RTT from HttpServerProperties.
+      // Use destination-specific RTT when the server has supplied a sample.
       if (common_connect_job_params->http_server_properties) {
         url::SchemeHostPort scheme_host_port;
         if (std::holds_alternative<url::SchemeHostPort>(
@@ -507,20 +506,10 @@ base::TimeDelta TcpConnectJob::GetIPv6FallbackTime(
         }
       }
 
-      // 2. Fallback to global network RTT from NetworkQualityEstimator.
-      if (common_connect_job_params->network_quality_estimator) {
-        std::optional<base::TimeDelta> nqe_rtt =
-            common_connect_job_params->network_quality_estimator
-                ->GetTransportRTT();
-        if (nqe_rtt.has_value()) {
-          return nqe_rtt;
-        }
-      }
-
       return std::nullopt;
     }();
 
-    // 3. Calculate and clamp fallback time.
+    // Calculate and clamp fallback time.
     if (rtt.has_value()) {
       base::TimeDelta rtt_based_fallback =
           rtt.value() * features::kIPv6FallbackRTTMultiplier.Get();

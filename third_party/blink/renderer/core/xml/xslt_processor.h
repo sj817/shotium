@@ -26,40 +26,29 @@
 #include <libxml/parserInternals.h>
 #include <libxslt/documents.h>
 
+#include "base/types/pass_key.h"
 #include "third_party/blink/renderer/core/dom/document.h"
 #include "third_party/blink/renderer/core/dom/node.h"
 #include "third_party/blink/renderer/core/frame/local_dom_window.h"
-#include "third_party/blink/renderer/core/frame/web_feature_forward.h"
 #include "third_party/blink/renderer/core/inspector/console_message.h"
 #include "third_party/blink/renderer/core/xml/xsl_style_sheet.h"
-#include "third_party/blink/renderer/platform/bindings/exception_state.h"
-#include "third_party/blink/renderer/platform/bindings/script_wrappable.h"
-#include "third_party/blink/renderer/platform/wtf/hash_map.h"
-#include "third_party/blink/renderer/platform/wtf/text/string_hash.h"
+#include "third_party/blink/renderer/platform/heap/garbage_collected.h"
 
 namespace blink {
 
 class LocalFrame;
 class Document;
-class DocumentFragment;
 
-class XSLTProcessor final : public ScriptWrappable {
-  DEFINE_WRAPPERTYPEINFO();
-
+class XSLTProcessor final : public GarbageCollected<XSLTProcessor> {
  public:
   using PassKey = base::PassKey<XSLTProcessor>;
-  static XSLTProcessor* Create(
-      Document& document,
-      ExceptionState& exception_state,
-      WebFeature feature = WebFeature::kXSLTProcessor) {
-    return MakeGarbageCollected<XSLTProcessor>(
-        XSLTProcessor::PassKey(), document, feature, exception_state);
+  static XSLTProcessor* Create(Document& document) {
+    return MakeGarbageCollected<XSLTProcessor>(XSLTProcessor::PassKey(), document);
   }
-  XSLTProcessor(PassKey, Document&, WebFeature, ExceptionState&);
-  ~XSLTProcessor() override;
+  XSLTProcessor(PassKey, Document&);
+  ~XSLTProcessor();
 
-  static void ReportXSLTDisabled(Document& document,
-                                 ExceptionState* exception_state);
+  static void ReportXSLTDisabled(Document& document);
 
   static bool IsXSLTEnabled(const ExecutionContext* context);
 
@@ -76,36 +65,17 @@ class XSLTProcessor final : public ScriptWrappable {
                                      Node* source_node,
                                      LocalFrame*);
 
-  // DOM methods
-  void importStylesheet(Node* style) { stylesheet_root_node_ = style; }
-  DocumentFragment* transformToFragment(Node* source, Document* ouput_doc);
-  Document* transformToDocument(Node* source);
-
-  void setParameter(const String& namespace_uri,
-                    const String& local_name,
-                    const String& value);
-  String getParameter(const String& namespace_uri,
-                      const String& local_name) const;
-  void removeParameter(const String& namespace_uri, const String& local_name);
-  void clearParameters() { parameters_.clear(); }
-
-  void reset();
-
   static void ParseErrorFunc(void* user_data, const xmlError*);
   static void GenericErrorFunc(void* user_data, const char* msg, ...);
 
   // Only for libXSLT callbacks
   XSLStyleSheet* XslStylesheet() const { return stylesheet_.Get(); }
 
-  typedef HashMap<String, String> ParameterMap;
-
-  void Trace(Visitor*) const override;
+  void Trace(Visitor*) const;
 
  private:
   Member<XSLStyleSheet> stylesheet_;
-  Member<Node> stylesheet_root_node_;
   Member<Document> document_;
-  ParameterMap parameters_;
 };
 
 }  // namespace blink

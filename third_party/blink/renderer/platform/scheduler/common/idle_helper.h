@@ -64,8 +64,6 @@ class PLATFORM_EXPORT IdleHelper : public base::TaskObserver,
     // isn't quiescent.
     virtual void IsNotQuiescent() = 0;
 
-    // Signals that the task list has changed.
-    virtual void OnPendingTasksChanged(bool has_tasks) = 0;
   };
 
   // The minimum duration of an idle period.

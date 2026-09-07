@@ -185,12 +185,10 @@ void RecordSocketCloseForReuseMetrics(TCPSocketWin* socket) {
 class NET_EXPORT TCPSocketDefaultWin : public TCPSocketWin {
  public:
   TCPSocketDefaultWin(
-      std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
       NetLog* net_log,
       const NetLogSource& source);
 
   TCPSocketDefaultWin(
-      std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
       NetLogWithSource net_log_source);
 
   ~TCPSocketDefaultWin() override;
@@ -399,35 +397,31 @@ void TCPSocketDefaultWin::CoreImpl::WriteDelegate::OnObjectSignaled(
 
 // static
 std::unique_ptr<TCPSocketWin> TCPSocketWin::Create(
-    std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
     NetLog* net_log,
     const NetLogSource& source) {
   if (base::FeatureList::IsEnabled(features::kTcpSocketIoCompletionPortWin)) {
     return std::make_unique<TcpSocketIoCompletionPortWin>(
-        std::move(socket_performance_watcher), net_log, source);
+        net_log, source);
   }
   return std::make_unique<TCPSocketDefaultWin>(
-      std::move(socket_performance_watcher), net_log, source);
+      net_log, source);
 }
 
 // static
 std::unique_ptr<TCPSocketWin> TCPSocketWin::Create(
-    std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
     NetLogWithSource net_log_source) {
   if (base::FeatureList::IsEnabled(features::kTcpSocketIoCompletionPortWin)) {
     return std::make_unique<TcpSocketIoCompletionPortWin>(
-        std::move(socket_performance_watcher), net_log_source);
+        net_log_source);
   }
   return std::make_unique<TCPSocketDefaultWin>(
-      std::move(socket_performance_watcher), std::move(net_log_source));
+      std::move(net_log_source));
 }
 
 TCPSocketWin::TCPSocketWin(
-    std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
     net::NetLog* net_log,
     const net::NetLogSource& source)
     : socket_(INVALID_SOCKET),
-      socket_performance_watcher_(std::move(socket_performance_watcher)),
       accept_event_(WSA_INVALID_EVENT),
       net_log_(NetLogWithSource::Make(net_log, NetLogSourceType::SOCKET)) {
   net_log_.BeginEventReferencingSource(NetLogEventType::SOCKET_ALIVE, source);
@@ -435,10 +429,8 @@ TCPSocketWin::TCPSocketWin(
 }
 
 TCPSocketWin::TCPSocketWin(
-    std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
     NetLogWithSource net_log_source)
     : socket_(INVALID_SOCKET),
-      socket_performance_watcher_(std::move(socket_performance_watcher)),
       accept_event_(WSA_INVALID_EVENT),
       net_log_(std::move(net_log_source)) {
   net_log_.BeginEvent(NetLogEventType::SOCKET_ALIVE);
@@ -984,7 +976,7 @@ int TCPSocketWin::AcceptInternal(std::unique_ptr<TCPSocketWin>* socket,
     NOTREACHED();
   }
   auto tcp_socket =
-      TCPSocketWin::Create(nullptr, net_log_.net_log(), net_log_.source());
+      TCPSocketWin::Create(net_log_.net_log(), net_log_.source());
   int adopt_result = tcp_socket->AdoptConnectedSocket(new_socket, ip_end_point);
   if (adopt_result != OK) {
     net_log_.EndEventWithNetErrorCode(NetLogEventType::TCP_ACCEPT,
@@ -1276,16 +1268,13 @@ int TCPSocketWin::BindToNetwork(handles::NetworkHandle network) {
 }
 
 TCPSocketDefaultWin::TCPSocketDefaultWin(
-    std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
     NetLog* net_log,
     const NetLogSource& source)
-    : TCPSocketWin(std::move(socket_performance_watcher), net_log, source) {}
+    : TCPSocketWin(net_log, source) {}
 
 TCPSocketDefaultWin::TCPSocketDefaultWin(
-    std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
     NetLogWithSource net_log_source)
-    : TCPSocketWin(std::move(socket_performance_watcher),
-                   std::move(net_log_source)) {}
+    : TCPSocketWin(std::move(net_log_source)) {}
 
 TCPSocketDefaultWin::~TCPSocketDefaultWin() {
   DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);

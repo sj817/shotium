@@ -6,7 +6,7 @@ import json5_generator
 import os
 import template_expander
 from collections import defaultdict
-from make_runtime_features_utilities import origin_trials
+from make_runtime_features_utilities import context_dependent_features
 
 
 class PermissionsPolicyFeatureWriter(json5_generator.Writer):
@@ -50,19 +50,26 @@ class PermissionsPolicyFeatureWriter(json5_generator.Writer):
             else:
                 runtime_features.append(feature)
 
-        origin_trials_set = origin_trials(runtime_features)
-        pp_origin_trial_dependency_map = defaultdict(list)
-        dp_origin_trial_dependency_map = defaultdict(list)
+        context_dependent_set = context_dependent_features(runtime_features)
+        pp_context_dependency_map = defaultdict(list)
+        dp_context_dependency_map = defaultdict(list)
+        pp_runtime_dependency_map = {}
+        dp_runtime_dependency_map = {}
         runtime_to_permissions_policy_map = defaultdict(list)
         runtime_to_document_policy_map = defaultdict(list)
         for feature in permissions_policy_features + document_policy_features:
+            if feature['depends_on']:
+                dependency_map = (pp_runtime_dependency_map if
+                                  feature['permissions_policy_name'] else
+                                  dp_runtime_dependency_map)
+                dependency_map[feature['name']] = feature['depends_on']
             for dependency in feature['depends_on']:
-                if str(dependency) in origin_trials_set:
+                if str(dependency) in context_dependent_set:
                     if feature['permissions_policy_name']:
-                        pp_origin_trial_dependency_map[feature['name']].append(
+                        pp_context_dependency_map[feature['name']].append(
                             dependency)
                     else:
-                        dp_origin_trial_dependency_map[feature['name']].append(
+                        dp_context_dependency_map[feature['name']].append(
                             dependency)
                 else:
                     if feature['permissions_policy_name']:
@@ -87,10 +94,12 @@ class PermissionsPolicyFeatureWriter(json5_generator.Writer):
                     name_to_permissions_policy_map,
                     'document_policy_features':
                     document_policy_features,
-                    'pp_origin_trial_dependency_map':
-                    pp_origin_trial_dependency_map,
-                    'dp_origin_trial_dependency_map':
-                    dp_origin_trial_dependency_map,
+                    'pp_runtime_dependency_map': pp_runtime_dependency_map,
+                    'dp_runtime_dependency_map': dp_runtime_dependency_map,
+                    'pp_context_dependency_map':
+                    pp_context_dependency_map,
+                    'dp_context_dependency_map':
+                    dp_context_dependency_map,
                     'runtime_to_permissions_policy_map':
                     runtime_to_permissions_policy_map,
                     'runtime_to_document_policy_map':

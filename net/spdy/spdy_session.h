@@ -120,7 +120,6 @@ constexpr base::TimeDelta kDefaultTimeToBufferSmallWindowUpdates =
     base::Seconds(5);
 
 class NetLog;
-class NetworkQualityEstimator;
 class SpdyStream;
 class SSLInfo;
 class TransportSecurityState;
@@ -355,7 +354,6 @@ class NET_EXPORT SpdySession
               bool http2_end_stream_with_data_frame,
               bool enable_priority_update,
               TimeFunc time_func,
-              NetworkQualityEstimator* network_quality_estimator,
               NetLog* net_log,
               MultiplexedSessionCreationInitiator session_creation_initiator,
               SpdySessionInitiator spdy_session_initiator);
@@ -1332,7 +1330,6 @@ class NET_EXPORT SpdySession
 
   // Network quality estimator to which the ping RTTs should be reported. May be
   // nullptr.
-  raw_ptr<NetworkQualityEstimator> network_quality_estimator_;
 
   // Set to the error and reason why this session is draining.
   // TODO(crbug.com/405934874): Remove once we identify the cause of the bug.

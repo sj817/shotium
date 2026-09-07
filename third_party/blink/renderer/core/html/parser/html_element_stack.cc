@@ -354,7 +354,6 @@ void HTMLElementStack::InsertAbove(HTMLStackItem* item,
     }
 
     stack_depth_++;
-    item->SetSanitizer(item_below->GetSanitizer());
     item->SetNextItemInStack(item_above->ReleaseNextItemInStack());
     item_above->SetNextItemInStack(item);
     item->GetElement()->BeginParsingChildren();
@@ -523,9 +522,6 @@ void HTMLElementStack::PushCommon(HTMLStackItem* item) {
   DCHECK(root_node_);
 
   stack_depth_++;
-  if (top_) {
-    item->SetSanitizer(top_->GetSanitizer());
-  }
   item->SetNextItemInStack(top_.Release());
   top_ = item;
 }

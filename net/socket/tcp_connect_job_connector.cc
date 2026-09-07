@@ -22,8 +22,6 @@
 #include "net/log/net_log_with_source.h"
 #include "net/socket/client_socket_factory.h"
 #include "net/socket/connection_attempts.h"
-#include "net/socket/socket_performance_watcher.h"
-#include "net/socket/socket_performance_watcher_factory.h"
 #include "net/socket/websocket_stream_socket.h"
 
 namespace net {
@@ -179,21 +177,11 @@ int TcpConnectJob::Connector::DoTcpConnect() {
 
   next_state_ = State::kTcpConnectComplete;
 
-  // Create a `SocketPerformanceWatcher`, and pass the ownership.
-  std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher;
-  if (auto* factory = parent_->socket_performance_watcher_factory();
-      factory != nullptr) {
-    socket_performance_watcher = factory->CreateSocketPerformanceWatcher(
-        SocketPerformanceWatcherFactory::PROTOCOL_TCP,
-        current_address_->address());
-  }
-
   const NetLogWithSource& net_log = parent_->net_log();
   transport_socket_ =
       parent_->client_socket_factory()->CreateTransportClientSocket(
           AddressList(*current_address_), parent_->params_->target_network(),
-          std::move(socket_performance_watcher),
-          parent_->network_quality_estimator(), net_log.net_log(),
+          net_log.net_log(),
           net_log.source());
 
   transport_socket_->ApplySocketTag(parent_->socket_tag());

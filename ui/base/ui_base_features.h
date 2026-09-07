@@ -169,56 +169,6 @@ BASE_DECLARE_FEATURE(kSynchronousPageFlipTesting);
 COMPONENT_EXPORT(UI_BASE_FEATURES)
 bool IsSynchronousPageFlipTestingEnabled();
 
-// The type of predictor to use for the resampling events. These values are
-// used as the 'predictor' feature param for
-// |blink::features::kResamplingScrollEvents|.
-COMPONENT_EXPORT(UI_BASE_FEATURES) extern const char kPredictorNameLsq[];
-COMPONENT_EXPORT(UI_BASE_FEATURES) extern const char kPredictorNameKalman[];
-COMPONENT_EXPORT(UI_BASE_FEATURES)
-extern const char kPredictorNameLinearFirst[];
-COMPONENT_EXPORT(UI_BASE_FEATURES)
-extern const char kPredictorNameLinearSecond[];
-COMPONENT_EXPORT(UI_BASE_FEATURES)
-extern const char kPredictorNameLinearResampling[];
-COMPONENT_EXPORT(UI_BASE_FEATURES) extern const char kPredictorNameEmpty[];
-
-// Enables resampling of scroll events using an experimental latency of +3.3ms
-// instead of the original -5ms.
-COMPONENT_EXPORT(UI_BASE_FEATURES)
-BASE_DECLARE_FEATURE(kResamplingScrollEventsExperimentalPrediction);
-
-COMPONENT_EXPORT(UI_BASE_FEATURES)
-extern const char kResampleLatencyModeFixedMs[];
-COMPONENT_EXPORT(UI_BASE_FEATURES)
-extern const char kResampleLatencyModeFractional[];
-
-// Enables experimental configuration of the resample latency for scroll events.
-COMPONENT_EXPORT(UI_BASE_FEATURES)
-BASE_DECLARE_FEATURE(kResampleScrollEventsLatency);
-
-COMPONENT_EXPORT(UI_BASE_FEATURES)
-extern const base::FeatureParam<std::string> kResampleLatencyModeParam;
-
-// Param for the value used in the chosen mode.
-COMPONENT_EXPORT(UI_BASE_FEATURES)
-extern const base::FeatureParam<double> kResampleLatencyValueParam;
-
-// Uses a ratio of the vsync refresh rate. The timing/ratio can be changed on
-// the command line through a `latency` param.
-COMPONENT_EXPORT(UI_BASE_FEATURES)
-extern const char kPredictionTypeFramesBased[];
-COMPONENT_EXPORT(UI_BASE_FEATURES)
-extern const char kPredictionTypeDefaultFramesVariation1[];
-COMPONENT_EXPORT(UI_BASE_FEATURES)
-extern const char kPredictionTypeDefaultFramesVariation2[];
-COMPONENT_EXPORT(UI_BASE_FEATURES)
-extern const char kPredictionTypeDefaultFramesVariation3[];
-
-// The type of filter to use for filtering events. These values are used as the
-// 'filter' feature param for |blink::features::kFilteringScrollPrediction|.
-COMPONENT_EXPORT(UI_BASE_FEATURES) extern const char kFilterNameEmpty[];
-COMPONENT_EXPORT(UI_BASE_FEATURES) extern const char kFilterNameOneEuro[];
-
 // Android only feature, for swipe to move cursor.
 COMPONENT_EXPORT(UI_BASE_FEATURES) BASE_DECLARE_FEATURE(kSwipeToMoveCursor);
 

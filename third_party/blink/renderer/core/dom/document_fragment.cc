@@ -75,18 +75,15 @@ Node* DocumentFragment::Clone(Document& factory,
 void DocumentFragment::ParseHTML(const String& source,
                                  Element* context_element,
                                  CustomElementRegistry* registry,
-                                 ParserContentPolicy parser_content_policy,
-                                 StreamingSanitizer* sanitizer) {
+                                 ParserContentPolicy parser_content_policy) {
   HTMLDocumentParser::ParseDocumentFragment(source, this, context_element,
-                                            registry, parser_content_policy,
-                                            sanitizer);
+                                            registry, parser_content_policy);
 }
 
 bool DocumentFragment::ParseXML(const String& source,
                                 Element* context_element,
                                 ExceptionState& exception_state,
-                                ParserContentPolicy parser_content_policy,
-                                StreamingSanitizer* sanitizer) {
+                                ParserContentPolicy parser_content_policy) {
   return XMLDocumentParser::ParseDocumentFragment(
       source, this, context_element, parser_content_policy, exception_state);
 }

@@ -445,11 +445,6 @@ bool PageSchedulerImpl::OptedOutFromAggressiveThrottling() const {
   return opted_out_from_aggressive_throttling_;
 }
 
-scoped_refptr<WidgetScheduler> PageSchedulerImpl::CreateWidgetScheduler(
-    WidgetScheduler::Delegate* delegate) {
-  return main_thread_scheduler_->CreateWidgetScheduler(delegate);
-}
-
 bool PageSchedulerImpl::IsAudioPlaying() const {
   return audio_state_ == AudioState::kAudible ||
          audio_state_ == AudioState::kRecentlyAudible;

@@ -179,26 +179,6 @@ BASE_FEATURE(kMaintainConnectionsOnIpv6TempAddrChange,
 
 BASE_FEATURE(kEnableTLS13EarlyData, base::FEATURE_DISABLED_BY_DEFAULT);
 
-BASE_FEATURE(kNetworkQualityEstimator, base::FEATURE_DISABLED_BY_DEFAULT);
-
-BASE_FEATURE(kNetworkQualityEstimatorIsPrivateHostCache,
-             base::FEATURE_ENABLED_BY_DEFAULT);
-
-const base::FeatureParam<int> kRecentHTTPThresholdInSeconds{
-    &kNetworkQualityEstimator, "RecentHTTPThresholdInSeconds", -1};
-const base::FeatureParam<int> kRecentTransportThresholdInSeconds{
-    &kNetworkQualityEstimator, "RecentTransportThresholdInSeconds", -1};
-const base::FeatureParam<int> kRecentEndToEndThresholdInSeconds{
-    &kNetworkQualityEstimator, "RecentEndToEndThresholdInSeconds", -1};
-const base::FeatureParam<int> kCountNewObservationsReceivedComputeEct{
-    &kNetworkQualityEstimator, "CountNewObservationsReceivedComputeEct", 50};
-const base::FeatureParam<int> kObservationBufferSize{
-    &kNetworkQualityEstimator, "ObservationBufferSize", 300};
-const base::FeatureParam<base::TimeDelta>
-    kEffectiveConnectionTypeRecomputationInterval{
-        &kNetworkQualityEstimator,
-        "EffectiveConnectionTypeRecomputationInterval", base::Seconds(10)};
-
 BASE_FEATURE(kOnlyParseFirstContentDisposition,
              base::FEATURE_ENABLED_BY_DEFAULT);
 
@@ -259,16 +239,6 @@ BASE_FEATURE(kSameSiteDefaultChecksMethodRigorously,
              base::FEATURE_DISABLED_BY_DEFAULT);
 
 BASE_FEATURE(kTimeoutTcpConnectAttempt, base::FEATURE_DISABLED_BY_DEFAULT);
-
-extern const base::FeatureParam<double> kTimeoutTcpConnectAttemptRTTMultiplier(
-    &kTimeoutTcpConnectAttempt,
-    "TimeoutTcpConnectAttemptRTTMultiplier",
-    5.0);
-
-extern const base::FeatureParam<base::TimeDelta> kTimeoutTcpConnectAttemptMin(
-    &kTimeoutTcpConnectAttempt,
-    "TimeoutTcpConnectAttemptMin",
-    base::Seconds(8));
 
 extern const base::FeatureParam<base::TimeDelta> kTimeoutTcpConnectAttemptMax(
     &kTimeoutTcpConnectAttempt,

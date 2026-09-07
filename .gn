@@ -3,7 +3,6 @@
 # file, run "gn help dotfile" at the command line.
 
 import("//build/dotfile_settings.gni")
-import("//third_party/angle/dotfile_settings.gni")
 
 # The location of the build configuration file.
 buildconfig = "//build/config/BUILDCONFIG.gn"
@@ -34,16 +33,6 @@ default_args = {
   # Changes some setup for the Crashpad build to set them to build against
   # Chromium's zlib, base, etc.
   crashpad_dependencies = "chromium"
-
-  # Override ANGLE's Vulkan dependencies.
-  angle_vulkan_headers_dir = "//third_party/vulkan-headers/src"
-  angle_vulkan_loader_dir = "//third_party/vulkan-loader/src"
-  angle_vulkan_tools_dir = "//third_party/vulkan-tools/src"
-  angle_vulkan_validation_layers_dir =
-      "//third_party/vulkan-validation-layers/src"
-
-  # Override VMA's Vulkan dependencies.
-  vma_vulkan_headers_dir = "//third_party/vulkan-headers/src"
 
   # Overwrite default args declared in the Fuchsia sdk
   fuchsia_sdk_readelf_exec =
@@ -123,7 +112,6 @@ no_check_targets = []
 
 exec_script_allowlist =
     build_dotfile_settings.exec_script_allowlist +
-    angle_dotfile_settings.exec_script_allowlist +
     [
       # Allowlist entries for //build should go into
       # //build/dotfile_settings.gni instead, so that they can be shared

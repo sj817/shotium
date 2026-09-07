@@ -15,7 +15,6 @@ component("shared_typemap_traits") {
     "bitmap_skbitmap_mojom_traits.h",
     "image_info_mojom_traits.cc",
     "image_info_mojom_traits.h",
-    "surface_origin_mojom_traits.h",
   ]
 
   defines = [ "IS_SKIA_SHARED_TRAITS_IMPL" ]
@@ -41,7 +40,6 @@ mojom("mojom") {
     "skcolorspace.mojom",
     "skcolorspace_primaries.mojom",
     "skpath.mojom",
-    "surface_origin.mojom",
     "tile_mode.mojom",
   ]
 
@@ -239,16 +237,6 @@ mojom("mojom") {
         ":shared_typemap_traits",
         "//skia",
       ]
-    },
-    {
-      types = [
-        {
-          mojom = "skia.mojom.SurfaceOrigin"
-          cpp = "::GrSurfaceOrigin"
-        },
-      ]
-      traits_headers = [ "surface_origin_mojom_traits.h" ]
-      traits_public_deps = [ ":shared_typemap_traits" ]
     },
   ]
 

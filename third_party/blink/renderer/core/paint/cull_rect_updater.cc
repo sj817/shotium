@@ -98,10 +98,6 @@ bool ShouldUseInfiniteCullRect(
     return true;
 
   const LayoutObject& object = layer.GetLayoutObject();
-  if (object.IsInclusiveDescendantOfUnboundedElement()) {
-    DCHECK(RuntimeEnabledFeatures::UnboundedElementEnabled());
-    return true;
-  }
   bool is_printing = object.GetDocument().Printing();
   if (IsA<LayoutView>(object) && !object.GetFrame()->ClipsContent() &&
       // We use custom top cull rect per page when printing.

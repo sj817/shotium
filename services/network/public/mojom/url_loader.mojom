@@ -4,15 +4,30 @@
 
 module network.mojom;
 
+import "mojo/public/mojom/base/time.mojom";
 import "services/network/public/mojom/early_hints.mojom";
 import "services/network/public/mojom/http_request_headers.mojom";
+import "services/network/public/mojom/referrer_policy.mojom";
 import "services/network/public/mojom/request_priority.mojom";
+import "services/network/public/mojom/site_for_cookies.mojom";
 import "services/network/public/mojom/url_loader_completion_status.mojom";
 import "services/network/public/mojom/url_response_head.mojom";
+import "url/mojom/origin.mojom";
 import "url/mojom/url.mojom";
 
-[Native]
-struct URLRequestRedirectInfo;
+// Mapped to net::RedirectInfo. Preserve every request/security field.
+struct URLRequestRedirectInfo {
+  url.mojom.Origin? original_initiator;
+  int32 status_code;
+  string new_method;
+  url.mojom.Url new_url;
+  SiteForCookies new_site_for_cookies;
+  string new_referrer;
+  bool insecure_scheme_was_upgraded;
+  bool is_signed_exchange_fallback_redirect;
+  URLRequestReferrerPolicy new_referrer_policy;
+  mojo_base.mojom.TimeTicks critical_ch_restart_time;
+};
 
 // URLLoader is an interface for performing a single request to a URL.
 //

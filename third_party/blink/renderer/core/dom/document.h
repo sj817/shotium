@@ -220,7 +220,6 @@ class MenuSafeTriangle;
 class NodeIterator;
 class NthIndexCache;
 class Page;
-class ParseHTMLUnsafeOptions;
 class PendingAnimations;
 class PendingLinkPreload;
 class ProcessingInstruction;
@@ -241,10 +240,8 @@ class ScriptableDocumentParser;
 class ScriptedAnimationController;
 class SecurityOrigin;
 class SelectorQueryCache;
-class SetHTMLOptions;
 class Settings;
 class SlotAssignmentEngine;
-class StreamingSanitizer;
 class StyleEngine;
 class StylePropertyMapReadOnly;
 class StyleResolver;
@@ -540,7 +537,7 @@ class CORE_EXPORT Document : public ContainerNode,
 
   AtomicString EncodingName() const;
 
-  void SetContent(const String&, StreamingSanitizer* sanitizer = nullptr);
+  void SetContent(const String&);
 
   // DOMParser::parseFromString() calls to this. Does the same thing as
   // `setContent()`, but may use the fast path parser.
@@ -1988,7 +1985,6 @@ class CORE_EXPORT Document : public ContainerNode,
   };
   DeclarativeShadowRootAllowState GetDeclarativeShadowRootAllowState() const;
   void setAllowDeclarativeShadowRoots(bool val);
-  void setSanitizer(StreamingSanitizer*);
 
   void SetFindInPageActiveMatchNode(Node*);
   const Node* GetFindInPageActiveMatchNode() const;
@@ -2078,29 +2074,6 @@ class CORE_EXPORT Document : public ContainerNode,
   void ResetAgent(Agent& agent);
 
   void InitializeRouteNavigationState();
-
-  // https://github.com/whatwg/html/pull/9538
-  static Document* parseHTMLUnsafe(ExecutionContext* context,
-                                   const V8UnionStringOrTrustedHTML* html,
-                                   ExceptionState& exception_state);
-
-  // https://wicg.github.io/sanitizer-api/#framework
-  //
-  // parseHTMLUnsafe uses an overload, so that we can separately enable/disable
-  // the |options| parameter. Long-term, the two parseHTMLUnsage methods
-  // should be merged.
-  static Document* parseHTMLUnsafe(ExecutionContext* context,
-                                   const V8UnionStringOrTrustedHTML* html,
-                                   ParseHTMLUnsafeOptions* options,
-                                   ExceptionState& exception_state);
-  static Document* parseHTMLUnsafe(ExecutionContext* context,
-                                   const V8UnionStringOrTrustedHTML* html,
-                                   TrustedParserOptions* options,
-                                   ExceptionState& exception_state);
-  static Document* parseHTML(ExecutionContext* context,
-                             const String& html,
-                             SetHTMLOptions* options,
-                             ExceptionState& exception_state);
 
   // Delays execution of pending async scripts until a milestone is reached.
   // Used in conjunction with kDelayAsyncScriptExecution experiment.
@@ -2442,12 +2415,6 @@ class CORE_EXPORT Document : public ContainerNode,
   // Returns true if data loading has started.
   bool InitiateStyleOrLayoutDependentLoadForPrint();
 
-  // https://wicg.github.io/sanitizer-api/#framework
-  // Common implementation for parseHTML and parseHTMLUnsafe.
-  static Document* parseHTMLInternal(ExecutionContext* context,
-                                     const String& html,
-                                     StreamingSanitizer* sanitizer,
-                                     ExceptionState& exception_state);
 
 
   // Called upon prerender activation.
@@ -2511,7 +2478,6 @@ class CORE_EXPORT Document : public ContainerNode,
 
   Member<ResourceFetcher> fetcher_;
   Member<DocumentParser> parser_;
-  Member<StreamingSanitizer> sanitizer_;
   Member<HttpRefreshScheduler> http_refresh_scheduler_;
 
   bool well_formed_ = false;

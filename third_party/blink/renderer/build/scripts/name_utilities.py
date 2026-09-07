@@ -76,7 +76,5 @@ def _upper_camel_case(property_name):
 
 
 def tag_symbol_for_entry(json_entry):
-    suffix = "OrUnknown" if json_entry.get('runtimeFlagHasOriginTrial',
-                                           False) else ""
     return 'k' + NameStyleConverter(
-        json_entry['name'].original).to_upper_camel_case() + suffix
+        json_entry['name'].original).to_upper_camel_case()

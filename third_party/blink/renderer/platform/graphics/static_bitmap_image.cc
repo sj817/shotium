@@ -4,8 +4,6 @@
 
 #include "third_party/blink/renderer/platform/graphics/static_bitmap_image.h"
 
-#include "base/numerics/checked_math.h"
-#include "gpu/command_buffer/client/gles2_interface.h"
 #include "third_party/blink/renderer/platform/graphics/graphics_context.h"
 #include "third_party/blink/renderer/platform/graphics/image_observer.h"
 #include "third_party/blink/renderer/platform/graphics/paint/paint_image.h"
@@ -41,42 +39,6 @@ gfx::Size StaticBitmapImage::SizeWithConfig(SizeConfig config) const {
   if (config.apply_orientation && orientation_.UsesWidthAsHeight())
     size.Transpose();
   return size;
-}
-
-Vector<uint8_t> StaticBitmapImage::CopyImageData(const SkImageInfo& info,
-                                                 bool apply_orientation) {
-  if (info.isEmpty())
-    return {};
-  PaintImage paint_image = PaintImageForCurrentFrame();
-  if (paint_image.GetSkImageInfo().isEmpty())
-    return {};
-
-  wtf_size_t byte_length =
-      base::checked_cast<wtf_size_t>(info.computeMinByteSize());
-  if (byte_length > partition_alloc::MaxAllocationSize()) {
-    return {};
-  }
-  Vector<uint8_t> dst_buffer(byte_length);
-
-  bool read_pixels_successful =
-      paint_image.readPixels(info, dst_buffer.data(), info.minRowBytes(), 0, 0);
-  DCHECK(read_pixels_successful);
-  if (!read_pixels_successful)
-    return {};
-
-  // Orient the data, and re-read the pixels.
-  if (apply_orientation && !HasDefaultOrientation()) {
-    paint_image = Image::ResizeAndOrientImage(paint_image, Orientation(),
-                                              gfx::Vector2dF(1, 1), 1,
-                                              kInterpolationNone);
-    read_pixels_successful = paint_image.readPixels(info, dst_buffer.data(),
-                                                    info.minRowBytes(), 0, 0);
-    DCHECK(read_pixels_successful);
-    if (!read_pixels_successful)
-      return {};
-  }
-
-  return dst_buffer;
 }
 
 void StaticBitmapImage::DrawHelper(cc::PaintCanvas* canvas,

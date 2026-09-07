@@ -145,7 +145,6 @@ DEBIAN_PACKAGES = [
     "libpipewire-0.3-dev",
     "libpulse-dev",
     "libre2-dev",
-    "libsnappy-dev",
     "libspeechd-dev",
     "libssl-dev",
     "libsystemd-dev",

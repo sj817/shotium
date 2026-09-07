@@ -43,7 +43,6 @@ class ElementLookupTrieWriter(json5_generator.Writer):
         'noConstructor': {},
         'noTypeHelpers': {},
         'runtimeEnabled': {},
-        'runtimeFlagHasOriginTrial': {},
     }
     default_metadata = {
         'attrsNullNamespace': None,
@@ -60,14 +59,13 @@ class ElementLookupTrieWriter(json5_generator.Writer):
                                                       output_dir)
         self._tags = {}
         self._tag_symbols = {}
-        self._runtimeEnabledWithoutOriginTrial = {}
+        self._runtimeEnabled = {}
         for entry in self.json5_file.name_dictionaries:
             tagname = entry['name'].original
             self._tags[tagname] = tagname
             self._tag_symbols[tagname] = tag_symbol_for_entry(entry)
-            if 'runtimeEnabled' in entry and not entry.get(
-                    'runtimeFlagHasOriginTrial', False):
-                self._runtimeEnabledWithoutOriginTrial[tagname] = entry[
+            if 'runtimeEnabled' in entry:
+                self._runtimeEnabled[tagname] = entry[
                     'runtimeEnabled']
         self._namespace = self.json5_file.metadata['namespace'].strip('"')
         basename = self._namespace.lower() + '_element_lookup_trie'
@@ -89,8 +87,8 @@ class ElementLookupTrieWriter(json5_generator.Writer):
             'input_files': self._input_files,
             'namespace': self._namespace,
             'length_tries': trie_builder.trie_list_by_str_length(self._tags),
-            'runtimeEnabledWithoutOriginTrial':
-            self._runtimeEnabledWithoutOriginTrial,
+            'runtimeEnabled':
+            self._runtimeEnabled,
             'tag_symbols': self._tag_symbols,
         }
 

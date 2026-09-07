@@ -33,7 +33,6 @@ group("test_support") {
   testonly = true
   public_deps = [
     ":test_headers",
-    "//third_party/blink/common:test_support",
     "//third_party/blink/renderer/core/exported:test_support",
     "//third_party/blink/renderer/platform:test_support",
   ]
@@ -91,7 +90,6 @@ if (is_android) {
 source_set("test_headers") {
   testonly = true
   sources = [
-    "common/origin_trials/scoped_test_origin_trial_policy.h",
     "platform/scheduler/test/renderer_scheduler_test_support.h",
     "platform/scheduler/test/web_mock_thread_scheduler.h",
     "test/frame_widget_test_helper.h",
@@ -154,7 +152,6 @@ source_set("blink_headers") {
     "platform/web_font_description.h",
     "platform/web_font_render_style.h",
     "platform/web_gesture_curve.h",
-    "platform/web_graphics_shared_image_interface_provider.h",
     "platform/web_http_body.h",
     "platform/web_http_header_visitor.h",
     "platform/web_icon_sizes_parser.h",
@@ -290,7 +287,6 @@ source_set("blink_headers") {
     ":runtime_features_for_public",
     "//net",
     "//services/network/public/mojom:mojom_shared",
-    "//services/service_manager/public/cpp",
     "//skia",
     "//third_party/blink/public/common",
     "//third_party/blink/public/common:headers",
@@ -302,7 +298,6 @@ source_set("blink_headers") {
     "//ui/base/dragdrop/mojom:mojom_shared",
     "//ui/base/ime",
     "//ui/base/ime/mojom",
-    "//ui/base/prediction",
     "//url",
   ]
 
@@ -314,7 +309,6 @@ source_set("blink_headers") {
     "//base",
     "//cc",
     "//cc/paint",
-    "//components/viz/common",
     "//mojo/public/cpp/bindings",
     "//mojo/public/cpp/system",
     "//services/network/public/cpp",
@@ -336,14 +330,12 @@ blink_python_runner("runtime_features_for_public") {
         "../renderer/build/scripts/make_runtime_features_utilities.py",
         "../renderer/build/scripts/make_runtime_features.py",
         "../renderer/build/scripts/templates/features_generated.h.tmpl",
-        "../renderer/build/scripts/templates/web_origin_trials.h.tmpl",
         "../renderer/build/scripts/templates/web_runtime_features_base.h.tmpl",
       ]
 
   outputs = [
     "$blink_public_output_dir/common/features_generated.h",
     "$blink_public_output_dir/platform/web_runtime_features_base.h",
-    "$blink_public_output_dir/web/web_origin_trials.h",
   ]
 
   args = [

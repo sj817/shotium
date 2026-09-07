@@ -670,8 +670,7 @@ mojom("url_loader_base") {
         },
       ]
       traits_headers = [
-        "//net/http/http_response_info.h",
-        "//services/network/public/cpp/network_ipc_param_traits.h",
+        "//services/network/public/cpp/network_types_mojom_traits.h",
       ]
       traits_public_deps = [
         "//net",
@@ -771,7 +770,6 @@ mojom("url_loader_base") {
         },
       ]
       traits_headers = [
-        "//services/network/public/cpp/network_ipc_param_traits.h",
         "//services/network/public/cpp/url_request_mojom_traits.h",
         "//services/network/public/cpp/network_isolation_key_mojom_traits.h",
         "//services/network/public/cpp/network_anonymization_key_mojom_traits.h",
@@ -911,8 +909,10 @@ mojom("url_loader_base") {
           cpp = "::net::RedirectInfo"
         },
       ]
-      traits_headers =
-          [ "//services/network/public/cpp/network_ipc_param_traits.h" ]
+      traits_headers = [
+        "//services/network/public/cpp/network_types_mojom_traits.h",
+        "//services/network/public/cpp/url_request_redirect_info_mojom_traits.h",
+      ]
       traits_public_deps = [ "//net" ]
     },
     {
@@ -1253,7 +1253,6 @@ mojom("mojom_network_param") {
         },
       ]
       traits_headers = [
-        "//services/network/public/cpp/net_ipc_param_traits.h",
         "//services/network/public/cpp/network_param_mojom_traits.h",
       ]
       traits_public_deps =

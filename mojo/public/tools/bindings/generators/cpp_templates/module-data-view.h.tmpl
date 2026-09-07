@@ -52,11 +52,7 @@ struct MojomTypeTraits<{{kind|get_qualified_name_for_kind}}DataView> {
 
 {#--- Struct Forward Declarations -#}
 {%- for struct in structs %}
-{%-   if struct|is_native_only_kind %}
-using {{struct.name}}DataView = mojo::native::NativeStructDataView;
-{%-   else %}
 class {{struct.name}}DataView;
-{%-   endif %}
 {%  endfor %}
 
 {#--- Union Forward Declarations -#}
@@ -71,9 +67,7 @@ namespace mojo {
 namespace internal {
 
 {%- for struct in structs %}
-{%-   if not struct|is_native_only_kind %}
 {{mojom_type_traits(struct)}}
-{%-   endif %}
 {%- endfor %}
 
 {%- for union in unions %}
@@ -90,11 +84,7 @@ namespace internal {
 {#--- Enums #}
 {%- from "enum_macros.tmpl" import enum_decl with context %}
 {%- for enum in all_enums %}
-{%-   if enum|is_native_only_kind %}
-using {{enum|get_name_for_kind(flatten_nested_kind=True)}} = mojo::NativeEnum;
-{%-   else %}
 {{enum_decl(enum, export_attribute)}}
-{%-   endif %}
 {%- endfor %}
 
 {#--- Interfaces #}
@@ -117,9 +107,7 @@ using {{interface.name}}AssociatedRequestDataView =
 
 {#--- Structs #}
 {%- for struct in structs %}
-{%-   if not struct|is_native_only_kind %}
-{%      include "struct_data_view_declaration.tmpl" %}
-{%-   endif %}
+{%    include "struct_data_view_declaration.tmpl" %}
 {%- endfor %}
 
 {#--- Unions #}

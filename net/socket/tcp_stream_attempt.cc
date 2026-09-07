@@ -14,8 +14,6 @@
 #include "net/base/address_list.h"
 #include "net/base/net_errors.h"
 #include "net/socket/client_socket_factory.h"
-#include "net/socket/socket_performance_watcher.h"
-#include "net/socket/socket_performance_watcher_factory.h"
 #include "net/socket/transport_client_socket.h"
 
 namespace net {
@@ -65,20 +63,10 @@ base::DictValue TcpStreamAttempt::GetInfoAsValue() const {
 int TcpStreamAttempt::StartInternal() {
   next_state_ = State::kConnecting;
 
-  std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher;
-  if (params().socket_performance_watcher_factory) {
-    socket_performance_watcher =
-        params()
-            .socket_performance_watcher_factory->CreateSocketPerformanceWatcher(
-                SocketPerformanceWatcherFactory::PROTOCOL_TCP,
-                ip_endpoint().address());
-  }
-
   std::unique_ptr<TransportClientSocket> stream_socket =
       params().client_socket_factory->CreateTransportClientSocket(
           AddressList(ip_endpoint()), target_network(),
-          std::move(socket_performance_watcher),
-          params().network_quality_estimator, net_log().net_log(),
+          net_log().net_log(),
           net_log().source());
 
   TransportClientSocket* socket_ptr = stream_socket.get();

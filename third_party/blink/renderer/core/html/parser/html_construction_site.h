@@ -98,7 +98,6 @@ class Element;
 class HTMLFormElement;
 class HTMLParserReentryPermit;
 class ParserRootInsertionPoint;
-class StreamingSanitizer;
 
 class HTMLConstructionSite final {
   DISALLOW_NEW();
@@ -113,7 +112,6 @@ class HTMLConstructionSite final {
                        ContainerNode*,
                        Element*,
                        CustomElementRegistry*,
-                       StreamingSanitizer*,
                        ParserRootInsertionPoint*);
   HTMLConstructionSite(const HTMLConstructionSite&) = delete;
   HTMLConstructionSite& operator=(const HTMLConstructionSite&) = delete;
@@ -297,8 +295,6 @@ class HTMLConstructionSite final {
 
   void ExecuteTask(HTMLConstructionSiteTask&);
   void QueueTask(HTMLConstructionSiteTask&, bool flush_pending_text);
-  StreamingSanitizer* ActiveSanitizer(
-      Node* node_being_inserted = nullptr) const;
   void SetAttributes(Element* element, AtomicHTMLToken* token);
 
   Member<HTMLParserReentryPermit> reentry_permit_;
@@ -388,7 +384,6 @@ class HTMLConstructionSite final {
   // when custom elements are encountered.
   Member<CustomElementRegistry> custom_element_registry_;
 
-  Member<StreamingSanitizer> sanitizer_;
 };
 
 }  // namespace blink

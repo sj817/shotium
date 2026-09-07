@@ -66,16 +66,10 @@ void HTMLHtmlElement::InsertedByParser() {
 
 void HTMLHtmlElement::AttachLayoutTree(AttachContext& context) {
   HTMLElement::AttachLayoutTree(context);
-  if (PseudoElement* skeleton = GetPseudoElement(kPseudoIdSkeleton)) {
-    skeleton->AttachLayoutTree(context);
-  }
 }
 
 void HTMLHtmlElement::DetachLayoutTree(bool performing_reattach) {
   HTMLElement::DetachLayoutTree(performing_reattach);
-  if (PseudoElement* skeleton = GetPseudoElement(kPseudoIdSkeleton)) {
-    skeleton->DetachLayoutTree(performing_reattach);
-  }
 }
 
 namespace {

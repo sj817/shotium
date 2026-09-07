@@ -34,10 +34,8 @@ namespace {{namespace}} {
 {#--- Enums #}
 {%- from "enum_macros.tmpl" import enum_stream, enum_to_string %}
 {%- for enum in all_enums %}
-{%-   if not enum|is_native_only_kind %}
 {{enum_to_string(enum)}}
 {{enum_stream(enum)}}
-{%-   endif %}
 {%- endfor %}
 
 namespace internal {
@@ -49,9 +47,7 @@ namespace internal {
 
 {#--- Struct definitions #}
 {%- for struct in structs %}
-{%-   if not struct|is_native_only_kind %}
-{%      include "struct_definition.tmpl" %}
-{%-   endif %}
+{%    include "struct_definition.tmpl" %}
 {%- endfor %}
 
 {#--- Interface parameter definitions #}
@@ -80,7 +76,5 @@ namespace internal {
 {#--- TraceFormatTraits specialisation for enums #}
 {%- from "enum_macros.tmpl" import enum_trace_format_traits %}
 {%- for enum in all_enums %}
-{%-   if not enum|is_native_only_kind %}
 {{enum_trace_format_traits(enum)}}
-{%-   endif %}
 {%- endfor %}

@@ -31,8 +31,8 @@ mojom("mojom") {
           cpp = "::ui::ScrollGranularity"
         },
       ]
-      traits_headers = [ "//ui/events/ipc/ui_events_param_traits_macros.h" ]
-      traits_public_deps = [ "//ui/events/ipc" ]
+      traits_headers = [ "event_enum_mojom_traits.h" ]
+      traits_public_deps = [ "//ui/events:events_base" ]
     },
   ]
 
@@ -73,7 +73,6 @@ mojom("mojom") {
         "//ui/gfx/geometry/mojom",
         "//ui/latency/mojom",
       ]
-      traits_deps = [ "//ipc:param_traits" ]
     },
   ]
 

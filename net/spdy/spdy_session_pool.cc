@@ -92,7 +92,6 @@ SpdySessionPool::SpdySessionPool(
     bool enable_priority_update,
     bool go_away_on_ip_change,
     SpdySessionPool::TimeFunc time_func,
-    NetworkQualityEstimator* network_quality_estimator,
     bool cleanup_sessions_on_ip_address_changed)
     : http_server_properties_(http_server_properties),
       transport_security_state_(transport_security_state),
@@ -110,7 +109,6 @@ SpdySessionPool::SpdySessionPool(
       enable_priority_update_(enable_priority_update),
       go_away_on_ip_change_(go_away_on_ip_change),
       time_func_(time_func),
-      network_quality_estimator_(network_quality_estimator),
       cleanup_sessions_on_ip_address_changed_(
           cleanup_sessions_on_ip_address_changed) {
   if (cleanup_sessions_on_ip_address_changed_)
@@ -664,7 +662,7 @@ std::unique_ptr<SpdySession> SpdySessionPool::CreateSession(
       session_max_queued_capped_frames_, initial_settings_,
       enable_http2_settings_grease_, greased_http2_frame_,
       http2_end_stream_with_data_frame_, enable_priority_update_, time_func_,
-      network_quality_estimator_, net_log, session_creation_initiator,
+      net_log, session_creation_initiator,
       spdy_session_initiator);
 }
 

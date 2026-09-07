@@ -18,7 +18,6 @@ bool StructTraits<blink::mojom::TransferableMessage::DataView,
   std::vector<blink::MessagePortDescriptor> stream_channels;
   if (!data.ReadMessage(static_cast<blink::CloneableMessage*>(out)) ||
       !data.ReadArrayBufferContentsArray(&out->array_buffer_contents_array) ||
-      !data.ReadImageBitmapContentsArray(&out->image_bitmap_contents_array) ||
       !data.ReadPorts(&ports) || !data.ReadStreamChannels(&stream_channels) ||
       !data.ReadUserActivation(&out->user_activation) ||
       !data.ReadTaskStateId(&out->task_state_id)) {

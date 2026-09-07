@@ -47,7 +47,6 @@
 #include "ui/base/buildflags.h"
 #include "ui/base/l10n/l10n_util.h"
 #include "ui/base/resource/data_pack.h"
-#include "ui/base/resource/lottie_resource.h"
 #include "ui/base/resource/resource_scale_factor.h"
 #include "ui/base/ui_base_paths.h"
 #include "ui/base/ui_base_switches.h"
@@ -687,43 +686,6 @@ gfx::Image& ResourceBundle::GetImageNamed(int resource_id) {
   return inserted.first->second;
 }
 
-std::optional<ResourceBundle::LottieData> ResourceBundle::GetLottieData(
-    int resource_id) const {
-  // The prefix that GRIT prepends to Lottie assets, after compression if any.
-  // See: tools/grit/grit/node/structure.py
-  constexpr std::string_view kLottiePrefix = "LOTTIE";
-
-  const std::string_view potential_lottie = GetRawDataResource(resource_id);
-  if (!potential_lottie.starts_with(kLottiePrefix)) {
-    return std::nullopt;
-  }
-
-  LottieData result;
-  DecompressIfNeeded(potential_lottie.substr(std::size(kLottiePrefix)),
-                     &result);
-  return result;
-}
-
-const ui::ImageModel& ResourceBundle::GetThemedLottieImageNamed(
-    int resource_id) {
-  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
-
-  // Check to see if the image is already in the cache.
-  auto found = image_models_.find(resource_id);
-  if (found != image_models_.end())
-    return found->second;
-
-  std::optional<LottieData> data = GetLottieData(resource_id);
-  CHECK(data) << "Unable to load themed Lottie image with id " << resource_id;
-
-  // The bytes string was successfully loaded, so parse it and cache the
-  // resulting image.
-  auto inserted = image_models_.emplace(
-      resource_id, ParseLottieAsThemedStillImage(std::move(*data)));
-  DCHECK(inserted.second);
-  return inserted.first->second;
-}
-
 constexpr uint8_t ResourceBundle::kBrotliConst[];
 
 bool ResourceBundle::HasDataResource(int resource_id) const {
@@ -1065,9 +1027,6 @@ void ResourceBundle::InitSharedInstance(Delegate* delegate) {
 
 void ResourceBundle::FreeImages() {
   images_.clear();
-#if BUILDFLAG(IS_CHROMEOS)
-  image_models_.clear();
-#endif
 }
 
 void ResourceBundle::LoadChromeResources() {
@@ -1153,11 +1112,6 @@ gfx::ImageSkia ResourceBundle::CreateImageSkia(int resource_id) {
         << "Missing call to SetResourcesDataDLL?";
   }
 #endif
-
-  std::optional<LottieData> data = GetLottieData(resource_id);
-  if (data) {
-    return ParseLottieAsStillImage(std::move(*data));
-  }
 
 #if BUILDFLAG(IS_CHROMEOS)
   const ResourceScaleFactor scale_factor_to_load = GetMaxResourceScaleFactor();
@@ -1251,16 +1205,6 @@ gfx::Image& ResourceBundle::GetEmptyImage() {
   }
   return empty_image_;
 }
-
-#if BUILDFLAG(IS_CHROMEOS)
-const ui::ImageModel& ResourceBundle::GetEmptyImageModel() {
-  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
-
-  if (empty_image_model_.IsEmpty())
-    empty_image_model_ = ui::ImageModel::FromImage(GetEmptyImage());
-  return empty_image_model_;
-}
-#endif
 
 std::u16string ResourceBundle::GetLocalizedStringImpl(int resource_id) const {
   std::u16string string;

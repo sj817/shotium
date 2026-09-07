@@ -94,8 +94,7 @@ enum class CompositingReason {
   kLinkHighlight,
   kDevToolsOverlay,
   kViewTransitionContent,
-  kUnboundedElement,
-  kMaxValue = kUnboundedElement,
+  kMaxValue = kViewTransitionContent,
 };
 
 using CompositingReasons = base::EnumSet<CompositingReason>;
@@ -162,8 +161,7 @@ class CompositingReasonCombos {
       kWillChangeMixBlendMode,
       kActiveBackdropFilterAnimation,
       kViewTransitionPseudoElement,
-      kTransform3DSceneLeaf,
-      kUnboundedElement};
+      kTransform3DSceneLeaf};
   static constexpr CompositingReasons kDirectReasonsForFilterProperty = {
       kActiveFilterAnimation, kWillChangeFilter};
 

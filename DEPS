@@ -47,7 +47,6 @@ gclient_gn_args = [
   'checkout_fuchsia',
   'checkout_glic_e2e_tests',
   'checkout_ios_webkit',
-  'checkout_mutter',
   'checkout_openxr',
   'checkout_src_internal',
   'cros_boards',
@@ -115,10 +114,6 @@ vars = {
   # are used to post-process raw v8 coverage reports into IstanbulJS compliant
   # output.
   'checkout_js_coverage_modules': True,
-
-  # Checkout out mutter and its dependencies to be able to run tests like
-  # interactive_ui_tests on the linux/wayland compositor.
-  'checkout_mutter': False,
 
   # By default, do not check out src-internal. This can be overridden e.g. with
   # custom_vars.
@@ -332,7 +327,6 @@ vars = {
   # Three lines of non-changing comments so that
   # the commit queue can handle CLs rolling ANGLE
   # and whatever else without interference from each other.
-  'angle_revision': 'aa192212af54a9de42a63db84a292b4cbfcaf114',
   # Three lines of non-changing comments so that
   # the commit queue can handle CLs rolling SwiftShader
   # and whatever else without interference from each other.
@@ -944,8 +938,6 @@ deps = {
   'src/net/third_party/quiche/src':
     Var('quiche_git') + '/quiche.git' + '@' +  Var('quiche_revision'),
 
-  'src/third_party/angle':
-    Var('chromium_git') + '/angle/angle.git' + '@' +  Var('angle_revision'),
 
   'src/third_party/highway/src':
     Var('chromium_git') + '/external/github.com/google/highway.git' + '@' + Var('highway_revision'),
@@ -1087,10 +1079,6 @@ deps = {
   'src/third_party/skia':
     Var('skia_git') + '/skia.git' + '@' +  Var('skia_revision'),
 
-  'src/third_party/spirv-headers/src': '{chromium_git}/external/github.com/KhronosGroup/SPIRV-Headers@0d25db97cb9b8f725e4c95e4553001710e7fc39d',
-  'src/third_party/spirv-tools/src': '{chromium_git}/external/github.com/KhronosGroup/SPIRV-Tools@e39e5c5838bc4b4162c349f2a2e5f163efe5432f',
-  'src/third_party/vulkan-headers/src': '{chromium_git}/external/github.com/KhronosGroup/Vulkan-Headers@0b7f383797fa7be53ae28213e001ae60668ee511',
-  'src/third_party/vulkan-loader/src': '{chromium_git}/external/github.com/KhronosGroup/Vulkan-Loader@83ddfc5ec5ca64ddd1055cefa1559c568101075a',
 
 
   # Wuffs' canonical repository is at github.com/google/wuffs, but we use
@@ -1126,7 +1114,6 @@ include_rules = [
 
   '+testing',
   '+third_party/jni_zero',
-  '+third_party/google_benchmark/src/include/benchmark/benchmark.h',
   '+third_party/icu/source/common/unicode',
   '+third_party/icu/source/i18n/unicode',
   '+url',
@@ -1265,16 +1252,6 @@ hooks = [
                'src/build/util/LASTCHANGE_commit_position.h'],
   },
   {
-    # Update GPU lists version string (for gpu/config).
-    'name': 'gpu_lists_version',
-    'pattern': '.',
-    'action': ['python3', 'src/build/util/lastchange.py',
-               '--filter', '.',
-               '-m', 'GPU_LISTS_VERSION',
-               '--revision-id-only',
-               '--header', 'src/gpu/config/gpu_lists_version.h'],
-  },
-  {
     # Update skia_commit_hash.h.
     'name': 'lastchange_skia',
     'pattern': '.',
@@ -1349,6 +1326,4 @@ hooks = [
 # Add any corresponding DEPS files from this list to chromium.exclusions in
 # //testing/buildbot/trybot_analyze_config.json
 # ctx: https://crbug.com/1201994
-recursedeps = [
-  'src/third_party/angle',
-]
+recursedeps = []

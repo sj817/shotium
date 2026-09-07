@@ -51,7 +51,6 @@
 #include "third_party/blink/public/mojom/blob/blob_url_store.mojom-blink-forward.h"
 #include "third_party/blink/public/mojom/devtools/devtools_agent.mojom-blink-forward.h"
 #include "third_party/blink/public/mojom/fenced_frame/fenced_frame.mojom-blink-forward.h"
-#include "third_party/blink/public/mojom/frame/remote_frame.mojom-blink-forward.h"
 #include "third_party/blink/public/mojom/frame/triggering_event_info.mojom-blink-forward.h"
 #include "third_party/blink/public/platform/scheduler/web_scoped_virtual_time_pauser.h"
 #include "third_party/blink/public/platform/web_background_resource_fetch_assets.h"
@@ -182,8 +181,6 @@ class CORE_EXPORT LocalFrameClient : public FrameClient {
       const base::UnguessableToken& initiator_state_token,
       const DocumentToken& initiator_document_token,
       SourceLocation* source_location,
-      mojo::PendingRemote<mojom::blink::NavigationStateKeepAliveHandle>
-          initiator_navigation_state_keep_alive_handle,
       bool is_container_initiated,
       bool has_rel_opener,
       mojo::PendingReceiver<

@@ -1053,13 +1053,9 @@ noframes, param, rp, script, style, template, title {
 input[type="hidden" i] {
   display: none !important;
 }
-@supports blink-feature(UnboundedElement) {
-  [unbounded]:not(:unbounded) {
-    visibility: hidden;
-  }
-  :unbounded {
-    -internal-unbounded: active;
-  }
+/* Keep the inactive attribute layout and selector specificity. */
+[unbounded]:not(:unbounded) {
+  visibility: hidden;
 }
 
 area:-webkit-any-link {

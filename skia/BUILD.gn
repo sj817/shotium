@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/buildflag_header.gni")
 import("//build/config/avx512.gni")
 import("//build/config/compiler/compiler.gni")
 import("//build/config/features.gni")
@@ -10,7 +9,6 @@ import("//build/config/freetype/freetype.gni")
 import("//build/config/rust.gni")
 import("//build/config/sanitizers/sanitizers.gni")
 import("//build/rust/rust_static_library.gni")
-import("//gpu/vulkan/features.gni")
 import("//testing/libfuzzer/fuzzer_test.gni")
 import("//testing/test.gni")
 import("//third_party/skia/gn/shared_sources.gni")
@@ -23,11 +21,6 @@ if (current_cpu == "arm") {
 }
 if (current_cpu == "mipsel" || current_cpu == "mips64el") {
   import("//build/config/mips.gni")
-}
-
-buildflag_header("buildflags") {
-  header = "buildflags.h"
-  flags = [ "SKIA_SUPPORT_SKOTTIE=$skia_support_skottie" ]
 }
 
 source_set("path_bridge") {
@@ -140,24 +133,6 @@ config("skia_config") {
     ]
   }
 
-  if (skia_support_gpu) {
-    workaround_header = "gpu/config/gpu_driver_bug_workaround_autogen.h"
-    configs = []
-    defines += [
-      "SK_GANESH",
-      "SK_GPU_WORKAROUNDS_HEADER=\"$workaround_header\"",
-    ]
-    if (skia_use_gl) {
-      defines += [ "SK_GL" ]
-    }
-    if (enable_vulkan) {
-      defines += [ "SK_VULKAN=1" ]
-      configs += [ "//third_party/vulkan-headers/src:vulkan_headers_config" ]
-    }
-
-    # Graphite
-    defines += [ "SK_GRAPHITE" ]
-  }
   if (current_cpu == "loong64") {
     cflags = [
       "-mlsx",
@@ -234,22 +209,6 @@ source_set("skia_core_public_headers") {
 component("skia") {
   shot_jumbo_file_merge_limit = 4
   shot_jumbo_excluded_sources = [
-    "//third_party/skia/modules/skottie/src/Transform.cpp",
-    "//third_party/skia/modules/skottie/src/animator/KeyframeAnimator.cpp",
-
-    # GrFragmentProcessor.cpp and GrGeometryProcessor.cpp both open with a
-    # file-scope `using ProgramImpl = ...` naming different types, and
-    # RangeSelector.cpp and ShapeLayer.cpp both define a ShapeInfo struct.
-    # The mac source list groups each pair into one jumbo unit; the lists the
-    # other platforms produce happen not to.
-    "//third_party/skia/src/gpu/ganesh/GrGeometryProcessor.cpp",
-    "//third_party/skia/modules/skottie/src/text/RangeSelector.cpp",
-    "//third_party/skia/src/gpu/ganesh/GrDirectContextPriv.cpp",
-    "//third_party/skia/src/gpu/ganesh/SurfaceDrawContext.cpp",
-    "//third_party/skia/src/gpu/ganesh/gl/GrGLAttachment.cpp",
-    "//third_party/skia/src/gpu/ganesh/gl/GrGLRenderTarget.cpp",
-    "//third_party/skia/src/gpu/ganesh/gl/builders/GrGLProgramBuilder.cpp",
-    "//third_party/skia/src/sksl/codegen/SkSLWGSLCodeGenerator.cpp",
     "//third_party/skia/src/ports/SkFontHost_FreeType_common.cpp",
     "//third_party/skia/src/ports/SkTypeface_fontations.cpp",
     "//third_party/skia/src/ports/SkTypeface_win_dw.cpp",
@@ -520,7 +479,6 @@ component("skia") {
     "//ui/base:features",
   ]
   public_deps = [
-    ":buildflags",
     ":rust_bmp_ffi",
     ":rust_exif_ffi",
     ":rust_icc_ffi",
@@ -561,7 +519,7 @@ component("skia") {
   if (is_ios) {
     frameworks += [ "ImageIO.framework" ]
   }
-  if (is_apple && skia_support_gpu) {
+  if (is_apple) {
     frameworks += [
       "CoreFoundation.framework",
       "CoreGraphics.framework",
@@ -580,33 +538,6 @@ component("skia") {
     deps += [ "//third_party/expat" ]
   }
 
-  if (skia_support_gpu) {
-    public += skia_gpu_public
-    public += skia_gpu_chromium_public
-    sources += skia_ganesh_private
-    sources += skia_null_gpu_sources
-    sources += skia_sksl_pipeline_sources
-    sources += skia_sksl_codegen_sources
-    sources += skia_shared_gpu_sources
-    if (skia_use_gl) {
-      public += skia_gpu_gl_public
-      sources += skia_gpu_gl_private
-    }
-    if (enable_vulkan) {
-      public += skia_gpu_vk_public
-      public += skia_gpu_vk_chromium_public
-      sources += skia_gpu_vk_private
-      sources += skia_shared_vk_sources
-      sources += skia_gpu_vk_chromium_private
-    }
-
-    public_deps += [ ":skia_graphite_public" ]
-    deps += [
-      ":skia_graphite_private",
-      "//gpu/config:workaround_list",
-    ]
-  }
-
   if (skia_support_pdf) {
     # Blink includes Skia's JPEG encoder and decoder which pdf uses.
     assert(use_blink)
@@ -619,24 +550,6 @@ component("skia") {
     sources += skia_pdf_sources
   } else {
     sources += [ "//third_party/skia/src/pdf/SkDocument_PDF_None.cpp" ]
-  }
-
-  if (skia_support_skottie) {
-    import("//third_party/skia/modules/jsonreader/jsonreader.gni")
-    import("//third_party/skia/modules/skottie/skottie.gni")
-    import("//third_party/skia/modules/skresources/skresources.gni")
-    import("//third_party/skia/modules/sksg/sksg.gni")
-    import("//third_party/skia/modules/skshaper/skshaper.gni")
-    public += skia_skottie_public
-    sources += skia_jsonreader_sources
-    sources += skia_shaper_primitive_sources
-    sources += skia_skottie_sources
-    sources += skia_skresources_sources
-    sources += skia_sksg_sources
-    defines += [
-      "SK_SHAPER_PRIMITIVE_AVAILABLE",
-      "SKOTTIE_TRIVIAL_FONTRUN_ITER",
-    ]
   }
 
   # TODO(crbug.com/40031409): Fix code that adds exit-time destructors and
@@ -994,9 +907,6 @@ skia_source_set("skia_core_and_effects") {
   sources += skia_effects_imagefilter_sources
   sources += skia_pathops_sources
   deps = []
-  if (skia_support_gpu) {
-    deps += [ "//gpu/config:workaround_list" ]
-  }
   if (use_blink) {
     # Fontations Rust/C++ bridge interfaces, needed by SkTypeface.
     deps += [
@@ -1191,38 +1101,6 @@ source_set("skcms") {
   include_dirs = [ "//third_party/skia/modules/skcms" ]
 }
 
-# Split out Graphite sources because of conflicting file names with Ganesh.
-# Split into separate private and public source sets because we want to allow
-# shared GPU code in ":skia" to include private Graphite headers, but want to
-# limit external code to only depend on public headers. Only define these source
-# sets when skia_support_gpu is true so that on iOS non-Blink builds, headers in
-# these source sets are considered unknown and skipped by gn check.
-if (skia_support_gpu) {
-  skia_source_set("skia_graphite_public") {
-    public = skia_graphite_public + skia_graphite_precompile_public
-    deps = [ "//gpu/config:workaround_list" ]
-  }
-
-  # If a source set contains only sources and no public files, then dependents
-  # can include any file from sources.
-  skia_source_set("skia_graphite_private") {
-    shot_jumbo_file_merge_limit = 4
-    shot_jumbo_excluded_sources = [
-      "//third_party/skia/src/gpu/graphite/Device.cpp",
-      "//third_party/skia/src/gpu/graphite/ResourceProvider.cpp",
-      "//third_party/skia/src/gpu/graphite/render/SDFTextRenderStep.cpp",
-      "//third_party/skia/src/gpu/graphite/render/TessellateStrokesRenderStep.cpp",
-      "//third_party/skia/src/gpu/graphite/render/TessellateWedgesRenderStep.cpp",
-      "//third_party/skia/src/gpu/graphite/render/VerticesRenderStep.cpp",
-    ]
-
-    sources = skia_graphite_sources + skia_graphite_precompile_sources +
-              skia_sksl_graphite_modules_sources
-    deps = [ "//gpu/config:workaround_list" ]
-    visibility = [ ":skia" ]
-  }
-}
-
 # Font copies.
 if (is_fuchsia) {
   copy("copy_fuchsia_fonts_manifest") {
@@ -1354,9 +1232,6 @@ test("skia_unittests") {
         [ "//build/config/fuchsia/test/test_fonts.shard.test-cml" ]
   }
 
-  if (skia_support_skottie) {
-    sources += [ "ext/skottie_unittest.cc" ]
-  }
 }
 
 if (!is_ios) {

@@ -54,7 +54,6 @@
 #include "third_party/blink/renderer/core/html/custom/custom_element_registry.h"
 #include "third_party/blink/renderer/core/html/html_slot_element.h"
 #include "third_party/blink/renderer/core/html/parser/fragment_parser.h"
-#include "third_party/blink/renderer/core/sanitizer/sanitizer_api.h"
 #include "third_party/blink/renderer/core/trustedtypes/trusted_parser_options.h"
 #include "third_party/blink/renderer/core/trustedtypes/trusted_types_names.h"
 #include "third_party/blink/renderer/core/trustedtypes/trusted_types_util.h"
@@ -151,8 +150,7 @@ void ShadowRoot::SetInnerHTMLWithoutTrustedTypes(
     const String& html,
     ExceptionState& exception_state) {
   SetInnerHTMLInternal(
-      html, FragmentParserOptions(), Sanitizer::Mode::kUnsafe,
-      FragmentParserConfig::ParseDeclarativeShadowRoots::kDontParse,
+      html, FragmentParserOptions(), FragmentParserConfig::ParseDeclarativeShadowRoots::kDontParse,
       FragmentParserConfig::ForceHtml::kDontForce,
       trusted_types_names::kInnerHTML, exception_state);
 }
@@ -168,8 +166,7 @@ void ShadowRoot::setInnerHTML(
     return;
   }
   SetInnerHTMLInternal(
-      compliant_string, resolved_options, Sanitizer::Mode::kUnsafe,
-      FragmentParserConfig::ParseDeclarativeShadowRoots::kDontParse,
+      compliant_string, resolved_options, FragmentParserConfig::ParseDeclarativeShadowRoots::kDontParse,
       FragmentParserConfig::ForceHtml::kDontForce,
       trusted_types_names::kInnerHTML, exception_state);
 }
@@ -186,8 +183,7 @@ void ShadowRoot::setHTMLUnsafe(const V8UnionStringOrTrustedHTML* html,
     return;
   }
   SetInnerHTMLInternal(
-      compliant_string, resolved_options, Sanitizer::Mode::kUnsafe,
-      FragmentParserConfig::ParseDeclarativeShadowRoots::kParse,
+      compliant_string, resolved_options, FragmentParserConfig::ParseDeclarativeShadowRoots::kParse,
       FragmentParserConfig::ForceHtml::kForce,
       trusted_types_names::kSetHTMLUnsafe, exception_state);
 }
@@ -206,8 +202,7 @@ void ShadowRoot::setHTMLUnsafe(const V8UnionStringOrTrustedHTML* html,
     return;
   }
   SetInnerHTMLInternal(
-      compliant_string, resolved_options, Sanitizer::Mode::kUnsafe,
-      FragmentParserConfig::ParseDeclarativeShadowRoots::kParse,
+      compliant_string, resolved_options, FragmentParserConfig::ParseDeclarativeShadowRoots::kParse,
       FragmentParserConfig::ForceHtml::kForce,
       trusted_types_names::kSetHTMLUnsafe, exception_state);
 }
@@ -225,8 +220,7 @@ void ShadowRoot::setHTMLUnsafe(const V8UnionStringOrTrustedHTML* html,
     return;
   }
   SetInnerHTMLInternal(
-      compliant_string, resolved_options, Sanitizer::Mode::kUnsafe,
-      FragmentParserConfig::ParseDeclarativeShadowRoots::kParse,
+      compliant_string, resolved_options, FragmentParserConfig::ParseDeclarativeShadowRoots::kParse,
       FragmentParserConfig::ForceHtml::kForce,
       trusted_types_names::kSetHTMLUnsafe, exception_state);
 }
@@ -234,7 +228,6 @@ void ShadowRoot::setHTMLUnsafe(const V8UnionStringOrTrustedHTML* html,
 void ShadowRoot::SetInnerHTMLInternal(
     const String& html,
     FragmentParserOptions options,
-    Sanitizer::Mode sanitizer_mode,
     FragmentParserConfig::ParseDeclarativeShadowRoots parse_shadow_roots,
     FragmentParserConfig::ForceHtml force_html,
     const AtomicString& property_name,
@@ -246,7 +239,6 @@ void ShadowRoot::SetInnerHTMLInternal(
   if (DocumentFragment* fragment = ParseHTMLFragment(
           html,
           {
-              .sanitizer_mode = sanitizer_mode,
               .parse_declarative_shadows = parse_shadow_roots,
               .force_html = force_html,
               .interface_name = trusted_types_names::kShadowRoot,
@@ -257,16 +249,6 @@ void ShadowRoot::SetInnerHTMLInternal(
           options, exception_state)) {
     ReplaceChildrenWithFragment(this, fragment, exception_state);
   }
-}
-
-void ShadowRoot::setHTML(const String& html,
-                         SetHTMLOptions* options,
-                         ExceptionState& exception_state) {
-  SetInnerHTMLInternal(
-      html, FragmentParserOptions(options), Sanitizer::Mode::kSafe,
-      FragmentParserConfig::ParseDeclarativeShadowRoots::kParse,
-      FragmentParserConfig::ForceHtml::kForce, trusted_types_names::kSetHTML,
-      exception_state);
 }
 
 void ShadowRoot::RebuildLayoutTree(WhitespaceAttacher& whitespace_attacher) {

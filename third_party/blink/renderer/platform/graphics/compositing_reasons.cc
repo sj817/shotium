@@ -134,8 +134,6 @@ constexpr auto kReasonMetadata = std::to_array<ReasonMetadata>({
      "Is DevTools overlay."},
     {CompositingReason::kViewTransitionContent, "ViewTransitionContent",
      "The layer containing the contents of a view transition element."},
-    {CompositingReason::kUnboundedElement, "UnboundedElement",
-     "Is an active unbounded element."},
 });
 
 constexpr size_t FindMismatch() {

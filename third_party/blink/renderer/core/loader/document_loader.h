@@ -54,9 +54,6 @@
 #include "third_party/blink/public/mojom/loader/same_document_navigation_type.mojom-blink.h"
 #include "third_party/blink/public/mojom/navigation/navigation_params.mojom-blink-forward.h"
 #include "third_party/blink/public/mojom/navigation/navigation_params.mojom-shared.h"
-// mojom::blink::OriginTrialFeature used to arrive transitively; the header that
-// carried it is cut, and the field below names the enum directly.
-#include "third_party/blink/public/mojom/origin_trials/origin_trial_feature.mojom-blink.h"
 #include "third_party/blink/public/mojom/page/page.mojom-blink-forward.h"
 #include "third_party/blink/public/mojom/page_state/page_state.mojom-blink.h"
 #include "third_party/blink/public/mojom/permissions/permission.mojom-blink.h"
@@ -792,11 +789,6 @@ class CORE_EXPORT DocumentLoader : public GarbageCollected<DocumentLoader>,
   UseCounterImpl use_counter_;
 
   const base::TickClock* clock_;
-
-  const Vector<mojom::blink::OriginTrialFeature>
-      initiator_origin_trial_features_;
-
-  const Vector<String> force_enabled_origin_trials_;
 
   // Whether the document can be scrolled on load
   bool navigation_scroll_allowed_ = true;

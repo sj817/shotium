@@ -26,7 +26,6 @@
 #define THIRD_PARTY_BLINK_RENDERER_CORE_DOM_CONTAINER_NODE_H_
 
 #include "third_party/blink/public/mojom/input/focus_type.mojom-blink-forward.h"
-#include "third_party/blink/renderer/bindings/core/v8/v8_set_html_options.h"
 #include "third_party/blink/renderer/core/core_export.h"
 #include "third_party/blink/renderer/core/css/css_value.h"
 #include "third_party/blink/renderer/core/css/style_recalc_change.h"
@@ -48,7 +47,6 @@ class FragmentParserOptions;
 class GetHTMLOptions;
 class HTMLCollection;
 class RadioNodeList;
-class SetHTMLOptions;
 class V8UnionSetHTMLUnsafeOptionsOrTrustedParserOptions;
 class StyleRecalcContext;
 class WhitespaceAttacher;
@@ -391,18 +389,12 @@ class CORE_EXPORT ContainerNode : public Node {
   // only.
   String getHTML(const GetHTMLOptions*, ExceptionState&) const;
 
-  void appendHTML(const String& html,
-                  SetHTMLOptions* options,
-                  ExceptionState& exception_state);
 
   void appendHTMLUnsafe(
       const V8UnionStringOrTrustedHTML* html,
       V8UnionSetHTMLUnsafeOptionsOrTrustedParserOptions* options,
       ExceptionState& exception_state);
 
-  void prependHTML(const String& html,
-                   SetHTMLOptions* options,
-                   ExceptionState& exception_state);
 
   void prependHTMLUnsafe(
       const V8UnionStringOrTrustedHTML* html,

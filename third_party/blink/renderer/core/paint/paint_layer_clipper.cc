@@ -58,28 +58,6 @@
 
 namespace blink {
 
-static const LayoutObject* FindActiveUnboundedAncestor(
-    const PaintLayer& layer) {
-  if (!RuntimeEnabledFeatures::UnboundedElementEnabled()) {
-    return nullptr;
-  }
-  if (!layer.GetLayoutObject().IsInclusiveDescendantOfUnboundedElement()) {
-    return nullptr;
-  }
-  for (const PaintLayer* curr = &layer; curr; curr = curr->Parent()) {
-    if (curr->GetLayoutObject().StyleRef().IsUnboundedElementActive()) {
-      DCHECK(RuntimeEnabledFeatures::UnboundedElementEnabled());
-      auto* html_element =
-          DynamicTo<HTMLElement>(curr->GetLayoutObject().GetNode());
-      DCHECK(!html_element ||
-             curr->GetLayoutObject().StyleRef().IsUnboundedElementActive() ==
-                 html_element->IsUnboundedElementActive());
-      return &curr->GetLayoutObject();
-    }
-  }
-  NOTREACHED();
-}
-
 static bool HasNonVisibleOverflow(const PaintLayer& layer) {
   if (const auto* box = layer.GetLayoutBox())
     return box->ShouldClipOverflowAlongEitherAxis();
@@ -154,16 +132,6 @@ void PaintLayerClipper::CalculateBackgroundClipRectInternal(
   } else {
     destination_property_tree_state.SetClip(
         context.root_fragment->ContentsClip());
-  }
-
-  if (const auto* unbounded_ancestor = FindActiveUnboundedAncestor(*layer_)) {
-    // For unbounded elements, we calculate the background clip rect relative to
-    // the active unbounded ancestor's state, so these elements escape ancestor
-    // clips.
-    DCHECK(RuntimeEnabledFeatures::UnboundedElementEnabled());
-    const auto& unbounded_fragment = unbounded_ancestor->FirstFragment();
-    destination_property_tree_state.SetClip(
-        unbounded_fragment.LocalBorderBoxProperties().Clip());
   }
 
   // The background rect applies all clips *above* m_layer, but not the overflow

@@ -91,16 +91,13 @@ CORE_EXPORT void ResetAvailableDocumentPolicyFeaturesForTest();
 bool IsPrivacySensitiveFeature(
     network::mojom::blink::PermissionsPolicyFeature feature);
 
-// Returns true if this PermissionsPolicyFeature is currently disabled by an
-// origin trial (it is origin trial controlled, and the origin trial is not
-// enabled). The first String param should be a name of
-// PermissionsPolicyFeature.
-bool DisabledByOriginTrial(const String&, FeatureContext*);
+// Returns true when the named permissions policy feature is disabled by its
+// runtime feature dependencies in this context.
+bool DisabledByRuntimeFeature(const String&, FeatureContext*);
 
-// Returns true if this DocumentPolicyFeature is currently disabled by an origin
-// trial (it is origin trial controlled, and the origin trial is not enabled).
-bool DisabledByOriginTrial(mojom::blink::DocumentPolicyFeature,
-                           FeatureContext*);
+// Checks runtime dependencies for a document policy feature.
+bool DisabledByRuntimeFeature(mojom::blink::DocumentPolicyFeature,
+                              FeatureContext*);
 
 // PermissionsPolicyFeatureToProtocol() removed with the DevTools Page-domain
 // name table it converted into; see policy_helper.cc.tmpl.

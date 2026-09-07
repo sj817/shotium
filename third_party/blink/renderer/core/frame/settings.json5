@@ -697,14 +697,6 @@
       invalidate: ["DOMWorlds"],
     },
 
-    // Forces TouchEventFeatureDetection conditional feature for all main
-    // worlds in the page. Used by inspector to emulate touch on devices
-    // which don't support it naturally.
-    {
-      name: "forceTouchEventFeatureDetectionForInspector",
-      initial: false,
-    },
-
     // This value is set to false if the platform does not support fullscreen.
     // When set to false all the requests to enter fullscreen will return an error
     // (fullscreenerror or webkitfullscreenerror) as specified in the standard:

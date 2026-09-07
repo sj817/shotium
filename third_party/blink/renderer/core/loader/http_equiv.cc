@@ -16,7 +16,6 @@
 #include "third_party/blink/renderer/core/html/html_meta_element.h"
 #include "third_party/blink/renderer/core/inspector/console_message.h"
 #include "third_party/blink/renderer/core/loader/document_loader.h"
-#include "third_party/blink/renderer/core/origin_trials/origin_trial_context.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
 #include "third_party/blink/renderer/platform/instrumentation/use_counter.h"
 #include "third_party/blink/renderer/platform/network/http_names.h"
@@ -68,10 +67,6 @@ void HttpEquiv::Process(Document& document,
     } else if (auto* window = document.domWindow()) {
       window->GetContentSecurityPolicy()->ReportMetaOutsideHead(content);
     }
-  } else if (EqualIgnoringAsciiCase(equiv, http_names::kOriginTrial)) {
-    if (in_document_head_element) {
-      ProcessHttpEquivOriginTrial(document.domWindow(), content);
-    }
   }
 }
 
@@ -109,17 +104,6 @@ void HttpEquiv::ProcessHttpEquivContentSecurityPolicy(
 void HttpEquiv::ProcessHttpEquivDefaultStyle(Document& document,
                                              const AtomicString& content) {
   document.GetStyleEngine().SetHttpDefaultStyle(content);
-}
-
-void HttpEquiv::ProcessHttpEquivOriginTrial(LocalDOMWindow* window,
-                                            const AtomicString& content) {
-  if (!window)
-    return;
-  // Upstream, a meta tag injected by script has its token attributed to the
-  // origin of the injecting script, discovered by walking the JS stack. There
-  // is no script engine, so every meta tag comes from the parser and the token
-  // is always processed without an external script origin.
-  window->GetOriginTrialContext()->AddToken(content);
 }
 
 void HttpEquiv::ProcessHttpEquivRefresh(LocalDOMWindow* window,

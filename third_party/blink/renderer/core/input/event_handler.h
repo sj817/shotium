@@ -123,10 +123,6 @@ class CORE_EXPORT EventHandler final : public GarbageCollected<EventHandler> {
   void ResetLastMousePositionForWebTest();
   void ClearMouseEventManager() const { mouse_event_manager_->Clear(); }
 
-  WebInputEventResult UpdateDragAndDrop(const WebMouseEvent&, DataTransfer*);
-  void CancelDragAndDrop(const WebMouseEvent&, DataTransfer*);
-  WebInputEventResult PerformDragAndDrop(const WebMouseEvent&, DataTransfer*);
-  void UpdateDragStateAfterEditDragIfNeeded(Element* root_editable_element);
 
   void ScheduleHoverStateUpdate();
   void ScheduleCursorUpdate();
@@ -144,7 +140,6 @@ class CORE_EXPORT EventHandler final : public GarbageCollected<EventHandler> {
   gfx::PointF LastKnownMousePositionInRootFrame() const;
   gfx::PointF LastKnownMouseScreenPosition() const;
 
-  gfx::Point DragDataTransferLocationForTesting();
 
   // Performs a logical scroll that chains, crossing frames, starting from
   // the given node or a reasonable default (focus/last clicked).
@@ -244,7 +239,6 @@ class CORE_EXPORT EventHandler final : public GarbageCollected<EventHandler> {
                             TextEventInputType = kTextEventInputKeyboard);
   void DefaultTextInputEventHandler(TextEvent*);
 
-  void DragSourceEndedAt(const WebMouseEvent&, ui::mojom::blink::DragOperation);
 
   void CapsLockStateMayHaveChanged();  // Only called by FrameSelection
 
@@ -260,10 +254,6 @@ class CORE_EXPORT EventHandler final : public GarbageCollected<EventHandler> {
 
   LocalFrame* DetermineActivePointerTrackerFrame(PointerId pointer_id) const;
 
-  // Clears drag target and related states. It is called when drag is done or
-  // canceled.
-  void ClearDragState();
-  void ReportDragEnd();
 
   EventHandlerRegistry& GetEventHandlerRegistry() const {
     return *event_handler_registry_;
@@ -446,8 +436,6 @@ class CORE_EXPORT EventHandler final : public GarbageCollected<EventHandler> {
   Member<LocalFrame> last_mouse_move_event_subframe_;
   Member<Scrollbar> last_scrollbar_under_mouse_;
 
-  Member<Node> drag_target_;
-  bool should_only_fire_drag_over_event_;
 
   Member<HTMLFrameSetElement> frame_set_being_resized_;
 

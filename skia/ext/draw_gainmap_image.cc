@@ -11,9 +11,6 @@
 #include "third_party/skia/include/core/SkColorSpace.h"
 #include "third_party/skia/include/core/SkShader.h"
 #include "third_party/skia/include/core/SkSurface.h"
-#include "third_party/skia/include/gpu/ganesh/GrRecordingContext.h"
-#include "third_party/skia/include/gpu/ganesh/SkSurfaceGanesh.h"
-#include "third_party/skia/include/gpu/graphite/Surface.h"
 #include "third_party/skia/include/private/SkGainmapInfo.h"
 #include "third_party/skia/include/private/SkGainmapShader.h"
 
@@ -26,33 +23,12 @@ namespace skia {
 void ResampleGainmap(sk_sp<SkImage> base_image,
                      SkRect base_rect,
                      sk_sp<SkImage>& gain_image,
-                     SkRect& gain_rect,
-                     GrRecordingContext* context,
-                     skgpu::graphite::Recorder* recorder) {
+                     SkRect& gain_rect) {
   SkImageInfo surface_info = gain_image->imageInfo()
                                  .makeDimensions(base_image->dimensions())
                                  .makeColorSpace(nullptr);
-  sk_sp<SkSurface> surface;
-#if defined(SK_GANESH)
-  if (context) {
-    surface =
-        SkSurfaces::RenderTarget(context, skgpu::Budgeted::kNo, surface_info,
-                                 /*sampleCount=*/0, kTopLeft_GrSurfaceOrigin,
-                                 /*surfaceProps=*/nullptr,
-                                 /*shouldCreateWithMips=*/false);
-  }
-#endif
-#if defined(SK_GRAPHITE)
-  if (recorder) {
-    surface =
-        SkSurfaces::RenderTarget(recorder, surface_info, skgpu::Mipmapped::kNo,
-                                 /*surfaceProps=*/nullptr);
-  }
-#endif
-  if (!context && !recorder) {
-    surface = SkSurfaces::Raster(surface_info, surface_info.minRowBytes(),
-                                 /*surfaceProps=*/nullptr);
-  }
+  sk_sp<SkSurface> surface =
+      SkSurfaces::Raster(surface_info, surface_info.minRowBytes(), nullptr);
   if (!surface) {
     return;
   }
@@ -99,22 +75,10 @@ void DrawGainmapImageRect(SkCanvas* canvas,
       SkRect::Make(gain_image->bounds()), SkRect::Make(base_image->bounds()),
       base_rect);
 
-  auto* context = canvas->recordingContext();
-  auto* recorder = canvas->recorder();
-
-  // Compute a tiling that ensures that the base and gainmap images fit on the
-  // GPU.
   const std::vector<SkRect> source_rects = {base_rect, gain_rect};
   const std::vector<sk_sp<SkImage>> source_images = {base_image, gain_image};
-  int max_texture_size = 0;
-  if (context) {
-    max_texture_size = context->maxTextureSize();
-  } else if (recorder) {
-    // TODO(b/279234024): Retrieve correct max texture size for graphite.
-    max_texture_size = 8192;
-  }
   skia::Tiling tiling(dest_rect_clipped, source_rects, source_images,
-                      max_texture_size);
+                      /*max_texture_size=*/0);
 
   // Draw tile-by-tile.
   for (int tx = 0; tx < tiling.GetTileCountX(); ++tx) {
@@ -146,8 +110,7 @@ void DrawGainmapImageRect(SkCanvas* canvas,
       if (sampling.filter == SkFilterMode::kNearest &&
           tile_source_rects[0] != tile_source_rects[1]) {
         ResampleGainmap(tile_source_images[0], tile_source_rects[0],
-                        tile_source_images[1], tile_source_rects[1], context,
-                        recorder);
+                        tile_source_images[1], tile_source_rects[1]);
       }
 
       // SkGainmapShader will internally use SkImage::makeRawShader, which does

@@ -19,15 +19,11 @@
 #include "cc/paint/paint_canvas.h"
 #include "cc/paint/paint_flags.h"
 #include "cc/paint/skia_paint_canvas.h"
-#include "cc/paint/skottie_color_map.h"
-#include "cc/paint/skottie_frame_data.h"
-#include "cc/paint/skottie_text_property_value.h"
 #include "ui/gfx/native_ui_types.h"
 #include "ui/gfx/platform_font.h"
 #include "ui/gfx/text_constants.h"
 
 namespace cc {
-class SkottieWrapper;
 }  // namespace cc
 
 namespace gfx {
@@ -388,18 +384,6 @@ class COMPONENT_EXPORT(GFX) Canvas {
                        int y,
                        const SkPath& path,
                        const cc::PaintFlags& flags);
-
-  // Draws the frame of the |skottie| animation specified by the normalized time
-  // instant t [0->first frame .. 1->last frame] onto the region corresponded by
-  // |dst| in the canvas. |images| is a map from asset id to the corresponding
-  // image to use when rendering this frame; it may be empty if this animation
-  // frame does not contain any images in it.
-  void DrawSkottie(scoped_refptr<cc::SkottieWrapper> skottie,
-                   const Rect& dst,
-                   float t,
-                   cc::SkottieFrameDataMap images,
-                   const cc::SkottieColorMap& color_map,
-                   cc::SkottieTextPropertyValueMap text_map);
 
   // Draws text with the specified color, fonts and location. The text is
   // aligned to the left, vertically centered, clipped to the region. If the

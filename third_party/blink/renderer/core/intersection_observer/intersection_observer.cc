@@ -230,7 +230,7 @@ void IntersectionObserver::SetThrottleDelayEnabledForTesting(bool enabled) {
 IntersectionObserver* IntersectionObserver::Create(
     const IntersectionObserverInit* observer_init,
     IntersectionObserverDelegate& delegate,
-    std::optional<LocalFrameUkmAggregator::MetricId> ukm_metric_id,
+    bool is_internal,
     ExceptionState& exception_state) {
   Node* root = nullptr;
   if (observer_init->root()) {
@@ -279,30 +279,30 @@ IntersectionObserver* IntersectionObserver::Create(
     return nullptr;
   }
 
-  return MakeGarbageCollected<IntersectionObserver>(delegate, ukm_metric_id,
+  return MakeGarbageCollected<IntersectionObserver>(delegate, is_internal,
                                                     std::move(params));
 }
 
 IntersectionObserver* IntersectionObserver::Create(
     const Document& document,
     EventCallback callback,
-    std::optional<LocalFrameUkmAggregator::MetricId> ukm_metric_id,
+    bool is_internal,
     Params&& params) {
   IntersectionObserverDelegateImpl* intersection_observer_delegate =
       MakeGarbageCollected<IntersectionObserverDelegateImpl>(
           document.GetExecutionContext(), std::move(callback), params.behavior);
   return MakeGarbageCollected<IntersectionObserver>(
-      *intersection_observer_delegate, ukm_metric_id, std::move(params));
+      *intersection_observer_delegate, is_internal, std::move(params));
 }
 
 IntersectionObserver::IntersectionObserver(
     IntersectionObserverDelegate& delegate,
-    std::optional<LocalFrameUkmAggregator::MetricId> ukm_metric_id,
+    bool is_internal,
     Params&& params)
     : ActiveScriptWrappable<IntersectionObserver>({}),
       ExecutionContextClient(delegate.GetExecutionContext()),
       delegate_(&delegate),
-      ukm_metric_id_(ukm_metric_id),
+      is_internal_(is_internal),
       root_(params.root),
       thresholds_(std::move(params.thresholds)),
       delay_(params.delay),
@@ -424,12 +424,6 @@ String IntersectionObserver::scrollMargin() const {
 
 base::TimeDelta IntersectionObserver::GetEffectiveDelay() const {
   return throttle_delay_enabled ? delay_ : base::TimeDelta();
-}
-
-bool IntersectionObserver::IsInternal() const {
-  return !GetUkmMetricId() ||
-         GetUkmMetricId() !=
-             LocalFrameUkmAggregator::kJavascriptIntersectionObserver;
 }
 
 void IntersectionObserver::ReportUpdates(IntersectionObservation& observation) {

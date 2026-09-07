@@ -79,9 +79,7 @@ constexpr {{constant.kind|cpp_pod_type}} {{struct.name}}::{{constant.name}};
 
 {#--- Struct builder definitions #}
 {%- for struct in structs %}
-{%-   if not struct|is_native_only_kind %}
-{%-     include "wrapper_class_definition.tmpl" %}
-{%-   endif %}
+{%-   include "wrapper_class_definition.tmpl" %}
 {%- endfor %}
 
 {#--- Union builder definitions #}
@@ -104,9 +102,7 @@ namespace mojo {
 
 {#--- Struct Serialization Helpers -#}
 {%  for struct in structs %}
-{%-   if not struct|is_native_only_kind %}
-{%      include "struct_traits_definition.tmpl" %}
-{%-   endif %}
+{%    include "struct_traits_definition.tmpl" %}
 {%- endfor %}
 
 {#--- Union Serialization Helpers #}

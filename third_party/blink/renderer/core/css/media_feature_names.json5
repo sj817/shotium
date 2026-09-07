@@ -56,8 +56,6 @@
     "min-width",
     "min-resolution",
     "navigation-controls",
-    // This feature only exists to test out origin-trial infrastructure.
-    "origin-trial-test",
     "pointer",
     "prefers-color-scheme",
     "prefers-contrast",

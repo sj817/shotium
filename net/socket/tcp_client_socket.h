@@ -44,8 +44,6 @@ namespace net {
 class IPEndPoint;
 class NetLog;
 struct NetLogSource;
-class SocketPerformanceWatcher;
-class NetworkQualityEstimator;
 
 // A client socket that uses TCP as the transport layer.
 class NET_EXPORT TCPClientSocket : public TransportClientSocket,
@@ -60,8 +58,6 @@ class NET_EXPORT TCPClientSocket : public TransportClientSocket,
   // `target_network` disconnects.
   TCPClientSocket(
       const AddressList& addresses,
-      std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
-      NetworkQualityEstimator* network_quality_estimator,
       net::NetLog* net_log,
       const net::NetLogSource& source,
       handles::NetworkHandle network);
@@ -75,15 +71,13 @@ class NET_EXPORT TCPClientSocket : public TransportClientSocket,
   // function is used by BrokeredTcpClientSocket.
   TCPClientSocket(std::unique_ptr<TCPSocket> unconnected_socket,
                   const AddressList& addresses,
-                  std::unique_ptr<IPEndPoint> bound_address,
-                  NetworkQualityEstimator* network_quality_estimator);
+                  std::unique_ptr<IPEndPoint> bound_address);
 
   // Creates a TCPClientSocket from a bound-but-not-connected socket.
   static std::unique_ptr<TCPClientSocket> CreateFromBoundSocket(
       std::unique_ptr<TCPSocket> bound_socket,
       const AddressList& addresses,
-      const IPEndPoint& bound_address,
-      NetworkQualityEstimator* network_quality_estimator);
+      const IPEndPoint& bound_address);
 
   TCPClientSocket(const TCPClientSocket&) = delete;
   TCPClientSocket& operator=(const TCPClientSocket&) = delete;
@@ -152,7 +146,6 @@ class NET_EXPORT TCPClientSocket : public TransportClientSocket,
                   const AddressList& addresses,
                   int current_address_index,
                   std::unique_ptr<IPEndPoint> bind_address,
-                  NetworkQualityEstimator* network_quality_estimator,
                   handles::NetworkHandle network);
 
   // A helper method shared by Read() and ReadIfReady(). If |read_if_ready| is
@@ -236,10 +229,6 @@ class NET_EXPORT TCPClientSocket : public TransportClientSocket,
 
   // The time when the latest connect attempt was started.
   std::optional<base::TimeTicks> start_connect_attempt_;
-
-  // The NetworkQualityEstimator for the context this socket is associated with.
-  // Can be nullptr.
-  raw_ptr<NetworkQualityEstimator> network_quality_estimator_;
 
   base::OneShotTimer connect_attempt_timer_;
 

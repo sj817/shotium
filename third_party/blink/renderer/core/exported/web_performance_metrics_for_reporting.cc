@@ -169,12 +169,6 @@ base::TimeTicks WebPerformanceMetricsForReporting::
       ->FirstContentfulPaintRenderedButNotPresentedAsMonotonicTime();
 }
 
-double WebPerformanceMetricsForReporting::FirstMeaningfulPaint() const {
-  return base::Milliseconds(
-             private_->timingForReporting()->FirstMeaningfulPaint())
-      .InSecondsF();
-}
-
 LargestContentfulPaintDetailsForReporting
 WebPerformanceMetricsForReporting::LargestContentfulDetailsForMetrics() const {
   return (private_->timingForReporting()

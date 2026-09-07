@@ -19,7 +19,6 @@
 #include "net/base/network_handle.h"
 #include "net/log/net_log_with_source.h"
 #include "net/socket/socket_descriptor.h"
-#include "net/socket/socket_performance_watcher.h"
 #include "net/socket/socket_tag.h"
 #include "net/traffic_annotation/network_traffic_annotation.h"
 
@@ -38,14 +37,10 @@ class SocketTag;
 
 class NET_EXPORT TCPSocketPosix {
  public:
-  // |socket_performance_watcher| is notified of the performance metrics related
-  // to this socket. |socket_performance_watcher| may be null.
   static std::unique_ptr<TCPSocketPosix> Create(
-      std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
       NetLog* net_log,
       const NetLogSource& source);
   static std::unique_ptr<TCPSocketPosix> Create(
-      std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
       NetLogWithSource net_log_source);
 
   TCPSocketPosix(const TCPSocketPosix&) = delete;
@@ -168,11 +163,6 @@ class NET_EXPORT TCPSocketPosix {
   // Apply |tag| to this socket.
   void ApplySocketTag(const SocketTag& tag);
 
-  // May return nullptr.
-  SocketPerformanceWatcher* socket_performance_watcher() const {
-    return socket_performance_watcher_.get();
-  }
-
   // Binds this socket to `network`. All data traffic on the socket will be sent
   // and received via `network`. Must be called after Open() but before
   // Connect() and/or Bind(). This call will fail if `network` has disconnected.
@@ -182,11 +172,9 @@ class NET_EXPORT TCPSocketPosix {
 
  private:
   TCPSocketPosix(
-      std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
       NetLog* net_log,
       const NetLogSource& source);
   TCPSocketPosix(
-      std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
       NetLogWithSource net_log_source);
 
   void AcceptCompleted(std::unique_ptr<TCPSocketPosix>* tcp_socket,
@@ -216,16 +204,8 @@ class NET_EXPORT TCPSocketPosix {
                       int rv);
   int HandleWriteCompleted(IOBuffer* buf, int rv);
 
-  // Notifies |socket_performance_watcher_| of the latest RTT estimate available
-  // from the tcp_info struct for this TCP socket.
-  void NotifySocketPerformanceWatcher();
-
   std::unique_ptr<SocketPosix> socket_;
   std::unique_ptr<SocketPosix> accept_socket_;
-
-  // Socket performance statistics (such as RTT) are reported to the
-  // |socket_performance_watcher_|. May be nullptr.
-  std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher_;
 
   bool logging_multiple_connect_attempts_ = false;
 

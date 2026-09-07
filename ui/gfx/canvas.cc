@@ -16,7 +16,6 @@
 #include "base/numerics/safe_conversions.h"
 #include "cc/paint/paint_flags.h"
 #include "cc/paint/paint_shader.h"
-#include "cc/paint/skottie_wrapper.h"
 #include "third_party/skia/include/core/SkBitmap.h"
 #include "third_party/skia/include/core/SkColor.h"
 #include "third_party/skia/include/core/SkPath.h"
@@ -448,16 +447,6 @@ void Canvas::DrawImageInPath(const ImageSkia& image,
   flags.setShader(CreateImageRepShader(image_rep, SkTileMode::kRepeat,
                                        SkTileMode::kRepeat, matrix));
   canvas_->drawPath(path, flags);
-}
-
-void Canvas::DrawSkottie(scoped_refptr<cc::SkottieWrapper> skottie,
-                         const Rect& dst,
-                         float t,
-                         cc::SkottieFrameDataMap images,
-                         const cc::SkottieColorMap& color_map,
-                         cc::SkottieTextPropertyValueMap text_map) {
-  canvas_->drawSkottie(std::move(skottie), RectToSkRect(dst), t,
-                       std::move(images), color_map, std::move(text_map));
 }
 
 void Canvas::DrawStringRect(std::u16string_view text,

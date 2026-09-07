@@ -19,7 +19,6 @@ import "services/network/public/mojom/url_request.mojom";
 import "services/network/public/mojom/url_response_head.mojom";
 import "services/network/public/mojom/web_client_hints_types.mojom";
 import "services/network/public/mojom/web_sandbox_flags.mojom";
-import "services/viz/public/mojom/compositing/local_surface_id.mojom";
 import "third_party/blink/public/mojom/back_forward_cache_not_restored_reasons.mojom";
 import "third_party/blink/public/mojom/fenced_frame/fenced_frame_config.mojom";
 import "third_party/blink/public/mojom/fetch/fetch_api_request.mojom";
@@ -303,13 +302,6 @@ struct CommonNavigationParams {
   network.mojom.CSPDisposition should_check_main_world_csp =
       network.mojom.CSPDisposition.CHECK;
 
-  // The origin trial features activated in the initiator that should be applied
-  // in the document being navigated to. The int values are blink
-  // OriginTrialFeature enum values. OriginTrialFeature enum is not visible
-  // outside of blink (and doesn't need to be) so these values are casted to int
-  // as they are passed through content across navigations.
-  array<int32> initiator_origin_trial_features;
-
   // The value of the hrefTranslate attribute if this navigation was initiated
   // from a link that had that attribute set.
   string href_translate;
@@ -559,9 +551,6 @@ struct CommitNavigationParams {
   // - Ctrl+click navigation (opening a link in a new tab).
   blink.mojom.FramePolicy frame_policy;
 
-  // The names of origin trials to be force enabled for this navigation.
-  array<string> force_enabled_origin_trials;
-
   // Specifies the AgentCluster to use to assign an execution context to the
   // document created by the navigation.
   // https://html.spec.whatwg.org/multipage/webappapis.html#agent-cluster-key
@@ -697,17 +686,6 @@ struct CommitNavigationParams {
   // sending salt values to the renderer after the :visited link hashtable has
   // been initialized.
   uint64? visited_link_salt;
-
-  // Provides the LocalSurfaceId to assign to the new Document when this
-  // navigation commits. This is only set for navigations where the new Document
-  // uses the same compositor as the old Document, i.e., same-RFH navigations.
-  //
-  // Note: We always assign a LocalSurfaceId to the new Document when the
-  // navigation commits in the browser (DidCommitNavigation). But if the old
-  // Document will be screenshotted by the browser, we need to generate an ID
-  // earlier to ensure the new Document doesn't render frames using the same ID
-  // as the old Document when it is committed in the renderer.
-  viz.mojom.LocalSurfaceId? local_surface_id;
 
   // Map of permission statuses at commit time.
   // Note: the permission statues will be only used as initial states of

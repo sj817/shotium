@@ -276,10 +276,6 @@ Message::Message(Message&& other) noexcept
       heap_profiler_tag_(other.heap_profiler_tag_) {
   other.transferable_ = false;
   other.serialized_ = false;
-#if defined(ENABLE_IPC_FUZZER)
-  interface_name_ = other.interface_name_;
-  method_name_ = other.method_name_;
-#endif
 }
 
 Message::Message(std::unique_ptr<internal::UnserializedMessageContext> context,
@@ -476,10 +472,6 @@ Message& Message::operator=(Message&& other) noexcept {
   serialized_ = other.serialized_;
   other.serialized_ = false;
   heap_profiler_tag_ = other.heap_profiler_tag_;
-#if defined(ENABLE_IPC_FUZZER)
-  interface_name_ = other.interface_name_;
-  method_name_ = other.method_name_;
-#endif
   return *this;
 }
 

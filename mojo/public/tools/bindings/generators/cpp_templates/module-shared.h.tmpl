@@ -37,11 +37,6 @@
 #include "mojo/public/cpp/system/data_pipe.h"
 {%- endif %}
 
-{% if not disallow_native_types and uses_native_types %}
-#include "mojo/public/cpp/bindings/native_enum.h"
-#include "mojo/public/cpp/bindings/lib/native_struct_serialization.h"
-{%- endif %}
-
 #include "{{module.path}}-data-view.h"  // IWYU pragma: export
 
 
@@ -64,9 +59,7 @@ namespace std {
 
 {%- from "enum_macros.tmpl" import enum_hash %}
 {%- for enum in all_enums %}
-{%-   if not enum|is_native_only_kind %}
 {{enum_hash(enum)}}
-{%-   endif %}
 {%- endfor %}
 
 }  // namespace std
@@ -75,16 +68,12 @@ namespace mojo {
 
 {#--- Enum Serialization Helpers -#}
 {%- for enum in all_enums %}
-{%-   if not enum|is_native_only_kind %}
-{%      include "enum_serialization_declaration.tmpl" %}
-{%-   endif %}
+{%    include "enum_serialization_declaration.tmpl" %}
 {%- endfor %}
 
 {#--- Struct Serialization Helpers -#}
 {%  for struct in structs %}
-{%-   if not struct|is_native_only_kind %}
-{%      include "struct_serialization_declaration.tmpl" %}
-{%-   endif %}
+{%    include "struct_serialization_declaration.tmpl" %}
 {%- endfor %}
 
 {#--- Union Serialization Helpers -#}
@@ -99,9 +88,7 @@ namespace mojo {
 {{namespace_begin(namespaces_as_array)}}
 
 {%- for struct in structs %}
-{%-   if not struct|is_native_only_kind %}
-{%      include "struct_data_view_definition.tmpl" %}
-{%-   endif %}
+{%    include "struct_data_view_definition.tmpl" %}
 {%- endfor %}
 
 {%- for union in unions %}
@@ -114,9 +101,7 @@ namespace mojo {
 // namespace.
 {%- from "enum_macros.tmpl" import enum_trace_format_traits_decl with context %}
 {%- for enum in all_enums %}
-{%-   if not enum|is_native_only_kind %}
 {{enum_trace_format_traits_decl(enum, export_attribute)}}
-{%-   endif %}
 {%- endfor %}
 
 #endif  // {{header_guard}}

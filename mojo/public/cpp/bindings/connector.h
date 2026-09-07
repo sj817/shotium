@@ -380,9 +380,6 @@ class COMPONENT_EXPORT(MOJO_CPP_BINDINGS) Connector : public MessageReceiver {
 
   MessageHeaderValidator header_validator_;
 
-#if defined(ENABLE_IPC_FUZZER)
-  std::unique_ptr<MessageReceiver> message_dumper_;
-#endif
 
   // A reference to the ConnectionGroup to which this Connector belongs, if any.
   ConnectionGroupRef connection_group_;

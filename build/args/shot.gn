@@ -42,7 +42,6 @@ shot_jumbo_file_merge_limit = 64
 # traits file below defines the same StructTraits alias as a sibling traits
 # file once the two share a unit.
 shot_jumbo_excluded_files = [
-  "//services/viz/public/cpp/compositing/frame_timing_details_mojom_traits.cc",
 
   # A DEPS checkout, so its BUILD.gn cannot carry the exclusion: HexDump's
   # local kPadding shadows base64.cc's anonymous-namespace one (-Wshadow).
@@ -56,7 +55,6 @@ shot_jumbo_excluded_files = [
 # Keeping ICU out of Jumbo costs a few hundred small compile actions and makes
 # the graph identical whether or not the checkout is patched.
 shot_jumbo_excluded_dirs = [
-  "//third_party/angle*",
   "//third_party/icu*",
 ]
 
@@ -105,16 +103,6 @@ is_p2p_enabled = false
 # GL context, a Vulkan device, or a GPU process, so ANGLE's renderer backends
 # and SwiftShader cannot be selected at runtime. They previously survived in the
 # build graph even though ThinLTO removed all of their code from shotium.exe.
-# Vulkan, off. enable_vulkan defaults to is_linux || is_chromeos || is_android
-# || is_fuchsia, so Windows has never built skia's Vulkan backend and Linux
-# always did -- which is why the first Linux build reached GrVkImage.cpp and
-# found VK_CALL defined two different ways in one Jumbo translation unit.
-#
-# Excluding a file from Jumbo would have silenced that and left the backend in
-# the build. shot rasterises into a CPU SkSurface and never creates a GL
-# context, a Vulkan device or a GPU process, so nothing here can select it at
-# run time; the swiftshader and ANGLE args below already say the same thing
-# about their halves of the same stack.
 # The views toolkit, gone. //ui/views and the desktop UI layer around it --
 # message_center, gtk, qt, shell_dialogs, accelerated_widget_mac,
 # remote_cocoa -- were removed: 1801 files that shot has no dependency path to
@@ -134,21 +122,6 @@ is_p2p_enabled = false
 # evaluate.
 toolkit_views = false
 
-enable_vulkan = false
-
-enable_swiftshader = false
-enable_swiftshader_vulkan = false
-angle_enable_swiftshader = false
-angle_enable_vulkan = false
-angle_enable_d3d11 = false
-angle_enable_gl = false
-
-# With every renderer backend above turned off, Display.cpp still has to
-# resolve one default platform type, so the Null backend has to be the one
-# left standing. angle_enable_null otherwise follows !is_official_build, which
-# is false here. Setting it explicitly rather than deriving it in angle.gni
-# keeps this correct on a checkout that gclient restored from ANGLE upstream.
-angle_enable_null = true
 
 # ---------------------------------------------------------------------------
 # Size. Everything below was chosen from measured bytes, not from the

@@ -953,19 +953,6 @@ ContainerNode* ParentForHTMLInsertion(Node* self,
 }
 }  // namespace
 
-void Node::replaceWithHTML(const String& html,
-                           SetHTMLOptions* options,
-                           ExceptionState& exception_state) {
-  if (ContainerNode* parent = ParentForHTMLInsertion(this, exception_state)) {
-    parent->ReplaceChildWithHTML(
-        this, html,
-        FragmentParserConfig::ForContainer(
-            parent, Sanitizer::Mode::kSafe, trusted_types_names::kNode,
-            trusted_types_names::kReplaceWithHTML),
-        FragmentParserOptions(options), exception_state);
-  }
-}
-
 void Node::replaceWithHTMLUnsafe(
     const V8UnionStringOrTrustedHTML* html,
     V8UnionSetHTMLUnsafeOptionsOrTrustedParserOptions* options,
@@ -983,26 +970,11 @@ void Node::replaceWithHTMLUnsafe(
     return;
   }
   const FragmentParserConfig config = FragmentParserConfig::ForContainer(
-      parent, Sanitizer::Mode::kUnsafe, trusted_types_names::kNode,
+      parent, trusted_types_names::kNode,
       trusted_types_names::kReplaceWithHTMLUnsafe);
 
   parent->ReplaceChildWithHTML(this, compliant_string, config, resolved_options,
                                exception_state);
-}
-
-void Node::beforeHTML(const String& html,
-                      SetHTMLOptions* options,
-                      ExceptionState& exception_state) {
-  ContainerNode* parent = ParentForHTMLInsertion(this, exception_state);
-  if (!parent) {
-    return;
-  }
-  parent->InsertHTMLBefore(
-      this, html,
-      FragmentParserConfig::ForContainer(parent, Sanitizer::Mode::kSafe,
-                                         trusted_types_names::kNode,
-                                         trusted_types_names::kBeforeHTML),
-      FragmentParserOptions(options), exception_state);
 }
 
 void Node::beforeHTMLUnsafe(
@@ -1022,26 +994,11 @@ void Node::beforeHTMLUnsafe(
     return;
   }
   const FragmentParserConfig config = FragmentParserConfig::ForContainer(
-      parent, Sanitizer::Mode::kUnsafe, trusted_types_names::kNode,
+      parent, trusted_types_names::kNode,
       trusted_types_names::kBeforeHTMLUnsafe);
 
   parent->InsertHTMLBefore(this, compliant_string, config, resolved_options,
                            exception_state);
-}
-
-void Node::afterHTML(const String& html,
-                     SetHTMLOptions* options,
-                     ExceptionState& exception_state) {
-  ContainerNode* parent = ParentForHTMLInsertion(this, exception_state);
-  if (!parent) {
-    return;
-  }
-  parent->InsertHTMLBefore(
-      nextSibling(), html,
-      FragmentParserConfig::ForContainer(parent, Sanitizer::Mode::kSafe,
-                                         trusted_types_names::kNode,
-                                         trusted_types_names::kAfterHTML),
-      FragmentParserOptions(options), exception_state);
 }
 
 void Node::afterHTMLUnsafe(
@@ -1061,7 +1018,7 @@ void Node::afterHTMLUnsafe(
     return;
   }
   const FragmentParserConfig config = FragmentParserConfig::ForContainer(
-      parent, Sanitizer::Mode::kUnsafe, trusted_types_names::kNode,
+      parent, trusted_types_names::kNode,
       trusted_types_names::kAfterHTMLUnsafe);
 
   parent->InsertHTMLBefore(nextSibling(), compliant_string, config,
@@ -2674,10 +2631,6 @@ static void AppendMarkedTree(const String& base_indent,
       if (Element* pseudo = element->GetPseudoElement(kPseudoIdBackdrop))
         AppendMarkedTree(indent_string, pseudo, marked_node1, marked_label1,
                          marked_node2, marked_label2, builder);
-      if (Element* pseudo = element->GetPseudoElement(kPseudoIdSkeleton)) {
-        AppendMarkedTree(indent_string, pseudo, marked_node1, marked_label1,
-                         marked_node2, marked_label2, builder);
-      }
     }
 
     if (ShadowRoot* shadow_root = node.GetShadowRoot()) {

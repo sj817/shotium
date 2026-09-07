@@ -24,7 +24,7 @@ import {resolve, root} from './lib/repo.ts';
 // Same rationale as gn-dangling-imports: these resolve `//` against their own
 // root and are not loaded by Chromium's gn.
 const SKIP_TREES = [
-  'third_party/angle', 'third_party/skia', 'third_party/crashpad', 'third_party/mini_chromium', 'third_party/OpenCL-CTS',
+  'third_party/skia', 'third_party/crashpad', 'third_party/mini_chromium', 'third_party/OpenCL-CTS',
   'third_party/clspv', 'third_party/swiftshader', 'third_party/fuchsia-sdk', 'third_party/perfetto',
 ];
 

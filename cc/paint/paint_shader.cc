@@ -15,9 +15,7 @@
 #include "base/numerics/checked_math.h"
 #include "base/types/optional_util.h"
 #include "cc/paint/image_provider.h"
-#include "cc/paint/paint_cache.h"
 #include "cc/paint/paint_image_builder.h"
-#include "cc/paint/paint_op_writer.h"
 #include "cc/paint/paint_record.h"
 #include "third_party/skia/include/core/SkColorSpace.h"
 #include "third_party/skia/include/core/SkImage.h"
@@ -267,47 +265,6 @@ sk_sp<PaintShader> PaintShader::MakeSkSLCommand(
   return shader;
 }
 
-// static
-size_t PaintShader::GetSerializedSize(const PaintShader* shader) {
-  if (!shader) {
-    return PaintOpWriter::SerializedSize<bool>();
-  }
-
-  return (base::CheckedNumeric<size_t>(PaintOpWriter::SerializedSize<bool>()) +
-          PaintOpWriter::SerializedSize(shader->shader_type_) +
-          PaintOpWriter::SerializedSize(shader->flags_) +
-          PaintOpWriter::SerializedSize(shader->end_radius_) +
-          PaintOpWriter::SerializedSize(shader->start_radius_) +
-          PaintOpWriter::SerializedSize(shader->tx_) +
-          PaintOpWriter::SerializedSize(shader->ty_) +
-          PaintOpWriter::SerializedSize(shader->fallback_color_) +
-          PaintOpWriter::SerializedSize(shader->scaling_behavior_) +
-          PaintOpWriter::SerializedSize(shader->local_matrix_) +
-          PaintOpWriter::SerializedSize(shader->center_) +
-          PaintOpWriter::SerializedSize(shader->tile_) +
-          PaintOpWriter::SerializedSize(shader->start_point_) +
-          PaintOpWriter::SerializedSize(shader->end_point_) +
-          PaintOpWriter::SerializedSize(shader->start_degrees_) +
-          PaintOpWriter::SerializedSize(shader->end_degrees_) +
-          PaintOpWriter::SerializedSize(shader->gradient_interpolation_) +
-          PaintOpWriter::SerializedSize(shader->image_) +
-          PaintOpWriter::SerializedSize(shader->id_) +
-          PaintOpWriter::SerializedSize(shader->record_) +
-          PaintOpWriter::SerializedSizeOfElements(shader->colors_.data(),
-                                                  shader->colors_.size()) +
-          PaintOpWriter::SerializedSizeOfElements(shader->positions_.data(),
-                                                  shader->positions_.size()) +
-          PaintOpWriter::SerializedSize(shader->sk_runtime_effect_id_) +
-          base::CheckedNumeric<size_t>(
-              PaintOpWriter::SerializedSize<PaintCacheEntryState>()) +
-          PaintOpWriter::SerializedSize(shader->sksl_command_) +
-          PaintOpWriter::SerializedSize(shader->scalar_uniforms_) +
-          PaintOpWriter::SerializedSize(shader->float2_uniforms_) +
-          PaintOpWriter::SerializedSize(shader->float4_uniforms_) +
-          PaintOpWriter::SerializedSize(shader->int_uniforms_))
-      .ValueOrDie();
-}
-
 PaintShader::PaintShader(Type type) : shader_type_(type) {}
 PaintShader::~PaintShader() = default;
 
@@ -418,10 +375,7 @@ sk_sp<PaintShader> PaintShader::CreateDecodedImage(
     const SkMatrix& ctm,
     PaintFlags::FilterQuality quality,
     ImageProvider* image_provider,
-    uint32_t* transfer_cache_entry_id,
-    PaintFlags::FilterQuality* raster_quality,
-    bool* needs_mips,
-    gpu::Mailbox* mailbox) const {
+    PaintFlags::FilterQuality* raster_quality) const {
   DCHECK_EQ(shader_type_, Type::kImage);
   if (!image_)
     return nullptr;
@@ -445,31 +399,17 @@ sk_sp<PaintShader> PaintShader::CreateDecodedImage(
                           1.f / decoded_image.scale_adjustment().height());
   }
 
-  PaintImage decoded_paint_image;
-  if (decoded_image.transfer_cache_entry_id()) {
-    decoded_paint_image = image_;
-    *transfer_cache_entry_id = *decoded_image.transfer_cache_entry_id();
-  } else if (!decoded_image.mailbox().IsZero()) {
-    decoded_paint_image = image_;
-    *mailbox = decoded_image.mailbox();
-  } else {
-    DCHECK(decoded_image.image());
+  DCHECK(decoded_image.image());
+  sk_sp<SkImage> sk_image =
+      sk_ref_sp<SkImage>(const_cast<SkImage*>(decoded_image.image().get()));
+  PaintImage decoded_paint_image =
+      PaintImageBuilder::WithDefault()
+          .set_id(image_.stable_id())
+          .set_texture_image(std::move(sk_image),
+                             image_.GetContentIdForFrame(0u))
+          .TakePaintImage();
 
-    sk_sp<SkImage> sk_image =
-        sk_ref_sp<SkImage>(const_cast<SkImage*>(decoded_image.image().get()));
-    decoded_paint_image =
-        PaintImageBuilder::WithDefault()
-            .set_id(image_.stable_id())
-            .set_texture_image(std::move(sk_image),
-                               image_.GetContentIdForFrame(0u))
-            .TakePaintImage();
-  }
-
-  // TODO(khushalsagar): Remove filter quality from DecodedDrawImage. All we
-  // want to do is cap the filter quality used, but Gpu and Sw cache have
-  // different behaviour. D:
   *raster_quality = decoded_image.filter_quality();
-  *needs_mips = decoded_image.transfer_cache_entry_needs_mips();
   return PaintShader::MakeImage(decoded_paint_image, tx_, ty_, &final_matrix);
 }
 

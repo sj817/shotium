@@ -162,7 +162,6 @@ bool IsPseudoElementWithUAStyle(PseudoId pseudo_id) {
     case kPseudoIdViewTransitionImagePair:
     case kPseudoIdViewTransitionOld:
     case kPseudoIdViewTransitionNew:
-    case kPseudoIdSkeleton:
       return true;
     default:
       return false;
@@ -2452,8 +2451,7 @@ Element* StyleResolver::FindContainerForElement(
   Element* start_candidate = FlatTreeTraversal::ParentElement(*element);
   if (PseudoElement* pseudo_element = DynamicTo<PseudoElement>(element)) {
     if (pseudo_element->IsLayoutSiblingOfOriginatingElement() &&
-        (container_selector.SelectsSizeContainers() ||
-         pseudo_element->GetPseudoId() == kPseudoIdSkeleton)) {
+        container_selector.SelectsSizeContainers()) {
       start_candidate = FlatTreeTraversal::ParentElement(*start_candidate);
     }
   }

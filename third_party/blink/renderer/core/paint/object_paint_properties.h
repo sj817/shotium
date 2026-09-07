@@ -130,9 +130,7 @@ class CORE_EXPORT ObjectPaintProperties
     kPerspective = 10,
     kReplacedContentTransform = 11,
     kScrollTranslation = 12,
-    kUnboundedWrapperTransform = 13,
-    kUnboundedInnerTransform = 14,
-    kLastTransform = kUnboundedInnerTransform,
+    kLastTransform = kScrollTranslation,
     kTransformAlias = 15,
 
     kScroll = 16,
@@ -141,7 +139,6 @@ class CORE_EXPORT ObjectPaintProperties
 
     // Effects
     kFirstEffect = 17,
-    kUnboundedWrapperEffect = 20,
     kEffect = 21,
     kFilter = 22,
     kMask = 23,
@@ -301,8 +298,6 @@ class CORE_EXPORT ObjectPaintProperties
   ADD_TRANSFORM(Perspective, NodeId::kPerspective)
   ADD_TRANSFORM(ReplacedContentTransform, NodeId::kReplacedContentTransform)
   ADD_TRANSFORM(ScrollTranslation, NodeId::kScrollTranslation)
-  ADD_TRANSFORM(UnboundedWrapperTransform, NodeId::kUnboundedWrapperTransform)
-  ADD_TRANSFORM(UnboundedInnerTransform, NodeId::kUnboundedInnerTransform)
   using ScrollPaintPropertyNodeOrAlias = ScrollPaintPropertyNode;
   ADD_ALIAS_NODE(Transform, TransformIsolationNode, NodeId::kTransformAlias)
 
@@ -341,7 +336,6 @@ class CORE_EXPORT ObjectPaintProperties
   //       This serves as a parent to subtree effects on an element with paint
   //       containment, It is the deepest child of any effect tree on the
   //       contain: paint element.
-  ADD_EFFECT(UnboundedWrapperEffect, NodeId::kUnboundedWrapperEffect)
   ADD_EFFECT(Effect, NodeId::kEffect)
   ADD_EFFECT(Filter, NodeId::kFilter)
   ADD_EFFECT(Mask, NodeId::kMask)

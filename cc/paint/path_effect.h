@@ -12,8 +12,6 @@ class SkPathEffect;
 
 namespace cc {
 
-class PaintOpWriter;
-class PaintOpReader;
 
 class CC_PAINT_EXPORT PathEffect : public SkRefCnt {
  public:
@@ -33,8 +31,6 @@ class CC_PAINT_EXPORT PathEffect : public SkRefCnt {
 
  protected:
   friend class PaintFlags;
-  friend class PaintOpReader;
-  friend class PaintOpWriter;
 
   enum class Type {
     // kNull is for serialization purposes only, to indicate a null path effect
@@ -48,10 +44,6 @@ class CC_PAINT_EXPORT PathEffect : public SkRefCnt {
   virtual sk_sp<SkPathEffect> GetSkPathEffect() const = 0;
 
   explicit PathEffect(Type type);
-  // These functions don't handle type_. It's handled in PaintOpWriter/Reader.
-  virtual size_t SerializedDataSize() const = 0;
-  virtual void SerializeData(PaintOpWriter& writer) const = 0;
-  static sk_sp<PathEffect> Deserialize(PaintOpReader& reader, Type type);
 
   Type type_;
 };

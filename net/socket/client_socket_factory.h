@@ -12,7 +12,6 @@
 #include "net/base/network_handle.h"
 #include "net/http/proxy_client_socket.h"
 #include "net/socket/datagram_socket.h"
-#include "net/socket/socket_performance_watcher.h"
 #include "net/socket/transport_client_socket.h"
 #include "net/traffic_annotation/network_traffic_annotation.h"
 
@@ -26,7 +25,6 @@ struct NetLogSource;
 class SSLClientContext;
 class SSLClientSocket;
 struct SSLConfig;
-class NetworkQualityEstimator;
 
 // An interface used to instantiate StreamSocket objects.  Used to facilitate
 // testing code with mock socket implementations.
@@ -42,14 +40,9 @@ class NET_EXPORT ClientSocketFactory {
       NetLog* net_log,
       const NetLogSource& source) = 0;
 
-  // |network_quality_estimator| is optional. If not specified, the network
-  // quality will not be considered when determining TCP connect handshake
-  // timeouts, or when histogramming the handshake duration.
   virtual std::unique_ptr<TransportClientSocket> CreateTransportClientSocket(
       const AddressList& addresses,
       handles::NetworkHandle target_network,
-      std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
-      NetworkQualityEstimator* network_quality_estimator,
       NetLog* net_log,
       const NetLogSource& source) = 0;
 

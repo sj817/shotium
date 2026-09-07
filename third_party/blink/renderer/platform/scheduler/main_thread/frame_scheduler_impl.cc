@@ -1022,20 +1022,6 @@ void FrameSchedulerImpl::OnMainFrameInteractive() {
   }
 }
 
-void FrameSchedulerImpl::OnFirstMeaningfulPaint() {
-  waiting_for_meaningful_paint_ = false;
-
-  if (GetFrameType() != FrameScheduler::FrameType::kMainFrame ||
-      is_in_embedded_frame_tree_) {
-    return;
-  }
-
-  main_thread_scheduler_->OnMainFramePaint();
-  if (delegate_) {
-    return delegate_->MainFrameFirstMeaningfulPaint();
-  }
-}
-
 void FrameSchedulerImpl::OnDidInstallNewDocument() {
   document_bound_weak_factory_.InvalidateWeakPtrs();
 }

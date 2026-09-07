@@ -115,7 +115,6 @@ class CC_PAINT_EXPORT PaintFilter : public SkRefCnt {
 
   virtual gfx::ContentColorUsage GetContentColorUsage() const = 0;
 
-  virtual size_t SerializedSize() const = 0;
 
   // Returns a snaphot of the PaintFilter with images replaced using
   // |image_provider|. Note that this may return the same filter if the filter
@@ -144,7 +143,6 @@ class CC_PAINT_EXPORT PaintFilter : public SkRefCnt {
     return cached_sk_filter_;
   }
 
-  virtual base::CheckedNumeric<size_t> BaseSerializedSize() const;
   virtual sk_sp<PaintFilter> SnapshotWithImagesInternal(
       ImageProvider* image_provider) const = 0;
 
@@ -179,7 +177,6 @@ class CC_PAINT_EXPORT OneInputPaintFilter : public PaintFilter {
                       const CropRect* crop_rect = nullptr);
   ~OneInputPaintFilter() override;
 
-  base::CheckedNumeric<size_t> BaseSerializedSize() const final;
   bool EqualsForTesting(const OneInputPaintFilter& other) const;
 
   sk_sp<PaintFilter> input_;
@@ -197,7 +194,6 @@ class CC_PAINT_EXPORT TwoInputPaintFilter : public PaintFilter {
                       const CropRect* crop_rect = nullptr);
   ~TwoInputPaintFilter() override;
 
-  base::CheckedNumeric<size_t> BaseSerializedSize() const final;
   bool EqualsForTesting(const TwoInputPaintFilter& other) const;
 
   sk_sp<PaintFilter> first_;
@@ -215,7 +211,6 @@ class CC_PAINT_EXPORT ColorFilterPaintFilter final
 
   const sk_sp<ColorFilter>& color_filter() const { return color_filter_; }
 
-  size_t SerializedSize() const override;
   bool EqualsForTesting(const ColorFilterPaintFilter& other) const;
 
  protected:
@@ -240,7 +235,6 @@ class CC_PAINT_EXPORT BlurPaintFilter final : public OneInputPaintFilter {
   SkScalar sigma_y() const { return sigma_y_; }
   SkTileMode tile_mode() const { return tile_mode_; }
 
-  size_t SerializedSize() const override;
   bool EqualsForTesting(const BlurPaintFilter& other) const;
 
  protected:
@@ -278,7 +272,6 @@ class CC_PAINT_EXPORT DropShadowPaintFilter final : public OneInputPaintFilter {
   SkColor4f color() const { return color_; }
   ShadowMode shadow_mode() const { return shadow_mode_; }
 
-  size_t SerializedSize() const override;
   bool EqualsForTesting(const DropShadowPaintFilter& other) const;
 
  protected:
@@ -308,7 +301,6 @@ class CC_PAINT_EXPORT MagnifierPaintFilter final : public OneInputPaintFilter {
   SkScalar zoom_amount() const { return zoom_amount_; }
   SkScalar inset() const { return inset_; }
 
-  size_t SerializedSize() const override;
   bool EqualsForTesting(const MagnifierPaintFilter& other) const;
 
  protected:
@@ -330,7 +322,6 @@ class CC_PAINT_EXPORT ComposePaintFilter final : public TwoInputPaintFilter {
   const sk_sp<PaintFilter>& outer() const { return first_; }
   const sk_sp<PaintFilter>& inner() const { return second_; }
 
-  size_t SerializedSize() const override;
   bool EqualsForTesting(const ComposePaintFilter& other) const;
 
  protected:
@@ -349,7 +340,6 @@ class CC_PAINT_EXPORT AlphaThresholdPaintFilter final
 
   const SkRegion& region() const { return region_; }
 
-  size_t SerializedSize() const override;
   bool EqualsForTesting(const AlphaThresholdPaintFilter& other) const;
 
  protected:
@@ -373,7 +363,6 @@ class CC_PAINT_EXPORT XfermodePaintFilter final : public TwoInputPaintFilter {
   const sk_sp<PaintFilter>& background() const { return first_; }
   const sk_sp<PaintFilter>& foreground() const { return second_; }
 
-  size_t SerializedSize() const override;
   bool EqualsForTesting(const XfermodePaintFilter& other) const;
 
  protected:
@@ -405,7 +394,6 @@ class CC_PAINT_EXPORT ArithmeticPaintFilter final : public TwoInputPaintFilter {
   const sk_sp<PaintFilter>& background() const { return first_; }
   const sk_sp<PaintFilter>& foreground() const { return second_; }
 
-  size_t SerializedSize() const override;
   bool EqualsForTesting(const ArithmeticPaintFilter& other) const;
 
  protected:
@@ -443,7 +431,6 @@ class CC_PAINT_EXPORT MatrixConvolutionPaintFilter final
   SkTileMode tile_mode() const { return tile_mode_; }
   bool convolve_alpha() const { return convolve_alpha_; }
 
-  size_t SerializedSize() const override;
   bool EqualsForTesting(const MatrixConvolutionPaintFilter& other) const;
 
  protected:
@@ -478,7 +465,6 @@ class CC_PAINT_EXPORT DisplacementMapEffectPaintFilter final
   const sk_sp<PaintFilter>& displacement() const { return first_; }
   const sk_sp<PaintFilter>& color() const { return second_; }
 
-  size_t SerializedSize() const override;
   bool EqualsForTesting(const DisplacementMapEffectPaintFilter& other) const;
 
  protected:
@@ -507,7 +493,6 @@ class CC_PAINT_EXPORT ImagePaintFilter final : public PaintFilter {
 
   gfx::ContentColorUsage GetContentColorUsage() const override;
 
-  size_t SerializedSize() const override;
   bool EqualsForTesting(const ImagePaintFilter& other) const;
 
  protected:
@@ -548,7 +533,6 @@ class CC_PAINT_EXPORT RecordPaintFilter final : public PaintFilter {
 
   gfx::ContentColorUsage GetContentColorUsage() const override;
 
-  size_t SerializedSize() const override;
   bool EqualsForTesting(const RecordPaintFilter& other) const;
 
  protected:
@@ -583,7 +567,6 @@ class CC_PAINT_EXPORT MergePaintFilter final : public PaintFilter {
 
   gfx::ContentColorUsage GetContentColorUsage() const override;
 
-  size_t SerializedSize() const override;
   bool EqualsForTesting(const MergePaintFilter& other) const;
 
  protected:
@@ -612,7 +595,6 @@ class CC_PAINT_EXPORT MorphologyPaintFilter final : public OneInputPaintFilter {
   float radius_x() const { return radius_x_; }
   float radius_y() const { return radius_y_; }
 
-  size_t SerializedSize() const override;
   bool EqualsForTesting(const MorphologyPaintFilter& other) const;
 
  protected:
@@ -637,7 +619,6 @@ class CC_PAINT_EXPORT OffsetPaintFilter final : public OneInputPaintFilter {
   SkScalar dx() const { return dx_; }
   SkScalar dy() const { return dy_; }
 
-  size_t SerializedSize() const override;
   bool EqualsForTesting(const OffsetPaintFilter& other) const;
 
  protected:
@@ -660,7 +641,6 @@ class CC_PAINT_EXPORT TilePaintFilter final : public OneInputPaintFilter {
   const SkRect& src() const { return src_; }
   const SkRect& dst() const { return dst_; }
 
-  size_t SerializedSize() const override;
   bool EqualsForTesting(const TilePaintFilter& other) const;
 
  protected:
@@ -698,7 +678,6 @@ class CC_PAINT_EXPORT TurbulencePaintFilter final : public PaintFilter {
 
   gfx::ContentColorUsage GetContentColorUsage() const override;
 
-  size_t SerializedSize() const override;
   bool EqualsForTesting(const TurbulencePaintFilter& other) const;
 
  protected:
@@ -741,7 +720,6 @@ class CC_PAINT_EXPORT ShaderPaintFilter final : public PaintFilter {
 
   gfx::ContentColorUsage GetContentColorUsage() const override;
 
-  size_t SerializedSize() const override;
   bool EqualsForTesting(const ShaderPaintFilter& other) const;
 
  protected:
@@ -766,7 +744,6 @@ class CC_PAINT_EXPORT MatrixPaintFilter final : public OneInputPaintFilter {
   const SkMatrix& matrix() const { return matrix_; }
   PaintFlags::FilterQuality filter_quality() const { return filter_quality_; }
 
-  size_t SerializedSize() const override;
   bool EqualsForTesting(const MatrixPaintFilter& other) const;
 
  protected:
@@ -802,7 +779,6 @@ class CC_PAINT_EXPORT LightingDistantPaintFilter final
   SkScalar kconstant() const { return kconstant_; }
   SkScalar shininess() const { return shininess_; }
 
-  size_t SerializedSize() const override;
   bool EqualsForTesting(const LightingDistantPaintFilter& other) const;
 
  protected:
@@ -842,7 +818,6 @@ class CC_PAINT_EXPORT LightingPointPaintFilter final
   SkScalar kconstant() const { return kconstant_; }
   SkScalar shininess() const { return shininess_; }
 
-  size_t SerializedSize() const override;
   bool EqualsForTesting(const LightingPointPaintFilter& other) const;
 
  protected:
@@ -888,7 +863,6 @@ class CC_PAINT_EXPORT LightingSpotPaintFilter final
   SkScalar kconstant() const { return kconstant_; }
   SkScalar shininess() const { return shininess_; }
 
-  size_t SerializedSize() const override;
   bool EqualsForTesting(const LightingSpotPaintFilter& other) const;
 
  protected:

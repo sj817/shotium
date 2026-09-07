@@ -219,15 +219,13 @@ TcpSocketIoCompletionPortWin::DisableSkipCompletionPortOnSuccessForTesting::
 }
 
 TcpSocketIoCompletionPortWin::TcpSocketIoCompletionPortWin(
-    std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
     NetLog* net_log,
     const NetLogSource& source)
-    : TCPSocketWin(std::move(socket_performance_watcher), net_log, source) {}
+    : TCPSocketWin(net_log, source) {}
 
 TcpSocketIoCompletionPortWin::TcpSocketIoCompletionPortWin(
-    std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
     NetLogWithSource net_log_source)
-    : TCPSocketWin(std::move(socket_performance_watcher), net_log_source) {}
+    : TCPSocketWin(net_log_source) {}
 
 TcpSocketIoCompletionPortWin::~TcpSocketIoCompletionPortWin() {
   DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);

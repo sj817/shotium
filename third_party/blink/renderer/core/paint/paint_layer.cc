@@ -1330,9 +1330,7 @@ PaintLayer* PaintLayer::HitTestLayer(
   }
 
   ShouldRespectOverflowClipType clip_behavior = kRespectOverflowClip;
-  if (result.GetHitTestRequest().IgnoreClipping() ||
-      (RuntimeEnabledFeatures::UnboundedElementEnabled() &&
-       layout_object.IsInclusiveDescendantOfUnboundedElement())) {
+  if (result.GetHitTestRequest().IgnoreClipping()) {
     clip_behavior = kIgnoreOverflowClip;
   }
 

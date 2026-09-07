@@ -33,7 +33,6 @@
 #include "net/dns/public/secure_dns_policy.h"
 #include "net/log/net_log_source_type.h"
 #include "net/log/net_log_with_source.h"
-#include "net/nqe/network_quality_estimator.h"
 #include "net/socket/client_socket_handle.h"
 #include "net/socket/next_proto.h"
 #include "net/socket/ssl_client_socket.h"
@@ -60,71 +59,6 @@ constexpr base::TimeDelta kHttpProxyConnectJobTunnelTimeout = base::Seconds(10);
 #else
 constexpr base::TimeDelta kHttpProxyConnectJobTunnelTimeout = base::Seconds(30);
 #endif
-
-class HttpProxyTimeoutExperiments {
- public:
-  HttpProxyTimeoutExperiments() { Init(); }
-
-  ~HttpProxyTimeoutExperiments() = default;
-
-  void Init() {
-    min_proxy_connection_timeout_ =
-        base::Seconds(GetInt32Param("min_proxy_connection_timeout_seconds", 8));
-    max_proxy_connection_timeout_ = base::Seconds(
-        GetInt32Param("max_proxy_connection_timeout_seconds", 30));
-    ssl_http_rtt_multiplier_ = GetInt32Param("ssl_http_rtt_multiplier", 10);
-    non_ssl_http_rtt_multiplier_ =
-        GetInt32Param("non_ssl_http_rtt_multiplier", 5);
-
-    DCHECK_LT(0, ssl_http_rtt_multiplier_);
-    DCHECK_LT(0, non_ssl_http_rtt_multiplier_);
-    DCHECK_LE(base::TimeDelta(), min_proxy_connection_timeout_);
-    DCHECK_LE(base::TimeDelta(), max_proxy_connection_timeout_);
-    DCHECK_LE(min_proxy_connection_timeout_, max_proxy_connection_timeout_);
-  }
-
-  base::TimeDelta min_proxy_connection_timeout() const {
-    return min_proxy_connection_timeout_;
-  }
-  base::TimeDelta max_proxy_connection_timeout() const {
-    return max_proxy_connection_timeout_;
-  }
-  int32_t ssl_http_rtt_multiplier() const { return ssl_http_rtt_multiplier_; }
-  int32_t non_ssl_http_rtt_multiplier() const {
-    return non_ssl_http_rtt_multiplier_;
-  }
-
- private:
-  // Returns the value of the parameter |param_name| for the field trial
-  // "NetAdaptiveProxyConnectionTimeout". If the value of the parameter is
-  // unavailable, then |default_value| is available.
-  static int32_t GetInt32Param(const std::string& param_name,
-                               int32_t default_value) {
-    int32_t param;
-    if (!base::StringToInt(base::GetFieldTrialParamValue(
-                               "NetAdaptiveProxyConnectionTimeout", param_name),
-                           &param)) {
-      return default_value;
-    }
-    return param;
-  }
-
-  // For secure proxies, the connection timeout is set to
-  // |ssl_http_rtt_multiplier_| times the HTTP RTT estimate. For insecure
-  // proxies, the connection timeout is set to |non_ssl_http_rtt_multiplier_|
-  // times the HTTP RTT estimate. In either case, the connection timeout
-  // is clamped to be between |min_proxy_connection_timeout_| and
-  // |max_proxy_connection_timeout_|.
-  base::TimeDelta min_proxy_connection_timeout_;
-  base::TimeDelta max_proxy_connection_timeout_;
-  int32_t ssl_http_rtt_multiplier_;
-  int32_t non_ssl_http_rtt_multiplier_;
-};
-
-HttpProxyTimeoutExperiments* GetProxyTimeoutExperiments() {
-  static HttpProxyTimeoutExperiments proxy_timeout_experiments;
-  return &proxy_timeout_experiments;
-}
 
 // Make a URL for a proxy, for use in proxy auth challenges.
 GURL MakeProxyUrl(const HttpProxySocketParams& params) {
@@ -292,9 +226,7 @@ void HttpProxyConnectJob::OnNeedsProxyAuth(
   NOTREACHED();
 }
 
-base::TimeDelta HttpProxyConnectJob::AlternateNestedConnectionTimeout(
-    const HttpProxySocketParams& params,
-    const NetworkQualityEstimator* network_quality_estimator) {
+base::TimeDelta HttpProxyConnectJob::AlternateNestedConnectionTimeout() {
   base::TimeDelta default_alternate_timeout;
 
   // On Android and iOS, a default proxy connection timeout is used instead of
@@ -303,35 +235,11 @@ base::TimeDelta HttpProxyConnectJob::AlternateNestedConnectionTimeout(
   default_alternate_timeout = kHttpProxyConnectJobTunnelTimeout;
 #endif  // !BUILDFLAG(IS_ANDROID) && !BUILDFLAG(IS_IOS)
 
-  bool is_https = params.proxy_server().is_https();
-
-  if (!network_quality_estimator) {
-    return default_alternate_timeout;
-  }
-
-  std::optional<base::TimeDelta> http_rtt_estimate =
-      network_quality_estimator->GetHttpRTT();
-  if (!http_rtt_estimate) {
-    return default_alternate_timeout;
-  }
-
-  int32_t multiplier =
-      is_https ? GetProxyTimeoutExperiments()->ssl_http_rtt_multiplier()
-               : GetProxyTimeoutExperiments()->non_ssl_http_rtt_multiplier();
-  base::TimeDelta timeout = multiplier * http_rtt_estimate.value();
-  // Ensure that connection timeout is between
-  // |min_proxy_connection_timeout_| and |max_proxy_connection_timeout_|.
-  return std::clamp(
-      timeout, GetProxyTimeoutExperiments()->min_proxy_connection_timeout(),
-      GetProxyTimeoutExperiments()->max_proxy_connection_timeout());
+  return default_alternate_timeout;
 }
 
 base::TimeDelta HttpProxyConnectJob::TunnelTimeoutForTesting() {
   return kHttpProxyConnectJobTunnelTimeout;
-}
-
-void HttpProxyConnectJob::UpdateFieldTrialParametersForTesting() {
-  GetProxyTimeoutExperiments()->Init();
 }
 
 int HttpProxyConnectJob::ConnectInternal() {
@@ -413,8 +321,7 @@ int HttpProxyConnectJob::DoLoop(int result) {
 
 int HttpProxyConnectJob::DoBeginConnect() {
   connect_start_time_ = base::TimeTicks::Now();
-  ResetTimer(
-      AlternateNestedConnectionTimeout(*params_, network_quality_estimator()));
+  ResetTimer(AlternateNestedConnectionTimeout());
   switch (GetProxyServerScheme()) {
     case ProxyServer::SCHEME_HTTP:
     case ProxyServer::SCHEME_HTTPS:

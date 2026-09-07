@@ -297,7 +297,6 @@ void IdleHelper::OnIdleTaskPostedOnMainThread() {
                "OnIdleTaskPostedOnMainThread");
   if (is_shutdown_)
     return;
-  delegate_->OnPendingTasksChanged(true);
   if (idle_period_state_ == IdlePeriodState::kInLongIdlePeriodPaused) {
     // Restart long idle period ticks.
     helper_->ControlTaskRunner()->PostTask(
@@ -320,7 +319,6 @@ void IdleHelper::DidProcessIdleTask() {
   if (IsInLongIdlePeriod()) {
     UpdateLongIdlePeriodStateAfterIdleTask();
   }
-  delegate_->OnPendingTasksChanged(idle_queue_->GetNumberOfPendingTasks() > 0);
 }
 
 base::TimeTicks IdleHelper::NowTicks() {

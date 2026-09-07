@@ -290,8 +290,7 @@ void SelectorFilter::PushAncestors(const Node& node) {
 void SelectorFilter::PushParent(Element& parent) {
 #if DCHECK_IS_ON()
   if (parent_stack_.empty()) {
-    DCHECK(parent == parent.GetDocument().documentElement() ||
-           parent.IsSkeletonPseudoElement());
+    DCHECK(parent == parent.GetDocument().documentElement());
   } else if (parent_stack_.back() != FlatTreeTraversal::ParentElement(parent) &&
              parent_stack_.back() != parent.ParentOrShadowHostElement()) {
     LOG(DFATAL) << "Parent stack must be consistent; pushed " << parent

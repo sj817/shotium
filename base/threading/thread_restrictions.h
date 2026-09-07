@@ -425,9 +425,6 @@ class ScopedAllowThreadJoinForWebRtcTransport;
 namespace rlz_lib {
 class FinancialPing;
 }
-namespace service_manager {
-class ServiceProcessLauncher;
-}
 namespace shell_integration_linux {
 class LaunchXdgUtilityScopedAllowBaseSyncPrimitives;
 }
@@ -929,7 +926,6 @@ class BASE_EXPORT
   friend class remoting::protocol::
       ScopedAllowThreadJoinForWebRtcTransport;  // http://crbug.com/660081
   // Not used in production yet, https://crbug.com/844078.
-  friend class service_manager::ServiceProcessLauncher;
   friend class ui::WindowResizeHelperMac;  // http://crbug.com/902829
 
   ScopedAllowBaseSyncPrimitivesOutsideBlockingScope(

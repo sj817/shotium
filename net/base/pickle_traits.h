@@ -10,8 +10,8 @@
 //  interoperability. No intrinsic support for forwards/backwards compatibility.
 //  Corruption that affects size fields will generally be detected and safely
 //  rejected. Other kinds of corruption will result in a valid instance of the
-//  data type with corrupted data. There are two systems to extend base::Pickle
-//  to handle new types: this one, and IPC::ParamTraits.
+//  data type with corrupted data. The traits below extend base::Pickle to
+//  handle additional types.
 //  - Mojo provides an undiscoverable serialization facility for Mojo types.
 //  This has similar performance and interoperability characteristics to
 //  base::Pickle, but is safer and easier to use. However, code in //net cannot

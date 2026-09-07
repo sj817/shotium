@@ -14,8 +14,6 @@
 #include "cc/paint/paint_op.h"
 #include "cc/paint/paint_record.h"
 #include "cc/paint/paint_recorder.h"
-#include "cc/paint/skottie_frame_data.h"
-#include "cc/paint/skottie_wrapper.h"
 #include "third_party/skia/include/core/SkAnnotation.h"
 #include "third_party/skia/include/core/SkCanvas.h"
 #include "third_party/skia/include/core/SkPaint.h"
@@ -32,7 +30,6 @@ PaintRecord RecordPaintCanvas::ReleaseAsRecord() {
   // Some users expect that their saves are automatically closed for them.
   // Maybe we could remove this assumption and just have callers do it.
   restoreToCount(1);
-  needs_flush_ = false;
   return buffer_.ReleaseAsRecord();
 }
 
@@ -42,23 +39,11 @@ void RecordPaintCanvas::DisableLineDrawingAsPaths() {
 }
 
 PaintRecord RecordPaintCanvas::CopyAsRecord() {
-  needs_flush_ = false;
   return buffer_.DeepCopyAsRecord();
 }
 
 template <typename T, typename... Args>
 void RecordPaintCanvas::push(Args&&... args) {
-#if DCHECK_IS_ON()
-  // The following check fails if client code does not check and handle
-  // NeedsFlush() before issuing draw calls.
-  // Note: restore ops are tolerated when flushes are requested since they are
-  // often necessary in order to bring the canvas to a flushable state.
-  // SetNodeId ops are also tolerated because they may be inserted just before
-  // flushing.
-  DCHECK(disable_flush_check_scope_ || !needs_flush_ ||
-         (std::is_same<T, RestoreOp>::value) ||
-         (std::is_same<T, SetNodeIdOp>::value));
-#endif
   buffer_.push<T>(std::forward<Args>(args)...);
 }
 
@@ -67,21 +52,6 @@ void* RecordPaintCanvas::accessTopLayerPixels(SkImageInfo* info,
                                               SkIPoint* origin) {
   // Modifications to the underlying pixels cannot be saved.
   return nullptr;
-}
-
-void RecordPaintCanvas::flush() {
-  // RecordPaintCanvas is unable to flush its own recording into the graphics
-  // pipeline. So instead we make note of the flush request so that it can be
-  // handled by code that owns the recording.
-  //
-  // Note: The value of needs_flush_ never gets reset until the end of
-  // recording. That is because flushing a recording implies ReleaseAsRecord()
-  // and starting a new recording.
-  needs_flush_ = true;
-}
-
-bool RecordPaintCanvas::NeedsFlush() const {
-  return needs_flush_;
 }
 
 int RecordPaintCanvas::save() {
@@ -351,16 +321,6 @@ void RecordPaintCanvas::drawVertices(
     const PaintFlags& flags) {
   push<DrawVerticesOp>(std::move(vertices), std::move(uvs), std::move(indices),
                        flags);
-}
-
-void RecordPaintCanvas::drawSkottie(scoped_refptr<SkottieWrapper> skottie,
-                                    const SkRect& dst,
-                                    float t,
-                                    SkottieFrameDataMap images,
-                                    const SkottieColorMap& color_map,
-                                    SkottieTextPropertyValueMap text_map) {
-  push<DrawSkottieOp>(std::move(skottie), dst, t, std::move(images), color_map,
-                      std::move(text_map));
 }
 
 void RecordPaintCanvas::drawTextBlob(sk_sp<SkTextBlob> blob,

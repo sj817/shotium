@@ -19,8 +19,6 @@
 #include "net/base/ip_endpoint.h"
 #include "net/base/net_errors.h"
 #include "net/base/port_util.h"
-#include "net/nqe/network_quality_estimator.h"
-#include "net/socket/socket_performance_watcher.h"
 #include "net/traffic_annotation/network_traffic_annotation.h"
 
 #if defined(TCP_CLIENT_SOCKET_OBSERVES_SUSPEND)
@@ -33,18 +31,14 @@ class NetLogWithSource;
 
 TCPClientSocket::TCPClientSocket(
     const AddressList& addresses,
-    std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
-    NetworkQualityEstimator* network_quality_estimator,
     net::NetLog* net_log,
     const net::NetLogSource& source,
     handles::NetworkHandle network)
-    : TCPClientSocket(TCPSocket::Create(std::move(socket_performance_watcher),
-                                        net_log,
+    : TCPClientSocket(TCPSocket::Create(net_log,
                                         source),
                       addresses,
                       -1 /* current_address_index */,
                       nullptr /* bind_address */,
-                      network_quality_estimator,
                       network) {}
 
 TCPClientSocket::TCPClientSocket(std::unique_ptr<TCPSocket> connected_socket,
@@ -53,21 +47,16 @@ TCPClientSocket::TCPClientSocket(std::unique_ptr<TCPSocket> connected_socket,
                       AddressList(peer_address),
                       0 /* current_address_index */,
                       nullptr /* bind_address */,
-                      // TODO(https://crbug.com/1123197: Pass non-null
-                      // NetworkQualityEstimator
-                      nullptr /* network_quality_estimator */,
                       handles::kInvalidNetworkHandle) {}
 
 TCPClientSocket::TCPClientSocket(
     std::unique_ptr<TCPSocket> unconnected_socket,
     const AddressList& addresses,
-    std::unique_ptr<IPEndPoint> bound_address,
-    NetworkQualityEstimator* network_quality_estimator)
+    std::unique_ptr<IPEndPoint> bound_address)
     : TCPClientSocket(std::move(unconnected_socket),
                       addresses,
                       -1 /* current_address_index */,
                       std::move(bound_address),
-                      network_quality_estimator,
                       handles::kInvalidNetworkHandle) {}
 
 TCPClientSocket::~TCPClientSocket() {
@@ -80,12 +69,10 @@ TCPClientSocket::~TCPClientSocket() {
 std::unique_ptr<TCPClientSocket> TCPClientSocket::CreateFromBoundSocket(
     std::unique_ptr<TCPSocket> bound_socket,
     const AddressList& addresses,
-    const IPEndPoint& bound_address,
-    NetworkQualityEstimator* network_quality_estimator) {
+    const IPEndPoint& bound_address) {
   return base::WrapUnique(new TCPClientSocket(
       std::move(bound_socket), addresses, -1 /* current_address_index */,
-      std::make_unique<IPEndPoint>(bound_address), network_quality_estimator,
-      handles::kInvalidNetworkHandle));
+      std::make_unique<IPEndPoint>(bound_address), handles::kInvalidNetworkHandle));
 }
 
 int TCPClientSocket::Bind(const IPEndPoint& address) {
@@ -160,13 +147,11 @@ TCPClientSocket::TCPClientSocket(
     const AddressList& addresses,
     int current_address_index,
     std::unique_ptr<IPEndPoint> bind_address,
-    NetworkQualityEstimator* network_quality_estimator,
     handles::NetworkHandle network)
     : socket_(std::move(socket)),
       bind_address_(std::move(bind_address)),
       addresses_(addresses),
       current_address_index_(current_address_index),
-      network_quality_estimator_(network_quality_estimator),
       network_(network) {
   DCHECK(socket_);
   if (socket_->IsValid())
@@ -265,11 +250,6 @@ int TCPClientSocket::DoConnect() {
     if (result != net::OK)
       return result;
   }
-
-  // Notify |socket_performance_watcher_| only if the |socket_| is reused to
-  // connect to a different IP Address.
-  if (socket_->socket_performance_watcher() && current_address_index_ != 0)
-    socket_->socket_performance_watcher()->OnConnectionChanged();
 
   start_connect_attempt_ = base::TimeTicks::Now();
 
@@ -583,27 +563,7 @@ base::TimeDelta TCPClientSocket::GetConnectAttemptTimeout() {
   if (!base::FeatureList::IsEnabled(features::kTimeoutTcpConnectAttempt))
     return base::TimeDelta::Max();
 
-  std::optional<base::TimeDelta> transport_rtt = std::nullopt;
-  if (network_quality_estimator_)
-    transport_rtt = network_quality_estimator_->GetTransportRTT();
-
-  base::TimeDelta min_timeout = features::kTimeoutTcpConnectAttemptMin.Get();
-  base::TimeDelta max_timeout = features::kTimeoutTcpConnectAttemptMax.Get();
-
-  if (!transport_rtt)
-    return max_timeout;
-
-  base::TimeDelta adaptive_timeout =
-      transport_rtt.value() *
-      features::kTimeoutTcpConnectAttemptRTTMultiplier.Get();
-
-  if (adaptive_timeout <= min_timeout)
-    return min_timeout;
-
-  if (adaptive_timeout >= max_timeout)
-    return max_timeout;
-
-  return adaptive_timeout;
+  return features::kTimeoutTcpConnectAttemptMax.Get();
 }
 
 }  // namespace net

@@ -23,7 +23,6 @@
 #include "base/memory/raw_ptr.h"
 #include "base/sequence_checker.h"
 #include "build/build_config.h"
-#include "ui/base/models/image_model.h"
 #include "ui/base/resource/resource_scale_factor.h"
 #include "ui/gfx/font_list.h"
 #include "ui/gfx/image/image.h"
@@ -196,10 +195,6 @@ class COMPONENT_EXPORT(UI_BASE) ResourceBundle {
 #endif  // BUILDFLAG(IS_ANDROID)
   };
 
-  using LottieData = std::vector<uint8_t>;
-  using LottieImageParseFunction = gfx::ImageSkia (*)(LottieData);
-  using LottieThemedImageParseFunction = ui::ImageModel (*)(LottieData);
-
   // Initialize the ResourceBundle for this process. Does not take ownership of
   // the |delegate| value. Returns the language selected or an empty string if
   // no candidate bundle file could be determined, or crashes the process if a
@@ -328,16 +323,6 @@ class COMPONENT_EXPORT(UI_BASE) ResourceBundle {
   // gfx::Image will perform a conversion, rather than using the native image
   // loading code of ResourceBundle.
   gfx::Image& GetNativeImageNamed(int resource_id);
-
-  // Loads a Lottie resource from `resource_id` and returns its decompressed
-  // contents. Returns `std::nullopt` if `resource_id` does not index a
-  // Lottie resource. The output of this is suitable for passing to
-  // `SkottieWrapper`.
-  std::optional<LottieData> GetLottieData(int resource_id) const;
-
-  // Gets a themed Lottie image (not animated) with the specified |resource_id|
-  // from the current module data. |ResourceBundle| owns the result.
-  const ui::ImageModel& GetThemedLottieImageNamed(int resource_id);
 
   // Returns true if LoadDataResourceBytes would return non-null data for the
   // specified |resource_id|.
@@ -554,7 +539,6 @@ class COMPONENT_EXPORT(UI_BASE) ResourceBundle {
   // Returns an empty image for when a resource cannot be loaded. This is a
   // bright red bitmap.
   gfx::Image& GetEmptyImage();
-  const ui::ImageModel& GetEmptyImageModel();
 
   // If mangling of localized strings is enabled, mangles |str| to make it
   // longer and to add begin and end markers so that any truncation of it is
@@ -589,11 +573,8 @@ class COMPONENT_EXPORT(UI_BASE) ResourceBundle {
   // ownership of the pointers.
   using ImageMap = std::map<int, gfx::Image>;
   ImageMap images_;
-  using ImageModelMap = std::map<int, ui::ImageModel>;
-  ImageModelMap image_models_;
 
   gfx::Image empty_image_;
-  ui::ImageModel empty_image_model_;
 
   // The various font lists used, as a map from a signed size delta from the
   // platform base font size, plus style, to the FontList. Cached to avoid

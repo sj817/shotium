@@ -76,7 +76,6 @@ class ChromeClient;
 class ConsoleMessageStorage;
 class Document;
 class DragCaret;
-class DragController;
 class FocusController;
 class Frame;
 class LocalFrame;
@@ -225,7 +224,6 @@ class CORE_EXPORT Page final : public GarbageCollected<Page>,
     return *autoscroll_controller_;
   }
   DragCaret& GetDragCaret() const { return *drag_caret_; }
-  DragController& GetDragController() const { return *drag_controller_; }
   FocusController& GetFocusController() const { return *focus_controller_; }
   SpatialNavigationController& GetSpatialNavigationController();
   SVGDocumentResourceTracker& GetSVGDocumentResourceTracker();
@@ -546,7 +544,6 @@ class CORE_EXPORT Page final : public GarbageCollected<Page>,
   const Member<AutoscrollController> autoscroll_controller_;
   Member<ChromeClient> chrome_client_;
   const Member<DragCaret> drag_caret_;
-  const Member<DragController> drag_controller_;
   const Member<FocusController> focus_controller_;
   const Member<PageScaleConstraintsSet> page_scale_constraints_set_;
   HeapLinkedHashSet<WeakMember<PageVisibilityObserver>>

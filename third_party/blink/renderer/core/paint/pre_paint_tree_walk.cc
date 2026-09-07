@@ -681,15 +681,6 @@ void PrePaintTreeWalk::WalkInternal(const LayoutObject& object,
                                   *context.tree_builder_context);
     property_tree_builder->UpdateForSelf();
   }
-  if (object.StyleRef().IsUnboundedElementActive()) {
-    DCHECK(RuntimeEnabledFeatures::UnboundedElementEnabled());
-    auto* html_element = DynamicTo<HTMLElement>(object.GetNode());
-    DCHECK(!html_element || object.StyleRef().IsUnboundedElementActive() ==
-                                html_element->IsUnboundedElementActive());
-    context.inside_active_unbounded = true;
-  }
-  object.GetMutableForPainting().UpdateIsActiveUnboundedElementOrDescendant(
-      context.inside_active_unbounded);
   // This must happen before paint invalidation because background painting
   // depends on the effective allowed touch action and blocking wheel event
   // handlers.

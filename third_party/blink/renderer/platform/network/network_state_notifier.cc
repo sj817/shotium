@@ -31,7 +31,6 @@
 #include "base/synchronization/lock.h"
 #include "base/task/single_thread_task_runner.h"
 #include "net/nqe/effective_connection_type.h"
-#include "net/nqe/network_quality_estimator_params.h"
 #include "services/network/public/cpp/client_hints.h"
 #include "third_party/blink/public/common/client_hints/client_hints.h"
 #include "third_party/blink/public/mojom/webpreferences/web_preferences.mojom-blink.h"

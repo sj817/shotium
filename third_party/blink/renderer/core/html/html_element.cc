@@ -35,7 +35,6 @@
 #include "third_party/blink/public/common/features.h"
 #include "third_party/blink/public/mojom/forms/form_control_type.mojom-blink.h"
 #include "third_party/blink/public/mojom/frame/frame.mojom-blink.h"
-#include "third_party/blink/public/mojom/unbounded_element/unbounded_element.mojom-blink.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_attach_internals_options.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_show_popover_options.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_toggle_popover_options.h"
@@ -116,7 +115,6 @@
 #include "third_party/blink/renderer/core/html/html_template_element.h"
 #include "third_party/blink/renderer/core/html/menu_safe_triangle.h"
 #include "third_party/blink/renderer/core/html/parser/html_parser_idioms.h"
-#include "third_party/blink/renderer/core/html/unbounded_event_data.h"
 #include "third_party/blink/renderer/core/html_names.h"
 #include "third_party/blink/renderer/core/input/keyboard_event_manager.h"
 #include "third_party/blink/renderer/core/input_type_names.h"
@@ -896,12 +894,6 @@ void HTMLElement::AttributeChanged(const AttributeModificationParams& params) {
     if (!IsFocusable()) {
       blur();
     }
-  } else if (params.name == html_names::kUnboundedAttr &&
-             RuntimeEnabledFeatures::UnboundedElementEnabled()) {
-    if (params.new_value.IsNull() &&
-        HasElementFlag(ElementFlags::kIsUnboundedElementActive)) {
-      SetUnboundedElementActive(false);
-    }
   }
 }
 
@@ -1527,83 +1519,6 @@ void MarkPopoverInvokersDirty(const HTMLElement& popover) {
   CHECK(popover.IsPopover());
 }
 }  // namespace
-
-bool HTMLElement::IsUnboundedElementActive() const {
-  DCHECK(RuntimeEnabledFeatures::UnboundedElementEnabled() ||
-         !HasElementFlag(ElementFlags::kIsUnboundedElementActive));
-  return HasElementFlag(ElementFlags::kIsUnboundedElementActive);
-}
-void HTMLElement::SetUnboundedElementActive(bool active,
-                                            UnboundedEvents fire_events) {
-  DCHECK(RuntimeEnabledFeatures::UnboundedElementEnabled());
-  DCHECK(!active || FastHasAttribute(html_names::kUnboundedAttr));
-  if (HasElementFlag(ElementFlags::kIsUnboundedElementActive) == active) {
-    return;
-  }
-  SetElementFlag(ElementFlags::kIsUnboundedElementActive, active);
-  if (!GetDocument().GetStyleEngine().InDetachLayoutTree() &&
-      !GetDocument().InStyleRecalc()) {
-    PseudoStateChanged(CSSSelector::kPseudoUnbounded);
-    // An active unbounded element is treated as stacked (gets its own
-    // PaintLayer) by default, which is managed via LayoutObject::IsStacked.
-    // Since this state is not a CSS property, we must explicitly trigger a
-    // local style recalc on the element itself to ensure its LayoutObject is
-    // updated. A local style change is sufficient because the unbounded state
-    // does not affect the style of the subtree (any CSS rules matching
-    // descendants via the :unbounded pseudo-class are already handled by
-    // PseudoStateChanged above).
-    SetNeedsStyleRecalc(
-        kLocalStyleChange,
-        StyleChangeReasonForTracing::Create(style_change_reason::kPseudoClass));
-    if (auto* layout_object = GetLayoutObject()) {
-      layout_object->AddSubtreePaintPropertyUpdateReason(
-          SubtreePaintPropertyUpdateReason::kContainerChainMayChange);
-    }
-  }
-  if (fire_events == UnboundedEvents::kFire) {
-    auto& event_data = EnsureUnboundedEventData();
-    String old_state = active ? keywords::kClosed : keywords::kOpen;
-    if (event_data.hasPendingEventTask()) {
-      old_state = event_data.pendingEventStartedClosed() ? keywords::kClosed
-                                                         : keywords::kOpen;
-      event_data.cancelPendingEventTask();
-    } else {
-      event_data.setPendingEventStartedClosed(active);
-    }
-    ToggleEvent* event = ToggleEvent::Create(
-        event_type_names::kUnbounded, Event::Cancelable::kNo, old_state,
-        active ? keywords::kOpen : keywords::kClosed, nullptr);
-    event->SetTarget(this);
-
-    event_data.setPendingEventTask(PostCancellableTask(
-        *GetDocument().GetTaskRunner(TaskType::kDOMManipulation), FROM_HERE,
-        BindOnce(
-            [](HTMLElement* element, ToggleEvent* event) {
-              if (element) {
-                element->DispatchEvent(*event);
-              }
-            },
-            WrapPersistent(this), WrapPersistent(event))));
-  } else {
-    DCHECK_EQ(fire_events, UnboundedEvents::kSuppress);
-    if (auto* event_data = GetUnboundedEventData()) {
-      event_data->cancelPendingEventTask();
-    }
-  }
-}
-
-UnboundedEventData* HTMLElement::GetUnboundedEventData() const {
-  if (const NodeRareData* data = RareData()) {
-    return data->GetUnboundedEventData();
-  }
-  return nullptr;
-}
-
-UnboundedEventData& HTMLElement::EnsureUnboundedEventData() {
-  auto pair = EnsureRareData().EnsureUnboundedEventData();
-  data_ = pair.second;
-  return pair.first.get();
-}
 
 bool HTMLElement::togglePopover(ExceptionState& exception_state) {
   return togglePopover(nullptr, exception_state);
@@ -3581,12 +3496,6 @@ void HTMLElement::RemovedFrom(ContainerNode& insertion_point) {
           HidePopoverTransitionBehavior::kNoEventsNoWaiting,
           /*exception_state=*/nullptr);
     }
-  }
-
-  if (RuntimeEnabledFeatures::UnboundedElementEnabled() &&
-      IsUnboundedElementActive() &&
-      !GetDocument().StatePreservingAtomicMoveInProgress()) {
-    SetUnboundedElementActive(false, UnboundedEvents::kSuppress);
   }
 
   Element::RemovedFrom(insertion_point);

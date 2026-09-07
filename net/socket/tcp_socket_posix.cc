@@ -150,35 +150,29 @@ base::TimeDelta GetTransportRtt(SocketDescriptor fd) {
 
 // static
 std::unique_ptr<TCPSocketPosix> TCPSocketPosix::Create(
-    std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
     NetLog* net_log,
     const NetLogSource& source) {
   return base::WrapUnique(new TCPSocketPosix(
-      std::move(socket_performance_watcher), net_log, source));
+      net_log, source));
 }
 
 // static
 std::unique_ptr<TCPSocketPosix> TCPSocketPosix::Create(
-    std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
     NetLogWithSource net_log_source) {
   return base::WrapUnique(new TCPSocketPosix(
-      std::move(socket_performance_watcher), net_log_source));
+      net_log_source));
 }
 
 TCPSocketPosix::TCPSocketPosix(
-    std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
     NetLog* net_log,
     const NetLogSource& source)
-    : socket_performance_watcher_(std::move(socket_performance_watcher)),
-      net_log_(NetLogWithSource::Make(net_log, NetLogSourceType::SOCKET)) {
+    : net_log_(NetLogWithSource::Make(net_log, NetLogSourceType::SOCKET)) {
   net_log_.BeginEventReferencingSource(NetLogEventType::SOCKET_ALIVE, source);
 }
 
 TCPSocketPosix::TCPSocketPosix(
-    std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
     NetLogWithSource net_log_source)
-    : socket_performance_watcher_(std::move(socket_performance_watcher)),
-      net_log_(net_log_source) {
+    : net_log_(net_log_source) {
   net_log_.BeginEvent(NetLogEventType::SOCKET_ALIVE);
 }
 
@@ -620,7 +614,7 @@ int TCPSocketPosix::BuildTcpSocketPosix(
   }
 
   *tcp_socket =
-      TCPSocketPosix::Create(nullptr, net_log_.net_log(), net_log_.source());
+      TCPSocketPosix::Create(net_log_.net_log(), net_log_.source());
   (*tcp_socket)->socket_ = std::move(accept_socket_);
   return OK;
 }
@@ -638,7 +632,6 @@ int TCPSocketPosix::HandleConnectCompleted(int rv) {
     tag_ = SocketTag();
   } else {
     net_log_.EndEvent(NetLogEventType::TCP_CONNECT_ATTEMPT);
-    NotifySocketPerformanceWatcher();
   }
 
 #if BUILDFLAG(IS_MAC)
@@ -703,9 +696,6 @@ int TCPSocketPosix::HandleReadCompleted(IOBuffer* buf, int rv) {
   if (rv < 0)
     return rv;
 
-  // Notify the watcher only if at least 1 byte was read.
-  if (rv > 0)
-    NotifySocketPerformanceWatcher();
 
   net_log_.AddByteTransferEvent(NetLogEventType::SOCKET_BYTES_RECEIVED, rv,
                                 buf->data());
@@ -733,30 +723,10 @@ int TCPSocketPosix::HandleWriteCompleted(IOBuffer* buf, int rv) {
     return rv;
   }
 
-  // Notify the watcher only if at least 1 byte was written.
-  if (rv > 0)
-    NotifySocketPerformanceWatcher();
 
   net_log_.AddByteTransferEvent(NetLogEventType::SOCKET_BYTES_SENT, rv,
                                 buf->data());
   return rv;
-}
-
-void TCPSocketPosix::NotifySocketPerformanceWatcher() {
-#if defined(HAVE_TCP_INFO)
-  // Check if |socket_performance_watcher_| is interested in receiving a RTT
-  // update notification.
-  if (!socket_performance_watcher_ ||
-      !socket_performance_watcher_->ShouldNotifyUpdatedRTT()) {
-    return;
-  }
-
-  base::TimeDelta rtt = GetTransportRtt(socket_->socket_fd());
-  if (rtt.is_zero())
-    return;
-
-  socket_performance_watcher_->OnUpdatedRTTAvailable(rtt);
-#endif  // defined(TCP_INFO)
 }
 
 bool TCPSocketPosix::GetEstimatedRoundTripTime(base::TimeDelta* out_rtt) const {

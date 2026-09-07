@@ -46,9 +46,7 @@ class HttpResponseInfo;
 class HttpUserAgentSettings;
 class NetLog;
 class NetLogWithSource;
-class NetworkQualityEstimator;
 class ProxyDelegate;
-class SocketPerformanceWatcherFactory;
 class SocketTag;
 class SpdySessionPool;
 class SSLCertRequestInfo;
@@ -72,8 +70,6 @@ struct NET_EXPORT_PRIVATE CommonConnectJobParams {
       ProxyDelegate* proxy_delegate,
       const HttpUserAgentSettings* http_user_agent_settings,
       SSLClientContext* ssl_client_context,
-      SocketPerformanceWatcherFactory* socket_performance_watcher_factory,
-      NetworkQualityEstimator* network_quality_estimator,
       NetLog* net_log,
       WebSocketEndpointLockManager* websocket_endpoint_lock_manager,
       HttpServerProperties* http_server_properties,
@@ -94,8 +90,6 @@ struct NET_EXPORT_PRIVATE CommonConnectJobParams {
   raw_ptr<ProxyDelegate> proxy_delegate;
   raw_ptr<const HttpUserAgentSettings> http_user_agent_settings;
   raw_ptr<SSLClientContext> ssl_client_context;
-  raw_ptr<SocketPerformanceWatcherFactory> socket_performance_watcher_factory;
-  raw_ptr<NetworkQualityEstimator> network_quality_estimator;
   raw_ptr<NetLog> net_log;
 
   // This must only be non-null for WebSockets.
@@ -293,12 +287,6 @@ class NET_EXPORT_PRIVATE ConnectJob {
   }
   SSLClientContext* ssl_client_context() {
     return common_connect_job_params_->ssl_client_context;
-  }
-  SocketPerformanceWatcherFactory* socket_performance_watcher_factory() {
-    return common_connect_job_params_->socket_performance_watcher_factory;
-  }
-  NetworkQualityEstimator* network_quality_estimator() {
-    return common_connect_job_params_->network_quality_estimator;
   }
   WebSocketEndpointLockManager* websocket_endpoint_lock_manager() {
     return common_connect_job_params_->websocket_endpoint_lock_manager;

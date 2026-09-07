@@ -51,7 +51,6 @@
 #include "third_party/blink/renderer/core/frame/web_feature.h"
 #include "third_party/blink/renderer/core/inspector/console_message.h"
 #include "third_party/blink/renderer/core/loader/document_loader.h"
-#include "third_party/blink/renderer/core/origin_trials/origin_trial_context.h"
 #include "third_party/blink/renderer/platform/bindings/source_location.h"
 #include "third_party/blink/renderer/platform/context_lifecycle_notifier.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
@@ -65,7 +64,7 @@
 
 namespace blink {
 
-ExecutionContext::ExecutionContext(Agent* agent, bool is_window)
+ExecutionContext::ExecutionContext(Agent* agent)
     : security_context_(this),
       agent_(agent),
       circular_sequential_id_(0),
@@ -73,15 +72,8 @@ ExecutionContext::ExecutionContext(Agent* agent, bool is_window)
       lifecycle_state_(mojom::FrameLifecycleState::kRunning),
       csp_delegate_(MakeGarbageCollected<ExecutionContextCSPDelegate>(*this)),
       window_interaction_tokens_(0),
-      origin_trial_context_(MakeGarbageCollected<OriginTrialContext>(this)),
-      // RuntimeFeatureStateOverrideContext shouldn't attempt to communcate back
-      // to browser for ExecutionContexts that aren't windows.
-      // TODO(https://crbug.com/1410817): Add support for workers/non-frames.
       runtime_feature_state_override_context_(
-          MakeGarbageCollected<RuntimeFeatureStateOverrideContext>(
-              this,
-              this,
-              /*send_runtime_features_to_browser=*/is_window)) {
+          MakeGarbageCollected<RuntimeFeatureStateOverrideContext>()) {
   DCHECK(agent_);
 }
 
@@ -485,7 +477,6 @@ void ExecutionContext::Trace(Visitor* visitor) const {
   visitor->Trace(public_url_manager_);
   visitor->Trace(pending_exceptions_);
   visitor->Trace(csp_delegate_);
-  visitor->Trace(origin_trial_context_);
   visitor->Trace(content_security_policy_);
   visitor->Trace(runtime_feature_state_override_context_);
   MojoBindingContext::Trace(visitor);
@@ -505,11 +496,6 @@ bool ExecutionContext::IsSameAgentCluster(
 
 mojom::blink::V8CacheOptions ExecutionContext::GetV8CacheOptions() const {
   return mojom::blink::V8CacheOptions::kDefault;
-}
-
-bool ExecutionContext::FeatureEnabled(
-    mojom::blink::OriginTrialFeature feature) const {
-  return origin_trial_context_->IsFeatureEnabled(feature);
 }
 
 bool ExecutionContext::IsFeatureEnabled(

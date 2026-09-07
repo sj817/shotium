@@ -19,7 +19,6 @@ import("//third_party/blink/renderer/build/scripts/scripts.gni")
 import("//third_party/blink/renderer/config.gni")
 import("//third_party/blink/renderer/platform/platform_generated.gni")
 import("//third_party/jinja2/jinja2.gni")
-import("//ui/gl/features.gni")
 
 if (is_ios) {
   import("//build/config/ios/bundle_data_from_filelist.gni")
@@ -64,7 +63,6 @@ blink_python_runner("runtime_enabled_features") {
     "$blink_platform_output_dir/runtime_enabled_features.cc",
     "$blink_platform_output_dir/runtime_enabled_features.h",
     "$blink_platform_output_dir/testing/runtime_enabled_features_test_helpers.h",
-    "$build_scripts_output_dir/runtime_enabled_features.pickle",
   ]
 
   args = [
@@ -202,15 +200,10 @@ group("blink_platform_public_deps") {
     "//cc",
     "//cc/animation",
     "//cc/paint",
-    "//gpu/command_buffer/client",
-    "//gpu/command_buffer/client:gles2_interface",
-    "//gpu/command_buffer/common",
-    "//gpu/command_buffer/common:gles2_utils",
     "//net",
     "//services/network/public/cpp",
     "//services/network/public/mojom",
     "//services/network/public/mojom:mojom_blink",
-    "//services/service_manager/public/mojom:mojom_blink",
     "//skia",
     "//third_party:jpeg",
     "//third_party/blink/public:blink_headers",
@@ -683,9 +676,6 @@ component("platform") {
     "geometry/skia_geometry_utils.h",
     "geometry/stroke_data.cc",
     "geometry/stroke_data.h",
-    "graphics/begin_frame_provider.cc",
-    "graphics/begin_frame_provider.h",
-    "graphics/begin_frame_provider_params.h",
     "graphics/bitmap_image.cc",
     "graphics/bitmap_image.h",
     "graphics/bitmap_image_metrics.cc",
@@ -711,10 +701,6 @@ component("platform") {
     "graphics/compositor_element_id.h",
     "graphics/compositor_filter_operations.cc",
     "graphics/compositor_filter_operations.h",
-    "graphics/cpu/arm/webgl_image_conversion_neon.h",
-    "graphics/cpu/loongarch64/webgl_image_conversion_lsx.h",
-    "graphics/cpu/mips/webgl_image_conversion_msa.h",
-    "graphics/cpu/x86/webgl_image_conversion_sse.h",
     "graphics/crossfade_generated_image.cc",
     "graphics/crossfade_generated_image.h",
     "graphics/css_image_animation_data_interface.h",
@@ -802,18 +788,7 @@ component("platform") {
     "graphics/flush_reason.h",
     "graphics/generated_image.cc",
     "graphics/generated_image.h",
-    "graphics/gpu/extensions_3d_util.cc",
-    "graphics/gpu/extensions_3d_util.h",
-    "graphics/gpu/image_extractor.cc",
-    "graphics/gpu/image_extractor.h",
-    "graphics/gpu/webgraphics_shared_image_interface_provider_impl.cc",
-    "graphics/gpu/webgraphics_shared_image_interface_provider_impl.h",
 
-    # xr_webgl_drawing_buffer.{h,cc} and
-    # xr_webgl_frame_transport_delegate.{h,cc} deleted: orphaned WebXR
-    # frame-transport plumbing left behind after the WebXR frame transport /
-    # modules/xr cut. No callers outside modules/xr, which no longer exists;
-    # base class XRFrameTransportDelegate was already gone.
     "graphics/gradient.cc",
     "graphics/gradient.h",
     "graphics/gradient_generated_image.cc",
@@ -844,8 +819,6 @@ component("platform") {
     "graphics/image_orientation_enum.h",
     "graphics/image_pattern.cc",
     "graphics/image_pattern.h",
-    "graphics/image_to_buffer_copier.cc",
-    "graphics/image_to_buffer_copier.h",
     "graphics/intercepting_canvas.cc",
     "graphics/intercepting_canvas.h",
     "graphics/interpolation_space.cc",
@@ -952,10 +925,7 @@ component("platform") {
     "graphics/raster_dark_mode_filter_impl.h",
     "graphics/replaying_canvas.cc",
     "graphics/replaying_canvas.h",
-    "graphics/resource_id_traits.h",
     "graphics/scoped_image_rendering_settings.h",
-    "graphics/scoped_raster_timer.cc",
-    "graphics/scoped_raster_timer.h",
     "graphics/scrollbar_theme_settings.cc",
     "graphics/scrollbar_theme_settings.h",
     "graphics/skia/sk_image_info_hash.h",
@@ -964,8 +934,6 @@ component("platform") {
     "graphics/skia/skia_utils.h",
     "graphics/static_bitmap_image.cc",
     "graphics/static_bitmap_image.h",
-    "graphics/static_bitmap_image_transform.cc",
-    "graphics/static_bitmap_image_transform.h",
     "graphics/styled_stroke_data.cc",
     "graphics/styled_stroke_data.h",
     "graphics/subtree_paint_property_update_reason.cc",
@@ -976,8 +944,6 @@ component("platform") {
     "graphics/unaccelerated_static_bitmap_image.cc",
     "graphics/unaccelerated_static_bitmap_image.h",
     "graphics/visual_rect_flags.h",
-    "graphics/viz_util.cc",
-    "graphics/viz_util.h",
     "heap_observer_list.h",
     "image-encoders/image_encoder.cc",
     "image-encoders/image_encoder.h",
@@ -1245,12 +1211,10 @@ component("platform") {
     ":blink_platform_public_deps",
     ":platform_export",
     "//build/rust/crubit",
-    "//gpu/command_buffer/client:raster_interface",
     "//mojo/public/cpp/base",
     "//mojo/public/cpp/bindings",
     "//services/network/public/mojom:mojom_headers",
     "//third_party/blink/public/mojom:color_scheme_mojo_bindings",
-    "//third_party/blink/public/mojom:embedded_frame_sink_mojo_bindings_blink",
     "//third_party/blink/renderer/platform/blob",
     "//third_party/blink/renderer/platform/heap",
     "//third_party/blink/renderer/platform/image-decoders:image_decoders",
@@ -1273,18 +1237,9 @@ component("platform") {
     "//build:chromecast_buildflags",
     "//cc",
 
-    # main_thread_scheduler_impl.cc calls PerformanceScenarioObserverList, but
-    # this dependency was never declared: the symbols arrived because //net
-    # pulled scenario_api in from its SQL disk cache block. Turning that block
-    # off made the missing edge visible. Declared here, where the use is.
-    "//components/performance_manager/scenario_api",
-    "//components/viz/client",
-    "//components/viz/common",
     "//crypto",
     "//mojo/public/cpp/bindings:wtf_support",
     "//services/network/public/mojom:mojom_shared",
-    "//services/service_manager/public/cpp",
-    "//services/viz/public/cpp/gpu",
     "//skia",
     "//skia:skcms",
     "//third_party/abseil-cpp:absl",
@@ -1298,16 +1253,12 @@ component("platform") {
     "//third_party/highway:libhwy",
     "//third_party/icu",
     "//third_party/libyuv",
-    "//third_party/one_euro_filter",
     "//third_party/zlib/google:compression_utils",
     "//ui/base/cursor/mojom:cursor_type_blink",
-    "//ui/base/prediction",
     "//ui/color",
     "//ui/color:mixers",
-    "//ui/events/ipc",
     "//ui/gfx/geometry",
     "//ui/gfx/mojom",
-    "//ui/gl:buildflags",
     "//ui/native_theme",
   ]
 
@@ -1427,23 +1378,18 @@ static_library("test_support") {
   defines = [ "BLINK_PLATFORM_TEST_IMPLEMENTATION" ]
 
   sources = [
-    "graphics/gpu/drawing_buffer_test_helpers.cc",
-    "graphics/gpu/drawing_buffer_test_helpers.h",
     "graphics/paint/paint_controller_test.h",
-    "graphics/test/fake_gles2_interface.h",
     "graphics/test/fake_web_graphics_context_3d_provider.h",
     "graphics/test/gpu_compositing_test_platform.h",
     "graphics/test/gpu_test_utils.cc",
     "graphics/test/gpu_test_utils.h",
     "graphics/test/mock_compositor_frame_sink.h",
     "graphics/test/mock_compositor_frame_sink_client.h",
-    "graphics/test/mock_embedded_frame_sink_provider.h",
     "graphics/test/mock_frame_sink_bundle.h",
     "graphics/test/mock_image_decoder.cc",
     "graphics/test/mock_image_decoder.h",
     "graphics/test/mock_paint_canvas.h",
     "graphics/test/stub_image.h",
-    "graphics/test/test_webgraphics_shared_image_interface_provider.h",
     "testing/compositor_test.cc",
     "testing/compositor_test.h",
     "testing/empty_web_media_player.cc",
@@ -1519,8 +1465,6 @@ static_library("test_support") {
   public_deps = [
     ":platform",
     "//cc",
-    "//components/viz/test:test_support",
-    "//gpu:raster",
     "//testing/gmock",
     "//testing/gtest",
     "//testing/perf",
@@ -1537,7 +1481,6 @@ static_library("test_support") {
     "//base/test:test_support",
     "//mojo/core/embedder",
     "//mojo/public/cpp/bindings",
-    "//services/service_manager/public/cpp",
     "//skia",
     "//skia:skcms",
     "//testing/libfuzzer/renderer_fuzzing",
@@ -1669,7 +1612,6 @@ source_set("blink_platform_unittests_sources") {
     "geometry/path_builder_test.cc",
     "geometry/path_test.cc",
     "geometry/physical_size_test.cc",
-    "graphics/accelerated_static_bitmap_image_test.cc",
     "graphics/bitmap_image_test.cc",
     "graphics/color_test.cc",
     "graphics/compositing/chunk_to_layer_mapper_test.cc",
@@ -1685,8 +1627,6 @@ source_set("blink_platform_unittests_sources") {
     "graphics/filters/fe_composite_test.cc",
     "graphics/filters/fe_turbulence_test.cc",
     "graphics/filters/image_filter_builder_test.cc",
-    "graphics/gpu/shared_gpu_context_test.cc",
-    "graphics/gpu/webgl_image_conversion_test.cc",
     "graphics/graphics_context_test.cc",
     "graphics/paint/cull_rect_test.cc",
     "graphics/paint/display_item_raster_invalidator_test.cc",
@@ -1708,7 +1648,6 @@ source_set("blink_platform_unittests_sources") {
     "graphics/parkable_image_segment_reader_test.cc",
     "graphics/parkable_image_test.cc",
     "graphics/raster_dark_mode_filter_impl_test.cc",
-    "graphics/static_bitmap_image_transform_test.cc",
     "heap_observer_list_test.cc",
     "json/json_parser_test.cc",
     "json/json_values_test.cc",
@@ -1799,7 +1738,6 @@ source_set("blink_platform_unittests_sources") {
     "//mojo/public/interfaces/bindings/tests:test_interfaces_blink",
     "//net/traffic_annotation:test_support",
     "//services/network/public/cpp:test_support",
-    "//services/viz/public/mojom",
     "//skia",
     "//skia:skcms",
     "//skia:test_fonts",
@@ -1817,7 +1755,6 @@ source_set("blink_platform_unittests_sources") {
     "//third_party/harfbuzz",
     "//third_party/libyuv",
     "//ui/base:features",
-    "//ui/base/prediction",
     "//ui/gfx",
     "//ui/gfx:test_support",
     "//ui/gfx/geometry",
@@ -2335,11 +2272,9 @@ source_set("unit_tests") {
     "graphics/canvas_resource_dispatcher_test.cc",
     "graphics/canvas_resource_test.cc",
     "graphics/deferred_image_decoder_test.cc",
-    "graphics/gpu/drawing_buffer_software_rendering_test.cc",
     "graphics/image_decoding_store_test.cc",
     "graphics/image_frame_generator_test.cc",
     "graphics/offscreen_canvas_placeholder_test.cc",
-    "graphics/scoped_raster_timer_test.cc",
 
     # Tests migrated from the web/tests directory.
     "exported/web_url_request_extra_data_test.cc",
@@ -2359,11 +2294,9 @@ source_set("unit_tests") {
     "//base",
     "//base/test:test_support",
     "//cc",
-    "//components/viz/test:test_support",
     "//skia:skcms",
     "//testing/gmock",
     "//testing/gtest",
     "//third_party/blink/public:test_headers",
   ]
-  public_deps = [ "//gpu:raster" ]
 }

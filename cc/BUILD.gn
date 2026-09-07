@@ -9,8 +9,6 @@ import("//cc/cc.gni")
 cc_component("cc") {
   sources = [
     "cc_export.h",
-    "input/browser_controls_offset_tag_modifications.h",
-    "input/browser_controls_offset_tags.h",
     "input/browser_controls_state.h",
     "input/event_listener_properties.h",
     "input/hit_test_opaqueness.cc",
@@ -32,8 +30,6 @@ cc_component("cc") {
     "trees/browser_controls_params.h",
     "trees/paint_holding_reason.h",
     "trees/property_ids.h",
-    "trees/render_frame_metadata.cc",
-    "trees/render_frame_metadata.h",
     "trees/scroll_source_type.h",
     "trees/sticky_position_constraint.cc",
     "trees/sticky_position_constraint.h",
@@ -42,7 +38,6 @@ cc_component("cc") {
   public_deps = [
     "//cc/base",
     "//cc/paint",
-    "//components/viz/common",
     "//skia",
   ]
   deps = [

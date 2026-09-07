@@ -48,7 +48,6 @@ class AtomicHTMLToken;
 class Element;
 class HTMLDocumentParser;
 class ParserRootInsertionPoint;
-class StreamingSanitizer;
 
 class HTMLTreeBuilder final : public GarbageCollected<HTMLTreeBuilder> {
  public:
@@ -61,8 +60,7 @@ class HTMLTreeBuilder final : public GarbageCollected<HTMLTreeBuilder> {
                   ParserContentPolicy,
                   const HTMLParserOptions&,
                   bool include_shadow_roots,
-                  CustomElementRegistry* registry,
-                  StreamingSanitizer* sanitizer = nullptr);
+                  CustomElementRegistry* registry);
   // This constructor is used for fragment parsing.
   HTMLTreeBuilder(HTMLDocumentParser*,
                   DocumentFragment*,
@@ -71,7 +69,6 @@ class HTMLTreeBuilder final : public GarbageCollected<HTMLTreeBuilder> {
                   const HTMLParserOptions&,
                   bool include_shadow_roots,
                   CustomElementRegistry* registry,
-                  StreamingSanitizer*,
                   ParserRootInsertionPoint* root_insertion_point);
 
   CORE_EXPORT static void ResetCachedFeaturesForTesting();
@@ -85,7 +82,6 @@ class HTMLTreeBuilder final : public GarbageCollected<HTMLTreeBuilder> {
                   DocumentFragment* fragment_target,
                   Element* fragment_context_element,
                   CustomElementRegistry* registry,
-                  StreamingSanitizer*,
                   ParserRootInsertionPoint* root_insertion_point);
 
  public:

@@ -149,7 +149,6 @@ class BLINK_EXPORT WebPerformanceMetricsForReporting {
   base::TimeTicks FirstContentfulPaintAsMonotonicTime() const;
   base::TimeTicks FirstContentfulPaintRenderedButNotPresentedAsMonotonicTime()
       const;
-  double FirstMeaningfulPaint() const;
   LargestContentfulPaintDetailsForReporting LargestContentfulDetailsForMetrics()
       const;
   LargestContentfulPaintDetailsForReporting

@@ -263,8 +263,6 @@ Frame* CreateNewWindow(LocalFrame& opener_frame,
   request.SetInitiatorFrameToken(opener_frame.GetLocalFrameToken());
   request.SetInitiatorStateToken(opener_frame.GetInitiatorStateToken());
   request.SetInitiatorDocumentToken(opener_frame.GetDocumentToken());
-  request.SetInitiatorNavigationStateKeepAliveHandle(
-      opener_frame.IssueKeepAliveHandle());
 
   // Make a copy in order to adjust the requested size. We don't constrain the
   // geometry to the screen (via ChromeClientImpl::AdjustWindowRectForDisplay)

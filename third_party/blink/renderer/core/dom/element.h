@@ -25,7 +25,6 @@
 #ifndef THIRD_PARTY_BLINK_RENDERER_CORE_DOM_ELEMENT_H_
 #define THIRD_PARTY_BLINK_RENDERER_CORE_DOM_ELEMENT_H_
 
-#include "third_party/blink/renderer/core/sanitizer/sanitizer.h"
 
 #include "base/check_op.h"
 #include "base/dcheck_is_on.h"
@@ -146,7 +145,6 @@ class ScrollMarkerGroupData;
 class ScrollPromiseResolver;
 class ScrollResult;
 class ScrollToOptions;
-class SetHTMLOptions;
 class SetHTMLUnsafeOptions;
 class ShadowRoot;
 class ShadowRootInit;
@@ -196,7 +194,6 @@ enum class ElementFlags {
   kContainsFullScreenElement = 1 << 3,
   kIsInTopLayer = 1 << 4,
   kContainsPersistentVideo = 1 << 5,
-  kIsUnboundedElementActive = 1 << 8,
 
   kNumberOfElementFlags = 9,  // Size of bitfield used to store the flags.
 };
@@ -1400,7 +1397,7 @@ class CORE_EXPORT Element : public ContainerNode {
 
   // The setHTMLUnsafe method is like `setInnerHTML()` except that a) it parses
   // declarative shadow DOM by default, and b) will eventually have a second
-  // argument to set Sanitizer parameters.
+  // argument to control HTML parsing.
   // See https://github.com/whatwg/html/pull/9538.
   void SetHTMLUnsafeWithoutTrustedTypes(const String& html,
                                         ExceptionState& = ASSERT_NO_EXCEPTION);
@@ -1411,7 +1408,6 @@ class CORE_EXPORT Element : public ContainerNode {
   void setHTMLUnsafe(const V8UnionStringOrTrustedHTML* html,
                      TrustedParserOptions*,
                      ExceptionState&);
-  void setHTML(const String& html, SetHTMLOptions*, ExceptionState&);
 
   void setPointerCapture(PointerId, ExceptionState&);
   void releasePointerCapture(PointerId, ExceptionState&);
@@ -1996,8 +1992,6 @@ class CORE_EXPORT Element : public ContainerNode {
   // heuristics.
   void SetHasBeenHeuristicCustomPasswordCSS();
 
-  void ClearSkeletonPseudo();
-  PseudoElement& EnsureSkeletonPseudo();
 
  protected:
   // Returns true if this element is a native password field or has been
@@ -2243,7 +2237,6 @@ class CORE_EXPORT Element : public ContainerNode {
 
   void UpdateColumnPseudoElements(const StyleRecalcChange,
                                   const StyleRecalcContext&);
-  void UpdateSkeleton(const StyleRecalcChange, const StyleRecalcContext&);
   PseudoElement* UpdatePseudoElement(
       PseudoId,
       const StyleRecalcChange,
@@ -2493,7 +2486,6 @@ class CORE_EXPORT Element : public ContainerNode {
   void SetInnerHTMLInternal(const String&,
                             FragmentParserConfig::ParseDeclarativeShadowRoots,
                             FragmentParserConfig::ForceHtml,
-                            Sanitizer::Mode,
                             const FragmentParserOptions&,
                             const AtomicString& property_name,
                             ExceptionState&);

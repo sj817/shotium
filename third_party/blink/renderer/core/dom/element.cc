@@ -48,7 +48,6 @@
 #include "third_party/blink/renderer/bindings/core/v8/v8_scroll_container.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_scroll_into_view_options.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_scroll_to_options.h"
-#include "third_party/blink/renderer/bindings/core/v8/v8_set_html_options.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_set_html_unsafe_options.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_shadow_root_init.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_timeline_range.h"
@@ -243,7 +242,6 @@
 #include "third_party/blink/renderer/core/page/page.h"
 #include "third_party/blink/renderer/core/page/page_animator.h"
 #include "third_party/blink/renderer/core/page/scrolling/root_scroller_controller.h"
-#include "third_party/blink/renderer/core/page/scrolling/sync_scroll_attempt_heuristic.h"
 #include "third_party/blink/renderer/core/page/spatial_navigation.h"
 #include "third_party/blink/renderer/core/paint/object_paint_invalidator.h"
 #include "third_party/blink/renderer/core/paint/paint_layer.h"
@@ -251,8 +249,6 @@
 #include "third_party/blink/renderer/core/probe/core_probes.h"
 #include "third_party/blink/renderer/core/resize_observer/resize_observation.h"
 #include "third_party/blink/renderer/core/resize_observer/resize_observer_size.h"
-#include "third_party/blink/renderer/core/sanitizer/sanitizer.h"
-#include "third_party/blink/renderer/core/sanitizer/sanitizer_api.h"
 #include "third_party/blink/renderer/core/scroll/scroll_into_view_util.h"
 #include "third_party/blink/renderer/core/scroll/scroll_promise_resolver.h"
 #include "third_party/blink/renderer/core/scroll/scroll_types.h"
@@ -2419,7 +2415,6 @@ double Element::scrollLeft() {
 
   // TODO(crbug.com/1499981): This should be removed once synchronized scrolling
   // impact is understood.
-  SyncScrollAttemptHeuristic::DidAccessScrollOffset();
 
   GetDocument().UpdateStyleAndLayoutForNode(this,
                                             DocumentUpdateReason::kJavaScript);
@@ -2459,7 +2454,6 @@ double Element::scrollTop() {
 
   // TODO(crbug.com/1499981): This should be removed once synchronized scrolling
   // impact is understood.
-  SyncScrollAttemptHeuristic::DidAccessScrollOffset();
 
   GetDocument().UpdateStyleAndLayoutForNode(this,
                                             DocumentUpdateReason::kJavaScript);
@@ -2508,7 +2502,6 @@ void Element::setScrollLeft(double new_left) {
 
   // TODO(crbug.com/1499981): This should be removed once synchronized scrolling
   // impact is understood.
-  SyncScrollAttemptHeuristic::DidSetScrollOffset();
 
   GetDocument().UpdateStyleAndLayoutForNode(this,
                                             DocumentUpdateReason::kJavaScript);
@@ -2565,7 +2558,6 @@ void Element::setScrollTop(double new_top) {
 
   // TODO(crbug.com/1499981): This should be removed once synchronized scrolling
   // impact is understood.
-  SyncScrollAttemptHeuristic::DidSetScrollOffset();
 
   GetDocument().UpdateStyleAndLayoutForNode(this,
                                             DocumentUpdateReason::kJavaScript);
@@ -2672,7 +2664,6 @@ bool Element::ScrollTo(const ScrollToOptions* scroll_to_options,
 
   // TODO(crbug.com/1499981): This should be removed once synchronized scrolling
   // impact is understood.
-  SyncScrollAttemptHeuristic::DidSetScrollOffset();
 
   // FIXME: This should be removed once scroll updates are processed only after
   // the compositing update. See http://crbug.com/420741.
@@ -2723,7 +2714,6 @@ void Element::scrollByForTesting(double x, double y) {
 
   // TODO(crbug.com/1499981): This should be removed once synchronized scrolling
   // impact is understood.
-  SyncScrollAttemptHeuristic::DidSetScrollOffset();
 
   // FIXME: This should be removed once scroll updates are processed only after
   // the compositing update. See http://crbug.com/420741.
@@ -3186,7 +3176,6 @@ DOMPoint* Element::convertPointFromNode(
 Vector<gfx::RectF> Element::GetClientRectsNoAdjustment() {
   // TODO(crbug.com/1499981): This should be removed once synchronized scrolling
   // impact is understood.
-  SyncScrollAttemptHeuristic::DidAccessScrollOffset();
   GetDocument().UpdateStyleAndLayoutForNode(this,
                                             DocumentUpdateReason::kJavaScript);
 
@@ -3238,7 +3227,6 @@ DOMRect* Element::GetBoundingClientRect() {
 DOMRect* Element::GetBoundingClientRectForBinding() {
   // TODO(crbug.com/1499981): This should be removed once synchronized scrolling
   // impact is understood.
-  SyncScrollAttemptHeuristic::DidAccessScrollOffset();
   return GetBoundingClientRect();
 }
 
@@ -4845,9 +4833,6 @@ void Element::MarkNonSlottedHostChildrenForStyleRecalc() {
 }
 
 const ComputedStyle* Element::ParentComputedStyle() const {
-  if (IsSkeletonPseudoElement()) {
-    return GetDocument().GetStyleResolver().InitialStyleForElement();
-  }
   Element* parent = LayoutTreeBuilderTraversal::ParentElement(*this);
   auto is_rendered_as_sibling = [this] {
     return IsBackdropPseudoElement() || IsScrollButtonPseudoElement() ||
@@ -5064,12 +5049,6 @@ void Element::RecalcStyle(const StyleRecalcChange change,
     UpdatePseudoElement(kPseudoIdOverscrollAreaParent, child_change,
                         child_recalc_context);
 
-    if (RuntimeEnabledFeatures::DeclarativeSkeletonsEnabled() &&
-        IsDocumentElement()) {
-      // ::skeleton is created based on an available skeleton from
-      // SkeletonLoader and does not rely on bits on ComputedStyle.
-      UpdateSkeleton(child_change, child_recalc_context);
-    }
 
     if (need_to_check_pseudos) {
       UpdatePseudoElement(kPseudoIdAfter, child_change, child_recalc_context);
@@ -5759,7 +5738,6 @@ void Element::RebuildLayoutTree(WhitespaceAttacher& whitespace_attacher) {
       } else {
         child_attacher = &whitespace_attacher;
       }
-      RebuildPseudoElementLayoutTree(kPseudoIdSkeleton, *child_attacher);
       RebuildOverscrollAreaLayoutTree(*child_attacher);
       if (has_pseudo_elements) {
         RebuildPseudoElementLayoutTree(kPseudoIdInterestButton,
@@ -8783,7 +8761,6 @@ void Element::SetInnerHTMLInternal(
     const String& html,
     FragmentParserConfig::ParseDeclarativeShadowRoots parse_declarative_shadows,
     FragmentParserConfig::ForceHtml force_html,
-    Sanitizer::Mode sanitizer_mode,
     const FragmentParserOptions& options,
     const AtomicString& property_name,
     ExceptionState& exception_state) {
@@ -8797,8 +8774,7 @@ void Element::SetInnerHTMLInternal(
 
   DocumentFragment* fragment =
       ParseHTMLFragment(html,
-                        {.sanitizer_mode = sanitizer_mode,
-                         .parse_declarative_shadows = parse_declarative_shadows,
+                        {.parse_declarative_shadows = parse_declarative_shadows,
                          .force_html = force_html,
                          .interface_name = trusted_types_names::kElement,
                          .property_name = property_name,
@@ -8821,7 +8797,7 @@ void Element::SetInnerHTMLWithoutTrustedTypes(const String& html,
                                               ExceptionState& exception_state) {
   SetInnerHTMLInternal(
       html, FragmentParserConfig::ParseDeclarativeShadowRoots::kDontParse,
-      FragmentParserConfig::ForceHtml::kDontForce, Sanitizer::Mode::kUnsafe,
+      FragmentParserConfig::ForceHtml::kDontForce,
       FragmentParserOptions(), trusted_types_names::kInnerHTML,
       exception_state);
 }
@@ -8840,7 +8816,7 @@ void Element::setInnerHTML(
   SetInnerHTMLInternal(
       compliant_string,
       FragmentParserConfig::ParseDeclarativeShadowRoots::kDontParse,
-      FragmentParserConfig::ForceHtml::kDontForce, Sanitizer::Mode::kUnsafe,
+      FragmentParserConfig::ForceHtml::kDontForce,
       resolved_options, trusted_types_names::kInnerHTML, exception_state);
 }
 
@@ -9632,16 +9608,6 @@ bool Element::ShouldStoreComputedStyle(const ComputedStyle& style) const {
     return true;
   }
 
-  if (IsSkeletonPseudoElement()) {
-    // The ::skeleton pseudo element does not create a layout box, but it has
-    // a set of initial styles to make sure style recalc traverses into its
-    // shadow tree which contains the DOM tree for rendering the skeleton.
-    // We could probably have forced it to be display:contents to return true
-    // for the last condition in this function, but then an explicit inherit of
-    // the display property for the skeleton DOM root element would have
-    // computed to 'contents'.
-    return true;
-  }
 
   if (IsPseudoElement() && style.Display() == EDisplay::kNone) {
     if (const ComputedStyle* base = style.GetBaseComputedStyle()) {
@@ -9969,38 +9935,6 @@ void Element::UpdateColumnPseudoElements(const StyleRecalcChange change,
   for (ColumnPseudoElement* column : *columns) {
     if (change.ShouldUpdatePseudoElement(*column)) {
       column->RecalcStyle(change, context);
-    }
-  }
-}
-
-void Element::ClearSkeletonPseudo() {
-  if (GetPseudoElement(kPseudoIdSkeleton)) {
-    ClearPseudoElement(kPseudoIdSkeleton);
-    // Normally, pseudo elements are added/removed during style recalc,
-    // which means we do not need to notify the StyleEngine about traversal
-    // roots being removed. The ::skeleton pseudo, however is synchronously
-    // created/destroyed outside of the lifecycle update and need to notify
-    // the StyleEngine like DOM removals.
-    GetDocument().GetStyleEngine().ChildrenRemoved(*this);
-  }
-}
-
-PseudoElement& Element::EnsureSkeletonPseudo() {
-  CHECK(RuntimeEnabledFeatures::DeclarativeSkeletonsEnabled());
-  ClearSkeletonPseudo();
-  PseudoElement* pseudo_element =
-      PseudoElement::Create(this, kPseudoIdSkeleton);
-  data_ = EnsureRareData().SetPseudoElement(kPseudoIdSkeleton, pseudo_element);
-  pseudo_element->InsertedInto(*this);
-  pseudo_element->SetStyleChangeOnInsertion();
-  return *pseudo_element;
-}
-
-void Element::UpdateSkeleton(const StyleRecalcChange change,
-                             const StyleRecalcContext& context) {
-  if (PseudoElement* skeleton_pseudo = GetPseudoElement(kPseudoIdSkeleton)) {
-    if (change.ShouldUpdatePseudoElement(*skeleton_pseudo)) {
-      skeleton_pseudo->RecalcStyle(change, context);
     }
   }
 }
@@ -12787,7 +12721,7 @@ void Element::SetHTMLUnsafeWithoutTrustedTypes(
   UseCounter::Count(GetDocument(), WebFeature::kHTMLUnsafeMethods);
   SetInnerHTMLInternal(
       html, FragmentParserConfig::ParseDeclarativeShadowRoots::kParse,
-      FragmentParserConfig::ForceHtml::kForce, Sanitizer::Mode::kUnsafe,
+      FragmentParserConfig::ForceHtml::kForce,
       FragmentParserOptions(), trusted_types_names::kSetHTMLUnsafe,
       exception_state);
 }
@@ -12806,7 +12740,7 @@ void Element::setHTMLUnsafe(const V8UnionStringOrTrustedHTML* html,
   SetInnerHTMLInternal(
       compliant_string,
       FragmentParserConfig::ParseDeclarativeShadowRoots::kParse,
-      FragmentParserConfig::ForceHtml::kForce, Sanitizer::Mode::kUnsafe,
+      FragmentParserConfig::ForceHtml::kForce,
       resolved_options, trusted_types_names::kSetHTMLUnsafe, exception_state);
 }
 
@@ -12814,7 +12748,6 @@ void Element::setHTMLUnsafe(const V8UnionStringOrTrustedHTML* html,
 void Element::setHTMLUnsafe(const V8UnionStringOrTrustedHTML* html,
                             SetHTMLUnsafeOptions* options,
                             ExceptionState& exception_state) {
-  CHECK(RuntimeEnabledFeatures::SanitizerAPIEnabled());
   UseCounter::Count(GetDocument(), WebFeature::kHTMLUnsafeMethods);
 
   FragmentParserOptions resolved_options(options);
@@ -12828,7 +12761,7 @@ void Element::setHTMLUnsafe(const V8UnionStringOrTrustedHTML* html,
   SetInnerHTMLInternal(
       compliant_string,
       FragmentParserConfig::ParseDeclarativeShadowRoots::kParse,
-      FragmentParserConfig::ForceHtml::kForce, Sanitizer::Mode::kUnsafe,
+      FragmentParserConfig::ForceHtml::kForce,
       resolved_options, trusted_types_names::kSetHTMLUnsafe, exception_state);
 }
 
@@ -12848,19 +12781,8 @@ void Element::setHTMLUnsafe(const V8UnionStringOrTrustedHTML* html,
   SetInnerHTMLInternal(
       compliant_string,
       FragmentParserConfig::ParseDeclarativeShadowRoots::kParse,
-      FragmentParserConfig::ForceHtml::kForce, Sanitizer::Mode::kUnsafe,
+      FragmentParserConfig::ForceHtml::kForce,
       resolved_options, trusted_types_names::kSetHTMLUnsafe, exception_state);
-}
-
-void Element::setHTML(const String& html,
-                      SetHTMLOptions* options,
-                      ExceptionState& exception_state) {
-  CHECK(RuntimeEnabledFeatures::SanitizerAPIEnabled());
-  SetInnerHTMLInternal(
-      html, FragmentParserConfig::ParseDeclarativeShadowRoots::kParse,
-      FragmentParserConfig::ForceHtml::kForce, Sanitizer::Mode::kSafe,
-      FragmentParserOptions(options), trusted_types_names::kSetHTML,
-      exception_state);
 }
 
 void Element::SetNamedTriggers(NamedAnimationTriggerMap&& named_triggers) {

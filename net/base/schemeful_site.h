@@ -23,11 +23,6 @@ class BlinkSchemefulSite;
 class StorageKey;
 }  // namespace blink
 
-namespace IPC {
-template <class P>
-struct ParamTraits;
-}  // namespace IPC
-
 namespace network::mojom {
 class SchemefulSiteDataView;
 }  // namespace network::mojom
@@ -171,7 +166,6 @@ class NET_EXPORT SchemefulSite {
   // IPC serialization code needs to access internal origin.
   friend struct mojo::StructTraits<network::mojom::SchemefulSiteDataView,
                                    SchemefulSite>;
-  friend struct IPC::ParamTraits<net::SchemefulSite>;
 
   friend class blink::BlinkSchemefulSite;
 

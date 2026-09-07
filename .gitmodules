@@ -16,9 +16,6 @@
 [submodule "net/third_party/quiche/src"]
 	path = net/third_party/quiche/src
 	url = https://quiche.googlesource.com/quiche
-[submodule "third_party/angle"]
-	path = third_party/angle
-	url = https://chromium.googlesource.com/angle/angle
 [submodule "third_party/highway/src"]
 	path = third_party/highway/src
 	url = https://chromium.googlesource.com/external/github.com/google/highway
@@ -103,18 +100,6 @@
 [submodule "third_party/skia"]
 	path = third_party/skia
 	url = https://skia.googlesource.com/skia
-[submodule "third_party/spirv-headers/src"]
-	path = third_party/spirv-headers/src
-	url = https://chromium.googlesource.com/external/github.com/KhronosGroup/SPIRV-Headers
-[submodule "third_party/spirv-tools/src"]
-	path = third_party/spirv-tools/src
-	url = https://chromium.googlesource.com/external/github.com/KhronosGroup/SPIRV-Tools
-[submodule "third_party/vulkan-headers/src"]
-	path = third_party/vulkan-headers/src
-	url = https://chromium.googlesource.com/external/github.com/KhronosGroup/Vulkan-Headers
-[submodule "third_party/vulkan-loader/src"]
-	path = third_party/vulkan-loader/src
-	url = https://chromium.googlesource.com/external/github.com/KhronosGroup/Vulkan-Loader
 [submodule "third_party/wuffs/src"]
 	path = third_party/wuffs/src
 	url = https://skia.googlesource.com/external/github.com/google/wuffs-mirror-release-c

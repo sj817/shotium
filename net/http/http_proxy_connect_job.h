@@ -34,7 +34,6 @@ namespace net {
 
 class HttpAuthController;
 class HttpResponseInfo;
-class NetworkQualityEstimator;
 class SocketTag;
 class ProxyClientSocket;
 class SpdyStreamRequest;
@@ -177,18 +176,15 @@ class NET_EXPORT_PRIVATE HttpProxyConnectJob : public ConnectJob,
   // is used for HTTP proxies during connection establishment and SSL
   // negotiation for the connection to the proxy itself. In those cases, returns
   // the connection timeout that will be used by a HttpProxyConnectJob created
-  // with the specified parameters, given current network conditions. Otherwise,
+  // on the current platform. Otherwise,
   // returns base::TimeDelta().
-  static base::TimeDelta AlternateNestedConnectionTimeout(
-      const HttpProxySocketParams& params,
-      const NetworkQualityEstimator* network_quality_estimator);
+  static base::TimeDelta AlternateNestedConnectionTimeout();
 
   // Returns the timeout for establishing a tunnel after a connection has been
   // established.
   static base::TimeDelta TunnelTimeoutForTesting();
 
   // Updates the field trial parameters used in calculating timeouts.
-  static void UpdateFieldTrialParametersForTesting();
 
   enum class HttpConnectResult {
     kSuccess,

@@ -231,7 +231,7 @@
 {%- endmacro %}
 
 {%- macro assert_nullable_output_type_if_necessary(kind, name) -%}
-{%-   if kind|is_nullable_kind and not kind|is_native_only_kind %}
+{%-   if kind|is_nullable_kind %}
 static_assert(
     mojo::internal::IsValidUserTypeForOptionalValue<
         {{kind|unmapped_type_for_serializer}}, UserType>(),

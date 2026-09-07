@@ -102,16 +102,6 @@ struct CORE_EXPORT FrameLoadRequest {
     triggering_event_info_ = info;
   }
 
-  mojo::PendingRemote<mojom::blink::NavigationStateKeepAliveHandle>
-  TakeInitiatorNavigationStateKeepAliveHandle() {
-    return std::move(initiator_navigation_state_keep_alive_handle_);
-  }
-  void SetInitiatorNavigationStateKeepAliveHandle(
-      mojo::PendingRemote<mojom::blink::NavigationStateKeepAliveHandle>
-          handle) {
-    initiator_navigation_state_keep_alive_handle_ = std::move(handle);
-  }
-
   SourceLocation* GetSourceLocation() { return source_location_; }
   void SetSourceLocation(SourceLocation* source_location) {
     source_location_ = source_location;
@@ -263,8 +253,6 @@ struct CORE_EXPORT FrameLoadRequest {
   std::optional<LocalFrameToken> initiator_frame_token_;
   base::UnguessableToken initiator_state_token_;
   std::optional<DocumentToken> initiator_document_token_;
-  mojo::PendingRemote<mojom::blink::NavigationStateKeepAliveHandle>
-      initiator_navigation_state_keep_alive_handle_;
   SourceLocation* source_location_ = nullptr;
   KURL requestor_base_url_;
 

@@ -89,18 +89,6 @@ class CORE_EXPORT PerformanceTimingForReporting final
   // be used for correlation with other events internal to blink.
   base::TimeTicks FirstContentfulPaintAsMonotonicTimeForMetrics() const;
 
-  // The time of the first 'meaningful' paint, A meaningful paint is a paint
-  // where the page's primary content is visible.
-  uint64_t FirstMeaningfulPaint() const;
-
-  // The time of the candidate of first 'meaningful' paint, A meaningful paint
-  // candidate indicates the first time we considered a paint to qualify as the
-  // potential first meaningful paint. But, be careful that it may be an
-  // optimistic (i.e., too early) estimate.
-  // TODO(crbug.com/848639): This function is exposed as an experiment, and if
-  // not useful, this function can be removed.
-  uint64_t FirstMeaningfulPaintCandidate() const;
-
   LargestContentfulPaintDetailsForReporting
   LargestContentfulPaintDetailsForMetrics() const {
     return largest_contentful_paint_details_for_metrics_;

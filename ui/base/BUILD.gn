@@ -12,7 +12,6 @@ import("//build/config/locales.gni")
 import("//build/config/ozone.gni")
 import("//build/config/sanitizers/sanitizers.gni")
 import("//build/config/ui.gni")
-import("//skia/features.gni")
 import("//testing/libfuzzer/fuzzer_test.gni")
 import("//testing/test.gni")
 import("//third_party/jni_zero/jni_zero.gni")
@@ -127,12 +126,6 @@ component("base") {
     "default_style.h",
     "device_form_factor.h",
     "device_form_factor_desktop.cc",
-    "dragdrop/drop_target_event.cc",
-    "dragdrop/drop_target_event.h",
-    "dragdrop/os_exchange_data.cc",
-    "dragdrop/os_exchange_data.h",
-    "dragdrop/os_exchange_data_provider_factory.cc",
-    "dragdrop/os_exchange_data_provider_factory.h",
     "ime/utf_offset.cc",
     "ime/utf_offset.h",
     "l10n/chromium_language_matcher.cc",
@@ -188,8 +181,6 @@ component("base") {
     "pointer/touch_ui_controller.cc",
     "pointer/touch_ui_controller.h",
     "resource/allowlist.h",
-    "resource/lottie_resource.cc",
-    "resource/lottie_resource.h",
     "resource/resource_bundle.cc",
     "resource/resource_bundle.h",
     "resource/scoped_startup_resource_bundle.cc",
@@ -233,12 +224,6 @@ component("base") {
 
   if (is_win) {
     sources += [
-      "dragdrop/drag_source_win.cc",
-      "dragdrop/drag_source_win.h",
-      "dragdrop/drop_target_win.cc",
-      "dragdrop/drop_target_win.h",
-      "dragdrop/os_exchange_data_provider_win.cc",
-      "dragdrop/os_exchange_data_provider_win.h",
       "l10n/l10n_util_win.cc",
       "l10n/l10n_util_win.h",
       "resource/resource_bundle_win.cc",
@@ -334,10 +319,6 @@ component("base") {
       "cocoa/user_interface_item_command_handler.h",
       "cocoa/views_hostable.h",
       "cocoa/window_size_constants.h",
-      "dragdrop/os_exchange_data_provider_builder_mac.h",
-      "dragdrop/os_exchange_data_provider_builder_mac.mm",
-      "dragdrop/os_exchange_data_provider_mac.h",
-      "dragdrop/os_exchange_data_provider_mac.mm",
       "resource/resource_bundle_mac.mm",
     ]
   }
@@ -497,7 +478,6 @@ component("base") {
     "//third_party/modp_b64",
     "//third_party/zlib",
     "//third_party/zlib/google:compression_utils",
-    "//ui/base:data_exchange",
     "//ui/base/clipboard:clipboard_types",
     "//ui/base/dragdrop/mojom",
     "//ui/base/interaction",
@@ -513,7 +493,6 @@ component("base") {
 
   if (use_blink) {
     public_deps += [
-      "//ui/base/clipboard:file_info",
       "//ui/events:dom_keycode_converter",
       "//ui/events:events_base",
       "//ui/events/platform",
@@ -537,10 +516,8 @@ component("base") {
 
   if (use_blink) {
     deps += [
-      "//cc/paint",
       "//ui/events",
       "//ui/events/devices",
-      "//ui/lottie",
     ]
   }
 
@@ -575,13 +552,10 @@ component("base") {
 
   if (is_chromeos || (use_aura && is_linux) || is_fuchsia) {
     sources += [
-      "dragdrop/os_exchange_data_provider_non_backed.cc",
-      "dragdrop/os_exchange_data_provider_non_backed.h",
     ]
   }
 
   if (is_mac || is_win) {
-    deps += [ "//ui/base/clipboard" ]
   }
 
   if (!use_aura) {
@@ -609,12 +583,6 @@ component("base") {
 
   if (!toolkit_views && !use_aura) {
     sources -= [
-      "dragdrop/drop_target_event.cc",
-      "dragdrop/drop_target_event.h",
-      "dragdrop/os_exchange_data.cc",
-      "dragdrop/os_exchange_data.h",
-      "dragdrop/os_exchange_data_provider_factory.cc",
-      "dragdrop/os_exchange_data_provider_factory.h",
       "nine_image_painter_factory.cc",
       "nine_image_painter_factory.h",
     ]
@@ -645,30 +613,6 @@ if (is_ios) {
     deps = [ "//base" ]
     frameworks = [ "Foundation.framework" ]
   }
-}
-
-component("data_exchange") {
-  defines = [ "IS_UI_BASE_DATA_EXCHANGE_IMPL" ]
-
-  sources = [
-    "dragdrop/download_file_info.cc",
-    "dragdrop/download_file_info.h",
-    "dragdrop/download_file_interface.h",
-    "dragdrop/os_exchange_data_provider.h",
-    "dragdrop/os_exchange_data_provider_factory_ozone.cc",
-    "dragdrop/os_exchange_data_provider_factory_ozone.h",
-  ]
-
-  deps = [
-    "//base",
-    "//ui/base/clipboard:clipboard_types",
-    "//ui/base/clipboard:file_info",
-    "//ui/gfx",
-    "//ui/gfx/geometry",
-    "//url",
-  ]
-
-  public_deps = [ "//ui/base/data_transfer_policy" ]
 }
 
 component("features") {
@@ -763,8 +707,6 @@ if (is_android) {
 static_library("test_support") {
   testonly = true
   sources = [
-    "data_transfer_policy/mock_data_transfer_policy_controller.cc",
-    "data_transfer_policy/mock_data_transfer_policy_controller.h",
     "pointer/mock_touch_ui_controller.cc",
     "pointer/mock_touch_ui_controller.h",
     "resource/mock_resource_bundle_delegate.cc",
@@ -853,8 +795,6 @@ static_library("test_support") {
     "//base/test:test_config",
     "//base/test:test_support",
     "//skia",
-    "//ui/base/clipboard:file_info",
-    "//ui/base/data_transfer_policy",
     "//ui/display:test_support",
     "//ui/events:events_base",
     "//ui/events:test_support",
@@ -1013,7 +953,6 @@ test("ui_base_unittests") {
 
   sources = [
     "class_property_unittest.cc",
-    "clipboard/file_info_unittest.cc",
     "ime/utf_offset_unittest.cc",
     "l10n/l10n_util_unittest.cc",
     "l10n/time_format_unittest.cc",
@@ -1021,15 +960,6 @@ test("ui_base_unittests") {
     "models/simple_combobox_model_unittest.cc",
     "models/tree_node_iterator_unittest.cc",
     "pointer/touch_ui_controller_unittest.cc",
-    "prediction/empty_filter_unittest.cc",
-    "prediction/input_predictor_unittest_helpers.cc",
-    "prediction/input_predictor_unittest_helpers.h",
-    "prediction/kalman_predictor_unittest.cc",
-    "prediction/least_squares_predictor_unittest.cc",
-    "prediction/linear_predictor_unittest.cc",
-    "prediction/linear_resampling_unittest.cc",
-    "prediction/one_euro_filter_unittest.cc",
-    "prediction/prediction_metrics_handler_unittest.cc",
     "prediction/prediction_unittest_helpers.h",
     "resource/data_pack_literal.cc",
     "resource/data_pack_literal.h",
@@ -1060,17 +990,12 @@ test("ui_base_unittests") {
     "//third_party/icu",
     "//third_party/zlib/google:compression_utils",
     "//ui/base",
-    "//ui/base:data_exchange",
     "//ui/base:test_support",
-    "//ui/base/clipboard:clipboard_test",
     "//ui/base/clipboard:clipboard_types",
-    "//ui/base/clipboard:file_info",
     "//ui/base/cursor:unittests",
-    "//ui/base/data_transfer_policy:unittests",
     "//ui/base/identifier:unit_tests",
     "//ui/base/interaction:unit_tests",
     "//ui/base/metadata:metadata_tests",
-    "//ui/base/prediction",
     "//ui/color",
     "//ui/display",
     "//ui/gfx:test_support",
@@ -1192,7 +1117,6 @@ test("ui_base_unittests") {
     }
     if (is_chromeos) {
       sources += [
-        "dragdrop/os_exchange_data_provider_non_backed_unittest.cc",
         "ime/ash/component_extension_ime_manager_unittest.cc",
         "ime/ash/extension_ime_util_unittest.cc",
         "ime/ash/ime_keyboard_unittest.cc",
@@ -1210,12 +1134,10 @@ test("ui_base_unittests") {
     }
     if (is_linux && use_aura) {
       sources += [
-        "dragdrop/os_exchange_data_provider_non_backed_unittest.cc",
         "ime/input_method_minimal_unittest.cc",
         "ime/linux/input_method_auralinux_unittest.cc",
       ]
       deps += [
-        "//ui/base/ime/init",
         "//ui/base/ime/linux",
       ]
     }
@@ -1249,7 +1171,6 @@ test("ui_base_unittests") {
 
   if (is_win) {
     sources += [
-      "dragdrop/os_exchange_data_win_unittest.cc",
       "view_prop_unittest.cc",
       "win/hwnd_subclass_unittest.cc",
       "win/shell_unittest.cc",
@@ -1301,7 +1222,6 @@ test("ui_base_unittests") {
       "$root_out_dir/ui_test.pak",  # TODO(brettw): remove this line.
     ]
     data_deps += [
-      "//third_party/angle:includes",
       "//ui/resources:ui_test_pak",  # TODO(brettw): this does nothing.
     ]
   }
@@ -1314,15 +1234,6 @@ test("ui_base_unittests") {
   }
   if (is_mac) {
     data += [ "$root_out_dir/ui_unittests Framework.framework/" ]
-  }
-
-  if (skia_support_skottie && !is_ios) {
-    sources += [ "//ui/lottie/animation_unittest.cc" ]
-    deps += [
-      "//cc/paint",
-      "//third_party/abseil-cpp:absl",
-      "//ui/lottie",
-    ]
   }
 
   # If the platform supports wayland, run wayland library unittests, too.
@@ -1390,13 +1301,6 @@ source_set("base_interactive_ui_tests") {
   }
 }
 
-fuzzer_test("file_info_fuzzer") {
-  sources = [ "clipboard/file_info_fuzzer.cc" ]
-  deps = [
-    "//base",
-    "//ui/base/clipboard:file_info",
-  ]
-}
 
 # Same as locales, but includes "en" on Apple platforms.
 # Apple platforms use "en" instead of "en-US" (see the definition of

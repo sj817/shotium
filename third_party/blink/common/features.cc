@@ -539,9 +539,6 @@ BASE_FEATURE(kEnableDevtoolsDeepLinkViaExtensibilityApi,
 BASE_FEATURE(kEnforceNoopenerOnBlobURLNavigation,
              base::FEATURE_ENABLED_BY_DEFAULT);
 
-BASE_FEATURE(kEventTimingIgnorePresentationTimeFromUnexpectedFrameSource,
-             base::FEATURE_DISABLED_BY_DEFAULT);
-
 BASE_FEATURE(kExpandCompositedCullRect, base::FEATURE_ENABLED_BY_DEFAULT);
 BASE_FEATURE_PARAM(int,
                    kCullRectPixelDistanceToExpand,
@@ -631,22 +628,6 @@ BASE_FEATURE(kFetchDestinationJsonCssModules,
 
 BASE_FEATURE(kFileSystemUrlNavigation, base::FEATURE_DISABLED_BY_DEFAULT);
 
-BASE_FEATURE(kFilteringScrollPrediction,
-#if BUILDFLAG(IS_ANDROID)
-             base::FEATURE_ENABLED_BY_DEFAULT
-#else
-             // TODO(b/284271126): Run the experiment on desktop and enable if
-             // positive.
-             base::FEATURE_DISABLED_BY_DEFAULT
-#endif
-);
-BASE_FEATURE_PARAM(std::string,
-                   kFilteringScrollPredictionFilterParam,
-                   &kFilteringScrollPrediction,
-                   "filter",
-                   "one_euro_filter");
-
-
 BASE_FEATURE(kBlockPartialResponseWithoutRange,
              base::FEATURE_ENABLED_BY_DEFAULT);
 
@@ -727,14 +708,6 @@ BASE_FEATURE_PARAM(size_t,
 
 BASE_FEATURE(kImageLoadingPrioritizationFix, base::FEATURE_ENABLED_BY_DEFAULT);
 
-BASE_FEATURE(kIndexedDBCompressValuesWithSnappy,
-             base::FEATURE_ENABLED_BY_DEFAULT);
-constexpr base::FeatureParam<int>
-    kIndexedDBCompressValuesWithSnappyCompressionThreshold{
-        &features::kIndexedDBCompressValuesWithSnappy,
-        /*name=*/"compression-threshold",
-        /*default_value=*/-1};
-
 BASE_FEATURE(kIndexedDBConnectionDeduplication,
              base::FEATURE_DISABLED_BY_DEFAULT);
 
@@ -762,8 +735,6 @@ BASE_FEATURE_PARAM(bool,
 // Gating the migration of Android IME cursor anchor updates from Mojo IPC to
 // RenderFrameMetadata.
 BASE_FEATURE(kInputCursorAnchorInfoMigration, base::FEATURE_ENABLED_BY_DEFAULT);
-
-BASE_FEATURE(kInputPredictorTypeChoice, base::FEATURE_DISABLED_BY_DEFAULT);
 
 // When enabled, wake ups from throttleable TaskQueues are limited to 1 per
 // minute in a page that has been backgrounded for 5 minutes.
@@ -1867,17 +1838,6 @@ BASE_FEATURE_PARAM(int,
 BASE_FEATURE(kRenderSizeInScoreAdBrowserSignals,
              base::FEATURE_ENABLED_BY_DEFAULT);
 
-BASE_FEATURE(kResamplingInputEvents, base::FEATURE_DISABLED_BY_DEFAULT);
-
-BASE_FEATURE(kResamplingScrollEvents, base::FEATURE_ENABLED_BY_DEFAULT);
-BASE_FEATURE_PARAM(base::TimeDelta,
-                   kScrollPredictorMaxResampleTime,
-                   &kResamplingScrollEvents,
-                   "max_resample_time",
-                   base::Milliseconds(20));
-
-BASE_FEATURE(kResampleScrollEventsForFling, base::FEATURE_DISABLED_BY_DEFAULT);
-
 BASE_FEATURE(kRestrictLinkHeaderOnSubresource,
              base::FEATURE_DISABLED_BY_DEFAULT);
 BASE_FEATURE_PARAM(bool,
@@ -1927,20 +1887,6 @@ BASE_FEATURE(kScriptStreamingForNonHTTP,
              base::FEATURE_ENABLED_BY_DEFAULT
 #endif
 );
-
-BASE_FEATURE(kScrollPredictorFilteringBypassOnSynthetic,
-             base::FEATURE_DISABLED_BY_DEFAULT);
-
-BASE_FEATURE(kScrollPredictorRefinedHasPrediction,
-#if BUILDFLAG(IS_ANDROID)
-             base::FEATURE_ENABLED_BY_DEFAULT
-#else
-             base::FEATURE_DISABLED_BY_DEFAULT
-#endif
-);
-
-BASE_FEATURE(kScrollPredictorSyntheticKalman,
-             base::FEATURE_DISABLED_BY_DEFAULT);
 
 // Enables sending Sec-Purpose: "prefetch" header for
 // NoStatePrefetchURLLoaderThrottle.

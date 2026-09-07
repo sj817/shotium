@@ -18,7 +18,6 @@
 #include "cc/paint/paint_image_generator.h"
 #include "cc/paint/paint_record.h"
 #include "cc/paint/skia_paint_image_generator.h"
-#include "cc/paint/texture_backing.h"
 #include "third_party/skia/include/core/SkBitmap.h"
 #include "third_party/skia/include/core/SkCPURecorder.h"
 #include "third_party/skia/include/core/SkColorSpace.h"
@@ -29,7 +28,6 @@
 #include "third_party/skia/include/core/SkSize.h"
 #include "third_party/skia/include/core/SkStream.h"
 #include "third_party/skia/include/core/SkYUVAPixmaps.h"
-#include "third_party/skia/include/gpu/ganesh/GrBackendSurface.h"
 #include "third_party/skia/include/private/SkGainmapInfo.h"
 #include "ui/gfx/color_space.h"
 #include "ui/gfx/geometry/skia_conversions.h"
@@ -81,8 +79,7 @@ bool PaintImage::IsSameForTesting(const PaintImage& other) const {
          paint_image_generator_ == other.paint_image_generator_ &&
          id_ == other.id_ && animation_type_ == other.animation_type_ &&
          completion_state_ == other.completion_state_ &&
-         is_multipart_ == other.is_multipart_ &&
-         texture_backing_ == other.texture_backing_;
+         is_multipart_ == other.is_multipart_;
   // Do not check may_be_lcp_candidate_ as it should not affect any rendering
   // operation, only metrics collection.
 }
@@ -138,13 +135,7 @@ const sk_sp<SkImage>& PaintImage::GetSkImage() const {
 }
 
 sk_sp<SkImage> PaintImage::GetSwSkImage() const {
-  if (texture_backing_) {
-    auto image = texture_backing_->GetSkImageViaReadback();
-    if (image && reinterpret_as_srgb_) {
-      image = image->reinterpretColorSpace(SkColorSpace::MakeSRGB());
-    }
-    return image;
-  } else if (cached_sk_image_ && cached_sk_image_->isTextureBacked()) {
+  if (cached_sk_image_ && cached_sk_image_->isTextureBacked()) {
     return cached_sk_image_->makeNonTextureImage();
   }
   return cached_sk_image_;
@@ -160,21 +151,7 @@ bool PaintImage::readPixels(const SkImageInfo& dst_info,
                             size_t dst_row_bytes,
                             int src_x,
                             int src_y) const {
-  if (texture_backing_) {
-    auto dst_info_adjusted = dst_info;
-    if (reinterpret_as_srgb_) {
-      // To reinterpret the read pixels as sRGB, set `dst_info_adjusted`'s
-      // color space to match the texture's space. This only works when the
-      // caller expects sRGB pixels.
-      CHECK(!dst_info.colorSpace() ||
-            SkColorSpace::Equals(dst_info.colorSpace(),
-                                 SkColorSpace::MakeSRGB().get()));
-      dst_info_adjusted = dst_info.makeColorSpace(
-          texture_backing_->GetSkImageInfo().refColorSpace());
-    }
-    return texture_backing_->readPixels(dst_info_adjusted, dst_pixels,
-                                        dst_row_bytes, src_x, src_y);
-  } else if (cached_sk_image_) {
+  if (cached_sk_image_) {
     return cached_sk_image_->readPixels(dst_info, dst_pixels, dst_row_bytes,
                                         src_x, src_y);
   }
@@ -189,11 +166,6 @@ SkImageInfo PaintImage::GetSkImageInfo(AuxImage aux_image) const {
         return reinterpret_as_srgb_
                    ? info.makeColorSpace(SkColorSpace::MakeSRGB())
                    : info;
-      } else if (texture_backing_) {
-        const auto info = texture_backing_->GetSkImageInfo();
-        return reinterpret_as_srgb_
-                   ? info.makeColorSpace(SkColorSpace::MakeSRGB())
-                   : info;
       } else if (cached_sk_image_) {
         return cached_sk_image_->imageInfo();
       }
@@ -202,22 +174,6 @@ SkImageInfo PaintImage::GetSkImageInfo(AuxImage aux_image) const {
       DCHECK(gainmap_paint_image_generator_);
       return gainmap_paint_image_generator_->GetSkImageInfo();
   }
-}
-
-gpu::Mailbox PaintImage::GetMailbox() const {
-  DCHECK(texture_backing_);
-  return texture_backing_->GetMailbox();
-}
-
-void PaintImage::BindTextureBacking(
-    scoped_refptr<TextureBackingContext> context) const {
-  DCHECK(texture_backing_);
-  texture_backing_->Bind(std::move(context));
-}
-
-void PaintImage::UnbindTextureBacking() const {
-  DCHECK(texture_backing_);
-  texture_backing_->Unbind();
 }
 
 bool PaintImage::IsOpaque() const {
@@ -375,9 +331,6 @@ PaintImage::ContentId PaintImage::GetContentIdForFrame(
 }
 
 bool PaintImage::IsTextureBacked() const {
-  if (texture_backing_) {
-    return true;
-  }
   if (cached_sk_image_) {
     return cached_sk_image_->isTextureBacked();
   }

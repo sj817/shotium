@@ -212,44 +212,6 @@ NET_EXPORT BASE_DECLARE_FEATURE(kMaintainConnectionsOnIpv6TempAddrChange);
 // Enables TLS 1.3 early data.
 NET_EXPORT BASE_DECLARE_FEATURE(kEnableTLS13EarlyData);
 
-// Enables optimizing the network quality estimation algorithms in network
-// quality estimator (NQE).
-NET_EXPORT BASE_DECLARE_FEATURE(kNetworkQualityEstimator);
-
-// Enables caching of IsPrivateHost() results in NetworkQualityEstimator.
-NET_EXPORT BASE_DECLARE_FEATURE(kNetworkQualityEstimatorIsPrivateHostCache);
-
-// The maximum age in seconds of observations to be used for calculating the
-// HTTP RTT from the historical data.
-// Negative value means infinite. i.e. all data are used.
-NET_EXPORT extern const base::FeatureParam<int> kRecentHTTPThresholdInSeconds;
-
-// The maximum age in seconds of observations to be used for calculating the
-// transport RTT from the historical data.
-// Negative value means infinite. i.e. all data are used.
-NET_EXPORT extern const base::FeatureParam<int>
-    kRecentTransportThresholdInSeconds;
-
-// The maximum age in seconds of observations to be used for calculating the
-// end to end RTT from the historical data.
-// Negative value means infinite. i.e. all data are used.
-NET_EXPORT extern const base::FeatureParam<int>
-    kRecentEndToEndThresholdInSeconds;
-
-// Number of observations received after which the effective connection type
-// should be recomputed.
-NET_EXPORT extern const base::FeatureParam<int>
-    kCountNewObservationsReceivedComputeEct;
-
-// Maximum number of observations that can be held in a single
-// ObservationBuffer.
-NET_EXPORT extern const base::FeatureParam<int> kObservationBufferSize;
-
-// Minimum duration between two consecutive computations of effective
-// connection type. Set to non-zero value as a performance optimization.
-NET_EXPORT extern const base::FeatureParam<base::TimeDelta>
-    kEffectiveConnectionTypeRecomputationInterval;
-
 // When disabled, HttpContentDisposition incorrectly handles multiple
 // comma-delimited Content-Disposition lines, treating them all as a single
 // Content-Disposition string.
@@ -327,21 +289,8 @@ NET_EXPORT BASE_DECLARE_FEATURE(kSameSiteDefaultChecksMethodRigorously);
 // the parameter values.
 NET_EXPORT BASE_DECLARE_FEATURE(kTimeoutTcpConnectAttempt);
 
-// FeatureParams associated with kTimeoutTcpConnectAttempt.
+// The TCP connect attempt timeout when kTimeoutTcpConnectAttempt is enabled.
 
-// When there is an estimated RTT available, the experimental TCP connect
-// attempt timeout is calculated as:
-//
-//  clamp(kTimeoutTcpConnectAttemptMin,
-//        kTimeoutTcpConnectAttemptMax,
-//        <Estimated RTT> * kTimeoutTcpConnectAttemptRTTMultiplier);
-//
-// Otherwise the TCP connect attempt timeout is set to
-// kTimeoutTcpConnectAttemptMax.
-NET_EXPORT extern const base::FeatureParam<double>
-    kTimeoutTcpConnectAttemptRTTMultiplier;
-NET_EXPORT extern const base::FeatureParam<base::TimeDelta>
-    kTimeoutTcpConnectAttemptMin;
 NET_EXPORT extern const base::FeatureParam<base::TimeDelta>
     kTimeoutTcpConnectAttemptMax;
 

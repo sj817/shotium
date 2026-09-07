@@ -23,29 +23,10 @@ class SkM44;
 struct SkColorSpacePrimaries;
 enum SkYUVColorSpace : int;
 
-// These forward declarations are used to give IPC code friend access to private
-// fields of gfx::ColorSpace for the purpose of serialization and
-// deserialization.
-namespace IPC {
-template <class P>
-struct ParamTraits;
-}  // namespace IPC
-
 namespace mojo {
 template <class T, class U>
 struct StructTraits;
 }  // namespace mojo
-
-// Used to serialize a gfx::ColorSpace through the GPU command buffer.
-struct _GLcolorSpace;
-
-namespace media {
-namespace stable {
-namespace mojom {
-class ColorSpaceDataView;
-}  // namespace mojom
-}  // namespace stable
-}  // namespace media
 
 namespace gfx {
 
@@ -329,11 +310,6 @@ class COLOR_SPACE_EXPORT ColorSpace {
   sk_sp<SkColorSpace> ToSkColorSpace(
       std::optional<float> sdr_white_level = std::nullopt) const;
 
-  // Return a GLcolorSpace value that is valid for the lifetime of |this|. This
-  // function is used to serialize ColorSpace objects across the GPU command
-  // buffer.
-  const _GLcolorSpace* AsGLColorSpace() const;
-
   // For YUV color spaces, return the closest SkYUVColorSpace. Returns true if a
   // close match is found. Otherwise, leaves *out unchanged and returns false.
   // If |matrix_id| is MatrixID::BT2020_NCL and |bit_depth| is provided, a bit
@@ -426,10 +402,7 @@ class COLOR_SPACE_EXPORT ColorSpace {
   //        C of the skcms_TransferFunction).
   std::array<float, 7> transfer_params_ = {};
 
-  friend struct IPC::ParamTraits<gfx::ColorSpace>;
   friend struct mojo::StructTraits<gfx::mojom::ColorSpaceDataView,
-                                   gfx::ColorSpace>;
-  friend struct mojo::StructTraits<media::stable::mojom::ColorSpaceDataView,
                                    gfx::ColorSpace>;
 };
 

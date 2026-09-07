@@ -19,7 +19,6 @@
 #include "third_party/blink/renderer/platform/scheduler/public/web_scheduling_priority.h"
 #include "third_party/blink/renderer/platform/scheduler/public/web_scheduling_queue_type.h"
 #include "third_party/blink/renderer/platform/scheduler/public/web_scheduling_task_queue.h"
-#include "third_party/blink/renderer/platform/scheduler/public/widget_scheduler.h"
 #include "third_party/blink/renderer/platform/wtf/wtf.h"
 
 namespace blink {
@@ -28,39 +27,6 @@ class VirtualTimeController;
 
 namespace scheduler {
 namespace {
-
-class DummyWidgetScheduler final : public WidgetScheduler {
- public:
-  DummyWidgetScheduler() = default;
-  DummyWidgetScheduler(const DummyWidgetScheduler&) = delete;
-  DummyWidgetScheduler& operator=(const DummyWidgetScheduler&) = delete;
-  ~DummyWidgetScheduler() override = default;
-
-  void WillShutdown() override {}
-  void Shutdown() override {}
-  // Returns the input task runner.
-  scoped_refptr<base::SingleThreadTaskRunner> InputTaskRunner() override {
-    return base::SingleThreadTaskRunner::GetCurrentDefault();
-  }
-  void WillBeginFrame(const viz::BeginFrameArgs& args) override {}
-  void BeginFrameNotExpectedSoon() override {}
-  void BeginMainFrameNotExpectedUntil(base::TimeTicks time) override {}
-  void DidCommitFrameToCompositor() override {}
-  void DidHandleInputEventOnCompositorThread(
-      const WebInputEvent& web_input_event,
-      InputEventState event_state) override {}
-  void WillPostInputEventToMainThread(
-      WebInputEvent::Type web_input_event_type,
-      const WebInputEventAttribution& web_input_event_attribution) override {}
-  void WillHandleInputEventOnMainThread(
-      WebInputEvent::Type web_input_event_type,
-      const WebInputEventAttribution& web_input_event_attribution) override {}
-  void DidHandleInputEventOnMainThread(const WebInputEvent& web_input_event,
-                                       WebInputEventResult result,
-                                       bool frame_requested) override {}
-  void DidRunBeginMainFrame() override {}
-  void SetHidden(bool hidden) override {}
-};
 
 class DummyFrameScheduler : public FrameScheduler {
  public:
@@ -107,7 +73,6 @@ class DummyFrameScheduler : public FrameScheduler {
                                 FrameScheduler::NavigationType,
                                 DidCommitProvisionalLoadParams) override {}
   void OnFirstContentfulPaintInMainFrame() override {}
-  void OnFirstMeaningfulPaint() override {}
   void OnDidInstallNewDocument() override {}
   void OnMainFrameInteractive() override {}
   bool IsExemptFromBudgetBasedThrottling() const override { return false; }
@@ -188,10 +153,6 @@ class DummyPageScheduler : public PageScheduler {
     return *agent_group_scheduler_;
   }
   VirtualTimeController* GetVirtualTimeController() override { return nullptr; }
-  scoped_refptr<WidgetScheduler> CreateWidgetScheduler(
-      WidgetScheduler::Delegate*) override {
-    return base::MakeRefCounted<DummyWidgetScheduler>();
-  }
 
  private:
   Persistent<AgentGroupScheduler> agent_group_scheduler_;
@@ -357,8 +318,6 @@ class DummyAgentGroupScheduler : public AgentGroupScheduler {
     return *main_thread_scheduler_;
   }
   void AddAgent(Agent* agent) override {}
-  void OnUrgentMessageReceived() override {}
-  void OnUrgentMessageProcessed() override {}
 
  private:
   std::unique_ptr<DummyWebMainThreadScheduler> main_thread_scheduler_;

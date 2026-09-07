@@ -231,12 +231,6 @@ static_library("test_support") {
       "win/test/scoped_screen_win.h",
       "win/test/screen_util_win.cc",
       "win/test/screen_util_win.h",
-      "win/test/virtual_display_util_win.cc",
-      "win/test/virtual_display_util_win.h",
-    ]
-    deps += [
-      "//third_party/win_virtual_display/controller",
-      "//third_party/win_virtual_display/driver/public",
     ]
   }
 
@@ -365,7 +359,6 @@ test("display_unittests") {
       ":display_manager_test_api",
       "//ui/base:run_all_unittests",
       "//ui/display/manager",
-      "//ui/ozone:ozone_switches",
     ]
 
     data_deps = [

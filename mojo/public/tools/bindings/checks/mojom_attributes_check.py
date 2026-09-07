@@ -22,7 +22,6 @@ _COMMON_FIELD_ATTRIBUTES = _COMMON_ATTRIBUTES | {
 # Note: [Stable] without [Extensible] is not allowed.
 _ENUM_ATTRIBUTES = _COMMON_ATTRIBUTES | {
   'Extensible',
-  'Native',
   'Stable',
   'RenamedFrom',
   'Uuid',
@@ -75,7 +74,6 @@ _PARAMETER_ATTRIBUTES = _COMMON_FIELD_ATTRIBUTES
 _STRUCT_ATTRIBUTES = _COMMON_ATTRIBUTES | {
   'CustomSerializer',
   'JavaClassName',
-  'Native',
   'Stable',
   'RenamedFrom',
   'Uuid',
@@ -93,80 +91,6 @@ _UNION_ATTRIBUTES = _COMMON_ATTRIBUTES | {
 _UNION_FIELD_ATTRIBUTES = _COMMON_FIELD_ATTRIBUTES | {
   'Default',
 }
-
-# TODO(crbug.com/393179188): Remove this allowlist. Do not add new entries here.
-_NATIVE_ALLOWLIST = {
-  'chrome.mojom.FaviconUsageDataList',
-  'chrome.mojom.ImportedBookmarkEntry',
-  'chrome.mojom.ImporterAutofillFormDataEntry',
-  'chrome.mojom.ImporterIE7PasswordInfo',
-  'chrome.mojom.ImporterURLRow',
-  'chrome.mojom.ImportItem',
-  'chrome.mojom.SafeArchiveAnalyzerResults',
-  'chrome.mojom.SearchEngineInfo',
-  'chrome.mojom.SourceProfile',
-  'content.mojom.DropData',
-  'content.mojom.PageTransition',
-  'content.mojom.WebPluginInfo',
-  'media.mojom.AudioCodec',
-  'media.mojom.AudioCodecProfile',
-  'media.mojom.AudioDecoderType',
-  'media.mojom.BufferingState',
-  'media.mojom.BufferingStateChangeReason',
-  'media.mojom.CdmMessageType',
-  'media.mojom.CdmSessionType',
-  'media.mojom.EmeInitDataType',
-  'media.mojom.EncryptionScheme',
-  'media.mojom.Exception',
-  'media.mojom.FullscreenVideoStatus',
-  'media.mojom.HdcpVersion',
-  'media.mojom.KeyType',
-  'media.mojom.MatrixID',
-  'media.mojom.MediaContainerName',
-  'media.mojom.MediaContentType',
-  'media.mojom.MediaLogRecord',
-  'media.mojom.MediaStatusState',
-  'media.mojom.OutputDeviceStatus',
-  'media.mojom.PrimaryID',
-  'media.mojom.RangeID',
-  'media.mojom.SampleFormat',
-  'media.mojom.Status',
-  'media.mojom.StreamType',
-  'media.mojom.SubsampleEntry',
-  'media.mojom.TransferID',
-  'media.mojom.Type',
-  'media.mojom.VideoCodec',
-  'media.mojom.VideoCodecProfile',
-  'media.mojom.VideoDecoderType',
-  'media.mojom.VideoPixelFormat',
-  'media.mojom.WaitingReason',
-  'media.mojom.WatchTimeKey',
-  'mojo.test.NativeEnum',
-  'mojo.test.data_view.TestNativeStruct',
-  'mojo.test.PickledEnum',
-  'mojo.test.PickledStruct',
-  'mojo.test.TestNativeStructMojom',
-  'mojo.test.TestNativeStructWithAttachmentsMojom',
-  'mojo.test.UnmappedNativeStruct',
-  'network.mojom.ConnectionInfo',
-  'network.mojom.EffectiveConnectionType',
-  'network.mojom.P2PHostAndIPEndPoint',
-  'network.mojom.P2PPacketInfo',
-  'network.mojom.P2PPortRange',
-  'network.mojom.P2PSendPacketMetrics',
-  'network.mojom.P2PSocketOption',
-  'network.mojom.P2PSocketType',
-  'network.mojom.URLRequestRedirectInfo',
-  'search.mojom.InstantMostVisitedInfo',
-  'search.mojom.NTPLoggingEventType',
-  'search.mojom.NtpTheme',
-  'search.mojom.NTPTileImpression',
-  'search.mojom.OmniboxFocusChangeReason',
-  'search.mojom.OmniboxFocusState',
-  'ui.mojom.EventPointerType',
-  'ui.mojom.ScrollGranularity',
-}
-
 
 class Check(check.Check):
   def __init__(self, *args, **kwargs):
@@ -197,18 +121,6 @@ class Check(check.Check):
         raise check.CheckException(
           self.module, f"[Extensible] required on [Stable] enum {full_name}"
         )
-      if 'Native' in enum.attributes and full_name not in _NATIVE_ALLOWLIST:
-        raise check.CheckException(
-          self.module,
-          f"[Native] is not allowed on {full_name}; "
-          "no new uses should be introduced",
-        )
-      if full_name in _NATIVE_ALLOWLIST and (
-        not enum.attributes or not 'Native' in enum.attributes
-      ):
-        raise check.CheckException(
-          self.module, f"{full_name} can be removed from _NATIVE_ALLOWLIST"
-        )
     for enumval in enum.fields:
       self._CheckAttributes(
         "enum value", _ENUMVAL_ATTRIBUTES, enumval.attributes
@@ -237,21 +149,6 @@ class Check(check.Check):
 
   def _CheckStructAttributes(self, struct):
     self._CheckAttributes("struct", _STRUCT_ATTRIBUTES, struct.attributes)
-    full_name = f"{self.module.mojom_namespace}.{struct.mojom_name}"
-    if struct.attributes and 'Native' in struct.attributes:
-      if full_name not in _NATIVE_ALLOWLIST:
-        raise check.CheckException(
-          self.module,
-          f"[Native] is not allowed on {full_name}; "
-          "no new uses should be introduced",
-        )
-    if full_name in _NATIVE_ALLOWLIST and (
-      not struct.attributes or not 'Native' in struct.attributes
-    ):
-      raise check.CheckException(
-        self.module, f"{full_name} can be removed from _NATIVE_ALLOWLIST"
-      )
-
     for field in struct.fields:
       self._CheckAttributes(
         "struct field", _STRUCT_FIELD_ATTRIBUTES, field.attributes

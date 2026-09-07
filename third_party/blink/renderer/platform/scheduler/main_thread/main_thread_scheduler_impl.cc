@@ -35,14 +35,9 @@
 #include "base/trace_event/traced_value.h"
 #include "build/build_config.h"
 #include "cc/base/features.h"
-#include "components/performance_manager/scenario_api/performance_scenario_observer.h"
-#include "components/performance_manager/scenario_api/performance_scenarios.h"
-#include "components/viz/common/frame_sinks/begin_frame_args.h"
 #include "third_party/blink/public/common/features.h"
 #include "third_party/blink/public/common/input/web_input_event.h"
 #include "third_party/blink/public/common/input/web_input_event_attribution.h"
-#include "third_party/blink/public/common/input/web_mouse_wheel_event.h"
-#include "third_party/blink/public/common/input/web_touch_event.h"
 #include "third_party/blink/public/common/page/launching_process_state.h"
 #include "third_party/blink/public/platform/scheduler/web_agent_group_scheduler.h"
 #include "third_party/blink/public/platform/scheduler/web_renderer_process_type.h"
@@ -61,7 +56,6 @@
 #include "third_party/blink/renderer/platform/scheduler/main_thread/pending_user_input.h"
 #include "third_party/blink/renderer/platform/scheduler/main_thread/task_type_names.h"
 #include "third_party/blink/renderer/platform/scheduler/main_thread/use_case.h"
-#include "third_party/blink/renderer/platform/scheduler/main_thread/widget_scheduler_impl.h"
 #include "third_party/blink/renderer/platform/scheduler/public/event_loop.h"
 #include "third_party/blink/renderer/platform/scheduler/public/thread.h"
 #include "third_party/blink/renderer/platform/wtf/functional.h"
@@ -176,36 +170,6 @@ perfetto::StaticString TaskPriorityToStaticString(TaskPriority priority) {
   return perfetto::StaticString(TaskPriorityToString(priority));
 }
 
-bool IsBlockingEvent(const blink::WebInputEvent& web_input_event) {
-  blink::WebInputEvent::Type type = web_input_event.GetType();
-  DCHECK(type == blink::WebInputEvent::Type::kTouchStart ||
-         type == blink::WebInputEvent::Type::kMouseWheel);
-
-  if (type == blink::WebInputEvent::Type::kTouchStart) {
-    const WebTouchEvent& touch_event =
-        static_cast<const WebTouchEvent&>(web_input_event);
-    return touch_event.dispatch_type ==
-           blink::WebInputEvent::DispatchType::kBlocking;
-  }
-
-  const WebMouseWheelEvent& mouse_event =
-      static_cast<const WebMouseWheelEvent&>(web_input_event);
-  return mouse_event.dispatch_type ==
-         blink::WebInputEvent::DispatchType::kBlocking;
-}
-
-perfetto::StaticString InputEventStateToString(
-    WidgetScheduler::InputEventState input_event_state) {
-  switch (input_event_state) {
-    case WidgetScheduler::InputEventState::EVENT_CONSUMED_BY_COMPOSITOR:
-      return "event_consumed_by_compositor";
-    case WidgetScheduler::InputEventState::EVENT_FORWARDED_TO_MAIN_THREAD:
-      return "event_forwarded_to_main_thread";
-    default:
-      NOTREACHED();
-  }
-}
-
 perfetto::StaticString RenderingPrioritizationStateToString(
     MainThreadSchedulerImpl::RenderingPrioritizationState state) {
   using RenderingPrioritizationState =
@@ -222,17 +186,6 @@ perfetto::StaticString RenderingPrioritizationStateToString(
   }
 }
 
-// Treat "input handling" specially in V8.
-BASE_FEATURE(kInputHandlingModeFromUseCase, base::FEATURE_ENABLED_BY_DEFAULT);
-BASE_FEATURE(kInputHandlingModeFromPerformanceScenario,
-             base::FEATURE_DISABLED_BY_DEFAULT);
-// kUseCaseLongerInputWindow and its extension param were here. They only ever
-// widened the window of the isolate's input-handling signal, which is gone.
-
-// Treat "loading" specially in V8.
-BASE_FEATURE(kLoadingModeFromRAILMode, base::FEATURE_ENABLED_BY_DEFAULT);
-BASE_FEATURE(kLoadingModeFromPerformanceScenario,
-             base::FEATURE_DISABLED_BY_DEFAULT);
 
 }  // namespace
 
@@ -270,7 +223,6 @@ MainThreadSchedulerImpl::MainThreadSchedulerImpl(
                    "MainThreadSchedulerIdlePeriod",
                    base::TimeDelta(),
                    idle_helper_queue_->GetTaskQueue()),
-      render_widget_scheduler_signals_(this),
       find_in_page_budget_pool_controller_(
           new FindInPageBudgetPoolController(this)),
       control_task_queue_(helper_.ControlMainThreadTaskQueue()),
@@ -318,8 +270,6 @@ MainThreadSchedulerImpl::MainThreadSchedulerImpl(
   // TaskQueueThrottler after task queues/runners are initialized.
   update_policy_closure_ = base::BindRepeating(
       &MainThreadSchedulerImpl::UpdatePolicy, weak_factory_.GetWeakPtr());
-  end_renderer_hidden_idle_period_closure_.Reset(base::BindRepeating(
-      &MainThreadSchedulerImpl::EndIdlePeriod, weak_factory_.GetWeakPtr()));
 
   TRACE_EVENT_INSTANT(TRACE_DISABLED_BY_DEFAULT("renderer.scheduler"),
                       "MainThreadScheduler:created",
@@ -333,14 +283,6 @@ MainThreadSchedulerImpl::MainThreadSchedulerImpl(
     trace_event::AddTraceSessionObserver(this);
   }
 
-  if (base::FeatureList::IsEnabled(kInputHandlingModeFromPerformanceScenario) ||
-      base::FeatureList::IsEnabled(kLoadingModeFromPerformanceScenario)) {
-    if (auto performance_scenario_observer_list =
-            performance_scenarios::PerformanceScenarioObserverList::GetForScope(
-                performance_scenarios::ScenarioScope::kCurrentProcess)) {
-      performance_scenario_observer_list->AddObserver(this);
-    }
-  }
 
   internal::ProcessState::Get()->is_process_backgrounded =
       main_thread_only().renderer_backgrounded;
@@ -385,14 +327,6 @@ MainThreadSchedulerImpl::~MainThreadSchedulerImpl() {
   CHECK(main_thread_only().detached_task_queues.empty());
   CHECK(!virtual_time_control_task_queue_);
 
-  if (base::FeatureList::IsEnabled(kInputHandlingModeFromPerformanceScenario) ||
-      base::FeatureList::IsEnabled(kLoadingModeFromPerformanceScenario)) {
-    if (auto performance_scenario_observer_list =
-            performance_scenarios::PerformanceScenarioObserverList::GetForScope(
-                performance_scenarios::ScenarioScope::kCurrentProcess)) {
-      performance_scenario_observer_list->RemoveObserver(this);
-    }
-  }
   trace_event::RemoveTraceSessionObserver(this);
 }
 
@@ -425,30 +359,6 @@ WebThreadScheduler& WebThreadScheduler::MainThreadScheduler() {
   // `WebThreadScheduler` is needed.
   CHECK(scheduler);
   return *scheduler;
-}
-
-void MainThreadSchedulerImpl::OnInputScenarioChanged(
-    performance_scenarios::ScenarioScope scope,
-    performance_scenarios::InputScenario old_scenario,
-    performance_scenarios::InputScenario new_scenario) {
-  if (!base::FeatureList::IsEnabled(
-          kInputHandlingModeFromPerformanceScenario)) {
-    return;
-  }
-  // This told the isolate whether the renderer is handling input, so V8 could
-  // pick a GC schedule that avoids janking it. No isolate, nothing to tell --
-  // the scenario observer itself stays registered because the scheduler's own
-  // use-case tracking still runs off it.
-}
-
-void MainThreadSchedulerImpl::OnLoadingScenarioChanged(
-    performance_scenarios::ScenarioScope scope,
-    performance_scenarios::LoadingScenario old_scenario,
-    performance_scenarios::LoadingScenario new_scenario) {
-  if (!base::FeatureList::IsEnabled(kLoadingModeFromPerformanceScenario)) {
-    return;
-  }
-  // As above: the loading signal existed only for V8's heuristics.
 }
 
 MainThreadSchedulerImpl::MainThreadOnly::MainThreadOnly(
@@ -489,13 +399,6 @@ MainThreadSchedulerImpl::MainThreadOnly::MainThreadOnly(
                        MakeStateTrack("Renderer audible", this),
                        &main_thread_scheduler_impl->tracing_controller_,
                        AudioPlayingStateToString),
-      compositor_will_send_main_frame_not_expected(
-          false,
-          MakeStateTrack("Scheduler.CompositorWillSendMainFrameNotExpected",
-                         this,
-                         *main_thread_scheduler_impl->tracing_track_),
-          &main_thread_scheduler_impl->tracing_controller_,
-          YesNoStateToString),
       has_navigated(false,
                     MakeStateTrack("Scheduler.HasNavigated",
                                    this,
@@ -693,33 +596,6 @@ void MainThreadSchedulerImpl::Shutdown() {
 
 std::unique_ptr<MainThread> MainThreadSchedulerImpl::CreateMainThread() {
   return std::make_unique<MainThreadImpl>(this);
-}
-
-scoped_refptr<WidgetScheduler> MainThreadSchedulerImpl::CreateWidgetScheduler(
-    WidgetScheduler::Delegate* delegate) {
-  auto widget_scheduler = base::MakeRefCounted<WidgetSchedulerImpl>(
-      this, &render_widget_scheduler_signals_, delegate);
-  CHECK(delegate);
-  main_thread_only().widget_schedulers.insert(widget_scheduler);
-  // If we're already receiving BeginMainFrameNotExpectedUntil signals from
-  // the other `WidgetScheduler`s, we need to receive these signals from this
-  // new one as well, otherwise idle periods might unexpectedly stop once
-  // frames stop being produced.
-  //
-  // Note: by default `widget_scheduler` will not receive these signals, so
-  // initialization is only needed if the signals are needed. If that changes,
-  // as a result of idle tasks being posted, the signals will be requested in
-  // `DispatchRequestBeginMainFrameNotExpected()`.
-  if (main_thread_only().compositor_will_send_main_frame_not_expected) {
-    // Defer this until after the current task to allow `delegate` to complete
-    // initialization.
-    control_task_queue_->GetTaskRunnerWithDefaultTaskType()->PostTask(
-        FROM_HERE,
-        base::BindOnce(&MainThreadSchedulerImpl::
-                           InitializeRequestBeginMainFrameNotExpected,
-                       weak_factory_.GetWeakPtr(), widget_scheduler));
-  }
-  return widget_scheduler;
 }
 
 scoped_refptr<base::SingleThreadTaskRunner>
@@ -948,157 +824,6 @@ void MainThreadSchedulerImpl::RemoveTaskObserver(
   helper_.RemoveTaskObserver(task_observer);
 }
 
-void MainThreadSchedulerImpl::WillBeginFrame(const viz::BeginFrameArgs& args) {
-  TRACE_EVENT1(TRACE_DISABLED_BY_DEFAULT("renderer.scheduler"),
-               "MainThreadSchedulerImpl::WillBeginFrame", "args",
-               args.AsValue());
-  helper_.CheckOnValidThread();
-  if (helper_.IsShutdown())
-    return;
-
-  // Determine e.g. which gesture/loading thing is happening during this frame,
-  // then (perhaps) uncap the CPU's performance for this and a few subsequent
-  // frames. Only takes effect on Android platforms.
-  const base::TimeTicks time_now = base::TimeTicks::LowResolutionNow();
-  switch (main_thread_only().current_use_case) {
-    case UseCase::kEarlyLoading:
-    case UseCase::kLoading:
-      performance_helper_.Add(PerformanceHelper::BoostType::kPageLoad,
-                              time_now);
-      break;
-    case UseCase::kSynchronizedGesture:
-    case UseCase::kMainThreadCustomInputHandling:
-      performance_helper_.Add(PerformanceHelper::BoostType::kScroll, time_now);
-      break;
-    case UseCase::kDiscreteInputResponse:
-      performance_helper_.Add(PerformanceHelper::BoostType::kTapOrTyping,
-                              time_now);
-      break;
-    default:
-  }
-  // Calls ::ApplyPerformanceState if something's changed.
-  performance_helper_.Check(time_now);
-
-  EndIdlePeriod();
-  main_thread_only().estimated_next_frame_begin =
-      args.frame_time + args.interval;
-  main_thread_only().compositor_frame_interval = args.interval;
-  {
-    base::AutoLock lock(any_thread_lock_);
-    any_thread().begin_main_frame_on_critical_path = args.on_critical_path;
-  }
-  main_thread_only().is_current_task_main_frame = true;
-}
-
-void MainThreadSchedulerImpl::DidCommitFrameToCompositor() {
-  TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("renderer.scheduler"),
-               "MainThreadSchedulerImpl::DidCommitFrameToCompositor");
-  helper_.CheckOnValidThread();
-  if (helper_.IsShutdown())
-    return;
-
-  base::TimeTicks now(helper_.NowTicks());
-  if (now < main_thread_only().estimated_next_frame_begin) {
-    // TODO(crbug.com/394906646): The main thread can be hosting multiple
-    // widgets producing frames at the same time (e.g. multiple monitors). We
-    // should account for this when setting the idle period duration rather than
-    // using the most recent value, in case this is running at a different rate.
-    //
-    // TODO(rmcilroy): Consider reducing the idle period based on the runtime of
-    // the next pending delayed tasks (as currently done in for long idle times)
-    idle_helper_.StartShortIdlePeriod(
-        now, main_thread_only().estimated_next_frame_begin);
-  }
-
-  main_thread_only().idle_time_estimator.DidCommitFrameToCompositor();
-}
-
-void MainThreadSchedulerImpl::BeginFrameNotExpectedSoon() {
-  // TODO(crbug/1068426): Should this call |UpdatePolicy|?
-  TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("renderer.scheduler"),
-               "MainThreadSchedulerImpl::BeginFrameNotExpectedSoon");
-  helper_.CheckOnValidThread();
-  performance_helper_.Check();
-  if (helper_.IsShutdown())
-    return;
-
-  // TODO(crbug.com/394906646): The main thread can be hosting multiple widgets
-  // producing frames at the same time, e.g. multiple monitors or popup windows.
-  // We should coordinate between this and the other rendering signals so this
-  // doesn't clobber a short idle period.
-  idle_helper_.EnableLongIdlePeriod();
-  {
-    base::AutoLock lock(any_thread_lock_);
-    any_thread().begin_main_frame_on_critical_path = false;
-  }
-}
-
-void MainThreadSchedulerImpl::BeginMainFrameNotExpectedUntil(
-    base::TimeTicks time) {
-  helper_.CheckOnValidThread();
-  if (helper_.IsShutdown())
-    return;
-
-  base::TimeTicks now(helper_.NowTicks());
-  TRACE_EVENT1(TRACE_DISABLED_BY_DEFAULT("renderer.scheduler"),
-               "MainThreadSchedulerImpl::BeginMainFrameNotExpectedUntil",
-               "time_remaining", (time - now).InMillisecondsF());
-
-  if (now < time) {
-    // End any previous idle period.
-    EndIdlePeriod();
-
-    // TODO(crbug.com/394906646): The main thread can be hosting multiple
-    // widgets producing frames at the same time (e.g. multiple monitors). We
-    // should account for this when setting the idle period duration rather than
-    // using the most recent value, in case this is running at a different rate.
-    //
-    // TODO(rmcilroy): Consider reducing the idle period based on the runtime of
-    // the next pending delayed tasks (as currently done in for long idle times)
-    idle_helper_.StartShortIdlePeriod(now, time);
-    performance_helper_.Check(time);
-  }
-}
-
-void MainThreadSchedulerImpl::SetAllRenderWidgetsHidden(bool hidden) {
-  TRACE_EVENT1(TRACE_DISABLED_BY_DEFAULT("renderer.scheduler"),
-               "MainThreadSchedulerImpl::SetAllRenderWidgetsHidden", "hidden",
-               hidden);
-
-  helper_.CheckOnValidThread();
-
-  if (helper_.IsShutdown() || main_thread_only().renderer_hidden == hidden) {
-    return;
-  }
-
-  end_renderer_hidden_idle_period_closure_.Cancel();
-
-  if (hidden) {
-    TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("renderer.scheduler"),
-                 "MainThreadSchedulerImpl::OnRendererVisible");
-
-    idle_helper_.EnableLongIdlePeriod();
-
-    // Ensure that we stop running idle tasks after a few seconds of being
-    // hidden.
-    base::TimeDelta end_idle_when_hidden_delay =
-        base::Milliseconds(kEndIdleWhenHiddenDelayMillis);
-    control_task_queue_->GetTaskRunnerWithDefaultTaskType()->PostDelayedTask(
-        FROM_HERE, end_renderer_hidden_idle_period_closure_.GetCallback(),
-        end_idle_when_hidden_delay);
-    main_thread_only().renderer_hidden = true;
-  } else {
-    TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("renderer.scheduler"),
-                 "MainThreadSchedulerImpl::OnRendererHidden");
-
-    main_thread_only().renderer_hidden = false;
-    EndIdlePeriod();
-  }
-
-  // TODO(alexclarke): Should we update policy here?
-  CreateTraceEventObjectSnapshot();
-}
-
 void MainThreadSchedulerImpl::SetRendererBackgrounded(bool backgrounded) {
   helper_.CheckOnValidThread();
 
@@ -1246,209 +971,6 @@ void MainThreadSchedulerImpl::PerformMicrotaskCheckpoint() {
     DCHECK(main_thread_only().agent_group_schedulers->Contains(
         agent_group_scheduler));
     agent_group_scheduler->PerformMicrotaskCheckpoint();
-  }
-}
-
-// static
-bool MainThreadSchedulerImpl::ShouldPrioritizeInputEvent(
-    const blink::WebInputEvent& web_input_event) {
-  // We regard MouseMove events with the left mouse button down as a signal
-  // that the user is doing something requiring a smooth frame rate.
-  if ((web_input_event.GetType() == blink::WebInputEvent::Type::kMouseDown ||
-       web_input_event.GetType() == blink::WebInputEvent::Type::kMouseMove) &&
-      (web_input_event.GetModifiers() &
-       blink::WebInputEvent::kLeftButtonDown)) {
-    return true;
-  }
-  // Ignore all other mouse events because they probably don't signal user
-  // interaction needing a smooth framerate. NOTE isMouseEventType returns false
-  // for mouse wheel events, hence we regard them as user input.
-  // Ignore keyboard events because it doesn't really make sense to enter
-  // compositor priority for them.
-  if (blink::WebInputEvent::IsMouseEventType(web_input_event.GetType()) ||
-      blink::WebInputEvent::IsKeyboardEventType(web_input_event.GetType())) {
-    return false;
-  }
-  return true;
-}
-
-void MainThreadSchedulerImpl::DidHandleInputEventOnCompositorThread(
-    const blink::WebInputEvent& web_input_event,
-    WidgetScheduler::InputEventState event_state) {
-  TRACE_EVENT0(
-      TRACE_DISABLED_BY_DEFAULT("renderer.scheduler"),
-      "MainThreadSchedulerImpl::DidHandleInputEventOnCompositorThread");
-  if (!ShouldPrioritizeInputEvent(web_input_event))
-    return;
-
-  UpdateForInputEventOnCompositorThread(web_input_event, event_state);
-}
-
-void MainThreadSchedulerImpl::UpdateForInputEventOnCompositorThread(
-    const blink::WebInputEvent& web_input_event,
-    WidgetScheduler::InputEventState input_event_state) {
-  base::AutoLock lock(any_thread_lock_);
-  base::TimeTicks now = helper_.NowTicks();
-
-  blink::WebInputEvent::Type type = web_input_event.GetType();
-
-  // TODO(alexclarke): Move WebInputEventTraits where we can access it from here
-  // and record the name rather than the integer representation.
-  TRACE_EVENT2(TRACE_DISABLED_BY_DEFAULT("renderer.scheduler"),
-               "MainThreadSchedulerImpl::UpdateForInputEventOnCompositorThread",
-               "type", static_cast<int>(type), "input_event_state",
-               InputEventStateToString(input_event_state));
-
-  base::TimeDelta unused_policy_duration;
-  UseCase previous_use_case =
-      ComputeCurrentUseCase(now, &unused_policy_duration);
-  bool was_awaiting_touch_start_response =
-      any_thread().awaiting_touch_start_response;
-
-  any_thread().user_model.DidStartProcessingInputEvent(type, now);
-  any_thread().have_seen_input_since_navigation = true;
-
-  if (input_event_state ==
-      WidgetScheduler::InputEventState::EVENT_CONSUMED_BY_COMPOSITOR)
-    any_thread().user_model.DidFinishProcessingInputEvent(now);
-
-  switch (type) {
-    case blink::WebInputEvent::Type::kTouchStart:
-      any_thread().awaiting_touch_start_response = true;
-      // This is just a fail-safe to reset the state of
-      // |last_gesture_was_compositor_driven| to the default. We don't know
-      // yet where the gesture will run.
-      any_thread().last_gesture_was_compositor_driven = false;
-      // Assume the default gesture is prevented until we see evidence
-      // otherwise.
-      any_thread().default_gesture_prevented = true;
-
-      if (IsBlockingEvent(web_input_event))
-        any_thread().have_seen_a_blocking_gesture = true;
-      break;
-    case blink::WebInputEvent::Type::kTouchMove:
-      // Observation of consecutive touchmoves is a strong signal that the
-      // page is consuming the touch sequence, in which case touchstart
-      // response prioritization is no longer necessary. Otherwise, the
-      // initial touchmove should preserve the touchstart response pending
-      // state.
-      if (any_thread().awaiting_touch_start_response &&
-          GetCompositorThreadOnly().last_input_type ==
-              blink::WebInputEvent::Type::kTouchMove) {
-        any_thread().awaiting_touch_start_response = false;
-      }
-      break;
-
-    case blink::WebInputEvent::Type::kGesturePinchUpdate:
-    case blink::WebInputEvent::Type::kGestureScrollUpdate:
-      // If we see events for an established gesture, we can lock it to the
-      // appropriate thread as the gesture can no longer be cancelled.
-      any_thread().last_gesture_was_compositor_driven =
-          input_event_state ==
-          WidgetScheduler::InputEventState::EVENT_CONSUMED_BY_COMPOSITOR;
-      any_thread().awaiting_touch_start_response = false;
-      any_thread().default_gesture_prevented = false;
-      break;
-
-    case blink::WebInputEvent::Type::kGestureFlingCancel:
-    case blink::WebInputEvent::Type::kGestureTapDown:
-    case blink::WebInputEvent::Type::kGestureShowPress:
-    case blink::WebInputEvent::Type::kGestureScrollEnd:
-      // With no observable effect, these meta events do not indicate a
-      // meaningful touchstart response and should not impact task priority.
-      break;
-
-    case blink::WebInputEvent::Type::kMouseDown:
-      // Reset tracking state at the start of a new mouse drag gesture.
-      any_thread().last_gesture_was_compositor_driven = false;
-      any_thread().default_gesture_prevented = true;
-      break;
-
-    case blink::WebInputEvent::Type::kMouseMove:
-      // Consider mouse movement with the left button held down (see
-      // ShouldPrioritizeInputEvent) similarly to a touch gesture.
-      any_thread().last_gesture_was_compositor_driven =
-          input_event_state ==
-          WidgetScheduler::InputEventState::EVENT_CONSUMED_BY_COMPOSITOR;
-      any_thread().awaiting_touch_start_response = false;
-      break;
-
-    case blink::WebInputEvent::Type::kMouseWheel:
-      any_thread().last_gesture_was_compositor_driven =
-          input_event_state ==
-          WidgetScheduler::InputEventState::EVENT_CONSUMED_BY_COMPOSITOR;
-      any_thread().awaiting_touch_start_response = false;
-      // If the event was sent to the main thread, assume the default gesture is
-      // prevented until we see evidence otherwise.
-      any_thread().default_gesture_prevented =
-          !any_thread().last_gesture_was_compositor_driven;
-      if (IsBlockingEvent(web_input_event))
-        any_thread().have_seen_a_blocking_gesture = true;
-      break;
-    case blink::WebInputEvent::Type::kUndefined:
-      break;
-
-    default:
-      any_thread().awaiting_touch_start_response = false;
-      break;
-  }
-
-  // Avoid unnecessary policy updates if the use case did not change.
-  UseCase use_case = ComputeCurrentUseCase(now, &unused_policy_duration);
-
-  if (use_case != previous_use_case ||
-      was_awaiting_touch_start_response !=
-          any_thread().awaiting_touch_start_response) {
-    EnsureUrgentPolicyUpdatePostedOnMainThread(FROM_HERE);
-  }
-  GetCompositorThreadOnly().last_input_type = type;
-}
-
-void MainThreadSchedulerImpl::WillPostInputEventToMainThread(
-    WebInputEvent::Type web_input_event_type,
-    const WebInputEventAttribution& web_input_event_attribution) {
-  base::AutoLock lock(any_thread_lock_);
-  any_thread().pending_input_monitor.OnEnqueue(web_input_event_type,
-                                               web_input_event_attribution);
-}
-
-void MainThreadSchedulerImpl::WillHandleInputEventOnMainThread(
-    WebInputEvent::Type web_input_event_type,
-    const WebInputEventAttribution& web_input_event_attribution) {
-  helper_.CheckOnValidThread();
-
-  base::AutoLock lock(any_thread_lock_);
-  any_thread().pending_input_monitor.OnDequeue(web_input_event_type,
-                                               web_input_event_attribution);
-}
-
-void MainThreadSchedulerImpl::DidHandleInputEventOnMainThread(
-    const WebInputEvent& web_input_event,
-    WebInputEventResult result,
-    bool is_frame_expected) {
-  TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("renderer.scheduler"),
-               "MainThreadSchedulerImpl::DidHandleInputEventOnMainThread");
-  helper_.CheckOnValidThread();
-  if (ShouldPrioritizeInputEvent(web_input_event)) {
-    base::AutoLock lock(any_thread_lock_);
-    any_thread().user_model.DidFinishProcessingInputEvent(helper_.NowTicks());
-
-    // If we were waiting for a touchstart response and the main thread has
-    // prevented the default gesture, consider the gesture established. This
-    // ensures single-event gestures such as button presses are promptly
-    // detected.
-    if (any_thread().awaiting_touch_start_response &&
-        result == WebInputEventResult::kHandledApplication) {
-      any_thread().awaiting_touch_start_response = false;
-      any_thread().default_gesture_prevented = true;
-      UpdatePolicyLocked(UpdateType::kMayEarlyOutIfPolicyUnchanged);
-    }
-  }
-
-  if (WebInputEvent::IsWebInteractionEvent(web_input_event.GetType())) {
-    main_thread_only().is_current_task_discrete_input = true;
-    main_thread_only().is_frame_expected_after_discrete_input =
-        is_frame_expected;
   }
 }
 
@@ -1614,9 +1136,6 @@ void MainThreadSchedulerImpl::UpdatePolicyLocked(UpdateType update_type) {
   new_policy.find_in_page_priority =
       find_in_page_budget_pool_controller_->CurrentTaskPriority();
 
-  new_policy.should_prioritize_ipc_tasks =
-      num_pending_urgent_ipc_messages_.load(std::memory_order_relaxed) > 0;
-
   const bool are_all_pages_frozen = AllPagesFrozen();
   new_policy.should_freeze_compositor_task_queue = are_all_pages_frozen;
 
@@ -1628,12 +1147,6 @@ void MainThreadSchedulerImpl::UpdatePolicyLocked(UpdateType update_type) {
   // priority computation relies on state outside of the policy
   // (main_thread_compositing_is_fast) that may have been updated here.
   UpdateCompositorTaskQueuePriority();
-
-  if (base::FeatureList::IsEnabled(kInputHandlingModeFromUseCase)) {
-    // The use-case -> isolate input-handling signal was computed here, along
-    // with last_input_use_case_time_, which existed only to widen that signal's
-    // window. Both go with the isolate.
-  }
 
   // TODO(alexclarke): Can we get rid of force update now?
   // talp: Can't get rid of this, as per-agent scheduling happens on top of the
@@ -1671,59 +1184,6 @@ void MainThreadSchedulerImpl::IncreaseDefaultThreadTypeUsageCount() {
 void MainThreadSchedulerImpl::DecreaseDefaultThreadTypeUsageCount() {
   default_thread_type_usage_count_--;
   MaybeUpdateThreadTypeLease();
-}
-
-bool MainThreadSchedulerImpl::ComputeIsInputHandlingFromPerformanceScenario(
-    performance_scenarios::InputScenario input_scenario) const {
-  DCHECK(!base::FeatureList::IsEnabled(kInputHandlingModeFromUseCase));
-  using performance_scenarios::InputScenario;
-  using performance_scenarios::ScenarioScope;
-
-  switch (input_scenario) {
-    case InputScenario::kTyping:
-    case InputScenario::kTap:
-    case InputScenario::kScroll:
-      return true;
-    case InputScenario::kNoInput:
-      return false;
-  }
-
-  NOTREACHED();
-}
-
-bool MainThreadSchedulerImpl::ComputeIsInputHandlingFromUseCase(
-    UseCase use_case) const {
-  DCHECK(
-      !base::FeatureList::IsEnabled(kInputHandlingModeFromPerformanceScenario));
-  switch (use_case) {
-    case UseCase::kDiscreteInputResponse:
-    case UseCase::kTouchstart:
-    case UseCase::kCompositorGesture:
-    case UseCase::kSynchronizedGesture:
-    case UseCase::kMainThreadGesture:
-    case UseCase::kMainThreadCustomInputHandling:
-      return true;
-    default:
-      return false;
-  }
-  NOTREACHED();
-}
-
-bool MainThreadSchedulerImpl::ComputeIsLoadingFromPerformanceScenario(
-    performance_scenarios::LoadingScenario loading_scenario) const {
-  DCHECK(!base::FeatureList::IsEnabled(kLoadingModeFromRAILMode));
-  using performance_scenarios::LoadingScenario;
-  using performance_scenarios::ScenarioScope;
-
-  switch (loading_scenario) {
-    case LoadingScenario::kNoPageLoading:
-      return false;
-    case LoadingScenario::kBackgroundPageLoading:
-    case LoadingScenario::kFocusedPageLoading:
-    case LoadingScenario::kVisiblePageLoading:
-      return true;
-  }
-  NOTREACHED();
 }
 
 RAILMode MainThreadSchedulerImpl::ComputeCurrentRAILMode(
@@ -1993,8 +1453,6 @@ void MainThreadSchedulerImpl::WriteIntoTraceLocked(
       UseCaseToString(main_thread_only().current_use_case);
   dict.Add("current_use_case",
            current_use_case.value ? current_use_case : "none");
-  dict.Add("compositor_will_send_main_frame_not_expected",
-           main_thread_only().compositor_will_send_main_frame_not_expected);
   dict.Add("blocking_input_expected_soon",
            main_thread_only().blocking_input_expected_soon);
   dict.Add("idle_period_state", idle_helper_.IdlePeriodStateForTracing());
@@ -2033,7 +1491,6 @@ void MainThreadSchedulerImpl::WriteIntoTraceLocked(
                .InMillisecondsF());
 
   dict.Add("user_model", any_thread().user_model);
-  dict.Add("render_widget_scheduler_signals", render_widget_scheduler_signals_);
   WriteVirtualTimeInfoIntoTrace(dict);
 }
 
@@ -2098,50 +1555,6 @@ void MainThreadSchedulerImpl::Policy::WriteIntoTrace(
            should_pause_task_queues_for_android_webview);
   dict.Add("should_freeze_compositor_task_queue",
            should_freeze_compositor_task_queue);
-  dict.Add("should_prioritize_ipc_tasks", should_prioritize_ipc_tasks);
-}
-
-void MainThreadSchedulerImpl::OnPendingTasksChanged(bool has_tasks) {
-  if (has_tasks ==
-      main_thread_only().compositor_will_send_main_frame_not_expected.get())
-    return;
-
-  // Dispatch RequestBeginMainFrameNotExpectedSoon notifications asynchronously.
-  // This is needed because idle task can be posted (and OnPendingTasksChanged
-  // called) at any moment, including in the middle of allocating an object,
-  // when state is not consistent. Posting a task to dispatch notifications
-  // minimizes the amount of code that runs and sees an inconsistent state.
-  control_task_queue_->GetTaskRunnerWithDefaultTaskType()->PostTask(
-      FROM_HERE,
-      base::BindOnce(
-          &MainThreadSchedulerImpl::DispatchRequestBeginMainFrameNotExpected,
-          weak_factory_.GetWeakPtr(), has_tasks));
-}
-
-void MainThreadSchedulerImpl::DispatchRequestBeginMainFrameNotExpected(
-    bool has_tasks) {
-  if (has_tasks ==
-      main_thread_only().compositor_will_send_main_frame_not_expected.get())
-    return;
-
-  TRACE_EVENT1(
-      TRACE_DISABLED_BY_DEFAULT("renderer.scheduler"),
-      "MainThreadSchedulerImpl::DispatchRequestBeginMainFrameNotExpected",
-      "has_tasks", has_tasks);
-  // If idle tasks are posted before compositing is initialized, the scheduler
-  // will request these signals as soon as it is.
-  for (auto& widget_scheduler : main_thread_only().widget_schedulers) {
-    widget_scheduler->RequestBeginMainFrameNotExpected(has_tasks);
-  }
-  main_thread_only().compositor_will_send_main_frame_not_expected = has_tasks;
-}
-
-void MainThreadSchedulerImpl::InitializeRequestBeginMainFrameNotExpected(
-    scoped_refptr<WidgetSchedulerImpl> widget_scheduler) {
-  if (main_thread_only().widget_schedulers.Contains(widget_scheduler)) {
-    widget_scheduler->RequestBeginMainFrameNotExpected(
-        main_thread_only().compositor_will_send_main_frame_not_expected);
-  }
 }
 
 void MainThreadSchedulerImpl::DidStartProvisionalLoad(
@@ -2493,10 +1906,6 @@ void MainThreadSchedulerImpl::OnTaskStarted(
 
   main_thread_only().current_task_start_time = task_timing.start_time();
 
-  // Check if the performance scenario has changed. NotifyAllScopes only posts
-  // tasks to notify observers if there's been a change.
-  performance_scenarios::PerformanceScenarioObserverList::NotifyAllScopes(
-      FROM_HERE);
 }
 
 void MainThreadSchedulerImpl::OnTaskCompleted(
@@ -2561,9 +1970,7 @@ TaskPriority MainThreadSchedulerImpl::ComputePriority(
   }
 
   if (task_queue->queue_type() == MainThreadTaskQueue::QueueType::kDefault) {
-    return main_thread_only().current_policy.should_prioritize_ipc_tasks
-               ? TaskPriority::kVeryHighPriority
-               : TaskPriority::kNormalPriority;
+    return TaskPriority::kNormalPriority;
   }
 
   switch (task_queue->GetPrioritisationType()) {
@@ -2620,9 +2027,7 @@ bool MainThreadSchedulerImpl::ShouldUpdateTaskQueuePriorities(
     Policy old_policy) const {
   return old_policy.use_case != main_thread_only().current_policy.use_case ||
          old_policy.find_in_page_priority !=
-             main_thread_only().current_policy.find_in_page_priority ||
-         old_policy.should_prioritize_ipc_tasks !=
-             main_thread_only().current_policy.should_prioritize_ipc_tasks;
+             main_thread_only().current_policy.find_in_page_priority;
 }
 
 UseCase MainThreadSchedulerImpl::current_use_case() const {
@@ -2701,13 +2106,6 @@ void MainThreadSchedulerImpl::MaybeUpdatePolicyOnTaskCompleted(
   performance_helper_.Check();
 
   bool needs_policy_update = false;
-
-  bool should_prioritize_ipc_tasks =
-      num_pending_urgent_ipc_messages_.load(std::memory_order_relaxed) > 0;
-  if (should_prioritize_ipc_tasks !=
-      main_thread_only().current_policy.should_prioritize_ipc_tasks) {
-    needs_policy_update = true;
-  }
 
   if (base::FeatureList::IsEnabled(features::kDeferRendererTasksAfterInput) &&
       queue) {
@@ -2897,17 +2295,6 @@ void MainThreadSchedulerImpl::ExecuteAfterCurrentTaskForTesting(
   ThreadSchedulerBase::ExecuteAfterCurrentTask(std::move(on_completion_task));
 }
 
-void MainThreadSchedulerImpl::OnUrgentMessageReceived() {
-  std::atomic_fetch_add_explicit(&num_pending_urgent_ipc_messages_, 1u,
-                                 std::memory_order_relaxed);
-}
-
-void MainThreadSchedulerImpl::OnUrgentMessageProcessed() {
-  uint64_t prev_urgent_message_count = std::atomic_fetch_sub_explicit(
-      &num_pending_urgent_ipc_messages_, 1u, std::memory_order_relaxed);
-  CHECK_GT(prev_urgent_message_count, 0u);
-}
-
 void MainThreadSchedulerImpl::OnWebSchedulingTaskQueuePriorityChanged(
     MainThreadTaskQueue* queue) {
   if (!base::FeatureList::IsEnabled(features::kDeferRendererTasksAfterInput)) {
@@ -2931,30 +2318,6 @@ void MainThreadSchedulerImpl::OnWebSchedulingTaskQueuePriorityChanged(
 
 const IdleHelper& MainThreadSchedulerImpl::GetIdleHelperForTesting() const {
   return idle_helper_;
-}
-
-void MainThreadSchedulerImpl::OnWidgetSchedulerWillShutdown(
-    WidgetSchedulerImpl* scheduler) {
-  auto iter = main_thread_only().widget_schedulers.find(scheduler);
-  CHECK_NE(iter, main_thread_only().widget_schedulers.end());
-  main_thread_only().widget_schedulers.erase(iter);
-
-  // If the thread is hosting multiple widgets, `widget_scheduler` was
-  // producing frames, and `widget_scheduler` had not received a
-  // `BeginFrameNotExpectedSoon` signal, idle periods won't restart until the
-  // next frame, which could cause idle periods to unexpectedly stop. This can
-  // happen, for example, when showing a date picker (popup window).
-  if (main_thread_only().renderer_hidden || idle_helper_.IsInLongIdlePeriod()) {
-    return;
-  }
-  bool no_widgets_expecting_frame = std::ranges::all_of(
-      main_thread_only().widget_schedulers,
-      [](const scoped_refptr<WidgetSchedulerImpl>& widget_scheduler) {
-        return widget_scheduler->IsBeginFrameNotExpectedSoon();
-      });
-  if (no_widgets_expecting_frame) {
-    idle_helper_.EnableLongIdlePeriod();
-  }
 }
 
 void MainThreadSchedulerImpl::MaybeSetBusyLoop() {

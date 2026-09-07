@@ -28,10 +28,6 @@
 #include "third_party/blink/renderer/bindings/core/v8/v8_union_file_formdata_usvstring.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_union_file_usvstring.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_union_htmlscriptelement_svgscriptelement.h"
-#include "third_party/blink/renderer/bindings/core/v8/v8_union_sanitizerattributenamespace_string.h"
-#include "third_party/blink/renderer/bindings/core/v8/v8_union_sanitizerelementnamespace_string.h"
-#include "third_party/blink/renderer/bindings/core/v8/v8_union_sanitizerelementnamespacewithattributes_string.h"
-#include "third_party/blink/renderer/bindings/core/v8/v8_union_sanitizerprocessinginstruction_string.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_union_trustedhtml_trustedscript_trustedscripturl.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_union_urlpattern_urlpatterninit_usvstring.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_union_urlpatterninit_usvstring.h"
@@ -52,10 +48,6 @@ using V8FormDataEntryValue = V8UnionFileOrUSVString;
 using V8GeometryNode = V8UnionCSSPseudoElementOrDocumentOrElementOrText;
 using V8HTMLOrSVGScriptElement = V8UnionHTMLScriptElementOrSVGScriptElement;
 using V8KeyframeOffset = V8UnionDoubleOrStringOrTimelineRangeOffset;
-using V8SanitizerAttribute = V8UnionSanitizerAttributeNamespaceOrString;
-using V8SanitizerElement = V8UnionSanitizerElementNamespaceOrString;
-using V8SanitizerElementWithAttributes = V8UnionSanitizerElementNamespaceWithAttributesOrString;
-using V8SanitizerPI = V8UnionSanitizerProcessingInstructionOrString;
 using V8TrustedType = V8UnionTrustedHTMLOrTrustedScriptOrTrustedScriptURL;
 using V8URLPatternCompatible = V8UnionURLPatternOrURLPatternInitOrUSVString;
 using V8URLPatternInput = V8UnionURLPatternInitOrUSVString;

@@ -4,5 +4,10 @@
 
 module ui.mojom;
 
-[Native]
-enum ScrollGranularity;
+enum ScrollGranularity {
+  kScrollByPrecisePixel = 0,
+  kScrollByPixel = 1,
+  kScrollByLine = 2,
+  kScrollByPage = 3,
+  kScrollByDocument = 4,
+};

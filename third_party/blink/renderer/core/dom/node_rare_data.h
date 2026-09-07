@@ -51,7 +51,6 @@ class ResizeObservation;
 class ResizeObserver;
 class ScrollTimeline;
 class ShadowRoot;
-class UnboundedEventData;
 class StyleScopeData;
 
 enum class DynamicRestyleFlags;
@@ -297,10 +296,6 @@ class CORE_EXPORT NodeRareData final : public GarbageCollected<NodeRareData> {
       std::optional<LayoutUnit> size);
   std::optional<LayoutUnit> LastRememberedBlockSize() const;
   std::optional<LayoutUnit> LastRememberedInlineSize() const;
-
-  UnboundedEventData* GetUnboundedEventData() const;
-  std::pair<std::reference_wrapper<UnboundedEventData>, NodeRareData*>
-  EnsureUnboundedEventData();
 
   PopoverData* GetPopoverData() const;
   std::pair<std::reference_wrapper<PopoverData>, NodeRareData*>
@@ -568,7 +563,6 @@ class CORE_EXPORT NodeRareData final : public GarbageCollected<NodeRareData> {
     kFocusgroupData = 48,
     kDOMNodeId = 49,
     kFocusgroupTokenList = 50,
-    kUnboundedEventTask = 52,
     kNumFields = 54,
   };
 

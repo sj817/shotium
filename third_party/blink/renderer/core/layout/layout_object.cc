@@ -447,8 +447,6 @@ LayoutObject::LayoutObject(Node* node)
 #endif
 
   InstanceCounters::IncrementCounter(InstanceCounters::kLayoutObjectCounter);
-  if (node_)
-    GetFrameView()->IncrementLayoutObjectCount();
 }
 
 LayoutObject::~LayoutObject() {
@@ -2001,24 +1999,6 @@ gfx::Rect LayoutObject::AbsoluteBoundingBoxRect(
   for (auto& quad : quads)
     result.Union(quad.BoundingBox());
   return gfx::ToEnclosingRect(result);
-}
-
-gfx::Rect LayoutObject::AbsoluteBoundingBoxRectForUnboundedElement() const {
-  NOT_DESTROYED();
-  DCHECK(RuntimeEnabledFeatures::UnboundedElementEnabled());
-  if (const auto* box_model = DynamicTo<LayoutBoxModelObject>(this)) {
-    PhysicalRect overflow = box_model->VisualOverflowRectIncludingFilters();
-    // Intersect with the clip-path bounding box so that the browser-side window
-    // bounds match the clipped/visible area of the element rather than its
-    // unclipped layout size. This prevents size/origin mismatches in the
-    // compositor.
-    if (auto clip_path_bounds =
-            ClipPathClipper::LocalClipPathBoundingBox(*this)) {
-      overflow.Intersect(PhysicalRect::EnclosingRect(*clip_path_bounds));
-    }
-    return ToEnclosingRect(LocalToAbsoluteRect(overflow));
-  }
-  return AbsoluteBoundingBoxRect();
 }
 
 PhysicalRect LayoutObject::AbsoluteBoundingBoxRectHandlingEmptyInline(

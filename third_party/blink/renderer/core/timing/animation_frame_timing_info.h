@@ -6,7 +6,6 @@
 #define THIRD_PARTY_BLINK_RENDERER_CORE_TIMING_ANIMATION_FRAME_TIMING_INFO_H_
 
 #include "base/time/time.h"
-#include "components/viz/common/frame_sinks/begin_frame_args.h"
 #include "third_party/blink/renderer/platform/bindings/source_location.h"
 #include "third_party/blink/renderer/platform/heap/collection_support/heap_vector.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
@@ -181,11 +180,6 @@ class AnimationFrameTimingInfo final
     layout_duration_ = duration;
   }
 
-  void SetBeginFrameId(viz::BeginFrameId begin_frame_id) {
-    begin_frame_id_ = begin_frame_id;
-  }
-  viz::BeginFrameId BeginFrameId() const { return begin_frame_id_; }
-
   void SetDidPause() { did_pause_ = true; }
   bool DidPause() const { return did_pause_; }
 
@@ -228,7 +222,6 @@ class AnimationFrameTimingInfo final
   Vector<ConditionalMeasureInfo> conditional_measures_;
 
   // Id for the BeginFrame, which triggered this animation frame.
-  viz::BeginFrameId begin_frame_id_;
 
   // Whether the LoAF included sync XHR or alerts (pause).
   bool did_pause_ = false;

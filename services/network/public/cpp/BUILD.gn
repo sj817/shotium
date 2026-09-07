@@ -203,14 +203,12 @@ component("cpp") {
     "//services/network/public/mojom",
     "//services/network/public/mojom:url_loader_base",
     "//url",
-    "//url/ipc:url_ipc",
   ]
 
   deps = [
     "//base",
     "//components/link_header_util",
     "//components/url_pattern",
-    "//ipc",
     "//net",
   ]
 
@@ -355,8 +353,6 @@ component("network_param_mojom_support") {
     "hash_value_mojom_traits.h",
     "http_response_headers_mojom_traits.cc",
     "http_response_headers_mojom_traits.h",
-    "net_ipc_param_traits.cc",
-    "net_ipc_param_traits.h",
     "network_param_mojom_traits.cc",
     "network_param_mojom_traits.h",
     "ocsp_verify_result_mojom_traits.cc",
@@ -373,11 +369,9 @@ component("network_param_mojom_support") {
     "x509_certificate_mojom_traits.h",
   ]
   deps = [
-    "//ipc",
     "//mojo/public/cpp/base:shared_typemap_traits",
     "//net",
     "//services/network/public/mojom:mojom_network_param_shared",
-    "//url/ipc:url_ipc",
     "//url/mojom:url_mojom_origin",
   ]
   configs += [ "//build/config/compiler:wexit_time_destructors" ]
@@ -646,10 +640,9 @@ component("cpp_base") {
     "network_anonymization_key_mojom_traits.h",
     "network_interface_mojom_traits.cc",
     "network_interface_mojom_traits.h",
-    "network_ipc_param_traits.cc",
-    "network_ipc_param_traits.h",
     "network_isolation_key_mojom_traits.cc",
     "network_isolation_key_mojom_traits.h",
+    "network_types_mojom_traits.h",
     "optional_trust_token_params.cc",
     "optional_trust_token_params.h",
     "originating_process_id.cc",
@@ -676,6 +669,7 @@ component("cpp_base") {
     "url_request_mojom_traits.h",
     "url_request_param_mojom_traits.cc",
     "url_request_param_mojom_traits.h",
+    "url_request_redirect_info_mojom_traits.h",
     "web_transport_http_request_headers_mojom_traits.cc",
     "web_transport_http_request_headers_mojom_traits.h",
   ]
@@ -699,7 +693,6 @@ component("cpp_base") {
     ":structured_headers_mojom_support",
     ":web_platform",
     "//services/network/public/mojom:url_loader_base",
-    "//url/ipc:url_ipc",
     "//url/mojom:url_mojom_gurl",
     "//url/mojom:url_mojom_origin",
   ]
@@ -707,7 +700,6 @@ component("cpp_base") {
     ":buildflags",
     ":first_party_sets_mojom_support",
     "//base",
-    "//ipc",
     "//mojo/public/mojom/base",
     "//net",
     "//services/network/public/mojom:cookies_mojom",
@@ -749,7 +741,6 @@ if (is_p2p_enabled) {
 
     deps = [
       ":network_param_mojom_support",
-      "//ipc",
       "//net",
       "//services/network/public/mojom:mojom_shared",
     ]
@@ -922,7 +913,6 @@ source_set("perftests") {
     "//net",
     "//testing/gtest",
     "//testing/perf",
-    "//third_party/google_benchmark",
   ]
 }
 

@@ -59,7 +59,6 @@
 #include "third_party/blink/renderer/core/css/style_sheet_contents.h"
 #include "third_party/blink/renderer/core/dom/document.h"
 #include "third_party/blink/renderer/core/dom/element.h"
-#include "third_party/blink/renderer/core/frame/local_frame_ukm_aggregator.h"
 #include "third_party/blink/renderer/core/frame/local_frame_view.h"
 #include "third_party/blink/renderer/core/frame/web_feature.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
@@ -489,14 +488,6 @@ ParseSheetResult CSSParserImpl::ParseStyleSheet(
     StyleSheetContents* style_sheet,
     CSSDeferPropertyParsing defer_property_parsing,
     bool allow_import_rules) {
-  std::optional<LocalFrameUkmAggregator::ScopedUkmHierarchicalTimer> timer;
-  if (context->GetDocument() && context->GetDocument()->View()) {
-    if (auto* metrics_aggregator =
-            context->GetDocument()->View()->GetUkmAggregator()) {
-      timer.emplace(metrics_aggregator->GetScopedTimer(
-          static_cast<size_t>(LocalFrameUkmAggregator::kParseStyleSheet)));
-    }
-  }
   TRACE_EVENT_BEGIN("blink,blink_style", "CSSParserImpl::parseStyleSheet",
                     "baseUrl", context->BaseURL().GetString().Utf8(), "mode",
                     context->Mode());

@@ -701,8 +701,6 @@ component("net") {
     "http/transport_security_state_source.h",
     "http/url_security_manager.cc",
     "http/url_security_manager.h",
-    "log/file_net_log_observer.cc",
-    "log/file_net_log_observer.h",
     "log/net_log.cc",
     "log/net_log.h",
     "log/net_log_capture_mode.cc",
@@ -725,43 +723,8 @@ component("net") {
     "log/net_log_with_source.h",
     "log/trace_net_log_observer.cc",
     "log/trace_net_log_observer.h",
-    "nqe/cached_network_quality.cc",
-    "nqe/cached_network_quality.h",
     "nqe/effective_connection_type.cc",
     "nqe/effective_connection_type.h",
-    "nqe/effective_connection_type_observer.h",
-    "nqe/event_creator.cc",
-    "nqe/event_creator.h",
-    "nqe/network_id.cc",
-    "nqe/network_id.h",
-    "nqe/network_qualities_prefs_manager.cc",
-    "nqe/network_qualities_prefs_manager.h",
-    "nqe/network_quality.cc",
-    "nqe/network_quality.h",
-    "nqe/network_quality_estimator.cc",
-    "nqe/network_quality_estimator.h",
-    "nqe/network_quality_estimator_params.cc",
-    "nqe/network_quality_estimator_params.h",
-    "nqe/network_quality_estimator_util.cc",
-    "nqe/network_quality_estimator_util.h",
-    "nqe/network_quality_observation.cc",
-    "nqe/network_quality_observation.h",
-    "nqe/network_quality_observation_source.h",
-    "nqe/network_quality_store.cc",
-    "nqe/network_quality_store.h",
-    "nqe/observation_buffer.cc",
-    "nqe/observation_buffer.h",
-    "nqe/peer_to_peer_connections_count_observer.h",
-    "nqe/pref_names.cc",
-    "nqe/pref_names.h",
-    "nqe/rtt_throughput_estimates_observer.h",
-    "nqe/socket_watcher.cc",
-    "nqe/socket_watcher.h",
-    "nqe/socket_watcher_factory.cc",
-    "nqe/socket_watcher_factory.h",
-    "nqe/throughput_analyzer.cc",
-    "nqe/throughput_analyzer.h",
-    "nqe/weighted_observation.h",
     "proxy_resolution/proxy_config.cc",
     "proxy_resolution/proxy_config.h",
     "proxy_resolution/proxy_config_with_annotation.cc",
@@ -833,8 +796,6 @@ component("net") {
     "socket/socket_net_log_params.h",
     "socket/socket_options.cc",
     "socket/socket_options.h",
-    "socket/socket_performance_watcher.h",
-    "socket/socket_performance_watcher_factory.h",
     "socket/socket_pool_additional_capacity.cc",
     "socket/socket_pool_additional_capacity.h",
     "socket/socket_tag.cc",
@@ -1699,7 +1660,6 @@ source_set("net_public_deps") {
 
   public_deps = [
     ":buildflags",
-    ":net_nqe_proto",
     "//base",
     "//crypto",
     "//net/base:registry_controlled_domains",
@@ -1723,21 +1683,6 @@ grit("net_resources") {
     "grit/net_resources.h",
     "net_resources.pak",
   ]
-}
-
-proto_library("net_nqe_proto") {
-  visibility = [ ":net_public_deps" ]
-
-  sources = [ "nqe/proto/network_id_proto.proto" ]
-  cc_generator_options = "dllexport_decl=NET_EXPORT_PRIVATE:"
-  cc_include = "net/base/net_export.h"
-  component_build_force_source_set = true
-
-  link_deps = [ "//net/base:net_export_header" ]
-
-  defines = [ "NET_IMPLEMENTATION" ]
-
-  extra_configs = [ "//build/config/compiler:wexit_time_destructors" ]
 }
 
 proto_library("isolation_info_proto") {
@@ -1904,8 +1849,6 @@ static_library("test_support") {
     "log/test_net_log.h",
     "log/test_net_log_util.cc",
     "log/test_net_log_util.h",
-    "nqe/network_quality_estimator_test_util.cc",
-    "nqe/network_quality_estimator_test_util.h",
     "socket/read_buffering_stream_socket.cc",
     "socket/read_buffering_stream_socket.h",
     "socket/socket_test_util.cc",
@@ -2573,22 +2516,11 @@ target(_test_target_type, "net_unittests") {
     "http/transport_security_persister_unittest.cc",
     "http/transport_security_state_unittest.cc",
     "http/url_security_manager_unittest.cc",
-    "log/file_net_log_observer_unittest.cc",
     "log/net_log_capture_mode_unittest.cc",
     "log/net_log_unittest.cc",
     "log/net_log_util_unittest.cc",
     "log/net_log_values_unittest.cc",
     "nqe/effective_connection_type_unittest.cc",
-    "nqe/event_creator_unittest.cc",
-    "nqe/network_id_unittest.cc",
-    "nqe/network_qualities_prefs_manager_unittest.cc",
-    "nqe/network_quality_estimator_params_unittest.cc",
-    "nqe/network_quality_estimator_unittest.cc",
-    "nqe/network_quality_estimator_util_unittest.cc",
-    "nqe/network_quality_store_unittest.cc",
-    "nqe/observation_buffer_unittest.cc",
-    "nqe/socket_watcher_unittest.cc",
-    "nqe/throughput_analyzer_unittest.cc",
     "shared_dictionary/shared_dictionary_header_checker_source_stream_unittest.cc",
     "shared_dictionary/shared_dictionary_isolation_key_unittest.cc",
     "shared_dictionary/shared_dictionary_network_transaction_factory_unittest.cc",
@@ -2810,7 +2742,6 @@ target(_test_target_type, "net_unittests") {
     "//testing/libfuzzer/proto:url_proto_converter",
     "//third_party/abseil-cpp:absl",
     "//third_party/abseil-cpp:test_support",
-    "//third_party/anonymous_tokens:anonymous_tokens_tests",
     "//third_party/protobuf:protobuf_lite",
     "//third_party/simdutf",
     "//third_party/zlib",
@@ -3159,7 +3090,6 @@ if (!is_ios) {
       "//base/test:test_support_perf",
       "//testing/gtest",
       "//testing/perf",
-      "//third_party/google_benchmark",
       "//url",
     ]
     data_deps = [

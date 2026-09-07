@@ -4,6 +4,20 @@
 
 本报告保留删除前的审计快照。随后获授权执行的实际删除与验证，见 [执行记录](screenshot-cut-execution-2026-09-07.md)。
 
+## 当前执行状态：本批源码完成，暂停交接
+
+**用户最新要求：本批完成后暂停并交接。此指令优先于下面所有历史 active 目标和继续执行计划；未经用户再次要求，不再裁剪、构建或启动子代理。**
+
+本批七组已明确授权并全部应用：Service Manager、ANGLE/SPIR-V/Vulkan、Blink 拖放、UKM、NQE/FileNetLog、Sanitizer/Skeleton、Origin Trial。加上本轮前半部分 GPU/Viz、旧 IPC、原生 UI、Skottie、第三方骨架、XSLT 脚本 API 与输入预测清理，相对最后验证提交 d9b409db334cb60b0f6b0c11549b7d5c4be7e7bb 共删除 1,404 个普通跟踪文件、5 个 gitlink，新增 3 个 Mojo traits 头文件。源码与文档合为一个本地提交，提交号及精确路径见 out/cut-stage16-final/commit.json；不创建 PR、不 push、不发布。
+
+七组源码完成为 7/7；整个裁剪目标尚未完成。已删除 gpu/、ipc/、services/service_manager、ui/gl 及 ANGLE/SPIR-V/Vulkan checkout；五个第三方完整仓库和既有修改保存在 out/cut-stage16-angle-authorized/vendor-backup。仍保留截图所需 CPU 绘制、CSS/DOM/布局、SVG、图片、字体、表单主题、Canvas 备用布局、原生 XSLT、普通 Mojo 和实际网络加载。
+
+静态证据 out/cut-stage16/static-proof-combined.json：15,905 个代码/构建输入、285 个改动 C/C++ 预处理配对、653 份新阶段原始 SHA 备份；扫描发现的一个 drag_state.h 旧 include 已补删，当前记录 0 问题。早期父阶段和 Skottie 备份另有原始证据。
+
+**本批尚未 GN 生成、编译/链接、重建 addon、运行或像素验收，不能宣称可构建或截图无回归。** out/Shot 仍是第十一批旧二进制：183 张已验证像素，第 184 张 Unbounded 只有旧二进制基线；六平台实际编译仍未完成。以后由用户决定是否验证，建议用已成功的 jobs 8（20 已多次实际 OOM），不改永久默认值。
+
+剩余网络/公共协议/FileReader/Blob/Worker、诊断/Perfetto/Crashpad/AX、UI/display/拖放辅助、Route/URLPattern、Skia 实际 checkout 及其他第三方/生成器/同步尾巴，连同接手顺序与回退位置，全部见 [交接报告](screenshot-cut-handoff-2026-09-08.md)。逐根目录状态见 [根目录报告](screenshot-root-status-2026-09-08.md)。子代理已停止。
+
 ## 第十一批执行状态（Windows 验证通过）
 
 第十一批已实体删除 576 文件，修改 225 个源码/构建输入及四份任务/同步文档。CC 合成器运行链、Canvas 绘图属性、元素/区域捕获与追踪的 Blink→CC/Viz→Mojo 链、浏览器 ImageReplacement、过渡 CSSOM/私有 descriptor/UA 资源已连同调用方和 GN 移除。普通 CPU 绘制、SVG、图片/表单、Canvas 备用布局、过渡相关普通 CSS 属性与 @supports、真实导航初始化保留。GN 6839/852、7409 个输入及 IDL 检查通过。Windows EXE/DLL 均以 jobs 8 编译链接成功，0 失败 edge；新 addon 已重建，旁置 DLL/资源与 out/Shot 哈希一致。serve、net、84 demos（62 exact / 1 fuzzy / 21 smoke）、Node、daemon、协议、Bilibili 离线长页与 accept 全部通过。183/183 张 PNG 解码像素完全一致，动态 clip-path 与等价静态中点完全一致；Chrome oracle 差异仍为 1.524%。EXE 45,542,912 字节，较第十批减少 790,016 字节；DLL 45,540,864 字节。 Linux probe 为 0 缺 BUILD、0 主仓库缺输入，仍有 3 个 Linux DEPS 检出项和 1 个宿主工具链输入缺失；jumbo 静态扫描列出 39 个候选，部分平台/生成输入未扫描。这是图与静态证据，六平台实际编译仍未完成。其余 Viz/GPU、协议、网络/诊断、第三方和根目录总复核继续处理，整个目标 active。完整接续见 screenshot-cut-task.md；本报告后文保持删除前审计快照。

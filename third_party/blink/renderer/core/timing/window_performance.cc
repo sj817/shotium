@@ -46,7 +46,6 @@
 #include "base/trace_event/trace_event.h"
 #include "base/trace_event/trace_id_helper.h"
 #include "cc/base/features.h"
-#include "components/viz/common/frame_timing_details.h"
 #include "services/metrics/public/cpp/ukm_builders.h"
 #include "services/network/public/mojom/load_timing_info.mojom-blink.h"
 #include "third_party/blink/public/common/features.h"
@@ -716,27 +715,6 @@ void WindowPerformance::EventTimingProcessingEnd(PerformanceEventTiming* entry,
     ApplyContextMenuFallbackToPendingEvents(processing_end);
   }
 
-  // Check if we need to request presentation time feedback for this frame.
-  // Ideally, we would only request if `entry->NeedsNextPaintMeasurement()`,
-  // However, we currently rely on the presentation promise to mark the task
-  // end time for cases when ALL events in this animation frame do not need
-  // next paint (e.g. when the last event triggers a fallback to apply to all
-  // events, like contextmenu or js prompt).
-  // TODO(crbug.com/40821329): PaintTimingMixin and TaskTimeObserver will
-  // obviate the need for this.
-  if (last_presentation_requested_for_frame_index_ < current_frame_index_) {
-    DomWindow()->GetFrame()->GetChromeClient().NotifyPresentationTime(
-        *DomWindow()->GetFrame(),
-        BindOnce(&WindowPerformance::OnPresentationPromiseResolved,
-                 WrapWeakPersistent(this), current_frame_index_,
-                 // TODO(crbug.com/378647854): Current implementation uses
-                 // source id from previous BeginMainFrame as an
-                 // approximate. And this can be further improved to the
-                 // current BeginMainFrame if we could defer presentation
-                 // promise registering to align with each BeginMainFrame.
-                 begin_main_frame_source_id_));
-    last_presentation_requested_for_frame_index_ = current_frame_index_;
-  }
 }
 
 void WindowPerformance::SetCommitFinishTimeStampForPendingEvents(
@@ -772,112 +750,6 @@ void WindowPerformance::SetRenderStartTimeForPendingEvents(
     }
     entry->GetEventTimingReportingInfo()->render_start_time = render_start_time;
   }
-}
-
-// Important details:
-// 1. frame_index and expected_frame_source_id are "captured" at the
-// time the presentation is requested, and might have changed by the time
-// presentation time arrives.
-// 2. presentation time might be "fake" when broken swap promise.
-void WindowPerformance::OnPresentationPromiseResolved(
-    uint64_t frame_index,
-    uint64_t expected_frame_source_id,
-    const viz::FrameTimingDetails& presentation_details) {
-  // DomWindow()->GetFrame() may no longer be available, do not CHECK for it.
-  // We still try to assign the presentation / fallback times to events, and
-  // then flush the event queue.
-
-  // If the resolved presentation promise is for an animation frame that didn't
-  // observe OnPaintFinished, then the most recent events actually did not need
-  // next paint.  We need to mark these with a fallback time instead of a real
-  // presentation time.
-  // TODO(crbug.com/378647854): Move this to happen before we request
-  // presentation time, when we dont need next paint, rather than after.
-  if (frame_index == current_frame_index_) {
-    ReportEventTimingsWithoutNextPaint(
-        presentation_details.presentation_feedback.timestamp);
-    return;
-  }
-
-  // We assume the presentation is for the expected source unless it's proven to
-  // be wrong.
-  uint64_t actual_frame_source_id = presentation_details.frame_id.source_id;
-  bool is_presentation_for_expected_source =
-      !expected_frame_source_id || !actual_frame_source_id ||
-      expected_frame_source_id == actual_frame_source_id;
-  if (base::FeatureList::IsEnabled(::features::kManualBeginFrame)) {
-    // Switch to cc BeginFrameSource will generate kNotRestartable(0) begin
-    // frame and submit compositor frame with kManualSourceId.
-    if ((expected_frame_source_id >> 32) == 0 ||
-        actual_frame_source_id == viz::BeginFrameArgs::kManualSourceId) {
-      is_presentation_for_expected_source = true;
-    }
-  }
-
-  IterateEventTimingsByAnimationFrame(frame_index, [&](auto& entry) {
-    if (!entry->NeedsNextPaintMeasurement()) {
-      return;
-    }
-    auto* timing = entry->GetEventTimingReportingInfo();
-    timing->presentation_time =
-        presentation_details.presentation_feedback.timestamp;
-
-    if (!is_presentation_for_expected_source) {
-      if (base::FeatureList::IsEnabled(
-              features::
-                  kEventTimingIgnorePresentationTimeFromUnexpectedFrameSource)) {
-        CHECK(!timing->commit_finish_time.is_null());
-        entry->UpdateFallbackTime(timing->commit_finish_time,
-                                  FallbackReason::kUnexpectedFrameSource);
-      }
-    }
-
-    // If page visibility was changed, add a fallback_time to the entry's
-    // processingEnd. Because we already flush events in
-    // `ReportAllPendingEventTimingsOnPageHidden`, this should only happen if
-    // a new event is processed after visibility is changed.  Users cannot
-    // interact with a hidden page, but, there might have been events in
-    // queue when the page was hidden (and they couldn't be flushed because
-    // they weren't even dispatched yet).
-    // TODO(crbug.com/378647854): We might want to just check for this at
-    // event timing registration time.  If the page is currently hidden (or
-    // was made hidden after the event was created/enqueued), then just skip
-    // asking for presentation time.
-    if (last_hidden_timestamp_ > timing->creation_time &&
-        last_hidden_timestamp_ < timing->presentation_time) {
-      if (!timing->commit_finish_time.is_null() &&
-          last_hidden_timestamp_ > timing->commit_finish_time) {
-        entry->UpdateFallbackTime(timing->commit_finish_time,
-                                  FallbackReason::kVisibilityChange);
-      } else {
-        entry->UpdateFallbackTime(timing->processing_end_time,
-                                  FallbackReason::kVisibilityChange);
-      }
-    }
-
-    // A javascript synchronous modal dialog might show before the event
-    // frame got presented.  If so, we use a fallback time to the dialog
-    // showing time.
-    // TODO(crbug.com/378647854): Simplify the way we measure dialogs:
-    // - Replace the list of dialogs with a single timestamp
-    // - When we see the first dialog per animation frame, resolve all
-    //    events already in queue (similar to visibility change).
-    // - When we process a new event, if we've already seen a modal, use it
-    //    as a fallback time.
-    // - We also don't need to fallback to dialog time after Paint is
-    //    committed, since paint will show at that point.
-    while (!show_modal_dialog_timestamps_.empty() &&
-           show_modal_dialog_timestamps_.front() < timing->creation_time) {
-      show_modal_dialog_timestamps_.pop_front();
-    }
-    if (!show_modal_dialog_timestamps_.empty() &&
-        show_modal_dialog_timestamps_.front() < timing->presentation_time) {
-      entry->UpdateFallbackTime(show_modal_dialog_timestamps_.front(),
-                                FallbackReason::kModalDialog);
-    }
-  });
-
-  TryFlushEventTimingQueue();
 }
 
 void WindowPerformance::ReportEventTimingsWithoutNextPaint(
@@ -1664,13 +1536,6 @@ void WindowPerformance::OnPaintFinished() {
   // frame group is now eligible for reporting (even if it didn't request a
   // presentation time).
   current_frame_index_++;
-}
-
-void WindowPerformance::OnBeginMainFrame(viz::BeginFrameId frame_id) {
-  const uint64_t source_id = frame_id.source_id;
-  if (source_id) {
-    begin_main_frame_source_id_ = source_id;
-  }
 }
 
 void WindowPerformance::OnPageScroll() {

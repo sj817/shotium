@@ -5,7 +5,6 @@
 import("//build/config/features.gni")
 import("//build/config/ozone.gni")
 import("//build/config/ui.gni")
-import("//gpu/vulkan/features.gni")
 import("//testing/libfuzzer/fuzzer_test.gni")
 import("//testing/test.gni")
 
@@ -620,7 +619,6 @@ source_set("memory_buffer_sources") {
     "//build:chromecast_buildflags",
     "//build:chromeos_buildflags",
     "//components/viz/common/resources:shared_image_format",
-    "//gpu/vulkan:buildflags",
     "//ui/gfx/geometry",
   ]
 
@@ -656,10 +654,6 @@ source_set("memory_buffer_sources") {
     ]
   }
 
-  if (is_win) {
-    public_deps += [ "//ipc:message_support" ]
-  }
-
   if (is_linux || is_chromeos || use_ozone) {
     sources += [
       "native_pixmap_handle.cc",
@@ -667,9 +661,6 @@ source_set("memory_buffer_sources") {
     ]
   }
 
-  if (enable_vulkan) {
-    public_deps += [ "//third_party/vulkan-headers/src:vulkan_headers" ]
-  }
 }
 
 # TODO(ccameron): This can be moved into a separate source_set.

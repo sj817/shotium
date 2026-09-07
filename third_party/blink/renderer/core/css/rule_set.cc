@@ -295,7 +295,6 @@ bool ShouldStopExtractingAtPseudoElement(
     case CSSSelector::kPseudoScrollMarkerGroup:
     case CSSSelector::kPseudoOverscrollAreaParent:
     case CSSSelector::kPseudoOverscrollBackdrop:
-    case CSSSelector::kPseudoSkeleton:
       return true;
     case CSSSelector::kPseudoCue:
     case CSSSelector::kPseudoFirstLine:
@@ -658,17 +657,6 @@ void RuleSet::FindBestBucketAndAdd(CSSSelector& component,
     AddToBucket(scrollbar_rules_, rule_data);
     return;
   }
-  if (values.pseudo_type == CSSSelector::kPseudoUnbounded) {
-    if (bucket_coverage == BucketCoverage::kCompute) {
-      MarkAsCoveredByBucketing(component, [](const CSSSelector& selector) {
-        return selector.Match() == CSSSelector::kPseudoClass &&
-               selector.GetPseudoType() == CSSSelector::kPseudoUnbounded;
-      });
-    }
-    AddToBucket(unbounded_pseudo_class_rules_, rule_data);
-    return;
-  }
-
   if (!values.id.empty()) {
     if (bucket_coverage == BucketCoverage::kCompute) {
       MarkAsCoveredByBucketing(component,
@@ -1403,9 +1391,6 @@ void RuleSet::AddFilteredRulesFromOtherSet(
     AddFilteredRulesFromOtherBucket(other, other.slotted_pseudo_element_rules_,
                                     only_include,
                                     &slotted_pseudo_element_rules_);
-    AddFilteredRulesFromOtherBucket(other, other.unbounded_pseudo_class_rules_,
-                                    only_include,
-                                    &unbounded_pseudo_class_rules_);
 
     AddFilteredRulesFromOtherBucket(other, other.root_element_rules_,
                                     only_include, &root_element_rules_);
@@ -1747,7 +1732,6 @@ void RuleSet::CompactRules() {
   shadow_host_rules_.shrink_to_fit();
   part_pseudo_rules_.shrink_to_fit();
   slotted_pseudo_element_rules_.shrink_to_fit();
-  unbounded_pseudo_class_rules_.shrink_to_fit();
 
   page_rules_.shrink_to_fit();
   font_face_rules_.shrink_to_fit();
@@ -1822,7 +1806,6 @@ void RuleSet::AssertRuleListsSorted() const {
   DCHECK(IsRuleListSorted(universal_rules_));
   DCHECK(IsRuleListSorted(shadow_host_rules_));
   DCHECK(IsRuleListSorted(part_pseudo_rules_));
-  DCHECK(IsRuleListSorted(unbounded_pseudo_class_rules_));
 }
 
 #endif  // EXPENSIVE_DCHECKS_ARE_ON()
@@ -1878,7 +1861,6 @@ void RuleSet::Trace(Visitor* visitor) const {
   visitor->Trace(shadow_host_rules_);
   visitor->Trace(part_pseudo_rules_);
   visitor->Trace(slotted_pseudo_element_rules_);
-  visitor->Trace(unbounded_pseudo_class_rules_);
 
   visitor->Trace(page_rules_);
   visitor->Trace(font_face_rules_);

@@ -44,7 +44,6 @@
 #include "base/threading/platform_thread.h"
 #include "base/time/time.h"
 #include "build/build_config.h"
-#include "components/viz/common/surfaces/frame_sink_id.h"
 #include "third_party/blink/public/common/security/protocol_handler_security_level.h"
 #include "third_party/blink/public/common/user_agent/user_agent_metadata.h"
 #include "third_party/blink/public/mojom/cpu_performance.mojom-shared.h"
@@ -55,7 +54,6 @@
 #include "third_party/blink/public/platform/web_string.h"
 #include "third_party/blink/public/platform/websocket_handshake_throttle_provider.h"
 #include "ui/base/resource/resource_scale_factor.h"
-#include "ui/gl/angle_implementation.h"
 
 class GURL;
 class SkCanvas;
@@ -66,16 +64,8 @@ class SingleThreadTaskRunner;
 class RefCountedMemory;
 }  // namespace base
 
-namespace cc {
-class RasterDarkModeFilter;
-}
-
 namespace gfx {
 class ColorSpace;
-}
-
-namespace gpu {
-class GpuChannelHost;
 }
 
 namespace net {
@@ -91,10 +81,6 @@ class PendingSharedURLLoaderFactory;
 
 namespace url {
 class Origin;
-}
-
-namespace viz {
-class RasterContextProvider;
 }
 
 namespace cppgc {
@@ -234,9 +220,6 @@ class BLINK_PLATFORM_EXPORT Platform {
   virtual bool IsLowEndDevice() { return false; }
 
   // Process -------------------------------------------------------------
-
-  // Returns a unique FrameSinkID for the current renderer process
-  virtual viz::FrameSinkId GenerateFrameSinkId() { return viz::FrameSinkId(); }
 
   // Returns whether this process is locked to a single site (i.e. a scheme
   // plus eTLD+1, such as https://google.com), or to a more specific origin.
@@ -449,27 +432,6 @@ class BLINK_PLATFORM_EXPORT Platform {
   // Whether the scroll animator that produces smooth scrolling is enabled.
   virtual bool IsScrollAnimatorEnabled() { return true; }
 
-
-  // Returns a worker context provider that will be bound on the compositor
-  // thread.
-  virtual scoped_refptr<viz::RasterContextProvider>
-  SharedCompositorWorkerContextProvider(
-      cc::RasterDarkModeFilter* dark_mode_filter);
-
-
-  // Synchronously establish a channel to the GPU plugin if not previously
-  // established or if it has been lost (for example if the GPU plugin crashed).
-  // If there is a pending asynchronous request, it will be completed by the
-  // time this routine returns.
-  virtual scoped_refptr<gpu::GpuChannelHost> EstablishGpuChannelSync();
-
-  // Is mojo::Remote<mojom::Gpu> disconnected?
-  virtual bool IsGpuRemoteDisconnected();
-
-  // Same as above, but asynchronous.
-  using EstablishGpuChannelCallback =
-      base::OnceCallback<void(scoped_refptr<gpu::GpuChannelHost>)>;
-  virtual void EstablishGpuChannel(EstablishGpuChannelCallback callback);
 
   // WebWorker ----------------------------------------------------------
 

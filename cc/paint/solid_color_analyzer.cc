@@ -298,8 +298,6 @@ std::optional<SkColor4f> SolidColorAnalyzer::DetermineIfSolidColor(
                           &is_transparent, &color);
         break;
       }
-      case PaintOpType::kDrawSkottie:
-      case PaintOpType::kDrawSlug:
       case PaintOpType::kDrawTextBlob:
       // Anything that has to do a save layer is probably not solid. As it will
       // likely need more than one draw op.

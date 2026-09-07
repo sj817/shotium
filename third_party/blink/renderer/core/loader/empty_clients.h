@@ -124,13 +124,6 @@ class CORE_EXPORT EmptyChromeClient : public ChromeClient {
   std::unique_ptr<cc::ScopedPauseRendering> PauseRendering(
       LocalFrame&) override;
   std::optional<int> GetMaxRenderBufferBounds(LocalFrame& frame) const override;
-  void StartDragging(LocalFrame*,
-                     const WebDragData&,
-                     DragOperationsMask,
-                     const SkBitmap& drag_image,
-                     const gfx::Vector2d& cursor_offset,
-                     const gfx::Rect& drag_obj_rect) override {}
-  bool AcceptsLoadDrops() const override { return true; }
   bool ShouldReportDetailedMessageForSourceAndSeverity(
       LocalFrame&,
       mojom::blink::ConsoleMessageLevel,
@@ -336,7 +329,6 @@ class CORE_EXPORT EmptyLocalFrameClient : public LocalFrameClient {
       const base::UnguessableToken& initiator_state_token,
       const DocumentToken& initiator_document_token,
       SourceLocation*,
-      mojo::PendingRemote<mojom::blink::NavigationStateKeepAliveHandle>,
       bool is_container_initiated,
       bool has_rel_opener,
       mojo::PendingReceiver<

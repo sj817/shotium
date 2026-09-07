@@ -35,7 +35,6 @@
 #include "third_party/blink/renderer/core/html/custom/custom_element_registry.h"
 #include "third_party/blink/renderer/core/html/custom/element_internals.h"
 #include "third_party/blink/renderer/core/html/html_element.h"
-#include "third_party/blink/renderer/core/html/unbounded_event_data.h"
 #include "third_party/blink/renderer/core/intersection_observer/element_intersection_observer_data.h"
 #include "third_party/blink/renderer/core/layout/anchor_position_scroll_data.h"
 #include "third_party/blink/renderer/core/layout/anchor_position_visibility_observer.h"
@@ -467,15 +466,6 @@ std::optional<LayoutUnit> NodeRareData::LastRememberedBlockSize() const {
 }
 std::optional<LayoutUnit> NodeRareData::LastRememberedInlineSize() const {
   return GetOptionalField<LayoutUnit>(FieldId::kLastRememberedInlineSize);
-}
-
-UnboundedEventData* NodeRareData::GetUnboundedEventData() const {
-  return static_cast<UnboundedEventData*>(
-      GetField(FieldId::kUnboundedEventTask));
-}
-std::pair<std::reference_wrapper<UnboundedEventData>, NodeRareData*>
-NodeRareData::EnsureUnboundedEventData() {
-  return EnsureField<UnboundedEventData>(FieldId::kUnboundedEventTask);
 }
 
 PopoverData* NodeRareData::GetPopoverData() const {

@@ -57,7 +57,6 @@
 #include "third_party/blink/renderer/core/layout/list/list_marker.h"
 #include "third_party/blink/renderer/core/overscroll/overscroll_area_tracker.h"
 #include "third_party/blink/renderer/core/probe/core_probes.h"
-#include "third_party/blink/renderer/core/skeleton/skeleton_pseudo_element.h"
 #include "third_party/blink/renderer/core/style/computed_style.h"
 #include "third_party/blink/renderer/core/style/computed_style_constants.h"
 #include "third_party/blink/renderer/core/style/content_data.h"
@@ -141,8 +140,6 @@ PseudoElement* PseudoElement::Create(Element* parent,
              pseudo_id == kPseudoIdScrollButtonInlineEnd ||
              pseudo_id == kPseudoIdScrollButtonBlockEnd) {
     return MakeGarbageCollected<ScrollButtonPseudoElement>(parent, pseudo_id);
-  } else if (pseudo_id == kPseudoIdSkeleton) {
-    return MakeGarbageCollected<SkeletonPseudoElement>(parent);
   }
   DCHECK(pseudo_id == kPseudoIdAfter || pseudo_id == kPseudoIdBefore ||
          pseudo_id == kPseudoIdCheckMark || pseudo_id == kPseudoIdPickerIcon ||
@@ -276,11 +273,6 @@ const QualifiedName& PseudoElementTagName(PseudoId pseudo_id) {
                           (AtomicString("::view-transition-old")));
       return transition_outgoing_image;
     }
-    case kPseudoIdSkeleton: {
-      DEFINE_STATIC_LOCAL(QualifiedName, skeleton,
-                          (AtomicString("::skeleton")));
-      return skeleton;
-    }
     default:
       NOTREACHED();
   }
@@ -373,7 +365,7 @@ bool PseudoElement::IsLayoutSiblingOfOriginatingElement(
     const Element& originating_element,
     PseudoId pseudo_id) {
   if (originating_element.IsDocumentElement()) {
-    return pseudo_id == kPseudoIdSkeleton;
+    return false;
   }
   return pseudo_id == kPseudoIdScrollButtonBlockStart ||
          pseudo_id == kPseudoIdScrollButtonInlineStart ||
@@ -455,12 +447,6 @@ void PseudoElement::Dispose() {
     }
   }
 
-  if (pseudo_id_ == kPseudoIdSkeleton) {
-    if (ShadowRoot* shadow_root = GetShadowRoot()) {
-      shadow_root->RemoveChildren();
-      shadow_root->RemovedFrom(*this);
-    }
-  }
 
   DetachLayoutTree();
   Element* parent = ParentOrShadowHostElement();
@@ -815,7 +801,6 @@ bool PseudoElementLayoutObjectIsNeeded(PseudoId pseudo_id,
     case kPseudoIdViewTransitionOld:
     case kPseudoIdColumn:
     case kPseudoIdOverscrollAreaParent:
-    case kPseudoIdSkeleton:
       return true;
     case kPseudoIdCheckMark:
     case kPseudoIdBefore:

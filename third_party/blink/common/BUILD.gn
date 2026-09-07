@@ -62,29 +62,6 @@ blink_python_runner("make_generated_features") {
   ]
 }
 
-blink_python_runner("make_generated_origin_trials") {
-  script = "../renderer/build/scripts/make_origin_trials.py"
-
-  inputs = scripts_for_json5_files + [
-             "../renderer/build/scripts/make_runtime_features_utilities.py",
-             "../renderer/build/scripts/make_runtime_features.py",
-             "../renderer/build/scripts/templates/origin_trials.cc.tmpl",
-             "../renderer/platform/runtime_enabled_features.json5",
-             "../renderer/platform/runtime_enabled_features.override.json5",
-           ]
-  outputs = [
-    "$root_gen_dir/third_party/blink/common/origin_trials/origin_trials.cc",
-  ]
-
-  args = [
-    rebase_path("../renderer/platform/runtime_enabled_features.json5",
-                root_build_dir),
-    "--output_dir",
-    rebase_path("$root_gen_dir/third_party/blink/common/origin_trials",
-                root_build_dir),
-  ]
-}
-
 blink_python_runner("make_runtime_feature_state_contexts_impl") {
   script =
       "../renderer/build/scripts/make_runtime_feature_state_contexts_impl.py"
@@ -152,7 +129,6 @@ shot_compatible_source_set("common") {
     "frame/frame_policy.cc",
     "frame/frame_policy_mojom_traits.cc",
     "frame/frame_visual_properties.cc",
-    "frame/frame_visual_properties_mojom_traits.cc",
     "frame/user_activation_state.cc",
     "input/synthetic_web_input_event_builders.cc",
     "input/web_coalesced_input_event.cc",
@@ -177,7 +153,6 @@ shot_compatible_source_set("common") {
     "loader/url_loader_factory_bundle_mojom_traits.cc",
     "loader/url_loader_throttle.cc",
     "logging/logging_utils.cc",
-    "messaging/accelerated_static_bitmap_image_mojom_traits.cc",
     "messaging/cloneable_message.cc",
     "messaging/cloneable_message_mojom_traits.cc",
     "messaging/message_port_channel.cc",
@@ -195,26 +170,10 @@ shot_compatible_source_set("common") {
     "navigation/prefetched_signed_exchange_info_mojom_traits.cc",
     "navigation/preloading_headers.cc",
 
-    # These three are the hand-written half of origin_trials: the generated
-    # origin_trials.cc covers what runtime_enabled_features.json5 can express,
-    # and these carry the three lists it cannot. They were deleted as "trial
-    # policy", but trial_token.cc, trial_token_validator.cc and
-    # origin_trial_context.cc all still call into them, so the declarations in
-    # public/common/origin_trials/origin_trials.h had no definitions.
-    "origin_trials/manual_completion_origin_trial_features.cc",
-    "origin_trials/navigation_origin_trial_features.cc",
-    "origin_trials/origin_trials_settings_provider.cc",
-    "origin_trials/persistent_origin_trials.cc",
-    "origin_trials/trial_token.cc",
-    "origin_trials/trial_token_result.cc",
-    "origin_trials/trial_token_validator.cc",
     "page/color_provider_color_maps_mojom_traits.cc",
-    "page/content_to_visible_time_reporter.cc",
-    "page/content_to_visible_time_request.cc",
     "page/drag_mojom_traits.cc",
     "page/drag_operation.cc",
     "page/page_zoom.cc",
-    "page/record_content_to_visible_time_request_mojom_traits.cc",
     "page/source_effect_allowed_mojom_util.cc",
     "page_state/page_state.cc",
     "page_state/page_state_serialization.cc",
@@ -253,21 +212,16 @@ shot_compatible_source_set("common") {
     "web_preferences/web_preferences_mojom_traits.cc",
     "widget/constants.cc",
     "widget/device_emulation_params_mojom_traits.cc",
-    "widget/visual_properties.cc",
-    "widget/visual_properties_mojom_traits.cc",
   ]
 
   sources += get_target_outputs(":make_generated_document_policy_features")
   sources += get_target_outputs(":make_generated_features")
-  sources += get_target_outputs(":make_generated_origin_trials")
   sources += get_target_outputs(":make_runtime_feature_state_contexts_impl")
 
   public_deps = [
     ":make_generated_document_policy_features",
     ":make_generated_features",
-    ":make_generated_origin_trials",
     ":make_runtime_feature_state_contexts_impl",
-    "//components/viz/common",
     "//third_party/blink/public/common:common_export",
     "//third_party/blink/public/common:headers",
     "//ui/base/mojom:ui_base_types",
@@ -362,11 +316,6 @@ source_set("common_unittests_sources") {
     "messaging/message_port_descriptor_unittest.cc",
     "mime_util/mime_util_unittest.cc",
     "navigation/preloading_headers_unittest.cc",
-    "origin_trials/origin_trials_settings_provider_unittest.cc",
-    "origin_trials/trial_token_unittest.cc",
-    "origin_trials/trial_token_validator_unittest.cc",
-    "page/content_to_visible_time_reporter_unittest.cc",
-    "page/content_to_visible_time_request_unittest.cc",
     "page_state/page_state_serialization_unittest.cc",
     "permissions_policy/document_policy_unittest.cc",
     "permissions_policy/policy_value_unittest.cc",
@@ -381,10 +330,8 @@ source_set("common_unittests_sources") {
   ]
 
   deps = [
-    ":test_support",
     "//base",
     "//base/test:test_support",
-    "//components/viz/common",
     "//mojo/core/embedder",
     "//mojo/public/cpp/test_support:test_utils",
     "//net",
@@ -435,23 +382,6 @@ if (is_ios) {
     testonly = true
     filelist_name = "blink_common_unittests_bundle_data.filelist"
   }
-}
-
-static_library("test_support") {
-  testonly = true
-
-  sources = [ "origin_trials/scoped_test_origin_trial_policy.cc" ]
-
-  deps = [
-    "//base",
-    "//testing/gtest",
-    "//third_party/blink/public:test_headers",
-  ]
-
-  visibility = [
-    ":common_unittests_sources",
-    "//third_party/blink/public:test_support",
-  ]
 }
 
 if (use_fuzzing_engine_with_lpm) {

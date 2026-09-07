@@ -89,7 +89,6 @@ class NodeListsNodeData;
 class QualifiedName;
 class RegisteredEventListener;
 class ScrollTimeline;
-class SetHTMLOptions;
 class SVGQualifiedName;
 class ShadowRoot;
 template <typename NodeType>
@@ -267,16 +266,11 @@ class CORE_EXPORT Node : public EventTarget {
   void remove(ExceptionState&);
   void remove();
 
-  void beforeHTML(const String& html, SetHTMLOptions* options, ExceptionState&);
   void beforeHTMLUnsafe(const V8UnionStringOrTrustedHTML* html,
                         V8UnionSetHTMLUnsafeOptionsOrTrustedParserOptions*,
                         ExceptionState&);
-  void afterHTML(const String& html, SetHTMLOptions* options, ExceptionState&);
   void afterHTMLUnsafe(const V8UnionStringOrTrustedHTML* html,
                        V8UnionSetHTMLUnsafeOptionsOrTrustedParserOptions*,
-                       ExceptionState&);
-  void replaceWithHTML(const String& html,
-                       SetHTMLOptions* options,
                        ExceptionState&);
   void replaceWithHTMLUnsafe(const V8UnionStringOrTrustedHTML* html,
                              V8UnionSetHTMLUnsafeOptionsOrTrustedParserOptions*,
@@ -313,7 +307,6 @@ class CORE_EXPORT Node : public EventTarget {
       kPseudoIdPickerIcon,
       kPseudoIdInterestButton,
       kPseudoIdScrollMarkerGroupAfter,
-      kPseudoIdSkeleton,
   };
 
   const KURL& baseURI() const;
@@ -446,9 +439,6 @@ class CORE_EXPORT Node : public EventTarget {
   }
   DISABLE_CFI_PERF bool IsViewTransitionPseudoElement() const {
     return IsTransitionPseudoElement(GetPseudoId());
-  }
-  DISABLE_CFI_PERF bool IsSkeletonPseudoElement() const {
-    return GetPseudoId() == kPseudoIdSkeleton;
   }
   virtual PseudoId GetPseudoId() const { return kPseudoIdNone; }
   virtual PseudoId GetPseudoIdForStyling() const { return kPseudoIdNone; }

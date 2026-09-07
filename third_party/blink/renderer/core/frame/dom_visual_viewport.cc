@@ -35,7 +35,6 @@
 #include "third_party/blink/renderer/core/geometry/dom_rect.h"
 #include "third_party/blink/renderer/core/layout/adjust_for_absolute_zoom.h"
 #include "third_party/blink/renderer/core/page/page.h"
-#include "third_party/blink/renderer/core/page/scrolling/sync_scroll_attempt_heuristic.h"
 #include "third_party/blink/renderer/core/paint/paint_layer_scrollable_area.h"
 #include "third_party/blink/renderer/core/style/computed_style.h"
 
@@ -96,7 +95,6 @@ float DOMVisualViewport::pageLeft() const {
 
   // TODO(crbug.com/1499981): This should be removed once synchronized scrolling
   // impact is understood.
-  SyncScrollAttemptHeuristic::DidAccessScrollOffset();
 
   frame->GetDocument()->UpdateStyleAndLayout(DocumentUpdateReason::kJavaScript);
   float viewport_x = view->LayoutViewport()->GetWebExposedScrollOffset().x();
@@ -123,7 +121,6 @@ float DOMVisualViewport::pageTop() const {
 
   // TODO(crbug.com/1499981): This should be removed once synchronized scrolling
   // impact is understood.
-  SyncScrollAttemptHeuristic::DidAccessScrollOffset();
 
   frame->GetDocument()->UpdateStyleAndLayout(DocumentUpdateReason::kJavaScript);
   float viewport_y = view->LayoutViewport()->GetWebExposedScrollOffset().y();

@@ -89,7 +89,6 @@
 #include "third_party/blink/renderer/core/loader/resource/image_resource_content.h"
 #include "third_party/blink/renderer/core/page/autoscroll_controller.h"
 #include "third_party/blink/renderer/core/page/chrome_client.h"
-#include "third_party/blink/renderer/core/page/drag_state.h"
 #include "third_party/blink/renderer/core/page/frame_tree.h"
 #include "third_party/blink/renderer/core/page/page.h"
 #include "third_party/blink/renderer/core/page/touch_adjustment.h"
@@ -276,7 +275,6 @@ EventHandler::EventHandler(LocalFrame& frame)
           frame.GetTaskRunner(TaskType::kInternalUserInteraction),
           this,
           &EventHandler::CursorUpdateTimerFired),
-      should_only_fire_drag_over_event_(false),
       event_handler_registry_(
           frame_->IsLocalRoot()
               ? MakeGarbageCollected<EventHandlerRegistry>(*frame_)
@@ -311,7 +309,6 @@ void EventHandler::Trace(Visitor* visitor) const {
   visitor->Trace(capturing_subframe_element_);
   visitor->Trace(last_mouse_move_event_subframe_);
   visitor->Trace(last_scrollbar_under_mouse_);
-  visitor->Trace(drag_target_);
   visitor->Trace(frame_set_being_resized_);
   visitor->Trace(event_handler_registry_);
   visitor->Trace(scroll_manager_);
@@ -331,8 +328,6 @@ void EventHandler::Clear() {
   last_mouse_move_event_subframe_ = nullptr;
   last_scrollbar_under_mouse_ = nullptr;
   frame_set_being_resized_ = nullptr;
-  drag_target_ = nullptr;
-  should_only_fire_drag_over_event_ = false;
   capturing_mouse_events_element_ = nullptr;
   capturing_subframe_element_ = nullptr;
   pointer_event_manager_->Clear();
@@ -474,14 +469,6 @@ gfx::PointF EventHandler::LastKnownMouseScreenPosition() const {
   return mouse_event_manager_->LastKnownMouseScreenPosition();
 }
 
-gfx::Point EventHandler::DragDataTransferLocationForTesting() {
-  if (mouse_event_manager_->GetDragState().drag_data_transfer_)
-    return mouse_event_manager_->GetDragState()
-        .drag_data_transfer_->DragLocation();
-
-  return gfx::Point();
-}
-
 static bool IsSubmitImage(const Node* node) {
   auto* html_input_element = DynamicTo<HTMLInputElement>(node);
   return html_input_element &&
@@ -544,7 +531,7 @@ bool EventHandler::ShouldShowResizeForNode(const LayoutObject& layout_object,
 }
 
 bool EventHandler::IsSelectingLink(const HitTestResult& result) {
-  // If a drag may be starting or we're capturing mouse events for a particular
+  // If we're capturing mouse events for a particular
   // node, don't treat this as a selection.
   // TODO(editing-dev): The use of UpdateStyleAndLayout needs to be audited. See
   // http://crbug.com/590369 for more details.
@@ -554,7 +541,6 @@ bool EventHandler::IsSelectingLink(const HitTestResult& result) {
       !capturing_mouse_events_element_ &&
       mouse_event_manager_->MousePressed() &&
       GetSelectionController().MouseDownMayStartSelect() &&
-      !mouse_event_manager_->MouseDownMayStartDrag() &&
       !frame_->Selection().ComputeVisibleSelectionInDomTree().IsNone();
   return mouse_selection && result.IsOverLink();
 }
@@ -1094,7 +1080,7 @@ WebInputEventResult EventHandler::HandleMouseMoveOrLeaveEvent(
   if (mouse_event.button == WebPointerProperties::Button::kNoButton &&
       !(mouse_event.GetModifiers() &
         WebInputEvent::Modifiers::kRelativeMotionEvent)) {
-    mouse_event_manager_->ClearDragHeuristicState();
+    mouse_event_manager_->ResetMousePressState();
     capturing_mouse_events_element_ = nullptr;
     ReleaseMouseCaptureFromLocalRoot();
 
@@ -1350,155 +1336,6 @@ static LocalFrame* LocalFrameFromTargetNode(Node* target) {
 
 LocalFrame* EventHandler::LocalFrameFromTargetNodeForTesting(Node* target) {
   return LocalFrameFromTargetNode(target);
-}
-
-WebInputEventResult EventHandler::UpdateDragAndDrop(
-    const WebMouseEvent& event,
-    DataTransfer* data_transfer) {
-  WebInputEventResult event_result = WebInputEventResult::kNotHandled;
-
-  if (!frame_->View())
-    return event_result;
-
-  HitTestRequest request(HitTestRequest::kReadOnly);
-  MouseEventWithHitTestResults mev =
-      event_handling_util::PerformMouseEventHitTest(frame_, request, event);
-
-  // Drag events should never go to text nodes (following IE, and proper
-  // mouseover/out dispatch)
-  Element* new_target = mev.InnerElement();
-
-  // Pseudo-elements without activation behavior (::before, ::after, ::marker)
-  // are visual decorations; for drag targeting resolve them to their
-  // ultimate originating element so that drag events reach the actual content
-  // element.
-  if (auto* pseudo = DynamicTo<PseudoElement>(new_target);
-      pseudo && !pseudo->HasActivationBehavior()) {
-    new_target = &pseudo->UltimateOriginatingElement();
-  }
-
-  // The drag target could be something inside a UA shadow root, in which case
-  // it should be retargeted to the shadow host.
-  ShadowRoot* containing_root =
-      new_target ? new_target->ContainingShadowRoot() : nullptr;
-  while (containing_root && containing_root->IsUserAgent()) {
-    new_target = &containing_root->host();
-    containing_root = new_target->ContainingShadowRoot();
-  }
-
-  if (AutoscrollController* controller =
-          scroll_manager_->GetAutoscrollController()) {
-    controller->UpdateDragAndDrop(new_target, event.PositionInRootFrame(),
-                                  event.TimeStamp());
-  }
-
-  if (drag_target_ != new_target) {
-    // FIXME: this ordering was explicitly chosen to match WinIE. However,
-    // it is sometimes incorrect when dragging within subframes, as seen with
-    // web_tests/fast/events/drag-in-frames.html.
-    //
-    // Moreover, this ordering conforms to section 7.9.4 of the HTML 5 spec.
-    // <http://dev.w3.org/html5/spec/Overview.html#drag-and-drop-processing-model>.
-    if (auto* target_frame = LocalFrameFromTargetNode(new_target)) {
-      event_result = target_frame->GetEventHandler().UpdateDragAndDrop(
-          event, data_transfer);
-    } else if (new_target) {
-      // As per section 7.9.4 of the HTML 5 spec., we must always fire a drag
-      // event before firing a dragenter, dragleave, or dragover event.
-      if (mouse_event_manager_->GetDragState().drag_src_) {
-        // For now we don't care if event handler cancels default behavior,
-        // since there is none.
-        mouse_event_manager_->DispatchDragSrcEvent(event_type_names::kDrag,
-                                                   event);
-      }
-      event_result = mouse_event_manager_->DispatchDragEvent(
-          event_type_names::kDragenter, new_target, drag_target_, event,
-          data_transfer);
-    }
-
-    if (auto* target_frame = LocalFrameFromTargetNode(drag_target_.Get())) {
-      event_result = target_frame->GetEventHandler().UpdateDragAndDrop(
-          event, data_transfer);
-    } else if (drag_target_) {
-      mouse_event_manager_->DispatchDragEvent(event_type_names::kDragleave,
-                                              drag_target_.Get(), new_target,
-                                              event, data_transfer);
-    }
-
-    if (new_target) {
-      // We do not explicitly call m_mouseEventManager->dispatchDragEvent here
-      // because it could ultimately result in the appearance that two dragover
-      // events fired. So, we mark that we should only fire a dragover event on
-      // the next call to this function.
-      should_only_fire_drag_over_event_ = true;
-    }
-  } else {
-    if (auto* target_frame = LocalFrameFromTargetNode(new_target)) {
-      event_result = target_frame->GetEventHandler().UpdateDragAndDrop(
-          event, data_transfer);
-    } else if (new_target) {
-      // Note, when dealing with sub-frames, we may need to fire only a dragover
-      // event as a drag event may have been fired earlier.
-      if (!should_only_fire_drag_over_event_ &&
-          mouse_event_manager_->GetDragState().drag_src_) {
-        // For now we don't care if event handler cancels default behavior,
-        // since there is none.
-        mouse_event_manager_->DispatchDragSrcEvent(event_type_names::kDrag,
-                                                   event);
-      }
-      event_result = mouse_event_manager_->DispatchDragEvent(
-          event_type_names::kDragover, new_target, nullptr, event,
-          data_transfer);
-      should_only_fire_drag_over_event_ = false;
-    }
-  }
-  drag_target_ = new_target;
-
-  return event_result;
-}
-
-void EventHandler::CancelDragAndDrop(const WebMouseEvent& event,
-                                     DataTransfer* data_transfer) {
-  if (auto* target_frame = LocalFrameFromTargetNode(drag_target_.Get())) {
-    target_frame->GetEventHandler().CancelDragAndDrop(event, data_transfer);
-  } else if (drag_target_.Get()) {
-    if (mouse_event_manager_->GetDragState().drag_src_) {
-      mouse_event_manager_->DispatchDragSrcEvent(event_type_names::kDrag,
-                                                 event);
-    }
-    mouse_event_manager_->DispatchDragEvent(event_type_names::kDragleave,
-                                            drag_target_.Get(), nullptr, event,
-                                            data_transfer);
-  }
-  ClearDragState();
-}
-
-WebInputEventResult EventHandler::PerformDragAndDrop(
-    const WebMouseEvent& event,
-    DataTransfer* data_transfer) {
-  WebInputEventResult result = WebInputEventResult::kNotHandled;
-  if (auto* target_frame = LocalFrameFromTargetNode(drag_target_.Get())) {
-    result = target_frame->GetEventHandler().PerformDragAndDrop(event,
-                                                                data_transfer);
-  } else if (drag_target_.Get()) {
-    result = mouse_event_manager_->DispatchDragEvent(
-        event_type_names::kDrop, drag_target_.Get(), nullptr, event,
-        data_transfer);
-  }
-  ClearDragState();
-  return result;
-}
-
-void EventHandler::ClearDragState() {
-  scroll_manager_->StopAutoscroll();
-  drag_target_ = nullptr;
-  capturing_mouse_events_element_ = nullptr;
-  ReleaseMouseCaptureFromLocalRoot();
-  should_only_fire_drag_over_event_ = false;
-}
-
-void EventHandler::ReportDragEnd() {
-  mouse_event_manager_->ReportDragEnd();
 }
 
 void EventHandler::RecomputeMouseHoverStateIfNeeded() {
@@ -2443,33 +2280,6 @@ bool EventHandler::DefaultTabEventHandler(KeyboardEvent* event) {
   return keyboard_event_manager_->DefaultTabEventHandler(event);
 }
 
-void EventHandler::DragSourceEndedAt(
-    const WebMouseEvent& event,
-    ui::mojom::blink::DragOperation operation) {
-  // Asides from routing the event to the correct frame, the hit test is also an
-  // opportunity for Layer to update the :hover and :active pseudoclasses.
-  HitTestRequest request(HitTestRequest::kRelease);
-  MouseEventWithHitTestResults mev =
-      event_handling_util::PerformMouseEventHitTest(frame_, request, event);
-
-  if (auto* target_frame = LocalFrameFromTargetNode(mev.InnerNode())) {
-    target_frame->GetEventHandler().DragSourceEndedAt(event, operation);
-    return;
-  }
-
-  mouse_event_manager_->DragSourceEndedAt(event, operation);
-  gesture_manager_->HandleTouchDragEnd(event, operation);
-}
-
-void EventHandler::UpdateDragStateAfterEditDragIfNeeded(
-    Element* root_editable_element) {
-  // If inserting the dragged contents removed the drag source, we still want to
-  // fire dragend at the root editble element.
-  if (mouse_event_manager_->GetDragState().drag_src_ &&
-      !mouse_event_manager_->GetDragState().drag_src_->isConnected())
-    mouse_event_manager_->GetDragState().drag_src_ = root_editable_element;
-}
-
 bool EventHandler::HandleTextInputEvent(const String& text,
                                         Event* underlying_event,
                                         TextEventInputType input_type) {
@@ -2564,8 +2374,6 @@ WebInputEventResult EventHandler::PassMouseMoveEventToSubframe(
     LocalFrame* subframe,
     HitTestResult* hovered_node,
     HitTestLocation* hit_test_location) {
-  if (mouse_event_manager_->MouseDownMayStartDrag())
-    return WebInputEventResult::kNotHandled;
   WebInputEventResult result =
       subframe->GetEventHandler().HandleMouseMoveOrLeaveEvent(
           mev.Event(), coalesced_events, predicted_events, hovered_node,

@@ -835,14 +835,6 @@ class CORE_EXPORT LocalFrame final
   // called on a provisional frame.
   Frame* GetProvisionalOwnerFrame();
 
-  // Return a keep alive handle for the browser side NavigationStateKeepAlive.
-  // The NavigationStateKeepAlive is created by a RenderFrameHost. Holding the
-  // pending receiver of this remote means the keep alive handle can still exist
-  // beyond the lifetime of the RenderFrameHost that created it.
-  mojo::PendingRemote<mojom::blink::NavigationStateKeepAliveHandle>
-  IssueKeepAliveHandle();
-
-
   void AllowStorageAccessAndNotify(
       blink::WebContentSettingsClient::StorageType storage_type,
       base::OnceCallback<void(bool)> callback);

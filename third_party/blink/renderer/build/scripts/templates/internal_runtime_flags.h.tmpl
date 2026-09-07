@@ -33,11 +33,8 @@ class InternalRuntimeFlags : public ScriptWrappable {
 
   {% for feature in features %}
   bool {{feature.name.to_lower_camel_case()}}Enabled() {
-    {% if feature.in_origin_trial %}
-    return RuntimeEnabledFeatures::{{feature.name}}EnabledByRuntimeFlag();
-    {% else %}
-    return RuntimeEnabledFeatures::{{feature.name}}Enabled();
-    {% endif %}
+        return RuntimeEnabledFeatures::{{feature.name}}Enabled();
+
   }
   {% endfor %}
 };

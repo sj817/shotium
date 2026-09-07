@@ -43,7 +43,6 @@ source_set("tests") {
     "message_queue.h",
     "message_unittest.cc",
     "multiplex_router_unittest.cc",
-    "native_struct_unittest.cc",
     "new_endpoint_types_unittest.cc",
     "nullable_value_types_unittest.cc",
     "race_condition_scheduler.cc",

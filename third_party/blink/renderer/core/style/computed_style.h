@@ -2591,9 +2591,6 @@ class ComputedStyle final : public ComputedStyleBase {
   bool IsInternalOverscrollPositionAuto() const {
     return InternalOverscrollPosition() == EInternalOverscrollPosition::kAuto;
   }
-  bool IsUnboundedElementActive() const {
-    return InternalUnbounded() == EInternalUnbounded::kActive;
-  }
 
  private:
   bool IsInlineSizeContainer() const {

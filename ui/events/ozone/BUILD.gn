@@ -74,6 +74,5 @@ source_set("unittests") {
   }
 
   if (is_linux || is_chromeos) {
-    deps += [ "//ui/events/ozone/evdev:unittests" ]
   }
 }

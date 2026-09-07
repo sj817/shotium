@@ -87,10 +87,6 @@ DocumentFragment* CreateFragmentFromMarkupWithContext(Document&,
                                                       wtf_size_t fragment_end,
                                                       const String& base_url,
                                                       ParserContentPolicy);
-DocumentFragment* CreateFragmentForTransformToFragment(
-    const String&,
-    const String& source_mime_type,
-    Document& output_doc);
 
 bool IsPlainTextMarkup(Node*);
 

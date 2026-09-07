@@ -22,12 +22,6 @@ constexpr int kInvalidFd = -1;
 // over IPC. Even if |auto_close| is true, base::FileDescriptor does NOT close()
 // |fd| when going out of scope. Instead, a consumer of a base::FileDescriptor
 // must invoke close() on |fd| if |auto_close| is true.
-//
-// In the case of IPC, the IPC subsystem knows to close() |fd| after sending
-// a message that contains a base::FileDescriptor if auto_close == true. On the
-// other end, the receiver must make sure to close() |fd| after it has finished
-// processing the IPC message. See the IPC::ParamTraits<> specialization in
-// ipc/param_traits_utils.h for all the details.
 // -----------------------------------------------------------------------------
 struct BASE_EXPORT FileDescriptor {
   FileDescriptor();

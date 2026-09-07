@@ -179,9 +179,7 @@ inline FormSubmission::FormSubmission(
     const base::UnguessableToken& initiator_state_token,
     const DocumentToken& initiator_document_token,
     bool has_rel_opener,
-    SourceLocation* source_location,
-    mojo::PendingRemote<mojom::blink::NavigationStateKeepAliveHandle>
-        initiator_navigation_state_keep_alive_handle)
+    SourceLocation* source_location)
     : method_(method),
       action_(action),
       target_(target),
@@ -202,9 +200,7 @@ inline FormSubmission::FormSubmission(
       input_start_time_(CurrentInputEvent::Get()
                             ? CurrentInputEvent::Get()->TimeStamp()
                             : base::TimeTicks()),
-      source_location_(source_location),
-      initiator_navigation_state_keep_alive_handle_(
-          std::move(initiator_navigation_state_keep_alive_handle)) {}
+      source_location_(source_location) {}
 
 inline FormSubmission::FormSubmission(const String& result)
     : method_(kDialogMethod), result_(result) {}
@@ -426,8 +422,7 @@ FormSubmission* FormSubmission::Create(HTMLFormElement* form,
       // JS call stack in that context's V8 isolate. There is no JS stack to
       // capture any more; the no-argument overload always returns an
       // unknown location.
-      CaptureSourceLocation(),
-      form_local_frame->IssueKeepAliveHandle());
+      CaptureSourceLocation());
 
   if (auto invocation_id = form->GetActiveWebMCPToolInvocationId()) {
     form_submission->script_tool_invocation_id_ = invocation_id;
@@ -462,8 +457,6 @@ void FormSubmission::Navigate() {
   frame_request.SetInitiatorFrameToken(initiator_frame_token_);
   frame_request.SetInitiatorStateToken(initiator_state_token_);
   frame_request.SetInitiatorDocumentToken(initiator_document_token_);
-  frame_request.SetInitiatorNavigationStateKeepAliveHandle(
-      std::move(initiator_navigation_state_keep_alive_handle_));
   frame_request.SetSourceLocation(source_location_);
   frame_request.SetInputStartTime(input_start_time_);
   if (script_tool_invocation_id_) {

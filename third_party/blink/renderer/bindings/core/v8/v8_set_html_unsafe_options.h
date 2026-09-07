@@ -11,7 +11,6 @@
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
 #include "third_party/blink/renderer/platform/heap/member.h"
 #include "third_party/blink/renderer/platform/wtf/text/wtf_string.h"
-#include "third_party/blink/renderer/bindings/core/v8/v8_union_sanitizer_sanitizerconfig_sanitizerpresets.h"
 #include "third_party/blink/renderer/platform/bindings/dictionary_base.h"
 #include "third_party/blink/renderer/core/core_export.h"
 
@@ -26,10 +25,6 @@ class CORE_EXPORT SetHTMLUnsafeOptions : public bindings::DictionaryBase {
   SetHTMLUnsafeOptions() = default;
   ~SetHTMLUnsafeOptions() override = default;
 
-  bool hasSanitizer() const { return has_sanitizer_; }
-  V8UnionSanitizerOrSanitizerConfigOrSanitizerPresets* sanitizer() const { return member_sanitizer_.Get(); }
-  void setSanitizer(V8UnionSanitizerOrSanitizerConfigOrSanitizerPresets* value) { member_sanitizer_ = value; has_sanitizer_ = true; }
-  V8UnionSanitizerOrSanitizerConfigOrSanitizerPresets* getSanitizerOr(V8UnionSanitizerOrSanitizerConfigOrSanitizerPresets* value) const { return has_sanitizer_ ? member_sanitizer_.Get() : value; }
 
   bool hasRunScripts() const { return has_run_scripts_; }
   bool runScripts() const { return member_run_scripts_; }
@@ -42,8 +37,6 @@ class CORE_EXPORT SetHTMLUnsafeOptions : public bindings::DictionaryBase {
   void Trace(Visitor* visitor) const override;
 
  private:
-  Member<V8UnionSanitizerOrSanitizerConfigOrSanitizerPresets> member_sanitizer_;
-  bool has_sanitizer_ = false;
   bool member_run_scripts_ = false;
   bool has_run_scripts_ = true;
 };

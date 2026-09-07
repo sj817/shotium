@@ -37,7 +37,6 @@ import("//third_party/blink/renderer/core/intersection_observer/build.gni")
 import("//third_party/blink/renderer/core/layout/build.gni")
 import("//third_party/blink/renderer/core/loader/build.gni")
 import("//third_party/blink/renderer/core/mathml/build.gni")
-import("//third_party/blink/renderer/core/origin_trials/build.gni")
 import("//third_party/blink/renderer/core/overscroll/build.gni")
 import("//third_party/blink/renderer/core/page/build.gni")
 import("//third_party/blink/renderer/core/paint/build.gni")
@@ -45,11 +44,9 @@ import("//third_party/blink/renderer/core/permissions_policy/build.gni")
 import("//third_party/blink/renderer/core/preferences/build.gni")
 import("//third_party/blink/renderer/core/resize_observer/build.gni")
 import("//third_party/blink/renderer/core/route_matching/build.gni")
-import("//third_party/blink/renderer/core/sanitizer/build.gni")
 import("//third_party/blink/renderer/core/scheduler/build.gni")
 import("//third_party/blink/renderer/core/script/build.gni")
 import("//third_party/blink/renderer/core/scroll/build.gni")
-import("//third_party/blink/renderer/core/skeleton/build.gni")
 import("//third_party/blink/renderer/core/style/build.gni")
 import("//third_party/blink/renderer/core/svg/build.gni")
 import("//third_party/blink/renderer/core/timing/build.gni")
@@ -150,7 +147,6 @@ source_set("prerequisites") {
   public_deps = [
     "//services/network/public/cpp",
     "//services/network/public/mojom",
-    "//services/service_manager/public/cpp",
     "//skia",
     "//third_party/blink/public/mojom:color_scheme_mojo_bindings",
     "//third_party/blink/public/mojom:mojom_core_blink",
@@ -312,9 +308,7 @@ component("core") {
   sources += rebase_path(blink_core_sources_loader, "", "loader")
   sources +=
       rebase_path(blink_core_sources_route_matching, "", "route_matching")
-  sources += rebase_path(blink_core_sources_sanitizer, "", "sanitizer")
   sources += rebase_path(blink_core_sources_mathml, "", "mathml")
-  sources += rebase_path(blink_core_sources_origin_trials, "", "origin_trials")
   sources += rebase_path(blink_core_sources_overscroll, "", "overscroll")
   sources += rebase_path(blink_core_sources_page, "", "page")
   sources += rebase_path(blink_core_sources_paint, "", "paint")
@@ -324,7 +318,6 @@ component("core") {
   sources += rebase_path(blink_core_sources_scheduler, "", "scheduler")
   sources += rebase_path(blink_core_sources_script, "", "script")
   sources += rebase_path(blink_core_sources_scroll, "", "scroll")
-  sources += rebase_path(blink_core_sources_skeleton, "", "skeleton")
   sources += rebase_path(blink_core_sources_style, "", "style")
   sources += rebase_path(blink_core_sources_svg, "", "svg")
   sources += rebase_path(blink_core_sources_timing, "", "timing")
@@ -348,7 +341,6 @@ component("core") {
     "//third_party/blink/renderer/core/exported",
     "//third_party/blink/renderer/core/inspector",
     "//third_party/blink/renderer/core/probe",
-    "//third_party/blink/renderer/core/sanitizer:generated",
     "//third_party/blink/renderer/core/url_pattern",
     "//third_party/blink/renderer/platform",
 
@@ -379,12 +371,10 @@ component("core") {
     ":make_deprecation_info",
     ":xml_ffi",
     "//base",
-    "//gpu/config",
     "//mojo/public/cpp/bindings",
     "//mojo/public/cpp/system",
     "//services/metrics/public/cpp:ukm_builders",
     "//services/network/public/cpp",
-    "//services/service_manager/public/cpp",
     "//skia",
     "//skia:skcms",
     "//third_party/blink/public:buildflags",
@@ -1111,24 +1101,6 @@ blink_python_runner("make_core_generated_html_attribute_name_lookup_trie") {
   deps = make_core_generated_deps
 }
 
-blink_python_runner("make_core_generated_web_origin_trials") {
-  script = "../build/scripts/make_web_origin_trials.py"
-
-  inputs = scripts_for_json5_files + [
-             "../build/scripts/make_runtime_features.py",
-             "../build/scripts/make_runtime_features_utilities.py",
-             "../build/scripts/templates/web_origin_trials.cc.tmpl",
-             "../platform/runtime_enabled_features.json5",
-           ]
-  outputs = [ "$blink_core_output_dir/exported/web_origin_trials.cc" ]
-
-  args = [
-    rebase_path("../platform/runtime_enabled_features.json5", root_build_dir),
-    "--output_dir",
-    "$rel_blink_core_gen_dir/exported",
-  ]
-}
-
 # Targets from above that generate outputs that need to be compiled.
 # All sources declared as outputs from these targets will be compiled into one
 # target.
@@ -1172,7 +1144,6 @@ targets_generating_sources = [
   ":make_core_generated_svg_element_type_helpers",
   ":make_core_generated_svg_names",
   ":make_core_generated_trusted_types_names",
-  ":make_core_generated_web_origin_trials",
   ":make_core_generated_xlink_names",
   ":make_core_generated_xml_names",
   ":make_core_generated_xml_ns_names",
@@ -1277,7 +1248,6 @@ source_set("unit_tests") {
   sources += rebase_path(blink_core_tests_layout, "", "layout")
   sources += rebase_path(blink_core_tests_loader, "", "loader")
   sources += rebase_path(blink_core_tests_mathml, "", "mathml")
-  sources += rebase_path(blink_core_tests_origin_trials, "", "origin_trials")
   sources += rebase_path(blink_core_tests_page, "", "page")
   sources += rebase_path(blink_core_tests_paint, "", "paint")
   sources +=
@@ -1307,9 +1277,6 @@ source_set("unit_tests") {
     ":fuzztest_utils",
     ":unit_test_support",
     "//cc",
-    "//components/viz/test:test_support",
-    "//gpu/command_buffer/client:raster",
-    "//gpu/config",
     "//mojo/public/cpp/system",
     "//mojo/public/cpp/test_support:test_utils",
     "//services/metrics/public/cpp:ukm_builders",

@@ -13,7 +13,6 @@
 #include "third_party/blink/renderer/platform/scheduler/public/frame_scheduler.h"
 #include "third_party/blink/renderer/platform/scheduler/public/scheduling_policy.h"
 #include "third_party/blink/renderer/platform/scheduler/public/virtual_time_controller.h"
-#include "third_party/blink/renderer/platform/scheduler/public/widget_scheduler.h"
 #include "third_party/blink/renderer/platform/wtf/functional.h"
 #include "third_party/blink/renderer/platform/wtf/text/wtf_string.h"
 
@@ -84,10 +83,6 @@ class PLATFORM_EXPORT PageScheduler {
   // be null in unit tests.
   virtual VirtualTimeController* GetVirtualTimeController() = 0;
 
-  // Creates a WidgetScheduler implementation. The delegate must remain alive
-  // until `scheduler::WidgetScheduler::WillShutdown()` is called.
-  virtual scoped_refptr<scheduler::WidgetScheduler> CreateWidgetScheduler(
-      scheduler::WidgetScheduler::Delegate*) = 0;
 };
 
 }  // namespace blink

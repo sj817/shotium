@@ -65,7 +65,6 @@
 #include "third_party/blink/renderer/core/loader/idleness_detector.h"
 #include "third_party/blink/renderer/core/page/autoscroll_controller.h"
 #include "third_party/blink/renderer/core/page/chrome_client.h"
-#include "third_party/blink/renderer/core/page/drag_controller.h"
 #include "third_party/blink/renderer/core/page/focus_controller.h"
 #include "third_party/blink/renderer/core/page/page_animator.h"
 #include "third_party/blink/renderer/core/page/page_hidden_state.h"
@@ -235,7 +234,6 @@ Page::Page(base::PassKey<Page>,
       autoscroll_controller_(MakeGarbageCollected<AutoscrollController>(*this)),
       chrome_client_(&chrome_client),
       drag_caret_(MakeGarbageCollected<DragCaret>()),
-      drag_controller_(MakeGarbageCollected<DragController>(this)),
       focus_controller_(MakeGarbageCollected<FocusController>(this)),
       page_scale_constraints_set_(
           MakeGarbageCollected<PageScaleConstraintsSet>(this)),
@@ -1183,7 +1181,6 @@ void Page::Trace(Visitor* visitor) const {
   visitor->Trace(autoscroll_controller_);
   visitor->Trace(chrome_client_);
   visitor->Trace(drag_caret_);
-  visitor->Trace(drag_controller_);
   visitor->Trace(focus_controller_);
   visitor->Trace(page_scale_constraints_set_);
   visitor->Trace(page_visibility_observer_set_);

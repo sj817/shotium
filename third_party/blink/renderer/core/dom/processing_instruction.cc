@@ -320,8 +320,7 @@ bool ProcessingInstruction::CheckStyleSheet(String& href, String& charset) {
 
   if (is_xsl_ &&
       !XSLTProcessor::IsXSLTEnabled(GetDocument().GetExecutionContext())) {
-    XSLTProcessor::ReportXSLTDisabled(GetDocument(),
-                                      /*exception_state*/ nullptr);
+    XSLTProcessor::ReportXSLTDisabled(GetDocument());
     is_xsl_ = false;
     return false;
   }

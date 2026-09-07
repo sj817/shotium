@@ -16,11 +16,6 @@
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size);
 
-namespace IPC {
-template <class P>
-struct ParamTraits;
-}  // namespace IPC
-
 namespace gfx {
 
 // Used to represent a full ICC profile, usually retrieved from a monitor. It
@@ -98,7 +93,6 @@ class COLOR_SPACE_EXPORT ICCProfile {
   friend int ::LLVMFuzzerTestOneInput(const uint8_t*, size_t);
   friend class ColorSpace;
   friend class ColorTransformInternal;
-  friend struct IPC::ParamTraits<gfx::ICCProfile>;
 };
 
 }  // namespace gfx

@@ -45,11 +45,6 @@ class SiteInfo;
 class SandboxedOpaqueOriginCreator;
 }  // namespace content
 
-namespace IPC {
-template <class P>
-struct ParamTraits;
-}  // namespace IPC
-
 namespace mojo {
 template <typename DataViewType, typename T>
 struct StructTraits;
@@ -375,7 +370,6 @@ class COMPONENT_EXPORT(URL) Origin {
   friend class OriginTest;
   friend struct mojo::UrlOriginAdapter;
   friend struct mojo::StructTraits<url::mojom::OriginDataView, url::Origin>;
-  friend IPC::ParamTraits<url::Origin>;
   friend COMPONENT_EXPORT(URL) std::ostream& operator<<(std::ostream& out,
                                                         const Origin& origin);
   friend class blink::StorageKeyTest;

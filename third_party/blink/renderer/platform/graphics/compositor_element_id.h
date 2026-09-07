@@ -37,8 +37,7 @@ enum class CompositorElementIdNamespace {
   kTranslateTransform,
   kVerticalScrollbar,
   kHorizontalScrollbar,
-  kUnboundedWrapperEffect = 20,
-  kDOMNodeId,
+  kDOMNodeId = 21,
   // The following values are for internal usage only.
   kMax = kDOMNodeId,
   // A sentinel to indicate the maximum representable namespace id

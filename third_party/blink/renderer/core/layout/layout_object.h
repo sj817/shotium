@@ -740,12 +740,6 @@ class CORE_EXPORT LayoutObject : public GarbageCollected<LayoutObject>,
   }
   inline bool IsStacked(const ComputedStyle& style) const {
     NOT_DESTROYED();
-    if (style.IsUnboundedElementActive()) {
-      // For unbounded elements, we treat them as stacked, so they get their own
-      // paint layer by default.
-      DCHECK(RuntimeEnabledFeatures::UnboundedElementEnabled());
-      return true;
-    }
     return style.GetPosition() != EPosition::kStatic ||
            (IsStackingContext(style) &&
             (!RuntimeEnabledFeatures::StackingContextIsNotStackedEnabled() ||
@@ -2434,12 +2428,6 @@ class CORE_EXPORT LayoutObject : public GarbageCollected<LayoutObject>,
   // gfx::Rect can be larger than the integral size.
   gfx::Rect AbsoluteBoundingBoxRect(MapCoordinatesFlags = {}) const;
 
-  // Returns the absolute bounding box rect including ink overflow (such as CSS
-  // drop-shadow) of this unbounded element, mapped to absolute coordinates.
-  // This is a specialized API for unbounded elements that traverses document
-  // boundaries.
-  gfx::Rect AbsoluteBoundingBoxRectForUnboundedElement() const;
-
   // These two functions also handle inlines without content for which the
   // location of the result rect (which may be empty) should be the absolute
   // location of the inline. This is especially useful to get the bounding
@@ -3132,10 +3120,6 @@ class CORE_EXPORT LayoutObject : public GarbageCollected<LayoutObject>,
       layout_object_.UpdateInsideBlockingWheelEventHandler(inside);
     }
 
-    void UpdateIsActiveUnboundedElementOrDescendant(bool inside) {
-      layout_object_.UpdateIsActiveUnboundedElementOrDescendant(inside);
-    }
-
 #if DCHECK_IS_ON()
     void ClearNeedsPaintPropertyUpdateForTesting() {
       layout_object_.needs_paint_property_update_ = false;
@@ -3378,16 +3362,6 @@ class CORE_EXPORT LayoutObject : public GarbageCollected<LayoutObject>,
   bool PreviousVisibilityVisible() const {
     NOT_DESTROYED();
     return previous_visibility_visible_;
-  }
-
-  bool IsInclusiveDescendantOfUnboundedElement() const {
-    NOT_DESTROYED();
-    return is_active_unbounded_element_or_descendant_;
-  }
-
-  void UpdateIsActiveUnboundedElementOrDescendant(bool inside) {
-    NOT_DESTROYED();
-    is_active_unbounded_element_or_descendant_ = inside;
   }
 
   virtual bool VisualRectRespectsVisibility() const {
@@ -4094,9 +4068,6 @@ class CORE_EXPORT LayoutObject : public GarbageCollected<LayoutObject>,
   // Whether the selection focus is inside this element.
   // Used for text-overflow ellipsis.
   unsigned contains_selection_focus_ : 1 = false;
-
-  // Whether this is an (inclusive) descendant of an unbounded element.
-  unsigned is_active_unbounded_element_or_descendant_ : 1 = false;
 
   // The depth of this object in the layout-tree.
   unsigned depth_ : kLayoutObjectDepthBits = 0u;

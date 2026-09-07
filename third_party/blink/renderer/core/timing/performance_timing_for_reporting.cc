@@ -210,23 +210,6 @@ PerformanceTimingForReporting::FirstContentfulPaintAsMonotonicTimeForMetrics()
   return timing->FirstContentfulPaint();
 }
 
-uint64_t PerformanceTimingForReporting::FirstMeaningfulPaint() const {
-  const PaintTiming* timing = GetPaintTiming();
-  if (!timing)
-    return 0;
-
-  return MonotonicTimeToIntegerMilliseconds(timing->FirstMeaningfulPaint());
-}
-
-uint64_t PerformanceTimingForReporting::FirstMeaningfulPaintCandidate() const {
-  const PaintTiming* timing = GetPaintTiming();
-  if (!timing)
-    return 0;
-
-  return MonotonicTimeToIntegerMilliseconds(
-      timing->FirstMeaningfulPaintCandidate());
-}
-
 uint64_t PerformanceTimingForReporting::FirstEligibleToPaint() const {
   const PaintTiming* timing = GetPaintTiming();
   if (!timing) {

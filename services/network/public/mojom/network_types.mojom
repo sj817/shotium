@@ -4,11 +4,59 @@
 
 module network.mojom;
 
-// This file is a collection of network types which rely on legacy IPC
-// ParamTraits for serialization. All of these should eventually be converted to
-// proper mojom definitions.
-[Native]
-enum ConnectionInfo;
+// Values match net::HttpConnectionInfo, including historical cache values.
+enum ConnectionInfo {
+  kUnknown = 0,
+  kHttp11 = 1,
+  kDeprecatedSpdy2 = 2,
+  kDeprecatedSpdy3 = 3,
+  kHttp2 = 4,
+  kQuicUnknownVersion = 5,
+  kDeprecatedHttp214 = 6,
+  kDeprecatedHttp215 = 7,
+  kHttp09 = 8,
+  kHttp10 = 9,
+  kQuic32 = 10,
+  kQuic33 = 11,
+  kQuic34 = 12,
+  kQuic35 = 13,
+  kQuic36 = 14,
+  kQuic37 = 15,
+  kQuic38 = 16,
+  kQuic39 = 17,
+  kQuic40 = 18,
+  kQuic41 = 19,
+  kQuic42 = 20,
+  kQuic43 = 21,
+  kQuicQ099 = 22,
+  kQuic44 = 23,
+  kQuic45 = 24,
+  kQuic46 = 25,
+  kQuic47 = 26,
+  kQuic999 = 27,
+  kQuicQ048 = 28,
+  kQuicQ049 = 29,
+  kQuicQ050 = 30,
+  kQuicT048 = 31,
+  kQuicT049 = 32,
+  kQuicT050 = 33,
+  kQuicT099 = 34,
+  kQuicDraft25 = 35,
+  kQuicDraft27 = 36,
+  kQuicDraft28 = 37,
+  kQuicDraft29 = 38,
+  kQuicT051 = 39,
+  kQuicRfcV1 = 40,
+  kDeprecatedQuic2Draft1 = 41,
+  kQuic2Draft8 = 42,
+};
 
-[Native]
-enum EffectiveConnectionType;
+// Values match net::EffectiveConnectionType; LAST is not a valid value.
+enum EffectiveConnectionType {
+  kUnknown = 0,
+  kOffline = 1,
+  kSlow2G = 2,
+  k2G = 3,
+  k3G = 4,
+  k4G = 5,
+};

@@ -184,8 +184,6 @@ class CC_PAINT_EXPORT CorePaintFlags {
   bool IsValid() const;
 
  private:
-  friend class PaintOpReader;
-  friend class PaintOpWriter;
 
   // Match(ish) SkPaint defaults.  SkPaintDefaults is not public, so this
   // just uses these values and ignores any SkUserConfig overrides.
@@ -332,8 +330,6 @@ class CC_PAINT_EXPORT PaintFlags final : public CorePaintFlags {
       gfx::ContentColorUsage* content_color_usage = nullptr) const;
 
  private:
-  friend class PaintOpReader;
-  friend class PaintOpWriter;
 
   // See documentation at `setTargetedHdrHeadroom`.
   float targeted_hdr_headroom_ = TargetedHdrHeadroom::kFromPlaybackParams;

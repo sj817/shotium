@@ -30,7 +30,6 @@
 #include <memory>
 
 #include "base/task/single_thread_task_runner.h"
-#include "components/viz/common/surfaces/local_surface_id.h"
 #include "mojo/public/cpp/bindings/pending_remote.h"
 #include "third_party/blink/public/common/associated_interfaces/associated_interface_provider.h"
 #include "third_party/blink/public/platform/platform.h"
@@ -108,7 +107,6 @@ void EmptyLocalFrameClient::BeginNavigation(
     const base::UnguessableToken& initiator_state_token,
     const DocumentToken& initiator_document_token,
     SourceLocation*,
-    mojo::PendingRemote<mojom::blink::NavigationStateKeepAliveHandle>,
     bool is_container_initiated,
     bool has_rel_opener,
     mojo::PendingReceiver<mojom::blink::NavigationResumeDeferredCommitListener>,

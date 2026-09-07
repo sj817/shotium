@@ -4756,18 +4756,6 @@
       invalidate: ["layout", "paint"],
     },
     {
-      // This property is used for testing with origin trial intergration only.
-      // It should never be web-exposed.
-      name: "origin-trial-test-property",
-      property_methods: ["CSSValueFromComputedStyleInternal"],
-      field_template: "keyword",
-      default_value: "normal",
-      keywords: ["normal", "none"],
-      typedom_types: ["Keyword"],
-      runtime_flag: "OriginTrialsSampleAPI",
-      computable: false,
-    },
-    {
       name: "orphans",
       property_methods: ["CSSValueFromComputedStyleInternal"],
       parse_helper: "ConsumePositiveInteger",
@@ -5030,17 +5018,6 @@
       typedom_types: ["Keyword"],
       default_value: "none",
       runtime_flag: "OverscrollGestures",
-    },
-    {
-      name: "-internal-unbounded",
-      property_methods: ["CSSValueFromComputedStyleInternal"],
-      field_group: "*",
-      field_template: "keyword",
-      keywords: ["none", "active"],
-      typedom_types: ["Keyword"],
-      default_value: "none",
-      runtime_flag: "UnboundedElement",
-      invalidate: ["layout", "paint"],
     },
     {
       name: "padding-bottom",

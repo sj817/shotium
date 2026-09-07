@@ -14,9 +14,6 @@
 #include "cc/paint/paint_export.h"
 #include "cc/paint/paint_image.h"
 #include "cc/paint/refcounted_buffer.h"
-#include "cc/paint/skottie_color_map.h"
-#include "cc/paint/skottie_frame_data.h"
-#include "cc/paint/skottie_text_property_value.h"
 #include "third_party/skia/include/core/SkCanvas.h"
 #include "third_party/skia/include/core/SkRefCnt.h"
 
@@ -31,7 +28,6 @@ class PaintPreviewTracker;
 }  // namespace paint_preview
 
 namespace cc {
-class SkottieWrapper;
 class PaintFilter;
 class PaintFlags;
 class PaintRecord;
@@ -66,14 +62,6 @@ class CC_PAINT_EXPORT PaintCanvas {
   virtual void* accessTopLayerPixels(SkImageInfo* info,
                                      size_t* rowBytes,
                                      SkIPoint* origin = nullptr) = 0;
-
-  // TODO(enne): It would be nice to get rid of flush() entirely, as it
-  // doesn't really make sense for recording.  However, this gets used by
-  // PaintCanvasVideoRenderer which takes a PaintCanvas to paint both
-  // software and hardware video.  This is super entangled with ImageBuffer
-  // and canvas/video painting in Blink where the same paths are used for
-  // both recording and gpu work.
-  virtual void flush() = 0;
 
   virtual int save() = 0;
   virtual int saveLayer(const PaintFlags& flags) = 0;
@@ -190,18 +178,6 @@ class CC_PAINT_EXPORT PaintCanvas {
                             scoped_refptr<RefCountedBuffer<uint16_t>> indices,
                             const PaintFlags& flags) = 0;
 
-  // Draws the frame of the |skottie| animation specified by the normalized time
-  // t [0->first frame..1->last frame] at the destination bounds given by |dst|
-  // onto the canvas. |images| is a map from asset id to the corresponding image
-  // to use when rendering this frame; it may be empty if this animation frame
-  // does not contain any images in it.
-  virtual void drawSkottie(scoped_refptr<SkottieWrapper> skottie,
-                           const SkRect& dst,
-                           float t,
-                           SkottieFrameDataMap images,
-                           const SkottieColorMap& color_map,
-                           SkottieTextPropertyValueMap text_map) = 0;
-
   virtual void drawTextBlob(sk_sp<SkTextBlob> blob,
                             SkScalar x,
                             SkScalar y,
@@ -228,7 +204,6 @@ class CC_PAINT_EXPORT PaintCanvas {
 
   virtual SkM44 getLocalToDevice() const = 0;
 
-  virtual bool NeedsFlush() const = 0;
 
   // Used for printing
   enum class AnnotationType {

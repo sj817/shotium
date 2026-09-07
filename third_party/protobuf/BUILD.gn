@@ -178,9 +178,6 @@ group("protobuf_full") {
 
       # The protobuf-based SQLite and GPU fuzzers need protobuf_full and are not
       # included in Chrome.
-      "//gpu:gl_lpm_fuzzer_proto",
-      "//gpu:gl_lpm_fuzzer_proto_gen",
-      "//gpu:gl_lpm_shader_to_string_unittest",
 
       # The protobuf-based Mojo LPM fuzzer needs protobuf_full and is not
       # included in Chrome.
@@ -191,12 +188,6 @@ group("protobuf_full") {
       # browser needs to be able to parse serialized protobuf (which is exposed
       # as a separate lite BUILD rule).
       "//net/cert:root_store_proto_full",
-
-      # The spirv-fuzz fuzzer tool needs protobuf_full and is not included in
-      # Chrome.
-      "//third_party/spirv-tools/src:spirv-fuzz",
-      "//third_party/spirv-tools/src:spvtools_fuzz",
-      "//third_party/spirv-tools/src:spvtools_fuzz_proto",
 
       # Some fuzzers for tint need protobuf_full and are not included in Chrome.
 

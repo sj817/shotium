@@ -14,7 +14,6 @@
 #include "build/build_config.h"
 
 #if BUILDFLAG(USE_BLINK)
-#include "ipc/param_traits.h"                        // nogncheck
 #include "mojo/public/cpp/bindings/struct_traits.h"  // nogncheck
 #endif
 
@@ -206,7 +205,6 @@ class LatencyInfo {
   int64_t touch_trace_id_ = 0;
 
 #if BUILDFLAG(USE_BLINK)
-  friend struct IPC::ParamTraits<ui::LatencyInfo>;
   friend struct mojo::StructTraits<ui::mojom::LatencyInfoDataView,
                                    ui::LatencyInfo>;
 #endif

@@ -91,8 +91,6 @@ blink_core_sources_frame = [
   "local_frame_client.h",
   "local_frame_mojo_handler.cc",
   "local_frame_mojo_handler.h",
-  "local_frame_ukm_aggregator.cc",
-  "local_frame_ukm_aggregator.h",
   "local_frame_view.cc",
   "local_frame_view.h",
   "location.cc",

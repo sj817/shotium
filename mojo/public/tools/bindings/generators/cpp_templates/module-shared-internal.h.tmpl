@@ -32,11 +32,6 @@
 #include "{{import.path}}-shared-internal.h"
 {%- endfor %}
 
-{%- if not disallow_native_types %}
-#include "mojo/public/cpp/bindings/lib/native_enum_data.h"
-#include "mojo/public/interfaces/bindings/native_struct.mojom-shared-internal.h"
-{%- endif %}
-
 {%- if export_header %}
 #include "{{export_header}}"
 {%- endif %}
@@ -58,11 +53,7 @@ namespace internal {
 
 {#--- Internal forward declarations #}
 {%- for struct in structs %}
-{%-   if struct|is_native_only_kind %}
-using {{struct.name}}_Data = mojo::native::internal::NativeStruct_Data;
-{%-   else %}
 class {{struct.name}}_Data;
-{%-   endif %}
 {%- endfor %}
 
 {%- for union in unions %}
@@ -72,12 +63,7 @@ class {{union.name}}_Data;
 {#--- Enums #}
 {%- from "enum_macros.tmpl" import enum_data_decl -%}
 {%- for enum in all_enums %}
-{%-   if enum|is_native_only_kind %}
-using {{enum|get_name_for_kind(flatten_nested_kind=True)}}_Data =
-    mojo::internal::NativeEnum_Data;
-{%-   else %}
 {{enum_data_decl(enum)}}
-{%-   endif %}
 {%- endfor %}
 
 #pragma pack(push, 1)
@@ -90,10 +76,8 @@ using {{enum|get_name_for_kind(flatten_nested_kind=True)}}_Data =
 
 {#--- Struct class declarations #}
 {%- for struct in structs %}
-{%-   if not struct|is_native_only_kind %}
-{%      include "struct_declaration.tmpl" %}
-{%      include "struct_unserialized_message_context.tmpl" %}
-{%-   endif %}
+{%    include "struct_declaration.tmpl" %}
+{%    include "struct_unserialized_message_context.tmpl" %}
 {%- endfor %}
 
 #pragma pack(pop)

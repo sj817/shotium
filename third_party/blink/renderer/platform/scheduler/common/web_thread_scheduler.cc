@@ -98,13 +98,5 @@ void WebThreadScheduler::ResumeTimersForAndroidWebView() {
 }
 #endif  // BUILDFLAG(IS_ANDROID)
 
-void WebThreadScheduler::OnUrgentMessageReceived() {
-  NOTREACHED();
-}
-
-void WebThreadScheduler::OnUrgentMessageProcessed() {
-  NOTREACHED();
-}
-
 }  // namespace scheduler
 }  // namespace blink

@@ -42,8 +42,7 @@
 
     // https://github.com/WICG/connection-allowlists/issues/1
     // Gated on `ConnectionAllowlistEmbeddedEnforcement` so the property is
-    // exposed only when embedded enforcement is available (the feature carries
-    // its own `origin_trial_feature_name`; see runtime_enabled_features.json5).
+    // exposed only when embedded enforcement is available.
     [RuntimeEnabled=ConnectionAllowlistEmbeddedEnforcement, CEReactions, Reflect] attribute DOMString connectionAllowlist;
 
     // Feature Policy

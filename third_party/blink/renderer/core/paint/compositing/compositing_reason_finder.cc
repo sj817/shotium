@@ -356,18 +356,9 @@ CompositingReasons CompositingReasonFinder::DirectReasonsForPaintProperties(
 
   CompositingReasons reasons;
 
-  auto* element = DynamicTo<Element>(object.GetNode());
 
 
   reasons.PutAll(CompositingReasonsFor3DSceneLeaf(object));
-
-  if (object.StyleRef().IsUnboundedElementActive()) {
-    DCHECK(RuntimeEnabledFeatures::UnboundedElementEnabled());
-    auto* html_element = DynamicTo<HTMLElement>(element);
-    DCHECK(!html_element || object.StyleRef().IsUnboundedElementActive() ==
-                                html_element->IsUnboundedElementActive());
-    reasons.Put(CompositingReason::kUnboundedElement);
-  }
 
   if (object.CanHaveAdditionalCompositingReasons()) {
     reasons.PutAll(object.AdditionalCompositingReasons());

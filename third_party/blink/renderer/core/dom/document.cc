@@ -204,7 +204,6 @@
 #include "third_party/blink/renderer/core/frame/local_dom_window.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
 #include "third_party/blink/renderer/core/frame/local_frame_client.h"
-#include "third_party/blink/renderer/core/frame/local_frame_ukm_aggregator.h"
 #include "third_party/blink/renderer/core/frame/local_frame_view.h"
 #include "third_party/blink/renderer/core/frame/page_dismissal_scope.h"
 #include "third_party/blink/renderer/core/frame/performance_monitor.h"
@@ -289,7 +288,6 @@
 #include "third_party/blink/renderer/core/mathml/mathml_row_element.h"
 #include "third_party/blink/renderer/core/mathml_element_factory.h"
 #include "third_party/blink/renderer/core/mathml_names.h"
-#include "third_party/blink/renderer/core/origin_trials/origin_trial_context.h"
 #include "third_party/blink/renderer/core/overscroll/overscroll_event.h"
 #include "third_party/blink/renderer/core/page/chrome_client.h"
 #include "third_party/blink/renderer/core/page/event_with_hit_test_results.h"
@@ -305,7 +303,6 @@
 #include "third_party/blink/renderer/core/page/spatial_navigation_controller.h"
 #include "third_party/blink/renderer/core/paint/paint_layer.h"
 #include "third_party/blink/renderer/core/paint/paint_layer_scrollable_area.h"
-#include "third_party/blink/renderer/core/paint/timing/first_meaningful_paint_detector.h"
 #include "third_party/blink/renderer/core/paint/timing/paint_timing.h"
 #include "third_party/blink/renderer/core/permissions_policy/dom_feature_policy.h"
 #include "third_party/blink/renderer/core/permissions_policy/permissions_policy_parser.h"
@@ -315,9 +312,6 @@
 #include "third_party/blink/renderer/core/resize_observer/resize_observer_entry.h"
 #include "third_party/blink/renderer/core/resize_observer/resize_observer_size.h"
 #include "third_party/blink/renderer/core/route_matching/route_map.h"
-#include "third_party/blink/renderer/core/sanitizer/sanitizer.h"
-#include "third_party/blink/renderer/core/sanitizer/sanitizer_api.h"
-#include "third_party/blink/renderer/core/sanitizer/sanitizer_builtins.h"
 #include "third_party/blink/renderer/core/script/script_runner.h"
 #include "third_party/blink/renderer/core/scroll/scrollbar_theme.h"
 #include "third_party/blink/renderer/core/scroll/snap_event.h"
@@ -1735,8 +1729,7 @@ void Document::setXMLStandalone(bool standalone,
   xml_standalone_ = standalone ? kStandalone : kNotStandalone;
 }
 
-void Document::SetContent(const String& content,
-                          StreamingSanitizer* sanitizer) {
+void Document::SetContent(const String& content) {
   // Only set the content of the document if it is ready to be set. This method
   // could be called at any time.
   if (ScriptableDocumentParser* parser = GetScriptableDocumentParser()) {
@@ -1746,13 +1739,11 @@ void Document::SetContent(const String& content,
   if (ignore_opens_during_unload_count_)
     return;
 
-  sanitizer_ = sanitizer;
 
   open();
   parser_->Append(content);
   close();
 
-  sanitizer_ = nullptr;
 }
 
 using AllowState = blink::Document::DeclarativeShadowRootAllowState;
@@ -2488,8 +2479,6 @@ void Document::UpdateStyleAndLayoutTreeForThisDocument() {
     }
   }
 
-  SCOPED_UMA_AND_UKM_TIMER(View()->GetUkmAggregator(),
-                           LocalFrameUkmAggregator::kStyle);
   FontPerformance::StyleScope font_performance_scope;
   // ENTER_EMBEDDER_STATE(..., BlinkState::STYLE) marked this stretch of work
   // as "style" for V8's CPU profiler, so a profile could attribute time to
@@ -2891,8 +2880,6 @@ void Document::UpdateStyleAndLayout(DocumentUpdateReason reason) {
   TRACE_EVENT("blink", "Document::UpdateStyleAndLayout");
   LocalFrameView* frame_view = View();
 
-  if (reason != DocumentUpdateReason::kBeginMainFrame && frame_view)
-    frame_view->WillStartForcedLayout(reason);
 
   ScriptForbiddenScope forbid_script;
 
@@ -2904,8 +2891,6 @@ void Document::UpdateStyleAndLayout(DocumentUpdateReason reason) {
   }
 
   if (!IsActive()) {
-    if (reason != DocumentUpdateReason::kBeginMainFrame && frame_view)
-      frame_view->DidFinishForcedLayout();
     return;
   }
 
@@ -2925,8 +2910,6 @@ void Document::UpdateStyleAndLayout(DocumentUpdateReason reason) {
     frame_view->ExecutePendingSnapUpdates();
   }
 
-  if (reason != DocumentUpdateReason::kBeginMainFrame && frame_view)
-    frame_view->DidFinishForcedLayout();
 
   if (should_update_selection_after_layout_)
     UpdateSelectionAfterLayout();
@@ -3227,7 +3210,7 @@ DocumentParser* Document::CreateParser() {
     CustomElementRegistry* registry =
         CustomElementRegistry::DefaultRegistry(*this);
     return MakeGarbageCollected<HTMLDocumentParser>(
-        *html_document, parser_sync_policy_, registry, sanitizer_.Get());
+        *html_document, parser_sync_policy_, registry);
   }
 
   data_->using_rust_xml_parser_ = false;
@@ -8654,7 +8637,6 @@ void Document::Trace(Visitor* visitor) const {
   visitor->Trace(dom_window_);
   visitor->Trace(fetcher_);
   visitor->Trace(parser_);
-  visitor->Trace(sanitizer_);
   visitor->Trace(http_refresh_scheduler_);
   visitor->Trace(document_timing_);
   visitor->Trace(media_query_matcher_);
@@ -9184,173 +9166,6 @@ void Document::SetHasRenderBlockingExpectLinkElements(bool flag) {
   has_render_blocking_expect_link_elements_ = flag;
 }
 
-
-// static
-Document* Document::parseHTMLInternal(ExecutionContext* context,
-                                      const String& html,
-                                      StreamingSanitizer* sanitizer,
-                                      ExceptionState& exception_state) {
-  Document* doc = DocumentInit::Create()
-                      .WithTypeFrom(keywords::kTextHtml)
-                      .WithExecutionContext(context)
-                      .WithAgent(*context->GetAgent())
-                      .CreateDocument();
-  doc->setAllowDeclarativeShadowRoots(true);
-  doc->SetContent(html, sanitizer);
-  doc->SetMimeType(keywords::kTextHtml);
-  if (sanitizer) {
-    sanitizer->DidParseDocument(doc);
-  }
-  return doc;
-}
-
-// static
-Document* Document::parseHTMLUnsafe(ExecutionContext* context,
-                                    const V8UnionStringOrTrustedHTML* html,
-                                    ExceptionState& exception_state) {
-  UseCounter::Count(context, WebFeature::kHTMLUnsafeMethods);
-  FragmentParserOptions fragment_options;
-  String compliant_html = TrustedTypesCheckForFragment(
-      html, fragment_options, context, trusted_types_names::kDocument,
-      trusted_types_names::kParseHTMLUnsafe, exception_state);
-  if (exception_state.HadException()) {
-    return nullptr;
-  }
-
-  auto* streaming_sanitizer =
-      RuntimeEnabledFeatures::StreamingSanitizerEnabled()
-          ? SanitizerAPI::CreateStreamingSanitizer(
-                Sanitizer::Mode::kUnsafe, fragment_options, exception_state)
-          : nullptr;
-
-  if (exception_state.HadException()) {
-    return nullptr;
-  }
-
-  Document* doc = parseHTMLInternal(context, compliant_html,
-                                    streaming_sanitizer, exception_state);
-  if (exception_state.HadException()) {
-    return nullptr;
-  }
-  if (!streaming_sanitizer) {
-    SanitizerAPI::SanitizeInternal(Sanitizer::Mode::kUnsafe,
-                                   /*context_element*/ doc,
-                                   /*root_element*/ doc, fragment_options,
-                                   exception_state);
-  }
-  if (exception_state.HadException()) {
-    return nullptr;
-  }
-  return doc;
-}
-
-// static
-Document* Document::parseHTMLUnsafe(ExecutionContext* context,
-                                    const V8UnionStringOrTrustedHTML* html,
-                                    ParseHTMLUnsafeOptions* options,
-                                    ExceptionState& exception_state) {
-  UseCounter::Count(context, WebFeature::kHTMLUnsafeMethods);
-  CHECK(RuntimeEnabledFeatures::SanitizerAPIEnabled());
-  FragmentParserOptions fragment_options(options);
-  String compliant_html = TrustedTypesCheckForFragment(
-      html, fragment_options, context, trusted_types_names::kDocument,
-      trusted_types_names::kParseHTMLUnsafe, exception_state);
-  if (exception_state.HadException()) {
-    return nullptr;
-  }
-
-  auto* streaming_sanitizer =
-      RuntimeEnabledFeatures::StreamingSanitizerEnabled()
-          ? SanitizerAPI::CreateStreamingSanitizer(
-                Sanitizer::Mode::kUnsafe, fragment_options, exception_state)
-          : nullptr;
-
-  if (exception_state.HadException()) {
-    return nullptr;
-  }
-  Document* doc = parseHTMLInternal(context, compliant_html,
-                                    streaming_sanitizer, exception_state);
-  if (!RuntimeEnabledFeatures::StreamingSanitizerEnabled()) {
-    CHECK(!streaming_sanitizer);
-    SanitizerAPI::SanitizeInternal(Sanitizer::Mode::kUnsafe,
-                                   /*context_element*/ doc,
-                                   /*root_element*/ doc, fragment_options,
-                                   exception_state);
-  }
-  if (exception_state.HadException()) {
-    return nullptr;
-  }
-  return doc;
-}
-
-// static
-Document* Document::parseHTMLUnsafe(ExecutionContext* context,
-                                    const V8UnionStringOrTrustedHTML* html,
-                                    TrustedParserOptions* options,
-                                    ExceptionState& exception_state) {
-  CHECK(RuntimeEnabledFeatures::TrustedTypesCreateParserOptionsEnabled());
-  UseCounter::Count(context, WebFeature::kHTMLUnsafeMethods);
-  String compliant_html = TrustedTypesCheckForHTML(
-      html, context, trusted_types_names::kDocument,
-      trusted_types_names::kParseHTMLUnsafe, exception_state);
-  if (exception_state.HadException()) {
-    return nullptr;
-  }
-
-  FragmentParserOptions fragment_options(options);
-
-  auto* streaming_sanitizer =
-      RuntimeEnabledFeatures::StreamingSanitizerEnabled()
-          ? SanitizerAPI::CreateStreamingSanitizer(
-                Sanitizer::Mode::kUnsafe, fragment_options, exception_state)
-          : nullptr;
-
-  if (exception_state.HadException()) {
-    return nullptr;
-  }
-
-  Document* doc = parseHTMLInternal(context, compliant_html,
-                                    streaming_sanitizer, exception_state);
-  if (exception_state.HadException()) {
-    return nullptr;
-  }
-  if (!streaming_sanitizer) {
-    SanitizerAPI::SanitizeInternal(Sanitizer::Mode::kUnsafe,
-                                   /*context_element*/ doc,
-                                   /*root_element*/ doc, fragment_options,
-                                   exception_state);
-  }
-  if (exception_state.HadException()) {
-    return nullptr;
-  }
-  return doc;
-}
-
-// static
-Document* Document::parseHTML(ExecutionContext* context,
-                              const String& html,
-                              SetHTMLOptions* options,
-                              ExceptionState& exception_state) {
-  CHECK(RuntimeEnabledFeatures::SanitizerAPIEnabled());
-  auto* streaming_sanitizer =
-      RuntimeEnabledFeatures::StreamingSanitizerEnabled()
-          ? SanitizerAPI::CreateStreamingSanitizer(
-                Sanitizer::Mode::kSafe, FragmentParserOptions(options),
-                exception_state)
-          : nullptr;
-  Document* doc =
-      parseHTMLInternal(context, html, streaming_sanitizer, exception_state);
-  if (!streaming_sanitizer) {
-    SanitizerAPI::SanitizeInternal(
-        Sanitizer::Mode::kSafe,
-        /*context_element*/ doc, /*root_element*/ doc,
-        FragmentParserOptions(options), exception_state);
-  }
-  if (exception_state.HadException()) {
-    return nullptr;
-  }
-  return doc;
-}
 
 void Document::SetOverrideSiteForCookiesForCSPMedia(bool value) {
   CHECK(IsMediaDocument());

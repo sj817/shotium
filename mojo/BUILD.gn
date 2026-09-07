@@ -20,7 +20,6 @@ group("mojo") {
     deps += [ "//mojo/public/java/system" ]
   }
 
-  deps += [ "//services/service_manager:all" ]
 }
 
 buildflag_header("buildflags") {
@@ -42,8 +41,6 @@ group("tests") {
 
   if (!is_ios) {
     deps += [
-      "//ipc:ipc_tests",
-      "//services/service_manager/tests",
     ]
   }
 }

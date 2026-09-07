@@ -19,7 +19,7 @@ import {root} from './lib/repo.ts';
 // there, and Chromium's `gn gen` never loads those files anyway -- if it did,
 // GN would already be erroring on them.
 const SKIP_TREES = [
-  'third_party/angle', 'third_party/skia', 'third_party/crashpad', 'third_party/mini_chromium', 'third_party/OpenCL-CTS',
+  'third_party/skia', 'third_party/crashpad', 'third_party/mini_chromium', 'third_party/OpenCL-CTS',
   'third_party/clspv', 'third_party/swiftshader', 'third_party/fuchsia-sdk',
 ];
 // `gn format` wraps a long path onto its own line, so the open paren and the

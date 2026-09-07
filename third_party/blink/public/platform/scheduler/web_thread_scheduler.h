@@ -12,7 +12,6 @@
 #include "base/task/single_thread_task_runner.h"
 #include "base/time/time.h"
 #include "build/build_config.h"
-#include "ipc/urgent_message_observer.h"
 #include "third_party/blink/public/platform/scheduler/web_agent_group_scheduler.h"
 #include "third_party/blink/public/platform/web_common.h"
 
@@ -25,12 +24,11 @@ namespace scheduler {
 
 enum class WebRendererProcessType;
 
-class BLINK_PLATFORM_EXPORT WebThreadScheduler
-    : public IPC::UrgentMessageObserver {
+class BLINK_PLATFORM_EXPORT WebThreadScheduler {
  public:
   WebThreadScheduler(const WebThreadScheduler&) = delete;
   WebThreadScheduler& operator=(const WebThreadScheduler&) = delete;
-  ~WebThreadScheduler() override;
+  virtual ~WebThreadScheduler();
 
   // ==== Functions for the main thread scheduler  ============================
   //
@@ -91,10 +89,6 @@ class BLINK_PLATFORM_EXPORT WebThreadScheduler
   virtual void PauseTimersForAndroidWebView();
   virtual void ResumeTimersForAndroidWebView();
 #endif  // BUILDFLAG(IS_ANDROID)
-
-  // IPC::Channel::UrgentMessageDelegate implementation:
-  void OnUrgentMessageReceived() override;
-  void OnUrgentMessageProcessed() override;
 
  protected:
   WebThreadScheduler() = default;

@@ -390,9 +390,6 @@ BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(
 
 BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kEnforceNoopenerOnBlobURLNavigation);
 
-BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(
-    kEventTimingIgnorePresentationTimeFromUnexpectedFrameSource);
-
 // Number of pixels to expand in root layout coordinates for cull rect under
 // scroll translation or other composited transform:
 //   kCullRectPixelDistanceToExpand *
@@ -442,15 +439,6 @@ BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kFetchDestinationJsonCssModules);
 // Switch to temporary turn back on file system url navigation.
 // TODO(https://crbug.com/1332598): Remove this feature.
 BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kFileSystemUrlNavigation);
-
-// Enables filtering of predicted scroll events on compositor thread.
-// Uses the kFilterName* values in ui_base_features.h as the 'filter' feature
-// param.
-BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kFilteringScrollPrediction);
-BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE_PARAM(
-    std::string,
-    kFilteringScrollPredictionFilterParam);
-
 
 // Block partial responses (206, 416) for requests without a Range header.
 BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kBlockPartialResponseWithoutRange);
@@ -513,14 +501,6 @@ BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE_PARAM(size_t,
 // applied. See https://crbug.com/1369823.
 BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kImageLoadingPrioritizationFix);
 
-// Use Snappy to compress values for IndexedDB before wiring them to the
-// browser.
-BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kIndexedDBCompressValuesWithSnappy);
-// Defines the minimum uncompressed size to merit a compression attempt.
-// Values less than 0 will use the minimum threshold for value blob-wrapping.
-BLINK_COMMON_EXPORT extern const base::FeatureParam<int>
-    kIndexedDBCompressValuesWithSnappyCompressionThreshold;
-
 // Enables connection deduplication for IndexedDB
 BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kIndexedDBConnectionDeduplication);
 
@@ -548,13 +528,6 @@ BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE_PARAM(
 // Gating the migration of Android IME cursor anchor updates from Mojo IPC to
 // RenderFrameMetadata.
 BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kInputCursorAnchorInfoMigration);
-
-// This flag is used to set field parameters to choose predictor we use when
-// kResamplingInputEvents is disabled. It's used for gathering accuracy metrics
-// on finch and also for choosing predictor type for predictedEvents API without
-// enabling resampling. It does not have any effect when the resampling flag is
-// enabled.
-BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kInputPredictorTypeChoice);
 
 BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kIntensiveWakeUpThrottling);
 BLINK_COMMON_EXPORT extern const char
@@ -1441,19 +1414,6 @@ BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE_PARAM(
 // https://github.com/WICG/turtledove/blob/main/FLEDGE.md#23-scoring-bids
 BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kRenderSizeInScoreAdBrowserSignals);
 
-// Enables resampling input events on main thread.
-BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kResamplingInputEvents);
-// Enables resampling GestureScroll events on compositor thread.
-// Uses the kPredictorName* values in ui_base_features.h as the 'predictor'
-// feature param.
-BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kResamplingScrollEvents);
-// Max timeout for synthetic scroll prediction.
-BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE_PARAM(base::TimeDelta,
-                                               kScrollPredictorMaxResampleTime);
-
-// Enables predicting momentum phase events (flings) in ScrollPredictor.
-BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kResampleScrollEventsForFling);
-
 // This bypasses restrictions on selection sources and allows the spelling and
 // grammar checks to proceed for testing purposes.
 // https://explainers-by-googlers.github.io/user-dictionary-leaks/
@@ -1503,16 +1463,6 @@ BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kShowHudDisplayForPausedPages);
 
 BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kScriptStreaming);
 BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kScriptStreamingForNonHTTP);
-
-// Bypasses the 1 Euro filter for synthetic (Kalman) frames in ScrollPredictor.
-BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(
-    kScrollPredictorFilteringBypassOnSynthetic);
-
-// Enables the refined timeout logic in ScrollPredictor::HasPrediction.
-BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kScrollPredictorRefinedHasPrediction);
-
-// Enables the synthetic predictor (Kalman) for scroll gap-filling.
-BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kScrollPredictorSyntheticKalman);
 
 // If enabled, prefetches from NoStatePrefetchURLLoaderThrottle will be sent
 // with the Sec-Purpose: "prefetch" header.

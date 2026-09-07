@@ -34,7 +34,6 @@
 #ifndef THIRD_PARTY_BLINK_RENDERER_PLATFORM_GRAPHICS_SKIA_SKIA_UTILS_H_
 #define THIRD_PARTY_BLINK_RENDERER_PLATFORM_GRAPHICS_SKIA_SKIA_UTILS_H_
 
-#include "components/viz/common/resources/shared_image_format.h"
 #include "third_party/blink/renderer/platform/platform_export.h"
 #include "third_party/skia/include/core/SkColorSpace.h"
 #include "third_party/skia/include/core/SkData.h"
@@ -53,14 +52,6 @@ inline gfx::ColorSpace SkColorSpaceToGfxColorSpace(
     sk_sp<SkColorSpace> sk_color_space) {
   return sk_color_space ? gfx::ColorSpace(*sk_color_space)
                         : gfx::ColorSpace::CreateSRGB();
-}
-
-// Temporary utility while converting canvas code to use SharedImageFormat.
-// TODO(crbug.com/391903236): Determine best long-term plan once canvas code is
-// completely converted to SharedImageFormat (i.e., crbug.com/371227617 is
-// resolved).
-inline viz::SharedImageFormat GetN32FormatForCanvas() {
-  return viz::SharedImageFormat::N32Format();
 }
 
 // Attempts to allocate an SkData on the PartitionAlloc buffer partition.

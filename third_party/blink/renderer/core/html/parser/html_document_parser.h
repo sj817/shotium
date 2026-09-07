@@ -63,13 +63,11 @@ class Document;
 class DocumentFragment;
 class Element;
 class HTMLDocument;
-class HTMLParserMetrics;
 class HTMLParserScriptRunner;
 class HTMLPreloadScanner;
 class HTMLResourcePreloader;
 class HTMLTreeBuilder;
 class HTMLDocumentParserState;
-class StreamingSanitizer;
 
 enum ParserPrefetchPolicy {
   // Indicates that prefetches/preloads should happen for this document type.
@@ -105,14 +103,12 @@ class CORE_EXPORT HTMLDocumentParser : public ScriptableDocumentParser,
   HTMLDocumentParser(HTMLDocument&,
                      ParserSynchronizationPolicy,
                      CustomElementRegistry* registry,
-                     StreamingSanitizer* sanitizer = nullptr,
                      ParserPrefetchPolicy prefetch_policy = kAllowPrefetching);
   HTMLDocumentParser(DocumentFragment* fragment_target,
                      Element* context_element,
                      ParserContentPolicy,
                      ParserPrefetchPolicy prefetch_policy,
                      CustomElementRegistry* registry,
-                     StreamingSanitizer* sanitizer,
                      ParserRootInsertionPoint* root_insertion_point = nullptr);
   ~HTMLDocumentParser() override;
   void Trace(Visitor*) const override;
@@ -122,8 +118,7 @@ class CORE_EXPORT HTMLDocumentParser : public ScriptableDocumentParser,
       DocumentFragment*,
       Element* context_element,
       CustomElementRegistry*,
-      ParserContentPolicy = kAllowScriptingContent,
-      StreamingSanitizer* sanitizer = nullptr);
+      ParserContentPolicy = kAllowScriptingContent);
 
   // Exposed for testing.
   HTMLParserScriptRunnerHost* AsHTMLParserScriptRunnerHostForTesting() {
@@ -137,7 +132,6 @@ class CORE_EXPORT HTMLDocumentParser : public ScriptableDocumentParser,
 
   bool DidPumpTokenizerForTesting() const { return did_pump_tokenizer_; }
 
-  unsigned GetChunkCountForTesting() const;
 
   TextPosition GetTextPosition() const final;
   OrdinalNumber LineNumber() const final;
@@ -234,9 +228,8 @@ class CORE_EXPORT HTMLDocumentParser : public ScriptableDocumentParser,
   }
   bool PumpTokenizer();
   void PumpTokenizerIfPossible();
-  void DeferredPumpTokenizerIfPossible(bool from_finish_append,
-                                       base::TimeTicks schedule_time);
-  void SchedulePumpTokenizer(bool from_finish_append);
+  void DeferredPumpTokenizerIfPossible();
+  void SchedulePumpTokenizer();
   void ScheduleEndIfDelayed();
   void ConstructTreeFromToken(AtomicHTMLToken& atomic_token);
 
@@ -319,11 +312,6 @@ class CORE_EXPORT HTMLDocumentParser : public ScriptableDocumentParser,
   Member<HTMLResourcePreloader> preloader_;
   Member<HTMLDocumentParserState> task_runner_state_;
   PreloadRequestStream queued_preloads_;
-
-  // Metrics gathering and reporting
-  std::unique_ptr<HTMLParserMetrics> metrics_reporter_;
-  // A timer for how long we are inactive after yielding
-  std::unique_ptr<base::ElapsedTimer> yield_timer_;
 
   // If ThreadedPreloadScanner is enabled, preload data will be added to
   // `pending_preloads_` from a background thread. The main thread will

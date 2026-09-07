@@ -17,7 +17,6 @@
 #include "base/debug/crash_logging.h"
 #include "base/debug/dump_without_crashing.h"
 #include "third_party/blink/public/common/features.h"
-#include "third_party/blink/public/mojom/origin_trials/origin_trial_feature.mojom-shared.h"
 #include "third_party/blink/renderer/platform/feature_context.h"
 #include "third_party/blink/renderer/platform/runtime_feature_state/runtime_feature_state_override_context.h"
 #include "third_party/blink/renderer/platform/wtf/text/wtf_string.h"
@@ -73,12 +72,6 @@ void RuntimeEnabledFeaturesBase::Set{{feature_set|capitalize}}FeaturesEnabled(bo
 }
 
 {% endfor %}
-
-void RuntimeEnabledFeaturesBase::SetOriginTrialControlledFeaturesEnabled(bool enable) {
-  {% for feature in origin_trial_controlled_features %}
-  Set{{feature.name}}Enabled(enable);
-  {% endfor %}
-}
 
 namespace {
 
@@ -152,24 +145,10 @@ void RuntimeEnabledFeaturesBase::SetFeatureEnabledFromString(
 
 bool RuntimeEnabledFeaturesBase::IsFeatureEnabledFromString(
     std::string_view name) {
-  // Origin-trial controlled features cannot be answered without a context, so
-  // rather than duplicating the lookup table without them, they are filtered
-  // out of the result of the shared lookup. This table is sorted because the
-  // `FlagIndex` enum is emitted in feature declaration order, of which this is
-  // a subsequence.
-  static constexpr uint16_t kFlagIndicesInOriginTrials[] = {
-  {% for feature in features if not feature.is_protected_feature and feature.in_origin_trial %}
-    k{{feature.name}}FlagIndex,
-  {% endfor %}
-  };
-  static_assert(std::ranges::is_sorted(kFlagIndicesInOriginTrials));
-
   std::optional<uint16_t> flag_index = FindFeatureFlagIndex(name);
-  if (flag_index.has_value() &&
-      !std::ranges::binary_search(kFlagIndicesInOriginTrials, *flag_index)) {
+  if (flag_index.has_value()) {
     return feature_states_[*flag_index];
   } else {
-    // TODO(crbug.com/477806715): This will get hit for features controlled by origin trials.
     SCOPED_CRASH_KEY_STRING64("BlinkFeatureNotFound", "name", name);
     SCOPED_CRASH_KEY_BOOL("BlinkFeatureNotFound", "in_map", flag_index.has_value());
     base::debug::DumpWithoutCrashing();
@@ -254,25 +233,7 @@ void RuntimeEnabledFeaturesBase::Set{{feature.name}}Enabled(bool enabled) {
 {% endif %}
 {% endfor %}
 
-{% for feature in features %}
-{%if feature.is_overridable_feature and not feature.in_origin_trial%}
-bool RuntimeEnabledFeaturesBase::{{feature.name}}Enabled(const FeatureContext* context) {
-  if(context && context->GetRuntimeFeatureStateOverrideContext()
-                    ->Is{{feature.name}}ForceEnabled()) {
-    return true;
-  }
-  if(context && context->GetRuntimeFeatureStateOverrideContext()
-                    ->Is{{feature.name}}ForceDisabled()) {
-    return false;
-  }
-
-  return {{feature.name}}Enabled();
-}
-
-{% endif %}
-{% endfor %}
-
-{% for feature in origin_trial_controlled_features %}
+{% for feature in features if feature.is_context_dependent %}
 
 bool RuntimeEnabledFeaturesBase::{{feature.name}}Enabled(const FeatureContext* context) {
   {% if feature.is_overridable_feature%}
@@ -295,17 +256,9 @@ bool RuntimeEnabledFeaturesBase::{{feature.name}}Enabled(const FeatureContext* c
     return true;
   {% endfor %}
   {% if feature.is_protected_feature %}
-  if (get_{{feature.data_member_name}}())
+  return get_{{feature.data_member_name}}();
   {% else %}
-  if (feature_states_[k{{feature.name}}FlagIndex])
-  {% endif %}
-    return true;
-  {% if not feature.origin_trial_feature_name %}
-  // The feature does not have an origin trial name and its runtime flag
-  // is not enabled.
-  return false;
-  {% else %}
-  return context && context->FeatureEnabled(mojom::blink::OriginTrialFeature::k{{feature.name}});
+  return feature_states_[k{{feature.name}}FlagIndex];
   {% endif %}
 }
 

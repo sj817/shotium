@@ -24,7 +24,6 @@
 
 namespace net {
 
-class SocketPerformanceWatcherFactory;
 
 ClientSocketPoolManagerImpl::ClientSocketPoolManagerImpl(
     const CommonConnectJobParams& common_connect_job_params,

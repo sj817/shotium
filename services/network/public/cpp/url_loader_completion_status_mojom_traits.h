@@ -13,7 +13,6 @@
 #include "mojo/public/cpp/bindings/struct_traits.h"
 #include "net/ssl/ssl_info.h"
 #include "services/network/public/cpp/cors/cors_mojom_traits.h"
-#include "services/network/public/cpp/net_ipc_param_traits.h"
 #include "services/network/public/cpp/network_param_mojom_traits.h"
 #include "services/network/public/cpp/ssl_info_mojom_traits.h"
 #include "services/network/public/cpp/url_loader_completion_status.h"

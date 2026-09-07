@@ -13,7 +13,6 @@ mojom("singleplanar_format") {
   sources = [ "singleplanar_format.mojom" ]
   visibility = [
     "//components/viz/common/resources:shared_image_format",
-    "//services/viz/public/mojom",
     "//services/viz/public/mojom/compositing:shared_image_format",
   ]
 }

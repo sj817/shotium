@@ -334,37 +334,6 @@ bool IsSynchronousPageFlipTestingEnabled() {
   return base::FeatureList::IsEnabled(kSynchronousPageFlipTesting);
 }
 
-BASE_FEATURE(kResamplingScrollEventsExperimentalPrediction,
-             base::FEATURE_DISABLED_BY_DEFAULT);
-
-BASE_FEATURE(kResampleScrollEventsLatency, base::FEATURE_DISABLED_BY_DEFAULT);
-
-const char kResampleLatencyModeFixedMs[] = "fixed_ms";
-const char kResampleLatencyModeFractional[] = "fractional";
-
-const base::FeatureParam<std::string> kResampleLatencyModeParam(
-    &kResampleScrollEventsLatency,
-    "mode",
-    kResampleLatencyModeFixedMs);
-
-const base::FeatureParam<double>
-    kResampleLatencyValueParam(&kResampleScrollEventsLatency, "value", -5.0);
-
-const char kPredictorNameLsq[] = "lsq";
-const char kPredictorNameKalman[] = "kalman";
-const char kPredictorNameLinearFirst[] = "linear_first";
-const char kPredictorNameLinearSecond[] = "linear_second";
-const char kPredictorNameLinearResampling[] = "linear_resampling";
-const char kPredictorNameEmpty[] = "empty";
-
-const char kFilterNameEmpty[] = "empty_filter";
-const char kFilterNameOneEuro[] = "one_euro_filter";
-
-const char kPredictionTypeFramesBased[] = "frames";
-const char kPredictionTypeDefaultFramesVariation1[] = "0.25";
-const char kPredictionTypeDefaultFramesVariation2[] = "0.375";
-const char kPredictionTypeDefaultFramesVariation3[] = "0.5";
-
 BASE_FEATURE(kSwipeToMoveCursor, base::FEATURE_DISABLED_BY_DEFAULT);
 
 BASE_FEATURE(kUIDebugTools,

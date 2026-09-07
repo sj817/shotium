@@ -11,8 +11,6 @@
 #include "base/compiler_specific.h"
 #include "base/containers/span.h"
 #include "base/memory/values_equivalent.h"
-#include "cc/paint/paint_op_reader.h"
-#include "cc/paint/paint_op_writer.h"
 #include "third_party/skia/include/core/SkColorFilter.h"
 #include "third_party/skia/include/core/SkColorTable.h"
 #include "third_party/skia/include/effects/SkHighContrastFilter.h"
@@ -28,46 +26,14 @@ class MatrixColorFilter final : public ColorFilter {
       : ColorFilter(Type::kMatrix, SkColorFilters::Matrix(matrix)) {}
 
  private:
-  size_t SerializedDataSize() const override {
-    float matrix[20];
-    return PaintOpWriter::SerializedSizeOfElements(matrix, 20);
-  }
-  void SerializeData(PaintOpWriter& writer) const override {
-    // The identity matrix will be used if the constructor failed to create
-    // sk_color_filter_ due to invalid matrix values.
-    float matrix[20] = {1, 0, 0, 0, 0,   // row 0
-                        0, 1, 0, 0, 0,   // row 1
-                        0, 0, 1, 0, 0,   // row 2
-                        0, 0, 0, 1, 0};  // row 3
-    if (sk_color_filter_) {
-      sk_color_filter_->asAColorMatrix(matrix);
-    }
-    for (float f : matrix) {
-      writer.Write(f);
-    }
-  }
 };
 
 class BlendColorFilter final : public ColorFilter {
  public:
   BlendColorFilter(const SkColor4f& color, SkBlendMode blend_mode)
       : ColorFilter(Type::kBlend,
-                    SkColorFilters::Blend(color, nullptr, blend_mode)),
-        color_(color),
-        blend_mode_(blend_mode) {}
+                    SkColorFilters::Blend(color, nullptr, blend_mode)) {}
 
- private:
-  size_t SerializedDataSize() const override {
-    return PaintOpWriter::SerializedSize(color_) +
-           PaintOpWriter::SerializedSize(blend_mode_);
-  }
-  void SerializeData(PaintOpWriter& writer) const override {
-    writer.Write(color_);
-    writer.Write(blend_mode_);
-  }
-
-  SkColor4f color_;
-  SkBlendMode blend_mode_;
 };
 
 class SRGBToLinearGammaColorFilter final : public ColorFilter {
@@ -92,41 +58,18 @@ class LumaColorFilter final : public ColorFilter {
 class TableColorFilter : public ColorFilter {
  public:
   explicit TableColorFilter(sk_sp<SkColorTable> table)
-      : ColorFilter(Type::kTableARGB, SkColorFilters::Table(table)),
-        table_(std::move(table)) {}
+      : ColorFilter(Type::kTableARGB, SkColorFilters::Table(table)) {}
 
  private:
-  size_t SerializedDataSize() const override {
-    return PaintOpWriter::SerializedSizeOfBytes(256 * 4);
-  }
-  void SerializeData(PaintOpWriter& writer) const override {
-    // SAFETY: the various SkColorTable::...table() methods always return
-    // 256-byte arrays.
-    writer.WriteData(UNSAFE_BUFFERS(base::span(table_->alphaTable(), 256u)));
-    writer.WriteData(UNSAFE_BUFFERS(base::span(table_->redTable(), 256u)));
-    writer.WriteData(UNSAFE_BUFFERS(base::span(table_->greenTable(), 256u)));
-    writer.WriteData(UNSAFE_BUFFERS(base::span(table_->blueTable(), 256u)));
-  }
 
  private:
-  sk_sp<SkColorTable> table_;
 };
 
 class HighContrastColorFilter final : public ColorFilter {
  public:
   explicit HighContrastColorFilter(const SkHighContrastConfig& config)
-      : ColorFilter(Type::kHighContrast, SkHighContrastFilter::Make(config)),
-        config_(config) {}
+      : ColorFilter(Type::kHighContrast, SkHighContrastFilter::Make(config)) {}
 
- private:
-  size_t SerializedDataSize() const override {
-    return PaintOpWriter::SerializedSize(config_);
-  }
-  void SerializeData(PaintOpWriter& writer) const override {
-    writer.Write(config_);
-  }
-
-  SkHighContrastConfig config_;
 };
 
 }  // namespace
@@ -182,61 +125,6 @@ SkColor4f ColorFilter::FilterColor(const SkColor4f& color) const {
 }
 bool ColorFilter::EqualsForTesting(const ColorFilter& other) const {
   return type_ == other.type_;
-}
-
-size_t ColorFilter::SerializedDataSize() const {
-  return 0u;
-}
-
-void ColorFilter::SerializeData(PaintOpWriter& writer) const {}
-
-sk_sp<ColorFilter> ColorFilter::Deserialize(PaintOpReader& reader, Type type) {
-  switch (type) {
-    case Type::kMatrix: {
-      float matrix[20];
-      for (float& f : matrix) {
-        reader.Read(&f);
-        if (!reader.valid()) {
-          return nullptr;
-        }
-      }
-      return MakeMatrix(matrix);
-    }
-    case Type::kBlend: {
-      SkColor4f color;
-      SkBlendMode blend_mode;
-      reader.Read(&color);
-      reader.Read(&blend_mode);
-      if (!reader.valid()) {
-        return nullptr;
-      }
-      return MakeBlend(color, blend_mode);
-    }
-    case Type::kSRGBToLinearGamma:
-      return MakeSRGBToLinearGamma();
-    case Type::kLinearToSRGBGamma:
-      return MakeLinearToSRGBGamma();
-    case Type::kLuma:
-      return MakeLuma();
-    case Type::kTableARGB: {
-      uint8_t a_table[256], r_table[256], g_table[256], b_table[256];
-      reader.ReadData(a_table);
-      reader.ReadData(r_table);
-      reader.ReadData(g_table);
-      reader.ReadData(b_table);
-      if (!reader.valid()) {
-        return nullptr;
-      }
-      return MakeTableARGB(a_table, r_table, g_table, b_table);
-    }
-    case Type::kHighContrast: {
-      SkHighContrastConfig config;
-      reader.Read(&config);
-      return MakeHighContrast(config);
-    }
-    default:
-      NOTREACHED();
-  }
 }
 
 }  // namespace cc

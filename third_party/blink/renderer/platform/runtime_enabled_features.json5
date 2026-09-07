@@ -53,50 +53,9 @@
       valid_type: "list",
     },
 
-    // *DO NOT* specify features that depend on origin trial features.
-    // It is NOT supported. As a workaround, you can either specify the same
-    // |origin_trial_feature_name| for the feature or add the OT feature to
-    // the |implied_by| list.
-    // TODO(https://crbug.com/954679): Add support for origin trial features in 'depends_on' list
     depends_on: {
       default: [],
       valid_type: "list",
-    },
-
-    // origin_trial_feature_name: "FEATURE_NAME" is used to integrate the
-    // feature with the Origin Trials framework. The framework allows the
-    // feature to be enabled at runtime on a per-page basis through a signed
-    // token for the corresponding feature name. Declaring the
-    // origin_trial_feature_name will modify the generation of the static
-    // methods in runtime_enabled_features.h/cpp -- the no-parameter version
-    // will not be generated, so all callers have to use the version that takes
-    // a const FeatureContext* argument.
-    origin_trial_feature_name: {
-    },
-    // origin_trial_os specifies the platforms where the trial is available.
-    // The default is empty, meaning all platforms.
-    origin_trial_os: {
-      default: [],
-      valid_type: "list",
-    },
-    // origin_trial_type specifies the unique type of the trial, when not the
-    // usual trial for a new experimental feature.
-    origin_trial_type: {
-      default: "",
-      valid_type: "str",
-      valid_values: ["deprecation", "intervention", ""],
-    },
-    // origin_trial_allows_insecure specifies whether the trial can be enabled
-    // in an insecure context, with default being false. This can only be set
-    // to true for a "deprecation" type trial.
-    origin_trial_allows_insecure: {
-      valid_type: "bool",
-    },
-
-    // origin_trial_allows_third_party specifies whether the trial can be enabled
-    // from third party origins, with default being false.
-    origin_trial_allows_third_party: {
-      valid_type: "bool",
     },
 
     // settable_from_internals specifies whether a feature can be set from
@@ -169,12 +128,6 @@
     //   base::Feature.  Note: "Override to Default" deosn't affect the Blink
     //   feature.
     //
-    //   This is useful for Blink origin trial features especially those
-    //   implemented in both Chromium and Blink. As origin trial only controls
-    //   the Blink features, we require the base::Feature to be enabled
-    //   by default, but we don't want the default enabled status to affect the
-    //   Blink feature. See RuntimeEnabledFeatures.md for a detailed explanation
-    //   of how this works. See also https://crbug.com/1048656#c10.
     //   This can also be used for features that are enabled by default in
     //   Chromium but not in Blink on all platforms and we want to use the Blink
     //   status. However, we would prefer consistent Chromium and Blink status
@@ -187,9 +140,6 @@
 
     // browser_process_read_access indicates the runtime feature state should be
     // readable in the browserprocess via RuntimeFeatureStateReadContext.
-    // TODO(crbug.com/1377000): this feature does not support origin trial
-    // tokens provided in HTTP headers. Any tokens provided via HTTP header will
-    // be dropped. Please inform developers they must embed the token in HTML.
     browser_process_read_access: {
       default: false,
       value_type: "bool",
@@ -197,9 +147,6 @@
 
     // browser_process_read_write_access indicates the runtime feature state
     // should be writable in the browserprocess via RuntimeFeatureStateContext.
-    // TODO(crbug.com/1377000): this feature does not support origin trial
-    // tokens provided in HTTP headers. Any tokens provided via HTTP header will
-    // be dropped. Please inform developers they must embed the token in HTML.
     browser_process_read_write_access: {
       default: false,
       value_type: "bool",
@@ -298,7 +245,6 @@
       // Interest Group JS API/runtimeflag.
       name: "AdInterestGroupAPI",
       status: "stable",
-      origin_trial_feature_name: "AdInterestGroupAPI",
       implied_by: ["Fledge", "Parakeet"],
       public: true,
     },
@@ -435,9 +381,6 @@
         "ChromeOS": "experimental",
         "default": "",
       },
-      origin_trial_feature_name: "AIPromptAPIParams",
-      origin_trial_os: ["win", "mac", "linux", "chromeos"],
-      origin_trial_allows_third_party: true,
     },
     {
       // Gates access to the responseConstraint enhancement for "AIPromptAPI".
@@ -467,9 +410,6 @@
         "ChromeOS": "experimental",
         "default": "",
       },
-      origin_trial_feature_name: "AIProofreaderAPI",
-      origin_trial_os: ["win", "mac", "linux", "chromeos"],
-      origin_trial_allows_third_party: true,
       base_feature_status: "enabled",
       copied_from_base_feature_if: "overridden",
     },
@@ -482,9 +422,6 @@
         "ChromeOS": "experimental",
         "default": "",
       },
-      origin_trial_feature_name: "AIRewriterAPI",
-      origin_trial_os: ["win", "mac", "linux", "chromeos"],
-      origin_trial_allows_third_party: true,
       base_feature_status: "enabled",
       copied_from_base_feature_if: "overridden",
     },
@@ -518,9 +455,6 @@
         "ChromeOS": "experimental",
         "default": "",
       },
-      origin_trial_feature_name: "AIWriterAPI",
-      origin_trial_os: ["win", "mac", "linux", "chromeos"],
-      origin_trial_allows_third_party: true,
       base_feature_status: "enabled",
       copied_from_base_feature_if: "overridden",
     },
@@ -658,8 +592,6 @@
     {
       name: "AppTitle",
       status: "experimental",
-      origin_trial_feature_name: "AppTitle",
-      origin_trial_os: ["win", "mac", "linux", "chromeos"],
       base_feature: "WebAppEnableAppTitle",
     },
     {
@@ -793,14 +725,12 @@
     },
     {
       name: "BackForwardCacheExperimentHTTPHeader",
-      origin_trial_feature_name: "BackForwardCacheExperimentHTTPHeader",
       status: "experimental",
       base_feature: "none",
     },
     {
       name: "BackForwardCacheNotRestoredReasons",
       status: "stable",
-      origin_trial_feature_name: "BackForwardCacheNotRestoredReasons",
       base_feature: "BackForwardCacheSendNotRestoredReasons",
       base_feature_status: "enabled",
       copied_from_base_feature_if: "overridden",
@@ -827,8 +757,6 @@
     {
       name: "BackgroundPageFreezeOptOut",
       base_feature: "none",
-      origin_trial_feature_name: "BackgroundPageFreezeOptOut",
-      origin_trial_type: "deprecation",
     },
     {
       name: "BarcodeDetector",
@@ -897,7 +825,6 @@
     {
       name: "BlockingFocusWithoutUserActivation",
       status: "experimental",
-      origin_trial_feature_name: "BlockingFocusWithoutUserActivation",
     },
     {
       // Prevents the popup document for the select element from being opened
@@ -952,7 +879,6 @@
     },
     {
       name: "CacheStorageCodeCacheHint",
-      origin_trial_feature_name: "CacheStorageCodeCacheHint",
       status: "experimental",
       base_feature: "none",
     },
@@ -983,8 +909,6 @@
     },
     {
       name: "Canvas2dMesh",
-      origin_trial_feature_name: "Canvas2dMesh",
-      origin_trial_allows_third_party: true,
       status: "test",
     },
     {
@@ -1235,22 +1159,7 @@
       status: "experimental",
     },
     {
-      // Enables Connection-Allowlist embedded enforcement: the
-      // `connectionallowlist` iframe content attribute (and its
-      // `connectionAllowlist` IDL reflection), by which an embedder requires a
-      // Connection-Allowlist of the document it frames. Kept separate from the
-      // `ConnectionAllowlist` feature so this in-development piece can iterate
-      // independently. See
-      // https://github.com/WICG/connection-allowlists/issues/1.
-      //
-      // Has its own `origin_trial_feature_name` so the `connectionAllowlist` IDL
-      // reflection can gate on this feature directly: that makes the Web IDL
-      // bindings generator treat it as context-dependent and emit the
-      // context-aware accessor, so the property is exposed only when embedded
-      // enforcement is actually available -- not merely when the base
-      // `ConnectionAllowlist` origin trial is enabled.
       name: "ConnectionAllowlistEmbeddedEnforcement",
-      origin_trial_feature_name: "ConnectionAllowlistEmbeddedEnforcement",
       status: "experimental",
     },
     {
@@ -1267,8 +1176,6 @@
     },
     {
       name: "ContainerTiming",
-      origin_trial_feature_name: "ContainerTiming",
-      origin_trial_allows_third_party: true,
       status: "experimental",
     },
     {
@@ -1316,7 +1223,6 @@
     },
     {
       name: "CoopRestrictProperties",
-      origin_trial_feature_name: "CoopRestrictProperties",
       base_feature: "none",
     },
     {
@@ -1334,15 +1240,12 @@
       // https://github.com/WICG/cpu-performance/
       name: "CpuPerformance",
       status: "stable",
-      origin_trial_feature_name: "CpuPerformance",
-      origin_trial_allows_third_party: true,
     },
     {
       name: "CrashReportingStorageAPI",
       status: "stable",
       base_feature_status: "enabled",
       copied_from_base_feature_if: "overridden",
-      origin_trial_feature_name: "CrashReportingStorageAPI",
     },
     {
       // Makes createHTMLDocument() return a document whose readyState is
@@ -1363,8 +1266,6 @@
       // See crbug.com/392657736 for details.
       name: "CSPHashesV1",
       base_feature: "none",
-      origin_trial_feature_name: "CSPExtendedScriptSrcHashes",
-      origin_trial_os: ["win", "linux", "mac", "android", "chromeos"],
       status: "experimental",
       public: true,
     },
@@ -2086,7 +1987,6 @@
     {
       name: "DeclarativeCSSModules",
       status: "experimental",
-      origin_trial_feature_name: "DeclarativeCSSModules",
     },
     // https://crbug.com/448174611
     {
@@ -2100,19 +2000,11 @@
     },
     {
       name: "DeclarativePerformanceObserver",
-      origin_trial_feature_name: "DeclarativePerformanceObserver",
       status: "experimental",
-      // base_feature is meant as kill-switch. This runtime-enabled feature
-      // should follow the Origin Trial unless explicitly overriden by Finch or
-      // commandline flags.
       base_feature_status: "enabled",
       // Enables the Blink feature only when the base::Feature is overridden by
       // field trial or command line.
       copied_from_base_feature_if: "overridden",
-    },
-    {
-      name: "DeclarativeSkeletons",
-      status: "test",
     },
     {
       // Killswitch for https://crbug.com/400317114 fix.
@@ -2126,10 +2018,6 @@
     // https://crbug.com/1432116
     {
       name: "DeprecateUnloadOptOut",
-      origin_trial_feature_name: "DeprecateUnloadOptOut",
-      origin_trial_type: "deprecation",
-      origin_trial_allows_third_party: true,
-      origin_trial_allows_insecure: true,
     },
     {
       name: "DesktopCaptureDisableLocalEchoControl",
@@ -2138,9 +2026,6 @@
     {
       name: "DesktopPWAsAdditionalWindowingControls",
       status: "experimental",
-      origin_trial_feature_name: "DesktopPWAsAdditionalWindowingControls",
-      origin_trial_os: ["win", "mac", "linux", "chromeos"],
-      origin_trial_allows_third_party: true,
       base_feature_status: "enabled",
       copied_from_base_feature_if: "overridden",
     },
@@ -2181,8 +2066,6 @@
     },
     {
       name: "DigitalGoods",
-      origin_trial_feature_name: "DigitalGoodsV2",
-      origin_trial_os: ["android", "chromeos"],
       public: true,
       status: {
         "Android": "stable",
@@ -2226,9 +2109,6 @@
     {
       name: "DisableDifferentOriginSubframeDialogSuppression",
       base_feature: "none",
-      origin_trial_feature_name: "DisableDifferentOriginSubframeDialogSuppression",
-      origin_trial_type: "deprecation",
-      origin_trial_allows_insecure: true,
     },
     {
       // Switch from ellipsis to clip when a container is scrolled.
@@ -2249,10 +2129,6 @@
     },
     {
       name: "DisableReduceAcceptLanguage",
-      origin_trial_feature_name: "DisableReduceAcceptLanguage",
-      origin_trial_type: "deprecation",
-      origin_trial_allows_insecure: true,
-      origin_trial_allows_third_party: true,
       base_feature: "none",
     },
     {
@@ -2322,8 +2198,6 @@
       // See https://https://github.com/WICG/document-isolation-policy.
       name: "DocumentIsolationPolicy",
       status: "experimental",
-      origin_trial_feature_name: "DocumentIsolationPolicy",
-      origin_trial_os: ["win", "mac", "linux", "chromeos"],
       base_feature: "none",
     },
     {
@@ -2403,7 +2277,6 @@
     },
     {
       name: "DocumentPolicyNegotiation",
-      origin_trial_feature_name: "DocumentPolicyNegotiation",
       public: true,
       status: "experimental",
       base_feature: "none",
@@ -2505,9 +2378,6 @@
     {
       name: "EmailVerificationProtocol",
       public: true,
-      origin_trial_feature_name: "EmailVerificationProtocol",
-      origin_trial_allows_third_party: true,
-      origin_trial_os: ["win", "mac", "linux", "chromeos"],
       status: {
         "Win": "experimental",
         "Mac": "experimental",
@@ -2522,9 +2392,6 @@
       name: "EmailVerificationStatusIndicator",
       status: "experimental",
       depends_on: ["EmailVerificationProtocol"],
-      origin_trial_feature_name: "EmailVerificationProtocol",
-      origin_trial_allows_third_party: true,
-      origin_trial_os: ["win", "mac", "linux", "chromeos"],
       status: {
         "Win": "experimental",
         "Mac": "experimental",
@@ -2602,7 +2469,6 @@
     },
     {
       name: "ExperimentalJSProfilerMarkers",
-      origin_trial_feature_name: "JSSelfProfilingMarkers",
       status: "experimental",
     },
     {
@@ -2623,8 +2489,6 @@
     },
     {
       name: "ExtendedTextMetrics",
-      origin_trial_feature_name: "ExtendedTextMetrics",
-      origin_trial_allows_third_party: true,
       status: "experimental",
     },
     {
@@ -2698,9 +2562,6 @@
       status: "stable",
       base_feature: "none",
       public: true,
-      origin_trial_feature_name: "FedCmMultipleIdentityProviders",
-      origin_trial_os: ["win", "mac", "linux", "chromeos"],
-      origin_trial_allows_third_party: true,
     },
     {
       name: "FedCmMultipleRequests",
@@ -2766,13 +2627,8 @@
       // The retry ability for Fetch keepalive requests.
       // https://chromestatus.com/feature/5181984581877760
       name: "FetchRetry",
-      origin_trial_feature_name: "FetchRetry",
-      origin_trial_allows_third_party: true,
       status: "experimental",
       base_feature: "FetchRetry",
-      // base_feature is meant as kill-switch. This runtime-enabled feature
-      // should follow the Origin Trial unless explicitly overriden by Finch or
-      // commandline flags.
       base_feature_status: "enabled",
       // Enables the Blink feature only when the base::Feature is overridden by
       // field trial or command line.
@@ -2954,8 +2810,6 @@
     },
     {
       name: "FledgeBiddingAndAuctionServerAPI",
-      origin_trial_feature_name: "FledgeBiddingAndAuctionServer",
-      origin_trial_allows_third_party: true,
       base_feature: "none",
       status: "stable",
     },
@@ -3157,7 +3011,6 @@
     {
       name: "GamepadRawInputChangeEvent",
       status: "experimental",
-      origin_trial_feature_name: "GamepadRawInputChangeEvent",
       base_feature: "none",
       public: true,
     },
@@ -3330,7 +3183,6 @@
     {
       name: "HrefTranslate",
       depends_on: ["TranslateService"],
-      origin_trial_feature_name: "HrefTranslate",
       status: "stable",
       base_feature: "none",
     },
@@ -3474,8 +3326,6 @@
     },
     {
       name: "IncomingCallNotifications",
-      origin_trial_feature_name: "IncomingCallNotifications",
-      origin_trial_os: [ "win" ],
       base_feature: "none",
       public: true,
     },
@@ -3564,8 +3414,6 @@
       // https://chromestatus.com/feature/5152834368700416
       name: "InstallElement",
       status: {"Android": "", "default": "test"},
-      origin_trial_feature_name: "InstallElement",
-      origin_trial_os: ["win", "mac", "linux", "chromeos"],
       public: true,
       base_feature_status: "enabled",
       copied_from_base_feature_if: "overridden",
@@ -3609,7 +3457,6 @@
     {
       name: "JavaScriptCompileHintsPerFunctionMagicRuntime",
       status: "experimental",
-      origin_trial_feature_name: "JavaScriptCompileHintsPerFunctionMagic",
     },
     {
       name: "JavaScriptImportText",
@@ -3715,12 +3562,7 @@
       status: "stable",
     },
     {
-      // Reverse origin trial allowing sites to opt out of Local Network Access
-      // restrictions for WebRTC.
       name: "LocalNetworkAccessForWebRTCOptOut",
-      origin_trial_feature_name: "LocalNetworkAccessForWebRTCOptOut",
-      origin_trial_type: "deprecation",
-      origin_trial_allows_insecure: true,
       base_feature: "none",
     },
     {
@@ -3774,8 +3616,6 @@
       // PerformanceLongAnimationFrameTiming and forcedStyleDuration and
       // forcedLayoutDuration to PerformanceScriptTiming
       name: "LongAnimationFrameStyleDuration",
-      origin_trial_feature_name: "LongAnimationFrameStyleDuration",
-      origin_trial_allows_third_party: true,
       status: "experimental",
     },
     {
@@ -3870,7 +3710,6 @@
     },
     {
       name: "MediaCaptureBackgroundBlur",
-      origin_trial_feature_name: "MediaCaptureBackgroundBlur",
       status: "experimental",
       implied_by: ["MediaCaptureCameraControls"],
       base_feature: "none",
@@ -3881,7 +3720,6 @@
     },
     {
       name: "MediaCaptureConfigurationChange",
-      origin_trial_feature_name: "MediaCaptureBackgroundBlur",
       status: "experimental",
       implied_by: ["MediaCaptureBackgroundBlur"],
       base_feature: "none",
@@ -3923,7 +3761,6 @@
     {
       name: "MediaPlaybackWhileNotVisiblePermissionPolicy",
       status: "test",
-      origin_trial_feature_name: "MediaPlaybackWhileNotVisiblePermissionPolicy",
     },
     {
       name: "MediaQueryNavigationControls",
@@ -3946,7 +3783,6 @@
       name: "MediaSourceExtensionsForWebCodecs",
       status: "experimental",
       base_feature: "none",
-      origin_trial_feature_name: "MediaSourceExtensionsForWebCodecs",
     },
     {
       name: "MediaStreamTrackProcessorStats",
@@ -4055,7 +3891,6 @@
     {
       name: "NavigationId",
       status: "experimental",
-      origin_trial_feature_name: "SoftNavigationHeuristics",
       implied_by: ["SoftNavigationHeuristics"],
     },
     {
@@ -4104,7 +3939,7 @@
       // streamHTML, appendHTML, etc.
       name: "NewHTMLSettingMethods",
       status: "experimental",
-      depends_on: ["SetHTMLCanRunScripts", "StreamingSanitizer", "TrustedTypesCreateParserOptions"]
+      depends_on: ["SetHTMLCanRunScripts", "TrustedTypesCreateParserOptions"]
     },
     {
       // Fix for https://crbug.com/482862753
@@ -4201,7 +4036,6 @@
     },
     {
       name: "NotificationTriggers",
-      origin_trial_feature_name: "NotificationTriggers",
       status: "experimental",
       base_feature: "none",
     },
@@ -4284,121 +4118,6 @@
       name: "OriginPolicy",
       status: "experimental",
     },
-    // Define a sample API for testing integration with the Origin Trials
-    // Framework. The sample API is used in both unit and web tests for the
-    // Origin Trials Framework. Do not change this flag to stable, as it exists
-    // solely to generate code used by the sample API implementation.
-    {
-      name: "OriginTrialsSampleAPI",
-      base_feature: "none",
-      origin_trial_feature_name: "Frobulate",
-      public: true,
-    },
-    // As above. Do not change this flag to stable, as it exists solely to
-    // generate code used by the origin trials sample API implementation.
-    {
-      name: "OriginTrialsSampleAPIBrowserReadWrite",
-      base_feature: "none",
-      origin_trial_feature_name: "FrobulateBrowserReadWrite",
-      browser_process_read_write_access: true,
-    },
-    // As above. Do not change this flag to stable, as it exists solely to
-    // generate code used by the origin trials sample API implementation.
-    // TODO(yashard): Add tests for this feature.
-    {
-      name: "OriginTrialsSampleAPIDependent",
-      depends_on: ["OriginTrialsSampleAPI"],
-      base_feature: "none",
-    },
-    // As above. Do not change this flag to stable, as it exists solely to
-    // generate code used by the origin trials sample API implementation.
-    {
-      name: "OriginTrialsSampleAPIDeprecation",
-      base_feature: "none",
-      origin_trial_feature_name: "FrobulateDeprecation",
-      origin_trial_type: "deprecation",
-      origin_trial_allows_insecure: true,
-      public: true,
-    },
-    // As above. Do not change this flag to stable, as it exists solely to
-    // generate code used by the origin trials sample API implementation.
-    {
-      name: "OriginTrialsSampleAPIExpiryGracePeriod",
-      base_feature: "none",
-      origin_trial_feature_name: "FrobulateExpiryGracePeriod",
-    },
-    // As above. Do not change this flag to stable, as it exists solely to
-    // generate code used by the origin trials sample API implementation.
-    {
-      name: "OriginTrialsSampleAPIExpiryGracePeriodThirdParty",
-      base_feature: "none",
-      origin_trial_feature_name: "FrobulateExpiryGracePeriodThirdParty",
-      origin_trial_allows_third_party: true,
-    },
-    // As above. Do not change this flag to stable, as it exists solely to
-    // generate code used by the origin trials sample API implementation.
-    {
-      name: "OriginTrialsSampleAPIImplied",
-      base_feature: "none",
-      origin_trial_feature_name: "FrobulateImplied",
-      implied_by: ["OriginTrialsSampleAPI", "OriginTrialsSampleAPIInvalidOS"],
-    },
-    // As above. Do not change this flag to stable, as it exists solely to
-    // generate code used by the origin trials sample API implementation.
-    {
-      name: "OriginTrialsSampleAPIInvalidOS",
-      base_feature: "none",
-      origin_trial_feature_name: "FrobulateInvalidOS",
-      origin_trial_os: ["invalid"],
-    },
-    // As above. Do not change this flag to stable, as it exists solely to
-    // generate code used by the origin trials sample API implementation.
-    {
-      name: "OriginTrialsSampleAPINavigation",
-      base_feature: "none",
-      origin_trial_feature_name: "FrobulateNavigation",
-    },
-    // As above. Do not change this flag to stable, as it exists solely to
-    // generate code used by the origin trials sample API implementation.
-    {
-      name: "OriginTrialsSampleAPIPersistentExpiryGracePeriod",
-      base_feature: "none",
-      origin_trial_feature_name: "FrobulatePersistentExpiryGracePeriod",
-    },
-    // As above. Do not change this flag to stable, as it exists solely to
-    // generate code used by the origin trials sample API implementation.
-    {
-      name: "OriginTrialsSampleAPIPersistentFeature",
-      base_feature: "none",
-      origin_trial_feature_name: "FrobulatePersistent",
-      origin_trial_allows_third_party: true,
-    },
-    // As above. Do not change this flag to stable, as it exists solely to
-    // generate code used by the origin trials sample API implementation.
-    {
-      name: "OriginTrialsSampleAPIPersistentInvalidOS",
-      base_feature: "none",
-      origin_trial_feature_name: "FrobulatePersistentInvalidOS",
-      origin_trial_allows_third_party: true,
-      origin_trial_os: ["invalid"],
-    },
-    // As above. Do not change this flag to stable, as it exists solely to
-    // generate code used by the origin trials sample API implementation.
-    {
-      name: "OriginTrialsSampleAPIPersistentThirdPartyDeprecationFeature",
-      base_feature: "none",
-      origin_trial_feature_name: "FrobulatePersistentThirdPartyDeprecation",
-      origin_trial_allows_third_party: true,
-      origin_trial_type: "deprecation",
-    },
-    // As above. Do not change this flag to stable, as it exists solely to
-    // generate code used by the origin trials sample API implementation.
-    {
-      name: "OriginTrialsSampleAPIThirdParty",
-      base_feature: "none",
-      origin_trial_feature_name: "FrobulateThirdParty",
-      origin_trial_allows_third_party: true,
-    },
     {
       name: "OutlineDrawAutoStyleZeroWidth",
       status: "stable",
@@ -4438,7 +4157,6 @@
     {
       // PARAKEET ad serving runtime flag/JS API.
       name: "Parakeet",
-      origin_trial_feature_name: "Parakeet",
     },
     {
       name: "PartitionVisitedLinkDatabaseWithSelfLinks",
@@ -4499,7 +4217,6 @@
     },
     {
       name: "PerMethodCanMakePaymentQuota",
-      origin_trial_feature_name: "PerMethodCanMakePaymentQuota",
       status: "experimental",
       base_feature: "none",
     },
@@ -4516,7 +4233,6 @@
     {
       name: "PNaCl",
       base_feature: "none",
-      origin_trial_feature_name: "PNaCl",
       public: true,
     },
     {
@@ -4581,8 +4297,6 @@
       name: "PreferredAudioOutputDevices",
       base_feature_status: "enabled",
       copied_from_base_feature_if: "overridden",
-      origin_trial_feature_name: "PreferredAudioOutputDevices",
-      origin_trial_allows_third_party: true,
       status: "experimental",
       public: true,
     },
@@ -4592,7 +4306,6 @@
     },
     {
       name: "PrefetchAndPrerenderActivationBeacon",
-      origin_trial_feature_name: "PrefetchAndPrerenderActivationBeacon",
       status: "experimental",
       base_feature: "none",
       public: true,
@@ -4618,20 +4331,16 @@
       // https://chromestatus.com/feature/5112398709129216
       // https://crbug.com/440387014
       name: "Prerender2CrossOriginIframes",
-      origin_trial_feature_name: "Prerender2CrossOriginIframes",
     },
     {
       // Used to allow prerender activation by form submission.
       // See https://crbug.com/346555939.
       name: "PrerenderActivationByFormSubmission",
-      origin_trial_feature_name: "PrerenderActivationByFormSubmission",
       status: "stable",
     },
     {
       name: "PrerenderUntilScript",
       public: true,
-      origin_trial_feature_name: "PrerenderUntilScript",
-      origin_trial_allows_third_party: true,
       status: "experimental",
     },
     {
@@ -4706,34 +4415,6 @@
       // body element. crbug.com/41453796
       name: "PropagateOverscrollBehaviorFromRoot",
       status: "stable"
-    },
-    // Protected memory varariant of the sample API for testing integration with
-    // the Origin Trials Framework. This is used only in unit tests.
-    // Do not change this flag to stable, as it exists
-    // solely to generate code used by the sample API implementation.
-    {
-      name: "ProtectedOriginTrialsSampleAPI",
-      base_feature: "none",
-      origin_trial_feature_name: "Frobulate",
-      is_protected_feature: "true",
-    },
-    // As above. Do not change this flag to stable, as it exists solely to
-    // generate code used by the origin trials sample API implementation.
-    // TODO(yashard): Add tests for this feature.
-    {
-      name: "ProtectedOriginTrialsSampleAPIDependent",
-      depends_on: ["ProtectedOriginTrialsSampleAPI"],
-      base_feature: "none",
-      is_protected_feature: "true",
-    },
-    // As above. Do not change this flag to stable, as it exists solely to
-    // generate code used by the origin trials sample API implementation.
-    {
-      name: "ProtectedOriginTrialsSampleAPIImplied",
-      base_feature: "none",
-      origin_trial_feature_name: "FrobulateImplied",
-      implied_by: ["ProtectedOriginTrialsSampleAPI"],
-      is_protected_feature: "true",
     },
     {
       // Allowing pseudo-elements to have focus.
@@ -5005,7 +4686,6 @@
     },
     {
       name: "RtcAudioJitterBufferMaxPackets",
-      origin_trial_feature_name: "RtcAudioJitterBufferMaxPackets",
       status: "experimental",
       base_feature: "none",
     },
@@ -5015,7 +4695,6 @@
     },
     {
       name: "RTCDiagnosticLogging",
-      origin_trial_feature_name: "RTCDiagnosticLogging",
       status: "experimental",
       base_feature_status: "enabled",
       copied_from_base_feature_if: "overridden",
@@ -5031,7 +4710,6 @@
     {
       name: "RTCEncodedFrameSetMetadata",
       status: "experimental",
-      origin_trial_feature_name: "RTCEncodedFrameSetMetadata",
     },
     {
       name: "RTCEncodedFrameTimestamps",
@@ -5047,12 +4725,8 @@
       name: "RTCJitterBufferTarget",
       status: "stable",
     },
-    // Legacy callback-based getStats() has limited availability unless this
-    // Deprecation Trial is enabled.
-    // TODO(https://crbug.com/822696): Remove when origin trial ends.
     {
       name: "RTCLegacyCallbackBasedGetStats",
-      origin_trial_feature_name: "RTCLegacyCallbackBasedGetStats",
       status: "experimental",
       base_feature: "none",
     },
@@ -5079,7 +4753,6 @@
     },
     {
       name: "RTCStatsRelativePacketArrivalDelay",
-      origin_trial_feature_name: "RTCStatsRelativePacketArrivalDelay",
       status: "experimental",
       base_feature: "none",
     },
@@ -5106,12 +4779,6 @@
     {
       // https://issues.chromium.org/issues/429490608
       name: "SanitizeIDNEmailFormInput",
-      status: "stable",
-    },
-    {
-      // Spec: https://wicg.github.io/sanitizer-api/
-      // Tracking bug: crbug.com/356601280
-      name: "SanitizerAPI",
       status: "stable",
     },
     {
@@ -5263,8 +4930,6 @@
     },
     {
       name: "SecurePaymentConfirmationOptOut",
-      origin_trial_feature_name: "SecurePaymentConfirmationOptOut",
-      origin_trial_allows_third_party: true,
       status: "stable",
       base_feature: "none",
     },
@@ -5474,7 +5139,6 @@
     {
       name: "ShadowRootAdoptedStyleSheet",
       implied_by: ["DeclarativeCSSModules"],
-      origin_trial_feature_name: "DeclarativeCSSModules",
     },
     {
       // Only allow attachShadow() on elements with the HTML namespace.
@@ -5486,7 +5150,6 @@
       // crbug.com/346835896
       name: "ShadowRootReferenceTarget",
       status: "stable",
-      origin_trial_feature_name: "ShadowRootReferenceTarget"
     },
     {
       // If enabled, Reference Target will support aria-owns.
@@ -5529,8 +5192,6 @@
       // https://issues.chromium.org/issues/400473072
       name: "SharedWorkerExtendedLifetime",
       status: "stable",
-      origin_trial_feature_name: "SharedWorkerExtendedLifetime",
-      origin_trial_allows_third_party: true,
     },
     {
       name: "SideRelativeBackgroundPosition",
@@ -5615,11 +5276,6 @@
       depends_on: ["RunSnapshotPostLayoutStateSteps"],
     },
     {
-      // Used to enable the code for detecting soft navigations through task
-      // attribution. Set to stable as this generates an enabled-by-default
-      // base::Feature for a field-trial remote shutoff. Needs to be a runtime
-      // feature so that the Soft Navigation Heuristics Origin Trial can depend
-      // on it.
       name: "SoftNavigationDetection",
       status: "stable",
     },
@@ -5659,8 +5315,6 @@
       // Exposes speculation measurement data (preloads, prefetches, prerenders)
       // on performance.speculations.
       name: "SpeculationMeasurement",
-      origin_trial_feature_name: "SpeculationMeasurement",
-      origin_trial_allows_third_party: true,
       status: "experimental",
     },
     {
@@ -5671,9 +5325,6 @@
       // speculation rules cross-origin (e.g. performance libraries) can opt in.
       // https://groups.google.com/a/chromium.org/g/blink-dev/c/YYBd-eksiE8
       name: "SpeculationRulesModerateViewportHeuristicsControl",
-      origin_trial_feature_name: "SpeculationRulesModerateViewportHeuristicsControl",
-      origin_trial_allows_third_party: true,
-      origin_trial_os: ["Android"],
       status: "experimental",
     },
     {
@@ -5741,10 +5392,6 @@
     },
     {
       name: "StandardizedBrowserZoomOptOut",
-      origin_trial_feature_name: "DisableStandardizedBrowserZoom",
-      origin_trial_type: "deprecation",
-      origin_trial_allows_insecure: true,
-      origin_trial_allows_third_party: true,
     },
     {
       // Killswitch M149.
@@ -5771,12 +5418,6 @@
       // Gates the `locks()` method on a storage bucket.
       name: "StorageBucketsLocks",
       status: "experimental",
-    },
-    {
-      // Performs sanitization while parsing instead of post-processing a parsed
-      // fragment. https://crbug.com/498272014
-      name: "StreamingSanitizer",
-      status: "stable",
     },
     {
       name: "StrictMimeTypesForWorkers",
@@ -5983,16 +5624,6 @@
       depends_on: ["TestFeatureImplied"],
       base_feature: "none",
     },
-    // This is a feature used for testing what happens when an origin trial
-    // feature has browser-process read/write access. It should never be used
-    // in production code.
-    {
-      name: "TestFeatureForBrowserProcessReadWriteAccessOriginTrial",
-      origin_trial_feature_name: "TestFeatureForBrowserProcessReadWriteAccessOriginTrial",
-      base_feature: "none",
-      browser_process_read_write_access: true,
-    },
-    // For unit tests.
     {
       name: "TestFeatureImplied",
       implied_by: ["TestFeature"],
@@ -6075,7 +5706,6 @@
     },
     {
       name: "TextFragmentIdentifiers",
-      origin_trial_feature_name: "TextFragmentIdentifiers",
       public: true,
       status: "stable",
       base_feature: "TextFragmentAnchor",
@@ -6195,7 +5825,6 @@
     // enabled since they're a feature always supported by Chrome.
     {
       name: "TouchEventFeatureDetection",
-      origin_trial_feature_name: "ForceTouchEventFeatureDetectionForInspector",
       public: true,
       status: "stable",
       base_feature: "none",
@@ -6260,10 +5889,10 @@
       // When enabled, trusted types can be used to enforce sanitization &
       // script running rules.
       // For example, it can enforce that any HTML setter would go through a
-      // sanitizer. See https://github.com/w3c/trusted-types/issues/594
+      // parser options. See https://github.com/w3c/trusted-types/issues/594
       name: "TrustedTypesCreateParserOptions",
       status: "experimental",
-      depends_on: ["SanitizerAPI", "SetHTMLCanRunScripts"],
+      depends_on: ["SetHTMLCanRunScripts"],
     },
     {
       name: "TrustedTypesFromLiteral",
@@ -6285,21 +5914,6 @@
       status: "experimental",
     },
     {
-      // The Unbounded Element API. See crbug.com/508672616.
-      // Note that this flag is enabled by default, to enable WebUI and other
-      // privileged UI to depend on this feature. The flag is here as a kill
-      // switch. Importantly, open web content still requires
-      // UnboundedElementOnTheOpenWeb to be enabled.
-      name: "UnboundedElement",
-      status: "stable",
-      implied_by: ["UnboundedElementOnTheOpenWeb"],
-    },
-    {
-      // The Unbounded Element API. See crbug.com/508672616.
-      // Enable Unbounded Element on the open web without privileged context.
-      name: "UnboundedElementOnTheOpenWeb",
-    },
-    {
       name: "UnclosedFormControlIsInvalid",
       status: "experimental",
     },
@@ -6319,8 +5933,6 @@
     {
       name: "UnrestrictedSharedArrayBuffer",
       base_feature: "none",
-      origin_trial_feature_name: "UnrestrictedSharedArrayBuffer",
-      origin_trial_os: ["win", "mac", "linux", "fuchsia", "chromeos"],
     },
     // Enables using policy-controlled feature "usb-unrestricted" to allow
     // isolated context to access protected USB interface classes and to
@@ -6415,7 +6027,6 @@
       // trial name, both features can be evaluated concurrently during the
       // trial phase while preserving a partner-less-effort path for future
       // deprecation.
-      origin_trial_feature_name: "UserMediaElement",
     },
     {
       name: "UseShadowHostStyleCheckEditable",
@@ -6501,8 +6112,6 @@
       // https://chromestatus.com/feature/5183481574850560
       name: "WebAppInstallation",
       status: {"Android": "", "default": "test"},
-      origin_trial_feature_name: "WebAppInstallation",
-      origin_trial_os: ["win", "mac", "linux", "chromeos"],
       public: true,
       base_feature_status: "enabled",
       copied_from_base_feature_if: "overridden",
@@ -6515,8 +6124,6 @@
     },
     {
       name: "WebAppScopeExtensions",
-      origin_trial_feature_name: "WebAppScopeExtensions",
-      origin_trial_os: ["win", "mac", "linux", "chromeos"],
       status: "experimental",
       base_feature: "none",
     },
@@ -6554,7 +6161,6 @@
     {
       // https://chromestatus.com/feature/6024844719947776, take 2
       name: "WebAssemblyCustomDescriptorsV2",
-      origin_trial_feature_name: "WebAssemblyCustomDescriptorsV2",
       status: "experimental",
       base_feature: "none",
     },
@@ -6562,7 +6168,6 @@
       // WebAssembly JS Promise Integration,
       // https://github.com/WebAssembly/js-promise-integration/blob/main/proposals/js-promise-integration
       name: "WebAssemblyJSPromiseIntegration",
-      origin_trial_feature_name: "WebAssemblyJSPromiseIntegration",
       status: "experimental",
       base_feature: "none",
     },
@@ -6585,7 +6190,6 @@
     {
       // https://webaudio.github.io/web-audio-api/#dom-baseaudiocontext-renderquantumsize
       name: "WebAudioConfigurableRenderQuantum",
-      origin_trial_feature_name: "WebAudioConfigurableRenderQuantum",
       status: "stable",
     },
     {
@@ -6615,9 +6219,6 @@
     {
       name: "WebAuthenticationAttestationFormats",
       status: "experimental",
-      origin_trial_feature_name: "WebAuthnAttestationFormats",
-      origin_trial_os: ["android"],
-      origin_trial_allows_third_party: true,
     },
     {
       name: "WebAuthenticationCmtgKey",
@@ -6694,7 +6295,6 @@
       //
       // https://chromestatus.com/feature/5198951632470016
       name: "WebCryptoPQC",
-      origin_trial_feature_name: "WebCryptoAdditionalAlgorithms202606",
     },
     {
       name: "WebGLDeveloperExtensions",
@@ -6726,7 +6326,6 @@
       // Launch feature flag for WebGPU Compatibility Mode
       // https://chromestatus.com/feature/6436406437871616
       name: "WebGPUCompatibilityMode",
-      origin_trial_feature_name: "WebGPUCompatibilityMode",
       status: "stable",
       base_feature: "none",
       public: true,
@@ -6802,8 +6401,6 @@
     },
     {
       name: "WebIdentityDigitalCredentialsCreation",
-      origin_trial_feature_name: "WebIdentityDigitalCredentialsCreation",
-      origin_trial_allows_third_party: true,
       public: true,
       status: "experimental",
       base_feature: "none",
@@ -6815,12 +6412,9 @@
     },
     {
       name: "WebMCP",
-      origin_trial_feature_name: "WebMCP",
-      origin_trial_allows_third_party: true,
       public: true,
       base_feature_status: "enabled",
       copied_from_base_feature_if: "overridden",
-      // Note that `depends_on` isn't supported by origin trials.
       implied_by: [
         "WebMCPDeclarativeFileInput",
         "WebMCPFormAssociatedCustomElements",
@@ -6874,7 +6468,6 @@
       // Experimental implementation of
       // https://www.ietf.org/archive/id/draft-hancke-tsvwg-snap-00.html
       name: "WebRtcSctpSnap",
-      origin_trial_feature_name: "WebRtcSctpSnap",
       status: "experimental",
     },
     {
@@ -6947,7 +6540,6 @@
     },
     {
       name: "WebTransportCustomCertificates",
-      origin_trial_feature_name: "WebTransportCustomCertificates",
       status: "stable",
       base_feature: "none",
     },
@@ -7049,7 +6641,6 @@
     {
       name: "WebXRImageTracking",
       depends_on: ["WebXR"],
-      origin_trial_feature_name: "WebXRImageTracking",
       public: true,
       status: "experimental",
       base_feature: "none",
@@ -7083,7 +6674,6 @@
     {
       name: "WebXRPlaneDetection",
       depends_on: ["WebXR"],
-      origin_trial_feature_name: "WebXRPlaneDetection",
       public: true,
       status: "stable",
       base_feature: "none",
@@ -7185,10 +6775,6 @@
       name: "XSLT",
       status: "stable",
       public: true,
-      origin_trial_feature_name: "XSLT",
-      origin_trial_type: "deprecation",
-      origin_trial_allows_insecure: true,
-      origin_trial_allows_third_party: true,
     },
     {
       // A feature flag that will be used for a "special trial" of disabling

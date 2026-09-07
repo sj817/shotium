@@ -86,10 +86,6 @@ def _ValidateDelta(root, delta):
         'third_party/blink/public/mojom/runtime_feature_state/'
         'runtime_feature.mojom'
       ),
-      (
-        'third_party/blink/public/mojom/origin_trials/'
-        'origin_trial_feature.mojom'
-      ),
     }
 
     ast.import_list.items = [

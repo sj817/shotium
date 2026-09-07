@@ -24,7 +24,6 @@
       <include name="IDR_UASTYLE_MATHML_CSS" file="../renderer/core/css/mathml.css" type="BINDATA" compress="brotli"/>
       <include name="IDR_UASTYLE_FULLSCREEN_CSS" file="../renderer/core/css/fullscreen.css" type="BINDATA" compress="brotli"/>
       <include name="IDR_UASTYLE_OVERSCROLL_CSS" file="../renderer/core/css/overscroll.css" type="BINDATA" compress="brotli"/>
-      <include name="IDR_UASTYLE_SKELETON_CSS" file="../renderer/core/skeleton/skeleton.css" type="BINDATA" compress="brotli"/>
       <include name="IDR_VALIDATION_BUBBLE_ICON" file="../renderer/core/html/forms/resources/input_alert.svg" type="BINDATA" compress="brotli"/>
       <include name="IDR_VALIDATION_BUBBLE_CSS" file="../renderer/core/html/forms/resources/validation_bubble.css" type="BINDATA" compress="brotli"/>
       <if expr="not is_android">

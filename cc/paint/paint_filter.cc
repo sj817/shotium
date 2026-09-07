@@ -19,7 +19,6 @@
 #include "cc/paint/filter_operations.h"
 #include "cc/paint/image_provider.h"
 #include "cc/paint/paint_image_builder.h"
-#include "cc/paint/paint_op_writer.h"
 #include "cc/paint/paint_record.h"
 #include "cc/paint/scoped_raster_flags.h"
 #include "third_party/skia/include/core/SkColorFilter.h"
@@ -160,17 +159,6 @@ const PaintFilter::CropRect* PaintFilter::GetCropRect() const {
   return base::OptionalToPtr(crop_rect_);
 }
 
-base::CheckedNumeric<size_t> PaintFilter::BaseSerializedSize() const {
-  base::CheckedNumeric<size_t> total_size =
-      PaintOpWriter::SerializedSize(type_);
-  // Bool to indicate whether crop exists.
-  total_size += PaintOpWriter::SerializedSize<bool>();
-  if (crop_rect_) {
-    total_size += PaintOpWriter::SerializedSize(*crop_rect_);
-  }
-  return total_size;
-}
-
 sk_sp<PaintFilter> PaintFilter::SnapshotWithImages(
     ImageProvider* image_provider) const {
   if (!has_discardable_images_)
@@ -260,11 +248,6 @@ gfx::ContentColorUsage OneInputPaintFilter::GetContentColorUsage() const {
                                   : gfx::ContentColorUsage::kSRGB;
 }
 
-base::CheckedNumeric<size_t> OneInputPaintFilter::BaseSerializedSize() const {
-  return PaintFilter::BaseSerializedSize() +
-         PaintOpWriter::SerializedSize(input_.get());
-}
-
 bool OneInputPaintFilter::EqualsForTesting(
     const OneInputPaintFilter& other) const {
   return AreValuesEqualForTesting(input_, other.input_);  // IN-TEST
@@ -294,12 +277,6 @@ gfx::ContentColorUsage TwoInputPaintFilter::GetContentColorUsage() const {
   return result;
 }
 
-base::CheckedNumeric<size_t> TwoInputPaintFilter::BaseSerializedSize() const {
-  return PaintFilter::BaseSerializedSize() +
-         PaintOpWriter::SerializedSize(first_.get()) +
-         PaintOpWriter::SerializedSize(second_.get());
-}
-
 bool TwoInputPaintFilter::EqualsForTesting(
     const TwoInputPaintFilter& other) const {
   return AreValuesEqualForTesting(first_, other.first_) &&  // IN-TEST
@@ -317,12 +294,6 @@ ColorFilterPaintFilter::ColorFilterPaintFilter(sk_sp<ColorFilter> color_filter,
 }
 
 ColorFilterPaintFilter::~ColorFilterPaintFilter() = default;
-
-size_t ColorFilterPaintFilter::SerializedSize() const {
-  base::CheckedNumeric<size_t> total_size = BaseSerializedSize();
-  total_size += PaintOpWriter::SerializedSize(color_filter_.get());
-  return total_size.ValueOrDefault(0u);
-}
 
 sk_sp<PaintFilter> ColorFilterPaintFilter::SnapshotWithImagesInternal(
     ImageProvider* image_provider) const {
@@ -351,14 +322,6 @@ BlurPaintFilter::BlurPaintFilter(SkScalar sigma_x,
 }
 
 BlurPaintFilter::~BlurPaintFilter() = default;
-
-size_t BlurPaintFilter::SerializedSize() const {
-  base::CheckedNumeric<size_t> total_size =
-      BaseSerializedSize() + PaintOpWriter::SerializedSize(sigma_x_) +
-      PaintOpWriter::SerializedSize(sigma_y_) +
-      PaintOpWriter::SerializedSize(tile_mode_);
-  return total_size.ValueOrDefault(0u);
-}
 
 sk_sp<PaintFilter> BlurPaintFilter::SnapshotWithImagesInternal(
     ImageProvider* image_provider) const {
@@ -403,17 +366,6 @@ DropShadowPaintFilter::DropShadowPaintFilter(SkScalar dx,
 
 DropShadowPaintFilter::~DropShadowPaintFilter() = default;
 
-size_t DropShadowPaintFilter::SerializedSize() const {
-  base::CheckedNumeric<size_t> total_size =
-      BaseSerializedSize() + PaintOpWriter::SerializedSize(dx_) +
-      PaintOpWriter::SerializedSize(dy_) +
-      PaintOpWriter::SerializedSize(sigma_x_) +
-      PaintOpWriter::SerializedSize(sigma_y_) +
-      PaintOpWriter::SerializedSize(color_) +
-      PaintOpWriter::SerializedSize(shadow_mode_);
-  return total_size.ValueOrDefault(0u);
-}
-
 sk_sp<PaintFilter> DropShadowPaintFilter::SnapshotWithImagesInternal(
     ImageProvider* image_provider) const {
   return sk_make_sp<DropShadowPaintFilter>(
@@ -453,14 +405,6 @@ MagnifierPaintFilter::MagnifierPaintFilter(const SkRect& lens_bounds,
 
 MagnifierPaintFilter::~MagnifierPaintFilter() = default;
 
-size_t MagnifierPaintFilter::SerializedSize() const {
-  base::CheckedNumeric<size_t> total_size =
-      BaseSerializedSize() + PaintOpWriter::SerializedSize(lens_bounds_) +
-      PaintOpWriter::SerializedSize(zoom_amount_) +
-      PaintOpWriter::SerializedSize(inset_);
-  return total_size.ValueOrDefault(0u);
-}
-
 sk_sp<PaintFilter> MagnifierPaintFilter::SnapshotWithImagesInternal(
     ImageProvider* image_provider) const {
   return sk_make_sp<MagnifierPaintFilter>(lens_bounds_, zoom_amount_, inset_,
@@ -483,10 +427,6 @@ ComposePaintFilter::ComposePaintFilter(sk_sp<PaintFilter> outer,
 }
 
 ComposePaintFilter::~ComposePaintFilter() = default;
-
-size_t ComposePaintFilter::SerializedSize() const {
-  return BaseSerializedSize().ValueOrDefault(0u);
-}
 
 sk_sp<PaintFilter> ComposePaintFilter::SnapshotWithImagesInternal(
     ImageProvider* image_provider) const {
@@ -543,13 +483,6 @@ AlphaThresholdPaintFilter::AlphaThresholdPaintFilter(const SkRegion& region,
 
 AlphaThresholdPaintFilter::~AlphaThresholdPaintFilter() = default;
 
-size_t AlphaThresholdPaintFilter::SerializedSize() const {
-  size_t region_size = region_.writeToMemory(nullptr);
-  base::CheckedNumeric<size_t> total_size =
-      BaseSerializedSize() + PaintOpWriter::SerializedSizeOfBytes(region_size);
-  return total_size.ValueOrDefault(0u);
-}
-
 sk_sp<PaintFilter> AlphaThresholdPaintFilter::SnapshotWithImagesInternal(
     ImageProvider* image_provider) const {
   return sk_make_sp<AlphaThresholdPaintFilter>(
@@ -577,12 +510,6 @@ XfermodePaintFilter::XfermodePaintFilter(SkBlendMode blend_mode,
 }
 
 XfermodePaintFilter::~XfermodePaintFilter() = default;
-
-size_t XfermodePaintFilter::SerializedSize() const {
-  base::CheckedNumeric<size_t> total_size =
-      BaseSerializedSize() + PaintOpWriter::SerializedSize(blend_mode_);
-  return total_size.ValueOrDefault(0u);
-}
 
 sk_sp<PaintFilter> XfermodePaintFilter::SnapshotWithImagesInternal(
     ImageProvider* image_provider) const {
@@ -620,15 +547,6 @@ ArithmeticPaintFilter::ArithmeticPaintFilter(float k1,
 }
 
 ArithmeticPaintFilter::~ArithmeticPaintFilter() = default;
-
-size_t ArithmeticPaintFilter::SerializedSize() const {
-  base::CheckedNumeric<size_t> total_size =
-      BaseSerializedSize() + PaintOpWriter::SerializedSize(k1_) +
-      PaintOpWriter::SerializedSize(k2_) + PaintOpWriter::SerializedSize(k3_) +
-      PaintOpWriter::SerializedSize(k4_) +
-      PaintOpWriter::SerializedSize(enforce_pm_color_);
-  return total_size.ValueOrDefault(0u);
-}
 
 sk_sp<PaintFilter> ArithmeticPaintFilter::SnapshotWithImagesInternal(
     ImageProvider* image_provider) const {
@@ -677,19 +595,6 @@ MatrixConvolutionPaintFilter::MatrixConvolutionPaintFilter(
 
 MatrixConvolutionPaintFilter::~MatrixConvolutionPaintFilter() = default;
 
-size_t MatrixConvolutionPaintFilter::SerializedSize() const {
-  base::CheckedNumeric<size_t> total_size =
-      BaseSerializedSize() + PaintOpWriter::SerializedSize(kernel_size_) +
-      PaintOpWriter::SerializedSize<size_t>() +
-      PaintOpWriter::SerializedSizeOfElements(kernel_.data(), kernel_.size()) +
-      PaintOpWriter::SerializedSize(gain_) +
-      PaintOpWriter::SerializedSize(bias_) +
-      PaintOpWriter::SerializedSize(kernel_offset_) +
-      PaintOpWriter::SerializedSize(tile_mode_) +
-      PaintOpWriter::SerializedSize(convolve_alpha_);
-  return total_size.ValueOrDefault(0u);
-}
-
 sk_sp<PaintFilter> MatrixConvolutionPaintFilter::SnapshotWithImagesInternal(
     ImageProvider* image_provider) const {
   return sk_make_sp<MatrixConvolutionPaintFilter>(
@@ -727,14 +632,6 @@ DisplacementMapEffectPaintFilter::DisplacementMapEffectPaintFilter(
 }
 
 DisplacementMapEffectPaintFilter::~DisplacementMapEffectPaintFilter() = default;
-
-size_t DisplacementMapEffectPaintFilter::SerializedSize() const {
-  base::CheckedNumeric<size_t> total_size =
-      BaseSerializedSize() + PaintOpWriter::SerializedSize(channel_x_) +
-      PaintOpWriter::SerializedSize(channel_y_) +
-      PaintOpWriter::SerializedSize(scale_);
-  return total_size.ValueOrDefault(0u);
-}
 
 sk_sp<PaintFilter> DisplacementMapEffectPaintFilter::SnapshotWithImagesInternal(
     ImageProvider* image_provider) const {
@@ -774,15 +671,6 @@ ImagePaintFilter::~ImagePaintFilter() = default;
 
 gfx::ContentColorUsage ImagePaintFilter::GetContentColorUsage() const {
   return image_.GetContentColorUsage();
-}
-
-size_t ImagePaintFilter::SerializedSize() const {
-  base::CheckedNumeric<size_t> total_size =
-      BaseSerializedSize() + PaintOpWriter::SerializedSize(src_rect_) +
-      PaintOpWriter::SerializedSize(dst_rect_) +
-      PaintOpWriter::SerializedSize(filter_quality_);
-  total_size += PaintOpWriter::SerializedSize(image_);
-  return total_size.ValueOrDefault(0u);
 }
 
 sk_sp<PaintFilter> ImagePaintFilter::SnapshotWithImagesInternal(
@@ -902,15 +790,6 @@ sk_sp<RecordPaintFilter> RecordPaintFilter::CreateScaledPaintRecord(
                                        ScalingBehavior::kFixedScale);
 }
 
-size_t RecordPaintFilter::SerializedSize() const {
-  base::CheckedNumeric<size_t> total_size =
-      BaseSerializedSize() + PaintOpWriter::SerializedSize(record_bounds_) +
-      PaintOpWriter::SerializedSize(raster_scale_) +
-      PaintOpWriter::SerializedSize(scaling_behavior_);
-  total_size += PaintOpWriter::SerializedSize(record_);
-  return total_size.ValueOrDefault(0u);
-}
-
 sk_sp<PaintFilter> RecordPaintFilter::SnapshotWithImagesInternal(
     ImageProvider* image_provider) const {
   return sk_sp<RecordPaintFilter>(
@@ -966,15 +845,6 @@ gfx::ContentColorUsage MergePaintFilter::GetContentColorUsage() const {
   return result;
 }
 
-size_t MergePaintFilter::SerializedSize() const {
-  base::CheckedNumeric<size_t> total_size = BaseSerializedSize();
-  total_size += PaintOpWriter::SerializedSize(input_count());
-  for (size_t i = 0; i < input_count(); ++i) {
-    total_size += PaintOpWriter::SerializedSize(input_at(i));
-  }
-  return total_size.ValueOrDefault(0u);
-}
-
 sk_sp<PaintFilter> MergePaintFilter::SnapshotWithImagesInternal(
     ImageProvider* image_provider) const {
   return sk_sp<MergePaintFilter>(
@@ -1011,14 +881,6 @@ MorphologyPaintFilter::MorphologyPaintFilter(MorphType morph_type,
 
 MorphologyPaintFilter::~MorphologyPaintFilter() = default;
 
-size_t MorphologyPaintFilter::SerializedSize() const {
-  base::CheckedNumeric<size_t> total_size =
-      BaseSerializedSize() + PaintOpWriter::SerializedSize(morph_type_) +
-      PaintOpWriter::SerializedSize(radius_x_) +
-      PaintOpWriter::SerializedSize(radius_y_);
-  return total_size.ValueOrDefault(0u);
-}
-
 sk_sp<PaintFilter> MorphologyPaintFilter::SnapshotWithImagesInternal(
     ImageProvider* image_provider) const {
   return sk_make_sp<MorphologyPaintFilter>(morph_type_, radius_x_, radius_y_,
@@ -1046,13 +908,6 @@ OffsetPaintFilter::OffsetPaintFilter(SkScalar dx,
 
 OffsetPaintFilter::~OffsetPaintFilter() = default;
 
-size_t OffsetPaintFilter::SerializedSize() const {
-  base::CheckedNumeric<size_t> total_size = BaseSerializedSize() +
-                                            PaintOpWriter::SerializedSize(dx_) +
-                                            PaintOpWriter::SerializedSize(dy_);
-  return total_size.ValueOrDefault(0u);
-}
-
 sk_sp<PaintFilter> OffsetPaintFilter::SnapshotWithImagesInternal(
     ImageProvider* image_provider) const {
   return sk_make_sp<OffsetPaintFilter>(
@@ -1073,13 +928,6 @@ TilePaintFilter::TilePaintFilter(const SkRect& src,
 }
 
 TilePaintFilter::~TilePaintFilter() = default;
-
-size_t TilePaintFilter::SerializedSize() const {
-  base::CheckedNumeric<size_t> total_size =
-      BaseSerializedSize() + PaintOpWriter::SerializedSize(src_) +
-      PaintOpWriter::SerializedSize(dst_);
-  return total_size.ValueOrDefault(0u);
-}
 
 sk_sp<PaintFilter> TilePaintFilter::SnapshotWithImagesInternal(
     ImageProvider* image_provider) const {
@@ -1125,17 +973,6 @@ TurbulencePaintFilter::~TurbulencePaintFilter() = default;
 
 gfx::ContentColorUsage TurbulencePaintFilter::GetContentColorUsage() const {
   return gfx::ContentColorUsage::kSRGB;
-}
-
-size_t TurbulencePaintFilter::SerializedSize() const {
-  return (BaseSerializedSize() +
-          PaintOpWriter::SerializedSize(turbulence_type_) +
-          PaintOpWriter::SerializedSize(base_frequency_x_) +
-          PaintOpWriter::SerializedSize(base_frequency_y_) +
-          PaintOpWriter::SerializedSize(num_octaves_) +
-          PaintOpWriter::SerializedSize(seed_) +
-          PaintOpWriter::SerializedSize(tile_size_))
-      .ValueOrDefault(0u);
 }
 
 sk_sp<PaintFilter> TurbulencePaintFilter::SnapshotWithImagesInternal(
@@ -1190,16 +1027,6 @@ gfx::ContentColorUsage ShaderPaintFilter::GetContentColorUsage() const {
     shader_->HasDiscardableImages(&result);
   }
   return result;
-}
-
-size_t ShaderPaintFilter::SerializedSize() const {
-  base::CheckedNumeric<size_t> total_size = BaseSerializedSize();
-  total_size += PaintShader::GetSerializedSize(shader_.get());
-  total_size += PaintOpWriter::SerializedSize(alpha_);
-  total_size +=
-      PaintOpWriter::SerializedSize(filter_quality_);  // filter quality
-  total_size += PaintOpWriter::SerializedSize(dither_);
-  return total_size.ValueOrDefault(0u);
 }
 
 sk_sp<PaintFilter> ShaderPaintFilter::SnapshotWithImagesInternal(
@@ -1257,13 +1084,6 @@ MatrixPaintFilter::MatrixPaintFilter(const SkMatrix& matrix,
 
 MatrixPaintFilter::~MatrixPaintFilter() = default;
 
-size_t MatrixPaintFilter::SerializedSize() const {
-  base::CheckedNumeric<size_t> total_size =
-      BaseSerializedSize() + PaintOpWriter::SerializedSize(matrix_) +
-      PaintOpWriter::SerializedSize(filter_quality_);
-  return total_size.ValueOrDefault(0u);
-}
-
 sk_sp<PaintFilter> MatrixPaintFilter::SnapshotWithImagesInternal(
     ImageProvider* image_provider) const {
   return sk_make_sp<MatrixPaintFilter>(matrix_, filter_quality_,
@@ -1308,17 +1128,6 @@ LightingDistantPaintFilter::LightingDistantPaintFilter(
 }
 
 LightingDistantPaintFilter::~LightingDistantPaintFilter() = default;
-
-size_t LightingDistantPaintFilter::SerializedSize() const {
-  base::CheckedNumeric<size_t> total_size =
-      BaseSerializedSize() + PaintOpWriter::SerializedSize(lighting_type_) +
-      PaintOpWriter::SerializedSize(direction_) +
-      PaintOpWriter::SerializedSize(light_color_) +
-      PaintOpWriter::SerializedSize(surface_scale_) +
-      PaintOpWriter::SerializedSize(kconstant_) +
-      PaintOpWriter::SerializedSize(shininess_);
-  return total_size.ValueOrDefault(0u);
-}
 
 sk_sp<PaintFilter> LightingDistantPaintFilter::SnapshotWithImagesInternal(
     ImageProvider* image_provider) const {
@@ -1368,17 +1177,6 @@ LightingPointPaintFilter::LightingPointPaintFilter(LightingType lighting_type,
 }
 
 LightingPointPaintFilter::~LightingPointPaintFilter() = default;
-
-size_t LightingPointPaintFilter::SerializedSize() const {
-  base::CheckedNumeric<size_t> total_size =
-      BaseSerializedSize() + PaintOpWriter::SerializedSize(lighting_type_) +
-      PaintOpWriter::SerializedSize(location_) +
-      PaintOpWriter::SerializedSize(light_color_) +
-      PaintOpWriter::SerializedSize(surface_scale_) +
-      PaintOpWriter::SerializedSize(kconstant_) +
-      PaintOpWriter::SerializedSize(shininess_);
-  return total_size.ValueOrDefault(0u);
-}
 
 sk_sp<PaintFilter> LightingPointPaintFilter::SnapshotWithImagesInternal(
     ImageProvider* image_provider) const {
@@ -1436,20 +1234,6 @@ LightingSpotPaintFilter::LightingSpotPaintFilter(LightingType lighting_type,
 }
 
 LightingSpotPaintFilter::~LightingSpotPaintFilter() = default;
-
-size_t LightingSpotPaintFilter::SerializedSize() const {
-  base::CheckedNumeric<size_t> total_size =
-      BaseSerializedSize() + PaintOpWriter::SerializedSize(lighting_type_) +
-      PaintOpWriter::SerializedSize(location_) +
-      PaintOpWriter::SerializedSize(target_) +
-      PaintOpWriter::SerializedSize(specular_exponent_) +
-      PaintOpWriter::SerializedSize(cutoff_angle_) +
-      PaintOpWriter::SerializedSize(light_color_) +
-      PaintOpWriter::SerializedSize(surface_scale_) +
-      PaintOpWriter::SerializedSize(kconstant_) +
-      PaintOpWriter::SerializedSize(shininess_);
-  return total_size.ValueOrDefault(0u);
-}
 
 sk_sp<PaintFilter> LightingSpotPaintFilter::SnapshotWithImagesInternal(
     ImageProvider* image_provider) const {

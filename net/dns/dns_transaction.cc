@@ -789,15 +789,13 @@ class DnsTransactionImpl final : public DnsTransaction {
     const DnsConfig& config = session_->config();
     DCHECK_LT(server_index, config.nameservers.size());
 
-    // TODO(crbug.com/40146880): Pass a non-null NetworkQualityEstimator.
-    NetworkQualityEstimator* network_quality_estimator = nullptr;
 
     std::unique_ptr<StreamSocket> socket =
         resolve_context_->url_request_context()
             ->GetNetworkSessionContext()
             ->client_socket_factory->CreateTransportClientSocket(
                 AddressList(config.nameservers[server_index]), target_network_,
-                nullptr, network_quality_estimator, net_log_.net_log(),
+                net_log_.net_log(),
                 net_log_.source());
 
     uint32_t attempt_number = attempts_.size();

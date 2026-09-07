@@ -14,7 +14,6 @@
 #include "cc/paint/paint_canvas.h"
 #include "cc/paint/paint_flags.h"
 #include "cc/paint/paint_record.h"
-#include "cc/paint/skottie_color_map.h"
 #include "third_party/skia/include/core/SkBitmap.h"
 #include "third_party/skia/include/core/SkColor.h"
 #include "third_party/skia/include/core/SkColorSpace.h"
@@ -43,16 +42,8 @@ class PaintFlags;
 // and then playing back to an SkCanvas.
 class CC_PAINT_EXPORT SkiaPaintCanvas final : public PaintCanvas {
  public:
-  struct CC_PAINT_EXPORT ContextFlushes {
-    ContextFlushes();
-
-    bool enable;
-    int max_draws_before_flush;
-  };
-
   explicit SkiaPaintCanvas(SkCanvas* canvas,
-                           ImageProvider* image_provider = nullptr,
-                           ContextFlushes context_flushes = ContextFlushes());
+                           ImageProvider* image_provider = nullptr);
   explicit SkiaPaintCanvas(const SkBitmap& bitmap,
                            ImageProvider* image_provider = nullptr);
 
@@ -69,7 +60,6 @@ class CC_PAINT_EXPORT SkiaPaintCanvas final : public PaintCanvas {
                              size_t* rowBytes,
                              SkIPoint* origin = nullptr) override;
 
-  void flush() override;
 
   int save() override;
   int saveLayer(const PaintFlags& flags) override;
@@ -139,12 +129,6 @@ class CC_PAINT_EXPORT SkiaPaintCanvas final : public PaintCanvas {
                     scoped_refptr<RefCountedBuffer<SkPoint>> uvs,
                     scoped_refptr<RefCountedBuffer<uint16_t>> indices,
                     const PaintFlags& flags) override;
-  void drawSkottie(scoped_refptr<SkottieWrapper> skottie,
-                   const SkRect& dst,
-                   float t,
-                   SkottieFrameDataMap images,
-                   const SkottieColorMap& color_map,
-                   SkottieTextPropertyValueMap text_map) override;
   void drawTextBlob(sk_sp<SkTextBlob> blob,
                     SkScalar x,
                     SkScalar y,
@@ -160,7 +144,6 @@ class CC_PAINT_EXPORT SkiaPaintCanvas final : public PaintCanvas {
 
   SkM44 getLocalToDevice() const override;
 
-  bool NeedsFlush() const override;
 
   void Annotate(AnnotationType type,
                 const SkRect& rect,
@@ -186,17 +169,13 @@ class CC_PAINT_EXPORT SkiaPaintCanvas final : public PaintCanvas {
   int pendingOpsForTesting() const { return num_of_ops_; }
 
  private:
-  void FlushAfterDrawIfNeeded();
 
-  int GetMaxTextureSize() const;
 
   raw_ptr<SkCanvas> canvas_;
   SkBitmap bitmap_;
   std::unique_ptr<SkCanvas> owned_;
   raw_ptr<ImageProvider> image_provider_ = nullptr;
 
-  const ContextFlushes context_flushes_;
-  int num_of_ops_ = 0;
 };
 
 }  // namespace cc

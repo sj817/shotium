@@ -53,7 +53,6 @@
 #include "third_party/blink/renderer/core/html_names.h"
 #include "third_party/blink/renderer/core/inspector/console_message.h"
 #include "third_party/blink/renderer/core/mathml_names.h"
-#include "third_party/blink/renderer/core/sanitizer/sanitizer.h"
 #include "third_party/blink/renderer/core/svg_names.h"
 #include "third_party/blink/renderer/core/xlink_names.h"
 #include "third_party/blink/renderer/core/xml_names.h"
@@ -343,7 +342,6 @@ HTMLTreeBuilder::HTMLTreeBuilder(HTMLDocumentParser* parser,
                                  DocumentFragment* fragment_target,
                                  Element* fragment_context_element,
                                  CustomElementRegistry* registry,
-                                 StreamingSanitizer* sanitizer,
                                  ParserRootInsertionPoint* root_insertion_point)
     : tree_(parser->ReentryPermit(),
             document,
@@ -351,7 +349,6 @@ HTMLTreeBuilder::HTMLTreeBuilder(HTMLDocumentParser* parser,
             fragment_target,
             fragment_context_element,
             registry,
-            sanitizer,
             root_insertion_point),
       insertion_mode_(kInitialMode),
       original_insertion_mode_(kInitialMode),
@@ -367,8 +364,7 @@ HTMLTreeBuilder::HTMLTreeBuilder(HTMLDocumentParser* parser,
                                  ParserContentPolicy parser_content_policy,
                                  const HTMLParserOptions& options,
                                  bool include_shadow_roots,
-                                 CustomElementRegistry* registry,
-                                 StreamingSanitizer* sanitizer)
+                                 CustomElementRegistry* registry)
     : HTMLTreeBuilder(parser,
                       document,
                       parser_content_policy,
@@ -377,7 +373,6 @@ HTMLTreeBuilder::HTMLTreeBuilder(HTMLDocumentParser* parser,
                       /*fragment_target=*/nullptr,
                       /*fragment_context_element=*/nullptr,
                       registry,
-                      sanitizer,
                       /*root_insertion_point=*/nullptr) {}
 HTMLTreeBuilder::HTMLTreeBuilder(HTMLDocumentParser* parser,
                                  DocumentFragment* fragment_target,
@@ -386,7 +381,6 @@ HTMLTreeBuilder::HTMLTreeBuilder(HTMLDocumentParser* parser,
                                  const HTMLParserOptions& options,
                                  bool include_shadow_roots,
                                  CustomElementRegistry* registry,
-                                 StreamingSanitizer* sanitizer,
                                  ParserRootInsertionPoint* root_insertion_point)
     : HTMLTreeBuilder(parser,
                       fragment_target->GetDocument(),
@@ -396,7 +390,6 @@ HTMLTreeBuilder::HTMLTreeBuilder(HTMLDocumentParser* parser,
                       fragment_target,
                       context_element,
                       registry,
-                      sanitizer,
                       root_insertion_point) {
   DCHECK(IsMainThread());
   fragment_context_.Init(fragment_target, context_element);

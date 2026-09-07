@@ -670,8 +670,6 @@ bool CSSPropertyEquality::PropertiesEqual(const PropertyHandle& property,
       return a.Opacity() == b.Opacity();
     case CSSPropertyID::kOrder:
       return a.Order() == b.Order();
-    case CSSPropertyID::kOriginTrialTestProperty:
-      return a.OriginTrialTestProperty() == b.OriginTrialTestProperty();
     case CSSPropertyID::kOrphans:
       return a.Orphans() == b.Orphans();
     case CSSPropertyID::kOutlineColor:
@@ -1352,7 +1350,6 @@ bool CSSPropertyEquality::PropertiesEqual(const PropertyHandle& property,
     case CSSPropertyID::kInternalForcedVisitedColor:
     case CSSPropertyID::kInternalOverscrollArea:
     case CSSPropertyID::kInternalOverscrollPosition:
-    case CSSPropertyID::kInternalUnbounded:
     case CSSPropertyID::kInternalVisitedBackgroundColor:
     case CSSPropertyID::kInternalVisitedBorderBlockEndColor:
     case CSSPropertyID::kInternalVisitedBorderBlockStartColor:

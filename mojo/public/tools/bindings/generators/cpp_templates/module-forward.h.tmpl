@@ -28,10 +28,6 @@
 #include "mojo/public/cpp/bindings/deprecated_interface_types_forward.h"
 {%- endif %}
 
-{% if not disallow_native_types and structs|length %}
-#include "mojo/public/interfaces/bindings/native_struct.mojom-forward.h"
-{%- endif %}
-
 {%- if export_header and module.constants|length %}
 #include "{{export_header}}"
 {%- endif %}
@@ -42,22 +38,12 @@
 #endif
 {%- endif %}
 
-{% if not disallow_native_types and uses_native_types and all_enums|length -%}
-namespace mojo {
-enum class NativeEnum;
-}  // namespace mojo
-{%- endif %}
-
 {%- if variant %}
 {{namespace_begin(namespaces_as_array)}}
 
 {%- from "enum_macros.tmpl" import enum_forward%}
 {%- for enum in all_enums %}
-{%-   if enum|is_native_only_kind %}
-using {{enum|get_name_for_kind(flatten_nested_kind=True)}} = mojo::NativeEnum;
-{%-   else %}
 {{enum_forward(enum)}}
-{%-   endif %}
 {%- endfor %}
 
 {%- for interface in interfaces %}
@@ -76,11 +62,7 @@ class {{interface.name}}InterfaceBase;
 
 {#--- Struct Forward Declarations -#}
 {%- for struct in structs %}
-{%-   if struct|is_native_only_kind %}
-using {{struct.name}}DataView = mojo::native::NativeStructDataView;
-{%-   else %}
 class {{struct.name}}DataView;
-{%-   endif %}
 {%  endfor %}
 
 {#--- Union Forward Declarations -#}
@@ -91,11 +73,7 @@ class {{union.name}}DataView;
 {#--- Enums #}
 {%- from "enum_macros.tmpl" import enum_forward%}
 {%- for enum in all_enums %}
-{%-   if enum|is_native_only_kind %}
-using {{enum|get_name_for_kind(flatten_nested_kind=True)}} = mojo::NativeEnum;
-{%-   else %}
 {{enum_forward(enum)}}
-{%-   endif %}
 {%- endfor %}
 
 {%- endif %}
@@ -123,16 +101,11 @@ using {{interface.name}}InterfaceBase = {{interface.name}}InterfaceBase;
 
 {#--- Struct Forward Declarations -#}
 {%  for struct in structs %}
-{%-   if struct|is_native_only_kind %}
-using {{struct.name}} = mojo::native::NativeStruct;
-using {{struct.name}}Ptr = mojo::native::NativeStructPtr;
-{%-   else %}
 class {{struct.name}};
-{%-     if struct|should_inline %}
+{%-   if struct|should_inline %}
 using {{struct.name}}Ptr = mojo::InlinedStructPtr<{{struct.name}}>;
-{%-     else %}
+{%-   else %}
 using {{struct.name}}Ptr = mojo::StructPtr<{{struct.name}}>;
-{%-     endif %}
 {%-   endif %}
 {%  endfor %}
 
@@ -154,7 +127,5 @@ class {{interface.name}};
 
 
 {{namespace_end(namespaces_as_array, variant)}}
-
-{#- TODO(tikuta): Use forward declaration of native enum/struct here. #}
 
 #endif  // {{header_guard}}

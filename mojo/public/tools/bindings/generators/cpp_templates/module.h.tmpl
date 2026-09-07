@@ -71,11 +71,6 @@
 #include "mojo/public/cpp/bindings/raw_ptr_impl_ref_traits.h"
 {%- endif %}
 
-{% if not disallow_native_types and uses_native_types %}
-#include "mojo/public/cpp/bindings/lib/native_enum_serialization.h"
-#include "mojo/public/cpp/bindings/lib/native_struct_serialization.h"
-{%- endif %}
-
 {%- for header in extra_public_headers %}
 #include "{{header}}"
 {%- endfor %}
@@ -145,7 +140,7 @@
 
 {#--- Inlined structs #}
 {%  for struct in structs %}
-{%    if struct|should_inline and not struct|is_native_only_kind %}
+{%    if struct|should_inline %}
 {%      include "wrapper_class_declaration.tmpl" %}
 {%    endif %}
 {%- endfor %}
@@ -159,7 +154,7 @@
 
 {#--- Non-inlined structs #}
 {%  for struct in structs %}
-{%    if not struct|should_inline and not struct|is_native_only_kind %}
+{%    if not struct|should_inline %}
 {%      include "wrapper_class_declaration.tmpl" %}
 {%    endif %}
 {%- endfor %}
@@ -169,9 +164,7 @@
 {%- endfor %}
 
 {%- for struct in structs %}
-{%-   if not struct|is_native_only_kind %}
-{%      include "wrapper_class_template_definition.tmpl" %}
-{%-   endif %}
+{%    include "wrapper_class_template_definition.tmpl" %}
 {%- endfor %}
 
 {{namespace_end(namespaces_as_array, variant)}}
@@ -180,9 +173,7 @@ namespace mojo {
 
 {#--- Struct Serialization Helpers -#}
 {%  for struct in structs %}
-{%-   if not struct|is_native_only_kind %}
-{%      include "struct_traits_declaration.tmpl" %}
-{%-   endif %}
+{%    include "struct_traits_declaration.tmpl" %}
 {%- endfor %}
 
 {#--- Union Serialization Helpers -#}

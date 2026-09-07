@@ -11,8 +11,6 @@
 #include "base/notreached.h"
 #include "base/numerics/checked_math.h"
 #include "base/numerics/safe_conversions.h"
-#include "cc/paint/paint_op_reader.h"
-#include "cc/paint/paint_op_writer.h"
 #include "third_party/abseil-cpp/absl/container/inlined_vector.h"
 #include "third_party/skia/include/core/SkPathEffect.h"
 #include "third_party/skia/include/effects/SkCornerPathEffect.h"
@@ -40,17 +38,6 @@ class DashPathEffect final : public PathEffect {
   }
 
  private:
-  size_t SerializedDataSize() const override {
-    return (base::CheckedNumeric<size_t>(
-                PaintOpWriter::SerializedSizeOfElements(intervals_.data(),
-                                                        intervals_.size())) +
-            PaintOpWriter::SerializedSize(phase_))
-        .ValueOrDie();
-  }
-  void SerializeData(PaintOpWriter& writer) const override {
-    writer.Write(intervals_);
-    writer.Write(phase_);
-  }
 
   sk_sp<SkPathEffect> GetSkPathEffect() const override {
     return SkDashPathEffect::Make(intervals_, phase_);
@@ -72,12 +59,6 @@ class CornerPathEffect final : public PathEffect {
   }
 
  private:
-  size_t SerializedDataSize() const override {
-    return PaintOpWriter::SerializedSize(radius_);
-  }
-  void SerializeData(PaintOpWriter& writer) const override {
-    writer.Write(radius_);
-  }
 
   sk_sp<SkPathEffect> GetSkPathEffect() const override {
     return SkCornerPathEffect::Make(radius_);
@@ -119,28 +100,6 @@ bool PathEffect::EqualsForTesting(const PathEffect& other) const {
       return AreEqualForTesting<CornerPathEffect>(*this, other);
   }
   NOTREACHED();
-}
-
-sk_sp<PathEffect> PathEffect::Deserialize(PaintOpReader& reader, Type type) {
-  switch (type) {
-    case Type::kDash: {
-      std::vector<float> intervals;
-      float phase;
-      reader.Read(intervals);
-      reader.Read(&phase);
-      return reader.valid()
-                 ? MakeDash(intervals.data(),
-                            base::checked_cast<int>(intervals.size()), phase)
-                 : nullptr;
-    }
-    case Type::kCorner: {
-      float radius;
-      reader.Read(&radius);
-      return reader.valid() ? MakeCorner(radius) : nullptr;
-    }
-    default:
-      NOTREACHED();
-  }
 }
 
 }  // namespace cc

@@ -148,7 +148,6 @@ class COLOR_SPACE_EXPORT DisplayColorSpaces {
 
  private:
   // Serialization of DisplayColorSpaces directly accesses members.
-  friend struct IPC::ParamTraits<gfx::DisplayColorSpaces>;
   friend struct mojo::StructTraits<gfx::mojom::DisplayColorSpacesDataView,
                                    gfx::DisplayColorSpaces>;
 

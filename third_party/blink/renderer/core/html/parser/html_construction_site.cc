@@ -76,7 +76,6 @@
 #include "third_party/blink/renderer/core/html_names.h"
 #include "third_party/blink/renderer/core/keywords.h"
 #include "third_party/blink/renderer/core/loader/frame_loader.h"
-#include "third_party/blink/renderer/core/sanitizer/sanitizer.h"
 #include "third_party/blink/renderer/core/script/ignore_destructive_write_count_incrementer.h"
 #include "third_party/blink/renderer/core/svg/svg_script_element.h"
 #include "third_party/blink/renderer/core/svg_names.h"
@@ -462,48 +461,8 @@ void HTMLConstructionSite::QueueTask(HTMLConstructionSiteTask& task,
     FlushPendingText();
   }
 
-  if (task.child && task.parent && !task.parent->IsDocumentNode() &&
-      task.operation != HTMLConstructionSiteTask::Operation::kTakeAllChildren) {
-    if (auto* active_sanitizer = ActiveSanitizer(task.child.Get())) {
-      if (!active_sanitizer->Sanitize(task.child)) {
-        return;
-      }
-    }
-  }
-
   AdjustInsertionLocation(task);
   task_queue_.push_back(task);
-}
-
-StreamingSanitizer* HTMLConstructionSite::ActiveSanitizer(
-    Node* node_being_inserted) const {
-  if (!RuntimeEnabledFeatures::StreamingSanitizerEnabled()) {
-    return nullptr;
-  }
-
-  auto* default_sanitizer = sanitizer_.Get();
-
-  if (!RuntimeEnabledFeatures::DeclarativeFragmentEnabled()) {
-    return default_sanitizer;
-  }
-
-  HTMLStackItem* top = open_elements_.TopStackItem();
-
-  // This is needed because sanitization might take place after the <template
-  // sanitize> element is already added to the stack.
-  if (top && node_being_inserted && top->GetNode() == node_being_inserted) {
-    top = top->NextItemInStack();
-  }
-
-  if (!top) {
-    return default_sanitizer;
-  }
-
-  if (StreamingSanitizer* patch_sanitizer = top->GetSanitizer()) {
-    return patch_sanitizer;
-  }
-
-  return default_sanitizer;
 }
 
 void HTMLConstructionSite::AttachLater(InsertionLocation location,
@@ -574,7 +533,6 @@ HTMLConstructionSite::HTMLConstructionSite(
     ContainerNode* fragment_target,
     Element* context_element,
     CustomElementRegistry* registry,
-    StreamingSanitizer* sanitizer,
     ParserRootInsertionPoint* root_insertion_point)
     : reentry_permit_(reentry_permit),
       document_(&document),
@@ -588,8 +546,7 @@ HTMLConstructionSite::HTMLConstructionSite(
       is_parsing_fragment_(fragment_target),
       redirect_attach_to_foster_parent_(false),
       in_quirks_mode_(document.InQuirksMode()),
-      custom_element_registry_(registry),
-      sanitizer_(sanitizer) {
+      custom_element_registry_(registry) {
   DCHECK(document_->IsHTMLDocument() || document_->IsXHTMLDocument() ||
          is_parsing_fragment_);
 
@@ -626,7 +583,6 @@ void HTMLConstructionSite::Trace(Visitor* visitor) const {
   visitor->Trace(task_queue_);
   visitor->Trace(pending_text_);
   visitor->Trace(custom_element_registry_);
-  visitor->Trace(sanitizer_);
 }
 
 void HTMLConstructionSite::Detach() {
@@ -673,10 +629,6 @@ void HTMLConstructionSite::MergeAttributesFromTokenIntoElement(
             token_attribute.GetName()) == kNotFound) {
       element->setAttribute(token_attribute.GetName(), token_attribute.Value());
     }
-  }
-
-  if (sanitizer_) {
-    sanitizer_->Sanitize(element);
   }
 
   element->HideNonce();
@@ -934,35 +886,9 @@ HTMLConstructionSite::CurrentInsertionLocation() {
 
 void HTMLConstructionSite::AdjustInsertionLocation(
     HTMLConstructionSiteTask& task) {
-  if (!RuntimeEnabledFeatures::StreamingSanitizerEnabled()) {
-    return;
-  }
   if (IsEmpty()) {
     return;
   }
-  if (auto* active_sanitizer = ActiveSanitizer()) {
-    // Find the first inclusive ancestor of task.parent that is not replaced
-    // with its children by the sanitizer.
-    // Using Find here as it might not be the topmost item due to foster
-    // parenting.
-    // TODO(nrosenthal): See if we can refactor this to be more efficient by
-    // doing this at the same time as foster parenting.
-    for (HTMLStackItem* parent_item =
-             open_elements_.Find(DynamicTo<Element>(task.parent.Get()));
-         parent_item &&
-         active_sanitizer->ShouldReplaceWithChildren(task.parent);
-         parent_item = parent_item->NextItemInStack()) {
-      task.parent = parent_item->GetNode();
-    }
-
-    // This can happen if the reference node moved right before closing the
-    // stream, and the stream close has some side effects (e.g. <head>
-    // processing). In this case, ignore the reference node and append.
-    if (task.next_child && task.next_child->parentNode() != task.parent) {
-      task.next_child = nullptr;
-    }
-  }
-
   if (task.parent != open_elements_.RootNode() || !root_insertion_point_) {
     return;
   }
@@ -1065,19 +991,6 @@ void HTMLConstructionSite::InsertHTMLTemplateElement(
           ? template_element->FastGetAttribute(html_names::kForAttr)
           : g_null_atom;
 
-  auto* active_sanitizer = ActiveSanitizer();
-  if (active_sanitizer &&
-      (!declarative_shadow_root_mode.IsNull() || !patch_target.IsNull())) {
-    bool ok = active_sanitizer->Sanitize(template_element);
-    if (!ok ||
-        !template_element->FastHasAttribute(html_names::kShadowrootmodeAttr)) {
-      declarative_shadow_root_mode = String();
-    }
-    if (!ok || !template_element->FastHasAttribute(html_names::kForAttr)) {
-      patch_target = g_null_atom;
-    }
-  }
-
   bool should_attach_template = true;
 
   if (!declarative_shadow_root_mode.IsNull() &&
@@ -1143,16 +1056,6 @@ void HTMLConstructionSite::InsertHTMLTemplateElement(
     CHECK(RuntimeEnabledFeatures::DocumentPatchingEnabled());
     UseCounter::Count(OwnerDocumentForCurrentNode(), WebFeature::kHTMLPatching);
     template_element->SetPatch(patch);
-    if (RuntimeEnabledFeatures::DeclarativeFragmentEnabled()) {
-      const AtomicString& sanitize_val =
-          template_element->FastGetAttribute(html_names::kSanitizeAttr);
-      if (!sanitize_val.IsNull() &&
-          (sanitize_val.empty() ||
-           EqualIgnoringAsciiCase(sanitize_val, "sanitize"))) {
-        stack_item->SetSanitizer(StreamingSanitizer::SafeFor(sanitizer_.Get()));
-      }
-    }
-
     if (!patch_target.empty() && !patch->is_buffered()) {
       return;
     }
@@ -1217,11 +1120,7 @@ void HTMLConstructionSite::InsertScriptElement(AtomicHTMLToken* token) {
       .SetAlreadyStarted(ShouldMarkScriptAlreadyStarted());
   HTMLScriptElement* element = nullptr;
   const auto* is_attribute = token->GetAttributeItem(html_names::kIsAttr);
-  auto* active_sanitizer = ActiveSanitizer();
-  bool sanitizer_allows_is_attribute =
-      !active_sanitizer ||
-      active_sanitizer->AllowIsAttribute(html_names::kScriptTag);
-  if (is_attribute && sanitizer_allows_is_attribute) {
+  if (is_attribute) {
     element = To<HTMLScriptElement>(OwnerDocumentForCurrentNode().CreateElement(
         html_names::kScriptTag, flags, is_attribute->Value(),
         CustomElementRegistry::DefaultRegistry(OwnerDocumentForCurrentNode())));
@@ -1394,18 +1293,8 @@ Element* HTMLConstructionSite::CreateElement(
            : QualifiedName(g_null_atom, token->GetName(), namespace_uri));
   // "5. Let is be the value of the "is" attribute in the given token ..." etc.
   const Attribute* is_attribute = token->GetAttributeItem(html_names::kIsAttr);
-  // If sanitizer_ is set and if santizer_ would not allow the "is" attribute,
-  // then we will just pretend to not have seen it.
-  auto* active_sanitizer = ActiveSanitizer();
-  Document& creation_document = (active_sanitizer && document.IsActive() &&
-                                 !active_sanitizer->IsElementAllowed(tag_name))
-                                    ? document.EnsureTemplateDocument()
-                                    : document;
-  bool sanitizer_allows_is_attribute =
-      !active_sanitizer || active_sanitizer->AllowIsAttribute(tag_name);
-  const AtomicString& is = (is_attribute && sanitizer_allows_is_attribute)
-                               ? is_attribute->Value()
-                               : g_null_atom;
+  Document& creation_document = document;
+  const AtomicString& is = is_attribute ? is_attribute->Value() : g_null_atom;
   // "6. Let registry be the result of looking up a custom element registry
   // given intended parent."
   CustomElementRegistry* registry = custom_element_registry_;
@@ -1450,11 +1339,8 @@ Element* HTMLConstructionSite::CreateElement(
   }
   // 8. Let definition be the result of looking up a custom element definition
   // given registry, given namespace, local name and is.
-  CustomElementDefinition* definition = nullptr;
-  if (!active_sanitizer || active_sanitizer->IsElementAllowed(tag_name)) {
-    definition =
-        LookUpCustomElementDefinition(document, tag_name, is, registry);
-  }
+  CustomElementDefinition* definition =
+      LookUpCustomElementDefinition(document, tag_name, is, registry);
   // "5. If definition is non-null and the parser was not originally created
   // for the HTML fragment parsing algorithm, then let will execute script
   // be true."

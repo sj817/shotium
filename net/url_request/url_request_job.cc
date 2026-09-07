@@ -37,7 +37,6 @@
 #include "net/log/net_log_capture_mode.h"
 #include "net/log/net_log_event_type.h"
 #include "net/log/net_log_with_source.h"
-#include "net/nqe/network_quality_estimator.h"
 #include "net/ssl/ssl_private_key.h"
 #include "net/url_request/redirect_info.h"
 #include "net/url_request/redirect_util.h"
@@ -758,23 +757,6 @@ void URLRequestJob::RecordBytesRead(int bytes_read) {
   DCHECK_GT(bytes_read, 0);
   const base::ByteSize byte_size_read(base::checked_cast<size_t>(bytes_read));
   prefilter_bytes_read_ += byte_size_read;
-
-  // On first read, notify NetworkQualityEstimator that response headers have
-  // been received.
-  // TODO(tbansal): Move this to url_request_http_job.cc. This may catch
-  // Service Worker jobs twice.
-  // If prefilter_bytes_read_ is equal to bytes_read, it indicates this is the
-  // first raw read of the response body. This is used as the signal that
-  // response headers have been received.
-  if (request_->context()->network_quality_estimator()) {
-    if (prefilter_bytes_read() == byte_size_read) {
-      request_->context()->network_quality_estimator()->NotifyHeadersReceived(
-          *request_);
-    } else {
-      request_->context()->network_quality_estimator()->NotifyBytesRead(
-          *request_);
-    }
-  }
 
   DVLOG(2) << __FUNCTION__ << "() "
            << "\"" << request_->url().spec() << "\""

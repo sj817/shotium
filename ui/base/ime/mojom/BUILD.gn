@@ -15,7 +15,6 @@ component("shared_mojom_traits") {
   ]
   public_deps = [
     ":mojom_shared",
-    "//ipc:param_traits",
     "//ui/base/ime:ime_types",
     "//ui/base/ime:text_edit_commands",
   ]

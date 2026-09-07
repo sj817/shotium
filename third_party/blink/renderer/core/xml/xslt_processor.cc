@@ -28,23 +28,20 @@
 #include "third_party/blink/public/common/switches.h"
 #include "third_party/blink/renderer/core/dom/document.h"
 #include "third_party/blink/renderer/core/dom/document_encoding_data.h"
-#include "third_party/blink/renderer/core/dom/document_fragment.h"
 #include "third_party/blink/renderer/core/dom/document_init.h"
 #include "third_party/blink/renderer/core/dom/ignore_opens_during_unload_count_incrementer.h"
 #include "third_party/blink/renderer/core/dom/text.h"
-#include "third_party/blink/renderer/core/editing/serializers/serialization.h"
 #include "third_party/blink/renderer/core/frame/csp/content_security_policy.h"
 #include "third_party/blink/renderer/core/frame/local_dom_window.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
 #include "third_party/blink/renderer/core/frame/local_frame_client.h"
 #include "third_party/blink/renderer/core/frame/local_frame_view.h"
-#include "third_party/blink/renderer/core/html/html_document.h"
+#include "third_party/blink/renderer/core/frame/web_feature.h"
 #include "third_party/blink/renderer/core/html/html_frame_owner_element.h"
 #include "third_party/blink/renderer/core/html_names.h"
 #include "third_party/blink/renderer/core/inspector/console_message.h"
 #include "third_party/blink/renderer/core/xml/document_xslt.h"
 #include "third_party/blink/renderer/core/xml/parser/xml_document_parser.h"
-#include "third_party/blink/renderer/platform/bindings/exception_state.h"
 #include "third_party/blink/renderer/platform/weborigin/security_origin.h"
 
 namespace blink {
@@ -94,8 +91,7 @@ bool XSLTProcessor::IsXSLTEnabled(const ExecutionContext* context) {
   return RuntimeEnabledFeatures::XSLTEnabled(context);
 }
 
-void XSLTProcessor::ReportXSLTDisabled(Document& document,
-                                       ExceptionState* exception_state) {
+void XSLTProcessor::ReportXSLTDisabled(Document& document) {
   CHECK(!IsXSLTEnabled(document.GetExecutionContext()));
   if (RuntimeEnabledFeatures::XSLTSpecialTrialEnabled()) {
     // Special trial run of XSLT removal (pre-stable channels, via Finch).
@@ -118,29 +114,14 @@ void XSLTProcessor::ReportXSLTDisabled(Document& document,
         "removed in this browser. See "
         "https://chromestatus.com/feature/4709671889534976.");
   }
-  if (exception_state) {
-    exception_state->ThrowDOMException(DOMExceptionCode::kNotSupportedError,
-                                       "XSLT is disabled");
-  }
 }
 
-XSLTProcessor::XSLTProcessor(PassKey,
-                             Document& document,
-                             WebFeature feature,
-                             ExceptionState& exception_state)
+XSLTProcessor::XSLTProcessor(PassKey, Document& document)
     : document_(&document) {
-  if (!IsXSLTEnabled(document.GetExecutionContext())) {
-    // Ordinarily we will not get here, since in this case the runtime enabled
-    // feature will be disabled, which removes the XSLTProcessor from IDL.
-    // However, there are corner cases, such as that Finch has disabled XSLT
-    // via the base::Feature, but the user has explicitly set the runtime
-    // enabled feature back to true with `--enable-blink-features`.
-    ReportXSLTDisabled(document, &exception_state);
-    return;
-  }
+  CHECK(IsXSLTEnabled(document.GetExecutionContext()));
   // XSLT is still enabled. Use count, report the deprecation, and add an
   // explicit console message here for visibility, due to crbug.com/40069336.
-  document.CountDeprecation(feature);
+  document.CountDeprecation(WebFeature::kXSLProcessingInstruction);
   AddXSLTConsoleWarning(
       document,
       "XSLTProcessor and XSLT Processing Instructions have been "
@@ -282,69 +263,9 @@ Document* XSLTProcessor::CreateDocumentFromSource(
   return document;
 }
 
-Document* XSLTProcessor::transformToDocument(Node* source_node) {
-  String result_mime_type;
-  String result_string;
-  String result_encoding;
-  if (!TransformToString(source_node, result_mime_type, result_string,
-                         result_encoding))
-    return nullptr;
-  return CreateDocumentFromSource(result_string, result_encoding,
-                                  result_mime_type, source_node, nullptr);
-}
-
-DocumentFragment* XSLTProcessor::transformToFragment(Node* source_node,
-                                                     Document* output_doc) {
-  String result_mime_type;
-  String result_string;
-  String result_encoding;
-
-  // If the output document is HTML, default to HTML method.
-  if (IsA<HTMLDocument>(output_doc))
-    result_mime_type = "text/html";
-
-  if (!TransformToString(source_node, result_mime_type, result_string,
-                         result_encoding))
-    return nullptr;
-  return CreateFragmentForTransformToFragment(result_string, result_mime_type,
-                                              *output_doc);
-}
-
-void XSLTProcessor::setParameter(const String& /*namespaceURI*/,
-                                 const String& local_name,
-                                 const String& value) {
-  // FIXME: namespace support?
-  // should make a QualifiedName here but we'd have to expose the impl
-  parameters_.Set(local_name, value);
-}
-
-String XSLTProcessor::getParameter(const String& /*namespaceURI*/,
-                                   const String& local_name) const {
-  // FIXME: namespace support?
-  // should make a QualifiedName here but we'd have to expose the impl
-  auto it = parameters_.find(local_name);
-  if (it == parameters_.end())
-    return String();
-  return it->value;
-}
-
-void XSLTProcessor::removeParameter(const String& /*namespaceURI*/,
-                                    const String& local_name) {
-  // FIXME: namespace support?
-  parameters_.erase(local_name);
-}
-
-void XSLTProcessor::reset() {
-  stylesheet_.Clear();
-  stylesheet_root_node_.Clear();
-  parameters_.clear();
-}
-
 void XSLTProcessor::Trace(Visitor* visitor) const {
   visitor->Trace(stylesheet_);
-  visitor->Trace(stylesheet_root_node_);
   visitor->Trace(document_);
-  ScriptWrappable::Trace(visitor);
 }
 
 }  // namespace blink

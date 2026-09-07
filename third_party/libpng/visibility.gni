@@ -41,16 +41,6 @@ visibility += [
   "//third_party/weston:cairo_shared",
 ]
 
-# Test/tool-only dependencies under `//third_party/angle`
-# (migrating these to `libpng_testonly_visibility` would require editing
-# ANGLE's `BUILD.gn` files to depend on the `libpng_for_testonly` target).
-visibility += [
-  "//third_party/angle/src/tests:angle_deqp_framework_qphelper",
-  "//third_party/angle/third_party/glmark2:glmark2_common_gl",
-  "//third_party/angle/third_party/glmark2:glmark2_common_gles",
-  "//third_party/angle/util:angle_png_utils",
-]
-
 # Test/tool-only dependencies.
 libpng_testonly_visibility = [
   "//chrome/test:accessibility_live_site_tests",

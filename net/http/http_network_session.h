@@ -52,14 +52,12 @@ class NetLog;
 #if BUILDFLAG(ENABLE_REPORTING)
 class NetworkErrorLoggingService;
 #endif
-class NetworkQualityEstimator;
 class ProxyDelegate;
 class ProxyChain;
 #if BUILDFLAG(ENABLE_REPORTING)
 class ReportingService;
 #endif
 class SCTAuditingDelegate;
-class SocketPerformanceWatcherFactory;
 class SSLConfigService;
 class TransportSecurityState;
 
@@ -174,8 +172,6 @@ struct NET_EXPORT HttpNetworkSessionContext {
   raw_ptr<HttpAuthHandlerFactory> http_auth_handler_factory;
   raw_ptr<HttpServerProperties> http_server_properties;
   raw_ptr<NetLog> net_log;
-  raw_ptr<SocketPerformanceWatcherFactory> socket_performance_watcher_factory;
-  raw_ptr<NetworkQualityEstimator> network_quality_estimator;
 #if BUILDFLAG(ENABLE_REPORTING)
   raw_ptr<ReportingService> reporting_service;
   raw_ptr<NetworkErrorLoggingService> network_error_logging_service;

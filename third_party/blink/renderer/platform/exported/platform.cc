@@ -38,8 +38,6 @@
 #include "base/threading/thread_checker.h"
 #include "base/trace_event/memory_dump_manager.h"
 #include "build/build_config.h"
-#include "components/viz/common/gpu/raster_context_provider.h"
-#include "gpu/ipc/client/gpu_channel_host.h"
 #include "services/network/public/cpp/shared_url_loader_factory.h"
 #include "third_party/blink/public/common/thread_safe_browser_interface_broker_proxy.h"
 #include "third_party/blink/public/platform/scheduler/web_thread_scheduler.h"
@@ -253,25 +251,6 @@ void Platform::CreateServiceWorkerSubresourceLoaderFactory(
 ThreadSafeBrowserInterfaceBrokerProxy* Platform::GetBrowserInterfaceBroker() {
   DEFINE_STATIC_LOCAL(DefaultBrowserInterfaceBrokerProxy, proxy, ());
   return &proxy;
-}
-
-scoped_refptr<viz::RasterContextProvider>
-Platform::SharedCompositorWorkerContextProvider(
-    cc::RasterDarkModeFilter* dark_mode_filter) {
-  return nullptr;
-}
-
-
-scoped_refptr<gpu::GpuChannelHost> Platform::EstablishGpuChannelSync() {
-  return nullptr;
-}
-
-bool Platform::IsGpuRemoteDisconnected() {
-  return false;
-}
-
-void Platform::EstablishGpuChannel(EstablishGpuChannelCallback callback) {
-  std::move(callback).Run(nullptr);
 }
 
 gfx::ColorSpace Platform::GetRenderingColorSpace() const {

@@ -16,8 +16,6 @@ struct SkHighContrastConfig;
 
 namespace cc {
 
-class PaintOpWriter;
-class PaintOpReader;
 
 class CC_PAINT_EXPORT ColorFilter : public SkRefCnt {
  public:
@@ -46,8 +44,6 @@ class CC_PAINT_EXPORT ColorFilter : public SkRefCnt {
  protected:
   friend class ColorFilterPaintFilter;
   friend class PaintFlags;
-  friend class PaintOpReader;
-  friend class PaintOpWriter;
 
   enum class Type {
     // kNull is for serialization purposes only, to indicate a null color
@@ -64,10 +60,6 @@ class CC_PAINT_EXPORT ColorFilter : public SkRefCnt {
   };
 
   explicit ColorFilter(Type type, sk_sp<SkColorFilter> sk_color_filter);
-  // These functions don't handle type_. It's handled in PaintOpWriter/Reader.
-  virtual size_t SerializedDataSize() const;
-  virtual void SerializeData(PaintOpWriter& writer) const;
-  static sk_sp<ColorFilter> Deserialize(PaintOpReader& reader, Type type);
 
   Type type_;
   sk_sp<SkColorFilter> sk_color_filter_;

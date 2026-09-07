@@ -54,8 +54,7 @@ XSLStyleSheet::XSLStyleSheet(XSLStyleSheet* parent_style_sheet,
       stylesheet_doc_(nullptr),
       stylesheet_doc_taken_(false),
       compilation_failed_(false),
-      parent_style_sheet_(parent_style_sheet),
-      owner_document_(nullptr) {
+      parent_style_sheet_(parent_style_sheet) {
   CHECK(XSLTProcessor::IsXSLTEnabled(
       OwnerDocument() ? OwnerDocument()->GetExecutionContext() : nullptr));
 }
@@ -73,30 +72,9 @@ XSLStyleSheet::XSLStyleSheet(Node* parent_node,
       stylesheet_doc_(nullptr),
       stylesheet_doc_taken_(false),
       compilation_failed_(false),
-      parent_style_sheet_(nullptr),
-      owner_document_(nullptr) {
+      parent_style_sheet_(nullptr) {
   CHECK(XSLTProcessor::IsXSLTEnabled(
       OwnerDocument() ? OwnerDocument()->GetExecutionContext() : nullptr));
-}
-
-XSLStyleSheet::XSLStyleSheet(Document* owner_document,
-                             Node* style_sheet_root_node,
-                             const String& original_url,
-                             const KURL& final_url,
-                             bool embedded)
-    : owner_node_(style_sheet_root_node),
-      original_url_(original_url),
-      final_url_(final_url),
-      is_disabled_(false),
-      embedded_(embedded),
-      processed_(true),  // The root sheet starts off processed.
-      stylesheet_doc_(nullptr),
-      stylesheet_doc_taken_(false),
-      compilation_failed_(false),
-      parent_style_sheet_(nullptr),
-      owner_document_(owner_document) {
-  CHECK(XSLTProcessor::IsXSLTEnabled(
-      owner_document ? owner_document->GetExecutionContext() : nullptr));
 }
 
 XSLStyleSheet::~XSLStyleSheet() {
@@ -293,8 +271,6 @@ xsltStylesheetPtr XSLStyleSheet::CompileStyleSheet() {
 Document* XSLStyleSheet::OwnerDocument() {
   for (XSLStyleSheet* style_sheet = this; style_sheet;
        style_sheet = style_sheet->parentStyleSheet()) {
-    if (style_sheet->owner_document_)
-      return style_sheet->owner_document_.Get();
     Node* node = style_sheet->ownerNode();
     if (node)
       return &node->GetDocument();
@@ -347,7 +323,6 @@ void XSLStyleSheet::Trace(Visitor* visitor) const {
   visitor->Trace(owner_node_);
   visitor->Trace(children_);
   visitor->Trace(parent_style_sheet_);
-  visitor->Trace(owner_document_);
   StyleSheet::Trace(visitor);
 }
 

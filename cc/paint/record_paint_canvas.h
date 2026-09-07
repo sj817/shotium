@@ -15,7 +15,6 @@
 #include "cc/paint/paint_flags.h"
 #include "cc/paint/paint_op_buffer.h"
 #include "cc/paint/paint_record.h"
-#include "cc/paint/skottie_color_map.h"
 #include "third_party/skia/include/core/SkRect.h"
 #include "third_party/skia/include/core/SkRefCnt.h"
 #include "third_party/skia/include/utils/SkNoDrawCanvas.h"
@@ -54,8 +53,6 @@ class CC_PAINT_EXPORT RecordPaintCanvas : public PaintCanvas {
                              size_t* rowBytes,
                              SkIPoint* origin = nullptr) override;
 
-  void flush() override;
-  bool NeedsFlush() const override;
 
   int save() override;
   int saveLayer(const PaintFlags& flags) override;
@@ -129,12 +126,6 @@ class CC_PAINT_EXPORT RecordPaintCanvas : public PaintCanvas {
                     scoped_refptr<RefCountedBuffer<SkPoint>> uvs,
                     scoped_refptr<RefCountedBuffer<uint16_t>> indices,
                     const PaintFlags& flags) override;
-  void drawSkottie(scoped_refptr<SkottieWrapper> skottie,
-                   const SkRect& dst,
-                   float t,
-                   SkottieFrameDataMap images,
-                   const SkottieColorMap& color_map,
-                   SkottieTextPropertyValueMap text_map) override;
   void drawTextBlob(sk_sp<SkTextBlob> blob,
                     SkScalar x,
                     SkScalar y,
@@ -162,42 +153,6 @@ class CC_PAINT_EXPORT RecordPaintCanvas : public PaintCanvas {
   using PaintCanvas::drawPath;
   using PaintCanvas::drawPicture;
 
-#if DCHECK_IS_ON()
-  void EnterDisableFlushCheckScope() { ++disable_flush_check_scope_; }
-  void LeaveDisableFlushCheckScope() { DCHECK(disable_flush_check_scope_--); }
-  bool IsInDisableFlushCheckScope() { return disable_flush_check_scope_; }
-#endif
-
-  class DisableFlushCheckScope {
-    // Create an object of this type to temporarily allow draw commands to be
-    // recorded while the recording is marked as needing to be flushed.  This is
-    // meant to be used to allow client code to issue the commands necessary to
-    // reach a state where the recording can be safely flushed before beginning
-    // to enforce a check that forbids recording additional draw commands after
-    // a flush was requested.
-   public:
-    explicit DisableFlushCheckScope(RecordPaintCanvas* canvas) {
-#if DCHECK_IS_ON()
-      // We require that NeedsFlush be false upon entering a top-level scope
-      // to prevent consecutive scopes from evading evading flush checks
-      // indefinitely.
-      DCHECK(!canvas->NeedsFlush() || canvas->IsInDisableFlushCheckScope());
-      canvas->EnterDisableFlushCheckScope();
-      canvas_ = canvas;
-#endif
-    }
-    ~DisableFlushCheckScope() {
-#if DCHECK_IS_ON()
-      canvas_->LeaveDisableFlushCheckScope();
-#endif
-    }
-
-   private:
-#if DCHECK_IS_ON()
-    raw_ptr<RecordPaintCanvas> canvas_;
-#endif
-  };
-
  protected:
   virtual void clipRRectInternal(const SkRRect& rrect,
                                  SkClipOp op,
@@ -216,10 +171,6 @@ class CC_PAINT_EXPORT RecordPaintCanvas : public PaintCanvas {
   PaintOpBuffer buffer_;
   int save_count_ = 1;
 
-  bool needs_flush_ = false;
-#if DCHECK_IS_ON()
-  unsigned disable_flush_check_scope_ = 0;
-#endif
   // These fields are used to determine if lines should be rastered as paths.
   // Rasterization may batch operations, and that batching may be disabled if
   // drawLine() is used instead of drawPath(). These members are used to

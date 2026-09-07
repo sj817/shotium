@@ -77,9 +77,6 @@
 /leveldb
 /libassistant
 /libc++-static/libc++.a
-/libei/cipd/bin/
-/libei/cipd/include/
-/libei/cipd/lib64/
 /libgifcodec
 /libjingle/source
 /libupnp

@@ -438,8 +438,6 @@ class CORE_EXPORT CSSSelector {
     kPseudoMuted,
     kPseudoVolumeLocked,
 
-    // ::skeleton for preview rendering
-    kPseudoSkeleton,
   };
 
   enum class AttributeMatchType : int {

@@ -29,12 +29,6 @@
 
 import copy
 import os
-import sys
-
-if sys.version_info.major == 2:
-    import cPickle as pickle
-else:
-    import pickle
 
 from blinkbuild.name_style_converter import NameStyleConverter
 import make_runtime_features_utilities as util
@@ -65,12 +59,10 @@ class BaseRuntimeFeatureWriter(json5_generator.Writer):
         assert self.file_basename
 
         self._features = self.json5_file.name_dictionaries
-        origin_trial_set = util.origin_trials(self._features)
+        util.validate_runtime_features_graph(self._features)
 
         # Make sure the resulting dictionaries have all the keys we expect.
         for feature in self._features:
-            feature['in_origin_trial'] = str(
-                feature['name']) in origin_trial_set
             feature['data_member_name'] = self._data_member_name(
                 feature['name'])
             # If 'status' is a dict, add the values for all the not-mentioned platforms too.
@@ -85,9 +77,6 @@ class BaseRuntimeFeatureWriter(json5_generator.Writer):
             elif feature['base_feature'] == '':
                 feature['base_feature'] = feature['name']
 
-        self._origin_trial_features = [
-            feature for feature in self._features if feature['in_origin_trial']
-        ]
         self._header_guard = self.make_header_guard(self._relative_output_dir +
                                                     self.file_basename + '.h')
 
@@ -132,38 +121,18 @@ class RuntimeFeatureWriter(BaseRuntimeFeatureWriter):
             self.generate_web_implementation,
         }
 
-        # Write features to file for bindings generation
-        self._write_features_to_pickle_file(output_dir)
         self._overridable_features = util.overridable_features(self._features)
 
         overridable_set = set()
         for feature in self._overridable_features:
             overridable_set.add(str(feature['name']))
 
+        context_dependent_set = util.context_dependent_features(self._features)
         for feature in self._features:
+            feature['is_context_dependent'] = str(
+                feature['name']) in context_dependent_set
             feature['is_overridable_feature'] = str(
                 feature['name']) in overridable_set
-
-    def _write_features_to_pickle_file(self, platform_output_dir):
-        # TODO(yashard): Get the file path from args instead of hardcoding it.
-        file_name = os.path.join(platform_output_dir, '..', 'build', 'scripts',
-                                 'runtime_enabled_features.pickle')
-        features_map = {}
-        for feature in self._features:
-            features_map[str(feature['name'])] = {
-                'in_origin_trial': feature['in_origin_trial']
-            }
-        if os.path.isfile(file_name):
-            with open(os.path.abspath(file_name)) as pickle_file:
-                # pylint: disable=broad-except
-                try:
-                    if pickle.load(pickle_file) == features_map:
-                        return
-                except Exception:
-                    # If trouble unpickling, overwrite
-                    pass
-        with open(os.path.abspath(file_name), 'wb') as pickle_file:
-            pickle.dump(features_map, pickle_file)
 
     def _template_inputs(self):
         # Sorted by name so that the generated lookup tables can be binary
@@ -183,7 +152,6 @@ class RuntimeFeatureWriter(BaseRuntimeFeatureWriter):
             'feature_sets': self._feature_sets(),
             'platforms': self._platforms(),
             'input_files': self._input_files,
-            'origin_trial_controlled_features': self._origin_trial_features,
             'header_guard': self._header_guard,
         }
 

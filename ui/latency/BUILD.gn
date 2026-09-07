@@ -45,7 +45,6 @@ test("latency_unittests") {
     sources += [ "mojom/mojom_traits_unittest.cc" ]
     deps += [
       "//mojo/public/cpp/bindings",
-      "//ui/gfx/ipc/geometry",
       "//ui/latency/mojom:test_interfaces",
     ]
   }

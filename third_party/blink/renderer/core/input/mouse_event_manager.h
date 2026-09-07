@@ -14,29 +14,15 @@
 #include "third_party/blink/renderer/core/input/boundary_event_dispatcher.h"
 #include "third_party/blink/renderer/core/page/event_with_hit_test_results.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
-#include "ui/base/dragdrop/mojom/drag_drop_types.mojom-blink-forward.h"
 
 namespace blink {
 
 class ContainerNode;
-class DragState;
-class DataTransfer;
 class Element;
 class HitTestResult;
 class InputDeviceCapabilities;
 class LocalFrame;
 class ScrollManager;
-
-enum class DragHandlingResult {
-  // The event was not handled and callers should try to use the mouse event for
-  // something else.
-  kNotHandled,
-  // The drag attempt event was handled, but a drag was not started. For
-  // example, if `event.preventDefault()` was called on drag start.
-  kHandledDragNotStarted,
-  // The drag attempt successfully initiated a drag.
-  kHandledDragStarted,
-};
 
 // This class takes care of dispatching all mouse events and keeps track of
 // positions and states of mouse.
@@ -80,14 +66,6 @@ class CORE_EXPORT MouseEventManager final
       PointerEventFactory::PointerTarget* pointer_down_target,
       PointerEventFactory::PointerTarget* pointer_up_target);
 
-  WebInputEventResult DispatchDragSrcEvent(const AtomicString& event_type,
-                                           const WebMouseEvent&);
-  WebInputEventResult DispatchDragEvent(const AtomicString& event_type,
-                                        Node* target,
-                                        Node* related_target,
-                                        const WebMouseEvent&,
-                                        DataTransfer*);
-
   // Resets the internal state of this object.
   void Clear();
 
@@ -110,10 +88,6 @@ class CORE_EXPORT MouseEventManager final
   void SetLastKnownMousePosition(const WebMouseEvent&);
   void SetLastMousePositionAsUnknown();
 
-  DragHandlingResult HandleDragDropIfPossible(
-      const GestureEventWithHitTestResults&,
-      PointerId pointer_id);
-
   WebInputEventResult HandleMouseDraggedEvent(
       const MouseEventWithHitTestResults&);
   WebInputEventResult HandleMousePressEvent(
@@ -121,16 +95,10 @@ class CORE_EXPORT MouseEventManager final
   WebInputEventResult HandleMouseReleaseEvent(
       const MouseEventWithHitTestResults&);
 
-  DragState& GetDragState();
 
   void FocusDocumentView();
 
-  // Resets the state that indicates the next events could cause a drag. It is
-  // called when we realize the next events should not cause drag based on the
-  // drag heuristics.
-  void ClearDragHeuristicState();
-
-  void DragSourceEndedAt(const WebMouseEvent&, ui::mojom::blink::DragOperation);
+  void ResetMousePressState();
 
   void UpdateSelectionForMouseDrag();
 
@@ -166,12 +134,10 @@ class CORE_EXPORT MouseEventManager final
   void SetMouseDownElement(Element*);
   void SetClickCount(int);
 
-  bool MouseDownMayStartDrag();
 
   void RecomputeMouseHoverStateIfNeeded();
 
   void MarkHoverStateDirty();
-  void ReportDragEnd();
 
  private:
   class MouseEventBoundaryEventDispatcher : public BoundaryEventDispatcher {
@@ -193,28 +159,7 @@ class CORE_EXPORT MouseEventManager final
     const WebMouseEvent* web_mouse_event_;
   };
 
-  // These values are persisted to logs. Entries should not be renumbered and
-  // numeric values should never be reused.
-  // LINT.IfChange(DragAndDropToolType)
-  enum class DragAndDropToolType {
-    kUnknown = 0,
-    kMouse,
-    kFinger,
-    kStylusViaGesture,
-    kStylusViaButton,
-    kMaxValue = kStylusViaButton,
-  };
-  // LINT.ThenChange(//tools/metrics/histograms/metadata/event/enums.xml:DragAndDropToolType)
-
-  bool DragThresholdExceeded(const gfx::Point&) const;
-  DragHandlingResult HandleDrag(const MouseEventWithHitTestResults&,
-                                DragAndDropToolType);
-  bool TryStartDrag(const MouseEventWithHitTestResults&);
-  void ClearDragDataTransfer();
-  DataTransfer* CreateDraggingDataTransfer() const;
-
   void HandleRemoveSubtree(Node&, bool include_root);
-  void ResetDragSource();
   bool HoverStateDirty();
 
   // NOTE: If adding a new field to this class please ensure that it is
@@ -245,7 +190,6 @@ class CORE_EXPORT MouseEventManager final
 
   unsigned mouse_down_may_start_autoscroll_ : 1;
   unsigned svg_pan_ : 1;
-  unsigned mouse_down_may_start_drag_ : 1;
 
   // Tracks the element that received the last mousedown event. For
   // hit-testable pseudos, this is the pseudo itself. Cleared on mouseup.
@@ -255,8 +199,6 @@ class CORE_EXPORT MouseEventManager final
   int click_count_ = 0;
 
   gfx::Point mouse_down_pos_;
-  base::TimeTicks mouse_down_timestamp_;
-  WebMouseEvent mouse_down_;
 
   PhysicalOffset drag_start_pos_in_root_frame_;
   // This indicates that whether we should update the hover at each begin
@@ -264,7 +206,6 @@ class CORE_EXPORT MouseEventManager final
   // ends, and at each begin frame, we will dispatch a fake mouse move event to
   // update hover when this is true.
   bool hover_state_dirty_ = false;
-  DragAndDropToolType drag_initiator_ = DragAndDropToolType::kUnknown;
 };
 
 }  // namespace blink

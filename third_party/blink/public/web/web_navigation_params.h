@@ -204,10 +204,6 @@ struct BLINK_EXPORT WebNavigationInfo {
   enum class ArchiveStatus { Absent, Present };
   ArchiveStatus archive_status = ArchiveStatus::Absent;
 
-  // The origin trial features activated in the document initiating this
-  // navigation that should be applied in the document being navigated to.
-  std::vector<int> initiator_origin_trial_features;
-
   // The value of hrefTranslate attribute of a link, if this navigation was
   // inititated by clicking a link.
   WebString href_translate;
@@ -220,11 +216,6 @@ struct BLINK_EXPORT WebNavigationInfo {
 
   // The frame token of the initiator Frame.
   std::optional<LocalFrameToken> initiator_frame_token;
-
-  // A handle for keeping the initiator RenderFrameHost's
-  // NavigationStateKeepAlive alive until we create the NavigationRequest.
-  CrossVariantMojoRemote<mojom::NavigationStateKeepAliveHandleInterfaceBase>
-      initiator_navigation_state_keep_alive_handle;
 
   // Whether this navigation was initiated by the container, e.g. iframe changed
   // src. Only container-initiated navigation report resource timing to the
@@ -489,10 +480,6 @@ struct BLINK_EXPORT WebNavigationParams {
   // An optional tick clock to be used for document loader timing. This is used
   // for testing.
   raw_ptr<const base::TickClock> tick_clock = nullptr;
-  // The origin trial features activated in the document initiating this
-  // navigation that should be applied in the document being navigated to.
-  std::vector<int> initiator_origin_trial_features;
-
   // UKM source id to be associated with the Document that will be installed
   // in the current frame.
   ukm::SourceId document_ukm_source_id = ukm::kInvalidSourceId;
@@ -500,9 +487,6 @@ struct BLINK_EXPORT WebNavigationParams {
   // The frame policy specified by the frame owner element.
   // Should be std::nullopt for top level navigations
   std::optional<FramePolicy> frame_policy;
-
-  // A list of origin trial names to enable for the document being loaded.
-  std::vector<WebString> force_enabled_origin_trials;
 
   // The AgentClusterKey to use to obtain an agent cluster to commit the
   // navigation.

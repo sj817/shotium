@@ -830,7 +830,6 @@ SelectorChecker::FeaturelessMatch SelectorChecker::MatchShadowHost(
     case CSSSelector::kPseudoSelectContainsInput:
     case CSSSelector::kPseudoOverscrollBackdrop:
     case CSSSelector::kPseudoSelectHasSlottedButton:
-    case CSSSelector::kPseudoSkeleton:
       // These pseudos are not allowed to match featureless elements. When
       // adding new pseudos here, they would typically be allowed if they are
       // logical pseudos which take selector arguments.
@@ -2504,11 +2503,9 @@ bool SelectorChecker::CheckPseudoClass(const SelectorCheckingContext& context,
         return form_element->MatchesToolFormActivePseudoClass();
       }
       return false;
-    case CSSSelector::kPseudoUnbounded: {
-      DCHECK(RuntimeEnabledFeatures::UnboundedElementEnabled());
-      auto* html_element = DynamicTo<HTMLElement>(element);
-      return html_element && html_element->IsUnboundedElementActive();
-    }
+    case CSSSelector::kPseudoUnbounded:
+      // Static documents never activate an external unbounded surface.
+      return false;
     case CSSSelector::kPseudoToolSubmitActive:
       if (auto* form_control_element =
               DynamicTo<HTMLFormControlElement>(element)) {

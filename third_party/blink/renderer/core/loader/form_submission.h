@@ -34,7 +34,6 @@
 #include "base/time/time.h"
 #include "mojo/public/cpp/bindings/pending_remote.h"
 #include "third_party/blink/public/common/tokens/tokens.h"
-#include "third_party/blink/public/mojom/frame/remote_frame.mojom-blink-forward.h"
 #include "third_party/blink/public/mojom/frame/triggering_event_info.mojom-blink-forward.h"
 #include "third_party/blink/public/web/web_frame_load_type.h"
 #include "third_party/blink/renderer/core/loader/frame_loader_types.h"
@@ -129,9 +128,7 @@ class FormSubmission final : public GarbageCollected<FormSubmission> {
       const base::UnguessableToken& initiator_state_token,
       const DocumentToken& initiator_document_token,
       bool has_rel_opener,
-      SourceLocation* source_location,
-      mojo::PendingRemote<mojom::blink::NavigationStateKeepAliveHandle>
-          initiator_navigation_state_keep_alive_handle);
+      SourceLocation* source_location);
   // FormSubmission for DialogMethod
   explicit FormSubmission(const String& result);
 
@@ -179,11 +176,6 @@ class FormSubmission final : public GarbageCollected<FormSubmission> {
   // the `FrameLoadRequest` will not return the correct location.
   Member<SourceLocation> source_location_;
 
-  // Since form submissions are scheduled asynchronously, we need to keep a
-  // handle to the initiator NavigationStateKeepAliveHandle. This ensures that
-  // it remains available in the browser until we create the NavigationRequest.
-  mojo::PendingRemote<mojom::blink::NavigationStateKeepAliveHandle>
-      initiator_navigation_state_keep_alive_handle_;
 };
 
 }  // namespace blink

@@ -116,7 +116,6 @@ void PaintTiming::MarkFirstPaint() {
   }
   DCHECK_EQ(IgnorePaintTimingScope::IgnoreDepth(), 0);
   SetFirstPaint(base::TimeTicks::Now());
-  pending_paint_events_.insert(PaintEvent::kFirstPaint);
 }
 
 void PaintTiming::MarkFirstContentfulPaint() {
@@ -141,7 +140,6 @@ void PaintTiming::MarkFirstImagePaint() {
   DCHECK_EQ(IgnorePaintTimingScope::IgnoreDepth(), 0);
   relevant_paint_details.first_image_paint_ = base::TimeTicks::Now();
   SetFirstContentfulPaint(relevant_paint_details.first_image_paint_);
-  Mark(PaintEvent::kFirstImagePaint);
 }
 
 void PaintTiming::MarkFirstEligibleToPaint() {
@@ -154,9 +152,7 @@ void PaintTiming::MarkFirstEligibleToPaint() {
 
 // We deliberately use |paint_details_.first_paint_| here rather than
 // |paint_details_.first_paint_presentation_|, because
-// |paint_details_.first_paint_presentation_| is set asynchronously and we need
-// to be able to rely on a synchronous check that SetFirstPaintPresentation
-// hasn't been scheduled or run.
+// eligibility is determined by synchronous CPU painting.
 void PaintTiming::MarkIneligibleToPaint() {
   if (first_eligible_to_paint_.is_null() ||
       !paint_details_.first_paint_.is_null()) {
@@ -165,34 +161,6 @@ void PaintTiming::MarkIneligibleToPaint() {
 
   first_eligible_to_paint_ = base::TimeTicks();
   NotifyPaintTimingChanged();
-}
-
-void PaintTiming::SetFirstMeaningfulPaintCandidate(base::TimeTicks timestamp) {
-  if (!first_meaningful_paint_candidate_.is_null())
-    return;
-  first_meaningful_paint_candidate_ = timestamp;
-  if (GetFrame() && GetFrame()->View() && !GetFrame()->View()->IsAttached()) {
-    GetFrame()->GetFrameScheduler()->OnFirstMeaningfulPaint();
-  }
-}
-
-void PaintTiming::SetFirstMeaningfulPaint(
-    base::TimeTicks presentation_time,
-    FirstMeaningfulPaintDetector::HadUserInput had_input) {
-  DCHECK(first_meaningful_paint_presentation_.is_null());
-  DCHECK(!presentation_time.is_null());
-
-  TRACE_EVENT_MARK_WITH_TIMESTAMP2("loading,rail,devtools.timeline",
-                                   "firstMeaningfulPaint", presentation_time,
-                                   "frame", GetFrameIdForTracing(GetFrame()),
-                                   "afterUserInput", had_input);
-
-  // Notify FMP for UMA only if there's no user input before FMP, so that layout
-  // changes caused by user interactions wouldn't be considered as FMP.
-  if (had_input == FirstMeaningfulPaintDetector::kNoUserInput) {
-    first_meaningful_paint_presentation_ = presentation_time;
-    NotifyPaintTimingChanged();
-  }
 }
 
 void PaintTiming::NotifyPaint(bool is_first_paint,
@@ -207,7 +175,6 @@ void PaintTiming::NotifyPaint(bool is_first_paint,
     MarkFirstContentfulPaint();
   if (image_painted)
     MarkFirstImagePaint();
-  fmp_detector_->NotifyPaint();
 
   if (is_first_paint)
     GetFrame()->OnFirstPaint(text_painted, image_painted);
@@ -219,20 +186,17 @@ void PaintTiming::DiscardPresentationCallbacks() {
   // Performance entries for a frame that will never be presented.
   paint_timing_detector_->GetTextPaintTimingDetector().TakePaintTimingCallback();
   paint_timing_detector_->GetImagePaintTimingDetector().TakePaintTimingCallback();
-  pending_paint_events_.clear();
 }
 
 void PaintTiming::Trace(Visitor* visitor) const {
   visitor->Trace(paint_timing_detector_);
-  visitor->Trace(fmp_detector_);
   visitor->Trace(largest_contentful_paint_manager_);
   Supplement<Document>::Trace(visitor);
 }
 
 PaintTiming::PaintTiming(Document& document)
     : Supplement<Document>(document),
-      paint_timing_detector_(MakeGarbageCollected<PaintTimingDetector>(this)),
-      fmp_detector_(MakeGarbageCollected<FirstMeaningfulPaintDetector>(this)) {
+      paint_timing_detector_(MakeGarbageCollected<PaintTimingDetector>(this)) {
   // `window` will be null if `document` has already been shut down (frame
   // detach). Typically `PaintTiming` will be created before this, but this
   // isn't guaranteed since it's created lazily.
@@ -266,7 +230,6 @@ void PaintTiming::SetFirstPaint(base::TimeTicks stamp) {
       frame->GetDocument()->MarkFirstPaint();
     }
 
-  pending_paint_events_.insert(PaintEvent::kFirstPaint);
 }
 
 void PaintTiming::SetFirstContentfulPaint(base::TimeTicks stamp) {
@@ -289,169 +252,6 @@ void PaintTiming::SetFirstContentfulPaint(base::TimeTicks stamp) {
     frame->GetFrameScheduler()->OnFirstContentfulPaintInMainFrame();
   }
   SetFirstPaint(stamp);
-  Mark(PaintEvent::kFirstContentfulPaint);
-  NotifyPaintTimingChanged();
-}
-
-void PaintTiming::Mark(PaintEvent event) {
-  pending_paint_events_.insert(event);
-}
-
-void PaintTiming::
-    RegisterNotifyFirstPaintAfterBackForwardCacheRestorePresentationTime(
-        wtf_size_t index) {
-  RegisterNotifyPresentationTime(
-      BindOnce(&PaintTiming::
-                   ReportFirstPaintAfterBackForwardCacheRestorePresentationTime,
-               WrapWeakPersistent(this), index));
-}
-
-void PaintTiming::RegisterNotifyPresentationTime(ReportTimeCallback callback) {
-  // ReportPresentationTime will queue a presentation-promise, the callback is
-  // called when the compositor submission of the current render frame completes
-  // or fails to happen.
-  if (!GetFrame() || !GetFrame()->GetPage()) {
-    return;
-  }
-
-  GetFrame()->GetPage()->GetChromeClient().NotifyPresentationTime(
-      *GetFrame(), std::move(callback));
-}
-
-void PaintTiming::ReportPresentationTime(
-    PaintEvent event,
-    base::TimeTicks rendering_update_end_time,
-    const viz::FrameTimingDetails& presentation_details) {
-  CHECK(IsMainThread());
-  base::TimeTicks timestamp =
-      presentation_details.presentation_feedback.timestamp;
-
-  switch (event) {
-    case PaintEvent::kFirstPaint:
-      SetFirstPaintPresentation(
-          PaintTimingInfo{rendering_update_end_time, timestamp});
-      return;
-    case PaintEvent::kFirstContentfulPaint:
-      SetFirstContentfulPaintPresentation(
-          PaintTimingInfo{rendering_update_end_time, timestamp});
-      RecordFirstContentfulPaintTimingMetrics(presentation_details);
-      return;
-    case PaintEvent::kFirstImagePaint:
-      SetFirstImagePaintPresentation(timestamp);
-      return;
-    default:
-      NOTREACHED();
-  }
-}
-
-void PaintTiming::RecordFirstContentfulPaintTimingMetrics(
-    const viz::FrameTimingDetails& frame_timing_details) {
-  if (frame_timing_details.received_compositor_frame_timestamp ==
-          base::TimeTicks() ||
-      frame_timing_details.embedded_frame_timestamp == base::TimeTicks()) {
-    return;
-  }
-  bool frame_submitted_before_embed =
-      (frame_timing_details.received_compositor_frame_timestamp <
-       frame_timing_details.embedded_frame_timestamp);
-  base::UmaHistogramBoolean("Navigation.FCPFrameSubmittedBeforeSurfaceEmbed",
-                            frame_submitted_before_embed);
-
-  if (frame_submitted_before_embed) {
-    base::UmaHistogramCustomTimes(
-        "Navigation.FCPFrameSubmissionToSurfaceEmbed",
-        frame_timing_details.embedded_frame_timestamp -
-            frame_timing_details.received_compositor_frame_timestamp,
-        base::Milliseconds(1), base::Minutes(3), 50);
-  } else {
-    base::UmaHistogramCustomTimes(
-        "Navigation.SurfaceEmbedToFCPFrameSubmission",
-        frame_timing_details.received_compositor_frame_timestamp -
-            frame_timing_details.embedded_frame_timestamp,
-        base::Milliseconds(1), base::Minutes(3), 50);
-  }
-}
-
-void PaintTiming::ReportFirstPaintAfterBackForwardCacheRestorePresentationTime(
-    wtf_size_t index,
-    const viz::FrameTimingDetails& presentation_details) {
-  CHECK(IsMainThread());
-  SetFirstPaintAfterBackForwardCacheRestorePresentation(
-      presentation_details.presentation_feedback.timestamp, index);
-}
-
-void PaintTiming::SetFirstPaintPresentation(
-    const PaintTimingInfo& paint_timing_info) {
-  PaintDetails& relevant_paint_details = GetRelevantPaintDetails();
-  DCHECK(relevant_paint_details.first_paint_presentation_.is_null());
-  relevant_paint_details.first_paint_presentation_ =
-      paint_timing_info.presentation_time;
-  if (first_paint_presentation_for_ukm_.is_null()) {
-    first_paint_presentation_for_ukm_ = paint_timing_info.presentation_time;
-  }
-  probe::PaintTiming(
-      GetSupplementable(), "firstPaint",
-      relevant_paint_details.first_paint_presentation_.since_origin()
-          .InSecondsF());
-  NotifyPaintTimingChanged();
-}
-
-void PaintTiming::SetFirstContentfulPaintPresentation(
-    const PaintTimingInfo& paint_timing_info) {
-  PaintDetails& relevant_paint_details = GetRelevantPaintDetails();
-  DCHECK(relevant_paint_details.first_contentful_paint_presentation_.is_null());
-  TRACE_EVENT_INSTANT_WITH_TIMESTAMP0(
-      "benchmark,loading", "GlobalFirstContentfulPaint",
-      TRACE_EVENT_SCOPE_GLOBAL, paint_timing_info.presentation_time);
-  relevant_paint_details.first_contentful_paint_presentation_ =
-      paint_timing_info.presentation_time;
-  CHECK(first_contentful_paint_presentation_.is_null());
-  first_contentful_paint_presentation_ = paint_timing_info.presentation_time;
-  probe::PaintTiming(
-      GetSupplementable(), "firstContentfulPaint",
-      relevant_paint_details.first_contentful_paint_presentation_.since_origin()
-          .InSecondsF());
-
-  NotifyPaintTimingChanged();
-  fmp_detector_->NotifyFirstContentfulPaint(
-      paint_details_.first_contentful_paint_presentation_);
-  InteractiveDetector* interactive_detector =
-      InteractiveDetector::From(*GetSupplementable());
-  if (interactive_detector) {
-    interactive_detector->OnFirstContentfulPaint(
-        paint_details_.first_contentful_paint_presentation_);
-  }
-
-  if (GetFrame()) {
-    GetFrame()->OnFirstContentfulPaint(paint_timing_info.presentation_time);
-    GetFrame()->Loader().Progress().DidFirstContentfulPaint();
-
-    // First contentful paint used to be reported to the browser's performance
-    // manager here. OnFirstContentfulPaint() above is Blink bookkeeping;
-    // Shot waits for document load completion and resource requests instead.
-  }
-}
-
-void PaintTiming::SetFirstImagePaintPresentation(base::TimeTicks stamp) {
-  PaintDetails& relevant_paint_details = GetRelevantPaintDetails();
-  DCHECK(relevant_paint_details.first_image_paint_presentation_.is_null());
-  relevant_paint_details.first_image_paint_presentation_ = stamp;
-  probe::PaintTiming(
-      GetSupplementable(), "firstImagePaint",
-      relevant_paint_details.first_image_paint_presentation_.since_origin()
-          .InSecondsF());
-  NotifyPaintTimingChanged();
-}
-
-void PaintTiming::SetFirstPaintAfterBackForwardCacheRestorePresentation(
-    base::TimeTicks stamp,
-    wtf_size_t index) {
-  // The elements are allocated when the page is restored from the cache.
-  DCHECK_GE(first_paints_after_back_forward_cache_restore_presentation_.size(),
-            index);
-  DCHECK(first_paints_after_back_forward_cache_restore_presentation_[index]
-             .is_null());
-  first_paints_after_back_forward_cache_restore_presentation_[index] = stamp;
   NotifyPaintTimingChanged();
 }
 
@@ -480,7 +280,6 @@ void PaintTiming::OnRestoredFromBackForwardCache() {
 
   first_paints_after_back_forward_cache_restore_presentation_.push_back(
       base::TimeTicks());
-  RegisterNotifyFirstPaintAfterBackForwardCacheRestorePresentationTime(index);
 
   request_animation_frames_after_back_forward_cache_restore_.push_back(
       RequestAnimationFrameTimesAfterBackForwardCacheRestore{});

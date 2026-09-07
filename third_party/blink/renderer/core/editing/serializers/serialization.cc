@@ -86,7 +86,6 @@
 #include "third_party/blink/renderer/core/mathml/mathml_element.h"
 #include "third_party/blink/renderer/core/mathml_names.h"
 #include "third_party/blink/renderer/core/page/page.h"
-#include "third_party/blink/renderer/core/sanitizer/sanitizer_api.h"
 #include "third_party/blink/renderer/core/svg/svg_style_element.h"
 #include "third_party/blink/renderer/core/svg/svg_use_element.h"
 #include "third_party/blink/renderer/core/trustedtypes/trusted_types_names.h"
@@ -675,42 +674,6 @@ DocumentFragment* CreateFragmentFromText(const EphemeralRange& context,
     }
     fragment->AppendChild(element);
   }
-  return fragment;
-}
-
-DocumentFragment* CreateFragmentForTransformToFragment(
-    const String& source_string,
-    const String& source_mime_type,
-    Document& output_doc) {
-  DocumentFragment* fragment = output_doc.createDocumentFragment();
-
-  // The HTML spec says that we should execute scripts and set their already
-  // started flag to false for transformToFragment, so we use
-  // kAllowScriptingContentAndDoNotMarkAlreadyStarted in ParseHTML and ParseXML
-  // below. https://html.spec.whatwg.org/multipage/scripting.html#scriptTagXSLT
-
-  if (source_mime_type == "text/html") {
-    // As far as I can tell, there isn't a spec for how transformToFragment is
-    // supposed to work. Based on the documentation I can find, it looks like we
-    // want to start parsing the fragment in the InBody insertion mode.
-    // Unfortunately, that's an implementation detail of the parser. We achieve
-    // that effect here by passing in a fake body element as context for the
-    // fragment.
-    auto* fake_body = MakeGarbageCollected<HTMLBodyElement>(output_doc);
-    fragment->ParseHTML(source_string, fake_body, /*registry*/ nullptr,
-                        kAllowScriptingContentAndDoNotMarkAlreadyStarted);
-  } else if (source_mime_type == "text/plain") {
-    fragment->ParserAppendChild(Text::Create(output_doc, source_string));
-  } else {
-    bool successful_parse =
-        fragment->ParseXML(source_string, nullptr, IGNORE_EXCEPTION,
-                           kAllowScriptingContentAndDoNotMarkAlreadyStarted);
-    if (!successful_parse)
-      return nullptr;
-  }
-
-  // FIXME: Do we need to mess with URLs here?
-
   return fragment;
 }
 

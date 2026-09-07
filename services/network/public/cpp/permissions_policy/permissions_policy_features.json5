@@ -353,11 +353,6 @@
       permissions_policy_name: "fullscreen",
     },
     {
-      name: "Frobulate",
-      permissions_policy_name: "frobulate",
-      depends_on: ["OriginTrialsSampleAPI"],
-    },
-    {
       name: "Gamepad",
       permissions_policy_name: "gamepad",
       feature_default: "EnableForAll",

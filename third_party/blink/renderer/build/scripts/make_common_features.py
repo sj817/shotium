@@ -24,7 +24,6 @@ class CommonFeaturesImplWriter(make_runtime_features.BaseRuntimeFeatureWriter):
             'feature_sets': self._feature_sets(),
             'platforms': self._platforms(),
             'input_files': self._input_files,
-            'origin_trial_controlled_features': self._origin_trial_features,
         }
 
     @template_expander.use_jinja('templates/' + file_basename + '.cc.tmpl')

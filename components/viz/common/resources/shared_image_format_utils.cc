@@ -4,9 +4,6 @@
 
 #include "components/viz/common/resources/shared_image_format_utils.h"
 
-#include <GLES2/gl2.h>
-#include <GLES2/gl2ext.h>
-
 #include <array>
 
 #include "base/check_op.h"

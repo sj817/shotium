@@ -43,7 +43,6 @@ class HttpTransactionFactory;
 class HttpUserAgentSettings;
 class NetLog;
 class NetworkDelegate;
-class NetworkQualityEstimator;
 class ProxyDelegate;
 class SCTAuditingDelegate;
 class SSLConfigService;
@@ -184,12 +183,6 @@ class NET_EXPORT URLRequestContext final {
     return http_user_agent_settings_.get();
   }
 
-  // Gets the NetworkQualityEstimator associated with this context.
-  // May return nullptr.
-  NetworkQualityEstimator* network_quality_estimator() const {
-    return network_quality_estimator_.get();
-  }
-
 #if BUILDFLAG(ENABLE_REPORTING)
   ReportingService* reporting_service() const {
     return reporting_service_.get();
@@ -278,8 +271,6 @@ class NET_EXPORT URLRequestContext final {
   void set_job_factory(std::unique_ptr<const URLRequestJobFactory> job_factory);
   void set_http_user_agent_settings(
       std::unique_ptr<const HttpUserAgentSettings> http_user_agent_settings);
-  void set_network_quality_estimator(
-      NetworkQualityEstimator* network_quality_estimator);
   void set_client_socket_factory(
       std::unique_ptr<ClientSocketFactory> client_socket_factory);
   void set_cache_encryption_delegate(
@@ -352,7 +343,6 @@ class NET_EXPORT URLRequestContext final {
   // `http_network_session_` so it needs to be declared last.
   std::unique_ptr<HttpTransactionFactory> http_transaction_factory_;
 
-  raw_ptr<NetworkQualityEstimator> network_quality_estimator_ = nullptr;
 
   std::unique_ptr<TransportSecurityPersister> transport_security_persister_;
 

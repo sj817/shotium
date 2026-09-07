@@ -21,7 +21,6 @@
 #include "third_party/blink/renderer/core/frame/settings.h"
 #include "third_party/blink/renderer/core/inspector/console_message.h"
 #include "third_party/blink/renderer/core/loader/document_loader.h"
-#include "third_party/blink/renderer/core/origin_trials/origin_trial_context.h"
 #include "third_party/blink/renderer/core/page/chrome_client.h"
 #include "third_party/blink/renderer/core/page/page.h"
 #include "third_party/blink/renderer/core/permissions_policy/document_policy_parser.h"
@@ -32,23 +31,22 @@
 namespace blink {
 namespace {
 
-// Helper function to filter out features that are not in origin trial in
-// ParsedDocumentPolicy.
-DocumentPolicy::ParsedDocumentPolicy FilterByOriginTrial(
+// Filter policy entries by their runtime feature dependencies.
+DocumentPolicy::ParsedDocumentPolicy FilterByRuntimeFeature(
     const DocumentPolicy::ParsedDocumentPolicy& parsed_policy,
     ExecutionContext* context) {
   DocumentPolicy::ParsedDocumentPolicy filtered_policy;
   for (auto i = parsed_policy.feature_state.begin(),
             last = parsed_policy.feature_state.end();
        i != last;) {
-    if (!DisabledByOriginTrial(i->first, context))
+    if (!DisabledByRuntimeFeature(i->first, context))
       filtered_policy.feature_state.insert(*i);
     ++i;
   }
   for (auto i = parsed_policy.endpoint_map.begin(),
             last = parsed_policy.endpoint_map.end();
        i != last;) {
-    if (!DisabledByOriginTrial(i->first, context))
+    if (!DisabledByRuntimeFeature(i->first, context))
       filtered_policy.endpoint_map.insert(*i);
     ++i;
   }
@@ -65,11 +63,9 @@ SecurityContextInit::SecurityContextInit(ExecutionContext* context)
 void SecurityContextInit::ApplyDocumentPolicy(
     DocumentPolicy::ParsedDocumentPolicy& document_policy,
     const String& report_only_document_policy_header) {
-  // Because Document-Policy http header is parsed in DocumentLoader,
-  // when origin trial context is not initialized yet.
-  // Needs to filter out features that are not in origin trial after
-  // we have origin trial information available.
-  document_policy = FilterByOriginTrial(document_policy, execution_context_);
+  // Apply the execution context's runtime feature overrides to the policy
+  // parsed from the Document-Policy header.
+  document_policy = FilterByRuntimeFeature(document_policy, execution_context_);
   if (!document_policy.feature_state.empty()) {
     UseCounter::Count(execution_context_, WebFeature::kDocumentPolicyHeader);
   }
@@ -90,7 +86,7 @@ void SecurityContextInit::ApplyDocumentPolicy(
           report_only_document_policy_header, logger);
   if (report_only_parsed_policy) {
     report_only_document_policy =
-        FilterByOriginTrial(*report_only_parsed_policy, execution_context_);
+        FilterByRuntimeFeature(*report_only_parsed_policy, execution_context_);
     if (!report_only_document_policy.feature_state.empty()) {
       UseCounter::Count(execution_context_,
                         WebFeature::kDocumentPolicyReportOnlyHeader);

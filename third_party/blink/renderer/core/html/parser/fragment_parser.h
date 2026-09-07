@@ -5,7 +5,9 @@
 #ifndef THIRD_PARTY_BLINK_RENDERER_CORE_HTML_PARSER_FRAGMENT_PARSER_H_
 #define THIRD_PARTY_BLINK_RENDERER_CORE_HTML_PARSER_FRAGMENT_PARSER_H_
 
-#include "third_party/blink/renderer/core/sanitizer/sanitizer.h"
+#include "third_party/blink/renderer/core/core_export.h"
+#include "third_party/blink/renderer/platform/wtf/allocator/allocator.h"
+#include "third_party/blink/renderer/platform/wtf/text/atomic_string.h"
 
 
 namespace blink {
@@ -18,12 +20,9 @@ class Element;
 class ExceptionState;
 class FragmentParserConfig;
 class FragmentParserOptions;
-class ParseHTMLUnsafeOptions;
-class SetHTMLOptions;
 class SetHTMLUnsafeOptions;
 class String;
 class TrustedParserOptions;
-class V8UnionSanitizerOrSanitizerConfigOrSanitizerPresets;
 class V8UnionSetHTMLUnsafeOptionsOrTrustedParserOptions;
 
 class CORE_EXPORT FragmentParserConfig {
@@ -42,11 +41,9 @@ class CORE_EXPORT FragmentParserConfig {
   };
 
   static FragmentParserConfig ForContainer(ContainerNode* context,
-                                           Sanitizer::Mode mode,
                                            const AtomicString& interface_name,
                                            const AtomicString& property_name);
 
-  Sanitizer::Mode sanitizer_mode = Sanitizer::Mode::kUnsafe;
   ParseDeclarativeShadowRoots parse_declarative_shadows =
       ParseDeclarativeShadowRoots::kDontParse;
   ForceHtml force_html = ForceHtml::kDontForce;
@@ -70,23 +67,16 @@ class CORE_EXPORT FragmentParserOptions {
   FragmentParserOptions& operator=(const FragmentParserOptions&) = default;
   explicit FragmentParserOptions(TrustedParserOptions* options);
   explicit FragmentParserOptions(SetHTMLUnsafeOptions* options);
-  explicit FragmentParserOptions(ParseHTMLUnsafeOptions* options);
-  explicit FragmentParserOptions(SetHTMLOptions* options);
 
   static FragmentParserOptions From(
       const V8UnionSetHTMLUnsafeOptionsOrTrustedParserOptions* options);
 
   TrustMode trust_mode() const { return trust_mode_; }
   RunScripts run_scripts() const { return run_scripts_; }
-  V8UnionSanitizerOrSanitizerConfigOrSanitizerPresets* sanitizer_init() const {
-    return sanitizer_init_;
-  }
 
  private:
   TrustMode trust_mode_ = TrustMode::kUntrusted;
   RunScripts run_scripts_ = RunScripts::kDontRunScripts;
-  V8UnionSanitizerOrSanitizerConfigOrSanitizerPresets* sanitizer_init_ =
-      nullptr;
 };
 
 DocumentFragment* ParseHTMLFragment(const String& html,

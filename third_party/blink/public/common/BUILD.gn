@@ -76,7 +76,6 @@ component("common") {
   ]
   deps = [
     "//third_party/blink/common",
-    "//ui/events/ipc",
   ]
 }
 
@@ -169,8 +168,6 @@ source_set("headers") {
     "loader/url_loader_throttle.h",
     "loader/worker_main_script_load_parameters.h",
     "logging/logging_utils.h",
-    "messaging/accelerated_image_info.h",
-    "messaging/accelerated_static_bitmap_image_mojom_traits.h",
     "messaging/cloneable_message.h",
     "messaging/cloneable_message_mojom_traits.h",
     "messaging/message_port_channel.h",
@@ -187,17 +184,8 @@ source_set("headers") {
     "navigation/navigation_params_mojom_traits.h",
     "navigation/navigation_policy.h",
     "navigation/resource_intercept_policy.h",
-    "origin_trials/origin_trial_policy.h",
-    "origin_trials/origin_trial_public_key.h",
-    "origin_trials/origin_trials.h",
-    "origin_trials/origin_trials_settings_provider.h",
-    "origin_trials/trial_token.h",
-    "origin_trials/trial_token_result.h",
-    "origin_trials/trial_token_validator.h",
     "page/color_provider_color_maps.h",
     "page/color_provider_color_maps_mojom_traits.h",
-    "page/content_to_visible_time_reporter.h",
-    "page/content_to_visible_time_request.h",
     "page/drag_mojom_traits.h",
     "page/drag_operation.h",
     "page/launching_process_state.h",
@@ -240,7 +228,6 @@ source_set("headers") {
     "web_preferences/web_preferences.h",
     "widget/constants.h",
     "widget/device_emulation_params.h",
-    "widget/visual_properties.h",
   ]
 
   sources += get_target_outputs(":make_generated_permissions_policy_helper")
@@ -261,7 +248,6 @@ source_set("headers") {
     "//third_party/blink/public/common/tokens:tokens_headers",
     "//third_party/blink/public/mojom:mojom_modules_headers",
     "//third_party/blink/public/mojom:mojom_platform_shared",
-    "//third_party/blink/public/mojom/origin_trials:origin_trial_feature",
     "//third_party/liburlpattern",
     "//ui/base/mojom:ui_base_types",
     "//ui/display/mojom",
@@ -276,8 +262,6 @@ source_set("headers") {
     "//base",
     "//cc",
     "//components/content_settings/core/common",
-    "//components/viz/common",
-    "//gpu/command_buffer/common",
     "//mojo/public/cpp/bindings",
     "//mojo/public/cpp/system",
     "//mojo/public/mojom/base",

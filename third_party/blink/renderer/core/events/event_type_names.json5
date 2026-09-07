@@ -343,7 +343,6 @@
     "transitionrun",
     "transitionstart",
     "typechange",
-    "unbounded",
     "uncapturederror",
     "unhandledrejection",
     "unload",

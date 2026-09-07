@@ -12,7 +12,6 @@
 #include "cc/paint/paint_image_generator.h"
 #include "cc/paint/paint_op_buffer.h"
 #include "cc/paint/skia_paint_image_generator.h"
-#include "cc/paint/texture_backing.h"
 #include "third_party/skia/include/core/SkImage.h"
 
 namespace cc {
@@ -47,12 +46,6 @@ class CC_PAINT_EXPORT PaintImageBuilder {
                                 PaintImage::ContentId content_id) {
     DCHECK(!sk_image->isTextureBacked());
     paint_image_.sk_image_ = std::move(sk_image);
-    paint_image_.content_id_ = content_id;
-    return std::move(*this);
-  }
-  PaintImageBuilder&& set_texture_backing(sk_sp<TextureBacking> texture_backing,
-                                          PaintImage::ContentId content_id) {
-    paint_image_.texture_backing_ = std::move(texture_backing);
     paint_image_.content_id_ = content_id;
     return std::move(*this);
   }
@@ -142,7 +135,6 @@ class CC_PAINT_EXPORT PaintImageBuilder {
   PaintImage TakePaintImage();
 
  private:
-  friend class PaintOpReader;
   friend class PaintShader;
   friend class ImagePaintFilter;
   friend PaintImage CreateNonDiscardablePaintImage(const gfx::Size& size);

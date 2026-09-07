@@ -49,7 +49,7 @@ void LazyLoadMediaObserver::StartMonitoringNearViewport(Document* root_document,
         *root_document,
         BindRepeating(&LazyLoadMediaObserver::LoadIfNearViewport,
                       WrapWeakPersistent(this)),
-        LocalFrameUkmAggregator::kLazyLoadIntersectionObserver,
+        /*is_internal=*/true,
         std::move(params));
   }
 

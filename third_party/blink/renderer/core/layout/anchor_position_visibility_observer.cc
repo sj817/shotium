@@ -59,8 +59,7 @@ void AnchorPositionVisibilityObserver::MonitorAnchor(const Element* anchor) {
           BindRepeating(&AnchorPositionVisibilityObserver::
                             OnIntersectionVisibilityChanged,
                         WrapWeakPersistent(this)),
-          // Do not record metrics for this internal intersection observer.
-          std::nullopt,
+          /*is_internal=*/true,
           IntersectionObserver::Params{
               .root = intersection_root->GetNode(),
               .thresholds = {IntersectionObserver::kMinimumThreshold},

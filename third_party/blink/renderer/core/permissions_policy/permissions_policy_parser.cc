@@ -20,7 +20,6 @@
 #include "third_party/blink/renderer/core/frame/local_dom_window.h"
 #include "third_party/blink/renderer/core/frame/web_feature.h"
 #include "third_party/blink/renderer/core/html/parser/html_parser_idioms.h"
-#include "third_party/blink/renderer/core/origin_trials/origin_trial_context.h"
 #include "third_party/blink/renderer/platform/allow_discouraged_type.h"
 #include "third_party/blink/renderer/platform/instrumentation/use_counter.h"
 #include "third_party/blink/renderer/platform/json/json_values.h"
@@ -199,7 +198,7 @@ ParsingContext::ParseFeatureName(const String& feature_name) {
     logger_.Warn(StrCat({"Unrecognized feature: '", feature_name, "'."}));
     return std::nullopt;
   }
-  if (DisabledByOriginTrial(feature_name, execution_context_)) {
+  if (DisabledByRuntimeFeature(feature_name, execution_context_)) {
     logger_.Warn(StrCat({"Origin trial controlled feature not enabled: '",
                          feature_name, "'."}));
     return std::nullopt;
@@ -838,7 +837,7 @@ const Vector<String> GetAvailableFeatures(ExecutionContext* execution_context) {
   bool is_isolated_context =
       execution_context && execution_context->IsIsolatedContext();
   for (const auto& feature : GetDefaultFeatureNameMap(is_isolated_context)) {
-    if (!DisabledByOriginTrial(feature.key, execution_context) &&
+    if (!DisabledByRuntimeFeature(feature.key, execution_context) &&
         !IsFeatureForMeasurementOnly(feature.value)) {
       available_features.push_back(feature.key);
     }

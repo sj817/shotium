@@ -5,9 +5,6 @@
 #ifndef THIRD_PARTY_BLINK_RENDERER_PLATFORM_GRAPHICS_STATIC_BITMAP_IMAGE_H_
 #define THIRD_PARTY_BLINK_RENDERER_PLATFORM_GRAPHICS_STATIC_BITMAP_IMAGE_H_
 
-#include "base/byte_size.h"
-#include "base/notreached.h"
-#include "components/viz/common/resources/shared_image_format_utils.h"
 #include "third_party/blink/renderer/platform/graphics/image.h"
 #include "third_party/blink/renderer/platform/wtf/casting.h"
 #include "third_party/skia/include/core/SkRefCnt.h"
@@ -45,10 +42,6 @@ class PLATFORM_EXPORT StaticBitmapImage : public Image {
   virtual bool IsValid() const { return true; }
   virtual void Transfer() {}
 
-  // Creates a non-gpu copy of the image, or returns this if image is already
-  // non-gpu.
-  virtual scoped_refptr<StaticBitmapImage> MakeUnaccelerated() { return this; }
-
   bool IsPremultiplied() const {
     return GetAlphaType() == SkAlphaType::kPremul_SkAlphaType;
   }
@@ -66,24 +59,10 @@ class PLATFORM_EXPORT StaticBitmapImage : public Image {
     orientation_ = orientation;
   }
 
-  // This function results in a readback due to using SkImage::readPixels().
-  // Returns transparent black pixels if the input SkImageInfo.bounds() does
-  // not intersect with the input image boundaries. When `apply_orientation`
-  // is true this method will orient the data according to the source's EXIF
-  // information.
-  Vector<uint8_t> CopyImageData(const SkImageInfo& info,
-                                bool apply_orientation);
-
   virtual gfx::Size GetSize() const = 0;
   virtual SkAlphaType GetAlphaType() const = 0;
   virtual gfx::ColorSpace GetColorSpace() const = 0;
-  virtual viz::SharedImageFormat GetSharedImageFormat() const = 0;
   virtual const gfx::HDRMetadata& GetHdrMetadata() const = 0;
-
-  base::ByteSize EstimatedSizeInBytes() const {
-    return base::ByteSize(
-        GetSharedImageFormat().EstimatedSizeInBytes(GetSize()));
-  }
 
  protected:
   // Helper for sub-classes

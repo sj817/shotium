@@ -199,7 +199,6 @@ def __thin_archive(ctx, cmd):
             return
     else:
         # check command line to see "-T" and "-S".
-        # rm -f obj/third_party/angle/libangle_common.a && "../../third_party/llvm-build/Release+Asserts/bin/llvm-ar" -T -S -r -c -D obj/third_party/angle/libangle_common.a @"obj/third_party/angle/libangle_common.a.rsp"
         if not ("-T" in cmd.args[-1] and "-S" in cmd.args[-1]):
             print("not thin archive without symbol table")
             return

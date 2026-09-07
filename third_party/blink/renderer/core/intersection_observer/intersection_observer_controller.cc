@@ -160,32 +160,6 @@ void IntersectionObserverController::ComputeIntersections(
                "IntersectionObserverController::"
                "computeIntersections");
 
-  int64_t internal_observation_count = 0;
-  int64_t javascript_observation_count = 0;
-
-  std::optional<LocalFrameUkmAggregator::IterativeTimer> metrics_timer;
-  LocalFrameUkmAggregator* metrics_aggregator = frame_view.GetUkmAggregator();
-  if (metrics_aggregator) {
-    metrics_timer.emplace(*metrics_aggregator);
-  }
-
-  auto compute_observer_intersections = [&](IntersectionObserver& observer,
-                                            const auto& observations) {
-    if (metrics_timer && observer.GetUkmMetricId()) {
-      metrics_timer->StartInterval(observer.GetUkmMetricId().value());
-    }
-    int64_t count = 0;
-    for (auto& observation : observations) {
-      count += observation->ComputeIntersection(
-          flags, accumulated_scroll_delta_since_last_update, context);
-    }
-    if (observer.IsInternal()) {
-      internal_observation_count += count;
-    } else {
-      javascript_observation_count += count;
-    }
-  };
-
   bool update_tracking = flags & IntersectionObservation::kUpdateTracking;
   if (update_tracking) {
     // If the root has disappeared, then this observer is toast. If the
@@ -199,7 +173,10 @@ void IntersectionObserverController::ComputeIntersections(
   }
   for (auto& observer : tracked_explicit_root_observers_) {
     DCHECK(!observer->RootIsImplicit());
-    compute_observer_intersections(*observer, observer->Observations());
+    for (auto& observation : observer->Observations()) {
+      observation->ComputeIntersection(
+          flags, accumulated_scroll_delta_since_last_update, context);
+    }
   }
   if (update_tracking) {
     // If the root is not connected, then we should have just generated
@@ -221,7 +198,10 @@ void IntersectionObserverController::ComputeIntersections(
                    &frame_view.GetFrame();
       });
     }
-    compute_observer_intersections(*observer, observations);
+    for (auto& observation : observations) {
+      observation->ComputeIntersection(
+          flags, accumulated_scroll_delta_since_last_update, context);
+    }
     if (update_tracking) {
       // If the target is not connected, then we should have just generated a
       // "not intersecting" notification if needed, and there's nothing more to
@@ -234,15 +214,6 @@ void IntersectionObserverController::ComputeIntersections(
   if (update_tracking) {
     tracked_implicit_root_observations_.erase_if(
         [](const auto& entry) { return entry.value.empty(); });
-  }
-
-  if (metrics_aggregator) {
-    metrics_aggregator->RecordCountSample(
-        LocalFrameUkmAggregator::kIntersectionObservationInternalCount,
-        internal_observation_count);
-    metrics_aggregator->RecordCountSample(
-        LocalFrameUkmAggregator::kIntersectionObservationJavascriptCount,
-        javascript_observation_count);
   }
 
   base::TimeDelta delay = context.GetAndResetNextRunDelay();

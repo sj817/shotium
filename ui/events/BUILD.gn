@@ -32,10 +32,6 @@ static_library("dom_keycode_converter") {
   ]
 
   deps = [ "//base" ]
-
-  if (!is_ios) {
-    deps += [ "//ipc:param_traits" ]
-  }
 }
 
 static_library("dom_keyboard_layout") {
@@ -72,10 +68,6 @@ static_library("dom_keyboard_layout") {
   } else if (use_ozone) {
     sources += [ "keycodes/dom/dom_keyboard_layout_map_ozone.cc" ]
     deps += [ "//ui/events/ozone/layout" ]
-  }
-
-  if (!is_ios) {
-    deps += [ "//ipc:param_traits" ]
   }
 
   # Expose the internals of this target to other packages in this BUILD file
@@ -217,10 +209,6 @@ component("events_base") {
     # nondeterminism in the DSO (see c#6 on the bug for an
     # explanation).
     deps += [ "//ui/gfx/x" ]
-  }
-
-  if (!is_ios) {
-    deps += [ "//ipc:param_traits" ]
   }
 
   if (is_mac) {
@@ -461,60 +449,6 @@ component("events") {
   configs += [ "//build/config/compiler:no_exit_time_destructors" ]
 }
 
-component("keyboard_hook") {
-  public = [ "keyboard_hook.h" ]
-
-  defines = [ "IS_KEYBOARD_HOOK_IMPL" ]
-
-  sources = [
-    "keyboard_hook_base.cc",
-    "keyboard_hook_base.h",
-  ]
-
-  deps = [
-    "//base",
-    "//ui/events",
-    "//ui/events:dom_keycode_converter",
-    "//ui/gfx",
-  ]
-
-  # Expose the internals of this target to other packages in this BUILD file
-  # so the unit tests can access the private header files.
-  friend = [ ":*" ]
-
-  if (is_win) {
-    public += [
-      "win/keyboard_hook_monitor.h",
-      "win/keyboard_hook_observer.h",
-    ]
-
-    sources += [
-      "win/keyboard_hook_monitor_impl.cc",
-      "win/keyboard_hook_monitor_impl.h",
-      "win/keyboard_hook_win_base.cc",
-      "win/keyboard_hook_win_base.h",
-      "win/media_keyboard_hook_win.cc",
-      "win/modifier_keyboard_hook_win.cc",
-    ]
-  }
-
-  if (is_mac) {
-    sources += [ "mac/keyboard_hook_mac.mm" ]
-  }
-
-  if (use_ozone) {
-    sources += [ "ozone/keyboard_hook_ozone.cc" ]
-    deps += [
-      "//ui/base:features",
-      "//ui/ozone",
-    ]
-  }
-
-  if (is_android) {
-    sources += [ "android/keyboard_hook_android.cc" ]
-  }
-}
-
 component("gesture_detection") {
   sources = [
     "gesture_detection/filtered_gesture_provider.cc",
@@ -650,11 +584,8 @@ static_library("test_support") {
 
   if (is_win) {
     sources += [
-      "test/keyboard_hook_monitor_utils.cc",
-      "test/keyboard_hook_monitor_utils.h",
       "test/keyboard_layout_win.cc",
     ]
-    deps += [ "//ui/events:keyboard_hook" ]
   }
 
   if (is_mac) {
@@ -769,7 +700,6 @@ if (use_blink) {
       "//ui/events/mojom",
       "//ui/events/platform",
       "//ui/gfx/geometry/mojom:mojom_traits",
-      "//ui/gfx/ipc/geometry",
     ]
 
     if (is_android) {
@@ -784,8 +714,6 @@ if (use_blink) {
         "//ui/android:ui_full_java",
         "//ui/android:ui_java_test_support",
       ]
-    } else {
-      data_deps = [ "//third_party/angle:includes" ]
     }
 
     if (use_ozone) {
@@ -814,11 +742,8 @@ if (use_blink) {
         "blink/web_input_event_builders_win_unittest.cc",
         "keycodes/platform_key_map_win_unittest.cc",
         "win/event_utils_win_unittest.cc",
-        "win/media_keyboard_hook_win_unittest.cc",
-        "win/modifier_keyboard_hook_win_unittest.cc",
         "win/stylus_handwriting_properties_win_unittest.cc",
       ]
-      deps += [ "//ui/events:keyboard_hook" ]
     }
 
     if (is_castos) {
@@ -858,22 +783,5 @@ if (is_android) {
 
   generate_jar_jni("keyevent_jni_headers") {
     classes = [ "android/view/KeyEvent.class" ]
-  }
-}
-
-# This target is added as a dependency of browser interactive_ui_tests. It must
-# be source_set, otherwise the linker will drop the tests as dead code.
-source_set("events_interactive_ui_tests") {
-  testonly = true
-  if (is_win) {
-    sources = [ "win/media_keyboard_hook_win_interactive_test.cc" ]
-
-    deps = [
-      ":events",
-      ":keyboard_hook",
-      ":test_support",
-      "//base/test:test_support",
-      "//testing/gtest",
-    ]
   }
 }

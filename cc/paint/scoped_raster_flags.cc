@@ -7,7 +7,6 @@
 #include <utility>
 
 #include "cc/paint/image_provider.h"
-#include "cc/paint/image_transfer_cache_entry.h"
 #include "cc/paint/paint_filter.h"
 #include "cc/paint/paint_image_builder.h"
 
@@ -19,17 +18,10 @@ void ScopedRasterFlags::DecodeImageShader(const SkMatrix& ctm) {
       flags()->getShader()->shader_type() != PaintShader::Type::kImage)
     return;
 
-  uint32_t transfer_cache_entry_id = kInvalidImageTransferCacheEntryId;
   PaintFlags::FilterQuality raster_quality = flags()->getFilterQuality();
-  bool transfer_cache_entry_needs_mips = false;
-  gpu::Mailbox mailbox;
   auto decoded_shader = flags()->getShader()->CreateDecodedImage(
       ctm, flags()->getFilterQuality(), &*decode_stashing_image_provider_,
-      &transfer_cache_entry_id, &raster_quality,
-      &transfer_cache_entry_needs_mips, &mailbox);
-  DCHECK_EQ(transfer_cache_entry_id, kInvalidImageTransferCacheEntryId);
-  DCHECK_EQ(transfer_cache_entry_needs_mips, false);
-  DCHECK(mailbox.IsZero());
+      &raster_quality);
 
   if (!decoded_shader) {
     decode_failed_ = true;

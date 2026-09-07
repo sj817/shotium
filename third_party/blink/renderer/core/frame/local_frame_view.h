@@ -46,9 +46,7 @@
 #include "third_party/blink/renderer/core/dom/document_resize_options.h"
 #include "third_party/blink/renderer/core/frame/frame_view.h"
 #include "third_party/blink/renderer/core/frame/layout_subtree_root_list.h"
-#include "third_party/blink/renderer/core/frame/local_frame_ukm_aggregator.h"
 #include "third_party/blink/renderer/core/layout/hit_test_request.h"
-#include "third_party/blink/renderer/core/paint/layout_object_counter.h"
 #include "third_party/blink/renderer/platform/geometry/physical_offset.h"
 #include "third_party/blink/renderer/platform/graphics/color.h"
 #include "third_party/blink/renderer/platform/graphics/compositor_element_id.h"
@@ -184,10 +182,6 @@ class CORE_EXPORT LocalFrameView final
   void ScheduleRelayoutOfSubtree(LayoutObject&);
   bool LayoutPending() const;
   bool IsInPerformLayout() const;
-
-  // Methods to capture forced layout metrics.
-  void WillStartForcedLayout(DocumentUpdateReason);
-  void DidFinishForcedLayout();
 
   void ClearLayoutSubtreeRoot(const LayoutObject&);
 
@@ -457,7 +451,6 @@ class CORE_EXPORT LocalFrameView final
       const HitTestLocation&,
       HitTestRequest::HitTestRequestType) const;
 
-  void IncrementLayoutObjectCount() { layout_object_counter_.Increment(); }
   void IncrementVisuallyNonEmptyCharacterCount(unsigned);
   void IncrementVisuallyNonEmptyPixelCount(const gfx::Size&);
   bool IsVisuallyNonEmpty() const { return is_visually_non_empty_; }
@@ -519,7 +512,6 @@ class CORE_EXPORT LocalFrameView final
       base::Location location = base::Location::Current(),
       bool urgent = false);
 
-  void OnCommitRequested();
 
   bool HasSubtreeLayoutRoots() const {
     return !layout_subtree_root_list_.IsEmpty();
@@ -745,11 +737,6 @@ class CORE_EXPORT LocalFrameView final
   // the rest of core/mobile_metrics -- see the constructor in the .cc --
   // and had no remaining caller.
   void RegisterTapEvent(Element* target);
-
-  // Returns the UKM aggregator for this frame's local root, creating it if
-  // necessary. Returns null if no aggregator is needed, such as for SVG images.
-  LocalFrameUkmAggregator* GetUkmAggregator();
-  void ResetUkmAggregatorForTesting();
 
   // Checks whether paint holding should be released without FCP.
   // If the page has been painted and the document has finished parsing,
@@ -1106,7 +1093,6 @@ class CORE_EXPORT LocalFrameView final
   unsigned visually_non_empty_character_count_;
   uint64_t visually_non_empty_pixel_count_;
   bool is_visually_non_empty_;
-  LayoutObjectCounter layout_object_counter_;
 
   Member<FragmentAnchor> fragment_anchor_;
 
@@ -1216,11 +1202,6 @@ class CORE_EXPORT LocalFrameView final
   // PaintTree caches display items and subsequences across frame updates and
   // repaints. The resulting PaintArtifact is converted for CPU rendering.
   Member<PaintControllerPersistentData> paint_controller_persistent_data_;
-
-  scoped_refptr<LocalFrameUkmAggregator> ukm_aggregator_;
-  unsigned forced_layout_stack_depth_;
-  std::optional<LocalFrameUkmAggregator::ScopedForcedLayoutTimer>
-      forced_layout_timer_;
 
   // From the beginning of the document, how many frames have painted.
   size_t paint_frame_count_;

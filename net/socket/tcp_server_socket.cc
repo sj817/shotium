@@ -19,8 +19,7 @@ namespace net {
 
 TCPServerSocket::TCPServerSocket(NetLog* net_log, const NetLogSource& source)
     : TCPServerSocket(
-          TCPSocket::Create(nullptr /* socket_performance_watcher */,
-                            net_log,
+          TCPSocket::Create(net_log,
                             source)) {}
 
 TCPServerSocket::TCPServerSocket(std::unique_ptr<TCPSocket> socket)

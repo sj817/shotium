@@ -28,23 +28,12 @@
 class SkCanvas;
 class SkColorSpace;
 class SkImage;
-class SkStrikeClient;
-class SkStrikeServer;
-
-namespace gpu {
-struct Mailbox;
-}
 
 namespace cc {
 
-class ClientPaintCache;
 class ImageProvider;
 class PaintOp;
 class PaintRecord;
-class ServicePaintCache;
-class SkottieSerializationHistory;
-class TransferCacheDeserializeHelper;
-class TransferCacheSerializeHelper;
 
 enum class PaintOpType : uint8_t;
 
@@ -87,24 +76,9 @@ struct CC_PAINT_EXPORT PlaybackParams {
   PlaybackCallbacks callbacks;
   std::optional<bool> save_layer_alpha_should_preserve_lcd_text;
   const ScrollOffsetMap* raster_inducing_scroll_offsets = nullptr;
-  bool is_analyzing = false;
 
   // The HDR headroom to tone map to.
   float destination_hdr_headroom = 0.f;
-};
-
-class CC_PAINT_EXPORT SharedImageProvider {
- public:
-  enum class Error {
-    kNoError,
-    kUnknownMailbox,
-    kNoAccess,
-    kSkImageCreationFailed,
-  };
-
-  virtual ~SharedImageProvider() = default;
-  virtual sk_sp<SkImage> OpenSharedImageForRead(const gpu::Mailbox& mailbox,
-                                                Error& error) = 0;
 };
 
 // Defined outside of the class as this const is used in multiple files.
@@ -114,57 +88,6 @@ static constexpr int kMinNumberOfSlowPathsForMSAA = 6;
 // See: third_party/skia/src/core/SkLiteDL.h.
 class CC_PAINT_EXPORT PaintOpBuffer : public SkRefCnt {
  public:
-  struct CC_PAINT_EXPORT SerializeOptions {
-    STACK_ALLOCATED();
-
-   public:
-    SerializeOptions();
-    SerializeOptions(
-        ImageProvider* image_provider,
-        TransferCacheSerializeHelper* transfer_cache,
-        ClientPaintCache* paint_cache,
-        SkStrikeServer* strike_server,
-        sk_sp<SkColorSpace> color_space,
-        SkottieSerializationHistory* skottie_serialization_history,
-        bool can_use_lcd_text,
-        bool context_supports_distance_field_text,
-        int max_texture_size,
-        const ScrollOffsetMap* raster_inducing_scroll_offsets = nullptr);
-    SerializeOptions(const SerializeOptions&);
-    SerializeOptions& operator=(const SerializeOptions&);
-    ~SerializeOptions();
-
-    // Required.
-    ImageProvider* image_provider = nullptr;
-    TransferCacheSerializeHelper* transfer_cache = nullptr;
-    ClientPaintCache* paint_cache = nullptr;
-    SkStrikeServer* strike_server = nullptr;
-    sk_sp<SkColorSpace> color_space;
-    SkottieSerializationHistory* skottie_serialization_history = nullptr;
-    bool can_use_lcd_text = false;
-    bool context_supports_distance_field_text = true;
-    int max_texture_size = 0;
-    const ScrollOffsetMap* raster_inducing_scroll_offsets = nullptr;
-    PlaybackCallbacks::CustomDataRasterCallback custom_callback;
-  };
-
-  struct CC_PAINT_EXPORT DeserializeOptions {
-    STACK_ALLOCATED();
-
-   public:
-    TransferCacheDeserializeHelper* transfer_cache = nullptr;
-    ServicePaintCache* paint_cache = nullptr;
-    SkStrikeClient* strike_client = nullptr;
-    // Used to memcpy Skia flattenables into to avoid TOCTOU issues.
-    std::vector<uint8_t>& scratch_buffer;
-    // Do a DumpWithoutCrashing when serialization fails.
-    bool crash_dump_on_failure = false;
-    // True if the deserialization is happening on a privileged gpu channel.
-    // e.g. in the case of UI.
-    bool is_privileged = false;
-    SharedImageProvider* shared_image_provider = nullptr;
-  };
-
   enum { kInitialBufferSize = 4096 };
   static constexpr size_t kPaintOpAlign = 8;
   template <typename Op>
@@ -194,20 +117,9 @@ class CC_PAINT_EXPORT PaintOpBuffer : public SkRefCnt {
                 const PlaybackParams& params,
                 bool local_ctm = true) const;
 
-  // Deserialize PaintOps from `input`. The original content will be
-  // overwritten.
-  bool Deserialize(base::span<const volatile uint8_t> input,
-                   const DeserializeOptions& options);
-
-  static sk_sp<PaintOpBuffer> MakeFromMemory(
-      base::span<const volatile uint8_t> input,
-      const DeserializeOptions& options);
-
   // Given the |bounds| of a PaintOpBuffer that would be transformed by |ctm|
   // when rendered, compute the bounds needed to raster the buffer at a fixed
   // scale into an auxiliary image instead of rasterizing at scale dynamically.
-  // This is used to enforce scaling decisions made pre-serialization when
-  // rasterizing after deserializing the buffer.
   static SkRect GetFixedScaleBounds(const SkMatrix& ctm,
                                     const SkRect& bounds,
                                     int max_texture_size = 0);

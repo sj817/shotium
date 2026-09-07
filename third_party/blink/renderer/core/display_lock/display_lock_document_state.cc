@@ -120,7 +120,7 @@ IntersectionObserver& DisplayLockDocumentState::EnsureIntersectionObserver() {
         BindRepeating(
             &DisplayLockDocumentState::ProcessDisplayLockActivationObservation,
             WrapWeakPersistent(this)),
-        LocalFrameUkmAggregator::kDisplayLockIntersectionObserver,
+        /*is_internal=*/true,
         IntersectionObserver::Params{
             .margin = {Length::Percent(kViewportMarginPercentage)},
             .margin_target = IntersectionObserver::kApplyMarginToTarget,

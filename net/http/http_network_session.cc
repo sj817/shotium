@@ -99,9 +99,7 @@ HttpNetworkSessionContext::HttpNetworkSessionContext()
       http_user_agent_settings(nullptr),
       ssl_config_service(nullptr),
       http_auth_handler_factory(nullptr),
-      net_log(nullptr),
-      socket_performance_watcher_factory(nullptr),
-      network_quality_estimator(nullptr)
+      net_log(nullptr)
 #if BUILDFLAG(ENABLE_REPORTING)
       ,
       reporting_service(nullptr),
@@ -151,7 +149,6 @@ HttpNetworkSession::HttpNetworkSession(const HttpNetworkSessionParams& params,
                          params.enable_priority_update,
                          params.spdy_go_away_on_ip_change,
                          params.time_func,
-                         context.network_quality_estimator,
                          // cleanup_sessions_on_ip_address_changed
                          !params.ignore_ip_address_changes),
       http_stream_factory_(std::make_unique<HttpStreamFactory>(this)),
@@ -280,8 +277,7 @@ CommonConnectJobParams HttpNetworkSession::CreateCommonConnectJobParams(
       context_.client_socket_factory, context_.host_resolver, &http_auth_cache_,
       context_.http_auth_handler_factory, &spdy_session_pool_,
       context_.proxy_delegate, context_.http_user_agent_settings,
-      &ssl_client_context_, context_.socket_performance_watcher_factory,
-      context_.network_quality_estimator, context_.net_log,
+      &ssl_client_context_, context_.net_log,
       for_websockets ? &websocket_endpoint_lock_manager_ : nullptr,
       context_.http_server_properties, &next_protos_, &application_settings_,
       &params_.ignore_certificate_errors, &params_.enable_early_data);

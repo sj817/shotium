@@ -33,9 +33,6 @@ declare_args() {
   # (see https://crrev.com/c/3123455).
   is_chromeos_with_hw_details = false
 
-  # Determines if we're willing to link against libinput
-  use_libinput = false
-
   # Refers to the separate branding required for the reven build.
   is_reven = false
 

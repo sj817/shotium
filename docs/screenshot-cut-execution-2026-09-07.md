@@ -1,5 +1,7 @@
 # 截图无用代码清理执行记录（2026-09-07）
 
+> 2026-09-08 最新指令：本批源码收尾后暂停，等待用户接手。下文旧继续计划仅为历史记录；当前状态以 [交接报告](screenshot-cut-handoff-2026-09-08.md) 为准。
+
 本轮按 `screenshot-unused-code-audit-2026-09-07.md` 的根目录清单实施。审计报告是删除前快照；本文件记录实际删除、提交和验证状态。删除授权覆盖耦合残留，采用少量大批次提交，不创建 PR。
 
 ## 第一批：SQL、脚本编译缓存和已失去消费者的构建依赖
@@ -255,9 +257,13 @@ EXE46,332,928字节，DLL46,330,880字节，分别比第九批减少62,464字节
 
 继续处理网络公共层、输入/合成器/GPU、诊断后端等剩余闭包，完整接续清单见 `screenshot-cut-task.md`。不把待处理或已关闭开关标为彻底删除。
 
-## 最新接续状态：第十一批验证通过，待提交
+## 最新接续状态：第十二批 Viz/GPU 闭包进行中
 
-本段优先于后面的历史进度。基准提交 cd916149eb10080a0c176826e9308f96ef5dd82d；第十一批使用 out/cut-stage15，共 229 个 owned 路径（225 源码/构建输入、4 文档）和 576 个实体删除，总计 805 个变更路径。当前全部 Windows 验证通过、尚未提交；所有构建/测试会话已结束。
+当前基准为 d9b409db334cb60b0f6b0c11549b7d5c4be7e7bb，上一批 stage15 冻结；新批次使用 out/cut-stage16。已删除无调用的 BeginFrameProvider/Params/Client、Viz bundle ID 生成器、StaticBitmapImageTransform 及专用格式/读回 API（7 文件）；随后删除 embedded/unbounded surface、CompositorFrameSink/FrameSinkBundle 协议及 bundle ID/traits（7 文件），同步 GN/源清单及无调用的浏览器请求方法。普通 StaticBitmapImage 创建、CPU 绘制、EXIF 朝向保留；UnboundedElement 的死状态/绘制链尚需继续拆。证据来自完整 git grep 与 shot_core 到 platform/Viz/mojom 的 GN 路径，当前仅静态检查，尚未构建。按用户要求先完成整个 Viz/GPU 大批次再集中验证，jobs 8（最新实试 20 OOM）。拖放拒绝提案仍未应用，全部根目录目标继续 active，无 PR/推送/发布。
+
+## 第十一批已提交（当前验证基线）
+
+本段优先于后面的历史进度。基准提交 cd916149eb10080a0c176826e9308f96ef5dd82d；第十一批使用 out/cut-stage15，共 229 个 owned 路径（225 源码/构建输入、4 文档）和 576 个实体删除，总计 805 个变更路径。提交 d9b409db334cb60b0f6b0c11549b7d5c4be7e7bb，全部 Windows 验证通过；stage15 清单冻结。
 
 已移除 View transition 创建入口、Document/DocumentLoader/LocalFrameView/PageAnimator 生命周期、样式调度/显示锁、DOM 伪树、布局/绘制/属性树、跨文档协议/traits、事件/字典和 GN；ForeignLayerDisplayItem 及调用方、无调用的图层/图片缓存入口和 AddToLayerDebugInfo 等也已删除。原 EnqueuePageRevealEvent 的 RouteMap 导航初始化副作用迁为 InitializeRouteNavigationState，仍在原调用时点执行。
 
@@ -282,3 +288,70 @@ EXE SHA256：7aee9e13c9505a25a66a99e1f1040fc924434d35146af8e6a5bca4d06667a2d3；
 Linux probe 为 0 缺 BUILD、0 主仓库缺输入，仍有 3 个 Linux DEPS 检出项和 1 个宿主工具链输入缺失；jumbo 静态扫描列出 39 个候选，部分平台/生成输入未扫描。这是图与静态证据，六平台实际编译仍未完成。其余 Viz/GPU、协议、网络/诊断、第三方和根目录总复核继续处理，整个目标 active。
 
 拖放 14 文件提案未应用，自动审批曾拒绝且尚未获用户确认；范围在 out/cut-stage11/drag-proposal-review/scope.json。当前独立裁剪不包含该提案，不得重试或拆分。不得创建 PR、push 或发布。
+
+
+## 2026-09-08：第十二批源码继续，改为剩余全范围最后统一验证
+
+当前基准为 d9b409db334cb60b0f6b0c11549b7d5c4be7e7bb；stage15 冻结，当前源码整轮使用 out/cut-stage16。累计 115 个 owned 路径（含三份文档）、97 个实体删除，尚未编译、未提交，不计为新二进制验证通过。前段已处理 provider/图片转换、浮层协议、Unbounded 死状态、RemoteFrame/导航 keepalive、CC 帧元数据与 offset tag、Viz client/GPU context。随后删除浏览器可见计时 reporter/request/Mojo、显示帧回调与 FMP 专用检测/布局计数器/上报入口、WidgetScheduler 全工厂和生命周期/输入转发/idle 通知、GPU 图片复制器、GL 扩展/SharedImage provider/Canvas GPU timer/WebGL CPU 转换头、VisualProperties 与 FrameVisualProperties 传输字段/Mojo、GPU 查询接口及 Blink 主目标的 GPU/Viz 直接依赖；CC TextureBacking 工厂/存储/读回/绑定链也已删除。保留同步 CPU FCP、绘制结束 bookkeeping、实际网络 idle 回调、普通 scheduler 队列、iframe 几何稳定性阈值与图片 CPU 解码。新建第 184 张 Unbounded 旧二进制基准，尚未跑新二进制对照。
+
+最新用户要求剩余所有范围先裁剪一遍，最后统一编译验收，优先于历史“每个大批次构建”的要求。下一步从 cc/paint 绘制序列化/SharedImage/transfer cache 接口继续 GPU/Viz 闭包，再连续处理网络/IPC、诊断、第三方、资源/构建/同步和根目录复核，不在 Viz/GPU 类别结束时提前启动完整构建。六平台实际编译仍欠缺；拖放拒绝提案未应用。目标继续 active，无 PR/推送/发布。
+
+本段仅记录源码进度。逐文件备份、SHA256 删除证据及 owned 清单位于 out/cut-stage16；旧二进制仍是第十一批已验证版本。没有为上述每条闭包启动完整构建。
+
+
+## 2026-09-08：整组删除 GPU/Viz 与 Skia GPU 构建入口，源码未编译
+
+当前基准仍为 d9b409db334cb60b0f6b0c11549b7d5c4be7e7bb。父任务清单 out/cut-stage16 为 177 个修改路径、1,034 个实际删除文件；独立 Skottie/Lottie 清单 out/cut-stage16-skottie 为 26 个修改、51 个删除。合并去重后为 189 个修改路径、1,085 个删除文件。尚未编译、尚未提交，不能标为新二进制验证通过。
+
+GPU/Viz 运行闭包、CC PaintOp 序列化/transfer cache、Skia GPU 编译入口等前序源码修改保留。gpu/ 已从磁盘消失；Viz 当前保留颜色/像素格式实际使用的 12 个文件。第三方 Skia checkout 本身的精简尚未完成，已有局部改动保留。
+
+新增原生 UI 闭包删除 364 个文件：GL（暂留 features.gni）、Ozone、平台窗口、WM、原生 keyboard hook、OS 剪贴板/拖放/data-transfer-policy。Blink token 仍使用的剪贴板常量与 sequence token 两个头文件保留为 clipboard_types，解除整套 OS 剪贴板实现的传递依赖。此处不包含被审批拒绝的 Blink 14 文件拖放提案。ui/gfx 的几何、颜色、字体与表单默认外观仍是实际截图基础设施。
+
+Skottie/Lottie 已移除 PaintOp/绘制 API、包装器、动画、ResourceBundle 解析与缓存、29 个 JSON 资源、GRD/配额和 Grit 专用生成分支。Skia 的 Skottie、jsonreader、skresources、sksg、primitive skshaper 编译来源移除；249 个当前 Skia 源文件中不存在这些模块。CPU SkSL、普通图片、SVG、文字和实际被滤镜使用的 Tween 保留。没有改第三方 Skia checkout。
+
+scenario_api 的 8 个文件及调度器对应观察接口、注册/注销、空回调、3 个无调用辅助方法、V8 专用 feature 和每任务通知已删除。外部没有 ScopedScenarioObserverList 或共享场景内存创建者，回调原本已无实际内容；真实任务队列、RAIL/加载调度和 FCP 保留。scenario 和 skottie trace 分类同步移除。
+
+合并静态证据见 out/cut-stage16/static-proof-combined.json：15,320 个现存代码/构建文件检查、119 个 C/C++/头文件预处理配对、全部备份 SHA256，0 问题。这不代替编译、运行和像素验证。当前最后通过验证的仍是第十一批 EXE/DLL 与 183 张像素，新增第 184 张 Unbounded 基线等待新二进制对照；六平台实际构建仍未完成。
+
+用户最新并行限制：最多 1 个子代理。原网络与诊断代理已中断；唯一保留的代理完成 Skottie 后核验 HTMLParserMetrics / LocalFrameUkmAggregator 两条 UKM 记录闭包；源码写入被自动审批拒绝，目前只准备 out/cut-stage16-ukm 审阅材料，尚未执行 23 个修改和 6 个删除。它拥有对应调用方和 core/html/build.gni、core/frame/build.gni、必要的 page/build.gni；core/BUILD.gn、platform/BUILD.gn 由父代理整合。保留 IntersectionObserver 的独立内部标志、懒加载、display-lock 与真实生命周期。
+
+自动审批尚未放行四组精确提案：Service Manager（53 文件删除、9 文件修改）、ANGLE/SPIR-V/Vulkan（10 文件修改、12 普通文件删除、5 个第三方 checkout/gitlink 与同步条目）、Blink 拖放（11 修改、3 删除）、UKM 记录链（23 修改、6 删除）。四组均未执行；总审阅清单为 out/cut-stage16/approval-review.md。Service Manager 完整 patch 在 service-manager-proposal-review 子目录；ANGLE 精确范围及第三方改动保留方案在 angle-proposal-review/scope.json；拖放仍用 out/cut-stage11/drag-proposal-review/scope.json；UKM 的 proposal.patch、review.md 和清单位于 out/cut-stage16-ukm。ANGLE 与 Vulkan loader 的既有局部改动必须完整备份，不直接清除。旧拖放 patch 与并发变更必须按当前文件重新核对。未获得明确放行前不重试或绕过拒绝。
+
+继续网络/旧 IPC、其余诊断、第三方/资源/生成器/同步和根目录全量复核。严格遵守最新节奏：剩余源码全部处理一遍后，集中 GN/缺失输入/编译修复/EXE+DLL/运行及像素验收。20 并发已实测再次 OOM，最终构建使用已通过的 8 并发，不更改仓库永久默认值。目标保持 active，不创建 PR、不 push、不发布。
+
+
+## 2026-09-08：旧 IPC、第三方骨架和 XSLT 脚本尾巴，源码未编译
+
+当前基准仍为 d9b409db334cb60b0f6b0c11549b7d5c4be7e7bb。剩余源码整轮裁剪累计已有 1,187 个跟踪文件实际删除，新增 3 个明确的 Mojo traits 头文件；各组修改路径与备份分别在 out/cut-stage16、cut-stage16-skottie、cut-stage16-ipc、cut-stage16-ipc-generator、cut-stage16-scaffolds、cut-stage16-xslt-api、cut-stage16-gfx-tail。源码尚未集中编译、运行或提交；最后已验证二进制仍为第十一批，不能把当前源文件删除算成新版本验收。
+
+GPU/Viz、CC PaintOp 序列化/transfer cache、Skia GPU 编译入口、364 个原生 UI 文件、51 个 Skottie/Lottie 文件和 8 个 scenario_api 文件的删除已经落盘。gpu/、ipc/、UI 下 Ozone/平台窗口/WM/Lottie 及 UI/URL 的旧 IPC 目录已消失。ui/gl 暂留 features.gni，随待确认 ANGLE 组处理。Viz 的 12 个 CPU 颜色/像素格式文件、SkCanvas、SVG/图片/字体/表单主题及真实调度保留；第三方 Skia checkout 尚未完整收窄，原有局部修改保留。
+
+新增旧 IPC 闭包删除 77 文件：五个 [Native] 类型改为显式 Mojo enum/struct，保留 ConnectionInfo 0–42、ECT 0–5、事件类型值和 RedirectInfo 原有 10 字段。删除 Channel/Proxy/附件/旧 ParamTraits、native 序列化桥、fuzzer 名称探针和调度器紧急消息回调/计数/提权分支；默认任务仍为 normal priority。普通 Mojo/ipcz、Shot stdio/daemon 协议、net 缓存 Pickle 不变。生成器及属性检查拒绝重新引入 legacy [Native]，普通 C++ typemap 保留。当前 GN 2,494 个依赖中已无旧 IPC；这只说明依赖图，不是编译通过。
+
+新增八个第三方骨架组与失效工具共删除 24 跟踪文件：anonymous_tokens、leveldatabase、snappy、libpfm4、ocmock、win_virtual_display、inspector_protocol、google_benchmark。同步去掉测试/GN 引用、BoringSSL 可见性、Snappy unbundle/sysroot 项、IndexedDB Snappy 空 feature、LevelDB dump 名称、失效 DevTools PDL 更新工具和 DEPS include allowlist；八个目录均已从磁盘清除，没有保留这些包的 DEPS/gitlink 同步项。inspector_protocol 的一个孤立 pyc 已备份后删除。
+
+XSLT 原生声明式转换保留，脚本专用 importStylesheet、transformToDocument/Fragment、参数 API/参数表、包装类型、无消费者的 fragment helper 和脚本 stylesheet 构造器已删；xslt_processor.idl 删除。PI→样式表加载→原生事件→libxslt→新文档的链、xsl:param 默认值、同源加载、禁止写文件/网络的检查、编码、排序和 CAP 行为保留。libxslt 原有 xsltQuoteUserParams(ctx, nullptr) 直接返回 0，因此去掉空外部参数转换不删除 XSL 文件内的参数求值。GFX 同步删除无人调用的 AsGLColorSpace 和旧 media 友元；CPU 颜色转换与普通 Mojo traits 保留。
+
+空目录使用经过绝对路径校验的非递归 rmdir，逐个确认无文件后删除；本轮另外清掉 358 个空目录，含先前留下的 Ozone 与 Android/UI 子目录。没有递归删除共享 checkout、已有第三方修改或 out。证据为 out/cut-stage16/empty-directory-proof.json。
+
+合并静态检查见 out/cut-stage16/static-proof-combined.json：16,049 个现存代码/构建输入、157 个已修改 C/C++/头文件预处理配对、当前新阶段 188 份原始 SHA 备份，0 问题；保留早期父任务和 Skottie 的备份证据。没有运行生成器测试、引擎构建或像素验证。第十一批 183 张已验证像素、新增第 184 张 Unbounded 旧二进制基线及六平台编译边界保持原记录。
+
+最多 1 个子代理；其他两名已停止。唯一子代理完成 Mojo 生成器和声明式研究后，正将被拒的 Sanitizer/Skeleton 改动写成 out/ 投影审阅提案，真实源码未改。声明式结论见 out/cut-stage16-declarative-review.md：XSLT 有真实用途；view-transition-name 有静态 3D 分组/backdrop 作用；Origin Trial 无策略注册者，Route/URLPattern 的声明式入口未启用，后两组尚未实施，不能按“有引用”永久保留。
+
+自动审批拒绝且未应用六组：Service Manager、ANGLE/SPIR-V/Vulkan、Blink 拖放、UKM、NQE/NetLog、Sanitizer/Skeleton。具体文件、理由、完整补丁或提案完成边界见 out/cut-stage16/approval-review.md 及各子目录。NQE、Service Manager 等旧提案必须按当前独立改动重新核对；不得重放旧 patch、改用工具或拆分绕过拒绝。第三方既有局部改动先完整保存。
+
+接续先处理已被拒组的明确授权与其余网络/协议、诊断/Perfetto/Crashpad/AX、OriginTrial/Route/URLPattern、第三方/资源/同步闭包，再统一 GN、缺失输入、语法修复、EXE/DLL、运行和像素门。20 并发已再次实测 OOM，最终使用已成功的 8 并发。目标继续 active；不创建 PR、不 push、不发布。当前逐根目录进展见 docs/screenshot-root-status-2026-09-08.md。
+
+## 2026-09-08 最终交接：七组已应用，源码提交未编译
+
+**用户最新要求：本批完成后暂停并交接。此指令优先于下面所有历史 active 目标和继续执行计划；未经用户再次要求，不再裁剪、构建或启动子代理。**
+
+本批七组已明确授权并全部应用：Service Manager、ANGLE/SPIR-V/Vulkan、Blink 拖放、UKM、NQE/FileNetLog、Sanitizer/Skeleton、Origin Trial。加上本轮前半部分 GPU/Viz、旧 IPC、原生 UI、Skottie、第三方骨架、XSLT 脚本 API 与输入预测清理，相对最后验证提交 d9b409db334cb60b0f6b0c11549b7d5c4be7e7bb 共删除 1,404 个普通跟踪文件、5 个 gitlink，新增 3 个 Mojo traits 头文件。源码与文档合为一个本地提交，提交号及精确路径见 out/cut-stage16-final/commit.json；不创建 PR、不 push、不发布。
+
+七组源码完成为 7/7；整个裁剪目标尚未完成。已删除 gpu/、ipc/、services/service_manager、ui/gl 及 ANGLE/SPIR-V/Vulkan checkout；五个第三方完整仓库和既有修改保存在 out/cut-stage16-angle-authorized/vendor-backup。仍保留截图所需 CPU 绘制、CSS/DOM/布局、SVG、图片、字体、表单主题、Canvas 备用布局、原生 XSLT、普通 Mojo 和实际网络加载。
+
+静态证据 out/cut-stage16/static-proof-combined.json：15,905 个代码/构建输入、285 个改动 C/C++ 预处理配对、653 份新阶段原始 SHA 备份；扫描发现的一个 drag_state.h 旧 include 已补删，当前记录 0 问题。早期父阶段和 Skottie 备份另有原始证据。
+
+**本批尚未 GN 生成、编译/链接、重建 addon、运行或像素验收，不能宣称可构建或截图无回归。** out/Shot 仍是第十一批旧二进制：183 张已验证像素，第 184 张 Unbounded 只有旧二进制基线；六平台实际编译仍未完成。以后由用户决定是否验证，建议用已成功的 jobs 8（20 已多次实际 OOM），不改永久默认值。
+
+剩余网络/公共协议/FileReader/Blob/Worker、诊断/Perfetto/Crashpad/AX、UI/display/拖放辅助、Route/URLPattern、Skia 实际 checkout 及其他第三方/生成器/同步尾巴，连同接手顺序与回退位置，全部见 [交接报告](screenshot-cut-handoff-2026-09-08.md)。逐根目录状态见 [根目录报告](screenshot-root-status-2026-09-08.md)。子代理已停止。

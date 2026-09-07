@@ -11,7 +11,6 @@
 namespace blink {
 
 void SetHTMLUnsafeOptions::Trace(Visitor* visitor) const {
-  visitor->Trace(member_sanitizer_);
   bindings::DictionaryBase::Trace(visitor);
 }
 

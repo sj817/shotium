@@ -54,7 +54,6 @@
 #include "net/log/net_log_event_type.h"
 #include "net/log/net_log_source_type.h"
 #include "net/log/net_log_with_source.h"
-#include "net/nqe/network_quality_estimator.h"
 #include "net/socket/socket.h"
 #include "net/socket/ssl_client_socket.h"
 #include "net/spdy/alps_decoder.h"
@@ -817,7 +816,6 @@ SpdySession::SpdySession(
     bool http2_end_stream_with_data_frame,
     bool enable_priority_update,
     TimeFunc time_func,
-    NetworkQualityEstimator* network_quality_estimator,
     NetLog* net_log,
     MultiplexedSessionCreationInitiator session_creation_initiator,
     SpdySessionInitiator spdy_session_initiator)
@@ -853,7 +851,6 @@ SpdySession::SpdySession(
           base::Seconds(kSpdyDefaultConnectionAtRiskOfLossSeconds)),
       hung_interval_(base::Seconds(kHungIntervalSeconds)),
       time_func_(time_func),
-      network_quality_estimator_(network_quality_estimator),
       session_creation_initiator_(session_creation_initiator),
       spdy_session_initiator_(spdy_session_initiator) {
   net_log_.BeginEvent(NetLogEventType::HTTP2_SESSION, [&]() {
@@ -2854,12 +2851,6 @@ void SpdySession::OnPing(spdy::SpdyPingId unique_id, bool is_ack) {
 
   ping_in_flight_ = false;
 
-  // Record RTT in histogram when there are no more pings in flight.
-  base::TimeDelta ping_duration = time_func_() - last_ping_sent_time_;
-  if (network_quality_estimator_) {
-    network_quality_estimator_->RecordSpdyPingLatency(host_port_pair(),
-                                                      ping_duration);
-  }
 }
 
 void SpdySession::OnRstStream(spdy::SpdyStreamId stream_id,

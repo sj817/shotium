@@ -9,6 +9,7 @@ import os
 import mojom.generate.generator as generator
 import mojom.generate.module as mojom
 import mojom.generate.pack as pack
+# Also imported from this module by the Mojolpm generator.
 from generators.cpp_util import IsNativeOnlyKind
 from mojom.generate.template_expander import (
   UseJinja,
@@ -377,17 +378,33 @@ class Generator(generator.Generator):
       and len(m.features) == 0
     )
 
-  def _ReferencesAnyNativeType(self):
-    """Returns whether this module uses native types directly or indirectly.
-
-    When false, the generated headers do not need to include
-    native_struct_serialization.h and similar.
-    """
-    m = self.module
-    # Note that interfaces can contain scoped native types.
-    return any(
-      map(mojom.ContainsNativeTypes, m.enums + m.structs + m.interfaces)
-    )
+  def _ValidateNoLegacyNativeTypes(self):
+    """Reject legacy [Native] declarations, including imported references."""
+    pending = [self.module]
+    checked = set()
+    while pending:
+      module = pending.pop()
+      if module.path in checked:
+        continue
+      checked.add(module.path)
+      pending.extend(module.imports)
+      kinds = module.enums + module.structs + module.unions + module.interfaces
+      kinds += list(module.imported_kinds.values())
+      # ContainsNativeTypes checks scoped interface enums, but not parameters.
+      for interface in module.interfaces:
+        for method in interface.methods:
+          kinds.extend(param.kind for param in method.parameters)
+          kinds.extend(
+            param.kind for param in (method.response_parameters or [])
+          )
+      for kind in kinds:
+        if mojom.ContainsNativeTypes(kind):
+          raise ValueError(
+            "Cannot generate C++ bindings for %s: %s references a legacy "
+            "[Native] type in %s. Define an explicit mojom enum or struct "
+            "and use C++ typemap traits instead."
+            % (self.module.path, kind.spec, module.path)
+          )
 
   def _UsesMessageSizeEstimator(self):
     """Returns whether this module has any interfaces that use estimate size
@@ -497,7 +514,6 @@ class Generator(generator.Generator):
       "all_enums": all_enums,
       "contains_only_enums": self._ContainsOnlyEnums(),
       "disallow_interfaces": self.disallow_interfaces,
-      "disallow_native_types": self.disallow_native_types,
       "enable_kythe_annotations": self.enable_kythe_annotations,
       "enums": self.module.enums,
       "export_attribute": self.export_attribute,
@@ -517,7 +533,6 @@ class Generator(generator.Generator):
       "unions": self.module.unions,
       "uses_interfaces": self._ReferencesAnyHandleOrInterfaceType(),
       "uses_message_size_estimator": self._UsesMessageSizeEstimator(),
-      "uses_native_types": self._ReferencesAnyNativeType(),
       "uses_stdint_types": self._UsesStdIntTypes(),
       "variant": self.variant,
       "send_validation_modules": self._GetSendValidationModules(),
@@ -580,7 +595,6 @@ class Generator(generator.Generator):
       "is_integral_kind": mojom.IsIntegralKind,
       "is_interface_kind": mojom.IsInterfaceKind,
       "is_receiver_kind": self._IsReceiverKind,
-      "is_native_only_kind": IsNativeOnlyKind,
       "is_any_handle_kind": mojom.IsAnyHandleKind,
       "is_any_interface_kind": mojom.IsAnyInterfaceKind,
       "is_any_handle_or_interface_kind": mojom.IsAnyHandleOrInterfaceKind,
@@ -663,6 +677,7 @@ class Generator(generator.Generator):
     return self._GetJinjaExports()
 
   def GenerateFiles(self, args):
+    self._ValidateNoLegacyNativeTypes()
     self.module.Stylize(generator.Stylizer())
 
     if self.extra_cpp_template_paths and self.generate_extra_cpp_only:

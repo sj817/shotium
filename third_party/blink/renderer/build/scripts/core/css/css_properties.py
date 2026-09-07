@@ -6,7 +6,6 @@
 from blinkbuild.name_style_converter import NameStyleConverter
 from core.css.field_alias_expander import FieldAliasExpander
 import json5_generator
-from make_origin_trials import OriginTrialsWriter
 from name_utilities import enum_key_for_css_property, id_for_css_property
 from name_utilities import enum_key_for_css_property_alias, id_for_css_property_alias
 import dataclasses
@@ -75,8 +74,6 @@ def validate_property(prop, props_by_name):
     assert not prop.mutable or \
         (prop.field_template in ['derived_flag', 'monotonic_flag'] ),\
         'mutable requires field_template:derived_flag or monotonic_flag [%s]' % name
-    assert not prop.in_origin_trial or prop.runtime_flag,\
-        'Property participates in origin trial, but has no runtime flag'
     custom_functions = set(prop.computed_style_custom_functions)
     protected_functions = set(set(prop.computed_style_protected_functions))
     assert not custom_functions.intersection(protected_functions), \
@@ -289,13 +286,6 @@ class CSSProperties(object):
 
         Property = generate_property_class(self._default_parameters)
 
-        # TODO(crbug/1031309): Refactor OriginTrialsWriter to reuse logic here.
-        origin_trials_writer = OriginTrialsWriter(
-            [runtime_enabled_features_path], "")
-        self._origin_trial_features = {
-            str(f['name'])
-            for f in origin_trials_writer.origin_trial_features
-        }
 
         properties = [
             Property(**x) for x in css_properties_file.name_dictionaries
@@ -601,12 +591,6 @@ class CSSProperties(object):
         set_if_none(property_, 'custom_compare', False)
         set_if_none(property_, 'mutable', False)
 
-        property_.in_origin_trial = property_.runtime_flag and \
-            property_.runtime_flag in self._origin_trial_features
-
-        assert not property_.is_shorthand or not property_.in_origin_trial, \
-            'Shorthand property [%s] cannot be controlled by an origin trial. See https://crbug.com/425974279' \
-            % property_.name
 
         self.set_derived_visited_attributes(property_)
         self.set_derived_surrogate_attributes(property_)

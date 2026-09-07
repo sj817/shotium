@@ -5,7 +5,6 @@
 import("//build/buildflag_header.gni")
 import("//build/config/compiler/compiler.gni")
 import("//build/config/features.gni")
-import("//tools/ipc_fuzzer/ipc_fuzzer.gni")
 
 declare_args() {
   # Note that even when set to false, there still exists minimal trace events
@@ -149,10 +148,6 @@ component("bindings_base") {
 
   configs += [ "//build/config/compiler:wexit_time_destructors" ]
 
-  if (enable_ipc_fuzzer) {
-    all_dependent_configs = [ "//tools/ipc_fuzzer:ipc_fuzzer_config" ]
-  }
-
   if (!is_debug && !optimize_for_size) {
     configs -= [ "//build/config/compiler:default_optimization" ]
     configs += [ "//build/config/compiler:optimize_max" ]
@@ -200,12 +195,6 @@ component("bindings") {
     "lib/message_dispatcher.cc",
     "lib/multiplex_router.cc",
     "lib/multiplex_router.h",
-    "lib/native_enum_data.h",
-    "lib/native_enum_serialization.h",
-    "lib/native_handle_type_converters.cc",
-    "lib/native_handle_type_converters.h",
-    "lib/native_struct_serialization.cc",
-    "lib/native_struct_serialization.h",
     "lib/pipe_control_message_handler.cc",
     "lib/pipe_control_message_proxy.cc",
     "lib/sequence_local_sync_event_watcher.cc",
@@ -219,7 +208,6 @@ component("bindings") {
     "lib/thread_safe_forwarder_base.cc",
     "lib/thread_safe_forwarder_base.h",
     "message_dispatcher.h",
-    "native_enum.h",
     "pending_associated_receiver.h",
     "pending_associated_remote.h",
     "pending_flush.cc",
@@ -260,19 +248,10 @@ component("bindings") {
     ]
   }
 
-  if (enable_ipc_fuzzer) {
-    sources += [
-      "lib/message_dumper.cc",
-      "message_dumper.h",
-    ]
-  }
-
   public_deps = [
     ":bindings_base",
     ":struct_traits",
     "//base",
-    "//ipc:message_support",
-    "//ipc:param_traits",
     "//mojo/public/cpp/system",
     "//mojo/public/interfaces/bindings",
   ]

@@ -32,7 +32,6 @@ _GATHERERS = {
   'chrome_html'         : grit.gather.chrome_html.ChromeHtml,
   'chrome_scaled_image' : grit.gather.chrome_scaled_image.ChromeScaledImage,
   'dialog'              : grit.gather.rc.Dialog,
-  'lottie'              : grit.gather.chrome_html.ChromeHtml,
   'menu'                : grit.gather.rc.Menu,
   'rcdata'              : grit.gather.rc.RCData,
   'tr_html'             : grit.gather.tr_html.TrHtml,
@@ -199,9 +198,6 @@ class StructureNode(base.Node):
     if encoding != util.BINARY:
       data = data.encode(encoding)
     data = self.CompressDataIfNeeded(data)
-    # If the asset is in the Lottie format, indicate it by prepending "LOTTIE".
-    if self.attrs['type'] == 'lottie':
-      data = 'LOTTIE'.encode(self.attrs['output_encoding']) + data
     return data
 
   def GetHtmlResourceFilenames(self):

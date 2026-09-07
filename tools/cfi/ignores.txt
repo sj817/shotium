@@ -175,14 +175,7 @@ type:sandbox::TargetServices
 
 ######### Cross-DSO icalls using dynamically resolved symbols crbug.com/771365
 
-# ANGLE
-src:*third_party/angle/src/common/vulkan/vulkan_icd.cpp
-src:*third_party/angle/src/libANGLE/*
-src:*third_party/angle/src/libEGL/*
-src:*third_party/angle/src/third_party/libXNVCtrl/NVCtrl.c
-# third_party/angle/src/gpu_info_util/SystemInfo_libpci.cpp
 fun:*GetPCIDevicesWithLibPCI*
-# third_party/angle/src/common/event_tracer.cpp
 fun:*GetTraceCategoryEnabledFlag*
 fun:*AddTraceEvent*
 
@@ -223,10 +216,7 @@ src:*ui/gl/gl_bindings_autogen_*
 
 # Calls to vulkan function pointers from shared library.
 src:*third_party/vulkan_memory_allocator/include/vk_mem_alloc.h
-src:*third_party/angle/third_party/vulkan-loader/src/loader*
-src:*third_party/vulkan-loader/src/loader*
 src:*third_party/vulkan-validation-layers/src/layers/*
-src:*third_party/angle/src/common/vulkan/vulkan_icd.cpp
 
 # Calls to TFLiteDelegate functions in a shared library.
 src:*services/webnn/tflite/graph_impl_tflite.cc

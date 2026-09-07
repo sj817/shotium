@@ -32,7 +32,6 @@
 #include "cc/input/overscroll_behavior.h"
 #include "cc/metrics/begin_main_frame_metrics.h"
 #include "cc/paint/draw_image.h"
-#include "components/viz/common/surfaces/frame_sink_id.h"
 #include "third_party/blink/public/common/dom_storage/session_storage_namespace_id.h"
 #include "third_party/blink/public/common/input/web_gesture_event.h"
 #include "third_party/blink/public/common/input/web_input_event.h"
@@ -74,10 +73,6 @@ struct ScreenInfos;
 
 namespace ui {
 class Cursor;
-}
-
-namespace viz {
-class FrameTimingDetails;
 }
 
 namespace blink {
@@ -221,20 +216,6 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
   // |frame| must be a local frame.
   virtual std::optional<int> GetMaxRenderBufferBounds(
       LocalFrame& frame) const = 0;
-
-  // Start a system drag and drop operation.
-  //
-  // The `cursor_offset` is the offset of the drag-point from the top-left of
-  // `drag_image`, which may not be the same as the top-left of
-  // `drag_obj_rect`.  For details, see the function header comment for:
-  // `blink::DragController::StartDrag()`.
-  virtual void StartDragging(LocalFrame*,
-                             const WebDragData&,
-                             DragOperationsMask,
-                             const SkBitmap& drag_image,
-                             const gfx::Vector2d& cursor_offset,
-                             const gfx::Rect& drag_obj_rect) = 0;
-  virtual bool AcceptsLoadDrops() const = 0;
 
   virtual std::optional<bool> GetWebRTCPostQuantumKeyAgreement() const {
     return std::nullopt;
@@ -488,25 +469,12 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
 
   virtual void InstallSupplements(LocalFrame&);
 
-  virtual viz::FrameSinkId GetFrameSinkId(LocalFrame*) {
-    return viz::FrameSinkId();
-  }
-
   virtual void RequestDecode(LocalFrame*,
                              const cc::DrawImage& image,
                              base::OnceCallback<void(bool)> callback,
                              bool speculative) {
     std::move(callback).Run(false);
   }
-
-  // The `callback` will be fired when the corresponding renderer frame for the
-  // `frame` is presented in the display compositor. If there is no update in
-  // the frame to be presented, the `callback` will run with the time of the
-  // failure.
-  using ReportTimeCallback =
-      base::OnceCallback<void(const viz::FrameTimingDetails&)>;
-  virtual void NotifyPresentationTime(LocalFrame& frame,
-                                      ReportTimeCallback callback) {}
 
   // A stable numeric Id for |frame|'s local root's compositor. For
   // tracing/debugging purposes.

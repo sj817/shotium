@@ -956,10 +956,6 @@
     "META": {"align": 100},
     "messages": [5700],
   },
-  "<(SHARED_INTERMEDIATE_DIR)/ash/ambient/resources/lottie_resources.grd": {
-    "META": {"sizes": {"includes": [100],}},
-    "includes": [5720],
-  },
   "chromeos/ash/components/emoji/emoji.grd" : {
     "META": {"sizes": {"includes": [45],}},
     "includes" : [5740],
@@ -1715,9 +1711,6 @@
   },
   "ui/resources/ui_resources.grd": {
     "structures": [9820],
-  },
-  "ui/resources/ui_lottie_resources.grd": {
-    "structures": [9830],
   },
   "ui/resources/ui_unscaled_resources.grd": {
     "includes": [9840],

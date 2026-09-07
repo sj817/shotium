@@ -39,7 +39,6 @@
 #include "third_party/blink/public/common/tokens/tokens.h"
 #include "third_party/blink/public/common/user_agent/user_agent_metadata.h"
 #include "third_party/blink/public/mojom/frame/lifecycle.mojom-blink-forward.h"
-#include "third_party/blink/public/mojom/origin_trials/origin_trial_feature.mojom-blink-forward.h"
 #include "third_party/blink/public/mojom/permissions_policy/policy_disposition.mojom-blink-forward.h"
 #include "third_party/blink/public/mojom/v8_cache_options.mojom-blink-forward.h"
 #include "third_party/blink/renderer/bindings/core/v8/sanitize_script_errors.h"
@@ -83,7 +82,6 @@ class ErrorEvent;
 class EventTarget;
 class FrameOrWorkerScheduler;
 class KURL;
-class OriginTrialContext;
 class RuntimeFeatureStateOverrideContext;
 class PolicyContainer;
 class PublicURLManager;
@@ -308,10 +306,6 @@ class CORE_EXPORT ExecutionContext : public Supplementable<ExecutionContext>,
 
   Agent* GetAgent() const { return agent_.Get(); }
 
-  OriginTrialContext* GetOriginTrialContext() const {
-    return origin_trial_context_.Get();
-  }
-
   RuntimeFeatureStateOverrideContext* GetRuntimeFeatureStateOverrideContext()
       const override {
     return runtime_feature_state_override_context_.Get();
@@ -319,9 +313,6 @@ class CORE_EXPORT ExecutionContext : public Supplementable<ExecutionContext>,
 
   virtual TrustedTypePolicyFactory* GetTrustedTypes() const { return nullptr; }
   virtual bool RequireTrustedTypes() const;
-
-  // FeatureContext override
-  bool FeatureEnabled(mojom::blink::OriginTrialFeature) const override;
 
   // Tests whether the policy-controlled feature is enabled in this frame.
   // Optionally sends a report to any registered reporting observers or
@@ -486,7 +477,7 @@ class CORE_EXPORT ExecutionContext : public Supplementable<ExecutionContext>,
   }
 
  protected:
-  ExecutionContext(Agent* agent, bool is_window = false);
+  explicit ExecutionContext(Agent* agent);
   ~ExecutionContext() override;
 
   // Resetting the Agent is only necessary for a special case related to the
@@ -538,7 +529,6 @@ class CORE_EXPORT ExecutionContext : public Supplementable<ExecutionContext>,
   // ExecutionContext.
   std::unique_ptr<PolicyContainer> policy_container_;
 
-  Member<OriginTrialContext> origin_trial_context_;
 
   Member<ContentSecurityPolicy> content_security_policy_;
 

@@ -52,10 +52,6 @@ void WebRuntimeFeatures::EnableTestOnlyFeatures(bool enable) {
   RuntimeEnabledFeatures::SetTestFeaturesEnabled(enable);
 }
 
-void WebRuntimeFeatures::EnableOriginTrialControlledFeatures(bool enable) {
-  RuntimeEnabledFeatures::SetOriginTrialControlledFeaturesEnabled(enable);
-}
-
 void WebRuntimeFeatures::EnableOverlayScrollbars(bool enable) {
   ScrollbarThemeSettings::SetOverlayScrollbarsEnabled(enable);
 }

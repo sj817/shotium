@@ -10,17 +10,8 @@
 
 namespace blink {
 
-// Unlike the private version (which lives in
-// blink/renderer/core/permissions_policy/), these maps will include all
-// features, regardless of whether or not they depend on a blink runtime enabled
-// feature that is enabled/disabled. Features which are shipping as part of an
-// origin trial add their feature names to this map unconditionally, as the
-// trial token could be added after the HTTP header needs to be parsed. This
-// also means that top-level documents which simply want to embed another page
-// which uses an origin trial feature, without using the feature themselves, can
-// use permissions policy to allow use of the feature in subframes (The framed
-// document will still require a valid origin trial token to use the feature in
-// this scenario).
+// Public maps describe all declared policy names. Runtime gating is applied
+// by the renderer policy helper.
 
 const PermissionsPolicyNameToFeatureMap&
 GetPermissionsPolicyNameToFeatureMap() {

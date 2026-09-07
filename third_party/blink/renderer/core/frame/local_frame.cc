@@ -165,14 +165,12 @@
 #include "third_party/blink/renderer/core/loader/idleness_detector.h"
 #include "third_party/blink/renderer/core/loader/prerender_handle.h"
 #include "third_party/blink/renderer/core/page/chrome_client.h"
-#include "third_party/blink/renderer/core/page/drag_controller.h"
 #include "third_party/blink/renderer/core/page/focus_controller.h"
 #include "third_party/blink/renderer/core/page/page.h"
 #include "third_party/blink/renderer/core/page/page_animator.h"
 #include "third_party/blink/renderer/core/paint/object_painter.h"
 #include "third_party/blink/renderer/core/paint/paint_auto_dark_mode.h"
 #include "third_party/blink/renderer/core/paint/paint_layer_scrollable_area.h"
-#include "third_party/blink/renderer/core/paint/timing/first_meaningful_paint_detector.h"
 #include "third_party/blink/renderer/core/probe/core_probes.h"
 #include "third_party/blink/renderer/core/svg/svg_document_extensions.h"
 #include "third_party/blink/renderer/core/timing/dom_window_performance.h"
@@ -1113,9 +1111,6 @@ void LocalFrame::NetworkBecameAlmostIdle(
   probe::LifecycleEvent(this, loader, "networkAlmostIdle",
                         almost_idle_start_time.InSecondsF());
   DCHECK(GetDocument());
-  // The service worker's network provider was told the network had gone quiet
-  // here, so it could stop holding the worker alive. Service workers are cut.
-  FirstMeaningfulPaintDetector::From(*GetDocument()).OnNetwork2Quiet();
 }
 
 void LocalFrame::NetworkBecameIdle(base::TimeDelta idle_start_time) {
@@ -3383,15 +3378,6 @@ const WebPrintParams& LocalFrame::GetPrintParams() const {
   CHECK(GetDocument()->Printing());
 
   return print_params_;
-}
-
-mojo::PendingRemote<mojom::blink::NavigationStateKeepAliveHandle>
-LocalFrame::IssueKeepAliveHandle() {
-  mojo::PendingRemote<mojom::blink::NavigationStateKeepAliveHandle>
-      keep_alive_remote;
-  GetLocalFrameHostRemote().IssueKeepAliveHandle(
-      keep_alive_remote.InitWithNewPipeAndPassReceiver());
-  return keep_alive_remote;
 }
 
 void LocalFrame::AllowStorageAccessAndNotify(

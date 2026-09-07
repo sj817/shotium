@@ -32,9 +32,6 @@
 #include "mojo/public/cpp/system/wait.h"
 #include "third_party/perfetto/protos/perfetto/trace/track_event/chrome_mojo_event_info.pbzero.h"
 
-#if defined(ENABLE_IPC_FUZZER)
-#include "mojo/public/cpp/bindings/message_dumper.h"
-#endif
 
 namespace mojo {
 
@@ -158,11 +155,6 @@ Connector::Connector(ScopedMessagePipeHandle message_pipe,
     lock_.emplace();
   }
 
-#if defined(ENABLE_IPC_FUZZER)
-  if (!MessageDumper::GetMessageDumpDirectory().empty()) {
-    message_dumper_ = std::make_unique<MessageDumper>();
-  }
-#endif
 
   weak_self_ = weak_factory_.GetWeakPtr();
 }
@@ -332,12 +324,6 @@ MojoResult Connector::AcceptAndGetResult(Message* message) {
     return MOJO_RESULT_OK;
   }
 
-#if defined(ENABLE_IPC_FUZZER)
-  if (message_dumper_ && message->is_serialized()) {
-    bool dump_result = message_dumper_->Accept(message);
-    DCHECK(dump_result);
-  }
-#endif
 
   if (!message->is_serialized()) {
     // The caller is sending an unserialized message. If we haven't set up a

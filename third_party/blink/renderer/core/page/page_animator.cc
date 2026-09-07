@@ -20,7 +20,6 @@
 #include "third_party/blink/renderer/core/loader/document_loader.h"
 #include "third_party/blink/renderer/core/page/chrome_client.h"
 #include "third_party/blink/renderer/core/page/page.h"
-#include "third_party/blink/renderer/core/page/scrolling/sync_scroll_attempt_heuristic.h"
 #include "third_party/blink/renderer/core/paint/paint_layer_scrollable_area.h"
 #include "third_party/blink/renderer/core/svg/svg_document_extensions.h"
 #include "third_party/blink/renderer/core/timing/time_clamper.h"
@@ -108,7 +107,6 @@ void PageAnimator::ServiceScriptedAnimations(
   }
   // TODO(crbug.com/1499981): This should be removed once synchronized scrolling
   // impact is understood.
-  SyncScrollAttemptHeuristic heuristic(page_->MainFrame());
   ServiceScriptedAnimations(monotonic_animation_start_time, controllers);
 }
 
@@ -207,7 +205,6 @@ void PageAnimator::ServiceScriptedAnimations(
 
   // 9. For each doc of docs, run the scroll steps for doc.
   run_for_all_active_controllers_with_timing([&](wtf_size_t i) {
-    auto scope = SyncScrollAttemptHeuristic::GetScrollHandlerScope();
     active_controllers[i]->DispatchEvents(BindRepeating([](Event* event) {
       return event->type() == event_type_names::kScroll ||
              event->type() == event_type_names::kScrollsnapchange ||
@@ -277,7 +274,6 @@ void PageAnimator::ServiceScriptedAnimations(
   // passing in the relative high resolution time given frameTimestamp and
   // doc's relevant global object as the timestamp.
   run_for_all_active_controllers_with_timing([&](wtf_size_t i) {
-    auto scope = SyncScrollAttemptHeuristic::GetRequestAnimationFrameScope();
     active_controllers[i]->ExecuteFrameCallbacks();
     if (!active_controllers[i]->GetExecutionContext()) {
       return;

@@ -13,15 +13,8 @@
 namespace blink {
 
 {% macro trie_return_expression(tag) -%}
-{% if runtimeEnabledWithoutOriginTrial[tag] -%}
-  (RuntimeEnabledFeatures::{{runtimeEnabledWithoutOriginTrial[tag]}}Enabled()
-      // If this code fails to compile because the
-      // RuntimeEnabledFeatures method requires an argument
-      // (because the feature can be affected by origin trials),
-      // this means you need to add runtimeFlagHasOriginTrial to
-      // the appropriate entry in html_tag_names.json5 .  Also
-      // see the documentation in html_tag_names.json5 for
-      // additional things you should test when doing this.
+{% if runtimeEnabled[tag] -%}
+  (RuntimeEnabledFeatures::{{runtimeEnabled[tag]}}Enabled()
       ? {{namespace|lower}}_names::HTMLTag::{{tag_symbols[tag]}}
       : {{namespace|lower}}_names::HTMLTag::kUnknown)
 {%- else -%}

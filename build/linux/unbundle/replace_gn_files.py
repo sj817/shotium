@@ -60,24 +60,16 @@ REPLACEMENTS = {
     'libvpx': 'third_party/libvpx/BUILD.gn',
     'libwebp': 'third_party/libwebp/BUILD.gn',
     'libxml': 'third_party/libxml/BUILD.gn',
-    'libXNVCtrl': 'third_party/angle/src/third_party/libXNVCtrl/BUILD.gn',
     'libxslt': 'third_party/libxslt/BUILD.gn',
     'libyuv': 'third_party/libyuv/BUILD.gn',
     'openh264': 'third_party/openh264/BUILD.gn',
     'opus': 'third_party/opus/BUILD.gn',
     're2': 'third_party/re2/BUILD.gn',
     'simdutf': 'third_party/simdutf/BUILD.gn',
-    'snappy': 'third_party/snappy/BUILD.gn',
     # Use system libSPIRV-Tools in Swiftshader.
     # These two shims MUST be used together.
     'swiftshader-SPIRV-Headers': 'third_party/swiftshader/third_party/SPIRV-Headers/BUILD.gn',
     'swiftshader-SPIRV-Tools': 'third_party/swiftshader/third_party/SPIRV-Tools/BUILD.gn',
-    # Use system libSPIRV-Tools inside ANGLE.
-    # These two shims MUST be used together
-    # and can only be used if WebGPU is not compiled (use_dawn=false)
-    'vulkan-SPIRV-Headers': 'third_party/spirv-headers/src/BUILD.gn',
-    'vulkan-SPIRV-Tools': 'third_party/spirv-tools/src/BUILD.gn',
-    #
     'vulkan_memory_allocator': 'third_party/vulkan_memory_allocator/BUILD.gn',
     'woff2': 'third_party/woff2/BUILD.gn',
     'zlib': 'third_party/zlib/BUILD.gn',

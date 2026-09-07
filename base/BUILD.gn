@@ -3155,7 +3155,6 @@ test("base_perftests") {
     "//base/test:test_support_perf",
     "//testing/gtest",
     "//testing/perf",
-    "//third_party/google_benchmark",
   ]
 
   # TODO(crbug.com/40158212): Move partition_alloc tests into its repository.

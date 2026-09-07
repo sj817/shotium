@@ -29,7 +29,6 @@
 #include "net/dns/public/secure_dns_policy.h"
 #include "net/http/http_server_properties.h"
 #include "net/log/net_log_event_type.h"
-#include "net/nqe/network_quality_estimator.h"
 #include "net/socket/socket_tag.h"
 #include "net/socket/tcp_connect_job.h"
 #include "net/socket/transport_connect_sub_job.h"

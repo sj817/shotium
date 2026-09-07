@@ -39,14 +39,6 @@ class XSLStyleSheet final : public StyleSheet {
                 const String& original_url,
                 const KURL& final_url,
                 bool embedded);
-  // Taking an arbitrary node is unsafe, because owner node pointer can become
-  // stale. XSLTProcessor ensures that the stylesheet doesn't outlive its
-  // parent, in part by not exposing it to JavaScript.
-  XSLStyleSheet(Document* owner_document,
-                Node* style_sheet_root_node,
-                const String& original_url,
-                const KURL& final_url,
-                bool embedded);
   XSLStyleSheet(XSLStyleSheet* parent_style_sheet,
                 const String& original_url,
                 const KURL& final_url);
@@ -103,7 +95,6 @@ class XSLStyleSheet final : public StyleSheet {
   bool compilation_failed_;
 
   Member<XSLStyleSheet> parent_style_sheet_;
-  Member<Document> owner_document_;
 };
 
 template <>

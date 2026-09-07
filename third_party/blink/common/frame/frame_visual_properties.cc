@@ -3,6 +3,9 @@
 // found in the LICENSE file.
 
 #include "third_party/blink/public/common/frame/frame_visual_properties.h"
+#include <limits>
+#include <optional>
+
 #include "base/metrics/field_trial_params.h"
 #include "third_party/blink/public/common/features.h"
 
@@ -20,16 +23,6 @@ std::optional<int> min_screen_rect_stable_time_ms;
 const int s_legacy_max_child_frame_screen_rect_movement = 30;
 const int s_legacy_min_screen_rect_stable_time_ms = 500;
 }  // namespace
-
-FrameVisualProperties::FrameVisualProperties() = default;
-
-FrameVisualProperties::FrameVisualProperties(
-    const FrameVisualProperties& other) = default;
-
-FrameVisualProperties::~FrameVisualProperties() = default;
-
-FrameVisualProperties& FrameVisualProperties::operator=(
-    const FrameVisualProperties& other) = default;
 
 double FrameVisualProperties::MaxChildFrameScreenRectMovement() {
   if (!max_child_frame_screen_rect_movement.has_value()) {
@@ -56,11 +49,6 @@ int FrameVisualProperties::MaxChildFrameScreenRectMovementForIOv2() {
 
 int FrameVisualProperties::MinScreenRectStableTimeMsForIOv2() {
   return s_legacy_min_screen_rect_stable_time_ms;
-}
-
-void FrameVisualProperties::ResetForTesting() {  // IN-TEST
-  max_child_frame_screen_rect_movement.reset();
-  min_screen_rect_stable_time_ms.reset();
 }
 
 }  // namespace blink

@@ -24,17 +24,16 @@
 
 #include <libxslt/imports.h>
 #include <libxslt/security.h>
-#include <libxslt/variables.h>
 #include <libxslt/xsltutils.h>
 
-#include "base/containers/heap_array.h"
 #include "base/containers/span.h"
-#include "base/numerics/checked_math.h"
+#include "base/numerics/safe_conversions.h"
 #include "third_party/blink/renderer/core/dom/document.h"
 #include "third_party/blink/renderer/core/dom/transform_source.h"
 #include "third_party/blink/renderer/core/editing/serializers/serialization.h"
 #include "third_party/blink/renderer/core/frame/frame_console.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
+#include "third_party/blink/renderer/core/frame/web_feature.h"
 #include "third_party/blink/renderer/core/inspector/console_message.h"
 #include "third_party/blink/renderer/core/xml/parser/xml_document_parser.h"
 #include "third_party/blink/renderer/core/xml/parser/xml_document_parser_scope.h"
@@ -43,6 +42,7 @@
 #include "third_party/blink/renderer/core/xml/xslt_unicode_sort.h"
 #include "third_party/blink/renderer/platform/bindings/source_location.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
+#include "third_party/blink/renderer/platform/instrumentation/use_counter.h"
 #include "third_party/blink/renderer/platform/loader/fetch/fetch_initiator_type_names.h"
 #include "third_party/blink/renderer/platform/loader/fetch/raw_resource.h"
 #include "third_party/blink/renderer/platform/loader/fetch/resource.h"
@@ -232,74 +232,6 @@ static bool SaveResultToString(xmlDocPtr result_doc,
   return true;
 }
 
-static char* AllocateParameterValue(const String& value) {
-  StringUtf8Adaptor utf8(value);
-  auto parameter_value = base::HeapArray<char>::Uninit(
-      base::CheckAdd(utf8.size(), 1u).ValueOrDie());
-  parameter_value.copy_prefix_from(base::span(utf8));
-  parameter_value[utf8.size()] = '\0';
-  return std::move(parameter_value).leak().data();
-}
-
-static Vector<char*> XsltParamArrayFromParameterMap(
-    XSLTProcessor::ParameterMap& parameters) {
-  if (parameters.empty())
-    return {};
-
-  base::CheckedNumeric<wtf_size_t> size = parameters.size();
-  size *= 2;
-  ++size;
-
-  Vector<char*> parameter_array(size.ValueOrDie());
-
-  unsigned index = 0;
-  for (auto& parameter : parameters) {
-    parameter_array[index++] = AllocateParameterValue(parameter.key);
-    parameter_array[index++] = AllocateParameterValue(parameter.value);
-  }
-  parameter_array[index] = nullptr;
-  return parameter_array;
-}
-
-static void FreeXsltParamArray(Vector<char*>& params) {
-  if (params.empty()) {
-    return;
-  }
-
-  for (auto& param : params) {
-    base::HeapArray<char>::DeleteLeakedData(param);
-  }
-  params.clear();
-}
-
-static xsltStylesheetPtr XsltStylesheetPointer(
-    Document* document,
-    Member<XSLStyleSheet>& cached_stylesheet,
-    Node* stylesheet_root_node) {
-  if (!cached_stylesheet && stylesheet_root_node) {
-    // When using importStylesheet, we will use the given document as the
-    // imported stylesheet's owner.
-    cached_stylesheet = MakeGarbageCollected<XSLStyleSheet>(
-        stylesheet_root_node->parentNode()
-            ? &stylesheet_root_node->parentNode()->GetDocument()
-            : document,
-        stylesheet_root_node,
-        stylesheet_root_node->GetDocument().Url().GetString(),
-        stylesheet_root_node->GetDocument().Url(),
-        false);  // FIXME: Should we use baseURL here?
-
-    // According to Mozilla documentation, the node must be a Document node,
-    // an xsl:stylesheet or xsl:transform element. But we just use text
-    // content regardless of node type.
-    cached_stylesheet->ParseString(CreateMarkup(stylesheet_root_node));
-  }
-
-  if (!cached_stylesheet || !cached_stylesheet->GetDocument())
-    return nullptr;
-
-  return cached_stylesheet->CompileStyleSheet();
-}
-
 static inline xmlDocPtr XmlDocPtrFromNode(Node* source_node,
                                           bool& should_delete) {
   Document* owner_document = &source_node->GetDocument();
@@ -344,8 +276,10 @@ bool XSLTProcessor::TransformToString(Node* source_node,
   Document* owner_document = &source_node->GetDocument();
 
   SetXSLTLoadCallBack(DocLoaderFunc, this, owner_document->Fetcher());
-  xsltStylesheetPtr sheet = XsltStylesheetPointer(document_.Get(), stylesheet_,
-                                                  stylesheet_root_node_.Get());
+  xsltStylesheetPtr sheet =
+      stylesheet_ && stylesheet_->GetDocument()
+          ? stylesheet_->CompileStyleSheet()
+          : nullptr;
   if (!sheet) {
     SetXSLTLoadCallBack(nullptr, nullptr, nullptr);
     stylesheet_ = nullptr;
@@ -421,16 +355,11 @@ bool XSLTProcessor::TransformToString(Node* source_node,
     if (!transform_context->globalVars)
       transform_context->globalVars = xmlHashCreate(20);
 
-    Vector<char*> params = XsltParamArrayFromParameterMap(parameters_);
-    xsltQuoteUserParams(
-        transform_context,
-        static_cast<const char**>(static_cast<void*>(params.data())));
     xmlDocPtr result_doc = xsltApplyStylesheetUser(
         sheet, source_doc, nullptr, nullptr, nullptr, transform_context);
 
     xsltFreeTransformContext(transform_context);
     xsltFreeSecurityPrefs(security_prefs);
-    FreeXsltParamArray(params);
 
     if (should_free_source_doc)
       xmlFreeDoc(source_doc);

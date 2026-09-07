@@ -34,7 +34,6 @@ scripts_for_json5_files = jinja2_sources + [
 
 css_properties_files = scripts_for_json5_files + [
                          "$_scripts_dir/core/css/css_properties.py",
-                         "$_scripts_dir/make_origin_trials.py",
                          "$_scripts_dir/make_runtime_features_utilities.py",
                          "$_scripts_dir/make_runtime_features.py",
                        ]

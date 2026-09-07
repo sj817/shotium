@@ -17,7 +17,6 @@
 #include "services/network/public/cpp/crash_keys.h"
 #include "services/network/public/cpp/http_request_headers_mojom_traits.h"
 #include "services/network/public/cpp/isolation_info_mojom_traits.h"
-#include "services/network/public/cpp/network_ipc_param_traits.h"
 #include "services/network/public/cpp/permissions_policy/permissions_policy_mojom_traits.h"
 #include "services/network/public/cpp/resource_request_body.h"
 #include "services/network/public/cpp/storage_access_api_mojom_traits.h"

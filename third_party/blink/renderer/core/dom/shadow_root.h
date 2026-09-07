@@ -46,7 +46,6 @@ namespace blink {
 
 class Document;
 class ExceptionState;
-class SetHTMLOptions;
 class SetHTMLUnsafeOptions;
 class SlotAssignment;
 class ReferenceTargetIdObserver;
@@ -142,7 +141,6 @@ class CORE_EXPORT ShadowRoot final : public DocumentFragment,
   void setHTMLUnsafe(const V8UnionStringOrTrustedHTML* html,
                      TrustedParserOptions*,
                      ExceptionState&);
-  void setHTML(const String& html, SetHTMLOptions*, ExceptionState&);
 
   Node* Clone(Document& factory,
               NodeCloningData& data,
@@ -227,7 +225,6 @@ class CORE_EXPORT ShadowRoot final : public DocumentFragment,
   void ReferenceTargetChanged();
   void SetInnerHTMLInternal(const String& html,
                             FragmentParserOptions,
-                            Sanitizer::Mode,
                             FragmentParserConfig::ParseDeclarativeShadowRoots,
                             FragmentParserConfig::ForceHtml,
                             const AtomicString& property_name,

@@ -93,13 +93,7 @@ if (enable_rust) {
       ":raw_bssl_sys_bindings_static_fns",
     ]
 
-    visibility = [
-      ":*",  # private, should only be exposed through bssl_crypto
-
-      # TODO: eventually rely on safe primitives instead of the unsafe ones.
-      "//third_party/anonymous_tokens:athm",
-      "//third_party/anonymous_tokens:athm_clippy",
-    ]
+    visibility = [ ":*" ]  # private, only exposed through bssl_crypto
 
     bindgen_deps = [ ":raw_bssl_sys_bindings" ]
   }
@@ -295,7 +289,6 @@ if (build_with_chromium) {
     sources = rebase_path(bench_sources + bench_internal_headers, ".", "src")
     deps = [
       ":boringssl",
-      "//third_party/google_benchmark",
     ]
 
     configs -= [ "//build/config/compiler:chromium_code" ]

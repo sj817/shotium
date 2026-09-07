@@ -45,7 +45,6 @@ class MakeElementFactoryWriter(MakeQualifiedNamesWriter):
         'noConstructor': {},
         'noTypeHelpers': {},
         'runtimeEnabled': {},
-        'runtimeFlagHasOriginTrial': {},
     }
     default_metadata = dict(
         MakeQualifiedNamesWriter.default_metadata, **{

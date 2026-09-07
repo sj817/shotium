@@ -65,7 +65,6 @@ class HttpTransactionFactory;
 class HttpUserAgentSettings;
 class HttpServerProperties;
 class HostResolverManager;
-class NetworkQualityEstimator;
 class ProxyConfigService;
 class URLRequestContext;
 class CacheEncryptionDelegate;
@@ -182,13 +181,6 @@ class NET_EXPORT URLRequestContextBuilder {
 
   void set_require_network_anonymization_key(bool value) {
     require_network_anonymization_key_ = value;
-  }
-
-  // Unlike most other setters, the builder does not take ownership of the
-  // NetworkQualityEstimator.
-  void set_network_quality_estimator(
-      NetworkQualityEstimator* network_quality_estimator) {
-    network_quality_estimator_ = network_quality_estimator;
   }
 
   void set_ssl_config_service(
@@ -385,10 +377,6 @@ class NET_EXPORT URLRequestContextBuilder {
   // safely destroyed.
   std::unique_ptr<URLRequestContext> Build();
 
-  void SuppressSettingSocketPerformanceWatcherFactoryForTesting() {
-    suppress_setting_socket_performance_watcher_factory_for_testing_ = true;
-  }
-
   void set_dns_platform_attempt_factory(
       std::unique_ptr<DnsPlatformAttemptFactory> dns_platform_attempt_factory) {
     dns_platform_attempt_factory_ = std::move(dns_platform_attempt_factory);
@@ -402,7 +390,6 @@ class NET_EXPORT URLRequestContextBuilder {
   static void SetHttpNetworkSessionComponents(
       const URLRequestContext* request_context,
       HttpNetworkSessionContext* session_context,
-      bool suppress_setting_socket_performance_watcher_factory = false,
       ClientSocketFactory* client_socket_factory = nullptr);
 
   // Factory that will be used to create all client sockets used by the
@@ -418,7 +405,6 @@ class NET_EXPORT URLRequestContextBuilder {
   bool enable_shared_zstd_ = false;
   bool check_cleartext_permitted_ = false;
   bool require_network_anonymization_key_ = false;
-  raw_ptr<NetworkQualityEstimator> network_quality_estimator_ = nullptr;
 
   std::string accept_language_;
   std::string user_agent_;
@@ -426,7 +412,6 @@ class NET_EXPORT URLRequestContextBuilder {
 
   bool http_cache_enabled_ = true;
   bool cookie_store_set_by_client_ = false;
-  bool suppress_setting_socket_performance_watcher_factory_for_testing_ = false;
   bool stale_dns_enabled_ = false;
 
   handles::NetworkHandle bound_network_ = handles::kInvalidNetworkHandle;

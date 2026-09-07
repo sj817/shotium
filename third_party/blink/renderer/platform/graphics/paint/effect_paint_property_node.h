@@ -239,10 +239,6 @@ class PLATFORM_EXPORT EffectPaintPropertyNode final
   bool HasDirectCompositingReasons() const {
     return !state_.direct_compositing_reasons.empty();
   }
-  bool RequiresCompositingForUnboundedElement() const {
-    return state_.direct_compositing_reasons.Has(
-        CompositingReason::kUnboundedElement);
-  }
   bool RequiresCompositingForBackdropFilterMask() const {
     return state_.direct_compositing_reasons.Has(
         CompositingReason::kBackdropFilterMask);

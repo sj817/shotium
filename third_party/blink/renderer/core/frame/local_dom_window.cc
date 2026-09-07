@@ -102,11 +102,9 @@
 #include "third_party/blink/renderer/core/layout/layout_view.h"
 #include "third_party/blink/renderer/core/loader/document_loader.h"
 #include "third_party/blink/renderer/core/loader/frame_load_request.h"
-#include "third_party/blink/renderer/core/origin_trials/origin_trial_context.h"
 #include "third_party/blink/renderer/core/page/chrome_client.h"
 #include "third_party/blink/renderer/core/page/create_window.h"
 #include "third_party/blink/renderer/core/page/page.h"
-#include "third_party/blink/renderer/core/page/scrolling/sync_scroll_attempt_heuristic.h"
 #include "third_party/blink/renderer/core/paint/paint_layer_scrollable_area.h"
 #include "third_party/blink/renderer/core/probe/core_probes.h"
 #include "third_party/blink/renderer/core/route_matching/navigation_state.h"
@@ -187,8 +185,7 @@ LocalDOMWindow::LocalDOMWindow(LocalFrame& frame, WindowAgent* agent)
     : DOMWindow(frame),
       // The v8::Isolate* that used to lead this argument list is gone with V8;
       // ExecutionContext no longer holds one.
-      ExecutionContext(agent,
-                       /*Same value as IsWindow(). is_window=*/true),
+      ExecutionContext(agent),
       visualViewport_(MakeGarbageCollected<DOMVisualViewport>(this)),
       should_print_when_finished_loading_(false),
       token_(frame.GetLocalFrameToken()),
@@ -1519,7 +1516,6 @@ double LocalDOMWindow::scrollX() const {
 
   // TODO(crbug.com/1499981): This should be removed once synchronized scrolling
   // impact is understood.
-  SyncScrollAttemptHeuristic::DidAccessScrollOffset();
 
   document()->UpdateStyleAndLayout(DocumentUpdateReason::kJavaScript);
 
@@ -1542,7 +1538,6 @@ double LocalDOMWindow::scrollY() const {
 
   // TODO(crbug.com/1499981): This should be removed once synchronized scrolling
   // impact is understood.
-  SyncScrollAttemptHeuristic::DidAccessScrollOffset();
 
   document()->UpdateStyleAndLayout(DocumentUpdateReason::kJavaScript);
 
@@ -1636,7 +1631,6 @@ void LocalDOMWindow::scrollBy(const ScrollToOptions* scroll_to_options) const {
 
   // TODO(crbug.com/1499981): This should be removed once synchronized scrolling
   // impact is understood.
-  SyncScrollAttemptHeuristic::DidSetScrollOffset();
 
   document()->UpdateStyleAndLayout(DocumentUpdateReason::kJavaScript);
 
@@ -1697,7 +1691,6 @@ void LocalDOMWindow::scrollTo(const ScrollToOptions* scroll_to_options) const {
 
   // TODO(crbug.com/1499981): This should be removed once synchronized scrolling
   // impact is understood.
-  SyncScrollAttemptHeuristic::DidSetScrollOffset();
 
   // It is only necessary to have an up-to-date layout if the position may be
   // clamped, which is never the case for (0, 0).

@@ -16,7 +16,6 @@ namespace net {
 
 class NetLog;
 struct NetLogSource;
-class SocketPerformanceWatcher;
 
 // An implementation of TCPSocketWin which uses an IO completion port to be
 // notified of completed reads and writes. The goal is to avoid the PostTask
@@ -37,12 +36,10 @@ class NET_EXPORT TcpSocketIoCompletionPortWin : public TCPSocketWin {
   };
 
   TcpSocketIoCompletionPortWin(
-      std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
       NetLog* net_log,
       const NetLogSource& source);
 
   TcpSocketIoCompletionPortWin(
-      std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
       NetLogWithSource net_log_source);
 
   ~TcpSocketIoCompletionPortWin() override;

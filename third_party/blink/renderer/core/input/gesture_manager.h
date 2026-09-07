@@ -10,10 +10,8 @@
 #include "third_party/blink/renderer/core/core_export.h"
 #include "third_party/blink/renderer/core/layout/hit_test_request.h"
 #include "third_party/blink/renderer/core/page/event_with_hit_test_results.h"
-#include "third_party/blink/renderer/core/page/focus_changed_observer.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
 #include "third_party/blink/renderer/platform/wtf/deque.h"
-#include "ui/base/dragdrop/mojom/drag_drop_types.mojom-blink.h"
 
 namespace gfx {
 class Point;
@@ -26,13 +24,11 @@ class ScrollManager;
 class SelectionController;
 class PointerEventManager;
 class MouseEventManager;
-enum class DragHandlingResult;
 
 // This class takes care of gestures and delegating the action based on the
 // gesture to the responsible class.
 class CORE_EXPORT GestureManager final
-    : public GarbageCollected<GestureManager>,
-      public FocusChangedObserver {
+    : public GarbageCollected<GestureManager> {
  public:
   GestureManager(LocalFrame&,
                  ScrollManager&,
@@ -41,7 +37,7 @@ class CORE_EXPORT GestureManager final
                  SelectionController&);
   GestureManager(const GestureManager&) = delete;
   GestureManager& operator=(const GestureManager&) = delete;
-  void Trace(Visitor*) const override;
+  void Trace(Visitor*) const;
 
   void Clear();
   void ResetLongTapContextMenuStates();
@@ -52,36 +48,11 @@ class CORE_EXPORT GestureManager final
       const GestureEventWithHitTestResults&);
   bool GestureContextMenuDeferred() const;
 
-  void HandleTouchDragEnd(const WebMouseEvent&,
-                          ui::mojom::blink::DragOperation);
-
-  // Dispatches contextmenu event for drag-ends that haven't really dragged
-  // except for a few pixels.
-  //
-  // The reason for handling this in GestureManager is the similarity of the
-  // interaction with long taps.  When a drag ends without a drag offset, it is
-  // effectively a long tap but with one difference: there is no gesture long
-  // tap event. This is because the drag controller interrupts current gesture
-  // sequence (cancelling the gesture) at the moment a drag begins, and the
-  // gesture recognizer does not know if the drag has ended at the originating
-  // position.
-  void SendContextMenuEventTouchDragEnd(const WebMouseEvent&,
-                                        ui::mojom::blink::DragOperation);
-
-  // FocusChangedObserver  overrides
-  // `lost_focus_during_drag_` will be set to true only if a drag is ongoing
-  // when the window's focus changes.
-  void FocusedFrameChanged() override {
-    lost_focus_during_drag_ = drag_in_progress_;
-  }
-
  private:
   WebInputEventResult HandleGestureShowPress();
   WebInputEventResult HandleGestureTapDown(
       const GestureEventWithHitTestResults&);
   WebInputEventResult HandleGestureTap(const GestureEventWithHitTestResults&);
-  WebInputEventResult HandleGestureShortPress(
-      const GestureEventWithHitTestResults&);
   WebInputEventResult HandleGestureLongPress(
       const GestureEventWithHitTestResults&);
   WebInputEventResult HandleGestureLongTap(
@@ -106,10 +77,6 @@ class CORE_EXPORT GestureManager final
   PointerId GetPointerIdFromWebGestureEvent(
       const WebGestureEvent& gesture_event) const;
 
-  DragHandlingResult HandleDragDropIfPossible(
-      const GestureEventWithHitTestResults&);
-  bool DragEndOpensContextMenu();
-
   // NOTE: If adding a new field to this class please ensure that it is
   // cleared if needed in |GestureManager::clear()|.
 
@@ -130,12 +97,6 @@ class CORE_EXPORT GestureManager final
   bool suppress_selection_on_repeated_tap_down_ = true;
 
   bool gesture_context_menu_deferred_;
-
-  gfx::PointF long_press_position_in_root_frame_;
-  bool drag_in_progress_ = false;
-  // Set to `true` whenever the `frame_`s page loses focus. If this happens
-  // during a touch-drag, we don't want to open a context menu on drag-end.
-  bool lost_focus_during_drag_ = false;
 
   const Member<SelectionController> selection_controller_;
 };

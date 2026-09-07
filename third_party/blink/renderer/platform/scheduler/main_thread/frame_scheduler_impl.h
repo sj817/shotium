@@ -119,7 +119,6 @@ class PLATFORM_EXPORT FrameSchedulerImpl : public FrameScheduler,
   scoped_refptr<base::SingleThreadTaskRunner> CompositorTaskRunner() override;
 
   void OnFirstContentfulPaintInMainFrame() override;
-  void OnFirstMeaningfulPaint() override;
   void OnMainFrameInteractive() override;
   void OnDidInstallNewDocument() override;
   base::TimeDelta UnreportedTaskTime() const override;
@@ -381,7 +380,6 @@ class PLATFORM_EXPORT FrameSchedulerImpl : public FrameScheduler,
       waiting_for_contentful_paint_;
   TraceableState<bool, "renderer.scheduler.status">
       waiting_for_meaningful_paint_;
-  base::TimeTicks first_meaningful_paint_timestamp_;
 
   using TaskRunnerMap =
       HashMap<TaskType, scoped_refptr<base::SingleThreadTaskRunner>>;

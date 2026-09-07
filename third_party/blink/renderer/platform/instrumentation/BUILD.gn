@@ -31,7 +31,6 @@ blink_platform_sources("instrumentation") {
     "use_counter.h",
   ]
 
-  deps = [ "//services/service_manager/public/cpp" ]
   public_deps = [
     ":histogram",
     "//third_party/blink/renderer/platform/heap",

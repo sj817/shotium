@@ -35,8 +35,6 @@ class NetworkBindingClientSocketFactory : public ClientSocketFactory {
   std::unique_ptr<TransportClientSocket> CreateTransportClientSocket(
       const AddressList& addresses,
       handles::NetworkHandle target_network,
-      std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
-      NetworkQualityEstimator* network_quality_estimator,
       NetLog* net_log,
       const NetLogSource& source) override;
 

@@ -23,9 +23,6 @@ class TimerBase;
 class TimerBasedTickProvider;
 class WebRtcTaskQueue;
 }  // namespace blink
-namespace IPC {
-class ChannelAssociatedGroupController;
-}  // namespace IPC
 namespace media {
 class AlsaPcmOutputStream;
 class AlsaPcmInputStream;
@@ -93,7 +90,6 @@ class RunOrPostTaskPassKey {
   // Avoid =default to disallow creation by uniform initialization.
   RunOrPostTaskPassKey() = default;
 
-  friend class IPC::ChannelAssociatedGroupController;
   friend class RunOrPostTaskPassKeyForTesting;
   friend class viz::ExternalBeginFrameSourceWin;
 };

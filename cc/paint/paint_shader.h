@@ -23,10 +23,6 @@
 
 class SkShader;
 
-namespace gpu {
-struct Mailbox;
-}
-
 namespace cc {
 class ImageProvider;
 
@@ -152,7 +148,6 @@ class CC_PAINT_EXPORT PaintShader : public SkRefCnt {
       std::vector<IntUniform> int_uniforms,
       sk_sp<PaintShader> cached_paint_shader);
 
-  static size_t GetSerializedSize(const PaintShader* shader);
 
   PaintShader(const PaintShader&) = delete;
   ~PaintShader() override;
@@ -215,9 +210,7 @@ class CC_PAINT_EXPORT PaintShader : public SkRefCnt {
  private:
   friend class PaintFlags;
   friend class PaintOpHelper;
-  friend class PaintOpReader;
   friend class PaintOpSerializationTestUtils;
-  friend class PaintOpWriter;
   friend class ScopedRasterFlags;
   friend class ShaderPaintFilter;
   FRIEND_TEST_ALL_PREFIXES(PaintShaderTest, DecodePaintRecord);
@@ -255,8 +248,6 @@ class CC_PAINT_EXPORT PaintShader : public SkRefCnt {
 
   // Creates a PaintShader with images from |image_provider| to be rasterized
   // at the given ctm.
-  // |transfer_cache_entry_id| is set to the transfer cache id for the image, if
-  // the decode is backed by the transfer cache.
   // |raster_quality| is set to the filter quality the shader should be
   // rasterized with.
   // Valid only for PaintImage backed shaders.
@@ -264,10 +255,7 @@ class CC_PAINT_EXPORT PaintShader : public SkRefCnt {
       const SkMatrix& ctm,
       PaintFlags::FilterQuality requested_quality,
       ImageProvider* image_provider,
-      uint32_t* transfer_cache_entry_id,
-      PaintFlags::FilterQuality* raster_quality,
-      bool* needs_mips,
-      gpu::Mailbox* mailbox) const;
+      PaintFlags::FilterQuality* raster_quality) const;
 
   void SetColorsAndPositions(const SkColor4f* colors,
                              const SkScalar* positions,

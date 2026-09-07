@@ -309,15 +309,6 @@ class COMPONENT_EXPORT(MOJO_CPP_BINDINGS_BASE) Message {
   // Write a representation of this object into a trace.
   void WriteIntoTrace(perfetto::TracedValue ctx) const;
 
-#if defined(ENABLE_IPC_FUZZER)
-  const char* interface_name() const { return interface_name_; }
-  void set_interface_name(const char* interface_name) {
-    interface_name_ = interface_name;
-  }
-
-  const char* method_name() const { return method_name_; }
-  void set_method_name(const char* method_name) { method_name_ = method_name; }
-#endif
 
   int64_t creation_timeticks_us() const;
 
@@ -351,10 +342,6 @@ class COMPONENT_EXPORT(MOJO_CPP_BINDINGS_BASE) Message {
   bool serialized_ = false;
 
   const char* heap_profiler_tag_ = nullptr;
-#if defined(ENABLE_IPC_FUZZER)
-  const char* interface_name_ = nullptr;
-  const char* method_name_ = nullptr;
-#endif
 };
 
 class COMPONENT_EXPORT(MOJO_CPP_BINDINGS_BASE) MessageFilter {

@@ -43,7 +43,6 @@ class StreamSocketHandle;
 class HostResolver;
 class HttpServerProperties;
 class NetLogWithSource;
-class NetworkQualityEstimator;
 class SpdySession;
 class StreamSocket;
 class TransportSecurityState;
@@ -156,7 +155,6 @@ class NET_EXPORT SpdySessionPool
                   bool enable_priority_update,
                   bool go_away_on_ip_change,
                   SpdySessionPool::TimeFunc time_func,
-                  NetworkQualityEstimator* network_quality_estimator,
                   bool cleanup_sessions_on_ip_address_changed);
 
   SpdySessionPool(const SpdySessionPool&) = delete;
@@ -356,11 +354,6 @@ class NET_EXPORT SpdySessionPool
   // streams.
   void OnSSLConfigForServersChanged(
       const base::flat_set<HostPortPair>& servers) override;
-
-  void set_network_quality_estimator(
-      NetworkQualityEstimator* network_quality_estimator) {
-    network_quality_estimator_ = network_quality_estimator;
-  }
 
   // Returns the stored DNS aliases for the session key.
   std::set<std::string> GetDnsAliasesForSessionKey(
@@ -578,7 +571,6 @@ class NET_EXPORT SpdySessionPool
 
   TimeFunc time_func_;
 
-  raw_ptr<NetworkQualityEstimator> network_quality_estimator_;
 
   const bool cleanup_sessions_on_ip_address_changed_;
 

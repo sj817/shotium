@@ -70,8 +70,13 @@ const int32 kKeyEventFlagIMEFabricatedKey = 0x10000;
 const int32 kKeyEventFlagIsRepeat         = 0x20000;
 
 // TODO(erg): Move accessibility flags and maybe synthetic touch events here.
-[Native]
-enum EventPointerType;
+enum EventPointerType {
+  kUnknown = 0,
+  kMouse = 1,
+  kPen = 2,
+  kTouch = 3,
+  kEraser = 4,
+};
 
 // Phase information used for a ScrollEvent.
 // These values match ui::ScrollEventPhase in ui/events/event_constants.h

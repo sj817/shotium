@@ -17,8 +17,6 @@
 #include "net/log/net_log_with_source.h"
 #include "net/socket/client_socket_factory.h"
 #include "net/socket/connection_attempts.h"
-#include "net/socket/socket_performance_watcher.h"
-#include "net/socket/socket_performance_watcher_factory.h"
 #include "net/socket/websocket_stream_socket.h"
 
 namespace net {
@@ -89,21 +87,11 @@ int TransportConnectSubJob::DoTransportConnect() {
   next_state_ = STATE_TRANSPORT_CONNECT_COMPLETE;
   AddressList one_address(CurrentAddress());
 
-  // Create a `SocketPerformanceWatcher`, and pass the ownership.
-  std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher;
-  if (auto* factory = parent_job_->socket_performance_watcher_factory();
-      factory != nullptr) {
-    socket_performance_watcher = factory->CreateSocketPerformanceWatcher(
-        SocketPerformanceWatcherFactory::PROTOCOL_TCP,
-        CurrentAddress().address());
-  }
-
   const NetLogWithSource& net_log = parent_job_->net_log();
   transport_socket_ =
       parent_job_->client_socket_factory()->CreateTransportClientSocket(
           one_address, parent_job_->params_->target_network(),
-          std::move(socket_performance_watcher),
-          parent_job_->network_quality_estimator(), net_log.net_log(),
+          net_log.net_log(),
           net_log.source());
 
   net_log.AddEvent(NetLogEventType::TRANSPORT_CONNECT_JOB_CONNECT_ATTEMPT, [&] {

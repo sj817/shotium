@@ -34,7 +34,6 @@
 #include "net/http/transport_security_state.h"
 #include "net/log/net_log.h"
 #include "net/log/net_log_source.h"
-#include "net/nqe/network_quality_estimator.h"
 #include "net/socket/client_socket_factory.h"
 #include "net/socket/ssl_client_socket_impl.h"
 #include "net/ssl/ssl_config_service.h"
@@ -216,10 +215,6 @@ void URLRequestContext::set_job_factory(
 void URLRequestContext::set_http_user_agent_settings(
     std::unique_ptr<const HttpUserAgentSettings> http_user_agent_settings) {
   http_user_agent_settings_ = std::move(http_user_agent_settings);
-}
-void URLRequestContext::set_network_quality_estimator(
-    NetworkQualityEstimator* network_quality_estimator) {
-  network_quality_estimator_ = network_quality_estimator;
 }
 void URLRequestContext::set_client_socket_factory(
     std::unique_ptr<ClientSocketFactory> client_socket_factory) {

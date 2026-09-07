@@ -1,5 +1,7 @@
 # 静态截图裁剪任务：完整目标与接续清单
 
+> 2026-09-08 最新指令：本批源码收尾后暂停，等待用户接手。下文旧继续计划仅为历史记录；当前状态以 [交接报告](screenshot-cut-handoff-2026-09-08.md) 为准。
+
 ## 目标与授权
 
 用户要求完成根目录审计报告中的全部状态：无用实现、仍有引用但截图不用的耦合残留，以及待进一步确认的候选，都必须有实际处理结果。不能只把构建开关关闭、删掉一层调用或把“仍被引用”写成永久保留理由。
@@ -27,6 +29,9 @@
 
 ## 构建与提交节奏
 
+**2026-09-08 最新用户调整（优先于下方历史批次节奏）：剩余全部范围先连续完成一轮源码裁剪，再统一编译和验收。GPU/Viz、网络与旧 IPC、诊断遥测、第三方、资源/生成器/同步配置连续处理；中途只做必要的调用关系核查、精确备份与轻量静态检查，不再每个组件或每个大类完整构建/跑全套回归。最终集中 GN、缺失输入、编译错误修复、EXE/DLL/运行检查及像素对照，保留六平台验证要求；提交合并为少量大提交。先前已完成的 11 批结果仍有效，当前源码未构建不能冒充已验证。**
+
+
 1. 先完成一个完整的大批次：调用方、接口、实现、构建配置、实体删除及静态残留检查集中处理。
 2. 批内不为每个文件/目录反复启动完整构建。到批次边界集中执行 GN、缺失输入检查、必要语法检查、EXE/DLL 编译与运行验证。
 3. 出现编译错误，先收集同批完整错误集合，再按失败 TU 做 syntax-only 修复；只有前端错误解决后才继续完整构建。
@@ -50,9 +55,23 @@
 
 前三批 Windows EXE/DLL、84 demos、serve/net、Node/daemon/协议、Bilibili 和像素基线检查已完成，详见执行记录；六平台实际编译未完成。没有创建 PR 或发布。
 
-## 最新接续状态：第十一批验证通过，待提交
+## 最新状态：本批源码完成，按用户要求暂停
 
-本段优先于后面的历史进度。基准提交 cd916149eb10080a0c176826e9308f96ef5dd82d；第十一批使用 out/cut-stage15，共 229 个 owned 路径（225 源码/构建输入、4 文档）和 576 个实体删除，总计 805 个变更路径。当前全部 Windows 验证通过、尚未提交；所有构建/测试会话已结束。
+**用户最新要求：本批完成后暂停并交接。此指令优先于下面所有历史 active 目标和继续执行计划；未经用户再次要求，不再裁剪、构建或启动子代理。**
+
+本批七组已明确授权并全部应用：Service Manager、ANGLE/SPIR-V/Vulkan、Blink 拖放、UKM、NQE/FileNetLog、Sanitizer/Skeleton、Origin Trial。加上本轮前半部分 GPU/Viz、旧 IPC、原生 UI、Skottie、第三方骨架、XSLT 脚本 API 与输入预测清理，相对最后验证提交 d9b409db334cb60b0f6b0c11549b7d5c4be7e7bb 共删除 1,404 个普通跟踪文件、5 个 gitlink，新增 3 个 Mojo traits 头文件。源码与文档合为一个本地提交，提交号及精确路径见 out/cut-stage16-final/commit.json；不创建 PR、不 push、不发布。
+
+七组源码完成为 7/7；整个裁剪目标尚未完成。已删除 gpu/、ipc/、services/service_manager、ui/gl 及 ANGLE/SPIR-V/Vulkan checkout；五个第三方完整仓库和既有修改保存在 out/cut-stage16-angle-authorized/vendor-backup。仍保留截图所需 CPU 绘制、CSS/DOM/布局、SVG、图片、字体、表单主题、Canvas 备用布局、原生 XSLT、普通 Mojo 和实际网络加载。
+
+静态证据 out/cut-stage16/static-proof-combined.json：15,905 个代码/构建输入、285 个改动 C/C++ 预处理配对、653 份新阶段原始 SHA 备份；扫描发现的一个 drag_state.h 旧 include 已补删，当前记录 0 问题。早期父阶段和 Skottie 备份另有原始证据。
+
+**本批尚未 GN 生成、编译/链接、重建 addon、运行或像素验收，不能宣称可构建或截图无回归。** out/Shot 仍是第十一批旧二进制：183 张已验证像素，第 184 张 Unbounded 只有旧二进制基线；六平台实际编译仍未完成。以后由用户决定是否验证，建议用已成功的 jobs 8（20 已多次实际 OOM），不改永久默认值。
+
+剩余网络/公共协议/FileReader/Blob/Worker、诊断/Perfetto/Crashpad/AX、UI/display/拖放辅助、Route/URLPattern、Skia 实际 checkout 及其他第三方/生成器/同步尾巴，连同接手顺序与回退位置，全部见 [交接报告](screenshot-cut-handoff-2026-09-08.md)。逐根目录状态见 [根目录报告](screenshot-root-status-2026-09-08.md)。子代理已停止。
+
+## 第十一批已提交（当前验证基线）
+
+本段优先于后面的历史进度。基准提交 cd916149eb10080a0c176826e9308f96ef5dd82d；第十一批使用 out/cut-stage15，共 229 个 owned 路径（225 源码/构建输入、4 文档）和 576 个实体删除，总计 805 个变更路径。提交 d9b409db334cb60b0f6b0c11549b7d5c4be7e7bb，全部 Windows 验证通过；stage15 清单冻结。
 
 已移除 View transition 创建入口、Document/DocumentLoader/LocalFrameView/PageAnimator 生命周期、样式调度/显示锁、DOM 伪树、布局/绘制/属性树、跨文档协议/traits、事件/字典和 GN；ForeignLayerDisplayItem 及调用方、无调用的图层/图片缓存入口和 AddToLayerDebugInfo 等也已删除。原 EnqueuePageRevealEvent 的 RouteMap 导航初始化副作用迁为 InitializeRouteNavigationState，仍在原调用时点执行。
 

@@ -70,7 +70,6 @@
 #include "third_party/blink/public/mojom/fetch/fetch_api_request.mojom-blink.h"
 #include "third_party/blink/public/mojom/frame/frame.mojom-blink.h"
 #include "third_party/blink/public/mojom/loader/same_document_navigation_type.mojom-shared.h"
-#include "third_party/blink/public/mojom/origin_trials/origin_trial_feature.mojom-shared.h"
 #include "third_party/blink/public/mojom/page/page.mojom-blink.h"
 #include "third_party/blink/public/mojom/service_worker/service_worker_fetch_handler_bypass_option.mojom-blink.h"
 #include "third_party/blink/public/mojom/service_worker/service_worker_fetch_handler_type.mojom-blink.h"
@@ -125,7 +124,6 @@
 #include "third_party/blink/renderer/core/loader/old_document_info_for_commit.h"
 #include "third_party/blink/renderer/core/loader/preload_helper.h"
 #include "third_party/blink/renderer/core/loader/progress_tracker.h"
-#include "third_party/blink/renderer/core/origin_trials/origin_trial_context.h"
 #include "third_party/blink/renderer/core/page/focus_controller.h"
 #include "third_party/blink/renderer/core/page/frame_tree.h"
 #include "third_party/blink/renderer/core/page/page.h"
@@ -181,48 +179,6 @@
 
 namespace blink {
 namespace {
-
-Vector<mojom::blink::OriginTrialFeature> CopyInitiatorOriginTrials(
-    const std::vector<int>& initiator_origin_trial_features) {
-  Vector<mojom::blink::OriginTrialFeature> result;
-  for (auto feature : initiator_origin_trial_features) {
-    // Convert from int to OriginTrialFeature. These values are passed between
-    // blink navigations. OriginTrialFeature isn't visible outside of blink (and
-    // doesn't need to be) so the values are transferred outside of blink as
-    // ints and casted to OriginTrialFeature once being processed in blink.
-    result.push_back(static_cast<mojom::blink::OriginTrialFeature>(feature));
-  }
-  return result;
-}
-
-std::vector<int> CopyInitiatorOriginTrials(
-    const Vector<mojom::blink::OriginTrialFeature>&
-        initiator_origin_trial_features) {
-  std::vector<int> result;
-  for (auto feature : initiator_origin_trial_features) {
-    // Convert from OriginTrialFeature to int. These values are passed between
-    // blink navigations. OriginTrialFeature isn't visible outside of blink (and
-    // doesn't need to be) so the values are transferred outside of blink as
-    // ints and casted to OriginTrialFeature once being processed in blink.
-    result.emplace_back(static_cast<int>(feature));
-  }
-  return result;
-}
-
-Vector<String> CopyForceEnabledOriginTrials(
-    const std::vector<WebString>& force_enabled_origin_trials) {
-  Vector<String> result;
-  result.ReserveInitialCapacity(
-      base::checked_cast<wtf_size_t>(force_enabled_origin_trials.size()));
-  for (const auto& trial : force_enabled_origin_trials)
-    result.push_back(trial);
-  return result;
-}
-
-std::vector<WebString> CopyForceEnabledOriginTrials(
-    const Vector<String>& force_enabled_origin_trials) {
-  return base::ToVector(force_enabled_origin_trials, ToWebString);
-}
 
 void WarnIfSandboxIneffective(LocalDOMWindow* window) {
   if (window->document()->IsInitialEmptyDocument()) {
@@ -399,9 +355,6 @@ struct SameSizeAsDocumentLoader
   ukm::SourceId ukm_source_id;
   UseCounterImpl use_counter;
   const base::TickClock* clock;
-  const Vector<mojom::blink::OriginTrialFeature>
-      initiator_origin_trial_features;
-  const Vector<String> force_enabled_origin_trials;
   bool navigation_scroll_allowed;
   AgentClusterKey agent_cluster_key;
   bool is_cross_site_cross_browsing_context_group;
@@ -566,10 +519,6 @@ DocumentLoader::DocumentLoader(
       ukm_source_id_(params_->document_ukm_source_id),
       clock_(params_->tick_clock ? params_->tick_clock.get()
                                  : base::DefaultTickClock::GetInstance()),
-      initiator_origin_trial_features_(
-          CopyInitiatorOriginTrials(params_->initiator_origin_trial_features)),
-      force_enabled_origin_trials_(
-          CopyForceEnabledOriginTrials(params_->force_enabled_origin_trials)),
       agent_cluster_key_(params_->agent_cluster_key),
       is_cross_site_cross_browsing_context_group_(
           params_->is_cross_site_cross_browsing_context_group),
@@ -742,10 +691,6 @@ DocumentLoader::CreateWebNavigationParamsToCloneDocument() {
         WebString(*internal_scroll_to_text_fragment_);
   }
   // Origin trials must still work on the cloned document.
-  params->initiator_origin_trial_features =
-      CopyInitiatorOriginTrials(initiator_origin_trial_features_);
-  params->force_enabled_origin_trials =
-      CopyForceEnabledOriginTrials(force_enabled_origin_trials_);
   for (const auto& pair : early_hints_preloaded_resources_) {
     WebEarlyHintsPreloadInfo info;
     info.url = pair.key;
@@ -2096,13 +2041,6 @@ void DocumentLoader::StartLoadingResponse() {
 void DocumentLoader::DidInstallNewDocument(Document* document) {
   TRACE_EVENT("loading", "DocumentLoader::DidInstallNewDocument",
               perfetto::Flow::FromPointer(this));
-  // This was called already during `InitializeWindow`, but it could be that we
-  // didn't have a Document then (which happens when `InitializeWindow` reuses
-  // the window and calls `LocalDOMWindow::ClearForReuse()`). This is
-  // idempotent, so it is safe to do it again (in fact, it will be called again
-  // also when parsing origin trials delivered in meta tags).
-  frame_->DomWindow()->GetOriginTrialContext()->InitializePendingFeatures();
-
   frame_->DomWindow()->BindContentSecurityPolicy();
 
   if (history_item_ && IsBackForwardOrRestore(load_type_)) {
@@ -2777,9 +2715,6 @@ void DocumentLoader::InitializeWindow(Document* owner_document) {
   // SecurityContext so same-process descendants see it in
   // HasInsecureContextInAncestors().
   security_context.SetIsSecureContextRoot(is_secure_context_root_);
-  // Requires SecurityOrigin to be initialized.
-  OriginTrialContext::AddTokensFromHeader(
-      frame_->DomWindow(), response_.HttpHeaderField(http_names::kOriginTrial));
 
   if (auto* parent = frame_->Tree().Parent()) {
     const SecurityContext* parent_context = parent->GetSecurityContext();
@@ -3218,26 +3153,6 @@ void DocumentLoader::CreateParserPostCommit() {
     DispatchLinkHeaderPreloads(nullptr /* viewport */,
                                PreloadHelper::LoadLinksFromHeaderMode::
                                    kDocumentAfterCommitWithoutViewport);
-  }
-
-  // Initializing origin trials might force window proxy initialization,
-  // which later triggers CHECK when swapping in via WebFrame::Swap().
-  // We can safely omit installing original trials on initial empty document
-  // and wait for the real load.
-  if (commit_reason_ != CommitReason::kInitialization) {
-    LocalDOMWindow* window = frame_->DomWindow();
-    if (frame_->GetSettings()
-            ->GetForceTouchEventFeatureDetectionForInspector()) {
-      window->GetOriginTrialContext()->AddFeature(
-          mojom::blink::OriginTrialFeature::kTouchEventFeatureDetection);
-    }
-
-    // Enable any origin trials that have been force enabled for this commit.
-    window->GetOriginTrialContext()->AddForceEnabledTrials(
-        force_enabled_origin_trials_);
-
-    OriginTrialContext::ActivateNavigationFeaturesFromInitiator(
-        window, &initiator_origin_trial_features_);
   }
 
   ParserSynchronizationPolicy parsing_policy = kAllowDeferredParsing;

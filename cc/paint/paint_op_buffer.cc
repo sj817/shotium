@@ -16,15 +16,9 @@
 #include "cc/paint/paint_image_builder.h"
 #include "cc/paint/paint_op.h"
 #include "cc/paint/paint_op_buffer_iterator.h"
-#include "cc/paint/paint_op_reader.h"
-#include "cc/paint/paint_op_writer.h"
 #include "cc/paint/paint_record.h"
 #include "cc/paint/scoped_raster_flags.h"
-#include "cc/paint/skottie_serialization_history.h"
 #include "third_party/skia/include/core/SkTextBlob.h"
-#include "third_party/skia/include/gpu/ganesh/GrRecordingContext.h"
-#include "third_party/skia/include/gpu/graphite/Recorder.h"
-#include "third_party/skia/include/private/chromium/Slug.h"
 
 namespace cc {
 
@@ -42,36 +36,6 @@ PlaybackParams::PlaybackParams(ImageProvider* image_provider,
       callbacks(callbacks) {}
 
 PlaybackParams::~PlaybackParams() = default;
-
-PaintOpBuffer::SerializeOptions::SerializeOptions(
-    ImageProvider* image_provider,
-    TransferCacheSerializeHelper* transfer_cache,
-    ClientPaintCache* paint_cache,
-    SkStrikeServer* strike_server,
-    sk_sp<SkColorSpace> color_space,
-    SkottieSerializationHistory* skottie_serialization_history,
-    bool can_use_lcd_text,
-    bool context_supports_distance_field_text,
-    int max_texture_size,
-    const ScrollOffsetMap* raster_inducing_scroll_offsets)
-    : image_provider(image_provider),
-      transfer_cache(transfer_cache),
-      paint_cache(paint_cache),
-      strike_server(strike_server),
-      color_space(std::move(color_space)),
-      skottie_serialization_history(skottie_serialization_history),
-      can_use_lcd_text(can_use_lcd_text),
-      context_supports_distance_field_text(
-          context_supports_distance_field_text),
-      max_texture_size(max_texture_size),
-      raster_inducing_scroll_offsets(raster_inducing_scroll_offsets) {}
-
-PaintOpBuffer::SerializeOptions::SerializeOptions() = default;
-PaintOpBuffer::SerializeOptions::SerializeOptions(const SerializeOptions&) =
-    default;
-PaintOpBuffer::SerializeOptions& PaintOpBuffer::SerializeOptions::operator=(
-    const SerializeOptions&) = default;
-PaintOpBuffer::SerializeOptions::~SerializeOptions() = default;
 
 PaintOpBuffer::PaintOpBuffer() = default;
 
@@ -210,15 +174,6 @@ void PaintOpBuffer::Append(
       case PaintOpType::kDrawScrollingContents: {
         const auto& o = static_cast<const DrawScrollingContentsOp&>(op);
         push<DrawScrollingContentsOp>(o.scroll_element_id, o.display_item_list);
-      } break;
-      case PaintOpType::kDrawSkottie: {
-        const auto& o = static_cast<const DrawSkottieOp&>(op);
-        push<DrawSkottieOp>(o.skottie, o.dst, o.t, o.images, o.color_map,
-                            o.text_map);
-      } break;
-      case PaintOpType::kDrawSlug: {
-        const auto& o = static_cast<const DrawSlugOp&>(op);
-        push<DrawSlugOp>(o.slug, o.flags);
       } break;
       case PaintOpType::kDrawTextBlob: {
         const auto& o = static_cast<const DrawTextBlobOp&>(op);
@@ -416,20 +371,10 @@ void PaintOpBuffer::Playback(SkCanvas* canvas,
       continue;
 
     if (op->IsPaintOpWithFlags()) {
-      int max_texture_size;
-      if (auto* context = canvas->recordingContext()) {
-        max_texture_size = context->maxTextureSize();
-      } else if (auto* recorder = canvas->recorder()) {
-        max_texture_size = recorder->maxTextureSize();
-      } else {
-        // This can happen in tests.
-        max_texture_size = 0;
-      }
-
       const auto& flags_op = static_cast<const PaintOpWithFlags&>(*op);
       const ScopedRasterFlags scoped_flags(
           &flags_op.flags, new_params.image_provider, canvas->getTotalMatrix(),
-          max_texture_size, iter.alpha());
+          /*max_texture_size=*/0, iter.alpha());
       if (const auto* raster_flags = scoped_flags.flags())
         flags_op.RasterWithFlags(canvas, raster_flags, new_params);
     } else {
@@ -443,37 +388,6 @@ void PaintOpBuffer::Playback(SkCanvas* canvas,
   }
 }
 
-bool PaintOpBuffer::Deserialize(base::span<const volatile uint8_t> input,
-                                const PaintOp::DeserializeOptions& options) {
-  while (!input.empty()) {
-    size_t read_bytes = 0;
-    if (!PaintOp::DeserializeIntoPaintOpBuffer(input, this, &read_bytes,
-                                               options)) {
-      return false;
-    }
-    DCHECK_GT(read_bytes, 0u);
-    input = input.subspan(read_bytes);
-  }
-
-  DCHECK_GT(size(), 0u);
-  return true;
-}
-
-// static
-sk_sp<PaintOpBuffer> PaintOpBuffer::MakeFromMemory(
-    base::span<const volatile uint8_t> input,
-    const PaintOp::DeserializeOptions& options) {
-  auto buffer = sk_make_sp<PaintOpBuffer>();
-  if (input.empty()) {
-    return buffer;
-  }
-  if (!buffer->Deserialize(input, options)) {
-    return nullptr;
-  }
-  return buffer;
-}
-
-// static
 SkRect PaintOpBuffer::GetFixedScaleBounds(const SkMatrix& ctm,
                                           const SkRect& bounds,
                                           int max_texture_size) {

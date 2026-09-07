@@ -15,7 +15,6 @@
 #include "third_party/blink/renderer/core/probe/core_probes.h"
 #include "third_party/blink/renderer/core/xml/xsl_style_sheet.h"
 #include "third_party/blink/renderer/core/xml/xslt_processor.h"
-#include "third_party/blink/renderer/platform/bindings/exception_state.h"
 #include "third_party/blink/renderer/platform/instrumentation/use_counter.h"
 #include "third_party/blink/renderer/platform/runtime_enabled_features.h"
 
@@ -71,8 +70,7 @@ void DocumentXSLT::ApplyXSLTransform(Document& document,
                                      ProcessingInstruction* pi) {
   DCHECK(!pi->IsLoading());
   CHECK(XSLTProcessor::IsXSLTEnabled(document.GetExecutionContext()));
-  XSLTProcessor* processor = XSLTProcessor::Create(
-      document, ASSERT_NO_EXCEPTION, WebFeature::kXSLProcessingInstruction);
+  XSLTProcessor* processor = XSLTProcessor::Create(document);
   processor->SetXSLStyleSheet(To<XSLStyleSheet>(pi->sheet()));
   String result_mime_type;
   String new_source;

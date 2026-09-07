@@ -476,7 +476,6 @@ blink_core_sources_html = [
   "track/vtt/vtt_tokenizer.h",
   "trust_token_attribute_parsing.cc",
   "trust_token_attribute_parsing.h",
-  "unbounded_event_data.h",
   "window_name_collection.cc",
   "window_name_collection.h",
 ]
@@ -522,8 +521,6 @@ blink_core_hot_sources_html = [
   "parser/html_meta_charset_parser.h",
   "parser/html_parser_idioms.cc",
   "parser/html_parser_idioms.h",
-  "parser/html_parser_metrics.cc",
-  "parser/html_parser_metrics.h",
   "parser/html_parser_options.cc",
   "parser/html_parser_options.h",
   "parser/html_parser_reentry_permit.cc",

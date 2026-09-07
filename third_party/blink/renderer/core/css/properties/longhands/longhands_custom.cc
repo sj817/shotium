@@ -7499,14 +7499,6 @@ const CSSValue* Order::CSSValueFromComputedStyleInternal(
                                         CSSPrimitiveValue::UnitType::kNumber);
 }
 
-const CSSValue* OriginTrialTestProperty::CSSValueFromComputedStyleInternal(
-    const ComputedStyle& style,
-    const LayoutObject*,
-    bool allow_visited_style,
-    CSSValuePhase value_phase) const {
-  return CSSIdentifierValue::Create(style.OriginTrialTestProperty());
-}
-
 const CSSValue* Orphans::CSSValueFromComputedStyleInternal(
     const ComputedStyle& style,
     const LayoutObject*,
@@ -7876,15 +7868,6 @@ const CSSValue* InternalOverscrollPosition::CSSValueFromComputedStyleInternal(
     bool allow_visited_style,
     CSSValuePhase value_phase) const {
   return CSSIdentifierValue::Create(style.InternalOverscrollPosition());
-}
-
-// -internal-unbounded: none | active
-const CSSValue* InternalUnbounded::CSSValueFromComputedStyleInternal(
-    const ComputedStyle& style,
-    const LayoutObject*,
-    bool allow_visited_style,
-    CSSValuePhase value_phase) const {
-  return CSSIdentifierValue::Create(style.InternalUnbounded());
 }
 
 const CSSValue* OverscrollBehaviorX::CSSValueFromComputedStyleInternal(

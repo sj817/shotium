@@ -103,8 +103,6 @@ class CC_PAINT_EXPORT DrawLooper : public SkRefCnt {
                       SkPaint* paint) const;
 
   friend class DrawLooperBuilder;
-  friend class PaintOpReader;
-  friend class PaintOpWriter;
 };
 
 class CC_PAINT_EXPORT DrawLooperBuilder {

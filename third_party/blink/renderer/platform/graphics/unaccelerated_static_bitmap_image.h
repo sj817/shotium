@@ -48,11 +48,6 @@ class PLATFORM_EXPORT UnacceleratedStaticBitmapImage final
   gfx::ColorSpace GetColorSpace() const override {
     return SkColorSpaceToGfxColorSpace(GetSkImageInfo().refColorSpace());
   }
-  viz::SharedImageFormat GetSharedImageFormat() const override {
-    return viz::SkColorTypeToSinglePlaneSharedImageFormat(
-        GetSkImageInfo().colorType());
-  }
-
   const gfx::HDRMetadata& GetHdrMetadata() const override {
     return paint_image_.GetHDRMetadata();
   }

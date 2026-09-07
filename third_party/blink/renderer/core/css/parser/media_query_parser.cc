@@ -87,9 +87,6 @@ bool MediaQueryParser::MediaQueryFeatureSet::IsAllowedWithoutValue(
           RuntimeEnabledFeatures::ForcedColorsEnabled()) ||
          (feature == media_feature_names::kNavigationControlsMediaFeature &&
           RuntimeEnabledFeatures::MediaQueryNavigationControlsEnabled()) ||
-         (feature == media_feature_names::kOriginTrialTestMediaFeature &&
-          RuntimeEnabledFeatures::OriginTrialsSampleAPIEnabled(
-              execution_context)) ||
          (feature ==
               media_feature_names::kHorizontalViewportSegmentsMediaFeature &&
           RuntimeEnabledFeatures::ViewportSegmentsEnabled(execution_context)) ||
