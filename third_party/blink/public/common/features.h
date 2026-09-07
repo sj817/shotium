@@ -1634,10 +1634,6 @@ BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kUnloadBlocklisted);
 
 BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kUrgentMainFrameForInput);
 
-// If enabled, URLPattern will use standard defined dummy URL canonicalization
-// to canonicalize URL properties. See https://crbug.com/409350827
-BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kURLPatternDummyURLCanonicalization);
-
 // Always use IsPersistentCacheForCodeCacheEnabled() rather than checking this
 // feature directly.
 BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kUsePersistentCacheForCodeCache);

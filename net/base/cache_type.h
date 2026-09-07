@@ -10,8 +10,7 @@ namespace net {
 // The types of caches that can be created.
 enum CacheType {
   DISK_CACHE,                 // Disk is used as the backing storage.
-  MEMORY_CACHE,               // Data is stored only in memory.
-  REMOVED_MEDIA_CACHE,        // No longer in use.
+  REMOVED_MEDIA_CACHE = 2,    // No longer in use; preserve later cache IDs.
   APP_CACHE,                  // Special case of DISK_CACHE.  Optimizes for
                               // cases where auto-eviction is not desired:
                               // e.g. cache_storage, service worker script cache

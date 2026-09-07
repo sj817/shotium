@@ -155,9 +155,6 @@ class NET_EXPORT HttpCache : public HttpTransactionFactory {
                    net::CacheEncryptionDelegate* cache_encryption_delegate);
     ~DefaultBackend() override;
 
-    // Returns a factory for an in-memory cache.
-    static std::unique_ptr<BackendFactory> InMemory(int max_bytes);
-
     // BackendFactory implementation.
     disk_cache::BackendResult CreateBackend(
         NetLog* net_log,

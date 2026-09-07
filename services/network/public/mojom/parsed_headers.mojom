@@ -4,7 +4,6 @@
 
 module network.mojom;
 
-import "services/network/public/mojom/connection_allowlist.mojom";
 import "services/network/public/mojom/content_security_policy.mojom";
 import "services/network/public/mojom/cross_origin_embedder_policy.mojom";
 import "services/network/public/mojom/cross_origin_opener_policy.mojom";
@@ -36,16 +35,6 @@ struct ParsedHeaders {
 
   // The parsed value of the Allow-CSP-From response header.
   OriginOrWildcardHeaderValue? allow_csp_from;
-
-  // The parsed representation of `Connection-Allowlist` and
- // `Connection-Allowlist-Report-Only` headers.
-  ConnectionAllowlists connection_allowlists;
-
-  // The parsed value of the `Allow-Connection-Allowlist-From` response header,
-  // used for Connection-Allowlist embedded enforcement. Reuses
-  // `OriginOrWildcardHeaderValue` as it shares the `*` / origin grammar with
-  // `Allow-CSP-From`.
-  OriginOrWildcardHeaderValue? allow_connection_allowlist_from;
 
   // The parsed representation of Cross-Origin-Embedder-Policy and
   // Cross-Origin-Embedder-Policy-Report-Only headers.

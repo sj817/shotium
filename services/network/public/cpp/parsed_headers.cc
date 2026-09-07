@@ -18,8 +18,6 @@
 #include "net/url_request/clear_site_data.h"
 #include "services/network/public/cpp/avail_language_header_parser.h"
 #include "services/network/public/cpp/client_hints.h"
-#include "services/network/public/cpp/connection_allowlist.h"
-#include "services/network/public/cpp/connection_allowlist_parser.h"
 #include "services/network/public/cpp/content_language_parser.h"
 #include "services/network/public/cpp/content_security_policy/content_security_policy.h"
 #include "services/network/public/cpp/cross_origin_embedder_policy_parser.h"
@@ -59,13 +57,6 @@ mojom::ParsedHeadersPtr PopulateParsedHeaders(
 
   parsed_headers->document_isolation_policy =
       ParseDocumentIsolationPolicy(*headers);
-
-  if (base::FeatureList::IsEnabled(network::features::kConnectionAllowlists)) {
-    parsed_headers->connection_allowlists =
-        ParseConnectionAllowlistsFromHeaders(*headers, url);
-    parsed_headers->allow_connection_allowlist_from =
-        ParseAllowConnectionAllowlistFromHeader(*headers);
-  }
 
   if (base::FeatureList::IsEnabled(network::features::kIntegrityPolicyScript)) {
     parsed_headers->integrity_policy = ParseIntegrityPolicyFromHeaders(

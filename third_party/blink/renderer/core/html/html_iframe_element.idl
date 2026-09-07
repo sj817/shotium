@@ -40,11 +40,6 @@
     // https://w3c.github.io/webappsec-csp/embedded/#dom-htmliframeelement-csp
     [CEReactions, Reflect] attribute DOMString csp;
 
-    // https://github.com/WICG/connection-allowlists/issues/1
-    // Gated on `ConnectionAllowlistEmbeddedEnforcement` so the property is
-    // exposed only when embedded enforcement is available.
-    [RuntimeEnabled=ConnectionAllowlistEmbeddedEnforcement, CEReactions, Reflect] attribute DOMString connectionAllowlist;
-
     // Feature Policy
     [CEReactions, Reflect] attribute DOMString allow;
     // https://w3c.github.io/webappsec-feature-policy/#the-policy-object

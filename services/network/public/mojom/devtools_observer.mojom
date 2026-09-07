@@ -9,7 +9,6 @@ import "mojo/public/mojom/base/time.mojom";
 import "mojo/public/mojom/base/unguessable_token.mojom";
 import "services/network/public/mojom/alternate_protocol_usage.mojom";
 import "services/network/public/mojom/client_security_state.mojom";
-import "services/network/public/mojom/connection_allowlist.mojom";
 import "services/network/public/mojom/cookie_manager.mojom";
 import "services/network/public/mojom/cookie_partition_key.mojom";
 import "services/network/public/mojom/cors.mojom";
@@ -187,11 +186,6 @@ interface DevToolsObserver {
   OnUnencodedDigestError(string devtool_request_id,
                          url.mojom.Url url,
                          UnencodedDigestIssue issue);
-
-  // Called when an error occurs when parsing a `Connection-Allowlist` header.
-  OnConnectionAllowlistIssue(string devtool_request_id,
-                             url.mojom.Url url,
-                             ConnectionAllowlistIssue issue);
 
   // Used by the NetworkService to create a copy of this observer.
   // (e.g. when creating an observer for URLLoader from URLLoaderFactory's

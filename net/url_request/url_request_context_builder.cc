@@ -476,34 +476,25 @@ std::unique_ptr<URLRequestContext> URLRequestContextBuilder::Build() {
 
   if (http_cache_enabled_) {
     std::unique_ptr<HttpCache::BackendFactory> http_cache_backend;
-    if (http_cache_params_.type != HttpCacheParams::IN_MEMORY) {
-      // TODO(mmenke): Maybe merge BackendType and HttpCacheParams::Type? The
-      // first doesn't include in memory, so may require some work.
-      BackendType backend_type = CACHE_BACKEND_DEFAULT;
-      switch (http_cache_params_.type) {
-        case HttpCacheParams::DISK:
-          backend_type = CACHE_BACKEND_DEFAULT;
-          break;
-        case HttpCacheParams::DISK_SIMPLE:
-          backend_type = CACHE_BACKEND_SIMPLE;
-          break;
-        case HttpCacheParams::IN_MEMORY:
-          NOTREACHED();
-      }
-      http_cache_backend = std::make_unique<HttpCache::DefaultBackend>(
-          DISK_CACHE, backend_type, http_cache_params_.file_operations_factory,
-          http_cache_params_.path, http_cache_params_.max_size,
-          http_cache_params_.reset_cache, cache_encryption_delegate_.get());
-      if (base::FeatureList::IsEnabled(features::kHttpCacheNoVarySearch) &&
-          features::kHttpCacheNoVarySearchPersistenceEnabled.Get() &&
-          !http_cache_params_.no_vary_search_path.empty()) {
-        CHECK(!http_cache_params_.path.empty());
-        file_operations = NoVarySearchCacheStorageFileOperations::Create(
-            http_cache_params_.no_vary_search_path, http_cache_params_.path);
-      }
-    } else {
-      http_cache_backend =
-          HttpCache::DefaultBackend::InMemory(http_cache_params_.max_size);
+    BackendType backend_type = CACHE_BACKEND_DEFAULT;
+    switch (http_cache_params_.type) {
+      case HttpCacheParams::DISK:
+        backend_type = CACHE_BACKEND_DEFAULT;
+        break;
+      case HttpCacheParams::DISK_SIMPLE:
+        backend_type = CACHE_BACKEND_SIMPLE;
+        break;
+    }
+    http_cache_backend = std::make_unique<HttpCache::DefaultBackend>(
+        DISK_CACHE, backend_type, http_cache_params_.file_operations_factory,
+        http_cache_params_.path, http_cache_params_.max_size,
+        http_cache_params_.reset_cache, cache_encryption_delegate_.get());
+    if (base::FeatureList::IsEnabled(features::kHttpCacheNoVarySearch) &&
+        features::kHttpCacheNoVarySearchPersistenceEnabled.Get() &&
+        !http_cache_params_.no_vary_search_path.empty()) {
+      CHECK(!http_cache_params_.path.empty());
+      file_operations = NoVarySearchCacheStorageFileOperations::Create(
+          http_cache_params_.no_vary_search_path, http_cache_params_.path);
     }
 #if BUILDFLAG(IS_ANDROID)
     http_cache_backend->SetAppStatusListenerGetter(

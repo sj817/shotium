@@ -29,7 +29,6 @@
 #include "net/disk_cache/cache_encryption_delegate.h"
 #include "net/disk_cache/cache_util.h"
 #include "net/disk_cache/disk_cache.h"
-#include "net/disk_cache/memory/mem_backend_impl.h"
 #include "net/disk_cache/simple/simple_backend_impl.h"
 #include "net/disk_cache/simple/simple_file_enumerator.h"
 #include "net/disk_cache/simple/simple_util.h"
@@ -385,22 +384,6 @@ BackendResult CreateCacheBackendImpl(
     base::OnceClosure post_cleanup_callback,
     BackendResultCallback callback) {
   DCHECK(!callback.is_null());
-
-  if (type == net::MEMORY_CACHE) {
-    std::unique_ptr<MemBackendImpl> mem_backend_impl =
-        disk_cache::MemBackendImpl::CreateBackend(max_bytes, net_log);
-    if (mem_backend_impl) {
-      mem_backend_impl->SetPostCleanupCallback(
-          std::move(post_cleanup_callback));
-      return BackendResult::Make(std::move(mem_backend_impl));
-    } else {
-      if (!post_cleanup_callback.is_null()) {
-        base::SequencedTaskRunner::GetCurrentDefault()->PostTask(
-            FROM_HERE, std::move(post_cleanup_callback));
-      }
-      return BackendResult::MakeError(net::ERR_FAILED);
-    }
-  }
 
   bool had_post_cleanup_callback = !post_cleanup_callback.is_null();
   // As document in disk_cache.h, `had_post_cleanup_callback` is not supported

@@ -1,5 +1,16 @@
 # 静态截图裁剪任务：完整目标与接续清单
 
+**本批本地源码提交：62 删除、65 修改。** 精确路径及提交号记录在 out/cut-stage17/commit.json。仅保存已经应用的父任务改动；Route 92 路径补丁未获具体确认、未应用。部分对应调用方仍待该补丁收尾，本批未生成、编译或运行，不是可构建/验收通过的版本。不 push，不创建 PR。
+
+
+## 恢复后的源码进度（2026-09-08）
+
+用户已明确继续。当前新阶段以 64f61d2ef182 为基准，out/cut-stage17/progress.json 跟踪接续。父任务已落实网络 connection allowlist / SafeUrlPattern / liburlpattern、无实现的 Network Service GN 骨架、FileReader 与脚本 Object URL 尾巴、JsonCpp 空骨架，并移除不用的内存 HTTP 缓存后端，共删除 62 个普通跟踪文件；Route/CSS/URLPattern 完整提案被自动审批拒绝，等待具体确认，子代理已停止。保留 CSP/混合内容/TLS 等真实加载检查、普通 File/FileList/输入框外观、实际 MemoryCache 和 Shot 缓存 API。这里尚未生成、编译或运行验证；只读 GN path 暴露的一处旧 runtime action 无用赋值已修复。此段优先于下方暂停交接历史。
+
+
+> 2026-09-08 用户已明确恢复任务（“算了 你继续吧。claude卡死了”）。从 64f61d2ef182 接续剩余裁剪；下面暂停交接记录为历史。本轮先完成 Route/URLPattern 与网络 allowlist 闭包，再集中验证，最多一名已获授权子代理。
+
+
 > 2026-09-08 最新指令：本批源码收尾后暂停，等待用户接手。下文旧继续计划仅为历史记录；当前状态以 [交接报告](screenshot-cut-handoff-2026-09-08.md) 为准。
 
 ## 目标与授权
@@ -299,3 +310,11 @@ Linux probe为out/CutBatch9Linux：0缺BUILD/0主仓库缺输入，3项Linux DEP
 - GPU 动画下一切口已从当前源码重新核实：Platform::IsThreadedAnimationEnabled 默认 false，Shot 和 SVG 平台没有 override，CheckCanStartElementOnCompositor 明确因此加入 kAcceleratedAnimationsDisabled，CreateCompositorAnimation 也受同一门控；证据 out/cut-batch7/animation-platform-gates.txt、animation-compositor-gate.txt、next-animation-entries.txt。不能直接删除整个 PendingAnimations：Update() 默认 true 的 PreCommit 仍有 Playing+CurrentTime+Outdated+PaintClean+ScriptForbidden 的 CPU 延迟；TimerFired 调用 Update(false)，DocumentAnimations 生命周期调用 Update()，NotifyReady 与 scroll timeline 未解析时 deferred 均是实际动画语义。下一批先分离这部分 CPU 收尾，再拆 CompositorState/group/ack/CompositorAnimation/NPW 整链。当前没有应用 GPU 动画新修改。
 
 - 第八批首轮3个失败TU修复后，EXE/DLL与全部运行/181张像素检查通过，所有构建会话已结束。RequiresPropertyNode仍被普通eligibility使用，留待下一动画状态闭包，不能为了删名字误改CPU动画判定。
+
+### 当前具体阻断
+
+Route/CSS/URLPattern 的 92 路径补丁（44 修改 / 48 删除）被自动审批拒绝，真实文件 SHA 92/92 未变，尚未应用。原因、完整补丁和精确清单见 out/cut-stage17/approval-review.md；等待用户具体确认后继续本组。父任务 58 文件删除仍在工作区，尚未提交/生成/编译，本轮不能标为可构建。不得重放或换工具绕过拒绝。
+
+### 独立完成：内存 HTTP 缓存后端
+
+新增删除 net/disk_cache/memory 四文件，以及 InMemory 工厂、builder 选项与两个统计条件的专用分支。Shot 只有禁用缓存或显式 DISK_SIMPLE，OnBackendCreated 失败不选择其他后端；缓存失败继续无缓存运行。内部 HttpCacheParams 默认改为 DISK_SIMPLE，保留既有后续枚举数值；Simple 索引、Blink MemoryCache、Cookie 与 Shot 缓存 API 不变。证据/备份在 out/cut-stage17-memory-http-cache。当前父任务累计 62 删除、66 唯一修改；备份校验通过，未生成/编译/运行。Route 92 路径仍未应用，不能把整个源码批次标完成。

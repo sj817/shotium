@@ -218,8 +218,6 @@ class CORE_EXPORT ExecutionContext : public Supplementable<ExecutionContext>,
 
   ContentSecurityPolicyDelegate& GetContentSecurityPolicyDelegate();
 
-  virtual void RemoveURLFromMemoryCache(const KURL&);
-
   virtual void SetIsInBackForwardCache(bool);
   bool is_in_back_forward_cache() const { return is_in_back_forward_cache_; }
 

@@ -1261,8 +1261,7 @@ int HttpCache::Transaction::DoOpenOrCreateEntryComplete(int result) {
 
   const bool record_uma =
       record_entry_open_or_creation_time_ && cache_ &&
-      cache_->GetCurrentBackend() &&
-      cache_->GetCurrentBackend()->GetCacheType() != MEMORY_CACHE;
+      cache_->GetCurrentBackend();
   record_entry_open_or_creation_time_ = false;
 
   // It is important that we go to STATE_ADD_TO_ENTRY whenever the result is
@@ -1528,8 +1527,7 @@ int HttpCache::Transaction::DoAddToEntryComplete(int result) {
                       track_for_state_change_, "result", result);
   net_log_.EndEventWithNetErrorCode(NetLogEventType::HTTP_CACHE_ADD_TO_ENTRY,
                                     result);
-  if (cache_ && cache_->GetCurrentBackend() &&
-      cache_->GetCurrentBackend()->GetCacheType() != MEMORY_CACHE) {
+  if (cache_ && cache_->GetCurrentBackend()) {
     const base::TimeDelta entry_lock_wait =
         TimeTicks::Now() - entry_lock_waiting_since_;
     base::UmaHistogramTimes("HttpCache.AddTransactionToEntry", entry_lock_wait);

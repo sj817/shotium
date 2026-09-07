@@ -1,5 +1,16 @@
 # 静态截图无用代码与残留依赖审计
 
+**本批本地源码提交：62 删除、65 修改。** 精确路径及提交号记录在 out/cut-stage17/commit.json。仅保存已经应用的父任务改动；Route 92 路径补丁未获具体确认、未应用。部分对应调用方仍待该补丁收尾，本批未生成、编译或运行，不是可构建/验收通过的版本。不 push，不创建 PR。
+
+
+## 恢复后的源码进度（2026-09-08）
+
+用户已明确继续。当前新阶段以 64f61d2ef182 为基准，out/cut-stage17/progress.json 跟踪接续。父任务已落实网络 connection allowlist / SafeUrlPattern / liburlpattern、无实现的 Network Service GN 骨架、FileReader 与脚本 Object URL 尾巴、JsonCpp 空骨架，并移除不用的内存 HTTP 缓存后端，共删除 62 个普通跟踪文件；Route/CSS/URLPattern 完整提案被自动审批拒绝，等待具体确认，子代理已停止。保留 CSP/混合内容/TLS 等真实加载检查、普通 File/FileList/输入框外观、实际 MemoryCache 和 Shot 缓存 API。这里尚未生成、编译或运行验证；只读 GN path 暴露的一处旧 runtime action 无用赋值已修复。此段优先于下方暂停交接历史。
+
+
+> 2026-09-08 用户已明确恢复任务（“算了 你继续吧。claude卡死了”）。从 64f61d2ef182 接续剩余裁剪；下面暂停交接记录为历史。本轮先完成 Route/URLPattern 与网络 allowlist 闭包，再集中验证，最多一名已获授权子代理。
+
+
 日期：2026-09-07。对象：`D:/Github/chromium` 当前源码、根目录、第三方检出目录及本机 Windows 构建依赖图。
 
 本报告保留删除前的审计快照。随后获授权执行的实际删除与验证，见 [执行记录](screenshot-cut-execution-2026-09-07.md)。
@@ -924,3 +935,7 @@ shot_core
 - [net 硬件密钥头引用](/D:/Github/chromium/out/screenshot-audit-20260907/net-key-references.txt)：builder/URLRequestContext 仍 include 服务头；禁用功能后仍有接口耦合。
 
 原始快照放在 gitignored 的 `out/`，主报告包含关键结论、数量与路径，不依赖快照才能阅读。后续 HEAD 或配置变更后需重导；旧 CI graph 和旧二进制不作为本次当前行为证明。
+
+### 独立完成：内存 HTTP 缓存后端
+
+新增删除 net/disk_cache/memory 四文件，以及 InMemory 工厂、builder 选项与两个统计条件的专用分支。Shot 只有禁用缓存或显式 DISK_SIMPLE，OnBackendCreated 失败不选择其他后端；缓存失败继续无缓存运行。内部 HttpCacheParams 默认改为 DISK_SIMPLE，保留既有后续枚举数值；Simple 索引、Blink MemoryCache、Cookie 与 Shot 缓存 API 不变。证据/备份在 out/cut-stage17-memory-http-cache。当前父任务累计 62 删除、66 唯一修改；备份校验通过，未生成/编译/运行。Route 92 路径仍未应用，不能把整个源码批次标完成。

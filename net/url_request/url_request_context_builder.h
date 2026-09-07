@@ -100,10 +100,8 @@ class NET_EXPORT URLRequestContextBuilder {
 
   struct NET_EXPORT HttpCacheParams {
     enum Type {
-      // In-memory cache.
-      IN_MEMORY,
       // Disk cache using the default Simple backend.
-      DISK,
+      DISK = 1,
       // Disk cache using "simple" backend (SimpleBackendImpl).
       DISK_SIMPLE,
     };
@@ -111,8 +109,8 @@ class NET_EXPORT URLRequestContextBuilder {
     HttpCacheParams();
     ~HttpCacheParams();
 
-    // The type of HTTP cache. Default is IN_MEMORY.
-    Type type = IN_MEMORY;
+    // The engine uses the Simple disk backend when HTTP caching is enabled.
+    Type type = DISK_SIMPLE;
 
     // The max size of the cache in bytes. Default is algorithmically determined
     // based off available disk space.

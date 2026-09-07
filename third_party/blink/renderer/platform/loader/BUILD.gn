@@ -246,7 +246,6 @@ source_set("unit_tests") {
     "//mojo/public/cpp/test_support:test_utils",
     "//net:test_support",
     "//net/traffic_annotation:test_support",
-    "//services/network:test_support",
     "//testing/gmock",
     "//testing/gtest",
     "//third_party/blink/public:test_headers",

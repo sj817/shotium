@@ -131,7 +131,6 @@ DEBIAN_PACKAGES = [
     "libinput-dev",
     "libjbig-dev",
     "libjpeg-dev",
-    "libjsoncpp-dev",
     "libkrb5-dev",
     "liblcms2-dev",
     "liblzma-dev",

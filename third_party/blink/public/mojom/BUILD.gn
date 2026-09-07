@@ -197,7 +197,6 @@ mojom("mojom_platform") {
     "renderer_preference_watcher.mojom",
     "renderer_preferences.mojom",
     "reporting/reporting.mojom",
-    "safe_url_pattern.mojom",
     "scheduler/web_scheduler_tracked_feature.mojom",
     "script_source_location.mojom",
     "scroll/scroll_enums.mojom",
@@ -217,7 +216,6 @@ mojom("mojom_platform") {
     "service_worker/service_worker_fetch_handler_type.mojom",
     "service_worker/service_worker_fetch_response_callback.mojom",
     "service_worker/service_worker_installed_scripts_manager.mojom",
-    "service_worker/service_worker_router_rule.mojom",
     "service_worker/service_worker_running_status_callback.mojom",
     "service_worker/service_worker_state.mojom",
     "service_worker/service_worker_stream_handle.mojom",
@@ -285,7 +283,6 @@ mojom("mojom_platform") {
     "//components/content_settings/core/common:mojo_bindings",
     "//mojo/public/mojom/base",
     "//services/network/public/mojom",
-    "//services/network/public/mojom:mojom_connection_allowlist",
     "//services/network/public/mojom:mojom_integrity_policy",
     "//services/network/public/mojom:mojom_ip_address",
     "//services/network/public/mojom:mojom_permissions_policy",
@@ -326,7 +323,6 @@ mojom("mojom_platform") {
     public_deps += [
       "//cc/mojom:mojom_browser_controls",
       "//services/network/public/mojom:cookies_mojom",
-      "//services/network/public/mojom:mojom_connection_allowlist",
       "//services/network/public/mojom:mojom_content_security_policy",
       "//services/network/public/mojom:mojom_cors_origin_pattern",
       "//services/network/public/mojom:mojom_integrity_algorithm",
@@ -444,34 +440,6 @@ mojom("mojom_platform") {
         },
       ]
       traits_headers = [ "//third_party/blink/public/common/navigation/prefetched_signed_exchange_info_mojom_traits.h" ]
-    },
-    {
-      types = [
-        {
-          mojom = "blink.mojom.SafeUrlPattern"
-          cpp = "::blink::SafeUrlPattern"
-        },
-        {
-          mojom = "blink.mojom.PatternTemplate"
-          cpp = "::liburlpattern::Part"
-        },
-        {
-          mojom = "blink.mojom.FixedPattern"
-          cpp = "::liburlpattern::Part"
-        },
-        {
-          mojom = "blink.mojom.WildcardPattern"
-          cpp = "::liburlpattern::Part"
-        },
-        {
-          mojom = "blink.mojom.Modifier"
-          cpp = "::liburlpattern::Modifier"
-        },
-      ]
-      traits_headers = [
-        "//third_party/blink/public/common/safe_url_pattern_mojom_traits.h",
-      ]
-      traits_public_deps = [ "//third_party/blink/public/common:headers" ]
     },
   ]
   cpp_typemaps = [
@@ -638,7 +606,6 @@ mojom("android_mojo_bindings") {
 
     # Direct deps (instead of transitive deps) are necessary for java targets.
     public_deps += [
-      "//services/network/public/mojom:mojom_connection_allowlist",
       "//services/network/public/mojom:mojom_content_security_policy",
       "//services/network/public/mojom:mojom_cors_origin_pattern",
       "//services/network/public/mojom:mojom_integrity_algorithm",
@@ -800,7 +767,6 @@ mojom("mojom_core") {
     public_deps += [
       "//cc/mojom:mojom_browser_controls",
       "//services/network/public/mojom:cookies_mojom",
-      "//services/network/public/mojom:mojom_connection_allowlist",
       "//services/network/public/mojom:mojom_content_security_policy",
       "//services/network/public/mojom:mojom_cors_origin_pattern",
       "//services/network/public/mojom:mojom_integrity_algorithm",

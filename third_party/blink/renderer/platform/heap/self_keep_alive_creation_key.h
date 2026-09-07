@@ -20,15 +20,12 @@ class SelfKeepAliveCreationKey final {
   template <typename V8SessionObjectType>
   friend class AIContextObserver;
   friend class AudioContext;
-  friend class BlobFileReaderClient;
   friend class BodyStreamBuffer;
   friend class BucketFileSystemBuilder;
-  friend class CachedResponseFileReaderLoaderClient;
   friend class ClipboardWriter;
   friend class CSSImageGeneratorValue;
   friend class DetachedClient;
   friend class FileSystemDirectoryHandle;
-  friend class InspectorFileReaderLoaderClient;
   friend class LanguageModelPromptBuilder;
   friend class MediaStreamAudioTrackUnderlyingSource;
   friend class MIDIAccessInitializer;

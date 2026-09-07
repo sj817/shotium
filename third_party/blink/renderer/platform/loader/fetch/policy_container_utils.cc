@@ -86,7 +86,6 @@ WebContentSecurityPolicy ToWebContentSecurityPolicy(
 WebPolicyContainerPolicies ToWebPolicyContainerPolicies(
     const mojom::blink::PolicyContainerPolicies& policies) {
   WebPolicyContainerPolicies web_policies;
-  web_policies.connection_allowlists = policies.connection_allowlists;
   web_policies.cross_origin_embedder_policy =
       policies.cross_origin_embedder_policy.value;
   web_policies.integrity_policy = policies.integrity_policy;
@@ -113,7 +112,7 @@ mojom::blink::PolicyContainerPoliciesPtr FromWebPolicyContainerPolicies(
   network::CrossOriginEmbedderPolicy cross_origin_embedder_policy;
   cross_origin_embedder_policy.value = policies.cross_origin_embedder_policy;
   return mojom::blink::PolicyContainerPolicies::New(
-      policies.connection_allowlists, cross_origin_embedder_policy,
+      cross_origin_embedder_policy,
       policies.integrity_policy, policies.integrity_policy_report_only,
       policies.referrer_policy,
       ToVector(policies.content_security_policies,

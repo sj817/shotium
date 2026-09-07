@@ -135,16 +135,6 @@ HttpCache::DefaultBackend::DefaultBackend(
 
 HttpCache::DefaultBackend::~DefaultBackend() = default;
 
-// static
-std::unique_ptr<HttpCache::BackendFactory> HttpCache::DefaultBackend::InMemory(
-    int max_bytes) {
-  return std::make_unique<DefaultBackend>(MEMORY_CACHE, CACHE_BACKEND_DEFAULT,
-                                          /*file_operations_factory=*/nullptr,
-                                          base::FilePath(), max_bytes, false,
-                                          /*cache_encryption_delegate=*/
-                                          nullptr);
-}
-
 disk_cache::BackendResult HttpCache::DefaultBackend::CreateBackend(
     NetLog* net_log,
     base::OnceCallback<void(disk_cache::BackendResult)> callback) {

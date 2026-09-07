@@ -135,10 +135,6 @@ class CORE_EXPORT DataObject : public GarbageCollected<DataObject>,
 
   void Trace(Visitor*) const override;
 
-  // |context| is used to obtain a file-reading task runner for synchronously
-  // reading blob-backed File objects.
-  WebDragData ToWebDragData(ExecutionContext* context);
-
  private:
   DataObjectItem* FindStringItem(const String& type) const;
   bool InternalAddStringItem(DataObjectItem*);

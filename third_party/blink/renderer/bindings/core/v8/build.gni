@@ -67,7 +67,6 @@ blink_core_sources_bindings_core_v8 = [
   "v8_composition_event_init.h",
   "v8_computed_effect_timing.cc",
   "v8_computed_effect_timing.h",
-  "v8_connection_allowlist_disposition.h",
   "v8_content_visibility_auto_state_change_event_init.cc",
   "v8_content_visibility_auto_state_change_event_init.h",
   "v8_convert_coordinate_options.cc",

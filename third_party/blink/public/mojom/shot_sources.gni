@@ -86,7 +86,6 @@ shot_mojom_platform_sources = [
   "renderer_preference_watcher.mojom",
   "renderer_preferences.mojom",
   "reporting/reporting.mojom",
-  "safe_url_pattern.mojom",
   "scheduler/web_scheduler_tracked_feature.mojom",
   "script_source_location.mojom",
   "scroll/scroll_enums.mojom",

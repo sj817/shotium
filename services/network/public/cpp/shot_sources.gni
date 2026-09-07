@@ -7,7 +7,6 @@
 # retain the complete network public C++ surface.
 shot_network_cpp_sources = [
   "avail_language_header_parser.cc",
-  "connection_allowlist_parser.cc",
   "constants.cc",
   "content_decoding_interceptor.cc",
   "content_language_parser.cc",

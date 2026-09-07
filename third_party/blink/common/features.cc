@@ -2181,11 +2181,6 @@ BASE_FEATURE(kUrgentMainFrameForInput,
 #endif
 );
 
-// If enabled, URLPattern will use standard defined dummy URL canonicalization
-// to canonicalize URL properties. See https://crbug.com/409350827
-BASE_FEATURE(kURLPatternDummyURLCanonicalization,
-             base::FEATURE_ENABLED_BY_DEFAULT);
-
 // Use PersistentCache on either side of blink.mojom.CodeCacheHost. This feature
 // is dependent on net::HttpCache::IsSplitCacheEnabled() being true. Always use
 // IsPersistentCacheForCodeCacheEnabled() rather than querying this feature

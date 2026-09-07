@@ -50,7 +50,6 @@ REPLACEMENTS = {
     'harfbuzz': 'third_party/harfbuzz/harfbuzz.gni',
     'highway': 'third_party/highway/BUILD.gn',
     'icu': 'third_party/icu/BUILD.gn',
-    'jsoncpp': 'third_party/jsoncpp/BUILD.gn',
     'libaom': 'third_party/libaom/BUILD.gn',
     'libdrm': 'third_party/libdrm/BUILD.gn',
     'libjpeg': 'third_party/libjpeg.gni',
