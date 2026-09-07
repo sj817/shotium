@@ -1,5 +1,19 @@
 # 截图无用代码清理执行记录（2026-09-07）
 
+## stage19：取消 patch，ICU 已直接纳入主仓
+
+最新收尾：三库均已纳入主仓，4/4 补丁移除，检出与重放入口清除；补齐符号链接目标并保留原执行模式。脚本 TypeScript 检查、DEPS 语法检查通过，未构建引擎。stage18 已提交 d21776f19892（35 文件，删除 2672 行），stage19 独立提交；本轮报告见 screenshot-cut-stage19-report.md。下方 ICU 单库状态是中间记录。
+
+ICU 996 个原文件加忽略规则和来源说明已转换为主仓普通文件；原子仓完整保存在 out/cut-stage19-direct-source/vendor-backup/icu。逐文件哈希一致，移除 ICU patch、gitlink、DEPS/.gitmodules 和 Windows 补丁步骤，三平台 repack 时间戳读取主仓历史。Skia/Perfetto 尚待迁移，本轮未编译、未提交，ICU 文件及 .gitmodules 已暂存。精确证据见 out/cut-stage19-direct-source/icu-migration-proof.json。
+
+## stage18：MojoLPM 已移除，通用 fuzzing 待收尾
+
+再追加：Breakpad minidump_fuzzer 的生成、复制和专用日志配置闭包已删；base/net/DNS/Mojo/URL 等 9 个 GN 文件再删 83 个 fuzzer_test 声明和导入。对应源输入字面路径均不存在，生产实现未删。清单见 out/cut-stage18-breakpad-fuzzer/ 和 out/cut-stage18-engine-fuzzers/，10 个 GN 文件语法解析、diff --check 通过，未生成/编译/运行/提交。net/DNS 支持库和 proto、Mojo 支持 group、base buildflags、Blink/skia、通用 runner 和 vendor 测试源仍待收尾。
+
+追加两组源码：out/cut-stage18-fuzzable-proto/ 删除额外 fuzzable 协议生成模板及无实现自测，保留 metrics_proto 的原普通协议生成；out/cut-stage18-library-fuzzers/ 删除 13 个库 BUILD.gn 内的 17 处 fuzzer_test 声明、import 和独占配置，BoringSSL 循环目标也移除。15 个 GN 文件语法解析通过；无编译、无运行、未提交。BoringSSL/RE2 保留 gitlink 中的测试源尚未裁剪，通用 fuzzing 完整闭包仍未完成。
+
+以 f4d07d2944a0 为基准，移除三个 Mojo fuzzing 文件并修改六个调用/构建文件，清单及原文备份见 out/cut-stage18-mojolpm/manifest.json。普通 Mojo 生成保留，删除原本 enable_mojom_fuzzer=false 的分支及其实现；生成器默认语言不再包含已删除的 mojolpm。三个 GN 文件、两个 Python 文件语法解析通过，跟踪源码中的 mojolpm/enable_mojom_fuzzer/fuzzers 路径残留为零（文档、Rust vendor 历史材料排除）。未生成、未编译、未运行，也未提交；后续合并测试骨架批次。通用 libFuzzer、FuzzTest、libprotobuf-mutator 仍在清理范围，Route 被拒补丁仍未应用。
+
 **本批本地源码提交：62 删除、65 修改。** 精确路径及提交号记录在 out/cut-stage17/commit.json。仅保存已经应用的父任务改动；Route 92 路径补丁未获具体确认、未应用。部分对应调用方仍待该补丁收尾，本批未生成、编译或运行，不是可构建/验收通过的版本。不 push，不创建 PR。
 
 

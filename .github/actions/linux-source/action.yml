@@ -145,36 +145,10 @@ runs:
         restore-keys: |
           out-shot-linux-${{ inputs.cpu }}-
 
-    - name: patch the Skia checkout
-      shell: bash
-      working-directory: src
-      # Skia is DEPS-managed, so Shot's Skia changes have to be reapplied
-      # after every sync. git apply leaves the patched files with "now" for
-      # an mtime, newer than every object in a restored build directory, so
-      # a warm run rebuilt them and everything that includes SkCodec.h (26
-      # objects directly, hundreds below). A patched file's honest time is
-      # the later of the dependency's revision and the last commit that
-      # touched the patch: same base plus same patch is the same file.
-      run: |
-        git -C third_party/skia apply --verbose ../../patches/third_party_skia_parallel_blur.patch
-        git -C third_party/skia apply --verbose ../../patches/third_party_skia_incremental_row_limit.patch
-        git -C third_party/perfetto apply --verbose ../../patches/third_party_perfetto_optional_trace_processor.patch
-        when=$(git log -1 --format=%ct -- patches)
-        base=$(git -C third_party/skia log -1 --format=%ct)
-        [ "$base" -gt "$when" ] && when=$base
-        # touch -t, not -d @seconds: BSD touch on macOS has no -d @.
-        stamp=$(date -u -d "@$when" +%Y%m%d%H%M.%S 2>/dev/null || date -u -r "$when" +%Y%m%d%H%M.%S)
-        git -C third_party/skia diff --name-only | while read -r f; do
-          touch -t "$stamp" "third_party/skia/$f"
-        done
-
     - name: build the shot ICU data set
       shell: bash
       working-directory: src
-      # Same as the Windows job: third_party/icu is a DEPS checkout, so the
-      # trimmed data set has to be regenerated on every run rather than
-      # checked in. Failing loudly beats quietly building against `cast` and
-      # shipping a binary 0.81 MB larger than the numbers claim.
+      # Generate Shot data from the directly tracked ICU cast data.
       run: |
         mkdir -p third_party/icu/shot
         pnpm icu:repack \
@@ -182,11 +156,9 @@ runs:
           third_party/icu/shot/icudtl.dat --preset shot
         # The repack writes icudtl.dat with "now" for an mtime on every run,
         # and ninja then redoes the data assembly, the ICU library and every
-        # library that links it (249 LIB edges on Windows). Same rule as the
-        # patches: the latest of the ICU revision, the repack script and the
-        # patches directory.
-        when=$(git -C third_party/icu log -1 --format=%ct)
-        for f in scripts/icu-repack.ts patches; do
+        # library that links it. Use the latest ICU source or repack-script commit.
+        when=$(git log -1 --format=%ct -- third_party/icu)
+        for f in scripts/icu-repack.ts; do
           t=$(git log -1 --format=%ct -- "$f"); [ "$t" -gt "$when" ] && when=$t
         done
         touch -t "$(date -u -d "@$when" +%Y%m%d%H%M.%S 2>/dev/null || date -u -r "$when" +%Y%m%d%H%M.%S)" third_party/icu/shot/icudtl.dat

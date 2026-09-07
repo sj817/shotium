@@ -54,9 +54,6 @@
 	path = third_party/gperf
 	url = https://chromium.googlesource.com/chromium/deps/gperf
 	gclient-condition = checkout_win
-[submodule "third_party/icu"]
-	path = third_party/icu
-	url = https://chromium.googlesource.com/chromium/deps/icu
 [submodule "third_party/libdrm/src"]
 	path = third_party/libdrm/src
 	url = https://chromium.googlesource.com/chromiumos/third_party/libdrm
@@ -91,15 +88,9 @@
 [submodule "third_party/nasm"]
 	path = third_party/nasm
 	url = https://chromium.googlesource.com/chromium/deps/nasm
-[submodule "third_party/perfetto"]
-	path = third_party/perfetto
-	url = https://chromium.googlesource.com/external/github.com/google/perfetto
 [submodule "third_party/re2/src"]
 	path = third_party/re2/src
 	url = https://chromium.googlesource.com/external/github.com/google/re2
-[submodule "third_party/skia"]
-	path = third_party/skia
-	url = https://skia.googlesource.com/skia
 [submodule "third_party/wuffs/src"]
 	path = third_party/wuffs/src
 	url = https://skia.googlesource.com/external/github.com/google/wuffs-mirror-release-c

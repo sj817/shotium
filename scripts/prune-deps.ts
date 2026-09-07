@@ -73,7 +73,6 @@ const keptHooks = new Set([
   'lastchange',
   'lastchange_commit_position_cros',
   'gpu_lists_version',
-  'lastchange_skia',
   'dsymutil_mac_arm64',
   'dsymutil_mac_x64',
   'rc_win',

@@ -97,42 +97,9 @@ function lastLines(text: string | undefined, count: number): string {
   return (text ?? '').split(/\r?\n/).filter(Boolean).slice(-count).join('\n');
 }
 
-// DEPS sync restores upstream source rather than this repository's patches.
-// Apply them once and fail loudly if a dependency roll stops matching:
-// a missing parallel blur is merely slow, but a missing row limit means the
-// PNG decoder allocates full-size bitmaps, and an unpatched Perfetto reloads
-// the removed SQL processor while generating the build graph.
-async function applyDependencyPatches(): Promise<boolean> {
-  const patches = [
-    ['skia', 'third_party_skia_parallel_blur.patch'],
-    ['skia', 'third_party_skia_incremental_row_limit.patch'],
-    ['perfetto', 'third_party_perfetto_optional_trace_processor.patch'],
-  ];
-  for (const [dependency, name] of patches) {
-    const apply = (...args: string[]) => execa(
-        'git', ['-C', `third_party/${dependency}`, 'apply', ...args, `../../patches/${name}`],
-        {cwd: root, reject: false});
-
-    if ((await apply('--check', '--reverse')).exitCode === 0) {
-      say(`${dependency}: ${name} already applied`);
-      continue;
-    }
-    if ((await apply('--check')).exitCode !== 0) {
-      say(pc.red(`${dependency}: patches/${name} no longer applies`));
-      return false;
-    }
-    const applied = await execa(
-        'git', ['-C', `third_party/${dependency}`, 'apply', '--verbose', `../../patches/${name}`],
-        {cwd: root, reject: false, stdio: 'inherit'});
-    if (applied.exitCode !== 0) return false;
-  }
-  return true;
-}
-
 // args.gn sets icu_data_dir_override = "shot", which is a data set this
-// repository generates rather than one third_party/icu ships. third_party/icu is
-// a DEPS checkout, so gclient discards the directory; regenerate it here so a
-// fresh sync does not fail gn gen with a missing input. The script is
+// repository generates from its checked-in ICU cast data. Regenerate it here
+// so a fresh checkout does not fail gn gen with a missing input. The script is
 // deterministic, so an unchanged output leaves ninja nothing to redo.
 async function repackIcu(): Promise<boolean> {
   const src = path.join(root, 'third_party/icu/cast/icudtl.dat');
@@ -231,7 +198,6 @@ async function main(): Promise<number> {
     say(pc.red(`--jobs takes a positive integer; got ${JSON.stringify(options.jobs)}`));
     return 2;
   }
-  if (!(await applyDependencyPatches())) return 1;
   if (!(await repackIcu())) return 1;
   if (!(await gnGen())) return 1;
   // A graph check after a cut wants the retry too -- running gn by hand is

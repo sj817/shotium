@@ -317,10 +317,6 @@ vars = {
   # and whatever else without interference from each other.
   'src_internal_revision': '1587f8dc74577a4ec0a49cf587d8f5977f2a8988',
   # Three lines of non-changing comments so that
-  # the commit queue can handle CLs rolling Skia
-  # and whatever else without interference from each other.
-  'skia_revision': '653397c6be15b87fe8f89a4492582fbb825f6da8',
-  # Three lines of non-changing comments so that
   # the commit queue can handle CLs rolling V8
   # and whatever else without interference from each other.
   'v8_revision': '913d2ab381f8843bb1f918f1a7b40c0aae5ba8f0',
@@ -1005,9 +1001,6 @@ deps = {
       'dep_type': 'cipd',
   },
 
-  'src/third_party/icu':
-    Var('chromium_git') + '/chromium/deps/icu.git' + '@' + '8cc91d9b6ab9991802fd208ee03a69714fd0251c',
-
   # Userspace interface to kernel DRM services.
   'src/third_party/libdrm/src': {
       'url': Var('chromium_git') + '/chromiumos/third_party/libdrm.git' + '@' + '369990d9660a387f618d0eedc341eb285016243b',
@@ -1066,18 +1059,11 @@ deps = {
     'dep_type': 'cipd',
   },
 
-  # Restored after being cut: base/check.h reaches base/trace_event through
-  # base/location.h, and base/trace_event is implemented on top of perfetto.
-  # See docs/cut-progress.md.
-  'src/third_party/perfetto':
-    Var('chromium_git') + '/external/github.com/google/perfetto.git' + '@' + '71b477b75d53576fa40f8ba19897a50c83255e03',
 
 
   'src/third_party/re2/src':
     Var('chromium_git') + '/external/github.com/google/re2.git' + '@' + '972a15cedd008d846f1a39b2e88ce48d7f166cbd',
 
-  'src/third_party/skia':
-    Var('skia_git') + '/skia.git' + '@' +  Var('skia_revision'),
 
 
 
@@ -1250,15 +1236,6 @@ hooks = [
                '-m', 'CHROMIUM',
                '--commit-position-header',
                'src/build/util/LASTCHANGE_commit_position.h'],
-  },
-  {
-    # Update skia_commit_hash.h.
-    'name': 'lastchange_skia',
-    'pattern': '.',
-    'action': ['python3', 'src/build/util/lastchange.py',
-               '-m', 'SKIA_COMMIT_HASH',
-               '-s', 'src/third_party/skia',
-               '--header', 'src/skia/ext/skia_commit_hash.h'],
   },
   # Pull dsymutil binaries using checked-in hashes.
   {

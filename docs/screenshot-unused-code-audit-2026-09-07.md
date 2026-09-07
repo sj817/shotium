@@ -1,5 +1,19 @@
 # 静态截图无用代码与残留依赖审计
 
+## stage19 回填：ICU 直接源码维护
+
+三库均已完成管理方式迁移：ICU、Skia、Perfetto 是普通主仓源码，原独立检出入口、4 个 patch 和应用逻辑已移除。保留源码与原文件一致，历史图覆盖不是最终六平台验证；第三方内部无用实现和最终根目录裁剪仍有待办。具体完成/未完成边界见 screenshot-cut-stage19-report.md。
+
+third_party/icu 已由 gitlink 转为主仓普通源码，保留 common/i18n/stubdata、GN/必要生成脚本、数据与许可证，996 个原文件哈希不变。原子仓与未纳入文件完整保存于 out/cut-stage19-direct-source/vendor-backup/icu；ICU patch/检出入口已移除。Skia/Perfetto 仍待迁移。这里只证明源码转换与备份，未编译验收、未提交。
+
+## 最新回填：MojoLPM 生成链
+
+最新追加：Breakpad fuzzing 生成/复制/日志分支已删；base/net/DNS/Mojo/URL 等 9 个 GN 文件已删 83 个旧 fuzzer 入口及导入，具体见 out/cut-stage18-breakpad-fuzzer/、out/cut-stage18-engine-fuzzers/。仅 GN 语法解析和 diff 检查通过，未编译。其独占支持库、proto、buildflags，以及 Blink/skia/通用 runner 和 vendor 测试源尚未完成，后续按这些闭包继续，当前不标完成。
+
+后续回填：额外 fuzzable 协议生成模板已删除，metrics_proto 仅生成普通协议；13 个库 BUILD.gn 内的旧 fuzzer_test 入口及导入已移除。精确路径见 out/cut-stage18-fuzzable-proto/manifest.json 与 out/cut-stage18-library-fuzzers/manifest.json。生产 TLS、字体、图片、正则库保留；BoringSSL/RE2 检出中的 vendor 测试源、base/net/Blink/skia/Breakpad 和通用 runner 闭包仍待完成。当前仅语法解析，未编译、未提交。
+
+mojo/public/tools/fuzzers 的两份无实现 GN 骨架及 MojoLPM Python 生成器已删除；mojom 模板、预编译、typemap、protobuf 可见性和 Siso 对象引用一并收尾。保留普通 Mojo 类型生成。精确清单见 out/cut-stage18-mojolpm/manifest.json；仅语法解析和跟踪源码残留核查通过，未构建或运行，当前未提交。testing/libfuzzer、third_party/fuzztest、third_party/libprotobuf-mutator 的通用闭包尚未完成。下方历史根目录快照不能覆盖此接续状态。
+
 **本批本地源码提交：62 删除、65 修改。** 精确路径及提交号记录在 out/cut-stage17/commit.json。仅保存已经应用的父任务改动；Route 92 路径补丁未获具体确认、未应用。部分对应调用方仍待该补丁收尾，本批未生成、编译或运行，不是可构建/验收通过的版本。不 push，不创建 PR。
 
 

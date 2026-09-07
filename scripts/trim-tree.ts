@@ -277,7 +277,7 @@ const whitelist = [
   'AGENTS.md', 'AUTHORS', 'BUILD.gn', 'CLAUDE.md', 'DEPS', 'LICENSE', 'README.md', 'README.zh.md',
   'package.json',
   '.claude/', '.github/', 'apps/', 'benchmark-results/', 'bootstrap/', 'build_overrides/',
-  'buildtools/', 'build/args/', 'build/config/shot_build.gni', 'docs/', 'patches/', 'scripts/',
+  'buildtools/', 'build/args/', 'build/config/shot_build.gni', 'docs/', 'scripts/',
   'shot/', 'shotium/', 'tests/', 'tools/shot/',
   // .sha1 stamps the dsymutil_mac_* gclient hooks download by; no build reads them.
   'tools/clang/dsymutil/',

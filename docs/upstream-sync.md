@@ -1,5 +1,10 @@
 # 与上游 Chromium 同步
 
+ICU、Skia、Perfetto 现在由本仓直接维护。更新它们时按各目录 README.shotium.md
+记录的上游版本审查差异，直接修改源码；不恢复它们的 DEPS/gitlink 或补丁重放。
+原 ICU 功能裁剪、Skia 并行模糊/逐行解码限制、Perfetto trace processor 开关均已
+保留在对应源码中。外部依赖的其他 DEPS 条目仍按本文同步。
+
 > 这棵树不是 Chromium 的一个分支,是它的一份切片。所以同步不是 merge,
 > 而是「按记录的基线重放上游的差异」。这份文档是那个记录,以及那套动作。
 

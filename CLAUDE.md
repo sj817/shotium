@@ -82,8 +82,9 @@ The tree is a *slice* of Chromium, not a fork: about 27k tracked files out of
 upstream's 505k, pinned at the baseline recorded in `docs/upstream-sync.md`
 and trimmed to what the six engine builds read (`pnpm trim-tree`, below).
 Chromium files that remain are edited in place; there is no patch queue for
-in-tree code. `patches/` holds the three patches applied to DEPS-fetched
-checkouts (ICU, Skia) that are not in git.
+in-tree code. ICU is maintained directly under `third_party/icu`.
+Skia and Perfetto are also maintained directly under `third_party/`. Local
+changes belong in those source files; there is no dependency patch replay.
 
 ## Repository layout
 
@@ -143,7 +144,6 @@ chromium/                      # this repo; upstream Chromium layout with most o
 │   └── package.json           # execa, cac, p-retry, tsx ...; `pnpm -C scripts install`
 ├── build/args/shot*.gn        # GN args: shot.gn (base), shot-linux.gn, shot-mac.gn (CI overlays), shot-official.gn
 ├── build/config/shot_build.gni# declares is_shot_build
-├── patches/                   # patches for DEPS checkouts (icu, skia); applied by the engine-*.yml patch step
 ├── docs/                      # shotium-plan.md, upstream-sync.md, cut-progress.md, performance.md, demo assets
 ├── benchmark-results/         # committed aggregated benchmark results
 ├── .github/workflows/         # checks, engine-{windows,linux,macos}, benchmark, perf gate, publish
@@ -319,8 +319,8 @@ pnpm build:engine --target shot_c --jobs 16 --log out/Shot/build.log    # shotiu
 Output: `out/Shot/shotium.exe`, `out/Shot/shotium.dll`, `out/Shot/shotium_data.pak`,
 `out/Shot/shotium_strings.pak`. GN target names are still `shot` and `shot_c`.
 
-- `scripts/build-engine.ts` applies the Skia patches, regenerates the ICU
-  data set, runs `gn gen`, then ninja with the output in the log file. It
+- `scripts/build-engine.ts` regenerates the ICU data set, runs `gn gen`,
+  then ninja with the output in the log file. It
   retries two failures that are not build errors: parallel toolchain
   variants racing on `environment.x64` (`PermissionError`), and ninja
   re-running `gn gen` itself. A relative `--log` is relative to where you
@@ -620,12 +620,9 @@ Output: `out/Shot/shotium.exe`, `out/Shot/shotium.dll`, `out/Shot/shotium_data.p
   `failures.json` and do not fail the run; only a shotium failure, a harness or
   host error, or an exhausted budget does. The rule lives in both `cli.ts` and
   `merge-shards.ts` and must change in both.
-- Files written after the mtime stamp get a content-faithful time too: the
-  patched Skia/ICU sources take the later of the dependency revision and the
-  last commit touching `patches/`, and the repacked `icudtl.dat` the latest
-  of the ICU revision, `scripts/icu-repack.ts` and `patches/`. Without that
-  every warm run rebuilt 26 objects below `SkCodec.h` and relinked the 249
-  libraries below the ICU data.
+- The repacked `icudtl.dat` uses the latest commit touching the directly
+  tracked ICU source or `scripts/icu-repack.ts` for its mtime. This avoids
+  rebuilding and relinking dependents on every warm CI run.
 - Engine build caches are keyed by content-faithful mtimes
   (`pnpm ci:stamp-mtimes`); without that step every CI build is cold.
 

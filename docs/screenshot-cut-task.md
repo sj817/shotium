@@ -1,5 +1,23 @@
 # 静态截图裁剪任务：完整目标与接续清单
 
+## 最新用户调整：取消 patch 重放，直接维护源码
+
+三库迁移现在全部落实：ICU/Skia/Perfetto 改由主仓跟踪，四个补丁、本地及三平台 CI 应用逻辑、三个检出项、三个 gitlink 和 Skia hash hook 已移除。13,300 余个后续文件与 ICU 保留文件逐一核对原文，补齐两个符号链接目标，保留 312 个可执行位和 8 个符号链接。原三个完整子仓保存在 out/cut-stage19-direct-source/vendor-backup/。这是源码管理方式迁移，不等于三库所有无用实现已经删完；新版本未编译。当前完整状态以 screenshot-cut-stage19-report.md 为准，以下迁移待办描述为历史。
+
+ICU 迁移已落实：996 个原文件加 .gitignore/来源说明改由主仓跟踪，移除 ICU gitlink、DEPS 和 .gitmodules 入口及其 patch；三平台 ICU 数据时间戳改读主仓路径历史，Windows 不再打 ICU 补丁。原子仓完整保存在 out/cut-stage19-direct-source/vendor-backup/icu（含 .git 和全部本地改动）；保留文件哈希全部一致。历史图记录核查不是当前构建证明，尚未编译；Skia/Perfetto 仍待迁移。ICU 普通文件及 .gitmodules 已暂存以完成 gitlink 转换，其余本轮配置和 stage18 修改尚未提交。
+
+用户要求移除 patches，改为直接修改相应源码。已查明四个补丁覆盖 ICU、Skia、Perfetto，这三者目前都是 mode 160000 Git 子仓和 DEPS 检出项；单改子仓文件不会进入主仓提交。接下来结合原裁剪目标确定实际保留源码，转成主仓普通文件，保护已有全部本地改动与 Git 元数据，再删除四个补丁、build-engine.ts 和三平台 CI 中的应用逻辑，同步更新 DEPS/.gitmodules、时间戳/ICU repack 和文档。避免全量导入约 515 MiB 的 vendor 测试与工具。预检及已修改源文件精确备份见 out/cut-stage19-direct-source/；当前尚未迁移，patch 尚未删除。原全部裁剪目标继续有效，stage18 未提交改动保留。
+
+## 最新源码接续：Mojo fuzzing 闭包（未编译）
+
+继续追加：Breakpad 的 minidump_fuzzer 目标、跨工具链复制入口、专用静默日志配置和 copy_exe 中的 fuzzer 分支已移除，保留原普通工具复制和 ERROR 日志。另在 base、net、DNS、Mojo、URL 等 9 个 GN 文件移除 83 个 fuzzer_test 目标及导入；这些目标的字面 sources 输入均已不在本地，生产实现保留。清单分别在 out/cut-stage18-breakpad-fuzzer/、out/cut-stage18-engine-fuzzers/；10 个 GN 文件语法解析通过，diff --check 通过，无生成/编译/运行，未提交。剩余范围进一步明确为 net/DNS 的 fuzzer 支持 target 和 proto、Mojo core_impl_for_fuzzers、base fuzzing buildflags、Blink/skia 包装器、test.gni/FuzzTest/sanitizer 引擎以及 vendor 测试源码。不能把入口删除当作这些支持链已完成。
+
+追加：已删除 fuzzable_proto_library 模板、自测和包装组，metrics_proto 改为同样参数的普通 proto_library；清单见 out/cut-stage18-fuzzable-proto/。另在 13 个库的 BUILD.gn 中删除 17 处 fuzzer_test 声明（BoringSSL 的一处循环会生成多个目标）、对应 import 和独占种子配置，见 out/cut-stage18-library-fuzzers/。新增 15 个 GN 文件语法解析通过，未生成/编译。保留生产库源码；BoringSSL/RE2 的 gitlink 检出中仍含 vendor 测试源，尚未完成供应商源码切片。base/net/Blink/skia/Breakpad 测试入口及通用 runner、sanitizer fuzzing 引擎闭包继续待办。全部 stage18 修改当前未提交。
+
+在 f4d07d2944a0 之后，已移除 MojoLPM 生成器、fuzzers 两个 GN 骨架及普通 Mojo 模板内的 fuzzing 分支、预编译目标、typemap 别名、protobuf 可见性和 Siso 旧对象引用。普通 C++/Java/Rust 生成器保留；默认生成语言由 c++,java,mojolpm 改为 c++,java。9 个源码路径（6 修改、3 删除），清单和原文件备份在 out/cut-stage18-mojolpm/。三个 GN 文件与两个 Python 文件仅完成语法解析，全仓跟踪源码残留搜索通过；没有生成构建图、编译或运行验收。该组当前未提交，将与后续测试骨架合并提交。Route 92 路径提案仍未应用，与本组没有路径重叠。
+
+下一步按 out/cut-stage18-fuzzing/next-boundary.md 清理通用 libFuzzer/FuzzTest/LPM 测试入口及 sanitizers 中的 fuzzing 专用部分。该范围仍未完成，不能把 MojoLPM 清理算作整个 fuzzing 闭包完成。继续遵守先集中源码、最后统一构建。
+
 **本批本地源码提交：62 删除、65 修改。** 精确路径及提交号记录在 out/cut-stage17/commit.json。仅保存已经应用的父任务改动；Route 92 路径补丁未获具体确认、未应用。部分对应调用方仍待该补丁收尾，本批未生成、编译或运行，不是可构建/验收通过的版本。不 push，不创建 PR。
 
 

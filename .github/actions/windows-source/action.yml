@@ -224,52 +224,13 @@ runs:
         restore-keys: |
           out-shot-windows-${{ inputs.cpu }}-
 
-    - name: patch the DEPS checkouts
-      shell: pwsh
-      working-directory: src
-      # gclient restores third_party/icu and third_party/skia from their own
-      # upstreams, so anything this repository changes there has to be
-      # reapplied on every run. The ICU patch is worth 5.8 MB of shotium.exe:
-      # icu_data_dir_override picks the "cast"
-      # filtered data set (5.0 MB) over the platform default "common"
-      # (10.8 MB), and icu_use_data_file = false links whichever one it is
-      # into the binary.
-      #
-      # git apply leaves the patched files with "now" for an mtime, newer
-      # than every object in a restored build directory, so a warm run
-      # rebuilt them and everything that includes SkCodec.h (26 objects
-      # directly, hundreds below). A patched file's honest time is the later
-      # of the dependency's revision and the last commit that touched the
-      # patch: same base plus same patch is the same file. Set below.
-      #
-      # A failure here is not something to swallow. If a DEPS roll moves the
-      # file out from under the patch, the build has to stop and say so --
-      # the alternative is a silently different binary, which is the state
-      # this step exists to end.
-      run: |
-        git -C third_party/icu apply --verbose ../../patches/third_party_icu.patch
-        if ($LASTEXITCODE -ne 0) { throw "patches/third_party_icu.patch did not apply" }
-        git -C third_party/skia apply --verbose ../../patches/third_party_skia_parallel_blur.patch
-        if ($LASTEXITCODE -ne 0) { throw "patches/third_party_skia_parallel_blur.patch did not apply" }
-        git -C third_party/skia apply --verbose ../../patches/third_party_skia_incremental_row_limit.patch
-        if ($LASTEXITCODE -ne 0) { throw "patches/third_party_skia_incremental_row_limit.patch did not apply" }
-        git -C third_party/perfetto apply --verbose ../../patches/third_party_perfetto_optional_trace_processor.patch
-        if ($LASTEXITCODE -ne 0) { throw "patches/third_party_perfetto_optional_trace_processor.patch did not apply" }
-        $patched = [long](git log -1 --format=%ct -- patches)
-        foreach ($dep in 'third_party/icu', 'third_party/skia', 'third_party/perfetto') {
-          $base = [long](git -C $dep log -1 --format=%ct)
-          $when = [DateTimeOffset]::FromUnixTimeSeconds([math]::Max($patched, $base)).UtcDateTime
-          git -C $dep diff --name-only | ForEach-Object { (Get-Item "$dep/$_").LastWriteTimeUtc = $when }
-        }
-
     - name: build the shot ICU data set
       shell: pwsh
       working-directory: src
       # args.gn asks for icu_data_dir_override = "shot", which is not one of
       # the nine sets third_party/icu ships: it is `cast` with the six CJK
       # converter tables removed, since Blink decodes those encodings itself.
-      # Like the patch above this has to be redone on every run, because
-      # gclient owns that directory.
+      # Generate this data from the directly tracked ICU cast data on each run.
       #
       # Failing here rather than falling back to `cast` is deliberate. A
       # missing input would stop gn gen anyway; what must not happen is the
@@ -283,10 +244,9 @@ runs:
         if ($LASTEXITCODE -ne 0) { throw "icu repack failed" }
         # The repack writes icudtl.dat with "now" for an mtime on every run,
         # and ninja then redoes the data assembly, the ICU library and every
-        # library that links it (249 LIB edges). Same rule as the patches:
-        # the latest of the ICU revision, the repack script and patches/.
-        $when = [long](git -C third_party/icu log -1 --format=%ct)
-        foreach ($f in 'scripts/icu-repack.ts', 'patches') {
+        # library that links it. Use the latest ICU source or repack-script commit.
+        $when = [long](git log -1 --format=%ct -- third_party/icu)
+        foreach ($f in @('scripts/icu-repack.ts')) {
           $t = [long](git log -1 --format=%ct -- $f)
           if ($t -gt $when) { $when = $t }
         }
