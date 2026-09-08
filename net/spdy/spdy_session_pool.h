@@ -29,7 +29,6 @@
 #include "net/base/reconnect_notifier.h"
 #include "net/dns/public/host_resolver_results.h"
 #include "net/log/net_log_source.h"
-#include "net/proxy_resolution/proxy_config.h"
 #include "net/socket/connect_job.h"
 #include "net/socket/ssl_client_socket.h"
 #include "net/spdy/multiplexed_session_creation_initiator.h"

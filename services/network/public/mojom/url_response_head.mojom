@@ -20,7 +20,6 @@ import "services/network/public/mojom/load_timing_internal_info.mojom";
 import "services/network/public/mojom/network_param.mojom";
 import "services/network/public/mojom/network_types.mojom";
 import "services/network/public/mojom/parsed_headers.mojom";
-import "services/network/public/mojom/service_worker_router_info.mojom";
 import "services/network/public/mojom/source_type.mojom";
 import "services/network/public/mojom/ssl_info.mojom";
 import "services/network/public/mojom/unencoded_digest.mojom";
@@ -153,18 +152,6 @@ struct URLResponseHead {
   // generated as in respondWith(new Response()). It is also empty if a service
   // worker did not respond to the request or did not call respondWith().
   array<url.mojom.Url> url_list_via_service_worker;
-
-  // The initial status of service worker on navigation request. This is the
-  // status when `ServiceWorkerMainResourceLoader` is constructed. This is
-  // similar to `evaluation_worker_status` in `service_worker_router_info`, but
-  // it's set even if the ServiceWorker Static Routing API is not involved.
-  ServiceWorkerStatus? initial_service_worker_status;
-
-  // Information about ServiceWorker Static Routing API. If this field is set
-  // with `matchedSourceType` field, a matching rule is found. If this field is
-  // set without `matchedSource`, no matching rule is found. Otherwise, the API
-  // is not used.
-  ServiceWorkerRouterInfo? service_worker_router_info;
 
   // https://fetch.spec.whatwg.org/#concept-response-type
   FetchResponseType response_type = FetchResponseType.kDefault;

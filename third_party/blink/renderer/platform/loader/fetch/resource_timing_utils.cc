@@ -14,7 +14,6 @@
 #include "third_party/blink/public/mojom/timing/resource_timing.mojom-blink.h"
 #include "third_party/blink/renderer/platform/loader/fetch/delivery_type_names.h"
 #include "third_party/blink/renderer/platform/loader/fetch/resource_load_timing.h"
-#include "third_party/blink/renderer/platform/loader/fetch/service_worker_router_info.h"
 #include "third_party/blink/renderer/platform/network/http_names.h"
 #include "third_party/blink/renderer/platform/network/http_parsers.h"
 #include "third_party/blink/renderer/platform/runtime_enabled_features.h"
@@ -105,11 +104,6 @@ mojom::blink::ResourceTimingInfoPtr CreateResourceTimingInfo(
       info->timing->service_worker_fetch_start = timing->WorkerFetchStart();
     }
   }
-
-  info->service_worker_router_info =
-      response->GetServiceWorkerRouterInfo()
-          ? response->GetServiceWorkerRouterInfo()->ToMojo()
-          : nullptr;
 
   bool allow_response_details = response->IsCorsSameOrigin();
 

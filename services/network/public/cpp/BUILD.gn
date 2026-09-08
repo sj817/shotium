@@ -234,24 +234,12 @@ component("network_param_mojom_support") {
   defines = [ "IS_NETWORK_CPP_NETWORK_PARAM_IMPL" ]
 }
 
-component("proxy_config_mojom_support") {
-  sources = [
-    "mutable_network_traffic_annotation_tag_mojom_traits.h",
-    "mutable_partial_network_traffic_annotation_tag_mojom_traits.h",
-    "proxy_config_mojom_traits.cc",
-    "proxy_config_mojom_traits.h",
-    "proxy_config_with_annotation_mojom_traits.cc",
-    "proxy_config_with_annotation_mojom_traits.h",
-  ]
+source_set("traffic_annotation_mojom_support") {
+  sources = [ "mutable_network_traffic_annotation_tag_mojom_traits.h" ]
   deps = [
-    ":network_param_mojom_support",
-    "//mojo/public/mojom/base",
-    "//net",
-    "//services/network/public/mojom:mojom_proxy_config_shared",
-    "//url/mojom:mojom_traits",
+    "//net/traffic_annotation",
+    "//services/network/public/mojom:mojom_traffic_annotation_shared",
   ]
-  configs += [ "//build/config/compiler:wexit_time_destructors" ]
-  defines = [ "IS_NETWORK_CPP_PROXY_CONFIG_IMPL" ]
 }
 
 component("structured_headers_mojom_support") {
@@ -510,7 +498,7 @@ component("cpp_base") {
     ":integrity_policy",
     ":ip_address_mojom_support",
     ":network_param_mojom_support",
-    ":proxy_config_mojom_support",
+    ":traffic_annotation_mojom_support",
     ":schemeful_site_mojom_support",
     ":storage_access_api_mojom_support",
     ":structured_headers_mojom_support",

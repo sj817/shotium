@@ -11,7 +11,6 @@
 #include "net/base/net_export.h"
 #include "net/base/proxy_chain.h"
 #include "net/base/proxy_server.h"
-#include "net/proxy_resolution/proxy_config.h"
 #include "net/proxy_resolution/proxy_list.h"
 #include "net/proxy_resolution/proxy_retry_info.h"
 #include "net/traffic_annotation/network_traffic_annotation.h"

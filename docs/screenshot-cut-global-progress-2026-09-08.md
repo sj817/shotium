@@ -1,4 +1,6 @@
-# 静态截图引擎全局裁剪进度（stage68）
+# 静态截图引擎全局裁剪进度（stage69）
+
+stage69：stage68 已提交 05d4be102cb6。本轮38源码路径（15D+23E），合并代理配置与ServiceWorker router响应两闭包。HTTP已固定直连，解除为读取默认注解而构造ProxyConfig的唯一真实入口，原注解逐字保留到调用处；删除PAC/WPAD/system/dynamic-routing配置数据、专属Mojo/traits与partial annotation共12文件，普通URLLoaderFactory流量注解单独保留最小目标，HTTP认证实际使用ProxyHostMatchingRules不动。另删除ServiceWorkerRouterInfo schema/Blink包装3文件，解除网络响应、WebURLResponse/ResourceResponse、ResourceTiming/性能IDL、fetchStart专属分支和7个路由统计字段；普通Create含SSL/证书/HTTP与fetchStart分支对照一致，其他worker响应元数据仍单列待办。5GN语法、备份SHA/15实体删除/保护交集零、diff及完整引用复核通过；残留是既有注解ID、Rust独立Windows绑定、UKM两条历史enum文字。证据out/cut-stage69-combined/、out/cut-stage69-proxy-config/、out/cut-stage69-worker-response/。未图生成/引擎编译/运行/像素验收，按用户要求集中最终编译。全局仍约65%±10、源码约80%、余10–16大批次是粗估；受限Route/core/TrustToken生成尾巴、Perfetto/ICU、UKM/Crashpad与追踪、代理transport/worker响应及递归prefetch、Blink编辑/AX/fileapi/probes/observer/lifecycle、最终根目录复核与全平台验收未完成。
 
 stage68：stage67 已提交 e965a4d97ef5。本轮扩大为111源码/工具路径（91D+20E），两组合并提交：删除78个metrics上游维护/校验/测试脚本及Siso旧入口，保留实际内存白名单与UKM生成链；两生成器删除前后实际运行成功，5生成文件逐字节一致。删除9个无消费Web嵌入接口头及4专属实现，GN/exported/probe生成include与无用声明同步；真实FCP、打印布局、字体/GC与受限prefetch消费者保留。2GN、2JSON5及结构比较、备份SHA/保护交集零、91实体删除和diff/引用检查通过。证据out/cut-stage68-combined/、out/cut-stage68-metrics-tools/、out/cut-stage68-web-interfaces/。未引擎图生成/编译/运行/像素验收；按照用户要求继续整组先删、集中最后编译。全局仍约65%±10、源码约80%，余10–16大批次仅粗估，不按本轮文件数抬高进度。待办仍包括受限Route/core/TrustToken生成尾巴、Perfetto/ICU、UKM/Crashpad与追踪、网络策略/递归prefetch、Blink编辑/AX/fileapi/probes/observer/lifecycle、根目录最终复核以及统一编译/运行/像素/六平台验收。
 

@@ -65,7 +65,6 @@ class HttpTransactionFactory;
 class HttpUserAgentSettings;
 class HttpServerProperties;
 class HostResolverManager;
-class ProxyConfigService;
 class URLRequestContext;
 class CacheEncryptionDelegate;
 

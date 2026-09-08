@@ -44,7 +44,6 @@
 #include "services/network/public/mojom/cors.mojom-shared.h"
 #include "services/network/public/mojom/ip_address_space.mojom-shared.h"
 #include "services/network/public/mojom/load_timing_info.mojom.h"
-#include "services/network/public/mojom/service_worker_router_info.mojom-blink.h"
 #include "services/network/public/mojom/url_response_head.mojom.h"
 #include "third_party/blink/public/platform/web_http_header_visitor.h"
 #include "third_party/blink/public/platform/web_string.h"
@@ -52,7 +51,6 @@
 #include "third_party/blink/renderer/platform/loader/fetch/integrity_metadata.h"
 #include "third_party/blink/renderer/platform/loader/fetch/resource_load_timing.h"
 #include "third_party/blink/renderer/platform/loader/fetch/resource_response.h"
-#include "third_party/blink/renderer/platform/loader/fetch/service_worker_router_info.h"
 #include "third_party/blink/renderer/platform/wtf/allocator/allocator.h"
 #include "third_party/blink/renderer/platform/wtf/vector.h"
 
@@ -155,9 +153,6 @@ WebURLResponse WebURLResponse::Create(
   response.SetInterceptedByPlugin(head.intercepted_by_plugin);
   response.SetDidUseSharedDictionary(head.did_use_shared_dictionary);
   response.SetServiceWorkerResponseSource(head.service_worker_response_source);
-  if (!head.service_worker_router_info.is_null()) {
-    response.SetServiceWorkerRouterInfo(*head.service_worker_router_info);
-  }
   response.SetType(head.response_type);
   response.SetPadding(head.padding);
   response.SetUrlListViaServiceWorker(
@@ -492,19 +487,6 @@ void WebURLResponse::SetInterceptedByPlugin(bool value) {
 network::mojom::FetchResponseSource
 WebURLResponse::GetServiceWorkerResponseSource() const {
   return resource_response_->GetServiceWorkerResponseSource();
-}
-
-void WebURLResponse::SetServiceWorkerRouterInfo(
-    const network::mojom::ServiceWorkerRouterInfo& value) {
-  auto info = ServiceWorkerRouterInfo::Create();
-  info->SetRuleIdMatched(value.rule_id_matched);
-  info->SetMatchedSourceType(value.matched_source_type);
-  info->SetActualSourceType(value.actual_source_type);
-  info->SetRouteRuleNum(value.route_rule_num);
-  info->SetEvaluationWorkerStatus(value.evaluation_worker_status);
-  info->SetRouterEvaluationTime(value.router_evaluation_time);
-  info->SetCacheLookupTime(value.cache_lookup_time);
-  resource_response_->SetServiceWorkerRouterInfo(std::move(info));
 }
 
 void WebURLResponse::SetServiceWorkerResponseSource(

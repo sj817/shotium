@@ -33,7 +33,6 @@
 
 #include "base/containers/fixed_flat_set.h"
 #include "base/notreached.h"
-#include "services/network/public/mojom/service_worker_router_info.mojom-blink-forward.h"
 #include "third_party/blink/public/common/features_generated.h"
 #include "third_party/blink/public/mojom/fetch/fetch_api_request.mojom-blink.h"
 #include "third_party/blink/public/mojom/timing/performance_mark_or_measure.mojom-blink.h"
@@ -54,7 +53,6 @@
 #include "third_party/blink/renderer/platform/loader/fetch/resource_request.h"
 #include "third_party/blink/renderer/platform/loader/fetch/resource_response.h"
 #include "third_party/blink/renderer/platform/loader/fetch/resource_timing_utils.h"
-#include "third_party/blink/renderer/platform/loader/fetch/service_worker_router_info.h"
 #include "third_party/blink/renderer/platform/runtime_enabled_features.h"
 #include "third_party/blink/renderer/platform/scheduler/public/thread_scheduler.h"
 #include "third_party/blink/renderer/platform/wtf/text/atomic_string.h"
@@ -118,16 +116,6 @@ PerformanceResourceTiming::PerformanceResourceTiming(
       info_(std::move(info)) {
   if (!server_timing_.empty()) {
     UseCounter::Count(context, WebFeature::kPerformanceServerTiming);
-  }
-  if (info_->service_worker_router_info) {
-    if (info_->service_worker_router_info->matched_source_type) {
-      UseCounter::Count(context,
-                        WebFeature::kResourceTimingWorkerMatchedSourceType);
-    }
-    if (info_->service_worker_router_info->actual_source_type) {
-      UseCounter::Count(context,
-                        WebFeature::kResourceTimingWorkerFinalSourceType);
-    }
   }
 }
 
@@ -251,26 +239,6 @@ DOMHighResTimeStamp PerformanceResourceTiming::workerCacheLookupStart() const {
       info_->allow_negative_values, CrossOriginIsolatedCapability());
 }
 
-AtomicString PerformanceResourceTiming::workerMatchedSourceType() const {
-  if (!info_->service_worker_router_info ||
-      !info_->service_worker_router_info->matched_source_type) {
-    return AtomicString();
-  }
-
-  return AtomicString(ServiceWorkerRouterInfo::GetRouterSourceTypeString(
-      *info_->service_worker_router_info->matched_source_type));
-}
-
-AtomicString PerformanceResourceTiming::workerFinalSourceType() const {
-  if (!info_->service_worker_router_info ||
-      !info_->service_worker_router_info->actual_source_type) {
-    return AtomicString();
-  }
-
-  return AtomicString(ServiceWorkerRouterInfo::GetRouterSourceTypeString(
-      *info_->service_worker_router_info->actual_source_type));
-}
-
 DOMHighResTimeStamp PerformanceResourceTiming::WorkerReady() const {
   if (!info_->timing || info_->timing->service_worker_ready_time.is_null()) {
     return 0.0;
@@ -315,19 +283,6 @@ DOMHighResTimeStamp PerformanceResourceTiming::fetchStart() const {
 
   if (DOMHighResTimeStamp worker_ready_time = WorkerReady())
     return worker_ready_time;
-
-  // If the fetch came from service worker static routing API and the actual
-  // source type is cache, we will not have a fetch start. For compatibility,
-  // we set this to responseStart (as written in explainer
-  // https://github.com/WICG/service-worker-static-routing-api/blob/main/resource-timing-api.md
-  // ).
-  if (RuntimeEnabledFeatures::ServiceWorkerStaticRouterTimingInfoEnabled(
-          DynamicTo<LocalDOMWindow>(source())) &&
-      info_->service_worker_router_info &&
-      info_->service_worker_router_info->actual_source_type ==
-          network::mojom::ServiceWorkerRouterSourceType::kCache) {
-    return responseStart();
-  }
 
   return PerformanceEntry::startTime();
 }

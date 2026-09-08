@@ -45,10 +45,6 @@ interface PerformanceResourceTiming : PerformanceEntry {
         readonly attribute DOMHighResTimeStamp workerRouterEvaluationStart;
     [RuntimeEnabled=ServiceWorkerStaticRouterTimingInfo, Measure]
         readonly attribute DOMHighResTimeStamp workerCacheLookupStart;
-    [RuntimeEnabled=ServiceWorkerStaticRouterTimingInfo, Measure]
-        readonly attribute DOMString workerMatchedSourceType;
-    [RuntimeEnabled=ServiceWorkerStaticRouterTimingInfo, Measure]
-        readonly attribute DOMString workerFinalSourceType;
     readonly attribute DOMHighResTimeStamp redirectStart;
     readonly attribute DOMHighResTimeStamp redirectEnd;
     readonly attribute DOMHighResTimeStamp fetchStart;

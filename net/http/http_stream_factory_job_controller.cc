@@ -38,9 +38,9 @@
 #include "net/log/net_log_event_type.h"
 #include "net/log/net_log_with_source.h"
 #include "net/proxy_resolution/proxy_info.h"
-#include "net/proxy_resolution/proxy_config_with_annotation.h"
 #include "net/socket/next_proto.h"
 #include "net/spdy/spdy_session.h"
+#include "net/traffic_annotation/network_traffic_annotation.h"
 #include "url/gurl.h"
 #include "url/scheme_host_port.h"
 #include "url/url_constants.h"
@@ -48,6 +48,31 @@
 namespace net {
 
 namespace {
+
+constexpr NetworkTrafficAnnotationTag kDirectProxyTrafficAnnotation =
+    DefineNetworkTrafficAnnotation("proxy_config_direct", R"(
+    semantics {
+      sender: "Proxy Config"
+      description:
+        "Direct connections are being used instead of a proxy. This is a place "
+        "holder annotation that would include details about where the "
+        "configuration, which can trigger fetching a PAC file, came from."
+      trigger:
+        "Connecting directly to destination sites instead of using a proxy is "
+        "the default behavior."
+      data:
+        "None."
+      destination: WEBSITE
+    }
+    policy {
+      cookies_allowed: NO
+      setting:
+        "This isn't a real network request. A proxy can be selected in "
+        "settings."
+      policy_exception_justification:
+        "Using 'ProxySettings' policy can set Chrome to use specific proxy "
+        "settings and avoid directly connecting to the websites."
+    })");
 
 // Returns parameters associated with the proxy resolution.
 base::DictValue NetLogHttpStreamJobProxyChainResolved(
@@ -597,7 +622,7 @@ void HttpStreamFactory::JobController::StartJobs() {
   // Shot only makes direct connections; no PAC fetch or system proxy discovery.
   proxy_info_.UseDirect();
   proxy_info_.set_traffic_annotation(MutableNetworkTrafficAnnotationTag(
-      ProxyConfigWithAnnotation::CreateDirect().traffic_annotation()));
+      kDirectProxyTrafficAnnotation));
   net_log_.AddEvent(
       NetLogEventType::HTTP_STREAM_JOB_CONTROLLER_PROXY_SERVER_RESOLVED, [&] {
         return NetLogHttpStreamJobProxyChainResolved(proxy_info_.proxy_chain());

@@ -279,25 +279,8 @@ mojom("mojom_network_anonymization_key") {
   ]
 }
 
-# As with |mojom_ip_address|, this is a separate target to avoid a circular
-# dependency, which comes from the fact that proxy_resolver_win uses this
-# interface, and the network service uses the proxy_resolver_win service. This
-# is separate from other targets because only this needs to be included in
-# proxy_resolver_win builds.
-mojom("mojom_proxy_config") {
-  generate_java = true
-  sources = [
-    "mutable_network_traffic_annotation_tag.mojom",
-    "mutable_partial_network_traffic_annotation_tag.mojom",
-    "proxy_config.mojom",
-    "proxy_config_with_annotation.mojom",
-  ]
-
-  public_deps = [
-    ":mojom_network_param",
-    "//mojo/public/mojom/base",
-    "//url/mojom:url_mojom_scheme_host_port",
-  ]
+mojom("mojom_traffic_annotation") {
+  sources = [ "mutable_network_traffic_annotation_tag.mojom" ]
 
   shared_cpp_typemaps = [
     {
@@ -310,81 +293,12 @@ mojom("mojom_proxy_config") {
       traits_headers = [ "//services/network/public/cpp/mutable_network_traffic_annotation_tag_mojom_traits.h" ]
       traits_public_deps = [
         "//net/traffic_annotation",
-        "//services/network/public/cpp:proxy_config_mojom_support",
+        "//services/network/public/cpp:traffic_annotation_mojom_support",
       ]
     },
   ]
 
-  cpp_typemaps = [
-    {
-      types = [
-        {
-          mojom = "network.mojom.MutablePartialNetworkTrafficAnnotationTag"
-          cpp = "::net::MutablePartialNetworkTrafficAnnotationTag"
-        },
-      ]
-      traits_headers = [ "//services/network/public/cpp/mutable_partial_network_traffic_annotation_tag_mojom_traits.h" ]
-      traits_public_deps = [
-        "//net/traffic_annotation",
-        "//services/network/public/cpp:proxy_config_mojom_support",
-      ]
-    },
-    {
-      types = [
-        {
-          mojom = "network.mojom.ProxyHostMatchingRules"
-          cpp = "::net::ProxyHostMatchingRules"
-        },
-        {
-          mojom = "network.mojom.ProxyList"
-          cpp = "::net::ProxyList"
-        },
-        {
-          mojom = "network.mojom.ProxyRulesType"
-          cpp = "::net::ProxyConfig::ProxyRules::Type"
-        },
-        {
-          mojom = "network.mojom.ProxyRules"
-          cpp = "::net::ProxyConfig::ProxyRules"
-        },
-        {
-          mojom = "network.mojom.ProxyConfig"
-          cpp = "::net::ProxyConfig"
-        },
-
-        {
-          mojom = "network.mojom.DynamicRoutingRule"
-          cpp = "::net::ProxyConfig::DynamicRoutingRule"
-        },
-        {
-          mojom = "network.mojom.DynamicRoutingConfig"
-          cpp = "::net::ProxyConfig::DynamicRoutingConfig"
-        },
-      ]
-      traits_headers =
-          [ "//services/network/public/cpp/proxy_config_mojom_traits.h" ]
-      traits_public_deps = [
-        "//net",
-        "//services/network/public/cpp:proxy_config_mojom_support",
-      ]
-    },
-    {
-      types = [
-        {
-          mojom = "network.mojom.ProxyConfigWithAnnotation"
-          cpp = "::net::ProxyConfigWithAnnotation"
-        },
-      ]
-      traits_headers = [ "//services/network/public/cpp/proxy_config_with_annotation_mojom_traits.h" ]
-      traits_public_deps = [
-        "//net",
-        "//services/network/public/cpp:proxy_config_mojom_support",
-      ]
-    },
-  ]
-
-  cpp_typemaps += shared_cpp_typemaps
-
+  cpp_typemaps = shared_cpp_typemaps
   blink_cpp_typemaps = shared_cpp_typemaps
 }
 
@@ -527,7 +441,6 @@ mojom("url_loader_base") {
     "parsed_headers.mojom",
     "referrer_policy.mojom",
     "request_priority.mojom",
-    "service_worker_router_info.mojom",
     "source_type.mojom",
     "sri_message_signature.mojom",
     "supports_loading_mode.mojom",
@@ -551,7 +464,7 @@ mojom("url_loader_base") {
     ":mojom_network_param",
     ":mojom_origin_or_wildcard_header_value",
     ":mojom_permissions_policy",
-    ":mojom_proxy_config",
+    ":mojom_traffic_annotation",
     ":mojom_schemeful_site",
     ":mojom_shared_dictionary",
     ":mojom_source_location",
@@ -1541,7 +1454,7 @@ mojom("mojom") {
   sources = [ "url_loader_factory.mojom" ]
 
   public_deps = [
-    ":mojom_proxy_config",
+    ":mojom_traffic_annotation",
     ":url_loader_base",
   ]
 

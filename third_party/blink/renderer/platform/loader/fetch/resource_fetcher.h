@@ -55,7 +55,6 @@
 #include "third_party/blink/renderer/platform/loader/fetch/render_blocking_behavior.h"
 #include "third_party/blink/renderer/platform/loader/fetch/resource_load_priority.h"
 #include "third_party/blink/renderer/platform/loader/fetch/resource_load_scheduler.h"
-#include "third_party/blink/renderer/platform/loader/fetch/service_worker_router_info.h"
 #include "third_party/blink/renderer/platform/loader/fetch/url_loader/url_loader.h"
 #include "third_party/blink/renderer/platform/mojo/heap_mojo_remote.h"
 #include "third_party/blink/renderer/platform/mojo/heap_mojo_wrapper_mode.h"
@@ -607,8 +606,7 @@ class PLATFORM_EXPORT ResourceFetcher
                                         base::TimeTicks response_end);
   void UpdateServiceWorkerSubresourceMetrics(
       ResourceType resource_type,
-      bool handled_by_serviceworker,
-      const blink::ServiceWorkerRouterInfo* router_info);
+      bool handled_by_serviceworker);
 
   void RecordResourceHistogram(std::string_view prefix,
                                ResourceType type,

@@ -385,7 +385,6 @@ class MultiThreadedCertVerifierScopedAllowBaseSyncPrimitives;
 class MultiThreadedProxyResolverScopedAllowJoinOnIO;
 class NetworkChangeNotifierApple;
 class NetworkConfigWatcherAppleThread;
-class ProxyConfigServiceWin;
 class ScopedAllowBlockingForSettingGetter;
 namespace internal {
 class AddressTrackerLinux;
@@ -645,7 +644,6 @@ class BASE_EXPORT ScopedAllowBlocking {
   friend class metrics::CleanExitBeacon;
   friend class module_installer::ScopedAllowModulePakLoad;
   friend class net::GSSAPISharedLibrary;    // http://crbug.com/66702
-  friend class net::ProxyConfigServiceWin;  // http://crbug.com/61453
   friend class net::
       ScopedAllowBlockingForSettingGetter;  // http://crbug.com/69057
   friend class net::internal::PemFileCertStore;
