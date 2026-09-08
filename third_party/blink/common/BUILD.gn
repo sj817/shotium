@@ -205,7 +205,6 @@ shot_compatible_source_set("common") {
     "view_source/rendering_preferences.cc",
     "web_package/signed_exchange_consts.cc",
     "web_preferences/web_preferences.cc",
-    "web_preferences/web_preferences_mojom_traits.cc",
     "widget/constants.cc",
     "widget/device_emulation_params_mojom_traits.cc",
   ]

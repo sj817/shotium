@@ -11,7 +11,6 @@ import "third_party/blink/public/mojom/frame/frame_replication_state.mojom";
 import "third_party/blink/public/mojom/navigation/was_activated_option.mojom";
 import "third_party/blink/public/mojom/page/page_visibility_state.mojom";
 import "third_party/blink/public/mojom/tokens/tokens.mojom";
-import "third_party/blink/public/mojom/webpreferences/web_preferences.mojom";
 import "ui/color/color_id.mojom";
 
 enum PagehideDispatch {
@@ -105,9 +104,6 @@ interface PageBroadcast {
   // document.prerendering stays true). This is distinct from activation,
   // which transitions the page from prerendering to the primary frame tree.
   UpgradePrerenderUntilScriptToFullPrerender();
-
-  // Notifies the renderer when updating a set of blink preferences.
-  UpdateWebPreferences(blink.mojom.WebPreferences preferences);
 
   // Set history index and length.
   SetHistoryIndexAndLength(int32 index, int32 length);

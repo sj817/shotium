@@ -37,12 +37,3 @@ component("util") {
     frameworks = [ "IOSurface.framework" ]
   }
 }
-
-source_set("gpu_info_util") {
-  sources = [
-    "gpu_info_util.cc",
-    "gpu_info_util.h",
-  ]
-
-  deps = [ "//base" ]
-}

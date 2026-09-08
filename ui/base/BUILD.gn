@@ -171,12 +171,6 @@ component("base") {
       "pointer/pointer_device.h",
     ]
 
-    if (is_linux || is_chromeos) {
-      sources += [
-        "linux/linux_desktop.cc",
-        "linux/linux_desktop.h",
-      ]
-    }
   }
 
   if (is_fuchsia) {
@@ -222,7 +216,6 @@ component("base") {
     "//ui/base/clipboard:clipboard_types",
     "//ui/base/dragdrop/mojom",
     "//ui/display",
-    "//ui/display/util:gpu_info_util",
     "//ui/strings",
     "//url",
   ]
@@ -271,9 +264,6 @@ component("base") {
     deps += [ "//third_party/fontconfig" ]
   }
 
-  if (use_glib) {
-    public_deps += [ "//ui/base/glib" ]
-  }
 
   if (is_mac) {
     frameworks = [
@@ -739,10 +729,6 @@ test("ui_base_unittests") {
     deps += [ "//ui/base/wayland:unittests" ]
   }
 
-  if (use_glib) {
-    sources += [ "glib/scoped_gsignal_unittest.cc" ]
-    deps += [ "//ui/base/glib" ]
-  }
 
   # TODO(crbug.com/40031409): Fix code that adds exit-time destructors and
   # enable the diagnostic by removing this line.

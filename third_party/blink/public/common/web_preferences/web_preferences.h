@@ -15,7 +15,7 @@
 #include "third_party/blink/public/common/common_export.h"
 #include "third_party/blink/public/mojom/css/preferred_color_scheme.mojom-shared.h"
 #include "third_party/blink/public/mojom/css/preferred_contrast.mojom-shared.h"
-#include "third_party/blink/public/mojom/v8_cache_options.mojom-forward.h"
+#include "third_party/blink/public/mojom/v8_cache_options.mojom-shared.h"
 #include "third_party/blink/public/mojom/webpreferences/web_preferences.mojom-shared.h"
 #include "third_party/skia/include/core/SkColor.h"
 #include "url/gurl.h"
@@ -357,7 +357,6 @@ struct BLINK_COMMON_EXPORT WebPreferences {
   // requirement can be bypassed via
   // `FileOrDirectoryPickerWithoutGestureAllowedForOrigins` policy.
   bool require_transient_activation_for_show_file_or_directory_picker = true;
-
 
   // The forced colors state for the web content. The forced colors state
   // is used to evaluate the forced-colors media query, as well as determining
