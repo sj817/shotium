@@ -61,7 +61,6 @@ mojom("mojom_platform") {
     "ai/ai_summarizer.mojom",
     "ai/ai_writer.mojom",
     "ai/model_streaming_responder.mojom",
-    "annotation/annotation.mojom",
     "app_banner/app_banner.mojom",
     "associated_interfaces/associated_interfaces.mojom",
     "autoplay/autoplay.mojom",
@@ -269,7 +268,6 @@ mojom("mojom_platform") {
   public_deps = [
     ":android_mojo_bindings",
     ":color_scheme_mojo_bindings",
-    ":credentialmanagement_mojo_bindings",
     ":dom_node_id",
     ":mojom_mhtml_load_result",
     ":script_type_mojo_bindings",
@@ -552,7 +550,6 @@ mojom("android_mojo_bindings") {
   ]
 
   public_deps = [
-    ":credentialmanagement_mojo_bindings",
     "//mojo/public/mojom/base",
     "//services/network/public/mojom",
     "//services/network/public/mojom:mojom_schemeful_site",
@@ -642,7 +639,6 @@ mojom("mojom_core") {
     "frame/fullscreen.mojom",
     "frame/intrinsic_sizing_info.mojom",
     "frame/lifecycle.mojom",
-    "frame/reporting_observer.mojom",
     "frame/sudden_termination_disabler_type.mojom",
     "frame/tree_scope_type.mojom",
     "frame/triggering_event_info.mojom",
@@ -970,30 +966,4 @@ mojom("color_scheme_mojo_bindings") {
   export_class_attribute = "BLINK_COMMON_EXPORT"
   export_define = "BLINK_COMMON_IMPLEMENTATION=1"
   export_header = "third_party/blink/public/common/common_export.h"
-}
-
-mojom_component("credentialmanagement_mojo_bindings") {
-  generate_java = true
-
-  sources = [
-    "credentialmanagement/credential_manager.mojom",
-    "credentialmanagement/credential_type_flags.mojom",
-  ]
-
-  public_deps = [
-    "//mojo/public/mojom/base",
-    "//url/mojom:url_mojom_gurl",
-    "//url/mojom:url_mojom_scheme_host_port",
-  ]
-
-  # The credential-manager typemaps mapped these onto ::password_manager::
-  # types from //components/password_manager, which is deleted. Without the
-  # typemap the generated blink.mojom types are used directly.
-
-  macro_prefix = "CREDENTIALMANAGEMENT_MOJOM"
-  output_prefix = "credentialmanagement_mojom"
-
-  export_class_attribute_blink = "PLATFORM_EXPORT"
-  export_define_blink = "BLINK_PLATFORM_IMPLEMENTATION=1"
-  export_header_blink = "third_party/blink/renderer/platform/platform_export.h"
 }

@@ -5,7 +5,6 @@
 # These lists are the transitive .mojom import closure used by the sources in
 # //shot:shot. Keep them sorted so missing interfaces are easy to review.
 shot_mojom_platform_sources = [
-  "annotation/annotation.mojom",
   "associated_interfaces/associated_interfaces.mojom",
   "back_forward_cache_not_restored_reasons.mojom",
   "browser_interface_broker.mojom",
@@ -120,7 +119,6 @@ shot_mojom_core_sources = [
   "frame/fullscreen.mojom",
   "frame/intrinsic_sizing_info.mojom",
   "frame/lifecycle.mojom",
-  "frame/reporting_observer.mojom",
   "frame/sudden_termination_disabler_type.mojom",
   "frame/tree_scope_type.mojom",
   "frame/triggering_event_info.mojom",

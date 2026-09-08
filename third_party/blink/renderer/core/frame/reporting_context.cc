@@ -16,38 +16,11 @@
 #include "third_party/blink/renderer/core/frame/intervention_report_body.h"
 #include "third_party/blink/renderer/core/frame/permissions_policy_violation_report_body.h"
 #include "third_party/blink/renderer/core/frame/report.h"
-#include "third_party/blink/renderer/core/frame/reporting_observer.h"
 #include "third_party/blink/renderer/core/frame/web_feature.h"
 #include "third_party/blink/renderer/platform/instrumentation/use_counter.h"
 
 namespace blink {
 
-namespace {
-
-// In the spec (https://w3c.github.io/reporting/#report-body) a report body can
-// have anything that can be serialized into a JSON text; in practice this only
-// ever carried the one-level name/value dictionary the browser sends over
-// mojom, which is what this holds.
-//
-// It used to also serialize itself into a script object, for the report's
-// `body` attribute as seen by a ReportingObserver. That was the only reader of
-// the dictionary, and there is no script engine to read it now, so the
-// serializer is gone; the body is still carried so that report type/url
-// delivery and the report buffer behave exactly as before.
-class DictionaryValueReportBody final : public ReportBody {
- public:
-  explicit DictionaryValueReportBody(mojom::blink::ReportBodyPtr body)
-      : body_(std::move(body)) {}
-
- private:
-  const mojom::blink::ReportBodyPtr body_;
-};
-
-bool ShouldReportBeVisibleToObservers(Report* report) {
-  return report->type() != ReportType::kCSPHash;
-}
-
-}  // namespace
 
 // static
 const char ReportingContext::kSupplementName[] = "ReportingContext";
@@ -55,8 +28,7 @@ const char ReportingContext::kSupplementName[] = "ReportingContext";
 ReportingContext::ReportingContext(ExecutionContext& context)
     : Supplement<ExecutionContext>(context),
       execution_context_(context),
-      reporting_service_(&context),
-      receivers_(this, &context) {}
+      reporting_service_(&context) {}
 
 // static
 ReportingContext* ReportingContext::From(ExecutionContext* context) {
@@ -69,12 +41,6 @@ ReportingContext* ReportingContext::From(ExecutionContext* context) {
   return reporting_context;
 }
 
-void ReportingContext::Bind(
-    mojo::PendingReceiver<mojom::blink::ReportingObserver> receiver) {
-  receivers_.Add(std::move(receiver),
-                 execution_context_->GetTaskRunner(TaskType::kMiscPlatformAPI));
-}
-
 void ReportingContext::QueueReport(Report* report,
                                    const Vector<String>& endpoints) {
   if (!report->ShouldSendReport()) {
@@ -83,47 +49,14 @@ void ReportingContext::QueueReport(Report* report,
 
   CountReport(report);
 
-  NotifyInternal(report);
-
   // Send the report via the Reporting API.
   for (auto& endpoint : endpoints)
     SendToReportingAPI(report, endpoint);
 }
 
-void ReportingContext::RegisterObserver(blink::ReportingObserver* observer) {
-  UseCounter::Count(execution_context_, WebFeature::kReportingObserver);
-
-  observers_.insert(observer);
-  if (!observer->Buffered())
-    return;
-
-  observer->ClearBuffered();
-  for (auto type : report_buffer_) {
-    for (Report* report : *type.value) {
-      observer->QueueReport(report);
-    }
-  }
-}
-
-void ReportingContext::UnregisterObserver(blink::ReportingObserver* observer) {
-  observers_.erase(observer);
-}
-
-void ReportingContext::Notify(mojom::blink::ReportPtr report) {
-  ReportBody* body = report->body
-                         ? MakeGarbageCollected<DictionaryValueReportBody>(
-                               std::move(report->body))
-                         : nullptr;
-  NotifyInternal(MakeGarbageCollected<Report>(report->type,
-                                              report->url.GetString(), body));
-}
-
 void ReportingContext::Trace(Visitor* visitor) const {
-  visitor->Trace(observers_);
-  visitor->Trace(report_buffer_);
   visitor->Trace(execution_context_);
   visitor->Trace(reporting_service_);
-  visitor->Trace(receivers_);
   Supplement<ExecutionContext>::Trace(visitor);
 }
 
@@ -153,31 +86,6 @@ ReportingContext::GetReportingService() const {
             execution_context_->GetTaskRunner(TaskType::kMiscPlatformAPI)));
   }
   return reporting_service_;
-}
-
-void ReportingContext::NotifyInternal(Report* report) {
-  if (!ShouldReportBeVisibleToObservers(report)) {
-    return;
-  }
-
-  // Buffer the report. insert() finds or creates the entry in a single lookup;
-  // the placeholder is only materialized when the type is new.
-  auto add_result = report_buffer_.insert(report->type(), nullptr);
-  if (add_result.is_new_entry) {
-    add_result.stored_value->value =
-        MakeGarbageCollected<GCedHeapLinkedHashSet<Member<Report>>>();
-  }
-  auto* buffer = add_result.stored_value->value.Get();
-  buffer->insert(report);
-
-  // Only the most recent 100 reports will remain buffered, per report type.
-  // https://w3c.github.io/reporting/#notify-observers
-  if (buffer->size() > 100)
-    buffer->RemoveFirst();
-
-  // Queue the report in all registered observers.
-  for (auto observer : observers_)
-    observer->QueueReport(report);
 }
 
 void ReportingContext::SendToReportingAPI(Report* report,

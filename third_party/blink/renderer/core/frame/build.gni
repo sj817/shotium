@@ -141,8 +141,6 @@ blink_core_sources_frame = [
   "report_body.h",
   "reporting_context.cc",
   "reporting_context.h",
-  "reporting_observer.cc",
-  "reporting_observer.h",
   "resize_viewport_anchor.cc",
   "resize_viewport_anchor.h",
   "root_frame_viewport.cc",

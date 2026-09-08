@@ -87,7 +87,6 @@ class ActiveScriptWrappableCreationKey final {
   friend class PresentationRequest;
   friend class ReadableStreamDefaultReader;
   friend class RemotePlayback;
-  friend class ReportingObserver;
   friend class ResizeObserver;
   friend class RTCDataChannel;
   friend class RTCIceTransport;
