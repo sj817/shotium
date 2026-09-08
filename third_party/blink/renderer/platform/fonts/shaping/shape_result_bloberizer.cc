@@ -9,6 +9,7 @@
 #include <algorithm>
 
 #include "base/compiler_specific.h"
+#include "base/containers/adapters.h"
 #include "base/logging.h"
 #include "base/strings/to_string.h"
 #include "cc/paint/paint_canvas.h"
