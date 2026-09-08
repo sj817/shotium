@@ -180,7 +180,7 @@ mojom("mojom_platform") {
     "parakeet/ad_request.mojom",
     "payments/payment_app.mojom",
     "peerconnection/peer_connection_tracker.mojom",
-    "peerconnection/webrtc_ip_handling_policy.mojom",
+
     "performance_manager/v8_detailed_memory_reporter.mojom",
     "permissions/permission.mojom",
     "permissions/permission_status.mojom",
@@ -194,8 +194,7 @@ mojom("mojom_platform") {
     "presentation/presentation.mojom",
     "push_messaging/push_messaging.mojom",
     "push_messaging/push_messaging_status.mojom",
-    "renderer_preference_watcher.mojom",
-    "renderer_preferences.mojom",
+
     "reporting/reporting.mojom",
     "scheduler/web_scheduler_tracked_feature.mojom",
     "script_source_location.mojom",
@@ -401,15 +400,6 @@ mojom("mojom_platform") {
       ]
       traits_headers = [ "//third_party/blink/public/common/loader/url_loader_factory_bundle_mojom_traits.h" ]
       traits_public_deps = [ "//url/mojom:mojom_traits" ]
-    },
-    {
-      types = [
-        {
-          mojom = "blink.mojom.RendererPreferences"
-          cpp = "::blink::RendererPreferences"
-        },
-      ]
-      traits_headers = [ "//third_party/blink/public/common/renderer_preferences/renderer_preferences_mojom_traits.h" ]
     },
     {
       types = [

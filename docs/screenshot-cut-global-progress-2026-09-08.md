@@ -1,4 +1,6 @@
-# 静态截图引擎全局裁剪进度（stage58）
+# 静态截图引擎全局裁剪进度（stage59）
+
+stage59 当前接续：stage58 已提交 33e64ee8cc7a。本批42源码路径、32D+10E。删除无实例/外部调用的平台PowerMonitorDeviceSource、电池provider/sampler、CPU频率估算、IOPM/温度/速度limit等26文件及GN生产/失效测试入口；网络/TCP/HTTP/定时器/线程仍引用的PowerMonitor/Source/Observer五文件原文保持，不把该基础层算作已删。另整链解除RendererPreferences类/构造/traits/schema/watcher、Page无消费者存储与get/set及page协议方法、专用WebRtcIpHandlingPolicy（6D9E）。原renderer_preferences.h只保留真实主题使用的四个默认选区颜色常量且数值原文不变，字体/layout theme实际行为代码与Shot runtime未改。42路径备份SHA、保护交集零、32实体删除、4GN语法与diff/残留检查通过；证据out/cut-stage59-combined/、out/cut-stage59-power-sources/、out/cut-stage59-renderer-prefs/。无本轮图生成/编译/运行/像素验证，stage49受限core GN阻点及原始全局剩余仍待完成；整体工作量估算约65%±10。
 
 stage58 当前接续：stage57 已提交 ac73da72718a。本批20源码路径、2D+18E：删除无创建端WebURLRequestExtraData类/实现、WebURLRequest接口、请求存储/复制、GN与无实体测试项，连带originated_from_service_worker协议字段退出；跨站图片认证使用原null-extra分支，混合内容/嵌入身份限制及普通prefetch/cache保持。动态屏幕管理四操作、Delegate/单例注册、Mac覆盖方法和专属几何辅助整链移除；GetNewDisplayId、GetHeadlessScreenInfos、CreateDisplayList、GetDisplayNearestWindow、SetDisplayGeometry函数体保持。实际Shot worker/daemon/UA/资源加载、初始屏幕配置/DPI/字体不变。20路径SHA备份、保护交集零、3GN语法、diff/残留和保留函数核对通过，证据out/cut-stage58-combined/、out/cut-stage58-request-extra/、out/cut-stage58-headless-manager/。未编译/运行/像素验收，受限core GN图阻点仍在，整体估计约65%±10、原始全量任务未完成。
 
@@ -35,7 +37,7 @@ stage51 更新：WebBundle 请求/响应/Fetcher 闭包已完成源码处理，3
 | 网络 | PAC/WPAD/系统代理、备用磁盘/内存后端、旧服务协议、content_settings、WebSocket、上层双向流和多组观察者已清理 | 实际 HTTP/TLS/HTTP2/缓存及安全类型保留；WebBundle、DevTools 字段闭包已做；policy/递归预取待收口 |
 | 遥测/第三方/维护 | 栈堆采样、大量 UKM 调用点、若干 CrashKey 调用及无用测试/工具已清理；ICU/Skia/Perfetto 已改直接维护源码 | UKM/Crashpad 库和运行 tracing 尚未整链完成；三组受阻清单未删除 |
 
-此前最后一套真正编译和运行通过的基线是第十一批 d9b409db334cb60b0f6b0c11549b7d5c4be7e7bb：Windows EXE/DLL/addon、serve/net、84 demos、Node/daemon/协议、Bilibili 与 183/183 像素一致。这不能证明 stage16–58 的累计改动已通过。六平台当前实际编译未完成。
+此前最后一套真正编译和运行通过的基线是第十一批 d9b409db334cb60b0f6b0c11549b7d5c4be7e7bb：Windows EXE/DLL/addon、serve/net、84 demos、Node/daemon/协议、Bilibili 与 183/183 像素一致。这不能证明 stage16–59 的累计改动已通过。六平台当前实际编译未完成。
 
 ## 全局待办：按后续大批次组织
 
@@ -67,4 +69,4 @@ stage51 更新：WebBundle 请求/响应/Fetcher 闭包已完成源码处理，3
 - 本轮 manifest、备份核对、静态结果：out/cut-stage54-combined/；AX 子代理交接：out/cut-stage54-ax-strings/report.md；旧 IPC 完成证据：out/cut-stage54-ipc-audit/report.md。
 - 根目录复核基础：out/cut-stage45-root-review/report.md；其中 network/content_settings/WebSocket 等项目以 stage46–54 的实际删除为准，不能重复列为未完成。
 - stage50 根目录现存跟踪文件统计和受阻清单存在性历史快照：out/cut-stage50-combined/global-snapshot.json。目录文件数只用来验证存在状态，不用来证明用途或百分比。
-- 主任务、原始审计、执行证据仍分别位于 screenshot-cut-task.md、screenshot-unused-code-audit-2026-09-07.md、screenshot-cut-execution-2026-09-07.md。历史未勾选项包含已做源码但未验收的内容，以本报告和顶部 stage58 状态解释，不把历史 checkbox 直接计为新工作量。
+- 主任务、原始审计、执行证据仍分别位于 screenshot-cut-task.md、screenshot-unused-code-audit-2026-09-07.md、screenshot-cut-execution-2026-09-07.md。历史未勾选项包含已做源码但未验收的内容，以本报告和顶部 stage59 状态解释，不把历史 checkbox 直接计为新工作量。

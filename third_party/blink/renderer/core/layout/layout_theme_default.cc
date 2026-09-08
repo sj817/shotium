@@ -24,7 +24,6 @@
 
 #include "third_party/blink/renderer/core/layout/layout_theme_default.h"
 
-#include "third_party/blink/public/common/renderer_preferences/renderer_preferences.h"
 #include "third_party/blink/public/platform/web_theme_engine.h"
 #include "third_party/blink/public/resources/grit/blink_resources.h"
 #include "third_party/blink/renderer/core/css_value_keywords.h"

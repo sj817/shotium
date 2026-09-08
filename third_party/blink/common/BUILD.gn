@@ -188,8 +188,7 @@ shot_compatible_source_set("common") {
     # gets them without depending on blink/common. Listing it in both compiled
     # the same TU into mojom_platform and into common, and a binary that links
     # both -- shot does -- gets three duplicate UnionTraits symbols.
-    "renderer_preferences/renderer_preferences.cc",
-    "renderer_preferences/renderer_preferences_mojom_traits.cc",
+
     "scheduler/web_scheduler_tracked_feature.cc",
     "scheme_registry.cc",
     "security/address_space_feature.cc",

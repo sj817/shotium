@@ -231,7 +231,6 @@ component("base") {
   shot_jumbo_file_merge_limit = 4
   shot_jumbo_excluded_sources = [
     "allocator/scheduler_loop_quarantine_config.cc",
-    "power_monitor/battery_level_provider_win.cc",
     "task/single_thread_task_runner.cc",
   ]
 
@@ -589,25 +588,11 @@ component("base") {
     "pending_task.h",
     "pickle.cc",
     "pickle.h",
-    "power_monitor/battery_level_provider.cc",
-    "power_monitor/battery_level_provider.h",
-    "power_monitor/battery_state_sampler.cc",
-    "power_monitor/battery_state_sampler.h",
-    "power_monitor/cpu_frequency_utils.cc",
-    "power_monitor/cpu_frequency_utils.h",
     "power_monitor/power_monitor.cc",
     "power_monitor/power_monitor.h",
-    "power_monitor/power_monitor_device_source.cc",
-    "power_monitor/power_monitor_device_source.h",
-    "power_monitor/power_monitor_features.cc",
-    "power_monitor/power_monitor_features.h",
     "power_monitor/power_monitor_source.cc",
     "power_monitor/power_monitor_source.h",
     "power_monitor/power_observer.h",
-    "power_monitor/sampling_event_source.cc",
-    "power_monitor/sampling_event_source.h",
-    "power_monitor/timer_sampling_event_source.cc",
-    "power_monitor/timer_sampling_event_source.h",
     "process/current_process.cc",
     "process/current_process.h",
     "process/current_process_test.h",
@@ -1270,7 +1255,6 @@ component("base") {
       "message_loop/message_pump_android.h",
       "os_compat_android.cc",
       "os_compat_android.h",
-      "power_monitor/energy_monitor_android.h",
       "process/process_android.cc",
       "system/sys_info_android.cc",
       "threading/platform_thread_android.cc",
@@ -1282,7 +1266,6 @@ component("base") {
       "debug/elf_reader.h",
       "debug/proc_maps_linux.cc",
       "debug/proc_maps_linux.h",
-      "power_monitor/power_monitor_device_source_android.cc",
       "process/internal_linux.cc",
       "process/internal_linux.h",
       "process/memory_linux.cc",
@@ -1426,7 +1409,6 @@ component("base") {
       "system/sys_info_chromeos.cc",
     ]
 
-    sources += [ "power_monitor/power_monitor_device_source_chromeos.cc" ]
 
     if (current_cpu == "x64" || current_cpu == "arm64") {
       sources += []
@@ -1794,10 +1776,6 @@ component("base") {
       "message_loop/message_pump_win.h",
       "moving_window.h",
       "native_library_win.cc",
-      "power_monitor/battery_level_provider_win.cc",
-      "power_monitor/power_monitor_device_source_win.cc",
-      "power_monitor/speed_limit_observer_win.cc",
-      "power_monitor/speed_limit_observer_win.h",
       "process/kill_win.cc",
       "process/launch_win.cc",
       "process/memory_win.cc",
@@ -2126,13 +2104,6 @@ component("base") {
       "mac/scoped_sending_event.mm",
       "message_loop/message_pump_kqueue.cc",
       "message_loop/message_pump_kqueue.h",
-      "power_monitor/battery_level_provider_mac.mm",
-      "power_monitor/battery_state_sampler_mac.cc",
-      "power_monitor/iopm_power_source_sampling_event_source.cc",
-      "power_monitor/iopm_power_source_sampling_event_source.h",
-      "power_monitor/power_monitor_device_source_mac.mm",
-      "power_monitor/thermal_state_observer_mac.h",
-      "power_monitor/thermal_state_observer_mac.mm",
       "process/kill_mac.cc",
       "process/launch_mac.cc",
       "process/memory_mac.mm",
@@ -2217,12 +2188,10 @@ component("base") {
           "apple/mach_port_rendezvous.h",
           "apple/mach_port_rendezvous_ios.cc",
           "apple/mach_port_rendezvous_ios.h",
-          "power_monitor/power_monitor_device_source_ios.mm",
           "process/process_mac.cc",
         ]
       } else {
         sources += [
-          "power_monitor/power_monitor_device_source_stub.cc",
 
           # tvOS apps must be single-process. Build a Process version that does
           # the bare minimum and does not use Mach ports.
@@ -2249,7 +2218,6 @@ component("base") {
       }
     } else {
       sources += [
-        "power_monitor/power_monitor_device_source_ios.mm",
         "process/launch_ios.cc",
         "process/memory_stubs.cc",
         "process/process_stubs.cc",
@@ -2391,7 +2359,6 @@ component("base") {
   }
 
   if ((is_posix && !is_apple && !is_android && !is_chromeos) || is_fuchsia) {
-    sources += [ "power_monitor/power_monitor_device_source_stub.cc" ]
   }
 
   # On ARC++-enabled ChromeOS system, we need TimeTicks::FromUptimeMillis to
@@ -3628,11 +3595,7 @@ test("base_unittests") {
     "one_shot_event_unittest.cc",
     "parameter_pack_unittest.cc",
     "pickle_unittest.cc",
-    "power_monitor/battery_level_provider_unittest.cc",
-    "power_monitor/battery_state_sampler_unittest.cc",
-    "power_monitor/power_monitor_device_source_unittest.cc",
     "power_monitor/power_monitor_unittest.cc",
-    "power_monitor/timer_sampling_event_source_unittest.cc",
     "process/environment_internal_unittest.cc",
     "process/launch_unittest.cc",
     "process/memory_unittest.cc",
@@ -4203,7 +4166,6 @@ test("base_unittests") {
       "mac/process_requirement_unittest.cc",
       "mac/scoped_sending_event_unittest.mm",
       "message_loop/message_pump_apple_unittest.mm",
-      "power_monitor/thermal_state_observer_mac_unittest.mm",
       "process/memory_unittest_mac.h",
       "process/memory_unittest_mac.mm",
       "system/sys_info_mac_unittest.mm",
