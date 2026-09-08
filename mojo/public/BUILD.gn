@@ -28,7 +28,3 @@ group("sdk") {
     "rust/system",
   ]
 }
-
-group("fuzzers") {
-  deps = [ "tools/fuzzers" ]
-}
