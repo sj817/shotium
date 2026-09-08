@@ -15,9 +15,6 @@ void RecordDroppedEntry(uint64_t event_hash, DroppedDataReason reason) {
   // Truncate the unsigned 64-bit hash to 31 bits, to
   // make it a suitable histogram sample.
   uint32_t value = event_hash & 0x7fffffff;
-  // The enum for these histograms gets populated by the
-  // PopulateEnumWithUkmEvents
-  // function in populate_enums.py when producing the merged XML.
 
   UMA_HISTOGRAM_SPARSE("UKM.Entries.Dropped.ByEntryHash", value);
 

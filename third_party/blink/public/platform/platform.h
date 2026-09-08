@@ -89,7 +89,6 @@ class StackStartMarker;
 namespace blink {
 
 class BrowserInterfaceBrokerProxy;
-class MediaInspectorContext;
 class MainThread;
 class ThreadSafeBrowserInterfaceBrokerProxy;
 class URLLoaderThrottle;

@@ -2,9 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# AUTO GENERATED, DO NOT EDIT MANUALLY.
-# SEE: tools/metrics/generate_setup_modules.py
-#
 # This is a shim allowing universal setup of tools/metrics scripts.
 # It calls setup_modules_lib.setup_modules() to create a common
 # environment whenever imported.

@@ -547,8 +547,7 @@ class DocumentType:
     """Parses the input file, which can be minidom, ET or xml string.
 
     The flexibility of input is to accommodate the currently different
-    representations of ukm, enums, histograms and actions in their
-    respective pretty_print.py.
+    representations of ukm, enums, histograms and actions.
 
     Args:
       input_file: The input file can be given in the form of minidom, ET

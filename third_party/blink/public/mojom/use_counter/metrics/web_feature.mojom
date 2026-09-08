@@ -5308,9 +5308,6 @@ enum WebFeature {
   // spaces or comments in this file. Comments belong next to the usage of
   // these constants in code.
 
-  // Also, run
-  // chromium/src/tools/metrics/histograms/update_use_counter_feature_enum.py
-  // to update the UMA mapping.
 };
 
 // LINT.ThenChange(//tools/metrics/histograms/metadata/blink/enums.xml:FeatureObserver)

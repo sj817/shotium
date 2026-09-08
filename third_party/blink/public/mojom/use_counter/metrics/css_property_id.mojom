@@ -1036,10 +1036,8 @@ enum CSSSampleId {
     kMaxContentSizing = 963,
     kTextDecorationInset = 964,
 
-    // 1. Add new features above this line (don't change the assigned numbers of
-    //    the existing items).
-    // 2. Run the src/tools/metrics/histograms/update_use_counter_css.py script
-    //    to update the UMA histogram names.
+    // Add new features above this line (don't change the assigned numbers of
+    // the existing items).
 };
 
 // LINT.ThenChange(//tools/metrics/histograms/metadata/blink/enums.xml:MappedCSSProperties)

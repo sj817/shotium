@@ -349,6 +349,4 @@ enum PermissionsPolicyFeature {
 
   // Don't change assigned numbers of any item, and don't reuse removed slots.
   // Add new features at the end of the enum.
-  // Run tools/metrics/histograms/update_permissions_policy_enum.py to update
-  // the UMA mapping.
 };

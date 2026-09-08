@@ -359,8 +359,6 @@ def _ExtractComponents(histogram: ET.Element) -> list[str]:
   <component>UI&gt;Browser</component>. Components may also be present when an
   OWNERS file is given as a histogram owner, e.g. <owner>src/dir/OWNERS</owner>;
   in this case the component is extracted from adjacent DIR_METADATA files.
-  See _ExtractComponentViaDirmd() in the following file for details:
-  chromium/src/tools/metrics/histograms/expand_owners.py.
 
   Args:
     histogram: An Element corresponding to a histogram.

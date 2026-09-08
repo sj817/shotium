@@ -1,4 +1,6 @@
-# 静态截图引擎全局裁剪进度（stage67）
+# 静态截图引擎全局裁剪进度（stage68）
+
+stage68：stage67 已提交 e965a4d97ef5。本轮扩大为111源码/工具路径（91D+20E），两组合并提交：删除78个metrics上游维护/校验/测试脚本及Siso旧入口，保留实际内存白名单与UKM生成链；两生成器删除前后实际运行成功，5生成文件逐字节一致。删除9个无消费Web嵌入接口头及4专属实现，GN/exported/probe生成include与无用声明同步；真实FCP、打印布局、字体/GC与受限prefetch消费者保留。2GN、2JSON5及结构比较、备份SHA/保护交集零、91实体删除和diff/引用检查通过。证据out/cut-stage68-combined/、out/cut-stage68-metrics-tools/、out/cut-stage68-web-interfaces/。未引擎图生成/编译/运行/像素验收；按照用户要求继续整组先删、集中最后编译。全局仍约65%±10、源码约80%，余10–16大批次仅粗估，不按本轮文件数抬高进度。待办仍包括受限Route/core/TrustToken生成尾巴、Perfetto/ICU、UKM/Crashpad与追踪、网络策略/递归prefetch、Blink编辑/AX/fileapi/probes/observer/lifecycle、根目录最终复核以及统一编译/运行/像素/六平台验收。
 
 stage67：stage66 已提交 58c5d81e0f96。本批15源码/工具路径（11D+4E）。解除Trust Token两个permissions-policy注册及命名枚举、六个NetLog事件、两个无生产端错误定义；权限72/110及错误-506/-507留注释保留空位，其他显式编号原文不变。使用仓库pyjson5解析确认其余权限配置完全相同；其余日志事件顺序保持，隐式NetLog数字ID可随最终重建变化，不宣称稳定。另删除Clang十一独立维护脚本：批量重构/编辑与测试链、额外clang-tidy工具构建、编译输入大小报表、上游dashboard；完整显式/动态入口复核无实际Shot或六平台消费者，build/update/package、Rust/Crubit、generate_compdb和资源字体生成保持。保护交集零、原始SHA/11实体删除、JSON5/枚举/残留与diff检查通过，无GN修改或图/编译/运行/像素验收。证据out/cut-stage67-combined/、out/cut-stage67-token-declarations/、out/cut-stage67-unused-tools/。Trust Token仅余受限Document生成头/schema与PrivateToken IDL/生成列表尾巴；历史WebFeature编号是兼容元数据而非启用功能。stage49受限core GN阻点及全局后续未解除，全局约65%±10、源码约80%、余10–16大批次仍为粗估。
 

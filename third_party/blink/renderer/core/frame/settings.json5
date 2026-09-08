@@ -330,8 +330,8 @@
       type: "int",
     },
 
-    // Determines whether WebViewClient::didTapMultipleTargets will be used for
-    // touch disambiguation.
+    // Determines whether to send multi-target tap notifications for touch
+    // disambiguation.
     {
       name: "multiTargetTapNotificationEnabled",
       initial: true,

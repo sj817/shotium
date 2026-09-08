@@ -70,12 +70,6 @@ def __step_config(ctx, step_config):
         "tools/grit/grit.py",
         "tools/licenses/licenses.py",
 
-        # merge_xml.py relies on expand_owners.py, which
-        # executes dirmd (depot_tools) that queries local git repository
-        # metadata. This cannot run inside clean RBE sandboxes.
-        # TODO: Consider recoding the parsing in Python to sever the link to
-        # dirmd, as this dependency keeps causing various problems.
-        "tools/metrics/histograms/merge_xml.py",
         "tools/nocompile/wrapper.py",
         "tools/polymer/css_to_wrapper.py",
         "tools/polymer/html_to_wrapper.py",
