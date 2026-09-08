@@ -403,8 +403,6 @@ class NET_EXPORT_PRIVATE SpdyStream {
 
   bool detect_broken_connection() const { return detect_broken_connection_; }
 
-  base::DictValue GetInfoAsValue() const;
-
  private:
   friend class test::SpdyStreamTest;
 
@@ -453,8 +451,6 @@ class NET_EXPORT_PRIVATE SpdyStream {
   // OnHeadersReceived() on the delegate if attached.
   void SaveResponseHeaders(const quiche::HttpHeaderBlock& response_headers,
                            int status);
-
-  static std::string DescribeState(State state);
 
   const SpdyStreamType type_;
 

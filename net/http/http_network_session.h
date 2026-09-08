@@ -229,12 +229,6 @@ class NET_EXPORT HttpNetworkSession : public base::PowerSuspendObserver {
   }
 #endif
 
-  // Creates a Value summary of the state of the socket pools.
-  base::Value SocketPoolInfoToValue() const;
-
-  // Creates a Value summary of the state of the SPDY sessions.
-  base::Value SpdySessionPoolInfoToValue() const;
-
   void CloseAllConnections(int net_error, const char* net_log_reason_utf8);
   void CloseIdleConnections(const char* net_log_reason_utf8);
 

@@ -376,10 +376,6 @@ void PopulateResourceRequest(const ResourceRequestHead& src,
     dest->devtools_request_id = src.GetDevToolsId().Ascii();
   }
 
-  if (src.GetDevToolsStackId().has_value()) {
-    dest->devtools_stack_id = src.GetDevToolsStackId().value().Ascii();
-  }
-
   dest->is_fetch_like_api = src.IsFetchLikeAPI();
 
   dest->is_fetch_later_api = src.IsFetchLaterAPI();

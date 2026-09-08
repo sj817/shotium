@@ -363,62 +363,6 @@ void HttpServerProperties::OnDefaultNetworkChanged() {
     MaybeQueueWriteProperties();
 }
 
-base::Value HttpServerProperties::GetAlternativeServiceInfoAsValue() const {
-  const base::Time now = clock_->Now();
-  const base::TimeTicks now_ticks = tick_clock_->NowTicks();
-  base::ListValue dict_list;
-  for (const auto& server_info : server_info_map_) {
-    if (!server_info.second.alternative_services.has_value())
-      continue;
-    base::ListValue alternative_service_list;
-    const ServerInfoMapKey& key = server_info.first;
-    for (const AlternativeServiceInfo& alternative_service_info :
-         server_info.second.alternative_services.value()) {
-      std::string alternative_service_string(
-          alternative_service_info.ToString());
-      AlternativeService alternative_service(
-          alternative_service_info.alternative_service());
-      if (alternative_service.host.empty()) {
-        alternative_service.host = key.server.host();
-      }
-      base::TimeTicks brokenness_expiration_ticks;
-      if (broken_alternative_services_.IsBroken(
-              BrokenAlternativeService(
-                  alternative_service,
-                  server_info.first.network_anonymization_key,
-                  use_network_anonymization_key_),
-              &brokenness_expiration_ticks)) {
-        // Convert |brokenness_expiration| from TimeTicks to Time.
-        //
-        // Note: Cannot use `base::UnlocalizedTimeFormatWithPattern()` since
-        // `net/DEPS` disallows `base/i18n`.
-        base::Time brokenness_expiration =
-            now + (brokenness_expiration_ticks - now_ticks);
-        base::Time::Exploded exploded;
-        brokenness_expiration.LocalExplode(&exploded);
-        std::string broken_info_string =
-            base::StrCat({" (broken until ",
-                          base::StringPrintf(
-                              "%04d-%02d-%02d %0d:%0d:%0d", exploded.year,
-                              exploded.month, exploded.day_of_month,
-                              exploded.hour, exploded.minute, exploded.second),
-                          ")"});
-        alternative_service_string.append(broken_info_string);
-      }
-      alternative_service_list.Append(std::move(alternative_service_string));
-    }
-    if (alternative_service_list.empty())
-      continue;
-    base::DictValue dict;
-    dict.Set("server", key.server.Serialize());
-    dict.Set("network_anonymization_key",
-             key.network_anonymization_key.ToDebugString());
-    dict.Set("alternative_service", std::move(alternative_service_list));
-    dict_list.Append(std::move(dict));
-  }
-  return base::Value(std::move(dict_list));
-}
-
 void HttpServerProperties::SetServerNetworkStats(
     const url::SchemeHostPort& server,
     const NetworkAnonymizationKey& network_anonymization_key,

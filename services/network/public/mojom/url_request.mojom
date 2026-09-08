@@ -139,11 +139,6 @@ struct TrustedUrlRequestParams {
   // experiment and will be removed after standardization.
   HttpResponseHeaders? expected_response_headers_for_synthetic_response;
 
-  // If true, `Content-Type: message/ad-auction-trusted-signals-request` will
-  // be treated as a CORS-safelisted Content-Type, so it will not trigger a CORS
-  // preflight. No new consumers should use this. It will be removed once the
-  // deprecated Protected Audiences code is deleted.
-  bool is_ad_auction_trusted_signals_request = false;
 };
 
 // Typemapped to network::ResourceRequest.
@@ -414,12 +409,6 @@ struct URLRequest {
   // renderer process and is only present when DevTools is enabled in the
   // renderer.
   string? devtools_request_id;
-
-  // A V8 stack id string describing where the request was initiated. DevTools
-  // can use this to display the initiator call stack when debugging a process
-  // that later intercepts the request, e.g., in a service worker fetch event
-  // handler.
-  string? devtools_stack_id;
 
   // True for XHR, Fetch, and EventSource.
   bool is_fetch_like_api;

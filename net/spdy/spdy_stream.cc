@@ -727,15 +727,6 @@ bool SpdyStream::GetLoadTimingInfo(LoadTimingInfo* load_timing_info) const {
   return result;
 }
 
-base::DictValue SpdyStream::GetInfoAsValue() const {
-  base::DictValue dict;
-  dict.Set("stream_id", static_cast<int>(stream_id_));
-  dict.Set("io_state", DescribeState(io_state_));
-  dict.Set("send_stalled_by_flow_control", send_stalled_by_flow_control_);
-  dict.Set("pending_send_status", pending_send_status_);
-  return dict;
-}
-
 void SpdyStream::QueueNextDataFrame() {
   // Until the request has been completely sent, we cannot be sure
   // that our stream_id is correct.
@@ -841,27 +832,5 @@ void SpdyStream::SaveResponseHeaders(
 
   delegate_->OnHeadersReceived(response_headers_);
 }
-
-#define STATE_CASE(s)                                       \
-  case s:                                                   \
-    description = base::StringPrintf("%s (0x%08X)", #s, s); \
-    break
-
-std::string SpdyStream::DescribeState(State state) {
-  std::string description;
-  switch (state) {
-    STATE_CASE(STATE_IDLE);
-    STATE_CASE(STATE_OPEN);
-    STATE_CASE(STATE_HALF_CLOSED_LOCAL);
-    STATE_CASE(STATE_CLOSED);
-    default:
-      description =
-          base::StringPrintf("Unknown state 0x%08X (%u)", state, state);
-      break;
-  }
-  return description;
-}
-
-#undef STATE_CASE
 
 }  // namespace net

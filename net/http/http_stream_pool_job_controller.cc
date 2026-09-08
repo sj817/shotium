@@ -446,17 +446,6 @@ void HttpStreamPool::JobController::SetPriority(RequestPriority priority) {
   }
 }
 
-base::DictValue HttpStreamPool::JobController::GetInfoAsValue() const {
-  base::DictValue dict;
-  dict.Set("origin_stream_key", origin_stream_key_.ToValue());
-  if (alternative_.has_value()) {
-    dict.Set("alternative_stream_key", alternative_->stream_key.ToValue());
-  }
-  base::TimeDelta elapsed = base::TimeTicks::Now() - created_time_;
-  dict.Set("elapsed_ms", static_cast<int>(elapsed.InMilliseconds()));
-  return dict;
-}
-
 SpdySessionPool* HttpStreamPool::JobController::spdy_session_pool() {
   return pool_->http_network_session()->spdy_session_pool();
 }

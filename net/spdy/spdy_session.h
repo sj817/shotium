@@ -552,10 +552,6 @@ class NET_EXPORT SpdySession
   // isn't closed yet, close it.
   void MaybeFinishGoingAway();
 
-  // Retrieves information on the current state of the SPDY session as a
-  // Value.
-  base::DictValue GetInfoAsValue() const;
-
   // Indicates whether the session is being reused after having successfully
   // used to send/receive data in the past or if the underlying socket was idle
   // before being used for a SPDY session.
@@ -683,8 +679,6 @@ class NET_EXPORT SpdySession
     WRITE_STATE_DO_WRITE,
     WRITE_STATE_DO_WRITE_COMPLETE,
   };
-
-  static std::string_view AvailabilityStateToString(AvailabilityState state);
 
   // Has the shared logic for the other two Initialize methods that call it.
   void InitializeInternal(SpdySessionPool* pool);

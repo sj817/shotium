@@ -74,8 +74,6 @@ class NET_EXPORT_PRIVATE ClientSocketPoolManager {
   // ProxyChain::Direct()).
   virtual ClientSocketPool* GetSocketPool(const ProxyChain& proxy_chain) = 0;
 
-  // Creates a Value summary of the state of the socket pools.
-  virtual base::Value SocketPoolInfoToValue() const = 0;
 };
 
 // A helper method that uses the passed in proxy information to initialize a

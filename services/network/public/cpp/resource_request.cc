@@ -100,8 +100,6 @@ ResourceRequest::TrustedParams& ResourceRequest::TrustedParams::operator=(
   response_body_stream = other.response_body_stream;
   expected_response_headers_for_synthetic_response =
       other.expected_response_headers_for_synthetic_response;
-  is_ad_auction_trusted_signals_request =
-      other.is_ad_auction_trusted_signals_request;
   return *this;
 }
 
@@ -125,9 +123,7 @@ bool ResourceRequest::TrustedParams::EqualsForTesting(
          // comparison of the refptrs themselves.
          (!!response_body_stream == !!other.response_body_stream) &&
          expected_response_headers_for_synthetic_response ==
-             other.expected_response_headers_for_synthetic_response &&
-         is_ad_auction_trusted_signals_request ==
-             other.is_ad_auction_trusted_signals_request;
+             other.expected_response_headers_for_synthetic_response;
 }
 
 ResourceRequest::ResourceRequest() = default;
@@ -158,7 +154,7 @@ bool ResourceRequest::EqualsForTesting(const ResourceRequest& request) const {
          resource_type == request.resource_type &&
          priority == request.priority &&
          priority_incremental == request.priority_incremental &&
-         devtools_stack_id == request.devtools_stack_id &&
+
          cors_preflight_policy == request.cors_preflight_policy &&
          originated_from_service_worker ==
              request.originated_from_service_worker &&

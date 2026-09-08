@@ -126,11 +126,6 @@ struct COMPONENT_EXPORT(NETWORK_CPP_BASE)
     return trusted_params.expected_response_headers_for_synthetic_response;
   }
 
-  static bool is_ad_auction_trusted_signals_request(
-      const network::ResourceRequest::TrustedParams& trusted_params) {
-    return trusted_params.is_ad_auction_trusted_signals_request;
-  }
-
   static bool Read(network::mojom::TrustedUrlRequestParamsDataView data,
                    network::ResourceRequest::TrustedParams* out);
 };
@@ -283,10 +278,6 @@ struct COMPONENT_EXPORT(NETWORK_CPP_BASE)
   static const std::optional<std::string>& devtools_request_id(
       const network::ResourceRequest& request) {
     return request.devtools_request_id;
-  }
-  static const std::optional<std::string>& devtools_stack_id(
-      const network::ResourceRequest& request) {
-    return request.devtools_stack_id;
   }
   static bool is_fetch_like_api(const network::ResourceRequest& request) {
     return request.is_fetch_like_api;

@@ -17,7 +17,6 @@ import "third_party/blink/public/mojom/loader/referrer.mojom";
 import "url/mojom/origin.mojom";
 import "url/mojom/url.mojom";
 
-
 // Type of the context associated with a request.
 // https://fetch.spec.whatwg.org/#concept-request-destination.
 // TODO(https://crbug.com/889751): Fetch now defines this concept as a request's
@@ -198,12 +197,6 @@ struct FetchAPIRequest {
   bool keepalive = false;
   bool is_reload = false;
   bool is_history_navigation = false;
-
-  // A V8 stack id string describing where the request was initiated.
-  // DevTools can use this to display the initiator call stack when debugging
-  // a process that later intercepts the request, e.g., in a service worker
-  // fetch event handler.
-  string? devtools_stack_id;
 
   // Specifies a Trust Token protocol operation if the request has one.
   network.mojom.TrustTokenParams? trust_token_params;

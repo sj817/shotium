@@ -231,7 +231,6 @@ component("net") {
     "base/net_error_list.h",
     "base/net_errors.cc",
     "base/net_errors.h",
-    "base/net_info_source_list.h",
     "base/net_platform_api_util.cc",
     "base/net_platform_api_util.h",
     "base/net_string_util.h",
@@ -709,8 +708,6 @@ component("net") {
     "log/net_log_values.h",
     "log/net_log_with_source.cc",
     "log/net_log_with_source.h",
-    "log/trace_net_log_observer.cc",
-    "log/trace_net_log_observer.h",
     "nqe/effective_connection_type.cc",
     "nqe/effective_connection_type.h",
     "proxy_resolution/proxy_config.cc",
@@ -2564,7 +2561,6 @@ target(_test_target_type, "net_unittests") {
       "extras/sqlite/sqlite_persistent_cookie_store_unittest.cc",
       "extras/sqlite/sqlite_persistent_shared_dictionary_store_unittest.cc",
       "extras/sqlite/sqlite_persistent_store_backend_base_unittest.cc",
-      "log/trace_net_log_observer_unittest.cc",
     ]
 
     deps += [ ":extras" ]

@@ -307,10 +307,6 @@ class NET_EXPORT HttpServerProperties
   // default network changed.
   void OnDefaultNetworkChanged();
 
-  // Returns all alternative service mappings as human readable strings.
-  // Empty alternative service hostnames will be printed as such.
-  base::Value GetAlternativeServiceInfoAsValue() const;
-
   // Sets |stats| for |server|.
   void SetServerNetworkStats(
       const url::SchemeHostPort& server,

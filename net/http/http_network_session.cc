@@ -216,14 +216,6 @@ ClientSocketPool* HttpNetworkSession::GetSocketPool(
   return GetSocketPoolManager(pool_type)->GetSocketPool(proxy_chain);
 }
 
-base::Value HttpNetworkSession::SocketPoolInfoToValue() const {
-  return normal_socket_pool_manager_->SocketPoolInfoToValue();
-}
-
-base::Value HttpNetworkSession::SpdySessionPoolInfoToValue() const {
-  return spdy_session_pool_.SpdySessionPoolInfoToValue();
-}
-
 void HttpNetworkSession::CloseAllConnections(int net_error,
                                              const char* net_log_reason_utf8) {
   normal_socket_pool_manager_->FlushSocketPoolsWithError(net_error,

@@ -344,13 +344,6 @@ class NET_EXPORT ClientSocketPool : public LowerLayeredPool {
   virtual LoadState GetLoadState(const GroupId& group_id,
                                  const ClientSocketHandle* handle) const = 0;
 
-  // Retrieves information on the current state of the pool as a
-  // Value.
-  // If |include_nested_pools| is true, the states of any nested
-  // ClientSocketPools will be included.
-  virtual base::Value GetInfoAsValue(const std::string& name,
-                                     const std::string& type) const = 0;
-
   virtual bool HasActiveSocket(const GroupId& group_id) const = 0;
 
   // Returns the maximum amount of time to wait before retrying a connect.

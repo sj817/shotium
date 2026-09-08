@@ -726,67 +726,6 @@ LoadState TransportClientSocketPool::GetLoadState(
   return LOAD_STATE_WAITING_FOR_AVAILABLE_SOCKET;
 }
 
-base::Value TransportClientSocketPool::GetInfoAsValue(
-    const std::string& name,
-    const std::string& type) const {
-  // TODO(mmenke): This currently doesn't return bound Requests or ConnectJobs.
-  auto dict =
-      base::DictValue()
-          .Set("name", name)
-          .Set("type", type)
-          .Set("handed_out_socket_count",
-               static_cast<int>(handed_out_socket_count_))
-          .Set("connecting_socket_count",
-               static_cast<int>(connecting_socket_count_))
-          .Set("idle_socket_count", static_cast<int>(idle_socket_count_))
-          .Set("socket_soft_cap", static_cast<int>(SocketSoftCap()))
-          .Set("max_sockets_per_group",
-               static_cast<int>(max_sockets_per_group_))
-          .Set("additional_capacity", std::string(AdditionalCapacity()));
-
-  if (group_map_.empty())
-    return base::Value(std::move(dict));
-
-  base::DictValue all_groups_dict;
-  for (const auto& entry : group_map_) {
-    const Group* group = &entry.second;
-
-    base::ListValue idle_socket_list;
-    for (const auto& idle_socket : group->idle_sockets()) {
-      int source_id = idle_socket.socket->NetLog().source().id;
-      idle_socket_list.Append(source_id);
-    }
-
-    base::ListValue connect_jobs_list;
-    for (const auto& job : group->jobs()) {
-      int source_id = job->net_log().source().id;
-      connect_jobs_list.Append(source_id);
-    }
-
-    auto group_dict =
-        base::DictValue()
-            .Set("pending_request_count",
-                 static_cast<int>(group->unbound_request_count()))
-            .Set("active_socket_count",
-                 static_cast<int>(group->active_socket_count()))
-            .Set("idle_sockets", std::move(idle_socket_list))
-            .Set("connect_jobs", std::move(connect_jobs_list))
-            .Set("is_stalled",
-                 group->CanUseAdditionalSocketSlot(max_sockets_per_group_))
-            .Set("backup_job_timer_is_running",
-                 group->BackupJobTimerIsRunning());
-
-    if (group->has_unbound_requests()) {
-      group_dict.Set("top_pending_priority",
-                     RequestPriorityToString(group->TopPendingPriority()));
-    }
-
-    all_groups_dict.Set(entry.first.ToString(), std::move(group_dict));
-  }
-  dict.Set("groups", std::move(all_groups_dict));
-  return base::Value(std::move(dict));
-}
-
 bool TransportClientSocketPool::HasActiveSocket(const GroupId& group_id) const {
   return HasGroup(group_id);
 }

@@ -265,9 +265,6 @@ class NET_EXPORT_PRIVATE HttpStreamPool
       const url::SchemeHostPort& destination,
       const NetworkAnonymizationKey& network_anonymization_key) const;
 
-  // Retrieves information on the current state of the pool as a base::Value.
-  base::DictValue GetInfoAsValue() const;
-
   void SetDelegateForTesting(std::unique_ptr<TestDelegate> observer);
 
   Group& GetOrCreateGroupForTesting(const HttpStreamKey& stream_key);

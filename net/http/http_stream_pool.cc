@@ -427,38 +427,6 @@ void HttpStreamPool::SetDelegateForTesting(
   delegate_for_testing_ = std::move(delegate);
 }
 
-base::DictValue HttpStreamPool::GetInfoAsValue() const {
-  // Using "socket" instead of "stream" for compatibility with ClientSocketPool.
-  // These fields are used by some tests.
-  base::DictValue dict;
-  dict.Set("handed_out_socket_count",
-           static_cast<int>(total_handed_out_stream_count_));
-  dict.Set("connecting_socket_count",
-           static_cast<int>(total_connecting_stream_count_));
-  dict.Set("idle_socket_count", static_cast<int>(total_idle_stream_count_));
-  dict.Set("max_socket_count", static_cast<int>(max_stream_sockets_per_pool_));
-  dict.Set("max_sockets_per_group",
-           static_cast<int>(max_stream_sockets_per_group_));
-
-  base::DictValue group_dicts;
-  for (const auto& [key, group] : groups_) {
-    group_dicts.Set(key.ToString(), group.GetInfoAsValue());
-  }
-  if (!group_dicts.empty()) {
-    dict.Set("groups", std::move(group_dicts));
-  }
-
-  base::ListValue job_controller_list;
-  for (const auto& job_controller : job_controllers_) {
-    job_controller_list.Append(job_controller->GetInfoAsValue());
-  }
-  if (!job_controller_list.empty()) {
-    dict.Set("job_controllers", std::move(job_controller_list));
-  }
-
-  return dict;
-}
-
 HttpStreamPool::Group& HttpStreamPool::GetOrCreateGroupForTesting(
     const HttpStreamKey& stream_key) {
   return GetOrCreateGroup(stream_key);

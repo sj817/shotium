@@ -43,9 +43,6 @@ class NET_EXPORT_PRIVATE ClientSocketPoolManagerImpl
 
   ClientSocketPool* GetSocketPool(const ProxyChain& proxy_chain) override;
 
-  // Creates a Value summary of the state of the socket pools.
-  base::Value SocketPoolInfoToValue() const override;
-
  private:
   using SocketPoolMap = std::map<ProxyChain, std::unique_ptr<ClientSocketPool>>;
 

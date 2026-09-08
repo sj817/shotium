@@ -321,9 +321,6 @@ class NET_EXPORT SpdySessionPool
   // Mark all current sessions as going away.
   void MakeCurrentSessionsGoingAway(Error error);
 
-  // Creates a Value summary of the state of the spdy session pool.
-  base::Value SpdySessionPoolInfoToValue() const;
-
   HttpServerProperties* http_server_properties() {
     return http_server_properties_;
   }

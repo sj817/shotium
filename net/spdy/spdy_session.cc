@@ -1414,81 +1414,6 @@ void SpdySession::MaybeFinishGoingAway() {
   }
 }
 
-base::DictValue SpdySession::GetInfoAsValue() const {
-  int pending_create_stream_request_count = 0;
-  for (const auto& queue : pending_create_stream_queues_) {
-    pending_create_stream_request_count += queue.size();
-  }
-
-  auto dict =
-      base::DictValue()
-          .Set("source_id", static_cast<int>(net_log_.source().id))
-          .Set("host_port_pair", host_port_pair().ToString())
-          .Set("proxy", spdy_session_key_.proxy_chain().ToDebugString())
-          .Set("network_anonymization_key",
-               spdy_session_key_.network_anonymization_key().ToDebugString())
-          .Set("active_streams", static_cast<int>(active_streams_.size()))
-          .Set("created_streams", static_cast<int>(created_streams_.size()))
-          .Set("pending_create_stream_request_count",
-               pending_create_stream_request_count)
-          .Set("negotiated_protocol",
-               NextProtoToString(socket_->GetNegotiatedProtocol()))
-          .Set("error", error_on_close_)
-          .Set("error_on_unavailable", error_on_unavailable_)
-          .Set("max_concurrent_streams",
-               static_cast<int>(max_concurrent_streams_))
-          .Set("streams_initiated_count", streams_initiated_count_)
-          .Set("streams_abandoned_count", streams_abandoned_count_)
-          .Set("stream_hi_water_mark", static_cast<int>(stream_hi_water_mark_))
-          .Set("frames_received", buffered_spdy_framer_.get()
-                                      ? buffered_spdy_framer_->frames_received()
-                                      : 0)
-          .Set("send_window_size", session_send_window_size_)
-          .Set("recv_window_size", session_recv_window_size_)
-          .Set("unacked_recv_window_bytes", session_unacked_recv_window_bytes_)
-          .Set("availability_state",
-               AvailabilityStateToString(availability_state_))
-          .Set("last_good_stream_id", static_cast<int>(last_good_stream_id_));
-
-  // TODO(crbug.com/405934874): Remove once we identify the cause of the bug.
-  {
-    base::DictValue key_dict;
-    key_dict.Set("privacy_mode",
-                 PrivacyModeToDebugString(spdy_session_key_.privacy_mode()));
-    key_dict.Set(
-        "secure_dns_policy",
-        SecureDnsPolicyToDebugString(spdy_session_key_.secure_dns_policy()));
-    key_dict.Set("disable_cert_verification_network_fetches",
-                 spdy_session_key_.disable_cert_verification_network_fetches());
-    dict.Set("spdy_session_key", std::move(key_dict));
-  }
-  if (drain_error_.has_value()) {
-    CHECK(!drain_description_.empty());
-    dict.Set("drain_error", *drain_error_);
-    dict.Set("drain_description", drain_description_);
-  }
-  if (go_away_error_.has_value()) {
-    dict.Set("go_away_error", static_cast<int>(*go_away_error_));
-    dict.Set("go_away_debug_data", go_away_debug_data_);
-  }
-
-  if (!pooled_aliases_.empty()) {
-    base::ListValue alias_list;
-    for (const auto& alias : pooled_aliases_) {
-      alias_list.Append(alias.host_port_pair().ToString());
-    }
-    dict.Set("aliases", std::move(alias_list));
-  }
-
-  base::ListValue active_stream_details;
-  for (const auto& [_, stream] : active_streams_) {
-    active_stream_details.Append(stream->GetInfoAsValue());
-  }
-  dict.Set("active_stream_details", std::move(active_stream_details));
-
-  return dict;
-}
-
 bool SpdySession::IsReused() const {
   if (buffered_spdy_framer_->frames_received() > 0)
     return true;
@@ -1619,19 +1544,6 @@ void SpdySession::EnableBrokenConnectionDetection(
 
 bool SpdySession::IsBrokenConnectionDetectionEnabled() const {
   return heartbeat_timer_.IsRunning();
-}
-
-// static
-std::string_view SpdySession::AvailabilityStateToString(
-    AvailabilityState state) {
-  switch (state) {
-    case STATE_AVAILABLE:
-      return "Available";
-    case STATE_GOING_AWAY:
-      return "GoingAway";
-    case STATE_DRAINING:
-      return "Draining";
-  }
 }
 
 void SpdySession::InitializeInternal(SpdySessionPool* pool) {

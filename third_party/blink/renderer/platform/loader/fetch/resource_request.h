@@ -447,12 +447,6 @@ class PLATFORM_EXPORT ResourceRequestHead {
   // can use this to display the initiator call stack when debugging a process
   // that later intercepts the request, e.g., in a service worker fetch event
   // handler.
-  const std::optional<String>& GetDevToolsStackId() const {
-    return devtools_stack_id_;
-  }
-  void SetDevToolsStackId(const std::optional<String>& devtools_stack_id) {
-    devtools_stack_id_ = devtools_stack_id;
-  }
 
   void SetUkmSourceId(ukm::SourceId ukm_source_id) {
     ukm_source_id_ = ukm_source_id;
@@ -678,8 +672,6 @@ class PLATFORM_EXPORT ResourceRequestHead {
   String requested_with_header_;
   String client_data_header_;
   String event_source_last_event_id_;
-
-  std::optional<String> devtools_stack_id_;
 
   ukm::SourceId ukm_source_id_ = ukm::kInvalidSourceId;
 

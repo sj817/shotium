@@ -412,16 +412,6 @@ void SpdySessionPool::MakeCurrentSessionsGoingAway(Error error) {
   }
 }
 
-base::Value SpdySessionPool::SpdySessionPoolInfoToValue() const {
-  auto list = base::ListValue::with_capacity(sessions_.size());
-
-  for (const auto& session : sessions_) {
-    list.Append(session->GetInfoAsValue());
-  }
-
-  return base::Value(std::move(list));
-}
-
 void SpdySessionPool::OnIPAddressChanged(
     NetworkChangeNotifier::IPAddressChangeType change_type) {
   DCHECK(cleanup_sessions_on_ip_address_changed_);

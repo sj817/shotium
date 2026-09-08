@@ -78,8 +78,6 @@ bool StructTraits<network::mojom::TrustedUrlRequestParamsDataView,
           &out->expected_response_headers_for_synthetic_response)) {
     return false;
   }
-  out->is_ad_auction_trusted_signals_request =
-      data.is_ad_auction_trusted_signals_request();
   return true;
 }
 
@@ -124,7 +122,7 @@ bool StructTraits<
       !data.ReadThrottlingProfileId(&out->throttling_profile_id) ||
       !data.ReadFetchWindowId(&out->fetch_window_id) ||
       !data.ReadDevtoolsRequestId(&out->devtools_request_id) ||
-      !data.ReadDevtoolsStackId(&out->devtools_stack_id) ||
+
       !data.ReadRecursivePrefetchToken(&out->recursive_prefetch_token) ||
       !data.ReadDevtoolsAcceptedStreamTypes(
           &out->devtools_accepted_stream_types) ||
