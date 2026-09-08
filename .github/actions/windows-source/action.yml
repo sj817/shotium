@@ -191,15 +191,6 @@ runs:
         gclient runhooks
         Get-PSDrive -PSProvider FileSystem | Select-Object Name,Used,Free
 
-    - name: make source timestamps content-faithful
-      shell: pwsh
-      # Without this the cached build directory is useless: checkout and
-      # gclient stamp every file with "now", so every source looks newer than
-      # every restored object and ninja rebuilds all 14,906 edges. See the
-      # script for what each kind of file gets.
-      run: |
-        pnpm -C src ci:stamp-mtimes "${{ github.workspace }}"
-
     - name: restore the build directory
       if: inputs.restore-cache == 'true'
       uses: actions/cache/restore@v6
@@ -223,6 +214,15 @@ runs:
         key: out-shot-windows-${{ inputs.cpu }}-${{ github.run_id }}
         restore-keys: |
           out-shot-windows-${{ inputs.cpu }}-
+
+    - name: make source timestamps content-faithful
+      shell: pwsh
+      # Without this the cached build directory is useless: checkout and
+      # gclient stamp every file with "now", so every source looks newer than
+      # every restored object and ninja rebuilds all 14,906 edges. See the
+      # script for what each kind of file gets.
+      run: |
+        pnpm -C src ci:stamp-mtimes "${{ github.workspace }}"
 
     - name: build the shot ICU data set
       shell: pwsh

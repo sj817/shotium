@@ -133,10 +133,6 @@ runs:
         gclient runhooks
         df -h /
 
-    - name: make source timestamps content-faithful
-      shell: bash
-      run: pnpm -C src ci:stamp-mtimes "$GITHUB_WORKSPACE"
-
     - name: restore the build directory
       if: inputs.restore-cache == 'true'
       uses: actions/cache/restore@v6
@@ -148,6 +144,10 @@ runs:
         key: out-shot-macos-${{ inputs.cpu }}-${{ github.run_id }}
         restore-keys: |
           out-shot-macos-${{ inputs.cpu }}-
+
+    - name: make source timestamps content-faithful
+      shell: bash
+      run: pnpm -C src ci:stamp-mtimes "$GITHUB_WORKSPACE"
 
     - name: build the shot ICU data set
       shell: bash

@@ -46,3 +46,28 @@ Commit `0c1a945c7b44f6f880abf45a3afb093d06309569`, checks 34287898193 passed. Th
 - macOS arm64: 34287927557
 
 Do not restart these while they run. Once they finish, capture timings and validate the second batch on its own exact commit. The post-release benchmark run 34287208480 is also active, with `max-parallel: 30`; at inspection four macOS benchmark jobs occupied runners and macOS x64 engine was queued. Record queue time separately from engine job time instead of attributing capacity contention to compilation. No benchmark results have been discarded.
+
+### First candidate observations (2026-09-09 07:06 China time)
+
+Five platforms succeeded; macOS x64 remains queued. Successful build job times: Windows x64 9.6 min, Windows arm64 14.4 min, Linux x64 7.1 min, Linux arm64 7.0 min, macOS arm64 7.7 min. Each now uses one build runner. The differences include download/test variability, so do not attribute every saved minute to the code change. In particular, Windows x64 checks took 2.0 min versus approximately 7 min in the baseline. API snapshots are `out/ci-runtime/run-<id>.json`.
+
+### Second candidate in flight
+
+Commit `b9dd0d07ff499b834d253d99540004ad166a7848`, checks 34288235418 passed. Launched with `shards=1`, all runtime checks enabled:
+
+- Windows x64: 34289154087
+- Windows arm64: 34289159125
+- Linux x64: 34289163175
+- Linux arm64: 34289167429
+- macOS arm64: 34289172394
+- macOS x64: **not dispatched yet**, to avoid duplicating its queued first-candidate run. Dispatch after 34287922393 finishes, then collect its exact second-candidate SHA result.
+
+Do not declare optimization complete until this candidate succeeds on all six platforms and the final timing report is committed. A live cache lookup for the final SHA should also confirm that auto selects one runner after those caches are saved. No extra release/tag is needed.
+
+### Cache invalidation discovered during the second candidate
+
+The second candidate's setup takes approximately four minutes, but ninja then recompiles extensively. `ci-stamp-mtimes.ts` assigned **every non-Git downloaded file the last DEPS commit timestamp**. Removing one Python preinstall hook therefore changes timestamps of unchanged clang/Rust inputs and invalidates downstream compilation. This is a source-level explanation pending confirmation from completed run logs; this run is not comparable to a warm version-only build.
+
+A follow-up changes downloaded-input timestamp handling to compare SHA-256 fingerprints saved inside `out/Shot/ci-input-mtimes.json` alongside the build cache. Identical bytes retain their old mtime across DEPS edits; changed bytes receive a time newer than the cached ninja log, including when checking out an older commit. First use of an old cache retains the legacy DEPS-time fallback. All source actions restore the cache before stamping. Focused tests cover unchanged content, changed content with an older commit, new inputs, repeat use and consistent shard timestamps; TypeScript checks pass.
+
+Wait for the running second-candidate builds to finish; do not cancel their rebuild work or start duplicate builds. Then validate this final cache fix on all six platforms with their newly populated caches. macOS x64 second-candidate dispatch can be replaced with the final candidate (which includes the hook removal), after its first candidate completes. Preserve the second-candidate timings as an invalidation case rather than claiming a warm speedup from them.
