@@ -501,6 +501,7 @@ component("cpp_base") {
     ":storage_access_api_mojom_support",
     ":structured_headers_mojom_support",
     ":web_platform",
+    "//services/network/public/mojom:mojom_network_anonymization_key",
     "//services/network/public/mojom:url_loader_base",
     "//url/mojom:url_mojom_gurl",
     "//url/mojom:url_mojom_origin",

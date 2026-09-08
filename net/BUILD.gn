@@ -1193,10 +1193,6 @@ component("net") {
         "socket/ephemeral_port_randomizer_mac.h",
       ]
     }
-    if (!is_ios) {
-      sources += [ "disk_cache/blockfile/file_posix.cc" ]
-    }
-    sources += [ "disk_cache/blockfile/mapped_file_posix.cc" ]
   }
 
   if (is_android || is_chromeos || is_linux) {
