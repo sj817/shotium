@@ -188,8 +188,7 @@ NET_ERROR(ADDRESS_UNREACHABLE, -109)
 // The server requested a client certificate for SSL client authentication.
 NET_ERROR(SSL_CLIENT_AUTH_CERT_NEEDED, -110)
 
-// A tunnel connection through the proxy could not be established.
-NET_ERROR(TUNNEL_CONNECTION_FAILED, -111)
+// -111 was removed with proxy transport support.
 
 // Obsolete:
 // NET_ERROR(NO_SSL_VERSIONS_ENABLED, -112)
@@ -201,9 +200,7 @@ NET_ERROR(SSL_VERSION_OR_CIPHER_MISMATCH, -113)
 // The server requested a renegotiation (rehandshake).
 NET_ERROR(SSL_RENEGOTIATION_REQUESTED, -114)
 
-// The proxy requested authentication (for tunnel establishment) with an
-// unsupported method.
-NET_ERROR(PROXY_AUTH_UNSUPPORTED, -115)
+// -115 was removed with proxy transport support.
 
 // Error -116 was removed (CERT_ERROR_IN_SSL_RENEGOTIATION)
 
@@ -273,8 +270,7 @@ NET_ERROR(NETWORK_ACCESS_DENIED, -138)
 // The request throttler module cancelled this request to avoid DDOS.
 NET_ERROR(TEMPORARILY_THROTTLED, -139)
 
-// Obsolete, since we now use the catch-all ERR_TUNNEL_CONNECTION_FAILED when a
-// proxy tried to redirect a request.
+// Obsolete proxy redirect error.
 // NET_ERROR(HTTPS_PROXY_TUNNEL_RESPONSE_REDIRECT, -140)
 
 // We were unable to sign the CertificateVerify data of an SSL client auth
@@ -752,8 +748,7 @@ NET_ERROR(HTTP2_COMPRESSION_ERROR, -363)
 // HTTP_1_1_REQUIRED error code received on HTTP/2 session.
 NET_ERROR(HTTP_1_1_REQUIRED, -365)
 
-// HTTP_1_1_REQUIRED error code received on HTTP/2 session to proxy.
-NET_ERROR(PROXY_HTTP_1_1_REQUIRED, -366)
+// -366 was removed with proxy transport support.
 
 // Error -367 was removed (PAC_SCRIPT_TERMINATED).
 

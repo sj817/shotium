@@ -1036,8 +1036,7 @@ int HttpNetworkTransaction::DoCreateStreamComplete(int result) {
   if (result == OK) {
     next_state_ = STATE_CONNECTED_CALLBACK;
     DCHECK(stream_.get());
-  } else if (result == ERR_HTTP_1_1_REQUIRED ||
-             result == ERR_PROXY_HTTP_1_1_REQUIRED) {
+  } else if (result == ERR_HTTP_1_1_REQUIRED) {
     return HandleHttp11Required(result);
   } else {
     // Handle possible client certificate errors that may have occurred if the
@@ -1180,10 +1179,9 @@ int HttpNetworkTransaction::DoInitStreamComplete(int result) {
 
 int HttpNetworkTransaction::DoGenerateServerAuthToken() {
   next_state_ = STATE_GENERATE_SERVER_AUTH_TOKEN_COMPLETE;
-  HttpAuth::Target target = HttpAuth::AUTH_SERVER;
   if (!server_auth_controller_.get()) {
     server_auth_controller_ = base::MakeRefCounted<HttpAuthController>(
-        target, request_->url, request_->network_anonymization_key,
+        request_->url, request_->network_anonymization_key,
         session_->http_auth_cache(), session_->http_auth_handler_factory(),
         session_->host_resolver());
     if (request_->load_flags & LOAD_DO_NOT_USE_EMBEDDED_IDENTITY)
@@ -1315,8 +1313,7 @@ int HttpNetworkTransaction::DoSendRequestComplete(int result) {
               NetLogWithSourceToFlow(net_log_), "result", result);
   send_end_time_ = base::TimeTicks::Now();
 
-  if (result == ERR_HTTP_1_1_REQUIRED ||
-      result == ERR_PROXY_HTTP_1_1_REQUIRED) {
+  if (result == ERR_HTTP_1_1_REQUIRED) {
     return HandleHttp11Required(result);
   }
 
@@ -1354,8 +1351,7 @@ int HttpNetworkTransaction::DoReadHeadersComplete(int result) {
     CacheNetErrorDetailsAndResetStream();
   }
 
-  if (result == ERR_HTTP_1_1_REQUIRED ||
-      result == ERR_PROXY_HTTP_1_1_REQUIRED) {
+  if (result == ERR_HTTP_1_1_REQUIRED) {
     return HandleHttp11Required(result);
   }
 
@@ -1771,8 +1767,7 @@ void HttpNetworkTransaction::GenerateNetworkErrorLoggingReport(int rv) {
 #endif  // BUILDFLAG(ENABLE_REPORTING)
 
 int HttpNetworkTransaction::HandleHttp11Required(int error) {
-  DCHECK(error == ERR_HTTP_1_1_REQUIRED ||
-         error == ERR_PROXY_HTTP_1_1_REQUIRED);
+  DCHECK(error == ERR_HTTP_1_1_REQUIRED);
 
   // HttpServerProperties should have been updated, so when the request is sent
   // again, it will automatically use HTTP/1.1.
@@ -2144,7 +2139,7 @@ int HttpNetworkTransaction::HandleAuthChallenge() {
     return ERR_UNEXPECTED_PROXY_AUTH;
 
   int rv = server_auth_controller_->HandleAuthChallenge(
-      headers, response_.ssl_info, !ShouldApplyServerAuth(), false, net_log_);
+      headers, response_.ssl_info, !ShouldApplyServerAuth(), net_log_);
   if (server_auth_controller_->HaveAuthHandler())
     pending_server_auth_ = true;
 

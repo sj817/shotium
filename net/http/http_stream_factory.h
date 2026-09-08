@@ -102,14 +102,6 @@ class NET_EXPORT HttpStreamFactory {
       const ProxyChain& proxy_chain,
       const StreamRequestInfo& request_info);
 
-  // Returns whether an appropriate SPDY session would correspond to either a
-  // connection to the last proxy server in the chain (for the traditional HTTP
-  // proxying behavior of sending a GET request to the proxy server) or a
-  // connection through the entire proxy chain (for tunneled requests). Note
-  // that for QUIC proxies we no longer support the former.
-  static bool IsGetToProxy(const ProxyChain& proxy_chain,
-                           const GURL& origin_url);
-
   explicit HttpStreamFactory(HttpNetworkSession* session);
 
   HttpStreamFactory(const HttpStreamFactory&) = delete;

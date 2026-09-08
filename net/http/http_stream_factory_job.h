@@ -246,10 +246,6 @@ class HttpStreamFactory::Job
   // This must only be called when we are using an SSLSocket.
   void GetSSLInfo(SSLInfo* ssl_info);
 
-  // Returns true if the resulting stream will use an HTTP GET to the final
-  // proxy in the chain, instead of a CONNECT to the endpoint.
-  bool UsingHttpProxyWithoutTunnel() const;
-
   // Returns true if the current request can use an existing spdy session.
   bool CanUseExistingSpdySession() const;
 
@@ -259,9 +255,7 @@ class HttpStreamFactory::Job
   // connection attempt to be made to an H2 server at a time.
   bool ShouldThrottleConnectForSpdy() const;
 
-  // True if Job actually uses HTTP/2. Note this describes both using HTTP/2
-  // with an HTTPS origin, and proxying a cleartext HTTP request over an HTTP/2
-  // proxy. This differs from `using_ssl_`, which only describes the origin.
+  // True if Job actually uses HTTP/2 with the HTTPS origin.
   bool using_spdy() const;
 
   // True if this is a preconnect job (i.e. PRECONNECT or
@@ -312,10 +306,7 @@ class HttpStreamFactory::Job
 
   const JobType job_type_;
 
-  // True if handling a HTTPS request. Note this only describes the origin URL.
-  // If false (an HTTP request), the request may still be sent over an HTTPS
-  // proxy. This differs from `using_spdy()`, which also describes some proxy
-  // cases.
+  // True if handling an HTTPS request.
   const bool using_ssl_;
 
   // True if Alternative Service protocol field requires that HTTP/2 is used.
@@ -339,9 +330,7 @@ class HttpStreamFactory::Job
   // session. Only valid when using SPDY.
   std::optional<bool> used_existing_spdy_session_;
 
-  // Which SpdySessions in the pool to use. Note that, if requesting an HTTP URL
-  // through an HTTPS proxy, this key corresponds to the last proxy in the proxy
-  // chain and not the origin server.
+  // Identifies the origin server session in the SPDY pool.
   const SpdySessionKey spdy_session_key_;
 
   // Whether Job has continued to DoInitConnection().

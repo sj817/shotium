@@ -38,7 +38,7 @@ class SSLInfo;
 // HttpAuthController is the main entry point for external callers into the HTTP
 // authentication stack. A single instance of an HttpAuthController can be used
 // to handle authentication to a single "target", where "target" is a HTTP
-// server or a proxy. During its lifetime, the HttpAuthController can make use
+// server. During its lifetime, the HttpAuthController can make use
 // of multiple authentication handlers (implemented as HttpAuthHandler
 // subclasses), and respond to multiple challenges.
 //
@@ -49,18 +49,11 @@ class NET_EXPORT_PRIVATE HttpAuthController
  public:
   // Construct a new HttpAuthController.
   //
-  // * |target| is either PROXY or SERVER and determines the authentication
-  //       headers to use ("WWW-Authenticate"/"Authorization" vs.
-  //       "Proxy-Authenticate"/"Proxy-Authorization") and how ambient
-  //       credentials are used.
-  //
   // * |auth_url| specifies the target URL. The origin of the URL identifies the
   //       target host. The path (hierarchical part defined in RFC 3986 section
   //       3.3) of the URL is used by HTTP basic authentication to determine
   //       cached credentials can be used to preemptively send an authorization
   //       header. See RFC 7617 section 2.2 (Reusing Credentials) for details.
-  //       If |target| is PROXY, then |auth_url| should have no hierarchical
-  //       part since that is meaningless.
   //
   // * |network_anonymization_key| specifies the NetworkAnonymizationKey
   //       associated with the resource load. Depending on settings, credentials
@@ -85,14 +78,13 @@ class NET_EXPORT_PRIVATE HttpAuthController
   //
   // * |allow_default_credentials| is used for determining if the current
   //       context allows ambient authentication using default credentials.
-  HttpAuthController(HttpAuth::Target target,
-                     const GURL& auth_url,
+  HttpAuthController(const GURL& auth_url,
                      const NetworkAnonymizationKey& network_anonymization_key,
                      HttpAuthCache* http_auth_cache,
                      HttpAuthHandlerFactory* http_auth_handler_factory,
                      HostResolver* host_resolver);
 
-  // Generate an authentication token for |target| if necessary. The return
+  // Generate a server authentication token if necessary. The return
   // value is a net error code. |OK| will be returned both in the case that
   // a token is correctly generated synchronously, as well as when no tokens
   // were necessary.
@@ -100,17 +92,15 @@ class NET_EXPORT_PRIVATE HttpAuthController
                              CompletionOnceCallback callback,
                              const NetLogWithSource& net_log);
 
-  // Adds either the proxy auth header, or the origin server auth header,
-  // as specified by |target_|.
+  // Adds the origin server authentication header.
   void AddAuthorizationHeader(HttpRequestHeaders* authorization_headers);
 
-  // Checks for and handles HTTP status code 401 or 407.
+  // Checks for and handles HTTP status code 401.
   // |HandleAuthChallenge()| returns OK on success, or a network error code
   // otherwise. It may also populate |auth_info_|.
   int HandleAuthChallenge(scoped_refptr<HttpResponseHeaders> headers,
                           const SSLInfo& ssl_info,
                           bool do_not_send_server_auth,
-                          bool establishing_tunnel,
                           const NetLogWithSource& net_log);
 
   // Store the supplied credentials and prepare to restart the auth.
@@ -198,9 +188,6 @@ class NET_EXPORT_PRIVATE HttpAuthController
 
   // Records the number of authentication events per authentication scheme.
   void HistogramAuthEvent(AuthEvent auth_event);
-
-  // Indicates if this handler is for Proxy auth or Server auth.
-  HttpAuth::Target target_;
 
   // Holds the {scheme, host, port, path} for the authentication target.
   const GURL auth_url_;

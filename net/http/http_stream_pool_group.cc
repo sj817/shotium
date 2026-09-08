@@ -141,8 +141,7 @@ std::unique_ptr<HttpStream> HttpStreamPool::Group::CreateTextBasedStream(
     LoadTimingInfo::ConnectTiming connect_timing) {
   CHECK(IsNegotiatedProtocolTextBased(socket->GetNegotiatedProtocol()));
   return std::make_unique<HttpBasicStream>(
-      CreateHandle(std::move(socket), reuse_type, std::move(connect_timing)),
-      /*is_for_get_to_http_proxy=*/false);
+      CreateHandle(std::move(socket), reuse_type, std::move(connect_timing)));
 }
 
 void HttpStreamPool::Group::ReleaseStreamSocket(

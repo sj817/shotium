@@ -24,11 +24,9 @@
 
 namespace net {
 
-HttpBasicState::HttpBasicState(std::unique_ptr<StreamSocketHandle> connection,
-                               bool is_for_get_to_http_proxy)
+HttpBasicState::HttpBasicState(std::unique_ptr<StreamSocketHandle> connection)
     : read_buf_(base::MakeRefCounted<GrowableIOBuffer>()),
-      connection_(std::move(connection)),
-      is_for_get_to_http_proxy_(is_for_get_to_http_proxy) {
+      connection_(std::move(connection)) {
   CHECK(connection_) << "StreamSocketHandle passed to HttpBasicState must "
                         "not be NULL. See crbug.com/790776";
 }
@@ -79,8 +77,7 @@ scoped_refptr<GrowableIOBuffer> HttpBasicState::read_buf() const {
 }
 
 std::string HttpBasicState::GenerateRequestLine() const {
-  return HttpUtil::GenerateRequestLine(parser_->method(), parser_->url(),
-                                       is_for_get_to_http_proxy_);
+  return HttpUtil::GenerateRequestLine(parser_->method(), parser_->url());
 }
 
 bool HttpBasicState::IsConnectionReused() const {

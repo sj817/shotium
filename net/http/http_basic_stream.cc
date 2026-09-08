@@ -20,9 +20,8 @@
 
 namespace net {
 
-HttpBasicStream::HttpBasicStream(std::unique_ptr<StreamSocketHandle> connection,
-                                 bool is_for_get_to_http_proxy)
-    : state_(std::move(connection), is_for_get_to_http_proxy) {}
+HttpBasicStream::HttpBasicStream(std::unique_ptr<StreamSocketHandle> connection)
+    : state_(std::move(connection)) {}
 
 HttpBasicStream::~HttpBasicStream() = default;
 
@@ -86,8 +85,7 @@ void HttpBasicStream::Close(bool not_reusable) {
 std::unique_ptr<HttpStream> HttpBasicStream::RenewStreamForAuth() {
   DCHECK(IsResponseBodyComplete());
   DCHECK(!parser()->IsMoreDataBuffered());
-  return std::make_unique<HttpBasicStream>(state_.ReleaseConnection(),
-                                           state_.is_for_get_to_http_proxy());
+  return std::make_unique<HttpBasicStream>(state_.ReleaseConnection());
 }
 
 bool HttpBasicStream::IsResponseBodyComplete() const {

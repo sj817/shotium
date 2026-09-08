@@ -117,9 +117,7 @@ HttpStreamFactory::Job::Job(
       connection_(std::make_unique<ClientSocketHandle>()),
       session_(session),
       destination_(std::move(destination)),
-      // Only support IP-based pooling for non-proxied streams.
-      enable_ip_based_pooling_for_h2_(enable_ip_based_pooling_for_h2 &&
-                                      proxy_info.is_direct()),
+      enable_ip_based_pooling_for_h2_(enable_ip_based_pooling_for_h2),
       delegate_(delegate),
       job_type_(job_type),
       using_ssl_(request_info_.url.SchemeIs(url::kHttpsScheme)),
@@ -321,10 +319,6 @@ void HttpStreamFactory::Job::GetSSLInfo(SSLInfo* ssl_info) {
   connection_->socket()->GetSSLInfo(ssl_info);
 }
 
-bool HttpStreamFactory::Job::UsingHttpProxyWithoutTunnel() const {
-  return !using_ssl_ && proxy_info_.proxy_chain().is_get_to_proxy_allowed();
-}
-
 bool HttpStreamFactory::Job::CanUseExistingSpdySession() const {
 
   if (session_->http_server_properties()->RequiresHTTP11(
@@ -337,20 +331,8 @@ bool HttpStreamFactory::Job::CanUseExistingSpdySession() const {
 
   // We need to make sure that if a HTTP/2 session was created for
   // https://somehost/ then we do not use that session for http://somehost:443/.
-  // The only time we can use an existing session is if the request URL is
-  // https (the normal case) or if we are connecting to an HTTPS proxy to make
-  // a GET request for an HTTP destination. https://crbug.com/133176
-  if (request_info_.url.SchemeIs(url::kHttpsScheme)) {
-    return true;
-  }
-  if (!proxy_info_.is_empty()) {
-    const ProxyChain& proxy_chain = proxy_info_.proxy_chain();
-    if (!proxy_chain.is_direct() && proxy_chain.is_get_to_proxy_allowed() &&
-        proxy_chain.Last().is_https()) {
-      return true;
-    }
-  }
-  return false;
+  // Only HTTPS requests reuse an existing HTTP/2 session.
+  return request_info_.url.SchemeIs(url::kHttpsScheme);
 }
 
 void HttpStreamFactory::Job::OnStreamReadyCallback(
@@ -674,12 +656,8 @@ int HttpStreamFactory::Job::DoInitConnectionComplete(int result) {
     if (connection_ && connection_->socket() &&
                connection_->socket()->GetNegotiatedProtocol() !=
                    NextProto::kProtoUnknown) {
-      // Only connections that use TLS (either to the origin or via a GET to a
-      // secure proxy) can negotiate ALPN.
-      bool get_to_secure_proxy =
-          IsGetToProxy(proxy_info_.proxy_chain(), request_info_.url) &&
-          proxy_info_.proxy_chain().Last().is_secure_http_like();
-      DCHECK(using_ssl_ || get_to_secure_proxy);
+      // Only TLS connections to the origin negotiate ALPN.
+      DCHECK(using_ssl_);
       negotiated_protocol_ = connection_->socket()->GetNegotiatedProtocol();
       net_log_.AddEvent(NetLogEventType::HTTP_STREAM_REQUEST_PROTO, [&] {
         return NetLogHttpStreamProtoParams(negotiated_protocol_);
@@ -806,13 +784,10 @@ int HttpStreamFactory::Job::DoCreateStream() {
     if (is_preconnect()) {
       return OK;
     }
-    bool is_for_get_to_http_proxy = UsingHttpProxyWithoutTunnel();
-
     if (!request_info_.is_http1_allowed) {
       return ERR_ALPN_NEGOTIATION_FAILED;
     }
-    stream_ = std::make_unique<HttpBasicStream>(std::move(connection_),
-                                                is_for_get_to_http_proxy);
+    stream_ = std::make_unique<HttpBasicStream>(std::move(connection_));
 
     return OK;
   }
@@ -909,7 +884,7 @@ void HttpStreamFactory::Job::OnSpdySessionAvailable(
   }
 
   // Once a connection is initialized, or if there's any out-of-band callback,
-  // like proxy auth challenge, the SpdySessionRequest is cancelled.
+  // the SpdySessionRequest is cancelled.
   DCHECK(next_state_ == STATE_INIT_CONNECTION ||
          next_state_ == STATE_INIT_CONNECTION_COMPLETE);
 

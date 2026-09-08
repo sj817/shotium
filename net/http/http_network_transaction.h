@@ -213,12 +213,7 @@ class NET_EXPORT_PRIVATE HttpNetworkTransaction
   void GenerateNetworkErrorLoggingReport(int rv);
 #endif
 
-  // Writes a log message to help debugging in the field when we block a proxy
-  // response to a CONNECT request.
-  void LogBlockedTunnelResponse(int response_code) const;
-
-  // Called wherever ERR_HTTP_1_1_REQUIRED or
-  // ERR_PROXY_HTTP_1_1_REQUIRED has to be handled.
+  // Called wherever ERR_HTTP_1_1_REQUIRED has to be handled.
   int HandleHttp11Required(int error);
 
   // Called to possibly handle a client authentication error. Sets next_state_
