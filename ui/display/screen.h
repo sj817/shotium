@@ -12,12 +12,10 @@
 
 #include "base/location.h"
 #include "base/memory/raw_ptr.h"
-#include "base/values.h"
 #include "build/build_config.h"
 #include "ui/display/display.h"
 #include "ui/display/display_export.h"
 #include "ui/display/screen_infos.h"
-#include "ui/gfx/gpu_extra_info.h"
 #include "ui/gfx/native_ui_types.h"
 
 namespace base {
@@ -198,11 +196,6 @@ class DISPLAY_EXPORT Screen {
   // by implementing and setting self as a DisplayObserver. It is also possible
   // to get current workspace through the GetCurrentWorkspace method.
   virtual std::string GetCurrentWorkspace();
-
-  // Returns human readable description of the window manager, desktop, and
-  // other system properties related to the compositing.
-  virtual base::ListValue GetGpuExtraInfo(
-      const gfx::GpuExtraInfo& gpu_extra_info);
 
   // Returns the preferred scale factor for |window|, if the underlying platform
   // supports per-window scaling, otherwise returns the scale factor of display

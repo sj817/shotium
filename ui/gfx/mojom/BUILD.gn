@@ -16,7 +16,6 @@ mojom("mojom") {
     "delegated_ink_point_renderer.mojom",
     "display_color_spaces.mojom",
     "font_render_params.mojom",
-    "gpu_extra_info.mojom",
     "hdr_static_metadata.mojom",
     "linear_gradient.mojom",
     "mask_filter_info.mojom",
@@ -65,20 +64,6 @@ mojom("mojom") {
         },
       ]
       traits_headers = [ "display_color_spaces_mojom_traits.h" ]
-      traits_public_deps = [ ":shared_mojom_traits" ]
-    },
-    {
-      types = [
-        {
-          mojom = "gfx.mojom.GpuExtraInfo"
-          cpp = "::gfx::GpuExtraInfo"
-        },
-        {
-          mojom = "gfx.mojom.ANGLEFeature"
-          cpp = "::gfx::ANGLEFeature"
-        },
-      ]
-      traits_headers = [ "gpu_extra_info_mojom_traits.h" ]
       traits_public_deps = [ ":shared_mojom_traits" ]
     },
     {
@@ -286,8 +271,6 @@ component("shared_mojom_traits") {
     "color_space_mojom_traits.h",
     "display_color_spaces_mojom_traits.cc",
     "display_color_spaces_mojom_traits.h",
-    "gpu_extra_info_mojom_traits.cc",
-    "gpu_extra_info_mojom_traits.h",
     "hdr_static_metadata_mojom_traits.cc",
     "hdr_static_metadata_mojom_traits.h",
   ]

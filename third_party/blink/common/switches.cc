@@ -43,20 +43,6 @@ const char kDefaultTileHeight[] = "default-tile-height";
 // many frames. Only effective if compositor image animations are enabled.
 const char kDisableImageAnimationResync[] = "disable-image-animation-resync";
 
-// Disable partial raster in the renderer. Disabling this switch also disables
-// the use of persistent gpu memory buffers.
-const char kDisablePartialRaster[] = "disable-partial-raster";
-
-// Disable the creation of compositing layers when it would prevent LCD text.
-const char kDisablePreferCompositingToLCDText[] =
-    "disable-prefer-compositing-to-lcd-text";
-
-// Disables RGBA_4444 textures.
-const char kDisableRGBA4444Textures[] = "disable-rgba-4444-textures";
-
-// Disable rasterizer that writes directly to GPU memory associated with tiles.
-const char kDisableZeroCopy[] = "disable-zero-copy";
-
 // Logs Runtime Call Stats. --single-process also needs to be used along with
 // this for the stats to be logged.
 const char kDumpRuntimeCallStats[] = "dump-blink-runtime-call-stats";
@@ -64,17 +50,6 @@ const char kDumpRuntimeCallStats[] = "dump-blink-runtime-call-stats";
 // Enable desktop Android scrollbars.
 const char kEnableDesktopAndroidScrollbars[] =
     "enable-desktop-android-scrollbars";
-
-// Specify that all compositor resources should be backed by GPU memory buffers.
-const char kEnableGpuMemoryBufferCompositorResources[] =
-    "enable-gpu-memory-buffer-compositor-resources";
-
-// Enable the creation of compositing layers when it would prevent LCD text.
-const char kEnablePreferCompositingToLCDText[] =
-    "enable-prefer-compositing-to-lcd-text";
-
-// Enables RGBA_4444 textures.
-const char kEnableRGBA4444Textures[] = "enable-rgba-4444-textures";
 
 // Enables raster side dark mode for images.
 const char kEnableRasterSideDarkModeForImages[] =
@@ -90,23 +65,6 @@ const char kEnableRasterSideDarkModeForImages[] =
 const char kEnableOverlaysAndLowLatencyUsageForWebGL[] =
     "enable-webgl-image-chromium";
 #endif
-
-// Enable rasterizer that writes directly to GPU memory associated with tiles.
-const char kEnableZeroCopy[] = "enable-zero-copy";
-
-// Sets the total amount of memory that may be allocated for GPU resources in
-// cc.
-const char kForceGpuMemAvailableMb[] = "force-gpu-mem-available-mb";
-
-// Disables the GpuMemoryBufferReadbackFromTexture codepath for debugging
-// purposes.
-const char kGpuMemoryBufferReadbackFromTextureForceDisabledForDebugging[] =
-    "gmb-readback-from-texture-disabled-for-debugging";
-
-// The number of multisample antialiasing samples for GPU rasterization.
-// Requires MSAA support on GPU to have an effect. 0 disables MSAA.
-const char kGpuRasterizationMSAASampleCount[] =
-    "gpu-rasterization-msaa-sample-count";
 
 // Used to communicate managed policy for the IntensiveWakeUpThrottling feature.
 // This feature is typically controlled by base::Feature (see
@@ -126,9 +84,6 @@ extern const char kLegacyTechReportPolicyEnabled[] =
 // Sets the width and height above which a composited layer will get tiled.
 const char kMaxUntiledLayerHeight[] = "max-untiled-layer-height";
 const char kMaxUntiledLayerWidth[] = "max-untiled-layer-width";
-
-// Sets the min tile height for GPU raster.
-const char kMinHeightForGpuRasterTile[] = "min-height-for-gpu-raster-tile";
 
 // Used to communicate managed policy for CSSCustomStateDeprecatedSyntax. This
 // feature is typically controlled by a RuntimeEnabledFeature, but requires an

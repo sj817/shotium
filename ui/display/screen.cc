@@ -135,11 +135,6 @@ std::string Screen::GetCurrentWorkspace() {
   return {};
 }
 
-base::ListValue Screen::GetGpuExtraInfo(
-    const gfx::GpuExtraInfo& gpu_extra_info) {
-  return base::ListValue();
-}
-
 // TODO(nickdiego): GetDisplayNearestWindow is supposed to always return a valid
 // display per its description, though there are call-sites arguably handling
 // this case, so keep it here for now and revisit later.

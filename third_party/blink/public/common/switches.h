@@ -23,26 +23,13 @@ BLINK_COMMON_EXPORT extern const char kDefaultTileHeight[];
 BLINK_COMMON_EXPORT extern const char kDefaultTileWidth[];
 BLINK_COMMON_EXPORT extern const char kDisableBackForwardCacheForWebSockets[];
 BLINK_COMMON_EXPORT extern const char kDisableImageAnimationResync[];
-BLINK_COMMON_EXPORT extern const char kDisablePartialRaster[];
-BLINK_COMMON_EXPORT extern const char kDisablePreferCompositingToLCDText[];
-BLINK_COMMON_EXPORT extern const char kDisableRGBA4444Textures[];
-BLINK_COMMON_EXPORT extern const char kDisableZeroCopy[];
 BLINK_COMMON_EXPORT extern const char kDumpRuntimeCallStats[];
 BLINK_COMMON_EXPORT extern const char kEnableDesktopAndroidScrollbars[];
-BLINK_COMMON_EXPORT extern const char
-    kEnableGpuMemoryBufferCompositorResources[];
-BLINK_COMMON_EXPORT extern const char kEnablePreferCompositingToLCDText[];
 BLINK_COMMON_EXPORT extern const char kEnableRasterSideDarkModeForImages[];
-BLINK_COMMON_EXPORT extern const char kEnableRGBA4444Textures[];
 #if BUILDFLAG(IS_CHROMEOS)
 BLINK_COMMON_EXPORT extern const char
     kEnableOverlaysAndLowLatencyUsageForWebGL[];
 #endif
-BLINK_COMMON_EXPORT extern const char kEnableZeroCopy[];
-BLINK_COMMON_EXPORT extern const char
-    kGpuMemoryBufferReadbackFromTextureForceDisabledForDebugging[];
-BLINK_COMMON_EXPORT extern const char kGpuRasterizationMSAASampleCount[];
-BLINK_COMMON_EXPORT extern const char kForceGpuMemAvailableMb[];
 BLINK_COMMON_EXPORT extern const char
     kIntensiveWakeUpThrottlingPolicy_ForceDisable[];
 BLINK_COMMON_EXPORT extern const char
@@ -54,7 +41,6 @@ BLINK_COMMON_EXPORT extern const char kMaxUntiledLayerHeight[];
 BLINK_COMMON_EXPORT extern const char kMaxUntiledLayerWidth[];
 BLINK_COMMON_EXPORT extern const char kDisableBlobUrlPartitioning[];
 BLINK_COMMON_EXPORT extern const char kCSSCustomStateDeprecatedSyntaxEnabled[];
-BLINK_COMMON_EXPORT extern const char kMinHeightForGpuRasterTile[];
 BLINK_COMMON_EXPORT extern const char kNetworkQuietTimeout[];
 BLINK_COMMON_EXPORT extern const char kShowContentfulPaintRects[];
 BLINK_COMMON_EXPORT extern const char kShowLayoutShiftRegions[];

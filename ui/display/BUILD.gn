@@ -192,7 +192,6 @@ static_library("test_support") {
     "//ui/display",
     "//ui/display/types",
     "//ui/display/util",
-    "//ui/events/devices",
     "//ui/gfx",
     "//ui/gfx:test_support",
     "//ui/gfx/geometry",
@@ -292,8 +291,6 @@ test("display_unittests") {
     "//ui/display/mojom",
     "//ui/display/types",
     "//ui/display/util",
-    "//ui/events:test_support",
-    "//ui/events/devices",
     "//ui/gfx:test_support",
     "//ui/gfx/geometry",
   ]

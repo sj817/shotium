@@ -64,10 +64,6 @@
 [submodule "third_party/libjpeg_turbo"]
 	path = third_party/libjpeg_turbo
 	url = https://chromium.googlesource.com/chromium/deps/libjpeg_turbo
-[submodule "third_party/libsync/src"]
-	path = third_party/libsync/src
-	url = https://chromium.googlesource.com/aosp/platform/system/core/libsync
-	gclient-condition = checkout_linux or checkout_android
 [submodule "third_party/libwebp/src"]
 	path = third_party/libwebp/src
 	url = https://chromium.googlesource.com/webm/libwebp

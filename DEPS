@@ -1007,14 +1007,6 @@ deps = {
       'condition': 'checkout_linux',
   },
 
-  # Android Explicit Synchronization. //ui/gfx depends on it whenever
-  # is_linux || is_chromeos || is_android, so a Linux build needs it even
-  # though the name suggests otherwise.
-  'src/third_party/libsync/src': {
-      'url': Var('chromium_git') + '/aosp/platform/system/core/libsync.git' + '@' + '074e053f159602aa7558cfb2ae2f3c67878d90e0',
-      'condition': 'checkout_linux or checkout_android',
-  },
-
   'src/third_party/expat/src':
     Var('chromium_git') + '/external/github.com/libexpat/libexpat.git' + '@' + Var('libexpat_revision'),
 

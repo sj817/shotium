@@ -246,7 +246,6 @@ component("base") {
     public_deps += [
       "//ui/events:dom_keycode_converter",
       "//ui/events:events_base",
-      "//ui/events/platform",
     ]
   }
 
@@ -259,16 +258,8 @@ component("base") {
     deps += [
       ":l10n_util_ios",
       "//base",
-      "//ui/events",
       "//ui/events:dom_keycode_converter",
       "//ui/events:events_base",
-    ]
-  }
-
-  if (use_blink) {
-    deps += [
-      "//ui/events",
-      "//ui/events/devices",
     ]
   }
 
@@ -283,10 +274,6 @@ component("base") {
   if (is_mac) {
     public_deps += [ "//ui/base/cursor" ]
     deps += [ "//ui/resources:ui_resources_grd" ]
-  }
-
-  if (toolkit_views) {
-    deps += [ "//ui/events" ]
   }
 
   if (use_aura && (is_linux || is_chromeos)) {
@@ -508,7 +495,6 @@ static_library("test_support") {
     "//skia",
     "//ui/display:test_support",
     "//ui/events:events_base",
-    "//ui/events:test_support",
     "//ui/gfx",
     "//ui/gfx/geometry",
   ]
@@ -516,7 +502,6 @@ static_library("test_support") {
   if (is_ios) {
     deps -= [
       "//ui/events:events_base",
-      "//ui/events:test_support",
     ]
   }
 
@@ -689,7 +674,6 @@ test("ui_base_unittests") {
   if (use_blink) {
     deps += [
       "//ui/events:events_base",
-      "//ui/events:test_support",
     ]
   }
 
@@ -762,10 +746,6 @@ test("ui_base_unittests") {
 
   if (use_aura || toolkit_views) {
     sources += [ "dragdrop/os_exchange_data_unittest.cc" ]
-    deps += [
-      "//ui/events",
-      "//ui/events/platform",
-    ]
   }
 
   if (is_chromeos) {

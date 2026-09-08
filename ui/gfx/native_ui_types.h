@@ -10,7 +10,6 @@
 #include "base/compiler_specific.h"
 #include "base/component_export.h"
 #include "base/memory/raw_ptr_exclusion.h"
-#include "build/blink_buildflags.h"
 #include "build/build_config.h"
 
 #if BUILDFLAG(IS_ANDROID)
@@ -23,10 +22,6 @@
 
 #if BUILDFLAG(IS_MAC)
 #include <string>
-#endif
-
-#if BUILDFLAG(IS_IOS)
-#include <variant>
 #endif
 
 #if BUILDFLAG(IS_WIN)
@@ -54,10 +49,6 @@
 // 'views' and with our Chrome UI code where the elements are also called
 // 'views'.
 //
-// TODO(https://crbug.com/40267204): Both gfx::NativeEvent and ui::PlatformEvent
-// are typedefs for native event types on different platforms, but they're
-// slightly different and used in different places. They should be merged.
-//
 // TODO(https://crbug.com/40157665): gfx::NativeCursor is ui::Cursor in Aura;
 // perhaps remove gfx::NativeCursor and use ui::Cursor everywhere?
 
@@ -72,7 +63,6 @@ namespace aura {
 class Window;
 }
 namespace ui {
-class Event;
 namespace mojom {
 enum class CursorType;
 }
@@ -122,25 +112,12 @@ using NativeCursor = ui::Cursor;
 #if defined(USE_AURA)
 using NativeView = aura::Window*;
 using NativeWindow = aura::Window*;
-using NativeEvent = ui::Event*;
 #elif BUILDFLAG(IS_IOS)
 using NativeCursor = void*;
 using NativeView = base::apple::WeakUIView;
 using NativeWindow = base::apple::WeakUIWindow;
-#if BUILDFLAG(USE_BLINK)
-#if BUILDFLAG(IS_IOS_TVOS)
-using NativeEvent =
-    std::variant<base::apple::OwnedUIEvent, base::apple::OwnedUIPress>;
-#else
-using NativeEvent =
-    std::variant<base::apple::OwnedUIEvent, base::apple::OwnedBEKeyEntry>;
-#endif  // BUILDFLAG(IS_IOS_TVOS)
-#else
-using NativeEvent = base::apple::OwnedUIEvent;
-#endif  // BUILDFLAG(USE_BLINK)
 #elif BUILDFLAG(IS_MAC)
 using NativeCursor = base::apple::OwnedNSCursor;
-using NativeEvent = base::apple::OwnedNSEvent;
 // NativeViews and NativeWindows on macOS are not necessarily in the same
 // process as the NSViews and NSWindows that they represent. Require an explicit
 // function call (GetNativeNSView or GetNativeNSWindow) to retrieve the
@@ -184,7 +161,6 @@ class COMPONENT_EXPORT(GFX) NativeWindow : public base::apple::WeakNSWindow {
 #elif BUILDFLAG(IS_ANDROID)
 using NativeView = ui::ViewAndroid*;
 using NativeWindow = ui::WindowAndroid*;
-using NativeEvent = base::android::ScopedJavaGlobalRef<jobject>;
 #else
 #error Unknown build environment.
 #endif
