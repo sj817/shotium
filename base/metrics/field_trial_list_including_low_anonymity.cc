@@ -10,10 +10,9 @@ namespace base {
 
 // static
 void FieldTrialListIncludingLowAnonymity::GetActiveFieldTrialGroups(
-    FieldTrial::ActiveGroups* active_groups,
-    bool include_runtime_overrides) {
+    FieldTrial::ActiveGroups* active_groups) {
   return FieldTrialList::GetActiveFieldTrialGroupsInternal(
-      active_groups, /*include_low_anonymity=*/true, include_runtime_overrides);
+      active_groups, /*include_low_anonymity=*/true);
 }
 
 // static

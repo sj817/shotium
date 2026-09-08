@@ -57,13 +57,11 @@ import "third_party/blink/public/mojom/messaging/task_attribution_id.mojom";
 import "third_party/blink/public/mojom/messaging/transferable_message.mojom";
 import "third_party/blink/public/mojom/navigation/navigation_params.mojom";
 import "third_party/blink/public/mojom/opengraph/metadata.mojom";
-import "third_party/blink/public/mojom/page/draggable_region.mojom";
 import "third_party/blink/public/mojom/scroll/scroll_into_view_params.mojom";
 import "third_party/blink/public/mojom/security_context/insecure_request_policy.mojom";
 import "third_party/blink/public/mojom/timing/resource_timing.mojom";
 import "third_party/blink/public/mojom/tokens/tokens.mojom";
 import "third_party/blink/public/mojom/use_counter/metrics/web_feature.mojom";
-import "third_party/blink/public/mojom/window_features/window_features.mojom";
 import "ui/base/ime/mojom/virtual_keyboard_types.mojom";
 import "ui/base/mojom/window_open_disposition.mojom";
 import "ui/events/mojom/scroll_granularity.mojom";
@@ -75,26 +73,6 @@ import "url/mojom/url.mojom";
 
 [EnableIf=is_mac]
 import "ui/base/mojom/attributed_string.mojom";
-
-struct FindInPageResultAXParams {
-  // The find in page request id.
-  int32 request_id;
-
-  // The index of the result match.
-  int32 match_index;
-
-  // The id of the accessibility object for the start of the match range.
-  int32 start_id;
-
-  // The character offset into the text of the start object.
-  int32 start_offset;
-
-  // The id of the accessibility object for the end of the match range.
-  int32 end_id;
-
-  // The character offset into the text of the end object.
-  int32 end_offset;
-};
 
 // This struct holds parameters sent by the renderer to the browser, that are
 // needed to download an URL.
@@ -404,13 +382,6 @@ interface LocalFrameHost {
   // back-trap a user is invoked. Keeps HistoryUserActivationState in sync
   // between renderer and browser.
   DidConsumeHistoryUserActivation();
-
-  // Provides accessibility information about a find in page result.
-  HandleAccessibilityFindInPageResult(FindInPageResultAXParams params);
-
-  // Provides accessibility information about the termination of a find
-  // in page operation.
-  HandleAccessibilityFindInPageTermination();
 
   // Sent after the onload handler has been invoked for the document
   // in this frame. Sent for top-level frames.

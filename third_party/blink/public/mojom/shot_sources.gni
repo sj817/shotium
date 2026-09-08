@@ -104,8 +104,7 @@ shot_mojom_platform_sources = [
   "v8_cache_options.mojom",
   "webid/email_verification_request.mojom",
   "webpreferences/web_preferences.mojom",
-  "widget/device_emulation_params.mojom",
-  "window_features/window_features.mojom",
+
 ]
 
 shot_mojom_core_sources = [
@@ -115,7 +114,7 @@ shot_mojom_core_sources = [
   "frame/back_forward_cache_controller.mojom",
   "frame/blocked_navigation_types.mojom",
   "frame/deferred_fetch_policy.mojom",
-  "frame/find_in_page.mojom",
+
   "frame/frame.mojom",
   "frame/frame_owner_properties.mojom",
   "frame/frame_policy.mojom",
@@ -138,7 +137,7 @@ shot_mojom_core_sources = [
   "messaging/user_activation_snapshot.mojom",
   "navigation/navigation_params.mojom",
   "page/display_cutout.mojom",
-  "page/draggable_region.mojom",
+
   "page/page.mojom",
   "page/page_visibility_state.mojom",
   "page/prerender_page_param.mojom",

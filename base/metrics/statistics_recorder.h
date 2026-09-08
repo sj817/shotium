@@ -35,7 +35,6 @@
 namespace base {
 
 class BucketRanges;
-class HistogramSnapshotManager;
 class RecordHistogramChecker;
 
 // In-memory recorder of usage statistics (aka metrics, aka histograms).
@@ -244,18 +243,6 @@ class BASE_EXPORT StatisticsRecorder {
   // Convenience function that calls ImportProvidedHistograms() with |async|
   // set to false, and with a no-op |done_callback|.
   static void ImportProvidedHistogramsSync();
-
-  // Snapshots all histogram deltas via |snapshot_manager|. This marks the
-  // deltas as logged. |include_persistent| determines whether histograms held
-  // in persistent storage are snapshotted. |flags_to_set| is used to set flags
-  // for each histogram. |required_flags| is used to select which histograms to
-  // record. Only histograms with all required flags are selected. If all
-  // histograms should be recorded, use |Histogram::kNoFlags| as the required
-  // flag. Thread-safe.
-  static void PrepareDeltas(bool include_persistent,
-                            HistogramBase::Flags flags_to_set,
-                            HistogramBase::Flags required_flags,
-                            HistogramSnapshotManager* snapshot_manager);
 
   // Retrieves and runs the list of callbacks for the histogram referred to by
   // |histogram_name|, if any.

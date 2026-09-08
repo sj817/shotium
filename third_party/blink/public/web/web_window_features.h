@@ -47,10 +47,6 @@ struct WebWindowFeatures {
 
   bool is_popup = false;
 
-  // The members above this line are transferred through mojo
-  // in the form of |struct WindowFeatures| defined in window_features.mojom,
-  // to be used across process boundaries.
-  // Below members are the ones not transferred through mojo.
   bool resizable = true;
 
   bool noopener = false;

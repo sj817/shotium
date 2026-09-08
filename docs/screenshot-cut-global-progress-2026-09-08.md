@@ -1,4 +1,6 @@
-# 静态截图引擎全局裁剪进度（stage61）
+# 静态截图引擎全局裁剪进度（stage62）
+
+stage62：stage61 已提交 4e9aaba36663。本批37源码路径（21D+16E），合并遥测外围与四组浏览器协议：删除histogram增量序列化/快照、跨进程共享内存启动传输、落盘storage、single-sample工厂、旧debug profiler及runtime field-trial overrides；解除专属PrepareDeltas、无用include和无写入的override读取分支/参数。常规histogram/persistent allocator、注册trial枚举和锁、CaptureStats/FCP及错误日志未改。另完整解除无绑定FindInPage及专属AX结果通知、DraggableRegion和WindowFeatures Mojo数据、DeviceEmulationParams原生类型/schema/traits；真实文本查找/CSS拖动/窗口属性/Shot视口保持，DisplayCutout实际接收器保留待整体裁决。备份SHA、21实体删除、保护交集零、5GN语法、diff和精确残留检索通过；Rust Windows JsStartProfiling等同名子串为无关系统绑定。证据out/cut-stage62-combined/、out/cut-stage62-base-telemetry/、out/cut-stage62-blink-protocol/。未图生成/编译/运行/像素验证，stage49受限core GN阻点仍在。全局仍约65%±10，源码约80%，余10–16大批次为工作量粗估，最终验收尚未完成。
 
 stage61：stage60 已提交 bbe067433a13。本批20源码路径（13D+7E），整组删除无调用的网络目录浏览器：DirectoryLister、JS目录HTML生成器及资源包、NetModule资源提供接口、BackoffEntrySerializer，并解除GN/资源ID入口。正常file加载、缓存及退避算法保留。并行整组删除PageBroadcast接口及独占PageRestoreParams、颜色映射Mojo序列化/traits；真实页面生命周期、预渲染参数及原生SVG颜色继承保留。4GN语法、diff及残留检查通过，保护清单交集零。没有本轮图生成/编译/运行/像素验收，stage49受限core GN阻点未解除。证据out/cut-stage61-combined/、out/cut-stage61-net-directory/、out/cut-stage61-page-protocol/。按用户最新要求，后续扩大删除组、集中最终编译；全局工作量仍估计65%±10，源码约80%，余10–16大批次是粗估而非小提交计数。
 

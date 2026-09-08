@@ -20,7 +20,6 @@
 #include "base/metrics/field_trial_entry.h"
 #include "base/metrics/field_trial_param_associator.h"
 #include "base/metrics/histogram_functions.h"
-#include "base/metrics/runtime_field_trial_overrides.h"
 #include "base/no_destructor.h"
 #include "base/notreached.h"
 #include "base/numerics/safe_conversions.h"
@@ -595,11 +594,9 @@ std::string FieldTrialList::AllParamsToString(EscapeDataFunc encode_data_func) {
 
 // static
 void FieldTrialList::GetActiveFieldTrialGroups(
-    FieldTrial::ActiveGroups* active_groups,
-    bool include_runtime_overrides) {
+    FieldTrial::ActiveGroups* active_groups) {
   GetActiveFieldTrialGroupsInternal(active_groups,
-                                    /*include_low_anonymity=*/false,
-                                    include_runtime_overrides);
+                                    /*include_low_anonymity=*/false);
 }
 
 // static
@@ -1228,38 +1225,16 @@ bool FieldTrialList::CreateTrialsFromFieldTrialStatesInternal(
 // static
 void FieldTrialList::GetActiveFieldTrialGroupsInternal(
     FieldTrial::ActiveGroups* active_groups,
-    bool include_low_anonymity,
-    bool include_runtime_overrides) {
+    bool include_low_anonymity) {
   DCHECK(active_groups->empty());
   if (!global_) {
     return;
-  }
-
-  std::set<std::string> trials_to_ignore;
-  if (include_runtime_overrides) {
-    for (const auto& [override_trial_name, runtime_override] :
-         base::RuntimeFieldTrialOverrides::GetInstance()
-             ->GetRuntimeOverrides()) {
-      // Runtime FieldTrial overrides are all considered active, so include them
-      // all.
-      active_groups->emplace_back(runtime_override.trial_name,
-                                  runtime_override.group_name,
-                                  /*is_overridden=*/false);
-      if (runtime_override.overridden_trial) {
-        trials_to_ignore.insert(
-            runtime_override.overridden_trial->trial_name());
-      }
-    }
   }
 
   AutoLock auto_lock(global_->lock_);
 
   for (const auto& registered : global_->registered_) {
     const FieldTrial& trial = *registered.second;
-    if (include_runtime_overrides &&
-        trials_to_ignore.contains(trial.trial_name())) {
-      continue;
-    }
     FieldTrial::ActiveGroup active_group;
     if ((include_low_anonymity || !trial.is_low_anonymity_) &&
         trial.GetActiveGroup(&active_group)) {

@@ -205,7 +205,7 @@ shot_compatible_source_set("common") {
     "web_package/signed_exchange_consts.cc",
     "web_preferences/web_preferences.cc",
     "widget/constants.cc",
-    "widget/device_emulation_params_mojom_traits.cc",
+
   ]
 
   sources += get_target_outputs(":make_generated_document_policy_features")

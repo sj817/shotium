@@ -12,7 +12,6 @@
 
 #include "base/debug/alias.h"
 #include "base/debug/crash_logging.h"
-#include "base/debug/profiler.h"
 #include "base/feature_list.h"
 #include "base/logging.h"
 #include "base/memory/raw_ptr.h"

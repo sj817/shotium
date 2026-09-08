@@ -11,7 +11,6 @@
 
 #include "base/allocator/buildflags.h"
 #include "base/compiler_specific.h"
-#include "base/debug/profiler.h"
 #include "base/feature_list.h"
 #include "base/format_macros.h"
 #include "base/metrics/histogram_functions.h"
