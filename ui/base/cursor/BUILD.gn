@@ -9,9 +9,6 @@ component("cursor") {
   sources = [
     "cursor.cc",
     "cursor.h",
-    "cursor_factory.cc",
-    "cursor_factory.h",
-    "cursor_size.h",
     "platform_cursor.h",
   ]
   defines = [ "IS_UI_BASE_CURSOR_IMPL" ]

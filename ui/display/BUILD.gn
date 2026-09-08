@@ -17,16 +17,6 @@ component("display_features") {
 }
 
 component("display") {
-  # ca_display_link_mac.mm, cv_display_link_mac.mm and
-  # external_display_link_mac.mm each define an anonymous-namespace
-  # DisplayLinkGlobals; any two merged into one jumbo unit collide. Keep all
-  # three out so no regrouping can pick a colliding pair.
-  shot_jumbo_excluded_sources = [
-    "mac/ca_display_link_mac.mm",
-    "mac/cv_display_link_mac.mm",
-    "mac/external_display_link_mac.mm",
-  ]
-
   sources = [
     "display.cc",
     "display.h",
@@ -75,23 +65,9 @@ component("display") {
 
   if (is_mac) {
     sources += [
-      "mac/ca_display_link_mac.h",
-      "mac/ca_display_link_mac.mm",
-      "mac/ca_metal_display_link_mac.h",
-      "mac/ca_metal_display_link_mac.mm",
-      "mac/cv_display_link_mac.h",
-      "mac/cv_display_link_mac.mm",
-      "mac/display_link_mac.h",
-      "mac/display_link_mac.mm",
-      "mac/external_display_link_mac.h",
-      "mac/external_display_link_mac.mm",
       "mac/screen_mac.mm",
       "mac/screen_mac_headless.h",
       "mac/screen_mac_headless.mm",
-      "mac/screen_utils_mac.h",
-      "mac/screen_utils_mac.mm",
-      "mac/vsync_provider_mac.cc",
-      "mac/vsync_provider_mac.h",
     ]
   }
 
@@ -156,9 +132,7 @@ component("display") {
   if (is_win) {
     # Don't conflict with Windows' "display.dll".
     output_name = "ui_display"
-    deps += [
-      "//ui/gfx/mojom:dxgi_info",
-    ]
+    deps += [ "//ui/gfx/mojom:dxgi_info" ]
     libs = [ "shcore.lib" ]
     ldflags = [ "/DELAYLOAD:shcore.dll" ]
   }
@@ -173,7 +147,6 @@ component("display") {
       "CoreGraphics.framework",
       "QuartzCore.framework",
       "IOKit.framework",
-      "Metal.framework",
     ]
   }
 }

@@ -89,13 +89,6 @@ buildflag_header("buildflags") {
   ]
 }
 
-source_set("hit_test") {
-  sources = [
-    "hit_test.cc",
-    "hit_test.h",
-  ]
-}
-
 source_set("constants") {
   sources = [ "command_id_constants.h" ]
 }
@@ -113,13 +106,7 @@ component("base") {
   output_name = "ui_base"
 
   sources = [
-    "class_properties.cc",
-    "class_properties.h",
-    "class_property.cc",
-    "class_property.h",
     "default_style.h",
-    "device_form_factor.h",
-    "device_form_factor_desktop.cc",
     "l10n/chromium_language_matcher.cc",
     "l10n/chromium_language_matcher.h",
     "l10n/formatter.cc",
@@ -131,40 +118,25 @@ component("base") {
     "l10n/l10n_util_collator.h",
     "l10n/time_format.cc",
     "l10n/time_format.h",
-    "layout.cc",
-    "layout.h",
     "models/menu_separator_types.h",
-    "nine_image_painter_factory.cc",
-    "nine_image_painter_factory.h",
     "page_transition_types.cc",
     "page_transition_types.h",
-    "pointer/touch_ui_controller.cc",
-    "pointer/touch_ui_controller.h",
     "resource/allowlist.h",
     "resource/resource_bundle.cc",
     "resource/resource_bundle.h",
     "resource/scoped_startup_resource_bundle.cc",
     "resource/scoped_startup_resource_bundle.h",
-    "scoped_visibility_tracker.cc",
-    "scoped_visibility_tracker.h",
-    "theme_provider.cc",
-    "theme_provider.h",
     "ui_base_paths.cc",
     "ui_base_paths.h",
     "ui_base_switches.h",
     "ui_base_switches_util.cc",
     "ui_base_switches_util.h",
-    "view_prop.cc",
-    "view_prop.h",
-    "window_open_disposition_utils.cc",
-    "window_open_disposition_utils.h",
   ]
 
   libs = []
 
   if (is_android) {
     sources += [
-      "device_form_factor_android.cc",
       "l10n/l10n_util_android.cc",
       "l10n/l10n_util_android.h",
       "resource/resource_bundle_android.cc",
@@ -180,11 +152,6 @@ component("base") {
       "resource/resource_bundle_win.h",
       "resource/resource_data_dll_win.cc",
       "resource/resource_data_dll_win.h",
-    ]
-    ldflags = [ "/DELAYLOAD:dwmapi.dll" ]
-    libs += [
-      "dwmapi.lib",
-      "wtsapi32.lib",
     ]
   }
 
@@ -204,49 +171,22 @@ component("base") {
   }
 
   if (is_ios) {
-    sources += [
-      "device_form_factor_ios.mm",
-      "resource/resource_bundle_ios.mm",
-    ]
+    sources += [ "resource/resource_bundle_ios.mm" ]
   }
 
   if (use_blink) {
     sources += [
       "emoji/emoji_panel_helper.h",
-      "owned_window_anchor.h",
-      "pointer/pointer_device.cc",
       "pointer/pointer_device.h",
       "text/bytes_formatting.cc",
       "text/bytes_formatting.h",
     ]
-
-    if (!is_android && !is_ios) {
-      sources += [
-        "menu_source_utils.cc",
-        "menu_source_utils.h",
-      ]
-    }
 
     if (is_linux || is_chromeos) {
       sources += [
         "linux/linux_desktop.cc",
         "linux/linux_desktop.h",
       ]
-    }
-
-    if (is_win) {
-      sources += [ "pointer/pointer_device_win.cc" ]
-    } else if (is_android) {
-      sources += [ "pointer/pointer_device_android.cc" ]
-    } else if (is_ios && target_platform == "iphoneos") {
-      sources += [ "pointer/pointer_device_ios.cc" ]
-    } else if (is_linux || is_chromeos) {
-      sources += [ "pointer/pointer_device_linux.cc" ]
-    } else if (is_fuchsia && is_web_engine) {
-      sources += [ "pointer/pointer_device_web_engine.cc" ]
-    } else {
-      # Empty implementation for all other cases.
-      sources += [ "pointer/pointer_device_default.cc" ]
     }
   }
 
@@ -264,7 +204,6 @@ component("base") {
   public_deps = [
     ":buildflags",
     ":features",
-    ":hit_test",
     ":types",
     ":ui_data_pack",
     "//base",
@@ -362,13 +301,6 @@ component("base") {
     public_deps += [ "//ui/base/glib" ]
   }
 
-  if (!use_aura) {
-    sources -= [
-      "view_prop.cc",
-      "view_prop.h",
-    ]
-  }
-
   if (is_mac) {
     frameworks = [
       "Accelerate.framework",
@@ -385,25 +317,11 @@ component("base") {
     ]
   }
 
-  if (!toolkit_views && !use_aura) {
-    sources -= [
-      "nine_image_painter_factory.cc",
-      "nine_image_painter_factory.h",
-    ]
-  }
-
   if (is_android) {
     deps += [ ":ui_base_jni_headers" ]
     libs += [ "jnigraphics" ]
 
-    sources -= [
-      "l10n/l10n_font_util.cc",
-      "theme_provider.cc",
-    ]
-  }
-
-  if (is_android || is_ios) {
-    sources -= [ "device_form_factor_desktop.cc" ]
+    sources -= [ "l10n/l10n_font_util.cc" ]
   }
 }
 
@@ -510,8 +428,6 @@ if (is_android) {
 static_library("test_support") {
   testonly = true
   sources = [
-    "pointer/mock_touch_ui_controller.cc",
-    "pointer/mock_touch_ui_controller.h",
     "resource/mock_resource_bundle_delegate.cc",
     "resource/mock_resource_bundle_delegate.h",
   ]
@@ -696,17 +612,14 @@ test("ui_base_unittests") {
   use_xvfb = use_xvfb_in_this_config
 
   sources = [
-    "class_property_unittest.cc",
     "l10n/l10n_util_unittest.cc",
     "l10n/time_format_unittest.cc",
-    "pointer/touch_ui_controller_unittest.cc",
     "prediction/prediction_unittest_helpers.h",
     "resource/data_pack_literal.cc",
     "resource/data_pack_literal.h",
     "resource/data_pack_unittest.cc",
     "resource/resource_bundle_unittest.cc",
     "resource/resource_scale_factor_unittest.cc",
-    "scoped_visibility_tracker_unittest.cc",
     "test/page_transition_types_unittest.cc",
     "test/run_all_unittests.cc",
   ]
@@ -774,7 +687,6 @@ test("ui_base_unittests") {
   }
 
   if (use_blink) {
-    sources += [ "pointer/pointer_device_unittest.cc" ]
     deps += [
       "//ui/events:events_base",
       "//ui/events:test_support",
@@ -827,7 +739,6 @@ test("ui_base_unittests") {
   }
 
   if (is_win) {
-    sources += [ "view_prop_unittest.cc" ]
     deps += [
       "//ui/base/cursor",
       "//ui/base/cursor/mojom:cursor_type_shared",
