@@ -1610,8 +1610,6 @@ component("base") {
   if (is_posix) {
     sources += [
       "base_paths_posix.h",
-      "posix/unix_domain_socket.cc",
-      "posix/unix_domain_socket.h",
       "rand_util_posix.cc",
       "system/sys_info_posix.cc",
     ]
@@ -2027,39 +2025,22 @@ component("base") {
       "files/file_path_watcher_kqueue.cc",
       "files/file_path_watcher_kqueue.h",
       "files/file_path_watcher_mac.cc",
-      "mac/authorization_util.h",
-      "mac/authorization_util.mm",
       "mac/close_nocancel.cc",
       "mac/code_signature.cc",
       "mac/code_signature.h",
       "mac/code_signature_spi.h",
       "mac/info_plist_data.h",
       "mac/info_plist_data.mm",
-      "mac/launch_application.h",
-      "mac/launch_application.mm",
-      "mac/launch_services_spi.h",
-      "mac/launchd.cc",
-      "mac/launchd.h",
-      "mac/login_util.cc",
-      "mac/login_util.h",
       "mac/mac_util.h",
       "mac/mac_util.mm",
-      "mac/os_crash_dumps.cc",
-      "mac/os_crash_dumps.h",
-      "mac/pasteboard_changed_observation.h",
-      "mac/pasteboard_changed_observation.mm",
       "mac/process_requirement.cc",
       "mac/process_requirement.h",
       "mac/scoped_aedesc.h",
-      "mac/scoped_authorizationref.h",
-      "mac/scoped_authorizationref.mm",
       "mac/scoped_ionotificationportref.h",
       "mac/scoped_ioobject.h",
       "mac/scoped_ioplugininterface.h",
       "mac/scoped_launch_data.h",
       "mac/scoped_mach_msg_destroy.h",
-      "mac/scoped_sending_event.h",
-      "mac/scoped_sending_event.mm",
       "message_loop/message_pump_kqueue.cc",
       "message_loop/message_pump_kqueue.h",
       "process/kill_mac.cc",
@@ -3992,7 +3973,6 @@ test("base_unittests") {
       "message_loop/fd_watch_controller_posix_unittest.cc",
       "message_loop/io_watcher_fd_unittest.cc",
       "posix/file_descriptor_shuffle_unittest.cc",
-      "posix/unix_domain_socket_unittest.cc",
     ]
     if (!is_apple) {
       sources += []
@@ -4103,17 +4083,13 @@ test("base_unittests") {
       "apple/scoped_mach_vm_unittest.cc",
       "apple/scoped_nsautorelease_pool_unittest.mm",
       "apple/scoped_objc_class_swizzler_unittest.mm",
-      "mac/launch_application_unittest.mm",
       "mac/mac_util_unittest.mm",
-      "mac/pasteboard_changed_observation_unittest.mm",
       "mac/process_requirement_unittest.cc",
-      "mac/scoped_sending_event_unittest.mm",
       "message_loop/message_pump_apple_unittest.mm",
       "process/memory_unittest_mac.h",
       "process/memory_unittest_mac.mm",
       "system/sys_info_mac_unittest.mm",
     ]
-    data_deps += [ "//base/mac:launch_application_test_helper" ]
     frameworks += [ "Security.framework" ]
   }
 

@@ -4,8 +4,8 @@
 
 module network.mojom;
 
-// Retained by the existing URL completion/error status chain.
-// Numeric status values remain unchanged.
+// Pending removal with Document's remaining generated-header dependency.
+// The token request and completion implementations have been removed.
 enum TrustTokenOperationStatus {
   kOk = 0,
 

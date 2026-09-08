@@ -121,7 +121,7 @@ void FrameConsole::DidFailLoading(DocumentLoader* loader,
                                   uint64_t request_identifier,
                                   const ResourceError& error) {
   // Report failures only.
-  if (error.IsCancellation() || error.IsUnactionableTrustTokensStatus())
+  if (error.IsCancellation())
     return;
 
   if (error.WasBlockedByORB()) {

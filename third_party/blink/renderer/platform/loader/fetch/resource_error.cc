@@ -28,7 +28,6 @@
 
 #include "base/strings/string_number_conversions.h"
 #include "net/base/net_errors.h"
-#include "services/network/public/mojom/trust_tokens.mojom-blink-forward.h"
 #include "third_party/blink/public/platform/platform.h"
 #include "third_party/blink/public/platform/resource_request_blocked_reason.h"
 #include "third_party/blink/public/platform/web_string.h"
@@ -119,8 +118,7 @@ ResourceError::ResourceError(const WebURLError& error)
       has_copy_in_cache_(error.has_copy_in_cache()),
       cors_error_status_(error.cors_error_status()),
       should_collapse_inititator_(error.should_collapse_initiator()),
-      blocked_by_response_reason_(error.blocked_by_response_reason()),
-      trust_token_operation_error_(error.trust_token_operation_error()) {
+      blocked_by_response_reason_(error.blocked_by_response_reason()) {
   DCHECK_NE(error_code_, 0);
   InitializeDescription();
 }
@@ -133,11 +131,6 @@ ResourceError::operator WebURLError() const {
   if (cors_error_status_) {
     DCHECK_EQ(net::ERR_FAILED, error_code_);
     return WebURLError(*cors_error_status_, has_copy_in_cache, failing_url_);
-  }
-
-  if (trust_token_operation_error_ !=
-      network::mojom::blink::TrustTokenOperationStatus::kOk) {
-    return WebURLError(error_code_, trust_token_operation_error_, failing_url_);
   }
 
   return WebURLError(
@@ -175,9 +168,6 @@ bool ResourceError::Compare(const ResourceError& a, const ResourceError& b) {
   if (a.resolve_error_info_ != b.resolve_error_info_)
     return false;
 
-  if (a.trust_token_operation_error_ != b.trust_token_operation_error_)
-    return false;
-
   if (a.should_collapse_inititator_ != b.should_collapse_inititator_)
     return false;
 
@@ -190,18 +180,6 @@ bool ResourceError::IsTimeout() const {
 
 bool ResourceError::IsCancellation() const {
   return error_code_ == net::ERR_ABORTED;
-}
-
-bool ResourceError::IsTrustTokenCacheHit() const {
-  return error_code_ ==
-         net::ERR_TRUST_TOKEN_OPERATION_SUCCESS_WITHOUT_SENDING_REQUEST;
-}
-
-bool ResourceError::IsUnactionableTrustTokensStatus() const {
-  return IsTrustTokenCacheHit() ||
-         (error_code_ == net::ERR_TRUST_TOKEN_OPERATION_FAILED &&
-          trust_token_operation_error_ ==
-              network::mojom::TrustTokenOperationStatus::kUnauthorized);
 }
 
 bool ResourceError::IsCacheMiss() const {
@@ -371,9 +349,7 @@ std::ostream& operator<<(std::ostream& os, const ResourceError& error) {
             << ", IsAccessCheck = " << error.IsAccessCheck()
             << ", IsTimeout = " << error.IsTimeout()
             << ", HasCopyInCache = " << error.HasCopyInCache()
-            << ", IsCacheMiss = " << error.IsCacheMiss()
-            << ", TrustTokenOperationError = "
-            << static_cast<int32_t>(error.TrustTokenOperationError());
+            << ", IsCacheMiss = " << error.IsCacheMiss();
 }
 
 }  // namespace blink

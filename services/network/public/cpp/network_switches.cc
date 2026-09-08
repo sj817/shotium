@@ -77,23 +77,6 @@ const char kTestThirdPartyCookiePhaseout[] = "test-third-party-cookie-phaseout";
 const char kUnsafelyTreatInsecureOriginAsSecure[] =
     "unsafely-treat-insecure-origin-as-secure";
 
-// Manually sets additional Private State Tokens key commitments in the network
-// service to the given value, which should be a JSON dictionary satisfying the
-// requirements of TrustTokenKeyCommitmentParser::ParseMultipleIssuers.
-//
-// These keys are available in addition to keys provided by the most recent call
-// to TrustTokenKeyCommitments::Set.
-//
-// For issuers with keys provided through both the command line and
-// TrustTokenKeyCommitments::Set, the keys provided through the command line
-// take precedence. This is because someone testing manually might want to pass
-// additional keys via the command line to a real Chrome release with the
-// component updater enabled, and it would be surprising if the manually-passed
-// keys were overwritten some time after startup when the component updater
-// runs.
-const char kAdditionalTrustTokenKeyCommitments[] =
-    "additional-private-state-token-key-commitments";
-
 // Allows the manual specification of a First-Party Set. The format is the same
 // as that of `--use-related-website-set`.
 //

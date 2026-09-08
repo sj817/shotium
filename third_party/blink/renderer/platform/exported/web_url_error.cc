@@ -6,7 +6,6 @@
 
 #include "net/base/net_errors.h"
 #include "services/network/public/cpp/url_loader_completion_status.h"
-#include "services/network/public/mojom/trust_tokens.mojom-shared.h"
 
 namespace blink {
 namespace {
@@ -22,19 +21,6 @@ WebURLError CreateInternal(const network::URLLoaderCompletionStatus& status,
     DCHECK_EQ(net::ERR_BLOCKED_BY_RESPONSE, status.error_code);
     return WebURLError(*status.blocked_by_response_reason,
                        status.resolve_error_info, has_copy_in_cache, url);
-  }
-
-  if (status.trust_token_operation_status !=
-      network::mojom::TrustTokenOperationStatus::kOk) {
-    DCHECK(status.error_code ==
-               net::ERR_TRUST_TOKEN_OPERATION_SUCCESS_WITHOUT_SENDING_REQUEST ||
-           status.error_code == net::ERR_TRUST_TOKEN_OPERATION_FAILED)
-        << "Unexpected error code on Trust Token operation failure (or cache "
-           "hit): "
-        << status.error_code;
-
-    return WebURLError(status.error_code, status.trust_token_operation_status,
-                       url);
   }
 
   return WebURLError(status.error_code, status.extended_error_code,
@@ -99,16 +85,5 @@ WebURLError::WebURLError(const network::CorsErrorStatus& cors_error_status,
       is_web_security_violation_(true),
       url_(url),
       cors_error_status_(cors_error_status) {}
-
-WebURLError::WebURLError(
-    int reason,
-    network::mojom::TrustTokenOperationStatus trust_token_operation_error,
-    const WebURL& url)
-    : reason_(reason),
-      url_(url),
-      trust_token_operation_error_(trust_token_operation_error) {
-  DCHECK_NE(trust_token_operation_error,
-            network::mojom::TrustTokenOperationStatus::kOk);
-}
 
 }  // namespace blink

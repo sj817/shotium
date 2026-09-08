@@ -10,7 +10,6 @@ import "services/network/public/mojom/blocked_by_response_reason.mojom";
 import "services/network/public/mojom/cors.mojom";
 import "services/network/public/mojom/network_param.mojom";
 import "services/network/public/mojom/ssl_info.mojom";
-import "services/network/public/mojom/trust_tokens.mojom";
 
 // Unlike structs, enums are not nullable, so we wrap this enum in a struct.
 struct BlockedByResponseReasonWrapper {
@@ -46,19 +45,6 @@ struct URLLoaderCompletionStatus {
 
   // Optional CORS error details.
   CorsErrorStatus? cors_error_status;
-
-  // Optional Trust Tokens (https://github.com/wicg/trust-token-api) error
-  // details.
-  //
-  // A non-kOk value denotes that the request failed because a Trust Tokens
-  // operation was attempted and failed for the given reason.
-  //
-  // The status is set to kOk in all other cases. In particular, a value of kOk
-  // does not imply that a Trust Tokens operation was executed successfully
-  // alongside this request, or even that a Trust Tokens operation was
-  // attempted.
-  TrustTokenOperationStatus trust_token_operation_status =
-      TrustTokenOperationStatus.kOk;
 
   // Optional SSL certificate info.
   SSLInfo? ssl_info;

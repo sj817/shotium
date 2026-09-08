@@ -25,7 +25,6 @@ bool StructTraits<network::mojom::URLLoaderCompletionStatusDataView,
          network::URLLoaderCompletionStatus* out) {
   if (!data.ReadCompletionTime(&out->completion_time) ||
       !data.ReadCorsErrorStatus(&out->cors_error_status) ||
-      !data.ReadTrustTokenOperationStatus(&out->trust_token_operation_status) ||
       !data.ReadSslInfo(&out->ssl_info) ||
       !data.ReadBlockedByResponseReason(&out->blocked_by_response_reason) ||
       !data.ReadResolveErrorInfo(&out->resolve_error_info) ||

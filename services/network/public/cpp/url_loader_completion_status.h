@@ -17,7 +17,6 @@
 #include "services/network/public/cpp/cors/cors_error_status.h"
 #include "services/network/public/mojom/blocked_by_response_reason.mojom-shared.h"
 #include "services/network/public/mojom/cors.mojom-shared.h"
-#include "services/network/public/mojom/trust_tokens.mojom-shared.h"
 #include "third_party/perfetto/include/perfetto/tracing/traced_value_forward.h"
 
 namespace network {
@@ -71,19 +70,6 @@ struct COMPONENT_EXPORT(NETWORK_CPP_BASE) URLLoaderCompletionStatus {
 
   // Optional CORS error details.
   std::optional<CorsErrorStatus> cors_error_status;
-
-  // Optional Trust Tokens (https://github.com/wicg/trust-token-api) error
-  // details.
-  //
-  // A non-kOk value denotes that the request failed because a Trust Tokens
-  // operation was attempted and failed for the given reason.
-  //
-  // The status is set to kOk in all other cases. In particular, a value of kOk
-  // does not imply that a Trust Tokens operation was executed successfully
-  // alongside this request, or even that a Trust Tokens operation was
-  // attempted.
-  mojom::TrustTokenOperationStatus trust_token_operation_status =
-      mojom::TrustTokenOperationStatus::kOk;
 
   // Optional SSL certificate info.
   std::optional<net::SSLInfo> ssl_info;
