@@ -32,23 +32,6 @@
 
 namespace mojo {
 
-bool StructTraits<network::mojom::EnabledClientHintsDataView,
-                  network::ResourceRequest::TrustedParams::EnabledClientHints>::
-    Read(network::mojom::EnabledClientHintsDataView data,
-         network::ResourceRequest::TrustedParams::EnabledClientHints* out) {
-  if (!data.ReadOrigin(&out->origin)) {
-    return false;
-  }
-  out->is_outermost_main_frame = data.is_outermost_main_frame();
-  if (!data.ReadHints(&out->hints)) {
-    return false;
-  }
-  if (!data.ReadNotAllowedHints(&out->not_allowed_hints)) {
-    return false;
-  }
-  return true;
-}
-
 bool StructTraits<network::mojom::TrustedUrlRequestParamsDataView,
                   network::ResourceRequest::TrustedParams>::
     Read(network::mojom::TrustedUrlRequestParamsDataView data,
@@ -61,21 +44,7 @@ bool StructTraits<network::mojom::TrustedUrlRequestParamsDataView,
   out->allow_cookies_from_browser = data.allow_cookies_from_browser();
   out->include_request_cookies_with_response =
       data.include_request_cookies_with_response();
-  if (!data.ReadEnabledClientHints(&out->enabled_client_hints)) {
-    return false;
-  }
   if (!data.ReadClientSecurityState(&out->client_security_state)) {
-    return false;
-  }
-  mojo::ScopedDataPipeProducerHandle response_body_stream =
-      data.TakeResponseBodyStream();
-  if (response_body_stream.is_valid()) {
-    out->response_body_stream =
-        base::MakeRefCounted<network::SharedDataPipeProducerHandle>(
-            std::move(response_body_stream));
-  }
-  if (!data.ReadExpectedResponseHeadersForSyntheticResponse(
-          &out->expected_response_headers_for_synthetic_response)) {
     return false;
   }
   return true;
@@ -123,10 +92,6 @@ bool StructTraits<
       !data.ReadFetchWindowId(&out->fetch_window_id) ||
 
       !data.ReadRecursivePrefetchToken(&out->recursive_prefetch_token) ||
-      !data.ReadDevtoolsAcceptedStreamTypes(
-          &out->devtools_accepted_stream_types) ||
-      !data.ReadNetLogCreateInfo(&out->net_log_create_info) ||
-      !data.ReadNetLogReferenceInfo(&out->net_log_reference_info) ||
       !data.ReadNavigationRedirectChain(&out->navigation_redirect_chain) ||
       !data.ReadKeepaliveToken(&out->keepalive_token) ||
       !data.ReadStorageAccessApiStatus(&out->storage_access_api_status) ||

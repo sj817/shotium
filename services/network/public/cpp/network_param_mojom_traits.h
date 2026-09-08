@@ -19,7 +19,6 @@
 #include "net/cert/signed_certificate_timestamp_and_status.h"
 #include "net/dns/public/resolve_error_info.h"
 #include "net/http/http_version.h"
-#include "net/log/net_log_source.h"
 #include "net/ssl/ssl_cert_request_info.h"
 #include "net/ssl/ssl_info.h"
 #include "services/network/public/cpp/hash_value_mojom_traits.h"
@@ -150,23 +149,6 @@ class COMPONENT_EXPORT(NETWORK_CPP_NETWORK_PARAM)
 
   static bool Read(network::mojom::SSLCertRequestInfoDataView data,
                    scoped_refptr<net::SSLCertRequestInfo>* out);
-};
-
-template <>
-struct COMPONENT_EXPORT(NETWORK_CPP_NETWORK_PARAM)
-    StructTraits<network::mojom::NetLogSourceDataView, net::NetLogSource> {
-  static uint32_t source_id(const net::NetLogSource& params) {
-    return params.id;
-  }
-  static uint32_t source_type(const net::NetLogSource& params) {
-    return static_cast<uint32_t>(params.type);
-  }
-  static base::TimeTicks start_time(const net::NetLogSource& params) {
-    return params.start_time;
-  }
-
-  static bool Read(network::mojom::NetLogSourceDataView data,
-                   net::NetLogSource* out);
 };
 
 }  // namespace mojo

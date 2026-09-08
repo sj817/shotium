@@ -28,9 +28,7 @@
 
 #include <string_view>
 
-#include "base/gtest_prod_util.h"
 #include "third_party/blink/renderer/core/core_export.h"
-#include "third_party/blink/renderer/platform/weborigin/kurl.h"
 #include "third_party/blink/renderer/platform/wtf/allocator/allocator.h"
 #include "third_party/blink/renderer/platform/wtf/text/wtf_string.h"
 #include "third_party/blink/renderer/platform/wtf/vector.h"
@@ -54,45 +52,28 @@ struct SpatialClip {
   Unit unit = Unit::kPixel;
 };
 
-// TODO(dmangal): Move MediaFragmentURIParser to a shared location since it is
-// now used by both HTML media and SVG. crbug.com/500224589
+// Parses spatial media fragments for SVG views.
 class CORE_EXPORT MediaFragmentURIParser final {
   STACK_ALLOCATED();
 
  public:
   // Primary API: parse a fragment string without the leading '#'.
   explicit MediaFragmentURIParser(const StringView& fragment);
-  // Convenience overload for callers that still have a full URL.
-  explicit MediaFragmentURIParser(const KURL&);
 
-  double StartTime();
-  double EndTime();
-  Vector<String> DefaultTracks();
   SpatialClip SpatialFragment();
 
  private:
   void ParseFragments();
-  void ParseTrackFragment();
-  void ParseTimeFragment();
   void ParseSpatialFragment();
-  bool ParseNPTFragment(std::string_view, double& start_time, double& end_time);
   SpatialClip ParseXYWH(std::string_view);
-
-  FRIEND_TEST_ALL_PREFIXES(ParseNPTTimeTest, TestParseNPTTime);
-  bool ParseNPTTime(std::string_view, size_t& offset, double& time);
 
   String fragment_;
 
-  double start_time_;
-  double end_time_;
-  Vector<String> default_tracks_;
   SpatialClip spatial_clip_;
 
   Vector<std::pair<std::string, std::string>> fragments_;
 
   bool has_parsed_fragments_ = false;
-  bool has_parsed_time_ = false;
-  bool has_parsed_track_ = false;
   bool has_parsed_spatial_ = false;
 };
 

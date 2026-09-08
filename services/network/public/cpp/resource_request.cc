@@ -4,40 +4,13 @@
 
 #include "services/network/public/cpp/resource_request.h"
 
-#include "base/debug/crash_logging.h"
 #include "base/notreached.h"
-#include "base/strings/string_number_conversions.h"
 #include "base/trace_event/typed_macros.h"
-#include "base/types/optional_util.h"
 #include "net/base/load_flags.h"
-#include "net/log/net_log_source.h"
 #include "services/network/public/cpp/permissions_policy/permissions_policy.h"
 #include "services/network/public/mojom/url_request.mojom.h"
 
 namespace network {
-
-SharedDataPipeProducerHandle::SharedDataPipeProducerHandle(
-    mojo::ScopedDataPipeProducerHandle pipe)
-    : pipe(std::move(pipe)) {}
-
-SharedDataPipeProducerHandle::~SharedDataPipeProducerHandle() = default;
-
-ResourceRequest::TrustedParams::EnabledClientHints::EnabledClientHints() =
-    default;
-ResourceRequest::TrustedParams::EnabledClientHints::~EnabledClientHints() =
-    default;
-ResourceRequest::TrustedParams::EnabledClientHints::EnabledClientHints(
-    const EnabledClientHints&) = default;
-ResourceRequest::TrustedParams::EnabledClientHints&
-ResourceRequest::TrustedParams::EnabledClientHints::operator=(
-    const EnabledClientHints&) = default;
-
-bool ResourceRequest::TrustedParams::EnabledClientHints::operator==(
-    const EnabledClientHints& other) const {
-  return origin == other.origin &&
-         is_outermost_main_frame == other.is_outermost_main_frame &&
-         hints == other.hints;
-}
 
 namespace {
 
@@ -50,31 +23,6 @@ bool OptionalTrustedParamsEqualsForTesting(
     const std::optional<ResourceRequest::TrustedParams>& lhs,
     const std::optional<ResourceRequest::TrustedParams>& rhs) {
   return (!lhs && !rhs) || (lhs && rhs && lhs->EqualsForTesting(*rhs));
-}
-
-bool OptionalNetLogInfoEqualsForTesting(
-    const std::optional<net::NetLogSource>& lhs,
-    const std::optional<net::NetLogSource>& rhs) {
-  bool equal_members = lhs && rhs && lhs.value() == rhs.value();
-  return (!lhs && !rhs) || equal_members;
-}
-
-base::debug::CrashKeyString* GetRequestUrlCrashKey() {
-  static auto* crash_key = base::debug::AllocateCrashKeyString(
-      "request_url", base::debug::CrashKeySize::Size256);
-  return crash_key;
-}
-
-base::debug::CrashKeyString* GetRequestInitiatorCrashKey() {
-  static auto* crash_key = base::debug::AllocateCrashKeyString(
-      "request_initiator", base::debug::CrashKeySize::Size64);
-  return crash_key;
-}
-
-base::debug::CrashKeyString* GetRequestResourceTypeCrashKey() {
-  static auto* crash_key = base::debug::AllocateCrashKeyString(
-      "request_resource_type", base::debug::CrashKeySize::Size32);
-  return crash_key;
 }
 
 }  // namespace
@@ -95,11 +43,7 @@ ResourceRequest::TrustedParams& ResourceRequest::TrustedParams::operator=(
   allow_cookies_from_browser = other.allow_cookies_from_browser;
   include_request_cookies_with_response =
       other.include_request_cookies_with_response;
-  enabled_client_hints = other.enabled_client_hints;
   client_security_state = other.client_security_state.Clone();
-  response_body_stream = other.response_body_stream;
-  expected_response_headers_for_synthetic_response =
-      other.expected_response_headers_for_synthetic_response;
   return *this;
 }
 
@@ -115,15 +59,7 @@ bool ResourceRequest::TrustedParams::EqualsForTesting(
          allow_cookies_from_browser == other.allow_cookies_from_browser &&
          include_request_cookies_with_response ==
              other.include_request_cookies_with_response &&
-         enabled_client_hints == other.enabled_client_hints &&
-         client_security_state == other.client_security_state &&
-         // `response_body_stream` holds a `mojo::ScopedDataPipeProducerHandle`
-         // which is moved during serialization. Therefore, we only check for
-         // its presence (null or not null) for equality, rather than direct
-         // comparison of the refptrs themselves.
-         (!!response_body_stream == !!other.response_body_stream) &&
-         expected_response_headers_for_synthetic_response ==
-             other.expected_response_headers_for_synthetic_response;
+         client_security_state == other.client_security_state;
 }
 
 ResourceRequest::ResourceRequest() = default;
@@ -189,13 +125,7 @@ bool ResourceRequest::EqualsForTesting(const ResourceRequest& request) const {
          recursive_prefetch_token == request.recursive_prefetch_token &&
          OptionalTrustedParamsEqualsForTesting(trusted_params,
                                                request.trusted_params) &&
-         devtools_accepted_stream_types ==
-             request.devtools_accepted_stream_types &&
          trust_token_params == request.trust_token_params &&
-         OptionalNetLogInfoEqualsForTesting(net_log_create_info,
-                                            request.net_log_create_info) &&
-         OptionalNetLogInfoEqualsForTesting(net_log_reference_info,
-                                            request.net_log_reference_info) &&
          shared_dictionary_writer_enabled ==
              request.shared_dictionary_writer_enabled &&
          socket_tag == request.socket_tag &&
@@ -261,17 +191,4 @@ int GetAllowedLoadFlagsForUntrustedRequests() {
          net::LOAD_RESTRICTED_PREFETCH_FOR_MAIN_FRAME;
 }
 
-namespace debug {
-
-ScopedResourceRequestCrashKeys::ScopedResourceRequestCrashKeys(
-    const network::ResourceRequest& request)
-    : url_(GetRequestUrlCrashKey(), request.url.possibly_invalid_spec()),
-      request_initiator_(GetRequestInitiatorCrashKey(),
-                         base::OptionalToPtr(request.request_initiator)),
-      resource_type_(GetRequestResourceTypeCrashKey(),
-                     base::NumberToString(request.resource_type)) {}
-
-ScopedResourceRequestCrashKeys::~ScopedResourceRequestCrashKeys() = default;
-
-}  // namespace debug
 }  // namespace network

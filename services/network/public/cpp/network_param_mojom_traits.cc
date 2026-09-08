@@ -192,21 +192,4 @@ bool StructTraits<network::mojom::SSLCertRequestInfoDataView,
   return true;
 }
 
-// static
-bool StructTraits<network::mojom::NetLogSourceDataView, net::NetLogSource>::
-    Read(network::mojom::NetLogSourceDataView data, net::NetLogSource* out) {
-  if (data.source_type() >=
-      static_cast<uint32_t>(net::NetLogSourceType::COUNT)) {
-    return false;
-  }
-  base::TimeTicks start_time;
-  if (!data.ReadStartTime(&start_time)) {
-    return false;
-  }
-  *out =
-      net::NetLogSource(static_cast<net::NetLogSourceType>(data.source_type()),
-                        data.source_id(), start_time);
-  return true;
-}
-
 }  // namespace mojo

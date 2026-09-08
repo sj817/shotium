@@ -11,16 +11,12 @@
 #include <string>
 
 #include "base/component_export.h"
-#include "base/debug/crash_logging.h"
 #include "base/memory/scoped_refptr.h"
 #include "base/unguessable_token.h"
-#include "mojo/public/cpp/system/data_pipe.h"
 #include "net/base/isolation_info.h"
 #include "net/base/request_priority.h"
 #include "net/cookies/site_for_cookies.h"
-#include "net/filter/source_stream_type.h"
 #include "net/http/http_request_headers.h"
-#include "net/log/net_log_source.h"
 #include "net/socket/socket_tag.h"
 #include "net/storage_access_api/status.h"
 #include "net/url_request/redirect_info.h"
@@ -37,29 +33,11 @@
 #include "services/network/public/mojom/trust_tokens.mojom.h"
 #include "services/network/public/mojom/url_request.mojom-forward.h"
 #include "services/network/public/mojom/url_response_head.mojom-forward.h"
-#include "services/network/public/mojom/web_client_hints_types.mojom-shared.h"
 #include "url/gurl.h"
 #include "url/origin.h"
-#include "url/origin_debug.h"
 
 namespace network {
 class ResourceRequestBody;
-
-// A reference-counted wrapper for a Mojo data pipe producer handle. This
-// allows the handle to be effectively copyable when stored in ResourceRequest,
-// ensuring it survives intermediate copies in the browser process.
-class COMPONENT_EXPORT(NETWORK_CPP_BASE) SharedDataPipeProducerHandle
-    : public base::RefCountedThreadSafe<SharedDataPipeProducerHandle> {
- public:
-  explicit SharedDataPipeProducerHandle(
-      mojo::ScopedDataPipeProducerHandle pipe);
-
-  mojo::ScopedDataPipeProducerHandle pipe;
-
- private:
-  friend class base::RefCountedThreadSafe<SharedDataPipeProducerHandle>;
-  ~SharedDataPipeProducerHandle();
-};
 
 // Typemapped to network.mojom.URLRequest in url_request.mojom.
 //
@@ -72,28 +50,6 @@ struct COMPONENT_EXPORT(NETWORK_CPP_BASE) ResourceRequest {
   // TODO(mmenke):  There are likely other fields that should be moved into this
   // class.
   struct COMPONENT_EXPORT(NETWORK_CPP_BASE) TrustedParams {
-    // Typemapped to network.mojom.EnabledClientHints, see comments there for
-    // details of each field.
-    struct COMPONENT_EXPORT(NETWORK_CPP_BASE) EnabledClientHints {
-      EnabledClientHints();
-      ~EnabledClientHints();
-      EnabledClientHints(const EnabledClientHints&);
-      EnabledClientHints& operator=(const EnabledClientHints&);
-      bool operator==(const EnabledClientHints& other) const;
-
-      url::Origin origin;
-      bool is_outermost_main_frame = false;
-      // The set of client hints that are enabled for the origin and currently
-      // allowed to be attached to the request (e.g., by Feature Policy).
-      std::vector<network::mojom::WebClientHintsType> hints;
-      // The set of client hints that are persisted for the origin but are
-      // currently not allowed to be attached to the request (e.g., blocked by
-      // Feature Policy). This is used in the network service to avoid an
-      // unnecessary IPC to the browser process when an ACCEPT_CH frame contains
-      // such hints.
-      std::vector<network::mojom::WebClientHintsType> not_allowed_hints;
-    };
-
     TrustedParams();
     ~TrustedParams();
     // TODO(crbug.com/332706093): Make this move-only to avoid cloning mojo
@@ -110,16 +66,7 @@ struct COMPONENT_EXPORT(NETWORK_CPP_BASE) ResourceRequest {
     bool has_user_activation = false;
     bool allow_cookies_from_browser = false;
     bool include_request_cookies_with_response = false;
-    std::optional<EnabledClientHints> enabled_client_hints;
     mojom::ClientSecurityStatePtr client_security_state;
-    // TODO(crbug.com/447039330): Consider refactoring this into a Mojo
-    // interface with TakeStream() and Clone() methods, similar to the
-    // PendingRemotes above, to make ownership and copying semantics more
-    // explicit. But scoped_refptr was initially used for simplicity to share
-    // ownership of the underlying Mojo handle.
-    scoped_refptr<SharedDataPipeProducerHandle> response_body_stream;
-    scoped_refptr<net::HttpResponseHeaders>
-        expected_response_headers_for_synthetic_response;
   };
 
   ResourceRequest();
@@ -219,14 +166,6 @@ struct COMPONENT_EXPORT(NETWORK_CPP_BASE) ResourceRequest {
   // field trivially copyable; see OptionalTrustTokenParams's definition for
   // more context.
   OptionalTrustTokenParams trust_token_params;
-  // If not null, the network service will not advertise any stream types
-  // (via Accept-Encoding) that are not listed. Also, it will not attempt
-  // decoding any non-listed stream types.
-  std::optional<std::vector<net::SourceStreamType>>
-      devtools_accepted_stream_types;
-  std::optional<net::NetLogSource> net_log_create_info;
-  std::optional<net::NetLogSource> net_log_reference_info;
-
   net::StorageAccessApiStatus storage_access_api_status =
       net::StorageAccessApiStatus::kNone;
   bool shared_dictionary_writer_enabled = false;
@@ -252,26 +191,6 @@ net::ReferrerPolicy ReferrerPolicyForUrlRequest(
 COMPONENT_EXPORT(NETWORK_CPP_BASE)
 int GetAllowedLoadFlagsForUntrustedRequests();
 
-namespace debug {
-
-class COMPONENT_EXPORT(NETWORK_CPP_BASE) ScopedResourceRequestCrashKeys {
- public:
-  explicit ScopedResourceRequestCrashKeys(
-      const network::ResourceRequest& request);
-  ~ScopedResourceRequestCrashKeys();
-
-  ScopedResourceRequestCrashKeys(const ScopedResourceRequestCrashKeys&) =
-      delete;
-  ScopedResourceRequestCrashKeys& operator=(
-      const ScopedResourceRequestCrashKeys&) = delete;
-
- private:
-  base::debug::ScopedCrashKeyString url_;
-  url::debug::ScopedOriginCrashKey request_initiator_;
-  base::debug::ScopedCrashKeyString resource_type_;
-};
-
-}  // namespace debug
 }  // namespace network
 
 #endif  // SERVICES_NETWORK_PUBLIC_CPP_RESOURCE_REQUEST_H_

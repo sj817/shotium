@@ -28,7 +28,6 @@
 #include "services/network/public/cpp/permissions_policy/permissions_policy_mojom_traits.h"
 #include "services/network/public/cpp/resource_request.h"
 #include "services/network/public/cpp/resource_request_body.h"
-#include "services/network/public/cpp/source_type_mojom_traits.h"
 #include "services/network/public/mojom/chunked_data_pipe_getter.mojom.h"
 #include "services/network/public/mojom/client_security_state.mojom-forward.h"
 #include "services/network/public/mojom/data_pipe_getter.mojom.h"
@@ -38,45 +37,10 @@
 #include "services/network/public/mojom/url_loader.mojom-forward.h"
 #include "services/network/public/mojom/url_request.mojom-forward.h"
 #include "services/network/public/mojom/url_response_head.mojom.h"
-#include "services/network/public/mojom/web_client_hints_types.mojom-forward.h"
 #include "url/mojom/origin_mojom_traits.h"
 #include "url/mojom/url_gurl_mojom_traits.h"
 
 namespace mojo {
-
-template <>
-struct COMPONENT_EXPORT(NETWORK_CPP_BASE)
-    StructTraits<network::mojom::EnabledClientHintsDataView,
-                 network::ResourceRequest::TrustedParams::EnabledClientHints> {
-  static const url::Origin& origin(
-      const network::ResourceRequest::TrustedParams::EnabledClientHints&
-          enabled_client_hints) {
-    return enabled_client_hints.origin;
-  }
-
-  static bool is_outermost_main_frame(
-      const network::ResourceRequest::TrustedParams::EnabledClientHints&
-          enabled_client_hints) {
-    return enabled_client_hints.is_outermost_main_frame;
-  }
-
-  static const std::vector<network::mojom::WebClientHintsType>& hints(
-      const network::ResourceRequest::TrustedParams::EnabledClientHints&
-          enabled_client_hints) {
-    return enabled_client_hints.hints;
-  }
-
-  static const std::vector<network::mojom::WebClientHintsType>&
-  not_allowed_hints(
-      const network::ResourceRequest::TrustedParams::EnabledClientHints&
-          enabled_client_hints) {
-    return enabled_client_hints.not_allowed_hints;
-  }
-
-  static bool Read(
-      network::mojom::EnabledClientHintsDataView data,
-      network::ResourceRequest::TrustedParams::EnabledClientHints* out);
-};
 
 template <>
 struct COMPONENT_EXPORT(NETWORK_CPP_BASE)
@@ -102,30 +66,10 @@ struct COMPONENT_EXPORT(NETWORK_CPP_BASE)
       const network::ResourceRequest::TrustedParams& trusted_params) {
     return trusted_params.include_request_cookies_with_response;
   }
-  static const std::optional<
-      network::ResourceRequest::TrustedParams::EnabledClientHints>&
-  enabled_client_hints(
-      const network::ResourceRequest::TrustedParams& trusted_params) {
-    return trusted_params.enabled_client_hints;
-  }
   static const network::mojom::ClientSecurityStatePtr& client_security_state(
       const network::ResourceRequest::TrustedParams& trusted_params) {
     return trusted_params.client_security_state;
   }
-  static mojo::ScopedDataPipeProducerHandle response_body_stream(
-      const network::ResourceRequest::TrustedParams& trusted_params) {
-    if (!trusted_params.response_body_stream) {
-      return mojo::ScopedDataPipeProducerHandle();
-    }
-    return std::move(trusted_params.response_body_stream->pipe);
-  }
-
-  static const scoped_refptr<net::HttpResponseHeaders>&
-  expected_response_headers_for_synthetic_response(
-      const network::ResourceRequest::TrustedParams& trusted_params) {
-    return trusted_params.expected_response_headers_for_synthetic_response;
-  }
-
   static bool Read(network::mojom::TrustedUrlRequestParamsDataView data,
                    network::ResourceRequest::TrustedParams* out);
 };
@@ -288,10 +232,6 @@ struct COMPONENT_EXPORT(NETWORK_CPP_BASE)
       const network::ResourceRequest& request) {
     return request.original_destination;
   }
-  static const std::optional<std::vector<net::SourceStreamType>>&
-  devtools_accepted_stream_types(const network::ResourceRequest& request) {
-    return request.devtools_accepted_stream_types;
-  }
   static const std::optional<network::ResourceRequest::TrustedParams>&
   trusted_params(const network::ResourceRequest& request) {
     return request.trusted_params;
@@ -303,14 +243,6 @@ struct COMPONENT_EXPORT(NETWORK_CPP_BASE)
   static const network::mojom::TrustTokenParamsPtr& trust_token_params(
       const network::ResourceRequest& request) {
     return request.trust_token_params.as_ptr();
-  }
-  static const std::optional<net::NetLogSource>& net_log_create_info(
-      const network::ResourceRequest& request) {
-    return request.net_log_create_info;
-  }
-  static const std::optional<net::NetLogSource>& net_log_reference_info(
-      const network::ResourceRequest& request) {
-    return request.net_log_reference_info;
   }
   static net::StorageAccessApiStatus storage_access_api_status(
       const network::ResourceRequest& request) {

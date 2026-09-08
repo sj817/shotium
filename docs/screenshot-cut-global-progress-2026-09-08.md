@@ -1,4 +1,6 @@
-# 静态截图引擎全局裁剪进度（stage55）
+# 静态截图引擎全局裁剪进度（stage56）
+
+stage56 当前接续：stage55 已提交 28102dfddc65。本批11E、源码4行增加/640行删除：整组解除无生产/消费端的六类network请求负载（浏览器EnabledClientHints缓存、合成响应producer/expected headers、DevTools解码白名单、两组NetLog参数），同步清掉专属NetLogSource Mojo/traits/typemap和无人实例化ScopedResourceRequestCrashKeys。实际net NetLog、反序列化失败诊断、Blink ClientHints和资源加载保留；SendsCookies至重定向/referrer/allowed-load-flags实现原文保持。媒体fragment去无调用时间/轨道/NPT API与RE2依赖，六个空间解析函数体和SVG视图代码不变。备份SHA、全部受限清单交集零、GN语法、diff与目标符号残留核对通过；证据out/cut-stage56-combined/、out/cut-stage56-network-fields/、out/cut-stage56-media-fragment/。未编译/运行/像素验收，stage49受限core GN阻点仍在；全局任务继续，整体工作量估计仍约65%±10，不把静态检查当最终验收。
 
 stage55 当前接续：stage54 已提交 c4fa55014cfd。本批整组清理 UI 浏览器本地化工具（语言选择列表、文案/复数格式化、Cocoa菜单标签包装、窗口尺寸辅助），移除两份 l10n_font_util 文件；ResourceBundle locale解析、GetStringUTF16/RTL调整和Cocoa locale初始化原文保持，Windows字体代码未动。同步清理ipcz已无实体的测试/reference/fuzzer GN目标及Mojo测试依赖，真实Mojo/ipcz运行后端保留。同时移除libyuv完整7路径闭包：gitlink、unbundle shim、3条Blink GN边及DEPS/.gitmodules/unbundle同步入口；原独立仓库完整保存于out/cut-stage55-libyuv/vendor-backup/libyuv，不是活动源码。合计20源码路径、3普通文件删除+1gitlink删除+16E；7GN语法、Python AST、gitmodules和diff静态检查通过，清单与证据out/cut-stage55-l10n/、out/cut-stage55-ipcz-build/，第三方具体用途复核out/cut-stage55-library-audit/。按用户要求整组实施后集中验证，当前只完成静态检查，未编译或运行验收；受限core GN阻点未解除。全局仍约65%±10，完整待办和10–16大批次估计见全局报告。
 
@@ -29,7 +31,7 @@ stage51 更新：WebBundle 请求/响应/Fetcher 闭包已完成源码处理，3
 | 网络 | PAC/WPAD/系统代理、备用磁盘/内存后端、旧服务协议、content_settings、WebSocket、上层双向流和多组观察者已清理 | 实际 HTTP/TLS/HTTP2/缓存及安全类型保留；WebBundle、DevTools 字段闭包已做；policy/递归预取待收口 |
 | 遥测/第三方/维护 | 栈堆采样、大量 UKM 调用点、若干 CrashKey 调用及无用测试/工具已清理；ICU/Skia/Perfetto 已改直接维护源码 | UKM/Crashpad 库和运行 tracing 尚未整链完成；三组受阻清单未删除 |
 
-此前最后一套真正编译和运行通过的基线是第十一批 d9b409db334cb60b0f6b0c11549b7d5c4be7e7bb：Windows EXE/DLL/addon、serve/net、84 demos、Node/daemon/协议、Bilibili 与 183/183 像素一致。这不能证明 stage16–55 的累计改动已通过。六平台当前实际编译未完成。
+此前最后一套真正编译和运行通过的基线是第十一批 d9b409db334cb60b0f6b0c11549b7d5c4be7e7bb：Windows EXE/DLL/addon、serve/net、84 demos、Node/daemon/协议、Bilibili 与 183/183 像素一致。这不能证明 stage16–56 的累计改动已通过。六平台当前实际编译未完成。
 
 ## 全局待办：按后续大批次组织
 
@@ -43,7 +45,7 @@ stage51 更新：WebBundle 请求/响应/Fetcher 闭包已完成源码处理，3
 | 4 | base/trace_event、base/tracing、Perfetto 运行后端 | 处理记录、会话、导出和宏调用的实际依赖；不能与已做的离线 processor 混为一组，不能误删 CaptureStats/FCP/CHECK/真实日志 | 1–2 |
 | 5 | net、services/network、Blink loader | WebBundle token/handle、响应标记和 Fetcher 闭包已在 stage51 处理；NetLog 导出和两组纯请求字段已在 stage52 处理；继续回查浏览器 policy、持久状态、剩余协议/traits、DevTools request id 已在 stage53 解除；递归预取等审计项按实际调用给最终结论；旧 IPC 五 Native 类型已在 stage54 复核源码完成，普通 Mojo traits 保留 | 1 |
 | 6 | third_party/blink 交互与扩展 | editing、DataTransfer/拖放、fullscreen、fileapi/blob、AX、PerformanceObserver/User Timing、probe，以及剩余脚本关联类型；同时确认内部 observer、通用线程与表单/CSS 状态的最小保留；XSLT 等已有保留结论不重新按名字砍 | 1–2 |
-| 7 | ui、base、build、third_party、根配置 | ui/resources 桌面资源已在 stage53 清理；两套无用语言包和 AX 未引用译文已在 stage54 清理；stage55已清理浏览器本地化工具和ipcz失效测试目标；其余 locale/语言资源、latency/AX、系统 helper、测试模板与生成工具，libyuv已在stage55解除全闭包；re2（SVG片段共享解析/Mac屏幕配置）、ipcz（当前Mojo后端）保留实际运行部分，其余外围继续收口；同步 DEPS/.gn/BUILD/.gitmodules/trim-tree/prune-deps，核对空目录和全部 A/B/C 附录，避免同步后回流 | 1–2 |
+| 7 | ui、base、build、third_party、根配置 | ui/resources 桌面资源已在 stage53 清理；两套无用语言包和 AX 未引用译文已在 stage54 清理；stage55已清理浏览器本地化工具和ipcz失效测试目标；其余 locale/语言资源、latency/AX、系统 helper、测试模板与生成工具，libyuv已在stage55解除全闭包；re2（Mac屏幕配置等；SVG片段时间解析依赖已在stage56解除）、ipcz（当前Mojo后端）保留实际运行部分，其余外围继续收口；同步 DEPS/.gn/BUILD/.gitmodules/trim-tree/prune-deps，核对空目录和全部 A/B/C 附录，避免同步后回流 | 1–2 |
 | 8 | 全局验证与修复 | 最终 GN 图、缺失输入、生成类型/语法/jumbo、Windows EXE/DLL/addon；按错误集合批量修复，避免每个小修改完整构建 | 1–2 |
 | 9 | 运行/像素/六平台 | serve/net/demos/Node/daemon/协议/Bilibili、完整像素和 Canvas 专项；六平台真实编译，交付保留/删除总表和最终证据 | 1–2 |
 
@@ -61,4 +63,4 @@ stage51 更新：WebBundle 请求/响应/Fetcher 闭包已完成源码处理，3
 - 本轮 manifest、备份核对、静态结果：out/cut-stage54-combined/；AX 子代理交接：out/cut-stage54-ax-strings/report.md；旧 IPC 完成证据：out/cut-stage54-ipc-audit/report.md。
 - 根目录复核基础：out/cut-stage45-root-review/report.md；其中 network/content_settings/WebSocket 等项目以 stage46–54 的实际删除为准，不能重复列为未完成。
 - stage50 根目录现存跟踪文件统计和受阻清单存在性历史快照：out/cut-stage50-combined/global-snapshot.json。目录文件数只用来验证存在状态，不用来证明用途或百分比。
-- 主任务、原始审计、执行证据仍分别位于 screenshot-cut-task.md、screenshot-unused-code-audit-2026-09-07.md、screenshot-cut-execution-2026-09-07.md。历史未勾选项包含已做源码但未验收的内容，以本报告和顶部 stage55 状态解释，不把历史 checkbox 直接计为新工作量。
+- 主任务、原始审计、执行证据仍分别位于 screenshot-cut-task.md、screenshot-unused-code-audit-2026-09-07.md、screenshot-cut-execution-2026-09-07.md。历史未勾选项包含已做源码但未验收的内容，以本报告和顶部 stage56 状态解释，不把历史 checkbox 直接计为新工作量。
