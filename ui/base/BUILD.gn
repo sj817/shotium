@@ -703,10 +703,6 @@ test("ui_base_unittests") {
     configs += [ "//build/config/linux/pangocairo" ]
   }
 
-  if (is_mac) {
-    deps += [ ":ui_unittests_framework" ]
-  }
-
   if (use_aura || toolkit_views) {
     sources += [ "dragdrop/os_exchange_data_unittest.cc" ]
   }
@@ -720,10 +716,6 @@ test("ui_base_unittests") {
       "test/data/data_pack_unittest/truncated-header.pak",
     ]
   }
-  if (is_mac) {
-    data += [ "$root_out_dir/ui_unittests Framework.framework/" ]
-  }
-
   # If the platform supports wayland, run wayland library unittests, too.
   if (is_chromeos || ozone_platform_wayland) {
     deps += [ "//ui/base/wayland:unittests" ]
@@ -733,17 +725,6 @@ test("ui_base_unittests") {
   # TODO(crbug.com/40031409): Fix code that adds exit-time destructors and
   # enable the diagnostic by removing this line.
   configs += [ "//build/config/compiler:no_exit_time_destructors" ]
-}
-
-if (is_mac) {
-  mac_framework_bundle("ui_unittests_framework") {
-    testonly = true
-    framework_version = "U"
-    framework_contents = [ "Resources" ]
-    info_plist = "test/framework-Info.plist"
-    extra_substitutions = [ "CHROMIUM_BUNDLE_ID=$chrome_mac_bundle_id" ]
-    output_name = "ui_unittests Framework"
-  }
 }
 
 if (is_win) {
