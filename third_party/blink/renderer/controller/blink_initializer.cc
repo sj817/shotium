@@ -316,24 +316,6 @@ void BlinkInitializer::InitLocalFrame(LocalFrame& frame) const {
   // annotation agent; core/annotation/ (its whole implementation) is gone --
   // see the "cut: remove 33 blink core subdirectories" commit -- so there is
   // nothing left to bind.
-  ModulesInitializer::InitLocalFrame(frame);
-}
-
-void BlinkInitializer::InitServiceWorkerGlobalScope(
-    ServiceWorkerGlobalScope& worker_global_scope) const {
-#if defined(USE_BLINK_EXTENSIONS_CHROMEOS)
-  ChromeOSExtensions::InitServiceWorkerGlobalScope(worker_global_scope);
-#endif
-}
-
-void BlinkInitializer::OnClearWindowObjectInMainWorld(
-    Document& document,
-    const Settings& settings) const {
-  // DevToolsFrontendImpl::DidClearWindowObject() call was here. It installed
-  // a DevToolsHost object on the window for the DevTools frontend's
-  // api_script to run against; that class is gone (see controller/BUILD.gn),
-  // so window-object setup has nothing left to notify.
-  ModulesInitializer::OnClearWindowObjectInMainWorld(document, settings);
 }
 
 // Function defined in third_party/blink/public/web/blink.h.

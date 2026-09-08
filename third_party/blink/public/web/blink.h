@@ -96,10 +96,6 @@ BLINK_EXPORT void SetDomainRelaxationForbiddenForTest(bool forbidden,
 // Undos all calls to SetDomainRelaxationForbiddenForTest().
 BLINK_EXPORT void ResetDomainRelaxationForTest();
 
-// Force the webgl context to fail so that webglcontextcreationerror
-// event gets generated/tested.
-BLINK_EXPORT void ForceNextWebGLContextCreationToFailForTest();
-
 // Force the drawing buffer used by webgl contexts to fail so that the webgl
 // context's ability to deal with that failure gracefully can be tested.
 BLINK_EXPORT void ForceNextDrawingBufferCreationToFailForTest();

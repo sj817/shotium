@@ -386,24 +386,12 @@ bool WebURLRequest::IsRevalidating() const {
   return resource_request_->IsRevalidating();
 }
 
-const std::optional<base::UnguessableToken>&
-WebURLRequest::GetDevToolsThrottlingToken() const {
-  return resource_request_->GetDevToolsThrottlingToken();
-}
-
 const WebString WebURLRequest::GetRequestedWithHeader() const {
   return resource_request_->GetRequestedWithHeader();
 }
 
 void WebURLRequest::SetRequestedWithHeader(const WebString& value) {
   resource_request_->SetRequestedWithHeader(value);
-}
-
-const base::UnguessableToken& WebURLRequest::GetFetchWindowId() const {
-  return resource_request_->GetFetchWindowId();
-}
-void WebURLRequest::SetFetchWindowId(const base::UnguessableToken& id) {
-  resource_request_->SetFetchWindowId(id);
 }
 
 int WebURLRequest::GetLoadFlagsForWebUrlRequest() const {

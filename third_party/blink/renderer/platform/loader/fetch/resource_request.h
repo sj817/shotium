@@ -38,7 +38,6 @@
 #include "net/filter/source_stream_type.h"
 #include "net/storage_access_api/status.h"
 #include "services/metrics/public/cpp/ukm_source_id.h"
-#include "services/network/public/cpp/fetch_retry_options.h"
 #include "services/network/public/mojom/chunked_data_pipe_getter.mojom-blink-forward.h"
 #include "services/network/public/mojom/cors.mojom-blink-forward.h"
 #include "services/network/public/mojom/fetch_api.mojom-blink.h"
@@ -261,19 +260,6 @@ class PLATFORM_EXPORT ResourceRequestHead {
   bool GetKeepalive() const { return keepalive_; }
   void SetKeepalive(bool keepalive) {
     keepalive_ = keepalive;
-    keepalive_token_ =
-        keepalive_ ? std::make_optional(base::UnguessableToken::Create())
-                   : std::nullopt;
-  }
-
-  bool HasFetchRetryOptions() const { return fetch_retry_options_.has_value(); }
-  const std::optional<network::FetchRetryOptions>& FetchRetryOptions() const {
-    return fetch_retry_options_;
-  }
-
-  void SetFetchRetryOptions(
-      const network::FetchRetryOptions& fetch_retry_options) {
-    fetch_retry_options_ = fetch_retry_options;
   }
 
   // True if service workers should not get events for the request.
@@ -404,15 +390,6 @@ class PLATFORM_EXPORT ResourceRequestHead {
   void SetAllowStaleResponse(bool value) { allow_stale_response_ = value; }
   bool AllowsStaleResponse() const { return allow_stale_response_; }
 
-  const std::optional<base::UnguessableToken>& GetDevToolsThrottlingToken()
-      const {
-    return devtools_throttling_token_;
-  }
-  void SetDevToolsThrottlingToken(
-      const std::optional<base::UnguessableToken>& devtools_token) {
-    devtools_throttling_token_ = devtools_token;
-  }
-
   void SetRequestedWithHeader(const String& value) {
     requested_with_header_ = value;
   }
@@ -439,15 +416,6 @@ class PLATFORM_EXPORT ResourceRequestHead {
     ukm_source_id_ = ukm_source_id;
   }
   ukm::SourceId GetUkmSourceId() const { return ukm_source_id_; }
-
-  // https://fetch.spec.whatwg.org/#concept-request-window
-  // See network::ResourceRequest::fetch_window_id for details.
-  void SetFetchWindowId(const base::UnguessableToken& id) {
-    fetch_window_id_ = id;
-  }
-  const base::UnguessableToken& GetFetchWindowId() const {
-    return fetch_window_id_;
-  }
 
   void SetRecursivePrefetchToken(
       const std::optional<base::UnguessableToken>& token) {
@@ -547,10 +515,6 @@ class PLATFORM_EXPORT ResourceRequestHead {
     return known_transparent_placeholder_image_index_;
   }
 
-  const std::optional<base::UnguessableToken>& GetKeepaliveToken() const {
-    return keepalive_token_;
-  }
-
   // Indicates that both FetchContext::PrepareResourceRequestForCacheAccess()
   // and FetchContext::UpgradeResourceRequestForLoader() must be called. See
   // FetchContext::UpgradeResourceRequestForLoader() for details.
@@ -644,14 +608,11 @@ class PLATFORM_EXPORT ResourceRequestHead {
 
   static const base::TimeDelta default_timeout_interval_;
 
-  std::optional<base::UnguessableToken> devtools_throttling_token_;
   String requested_with_header_;
   String client_data_header_;
   String event_source_last_event_id_;
 
   ukm::SourceId ukm_source_id_ = ukm::kInvalidSourceId;
-
-  base::UnguessableToken fetch_window_id_;
 
   network::mojom::RequestDestination original_destination_ =
       network::mojom::RequestDestination::kEmpty;
@@ -680,11 +641,6 @@ class PLATFORM_EXPORT ResourceRequestHead {
   std::optional<base::UnguessableToken>
       service_worker_race_network_request_token_;
 
-  // The unique identifier set when this request's `keepalive_` is true.
-  // TODO(crbug.com/382527001): Consider merge this field with `keepalive_`.
-  std::optional<base::UnguessableToken> keepalive_token_;
-
-  std::optional<network::FetchRetryOptions> fetch_retry_options_;
 
 #if DCHECK_IS_ON()
   bool is_set_url_allowed_ = true;

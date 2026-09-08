@@ -712,8 +712,6 @@ class CORE_EXPORT LocalFrame final
 
   LoaderFreezeMode GetLoaderFreezeMode();
 
-  void SetEvictCachedSessionStorageOnFreezeOrUnload();
-
   // Whether to maintain a trivial session history.
   //
   // One example is prerender.
@@ -1039,8 +1037,6 @@ class CORE_EXPORT LocalFrame final
   gfx::Rect window_controls_overlay_rect_;
   WeakMember<WindowControlsOverlayChangedDelegate>
       window_controls_overlay_changed_delegate_;
-
-  bool evict_cached_session_storage_on_freeze_or_unload_ = false;
 
   // Indicate if the current document's color scheme was notified.
   bool notified_color_scheme_ = false;

@@ -14,11 +14,8 @@ class Platform;
 class BlinkInitializer : public ModulesInitializer {
  public:
   void RegisterInterfaces(mojo::BinderMap&) override;
-  void OnClearWindowObjectInMainWorld(Document&,
-                                      const Settings&) const override;
   void InitLocalFrame(LocalFrame&) const override;
 
-  void InitServiceWorkerGlobalScope(ServiceWorkerGlobalScope&) const override;
   void RegisterMemoryWatchers(Platform*);
 };
 

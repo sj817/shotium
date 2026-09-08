@@ -663,13 +663,6 @@ bool LocalFrame::DetachImpl(FrameDetachType type) {
 
   loader_.DispatchUnloadEventAndFillOldDocumentInfoIfNeeded(
       type != FrameDetachType::kRemove);
-  if (evict_cached_session_storage_on_freeze_or_unload_) {
-    // Evicts the cached data of Session Storage to avoid reusing old data in
-    // the cache after the session storage has been modified by another renderer
-    // process.
-    CoreInitializer::GetInstance().EvictSessionStorageCachedData(
-        GetDocument()->GetPage());
-  }
   if (!Client()) {
     return false;
   }
@@ -2641,10 +2634,6 @@ void LocalFrame::SetContextPaused(bool is_paused) {
   GetFrameScheduler()->SetPaused(is_paused);
 }
 
-void LocalFrame::SetEvictCachedSessionStorageOnFreezeOrUnload() {
-  evict_cached_session_storage_on_freeze_or_unload_ = true;
-}
-
 LocalFrameToken LocalFrame::GetLocalFrameToken() const {
   return GetFrameToken().GetAs<LocalFrameToken>();
 }
@@ -2681,13 +2670,6 @@ void LocalFrame::DidFreeze() {
             mojom::blink::FrameLifecycleState::kFrozen);
   GetDocument()->DispatchFreezeEvent();
 
-  if (evict_cached_session_storage_on_freeze_or_unload_) {
-    // Evicts the cached data of Session Storage to avoid reusing old data in
-    // the cache after the session storage has been modified by another renderer
-    // process.
-    CoreInitializer::GetInstance().EvictSessionStorageCachedData(
-        GetDocument()->GetPage());
-  }
   // DispatchFreezeEvent dispatches JS events, which may detach |this|.
   if (!IsAttached()) {
     return;

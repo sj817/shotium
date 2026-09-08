@@ -1,4 +1,6 @@
-# 静态截图引擎全局裁剪进度（stage63）
+# 静态截图引擎全局裁剪进度（stage64）
+
+stage64：stage63 已提交 36aed49570a3。本批30源码路径（5D+25E），整链解除网络请求FetchRetryOptions专属类/schema/traits/GN及限速token、Fetch window ID、keepalive统计token、重试选项四组元数据；清理Blink存储/getset、WebURLRequest转发、网络转换与序列化，真实keepalive bool和网络连接重试保留，ResourceRequest从SendsCookies起的安全/重定向实现原文不变。另解除11个Core/ModulesInitializer空服务API及调用端，删除独占session_storage_namespace/storage_area两份协议；LocalFrame冻结/卸载仅去空缓存驱逐调用，CreateNewWindow仅去空storage clone。保留实际初始化/InitLocalFrame注册、PiP有返回值fallback；InstallSupplements调用端受限仍单列。保护交集零、备份SHA、5实体删除、4GN语法、diff和移除符号完整残留检查通过。证据out/cut-stage64-combined/、out/cut-stage64-network-fields/、out/cut-stage64-module-shells/。未图生成/编译/运行/像素验证，stage49受限core GN阻点及全局剩余未解除；全局工作量仍估计65%±10，源码约80%，余10–16大批次为粗估。
 
 stage63：stage62 已提交 2a47ed80f433。本批36源码路径（17D+19E）。整组移除无调用HandleHooks、chrome崩溃/调试URL及其专属Win heap/CFG故障注入、ASan故障注入和四文件Rust人工崩溃夹具，同步GN并清理两空夹具目录；删除无实例网络变化日志观察器、只有写入没有读取的全局网络字节计数器及五个TCP/UDP计数调用点。五份socket文件仅计数调用/include变化，返回值、回调、错误和NetLog逻辑保持。并行解除DevTools四个Mojo接口及全部独占数据、空绑定API、Core/ModulesInitializer两空session初始化API和无用friend。GDI真实分配失败诊断、实际network notifier、CHECK/错误日志、CaptureStats/FCP与线程任务处理保留。保护交集零、删除存在性、备份SHA、6GN语法、diff和完整残留检查通过。证据out/cut-stage63-combined/、out/cut-stage63-debug-network/、out/cut-stage63-devtools-protocol/。未图生成/编译/运行/像素验收；stage49受限core GN阻点及全局后续闭包仍待处理，不能以静态通过代替完成。全局工作量估计仍约65%±10，源码约80%，余10–16大批次是粗估。
 

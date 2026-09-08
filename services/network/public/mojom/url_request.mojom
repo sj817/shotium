@@ -14,7 +14,6 @@ import "services/network/public/mojom/cookie_manager.mojom";
 import "services/network/public/mojom/cors.mojom";
 import "services/network/public/mojom/data_pipe_getter.mojom";
 import "services/network/public/mojom/fetch_api.mojom";
-import "services/network/public/mojom/fetch_retry_options.mojom";
 import "services/network/public/mojom/http_request_headers.mojom";
 import "services/network/public/mojom/ip_address_space.mojom";
 import "services/network/public/mojom/isolation_info.mojom";
@@ -291,28 +290,6 @@ struct URLRequest {
   string? revalidation_etag;
   string? revalidation_last_modified;
 
-  // The profile ID of network conditions to throttle the network request.
-  mojo_base.mojom.UnguessableToken? throttling_profile_id;
-
-  // See https://fetch.spec.whatwg.org/#concept-request-window
-  //
-  // This is an opaque id of the original requestor of the resource, which might
-  // be different to the current requestor which is |render_frame_id|. For
-  // example, if a navigation for window "abc" is intercepted by a service
-  // worker, which re-issues the request via fetch, the re-issued request has
-  // |render_frame_id| of IPC::mojom::kRoutingIdNone (the service worker) and
-  // |window_id| of "abc". This is used for, e.g., client certificate selection.
-  // It's important that this id be unguessable so renderers cannot impersonate
-  // other renderers.
-  //
-  // This may be empty when the original requestor is the current requestor or
-  // is not a window. When it's empty, use |render_frame_id| instead. In
-  // practical terms, it's empty for requests that didn't go through a service
-  // worker, or if the original requestor is not a window. When the request
-  // goes through a service worker, the id is
-  // ServiceWorkerContainerHost::fetch_request_window_id.
-  mojo_base.mojom.UnguessableToken? fetch_window_id;
-
   // True for XHR, Fetch, and EventSource.
   bool is_fetch_like_api;
 
@@ -387,12 +364,6 @@ struct URLRequest {
   // ok.
   StorageAccessApiStatus storage_access_api_status;
 
-  // When applicable, i.e. `keepalive` is true, indicates a fetch keepalive
-  // request.
-  // Used in UKM logging to identify the lifetime of a fetch keepalive request.
-  // TODO(crbug.com/382527001): Consider merge this field with `keepalive`.
-  mojo_base.mojom.UnguessableToken? keepalive_token;
-
   // Indicates whether this request has been determined to be used for
   // advertising purposes.
   bool is_ad_tagged = false;
@@ -412,9 +383,6 @@ struct URLRequest {
   // policy. Example: https://crrev.com/c/6295903
   network.mojom.PermissionsPolicy? permissions_policy;
 
-  // The policies to be used when retrying a fetch. Will only be set on fetch
-  // requests who specified its RetryOptions.
-  network.mojom.FetchRetryOptions? fetch_retry_options;
 };
 
 // URLRequestBody represents body (i.e. upload data) of a HTTP request.

@@ -31,17 +31,8 @@
 #ifndef THIRD_PARTY_BLINK_RENDERER_CORE_CORE_INITIALIZER_H_
 #define THIRD_PARTY_BLINK_RENDERER_CORE_CORE_INITIALIZER_H_
 
-#include <memory>
-
-#include "mojo/public/cpp/bindings/pending_remote.h"
-#include "third_party/blink/public/common/dom_storage/session_storage_namespace_id.h"
-#include "third_party/blink/public/mojom/dom_storage/storage_area.mojom-blink-forward.h"
 #include "third_party/blink/renderer/core/core_export.h"
 #include "third_party/blink/renderer/platform/wtf/allocator/allocator.h"
-
-namespace display {
-struct ScreenInfos;
-}
 
 namespace mojo {
 class BinderMap;
@@ -50,14 +41,8 @@ class BinderMap;
 namespace blink {
 
 class Document;
-class ExecutionContext;
-class HTMLMediaElement;
 class LocalFrame;
-class Page;
 class PictureInPictureController;
-class ServiceWorkerGlobalScope;
-class Settings;
-class ShadowRoot;
 
 class CORE_EXPORT CoreInitializer {
   USING_FAST_MALLOC(CoreInitializer);
@@ -83,9 +68,6 @@ class CORE_EXPORT CoreInitializer {
   // bypass the inverted dependency from core/ to modules/.
   // Mojo Interfaces registered with LocalFrame
   virtual void InitLocalFrame(LocalFrame&) const = 0;
-  // Mojo Interfaces registered with ServiceWorkerGlobalScope.
-  virtual void InitServiceWorkerGlobalScope(
-      ServiceWorkerGlobalScope&) const = 0;
   // Supplements installed on a frame using ChromeClient
   virtual void InstallSupplements(LocalFrame&) const = 0;
   // CreateMediaControls(), CreateRemotePlaybackClient() and
@@ -96,38 +78,6 @@ class CORE_EXPORT CoreInitializer {
   // that no longer exist.
   virtual PictureInPictureController* CreatePictureInPictureController(
       Document&) const = 0;
-
-  virtual void OnClearWindowObjectInMainWorld(Document&,
-                                              const Settings&) const = 0;
-
-  virtual void ProvideModulesToPage(Page&,
-                                    const SessionStorageNamespaceId&) const = 0;
-  virtual void ForceNextWebGLContextCreationToFail() const = 0;
-
-  virtual void CloneSessionStorage(
-      Page* clone_from_page,
-      const SessionStorageNamespaceId& clone_to_namespace) = 0;
-
-  // Evicts the cached data of Session Storage. Called after dispatching a
-  // document unload or freeze event to avoid reusing old data in the cache in
-  // case the same renderer process is reused after the session storage has been
-  // modified by another renderer process. (Eg: Back navigation from a
-  // prerendered page.)
-  virtual void EvictSessionStorageCachedData(Page*) = 0;
-
-  virtual void DidChangeManifest(LocalFrame&) = 0;
-  virtual void NotifyOrientationChanged(LocalFrame&) = 0;
-  // Called with an updated set of ScreenInfos for a local root frame
-  // during a visual property update.
-  virtual void DidUpdateScreens(LocalFrame& frame,
-                                const display::ScreenInfos&) = 0;
-
-  virtual void SetLocalStorageArea(
-      LocalFrame& frame,
-      mojo::PendingRemote<mojom::blink::StorageArea> local_storage_area) = 0;
-  virtual void SetSessionStorageArea(
-      LocalFrame& frame,
-      mojo::PendingRemote<mojom::blink::StorageArea> session_storage_area) = 0;
 
   // GetFileSystemManager() was here. Its only caller was
   // File::CreateForFileSystemFile(), on the filesystem: URL snapshot path of

@@ -516,7 +516,6 @@ mojom("url_loader_base") {
     "early_hints.mojom",
     "encoded_body_length.mojom",
     "fetch_api.mojom",
-    "fetch_retry_options.mojom",
     "http_request_headers.mojom",
     "ip_address_space.mojom",
     "isolation_info.mojom",

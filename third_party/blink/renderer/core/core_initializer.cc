@@ -68,11 +68,6 @@ namespace blink {
 
 CoreInitializer* CoreInitializer::instance_ = nullptr;
 
-// Function defined in third_party/blink/public/web/blink.h.
-void ForceNextWebGLContextCreationToFailForTest() {
-  CoreInitializer::GetInstance().ForceNextWebGLContextCreationToFail();
-}
-
 void CoreInitializer::Initialize() {
   // Initialize must be called once by singleton ModulesInitializer.
   DCHECK(!instance_);

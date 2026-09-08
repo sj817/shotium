@@ -4,10 +4,6 @@
 
 #include "third_party/blink/renderer/modules/modules_initializer.h"
 
-#include <memory>
-
-#include "third_party/blink/public/mojom/dom_storage/session_storage_namespace.mojom-blink.h"
-
 namespace blink {
 
 void ModulesInitializer::Initialize() {
@@ -33,50 +29,11 @@ void ModulesInitializer::Initialize() {
 // provide media controls or a picture-in-picture controller. The void methods
 // return without doing anything for the same reason.
 
-void ModulesInitializer::InitLocalFrame(LocalFrame&) const {}
-
-void ModulesInitializer::OnClearWindowObjectInMainWorld(
-    Document&,
-    const Settings&) const {}
-
 void ModulesInitializer::InstallSupplements(LocalFrame&) const {}
 
 PictureInPictureController*
 ModulesInitializer::CreatePictureInPictureController(Document&) const {
   return nullptr;
 }
-
-void ModulesInitializer::InitServiceWorkerGlobalScope(
-    ServiceWorkerGlobalScope&) const {}
-
-void ModulesInitializer::ProvideModulesToPage(
-    Page&,
-    const SessionStorageNamespaceId&) const {}
-
-void ModulesInitializer::ForceNextWebGLContextCreationToFail() const {}
-
-void ModulesInitializer::CloneSessionStorage(Page*,
-                                             const SessionStorageNamespaceId&) {
-}
-
-void ModulesInitializer::EvictSessionStorageCachedData(Page*) {}
-
-void ModulesInitializer::DidChangeManifest(LocalFrame&) {}
-
-void ModulesInitializer::NotifyOrientationChanged(LocalFrame&) {}
-
-void ModulesInitializer::DidUpdateScreens(LocalFrame&,
-                                          const display::ScreenInfos&) {}
-
-void ModulesInitializer::SetLocalStorageArea(
-    LocalFrame&,
-    mojo::PendingRemote<mojom::blink::StorageArea>) {}
-
-void ModulesInitializer::SetSessionStorageArea(
-    LocalFrame&,
-    mojo::PendingRemote<mojom::blink::StorageArea>) {}
-
-// GetFileSystemManager() definition was here. Deleted along with the
-// declaration in modules_initializer.h; see the comment there.
 
 }  // namespace blink

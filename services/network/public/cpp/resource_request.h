@@ -21,7 +21,6 @@
 #include "net/storage_access_api/status.h"
 #include "net/url_request/redirect_info.h"
 #include "net/url_request/referrer_policy.h"
-#include "services/network/public/cpp/fetch_retry_options.h"
 #include "services/network/public/cpp/optional_trust_token_params.h"
 #include "services/network/public/cpp/permissions_policy/permissions_policy.h"
 #include "services/network/public/cpp/resource_request_body.h"
@@ -153,8 +152,6 @@ struct COMPONENT_EXPORT(NETWORK_CPP_BASE) ResourceRequest {
   bool is_revalidating = false;
   std::optional<std::string> revalidation_etag;
   std::optional<std::string> revalidation_last_modified;
-  std::optional<base::UnguessableToken> throttling_profile_id;
-  std::optional<base::UnguessableToken> fetch_window_id;
   bool is_fetch_like_api = false;
   bool is_fetch_later_api = false;
   bool is_favicon = false;
@@ -167,14 +164,12 @@ struct COMPONENT_EXPORT(NETWORK_CPP_BASE) ResourceRequest {
   net::StorageAccessApiStatus storage_access_api_status =
       net::StorageAccessApiStatus::kNone;
 
-  std::optional<base::UnguessableToken> keepalive_token;
   bool is_ad_tagged = false;
   bool client_side_content_decoding_enabled = false;
   net::SocketTag socket_tag;
 
   std::optional<network::PermissionsPolicy> permissions_policy;
 
-  std::optional<network::FetchRetryOptions> fetch_retry_options;
   // LINT.ThenChange(//services/network/prefetch_matches.cc)
 };
 

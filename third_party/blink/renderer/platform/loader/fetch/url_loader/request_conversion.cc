@@ -23,7 +23,6 @@
 #include "services/network/public/mojom/chunked_data_pipe_getter.mojom-blink.h"
 #include "services/network/public/mojom/data_pipe_getter.mojom-blink.h"
 #include "services/network/public/mojom/data_pipe_getter.mojom.h"
-#include "services/network/public/mojom/fetch_retry_options.mojom-shared.h"
 #include "services/network/public/mojom/trust_tokens.mojom-blink.h"
 #include "services/network/public/mojom/trust_tokens.mojom.h"
 #include "third_party/blink/public/common/loader/network_utils.h"
@@ -354,15 +353,9 @@ void PopulateResourceRequest(const ResourceRequestHead& src,
   dest->has_user_gesture = src.HasUserGesture();
   dest->enable_load_timing = true;
   dest->enable_upload_progress = src.ReportUploadProgress();
-  dest->throttling_profile_id = src.GetDevToolsThrottlingToken();
   dest->trust_token_params = ConvertTrustTokenParams(src.TrustTokenParams());
   dest->required_ip_address_space = src.GetTargetAddressSpace();
-  if (src.HasFetchRetryOptions()) {
-    dest->fetch_retry_options = src.FetchRetryOptions();
-  }
 
-  if (base::UnguessableToken window_id = src.GetFetchWindowId())
-    dest->fetch_window_id = std::make_optional(window_id);
 
   dest->is_fetch_like_api = src.IsFetchLikeAPI();
 
@@ -399,7 +392,6 @@ void PopulateResourceRequest(const ResourceRequestHead& src,
 
   dest->storage_access_api_status = src.GetStorageAccessApiStatus();
 
-  dest->keepalive_token = src.GetKeepaliveToken();
 
 
   // network::ResourceRequest::is_ad_tagged was filled in from the blink-side ad

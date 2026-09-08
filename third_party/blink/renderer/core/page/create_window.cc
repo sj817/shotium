@@ -36,7 +36,6 @@
 #include "third_party/blink/public/platform/web_string.h"
 #include "third_party/blink/public/web/web_view_client.h"
 #include "third_party/blink/public/web/web_window_features.h"
-#include "third_party/blink/renderer/core/core_initializer.h"
 #include "third_party/blink/renderer/core/dom/document.h"
 #include "third_party/blink/renderer/core/frame/csp/content_security_policy.h"
 #include "third_party/blink/renderer/core/frame/frame_client.h"
@@ -309,10 +308,6 @@ Frame* CreateNewWindow(LocalFrame& opener_frame,
       AllocateSessionStorageNamespaceId();
 
   Page* old_page = opener_frame.GetPage();
-  if (!features.noopener) {
-    CoreInitializer::GetInstance().CloneSessionStorage(old_page,
-                                                       new_namespace_id);
-  }
 
   bool consumed_user_gesture = false;
   Page* page = old_page->GetChromeClient().CreateWindow(

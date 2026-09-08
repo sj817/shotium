@@ -106,8 +106,6 @@ bool ResourceRequest::EqualsForTesting(const ResourceRequest& request) const {
          is_revalidating == request.is_revalidating &&
          revalidation_etag == request.revalidation_etag &&
          revalidation_last_modified == request.revalidation_last_modified &&
-         throttling_profile_id == request.throttling_profile_id &&
-         fetch_window_id == request.fetch_window_id &&
 
          is_fetch_like_api == request.is_fetch_like_api &&
          is_fetch_later_api == request.is_fetch_later_api &&
@@ -117,8 +115,7 @@ bool ResourceRequest::EqualsForTesting(const ResourceRequest& request) const {
                                                request.trusted_params) &&
          trust_token_params == request.trust_token_params &&
          socket_tag == request.socket_tag &&
-         permissions_policy == request.permissions_policy &&
-         fetch_retry_options == request.fetch_retry_options;
+         permissions_policy == request.permissions_policy;
 }
 
 bool ResourceRequest::SendsCookies() const {

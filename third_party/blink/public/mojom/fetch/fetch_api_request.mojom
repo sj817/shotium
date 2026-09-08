@@ -190,10 +190,6 @@ struct FetchAPIRequest {
   string? integrity;
   network.mojom.RequestPriority priority = network.mojom.RequestPriority.kIdle;
 
-  // Id of the original requestor window.
-  // See network::ResourceRequest::fetch_window_id.
-  mojo_base.mojom.UnguessableToken? fetch_window_id;
-
   bool keepalive = false;
   bool is_reload = false;
   bool is_history_navigation = false;
