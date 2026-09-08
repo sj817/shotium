@@ -3285,7 +3285,7 @@ void ResourceFetcher::MarkEarlyHintConsumedIfNeeded(
     // due to cache control policies.
     if (!response.NetworkAccessed() &&
         (!response.WasFetchedViaServiceWorker() ||
-         response.IsServiceWorkerPassThrough())) {
+         response.HasMatchingServiceWorkerUrl())) {
       resource->SetIsPreloadedByEarlyHints();
     }
   }

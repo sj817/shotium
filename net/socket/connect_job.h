@@ -154,20 +154,6 @@ class NET_EXPORT_PRIVATE ConnectJob {
     // caller of this function doesn't own |job|.
     virtual void OnConnectJobComplete(int result, ConnectJob* job) = 0;
 
-    // Invoked when an HTTP proxy returns an HTTP auth challenge during tunnel
-    // establishment. Always invoked asynchronously. The caller should use
-    // |auth_controller| to set challenge response information and then invoke
-    // |restart_with_auth_callback| to continue establishing a connection, or
-    // delete the ConnectJob if it doesn't want to respond to the challenge.
-    //
-    // Will only be called once at a time. Neither OnConnectJobComplete() nor
-    // OnNeedsProxyAuth() will be called synchronously when
-    // |restart_with_auth_callback| is invoked. Will not be called after
-    // OnConnectJobComplete() has been invoked.
-    virtual void OnNeedsProxyAuth(const HttpResponseInfo& response,
-                                  HttpAuthController* auth_controller,
-                                  base::OnceClosure restart_with_auth_callback,
-                                  ConnectJob* job) = 0;
   };
 
   // A |timeout_duration| of 0 corresponds to no timeout.
@@ -293,10 +279,6 @@ class NET_EXPORT_PRIVATE ConnectJob {
   void SetSocket(std::unique_ptr<StreamSocket> socket,
                  std::optional<std::set<std::string>> dns_aliases);
   void NotifyDelegateOfCompletion(int rv);
-  void NotifyDelegateOfProxyAuth(const HttpResponseInfo& response,
-                                 HttpAuthController* auth_controller,
-                                 base::OnceClosure restart_with_auth_callback);
-
   // If |remaining_time| is base::TimeDelta(), stops the timeout timer, if it's
   // running. Otherwise, Starts / restarts the timeout timer to trigger in the
   // specified amount of time.

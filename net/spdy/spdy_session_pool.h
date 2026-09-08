@@ -53,7 +53,7 @@ enum class SpdySessionInitiator : uint32_t {
   kUnknown = 0,
   kHttpStreamFactoryJob = 1,
   kHttpStreamPoolAttemptManager = 2,
-  kHttpProxyConnectJob = 3,
+  // Value 3 was the removed proxy connect job; do not reuse.
 };
 
 // This is a very simple pool for open SpdySessions.

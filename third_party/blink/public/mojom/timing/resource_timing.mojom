@@ -5,7 +5,6 @@
 module blink.mojom;
 
 import "mojo/public/mojom/base/time.mojom";
-import "services/network/public/mojom/fetch_api.mojom";
 import "services/network/public/mojom/load_timing_info.mojom";
 import "third_party/blink/public/mojom/fetch/fetch_api_request.mojom";
 import "url/mojom/url.mojom";
@@ -130,9 +129,4 @@ struct ResourceTimingInfo {
   // Holds the url of the resource that initiated current resource.
   // PerformanceResourceTiming (https://w3c.github.io/resource-timing/).
   url.mojom.Url initiator_url;
-
-  // Holds where the source of the resource, when it was fetched via
-  // ServiceWorker. This is |kUnspecified| if the response is not from
-  // ServiceWorker.
-  network.mojom.FetchResponseSource service_worker_response_source;
 };

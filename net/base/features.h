@@ -623,8 +623,6 @@ NET_EXPORT BASE_DECLARE_FEATURE(kNetworkServicePerPriorityTaskQueues);
 // These parameters control whether the Net Task Scheduler is used
 // for specific classes.
 NET_EXPORT BASE_DECLARE_FEATURE_PARAM(bool,
-                                      kNetTaskSchedulerHttpProxyConnectJob);
-NET_EXPORT BASE_DECLARE_FEATURE_PARAM(bool,
                                       kNetTaskSchedulerHttpStreamFactoryJob);
 NET_EXPORT BASE_DECLARE_FEATURE_PARAM(
     bool,

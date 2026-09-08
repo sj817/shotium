@@ -152,17 +152,11 @@ WebURLResponse WebURLResponse::Create(
   response.SetFromSyntheticResponse(head.from_synthetic_response);
   response.SetInterceptedByPlugin(head.intercepted_by_plugin);
   response.SetDidUseSharedDictionary(head.did_use_shared_dictionary);
-  response.SetServiceWorkerResponseSource(head.service_worker_response_source);
   response.SetType(head.response_type);
   response.SetPadding(head.padding);
   response.SetUrlListViaServiceWorker(
       base::ToVector(head.url_list_via_service_worker,
                      [](const GURL& url) { return WebURL(KURL(url)); }));
-  response.SetCacheStorageCacheName(
-      head.service_worker_response_source ==
-              network::mojom::FetchResponseSource::kCacheStorage
-          ? WebString::FromUtf8(head.cache_storage_cache_name)
-          : WebString());
 
   response.SetDnsAliases(
       base::ToVector(head.dns_aliases, &WebString::FromAscii));
@@ -484,16 +478,6 @@ void WebURLResponse::SetInterceptedByPlugin(bool value) {
   resource_response_->SetInterceptedByPlugin(value);
 }
 
-network::mojom::FetchResponseSource
-WebURLResponse::GetServiceWorkerResponseSource() const {
-  return resource_response_->GetServiceWorkerResponseSource();
-}
-
-void WebURLResponse::SetServiceWorkerResponseSource(
-    network::mojom::FetchResponseSource value) {
-  resource_response_->SetServiceWorkerResponseSource(value);
-}
-
 void WebURLResponse::SetDidUseSharedDictionary(bool did_use_shared_dictionary) {
   resource_response_->SetDidUseSharedDictionary(did_use_shared_dictionary);
 }
@@ -526,15 +510,6 @@ bool WebURLResponse::HasUrlListViaServiceWorker() const {
   DCHECK(resource_response_->UrlListViaServiceWorker().size() == 0 ||
          WasFetchedViaServiceWorker());
   return resource_response_->UrlListViaServiceWorker().size() > 0;
-}
-
-WebString WebURLResponse::CacheStorageCacheName() const {
-  return resource_response_->CacheStorageCacheName();
-}
-
-void WebURLResponse::SetCacheStorageCacheName(
-    const WebString& cache_storage_cache_name) {
-  resource_response_->SetCacheStorageCacheName(cache_storage_cache_name);
 }
 
 std::vector<WebString> WebURLResponse::CorsExposedHeaderNames() const {

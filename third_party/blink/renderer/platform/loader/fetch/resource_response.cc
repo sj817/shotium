@@ -163,10 +163,6 @@ bool ResourceResponse::HasMatchingServiceWorkerUrl() const {
          url_list_via_service_worker_.back() == current_request_url_;
 }
 
-bool ResourceResponse::IsServiceWorkerPassThrough() const {
-  return cache_storage_cache_name_.empty() && HasMatchingServiceWorkerUrl();
-}
-
 const AtomicString& ResourceResponse::MimeType() const {
   return mime_type_;
 }

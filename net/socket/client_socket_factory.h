@@ -10,7 +10,6 @@
 
 #include "net/base/net_export.h"
 #include "net/base/network_handle.h"
-#include "net/http/proxy_client_socket.h"
 #include "net/socket/datagram_socket.h"
 #include "net/socket/transport_client_socket.h"
 #include "net/traffic_annotation/network_traffic_annotation.h"

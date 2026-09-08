@@ -520,11 +520,6 @@ BASE_FEATURE(kNetTaskScheduler, base::FEATURE_ENABLED_BY_DEFAULT);
 BASE_FEATURE(kNetTaskSchedulerHostResolver, base::FEATURE_DISABLED_BY_DEFAULT);
 
 BASE_FEATURE_PARAM(bool,
-                   kNetTaskSchedulerHttpProxyConnectJob,
-                   &kNetTaskScheduler,
-                   "http_proxy_connect_job",
-                   true);
-BASE_FEATURE_PARAM(bool,
                    kNetTaskSchedulerHttpStreamFactoryJob,
                    &kNetTaskScheduler,
                    "http_stream_factory_job",

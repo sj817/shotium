@@ -1351,26 +1351,6 @@ void TransportClientSocketPool::OnConnectJobComplete(Group* group,
   }
 }
 
-void TransportClientSocketPool::OnNeedsProxyAuth(
-    Group* group,
-    const HttpResponseInfo& response,
-    HttpAuthController* auth_controller,
-    base::OnceClosure restart_with_auth_callback,
-    ConnectJob* job) {
-  DCHECK(group_map_.find(group->group_id()) != group_map_.end());
-  DCHECK_EQ(group, &group_map_.find(group->group_id())->second);
-
-  const Request* request = group->BindRequestToConnectJob(job);
-  // If can't bind the ConnectJob to a request, treat this as a ConnectJob
-  // failure.
-  if (!request) {
-    OnConnectJobComplete(group, ERR_PROXY_AUTH_REQUESTED, job);
-    return;
-  }
-
-  request->proxy_auth_callback().Run(response, auth_controller,
-                                     std::move(restart_with_auth_callback));
-}
 
 void TransportClientSocketPool::InvokeUserCallbackLater(
     ClientSocketHandle* handle,
@@ -1520,15 +1500,6 @@ void TransportClientSocketPool::Group::OnConnectJobComplete(int result,
   client_socket_pool_->OnConnectJobComplete(this, result, job);
 }
 
-void TransportClientSocketPool::Group::OnNeedsProxyAuth(
-    const HttpResponseInfo& response,
-    HttpAuthController* auth_controller,
-    base::OnceClosure restart_with_auth_callback,
-    ConnectJob* job) {
-  client_socket_pool_->OnNeedsProxyAuth(this, response, auth_controller,
-                                        std::move(restart_with_auth_callback),
-                                        job);
-}
 
 void TransportClientSocketPool::Group::StartBackupJobTimer(
     const GroupId& group_id) {

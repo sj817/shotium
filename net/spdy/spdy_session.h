@@ -627,9 +627,7 @@ class NET_EXPORT SpdySession
  private:
   friend class base::RefCounted<SpdySession>;
   friend class HttpNetworkTransactionTest;
-  friend class HttpProxyClientSocketPoolTest;
   friend class SpdyNetworkTransactionTest;
-  friend class SpdyProxyClientSocketTest;
   friend class SpdySessionPoolTest;
   friend class SpdySessionTest;
   friend class SpdyStreamRequest;

@@ -338,11 +338,6 @@ class NET_EXPORT_PRIVATE TransportClientSocketPool
 
     // ConnectJob::Delegate methods:
     void OnConnectJobComplete(int result, ConnectJob* job) override;
-    void OnNeedsProxyAuth(const HttpResponseInfo& response,
-                          HttpAuthController* auth_controller,
-                          base::OnceClosure restart_with_auth_callback,
-                          ConnectJob* job) override;
-
     bool IsEmpty() const {
       return active_socket_count_ == 0 && idle_sockets_.empty() &&
              jobs_.empty() && unbound_requests_.empty() &&
@@ -727,12 +722,6 @@ class NET_EXPORT_PRIVATE TransportClientSocketPool
   // These correspond to ConnectJob::Delegate methods, and are invoked by the
   // Group a ConnectJob belongs to.
   void OnConnectJobComplete(Group* group, int result, ConnectJob* job);
-  void OnNeedsProxyAuth(Group* group,
-                        const HttpResponseInfo& response,
-                        HttpAuthController* auth_controller,
-                        base::OnceClosure restart_with_auth_callback,
-                        ConnectJob* job);
-
   // Invokes the user callback for |handle|.  By the time this task has run,
   // it's possible that the request has been cancelled, so |handle| may not
   // exist in |pending_callback_map_|.  We look up the callback and result code

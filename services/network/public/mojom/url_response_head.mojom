@@ -133,16 +133,6 @@ struct URLResponseHead {
   // to absence of a fetch event handler, this is false.
   bool was_fetched_via_service_worker = false;
 
-  // Source of a serviceworker response - CacheStorage, HttpCache, Network or
-  // Unspecified (default).
-  // The value can be Unspecified in some cases including:
-  // 1. |was_fetched_via_service_worker| is false.
-  // 2. The service worker responded with an error (response status code is 0).
-  // 3. The service worker responded with a generated response, i.e.,
-  // `respondWith(new Response(...))`.
-  FetchResponseSource service_worker_response_source =
-      FetchResponseSource.kUnspecified;
-
   // The URL list of the Response object the service worker passed to
   // respondWith() to create this response. For example, if the service worker
   // calls respondWith(fetch('http://example.com/a')) and http://example.com/a
@@ -161,10 +151,6 @@ struct URLResponseHead {
   // populated if the response was provided by a service worker FetchEvent
   // handler.
   int64 padding = 0;
-
-  // The cache name of the CacheStorage from where the response is served via
-  // the ServiceWorker. Empty if the response isn't from the CacheStorage.
-  string cache_storage_cache_name;
 
   // Bitmask of status info of the SSL certificate. See cert_status_flags.h for
   // values.

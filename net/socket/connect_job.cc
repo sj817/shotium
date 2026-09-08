@@ -14,12 +14,10 @@
 #include "net/dns/public/host_resolver_results.h"
 #include "net/dns/public/secure_dns_policy.h"
 #include "net/http/http_auth_controller.h"
-#include "net/http/http_proxy_connect_job.h"
 #include "net/log/net_log.h"
 #include "net/log/net_log_event_type.h"
 #include "net/socket/client_socket_handle.h"
 #include "net/socket/socket_tag.h"
-#include "net/socket/socks_connect_job.h"
 #include "net/socket/ssl_connect_job.h"
 #include "net/socket/stream_socket.h"
 #include "net/socket/transport_connect_job.h"
@@ -187,14 +185,6 @@ void ConnectJob::NotifyDelegateOfCompletion(int rv) {
 
   StopTimerAndLogConnectCompletion(rv);
   delegate->OnConnectJobComplete(rv, this);
-}
-
-void ConnectJob::NotifyDelegateOfProxyAuth(
-    const HttpResponseInfo& response,
-    HttpAuthController* auth_controller,
-    base::OnceClosure restart_with_auth_callback) {
-  delegate_->OnNeedsProxyAuth(response, auth_controller,
-                              std::move(restart_with_auth_callback), this);
 }
 
 void ConnectJob::ResetTimer(base::TimeDelta remaining_time) {

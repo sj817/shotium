@@ -33,19 +33,13 @@
 namespace net {
 
 class HostPortPair;
-class HttpProxySocketParams;
 class SocketTag;
-class SOCKSSocketParams;
 class TcpConnectJob;
 class TransportSocketParams;
 
 class NET_EXPORT_PRIVATE SSLSocketParams
     : public base::RefCounted<SSLSocketParams> {
  public:
-  enum ConnectionType { DIRECT, SOCKS_PROXY, HTTP_PROXY };
-
-  // Exactly one of |direct_params|, |socks_proxy_params|, and
-  // |http_proxy_params| must be non-NULL.
   SSLSocketParams(ConnectJobParams params,
                   const HostPortPair& host_and_port,
                   const SSLConfig& ssl_config,
@@ -54,25 +48,9 @@ class NET_EXPORT_PRIVATE SSLSocketParams
   SSLSocketParams(const SSLSocketParams&) = delete;
   SSLSocketParams& operator=(const SSLSocketParams&) = delete;
 
-  // Returns the type of the underlying connection.
-  ConnectionType GetConnectionType() const;
-
-  // Must be called only when GetConnectionType() returns DIRECT.
   const scoped_refptr<TransportSocketParams>& GetDirectConnectionParams()
       const {
     return nested_params_.transport();
-  }
-
-  // Must be called only when GetConnectionType() returns SOCKS_PROXY.
-  const scoped_refptr<SOCKSSocketParams>& GetSocksProxyConnectionParams()
-      const {
-    return nested_params_.socks();
-  }
-
-  // Must be called only when GetConnectionType() returns HTTP_PROXY.
-  const scoped_refptr<HttpProxySocketParams>& GetHttpProxyConnectionParams()
-      const {
-    return nested_params_.http_proxy();
   }
 
   const HostPortPair& host_and_port() const { return host_and_port_; }
@@ -91,7 +69,7 @@ class NET_EXPORT_PRIVATE SSLSocketParams
   const NetworkAnonymizationKey network_anonymization_key_;
 };
 
-// SSLConnectJob establishes a connection, through a proxy if needed, and then
+// SSLConnectJob establishes a direct connection and then
 // handles the SSL handshake. It returns an SSLClientSocket on success.
 class NET_EXPORT_PRIVATE SSLConnectJob : public ConnectJob,
                                          public ConnectJob::Delegate {
@@ -128,10 +106,6 @@ class NET_EXPORT_PRIVATE SSLConnectJob : public ConnectJob,
 
   // ConnectJob::Delegate methods.
   void OnConnectJobComplete(int result, ConnectJob* job) override;
-  void OnNeedsProxyAuth(const HttpResponseInfo& response,
-                        HttpAuthController* auth_controller,
-                        base::OnceClosure restart_with_auth_callback,
-                        ConnectJob* job) override;
   ConnectionAttempts GetConnectionAttempts() const override;
   ResolveErrorInfo GetResolveErrorInfo() const override;
   bool IsSSLError() const override;
@@ -146,10 +120,6 @@ class NET_EXPORT_PRIVATE SSLConnectJob : public ConnectJob,
   enum State {
     STATE_TRANSPORT_CONNECT,
     STATE_TRANSPORT_CONNECT_COMPLETE,
-    STATE_SOCKS_CONNECT,
-    STATE_SOCKS_CONNECT_COMPLETE,
-    STATE_TUNNEL_CONNECT,
-    STATE_TUNNEL_CONNECT_COMPLETE,
     STATE_SSL_CONNECT,
     STATE_SSL_CONNECT_COMPLETE,
     STATE_NONE,
@@ -162,16 +132,8 @@ class NET_EXPORT_PRIVATE SSLConnectJob : public ConnectJob,
 
   int DoTransportConnect();
   int DoTransportConnectComplete(int result);
-  int DoSOCKSConnect();
-  int DoSOCKSConnectComplete(int result);
-  int DoTunnelConnect();
-  int DoTunnelConnectComplete(int result);
   int DoSSLConnect();
   int DoSSLConnectComplete(int result);
-
-  // Returns the initial state for the state machine based on the
-  // |connection_type|.
-  static State GetInitialState(SSLSocketParams::ConnectionType connection_type);
 
   // Starts the SSL connection process.  Returns OK on success and
   // ERR_IO_PENDING if it cannot immediately service the request.

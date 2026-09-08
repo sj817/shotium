@@ -18,13 +18,11 @@
 #include "net/base/proxy_chain.h"
 #include "net/base/session_usage.h"
 #include "net/dns/public/secure_dns_policy.h"
-#include "net/http/http_proxy_connect_job.h"
 #include "net/log/net_log_event_type.h"
 #include "net/log/net_log_with_source.h"
 #include "net/socket/client_socket_pool_manager.h"
 #include "net/socket/connect_job.h"
 #include "net/socket/connect_job_factory.h"
-#include "net/socket/socks_connect_job.h"
 #include "net/socket/ssl_connect_job.h"
 #include "net/socket/stream_socket.h"
 #include "net/spdy/spdy_session.h"
@@ -235,9 +233,9 @@ std::unique_ptr<ConnectJob> ClientSocketPool::CreateConnectJob(
   }
 
   return connect_job_factory_->CreateConnectJob(
-      group_id.destination(), GetProxyChain(), proxy_annotation_tag,
+      group_id.destination(), GetProxyChain(),
       socket_params->allowed_bad_certs(), ConnectJobFactory::AlpnMode::kHttpAll,
-      /*force_tunnel=*/false, group_id.privacy_mode(), resolution_callback,
+      group_id.privacy_mode(), resolution_callback,
       request_priority, socket_tag, group_id.network_anonymization_key(),
       group_id.secure_dns_policy(), group_id.disable_cert_network_fetches(),
       common_connect_job_params_, group_id.target_network(), delegate);

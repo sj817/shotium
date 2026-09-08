@@ -16,7 +16,6 @@
 #include "net/base/proxy_string_util.h"
 #include "net/http/http_network_session.h"
 #include "net/socket/socket_pool_additional_capacity.h"
-#include "net/socket/socks_connect_job.h"
 #include "net/socket/ssl_connect_job.h"
 #include "net/socket/transport_client_socket_pool.h"
 #include "net/socket/transport_connect_job.h"

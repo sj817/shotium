@@ -127,12 +127,6 @@ class PLATFORM_EXPORT ResourceResponse final {
   // final URL matches the current request URL.
   bool HasMatchingServiceWorkerUrl() const;
 
-  // Returns true if this response is the result of a service worker
-  // effectively calling `evt.respondWith(fetch(evt.request))`.  Specifically,
-  // it returns false for synthetic constructed responses, responses fetched
-  // from different URLs, and responses produced by cache_storage.
-  bool IsServiceWorkerPassThrough() const;
-
   const AtomicString& MimeType() const;
   void SetMimeType(const AtomicString&);
 
@@ -234,15 +228,6 @@ class PLATFORM_EXPORT ResourceResponse final {
   bool InterceptedByPlugin() const { return intercepted_by_plugin_; }
   void SetInterceptedByPlugin(bool value) { intercepted_by_plugin_ = value; }
 
-  network::mojom::FetchResponseSource GetServiceWorkerResponseSource() const {
-    return service_worker_response_source_;
-  }
-
-  void SetServiceWorkerResponseSource(
-      network::mojom::FetchResponseSource value) {
-    service_worker_response_source_ = value;
-  }
-
   network::mojom::FetchResponseType GetType() const { return response_type_; }
   void SetType(network::mojom::FetchResponseType value) {
     response_type_ = value;
@@ -261,13 +246,6 @@ class PLATFORM_EXPORT ResourceResponse final {
   }
   void SetUrlListViaServiceWorker(const Vector<KURL>& url_list) {
     url_list_via_service_worker_ = url_list;
-  }
-
-  const String& CacheStorageCacheName() const {
-    return cache_storage_cache_name_;
-  }
-  void SetCacheStorageCacheName(const String& cache_storage_cache_name) {
-    cache_storage_cache_name_ = cache_storage_cache_name;
   }
 
   const Vector<String>& CorsExposedHeaderNames() const {
@@ -572,8 +550,6 @@ class PLATFORM_EXPORT ResourceResponse final {
 
   // The source of the resource, if it was fetched via ServiceWorker. This is
   // kUnspecified if |was_fetched_via_service_worker| is false.
-  network::mojom::FetchResponseSource service_worker_response_source_ =
-      network::mojom::FetchResponseSource::kUnspecified;
 
   // The information about the ServiceWorker Static Router that handled the
   // request. Null if there was no registered Static Routers.
@@ -608,10 +584,6 @@ class PLATFORM_EXPORT ResourceResponse final {
   // The URL list of the response which was fetched by the ServiceWorker.
   // This is empty if the response was created inside the ServiceWorker.
   Vector<KURL> url_list_via_service_worker_;
-
-  // The cache name of the CacheStorage from where the response is served via
-  // the ServiceWorker. Null if the response isn't from the CacheStorage.
-  String cache_storage_cache_name_;
 
   // The headers that should be exposed according to CORS. Only guaranteed
   // to be set if the response was fetched by a ServiceWorker.

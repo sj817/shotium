@@ -50,7 +50,6 @@
 namespace network {
 namespace mojom {
 enum class AlternateProtocolUsage;
-enum class FetchResponseSource;
 enum class FetchResponseType : int32_t;
 enum class IPAddressSpace : int32_t;
 enum class PrivateNetworkAccessPreflightResult;
@@ -186,11 +185,6 @@ class BLINK_PLATFORM_EXPORT WebURLResponse {
   // See network.mojom.URLResponseHead.intercepted_by_plugin.
   void SetInterceptedByPlugin(bool);
 
-  // Set when this request was loaded via a ServiceWorker.
-  // See network.mojom.URLResponseHead.service_worker_response_source.
-  network::mojom::FetchResponseSource GetServiceWorkerResponseSource() const;
-  void SetServiceWorkerResponseSource(network::mojom::FetchResponseSource);
-
   // Flag whether a shared dictionary was used to decompress the response body.
   void SetDidUseSharedDictionary(bool);
 
@@ -210,11 +204,6 @@ class BLINK_PLATFORM_EXPORT WebURLResponse {
   void SetUrlListViaServiceWorker(const std::vector<WebURL>&);
   // Returns true if the URL list is not empty.
   bool HasUrlListViaServiceWorker() const;
-
-  // The cache name of the CacheStorage from where the response is served via
-  // the ServiceWorker. Null if the response isn't from the CacheStorage.
-  WebString CacheStorageCacheName() const;
-  void SetCacheStorageCacheName(const WebString&);
 
   // The headers that should be exposed according to CORS. Only guaranteed
   // to be set if the response was served by a ServiceWorker.

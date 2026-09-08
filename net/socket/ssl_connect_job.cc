@@ -21,13 +21,11 @@
 #include "net/base/trace_constants.h"
 #include "net/base/url_util.h"
 #include "net/cert/x509_util.h"
-#include "net/http/http_proxy_connect_job.h"
 #include "net/log/net_log_source_type.h"
 #include "net/log/net_log_values.h"
 #include "net/log/net_log_with_source.h"
 #include "net/socket/client_socket_factory.h"
 #include "net/socket/client_socket_handle.h"
-#include "net/socket/socks_connect_job.h"
 #include "net/socket/ssl_client_socket.h"
 #include "net/socket/tcp_connect_job.h"
 #include "net/socket/transport_connect_job.h"
@@ -55,20 +53,10 @@ SSLSocketParams::SSLSocketParams(
       host_and_port_(host_and_port),
       ssl_config_(ssl_config),
       network_anonymization_key_(network_anonymization_key) {
-  CHECK(!nested_params_.is_ssl());
+  CHECK(nested_params_.is_transport());
 }
 
 SSLSocketParams::~SSLSocketParams() = default;
-
-SSLSocketParams::ConnectionType SSLSocketParams::GetConnectionType() const {
-  if (nested_params_.is_socks()) {
-    return SOCKS_PROXY;
-  }
-  if (nested_params_.is_http_proxy()) {
-    return HTTP_PROXY;
-  }
-  return DIRECT;
-}
 
 std::unique_ptr<SSLConnectJob> SSLConnectJob::Factory::Create(
     RequestPriority priority,
@@ -113,16 +101,8 @@ SSLConnectJob::~SSLConnectJob() {
 LoadState SSLConnectJob::GetLoadState() const {
   switch (next_state_) {
     case STATE_TRANSPORT_CONNECT:
-    case STATE_SOCKS_CONNECT:
-    case STATE_TUNNEL_CONNECT:
       return LOAD_STATE_IDLE;
     case STATE_TRANSPORT_CONNECT_COMPLETE:
-    case STATE_SOCKS_CONNECT_COMPLETE:
-      return nested_connect_job_->GetLoadState();
-    case STATE_TUNNEL_CONNECT_COMPLETE:
-      if (nested_socket_) {
-        return LOAD_STATE_ESTABLISHING_PROXY_TUNNEL;
-      }
       return nested_connect_job_->GetLoadState();
     case STATE_SSL_CONNECT:
     case STATE_SSL_CONNECT_COMPLETE:
@@ -144,23 +124,6 @@ bool SSLConnectJob::HasEstablishedConnection() const {
 void SSLConnectJob::OnConnectJobComplete(int result, ConnectJob* job) {
   DCHECK_EQ(job, nested_connect_job_.get());
   OnIOComplete(result);
-}
-
-void SSLConnectJob::OnNeedsProxyAuth(
-    const HttpResponseInfo& response,
-    HttpAuthController* auth_controller,
-    base::OnceClosure restart_with_auth_callback,
-    ConnectJob* job) {
-  DCHECK_EQ(next_state_, STATE_TUNNEL_CONNECT_COMPLETE);
-
-  // The timer shouldn't have started running yet, since the handshake only
-  // starts after a tunnel has been established through the proxy.
-  DCHECK(!TimerIsRunning());
-
-  // Just pass the callback up to the consumer. This class doesn't need to do
-  // anything once credentials are provided.
-  NotifyDelegateOfProxyAuth(response, auth_controller,
-                            std::move(restart_with_auth_callback));
 }
 
 ConnectionAttempts SSLConnectJob::GetConnectionAttempts() const {
@@ -209,20 +172,6 @@ int SSLConnectJob::DoLoop(int result) {
         break;
       case STATE_TRANSPORT_CONNECT_COMPLETE:
         rv = DoTransportConnectComplete(rv);
-        break;
-      case STATE_SOCKS_CONNECT:
-        DCHECK_EQ(OK, rv);
-        rv = DoSOCKSConnect();
-        break;
-      case STATE_SOCKS_CONNECT_COMPLETE:
-        rv = DoSOCKSConnectComplete(rv);
-        break;
-      case STATE_TUNNEL_CONNECT:
-        DCHECK_EQ(OK, rv);
-        rv = DoTunnelConnect();
-        break;
-      case STATE_TUNNEL_CONNECT_COMPLETE:
-        rv = DoTunnelConnectComplete(rv);
         break;
       case STATE_SSL_CONNECT:
         DCHECK_EQ(OK, rv);
@@ -298,60 +247,6 @@ int SSLConnectJob::DoTransportConnectComplete(int result) {
   return result;
 }
 
-int SSLConnectJob::DoSOCKSConnect() {
-  DCHECK(!nested_connect_job_);
-  DCHECK(params_->GetSocksProxyConnectionParams());
-  DCHECK(!TimerIsRunning());
-
-  next_state_ = STATE_SOCKS_CONNECT_COMPLETE;
-  nested_connect_job_ = std::make_unique<SOCKSConnectJob>(
-      priority(), socket_tag(), common_connect_job_params(),
-      params_->GetSocksProxyConnectionParams(), this, &net_log());
-  return nested_connect_job_->Connect();
-}
-
-int SSLConnectJob::DoSOCKSConnectComplete(int result) {
-  resolve_error_info_ = nested_connect_job_->GetResolveErrorInfo();
-  resolution_details_ = nested_connect_job_->GetResolutionDetails();
-  if (result == OK) {
-    next_state_ = STATE_SSL_CONNECT;
-    nested_socket_ = nested_connect_job_->PassSocket();
-  }
-
-  return result;
-}
-
-int SSLConnectJob::DoTunnelConnect() {
-  DCHECK(!nested_connect_job_);
-  DCHECK(params_->GetHttpProxyConnectionParams());
-  DCHECK(!TimerIsRunning());
-
-  next_state_ = STATE_TUNNEL_CONNECT_COMPLETE;
-  nested_connect_job_ = std::make_unique<HttpProxyConnectJob>(
-      priority(), socket_tag(), common_connect_job_params(),
-      params_->GetHttpProxyConnectionParams(), this, &net_log());
-  return nested_connect_job_->Connect();
-}
-
-int SSLConnectJob::DoTunnelConnectComplete(int result) {
-  resolve_error_info_ = nested_connect_job_->GetResolveErrorInfo();
-  resolution_details_ = nested_connect_job_->GetResolutionDetails();
-  nested_socket_ = nested_connect_job_->PassSocket();
-
-  if (result < 0) {
-    // Extract the information needed to prompt for appropriate proxy
-    // authentication so that when ClientSocketPoolBaseHelper calls
-    // |GetAdditionalErrorState|, we can easily set the state.
-    if (result == ERR_SSL_CLIENT_AUTH_CERT_NEEDED) {
-      ssl_cert_request_info_ = nested_connect_job_->GetCertRequestInfo();
-    }
-    return result;
-  }
-
-  next_state_ = STATE_SSL_CONNECT;
-  return result;
-}
-
 int SSLConnectJob::DoSSLConnect() {
   TRACE_EVENT0(NetTracingCategory(), "SSLConnectJob::DoSSLConnect");
   DCHECK(!TimerIsRunning());
@@ -409,7 +304,6 @@ int SSLConnectJob::DoSSLConnect() {
     if (!ssl_config.ech_config_list.empty()) {
       // Overriding the DNS lookup only works for direct connections. We
       // currently do not support ECH with other connection types.
-      DCHECK_EQ(params_->GetConnectionType(), SSLSocketParams::DIRECT);
     }
   }
 
@@ -461,7 +355,7 @@ int SSLConnectJob::DoSSLConnectComplete(int result) {
   if (result != OK && is_connected_via_stale_dns_) {
     ResetStateForRestart();
     disable_stale_dns_ = true;
-    next_state_ = GetInitialState(params_->GetConnectionType());
+    next_state_ = STATE_TRANSPORT_CONNECT;
     return OK;
   }
 
@@ -481,7 +375,7 @@ int SSLConnectJob::DoSSLConnectComplete(int result) {
        result == ERR_SSL_VERSION_OR_CIPHER_MISMATCH)) {
     ResetStateForRestart();
     disable_legacy_crypto_with_fallback_ = false;
-    next_state_ = GetInitialState(params_->GetConnectionType());
+    next_state_ = STATE_TRANSPORT_CONNECT;
     return OK;
   }
 
@@ -513,7 +407,7 @@ int SSLConnectJob::DoSSLConnectComplete(int result) {
         });
 
     ResetStateForRestart();
-    next_state_ = GetInitialState(params_->GetConnectionType());
+    next_state_ = STATE_TRANSPORT_CONNECT;
     return OK;
   }
 
@@ -533,21 +427,8 @@ int SSLConnectJob::DoSSLConnectComplete(int result) {
   return result;
 }
 
-SSLConnectJob::State SSLConnectJob::GetInitialState(
-    SSLSocketParams::ConnectionType connection_type) {
-  switch (connection_type) {
-    case SSLSocketParams::DIRECT:
-      return STATE_TRANSPORT_CONNECT;
-    case SSLSocketParams::HTTP_PROXY:
-      return STATE_TUNNEL_CONNECT;
-    case SSLSocketParams::SOCKS_PROXY:
-      return STATE_SOCKS_CONNECT;
-  }
-  NOTREACHED();
-}
-
 int SSLConnectJob::ConnectInternal() {
-  next_state_ = GetInitialState(params_->GetConnectionType());
+  next_state_ = STATE_TRANSPORT_CONNECT;
   return DoLoop(OK);
 }
 
