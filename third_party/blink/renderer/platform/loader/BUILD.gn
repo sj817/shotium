@@ -159,7 +159,6 @@ blink_platform_sources("loader") {
     "subresource_integrity.cc",
     "subresource_integrity.h",
     "tracked_child_url_loader_factory_bundle.cc",
-    "web_url_request_extra_data.cc",
     "web_url_request_util.cc",
   ]
 

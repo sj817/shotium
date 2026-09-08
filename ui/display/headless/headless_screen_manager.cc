@@ -4,69 +4,13 @@
 
 #include "ui/display/headless/headless_screen_manager.h"
 
-#include <algorithm>
-
-#include "base/notimplemented.h"
-#include "ui/display/types/display_constants.h"
-
 namespace display {
-
-// static
-HeadlessScreenManager* HeadlessScreenManager::Get() {
-  static base::NoDestructor<HeadlessScreenManager> headless_screen_manager;
-  return headless_screen_manager.get();
-}
 
 // static
 int64_t HeadlessScreenManager::GetNewDisplayId() {
   // Use larger than max int to catch overflow early.
   static int64_t headless_display_id = 2300000000LL;
   return headless_display_id++;
-}
-
-void HeadlessScreenManager::SetDelegate(Delegate* delegate,
-                                        const base::Location& location) {
-  CHECK(!delegate_ || delegate == nullptr)
-      << "Delegate is already set by " << location_.ToString();
-
-  delegate_ = delegate;
-  location_ = location;
-}
-
-int64_t HeadlessScreenManager::AddDisplay(const Display& display) {
-  if (!delegate_) {
-    NOTIMPLEMENTED();
-    return kInvalidDisplayId;
-  }
-
-  return delegate_->AddDisplay(display);
-}
-
-void HeadlessScreenManager::UpdateDisplay(const Display& display) {
-  if (!delegate_) {
-    NOTIMPLEMENTED();
-    return;
-  }
-
-  return delegate_->UpdateDisplay(display);
-}
-
-void HeadlessScreenManager::RemoveDisplay(int64_t display_id) {
-  if (!delegate_) {
-    NOTIMPLEMENTED();
-    return;
-  }
-
-  delegate_->RemoveDisplay(display_id);
-}
-
-void HeadlessScreenManager::SetPrimaryDisplay(int64_t display_id) {
-  if (!delegate_) {
-    NOTIMPLEMENTED();
-    return;
-  }
-
-  delegate_->SetPrimaryDisplay(display_id);
 }
 
 }  // namespace display

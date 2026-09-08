@@ -6,15 +6,13 @@
 #define UI_DISPLAY_MAC_SCREEN_MAC_HEADLESS_H_
 
 #include "ui/display/display.h"
-#include "ui/display/headless/headless_screen_manager.h"
 #include "ui/display/screen_base.h"
 #include "ui/gfx/geometry/point.h"
 #include "ui/gfx/native_ui_types.h"
 
 namespace display {
 
-class ScreenMacHeadless : public ScreenBase,
-                          public HeadlessScreenManager::Delegate {
+class ScreenMacHeadless : public ScreenBase {
  public:
   ScreenMacHeadless();
 
@@ -32,12 +30,6 @@ class ScreenMacHeadless : public ScreenBase,
       const std::set<gfx::NativeWindow>& ignore) override;
   Display GetDisplayNearestWindow(gfx::NativeWindow window) const override;
   bool IsHeadless() const override;
-
-  // HeadlessScreenManager::Delegate overrides:
-  int64_t AddDisplay(const Display& display) override;
-  void UpdateDisplay(const Display& display) override;
-  void RemoveDisplay(int64_t display_id) override;
-  void SetPrimaryDisplay(int64_t display_id) override;
 
  private:
   void CreateDisplayList();

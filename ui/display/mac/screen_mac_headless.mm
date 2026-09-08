@@ -13,6 +13,7 @@
 #include "base/containers/flat_set.h"
 #include "base/types/expected.h"
 #include "components/headless/screen_info/headless_screen_info.h"
+#include "ui/display/headless/headless_screen_manager.h"
 #include "ui/display/headless/headless_screen_util.h"
 #include "ui/display/util/display_util.h"
 #include "ui/gfx/geometry/rect.h"
@@ -48,13 +49,9 @@ std::vector<headless::HeadlessScreenInfo> GetHeadlessScreenInfos() {
 
 ScreenMacHeadless::ScreenMacHeadless() {
   CreateDisplayList();
-
-  display::HeadlessScreenManager::Get()->SetDelegate(this);
 }
 
-ScreenMacHeadless::~ScreenMacHeadless() {
-  display::HeadlessScreenManager::Get()->SetDelegate(nullptr);
-}
+ScreenMacHeadless::~ScreenMacHeadless() = default;
 
 void ScreenMacHeadless::CreateDisplayList() {
   std::vector<headless::HeadlessScreenInfo> screen_infos =
@@ -119,30 +116,6 @@ Display ScreenMacHeadless::GetDisplayNearestWindow(
 
 bool ScreenMacHeadless::IsHeadless() const {
   return true;
-}
-
-int64_t ScreenMacHeadless::AddDisplay(const Display& display) {
-  Display new_display(display);
-  new_display.set_id(HeadlessScreenManager::GetNewDisplayId());
-
-  bool is_primary = display_list().displays().empty();
-  display_list().AddDisplay(new_display, is_primary
-                                             ? DisplayList::Type::PRIMARY
-                                             : DisplayList::Type::NOT_PRIMARY);
-  return new_display.id();
-}
-
-void ScreenMacHeadless::UpdateDisplay(const Display& display) {
-  display_list().UpdateDisplay(display);
-}
-
-void ScreenMacHeadless::RemoveDisplay(int64_t display_id) {
-  display_list().RemoveDisplay(display_id);
-  display::RemoveInternalDisplayId(display_id);
-}
-
-void ScreenMacHeadless::SetPrimaryDisplay(int64_t display_id) {
-  headless::SetPrimaryDisplay(display_list(), display_id);
 }
 
 }  // namespace display

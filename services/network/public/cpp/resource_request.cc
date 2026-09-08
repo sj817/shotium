@@ -86,8 +86,6 @@ bool ResourceRequest::EqualsForTesting(const ResourceRequest& request) const {
          priority_incremental == request.priority_incremental &&
 
          cors_preflight_policy == request.cors_preflight_policy &&
-         originated_from_service_worker ==
-             request.originated_from_service_worker &&
          skip_service_worker == request.skip_service_worker &&
          mode == request.mode &&
          required_ip_address_space == request.required_ip_address_space &&

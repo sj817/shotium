@@ -70,7 +70,6 @@ enum class RequestContextFrameType : int32_t;
 class ResourceRequest;
 class WebHTTPBody;
 class WebHTTPHeaderVisitor;
-class WebURLRequestExtraData;
 class WebSecurityOrigin;
 class WebString;
 class WebURL;
@@ -205,15 +204,6 @@ class BLINK_PLATFORM_EXPORT WebURLRequest {
   // The redirect mode which is used in Fetch API.
   network::mojom::RedirectMode GetRedirectMode() const;
   void SetRedirectMode(network::mojom::RedirectMode);
-
-  // Extra data associated with the underlying resource request. Resource
-  // requests can be copied. If non-null, each copy of a resource requests
-  // holds a pointer to the extra data, and the extra data pointer will be
-  // deleted when the last resource request is destroyed. Setting the extra
-  // data pointer will cause the underlying resource request to be
-  // dissociated from any existing non-null extra data pointer.
-  const scoped_refptr<WebURLRequestExtraData>& GetURLRequestExtraData() const;
-  void SetURLRequestExtraData(scoped_refptr<WebURLRequestExtraData>);
 
   // The request is downloaded to the network cache, but not rendered or
   // executed.

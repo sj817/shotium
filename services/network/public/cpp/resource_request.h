@@ -120,7 +120,6 @@ struct COMPONENT_EXPORT(NETWORK_CPP_BASE) ResourceRequest {
   bool priority_incremental = net::kDefaultPriorityIncremental;
   mojom::CorsPreflightPolicy cors_preflight_policy =
       mojom::CorsPreflightPolicy::kConsiderPreflight;
-  bool originated_from_service_worker = false;
   bool skip_service_worker = false;
   // `kNoCors` mode is the default request mode for legacy reasons, however this
   // mode is highly discouraged for new requests made on the web platform;

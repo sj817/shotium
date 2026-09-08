@@ -42,7 +42,6 @@
 #include "third_party/blink/public/platform/web_http_header_visitor.h"
 #include "third_party/blink/public/platform/web_security_origin.h"
 #include "third_party/blink/public/platform/web_url.h"
-#include "third_party/blink/public/platform/web_url_request_extra_data.h"
 #include "third_party/blink/renderer/platform/loader/fetch/resource_request.h"
 #include "third_party/blink/renderer/platform/loader/fetch/trust_token_params_conversion.h"
 #include "third_party/blink/renderer/platform/network/encoded_form_data.h"
@@ -338,16 +337,6 @@ void WebURLRequest::SetRedirectMode(network::mojom::RedirectMode redirect) {
   return resource_request_->SetRedirectMode(redirect);
 }
 
-const scoped_refptr<WebURLRequestExtraData>&
-WebURLRequest::GetURLRequestExtraData() const {
-  return resource_request_->GetURLRequestExtraData();
-}
-
-void WebURLRequest::SetURLRequestExtraData(
-    scoped_refptr<WebURLRequestExtraData> extra_data) {
-  resource_request_->SetURLRequestExtraData(std::move(extra_data));
-}
-
 bool WebURLRequest::IsDownloadToNetworkCacheOnly() const {
   return resource_request_->IsDownloadToNetworkCacheOnly();
 }
@@ -450,10 +439,6 @@ int WebURLRequest::GetLoadFlagsForWebUrlRequest() const {
       blink::mojom::blink::RequestContextType::PREFETCH)
     load_flags |= net::LOAD_PREFETCH;
 
-  if (resource_request_->GetURLRequestExtraData()) {
-    if (resource_request_->GetURLRequestExtraData()->is_for_no_state_prefetch())
-      load_flags |= net::LOAD_PREFETCH;
-  }
   if (resource_request_->AllowsStaleResponse()) {
     load_flags |= net::LOAD_SUPPORT_ASYNC_REVALIDATION;
   }

@@ -181,7 +181,6 @@ source_set("blink_headers") {
     "platform/web_url.h",
     "platform/web_url_error.h",
     "platform/web_url_request.h",
-    "platform/web_url_request_extra_data.h",
     "platform/web_url_request_util.h",
     "platform/web_url_response.h",
     "platform/web_worker_fetch_context.h",

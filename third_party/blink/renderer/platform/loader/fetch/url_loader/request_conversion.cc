@@ -211,30 +211,22 @@ void PopulateResourceRequestBody(const EncodedFormData& src,
   }
 }
 
-bool IsBannedCrossSiteAuth(network::ResourceRequest* resource_request,
-                           WebURLRequestExtraData* url_request_extra_data) {
+bool IsBannedCrossSiteAuth(network::ResourceRequest* resource_request) {
   auto& request_url = resource_request->url;
   auto& first_party = resource_request->site_for_cookies;
-
-  bool allow_cross_origin_auth_prompt = false;
-  if (url_request_extra_data) {
-    allow_cross_origin_auth_prompt =
-        url_request_extra_data->allow_cross_origin_auth_prompt();
-  }
 
   if (first_party.IsFirstPartyWithSchemefulMode(
           request_url, /*compute_schemefully=*/false)) {
     // If the first party is secure but the subresource is not, this is
     // mixed-content. Do not allow the image.
-    if (!allow_cross_origin_auth_prompt &&
-        network::IsUrlPotentiallyTrustworthy(first_party.RepresentativeUrl()) &&
+    if (network::IsUrlPotentiallyTrustworthy(first_party.RepresentativeUrl()) &&
         !network::IsUrlPotentiallyTrustworthy(request_url)) {
       return true;
     }
     return false;
   }
 
-  return !allow_cross_origin_auth_prompt;
+  return true;
 }
 
 }  // namespace
@@ -390,13 +382,9 @@ void PopulateResourceRequest(const ResourceRequestHead& src,
 
   dest->original_destination = src.GetOriginalDestination();
 
-  if (src.GetURLRequestExtraData()) {
-    src.GetURLRequestExtraData()->CopyToResourceRequest(dest);
-  }
-
   if (!dest->is_favicon &&
       request_destination == network::mojom::RequestDestination::kImage &&
-      IsBannedCrossSiteAuth(dest, src.GetURLRequestExtraData().get())) {
+      IsBannedCrossSiteAuth(dest)) {
     // Prevent third-party image content from prompting for login, as this
     // is often a scam to extract credentials for another domain from the
     // user. Only block image loads, as the attack applies largely to the
