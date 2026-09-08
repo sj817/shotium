@@ -23,7 +23,6 @@
 #include "base/memory_coordinator/utils.h"
 #include "base/numerics/safe_math.h"
 #include "base/process/memory.h"
-#include "base/strings/string_number_conversions.h"
 #include "base/strings/stringprintf.h"
 #include "base/synchronization/waitable_event.h"
 #include "base/system/sys_info.h"
@@ -36,7 +35,6 @@
 #include "base/trace_event/trace_event.h"
 #include "build/build_config.h"
 #include "build/chromecast_buildflags.h"
-#include "components/crash/core/common/crash_key.h"
 #include "components/discardable_memory/common/discardable_shared_memory_heap.h"
 #include "mojo/public/cpp/bindings/self_owned_receiver.h"
 
@@ -427,15 +425,10 @@ void DiscardableSharedMemoryManager::ClientRemoved(int client_id) {
   if (it == clients_.end())
     return;
 
-  size_t bytes_allocated_before_releasing_memory = bytes_allocated_;
-
   for (auto& segment_it : it->second)
     ReleaseMemory(segment_it.second->memory());
 
   clients_.erase(it);
-
-  if (bytes_allocated_ != bytes_allocated_before_releasing_memory)
-    BytesAllocatedChanged(bytes_allocated_);
 }
 
 void DiscardableSharedMemoryManager::SetMaxBytes(size_t bytes) {
@@ -516,7 +509,6 @@ void DiscardableSharedMemoryManager::AllocateLockedDiscardableSharedMemory(
   }
 
   bytes_allocated_ = checked_bytes_allocated.ValueOrDie();
-  BytesAllocatedChanged(bytes_allocated_);
 
   *shared_memory_region = memory->DuplicateRegion();
   // Close file descriptor to avoid running out.
@@ -545,14 +537,9 @@ void DiscardableSharedMemoryManager::DeletedDiscardableSharedMemory(
     return;
   }
 
-  size_t bytes_allocated_before_releasing_memory = bytes_allocated_;
-
   ReleaseMemory(segment_it->second->memory());
 
   client_segments.erase(segment_it);
-
-  if (bytes_allocated_ != bytes_allocated_before_releasing_memory)
-    BytesAllocatedChanged(bytes_allocated_);
 }
 
 void DiscardableSharedMemoryManager::ReduceMemoryUsageUntilWithinMaxBytes() {
@@ -582,7 +569,6 @@ void DiscardableSharedMemoryManager::ReduceMemoryUsageUntilWithinBytes(
   base::Time current_time = base::Time::Now();
 
   lock_.AssertAcquired();
-  size_t bytes_allocated_before_purging = bytes_allocated_;
   while (!segments_.empty()) {
     if (bytes_allocated_ <= bytes) {
       break;
@@ -613,9 +599,6 @@ void DiscardableSharedMemoryManager::ReduceMemoryUsageUntilWithinBytes(
     segments_.push_back(segment.get());
     std::push_heap(segments_.begin(), segments_.end(), CompareMemoryUsageTime);
   }
-
-  if (bytes_allocated_ != bytes_allocated_before_purging)
-    BytesAllocatedChanged(bytes_allocated_);
 }
 
 void DiscardableSharedMemoryManager::ReleaseMemory(
@@ -634,13 +617,6 @@ void DiscardableSharedMemoryManager::ReleaseMemory(
   // when its last usage time is older than all other segments.
   memory->Unmap();
   memory->Close();
-}
-
-void DiscardableSharedMemoryManager::BytesAllocatedChanged(
-    size_t new_bytes_allocated) const {
-  static crash_reporter::CrashKeyString<24> total_discardable_memory(
-      "total-discardable-memory-allocated");
-  total_discardable_memory.Set(base::NumberToString(new_bytes_allocated));
 }
 
 size_t DiscardableSharedMemoryManager::GetEffectiveMaxBytes() const {

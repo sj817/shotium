@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//mojo/public/tools/bindings/mojom.gni")
-
 component("metrics_cpp") {
   sources = [
     "delegating_ukm_recorder.cc",
@@ -44,32 +42,6 @@ component("metrics_cpp") {
     "//mojo/public/cpp/bindings",
     "//third_party/metrics_proto",
   ]
-}
-
-source_set("tests") {
-  testonly = true
-
-  sources = [
-    "metrics_utils_unittest.cc",
-    "ukm_entry_builder_unittest.cc",
-    "ukm_source_id_unittest.cc",
-  ]
-
-  deps = [
-    ":metrics_cpp",
-    "//base",
-    "//testing/gmock",
-    "//testing/gtest",
-  ]
-}
-
-source_set("test_support") {
-  testonly = true
-  sources = [
-    "test_recording_helper.cc",
-    "test_recording_helper.h",
-  ]
-  public_deps = [ ":metrics_cpp" ]
 }
 
 action("gen_ukm_builders") {

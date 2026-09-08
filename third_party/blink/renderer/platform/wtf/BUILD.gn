@@ -267,7 +267,6 @@ component("wtf") {
     ":wtf_buildflags",
     "//base",
     "//base/third_party/double_conversion",
-    "//components/crash/core/common:crash_key",
     "//third_party/highway:libhwy",
     "//third_party/icu",
 

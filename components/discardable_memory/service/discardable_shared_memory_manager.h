@@ -156,7 +156,6 @@ class DISCARDABLE_MEMORY_EXPORT DiscardableSharedMemoryManager
       EXCLUSIVE_LOCKS_REQUIRED(lock_);
   void ReleaseMemory(base::DiscardableSharedMemory* memory)
       EXCLUSIVE_LOCKS_REQUIRED(lock_);
-  void BytesAllocatedChanged(size_t new_bytes_allocated) const;
 
   size_t GetEffectiveMaxBytes() const EXCLUSIVE_LOCKS_REQUIRED(lock_);
 

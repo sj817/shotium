@@ -22,7 +22,6 @@
 #if DCHECK_IS_ON()
 #include "base/debug/crash_logging.h"
 #include "base/debug/stack_trace.h"
-#include "components/crash/core/common/crash_key.h"
 #endif
 
 namespace blink {
@@ -479,11 +478,7 @@ void PaintController::CheckNewItem(DisplayItem& display_item) {
       // more data, we expect the issue will reproduce during the next paint
       // cycle, which will crash with more data.
       if (previous_stack) {
-        static crash_reporter::CrashKeyString<1024> previous_stack_key(
-            "DupItemId-PrevStack");
         LOG(ERROR) << "previous stack: " << previous_stack->ToString();
-        crash_reporter::SetCrashKeyStringToStackTrace(&previous_stack_key,
-                                                      *previous_stack);
         NOTREACHED();
       }
     }
@@ -547,11 +542,7 @@ void PaintController::CheckNewChunkId(const PaintChunk::Id& id) {
     // more data, we expect the issue will reproduce during the next paint
     // cycle, which will crash with more data.
     if (previous_stack) {
-      static crash_reporter::CrashKeyString<1024> previous_stack_key(
-          "DupChunkId-PrevStack");
       LOG(ERROR) << "previous stack: " << previous_stack->ToString();
-      crash_reporter::SetCrashKeyStringToStackTrace(&previous_stack_key,
-                                                    *previous_stack);
       DUMP_WILL_BE_NOTREACHED();
     }
     last_duplicated_id.emplace(id.client_id, id.type, id.fragment);

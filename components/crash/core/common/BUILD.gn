@@ -14,34 +14,6 @@ declare_args() {
   use_crash_key_stubs = is_fuchsia
 }
 
-group("common") {
-  public_deps = [
-    ":crash_key",
-    ":crash_key_utils",
-    ":shared_memory_user_stream",
-  ]
-
-  if (is_apple) {
-    public_deps += [ ":zombies" ]
-  }
-
-  if (is_ios) {
-    public_deps += [ ":reporter_running_ios" ]
-  }
-}
-
-source_set("shared_memory_user_stream") {
-  sources = [
-    "shared_memory_user_stream.h",
-    "shared_memory_user_stream_reader.cc",
-    "shared_memory_user_stream_reader.h",
-    "shared_memory_user_stream_writer.cc",
-    "shared_memory_user_stream_writer.h",
-  ]
-
-  deps = [ "//base" ]
-}
-
 use_crashpad_annotation =
     (is_mac || is_ios || is_win || is_android || is_chromeos ||
      (is_linux && !is_castos)) && !use_crash_key_stubs
@@ -117,92 +89,5 @@ target(crash_key_target_type, "crash_key_lib") {
     ]
 
     deps += [ "//third_party/breakpad:client" ]
-  }
-}
-
-static_library("crash_key_utils") {
-  visibility = [ ":*" ]
-
-  sources = [
-    "crash_keys.cc",
-    "crash_keys.h",
-  ]
-
-  deps = [
-    ":crash_key",
-    "//base",
-  ]
-}
-
-if (is_apple) {
-  component("zombies") {
-    visibility = [ ":common" ]
-
-    sources = [
-      "objc_zombie.h",
-      "objc_zombie.mm",
-    ]
-
-    defines = [ "CRASH_CORE_COMMON_IMPLEMENTATION" ]
-
-    # Do not compile with ARC because ARC would prevent intercepting and
-    # interfering with low-level object destruction.
-    configs -= [ "//build/config/compiler:enable_arc" ]
-
-    deps = [
-      ":crash_key",
-      "//base",
-    ]
-
-
-    frameworks = [ "Foundation.framework" ]
-  }
-}
-
-if (is_ios) {
-  source_set("reporter_running_ios") {
-    sources = [
-      "reporter_running_ios.cc",
-      "reporter_running_ios.h",
-    ]
-  }
-}
-
-source_set("unit_tests") {
-  testonly = true
-  sources = [
-    "crash_key_unittest.cc",
-    "crash_keys_unittest.cc",
-    "shared_memory_user_stream_reader_unittest.cc",
-    "shared_memory_user_stream_writer_unittest.cc",
-  ]
-
-  deps = [
-    ":common",
-    "//base",
-    "//base/test:test_support",
-    "//testing/gmock",
-    "//testing/gtest",
-  ]
-
-  if (is_apple) {
-    sources += [ "objc_zombie_unittest.mm" ]
-
-    # Do not compile with ARC because ARC would prevent intercepting and
-    # interfering with low-level object destruction.
-    configs -= [ "//build/config/compiler:enable_arc" ]
-  }
-
-  if (is_castos) {
-    include_dirs = [ "//third_party/breakpad/breakpad/src/" ]
-    sources += [ "crash_key_breakpad_unittest.cc" ]
-  }
-
-  # TODO(crbug.com/40172607): Enable when crash keys are supported on Fuchsia.
-  if (is_fuchsia) {
-    sources -= [
-      "crash_key_unittest.cc",
-      "crash_keys_unittest.cc",
-    ]
   }
 }

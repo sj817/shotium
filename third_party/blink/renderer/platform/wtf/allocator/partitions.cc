@@ -37,11 +37,9 @@
 #include "base/feature_list.h"
 #include "base/memory/aligned_memory.h"
 #include "base/no_destructor.h"
-#include "base/strings/safe_sprintf.h"
 #include "base/task/sequenced_task_runner.h"
 #include "base/thread_annotations.h"
 #include "build/build_config.h"
-#include "components/crash/core/common/crash_key.h"
 #include "partition_alloc/buildflags.h"
 #include "partition_alloc/oom.h"
 #include "partition_alloc/page_allocator.h"
@@ -419,22 +417,6 @@ void Partitions::HandleOutOfMemory(size_t size) {
   volatile size_t total_usage = TotalSizeOfCommittedPages();
   uint32_t alloc_page_error_code = partition_alloc::GetAllocPageErrorCode();
   base::debug::Alias(&alloc_page_error_code);
-
-  // Report the total mapped size from PageAllocator. This is intended to
-  // distinguish better between address space exhaustion and out of memory on 32
-  // bit platforms. PartitionAlloc can use a lot of address space, as free pages
-  // are not shared between buckets (see crbug.com/421387). There is already
-  // reporting for this, however it only looks at the address space usage of a
-  // single partition. This allows to look across all the partitions, and other
-  // users such as V8.
-  char value[24];
-  // %d works for 64 bit types as well with SafeSPrintf(), see its unit tests
-  // for an example.
-  base::strings::SafeSPrintf(value, "%d",
-                             partition_alloc::GetTotalMappedSize());
-  static crash_reporter::CrashKeyString<24> g_page_allocator_mapped_size(
-      "page-allocator-mapped-size");
-  g_page_allocator_mapped_size.Set(value);
 
   if (total_usage >= 2UL * 1024 * 1024 * 1024) {
     PartitionsOutOfMemoryUsing2G(size);
