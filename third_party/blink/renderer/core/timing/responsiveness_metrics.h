@@ -48,14 +48,13 @@ class CORE_EXPORT ResponsivenessMetrics
   // pointerup, pointercancel, contextmenu, or click (etc) occurs.
   void TryAssignInteractionId(PerformanceEventTiming* entry);
 
-  // Reports the entry to UKM and UMA metrics if it represents a valid
+  // Reports the entry to UMA metrics if it represents a valid
   // interaction. Called as soon as the entry has a known end time. |entry|
   // must not be null.
   void ReportToMetrics(PerformanceEventTiming* entry);
 
   // Lifecycle and Testing
   void FlushAllEvents();
-  void StopUkmSamplingForTesting() { sampling_ = false; }
   uint64_t GetInteractionCount() const;
 
   void SetCurrentInteractionEventQueuedTimestamp(base::TimeTicks queued_time);
@@ -100,9 +99,8 @@ class CORE_EXPORT ResponsivenessMetrics
   void CommitAllPendingPointerdowns();
 
   // Metrics Reporting
-  void RecordUserInteractionUKM(LocalDOMWindow* window,
-                                UserInteractionType interaction_type,
-                                const PerformanceEventTiming& entry);
+  void NotifyUserInteraction(LocalDOMWindow* window,
+                             const PerformanceEventTiming& entry);
 
   void RecordUserInteractionHistograms(UserInteractionType interaction_type,
                                        const PerformanceEventTiming& entry,
@@ -195,9 +193,6 @@ class CORE_EXPORT ResponsivenessMetrics
   PerformanceTimelineEntryIdGenerator interaction_id_generator_;
 
   uint32_t navigation_interaction_count_ = 0;
-
-  // Whether to perform UKM sampling.
-  bool sampling_ = true;
 
   std::optional<uint64_t> last_recorded_frame_index_;
   Vector<ReportedInteractionKey> reported_interactions_in_frame_;

@@ -41,7 +41,6 @@
 #include "base/time/default_clock.h"
 #include "base/time/time.h"
 #include "base/values.h"
-#include "services/metrics/public/cpp/ukm_builders.h"
 #include "third_party/blink/public/common/features.h"
 #include "third_party/blink/public/mojom/permissions_policy/document_policy_feature.mojom-blink.h"
 #include "third_party/blink/public/platform/platform.h"
@@ -94,10 +93,6 @@ namespace blink {
 
 namespace {
 
-// LongTask API can be a source of many events. Filter on Performance object
-// level before reporting to UKM to smooth out recorded events over all pages.
-constexpr size_t kLongTaskUkmSampleInterval = 100;
-
 // Three UMA histogram names lived here -- kParserPausingCalledAfterResumimg,
 // kParserResumeByUserTiming and kParserResumingCalledBeforePausing. All three
 // measured the parser being paused and resumed by performance.mark()/measure()
@@ -117,16 +112,6 @@ base::TimeDelta GetUnixAtZeroMonotonic(const base::Clock* clock) {
   return unix_time_now - time_since_origin;
 }
 
-void RecordLongTaskUkm(ExecutionContext* execution_context,
-                       base::TimeDelta start_time,
-                       base::TimeDelta duration) {
-  // The V8 breakdown of the long task (GC and execute time) is gone with
-  // the engine; the task's own start time and duration are still recorded.
-  ukm::builders::PerformanceAPI_LongTask(execution_context->UkmSourceID())
-      .SetStartTime(start_time.InMilliseconds())
-      .SetDuration(duration.InMicroseconds())
-      .Record(execution_context->UkmRecorder());
-}
 
 PerformanceEntry::EntryType kDroppableEntryTypes[] = {
     PerformanceEntry::kResource,
@@ -799,11 +784,6 @@ void Performance::AddLongTaskTiming(base::TimeTicks start_time,
   } else {
     ++(dropped_entries_count_map_.find(PerformanceEntry::kLongTask)->value);
     UseCounter::Count(execution_context, WebFeature::kLongTaskBufferFull);
-  }
-  if ((++long_task_counter_ % kLongTaskUkmSampleInterval) == 0) {
-    RecordLongTaskUkm(execution_context,
-                      base::Milliseconds(dom_high_res_start_time),
-                      end_time - start_time);
   }
   NotifyObserversOfEntry(*entry);
 }

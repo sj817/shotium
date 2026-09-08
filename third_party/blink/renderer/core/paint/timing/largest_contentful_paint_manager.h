@@ -117,8 +117,6 @@ class CORE_EXPORT LargestContentfulPaintManager
   EphemeronPair<const LayoutObject, TextRecord> largest_ignored_text_{nullptr,
                                                                       nullptr};
   Member<ImageRecord> largest_ignored_image_;
-
-  bool contains_full_viewport_image_ = false;
 };
 
 }  // namespace blink

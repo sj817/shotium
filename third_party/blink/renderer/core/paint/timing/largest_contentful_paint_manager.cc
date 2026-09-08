@@ -5,8 +5,6 @@
 #include "third_party/blink/renderer/core/paint/timing/largest_contentful_paint_manager.h"
 
 #include "base/check.h"
-#include "services/metrics/public/cpp/ukm_builders.h"
-#include "services/metrics/public/cpp/ukm_recorder.h"
 #include "third_party/blink/renderer/core/dom/document.h"
 #include "third_party/blink/renderer/core/frame/local_dom_window.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
@@ -91,12 +89,6 @@ void LargestContentfulPaintManager::OnFirstInputOrScroll() {
 
   LocalFrame* frame = window_->GetFrame();
   CHECK(frame);
-  if (frame->IsOutermostMainFrame()) {
-    Document* document = frame->GetDocument();
-    ukm::builders::Blink_PaintTiming(document->UkmSourceID())
-        .SetLCPDebugging_HasViewportImage(contains_full_viewport_image_)
-        .Record(document->UkmRecorder());
-  }
 }
 
 void LargestContentfulPaintManager::Trace(Visitor* visitor) const {
@@ -109,8 +101,6 @@ void LargestContentfulPaintManager::Trace(Visitor* visitor) const {
 void LargestContentfulPaintManager::InitializePaintTracking(
     ImageRecord* record) {
   CHECK(largest_contentful_paint_calculator_);
-  contains_full_viewport_image_ |=
-      record->GetEffectiveVisualSizeResult().is_viewport_covered;
   if (largest_contentful_paint_calculator_->ShouldTrackForPaintTiming(
           *record)) {
     record->SetIsNeededForLargestContentfulPaint(true);

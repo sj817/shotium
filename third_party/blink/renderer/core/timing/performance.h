@@ -402,8 +402,6 @@ class CORE_EXPORT Performance : public EventTarget {
   // See crbug.com/1181774.
   Member<BackgroundTracingHelper> background_tracing_helper_;
 
-  // Running counter for LongTask observations.
-  size_t long_task_counter_ = 0;
 
   // Buffered performance entries that are waiting to be flushed to the browser.
   Vector<mojom::blink::DeclarativePerformanceEntryPtr>

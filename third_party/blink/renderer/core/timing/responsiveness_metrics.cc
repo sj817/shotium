@@ -11,14 +11,11 @@
 #include "base/metrics/histogram_functions.h"
 #include "base/not_fatal_until.h"
 #include "base/notreached.h"
-#include "base/rand_util.h"
 #include "base/strings/strcat.h"
 #include "base/time/time.h"
 #include "base/trace_event/histogram_scope.h"
 #include "base/trace_event/trace_event.h"
 #include "base/trace_event/trace_id_helper.h"
-#include "services/metrics/public/cpp/ukm_builders.h"
-#include "services/metrics/public/cpp/ukm_recorder.h"
 #include "third_party/blink/public/common/responsiveness_metrics/user_interaction_latency.h"
 #include "third_party/blink/renderer/core/dom/dom_high_res_time_stamp.h"
 #include "third_party/blink/renderer/core/event_type_names.h"
@@ -38,12 +35,6 @@
 namespace blink {
 
 namespace {
-// Minimum potentially generated value for UKM sampling.
-constexpr int kMinValueForSampling = 1;
-// Maximum potentially generated value for UKM sampling.
-constexpr int kMaxValueForSampling = 100;
-// UKM sampling rate. The sampling strategy is 1/N.
-constexpr int kUkmSamplingRate = 10;
 // The name for the histogram which records interaction timings, and the names
 // of the variants for keyboard or click/tap interactions.
 const char kHistogramMaxEventDuration[] =
@@ -548,7 +539,7 @@ void ResponsivenessMetrics::ReportToMetrics(PerformanceEventTiming* entry) {
   }
 
   UserInteractionType interaction_type = entry->InteractionType();
-  RecordUserInteractionUKM(window, interaction_type, *entry);
+  NotifyUserInteraction(window, *entry);
 
   // For Histogram and Tracing convenience, we only report "unique" interaction
   // durations. I.e. when keydown and keypress, or pointerup and click, report
@@ -574,9 +565,8 @@ void ResponsivenessMetrics::ReportToMetrics(PerformanceEventTiming* entry) {
   }
 }
 
-void ResponsivenessMetrics::RecordUserInteractionUKM(
+void ResponsivenessMetrics::NotifyUserInteraction(
     LocalDOMWindow* window,
-    UserInteractionType interaction_type,
     const PerformanceEventTiming& entry) {
   auto interaction_id = entry.GetInteractionIdInfo();
   CHECK(interaction_id.has_value());
@@ -601,17 +591,6 @@ void ResponsivenessMetrics::RecordUserInteractionUKM(
     }
   }
 
-  ukm::UkmRecorder* ukm_recorder = window->UkmRecorder();
-  ukm::SourceId source_id = window->UkmSourceID();
-  if (source_id != ukm::kInvalidSourceId &&
-      (!sampling_ ||
-       base::RandIntInclusive(kMinValueForSampling, kMaxValueForSampling) <=
-           kUkmSamplingRate)) {
-    ukm::builders::Responsiveness_UserInteraction(source_id)
-        .SetInteractionType(static_cast<int64_t>(interaction_type))
-        .SetMaxEventDuration(duration.InMilliseconds())
-        .Record(ukm_recorder);
-  }
 }
 
 void ResponsivenessMetrics::RecordUserInteractionHistograms(
