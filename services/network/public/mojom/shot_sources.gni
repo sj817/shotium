@@ -1,8 +1,0 @@
-# Copyright 2026 The Chromium Authors
-# Use of this source code is governed by a BSD-style license that can be
-# found in the LICENSE file.
-
-# Source from //services/network/public/mojom:mojom reachable from Shot's URL
-# loading interfaces. Imported Mojom files are provided by the aggregate
-# target's existing public dependencies.
-shot_network_mojom_sources = [ "url_loader_factory.mojom" ]

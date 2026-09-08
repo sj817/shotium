@@ -151,30 +151,6 @@ interface CoreProbes {
   void FrameRequestedNavigation(LocalFrame*, Frame* target_frame, const KURL& url, ClientNavigationReason reason, NavigationPolicy policy);
   void FrameScheduledNavigation([Keep] LocalFrame*, const KURL& url, base::TimeDelta delay, ClientNavigationReason reason);
   void FrameClearedScheduledNavigation([Keep] LocalFrame*);
-  void WillCreateWebSocket([Keep] ExecutionContext*, uint64_t identifier, const KURL& request_url, const String& protocol, std::optional<base::UnguessableToken>* devtools_token);
-  void WillSendWebSocketHandshakeRequest([Keep] ExecutionContext*, uint64_t identifier, network::mojom::blink::WebSocketHandshakeRequest* request);
-  void DidReceiveWebSocketHandshakeResponse([Keep] ExecutionContext*, uint64_t identifier, network::mojom::blink::WebSocketHandshakeRequest* request, network::mojom::blink::WebSocketHandshakeResponse* response);
-  void DidCloseWebSocket([Keep] ExecutionContext*, uint64_t identifier);
-  void DidReceiveWebSocketMessage(ExecutionContext*, uint64_t identifier, int opcode, bool masked, const Vector<base::span<const uint8_t>>& data);
-  void DidSendWebSocketMessage(ExecutionContext*, uint64_t identifier, int opcode, bool masked, base::span<const uint8_t> payload);
-  void DidReceiveWebSocketMessageError(ExecutionContext*, uint64_t identifier, const String& error_message);
-  void WebTransportCreated([Keep] ExecutionContext*, uint64_t transport_id, const KURL& request_url);
-  void WebTransportConnectionEstablished(ExecutionContext*, uint64_t transport_id);
-  void WebTransportClosed(ExecutionContext*, uint64_t transport_id);
-  void DirectTCPSocketCreated([Keep] ExecutionContext*, uint64_t identifier, const String& remote_addr, uint16_t remote_port, protocol::Network::DirectTCPSocketOptions& options);
-  void DirectTCPSocketOpened(ExecutionContext*, uint64_t identifier, const String& remote_addr, uint16_t remote_port, std::optional<String> local_addr, std::optional<uint16_t> local_port);
-  void DirectTCPSocketAborted(ExecutionContext*, uint64_t identifier, int net_error);
-  void DirectTCPSocketClosed(ExecutionContext*, uint64_t identifier);
-  // DirectTCPSocketChunkSent/Received and DirectUDPSocketChunkSent/Received
-  // took a ScriptState& (a V8 type) to report the chunk's owning script
-  // realm to DevTools. ScriptState no longer exists -- deleted.
-  void DirectUDPSocketCreated([Keep] ExecutionContext*, uint64_t identifier, protocol::Network::DirectUDPSocketOptions& options);
-  void DirectUDPSocketOpened(ExecutionContext*, uint64_t identifier, const String& local_addr, uint16_t local_port, std::optional<String> remote_addr, std::optional<uint16_t> remote_port);
-  void DirectUDPSocketAborted(ExecutionContext*, uint64_t identifier, int net_error);
-  void DirectUDPSocketClosed(ExecutionContext*, uint64_t identifier);
-  void DirectUDPSocketJoinedMulticastGroup(ExecutionContext*, uint64_t identifier, const String& ipAddress);
-  void DirectUDPSocketLeftMulticastGroup(ExecutionContext*, uint64_t identifier, const String& ipAddress);
-  void WillCreateP2PSocketUdp(ExecutionContext*, std::optional<base::UnguessableToken>* devtools_token);
   /* This is for pre-BlinkGenPropertyTrees. TODO(wangxianzhu): Remove this function for BlinkGenPropertyTrees. */
   void LayerTreeDidChange(LocalFrame*);
   void LayerTreePainted(LocalFrame*);

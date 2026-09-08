@@ -36,24 +36,11 @@
 #include "third_party/blink/renderer/core/execution_context/execution_context.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
 
-namespace network {
-namespace mojom {
-namespace blink {
-class WebSocketHandshakeResponse;
-class WebSocketHandshakeRequest;
-}  // namespace blink
-}  // namespace mojom
-}  // namespace network
-
 namespace blink {
 
 class CoreProbeSink;
 
 namespace protocol {
-namespace Network {
-class DirectTCPSocketOptions;
-class DirectUDPSocketOptions;
-}  // namespace Network
 namespace Audits {
 class InspectorIssue;
 }  // namespace Audits
