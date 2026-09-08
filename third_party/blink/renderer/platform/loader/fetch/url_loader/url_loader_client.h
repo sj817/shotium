@@ -58,8 +58,7 @@ struct WebURLError;
 class BLINK_PLATFORM_EXPORT URLLoaderClient {
  public:
   // Called when following a redirect. |new_.*| arguments contain the
-  // information about the received redirect. When |report_raw_headers| is
-  // updated it'll be used for filtering data of the next redirect or response.
+  // information about the received redirect.
   // |removed_headers| outputs headers that need to be removed from the
   // redirect request. `modified_headers` outputs headers that need to be added
   // to or updated in the redirect request.
@@ -73,7 +72,6 @@ class BLINK_PLATFORM_EXPORT URLLoaderClient {
       network::mojom::ReferrerPolicy new_referrer_policy,
       const WebString& new_method,
       const WebURLResponse& passed_redirect_response,
-      bool& report_raw_headers,
       std::vector<std::string>* removed_headers,
       net::HttpRequestHeaders& modified_headers,
       bool insecure_scheme_was_upgraded) {

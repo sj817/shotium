@@ -227,7 +227,6 @@ void HTMLPlugInElement::DetachLayoutTree(bool performing_reattach) {
   if (!performing_reattach)
     SetDisposeView();
 
-
   HTMLFrameOwnerElement::DetachLayoutTree(performing_reattach);
 }
 
@@ -437,7 +436,7 @@ bool HTMLPlugInElement::AllowedToLoadObject(const KURL& url,
              frame, mojom::blink::RequestContextType::OBJECT,
              network::mojom::blink::IPAddressSpace::kUnknown, url,
              ResourceRequest::RedirectStatus::kNoRedirect, url,
-             /* devtools_id= */ String(), ReportingDisposition::kReport,
+             ReportingDisposition::kReport,
              GetDocument().Loader()->GetContentSecurityNotifier());
 }
 

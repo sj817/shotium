@@ -1,4 +1,6 @@
-# 静态截图引擎全局裁剪进度（stage52）
+# 静态截图引擎全局裁剪进度（stage53）
+
+stage53 更新：ui/resources 全部 90 文件、12 空目录已清理，配套打包/ID/路径依赖完成；DevTools request-id 和 emitted-extra-info 通知链同时解除。本批 128 源码路径，SSL/导航/混合内容/重定向实际行为静态核对保持。完整编译和运行验证仍待完成。证据 out/cut-stage53-combined/。
 
 stage52 更新：36 源码路径、3 文件删除，完成 NetLog 导出/专用摘要、DevTools stack id 和广告拍卖请求标记裁剪。普通 CORS 分支等价，Flow helper 不变；实际错误诊断及 base/Perfetto 运行 tracing 尚在。证据 out/cut-stage52-combined/；当前累计源码仍未验收，不机械提高整体估算。
 
@@ -35,9 +37,9 @@ stage51 更新：WebBundle 请求/响应/Fetcher 闭包已完成源码处理，3
 | 2 | third_party/perfetto、icu | 落实离线 trace processor 的 2039 个待删文件、ICU 的 16 个待删文件；检查独立外围工具。保留真实 Unicode、字体与数据生成 | 1 |
 | 3 | Blink、services/metrics、components/crash、third_party/crashpad | 去掉 Document/DocumentLoader 的 6 个 UKM builder 调用及库/协议/生成器依赖；关闭已无外部调用的组件 CrashKey GN 链并清理 Crashpad，保留实际错误诊断 | 1–2 |
 | 4 | base/trace_event、base/tracing、Perfetto 运行后端 | 处理记录、会话、导出和宏调用的实际依赖；不能与已做的离线 processor 混为一组，不能误删 CaptureStats/FCP/CHECK/真实日志 | 1–2 |
-| 5 | net、services/network、Blink loader | WebBundle token/handle、响应标记和 Fetcher 闭包已在 stage51 处理；NetLog 导出和两组纯请求字段已在 stage52 处理；继续回查浏览器 policy、持久状态、剩余协议/traits、DevTools request id、递归预取与旧 IPC 等审计项，按实际调用给最终结论 | 1 |
+| 5 | net、services/network、Blink loader | WebBundle token/handle、响应标记和 Fetcher 闭包已在 stage51 处理；NetLog 导出和两组纯请求字段已在 stage52 处理；继续回查浏览器 policy、持久状态、剩余协议/traits、DevTools request id 已在 stage53 解除；递归预取与旧 IPC 等审计项，按实际调用给最终结论 | 1 |
 | 6 | third_party/blink 交互与扩展 | editing、DataTransfer/拖放、fullscreen、fileapi/blob、AX、PerformanceObserver/User Timing、probe，以及剩余脚本关联类型；同时确认内部 observer、通用线程与表单/CSS 状态的最小保留；XSLT 等已有保留结论不重新按名字砍 | 1–2 |
-| 7 | ui、base、build、third_party、根配置 | GRD/语言/桌面资源、latency/AX、系统 helper、测试模板与生成工具，re2/libyuv/ipcz 等实际依赖；同步 DEPS/.gn/BUILD/.gitmodules/trim-tree/prune-deps，核对空目录和全部 A/B/C 附录，避免同步后回流 | 1–2 |
+| 7 | ui、base、build、third_party、根配置 | ui/resources 桌面资源已在 stage53 清理；其余 GRD/语言资源、latency/AX、系统 helper、测试模板与生成工具，re2/libyuv/ipcz 等实际依赖；同步 DEPS/.gn/BUILD/.gitmodules/trim-tree/prune-deps，核对空目录和全部 A/B/C 附录，避免同步后回流 | 1–2 |
 | 8 | 全局验证与修复 | 最终 GN 图、缺失输入、生成类型/语法/jumbo、Windows EXE/DLL/addon；按错误集合批量修复，避免每个小修改完整构建 | 1–2 |
 | 9 | 运行/像素/六平台 | serve/net/demos/Node/daemon/协议/Bilibili、完整像素和 Canvas 专项；六平台真实编译，交付保留/删除总表和最终证据 | 1–2 |
 

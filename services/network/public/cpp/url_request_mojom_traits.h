@@ -275,10 +275,6 @@ struct COMPONENT_EXPORT(NETWORK_CPP_BASE)
       const network::ResourceRequest& request) {
     return request.fetch_window_id;
   }
-  static const std::optional<std::string>& devtools_request_id(
-      const network::ResourceRequest& request) {
-    return request.devtools_request_id;
-  }
   static bool is_fetch_like_api(const network::ResourceRequest& request) {
     return request.is_fetch_like_api;
   }

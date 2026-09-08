@@ -720,12 +720,6 @@ test("gfx_unittests") {
     deps += [ "//third_party/harfbuzz" ]
   }
 
-  data_deps = [ "//ui/resources:ui_test_pak_data" ]
-
-  if (is_apple) {
-    deps += [ "//ui/resources:ui_test_pak_bundle_data" ]
-  }
-
   if (is_android) {
     deps += [ "//ui/android:ui_java" ]
   }

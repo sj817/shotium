@@ -372,10 +372,6 @@ void PopulateResourceRequest(const ResourceRequestHead& src,
   if (base::UnguessableToken window_id = src.GetFetchWindowId())
     dest->fetch_window_id = std::make_optional(window_id);
 
-  if (!src.GetDevToolsId().IsNull()) {
-    dest->devtools_request_id = src.GetDevToolsId().Ascii();
-  }
-
   dest->is_fetch_like_api = src.IsFetchLikeAPI();
 
   dest->is_fetch_later_api = src.IsFetchLaterAPI();

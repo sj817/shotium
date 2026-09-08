@@ -306,12 +306,10 @@ std::unique_ptr<TracedValue> CreateTracedValueWithPriority(
 
 std::unique_ptr<TracedValue> CreateTracedValueForUnusedPreload(
     const KURL& url,
-    Resource::MatchStatus status,
-    String request_id) {
+    Resource::MatchStatus status) {
   auto value = std::make_unique<TracedValue>();
   value->SetString("url", String(url.ElidedString().Utf8()));
   value->SetInteger("status", static_cast<int>(status));
-  value->SetString("requestId", request_id);
   return value;
 }
 
@@ -1933,9 +1931,7 @@ void ResourceFetcher::PrintPreloadMismatch(Resource* resource,
 
   TRACE_EVENT1("blink,blink.resource", "ResourceFetcher::PrintPreloadMismatch",
                "data",
-               CreateTracedValueForUnusedPreload(
-                   resource->Url(), status,
-                   resource->GetResourceRequest().GetDevToolsId()));
+               CreateTracedValueForUnusedPreload(resource->Url(), status));
 }
 
 void ResourceFetcher::InsertAsPreloadIfNecessary(Resource* resource,
@@ -2460,8 +2456,7 @@ void ResourceFetcher::WarnUnusedPreloads(
       TRACE_EVENT1("blink,blink.resource",
                    "ResourceFetcher::WarnUnusedPreloads", "data",
                    CreateTracedValueForUnusedPreload(
-                       resource->Url(), Resource::MatchStatus::kOk,
-                       resource->GetResourceRequest().GetDevToolsId()));
+                       resource->Url(), Resource::MatchStatus::kOk));
 
       base::UmaHistogramCounts100("Renderer.Preload.UnusedResource",
                                   static_cast<int>(resource->GetType()));

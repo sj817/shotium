@@ -127,7 +127,7 @@ class PLATFORM_EXPORT ResourceLoader final
                           network::mojom::ReferrerPolicy new_referrer_policy,
                           const WebString& new_method,
                           const WebURLResponse& passed_redirect_response,
-                          bool& has_devtools_request_id,
+
                           std::vector<std::string>* removed_headers,
                           net::HttpRequestHeaders& modified_headers,
                           bool insecure_scheme_was_upgraded) override;

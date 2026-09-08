@@ -410,7 +410,6 @@ void FrameFetchContext::PrepareRequest(
   request.SetStorageAccessApiStatus(
       document_->GetExecutionContext()->GetStorageAccessApiStatus());
 
-
   request.SetSharedDictionaryWriterEnabled(
       RuntimeEnabledFeatures::CompressionDictionaryTransportEnabled(
           GetExecutionContext()));
@@ -937,10 +936,6 @@ void FrameFetchContext::WillSendRequest(ResourceRequest& resource_request) {
 void FrameFetchContext::PopulateResourceRequestBeforeCacheAccess(
     const ResourceLoaderOptions& options,
     ResourceRequest& request) {
-  if (!GetResourceFetcherProperties().IsDetached()) {
-    probe::SetDevToolsIds(Probe(), request, options.initiator_info);
-  }
-
   // CSP may change the url, if Upgrade-Insecure-Request is enforced for
   // mixed content.
   ModifyRequestForMixedContentUpgrade(request);
@@ -1135,8 +1130,7 @@ bool FrameFetchContext::ShouldBlockFetchByMixedContentCheck(
     network::mojom::blink::IPAddressSpace target_address_space,
     base::optional_ref<const ResourceRequest::RedirectInfo> redirect_info,
     const KURL& url,
-    ReportingDisposition reporting_disposition,
-    const String& devtools_id) const {
+    ReportingDisposition reporting_disposition) const {
   if (GetResourceFetcherProperties().IsDetached()) {
     // TODO(yhirano): Implement the detached case.
     return false;
@@ -1148,7 +1142,7 @@ bool FrameFetchContext::ShouldBlockFetchByMixedContentCheck(
                                 : RedirectStatus::kNoRedirect;
   return MixedContentChecker::ShouldBlockFetch(
       GetFrame(), request_context, target_address_space, url_before_redirects,
-      redirect_status, url, devtools_id, reporting_disposition,
+      redirect_status, url, reporting_disposition,
       document_loader_->GetContentSecurityNotifier());
 }
 

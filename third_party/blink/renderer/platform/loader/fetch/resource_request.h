@@ -423,9 +423,6 @@ class PLATFORM_EXPORT ResourceRequestHead {
     devtools_throttling_token_ = devtools_token;
   }
 
-  const String& GetDevToolsId() const { return devtools_id_; }
-  void SetDevToolsId(const String devtools_id) { devtools_id_ = devtools_id; }
-
   void SetRequestedWithHeader(const String& value) {
     requested_with_header_ = value;
   }
@@ -668,7 +665,6 @@ class PLATFORM_EXPORT ResourceRequestHead {
   static const base::TimeDelta default_timeout_interval_;
 
   std::optional<base::UnguessableToken> devtools_throttling_token_;
-  String devtools_id_;
   String requested_with_header_;
   String client_data_header_;
   String event_source_last_event_id_;

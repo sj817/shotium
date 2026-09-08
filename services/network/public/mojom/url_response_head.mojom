@@ -82,12 +82,6 @@ struct URLResponseHead {
   // processes. Only provided if request has `trusted_params`.
   LoadTimingInternalInfo? load_timing_internal_info;
 
-  // Set to true if the request had devtools_request_id set and OnRawRequest
-  // and OnRawResponse are called on the corresponding DevToolsObserver. This
-  // allows Chrome DevTools Protocol clients to know whether they should wait
-  // for the signals from OnRawRequest and OnRawResponse for this request.
-  bool emitted_extra_info = false;
-
   // True if the response was delivered using SPDY.
   bool was_fetched_via_spdy = false;
 
@@ -191,11 +185,7 @@ struct URLResponseHead {
   uint32 cert_status = 0;
 
   // Only provided if kURLLoadOptionSendSSLInfoWithResponse was specified to
-  // the URLLoaderFactory::CreateLoaderAndStart option or
-  // if ResourceRequest::devtools_request_id is set. When set via
-  // |report_raw_headers|, the SSLInfo is not guaranteed to be fully populated
-  // and may only contain certain fields of interest (namely, connection
-  // parameters and certificate information).
+  // the URLLoaderFactory::CreateLoaderAndStart option.
   SSLInfo? ssl_info;
 
   // Only provided if `include_request_cookies_with_response` was true in the

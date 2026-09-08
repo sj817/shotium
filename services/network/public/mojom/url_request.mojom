@@ -405,11 +405,6 @@ struct URLRequest {
   // ServiceWorkerContainerHost::fetch_request_window_id.
   mojo_base.mojom.UnguessableToken? fetch_window_id;
 
-  // The ID that DevTools uses to track network requests. It is generated in the
-  // renderer process and is only present when DevTools is enabled in the
-  // renderer.
-  string? devtools_request_id;
-
   // True for XHR, Fetch, and EventSource.
   bool is_fetch_like_api;
 

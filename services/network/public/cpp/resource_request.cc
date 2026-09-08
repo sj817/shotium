@@ -182,7 +182,7 @@ bool ResourceRequest::EqualsForTesting(const ResourceRequest& request) const {
          revalidation_last_modified == request.revalidation_last_modified &&
          throttling_profile_id == request.throttling_profile_id &&
          fetch_window_id == request.fetch_window_id &&
-         devtools_request_id == request.devtools_request_id &&
+
          is_fetch_like_api == request.is_fetch_like_api &&
          is_fetch_later_api == request.is_fetch_later_api &&
          is_favicon == request.is_favicon &&

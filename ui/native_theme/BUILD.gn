@@ -47,7 +47,6 @@ component("native_theme") {
     "//ui/gfx",
     "//ui/gfx/animation/keyframe",
     "//ui/gfx/geometry",
-    "//ui/resources",
   ]
 
   if (is_android) {

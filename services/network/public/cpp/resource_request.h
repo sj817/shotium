@@ -210,7 +210,6 @@ struct COMPONENT_EXPORT(NETWORK_CPP_BASE) ResourceRequest {
   std::optional<std::string> revalidation_last_modified;
   std::optional<base::UnguessableToken> throttling_profile_id;
   std::optional<base::UnguessableToken> fetch_window_id;
-  std::optional<std::string> devtools_request_id;
   bool is_fetch_like_api = false;
   bool is_fetch_later_api = false;
   bool is_favicon = false;

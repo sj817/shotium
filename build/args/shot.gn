@@ -98,8 +98,7 @@ is_p2p_enabled = false
 #
 # Turning the arg off is what makes the removal coherent rather than a hole:
 # every `if (toolkit_views)` block upstream wrote for a build without the
-# toolkit is now taken, including the ones that repack views_resources into
-# ui_test.pak.
+# toolkit is now taken. The unused desktop resource packs have been removed.
 #
 # This changes no bytes in the binary. ThinLTO had already dropped all of it;
 # what it buys is a macOS build that configures, and a smaller graph to

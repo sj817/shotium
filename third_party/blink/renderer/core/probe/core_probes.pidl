@@ -204,7 +204,6 @@ interface CoreProbes {
   // pipeline properties -- and PlayerCreated took a `const MediaPlayer&`, whose
   // class went with //media. Every one of them had zero call sites left after
   // the media player was cut out of HTMLMediaElement.
-  void SetDevToolsIds(CoreProbeSink*, ResourceRequest& request, const FetchInitiatorInfo&);
   void DidMutateStyleSheet(Document*, CSSStyleSheet* style_sheet);
   void DidReplaceStyleSheetText(Document*, CSSStyleSheet* style_sheet, const String& text);
   void GetTextPosition(Document*, wtf_size_t offset, const String* text, TextPosition* result);

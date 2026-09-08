@@ -134,13 +134,6 @@ class URLLoader::Context : public ResourceRequestClient {
   raw_ptr<URLLoader> loader_;
 
   KURL url_;
-  // This is set in Start() and is used by SetSecurityStyleAndDetails() to
-  // determine if security details should be added to the request for DevTools.
-  //
-  // Additionally, if there is a redirect, WillFollowRedirect() will update this
-  // for the new request. InspectorNetworkAgent will have the chance to attach a
-  // DevTools request id to that new request, and it will propagate here.
-  bool has_devtools_request_id_;
 
   raw_ptr<URLLoaderClient> client_;
   // TODO(https://crbug.com/1137682): Remove |freezable_task_runner_|, migrating
@@ -181,7 +174,6 @@ URLLoader::Context::Context(
     BackForwardCacheLoaderHelper* back_forward_cache_loader_helper,
     Vector<std::unique_ptr<URLLoaderThrottle>> throttles)
     : loader_(loader),
-      has_devtools_request_id_(false),
       client_(nullptr),
       freezable_task_runner_(std::move(freezable_task_runner)),
       unfreezable_task_runner_(std::move(unfreezable_task_runner)),
@@ -245,7 +237,6 @@ void URLLoader::Context::Start(
   DCHECK_EQ(request_id_, -1);
 
   url_ = KURL(request->url);
-  has_devtools_request_id_ = request->devtools_request_id.has_value();
 
   std::vector<std::unique_ptr<blink::URLLoaderThrottle>> throttles;
   for (auto& throttle : throttles_) {
@@ -324,7 +315,7 @@ void URLLoader::Context::OnReceivedRedirect(
               perfetto::Flow::FromPointer(this));
 
   WebURLResponse response = WebURLResponse::Create(
-      url_, *head, has_devtools_request_id_, request_id_);
+      url_, *head, /*report_security_info=*/false, request_id_);
 
   url_ = KURL(redirect_info.new_url);
   std::vector<std::string> removed_headers;
@@ -335,7 +326,7 @@ void URLLoader::Context::OnReceivedRedirect(
           ReferrerUtils::NetToMojoReferrerPolicy(
               redirect_info.new_referrer_policy),
           WebString::FromUtf8(redirect_info.new_method), response,
-          has_devtools_request_id_, &removed_headers, modified_headers,
+          &removed_headers, modified_headers,
           redirect_info.insecure_scheme_was_upgraded)) {
     std::move(follow_redirect_callback)
         .Run(std::move(removed_headers), std::move(modified_headers));
@@ -359,7 +350,7 @@ void URLLoader::Context::OnReceivedResponse(
   DCHECK(!head->headers || !head->headers->HasHeader("clear-site-data"));
 
   WebURLResponse response = WebURLResponse::Create(
-      url_, *head, has_devtools_request_id_, request_id_);
+      url_, *head, /*report_security_info=*/false, request_id_);
   client_->DidReceiveResponse(response, std::move(body));
 }
 
@@ -453,7 +444,6 @@ void URLLoader::LoadSynchronously(
   DCHECK(!context_->client());
   context_->set_client(client);
 
-  const bool has_devtools_request_id = request->devtools_request_id.has_value();
   context_->Start(std::move(request), std::move(top_frame_origin),
                   download_to_blob, no_mime_sniffing, timeout_interval,
                   &sync_load_response,
@@ -491,9 +481,9 @@ void URLLoader::LoadSynchronously(
     client->CountFeature(mojom::WebFeature::kAuthorizationCrossOrigin);
   }
 
-  response =
-      WebURLResponse::Create(final_url, *sync_load_response.head,
-                             has_devtools_request_id, context_->request_id());
+  response = WebURLResponse::Create(final_url, *sync_load_response.head,
+                                    /*report_security_info=*/false,
+                                    context_->request_id());
   encoded_data_length = sync_load_response.head->encoded_data_length;
   encoded_body_length =
       sync_load_response.head->encoded_body_length

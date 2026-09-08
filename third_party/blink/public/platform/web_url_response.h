@@ -143,9 +143,6 @@ class BLINK_PLATFORM_EXPORT WebURLResponse {
   WebString HttpStatusText() const;
   void SetHttpStatusText(const WebString&);
 
-  bool EmittedExtraInfo() const;
-  void SetEmittedExtraInfo(bool);
-
   WebString HttpHeaderField(const WebString& name) const;
   void SetHttpHeaderField(const WebString& name, const WebString& value);
   void AddHttpHeaderField(const WebString& name, const WebString& value);

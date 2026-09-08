@@ -261,8 +261,6 @@ class BLINK_PLATFORM_EXPORT WebURLRequest {
   const base::UnguessableToken& GetFetchWindowId() const;
   void SetFetchWindowId(const base::UnguessableToken&);
 
-  std::optional<WebString> GetDevToolsId() const;
-
   int GetLoadFlagsForWebUrlRequest() const;
 
   bool IsFromOriginDirtyStyleSheet() const;

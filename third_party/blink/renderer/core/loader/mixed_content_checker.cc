@@ -419,7 +419,6 @@ bool MixedContentChecker::ShouldBlockFetch(
     const KURL& url_before_redirects,
     ResourceRequest::RedirectStatus redirect_status,
     const KURL& url,
-    const String& devtools_id,
     ReportingDisposition reporting_disposition,
     mojom::blink::ContentSecurityNotifier& notifier) {
   Frame* mixed_frame = InWhichFrameIsContentMixed(frame, url);
@@ -585,10 +584,6 @@ bool MixedContentChecker::ShouldBlockFetch(
         CreateConsoleMessageAboutFetch(MainResourceUrlForFrame(mixed_frame),
                                        url, request_context, allowed, nullptr));
   }
-  // Issue is created even when reporting disposition is false i.e. for
-  // speculative prefetches. Otherwise the DevTools frontend would not
-  // receive an issue with a devtools_id which it can match to a request.
-  // AuditsIssue::ReportMixedContentIssue(...) was here.
   return !allowed;
 }
 
@@ -634,10 +629,6 @@ bool MixedContentChecker::IsMixedFormAction(
             mojom::ConsoleMessageSource::kSecurity,
             mojom::ConsoleMessageLevel::kWarning, message));
   }
-  // Issue is created even when reporting disposition is false i.e. for
-  // speculative prefetches. Otherwise the DevTools frontend would not
-  // receive an issue with a devtools_id which it can match to a request.
-  // AuditsIssue::ReportMixedContentIssue(...) was here.
 
   return true;
 }

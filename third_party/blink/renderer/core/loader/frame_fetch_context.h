@@ -189,8 +189,7 @@ class CORE_EXPORT FrameFetchContext final : public BaseFetchContext,
       network::mojom::blink::IPAddressSpace target_address_space,
       base::optional_ref<const ResourceRequest::RedirectInfo> redirect_info,
       const KURL& url,
-      ReportingDisposition reporting_disposition,
-      const String& devtools_id) const override;
+      ReportingDisposition reporting_disposition) const override;
   bool ShouldBlockFetchAsCredentialedSubresource(const ResourceRequest&,
                                                  const KURL&) const override;
 

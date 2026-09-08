@@ -286,8 +286,7 @@ BaseFetchContext::CanRequestInternal(
   // warning instead.
   if (ShouldBlockFetchByMixedContentCheck(
           request_context, resource_request.GetTargetAddressSpace(),
-          redirect_info, url, reporting_disposition,
-          resource_request.GetDevToolsId())) {
+          redirect_info, url, reporting_disposition)) {
     return ResourceRequestBlockedReason::kMixedContent;
   }
 

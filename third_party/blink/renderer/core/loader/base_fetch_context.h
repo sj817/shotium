@@ -100,8 +100,7 @@ class CORE_EXPORT BaseFetchContext : public FetchContext {
       network::mojom::blink::IPAddressSpace target_address_space,
       base::optional_ref<const ResourceRequest::RedirectInfo> redirect_info,
       const KURL& url,
-      ReportingDisposition reporting_disposition,
-      const String& devtools_id) const = 0;
+      ReportingDisposition reporting_disposition) const = 0;
   virtual bool ShouldBlockFetchAsCredentialedSubresource(const ResourceRequest&,
                                                          const KURL&) const = 0;
   virtual const KURL& Url() const = 0;

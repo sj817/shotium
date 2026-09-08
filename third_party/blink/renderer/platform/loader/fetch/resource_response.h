@@ -215,11 +215,6 @@ class PLATFORM_EXPORT ResourceResponse final {
   const std::optional<net::SSLInfo>& GetSSLInfo() const { return ssl_info_; }
   void SetSSLInfo(const net::SSLInfo& ssl_info);
 
-  bool EmittedExtraInfo() const { return emitted_extra_info_; }
-  void SetEmittedExtraInfo(bool emitted_extra_info) {
-    emitted_extra_info_ = emitted_extra_info;
-  }
-
   bool WasFetchedViaSPDY() const { return was_fetched_via_spdy_; }
   void SetWasFetchedViaSPDY(bool value) { was_fetched_via_spdy_ = value; }
 
@@ -423,7 +418,6 @@ class PLATFORM_EXPORT ResourceResponse final {
     is_signed_exchange_inner_response_ = is_signed_exchange_inner_response;
   }
 
-
   bool WasInPrefetchCache() const { return was_in_prefetch_cache_; }
 
   void SetWasInPrefetchCache(bool was_in_prefetch_cache) {
@@ -536,7 +530,6 @@ class PLATFORM_EXPORT ResourceResponse final {
   // True if this resource is from an inner response of a signed exchange.
   // https://wicg.github.io/webpackage/draft-yasskin-http-origin-signed-responses.html
   bool is_signed_exchange_inner_response_ : 1;
-
 
   // True if this resource is served from the prefetch cache.
   bool was_in_prefetch_cache_ : 1;
@@ -671,8 +664,6 @@ class PLATFORM_EXPORT ResourceResponse final {
   Vector<String> dns_aliases_;
 
   std::optional<net::AuthChallengeInfo> auth_challenge_info_;
-
-  bool emitted_extra_info_ = false;
 
   Vector<network::IntegrityMetadata> unencoded_digests_;
 };

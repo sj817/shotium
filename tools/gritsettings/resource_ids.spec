@@ -1709,12 +1709,6 @@
   "ui/file_manager/file_manager_resources.grd": {
     "includes": [9800],
   },
-  "ui/resources/ui_resources.grd": {
-    "structures": [9820],
-  },
-  "ui/resources/ui_unscaled_resources.grd": {
-    "includes": [9840],
-  },
   "ui/strings/app_locale_settings.grd": {
     "messages": [9860],
   },

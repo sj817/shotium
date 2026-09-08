@@ -27,8 +27,6 @@ enum {
   DIR_RESOURCE_PAKS_ANDROID,
 #endif
 
-  UI_TEST_PAK,
-
   PATH_END
 };
 

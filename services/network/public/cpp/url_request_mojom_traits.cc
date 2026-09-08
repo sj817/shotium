@@ -121,7 +121,6 @@ bool StructTraits<
       !data.ReadRequestBody(&out->request_body) ||
       !data.ReadThrottlingProfileId(&out->throttling_profile_id) ||
       !data.ReadFetchWindowId(&out->fetch_window_id) ||
-      !data.ReadDevtoolsRequestId(&out->devtools_request_id) ||
 
       !data.ReadRecursivePrefetchToken(&out->recursive_prefetch_token) ||
       !data.ReadDevtoolsAcceptedStreamTypes(

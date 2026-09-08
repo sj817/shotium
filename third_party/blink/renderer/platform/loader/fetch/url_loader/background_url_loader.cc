@@ -189,7 +189,7 @@ class BackgroundURLLoader::Context
              URLLoaderClient* client) {
     DCHECK_CALLED_ON_VALID_SEQUENCE(main_thread_sequence_checker_);
     url_ = KURL(request->url);
-    has_devtools_request_id_ = request->devtools_request_id.has_value();
+
     client_ = client;
 
     PostCrossThreadTask(
@@ -450,7 +450,7 @@ class BackgroundURLLoader::Context
       int request_id) {
     DCHECK_CALLED_ON_VALID_SEQUENCE(main_thread_sequence_checker_);
     WebURLResponse response = WebURLResponse::Create(
-        url_, *head, has_devtools_request_id_, request_id);
+        url_, *head, /*report_security_info=*/false, request_id);
     url_ = KURL(redirect_info.new_url);
     std::vector<std::string> removed_headers;
     net::HttpRequestHeaders modified_headers;
@@ -460,7 +460,7 @@ class BackgroundURLLoader::Context
             ReferrerUtils::NetToMojoReferrerPolicy(
                 redirect_info.new_referrer_policy),
             WebString::FromUtf8(redirect_info.new_method), response,
-            has_devtools_request_id_, &removed_headers, modified_headers,
+            &removed_headers, modified_headers,
             redirect_info.insecure_scheme_was_upgraded)) {
       PostCrossThreadTask(
           *background_task_runner_, FROM_HERE,
@@ -474,7 +474,7 @@ class BackgroundURLLoader::Context
                           int request_id) {
     DCHECK_CALLED_ON_VALID_SEQUENCE(main_thread_sequence_checker_);
     WebURLResponse response = WebURLResponse::Create(
-        url_, *head, has_devtools_request_id_, request_id);
+        url_, *head, /*report_security_info=*/false, request_id);
     client_->DidReceiveResponse(response, std::move(body));
   }
   void DidFinishBackgroundResponseProcessor(
@@ -611,8 +611,6 @@ class BackgroundURLLoader::Context
   raw_ptr<URLLoaderClient> client_
       GUARDED_BY_CONTEXT(main_thread_sequence_checker_) = nullptr;
   KURL url_ GUARDED_BY_CONTEXT(main_thread_sequence_checker_);
-  bool has_devtools_request_id_
-      GUARDED_BY_CONTEXT(main_thread_sequence_checker_) = false;
   LoaderFreezeMode freeze_mode_ GUARDED_BY_CONTEXT(
       main_thread_sequence_checker_) = LoaderFreezeMode::kNone;
 

@@ -474,10 +474,6 @@ const ResourceRequest& WebURLRequest::ToResourceRequest() const {
   return *resource_request_;
 }
 
-std::optional<WebString> WebURLRequest::GetDevToolsId() const {
-  return resource_request_->GetDevToolsId();
-}
-
 bool WebURLRequest::IsFromOriginDirtyStyleSheet() const {
   return resource_request_->IsFromOriginDirtyStyleSheet();
 }
