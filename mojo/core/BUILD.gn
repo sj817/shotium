@@ -14,7 +14,6 @@ component("embedder_internal") {
   output_name = "mojo_core_embedder_internal"
   public_deps = [ ":impl_for_embedder" ]
   visibility = [
-    ":driver_for_ipcz_tests",
     ":test_sources",
     "//mojo:*",
     "//mojo/core/embedder",
@@ -148,17 +147,6 @@ source_set("impl_for_embedder") {
     configs -= [ "//build/config/compiler:default_optimization" ]
     configs += [ "//build/config/compiler:optimize_max" ]
   }
-}
-
-source_set("driver_for_ipcz_tests") {
-  testonly = true
-  sources = [ "ipcz_driver/driver_for_ipcz_tests.cc" ]
-  deps = [
-    ":embedder_internal",
-    "//base",
-    "//base/test:test_support",
-    "//third_party/ipcz/src:ipcz_test_support",
-  ]
 }
 
 source_set("test_sources") {

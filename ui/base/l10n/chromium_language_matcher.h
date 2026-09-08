@@ -8,19 +8,11 @@
 #include <vector>
 
 #include "base/component_export.h"
-#include "base/containers/flat_set.h"
+#include "base/containers/span.h"
 #include "base/i18n/language_tag.h"
 #include "base/i18n/language_tag_matcher.h"
 
 namespace ui_l10n {
-
-// Returns the list of LanguageTags that are accepted by Chromium.
-COMPONENT_EXPORT(UI_BASE)
-const std::vector<base::i18n::LanguageTag>& GetAcceptLanguageTags();
-
-// Returns the LanguageTagMatcher initialized with the accepted language tags.
-COMPONENT_EXPORT(UI_BASE)
-const base::i18n::LanguageTagMatcher& GetAcceptLanguageMatcher();
 
 // The list of locales that are expected on the current platform, generated from
 // the `locales` variable in GN (defined in build/config/locales.gni). This is

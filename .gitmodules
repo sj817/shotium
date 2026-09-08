@@ -67,9 +67,6 @@
 [submodule "third_party/libwebp/src"]
 	path = third_party/libwebp/src
 	url = https://chromium.googlesource.com/webm/libwebp
-[submodule "third_party/libyuv"]
-	path = third_party/libyuv
-	url = https://chromium.googlesource.com/libyuv/libyuv
 [submodule "third_party/lss"]
 	path = third_party/lss
 	url = https://chromium.googlesource.com/linux-syscall-support

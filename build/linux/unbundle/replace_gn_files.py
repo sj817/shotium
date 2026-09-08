@@ -60,7 +60,6 @@ REPLACEMENTS = {
     'libwebp': 'third_party/libwebp/BUILD.gn',
     'libxml': 'third_party/libxml/BUILD.gn',
     'libxslt': 'third_party/libxslt/BUILD.gn',
-    'libyuv': 'third_party/libyuv/BUILD.gn',
     'openh264': 'third_party/openh264/BUILD.gn',
     'opus': 'third_party/opus/BUILD.gn',
     're2': 'third_party/re2/BUILD.gn',

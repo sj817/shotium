@@ -109,8 +109,6 @@ component("base") {
     "default_style.h",
     "l10n/chromium_language_matcher.cc",
     "l10n/chromium_language_matcher.h",
-    "l10n/l10n_font_util.cc",
-    "l10n/l10n_font_util.h",
     "l10n/l10n_util.cc",
     "l10n/l10n_util.h",
     "models/menu_separator_types.h",
@@ -296,8 +294,6 @@ component("base") {
   if (is_android) {
     deps += [ ":ui_base_jni_headers" ]
     libs += [ "jnigraphics" ]
-
-    sources -= [ "l10n/l10n_font_util.cc" ]
   }
 }
 
