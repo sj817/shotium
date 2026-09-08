@@ -90,8 +90,6 @@ void URLRequestContextBuilder::SetHttpNetworkSessionComponents(
       request_context->transport_security_state();
   session_context->sct_auditing_delegate =
       request_context->sct_auditing_delegate();
-  session_context->http_user_agent_settings =
-      request_context->http_user_agent_settings();
   session_context->ssl_config_service = request_context->ssl_config_service();
   session_context->http_auth_handler_factory =
       request_context->http_auth_handler_factory();

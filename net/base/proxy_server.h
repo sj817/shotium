@@ -26,9 +26,7 @@ namespace net {
 // ProxyServer is immutable.
 class NET_EXPORT ProxyServer {
  public:
-  // The type of proxy. These are defined as bit flags so they can be ORed
-  // together to pass as the |scheme_bit_field| argument to
-  // ProxyList::RemoveProxiesWithoutScheme().
+  // The type of proxy. Existing bit values are retained.
   enum Scheme {
     SCHEME_INVALID = 1 << 0,
     // SCHEME_DIRECT (value = 1 << 1) is no longer used or supported.

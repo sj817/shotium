@@ -39,11 +39,6 @@ class ClientSocketFactory;
 class HostPortPair;
 class HostResolver;
 struct HostResolverEndpointResult;
-class HttpAuthCache;
-class HttpAuthController;
-class HttpAuthHandlerFactory;
-class HttpResponseInfo;
-class HttpUserAgentSettings;
 class NetLog;
 class NetLogWithSource;
 class SocketTag;
@@ -62,10 +57,7 @@ struct NET_EXPORT_PRIVATE CommonConnectJobParams {
   CommonConnectJobParams(
       ClientSocketFactory* client_socket_factory,
       HostResolver* host_resolver,
-      HttpAuthCache* http_auth_cache,
-      HttpAuthHandlerFactory* http_auth_handler_factory,
       SpdySessionPool* spdy_session_pool,
-      const HttpUserAgentSettings* http_user_agent_settings,
       SSLClientContext* ssl_client_context,
       NetLog* net_log,
       HttpServerProperties* http_server_properties,
@@ -80,10 +72,7 @@ struct NET_EXPORT_PRIVATE CommonConnectJobParams {
 
   raw_ptr<ClientSocketFactory> client_socket_factory;
   raw_ptr<HostResolver> host_resolver;
-  raw_ptr<HttpAuthCache> http_auth_cache;
-  raw_ptr<HttpAuthHandlerFactory> http_auth_handler_factory;
   raw_ptr<SpdySessionPool> spdy_session_pool;
-  raw_ptr<const HttpUserAgentSettings> http_user_agent_settings;
   raw_ptr<SSLClientContext> ssl_client_context;
   raw_ptr<NetLog> net_log;
 
@@ -259,9 +248,6 @@ class NET_EXPORT_PRIVATE ConnectJob {
   }
   HostResolver* host_resolver() {
     return common_connect_job_params_->host_resolver;
-  }
-  const HttpUserAgentSettings* http_user_agent_settings() const {
-    return common_connect_job_params_->http_user_agent_settings;
   }
   SSLClientContext* ssl_client_context() {
     return common_connect_job_params_->ssl_client_context;

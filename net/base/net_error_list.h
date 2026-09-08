@@ -188,8 +188,7 @@ NET_ERROR(ADDRESS_UNREACHABLE, -109)
 // The server requested a client certificate for SSL client authentication.
 NET_ERROR(SSL_CLIENT_AUTH_CERT_NEEDED, -110)
 
-// A tunnel connection through the proxy could not be established. For more info
-// see the comment on PROXY_UNABLE_TO_CONNECT_TO_DESTINATION.
+// A tunnel connection through the proxy could not be established.
 NET_ERROR(TUNNEL_CONNECTION_FAILED, -111)
 
 // Obsolete:
@@ -218,12 +217,9 @@ NET_ERROR(CONNECTION_TIMED_OUT, -118)
 // aborted.
 NET_ERROR(HOST_RESOLVER_QUEUE_TOO_LARGE, -119)
 
-// Failed establishing a connection to the SOCKS proxy server for a target host.
-NET_ERROR(SOCKS_CONNECTION_FAILED, -120)
+// Error -120 was removed (SOCKS_CONNECTION_FAILED).
 
-// The SOCKS proxy server failed establishing connection to the target host
-// because that host is unreachable.
-NET_ERROR(SOCKS_CONNECTION_HOST_UNREACHABLE, -121)
+// Error -121 was removed (SOCKS_CONNECTION_HOST_UNREACHABLE).
 
 // The request to negotiate an alternate protocol failed.
 NET_ERROR(ALPN_NEGOTIATION_FAILED, -122)
@@ -244,20 +240,13 @@ NET_ERROR(SSL_DECOMPRESSION_FAILURE_ALERT, -125)
 // from servers with buggy DEFLATE support.
 NET_ERROR(SSL_BAD_RECORD_MAC_ALERT, -126)
 
-// The proxy requested authentication (for tunnel establishment).
-NET_ERROR(PROXY_AUTH_REQUESTED, -127)
+// Error -127 was removed (PROXY_AUTH_REQUESTED).
 
 // Error -129 was removed (SSL_WEAK_SERVER_EPHEMERAL_DH_KEY).
 
-// Could not create a connection to the proxy server. An error occurred
-// either in resolving its name, or in connecting a socket to it.
-// Note that this does NOT include failures during the actual "CONNECT" method
-// of an HTTP proxy.
-NET_ERROR(PROXY_CONNECTION_FAILED, -130)
+// Error -130 was removed (PROXY_CONNECTION_FAILED).
 
-// A mandatory proxy configuration could not be used. Currently this means
-// that a mandatory PAC script could not be fetched, parsed or executed.
-NET_ERROR(MANDATORY_PROXY_CONFIGURATION_FAILED, -131)
+// Error -131 was removed (MANDATORY_PROXY_CONFIGURATION_FAILED).
 
 // -132 was formerly ERR_ESET_ANTI_VIRUS_SSL_INTERCEPTION
 
@@ -271,8 +260,7 @@ NET_ERROR(SSL_CLIENT_AUTH_PRIVATE_KEY_ACCESS_DENIED, -134)
 // The SSL client certificate has no private key.
 NET_ERROR(SSL_CLIENT_AUTH_CERT_NO_PRIVATE_KEY, -135)
 
-// The certificate presented by the HTTPS Proxy was invalid.
-NET_ERROR(PROXY_CERTIFICATE_INVALID, -136)
+// Error -136 was removed (PROXY_CERTIFICATE_INVALID).
 
 // An error occurred when trying to do a name resolution (DNS).
 NET_ERROR(NAME_RESOLUTION_FAILED, -137)
@@ -306,9 +294,7 @@ NET_ERROR(MSG_TOO_BIG, -142)
 
 // Error -144 was removed (LIMIT_VIOLATION).
 
-// Websocket protocol error. Indicates that we are terminating the connection
-// due to a malformed frame or other protocol violation.
-NET_ERROR(WS_PROTOCOL_ERROR, -145)
+// Error -145 was removed (WS_PROTOCOL_ERROR).
 
 // Error -146 was removed (PROTOCOL_SWITCHED)
 
@@ -334,9 +320,7 @@ NET_ERROR(CLIENT_AUTH_CERT_TYPE_UNSUPPORTED, -151)
 // ServerKeyExchange) or validate a Finished message.
 NET_ERROR(SSL_DECRYPT_ERROR_ALERT, -153)
 
-// There are too many pending WebSocketJob instances, so the new job was not
-// pushed to the queue.
-NET_ERROR(WS_THROTTLE_QUEUE_TOO_LARGE, -154)
+// Error -154 was removed (WS_THROTTLE_QUEUE_TOO_LARGE).
 
 // Error -155 was removed (TOO_MANY_SOCKET_STREAMS)
 
@@ -388,11 +372,7 @@ NET_ERROR(CT_STH_PARSING_FAILED, -168)
 // OK but was missing some of the fields.
 NET_ERROR(CT_STH_INCOMPLETE, -169)
 
-// The attempt to reuse a connection to send proxy auth credentials failed
-// before the AuthController was used to generate credentials. The caller should
-// reuse the controller with a new connection. This error is only used
-// internally by the network stack.
-NET_ERROR(UNABLE_TO_REUSE_CONNECTION_FOR_PROXY_AUTH, -170)
+// Error -170 was removed (UNABLE_TO_REUSE_CONNECTION_FOR_PROXY_AUTH).
 
 // Certificate Transparency: Failed to parse the received consistency proof.
 NET_ERROR(CT_CONSISTENCY_PROOF_PARSING_FAILED, -171)
@@ -403,9 +383,7 @@ NET_ERROR(CT_CONSISTENCY_PROOF_PARSING_FAILED, -171)
 // fallback will be removed.
 NET_ERROR(SSL_OBSOLETE_CIPHER, -172)
 
-// When a WebSocket handshake is done successfully and the connection has been
-// upgraded, the URLRequest is cancelled with this error code.
-NET_ERROR(WS_UPGRADE, -173)
+// Error -173 was removed (WS_UPGRADE).
 
 // Socket ReadIfReady support is not implemented. This error should not be user
 // visible, because the normal Read() method is used as a fallback.
@@ -458,29 +436,10 @@ NET_ERROR(ECH_FALLBACK_CERTIFICATE_INVALID, -184)
 
 // Error -185 was removed (PROXY_TUNNEL_REQUEST_FAILED).
 
-// An attempt to proxy a request failed because the proxy wasn't able to
-// successfully connect to the destination. This likely indicates an issue with
-// the request itself (for instance, the hostname failed to resolve to an IP
-// address or the destination server refused the connection). This error code
-// is used to indicate that the error is outside the control of the proxy server
-// and thus the proxy chain should not be marked as bad. This is in contrast to
-// ERR_TUNNEL_CONNECTION_FAILED which is used for general purpose errors
-// connecting to the proxy and by the proxy request response handling when a
-// proxy delegate doesn't indicate via a different error code whether proxy
-// fallback should occur. Note that for IP Protection proxies this error code
-// causes the proxy to be marked as bad since the preference is to fail open for
-// general purpose errors, but for other proxies this error does not cause the
-// proxy to be marked as bad.
-NET_ERROR(PROXY_UNABLE_TO_CONNECT_TO_DESTINATION, -186)
+// Error -186 was removed (PROXY_UNABLE_TO_CONNECT_TO_DESTINATION).
 
-// Some implementations of ProxyDelegate query a separate entity to know whether
-// it should cancel tunnel prior to:
-// - The HTTP CONNECT requests being sent out
-// - The HTTP CONNECT response being parsed by //net
-// An example is CronetProxyDelegate: Cronet allows developers to decide whether
-// the tunnel being established should be canceled.
-NET_ERROR(PROXY_DELEGATE_CANCELED_CONNECT_REQUEST, -187)
-NET_ERROR(PROXY_DELEGATE_CANCELED_CONNECT_RESPONSE, -188)
+// Error -187 was removed (PROXY_DELEGATE_CANCELED_CONNECT_REQUEST).
+// Error -188 was removed (PROXY_DELEGATE_CANCELED_CONNECT_RESPONSE).
 
 // The control message was too large for the transport. (for example a UDP
 // message control data exceeds size threshold).
@@ -667,8 +626,7 @@ NET_ERROR(RESPONSE_HEADERS_TOO_BIG, -325)
 
 // Error -326 was removed (PAC_STATUS_NOT_OK)
 
-// The evaluation of the PAC script failed.
-NET_ERROR(PAC_SCRIPT_FAILED, -327)
+// Error -327 was removed (PAC_SCRIPT_FAILED).
 
 // The response was 416 (Requested range not satisfiable) and the server cannot
 // satisfy the range requested.
@@ -733,10 +691,7 @@ NET_ERROR(RESPONSE_HEADERS_MULTIPLE_CONTENT_LENGTH, -346)
 // headers are missing, so we're expecting additional frames to complete them.
 NET_ERROR(INCOMPLETE_HTTP2_HEADERS, -347)
 
-// No PAC URL configuration could be retrieved from DHCP. This can indicate
-// either a failure to retrieve the DHCP configuration, or that there was no
-// PAC URL configured in DHCP.
-NET_ERROR(PAC_NOT_IN_DHCP, -348)
+// Error -348 was removed (PAC_NOT_IN_DHCP).
 
 // The HTTP response contained multiple Content-Disposition headers.
 NET_ERROR(RESPONSE_HEADERS_MULTIPLE_CONTENT_DISPOSITION, -349)
@@ -792,8 +747,7 @@ NET_ERROR(HTTP2_FRAME_SIZE_ERROR, -362)
 // Decoding or encoding of compressed HTTP/2 headers failed.
 NET_ERROR(HTTP2_COMPRESSION_ERROR, -363)
 
-// Proxy Auth Requested without a valid Client Socket Handle.
-NET_ERROR(PROXY_AUTH_REQUESTED_WITH_NO_CONNECTION, -364)
+// Error -364 was removed (PROXY_AUTH_REQUESTED_WITH_NO_CONNECTION).
 
 // HTTP_1_1_REQUIRED error code received on HTTP/2 session.
 NET_ERROR(HTTP_1_1_REQUIRED, -365)
@@ -801,8 +755,7 @@ NET_ERROR(HTTP_1_1_REQUIRED, -365)
 // HTTP_1_1_REQUIRED error code received on HTTP/2 session to proxy.
 NET_ERROR(PROXY_HTTP_1_1_REQUIRED, -366)
 
-// The PAC script terminated fatally and must be reloaded.
-NET_ERROR(PAC_SCRIPT_TERMINATED, -367)
+// Error -367 was removed (PAC_SCRIPT_TERMINATED).
 
 // Obsolete. Support for CNAME record detection was never fully implemented and
 // is no longer needed since the IP Protection feature didn't launch.

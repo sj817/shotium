@@ -13,7 +13,6 @@
 #include "net/base/trace_constants.h"
 #include "net/dns/public/host_resolver_results.h"
 #include "net/dns/public/secure_dns_policy.h"
-#include "net/http/http_auth_controller.h"
 #include "net/log/net_log.h"
 #include "net/log/net_log_event_type.h"
 #include "net/socket/client_socket_handle.h"
@@ -28,10 +27,7 @@ namespace net {
 CommonConnectJobParams::CommonConnectJobParams(
     ClientSocketFactory* client_socket_factory,
     HostResolver* host_resolver,
-    HttpAuthCache* http_auth_cache,
-    HttpAuthHandlerFactory* http_auth_handler_factory,
     SpdySessionPool* spdy_session_pool,
-    const HttpUserAgentSettings* http_user_agent_settings,
     SSLClientContext* ssl_client_context,
     NetLog* net_log,
     HttpServerProperties* http_server_properties,
@@ -41,10 +37,7 @@ CommonConnectJobParams::CommonConnectJobParams(
     const bool* enable_early_data)
     : client_socket_factory(client_socket_factory),
       host_resolver(host_resolver),
-      http_auth_cache(http_auth_cache),
-      http_auth_handler_factory(http_auth_handler_factory),
       spdy_session_pool(spdy_session_pool),
-      http_user_agent_settings(http_user_agent_settings),
       ssl_client_context(ssl_client_context),
       net_log(net_log),
       http_server_properties(http_server_properties),

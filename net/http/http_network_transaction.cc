@@ -688,9 +688,8 @@ bool HttpNetworkTransaction::GetLoadTimingInfo(
         dns_resolution_end_time_override_;
   }
 
-  load_timing_info->proxy_resolve_start =
-      proxy_info_.proxy_resolve_start_time();
-  load_timing_info->proxy_resolve_end = proxy_info_.proxy_resolve_end_time();
+  load_timing_info->proxy_resolve_start = base::TimeTicks();
+  load_timing_info->proxy_resolve_end = base::TimeTicks();
   load_timing_info->send_start = send_start_time_;
   load_timing_info->send_end = send_end_time_;
   return true;
