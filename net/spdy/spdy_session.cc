@@ -38,7 +38,6 @@
 #include "net/base/privacy_mode.h"
 #include "net/base/proxy_chain.h"
 #include "net/base/proxy_string_util.h"
-#include "net/base/session_usage.h"
 #include "net/base/url_util.h"
 #include "net/cert/asn1_util.h"
 #include "net/cert/cert_verify_result.h"
@@ -1517,7 +1516,7 @@ bool SpdySession::ChangeSocketTag(const SocketTag& new_tag) {
 
   SpdySessionKey new_key(
       spdy_session_key_.host_port_pair(), spdy_session_key_.privacy_mode(),
-      spdy_session_key_.proxy_chain(), spdy_session_key_.session_usage(),
+      spdy_session_key_.proxy_chain(),
       new_tag, spdy_session_key_.network_anonymization_key(),
       spdy_session_key_.secure_dns_policy(),
       spdy_session_key_.disable_cert_verification_network_fetches(),
@@ -3099,14 +3098,6 @@ void SpdySession::OnAltSvc(
     spdy::SpdyStreamId stream_id,
     std::string_view origin,
     const spdy::SpdyAltSvcWireFormat::AlternativeServiceVector& altsvc_vector) {
-  // For sessions carrying proxy traffic, the peer is not authoritative for the
-  // origins associated with the carried streams. Except for stream 0, which
-  // must specify the origin in the ALTSVC frame itself.
-  // https://datatracker.ietf.org/doc/html/rfc7838#section-4.
-  if (spdy_session_key_.session_usage() == SessionUsage::kProxy &&
-      stream_id != 0) {
-    return;
-  }
   url::SchemeHostPort scheme_host_port;
   if (stream_id == 0) {
     if (origin.empty())

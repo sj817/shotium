@@ -29,7 +29,6 @@
 #include "net/base/network_change_notifier.h"
 #include "net/base/proxy_chain.h"
 #include "net/base/request_priority.h"
-#include "net/base/session_usage.h"
 #include "net/base/task/task_runner.h"
 #include "net/http/alternative_service.h"
 #include "net/http/http_network_session.h"

@@ -16,7 +16,6 @@
 #include "net/base/features.h"
 #include "net/base/host_port_pair.h"
 #include "net/base/proxy_chain.h"
-#include "net/base/session_usage.h"
 #include "net/dns/public/secure_dns_policy.h"
 #include "net/log/net_log_event_type.h"
 #include "net/log/net_log_with_source.h"
@@ -224,7 +223,7 @@ std::unique_ptr<ConnectJob> ClientSocketPool::CreateConnectJob(
         // TODO(crbug.com/40181080): Pass along as SchemeHostPort.
         SpdySessionKey(HostPortPair::FromSchemeHostPort(group_id.destination()),
                        group_id.privacy_mode(), GetProxyChain(),
-                       SessionUsage::kDestination, socket_tag,
+                       socket_tag,
                        group_id.network_anonymization_key(),
                        group_id.secure_dns_policy(),
                        group_id.disable_cert_network_fetches(),

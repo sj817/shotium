@@ -5,12 +5,9 @@
 #ifndef NET_BASE_PROXY_CHAIN_H_
 #define NET_BASE_PROXY_CHAIN_H_
 
-#include <stdint.h>
-
 #include <iosfwd>
 #include <optional>
 #include <string>
-#include <string_view>
 #include <tuple>
 #include <vector>
 
@@ -48,26 +45,6 @@ class NET_EXPORT ProxyChain {
 
   ~ProxyChain();  // Destructor declaration
 
-  // Creates a single-proxy ProxyChain, validating and canonicalizing input.
-  // Port is optional and, if not provided, will be replaced with the default
-  // port for the given scheme. Accepts IPv6 literal `host`s with surrounding
-  // brackets (URL format) or without (HostPortPair format). On invalid input,
-  // result will be a `SCHEME_INVALID` ProxyChain.
-  //
-  // Must not be called with `SCHEME_INVALID` or `SCHEME_DIRECT`. Use
-  // `ProxyChain()` or `Direct()` respectively to create an invalid or direct
-  // ProxyChain.
-  static ProxyChain FromSchemeHostAndPort(ProxyServer::Scheme scheme,
-                                          std::string_view host,
-                                          std::string_view port_str) {
-    return ProxyChain(
-        ProxyServer::FromSchemeHostAndPort(scheme, host, port_str));
-  }
-  static ProxyChain FromSchemeHostAndPort(ProxyServer::Scheme scheme,
-                                          std::string_view host,
-                                          std::optional<uint16_t> port) {
-    return ProxyChain(ProxyServer::FromSchemeHostAndPort(scheme, host, port));
-  }
   // Create a "direct" proxy chain, which includes no proxy servers.
   static ProxyChain Direct() { return ProxyChain(std::vector<ProxyServer>()); }
 
@@ -78,19 +55,7 @@ class NET_EXPORT ProxyChain {
   // `ProxyChain` is returned and `chain_id` is not used.
   static ProxyChain ForIpProtection(std::vector<ProxyServer> proxy_server_list,
                                     int chain_id = 0) {
-    return ProxyChain(std::move(proxy_server_list), chain_id,
-                      /*opaque_data=*/std::nullopt);
-  }
-
-  // Creates a `ProxyChain` with `opaque_data` attached to it. This can be later
-  // on retrieved via `opaque_data()`. If the resulting `ProxyChain` is deemed
-  // to be invalid, an invalid `ProxyChain` is returned and `opaque_data` is not
-  // used.
-  static ProxyChain WithOpaqueData(std::vector<ProxyServer> proxy_server_list,
-                                   int opaque_data) {
-    return ProxyChain(std::move(proxy_server_list),
-                      /*ip_protection_chain_id=*/kNotIpProtectionChainId,
-                      opaque_data);
+    return ProxyChain(std::move(proxy_server_list), chain_id);
   }
 
   // Attempt to create a new `ProxyChain` from a pickle that contains data
@@ -104,30 +69,9 @@ class NET_EXPORT ProxyChain {
   // invalid object.
   void Persist(base::Pickle* pickle) const;
 
-  // Get ProxyServer at index in chain. This is not valid for direct or invalid
-  // proxy chains.
-  const ProxyServer& GetProxyServer(size_t chain_index) const;
-
   // Get the ProxyServers in this chain. This must not be called on invalid
   // proxy chains. An empty vector is returned for direct proxy chains.
   const std::vector<ProxyServer>& proxy_servers() const;
-
-  // Return the last proxy server in the chain, together with all of the
-  // preceding proxies. The chain must have at least one proxy server. If it
-  // only has one proxy server, then the resulting chain will be direct.
-  std::pair<ProxyChain, const ProxyServer&> SplitLast() const;
-
-  // Return a prefix of this proxy chain, of the given length. This length must
-  // be less than or equal to the chain's length.
-  ProxyChain Prefix(size_t length) const;
-
-  // Get the first ProxyServer in this chain, which must have at least one
-  // server.
-  const ProxyServer& First() const;
-
-  // Get the last ProxyServer in this chain, which must have at least one
-  // server.
-  const ProxyServer& Last() const;
 
   // Get the ProxyServers in this chain, or `nullopt` if the chain is not valid.
   const std::optional<std::vector<ProxyServer>>& proxy_servers_if_valid()
@@ -161,21 +105,6 @@ class NET_EXPORT ProxyChain {
                                           : false;
   }
 
-  template <class Predicate>
-  bool AnyProxy(Predicate p) const {
-    return proxy_server_list_.has_value() &&
-           std::any_of(proxy_server_list_->begin(), proxy_server_list_->end(),
-                       p);
-  }
-
-  // Determines if HTTP GETs to the last proxy in the chain are allowed,
-  // instead of establishing a tunnel with CONNECT. This is no longer supported
-  // for QUIC proxy chains and is not currently supported for multi-proxy
-  // chains.
-  bool is_get_to_proxy_allowed() const {
-    return is_single_proxy() && (First().is_http() || First().is_https());
-  }
-
   // Returns true if a proxy server list is available.
   bool IsValid() const { return proxy_server_list_.has_value(); }
 
@@ -198,45 +127,20 @@ class NET_EXPORT ProxyChain {
   }
   int ip_protection_chain_id() const { return ip_protection_chain_id_; }
 
-  std::optional<int> opaque_data() const { return opaque_data_; }
-
   friend bool operator==(const ProxyChain&, const ProxyChain&) = default;
   friend auto operator<=>(const ProxyChain&, const ProxyChain&) = default;
 
   std::string ToDebugString() const;
 
-  // Returns a string suffix for histogram names.
-  //
-  // For IP Protection chains, the format is "Chain{ID}" for direct chains, and
-  // "Chain{ID}.{Protocol}" otherwise, where {ID} is the
-  // `ip_protection_chain_id()` and {Protocol} is the scheme of the first
-  // proxy. For example, "Chain0" or "Chain1.HTTPS".
-  // For other chains, the format is "Direct" for direct connections, or the
-  // scheme of the proxies in the chain for proxy connections. For example,
-  // "HTTPS" or "SOCKS5".
-  //
-  // This format should not be changed without updating the metrics that use
-  // this.
-  std::string GetHistogramSuffix() const;
-
  private:
   explicit ProxyChain(std::vector<ProxyServer> proxy_server_list,
-                      int ip_protection_chain_id,
-                      std::optional<int> opaque_data);
+                      int ip_protection_chain_id);
 
   std::optional<std::vector<ProxyServer>> proxy_server_list_;
 
   // If used for IP protection, this is the chain_id received from the server.
   // A negative value indicates this chain is not used for IP protection.
   int ip_protection_chain_id_ = kNotIpProtectionChainId;
-
-  // Owners of `ProxyChain` can use to store private information. For example,
-  // Cronet uses this to map each net::ProxyChain to a specific
-  // org.chromium.net.Proxy.Callback, when necessary. This does not get
-  // persisted during calls to the `Persist` method.
-  // Note: the value of this field does not affect the validity of this
-  // ProxyChain.
-  std::optional<int> opaque_data_;
 
   // Returns true if this chain is valid. A chain is considered valid if
   //  (1) it is a single valid proxy server, or

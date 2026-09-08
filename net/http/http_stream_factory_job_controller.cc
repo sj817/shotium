@@ -20,7 +20,6 @@
 #include "net/base/net_errors.h"
 #include "net/base/privacy_mode.h"
 #include "net/base/proxy_chain.h"
-#include "net/base/session_usage.h"
 #include "net/base/task/task_runner.h"
 #include "net/base/url_util.h"
 #include "net/http/alternate_protocol_usage.h"

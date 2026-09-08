@@ -2191,8 +2191,6 @@ EVENT_TYPE(QUIC_SESSION_POOL_JOB_RESULT)
 //     "server_id_privacy_mode": <The privacy mode from the server ID>,
 //     "privacy_mode": <The privacy mode of the session>,
 //     "proxy_chain": <The proxy chain of the session>,
-//     "session_usage": <If the session is used for a connection to the
-//                       destination or through a proxy>,
 //     "network_anonymization_key": <The NetworkAnonymizationKey of the
 //                                   session>,
 //     "secure_dns_policy": <The policy for Secure DNS usage>,

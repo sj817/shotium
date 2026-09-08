@@ -14,7 +14,6 @@
 #include "net/base/network_isolation_key.h"
 #include "net/base/privacy_mode.h"
 #include "net/base/proxy_chain.h"
-#include "net/base/session_usage.h"
 #include "net/dns/public/secure_dns_policy.h"
 #include "net/socket/socket_tag.h"
 
@@ -25,15 +24,9 @@ class NET_EXPORT_PRIVATE SpdySessionKey {
  public:
   SpdySessionKey();
 
-  // Note that if `session_usage` is kProxy, then:
-  // * `privacy_mode` must be PRIVACY_MODE_DISABLED to pool credentialed and
-  //     uncredetialed requests onto the same proxy connections.
-  // * `disable_cert_verification_network_fetches` must be true, to avoid
-  //     depending on cert fetches, which would be made through the proxy.
   SpdySessionKey(const HostPortPair& host_port_pair,
                  PrivacyMode privacy_mode,
                  const ProxyChain& proxy_chain,
-                 SessionUsage session_usage,
                  const SocketTag& socket_tag,
                  const NetworkAnonymizationKey& network_anonymization_key,
                  SecureDnsPolicy secure_dns_policy,
@@ -79,7 +72,6 @@ class NET_EXPORT_PRIVATE SpdySessionKey {
 
   const ProxyChain& proxy_chain() const { return proxy_chain_; }
 
-  SessionUsage session_usage() const { return session_usage_; }
 
   const SocketTag& socket_tag() const { return socket_tag_; }
 
@@ -100,7 +92,6 @@ class NET_EXPORT_PRIVATE SpdySessionKey {
   // If enabled, then session cannot be tracked by the server.
   PrivacyMode privacy_mode_ = PRIVACY_MODE_DISABLED;
   ProxyChain proxy_chain_;
-  SessionUsage session_usage_ = SessionUsage::kDestination;
   SocketTag socket_tag_;
   // Used to separate requests made in different contexts. If network state
   // partitioning is disabled this will be set to an empty key.

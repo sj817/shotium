@@ -25,7 +25,6 @@
 #include "net/base/port_util.h"
 #include "net/base/proxy_chain.h"
 #include "net/base/reconnect_notifier.h"
-#include "net/base/session_usage.h"
 #include "net/base/task/task_runner.h"
 #include "net/base/url_util.h"
 #include "net/cert/cert_verifier.h"

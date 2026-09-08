@@ -283,7 +283,6 @@ component("net") {
     "base/scheme_host_port_matcher_result.h",
     "base/scheme_host_port_matcher_rule.cc",
     "base/scheme_host_port_matcher_rule.h",
-    "base/session_usage.h",
     "base/sockaddr_storage.cc",
     "base/sockaddr_storage.h",
     "base/switches.h",

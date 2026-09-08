@@ -903,7 +903,7 @@ bool SpdySessionPool::OnHostResolutionCompleteShared(
         SpdySessionKey old_key = available_session->spdy_session_key();
         SpdySessionKey new_key(
             old_key.host_port_pair(), old_key.privacy_mode(),
-            old_key.proxy_chain(), old_key.session_usage(), key.socket_tag(),
+            old_key.proxy_chain(), key.socket_tag(),
             old_key.network_anonymization_key(), old_key.secure_dns_policy(),
             old_key.disable_cert_verification_network_fetches(),
             old_key.target_network());
@@ -952,7 +952,7 @@ bool SpdySessionPool::OnHostResolutionCompleteShared(
           UnmapKey(*it);
           SpdySessionKey new_pool_alias_key = SpdySessionKey(
               it->host_port_pair(), it->privacy_mode(), it->proxy_chain(),
-              it->session_usage(), key.socket_tag(),
+              key.socket_tag(),
               it->network_anonymization_key(), it->secure_dns_policy(),
               it->disable_cert_verification_network_fetches(),
               it->target_network());

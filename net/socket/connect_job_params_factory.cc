@@ -115,13 +115,9 @@ ConnectJobParams ConstructConnectJobParams(
     ssl_config.disable_cert_verification_network_fetches =
         disable_cert_network_fetches;
 
-    // TODO(crbug.com/41459647): Also enable 0-RTT for TLS proxies.
     ssl_config.early_data_enabled =
         *common_connect_job_params->enable_early_data;
 
-    ssl_config.proxy_chain = proxy_chain;
-    ssl_config.proxy_chain_index = proxy_chain.length();
-    ssl_config.session_usage = SessionUsage::kDestination;
   }
 
   // Create the nested parameters over which the connection to the endpoint
