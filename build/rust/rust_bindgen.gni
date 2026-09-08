@@ -68,9 +68,6 @@ if (!use_chromium_rust_toolchain &&
 #   be used sparingly - typically only in low-level, foundational libraries
 #   that cannot depend on Chromium prelude (such as `//build/rust/allocator`).
 #
-# For a small, self-contained example please see:
-# * C header: //build/rust/tests/bindgen_test
-# * C++ header: //build/rust/tests/bindgen_cpp_test
 template("rust_bindgen") {
   _rust_bindgen_generator_target_name = target_name + "_generator"
 

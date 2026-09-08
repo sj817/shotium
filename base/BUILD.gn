@@ -3896,17 +3896,6 @@ test("base_unittests") {
     "allocator/partition_allocator/src/partition_alloc:test_support",
   ]
 
-  # TODO(https://crbug.com/532647976): Add test coverage to ChromeOS and Fuchsia
-  # after fixing linking errors found by
-  # https://ci.chromium.org/ui/p/chrome/builders/try/chromeos-betty-chrome-gtest/80753/overview
-  # (can be fixed by disabling remote linking in `build/config/siso/rust.star`
-  # and by
-  # https://ci.chromium.org/ui/p/chromium/builders/try/fuchsia-x64-cast-receiver-rel/1591660/overview
-  # (not diagnosed yet).
-  if (!is_chromeos && !is_fuchsia) {
-    deps += [ "//build/rust/tests" ]
-  }
-
   # TODO(https://crbug.com/405379314): This fails to build on some iOS ASAN
   # builders.
   if (!is_ios || !is_asan) {
@@ -4381,9 +4370,6 @@ test("base_unittests") {
     # startup penalty.
     # sources += [ "files/os_validation_win_unittest.cc" ]
 
-    if (toolchain_has_rust && win_enable_cfg_guards) {
-      deps += [ ":rust_cfg_win_test" ]
-    }
   }
   if (is_apple) {
   }
@@ -4467,19 +4453,6 @@ proto_library("protobuf_hardening_test_support") {
   testonly = true
   sources = [ "protobuf_hardening_test_support.proto" ]
   generate_python = false
-}
-
-# Test that CFG is enabled in Rust code.
-if (is_win && toolchain_has_rust) {
-  source_set("rust_cfg_win_test") {
-    testonly = true
-    deps = [
-      ":base",
-      "//testing/gtest",
-    ]
-    data_deps = [ "//build/rust/tests/test_control_flow_guard" ]
-    sources = [ "memory/rust_cfg_win_unittest.cc" ]
-  }
 }
 
 if (current_toolchain == default_toolchain) {
