@@ -213,7 +213,6 @@ mojom("mojom_shared_dictionary") {
   sources = [
     "shared_dictionary_error.mojom",
     "shared_dictionary_isolation_key.mojom",
-    "shared_dictionary_usage_info.mojom",
   ]
 
   public_deps = [
@@ -242,17 +241,6 @@ mojom("mojom_shared_dictionary") {
         "//net",
         "//services/network/public/cpp:schemeful_site_mojom_support",
       ]
-    },
-    {
-      types = [
-        {
-          mojom = "network.mojom.SharedDictionaryUsageInfo"
-          cpp = "::net::SharedDictionaryUsageInfo"
-        },
-      ]
-      traits_headers = [ "//services/network/public/cpp/shared_dictionary_usage_info_mojom_traits.h" ]
-      traits_sources = [ "//services/network/public/cpp/shared_dictionary_usage_info_mojom_traits.cc" ]
-      traits_public_deps = [ "//net:shared_dictionary_info" ]
     },
   ]
 }
@@ -521,7 +509,6 @@ mojom("url_loader_base") {
     "accept_ch_frame_observer.mojom",
     "blocked_by_response_reason.mojom",
     "chunked_data_pipe_getter.mojom",
-    "clear_data_filter.mojom",
     "client_security_state.mojom",
     "cors.mojom",
     "cross_origin_embedder_policy.mojom",
@@ -541,9 +528,6 @@ mojom("url_loader_base") {
     "link_header.mojom",
     "load_timing_info.mojom",
     "load_timing_internal_info.mojom",
-    "network_change_manager.mojom",
-    "network_interface.mojom",
-    "network_interface_change_listener.mojom",
     "network_types.mojom",
     "no_vary_search.mojom",
     "parsed_headers.mojom",
@@ -565,7 +549,6 @@ mojom("url_loader_base") {
     "url_response_head.mojom",
     "web_bundle_handle.mojom",
     "web_client_hints_types.mojom",
-    "web_transport.mojom",
     "x_frame_options.mojom",
   ]
 
@@ -594,12 +577,6 @@ mojom("url_loader_base") {
   enabled_features = []
   if (is_android || is_chromeos || is_linux) {
     enabled_features += [ "network_change_notifier_in_browser" ]
-  }
-
-  if (is_linux) {
-    # TODO(crbug.com/40263697): Remove this once is_linux in the mojom IDL does
-    # not include lacros.
-    enabled_features += [ "use_network_interface_change_listener" ]
   }
 
   if (!is_ios) {
@@ -776,17 +753,6 @@ mojom("url_loader_base") {
     {
       types = [
         {
-          mojom = "network.mojom.WebTransportHttpRequestHeaders"
-          cpp = "::net::HttpRequestHeaders::HeaderVector"
-          move_only = true
-        },
-      ]
-      traits_headers = [ "//services/network/public/cpp/web_transport_http_request_headers_mojom_traits.h" ]
-      traits_public_deps = [ "//net" ]
-    },
-    {
-      types = [
-        {
           mojom = "network.mojom.IsolationInfo"
           cpp = "::net::IsolationInfo"
         },
@@ -807,21 +773,6 @@ mojom("url_loader_base") {
         "//base",
         "//net",
       ]
-    },
-    {
-      types = [
-        {
-          mojom = "network.mojom.NetworkInterface"
-          cpp = "::net::NetworkInterface"
-        },
-        {
-          mojom = "network.mojom.ConnectionType"
-          cpp = "::net::NetworkChangeNotifier::ConnectionType"
-        },
-      ]
-      traits_headers =
-          [ "//services/network/public/cpp/network_interface_mojom_traits.h" ]
-      traits_public_deps = [ "//net" ]
     },
     {
       types = [
@@ -894,28 +845,6 @@ mojom("url_loader_base") {
       traits_public_deps = [ "//net" ]
     },
   ]
-
-  if (is_linux) {
-    cpp_typemaps += [
-      {
-        types = [
-          {
-            mojom = "network.mojom.IfAddrMsg"
-            cpp = "struct ifaddrmsg"
-          },
-          {
-            mojom = "network.mojom.AddressMap"
-            cpp = "::net::AddressMapOwnerLinux::AddressMap"
-          },
-          {
-            mojom = "network.mojom.OnlineLinks"
-            cpp = "::std::unordered_set<int>"
-          },
-        ]
-        traits_headers = [ "//services/network/public/cpp/network_interface_change_listener_mojom_traits.h" ]
-      },
-    ]
-  }
 
   cpp_typemaps += shared_typemaps
 
@@ -1857,12 +1786,6 @@ mojom("mojom") {
     if (enable_reporting) {
       enabled_features += [ "enable_reporting" ]
     }
-  }
-
-  if (is_linux) {
-    # TODO(crbug.com/40263697): Remove this once is_linux in the mojom IDL does
-    # not include lacros.
-    enabled_features += [ "use_network_interface_change_listener" ]
   }
 
   # Typemaps which apply to both Blink and non-Blink bindings.

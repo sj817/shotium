@@ -1701,7 +1701,6 @@ component("extras") {
     "//base",
     "//crypto",
   ]
-  public_deps = [ ":shared_dictionary_info" ]
 
   if (enable_reporting) {
     sources += [
@@ -1711,19 +1710,6 @@ component("extras") {
   }
 }
 
-component("shared_dictionary_info") {
-  sources = [
-    "extras/shared_dictionary/shared_dictionary_info.cc",
-    "extras/shared_dictionary/shared_dictionary_info.h",
-    "extras/shared_dictionary/shared_dictionary_usage_info.h",
-  ]
-  defines = [ "IS_NET_SHARED_DICTIONARY_IMPL" ]
-  configs += [ "//build/config/compiler:wexit_time_destructors" ]
-  deps = [
-    ":net",
-    "//base",
-  ]
-}
 
 static_library("preload_decoder") {
   sources = [
