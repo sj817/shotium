@@ -262,8 +262,6 @@ source_set("test_support") {
     "testing/bytes_consumer_test_reader.h",
     "testing/fake_background_resource_fetch_assets.cc",
     "testing/fake_background_resource_fetch_assets.h",
-    "testing/fake_resource_load_info_notifier.cc",
-    "testing/fake_resource_load_info_notifier.h",
     "testing/fake_url_loader_factory_for_background_thread.cc",
     "testing/fake_url_loader_factory_for_background_thread.h",
     "testing/fetch_testing_platform_support.cc",

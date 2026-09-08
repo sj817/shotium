@@ -145,9 +145,6 @@ class CORE_EXPORT FrameFetchContext final : public BaseFetchContext,
   // LoadingBehaviorObserver overrides:
   void DidObserveLoadingBehavior(LoadingBehaviorFlag) override;
 
-  std::unique_ptr<ResourceLoadInfoNotifierWrapper>
-  CreateResourceLoadInfoNotifierWrapper() override;
-
   mojom::blink::ContentSecurityNotifier& GetContentSecurityNotifier() const;
 
   ExecutionContext* GetExecutionContext() const override;

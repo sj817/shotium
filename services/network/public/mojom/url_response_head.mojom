@@ -125,9 +125,6 @@ struct URLResponseHead {
   // prefetched URL.
   NavigationDeliveryType navigation_delivery_type = kDefault;
 
-  // The proxy chain used for this request, if any.
-  ProxyChain proxy_chain;
-
   // True if a service worker responded to the request. If the service worker
   // received a fetch event and did not call respondWith(), or was bypassed due
   // to absence of a fetch event handler, this is false.

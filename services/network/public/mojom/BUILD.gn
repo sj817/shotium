@@ -854,10 +854,6 @@ mojom("mojom_network_param") {
           mojom = "network.mojom.HostPortPair"
           cpp = "::net::HostPortPair"
         },
-        {
-          mojom = "network.mojom.ProxyChain"
-          cpp = "::net::ProxyChain"
-        },
       ]
       traits_headers =
           [ "//services/network/public/cpp/network_param_mojom_traits.h" ]
@@ -1002,14 +998,6 @@ mojom("mojom_network_param") {
         {
           mojom = "network.mojom.HttpVersion"
           cpp = "::net::HttpVersion"
-        },
-        {
-          mojom = "network.mojom.ProxyServer"
-          cpp = "::net::ProxyServer"
-        },
-        {
-          mojom = "network.mojom.ProxyScheme"
-          cpp = "::net::ProxyServer::Scheme"
         },
         {
           mojom = "network.mojom.ResolveErrorInfo"

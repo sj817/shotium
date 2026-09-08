@@ -28,7 +28,6 @@
 #include "third_party/blink/public/common/features.h"
 #include "third_party/blink/public/common/loader/referrer_utils.h"
 #include "third_party/blink/public/mojom/navigation/navigation_params.mojom.h"
-#include "third_party/blink/public/platform/resource_load_info_notifier_wrapper.h"
 #include "third_party/blink/public/platform/web_url_error.h"
 #include "third_party/blink/public/platform/web_url_response.h"
 #include "third_party/blink/public/web/web_navigation_params.h"
@@ -352,32 +351,21 @@ class NavigationBodyLoader::MainThreadBodyReader : public BodyReader {
 
 NavigationBodyLoader::NavigationBodyLoader(
     const KURL& original_url,
-    network::mojom::URLResponseHeadPtr response_head,
     mojo::ScopedDataPipeConsumerHandle response_body,
     network::mojom::URLLoaderClientEndpointsPtr endpoints,
-    scoped_refptr<base::SingleThreadTaskRunner> task_runner,
-    std::unique_ptr<ResourceLoadInfoNotifierWrapper>
-        resource_load_info_notifier_wrapper)
-    : response_head_(std::move(response_head)),
-      response_body_(std::move(response_body)),
+    scoped_refptr<base::SingleThreadTaskRunner> task_runner)
+    : response_body_(std::move(response_body)),
       endpoints_(std::move(endpoints)),
       task_runner_(std::move(task_runner)),
       handle_watcher_(FROM_HERE,
                       mojo::SimpleWatcher::ArmingPolicy::MANUAL,
                       task_runner_),
-      resource_load_info_notifier_wrapper_(
-          std::move(resource_load_info_notifier_wrapper)),
       original_url_(original_url),
       should_send_directly_to_preload_scanner_(
           ShouldSendDirectlyToPreloadScanner()),
       max_data_to_process_per_task_(GetMaxDataToProcessPerTask()) {}
 
-NavigationBodyLoader::~NavigationBodyLoader() {
-  if (!has_received_completion_ || !has_seen_end_of_data_) {
-    resource_load_info_notifier_wrapper_->NotifyResourceLoadCanceled(
-        net::ERR_ABORTED);
-  }
-}
+NavigationBodyLoader::~NavigationBodyLoader() = default;
 
 void NavigationBodyLoader::OnReceiveEarlyHints(
     network::mojom::EarlyHintsPtr early_hints) {
@@ -409,10 +397,6 @@ void NavigationBodyLoader::OnUploadProgress(int64_t current_position,
 void NavigationBodyLoader::OnTransferSizeUpdated(int32_t transfer_size_diff) {
   network::RecordOnTransferSizeUpdatedUMA(
       network::OnTransferSizeUpdatedFrom::kNavigationBodyLoader);
-  // This cast is safe because url_loader.mojom documents that
-  // `transfer_size_diff` must be positive.
-  resource_load_info_notifier_wrapper_->NotifyResourceTransferSizeUpdated(
-      base::ByteSize(base::checked_cast<uint32_t>(transfer_size_diff)));
 }
 
 void NavigationBodyLoader::OnComplete(
@@ -440,8 +424,6 @@ void NavigationBodyLoader::StartLoadingBody(
                original_url_.GetString().Utf8());
   client_ = client;
 
-  resource_load_info_notifier_wrapper_->NotifyResourceResponseReceived(
-      std::move(response_head_));
   base::WeakPtr<NavigationBodyLoader> weak_self = weak_factory_.GetWeakPtr();
   NotifyCompletionIfAppropriate();
   if (!weak_self)
@@ -559,8 +541,6 @@ void NavigationBodyLoader::NotifyCompletionIfAppropriate() {
     error = WebURLError::Create(status_, original_url_);
   }
 
-  resource_load_info_notifier_wrapper_->NotifyResourceLoadCompleted(status_);
-
   if (!client_)
     return;
 
@@ -616,9 +596,6 @@ void WebNavigationBodyLoader::FillNavigationParamsResponseAndBodyLoader(
     mojo::ScopedDataPipeConsumerHandle response_body,
     network::mojom::URLLoaderClientEndpointsPtr url_loader_client_endpoints,
     scoped_refptr<base::SingleThreadTaskRunner> task_runner,
-    std::unique_ptr<ResourceLoadInfoNotifierWrapper>
-        resource_load_info_notifier_wrapper,
-    bool is_main_frame,
     WebNavigationParams* navigation_params) {
   // Use the original navigation URL to start with. Note that when the browser
   // enables redirect sanitization (via
@@ -635,14 +612,6 @@ void WebNavigationBodyLoader::FillNavigationParamsResponseAndBodyLoader(
                                 ? KURL(commit_params->original_url)
                                 : KURL(common_params->url);
   KURL url = original_url;
-  resource_load_info_notifier_wrapper->NotifyResourceLoadInitiated(
-      request_id, GURL(url),
-      !commit_params->original_method.empty() ? commit_params->original_method
-                                              : common_params->method,
-      common_params->referrer->url, common_params->request_destination,
-      // The trailing argument is `is_ad_tagged`. It came from the committing
-      // frame's ad status, which no longer exists.
-      is_main_frame ? net::HIGHEST : net::LOWEST, /*is_ad_tagged=*/false);
   size_t redirect_count = commit_params->redirect_params.size();
 
   if (!base::FeatureList::IsEnabled(
@@ -671,8 +640,6 @@ void WebNavigationBodyLoader::FillNavigationParamsResponseAndBodyLoader(
     redirect.redirect_response =
         WebURLResponse::Create(url, *redirect_response,
                                response_head->ssl_info.has_value(), request_id);
-    resource_load_info_notifier_wrapper->NotifyResourceRedirectReceived(
-        redirect_info, std::move(redirect_response));
     if (url.ProtocolIsData())
       redirect.redirect_response.SetHttpStatusCode(200);
 
@@ -699,9 +666,8 @@ void WebNavigationBodyLoader::FillNavigationParamsResponseAndBodyLoader(
 
   if (url_loader_client_endpoints) {
     navigation_params->body_loader.reset(new NavigationBodyLoader(
-        original_url, std::move(response_head), std::move(response_body),
-        std::move(url_loader_client_endpoints), task_runner,
-        std::move(resource_load_info_notifier_wrapper)));
+        original_url, std::move(response_body),
+        std::move(url_loader_client_endpoints), task_runner));
   }
 }
 

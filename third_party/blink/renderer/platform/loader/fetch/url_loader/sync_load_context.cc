@@ -26,7 +26,6 @@
 #include "third_party/blink/public/common/client_hints/client_hints.h"
 #include "third_party/blink/public/common/features.h"
 #include "third_party/blink/public/common/loader/url_loader_throttle.h"
-#include "third_party/blink/public/platform/resource_load_info_notifier_wrapper.h"
 #include "third_party/blink/renderer/platform/loader/fetch/url_loader/sync_load_response.h"
 #include "third_party/blink/renderer/platform/weborigin/kurl.h"
 #include "third_party/blink/renderer/platform/wtf/shared_buffer.h"
@@ -113,9 +112,7 @@ void SyncLoadContext::StartAsyncWithWaitableEvent(
     base::WaitableEvent* abort_event,
     base::TimeDelta timeout,
     mojo::PendingRemote<mojom::blink::BlobRegistry> download_to_blob_registry,
-    const Vector<String>& cors_exempt_header_list,
-    std::unique_ptr<ResourceLoadInfoNotifierWrapper>
-        resource_load_info_notifier_wrapper) {
+    const Vector<String>& cors_exempt_header_list) {
   scoped_refptr<SyncLoadContext> context(base::AdoptRef(new SyncLoadContext(
       request.get(), std::move(pending_url_loader_factory), response,
       context_for_redirect, redirect_or_response_event, abort_event, timeout,
@@ -124,7 +121,6 @@ void SyncLoadContext::StartAsyncWithWaitableEvent(
       std::move(request), std::move(loading_task_runner), traffic_annotation,
       loader_options, cors_exempt_header_list, context,
       context->url_loader_factory_, std::move(throttles),
-      std::move(resource_load_info_notifier_wrapper),
       /*evict_from_bfcache_callback=*/
       base::OnceCallback<void(mojom::blink::RendererEvictionReason)>(),
       /*did_buffer_load_while_in_bfcache_callback=*/

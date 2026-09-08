@@ -50,7 +50,6 @@ struct URLLoaderCompletionStatus;
 }  // namespace network
 
 namespace blink {
-class ResourceLoadInfoNotifierWrapper;
 class ThrottlingURLLoader;
 class MojoURLLoaderClient;
 class ResourceRequestClient;
@@ -89,9 +88,7 @@ class BLINK_PLATFORM_EXPORT ResourceRequestSender {
       const Vector<String>& cors_exempt_header_list,
       base::WaitableEvent* terminate_sync_load_event,
       mojo::PendingRemote<mojom::blink::BlobRegistry> download_to_blob_registry,
-      scoped_refptr<ResourceRequestClient> client,
-      std::unique_ptr<ResourceLoadInfoNotifierWrapper>
-          resource_load_info_notifier_wrapper);
+      scoped_refptr<ResourceRequestClient> client);
 
   // Call this method to initiate the request. If this method succeeds, then
   // the client's methods will be called asynchronously to report various
@@ -108,8 +105,6 @@ class BLINK_PLATFORM_EXPORT ResourceRequestSender {
       scoped_refptr<ResourceRequestClient> client,
       scoped_refptr<network::SharedURLLoaderFactory> url_loader_factory,
       std::vector<std::unique_ptr<URLLoaderThrottle>> throttles,
-      std::unique_ptr<ResourceLoadInfoNotifierWrapper>
-          resource_load_info_notifier_wrapper,
       base::OnceCallback<void(mojom::blink::RendererEvictionReason)>
           evict_from_bfcache_callback,
       base::RepeatingCallback<void(size_t)>
@@ -159,15 +154,11 @@ class BLINK_PLATFORM_EXPORT ResourceRequestSender {
 
   struct PendingRequestInfo {
     PendingRequestInfo(scoped_refptr<ResourceRequestClient> client,
-                       network::mojom::RequestDestination request_destination,
-                       const KURL& request_url,
-                       std::unique_ptr<ResourceLoadInfoNotifierWrapper>
-                           resource_load_info_notifier_wrapper);
+                       const KURL& request_url);
 
     ~PendingRequestInfo();
 
     scoped_refptr<ResourceRequestClient> client;
-    network::mojom::RequestDestination request_destination;
     LoaderFreezeMode freeze_mode = LoaderFreezeMode::kNone;
     // Original requested url.
     KURL url;
@@ -198,10 +189,6 @@ class BLINK_PLATFORM_EXPORT ResourceRequestSender {
     // comment might be outdated.
     network::HttpRequestHeadersUpdateParams headers_update_params;
 
-    // Used to notify the loading stats.
-    std::unique_ptr<ResourceLoadInfoNotifierWrapper>
-        resource_load_info_notifier_wrapper;
-
     // Set to true when the request was frozen. This is used not to record
     // histograms for frozen requests. Note: Even if the request was unfreezed,
     // we don't resume recording histograms because tasks are deferred in
@@ -212,7 +199,6 @@ class BLINK_PLATFORM_EXPORT ResourceRequestSender {
   // Called as a callback for ResourceRequestClient::OnReceivedRedirect().
   void OnFollowRedirectCallback(
       const net::RedirectInfo& redirect_info,
-      network::mojom::URLResponseHeadPtr response_head,
       std::vector<std::string> removed_headers,
       net::HttpRequestHeaders modified_headers);
 

@@ -48,7 +48,6 @@
 #include "third_party/blink/public/mojom/blob/blob_registry.mojom-blink.h"
 #include "third_party/blink/public/mojom/use_counter/metrics/web_feature.mojom-shared.h"
 #include "third_party/blink/public/platform/platform.h"
-#include "third_party/blink/public/platform/resource_load_info_notifier_wrapper.h"
 #include "third_party/blink/public/platform/web_loader_freeze_mode.h"
 #include "third_party/blink/public/platform/web_string.h"
 #include "third_party/blink/public/platform/web_url.h"
@@ -108,9 +107,7 @@ class URLLoader::Context : public ResourceRequestClient {
              bool download_to_blob,
              bool no_mime_sniffing,
              base::TimeDelta timeout_interval,
-             SyncLoadResponse* sync_load_response,
-             std::unique_ptr<ResourceLoadInfoNotifierWrapper>
-                 resource_load_info_notifier_wrapper);
+             SyncLoadResponse* sync_load_response);
 
   // ResourceRequestClient overrides:
   void OnUploadProgress(uint64_t position, uint64_t size) override;
@@ -231,9 +228,7 @@ void URLLoader::Context::Start(
     bool download_to_blob,
     bool no_mime_sniffing,
     base::TimeDelta timeout_interval,
-    SyncLoadResponse* sync_load_response,
-    std::unique_ptr<ResourceLoadInfoNotifierWrapper>
-        resource_load_info_notifier_wrapper) {
+    SyncLoadResponse* sync_load_response) {
   DCHECK_EQ(request_id_, -1);
 
   url_ = KURL(request->url);
@@ -272,8 +267,7 @@ void URLLoader::Context::Start(
         std::move(request), tag, loader_options, sync_load_response,
         url_loader_factory_, std::move(throttles), timeout_interval,
         cors_exempt_header_list_, terminate_sync_load_event_,
-        std::move(download_to_blob_registry), base::WrapRefCounted(this),
-        std::move(resource_load_info_notifier_wrapper));
+        std::move(download_to_blob_registry), base::WrapRefCounted(this));
     return;
   }
 
@@ -284,7 +278,7 @@ void URLLoader::Context::Start(
   request_id_ = resource_request_sender_->SendAsync(
       std::move(request), GetMaybeUnfreezableTaskRunner(), tag, loader_options,
       cors_exempt_header_list_, base::WrapRefCounted(this), url_loader_factory_,
-      std::move(throttles), std::move(resource_load_info_notifier_wrapper),
+      std::move(throttles),
       base::BindOnce(&BackForwardCacheLoaderHelper::EvictFromBackForwardCache,
                      back_forward_cache_loader_helper_),
       base::BindRepeating(
@@ -425,9 +419,7 @@ void URLLoader::LoadSynchronously(
     scoped_refptr<SharedBuffer>& data,
     int64_t& encoded_data_length,
     uint64_t& encoded_body_length,
-    scoped_refptr<BlobDataHandle>& downloaded_blob,
-    std::unique_ptr<ResourceLoadInfoNotifierWrapper>
-        resource_load_info_notifier_wrapper) {
+    scoped_refptr<BlobDataHandle>& downloaded_blob) {
   if (!context_) {
     return;
   }
@@ -446,8 +438,7 @@ void URLLoader::LoadSynchronously(
 
   context_->Start(std::move(request), std::move(top_frame_origin),
                   download_to_blob, no_mime_sniffing, timeout_interval,
-                  &sync_load_response,
-                  std::move(resource_load_info_notifier_wrapper));
+                  &sync_load_response);
 
   const KURL final_url(sync_load_response.url);
 
@@ -500,8 +491,6 @@ void URLLoader::LoadAsynchronously(
     std::unique_ptr<network::ResourceRequest> request,
     scoped_refptr<const SecurityOrigin> top_frame_origin,
     bool no_mime_sniffing,
-    std::unique_ptr<ResourceLoadInfoNotifierWrapper>
-        resource_load_info_notifier_wrapper,
     URLLoaderClient* client) {
   if (!context_) {
     return;
@@ -514,8 +503,7 @@ void URLLoader::LoadAsynchronously(
   context_->set_client(client);
   context_->Start(std::move(request), std::move(top_frame_origin),
                   /*download_to_blob=*/false, no_mime_sniffing,
-                  base::TimeDelta(), /*sync_load_response=*/nullptr,
-                  std::move(resource_load_info_notifier_wrapper));
+                  base::TimeDelta(), /*sync_load_response=*/nullptr);
 }
 
 void URLLoader::Cancel() {

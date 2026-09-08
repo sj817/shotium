@@ -1191,8 +1191,7 @@ void ResourceLoader::RequestSynchronously() {
         std::move(network_resource_request_), Context().GetTopFrameOrigin(),
         request.DownloadToBlob(), no_mime_sniffing, request.TimeoutInterval(),
         this, response_out, error_out, data_out, encoded_data_length,
-        encoded_body_length, downloaded_blob,
-        Context().CreateResourceLoadInfoNotifierWrapper());
+        encoded_body_length, downloaded_blob);
   }
   // A message dispatched while synchronously fetching the resource
   // can bring about the cancellation of this load.
@@ -1261,7 +1260,6 @@ void ResourceLoader::RequestAsynchronously() {
 
   loader_->LoadAsynchronously(std::move(network_resource_request_),
                               Context().GetTopFrameOrigin(), no_mime_sniffing,
-                              Context().CreateResourceLoadInfoNotifierWrapper(),
                               this);
 }
 

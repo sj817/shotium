@@ -63,15 +63,11 @@ class BLINK_PLATFORM_EXPORT BackgroundURLLoader : public URLLoader {
                          scoped_refptr<SharedBuffer>& data,
                          int64_t& encoded_data_length,
                          uint64_t& encoded_body_length,
-                         scoped_refptr<BlobDataHandle>& downloaded_blob,
-                         std::unique_ptr<ResourceLoadInfoNotifierWrapper>
-                             resource_load_info_notifier_wrapper) override;
+                         scoped_refptr<BlobDataHandle>& downloaded_blob) override;
 
   void LoadAsynchronously(std::unique_ptr<network::ResourceRequest> request,
                           scoped_refptr<const SecurityOrigin> top_frame_origin,
                           bool no_mime_sniffing,
-                          std::unique_ptr<ResourceLoadInfoNotifierWrapper>
-                              resource_load_info_notifier_wrapper,
                           URLLoaderClient* client) override;
 
   void Freeze(LoaderFreezeMode mode) override;

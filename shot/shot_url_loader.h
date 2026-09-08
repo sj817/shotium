@@ -54,16 +54,12 @@ class ShotURLLoader : public blink::URLLoader {
       scoped_refptr<blink::SharedBuffer>& data,
       int64_t& encoded_data_length,
       uint64_t& encoded_body_length,
-      scoped_refptr<blink::BlobDataHandle>& downloaded_blob,
-      std::unique_ptr<blink::ResourceLoadInfoNotifierWrapper>
-          resource_load_info_notifier_wrapper) override;
+      scoped_refptr<blink::BlobDataHandle>& downloaded_blob) override;
 
   void LoadAsynchronously(
       std::unique_ptr<network::ResourceRequest> request,
       scoped_refptr<const blink::SecurityOrigin> top_frame_origin,
       bool no_mime_sniffing,
-      std::unique_ptr<blink::ResourceLoadInfoNotifierWrapper>
-          resource_load_info_notifier_wrapper,
       blink::URLLoaderClient* client) override;
 
   scoped_refptr<base::SingleThreadTaskRunner> GetTaskRunnerForBodyLoader()

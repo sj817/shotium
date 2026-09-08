@@ -49,7 +49,6 @@
 #include "third_party/blink/public/mojom/loader/resource_load_info.mojom-shared.h"
 #include "third_party/blink/public/mojom/navigation/renderer_eviction_reason.mojom-blink.h"
 #include "third_party/blink/public/platform/platform.h"
-#include "third_party/blink/public/platform/resource_load_info_notifier_wrapper.h"
 #include "third_party/blink/public/platform/web_string.h"
 #include "third_party/blink/public/platform/web_url.h"
 #include "third_party/blink/public/platform/web_url_request_util.h"
@@ -129,9 +128,7 @@ void ResourceRequestSender::SendSync(
     const Vector<String>& cors_exempt_header_list,
     base::WaitableEvent* terminate_sync_load_event,
     mojo::PendingRemote<mojom::blink::BlobRegistry> download_to_blob_registry,
-    scoped_refptr<ResourceRequestClient> client,
-    std::unique_ptr<ResourceLoadInfoNotifierWrapper>
-        resource_load_info_notifier_wrapper) {
+    scoped_refptr<ResourceRequestClient> client) {
   CheckSchemeForReferrerPolicy(*request);
 
   DCHECK(loader_options & network::mojom::kURLLoadOptionSynchronous);
@@ -165,8 +162,7 @@ void ResourceRequestSender::SendSync(
                           CrossThreadUnretained(&redirect_or_response_event),
                           CrossThreadUnretained(terminate_sync_load_event),
                           timeout, std::move(download_to_blob_registry),
-                          cors_exempt_header_list,
-                          std::move(resource_load_info_notifier_wrapper)));
+                          cors_exempt_header_list));
 
   // `redirect_or_response_event` will signal when each redirect completes, and
   // when the final response is complete.
@@ -227,8 +223,6 @@ int ResourceRequestSender::SendAsync(
     scoped_refptr<ResourceRequestClient> client,
     scoped_refptr<network::SharedURLLoaderFactory> url_loader_factory,
     std::vector<std::unique_ptr<URLLoaderThrottle>> throttles,
-    std::unique_ptr<ResourceLoadInfoNotifierWrapper>
-        resource_load_info_notifier_wrapper,
     base::OnceCallback<void(mojom::blink::RendererEvictionReason)>
         evict_from_bfcache_callback,
     base::RepeatingCallback<void(size_t)>
@@ -249,38 +243,11 @@ int ResourceRequestSender::SendAsync(
     throttles.insert(throttles.begin(),
                      std::make_unique<ContentDecodingURLLoaderThrottle>());
   }
-#if BUILDFLAG(IS_ANDROID)
-  // TODO(crbug.com/1286053): This used to be a DCHECK asserting "Main frame
-  // shouldn't come here", but after removing and re-landing the DCHECK later it
-  // started tripping in some teses. Was the DCHECK invalid or is there a bug
-  // somewhere?
-  if (!(request->is_outermost_main_frame &&
-        IsRequestDestinationFrame(request->destination))) {
-    // Having the favicon request extend user gesture carryover doesn't make
-    // sense and causes flakiness in tests when the async favicon request
-    // unexpectedly extends the navigation chain.
-    if (request->has_user_gesture && !request->is_favicon) {
-      resource_load_info_notifier_wrapper
-          ->NotifyUpdateUserGestureCarryoverInfo();
-    }
-  }
-#endif
 
   // Compute a unique request_id for this renderer process.
   int request_id = GenerateRequestId();
   request_info_ = std::make_unique<PendingRequestInfo>(
-      std::move(client), request->destination, KURL(request->url),
-      std::move(resource_load_info_notifier_wrapper));
-
-  // In special cases such as HTML serialization,
-  // resource_load_info_notifier_wrapper is not set.
-  if (request_info_->resource_load_info_notifier_wrapper) {
-    request_info_->resource_load_info_notifier_wrapper
-        ->NotifyResourceLoadInitiated(request_id, request->url, request->method,
-                                      request->referrer,
-                                      request_info_->request_destination,
-                                      request->priority, request->is_ad_tagged);
-  }
+      std::move(client), KURL(request->url));
 
   auto url_loader_client = std::make_unique<MojoURLLoaderClient>(
       this, loading_task_runner, url_loader_factory->BypassRedirectChecks(),
@@ -352,12 +319,6 @@ void ResourceRequestSender::DeletePendingRequest(
 
   if (request_info_->net_error == net::ERR_IO_PENDING) {
     request_info_->net_error = net::ERR_ABORTED;
-    // In special cases such as HTML serialization,
-    // resource_load_info_notifier_wrapper is not set.
-    if (request_info_->resource_load_info_notifier_wrapper) {
-      request_info_->resource_load_info_notifier_wrapper
-          ->NotifyResourceLoadCanceled(request_info_->net_error);
-    }
   }
 
   // Cancel loading.
@@ -375,17 +336,11 @@ void ResourceRequestSender::DeletePendingRequest(
 
 ResourceRequestSender::PendingRequestInfo::PendingRequestInfo(
     scoped_refptr<ResourceRequestClient> client,
-    network::mojom::RequestDestination request_destination,
-    const KURL& request_url,
-    std::unique_ptr<ResourceLoadInfoNotifierWrapper>
-        resource_load_info_notifier_wrapper)
+    const KURL& request_url)
     : client(std::move(client)),
-      request_destination(request_destination),
       url(request_url),
       response_url(request_url),
-      local_request_start(base::TimeTicks::Now()),
-      resource_load_info_notifier_wrapper(
-          std::move(resource_load_info_notifier_wrapper)) {}
+      local_request_start(base::TimeTicks::Now()) {}
 
 ResourceRequestSender::PendingRequestInfo::~PendingRequestInfo() = default;
 
@@ -421,8 +376,6 @@ void ResourceRequestSender::OnTransferSizeUpdated(
   if (!request_info_) {
     return;
   }
-  request_info_->resource_load_info_notifier_wrapper
-      ->NotifyResourceTransferSizeUpdated(transfer_size_diff);
 }
 
 void ResourceRequestSender::OnUploadProgress(int64_t position, int64_t size) {
@@ -462,13 +415,7 @@ void ResourceRequestSender::OnReceivedResponse(
   response_sent_to_client_ = true;
 
   request_info_->client->OnReceivedResponse(
-      response_head.Clone(), std::move(body));
-  if (!request_info_) {
-    return;
-  }
-
-  request_info_->resource_load_info_notifier_wrapper
-      ->NotifyResourceResponseReceived(std::move(response_head));
+      std::move(response_head), std::move(body));
 }
 
 void ResourceRequestSender::OnReceivedRedirect(
@@ -499,14 +446,13 @@ void ResourceRequestSender::OnReceivedRedirect(
 
   auto callback = blink::BindOnce(
       &ResourceRequestSender::OnFollowRedirectCallback,
-      weak_factory_.GetWeakPtr(), redirect_info, response_head.Clone());
+      weak_factory_.GetWeakPtr(), redirect_info);
   request_info_->client->OnReceivedRedirect(
       redirect_info, std::move(response_head), std::move(callback));
 }
 
 void ResourceRequestSender::OnFollowRedirectCallback(
     const net::RedirectInfo& redirect_info,
-    network::mojom::URLResponseHeadPtr response_head,
     std::vector<std::string> removed_headers,
     net::HttpRequestHeaders modified_headers) {
   // DeletePendingRequest() may have cleared request_info_.
@@ -523,8 +469,6 @@ void ResourceRequestSender::OnFollowRedirectCallback(
       std::move(removed_headers);
   request_info_->response_url = KURL(redirect_info.new_url);
   request_info_->has_pending_redirect = true;
-  request_info_->resource_load_info_notifier_wrapper
-      ->NotifyResourceRedirectReceived(redirect_info, std::move(response_head));
   request_info_->headers_update_params.modified_headers =
       std::move(modified_headers);
 
@@ -542,9 +486,6 @@ void ResourceRequestSender::OnRequestComplete(
     return;
   }
   request_info_->net_error = status.error_code;
-
-  request_info_->resource_load_info_notifier_wrapper
-      ->NotifyResourceLoadCompleted(status);
 
   ResourceRequestClient* client = request_info_->client.get();
 

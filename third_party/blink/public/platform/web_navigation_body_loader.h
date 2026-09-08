@@ -22,7 +22,6 @@
 
 namespace blink {
 
-class ResourceLoadInfoNotifierWrapper;
 struct WebEncodingData;
 struct WebNavigationParams;
 
@@ -81,9 +80,6 @@ class BLINK_EXPORT WebNavigationBodyLoader {
       mojo::ScopedDataPipeConsumerHandle response_body,
       network::mojom::URLLoaderClientEndpointsPtr url_loader_client_endpoints,
       scoped_refptr<base::SingleThreadTaskRunner> task_runner,
-      std::unique_ptr<ResourceLoadInfoNotifierWrapper>
-          resource_load_info_notifier_wrapper,
-      bool is_main_frame,
       WebNavigationParams* navigation_params);
 
   // It should be safe to destroy WebNavigationBodyLoader at any moment,

@@ -431,9 +431,6 @@ class PLATFORM_EXPORT SecurityOrigin : public RefCounted<SecurityOrigin> {
   friend struct HashTraits<scoped_refptr<const SecurityOrigin>>;
   friend class SecurityOriginTest;
 
-  // For calling GetNonceForSerialization().
-  friend class BlobURLOpaqueOriginNonceMap;
-
   // Creates a new opaque SecurityOrigin using the supplied |precursor| origin
   // and |nonce|.
   static scoped_refptr<SecurityOrigin> CreateOpaque(

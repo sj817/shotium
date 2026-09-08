@@ -18,37 +18,6 @@ struct HostPortPair {
   uint16 port;
 };
 
-// Mirror of net::ProxyServer::Scheme.
-enum ProxyScheme {
-  kInvalid,
-  kHttp,
-  kSocks4,
-  kSocks5,
-  kHttps,
-  kQuic,
-};
-
-// Mirror of net::ProxyServer.
-struct ProxyServer {
-  ProxyScheme scheme;
-
-  // |host_and_port| field is set iff |scheme| is not INVALID or DIRECT.
-  HostPortPair? host_and_port;
-};
-
-// Mirror of net::ProxyChain.
-struct ProxyChain {
-  // The sequence of servers in this chain, or if nullopt, an invalid chain.
-  array<ProxyServer>? proxy_servers;
-
-  // IP Protection proxy chain ID, or -1 if not for IP protection. A `chain_id`
-  // greater than zero identifies a specific chain, as defined on the server. A
-  // `chain_id` of zero indicates an unidentified chain. Note that `chain_id`
-  // is not unique: chains with different `proxy_a` or `proxy_b` values may
-  // have the same `chain_id`.
-  int32 ip_protection_chain_id;
-};
-
 // Host resolution error info.
 struct ResolveErrorInfo {
   // Underlying network error code. See net/base/net_error_list.h for error

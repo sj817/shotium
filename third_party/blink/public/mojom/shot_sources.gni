@@ -56,7 +56,6 @@ shot_mojom_platform_sources = [
   "loader/referrer.mojom",
   "loader/request_context_frame_type.mojom",
   "loader/resource_load_info.mojom",
-  "loader/resource_load_info_notifier.mojom",
   "loader/same_document_navigation_type.mojom",
   "loader/transferrable_url_loader.mojom",
   "loader/url_loader_factory_bundle.mojom",

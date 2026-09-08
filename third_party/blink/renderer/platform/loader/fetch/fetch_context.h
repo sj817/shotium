@@ -41,7 +41,6 @@
 #include "third_party/blink/public/mojom/fetch/fetch_api_request.mojom-blink-forward.h"
 #include "third_party/blink/public/mojom/loader/request_context_frame_type.mojom-blink-forward.h"
 #include "third_party/blink/public/mojom/timing/resource_timing.mojom-blink-forward.h"
-#include "third_party/blink/public/platform/resource_load_info_notifier_wrapper.h"
 #include "third_party/blink/public/platform/resource_request_blocked_reason.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
 #include "third_party/blink/renderer/platform/loader/fetch/fetch_initiator_info.h"
@@ -219,12 +218,6 @@ class PLATFORM_EXPORT FetchContext : public GarbageCollected<FetchContext> {
   // v8 stack that issued the request, and a filterlist match. Neither exists --
   // //core/ad_tracker is deleted with V8, and no WebDocumentSubresourceFilter
   // is ever built -- so no request can carry an ad annotation.
-
-  // Returns a wrapper of ResourceLoadInfoNotifier to notify loading stats.
-  virtual std::unique_ptr<ResourceLoadInfoNotifierWrapper>
-  CreateResourceLoadInfoNotifierWrapper() {
-    return nullptr;
-  }
 
   // Returns if the request context is for prerendering or not.
   virtual bool IsPrerendering() const { return false; }

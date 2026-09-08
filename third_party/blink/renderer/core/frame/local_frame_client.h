@@ -99,7 +99,6 @@ class ResourceResponse;
 class SourceLocation;
 class WebDedicatedWorkerHostFactoryClient;
 class URLLoader;
-class ResourceLoadInfoNotifierWrapper;
 struct JavaScriptFrameworkDetectionResult;
 
 namespace scheduler {
@@ -114,7 +113,6 @@ class CORE_EXPORT LocalFrameClient : public FrameClient {
   // WebContentCaptureClient, which content capture streamed on-screen text
   // to. ContentCaptureManager and its only caller in LocalFrame are cut, so
   // nothing asks for the client any more.
-
 
   virtual base::UnguessableToken GetDevToolsFrameToken() const = 0;
 
@@ -299,15 +297,12 @@ class CORE_EXPORT LocalFrameClient : public FrameClient {
 
   unsigned BackForwardLength() override { return 0; }
 
-
   virtual AssociatedInterfaceProvider*
   GetRemoteNavigationAssociatedInterfaces() = 0;
 
   virtual void NotifyUserActivation() {}
 
   virtual void AbortClientNavigation(bool for_new_navigation) {}
-
-
 
   virtual scoped_refptr<network::SharedURLLoaderFactory>
   GetURLLoaderFactory() = 0;
@@ -321,7 +316,6 @@ class CORE_EXPORT LocalFrameClient : public FrameClient {
       WebScopedVirtualTimePauser virtual_time_pauser) {}
 
   virtual String evaluateInInspectorOverlayForTesting(const String& script) = 0;
-
 
   virtual void DidChangeContents() {}
 
@@ -352,11 +346,6 @@ class CORE_EXPORT LocalFrameClient : public FrameClient {
   virtual void SetMouseCapture(bool) {}
 
   virtual void NotifyAutoscrollForSelectionInMainFrame(bool) {}
-
-  virtual std::unique_ptr<ResourceLoadInfoNotifierWrapper>
-  CreateResourceLoadInfoNotifierWrapper() {
-    return nullptr;
-  }
 
   // Specifies whether to disable DOM storage interfaces such as localStorage
   // and sessionStorage.

@@ -50,12 +50,9 @@ class PLATFORM_EXPORT NavigationBodyLoader
  public:
   NavigationBodyLoader(
       const KURL& original_url,
-      network::mojom::URLResponseHeadPtr response_head,
       mojo::ScopedDataPipeConsumerHandle response_body,
       network::mojom::URLLoaderClientEndpointsPtr url_loader_client_endpoints,
-      scoped_refptr<base::SingleThreadTaskRunner> task_runner,
-      std::unique_ptr<ResourceLoadInfoNotifierWrapper>
-          resource_load_info_notifier_wrapper);
+      scoped_refptr<base::SingleThreadTaskRunner> task_runner);
   ~NavigationBodyLoader() override;
 
   // Starts reading and decoding the body on a background thread. Client
@@ -142,7 +139,6 @@ class PLATFORM_EXPORT NavigationBodyLoader
   NavigationBodyLoader(const NavigationBodyLoader&) = delete;
 
   // Navigation parameters.
-  network::mojom::URLResponseHeadPtr response_head_;
   mojo::ScopedDataPipeConsumerHandle response_body_;
   network::mojom::URLLoaderClientEndpointsPtr endpoints_;
   scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
@@ -156,10 +152,6 @@ class PLATFORM_EXPORT NavigationBodyLoader
   // The handle and watcher are live while loading the body.
   mojo::ScopedDataPipeConsumerHandle handle_;
   mojo::SimpleWatcher handle_watcher_;
-
-  // Used to notify the navigation loading stats.
-  std::unique_ptr<ResourceLoadInfoNotifierWrapper>
-      resource_load_info_notifier_wrapper_;
 
   // The final status received from network or cancelation status if aborted.
   network::URLLoaderCompletionStatus status_;

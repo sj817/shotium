@@ -41,8 +41,6 @@
 #include "net/base/url_util.h"
 #include "services/network/public/cpp/is_potentially_trustworthy.h"
 #include "third_party/blink/public/common/features.h"
-#include "third_party/blink/renderer/platform/blob/blob_url.h"
-#include "third_party/blink/renderer/platform/blob/blob_url_null_origin_map.h"
 #include "third_party/blink/renderer/platform/weborigin/known_ports.h"
 #include "third_party/blink/renderer/platform/weborigin/kurl.h"
 #include "third_party/blink/renderer/platform/weborigin/origin_access_entry.h"
@@ -225,12 +223,6 @@ SecurityOrigin::SecurityOrigin(const SecurityOrigin* other,
 scoped_refptr<SecurityOrigin> SecurityOrigin::CreateWithReferenceOrigin(
     const KURL& url,
     const SecurityOrigin* reference_origin) {
-  if (url.ProtocolIs("blob") && BlobURL::GetOrigin(url) == "null") {
-    if (scoped_refptr<SecurityOrigin> origin =
-            BlobURLNullOriginMap::GetInstance()->Get(url))
-      return origin;
-  }
-
   if (url.IsAboutBlankUrl()) {
     if (!reference_origin)
       return CreateUniqueOpaque();
@@ -398,19 +390,6 @@ bool SecurityOrigin::CanRequest(const KURL& url) const {
     return true;
 
   if (SerializesAsNull()) {
-    // Allow the request if the URL is blob and it has the same "null" origin
-    // with |this|.
-    if (!url.ProtocolIs("blob") || BlobURL::GetOrigin(url) != "null")
-      return false;
-    if (BlobURLNullOriginMap::GetInstance()->Get(url) == this)
-      return true;
-    // BlobURLNullOriginMap doesn't work for cross-thread blob URL loading
-    // (e.g., top-level worker script loading) because SecurityOrigin and
-    // BlobURLNullOriginMap are thread-specific. For the case, check
-    // BlobURLOpaqueOriginNonceMap.
-    const base::UnguessableToken* nonce = GetNonceForSerialization();
-    if (nonce && BlobURLOpaqueOriginNonceMap::GetInstance().Get(url) == *nonce)
-      return true;
     return false;
   }
 

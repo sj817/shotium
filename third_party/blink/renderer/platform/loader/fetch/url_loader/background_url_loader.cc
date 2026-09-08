@@ -25,7 +25,6 @@
 #include "third_party/blink/public/common/loader/referrer_utils.h"
 #include "third_party/blink/public/mojom/navigation/renderer_eviction_reason.mojom-blink.h"
 #include "third_party/blink/public/platform/platform.h"
-#include "third_party/blink/public/platform/resource_load_info_notifier_wrapper.h"
 #include "third_party/blink/public/platform/web_background_resource_fetch_assets.h"
 #include "third_party/blink/public/platform/web_url_error.h"
 #include "third_party/blink/public/platform/web_url_response.h"
@@ -184,8 +183,6 @@ class BackgroundURLLoader::Context
   void Start(std::unique_ptr<network::ResourceRequest> request,
              scoped_refptr<const SecurityOrigin> top_frame_origin,
              bool no_mime_sniffing,
-             std::unique_ptr<ResourceLoadInfoNotifierWrapper>
-                 resource_load_info_notifier_wrapper,
              URLLoaderClient* client) {
     DCHECK_CALLED_ON_VALID_SEQUENCE(main_thread_sequence_checker_);
     url_ = KURL(request->url);
@@ -199,7 +196,6 @@ class BackgroundURLLoader::Context
             std::move(background_resource_fetch_context_), std::move(request),
             top_frame_origin ? top_frame_origin->ToUrlOrigin() : url::Origin(),
             no_mime_sniffing, cors_exempt_header_list_,
-            std::move(resource_load_info_notifier_wrapper),
             std::move(background_response_processor_factory_)));
   }
 
@@ -315,8 +311,6 @@ class BackgroundURLLoader::Context
                          const url::Origin& top_frame_origin,
                          bool no_mime_sniffing,
                          const Vector<String>& cors_exempt_header_list,
-                         std::unique_ptr<ResourceLoadInfoNotifierWrapper>
-                             resource_load_info_notifier_wrapper,
                          std::unique_ptr<BackgroundResponseProcessorFactory>
                              background_response_processor_factory) {
     DCHECK_CALLED_ON_VALID_SEQUENCE(background_sequence_checker_);
@@ -366,7 +360,7 @@ class BackgroundURLLoader::Context
                 ? std::move(*background_response_processor_factory).Create()
                 : nullptr),
         cross_thread_background_resource_fetch_context_->GetLoaderFactory(),
-        std::move(throttles), std::move(resource_load_info_notifier_wrapper),
+        std::move(throttles),
         base::BindOnce(&Context::EvictFromBackForwardCacheOnBackground, this),
         base::BindRepeating(
             &Context::DidBufferLoadWhileInBackForwardCacheOnBackground, this));
@@ -671,9 +665,7 @@ void BackgroundURLLoader::LoadSynchronously(
     scoped_refptr<SharedBuffer>& data,
     int64_t& encoded_data_length,
     uint64_t& encoded_body_length,
-    scoped_refptr<BlobDataHandle>& downloaded_blob,
-    std::unique_ptr<ResourceLoadInfoNotifierWrapper>
-        resource_load_info_notifier_wrapper) {
+    scoped_refptr<BlobDataHandle>& downloaded_blob) {
   // BackgroundURLLoader doesn't support sync requests.
   NOTREACHED();
 }
@@ -682,12 +674,9 @@ void BackgroundURLLoader::LoadAsynchronously(
     std::unique_ptr<network::ResourceRequest> request,
     scoped_refptr<const SecurityOrigin> top_frame_origin,
     bool no_mime_sniffing,
-    std::unique_ptr<ResourceLoadInfoNotifierWrapper>
-        resource_load_info_notifier_wrapper,
     URLLoaderClient* client) {
   context_->Start(std::move(request), std::move(top_frame_origin),
                   no_mime_sniffing,
-                  std::move(resource_load_info_notifier_wrapper),
                   client);
 }
 

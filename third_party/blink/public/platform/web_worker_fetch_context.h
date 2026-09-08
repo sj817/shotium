@@ -19,7 +19,6 @@
 // WebServiceWorkerProvider was the renderer-side handle to a service worker
 // registration. public/platform/modules/service_worker is cut; the only use
 // below is a forward-declared pointer.
-#include "third_party/blink/public/platform/resource_load_info_notifier_wrapper.h"
 #include "third_party/blink/public/platform/web_security_origin.h"
 #include "third_party/blink/public/platform/web_string.h"
 #include "third_party/blink/public/platform/web_url.h"
@@ -135,13 +134,6 @@ class WebWorkerFetchContext : public base::RefCounted<WebWorkerFetchContext> {
 
   // Returns the current list of user preferred languages.
   virtual blink::WebString GetAcceptLanguages() const = 0;
-
-  // Creates a notifier used to notify loading stats for workers.
-  virtual std::unique_ptr<blink::ResourceLoadInfoNotifierWrapper>
-  CreateResourceLoadInfoNotifierWrapper() {
-    return std::make_unique<blink::ResourceLoadInfoNotifierWrapper>(
-        /*resource_load_info_notifier=*/nullptr);
-  }
 
   virtual bool IsDedicatedWorkerOrSharedWorkerFetchContext() const {
     return false;

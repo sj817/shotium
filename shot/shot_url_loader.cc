@@ -20,7 +20,6 @@
 #include "net/http/http_request_headers.h"
 #include "services/network/public/cpp/resource_request.h"
 #include "shot/shot_capture_context.h"
-#include "third_party/blink/public/platform/resource_load_info_notifier_wrapper.h"
 #include "third_party/blink/public/platform/web_string.h"
 #include "third_party/blink/public/platform/web_url.h"
 #include "third_party/blink/public/platform/web_url_error.h"
@@ -186,9 +185,7 @@ void ShotURLLoader::LoadSynchronously(
     scoped_refptr<blink::SharedBuffer>& data,
     int64_t& encoded_data_length,
     uint64_t& encoded_body_length,
-    scoped_refptr<blink::BlobDataHandle>& downloaded_blob,
-    std::unique_ptr<blink::ResourceLoadInfoNotifierWrapper>
-        resource_load_info_notifier_wrapper) {
+    scoped_refptr<blink::BlobDataHandle>& downloaded_blob) {
   const GURL url = request->url;
 
   std::string contents;
@@ -247,8 +244,6 @@ void ShotURLLoader::LoadAsynchronously(
     std::unique_ptr<network::ResourceRequest> request,
     scoped_refptr<const blink::SecurityOrigin> top_frame_origin,
     bool no_mime_sniffing,
-    std::unique_ptr<blink::ResourceLoadInfoNotifierWrapper>
-        resource_load_info_notifier_wrapper,
     blink::URLLoaderClient* client) {
   const GURL url = request->url;
   LOG(INFO) << "shot: request " << url.spec();
