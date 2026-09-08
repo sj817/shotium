@@ -49,7 +49,7 @@ on:
         type: boolean
         default: true
       shards:
-        description: 'jobs that split the objects between them, the final one included; auto = 4; 1 = one job does everything'
+        description: 'auto: one runner for a proven warm docs/version change, platform defaults otherwise; integer: explicit shard count'
         default: auto
 
 # GN, the SDK and node-gyp spell the 64-bit architecture x64; the names
@@ -64,6 +64,9 @@ jobs:
   # read an earlier job's outputs but not a file, so one small job
   # reads package.json first.
   meta:
+    permissions:
+      contents: read
+      actions: read
     name: "resolve: shotium-windows-${{ inputs.arch }}"
     runs-on: ubuntu-latest
     outputs:
@@ -74,24 +77,25 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          sparse-checkout: shotium/package.json
+          sparse-checkout: |
+            shotium/package.json
+            scripts
           sparse-checkout-cone-mode: false
       - id: version
         run: echo "version=$(jq -r .version shotium/package.json)" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 9.15.9
+      - run: pnpm -C scripts install --frozen-lockfile
       - id: shards
-        # `auto` is the per-platform count that keeps a full six-platform
-        # dispatch inside the free plan's 20 concurrent jobs (macOS: 5):
-        # Windows 4+4, Linux 4+3, macOS 2+3. Those are runners, not extra
-        # runners: the last slice belongs to the final job, so N slices cost
-        # N machines. The matrix wants a JSON list of indices; a matrix
-        # cannot count on its own.
-        run: |
-          n='${{ inputs.shards }}'
-          if [ "$n" = auto ]; then n=4; fi
-          case "$n" in ''|*[!0-9]*|0) echo "shards must be auto or a positive integer, got '$n'" >&2; exit 1 ;; esac
-          echo "count=$n" >> "$GITHUB_OUTPUT"
-          echo "final=$((n - 1))" >> "$GITHUB_OUTPUT"
-          echo "list=$(jq -cn --argjson n "$n" '[range($n - 1)]')" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHOT_PLATFORM: windows
+          SHOT_SHARDS: ${{ inputs.shards }}
+        run: pnpm -C scripts exec tsx ci-select-shards.ts
 
   # Sharding. ninja's idea of "up to date" is the outputs plus .ninja_log and
   # .ninja_deps, and N runners that ran the same gn gen share one graph. So

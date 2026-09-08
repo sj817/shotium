@@ -44,12 +44,19 @@ runs:
         newest="$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)"
         newest="$(readlink -f "$newest")"
         sudo xcode-select -s "$newest"
-        for app in /Applications/Xcode*.app; do
-          if [ "$(readlink -f "$app")" != "$newest" ]; then
-            echo "removing $app"
-            sudo rm -rf "$app" || true
-          fi
-        done
+        # Release baseline had 109 GiB free; deleting spare Xcodes cost 5-7 minutes.
+        # Keep a conservative 40 GiB reserve for source, objects and shard archives.
+        free_kb=$(df -Pk "$GITHUB_WORKSPACE" | tail -1 | awk '{print $4}')
+        if [ "$free_kb" -lt 41943040 ]; then
+          for app in /Applications/Xcode*.app; do
+            if [ "$(readlink -f "$app")" != "$newest" ]; then
+              echo "removing $app"
+              sudo rm -rf "$app" || true
+            fi
+          done
+        else
+          echo "Enough disk space; keeping spare Xcodes ($free_kb KiB free)"
+        fi
         # Prove the selection survived the deletions before spending an hour
         # on a sync that would fail at gn gen.
         xcodebuild -version

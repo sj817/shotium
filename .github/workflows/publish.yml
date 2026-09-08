@@ -346,25 +346,21 @@ jobs:
 
       - name: the packages are actually there
         if: ${{ env.DRY_RUN != 'true' }}
-        # `npm publish` prints `+ name@version` on success -- and prints the
-        # same line on a dry run, which makes it useless as evidence on its
-        # own. So ask the registry. A 404 here is not proof of failure either:
-        # the CDN took several minutes to serve one of the seven at v0.1.0
-        # while npm had already accepted it. Hence the retry, and hence this
-        # being a report rather than a gate -- the publish already happened
-        # and cannot be undone by failing the job.
-        continue-on-error: true
+        # Publication can precede CDN visibility by 15 minutes. Wait before
+        # declaring success; a timeout requires registry inspection, not blindly
+        # republishing already accepted immutable versions.
         run: |
           for pkg in shotium-win32-x64 shotium-win32-arm64 \
                      shotium-darwin-x64 shotium-darwin-arm64 \
                      shotium-linux-x64 shotium-linux-arm64 shotium; do
             url="https://registry.npmjs.org/@shotkit/$pkg/$VERSION"
-            for attempt in 1 2 3 4 5 6; do
+            for attempt in $(seq 1 45); do
               code=$(curl -s -o /dev/null -w '%{http_code}' "$url")
               [ "$code" = "200" ] && break
               sleep 20
             done
             echo "$code  @shotkit/$pkg@$VERSION"
+            [ "$code" = "200" ] || { echo "Registry visibility timed out; inspect publication before retrying." >&2; exit 1; }
           done
 
       - name: release
