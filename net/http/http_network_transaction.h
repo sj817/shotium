@@ -7,7 +7,6 @@
 
 #include <stdint.h>
 
-#include <array>
 #include <memory>
 #include <optional>
 #include <string>
@@ -27,7 +26,6 @@
 #include "net/base/net_export.h"
 #include "net/base/network_anonymization_key.h"
 #include "net/base/request_priority.h"
-#include "net/http/http_auth.h"
 #include "net/http/http_request_headers.h"
 #include "net/http/http_response_info.h"
 #include "net/http/http_stream_factory.h"
@@ -143,8 +141,6 @@ class NET_EXPORT_PRIVATE HttpNetworkTransaction
     STATE_INIT_STREAM_COMPLETE,
     STATE_CONNECTED_CALLBACK,
     STATE_CONNECTED_CALLBACK_COMPLETE,
-    STATE_GENERATE_PROXY_AUTH_TOKEN,
-    STATE_GENERATE_PROXY_AUTH_TOKEN_COMPLETE,
     STATE_GENERATE_SERVER_AUTH_TOKEN,
     STATE_GENERATE_SERVER_AUTH_TOKEN_COMPLETE,
     STATE_INIT_REQUEST_BODY,
@@ -164,10 +160,6 @@ class NET_EXPORT_PRIVATE HttpNetworkTransaction
 
   bool IsSecureRequest() const;
 
-  // Returns true if the request is using an HTTP(S) proxy without being
-  // tunneled via the CONNECT method.
-  bool UsingHttpProxyWithoutTunnel() const;
-
   void DoCallback(int result);
   void OnIOComplete(int result);
 
@@ -184,8 +176,6 @@ class NET_EXPORT_PRIVATE HttpNetworkTransaction
   int DoConnectedCallbackComplete(int result);
   int DoInitStream();
   int DoInitStreamComplete(int result);
-  int DoGenerateProxyAuthToken();
-  int DoGenerateProxyAuthTokenComplete(int result);
   int DoGenerateServerAuthToken();
   int DoGenerateServerAuthTokenComplete(int result);
   int DoInitRequestBody();
@@ -201,7 +191,7 @@ class NET_EXPORT_PRIVATE HttpNetworkTransaction
   int DoDrainBodyForAuthRestart();
   int DoDrainBodyForAuthRestartComplete(int result);
 
-  int BuildRequestHeaders(bool using_http_proxy_without_tunnel);
+  int BuildRequestHeaders();
 
 #if BUILDFLAG(ENABLE_REPORTING)
   // Processes the Report-To header, if one exists. This header configures where
@@ -285,7 +275,7 @@ class NET_EXPORT_PRIVATE HttpNetworkTransaction
   void ResetConnectionAndRequestForResend(RetryReason retry_reason);
 
   // Sets up the state machine to restart the transaction with auth.
-  void PrepareForAuthRestart(HttpAuth::Target target);
+  void PrepareForAuthRestart();
 
   // Called when we don't need to drain the response body or have drained it.
   // Resets |connection_| unless |keep_alive| is true, then calls
@@ -303,22 +293,16 @@ class NET_EXPORT_PRIVATE HttpNetworkTransaction
   // and resets the stream.
   void CacheNetErrorDetailsAndResetStream();
 
-  // Returns true if we should try to add a Proxy-Authorization header
-  bool ShouldApplyProxyAuth() const;
-
   // Returns true if we should try to add an Authorization header.
   bool ShouldApplyServerAuth() const;
 
   // Handles HTTP status code 401 or 407.
   // HandleAuthChallenge() returns a network error code, or OK on success.
-  // May update |pending_auth_target_| or |response_.auth_challenge|.
+  // May update |pending_server_auth_| or |response_.auth_challenge|.
   int HandleAuthChallenge();
 
-  // Returns true if we have auth credentials for the given target.
-  bool HaveAuth(HttpAuth::Target target) const;
-
-  // Get the {scheme, host, path, port} for the authentication target
-  GURL AuthURL(HttpAuth::Target target) const;
+  // Returns true if we have server authentication credentials.
+  bool HaveAuth() const;
 
   void CopyConnectionAttemptsFromStreamRequest();
 
@@ -350,13 +334,12 @@ class NET_EXPORT_PRIVATE HttpNetworkTransaction
   static void SetProxyInfoInResponse(const ProxyInfo& proxy_info,
                                      HttpResponseInfo* response_info);
 
-  std::array<scoped_refptr<HttpAuthController>, HttpAuth::AUTH_NUM_TARGETS>
-      auth_controllers_;
+  scoped_refptr<HttpAuthController> server_auth_controller_;
 
-  // Whether this transaction is waiting for proxy auth, server auth, or is
-  // not waiting for any auth at all. |pending_auth_target_| is read and
+  // Whether this transaction is waiting for server auth.
+  // |pending_server_auth_| is read and
   // cleared by RestartWithAuth().
-  HttpAuth::Target pending_auth_target_ = HttpAuth::AUTH_NONE;
+  bool pending_server_auth_ = false;
 
   CompletionRepeatingCallback io_callback_;
   CompletionOnceCallback callback_;

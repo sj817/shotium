@@ -11,7 +11,6 @@
 #include "base/metrics/histogram_functions.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/strings/string_number_conversions.h"
-#include "base/strings/string_util.h"
 #include "base/task/single_thread_task_runner.h"
 #include "base/types/optional_ref.h"
 #include "base/values.h"
@@ -21,7 +20,6 @@
 #include "net/base/net_errors.h"
 #include "net/base/privacy_mode.h"
 #include "net/base/proxy_chain.h"
-#include "net/base/proxy_string_util.h"
 #include "net/base/session_usage.h"
 #include "net/base/task/task_runner.h"
 #include "net/base/url_util.h"
@@ -68,45 +66,6 @@ GURL CreateAltSvcUrl(const GURL& origin_url,
   replacements.SetHostStr(alternative_destination.host());
 
   return origin_url.ReplaceComponents(replacements);
-}
-
-void ConvertWsToHttp(url::SchemeHostPort& input) {
-  if (base::EqualsCaseInsensitiveASCII(input.scheme(), url::kHttpScheme) ||
-      base::EqualsCaseInsensitiveASCII(input.scheme(), url::kHttpsScheme)) {
-    return;
-  }
-
-  if (base::EqualsCaseInsensitiveASCII(input.scheme(), url::kWsScheme)) {
-    input = url::SchemeHostPort(url::kHttpScheme, input.host(), input.port());
-    return;
-  }
-
-  DCHECK(base::EqualsCaseInsensitiveASCII(input.scheme(), url::kWssScheme));
-  input = url::SchemeHostPort(url::kHttpsScheme, input.host(), input.port());
-}
-
-void HistogramProxyUsed(const ProxyInfo& proxy_info, bool success) {
-  const ProxyServer::Scheme max_scheme = ProxyServer::Scheme::SCHEME_QUIC;
-  ProxyServer::Scheme proxy_scheme = ProxyServer::Scheme::SCHEME_INVALID;
-  if (!proxy_info.is_empty() && !proxy_info.is_direct()) {
-    if (proxy_info.proxy_chain().is_multi_proxy()) {
-      // TODO(crbug.com/40284947): Update this histogram to have a new
-      // bucket for multi-chain proxies. Until then, don't influence the
-      // existing metric counts which have historically been only for single-hop
-      // proxies.
-      return;
-    }
-    proxy_scheme = proxy_info.proxy_chain().is_direct()
-                       ? static_cast<ProxyServer::Scheme>(1)
-                       : proxy_info.proxy_chain().First().scheme();
-  }
-  if (success) {
-    UMA_HISTOGRAM_ENUMERATION("Net.HttpJob.ProxyTypeSuccess", proxy_scheme,
-                              max_scheme);
-  } else {
-    UMA_HISTOGRAM_ENUMERATION("Net.HttpJob.ProxyTypeFailed", proxy_scheme,
-                              max_scheme);
-  }
 }
 
 // Generate a AlternativeService for DNS alt job. Note: Chrome does not yet
@@ -300,7 +259,6 @@ void HttpStreamFactory::JobController::OnStreamReady(Job* job) {
 
   DCHECK(request_->completed());
 
-  HistogramProxyUsed(job->proxy_info(), /*success=*/true);
   delegate_->OnStreamReady(job->proxy_info(), std::move(stream));
 }
 
@@ -348,7 +306,6 @@ void HttpStreamFactory::JobController::OnStreamFailed(Job* job, int status) {
     }
   }
 
-  HistogramProxyUsed(job->proxy_info(), /*success=*/false);
   delegate_->OnStreamFailed(status, *job->net_error_details(),
                             job->proxy_info(), job->resolve_error_info());
 }
@@ -583,14 +540,12 @@ void HttpStreamFactory::JobController::CreateJobs() {
 
   url::SchemeHostPort destination(request_info_.url);
   DCHECK(destination.IsValid());
-  ConvertWsToHttp(destination);
 
   // Create an alternative job if alternative service is set up for this domain.
-  // This is applicable even if the connection will be made via a proxy.
   advertised_alt_svc_ = GetAdvertisedAltSvcFor(request_info_, delegate_);
 
   if (session_->host_resolver()->IsHappyEyeballsV3Enabled() &&
-      proxy_info_.is_direct() && request_info_.socket_tag == SocketTag()) {
+      request_info_.socket_tag == SocketTag()) {
     SwitchToHttpStreamPool();
     return;
   }
@@ -598,8 +553,7 @@ void HttpStreamFactory::JobController::CreateJobs() {
   if (is_preconnect_) {
     // Due to how the socket pools handle priorities and idle sockets, only IDLE
     // priority currently makes sense for preconnects. The priority for
-    // preconnects is currently ignored (see RequestSocketsForPool()), but could
-    // be used at some point for proxy resolution or something.
+    // preconnects is currently ignored (see RequestSocketsForPool()).
     std::unique_ptr<Job> preconnect_job = job_factory_->CreateJob(
         this, PRECONNECT, session_, request_info_, IDLE, proxy_info_,
         allowed_bad_certs_, destination, enable_ip_based_pooling_for_h2_,
@@ -612,7 +566,6 @@ void HttpStreamFactory::JobController::CreateJobs() {
 
       url::SchemeHostPort alternative_destination =
           url::SchemeHostPort(alternative_url);
-      ConvertWsToHttp(alternative_destination);
 
       main_job_ = job_factory_->CreateJob(
           this, PRECONNECT, session_, request_info_, IDLE, proxy_info_,
@@ -631,8 +584,7 @@ void HttpStreamFactory::JobController::CreateJobs() {
       enable_ip_based_pooling_for_h2_, net_log_.net_log(),
       NextProto::kProtoUnknown, management_config_);
 
-  // Alternative Service can only be set for HTTPS requests while Alternative
-  // Proxy is set for HTTP requests.
+  // Alternative Service can only be set for HTTPS requests.
   if (advertised_alt_svc_.info.protocol() != NextProto::kProtoUnknown) {
     DCHECK(request_info_.url.SchemeIs(url::kHttpsScheme));
 
@@ -646,7 +598,6 @@ void HttpStreamFactory::JobController::CreateJobs() {
 
     url::SchemeHostPort alternative_destination =
         url::SchemeHostPort(alternative_url);
-    ConvertWsToHttp(alternative_destination);
 
     alternative_job_ = job_factory_->CreateJob(
         this, ALTERNATIVE, session_, request_info_, priority_, proxy_info_,

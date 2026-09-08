@@ -72,9 +72,6 @@ class HttpStreamFactory::JobController
   // ever set.
   void OnRequestComplete() override;
 
-  // Called to resume the HttpStream creation process when necessary
-  // Proxy authentication credentials are collected.
-
   // Called when the priority of transaction changes.
   void SetPriority(RequestPriority priority) override;
 

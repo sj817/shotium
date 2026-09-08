@@ -24,14 +24,6 @@ class NET_EXPORT ProxyInfo {
   bool is_direct_only() const { return is_direct(); }
   bool is_empty() const { return !proxy_chain_.IsValid(); }
 
-  template <class Predicate>
-  bool AnyProxyInChain(Predicate p) const {
-    return !is_empty() && proxy_chain_.AnyProxy(p);
-  }
-
-  bool is_for_ip_protection() const {
-    return !is_empty() && proxy_chain_.is_for_ip_protection();
-  }
   const ProxyChain& proxy_chain() const {
     CHECK(!is_empty());
     return proxy_chain_;

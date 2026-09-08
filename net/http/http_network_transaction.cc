@@ -44,7 +44,6 @@
 #include "net/base/load_timing_internal_info.h"
 #include "net/base/net_errors.h"
 #include "net/base/proxy_chain.h"
-#include "net/base/proxy_server.h"
 #include "net/base/transport_info.h"
 #include "net/base/upload_data_stream.h"
 #include "net/base/url_util.h"
@@ -485,20 +484,18 @@ int HttpNetworkTransaction::RestartWithAuth(const AuthCredentials& credentials,
   if (!CheckMaxRestarts())
     return ERR_TOO_MANY_RETRIES;
 
-  HttpAuth::Target target = pending_auth_target_;
-  if (target == HttpAuth::AUTH_NONE) {
+  if (!pending_server_auth_) {
     NOTREACHED();
   }
-  pending_auth_target_ = HttpAuth::AUTH_NONE;
+  pending_server_auth_ = false;
 
-  auth_controllers_[target]->ResetAuth(credentials);
+  server_auth_controller_->ResetAuth(credentials);
 
   DCHECK(callback_.is_null());
 
-  // In this case, we've gathered credentials for the server or the proxy
-  // but it is not during the tunneling phase.
+  // Credentials are available for the server.
   DCHECK(stream_request_ == nullptr);
-  PrepareForAuthRestart(target);
+  PrepareForAuthRestart();
   int rv = DoLoop(OK);
   // Note: If an error is encountered while draining the old response body, no
   // Network Error Logging report will be generated, because the error was
@@ -511,13 +508,11 @@ int HttpNetworkTransaction::RestartWithAuth(const AuthCredentials& credentials,
   return rv;
 }
 
-void HttpNetworkTransaction::PrepareForAuthRestart(HttpAuth::Target target) {
-  DCHECK(HaveAuth(target));
+void HttpNetworkTransaction::PrepareForAuthRestart() {
+  DCHECK(HaveAuth());
   DCHECK(!stream_request_.get());
 
-  // Authorization schemes incompatible with HTTP/2 are unsupported for proxies.
-  if (target == HttpAuth::AUTH_SERVER &&
-      auth_controllers_[target]->NeedsHTTP11()) {
+  if (server_auth_controller_->NeedsHTTP11()) {
     session_->http_server_properties()->SetHTTP11Required(
         url::SchemeHostPort(request_->url), network_anonymization_key_);
     stream_->SetHTTP11Required();
@@ -580,8 +575,8 @@ void HttpNetworkTransaction::DidDrainBodyForAuthRestart(bool keep_alive) {
 }
 
 bool HttpNetworkTransaction::IsReadyToRestartForAuth() {
-  return pending_auth_target_ != HttpAuth::AUTH_NONE &&
-      HaveAuth(pending_auth_target_);
+  return pending_server_auth_ &&
+      HaveAuth();
 }
 
 int HttpNetworkTransaction::Read(IOBuffer* buf,
@@ -589,23 +584,6 @@ int HttpNetworkTransaction::Read(IOBuffer* buf,
                                  CompletionOnceCallback callback) {
   DCHECK(buf);
   DCHECK_LT(0, buf_len);
-
-  scoped_refptr<HttpResponseHeaders> headers(GetResponseHeaders());
-  if (headers_valid_ && headers.get() && stream_request_.get()) {
-    // We're trying to read the body of the response but we're still trying
-    // to establish an SSL tunnel through an HTTP proxy.  We can't read these
-    // bytes when establishing a tunnel because they might be controlled by
-    // an active network attacker.  We don't worry about this for HTTP
-    // because an active network attacker can already control HTTP sessions.
-    // We reach this case when the user cancels a 407 proxy auth prompt.  We
-    // also don't worry about this for an HTTPS Proxy, because the
-    // communication with the proxy is secure.
-    // See http://crbug.com/8473.
-    DCHECK(proxy_info_.AnyProxyInChain(
-        [](const ProxyServer& s) { return s.is_http_like(); }));
-    DCHECK_EQ(headers->response_code(), HTTP_PROXY_AUTHENTICATION_REQUIRED);
-    return ERR_TUNNEL_CONNECTION_FAILED;
-  }
 
   // Are we using SPDY or HTTP?
   next_state_ = STATE_READ_BODY;
@@ -655,7 +633,6 @@ LoadState HttpNetworkTransaction::GetLoadState() const {
       return LOAD_STATE_WAITING_FOR_DELEGATE;
     case STATE_CREATE_STREAM_COMPLETE:
       return stream_request_->GetLoadState();
-    case STATE_GENERATE_PROXY_AUTH_TOKEN_COMPLETE:
     case STATE_GENERATE_SERVER_AUTH_TOKEN_COMPLETE:
     case STATE_SEND_REQUEST_COMPLETE:
       return LOAD_STATE_SENDING_REQUEST;
@@ -894,11 +871,6 @@ bool HttpNetworkTransaction::IsSecureRequest() const {
   return request_->url.SchemeIsCryptographic();
 }
 
-bool HttpNetworkTransaction::UsingHttpProxyWithoutTunnel() const {
-  return proxy_info_.proxy_chain().is_get_to_proxy_allowed() &&
-         request_->url.SchemeIs("http");
-}
-
 void HttpNetworkTransaction::DoCallback(int rv) {
   DCHECK_NE(rv, ERR_IO_PENDING);
   DCHECK(!callback_.is_null());
@@ -946,13 +918,6 @@ int HttpNetworkTransaction::DoLoop(int result) {
         break;
       case STATE_INIT_STREAM_COMPLETE:
         rv = DoInitStreamComplete(rv);
-        break;
-      case STATE_GENERATE_PROXY_AUTH_TOKEN:
-        DCHECK_EQ(OK, rv);
-        rv = DoGenerateProxyAuthToken();
-        break;
-      case STATE_GENERATE_PROXY_AUTH_TOKEN_COMPLETE:
-        rv = DoGenerateProxyAuthTokenComplete(rv);
         break;
       case STATE_GENERATE_SERVER_AUTH_TOKEN:
         DCHECK_EQ(OK, rv);
@@ -1111,9 +1076,6 @@ int HttpNetworkTransaction::DoConnectedCallback() {
 
   // Fire off notification that we have successfully connected.
   TransportType type = TransportType::kDirect;
-  if (!proxy_info_.is_direct()) {
-    type = TransportType::kProxied;
-  }
 
   bool is_issued_by_known_root = false;
   if (IsSecureRequest()) {
@@ -1212,45 +1174,24 @@ int HttpNetworkTransaction::DoInitStreamComplete(int result) {
     return result;
   }
 
-  next_state_ = STATE_GENERATE_PROXY_AUTH_TOKEN;
+  next_state_ = STATE_GENERATE_SERVER_AUTH_TOKEN;
   return result;
-}
-
-int HttpNetworkTransaction::DoGenerateProxyAuthToken() {
-  next_state_ = STATE_GENERATE_PROXY_AUTH_TOKEN_COMPLETE;
-  if (!ShouldApplyProxyAuth())
-    return OK;
-  HttpAuth::Target target = HttpAuth::AUTH_PROXY;
-  if (!auth_controllers_[target].get())
-    auth_controllers_[target] = base::MakeRefCounted<HttpAuthController>(
-        target, AuthURL(target), request_->network_anonymization_key,
-        session_->http_auth_cache(), session_->http_auth_handler_factory(),
-        session_->host_resolver());
-  return auth_controllers_[target]->MaybeGenerateAuthToken(
-      request_, io_callback_, net_log_);
-}
-
-int HttpNetworkTransaction::DoGenerateProxyAuthTokenComplete(int rv) {
-  DCHECK_NE(ERR_IO_PENDING, rv);
-  if (rv == OK)
-    next_state_ = STATE_GENERATE_SERVER_AUTH_TOKEN;
-  return rv;
 }
 
 int HttpNetworkTransaction::DoGenerateServerAuthToken() {
   next_state_ = STATE_GENERATE_SERVER_AUTH_TOKEN_COMPLETE;
   HttpAuth::Target target = HttpAuth::AUTH_SERVER;
-  if (!auth_controllers_[target].get()) {
-    auth_controllers_[target] = base::MakeRefCounted<HttpAuthController>(
-        target, AuthURL(target), request_->network_anonymization_key,
+  if (!server_auth_controller_.get()) {
+    server_auth_controller_ = base::MakeRefCounted<HttpAuthController>(
+        target, request_->url, request_->network_anonymization_key,
         session_->http_auth_cache(), session_->http_auth_handler_factory(),
         session_->host_resolver());
     if (request_->load_flags & LOAD_DO_NOT_USE_EMBEDDED_IDENTITY)
-      auth_controllers_[target]->DisableEmbeddedIdentity();
+      server_auth_controller_->DisableEmbeddedIdentity();
   }
   if (!ShouldApplyServerAuth())
     return OK;
-  return auth_controllers_[target]->MaybeGenerateAuthToken(
+  return server_auth_controller_->MaybeGenerateAuthToken(
       request_, io_callback_, net_log_);
 }
 
@@ -1261,18 +1202,12 @@ int HttpNetworkTransaction::DoGenerateServerAuthTokenComplete(int rv) {
   return rv;
 }
 
-int HttpNetworkTransaction::BuildRequestHeaders(
-    bool using_http_proxy_without_tunnel) {
+int HttpNetworkTransaction::BuildRequestHeaders() {
   request_headers_.SetHeader(HttpRequestHeaders::kHost,
                              GetHostAndOptionalPort(request_->url));
 
-  // For compat with HTTP/1.0 servers and proxies:
-  if (using_http_proxy_without_tunnel) {
-    request_headers_.SetHeader(HttpRequestHeaders::kProxyConnection,
-                               "keep-alive");
-  } else {
-    request_headers_.SetHeader(HttpRequestHeaders::kConnection, "keep-alive");
-  }
+  // For compatibility with HTTP/1.0 servers.
+  request_headers_.SetHeader(HttpRequestHeaders::kConnection, "keep-alive");
 
   // Add a content length header?
   if (request_->upload_data_stream) {
@@ -1302,11 +1237,8 @@ int HttpNetworkTransaction::BuildRequestHeaders(
     request_headers_.SetHeader(HttpRequestHeaders::kCacheControl, "max-age=0");
   }
 
-  if (ShouldApplyProxyAuth() && HaveAuth(HttpAuth::AUTH_PROXY))
-    auth_controllers_[HttpAuth::AUTH_PROXY]->AddAuthorizationHeader(
-        &request_headers_);
-  if (ShouldApplyServerAuth() && HaveAuth(HttpAuth::AUTH_SERVER))
-    auth_controllers_[HttpAuth::AUTH_SERVER]->AddAuthorizationHeader(
+  if (ShouldApplyServerAuth() && HaveAuth())
+    server_auth_controller_->AddAuthorizationHeader(
         &request_headers_);
 
   request_headers_.MergeFrom(request_->extra_headers);
@@ -1347,11 +1279,8 @@ int HttpNetworkTransaction::DoBuildRequest() {
   next_state_ = STATE_BUILD_REQUEST_COMPLETE;
   headers_valid_ = false;
 
-  // This is constructed lazily (instead of within our Start method), so that
-  // we have proxy info available.
   if (request_headers_.IsEmpty()) {
-    bool using_http_proxy_without_tunnel = UsingHttpProxyWithoutTunnel();
-    return BuildRequestHeaders(using_http_proxy_without_tunnel);
+    return BuildRequestHeaders();
   }
 
   return OK;
@@ -1588,7 +1517,7 @@ int HttpNetworkTransaction::DoReadHeadersComplete(int result) {
   // from its creating consumer in cases where it is shared for writing to the
   // cache. It is also safe to set it to null at this point since
   // upload_data_stream is also not used in the Read state machine.
-  if (pending_auth_target_ == HttpAuth::AUTH_NONE)
+  if (!pending_server_auth_)
     request_ = nullptr;
 
   return OK;
@@ -1852,45 +1781,13 @@ int HttpNetworkTransaction::HandleHttp11Required(int error) {
 }
 
 int HttpNetworkTransaction::HandleSSLClientAuthError(int error) {
-  // Client certificate errors may come from either the origin server or the
-  // proxy.
-  //
-  // Origin errors are handled here, while most proxy errors are handled in the
-  // HttpStreamFactory and below, while handshaking with the proxy. However, in
-  // TLS 1.2 with False Start, or TLS 1.3, client certificate errors are
-  // reported immediately after the handshake. The error will then surface out
-  // of the first Read() rather than Connect().
-  //
-  // If the request is tunneled (i.e. the origin is HTTPS), this first Read()
-  // occurs while establishing the tunnel and HttpStreamFactory handles the
-  // proxy error. However, if the request is not tunneled (i.e. the origin is
-  // HTTP), this first Read() happens late and is ultimately surfaced out of
-  // DoReadHeadersComplete(). This method will then be responsible for both
-  // origin and proxy errors.
-  //
-  // See https://crbug.com/828965.
+  // Client certificate errors may surface after the TLS handshake.
   if (error != ERR_SSL_PROTOCOL_ERROR && !IsClientCertificateError(error)) {
     return error;
   }
 
-  bool is_server = !UsingHttpProxyWithoutTunnel();
-  HostPortPair host_port_pair;
-  // TODO(crbug.com/40284947): Remove check and return error when
-  // multi-proxy chain.
-  if (is_server) {
-    host_port_pair = HostPortPair::FromURL(request_->url);
-  } else {
-    CHECK(proxy_info_.proxy_chain().is_single_proxy());
-    host_port_pair = proxy_info_.proxy_chain().First().host_port_pair();
-  }
-
-  // Check that something in the proxy chain or endpoint are using HTTPS.
-  if (DCHECK_IS_ON()) {
-    bool server_using_tls = IsSecureRequest();
-    bool proxy_using_tls = proxy_info_.AnyProxyInChain(
-        [](const ProxyServer& s) { return s.is_secure_http_like(); });
-    DCHECK(server_using_tls || proxy_using_tls);
-  }
+  HostPortPair host_port_pair = HostPortPair::FromURL(request_->url);
+  DCHECK(IsSecureRequest());
 
   if (session_->ssl_client_context()->ClearClientCertificate(host_port_pair)) {
     // The private key handle may have gone stale due to, e.g., the user
@@ -1899,11 +1796,7 @@ int HttpNetworkTransaction::HandleSSLClientAuthError(int error) {
     // not already prompted for certificate on this request, retry to ask
     // the user for a new one.
     //
-    // TODO(davidben): There is no corresponding feature for proxy client
-    // certificates. Ideally this would live at a lower level, common to both,
-    // but |configured_client_cert_for_server_| is not accessible below the
-    // socket pools.
-    if (is_server && error == ERR_SSL_CLIENT_AUTH_SIGNATURE_FAILED &&
+    if (error == ERR_SSL_CLIENT_AUTH_SIGNATURE_FAILED &&
         !configured_client_cert_for_server_ && !HasExceededMaxRetries()) {
       retry_attempts_++;
       net_log_.AddEventWithNetErrorCode(
@@ -2155,7 +2048,7 @@ void HttpNetworkTransaction::ResetStateForAuthRestart() {
   send_start_time_ = base::TimeTicks();
   send_end_time_ = base::TimeTicks();
 
-  pending_auth_target_ = HttpAuth::AUTH_NONE;
+  pending_server_auth_ = false;
   read_buf_ = nullptr;
   read_buf_len_ = 0;
   headers_valid_ = false;
@@ -2232,14 +2125,6 @@ void HttpNetworkTransaction::ResetConnectionAndRequestForResend(
   ResetStateForRestart();
 }
 
-bool HttpNetworkTransaction::ShouldApplyProxyAuth() const {
-  // TODO(crbug.com/40284947): Update to handle multi-proxy chains.
-  if (proxy_info_.proxy_chain().is_multi_proxy()) {
-    return false;
-  }
-  return UsingHttpProxyWithoutTunnel();
-}
-
 bool HttpNetworkTransaction::ShouldApplyServerAuth() const {
   return request_->privacy_mode == PRIVACY_MODE_DISABLED;
 }
@@ -2252,53 +2137,25 @@ int HttpNetworkTransaction::HandleAuthChallenge() {
   if (status != HTTP_UNAUTHORIZED &&
       status != HTTP_PROXY_AUTHENTICATION_REQUIRED)
     return OK;
-  HttpAuth::Target target = status == HTTP_PROXY_AUTHENTICATION_REQUIRED ?
-                            HttpAuth::AUTH_PROXY : HttpAuth::AUTH_SERVER;
-  if (target == HttpAuth::AUTH_PROXY && proxy_info_.is_direct())
+  if (status == HTTP_PROXY_AUTHENTICATION_REQUIRED)
     return ERR_UNEXPECTED_PROXY_AUTH;
 
-  // This case can trigger when an HTTPS server responds with a "Proxy
-  // authentication required" status code through a non-authenticating
-  // proxy.
-  if (!auth_controllers_[target].get())
+  if (!server_auth_controller_.get())
     return ERR_UNEXPECTED_PROXY_AUTH;
 
-  int rv = auth_controllers_[target]->HandleAuthChallenge(
+  int rv = server_auth_controller_->HandleAuthChallenge(
       headers, response_.ssl_info, !ShouldApplyServerAuth(), false, net_log_);
-  if (auth_controllers_[target]->HaveAuthHandler())
-    pending_auth_target_ = target;
+  if (server_auth_controller_->HaveAuthHandler())
+    pending_server_auth_ = true;
 
-  auth_controllers_[target]->TakeAuthInfo(&response_.auth_challenge);
+  server_auth_controller_->TakeAuthInfo(&response_.auth_challenge);
 
   return rv;
 }
 
-bool HttpNetworkTransaction::HaveAuth(HttpAuth::Target target) const {
-  return auth_controllers_[target].get() &&
-      auth_controllers_[target]->HaveAuth();
-}
-
-GURL HttpNetworkTransaction::AuthURL(HttpAuth::Target target) const {
-  switch (target) {
-    case HttpAuth::AUTH_PROXY: {
-      // TODO(crbug.com/40284947): Update to handle multi-proxy chain.
-      CHECK(proxy_info_.proxy_chain().is_single_proxy());
-      if (!proxy_info_.proxy_chain().IsValid() ||
-          proxy_info_.proxy_chain().is_direct()) {
-        return GURL();  // There is no proxy chain.
-      }
-      // TODO(crbug.com/40704785): Mapping proxy addresses to
-      // URLs is a lossy conversion, shouldn't do this.
-      auto& proxy_server = proxy_info_.proxy_chain().First();
-      const char* scheme =
-          proxy_server.is_secure_http_like() ? "https://" : "http://";
-      return GURL(scheme + proxy_server.host_port_pair().ToString());
-    }
-    case HttpAuth::AUTH_SERVER:
-      return request_->url;
-    default:
-     return GURL();
-  }
+bool HttpNetworkTransaction::HaveAuth() const {
+  return server_auth_controller_.get() &&
+      server_auth_controller_->HaveAuth();
 }
 
 void HttpNetworkTransaction::CopyConnectionAttemptsFromStreamRequest() {
