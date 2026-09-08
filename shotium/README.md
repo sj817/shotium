@@ -26,14 +26,16 @@ The package is published as native ESM:
 ### 2. Basic Example
 
 ```ts
+import { writeFileSync } from 'node:fs';
 import shotium, { screenshot } from '@shotkit/shotium';
 
 // 1. Initialize engine
 shotium.start();
 
-// 2. Render remote URLs, local HTML files, or inline HTML strings (data:text/html)
+// 2. Write HTML to a local file and render it
+writeFileSync('hello.html', '<h1 style="color: #0969da; font-family: sans-serif;">Hello Shotium</h1>');
 const { image, stats } = await screenshot({
-  file: 'data:text/html,<h1 style="color: #0969da; font-family: sans-serif;">Hello Shotium</h1>',
+  file: './hello.html',
   viewport: { width: 800, height: 400 },
 });
 
@@ -95,6 +97,7 @@ The engine is loaded into the host process as a Node-API addon wrapping a shared
 The engine runs directly inside your Node.js process via Node-API, bound to the C ABI in [`shot/shot_api.h`](https://github.com/sj817/shotium/blob/main/shot/shot_api.h). `screenshot()` returns the image buffer encoded directly by Blink (~**31 ms** per shot).
 
 ```ts
+import { writeFileSync } from 'node:fs';
 import shotium, { screenshot } from '@shotkit/shotium';
 
 // Start engine and retrieve cache status
@@ -108,10 +111,11 @@ const res1 = await screenshot({
   quality: 85,
 });
 
-// 2. Capture dynamically assembled inline HTML string (no temporary files on disk)
+// 2. Capture dynamically assembled HTML through a local file
 const html = `<div style="padding: 24px; background: #f6f8fa;"><h2>Invoice #1024</h2></div>`;
+writeFileSync('invoice.html', html);
 const res2 = await screenshot({
-  file: `data:text/html;charset=utf-8,${encodeURIComponent(html)}`,
+  file: './invoice.html',
   viewport: { width: 600, height: 300 },
 });
 
@@ -335,7 +339,7 @@ tiles for a tall page.
 - **`file` Input Schemes**:
   - Remote URLs: `https://example.com`
   - Local Paths: `./template.html`, `/absolute/path/index.html`, `file:///...`
-  - Inline HTML Strings: `data:text/html;charset=utf-8,<h1>Hello</h1>`
+  - For generated HTML, write a local file first. `data:` URLs are not supported.
 - **`cache` Strategies** (follows Web Fetch API, applies to document and subresources):
   - `default`: Standard HTTP caching behavior.
   - `reload`: Bypasses existing cache, fetches fresh resources from server, and updates cache.
