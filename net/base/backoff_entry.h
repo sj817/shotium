@@ -25,8 +25,7 @@ namespace net {
 // intended for reuse in various networking scenarios.
 class NET_EXPORT BackoffEntry final {
  public:
-  // The set of parameters that define a back-off policy. When modifying this,
-  // increment SERIALIZATION_VERSION_NUMBER in backoff_entry_serializer.cc.
+  // The set of parameters that define a back-off policy.
   struct Policy {
     // Number of initial errors (in sequence) to ignore before applying
     // exponential back-off rules.

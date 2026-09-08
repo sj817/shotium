@@ -5,13 +5,8 @@
 module blink.mojom;
 
 import "mojo/public/mojom/base/time.mojom";
-import "mojo/public/mojom/base/unguessable_token.mojom";
-import "skia/public/mojom/skcolor.mojom";
-import "third_party/blink/public/mojom/frame/frame_replication_state.mojom";
 import "third_party/blink/public/mojom/navigation/was_activated_option.mojom";
 import "third_party/blink/public/mojom/page/page_visibility_state.mojom";
-import "third_party/blink/public/mojom/tokens/tokens.mojom";
-import "ui/color/color_id.mojom";
 
 enum PagehideDispatch {
   // We haven't dispatched pagehide and should do so when appropriate.
@@ -40,28 +35,6 @@ struct PageLifecycleState {
   bool eviction_enabled;
 };
 
-// Additional parameters to send with SetPageLifecycleState calls when we're
-// restoring a page from the back-forward cache.
-struct PageRestoreParams {
-  // Timestamp of the start of the navigation restoring this entry from the
-  // back-forward cache.
-  mojo_base.mojom.TimeTicks navigation_start;
-
-  // The index in the session history list for the page to be restored.
-  int32 pending_history_list_index;
-
-  // Total size of the session history list.
-  int32 current_history_list_length;
-
-};
-
-// Contains the information necessary to construct the light, dark, forced ColorProviders.
-struct ColorProviderColorMaps {
-  map<color.mojom.RendererColorId, skia.mojom.SkColor> light_colors_map;
-  map<color.mojom.RendererColorId, skia.mojom.SkColor> dark_colors_map;
-  map<color.mojom.RendererColorId, skia.mojom.SkColor> forced_colors_map;
-};
-
 // Parameters to send with ActivatePrerenderedPage calls when we're activating a
 // prerendered page.
 struct PrerenderPageActivationParams {
@@ -74,56 +47,4 @@ struct PrerenderPageActivationParams {
   // hosts a prerendered frame.
   mojo_base.mojom.TimeTicks? activation_start;
 
-};
-
-// Used for broadcast messages from browser to renderer for messages that need
-// to go to all blink::WebViewImpls for a given content::WebContents. There may
-// be multiple blink::WebViewImpls when there are out-of-process iframes.
-interface PageBroadcast {
-  // Notifies the renderer about a change in the lifecycle state of the page.
-  SetPageLifecycleState(
-      PageLifecycleState state,
-      PageRestoreParams? page_restore_params) => ();
-
-  // Notifies the renderer when audio is started or stopped.
-  AudioStateChanged(bool is_audio_playing);
-
-  // Notifies the renderer when a prerendered page is activated. The renderer
-  // is expected to update `document.prerendering` and dispatch the
-  // prerenderingchange event on relevant documents.
-  //
-  // The renderer calls the callback once all documents in the
-  // blink::WebViewImpl finished activating.
-  //
-  // TODO(falken): Move this to SetPageLifecycleState.
-  ActivatePrerenderedPage(
-      PrerenderPageActivationParams prerender_page_activation_params) => ();
-
-  // Upgrades a prerender-until-script page to a full prerender, resuming
-  // JavaScript execution. The page remains in prerendering state (i.e.,
-  // document.prerendering stays true). This is distinct from activation,
-  // which transitions the page from prerendering to the primary frame tree.
-  UpgradePrerenderUntilScriptToFullPrerender();
-
-  // Set history index and length.
-  SetHistoryIndexAndLength(int32 index, int32 length);
-
-  // Sent to whole page, but should only be used by the main frame.
-  SetPageBaseBackgroundColor(skia.mojom.SkColor? color);
-
-  // Update the page's browsing context group, with the information contained
-  // in `browsing_context_group_token`.
-  UpdatePageBrowsingContextGroup(
-    mojo_base.mojom.UnguessableToken browsing_context_group_token);
-
-  // Sends an update for the ColorProviders to be used for the given page.
-  // The update is sent when either occurs:
-  // 1. A blink::WebView is created.
-  // 2. The ColorProvider associated with the WebContents changes as a result
-  // of theme changes.
-  UpdateColorProviders(ColorProviderColorMaps color_provider_colors);
-
-  // Indicates that the page's main frame should collect draggable regions set
-  // using the app-region CSS property.
-  SetSupportsDraggableRegions(bool supports_draggable_regions);
 };

@@ -1655,10 +1655,6 @@
     "includes": [9480],
   },
 
-  "net/base/net_resources.grd": {
-    "includes": [9500],
-  },
-
   "remoting/resources/remoting_strings.grd": {
     "messages": [9520],
   },

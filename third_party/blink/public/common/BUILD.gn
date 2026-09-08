@@ -185,7 +185,6 @@ source_set("headers") {
     "navigation/navigation_policy.h",
     "navigation/resource_intercept_policy.h",
     "page/color_provider_color_maps.h",
-    "page/color_provider_color_maps_mojom_traits.h",
     "page/drag_mojom_traits.h",
     "page/drag_operation.h",
     "page/launching_process_state.h",

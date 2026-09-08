@@ -169,7 +169,6 @@ shot_compatible_source_set("common") {
     "navigation/prefetched_signed_exchange_info_mojom_traits.cc",
     "navigation/preloading_headers.cc",
 
-    "page/color_provider_color_maps_mojom_traits.cc",
     "page/drag_mojom_traits.cc",
     "page/drag_operation.cc",
     "page/page_zoom.cc",

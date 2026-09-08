@@ -12,7 +12,6 @@ import("//net/features.gni")
 import("//testing/test.gni")
 import("//third_party/icu/config.gni")
 import("//third_party/protobuf/proto_library.gni")
-import("//tools/grit/grit_rule.gni")
 import("//url/features.gni")
 
 if (is_android) {
@@ -162,8 +161,6 @@ component("net") {
     "base/auth.h",
     "base/backoff_entry.cc",
     "base/backoff_entry.h",
-    "base/backoff_entry_serializer.cc",
-    "base/backoff_entry_serializer.h",
     "base/base64.cc",
     "base/base64.h",
     "base/bssl_refcounted.cc",
@@ -1413,8 +1410,6 @@ component("net") {
 
   if (!disable_file_support) {
     sources += [
-      "base/directory_lister.cc",
-      "base/directory_lister.h",
     ]
   }
 
@@ -1496,16 +1491,12 @@ source_set("net_deps") {
     "//base",
     "//net/base:constants",
     "//net/base:net_export_header",
-    "//net/base/module",
     "//net/base/registry_controlled_domains",
     "//third_party/protobuf:protobuf_lite",
     "//third_party/zlib",
     "//url:buildflags",
   ]
 
-  if (!disable_file_support) {
-    public_deps += [ ":net_resources" ]
-  }
 
   public_configs = net_configs
 
@@ -1573,7 +1564,6 @@ source_set("net_public_deps") {
     "//base",
     "//crypto",
     "//net/base:registry_controlled_domains",
-    "//net/base/module",
     "//net/third_party/quiche",
     "//net/third_party/uri_template",
     "//net/traffic_annotation",
@@ -1586,14 +1576,6 @@ source_set("net_public_deps") {
   }
 }
 
-grit("net_resources") {
-  source = "base/net_resources.grd"
-  inputs = [ "base/dir_header.html" ]
-  outputs = [
-    "grit/net_resources.h",
-    "net_resources.pak",
-  ]
-}
 
 proto_library("isolation_info_proto") {
   sources = [ "base/isolation_info.proto" ]
@@ -2164,7 +2146,6 @@ target(_test_target_type, "net_unittests") {
   sources = [
     "base/address_family_unittest.cc",
     "base/address_list_unittest.cc",
-    "base/backoff_entry_serializer_unittest.cc",
     "base/backoff_entry_unittest.cc",
     "base/base64_unittest.cc",
     "base/chunked_upload_data_stream_unittest.cc",
@@ -2690,8 +2671,6 @@ target(_test_target_type, "net_unittests") {
 
   if (!disable_file_support) {
     sources += [
-      "base/directory_lister_unittest.cc",
-      "base/directory_listing_unittest.cc",
       "test/url_request/url_request_test_job_backed_by_file_unittest.cc",
     ]
   }

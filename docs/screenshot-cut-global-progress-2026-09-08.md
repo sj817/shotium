@@ -1,4 +1,6 @@
-# 静态截图引擎全局裁剪进度（stage60）
+# 静态截图引擎全局裁剪进度（stage61）
+
+stage61：stage60 已提交 bbe067433a13。本批20源码路径（13D+7E），整组删除无调用的网络目录浏览器：DirectoryLister、JS目录HTML生成器及资源包、NetModule资源提供接口、BackoffEntrySerializer，并解除GN/资源ID入口。正常file加载、缓存及退避算法保留。并行整组删除PageBroadcast接口及独占PageRestoreParams、颜色映射Mojo序列化/traits；真实页面生命周期、预渲染参数及原生SVG颜色继承保留。4GN语法、diff及残留检查通过，保护清单交集零。没有本轮图生成/编译/运行/像素验收，stage49受限core GN阻点未解除。证据out/cut-stage61-combined/、out/cut-stage61-net-directory/、out/cut-stage61-page-protocol/。按用户最新要求，后续扩大删除组、集中最终编译；全局工作量仍估计65%±10，源码约80%，余10–16大批次是粗估而非小提交计数。
 
 stage60 当前接续：stage59 已提交 06e6b2420c9c。本批22源码路径、14D+8E。删除无调用SystemMonitor设备通知、Linux桌面环境导出及专属GPU信息formatter、全部无消费者UI GLib wrappers（12D3E）；底层GLib、SysInfo、字体配置及实际display util/EDID保留，ui/base/glib与linux两空目录按边界与为空校验后清理。另仅解除WebPreferences无人消费的序列化/traits/Mojo struct/page更新方法（2D5E），Shot真实默认配置类/构造/应用逻辑继续保留；8个CSS/布局等枚举原文相同。类体只少一多余空行，声明/默认值不变，头文件显式包含V8CacheOptions shared枚举以消除旧传递依赖。22路径备份SHA/保护交集零、14实体删除、5GN语法、diff/残留核对通过；SystemMonitor同名Rust COM GUID非base调用，保留。证据out/cut-stage60-combined/、out/cut-stage60-system-ui/、out/cut-stage60-web-prefs/。无本轮图生成/编译/运行/像素验证，stage49受限core GN阻点及全局待办未解除，整体工作量估算仍约65%±10。
 
