@@ -86,17 +86,6 @@ class NET_EXPORT ClientSocketPool : public LowerLayeredPool {
   // SocketPool's global and per-group socket limits.
   enum class RespectLimits { DISABLED, ENABLED };
 
-  // ProxyAuthCallback is invoked when there is an auth challenge while
-  // connecting to a tunnel. When |restart_with_auth_callback| is invoked, the
-  // corresponding socket request is guaranteed not to be completed
-  // synchronously, nor will the ProxyAuthCallback be invoked against
-  // synchronously.
-  typedef base::RepeatingCallback<void(
-      const HttpResponseInfo& response,
-      HttpAuthController* auth_controller,
-      base::OnceClosure restart_with_auth_callback)>
-      ProxyAuthCallback;
-
   // Callback for preconnect socket requests.
   // The first bool argument indicates whether the request is successful.
   // Currently, preconnect is considered "successful" when a socket is available
@@ -247,22 +236,14 @@ class NET_EXPORT ClientSocketPool : public LowerLayeredPool {
   //
   // If |respect_limits| is DISABLED, priority must be HIGHEST.
   //
-  // |proxy_annotation_tag| is the annotation used for proxy-related reads and
-  // writes, and may be nullopt if (and only if) no proxy is in use.
-  //
-  // |proxy_auth_callback| will be invoked each time an auth challenge is seen
-  // while establishing a tunnel. It will be invoked asynchronously, once for
-  // each auth challenge seen.
   virtual int RequestSocket(
       const GroupId& group_id,
       scoped_refptr<SocketParams> params,
-      const std::optional<NetworkTrafficAnnotationTag>& proxy_annotation_tag,
       RequestPriority priority,
       const SocketTag& socket_tag,
       RespectLimits respect_limits,
       ClientSocketHandle* handle,
       CompletionOnceCallback callback,
-      const ProxyAuthCallback& proxy_auth_callback,
       const NetLogWithSource& net_log) = 0;
 
   // RequestSockets is used to request that |num_sockets| be connected in the
@@ -280,7 +261,6 @@ class NET_EXPORT ClientSocketPool : public LowerLayeredPool {
   virtual int RequestSockets(
       const GroupId& group_id,
       scoped_refptr<SocketParams> params,
-      const std::optional<NetworkTrafficAnnotationTag>& proxy_annotation_tag,
       size_t num_sockets,
       PreconnectCompletionCallback callback,
       const NetLogWithSource& net_log) = 0;
@@ -385,7 +365,6 @@ class NET_EXPORT ClientSocketPool : public LowerLayeredPool {
   std::unique_ptr<ConnectJob> CreateConnectJob(
       GroupId group_id,
       scoped_refptr<SocketParams> socket_params,
-      const std::optional<NetworkTrafficAnnotationTag>& proxy_annotation_tag,
       RequestPriority request_priority,
       SocketTag socket_tag,
       ConnectJob::Delegate* delegate);

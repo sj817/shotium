@@ -71,22 +71,18 @@ const char TransportClientSocketPool::kSslConfigChanged[] =
 TransportClientSocketPool::Request::Request(
     ClientSocketHandle* handle,
     CompletionOnceCallback callback,
-    const ProxyAuthCallback& proxy_auth_callback,
     RequestPriority priority,
     const SocketTag& socket_tag,
     RespectLimits respect_limits,
     Flags flags,
     scoped_refptr<SocketParams> socket_params,
-    const std::optional<NetworkTrafficAnnotationTag>& proxy_annotation_tag,
     const NetLogWithSource& net_log)
     : handle_(handle),
       callback_(std::move(callback)),
-      proxy_auth_callback_(proxy_auth_callback),
       priority_(priority),
       respect_limits_(respect_limits),
       flags_(flags),
       socket_params_(std::move(socket_params)),
-      proxy_annotation_tag_(proxy_annotation_tag),
       net_log_(net_log),
       socket_tag_(socket_tag) {
   if (respect_limits_ == ClientSocketPool::RespectLimits::DISABLED)
@@ -238,13 +234,11 @@ void TransportClientSocketPool::RemoveHigherLayeredPool(
 int TransportClientSocketPool::RequestSocket(
     const GroupId& group_id,
     scoped_refptr<SocketParams> params,
-    const std::optional<NetworkTrafficAnnotationTag>& proxy_annotation_tag,
     RequestPriority priority,
     const SocketTag& socket_tag,
     RespectLimits respect_limits,
     ClientSocketHandle* handle,
     CompletionOnceCallback callback,
-    const ProxyAuthCallback& proxy_auth_callback,
     const NetLogWithSource& net_log) {
   CHECK(callback);
   CHECK(handle);
@@ -252,8 +246,8 @@ int TransportClientSocketPool::RequestSocket(
   NetLogTcpClientSocketPoolRequestedSocket(net_log, group_id);
 
   std::unique_ptr<Request> request = std::make_unique<Request>(
-      handle, std::move(callback), proxy_auth_callback, priority, socket_tag,
-      respect_limits, NORMAL, std::move(params), proxy_annotation_tag, net_log);
+      handle, std::move(callback), priority, socket_tag,
+      respect_limits, NORMAL, std::move(params), net_log);
 
   // Cleanup any timed-out idle sockets.
   CleanupIdleSockets(false, nullptr /* net_log_reason_utf8 */);
@@ -292,7 +286,6 @@ int TransportClientSocketPool::RequestSocket(
 int TransportClientSocketPool::RequestSockets(
     const GroupId& group_id,
     scoped_refptr<SocketParams> params,
-    const std::optional<NetworkTrafficAnnotationTag>& proxy_annotation_tag,
     size_t num_sockets,
     PreconnectCompletionCallback callback,
     const NetLogWithSource& net_log) {
@@ -301,9 +294,9 @@ int TransportClientSocketPool::RequestSockets(
                    [&] { return NetLogGroupIdParams(group_id); });
 
   Request request(nullptr /* no handle */, CompletionOnceCallback(),
-                  ProxyAuthCallback(), IDLE, SocketTag(),
+                  IDLE, SocketTag(),
                   RespectLimits::ENABLED, NO_IDLE_SOCKETS, params,
-                  proxy_annotation_tag, net_log);
+                  net_log);
 
   // Cleanup any timed-out idle sockets.
   CleanupIdleSockets(false, nullptr /* net_log_reason_utf8 */);
@@ -338,7 +331,7 @@ int TransportClientSocketPool::RequestSockets(
           base::BindPostTaskToCurrentDefault(base::BindOnce(
               &TransportClientSocketPool::OnPreconnectConnectJobComplete,
               weak_factory_.GetWeakPtr(), std::move(callback), group_id, params,
-              proxy_annotation_tag, net_log)));
+              net_log)));
   int pending_connect_job_count = 0;
   for (int num_iterations_left = num_sockets;
        group->NumActiveSocketSlots() < num_sockets && num_iterations_left > 0;
@@ -477,8 +470,7 @@ int TransportClientSocketPool::RequestSocketInternal(
   // so allocate and connect a new one.
   group = GetOrCreateGroup(group_id);
   std::unique_ptr<ConnectJob> connect_job(CreateConnectJob(
-      group_id, request.socket_params(), request.proxy_annotation_tag(),
-      request.priority(), request.socket_tag(), group));
+      group_id, request.socket_params(), request.priority(), request.socket_tag(), group));
   connect_job->net_log().AddEvent(
       NetLogEventType::SOCKET_POOL_CONNECT_JOB_CREATED, [&] {
         return NetLogCreateConnectJobParams(false /* backup_job */, &group_id);
@@ -639,17 +631,8 @@ void TransportClientSocketPool::CancelRequest(const GroupId& group_id,
   CHECK(group_map_.contains(group_id));
   Group* group = GetOrCreateGroup(group_id);
 
-  std::unique_ptr<Request> request = group->FindAndRemoveBoundRequest(handle);
-  if (request) {
-    --connecting_socket_count_;
-    UpdateExpandabilityAfterRelease();
-    OnAvailableSocketSlot(group_id, group);
-    CheckForStalledSocketGroups();
-    return;
-  }
-
   // Search |unbound_requests_| for matching handle.
-  request = group->FindAndRemoveUnboundRequest(handle);
+  std::unique_ptr<Request> request = group->FindAndRemoveUnboundRequest(handle);
   if (request) {
     request->net_log().AddEvent(NetLogEventType::CANCELLED);
     request->net_log().EndEvent(NetLogEventType::SOCKET_POOL);
@@ -1226,7 +1209,6 @@ void TransportClientSocketPool::CancelAllRequestsWithError(int error) {
     // could access them if a user callback invocation is queued. It would also
     // result in the consumer handling two messages at once, which in general
     // isn't safe for a lot of code.
-    group->SetPendingErrorForAllBoundRequests(error);
 
     // Delete group if no longer needed.
     if (group->IsEmpty()) {
@@ -1270,61 +1252,24 @@ void TransportClientSocketPool::OnConnectJobComplete(Group* group,
   DCHECK_EQ(group, &group_map_.find(group->group_id())->second);
   DCHECK(result != OK || job->socket() != nullptr);
 
-  // Check if the ConnectJob is already bound to a Request. If so, result is
-  // returned to that specific request.
-  std::optional<Group::BoundRequest> bound_request =
-      group->FindAndRemoveBoundRequestForConnectJob(job);
-  Request* request = nullptr;
-  std::unique_ptr<Request> owned_request;
-  if (bound_request) {
-    --connecting_socket_count_;
+  // In this case, RemoveConnectJob(job, _) must be called before exiting this
+  // method. Otherwise, |job| will be leaked.
+  std::unique_ptr<Request> owned_request = group->PopNextUnboundRequest();
+  Request* request = owned_request.get();
 
-    // If the socket pools were previously flushed with an error, return that
-    // error to the bound request and discard the socket.
-    if (bound_request->pending_error != OK) {
-      InvokeUserCallbackLater(bound_request->request->handle(),
-                              bound_request->request->release_callback(),
-                              bound_request->pending_error,
-                              bound_request->request->socket_tag());
-      bound_request->request->net_log().EndEventWithNetErrorCode(
-          NetLogEventType::SOCKET_POOL, bound_request->pending_error);
+  if (!request) {
+    if (result == OK)
+      AddIdleSocket(job->PassSocket(), group);
+    RemoveConnectJob(job, group);
+    if (result != OK) {
       UpdateExpandabilityAfterRelease();
-      OnAvailableSocketSlot(group->group_id(), group);
-      CheckForStalledSocketGroups();
-      return;
     }
-
-    // If the ConnectJob is from a previous generation, add the request back to
-    // the group, and kick off another request. The socket will be discarded.
-    if (bound_request->generation != group->generation()) {
-      group->InsertUnboundRequest(std::move(bound_request->request));
-      UpdateExpandabilityAfterRelease();
-      OnAvailableSocketSlot(group->group_id(), group);
-      CheckForStalledSocketGroups();
-      return;
-    }
-
-    request = bound_request->request.get();
-  } else {
-    // In this case, RemoveConnectJob(job, _) must be called before exiting this
-    // method. Otherwise, |job| will be leaked.
-    owned_request = group->PopNextUnboundRequest();
-    request = owned_request.get();
-
-    if (!request) {
-      if (result == OK)
-        AddIdleSocket(job->PassSocket(), group);
-      RemoveConnectJob(job, group);
-      if (result != OK) {
-        UpdateExpandabilityAfterRelease();
-      }
-      OnAvailableSocketSlot(group->group_id(), group);
-      CheckForStalledSocketGroups();
-      return;
-    }
-
-    LogBoundConnectJobToRequest(job->net_log().source(), *request);
+    OnAvailableSocketSlot(group->group_id(), group);
+    CheckForStalledSocketGroups();
+    return;
   }
+
+  LogBoundConnectJobToRequest(job->net_log().source(), *request);
 
   // The case where there's no request is handled above.
   DCHECK(request);
@@ -1341,8 +1286,7 @@ void TransportClientSocketPool::OnConnectJobComplete(Group* group,
                                               result);
   InvokeUserCallbackLater(request->handle(), request->release_callback(),
                           result, request->socket_tag());
-  if (!bound_request)
-    RemoveConnectJob(job, group);
+  RemoveConnectJob(job, group);
   // If no socket was handed out, there's a new socket slot available.
   if (!request->handle()->socket()) {
     UpdateExpandabilityAfterRelease();
@@ -1350,7 +1294,6 @@ void TransportClientSocketPool::OnConnectJobComplete(Group* group,
     CheckForStalledSocketGroups();
   }
 }
-
 
 void TransportClientSocketPool::InvokeUserCallbackLater(
     ClientSocketHandle* handle,
@@ -1421,7 +1364,6 @@ void TransportClientSocketPool::OnPreconnectConnectJobComplete(
     PreconnectCompletionCallback callback,
     const GroupId& group_id,
     scoped_refptr<SocketParams> socket_params,
-    const std::optional<NetworkTrafficAnnotationTag>& proxy_annotation_tag,
     const NetLogWithSource& net_log,
     std::vector<int> results) {
   int result = OK;
@@ -1439,9 +1381,9 @@ void TransportClientSocketPool::OnPreconnectConnectJobComplete(
       if (HasActiveSocket(group_id) && IdleSocketCountInGroup(group_id) > 0) {
         handle = std::make_unique<ClientSocketHandle>();
         int rv = handle->Init(
-            group_id, std::move(socket_params), proxy_annotation_tag, IDLE,
+            group_id, std::move(socket_params), IDLE,
             SocketTag(), ClientSocketPool::RespectLimits::ENABLED,
-            base::DoNothing(), ProxyAuthCallback(), this, net_log);
+            base::DoNothing(), this, net_log);
 
         // There are couple of cases where rv can be ERR_IO_PENDING:
         // 1. Within TransportClientSocketPool::RequestSocket, it
@@ -1491,7 +1433,6 @@ TransportClientSocketPool::Group::~Group() {
   DCHECK_EQ(0u, unassigned_job_count());
   DCHECK(unbound_requests_.empty());
   DCHECK(jobs_.empty());
-  DCHECK(bound_requests_.empty());
 }
 
 void TransportClientSocketPool::Group::OnConnectJobComplete(int result,
@@ -1499,7 +1440,6 @@ void TransportClientSocketPool::Group::OnConnectJobComplete(int result,
   DCHECK_NE(ERR_IO_PENDING, result);
   client_socket_pool_->OnConnectJobComplete(this, result, job);
 }
-
 
 void TransportClientSocketPool::Group::StartBackupJobTimer(
     const GroupId& group_id) {
@@ -1618,8 +1558,7 @@ void TransportClientSocketPool::Group::OnBackupJobTimerFired(
   Request* request = unbound_requests_.FirstMax().value().get();
   std::unique_ptr<ConnectJob> owned_backup_job =
       client_socket_pool_->CreateConnectJob(
-          group_id, request->socket_params(), request->proxy_annotation_tag(),
-          request->priority(), request->socket_tag(), this);
+          group_id, request->socket_params(), request->priority(), request->socket_tag(), this);
   owned_backup_job->net_log().AddEvent(
       NetLogEventType::SOCKET_POOL_CONNECT_JOB_CREATED, [&] {
         return NetLogCreateConnectJobParams(true /* backup_job */, &group_id_);
@@ -1687,11 +1626,6 @@ void TransportClientSocketPool::Group::SanityCheck() const {
       DCHECK_NE(job, *it2);
     }
 
-    // Check that no |unassigned_jobs_| are in |bound_requests_|.
-    DCHECK(!std::ranges::contains(bound_requests_, job,
-                                  [](const BoundRequest& bound_request) {
-                                    return bound_request.connect_job.get();
-                                  }));
   }
 #endif
 }
@@ -1724,17 +1658,11 @@ void TransportClientSocketPool::Group::RemoveAllUnboundJobs() {
 }
 
 size_t TransportClientSocketPool::Group::ConnectJobCount() const {
-  return bound_requests_.size() + jobs_.size();
+  return jobs_.size();
 }
 
 ConnectJob* TransportClientSocketPool::Group::GetConnectJobForHandle(
     const ClientSocketHandle* handle) const {
-  // Search through bound requests for |handle|.
-  for (const auto& bound_pair : bound_requests_) {
-    if (handle == bound_pair.request->handle())
-      return bound_pair.connect_job.get();
-  }
-
   // Search through the unbound requests that have corresponding jobs for a
   // request with |handle|.
   for (RequestQueue::Pointer pointer = unbound_requests_.FirstMax();
@@ -1803,69 +1731,6 @@ TransportClientSocketPool::Group::FindAndRemoveUnboundRequest(
   return nullptr;
 }
 
-void TransportClientSocketPool::Group::SetPendingErrorForAllBoundRequests(
-    int pending_error) {
-  for (auto& bound_request : bound_requests_) {
-    // Earlier errors take precedence.
-    if (bound_request.pending_error == OK)
-      bound_request.pending_error = pending_error;
-  }
-}
-
-const TransportClientSocketPool::Request*
-TransportClientSocketPool::Group::BindRequestToConnectJob(
-    ConnectJob* connect_job) {
-  // Check if |job| is already bound to a Request.
-  for (const auto& bound_pair : bound_requests_) {
-    if (bound_pair.connect_job.get() == connect_job)
-      return bound_pair.request.get();
-  }
-
-  // If not, try to bind it to a Request.
-  const Request* request = GetNextUnboundRequest();
-  // If there are no pending requests, or the highest priority request has no
-  // callback to handle auth challenges, return nullptr.
-  if (!request || request->proxy_auth_callback().is_null())
-    return nullptr;
-
-  // Otherwise, bind the ConnectJob to the Request.
-  std::unique_ptr<Request> owned_request = PopNextUnboundRequest();
-  DCHECK_EQ(owned_request.get(), request);
-  std::unique_ptr<ConnectJob> owned_connect_job = RemoveUnboundJob(connect_job);
-  LogBoundConnectJobToRequest(owned_connect_job->net_log().source(), *request);
-  bound_requests_.emplace_back(BoundRequest(
-      std::move(owned_connect_job), std::move(owned_request), generation()));
-  return request;
-}
-
-std::optional<TransportClientSocketPool::Group::BoundRequest>
-TransportClientSocketPool::Group::FindAndRemoveBoundRequestForConnectJob(
-    ConnectJob* connect_job) {
-  for (auto bound_pair = bound_requests_.begin();
-       bound_pair != bound_requests_.end(); ++bound_pair) {
-    if (bound_pair->connect_job.get() != connect_job)
-      continue;
-    BoundRequest ret = std::move(*bound_pair);
-    bound_requests_.erase(bound_pair);
-    return std::move(ret);
-  }
-  return std::nullopt;
-}
-
-std::unique_ptr<TransportClientSocketPool::Request>
-TransportClientSocketPool::Group::FindAndRemoveBoundRequest(
-    ClientSocketHandle* client_socket_handle) {
-  for (auto bound_pair = bound_requests_.begin();
-       bound_pair != bound_requests_.end(); ++bound_pair) {
-    if (bound_pair->request->handle() != client_socket_handle)
-      continue;
-    std::unique_ptr<Request> request = std::move(bound_pair->request);
-    bound_requests_.erase(bound_pair);
-    return request;
-  }
-  return nullptr;
-}
-
 void TransportClientSocketPool::Group::SetPriority(ClientSocketHandle* handle,
                                                    RequestPriority priority) {
   for (RequestQueue::Pointer pointer = unbound_requests_.FirstMax();
@@ -1907,27 +1772,6 @@ bool TransportClientSocketPool::Group::RequestWithHandleHasJobForTesting(
   }
   NOTREACHED();
 }
-
-TransportClientSocketPool::Group::BoundRequest::BoundRequest()
-    : pending_error(OK) {}
-
-TransportClientSocketPool::Group::BoundRequest::BoundRequest(
-    std::unique_ptr<ConnectJob> connect_job,
-    std::unique_ptr<Request> request,
-    int64_t generation)
-    : connect_job(std::move(connect_job)),
-      request(std::move(request)),
-      generation(generation),
-      pending_error(OK) {}
-
-TransportClientSocketPool::Group::BoundRequest::BoundRequest(
-    BoundRequest&& other) = default;
-
-TransportClientSocketPool::Group::BoundRequest&
-TransportClientSocketPool::Group::BoundRequest::operator=(
-    BoundRequest&& other) = default;
-
-TransportClientSocketPool::Group::BoundRequest::~BoundRequest() = default;
 
 std::unique_ptr<TransportClientSocketPool::Request>
 TransportClientSocketPool::Group::RemoveUnboundRequest(

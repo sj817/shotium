@@ -111,9 +111,6 @@ class NET_EXPORT_PRIVATE HttpNetworkTransaction
                       const ProxyInfo& used_proxy_info,
                       ResolveErrorInfo resolve_error_info) override;
   void OnCertificateError(int status, const SSLInfo& ssl_info) override;
-  void OnNeedsProxyAuth(const HttpResponseInfo& response_info,
-                        const ProxyInfo& used_proxy_info,
-                        HttpAuthController* auth_controller) override;
   void OnNeedsClientAuth(SSLCertRequestInfo* cert_info) override;
 
   ConnectionAttempts GetConnectionAttempts() const override;
@@ -447,10 +444,6 @@ class NET_EXPORT_PRIVATE HttpNetworkTransaction
 
   // The next state in the state machine.
   State next_state_ = STATE_NONE;
-
-  // True when the tunnel is in the process of being established - we can't
-  // read from the socket until the tunnel is done.
-  bool establishing_tunnel_ = false;
 
   // Enable pooling to a SpdySession with matching IP and certificate
   // even if the SpdySessionKey is different.

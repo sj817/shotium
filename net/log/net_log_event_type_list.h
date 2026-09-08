@@ -36,20 +36,6 @@ EVENT_TYPE(FAILED)
 // Marks the creation/destruction of a request (net::URLRequest).
 EVENT_TYPE(REQUEST_ALIVE)
 
-// Marks the lifecycle of a WebSocket connection (net::WebSocketChannel).
-// Emitted as a BEGIN event in the constructor, an END event in the destructor,
-// and replayed as a synthetic BEGIN event when NetLog capture starts to surface
-// pre-existing connections that were opened before logging began.
-EVENT_TYPE(WEBSOCKET_ALIVE)
-
-// Marks a WebSocket channel state transition.
-// The event parameters include:
-//   {
-//     "old_state": <string>,
-//     "new_state": <string>,
-//   }
-EVENT_TYPE(WEBSOCKET_STATE_CHANGED)
-
 // ------------------------------------------------------------------------
 // HostResolverManager (previously known as HostResolverImpl)
 // ------------------------------------------------------------------------
@@ -314,105 +300,6 @@ EVENT_TYPE(HOST_RESOLVER_SERVICE_ENDPOINTS_STALE_RESULTS)
 EVENT_TYPE(HOST_RESOLVER_SERVICE_ENDPOINTS_RESOLUTION_DELAY)
 
 // ------------------------------------------------------------------------
-// InitProxyResolver
-// ------------------------------------------------------------------------
-
-// The start/end of auto-detect + custom PAC URL configuration.
-EVENT_TYPE(PAC_FILE_DECIDER)
-
-// The start/end of when proxy autoconfig was artificially paused following
-// a network change event. (We wait some amount of time after being told of
-// network changes to avoid hitting spurious errors during auto-detect).
-EVENT_TYPE(PAC_FILE_DECIDER_WAIT)
-
-// The start/end of download of a PAC script. This could be the well-known
-// WPAD URL (if testing auto-detect), or a custom PAC URL.
-//
-// The START event has the parameters:
-//   {
-//     "source": <String describing where PAC script comes from>,
-//   }
-//
-// If the fetch failed, then the END phase has these parameters:
-//   {
-//      "net_error": <Net error code integer>,
-//   }
-EVENT_TYPE(PAC_FILE_DECIDER_FETCH_PAC_SCRIPT)
-
-// This event means that initialization failed because there was no
-// configured script fetcher. (This indicates a configuration error).
-EVENT_TYPE(PAC_FILE_DECIDER_HAS_NO_FETCHER)
-
-// This event is emitted after deciding to fall-back to the next source
-// of PAC scripts in the list.
-EVENT_TYPE(PAC_FILE_DECIDER_FALLING_BACK_TO_NEXT_PAC_SOURCE)
-
-// ------------------------------------------------------------------------
-// ConfiguredProxyResolutionService
-// ------------------------------------------------------------------------
-
-// The start/end of a proxy resolve request.
-EVENT_TYPE(PROXY_RESOLUTION_SERVICE)
-
-// The time while a request is waiting on InitProxyResolver to configure
-// against either WPAD or custom PAC URL. The specifics on this time
-// are found from ConfiguredProxyResolutionService::init_proxy_resolver_log().
-EVENT_TYPE(PROXY_RESOLUTION_SERVICE_WAITING_FOR_INIT_PAC)
-
-// The time while a request is waiting on dynamic proxy routing rules (e.g. from
-// an enterprise Provisioning Domain) to be updated/fetched.
-EVENT_TYPE(PROXY_RESOLUTION_SERVICE_WAITING_FOR_DYNAMIC_PROXY_CONFIGS)
-
-// This event is emitted to show what the PAC script returned. It can contain
-// extra parameters that are either:
-//   {
-//      "pac_string": <List of valid proxy servers, in PAC format>,
-//   }
-//
-//  Or if the the resolver failed:
-//   {
-//      "net_error": <Net error code that resolver failed with>,
-//   }
-//
-// In the case of Windows system-based proxy resolution, the event also includes
-// WinHTTP status codes and Windows-specific error codes:
-//   {
-//      "winhttp_status": <WinHTTP status code (integer)>,
-//      "windows_error": <Windows system error code (integer)>,
-//      "proxy_info": <Debug string representation of the ProxyInfo result>,
-//   }
-EVENT_TYPE(PROXY_RESOLUTION_SERVICE_RESOLVED_PROXY_LIST)
-
-// This event is emitted after proxies marked as bad have been deprioritized.
-//
-// It contains these parameters:
-//   {
-//      "pac_string": <List of valid proxy servers, in PAC format>,
-//   }
-EVENT_TYPE(PROXY_RESOLUTION_SERVICE_DEPRIORITIZED_BAD_PROXIES)
-
-// This event is emitted whenever the proxy settings used by
-// ConfiguredProxyResolutionService change.
-//
-// It contains these parameters:
-//  {
-//     "old_config": <Dump of the previous proxy settings>,
-//     "new_config": <Dump of the new proxy settings>,
-//  }
-//
-// Note that the "old_config" key will be omitted on the first fetch of the
-// proxy settings (since there wasn't a previous value).
-EVENT_TYPE(PROXY_CONFIG_CHANGED)
-
-// Emitted when a list of bad proxies is reported to the proxy service.
-//
-// Parameters:
-//   {
-//     "bad_proxy_list": <List of bad proxies>,
-//   }
-EVENT_TYPE(BAD_PROXY_LIST_REPORTED)
-
-// ------------------------------------------------------------------------
 // ProxyList
 // ------------------------------------------------------------------------
 
@@ -425,43 +312,6 @@ EVENT_TYPE(BAD_PROXY_LIST_REPORTED)
 //     "bad_proxy": <URI representation of the failed proxy server>,
 //   }
 EVENT_TYPE(PROXY_LIST_FALLBACK)
-
-// ------------------------------------------------------------------------
-// ProxyResolverV8Tracing
-// ------------------------------------------------------------------------
-
-// This event is emitted when a javascript error has been triggered by a
-// PAC script. It contains the following event parameters:
-//   {
-//      "line_number": <The line number in the PAC script
-//                      (or -1 if not applicable)>,
-//      "message": <The error message>,
-//   }
-EVENT_TYPE(PAC_JAVASCRIPT_ERROR)
-
-// This event is emitted when a PAC script called alert(). It contains the
-// following event parameters:
-//   {
-//      "message": <The string of the alert>,
-//   }
-EVENT_TYPE(PAC_JAVASCRIPT_ALERT)
-
-// ------------------------------------------------------------------------
-// MultiThreadedProxyResolver
-// ------------------------------------------------------------------------
-
-// Measures the time that a proxy resolve request was stalled waiting for a
-// proxy resolver thread to free-up.
-EVENT_TYPE(WAITING_FOR_PROXY_RESOLVER_THREAD)
-
-// This event is emitted just before a PAC request is bound to a thread. It
-// contains these parameters:
-//
-//   {
-//     "thread_number": <Identifier for the PAC thread that is going to
-//                       run this request>,
-//   }
-EVENT_TYPE(SUBMITTED_TO_RESOLVER_THREAD)
 
 // ------------------------------------------------------------------------
 // Socket (Shared by stream and datagram sockets)
@@ -587,53 +437,6 @@ EVENT_TYPE(TCP_ACCEPT)
 //     "source_dependency": <Source identifier for the controlling entity>,
 //   }
 EVENT_TYPE(SOCKET_IN_USE)
-
-// The start/end of a SOCKS connect().
-EVENT_TYPE(SOCKS_CONNECT)
-
-// The start/end of a SOCKS5 connect().
-EVENT_TYPE(SOCKS5_CONNECT)
-
-// This event is emitted when the SOCKS connect fails because the provided
-// was longer than 255 characters.
-EVENT_TYPE(SOCKS_HOSTNAME_TOO_BIG)
-
-// These events are emitted when insufficient data was read while
-// trying to establish a connection to the SOCKS proxy server
-// (during the greeting phase or handshake phase, respectively).
-EVENT_TYPE(SOCKS_UNEXPECTEDLY_CLOSED_DURING_GREETING)
-EVENT_TYPE(SOCKS_UNEXPECTEDLY_CLOSED_DURING_HANDSHAKE)
-
-// This event indicates that a bad version number was received in the
-// proxy server's response. The extra parameters show its value:
-//   {
-//     "version": <Integer version number in the response>,
-//   }
-EVENT_TYPE(SOCKS_UNEXPECTED_VERSION)
-
-// This event indicates that the SOCKS proxy server returned an error while
-// trying to create a connection. The following parameters will be attached
-// to the event:
-//   {
-//     "error_code": <Integer error code returned by the server>,
-//   }
-EVENT_TYPE(SOCKS_SERVER_ERROR)
-
-// This event indicates that the SOCKS proxy server asked for an authentication
-// method that we don't support. The following parameters are attached to the
-// event:
-//   {
-//     "method": <Integer method code>,
-//   }
-EVENT_TYPE(SOCKS_UNEXPECTED_AUTH)
-
-// This event indicates that the SOCKS proxy server's response indicated an
-// address type which we are not prepared to handle.
-// The following parameters are attached to the event:
-//   {
-//     "address_type": <Integer code for the address type>,
-//   }
-EVENT_TYPE(SOCKS_UNKNOWN_ADDRESS_TYPE)
 
 // The start/end of an SSL "connect" (aka client handshake).
 // The following parameters are attached to the END event:
@@ -927,12 +730,6 @@ EVENT_TYPE(TCP_CONNECT_JOB_CONNECT)
 
 // The start/end of the SSLConnectJob::Connect().
 EVENT_TYPE(SSL_CONNECT_JOB_CONNECT)
-
-// The start/end of the SOCKSConnectJob::Connect().
-EVENT_TYPE(SOCKS_CONNECT_JOB_CONNECT)
-
-// The start/end of the HttpProxyConnectJob::Connect().
-EVENT_TYPE(HTTP_PROXY_CONNECT_JOB_CONNECT)
 
 // A TLS connection attempt failed because ECH was not negotiated. The
 // connection will be retried with a new ECHConfigList from the client-facing
@@ -1964,96 +1761,6 @@ EVENT_TYPE(HTTP_TRANSACTION_RESTART_AFTER_ERROR)
 EVENT_TYPE(HTTP_TRANSACTION_RESTART_MISDIRECTED_REQUEST)
 
 // ------------------------------------------------------------------------
-// BidirectionalStream
-// ------------------------------------------------------------------------
-
-// Marks the creation/destruction of a net::BidirectionalStream.
-// The following parameters are attached:
-//   {
-//      "url": <The URL being used>,
-//      "method": <The HTTP method being used>,
-//      "headers": <The list of header:value pairs>,
-//   }
-EVENT_TYPE(BIDIRECTIONAL_STREAM_ALIVE)
-
-// Marks the ReadData call of a net::BidirectionalStream.
-// The following parameters are attached:
-// {
-//     "rv": <The value in int that is returned to the caller>
-// }
-EVENT_TYPE(BIDIRECTIONAL_STREAM_READ_DATA)
-
-// Marks the SendvData call of a net::BidirectionalStream.
-// The following parameters are attached:
-// {
-//     "num_buffers": <The number of buffers passed to SendvData>
-// }
-EVENT_TYPE(BIDIRECTIONAL_STREAM_SENDV_DATA)
-
-// Marks the beginning/end of buffers sent in a net::BidirectionalStream.
-// The following parameters are attached:
-//   {
-//      "num_buffers_coalesced": <number of buffers that were sent together>,
-//   }
-EVENT_TYPE(BIDIRECTIONAL_STREAM_BYTES_SENT_COALESCED)
-
-// The specified number of bytes were sent on the stream.  Depending on the
-// source of the event, may be logged either once the data is sent, or when it
-// is queued to be sent.
-// The following parameters are attached:
-//   {
-//     "byte_count": <Number of bytes that were just sent>,
-//     "bytes": <The exact bytes sent, Base64 encoded.
-//               Only present when byte logging is enabled>,
-//   }
-EVENT_TYPE(BIDIRECTIONAL_STREAM_BYTES_SENT)
-
-// The specified number of bytes were received on the stream.
-// The following parameters are attached:
-//   {
-//     "byte_count": <Number of bytes that were just received>,
-//     "bytes": <The exact bytes received, Base64 encoded.
-//               Only present when byte logging is enabled>,
-//   }
-EVENT_TYPE(BIDIRECTIONAL_STREAM_BYTES_RECEIVED)
-
-// This event is sent for receiving headers on the stream.
-// The following parameters are attached:
-//   {
-//     "headers": <The list of header:value pairs>,
-//   }
-EVENT_TYPE(BIDIRECTIONAL_STREAM_RECV_HEADERS)
-
-// This event is sent for receiving trailers on the stream.
-// The following parameters are attached:
-//   {
-//     "headers": <The list of header:value pairs>,
-//   }
-EVENT_TYPE(BIDIRECTIONAL_STREAM_RECV_TRAILERS)
-
-// This event is used when stream is successfully negotiated and is ready for
-// sending data and reading data.
-// The following parameters are attached:
-//   {
-//     "request_headers_sent": <boolean>,
-//   }
-EVENT_TYPE(BIDIRECTIONAL_STREAM_READY)
-
-// This event is used when stream has failed.
-// The following parameters are attached:
-//   {
-//     "net_error": <Net error code for the failure>,
-//   }
-EVENT_TYPE(BIDIRECTIONAL_STREAM_FAILED)
-
-// Identifies the NetLogSource() for the QuicSession that handled the stream.
-// The event parameters are:
-//   {
-//      "source_dependency": <Source identifier for session that was used>,
-//   }
-EVENT_TYPE(BIDIRECTIONAL_STREAM_BOUND_TO_QUIC_SESSION)
-
-// ------------------------------------------------------------------------
 // SpdySession
 // ------------------------------------------------------------------------
 
@@ -2338,12 +2045,6 @@ EVENT_TYPE(HTTP2_STREAM_ERROR)
 //     "exclusive":        <Whether the new dependency is exclusive>,
 //   }
 EVENT_TYPE(HTTP2_STREAM_SEND_PRIORITY)
-
-// ------------------------------------------------------------------------
-// SpdyProxyClientSocket
-// ------------------------------------------------------------------------
-
-EVENT_TYPE(HTTP2_PROXY_CLIENT_SESSION)
 // Identifies the HTTP/2 session a source is using.
 //   {
 //     "source_dependency":  <Source identifier for the underlying session>,
@@ -2460,13 +2161,6 @@ EVENT_TYPE(BOUND_TO_QUIC_SESSION_POOL_JOB)
 //     "net_error": <Net error code the connect failed with, on error>,
 //  }
 EVENT_TYPE(QUIC_SESSION_POOL_JOB_CONNECT)
-
-// Measures the time taken by a ProxyJob to establish a connection to its
-// endpoint through the proxy.
-EVENT_TYPE(QUIC_SESSION_POOL_PROXY_JOB_CONNECT)
-
-// Measures the time taken by a ProxyJob to establish a session to the proxy.
-EVENT_TYPE(QUIC_SESSION_POOL_PROXY_JOB_CREATE_PROXY_SESSION)
 
 // This event indicates that the connection on the default network has failed
 // before the handshake completed and a new connection on the alternate network
@@ -3351,22 +3045,6 @@ EVENT_TYPE(QUIC_READ_ERROR)
 
 // Measures the time to read HTTP response headers from the server.
 EVENT_TYPE(HTTP_STREAM_PARSER_READ_HEADERS)
-
-// ------------------------------------------------------------------------
-// SOCKS5ClientSocket
-// ------------------------------------------------------------------------
-
-// The time spent sending the "greeting" to the SOCKS server.
-EVENT_TYPE(SOCKS5_GREET_WRITE)
-
-// The time spent waiting for the "greeting" response from the SOCKS server.
-EVENT_TYPE(SOCKS5_GREET_READ)
-
-// The time spent sending the CONNECT request to the SOCKS server.
-EVENT_TYPE(SOCKS5_HANDSHAKE_WRITE)
-
-// The time spent waiting for the response to the CONNECT request.
-EVENT_TYPE(SOCKS5_HANDSHAKE_READ)
 
 // ------------------------------------------------------------------------
 // HTTP Authentication
@@ -4999,66 +4677,6 @@ EVENT_TYPE(CREATED_BY)
 // }
 EVENT_TYPE(COMPUTED_PRIVACY_MODE)
 
-// ------------------------------------------------------------------------
-// WebSocket
-// ------------------------------------------------------------------------
-
-// This event is logged when an error occurs during WebSocket handshake. It
-// contains the following parameters:
-// {
-//    "net_error": <The number showing network error type>,
-//    "message": <Failure message>,
-// }
-EVENT_TYPE(WEBSOCKET_UPGRADE_FAILURE)
-
-// This event is logged when the WebSocket read buffer size is changed. It
-// contains the following parameters:
-// {
-//    "read_buffer_size_in_bytes": <New read buffer size in bytes>,
-// }
-EVENT_TYPE(WEBSOCKET_READ_BUFFER_SIZE_CHANGED)
-
-// This event is logged to show the received frame header information. It
-// contains the following parameters:
-// {
-//    "final": <Whether it is the last fragment in a message>,
-//    "reserved1": <Whether any extension is defined>,
-//    "reserved2": <Whether any extension is defined>,
-//    "reserved3": <Whether any extension is defined>,
-//    "opcode": <Opcode in the frame header>,
-//    "masked": <Whether the message is encoded>,
-//    "payload_length": <Payload length in the frame header>,
-// }
-EVENT_TYPE(WEBSOCKET_RECV_FRAME_HEADER)
-
-// This event is logged to show the sent frame header information. It
-// contains the following parameters:
-// {
-//    "final": <Whether it is the last fragment in a message>,
-//    "reserved1": <Whether any extension is defined>,
-//    "reserved2": <Whether any extension is defined>,
-//    "reserved3": <Whether any extension is defined>,
-//    "opcode": <Opcode in the frame header>,
-//    "masked": <Whether the message is encoded>,
-//    "payload_length": <Payload length in the frame header>,
-// }
-EVENT_TYPE(WEBSOCKET_SENT_FRAME_HEADER)
-
-// This event is logged when the browser closes the connection instead of the
-// server.
-EVENT_TYPE(WEBSOCKET_CLOSE_TIMEOUT)
-
-// This event is logged when the WebSocket frame is wrong or weird and the
-// browser closes the connection. It contains the following parameters:
-// {
-//    "code": <WebSocket close code based on
-//    https://datatracker.ietf.org/doc/html/rfc6455#section-7.1.5>,
-//    "reason":<WebSocket close reason based on
-//    https://datatracker.ietf.org/doc/html/rfc6455#section-7.1.6>,
-//    "internal_reason": <Detailed reason>,
-// }
-EVENT_TYPE(WEBSOCKET_INVALID_FRAME)
-
 // This event is logged at TransportSecurityState::ShouldUpgradeToSSL.
 // The following parameters are attached:
 //   {
@@ -5150,60 +4768,6 @@ EVENT_TYPE(DBSC_REFRESH_RESULT)
 //     "status": <string>,
 //   }
 EVENT_TYPE(DBSC_REGISTRATION_RESULT)
-
-// The evaluation start/end of proxy resolution override rules.
-EVENT_TYPE(PROXY_RESOLUTION_OVERRIDE_RULES)
-
-// This event is logged when an applicable proxy override rule starts a DNS
-// resolution as required by one of its conditions. It contains the following
-// parameters:
-//   {
-//      "source_dependency": <Source identifier for the override rule which
-//      started this host resolution>,
-//   }
-EVENT_TYPE(PROXY_OVERRIDE_HOST_RESOLUTION)
-
-// This event is logged when an applicable proxy override rule starts a DNS
-// resolution as required by one of its conditions. It contains the following
-// parameters:
-//   {
-//      "source_dependency": <Source identifier for the net log that will be
-//      used by the HostResolver request>, "dns_condition": {
-//         "host": <string>,
-//         "result": <string>
-//      }
-//   }
-EVENT_TYPE(PROXY_OVERRIDE_BEGIN_HOST_RESOLUTION)
-
-// This event is logged when an applicable proxy override rule's DNS resolution
-// request completed. It contains the following parameters:
-//   {
-//      "host": <string>,
-//      "was_resolved_sync": <bool>,
-//      "net_error": <Integer error code>,
-//      "is_address_list_empty": <bool>,
-//   }
-EVENT_TYPE(PROXY_OVERRIDE_END_HOST_RESOLUTION)
-
-// This event is logged when a proxy resolution override rule was applied
-// for a request. It contains the rule, captured in the following parameters:
-//   {
-//     "destination_matchers": <string>,
-//     "proxy_list": <List of proxy servers>,
-//     "dns_conditions": [{
-//         "host": <string>,
-//         "result": <string>
-//       }]
-//   }
-EVENT_TYPE(PROXY_RESOLUTION_OVERRIDE_RULE_APPLIED)
-
-// This event is logged when a dynamic proxy routing rule (e.g. from an
-// enterprise Provisioning Domain) was applied for a request.
-//   {
-//     "destination_matchers": <string>,
-//     "proxy_list": <List of proxy servers>
-//   }
-EVENT_TYPE(PROXY_RESOLUTION_DYNAMIC_RULE_APPLIED)
 
 // This event is logged by a TrustedHeaderClient when it modifies headers
 // during OnBeforeSendHeaders. The event can be logged by multiple clients,

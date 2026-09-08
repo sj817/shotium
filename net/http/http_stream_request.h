@@ -64,24 +64,6 @@ class NET_EXPORT_PRIVATE HttpStreamRequest {
     // Called when we have a certificate error for the request.
     virtual void OnCertificateError(int status, const SSLInfo& ssl_info) = 0;
 
-    // This is the failure case where we need proxy authentication during
-    // proxy tunnel establishment.  For the tunnel case, we were unable to
-    // create the HttpStream, so the caller provides the auth and then resumes
-    // the HttpStreamRequest.
-    //
-    // For the non-tunnel case, the caller will discover the authentication
-    // failure when reading response headers. At that point, it will handle the
-    // authentication failure and restart the HttpStreamRequest entirely.
-    //
-    // Ownership of |auth_controller| and |proxy_response| are owned
-    // by the HttpStreamRequest. |proxy_response| is not guaranteed to be usable
-    // after the lifetime of this callback.  The delegate may take a reference
-    // to |auth_controller| if it is needed beyond the lifetime of this
-    // callback.
-    virtual void OnNeedsProxyAuth(const HttpResponseInfo& proxy_response,
-                                  const ProxyInfo& used_proxy_info,
-                                  HttpAuthController* auth_controller) = 0;
-
     // This is the failure for SSL Client Auth
     // Ownership of |cert_info| is retained by the HttpStreamRequest.  The
     // delegate may take a reference if it needs the cert_info beyond the
@@ -104,7 +86,6 @@ class NET_EXPORT_PRIVATE HttpStreamRequest {
 
     // Called to resume the HttpStream creation process when necessary
     // Proxy authentication credentials are collected.
-    virtual int RestartTunnelWithProxyAuth() = 0;
 
     // Called when the priority of transaction changes.
     virtual void SetPriority(RequestPriority priority) = 0;
@@ -131,13 +112,6 @@ class NET_EXPORT_PRIVATE HttpStreamRequest {
   HttpStreamRequest& operator=(const HttpStreamRequest&) = delete;
 
   ~HttpStreamRequest();
-
-  // When a HttpStream creation process is stalled due to necessity
-  // of Proxy authentication credentials, the delegate OnNeedsProxyAuth
-  // will have been called.  It now becomes the delegate's responsibility
-  // to collect the necessary credentials, and then call this method to
-  // resume the HttpStream creation process.
-  int RestartTunnelWithProxyAuth();
 
   // Called when the priority of the parent transaction changes.
   void SetPriority(RequestPriority priority);

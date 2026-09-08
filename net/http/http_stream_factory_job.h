@@ -78,12 +78,6 @@ class HttpStreamFactory::Job
     // Invoked when |job| raises failure for SSL Client Auth.
     virtual void OnNeedsClientAuth(Job* job, SSLCertRequestInfo* cert_info) = 0;
 
-    // Invoked when |job| needs proxy authentication.
-    virtual void OnNeedsProxyAuth(Job* job,
-                                  const HttpResponseInfo& proxy_response,
-                                  const ProxyInfo& used_proxy_info,
-                                  HttpAuthController* auth_controller) = 0;
-
     // Invoked when the |job| finishes pre-connecting sockets.
     virtual void OnPreconnectsComplete(Job* job, int result) = 0;
 
@@ -148,7 +142,6 @@ class HttpStreamFactory::Job
   // appropriate ClientSocketPool.
   int Preconnect(int num_streams);
 
-  int RestartTunnelWithProxyAuth();
   LoadState GetLoadState() const;
 
   // Tells |this| that |delegate_| has determined it still needs to continue
@@ -220,9 +213,6 @@ class HttpStreamFactory::Job
   void OnNewSpdySessionReadyCallback();
   void OnStreamFailedCallback(int result);
   void OnCertificateErrorCallback(int result, const SSLInfo& ssl_info);
-  void OnNeedsProxyAuthCallback(const HttpResponseInfo& response_info,
-                                HttpAuthController* auth_controller,
-                                base::OnceClosure restart_with_auth_callback);
   void OnNeedsClientAuthCallback(SSLCertRequestInfo* cert_info);
   void OnPreconnectsComplete(int result);
 
@@ -346,10 +336,6 @@ class HttpStreamFactory::Job
   // True if this job might succeed with a different proxy config.
   bool should_reconsider_proxy_ = false;
 
-  // True when the tunnel is in the process of being established - we can't
-  // read from the socket until the tunnel is done.
-  bool establishing_tunnel_ = false;
-
   std::unique_ptr<HttpStream> stream_;
 
   // Protocol negotiated with the server.
@@ -373,8 +359,6 @@ class HttpStreamFactory::Job
 
   // Whether Job has continued to DoInitConnection().
   bool init_connection_already_resumed_ = false;
-
-  base::OnceClosure restart_with_auth_callback_;
 
   NetErrorDetails net_error_details_;
 

@@ -94,8 +94,7 @@ int InitSocketHandleForHttpRequest(
     handles::NetworkHandle target_network,
     const NetLogWithSource& net_log,
     ClientSocketHandle* socket_handle,
-    CompletionOnceCallback callback,
-    const ClientSocketPool::ProxyAuthCallback& proxy_auth_callback);
+    CompletionOnceCallback callback);
 
 // Similar to InitSocketHandleForHttpRequest except that it initiates the
 // desired number of preconnect streams from the relevant socket pool.

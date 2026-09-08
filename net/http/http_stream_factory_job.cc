@@ -225,14 +225,6 @@ int HttpStreamFactory::Job::Preconnect(int num_streams) {
   return StartInternal();
 }
 
-int HttpStreamFactory::Job::RestartTunnelWithProxyAuth() {
-  DCHECK(establishing_tunnel_);
-  DCHECK(restart_with_auth_callback_);
-
-  std::move(restart_with_auth_callback_).Run();
-  return ERR_IO_PENDING;
-}
-
 LoadState HttpStreamFactory::Job::GetLoadState() const {
   switch (next_state_) {
     case STATE_INIT_CONNECTION_COMPLETE:
@@ -327,7 +319,6 @@ ResolveErrorInfo HttpStreamFactory::Job::resolve_error_info() const {
 
 void HttpStreamFactory::Job::GetSSLInfo(SSLInfo* ssl_info) {
   DCHECK(using_ssl_);
-  DCHECK(!establishing_tunnel_);
   DCHECK(connection_.get() && connection_->socket());
   connection_->socket()->GetSSLInfo(ssl_info);
 }
@@ -395,24 +386,6 @@ void HttpStreamFactory::Job::OnCertificateErrorCallback(
   MaybeCopyConnectionAttemptsFromHandle();
 
   delegate_->OnCertificateError(this, result, ssl_info);
-  // |this| may be deleted after this call.
-}
-
-void HttpStreamFactory::Job::OnNeedsProxyAuthCallback(
-    const HttpResponseInfo& response,
-    HttpAuthController* auth_controller,
-    base::OnceClosure restart_with_auth_callback) {
-  DCHECK_NE(job_type_, PRECONNECT);
-  DCHECK(establishing_tunnel_);
-  DCHECK(!restart_with_auth_callback_);
-
-  restart_with_auth_callback_ = std::move(restart_with_auth_callback);
-
-  // This is called out of band, so need to abort the SpdySessionRequest to
-  // prevent being passed a new session while waiting on proxy auth credentials.
-  spdy_session_request_.reset();
-
-  delegate_->OnNeedsProxyAuth(this, response, proxy_info_, auth_controller);
   // |this| may be deleted after this call.
 }
 
@@ -665,8 +638,6 @@ int HttpStreamFactory::Job::DoInitConnectionImpl() {
     }
   }
 
-  establishing_tunnel_ = !UsingHttpProxyWithoutTunnel();
-
   if (job_type_ == PRECONNECT) {
     DCHECK(request_info_.socket_tag == SocketTag());
 
@@ -684,22 +655,16 @@ int HttpStreamFactory::Job::DoInitConnectionImpl() {
         num_streams_, std::move(preconnect_callback));
   }
 
-  ClientSocketPool::ProxyAuthCallback proxy_auth_callback =
-      base::BindRepeating(&HttpStreamFactory::Job::OnNeedsProxyAuthCallback,
-                          base::Unretained(this));
-
   return InitSocketHandleForHttpRequest(
       destination_, request_info_.load_flags, priority_, session_, proxy_info_,
       allowed_bad_certs_, request_info_.privacy_mode,
       request_info_.network_anonymization_key, request_info_.secure_dns_policy,
       request_info_.socket_tag, request_info_.target_network, net_log_,
-      connection_.get(), io_callback_, proxy_auth_callback);
+      connection_.get(), io_callback_);
 }
 
 int HttpStreamFactory::Job::DoInitConnectionComplete(int result) {
   net_log_.EndEvent(NetLogEventType::HTTP_STREAM_JOB_INIT_CONNECTION);
-
-  establishing_tunnel_ = false;
 
   // No need to continue waiting for a session, once a connection is
   // established.

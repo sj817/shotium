@@ -40,7 +40,6 @@
 #include "net/proxy_resolution/proxy_info.h"
 #include "net/socket/next_proto.h"
 #include "net/spdy/spdy_session.h"
-#include "net/traffic_annotation/network_traffic_annotation.h"
 #include "url/gurl.h"
 #include "url/scheme_host_port.h"
 #include "url/url_constants.h"
@@ -48,31 +47,6 @@
 namespace net {
 
 namespace {
-
-constexpr NetworkTrafficAnnotationTag kDirectProxyTrafficAnnotation =
-    DefineNetworkTrafficAnnotation("proxy_config_direct", R"(
-    semantics {
-      sender: "Proxy Config"
-      description:
-        "Direct connections are being used instead of a proxy. This is a place "
-        "holder annotation that would include details about where the "
-        "configuration, which can trigger fetching a PAC file, came from."
-      trigger:
-        "Connecting directly to destination sites instead of using a proxy is "
-        "the default behavior."
-      data:
-        "None."
-      destination: WEBSITE
-    }
-    policy {
-      cookies_allowed: NO
-      setting:
-        "This isn't a real network request. A proxy can be selected in "
-        "settings."
-      policy_exception_justification:
-        "Using 'ProxySettings' policy can set Chrome to use specific proxy "
-        "settings and avoid directly connecting to the websites."
-    })");
 
 // Returns parameters associated with the proxy resolution.
 base::DictValue NetLogHttpStreamJobProxyChainResolved(
@@ -292,11 +266,6 @@ void HttpStreamFactory::JobController::OnRequestComplete() {
   MaybeNotifyFactoryOfCompletion();
 }
 
-int HttpStreamFactory::JobController::RestartTunnelWithProxyAuth() {
-  DCHECK(bound_job_);
-  return bound_job_->RestartTunnelWithProxyAuth();
-}
-
 void HttpStreamFactory::JobController::SetPriority(RequestPriority priority) {
   if (main_job_) {
     main_job_->SetPriority(priority);
@@ -430,29 +399,6 @@ void HttpStreamFactory::JobController::OnNeedsClientAuth(
   }
 
   delegate_->OnNeedsClientAuth(cert_info);
-}
-
-void HttpStreamFactory::JobController::OnNeedsProxyAuth(
-    Job* job,
-    const HttpResponseInfo& proxy_response,
-    const ProxyInfo& used_proxy_info,
-    HttpAuthController* auth_controller) {
-  MaybeResumeMainJob(job, base::TimeDelta());
-
-  if (IsJobOrphaned(job)) {
-    // We have bound a job to the associated HttpStreamRequest, |job| has been
-    // orphaned.
-    OnOrphanedJobComplete(job);
-    return;
-  }
-
-  if (!request_) {
-    return;
-  }
-  if (!bound_job_) {
-    BindJob(job);
-  }
-  delegate_->OnNeedsProxyAuth(proxy_response, used_proxy_info, auth_controller);
 }
 
 void HttpStreamFactory::JobController::OnPreconnectsComplete(Job* job,
@@ -621,8 +567,6 @@ bool HttpStreamFactory::JobController::HasPendingAltJob() const {
 void HttpStreamFactory::JobController::StartJobs() {
   // Shot only makes direct connections; no PAC fetch or system proxy discovery.
   proxy_info_.UseDirect();
-  proxy_info_.set_traffic_annotation(MutableNetworkTrafficAnnotationTag(
-      kDirectProxyTrafficAnnotation));
   net_log_.AddEvent(
       NetLogEventType::HTTP_STREAM_JOB_CONTROLLER_PROXY_SERVER_RESOLVED, [&] {
         return NetLogHttpStreamJobProxyChainResolved(proxy_info_.proxy_chain());

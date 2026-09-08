@@ -495,27 +495,16 @@ int HttpNetworkTransaction::RestartWithAuth(const AuthCredentials& credentials,
 
   DCHECK(callback_.is_null());
 
-  int rv = OK;
-  if (target == HttpAuth::AUTH_PROXY && establishing_tunnel_) {
-    // In this case, we've gathered credentials for use with proxy
-    // authentication of a tunnel.
-    DCHECK_EQ(STATE_CREATE_STREAM_COMPLETE, next_state_);
-    DCHECK(stream_request_ != nullptr);
-    auth_controllers_[target] = nullptr;
-    ResetStateForRestart();
-    rv = stream_request_->RestartTunnelWithProxyAuth();
-  } else {
-    // In this case, we've gathered credentials for the server or the proxy
-    // but it is not during the tunneling phase.
-    DCHECK(stream_request_ == nullptr);
-    PrepareForAuthRestart(target);
-    rv = DoLoop(OK);
-    // Note: If an error is encountered while draining the old response body, no
-    // Network Error Logging report will be generated, because the error was
-    // with the old request, which will already have had a NEL report generated
-    // for it due to the auth challenge (so we don't report a second error for
-    // that request).
-  }
+  // In this case, we've gathered credentials for the server or the proxy
+  // but it is not during the tunneling phase.
+  DCHECK(stream_request_ == nullptr);
+  PrepareForAuthRestart(target);
+  int rv = DoLoop(OK);
+  // Note: If an error is encountered while draining the old response body, no
+  // Network Error Logging report will be generated, because the error was
+  // with the old request, which will already have had a NEL report generated
+  // for it due to the auth challenge (so we don't report a second error for
+  // that request).
 
   if (rv == ERR_IO_PENDING)
     callback_ = std::move(callback);
@@ -889,32 +878,6 @@ void HttpNetworkTransaction::OnCertificateError(int result,
   // the end of the world either.
 
   OnIOComplete(result);
-}
-
-void HttpNetworkTransaction::OnNeedsProxyAuth(
-    const HttpResponseInfo& proxy_response,
-    const ProxyInfo& used_proxy_info,
-    HttpAuthController* auth_controller) {
-  DCHECK(stream_request_.get());
-  DCHECK_EQ(STATE_CREATE_STREAM_COMPLETE, next_state_);
-
-  establishing_tunnel_ = true;
-  response_.headers = proxy_response.headers;
-  response_.auth_challenge = proxy_response.auth_challenge;
-  SetProxyInfoInResponse(used_proxy_info, &response_);
-
-  if (!ContentEncodingsValid()) {
-    DoCallback(ERR_CONTENT_DECODING_FAILED);
-    return;
-  }
-
-  headers_valid_ = true;
-  proxy_info_ = used_proxy_info;
-
-  auth_controllers_[HttpAuth::AUTH_PROXY] = auth_controller;
-  pending_auth_target_ = HttpAuth::AUTH_PROXY;
-
-  DoCallback(OK);
 }
 
 void HttpNetworkTransaction::OnNeedsClientAuth(SSLCertRequestInfo* cert_info) {
@@ -2200,7 +2163,6 @@ void HttpNetworkTransaction::ResetStateForAuthRestart() {
   request_headers_.Clear();
   response_ = HttpResponseInfo();
   SetProxyInfoInResponse(proxy_info_, &response_);
-  establishing_tunnel_ = false;
   remote_endpoint_ = IPEndPoint();
 #if BUILDFLAG(ENABLE_REPORTING)
   network_error_logging_report_generated_ = false;

@@ -74,7 +74,6 @@ class HttpStreamFactory::JobController
 
   // Called to resume the HttpStream creation process when necessary
   // Proxy authentication credentials are collected.
-  int RestartTunnelWithProxyAuth() override;
 
   // Called when the priority of transaction changes.
   void SetPriority(RequestPriority priority) override;
@@ -95,10 +94,6 @@ class HttpStreamFactory::JobController
   void OnNeedsClientAuth(Job* job, SSLCertRequestInfo* cert_info) override;
 
   // Invoked when |job| needs proxy authentication.
-  void OnNeedsProxyAuth(Job* job,
-                        const HttpResponseInfo& proxy_response,
-                        const ProxyInfo& used_proxy_info,
-                        HttpAuthController* auth_controller) override;
 
   // Invoked when the |job| finishes pre-connecting sockets.
   void OnPreconnectsComplete(Job* job, int result) override;

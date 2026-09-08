@@ -13,7 +13,6 @@
 #include "net/base/proxy_server.h"
 #include "net/proxy_resolution/proxy_list.h"
 #include "net/proxy_resolution/proxy_retry_info.h"
-#include "net/traffic_annotation/network_traffic_annotation.h"
 
 namespace net {
 
@@ -148,15 +147,6 @@ class NET_EXPORT ProxyInfo {
     return proxy_resolve_end_time_;
   }
 
-  void set_traffic_annotation(
-      const MutableNetworkTrafficAnnotationTag& traffic_annotation) {
-    traffic_annotation_ = traffic_annotation;
-  }
-
-  MutableNetworkTrafficAnnotationTag traffic_annotation() const {
-    return traffic_annotation_;
-  }
-
   const ProxyRetryInfoMap& proxy_retry_info() const {
     return proxy_retry_info_;
   }
@@ -176,9 +166,6 @@ class NET_EXPORT ProxyInfo {
 
   // List of proxies that have been tried already.
   ProxyRetryInfoMap proxy_retry_info_;
-
-  // The traffic annotation of the used proxy config.
-  MutableNetworkTrafficAnnotationTag traffic_annotation_;
 
   // Whether the proxy result represent a proxy bypass.
   bool did_bypass_proxy_ = false;

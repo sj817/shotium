@@ -30,10 +30,6 @@ void HttpStreamRequest::Complete(CompletionDetails details) {
   completion_details_ = std::move(details);
 }
 
-int HttpStreamRequest::RestartTunnelWithProxyAuth() {
-  return helper_->RestartTunnelWithProxyAuth();
-}
-
 void HttpStreamRequest::SetPriority(RequestPriority priority) {
   helper_->SetPriority(priority);
 }

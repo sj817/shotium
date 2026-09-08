@@ -87,7 +87,6 @@ int InitSocketPoolHelper(
     ClientSocketHandle* socket_handle,
     HttpNetworkSession::SocketPoolType socket_pool_type,
     CompletionOnceCallback callback,
-    const ClientSocketPool::ProxyAuthCallback& proxy_auth_callback,
     ClientSocketPool::PreconnectCompletionCallback preconnect_callback) {
   DCHECK(endpoint.IsValid());
 
@@ -108,20 +107,16 @@ int InitSocketPoolHelper(
   if ((request_load_flags & LOAD_IGNORE_LIMITS) != 0)
     respect_limits = ClientSocketPool::RespectLimits::DISABLED;
 
-  std::optional<NetworkTrafficAnnotationTag> proxy_annotation =
-      proxy_info.is_direct() ? std::nullopt
-                             : std::optional<NetworkTrafficAnnotationTag>(
-                                   proxy_info.traffic_annotation());
   if (num_preconnect_streams) {
     return pool->RequestSockets(connection_group, std::move(socket_params),
-                                proxy_annotation, num_preconnect_streams,
+                                num_preconnect_streams,
                                 std::move(preconnect_callback), net_log);
   }
 
   return socket_handle->Init(connection_group, std::move(socket_params),
-                             proxy_annotation, request_priority, socket_tag,
+                             request_priority, socket_tag,
                              respect_limits, std::move(callback),
-                             proxy_auth_callback, pool, net_log);
+                             pool, net_log);
 }
 
 }  // namespace
@@ -217,8 +212,7 @@ int InitSocketHandleForHttpRequest(
     handles::NetworkHandle target_network,
     const NetLogWithSource& net_log,
     ClientSocketHandle* socket_handle,
-    CompletionOnceCallback callback,
-    const ClientSocketPool::ProxyAuthCallback& proxy_auth_callback) {
+    CompletionOnceCallback callback) {
   DCHECK(socket_handle);
   return InitSocketPoolHelper(
       std::move(endpoint), request_load_flags, request_priority, session,
@@ -226,7 +220,7 @@ int InitSocketHandleForHttpRequest(
       std::move(network_anonymization_key), secure_dns_policy, socket_tag,
       target_network, net_log, 0, socket_handle,
       HttpNetworkSession::SocketPoolType::kNormal, std::move(callback),
-      proxy_auth_callback, ClientSocketPool::PreconnectCompletionCallback());
+      ClientSocketPool::PreconnectCompletionCallback());
 }
 
 int PreconnectSocketsForHttpRequest(
@@ -252,7 +246,7 @@ int PreconnectSocketsForHttpRequest(
       std::move(network_anonymization_key), secure_dns_policy, SocketTag(),
       target_network, net_log, num_preconnect_streams, nullptr,
       HttpNetworkSession::SocketPoolType::kNormal, CompletionOnceCallback(),
-      ClientSocketPool::ProxyAuthCallback(), std::move(callback));
+      std::move(callback));
 }
 
 }  // namespace net

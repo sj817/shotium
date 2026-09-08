@@ -209,7 +209,6 @@ base::DictValue ClientSocketPool::NetLogGroupIdParams(const GroupId& group_id) {
 std::unique_ptr<ConnectJob> ClientSocketPool::CreateConnectJob(
     GroupId group_id,
     scoped_refptr<SocketParams> socket_params,
-    const std::optional<NetworkTrafficAnnotationTag>& proxy_annotation_tag,
     RequestPriority request_priority,
     SocketTag socket_tag,
     ConnectJob::Delegate* delegate) {

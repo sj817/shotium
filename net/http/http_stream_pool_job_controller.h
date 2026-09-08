@@ -88,7 +88,6 @@ class HttpStreamPool::JobController : public HttpStreamPool::Job::Delegate,
   // HttpStreamRequest::Helper implementation:
   LoadState GetLoadState() const override;
   void OnRequestComplete() override;
-  int RestartTunnelWithProxyAuth() override;
   void SetPriority(RequestPriority priority) override;
 
  private:

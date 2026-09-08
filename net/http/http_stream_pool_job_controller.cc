@@ -432,10 +432,6 @@ void HttpStreamPool::JobController::OnRequestComplete() {
   // `this` is deleted.
 }
 
-int HttpStreamPool::JobController::RestartTunnelWithProxyAuth() {
-  NOTREACHED();
-}
-
 void HttpStreamPool::JobController::SetPriority(RequestPriority priority) {
   priority_ = priority;
   if (origin_job_) {

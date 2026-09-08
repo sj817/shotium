@@ -83,12 +83,10 @@ class NET_EXPORT ClientSocketHandle : public StreamSocketHandle {
   int Init(
       const ClientSocketPool::GroupId& group_id,
       scoped_refptr<ClientSocketPool::SocketParams> socket_params,
-      const std::optional<NetworkTrafficAnnotationTag>& proxy_annotation_tag,
       RequestPriority priority,
       const SocketTag& socket_tag,
       ClientSocketPool::RespectLimits respect_limits,
       CompletionOnceCallback callback,
-      const ClientSocketPool::ProxyAuthCallback& proxy_auth_callback,
       ClientSocketPool* pool,
       const NetLogWithSource& net_log);
 
