@@ -217,8 +217,6 @@ class HttpStreamFactory::JobController
   // when the reason is unknown.
   AlternateProtocolUsage CalculateAlternateProtocolUsage(Job* job) const;
 
-  void NotifyOnStreamCreationAttempted(base::optional_ref<int> net_error);
-
   int GetJobCount() const {
     return (main_job_ ? 1 : 0) + (alternative_job_ ? 1 : 0);
   }
@@ -304,9 +302,6 @@ class HttpStreamFactory::JobController
   base::OnceClosure preconnect_callback_;
 
   RequestPriority priority_ = IDLE;
-
-  // Used to measure how long it takes to create a stream.
-  base::TimeTicks stream_creation_attempt_start_time_;
 
   const NetLogWithSource net_log_;
 

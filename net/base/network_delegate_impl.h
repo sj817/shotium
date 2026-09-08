@@ -18,7 +18,6 @@
 #include "net/cookies/cookie_setting_override.h"
 #include "net/first_party_sets/first_party_set_metadata.h"
 #include "net/first_party_sets/first_party_sets_cache_filter.h"
-#include "net/proxy_resolution/proxy_retry_info.h"
 #include "net/ssl/ssl_info.h"
 
 class GURL;

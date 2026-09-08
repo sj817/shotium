@@ -6,11 +6,8 @@
 #define NET_SOCKET_CONNECT_JOB_PARAMS_FACTORY_H_
 
 #include <memory>
-#include <optional>
-#include <variant>
 #include <vector>
 
-#include "net/base/host_port_pair.h"
 #include "net/base/network_anonymization_key.h"
 #include "net/base/network_handle.h"
 #include "net/base/privacy_mode.h"
@@ -30,7 +27,7 @@ class ProxyChain;
 struct SSLConfig;
 
 NET_EXPORT_PRIVATE ConnectJobParams ConstructConnectJobParams(
-    const ConnectJobFactory::Endpoint& endpoint,
+    const url::SchemeHostPort& endpoint,
     const ProxyChain& proxy_chain,
     const std::vector<SSLConfig::CertAndStatus>& allowed_bad_certs,
     ConnectJobFactory::AlpnMode alpn_mode,

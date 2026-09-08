@@ -10,16 +10,10 @@
 #include "base/functional/callback.h"
 #include "base/notreached.h"
 #include "base/strings/string_tokenizer.h"
-#include "base/time/time.h"
 #include "base/values.h"
 #include "net/base/proxy_chain.h"
 #include "net/base/proxy_server.h"
 #include "net/base/proxy_string_util.h"
-#include "net/log/net_log.h"
-#include "net/log/net_log_event_type.h"
-#include "net/log/net_log_with_source.h"
-
-using base::TimeTicks;
 
 namespace net {
 
@@ -64,34 +58,6 @@ void ProxyList::AddProxyChain(ProxyChain proxy_chain) {
 
 void ProxyList::AddProxyServer(ProxyServer proxy_server) {
   AddProxyChain(ProxyChain(std::move(proxy_server)));
-}
-
-void ProxyList::DeprioritizeBadProxyChains(
-    const ProxyRetryInfoMap& proxy_retry_info,
-    bool remove_bad_proxy_chains) {
-  // Partition the proxy list in two:
-  //   (1) the known bad proxy chains
-  //   (2) everything else
-  std::vector<ProxyChain> good_chains;
-  std::vector<ProxyChain> bad_chains_to_try;
-
-  for (const auto& proxy_chain : proxy_chains_) {
-    if (auto bad_info = proxy_retry_info.find(proxy_chain);
-        bad_info != proxy_retry_info.end() &&
-        bad_info->second.bad_until >= TimeTicks::Now()) {
-      // This proxy is bad and it's not time to retry.
-      bad_chains_to_try.push_back(proxy_chain);
-      continue;
-    }
-    good_chains.push_back(proxy_chain);
-  }
-
-  // "proxy_chains_ = good_chains + bad_proxies"
-  proxy_chains_.swap(good_chains);
-  if (!remove_bad_proxy_chains) {
-    proxy_chains_.insert(proxy_chains_.end(), bad_chains_to_try.begin(),
-                         bad_chains_to_try.end());
-  }
 }
 
 void ProxyList::RemoveProxiesWithoutScheme(int scheme_bit_field) {
@@ -194,34 +160,6 @@ base::Value ProxyList::ToValue() const {
     }
   }
   return base::Value(std::move(list));
-}
-
-bool ProxyList::Fallback(ProxyRetryInfoMap* proxy_retry_info,
-                         int net_error,
-                         const NetLogWithSource& net_log) {
-  CHECK(!proxy_chains_.empty());
-
-  auto first_chain = std::move(proxy_chains_.front());
-  proxy_chains_.erase(proxy_chains_.begin());
-
-  if (!first_chain.is_direct()) {
-    net_log.AddEventWithStringParams(NetLogEventType::PROXY_LIST_FALLBACK,
-                                     "bad_proxy_chain",
-                                     first_chain.ToDebugString());
-
-    // By default, proxy chains are not retried for 5 minutes.
-    static constexpr base::TimeDelta kDefaultRetryDelay = base::Minutes(5);
-    TimeTicks bad_until = TimeTicks::Now() + kDefaultRetryDelay;
-    auto iter = proxy_retry_info->find(first_chain);
-    if (iter == proxy_retry_info->end() || bad_until > iter->second.bad_until) {
-      ProxyRetryInfo retry_info;
-      retry_info.bad_until = bad_until;
-      retry_info.net_error = net_error;
-      (*proxy_retry_info)[std::move(first_chain)] = std::move(retry_info);
-    }
-  }
-
-  return !proxy_chains_.empty();
 }
 
 }  // namespace net

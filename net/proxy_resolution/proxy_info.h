@@ -12,11 +12,8 @@
 #include "net/base/proxy_chain.h"
 #include "net/base/proxy_server.h"
 #include "net/proxy_resolution/proxy_list.h"
-#include "net/proxy_resolution/proxy_retry_info.h"
 
 namespace net {
-
-class NetLogWithSource;
 
 // This object holds proxy information returned by ResolveProxy.
 class NET_EXPORT ProxyInfo {
@@ -68,7 +65,7 @@ class NET_EXPORT ProxyInfo {
   }
 
   bool is_direct_only() const {
-    return is_direct() && proxy_list_.size() == 1 && proxy_retry_info_.empty();
+    return is_direct() && proxy_list_.size() == 1;
   }
 
   // Return true if there is at least one proxy chain, and at least one proxy
@@ -112,20 +109,6 @@ class NET_EXPORT ProxyInfo {
   // See description in ProxyList::ToDebugString().
   std::string ToDebugString() const;
 
-  // Marks the current proxy as bad. |net_error| should contain the network
-  // error encountered when this proxy was tried, if any. If this fallback
-  // is not because of a network error, then |OK| should be passed in (eg. for
-  // reasons such as local policy). Returns true if there is another proxy
-  // available to try in |proxy_list_|.
-  bool Fallback(int net_error, const NetLogWithSource& net_log);
-
-  // De-prioritizes the proxies that we have cached as not working, by moving
-  // them to the end of the proxy list. If `remove_bad_proxy_chains` is true,
-  // bad proxy chains are removed from the list rather than just moved
-  // to the end.
-  void DeprioritizeBadProxyChains(const ProxyRetryInfoMap& proxy_retry_info,
-                                  bool remove_bad_proxy_chains = false);
-
   // Deletes any entry which doesn't have one of the specified proxy schemes.
   void RemoveProxiesWithoutScheme(int scheme_bit_field);
 
@@ -147,10 +130,6 @@ class NET_EXPORT ProxyInfo {
     return proxy_resolve_end_time_;
   }
 
-  const ProxyRetryInfoMap& proxy_retry_info() const {
-    return proxy_retry_info_;
-  }
-
  private:
   // Reset proxy and config settings.
   void Reset();
@@ -163,9 +142,6 @@ class NET_EXPORT ProxyInfo {
   // The ordered list of proxy servers (including DIRECT attempts) remaining to
   // try. If proxy_list_ is empty, then there is nothing left to fall back to.
   ProxyList proxy_list_;
-
-  // List of proxies that have been tried already.
-  ProxyRetryInfoMap proxy_retry_info_;
 
   // Whether the proxy result represent a proxy bypass.
   bool did_bypass_proxy_ = false;

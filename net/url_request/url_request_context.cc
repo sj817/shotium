@@ -19,7 +19,6 @@
 #include "build/build_config.h"
 #include "net/base/http_user_agent_settings.h"
 #include "net/base/network_delegate.h"
-#include "net/base/proxy_delegate.h"
 #include "net/cert/cert_verifier.h"
 #include "net/cert/sct_auditing_delegate.h"
 #include "net/cookies/cookie_store.h"
@@ -165,10 +164,7 @@ void URLRequestContext::set_cert_verifier(
     std::unique_ptr<CertVerifier> cert_verifier) {
   cert_verifier_ = std::move(cert_verifier);
 }
-void URLRequestContext::set_proxy_delegate(
-    std::unique_ptr<ProxyDelegate> proxy_delegate) {
-  proxy_delegate_ = std::move(proxy_delegate);
-}
+
 void URLRequestContext::set_ssl_config_service(
     std::unique_ptr<SSLConfigService> service) {
   ssl_config_service_ = std::move(service);

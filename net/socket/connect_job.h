@@ -46,7 +46,6 @@ class HttpResponseInfo;
 class HttpUserAgentSettings;
 class NetLog;
 class NetLogWithSource;
-class ProxyDelegate;
 class SocketTag;
 class SpdySessionPool;
 class SSLCertRequestInfo;
@@ -66,7 +65,6 @@ struct NET_EXPORT_PRIVATE CommonConnectJobParams {
       HttpAuthCache* http_auth_cache,
       HttpAuthHandlerFactory* http_auth_handler_factory,
       SpdySessionPool* spdy_session_pool,
-      ProxyDelegate* proxy_delegate,
       const HttpUserAgentSettings* http_user_agent_settings,
       SSLClientContext* ssl_client_context,
       NetLog* net_log,
@@ -85,7 +83,6 @@ struct NET_EXPORT_PRIVATE CommonConnectJobParams {
   raw_ptr<HttpAuthCache> http_auth_cache;
   raw_ptr<HttpAuthHandlerFactory> http_auth_handler_factory;
   raw_ptr<SpdySessionPool> spdy_session_pool;
-  raw_ptr<ProxyDelegate> proxy_delegate;
   raw_ptr<const HttpUserAgentSettings> http_user_agent_settings;
   raw_ptr<SSLClientContext> ssl_client_context;
   raw_ptr<NetLog> net_log;

@@ -43,7 +43,6 @@ class HttpTransactionFactory;
 class HttpUserAgentSettings;
 class NetLog;
 class NetworkDelegate;
-class ProxyDelegate;
 class SCTAuditingDelegate;
 class SSLConfigService;
 class TransportSecurityPersister;
@@ -106,8 +105,6 @@ class NET_EXPORT URLRequestContext final {
   HostResolver* host_resolver() const { return host_resolver_.get(); }
 
   CertVerifier* cert_verifier() const { return cert_verifier_.get(); }
-
-  ProxyDelegate* proxy_delegate() const { return proxy_delegate_.get(); }
 
   // Get the ssl config service for this context.
   SSLConfigService* ssl_config_service() const {
@@ -236,7 +233,6 @@ class NET_EXPORT URLRequestContext final {
   void set_net_log(NetLog* net_log);
   void set_host_resolver(std::unique_ptr<HostResolver> host_resolver);
   void set_cert_verifier(std::unique_ptr<CertVerifier> cert_verifier);
-  void set_proxy_delegate(std::unique_ptr<ProxyDelegate> proxy_delegate);
   void set_ssl_config_service(std::unique_ptr<SSLConfigService> service);
   void set_http_auth_handler_factory(
       std::unique_ptr<HttpAuthHandlerFactory> factory);
@@ -293,7 +289,6 @@ class NET_EXPORT URLRequestContext final {
   std::unique_ptr<CertVerifier> cert_verifier_;
   std::unique_ptr<HttpAuthHandlerFactory> http_auth_handler_factory_;
   std::unique_ptr<NetworkDelegate> network_delegate_;
-  std::unique_ptr<ProxyDelegate> proxy_delegate_;
   std::unique_ptr<SSLConfigService> ssl_config_service_;
   std::unique_ptr<HttpServerProperties> http_server_properties_;
   std::unique_ptr<const HttpUserAgentSettings> http_user_agent_settings_;

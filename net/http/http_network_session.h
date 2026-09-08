@@ -51,7 +51,6 @@ class NetLog;
 #if BUILDFLAG(ENABLE_REPORTING)
 class NetworkErrorLoggingService;
 #endif
-class ProxyDelegate;
 class ProxyChain;
 #if BUILDFLAG(ENABLE_REPORTING)
 class ReportingService;
@@ -165,7 +164,6 @@ struct NET_EXPORT HttpNetworkSessionContext {
   raw_ptr<CertVerifier> cert_verifier;
   raw_ptr<TransportSecurityState> transport_security_state;
   raw_ptr<SCTAuditingDelegate> sct_auditing_delegate;
-  raw_ptr<ProxyDelegate> proxy_delegate;
   raw_ptr<const HttpUserAgentSettings> http_user_agent_settings;
   raw_ptr<SSLConfigService> ssl_config_service;
   raw_ptr<HttpAuthHandlerFactory> http_auth_handler_factory;

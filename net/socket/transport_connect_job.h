@@ -41,9 +41,8 @@ class NET_EXPORT_PRIVATE TransportSocketParams
     : public base::RefCounted<TransportSocketParams> {
  public:
   // Representation of the destination endpoint of the transport
-  // socket/connection. Unlike ConnectJobFactory::Endpoint, this does not have a
-  // `using_ssl` field for schemeless endpoints because that has no meaning for
-  // transport parameters.
+  // socket/connection. Transport parameters accept either a schemeful URL or
+  // a host/port pair.
   using Endpoint = std::variant<url::SchemeHostPort, HostPortPair>;
 
   // `host_resolution_callback` will be invoked after the the hostname is

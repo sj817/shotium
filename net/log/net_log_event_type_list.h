@@ -300,20 +300,6 @@ EVENT_TYPE(HOST_RESOLVER_SERVICE_ENDPOINTS_STALE_RESULTS)
 EVENT_TYPE(HOST_RESOLVER_SERVICE_ENDPOINTS_RESOLUTION_DELAY)
 
 // ------------------------------------------------------------------------
-// ProxyList
-// ------------------------------------------------------------------------
-
-// Emitted when the first proxy server in a list is being marked as
-// bad and proxy resolution is going to failover to the next one in
-// the list.  The fallback is local to the request.
-//
-// Parameters:
-//   {
-//     "bad_proxy": <URI representation of the failed proxy server>,
-//   }
-EVENT_TYPE(PROXY_LIST_FALLBACK)
-
-// ------------------------------------------------------------------------
 // Socket (Shared by stream and datagram sockets)
 // ------------------------------------------------------------------------
 

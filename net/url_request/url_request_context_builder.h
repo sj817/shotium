@@ -34,7 +34,6 @@
 #include "net/base/net_export.h"
 #include "net/base/network_delegate.h"
 #include "net/base/network_handle.h"
-#include "net/base/proxy_delegate.h"
 #include "net/disk_cache/disk_cache.h"
 #include "net/dns/dns_platform_attempt_factory.h"
 #include "net/dns/host_resolver.h"
@@ -242,9 +241,6 @@ class NET_EXPORT URLRequestContextBuilder {
     return static_cast<T*>(network_delegate_.get());
   }
 
-  // Sets the ProxyDelegate.
-  void set_proxy_delegate(std::unique_ptr<ProxyDelegate> proxy_delegate);
-
   // Sets a specific HttpAuthHandlerFactory to be used by the URLRequestContext
   // rather than the default |HttpAuthHandlerRegistryFactory|. The builder
   // takes ownership of the factory and will eventually transfer it to the new
@@ -429,7 +425,6 @@ class NET_EXPORT URLRequestContextBuilder {
   raw_ptr<HostResolver::Factory> host_resolver_factory_ = nullptr;
   std::unique_ptr<SSLConfigService> ssl_config_service_;
   std::unique_ptr<NetworkDelegate> network_delegate_;
-  std::unique_ptr<ProxyDelegate> proxy_delegate_;
   std::unique_ptr<CookieStore> cookie_store_;
   std::unique_ptr<HttpAuthHandlerFactory> http_auth_handler_factory_;
   std::unique_ptr<CertVerifier> cert_verifier_;

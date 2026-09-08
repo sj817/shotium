@@ -4,8 +4,6 @@
 
 #include "net/socket/connect_job_params_factory.h"
 
-#include <optional>
-#include <variant>
 #include <vector>
 
 #include "base/check.h"
@@ -36,30 +34,19 @@ namespace net {
 namespace {
 
 // Configure ALPN and retain HttpServerProperties HTTP/1.1 overrides.
-void ConfigureAlpn(const ConnectJobFactory::Endpoint& endpoint,
+void ConfigureAlpn(const url::SchemeHostPort& endpoint,
                    ConnectJobFactory::AlpnMode alpn_mode,
                    const NetworkAnonymizationKey& network_anonymization_key,
                    const CommonConnectJobParams& common_connect_job_params,
                    SSLConfig& ssl_config,
                    bool renego_allowed) {
-  if (alpn_mode == ConnectJobFactory::AlpnMode::kDisabled) {
-    ssl_config.alpn_protos = {};
-    ssl_config.application_settings = {};
-    ssl_config.renego_allowed_default = false;
-    return;
-  }
-
-  DCHECK(std::holds_alternative<url::SchemeHostPort>(endpoint));
-
   DCHECK_EQ(alpn_mode, ConnectJobFactory::AlpnMode::kHttpAll);
-  DCHECK(std::holds_alternative<url::SchemeHostPort>(endpoint));
   ssl_config.alpn_protos = *common_connect_job_params.alpn_protos;
   ssl_config.application_settings =
       *common_connect_job_params.application_settings;
   if (common_connect_job_params.http_server_properties) {
     common_connect_job_params.http_server_properties->MaybeForceHTTP11(
-        std::get<url::SchemeHostPort>(endpoint), network_anonymization_key,
-        &ssl_config);
+        endpoint, network_anonymization_key, &ssl_config);
   }
 
   // Prior to HTTP/2 and SPDY, some servers used TLS renegotiation to request
@@ -86,39 +73,8 @@ base::flat_set<std::string> SupportedProtocolsFromSSLConfig(
                                         NextProtoToString);
 }
 
-HostPortPair ToHostPortPair(const ConnectJobFactory::Endpoint& endpoint) {
-  if (std::holds_alternative<url::SchemeHostPort>(endpoint)) {
-    return HostPortPair::FromSchemeHostPort(
-        std::get<url::SchemeHostPort>(endpoint));
-  }
-
-  DCHECK(
-      std::holds_alternative<ConnectJobFactory::SchemelessEndpoint>(endpoint));
-  return std::get<ConnectJobFactory::SchemelessEndpoint>(endpoint)
-      .host_port_pair;
-}
-
-TransportSocketParams::Endpoint ToTransportEndpoint(
-    const ConnectJobFactory::Endpoint& endpoint) {
-  if (std::holds_alternative<url::SchemeHostPort>(endpoint)) {
-    return std::get<url::SchemeHostPort>(endpoint);
-  }
-
-  DCHECK(
-      std::holds_alternative<ConnectJobFactory::SchemelessEndpoint>(endpoint));
-  return std::get<ConnectJobFactory::SchemelessEndpoint>(endpoint)
-      .host_port_pair;
-}
-
-bool UsingSsl(const ConnectJobFactory::Endpoint& endpoint) {
-  if (std::holds_alternative<url::SchemeHostPort>(endpoint)) {
-    return GURL::SchemeIsCryptographic(
-        base::ToLowerASCII(std::get<url::SchemeHostPort>(endpoint).scheme()));
-  }
-
-  DCHECK(
-      std::holds_alternative<ConnectJobFactory::SchemelessEndpoint>(endpoint));
-  return std::get<ConnectJobFactory::SchemelessEndpoint>(endpoint).using_ssl;
+bool UsingSsl(const url::SchemeHostPort& endpoint) {
+  return GURL::SchemeIsCryptographic(base::ToLowerASCII(endpoint.scheme()));
 }
 
 ConnectJobParams MakeSSLSocketParams(
@@ -133,7 +89,7 @@ ConnectJobParams MakeSSLSocketParams(
 }  // namespace
 
 ConnectJobParams ConstructConnectJobParams(
-    const ConnectJobFactory::Endpoint& endpoint,
+    const url::SchemeHostPort& endpoint,
     const ProxyChain& proxy_chain,
     const std::vector<SSLConfig::CertAndStatus>& allowed_bad_certs,
     ConnectJobFactory::AlpnMode alpn_mode,
@@ -171,7 +127,7 @@ ConnectJobParams ConstructConnectJobParams(
   // Create the nested parameters over which the connection to the endpoint
   // will be made.
   ConnectJobParams params(base::MakeRefCounted<TransportSocketParams>(
-      ToTransportEndpoint(endpoint), endpoint_network_anonymization_key,
+      endpoint, endpoint_network_anonymization_key,
       secure_dns_policy, target_network, resolution_callback,
       SupportedProtocolsFromSSLConfig(ssl_config)));
 
@@ -180,7 +136,7 @@ ConnectJobParams ConstructConnectJobParams(
     // TODO(crbug.com/40181080): Pass `endpoint` directly (preserving scheme
     // when available)?
     params =
-        MakeSSLSocketParams(std::move(params), ToHostPortPair(endpoint),
+        MakeSSLSocketParams(std::move(params), HostPortPair::FromSchemeHostPort(endpoint),
                             ssl_config, endpoint_network_anonymization_key);
   }
 

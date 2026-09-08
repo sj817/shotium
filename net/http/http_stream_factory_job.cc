@@ -24,7 +24,6 @@
 #include "net/base/load_flags.h"
 #include "net/base/port_util.h"
 #include "net/base/proxy_chain.h"
-#include "net/base/proxy_delegate.h"
 #include "net/base/reconnect_notifier.h"
 #include "net/base/session_usage.h"
 #include "net/base/task/task_runner.h"
@@ -36,7 +35,6 @@
 #include "net/http/http_network_session.h"
 #include "net/http/http_server_properties.h"
 #include "net/http/http_stream_factory.h"
-#include "net/http/proxy_fallback.h"
 #include "net/log/net_log.h"
 #include "net/log/net_log_event_type.h"
 #include "net/log/net_log_source.h"
@@ -734,24 +732,7 @@ int HttpStreamFactory::Job::DoInitConnectionComplete(int result) {
     return ERR_ALPN_NEGOTIATION_FAILED;
   }
 
-  // |result| may be the result of any of the stacked protocols. The following
-  // logic is used when determining how to interpret an error.
-  // If |result| < 0:
-  //   and connection_->socket() != NULL, then the SSL handshake ran and it
-  //     is a potentially recoverable error.
-  //   and connection_->socket == NULL and connection_->is_ssl_error() is true,
-  //     then the SSL handshake ran with an unrecoverable error.
-  //   otherwise, the error came from one of the other protocols.
-  bool ssl_started = using_ssl_ && (result == OK || connection_->socket() ||
-                                    connection_->is_ssl_error());
-  if (!ssl_started && result < 0 && expect_spdy_) {
-    return result;
-  }
-
   if (result < 0) {
-    if (!ssl_started) {
-      return ReconsiderProxyAfterError(result);
-    }
     return result;
   }
 
@@ -951,17 +932,6 @@ void HttpStreamFactory::Job::OnSpdySessionAvailable(
   // `existing_spdy_session_`, so there are no concerns about it being destroyed
   // before use.
   RunLoop(OK);
-}
-
-int HttpStreamFactory::Job::ReconsiderProxyAfterError(int error) {
-  // Check if the error was a proxy failure.
-  if (!CanFalloverToNextProxy(proxy_info_.proxy_chain(), error, &error,
-                              session_->context().proxy_delegate)) {
-    return error;
-  }
-
-  should_reconsider_proxy_ = true;
-  return error;
 }
 
 void HttpStreamFactory::Job::MaybeCopyConnectionAttemptsFromHandle() {

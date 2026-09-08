@@ -1,4 +1,6 @@
-# 静态截图引擎全局裁剪进度（stage71）
+# 静态截图引擎全局裁剪进度（stage72）
+
+stage72：stage71 已提交 883898f6d9bb。本批31源码路径（5D+26E），删除无实例/设置入口的ProxyDelegate、代理fallback实现和ProxyRetryInfo；解除context/session/connect参数链、stream专属通知与计时、重试表/降级API及唯一日志事件，GN与遗留include同步收齐。当前直连普通错误直接返回，旧fallback仅对已删除SOCKS错误做重映射；HTTP/TLS/HTTP2实际流程保留。另删除无人调用的SchemelessEndpoint、bool/HostPortPair工厂重载和disabled ALPN分支，实际HTTP ALPN/DNS/证书参数静态对照通过。备份SHA、保护交集零、删除符号/文件引用复核、1GN语法及diff通过；未图生成/编译/运行/像素验证。证据out/cut-stage72-combined/、out/cut-stage72-proxy-policy/、out/cut-stage72-schemeless-connect/。按用户最新要求，后续扩大整组源码删除、合并提交，中途仅快速残留/语法检查，最后统一编译及运行验收。剩余代理值类型/策略、受限Worker URL-list/preload/WasFetched及时序、Route/core/TrustToken、Perfetto/ICU、UKM/Crashpad/tracing、Blink交互/AX/fileapi/probes/observer/lifecycle、根目录复核与六平台验收仍未完成。全局约65%±10、源码约80%仍为粗估；原10–16批估计不随小项提交递减，后续按更大的功能组重新合并。
 
 stage71：stage70 已提交 29adfa0694f6。本轮21E，完整解除上层代理隧道认证通知/重启API、HTTP stream/request/controller与socket handle/pool/preconnect回调和代理注解参数；ProxyInfo无读者注解存储/唯一写点同步删除。连接池专用于代理认证的BoundRequest容器、绑定/查找/延迟错误/计数及生命周期全部收齐，普通队列、连接所有权、取消/预连接与回调保留；12段普通HTTP/auth/SSL/读写/池操作函数原文对照、普通completion分支/尾部对照通过。另删除59个无生产端NetLog事件及9个source标签，保留标签顺序验证通过，隐式数字编号会随最终重建重排；仍使用的proxy fallback/resolve日志与SPDY检查feature不动。完整移除符号残留零、原始SHA/保护交集零、diff通过，无GN改动/图/编译/运行/像素验证。证据out/cut-stage71-combined/、out/cut-stage71-proxy-callbacks/、out/cut-stage71-dead-network-events/。Proxy值类型/HTTP代理选择与fallback、Worker受限URL-list/preload/WasFetched及时序、Route/core/TrustToken尾巴、Perfetto/ICU、UKM/Crashpad/tracing、Blink交互/AX/fileapi/probes/observer/lifecycle、根目录最终复核及六平台验收仍未完成。全局仍约65%±10、源码约80%、余10–16大批次仅粗估；继续先整组删除，集中最终编译。
 

@@ -5,14 +5,11 @@
 #include "net/socket/connect_job_factory.h"
 
 #include <memory>
-#include <optional>
 #include <utility>
-#include <variant>
 #include <vector>
 
 #include "base/check.h"
 #include "base/memory/scoped_refptr.h"
-#include "net/base/host_port_pair.h"
 #include "net/base/network_anonymization_key.h"
 #include "net/base/network_handle.h"
 #include "net/base/privacy_mode.h"
@@ -67,53 +64,6 @@ std::unique_ptr<ConnectJob> ConnectJobFactory::CreateConnectJob(
     const CommonConnectJobParams* common_connect_job_params,
     handles::NetworkHandle target_network,
     ConnectJob::Delegate* delegate) const {
-  return CreateConnectJob(Endpoint(std::move(endpoint)), proxy_chain,
-                          allowed_bad_certs, alpn_mode,
-                          privacy_mode, resolution_callback,
-                          request_priority, socket_tag,
-                          network_anonymization_key, secure_dns_policy,
-                          disable_cert_network_fetches,
-                          common_connect_job_params, target_network, delegate);
-}
-
-std::unique_ptr<ConnectJob> ConnectJobFactory::CreateConnectJob(
-    bool using_ssl,
-    HostPortPair endpoint,
-    const ProxyChain& proxy_chain,
-    PrivacyMode privacy_mode,
-    const OnHostResolutionCallback& resolution_callback,
-    RequestPriority request_priority,
-    SocketTag socket_tag,
-    const NetworkAnonymizationKey& network_anonymization_key,
-    SecureDnsPolicy secure_dns_policy,
-    const CommonConnectJobParams* common_connect_job_params,
-    handles::NetworkHandle target_network,
-    ConnectJob::Delegate* delegate) const {
-  SchemelessEndpoint schemeless_endpoint{using_ssl, std::move(endpoint)};
-  return CreateConnectJob(
-      std::move(schemeless_endpoint), proxy_chain,
-      /*allowed_bad_certs=*/{}, ConnectJobFactory::AlpnMode::kDisabled,
-      privacy_mode, resolution_callback, request_priority,
-      socket_tag, network_anonymization_key, secure_dns_policy,
-      /*disable_cert_network_fetches=*/false, common_connect_job_params,
-      target_network, delegate);
-}
-
-std::unique_ptr<ConnectJob> ConnectJobFactory::CreateConnectJob(
-    Endpoint endpoint,
-    const ProxyChain& proxy_chain,
-    const std::vector<SSLConfig::CertAndStatus>& allowed_bad_certs,
-    ConnectJobFactory::AlpnMode alpn_mode,
-    PrivacyMode privacy_mode,
-    const OnHostResolutionCallback& resolution_callback,
-    RequestPriority request_priority,
-    SocketTag socket_tag,
-    const NetworkAnonymizationKey& network_anonymization_key,
-    SecureDnsPolicy secure_dns_policy,
-    bool disable_cert_network_fetches,
-    const CommonConnectJobParams* common_connect_job_params,
-    handles::NetworkHandle target_network,
-    ConnectJob::Delegate* delegate) const {
   ConnectJobParams connect_job_params = ConstructConnectJobParams(
       endpoint, proxy_chain, allowed_bad_certs, alpn_mode,
       privacy_mode, resolution_callback,
@@ -131,7 +81,6 @@ std::unique_ptr<ConnectJob> ConnectJobFactory::CreateConnectJob(
   return transport_connect_job_factory_->Create(
       request_priority, socket_tag, common_connect_job_params,
       connect_job_params.take_transport(), delegate, /*net_log=*/nullptr);
-
 }
 
 }  // namespace net

@@ -21,7 +21,6 @@
 #include "net/base/net_errors.h"
 #include "net/base/privacy_mode.h"
 #include "net/base/proxy_chain.h"
-#include "net/base/proxy_delegate.h"
 #include "net/base/proxy_string_util.h"
 #include "net/base/session_usage.h"
 #include "net/base/task/task_runner.h"
@@ -285,7 +284,6 @@ void HttpStreamFactory::JobController::OnStreamReady(Job* job) {
     return;
   }
 
-  NotifyOnStreamCreationAttempted(std::nullopt);
   std::unique_ptr<HttpStream> stream = job->ReleaseStream();
   DCHECK(stream);
 
@@ -350,7 +348,6 @@ void HttpStreamFactory::JobController::OnStreamFailed(Job* job, int status) {
     }
   }
 
-  NotifyOnStreamCreationAttempted(status);
   HistogramProxyUsed(job->proxy_info(), /*success=*/false);
   delegate_->OnStreamFailed(status, *job->net_error_details(),
                             job->proxy_info(), job->resolve_error_info());
@@ -583,7 +580,6 @@ void HttpStreamFactory::JobController::CreateJobs() {
   DCHECK(!alternative_job_);
   DCHECK(request_info_.url.is_valid());
   DCHECK(request_info_.url.IsStandard());
-  stream_creation_attempt_start_time_ = base::TimeTicks::Now();
 
   url::SchemeHostPort destination(request_info_.url);
   DCHECK(destination.IsValid());
@@ -1003,20 +999,6 @@ void HttpStreamFactory::JobController::SwitchToHttpStreamPool() {
       std::exchange(request_, nullptr), std::exchange(delegate_, nullptr),
       std::move(pool_request_info), priority_, allowed_bad_certs_,
       enable_ip_based_pooling_for_h2_, enable_alternative_services_);
-}
-
-void HttpStreamFactory::JobController::NotifyOnStreamCreationAttempted(
-    base::optional_ref<int> net_error) {
-  auto* proxy_delegate = session_->context().proxy_delegate.get();
-  if (!proxy_delegate || proxy_info_.is_empty()) {
-    return;
-  }
-
-  base::TimeDelta duration =
-      base::TimeTicks::Now() - stream_creation_attempt_start_time_;
-
-  proxy_delegate->OnStreamCreationAttempted(proxy_info_.proxy_chain(), duration,
-                                            net_error);
 }
 
 }  // namespace net

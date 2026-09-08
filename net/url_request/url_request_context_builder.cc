@@ -90,7 +90,6 @@ void URLRequestContextBuilder::SetHttpNetworkSessionComponents(
       request_context->transport_security_state();
   session_context->sct_auditing_delegate =
       request_context->sct_auditing_delegate();
-  session_context->proxy_delegate = request_context->proxy_delegate();
   session_context->http_user_agent_settings =
       request_context->http_user_agent_settings();
   session_context->ssl_config_service = request_context->ssl_config_service();
@@ -204,11 +203,6 @@ void URLRequestContextBuilder::set_host_resolver_factory(
     HostResolver::Factory* factory) {
   DCHECK(!host_resolver_);
   host_resolver_factory_ = factory;
-}
-
-void URLRequestContextBuilder::set_proxy_delegate(
-    std::unique_ptr<ProxyDelegate> proxy_delegate) {
-  proxy_delegate_ = std::move(proxy_delegate);
 }
 
 void URLRequestContextBuilder::SetHttpAuthHandlerFactory(
@@ -393,10 +387,6 @@ std::unique_ptr<URLRequestContext> URLRequestContextBuilder::Build() {
 
   if (sct_auditing_delegate_) {
     context->set_sct_auditing_delegate(std::move(sct_auditing_delegate_));
-  }
-
-  if (proxy_delegate_) {
-    context->set_proxy_delegate(std::move(proxy_delegate_));
   }
 
 #if BUILDFLAG(ENABLE_REPORTING)

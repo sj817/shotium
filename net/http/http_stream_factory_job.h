@@ -179,8 +179,6 @@ class HttpStreamFactory::Job
     return *used_existing_spdy_session_;
   }
 
-  bool should_reconsider_proxy() const { return should_reconsider_proxy_; }
-
   NetErrorDetails* net_error_details() { return &net_error_details_; }
 
  private:
@@ -255,14 +253,6 @@ class HttpStreamFactory::Job
   // Returns true if the current request can use an existing spdy session.
   bool CanUseExistingSpdySession() const;
 
-  // Called when we encounter a network error that could be resolved by trying
-  // a new proxy configuration.  If there is another proxy configuration to try
-  // then this method sets next_state_ appropriately and returns either OK or
-  // ERR_IO_PENDING depending on whether or not the new proxy configuration is
-  // available synchronously or asynchronously.  Otherwise, the given error
-  // code is simply returned.
-  int ReconsiderProxyAfterError(int error);
-
   void MaybeCopyConnectionAttemptsFromHandle();
 
   // Returns true if the request should be throttled to allow for only one
@@ -332,9 +322,6 @@ class HttpStreamFactory::Job
   // In this case, Job fails if it cannot pool to an existing SpdySession and
   // the server does not negotiate HTTP/2 on a new socket.
   const bool expect_spdy_;
-
-  // True if this job might succeed with a different proxy config.
-  bool should_reconsider_proxy_ = false;
 
   std::unique_ptr<HttpStream> stream_;
 

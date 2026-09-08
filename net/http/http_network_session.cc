@@ -95,7 +95,6 @@ HttpNetworkSessionContext::HttpNetworkSessionContext()
       cert_verifier(nullptr),
       transport_security_state(nullptr),
       sct_auditing_delegate(nullptr),
-      proxy_delegate(nullptr),
       http_user_agent_settings(nullptr),
       ssl_config_service(nullptr),
       http_auth_handler_factory(nullptr),
@@ -252,7 +251,7 @@ CommonConnectJobParams HttpNetworkSession::CreateCommonConnectJobParams() {
   return CommonConnectJobParams(
       context_.client_socket_factory, context_.host_resolver, &http_auth_cache_,
       context_.http_auth_handler_factory, &spdy_session_pool_,
-      context_.proxy_delegate, context_.http_user_agent_settings,
+      context_.http_user_agent_settings,
       &ssl_client_context_, context_.net_log,
       context_.http_server_properties, &next_protos_, &application_settings_,
       &params_.ignore_certificate_errors, &params_.enable_early_data);

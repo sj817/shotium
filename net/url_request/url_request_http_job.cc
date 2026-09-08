@@ -89,7 +89,6 @@
 #include "net/log/net_log_with_source.h"
 #include "net/net_buildflags.h"
 #include "net/proxy_resolution/proxy_info.h"
-#include "net/proxy_resolution/proxy_retry_info.h"
 #include "net/ssl/ssl_cert_request_info.h"
 #include "net/ssl/ssl_config_service.h"
 #include "net/ssl/ssl_connection_status_flags.h"

@@ -14,7 +14,6 @@
 
 #include "net/base/net_export.h"
 #include "net/base/proxy_server.h"
-#include "net/proxy_resolution/proxy_retry_info.h"
 
 namespace base {
 class Value;
@@ -23,7 +22,6 @@ class Value;
 namespace net {
 
 class ProxyChain;
-class NetLogWithSource;
 
 // This class is used to hold a prioritized list of proxy chains. It handles
 // fallback to lower-priority chains if multiple chains are specified.
@@ -53,13 +51,6 @@ class NET_EXPORT_PRIVATE ProxyList {
   // Append a single proxy chain containing the given server to the end of the
   // proxy list.
   void AddProxyServer(ProxyServer proxy_server);
-
-  // De-prioritizes the proxy chains that are cached as not working but are
-  // allowed to be reconsidered, by moving them to the end of the fallback list.
-  // If `remove_bad_proxy_chains` is true, bad proxy chains are removed
-  // from the list rather than just moved to the end.
-  void DeprioritizeBadProxyChains(const ProxyRetryInfoMap& proxy_retry_info,
-                                  bool remove_bad_proxy_chains = false);
 
   // Deletes all chains which don't exclusively consist of proxy servers with
   // the specified schemes. `scheme_bit_field` is a bunch of
@@ -108,19 +99,6 @@ class NET_EXPORT_PRIVATE ProxyList {
 
   // Returns a serialized value for the list.
   base::Value ToValue() const;
-
-  // Marks the current proxy chain as bad and deletes it from the list. The
-  // list of known bad proxies is given by |proxy_retry_info|. |net_error|
-  // should contain the network error encountered when this proxy chain was
-  // tried, if any. If this fallback is not because of a network error, then
-  // |OK| should be passed in (eg. for reasons such as local policy). Returns
-  // true if there is another chain available in the list.
-  //
-  // When a proxy chain is marked as bad, it will be deprioritized by calls to
-  // `DeprioritizeBadProxyChains()` for five minutes.
-  bool Fallback(ProxyRetryInfoMap* proxy_retry_info,
-                int net_error,
-                const NetLogWithSource& net_log);
 
  private:
   // List of proxy chains.
