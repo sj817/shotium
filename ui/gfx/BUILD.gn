@@ -76,14 +76,6 @@ component("gfx") {
     "color_conversions.h",
     "decorated_text.cc",
     "decorated_text.h",
-    "delegated_ink_metadata.cc",
-    "delegated_ink_metadata.h",
-    "delegated_ink_point.cc",
-    "delegated_ink_point.h",
-    "extension_set.cc",
-    "extension_set.h",
-    "favicon_size.cc",
-    "favicon_size.h",
     "font.cc",
     "font.h",
     "font_fallback.h",
@@ -110,10 +102,6 @@ component("gfx") {
     "image/image_skia_source.h",
     "image/image_util.cc",
     "image/image_util.h",
-    "interpolated_transform.cc",
-    "interpolated_transform.h",
-    "monogram_utils.cc",
-    "monogram_utils.h",
     "native_ui_util.h",
     "platform_font.cc",
     "platform_font.h",
@@ -121,8 +109,6 @@ component("gfx") {
     "scrollbar_size.h",
     "selection_model.cc",
     "selection_model.h",
-    "sequential_id_generator.cc",
-    "sequential_id_generator.h",
     "shadow_value.cc",
     "shadow_value.h",
     "skbitmap_operations.cc",
@@ -357,8 +343,6 @@ component("gfx") {
       "image/image_skia_operations.h",
       "image/image_skia_rep_default.cc",
       "image/image_skia_rep_default.h",
-      "paint_throbber.cc",
-      "paint_throbber.h",
       "paint_vector_icon.cc",
       "paint_vector_icon.h",
       "render_text.cc",
@@ -394,8 +378,6 @@ component("gfx") {
 
   if (use_aura || toolkit_views) {
     sources += [
-      "nine_image_painter.cc",
-      "nine_image_painter.h",
     ]
   }
 
@@ -460,15 +442,6 @@ component("color_space") {
     }
   }
   defines = [ "COLOR_SPACE_IMPLEMENTATION" ]
-}
-
-component("animation_scale") {
-  sources = [
-    "scoped_animation_duration_scale_mode.cc",
-    "scoped_animation_duration_scale_mode.h",
-  ]
-  deps = [ "//base" ]
-  defines = [ "IS_ANIMATION_SCALE_IMPL" ]
 }
 
 # Depend on this to use image/resize_image_dimensions.h without pulling in
@@ -629,7 +602,6 @@ test("gfx_unittests") {
     "image/image_family_unittest.cc",
     "image/image_skia_unittest.cc",
     "image/image_unittest.cc",
-    "interpolated_transform_unittest.cc",
     "test/run_all_unittests.cc",
     "text_elider_unittest.cc",
     "text_utils_unittest.cc",
@@ -697,7 +669,6 @@ test("gfx_unittests") {
       "color_conversions_unittest.cc",
       "color_space_unittest.cc",
       "color_utils_unittest.cc",
-      "delegated_ink_unittest.cc",
       "font_fallback_unittest.cc",
       "font_list_unittest.cc",
       "geometry/axis_transform2d_unittest.cc",
@@ -730,13 +701,11 @@ test("gfx_unittests") {
       "image/image_skia_operations_unittest.cc",
       "image/image_util_unittest.cc",
       "mojom/mojom_traits_unittest.cc",
-      "paint_throbber_unittest.cc",
       "paint_vector_icon_unittest.cc",
       "range/range_unittest.cc",
       "render_text_unittest.cc",
       "selection_bound_unittest.cc",
       "selection_model_unittest.cc",
-      "sequential_id_generator_unittest.cc",
       "shadow_util_unittest.cc",
       "shadow_value_unittest.cc",
       "skbitmap_operations_unittest.cc",

@@ -11,9 +11,6 @@ mojom("mojom") {
   sources = [
     "accelerated_widget.mojom",
     "color_space.mojom",
-    "delegated_ink_metadata.mojom",
-    "delegated_ink_point.mojom",
-    "delegated_ink_point_renderer.mojom",
     "display_color_spaces.mojom",
     "font_render_params.mojom",
     "hdr_static_metadata.mojom",
@@ -116,30 +113,6 @@ mojom("mojom") {
     {
       types = [
         {
-          mojom = "gfx.mojom.DelegatedInkMetadata"
-          cpp = "::std::unique_ptr<::gfx::DelegatedInkMetadata>"
-          move_only = true
-          nullable_is_same_type = true
-        },
-      ]
-      traits_sources = [ "delegated_ink_metadata_mojom_traits.cc" ]
-      traits_headers = [ "delegated_ink_metadata_mojom_traits.h" ]
-      traits_public_deps = [ "//ui/gfx" ]
-    },
-    {
-      types = [
-        {
-          mojom = "gfx.mojom.DelegatedInkPoint"
-          cpp = "::gfx::DelegatedInkPoint"
-        },
-      ]
-      traits_sources = [ "delegated_ink_point_mojom_traits.cc" ]
-      traits_headers = [ "delegated_ink_point_mojom_traits.h" ]
-      traits_public_deps = [ "//ui/gfx" ]
-    },
-    {
-      types = [
-        {
           mojom = "gfx.mojom.Hinting"
           cpp = "::gfx::FontRenderParams::Hinting"
         },
@@ -187,20 +160,6 @@ mojom("mojom") {
 
   cpp_typemaps += shared_cpp_typemaps
   blink_cpp_typemaps = shared_cpp_typemaps
-  blink_cpp_typemaps += [
-    {
-      types = [
-        {
-          mojom = "gfx.mojom.DelegatedInkMetadata"
-          cpp = "::std::unique_ptr<::gfx::DelegatedInkMetadata>"
-          move_only = true
-          nullable_is_same_type = true
-        },
-      ]
-      traits_headers = [ "delegated_ink_metadata_mojom_traits.h" ]
-      traits_public_deps = [ "//ui/gfx" ]
-    },
-  ]
 }
 
 if (is_win) {

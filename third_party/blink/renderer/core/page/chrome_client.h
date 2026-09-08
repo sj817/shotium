@@ -52,7 +52,6 @@
 #include "third_party/blink/renderer/platform/text/text_direction.h"
 #include "third_party/blink/renderer/platform/wtf/forward.h"
 #include "third_party/blink/renderer/platform/wtf/functional.h"
-#include "ui/gfx/delegated_ink_metadata.h"
 #include "ui/gfx/geometry/transform.h"
 #include "ui/gfx/geometry/vector2d_f.h"
 
@@ -489,9 +488,6 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
   // enabled). This only includes the zoom initiated by the user (ctrl +/-).
   virtual double UserZoomFactor(LocalFrame* frame) const { return 1; }
 
-  virtual void SetDelegatedInkMetadata(
-      LocalFrame* frame,
-      std::unique_ptr<gfx::DelegatedInkMetadata> metadata) {}
 
 
 

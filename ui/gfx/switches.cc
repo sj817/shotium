@@ -9,25 +9,10 @@
 
 namespace switches {
 
-// Scale factor to apply to every animation duration. Must be >= 0.0. This will
-// only apply to LinearAnimation and its subclasses.
-const char kAnimationDurationScale[] = "animation-duration-scale";
-
 // Force disables font subpixel positioning. This affects the character glyph
 // sharpness, kerning, hinting and layout.
 const char kDisableFontSubpixelPositioning[] =
     "disable-font-subpixel-positioning";
-
-// Enable native CPU-mappable GPU memory buffer support on Linux.
-const char kEnableNativeGpuMemoryBuffers[] = "enable-native-gpu-memory-buffers";
-
-// Forces whether the user desires reduced motion, regardless of system
-// settings.
-const char kForcePrefersReducedMotion[] = "force-prefers-reduced-motion";
-
-// Forces whether the user desires no reduced motion, regardless of system
-// settings.
-const char kForcePrefersNoReducedMotion[] = "force-prefers-no-reduced-motion";
 
 // Run in headless mode, i.e., without a UI or display server dependencies.
 const char kHeadless[] = "headless";
@@ -47,8 +32,6 @@ const char kNoXshm[] = "no-xshm";
 }  // namespace switches
 
 namespace features {
-BASE_FEATURE(kUseSmartRefForGPUFenceHandle, base::FEATURE_ENABLED_BY_DEFAULT);
-
 // Enables using rounding instead of flooring for coordinate conversions.
 //
 // Using `round()` instead of `floor()` prevents the systematic downward bias
