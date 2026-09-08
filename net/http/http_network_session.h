@@ -50,7 +50,6 @@ class NetLog;
 #if BUILDFLAG(ENABLE_REPORTING)
 class NetworkErrorLoggingService;
 #endif
-class ProxyChain;
 #if BUILDFLAG(ENABLE_REPORTING)
 class ReportingService;
 #endif
@@ -197,11 +196,8 @@ class NET_EXPORT HttpNetworkSession : public base::PowerSuspendObserver {
   // Removes the drainer from the session.
   void RemoveResponseDrainer(HttpResponseBodyDrainer* drainer);
 
-  // Returns the socket pool of the given type for use with the specified
-  // ProxyChain. Use ProxyChain::Direct() to get the pool for use with direct
-  // connections.
-  ClientSocketPool* GetSocketPool(SocketPoolType pool_type,
-                                  const ProxyChain& proxy_chain);
+  // Returns the direct connection pool of the given type.
+  ClientSocketPool* GetSocketPool(SocketPoolType pool_type);
 
   CertVerifier* cert_verifier() { return cert_verifier_; }
   SSLConfigService* ssl_config_service() { return ssl_config_service_; }

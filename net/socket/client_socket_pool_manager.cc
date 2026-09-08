@@ -14,11 +14,8 @@
 #include "base/numerics/safe_conversions.h"
 #include "build/build_config.h"
 #include "net/base/load_flags.h"
-#include "net/base/proxy_chain.h"
-#include "net/base/proxy_server.h"
 #include "net/dns/public/secure_dns_policy.h"
 #include "net/http/http_stream_factory.h"
-#include "net/proxy_resolution/proxy_info.h"
 #include "net/socket/client_socket_handle.h"
 #include "net/socket/client_socket_pool.h"
 #include "net/socket/connect_job.h"
@@ -49,16 +46,6 @@ std::array<size_t, kSocketPoolTypesSize> g_max_sockets_per_group =
 
     });
 
-// Returns the limit for active connections through a specific proxy chain for
-// this network process. `set_max_sockets_per_proxy_chain` can modify this.
-std::array<size_t, kSocketPoolTypesSize> g_max_sockets_per_proxy_chain =
-    std::to_array<size_t>({
-        128,  // kNormal
-
-    });
-
-bool g_allow_size_randomization_for_proxy = true;
-
 // TODO(crbug.com/40609237) In order to resolve longstanding issues
 // related to pooling distinguishable sockets together, get rid of SocketParams
 // entirely.
@@ -75,7 +62,6 @@ int InitSocketPoolHelper(
     int request_load_flags,
     RequestPriority request_priority,
     HttpNetworkSession* session,
-    const ProxyInfo& proxy_info,
     const std::vector<SSLConfig::CertAndStatus>& allowed_bad_certs,
     PrivacyMode privacy_mode,
     NetworkAnonymizationKey network_anonymization_key,
@@ -101,7 +87,7 @@ int InitSocketPoolHelper(
       CreateSocketParams(connection_group, allowed_bad_certs);
 
   ClientSocketPool* pool =
-      session->GetSocketPool(socket_pool_type, proxy_info.proxy_chain());
+      session->GetSocketPool(socket_pool_type);
   ClientSocketPool::RespectLimits respect_limits =
       ClientSocketPool::RespectLimits::ENABLED;
   if ((request_load_flags & LOAD_IGNORE_LIMITS) != 0)
@@ -157,38 +143,6 @@ void ClientSocketPoolManager::set_max_sockets_per_group_for_test(
 
   DCHECK_GE(g_socket_soft_cap_per_pool[std::to_underlying(pool_type)],
             g_max_sockets_per_group[std::to_underlying(pool_type)]);
-  DCHECK_GE(g_max_sockets_per_proxy_chain[std::to_underlying(pool_type)],
-            g_max_sockets_per_group[std::to_underlying(pool_type)]);
-}
-
-// static
-size_t ClientSocketPoolManager::max_sockets_per_proxy_chain(
-    HttpNetworkSession::SocketPoolType pool_type) {
-  return g_max_sockets_per_proxy_chain[std::to_underlying(pool_type)];
-}
-
-// static
-bool ClientSocketPoolManager::allow_size_randomization_for_proxy() {
-  return g_allow_size_randomization_for_proxy;
-}
-
-// static
-void ClientSocketPoolManager::set_max_sockets_per_proxy_chain(
-    HttpNetworkSession::SocketPoolType pool_type,
-    size_t socket_count) {
-  // LINT.IfChange(set_max_sockets_per_proxy_chain)
-  // We set out explicit limits here because they are hard coded in the
-  // enterprise policy MaxConnectionsPerProxy.
-  CHECK_GE(socket_count, 6u);
-  CHECK_LE(socket_count, 256u);
-  // LINT.ThenChange(/net/socket/client_socket_pool_manager.cc:SetMaxConnectionsPerProxyChain)
-  g_max_sockets_per_proxy_chain[std::to_underlying(pool_type)] = socket_count;
-}
-
-// static
-void ClientSocketPoolManager::set_allow_size_randomization_for_proxy(
-    bool allow) {
-  g_allow_size_randomization_for_proxy = allow;
 }
 
 // static
@@ -203,7 +157,6 @@ int InitSocketHandleForHttpRequest(
     int request_load_flags,
     RequestPriority request_priority,
     HttpNetworkSession* session,
-    const ProxyInfo& proxy_info,
     const std::vector<SSLConfig::CertAndStatus>& allowed_bad_certs,
     PrivacyMode privacy_mode,
     NetworkAnonymizationKey network_anonymization_key,
@@ -216,7 +169,7 @@ int InitSocketHandleForHttpRequest(
   DCHECK(socket_handle);
   return InitSocketPoolHelper(
       std::move(endpoint), request_load_flags, request_priority, session,
-      proxy_info, allowed_bad_certs, privacy_mode,
+      allowed_bad_certs, privacy_mode,
       std::move(network_anonymization_key), secure_dns_policy, socket_tag,
       target_network, net_log, 0, socket_handle,
       HttpNetworkSession::SocketPoolType::kNormal, std::move(callback),
@@ -228,7 +181,6 @@ int PreconnectSocketsForHttpRequest(
     int request_load_flags,
     RequestPriority request_priority,
     HttpNetworkSession* session,
-    const ProxyInfo& proxy_info,
     const std::vector<SSLConfig::CertAndStatus>& allowed_bad_certs,
     PrivacyMode privacy_mode,
     NetworkAnonymizationKey network_anonymization_key,
@@ -242,7 +194,7 @@ int PreconnectSocketsForHttpRequest(
 
   return InitSocketPoolHelper(
       std::move(endpoint), request_load_flags, request_priority, session,
-      proxy_info, allowed_bad_certs, privacy_mode,
+      allowed_bad_certs, privacy_mode,
       std::move(network_anonymization_key), secure_dns_policy, SocketTag(),
       target_network, net_log, num_preconnect_streams, nullptr,
       HttpNetworkSession::SocketPoolType::kNormal, CompletionOnceCallback(),

@@ -4,21 +4,8 @@
 
 #include "net/socket/client_socket_pool_manager_impl.h"
 
-#include <algorithm>
-#include <utility>
-
-#include "base/check_op.h"
-#include "base/feature_list.h"
-#include "base/values.h"
-#include "net/base/features.h"
-#include "net/base/proxy_chain.h"
-#include "net/base/proxy_server.h"
-#include "net/base/proxy_string_util.h"
 #include "net/http/http_network_session.h"
-#include "net/socket/socket_pool_additional_capacity.h"
-#include "net/socket/ssl_connect_job.h"
 #include "net/socket/transport_client_socket_pool.h"
-#include "net/socket/transport_connect_job.h"
 
 namespace net {
 
@@ -37,46 +24,26 @@ ClientSocketPoolManagerImpl::~ClientSocketPoolManagerImpl() {
 void ClientSocketPoolManagerImpl::FlushSocketPoolsWithError(
     int net_error,
     const char* net_log_reason_utf8) {
-  for (const auto& it : socket_pools_) {
-    it.second->FlushWithError(net_error, net_log_reason_utf8);
+  if (socket_pool_) {
+    socket_pool_->FlushWithError(net_error, net_log_reason_utf8);
   }
 }
 
 void ClientSocketPoolManagerImpl::CloseIdleSockets(
     const char* net_log_reason_utf8) {
-  for (const auto& it : socket_pools_) {
-    it.second->CloseIdleSockets(net_log_reason_utf8);
+  if (socket_pool_) {
+    socket_pool_->CloseIdleSockets(net_log_reason_utf8);
   }
 }
 
-ClientSocketPool* ClientSocketPoolManagerImpl::GetSocketPool(
-    const ProxyChain& proxy_chain) {
-  SocketPoolMap::const_iterator it = socket_pools_.find(proxy_chain);
-  if (it != socket_pools_.end()) {
-    return it->second.get();
+ClientSocketPool* ClientSocketPoolManagerImpl::GetSocketPool() {
+  if (!socket_pool_) {
+    socket_pool_ = std::make_unique<TransportClientSocketPool>(
+        socket_soft_cap_per_pool(pool_type_), max_sockets_per_group(pool_type_),
+        unused_idle_socket_timeout(pool_type_), &common_connect_job_params_,
+        cleanup_on_ip_address_change_);
   }
-
-  size_t sockets_per_proxy_chain;
-  size_t sockets_per_group;
-  if (proxy_chain.is_direct()) {
-    sockets_per_proxy_chain = socket_soft_cap_per_pool(pool_type_);
-    sockets_per_group = max_sockets_per_group(pool_type_);
-  } else {
-    sockets_per_proxy_chain = max_sockets_per_proxy_chain(pool_type_);
-    sockets_per_group =
-        std::min(sockets_per_proxy_chain, max_sockets_per_group(pool_type_));
-  }
-
-  std::unique_ptr<ClientSocketPool> new_pool;
-
-  new_pool = std::make_unique<TransportClientSocketPool>(
-      sockets_per_proxy_chain, sockets_per_group,
-      unused_idle_socket_timeout(pool_type_), proxy_chain,
-      &common_connect_job_params_, cleanup_on_ip_address_change_);
-
-  std::pair<SocketPoolMap::iterator, bool> ret =
-      socket_pools_.emplace(proxy_chain, std::move(new_pool));
-  return ret.first->second.get();
+  return socket_pool_.get();
 }
 
 }  // namespace net

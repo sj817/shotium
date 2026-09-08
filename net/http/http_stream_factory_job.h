@@ -121,7 +121,6 @@ class HttpStreamFactory::Job
       HttpNetworkSession* session,
       const StreamRequestInfo& request_info,
       RequestPriority priority,
-      const ProxyInfo& proxy_info,
       const std::vector<SSLConfig::CertAndStatus>& allowed_bad_certs,
       url::SchemeHostPort destination,
       NextProto alternative_protocol,
@@ -167,7 +166,6 @@ class HttpStreamFactory::Job
   std::unique_ptr<HttpStream> ReleaseStream() { return std::move(stream_); }
 
   bool is_waiting() const { return next_state_ == STATE_WAIT_COMPLETE; }
-  const ProxyInfo& proxy_info() const;
   ResolveErrorInfo resolve_error_info() const;
 
   JobType job_type() const { return job_type_; }
@@ -283,7 +281,6 @@ class HttpStreamFactory::Job
 
   const StreamRequestInfo request_info_;
   RequestPriority priority_;
-  const ProxyInfo proxy_info_;
   const std::vector<SSLConfig::CertAndStatus> allowed_bad_certs_;
   const NetLogWithSource net_log_;
 
@@ -364,7 +361,6 @@ class HttpStreamFactory::JobFactory {
       HttpNetworkSession* session,
       const StreamRequestInfo& request_info,
       RequestPriority priority,
-      const ProxyInfo& proxy_info,
       const std::vector<SSLConfig::CertAndStatus>& allowed_bad_certs,
       url::SchemeHostPort destination,
       bool enable_ip_based_pooling_for_h2,

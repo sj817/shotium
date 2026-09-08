@@ -42,7 +42,6 @@ class HttpAuthController;
 class HttpNetworkSession;
 class HttpStream;
 class IOBuffer;
-class ProxyInfo;
 class SSLPrivateKey;
 struct HttpRequestInfo;
 
@@ -101,12 +100,10 @@ class NET_EXPORT_PRIVATE HttpNetworkTransaction
   void CloseConnectionOnDestruction() override;
 
   // HttpStreamRequest::Delegate methods:
-  void OnStreamReady(const ProxyInfo& used_proxy_info,
-                     std::unique_ptr<HttpStream> stream) override;
+  void OnStreamReady(std::unique_ptr<HttpStream> stream) override;
 
   void OnStreamFailed(int status,
                       const NetErrorDetails& net_error_details,
-                      const ProxyInfo& used_proxy_info,
                       ResolveErrorInfo resolve_error_info) override;
   void OnCertificateError(int status, const SSLInfo& ssl_info) override;
   void OnNeedsClientAuth(SSLCertRequestInfo* cert_info) override;
@@ -115,16 +112,6 @@ class NET_EXPORT_PRIVATE HttpNetworkTransaction
 
  private:
   FRIEND_TEST_ALL_PREFIXES(HttpNetworkTransactionTest, ResetStateForRestart);
-  FRIEND_TEST_ALL_PREFIXES(HttpNetworkTransactionTest,
-                           SetProxyInfoInResponse_Direct);
-  FRIEND_TEST_ALL_PREFIXES(HttpNetworkTransactionTest,
-                           SetProxyInfoInResponse_Proxied);
-  FRIEND_TEST_ALL_PREFIXES(HttpNetworkTransactionTest,
-                           SetProxyInfoInResponse_Empty);
-  FRIEND_TEST_ALL_PREFIXES(HttpNetworkTransactionTest,
-                           SetProxyInfoInResponse_IpProtectionProxied);
-  FRIEND_TEST_ALL_PREFIXES(HttpNetworkTransactionTest,
-                           SetProxyInfoInResponse_IpProtectionDirect);
   FRIEND_TEST_ALL_PREFIXES(SpdyNetworkTransactionTest, WindowUpdateReceived);
   FRIEND_TEST_ALL_PREFIXES(SpdyNetworkTransactionTest, WindowUpdateSent);
   FRIEND_TEST_ALL_PREFIXES(SpdyNetworkTransactionTest, WindowUpdateOverflow);
@@ -326,9 +313,6 @@ class NET_EXPORT_PRIVATE HttpNetworkTransaction
     kMaxValue = kRetryAltServiceNotBroken,
   };
 
-  static void SetProxyInfoInResponse(const ProxyInfo& proxy_info,
-                                     HttpResponseInfo* response_info);
-
   scoped_refptr<HttpAuthController> server_auth_controller_;
 
   // Whether this transaction is waiting for server auth.
@@ -357,8 +341,6 @@ class NET_EXPORT_PRIVATE HttpNetworkTransaction
   // read.
   NetworkAnonymizationKey network_anonymization_key_;
 
-  // |proxy_info_| is the ProxyInfo used by the HttpStreamRequest.
-  ProxyInfo proxy_info_;
 
   std::unique_ptr<HttpStreamRequest> stream_request_;
   std::optional<HttpStreamRequest::CompletionDetails>

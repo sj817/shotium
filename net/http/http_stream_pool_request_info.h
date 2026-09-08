@@ -13,7 +13,6 @@
 #include "net/http/alternate_protocol_usage.h"
 #include "net/http/alternative_service.h"
 #include "net/log/net_log_with_source.h"
-#include "net/proxy_resolution/proxy_info.h"
 #include "net/socket/next_proto.h"
 #include "net/socket/socket_tag.h"
 #include "url/scheme_host_port.h"
@@ -32,7 +31,6 @@ struct NET_EXPORT_PRIVATE HttpStreamPoolRequestInfo {
                             AdvertisedAltSvcState advertised_alt_svc_state,
                             NextProtoSet allowed_alpns,
                             int load_flags,
-                            ProxyInfo proxy_info,
                             handles::NetworkHandle target_network,
                             NetLogWithSource factory_job_controller_net_log);
 
@@ -59,7 +57,6 @@ struct NET_EXPORT_PRIVATE HttpStreamPoolRequestInfo {
 
   NextProtoSet allowed_alpns;
   int load_flags = 0;
-  ProxyInfo proxy_info;
   // TODO(https://crbug.com/495684670): Test this within
   // http_stream_pool_attempt_manager_unittest.cc once target_network has been
   // plumbed all the way through.

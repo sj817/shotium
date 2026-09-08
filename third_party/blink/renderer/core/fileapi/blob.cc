@@ -186,10 +186,6 @@ void Blob::AppendTo(BlobData& blob_data) const {
   blob_data.AppendBlob(blob_data_handle_, 0, size());
 }
 
-void Blob::CloneMojoBlob(mojo::PendingReceiver<mojom::blink::Blob> receiver) {
-  blob_data_handle_->CloneBlobRemote(std::move(receiver));
-}
-
 mojo::PendingRemote<mojom::blink::Blob> Blob::AsMojoBlob() const {
   return blob_data_handle_->CloneBlobRemote();
 }

@@ -98,7 +98,6 @@ HttpStreamFactory::Job::Job(
     HttpNetworkSession* session,
     const StreamRequestInfo& request_info,
     RequestPriority priority,
-    const ProxyInfo& proxy_info,
     const std::vector<SSLConfig::CertAndStatus>& allowed_bad_certs,
     url::SchemeHostPort destination,
     NextProto alternative_protocol,
@@ -107,7 +106,6 @@ HttpStreamFactory::Job::Job(
     NetLog* net_log)
     : request_info_(request_info),
       priority_(priority),
-      proxy_info_(proxy_info),
       allowed_bad_certs_(allowed_bad_certs),
       net_log_(
           NetLogWithSource::Make(net_log, NetLogSourceType::HTTP_STREAM_JOB)),
@@ -128,12 +126,6 @@ HttpStreamFactory::Job::Job(
                                           url::kHttpScheme) ||
          base::EqualsCaseInsensitiveASCII(destination_.scheme(),
                                           url::kHttpsScheme));
-
-  // This class is specific to a single `ProxyChain`, so `proxy_info_` must be
-  // non-empty. Entries beyond the first are ignored. It should simply take a
-  // `ProxyChain`, but the full `ProxyInfo` is passed back to
-  // `HttpNetworkTransaction`, which consumes additional fields.
-  DCHECK(!proxy_info_.is_empty());
 
   DCHECK(session);
   if (alternative_protocol != NextProto::kProtoUnknown) {
@@ -271,7 +263,7 @@ bool HttpStreamFactory::Job::HasAvailableSpdySession() const {
 
 bool HttpStreamFactory::Job::TargettedSocketGroupHasActiveSocket() const {
   ClientSocketPool* pool = session_->GetSocketPool(
-      HttpNetworkSession::SocketPoolType::kNormal, proxy_info_.proxy_chain());
+      HttpNetworkSession::SocketPoolType::kNormal);
   DCHECK(pool);
   ClientSocketPool::GroupId connection_group(
       destination_, request_info_.privacy_mode,
@@ -302,10 +294,6 @@ url::SchemeHostPort HttpStreamFactory::Job::SchemeHostPortForSupportsSpdy()
 
 bool HttpStreamFactory::Job::disable_cert_verification_network_fetches() const {
   return !!(request_info_.load_flags & LOAD_DISABLE_CERT_NETWORK_FETCHES);
-}
-
-const ProxyInfo& HttpStreamFactory::Job::proxy_info() const {
-  return proxy_info_;
 }
 
 ResolveErrorInfo HttpStreamFactory::Job::resolve_error_info() const {
@@ -551,7 +539,6 @@ int HttpStreamFactory::Job::DoInitConnection() {
 int HttpStreamFactory::Job::DoInitConnectionImpl() {
   DCHECK(!connection_->is_initialized());
 
-  DCHECK(proxy_info_.proxy_chain().IsValid());
   next_state_ = STATE_INIT_CONNECTION_COMPLETE;
 
   // Check first if there is a pushed stream matching the request, or an HTTP/2
@@ -628,14 +615,14 @@ int HttpStreamFactory::Job::DoInitConnectionImpl() {
 
     return PreconnectSocketsForHttpRequest(
         destination_, request_info_.load_flags, priority_, session_,
-        proxy_info_, allowed_bad_certs_, request_info_.privacy_mode,
+        allowed_bad_certs_, request_info_.privacy_mode,
         request_info_.network_anonymization_key,
         request_info_.secure_dns_policy, request_info_.target_network, net_log_,
         num_streams_, std::move(preconnect_callback));
   }
 
   return InitSocketHandleForHttpRequest(
-      destination_, request_info_.load_flags, priority_, session_, proxy_info_,
+      destination_, request_info_.load_flags, priority_, session_,
       allowed_bad_certs_, request_info_.privacy_mode,
       request_info_.network_anonymization_key, request_info_.secure_dns_policy,
       request_info_.socket_tag, request_info_.target_network, net_log_,
@@ -928,7 +915,6 @@ HttpStreamFactory::JobFactory::CreateJob(
     HttpNetworkSession* session,
     const StreamRequestInfo& request_info,
     RequestPriority priority,
-    const ProxyInfo& proxy_info,
     const std::vector<SSLConfig::CertAndStatus>& allowed_bad_certs,
     url::SchemeHostPort destination,
     bool enable_ip_based_pooling_for_h2,
@@ -936,7 +922,7 @@ HttpStreamFactory::JobFactory::CreateJob(
     NextProto alternative_protocol,
     std::optional<ConnectionManagementConfig> management_config) {
   return std::make_unique<HttpStreamFactory::Job>(
-      delegate, job_type, session, request_info, priority, proxy_info,
+      delegate, job_type, session, request_info, priority,
       allowed_bad_certs, std::move(destination), alternative_protocol,
       enable_ip_based_pooling_for_h2, management_config, net_log);
 }

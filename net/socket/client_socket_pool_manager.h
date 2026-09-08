@@ -27,8 +27,6 @@ namespace net {
 class ClientSocketHandle;
 class NetLogWithSource;
 class NetworkAnonymizationKey;
-class ProxyInfo;
-class ProxyChain;
 
 class NET_EXPORT_PRIVATE ClientSocketPoolManager {
  public:
@@ -50,17 +48,6 @@ class NET_EXPORT_PRIVATE ClientSocketPoolManager {
       HttpNetworkSession::SocketPoolType pool_type,
       size_t socket_count);
 
-  static size_t max_sockets_per_proxy_chain(
-      HttpNetworkSession::SocketPoolType pool_type);
-  static bool allow_size_randomization_for_proxy();
-  // Unlike the other `set_` methods, these ones are used in production code and
-  // thus cannot be marked as `_for_test`. Usage should be carefully audited.
-  // Caller is responsible for following max/min CHECKs on socket_count.
-  static void set_max_sockets_per_proxy_chain(
-      HttpNetworkSession::SocketPoolType pool_type,
-      size_t socket_count);
-  static void set_allow_size_randomization_for_proxy(bool allow);
-
   static base::TimeDelta unused_idle_socket_timeout(
       HttpNetworkSession::SocketPoolType pool_type);
 
@@ -70,14 +57,13 @@ class NET_EXPORT_PRIVATE ClientSocketPoolManager {
                                          const char* net_log_reason_utf8) = 0;
   virtual void CloseIdleSockets(const char* net_log_reason_utf8) = 0;
 
-  // Returns the socket pool for the specified ProxyChain (Which may be
-  // ProxyChain::Direct()).
-  virtual ClientSocketPool* GetSocketPool(const ProxyChain& proxy_chain) = 0;
+  // Returns the direct connection pool.
+  virtual ClientSocketPool* GetSocketPool() = 0;
 
 };
 
-// A helper method that uses the passed in proxy information to initialize a
-// ClientSocketHandle with the relevant socket pool. Use this method for
+// A helper method that initializes a ClientSocketHandle with the direct
+// connection pool. Use this method for
 // HTTP/HTTPS requests. `allowed_bad_certs` is only used if the request
 // uses SSL.
 int InitSocketHandleForHttpRequest(
@@ -85,7 +71,6 @@ int InitSocketHandleForHttpRequest(
     int request_load_flags,
     RequestPriority request_priority,
     HttpNetworkSession* session,
-    const ProxyInfo& proxy_info,
     const std::vector<SSLConfig::CertAndStatus>& allowed_bad_certs,
     PrivacyMode privacy_mode,
     NetworkAnonymizationKey network_anonymization_key,
@@ -103,7 +88,6 @@ int PreconnectSocketsForHttpRequest(
     int request_load_flags,
     RequestPriority request_priority,
     HttpNetworkSession* session,
-    const ProxyInfo& proxy_info,
     const std::vector<SSLConfig::CertAndStatus>& allowed_bad_certs,
     PrivacyMode privacy_mode,
     NetworkAnonymizationKey network_anonymization_key,

@@ -15,7 +15,6 @@
 #include "base/strings/strcat.h"
 #include "net/base/features.h"
 #include "net/base/host_port_pair.h"
-#include "net/base/proxy_chain.h"
 #include "net/dns/public/secure_dns_policy.h"
 #include "net/log/net_log_event_type.h"
 #include "net/log/net_log_with_source.h"
@@ -180,16 +179,10 @@ void ClientSocketPool::set_used_idle_socket_timeout(base::TimeDelta timeout) {
 
 ClientSocketPool::ClientSocketPool(
     size_t socket_soft_cap,
-    const ProxyChain& proxy_chain,
     const CommonConnectJobParams* common_connect_job_params,
     std::unique_ptr<ConnectJobFactory> connect_job_factory)
     : socket_soft_cap_(socket_soft_cap),
-      additional_capacity_(
-          (proxy_chain.is_direct() ||
-           ClientSocketPoolManager::allow_size_randomization_for_proxy())
-              ? SocketPoolAdditionalCapacity::Create(socket_soft_cap)
-              : SocketPoolAdditionalCapacity::CreateEmpty()),
-      proxy_chain_(proxy_chain),
+      additional_capacity_(SocketPoolAdditionalCapacity::Create(socket_soft_cap)),
       common_connect_job_params_(common_connect_job_params),
       connect_job_factory_(std::move(connect_job_factory)) {}
 

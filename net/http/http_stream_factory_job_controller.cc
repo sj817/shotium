@@ -19,7 +19,6 @@
 #include "net/base/load_timing_internal_info.h"
 #include "net/base/net_errors.h"
 #include "net/base/privacy_mode.h"
-#include "net/base/proxy_chain.h"
 #include "net/base/task/task_runner.h"
 #include "net/base/url_util.h"
 #include "net/http/alternate_protocol_usage.h"
@@ -33,7 +32,6 @@
 #include "net/log/net_log.h"
 #include "net/log/net_log_event_type.h"
 #include "net/log/net_log_with_source.h"
-#include "net/proxy_resolution/proxy_info.h"
 #include "net/socket/next_proto.h"
 #include "net/spdy/spdy_session.h"
 #include "url/gurl.h"
@@ -43,16 +41,6 @@
 namespace net {
 
 namespace {
-
-// Returns parameters associated with the proxy resolution.
-base::DictValue NetLogHttpStreamJobProxyChainResolved(
-    const ProxyChain& proxy_chain) {
-  base::DictValue dict;
-
-  dict.Set("proxy_chain",
-           proxy_chain.IsValid() ? proxy_chain.ToDebugString() : std::string());
-  return dict;
-}
 
 GURL CreateAltSvcUrl(const GURL& origin_url,
                      const HostPortPair& alternative_destination) {
@@ -258,7 +246,7 @@ void HttpStreamFactory::JobController::OnStreamReady(Job* job) {
 
   DCHECK(request_->completed());
 
-  delegate_->OnStreamReady(job->proxy_info(), std::move(stream));
+  delegate_->OnStreamReady(std::move(stream));
 }
 
 void HttpStreamFactory::JobController::OnStreamFailed(Job* job, int status) {
@@ -306,7 +294,7 @@ void HttpStreamFactory::JobController::OnStreamFailed(Job* job, int status) {
   }
 
   delegate_->OnStreamFailed(status, *job->net_error_details(),
-                            job->proxy_info(), job->resolve_error_info());
+                            job->resolve_error_info());
 }
 
 void HttpStreamFactory::JobController::OnCertificateError(
@@ -518,12 +506,6 @@ bool HttpStreamFactory::JobController::HasPendingAltJob() const {
 }
 
 void HttpStreamFactory::JobController::StartJobs() {
-  // Shot only makes direct connections; no PAC fetch or system proxy discovery.
-  proxy_info_.UseDirect();
-  net_log_.AddEvent(
-      NetLogEventType::HTTP_STREAM_JOB_CONTROLLER_PROXY_SERVER_RESOLVED, [&] {
-        return NetLogHttpStreamJobProxyChainResolved(proxy_info_.proxy_chain());
-      });
   CreateJobs();
   if (switched_to_http_stream_pool_) {
     MaybeNotifyFactoryOfCompletion();
@@ -554,7 +536,7 @@ void HttpStreamFactory::JobController::CreateJobs() {
     // priority currently makes sense for preconnects. The priority for
     // preconnects is currently ignored (see RequestSocketsForPool()).
     std::unique_ptr<Job> preconnect_job = job_factory_->CreateJob(
-        this, PRECONNECT, session_, request_info_, IDLE, proxy_info_,
+        this, PRECONNECT, session_, request_info_, IDLE,
         allowed_bad_certs_, destination, enable_ip_based_pooling_for_h2_,
         net_log_.net_log(), NextProto::kProtoUnknown, management_config_);
     // When there is a valid alternative service info, create a job for the
@@ -567,7 +549,7 @@ void HttpStreamFactory::JobController::CreateJobs() {
           url::SchemeHostPort(alternative_url);
 
       main_job_ = job_factory_->CreateJob(
-          this, PRECONNECT, session_, request_info_, IDLE, proxy_info_,
+          this, PRECONNECT, session_, request_info_, IDLE,
           allowed_bad_certs_, std::move(alternative_destination),
           enable_ip_based_pooling_for_h2_, session_->net_log(),
           advertised_alt_svc_.info.protocol(), management_config_);
@@ -578,7 +560,7 @@ void HttpStreamFactory::JobController::CreateJobs() {
     return;
   }
   main_job_ = job_factory_->CreateJob(
-      this, MAIN, session_, request_info_, priority_, proxy_info_,
+      this, MAIN, session_, request_info_, priority_,
       allowed_bad_certs_, std::move(destination),
       enable_ip_based_pooling_for_h2_, net_log_.net_log(),
       NextProto::kProtoUnknown, management_config_);
@@ -599,7 +581,7 @@ void HttpStreamFactory::JobController::CreateJobs() {
         url::SchemeHostPort(alternative_url);
 
     alternative_job_ = job_factory_->CreateJob(
-        this, ALTERNATIVE, session_, request_info_, priority_, proxy_info_,
+        this, ALTERNATIVE, session_, request_info_, priority_,
         allowed_bad_certs_, std::move(alternative_destination),
         enable_ip_based_pooling_for_h2_, net_log_.net_log(),
         advertised_alt_svc_.info.protocol(), management_config_);
@@ -930,7 +912,7 @@ void HttpStreamFactory::JobController::SwitchToHttpStreamPool() {
       request_info_.socket_tag, request_info_.network_anonymization_key,
       request_info_.secure_dns_policy, disable_cert_network_fetches,
       advertised_alt_svc_.info, advertised_alt_svc_.state, allowed_alpns,
-      request_info_.load_flags, proxy_info_, request_info_.target_network,
+      request_info_.load_flags, request_info_.target_network,
       net_log_);
   if (is_preconnect_) {
     auto split_callback = base::SplitOnceCallback(

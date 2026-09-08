@@ -59,9 +59,6 @@ class HttpStreamPool::Job {
     // Returns the set of ALPNs that are allowed for this job.
     virtual NextProtoSet allowed_alpns() const = 0;
 
-    // Returns the proxy info.
-    virtual const ProxyInfo& proxy_info() const = 0;
-
     virtual const NetLogWithSource& net_log() const = 0;
 
     virtual const perfetto::Flow& flow() const = 0;
@@ -160,8 +157,6 @@ class HttpStreamPool::Job {
   bool enable_ip_based_pooling_for_h2() const {
     return delegate_->enable_ip_based_pooling_for_h2();
   }
-
-  const ProxyInfo& proxy_info() const { return delegate_->proxy_info(); }
 
   const std::vector<SSLConfig::CertAndStatus>& allowed_bad_certs() const {
     return delegate_->allowed_bad_certs();

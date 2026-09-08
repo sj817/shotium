@@ -48,7 +48,6 @@ struct CommonConnectJobParams;
 class ConnectJobFactory;
 struct NetLogSource;
 struct NetworkTrafficAnnotationTag;
-class ProxyChain;
 
 // TransportClientSocketPool establishes network connections through using
 // ConnectJobs, and maintains a list of idle persistent sockets available for
@@ -58,9 +57,6 @@ class ProxyChain;
 // semantics, handling each request serially, before reusable sockets are
 // returned to the socket pool.
 //
-// In order to manage connection limits on a per-Proxy basis, separate
-// TransportClientSocketPools are created for each proxy, and another for
-// connections that have no proxy.
 // TransportClientSocketPool is an internal class that implements almost all
 // the functionality from ClientSocketPool.
 class NET_EXPORT_PRIVATE TransportClientSocketPool
@@ -145,7 +141,6 @@ class NET_EXPORT_PRIVATE TransportClientSocketPool
       size_t socket_soft_cap,
       size_t max_sockets_per_group,
       base::TimeDelta unused_idle_socket_timeout,
-      const ProxyChain& proxy_chain,
       const CommonConnectJobParams* common_connect_job_params,
       bool cleanup_on_ip_address_change = true);
 
@@ -163,7 +158,6 @@ class NET_EXPORT_PRIVATE TransportClientSocketPool
       size_t max_sockets_per_group,
       base::TimeDelta unused_idle_socket_timeout,
       base::TimeDelta used_idle_socket_timeout,
-      const ProxyChain& proxy_chain_,
       const CommonConnectJobParams* common_connect_job_params,
       std::unique_ptr<ConnectJobFactory> connect_job_factory,
       SSLClientContext* ssl_client_context,
@@ -260,18 +254,7 @@ class NET_EXPORT_PRIVATE TransportClientSocketPool
 
   using RequestQueue = PriorityQueue<std::unique_ptr<Request>>;
 
-  // A Group is allocated per GroupId when there are idle sockets, unbound
-  // request, or bound requests. Otherwise, the Group object is removed from the
-  // map.
-  //
-  // A request is "bound" to a ConnectJob when an unbound ConnectJob encounters
-  // a proxy HTTP auth challenge, and the auth challenge is presented to that
-  // request. Once a request and ConnectJob are bound together:
-  // * All auth challenges the ConnectJob sees will be sent to that request.
-  // * Cancelling the request will cancel the ConnectJob.
-  // * The final result of the ConnectJob, and any returned socket, will only be
-  //   sent to that bound request, though if the returned socket is returned to
-  //   the socket pool, it can then be used to service any request.
+  // A Group is allocated per GroupId while it has sockets or pending work.
   //
   // "assigned" jobs are unbound ConnectJobs that have a corresponding Request.
   // If there are 5 Jobs and 10 Requests, the 5 highest priority requests are
@@ -512,7 +495,6 @@ class NET_EXPORT_PRIVATE TransportClientSocketPool
       size_t max_sockets_per_group,
       base::TimeDelta unused_idle_socket_timeout,
       base::TimeDelta used_idle_socket_timeout,
-      const ProxyChain& proxy_chain,
       const CommonConnectJobParams* common_connect_job_params,
       bool cleanup_on_ip_address_change,
       std::unique_ptr<ConnectJobFactory> connect_job_factory,

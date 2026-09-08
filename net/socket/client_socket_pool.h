@@ -20,7 +20,6 @@
 #include "net/base/network_anonymization_key.h"
 #include "net/base/network_handle.h"
 #include "net/base/privacy_mode.h"
-#include "net/base/proxy_chain.h"
 #include "net/base/request_priority.h"
 #include "net/dns/host_resolver.h"
 #include "net/dns/public/secure_dns_policy.h"
@@ -40,7 +39,6 @@ class HttpAuthController;
 class HttpResponseInfo;
 class NetLogWithSource;
 struct NetworkTrafficAnnotationTag;
-class ProxyChain;
 struct SSLConfig;
 class StreamSocket;
 
@@ -352,7 +350,6 @@ class NET_EXPORT ClientSocketPool : public LowerLayeredPool {
 
  protected:
   ClientSocketPool(size_t socket_soft_cap,
-                   const ProxyChain& proxy_chain,
                    const CommonConnectJobParams* common_connect_job_params,
                    std::unique_ptr<ConnectJobFactory> connect_job_factory);
 
@@ -406,8 +403,6 @@ class NET_EXPORT ClientSocketPool : public LowerLayeredPool {
     expandability_ = SocketPoolExpandability::kUncapped;
   }
 
-  const ProxyChain& GetProxyChain() const { return proxy_chain_; }
-
  private:
   // This section tracks information related to the overall pool capacity.
   // `socket_soft_cap_` is the amount of sockets always available to the pool
@@ -422,8 +417,6 @@ class NET_EXPORT ClientSocketPool : public LowerLayeredPool {
 
   // If set, this overrides `socket_soft_cap_` for future calculations.
   std::optional<size_t> socket_soft_cap_override_for_test_ = std::nullopt;
-
-  const ProxyChain proxy_chain_;
 
   const raw_ptr<const CommonConnectJobParams> common_connect_job_params_;
   const std::unique_ptr<ConnectJobFactory> connect_job_factory_;

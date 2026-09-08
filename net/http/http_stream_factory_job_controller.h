@@ -90,8 +90,6 @@ class HttpStreamFactory::JobController
   // Invoked when |job| raises failure for SSL Client Auth.
   void OnNeedsClientAuth(Job* job, SSLCertRequestInfo* cert_info) override;
 
-  // Invoked when |job| needs proxy authentication.
-
   // Invoked when the |job| finishes pre-connecting sockets.
   void OnPreconnectsComplete(Job* job, int result) override;
 
@@ -293,7 +291,6 @@ class HttpStreamFactory::JobController
   std::optional<ConnectionManagementConfig> management_config_;
 
   const StreamRequestInfo request_info_;
-  ProxyInfo proxy_info_;
   const std::vector<SSLConfig::CertAndStatus> allowed_bad_certs_;
   int num_streams_ = 0;
   base::OnceClosure preconnect_callback_;

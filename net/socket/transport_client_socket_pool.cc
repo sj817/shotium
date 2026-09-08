@@ -26,7 +26,6 @@
 #include "net/base/features.h"
 #include "net/base/host_port_pair.h"
 #include "net/base/net_errors.h"
-#include "net/base/proxy_server.h"
 #include "net/log/net_log.h"
 #include "net/log/net_log_event_type.h"
 #include "net/log/net_log_source.h"
@@ -128,14 +127,12 @@ TransportClientSocketPool::TransportClientSocketPool(
     size_t socket_soft_cap,
     size_t max_sockets_per_group,
     base::TimeDelta unused_idle_socket_timeout,
-    const ProxyChain& proxy_chain,
     const CommonConnectJobParams* common_connect_job_params,
     bool cleanup_on_ip_address_change)
     : TransportClientSocketPool(socket_soft_cap,
                                 max_sockets_per_group,
                                 unused_idle_socket_timeout,
                                 ClientSocketPool::used_idle_socket_timeout(),
-                                proxy_chain,
                                 common_connect_job_params,
                                 cleanup_on_ip_address_change,
                                 std::make_unique<ConnectJobFactory>(),
@@ -166,7 +163,6 @@ TransportClientSocketPool::CreateForTesting(
     size_t max_sockets_per_group,
     base::TimeDelta unused_idle_socket_timeout,
     base::TimeDelta used_idle_socket_timeout,
-    const ProxyChain& proxy_chain,
     const CommonConnectJobParams* common_connect_job_params,
     std::unique_ptr<ConnectJobFactory> connect_job_factory,
     SSLClientContext* ssl_client_context,
@@ -174,7 +170,7 @@ TransportClientSocketPool::CreateForTesting(
   return base::WrapUnique<TransportClientSocketPool>(
       new TransportClientSocketPool(
           socket_soft_cap, max_sockets_per_group, unused_idle_socket_timeout,
-          used_idle_socket_timeout, proxy_chain, common_connect_job_params,
+          used_idle_socket_timeout, common_connect_job_params,
           /*cleanup_on_ip_address_change=*/true, std::move(connect_job_factory),
           ssl_client_context, connect_backup_jobs_enabled));
 }
@@ -746,14 +742,12 @@ TransportClientSocketPool::TransportClientSocketPool(
     size_t max_sockets_per_group,
     base::TimeDelta unused_idle_socket_timeout,
     base::TimeDelta used_idle_socket_timeout,
-    const ProxyChain& proxy_chain,
     const CommonConnectJobParams* common_connect_job_params,
     bool cleanup_on_ip_address_change,
     std::unique_ptr<ConnectJobFactory> connect_job_factory,
     SSLClientContext* ssl_client_context,
     bool connect_backup_jobs_enabled)
     : ClientSocketPool(socket_soft_cap,
-                       proxy_chain,
                        common_connect_job_params,
                        std::move(connect_job_factory)),
       max_sockets_per_group_(max_sockets_per_group),
@@ -810,22 +804,11 @@ void TransportClientSocketPool::OnSSLConfigForServersChanged(
   // interfaces so the parameter is not necessary.
   base::TimeTicks now = base::TimeTicks::Now();
 
-  // If the proxy chain includes a server from `servers` and uses SSL settings
-  // (HTTPS or QUIC), refresh every group.
-  bool proxy_matches = false;
-  for (const ProxyServer& proxy_server : GetProxyChain().proxy_servers()) {
-    if (proxy_server.is_secure_http_like() &&
-        servers.contains(proxy_server.host_port_pair())) {
-      proxy_matches = true;
-    }
-  }
-
   bool refreshed_any = false;
   for (auto it = group_map_.begin(); it != group_map_.end();) {
-    if (proxy_matches ||
-        (GURL::SchemeIsCryptographic(it->first.destination().scheme()) &&
-         servers.contains(
-             HostPortPair::FromSchemeHostPort(it->first.destination())))) {
+    if (GURL::SchemeIsCryptographic(it->first.destination().scheme()) &&
+        servers.contains(
+            HostPortPair::FromSchemeHostPort(it->first.destination()))) {
       refreshed_any = true;
       // Note this call may destroy the group and invalidate |to_refresh|.
       it = RefreshGroup(it, now, kSslConfigChanged);

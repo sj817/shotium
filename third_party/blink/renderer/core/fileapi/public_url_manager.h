@@ -35,18 +35,11 @@
 #include "third_party/blink/renderer/core/execution_context/execution_context_lifecycle_observer.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
 #include "third_party/blink/renderer/platform/mojo/heap_mojo_associated_remote.h"
-#include "third_party/blink/renderer/platform/wtf/hash_map.h"
-#include "third_party/blink/renderer/platform/wtf/hash_set.h"
-#include "third_party/blink/renderer/platform/wtf/text/string_hash.h"
-#include "third_party/blink/renderer/platform/wtf/text/wtf_string.h"
 
 namespace blink {
 
-class Blob;
 class ExecutionContext;
 class KURL;
-class URLRegistry;
-class URLRegistrable;
 
 class CORE_EXPORT PublicURLManager final
     : public GarbageCollected<PublicURLManager>,
@@ -59,14 +52,6 @@ class CORE_EXPORT PublicURLManager final
   // both gone in this single-threaded screenshot process, so that entry
   // point (and its only caller) no longer exists; deleted along with it.
 
-  // Returns a serialized new Blob URL and registers the Blob with the
-  // BlobURLStore.
-  String RegisterUrl(Blob*);
-  // Returns a serialized new Blob URL and registers the URLRegistrable with its
-  // URLRegistry.
-  String RegisterUrl(URLRegistrable*);
-  // Revokes the given URL.
-  void Revoke(const KURL&);
   // Resolves the provided URL to a factory capable of creating loaders for
   // the specific URL.
   void Resolve(const KURL&,
@@ -93,15 +78,6 @@ class CORE_EXPORT PublicURLManager final
   mojom::blink::BlobURLStore& GetBlobURLStore();
 
  private:
-  KURL GenerateUrl() const;
-  String CompleteRegistration(const KURL&);
-
-  typedef String URLString;
-  // Map from URLs to the URLRegistry they are registered with.
-  typedef HashMap<URLString, URLRegistry*> URLToRegistryMap;
-  URLToRegistryMap url_to_registry_;
-  HashSet<URLString> mojo_urls_;
-
   bool is_stopped_ = false;
 
   // A navigation-associated interface is used to preserve message ordering.

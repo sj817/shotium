@@ -29,30 +29,14 @@
 #include "base/check.h"
 #include "mojo/public/cpp/bindings/pending_remote.h"
 #include "third_party/blink/public/common/associated_interfaces/associated_interface_provider.h"
-#include "third_party/blink/public/mojom/blob/blob.mojom-blink-forward.h"
 #include "third_party/blink/renderer/core/execution_context/execution_context.h"
-#include "third_party/blink/renderer/core/fileapi/blob.h"
-#include "third_party/blink/renderer/core/fileapi/url_registry.h"
 #include "third_party/blink/renderer/core/frame/local_dom_window.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
-#include "third_party/blink/renderer/platform/blob/blob_url.h"
-#include "third_party/blink/renderer/platform/blob/blob_url_null_origin_map.h"
 #include "third_party/blink/renderer/platform/scheduler/main_thread/task_type_names.h"
 #include "third_party/blink/renderer/platform/weborigin/kurl.h"
-#include "third_party/blink/renderer/platform/weborigin/security_origin.h"
 #include "third_party/blink/renderer/platform/wtf/casting.h"
 
 namespace blink {
-
-namespace {
-
-void RemoveFromNullOriginMapIfNecessary(const KURL& blob_url) {
-  DCHECK(blob_url.ProtocolIs("blob"));
-  if (BlobURL::GetOrigin(blob_url) == "null")
-    BlobURLNullOriginMap::GetInstance()->Remove(blob_url);
-}
-
-}  // namespace
 
 PublicURLManager::PublicURLManager(ExecutionContext* execution_context)
     : ExecutionContextLifecycleObserver(execution_context),
@@ -87,81 +71,6 @@ mojom::blink::BlobURLStore& PublicURLManager::GetBlobURLStore() {
   return *frame_url_store_.get();
 }
 
-String PublicURLManager::RegisterUrl(URLRegistrable* registrable) {
-  if (is_stopped_) {
-    return String();
-  }
-  CHECK(registrable);
-
-  const KURL url = GenerateUrl();
-  const String& url_string = url.GetString();
-
-  URLRegistry* registry = &registrable->Registry();
-  registry->RegisterURL(url, registrable);
-  url_to_registry_.insert(url_string, registry);
-
-  return CompleteRegistration(url);
-}
-
-String PublicURLManager::RegisterUrl(Blob* blob) {
-  if (is_stopped_) {
-    return String();
-  }
-  CHECK(blob);
-
-  const KURL url = GenerateUrl();
-  const String& url_string = url.GetString();
-
-  mojo::PendingRemote<mojom::blink::Blob> blob_remote;
-  mojo::PendingReceiver<mojom::blink::Blob> blob_receiver =
-      blob_remote.InitWithNewPipeAndPassReceiver();
-
-  GetBlobURLStore().Register(std::move(blob_remote), url);
-
-  mojo_urls_.insert(url_string);
-  blob->CloneMojoBlob(std::move(blob_receiver));
-
-  return CompleteRegistration(url);
-}
-
-KURL PublicURLManager::GenerateUrl() const {
-  KURL url =
-      BlobURL::CreatePublicURL(GetExecutionContext()->GetSecurityOrigin());
-  DCHECK(!url.IsEmpty());
-  return url;
-}
-
-String PublicURLManager::CompleteRegistration(const KURL& url) {
-  SecurityOrigin* mutable_origin =
-      GetExecutionContext()->GetMutableSecurityOrigin();
-  if (mutable_origin->SerializesAsNull()) {
-    BlobURLNullOriginMap::GetInstance()->Add(url, mutable_origin);
-  }
-  return url.GetString();
-}
-
-void PublicURLManager::Revoke(const KURL& url) {
-  if (is_stopped_)
-    return;
-  // Don't bother trying to revoke URLs that can't have been registered anyway.
-  if (!url.ProtocolIs("blob") || url.HasFragmentIdentifier())
-    return;
-  // Don't support revoking cross-origin blob URLs.
-  if (!SecurityOrigin::Create(url)->IsSameOriginWith(
-          GetExecutionContext()->GetSecurityOrigin()))
-    return;
-
-  GetBlobURLStore().Revoke(url);
-  mojo_urls_.erase(url.GetString());
-
-  RemoveFromNullOriginMapIfNecessary(url);
-  auto it = url_to_registry_.find(url.GetString());
-  if (it == url_to_registry_.end())
-    return;
-  it->value->UnregisterURL(url);
-  url_to_registry_.erase(it);
-}
-
 void PublicURLManager::Resolve(
     const KURL& url,
     mojo::PendingReceiver<network::mojom::blink::URLLoaderFactory>
@@ -192,15 +101,6 @@ void PublicURLManager::ContextDestroyed() {
     return;
 
   is_stopped_ = true;
-  for (auto& url_registry : url_to_registry_) {
-    url_registry.value->UnregisterURL(KURL(url_registry.key));
-    RemoveFromNullOriginMapIfNecessary(KURL(url_registry.key));
-  }
-  for (const auto& url : mojo_urls_)
-    RemoveFromNullOriginMapIfNecessary(KURL(url));
-
-  url_to_registry_.clear();
-  mojo_urls_.clear();
 }
 
 void PublicURLManager::Trace(Visitor* visitor) const {

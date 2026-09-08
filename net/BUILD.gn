@@ -694,8 +694,6 @@ component("net") {
     "nqe/effective_connection_type.h",
     "proxy_resolution/proxy_host_matching_rules.cc",
     "proxy_resolution/proxy_host_matching_rules.h",
-    "proxy_resolution/proxy_info.cc",
-    "proxy_resolution/proxy_info.h",
     "shared_dictionary/shared_dictionary.h",
     "shared_dictionary/shared_dictionary_constants.h",
     "shared_dictionary/shared_dictionary_getter.h",

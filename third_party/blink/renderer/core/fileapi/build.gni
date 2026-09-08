@@ -13,7 +13,6 @@ blink_core_sources_fileapi = [
   "file_list.h",
   "public_url_manager.cc",
   "public_url_manager.h",
-  "url_registry.h",
 ]
 
 blink_core_tests_fileapi = []

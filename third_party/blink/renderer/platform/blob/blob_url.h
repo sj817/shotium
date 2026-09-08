@@ -38,7 +38,6 @@
 namespace blink {
 
 class KURL;
-class SecurityOrigin;
 
 // Public blob URLs are of the form
 //     blob:%escaped_origin%/%UUID%
@@ -51,11 +50,9 @@ class PLATFORM_EXPORT BlobURL {
   STATIC_ONLY(BlobURL);
 
  public:
-  static KURL CreatePublicURL(const SecurityOrigin*);
   static String GetOrigin(const KURL&);
 
  private:
-  static KURL CreateBlobURL(const String& origin_string);
   static const char kBlobProtocol[];
 };
 

@@ -1335,12 +1335,6 @@ EVENT_TYPE(HTTP_STREAM_JOB_CONTROLLER)
 //   }
 EVENT_TYPE(HTTP_STREAM_JOB_CONTROLLER_BOUND)
 
-// Logs the proxy server resolved for the controller. The event parameters are:
-//   {
-//      "proxy_server": The proxy server resolved for the Job,
-//   }
-EVENT_TYPE(HTTP_STREAM_JOB_CONTROLLER_PROXY_SERVER_RESOLVED)
-
 // Logs an alternative service found by the controller. The event parameters
 // are:
 //   {

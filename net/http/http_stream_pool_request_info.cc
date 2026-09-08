@@ -9,7 +9,6 @@
 #include "net/dns/public/secure_dns_policy.h"
 #include "net/http/alternative_service.h"
 #include "net/log/net_log_with_source.h"
-#include "net/proxy_resolution/proxy_info.h"
 #include "net/socket/next_proto.h"
 #include "net/socket/socket_tag.h"
 #include "url/scheme_host_port.h"
@@ -27,7 +26,6 @@ HttpStreamPoolRequestInfo::HttpStreamPoolRequestInfo(
     AdvertisedAltSvcState advertised_alt_svc_state,
     NextProtoSet allowed_alpns,
     int load_flags,
-    ProxyInfo proxy_info,
     handles::NetworkHandle target_network,
     NetLogWithSource factory_job_controller_net_log)
     : destination(std::move(destination)),
@@ -42,7 +40,6 @@ HttpStreamPoolRequestInfo::HttpStreamPoolRequestInfo(
       advertised_alt_svc_state(advertised_alt_svc_state),
       allowed_alpns(allowed_alpns),
       load_flags(load_flags),
-      proxy_info(std::move(proxy_info)),
       target_network(target_network),
       factory_job_controller_net_log(
           std::move(factory_job_controller_net_log)) {}

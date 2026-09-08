@@ -28,8 +28,6 @@
 
 #include "base/auto_reset.h"
 #include "base/check.h"
-#include "third_party/blink/renderer/core/execution_context/execution_context.h"
-#include "third_party/blink/renderer/core/fileapi/public_url_manager.h"
 #include "third_party/blink/renderer/core/url/dom_origin.h"
 #include "third_party/blink/renderer/core/url/url_search_params.h"
 #include "third_party/blink/renderer/platform/bindings/exception_state.h"
@@ -129,15 +127,6 @@ void URL::setSearch(const String& value) {
   } else {
     UpdateSearchParams(value);
   }
-}
-
-String URL::CreatePublicURL(ExecutionContext* execution_context, Blob* blob) {
-  return execution_context->GetPublicURLManager().RegisterUrl(blob);
-}
-
-String URL::CreatePublicURL(ExecutionContext* execution_context,
-                            URLRegistrable* registrable) {
-  return execution_context->GetPublicURLManager().RegisterUrl(registrable);
 }
 
 URLSearchParams* URL::searchParams() {

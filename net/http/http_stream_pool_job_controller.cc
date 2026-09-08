@@ -126,7 +126,6 @@ HttpStreamPool::JobController::JobController(
                           ? RespectLimits::kIgnore
                           : RespectLimits::kRespect),
       allowed_alpns_(request_info.allowed_alpns),
-      proxy_info_(request_info.proxy_info),
       alternative_service_info_(request_info.alternative_service_info),
       advertised_alt_svc_state_(request_info.advertised_alt_svc_state),
       origin_stream_key_(request_info.destination,
@@ -160,7 +159,6 @@ HttpStreamPool::JobController::JobController(
         return dict;
       });
 
-  CHECK(proxy_info_.is_direct());
 }
 
 HttpStreamPool::JobController::~JobController() {
@@ -297,10 +295,6 @@ bool HttpStreamPool::JobController::enable_alternative_services() const {
 
 NextProtoSet HttpStreamPool::JobController::allowed_alpns() const {
   return allowed_alpns_;
-}
-
-const ProxyInfo& HttpStreamPool::JobController::proxy_info() const {
-  return proxy_info_;
 }
 
 const NetLogWithSource& HttpStreamPool::JobController::net_log() const {
@@ -546,14 +540,14 @@ void HttpStreamPool::JobController::CallRequestCompleteAndStreamReady() {
       .session_source = pending_stream_->session_source,
       .advertised_alt_svc_state = advertised_alt_svc_state_,
   });
-  delegate_->OnStreamReady(proxy_info_, std::move(pending_stream_->stream));
+  delegate_->OnStreamReady(std::move(pending_stream_->stream));
 }
 
 void HttpStreamPool::JobController::CallOnStreamFailed(
     int status,
     const NetErrorDetails& net_error_details,
     ResolveErrorInfo resolve_error_info) {
-  delegate_->OnStreamFailed(status, net_error_details, proxy_info_,
+  delegate_->OnStreamFailed(status, net_error_details,
                             std::move(resolve_error_info));
 }
 

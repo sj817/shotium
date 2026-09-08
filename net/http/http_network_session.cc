@@ -209,9 +209,8 @@ void HttpNetworkSession::RemoveResponseDrainer(
 }
 
 ClientSocketPool* HttpNetworkSession::GetSocketPool(
-    SocketPoolType pool_type,
-    const ProxyChain& proxy_chain) {
-  return GetSocketPoolManager(pool_type)->GetSocketPool(proxy_chain);
+    SocketPoolType pool_type) {
+  return GetSocketPoolManager(pool_type)->GetSocketPool();
 }
 
 void HttpNetworkSession::CloseAllConnections(int net_error,

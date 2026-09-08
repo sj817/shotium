@@ -73,7 +73,6 @@
 #include "net/http/url_security_manager.h"
 #include "net/log/net_log_event_type.h"
 #include "net/log/net_log_util.h"
-#include "net/proxy_resolution/proxy_info.h"
 #include "net/socket/client_socket_factory.h"
 #include "net/socket/next_proto.h"
 #include "net/socket/transport_client_socket_pool.h"
@@ -783,8 +782,7 @@ void HttpNetworkTransaction::CloseConnectionOnDestruction() {
   close_connection_on_destruction_ = true;
 }
 
-void HttpNetworkTransaction::OnStreamReady(const ProxyInfo& used_proxy_info,
-                                           std::unique_ptr<HttpStream> stream) {
+void HttpNetworkTransaction::OnStreamReady(std::unique_ptr<HttpStream> stream) {
   DCHECK_EQ(STATE_CREATE_STREAM_COMPLETE, next_state_);
   DCHECK(stream_request_.get());
 
@@ -794,7 +792,6 @@ void HttpNetworkTransaction::OnStreamReady(const ProxyInfo& used_proxy_info,
   }
   stream_ = std::move(stream);
   stream_->SetRequestHeadersCallback(request_headers_callback_);
-  proxy_info_ = used_proxy_info;
   negotiated_protocol_ = stream_request_->negotiated_protocol();
   // TODO(crbug.com/40473589): Remove `was_alpn_negotiated` when we remove
   // chrome.loadTimes API.
@@ -814,22 +811,20 @@ void HttpNetworkTransaction::OnStreamReady(const ProxyInfo& used_proxy_info,
   dns_resolution_end_time_override_ =
       stream_request_->dns_resolution_end_time_override();
 
-  SetProxyInfoInResponse(used_proxy_info, &response_);
+  response_.proxy_chain = ProxyChain::Direct();
   OnIOComplete(OK);
 }
 
 void HttpNetworkTransaction::OnStreamFailed(
     int result,
     const NetErrorDetails& net_error_details,
-    const ProxyInfo& used_proxy_info,
     ResolveErrorInfo resolve_error_info) {
   DCHECK_EQ(STATE_CREATE_STREAM_COMPLETE, next_state_);
   DCHECK_NE(OK, result);
   DCHECK(stream_request_.get());
   DCHECK(!stream_.get());
   net_error_details_ = net_error_details;
-  proxy_info_ = used_proxy_info;
-  SetProxyInfoInResponse(used_proxy_info, &response_);
+  response_.proxy_chain = ProxyChain::Direct();
   response_.resolve_error_info = resolve_error_info;
 
   OnIOComplete(result);
@@ -2048,8 +2043,9 @@ void HttpNetworkTransaction::ResetStateForAuthRestart() {
   read_buf_len_ = 0;
   headers_valid_ = false;
   request_headers_.Clear();
+  auto proxy_chain = std::move(response_.proxy_chain);
   response_ = HttpResponseInfo();
-  SetProxyInfoInResponse(proxy_info_, &response_);
+  response_.proxy_chain = std::move(proxy_chain);
   remote_endpoint_ = IPEndPoint();
 #if BUILDFLAG(ENABLE_REPORTING)
   network_error_logging_report_generated_ = false;
@@ -2335,17 +2331,6 @@ void HttpNetworkTransaction::AddTraceParamsForStreamRequestResult(
     session_source_annotation->set_name("session_source");
     session_source_annotation->set_uint_value(
         static_cast<uint64_t>(*details->session_source));
-  }
-}
-
-// static
-void HttpNetworkTransaction::SetProxyInfoInResponse(
-    const ProxyInfo& proxy_info,
-    HttpResponseInfo* response_info) {
-  if (proxy_info.is_empty()) {
-    response_info->proxy_chain = ProxyChain();
-  } else {
-    response_info->proxy_chain = proxy_info.proxy_chain();
   }
 }
 

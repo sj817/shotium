@@ -68,7 +68,6 @@ class HttpStreamPool::JobController : public HttpStreamPool::Job::Delegate,
   bool enable_ip_based_pooling_for_h2() const override;
   bool enable_alternative_services() const override;
   NextProtoSet allowed_alpns() const override;
-  const ProxyInfo& proxy_info() const override;
   const NetLogWithSource& net_log() const override;
   const perfetto::Flow& flow() const override;
   void OnStreamReady(Job* job,
@@ -180,7 +179,6 @@ class HttpStreamPool::JobController : public HttpStreamPool::Job::Delegate,
   const bool enable_alternative_services_;
   const RespectLimits respect_limits_;
   NextProtoSet allowed_alpns_;
-  const ProxyInfo proxy_info_;
   const AlternativeServiceInfo alternative_service_info_;
   const AdvertisedAltSvcState advertised_alt_svc_state_;
 

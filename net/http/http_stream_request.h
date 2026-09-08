@@ -18,7 +18,6 @@
 #include "net/http/http_response_info.h"
 #include "net/log/net_log_source.h"
 #include "net/log/net_log_with_source.h"
-#include "net/proxy_resolution/proxy_info.h"
 #include "net/socket/connection_attempts.h"
 #include "net/socket/next_proto.h"
 #include "net/spdy/spdy_session_key.h"
@@ -48,17 +47,11 @@ class NET_EXPORT_PRIVATE HttpStreamRequest {
 
     // This is the success case for RequestStream.
     // |stream| is now owned by the delegate.
-    // |used_proxy_info| indicates the actual ProxyInfo used for this stream,
-    // since the HttpStreamRequest performs the proxy resolution.
-    virtual void OnStreamReady(const ProxyInfo& used_proxy_info,
-                               std::unique_ptr<HttpStream> stream) = 0;
+    virtual void OnStreamReady(std::unique_ptr<HttpStream> stream) = 0;
 
     // This is the failure to create a stream case.
-    // |used_proxy_info| indicates the actual ProxyInfo used for this stream,
-    // since the HttpStreamRequest performs the proxy resolution.
     virtual void OnStreamFailed(int status,
                                 const NetErrorDetails& net_error_details,
-                                const ProxyInfo& used_proxy_info,
                                 ResolveErrorInfo resolve_error_info) = 0;
 
     // Called when we have a certificate error for the request.
