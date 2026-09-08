@@ -64,8 +64,7 @@ struct COMPONENT_EXPORT(NETWORK_CPP_BASE) ResourceRequest {
     net::IsolationInfo isolation_info;
     bool disable_secure_dns = false;
     bool has_user_activation = false;
-    bool allow_cookies_from_browser = false;
-    bool include_request_cookies_with_response = false;
+
     mojom::ClientSecurityStatePtr client_security_state;
   };
 
@@ -148,9 +147,9 @@ struct COMPONENT_EXPORT(NETWORK_CPP_BASE) ResourceRequest {
   bool enable_upload_progress = false;
   bool do_not_prompt_for_login = false;
   bool is_outermost_main_frame = false;
-  int transition_type = 0;
+
   bool is_reload_navigation = false;
-  int previews_state = 0;
+
   bool upgrade_if_insecure = false;
   bool is_revalidating = false;
   std::optional<std::string> revalidation_etag;
@@ -168,11 +167,10 @@ struct COMPONENT_EXPORT(NETWORK_CPP_BASE) ResourceRequest {
   OptionalTrustTokenParams trust_token_params;
   net::StorageAccessApiStatus storage_access_api_status =
       net::StorageAccessApiStatus::kNone;
-  bool shared_dictionary_writer_enabled = false;
+
   std::optional<base::UnguessableToken> keepalive_token;
   bool is_ad_tagged = false;
   bool client_side_content_decoding_enabled = false;
-  std::optional<base::UnguessableToken> prefetch_token;
   net::SocketTag socket_tag;
 
   std::optional<network::PermissionsPolicy> permissions_policy;

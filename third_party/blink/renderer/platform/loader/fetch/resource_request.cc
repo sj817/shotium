@@ -75,7 +75,6 @@ ResourceRequestHead::ResourceRequestHead(const KURL& url)
       is_fetch_later_api_(false),
       is_favicon_(false),
       prefetch_maybe_for_top_level_navigation_(false),
-      shared_dictionary_writer_enabled_(false),
       requires_upgrade_for_loader_(false),
       cache_mode_(mojom::blink::FetchCacheMode::kDefault),
       initial_priority_(ResourceLoadPriority::kUnresolved),

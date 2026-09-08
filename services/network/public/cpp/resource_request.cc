@@ -40,9 +40,6 @@ ResourceRequest::TrustedParams& ResourceRequest::TrustedParams::operator=(
   isolation_info = other.isolation_info;
   disable_secure_dns = other.disable_secure_dns;
   has_user_activation = other.has_user_activation;
-  allow_cookies_from_browser = other.allow_cookies_from_browser;
-  include_request_cookies_with_response =
-      other.include_request_cookies_with_response;
   client_security_state = other.client_security_state.Clone();
   return *this;
 }
@@ -56,9 +53,6 @@ bool ResourceRequest::TrustedParams::EqualsForTesting(
   return isolation_info.IsEqualForTesting(other.isolation_info) &&
          disable_secure_dns == other.disable_secure_dns &&
          has_user_activation == other.has_user_activation &&
-         allow_cookies_from_browser == other.allow_cookies_from_browser &&
-         include_request_cookies_with_response ==
-             other.include_request_cookies_with_response &&
          client_security_state == other.client_security_state;
 }
 
@@ -109,9 +103,7 @@ bool ResourceRequest::EqualsForTesting(const ResourceRequest& request) const {
          enable_upload_progress == request.enable_upload_progress &&
          do_not_prompt_for_login == request.do_not_prompt_for_login &&
          is_outermost_main_frame == request.is_outermost_main_frame &&
-         transition_type == request.transition_type &&
          is_reload_navigation == request.is_reload_navigation &&
-         previews_state == request.previews_state &&
          upgrade_if_insecure == request.upgrade_if_insecure &&
          is_revalidating == request.is_revalidating &&
          revalidation_etag == request.revalidation_etag &&
@@ -126,8 +118,6 @@ bool ResourceRequest::EqualsForTesting(const ResourceRequest& request) const {
          OptionalTrustedParamsEqualsForTesting(trusted_params,
                                                request.trusted_params) &&
          trust_token_params == request.trust_token_params &&
-         shared_dictionary_writer_enabled ==
-             request.shared_dictionary_writer_enabled &&
          socket_tag == request.socket_tag &&
          permissions_policy == request.permissions_policy &&
          fetch_retry_options == request.fetch_retry_options;

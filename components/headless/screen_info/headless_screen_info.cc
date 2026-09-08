@@ -9,7 +9,6 @@
 #include "base/logging.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_util.h"
-#include "base/strings/stringprintf.h"
 #include "third_party/re2/src/re2/re2.h"
 #include "ui/gfx/geometry/size.h"
 #include "ui/gfx/geometry/size_conversions.h"
@@ -250,9 +249,6 @@ std::string ParseOneScreenInfo(std::string_view screen_info,
 
 }  // namespace
 
-bool HeadlessScreenInfo::operator==(const HeadlessScreenInfo& other) const =
-    default;
-
 // static
 base::expected<std::vector<HeadlessScreenInfo>, std::string>
 HeadlessScreenInfo::FromString(std::string_view screen_info) {
@@ -278,15 +274,6 @@ HeadlessScreenInfo::FromString(std::string_view screen_info) {
   }
 
   return base::ok(result);
-}
-
-std::string HeadlessScreenInfo::ToString() const {
-  return base::StringPrintf(
-      "%s color_depth=%d device_pixel_ratio=%g is_internal=%d label='%s' "
-      "workarea TLBR={%d,%d,%d,%d} rotation=%d",
-      bounds.ToString().c_str(), color_depth, device_pixel_ratio, is_internal,
-      label.c_str(), work_area_insets.top(), work_area_insets.left(),
-      work_area_insets.bottom(), work_area_insets.right(), rotation);
 }
 
 }  // namespace headless

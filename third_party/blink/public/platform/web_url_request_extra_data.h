@@ -9,7 +9,6 @@
 #include "third_party/blink/public/common/loader/url_loader_throttle.h"
 #include "third_party/blink/public/platform/web_common.h"
 #include "third_party/blink/public/platform/web_string.h"
-#include "ui/base/page_transition_types.h"
 #include "url/origin.h"
 
 namespace network {
@@ -28,11 +27,6 @@ class BLINK_PLATFORM_EXPORT WebURLRequestExtraData
   void set_is_outermost_main_frame(bool is_outermost_main_frame) {
     is_outermost_main_frame_ = is_outermost_main_frame;
   }
-  ui::PageTransition transition_type() const { return transition_type_; }
-  void set_transition_type(ui::PageTransition transition_type) {
-    transition_type_ = transition_type;
-  }
-
   // The request is for a prefetch-only client (i.e. running NoStatePrefetch)
   // and should use LOAD_PREFETCH network flags.
   bool is_for_no_state_prefetch() const { return is_for_no_state_prefetch_; }
@@ -70,7 +64,6 @@ class BLINK_PLATFORM_EXPORT WebURLRequestExtraData
 
  private:
   bool is_outermost_main_frame_ = false;
-  ui::PageTransition transition_type_ = ui::PAGE_TRANSITION_LINK;
   bool is_for_no_state_prefetch_ = false;
   bool originated_from_service_worker_ = false;
   WebString custom_user_agent_;

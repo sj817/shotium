@@ -526,7 +526,6 @@ mojom("url_loader_base") {
     "network_types.mojom",
     "no_vary_search.mojom",
     "parsed_headers.mojom",
-    "parsed_request_cookie.mojom",
     "referrer_policy.mojom",
     "request_priority.mojom",
     "service_worker_router_info.mojom",
@@ -755,18 +754,6 @@ mojom("url_loader_base") {
         "//base",
         "//net",
       ]
-    },
-    {
-      types = [
-        {
-          mojom = "network.mojom.ParsedRequestCookie"
-          cpp = "::net::cookie_util::ParsedRequestCookie"
-        },
-      ]
-      traits_headers = [
-        "//services/network/public/cpp/parsed_request_cookie_mojom_traits.h",
-      ]
-      traits_public_deps = [ "//net" ]
     },
     {
       types = [

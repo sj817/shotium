@@ -58,14 +58,6 @@ struct COMPONENT_EXPORT(NETWORK_CPP_BASE)
       const network::ResourceRequest::TrustedParams& trusted_params) {
     return trusted_params.has_user_activation;
   }
-  static bool allow_cookies_from_browser(
-      const network::ResourceRequest::TrustedParams& trusted_params) {
-    return trusted_params.allow_cookies_from_browser;
-  }
-  static bool include_request_cookies_with_response(
-      const network::ResourceRequest::TrustedParams& trusted_params) {
-    return trusted_params.include_request_cookies_with_response;
-  }
   static const network::mojom::ClientSecurityStatePtr& client_security_state(
       const network::ResourceRequest::TrustedParams& trusted_params) {
     return trusted_params.client_security_state;
@@ -188,14 +180,8 @@ struct COMPONENT_EXPORT(NETWORK_CPP_BASE)
   static bool is_outermost_main_frame(const network::ResourceRequest& request) {
     return request.is_outermost_main_frame;
   }
-  static int32_t transition_type(const network::ResourceRequest& request) {
-    return request.transition_type;
-  }
   static bool is_reload_navigation(const network::ResourceRequest& request) {
     return request.is_reload_navigation;
-  }
-  static int32_t previews_state(const network::ResourceRequest& request) {
-    return request.previews_state;
   }
   static bool upgrade_if_insecure(const network::ResourceRequest& request) {
     return request.upgrade_if_insecure;
@@ -254,10 +240,6 @@ struct COMPONENT_EXPORT(NETWORK_CPP_BASE)
   }
   static bool is_ad_tagged(const network::ResourceRequest& request) {
     return request.is_ad_tagged;
-  }
-  static bool shared_dictionary_writer_enabled(
-      const network::ResourceRequest& request) {
-    return request.shared_dictionary_writer_enabled;
   }
   static bool client_side_content_decoding_enabled(
       const network::ResourceRequest& request) {

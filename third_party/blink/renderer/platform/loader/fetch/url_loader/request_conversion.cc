@@ -413,7 +413,6 @@ void PopulateResourceRequest(const ResourceRequestHead& src,
 
   dest->keepalive_token = src.GetKeepaliveToken();
 
-  dest->shared_dictionary_writer_enabled = src.SharedDictionaryWriterEnabled();
 
   // network::ResourceRequest::is_ad_tagged was filled in from the blink-side ad
   // annotation. Blink can no longer produce one, so the field keeps its false

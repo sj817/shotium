@@ -54,27 +54,6 @@ struct TrustedUrlRequestParams {
   // without user gesture. Used to determine the `Sec-Fetch-User` header.
   bool has_user_activation;
 
-  // Requests received from the trusted URLLoaderFactory may contain cookies
-  // which are overridden in the network stack.
-  //
-  // If this is set to true, the Cookie headers in ResourceRequest::headers and
-  // ResourceRequest::cors_exempt_headers, if present, are added to the request
-  // after the network stack has set its cookies, which prevents them from being
-  // overridden. Such a cookie will not be added if the request already contains
-  // a cookie with an identical name.
-  //
-  // Cookies added through this method are removed on redirects (including same-
-  // origin redirects) to ensure sensitive data is only sent to appropriate
-  // sites. If needed, the caller can add the cookies back in the call to
-  // FollowRedirect().
-  bool allow_cookies_from_browser;
-
-  // Specifies that the response head should include request cookies which were
-  // sent, including cookies added by the browser. Clients which set this flag
-  // should take care to remove them if they forward the response head to a
-  // client which should not be able to see them.
-  bool include_request_cookies_with_response = false;
-
   // Specifies the security state of the client, for cases when the
   // URLLoaderFactory is shared among multiple clients.
   //
@@ -298,21 +277,9 @@ struct URLRequest {
   // True if |frame_id| is the outermost main frame of a page.
   bool is_outermost_main_frame;
 
-  // Note: this is an enum of type ui::PageTransition.
-  // TODO(jam): remove this from the struct since network service shouldn't know
-  // about this.
-  int32 transition_type;
-
   // Whether this navigation is a reload (e.g., location.reload(), F5).
   // Used to populate Request.isReloadNavigation for Service Workers.
   bool is_reload_navigation;
-
-  // Whether or not to request a Preview version of the resource or let the
-  // browser decide.
-  // Note: this is an enum of type PreviewsState.
-  // TODO(jam): remove this from the struct since network service shouldn't know
-  // about this.
-  int32 previews_state;
 
   // Whether or not this request (including redirects) should be upgraded to
   // HTTPS due to an Upgrade-Insecure-Requests requirement.
@@ -432,12 +399,6 @@ struct URLRequest {
   // Indicates whether this request has been determined to be used for
   // advertising purposes.
   bool is_ad_tagged = false;
-
-  // Indicate the state of CompressionDictionaryTransport feature. When it is
-  // true, `use-as-dictionary` response HTTP header may be processed.
-  // TODO(crbug.com/40255884): Remove this flag when we launch
-  // CompressionDictionaryTransport feature.
-  bool shared_dictionary_writer_enabled = false;
 
   // If true, disables content decoding (e.g., gzip, brotli) within the network
   // service for this request. The client becomes responsible for decoding the

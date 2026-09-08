@@ -490,8 +490,6 @@ component("cpp_base") {
     "optional_trust_token_params.h",
     "originating_process_id.cc",
     "originating_process_id.h",
-    "parsed_request_cookie_mojom_traits.cc",
-    "parsed_request_cookie_mojom_traits.h",
     "renderer_process_id.h",
     "resource_request.cc",
     "resource_request.h",

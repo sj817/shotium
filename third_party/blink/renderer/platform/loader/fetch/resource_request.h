@@ -532,14 +532,6 @@ class PLATFORM_EXPORT ResourceRequestHead {
     return storage_access_api_status_;
   }
 
-  bool SharedDictionaryWriterEnabled() const {
-    return shared_dictionary_writer_enabled_;
-  }
-
-  void SetSharedDictionaryWriterEnabled(bool shared_dictionary_writer_enabled) {
-    shared_dictionary_writer_enabled_ = shared_dictionary_writer_enabled;
-  }
-
   const std::optional<base::UnguessableToken>&
   GetServiceWorkerRaceNetworkRequestToken() const {
     return service_worker_race_network_request_token_;
@@ -634,7 +626,6 @@ class PLATFORM_EXPORT ResourceRequestHead {
   // TODO(crbug.com/40255884): Remove this flag when the
   // CompressionDictionaryTransport feature can no longer be disabled by
   // feature flag or enterprise policy.
-  bool shared_dictionary_writer_enabled_ : 1;
   bool requires_upgrade_for_loader_ : 1;
   mojom::blink::FetchCacheMode cache_mode_;
   ResourceLoadPriority initial_priority_;

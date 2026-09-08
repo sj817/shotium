@@ -410,10 +410,6 @@ void FrameFetchContext::PrepareRequest(
   request.SetStorageAccessApiStatus(
       document_->GetExecutionContext()->GetStorageAccessApiStatus());
 
-  request.SetSharedDictionaryWriterEnabled(
-      RuntimeEnabledFeatures::CompressionDictionaryTransportEnabled(
-          GetExecutionContext()));
-
   GetLocalFrameClient()->DispatchFinalizeRequest(request);
   FrameScheduler* frame_scheduler = GetFrame()->GetFrameScheduler();
   if (!for_redirect && frame_scheduler) {

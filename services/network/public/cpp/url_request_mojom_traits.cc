@@ -41,9 +41,6 @@ bool StructTraits<network::mojom::TrustedUrlRequestParamsDataView,
   }
   out->disable_secure_dns = data.disable_secure_dns();
   out->has_user_activation = data.has_user_activation();
-  out->allow_cookies_from_browser = data.allow_cookies_from_browser();
-  out->include_request_cookies_with_response =
-      data.include_request_cookies_with_response();
   if (!data.ReadClientSecurityState(&out->client_security_state)) {
     return false;
   }
@@ -124,9 +121,7 @@ bool StructTraits<
   out->enable_upload_progress = data.enable_upload_progress();
   out->do_not_prompt_for_login = data.do_not_prompt_for_login();
   out->is_outermost_main_frame = data.is_outermost_main_frame();
-  out->transition_type = data.transition_type();
   out->is_reload_navigation = data.is_reload_navigation();
-  out->previews_state = data.previews_state();
   out->upgrade_if_insecure = data.upgrade_if_insecure();
   out->is_revalidating = data.is_revalidating();
   if (!data.ReadRevalidationEtag(&out->revalidation_etag) ||
@@ -150,8 +145,6 @@ bool StructTraits<
   out->is_favicon = data.is_favicon();
   out->original_destination = data.original_destination();
   out->is_ad_tagged = data.is_ad_tagged();
-  out->shared_dictionary_writer_enabled =
-      data.shared_dictionary_writer_enabled();
   out->client_side_content_decoding_enabled =
       data.client_side_content_decoding_enabled();
   out->required_ip_address_space = data.required_ip_address_space();

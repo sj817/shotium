@@ -1,4 +1,6 @@
-# 静态截图引擎全局裁剪进度（stage56）
+# 静态截图引擎全局裁剪进度（stage57）
+
+stage57 当前接续：stage56 已提交 a6efbc4d2408。本批21源码路径、3D+18E，源码4行增加/318行删除。整链移除浏览器Cookie注入/回传参数及响应cookie echo协议/traits（真实net Cookie解析保留）、previews_state和无调用prefetch_token、WebURLRequestExtraData页面跳转分类、FrameFetchContext到network的共享字典write-only标记。普通Cookie/重定向/referrer/加载安全尾部原文不变，实际共享字典解码保留。另删无调用CDP屏幕UpdateDisplay工具和HeadlessScreenInfo调试格式化/比较；七个几何/配置解析函数体与Mac屏幕实现保持，RE2实际配置解析保留。21路径备份SHA/保护交集零、2GN语法、diff及引用核对通过；同名Perfetto table row setter不是本批调用，未改。证据out/cut-stage57-combined/、out/cut-stage57-network-state/、out/cut-stage57-display-audit/。按整批修改后集中编译策略，本批未编译/运行/像素验证；stage49受限core GN阻点未解除，全局目标继续，整体仍估计65%±10。
 
 stage56 当前接续：stage55 已提交 28102dfddc65。本批11E、源码4行增加/640行删除：整组解除无生产/消费端的六类network请求负载（浏览器EnabledClientHints缓存、合成响应producer/expected headers、DevTools解码白名单、两组NetLog参数），同步清掉专属NetLogSource Mojo/traits/typemap和无人实例化ScopedResourceRequestCrashKeys。实际net NetLog、反序列化失败诊断、Blink ClientHints和资源加载保留；SendsCookies至重定向/referrer/allowed-load-flags实现原文保持。媒体fragment去无调用时间/轨道/NPT API与RE2依赖，六个空间解析函数体和SVG视图代码不变。备份SHA、全部受限清单交集零、GN语法、diff与目标符号残留核对通过；证据out/cut-stage56-combined/、out/cut-stage56-network-fields/、out/cut-stage56-media-fragment/。未编译/运行/像素验收，stage49受限core GN阻点仍在；全局任务继续，整体工作量估计仍约65%±10，不把静态检查当最终验收。
 
@@ -31,7 +33,7 @@ stage51 更新：WebBundle 请求/响应/Fetcher 闭包已完成源码处理，3
 | 网络 | PAC/WPAD/系统代理、备用磁盘/内存后端、旧服务协议、content_settings、WebSocket、上层双向流和多组观察者已清理 | 实际 HTTP/TLS/HTTP2/缓存及安全类型保留；WebBundle、DevTools 字段闭包已做；policy/递归预取待收口 |
 | 遥测/第三方/维护 | 栈堆采样、大量 UKM 调用点、若干 CrashKey 调用及无用测试/工具已清理；ICU/Skia/Perfetto 已改直接维护源码 | UKM/Crashpad 库和运行 tracing 尚未整链完成；三组受阻清单未删除 |
 
-此前最后一套真正编译和运行通过的基线是第十一批 d9b409db334cb60b0f6b0c11549b7d5c4be7e7bb：Windows EXE/DLL/addon、serve/net、84 demos、Node/daemon/协议、Bilibili 与 183/183 像素一致。这不能证明 stage16–56 的累计改动已通过。六平台当前实际编译未完成。
+此前最后一套真正编译和运行通过的基线是第十一批 d9b409db334cb60b0f6b0c11549b7d5c4be7e7bb：Windows EXE/DLL/addon、serve/net、84 demos、Node/daemon/协议、Bilibili 与 183/183 像素一致。这不能证明 stage16–57 的累计改动已通过。六平台当前实际编译未完成。
 
 ## 全局待办：按后续大批次组织
 
@@ -63,4 +65,4 @@ stage51 更新：WebBundle 请求/响应/Fetcher 闭包已完成源码处理，3
 - 本轮 manifest、备份核对、静态结果：out/cut-stage54-combined/；AX 子代理交接：out/cut-stage54-ax-strings/report.md；旧 IPC 完成证据：out/cut-stage54-ipc-audit/report.md。
 - 根目录复核基础：out/cut-stage45-root-review/report.md；其中 network/content_settings/WebSocket 等项目以 stage46–54 的实际删除为准，不能重复列为未完成。
 - stage50 根目录现存跟踪文件统计和受阻清单存在性历史快照：out/cut-stage50-combined/global-snapshot.json。目录文件数只用来验证存在状态，不用来证明用途或百分比。
-- 主任务、原始审计、执行证据仍分别位于 screenshot-cut-task.md、screenshot-unused-code-audit-2026-09-07.md、screenshot-cut-execution-2026-09-07.md。历史未勾选项包含已做源码但未验收的内容，以本报告和顶部 stage56 状态解释，不把历史 checkbox 直接计为新工作量。
+- 主任务、原始审计、执行证据仍分别位于 screenshot-cut-task.md、screenshot-unused-code-audit-2026-09-07.md、screenshot-cut-execution-2026-09-07.md。历史未勾选项包含已做源码但未验收的内容，以本报告和顶部 stage57 状态解释，不把历史 checkbox 直接计为新工作量。

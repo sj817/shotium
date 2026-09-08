@@ -24,8 +24,6 @@ struct HeadlessScreenInfo {
   std::string label;
   int rotation = 0;
 
-  bool operator==(const HeadlessScreenInfo& other) const;
-
   // Parse one or more screen specifications returning a list of headless
   // screen infos or an error string.
   //
@@ -56,7 +54,6 @@ struct HeadlessScreenInfo {
   static base::expected<std::vector<HeadlessScreenInfo>, std::string>
   FromString(std::string_view screen_info);
 
-  std::string ToString() const;
 };
 
 }  // namespace headless
