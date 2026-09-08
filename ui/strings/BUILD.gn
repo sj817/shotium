@@ -10,25 +10,13 @@ import("//tools/grit/grit_rule.gni")
 group("strings") {
   public_deps = [
     ":app_locale_settings",
-    ":auto_image_annotation_strings",
     ":ax_strings",
-    ":ui_strings",
   ]
 }
 
 grit_strings("ax_strings") {
   source = "ax_strings.grd"
   outputs = [ "grit/ax_strings.h" ]
-}
-
-grit_strings("auto_image_annotation_strings") {
-  source = "auto_image_annotation_strings.grd"
-  outputs = [ "grit/auto_image_annotation_strings.h" ]
-}
-
-grit_strings("ui_strings") {
-  source = "ui_strings.grd"
-  outputs = [ "grit/ui_strings.h" ]
 }
 
 grit_strings("app_locale_settings") {

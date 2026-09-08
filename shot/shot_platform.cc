@@ -126,9 +126,8 @@ blink::WebString ShotPlatform::DefaultLocale() {
   // on the first document decoded.
   //
   // en-US is the honest answer for this binary rather than a placeholder: the
-  // only strings it carries are blink_strings_en-US.pak and
-  // ui_strings_en-US.pak (see //shot:shot_strings), so this is the locale it
-  // actually has. The value is real input to rendering -- it picks the
+  // localized strings it carries are the en-US Blink and locale-settings
+  // packs (see //shot:shot_strings), so this is the locale it actually has. The value is real input to rendering -- it picks the
   // language-sensitive font fallback and the default quote characters -- so it
   // has to agree with what is packed.
   return blink::WebString::FromUtf8("en-US");

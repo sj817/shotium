@@ -1,4 +1,6 @@
-# 静态截图引擎全局裁剪进度（stage53）
+# 静态截图引擎全局裁剪进度（stage54）
+
+stage54 当前接续：stage53 已提交 f8e410a354a1。本批252源码路径，164D+88E：删除无实际消费者的 auto_image_annotation_strings 与 ui_strings 两套 GRD/162翻译文件，解除GN、Shot无用语言pak输入、ID分配与12项startup排序记录；保留实际Blink和locale资源。AX消息242→14，81语言译文19440→1134，保留日期/时间字段实际引用的符号、原消息和原译文，官方Grit消息指纹核对一致。数字资源ID可重新分配，最终必须一起重新生成header/pak和编译消费者，不宣称数字ID不变。备份SHA、精确252路径、全部受限清单交集零、删除存在性、2GN语法、XML/指纹/引用与diff检查通过。旧IPC五Native类型复核确认源码迁移已完成，当前ipc跟踪文件及mojom Native声明为零，普通Mojo安全traits保留；该项移出实现待办。证据out/cut-stage54-combined/verification.json、out/cut-stage54-ui-strings/report.md、out/cut-stage54-ax-strings/report.md、out/cut-stage54-ipc-audit/report.md。没有当前图生成/编译/运行/像素验收，stage49受限core GN阻点未解除。整体仍估计65%±10、源码约80%、预计余10–16大批次，完整待办见全局报告。
 
 stage53 更新：ui/resources 全部 90 文件、12 空目录已清理，配套打包/ID/路径依赖完成；DevTools request-id 和 emitted-extra-info 通知链同时解除。本批 128 源码路径，SSL/导航/混合内容/重定向实际行为静态核对保持。完整编译和运行验证仍待完成。证据 out/cut-stage53-combined/。
 
@@ -22,10 +24,10 @@ stage51 更新：WebBundle 请求/响应/Fetcher 闭包已完成源码处理，3
 | 根目录大组件 | gpu、sql、sandbox、device、google_apis 的现存跟踪文件已清空；prefs 和多个独立浏览器服务已清理 | 空目录实体清理与源码清空是两件事 |
 | Canvas/浏览器嵌入层 | Canvas 绘图 API/资源桥接、WebView/WebWidget/Popup 大实现、系统剪贴板和多组编辑命令已移除 | 保留 canvas 标签静态 fallback、宽高比；部分交互类型仍需收口 |
 | GPU/合成器/Skia | 大部分合成器执行端、GPU/GL/Vulkan/Skia GPU/PDF/Skottie 和桌面图形桥接已删除 | CPU paint、原生 SkCanvas、图片/字体/SVG/MathML 保留 |
-| 网络 | PAC/WPAD/系统代理、备用磁盘/内存后端、旧服务协议、content_settings、WebSocket、上层双向流和多组观察者已清理 | 实际 HTTP/TLS/HTTP2/缓存及安全类型保留；WebBundle 等后续闭包待做 |
+| 网络 | PAC/WPAD/系统代理、备用磁盘/内存后端、旧服务协议、content_settings、WebSocket、上层双向流和多组观察者已清理 | 实际 HTTP/TLS/HTTP2/缓存及安全类型保留；WebBundle、DevTools 字段闭包已做；policy/递归预取待收口 |
 | 遥测/第三方/维护 | 栈堆采样、大量 UKM 调用点、若干 CrashKey 调用及无用测试/工具已清理；ICU/Skia/Perfetto 已改直接维护源码 | UKM/Crashpad 库和运行 tracing 尚未整链完成；三组受阻清单未删除 |
 
-此前最后一套真正编译和运行通过的基线是第十一批 d9b409db334cb60b0f6b0c11549b7d5c4be7e7bb：Windows EXE/DLL/addon、serve/net、84 demos、Node/daemon/协议、Bilibili 与 183/183 像素一致。这不能证明 stage16–50 的累计改动已通过。六平台当前实际编译未完成。
+此前最后一套真正编译和运行通过的基线是第十一批 d9b409db334cb60b0f6b0c11549b7d5c4be7e7bb：Windows EXE/DLL/addon、serve/net、84 demos、Node/daemon/协议、Bilibili 与 183/183 像素一致。这不能证明 stage16–54 的累计改动已通过。六平台当前实际编译未完成。
 
 ## 全局待办：按后续大批次组织
 
@@ -37,9 +39,9 @@ stage51 更新：WebBundle 请求/响应/Fetcher 闭包已完成源码处理，3
 | 2 | third_party/perfetto、icu | 落实离线 trace processor 的 2039 个待删文件、ICU 的 16 个待删文件；检查独立外围工具。保留真实 Unicode、字体与数据生成 | 1 |
 | 3 | Blink、services/metrics、components/crash、third_party/crashpad | 去掉 Document/DocumentLoader 的 6 个 UKM builder 调用及库/协议/生成器依赖；关闭已无外部调用的组件 CrashKey GN 链并清理 Crashpad，保留实际错误诊断 | 1–2 |
 | 4 | base/trace_event、base/tracing、Perfetto 运行后端 | 处理记录、会话、导出和宏调用的实际依赖；不能与已做的离线 processor 混为一组，不能误删 CaptureStats/FCP/CHECK/真实日志 | 1–2 |
-| 5 | net、services/network、Blink loader | WebBundle token/handle、响应标记和 Fetcher 闭包已在 stage51 处理；NetLog 导出和两组纯请求字段已在 stage52 处理；继续回查浏览器 policy、持久状态、剩余协议/traits、DevTools request id 已在 stage53 解除；递归预取与旧 IPC 等审计项，按实际调用给最终结论 | 1 |
+| 5 | net、services/network、Blink loader | WebBundle token/handle、响应标记和 Fetcher 闭包已在 stage51 处理；NetLog 导出和两组纯请求字段已在 stage52 处理；继续回查浏览器 policy、持久状态、剩余协议/traits、DevTools request id 已在 stage53 解除；递归预取等审计项按实际调用给最终结论；旧 IPC 五 Native 类型已在 stage54 复核源码完成，普通 Mojo traits 保留 | 1 |
 | 6 | third_party/blink 交互与扩展 | editing、DataTransfer/拖放、fullscreen、fileapi/blob、AX、PerformanceObserver/User Timing、probe，以及剩余脚本关联类型；同时确认内部 observer、通用线程与表单/CSS 状态的最小保留；XSLT 等已有保留结论不重新按名字砍 | 1–2 |
-| 7 | ui、base、build、third_party、根配置 | ui/resources 桌面资源已在 stage53 清理；其余 GRD/语言资源、latency/AX、系统 helper、测试模板与生成工具，re2/libyuv/ipcz 等实际依赖；同步 DEPS/.gn/BUILD/.gitmodules/trim-tree/prune-deps，核对空目录和全部 A/B/C 附录，避免同步后回流 | 1–2 |
+| 7 | ui、base、build、third_party、根配置 | ui/resources 桌面资源已在 stage53 清理；两套无用语言包和 AX 未引用译文已在 stage54 清理；其余 locale/语言资源、latency/AX、系统 helper、测试模板与生成工具，re2/libyuv/ipcz 等实际依赖；同步 DEPS/.gn/BUILD/.gitmodules/trim-tree/prune-deps，核对空目录和全部 A/B/C 附录，避免同步后回流 | 1–2 |
 | 8 | 全局验证与修复 | 最终 GN 图、缺失输入、生成类型/语法/jumbo、Windows EXE/DLL/addon；按错误集合批量修复，避免每个小修改完整构建 | 1–2 |
 | 9 | 运行/像素/六平台 | serve/net/demos/Node/daemon/协议/Bilibili、完整像素和 Canvas 专项；六平台真实编译，交付保留/删除总表和最终证据 | 1–2 |
 
@@ -54,7 +56,7 @@ stage51 更新：WebBundle 请求/响应/Fetcher 闭包已完成源码处理，3
 
 ## 证据与后续接续
 
-- 本轮 manifest、备份核对、静态结果：out/cut-stage50-combined/；网络子代理交接：out/cut-stage50-bidirectional/report.md。
-- 根目录复核基础：out/cut-stage45-root-review/report.md；其中 network/content_settings/WebSocket 等项目以 stage46–50 的实际删除为准，不能重复列为未完成。
-- 最新根目录现存跟踪文件统计和受阻清单存在性：out/cut-stage50-combined/global-snapshot.json。目录文件数只用来验证存在状态，不用来证明用途或百分比。
-- 主任务、原始审计、执行证据仍分别位于 screenshot-cut-task.md、screenshot-unused-code-audit-2026-09-07.md、screenshot-cut-execution-2026-09-07.md。历史未勾选项包含已做源码但未验收的内容，以本报告和顶部 stage50 状态解释，不把历史 checkbox 直接计为新工作量。
+- 本轮 manifest、备份核对、静态结果：out/cut-stage54-combined/；AX 子代理交接：out/cut-stage54-ax-strings/report.md；旧 IPC 完成证据：out/cut-stage54-ipc-audit/report.md。
+- 根目录复核基础：out/cut-stage45-root-review/report.md；其中 network/content_settings/WebSocket 等项目以 stage46–54 的实际删除为准，不能重复列为未完成。
+- stage50 根目录现存跟踪文件统计和受阻清单存在性历史快照：out/cut-stage50-combined/global-snapshot.json。目录文件数只用来验证存在状态，不用来证明用途或百分比。
+- 主任务、原始审计、执行证据仍分别位于 screenshot-cut-task.md、screenshot-unused-code-audit-2026-09-07.md、screenshot-cut-execution-2026-09-07.md。历史未勾选项包含已做源码但未验收的内容，以本报告和顶部 stage54 状态解释，不把历史 checkbox 直接计为新工作量。

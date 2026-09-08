@@ -1712,14 +1712,8 @@
   "ui/strings/app_locale_settings.grd": {
     "messages": [9860],
   },
-  "ui/strings/auto_image_annotation_strings.grd": {
-    "messages": [9870],
-  },
   "ui/strings/ax_strings.grd": {
     "messages": [9880],
-  },
-  "ui/strings/ui_strings.grd": {
-    "messages": [9900],
   },
   "ui/views/examples/views_examples_resources.grd": {
     "messages": [9920],
