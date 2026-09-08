@@ -239,7 +239,6 @@ class NET_EXPORT URLRequest : public base::SupportsUserData {
              Delegate* delegate,
              const URLRequestContext* context,
              NetworkTrafficAnnotationTag traffic_annotation,
-             bool is_for_websockets,
              handles::NetworkHandle target_network,
              std::optional<net::NetLogSource> net_log_source);
 
@@ -910,8 +909,6 @@ class NET_EXPORT URLRequest : public base::SupportsUserData {
     return treat_all_redirects_as_safe_;
   }
 
-  bool is_for_websockets() const { return is_for_websockets_; }
-
   handles::NetworkHandle target_network() const { return target_network_; }
 
   void SetIdempotency(Idempotency idempotency) { idempotency_ = idempotency; }
@@ -1117,8 +1114,6 @@ class NET_EXPORT URLRequest : public base::SupportsUserData {
   // Never access methods of the |delegate_| directly. Always use the
   // Notify... methods for this.
   raw_ptr<Delegate> delegate_;
-
-  const bool is_for_websockets_;
 
   const handles::NetworkHandle target_network_ = handles::kInvalidNetworkHandle;
 

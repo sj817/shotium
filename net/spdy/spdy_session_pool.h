@@ -103,7 +103,6 @@ class NET_EXPORT SpdySessionPool
     // Constructor - this is called by the SpdySessionPool.
     SpdySessionRequest(const SpdySessionKey& key,
                        bool enable_ip_based_pooling_for_h2,
-                       bool is_websocket,
                        bool is_blocking_request_for_session,
                        Delegate* delegate,
                        SpdySessionPool* spdy_session_pool);
@@ -121,7 +120,6 @@ class NET_EXPORT SpdySessionPool
     bool enable_ip_based_pooling_for_h2() const {
       return enable_ip_based_pooling_for_h2_;
     }
-    bool is_websocket() const { return is_websocket_; }
     bool is_blocking_request_for_session() const {
       return is_blocking_request_for_session_;
     }
@@ -134,7 +132,7 @@ class NET_EXPORT SpdySessionPool
    private:
     const SpdySessionKey key_;
     const bool enable_ip_based_pooling_for_h2_;
-    const bool is_websocket_;
+
     const bool is_blocking_request_for_session_;
     const raw_ptr<Delegate> delegate_;
     raw_ptr<SpdySessionPool> spdy_session_pool_;
@@ -217,7 +215,6 @@ class NET_EXPORT SpdySessionPool
   base::WeakPtr<SpdySession> FindAvailableSession(
       const SpdySessionKey& key,
       bool enable_ip_based_pooling_for_h2,
-      bool is_websocket,
       const NetLogWithSource& net_log);
 
   using AvailableSessionMap =
@@ -238,8 +235,7 @@ class NET_EXPORT SpdySessionPool
   // there is a session to pool to based on IP address, returns true if
   // `enable_ip_based_pooling_for_h2` is true. Otherwise returns false.
   bool HasAvailableSession(const SpdySessionKey& key,
-                           bool enable_ip_based_pooling_for_h2,
-                           bool is_websocket) const;
+                           bool enable_ip_based_pooling_for_h2) const;
 
   // Just like FindAvailableSession.
   //
@@ -269,7 +265,6 @@ class NET_EXPORT SpdySessionPool
   base::WeakPtr<SpdySession> RequestSession(
       const SpdySessionKey& key,
       bool enable_ip_based_pooling_for_h2,
-      bool is_websocket,
       const NetLogWithSource& net_log,
       base::RepeatingClosure on_blocking_request_destroyed_callback,
       SpdySessionRequest::Delegate* delegate,
@@ -284,14 +279,12 @@ class NET_EXPORT SpdySessionPool
   // is removed,remove this overload in favor of the other one.
   OnHostResolutionCallbackResult OnHostResolutionComplete(
       const SpdySessionKey& key,
-      bool is_websocket,
       base::span<const HostResolverEndpointResult> endpoint_results,
       const std::set<std::string>& aliases);
 
   // Overload of above function that takes a ServiceEndpoint.
   OnHostResolutionCallbackResult OnHostResolutionComplete(
       const SpdySessionKey& key,
-      bool is_websocket,
       base::span<const ServiceEndpoint> endpoint_results,
       const std::set<std::string>& aliases);
 
@@ -487,7 +480,6 @@ class NET_EXPORT SpdySessionPool
   // is removed, merge this back into OnHostResolutionComplete().
   bool OnHostResolutionCompleteShared(
       const SpdySessionKey& key,
-      bool is_websocket,
       const ConnectionEndpointMetadata& metadata,
       base::span<const IPEndPoint> ip_endpoints,
       const std::set<std::string>& aliases);
@@ -514,7 +506,6 @@ class NET_EXPORT SpdySessionPool
 
   const raw_ptr<SSLClientContext> ssl_client_context_;
   const raw_ptr<HostResolver> resolver_;
-
 
   // Defaults to true. May be controlled via SpdySessionPoolPeer for tests.
   bool enable_sending_initial_data_ = true;
@@ -570,7 +561,6 @@ class NET_EXPORT SpdySessionPool
   SpdySessionRequestMap spdy_session_request_map_;
 
   TimeFunc time_func_;
-
 
   const bool cleanup_sessions_on_ip_address_changed_;
 

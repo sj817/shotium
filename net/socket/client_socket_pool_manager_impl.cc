@@ -20,25 +20,16 @@
 #include "net/socket/ssl_connect_job.h"
 #include "net/socket/transport_client_socket_pool.h"
 #include "net/socket/transport_connect_job.h"
-#include "net/socket/websocket_transport_client_socket_pool.h"
 
 namespace net {
 
-
 ClientSocketPoolManagerImpl::ClientSocketPoolManagerImpl(
     const CommonConnectJobParams& common_connect_job_params,
-    const CommonConnectJobParams& websocket_common_connect_job_params,
     HttpNetworkSession::SocketPoolType pool_type,
     bool cleanup_on_ip_address_change)
     : common_connect_job_params_(common_connect_job_params),
-      websocket_common_connect_job_params_(websocket_common_connect_job_params),
       pool_type_(pool_type),
-      cleanup_on_ip_address_change_(cleanup_on_ip_address_change) {
-  // |websocket_endpoint_lock_manager| must only be set for websocket
-  // connections.
-  DCHECK(!common_connect_job_params_.websocket_endpoint_lock_manager);
-  DCHECK(websocket_common_connect_job_params.websocket_endpoint_lock_manager);
-}
+      cleanup_on_ip_address_change_(cleanup_on_ip_address_change) {}
 
 ClientSocketPoolManagerImpl::~ClientSocketPoolManagerImpl() {
   DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
@@ -62,8 +53,9 @@ void ClientSocketPoolManagerImpl::CloseIdleSockets(
 ClientSocketPool* ClientSocketPoolManagerImpl::GetSocketPool(
     const ProxyChain& proxy_chain) {
   SocketPoolMap::const_iterator it = socket_pools_.find(proxy_chain);
-  if (it != socket_pools_.end())
+  if (it != socket_pools_.end()) {
     return it->second.get();
+  }
 
   size_t sockets_per_proxy_chain;
   size_t sockets_per_group;
@@ -78,19 +70,10 @@ ClientSocketPool* ClientSocketPoolManagerImpl::GetSocketPool(
 
   std::unique_ptr<ClientSocketPool> new_pool;
 
-  // Use specialized WebSockets pool for WebSockets when no proxies are in use.
-  if (pool_type_ == HttpNetworkSession::SocketPoolType::kWebSocket &&
-      proxy_chain.is_direct()) {
-    new_pool = std::make_unique<WebSocketTransportClientSocketPool>(
-        sockets_per_proxy_chain, proxy_chain,
-        &websocket_common_connect_job_params_);
-  } else {
-    new_pool = std::make_unique<TransportClientSocketPool>(
-        sockets_per_proxy_chain, sockets_per_group,
-        unused_idle_socket_timeout(pool_type_), proxy_chain,
-        pool_type_ == HttpNetworkSession::SocketPoolType::kWebSocket,
-        &common_connect_job_params_, cleanup_on_ip_address_change_);
-  }
+  new_pool = std::make_unique<TransportClientSocketPool>(
+      sockets_per_proxy_chain, sockets_per_group,
+      unused_idle_socket_timeout(pool_type_), proxy_chain,
+      &common_connect_job_params_, cleanup_on_ip_address_change_);
 
   std::pair<SocketPoolMap::iterator, bool> ret =
       socket_pools_.emplace(proxy_chain, std::move(new_pool));

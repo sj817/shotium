@@ -159,18 +159,9 @@ HttpNetworkSession::HttpNetworkSession(const HttpNetworkSessionParams& params,
   DCHECK(context_.client_socket_factory);
 
   normal_socket_pool_manager_ = std::make_unique<ClientSocketPoolManagerImpl>(
-      CreateCommonConnectJobParams(false /* for_websockets */),
-      CreateCommonConnectJobParams(true /* for_websockets */),
-      SocketPoolType::kNormal,
+      CreateCommonConnectJobParams(), SocketPoolType::kNormal,
       // cleanup_on_ip_address_change
       !params.ignore_ip_address_changes);
-  websocket_socket_pool_manager_ =
-      std::make_unique<ClientSocketPoolManagerImpl>(
-          CreateCommonConnectJobParams(false /* for_websockets */),
-          CreateCommonConnectJobParams(true /* for_websockets */),
-          SocketPoolType::kWebSocket,
-          // cleanup_on_ip_address_change
-          !params.ignore_ip_address_changes);
 
   if (params_.enable_http2) {
     next_protos_.push_back(NextProto::kProtoHTTP2);
@@ -226,7 +217,6 @@ ClientSocketPool* HttpNetworkSession::GetSocketPool(
 }
 
 base::Value HttpNetworkSession::SocketPoolInfoToValue() const {
-  // TODO(yutak): Should merge values from normal pools and WebSocket pools.
   return normal_socket_pool_manager_->SocketPoolInfoToValue();
 }
 
@@ -238,8 +228,6 @@ void HttpNetworkSession::CloseAllConnections(int net_error,
                                              const char* net_log_reason_utf8) {
   normal_socket_pool_manager_->FlushSocketPoolsWithError(net_error,
                                                          net_log_reason_utf8);
-  websocket_socket_pool_manager_->FlushSocketPoolsWithError(
-      net_error, net_log_reason_utf8);
   if (http_stream_pool_) {
     http_stream_pool_->FlushWithError(
         net_error, StreamSocketCloseReason::kCloseAllConnections,
@@ -250,7 +238,6 @@ void HttpNetworkSession::CloseAllConnections(int net_error,
 
 void HttpNetworkSession::CloseIdleConnections(const char* net_log_reason_utf8) {
   normal_socket_pool_manager_->CloseIdleSockets(net_log_reason_utf8);
-  websocket_socket_pool_manager_->CloseIdleSockets(net_log_reason_utf8);
   if (http_stream_pool_) {
     http_stream_pool_->CloseIdleStreams(net_log_reason_utf8);
   }
@@ -269,16 +256,12 @@ void HttpNetworkSession::ClearSSLSessionCache() {
   ssl_client_session_cache_.Flush();
 }
 
-CommonConnectJobParams HttpNetworkSession::CreateCommonConnectJobParams(
-    bool for_websockets) {
-  // Use null websocket_endpoint_lock_manager, which is only set for WebSockets,
-  // and only when not using a proxy.
+CommonConnectJobParams HttpNetworkSession::CreateCommonConnectJobParams() {
   return CommonConnectJobParams(
       context_.client_socket_factory, context_.host_resolver, &http_auth_cache_,
       context_.http_auth_handler_factory, &spdy_session_pool_,
       context_.proxy_delegate, context_.http_user_agent_settings,
       &ssl_client_context_, context_.net_log,
-      for_websockets ? &websocket_endpoint_lock_manager_ : nullptr,
       context_.http_server_properties, &next_protos_, &application_settings_,
       &params_.ignore_certificate_errors, &params_.enable_early_data);
 }
@@ -300,8 +283,6 @@ ClientSocketPoolManager* HttpNetworkSession::GetSocketPoolManager(
   switch (pool_type) {
     case SocketPoolType::kNormal:
       return normal_socket_pool_manager_.get();
-    case SocketPoolType::kWebSocket:
-      return websocket_socket_pool_manager_.get();
   }
   NOTREACHED();
 }

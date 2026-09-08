@@ -870,9 +870,7 @@ std::optional<mojom::BlockedByResponseReason>
 MaybeBlockResponseForSRIMessageSignature(
     const net::URLRequest& url_request,
     const network::mojom::URLResponseHead& response,
-    const std::vector<std::vector<uint8_t>>& expected_public_keys,
-    const raw_ptr<mojom::DevToolsObserver> devtools_observer,
-    const std::string& devtools_request_id) {
+    const std::vector<std::vector<uint8_t>>& expected_public_keys) {
   // No headers, no URL: no blocking.
   const GURL& request_url = url_request.url();
   if (!response.headers || !request_url.is_valid()) {
@@ -884,11 +882,6 @@ MaybeBlockResponseForSRIMessageSignature(
       (ValidateSRIMessageSignaturesOverHeaders(parsed_headers, url_request,
                                                *response.headers) &&
        MatchExpectedPublicKeys(parsed_headers, expected_public_keys));
-
-  if (devtools_observer && !devtools_request_id.empty()) {
-    devtools_observer->OnSRIMessageSignatureIssue(
-        devtools_request_id, request_url, std::move(parsed_headers->issues));
-  }
 
   if (passed_validation) {
     // If we have signatures that matched expected keys, they MUST have a

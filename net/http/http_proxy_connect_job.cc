@@ -100,7 +100,6 @@ HttpProxySocketParams::HttpProxySocketParams(
   DCHECK(proxy_chain_.IsValid());
   CHECK(proxy_chain_index_ < proxy_chain_.length());
 
-
   // Only supports proxy endpoints without scheme for now.
   // TODO(crbug.com/40181080): Handle scheme.
   if (is_over_transport()) {
@@ -346,7 +345,7 @@ int HttpProxyConnectJob::DoTransportConnect() {
     if (params_->tunnel() &&
         common_connect_job_params()->spdy_session_pool->FindAvailableSession(
             CreateSpdySessionKey(), /*enable_ip_based_pooling_for_h2=*/false,
-            /*is_websocket=*/false, net_log())) {
+            net_log())) {
       has_established_connection_ = true;
       next_state_ = STATE_SPDY_PROXY_CREATE_STREAM;
       return OK;
@@ -511,8 +510,7 @@ int HttpProxyConnectJob::DoSpdyProxyCreateStream() {
   SpdySessionKey key = CreateSpdySessionKey();
   base::WeakPtr<SpdySession> spdy_session =
       common_connect_job_params()->spdy_session_pool->FindAvailableSession(
-          key, /* enable_ip_based_pooling_for_h2 = */ false,
-          /* is_websocket = */ false, net_log());
+          key, /* enable_ip_based_pooling_for_h2 = */ false, net_log());
   // It's possible that a session to the proxy has recently been created
   if (spdy_session) {
     nested_connect_job_.reset();

@@ -24,25 +24,15 @@ URLRequestInterceptor* g_interceptor_for_testing = nullptr;
 // is iOS-only.
 class HttpProtocolHandler : public URLRequestJobFactory::ProtocolHandler {
  public:
-  // URLRequest::is_for_websockets() must match `is_for_websockets`, or requests
-  // will be failed. This is so that attempts to fetch WebSockets requests
-  // fails, and attempts to use HTTP URLs for WebSockets also fail.
-  explicit HttpProtocolHandler(bool is_for_websockets)
-      : is_for_websockets_(is_for_websockets) {}
+  HttpProtocolHandler() = default;
 
   HttpProtocolHandler(const HttpProtocolHandler&) = delete;
   HttpProtocolHandler& operator=(const HttpProtocolHandler&) = delete;
   ~HttpProtocolHandler() override = default;
 
   std::unique_ptr<URLRequestJob> CreateJob(URLRequest* request) const override {
-    if (request->is_for_websockets() != is_for_websockets_) {
-      return std::make_unique<URLRequestErrorJob>(request,
-                                                  ERR_UNKNOWN_URL_SCHEME);
-    }
     return URLRequestHttpJob::Create(request);
   }
-
-  const bool is_for_websockets_;
 };
 
 }  // namespace
@@ -55,16 +45,9 @@ bool URLRequestJobFactory::ProtocolHandler::IsSafeRedirectTarget(
 }
 
 URLRequestJobFactory::URLRequestJobFactory() {
-  SetProtocolHandler(url::kHttpScheme, std::make_unique<HttpProtocolHandler>(
-                                           /*is_for_websockets=*/false));
-  SetProtocolHandler(url::kHttpsScheme, std::make_unique<HttpProtocolHandler>(
-                                            /*is_for_websockets=*/false));
-#if BUILDFLAG(ENABLE_WEBSOCKETS)
-  SetProtocolHandler(url::kWsScheme, std::make_unique<HttpProtocolHandler>(
-                                         /*is_for_websockets=*/true));
-  SetProtocolHandler(url::kWssScheme, std::make_unique<HttpProtocolHandler>(
-                                          /*is_for_websockets=*/true));
-#endif  // BUILDFLAG(ENABLE_WEBSOCKETS)
+  SetProtocolHandler(url::kHttpScheme, std::make_unique<HttpProtocolHandler>());
+  SetProtocolHandler(url::kHttpsScheme,
+                     std::make_unique<HttpProtocolHandler>());
 }
 
 URLRequestJobFactory::~URLRequestJobFactory() {

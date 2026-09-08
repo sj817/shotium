@@ -563,12 +563,6 @@ void HttpCache::Transaction::SetPriority(RequestPriority priority) {
   }
 }
 
-void HttpCache::Transaction::SetWebSocketHandshakeStreamCreateHelper(
-    WebSocketHandshakeStreamBase::CreateHelper* create_helper) {
-  CHECK(!network_transaction());
-  websocket_handshake_stream_base_create_helper_ = create_helper;
-}
-
 void HttpCache::Transaction::SetConnectedCallback(
     const ConnectedCallback& callback) {
   DCHECK(!network_trans_);
@@ -1990,11 +1984,6 @@ int HttpCache::Transaction::DoSendRequest() {
   // Old load timing information, if any, is now obsolete.
   network_transaction_info_.old_network_trans_load_timing.reset();
   network_transaction_info_.old_remote_endpoint = IPEndPoint();
-
-  if (websocket_handshake_stream_base_create_helper_) {
-    network_trans_->SetWebSocketHandshakeStreamCreateHelper(
-        websocket_handshake_stream_base_create_helper_);
-  }
 
   if (IsUsingURLFromNoVarySearchCache()) {
     // If we are using the NoVarySearchCache, double-check that the network

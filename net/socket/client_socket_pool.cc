@@ -50,7 +50,6 @@ int64_t g_used_idle_socket_timeout_s = 300;  // 5 minutes
 OnHostResolutionCallbackResult OnHostResolution(
     SpdySessionPool* spdy_session_pool,
     const SpdySessionKey& spdy_session_key,
-    bool is_for_websockets,
     const HostPortPair& host_port_pair,
     const HostResolverEndpointsOrServiceEndpoints& endpoint_results,
     const std::set<std::string>& aliases) {
@@ -65,12 +64,12 @@ OnHostResolutionCallbackResult OnHostResolution(
   // destroys the SpdySessionPool.
   if (host_resolver_endpoints) {
     return spdy_session_pool->OnHostResolutionComplete(
-        spdy_session_key, is_for_websockets, *host_resolver_endpoints, aliases);
+        spdy_session_key, *host_resolver_endpoints, aliases);
   } else {
     base::span<const ServiceEndpoint> service_endpoints =
         std::get<base::span<const ServiceEndpoint>>(endpoint_results);
     return spdy_session_pool->OnHostResolutionComplete(
-        spdy_session_key, is_for_websockets, service_endpoints, aliases);
+        spdy_session_key, service_endpoints, aliases);
   }
 }
 
@@ -185,7 +184,6 @@ void ClientSocketPool::set_used_idle_socket_timeout(base::TimeDelta timeout) {
 ClientSocketPool::ClientSocketPool(
     size_t socket_soft_cap,
     const ProxyChain& proxy_chain,
-    bool is_for_websockets,
     const CommonConnectJobParams* common_connect_job_params,
     std::unique_ptr<ConnectJobFactory> connect_job_factory)
     : socket_soft_cap_(socket_soft_cap),
@@ -195,7 +193,6 @@ ClientSocketPool::ClientSocketPool(
               ? SocketPoolAdditionalCapacity::Create(socket_soft_cap)
               : SocketPoolAdditionalCapacity::CreateEmpty()),
       proxy_chain_(proxy_chain),
-      is_for_websockets_(is_for_websockets),
       common_connect_job_params_(common_connect_job_params),
       connect_job_factory_(std::move(connect_job_factory)) {}
 
@@ -228,37 +225,20 @@ std::unique_ptr<ConnectJob> ClientSocketPool::CreateConnectJob(
     resolution_callback = base::BindRepeating(
         &OnHostResolution, common_connect_job_params_->spdy_session_pool,
         // TODO(crbug.com/40181080): Pass along as SchemeHostPort.
-        SpdySessionKey(
-            HostPortPair::FromSchemeHostPort(group_id.destination()),
-            group_id.privacy_mode(), GetProxyChain(),
-            SessionUsage::kDestination, socket_tag,
-            group_id.network_anonymization_key(), group_id.secure_dns_policy(),
-            group_id.disable_cert_network_fetches(), group_id.target_network()),
-        is_for_websockets_);
+        SpdySessionKey(HostPortPair::FromSchemeHostPort(group_id.destination()),
+                       group_id.privacy_mode(), GetProxyChain(),
+                       SessionUsage::kDestination, socket_tag,
+                       group_id.network_anonymization_key(),
+                       group_id.secure_dns_policy(),
+                       group_id.disable_cert_network_fetches(),
+                       group_id.target_network()));
   }
-
-  // Force a CONNECT tunnel for websockets. If this is false, the connect job
-  // may still use a tunnel for other reasons.
-  bool force_tunnel = is_for_websockets_;
-
-  // Only offer HTTP/1.1 for WebSockets. Although RFC 8441 defines WebSockets
-  // over HTTP/2, a single WSS/HTTPS origin may support HTTP over HTTP/2
-  // without supporting WebSockets over HTTP/2. Offering HTTP/2 for a fresh
-  // connection would break such origins.
-  //
-  // However, still offer HTTP/1.1 rather than skipping ALPN entirely. While
-  // this will not change the application protocol (HTTP/1.1 is default), it
-  // provides hardening against cross-protocol attacks and allows for the False
-  // Start (RFC 7918) optimization.
-  ConnectJobFactory::AlpnMode alpn_mode =
-      is_for_websockets_ ? ConnectJobFactory::AlpnMode::kHttp11Only
-                         : ConnectJobFactory::AlpnMode::kHttpAll;
 
   return connect_job_factory_->CreateConnectJob(
       group_id.destination(), GetProxyChain(), proxy_annotation_tag,
-      socket_params->allowed_bad_certs(), alpn_mode, force_tunnel,
-      group_id.privacy_mode(), resolution_callback, request_priority,
-      socket_tag, group_id.network_anonymization_key(),
+      socket_params->allowed_bad_certs(), ConnectJobFactory::AlpnMode::kHttpAll,
+      /*force_tunnel=*/false, group_id.privacy_mode(), resolution_callback,
+      request_priority, socket_tag, group_id.network_anonymization_key(),
       group_id.secure_dns_policy(), group_id.disable_cert_network_fetches(),
       common_connect_job_params_, group_id.target_network(), delegate);
 }

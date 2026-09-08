@@ -51,7 +51,6 @@ class SocketTag;
 class SpdySessionPool;
 class SSLCertRequestInfo;
 class StreamSocket;
-class WebSocketEndpointLockManager;
 
 // Immutable socket parameters intended for shared use by all ConnectJob types.
 // Excludes priority because it can be modified over the lifetime of a
@@ -71,7 +70,6 @@ struct NET_EXPORT_PRIVATE CommonConnectJobParams {
       const HttpUserAgentSettings* http_user_agent_settings,
       SSLClientContext* ssl_client_context,
       NetLog* net_log,
-      WebSocketEndpointLockManager* websocket_endpoint_lock_manager,
       HttpServerProperties* http_server_properties,
       const NextProtoVector* alpn_protos,
       const SSLConfig::ApplicationSettings* application_settings,
@@ -91,9 +89,6 @@ struct NET_EXPORT_PRIVATE CommonConnectJobParams {
   raw_ptr<const HttpUserAgentSettings> http_user_agent_settings;
   raw_ptr<SSLClientContext> ssl_client_context;
   raw_ptr<NetLog> net_log;
-
-  // This must only be non-null for WebSockets.
-  raw_ptr<WebSocketEndpointLockManager> websocket_endpoint_lock_manager;
 
   raw_ptr<HttpServerProperties> http_server_properties;
 
@@ -287,9 +282,6 @@ class NET_EXPORT_PRIVATE ConnectJob {
   }
   SSLClientContext* ssl_client_context() {
     return common_connect_job_params_->ssl_client_context;
-  }
-  WebSocketEndpointLockManager* websocket_endpoint_lock_manager() {
-    return common_connect_job_params_->websocket_endpoint_lock_manager;
   }
   HttpServerProperties* http_server_properties() {
     return common_connect_job_params_->http_server_properties;

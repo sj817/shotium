@@ -157,8 +157,7 @@ DnsHTTPAttempt::DnsHTTPAttempt(base::WeakPtr<ResolveContext> resolve_context,
                                         "is disabled by default"
       }
     )"),
-      handles::kInvalidNetworkHandle, /*is_for_websockets=*/false,
-      net_log_.source());
+      handles::kInvalidNetworkHandle, net_log_.source());
 
   if (use_post) {
     request_->set_method("POST");

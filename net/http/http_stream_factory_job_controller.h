@@ -42,7 +42,6 @@ class HttpStreamFactory::JobController
                 JobFactory* job_factory,
                 const HttpRequestInfo& http_request_info,
                 bool is_preconnect,
-                bool is_websocket,
                 bool enable_ip_based_pooling_for_h2,
                 bool enable_alternative_services,
                 bool delay_main_job_with_available_spdy_session,
@@ -59,8 +58,6 @@ class HttpStreamFactory::JobController
   // Job(s) and start serving the created request.
   std::unique_ptr<HttpStreamRequest> Start(
       HttpStreamRequest::Delegate* delegate,
-      WebSocketHandshakeStreamBase::CreateHelper*
-          websocket_handshake_stream_create_helper,
       const NetLogWithSource& source_net_log,
       HttpStreamRequest::StreamType stream_type,
       RequestPriority priority);
@@ -91,12 +88,6 @@ class HttpStreamFactory::JobController
   void OnBidirectionalStreamImplReady(
       Job* job,
       const ProxyInfo& used_proxy_info) override;
-
-  // Invoked when |job| has a WebSocketHandshakeStream ready.
-  void OnWebSocketHandshakeStreamReady(
-      Job* job,
-      const ProxyInfo& used_proxy_info,
-      std::unique_ptr<WebSocketHandshakeStreamBase> stream) override;
 
   // Invoked when |job| fails to create a stream.
   void OnStreamFailed(Job* job, int status) override;
@@ -135,9 +126,6 @@ class HttpStreamFactory::JobController
   const NetLogWithSource* GetNetLog() const override;
 
   void MaybeSetWaitTimeForMainJob(const base::TimeDelta& delay) override;
-
-  WebSocketHandshakeStreamBase::CreateHelper*
-  websocket_handshake_stream_create_helper() override;
 
   bool is_preconnect() const { return is_preconnect_; }
 
@@ -271,9 +259,6 @@ class HttpStreamFactory::JobController
   // True if this JobController is used to preconnect streams.
   const bool is_preconnect_;
 
-  // True if request is for Websocket.
-  const bool is_websocket_;
-
   // Enable pooling to a SpdySession with matching IP and certificate even if
   // the SpdySessionKey is different.
   const bool enable_ip_based_pooling_for_h2_;
@@ -282,15 +267,6 @@ class HttpStreamFactory::JobController
   // JobController will only create a |main_job_|.
   const bool enable_alternative_services_;
 
-  // For a normal (non-preconnect) job, |main_job_| is a job waiting to see if
-  // |alternative_job_| can reuse a connection. If it cannot, |this| notifies
-  // |main_job_| to proceed and then races the two jobs.
-  //
-  // Upstream there are two more: |dns_alpn_h3_job_|, racing on an "h3" ALPN
-  // value from an HTTPS DNS record, and |ws_over_h3_job_|, reusing an existing
-  // HTTP/3 session for WebSocket. Both are HTTP/3 and are gone, and so is
-  // |preconnect_backup_job_|, which existed only to fall back to TCP when the
-  // HTTP/3 preconnect failed with ERR_DNS_NO_MATCHING_SUPPORTED_ALPN.
   std::unique_ptr<Job> main_job_;
   std::unique_ptr<Job> alternative_job_;
 

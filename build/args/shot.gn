@@ -177,7 +177,6 @@ enable_jxl_decoder = false
 # Network Error Logging endpoints, WebSockets, multicast DNS discovery, and
 # Kerberos/Negotiate HTTP auth.
 enable_reporting = false
-enable_websockets = false
 enable_mdns = false
 use_kerberos = false
 

@@ -102,7 +102,6 @@
 #include "net/url_request/url_request_error_job.h"
 #include "net/url_request/url_request_job_factory.h"
 #include "net/url_request/url_request_redirect_job.h"
-#include "net/url_request/websocket_handshake_userdata_key.h"
 #include "url/gurl.h"
 #include "url/origin.h"
 #include "url/url_constants.h"
@@ -697,7 +696,6 @@ void URLRequestHttpJob::StartTransactionInternal() {
 
   int rv = OK;
 
-
   if (transaction_.get()) {
     rv = transaction_->RestartWithAuth(
         auth_credentials_, base::BindOnce(&URLRequestHttpJob::OnStartCompleted,
@@ -711,14 +709,7 @@ void URLRequestHttpJob::StartTransactionInternal() {
     CHECK(transaction_);
 
     if (request_info_.url.SchemeIsWSOrWSS()) {
-      base::SupportsUserData::Data* data =
-          request_->GetUserData(kWebSocketHandshakeUserDataKey);
-      if (data) {
-        transaction_->SetWebSocketHandshakeStreamCreateHelper(
-            static_cast<WebSocketHandshakeStreamBase::CreateHelper*>(data));
-      } else {
-        rv = ERR_DISALLOWED_URL_SCHEME;
-      }
+      rv = ERR_DISALLOWED_URL_SCHEME;
     }
 
     if (rv == OK && request_info_.method == "CONNECT") {
@@ -1986,7 +1977,6 @@ void URLRequestHttpJob::DoneWithRequest(CompletionCause reason) {
     return;
   }
   done_ = true;
-
 
   RecordCompletionHistograms(reason);
   request()->set_received_response_content_length(

@@ -99,25 +99,6 @@ int InitSocketHandleForHttpRequest(
     CompletionOnceCallback callback,
     const ClientSocketPool::ProxyAuthCallback& proxy_auth_callback);
 
-// A helper method that uses the passed in proxy information to initialize a
-// ClientSocketHandle with the relevant socket pool. Use this method for
-// HTTP/HTTPS requests for WebSocket handshake. This function uses
-// kWebSocket socket pools.
-int InitSocketHandleForWebSocketRequest(
-    url::SchemeHostPort endpoint,
-    int request_load_flags,
-    RequestPriority request_priority,
-    HttpNetworkSession* session,
-    const ProxyInfo& proxy_info,
-    const std::vector<SSLConfig::CertAndStatus>& allowed_bad_certs,
-    PrivacyMode privacy_mode,
-    NetworkAnonymizationKey network_anonymization_key,
-    handles::NetworkHandle target_network,
-    const NetLogWithSource& net_log,
-    ClientSocketHandle* socket_handle,
-    CompletionOnceCallback callback,
-    const ClientSocketPool::ProxyAuthCallback& proxy_auth_callback);
-
 // Similar to InitSocketHandleForHttpRequest except that it initiates the
 // desired number of preconnect streams from the relevant socket pool.
 int PreconnectSocketsForHttpRequest(

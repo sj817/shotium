@@ -530,8 +530,7 @@ base::WeakPtr<SpdySession> HttpStreamPool::FindAvailableSpdySession(
   }
 
   return http_network_session()->spdy_session_pool()->FindAvailableSession(
-      spdy_session_key, enable_ip_based_pooling_for_h2,
-      /*is_websocket=*/false, net_log);
+      spdy_session_key, enable_ip_based_pooling_for_h2, net_log);
 }
 
 void HttpStreamPool::OnPreconnectComplete(JobController* job_controller,

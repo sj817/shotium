@@ -263,8 +263,6 @@ BASE_FEATURE(kAlpsParsing, base::FEATURE_ENABLED_BY_DEFAULT);
 
 BASE_FEATURE(kAlpsClientHintParsing, base::FEATURE_ENABLED_BY_DEFAULT);
 
-BASE_FEATURE(kEnableWebsocketsOverHttp3, base::FEATURE_DISABLED_BY_DEFAULT);
-
 #if BUILDFLAG(IS_WIN)
 // Disabled because of https://crbug.com/1489696.
 BASE_FEATURE(kEnableGetNetworkConnectivityHintAPI,
@@ -717,9 +715,6 @@ BASE_FEATURE(kEnableBackendCleanupTrackerOnHttpCache,
 #else   // BUILDFLAG(CRONET_BUILD)
              base::FEATURE_ENABLED_BY_DEFAULT);
 #endif  // BUILDFLAG(CRONET_BUILD)
-
-BASE_FEATURE(kPartitionWebSocketEndpointLocksByNetworkAnonymizationKey,
-             base::FEATURE_ENABLED_BY_DEFAULT);
 
 BASE_FEATURE(kInitialDelayForBrokenAlternativeService,
              base::FEATURE_DISABLED_BY_DEFAULT);

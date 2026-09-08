@@ -25,7 +25,6 @@
 #include "net/spdy/spdy_session_pool.h"
 #include "net/ssl/ssl_config.h"
 #include "net/ssl/ssl_info.h"
-#include "net/websockets/websocket_handshake_stream_base.h"
 
 namespace net {
 
@@ -60,14 +59,6 @@ class NET_EXPORT_PRIVATE HttpStreamRequest {
     // since the HttpStreamRequest performs the proxy resolution.
     virtual void OnStreamReady(const ProxyInfo& used_proxy_info,
                                std::unique_ptr<HttpStream> stream) = 0;
-
-    // This is the success case for RequestWebSocketHandshakeStream.
-    // |stream| is now owned by the delegate.
-    // |used_proxy_info| indicates the actual ProxyInfo used for this stream,
-    // since the HttpStreamRequest performs the proxy resolution.
-    virtual void OnWebSocketHandshakeStreamReady(
-        const ProxyInfo& used_proxy_info,
-        std::unique_ptr<WebSocketHandshakeStreamBase> stream) = 0;
 
     virtual void OnBidirectionalStreamImplReady(
         const ProxyInfo& used_proxy_info,
@@ -146,8 +137,6 @@ class NET_EXPORT_PRIVATE HttpStreamRequest {
   // Request will notify `helper` when it's destructed.
   // Thus `helper` is valid for the lifetime of the `this` Request.
   HttpStreamRequest(Helper* helper,
-                    WebSocketHandshakeStreamBase::CreateHelper*
-                        websocket_handshake_stream_create_helper,
                     const NetLogWithSource& net_log,
                     StreamType stream_type);
 
@@ -193,11 +182,6 @@ class NET_EXPORT_PRIVATE HttpStreamRequest {
   // Returns socket-layer connection attempts made for this stream request.
   const ConnectionAttempts& connection_attempts() const;
 
-  // Returns the WebSocketHandshakeStreamBase::CreateHelper for this stream
-  // request.
-  WebSocketHandshakeStreamBase::CreateHelper*
-  websocket_handshake_stream_create_helper() const;
-
   const NetLogWithSource& net_log() const { return net_log_; }
 
   StreamType stream_type() const { return stream_type_; }
@@ -234,8 +218,6 @@ class NET_EXPORT_PRIVATE HttpStreamRequest {
   // Unowned. The helper must not be destroyed before this object is.
   raw_ptr<Helper> helper_;
 
-  const raw_ptr<WebSocketHandshakeStreamBase::CreateHelper>
-      websocket_handshake_stream_create_helper_;
   const NetLogWithSource net_log_;
 
   std::optional<CompletionDetails> completion_details_;

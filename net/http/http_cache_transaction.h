@@ -41,7 +41,6 @@
 #include "net/http/partial_data.h"
 #include "net/log/net_log_with_source.h"
 #include "net/socket/connection_attempts.h"
-#include "net/websockets/websocket_handshake_stream_base.h"
 
 namespace net {
 
@@ -160,8 +159,7 @@ class NET_EXPORT_PRIVATE HttpCache::Transaction : public HttpTransaction {
   bool GetRemoteEndpoint(IPEndPoint* endpoint) const override;
   void PopulateNetErrorDetails(NetErrorDetails* details) const override;
   void SetPriority(RequestPriority priority) override;
-  void SetWebSocketHandshakeStreamCreateHelper(
-      WebSocketHandshakeStreamBase::CreateHelper* create_helper) override;
+
   void SetConnectedCallback(const ConnectedCallback& callback) override;
   void SetRequestHeadersCallback(RequestHeadersCallback callback) override;
   void SetResponseHeadersCallback(ResponseHeadersCallback callback) override;
@@ -219,7 +217,6 @@ class NET_EXPORT_PRIVATE HttpCache::Transaction : public HttpTransaction {
 
   enum State {
     STATE_UNSET,
-
     // Normally, states are traversed in approximately this order.
     STATE_NONE,
     STATE_GET_BACKEND,
@@ -264,7 +261,6 @@ class NET_EXPORT_PRIVATE HttpCache::Transaction : public HttpTransaction {
     STATE_HEADERS_PHASE_CANNOT_PROCEED,
     STATE_FINISH_HEADERS,
     STATE_FINISH_HEADERS_COMPLETE,
-
     // These states are entered from Read.
     STATE_NETWORK_READ_CACHE_WRITE,
     STATE_NETWORK_READ_CACHE_WRITE_COMPLETE,
@@ -847,13 +843,6 @@ class NET_EXPORT_PRIVATE HttpCache::Transaction : public HttpTransaction {
   // flag to indicate we are using a URL provided by the NoVarySearchCache.
   std::optional<NoVarySearchCache::EraseHandle>
       no_vary_search_cache_erase_handle_;
-
-  // The helper object to use to create WebSocketHandshakeStreamBase
-  // objects. Only relevant when establishing a WebSocket connection.
-  // This is passed to the underlying network transaction. It is stored here in
-  // case the transaction does not exist yet.
-  raw_ptr<WebSocketHandshakeStreamBase::CreateHelper>
-      websocket_handshake_stream_base_create_helper_ = nullptr;
 
   ConnectedCallback connected_callback_;
   RequestHeadersCallback request_headers_callback_;

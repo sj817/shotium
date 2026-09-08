@@ -513,13 +513,11 @@ mojom("url_loader_base") {
     "cross_origin_opener_policy.mojom",
     "data_pipe_getter.mojom",
     "declarative_performance_observer.mojom",
-    "devtools_observer.mojom",
     "document_isolation_policy.mojom",
     "early_hints.mojom",
     "encoded_body_length.mojom",
     "fetch_api.mojom",
     "fetch_retry_options.mojom",
-    "http_raw_headers.mojom",
     "http_request_headers.mojom",
     "ip_address_space.mojom",
     "isolation_info.mojom",
@@ -533,16 +531,13 @@ mojom("url_loader_base") {
     "referrer_policy.mojom",
     "request_priority.mojom",
     "service_worker_router_info.mojom",
-    "shared_dictionary_access_observer.mojom",
     "source_type.mojom",
     "sri_message_signature.mojom",
     "supports_loading_mode.mojom",
     "timing_allow_origin.mojom",
-    "trust_token_access_observer.mojom",
     "trust_tokens.mojom",
     "url_loader.mojom",
     "url_loader_completion_status.mojom",
-    "url_loader_network_service_observer.mojom",
     "url_request.mojom",
     "url_response_head.mojom",
     "web_bundle_handle.mojom",
@@ -711,11 +706,6 @@ mojom("url_loader_base") {
         "//services/network/public/cpp/url_request_mojom_traits.h",
         "//services/network/public/cpp/network_isolation_key_mojom_traits.h",
         "//services/network/public/cpp/network_anonymization_key_mojom_traits.h",
-      ]
-      traits_private_headers = [
-        "//services/network/public/mojom/devtools_observer.mojom.h",
-        "//services/network/public/mojom/cookie_access_observer.mojom.h",
-        "//services/network/public/mojom/trust_token_access_observer.mojom.h",
       ]
       traits_public_deps = [
         ":mojom_network_isolation_key",
@@ -1324,7 +1314,6 @@ mojom("mojom_structured_headers") {
 mojom("cookies_mojom") {
   generate_java = true
   sources = [
-    "cookie_access_observer.mojom",
     "cookie_manager.mojom",
     "cookie_partition_key.mojom",
     "cookie_setting_overrides.mojom",
@@ -1494,85 +1483,6 @@ mojom("cookies_mojom") {
   blink_cpp_typemaps += shared_cpp_typemaps
 }
 
-mojom("mojom_host_resolver") {
-  generate_java = true
-  sources = [ "host_resolver.mojom" ]
-
-  public_deps = [
-    ":mojom_ip_address",
-    ":mojom_network_anonymization_key",
-    ":mojom_network_param",
-    ":url_loader_base",
-    "//mojo/public/mojom/base",
-    "//url/mojom:url_mojom_scheme_host_port",
-  ]
-
-  if (!is_ios) {
-    export_class_attribute_blink = "BLINK_PLATFORM_EXPORT"
-    export_define_blink = "BLINK_PLATFORM_IMPLEMENTATION=1"
-    export_header_blink = "third_party/blink/public/platform/web_common.h"
-  }
-
-  shared_cpp_typemaps = [
-    {
-      types = [
-        {
-          mojom = "network.mojom.DnsQueryType"
-          cpp = "::net::DnsQueryType"
-        },
-      ]
-      traits_headers =
-          [ "//services/network/public/cpp/host_resolver_mojom_traits.h" ]
-      traits_public_deps = [
-        "//net",
-        "//services/network/public/cpp:host_resolver_mojom_support",
-      ]
-    },
-  ]
-  cpp_typemaps = [
-    {
-      types = [
-        {
-          mojom = "network.mojom.DnsConfigOverrides"
-          cpp = "::net::DnsConfigOverrides"
-        },
-        {
-          mojom = "network.mojom.DnsOverHttpsServerConfig"
-          cpp = "::net::DnsOverHttpsServerConfig"
-        },
-        {
-          mojom = "network.mojom.DnsOverHttpsConfig"
-          cpp = "::net::DnsOverHttpsConfig"
-        },
-        {
-          mojom = "network.mojom.ResolveHostParameters.Source"
-          cpp = "::net::HostResolverSource"
-        },
-        {
-          mojom = "network.mojom.MdnsListenClient.UpdateType"
-          cpp = "::net::MdnsListenerUpdateType"
-        },
-        {
-          mojom = "network.mojom.SecureDnsMode"
-          cpp = "::net::SecureDnsMode"
-        },
-        {
-          mojom = "network.mojom.InsecureDnsMode"
-          cpp = "::net::InsecureDnsMode"
-        },
-      ]
-      traits_headers =
-          [ "//services/network/public/cpp/host_resolver_mojom_traits.h" ]
-      traits_public_deps = [
-        "//net",
-        "//services/network/public/cpp:host_resolver_mojom_support",
-      ]
-    },
-  ]
-
-  cpp_typemaps += shared_cpp_typemaps
-  blink_cpp_typemaps = shared_cpp_typemaps
-}
 
 mojom("mojom_integrity_policy") {
   generate_java = true

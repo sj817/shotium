@@ -26,12 +26,8 @@ class ClientSocketPool;
 class NET_EXPORT_PRIVATE ClientSocketPoolManagerImpl
     : public ClientSocketPoolManager {
  public:
-  // `websocket_common_connect_job_params` is only used for direct WebSocket
-  // connections (No proxies in use). It's never used if `pool_type` is not
-  // HttpNetworkSession::SocketPoolType::kWebSocket.
   ClientSocketPoolManagerImpl(
       const CommonConnectJobParams& common_connect_job_params,
-      const CommonConnectJobParams& websocket_common_connect_job_params,
       HttpNetworkSession::SocketPoolType pool_type,
       bool cleanup_on_ip_address_change = true);
 
@@ -54,8 +50,6 @@ class NET_EXPORT_PRIVATE ClientSocketPoolManagerImpl
   using SocketPoolMap = std::map<ProxyChain, std::unique_ptr<ClientSocketPool>>;
 
   const CommonConnectJobParams common_connect_job_params_;
-  // Used only for direct WebSocket connections (i.e., no proxy in use).
-  const CommonConnectJobParams websocket_common_connect_job_params_;
 
   const HttpNetworkSession::SocketPoolType pool_type_;
 

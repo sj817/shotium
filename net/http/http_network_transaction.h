@@ -37,7 +37,6 @@
 #include "net/net_buildflags.h"
 #include "net/socket/connection_attempts.h"
 #include "net/ssl/ssl_config.h"
-#include "net/websockets/websocket_handshake_stream_base.h"
 
 namespace net {
 
@@ -92,8 +91,7 @@ class NET_EXPORT_PRIVATE HttpNetworkTransaction
   bool GetRemoteEndpoint(IPEndPoint* endpoint) const override;
   void PopulateNetErrorDetails(NetErrorDetails* details) const override;
   void SetPriority(RequestPriority priority) override;
-  void SetWebSocketHandshakeStreamCreateHelper(
-      WebSocketHandshakeStreamBase::CreateHelper* create_helper) override;
+
   void SetConnectedCallback(const ConnectedCallback& callback) override;
   void SetRequestHeadersCallback(RequestHeadersCallback callback) override;
   void SetEarlyResponseHeadersCallback(
@@ -111,9 +109,7 @@ class NET_EXPORT_PRIVATE HttpNetworkTransaction
   void OnBidirectionalStreamImplReady(
       const ProxyInfo& used_proxy_info,
       std::unique_ptr<BidirectionalStreamImpl> stream) override;
-  void OnWebSocketHandshakeStreamReady(
-      const ProxyInfo& used_proxy_info,
-      std::unique_ptr<WebSocketHandshakeStreamBase> stream) override;
+
   void OnStreamFailed(int status,
                       const NetErrorDetails& net_error_details,
                       const ProxyInfo& used_proxy_info,
@@ -124,15 +120,10 @@ class NET_EXPORT_PRIVATE HttpNetworkTransaction
                         HttpAuthController* auth_controller) override;
   void OnNeedsClientAuth(SSLCertRequestInfo* cert_info) override;
 
-
   ConnectionAttempts GetConnectionAttempts() const override;
 
  private:
   FRIEND_TEST_ALL_PREFIXES(HttpNetworkTransactionTest, ResetStateForRestart);
-  FRIEND_TEST_ALL_PREFIXES(HttpNetworkTransactionTest,
-                           CreateWebSocketHandshakeStream);
-  FRIEND_TEST_ALL_PREFIXES(HttpNetworkTransactionTest,
-                           WebSocketFallbackResultUsesHttp3ConnectionInfo);
   FRIEND_TEST_ALL_PREFIXES(HttpNetworkTransactionTest,
                            SetProxyInfoInResponse_Direct);
   FRIEND_TEST_ALL_PREFIXES(HttpNetworkTransactionTest,
@@ -336,9 +327,6 @@ class NET_EXPORT_PRIVATE HttpNetworkTransaction
   // Get the {scheme, host, path, port} for the authentication target
   GURL AuthURL(HttpAuth::Target target) const;
 
-  // Returns true if this transaction is for a WebSocket handshake
-  bool ForWebSocketHandshake() const;
-
   void CopyConnectionAttemptsFromStreamRequest();
 
   // Returns true if response "Content-Encoding" headers respect
@@ -483,11 +471,6 @@ class NET_EXPORT_PRIVATE HttpNetworkTransaction
   // this will store the alternative service used.
   AlternativeService retried_alternative_service_;
 
-  // The helper object to use to create WebSocketHandshakeStreamBase
-  // objects. Only relevant when establishing a WebSocket connection.
-  raw_ptr<WebSocketHandshakeStreamBase::CreateHelper>
-      websocket_handshake_stream_base_create_helper_ = nullptr;
-
   ConnectedCallback connected_callback_;
   RequestHeadersCallback request_headers_callback_;
   ResponseHeadersCallback early_response_headers_callback_;
@@ -527,9 +510,6 @@ class NET_EXPORT_PRIVATE HttpNetworkTransaction
   size_t num_restarts_ = 0;
 
   bool close_connection_on_destruction_ = false;
-
-  // Set to true when the server required HTTP/1.1 fallback.
-  bool http_1_1_was_required_ = false;
 
   // If set, these values are used as DNS resolution times, rather than
   // using DNS times coming from the established stream.

@@ -55,13 +55,11 @@ SpdySessionPool::SpdySessionRequest::Delegate::~Delegate() = default;
 SpdySessionPool::SpdySessionRequest::SpdySessionRequest(
     const SpdySessionKey& key,
     bool enable_ip_based_pooling_for_h2,
-    bool is_websocket,
     bool is_blocking_request_for_session,
     Delegate* delegate,
     SpdySessionPool* spdy_session_pool)
     : key_(key),
       enable_ip_based_pooling_for_h2_(enable_ip_based_pooling_for_h2),
-      is_websocket_(is_websocket),
       is_blocking_request_for_session_(is_blocking_request_for_session),
       delegate_(delegate),
       spdy_session_pool_(spdy_session_pool) {}
@@ -200,11 +198,9 @@ SpdySessionPool::CreateAvailableSessionFromSocket(
 base::WeakPtr<SpdySession> SpdySessionPool::FindAvailableSession(
     const SpdySessionKey& key,
     bool enable_ip_based_pooling_for_h2,
-    bool is_websocket,
     const NetLogWithSource& net_log) {
   auto it = LookupAvailableSessionByKey(key);
-  if (it == available_sessions_.end() ||
-      (is_websocket && !it->second->support_websocket())) {
+  if (it == available_sessions_.end()) {
     return base::WeakPtr<SpdySession>();
   }
 
@@ -234,8 +230,7 @@ SpdySessionPool::FindMatchingIpSessionForServiceEndpoint(
     const SpdySessionKey& key,
     const ServiceEndpoint& service_endpoint,
     const std::set<std::string>& dns_aliases) {
-  CHECK(!HasAvailableSession(key, /*enable_ip_based_pooling_for_h2=*/true,
-                             /*is_websocket=*/false));
+  CHECK(!HasAvailableSession(key, /*enable_ip_based_pooling_for_h2=*/true));
   CHECK(key.socket_tag() == SocketTag());
 
   base::WeakPtr<SpdySession> session =
@@ -247,12 +242,11 @@ SpdySessionPool::FindMatchingIpSessionForServiceEndpoint(
                                dns_aliases);
 }
 
-bool SpdySessionPool::HasAvailableSession(const SpdySessionKey& key,
-                                          bool enable_ip_based_pooling_for_h2,
-                                          bool is_websocket) const {
+bool SpdySessionPool::HasAvailableSession(
+    const SpdySessionKey& key,
+    bool enable_ip_based_pooling_for_h2) const {
   auto it = available_sessions_.find(key);
-  if (it == available_sessions_.end() ||
-      (is_websocket && !it->second->support_websocket())) {
+  if (it == available_sessions_.end()) {
     return false;
   }
 
@@ -263,7 +257,6 @@ bool SpdySessionPool::HasAvailableSession(const SpdySessionKey& key,
 base::WeakPtr<SpdySession> SpdySessionPool::RequestSession(
     const SpdySessionKey& key,
     bool enable_ip_based_pooling_for_h2,
-    bool is_websocket,
     const NetLogWithSource& net_log,
     base::RepeatingClosure on_blocking_request_destroyed_callback,
     SpdySessionRequest::Delegate* delegate,
@@ -271,8 +264,8 @@ base::WeakPtr<SpdySession> SpdySessionPool::RequestSession(
     bool* is_blocking_request_for_session) {
   DCHECK(delegate);
 
-  base::WeakPtr<SpdySession> spdy_session = FindAvailableSession(
-      key, enable_ip_based_pooling_for_h2, is_websocket, net_log);
+  base::WeakPtr<SpdySession> spdy_session =
+      FindAvailableSession(key, enable_ip_based_pooling_for_h2, net_log);
   if (spdy_session) {
     // This value doesn't really matter, but best to always populate it, for
     // consistency.
@@ -283,8 +276,8 @@ base::WeakPtr<SpdySession> SpdySessionPool::RequestSession(
   RequestInfoForKey* request_info = &spdy_session_request_map_[key];
   *is_blocking_request_for_session = !request_info->has_blocking_request;
   *spdy_session_request = std::make_unique<SpdySessionRequest>(
-      key, enable_ip_based_pooling_for_h2, is_websocket,
-      *is_blocking_request_for_session, delegate, this);
+      key, enable_ip_based_pooling_for_h2, *is_blocking_request_for_session,
+      delegate, this);
   request_info->request_set.insert(spdy_session_request->get());
 
   if (*is_blocking_request_for_session) {
@@ -298,7 +291,6 @@ base::WeakPtr<SpdySession> SpdySessionPool::RequestSession(
 
 OnHostResolutionCallbackResult SpdySessionPool::OnHostResolutionComplete(
     const SpdySessionKey& key,
-    bool is_websocket,
     base::span<const HostResolverEndpointResult> endpoint_results,
     const std::set<std::string>& aliases) {
   // If there are no pending requests for that alias, nothing to do.
@@ -310,17 +302,11 @@ OnHostResolutionCallbackResult SpdySessionPool::OnHostResolutionComplete(
   // nothing, but inform the caller to wait for such a task to run.
   auto existing_session_it = LookupAvailableSessionByKey(key);
   if (existing_session_it != available_sessions_.end()) {
-    if (is_websocket && !existing_session_it->second->support_websocket()) {
-      // We don't look for aliased sessions because it would not be possible to
-      // add them to the available_sessions_ map. See https://crbug.com/1220771.
-      return OnHostResolutionCallbackResult::kContinue;
-    }
-
     return OnHostResolutionCallbackResult::kMayBeDeletedAsync;
   }
 
   for (const auto& endpoint : endpoint_results) {
-    if (OnHostResolutionCompleteShared(key, is_websocket, endpoint.metadata,
+    if (OnHostResolutionCompleteShared(key, endpoint.metadata,
                                        endpoint.ip_endpoints, aliases)) {
       return OnHostResolutionCallbackResult::kMayBeDeletedAsync;
     }
@@ -330,7 +316,6 @@ OnHostResolutionCallbackResult SpdySessionPool::OnHostResolutionComplete(
 
 OnHostResolutionCallbackResult SpdySessionPool::OnHostResolutionComplete(
     const SpdySessionKey& key,
-    bool is_websocket,
     base::span<const ServiceEndpoint> endpoint_results,
     const std::set<std::string>& aliases) {
   // If there are no pending requests for that alias, nothing to do.
@@ -343,24 +328,18 @@ OnHostResolutionCallbackResult SpdySessionPool::OnHostResolutionComplete(
   // nothing, but inform the caller to wait for such a task to run.
   auto existing_session_it = LookupAvailableSessionByKey(key);
   if (existing_session_it != available_sessions_.end()) {
-    if (is_websocket && !existing_session_it->second->support_websocket()) {
-      // We don't look for aliased sessions because it would not be possible to
-      // add them to the available_sessions_ map. See https://crbug.com/1220771.
-      return OnHostResolutionCallbackResult::kContinue;
-    }
-
     return OnHostResolutionCallbackResult::kMayBeDeletedAsync;
   }
 
   for (const auto& endpoint : endpoint_results) {
     // These calls do redundantly check that the metadata allows use of H2, but
     // that's not a huge cost.
-    if (OnHostResolutionCompleteShared(key, is_websocket, endpoint.metadata,
+    if (OnHostResolutionCompleteShared(key, endpoint.metadata,
                                        endpoint.ipv6_endpoints, aliases)) {
       return OnHostResolutionCallbackResult::kMayBeDeletedAsync;
     }
 
-    if (OnHostResolutionCompleteShared(key, is_websocket, endpoint.metadata,
+    if (OnHostResolutionCompleteShared(key, endpoint.metadata,
                                        endpoint.ipv4_endpoints, aliases)) {
       return OnHostResolutionCallbackResult::kMayBeDeletedAsync;
     }
@@ -740,11 +719,6 @@ void SpdySessionPool::UpdatePendingRequests(const SpdySessionKey& key) {
       RequestSet::iterator request;
       for (request = request_set->begin(); request != request_set->end();
            ++request) {
-        // If the request is for use with websockets, and the session doesn't
-        // support websockets, skip over the request.
-        if ((*request)->is_websocket() && !new_session->support_websocket())
-          continue;
-        // Don't use IP pooled session if not allowed.
         if (!(*request)->enable_ip_based_pooling_for_h2() && is_pooled) {
           continue;
         }
@@ -892,7 +866,6 @@ void SpdySessionPool::NotifyOnConnectionFailure(
 
 bool SpdySessionPool::OnHostResolutionCompleteShared(
     const SpdySessionKey& key,
-    bool is_websocket,
     const ConnectionEndpointMetadata& metadata,
     base::span<const IPEndPoint> ip_endpoints,
     const std::set<std::string>& aliases) {
@@ -916,10 +889,6 @@ bool SpdySessionPool::OnHostResolutionCompleteShared(
           alias_key.CompareForAliasing(key);
       // Keys must be aliasable.
       if (!compare_result.is_potentially_aliasable) {
-        continue;
-      }
-
-      if (is_websocket && !available_session_it->second->support_websocket()) {
         continue;
       }
 

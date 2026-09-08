@@ -46,12 +46,6 @@ class NET_EXPORT_PRIVATE ConnectJobFactory {
     // Don't use ALPN mode at all when negotiating a connection. This is used by
     // non-HTTP consumers.
     kDisabled,
-    // Only try to negotiate H1. This is only used by WebSockets.
-    kHttp11Only,
-    // Allow negotiating H2 or H1 via ALPN. H2 may only be negotiated if
-    // CommonConnectJobParams allows it. Also, if HttpServerProperties only
-    // allows H1 for the destination server, only H1 will be negotiated, even
-    // if `kHttpAll` is specified.
     kHttpAll,
   };
 

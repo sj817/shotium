@@ -37,22 +37,7 @@ namespace net {
 
 namespace {
 
-// Populates `ssl_config's` ALPN-related fields. Namely, `alpn_protos`,
-// `application_settings`, `renego_allowed_default`, and
-// `renego_allowed_for_protos`.
-//
-// In the case of `AlpnMode::kDisabled`, clears all of the fields.
-//
-// In the case of `AlpnMode::kHttp11Only`, sets `alpn_protos` to only allow
-// HTTP/1.1 negotiation.
-//
-// In the case of `AlpnMode::kHttpAll`, copies `alpn_protos` from
-// `common_connect_job_params`, and gives `HttpServerProperties` a chance to
-// force use of HTTP/1.1 only.
-//
-// If `alpn_mode` is not `AlpnMode::kDisabled`, then `server` must be a
-// `SchemeHostPort`, as it makes no sense to negotiate ALPN when the scheme
-// isn't known.
+// Configure ALPN and retain HttpServerProperties HTTP/1.1 overrides.
 void ConfigureAlpn(const ConnectJobFactory::Endpoint& endpoint,
                    ConnectJobFactory::AlpnMode alpn_mode,
                    const NetworkAnonymizationKey& network_anonymization_key,
@@ -68,21 +53,15 @@ void ConfigureAlpn(const ConnectJobFactory::Endpoint& endpoint,
 
   DCHECK(std::holds_alternative<url::SchemeHostPort>(endpoint));
 
-  if (alpn_mode == ConnectJobFactory::AlpnMode::kHttp11Only) {
-    ssl_config.alpn_protos = {NextProto::kProtoHTTP11};
-    ssl_config.application_settings =
-        *common_connect_job_params.application_settings;
-  } else {
-    DCHECK_EQ(alpn_mode, ConnectJobFactory::AlpnMode::kHttpAll);
-    DCHECK(std::holds_alternative<url::SchemeHostPort>(endpoint));
-    ssl_config.alpn_protos = *common_connect_job_params.alpn_protos;
-    ssl_config.application_settings =
-        *common_connect_job_params.application_settings;
-    if (common_connect_job_params.http_server_properties) {
-      common_connect_job_params.http_server_properties->MaybeForceHTTP11(
-          std::get<url::SchemeHostPort>(endpoint), network_anonymization_key,
-          &ssl_config);
-    }
+  DCHECK_EQ(alpn_mode, ConnectJobFactory::AlpnMode::kHttpAll);
+  DCHECK(std::holds_alternative<url::SchemeHostPort>(endpoint));
+  ssl_config.alpn_protos = *common_connect_job_params.alpn_protos;
+  ssl_config.application_settings =
+      *common_connect_job_params.application_settings;
+  if (common_connect_job_params.http_server_properties) {
+    common_connect_job_params.http_server_properties->MaybeForceHTTP11(
+        std::get<url::SchemeHostPort>(endpoint), network_anonymization_key,
+        &ssl_config);
   }
 
   // Prior to HTTP/2 and SPDY, some servers used TLS renegotiation to request

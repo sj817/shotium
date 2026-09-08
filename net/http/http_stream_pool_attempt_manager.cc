@@ -1496,8 +1496,7 @@ bool HttpStreamPool::AttemptManager::HasAvailableSpdySession() const {
   }
 
   return spdy_session_pool()->HasAvailableSession(
-      spdy_session_key(), IsIpBasedPoolingEnabledForH2(),
-      /*is_websocket=*/false);
+      spdy_session_key(), IsIpBasedPoolingEnabledForH2());
 }
 
 void HttpStreamPool::AttemptManager::MaybeStartDraining() {

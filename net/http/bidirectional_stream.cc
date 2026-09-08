@@ -368,12 +368,6 @@ void BidirectionalStream::OnBidirectionalStreamImplReady(
                       std::move(timer_), traffic_annotation);
 }
 
-void BidirectionalStream::OnWebSocketHandshakeStreamReady(
-    const ProxyInfo& used_proxy_info,
-    std::unique_ptr<WebSocketHandshakeStreamBase> stream) {
-  NOTREACHED();
-}
-
 void BidirectionalStream::OnStreamFailed(
     int result,
     const NetErrorDetails& net_error_details,
@@ -414,7 +408,6 @@ void BidirectionalStream::OnNeedsClientAuth(SSLCertRequestInfo* cert_info) {
   stream_request_ = nullptr;
   StartRequest();
 }
-
 
 void BidirectionalStream::NotifyFailed(int error) {
   delegate_->OnFailed(error);

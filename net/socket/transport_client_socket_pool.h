@@ -157,7 +157,6 @@ class NET_EXPORT_PRIVATE TransportClientSocketPool
       size_t max_sockets_per_group,
       base::TimeDelta unused_idle_socket_timeout,
       const ProxyChain& proxy_chain,
-      bool is_for_websockets,
       const CommonConnectJobParams* common_connect_job_params,
       bool cleanup_on_ip_address_change = true);
 
@@ -176,7 +175,6 @@ class NET_EXPORT_PRIVATE TransportClientSocketPool
       base::TimeDelta unused_idle_socket_timeout,
       base::TimeDelta used_idle_socket_timeout,
       const ProxyChain& proxy_chain_,
-      bool is_for_websockets,
       const CommonConnectJobParams* common_connect_job_params,
       std::unique_ptr<ConnectJobFactory> connect_job_factory,
       SSLClientContext* ssl_client_context,
@@ -590,7 +588,6 @@ class NET_EXPORT_PRIVATE TransportClientSocketPool
       base::TimeDelta unused_idle_socket_timeout,
       base::TimeDelta used_idle_socket_timeout,
       const ProxyChain& proxy_chain,
-      bool is_for_websockets,
       const CommonConnectJobParams* common_connect_job_params,
       bool cleanup_on_ip_address_change,
       std::unique_ptr<ConnectJobFactory> connect_job_factory,

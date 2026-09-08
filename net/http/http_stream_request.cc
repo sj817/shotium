@@ -16,17 +16,10 @@
 
 namespace net {
 
-HttpStreamRequest::HttpStreamRequest(
-    Helper* helper,
-    WebSocketHandshakeStreamBase::CreateHelper*
-        websocket_handshake_stream_create_helper,
-    const NetLogWithSource& net_log,
-    StreamType stream_type)
-    : helper_(helper),
-      websocket_handshake_stream_create_helper_(
-          websocket_handshake_stream_create_helper),
-      net_log_(net_log),
-      stream_type_(stream_type) {
+HttpStreamRequest::HttpStreamRequest(Helper* helper,
+                                     const NetLogWithSource& net_log,
+                                     StreamType stream_type)
+    : helper_(helper), net_log_(net_log), stream_type_(stream_type) {
   net_log_.BeginEvent(NetLogEventType::HTTP_STREAM_REQUEST);
 }
 
@@ -71,11 +64,6 @@ void HttpStreamRequest::AddConnectionAttempts(
   for (const auto& attempt : attempts) {
     connection_attempts_.push_back(attempt);
   }
-}
-
-WebSocketHandshakeStreamBase::CreateHelper*
-HttpStreamRequest::websocket_handshake_stream_create_helper() const {
-  return websocket_handshake_stream_create_helper_;
 }
 
 void HttpStreamRequest::SetDnsResolutionTimeOverrides(

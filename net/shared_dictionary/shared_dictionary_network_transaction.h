@@ -81,8 +81,7 @@ class NET_EXPORT SharedDictionaryNetworkTransaction : public HttpTransaction {
   bool GetRemoteEndpoint(IPEndPoint* endpoint) const override;
   void PopulateNetErrorDetails(NetErrorDetails* details) const override;
   void SetPriority(RequestPriority priority) override;
-  void SetWebSocketHandshakeStreamCreateHelper(
-      WebSocketHandshakeStreamBase::CreateHelper* create_helper) override;
+
   void SetConnectedCallback(const ConnectedCallback& callback) override;
   void SetRequestHeadersCallback(RequestHeadersCallback callback) override;
   void SetResponseHeadersCallback(ResponseHeadersCallback callback) override;

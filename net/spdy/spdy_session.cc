@@ -1193,7 +1193,6 @@ std::unique_ptr<SpdyBuffer> SpdySession::CreateDataBuffer(
   if (*effective_len < len)
     flags = static_cast<spdy::SpdyDataFlags>(flags & ~spdy::DATA_FLAG_FIN);
 
-
   // Send PrefacePing for DATA_FRAMEs with nonzero payload size.
   if (*effective_len > 0)
     MaybeSendPrefacePing();
@@ -1447,7 +1446,6 @@ base::DictValue SpdySession::GetInfoAsValue() const {
           .Set("send_window_size", session_send_window_size_)
           .Set("recv_window_size", session_recv_window_size_)
           .Set("unacked_recv_window_bytes", session_unacked_recv_window_bytes_)
-          .Set("support_websocket", support_websocket_)
           .Set("availability_state",
                AvailabilityStateToString(availability_state_))
           .Set("last_good_stream_id", static_cast<int>(last_good_stream_id_));
@@ -2369,14 +2367,15 @@ void SpdySession::HandleSetting(uint32_t id, uint32_t value) {
       break;
     }
     case spdy::SETTINGS_ENABLE_CONNECT_PROTOCOL:
-      if ((value != 0 && value != 1) || (support_websocket_ && value == 0)) {
+      if ((value != 0 && value != 1) ||
+          (supports_extended_connect_ && value == 0)) {
         DoDrainSession(
             ERR_HTTP2_PROTOCOL_ERROR,
             "Invalid value for spdy::SETTINGS_ENABLE_CONNECT_PROTOCOL.");
         return;
       }
       if (value == 1) {
-        support_websocket_ = true;
+        supports_extended_connect_ = true;
       }
       break;
     case spdy::SETTINGS_DEPRECATE_HTTP2_PRIORITIES:
@@ -2655,8 +2654,6 @@ void SpdySession::RecordHistograms() {
                               streams_initiated_count_, 1, 300, 50);
   UMA_HISTOGRAM_CUSTOM_COUNTS("Net.SpdyStreamsAbandonedPerSession",
                               streams_abandoned_count_, 1, 300, 50);
-  UMA_HISTOGRAM_BOOLEAN("Net.SpdySession.ServerSupportsWebSocket",
-                        support_websocket_);
   if (IsGoogleHostWithAlpnH3(spdy_session_key_.host_port_pair().host())) {
     LogSessionCreationInitiatorToHistogram(session_creation_initiator_,
                                            streams_initiated_count_ > 0);

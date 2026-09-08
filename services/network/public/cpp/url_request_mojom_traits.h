@@ -31,15 +31,11 @@
 #include "services/network/public/cpp/source_type_mojom_traits.h"
 #include "services/network/public/mojom/chunked_data_pipe_getter.mojom.h"
 #include "services/network/public/mojom/client_security_state.mojom-forward.h"
-#include "services/network/public/mojom/cookie_access_observer.mojom-forward.h"
 #include "services/network/public/mojom/data_pipe_getter.mojom.h"
-#include "services/network/public/mojom/devtools_observer.mojom-forward.h"
 #include "services/network/public/mojom/fetch_retry_options.mojom.h"
 #include "services/network/public/mojom/ip_address_space.mojom-forward.h"
-#include "services/network/public/mojom/trust_token_access_observer.mojom-forward.h"
 #include "services/network/public/mojom/trust_tokens.mojom-forward.h"
 #include "services/network/public/mojom/url_loader.mojom-forward.h"
-#include "services/network/public/mojom/url_loader_network_service_observer.mojom-forward.h"
 #include "services/network/public/mojom/url_request.mojom-forward.h"
 #include "services/network/public/mojom/url_response_head.mojom.h"
 #include "services/network/public/mojom/web_bundle_handle.mojom-forward.h"
@@ -113,46 +109,6 @@ struct COMPONENT_EXPORT(NETWORK_CPP_BASE)
       const network::ResourceRequest::TrustedParams& trusted_params) {
     return trusted_params.enabled_client_hints;
   }
-  static mojo::PendingRemote<network::mojom::CookieAccessObserver>
-  cookie_observer(
-      const network::ResourceRequest::TrustedParams& trusted_params) {
-    if (!trusted_params.cookie_observer) {
-      return mojo::NullRemote();
-    }
-    return std::move(
-        const_cast<network::ResourceRequest::TrustedParams&>(trusted_params)
-            .cookie_observer);
-  }
-  static mojo::PendingRemote<network::mojom::TrustTokenAccessObserver>
-  trust_token_observer(
-      const network::ResourceRequest::TrustedParams& trusted_params) {
-    if (!trusted_params.trust_token_observer) {
-      return mojo::NullRemote();
-    }
-    return std::move(
-        const_cast<network::ResourceRequest::TrustedParams&>(trusted_params)
-            .trust_token_observer);
-  }
-  static mojo::PendingRemote<network::mojom::URLLoaderNetworkServiceObserver>
-  url_loader_network_observer(
-      const network::ResourceRequest::TrustedParams& trusted_params) {
-    if (!trusted_params.url_loader_network_observer) {
-      return mojo::NullRemote();
-    }
-    return std::move(
-        const_cast<network::ResourceRequest::TrustedParams&>(trusted_params)
-            .url_loader_network_observer);
-  }
-  static mojo::PendingRemote<network::mojom::DevToolsObserver>
-  devtools_observer(
-      const network::ResourceRequest::TrustedParams& trusted_params) {
-    if (!trusted_params.devtools_observer) {
-      return mojo::NullRemote();
-    }
-    return std::move(
-        const_cast<network::ResourceRequest::TrustedParams&>(trusted_params)
-            .devtools_observer);
-  }
   static const network::mojom::ClientSecurityStatePtr& client_security_state(
       const network::ResourceRequest::TrustedParams& trusted_params) {
     return trusted_params.client_security_state;
@@ -166,16 +122,6 @@ struct COMPONENT_EXPORT(NETWORK_CPP_BASE)
     return std::move(
         const_cast<network::ResourceRequest::TrustedParams&>(trusted_params)
             .accept_ch_frame_observer);
-  }
-  static mojo::PendingRemote<network::mojom::SharedDictionaryAccessObserver>
-  shared_dictionary_observer(
-      const network::ResourceRequest::TrustedParams& trusted_params) {
-    if (!trusted_params.shared_dictionary_observer) {
-      return mojo::NullRemote();
-    }
-    return std::move(
-        const_cast<network::ResourceRequest::TrustedParams&>(trusted_params)
-            .shared_dictionary_observer);
   }
 
   static mojo::ScopedDataPipeProducerHandle response_body_stream(

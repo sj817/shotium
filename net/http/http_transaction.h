@@ -18,7 +18,6 @@
 #include "net/http/http_raw_request_headers.h"
 #include "net/http/http_response_headers.h"
 #include "net/socket/connection_attempts.h"
-#include "net/websockets/websocket_handshake_stream_base.h"
 
 namespace net {
 
@@ -183,12 +182,6 @@ class NET_EXPORT_PRIVATE HttpTransaction {
 
   // Called when the priority of the parent job changes.
   virtual void SetPriority(RequestPriority priority) = 0;
-
-  // Set the WebSocketHandshakeStreamBase::CreateHelper to be used for the
-  // request.  Only relevant to WebSocket transactions. Must be called before
-  // Start(). Ownership of |create_helper| remains with the caller.
-  virtual void SetWebSocketHandshakeStreamCreateHelper(
-      WebSocketHandshakeStreamBase::CreateHelper* create_helper) = 0;
 
   // Sets the callback to receive a notification upon connection.
   virtual void SetConnectedCallback(const ConnectedCallback& callback) = 0;

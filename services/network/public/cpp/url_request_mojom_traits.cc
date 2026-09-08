@@ -21,12 +21,9 @@
 #include "services/network/public/cpp/resource_request_body.h"
 #include "services/network/public/cpp/storage_access_api_mojom_traits.h"
 #include "services/network/public/cpp/url_request_param_mojom_traits.h"
-#include "services/network/public/mojom/cookie_access_observer.mojom.h"
 #include "services/network/public/mojom/data_pipe_getter.mojom.h"
-#include "services/network/public/mojom/devtools_observer.mojom.h"
 #include "services/network/public/mojom/fetch_retry_options.mojom.h"
 #include "services/network/public/mojom/ip_address_space.mojom.h"
-#include "services/network/public/mojom/trust_token_access_observer.mojom.h"
 #include "services/network/public/mojom/trust_tokens.mojom.h"
 #include "services/network/public/mojom/url_loader.mojom-shared.h"
 #include "services/network/public/mojom/url_request.mojom.h"
@@ -68,21 +65,11 @@ bool StructTraits<network::mojom::TrustedUrlRequestParamsDataView,
   if (!data.ReadEnabledClientHints(&out->enabled_client_hints)) {
     return false;
   }
-  out->cookie_observer = data.TakeCookieObserver<
-      mojo::PendingRemote<network::mojom::CookieAccessObserver>>();
-  out->trust_token_observer = data.TakeTrustTokenObserver<
-      mojo::PendingRemote<network::mojom::TrustTokenAccessObserver>>();
-  out->url_loader_network_observer = data.TakeUrlLoaderNetworkObserver<
-      mojo::PendingRemote<network::mojom::URLLoaderNetworkServiceObserver>>();
-  out->devtools_observer = data.TakeDevtoolsObserver<
-      mojo::PendingRemote<network::mojom::DevToolsObserver>>();
   if (!data.ReadClientSecurityState(&out->client_security_state)) {
     return false;
   }
   out->accept_ch_frame_observer = data.TakeAcceptChFrameObserver<
       mojo::PendingRemote<network::mojom::AcceptCHFrameObserver>>();
-  out->shared_dictionary_observer = data.TakeSharedDictionaryObserver<
-      mojo::PendingRemote<network::mojom::SharedDictionaryAccessObserver>>();
   mojo::ScopedDataPipeProducerHandle response_body_stream =
       data.TakeResponseBodyStream();
   if (response_body_stream.is_valid()) {

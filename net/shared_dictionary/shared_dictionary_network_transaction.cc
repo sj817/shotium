@@ -495,12 +495,6 @@ void SharedDictionaryNetworkTransaction::SetPriority(RequestPriority priority) {
   network_transaction_->SetPriority(priority);
 }
 
-void SharedDictionaryNetworkTransaction::
-    SetWebSocketHandshakeStreamCreateHelper(
-        WebSocketHandshakeStreamBase::CreateHelper* create_helper) {
-  network_transaction_->SetWebSocketHandshakeStreamCreateHelper(create_helper);
-}
-
 void SharedDictionaryNetworkTransaction::SetRequestHeadersCallback(
     RequestHeadersCallback callback) {
   network_transaction_->SetRequestHeadersCallback(std::move(callback));

@@ -29,6 +29,7 @@
 #include "net/http/alternate_protocol_usage.h"
 #include "net/http/alternative_service.h"
 #include "net/http/bidirectional_stream_impl.h"
+#include "net/http/http_stream.h"
 #include "net/http/http_stream_factory.h"
 #include "net/http/http_stream_key.h"
 #include "net/http/http_stream_pool.h"
@@ -142,7 +143,6 @@ HttpStreamFactory::JobController::JobController(
     JobFactory* job_factory,
     const HttpRequestInfo& http_request_info,
     bool is_preconnect,
-    bool is_websocket,
     bool enable_ip_based_pooling_for_h2,
     bool enable_alternative_services,
     bool delay_main_job_with_available_spdy_session,
@@ -152,7 +152,6 @@ HttpStreamFactory::JobController::JobController(
       job_factory_(job_factory),
       delegate_(delegate),
       is_preconnect_(is_preconnect),
-      is_websocket_(is_websocket),
       enable_ip_based_pooling_for_h2_(enable_ip_based_pooling_for_h2),
       enable_alternative_services_(enable_alternative_services),
       delay_main_job_with_available_spdy_session_(
@@ -194,8 +193,6 @@ HttpStreamFactory::JobController::~JobController() {
 
 std::unique_ptr<HttpStreamRequest> HttpStreamFactory::JobController::Start(
     HttpStreamRequest::Delegate* delegate,
-    WebSocketHandshakeStreamBase::CreateHelper*
-        websocket_handshake_stream_create_helper,
     const NetLogWithSource& source_net_log,
     HttpStreamRequest::StreamType stream_type,
     RequestPriority priority) {
@@ -204,9 +201,8 @@ std::unique_ptr<HttpStreamRequest> HttpStreamFactory::JobController::Start(
   stream_type_ = stream_type;
   priority_ = priority;
 
-  auto request = std::make_unique<HttpStreamRequest>(
-      this, websocket_handshake_stream_create_helper, source_net_log,
-      stream_type);
+  auto request =
+      std::make_unique<HttpStreamRequest>(this, source_net_log, stream_type);
   // Keep a raw pointer but release ownership of HttpStreamRequest instance.
   request_ = request.get();
 
@@ -309,7 +305,7 @@ void HttpStreamFactory::JobController::OnStreamReady(Job* job) {
   if (!request_) {
     return;
   }
-  DCHECK(!is_websocket_);
+
   DCHECK_EQ(HttpStreamRequest::HTTP_STREAM, request_->stream_type());
   OnJobSucceeded(job);
 
@@ -342,32 +338,12 @@ void HttpStreamFactory::JobController::OnBidirectionalStreamImplReady(
   std::unique_ptr<BidirectionalStreamImpl> stream =
       job->ReleaseBidirectionalStream();
   DCHECK(stream);
-  DCHECK(!is_websocket_);
+
   DCHECK_EQ(HttpStreamRequest::BIDIRECTIONAL_STREAM, request_->stream_type());
 
   OnJobSucceeded(job);
   DCHECK(request_->completed());
   delegate_->OnBidirectionalStreamImplReady(used_proxy_info, std::move(stream));
-}
-
-void HttpStreamFactory::JobController::OnWebSocketHandshakeStreamReady(
-    Job* job,
-    const ProxyInfo& used_proxy_info,
-    std::unique_ptr<WebSocketHandshakeStreamBase> stream) {
-  DCHECK(job);
-  MarkRequestComplete(job);
-
-  if (!request_) {
-    return;
-  }
-  DCHECK(is_websocket_);
-  DCHECK_EQ(HttpStreamRequest::HTTP_STREAM, request_->stream_type());
-  DCHECK(stream);
-
-  OnJobSucceeded(job);
-  DCHECK(request_->completed());
-  delegate_->OnWebSocketHandshakeStreamReady(used_proxy_info,
-                                             std::move(stream));
 }
 
 void HttpStreamFactory::JobController::OnStreamFailed(Job* job, int status) {
@@ -651,12 +627,6 @@ bool HttpStreamFactory::JobController::HasPendingAltJob() const {
   return alternative_job_.get() != nullptr;
 }
 
-WebSocketHandshakeStreamBase::CreateHelper*
-HttpStreamFactory::JobController::websocket_handshake_stream_create_helper() {
-  DCHECK(request_);
-  return request_->websocket_handshake_stream_create_helper();
-}
-
 void HttpStreamFactory::JobController::StartJobs() {
   // Shot only makes direct connections; no PAC fetch or system proxy discovery.
   proxy_info_.UseDirect();
@@ -690,8 +660,7 @@ void HttpStreamFactory::JobController::CreateJobs() {
       GetAdvertisedAltSvcFor(request_info_, delegate_, stream_type_);
 
   if (session_->host_resolver()->IsHappyEyeballsV3Enabled() &&
-      proxy_info_.is_direct() && !is_websocket_ &&
-      request_info_.socket_tag == SocketTag()) {
+      proxy_info_.is_direct() && request_info_.socket_tag == SocketTag()) {
     SwitchToHttpStreamPool();
     return;
   }
@@ -703,9 +672,8 @@ void HttpStreamFactory::JobController::CreateJobs() {
     // be used at some point for proxy resolution or something.
     std::unique_ptr<Job> preconnect_job = job_factory_->CreateJob(
         this, PRECONNECT, session_, request_info_, IDLE, proxy_info_,
-        allowed_bad_certs_, destination, is_websocket_,
-        enable_ip_based_pooling_for_h2_, net_log_.net_log(),
-        NextProto::kProtoUnknown, management_config_);
+        allowed_bad_certs_, destination, enable_ip_based_pooling_for_h2_,
+        net_log_.net_log(), NextProto::kProtoUnknown, management_config_);
     // When there is a valid alternative service info, create a job for the
     // alternative service.
     if (advertised_alt_svc_.info.protocol() != NextProto::kProtoUnknown) {
@@ -718,7 +686,7 @@ void HttpStreamFactory::JobController::CreateJobs() {
 
       main_job_ = job_factory_->CreateJob(
           this, PRECONNECT, session_, request_info_, IDLE, proxy_info_,
-          allowed_bad_certs_, std::move(alternative_destination), is_websocket_,
+          allowed_bad_certs_, std::move(alternative_destination),
           enable_ip_based_pooling_for_h2_, session_->net_log(),
           advertised_alt_svc_.info.protocol(), management_config_);
     } else {
@@ -729,7 +697,7 @@ void HttpStreamFactory::JobController::CreateJobs() {
   }
   main_job_ = job_factory_->CreateJob(
       this, MAIN, session_, request_info_, priority_, proxy_info_,
-      allowed_bad_certs_, std::move(destination), is_websocket_,
+      allowed_bad_certs_, std::move(destination),
       enable_ip_based_pooling_for_h2_, net_log_.net_log(),
       NextProto::kProtoUnknown, management_config_);
 
@@ -737,7 +705,7 @@ void HttpStreamFactory::JobController::CreateJobs() {
   // Proxy is set for HTTP requests.
   if (advertised_alt_svc_.info.protocol() != NextProto::kProtoUnknown) {
     DCHECK(request_info_.url.SchemeIs(url::kHttpsScheme));
-    DCHECK(!is_websocket_);
+
     DVLOG(1) << "Selected alternative service (host: "
              << advertised_alt_svc_.info.GetHostPortPair().host()
              << " port: "
@@ -752,7 +720,7 @@ void HttpStreamFactory::JobController::CreateJobs() {
 
     alternative_job_ = job_factory_->CreateJob(
         this, ALTERNATIVE, session_, request_info_, priority_, proxy_info_,
-        allowed_bad_certs_, std::move(alternative_destination), is_websocket_,
+        allowed_bad_certs_, std::move(alternative_destination),
         enable_ip_based_pooling_for_h2_, net_log_.net_log(),
         advertised_alt_svc_.info.protocol(), management_config_);
   }
@@ -803,7 +771,6 @@ void HttpStreamFactory::JobController::OrphanUnboundJob() {
     // to check if there is any broken alternative service to report.
     // OnOrphanedJobComplete() will clean up |this| when the job completes.
     if (alternative_job_) {
-      DCHECK(!is_websocket_);
       alternative_job_->Orphan();
     }
     return;

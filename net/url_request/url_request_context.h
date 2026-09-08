@@ -92,29 +92,12 @@ class NET_EXPORT URLRequestContext final {
       URLRequest::Delegate* delegate) const;
 #endif
 
-  // `traffic_annotation` is metadata about the network traffic send via this
-  // URLRequest, see net::DefineNetworkTrafficAnnotation. Note that:
-  // - net provides the API for tagging requests with an opaque identifier.
-  // - chrome/browser/privacy/traffic_annotation.proto contains the Chrome
-  // specific .proto describing the verbose annotation format that Chrome's
-  // callsites are expected to follow.
-  // - tools/traffic_annotation/ contains sample and template for annotation and
-  // tools will be added for verification following crbug.com/690323.
-  //
-  // `is_for_websockets` should be true iff this was created for use by a
-  // websocket. HTTP/HTTPS requests fail if it's true, and WS/WSS requests fail
-  // if it's false. This is to protect against broken consumers.
-  //
-  // `net_log_source_id` is used to construct NetLogWithSource using the
-  // specified Source ID. This method is expected to be used when URLRequest
-  // wants to take over existing NetLogSource.
   std::unique_ptr<URLRequest> CreateRequest(
       const GURL& url,
       RequestPriority priority,
       URLRequest::Delegate* delegate,
       NetworkTrafficAnnotationTag traffic_annotation,
       handles::NetworkHandle target_network,
-      bool is_for_websockets = false,
       const std::optional<net::NetLogSource> net_log_source =
           std::nullopt) const;
 
@@ -342,7 +325,6 @@ class NET_EXPORT URLRequestContext final {
   // `http_transaction_factory_` might hold a raw pointer on
   // `http_network_session_` so it needs to be declared last.
   std::unique_ptr<HttpTransactionFactory> http_transaction_factory_;
-
 
   std::unique_ptr<TransportSecurityPersister> transport_security_persister_;
 

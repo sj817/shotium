@@ -107,7 +107,6 @@ HttpStreamFactory::Job::Job(
     const std::vector<SSLConfig::CertAndStatus>& allowed_bad_certs,
     url::SchemeHostPort destination,
     NextProto alternative_protocol,
-    bool is_websocket,
     bool enable_ip_based_pooling_for_h2,
     std::optional<ConnectionManagementConfig> management_config,
     NetLog* net_log)
@@ -122,21 +121,16 @@ HttpStreamFactory::Job::Job(
       connection_(std::make_unique<ClientSocketHandle>()),
       session_(session),
       destination_(std::move(destination)),
-      is_websocket_(is_websocket),
-      try_websocket_over_http2_(is_websocket_ &&
-                                request_info_.url.SchemeIs(url::kWssScheme)),
       // Only support IP-based pooling for non-proxied streams.
       enable_ip_based_pooling_for_h2_(enable_ip_based_pooling_for_h2 &&
                                       proxy_info.is_direct()),
       delegate_(delegate),
       job_type_(job_type),
-      using_ssl_(request_info_.url.SchemeIs(url::kHttpsScheme) ||
-                 request_info_.url.SchemeIs(url::kWssScheme)),
+      using_ssl_(request_info_.url.SchemeIs(url::kHttpsScheme)),
       expect_spdy_(alternative_protocol == NextProto::kProtoHTTP2),
       spdy_session_key_(
           GetSpdySessionKey(proxy_info_.proxy_chain(), request_info_)),
       management_config_(management_config) {
-  // Websocket `destination` schemes should be converted to HTTP(S).
   DCHECK(base::EqualsCaseInsensitiveASCII(destination_.scheme(),
                                           url::kHttpScheme) ||
          base::EqualsCaseInsensitiveASCII(destination_.scheme(),
@@ -158,14 +152,11 @@ HttpStreamFactory::Job::Job(
   if (expect_spdy_) {
     DCHECK(request_info_.url.SchemeIs(url::kHttpsScheme));
   }
-  if (job_type_ == PRECONNECT || is_websocket_) {
+  if (job_type_ == PRECONNECT) {
     DCHECK(request_info_.socket_tag == SocketTag());
   }
-  if (is_websocket_) {
-    DCHECK(request_info_.url.SchemeIsWSOrWSS());
-  } else {
-    DCHECK(!request_info_.url.SchemeIsWSOrWSS());
-  }
+
+  DCHECK(!request_info_.url.SchemeIsWSOrWSS());
 }
 
 HttpStreamFactory::Job::~Job() {
@@ -291,11 +282,10 @@ bool HttpStreamFactory::Job::HasAvailableSpdySession() const {
   return CanUseExistingSpdySession() &&
          session_->spdy_session_pool()->HasAvailableSession(
              spdy_session_key_,
-             /*enable_ip_based_pooling=*/true, is_websocket_);
+             /*enable_ip_based_pooling=*/true);
 }
 
 bool HttpStreamFactory::Job::TargettedSocketGroupHasActiveSocket() const {
-  DCHECK(!is_websocket_);
   ClientSocketPool* pool = session_->GetSocketPool(
       HttpNetworkSession::SocketPoolType::kNormal, proxy_info_.proxy_chain());
   DCHECK(pool);
@@ -346,8 +336,7 @@ void HttpStreamFactory::Job::GetSSLInfo(SSLInfo* ssl_info) {
 }
 
 bool HttpStreamFactory::Job::UsingHttpProxyWithoutTunnel() const {
-  return !using_ssl_ && !is_websocket_ &&
-         proxy_info_.proxy_chain().is_get_to_proxy_allowed();
+  return !using_ssl_ && proxy_info_.proxy_chain().is_get_to_proxy_allowed();
 }
 
 bool HttpStreamFactory::Job::CanUseExistingSpdySession() const {
@@ -356,10 +345,6 @@ bool HttpStreamFactory::Job::CanUseExistingSpdySession() const {
           url::SchemeHostPort(request_info_.url),
           request_info_.network_anonymization_key)) {
     return false;
-  }
-
-  if (is_websocket_) {
-    return try_websocket_over_http2_;
   }
 
   DCHECK(request_info_.url.SchemeIsHTTPOrHTTPS());
@@ -386,25 +371,12 @@ void HttpStreamFactory::Job::OnStreamReadyCallback(
     base::TimeTicks stream_ready_time) {
   DCHECK(stream_.get());
   DCHECK_NE(job_type_, PRECONNECT);
-  DCHECK(!is_websocket_ || try_websocket_over_http2_);
 
   base::UmaHistogramTimes("Net.HttpStreamFactory.OnStreamReadyCallbackDelay",
                           base::TimeTicks::Now() - stream_ready_time);
   MaybeCopyConnectionAttemptsFromHandle();
 
   delegate_->OnStreamReady(this);
-  // |this| may be deleted after this call.
-}
-
-void HttpStreamFactory::Job::OnWebSocketHandshakeStreamReadyCallback() {
-  DCHECK(websocket_stream_);
-  DCHECK_NE(job_type_, PRECONNECT);
-  DCHECK(is_websocket_);
-
-  MaybeCopyConnectionAttemptsFromHandle();
-
-  delegate_->OnWebSocketHandshakeStreamReady(this, proxy_info_,
-                                             std::move(websocket_stream_));
   // |this| may be deleted after this call.
 }
 
@@ -521,13 +493,7 @@ void HttpStreamFactory::Job::RunLoop(int result) {
 
     case OK:
       next_state_ = STATE_DONE;
-      if (is_websocket_) {
-        DCHECK(websocket_stream_);
-        TaskRunner(priority_)->PostTask(
-            FROM_HERE,
-            base::BindOnce(&Job::OnWebSocketHandshakeStreamReadyCallback,
-                           ptr_factory_.GetWeakPtr()));
-      } else if (stream_type_ == HttpStreamRequest::BIDIRECTIONAL_STREAM) {
+      if (stream_type_ == HttpStreamRequest::BIDIRECTIONAL_STREAM) {
         if (!bidirectional_stream_impl_) {
           TaskRunner(priority_)->PostTask(
               FROM_HERE, base::BindOnce(&Job::OnStreamFailedCallback,
@@ -678,8 +644,8 @@ int HttpStreamFactory::Job::DoInitConnectionImpl() {
 
         bool is_blocking_request_for_session;
         existing_spdy_session_ = session_->spdy_session_pool()->RequestSession(
-            spdy_session_key_, enable_ip_based_pooling_for_h2_, is_websocket_,
-            net_log_, resume_callback, this, &spdy_session_request_,
+            spdy_session_key_, enable_ip_based_pooling_for_h2_, net_log_,
+            resume_callback, this, &spdy_session_request_,
             &is_blocking_request_for_session);
         if (!existing_spdy_session_ && should_throttle_connect &&
             !is_blocking_request_for_session) {
@@ -698,8 +664,7 @@ int HttpStreamFactory::Job::DoInitConnectionImpl() {
         // callback.
         existing_spdy_session_ =
             session_->spdy_session_pool()->FindAvailableSession(
-                spdy_session_key_, enable_ip_based_pooling_for_h2_,
-                is_websocket_, net_log_);
+                spdy_session_key_, enable_ip_based_pooling_for_h2_, net_log_);
       }
     }
     if (existing_spdy_session_) {
@@ -726,7 +691,6 @@ int HttpStreamFactory::Job::DoInitConnectionImpl() {
   establishing_tunnel_ = !UsingHttpProxyWithoutTunnel();
 
   if (job_type_ == PRECONNECT) {
-    DCHECK(!is_websocket_);
     DCHECK(request_info_.socket_tag == SocketTag());
 
     // The lifetime of the preconnect tasks is not controlled by |connection_|.
@@ -746,15 +710,6 @@ int HttpStreamFactory::Job::DoInitConnectionImpl() {
   ClientSocketPool::ProxyAuthCallback proxy_auth_callback =
       base::BindRepeating(&HttpStreamFactory::Job::OnNeedsProxyAuthCallback,
                           base::Unretained(this));
-  if (is_websocket_) {
-    DCHECK(request_info_.socket_tag == SocketTag());
-    DCHECK_EQ(SecureDnsPolicy::kAllow, request_info_.secure_dns_policy);
-    return InitSocketHandleForWebSocketRequest(
-        destination_, request_info_.load_flags, priority_, session_,
-        proxy_info_, allowed_bad_certs_, request_info_.privacy_mode,
-        request_info_.network_anonymization_key, request_info_.target_network,
-        net_log_, connection_.get(), io_callback_, proxy_auth_callback);
-  }
 
   return InitSocketHandleForHttpRequest(
       destination_, request_info_.load_flags, priority_, session_, proxy_info_,
@@ -789,21 +744,6 @@ int HttpStreamFactory::Job::DoInitConnectionComplete(int result) {
       net_log_.AddEvent(NetLogEventType::HTTP_STREAM_REQUEST_PROTO, [&] {
         return NetLogHttpStreamProtoParams(negotiated_protocol_);
       });
-      if (using_spdy()) {
-        if (is_websocket_) {
-          // WebSocket is not supported over a fresh HTTP/2 connection. This
-          // should not be reachable. For the origin, we do not request HTTP/2
-          // on fresh WebSockets connections, because not all HTTP/2 servers
-          // implement RFC 8441. For proxies, WebSockets are always tunneled.
-          //
-          // TODO(davidben): This isn't a CHECK() because, previously, it was
-          // reachable in https://crbug.com/828865. However, if reachable, it
-          // means a bug in the socket pools. The socket pools have since been
-          // cleaned up, so this may no longer be reachable. Restore the CHECK
-          // and see if this is still needed.
-          return ERR_NOT_IMPLEMENTED;
-        }
-      }
     }
   }
 
@@ -922,21 +862,6 @@ int HttpStreamFactory::Job::SetSpdyHttpStreamOrBidirectionalStreamImpl(
 
   used_existing_spdy_session_ = existing_spdy_session_ != nullptr;
 
-  if (is_websocket_) {
-    DCHECK_NE(job_type_, PRECONNECT);
-      DCHECK(delegate_->websocket_handshake_stream_create_helper());
-
-    if (!try_websocket_over_http2_) {
-      // TODO(davidben): Is this reachable? We shouldn't receive a SpdySession
-      // if not requested.
-      return ERR_NOT_IMPLEMENTED;
-    }
-
-    websocket_stream_ =
-        delegate_->websocket_handshake_stream_create_helper()
-            ->CreateHttp2Stream(session, std::move(dns_aliases));
-    return OK;
-  }
   if (stream_type_ == HttpStreamRequest::BIDIRECTIONAL_STREAM) {
     bidirectional_stream_impl_ = std::make_unique<BidirectionalStreamSpdyImpl>(
         session, net_log_.source());
@@ -965,21 +890,13 @@ int HttpStreamFactory::Job::DoCreateStream() {
       return OK;
     }
     bool is_for_get_to_http_proxy = UsingHttpProxyWithoutTunnel();
-    if (is_websocket_) {
-      DCHECK_NE(job_type_, PRECONNECT);
-          DCHECK(delegate_->websocket_handshake_stream_create_helper());
-      websocket_stream_ =
-          delegate_->websocket_handshake_stream_create_helper()
-              ->CreateBasicStream(std::move(connection_),
-                                  is_for_get_to_http_proxy,
-                                  session_->websocket_endpoint_lock_manager());
-    } else {
-      if (!request_info_.is_http1_allowed) {
-        return ERR_ALPN_NEGOTIATION_FAILED;
-      }
-      stream_ = std::make_unique<HttpBasicStream>(std::move(connection_),
-                                                  is_for_get_to_http_proxy);
+
+    if (!request_info_.is_http1_allowed) {
+      return ERR_ALPN_NEGOTIATION_FAILED;
     }
+    stream_ = std::make_unique<HttpBasicStream>(std::move(connection_),
+                                                is_for_get_to_http_proxy);
+
     return OK;
   }
 
@@ -988,15 +905,9 @@ int HttpStreamFactory::Job::DoCreateStream() {
   // It is also possible that an HTTP/2 connection has been established since
   // last time Job checked above.
   if (!existing_spdy_session_) {
-    // WebSocket over HTTP/2 is only allowed to use existing HTTP/2 connections.
-    // Therefore `using_spdy()` could not have been set unless a connection had
-    // already been found.
-    DCHECK(!is_websocket_);
-
     existing_spdy_session_ =
         session_->spdy_session_pool()->FindAvailableSession(
-            spdy_session_key_, enable_ip_based_pooling_for_h2_,
-            /* is_websocket = */ false, net_log_);
+            spdy_session_key_, enable_ip_based_pooling_for_h2_, net_log_);
   }
   if (existing_spdy_session_) {
     // If we have a session, and we have a connection management config, add
@@ -1143,7 +1054,6 @@ HttpStreamFactory::JobFactory::CreateJob(
     const ProxyInfo& proxy_info,
     const std::vector<SSLConfig::CertAndStatus>& allowed_bad_certs,
     url::SchemeHostPort destination,
-    bool is_websocket,
     bool enable_ip_based_pooling_for_h2,
     NetLog* net_log,
     NextProto alternative_protocol,
@@ -1151,8 +1061,7 @@ HttpStreamFactory::JobFactory::CreateJob(
   return std::make_unique<HttpStreamFactory::Job>(
       delegate, job_type, session, request_info, priority, proxy_info,
       allowed_bad_certs, std::move(destination), alternative_protocol,
-      is_websocket, enable_ip_based_pooling_for_h2, management_config,
-      net_log);
+      enable_ip_based_pooling_for_h2, management_config, net_log);
 }
 
 bool HttpStreamFactory::Job::ShouldThrottleConnectForSpdy() const {
@@ -1184,8 +1093,7 @@ void HttpStreamFactory::Job::OnPreconnectSocketsComplete(
       CHECK(!existing_spdy_session_);
       existing_spdy_session_ =
           session_->spdy_session_pool()->FindAvailableSession(
-              spdy_session_key_, enable_ip_based_pooling_for_h2_, is_websocket_,
-              net_log_);
+              spdy_session_key_, enable_ip_based_pooling_for_h2_, net_log_);
       if (existing_spdy_session_) {
         negotiated_protocol_ = NextProto::kProtoHTTP2;
       }

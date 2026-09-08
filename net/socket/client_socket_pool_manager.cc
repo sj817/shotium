@@ -40,21 +40,13 @@ static constexpr size_t kSocketPoolTypesSize =
 std::array<size_t, kSocketPoolTypesSize> g_socket_soft_cap_per_pool =
     std::to_array<size_t>({
         256,  // kNormal
-        256   // kWebSocket
+
     });
 
-// Default to allow up to 6 connections per host. Experiment and tuning may
-// try other values (greater than 0).  Too large may cause many problems, such
-// as home routers blocking the connections!?!?  See http://crbug.com/12066.
-//
-// WebSocket connections are long-lived, and should be treated differently
-// than normal other connections. Use a limit of 255, so the limit for wss will
-// be the same as the limit for ws. Also note that Firefox uses a limit of 200.
-// See http://crbug.com/486800
 std::array<size_t, kSocketPoolTypesSize> g_max_sockets_per_group =
     std::to_array<size_t>({
-        6,   // kNormal
-        255  // kWebSocket
+        6,  // kNormal
+
     });
 
 // Returns the limit for active connections through a specific proxy chain for
@@ -62,7 +54,7 @@ std::array<size_t, kSocketPoolTypesSize> g_max_sockets_per_group =
 std::array<size_t, kSocketPoolTypesSize> g_max_sockets_per_proxy_chain =
     std::to_array<size_t>({
         128,  // kNormal
-        128   // kWebSocket
+
     });
 
 bool g_allow_size_randomization_for_proxy = true;
@@ -237,39 +229,6 @@ int InitSocketHandleForHttpRequest(
       proxy_auth_callback, ClientSocketPool::PreconnectCompletionCallback());
 }
 
-int InitSocketHandleForWebSocketRequest(
-    url::SchemeHostPort endpoint,
-    int request_load_flags,
-    RequestPriority request_priority,
-    HttpNetworkSession* session,
-    const ProxyInfo& proxy_info,
-    const std::vector<SSLConfig::CertAndStatus>& allowed_bad_certs,
-    PrivacyMode privacy_mode,
-    NetworkAnonymizationKey network_anonymization_key,
-    handles::NetworkHandle target_network,
-    const NetLogWithSource& net_log,
-    ClientSocketHandle* socket_handle,
-    CompletionOnceCallback callback,
-    const ClientSocketPool::ProxyAuthCallback& proxy_auth_callback) {
-  DCHECK(socket_handle);
-
-  // QUIC proxies are currently not supported through this method.
-  DCHECK(proxy_info.is_direct() || !proxy_info.proxy_chain().Last().is_quic());
-
-  // Expect websocket schemes (ws and wss) to be converted to the http(s)
-  // equivalent.
-  DCHECK(endpoint.scheme() == url::kHttpScheme ||
-         endpoint.scheme() == url::kHttpsScheme);
-
-  return InitSocketPoolHelper(
-      std::move(endpoint), request_load_flags, request_priority, session,
-      proxy_info, allowed_bad_certs, privacy_mode,
-      std::move(network_anonymization_key), SecureDnsPolicy::kAllow,
-      SocketTag(), target_network, net_log, 0, socket_handle,
-      HttpNetworkSession::SocketPoolType::kWebSocket, std::move(callback),
-      proxy_auth_callback, ClientSocketPool::PreconnectCompletionCallback());
-}
-
 int PreconnectSocketsForHttpRequest(
     url::SchemeHostPort endpoint,
     int request_load_flags,
@@ -284,8 +243,6 @@ int PreconnectSocketsForHttpRequest(
     const NetLogWithSource& net_log,
     int num_preconnect_streams,
     ClientSocketPool::PreconnectCompletionCallback callback) {
-  // Expect websocket schemes (ws and wss) to be converted to the http(s)
-  // equivalent.
   DCHECK(endpoint.scheme() == url::kHttpScheme ||
          endpoint.scheme() == url::kHttpsScheme);
 

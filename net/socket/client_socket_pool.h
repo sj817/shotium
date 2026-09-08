@@ -184,14 +184,6 @@ class NET_EXPORT ClientSocketPool : public LowerLayeredPool {
     handles::NetworkHandle target_network_ = handles::kInvalidNetworkHandle;
   };
 
-  // Parameters that, in combination with GroupId, proxy, websocket information,
-  // and global state, are sufficient to create a ConnectJob.
-  //
-  // DO NOT ADD ANY FIELDS TO THIS CLASS.
-  //
-  // TODO(crbug.com/40609237) In order to resolve longstanding issues
-  // related to pooling distinguishable sockets together, remove this class
-  // entirely.
   class NET_EXPORT_PRIVATE SocketParams
       : public base::RefCounted<SocketParams> {
    public:
@@ -359,8 +351,6 @@ class NET_EXPORT ClientSocketPool : public LowerLayeredPool {
   virtual base::Value GetInfoAsValue(const std::string& name,
                                      const std::string& type) const = 0;
 
-  // Returns whether a connected (idle or handed out) or connecting socket
-  // exists for the group. This method is not supported for WebSockets.
   virtual bool HasActiveSocket(const GroupId& group_id) const = 0;
 
   // Returns the maximum amount of time to wait before retrying a connect.
@@ -390,7 +380,6 @@ class NET_EXPORT ClientSocketPool : public LowerLayeredPool {
  protected:
   ClientSocketPool(size_t socket_soft_cap,
                    const ProxyChain& proxy_chain,
-                   bool is_for_websockets,
                    const CommonConnectJobParams* common_connect_job_params,
                    std::unique_ptr<ConnectJobFactory> connect_job_factory);
 
@@ -463,7 +452,7 @@ class NET_EXPORT ClientSocketPool : public LowerLayeredPool {
   std::optional<size_t> socket_soft_cap_override_for_test_ = std::nullopt;
 
   const ProxyChain proxy_chain_;
-  const bool is_for_websockets_;
+
   const raw_ptr<const CommonConnectJobParams> common_connect_job_params_;
   const std::unique_ptr<ConnectJobFactory> connect_job_factory_;
 };

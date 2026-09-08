@@ -207,9 +207,7 @@ class NET_EXPORT BidirectionalStream : public BidirectionalStreamImpl::Delegate,
   void OnBidirectionalStreamImplReady(
       const ProxyInfo& used_proxy_info,
       std::unique_ptr<BidirectionalStreamImpl> stream) override;
-  void OnWebSocketHandshakeStreamReady(
-      const ProxyInfo& used_proxy_info,
-      std::unique_ptr<WebSocketHandshakeStreamBase> stream) override;
+
   void OnStreamFailed(int status,
                       const NetErrorDetails& net_error_details,
                       const ProxyInfo& used_proxy_info,

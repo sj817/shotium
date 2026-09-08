@@ -105,8 +105,7 @@ std::unique_ptr<URLRequest> URLRequestContext::CreateRequest(
     RequestPriority priority,
     URLRequest::Delegate* delegate) const {
   return CreateRequest(url, priority, delegate, MISSING_TRAFFIC_ANNOTATION,
-                       handles::kInvalidNetworkHandle,
-                       /*is_for_websockets=*/false);
+                       handles::kInvalidNetworkHandle);
 }
 #endif
 
@@ -116,7 +115,6 @@ std::unique_ptr<URLRequest> URLRequestContext::CreateRequest(
     URLRequest::Delegate* delegate,
     NetworkTrafficAnnotationTag traffic_annotation,
     handles::NetworkHandle target_network,
-    bool is_for_websockets,
     const std::optional<net::NetLogSource> net_log_source) const {
   if (expected_target_network_for_testing().has_value() &&
       target_network != handles::kInvalidNetworkHandle) {
@@ -137,7 +135,7 @@ std::unique_ptr<URLRequest> URLRequestContext::CreateRequest(
   }
   return std::make_unique<URLRequest>(
       base::PassKey<URLRequestContext>(), url, priority, delegate, this,
-      traffic_annotation, is_for_websockets, target_network, net_log_source);
+      traffic_annotation, target_network, net_log_source);
 }
 
 void URLRequestContext::AssertNoURLRequests() const {

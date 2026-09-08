@@ -141,52 +141,6 @@ bool EarlyHintsAreAllowedOn(HttpConnectionInfo connection_info) {
   }
 }
 
-// These values are persisted to logs. Entries should not be renumbered and
-// numeric values should never be reused.
-enum class WebSocketFallbackResult {
-  kSuccessHttp11 = 0,
-  kSuccessHttp2 = 1,
-  kSuccessHttp11AfterFallback = 2,
-  kFailure = 3,
-  kFailureAfterFallback = 4,
-  kSuccessHttp3 = 5,
-  kMaxValue = kSuccessHttp3,
-};
-
-WebSocketFallbackResult CalculateWebSocketFallbackResult(
-    int result,
-    bool http_1_1_was_required,
-    HttpConnectionInfoCoarse connection_info) {
-  if (result == OK) {
-    if (connection_info == HttpConnectionInfoCoarse::kHTTP2) {
-      return WebSocketFallbackResult::kSuccessHttp2;
-    }
-    if (connection_info == HttpConnectionInfoCoarse::kQUIC) {
-      return WebSocketFallbackResult::kSuccessHttp3;
-    }
-    return http_1_1_was_required
-               ? WebSocketFallbackResult::kSuccessHttp11AfterFallback
-               : WebSocketFallbackResult::kSuccessHttp11;
-  }
-
-  return http_1_1_was_required ? WebSocketFallbackResult::kFailureAfterFallback
-                               : WebSocketFallbackResult::kFailure;
-}
-
-void RecordWebSocketFallbackResult(int result,
-                                   bool http_1_1_was_required,
-                                   HttpConnectionInfoCoarse connection_info) {
-  // `connection_info` could be kOTHER in tests.
-  if (connection_info == HttpConnectionInfoCoarse::kOTHER) {
-    return;
-  }
-
-  base::UmaHistogramEnumeration(
-      "Net.WebSocket.FallbackResult",
-      CalculateWebSocketFallbackResult(result, http_1_1_was_required,
-                                       connection_info));
-}
-
 // TODO(https://crbug.com/413557424): Remove DuplicateRequestLogger, calling
 // code, feature, and histograms once investigation is complete.
 
@@ -814,11 +768,6 @@ void HttpNetworkTransaction::SetPriority(RequestPriority priority) {
   // The above call may have resulted in deleting |*this|.
 }
 
-void HttpNetworkTransaction::SetWebSocketHandshakeStreamCreateHelper(
-    WebSocketHandshakeStreamBase::CreateHelper* create_helper) {
-  websocket_handshake_stream_base_create_helper_ = create_helper;
-}
-
 void HttpNetworkTransaction::SetConnectedCallback(
     const ConnectedCallback& callback) {
   connected_callback_ = callback;
@@ -909,12 +858,6 @@ void HttpNetworkTransaction::OnBidirectionalStreamImplReady(
     const ProxyInfo& used_proxy_info,
     std::unique_ptr<BidirectionalStreamImpl> stream) {
   NOTREACHED();
-}
-
-void HttpNetworkTransaction::OnWebSocketHandshakeStreamReady(
-    const ProxyInfo& used_proxy_info,
-    std::unique_ptr<WebSocketHandshakeStreamBase> stream) {
-  OnStreamReady(used_proxy_info, std::move(stream));
 }
 
 void HttpNetworkTransaction::OnStreamFailed(
@@ -1145,24 +1088,15 @@ int HttpNetworkTransaction::DoCreateStream() {
   // case that `DoCreateStream` is called multiple times.
   create_stream_end_time_ = base::TimeTicks();
 
-  if (ForWebSocketHandshake()) {
-    stream_request_ =
-        session_->http_stream_factory()->RequestWebSocketHandshakeStream(
-            *request_, priority_, /*allowed_bad_certs=*/observed_bad_certs_,
-            this, websocket_handshake_stream_base_create_helper_,
-            enable_ip_based_pooling_for_h2_, enable_alternative_services_,
-            net_log_);
-  } else {
-    // TODO(crbug.com/414173943): Remove this histogram timer once we confirm
-    // that time consumed by this method is different or the same for the HEv3
-    // and non-HEv3 paths.
-    base::ScopedUmaHistogramTimer histogram_timer(
-        "Net.NetworkTransaction.RequestStreamCpuTime");
-    stream_request_ = session_->http_stream_factory()->RequestStream(
-        *request_, priority_, /*allowed_bad_certs=*/observed_bad_certs_, this,
-        enable_ip_based_pooling_for_h2_, enable_alternative_services_,
-        net_log_);
-  }
+  // TODO(crbug.com/414173943): Remove this histogram timer once we confirm
+  // that time consumed by this method is different or the same for the HEv3
+  // and non-HEv3 paths.
+  base::ScopedUmaHistogramTimer histogram_timer(
+      "Net.NetworkTransaction.RequestStreamCpuTime");
+  stream_request_ = session_->http_stream_factory()->RequestStream(
+      *request_, priority_, /*allowed_bad_certs=*/observed_bad_certs_, this,
+      enable_ip_based_pooling_for_h2_, enable_alternative_services_, net_log_);
+
   DCHECK(stream_request_.get());
   return ERR_IO_PENDING;
 }
@@ -1551,12 +1485,6 @@ int HttpNetworkTransaction::DoReadHeadersComplete(int result) {
   if (result == ERR_CONNECTION_CLOSED && response_.headers.get())
     result = OK;
 
-  if (ForWebSocketHandshake()) {
-    RecordWebSocketFallbackResult(
-        result, http_1_1_was_required_,
-        HttpConnectionInfoToCoarse(response_.connection_info));
-  }
-
   if (result < 0)
     return HandleIOError(result);
 
@@ -1568,11 +1496,6 @@ int HttpNetworkTransaction::DoReadHeadersComplete(int result) {
         net_log_,
         NetLogEventType::HTTP_TRANSACTION_READ_EARLY_HINTS_RESPONSE_HEADERS,
         response_.headers.get());
-
-    // Early Hints does not make sense for a WebSocket handshake.
-    if (ForWebSocketHandshake()) {
-      return ERR_FAILED;
-    }
 
     // TODO(crbug.com/40496584): Validate headers?  "Content-Encoding" etc
     // should not appear since informational responses can't contain content.
@@ -1639,14 +1562,8 @@ int HttpNetworkTransaction::DoReadHeadersComplete(int result) {
     }
   }
 
-  // Check for an intermediate 100 Continue response.  An origin server is
-  // allowed to send this response even if we didn't ask for it, so we just
-  // need to skip over it.
-  // We treat any other 1xx in this same way unless:
-  //  * The response is 103, which is already handled above
-  //  * This is a WebSocket request, in which case we pass it on up.
-  if (response_.headers->response_code() / 100 == 1 &&
-      !ForWebSocketHandshake()) {
+  // Skip informational responses; Early Hints has already been handled above.
+  if (response_.headers->response_code() / 100 == 1) {
     response_.headers =
         base::MakeRefCounted<HttpResponseHeaders>(std::string());
     next_state_ = STATE_READ_HEADERS;
@@ -1972,8 +1889,6 @@ void HttpNetworkTransaction::GenerateNetworkErrorLoggingReport(int rv) {
 int HttpNetworkTransaction::HandleHttp11Required(int error) {
   DCHECK(error == ERR_HTTP_1_1_REQUIRED ||
          error == ERR_PROXY_HTTP_1_1_REQUIRED);
-
-  http_1_1_was_required_ = true;
 
   // HttpServerProperties should have been updated, so when the request is sent
   // again, it will automatically use HTTP/1.1.
@@ -2426,18 +2341,10 @@ GURL HttpNetworkTransaction::AuthURL(HttpAuth::Target target) const {
       return GURL(scheme + proxy_server.host_port_pair().ToString());
     }
     case HttpAuth::AUTH_SERVER:
-      if (ForWebSocketHandshake()) {
-        return ChangeWebSocketSchemeToHttpScheme(request_->url);
-      }
       return request_->url;
     default:
      return GURL();
   }
-}
-
-bool HttpNetworkTransaction::ForWebSocketHandshake() const {
-  return websocket_handshake_stream_base_create_helper_ &&
-         request_->url.SchemeIsWSOrWSS();
 }
 
 void HttpNetworkTransaction::CopyConnectionAttemptsFromStreamRequest() {
@@ -2533,9 +2440,7 @@ void HttpNetworkTransaction::RecordStreamRequestResult(int result) {
     base::TimeDelta create_time =
         create_stream_end_time_ - create_stream_start_time_;
 
-    const std::string_view histogram_base_name =
-        ForWebSocketHandshake() ? "CreateWebSocketStreamTime4"
-                                : "CreateHttpStreamTime4";
+    const std::string_view histogram_base_name = "CreateHttpStreamTime4";
     const std::string_view host_suffix =
         IsGoogleHostWithAlpnH3(url_.host()) ? ".GoogleHost" : "";
     const std::string_view protocol_suffix =
@@ -2561,24 +2466,24 @@ void HttpNetworkTransaction::RecordStreamRequestResult(int result) {
     // Record HttpStream creation time per new/existing stream/session.
     // TODO(crbug.com/414173943): Remove these histograms after we confirm
     // there is no difference between the HEv3 and the non-HEv3 paths.
-    if (!ForWebSocketHandshake()) {
-      auto is_existing = [&]() {
-        if (negotiated_protocol_ == NextProto::kProtoUnknown ||
-            negotiated_protocol_ == NextProto::kProtoHTTP11) {
-          // For HTTP/1.1 streams, `IsConnectionReused()` actually means whether
-          // the underlying socket is idle (existing) or fresh (new).
-          return stream_->IsConnectionReused();
-        }
-        CHECK(stream_request_completion_details_->session_source.has_value());
-        return *stream_request_completion_details_->session_source ==
-               SessionSource::kExisting;
-      };
-      base::UmaHistogramTimes(
-          base::StrCat({"Net.NetworkTransaction.", protocol_suffix,
-                        "StreamCreationTime3.",
-                        is_existing() ? "Existing" : "New"}),
-          create_time);
-    }
+
+    auto is_existing = [&]() {
+      if (negotiated_protocol_ == NextProto::kProtoUnknown ||
+          negotiated_protocol_ == NextProto::kProtoHTTP11) {
+        // For HTTP/1.1 streams, `IsConnectionReused()` actually means whether
+        // the underlying socket is idle (existing) or fresh (new).
+        return stream_->IsConnectionReused();
+      }
+      CHECK(stream_request_completion_details_->session_source.has_value());
+      return *stream_request_completion_details_->session_source ==
+             SessionSource::kExisting;
+    };
+    base::UmaHistogramTimes(
+        base::StrCat({"Net.NetworkTransaction.", protocol_suffix,
+                      "StreamCreationTime3.",
+                      is_existing() ? "Existing" : "New"}),
+        create_time);
+
   } else {
     base::UmaHistogramSparse("Net.NetworkTransaction.StreamRequestErrorCode4",
                              -result);

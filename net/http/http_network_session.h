@@ -30,7 +30,6 @@
 #include "net/net_buildflags.h"
 #include "net/socket/connect_job.h"
 #include "net/socket/next_proto.h"
-#include "net/socket/websocket_endpoint_lock_manager.h"
 #include "net/spdy/spdy_session_pool.h"
 #include "net/ssl/ssl_client_session_cache.h"
 #include "net/third_party/quiche/src/quiche/http2/core/spdy_protocol.h"
@@ -183,8 +182,7 @@ class NET_EXPORT HttpNetworkSession : public base::PowerSuspendObserver {
  public:
   enum class SocketPoolType {
     kNormal = 0,
-    kWebSocket = 1,
-    kMaxValue = kWebSocket,
+    kMaxValue = kNormal,
   };
 
   HttpNetworkSession(const HttpNetworkSessionParams& params,
@@ -211,9 +209,6 @@ class NET_EXPORT HttpNetworkSession : public base::PowerSuspendObserver {
 
   CertVerifier* cert_verifier() { return cert_verifier_; }
   SSLConfigService* ssl_config_service() { return ssl_config_service_; }
-  WebSocketEndpointLockManager* websocket_endpoint_lock_manager() {
-    return &websocket_endpoint_lock_manager_;
-  }
   SpdySessionPool* spdy_session_pool() { return &spdy_session_pool_; }
   HttpAuthHandlerFactory* http_auth_handler_factory() {
     return http_auth_handler_factory_;
@@ -265,12 +260,7 @@ class NET_EXPORT HttpNetworkSession : public base::PowerSuspendObserver {
   // Clear the SSL session cache.
   void ClearSSLSessionCache();
 
-  // Returns a CommonConnectJobParams that references the NetworkSession's
-  // components. If |for_websockets| is true, the Params'
-  // |websocket_endpoint_lock_manager| field will be populated. Otherwise, it
-  // will be nullptr.
-  CommonConnectJobParams CreateCommonConnectJobParams(
-      bool for_websockets = false);
+  CommonConnectJobParams CreateCommonConnectJobParams();
 
   // Rewrite the port of `endpoint` when testing fixed port is specified.
   void ApplyTestingFixedPort(url::SchemeHostPort& endpoint) const;
@@ -297,9 +287,7 @@ class NET_EXPORT HttpNetworkSession : public base::PowerSuspendObserver {
   HttpAuthCache http_auth_cache_;
   SSLClientSessionCache ssl_client_session_cache_;
   SSLClientContext ssl_client_context_;
-  WebSocketEndpointLockManager websocket_endpoint_lock_manager_;
   std::unique_ptr<ClientSocketPoolManager> normal_socket_pool_manager_;
-  std::unique_ptr<ClientSocketPoolManager> websocket_socket_pool_manager_;
   // `http_stream_pool_` needs to outlive `spdy_session_pool_` because it owns
   // SpdySessions, which own HttpStreamHandle and handles are owned by
   // `http_stream_pool_`.

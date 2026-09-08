@@ -73,7 +73,6 @@ buildflag_header("buildflags") {
     "DISABLE_FILE_SUPPORT=$disable_file_support",
     "ENABLE_MDNS=$enable_mdns",
     "ENABLE_REPORTING=$enable_reporting",
-    "ENABLE_WEBSOCKETS=$enable_websockets",
     "ENABLE_CLIENT_CERTIFICATES=$enable_client_certificates",
     "INCLUDE_TRANSPORT_SECURITY_STATE_PRELOAD_LIST=$include_transport_security_state_preload_list",
     "USE_KERBEROS=$use_kerberos",
@@ -849,12 +848,6 @@ component("net") {
     "socket/udp_socket.h",
     "socket/udp_socket_global_limits.cc",
     "socket/udp_socket_global_limits.h",
-    "socket/websocket_endpoint_lock_manager.cc",
-    "socket/websocket_endpoint_lock_manager.h",
-    "socket/websocket_stream_socket.cc",
-    "socket/websocket_stream_socket.h",
-    "socket/websocket_transport_client_socket_pool.cc",
-    "socket/websocket_transport_client_socket_pool.h",
     "spdy/alps_decoder.cc",
     "spdy/alps_decoder.h",
     "spdy/bidirectional_stream_spdy_impl.cc",
@@ -975,8 +968,6 @@ component("net") {
     "url_request/url_request_netlog_params.h",
     "url_request/url_request_redirect_job.cc",
     "url_request/url_request_redirect_job.h",
-    "url_request/websocket_handshake_userdata_key.cc",
-    "url_request/websocket_handshake_userdata_key.h",
   ]
 
   if (is_posix || is_fuchsia) {
@@ -1438,71 +1429,6 @@ component("net") {
     ]
   }
 
-  if (enable_websockets) {
-    sources += [
-      "server/http_connection.cc",
-      "server/http_connection.h",
-      "server/http_server.cc",
-      "server/http_server.h",
-      "server/http_server_request_info.cc",
-      "server/http_server_request_info.h",
-      "server/http_server_response_info.cc",
-      "server/http_server_response_info.h",
-      "server/web_socket.cc",
-      "server/web_socket.h",
-      "server/web_socket_encoder.cc",
-      "server/web_socket_encoder.h",
-      "server/web_socket_parse_result.h",
-      "websockets/websocket_basic_handshake_stream.cc",
-      "websockets/websocket_basic_handshake_stream.h",
-      "websockets/websocket_basic_stream.cc",
-      "websockets/websocket_basic_stream.h",
-      "websockets/websocket_basic_stream_adapters.cc",
-      "websockets/websocket_basic_stream_adapters.h",
-      "websockets/websocket_channel.cc",
-      "websockets/websocket_channel.h",
-      "websockets/websocket_chunk_assembler.cc",
-      "websockets/websocket_chunk_assembler.h",
-      "websockets/websocket_deflate_parameters.cc",
-      "websockets/websocket_deflate_parameters.h",
-      "websockets/websocket_deflate_predictor.h",
-      "websockets/websocket_deflate_predictor_impl.cc",
-      "websockets/websocket_deflate_predictor_impl.h",
-      "websockets/websocket_deflate_stream.cc",
-      "websockets/websocket_deflate_stream.h",
-      "websockets/websocket_deflater.cc",
-      "websockets/websocket_deflater.h",
-      "websockets/websocket_errors.cc",
-      "websockets/websocket_errors.h",
-      "websockets/websocket_event_interface.h",
-      "websockets/websocket_extension.cc",
-      "websockets/websocket_extension.h",
-      "websockets/websocket_extension_parser.cc",
-      "websockets/websocket_extension_parser.h",
-      "websockets/websocket_frame.cc",
-      "websockets/websocket_frame.h",
-      "websockets/websocket_frame_parser.cc",
-      "websockets/websocket_frame_parser.h",
-      "websockets/websocket_handshake_challenge.cc",
-      "websockets/websocket_handshake_challenge.h",
-      "websockets/websocket_handshake_constants.h",
-      "websockets/websocket_handshake_request_info.cc",
-      "websockets/websocket_handshake_request_info.h",
-      "websockets/websocket_handshake_response_info.cc",
-      "websockets/websocket_handshake_response_info.h",
-      "websockets/websocket_handshake_stream_base.cc",
-      "websockets/websocket_handshake_stream_base.h",
-      "websockets/websocket_handshake_stream_create_helper.cc",
-      "websockets/websocket_handshake_stream_create_helper.h",
-      "websockets/websocket_http2_handshake_stream.cc",
-      "websockets/websocket_http2_handshake_stream.h",
-      "websockets/websocket_inflater.cc",
-      "websockets/websocket_inflater.h",
-      "websockets/websocket_stream.cc",
-      "websockets/websocket_stream.h",
-    ]
-  }
-
   # ICU support.
   if (use_platform_icu_alternatives) {
     if (is_android) {
@@ -1710,7 +1636,6 @@ component("extras") {
   }
 }
 
-
 static_library("preload_decoder") {
   sources = [
     "extras/preload_data/decoder.cc",
@@ -1858,8 +1783,6 @@ static_library("test_support") {
     "test/embedded_test_server/connection_tracker.h",
     "test/embedded_test_server/controllable_http_response.cc",
     "test/embedded_test_server/controllable_http_response.h",
-    "test/embedded_test_server/create_websocket_handler.cc",
-    "test/embedded_test_server/create_websocket_handler.h",
     "test/embedded_test_server/default_handlers.cc",
     "test/embedded_test_server/default_handlers.h",
     "test/embedded_test_server/embedded_test_server.cc",
@@ -1880,36 +1803,12 @@ static_library("test_support") {
     "test/embedded_test_server/http_request.h",
     "test/embedded_test_server/http_response.cc",
     "test/embedded_test_server/http_response.h",
-    "test/embedded_test_server/install_default_websocket_handlers.cc",
-    "test/embedded_test_server/install_default_websocket_handlers.h",
     "test/embedded_test_server/register_basic_auth_handler.cc",
     "test/embedded_test_server/register_basic_auth_handler.h",
     "test/embedded_test_server/request_handler_util.cc",
     "test/embedded_test_server/request_handler_util.h",
     "test/embedded_test_server/simple_connection_listener.cc",
     "test/embedded_test_server/simple_connection_listener.h",
-    "test/embedded_test_server/websocket_check_origin_handler.cc",
-    "test/embedded_test_server/websocket_check_origin_handler.h",
-    "test/embedded_test_server/websocket_close_handler.cc",
-    "test/embedded_test_server/websocket_close_handler.h",
-    "test/embedded_test_server/websocket_close_immediately_handler.cc",
-    "test/embedded_test_server/websocket_close_immediately_handler.h",
-    "test/embedded_test_server/websocket_close_observer_handler.cc",
-    "test/embedded_test_server/websocket_close_observer_handler.h",
-    "test/embedded_test_server/websocket_connection.cc",
-    "test/embedded_test_server/websocket_connection.h",
-    "test/embedded_test_server/websocket_echo_handler.cc",
-    "test/embedded_test_server/websocket_echo_handler.h",
-    "test/embedded_test_server/websocket_echo_request_headers_handler.cc",
-    "test/embedded_test_server/websocket_echo_request_headers_handler.h",
-    "test/embedded_test_server/websocket_handler.cc",
-    "test/embedded_test_server/websocket_handler.h",
-    "test/embedded_test_server/websocket_message_assembler.cc",
-    "test/embedded_test_server/websocket_message_assembler.h",
-    "test/embedded_test_server/websocket_set_hsts_handler.cc",
-    "test/embedded_test_server/websocket_set_hsts_handler.h",
-    "test/embedded_test_server/websocket_split_packet_close_handler.cc",
-    "test/embedded_test_server/websocket_split_packet_close_handler.h",
     "test/event_waiter.h",
     "test/key_util.cc",
     "test/key_util.h",
@@ -2507,9 +2406,6 @@ target(_test_target_type, "net_unittests") {
     "socket/transport_client_socket_unittest.cc",
     "socket/transport_connect_job_unittest.cc",
     "socket/udp_socket_unittest.cc",
-    "socket/websocket_endpoint_lock_manager_unittest.cc",
-    "socket/websocket_stream_socket_unittest.cc",
-    "socket/websocket_transport_client_socket_pool_unittest.cc",
     "spdy/alps_decoder_test.cc",
     "spdy/bidirectional_stream_spdy_impl_unittest.cc",
     "spdy/buffered_spdy_framer_unittest.cc",
@@ -2684,15 +2580,6 @@ target(_test_target_type, "net_unittests") {
     deps += [ ":extras" ]
   }
 
-  if (enable_websockets) {
-    sources += [
-      "server/http_connection_unittest.cc",
-      "server/http_server_response_info_unittest.cc",
-      "server/http_server_unittest.cc",
-      "server/web_socket_encoder_unittest.cc",
-    ]
-  }
-
   if (is_posix) {
     sources += [ "base/sockaddr_util_posix_unittest.cc" ]
   }
@@ -2813,34 +2700,6 @@ target(_test_target_type, "net_unittests") {
 
   if (use_kerberos) {
     sources += [ "http/http_auth_handler_negotiate_unittest.cc" ]
-  }
-
-  if (enable_websockets) {
-    sources += [
-      "websockets/websocket_basic_handshake_stream_test.cc",
-      "websockets/websocket_basic_stream_adapters_test.cc",
-      "websockets/websocket_basic_stream_test.cc",
-      "websockets/websocket_channel_test.cc",
-      "websockets/websocket_deflate_parameters_test.cc",
-      "websockets/websocket_deflate_predictor_impl_test.cc",
-      "websockets/websocket_deflate_stream_test.cc",
-      "websockets/websocket_deflater_test.cc",
-      "websockets/websocket_end_to_end_test.cc",
-      "websockets/websocket_errors_test.cc",
-      "websockets/websocket_extension_parser_test.cc",
-      "websockets/websocket_extension_test.cc",
-      "websockets/websocket_frame_parser_test.cc",
-      "websockets/websocket_frame_test.cc",
-      "websockets/websocket_handshake_challenge_test.cc",
-      "websockets/websocket_handshake_stream_create_helper_test.cc",
-      "websockets/websocket_inflater_test.cc",
-      "websockets/websocket_stream_cookie_test.cc",
-      "websockets/websocket_stream_create_test_base.cc",
-      "websockets/websocket_stream_create_test_base.h",
-      "websockets/websocket_stream_test.cc",
-      "websockets/websocket_test_util.cc",
-      "websockets/websocket_test_util.h",
-    ]
   }
 
   if (!disable_file_support) {
@@ -3021,9 +2880,6 @@ if (!is_ios) {
       "//testing:run_perf_test",
     ]
 
-    if (enable_websockets) {
-      sources += [ "websockets/websocket_frame_perftest.cc" ]
-    }
     if (is_win) {
       deps += [ "//build/win:default_exe_manifest" ]
     }

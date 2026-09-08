@@ -149,21 +149,6 @@ component("ip_address_mojom_support") {
   defines = [ "IS_NETWORK_CPP_IP_ADDRESS_IMPL" ]
 }
 
-component("host_resolver_mojom_support") {
-  sources = [
-    "host_resolver_mojom_traits.cc",
-    "host_resolver_mojom_traits.h",
-  ]
-  deps = [
-    ":ip_address_mojom_support",
-    "//mojo/public/cpp/base:shared_typemap_traits",
-    "//mojo/public/mojom/base",
-    "//net",
-    "//services/network/public/mojom:mojom_host_resolver_shared",
-  ]
-  configs += [ "//build/config/compiler:wexit_time_destructors" ]
-  defines = [ "IS_NETWORK_CPP_HOST_RESOLVER_IMPL" ]
-}
 
 component("integrity_metadata_mojom_support") {
   sources = [
@@ -572,25 +557,5 @@ component("cpp_base") {
   # TODO(crbug.com/40915226): Remove the need to ignore this warning.
   if (is_win && is_component_build) {
     ldflags = [ "/IGNORE:4217" ]
-  }
-}
-
-if (is_p2p_enabled) {
-  component("cpp_p2p") {
-    output_name = "network_cpp_p2p"
-
-    sources = [
-      "p2p_param_traits.cc",
-      "p2p_param_traits.h",
-      "p2p_socket_type.h",
-    ]
-
-    defines = [ "IS_NETWORK_CPP_P2P_IMPL" ]
-
-    deps = [
-      ":network_param_mojom_support",
-      "//net",
-      "//services/network/public/mojom:mojom_shared",
-    ]
   }
 }

@@ -11,14 +11,11 @@ import "mojo/public/mojom/base/unguessable_token.mojom";
 import "services/network/public/mojom/accept_ch_frame_observer.mojom";
 import "services/network/public/mojom/chunked_data_pipe_getter.mojom";
 import "services/network/public/mojom/client_security_state.mojom";
-import "services/network/public/mojom/cookie_access_observer.mojom";
 import "services/network/public/mojom/cookie_manager.mojom";
 import "services/network/public/mojom/cors.mojom";
 import "services/network/public/mojom/data_pipe_getter.mojom";
-import "services/network/public/mojom/devtools_observer.mojom";
 import "services/network/public/mojom/fetch_api.mojom";
 import "services/network/public/mojom/fetch_retry_options.mojom";
-import "services/network/public/mojom/http_raw_headers.mojom";
 import "services/network/public/mojom/http_request_headers.mojom";
 import "services/network/public/mojom/http_response_headers.mojom";
 import "services/network/public/mojom/ip_address_space.mojom";
@@ -27,13 +24,10 @@ import "services/network/public/mojom/network_param.mojom";
 import "services/network/public/mojom/permissions_policy/permissions_policy.mojom";
 import "services/network/public/mojom/referrer_policy.mojom";
 import "services/network/public/mojom/request_priority.mojom";
-import "services/network/public/mojom/shared_dictionary_access_observer.mojom";
 import "services/network/public/mojom/site_for_cookies.mojom";
 import "services/network/public/mojom/source_type.mojom";
 import "services/network/public/mojom/storage_access_api.mojom";
-import "services/network/public/mojom/trust_token_access_observer.mojom";
 import "services/network/public/mojom/trust_tokens.mojom";
-import "services/network/public/mojom/url_loader_network_service_observer.mojom";
 import "services/network/public/mojom/url_response_head.mojom";
 import "services/network/public/mojom/web_bundle_handle.mojom";
 import "services/network/public/mojom/web_client_hints_types.mojom";
@@ -114,23 +108,6 @@ struct TrustedUrlRequestParams {
   // when it receives the AcceptCHFrame.
   EnabledClientHints? enabled_client_hints;
 
-  // Observer which should be notified when this URLRequest reads or writes
-  // a cookie. If this is set to non-null, the observer passed to
-  // URLLoaderFactory will be ignored.
-  pending_remote<CookieAccessObserver>? cookie_observer;
-
-  // Observer which should be notified when this URLRequest accesses a Trust
-  // Token. If this is set to non-null, the observer passed to
-  // URLLoaderFactory will be ignored.
-  pending_remote<TrustTokenAccessObserver>? trust_token_observer;
-
-  // Observer which should be notified when this URLRequest has authentication
-  // and certificate events. If this is set to non-null, the observer passed to
-  // URLLoaderFactory will be ignored.
-  pending_remote<URLLoaderNetworkServiceObserver>? url_loader_network_observer;
-
-  pending_remote<DevToolsObserver>? devtools_observer;
-
   // Specifies the security state of the client, for cases when the
   // URLLoaderFactory is shared among multiple clients.
   //
@@ -143,11 +120,6 @@ struct TrustedUrlRequestParams {
   // received. Can be null to signify that the requestor is not interested in
   // ACCEPT_CH frames.
   pending_remote<AcceptCHFrameObserver>? accept_ch_frame_observer;
-
-  // Observer which should be notified when this URLRequest accesses a shared
-  // dictionary. If this is set to non-null, the observer passed to
-  // URLLoaderFactory will be ignored.
-  pending_remote<SharedDictionaryAccessObserver>? shared_dictionary_observer;
 
   // A data pipe producer handle that the URLLoader will use to write the
   // response body.

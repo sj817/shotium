@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-
 #include "net/spdy/spdy_http_utils.h"
 
 #include <string>
@@ -304,28 +303,6 @@ void CreateSpdyHeadersFromHttpRequestForExtendedConnect(
   // correctly, since the header was first added before any regular headers.
   headers->insert(
       {spdy::kHttp2AuthorityHeader, GetHostAndOptionalPort(info.url)});
-}
-
-void CreateSpdyHeadersFromHttpRequestForWebSocket(
-    const GURL& url,
-    const HttpRequestHeaders& request_headers,
-    quiche::HttpHeaderBlock* headers) {
-  headers->insert({spdy::kHttp2MethodHeader, "CONNECT"});
-  headers->insert({spdy::kHttp2AuthorityHeader, GetHostAndOptionalPort(url)});
-  headers->insert({spdy::kHttp2SchemeHeader, "https"});
-  headers->insert({spdy::kHttp2PathHeader, url.PathForRequest()});
-  headers->insert({spdy::kHttp2ProtocolHeader, "websocket"});
-
-  HttpRequestHeaders::Iterator it(request_headers);
-  while (it.GetNext()) {
-    std::string name = base::ToLowerASCII(it.name());
-    if (name.empty() || name[0] == ':' || name == "upgrade" ||
-        name == "connection" || name == "proxy-connection" ||
-        name == "transfer-encoding" || name == "host") {
-      continue;
-    }
-    AddUniqueSpdyHeader(name, it.value(), headers);
-  }
 }
 
 static_assert(HIGHEST - LOWEST < 4 && HIGHEST - MINIMUM_PRIORITY < 6,

@@ -17,7 +17,6 @@
 #include "net/log/net_log_with_source.h"
 #include "net/socket/client_socket_factory.h"
 #include "net/socket/connection_attempts.h"
-#include "net/socket/websocket_stream_socket.h"
 
 namespace net {
 
@@ -101,17 +100,6 @@ int TransportConnectSubJob::DoTransportConnect() {
   });
 
   transport_socket_->ApplySocketTag(parent_job_->socket_tag());
-
-  // If there's a `websocket_endpoint_lock_manager`, then this is a WebSocket
-  // connection attempt, and a lock must be obtained on the destination endpoint
-  // before connecting. Wrap `socket` in a `WebSocketStreamSocket`, which will
-  // wait for the lock before connecting, and then release it on destruction.
-  if (parent_job_->websocket_endpoint_lock_manager()) {
-    transport_socket_ = std::make_unique<WebSocketStreamSocket>(
-        *parent_job_->websocket_endpoint_lock_manager(), CurrentAddress(),
-        std::move(transport_socket_),
-        parent_job_->params_->network_anonymization_key());
-  }
 
   // This use of base::Unretained() is safe because transport_socket_ is
   // destroyed in the destructor.

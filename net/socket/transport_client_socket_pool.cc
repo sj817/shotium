@@ -133,7 +133,6 @@ TransportClientSocketPool::TransportClientSocketPool(
     size_t max_sockets_per_group,
     base::TimeDelta unused_idle_socket_timeout,
     const ProxyChain& proxy_chain,
-    bool is_for_websockets,
     const CommonConnectJobParams* common_connect_job_params,
     bool cleanup_on_ip_address_change)
     : TransportClientSocketPool(socket_soft_cap,
@@ -141,7 +140,6 @@ TransportClientSocketPool::TransportClientSocketPool(
                                 unused_idle_socket_timeout,
                                 ClientSocketPool::used_idle_socket_timeout(),
                                 proxy_chain,
-                                is_for_websockets,
                                 common_connect_job_params,
                                 cleanup_on_ip_address_change,
                                 std::make_unique<ConnectJobFactory>(),
@@ -173,7 +171,6 @@ TransportClientSocketPool::CreateForTesting(
     base::TimeDelta unused_idle_socket_timeout,
     base::TimeDelta used_idle_socket_timeout,
     const ProxyChain& proxy_chain,
-    bool is_for_websockets,
     const CommonConnectJobParams* common_connect_job_params,
     std::unique_ptr<ConnectJobFactory> connect_job_factory,
     SSLClientContext* ssl_client_context,
@@ -181,8 +178,7 @@ TransportClientSocketPool::CreateForTesting(
   return base::WrapUnique<TransportClientSocketPool>(
       new TransportClientSocketPool(
           socket_soft_cap, max_sockets_per_group, unused_idle_socket_timeout,
-          used_idle_socket_timeout, proxy_chain, is_for_websockets,
-          common_connect_job_params,
+          used_idle_socket_timeout, proxy_chain, common_connect_job_params,
           /*cleanup_on_ip_address_change=*/true, std::move(connect_job_factory),
           ssl_client_context, connect_backup_jobs_enabled));
 }
@@ -829,7 +825,6 @@ TransportClientSocketPool::TransportClientSocketPool(
     base::TimeDelta unused_idle_socket_timeout,
     base::TimeDelta used_idle_socket_timeout,
     const ProxyChain& proxy_chain,
-    bool is_for_websockets,
     const CommonConnectJobParams* common_connect_job_params,
     bool cleanup_on_ip_address_change,
     std::unique_ptr<ConnectJobFactory> connect_job_factory,
@@ -837,7 +832,6 @@ TransportClientSocketPool::TransportClientSocketPool(
     bool connect_backup_jobs_enabled)
     : ClientSocketPool(socket_soft_cap,
                        proxy_chain,
-                       is_for_websockets,
                        common_connect_job_params,
                        std::move(connect_job_factory)),
       max_sockets_per_group_(max_sockets_per_group),

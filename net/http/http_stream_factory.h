@@ -36,7 +36,6 @@
 #include "net/socket/ssl_client_socket.h"
 #include "net/spdy/spdy_session_key.h"
 #include "net/ssl/ssl_config.h"
-#include "net/websockets/websocket_handshake_stream_base.h"
 
 namespace net {
 
@@ -59,12 +58,6 @@ class NET_EXPORT HttpStreamFactory {
     // Job that will preconnect via HTTP/1 or HTTP/2.
     PRECONNECT,
   };
-
-  // Upstream this enum also carries DNS_ALPN_H3, PRECONNECT_DNS_ALPN_H3 and
-  // WS_OVER_H3. All three name HTTP/3 jobs -- connecting on an "h3" ALPN value
-  // from an HTTPS DNS record, preconnecting the same way, and reusing an
-  // existing HTTP/3 session for WebSocket-over-Extended-CONNECT -- and all
-  // three are gone with the protocol.
 
   // This is the subset of HttpRequestInfo needed by the HttpStreamFactory
   // layer. It's separated out largely to avoid dangling pointers when jobs are
@@ -141,19 +134,6 @@ class NET_EXPORT HttpStreamFactory {
       bool enable_alternative_services,
       const NetLogWithSource& net_log);
 
-  // Request a WebSocket handshake stream.
-  // Will call delegate->OnWebSocketHandshakeStreamReady on successful
-  // completion.
-  std::unique_ptr<HttpStreamRequest> RequestWebSocketHandshakeStream(
-      const HttpRequestInfo& info,
-      RequestPriority priority,
-      const std::vector<SSLConfig::CertAndStatus>& allowed_bad_certs,
-      HttpStreamRequest::Delegate* delegate,
-      WebSocketHandshakeStreamBase::CreateHelper* create_helper,
-      bool enable_ip_based_pooling_for_h2,
-      bool enable_alternative_services,
-      const NetLogWithSource& net_log);
-
   // Request a BidirectionalStreamImpl.
   // Will call delegate->OnBidirectionalStreamImplReady on successful
   // completion.
@@ -202,9 +182,7 @@ class NET_EXPORT HttpStreamFactory {
       RequestPriority priority,
       const std::vector<SSLConfig::CertAndStatus>& allowed_bad_certs,
       HttpStreamRequest::Delegate* delegate,
-      WebSocketHandshakeStreamBase::CreateHelper* create_helper,
       HttpStreamRequest::StreamType stream_type,
-      bool is_websocket,
       bool enable_ip_based_pooling_for_h2,
       bool enable_alternative_services,
       const NetLogWithSource& net_log);

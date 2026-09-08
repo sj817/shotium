@@ -140,7 +140,6 @@ enum SpdyProtocolErrorDetails {
   SPDY_ERROR_INTERNAL_FRAMER_ERROR = 41,
   SPDY_ERROR_INVALID_CONTROL_FRAME_SIZE = 37,
   SPDY_ERROR_OVERSIZED_PAYLOAD = 40,
-
   // HttpDecoder or HttpDecoderAdapter error.
   SPDY_ERROR_HPACK_INDEX_VARINT_ERROR = 43,
   SPDY_ERROR_HPACK_NAME_LENGTH_VARINT_ERROR = 44,
@@ -179,7 +178,6 @@ enum SpdyProtocolErrorDetails {
   STATUS_CODE_UNSUPPORTED_VERSION = 14,
   STATUS_CODE_STREAM_IN_USE = 18,
   STATUS_CODE_STREAM_ALREADY_CLOSED = 19,
-
   // SpdySession errors
   PROTOCOL_ERROR_UNEXPECTED_PING = 22,
   PROTOCOL_ERROR_RST_STREAM_FOR_NON_ACTIVE_STREAM = 23,
@@ -188,7 +186,6 @@ enum SpdyProtocolErrorDetails {
   PROTOCOL_ERROR_SYN_REPLY_NOT_RECEIVED = 26,
   PROTOCOL_ERROR_INVALID_WINDOW_UPDATE_SIZE = 27,
   PROTOCOL_ERROR_RECEIVE_WINDOW_VIOLATION = 28,
-
   // Next free value.
   NUM_SPDY_PROTOCOL_ERROR_DETAILS = 60,
 };
@@ -590,9 +587,6 @@ class NET_EXPORT SpdySession
   bool WasEverUsedToCreateStreams() const {
     return streams_initiated_count_ > 0;
   }
-
-  // True if the server supports WebSocket protocol.
-  bool support_websocket() const { return support_websocket_; }
 
   // Returns true if no stream in the session can send data due to
   // session flow control.
@@ -1286,17 +1280,14 @@ class NET_EXPORT SpdySession
 
   NetLogWithSource net_log_;
 
-
   // Outside of tests, these should always be true.
   const bool enable_sending_initial_data_;
   const bool enable_ping_based_connection_checking_;
 
   const bool is_http2_enabled_;
 
-  // True if the server has advertised WebSocket support via
-  // spdy::SETTINGS_ENABLE_CONNECT_PROTOCOL, see
-  // https://tools.ietf.org/html/draft-ietf-httpbis-h2-websockets-00.
-  bool support_websocket_ = false;
+  // Tracks SETTINGS_ENABLE_CONNECT_PROTOCOL for HTTP/2 validation.
+  bool supports_extended_connect_ = false;
 
   // |connection_at_risk_of_loss_time_| is an optimization to avoid sending
   // wasteful preface pings (when we just got some data).

@@ -73,12 +73,6 @@ class HttpStreamFactory::Job
         Job* job,
         const ProxyInfo& used_proxy_info) = 0;
 
-    // Invoked when |job| has a WebSocketHandshakeStream ready.
-    virtual void OnWebSocketHandshakeStreamReady(
-        Job* job,
-        const ProxyInfo& used_proxy_info,
-        std::unique_ptr<WebSocketHandshakeStreamBase> stream) = 0;
-
     // Invoked when |job| fails to create a stream.
     virtual void OnStreamFailed(Job* job, int status) = 0;
 
@@ -116,9 +110,6 @@ class HttpStreamFactory::Job
 
     virtual const NetLogWithSource* GetNetLog() const = 0;
 
-    virtual WebSocketHandshakeStreamBase::CreateHelper*
-    websocket_handshake_stream_create_helper() = 0;
-
     virtual void MaybeSetWaitTimeForMainJob(const base::TimeDelta& delay) = 0;
   };
 
@@ -146,7 +137,6 @@ class HttpStreamFactory::Job
       const std::vector<SSLConfig::CertAndStatus>& allowed_bad_certs,
       url::SchemeHostPort destination,
       NextProto alternative_protocol,
-      bool is_websocket,
       bool enable_ip_based_pooling_for_h2,
       std::optional<ConnectionManagementConfig> management_config,
       NetLog* net_log);
@@ -181,8 +171,6 @@ class HttpStreamFactory::Job
   // spdy session.
   bool HasAvailableSpdySession() const;
 
-  // Returns true if a connected (idle or handed out) or connecting socket
-  // exists for the job. This method is not supported for WebSocket.
   bool TargettedSocketGroupHasActiveSocket() const;
 
   RequestPriority priority() const { return priority_; }
@@ -228,7 +216,6 @@ class HttpStreamFactory::Job
     // If the main job is resumed, then it races the alternative job.
     STATE_WAIT,
     STATE_WAIT_COMPLETE,
-
     STATE_INIT_CONNECTION,
     STATE_INIT_CONNECTION_COMPLETE,
     STATE_WAITING_USER_ACTION,
@@ -240,7 +227,7 @@ class HttpStreamFactory::Job
 
   void OnStreamReadyCallback(base::TimeTicks stream_ready_time);
   void OnBidirectionalStreamImplReadyCallback();
-  void OnWebSocketHandshakeStreamReadyCallback();
+
   // This callback function is called when a new SPDY session is created.
   void OnNewSpdySessionReadyCallback();
   void OnStreamFailedCallback(int result);
@@ -274,9 +261,6 @@ class HttpStreamFactory::Job
 
   void ResumeInitConnection();
 
-  // Creates a SpdyHttpStream or a BidirectionalStreamImpl from the given values
-  // and sets to |stream_| or |bidirectional_stream_impl_| respectively. Does
-  // nothing if |stream_factory_| is for WebSocket.
   int SetSpdyHttpStreamOrBidirectionalStreamImpl(
       base::WeakPtr<SpdySession> session);
 
@@ -350,19 +334,7 @@ class HttpStreamFactory::Job
 
   bool started_ = false;
 
-  // The host we are going to connect to, could be that of the origin or of the
-  // alternative service. The scheme of this is always HTTP or HTTPS, even for
-  // websockets requests. The original destination can be found in
-  // `request_info_`, which is used for the purposes of encryption.
   const url::SchemeHostPort destination_;
-
-  // True if request is for Websocket.
-  const bool is_websocket_;
-
-  // True if WebSocket request is allowed to use a WebSocket-capable existing
-  // HTTP/2 connection.  In this case FindAvailableSession() must be called with
-  // |enable_websocket = true|.
-  const bool try_websocket_over_http2_;
 
   // Enable pooling to a SpdySession with matching IP and certificate
   // even if the SpdySessionKey is different.
@@ -392,7 +364,7 @@ class HttpStreamFactory::Job
   bool establishing_tunnel_ = false;
 
   std::unique_ptr<HttpStream> stream_;
-  std::unique_ptr<WebSocketHandshakeStreamBase> websocket_stream_;
+
   std::unique_ptr<BidirectionalStreamImpl> bidirectional_stream_impl_;
 
   // Protocol negotiated with the server.
@@ -454,7 +426,6 @@ class HttpStreamFactory::JobFactory {
       const ProxyInfo& proxy_info,
       const std::vector<SSLConfig::CertAndStatus>& allowed_bad_certs,
       url::SchemeHostPort destination,
-      bool is_websocket,
       bool enable_ip_based_pooling_for_h2,
       NetLog* net_log,
       NextProto alternative_protocol,

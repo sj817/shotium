@@ -322,8 +322,6 @@ NET_EXPORT BASE_DECLARE_FEATURE(kAlpsParsing);
 // Whether ALPS parsing is on for client hint parsing specifically.
 NET_EXPORT BASE_DECLARE_FEATURE(kAlpsClientHintParsing);
 
-NET_EXPORT BASE_DECLARE_FEATURE(kEnableWebsocketsOverHttp3);
-
 #if BUILDFLAG(IS_WIN)
 // Whether or not to use the GetNetworkConnectivityHint API on modern Windows
 // versions for the Network Change Notifier.
@@ -766,13 +764,6 @@ NET_EXPORT BASE_DECLARE_FEATURE(kTlsGreaseSigalgs);
 // Enables the BackendCleanupTracker for HTTP cache backends (net::DISK_CACHE)
 // to prevent conflicts when multiple backends are created for the same path.
 NET_EXPORT BASE_DECLARE_FEATURE(kEnableBackendCleanupTrackerOnHttpCache);
-
-// If enabled, WebSocketEndpointLockManager partitions locks by
-// NetworkAnonymizationKey.
-// TODO(crbug.com/533028862): Remove the base::Feature after August 2026
-// once it has been verified safe.
-NET_EXPORT BASE_DECLARE_FEATURE(
-    kPartitionWebSocketEndpointLocksByNetworkAnonymizationKey);
 
 // Controls initial delay for broken alternative services.
 NET_EXPORT BASE_DECLARE_FEATURE(kInitialDelayForBrokenAlternativeService);

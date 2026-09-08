@@ -30,16 +30,11 @@
 #include "services/network/public/cpp/resource_request_body.h"
 #include "services/network/public/mojom/accept_ch_frame_observer.mojom.h"
 #include "services/network/public/mojom/client_security_state.mojom.h"
-#include "services/network/public/mojom/cookie_access_observer.mojom-forward.h"
 #include "services/network/public/mojom/cors.mojom-shared.h"
-#include "services/network/public/mojom/devtools_observer.mojom-forward.h"
 #include "services/network/public/mojom/fetch_api.mojom-shared.h"
 #include "services/network/public/mojom/ip_address_space.mojom-shared.h"
 #include "services/network/public/mojom/referrer_policy.mojom-shared.h"
-#include "services/network/public/mojom/shared_dictionary_access_observer.mojom.h"
-#include "services/network/public/mojom/trust_token_access_observer.mojom-forward.h"
 #include "services/network/public/mojom/trust_tokens.mojom.h"
-#include "services/network/public/mojom/url_loader_network_service_observer.mojom.h"
 #include "services/network/public/mojom/url_request.mojom-forward.h"
 #include "services/network/public/mojom/url_response_head.mojom-forward.h"
 #include "services/network/public/mojom/web_bundle_handle.mojom.h"
@@ -116,15 +111,8 @@ struct COMPONENT_EXPORT(NETWORK_CPP_BASE) ResourceRequest {
     bool allow_cookies_from_browser = false;
     bool include_request_cookies_with_response = false;
     std::optional<EnabledClientHints> enabled_client_hints;
-    mojo::PendingRemote<mojom::CookieAccessObserver> cookie_observer;
-    mojo::PendingRemote<mojom::TrustTokenAccessObserver> trust_token_observer;
-    mojo::PendingRemote<mojom::URLLoaderNetworkServiceObserver>
-        url_loader_network_observer;
-    mojo::PendingRemote<mojom::DevToolsObserver> devtools_observer;
     mojom::ClientSecurityStatePtr client_security_state;
     mojo::PendingRemote<mojom::AcceptCHFrameObserver> accept_ch_frame_observer;
-    mojo::PendingRemote<mojom::SharedDictionaryAccessObserver>
-        shared_dictionary_observer;
     // TODO(crbug.com/447039330): Consider refactoring this into a Mojo
     // interface with TakeStream() and Clone() methods, similar to the
     // PendingRemotes above, to make ownership and copying semantics more

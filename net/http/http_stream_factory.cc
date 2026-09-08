@@ -158,29 +158,10 @@ std::unique_ptr<HttpStreamRequest> HttpStreamFactory::RequestStream(
     bool enable_ip_based_pooling_for_h2,
     bool enable_alternative_services,
     const NetLogWithSource& net_log) {
-  return RequestStreamInternal(
-      request_info, priority, allowed_bad_certs, delegate, nullptr,
-      HttpStreamRequest::HTTP_STREAM,
-      /*is_websocket=*/false, enable_ip_based_pooling_for_h2,
-      enable_alternative_services, net_log);
-}
-
-std::unique_ptr<HttpStreamRequest>
-HttpStreamFactory::RequestWebSocketHandshakeStream(
-    const HttpRequestInfo& request_info,
-    RequestPriority priority,
-    const std::vector<SSLConfig::CertAndStatus>& allowed_bad_certs,
-    HttpStreamRequest::Delegate* delegate,
-    WebSocketHandshakeStreamBase::CreateHelper* create_helper,
-    bool enable_ip_based_pooling_for_h2,
-    bool enable_alternative_services,
-    const NetLogWithSource& net_log) {
-  DCHECK(create_helper);
-  return RequestStreamInternal(
-      request_info, priority, allowed_bad_certs, delegate, create_helper,
-      HttpStreamRequest::HTTP_STREAM,
-      /*is_websocket=*/true, enable_ip_based_pooling_for_h2,
-      enable_alternative_services, net_log);
+  return RequestStreamInternal(request_info, priority, allowed_bad_certs,
+                               delegate, HttpStreamRequest::HTTP_STREAM,
+                               enable_ip_based_pooling_for_h2,
+                               enable_alternative_services, net_log);
 }
 
 std::unique_ptr<HttpStreamRequest>
@@ -195,9 +176,8 @@ HttpStreamFactory::RequestBidirectionalStreamImpl(
   DCHECK(request_info.url.SchemeIs(url::kHttpsScheme));
 
   return RequestStreamInternal(
-      request_info, priority, allowed_bad_certs, delegate, nullptr,
-      HttpStreamRequest::BIDIRECTIONAL_STREAM,
-      /*is_websocket=*/false, enable_ip_based_pooling_for_h2,
+      request_info, priority, allowed_bad_certs, delegate,
+      HttpStreamRequest::BIDIRECTIONAL_STREAM, enable_ip_based_pooling_for_h2,
       enable_alternative_services, net_log);
 }
 
@@ -206,10 +186,7 @@ std::unique_ptr<HttpStreamRequest> HttpStreamFactory::RequestStreamInternal(
     RequestPriority priority,
     const std::vector<SSLConfig::CertAndStatus>& allowed_bad_certs,
     HttpStreamRequest::Delegate* delegate,
-    WebSocketHandshakeStreamBase::CreateHelper*
-        websocket_handshake_stream_create_helper,
     HttpStreamRequest::StreamType stream_type,
-    bool is_websocket,
     bool enable_ip_based_pooling_for_h2,
     bool enable_alternative_services,
     const NetLogWithSource& net_log) {
@@ -219,18 +196,16 @@ std::unique_ptr<HttpStreamRequest> HttpStreamFactory::RequestStreamInternal(
 
   auto job_controller = std::make_unique<JobController>(
       this, delegate, session_, job_factory_.get(), request_info,
-      /* is_preconnect = */ false, is_websocket, enable_ip_based_pooling_for_h2,
+      /* is_preconnect = */ false, enable_ip_based_pooling_for_h2,
       enable_alternative_services,
       // Upstream this comes from
       // QuicParams::delay_main_job_with_available_spdy_session, which defaults
       // to false and had no other setter in this build.
-      /*delay_main_job_with_available_spdy_session=*/false,
-      allowed_bad_certs);
+      /*delay_main_job_with_available_spdy_session=*/false, allowed_bad_certs);
   JobController* job_controller_raw_ptr = job_controller.get();
   job_controller_set_.insert(std::move(job_controller));
-  return job_controller_raw_ptr->Start(delegate,
-                                       websocket_handshake_stream_create_helper,
-                                       net_log, stream_type, priority);
+  return job_controller_raw_ptr->Start(delegate, net_log, stream_type,
+                                       priority);
 }
 
 void HttpStreamFactory::PreconnectStreams(int num_streams,
@@ -250,7 +225,6 @@ void HttpStreamFactory::PreconnectStreams(int num_streams,
   auto job_controller = std::make_unique<JobController>(
       this, nullptr, session_, job_factory_.get(), request_info,
       /*is_preconnect=*/true,
-      /*is_websocket=*/false,
       /*enable_ip_based_pooling_for_h2=*/true,
       /*enable_alternative_services=*/true,
       // Upstream this comes from
