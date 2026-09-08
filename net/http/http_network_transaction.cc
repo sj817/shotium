@@ -51,7 +51,6 @@
 #include "net/cert/cert_status_flags.h"
 #include "net/filter/filter_source_stream.h"
 #include "net/filter/source_stream_type.h"
-#include "net/http/bidirectional_stream_impl.h"
 #include "net/http/http_auth.h"
 #include "net/http/http_auth_controller.h"
 #include "net/http/http_auth_handler.h"
@@ -852,12 +851,6 @@ void HttpNetworkTransaction::OnStreamReady(const ProxyInfo& used_proxy_info,
 
   SetProxyInfoInResponse(used_proxy_info, &response_);
   OnIOComplete(OK);
-}
-
-void HttpNetworkTransaction::OnBidirectionalStreamImplReady(
-    const ProxyInfo& used_proxy_info,
-    std::unique_ptr<BidirectionalStreamImpl> stream) {
-  NOTREACHED();
 }
 
 void HttpNetworkTransaction::OnStreamFailed(

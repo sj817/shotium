@@ -40,7 +40,6 @@
 
 namespace net {
 
-class BidirectionalStreamImpl;
 class HttpAuthController;
 class HttpNetworkSession;
 class HttpStream;
@@ -106,9 +105,6 @@ class NET_EXPORT_PRIVATE HttpNetworkTransaction
   // HttpStreamRequest::Delegate methods:
   void OnStreamReady(const ProxyInfo& used_proxy_info,
                      std::unique_ptr<HttpStream> stream) override;
-  void OnBidirectionalStreamImplReady(
-      const ProxyInfo& used_proxy_info,
-      std::unique_ptr<BidirectionalStreamImpl> stream) override;
 
   void OnStreamFailed(int status,
                       const NetErrorDetails& net_error_details,

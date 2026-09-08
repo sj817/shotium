@@ -8,7 +8,6 @@ import "mojo/public/mojom/base/big_buffer.mojom";
 import "mojo/public/mojom/base/file_path.mojom";
 import "mojo/public/mojom/base/time.mojom";
 import "mojo/public/mojom/base/unguessable_token.mojom";
-import "services/network/public/mojom/accept_ch_frame_observer.mojom";
 import "services/network/public/mojom/chunked_data_pipe_getter.mojom";
 import "services/network/public/mojom/client_security_state.mojom";
 import "services/network/public/mojom/cookie_manager.mojom";
@@ -115,11 +114,6 @@ struct TrustedUrlRequestParams {
   // URLLoaderFactoryParams passed to the factory. Otherwise, the value from
   // the factory params is used unconditionally.
   ClientSecurityState? client_security_state;
-
-  // An observer that should be notified when an ACCEPT_CH H2/3 frame is
-  // received. Can be null to signify that the requestor is not interested in
-  // ACCEPT_CH frames.
-  pending_remote<AcceptCHFrameObserver>? accept_ch_frame_observer;
 
   // A data pipe producer handle that the URLLoader will use to write the
   // response body.

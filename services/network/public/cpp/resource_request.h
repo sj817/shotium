@@ -28,7 +28,6 @@
 #include "services/network/public/cpp/optional_trust_token_params.h"
 #include "services/network/public/cpp/permissions_policy/permissions_policy.h"
 #include "services/network/public/cpp/resource_request_body.h"
-#include "services/network/public/mojom/accept_ch_frame_observer.mojom.h"
 #include "services/network/public/mojom/client_security_state.mojom.h"
 #include "services/network/public/mojom/cors.mojom-shared.h"
 #include "services/network/public/mojom/fetch_api.mojom-shared.h"
@@ -38,6 +37,7 @@
 #include "services/network/public/mojom/url_request.mojom-forward.h"
 #include "services/network/public/mojom/url_response_head.mojom-forward.h"
 #include "services/network/public/mojom/web_bundle_handle.mojom.h"
+#include "services/network/public/mojom/web_client_hints_types.mojom-shared.h"
 #include "url/gurl.h"
 #include "url/origin.h"
 #include "url/origin_debug.h"
@@ -112,7 +112,6 @@ struct COMPONENT_EXPORT(NETWORK_CPP_BASE) ResourceRequest {
     bool include_request_cookies_with_response = false;
     std::optional<EnabledClientHints> enabled_client_hints;
     mojom::ClientSecurityStatePtr client_security_state;
-    mojo::PendingRemote<mojom::AcceptCHFrameObserver> accept_ch_frame_observer;
     // TODO(crbug.com/447039330): Consider refactoring this into a Mojo
     // interface with TakeStream() and Clone() methods, similar to the
     // PendingRemotes above, to make ownership and copying semantics more

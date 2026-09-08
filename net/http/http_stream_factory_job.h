@@ -18,7 +18,6 @@
 #include "net/base/request_priority.h"
 #include "net/dns/public/resolve_error_info.h"
 #include "net/dns/public/secure_dns_policy.h"
-#include "net/http/bidirectional_stream_impl.h"
 #include "net/http/http_auth.h"
 #include "net/http/http_auth_controller.h"
 #include "net/http/http_stream_factory.h"
@@ -67,11 +66,6 @@ class HttpStreamFactory::Job
 
     // Invoked when |job| has an HttpStream ready.
     virtual void OnStreamReady(Job* job) = 0;
-
-    // Invoked when |job| has a BidirectionalStream ready.
-    virtual void OnBidirectionalStreamImplReady(
-        Job* job,
-        const ProxyInfo& used_proxy_info) = 0;
 
     // Invoked when |job| fails to create a stream.
     virtual void OnStreamFailed(Job* job, int status) = 0;
@@ -148,7 +142,7 @@ class HttpStreamFactory::Job
 
   // Start initiates the process of creating a new HttpStream.
   // |delegate_| will be notified upon completion.
-  void Start(HttpStreamRequest::StreamType stream_type);
+  void Start();
 
   // Preconnect will attempt to request |num_streams| sockets from the
   // appropriate ClientSocketPool.
@@ -176,13 +170,8 @@ class HttpStreamFactory::Job
   RequestPriority priority() const { return priority_; }
   NextProto negotiated_protocol() const;
   const NetLogWithSource& net_log() const { return net_log_; }
-  HttpStreamRequest::StreamType stream_type() const { return stream_type_; }
 
   std::unique_ptr<HttpStream> ReleaseStream() { return std::move(stream_); }
-
-  std::unique_ptr<BidirectionalStreamImpl> ReleaseBidirectionalStream() {
-    return std::move(bidirectional_stream_impl_);
-  }
 
   bool is_waiting() const { return next_state_ == STATE_WAIT_COMPLETE; }
   const ProxyInfo& proxy_info() const;
@@ -226,7 +215,6 @@ class HttpStreamFactory::Job
   };
 
   void OnStreamReadyCallback(base::TimeTicks stream_ready_time);
-  void OnBidirectionalStreamImplReadyCallback();
 
   // This callback function is called when a new SPDY session is created.
   void OnNewSpdySessionReadyCallback();
@@ -261,8 +249,7 @@ class HttpStreamFactory::Job
 
   void ResumeInitConnection();
 
-  int SetSpdyHttpStreamOrBidirectionalStreamImpl(
-      base::WeakPtr<SpdySession> session);
+  int SetSpdyHttpStream(base::WeakPtr<SpdySession> session);
 
   // SpdySessionPool::SpdySessionRequest::Delegate implementation:
   void OnSpdySessionAvailable(base::WeakPtr<SpdySession> spdy_session) override;
@@ -365,8 +352,6 @@ class HttpStreamFactory::Job
 
   std::unique_ptr<HttpStream> stream_;
 
-  std::unique_ptr<BidirectionalStreamImpl> bidirectional_stream_impl_;
-
   // Protocol negotiated with the server.
   NextProto negotiated_protocol_ = NextProto::kProtoUnknown;
 
@@ -385,10 +370,6 @@ class HttpStreamFactory::Job
   // through an HTTPS proxy, this key corresponds to the last proxy in the proxy
   // chain and not the origin server.
   const SpdySessionKey spdy_session_key_;
-
-  // Type of stream that is requested.
-  HttpStreamRequest::StreamType stream_type_ =
-      HttpStreamRequest::BIDIRECTIONAL_STREAM;
 
   // Whether Job has continued to DoInitConnection().
   bool init_connection_already_resumed_ = false;

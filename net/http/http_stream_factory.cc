@@ -31,7 +31,6 @@
 #include "net/http/http_stream_factory_job_controller.h"
 #include "net/http/transport_security_state.h"
 #include "net/socket/socket_tag.h"
-#include "net/spdy/bidirectional_stream_spdy_impl.h"
 #include "net/spdy/spdy_http_stream.h"
 #include "net/ssl/ssl_config.h"
 #include "net/third_party/quiche/src/quiche/http2/core/spdy_alt_svc_wire_format.h"
@@ -159,26 +158,8 @@ std::unique_ptr<HttpStreamRequest> HttpStreamFactory::RequestStream(
     bool enable_alternative_services,
     const NetLogWithSource& net_log) {
   return RequestStreamInternal(request_info, priority, allowed_bad_certs,
-                               delegate, HttpStreamRequest::HTTP_STREAM,
-                               enable_ip_based_pooling_for_h2,
+                               delegate, enable_ip_based_pooling_for_h2,
                                enable_alternative_services, net_log);
-}
-
-std::unique_ptr<HttpStreamRequest>
-HttpStreamFactory::RequestBidirectionalStreamImpl(
-    const HttpRequestInfo& request_info,
-    RequestPriority priority,
-    const std::vector<SSLConfig::CertAndStatus>& allowed_bad_certs,
-    HttpStreamRequest::Delegate* delegate,
-    bool enable_ip_based_pooling_for_h2,
-    bool enable_alternative_services,
-    const NetLogWithSource& net_log) {
-  DCHECK(request_info.url.SchemeIs(url::kHttpsScheme));
-
-  return RequestStreamInternal(
-      request_info, priority, allowed_bad_certs, delegate,
-      HttpStreamRequest::BIDIRECTIONAL_STREAM, enable_ip_based_pooling_for_h2,
-      enable_alternative_services, net_log);
 }
 
 std::unique_ptr<HttpStreamRequest> HttpStreamFactory::RequestStreamInternal(
@@ -186,7 +167,6 @@ std::unique_ptr<HttpStreamRequest> HttpStreamFactory::RequestStreamInternal(
     RequestPriority priority,
     const std::vector<SSLConfig::CertAndStatus>& allowed_bad_certs,
     HttpStreamRequest::Delegate* delegate,
-    HttpStreamRequest::StreamType stream_type,
     bool enable_ip_based_pooling_for_h2,
     bool enable_alternative_services,
     const NetLogWithSource& net_log) {
@@ -204,8 +184,7 @@ std::unique_ptr<HttpStreamRequest> HttpStreamFactory::RequestStreamInternal(
       /*delay_main_job_with_available_spdy_session=*/false, allowed_bad_certs);
   JobController* job_controller_raw_ptr = job_controller.get();
   job_controller_set_.insert(std::move(job_controller));
-  return job_controller_raw_ptr->Start(delegate, net_log, stream_type,
-                                       priority);
+  return job_controller_raw_ptr->Start(delegate, net_log, priority);
 }
 
 void HttpStreamFactory::PreconnectStreams(int num_streams,

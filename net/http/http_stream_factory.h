@@ -134,20 +134,6 @@ class NET_EXPORT HttpStreamFactory {
       bool enable_alternative_services,
       const NetLogWithSource& net_log);
 
-  // Request a BidirectionalStreamImpl.
-  // Will call delegate->OnBidirectionalStreamImplReady on successful
-  // completion.
-  // TODO(crbug.com/40573539): This method is virtual to avoid cronet_test
-  // failure on iOS that is caused by Network Thread TLS getting the wrong slot.
-  virtual std::unique_ptr<HttpStreamRequest> RequestBidirectionalStreamImpl(
-      const HttpRequestInfo& info,
-      RequestPriority priority,
-      const std::vector<SSLConfig::CertAndStatus>& allowed_bad_certs,
-      HttpStreamRequest::Delegate* delegate,
-      bool enable_ip_based_pooling_for_h2,
-      bool enable_alternative_services,
-      const NetLogWithSource& net_log);
-
   // Requests that enough connections for |num_streams| be opened.
   //
   // TODO: Make this take StreamRequestInfo instead.
@@ -182,7 +168,6 @@ class NET_EXPORT HttpStreamFactory {
       RequestPriority priority,
       const std::vector<SSLConfig::CertAndStatus>& allowed_bad_certs,
       HttpStreamRequest::Delegate* delegate,
-      HttpStreamRequest::StreamType stream_type,
       bool enable_ip_based_pooling_for_h2,
       bool enable_alternative_services,
       const NetLogWithSource& net_log);

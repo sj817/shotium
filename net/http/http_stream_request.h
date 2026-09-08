@@ -28,7 +28,6 @@
 
 namespace net {
 
-class BidirectionalStreamImpl;
 class HttpAuthController;
 class HttpStream;
 class SSLCertRequestInfo;
@@ -40,12 +39,6 @@ class SSLCertRequestInfo;
 // which no callbacks will be invoked.
 class NET_EXPORT_PRIVATE HttpStreamRequest {
  public:
-  // Indicates which type of stream is requested.
-  enum StreamType {
-    BIDIRECTIONAL_STREAM,
-    HTTP_STREAM,
-  };
-
   // The HttpStreamRequest::Delegate is a set of callback methods for a
   // HttpStreamRequestJob.  Generally, only one of these methods will be
   // called as a result of a stream request.
@@ -59,10 +52,6 @@ class NET_EXPORT_PRIVATE HttpStreamRequest {
     // since the HttpStreamRequest performs the proxy resolution.
     virtual void OnStreamReady(const ProxyInfo& used_proxy_info,
                                std::unique_ptr<HttpStream> stream) = 0;
-
-    virtual void OnBidirectionalStreamImplReady(
-        const ProxyInfo& used_proxy_info,
-        std::unique_ptr<BidirectionalStreamImpl> stream) = 0;
 
     // This is the failure to create a stream case.
     // |used_proxy_info| indicates the actual ProxyInfo used for this stream,
@@ -136,9 +125,7 @@ class NET_EXPORT_PRIVATE HttpStreamRequest {
 
   // Request will notify `helper` when it's destructed.
   // Thus `helper` is valid for the lifetime of the `this` Request.
-  HttpStreamRequest(Helper* helper,
-                    const NetLogWithSource& net_log,
-                    StreamType stream_type);
+  HttpStreamRequest(Helper* helper, const NetLogWithSource& net_log);
 
   HttpStreamRequest(const HttpStreamRequest&) = delete;
   HttpStreamRequest& operator=(const HttpStreamRequest&) = delete;
@@ -184,8 +171,6 @@ class NET_EXPORT_PRIVATE HttpStreamRequest {
 
   const NetLogWithSource& net_log() const { return net_log_; }
 
-  StreamType stream_type() const { return stream_type_; }
-
   bool completed() const { return completion_details_.has_value(); }
 
   void SetDnsResolutionTimeOverrides(
@@ -222,7 +207,6 @@ class NET_EXPORT_PRIVATE HttpStreamRequest {
 
   std::optional<CompletionDetails> completion_details_;
   ConnectionAttempts connection_attempts_;
-  const StreamType stream_type_;
 
   base::TimeTicks dns_resolution_start_time_override_;
   base::TimeTicks dns_resolution_end_time_override_;

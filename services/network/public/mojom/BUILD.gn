@@ -504,7 +504,6 @@ mojom("mojom_origin_or_wildcard_header_value") {
 mojom("url_loader_base") {
   generate_java = true
   sources = [
-    "accept_ch_frame_observer.mojom",
     "blocked_by_response_reason.mojom",
     "chunked_data_pipe_getter.mojom",
     "client_security_state.mojom",

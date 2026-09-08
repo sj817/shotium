@@ -28,7 +28,6 @@
 #include "net/base/url_util.h"
 #include "net/http/alternate_protocol_usage.h"
 #include "net/http/alternative_service.h"
-#include "net/http/bidirectional_stream_impl.h"
 #include "net/http/http_stream.h"
 #include "net/http/http_stream_factory.h"
 #include "net/http/http_stream_key.h"
@@ -194,15 +193,12 @@ HttpStreamFactory::JobController::~JobController() {
 std::unique_ptr<HttpStreamRequest> HttpStreamFactory::JobController::Start(
     HttpStreamRequest::Delegate* delegate,
     const NetLogWithSource& source_net_log,
-    HttpStreamRequest::StreamType stream_type,
     RequestPriority priority) {
   DCHECK(!request_);
 
-  stream_type_ = stream_type;
   priority_ = priority;
 
-  auto request =
-      std::make_unique<HttpStreamRequest>(this, source_net_log, stream_type);
+  auto request = std::make_unique<HttpStreamRequest>(this, source_net_log);
   // Keep a raw pointer but release ownership of HttpStreamRequest instance.
   request_ = request.get();
 
@@ -225,7 +221,6 @@ void HttpStreamFactory::JobController::Preconnect(int num_streams,
   DCHECK(!alternative_job_);
   DCHECK(is_preconnect_);
 
-  stream_type_ = HttpStreamRequest::HTTP_STREAM;
   num_streams_ = num_streams;
   preconnect_callback_ = std::move(callback);
 
@@ -306,7 +301,6 @@ void HttpStreamFactory::JobController::OnStreamReady(Job* job) {
     return;
   }
 
-  DCHECK_EQ(HttpStreamRequest::HTTP_STREAM, request_->stream_type());
   OnJobSucceeded(job);
 
   // TODO(bnc): Remove when https://crbug.com/461981 is fixed.
@@ -316,34 +310,6 @@ void HttpStreamFactory::JobController::OnStreamReady(Job* job) {
 
   HistogramProxyUsed(job->proxy_info(), /*success=*/true);
   delegate_->OnStreamReady(job->proxy_info(), std::move(stream));
-}
-
-void HttpStreamFactory::JobController::OnBidirectionalStreamImplReady(
-    Job* job,
-    const ProxyInfo& used_proxy_info) {
-  DCHECK(job);
-
-  if (IsJobOrphaned(job)) {
-    // We have bound a job to the associated HttpStreamRequest, |job| has been
-    // orphaned.
-    OnOrphanedJobComplete(job);
-    return;
-  }
-
-  MarkRequestComplete(job);
-
-  if (!request_) {
-    return;
-  }
-  std::unique_ptr<BidirectionalStreamImpl> stream =
-      job->ReleaseBidirectionalStream();
-  DCHECK(stream);
-
-  DCHECK_EQ(HttpStreamRequest::BIDIRECTIONAL_STREAM, request_->stream_type());
-
-  OnJobSucceeded(job);
-  DCHECK(request_->completed());
-  delegate_->OnBidirectionalStreamImplReady(used_proxy_info, std::move(stream));
 }
 
 void HttpStreamFactory::JobController::OnStreamFailed(Job* job, int status) {
@@ -656,8 +622,7 @@ void HttpStreamFactory::JobController::CreateJobs() {
 
   // Create an alternative job if alternative service is set up for this domain.
   // This is applicable even if the connection will be made via a proxy.
-  advertised_alt_svc_ =
-      GetAdvertisedAltSvcFor(request_info_, delegate_, stream_type_);
+  advertised_alt_svc_ = GetAdvertisedAltSvcFor(request_info_, delegate_);
 
   if (session_->host_resolver()->IsHappyEyeballsV3Enabled() &&
       proxy_info_.is_direct() && request_info_.socket_tag == SocketTag()) {
@@ -730,11 +695,11 @@ void HttpStreamFactory::JobController::CreateJobs() {
   }
 
   if (alternative_job_) {
-    alternative_job_->Start(request_->stream_type());
+    alternative_job_->Start();
   }
 
   if (main_job_) {
-    main_job_->Start(request_->stream_type());
+    main_job_->Start();
   }
   return;
 }
@@ -907,14 +872,13 @@ void HttpStreamFactory::JobController::MaybeNotifyFactoryOfCompletion() {
 HttpStreamFactory::JobController::AdvertisedAlternativeService
 HttpStreamFactory::JobController::GetAdvertisedAltSvcFor(
     const StreamRequestInfo& request_info,
-    HttpStreamRequest::Delegate* delegate,
-    HttpStreamRequest::StreamType stream_type) {
+    HttpStreamRequest::Delegate* delegate) {
   if (!enable_alternative_services_) {
     return AdvertisedAlternativeService();
   }
 
   AdvertisedAlternativeService alternative_service_info =
-      GetAdvertisedAltSvcInternal(request_info, delegate, stream_type);
+      GetAdvertisedAltSvcInternal(request_info, delegate);
   AlternativeServiceType type;
   if (alternative_service_info.info.protocol() == NextProto::kProtoUnknown) {
     type = NO_ALTERNATIVE_SERVICE;
@@ -934,8 +898,7 @@ HttpStreamFactory::JobController::GetAdvertisedAltSvcFor(
 HttpStreamFactory::JobController::AdvertisedAlternativeService
 HttpStreamFactory::JobController::GetAdvertisedAltSvcInternal(
     const StreamRequestInfo& request_info,
-    HttpStreamRequest::Delegate* delegate,
-    HttpStreamRequest::StreamType stream_type) {
+    HttpStreamRequest::Delegate* delegate) {
   if (!request_info.url.SchemeIs(url::kHttpsScheme)) {
     return AdvertisedAlternativeService();
   }
@@ -1035,17 +998,16 @@ HttpStreamFactory::JobController::CalculateAlternateProtocolUsage(
 
 void HttpStreamFactory::JobController::SwitchToHttpStreamPool() {
   CHECK(request_info_.socket_tag == SocketTag());
-  CHECK_EQ(stream_type_, HttpStreamRequest::HTTP_STREAM);
+
   CHECK(session_->host_resolver()->IsHappyEyeballsV3Enabled());
 
   switched_to_http_stream_pool_ = true;
 
   bool disable_cert_network_fetches =
       disable_cert_verification_network_fetches();
-  NextProtoSet allowed_alpns =
-      request_info_.is_http1_allowed
-          ? NextProtoSet::All()
-          : NextProtoSet{NextProto::kProtoHTTP2};
+  NextProtoSet allowed_alpns = request_info_.is_http1_allowed
+                                   ? NextProtoSet::All()
+                                   : NextProtoSet{NextProto::kProtoHTTP2};
   url::SchemeHostPort destination(request_info_.url);
   session_->ApplyTestingFixedPort(destination);
   HttpStreamPoolRequestInfo pool_request_info(

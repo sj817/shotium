@@ -22,7 +22,6 @@
 #include "services/network/public/cpp/http_request_headers_update_params.h"
 #include "services/network/public/cpp/resource_request.h"
 #include "services/network/public/cpp/shared_url_loader_factory.h"
-#include "services/network/public/mojom/accept_ch_frame_observer.mojom.h"
 #include "services/network/public/mojom/url_loader.mojom.h"
 #include "services/network/public/mojom/url_loader_factory.mojom-forward.h"
 #include "services/network/public/mojom/url_response_head.mojom-forward.h"

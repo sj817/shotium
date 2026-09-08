@@ -31,7 +31,6 @@
 #include "net/base/url_util.h"
 #include "net/cert/cert_verifier.h"
 #include "net/dns/public/secure_dns_policy.h"
-#include "net/http/bidirectional_stream_impl.h"
 #include "net/http/http_basic_stream.h"
 #include "net/http/http_connection_info.h"
 #include "net/http/http_network_session.h"
@@ -48,7 +47,6 @@
 #include "net/socket/next_proto.h"
 #include "net/socket/ssl_client_socket.h"
 #include "net/socket/stream_socket.h"
-#include "net/spdy/bidirectional_stream_spdy_impl.h"
 #include "net/spdy/multiplexed_session_creation_initiator.h"
 #include "net/spdy/spdy_http_stream.h"
 #include "net/spdy/spdy_session.h"
@@ -178,9 +176,8 @@ HttpStreamFactory::Job::~Job() {
   }
 }
 
-void HttpStreamFactory::Job::Start(HttpStreamRequest::StreamType stream_type) {
+void HttpStreamFactory::Job::Start() {
   started_ = true;
-  stream_type_ = stream_type;
 
   const NetLogWithSource* delegate_net_log = delegate_->GetNetLog();
   if (delegate_net_log) {
@@ -380,15 +377,6 @@ void HttpStreamFactory::Job::OnStreamReadyCallback(
   // |this| may be deleted after this call.
 }
 
-void HttpStreamFactory::Job::OnBidirectionalStreamImplReadyCallback() {
-  DCHECK(bidirectional_stream_impl_);
-
-  MaybeCopyConnectionAttemptsFromHandle();
-
-  delegate_->OnBidirectionalStreamImplReady(this, proxy_info_);
-  // |this| may be deleted after this call.
-}
-
 void HttpStreamFactory::Job::OnStreamFailedCallback(int result) {
   DCHECK_NE(job_type_, PRECONNECT);
 
@@ -493,24 +481,13 @@ void HttpStreamFactory::Job::RunLoop(int result) {
 
     case OK:
       next_state_ = STATE_DONE;
-      if (stream_type_ == HttpStreamRequest::BIDIRECTIONAL_STREAM) {
-        if (!bidirectional_stream_impl_) {
-          TaskRunner(priority_)->PostTask(
-              FROM_HERE, base::BindOnce(&Job::OnStreamFailedCallback,
-                                        ptr_factory_.GetWeakPtr(), ERR_FAILED));
-        } else {
-          TaskRunner(priority_)->PostTask(
-              FROM_HERE,
-              base::BindOnce(&Job::OnBidirectionalStreamImplReadyCallback,
-                             ptr_factory_.GetWeakPtr()));
-        }
-      } else {
-        DCHECK(stream_.get());
-        TaskRunner(priority_)->PostTask(
-            FROM_HERE,
-            base::BindOnce(&Job::OnStreamReadyCallback,
-                           ptr_factory_.GetWeakPtr(), base::TimeTicks::Now()));
-      }
+
+      DCHECK(stream_.get());
+      TaskRunner(priority_)->PostTask(
+          FROM_HERE,
+          base::BindOnce(&Job::OnStreamReadyCallback, ptr_factory_.GetWeakPtr(),
+                         base::TimeTicks::Now()));
+
       return;
 
     default:
@@ -854,19 +831,13 @@ int HttpStreamFactory::Job::DoWaitingUserAction(int result) {
   return ERR_IO_PENDING;
 }
 
-int HttpStreamFactory::Job::SetSpdyHttpStreamOrBidirectionalStreamImpl(
+int HttpStreamFactory::Job::SetSpdyHttpStream(
     base::WeakPtr<SpdySession> session) {
   DCHECK(using_spdy());
   auto dns_aliases = session_->spdy_session_pool()->GetDnsAliasesForSessionKey(
       spdy_session_key_);
 
   used_existing_spdy_session_ = existing_spdy_session_ != nullptr;
-
-  if (stream_type_ == HttpStreamRequest::BIDIRECTIONAL_STREAM) {
-    bidirectional_stream_impl_ = std::make_unique<BidirectionalStreamSpdyImpl>(
-        session, net_log_.source());
-    return OK;
-  }
 
   // TODO(willchan): Delete this code, because eventually, the HttpStreamFactory
   // will be creating all the SpdyHttpStreams, since it will know when
@@ -928,8 +899,7 @@ int HttpStreamFactory::Job::DoCreateStream() {
       return OK;
     }
 
-    int set_result =
-        SetSpdyHttpStreamOrBidirectionalStreamImpl(existing_spdy_session_);
+    int set_result = SetSpdyHttpStream(existing_spdy_session_);
     existing_spdy_session_.reset();
     return set_result;
   }
@@ -965,9 +935,7 @@ int HttpStreamFactory::Job::DoCreateStream() {
     return OK;
   }
 
-  // Create a SpdyHttpStream or a BidirectionalStreamImpl attached to the
-  // session.
-  return SetSpdyHttpStreamOrBidirectionalStreamImpl(spdy_session);
+  return SetSpdyHttpStream(spdy_session);
 }
 
 int HttpStreamFactory::Job::DoCreateStreamComplete(int result) {

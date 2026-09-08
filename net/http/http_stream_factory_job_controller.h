@@ -59,7 +59,6 @@ class HttpStreamFactory::JobController
   std::unique_ptr<HttpStreamRequest> Start(
       HttpStreamRequest::Delegate* delegate,
       const NetLogWithSource& source_net_log,
-      HttpStreamRequest::StreamType stream_type,
       RequestPriority priority);
 
   void Preconnect(int num_streams, base::OnceClosure callback);
@@ -83,11 +82,6 @@ class HttpStreamFactory::JobController
   // From HttpStreamFactory::Job::Delegate.
   // Invoked when |job| has an HttpStream ready.
   void OnStreamReady(Job* job) override;
-
-  // Invoked when |job| has a BidirectionalStream ready.
-  void OnBidirectionalStreamImplReady(
-      Job* job,
-      const ProxyInfo& used_proxy_info) override;
 
   // Invoked when |job| fails to create a stream.
   void OnStreamFailed(Job* job, int status) override;
@@ -207,13 +201,11 @@ class HttpStreamFactory::JobController
 
   AdvertisedAlternativeService GetAdvertisedAltSvcFor(
       const StreamRequestInfo& request_info,
-      HttpStreamRequest::Delegate* delegate,
-      HttpStreamRequest::StreamType stream_type);
+      HttpStreamRequest::Delegate* delegate);
 
   AdvertisedAlternativeService GetAdvertisedAltSvcInternal(
       const StreamRequestInfo& request_info,
-      HttpStreamRequest::Delegate* delegate,
-      HttpStreamRequest::StreamType stream_type);
+      HttpStreamRequest::Delegate* delegate);
 
   // Records histogram metrics for the usage of alternative protocol. Must be
   // called when |job| has succeeded and the other job will be orphaned.
@@ -315,7 +307,7 @@ class HttpStreamFactory::JobController
   const std::vector<SSLConfig::CertAndStatus> allowed_bad_certs_;
   int num_streams_ = 0;
   base::OnceClosure preconnect_callback_;
-  HttpStreamRequest::StreamType stream_type_;
+
   RequestPriority priority_ = IDLE;
 
   // Used to measure how long it takes to create a stream.

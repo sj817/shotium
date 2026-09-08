@@ -8,18 +8,15 @@
 
 #include "base/check.h"
 #include "base/functional/callback.h"
-#include "net/http/bidirectional_stream_impl.h"
 #include "net/log/net_log_event_type.h"
-#include "net/spdy/bidirectional_stream_spdy_impl.h"
 #include "net/spdy/spdy_http_stream.h"
 #include "net/spdy/spdy_session.h"
 
 namespace net {
 
 HttpStreamRequest::HttpStreamRequest(Helper* helper,
-                                     const NetLogWithSource& net_log,
-                                     StreamType stream_type)
-    : helper_(helper), net_log_(net_log), stream_type_(stream_type) {
+                                     const NetLogWithSource& net_log)
+    : helper_(helper), net_log_(net_log) {
   net_log_.BeginEvent(NetLogEventType::HTTP_STREAM_REQUEST);
 }
 

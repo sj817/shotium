@@ -44,19 +44,6 @@ bool ResourceRequest::TrustedParams::EnabledClientHints::operator==(
 
 namespace {
 
-mojo::PendingRemote<mojom::AcceptCHFrameObserver> Clone(
-    mojo::PendingRemote<mojom::AcceptCHFrameObserver>& observer) {
-  if (!observer) {
-    return mojo::NullRemote();
-  }
-  TRACE_EVENT("loading", "AcceptCHFrameObserver.copy");
-  mojo::Remote<mojom::AcceptCHFrameObserver> remote(std::move(observer));
-  mojo::PendingRemote<mojom::AcceptCHFrameObserver> new_remote;
-  remote->Clone(new_remote.InitWithNewPipeAndPassReceiver());
-  observer = remote.Unbind();
-  return new_remote;
-}
-
 // Returns true iff either holds true:
 //
 //  - both |lhs| and |rhs| are nullopt, or
@@ -120,9 +107,6 @@ ResourceRequest::TrustedParams& ResourceRequest::TrustedParams::operator=(
       other.include_request_cookies_with_response;
   enabled_client_hints = other.enabled_client_hints;
   client_security_state = other.client_security_state.Clone();
-  accept_ch_frame_observer =
-      Clone(const_cast<mojo::PendingRemote<mojom::AcceptCHFrameObserver>&>(
-          other.accept_ch_frame_observer));
   response_body_stream = other.response_body_stream;
   expected_response_headers_for_synthetic_response =
       other.expected_response_headers_for_synthetic_response;
