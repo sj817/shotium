@@ -102,7 +102,6 @@ component("gfx") {
     "image/image_skia_source.h",
     "image/image_util.cc",
     "image/image_util.h",
-    "native_ui_util.h",
     "platform_font.cc",
     "platform_font.h",
     "scrollbar_size.cc",
@@ -232,13 +231,6 @@ component("gfx") {
       "image/image_util_mac.mm",
       "mac/coordinate_conversion.h",
       "mac/coordinate_conversion.mm",
-      "mac/menu_text_elider_mac.h",
-      "mac/menu_text_elider_mac.mm",
-      "mac/nswindow_frame_controls.h",
-      "mac/nswindow_frame_controls.mm",
-      "mac/scoped_cocoa_disable_screen_updates.h",
-      "mac/scoped_cocoa_disable_screen_updates.mm",
-      "native_ui_util_mac.mm",
       "platform_font_mac.h",
       "platform_font_mac.mm",
       "scoped_cg_context_save_gstate_mac.h",
@@ -288,28 +280,18 @@ component("gfx") {
       "path_win.h",
       "system_fonts_win.cc",
       "system_fonts_win.h",
-      "win/crash_id_helper.cc",
-      "win/crash_id_helper.h",
       "win/direct_write.cc",
       "win/direct_write.h",
       "win/gdi_util.cc",
       "win/gdi_util.h",
-      "win/get_elevation_icon.cc",
-      "win/get_elevation_icon.h",
       "win/hwnd_util.cc",
       "win/hwnd_util.h",
       "win/icon_util.cc",
       "win/icon_util.h",
       "win/msg_util.h",
-      "win/physical_size.cc",
-      "win/physical_size.h",
-      "win/rendering_window_manager.cc",
-      "win/rendering_window_manager.h",
       "win/scoped_set_map_mode.h",
       "win/singleton_hwnd.cc",
       "win/singleton_hwnd.h",
-      "win/singleton_hwnd_hot_key_observer.cc",
-      "win/singleton_hwnd_hot_key_observer.h",
       "win/text_analysis_source.cc",
       "win/text_analysis_source.h",
       "win/window_impl.cc",
@@ -322,7 +304,6 @@ component("gfx") {
       "onecore.lib",
     ]
     all_dependent_configs = [ ":gfx_win_linker_flags" ]
-    public_deps += [ "//components/crash/core/common" ]
   }
 
   if (use_blink) {
@@ -381,9 +362,6 @@ component("gfx") {
     ]
   }
 
-  if (use_aura) {
-    sources += [ "native_ui_util_aura.cc" ]
-  }
 }
 
 component("color_space") {
@@ -622,7 +600,6 @@ test("gfx_unittests") {
       "mac/coordinate_conversion_unittest.mm",
       "mac/display_icc_profiles_unittest.cc",
       "mac/io_surface_unittest.cc",
-      "mac/menu_text_elider_mac_unittest.mm",
       "platform_font_mac_unittest.mm",
       "range/range_mac_unittest.mm",
     ]
@@ -630,7 +607,6 @@ test("gfx_unittests") {
   if (is_win) {
     sources += [
       "font_fallback_win_unittest.cc",
-      "win/get_elevation_icon_unittest.cc",
       "win/hwnd_util_unittest.cc",
     ]
   }
@@ -771,7 +747,6 @@ test("gfx_unittests") {
       "font_render_params_win_unittest.cc",
       "font_util_win.cc",
       "path_win_unittest.cc",
-      "win/crash_id_helper_unittest.cc",
       "win/direct_write_unittest.cc",
       "win/icon_util_unittest.cc",
       "win/icon_util_unittests.rc",

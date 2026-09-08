@@ -39,7 +39,6 @@
 #include "third_party/icu/source/common/unicode/uloc.h"
 #include "ui/base/buildflags.h"
 #include "ui/base/l10n/chromium_language_matcher.h"
-#include "ui/base/l10n/l10n_util_collator.h"
 #include "ui/base/resource/resource_bundle.h"
 #include "ui/base/ui_base_paths.h"
 

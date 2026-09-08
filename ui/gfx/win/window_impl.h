@@ -40,9 +40,7 @@ class MessageMapInterface {
 ///////////////////////////////////////////////////////////////////////////////
 class COMPONENT_EXPORT(GFX) WindowImpl : public MessageMapInterface {
  public:
-  // |debugging_id| is reported with crashes to help attribute the code that
-  // created the WindowImpl.
-  explicit WindowImpl(const std::string& debugging_id = std::string());
+  WindowImpl();
 
   WindowImpl(const WindowImpl&) = delete;
   WindowImpl& operator=(const WindowImpl&) = delete;
@@ -85,8 +83,6 @@ class COMPONENT_EXPORT(GFX) WindowImpl : public MessageMapInterface {
   }
   UINT initial_class_style() const { return class_style_; }
 
-  const std::string& debugging_id() const { return debugging_id_; }
-
  protected:
   // Handles the WndProc callback for this object.
   virtual LRESULT OnWndProc(UINT message, WPARAM w_param, LPARAM l_param);
@@ -112,8 +108,6 @@ class COMPONENT_EXPORT(GFX) WindowImpl : public MessageMapInterface {
 
   // All classes registered by WindowImpl start with this name.
   static const wchar_t* const kBaseClassName;
-
-  const std::string debugging_id_;
 
   // Window Styles used when creating the window.
   DWORD window_style_ = 0;

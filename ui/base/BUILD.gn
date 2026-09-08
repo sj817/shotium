@@ -109,23 +109,16 @@ component("base") {
     "default_style.h",
     "l10n/chromium_language_matcher.cc",
     "l10n/chromium_language_matcher.h",
-    "l10n/formatter.cc",
-    "l10n/formatter.h",
     "l10n/l10n_font_util.cc",
     "l10n/l10n_font_util.h",
     "l10n/l10n_util.cc",
     "l10n/l10n_util.h",
-    "l10n/l10n_util_collator.h",
-    "l10n/time_format.cc",
-    "l10n/time_format.h",
     "models/menu_separator_types.h",
     "page_transition_types.cc",
     "page_transition_types.h",
     "resource/allowlist.h",
     "resource/resource_bundle.cc",
     "resource/resource_bundle.h",
-    "resource/scoped_startup_resource_bundle.cc",
-    "resource/scoped_startup_resource_bundle.h",
     "ui_base_paths.cc",
     "ui_base_paths.h",
     "ui_base_switches.h",
@@ -178,8 +171,6 @@ component("base") {
     sources += [
       "emoji/emoji_panel_helper.h",
       "pointer/pointer_device.h",
-      "text/bytes_formatting.cc",
-      "text/bytes_formatting.h",
     ]
 
     if (is_linux || is_chromeos) {
@@ -598,7 +589,6 @@ test("ui_base_unittests") {
 
   sources = [
     "l10n/l10n_util_unittest.cc",
-    "l10n/time_format_unittest.cc",
     "prediction/prediction_unittest_helpers.h",
     "resource/data_pack_literal.cc",
     "resource/data_pack_literal.h",
@@ -629,8 +619,6 @@ test("ui_base_unittests") {
     "//ui/base:test_support",
     "//ui/base/clipboard:clipboard_types",
     "//ui/base/cursor:unittests",
-    "//ui/base/identifier:unit_tests",
-    "//ui/base/metadata:metadata_tests",
     "//ui/color",
     "//ui/display",
     "//ui/gfx:test_support",
@@ -642,10 +630,6 @@ test("ui_base_unittests") {
 
   if (is_mac || is_win || is_linux || is_chromeos) {
     deps += [ "//ui/events:events_base" ]
-  }
-
-  if (is_win || is_mac || is_linux || is_chromeos || is_android) {
-    deps += [ "//ui/base/unowned_user_data:unit_tests" ]
   }
 
   if (is_mac) {
@@ -668,7 +652,6 @@ test("ui_base_unittests") {
     ]
     deps += [ ":l10n_util_ios" ]
   } else {  # !is_ios
-    sources += [ "text/bytes_formatting_unittest.cc" ]
   }
 
   if (use_blink) {

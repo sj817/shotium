@@ -20,7 +20,6 @@
 #include "base/win/resource_exhaustion.h"
 #include "base/win/win_util.h"
 #include "base/win/wrapped_window_proc.h"
-#include "ui/gfx/win/crash_id_helper.h"
 #include "ui/gfx/win/hwnd_util.h"
 
 namespace gfx {
@@ -181,8 +180,7 @@ ClassRegistrar::ClassRegistrar() = default;
 ///////////////////////////////////////////////////////////////////////////////
 // WindowImpl, public
 
-WindowImpl::WindowImpl(const std::string& debugging_id)
-    : debugging_id_(debugging_id), class_style_(CS_DBLCLKS) {}
+WindowImpl::WindowImpl() : class_style_(CS_DBLCLKS) {}
 
 WindowImpl::~WindowImpl() {
   ClearUserData();
@@ -304,8 +302,6 @@ LRESULT CALLBACK WindowImpl::WndProc(HWND hwnd,
   if (!window)
     return DefWindowProc(hwnd, message, w_param, l_param);
 
-  auto logger =
-      CrashIdHelper::Get()->OnWillProcessMessages(window->debugging_id_);
   return window->OnWndProc(message, w_param, l_param);
 }
 
