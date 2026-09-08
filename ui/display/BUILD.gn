@@ -35,16 +35,12 @@ component("display") {
     "display_observer.h",
     "display_switches.cc",
     "display_switches.h",
-    "display_transform.cc",
-    "display_transform.h",
     "display_util.cc",
     "display_util.h",
     "headless/headless_screen_manager.cc",
     "headless/headless_screen_manager.h",
     "headless/headless_screen_util.cc",
     "headless/headless_screen_util.h",
-    "scoped_display_for_new_windows.cc",
-    "scoped_display_for_new_windows.h",
     "screen.cc",
     "screen.h",
     "screen_base.cc",
@@ -55,8 +51,6 @@ component("display") {
     "screen_infos.h",
     "tablet_state.cc",
     "tablet_state.h",
-    "unified_desktop_utils.cc",
-    "unified_desktop_utils.h",
   ]
 
   if (is_android) {
@@ -73,8 +67,6 @@ component("display") {
 
   if (is_win) {
     sources += [
-      "win/audio_edid_scan.cc",
-      "win/audio_edid_scan.h",
       "win/base_window_finder_win.cc",
       "win/base_window_finder_win.h",
       "win/color_profile_reader.cc",
@@ -265,7 +257,6 @@ test("display_unittests") {
     "mojom/display_mojom_traits_unittest.cc",
     "mojom/screen_infos_mojom_traits_unittest.cc",
     "screen_unittest.cc",
-    "unified_desktop_utils_unittest.cc",
     "util/display_util_unittest.cc",
     "util/edid_parser_unittest.cc",
   ]

@@ -19,7 +19,6 @@ mojom("mojom") {
     "hdr_static_metadata.mojom",
     "linear_gradient.mojom",
     "mask_filter_info.mojom",
-    "overlay_transform.mojom",
     "rrect_f.mojom",
     "selection_bound.mojom",
     "transform.mojom",
@@ -150,16 +149,6 @@ mojom("mojom") {
         },
       ]
       traits_headers = [ "font_render_params_mojom_traits.h" ]
-      traits_public_deps = [ "//ui/gfx" ]
-    },
-    {
-      types = [
-        {
-          mojom = "gfx.mojom.OverlayTransform"
-          cpp = "::gfx::OverlayTransform"
-        },
-      ]
-      traits_headers = [ "overlay_transform_mojom_traits.h" ]
       traits_public_deps = [ "//ui/gfx" ]
     },
     {

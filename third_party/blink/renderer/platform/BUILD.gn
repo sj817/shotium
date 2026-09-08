@@ -797,7 +797,6 @@ component("platform") {
     "graphics/graphics_context_state_saver.h",
     "graphics/graphics_context_types.cc",
     "graphics/graphics_context_types.h",
-    "graphics/graphics_types_3d.h",
     "graphics/image.cc",
     "graphics/image.h",
     "graphics/image_data_buffer.cc",
