@@ -72,7 +72,6 @@ ResourceRequestHead::ResourceRequestHead(const KURL& url)
       is_automatic_upgrade_(false),
       is_from_origin_dirty_style_sheet_(false),
       is_fetch_like_api_(false),
-      is_fetch_later_api_(false),
       is_favicon_(false),
       prefetch_maybe_for_top_level_navigation_(false),
       requires_upgrade_for_loader_(false),
@@ -197,7 +196,6 @@ std::unique_ptr<ResourceRequest> ResourceRequestHead::CreateRedirectRequest(
   request->SetFromOriginDirtyStyleSheet(IsFromOriginDirtyStyleSheet());
   request->SetRecursivePrefetchToken(RecursivePrefetchToken());
   request->SetFetchLikeAPI(IsFetchLikeAPI());
-  request->SetFetchLaterAPI(IsFetchLaterAPI());
   request->SetFavicon(IsFavicon());
 
   return request;

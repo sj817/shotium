@@ -27,8 +27,6 @@ TrackedChildPendingURLLoaderFactoryBundle::
             pending_subresource_proxying_loader_factory,
         mojo::PendingRemote<network::mojom::URLLoaderFactory>
             pending_keep_alive_loader_factory,
-        mojo::PendingAssociatedRemote<blink::mojom::FetchLaterLoaderFactory>
-            pending_fetch_later_loader_factory,
         mojom::LocalResourceLoaderConfigPtr local_resource_loader_config,
         std::unique_ptr<HostPtrAndTaskRunner> main_thread_host_bundle,
         bool bypass_redirect_checks)
@@ -38,7 +36,6 @@ TrackedChildPendingURLLoaderFactoryBundle::
           std::move(pending_isolated_world_factories),
           std::move(pending_subresource_proxying_loader_factory),
           std::move(pending_keep_alive_loader_factory),
-          std::move(pending_fetch_later_loader_factory),
           std::move(local_resource_loader_config),
           bypass_redirect_checks),
       main_thread_host_bundle_(std::move(main_thread_host_bundle)) {}
@@ -63,8 +60,6 @@ TrackedChildPendingURLLoaderFactoryBundle::CreateFactory() {
       std::move(pending_subresource_proxying_loader_factory_);
   other->pending_keep_alive_loader_factory_ =
       std::move(pending_keep_alive_loader_factory_);
-  other->pending_fetch_later_loader_factory_ =
-      std::move(pending_fetch_later_loader_factory_);
   other->local_resource_loader_config_ =
       std::move(local_resource_loader_config_);
   other->main_thread_host_bundle_ = std::move(main_thread_host_bundle_);
@@ -108,7 +103,6 @@ TrackedChildURLLoaderFactoryBundle::Clone() {
       std::move(
           pending_factories->pending_subresource_proxying_loader_factory()),
       std::move(pending_factories->pending_keep_alive_loader_factory()),
-      std::move(pending_factories->pending_fetch_later_loader_factory()),
       std::move(pending_factories->local_resource_loader_config()),
       std::move(main_thread_host_bundle_clone),
       pending_factories->bypass_redirect_checks());
@@ -178,7 +172,6 @@ HostChildURLLoaderFactoryBundle::Clone() {
       std::move(
           pending_factories->pending_subresource_proxying_loader_factory()),
       std::move(pending_factories->pending_keep_alive_loader_factory()),
-      std::move(pending_factories->pending_fetch_later_loader_factory()),
       std::move(pending_factories->local_resource_loader_config()),
       std::move(main_thread_host_bundle_clone),
       pending_factories->bypass_redirect_checks());

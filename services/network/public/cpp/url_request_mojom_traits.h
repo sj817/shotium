@@ -194,9 +194,6 @@ struct COMPONENT_EXPORT(NETWORK_CPP_BASE)
   static bool is_fetch_like_api(const network::ResourceRequest& request) {
     return request.is_fetch_like_api;
   }
-  static bool is_fetch_later_api(const network::ResourceRequest& request) {
-    return request.is_fetch_later_api;
-  }
   static bool is_favicon(const network::ResourceRequest& request) {
     return request.is_favicon;
   }

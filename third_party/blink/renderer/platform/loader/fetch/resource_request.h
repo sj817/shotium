@@ -438,8 +438,6 @@ class PLATFORM_EXPORT ResourceRequestHead {
 
   void SetFetchLikeAPI(bool enabled) { is_fetch_like_api_ = enabled; }
 
-  bool IsFetchLaterAPI() const { return is_fetch_later_api_; }
-  void SetFetchLaterAPI(bool enabled) { is_fetch_later_api_ = enabled; }
 
   bool IsFavicon() const { return is_favicon_; }
 
@@ -558,7 +556,6 @@ class PLATFORM_EXPORT ResourceRequestHead {
   // Indicates that this ResourceRequest represents the requestObject for a
   // JS fetchLater() call.
   // https://whatpr.org/fetch/1647/094ea69...152d725.html#fetch-later-method
-  bool is_fetch_later_api_ : 1;
   bool is_favicon_ : 1;
   // Currently this is only used when a prefetch request has `as=document`
   // specified. If true, and the request is cross-origin, the browser will cache

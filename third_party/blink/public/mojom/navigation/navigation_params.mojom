@@ -23,7 +23,6 @@ import "third_party/blink/public/mojom/fenced_frame/fenced_frame_config.mojom";
 import "third_party/blink/public/mojom/fetch/fetch_api_request.mojom";
 import "third_party/blink/public/mojom/frame/agent_cluster_key.mojom";
 import "third_party/blink/public/mojom/frame/frame_policy.mojom";
-import "third_party/blink/public/mojom/lcp_critical_path_predictor/lcp_critical_path_predictor.mojom";
 import "third_party/blink/public/mojom/loader/mixed_content.mojom";
 import "third_party/blink/public/mojom/loader/referrer.mojom";
 import "third_party/blink/public/mojom/messaging/task_attribution_id.mojom";
@@ -628,7 +627,6 @@ struct CommitNavigationParams {
   // `PerformanceNavigationTiming` APIs.
   network.mojom.NavigationDeliveryType navigation_delivery_type = kDefault;
 
-
   // If any, the task ID of the initiator of the navigation. This is restricted
   // to same-document main-frame navigation initiated by the top-level document.
   // Used by SoftNavigationHeuristics to trace back the chain of events.
@@ -659,9 +657,6 @@ struct CommitNavigationParams {
   // because no update is required. Subframes navigations never set this,
   // because they cannot change browsing context group.
   mojo_base.mojom.UnguessableToken? browsing_context_group_token;
-
-  // LCP Critical Path Predictor hint data available at navigation timing.
-  blink.mojom.LCPCriticalPathPredictorNavigationTimeHint? lcpp_hint;
 
   // Some content settings must be enforced by the renderer. See
   // ContentSettingsType for more details.

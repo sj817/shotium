@@ -108,7 +108,6 @@ bool ResourceRequest::EqualsForTesting(const ResourceRequest& request) const {
          revalidation_last_modified == request.revalidation_last_modified &&
 
          is_fetch_like_api == request.is_fetch_like_api &&
-         is_fetch_later_api == request.is_fetch_later_api &&
          is_favicon == request.is_favicon &&
          recursive_prefetch_token == request.recursive_prefetch_token &&
          OptionalTrustedParamsEqualsForTesting(trusted_params,

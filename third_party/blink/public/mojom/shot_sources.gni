@@ -42,11 +42,9 @@ shot_mojom_platform_sources = [
   "input/pointer_lock_result.mojom",
   "input/scroll_direction.mojom",
   "input/touch_event.mojom",
-  "lcp_critical_path_predictor/lcp_critical_path_predictor.mojom",
   "link_to_text/link_to_text.mojom",
   "loader/content_security_notifier.mojom",
   "loader/fetch_client_settings_object.mojom",
-  "loader/fetch_later.mojom",
   "loader/javascript_framework_detection.mojom",
   "loader/keep_alive_handle.mojom",
   "loader/keep_alive_handle_factory.mojom",
@@ -69,7 +67,6 @@ shot_mojom_platform_sources = [
   "navigation/renderer_content_settings.mojom",
   "navigation/renderer_eviction_reason.mojom",
   "navigation/was_activated_option.mojom",
-  "opengraph/metadata.mojom",
 
   "permissions/permission.mojom",
   "permissions/permission_status.mojom",
@@ -98,7 +95,6 @@ shot_mojom_platform_sources = [
   "use_counter/use_counter_feature.mojom",
   "user_agent/user_agent_metadata.mojom",
   "v8_cache_options.mojom",
-  "webid/email_verification_request.mojom",
   "webpreferences/web_preferences.mojom",
 
 ]

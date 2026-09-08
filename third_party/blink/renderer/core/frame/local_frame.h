@@ -73,7 +73,6 @@
 #include "third_party/blink/renderer/core/editing/iterators/text_iterator_behavior.h"
 #include "third_party/blink/renderer/core/frame/frame.h"
 #include "third_party/blink/renderer/core/frame/frame_types.h"
-#include "third_party/blink/renderer/core/frame/frame_visibility_observer.h"
 #include "third_party/blink/renderer/core/frame/local_frame_view.h"
 #include "third_party/blink/renderer/core/loader/back_forward_cache_loader_helper_impl.h"
 #include "third_party/blink/renderer/core/loader/frame_loader.h"
@@ -138,7 +137,6 @@ class StorageKey;
 class StyleEnvironmentVariables;
 class TextFragmentHandler;
 class URLLoader;
-class VirtualKeyboardOverlayChangedObserver;
 class WebContentSettingsClient;
 class WebInputEventAttribution;
 class WindowControlsOverlayChangedDelegate;
@@ -325,15 +323,6 @@ class CORE_EXPORT LocalFrame final
   // scheduler of the state change.
   void SetHadUserInteraction(bool had_user_interaction);
 
-  // Registers an observer that will be notified if a VK occludes
-  // the content when it raises/dismisses. The observer is a HeapHashSet
-  // data structure that doesn't allow duplicates.
-  void RegisterVirtualKeyboardOverlayChangedObserver(
-      VirtualKeyboardOverlayChangedObserver*);
-
-  // Update the current keyboard overlay geometry, then notify
-  // |virtual_keyboard_overlay_changed_observers_|.
-  void NotifyVirtualKeyboardOverlayRectObservers(const gfx::Rect&);
   void SetVirtualKeyboardOverlayGeometry(const gfx::Rect&);
   // The most recent normalized keyboard overlay geometry.
   const gfx::Rect& VirtualKeyboardOverlayRect() const {
@@ -838,9 +827,6 @@ class CORE_EXPORT LocalFrame final
   bool AllowStorageAccessSyncAndNotify(
       blink::WebContentSettingsClient::StorageType storage_type);
 
-  void AddVisibilityObserver(FrameVisibilityObserver* observer);
-  void RemoveVisibilityObserver(FrameVisibilityObserver* observer);
-
   void OnFrameVisibilityChangedForMediaPlayback(bool is_hidden);
   std::optional<bool> IsHiddenForMediaPlayback() const {
     return is_hidden_for_media_playback_;
@@ -935,9 +921,6 @@ class CORE_EXPORT LocalFrame final
   HeapMojoUniqueReceiverSet<blink::mojom::blink::PauseSubresourceLoadingHandle>
       pause_handle_receivers_{nullptr};
 
-  // Keeps track of all the registered VK observers.
-  HeapHashSet<WeakMember<VirtualKeyboardOverlayChangedObserver>>
-      virtual_keyboard_overlay_changed_observers_;
   // Retains normalized geometry before navigator.virtualKeyboard is created,
   // so its boundingRect can start with the current value.
   gfx::Rect virtual_keyboard_overlay_rect_;
@@ -1067,8 +1050,6 @@ class CORE_EXPORT LocalFrame final
 
   BrowserInterfaceBrokerProxyImpl browser_interface_broker_proxy_;
 
-
-  HeapHashSet<WeakMember<FrameVisibilityObserver>> frame_visibility_observers_;
 
   // Whether caret browsing mode has been overridden by the embedder or not.
   bool is_caret_browsing_overridden_ = false;

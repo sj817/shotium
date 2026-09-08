@@ -133,7 +133,6 @@
 #include "third_party/blink/renderer/core/frame/settings.h"
 #include "third_party/blink/renderer/core/frame/smart_clip.h"
 #include "third_party/blink/renderer/core/frame/user_activation.h"
-#include "third_party/blink/renderer/core/frame/virtual_keyboard_overlay_changed_observer.h"
 #include "third_party/blink/renderer/core/frame/visual_viewport.h"
 #include "third_party/blink/renderer/core/frame/window_controls_overlay_changed_delegate.h"
 #include "third_party/blink/renderer/core/fullscreen/fullscreen.h"
@@ -461,14 +460,12 @@ void LocalFrame::Trace(Visitor* visitor) const {
   visitor->Trace(selection_);
   visitor->Trace(event_handler_);
   visitor->Trace(console_);
-  visitor->Trace(virtual_keyboard_overlay_changed_observers_);
   visitor->Trace(pause_handle_receivers_);
   visitor->Trace(frame_color_overlay_);
   visitor->Trace(mojo_handler_);
   visitor->Trace(post_layout_snapshot_clients_);
   visitor->Trace(saved_scroll_offsets_);
   visitor->Trace(browser_interface_broker_proxy_);
-  visitor->Trace(frame_visibility_observers_);
   visitor->Trace(window_controls_overlay_changed_delegate_);
   Frame::Trace(visitor);
   Supplementable<LocalFrame>::Trace(visitor);
@@ -718,8 +715,6 @@ bool LocalFrame::DetachImpl(FrameDetachType type) {
   // dispose inspector_task_runner_, then notify text_fragment_handler_ of
   // the detach; all three fields are gone -- see their former declarations
   // in the header.
-
-  frame_visibility_observers_.clear();
 
   not_restored_reasons_.reset();
   microtasks_pauser_.reset();
@@ -2918,22 +2913,6 @@ LocalFrame::GetBackForwardCacheControllerHostRemote() {
   return mojo_handler_->BackForwardCacheControllerHostRemote();
 }
 
-void LocalFrame::RegisterVirtualKeyboardOverlayChangedObserver(
-    VirtualKeyboardOverlayChangedObserver* observer) {
-  virtual_keyboard_overlay_changed_observers_.insert(observer);
-}
-
-void LocalFrame::NotifyVirtualKeyboardOverlayRectObservers(
-    const gfx::Rect& rect) {
-  virtual_keyboard_overlay_rect_ = rect;
-
-  HeapVector<Member<VirtualKeyboardOverlayChangedObserver>, 32> observers(
-      virtual_keyboard_overlay_changed_observers_);
-  for (VirtualKeyboardOverlayChangedObserver* observer : observers) {
-    observer->VirtualKeyboardOverlayChanged(rect);
-  }
-}
-
 void LocalFrame::SetVirtualKeyboardOverlayGeometry(const gfx::Rect& rect) {
   bool use_geometry_fixes = true;
 #if BUILDFLAG(IS_ANDROID)
@@ -2980,7 +2959,7 @@ void LocalFrame::SetVirtualKeyboardOverlayGeometry(const gfx::Rect& rect) {
     set_inset(UADefinedVariable::kKeyboardInsetHeight, visible_rect.height());
   }
 
-  NotifyVirtualKeyboardOverlayRectObservers(visible_rect);
+  virtual_keyboard_overlay_rect_ = visible_rect;
 }
 
 void LocalFrame::ShowInterestInElement(int nodeID) const {
@@ -3397,14 +3376,6 @@ void LocalFrame::OnStorageAccessCallback(
   std::move(callback).Run(is_allowed);
 }
 
-void LocalFrame::AddVisibilityObserver(FrameVisibilityObserver* observer) {
-  frame_visibility_observers_.insert(observer);
-}
-
-void LocalFrame::RemoveVisibilityObserver(FrameVisibilityObserver* observer) {
-  frame_visibility_observers_.erase(observer);
-}
-
 void LocalFrame::OnFrameVisibilityChangedForMediaPlayback(bool is_hidden) {
   if (is_hidden_for_media_playback_.has_value() &&
       *is_hidden_for_media_playback_ == is_hidden) {
@@ -3412,21 +3383,6 @@ void LocalFrame::OnFrameVisibilityChangedForMediaPlayback(bool is_hidden) {
   }
 
   is_hidden_for_media_playback_ = is_hidden;
-
-  // Iterate on a copy of the vector to avoid invalidating the iterator if
-  // `OnFrameHidden` or `OnFrameShown` happens to remove the observer from
-  // `frame_visibility_observers_`.
-  HeapVector<Member<FrameVisibilityObserver>>
-      frame_visibility_observers_as_vector(frame_visibility_observers_);
-  if (*is_hidden_for_media_playback_) {
-    for (auto observer : frame_visibility_observers_as_vector) {
-      observer->OnFrameHidden();
-    }
-  } else {
-    for (auto observer : frame_visibility_observers_as_vector) {
-      observer->OnFrameShown();
-    }
-  }
 }
 
 // TODO(crbug.com/447973489) - Add test coverage for this method

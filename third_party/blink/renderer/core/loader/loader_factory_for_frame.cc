@@ -233,8 +233,7 @@ LoaderFactoryForFrame::MaybeIssueKeepAliveHandle(
   mojo::PendingRemote<mojom::blink::KeepAliveHandle> pending_remote;
   if (network_request.keepalive &&
       !base::FeatureList::IsEnabled(features::kKeepAliveInBrowserMigration) &&
-      keep_alive_handle_factory_.is_bound() &&
-      !network_request.is_fetch_later_api) {
+      keep_alive_handle_factory_.is_bound()) {
     keep_alive_handle_factory_->IssueKeepAliveHandle(
         pending_remote.InitWithNewPipeAndPassReceiver());
   }

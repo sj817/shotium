@@ -151,7 +151,6 @@ struct COMPONENT_EXPORT(NETWORK_CPP_BASE) ResourceRequest {
   std::optional<std::string> revalidation_etag;
   std::optional<std::string> revalidation_last_modified;
   bool is_fetch_like_api = false;
-  bool is_fetch_later_api = false;
   bool is_favicon = false;
   std::optional<base::UnguessableToken> recursive_prefetch_token;
   std::optional<TrustedParams> trusted_params;
