@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "services/metrics/public/cpp/ukm_recorder.h"
 #ifndef THIRD_PARTY_BLINK_RENDERER_PLATFORM_NETWORK_NETWORK_UTILS_H_
 #define THIRD_PARTY_BLINK_RENDERER_PLATFORM_NETWORK_NETWORK_UTILS_H_
 
@@ -33,10 +32,7 @@ PLATFORM_EXPORT String GetDomainAndRegistry(const StringView& host,
 // was successful. The result is returned as net error code. It returns net::OK
 // if decoding succeeds, otherwise it failed.
 PLATFORM_EXPORT std::tuple<int, ResourceResponse, scoped_refptr<SharedBuffer>>
-ParseDataURL(const KURL&,
-             const String& method,
-             ukm::SourceId source_id = ukm::kInvalidSourceId,
-             ukm::UkmRecorder* recorder = nullptr);
+ParseDataURL(const KURL&, const String& method);
 
 // Returns true if the URL is a data URL and its MIME type is in the list of
 // supported/recognized MIME types.

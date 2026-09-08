@@ -42,13 +42,11 @@
 #include "base/metrics/histogram_functions.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/numerics/checked_math.h"
-#include "base/rand_util.h"
 #include "base/task/single_thread_task_runner.h"
 #include "base/unguessable_token.h"
 #include "mojo/public/cpp/bindings/pending_remote.h"
 #include "net/base/load_flags.h"
 #include "services/metrics/public/cpp/metrics_utils.h"
-#include "services/metrics/public/cpp/ukm_builders.h"
 #include "services/network/public/cpp/cross_origin_embedder_policy.h"
 #include "services/network/public/cpp/features.h"
 #include "services/network/public/cpp/no_vary_search_header_parser.h"
@@ -119,10 +117,6 @@ const char* RequestOutcomeToString(RequestOutcome outcome) {
       return "Fail";
   }
 }
-
-// The sampling rate for UKM recording. A value of 0.1 corresponds to a
-// sampling rate of 10%.
-constexpr double kUkmSamplingRate = 0.1;
 
 bool IsThrottlableRequestContext(mojom::blink::RequestContextType context) {
   // Requests that could run long should not be throttled as they
@@ -777,23 +771,10 @@ void ResourceLoader::DidReceiveResponseInternal(
 
   AtomicString content_encoding =
       response.HttpHeaderField(http_names::kContentEncoding);
-  bool used_zstd = false;
   if (EqualIgnoringAsciiCase(content_encoding, "zstd")) {
     fetcher_->GetUseCounter().CountUse(WebFeature::kZstdContentEncoding);
     fetcher_->GetUseCounter().CountUse(
         WebFeature::kZstdContentEncodingForSubresource);
-    used_zstd = true;
-  }
-
-  // Sample the UKM recorded events. Also, a current default task runner is
-  // needed to obtain a UKM recorder, so if there is not one, do not record
-  // UKMs.
-  if ((base::RandDouble() <= kUkmSamplingRate) &&
-      base::SequencedTaskRunner::HasCurrentDefault()) {
-    ukm::builders::SubresourceLoad_ZstdContentEncoding builder(
-        request.GetUkmSourceId());
-    builder.SetUsedZstd(used_zstd);
-    builder.Record(fetcher_->UkmRecorder());
   }
 
   if (response.DidUseSharedDictionary()) {
@@ -1194,8 +1175,7 @@ void ResourceLoader::RequestSynchronously() {
     // CanHandleDataURLRequestLocally() has already checked if the data url can
     // be handled here.
     auto [result, response, data] = network_utils::ParseDataURL(
-        resource_->Url(), request.HttpMethod(), request.GetUkmSourceId(),
-        fetcher_->UkmRecorder());
+        resource_->Url(), request.HttpMethod());
     if (result != net::OK) {
       error_out = WebURLError(result, resource_->Url());
     } else {
@@ -1404,9 +1384,7 @@ void ResourceLoader::HandleDataUrl() {
   // CanHandleDataURLRequestLocally() has already checked if the data url can be
   // handled here.
   auto [result, response, data] = network_utils::ParseDataURL(
-      resource_->Url(), resource_->GetResourceRequest().HttpMethod(),
-      resource_->GetResourceRequest().GetUkmSourceId(),
-      fetcher_->UkmRecorder());
+      resource_->Url(), resource_->GetResourceRequest().HttpMethod());
   if (result != net::OK) {
     HandleError(ResourceError(result, resource_->Url(), std::nullopt));
     return;

@@ -46,9 +46,7 @@
 #include "base/trace_event/typed_macros.h"
 #include "base/unguessable_token.h"
 #include "mojo/public/cpp/bindings/pending_remote.h"
-#include "services/metrics/public/cpp/metrics_utils.h"
-#include "services/metrics/public/cpp/ukm_builders.h"
-#include "services/metrics/public/cpp/ukm_recorder.h"
+#include "services/metrics/public/cpp/ukm_source_id.h"
 #include "services/network/public/cpp/features.h"
 #include "services/network/public/cpp/web_sandbox_flags.h"
 #include "services/network/public/mojom/web_sandbox_flags.mojom-blink.h"
@@ -1205,17 +1203,6 @@ void FrameLoader::CommitNavigation(
 
   RestoreScrollPositionAndViewState();
 
-  if (!frame_->IsDetached() && frame_->IsOutermostMainFrame()) {
-    ukm::builders::PageLifecycleMetricsOnNewPageCommit(
-        frame_->GetDocument()->UkmSourceID())
-        .SetPageLifecycleEventsTotalProcessingTime(
-            ukm::GetExponentialBucketMinForFineUserTiming(
-                scoped_old_document_info.CurrentInfo()
-                    ->total_lifecycle_events_processing_time_on_commit
-                    .InMilliseconds()))
-        .Record(frame_->GetDocument()->UkmRecorder());
-  }
-
   TakeObjectSnapshot();
 }
 
@@ -1382,10 +1369,6 @@ void FrameLoader::CommitDocumentLoader(DocumentLoader* document_loader,
   document_loader_->CommitNavigation();
 
   base::UmaHistogramTimes("Blink.CommitDocumentLoaderTime", timer.Elapsed());
-  ukm::builders::Blink_FrameLoader(frame_->GetDocument()->UkmSourceID())
-      .SetCommitDocumentLoaderTime(ukm::GetExponentialBucketMinForUserTiming(
-          timer.Elapsed().InMicroseconds()))
-      .Record(frame_->GetDocument()->UkmRecorder());
 }
 
 void FrameLoader::RestoreScrollPositionAndViewState() {

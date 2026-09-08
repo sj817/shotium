@@ -36,7 +36,6 @@
 #include "base/task/single_thread_task_runner.h"
 #include "base/time/time.h"
 #include "base/unguessable_token.h"
-#include "services/metrics/public/cpp/mojo_ukm_recorder.h"
 #include "third_party/blink/public/common/features.h"
 #include "third_party/blink/public/common/subresource_load_metrics.h"
 #include "third_party/blink/public/mojom/blob/blob_registry.mojom-blink.h"
@@ -399,9 +398,6 @@ class PLATFORM_EXPORT ResourceFetcher
   void SetEarlyHintsPreloadedResources(
       HashMap<KURL, EarlyHintsPreloadEntry> resources);
 
-  // Access the UKMRecorder.
-  ukm::MojoUkmRecorder* UkmRecorder();
-
   void CancelWebBundleSubresourceLoadersFor(
       const base::UnguessableToken& web_bundle_token);
 
@@ -743,8 +739,6 @@ class PLATFORM_EXPORT ResourceFetcher
   // 28 bits left (decrease the count when you add bit fields above)
 
   static constexpr uint32_t kKeepaliveInflightBytesQuota = 64 * 1024;
-
-  std::unique_ptr<ukm::MojoUkmRecorder> ukm_recorder_;
 
   SubresourceLoadMetrics subresource_load_metrics_;
 

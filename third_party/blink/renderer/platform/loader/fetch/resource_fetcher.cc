@@ -1062,8 +1062,7 @@ Resource* ResourceFetcher::CreateResourceForStaticData(
   } else if (url.ProtocolIsData()) {
     int result;
     std::tie(result, response, data) = network_utils::ParseDataURL(
-        url, params.GetResourceRequest().HttpMethod(),
-        params.GetResourceRequest().GetUkmSourceId(), UkmRecorder());
+        url, params.GetResourceRequest().HttpMethod());
     if (result != net::OK) {
       return nullptr;
     }
@@ -1346,19 +1345,6 @@ ResourceFetcher::GetOrCreateSubresourceWebBundleList() {
   }
   subresource_web_bundles_ = MakeGarbageCollected<SubresourceWebBundleList>();
   return subresource_web_bundles_.Get();
-}
-
-ukm::MojoUkmRecorder* ResourceFetcher::UkmRecorder() {
-  if (ukm_recorder_) {
-    return ukm_recorder_.get();
-  }
-
-  mojo::Remote<ukm::mojom::UkmRecorderFactory> factory;
-  Platform::Current()->GetBrowserInterfaceBroker()->GetInterface(
-      factory.BindNewPipeAndPassReceiver());
-  ukm_recorder_ = ukm::MojoUkmRecorder::Create(*factory);
-
-  return ukm_recorder_.get();
 }
 
 Resource* ResourceFetcher::RequestResource(FetchParameters& params,

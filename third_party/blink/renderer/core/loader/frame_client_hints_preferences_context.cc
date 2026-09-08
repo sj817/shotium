@@ -7,7 +7,6 @@
 #include <algorithm>
 
 #include "base/no_destructor.h"
-#include "services/metrics/public/cpp/ukm_recorder.h"
 #include "services/network/public/cpp/client_hints.h"
 #include "third_party/blink/renderer/core/dom/document.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
@@ -94,14 +93,6 @@ const ClientHintToWebFeatureMap& GetClientHintToWebFeatureMap() {
 FrameClientHintsPreferencesContext::FrameClientHintsPreferencesContext(
     LocalFrame* frame)
     : frame_(frame) {}
-
-ukm::SourceId FrameClientHintsPreferencesContext::GetUkmSourceId() {
-  return frame_->GetDocument()->UkmSourceID();
-}
-
-ukm::UkmRecorder* FrameClientHintsPreferencesContext::GetUkmRecorder() {
-  return frame_->GetDocument()->UkmRecorder();
-}
 
 void FrameClientHintsPreferencesContext::CountClientHints(
     network::mojom::WebClientHintsType type) {

@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "services/metrics/public/cpp/ukm_source_id.h"
 #ifndef THIRD_PARTY_BLINK_RENDERER_PLATFORM_LOADER_FETCH_CLIENT_HINTS_PREFERENCES_H_
 #define THIRD_PARTY_BLINK_RENDERER_PLATFORM_LOADER_FETCH_CLIENT_HINTS_PREFERENCES_H_
 
@@ -11,10 +10,6 @@
 #include "third_party/blink/renderer/platform/platform_export.h"
 #include "third_party/blink/renderer/platform/wtf/allocator/allocator.h"
 #include "third_party/blink/renderer/platform/wtf/text/wtf_string.h"
-
-namespace ukm {
-class UkmRecorder;
-}  // namespace ukm
 
 namespace blink {
 
@@ -28,8 +23,6 @@ class PLATFORM_EXPORT ClientHintsPreferences {
  public:
   class Context {
    public:
-    virtual ukm::SourceId GetUkmSourceId() = 0;
-    virtual ukm::UkmRecorder* GetUkmRecorder() = 0;
     virtual void CountClientHints(network::mojom::WebClientHintsType) = 0;
 
    protected:

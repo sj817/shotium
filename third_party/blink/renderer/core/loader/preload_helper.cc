@@ -9,9 +9,7 @@
 
 #include "base/feature_list.h"
 #include "base/metrics/histogram_functions.h"
-#include "base/rand_util.h"
 #include "base/timer/elapsed_timer.h"
-#include "services/metrics/public/cpp/ukm_builders.h"
 #include "third_party/blink/public/common/features.h"
 #include "third_party/blink/public/mojom/fetch/fetch_api_request.mojom-blink.h"
 #include "third_party/blink/public/platform/platform.h"
@@ -242,26 +240,6 @@ bool IsSubresourceLoad(PreloadHelper::LoadLinksFromHeaderMode mode) {
       NOTREACHED();
   }
 }
-
-PreloadHelper::OriginStatusOnSubresource GetOriginStatus(bool from_same_origin,
-                                                         bool to_same_origin) {
-  using OriginStatusOnSubresource = PreloadHelper::OriginStatusOnSubresource;
-  if (from_same_origin) {
-    if (to_same_origin) {
-      return OriginStatusOnSubresource::kFromSameOriginToSameOrigin;
-    } else {
-      return OriginStatusOnSubresource::kFromSameOriginToCrossOrigin;
-    }
-  } else {
-    if (to_same_origin) {
-      return OriginStatusOnSubresource::kFromCrossOriginToSameOrigin;
-    } else {
-      return OriginStatusOnSubresource::kFromCrossOriginToCrossOrigin;
-    }
-  }
-}
-
-constexpr double kUkmSamplingRate = 0.0025;
 
 }  // namespace
 
@@ -580,20 +558,6 @@ void PreloadHelper::LoadLinksFromHeader(
     LinkLoadParameters params(header, base_url);
     bool change_rel_to_prefetch = false;
 
-    // Record UKM by the rate of `kUkmSamplingRate` to avoid UKM infra's
-    // automatic downsampling.
-    if (is_subresource_load && base::RandDouble() < kUkmSamplingRate) {
-      CHECK(document);
-      bool to_same_origin =
-          document->GetExecutionContext()
-              ->GetSecurityOrigin()
-              ->IsSameOriginWith(SecurityOrigin::Create(params.href).get());
-      const OriginStatusOnSubresource origin_status =
-          GetOriginStatus(from_same_origin, to_same_origin);
-      ukm::builders::Blink_Preloading_ByLinkHeader(document->UkmSourceID())
-          .SetOriginStatusOnSubresource(std::to_underlying(origin_status))
-          .Record(document->UkmRecorder());
-    }
     if (is_subresource_load && !from_same_origin &&
         blink::features::kRestrictLinkHeaderOnSubresourceCrossOrigin.Get()) {
       continue;
