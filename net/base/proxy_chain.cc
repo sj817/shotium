@@ -4,18 +4,12 @@
 
 #include "net/base/proxy_chain.h"
 
-#include <algorithm>
-#include <ostream>
 #include <vector>
 
 #include "base/check.h"
-#include "base/no_destructor.h"
 #include "base/pickle.h"
-#include "base/strings/strcat.h"
-#include "base/strings/stringprintf.h"
 #include "build/buildflag.h"
 #include "net/base/proxy_server.h"
-#include "net/base/proxy_string_util.h"
 #include "net/net_buildflags.h"
 
 namespace net {
@@ -40,20 +34,6 @@ ProxyChain::ProxyChain(ProxyChain&& other) noexcept = default;
 ProxyChain& ProxyChain::operator=(const ProxyChain& other) = default;
 ProxyChain& ProxyChain::operator=(ProxyChain&& other) noexcept = default;
 ProxyChain::~ProxyChain() = default;
-
-ProxyChain::ProxyChain(ProxyServer proxy_server)
-    : ProxyChain(std::vector<ProxyServer>{std::move(proxy_server)}) {}
-
-ProxyChain::ProxyChain(ProxyServer::Scheme scheme,
-                       const HostPortPair& host_port_pair)
-    : ProxyChain(ProxyServer(scheme, host_port_pair)) {}
-
-ProxyChain::ProxyChain(std::vector<ProxyServer> proxy_server_list)
-    : proxy_server_list_(std::move(proxy_server_list)) {
-  if (!IsValidInternal()) {
-    proxy_server_list_ = std::nullopt;
-  }
-}
 
 // static
 std::optional<ProxyChain> ProxyChain::InitFromPickle(
@@ -91,34 +71,6 @@ void ProxyChain::Persist(base::Pickle* pickle) const {
   for (const auto& proxy_server : proxy_server_list_.value()) {
     proxy_server.Persist(pickle);
   }
-}
-
-const std::vector<ProxyServer>& ProxyChain::proxy_servers() const {
-  DCHECK(IsValid());
-  return proxy_server_list_.value();
-}
-
-std::string ProxyChain::ToDebugString() const {
-  if (!IsValid()) {
-    return "INVALID PROXY CHAIN";
-  }
-  std::string debug_string =
-      proxy_server_list_.value().empty() ? "direct://" : "";
-  for (const ProxyServer& proxy_server : proxy_server_list_.value()) {
-    if (!debug_string.empty()) {
-      debug_string += ", ";
-    }
-    debug_string += ProxyServerToProxyUri(proxy_server);
-  }
-  debug_string = base::StrCat({"[", debug_string, "]"});
-  if (ip_protection_chain_id_ == 0) {
-    debug_string += " (IP Protection)";
-  } else if (ip_protection_chain_id_ >= 0) {
-    debug_string += base::StringPrintf(" (IP Protection chain %d)",
-                                       ip_protection_chain_id_);
-  }
-
-  return debug_string;
 }
 
 ProxyChain::ProxyChain(std::vector<ProxyServer> proxy_server_list,
@@ -177,10 +129,6 @@ bool ProxyChain::IsValidInternal() const {
   // QUIC is only allowed for IP protection unless in debug builds where it is
   // generally available.
   return !seen_quic || should_allow_quic;
-}
-
-std::ostream& operator<<(std::ostream& os, const ProxyChain& proxy_chain) {
-  return os << proxy_chain.ToDebugString();
 }
 
 }  // namespace net

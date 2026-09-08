@@ -1,4 +1,7 @@
-# 静态截图引擎全局裁剪进度（stage80）
+# 静态截图引擎全局裁剪进度（stage81）
+
+stage81：stage80 已提交 258f953c28a3。本轮合并34源码/协议路径（3D+31E）。网络15路径删除代理地址解析/字符串工具cc/h、无调用构造/getter/operator与URLRequest代理状态传递；ProxyChain/ProxyServer裁为旧HTTP磁盘缓存元数据的最小读写/校验，7段pickle/校验正文与3个HTTP响应/缓存文件不变，保留WasFetchedViaProxy对应旧缓存传输信息和NEL隐私判断，明确属于缓存格式而非代理运行链。另12路径解除TLS证书和HTTP挑战恒false的is_proxy字段/reset/生产端/比较/Mojo与认证重启guard，真实origin证书/凭据不变。Blink 7路径移除加载统计flag、UMA计时/后台支持枚举头/GN，保留全部真实clock conversion、完成时间clamp、FCP/ResourceTiming与client/字节回调，后台可用条件不变。保护交集零、完整移除符号残留零、GN语法/diff及pickle/加载正文对照通过；未图/编译/运行/像素验收。证据out/cut-stage81-combined/及proxy-cache/auth-origin/load-metrics三组。全局约65%±10、源码约80%仍为粗估；主要待办为受限Route/core/Worker/TrustToken/ReportingOptions/Blob/Perfetto/ICU/CSS诊断、UKM/Crashpad/tracing、Blink交互/AX/probes/lifecycle、根目录与第三方骨架复核、最终Windows和六平台完整验收。继续整组先删后集中编译。
+
 
 stage80：stage79 已提交 d4eb3600e024。本轮合并44源码/协议路径（9D+35E）。整组删除无实际接收端的ResourceLoadInfoNotifier两层wrapper及Mojo接口、Frame/FetchContext/URLLoader/Shot/Sync/Background/Navigation/Sender参数和回调链、独占统计数据结构与RecordLoadHistograms cc/h、专属响应clone/storage和请求destination字段；保留真实ResourceType枚举、加载安全/完成/计时，Shot同步异步加载正文不变。由此删除URLResponseHead代理字段、network_param代理schema/traits/typemaps五路径，net磁盘缓存格式未改。另删除无任何生产者的BlobURLNullOriginMap及线程nonce缓存两文件、SecurityOrigin永不命中读取/friend/GN，保留原拒绝、nonce序列化及同源/访问策略。受限local_dom_window仍include的blob_url头尾巴明确待处理。移除符号源码残留零、保护交集零、GN语法/diff、Shot/加载正文与Blob origin对照通过；尚无图/编译/运行/像素验收。证据out/cut-stage80-combined/及load-notifier/proxy-mojo/blob-origin三组目录。全局约65%±10、源码约80%仍为粗估；剩余net缓存ProxyChain/ProxyServer最小化、受限Route/core/Worker/TrustToken/ReportingOptions/Blob/Perfetto/ICU/CSS诊断、UKM/Crashpad/tracing、Blink交互/AX/probes/lifecycle、根目录复核和最终Windows/六平台验收。继续整组先删、少量合并commit、最终集中编译。
 

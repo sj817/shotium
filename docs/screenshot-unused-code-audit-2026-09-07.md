@@ -1,3 +1,5 @@
+stage81：stage80 已提交 258f953c28a3。本轮合并34源码/协议路径（3D+31E）。网络15路径删除代理地址解析/字符串工具cc/h、无调用构造/getter/operator与URLRequest代理状态传递；ProxyChain/ProxyServer裁为旧HTTP磁盘缓存元数据的最小读写/校验，7段pickle/校验正文与3个HTTP响应/缓存文件不变，保留WasFetchedViaProxy对应旧缓存传输信息和NEL隐私判断，明确属于缓存格式而非代理运行链。另12路径解除TLS证书和HTTP挑战恒false的is_proxy字段/reset/生产端/比较/Mojo与认证重启guard，真实origin证书/凭据不变。Blink 7路径移除加载统计flag、UMA计时/后台支持枚举头/GN，保留全部真实clock conversion、完成时间clamp、FCP/ResourceTiming与client/字节回调，后台可用条件不变。保护交集零、完整移除符号残留零、GN语法/diff及pickle/加载正文对照通过；未图/编译/运行/像素验收。证据out/cut-stage81-combined/及proxy-cache/auth-origin/load-metrics三组。全局约65%±10、源码约80%仍为粗估；主要待办为受限Route/core/Worker/TrustToken/ReportingOptions/Blob/Perfetto/ICU/CSS诊断、UKM/Crashpad/tracing、Blink交互/AX/probes/lifecycle、根目录与第三方骨架复核、最终Windows和六平台完整验收。继续整组先删后集中编译。
+
 stage80：stage79 已提交 d4eb3600e024。本轮合并44源码/协议路径（9D+35E）。整组删除无实际接收端的ResourceLoadInfoNotifier两层wrapper及Mojo接口、Frame/FetchContext/URLLoader/Shot/Sync/Background/Navigation/Sender参数和回调链、独占统计数据结构与RecordLoadHistograms cc/h、专属响应clone/storage和请求destination字段；保留真实ResourceType枚举、加载安全/完成/计时，Shot同步异步加载正文不变。由此删除URLResponseHead代理字段、network_param代理schema/traits/typemaps五路径，net磁盘缓存格式未改。另删除无任何生产者的BlobURLNullOriginMap及线程nonce缓存两文件、SecurityOrigin永不命中读取/friend/GN，保留原拒绝、nonce序列化及同源/访问策略。受限local_dom_window仍include的blob_url头尾巴明确待处理。移除符号源码残留零、保护交集零、GN语法/diff、Shot/加载正文与Blob origin对照通过；尚无图/编译/运行/像素验收。证据out/cut-stage80-combined/及load-notifier/proxy-mojo/blob-origin三组目录。全局约65%±10、源码约80%仍为粗估；剩余net缓存ProxyChain/ProxyServer最小化、受限Route/core/Worker/TrustToken/ReportingOptions/Blob/Perfetto/ICU/CSS诊断、UKM/Crashpad/tracing、Blink交互/AX/probes/lifecycle、根目录复核和最终Windows/六平台验收。继续整组先删、少量合并commit、最终集中编译。
 
 stage79：stage78 已提交 cad5b9211547。本轮合并40源码/协议路径（3D+37E）。网络29路径整组移除SocketPool代理map/构造/getter/SSL代理刷新、代理专属限额与随机化开关、HTTP两套Job/控制器/请求/回调的ProxyInfo传递和存储，删除ProxyInfo cc/h及GN与无生产者日志事件。连接池改为惰性单池，原直连256/6、容量随机化、排队/取消/释放/真实TLS origin刷新保持；响应仍保留ProxyChain磁盘缓存兼容字段与auth重启值，未宣称该值类型全删。Blink 11路径移除无脚本消费者的Blob URL注册/撤销链、URLRegistry头、UUID生成、登记表和专属Mojo方法，实际Resolve/token、Blob读取和文件元数据路径保持；NullOriginMap安全读取及受限Blob/File生成链待后续处理。移除符号完整源码残留零、GN语法/diff及16段原文对照通过，未生成图/编译/运行/像素验收。证据out/cut-stage79-combined/、out/cut-stage79-socket-pool/、out/cut-stage79-proxy-info/、out/cut-stage79-fileapi/。全局约65%±10、源码约80%仍为工作量粗估；剩余响应Mojo/缓存ProxyChain与ProxyServer、受限Route/core/Worker/TrustToken/ReportingOptions/Perfetto/ICU/CSS诊断、UKM/Crashpad/tracing、Blink交互/AX/fileapi/probes/lifecycle、根目录复核及Windows与六平台最终验证。按用户新要求整组先删、合并提交、最终集中编译，不再为每个小分支单独提交。
@@ -250,7 +252,7 @@ GN 导出 9164 个目标，其中从 shot/shot_c 构建可达 2907 个。无可�
 | `ipc/` | 46 | 42 | 2 | 25 | A/B 旧IPC |
 | `media/` | 360 | 353 | 7 | 7 | A/B 音视频基础实现 |
 | `mojo/` | 611 | 405 | 42 | 46 | K + B/C 消息/传输 |
-| `net/` | 1425 | 1378 | 18 | 47 | K + A/B/C 网络额外能力 |
+| `net/` | 1425 | 1378 | 18 | 47 | K + A/B/C 网络额外能力；stage81：代理运行链已解除，ProxyChain/ProxyServer仅保留HTTP旧缓存读写/校验（out/cut-stage81-proxy-cache/report.md） |
 | `out/` | 0 | 0 | 0 | 0 | T 本地构建产物 |
 | `patches/` | 3 | 0 | 0 | 0 | T 依赖补丁 |
 | `printing/` | 2 | 0 | 1 | 14 | A/B 打印协议 |

@@ -7,11 +7,6 @@
 
 #include <stdint.h>
 
-#include <optional>
-#include <ostream>
-#include <string>
-#include <string_view>
-
 #include "net/base/host_port_pair.h"
 #include "net/base/net_export.h"
 
@@ -46,79 +41,24 @@ class NET_EXPORT ProxyServer {
 
   ProxyServer(Scheme scheme, const HostPortPair& host_port_pair);
 
-  // Creates a ProxyServer, validating and canonicalizing input. Port is
-  // optional and, if not provided, will be replaced with the default port for
-  // the given scheme. Accepts IPv6 literal `host`s with surrounding brackets
-  // (URL format) or without (HostPortPair format). On invalid input, result
-  // will be a `SCHEME_INVALID` ProxyServer.
-  //
-  // Must not be called with `SCHEME_INVALID`. Use `ProxyServer()` to create an
-  // invalid ProxyServer.
-  static ProxyServer FromSchemeHostAndPort(Scheme scheme,
-                                           std::string_view host,
-                                           std::string_view port_str);
-  static ProxyServer FromSchemeHostAndPort(Scheme scheme,
-                                           std::string_view host,
-                                           std::optional<uint16_t> port);
-
   static ProxyServer CreateFromPickle(base::PickleIterator* pickle_iter);
 
   void Persist(base::Pickle* pickle) const;
 
-  // In URL format (with brackets around IPv6 literals). Must not call for
-  // invalid ProxyServers.
-  std::string GetHost() const;
-
-  // Must not call for invalid ProxyServers.
-  uint16_t GetPort() const;
-
   bool is_valid() const { return scheme_ != SCHEME_INVALID; }
-
-  // Gets the proxy's scheme (i.e. SOCKS4, SOCKS5, HTTP)
-  Scheme scheme() const { return scheme_; }
-
-  // Returns true if this ProxyServer is an HTTP proxy.
-  bool is_http() const { return scheme_ == SCHEME_HTTP; }
 
   // Returns true if this ProxyServer is an HTTPS proxy. Note this
   // does not include proxies matched by |is_quic()|.
   //
-  // Generally one should test the more general concept of
-  // |is_secure_http_like()| to account for |is_quic()|.
   bool is_https() const { return scheme_ == SCHEME_HTTPS; }
-
-  // Returns true if this ProxyServer is a SOCKS proxy.
-  bool is_socks() const {
-    return scheme_ == SCHEME_SOCKS4 || scheme_ == SCHEME_SOCKS5;
-  }
 
   // Returns true if this ProxyServer is a QUIC proxy.
   bool is_quic() const { return scheme_ == SCHEME_QUIC; }
-
-  // Returns true if the ProxyServer's scheme is HTTP compatible (uses HTTP
-  // headers, has a CONNECT method for establishing tunnels).
-  bool is_http_like() const { return is_http() || is_https() || is_quic(); }
-
-  // Returns true if the proxy server has HTTP semantics, AND
-  // the channel between the client and proxy server is secure.
-  bool is_secure_http_like() const { return is_https() || is_quic(); }
-
-  const HostPortPair& host_port_pair() const;
-
-  // Returns the default port number for a proxy server with the specified
-  // scheme. Returns -1 if unknown.
-  static int GetDefaultPortForScheme(Scheme scheme);
-
-  friend bool operator==(const ProxyServer&, const ProxyServer&) = default;
-  friend auto operator<=>(const ProxyServer&, const ProxyServer&) = default;
 
  private:
   Scheme scheme_ = SCHEME_INVALID;
   HostPortPair host_port_pair_;
 };
-
-NET_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& os,
-                                            const ProxyServer& proxy_server);
 
 }  // namespace net
 

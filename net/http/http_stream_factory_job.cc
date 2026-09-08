@@ -23,7 +23,6 @@
 #include "net/base/host_port_pair.h"
 #include "net/base/load_flags.h"
 #include "net/base/port_util.h"
-#include "net/base/proxy_chain.h"
 #include "net/base/reconnect_notifier.h"
 #include "net/base/task/task_runner.h"
 #include "net/base/url_util.h"

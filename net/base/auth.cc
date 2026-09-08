@@ -12,7 +12,7 @@ AuthChallengeInfo::AuthChallengeInfo(const AuthChallengeInfo& other) = default;
 
 bool AuthChallengeInfo::MatchesExceptPath(
     const AuthChallengeInfo& other) const {
-  return (is_proxy == other.is_proxy && challenger == other.challenger &&
+  return (challenger == other.challenger &&
           scheme == other.scheme && realm == other.realm &&
           challenge == other.challenge);
 }

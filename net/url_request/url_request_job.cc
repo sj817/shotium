@@ -25,7 +25,6 @@
 #include "net/base/load_states.h"
 #include "net/base/net_errors.h"
 #include "net/base/network_delegate.h"
-#include "net/base/proxy_chain.h"
 #include "net/base/schemeful_site.h"
 #include "net/base/task/task_runner.h"
 #include "net/cert/x509_certificate.h"
@@ -657,10 +656,6 @@ void URLRequestJob::DoneReadingRetryResponse() {}
 
 std::unique_ptr<SourceStream> URLRequestJob::SetUpSourceStream() {
   return std::make_unique<URLRequestJobSourceStream>(this);
-}
-
-void URLRequestJob::SetProxyChain(const ProxyChain& proxy_chain) {
-  request_->proxy_chain_ = proxy_chain;
 }
 
 void URLRequestJob::SourceStreamReadComplete(bool synchronous, int result) {

@@ -460,7 +460,6 @@ void HttpAuthController::PopulateAuthChallenge() {
   // This info is consumed by URLRequestHttpJob::GetAuthChallengeInfo().
 
   auth_info_ = AuthChallengeInfo();
-  auth_info_->is_proxy = false;
   auth_info_->challenger = auth_scheme_host_port_;
   auth_info_->scheme = HttpAuth::SchemeToString(handler_->auth_scheme());
   auth_info_->realm = handler_->realm();

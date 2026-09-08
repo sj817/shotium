@@ -78,7 +78,6 @@ bool StructTraits<network::mojom::SSLCertRequestInfoDataView,
 
   auto ssl_cert_request_info = base::MakeRefCounted<net::SSLCertRequestInfo>();
   ssl_cert_request_info->host_and_port = std::move(host_and_port);
-  ssl_cert_request_info->is_proxy = data.is_proxy();
   ssl_cert_request_info->cert_authorities = std::move(cert_authorities);
   ssl_cert_request_info->signature_algorithms = std::move(signature_algorithms);
 

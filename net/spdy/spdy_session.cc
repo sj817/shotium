@@ -36,7 +36,6 @@
 #include "base/values.h"
 #include "net/base/features.h"
 #include "net/base/privacy_mode.h"
-#include "net/base/proxy_string_util.h"
 #include "net/base/url_util.h"
 #include "net/cert/asn1_util.h"
 #include "net/cert/cert_verify_result.h"

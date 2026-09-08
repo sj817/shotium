@@ -171,8 +171,7 @@ class BLINK_PLATFORM_EXPORT ResourceRequestSender {
     net::LoadTimingInfo load_timing_info;
     bool redirect_requires_loader_restart = false;
     // Network error code the request completed with, or net::ERR_IO_PENDING if
-    // it's not completed. Used both to distinguish completion from
-    // cancellation, and to log histograms.
+    // it's not completed. Used to distinguish completion from cancellation.
     int net_error = net::ERR_IO_PENDING;
 
     std::unique_ptr<ThrottlingURLLoader> url_loader;
@@ -189,11 +188,6 @@ class BLINK_PLATFORM_EXPORT ResourceRequestSender {
     // comment might be outdated.
     network::HttpRequestHeadersUpdateParams headers_update_params;
 
-    // Set to true when the request was frozen. This is used not to record
-    // histograms for frozen requests. Note: Even if the request was unfreezed,
-    // we don't resume recording histograms because tasks are deferred in
-    // MojoURLLoaderClient.
-    bool ignore_for_histogram = false;
   };
 
   // Called as a callback for ResourceRequestClient::OnReceivedRedirect().
@@ -205,9 +199,8 @@ class BLINK_PLATFORM_EXPORT ResourceRequestSender {
   // Follows redirect, if any, for the given request.
   void FollowPendingRedirect();
 
-  // Converts remote times in the response head to local times. Returns the
-  // converted response start time.
-  base::TimeTicks ToLocalURLResponseHead(
+  // Converts remote times in the response head to local times.
+  void ToLocalURLResponseHead(
       const PendingRequestInfo& request_info,
       network::mojom::URLResponseHead& response_head) const;
 

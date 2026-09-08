@@ -20,9 +20,6 @@ class COMPONENT_EXPORT(NETWORK_CPP_NETWORK_PARAM)
     StructTraits<network::mojom::AuthChallengeInfoDataView,
                  net::AuthChallengeInfo> {
  public:
-  static bool is_proxy(const net::AuthChallengeInfo& auth_challenge_info) {
-    return auth_challenge_info.is_proxy;
-  }
   static const url::SchemeHostPort& challenger(
       const net::AuthChallengeInfo& auth_challenge_info) {
     return auth_challenge_info.challenger;

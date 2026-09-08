@@ -42,7 +42,6 @@ class HttpRequestHeaders;
 class HttpResponseInfo;
 class IOBuffer;
 struct LoadTimingInfo;
-class ProxyChain;
 class SourceStream;
 class SSLCertRequestInfo;
 class SSLInfo;
@@ -372,9 +371,6 @@ class NET_EXPORT URLRequestJob {
   // Subclasses should return the appropriate last SourceStream of the chain,
   // or nullptr on error.
   virtual std::unique_ptr<SourceStream> SetUpSourceStream();
-
-  // Set the proxy chain that was used, if any.
-  void SetProxyChain(const ProxyChain& proxy_chain);
 
   // The number of bytes read after passing through the filter. This value
   // reflects bytes read even when there is no filter.

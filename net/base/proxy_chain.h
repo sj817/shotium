@@ -5,13 +5,9 @@
 #ifndef NET_BASE_PROXY_CHAIN_H_
 #define NET_BASE_PROXY_CHAIN_H_
 
-#include <iosfwd>
 #include <optional>
-#include <string>
-#include <tuple>
 #include <vector>
 
-#include "net/base/host_port_pair.h"
 #include "net/base/net_export.h"
 #include "net/base/proxy_server.h"
 
@@ -22,10 +18,8 @@ class PickleIterator;
 
 namespace net {
 
-// ProxyChain represents a chain of ProxyServers. A chain with multiple proxy
-// servers means that a single connection will go through all of the proxies in
-// order, using a tunnel through the first proxy to connect to the second, etc.
-// A "direct" connection is a chain of length zero.
+// Legacy proxy metadata retained for HTTP disk-cache serialization.
+// Live requests only construct an invalid or direct value.
 class NET_EXPORT ProxyChain {
  public:
   // Constructs an invalid ProxyChain.
@@ -38,24 +32,11 @@ class NET_EXPORT ProxyChain {
   ProxyChain& operator=(
       ProxyChain&& other) noexcept;  // Move assignment operator
 
-  ProxyChain(ProxyServer::Scheme scheme, const HostPortPair& host_port_pair);
-
-  explicit ProxyChain(std::vector<ProxyServer> proxy_server_list);
-  explicit ProxyChain(ProxyServer proxy_server);
-
   ~ProxyChain();  // Destructor declaration
 
   // Create a "direct" proxy chain, which includes no proxy servers.
-  static ProxyChain Direct() { return ProxyChain(std::vector<ProxyServer>()); }
-
-  // Creates a `ProxyChain` for use by the IP Protection feature. This is used
-  // for metrics collection and for special handling.  If not given, the
-  // chain_id defaults to 0 which corresponds to an un-identified chain.
-  // If the resulting `ProxyChain` is deemed to be invalid, an invalid
-  // `ProxyChain` is returned and `chain_id` is not used.
-  static ProxyChain ForIpProtection(std::vector<ProxyServer> proxy_server_list,
-                                    int chain_id = 0) {
-    return ProxyChain(std::move(proxy_server_list), chain_id);
+  static ProxyChain Direct() {
+    return ProxyChain(std::vector<ProxyServer>(), kNotIpProtectionChainId);
   }
 
   // Attempt to create a new `ProxyChain` from a pickle that contains data
@@ -68,16 +49,6 @@ class NET_EXPORT ProxyChain {
   // Call this method to persist `ProxyChain`. Illegal to call this on an
   // invalid object.
   void Persist(base::Pickle* pickle) const;
-
-  // Get the ProxyServers in this chain. This must not be called on invalid
-  // proxy chains. An empty vector is returned for direct proxy chains.
-  const std::vector<ProxyServer>& proxy_servers() const;
-
-  // Get the ProxyServers in this chain, or `nullopt` if the chain is not valid.
-  const std::optional<std::vector<ProxyServer>>& proxy_servers_if_valid()
-      const {
-    return proxy_server_list_;
-  }
 
   // Returns number of proxy servers in chain.
   size_t length() const {
@@ -112,25 +83,9 @@ class NET_EXPORT ProxyChain {
   // IP protection chain. All IP-Protection chain IDs are non-negative.
   static constexpr int kNotIpProtectionChainId = -1;
 
-  // A value for `ip_protection_chain_id()` for IP protection chains for which
-  // no other chain ID was specified.
-  static constexpr int kDefaultIpProtectionChainId = 0;
-
-  // The largest allowed ip_protection_chain_id.
-  // NOTE: Make sure to update the
-  // `Net.IpProtection.CanFalloverToNextProxy.Error.{Chain}` histogram when
-  // modifying this value.
-  static constexpr int kMaxIpProtectionChainId = 3;
-
   bool is_for_ip_protection() const {
     return ip_protection_chain_id_ != kNotIpProtectionChainId;
   }
-  int ip_protection_chain_id() const { return ip_protection_chain_id_; }
-
-  friend bool operator==(const ProxyChain&, const ProxyChain&) = default;
-  friend auto operator<=>(const ProxyChain&, const ProxyChain&) = default;
-
-  std::string ToDebugString() const;
 
  private:
   explicit ProxyChain(std::vector<ProxyServer> proxy_server_list,
@@ -150,9 +105,6 @@ class NET_EXPORT ProxyChain {
   // protection.
   bool IsValidInternal() const;
 };
-
-NET_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& os,
-                                            const ProxyChain& proxy_chain);
 
 }  // namespace net
 

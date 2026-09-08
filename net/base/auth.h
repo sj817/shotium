@@ -25,9 +25,6 @@ class NET_EXPORT AuthChallengeInfo {
   // for two different requests.
   bool MatchesExceptPath(const AuthChallengeInfo& other) const;
 
-  // Whether this came from a server or a proxy.
-  bool is_proxy = false;
-
   // The service issuing the challenge.
   url::SchemeHostPort challenger;
 

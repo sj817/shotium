@@ -1149,10 +1149,6 @@ void URLRequestHttpJob::OnStartCompleted(int result) {
     }
   }
 
-  if (transaction_ && transaction_->GetResponseInfo()) {
-    SetProxyChain(transaction_->GetResponseInfo()->proxy_chain);
-  }
-
   if (result == OK) {
     scoped_refptr<HttpResponseHeaders> headers = GetResponseHeaders();
 

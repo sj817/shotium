@@ -19,8 +19,6 @@
 #include "base/memory/ref_counted.h"
 #include "base/memory/scoped_refptr.h"
 #include "base/memory/weak_ptr.h"
-#include "base/metrics/histogram_functions.h"
-#include "base/metrics/histogram_macros.h"
 #include "base/strings/string_util.h"
 #include "base/synchronization/waitable_event.h"
 #include "base/task/single_thread_task_runner.h"
@@ -291,7 +289,6 @@ void ResourceRequestSender::Freeze(LoaderFreezeMode mode) {
     return;
   }
   if (mode != LoaderFreezeMode::kNone) {
-    request_info_->ignore_for_histogram = true;
     request_info_->freeze_mode = mode;
     request_info_->url_loader_client->Freeze(mode);
   } else if (request_info_->freeze_mode != LoaderFreezeMode::kNone) {
@@ -400,13 +397,7 @@ void ResourceRequestSender::OnReceivedResponse(
       response_head->load_timing.request_start;
   // Now that response_start has been set, we can properly set the TimeTicks in
   // the URLResponseHead.
-  base::TimeTicks remote_response_start =
-      ToLocalURLResponseHead(*request_info_, *response_head);
-  if (!request_info_->ignore_for_histogram &&
-      !remote_response_start.is_null()) {
-    base::UmaHistogramTimes("Blink.ResourceRequest.ResponseDelay2",
-                            response_ipc_arrival_time - remote_response_start);
-  }
+  ToLocalURLResponseHead(*request_info_, *response_head);
   request_info_->load_timing_info = response_head->load_timing;
 
   // OnReceivedResponse() can be called at most once. This check is added to
@@ -435,14 +426,7 @@ void ResourceRequestSender::OnReceivedRedirect(
       RedirectRequiresLoaderRestart(GURL(request_info_->response_url),
                                     redirect_info.new_url);
 
-  base::TimeTicks remote_response_start =
-      ToLocalURLResponseHead(*request_info_, *response_head);
-  if (!request_info_->ignore_for_histogram &&
-      !remote_response_start.is_null()) {
-    UmaHistogramTimes(
-        "Blink.ResourceRequest.RedirectDelay2",
-        request_info_->local_response_start - remote_response_start);
-  }
+  ToLocalURLResponseHead(*request_info_, *response_head);
 
   auto callback = blink::BindOnce(
       &ResourceRequestSender::OnFollowRedirectCallback,
@@ -502,8 +486,6 @@ void ResourceRequestSender::OnRequestComplete(
         (renderer_status.completion_time < request_info_->local_request_start ||
          renderer_status.completion_time > complete_ipc_arrival_time);
 
-    base::UmaHistogramBoolean("Blink.ResourceRequest.CompletionTimeOutOfRange",
-                              completion_time_out_of_range);
   }
 
   if (completion_time_out_of_range) {
@@ -530,20 +512,6 @@ void ResourceRequestSender::OnRequestComplete(
     }
   }
 
-  if (!request_info_->ignore_for_histogram) {
-    const net::LoadTimingInfo& timing_info = request_info_->load_timing_info;
-    if (!timing_info.request_start.is_null()) {
-      UmaHistogramTimes(
-          "Blink.ResourceRequest.StartDelay2",
-          timing_info.request_start - request_info_->local_request_start);
-    }
-    if (!renderer_status.completion_time.is_null()) {
-      UmaHistogramTimes(
-          "Blink.ResourceRequest.CompletionDelay3",
-          complete_ipc_arrival_time - renderer_status.completion_time);
-    }
-  }
-
   // The request ID will be removed from our pending list in the destructor.
   // Normally, dispatching this message causes the reference-counted request to
   // die immediately.
@@ -553,7 +521,7 @@ void ResourceRequestSender::OnRequestComplete(
   client->OnCompletedRequest(renderer_status);
 }
 
-base::TimeTicks ResourceRequestSender::ToLocalURLResponseHead(
+void ResourceRequestSender::ToLocalURLResponseHead(
     const PendingRequestInfo& request_info,
     network::mojom::URLResponseHead& response_head) const {
   base::TimeTicks remote_response_start = response_head.response_start;
@@ -563,7 +531,7 @@ base::TimeTicks ResourceRequestSender::ToLocalURLResponseHead(
       response_head.request_start.is_null() ||
       remote_response_start.is_null() ||
       response_head.load_timing.request_start.is_null()) {
-    return remote_response_start;
+    return;
   }
 
 #if BUILDFLAG(IS_WIN)
@@ -599,9 +567,7 @@ base::TimeTicks ResourceRequestSender::ToLocalURLResponseHead(
   RemoteToLocalTimeTicks(converter, &load_timing->service_worker_fetch_start);
   RemoteToLocalTimeTicks(converter,
                          &load_timing->service_worker_respond_with_settled);
-  RemoteToLocalTimeTicks(converter, &remote_response_start);
 #endif
-  return remote_response_start;
 }
 
 }  // namespace blink

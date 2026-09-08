@@ -1076,7 +1076,6 @@ void URLRequest::PrepareToRestart() {
 
   status_ = OK;
   is_pending_ = false;
-  proxy_chain_ = ProxyChain();
 }
 
 void URLRequest::Redirect(

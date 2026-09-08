@@ -42,10 +42,6 @@ class NET_EXPORT SSLCertRequestInfo
   // The host and port of the SSL server that requested client authentication.
   HostPortPair host_and_port;
 
-  // True if the server that issues this request was the HTTPS proxy used in
-  // the request.  False, if the server was the origin server.
-  bool is_proxy = false;
-
   // List of DER-encoded X.509 DistinguishedName of certificate authorities
   // allowed by the server.
   std::vector<std::string> cert_authorities;

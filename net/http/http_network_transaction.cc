@@ -457,8 +457,7 @@ int HttpNetworkTransaction::RestartWithCertificate(
       response_.cert_request_info->host_and_port, std::move(client_cert),
       std::move(client_private_key));
 
-  if (!response_.cert_request_info->is_proxy)
-    configured_client_cert_for_server_ = true;
+  configured_client_cert_for_server_ = true;
 
   // Reset the other member variables.
   // Note: this is necessary only with SSL renegotiation.

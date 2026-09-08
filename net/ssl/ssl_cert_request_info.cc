@@ -12,7 +12,6 @@ SSLCertRequestInfo::SSLCertRequestInfo() = default;
 
 void SSLCertRequestInfo::Reset() {
   host_and_port = HostPortPair();
-  is_proxy = false;
   cert_authorities.clear();
   signature_algorithms.clear();
 }

@@ -92,10 +92,6 @@ class COMPONENT_EXPORT(NETWORK_CPP_NETWORK_PARAM)
     return s->host_and_port;
   }
 
-  static bool is_proxy(const scoped_refptr<net::SSLCertRequestInfo>& s) {
-    return s->is_proxy;
-  }
-
   static const std::vector<std::string>& cert_authorities(
       const scoped_refptr<net::SSLCertRequestInfo>& s) {
     return s->cert_authorities;
