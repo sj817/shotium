@@ -29,7 +29,20 @@ Evidence: Windows x64 shards spent 6–16 minutes on setup, then ninja reported 
 ## Batches and completion criteria
 
 1. **Remove proven redundant setup**: adaptive single-runner selection for an available successful cache with only documentation/version changes; keep cold/source-change parallelism. Skip macOS Xcode deletion when at least 40 GiB is free. Correct registry verification so a 404 cannot produce a green publication gate. Implementation and focused local tests complete; six-platform CI measurement pending.
-2. **Dependency preparation and remaining critical path**: inspect sync/download and cache logs across platforms; remove or reuse demonstrably duplicated work without stale toolchains, deleting live dependencies or hiding failed checks. Decide from measurements whether another cache/preparation stage actually saves time. Still pending.
+2. **Dependency preparation and remaining critical path**: removed the eager `vpython3_common` install hook and its pruning allowlist entry. Baseline hook cost: Windows x64 122.65 seconds, macOS x64 287.27 seconds. GN explicitly selects DEPS CPython; all 4,199 commands in the local Windows engine graph contain zero vpython calls. The repository vpython spec remains available on demand. Type check passes; cross-platform CI verification is pending. Other sync/cache changes require evidence that restoring another large cache is faster than downloading it.
 3. **Measure and finish**: obtain successful six-platform candidate runs and compare wall time plus summed runner minutes against comparable warm runs. Report cold-build limitations honestly, record run URLs and remaining costs. Do not describe a forecast as measured savings. Still pending.
 
 Keep the `shotium-ci` heartbeat active until these batches are complete. On unchanged CI state, remain quiet. Notify on a failure, required action, or verified meaningful outcome. Commit related changes in batches; no PR and no further release.
+
+## First candidate in flight
+
+Commit `0c1a945c7b44f6f880abf45a3afb093d06309569`, checks 34287898193 passed. These six runs explicitly select `shards=1` to measure the warm single-runner path; the adaptive classifier also passed a live GitHub-cache lookup locally. They do not include the subsequent vpython hook removal.
+
+- Windows x64: 34287897157
+- Windows arm64: 34287901594
+- Linux x64: 34287906113
+- Linux arm64: 34287917855
+- macOS x64: 34287922393
+- macOS arm64: 34287927557
+
+Do not restart these while they run. Once they finish, capture timings and validate the second batch on its own exact commit. The post-release benchmark run 34287208480 is also active, with `max-parallel: 30`; at inspection four macOS benchmark jobs occupied runners and macOS x64 engine was queued. Record queue time separately from engine job time instead of attributing capacity contention to compilation. No benchmark results have been discarded.

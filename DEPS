@@ -1148,18 +1148,9 @@ skip_child_includes = [
 
 
 hooks = [
-  # Download and initialize "vpython" VirtualEnv environment packages for
-  # Python3. We do this before running any other hooks so that any other
-  # hooks that might use vpython don't trip over unexpected issues and
-  # don't run slower than they might otherwise need to.
-  {
-    'name': 'vpython3_common',
-    'pattern': '.',
-    'action': [ 'vpython3',
-                '-vpython-spec', 'src/.vpython3',
-                '-vpython-tool', 'install',
-    ],
-  },
+  # GN uses the DEPS-provided CPython, not the repository-wide vpython spec.
+  # Do not eagerly install Chromium's analysis/test/cloud Python environment
+  # on every screenshot CI runner. Explicit vpython users resolve it on demand.
   {
     # This clobbers when necessary (based on get_landmines.py). This should
     # run as early as possible so that other things that get/generate into the

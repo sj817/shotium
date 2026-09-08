@@ -63,7 +63,6 @@ const toolchain = [
 
 // gclient hooks that do something for a Windows, Linux or macOS engine build.
 const keptHooks = new Set([
-  'vpython3_common',
   'landmines',
   'disable_depot_tools_selfupdate',
   'win_toolchain',
