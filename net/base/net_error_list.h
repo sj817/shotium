@@ -958,16 +958,7 @@ NET_ERROR(INVALID_SIGNED_EXCHANGE, -504)
 // An error occurred while handling a Web Bundle source.
 NET_ERROR(INVALID_WEB_BUNDLE, -505)
 
-// A Trust Tokens protocol operation-executing request failed for one of a
-// number of reasons (precondition failure, internal error, bad response).
-NET_ERROR(TRUST_TOKEN_OPERATION_FAILED, -506)
-
-// When handling a Trust Tokens protocol operation-executing request, the system
-// was able to execute the request's Trust Tokens operation without sending the
-// request to its destination: for instance, the results could have been present
-// in a local cache (for redemption) or the operation could have been diverted
-// to a local provider (for "platform-provided" issuance).
-NET_ERROR(TRUST_TOKEN_OPERATION_SUCCESS_WITHOUT_SENDING_REQUEST, -507)
+// Values -506 and -507 are reserved for removed token operations.
 
 // This is a placeholder value that should never be used within //net.
 //

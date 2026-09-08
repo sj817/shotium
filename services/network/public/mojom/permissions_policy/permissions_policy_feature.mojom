@@ -93,8 +93,7 @@ enum PermissionsPolicyFeature {
   // Client Hint for the full browser version.
   kClientHintUAFullVersion = 71,
 
-  // Trust Token API redemption and request signing operations
-  kTrustTokenRedemption = 72,
+  // Value 72 is reserved for removed token redemption.
 
   // [Deprecated]
   // kAttributionReporting = 73,
@@ -210,8 +209,7 @@ enum PermissionsPolicyFeature {
   // [Deprecated]
   // kPrivateAggregation = 109,
 
-  // Private State Tokens API issuance operation
-  kPrivateStateTokenIssuance = 110,
+  // Value 110 is reserved for removed token issuance.
 
   // Client Hint for form factor
   kClientHintUAFormFactors = 111,

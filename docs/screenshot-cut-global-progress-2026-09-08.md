@@ -1,4 +1,6 @@
-# 静态截图引擎全局裁剪进度（stage66）
+# 静态截图引擎全局裁剪进度（stage67）
+
+stage67：stage66 已提交 58c5d81e0f96。本批15源码/工具路径（11D+4E）。解除Trust Token两个permissions-policy注册及命名枚举、六个NetLog事件、两个无生产端错误定义；权限72/110及错误-506/-507留注释保留空位，其他显式编号原文不变。使用仓库pyjson5解析确认其余权限配置完全相同；其余日志事件顺序保持，隐式NetLog数字ID可随最终重建变化，不宣称稳定。另删除Clang十一独立维护脚本：批量重构/编辑与测试链、额外clang-tidy工具构建、编译输入大小报表、上游dashboard；完整显式/动态入口复核无实际Shot或六平台消费者，build/update/package、Rust/Crubit、generate_compdb和资源字体生成保持。保护交集零、原始SHA/11实体删除、JSON5/枚举/残留与diff检查通过，无GN修改或图/编译/运行/像素验收。证据out/cut-stage67-combined/、out/cut-stage67-token-declarations/、out/cut-stage67-unused-tools/。Trust Token仅余受限Document生成头/schema与PrivateToken IDL/生成列表尾巴；历史WebFeature编号是兼容元数据而非启用功能。stage49受限core GN阻点及全局后续未解除，全局约65%±10、源码约80%、余10–16大批次仍为粗估。
 
 stage66：stage65 已提交 de95404538ca。本批36源码路径（20D+16E）。解除Trust Token completion/error链：网络状态字段/schema/traits、WebURLError专属构造/getter、ResourceError拷贝/转换/比较/日志/特殊抑制及无调用key-commitments switch，五处空include收齐。普通CORS/响应阻断/DNS/证书/缓存错误继续保留；完整生成头引用只余受限document.cc和归属GN源条目，schema枚举原文不变且明确待删，未伪报完整功能完成。另删除macOS八组独立辅助及专属LaunchServices SPI/孤立test-helper BUILD、POSIX旧UnixDomainSocket共20文件，base GN同步；真实Mach签名/FD与Mojo通道/net socket/process launch/locale/font/error逻辑保留，残留同名Mojo helper为独立实现。保护交集零、原始SHA/实体删除、1GN语法、diff和残留核对通过；证据out/cut-stage66-combined/、out/cut-stage66-token-status/、out/cut-stage66-system-helpers/。无图生成/编译/运行/像素验证。Trust Token剩余受限schema/IDL生成边与policy/counter/历史event声明、stage49受限core GN阻点和全局后续仍待完成；全局约65%±10、源码约80%、余10–16大批次仅工作量粗估。
 

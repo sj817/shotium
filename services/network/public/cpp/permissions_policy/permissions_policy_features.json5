@@ -472,12 +472,6 @@
       feature_default: "EnableForAll",
     },
     {
-      name: "PrivateStateTokenIssuance",
-      permissions_policy_name: "private-state-token-issuance",
-      feature_default: "EnableForAll",
-      depends_on: ["PrivateStateTokens"],
-    },
-    {
       name: "PublicKeyCredentialsCreate",
       permissions_policy_name: "publickey-credentials-create",
     },
@@ -551,12 +545,6 @@
       name: "Translator",
       permissions_policy_name: "translator",
       depends_on: ["TranslationAPI"],
-    },
-    {
-      name: "TrustTokenRedemption",
-      permissions_policy_name: "private-state-token-redemption",
-      feature_default: "EnableForAll",
-      depends_on: ["PrivateStateTokens"],
     },
     {
       name: "Usb",
