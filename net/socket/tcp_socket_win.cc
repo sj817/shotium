@@ -26,7 +26,6 @@
 #include "net/base/io_buffer.h"
 #include "net/base/ip_endpoint.h"
 #include "net/base/net_errors.h"
-#include "net/base/network_activity_monitor.h"
 #include "net/base/network_change_notifier.h"
 #include "net/base/sockaddr_storage.h"
 #include "net/base/winsock_init.h"
@@ -708,7 +707,6 @@ int TCPSocketDefaultWin::ReadIfReady(IOBuffer* buf,
   } else {
     net_log_.AddByteTransferEvent(NetLogEventType::SOCKET_BYTES_RECEIVED, rv,
                                   buf->data());
-    activity_monitor::IncrementBytesReceived(rv);
     return rv;
   }
 

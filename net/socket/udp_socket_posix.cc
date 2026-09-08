@@ -48,7 +48,6 @@
 #include "net/base/ip_address_util.h"
 #include "net/base/ip_endpoint.h"
 #include "net/base/net_errors.h"
-#include "net/base/network_activity_monitor.h"
 #include "net/base/network_interfaces.h"
 #include "net/base/sockaddr_storage.h"
 #include "net/base/trace_constants.h"
@@ -995,8 +994,6 @@ void UDPSocketPosix::LogRead(int result,
     NetLogUDPDataTransfer(net_log_, NetLogEventType::UDP_BYTES_RECEIVED, result,
                           bytes, address);
   }
-
-  activity_monitor::IncrementBytesReceived(result);
 }
 
 void UDPSocketPosix::DidCompleteWrite() {

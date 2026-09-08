@@ -49,19 +49,15 @@ class BinderMap;
 
 namespace blink {
 
-class DevToolsSession;
 class Document;
 class ExecutionContext;
 class HTMLMediaElement;
-class InspectedFrames;
-class InspectorDOMAgent;
 class LocalFrame;
 class Page;
 class PictureInPictureController;
 class ServiceWorkerGlobalScope;
 class Settings;
 class ShadowRoot;
-class WorkerGlobalScope;
 
 class CORE_EXPORT CoreInitializer {
   USING_FAST_MALLOC(CoreInitializer);
@@ -100,16 +96,6 @@ class CORE_EXPORT CoreInitializer {
   // that no longer exist.
   virtual PictureInPictureController* CreatePictureInPictureController(
       Document&) const = 0;
-  // Session Initializers for Inspector Agents in modules/
-  // These methods typically create agents and append them to a session.
-  // TODO(nverne): remove this and restore to WebDevToolsAgentImpl once that
-  // class is a controller/ crbug:731490
-  virtual void InitInspectorAgentSession(DevToolsSession*,
-                                         InspectorDOMAgent*,
-                                         InspectedFrames*,
-                                         Page*) const = 0;
-  virtual void InitWorkerInspectorAgentSession(DevToolsSession*,
-                                               WorkerGlobalScope*) const = 0;
 
   virtual void OnClearWindowObjectInMainWorld(Document&,
                                               const Settings&) const = 0;

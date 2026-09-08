@@ -22,7 +22,6 @@
 #include "base/win/scoped_handle.h"
 #include "net/base/io_buffer.h"
 #include "net/base/net_errors.h"
-#include "net/base/network_activity_monitor.h"
 #include "net/log/net_log.h"
 #include "net/socket/socket_net_log_params.h"
 
@@ -412,7 +411,6 @@ int TcpSocketIoCompletionPortWin::DidCompleteRead(
       const int rv = base::checked_cast<int>(bytes_transferred);
       net_log_.AddByteTransferEvent(NetLogEventType::SOCKET_BYTES_RECEIVED, rv,
                                     buffer->data());
-      activity_monitor::IncrementBytesReceived(rv);
       return rv;
     }  // else: asynchronous ReadIfReady completed.
     return OK;

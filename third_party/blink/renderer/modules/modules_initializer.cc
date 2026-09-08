@@ -46,15 +46,6 @@ ModulesInitializer::CreatePictureInPictureController(Document&) const {
   return nullptr;
 }
 
-void ModulesInitializer::InitInspectorAgentSession(DevToolsSession*,
-                                                   InspectorDOMAgent*,
-                                                   InspectedFrames*,
-                                                   Page*) const {}
-
-void ModulesInitializer::InitWorkerInspectorAgentSession(
-    DevToolsSession*,
-    WorkerGlobalScope*) const {}
-
 void ModulesInitializer::InitServiceWorkerGlobalScope(
     ServiceWorkerGlobalScope&) const {}
 

@@ -38,12 +38,6 @@ class MODULES_EXPORT ModulesInitializer : public CoreInitializer {
   void InstallSupplements(LocalFrame&) const override;
   PictureInPictureController* CreatePictureInPictureController(
       Document&) const override;
-  void InitInspectorAgentSession(DevToolsSession*,
-                                 InspectorDOMAgent*,
-                                 InspectedFrames*,
-                                 Page*) const override;
-  void InitWorkerInspectorAgentSession(DevToolsSession*,
-                                       WorkerGlobalScope*) const override;
   void InitServiceWorkerGlobalScope(ServiceWorkerGlobalScope&) const override;
   void ProvideModulesToPage(Page&,
                             const SessionStorageNamespaceId&) const override;
