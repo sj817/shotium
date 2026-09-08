@@ -69,16 +69,6 @@ PaintFlags::FilterQuality sampling_to_quality(
              : PaintFlags::FilterQuality::kNone;
 }
 
-DrawImage CreateDrawImage(const PaintImage& image,
-                          const PaintFlags* flags,
-                          const PaintFlags::FilterQuality& quality,
-                          const SkM44& matrix) {
-  if (!image)
-    return DrawImage();
-  return DrawImage(image, flags->useDarkModeForImage(),
-                   SkIRect::MakeWH(image.width(), image.height()), quality,
-                   matrix);
-}
 
 bool IsScaleAdjustmentIdentity(const SkSize& scale_adjustment) {
   return std::abs(scale_adjustment.width() - 1.f) < FLT_EPSILON &&

@@ -110,6 +110,7 @@ source_set("headers") {
   ]
 
   sources = [
+    "safe_url_pattern.h",
     "associated_interfaces/associated_interface_provider.h",
     "associated_interfaces/associated_interface_registry.h",
     "blob/blob_utils.h",
@@ -229,6 +230,7 @@ source_set("headers") {
   sources += get_target_outputs(":make_runtime_feature_state_contexts_headers")
 
   public_deps = [
+    "//third_party/liburlpattern",
     ":make_generated_permissions_policy_helper",
     ":make_runtime_feature_state_contexts_headers",
     ":preloading_headers",

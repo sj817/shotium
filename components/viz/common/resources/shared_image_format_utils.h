@@ -5,6 +5,7 @@
 #ifndef COMPONENTS_VIZ_COMMON_RESOURCES_SHARED_IMAGE_FORMAT_UTILS_H_
 #define COMPONENTS_VIZ_COMMON_RESOURCES_SHARED_IMAGE_FORMAT_UTILS_H_
 
+#include "base/containers/span.h"
 #include "base/component_export.h"
 #include "components/viz/common/resources/shared_image_format.h"
 

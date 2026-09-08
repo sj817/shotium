@@ -20,6 +20,8 @@
 namespace blink {
 namespace features {
 
+BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kURLPatternDummyURLCanonicalization);
+
 // -----------------------------------------------------------------------------
 // Feature declarations and associated constants (feature params, et cetera)
 //

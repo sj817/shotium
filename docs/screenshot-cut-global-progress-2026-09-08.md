@@ -1,4 +1,6 @@
-# 静态截图引擎全局裁剪进度（stage84）
+# 静态截图引擎全局裁剪进度（stage85）
+
+stage85（Windows x64 编译与运行验收完成）：stage84 已提交 985fa6b678ff（2482 文件、515884 行删除）。本轮直接修复源码/生成模板，落实用户授权的 style_engine include、Gesture 重复 case 和 ConnectionAllowlist 旧统计删除；因 Route 留待下次，恢复 19 个最小 URLPattern 库文件及 SafeUrlPattern cc/h 和原默认开关。EXE 42,728,448 B、DLL 42,726,400 B，addon 已重建并核对加载 DLL 的 SHA。7041 构建输入全部存在；serve/net/node/daemon/protocol/Bilibili 均通过；demos 串行 84 项（62 PASS、1 FUZZY、21 SMOKE）；原基线 183/183 SHA 未变，新结果 183/183 解码像素完全一致。accept --skip-build 完成，Chrome oracle 差异维持 1.524%。首次 jobs=4 demos 出现等待异常，已终止旧测试；独立用例和整套串行复测通过，并行异常原因未确认。六平台实际编译/发布尚未执行，运行 tracing 与 UkmRecorder/SourceId 仍在。证据：out/cut-stage85-build/、out/cut-stage85-checks/；简版 npm 对比见 out/cut-stage85-perf/。
 
 stage84：按用户最新范围完成集中源码删除，stage83已提交19938989d484。用户明确重新授权31/32删除清单、49图修复及84诊断具体差异；核对原文SHA后删除2039个Perfetto离线processor文件及16个ICU无用文件，直接移除六处UKM记录和core三条builder依赖/一条crash_key依赖/失效network:test_support。另删除354个Crashpad/components文件和8个UKM生成文件，收其余4条GN依赖、无用include与OWNERS。保留SVG实际处理、Zstd/CountUse、导航/查找状态、CHECK和FCP。当前实际Perfetto tracing后端与UkmRecorder/SourceId基础链仍在，不宣称所有诊断实现已经清空。Perfetto Python离线客户端配套由唯一子代理收尾；随后集中编译和运行验收，不扩展Blink交互及浏览器尾巴。构建通过前仍不能宣称可发版。证据out/cut-stage84-approved/、out/cut-stage84-crash-ukm/及out/cut-stage84-perfetto-python/。
 
@@ -74,53 +76,75 @@ stage51 更新：WebBundle 请求/响应/Fetcher 闭包已完成源码处理，3
 
 上一轮已完成上层 BidirectionalStream 和 AcceptCHFrameObserver 闭包：27 个源码路径、9 个文件删除、18 个配套编辑，源码增加 33 行、删除 1781 行。普通 HTTP 和底层 HTTP/2 CONNECT 保留。备份、引用、2 份 GN 语法及 diff 检查通过；本轮没有执行完整图生成、编译或运行验收。
 
-## 全局百分比与口径
+## 当前进度与口径
 
-- **源码裁剪与依赖收口：约 80%（估计范围 70%–85%）。** 大体积独立实现已删除；剩余多为跨 DOM、CSS、网络、遥测和构建目标的耦合收尾，不能按文件体积换算工作量。
-- **当前累计改动的最终验收：0% 完成。** 表示当前源码尚无一套最终通过的构建和验收结果，并非之前没有测试。上一轮集中图生成仍失败，当前 C++/链接/运行/像素/六平台门均不能宣称通过。
-- **全任务交付进度：约 65%，合理误差约 ±10 个百分点。** 为便于跟踪，暂按源码处理占 80%、最终构建修复和验收占 20% 估算，80%×80%≈64%，取整约 65%。这是工作量估算，不是自动统计完成率，也不代表有 65% 的当前产物已通过验收。
-- 不能用 stage50/50 或已删文件数除旧 27k 文件数作为完成率。stage 是历史执行记录编号；第三方转为直接维护后文件分母也已变化。
+- **本次收尾交付：Windows x64 构建、运行与像素验收已完成。** 上述通过结果覆盖累计裁剪后的当前源码；首次并行 demos 等待异常未定因，串行整套通过。简版性能结果见下方。
+- **全局源码裁剪约 85%（工作量粗估，误差 ±10 个百分点）**，全局交付约 80%（同为粗估）。不是按文件数统计，不能视为六平台完成率。
+- 本次约定的离线第三方/工具/测试及 Crashpad、UKM builder 清理已经落地。运行 tracing、UkmRecorder/SourceId 和深层性能订阅仍在，不能宣称全部诊断清空。
+- 用户指定剩余两大方向留待下次：Blink 深层交互/扩展，以及浏览器网络/路由尾巴。本轮不继续扩大删除范围。
 
-## 已完成的主要源码工作
+## 已完成
 
-| 范围 | 当前已完成 | 仍需区分 |
+| 范围 | 当前结果 |
+|---|---|
+| 大组件与图形 | gpu/sql/sandbox/device/google_apis 等跟踪源码清空；CPU paint、字体、SVG、MathML 保留。Canvas 绘图链已去除，标签静态 fallback/尺寸相关仍在 |
+| 第三方/工具/测试 | Perfetto 离线 processor 2039 文件、ICU 16 文件删除；Perfetto Python 离线客户端/配套 49 文件删除；第三方直接维护源码，无需补丁队列 |
+| UKM/Crashpad | 6 处核心 UKM builder 统计、builder 生成链移除；Crashpad/components crash 354 文件和 UKM 工具 8 文件删除 |
+| GN/编译 | 失效 network:test_support 已移除；生成模板、直接 include、Mojo traits 和 jumbo 冲突已修；7041 输入存在；EXE/DLL/addon 构建完成 |
+| 运行 | serve、net、node、daemon、daemon-protocol、Bilibili 通过；demos 串行 62 PASS + 1 FUZZY + 21 SMOKE |
+| 像素 | 183 原始基线哈希不变；新输出 183/183 像素完全一致；Chrome oracle 1.524% 差异与旧验收一致 |
+
+## 全局待办（下次再做）
+
+| 范围 | 尚未完成 | 粗估批次 |
 |---|---|---|
-| 根目录大组件 | gpu、sql、sandbox、device、google_apis 的现存跟踪文件已清空；prefs 和多个独立浏览器服务已清理 | 空目录实体清理与源码清空是两件事 |
-| Canvas/浏览器嵌入层 | Canvas 绘图 API/资源桥接、WebView/WebWidget/Popup 大实现、系统剪贴板和多组编辑命令已移除 | 保留 canvas 标签静态 fallback、宽高比；部分交互类型仍需收口 |
-| GPU/合成器/Skia | 大部分合成器执行端、GPU/GL/Vulkan/Skia GPU/PDF/Skottie 和桌面图形桥接已删除 | CPU paint、原生 SkCanvas、图片/字体/SVG/MathML 保留 |
-| 网络 | PAC/WPAD/系统代理、备用磁盘/内存后端、旧服务协议、content_settings、WebSocket、上层双向流和多组观察者已清理 | 实际 HTTP/TLS/HTTP2/缓存及安全类型保留；WebBundle、DevTools 字段闭包已做；policy/递归预取待收口 |
-| 遥测/第三方/维护 | 栈堆采样、大量 UKM 调用点、若干 CrashKey 调用及无用测试/工具已清理；ICU/Skia/Perfetto 已改直接维护源码 | UKM/Crashpad 库和运行 tracing 尚未整链完成；三组受阻清单未删除 |
+| Blink 交互/扩展 | editing、拖放、AX、fileapi/blob、observer/probe/lifecycle 等实际调用闭包；不能按名称整目录删除 | 1–2 |
+| 浏览器网络/路由尾巴 | Route/CSS/URLPattern、Worker、TrustToken/ReportingOptions 和剩余 policy/协议；Route 本轮恢复了最小原生依赖用于通过编译 | 1–2 |
+| 诊断耦合余项 | base/trace_event、运行 Perfetto、UkmRecorder/SourceId、PerformanceMonitor/声明式性能订阅；保留 CaptureStats/FCP/CHECK 的实际功能 | 1–2 |
+| 全局复核与平台验证 | 根目录/DEPS/生成工具最终复核、六平台真实构建和必要修复；本次 Windows 本机通过不代替其他平台 | 1–2 |
 
-此前最后一套真正编译和运行通过的基线是第十一批 d9b409db334cb60b0f6b0c11549b7d5c4be7e7bb：Windows EXE/DLL/addon、serve/net、84 demos、Node/daemon/协议、Bilibili 与 183/183 像素一致。这不能证明 stage16–60 的累计改动已通过。六平台当前实际编译未完成。
+预计 **4–8 个大批次**，可按同一依赖闭包合并提交；这是未知耦合较多的估计，不是承诺。发版准备可先进行其他平台构建，无需先完成上述全部可选裁剪。
 
-## 全局待办：按后续大批次组织
+## 现有边界与异常
 
-以下是剩余工作的完整分组，不是允许整目录删除的名单。每组最终须裁掉无用闭包，或写出具体静态截图用途和最小保留范围。
+此前对 Perfetto 2039 删除、ICU 16 删除、core 失效 GN 行、核心 UKM 以及三处编译修复的具体授权均已落实，不再列为当前阻点。其余旧受限修改没有获整组授权，后续应重新审查当前源码，不能重放历史补丁。
 
-| 顺序 | 根目录/范围 | 必须完成的工作 | 估计大批次 |
-|---|---|---|---|
-| 1 | Blink core / Route / URLPattern | 先解除 core/BUILD.gn 的失效 services/network:test_support 图阻点；处理 Route/CSS/URLPattern 原 92 路径提案，重查调用与当前源码，不能重放旧补丁覆盖后续修改 | 1–2 |
-| 2 | third_party/perfetto、icu | 落实离线 trace processor 的 2039 个待删文件、ICU 的 16 个待删文件；检查独立外围工具。保留真实 Unicode、字体与数据生成 | 1 |
-| 3 | Blink、services/metrics、components/crash、third_party/crashpad | 去掉 Document/DocumentLoader 的 6 个 UKM builder 调用及库/协议/生成器依赖；关闭已无外部调用的组件 CrashKey GN 链并清理 Crashpad，保留实际错误诊断 | 1–2 |
-| 4 | base/trace_event、base/tracing、Perfetto 运行后端 | 处理记录、会话、导出和宏调用的实际依赖；不能与已做的离线 processor 混为一组，不能误删 CaptureStats/FCP/CHECK/真实日志 | 1–2 |
-| 5 | net、services/network、Blink loader | WebBundle token/handle、响应标记和 Fetcher 闭包已在 stage51 处理；NetLog 导出和两组纯请求字段已在 stage52 处理；继续回查浏览器 policy、持久状态、剩余协议/traits、DevTools request id 已在 stage53 解除；递归预取等审计项按实际调用给最终结论；旧 IPC 五 Native 类型已在 stage54 复核源码完成，普通 Mojo traits 保留 | 1 |
-| 6 | third_party/blink 交互与扩展 | editing、DataTransfer/拖放、fullscreen、fileapi/blob、AX、PerformanceObserver/User Timing、probe，以及剩余脚本关联类型；同时确认内部 observer、通用线程与表单/CSS 状态的最小保留；XSLT 等已有保留结论不重新按名字砍 | 1–2 |
-| 7 | ui、base、build、third_party、根配置 | ui/resources 桌面资源已在 stage53 清理；两套无用语言包和 AX 未引用译文已在 stage54 清理；stage55已清理浏览器本地化工具和ipcz失效测试目标；其余 locale/语言资源、latency/AX、系统 helper、测试模板与生成工具，libyuv已在stage55解除全闭包；re2（Mac屏幕配置等；SVG片段时间解析依赖已在stage56解除）、ipcz（当前Mojo后端）保留实际运行部分，其余外围继续收口；同步 DEPS/.gn/BUILD/.gitmodules/trim-tree/prune-deps，核对空目录和全部 A/B/C 附录，避免同步后回流 | 1–2 |
-| 8 | 全局验证与修复 | 最终 GN 图、缺失输入、生成类型/语法/jumbo、Windows EXE/DLL/addon；按错误集合批量修复，避免每个小修改完整构建 | 1–2 |
-| 9 | 运行/像素/六平台 | serve/net/demos/Node/daemon/协议/Bilibili、完整像素和 Canvas 专项；六平台真实编译，交付保留/删除总表和最终证据 | 1–2 |
+首次 jobs=4 demos 在 gradient-hard-stop 测试等待；输出存在不等于进程完成。独立同一用例及 jobs=1 全部 84 项通过；旧测试父进程已终止，首次并行运行记为失败/未完成，不计通过。原因未确认，后续并行可靠性值得单独排查。
 
-**合计预计约 10–16 个大批次**（上表端点相加约 9–16，按约 10–16 对外规划）。可并入同一依赖闭包的工作合并提交，批次不等于必须一批一个 commit。前提是受阻范围解除，且构建不暴露新的大规模依赖问题；出现额外耦合或平台问题需上调估计。这是剩余工作量预测，不承诺固定耗时。
+## shotium 迁入 apps 的成本
 
-## 当前阻点
+**中低成本，建议独立一个提交处理，本轮仅评估未移动。** 已发现 58 个候选引用文件（6 workflows、22 scripts、21 apps、8 shotium、root package.json），其中可能含注释，不等于必须改 58 个文件。主要是 native 的头文件/库相对路径、构建与测试脚本默认路径、workflow 工作目录/产物和示例引用；不需要改 Blink/Skia 引擎架构。预计一个路径迁移批次，加包构建/类型/加载/打包检查；若引擎 GN 输入不变无需重编完整 Chromium。
 
-1. 当前构建图失败在 third_party/blink/renderer/core/BUILD.gn:1283 的 //services/network:test_support，目标目录 BUILD.gn 已不存在。精确单行修复见 out/cut-stage49-graph/approval-review.md，尚未应用。
-2. Route 92 路径、Perfetto 2039 个物理删除、ICU 16 个物理删除此前被自动审批拒绝；相关路径仍保留，不能把 GN 改过算作实体已删。该限制同时影响核心文件内的 UKM/CrashKey 等收口。
-3. patches 和 mojo/public/tools/fuzzers 的空目录删除此前也被拒绝；不影响它们已删源码的事实，但最终目录验收仍要明确处理。
-4. 自动审批只返回 blocked by policy，没有更详细原因。当前记录保留原拒绝范围，不通过换工具、补空 target 或改其他位置绕过。
+## 证据
 
-## 证据与后续接续
+- stage84 删除提交：985fa6b678ff；out/cut-stage84-approved/、out/cut-stage84-crash-ukm/、out/cut-stage84-perfetto-python/。
+- stage85 构建：out/cut-stage85-build/build-04.log、dll.log、addon.log、missing-inputs-final.log、binaries.json。
+- 运行：out/cut-stage85-build/ 下各套日志；demos-serial.log 与首次 demos.log 分开保存。
+- 像素：out/cut-stage85-checks/pixel-comparison.json；原始基线完整性：out/cut-stage85-build/baseline-integrity.json。
+- 后续接续以本节与顶部 stage85 为准；上面的 stage84 及更早记录为历史，不应重新当作当前未完成清单。
 
-- 本轮 manifest、备份核对、静态结果：out/cut-stage54-combined/；AX 子代理交接：out/cut-stage54-ax-strings/report.md；旧 IPC 完成证据：out/cut-stage54-ipc-audit/report.md。
-- 根目录复核基础：out/cut-stage45-root-review/report.md；其中 network/content_settings/WebSocket 等项目以 stage46–54 的实际删除为准，不能重复列为未完成。
-- stage50 根目录现存跟踪文件统计和受阻清单存在性历史快照：out/cut-stage50-combined/global-snapshot.json。目录文件数只用来验证存在状态，不用来证明用途或百分比。
-- 主任务、原始审计、执行证据仍分别位于 screenshot-cut-task.md、screenshot-unused-code-audit-2026-09-07.md、screenshot-cut-execution-2026-09-07.md。历史未勾选项包含已做源码但未验收的内容，以本报告和顶部 stage60 状态解释，不把历史 checkbox 直接计为新工作量。
+## npm 0.4.0 简版对比（Windows x64）
+
+同机、同一 JS bundle，真实 npm 安装包对比当前重建 addon/DLL；实际加载库 SHA 已记录并与最终产物一致。仅选 6 个本地用例，AB/BA 配对、至少 20 对、99% 区间；未做 A/A 噪声校准，使用脚本默认 2% 容差。不涉及远程网络速度，也不代表其他平台。
+
+| 项目 | npm 0.4.0 | 当前 | 变化 |
+|---|---:|---:|---:|
+| 引擎 DLL（未压缩） | 48,976,896 B / 46.71 MiB | 42,726,400 B / 40.75 MiB | -12.76% |
+| Node addon（未压缩） | 122,880 B | 124,416 B | +1,536 B |
+
+当前 EXE 为 42,728,448 B（40.75 MiB），npm 包不含 EXE，故不进行跨形态比较。当前平台运行文件 DLL + addon + 两个 pak 合计 42,889,104 B；这不是重新打包后的 npm tarball 大小。
+
+| 用例（p50，ms） | npm | 当前 | 耗时变化 | 当前/npm 99% 区间 | 配对数 | 判断 |
+|---|---:|---:|---:|---|---:|---|
+| card-png | 5.125 | 4.906 | -4.27% | 0.938–0.979 | 1000 | 小幅更快 |
+| corpus-png | 13.508 | 12.895 | -4.54% | 0.924–0.992 | 571 | 小幅更快 |
+| card-jpeg | 3.144 | 2.986 | -5.03% | 0.931–0.972 | 971 | 小幅更快 |
+| card-webp | 14.702 | 14.505 | -1.34% | 0.972–1.000 | 201 | 小幅更快 |
+| standard-long-page-png | 33.764 | 32.956 | -2.39% | 0.932–1.030 | 232 | 收益未证实 |
+| startup-png | 11.491 | 10.963 | -4.59% | 0.935–0.975 | 396 | 小幅更快 |
+| 引擎初始化 | 29.028 | 27.455 | -5.42% | 0.908–0.975 | 396 | 小幅更快 |
+| 模块导入 + 引擎初始化 | 38.242 | 36.403 | -4.81% | 0.908–0.996 | 396 | 小幅更快 |
+
+启动用例的 wall 是新进程内第一次截图；引擎初始化与模块导入另列，不含 Node 进程启动。p95 尾延迟存在不确定性，不宣称全分位提速。6/6 配对图片校验通过，各截图失败资源计数为 0。
+
+这是按用户要求缩小范围的诊断对比，**不是完整性能门通过**：result.json 明确 complete=false/status=not-passed；完整报告器因此返回 exit 1，另有长页面 unproven。所选 6 项执行完成，没有把失败截图当速度收益。原始结果：out/cut-stage85-perf/result.json，图片结论 result.pixels.json，完整报告器输出 report.md。

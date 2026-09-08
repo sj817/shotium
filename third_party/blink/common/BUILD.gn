@@ -108,6 +108,7 @@ shot_compatible_source_set("common") {
   }
 
   sources = [
+    "safe_url_pattern.cc",
     # NOTE: Please do not add public headers that need to be referenced from
     # outside WebKit, add them in public/common instead.
     "associated_interfaces/associated_interface_provider.cc",
@@ -211,6 +212,7 @@ shot_compatible_source_set("common") {
   sources += get_target_outputs(":make_runtime_feature_state_contexts_impl")
 
   public_deps = [
+    "//third_party/liburlpattern",
     ":make_generated_document_policy_features",
     ":make_generated_features",
     ":make_runtime_feature_state_contexts_impl",

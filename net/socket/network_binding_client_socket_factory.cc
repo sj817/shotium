@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "net/socket/ssl_client_socket.h"
 #include "net/socket/network_binding_client_socket_factory.h"
 
 #include "net/socket/tcp_client_socket.h"

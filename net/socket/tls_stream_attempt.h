@@ -5,6 +5,7 @@
 #ifndef NET_SOCKET_TLS_STREAM_ATTEMPT_H_
 #define NET_SOCKET_TLS_STREAM_ATTEMPT_H_
 
+#include "net/socket/ssl_client_socket.h"
 #include <memory>
 #include <optional>
 #include <string_view>

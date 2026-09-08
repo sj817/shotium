@@ -38,6 +38,7 @@
 #include "base/hash/hash.h"
 #include "base/rand_util.h"
 #include "third_party/blink/public/common/features.h"
+#include "third_party/blink/public/mojom/css/preferred_contrast.mojom-blink.h"
 #include "third_party/blink/public/mojom/timing/resource_timing.mojom-blink.h"
 #include "third_party/blink/renderer/core/css/cascade_layer_map.h"
 #include "third_party/blink/renderer/core/css/cascade_layered.h"

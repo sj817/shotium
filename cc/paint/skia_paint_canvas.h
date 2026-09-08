@@ -160,7 +160,6 @@ class CC_PAINT_EXPORT SkiaPaintCanvas final : public PaintCanvas {
       PlaybackCallbacks::CustomDataRasterCallback custom_raster_callback,
       bool local_ctm = true);
 
-  int pendingOpsForTesting() const { return num_of_ops_; }
 
  private:
 

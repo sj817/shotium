@@ -127,27 +127,6 @@ std::vector<size_t> DisplayItemList::OffsetsOfOpsToRaster(
   return offsets;
 }
 
-void DisplayItemList::CaptureContent(const gfx::Rect& rect,
-                                     std::vector<NodeInfo>* content) const {
-#if DCHECK_IS_ON()
-  DCHECK(IsFinalized());
-#endif
-
-  if (!paint_op_buffer_.has_draw_text_ops())
-    return;
-  std::vector<size_t> offsets;
-  std::vector<gfx::Rect> rects;
-  rtree_.Search(rect, &offsets, &rects);
-  IterateTextContentByOffsets(
-      paint_op_buffer_, offsets, rects,
-      [content](const DrawTextBlobOp& op, const gfx::Rect& rect) {
-        // Only union the rect if the current is the same as the last one.
-        if (!content->empty() && content->back().node_id == op.node_id)
-          content->back().visual_rect.Union(rect);
-        else
-          content->emplace_back(op.node_id, rect);
-      });
-}
 
 double DisplayItemList::AreaOfDrawText(const gfx::Rect& rect) const {
   if (!paint_op_buffer_.has_draw_text_ops())

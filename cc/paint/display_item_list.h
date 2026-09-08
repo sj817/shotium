@@ -55,10 +55,6 @@ class CC_PAINT_EXPORT DisplayItemList
   void Raster(SkCanvas* canvas, const PlaybackParams& params) const;
   std::vector<size_t> OffsetsOfOpsToRaster(SkCanvas* canvas) const;
 
-  // Captures |DrawTextBlobOp|s intersecting |rect| and returns the associated
-  // |NodeId|s in |content|.
-  void CaptureContent(const gfx::Rect& rect,
-                      std::vector<NodeInfo>* content) const;
 
   // Returns the approximate total area covered by |DrawTextBlobOp|s
   // intersecting |rect|, used for statistics purpose.

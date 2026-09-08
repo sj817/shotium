@@ -30,6 +30,8 @@
 
 #include "third_party/blink/public/platform/platform.h"
 
+#include "ui/gfx/color_space.h"
+
 #include <memory>
 
 #include "base/notimplemented.h"

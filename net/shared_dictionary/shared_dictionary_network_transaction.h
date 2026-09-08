@@ -5,6 +5,7 @@
 #ifndef NET_SHARED_DICTIONARY_SHARED_DICTIONARY_NETWORK_TRANSACTION_H_
 #define NET_SHARED_DICTIONARY_SHARED_DICTIONARY_NETWORK_TRANSACTION_H_
 
+#include "net/log/net_log_with_source.h"
 #include <vector>
 
 #include "base/byte_size.h"

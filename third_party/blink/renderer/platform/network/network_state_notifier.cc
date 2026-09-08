@@ -228,21 +228,15 @@ void NetworkStateNotifier::SetNetworkConnectionInfoOverride(
 
     if (!effective_type && http_rtt_msec > 0) {
       base::TimeDelta http_rtt(base::Milliseconds(http_rtt_msec));
-      // Threshold values taken from
-      // net/nqe/network_quality_estimator_params.cc.
+      // Preserve the RTT thresholds from the removed network quality estimator.
       if (http_rtt >=
-          net::kHttpRttEffectiveConnectionTypeThresholds[static_cast<size_t>(
-              EffectiveConnectionType::kEffectiveConnectionSlow2GType)]) {
+          base::Milliseconds(2010)) {
         effective_type = WebEffectiveConnectionType::kTypeSlow2G;
       } else if (http_rtt >=
-                 net::kHttpRttEffectiveConnectionTypeThresholds[static_cast<
-                     size_t>(
-                     EffectiveConnectionType::kEffectiveConnection2GType)]) {
+                 base::Milliseconds(1420)) {
         effective_type = WebEffectiveConnectionType::kType2G;
       } else if (http_rtt >=
-                 net::kHttpRttEffectiveConnectionTypeThresholds[static_cast<
-                     size_t>(
-                     EffectiveConnectionType::kEffectiveConnection3GType)]) {
+                 base::Milliseconds(272)) {
         effective_type = WebEffectiveConnectionType::kType3G;
       } else {
         effective_type = WebEffectiveConnectionType::kType4G;

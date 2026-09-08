@@ -120,6 +120,7 @@ constexpr auto kRequestDestinationFromStringMap =
 constexpr int kDeprecatedRequestDestinationValues[] = {
     2,   // Removed audio worklet destination.
     11,  // Removed paint worklet destination.
+    19,  // Removed web bundle destination.
     27,  // kSharedStorageWorklet
 };
 

@@ -80,7 +80,6 @@ HitTestRequest::HitTestRequestType GestureManager::GetHitTypeForGestureType(
     case WebInputEvent::Type::kGestureShowPress:
     case WebInputEvent::Type::kGestureTapUnconfirmed:
       return hit_type | HitTestRequest::kActive;
-    case WebInputEvent::Type::kGestureShortPress:
     case WebInputEvent::Type::kGestureTapCancel:
       // A TapDownCancel received when no element is active shouldn't really be
       // changing hover state.

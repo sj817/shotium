@@ -19,6 +19,8 @@
 
 namespace blink::features {
 
+BASE_FEATURE(kURLPatternDummyURLCanonicalization, base::FEATURE_ENABLED_BY_DEFAULT);
+
 // -----------------------------------------------------------------------------
 // Feature definitions and associated constants (feature params, et cetera)
 //

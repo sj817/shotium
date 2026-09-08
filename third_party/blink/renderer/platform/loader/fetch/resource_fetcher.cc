@@ -3542,7 +3542,6 @@ ResourceFetcher::ResourcePrepareHelper::PrepareRequestForCacheAccess(
   if (has_transparent_placeholder_image_) {
     return fetcher_.UpdateRequestForTransparentPlaceholderImage(params_);
   }
-  ResourceRequest& resource_request = params_.MutableResourceRequest();
 
   ResourceType resource_type = factory_.GetType();
   const ResourceLoaderOptions& options = params_.Options();

@@ -5,6 +5,8 @@
 #ifndef SERVICES_NETWORK_PUBLIC_CPP_NETWORK_TYPES_MOJOM_TRAITS_H_
 #define SERVICES_NETWORK_PUBLIC_CPP_NETWORK_TYPES_MOJOM_TRAITS_H_
 
+#include <optional>
+
 #include "base/check_op.h"
 #include "mojo/public/cpp/bindings/enum_traits.h"
 #include "net/http/http_connection_info.h"
@@ -22,15 +24,14 @@ struct EnumTraits<network::mojom::ConnectionInfo, net::HttpConnectionInfo> {
     return static_cast<network::mojom::ConnectionInfo>(value);
   }
 
-  static bool FromMojom(network::mojom::ConnectionInfo input,
-                       net::HttpConnectionInfo* output) {
+  static std::optional<net::HttpConnectionInfo> FromMojom(
+      network::mojom::ConnectionInfo input) {
     const int value = static_cast<int>(input);
     if (value < 0 ||
         value > static_cast<int>(net::HttpConnectionInfo::kMaxValue)) {
-      return false;
+      return std::nullopt;
     }
-    *output = static_cast<net::HttpConnectionInfo>(value);
-    return true;
+    return static_cast<net::HttpConnectionInfo>(value);
   }
 };
 
@@ -44,15 +45,14 @@ struct EnumTraits<network::mojom::EffectiveConnectionType,
     return static_cast<network::mojom::EffectiveConnectionType>(input);
   }
 
-  static bool FromMojom(network::mojom::EffectiveConnectionType input,
-                       net::EffectiveConnectionType* output) {
+  static std::optional<net::EffectiveConnectionType> FromMojom(
+      network::mojom::EffectiveConnectionType input) {
     const int value = static_cast<int>(input);
     if (value < net::EFFECTIVE_CONNECTION_TYPE_UNKNOWN ||
         value >= net::EFFECTIVE_CONNECTION_TYPE_LAST) {
-      return false;
+      return std::nullopt;
     }
-    *output = static_cast<net::EffectiveConnectionType>(value);
-    return true;
+    return static_cast<net::EffectiveConnectionType>(value);
   }
 };
 

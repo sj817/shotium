@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "base/i18n/language_tag.h"
 #include "ui/base/resource/resource_bundle.h"
 
 #include <stdint.h>

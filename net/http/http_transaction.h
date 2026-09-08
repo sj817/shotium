@@ -5,6 +5,7 @@
 #ifndef NET_HTTP_HTTP_TRANSACTION_H_
 #define NET_HTTP_HTTP_TRANSACTION_H_
 
+#include "net/http/http_request_headers.h"
 #include <stdint.h>
 
 #include "base/byte_size.h"

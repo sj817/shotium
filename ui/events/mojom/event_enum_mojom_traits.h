@@ -5,6 +5,8 @@
 #ifndef UI_EVENTS_MOJOM_EVENT_ENUM_MOJOM_TRAITS_H_
 #define UI_EVENTS_MOJOM_EVENT_ENUM_MOJOM_TRAITS_H_
 
+#include <optional>
+
 #include "base/check_op.h"
 #include "mojo/public/cpp/bindings/enum_traits.h"
 #include "ui/events/event_constants.h"
@@ -21,14 +23,13 @@ struct EnumTraits<ui::mojom::EventPointerType, ui::EventPointerType> {
     CHECK_LE(input, ui::EventPointerType::kMaxValue);
     return static_cast<ui::mojom::EventPointerType>(input);
   }
-  static bool FromMojom(ui::mojom::EventPointerType input,
-                       ui::EventPointerType* output) {
+  static std::optional<ui::EventPointerType> FromMojom(
+      ui::mojom::EventPointerType input) {
     const int value = static_cast<int>(input);
     if (value < 0 || value > static_cast<int>(ui::EventPointerType::kMaxValue)) {
-      return false;
+      return std::nullopt;
     }
-    *output = static_cast<ui::EventPointerType>(value);
-    return true;
+    return static_cast<ui::EventPointerType>(value);
   }
 };
 
@@ -39,15 +40,14 @@ struct EnumTraits<ui::mojom::ScrollGranularity, ui::ScrollGranularity> {
     CHECK_LE(input, ui::ScrollGranularity::kMaxValue);
     return static_cast<ui::mojom::ScrollGranularity>(input);
   }
-  static bool FromMojom(ui::mojom::ScrollGranularity input,
-                       ui::ScrollGranularity* output) {
+  static std::optional<ui::ScrollGranularity> FromMojom(
+      ui::mojom::ScrollGranularity input) {
     const int value = static_cast<int>(input);
     if (value < static_cast<int>(ui::ScrollGranularity::kFirstScrollGranularity) ||
         value > static_cast<int>(ui::ScrollGranularity::kMaxValue)) {
-      return false;
+      return std::nullopt;
     }
-    *output = static_cast<ui::ScrollGranularity>(value);
-    return true;
+    return static_cast<ui::ScrollGranularity>(value);
   }
 };
 

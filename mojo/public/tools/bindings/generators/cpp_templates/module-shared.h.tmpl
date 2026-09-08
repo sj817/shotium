@@ -17,6 +17,11 @@
 #include <type_traits>
 #include <utility>
 
+{%- if all_enums|length %}
+#include "mojo/public/cpp/bindings/lib/bindings_internal.h"
+#include "mojo/public/cpp/bindings/lib/serialization_forward.h"
+{%- endif %}
+
 {%- if structs|length or unions|length %}
 #include "mojo/public/cpp/bindings/array_data_view.h"
 #include "mojo/public/cpp/bindings/map_data_view.h"
