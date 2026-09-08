@@ -48,11 +48,10 @@ const char kAlternativeServiceHeader[] = "Alt-Svc";
 
 // static
 SpdySessionKey HttpStreamFactory::GetSpdySessionKey(
-    const ProxyChain& proxy_chain,
     const StreamRequestInfo& request_info) {
   return SpdySessionKey(
       HostPortPair::FromURL(request_info.url), request_info.privacy_mode,
-      proxy_chain, request_info.socket_tag,
+      request_info.socket_tag,
       request_info.network_anonymization_key, request_info.secure_dns_policy,
       request_info.load_flags & LOAD_DISABLE_CERT_NETWORK_FETCHES,
       request_info.target_network);

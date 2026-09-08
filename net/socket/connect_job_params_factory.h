@@ -23,14 +23,11 @@ namespace net {
 
 class NetworkAnonymizationKey;
 struct NetworkTrafficAnnotationTag;
-class ProxyChain;
 struct SSLConfig;
 
 NET_EXPORT_PRIVATE ConnectJobParams ConstructConnectJobParams(
     const url::SchemeHostPort& endpoint,
-    const ProxyChain& proxy_chain,
     const std::vector<SSLConfig::CertAndStatus>& allowed_bad_certs,
-    ConnectJobFactory::AlpnMode alpn_mode,
     PrivacyMode privacy_mode,
     const OnHostResolutionCallback& resolution_callback,
     const NetworkAnonymizationKey& network_anonymization_key,

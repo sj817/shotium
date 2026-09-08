@@ -453,21 +453,7 @@ void SpdySessionPool::OnSSLConfigForServersChanged(
     if (!session)
       continue;
 
-    // If the destination for this session is invalidated, or any of the proxy
-    // hops along the way, make the session go away.
-    if (servers.contains(session->host_port_pair())) {
-      session_matches = true;
-    } else {
-      const ProxyChain& proxy_chain = session->spdy_session_key().proxy_chain();
-
-      for (const ProxyServer& proxy_server : proxy_chain.proxy_servers()) {
-        if (proxy_server.is_http_like() && !proxy_server.is_http() &&
-            servers.contains(proxy_server.host_port_pair())) {
-          session_matches = true;
-          break;
-        }
-      }
-    }
+    session_matches = servers.contains(session->host_port_pair());
 
     if (session_matches) {
       session->MakeUnavailable(ERR_NETWORK_CHANGED);
@@ -653,16 +639,10 @@ base::expected<base::WeakPtr<SpdySession>, int> SpdySessionPool::InsertSession(
       NetLogEventType::HTTP2_SESSION_POOL_IMPORTED_SESSION_FROM_SOCKET,
       available_session->net_log().source());
 
-  // Look up the IP address for this session so that we can match
-  // future sessions (potentially to different domains) which can
-  // potentially be pooled with this one. Because GetPeerAddress()
-  // reports the proxy's address instead of the origin server, check
-  // to see if this is a direct connection.
-  if (key.proxy_chain().is_direct()) {
-    IPEndPoint address;
-    if (available_session->GetPeerAddress(&address) == OK)
-      aliases_.insert(AliasMap::value_type(address, key));
-  }
+  // Index the peer address for subsequent origin pooling checks.
+  IPEndPoint address;
+  if (available_session->GetPeerAddress(&address) == OK)
+    aliases_.insert(AliasMap::value_type(address, key));
 
   if (!perform_post_insertion_checks) {
     return available_session;
@@ -903,7 +883,7 @@ bool SpdySessionPool::OnHostResolutionCompleteShared(
         SpdySessionKey old_key = available_session->spdy_session_key();
         SpdySessionKey new_key(
             old_key.host_port_pair(), old_key.privacy_mode(),
-            old_key.proxy_chain(), key.socket_tag(),
+            key.socket_tag(),
             old_key.network_anonymization_key(), old_key.secure_dns_policy(),
             old_key.disable_cert_verification_network_fetches(),
             old_key.target_network());
@@ -951,7 +931,7 @@ bool SpdySessionPool::OnHostResolutionCompleteShared(
               GetDnsAliasesForSessionKey(*it);
           UnmapKey(*it);
           SpdySessionKey new_pool_alias_key = SpdySessionKey(
-              it->host_port_pair(), it->privacy_mode(), it->proxy_chain(),
+              it->host_port_pair(), it->privacy_mode(),
               key.socket_tag(),
               it->network_anonymization_key(), it->secure_dns_policy(),
               it->disable_cert_verification_network_fetches(),

@@ -15,8 +15,6 @@
 #include "net/base/host_port_pair.h"
 #include "net/base/network_anonymization_key.h"
 #include "net/base/privacy_mode.h"
-#include "net/base/proxy_chain.h"
-#include "net/base/proxy_server.h"
 #include "net/base/request_priority.h"
 #include "net/dns/public/secure_dns_policy.h"
 #include "net/socket/connect_job_params.h"
@@ -35,12 +33,9 @@ namespace {
 
 // Configure ALPN and retain HttpServerProperties HTTP/1.1 overrides.
 void ConfigureAlpn(const url::SchemeHostPort& endpoint,
-                   ConnectJobFactory::AlpnMode alpn_mode,
                    const NetworkAnonymizationKey& network_anonymization_key,
                    const CommonConnectJobParams& common_connect_job_params,
-                   SSLConfig& ssl_config,
-                   bool renego_allowed) {
-  DCHECK_EQ(alpn_mode, ConnectJobFactory::AlpnMode::kHttpAll);
+                   SSLConfig& ssl_config) {
   ssl_config.alpn_protos = *common_connect_job_params.alpn_protos;
   ssl_config.application_settings =
       *common_connect_job_params.application_settings;
@@ -58,10 +53,8 @@ void ConfigureAlpn(const url::SchemeHostPort& endpoint,
   // server to request a renegotiation immediately before sending the
   // connection preface as waiting for the preface would cost the round trip
   // that False Start otherwise saves.
-  ssl_config.renego_allowed_default = renego_allowed;
-  if (renego_allowed) {
-    ssl_config.renego_allowed_for_protos = {NextProto::kProtoHTTP11};
-  }
+  ssl_config.renego_allowed_default = true;
+  ssl_config.renego_allowed_for_protos = {NextProto::kProtoHTTP11};
 }
 
 base::flat_set<std::string> SupportedProtocolsFromSSLConfig(
@@ -90,9 +83,7 @@ ConnectJobParams MakeSSLSocketParams(
 
 ConnectJobParams ConstructConnectJobParams(
     const url::SchemeHostPort& endpoint,
-    const ProxyChain& proxy_chain,
     const std::vector<SSLConfig::CertAndStatus>& allowed_bad_certs,
-    ConnectJobFactory::AlpnMode alpn_mode,
     PrivacyMode privacy_mode,
     const OnHostResolutionCallback& resolution_callback,
     const NetworkAnonymizationKey& endpoint_network_anonymization_key,
@@ -100,17 +91,14 @@ ConnectJobParams ConstructConnectJobParams(
     bool disable_cert_network_fetches,
     const CommonConnectJobParams* common_connect_job_params,
     handles::NetworkHandle target_network) {
-  CHECK(proxy_chain.is_direct());
-
   // Set up `ssl_config` if using SSL to the endpoint.
   SSLConfig ssl_config;
   if (UsingSsl(endpoint)) {
     ssl_config.allowed_bad_certs = allowed_bad_certs;
     ssl_config.privacy_mode = privacy_mode;
 
-    ConfigureAlpn(endpoint, alpn_mode, endpoint_network_anonymization_key,
-                  *common_connect_job_params, ssl_config,
-                  /*renego_allowed=*/true);
+    ConfigureAlpn(endpoint, endpoint_network_anonymization_key,
+                  *common_connect_job_params, ssl_config);
 
     ssl_config.disable_cert_verification_network_fetches =
         disable_cert_network_fetches;

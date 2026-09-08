@@ -26,25 +26,6 @@
       <include name="IDR_UASTYLE_OVERSCROLL_CSS" file="../renderer/core/css/overscroll.css" type="BINDATA" compress="brotli"/>
       <include name="IDR_VALIDATION_BUBBLE_ICON" file="../renderer/core/html/forms/resources/input_alert.svg" type="BINDATA" compress="brotli"/>
       <include name="IDR_VALIDATION_BUBBLE_CSS" file="../renderer/core/html/forms/resources/validation_bubble.css" type="BINDATA" compress="brotli"/>
-      <if expr="not is_android">
-        <include name="IDR_PICKER_COMMON_JS" file="../renderer/core/html/forms/resources/picker_common.js" type="BINDATA" compress="brotli"/>
-        <include name="IDR_PICKER_COMMON_CSS" file="../renderer/core/html/forms/resources/picker_common.css" type="BINDATA" compress="brotli"/>
-        <include name="IDR_CALENDAR_PICKER_CSS" file="../renderer/core/html/forms/resources/calendar_picker.css" type="BINDATA" compress="brotli"/>
-        <include name="IDR_CALENDAR_PICKER_JS" file="../renderer/core/html/forms/resources/calendar_picker.js" type="BINDATA" compress="brotli"/>
-        <include name="IDR_MONTH_PICKER_JS" file="../renderer/core/html/forms/resources/month_picker.js" type="BINDATA" compress="brotli"/>
-        <include name="IDR_TIME_PICKER_CSS" file="../renderer/core/html/forms/resources/time_picker.css" type="BINDATA" compress="brotli"/>
-        <include name="IDR_TIME_PICKER_JS" file="../renderer/core/html/forms/resources/time_picker.js" type="BINDATA" compress="brotli"/>
-        <include name="IDR_DATETIMELOCAL_PICKER_JS" file="../renderer/core/html/forms/resources/datetimelocal_picker.js" type="BINDATA" compress="brotli"/>
-        <include name="IDR_SUGGESTION_PICKER_CSS" file="../renderer/core/html/forms/resources/suggestion_picker.css" type="BINDATA" compress="brotli"/>
-        <include name="IDR_SUGGESTION_PICKER_JS" file="../renderer/core/html/forms/resources/suggestion_picker.js" type="BINDATA" compress="brotli"/>
-        <include name="IDR_COLOR_PICKER_COMMON_JS" file="../renderer/core/html/forms/resources/color_picker_common.js" type="BINDATA" compress="brotli"/>
-        <include name="IDR_COLOR_SUGGESTION_PICKER_CSS" file="../renderer/core/html/forms/resources/color_suggestion_picker.css" type="BINDATA" compress="brotli"/>
-        <include name="IDR_COLOR_SUGGESTION_PICKER_JS" file="../renderer/core/html/forms/resources/color_suggestion_picker.js" type="BINDATA" compress="brotli"/>
-        <include name="IDR_COLOR_PICKER_CSS" file="../renderer/core/html/forms/resources/color_picker.css" flattenhtml="true" type="BINDATA" compress="brotli"/>
-        <include name="IDR_COLOR_PICKER_JS" file="../renderer/core/html/forms/resources/color_picker.js" type="BINDATA" compress="brotli"/>
-        <include name="IDR_LIST_PICKER_CSS" file="../renderer/core/html/forms/resources/list_picker.css" type="BINDATA" compress="brotli"/>
-        <include name="IDR_LIST_PICKER_JS" file="../renderer/core/html/forms/resources/list_picker.js" type="BINDATA" compress="brotli"/>
-      </if>
       <include name="IDR_UASTYLE_JSON_DOCUMENT_CSS" file="../renderer/core/css/json-document.css" type="BINDATA" compress="brotli"/>
 
     </includes>

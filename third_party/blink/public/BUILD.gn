@@ -374,27 +374,6 @@ grit("resources") {
     "//third_party/blink/renderer/core/html/resources/linux.css",
     "//third_party/blink/renderer/core/html/resources/quirks.css",
   ]
-  if (!is_android) {
-    inputs += [
-      "//third_party/blink/renderer/core/html/forms/resources/calendar_picker.css",
-      "//third_party/blink/renderer/core/html/forms/resources/calendar_picker.js",
-      "//third_party/blink/renderer/core/html/forms/resources/color_picker.css",
-      "//third_party/blink/renderer/core/html/forms/resources/color_picker.js",
-      "//third_party/blink/renderer/core/html/forms/resources/color_picker_common.js",
-      "//third_party/blink/renderer/core/html/forms/resources/color_suggestion_picker.css",
-      "//third_party/blink/renderer/core/html/forms/resources/color_suggestion_picker.js",
-      "//third_party/blink/renderer/core/html/forms/resources/datetimelocal_picker.js",
-      "//third_party/blink/renderer/core/html/forms/resources/list_picker.css",
-      "//third_party/blink/renderer/core/html/forms/resources/list_picker.js",
-      "//third_party/blink/renderer/core/html/forms/resources/month_picker.js",
-      "//third_party/blink/renderer/core/html/forms/resources/picker_common.css",
-      "//third_party/blink/renderer/core/html/forms/resources/picker_common.js",
-      "//third_party/blink/renderer/core/html/forms/resources/suggestion_picker.css",
-      "//third_party/blink/renderer/core/html/forms/resources/suggestion_picker.js",
-      "//third_party/blink/renderer/core/html/forms/resources/time_picker.css",
-      "//third_party/blink/renderer/core/html/forms/resources/time_picker.js",
-    ]
-  }
   outputs = [
     "grit/blink_resources.h",
     "blink_resources.pak",

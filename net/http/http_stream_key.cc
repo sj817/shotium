@@ -102,7 +102,7 @@ SpdySessionKey HttpStreamKey::CalculateSpdySessionKey() const {
                                ? HostPortPair::FromSchemeHostPort(destination())
                                : HostPortPair();
   return SpdySessionKey(
-      std::move(host_port), privacy_mode(), ProxyChain::Direct(),
+      std::move(host_port), privacy_mode(),
       socket_tag(), network_anonymization_key(),
       secure_dns_policy(), disable_cert_network_fetches(), target_network());
 }

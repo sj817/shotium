@@ -13,7 +13,6 @@
 #include "net/base/network_anonymization_key.h"
 #include "net/base/network_handle.h"
 #include "net/base/privacy_mode.h"
-#include "net/base/proxy_chain.h"
 #include "net/base/request_priority.h"
 #include "net/dns/public/secure_dns_policy.h"
 #include "net/socket/connect_job.h"
@@ -51,9 +50,7 @@ ConnectJobFactory::~ConnectJobFactory() = default;
 
 std::unique_ptr<ConnectJob> ConnectJobFactory::CreateConnectJob(
     url::SchemeHostPort endpoint,
-    const ProxyChain& proxy_chain,
     const std::vector<SSLConfig::CertAndStatus>& allowed_bad_certs,
-    ConnectJobFactory::AlpnMode alpn_mode,
     PrivacyMode privacy_mode,
     const OnHostResolutionCallback& resolution_callback,
     RequestPriority request_priority,
@@ -65,7 +62,7 @@ std::unique_ptr<ConnectJob> ConnectJobFactory::CreateConnectJob(
     handles::NetworkHandle target_network,
     ConnectJob::Delegate* delegate) const {
   ConnectJobParams connect_job_params = ConstructConnectJobParams(
-      endpoint, proxy_chain, allowed_bad_certs, alpn_mode,
+      endpoint, allowed_bad_certs,
       privacy_mode, resolution_callback,
       network_anonymization_key, secure_dns_policy,
       disable_cert_network_fetches, common_connect_job_params,

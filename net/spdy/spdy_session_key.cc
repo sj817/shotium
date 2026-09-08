@@ -13,8 +13,6 @@
 #include "base/trace_event/memory_usage_estimator.h"
 #include "net/base/features.h"
 #include "net/base/host_port_pair.h"
-#include "net/base/proxy_chain.h"
-#include "net/base/proxy_string_util.h"
 #include "net/dns/public/secure_dns_policy.h"
 #include "net/socket/socket_tag.h"
 
@@ -25,7 +23,6 @@ SpdySessionKey::SpdySessionKey() = default;
 SpdySessionKey::SpdySessionKey(
     const HostPortPair& host_port_pair,
     PrivacyMode privacy_mode,
-    const ProxyChain& proxy_chain,
     const SocketTag& socket_tag,
     const NetworkAnonymizationKey& network_anonymization_key,
     SecureDnsPolicy secure_dns_policy,
@@ -33,7 +30,6 @@ SpdySessionKey::SpdySessionKey(
     handles::NetworkHandle target_network)
     : host_port_pair_(host_port_pair),
       privacy_mode_(privacy_mode),
-      proxy_chain_(proxy_chain),
       socket_tag_(socket_tag),
       network_anonymization_key_(
           NetworkAnonymizationKey::IsPartitioningEnabled()
@@ -50,12 +46,11 @@ SpdySessionKey::SpdySessionKey(const SpdySessionKey& other) = default;
 SpdySessionKey::~SpdySessionKey() = default;
 
 bool SpdySessionKey::operator<(const SpdySessionKey& other) const {
-  return std::tie(host_port_pair_, privacy_mode_, proxy_chain_,
+  return std::tie(host_port_pair_, privacy_mode_,
                   network_anonymization_key_, secure_dns_policy_,
                   disable_cert_verification_network_fetches_, socket_tag_,
                   target_network_) <
          std::tie(other.host_port_pair_, other.privacy_mode_,
-                  other.proxy_chain_,
                   other.network_anonymization_key_, other.secure_dns_policy_,
                   other.disable_cert_verification_network_fetches_,
                   other.socket_tag_, other.target_network_);
@@ -66,7 +61,6 @@ SpdySessionKey::CompareForAliasingResult SpdySessionKey::CompareForAliasing(
   CompareForAliasingResult result;
   result.is_potentially_aliasable =
       (privacy_mode_ == other.privacy_mode_ &&
-       proxy_chain_ == other.proxy_chain_ &&
        network_anonymization_key_ == other.network_anonymization_key_ &&
        secure_dns_policy_ == other.secure_dns_policy_ &&
        disable_cert_verification_network_fetches_ ==
@@ -79,7 +73,6 @@ SpdySessionKey::CompareForAliasingResult SpdySessionKey::CompareForAliasing(
 std::ostream& operator<<(std::ostream& os, const SpdySessionKey& key) {
   os << "{host_port_pair: " << key.host_port_pair().ToString()
      << ", privacy_mode: " << static_cast<int>(key.privacy_mode())
-     << ", proxy_chain: " << key.proxy_chain()
      << ", socket_tag: " << key.socket_tag()
      << ", network_anonymization_key: " << key.network_anonymization_key()
      << ", secure_dns_policy: " << static_cast<int>(key.secure_dns_policy())

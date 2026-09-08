@@ -24,20 +24,11 @@ namespace net {
 
 class NetworkAnonymizationKey;
 struct NetworkTrafficAnnotationTag;
-class ProxyChain;
 struct SSLConfig;
 
-// Common factory for all ConnectJob types. Determines and creates the correct
-// ConnectJob depending on the passed in parameters.
+// Common factory for transport and TLS connections.
 class NET_EXPORT_PRIVATE ConnectJobFactory {
  public:
-  // What protocols may be negotiated with the destination SSL server via ALPN.
-  //
-  // AlpnMode has no impact when not talking to an HTTPS destination server.
-  enum class AlpnMode {
-    kHttpAll = 1,
-  };
-
   // Default factory will be used if passed the default `nullptr`.
   explicit ConnectJobFactory(
       std::unique_ptr<SSLConnectJob::Factory> ssl_connect_job_factory = nullptr,
@@ -54,9 +45,7 @@ class NET_EXPORT_PRIVATE ConnectJobFactory {
   // ConnectJob.
   virtual std::unique_ptr<ConnectJob> CreateConnectJob(
       url::SchemeHostPort endpoint,
-      const ProxyChain& proxy_chain,
       const std::vector<SSLConfig::CertAndStatus>& allowed_bad_certs,
-      ConnectJobFactory::AlpnMode alpn_mode,
       PrivacyMode privacy_mode,
       const OnHostResolutionCallback& resolution_callback,
       RequestPriority request_priority,

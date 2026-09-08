@@ -122,7 +122,7 @@ HttpStreamFactory::Job::Job(
       using_ssl_(request_info_.url.SchemeIs(url::kHttpsScheme)),
       expect_spdy_(alternative_protocol == NextProto::kProtoHTTP2),
       spdy_session_key_(
-          GetSpdySessionKey(proxy_info_.proxy_chain(), request_info_)),
+          GetSpdySessionKey(request_info_)),
       management_config_(management_config) {
   DCHECK(base::EqualsCaseInsensitiveASCII(destination_.scheme(),
                                           url::kHttpScheme) ||

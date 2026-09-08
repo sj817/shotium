@@ -99,7 +99,6 @@ class NET_EXPORT HttpStreamFactory {
 
   // Calculates an appropriate SPDY session key for the given parameters.
   static SpdySessionKey GetSpdySessionKey(
-      const ProxyChain& proxy_chain,
       const StreamRequestInfo& request_info);
 
   explicit HttpStreamFactory(HttpNetworkSession* session);

@@ -13,7 +13,6 @@
 #include "net/base/network_handle.h"
 #include "net/base/network_isolation_key.h"
 #include "net/base/privacy_mode.h"
-#include "net/base/proxy_chain.h"
 #include "net/dns/public/secure_dns_policy.h"
 #include "net/socket/socket_tag.h"
 
@@ -26,7 +25,6 @@ class NET_EXPORT_PRIVATE SpdySessionKey {
 
   SpdySessionKey(const HostPortPair& host_port_pair,
                  PrivacyMode privacy_mode,
-                 const ProxyChain& proxy_chain,
                  const SocketTag& socket_tag,
                  const NetworkAnonymizationKey& network_anonymization_key,
                  SecureDnsPolicy secure_dns_policy,
@@ -70,7 +68,6 @@ class NET_EXPORT_PRIVATE SpdySessionKey {
     return privacy_mode_;
   }
 
-  const ProxyChain& proxy_chain() const { return proxy_chain_; }
 
 
   const SocketTag& socket_tag() const { return socket_tag_; }
@@ -91,7 +88,6 @@ class NET_EXPORT_PRIVATE SpdySessionKey {
   HostPortPair host_port_pair_;
   // If enabled, then session cannot be tracked by the server.
   PrivacyMode privacy_mode_ = PRIVACY_MODE_DISABLED;
-  ProxyChain proxy_chain_;
   SocketTag socket_tag_;
   // Used to separate requests made in different contexts. If network state
   // partitioning is disabled this will be set to an empty key.

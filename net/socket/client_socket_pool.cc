@@ -213,16 +213,14 @@ std::unique_ptr<ConnectJob> ClientSocketPool::CreateConnectJob(
     ConnectJob::Delegate* delegate) {
   bool using_ssl = GURL::SchemeIsCryptographic(group_id.destination().scheme());
 
-  // If applicable, set up a callback to handle checking for H2 IP pooling
-  // opportunities. We don't perform H2 IP pooling to or through proxy servers,
-  // so ignore those cases.
+  // If applicable, check for H2 origin IP pooling opportunities.
   OnHostResolutionCallback resolution_callback;
-  if (using_ssl && GetProxyChain().is_direct()) {
+  if (using_ssl) {
     resolution_callback = base::BindRepeating(
         &OnHostResolution, common_connect_job_params_->spdy_session_pool,
         // TODO(crbug.com/40181080): Pass along as SchemeHostPort.
         SpdySessionKey(HostPortPair::FromSchemeHostPort(group_id.destination()),
-                       group_id.privacy_mode(), GetProxyChain(),
+                       group_id.privacy_mode(),
                        socket_tag,
                        group_id.network_anonymization_key(),
                        group_id.secure_dns_policy(),
@@ -231,8 +229,8 @@ std::unique_ptr<ConnectJob> ClientSocketPool::CreateConnectJob(
   }
 
   return connect_job_factory_->CreateConnectJob(
-      group_id.destination(), GetProxyChain(),
-      socket_params->allowed_bad_certs(), ConnectJobFactory::AlpnMode::kHttpAll,
+      group_id.destination(),
+      socket_params->allowed_bad_certs(),
       group_id.privacy_mode(), resolution_callback,
       request_priority, socket_tag, group_id.network_anonymization_key(),
       group_id.secure_dns_policy(), group_id.disable_cert_network_fetches(),

@@ -36,7 +36,6 @@
 #include "base/values.h"
 #include "net/base/features.h"
 #include "net/base/privacy_mode.h"
-#include "net/base/proxy_chain.h"
 #include "net/base/proxy_string_util.h"
 #include "net/base/url_util.h"
 #include "net/cert/asn1_util.h"
@@ -853,9 +852,7 @@ SpdySession::SpdySession(
       session_creation_initiator_(session_creation_initiator),
       spdy_session_initiator_(spdy_session_initiator) {
   net_log_.BeginEvent(NetLogEventType::HTTP2_SESSION, [&]() {
-    return base::DictValue()
-        .Set("host", host_port_pair().ToString())
-        .Set("proxy", spdy_session_key_.proxy_chain().ToDebugString());
+    return base::DictValue().Set("host", host_port_pair().ToString());
   });
 
   DCHECK(initial_settings_.contains(spdy::SETTINGS_HEADER_TABLE_SIZE));
@@ -1516,7 +1513,6 @@ bool SpdySession::ChangeSocketTag(const SocketTag& new_tag) {
 
   SpdySessionKey new_key(
       spdy_session_key_.host_port_pair(), spdy_session_key_.privacy_mode(),
-      spdy_session_key_.proxy_chain(),
       new_tag, spdy_session_key_.network_anonymization_key(),
       spdy_session_key_.secure_dns_policy(),
       spdy_session_key_.disable_cert_verification_network_fetches(),
