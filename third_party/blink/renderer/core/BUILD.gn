@@ -219,7 +219,6 @@ rust_static_library("xml_ffi") {
   cxx_bindings = [ crate_root ]
   deps = [
     "//services/metrics/public/cpp:metrics_cpp",
-    "//services/metrics/public/cpp:ukm_builders",
     "//services/metrics/public/mojom",
     "//third_party/blink/renderer/platform/wtf",
     "//third_party/rust/cxx/v1:lib",
@@ -373,7 +372,6 @@ component("core") {
     "//base",
     "//mojo/public/cpp/bindings",
     "//mojo/public/cpp/system",
-    "//services/metrics/public/cpp:ukm_builders",
     "//services/network/public/cpp",
     "//skia",
     "//skia:skcms",
@@ -1210,9 +1208,6 @@ target(core_generated_target_type, "core_generated") {
     ]
   }
 
-  if (is_debug || dcheck_always_on) {
-    deps += [ "//components/crash/core/common:crash_key" ]
-  }
 }
 
 # Generate a list of event handler attributes, for use by Trusted Types.
@@ -1279,8 +1274,6 @@ source_set("unit_tests") {
     "//cc",
     "//mojo/public/cpp/system",
     "//mojo/public/cpp/test_support:test_utils",
-    "//services/metrics/public/cpp:ukm_builders",
-    "//services/network:test_support",
     "//services/network/public/mojom:mojom_permissions_policy",
     "//skia",
     "//skia:skcms",

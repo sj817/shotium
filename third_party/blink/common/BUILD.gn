@@ -226,7 +226,6 @@ shot_compatible_source_set("common") {
     "//mojo/public/cpp/system",
     "//net",
     "//services/metrics/public/cpp:metrics_cpp",
-    "//services/metrics/public/cpp:ukm_builders",
     "//services/metrics/public/mojom",
     "//services/network/public/cpp",
     "//services/network/public/mojom:mojom_permissions_policy",

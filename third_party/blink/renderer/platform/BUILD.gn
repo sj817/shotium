@@ -289,7 +289,6 @@ source_set("platform_export") {
   visibility = []  # Allow re-assignment of list.
   visibility = [
     "//mojo/public/cpp/bindings:wtf_support",
-    "//services/metrics/public/cpp:ukm_builders",
     "//third_party/blink/renderer/platform/*",
   ]
 }

@@ -1,4 +1,6 @@
-# 静态截图引擎全局裁剪进度（stage83）
+# 静态截图引擎全局裁剪进度（stage84）
+
+stage84：按用户最新范围完成集中源码删除，stage83已提交19938989d484。用户明确重新授权31/32删除清单、49图修复及84诊断具体差异；核对原文SHA后删除2039个Perfetto离线processor文件及16个ICU无用文件，直接移除六处UKM记录和core三条builder依赖/一条crash_key依赖/失效network:test_support。另删除354个Crashpad/components文件和8个UKM生成文件，收其余4条GN依赖、无用include与OWNERS。保留SVG实际处理、Zstd/CountUse、导航/查找状态、CHECK和FCP。当前实际Perfetto tracing后端与UkmRecorder/SourceId基础链仍在，不宣称所有诊断实现已经清空。Perfetto Python离线客户端配套由唯一子代理收尾；随后集中编译和运行验收，不扩展Blink交互及浏览器尾巴。构建通过前仍不能宣称可发版。证据out/cut-stage84-approved/、out/cut-stage84-crash-ukm/及out/cut-stage84-perfetto-python/。
 
 stage83：stage82 已提交312c42b33a37。本轮21源码路径（4D+17E），删除无人消费的Performance-Observer网络头解析/策略schema/ParsedHeaders字段及Blink转换占位、独占capture-early-failures参数；删除PerformanceMarkOrMeasure协议、Entry/Mark/Measure虚函数转换及ResourceTiming无用include，共301行。保留实际计时数据、加载/FCP与安全头解析。Blink声明式上报host/timer/FlushPerformanceEntries整组删除已撤回：local_dom_window.cc:1008受限调用及window_performance.cc:1460仍在，需未来完整收口，不能宣称全部性能上报已移除。保护交集零、删除符号残留零、4个GN语法与diff及8文件保留正文对照通过；未图/编译/运行/像素验收。证据out/cut-stage83-combined/、out/cut-stage83-declarative/、out/cut-stage83-mark-mojo/。全局粗估65%±10、源码约80%，预计剩4–6个大源码批次及2–4个集中修复验收批次，非保证；受限Route/core/Worker/TrustToken/ReportingOptions/Blob/Perfetto/ICU/CSS诊断、UKM/Crashpad/tracing/PerformanceMonitor、Blink交互/AX/probes/lifecycle、根目录/第三方复核和最终六平台验证仍未完成。
 

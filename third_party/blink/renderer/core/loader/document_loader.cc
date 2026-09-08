@@ -51,7 +51,6 @@
 #include "base/uuid.h"
 #include "build/build_config.h"
 #include "net/storage_access_api/status.h"
-#include "services/metrics/public/cpp/ukm_builders.h"
 #include "services/network/public/cpp/client_hints.h"
 #include "services/network/public/cpp/header_util.h"
 #include "services/network/public/cpp/no_vary_search_header_parser.h"
@@ -1002,14 +1001,6 @@ void DocumentLoader::UpdateForSameDocumentNavigation(
   // an ad and there is no stack to walk. The UKM SetFromAd() metric goes with
   // it; HasStickyUserActivation is independent and stays.
 
-  if (frame_->DomWindow() &&
-      same_document_navigation_type ==
-          mojom::blink::SameDocumentNavigationType::kHistoryApi &&
-      type == WebFrameLoadType::kStandard) {
-    ukm::builders::HistoryApi_PushState(frame_->DomWindow()->UkmSourceID())
-        .SetHasStickyUserActivation(frame_->HasStickyUserActivation())
-        .Record(frame_->DomWindow()->UkmRecorder());
-  }
 
   GetLocalFrameClient().DidFinishSameDocumentNavigation(
       commit_type, is_synchronously_committed, same_document_navigation_type,
@@ -3352,10 +3343,6 @@ void DocumentLoader::RecordUseCountersForCommit() {
     CountUse(WebFeature::kZstdContentEncodingForNavigation);
     if (frame_->IsOutermostMainFrame()) {
       CountUse(WebFeature::kZstdContentEncodingForMainFrameNavigation);
-      ukm::builders::MainFrameNavigation_ZstdContentEncoding builder(
-          ukm_source_id_);
-      builder.SetUsedZstd(true);
-      builder.Record(frame_->GetDocument()->UkmRecorder());
     } else {
       CountUse(WebFeature::kZstdContentEncodingForSubFrameNavigation);
     }

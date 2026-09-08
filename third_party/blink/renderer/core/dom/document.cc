@@ -56,7 +56,6 @@
 #include "services/metrics/public/cpp/delegating_ukm_recorder.h"
 #include "services/metrics/public/cpp/metrics_utils.h"
 #include "services/metrics/public/cpp/mojo_ukm_recorder.h"
-#include "services/metrics/public/cpp/ukm_builders.h"
 #include "services/metrics/public/cpp/ukm_recorder.h"
 #include "services/metrics/public/cpp/ukm_source_id.h"
 #include "services/network/public/cpp/web_sandbox_flags.h"
@@ -442,7 +441,6 @@ bool DefaultFaviconAllowedByCSP(const Document* document, const IconURL& icon) {
 }
 
 // The sampling rate for UKM.
-constexpr double kUkmSamplingRate = 0.001;
 
 }  // namespace
 
@@ -2831,12 +2829,6 @@ void Document::MarkHasFindInPageRequest() {
   if (had_find_in_page_request_)
     return;
 
-  auto* recorder = UkmRecorder();
-  DCHECK(recorder);
-  DCHECK(UkmSourceID() != ukm::kInvalidSourceId);
-  ukm::builders::Blink_FindInPage(UkmSourceID())
-      .SetDidSearch(true)
-      .Record(recorder);
   had_find_in_page_request_ = true;
 }
 
@@ -2845,13 +2837,6 @@ void Document::MarkHasFindInPageContentVisibilityActiveMatch() {
   if (had_find_in_page_render_subtree_active_match_)
     return;
 
-  auto* recorder = UkmRecorder();
-  DCHECK(recorder);
-  DCHECK(UkmSourceID() != ukm::kInvalidSourceId);
-  // TODO(vmpstr): Rename UKM values if possible.
-  ukm::builders::Blink_FindInPage(UkmSourceID())
-      .SetDidHaveRenderSubtreeMatch(true)
-      .Record(recorder);
   had_find_in_page_render_subtree_active_match_ = true;
 }
 
@@ -2860,12 +2845,6 @@ void Document::MarkHasFindInPageBeforematchExpandedHiddenMatchable() {
   if (had_find_in_page_beforematch_expanded_hidden_matchable_)
     return;
 
-  auto* recorder = UkmRecorder();
-  DCHECK(recorder);
-  DCHECK(UkmSourceID() != ukm::kInvalidSourceId);
-  ukm::builders::Blink_FindInPage(UkmSourceID())
-      .SetBeforematchExpandedHiddenMatchable(true)
-      .Record(recorder);
   had_find_in_page_beforematch_expanded_hidden_matchable_ = true;
 }
 
@@ -7254,15 +7233,6 @@ void Document::FinishedParsing() {
         "Blink.Layout.SVGImage.TotalTime.InOutermostMainFrame",
         data_->accumulated_svg_image_elapsed_time_);
 
-    // UKM data is sampled at a frequency of `kUkmSamplingRate`.
-    if (base::RandDouble() < kUkmSamplingRate) {
-      ukm::builders::Blink_SVGImage(UkmSourceID())
-          .SetCount(ukm::GetExponentialBucketMinForCounts1000(
-              data_->svg_image_processed_count_))
-          .SetTotalTime(
-              data_->accumulated_svg_image_elapsed_time_.InMicroseconds())
-          .Record(UkmRecorder());
-    }
 
     // Record the total taken time by UseCounter.
     Loader()->GetUseCounter().ReportTotalTakenTime(GetFrame(),
