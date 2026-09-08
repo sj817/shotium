@@ -58,10 +58,6 @@ class ResourceRequestContext {
 // to do a cache lookup. If a cached value is not used,
 // UpgradeResourceRequestForLoader() must be called.
 //
-// `bundle_url_for_uuid_resources` is an optional bundle URL for
-// uuid-in-package: resources for security checks. Should only be set when the
-// request is WebBundle.
-//
 // Returns std::nullopt if loading the ResourceRequest in `params` is not
 // blocked. Otherwise, returns a blocked reason.
 // This method may modify the ResourceRequest in `params` according to
@@ -70,7 +66,6 @@ BLINK_PLATFORM_EXPORT std::optional<ResourceRequestBlockedReason>
 PrepareResourceRequestForCacheAccess(
     ResourceType type,
     const FetchClientSettingsObject& fetch_client_settings_object,
-    const KURL& bundle_url_for_uuid_resources,
     ResourceRequestContext& resource_request_context,
     FetchContext& context,
     FetchParameters& params);

@@ -222,9 +222,6 @@ struct URLResponseHead {
   // True if the response is an inner response of a signed exchange.
   bool is_signed_exchange_inner_response = false;
 
-  // True if the response is an inner response of a WebBundle.
-  bool is_web_bundle_inner_response = false;
-
   // True if this resource is served from the prefetch cache.
   bool was_in_prefetch_cache = false;
 

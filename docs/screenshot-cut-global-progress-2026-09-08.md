@@ -1,6 +1,8 @@
-# 静态截图引擎全局裁剪进度（stage50）
+# 静态截图引擎全局裁剪进度（stage51）
 
-本轮已完成上层 BidirectionalStream 和 AcceptCHFrameObserver 闭包：27 个源码路径、9 个文件删除、18 个配套编辑，源码增加 33 行、删除 1781 行。普通 HTTP 和底层 HTTP/2 CONNECT 保留。备份、引用、2 份 GN 语法及 diff 检查通过；本轮没有执行完整图生成、编译或运行验收。
+stage51 更新：WebBundle 请求/响应/Fetcher 闭包已完成源码处理，31 路径、4 文件删除，静态检查通过，尚未编译。下表第 5 组剩余网络项继续推进；整体约 65% 和 10–16 大批次仍为估算范围，不因一次源码提交机械上调。证据 out/cut-stage51-combined/。
+
+上一轮已完成上层 BidirectionalStream 和 AcceptCHFrameObserver 闭包：27 个源码路径、9 个文件删除、18 个配套编辑，源码增加 33 行、删除 1781 行。普通 HTTP 和底层 HTTP/2 CONNECT 保留。备份、引用、2 份 GN 语法及 diff 检查通过；本轮没有执行完整图生成、编译或运行验收。
 
 ## 全局百分比与口径
 
@@ -31,7 +33,7 @@
 | 2 | third_party/perfetto、icu | 落实离线 trace processor 的 2039 个待删文件、ICU 的 16 个待删文件；检查独立外围工具。保留真实 Unicode、字体与数据生成 | 1 |
 | 3 | Blink、services/metrics、components/crash、third_party/crashpad | 去掉 Document/DocumentLoader 的 6 个 UKM builder 调用及库/协议/生成器依赖；关闭已无外部调用的组件 CrashKey GN 链并清理 Crashpad，保留实际错误诊断 | 1–2 |
 | 4 | base/trace_event、base/tracing、Perfetto 运行后端 | 处理记录、会话、导出和宏调用的实际依赖；不能与已做的离线 processor 混为一组，不能误删 CaptureStats/FCP/CHECK/真实日志 | 1–2 |
-| 5 | net、services/network、Blink loader | WebBundle token/handle 和 Fetcher 的完整无生产者闭包；回查浏览器 policy、持久状态、剩余协议/traits、NetLog 导出与旧 IPC 等审计项，按实际调用给最终结论 | 1 |
+| 5 | net、services/network、Blink loader | WebBundle token/handle、响应标记和 Fetcher 闭包已在 stage51 处理；继续回查浏览器 policy、持久状态、剩余协议/traits、NetLog 导出与旧 IPC 等审计项，按实际调用给最终结论 | 1 |
 | 6 | third_party/blink 交互与扩展 | editing、DataTransfer/拖放、fullscreen、fileapi/blob、AX、PerformanceObserver/User Timing、probe，以及剩余脚本关联类型；同时确认内部 observer、通用线程与表单/CSS 状态的最小保留；XSLT 等已有保留结论不重新按名字砍 | 1–2 |
 | 7 | ui、base、build、third_party、根配置 | GRD/语言/桌面资源、latency/AX、系统 helper、测试模板与生成工具，re2/libyuv/ipcz 等实际依赖；同步 DEPS/.gn/BUILD/.gitmodules/trim-tree/prune-deps，核对空目录和全部 A/B/C 附录，避免同步后回流 | 1–2 |
 | 8 | 全局验证与修复 | 最终 GN 图、缺失输入、生成类型/语法/jumbo、Windows EXE/DLL/addon；按错误集合批量修复，避免每个小修改完整构建 | 1–2 |

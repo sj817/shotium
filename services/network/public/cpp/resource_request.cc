@@ -9,13 +9,10 @@
 #include "base/strings/string_number_conversions.h"
 #include "base/trace_event/typed_macros.h"
 #include "base/types/optional_util.h"
-#include "mojo/public/cpp/bindings/pending_remote.h"
-#include "mojo/public/cpp/bindings/remote.h"
 #include "net/base/load_flags.h"
 #include "net/log/net_log_source.h"
 #include "services/network/public/cpp/permissions_policy/permissions_policy.h"
 #include "services/network/public/mojom/url_request.mojom.h"
-#include "services/network/public/mojom/web_bundle_handle.mojom.h"
 
 namespace network {
 
@@ -53,13 +50,6 @@ bool OptionalTrustedParamsEqualsForTesting(
     const std::optional<ResourceRequest::TrustedParams>& lhs,
     const std::optional<ResourceRequest::TrustedParams>& rhs) {
   return (!lhs && !rhs) || (lhs && rhs && lhs->EqualsForTesting(*rhs));
-}
-
-bool OptionalWebBundleTokenParamsEqualsForTesting(  // IN-TEST
-    const std::optional<ResourceRequest::WebBundleTokenParams>& lhs,
-    const std::optional<ResourceRequest::WebBundleTokenParams>& rhs) {
-  return (!lhs && !rhs) ||
-         (lhs && rhs && lhs->EqualsForTesting(*rhs));  // IN-TEST
 }
 
 bool OptionalNetLogInfoEqualsForTesting(
@@ -140,59 +130,6 @@ bool ResourceRequest::TrustedParams::EqualsForTesting(
              other.is_ad_auction_trusted_signals_request;
 }
 
-ResourceRequest::WebBundleTokenParams::WebBundleTokenParams() = default;
-ResourceRequest::WebBundleTokenParams::~WebBundleTokenParams() = default;
-
-ResourceRequest::WebBundleTokenParams::WebBundleTokenParams(
-    const WebBundleTokenParams& other) {
-  *this = other;
-}
-
-ResourceRequest::WebBundleTokenParams&
-ResourceRequest::WebBundleTokenParams::operator=(
-    const WebBundleTokenParams& other) {
-  bundle_url = other.bundle_url;
-  token = other.token;
-  handle = other.CloneHandle();
-  render_process_id = other.render_process_id;
-  return *this;
-}
-
-ResourceRequest::WebBundleTokenParams::WebBundleTokenParams(
-    const GURL& bundle_url,
-    const base::UnguessableToken& token,
-    mojo::PendingRemote<mojom::WebBundleHandle> handle)
-    : bundle_url(bundle_url), token(token), handle(std::move(handle)) {}
-
-ResourceRequest::WebBundleTokenParams::WebBundleTokenParams(
-    const GURL& bundle_url,
-    const base::UnguessableToken& token,
-    int32_t render_process_id)
-    : bundle_url(bundle_url),
-      token(token),
-      render_process_id(render_process_id) {}
-
-bool ResourceRequest::WebBundleTokenParams::EqualsForTesting(
-    const WebBundleTokenParams& other) const {
-  return bundle_url == other.bundle_url && token == other.token &&
-         ((handle && other.handle) || (!handle && !other.handle)) &&
-         render_process_id == other.render_process_id;
-}
-
-mojo::PendingRemote<mojom::WebBundleHandle>
-ResourceRequest::WebBundleTokenParams::CloneHandle() const {
-  if (!handle)
-    return mojo::NullRemote();
-  mojo::Remote<network::mojom::WebBundleHandle> remote(std::move(
-      const_cast<mojo::PendingRemote<network::mojom::WebBundleHandle>&>(
-          handle)));
-  mojo::PendingRemote<network::mojom::WebBundleHandle> new_remote;
-  remote->Clone(new_remote.InitWithNewPipeAndPassReceiver());
-  const_cast<mojo::PendingRemote<network::mojom::WebBundleHandle>&>(handle) =
-      remote.Unbind();
-  return new_remote;
-}
-
 ResourceRequest::ResourceRequest() = default;
 ResourceRequest::ResourceRequest(const ResourceRequest& request) {
   TRACE_EVENT(TRACE_DISABLED_BY_DEFAULT("loading"),
@@ -259,8 +196,6 @@ bool ResourceRequest::EqualsForTesting(const ResourceRequest& request) const {
          devtools_accepted_stream_types ==
              request.devtools_accepted_stream_types &&
          trust_token_params == request.trust_token_params &&
-         OptionalWebBundleTokenParamsEqualsForTesting(  // IN-TEST
-             web_bundle_token_params, request.web_bundle_token_params) &&
          OptionalNetLogInfoEqualsForTesting(net_log_create_info,
                                             request.net_log_create_info) &&
          OptionalNetLogInfoEqualsForTesting(net_log_reference_info,

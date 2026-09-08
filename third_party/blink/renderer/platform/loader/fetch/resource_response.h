@@ -88,11 +88,7 @@ class PLATFORM_EXPORT ResourceResponse final {
   bool IsNull() const { return is_null_; }
   bool IsHTTP() const;
 
-  // When serving resources from a WebBundle, we might have resources whose
-  // source isn't a URL (like urn:uuid), but we still need to create and
-  // populate ResourceTiming entries for them, so we need to check that either
-  // response has a proper request URL or whether the response is an inner
-  // response of a WebBundle.
+  // Resource timing is populated for HTTP-family responses.
   bool ShouldPopulateResourceTiming() const;
 
   // The current request URL for this resource (the URL after redirects).
@@ -427,9 +423,6 @@ class PLATFORM_EXPORT ResourceResponse final {
     is_signed_exchange_inner_response_ = is_signed_exchange_inner_response;
   }
 
-  void SetIsWebBundleInnerResponse(bool is_web_bundle_inner_response) {
-    is_web_bundle_inner_response_ = is_web_bundle_inner_response;
-  }
 
   bool WasInPrefetchCache() const { return was_in_prefetch_cache_; }
 
@@ -544,8 +537,6 @@ class PLATFORM_EXPORT ResourceResponse final {
   // https://wicg.github.io/webpackage/draft-yasskin-http-origin-signed-responses.html
   bool is_signed_exchange_inner_response_ : 1;
 
-  // True if this resource is an inner response of a WebBundle.
-  bool is_web_bundle_inner_response_ : 1;
 
   // True if this resource is served from the prefetch cache.
   bool was_in_prefetch_cache_ : 1;

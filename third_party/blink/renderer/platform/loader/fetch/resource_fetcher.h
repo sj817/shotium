@@ -83,8 +83,6 @@ class KURL;
 class Resource;
 class ResourceError;
 class ResourceLoadObserver;
-class SubresourceWebBundle;
-class SubresourceWebBundleList;
 struct ResourceFetcherInit;
 struct ResourceLoaderOptions;
 
@@ -316,21 +314,10 @@ class PLATFORM_EXPORT ResourceFetcher
                          uint32_t inflight_keepalive_bytes);
   blink::mojom::ControllerServiceWorkerMode IsControlledByServiceWorker() const;
 
-  // Returns a cache identifier for MemoryCache.
-  // `url` is used for finding a matching WebBundle.
-  // If `skip_service_worker` is true, the identifier won't be a ServiceWorker's
-  // identifier to keep the cache separated.
   String GetCacheIdentifier(const KURL& url, bool skip_service_worker) const;
   String GetCacheIdentifier(ResourceType type,
                             const KURL& url,
                             bool skip_service_worker) const;
-
-  // If `url` exists as a resource in a subresource bundle in this frame,
-  // returns its UnguessableToken; otherwise, returns std::nullopt.
-  std::optional<base::UnguessableToken> GetSubresourceBundleToken(
-      const KURL& url) const;
-
-  std::optional<KURL> GetSubresourceBundleSourceUrl(const KURL& url) const;
 
   enum IsImageSet { kImageNotImageSet, kImageIsImageSet };
 
@@ -389,17 +376,12 @@ class PLATFORM_EXPORT ResourceFetcher
     scheduler_->SetThrottleOptionOverride(throttle_option_override);
   }
 
-  SubresourceWebBundleList* GetOrCreateSubresourceWebBundleList();
-
   BackForwardCacheLoaderHelper* GetBackForwardCacheLoaderHelper() {
     return back_forward_cache_loader_helper_.Get();
   }
 
   void SetEarlyHintsPreloadedResources(
       HashMap<KURL, EarlyHintsPreloadEntry> resources);
-
-  void CancelWebBundleSubresourceLoadersFor(
-      const base::UnguessableToken& web_bundle_token);
 
   void MaybeRecordLCPPSubresourceMetrics(const KURL& document_url);
 
@@ -603,10 +585,6 @@ class PLATFORM_EXPORT ResourceFetcher
 
   void RemoveResourceStrongReference(Resource* resource);
 
-  KURL PrepareRequestForWebBundle(ResourceRequest& resource_request) const;
-
-  void AttachWebBundleTokenIfNeeded(ResourceRequest&) const;
-
   // Information about a resource fetch that had started but not completed yet.
   // Would be added to the response data when the response arrives.
   struct PendingResourceTimingInfo {
@@ -627,7 +605,6 @@ class PLATFORM_EXPORT ResourceFetcher
   void PopulateAndAddResourceTimingInfo(Resource* resource,
                                         const PendingResourceTimingInfo& info,
                                         base::TimeTicks response_end);
-  SubresourceWebBundle* GetMatchingBundle(const KURL& url) const;
   void UpdateServiceWorkerSubresourceMetrics(
       ResourceType resource_type,
       bool handled_by_serviceworker,
@@ -721,9 +698,6 @@ class PLATFORM_EXPORT ResourceFetcher
   uint32_t inflight_keepalive_bytes_ = 0;
 
   HeapMojoRemote<mojom::blink::BlobRegistry> blob_registry_remote_;
-
-  // Lazily initialized when the first <script type=webbundle> is inserted.
-  Member<SubresourceWebBundleList> subresource_web_bundles_;
 
   // The context lifecycle notifier. Used for GC lifetime management
   // purpose of the ResourceLoader used internally.

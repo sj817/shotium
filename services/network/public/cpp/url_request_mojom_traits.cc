@@ -27,7 +27,6 @@
 #include "services/network/public/mojom/trust_tokens.mojom.h"
 #include "services/network/public/mojom/url_loader.mojom-shared.h"
 #include "services/network/public/mojom/url_request.mojom.h"
-#include "services/network/public/mojom/web_bundle_handle.mojom.h"
 #include "url/mojom/origin_mojom_traits.h"
 #include "url/mojom/url_gurl_mojom_traits.h"
 
@@ -84,22 +83,6 @@ bool StructTraits<network::mojom::TrustedUrlRequestParamsDataView,
   return true;
 }
 
-bool StructTraits<network::mojom::WebBundleTokenParamsDataView,
-                  network::ResourceRequest::WebBundleTokenParams>::
-    Read(network::mojom::WebBundleTokenParamsDataView data,
-         network::ResourceRequest::WebBundleTokenParams* out) {
-  if (!data.ReadBundleUrl(&out->bundle_url)) {
-    return false;
-  }
-  if (!data.ReadToken(&out->token)) {
-    return false;
-  }
-  out->handle = data.TakeWebBundleHandle<
-      mojo::PendingRemote<network::mojom::WebBundleHandle>>();
-  out->render_process_id = data.render_process_id();
-  return true;
-}
-
 bool StructTraits<
     network::mojom::URLRequestDataView,
     network::ResourceRequest>::Read(network::mojom::URLRequestDataView data,
@@ -143,7 +126,6 @@ bool StructTraits<
       !data.ReadDevtoolsRequestId(&out->devtools_request_id) ||
       !data.ReadDevtoolsStackId(&out->devtools_stack_id) ||
       !data.ReadRecursivePrefetchToken(&out->recursive_prefetch_token) ||
-      !data.ReadWebBundleTokenParams(&out->web_bundle_token_params) ||
       !data.ReadDevtoolsAcceptedStreamTypes(
           &out->devtools_accepted_stream_types) ||
       !data.ReadNetLogCreateInfo(&out->net_log_create_info) ||

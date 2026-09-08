@@ -42,14 +42,7 @@ enum RequestDestination {
   kStyle = 16,
   kTrack = 17,
   kVideo = 18,
-  // kWebBundle represents a request for a WebBundle. A <script> element whose
-  // type is "webbundle" uses this destination.
-  //
-  // e.g. <script type=webbundle> { "source": "foo.wbn", ... } </script>
-  //
-  // Fetch specifiction does not define this destination yet.
-  // Tracking issue: https://github.com/whatwg/fetch/issues/1120
-  kWebBundle = 19,
+  // Value 19 is retired; do not reuse.
   kWorker = 20,
   kXslt = 21,
   // kFencedframe represents a main resource request in a fenced frame. A

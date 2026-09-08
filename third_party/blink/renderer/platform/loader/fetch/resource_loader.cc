@@ -1409,13 +1409,4 @@ void ResourceLoader::HandleDataUrl() {
   DidFinishLoading(base::TimeTicks::Now(), data_size, data_size, data_size);
 }
 
-void ResourceLoader::CancelIfWebBundleTokenMatches(
-    const base::UnguessableToken& web_bundle_token) {
-  if (resource_->GetResourceRequest().GetWebBundleTokenParams().has_value() &&
-      resource_->GetResourceRequest().GetWebBundleTokenParams().value().token ==
-          web_bundle_token) {
-    Cancel();
-  }
-}
-
 }  // namespace blink

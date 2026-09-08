@@ -344,14 +344,6 @@ void PopulateResourceRequest(const ResourceRequestHead& src,
     dest->expected_public_keys.emplace_back(public_key.begin(),
                                             public_key.end());
   }
-  if (src.GetWebBundleTokenParams().has_value()) {
-    dest->web_bundle_token_params =
-        std::make_optional(network::ResourceRequest::WebBundleTokenParams(
-            GURL(src.GetWebBundleTokenParams()->bundle_url),
-            src.GetWebBundleTokenParams()->token,
-            ToCrossVariantMojoType(
-                src.GetWebBundleTokenParams()->CloneHandle())));
-  }
 
   // TODO(kinuko): Deprecate this.
   dest->resource_type =

@@ -88,8 +88,6 @@
 #include "third_party/blink/renderer/platform/loader/fetch/resource_request_utils.h"
 #include "third_party/blink/renderer/platform/loader/fetch/resource_timing_utils.h"
 #include "third_party/blink/renderer/platform/loader/fetch/stale_revalidation_resource_client.h"
-#include "third_party/blink/renderer/platform/loader/fetch/subresource_web_bundle.h"
-#include "third_party/blink/renderer/platform/loader/fetch/subresource_web_bundle_list.h"
 #include "third_party/blink/renderer/platform/loader/fetch/unique_identifier.h"
 #include "third_party/blink/renderer/platform/mhtml/archive_resource.h"
 #include "third_party/blink/renderer/platform/mhtml/mhtml_archive.h"
@@ -437,7 +435,6 @@ class ResourceFetcher::ResourcePrepareHelper final
  private:
   ResourceFetcher& fetcher_;
   FetchParameters& params_;
-  KURL bundle_url_for_uuid_resources_;
   const ResourceFactory& factory_;
   const bool has_transparent_placeholder_image_;
   bool was_upgrade_for_loader_called_ = true;
@@ -1308,43 +1305,6 @@ ResourceFetcher::UpdateRequestForTransparentPlaceholderImage(
   // not yet cover image destinations.
 
   return std::nullopt;
-}
-
-KURL ResourceFetcher::PrepareRequestForWebBundle(
-    ResourceRequest& resource_request) const {
-  if (resource_request.GetWebBundleTokenParams()) {
-    DCHECK_EQ(resource_request.GetRequestDestination(),
-              network::mojom::RequestDestination::kWebBundle);
-    return KURL();
-  }
-  if (SubresourceWebBundle* bundle =
-          GetMatchingBundle(resource_request.Url())) {
-    resource_request.SetWebBundleTokenParams(
-        ResourceRequestHead::WebBundleTokenParams(bundle->GetBundleUrl(),
-                                                  bundle->WebBundleToken(),
-                                                  mojo::NullRemote()));
-
-    // Skip the service worker for a short term solution.
-    // TODO(crbug.com/1240424): Figure out the ideal design of the service
-    // worker integration.
-    resource_request.SetSkipServiceWorker(true);
-  }
-  if (resource_request.Url().Protocol() == "uuid-in-package" &&
-      resource_request.GetWebBundleTokenParams()) {
-    // We use the bundle URL for uuid-in-package: resources for security
-    // checks.
-    return resource_request.GetWebBundleTokenParams()->bundle_url;
-  }
-  return KURL();
-}
-
-SubresourceWebBundleList*
-ResourceFetcher::GetOrCreateSubresourceWebBundleList() {
-  if (subresource_web_bundles_) {
-    return subresource_web_bundles_.Get();
-  }
-  subresource_web_bundles_ = MakeGarbageCollected<SubresourceWebBundleList>();
-  return subresource_web_bundles_.Get();
 }
 
 Resource* ResourceFetcher::RequestResource(FetchParameters& params,
@@ -2677,11 +2637,7 @@ void ResourceFetcher::HandleLoaderError(Resource* resource,
   PendingResourceTimingInfo info = resource_timing_info_map_.Take(resource);
 
   if (!info.is_null()) {
-    if (resource->GetResourceRequest().Url().ProtocolIsInHttpFamily() ||
-        (resource->GetResourceRequest().GetWebBundleTokenParams() &&
-         resource->GetResourceRequest()
-             .GetWebBundleTokenParams()
-             ->bundle_url.IsValid())) {
+    if (resource->GetResourceRequest().Url().ProtocolIsInHttpFamily()) {
       PopulateAndAddResourceTimingInfo(resource, std::move(info), finish_time);
     }
   }
@@ -3037,16 +2993,9 @@ String ResourceFetcher::GetCacheIdentifier(const KURL& url,
     return String::Number(properties_->ServiceWorkerId());
   }
 
-  // Requests that can be satisfied via `archive_` (i.e. MHTML) or
-  // `subresource_web_bundles_` should not participate in the global caching,
-  // but should use a bundle/mhtml-specific cache.
+  // MHTML archives use their own cache rather than the global cache.
   if (archive_) {
     return archive_->GetCacheIdentifier();
-  }
-
-  SubresourceWebBundle* bundle = GetMatchingBundle(url);
-  if (bundle) {
-    return bundle->GetCacheIdentifier();
   }
 
   return MemoryCache::DefaultCacheIdentifier();
@@ -3065,24 +3014,6 @@ String ResourceFetcher::GetCacheIdentifier(ResourceType type,
 
   // Fallback to the standard cache identifier logic.
   return GetCacheIdentifier(url, skip_service_worker);
-}
-
-std::optional<base::UnguessableToken>
-ResourceFetcher::GetSubresourceBundleToken(const KURL& url) const {
-  SubresourceWebBundle* bundle = GetMatchingBundle(url);
-  if (!bundle) {
-    return std::nullopt;
-  }
-  return bundle->WebBundleToken();
-}
-
-std::optional<KURL> ResourceFetcher::GetSubresourceBundleSourceUrl(
-    const KURL& url) const {
-  SubresourceWebBundle* bundle = GetMatchingBundle(url);
-  if (!bundle) {
-    return std::nullopt;
-  }
-  return bundle->GetBundleUrl();
 }
 
 void ResourceFetcher::EmulateLoadStartedForInspector(
@@ -3268,26 +3199,6 @@ void ResourceFetcher::PopulateAndAddResourceTimingInfo(
   }
 
   Context().AddResourceTiming(std::move(info), initiator_type);
-}
-
-SubresourceWebBundle* ResourceFetcher::GetMatchingBundle(
-    const KURL& url) const {
-  return subresource_web_bundles_
-             ? subresource_web_bundles_->GetMatchingBundle(url)
-             : nullptr;
-}
-
-void ResourceFetcher::CancelWebBundleSubresourceLoadersFor(
-    const base::UnguessableToken& web_bundle_token) {
-  // Copy to avoid concurrent iteration and modification.
-  auto loaders = loaders_;
-  for (const auto& loader : loaders) {
-    loader->CancelIfWebBundleTokenMatches(web_bundle_token);
-  }
-  auto non_blocking_loaders = non_blocking_loaders_;
-  for (const auto& loader : non_blocking_loaders) {
-    loader->CancelIfWebBundleTokenMatches(web_bundle_token);
-  }
 }
 
 void ResourceFetcher::MaybeSaveResourceToStrongReference(Resource* resource) {
@@ -3477,7 +3388,6 @@ void ResourceFetcher::Trace(Visitor* visitor) const {
   visitor->Trace(deferred_preloads_);
   visitor->Trace(resource_timing_info_map_);
   visitor->Trace(blob_registry_remote_);
-  visitor->Trace(subresource_web_bundles_);
   visitor->Trace(context_lifecycle_notifier_);
 }
 
@@ -3669,8 +3579,6 @@ ResourceFetcher::ResourcePrepareHelper::PrepareRequestForCacheAccess(
     return fetcher_.UpdateRequestForTransparentPlaceholderImage(params_);
   }
   ResourceRequest& resource_request = params_.MutableResourceRequest();
-  bundle_url_for_uuid_resources_ =
-      fetcher_.PrepareRequestForWebBundle(resource_request);
 
   ResourceType resource_type = factory_.GetType();
   const ResourceLoaderOptions& options = params_.Options();
@@ -3682,7 +3590,7 @@ ResourceFetcher::ResourcePrepareHelper::PrepareRequestForCacheAccess(
   std::optional<ResourceRequestBlockedReason> blocked_reason =
       PrepareResourceRequestForCacheAccess(
           resource_type, fetcher_.properties_->GetFetchClientSettingsObject(),
-          bundle_url_for_uuid_resources_, *this, fetcher_.Context(), params_);
+          *this, fetcher_.Context(), params_);
   if (blocked_reason) {
     return blocked_reason;
   }

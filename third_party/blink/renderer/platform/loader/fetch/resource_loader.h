@@ -155,9 +155,6 @@ class PLATFORM_EXPORT ResourceLoader final
 
   scoped_refptr<base::SingleThreadTaskRunner> GetLoadingTaskRunner();
 
-  void CancelIfWebBundleTokenMatches(
-      const base::UnguessableToken& web_bundle_token);
-
   const FeatureContext* GetFeatureContext() const {
     return Context().GetFeatureContext();
   }

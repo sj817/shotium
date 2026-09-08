@@ -539,7 +539,6 @@ mojom("url_loader_base") {
     "url_loader_completion_status.mojom",
     "url_request.mojom",
     "url_response_head.mojom",
-    "web_bundle_handle.mojom",
     "web_client_hints_types.mojom",
     "x_frame_options.mojom",
   ]
@@ -654,10 +653,6 @@ mojom("url_loader_base") {
         {
           mojom = "network.mojom.TrustedUrlRequestParams"
           cpp = "::network::ResourceRequest::TrustedParams"
-        },
-        {
-          mojom = "network.mojom.WebBundleTokenParams"
-          cpp = "::network::ResourceRequest::WebBundleTokenParams"
         },
         {
           mojom = "network.mojom.URLRequest"

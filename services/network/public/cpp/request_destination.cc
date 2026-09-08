@@ -37,7 +37,6 @@ constexpr char kSharedWorker[] = "sharedworker";
 constexpr char kStyle[] = "style";
 constexpr char kTrack[] = "track";
 constexpr char kVideo[] = "video";
-constexpr char kWebBundle[] = "webbundle";
 constexpr char kWorker[] = "worker";
 constexpr char kXslt[] = "xslt";
 constexpr char kFencedframe[] = "fencedframe";
@@ -67,7 +66,6 @@ constexpr auto kRequestDestinationToStringMap =
          {network::mojom::RequestDestination::kText, kText},
          {network::mojom::RequestDestination::kTrack, kTrack},
          {network::mojom::RequestDestination::kVideo, kVideo},
-         {network::mojom::RequestDestination::kWebBundle, kWebBundle},
          {network::mojom::RequestDestination::kWorker, kWorker},
          {network::mojom::RequestDestination::kXslt, kXslt},
          {network::mojom::RequestDestination::kFencedframe, kFencedframe},
@@ -101,7 +99,6 @@ constexpr auto kRequestDestinationFromStringMap =
          {kText, network::mojom::RequestDestination::kText},
          {kTrack, network::mojom::RequestDestination::kTrack},
          {kVideo, network::mojom::RequestDestination::kVideo},
-         {kWebBundle, network::mojom::RequestDestination::kWebBundle},
          {kWorker, network::mojom::RequestDestination::kWorker},
          {kXslt, network::mojom::RequestDestination::kXslt},
          {kFencedframe, network::mojom::RequestDestination::kFencedframe},

@@ -491,20 +491,6 @@ network::OptionalTrustTokenParams WebURLRequest::TrustTokenParams() const {
   return ConvertTrustTokenParams(resource_request_->TrustTokenParams());
 }
 
-std::optional<WebURL> WebURLRequest::WebBundleUrl() const {
-  if (resource_request_->GetWebBundleTokenParams()) {
-    return resource_request_->GetWebBundleTokenParams()->bundle_url;
-  }
-  return std::nullopt;
-}
-
-std::optional<base::UnguessableToken> WebURLRequest::WebBundleToken() const {
-  if (resource_request_->GetWebBundleTokenParams()) {
-    return resource_request_->GetWebBundleTokenParams()->token;
-  }
-  return std::nullopt;
-}
-
 WebURLRequest::WebURLRequest(ResourceRequest& r) : resource_request_(&r) {}
 
 }  // namespace blink

@@ -138,7 +138,6 @@ net::NetworkTrafficAnnotationTag FetchUtils::GetTrafficAnnotationTag(
     case network::mojom::RequestDestination::kText:
     case network::mojom::RequestDestination::kTrack:
     case network::mojom::RequestDestination::kVideo:
-    case network::mojom::RequestDestination::kWebBundle:
     case network::mojom::RequestDestination::kWorker:
     case network::mojom::RequestDestination::kXslt:
       return net::DefineNetworkTrafficAnnotation("blink_resource_loader", R"(

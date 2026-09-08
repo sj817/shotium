@@ -14,6 +14,7 @@
 #include "base/debug/crash_logging.h"
 #include "base/memory/scoped_refptr.h"
 #include "base/unguessable_token.h"
+#include "mojo/public/cpp/system/data_pipe.h"
 #include "net/base/isolation_info.h"
 #include "net/base/request_priority.h"
 #include "net/cookies/site_for_cookies.h"
@@ -36,7 +37,6 @@
 #include "services/network/public/mojom/trust_tokens.mojom.h"
 #include "services/network/public/mojom/url_request.mojom-forward.h"
 #include "services/network/public/mojom/url_response_head.mojom-forward.h"
-#include "services/network/public/mojom/web_bundle_handle.mojom.h"
 #include "services/network/public/mojom/web_client_hints_types.mojom-shared.h"
 #include "url/gurl.h"
 #include "url/origin.h"
@@ -124,38 +124,6 @@ struct COMPONENT_EXPORT(NETWORK_CPP_BASE) ResourceRequest {
     // No new consumers should use this. It will be removed once the deprecated
     // Protected Audiences code is removed.
     bool is_ad_auction_trusted_signals_request = false;
-  };
-
-  // Typemapped to network.mojom.WebBundleTokenParams, see comments there
-  // for details of each field.
-  struct COMPONENT_EXPORT(NETWORK_CPP_BASE) WebBundleTokenParams {
-    WebBundleTokenParams();
-    ~WebBundleTokenParams();
-    // Define a non-default copy-constructor because:
-    // 1. network::ResourceRequest has a requirement that all of
-    //    the members be trivially copyable.
-    // 2. mojo::PendingRemote is non-copyable.
-    WebBundleTokenParams(const WebBundleTokenParams& params);
-    WebBundleTokenParams& operator=(const WebBundleTokenParams& other);
-
-    WebBundleTokenParams(const GURL& bundle_url,
-                         const base::UnguessableToken& token,
-                         mojo::PendingRemote<mojom::WebBundleHandle> handle);
-    WebBundleTokenParams(const GURL& bundle_url,
-                         const base::UnguessableToken& token,
-                         int32_t render_process_id);
-
-    // For testing. Regarding the equality of |handle|, |this| equals |other| if
-    // both |handle| exists, or neither exists, because we cannot test the
-    // equality of two mojo handles.
-    bool EqualsForTesting(const WebBundleTokenParams& other) const;
-
-    mojo::PendingRemote<mojom::WebBundleHandle> CloneHandle() const;
-
-    GURL bundle_url;
-    base::UnguessableToken token;
-    mojo::PendingRemote<mojom::WebBundleHandle> handle;
-    int32_t render_process_id = -1;
   };
 
   ResourceRequest();
@@ -257,7 +225,6 @@ struct COMPONENT_EXPORT(NETWORK_CPP_BASE) ResourceRequest {
   // field trivially copyable; see OptionalTrustTokenParams's definition for
   // more context.
   OptionalTrustTokenParams trust_token_params;
-  std::optional<WebBundleTokenParams> web_bundle_token_params;
   // If not null, the network service will not advertise any stream types
   // (via Accept-Encoding) that are not listed. Also, it will not attempt
   // decoding any non-listed stream types.

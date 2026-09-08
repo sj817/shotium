@@ -18,7 +18,6 @@ namespace {
 
 constexpr char kJsonAcceptHeader[] = "application/json,*/*;q=0.5";
 constexpr char kStylesheetAcceptHeader[] = "text/css,*/*;q=0.1";
-constexpr char kWebBundleAcceptHeader[] = "application/webbundle;v=b2";
 constexpr char kTextAcceptHeader[] = "text/plain,*/*;q=0.5";
 
 }  // namespace
@@ -51,7 +50,6 @@ void SetAcceptHeader(net::HttpRequestHeaders& headers,
   if (request_destination == network::mojom::RequestDestination::kJson ||
       request_destination == network::mojom::RequestDestination::kStyle ||
       request_destination == network::mojom::RequestDestination::kText ||
-      request_destination == network::mojom::RequestDestination::kWebBundle ||
       request_destination == network::mojom::RequestDestination::kXslt) {
     headers.SetHeader(net::HttpRequestHeaders::kAccept,
                       GetAcceptHeaderForDestination(request_destination));
@@ -72,9 +70,6 @@ const char* GetAcceptHeaderForDestination(
   } else if (request_destination ==
              network::mojom::RequestDestination::kImage) {
     return ImageAcceptHeader();
-  } else if (request_destination ==
-             network::mojom::RequestDestination::kWebBundle) {
-    return kWebBundleAcceptHeader;
   } else if (request_destination == network::mojom::RequestDestination::kJson) {
     return kJsonAcceptHeader;
   } else if (request_destination == network::mojom::RequestDestination::kText) {

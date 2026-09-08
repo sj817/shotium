@@ -214,7 +214,6 @@ std::optional<ResourceRequestBlockedReason>
 PrepareResourceRequestForCacheAccess(
     ResourceType resource_type,
     const FetchClientSettingsObject& fetch_client_settings_object,
-    const KURL& bundle_url_for_uuid_resources,
     ResourceRequestContext& resource_request_context,
     FetchContext& context,
     FetchParameters& params) {
@@ -241,11 +240,8 @@ PrepareResourceRequestForCacheAccess(
   context.CheckCSPForRequest(
       resource_request.GetRequestContext(),
       resource_request.GetRequestDestination(), resource_request.GetMode(),
-      MemoryCache::RemoveFragmentIdentifierIfNeeded(
-          bundle_url_for_uuid_resources.IsValid()
-              ? bundle_url_for_uuid_resources
-              : params.Url()),
-      options, reporting_disposition,
+      MemoryCache::RemoveFragmentIdentifierIfNeeded(params.Url()), options,
+      reporting_disposition,
       MemoryCache::RemoveFragmentIdentifierIfNeeded(url_before_redirects),
       redirect_status);
   // There's no need to add an integrity policy check here, as CanRequest() will
@@ -291,13 +287,10 @@ PrepareResourceRequestForCacheAccess(
   SetReferrer(resource_request, fetch_client_settings_object);
 
   std::optional<ResourceRequestBlockedReason> blocked_reason =
-      context.CanRequest(resource_type, resource_request,
-                         MemoryCache::RemoveFragmentIdentifierIfNeeded(
-                             bundle_url_for_uuid_resources.IsValid()
-                                 ? bundle_url_for_uuid_resources
-                                 : params.Url()),
-                         options, reporting_disposition,
-                         resource_request.GetRedirectInfo());
+      context.CanRequest(
+          resource_type, resource_request,
+          MemoryCache::RemoveFragmentIdentifierIfNeeded(params.Url()), options,
+          reporting_disposition, resource_request.GetRedirectInfo());
 
   // This was the one call per request made while the v8 stack that triggered it
   // was still live, so the AdTracker could attribute it. There is no stack.

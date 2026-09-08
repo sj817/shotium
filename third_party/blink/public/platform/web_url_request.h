@@ -273,9 +273,6 @@ class BLINK_PLATFORM_EXPORT WebURLRequest {
   // request's load (https://github.com/wicg/trust-token-api).
   network::OptionalTrustTokenParams TrustTokenParams() const;
 
-  std::optional<WebURL> WebBundleUrl() const;
-  std::optional<base::UnguessableToken> WebBundleToken() const;
-
 #if INSIDE_BLINK
   ResourceRequest& ToMutableResourceRequest();
   const ResourceRequest& ToResourceRequest() const;
