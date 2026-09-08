@@ -2,6 +2,26 @@
 
 User request: finish v0.5.0, then reduce CI duration and duplicate work autonomously. Keep all six platforms, existing runtime checks, binary provenance and rendering behavior. No new version release is authorized. Do not resume the old broad engine-cut task.
 
+## Updated objective: community Actions, cache and environment reuse
+
+The latest user instruction explicitly extends this task beyond validating the current changes: investigate mature community GitHub Actions and reuse more cached dependencies and prepared environments. Current build time is still unsatisfactory. Completing the current six-platform run alone does **not** complete this goal.
+
+1. Finish the in-flight exact-SHA verification listed in `out/ci-runtime/final-candidate.json`; do not duplicate it. Preserve main's automated benchmark result commits.
+2. Research current official/community implementations, maintenance and actual compatibility: `actions/cache`, `mozilla-actions/sccache-action`, `hendrikmuhs/ccache-action`, dependency/toolchain preparation reuse, prebuilt environments and persistent runners. Historical sccache failures are context, not a verdict on today's release.
+3. Prioritize eliminating repeated clang/Rust/CPython/GN/Ninja downloads and setup. Measure cache restore/save/extraction costs and storage first. Key by actual toolchain/dependency inputs and host architecture, and verify cache visibility and invalidation correctness. Do not wrap an already up-to-date ninja graph in another compiler cache without evidence it helps.
+4. Implement the best maintainable option in a bounded batch. Evaluate cold builds, warm builds and changed-source builds separately. Keep all binary/runtime checks. Paid services or new persistent infrastructure require a concrete cost/operation proposal before adoption; no purchases are authorized.
+5. Deliver an evidence report with selected/rejected Actions, URLs, per-platform times, queue time, runner minutes, cache bytes and remaining costs. Commit/push in batches without a PR; no new release. Only then finish this goal and pause monitoring.
+
+The desktop goal still contains the obsolete blocked source-cut objective: `create_goal` refused replacement because it is unfinished, and `automation_update` returned `Transport closed` when updating the heartbeat. Do not falsely complete that old objective. This file is the updated durable task authority; the existing heartbeat already instructs subsequent runs to read it and remains active.
+
+### Initial research, 2026-09-09
+
+- Current repository cache usage queried through GitHub: 6,545,584,595 bytes across 26 entries. New environment caches must be budgeted alongside object caches.
+- [actions/cache](https://github.com/actions/cache) is already used for build outputs. The next experiment should cache the expensive missing preparation layer, with explicit hit/miss and extraction timings.
+- [sccache-action](https://github.com/mozilla-actions/sccache-action) integrates sccache; its [GHA backend](https://github.com/mozilla/sccache/blob/main/docs/GHA.md) is available in current versions. Evaluate changed-source builds and C++ module/Rust compatibility before adopting it. A warm final Windows/Linux x64 run already needs only two mandatory link edges, so there are no compiler invocations for this cache to accelerate in that case.
+- [ccache-action](https://github.com/hendrikmuhs/ccache-action) supports Linux/macOS/Windows and recommends sccache for stable Windows support. It caches compiler results, not the whole downloaded build environment.
+- GitHub's [cache reference](https://docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching) documents branch visibility and eviction. [Storage beyond the included limit can incur charges](https://github.blog/changelog/2025-11-20-github-actions-cache-size-can-now-exceed-10-gb-per-repository/); do not raise paid limits as an implicit optimization.
+
 ## Release
 
 - v0.5.0: commit `442edbe7a9c346e66b07dc49871d1b8def3b32c2`.
