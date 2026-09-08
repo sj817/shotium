@@ -422,7 +422,6 @@ blink::ParsedHeadersPtr ConvertToBlink(const ParsedHeadersPtr& in) {
           : std::nullopt,
       ConvertToBlink(in->no_vary_search_with_parse_error),
       in->allow_cross_origin_event_reporting,
-      /*declarative_performance_observer_policy=*/nullptr,
       in->prefetch_activation_beacon_endpoint.has_value()
           ? std::make_optional(
                 ConvertToBlink(in->prefetch_activation_beacon_endpoint.value()))

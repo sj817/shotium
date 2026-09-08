@@ -56,7 +56,6 @@ component("cpp") {
 
   # Each defines an anonymous-namespace kHeaderName, as do its siblings.
   shot_jumbo_excluded_sources = [
-    "declarative_performance_observer_parser.cc",
     "document_isolation_policy_parser.cc",
   ]
 
@@ -70,7 +69,6 @@ component("cpp") {
     "cross_origin_embedder_policy_parser.cc",
     "cross_origin_opener_policy_parser.cc",
     "data_pipe_to_source_stream.cc",
-    "declarative_performance_observer_parser.cc",
     "document_isolation_policy_parser.cc",
     "fence_event_reporting_parser.cc",
     "header_util.cc",

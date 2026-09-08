@@ -31,7 +31,6 @@
 #include "third_party/blink/renderer/core/timing/performance_entry.h"
 
 #include "base/atomic_sequence_num.h"
-#include "third_party/blink/public/mojom/timing/performance_mark_or_measure.mojom-blink.h"
 #include "third_party/blink/renderer/core/execution_context/execution_context.h"
 #include "third_party/blink/renderer/core/frame/local_dom_window.h"
 #include "third_party/blink/renderer/core/performance_entry_names.h"
@@ -84,22 +83,6 @@ uint64_t PerformanceEntry::navigationId() const {
 
 DOMWindow* PerformanceEntry::source() const {
   return source_.Get();
-}
-
-mojom::blink::PerformanceMarkOrMeasurePtr
-PerformanceEntry::ToMojoPerformanceMarkOrMeasure() {
-  DCHECK(EntryTypeEnum() == kMark || EntryTypeEnum() == kMeasure);
-  auto mojo_performance_mark_or_measure =
-      mojom::blink::PerformanceMarkOrMeasure::New();
-  mojo_performance_mark_or_measure->name = name_;
-  mojo_performance_mark_or_measure->entry_type =
-      EntryTypeEnum() == kMark
-          ? mojom::blink::PerformanceMarkOrMeasure::EntryType::kMark
-          : mojom::blink::PerformanceMarkOrMeasure::EntryType::kMeasure;
-  mojo_performance_mark_or_measure->start_time = start_time_;
-  mojo_performance_mark_or_measure->duration = duration_;
-  // PerformanceMark/Measure overrides will add the detail field.
-  return mojo_performance_mark_or_measure;
 }
 
 PerformanceEntry::EntryType PerformanceEntry::ToEntryTypeEnum(

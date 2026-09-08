@@ -27,7 +27,6 @@
 #define THIRD_PARTY_BLINK_RENDERER_CORE_TIMING_PERFORMANCE_MARK_H_
 
 #include "base/time/time.h"
-#include "third_party/blink/public/mojom/timing/performance_mark_or_measure.mojom-blink-forward.h"
 #include "third_party/blink/renderer/core/core_export.h"
 #include "third_party/blink/renderer/core/timing/performance_entry.h"
 #include "third_party/blink/renderer/platform/heap/collection_support/heap_hash_map.h"
@@ -56,8 +55,6 @@ class CORE_EXPORT PerformanceMark final : public PerformanceEntry {
 
   const AtomicString& entryType() const override;
   PerformanceEntryType EntryTypeEnum() const override;
-  mojom::blink::PerformanceMarkOrMeasurePtr ToMojoPerformanceMarkOrMeasure()
-      override;
 
   void Trace(Visitor*) const override;
 

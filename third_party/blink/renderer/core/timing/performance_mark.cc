@@ -5,7 +5,6 @@
 
 #include <optional>
 
-#include "third_party/blink/public/mojom/timing/performance_mark_or_measure.mojom-blink.h"
 #include "third_party/blink/renderer/core/frame/local_dom_window.h"
 #include "third_party/blink/renderer/core/performance_entry_names.h"
 #include "third_party/blink/renderer/core/timing/dom_window_performance.h"
@@ -20,15 +19,6 @@ const AtomicString& PerformanceMark::entryType() const {
 
 PerformanceEntryType PerformanceMark::EntryTypeEnum() const {
   return PerformanceEntry::EntryType::kMark;
-}
-
-mojom::blink::PerformanceMarkOrMeasurePtr
-PerformanceMark::ToMojoPerformanceMarkOrMeasure() {
-  // `detail` used to be a V8-serialized `any` the script passed to
-  // performance.mark(); that serialization went with V8, and PerformanceMark
-  // no longer carries a detail value to forward here. `detail` stays unset,
-  // which the mojom declares as a nullable field.
-  return PerformanceEntry::ToMojoPerformanceMarkOrMeasure();
 }
 
 // static
@@ -73,10 +63,6 @@ PerformanceMark::GetWebFeatureForUserFeatureName(const String& feature_name) {
 }
 
 void PerformanceMark::Trace(Visitor* visitor) const {
-  // deserialized_detail_map_ was the per-isolate cache of the V8-deserialized
-  // `detail` value; it went with V8 serialization (see
-  // ToMojoPerformanceMarkOrMeasure() above), so there is nothing left to
-  // trace here beyond the base class.
   PerformanceEntry::Trace(visitor);
 }
 

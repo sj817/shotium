@@ -219,7 +219,6 @@ mojom("mojom_platform") {
     "speech/speech_synthesis.mojom",
     "subapps/sub_apps_service.mojom",
     "timing/declarative_performance_observer.mojom",
-    "timing/performance_mark_or_measure.mojom",
     "timing/resource_timing.mojom",
     "use_counter/use_counter_feature.mojom",
     "user_agent/user_agent_metadata.mojom",

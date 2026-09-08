@@ -32,7 +32,6 @@
 #ifndef THIRD_PARTY_BLINK_RENDERER_CORE_TIMING_PERFORMANCE_ENTRY_H_
 #define THIRD_PARTY_BLINK_RENDERER_CORE_TIMING_PERFORMANCE_ENTRY_H_
 
-#include "third_party/blink/public/mojom/timing/performance_mark_or_measure.mojom-blink-forward.h"
 #include "third_party/blink/renderer/core/core_export.h"
 #include "third_party/blink/renderer/core/dom/dom_high_res_time_stamp.h"
 #include "third_party/blink/renderer/core/frame/dom_window.h"
@@ -148,13 +147,6 @@ class CORE_EXPORT PerformanceEntry : public ScriptWrappable {
         kLongAnimationFrame | kVisibilityState;
     return (entry_type & kTimelineEntryMask) != 0;
   }
-
-  // PerformanceMark/Measure override this and it returns Mojo structure pointer
-  // which has all members of PerformanceMark/Measure. Common data members are
-  // set by PerformanceMark/Measure calling
-  // PerformanceEntry::ToMojoPerformanceMarkOrMeasure().
-  virtual mojom::blink::PerformanceMarkOrMeasurePtr
-  ToMojoPerformanceMarkOrMeasure();
 
   // PaintTimingMixin. It's implemented here for simplicity.
   // If an interface doesn't have PaintTimingMixin, these functions
