@@ -10,7 +10,6 @@
 #include "services/viz/public/cpp/compositing/shared_image_format_mojom_traits.h"
 #include "third_party/skia/include/core/SkColorSpace.h"
 #include "ui/gfx/display_color_spaces.h"
-#include "ui/gfx/mojom/buffer_types_mojom_traits.h"
 #include "ui/gfx/mojom/color_space_mojom_traits.h"
 #include "ui/gfx/mojom/display_color_spaces.mojom-shared.h"
 #include "ui/gfx/mojom/hdr_static_metadata_mojom_traits.h"

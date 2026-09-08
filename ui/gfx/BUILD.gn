@@ -95,7 +95,6 @@ component("gfx") {
     "font_render_params.h",
     "font_util.cc",
     "font_util.h",
-    "frame_data.h",
     "gpu_extra_info.cc",
     "gpu_extra_info.h",
     "image/image.cc",
@@ -118,10 +117,7 @@ component("gfx") {
     "monogram_utils.cc",
     "monogram_utils.h",
     "native_ui_util.h",
-    "overlay_layer_id.cc",
-    "overlay_layer_id.h",
-    "overlay_plane_data.cc",
-    "overlay_plane_data.h",
+    "overlay_transform.h",
     "overlay_transform_utils.cc",
     "overlay_transform_utils.h",
     "platform_font.cc",
@@ -136,7 +132,6 @@ component("gfx") {
     "shadow_value.h",
     "skbitmap_operations.cc",
     "skbitmap_operations.h",
-    "swap_result.cc",
     "text_constants.h",
     "text_elider.cc",
     "text_elider.h",
@@ -166,7 +161,6 @@ component("gfx") {
     ":color_utils",
     ":gfx_skia",
     ":gfx_switches",
-    ":memory_buffer_sources",
     ":native_ui_types_sources",
     ":resize_image_dimensions",
     ":selection_bound_sources",
@@ -251,7 +245,6 @@ component("gfx") {
   }
   if (is_mac) {
     sources += [
-      "ca_layer_result.h",
       "decorated_text_mac.h",
       "decorated_text_mac.mm",
       "font_fallback_mac.mm",
@@ -319,8 +312,6 @@ component("gfx") {
       "system_fonts_win.h",
       "win/crash_id_helper.cc",
       "win/crash_id_helper.h",
-      "win/d3d_shared_fence.cc",
-      "win/d3d_shared_fence.h",
       "win/direct_write.cc",
       "win/direct_write.h",
       "win/gdi_util.cc",
@@ -555,110 +546,6 @@ source_set("selection_bound_sources") {
 source_set("buffer_types") {
   sources = [ "buffer_types.h" ]
   deps = [ "//base" ]
-}
-
-# The GPU memory buffer stuff is separate from "gfx" to allow GPU-related
-# things to use these files without pulling in all of gfx, which includes large
-# things like Skia.
-#
-# The structure here allows the memory buffer to be part of the gfx component
-# in the component build, but be a separate source set in a static build.
-group("memory_buffer") {
-  if (is_component_build) {
-    public_deps = [ ":gfx" ]
-  } else {
-    public_deps = [ ":memory_buffer_sources" ]
-  }
-}
-
-# Cannot be a static_library in component builds due to exported functions
-source_set("memory_buffer_sources") {
-  visibility = [ ":*" ]  # Depend on through ":memory_buffer".
-
-  # TODO(brettw) refactor this so these sources are in a coherent directory
-  # structure rather than random samplings of ui/gfx and ui/gfx/mac.
-  sources = [
-    "buffer_usage_util.cc",
-    "buffer_usage_util.h",
-    "client_native_pixmap.h",
-    "client_native_pixmap_factory.h",
-    "generic_shared_memory_id.cc",
-    "generic_shared_memory_id.h",
-    "gpu_fence.cc",
-    "gpu_fence.h",
-    "gpu_fence_handle.cc",
-    "gpu_fence_handle.h",
-    "native_pixmap.h",
-    "overlay_priority_hint.h",
-    "overlay_transform.h",
-    "overlay_type.h",
-    "surface_origin.h",
-  ]
-
-  if (use_blink) {
-    sources += [
-      "ca_layer_params.cc",
-      "ca_layer_params.h",
-      "gpu_memory_buffer_handle.cc",
-      "gpu_memory_buffer_handle.h",
-    ]
-  }
-
-  configs += [
-    ":gfx_impl_define",
-    "//build/config/compiler:wexit_time_destructors",
-  ]
-
-  public_deps = [ ":buffer_types" ]
-
-  deps = [
-    ":gfx_switches",
-    ":native_ui_types_sources",
-    "//base",
-    "//build:chromecast_buildflags",
-    "//build:chromeos_buildflags",
-    "//components/viz/common/resources:shared_image_format",
-    "//ui/gfx/geometry",
-  ]
-
-  if (is_linux || is_chromeos) {
-    sources += [
-      "linux/client_native_pixmap_dmabuf.cc",
-      "linux/client_native_pixmap_dmabuf.h",
-      "linux/client_native_pixmap_factory_dmabuf.cc",
-      "linux/client_native_pixmap_factory_dmabuf.h",
-      "linux/dmabuf_uapi.h",
-      "linux/native_pixmap_dmabuf.cc",
-      "linux/native_pixmap_dmabuf.h",
-    ]
-
-    deps += [ "//build/config/linux/libdrm" ]
-  }
-
-  if (is_linux || is_chromeos || is_android) {
-    deps += [ "//third_party/libsync" ]
-  }
-
-  if (use_blink && is_apple) {
-    sources += [
-      "mac/io_surface.cc",
-      "mac/io_surface.h",
-      "mac/mtl_shared_event_fence.h",
-      "mac/mtl_shared_event_fence.mm",
-    ]
-
-    public_deps += [
-      "//components/viz/common/resources:shared_image_format",
-      "//ui/gfx:color_space",
-    ]
-  }
-
-  if (is_linux || is_chromeos || use_ozone) {
-    sources += [
-      "native_pixmap_handle.cc",
-      "native_pixmap_handle.h",
-    ]
-  }
 }
 
 # TODO(ccameron): This can be moved into a separate source_set.

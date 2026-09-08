@@ -128,21 +128,12 @@ component("events_base") {
     "events_base_export.h",
     "features.cc",
     "features.h",
-    "gesture_curve.h",
     "gesture_event_details.cc",
     "gesture_event_details.h",
-    "gestures/fixed_velocity_curve.cc",
-    "gestures/fixed_velocity_curve.h",
-    "gestures/fling_curve.cc",
-    "gestures/fling_curve.h",
-    "gestures/physics_based_fling_curve.cc",
-    "gestures/physics_based_fling_curve.h",
     "keycodes/dom_us_layout_data.h",
     "keycodes/keyboard_code_conversion.cc",
     "keycodes/keyboard_code_conversion.h",
     "keycodes/keyboard_codes.h",
-    "mobile_scroller.cc",
-    "mobile_scroller.h",
     "pointer_details.cc",
     "pointer_details.h",
   ]
@@ -248,8 +239,6 @@ component("events") {
     "event_targeter.h",
     "event_utils.h",
     "events_export.h",
-    "gestures/gesture_recognizer.h",
-    "gestures/gesture_types.h",
     "null_event_targeter.h",
     "scoped_target_handler.h",
   ]
@@ -267,8 +256,6 @@ component("events") {
     "event_utils.cc",
     "events_exports.cc",
     "events_stub.cc",
-    "gestures/gesture_recognizer.cc",
-    "gestures/gesture_types.cc",
     "null_event_targeter.cc",
     "scoped_target_handler.cc",
   ]
@@ -291,12 +278,9 @@ component("events") {
   }
 
   if (is_mac) {
-    public += [ "gestures/gesture_recognizer_impl_mac.h" ]
-
     sources += [
       "cocoa/cocoa_event_utils.mm",
       "cocoa/events_mac.mm",
-      "gestures/gesture_recognizer_impl_mac.cc",
     ]
   }
 
@@ -319,7 +303,6 @@ component("events") {
   ]
   deps = [
     ":dom_keycode_converter",
-    ":gesture_detection",
     "//skia",
     "//ui/base:features",
     "//ui/gfx",
@@ -367,19 +350,6 @@ component("events") {
     deps += [
       "//ui/base:features",
       "//ui/events/ozone/layout",
-    ]
-  }
-
-  if (use_aura) {
-    public += [
-      "gestures/gesture_provider_aura.h",
-      "gestures/gesture_recognizer_impl.h",
-      "gestures/motion_event_aura.h",
-    ]
-    sources += [
-      "gestures/gesture_provider_aura.cc",
-      "gestures/gesture_recognizer_impl.cc",
-      "gestures/motion_event_aura.cc",
     ]
   }
 
@@ -449,86 +419,7 @@ component("events") {
   configs += [ "//build/config/compiler:no_exit_time_destructors" ]
 }
 
-component("gesture_detection") {
-  sources = [
-    "gesture_detection/filtered_gesture_provider.cc",
-    "gesture_detection/filtered_gesture_provider.h",
-    "gesture_detection/gesture_configuration.cc",
-    "gesture_detection/gesture_configuration.h",
-    "gesture_detection/gesture_detection_export.h",
-    "gesture_detection/gesture_detector.cc",
-    "gesture_detection/gesture_detector.h",
-    "gesture_detection/gesture_event_data.cc",
-    "gesture_detection/gesture_event_data.h",
-    "gesture_detection/gesture_event_data_packet.cc",
-    "gesture_detection/gesture_event_data_packet.h",
-    "gesture_detection/gesture_listeners.cc",
-    "gesture_detection/gesture_listeners.h",
-    "gesture_detection/gesture_provider.cc",
-    "gesture_detection/gesture_provider.h",
-    "gesture_detection/gesture_provider_config_helper.cc",
-    "gesture_detection/gesture_provider_config_helper.h",
-    "gesture_detection/gesture_touch_uma_histogram.cc",
-    "gesture_detection/gesture_touch_uma_histogram.h",
-    "gesture_detection/scale_gesture_detector.cc",
-    "gesture_detection/scale_gesture_detector.h",
-    "gesture_detection/scale_gesture_listeners.cc",
-    "gesture_detection/scale_gesture_listeners.h",
-    "gesture_detection/snap_scroll_controller.cc",
-    "gesture_detection/snap_scroll_controller.h",
-    "gesture_detection/touch_disposition_gesture_filter.cc",
-    "gesture_detection/touch_disposition_gesture_filter.h",
-  ]
 
-  public_deps = [ ":velocity_tracker" ]
-
-  deps = [
-    ":events_base",
-    "//base",
-    "//ui/base:features",
-    "//ui/display",
-    "//ui/gfx",
-    "//ui/gfx/geometry",
-    "//ui/latency",
-  ]
-
-  defines = [ "GESTURE_DETECTION_IMPLEMENTATION" ]
-
-  if (is_android) {
-    sources += [ "gesture_detection/gesture_configuration_android.cc" ]
-  } else if (is_ios) {
-    sources += [ "gesture_detection/gesture_configuration_ios.cc" ]
-  } else if (is_castos) {
-    sources += [ "gesture_detection/gesture_configuration_cast.cc" ]
-  } else if (use_aura) {
-    sources += [ "gesture_detection/gesture_configuration_aura.cc" ]
-  } else {
-    sources += [ "gesture_detection/gesture_configuration_default.cc" ]
-  }
-}
-
-component("velocity_tracker") {
-  sources = [
-    "velocity_tracker/bitset_32.h",
-    "velocity_tracker/motion_event.cc",
-    "velocity_tracker/motion_event.h",
-    "velocity_tracker/motion_event_generic.cc",
-    "velocity_tracker/motion_event_generic.h",
-    "velocity_tracker/velocity_tracker.cc",
-    "velocity_tracker/velocity_tracker.h",
-    "velocity_tracker/velocity_tracker_state.cc",
-    "velocity_tracker/velocity_tracker_state.h",
-  ]
-
-  defines = [ "IS_VELOCITY_TRACKER_IMPL" ]
-
-  deps = [
-    ":events_base",
-    "//base",
-    "//ui/gfx",
-    "//ui/gfx/geometry",
-  ]
-}
 
 static_library("test_support") {
   sources = [
@@ -571,7 +462,6 @@ static_library("test_support") {
     ":dom_keycode_converter",
     ":events",
     ":events_base",
-    ":gesture_detection",
     "//ui/events/devices",
   ]
   deps = [
@@ -634,33 +524,17 @@ if (use_blink) {
     use_xvfb = use_xvfb_in_this_config
 
     sources = [
-      "blink/blink_event_util_unittest.cc",
-      "blink/fling_booster_unittest.cc",
-      "blink/web_input_event_traits_unittest.cc",
-      "blink/web_input_event_unittest.cc",
       "event_dispatcher_unittest.cc",
       "event_processor_unittest.cc",
       "event_rewriter_unittest.cc",
       "event_target_unittest.cc",
       "event_unittest.cc",
-      "gesture_detection/filtered_gesture_provider_unittest.cc",
-      "gesture_detection/gesture_event_data_packet_unittest.cc",
-      "gesture_detection/gesture_provider_unittest.cc",
-      "gesture_detection/snap_scroll_controller_unittest.cc",
-      "gesture_detection/touch_disposition_gesture_filter_unittest.cc",
-      "gestures/blink/web_gesture_curve_impl_unittest.cc",
-      "gestures/fling_curve_unittest.cc",
-      "gestures/physics_based_fling_curve_unittest.cc",
       "keycodes/dom/keycode_converter_unittest.cc",
       "keycodes/keyboard_code_conversion_unittest.cc",
-      "mobile_scroller_unittest.cc",
       "mojom/mojom_traits_unittest.cc",
       "platform/platform_event_source_unittest.cc",
       "scoped_target_handler_unittest.cc",
       "test/scoped_event_waiter_unittest.cc",
-      "velocity_tracker/bitset_32_unittest.cc",
-      "velocity_tracker/motion_event_generic_unittest.cc",
-      "velocity_tracker/velocity_tracker_unittest.cc",
     ]
 
     if (is_mac) {
@@ -679,9 +553,7 @@ if (use_blink) {
       ":dom_keycode_converter",
       ":events",
       ":events_base",
-      ":gesture_detection",
       ":test_support",
-      ":velocity_tracker",
       "//base",
       "//base/test:test_support",
       "//cc",
@@ -694,9 +566,7 @@ if (use_blink) {
       "//third_party/blink/public:blink_headers",
       "//ui/base:test_support",
       "//ui/display",
-      "//ui/events/blink",
       "//ui/events/devices",
-      "//ui/events/gestures/blink",
       "//ui/events/mojom",
       "//ui/events/platform",
       "//ui/gfx/geometry/mojom:mojom_traits",
@@ -730,16 +600,8 @@ if (use_blink) {
       deps += [ "//ui/events/devices:unittests" ]
     }
 
-    if (use_aura) {
-      sources += [
-        "gestures/gesture_provider_aura_unittest.cc",
-        "gestures/motion_event_aura_unittest.cc",
-      ]
-    }
-
     if (is_win) {
       sources += [
-        "blink/web_input_event_builders_win_unittest.cc",
         "keycodes/platform_key_map_win_unittest.cc",
         "win/event_utils_win_unittest.cc",
         "win/stylus_handwriting_properties_win_unittest.cc",
