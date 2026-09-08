@@ -455,15 +455,6 @@ class PLATFORM_EXPORT ResourceRequestHead {
         prefetch_maybe_for_top_level_navigation;
   }
 
-  const std::optional<network::mojom::blink::TrustTokenParams>&
-  TrustTokenParams() const {
-    return trust_token_params_;
-  }
-  void SetTrustTokenParams(
-      std::optional<network::mojom::blink::TrustTokenParams> params) {
-    trust_token_params_ = std::move(params);
-  }
-
   // Whether either RequestorOrigin or IsolatedWorldOrigin can display the
   // |url|,
   bool CanDisplay(const KURL&) const;
@@ -599,7 +590,6 @@ class PLATFORM_EXPORT ResourceRequestHead {
   network::mojom::ReferrerPolicy referrer_policy_;
   network::mojom::CorsPreflightPolicy cors_preflight_policy_;
   std::optional<RedirectInfo> redirect_info_;
-  std::optional<network::mojom::blink::TrustTokenParams> trust_token_params_;
   network::mojom::IPAddressSpace target_address_space_;
 
   std::optional<String> suggested_filename_;

@@ -25,7 +25,6 @@
 #define THIRD_PARTY_BLINK_RENDERER_CORE_HTML_HTML_IFRAME_ELEMENT_H_
 
 #include "services/network/public/cpp/permissions_policy/permissions_policy_declaration.h"
-#include "services/network/public/mojom/trust_tokens.mojom-blink-forward.h"
 #include "services/network/public/mojom/web_sandbox_flags.mojom-blink.h"
 #include "third_party/blink/renderer/core/core_export.h"
 #include "third_party/blink/renderer/core/html/html_frame_element_base.h"
@@ -93,9 +92,6 @@ class CORE_EXPORT HTMLIFrameElement : public HTMLFrameElementBase,
 
   network::mojom::ReferrerPolicy ReferrerPolicyAttribute() override;
 
-  network::mojom::blink::TrustTokenParamsPtr ConstructTrustTokenParams()
-      const override;
-
   // FrameOwner overrides:
   bool AllowFullscreen() const override { return allow_fullscreen_; }
   bool AllowPaymentRequest() const override { return allow_payment_request_; }
@@ -110,10 +106,6 @@ class CORE_EXPORT HTMLIFrameElement : public HTMLFrameElementBase,
   AtomicString required_policy_;  // policy attribute
   AtomicString id_;
   AtomicString src_;
-  // String attribute storing a JSON representation of the Trust Token
-  // parameters (in order to align with the fetch interface to the Trust Token
-  // API). If present, this is parsed in ConstructTrustTokenParams.
-  AtomicString trust_token_;
   bool allow_fullscreen_;
   bool allow_payment_request_;
   bool collapsed_by_client_;

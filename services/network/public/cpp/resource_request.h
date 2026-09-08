@@ -21,7 +21,6 @@
 #include "net/storage_access_api/status.h"
 #include "net/url_request/redirect_info.h"
 #include "net/url_request/referrer_policy.h"
-#include "services/network/public/cpp/optional_trust_token_params.h"
 #include "services/network/public/cpp/permissions_policy/permissions_policy.h"
 #include "services/network/public/cpp/resource_request_body.h"
 #include "services/network/public/mojom/client_security_state.mojom.h"
@@ -29,7 +28,6 @@
 #include "services/network/public/mojom/fetch_api.mojom-shared.h"
 #include "services/network/public/mojom/ip_address_space.mojom-shared.h"
 #include "services/network/public/mojom/referrer_policy.mojom-shared.h"
-#include "services/network/public/mojom/trust_tokens.mojom.h"
 #include "services/network/public/mojom/url_request.mojom-forward.h"
 #include "services/network/public/mojom/url_response_head.mojom-forward.h"
 #include "url/gurl.h"
@@ -157,10 +155,6 @@ struct COMPONENT_EXPORT(NETWORK_CPP_BASE) ResourceRequest {
   bool is_favicon = false;
   std::optional<base::UnguessableToken> recursive_prefetch_token;
   std::optional<TrustedParams> trusted_params;
-  // |trust_token_params| uses a custom std::optional-like type to make the
-  // field trivially copyable; see OptionalTrustTokenParams's definition for
-  // more context.
-  OptionalTrustTokenParams trust_token_params;
   net::StorageAccessApiStatus storage_access_api_status =
       net::StorageAccessApiStatus::kNone;
 

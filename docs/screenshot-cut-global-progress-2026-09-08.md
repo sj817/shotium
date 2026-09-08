@@ -1,4 +1,6 @@
-# 静态截图引擎全局裁剪进度（stage64）
+# 静态截图引擎全局裁剪进度（stage65）
+
+stage65：stage64 已提交 8f95ad10444e。本批51源码路径（26D+25E）。删除Trust Token请求闭包：iframe专用属性解析/state/IDL、frame-owner参数构造、脚本converter、Blink/WebURLRequest转换与网络请求/traits/Optional包装，FetchAPIRequest与导航字段同步；8专属实现文件移除、4GN列表收齐。schema只保留当前completion/error链使用的TrustTokenOperationStatus且枚举原文相同；安全/重定向尾部实现未变。整个Trust Token仍未完成：error/status、switch/policy/counter、受限bindings列表关联IDL和document.cc旧include单列待办。另删除9组无调用Windows辅助18文件（IAT patch、独立PE reader、Win11/TPM资格、Explorer/elevation、limited features、EnumVariant、ETW controller、CRT setup），base GN与tbs链接/延迟加载、唯一消费者消失的kDisableBreakpad同步；实际PEImage/COM ModifyCode/ETW provider/资源主题字体GDI保留。保护交集零、SHA/实体删除、5GN语法、diff与残留检查通过；残留明确区分NetLog历史注释、Rust独立TPM绑定及未完成状态链。证据out/cut-stage65-combined/、out/cut-stage65-trust-token/、out/cut-stage65-system-helpers/。无图生成/编译/运行/像素验收，stage49受限core GN阻点仍在，全局估计65%±10、源码约80%，余10–16大批次为粗估。
 
 stage64：stage63 已提交 36aed49570a3。本批30源码路径（5D+25E），整链解除网络请求FetchRetryOptions专属类/schema/traits/GN及限速token、Fetch window ID、keepalive统计token、重试选项四组元数据；清理Blink存储/getset、WebURLRequest转发、网络转换与序列化，真实keepalive bool和网络连接重试保留，ResourceRequest从SendsCookies起的安全/重定向实现原文不变。另解除11个Core/ModulesInitializer空服务API及调用端，删除独占session_storage_namespace/storage_area两份协议；LocalFrame冻结/卸载仅去空缓存驱逐调用，CreateNewWindow仅去空storage clone。保留实际初始化/InitLocalFrame注册、PiP有返回值fallback；InstallSupplements调用端受限仍单列。保护交集零、备份SHA、5实体删除、4GN语法、diff和移除符号完整残留检查通过。证据out/cut-stage64-combined/、out/cut-stage64-network-fields/、out/cut-stage64-module-shells/。未图生成/编译/运行/像素验证，stage49受限core GN阻点及全局剩余未解除；全局工作量仍估计65%±10，源码约80%，余10–16大批次为粗估。
 

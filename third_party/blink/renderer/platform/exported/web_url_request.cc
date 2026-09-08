@@ -35,7 +35,6 @@
 #include "base/time/time.h"
 #include "net/base/load_flags.h"
 #include "services/network/public/cpp/features.h"
-#include "services/network/public/cpp/optional_trust_token_params.h"
 #include "third_party/blink/public/mojom/fetch/fetch_api_request.mojom-blink.h"
 #include "third_party/blink/public/platform/url_conversion.h"
 #include "third_party/blink/public/platform/web_http_body.h"
@@ -43,7 +42,6 @@
 #include "third_party/blink/public/platform/web_security_origin.h"
 #include "third_party/blink/public/platform/web_url.h"
 #include "third_party/blink/renderer/platform/loader/fetch/resource_request.h"
-#include "third_party/blink/renderer/platform/loader/fetch/trust_token_params_conversion.h"
 #include "third_party/blink/renderer/platform/network/encoded_form_data.h"
 #include "third_party/blink/renderer/platform/weborigin/referrer.h"
 #include "third_party/blink/renderer/platform/weborigin/security_origin.h"
@@ -454,10 +452,6 @@ bool WebURLRequest::IsFromOriginDirtyStyleSheet() const {
 std::optional<base::UnguessableToken> WebURLRequest::RecursivePrefetchToken()
     const {
   return resource_request_->RecursivePrefetchToken();
-}
-
-network::OptionalTrustTokenParams WebURLRequest::TrustTokenParams() const {
-  return ConvertTrustTokenParams(resource_request_->TrustTokenParams());
 }
 
 WebURLRequest::WebURLRequest(ResourceRequest& r) : resource_request_(&r) {}

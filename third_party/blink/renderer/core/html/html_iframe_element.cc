@@ -29,7 +29,6 @@
 #include "services/network/public/cpp/permissions_policy/permissions_policy_declaration.h"
 #include "services/network/public/cpp/web_sandbox_flags.h"
 #include "services/network/public/mojom/permissions_policy/permissions_policy_feature.mojom-blink.h"
-#include "services/network/public/mojom/trust_tokens.mojom-blink.h"
 #include "services/network/public/mojom/web_sandbox_flags.mojom-blink.h"
 #include "third_party/blink/public/common/features.h"
 #include "third_party/blink/public/common/permissions_policy/policy_helper_public.h"
@@ -44,7 +43,6 @@
 #include "third_party/blink/renderer/core/frame/local_frame.h"
 #include "third_party/blink/renderer/core/html/client_hints_util.h"
 #include "third_party/blink/renderer/core/html/html_document.h"
-#include "third_party/blink/renderer/core/html/trust_token_attribute_parsing.h"
 #include "third_party/blink/renderer/core/html_names.h"
 #include "third_party/blink/renderer/core/inspector/console_message.h"
 #include "third_party/blink/renderer/core/layout/layout_iframe.h"
@@ -320,9 +318,6 @@ void HTMLIFrameElement::ParseAttribute(
       required_policy_ = value;
       UpdateRequiredPolicy();
     }
-  } else if (name == html_names::kPrivatetokenAttr) {
-    UseCounter::Count(GetDocument(), WebFeature::kTrustTokenIframe);
-    trust_token_ = value;
   } else {
     // Websites picked up a Chromium article that used this non-specified
     // attribute which ended up changing shape after the specification process.
@@ -511,63 +506,6 @@ bool HTMLIFrameElement::IsInteractiveContent() const {
 
 network::mojom::ReferrerPolicy HTMLIFrameElement::ReferrerPolicyAttribute() {
   return referrer_policy_;
-}
-
-network::mojom::blink::TrustTokenParamsPtr
-HTMLIFrameElement::ConstructTrustTokenParams() const {
-  if (!trust_token_) {
-    return nullptr;
-  }
-
-  JSONParseError parse_error;
-  std::unique_ptr<JSONValue> parsed_attribute =
-      ParseJSON(trust_token_, &parse_error);
-  if (!parsed_attribute) {
-    GetDocument().AddConsoleMessage(MakeGarbageCollected<ConsoleMessage>(
-        mojom::blink::ConsoleMessageSource::kOther,
-        mojom::blink::ConsoleMessageLevel::kError,
-        StrCat({"iframe trusttoken attribute was invalid JSON: ",
-                parse_error.message, " (line ",
-                String::Number(parse_error.line), ", col ",
-                String::Number(parse_error.column), ")"})));
-    return nullptr;
-  }
-
-  network::mojom::blink::TrustTokenParamsPtr parsed_params =
-      internal::TrustTokenParamsFromJson(std::move(parsed_attribute));
-  if (!parsed_params) {
-    GetDocument().AddConsoleMessage(MakeGarbageCollected<ConsoleMessage>(
-        mojom::blink::ConsoleMessageSource::kOther,
-        mojom::blink::ConsoleMessageLevel::kError,
-        "Couldn't parse iframe trusttoken attribute (was it missing a "
-        "field?)"));
-    return nullptr;
-  }
-
-  // Only the send-redemption-record (the kSigning variant) operation is
-  // valid in the iframe context.
-  if (parsed_params->operation !=
-      network::mojom::blink::TrustTokenOperationType::kSigning) {
-    GetDocument().AddConsoleMessage(MakeGarbageCollected<ConsoleMessage>(
-        mojom::blink::ConsoleMessageSource::kOther,
-        mojom::blink::ConsoleMessageLevel::kError,
-        "Trust Tokens: Attempted a trusttoken operation which isn't "
-        "send-redemption-record in an iframe."));
-    return nullptr;
-  }
-
-  if (!GetExecutionContext()->IsFeatureEnabled(
-          network::mojom::PermissionsPolicyFeature::kTrustTokenRedemption)) {
-    GetExecutionContext()->AddConsoleMessage(MakeGarbageCollected<
-                                             ConsoleMessage>(
-        mojom::blink::ConsoleMessageSource::kOther,
-        mojom::blink::ConsoleMessageLevel::kError,
-        "Trust Tokens: Attempted redemption or signing without the "
-        "private-state-token-redemption Permissions Policy feature present."));
-    return nullptr;
-  }
-
-  return parsed_params;
 }
 
 void HTMLIFrameElement::DidChangeAttributes() {

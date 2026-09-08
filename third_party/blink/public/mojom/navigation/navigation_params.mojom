@@ -13,7 +13,6 @@ import "services/network/public/mojom/fetch_api.mojom";
 import "services/network/public/mojom/link_header.mojom";
 import "services/network/public/mojom/source_location.mojom";
 import "services/network/public/mojom/storage_access_api.mojom";
-import "services/network/public/mojom/trust_tokens.mojom";
 import "services/network/public/mojom/url_loader.mojom";
 import "services/network/public/mojom/url_request.mojom";
 import "services/network/public/mojom/url_response_head.mojom";
@@ -162,11 +161,6 @@ struct BeginNavigationParams {
   // https://chromedevtools.github.io/devtools-protocol/tot/Network#type-Initiator
   // for details.
   mojo_base.mojom.DictionaryValue? devtools_initiator;
-
-  // Specifies whether, and how, the navigation should execute a Trust Tokens
-  // operation (https://github.com/wicg/trust-token-api) and attach headers
-  // conveying the result of the operation. Set on some child frame navigations.
-  network.mojom.TrustTokenParams? trust_token_params;
 
   // Timestamps of the renderer running beforeunload handlers on local frames
   // in preparation for navigating. Used for metrics.

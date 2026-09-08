@@ -477,11 +477,6 @@ void HTMLFrameOwnerElement::MaybeClearDeferredFetchPolicy() {
   }
 }
 
-network::mojom::blink::TrustTokenParamsPtr
-HTMLFrameOwnerElement::ConstructTrustTokenParams() const {
-  return nullptr;
-}
-
 void HTMLFrameOwnerElement::FrameOwnerPropertiesChanged() {
   // Don't notify about updates if ContentFrame() is null, for example when
   // the subframe hasn't been created yet; or if we are in the middle of
@@ -727,11 +722,6 @@ bool HTMLFrameOwnerElement::LoadOrRedirectSubframe(
   request.SetReferrerPolicy(ReferrerPolicyAttribute());
   request.SetHasUserGesture(
       LocalFrame::HasTransientUserActivation(GetDocument().GetFrame()));
-
-  network::mojom::blink::TrustTokenParamsPtr trust_token_params =
-      ConstructTrustTokenParams();
-  if (trust_token_params)
-    request.SetTrustTokenParams(*trust_token_params);
 
   if (ContentFrame()) {
     FrameLoadRequest frame_load_request(GetDocument().domWindow(), request);

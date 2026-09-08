@@ -22,7 +22,6 @@ import "services/network/public/mojom/referrer_policy.mojom";
 import "services/network/public/mojom/request_priority.mojom";
 import "services/network/public/mojom/site_for_cookies.mojom";
 import "services/network/public/mojom/storage_access_api.mojom";
-import "services/network/public/mojom/trust_tokens.mojom";
 import "services/network/public/mojom/url_response_head.mojom";
 import "url/mojom/origin.mojom";
 import "url/mojom/url.mojom";
@@ -341,11 +340,6 @@ struct URLRequest {
   // response headers. For more information on these requests see
   // https://github.com/w3c/resource-hints/issues/77.
   mojo_base.mojom.UnguessableToken? recursive_prefetch_token;
-
-  // Set when Trust Tokens (https://github.com/wicg/trust-token-api) is enabled
-  // and the request has set the trustToken Fetch parameter, denoting that it
-  // wishes to execute a Trust Tokens protocol operation.
-  TrustTokenParams? trust_token_params;
 
   // The target address space to which a given fetch operation is expected to
   // connect. See more:

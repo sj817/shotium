@@ -23,7 +23,6 @@
 #include "services/network/public/cpp/url_request_param_mojom_traits.h"
 #include "services/network/public/mojom/data_pipe_getter.mojom.h"
 #include "services/network/public/mojom/ip_address_space.mojom.h"
-#include "services/network/public/mojom/trust_tokens.mojom.h"
 #include "services/network/public/mojom/url_loader.mojom-shared.h"
 #include "services/network/public/mojom/url_request.mojom.h"
 #include "url/mojom/origin_mojom_traits.h"
@@ -90,16 +89,7 @@ bool StructTraits<
       !data.ReadStorageAccessApiStatus(&out->storage_access_api_status) ||
       !data.ReadSocketTag(&out->socket_tag) ||
       !data.ReadPermissionsPolicy(&out->permissions_policy)) {
-    // Note that data.ReadTrustTokenParams is temporarily handled below.
     return false;
-  }
-
-  // Temporarily separated from the remainder of the deserialization in order to
-  // help debug crbug.com/1062637.
-  if (!data.ReadTrustTokenParams(&out->trust_token_params.as_ptr())) {
-    // We don't return false here to avoid duplicate reports.
-    out->trust_token_params = std::nullopt;
-    base::debug::DumpWithoutCrashing();
   }
 
   out->update_first_party_url_on_redirect =

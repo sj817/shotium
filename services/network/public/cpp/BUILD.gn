@@ -474,8 +474,6 @@ component("cpp_base") {
     "network_isolation_key_mojom_traits.cc",
     "network_isolation_key_mojom_traits.h",
     "network_types_mojom_traits.h",
-    "optional_trust_token_params.cc",
-    "optional_trust_token_params.h",
     "originating_process_id.cc",
     "originating_process_id.h",
     "renderer_process_id.h",

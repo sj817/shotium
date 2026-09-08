@@ -113,7 +113,6 @@ bool ResourceRequest::EqualsForTesting(const ResourceRequest& request) const {
          recursive_prefetch_token == request.recursive_prefetch_token &&
          OptionalTrustedParamsEqualsForTesting(trusted_params,
                                                request.trusted_params) &&
-         trust_token_params == request.trust_token_params &&
          socket_tag == request.socket_tag &&
          permissions_policy == request.permissions_policy;
 }

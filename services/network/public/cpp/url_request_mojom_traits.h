@@ -213,10 +213,6 @@ struct COMPONENT_EXPORT(NETWORK_CPP_BASE)
       const network::ResourceRequest& request) {
     return request.recursive_prefetch_token;
   }
-  static const network::mojom::TrustTokenParamsPtr& trust_token_params(
-      const network::ResourceRequest& request) {
-    return request.trust_token_params.as_ptr();
-  }
   static net::StorageAccessApiStatus storage_access_api_status(
       const network::ResourceRequest& request) {
     return request.storage_access_api_status;

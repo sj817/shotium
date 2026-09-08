@@ -474,8 +474,6 @@ blink_core_sources_html = [
   "track/vtt/vtt_token.h",
   "track/vtt/vtt_tokenizer.cc",
   "track/vtt/vtt_tokenizer.h",
-  "trust_token_attribute_parsing.cc",
-  "trust_token_attribute_parsing.h",
   "window_name_collection.cc",
   "window_name_collection.h",
 ]
