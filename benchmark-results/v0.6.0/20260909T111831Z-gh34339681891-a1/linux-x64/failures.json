@@ -1,0 +1,29 @@
+[
+  {
+    "shard": "parallel",
+    "engine": "puppeteer-chrome",
+    "scenario": "parallel",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 2,
+    "error": "Error: flex/parallel.c2.r1.a1.s00003: Error: PNG appears empty or uniform\n    at inspectPng (/home/runner/work/shotium/shotium/apps/benchmark/src/image.ts:28:11)\n    at flushEvidence (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:285:21)\n    at <anonymous> (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:799:9)\nmissing-resource/parallel.c2.r1.a1.s00027: Error: PNG appears empty or uniform\n    at inspectPng (/home/runner/work/shotium/shotium/apps/benchmark/src/image.ts:28:11)\n    at flushEvidence (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:285:21)\n    at <anonymous> (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:799:9)\n    at flushEvidence (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:310:11)\n    at <anonymous> (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:799:9)"
+  },
+  {
+    "shard": "parallel",
+    "engine": "puppeteer-chrome",
+    "scenario": "parallel",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 4,
+    "error": "Error: text/parallel.c4.r1.a1.s00003: Error: PNG appears empty or uniform\n    at inspectPng (/home/runner/work/shotium/shotium/apps/benchmark/src/image.ts:28:11)\n    at flushEvidence (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:285:21)\n    at <anonymous> (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:799:9)\nredirect/parallel.c4.r1.a1.s00012: Error: PNG appears empty or uniform\n    at inspectPng (/home/runner/work/shotium/shotium/apps/benchmark/src/image.ts:28:11)\n    at flushEvidence (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:285:21)\n    at <anonymous> (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:799:9)\n    at flushEvidence (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:310:11)\n    at <anonymous> (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:799:9)"
+  },
+  {
+    "shard": "resilience",
+    "engine": "puppeteer-chrome",
+    "scenario": "soak",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 4,
+    "error": "Error: grid/soak.c4.r1.a1.s00129: Error: PNG appears empty or uniform\n    at inspectPng (/home/runner/work/shotium/shotium/apps/benchmark/src/image.ts:28:11)\n    at flushEvidence (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:285:21)\n    at <anonymous> (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:799:9)\ncss-heavy/soak.c4.r1.a1.s00478: Error: PNG appears empty or uniform\n    at inspectPng (/home/runner/work/shotium/shotium/apps/benchmark/src/image.ts:28:11)\n    at flushEvidence (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:285:21)\n    at <anonymous> (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:799:9)\ncss-heavy/soak.c4.r1.a1.s00519: Error: PNG appears empty or uniform\n    at inspectPng (/home/runner/work/shotium/shotium/apps/benchmark/src/image.ts:28:11)\n    at flushEvidence (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:285:21)\n    at <anonymous> (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:799:9)\ngrid/soak.c4.r1.a1.s00605: Error: PNG appears empty or uniform\n    at inspectPng (/home/runner/work/shotium/shotium/apps/benchmark/src/image.ts:28:11)\n    at flushEvidence (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:285:21)\n    at <anonymous> (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:799:9)\nredirect/soak.c4.r1.a1.s00950: Error: PNG appears empty or uniform\n    at inspectPng (/home/runner/work/shotium/shotium/apps/benchmark/src/image.ts:28:11)\n    at flushEvidence (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:285:21)\n    at <anonymous> (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:799:9)\nfonts/soak.c4.r1.a1.s00957: Error: PNG appears empty or uniform\n    at inspectPng (/home/runner/work/shotium/shotium/apps/benchmark/src/image.ts:28:11)\n    at flushEvidence (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:285:21)\n    at <anonymous> (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:799:9)\n    at flushEvidence (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:310:11)\n    at <anonymous> (/home/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:799:9)"
+  }
+]
