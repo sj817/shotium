@@ -1,4 +1,5 @@
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import com.sun.jna.*;
 import com.sun.jna.ptr.PointerByReference;
 import java.nio.charset.StandardCharsets;
@@ -30,6 +31,11 @@ public class ShotiumDemo {
         return new String(bytes(buffer), StandardCharsets.UTF_8).replaceFirst("\u0000+$", "");
     }
     private static void run(String[] args) throws Exception {
+        // A UTF-8 file avoids the Windows Java launcher's ANSI argv conversion.
+        if (args.length == 2 && args[0].equals("--config")) {
+            JsonObject config = new Gson().fromJson(Files.readString(Path.of(args[1]), StandardCharsets.UTF_8), JsonObject.class);
+            args = new String[] {config.get("libraryDir").getAsString(), config.get("input").getAsString(), config.get("output").getAsString()};
+        }
         if (args.length != 3) throw new IllegalArgumentException("usage: ShotiumDemo <library-dir> <input.html> <output.png>");
         Path directory = Path.of(args[0]).toAbsolutePath().normalize();
         String name = Platform.isWindows() ? "shotium.dll" : Platform.isMac() ? "libshotium.dylib" : "libshotium.so";

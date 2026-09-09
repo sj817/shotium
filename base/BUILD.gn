@@ -32,6 +32,7 @@ import("//build/config/logging.gni")
 import("//build/config/profiling/profiling.gni")
 import("//build/config/rust.gni")
 import("//build/config/sanitizers/sanitizers.gni")
+import("//build/config/shot_build.gni")
 import("//build/config/sysroot.gni")
 import("//build/config/ui.gni")
 import("//build/nocompile.gni")
@@ -1155,7 +1156,9 @@ component("base") {
 
   # Allow more direct string conversions on platforms with native utf8
   # strings
-  if (is_apple || is_chromeos || is_castos || is_cast_android || is_fuchsia) {
+  # Shot's JSON and Node interfaces use UTF-8 paths even in a C-locale host.
+  if (is_apple || is_chromeos || is_castos || is_cast_android || is_fuchsia ||
+      (is_shot_build && is_linux)) {
     defines += [ "SYSTEM_NATIVE_UTF8" ]
   }
 
@@ -4054,7 +4057,8 @@ test("base_unittests") {
 
   # Allow more direct string conversions on platforms with native utf8
   # strings
-  if (is_apple || is_chromeos || is_castos || is_cast_android || is_fuchsia) {
+  if (is_apple || is_chromeos || is_castos || is_cast_android || is_fuchsia ||
+      (is_shot_build && is_linux)) {
     defines += [ "SYSTEM_NATIVE_UTF8" ]
   }
 

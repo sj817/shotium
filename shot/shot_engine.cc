@@ -23,8 +23,10 @@
 #include "base/logging/logging_settings.h"
 #include "base/memory/raw_ptr.h"
 #include "base/memory/scoped_refptr.h"
+#include "base/no_destructor.h"
 #include "base/path_service.h"
 #include "base/run_loop.h"
+#include "base/synchronization/lock.h"
 #include "base/synchronization/waitable_event.h"
 #include "base/task/single_thread_task_executor.h"
 #include "base/task/single_thread_task_runner.h"
@@ -365,9 +367,9 @@ base::Value ClearResultToValue(const CacheClearResult& result) {
 }
 
 // Serializes temporary cache environments with engine initialization.
-std::mutex& InitializationMutex() {
-  static std::mutex mutex;
-  return mutex;
+base::Lock& InitializationMutex() {
+  static base::NoDestructor<base::Lock> mutex;
+  return *mutex;
 }
 
 EngineResult RunCache(const CacheOptions& options, bool clearing, bool borrow) {
@@ -439,7 +441,7 @@ EngineService::~EngineService() {
 }
 base::expected<std::shared_ptr<EngineService>, std::string>
 EngineService::Create(EngineOptions options) {
-  std::lock_guard lock(InitializationMutex());
+  base::AutoLock lock(InitializationMutex());
   if (EngineWasCreated().exchange(true)) {
     return base::unexpected(
         "this process has already had an engine; blink can only be started "
@@ -564,7 +566,7 @@ void EngineService::Purge(bool release) {
       base::Unretained(impl_.get()), release));
 }
 EngineResult CacheWithoutEngine(CacheOptions options, bool clearing) {
-  std::lock_guard lock(InitializationMutex());
+  base::AutoLock lock(InitializationMutex());
   if (EngineWasCreated()) {
     auto result = Closed();
     result.error =

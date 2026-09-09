@@ -32,6 +32,26 @@ Arguments: `<library-dir> <input.html> <output.png>`. The first argument also be
 
 参数分别为动态库目录、输入 HTML、输出 PNG。示例显式设置资源目录、本地文件权限和 800×600 视口，打印统计并保存 PNG。使用本机构建时替换为 `out/Shot`（Go 切换目录后为 `../../out/Shot`）。
 
+### Unicode paths / Unicode 路径
+
+Some Windows JDK launchers replace command-line characters outside the system code page before Java receives them. For Unicode paths, save this as UTF-8 `java-config.json` (without a BOM) and pass `--config java-config.json`. Keep the config filename itself in ASCII. Paths in the JSON resolve against the working directory.
+
+部分 Windows JDK 启动器会提前替换系统代码页以外的命令行字符。包含中文等 Unicode 路径时，把以下配置保存为无 BOM 的 UTF-8 `java-config.json`，通过配置文件传入；配置文件自身路径使用 ASCII。JSON 中的相对路径以当前工作目录为基准。
+
+```json
+{
+  "libraryDir": "apps/native/shotium-windows-amd64",
+  "input": "apps/fixtures/中文页面.html",
+  "output": "截图.png"
+}
+```
+
+```powershell
+java -cp "apps/java/target/classes;apps/java/target/dependency/*" ShotiumDemo --config java-config.json
+```
+
+On Linux/macOS, use `:` instead of `;` in the classpath and the matching library directory. / Linux/macOS 使用对应动态库目录，并把 classpath 分隔符换成 `:`。
+
 ## Failures and ownership / 错误与所有权
 
 Replace the input with a nonexistent file: the program must exit nonzero, print `capture failed (2)` and any available failure statistics, and write no image. ABI mismatches are rejected before engine creation. JNA loads the absolute library path with UTF-8 string encoding. SizeT uses Native.SIZE_T_SIZE, including on Windows. Every result is freed in finally; the proxy is kept alive until JVM shutdown. / size_t 按指针宽度映射，不能用 Windows 的 C long 替代。

@@ -62,11 +62,17 @@ async function main(options: {libraryDir: string; output: string; languages: str
       default: throw new Error(`unknown language: ${language}`);
     }
     const png = path.join(output, `${language}.png`);
-    const success = await run(command, [...args, directory, fixture, png]);
+    const captureArgs = (input: string, destination: string) => {
+      if (language !== 'java') return [...args, directory, input, destination];
+      const config = path.join(output, 'java-config.json');
+      writeFileSync(config, JSON.stringify({libraryDir: directory, input, output: destination}));
+      return [...args, '--config', config];
+    };
+    const success = await run(command, captureArgs(fixture, png));
     assert.equal(hash(png), expected, `${language}: image differs from CLI`);
     assert.match(success.stdout, /"timing"/, `${language}: missing success stats`);
     const failedOutput = path.join(output, `${language}-failure-${process.pid}.png`);
-    const failure = await execa(command, [...args, directory, path.join(fixtureDirectory, 'missing.html'), failedOutput], {timeout: 30000, reject: false});
+    const failure = await execa(command, captureArgs(path.join(fixtureDirectory, 'missing.html'), failedOutput), {timeout: 30000, reject: false});
     assert.notEqual(failure.exitCode, 0, `${language}: missing file succeeded`);
     assert.match(failure.stderr, /capture failed \(2\)/, `${language}: missing capture error`);
     assert.match(failure.stdout, /"timing"/, `${language}: missing failure stats`);
