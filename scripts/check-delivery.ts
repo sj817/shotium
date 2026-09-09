@@ -39,7 +39,7 @@ async function main(platformDirectory: string): Promise<void> {
       assert.equal(tiles.tiles.length, 2);
       await shot.stop();
       const addon = Object.keys(require.cache).find(p => p.endsWith('.node'));
-      assert.equal(path.dirname(addon), process.env.SHOT_PLATFORM);
+      assert.equal(fs.realpathSync(path.dirname(addon)), fs.realpathSync(process.env.SHOT_PLATFORM));
       console.log(JSON.stringify({addon, imageSha256: hash(result.image), tiles: tiles.tiles.length}));
     })().catch(e => {console.error(e); process.exitCode=1;});
   `;
