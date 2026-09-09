@@ -14,7 +14,7 @@
     "graph": "passed: GN and final shot/shot_c source-input check",
     "windowsBinaryAndChecks": "passed: exe, dll, serve, net, 84 demos, node, daemon, daemon protocol, Bilibili; charset behavior unchanged",
     "pixelComparison": "passed: basic/layout/paint/text, identical pixels and hashes against pre-sync binary",
-    "sixPlatformExactSha": "pending dispatch after integration commit",
+    "sixPlatformExactSha": "first CI at 1e25a9bf414e2f6b45c77a0ea8ffc1fe6f420bed exposed a PartitionAlloc jumbo header-check collision and Windows SDK minimum gate; both corrected, final same-SHA CI pending",
     "release": "pending"
   },
   "dependencies": [
