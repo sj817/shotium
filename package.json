@@ -57,6 +57,7 @@
     "verify:charset": "pnpm -C scripts check-charset",
     "icu:repack": "pnpm -C scripts icu-repack",
     "restore:upstream": "pnpm -C scripts restore-from-upstream",
+    "upstream:sync": "pnpm -C scripts upstream-sync",
     "render": "pnpm -C scripts render-regression",
     "restore:includes": "pnpm -C scripts restore-includes",
     "restore:includes-by-prefix": "pnpm -C scripts restore-includes-by-prefix",

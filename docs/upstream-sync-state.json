@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "status": "in_progress",
+  "releaseVersion": "0.6.0",
+  "completedBaseline": "c0bba1026178fe2a8b441fead7928b697a801c1e",
+  "target": {
+    "repository": "https://chromium.googlesource.com/chromium/src",
+    "commit": "c099bd180a2db0fa6a313d43653529ba02665c84",
+    "version": "155.0.8048.0"
+  },
+  "scope": "All retained Chromium engine/build paths; preserve Shotium deletions and product behavior. Independently vendored dependencies require their own upstream baselines.",
+  "planDirectory": "out/upstream-sync-155",
+  "validation": {
+    "graph": "pending",
+    "windowsBinaryAndChecks": "pending",
+    "pixelComparison": "pending",
+    "sixPlatformExactSha": "pending",
+    "release": "pending"
+  },
+  "dependencies": [
+    {"name": "skia", "baseline": "653397c6be15b87fe8f89a4492582fbb825f6da8", "status": "pending"},
+    {"name": "icu", "baseline": "8cc91d9b6ab9991802fd208ee03a69714fd0251c", "status": "pending"}
+  ]
+}

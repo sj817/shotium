@@ -1,5 +1,20 @@
 # 与上游 Chromium 同步
 
+## 当前标准入口
+
+使用 `pnpm upstream:sync plan/apply`，具体参数、保护和输出见
+[批量同步工具](upstream-sync-tool.md)。本轮目标与验收状态以
+[upstream-sync-state.json](upstream-sync-state.json) 为准；`completedBaseline`
+只记录已经完成验收的基线，不能把正在合并的 target 当成已同步版本。
+
+2026-09-09 开始将保留引擎同步到固定的 Chromium `c099bd180a2d`
+（155.0.8048.0），目标发布版本为用户批准的 0.6.0。当前尚未完成合并、
+编译或发布。先成批合并，集中修复并验证；不恢复被裁剪的浏览器功能。
+
+下方旧统计与 `out/ShotWip` 命令属于历史记录；执行时以当前 CLAUDE.md、
+build-engine/verify-engine 流程为准，Windows 构建入口为
+`pnpm build:engine`，输出为 `out/Shot`。
+
 ICU、Skia、Perfetto 现在由本仓直接维护。更新它们时按各目录 README.shotium.md
 记录的上游版本审查差异，直接修改源码；不恢复它们的 DEPS/gitlink 或补丁重放。
 原 ICU 功能裁剪、Skia 并行模糊/逐行解码限制、Perfetto trace processor 开关均已
