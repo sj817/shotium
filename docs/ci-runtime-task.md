@@ -2,6 +2,12 @@
 
 User request: finish v0.5.0, then reduce CI duration and duplicate work autonomously. Keep all six platforms, existing runtime checks, binary provenance and rendering behavior. No new version release is authorized. Do not resume the old broad engine-cut task.
 
+## Completion (2026-09-09)
+
+The release and extended community-Actions/cache optimization are complete. Final code candidate `db6f03a6ccfbb48c26d607e25debf199457a8fe8` passed Windows x64 34302276662, Windows arm64 34298127374, Linux x64 34298131161, Linux arm64 34298135058, macOS x64 34301499213 and macOS arm64 34298145170. Existing checks and nonempty standalone/npm artifacts were verified, along with all six saved build caches and four toolchain caches. See [the final evidence report](ci-runtime-results.md) for measured warm/cold distinctions, runner minutes, cache capacity and community Actions decisions. The heartbeat update succeeded on the final implementation turn; its earlier transport error below is historical. Pause that heartbeat after committing this report. Do not resume the obsolete blocked source-cut goal.
+
+Everything below is historical investigation context; its pending labels are superseded by this completion record.
+
 ## Updated objective: community Actions, cache and environment reuse
 
 ### Current execution checkpoint (supersedes historical pending statuses below)
