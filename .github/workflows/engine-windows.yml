@@ -426,7 +426,7 @@ jobs:
         run: |
           $keep = 2
           try {
-            $stale = gh cache list --repo ${{ github.repository }} `
+            $stale = gh cache list --repo ${{ github.repository }} --ref "${{ github.ref }}" `
                        --key "out-shot-windows-${{ env.SHOT_CPU }}-" --limit 100 `
                        --sort created_at --order desc --json id,key,sizeInBytes |
                      ConvertFrom-Json

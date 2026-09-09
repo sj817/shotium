@@ -4,6 +4,14 @@ User request: finish v0.5.0, then reduce CI duration and duplicate work autonomo
 
 ## Updated objective: community Actions, cache and environment reuse
 
+### Current execution checkpoint (supersedes historical pending statuses below)
+
+The fingerprint candidate passed all six platforms. Linux toolchain cache fill run 34294019439 and hit run 34296470907 passed: gclient fell from 95.826 s to 29.110 s, with 8.416 s cache restore, approximately 58 s net preparation saving. Whole hit build job: 4.33 min (one sample). The same exact-key cache is now implemented for Windows and both macOS host architectures; four toolchain entries occupy about 3.7 GB compressed.
+
+Windows arm64 fill 34297133038 and macOS arm64 fill 34297141030 passed and their main object caches exist. Windows x64 34297122103 and macOS x64 34297137353 are still compiling; preserve them. The Windows cold rebuild was caused by my deleting the validation-branch cache without confirming a main copy remained. Cross-branch pruning had removed that copy. The workflow fix scopes pruning to the current ref. macOS x64's previous run separately failed to persist its cache despite a successful build; the new save wrapper checks cache API visibility and retries with a fresh key.
+
+Next: freeze this pruning-fix candidate, run Windows arm64, Linux x64/arm64 and macOS arm64 with one runner and all checks; after the two existing x64 fills finish, verify their caches and run those platforms on the same candidate. Verify toolchain hits and build-cache persistence from logs/API, then publish the measured final report. Do not treat dispatch or static checks as completion. Do not add another speculative optimization while this final measurement is running.
+
 The latest user instruction explicitly extends this task beyond validating the current changes: investigate mature community GitHub Actions and reuse more cached dependencies and prepared environments. Current build time is still unsatisfactory. Completing the current six-platform run alone does **not** complete this goal.
 
 1. Finish the in-flight exact-SHA verification listed in `out/ci-runtime/final-candidate.json`; do not duplicate it. Preserve main's automated benchmark result commits.

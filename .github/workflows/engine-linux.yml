@@ -423,7 +423,7 @@ jobs:
           prefix="out-shot-linux-${{ env.SHOT_CPU }}-"
           # .[2:] keeps the newest two: this run's entry, and one spare to fall
           # back on if this run's turns out to be unusable.
-          ids=$(gh cache list --repo "${{ github.repository }}" \
+          ids=$(gh cache list --repo "${{ github.repository }}" --ref "${{ github.ref }}" \
                   --key "$prefix" --limit 100 \
                   --sort created_at --order desc \
                   --json id --jq '.[2:][].id' 2>/dev/null || true)
