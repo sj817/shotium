@@ -9,6 +9,7 @@ import("//services/network/public/cpp/features.gni")
 import("//third_party/blink/renderer/build/scripts/scripts.gni")  # TODO(crbug.com/397934758)
 
 _is_directory_transfer_required = is_fuchsia
+
 buildflag_header("buildflags") {
   header = "network_service_buildflags.h"
   flags = [
@@ -274,11 +275,8 @@ component("flags_and_switches") {
   defines = [ "IS_NETWORK_CPP_FLAGS_AND_SWITCHES_IMPL" ]
 }
 
-component("is_potentially_trustworthy") {
-  sources = [
-    "is_potentially_trustworthy.cc",
-    "is_potentially_trustworthy.h",
-  ]
+source_set("is_potentially_trustworthy") {
+  sources = [ "is_potentially_trustworthy.h" ]
   public_deps = [
     ":flags_and_switches",
     "//base",

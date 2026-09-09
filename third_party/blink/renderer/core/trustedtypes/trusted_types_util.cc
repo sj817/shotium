@@ -13,7 +13,7 @@
 #include "third_party/blink/public/mojom/reporting/reporting.mojom-blink.h"
 #include "third_party/blink/public/platform/platform.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_set_html_unsafe_options.h"
-#include "third_party/blink/renderer/bindings/core/v8/v8_union_sethtmlunsafeoptions_trustedparseroptions.h"
+#include "third_party/blink/renderer/bindings/core/v8/v8_union_sethtmlunsafeoptions_trustedhtmlparseroptions.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_union_string_trustedhtml.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_union_string_trustedscript.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_union_stringlegacynulltoemptystring_trustedhtml.h"
@@ -29,7 +29,7 @@
 #include "third_party/blink/renderer/core/probe/core_probes.h"
 #include "third_party/blink/renderer/core/script/script_element_base.h"
 #include "third_party/blink/renderer/core/trustedtypes/trusted_html.h"
-#include "third_party/blink/renderer/core/trustedtypes/trusted_parser_options.h"
+#include "third_party/blink/renderer/core/trustedtypes/trusted_html_parser_options.h"
 #include "third_party/blink/renderer/core/trustedtypes/trusted_script.h"
 #include "third_party/blink/renderer/core/trustedtypes/trusted_script_url.h"
 #include "third_party/blink/renderer/core/trustedtypes/trusted_type_policy_factory.h"
@@ -129,14 +129,17 @@ const char* GetMessage(TrustedTypeViolationKind kind) {
              "assignment and the 'default' policy failed to execute.";
     case kTrustedHTMLParserOptionsTransform:
       CHECK(RuntimeEnabledFeatures::NewHTMLSettingMethodsEnabled());
-      return "This document requires 'TrustedParserOptions' assignment.";
+      return "This document requires 'TrustedHTMLParserOptions' assignment.";
     case kTrustedHTMLParserOptionsTransformAndNoDefaultPolicyExisted:
       CHECK(RuntimeEnabledFeatures::NewHTMLSettingMethodsEnabled());
-      return "The TrustedParserOptions parser options transform failed and no "
-             "'default' policy for 'TrustedParserOptions' has been defined.";
+      return "The TrustedHTMLParserOptions parser options transform failed and "
+             "no "
+             "'default' policy for 'TrustedHTMLParserOptions' has been "
+             "defined.";
     case kTrustedHTMLParserOptionsTransformAndDefaultPolicyFailed:
       CHECK(RuntimeEnabledFeatures::NewHTMLSettingMethodsEnabled());
-      return "The TrustedParserOptions parser options transform failed and the "
+      return "The TrustedHTMLParserOptions parser options transform failed and "
+             "the "
              "'default' policy failed to execute.";
   }
   NOTREACHED();

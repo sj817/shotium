@@ -993,8 +993,7 @@ void PaintLayer::CollectFragments(
 
     ClipRectsContext clip_rects_context(
         root_layer, root_fragment_data,
-        kExcludeOverlayScrollbarSizeForHitTesting, respect_overflow_clip,
-        PhysicalOffset());
+        kExcludeOverlayScrollbarSizeForHitTesting, respect_overflow_clip);
 
     Clipper().CalculateRects(clip_rects_context, *fragment_data,
                              fragment.layer_offset, fragment.background_rect,
@@ -1367,8 +1366,9 @@ PaintLayer* PaintLayer::HitTestLayer(
     if (const auto* properties =
             layout_object.FirstFragment().PaintProperties()) {
       if (properties->HasCSSTransformPropertyNode() ||
-          properties->Perspective())
+          properties->Perspective()) {
         use_transform = true;
+      }
     }
   }
 

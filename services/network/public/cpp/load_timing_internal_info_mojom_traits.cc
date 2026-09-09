@@ -8,6 +8,7 @@
 #include "mojo/public/cpp/base/time_mojom_traits.h"
 #include "net/base/load_timing_internal_info.h"
 #include "net/http/alternate_protocol_usage.h"
+#include "net/spdy/multiplexed_session_creation_initiator.h"
 
 namespace mojo {
 
@@ -111,6 +112,32 @@ EnumTraits<network::mojom::ResolutionSource, net::ResolutionSource>::FromMojom(
       return net::ResolutionSource::kMdns;
     case network::mojom::ResolutionSource::kNat64:
       return net::ResolutionSource::kNat64;
+  }
+  NOTREACHED();
+}
+
+network::mojom::MultiplexedSessionCreationInitiator
+EnumTraits<network::mojom::MultiplexedSessionCreationInitiator,
+           net::MultiplexedSessionCreationInitiator>::
+    ToMojom(net::MultiplexedSessionCreationInitiator initiator) {
+  switch (initiator) {
+    case net::MultiplexedSessionCreationInitiator::kUnknown:
+      return network::mojom::MultiplexedSessionCreationInitiator::kUnknown;
+    case net::MultiplexedSessionCreationInitiator::kPreconnect:
+      return network::mojom::MultiplexedSessionCreationInitiator::kPreconnect;
+  }
+  NOTREACHED();
+}
+
+net::MultiplexedSessionCreationInitiator
+EnumTraits<network::mojom::MultiplexedSessionCreationInitiator,
+           net::MultiplexedSessionCreationInitiator>::
+    FromMojom(network::mojom::MultiplexedSessionCreationInitiator in) {
+  switch (in) {
+    case network::mojom::MultiplexedSessionCreationInitiator::kUnknown:
+      return net::MultiplexedSessionCreationInitiator::kUnknown;
+    case network::mojom::MultiplexedSessionCreationInitiator::kPreconnect:
+      return net::MultiplexedSessionCreationInitiator::kPreconnect;
   }
   NOTREACHED();
 }
@@ -271,6 +298,14 @@ StructTraits<network::mojom::LoadTimingInternalInfoDataView,
 }
 
 // static
+std::optional<net::MultiplexedSessionCreationInitiator>
+StructTraits<network::mojom::LoadTimingInternalInfoDataView,
+             net::LoadTimingInternalInfo>::
+    session_creation_initiator(const net::LoadTimingInternalInfo& info) {
+  return info.session_creation_initiator;
+}
+
+// static
 bool StructTraits<network::mojom::LoadTimingInternalInfoDataView,
                   net::LoadTimingInternalInfo>::
     Read(network::mojom::LoadTimingInternalInfoDataView data,
@@ -296,6 +331,9 @@ bool StructTraits<network::mojom::LoadTimingInternalInfoDataView,
     return false;
   }
   if (!data.ReadResolutionDetails(&info->resolution_details)) {
+    return false;
+  }
+  if (!data.ReadSessionCreationInitiator(&info->session_creation_initiator)) {
     return false;
   }
   return true;

@@ -28,7 +28,6 @@ absl_source_set("hash") {
     "//third_party/abseil-cpp/absl/meta:type_traits",
     "//third_party/abseil-cpp/absl/numeric:bits",
     "//third_party/abseil-cpp/absl/numeric:int128",
-    "//third_party/abseil-cpp/absl/strings",
     "//third_party/abseil-cpp/absl/strings:string_view",
     "//third_party/abseil-cpp/absl/types:optional",
     "//third_party/abseil-cpp/absl/types:variant",
@@ -64,6 +63,7 @@ absl_test("hash_test") {
     "//third_party/abseil-cpp/absl/memory",
     "//third_party/abseil-cpp/absl/meta:type_traits",
     "//third_party/abseil-cpp/absl/numeric:bits",
+    "//third_party/abseil-cpp/absl/strings:cord",
     "//third_party/abseil-cpp/absl/strings:cord_test_helpers",
     "//third_party/abseil-cpp/absl/strings:string_view",
   ]

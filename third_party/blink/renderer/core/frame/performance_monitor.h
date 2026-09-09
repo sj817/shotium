@@ -7,6 +7,7 @@
 
 #include <array>
 
+#include "base/memory/raw_ptr.h"
 #include "base/task/sequence_manager/task_time_observer.h"
 #include "base/time/time.h"
 #include "third_party/blink/renderer/core/core_export.h"
@@ -157,7 +158,7 @@ class CORE_EXPORT PerformanceMonitor final
   unsigned script_depth_ = 0;
   unsigned layout_depth_ = 0;
   unsigned user_callback_depth_ = 0;
-  const void* user_callback_;
+  raw_ptr<const void, UnprotectedInRelease | DanglingUntriaged> user_callback_;
 
   std::array<base::TimeDelta, kAfterLast> thresholds_;
 

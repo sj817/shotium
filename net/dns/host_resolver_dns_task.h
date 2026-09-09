@@ -84,7 +84,7 @@ class NET_EXPORT_PRIVATE HostResolverDnsTask final {
 
     virtual RequestPriority priority() const = 0;
 
-    virtual bool IsHappyEyeballsV3Enabled() const = 0;
+    virtual bool ShouldSortTransactionsIndividually() const = 0;
 
     virtual void AddTransactionTimeQueued(base::TimeDelta time_queued) = 0;
 
@@ -302,6 +302,7 @@ class NET_EXPORT_PRIVATE HostResolverDnsTask final {
   bool fallback_available_;
 
   const HostResolver::HttpsSvcbOptions https_svcb_options_;
+  const EchMode ech_mode_;
 
   // If true, the task will wait for the pending HTTPS query and treat
   // certain HTTPS query errors as fatal.

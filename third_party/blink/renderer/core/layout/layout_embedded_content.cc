@@ -50,14 +50,12 @@ LayoutEmbeddedContent::LayoutEmbeddedContent(HTMLFrameOwnerElement* element)
   SetInline(false);
 }
 
-void LayoutEmbeddedContent::WillBeDestroyed() {
+void LayoutEmbeddedContent::WillBeDestroyed(const ComputedStyle* style) {
   NOT_DESTROYED();
   if (auto* frame_owner = GetFrameOwnerElement())
     frame_owner->SetEmbeddedContentView(nullptr);
 
-  LayoutReplaced::WillBeDestroyed();
-
-  ClearNode();
+  LayoutReplaced::WillBeDestroyed(style);
 }
 
 FrameView* LayoutEmbeddedContent::ChildFrameView() const {
@@ -129,6 +127,12 @@ gfx::PointF LayoutEmbeddedContent::EmbeddedContentFromBorderBox(
     const gfx::PointF& point) const {
   NOT_DESTROYED();
   return EmbeddedContentTransform().Inverse().MapPoint(point);
+}
+
+gfx::Rect LayoutEmbeddedContent::EmbeddedContentFromBorderBox(
+    const gfx::Rect& rect) const {
+  NOT_DESTROYED();
+  return EmbeddedContentTransform().Inverse().MapRect(rect);
 }
 
 PhysicalOffset LayoutEmbeddedContent::BorderBoxFromEmbeddedContent(
@@ -241,9 +245,23 @@ bool LayoutEmbeddedContent::NodeAtPoint(
 
     if (VisibleToHitTestRequest(result.GetHitTestRequest()) &&
         child_layout_view) {
-      const PhysicalOffset content_offset = PhysicalContentBoxRect().offset;
-      HitTestLocation new_hit_test_location(
-          hit_test_location, -accumulated_offset - content_offset);
+      PhysicalOffset offset = accumulated_offset + ReplacedContentRect().offset;
+      if (RuntimeEnabledFeatures::UsePaintGeometryForIntersectionEnabled() &&
+          result.GetHitTestRequest().IsHitTestVisualOverflow()) {
+        // To hit test where we paint, adjust the offset by the paint offset
+        // subpixels to be consistent with PrePaint and Paint when we round
+        // paint offset when crossing frame boundaries.
+        PhysicalOffset frame_paint_offset =
+            FirstFragment().PaintOffset() + ReplacedContentRect().offset;
+        // LINT.IfChange(FramePixelSnapping)
+        PhysicalOffset subpixel_adjustment =
+            frame_paint_offset -
+            PhysicalOffset(ToRoundedPoint(frame_paint_offset));
+        // LINT.ThenChange(../paint/pre_paint_tree_walk.cc:FramePixelSnapping)
+        offset -= subpixel_adjustment;
+      }
+
+      HitTestLocation new_hit_test_location(hit_test_location, -offset);
       HitTestRequest new_hit_test_request(
           result.GetHitTestRequest().GetType() |
               HitTestRequest::kChildFrameHitTest,
@@ -400,6 +418,13 @@ void LayoutEmbeddedContent::UpdateOnEmbeddedContentViewChange() {
 void LayoutEmbeddedContent::UpdateGeometry(
     EmbeddedContentView& embedded_content_view) {
   NOT_DESTROYED();
+  if (RuntimeEnabledFeatures::AvoidEmbeddedContentViewLocationEnabled()) {
+    embedded_content_view.SetNeedsFrameRectPropagation();
+    embedded_content_view.SetFrameRect(
+        gfx::Rect(ToCeiledSize(ReplacedContentRect().size)));
+    return;
+  }
+
   // TODO(wangxianzhu): We reset subpixel accumulation at some boundaries, so
   // the following code is incorrect when some ancestors are such boundaries.
   // What about multicol? Need a LayoutBox function to query sub-pixel
@@ -440,7 +465,8 @@ void LayoutEmbeddedContent::UpdateGeometry(
     // which is a float-type but frame_rect in a content view is an gfx::Rect.
     // We may want to reevaluate the use of pixel snapping that since scroll
     // offsets/layout can be fractional.
-    frame_rect.Offset(layout_view->PixelSnappedScrolledContentOffset());
+    frame_rect.Offset(
+        layout_view->GetScrollableArea()->PixelSnappedScrollOffset());
   }
 
   embedded_content_view.SetFrameRect(frame_rect);

@@ -33,6 +33,7 @@
 #include <memory>
 #include <optional>
 
+#include "base/memory/raw_ptr.h"
 #include "base/memory/scoped_refptr.h"
 #include "base/time/time.h"
 #include "base/unguessable_token.h"
@@ -660,7 +661,7 @@ class CORE_EXPORT DocumentLoader : public GarbageCollected<DocumentLoader>,
   const std::optional<blink::mojom::FetchCacheMode> force_fetch_cache_mode_;
   const FramePolicy frame_policy_;
   std::optional<uint64_t> visited_link_salt_;
-  base::UnguessableToken initiator_state_token_;
+  InitiatorStateToken initiator_state_token_;
 
   Member<LocalFrame> frame_;
 
@@ -743,6 +744,7 @@ class CORE_EXPORT DocumentLoader : public GarbageCollected<DocumentLoader>,
   // window's SecurityContext.
   bool is_secure_context_root_ = false;
 
+
   // Whether this load request comes with a sticky user activation. For
   // prerendered pages, this is initially false but could be updated on
   // prerender page activation.
@@ -759,6 +761,7 @@ class CORE_EXPORT DocumentLoader : public GarbageCollected<DocumentLoader>,
   // to invoke. This token may be instead consumed to pass this permission
   // through a redirect.
   bool has_text_fragment_token_ = false;
+
 
   // If set, the document should attempt to scroll this text fragment into view
   // upon load, without highlighting it.
@@ -788,7 +791,8 @@ class CORE_EXPORT DocumentLoader : public GarbageCollected<DocumentLoader>,
   // report feature usage to UMA histograms per page load.
   UseCounterImpl use_counter_;
 
-  const base::TickClock* clock_;
+  raw_ptr<const base::TickClock, UnprotectedInRelease | DanglingUntriaged>
+      clock_;
 
   // Whether the document can be scrolled on load
   bool navigation_scroll_allowed_ = true;

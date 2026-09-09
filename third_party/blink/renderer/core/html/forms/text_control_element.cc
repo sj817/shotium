@@ -69,6 +69,7 @@
 #include "third_party/blink/renderer/platform/bindings/exception_state.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
 #include "third_party/blink/renderer/platform/instrumentation/use_counter.h"
+#include "third_party/blink/renderer/platform/runtime_enabled_features.h"
 #include "third_party/blink/renderer/platform/wtf/text/strcat.h"
 #include "third_party/blink/renderer/platform/wtf/text/string_buffer.h"
 #include "third_party/blink/renderer/platform/wtf/text/string_builder.h"
@@ -186,10 +187,58 @@ void TextControlElement::DefaultEventHandler(Event& event) {
     CaptureOpaqueRangePreEdit();
   }
 
-  if (event.type() == event_type_names::kWebkitEditableContentChanged &&
-      GetLayoutObject() && GetLayoutObject()->IsTextControl()) {
+  if (!RuntimeEnabledFeatures::CleanUpActivationBehaviorEnabled()) {
+    if (event.type() == event_type_names::kWebkitEditableContentChanged &&
+        GetLayoutObject() && GetLayoutObject()->IsTextControl()) {
+      last_change_was_user_edit_ = true;
+      if (last_change_was_user_edit_) {
+        SetUserHasEditedTheField();
+      }
+
+      if (IsFocused()) {
+        // Updating the cache in SelectionChanged() isn't enough because
+        // SelectionChanged() is not called if:
+        // - Text nodes in the inner-editor is split to multiple, and
+        // - The caret is on the beginning of a Text node, and its previous node
+        //   is updated, or
+        // - The caret is on the end of a text node, and its next node is
+        // updated.
+        ComputedSelection computed_selection;
+        ComputeSelection(kStart | kEnd | kDirection, computed_selection);
+        CacheSelection(computed_selection.start, computed_selection.end,
+                       computed_selection.direction);
+      } else if (RuntimeEnabledFeatures::
+                     ClampUnfocusedSelectionCacheEnabled()) {
+        // If the element is not focused, the selection cache is not updated
+        // during text mutations because the global Selection doesn't point to
+        // this element. This can cause the cache to exceed the new text length.
+        // We clamp the cache here to prevent out-of-bounds index crashes.
+        // Note: While this doesn't perfectly adjust selection offsets (e.g. if
+        // text is deleted from the beginning), it is sufficient to prevent
+        // crashes in rare non-focused edit cases.
+        unsigned len = InnerEditorValue().length();
+        if (cached_selection_start_ > len || cached_selection_end_ > len) {
+          CacheSelection(std::min(cached_selection_start_, len),
+                         std::min(cached_selection_end_, len),
+                         cached_selection_direction_);
+        }
+      }
+
+      SubtreeHasChanged();
+      return;
+    }
+  }
+
+  HTMLFormControlElementWithState::DefaultEventHandler(event);
+}
+
+void TextControlElement::NotifyEditableContentChanged() {
+  CHECK(RuntimeEnabledFeatures::CleanUpActivationBehaviorEnabled());
+  if (GetLayoutObject() && GetLayoutObject()->IsTextControl()) {
     last_change_was_user_edit_ = true;
-    SetUserHasEditedTheField();
+    if (last_change_was_user_edit_) {
+      SetUserHasEditedTheField();
+    }
 
     if (IsFocused()) {
       // Updating the cache in SelectionChanged() isn't enough because
@@ -219,10 +268,7 @@ void TextControlElement::DefaultEventHandler(Event& event) {
     }
 
     SubtreeHasChanged();
-    return;
   }
-
-  HTMLFormControlElementWithState::DefaultEventHandler(event);
 }
 
 void TextControlElement::ForwardEvent(Event& event) {
@@ -369,11 +415,18 @@ void TextControlElement::ClearValueBeforeFirstUserEdit() {
 }
 
 void TextControlElement::SetFocused(bool flag,
-                                    mojom::blink::FocusType focus_type) {
-  HTMLFormControlElementWithState::SetFocused(flag, focus_type);
+                                    mojom::blink::FocusType focus_type,
+                                    BlurEventBehavior blur_event_behavior) {
+  HTMLFormControlElementWithState::SetFocused(flag, focus_type,
+                                              blur_event_behavior);
 
-  if (!flag)
-    DispatchFormControlChangeEvent();
+  if (!flag) {
+    if (blur_event_behavior != BlurEventBehavior::kDropWhenRemoving) {
+      DispatchFormControlChangeEvent();
+    } else {
+      ClearValueBeforeFirstUserEdit();
+    }
+  }
 
   if (auto* inner_editor = InnerEditorElement())
     inner_editor->FocusChanged();
@@ -382,6 +435,8 @@ void TextControlElement::SetFocused(bool flag,
 void TextControlElement::DispatchFormControlChangeEvent() {
   if (!value_before_first_user_edit_.IsNull() &&
       !EqualIgnoringNullity(value_before_first_user_edit_, Value())) {
+    // We need to clear after checking the condition, because clearing
+    // changes Value().
     ClearValueBeforeFirstUserEdit();
     DispatchChangeEvent();
   } else {
@@ -874,9 +929,9 @@ void TextControlElement::SelectionChanged(bool user_triggered) {
   if (!GetLayoutObject() || !IsTextControl())
     return;
 
-  // The cached selection is authoritative while unfocused, so only refresh it
-  // from the live DOM selection when focused.
-  if (IsFocused() ||
+  // The cached selection is authoritative when ShouldApplySelectionCache() is
+  // true, so only refresh it from the live DOM selection otherwise.
+  if (!ShouldApplySelectionCache() ||
       !RuntimeEnabledFeatures::PreserveUnfocusedSelectionCacheEnabled()) {
     ComputedSelection computed_selection;
     ComputeSelection(kStart | kEnd | kDirection, computed_selection);
@@ -976,9 +1031,7 @@ Node* TextControlElement::CreatePlaceholderBreakElement() const {
   auto* element = MakeGarbageCollected<HTMLBRElement>(GetDocument());
   element->setAttribute(html_names::kIdAttr,
                         shadow_element_names::kIdPlaceholderBreak);
-  if (RuntimeEnabledFeatures::TextAreaEmptyPlaceholderBreakEnabled()) {
-    element->setAttribute(html_names::kAriaHiddenAttr, keywords::kTrue);
-  }
+  element->setAttribute(html_names::kAriaHiddenAttr, keywords::kTrue);
   return element;
 }
 
@@ -1018,8 +1071,7 @@ void TextControlElement::AdjustPlaceholderBreakElement() {
     }
     return;
   }
-  if (RuntimeEnabledFeatures::TextAreaEmptyPlaceholderBreakEnabled() &&
-      !last_child && IsA<HTMLTextAreaElement>(this)) {
+  if (!last_child && IsA<HTMLTextAreaElement>(this)) {
     // We need a placeholder break for an empty value in order to provide one
     // line-height and a baseline even if this element is not editable.
     inner_editor->AppendChild(CreatePlaceholderBreakElement());

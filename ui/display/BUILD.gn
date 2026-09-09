@@ -140,6 +140,9 @@ component("display") {
       "QuartzCore.framework",
       "IOKit.framework",
     ]
+
+    # for SPI SLSGetDisplayLink()
+    framework_dirs = [ "$mac_sdk_path/System/Library/PrivateFrameworks" ]
   }
 }
 

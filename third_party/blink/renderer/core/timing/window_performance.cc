@@ -1433,9 +1433,14 @@ PerformanceSoftNavigation* WindowPerformance::AddSoftNavigation(
           MonotonicTimeToDOMHighResTimeStamp(timestamp), paint_timing_info,
           context);
 
+  UseCounter::Count(GetExecutionContext(),
+                    WebFeature::kSoftNavigationEntryEmitted);
+
   if (HasObserverFor(PerformanceEntry::kSoftNavigation)) {
     UseCounter::Count(GetExecutionContext(),
                       WebFeature::kSoftNavigationHeuristics);
+    UseCounter::Count(GetExecutionContext(),
+                      WebFeature::kSoftNavigationObserved);
     NotifyObserversOfEntry(*entry);
   }
 
@@ -1523,7 +1528,11 @@ void WindowPerformance::OnInteractionContentfulPaintUpdated(
     InteractionContentfulPaint* entry) {
   CHECK(RuntimeEnabledFeatures::SoftNavigationHeuristicsEnabled(
       GetExecutionContext()));
+  UseCounter::Count(GetExecutionContext(),
+                    WebFeature::kInteractionContentfulPaintEntryEmitted);
   if (HasObserverFor(PerformanceEntry::kInteractionContentfulPaint)) {
+    UseCounter::Count(GetExecutionContext(),
+                      WebFeature::kInteractionContentfulPaintObserved);
     NotifyObserversOfEntry(*entry);
   }
   AddInteractionContentfulPaint(entry);

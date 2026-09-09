@@ -30,6 +30,7 @@
 
 #include <memory>
 
+#include "base/memory/raw_ptr.h"
 #include "base/notreached.h"
 #include "net/storage_access_api/status.h"
 #include "services/metrics/public/cpp/ukm_source_id.h"
@@ -232,7 +233,6 @@ class CORE_EXPORT ExecutionContext : public Supplementable<ExecutionContext>,
   void CountDeprecation(WebFeature feature) override;
 
   bool IsContextPaused() const;
-  bool IsContextFrozen() const;
   LoaderFreezeMode GetLoaderFreezeMode() const;
   mojom::FrameLifecycleState ContextPauseState() const {
     return lifecycle_state_;
@@ -296,7 +296,7 @@ class CORE_EXPORT ExecutionContext : public Supplementable<ExecutionContext>,
   // updated version, so that navigations they start afterwards are associated
   // with the right state of PolicyContainerPolicies.
   virtual void SetInitiatorStateToken(
-      const base::UnguessableToken& initiator_state_token) {}
+      const InitiatorStateToken& initiator_state_token) {}
 
   virtual CoreProbeSink* GetProbeSink() { return nullptr; }
 

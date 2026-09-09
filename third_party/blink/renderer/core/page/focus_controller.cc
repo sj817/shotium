@@ -59,6 +59,7 @@
 #include "third_party/blink/renderer/core/html/forms/html_select_element.h"
 #include "third_party/blink/renderer/core/html/forms/listed_element.h"
 #include "third_party/blink/renderer/core/html/forms/text_control_element.h"
+#include "third_party/blink/renderer/core/html/html_frame_owner_element.h"
 #include "third_party/blink/renderer/core/html/html_iframe_element.h"
 #include "third_party/blink/renderer/core/html/html_plugin_element.h"
 #include "third_party/blink/renderer/core/html/html_slot_element.h"
@@ -359,7 +360,13 @@ Element* InvokerForOpenPopover(const Node* node) {
   if (!popover || !popover->popoverOpen()) {
     return nullptr;
   }
-  return popover->GetPopoverData()->invoker();
+  Element* invoker = popover->GetPopoverData()->invoker();
+  if (invoker && FlatTreeTraversal::Contains(*popover, *invoker)) {
+    // See crbug.com/542274292: if the popover contains its own invoker, break
+    // the loop here.
+    return nullptr;
+  }
+  return invoker;
 }
 
 const Element* InclusiveAncestorOpenPopoverWithInvoker(const Element* element) {

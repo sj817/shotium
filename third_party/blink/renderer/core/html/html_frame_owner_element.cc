@@ -217,18 +217,7 @@ void HTMLFrameOwnerElement::DidChangeIsInCanvasSubtree() {
       root->SetIsInCanvasSubtree(IsInCanvasSubtree());
       if (auto* layout_view = inner_document->GetLayoutView()) {
         layout_view->SetNeedsPaintPropertyUpdate();
-        layout_view->Layer()->SetNeedsRepaint();
-        // At this point we do not know if the layout view background etc.
-        // will be painted by the layout view itself or the scrollable area.
-        // So invalidate both display item clients.
-        ObjectPaintInvalidator(*layout_view)
-            .InvalidateDisplayItemClient(
-                *layout_view, PaintInvalidationReason::kUncacheable);
-        ObjectPaintInvalidator(*layout_view)
-            .InvalidateDisplayItemClient(
-                layout_view->GetScrollableArea()
-                    ->GetScrollingBackgroundDisplayItemClient(),
-                PaintInvalidationReason::kUncacheable);
+        layout_view->SetSubtreeShouldDoFullPaintInvalidation();
       }
     }
   }
@@ -720,8 +709,6 @@ bool HTMLFrameOwnerElement::LoadOrRedirectSubframe(
   KURL url_to_request = url.IsNull() ? BlankUrl() : url;
   ResourceRequestHead request(url_to_request);
   request.SetReferrerPolicy(ReferrerPolicyAttribute());
-  request.SetHasUserGesture(
-      LocalFrame::HasTransientUserActivation(GetDocument().GetFrame()));
 
   if (ContentFrame()) {
     FrameLoadRequest frame_load_request(GetDocument().domWindow(), request);

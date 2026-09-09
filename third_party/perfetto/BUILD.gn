@@ -313,8 +313,3 @@ group("default") {
   deps = [ ":all" ]
 }
 
-if (enable_perfetto_site) {
-  group("site") {
-    deps = [ "infra/perfetto.dev:site" ]
-  }
-}

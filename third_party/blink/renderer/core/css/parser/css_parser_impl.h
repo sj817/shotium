@@ -48,6 +48,7 @@ class StyleRuleNavigation;
 class StyleRulePage;
 class StyleRulePositionTry;
 class StyleRuleProperty;
+class StyleRulePrivate;
 class StyleRuleSupports;
 class StyleSheetContents;
 class Element;
@@ -343,6 +344,7 @@ class CORE_EXPORT CSSParserImpl {
   ConsumeFunctionParameters(CSSParserTokenStream& stream);
   StyleRuleMixin* ConsumeMixinRule(CSSParserTokenStream& stream);
   StyleRuleResult* ConsumeResultRule(CSSParserTokenStream& stream);
+  StyleRulePrivate* ConsumePrivateRule(CSSParserTokenStream& stream);
   StyleRuleApplyMixin* ConsumeApplyMixinRule(CSSParserTokenStream& stream);
   StyleRuleContentsStatement* ConsumeContentsRule(CSSParserTokenStream& stream);
   StyleRuleCustomMedia* ConsumeCustomMediaRule(CSSParserTokenStream& stream);

@@ -353,9 +353,6 @@ class ComputedStyle final : public ComputedStyleBase {
     if (!style) {
       return nullptr;
     }
-    if (style->IsEnsuredOutsideFlatTree()) {
-      return nullptr;
-    }
     if (style->IsEnsuredInDisplayNone()) {
       return nullptr;
     }
@@ -957,6 +954,8 @@ class ComputedStyle final : public ComputedStyleBase {
   inline bool IndependentInheritedEqual(const ComputedStyle&) const;
   inline bool NonIndependentInheritedEqual(const ComputedStyle&) const;
   bool InheritedEqualIncludingInheritedVariables(const ComputedStyle&) const;
+  InheritedPropertyHash FirstDifferingInheritedProperty(
+      const ComputedStyle&) const;
 
   bool HasChildDependentFlags() const { return ChildHasExplicitInheritance(); }
 
@@ -1009,7 +1008,6 @@ class ComputedStyle final : public ComputedStyleBase {
   bool ColumnRuleIsTransparent() const {
     return GapRuleColorIsTransparent(ColumnRuleColor());
   }
-  bool ColumnRuleEquivalent(const ComputedStyle& other_style) const;
   bool HasColumnRule() const {
     if (!IsGapDecorationsContainer()) [[likely]] {
       return false;
@@ -1632,7 +1630,8 @@ class ComputedStyle final : public ComputedStyleBase {
   static unsigned EffectiveContainment(unsigned contain,
                                        unsigned container_type,
                                        EContentVisibility content_visibility,
-                                       bool skips_contents) {
+                                       bool skips_contents,
+                                       EOverscrollContainerType overscroll_container_type) {
     unsigned effective = contain;
 
     if (container_type & kContainerTypeInlineSize) {
@@ -1654,13 +1653,23 @@ class ComputedStyle final : public ComputedStyleBase {
     if (skips_contents) {
       effective |= kContainsSize;
     }
+    if (overscroll_container_type != EOverscrollContainerType::kNone) {
+      // TODO(crbug.com/467112943): Layout containment is currently forced to
+      // ensure that the container of the overscroll areas actually contains
+      // the overscroll areas. However, requiring layout containment is
+      // overly restrictive to the child content that can be used within
+      // the scroller. We should remove this requirement while ensuring they are
+      // layout children of the container element.
+      effective |= kContainsLayout;
+    }
 
     return effective;
   }
 
   unsigned EffectiveContainment() const {
     return ComputedStyle::EffectiveContainment(
-        Contain(), ContainerType(), ContentVisibility(), SkipsContents());
+        Contain(), ContainerType(), ContentVisibility(), SkipsContents(),
+        EffectiveOverscrollContainerType());
   }
 
   bool ContainsStyle() const { return EffectiveContainment() & kContainsStyle; }
@@ -2444,7 +2453,15 @@ class ComputedStyle final : public ComputedStyleBase {
       return false;
     }
     if (pseudo == kPseudoIdMarker) {
-      return IsDisplayListItem();
+      // A list item's ::marker generates a box if it has non-normal
+      // 'content' (which requires ::marker rules to have matched), or a
+      // 'list-style-type' or marker image; see
+      // PseudoElementLayoutObjectIsNeeded(). Every <li> in a
+      // 'list-style: none' list has none of these, and creating the
+      // PseudoElement just to resolve its style and throw it away is a
+      // measurable cost on list-heavy pages.
+      return IsDisplayListItem() && (HasPseudoElementStyle(kPseudoIdMarker) ||
+                                     ListStyleType() || GeneratesMarkerImage());
     }
     // ::backdrop is generated for top layer elements (where Overlay is not
     // none).
@@ -2468,9 +2485,6 @@ class ComputedStyle final : public ComputedStyleBase {
         pseudo == kPseudoIdScrollButtonInlineEnd ||
         pseudo == kPseudoIdScrollButtonBlockEnd) {
       return HasPseudoElementStyle(kPseudoIdScrollButton);
-    }
-    if (pseudo == kPseudoIdOverscrollAreaParent) {
-      return IsInternalOverscrollArea();
     }
     if (!HasPseudoElementStyle(pseudo)) {
       return false;
@@ -2585,9 +2599,19 @@ class ComputedStyle final : public ComputedStyleBase {
 
   bool HasBaseEffectiveAppearance() const;
 
-  bool IsInternalOverscrollArea() const {
-    return InternalOverscrollArea() != EInternalOverscrollArea::kNone;
+  EOverscrollContainerType EffectiveOverscrollContainerType() const {
+    if (InternalOverscrollContainer() == EInternalOverscrollContainer::kNone) {
+      return EOverscrollContainerType::kNone;
+    }
+    return OverscrollContainerType();
   }
+
+  bool IsContentMovingOverscrollContainer() const {
+    EOverscrollContainerType type = EffectiveOverscrollContainerType();
+    return type == EOverscrollContainerType::kAuto ||
+           type == EOverscrollContainerType::kPush;
+  }
+
   bool IsInternalOverscrollPositionAuto() const {
     return InternalOverscrollPosition() == EInternalOverscrollPosition::kAuto;
   }
@@ -3118,7 +3142,8 @@ class ComputedStyleBuilder final : public ComputedStyleBuilderBase {
   // contain
   bool ShouldApplyAnyContainment(const Element& element) const {
     unsigned effective_containment = ComputedStyle::EffectiveContainment(
-        Contain(), ContainerType(), ContentVisibility(), SkipsContents());
+        Contain(), ContainerType(), ContentVisibility(), SkipsContents(),
+        EffectiveOverscrollContainerType());
     return ComputedStyle::ShouldApplyAnyContainment(element, GetDisplayStyle(),
                                                     effective_containment);
   }
@@ -3329,6 +3354,14 @@ class ComputedStyleBuilder final : public ComputedStyleBuilderBase {
   bool ScrollsOverflow() const {
     return ComputedStyle::ScrollsOverflow(OverflowX()) ||
            ComputedStyle::ScrollsOverflow(OverflowY());
+  }
+
+  // overscroll
+  EOverscrollContainerType EffectiveOverscrollContainerType() const {
+    if (InternalOverscrollContainer() == EInternalOverscrollContainer::kNone) {
+      return EOverscrollContainerType::kNone;
+    }
+    return OverscrollContainerType();
   }
 
   // padding-*

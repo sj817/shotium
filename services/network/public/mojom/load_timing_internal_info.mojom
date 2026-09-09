@@ -76,6 +76,14 @@ struct ResolutionDetails {
 };
 // LINT.ThenChange(//net/dns/public/resolution_details.h:ResolutionDetails)
 
+// Mirror of net::MultiplexedSessionCreationInitiator.
+// LINT.IfChange(MultiplexedSessionCreationInitiator)
+enum MultiplexedSessionCreationInitiator {
+  kUnknown,
+  kPreconnect,
+};
+// LINT.ThenChange(//net/spdy/multiplexed_session_creation_initiator.h:MultiplexedSessionCreationInitiator)
+
 // Mirror of net::LoadTimingInternalInfo.
 struct LoadTimingInternalInfo {
   mojo_base.mojom.TimeDelta? max_stream_limit_pending_delay;
@@ -86,4 +94,5 @@ struct LoadTimingInternalInfo {
   SessionSource? session_source;
   AdvertisedAltSvcState advertised_alt_svc_state;
   ResolutionDetails? resolution_details;
+  MultiplexedSessionCreationInitiator? session_creation_initiator;
 };

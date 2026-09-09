@@ -26,6 +26,7 @@
 #include "third_party/blink/renderer/core/style/grid_area.h"
 #include "third_party/blink/renderer/platform/heap/collection_support/heap_vector.h"
 #include "third_party/blink/renderer/platform/heap/member.h"
+#include "third_party/blink/renderer/platform/runtime_enabled_features.h"
 
 namespace blink {
 
@@ -965,7 +966,7 @@ CSSValueList* ConsumeCommaSeparatedList(Func callback,
                                         Args&&... args) {
   CSSValueList* list = CSSValueList::CreateCommaSeparated();
   do {
-    CSSValue* value = callback(stream, std::forward<Args>(args)...);
+    CSSValue* value = callback(stream, args...);
     if (!value) {
       return nullptr;
     }
@@ -981,7 +982,7 @@ CSSValueList* ConsumeSpaceSeparatedList(Func callback,
                                         Args&&... args) {
   CSSValueList* list = CSSValueList::CreateSpaceSeparated();
   do {
-    CSSValue* value = callback(stream, std::forward<Args>(args)...);
+    CSSValue* value = callback(stream, args...);
     if (!value) {
       return list->length() > 0 ? list : nullptr;
     }

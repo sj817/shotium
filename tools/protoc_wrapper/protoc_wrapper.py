@@ -37,13 +37,16 @@ def FormatGeneratorOptions(options):
 def VerifyProtoNames(protos):
   for filename in protos:
     if "-" in filename:
-      raise RuntimeError("Proto file names must not contain hyphens "
-                         "(see http://crbug.com/386125 for more information).")
+      raise RuntimeError(
+        "Proto file names must not contain hyphens "
+        "(see http://crbug.com/386125 for more information)."
+      )
 
 def StripProtoExtension(filename):
   if not filename.endswith(".proto"):
-    raise RuntimeError("Invalid proto filename extension: "
-                       "{0} .".format(filename))
+    raise RuntimeError(
+      "Invalid proto filename extension: {0} .".format(filename)
+    )
   return filename.rsplit(".", 1)[0]
 
 def WriteIncludes(headers, include):
@@ -62,8 +65,9 @@ def WriteIncludes(headers, include):
           contents.append(extra_statement)
 
       if not include_point_found:
-        raise RuntimeError("Include point not found in header: "
-                           "{0} .".format(filename))
+        raise RuntimeError(
+          "Include point not found in header: {0} .".format(filename)
+        )
 
     with open(filename, "w") as f:
       for line in contents:
@@ -97,23 +101,25 @@ def main(argv):
   parser.add_argument("--import-dir", action="append", default=[],
                       help="Extra import directory for protos, can be repeated."
   )
-  parser.add_argument("--descriptor-set-out",
-                      help="Path to write a descriptor.")
+  parser.add_argument("--descriptor-set-out", help="Output descriptor set path.")
   parser.add_argument(
-      "--descriptor-set-dependency-file",
-      help="Path to write the dependency file for descriptor set.")
+    "--descriptor-set-dependency-file",
+    help="Path to write the dependency file for descriptor set.",
+  )
   # The meaning of this flag is flipped compared to the corresponding protoc
   # flag due to this script previously passing --include_imports. Removing the
   # --include_imports is likely to have unintended consequences.
   parser.add_argument(
-      "--exclude-imports",
-      help="Do not include imported files into generated descriptor.",
-      action="store_true",
-      default=False)
+    "--exclude-imports",
+    help="Do not include imported files into generated descriptor.",
+    action="store_true",
+    default=False,
+  )
   parser.add_argument('--fatal_warnings', action='store_true')
 
-  parser.add_argument("protos", nargs="+",
-                      help="Input protobuf definition file(s).")
+  parser.add_argument(
+    "protos", nargs="+", help="Input protobuf definition file(s)."
+  )
 
   options = parser.parse_args(argv)
 
@@ -134,10 +140,13 @@ def main(argv):
     cc_out_dir = options.cc_out_dir
     cc_options_list = []
     if options.enable_kythe_annotations:
-      cc_options_list.extend([
-          'annotate_headers', 'annotation_pragma_name=kythe_metadata',
-          'annotation_guard_name=KYTHE_IS_RUNNING'
-      ])
+      cc_options_list.extend(
+        [
+          'annotate_headers',
+          'annotation_pragma_name=kythe_metadata',
+          'annotation_guard_name=KYTHE_IS_RUNNING',
+        ]
+      )
 
     # cc_options will likely have trailing colon so needs to be inserted at the
     # end.
@@ -153,8 +162,10 @@ def main(argv):
   if options.plugin_out_dir:
     plugin_options = FormatGeneratorOptions(options.plugin_options)
     protoc_cmd += [
-      "--plugin", "protoc-gen-plugin=" + os.path.relpath(options.plugin),
-      "--plugin_out", plugin_options + options.plugin_out_dir
+      "--plugin",
+      "protoc-gen-plugin=" + os.path.relpath(options.plugin),
+      "--plugin_out",
+      plugin_options + options.plugin_out_dir,
     ]
 
   protoc_cmd += ["--proto_path", proto_dir]
@@ -189,8 +200,9 @@ def main(argv):
       error_number = "0x%08X" % (ret + (1 << 32))
     else:
       error_number = "%d" % ret
-    raise RuntimeError("Protoc has returned non-zero status: "
-                       "{0}".format(error_number))
+    raise RuntimeError(
+      "Protoc has returned non-zero status: {0}".format(error_number)
+    )
 
   if dependency_file_data:
     with open(options.descriptor_set_dependency_file, 'w') as f:

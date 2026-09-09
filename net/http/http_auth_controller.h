@@ -34,6 +34,7 @@ class HostResolver;
 class NetLogWithSource;
 struct HttpRequestInfo;
 class SSLInfo;
+class X509Certificate;
 
 // HttpAuthController is the main entry point for external callers into the HTTP
 // authentication stack. A single instance of an HttpAuthController can be used
@@ -109,6 +110,13 @@ class NET_EXPORT_PRIVATE HttpAuthController
   bool HaveAuthHandler() const;
 
   bool HaveAuth() const;
+
+  // Returns true if the target scheme, host, and port that this controller was
+  // constructed to authenticate against matches `scheme_host_port`.
+  bool MatchesSchemeHostPort(
+      const url::SchemeHostPort& scheme_host_port) const {
+    return auth_scheme_host_port_ == scheme_host_port;
+  }
 
   // Return whether the authentication scheme is incompatible with HTTP/2
   // and thus the server would presumably reject a request on HTTP/2 anyway.
@@ -206,6 +214,13 @@ class NET_EXPORT_PRIVATE HttpAuthController
   // This includes the challenge's parameters. If nullptr, then there is no
   // associated auth handler.
   std::unique_ptr<HttpAuthHandler> handler_;
+
+  // The server certificate from the connection on which |handler_| was
+  // created. Connection-based handlers derive per-connection state (such as
+  // channel bindings) from this certificate at creation time, so the handler
+  // must be dropped if a later challenge arrives over a connection with a
+  // different certificate.
+  scoped_refptr<X509Certificate> handler_server_cert_;
 
   // |identity_| holds the credentials that should be used by the handler_ to
   // generate challenge responses. This identity can come from a number of

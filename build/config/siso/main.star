@@ -8,6 +8,7 @@ load("@builtin//encoding.star", "json")
 load("@builtin//lib/gn.star", "gn")
 load("@builtin//runtime.star", "runtime")
 load("@builtin//struct.star", "module")
+load("@builtin//time.star", "time")
 load("./backend_config/backend.star", "backend")
 load("./blink_all.star", "blink_all")
 load("./config.star", "config")
@@ -45,6 +46,12 @@ def __unset_timeout(ctx, step_config):
     if not config.get(ctx, "no-remote-timeout"):
         return step_config
     for rule in step_config["rules"]:
+        # if no timeout, default is 60m timeout.
+        # better to keep longer timeout instead of using shorter timeout.
+        timeout = rule.get("timeout")
+        if timeout and \
+           time.parse_duration(timeout) > time.parse_duration("60m"):
+            continue
         rule.pop("timeout", None)
     return step_config
 
@@ -82,6 +89,28 @@ def init(ctx):
             },
         },
         "rules": [],
+        # Allowlist for fail-on-bad-deps feature.
+        "bad_deps": {
+            "./android_clang_arm/obj/third_party/blink/renderer/bindings/modules/v8/v8/v8_language_model.o": "crbug.com/558036595",
+            "./android_clang_arm/obj/third_party/blink/renderer/bindings/modules/v8/v8/v8_proofreader.o": "crbug.com/558036595",
+            "./android_clang_arm/obj/third_party/blink/renderer/bindings/modules/v8/v8/v8_rewriter.o": "crbug.com/558036595",
+            "./android_clang_arm/obj/third_party/blink/renderer/bindings/modules/v8/v8/v8_summarizer.o": "crbug.com/558036595",
+            "./android_clang_arm/obj/third_party/blink/renderer/bindings/modules/v8/v8/v8_translator.o": "crbug.com/558036595",
+            "./android_clang_arm/obj/third_party/blink/renderer/bindings/modules/v8/v8/v8_writer.o": "crbug.com/558036595",
+            "./gen/third_party/devtools-frontend/src/front_end/panels/application/application.js": "crbug.com/556413211",
+            "./gen/third_party/devtools-frontend/src/front_end/panels/sources/sources.js": "crbug.com/556926446",
+            "./gen/third_party/devtools-frontend/src/front_end/panels/timeline/timeline.js": "crbug.com/556600964",
+            "./gen/third_party/devtools-frontend/src/front_end/ui/legacy/components/cookie_table/cookie_table.js": "crbug.com/556881890",
+            "./obj/ash/quick_pair/repository/repository/device_address_map.o": "crbug.com/546524333",
+            "./obj/ash/quick_pair/repository/repository/device_image_store.o": "crbug.com/546524333",
+            "./obj/chrome/browser/ui/views/upgrade_notification_controller/upgrade_notification_controller.o": "crbug.com/555387059",
+            "./obj/third_party/blink/renderer/bindings/modules/v8/v8/v8_language_model.o": "crbug.com/558036595",
+            "./obj/third_party/blink/renderer/bindings/modules/v8/v8/v8_proofreader.o": "crbug.com/558036595",
+            "./obj/third_party/blink/renderer/bindings/modules/v8/v8/v8_rewriter.o": "crbug.com/558036595",
+            "./obj/third_party/blink/renderer/bindings/modules/v8/v8/v8_summarizer.o": "crbug.com/558036595",
+            "./obj/third_party/blink/renderer/bindings/modules/v8/v8/v8_translator.o": "crbug.com/558036595",
+            "./obj/third_party/blink/renderer/bindings/modules/v8/v8/v8_writer.o": "crbug.com/558036595",
+        },
         # Executables sent from Windows host to Linux workers need to set executable bit explicitly.
         # This is necessary for cross platform build actions. e.g. node binary for typescript
         "executables": [

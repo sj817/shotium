@@ -33,8 +33,10 @@
 #include "third_party/blink/renderer/core/editing/selection_template.h"
 #include "third_party/blink/renderer/core/events/keyboard_event.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
+#include "third_party/blink/renderer/core/html/forms/date_time_chooser.h"
 #include "third_party/blink/renderer/core/html_names.h"
 #include "third_party/blink/renderer/core/style/computed_style.h"
+#include "third_party/blink/renderer/platform/runtime_enabled_features.h"
 #include "third_party/blink/renderer/platform/text/platform_locale.h"
 #include "third_party/blink/renderer/platform/wtf/text/wtf_string.h"
 
@@ -138,7 +140,8 @@ void DateTimeFieldElement::DefaultKeyboardEventHandler(
 }
 
 void DateTimeFieldElement::SetFocused(bool value,
-                                      mojom::blink::FocusType focus_type) {
+                                      mojom::blink::FocusType focus_type,
+                                      BlurEventBehavior blur_event_behavior) {
   if (field_owner_) {
     if (value) {
       field_owner_->DidFocusOnField(focus_type);
@@ -156,7 +159,7 @@ void DateTimeFieldElement::SetFocused(bool value,
     }
   }
 
-  Element::SetFocused(value, focus_type);
+  Element::SetFocused(value, focus_type, blur_event_behavior);
 }
 
 void DateTimeFieldElement::FocusOnNextField() {
@@ -227,6 +230,10 @@ void DateTimeFieldElement::SetDisabled() {
 }
 
 FocusableState DateTimeFieldElement::SupportsFocus(UpdateBehavior) const {
+  if (RuntimeEnabledFeatures::InputMultipleFieldsUIWithPointerChecksEnabled() &&
+      !DateTimeChooser::ShouldSubfieldsBeFocusable(GetDocument().GetFrame())) {
+    return FocusableState::kNotFocusable;
+  }
   return (!IsDisabled() && !IsFieldOwnerDisabled())
              ? FocusableState::kFocusable
              : FocusableState::kNotFocusable;

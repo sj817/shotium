@@ -213,11 +213,10 @@ base::expected<std::unique_ptr<ShotRuntime>, std::string> ShotRuntime::Create(
         ::partition_alloc::internal::SchedulerLoopQuarantineConfig(),
         ::partition_alloc::internal::SchedulerLoopQuarantineConfig(),
         allocator_shim::EventuallyZeroFreedMemory(false),
-        allocator_shim::EnableFreeWithSize(false),
-        allocator_shim::EnableStrictFreeSizeCheck(false));
-    for (size_t token = 0; token < allocator_shim::kNumPartitions; ++token) {
-      allocator_shim::internal::PartitionAllocMalloc::Allocator(
-          allocator_shim::AllocToken(token))
+        allocator_shim::EnableTighterAlignedAllocBound(false));
+    for (size_t partition_index = 0;
+         partition_index < allocator_shim::kNumPartitions; ++partition_index) {
+      allocator_shim::internal::PartitionAllocMalloc::Allocator(partition_index)
           ->EnableThreadCacheIfSupported();
     }
     ::partition_alloc::ThreadCache::SetLargestCachedSize(

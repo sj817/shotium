@@ -577,14 +577,14 @@ bool LayoutBox::TransformsChangeMayRequireLayout() const {
   return false;
 }
 
-void LayoutBox::WillBeDestroyed() {
+void LayoutBox::WillBeDestroyed(const ComputedStyle* style) {
   NOT_DESTROYED();
 
   ShapeOutsideInfo::RemoveInfo(*this);
 
   DisassociatePhysicalFragments();
 
-  LayoutBoxModelObject::WillBeDestroyed();
+  LayoutBoxModelObject::WillBeDestroyed(style);
 }
 
 void LayoutBox::DisassociatePhysicalFragments() {
@@ -610,7 +610,7 @@ void LayoutBox::WillBeRemovedFromTree() {
   NOT_DESTROYED();
 
   // Notify the display-locks that anchors within a sub-tree may disappear.
-  if (Style() && StyleRef().HasOutOfFlowPosition()) {
+  if (StyleRef().HasOutOfFlowPosition()) {
     NotifyContainingDisplayLocksForAnchorPositioning(
         DisplayLocksAffectedByAnchors(), nullptr);
   }
@@ -1139,7 +1139,15 @@ void LayoutBox::UpdateAfterLayout() {
       frame.GetChromeClient().ResizeAfterLayout();
     }
     if (IsScrollContainer()) {
-      GetScrollableArea()->ClampScrollOffsetAfterOverflowChange();
+      auto* scrollable_area = GetScrollableArea();
+      using ClampScope = PaintLayerScrollableArea::DelayScrollOffsetClampScope;
+      if (GetFrameView()->IsAutoSizeModeEnabled() &&
+          RuntimeEnabledFeatures::AutoSizeUsesScrollWidthForOverflowEnabled() &&
+          ClampScope::ClampingIsDelayed()) {
+        ClampScope::SetNeedsClamp(scrollable_area);
+      } else {
+        scrollable_area->ClampScrollOffsetAfterOverflowChange();
+      }
     }
   }
 
@@ -1150,15 +1158,7 @@ void LayoutBox::UpdateAfterLayout() {
     Layer()->UpdateScrollingAfterLayout();
   }
 
-  if (StyleRef().HasColumnRule() && IsFragmentationContextRoot() &&
-      !RuntimeEnabledFeatures::CSSGapDecorationEnabled()) {
-    // Issue full invalidation, in case the number of column rules have changed.
-    // When CSSGapDecoration is enabled, gap decoration invalidation is handled
-    // by BoxPaintInvalidator.
-    ClearNeedsLayoutWithFullPaintInvalidation();
-  } else {
-    ClearNeedsLayout();
-  }
+  ClearNeedsLayout();
 
   // We should notify the display lock that we've done layout on self, and if
   // it's not blocked, on children.
@@ -1695,13 +1695,6 @@ PhysicalOffset LayoutBox::ScrolledContentOffset() const {
   DCHECK(GetScrollableArea());
   return PhysicalOffset::FromVector2dFFloor(
       GetScrollableArea()->GetScrollOffset());
-}
-
-gfx::Vector2d LayoutBox::PixelSnappedScrolledContentOffset() const {
-  NOT_DESTROYED();
-  DCHECK(IsScrollContainer());
-  DCHECK(GetScrollableArea());
-  return GetScrollableArea()->ScrollOffsetInt();
 }
 
 PhysicalRect LayoutBox::ClippingRect() const {
@@ -2948,6 +2941,7 @@ bool LayoutBox::MapToVisualRectInAncestorSpaceInternal(
   if (!visual_rect_flags.Has(VisualRectFlag::kIgnoreFilters)) {
     InflateVisualRectForFilter(transform_state);
   }
+
 
   AncestorSkipInfo skip_info(ancestor, true);
   LayoutObject* container = Container(&skip_info);

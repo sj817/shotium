@@ -52,11 +52,16 @@ def __step_config(ctx, step_config):
         "third_party/blink/renderer/modules/webcodecs/fuzzer_seed_corpus/generate_image_corpus.py",
         "third_party/cast_core/public/src/build/chromium/cast_core_grpc_generator_wrapper.py",
         "third_party/catapult/tracing/bin/generate_about_tracing_contents",
+        "third_party/chromium-bidi/tools/build/scripts/compile_ts.py",
+        "third_party/chromium-bidi/tools/build/scripts/rollup.py",
         # Requires JDK to run. Additionally, it dynamically parses .js_library
         # metadata files to determine JS source files to load at runtime, making
         # input tracking too complex for static analysis without Starlark handlers.
         "third_party/closure_compiler/js_binary.py",
         "third_party/devtools-frontend/src/scripts/build/build_inspector_overlay.py",
+        "third_party/devtools-frontend/src/scripts/build/run_with_restat.py",
+        "third_party/devtools-frontend/src/scripts/build/run_with_stamp.py",
+        "third_party/devtools-frontend/src/scripts/build/typescript/generate_indexer_tsconfig.py",
         "third_party/inspector_protocol/check_protocol_compatibility.py",
         "third_party/inspector_protocol/code_generator.py",
         "third_party/perfetto/src/trace_processor/plugins/wattson/gen_wattson_curves.py",
@@ -90,6 +95,7 @@ def __step_config(ctx, step_config):
         "third_party/devtools-frontend/src/front_end/core/i18n/generate-locales-js.js",
         "third_party/devtools-frontend/src/node_modules/rollup/dist/bin/rollup",
         "third_party/devtools-frontend/src/scripts/build/build_ai_skills.mjs",
+        "third_party/devtools-frontend/src/scripts/build/compress_files.js",
         "third_party/devtools-frontend/src/scripts/build/generate_devtools_json.mjs",
         "third_party/devtools-frontend/src/scripts/build/generate_html_entrypoint.js",
         "third_party/devtools-frontend/src/scripts/component_docs/generate_docs.mjs",
@@ -114,12 +120,21 @@ def __step_config(ctx, step_config):
         })
 
     if config.get(ctx, "default-remote"):
-        step_config["rules"].append({
-            "name": "default",
-            "action": ".*",
-            "remote": True,
-            "timeout": "2m",
-        })
+        step_config["rules"].extend([
+            {
+                "name": "default-python",
+                "command_prefix": platform.python_bin,
+                "remote": True,
+                "remote_command": platform.remote_python_bin,
+                "timeout": "2m",
+            },
+            {
+                "name": "default",
+                "action": ".*",
+                "remote": True,
+                "timeout": "2m",
+            },
+        ])
 
     return step_config
 

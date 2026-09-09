@@ -50,7 +50,6 @@
 #include "third_party/blink/renderer/core/dom/dom_node_ids.h"
 #include "third_party/blink/renderer/core/dom/element.h"
 #include "third_party/blink/renderer/core/dom/element_traversal.h"
-#include "third_party/blink/renderer/core/dom/events/add_event_listener_options_resolved.h"
 #include "third_party/blink/renderer/core/dom/events/event.h"
 #include "third_party/blink/renderer/core/dom/events/event_dispatch_forbidden_scope.h"
 #include "third_party/blink/renderer/core/dom/events/event_dispatcher.h"
@@ -375,7 +374,8 @@ void Node::setNodeValue(const String&, ExceptionState&) {
 
 NodeList* Node::childNodes() {
   auto* this_node = DynamicTo<ContainerNode>(this);
-  auto& node_lists = UnpackAndRefresh(EnsureRareData().EnsureNodeLists());
+  auto& node_lists =
+      EnsureRareData().EnsureNodeLists().RefreshNodeAndUnwrap(*this);
   if (this_node)
     return node_lists.EnsureChildNodeList(*this_node);
   return node_lists.EnsureEmptyChildNodeList(*this);
@@ -955,7 +955,7 @@ ContainerNode* ParentForHTMLInsertion(Node* self,
 
 void Node::replaceWithHTMLUnsafe(
     const V8UnionStringOrTrustedHTML* html,
-    V8UnionSetHTMLUnsafeOptionsOrTrustedParserOptions* options,
+    V8UnionSetHTMLUnsafeOptionsOrTrustedHTMLParserOptions* options,
     ExceptionState& exception_state) {
   FragmentParserOptions resolved_options = FragmentParserOptions::From(options);
   String compliant_string = TrustedTypesCheckForFragment(
@@ -979,7 +979,7 @@ void Node::replaceWithHTMLUnsafe(
 
 void Node::beforeHTMLUnsafe(
     const V8UnionStringOrTrustedHTML* html,
-    V8UnionSetHTMLUnsafeOptionsOrTrustedParserOptions* options,
+    V8UnionSetHTMLUnsafeOptionsOrTrustedHTMLParserOptions* options,
     ExceptionState& exception_state) {
   FragmentParserOptions resolved_options = FragmentParserOptions::From(options);
   String compliant_string = TrustedTypesCheckForFragment(
@@ -1003,7 +1003,7 @@ void Node::beforeHTMLUnsafe(
 
 void Node::afterHTMLUnsafe(
     const V8UnionStringOrTrustedHTML* html,
-    V8UnionSetHTMLUnsafeOptionsOrTrustedParserOptions* options,
+    V8UnionSetHTMLUnsafeOptionsOrTrustedHTMLParserOptions* options,
     ExceptionState& exception_state) {
   FragmentParserOptions resolved_options = FragmentParserOptions::From(options);
   String compliant_string = TrustedTypesCheckForFragment(
@@ -1261,7 +1261,7 @@ bool Node::ShouldSkipMarkingStyleDirty() const {
       return false;
     }
     // This is an element outside the flat tree without a parent. Should only
-    // mark dirty if it has an ensured style.
+    // mark dirty if it has a computed style.
     return !element->GetComputedStyle();
   }
   // Text nodes outside the flat tree do not need to be marked for style recalc.
@@ -1291,9 +1291,6 @@ bool IsNodeInFlatTree(const Node& node, const Element* style_parent) {
   }
   if (!current_style && style_parent) {
     current_style = style_parent->GetComputedStyle();
-  }
-  if (current_style && current_style->IsEnsuredOutsideFlatTree()) {
-    return false;
   }
   return true;
 }
@@ -1504,7 +1501,7 @@ void Node::ClearNodeLists() {
 }
 
 FlatTreeNodeData& Node::EnsureFlatTreeNodeData() {
-  return UnpackAndRefresh(EnsureRareData().EnsureFlatTreeNodeData());
+  return EnsureRareData().EnsureFlatTreeNodeData().RefreshNodeAndUnwrap(*this);
 }
 
 FlatTreeNodeData* Node::GetFlatTreeNodeData() const {
@@ -1670,10 +1667,12 @@ void Node::AttachLayoutTree(AttachContext& context) {
   DCHECK(!context.performing_reattach ||
          GetDocument().GetStyleEngine().InRebuildLayoutTree());
 
-  LayoutObject* layout_object = GetLayoutObject();
+#if DCHECK_IS_ON()
+  const LayoutObject* layout_object = GetLayoutObject();
   DCHECK(!layout_object ||
          (layout_object->HasStyle() &&
           (layout_object->Parent() || IsA<LayoutView>(layout_object))));
+#endif
 
   ClearNeedsReattachLayoutTree();
 
@@ -1807,15 +1806,6 @@ void Node::NotifyPriorityScrollAnchorStatusChanged() {
 
 bool Node::IsActiveSlot() const {
   return ToHTMLSlotElementIfSupportsAssignmentOrNull(*this);
-}
-
-bool Node::HasContainerTiming() const {
-  if (IsElementNode()) {
-    return To<Element>(*this).FastHasAttribute(
-        html_names::kContainertimingAttr);
-  } else {
-    return false;
-  }
 }
 
 AtomicString Node::SlotName() const {
@@ -2777,7 +2767,7 @@ void Node::WillMoveToNewDocument(Document& new_document) {
   if (old_document.FocusedElement() == this) {
     FocusParams params(SelectionBehaviorOnFocus::kNone,
                        mojom::blink::FocusType::kNone, nullptr);
-    params.omit_blur_events = true;
+    params.blur_event_behavior = BlurEventBehavior::kDropWhenRemoving;
     old_document.SetFocusedElement(nullptr, params);
   }
 
@@ -2824,7 +2814,7 @@ void Node::AddedEventListener(const AtomicString& event_type,
   }
   if (auto* frame = GetDocument().GetFrame()) {
     frame->GetEventHandlerRegistry().DidAddEventHandler(
-        *this, event_type, registered_listener.Options());
+        *this, event_type, registered_listener.Passive());
     // We need to track the existence of the visibilitychange event listeners to
     // enable/disable sudden terminations.
     if (IsDocumentNode() && event_type == event_type_names::kVisibilitychange) {
@@ -2845,7 +2835,7 @@ void Node::RemovedEventListener(
   // https://bugs.webkit.org/show_bug.cgi?id=33861
   if (auto* frame = GetDocument().GetFrame()) {
     frame->GetEventHandlerRegistry().DidRemoveEventHandler(
-        *this, event_type, registered_listener.Options());
+        *this, event_type, registered_listener.Passive());
   }
   // Used to notify the AXObjectCache that a listener was removed; no
   // accessibility tree exists to notify anymore.
@@ -3003,7 +2993,7 @@ void Node::RegisterMutationObserver(
     const HashSet<AtomicString>& attribute_filter) {
   MutationObserverRegistration* registration = nullptr;
   auto& mutation_observer_data =
-      UnpackAndRefresh(EnsureRareData().EnsureMutationObserverData());
+      EnsureRareData().EnsureMutationObserverData().RefreshNodeAndUnwrap(*this);
   for (const auto& item : mutation_observer_data.Registry()) {
     if (&item->Observer() == &observer) {
       registration = item.Get();
@@ -3032,13 +3022,17 @@ void Node::UnregisterMutationObserver(
   // understandable by humans.  The explicit dispose() is needed to have the
   // registration object unregister itself promptly.
   registration->Dispose();
-  UnpackAndRefresh(EnsureRareData().EnsureMutationObserverData())
+  EnsureRareData()
+      .EnsureMutationObserverData()
+      .RefreshNodeAndUnwrap(*this)
       .RemoveRegistration(registration);
 }
 
 void Node::RegisterTransientMutationObserver(
     MutationObserverRegistration* registration) {
-  UnpackAndRefresh(EnsureRareData().EnsureMutationObserverData())
+  EnsureRareData()
+      .EnsureMutationObserverData()
+      .RefreshNodeAndUnwrap(*this)
       .AddTransientRegistration(registration);
 }
 
@@ -3050,7 +3044,9 @@ void Node::UnregisterTransientMutationObserver(
   if (!transient_registry)
     return;
 
-  UnpackAndRefresh(EnsureRareData().EnsureMutationObserverData())
+  EnsureRareData()
+      .EnsureMutationObserverData()
+      .RefreshNodeAndUnwrap(*this)
       .RemoveTransientRegistration(registration);
 }
 
@@ -3099,10 +3095,7 @@ DispatchEventResult Node::DispatchDOMActivateEvent(int detail,
   UIEvent& event = *UIEvent::Create();
   // DOMActivate inherits bubbles from the underlying event to prevent
   // activation behavior of parent elements from running when it doesn't bubble.
-  const bool bubbles =
-      RuntimeEnabledFeatures::DOMActivateBubblesInheritanceEnabled()
-          ? underlying_event.bubbles()
-          : true;
+  const bool bubbles = underlying_event.bubbles();
   event.initUIEvent(event_type_names::kDOMActivate, bubbles, true,
                     GetDocument().domWindow(), detail);
   event.SetUnderlyingEvent(&underlying_event);
@@ -3467,26 +3460,17 @@ void Node::FlatTreeParentChanged() {
   }
   const ComputedStyle* style =
       IsElementNode() ? To<Element>(this)->GetComputedStyle() : nullptr;
-  bool detach = false;
   if (ShouldSkipMarkingStyleDirty()) {
     // If we should not mark the node dirty in the new flat tree position,
     // detach to make sure all computes styles, layout objects, and dirty
     // flags are cleared.
-    detach = IsDirtyForStyleRecalc() || ChildNeedsStyleRecalc() || style ||
-             GetLayoutObject();
-  }
-  if (!detach) {
-    // We are moving a node with ensured computed style into the flat tree.
-    // Clear ensured styles so that we can use IsEnsuredOutsideFlatTree() to
-    // determine that we are outside the flat tree before updating the style
-    // recalc root in MarkAncestorsWithChildNeedsStyleRecalc().
-    detach = style && style->IsEnsuredOutsideFlatTree();
-  }
-  if (detach) {
-    StyleEngine& engine = GetDocument().GetStyleEngine();
-    StyleEngine::DetachLayoutTreeScope detach_scope(engine);
-    DetachLayoutTree();
-    engine.FlatTreePositionChanged(*this);
+    if (IsDirtyForStyleRecalc() || ChildNeedsStyleRecalc() || style ||
+        GetLayoutObject()) {
+      StyleEngine& engine = GetDocument().GetStyleEngine();
+      StyleEngine::DetachLayoutTreeScope detach_scope(engine);
+      DetachLayoutTree();
+      engine.FlatTreePositionChanged(*this);
+    }
   }
 
   // The node changed the flat tree position by being slotted to a new slot or
@@ -3550,10 +3534,10 @@ void Node::RemovedFromFlatTree() {
 }
 
 void Node::RegisterScrollTimeline(ScrollTimeline* timeline) {
-  data_ = EnsureRareData().RegisterScrollTimeline(timeline);
+  EnsureRareData().RegisterScrollTimeline(timeline).RefreshNode(*this);
 }
 void Node::UnregisterScrollTimeline(ScrollTimeline* timeline) {
-  data_ = EnsureRareData().UnregisterScrollTimeline(timeline);
+  EnsureRareData().UnregisterScrollTimeline(timeline).RefreshNode(*this);
 }
 
 void Node::SetManuallyAssignedSlot(HTMLSlotElement* slot) {

@@ -52,15 +52,12 @@ DOMHighResTimeStamp ComputeIntersectionsContext::GetTimeStamp(
 std::optional<IntersectionGeometry::RootGeometry>&
 ComputeIntersectionsContext::GetRootGeometry(
     const IntersectionObserver& observer,
-    unsigned flags) {
+    const Vector<Length>& root_margin) {
   if (observer.RootIsImplicit()) {
     if (&observer != implicit_root_geometry_observer_) {
       implicit_root_geometry_observer_ = &observer;
       if (implicit_root_geometry_) {
-        implicit_root_geometry_->UpdateMargin(
-            flags & IntersectionGeometry::kShouldReportRootBounds
-                ? observer.RootMargin()
-                : Vector<Length>());
+        implicit_root_geometry_->UpdateMargin(root_margin);
       }
     }
     return implicit_root_geometry_;
@@ -149,9 +146,8 @@ void IntersectionObserverController::UpdateIntersectionObserverStatus() {
 }
 
 void IntersectionObserverController::ComputeIntersections(
-    unsigned flags,
+    IntersectionObservation::ComputeFlags flags,
     LocalFrameView& frame_view,
-    gfx::Vector2dF accumulated_scroll_delta_since_last_update,
     ComputeIntersectionsContext& context) {
   if (!GetExecutionContext()) {
     return;
@@ -160,7 +156,7 @@ void IntersectionObserverController::ComputeIntersections(
                "IntersectionObserverController::"
                "computeIntersections");
 
-  bool update_tracking = flags & IntersectionObservation::kUpdateTracking;
+  bool update_tracking = flags.Has(IntersectionObservation::kUpdateTracking);
   if (update_tracking) {
     // If the root has disappeared, then this observer is toast. If the
     // root is in another document, that document will take over updates.
@@ -175,7 +171,7 @@ void IntersectionObserverController::ComputeIntersections(
     DCHECK(!observer->RootIsImplicit());
     for (auto& observation : observer->Observations()) {
       observation->ComputeIntersection(
-          flags, accumulated_scroll_delta_since_last_update, context);
+          flags, context);
     }
   }
   if (update_tracking) {
@@ -200,7 +196,7 @@ void IntersectionObserverController::ComputeIntersections(
     }
     for (auto& observation : observations) {
       observation->ComputeIntersection(
-          flags, accumulated_scroll_delta_since_last_update, context);
+          flags, context);
     }
     if (update_tracking) {
       // If the target is not connected, then we should have just generated a

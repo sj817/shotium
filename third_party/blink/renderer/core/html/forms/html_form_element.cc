@@ -161,7 +161,7 @@ void HTMLFormElement::RemovedFrom(ContainerNode& insertion_point) {
       NotifyFormRemovedFromTree(images, root);
     }
   }
-  GetDocument().GetFormController().WillDeleteForm(this);
+  GetDocument().EnsureFormController().WillDeleteForm(this);
   HTMLElement::RemovedFrom(insertion_point);
 
 }
@@ -1016,7 +1016,7 @@ bool HTMLFormElement::HasRel(RelAttribute relation) const {
 
 void HTMLFormElement::FinishParsingChildren() {
   HTMLElement::FinishParsingChildren();
-  GetDocument().GetFormController().RestoreControlStateIn(*this);
+  GetDocument().EnsureFormController().RestoreControlStateIn(*this);
   did_finish_parsing_children_ = true;
 }
 

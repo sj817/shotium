@@ -93,6 +93,7 @@
 #include "third_party/blink/renderer/platform/bindings/exception_state.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
 #include "third_party/blink/renderer/platform/loader/fetch/url_loader/url_loader_client.h"
+#include "third_party/blink/renderer/platform/runtime_enabled_features.h"
 #include "third_party/blink/renderer/platform/weborigin/kurl.h"
 #include "third_party/blink/renderer/platform/wtf/functional.h"
 #include "third_party/blink/renderer/platform/wtf/std_lib_extras.h"
@@ -683,6 +684,11 @@ void ReplaceChildrenWithFragment(ContainerNode* container,
   DCHECK(container);
   ContainerNode* container_node(container);
 
+  if (RuntimeEnabledFeatures::ReplaceChildrenWithFragmentFastPathEnabled() &&
+      !fragment->firstChild() && !container_node->hasChildren()) {
+    return;
+  }
+
   ChildListMutationScope mutation(*container_node);
 
   if (!fragment->firstChild()) {
@@ -698,7 +704,10 @@ void ReplaceChildrenWithFragment(ContainerNode* container,
     return;
   }
 
-  container_node->RemoveChildren();
+  if (!RuntimeEnabledFeatures::ReplaceChildrenWithFragmentFastPathEnabled() ||
+      container_node->hasChildren()) {
+    container_node->RemoveChildren();
+  }
   container_node->AppendChild(fragment, exception_state);
 }
 
@@ -767,8 +776,10 @@ static Document* CreateStagingDocumentForMarkupSanitization(
       MakeGarbageCollected<LocalFrameView>(*frame, gfx::Size(800, 600));
   frame->SetView(frame_view);
   // TODO(https://crbug.com/1355751) Initialize `storage_key`.
-  frame->Init(/*opener=*/nullptr, DocumentToken(), /*policy_container=*/nullptr,
-              StorageKey(), /*document_ukm_source_id=*/ukm::kInvalidSourceId,
+  frame->Init(/*opener=*/nullptr, DocumentToken(),
+              /*initiator_state_token=*/InitiatorStateToken(),
+              /*policy_container=*/nullptr, StorageKey(),
+              /*document_ukm_source_id=*/ukm::kInvalidSourceId,
               /*creator_base_url=*/NullUrl());
 
   Document* document = frame->GetDocument();

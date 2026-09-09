@@ -239,7 +239,7 @@ ThreadGroupImpl::ThreadGroupImpl(
     std::string_view thread_group_label,
     ThreadType thread_type_hint,
     TrackedRef<TaskTracker> task_tracker,
-    TrackedRef<Delegate> delegate,
+    TrackedRef<ThreadGroup::Delegate> delegate,
     bool monitor_worker_thread_priorities,
     ThreadPoolInstance::RecordLockContention record_lock_contention)
     : ThreadGroup(histogram_label,
@@ -616,7 +616,6 @@ RegisteredTaskSource ThreadGroupImpl::WorkerDelegate::SwapProcessedTask(
     next_task_source = GetWorkLockRequired(&workers_executor,
                                            static_cast<WorkerThread*>(worker));
   }
-  // Must be called without holding a lock.
   return next_task_source;
 }
 

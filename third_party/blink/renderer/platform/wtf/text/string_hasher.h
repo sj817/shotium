@@ -43,17 +43,11 @@ class StringHasher {
 
   // The main entry point for the string hasher. Computes the hash and returns
   // only the lowest 24 bits, since that's what we have room for in StringImpl.
-  //
-  // NOTE: length is the number of bytes produced _by the reader_.
-  // Normally, this means that the number of bytes actually read will be
-  // equivalent to (length * Reader::kCompressionFactor /
-  // Reader::kExpansionFactor). Also note that if you are hashing something
-  // that is not 8-bit elements, and do _not_ use compression factors or
-  // similar, you'll need to multiply by sizeof(T) to get all data read.
   template <class Reader = PlainHashReader>
-  static unsigned ComputeHashAndMaskTop8Bits(const char* data, size_t length) {
-    return MaskTop8Bits(
-        rapidhash<Reader>(reinterpret_cast<const uint8_t*>(data), length));
+  static uint32_t ComputeHashAndMaskTop8Bits(base::span<const uint8_t> data) {
+    return MaskTop8Bits(rapidhash<Reader>(
+        data.data(),
+        data.size() * Reader::kExpansionFactor / Reader::kCompressionFactor));
   }
 
   // Hashing can be very performance-sensitive, but the hashing function is also
@@ -76,7 +70,7 @@ class StringHasher {
   // enough to inline. The same goes if you are the only user of your
   // HashReader.
   template <class Reader = PlainHashReader>
-  ALWAYS_INLINE static unsigned ComputeHashAndMaskTop8BitsInline(
+  ALWAYS_INLINE static uint32_t ComputeHashAndMaskTop8BitsInline(
       base::span<const uint8_t> data) {
     return MaskTop8Bits(rapidhash<Reader>(data.data(), data.size()));
   }
@@ -101,7 +95,7 @@ class StringHasher {
   }
 
  private:
-  static unsigned MaskTop8Bits(uint64_t result) {
+  static uint32_t MaskTop8Bits(uint64_t result) {
     // Reserving space from the high bits for flags preserves most of the hash's
     // value, since hash lookup typically masks out the high bits anyway.
     result &= (1U << (32 - kFlagCount)) - 1;
@@ -114,7 +108,7 @@ class StringHasher {
       result = 0x80000000 >> kFlagCount;
     }
 
-    return static_cast<unsigned>(result);
+    return static_cast<uint32_t>(result);
   }
 };
 

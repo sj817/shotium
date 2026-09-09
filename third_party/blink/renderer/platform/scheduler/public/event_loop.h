@@ -14,13 +14,12 @@
 #include "third_party/blink/renderer/platform/heap/persistent.h"
 #include "third_party/blink/renderer/platform/platform_export.h"
 #include "third_party/blink/renderer/platform/wtf/deque.h"
-#include "third_party/blink/renderer/platform/wtf/hash_set.h"
-#include "third_party/blink/renderer/platform/wtf/ref_counted.h"
+#include "base/memory/weak_ptr.h"
+#include "third_party/blink/renderer/platform/wtf/allocator/allocator.h"
 
 namespace blink {
 
 class Agent;
-class FrameOrWorkerScheduler;
 
 namespace scheduler {
 
@@ -54,7 +53,7 @@ namespace scheduler {
 // Blink's own: EnqueueMicrotask() appends to it and PerformMicrotaskCheckpoint()
 // drains it, including anything queued while draining, per the spec's
 // "perform a microtask checkpoint" algorithm.
-class PLATFORM_EXPORT EventLoop final : public RefCounted<EventLoop> {
+class PLATFORM_EXPORT EventLoop final {
   USING_FAST_MALLOC(EventLoop);
 
  public:
@@ -68,6 +67,7 @@ class PLATFORM_EXPORT EventLoop final : public RefCounted<EventLoop> {
 
   EventLoop(const EventLoop&) = delete;
   EventLoop& operator=(const EventLoop&) = delete;
+  ~EventLoop();
 
   // Queues |cb| onto this event loop's microtask queue.
   void EnqueueMicrotask(base::OnceClosure cb);
@@ -86,11 +86,6 @@ class PLATFORM_EXPORT EventLoop final : public RefCounted<EventLoop> {
   // end-of-checkpoint tasks.
   void PerformMicrotaskCheckpoint();
 
-  void AttachScheduler(FrameOrWorkerScheduler*);
-  void DetachScheduler(FrameOrWorkerScheduler*);
-
-  bool IsSchedulerAttachedForTest(FrameOrWorkerScheduler*);
-
   class PLATFORM_EXPORT PauseMicrotasksHandle {
    public:
     ~PauseMicrotasksHandle();
@@ -99,11 +94,11 @@ class PLATFORM_EXPORT EventLoop final : public RefCounted<EventLoop> {
 
    private:
     friend class EventLoop;
-    explicit PauseMicrotasksHandle(scoped_refptr<EventLoop> loop)
-        : loop_(std::move(loop)) {
-      ++loop_->microtasks_pause_count_;
+    explicit PauseMicrotasksHandle(EventLoop& loop)
+        : loop_(loop.weak_ptr_factory_.GetWeakPtr()) {
+      ++loop.microtasks_pause_count_;
     }
-    scoped_refptr<EventLoop> loop_;
+    base::WeakPtr<EventLoop> loop_;
   };
 
   // Suppresses microtask execution for the lifetime of the returned handle.
@@ -113,11 +108,9 @@ class PLATFORM_EXPORT EventLoop final : public RefCounted<EventLoop> {
   bool AreMicrotasksPaused() const { return !!microtasks_pause_count_; }
 
  private:
-  friend class RefCounted<EventLoop>;
   friend blink::Agent;
 
   explicit EventLoop(Delegate* delegate);
-  ~EventLoop();
 
   WeakPersistent<Delegate> delegate_;
   int microtasks_pause_count_ = 0;
@@ -125,7 +118,7 @@ class PLATFORM_EXPORT EventLoop final : public RefCounted<EventLoop> {
   bool performing_microtask_checkpoint_ = false;
   Deque<base::OnceClosure> pending_microtasks_;
   Vector<base::OnceClosure> end_of_checkpoint_tasks_;
-  HashSet<FrameOrWorkerScheduler*> schedulers_;
+  base::WeakPtrFactory<EventLoop> weak_ptr_factory_{this};
 };
 
 }  // namespace scheduler

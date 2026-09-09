@@ -226,19 +226,7 @@ void HTMLAnchorElementBase::ParseAttribute(
     if (params.old_value == params.new_value) {
       return;
     }
-    bool was_link = IsLink();
-    SetIsLink(!params.new_value.IsNull());
-    if (was_link || IsLink()) {
-      PseudoStateChanged(CSSSelector::kPseudoLink);
-      PseudoStateChanged(CSSSelector::kPseudoVisited);
-      if (was_link != IsLink()) {
-        PseudoStateChanged(CSSSelector::kPseudoWebkitAnyLink);
-        PseudoStateChanged(CSSSelector::kPseudoAnyLink);
-      }
-    }
-    // Used to notify DocumentSpeculationRules so <script type=speculationrules>
-    // href-matching rules could react to the href change. speculationrules is
-    // a scripting feature and DocumentSpeculationRules is gone with script.
+    AnchorElementUtils::UpdateHref(*this, params.new_value);
     InvalidateCachedVisitedLinkHash();
   } else if (params.name == html_names::kNameAttr) {
     ProcessElementRenderBlocking(params.new_value);
@@ -459,8 +447,7 @@ void HTMLAnchorElementBase::HandleClick(MouseEvent& event) {
                       WebFeature::kAnchorClickDispatchForNonConnectedNode);
     // Disconnected <area> elements should not trigger navigation.
     // https://html.spec.whatwg.org/multipage/links.html#cannot-navigate
-    if (RuntimeEnabledFeatures::DisallowDisconnectedAreaNavigationEnabled() &&
-        IsA<HTMLAreaElement>(this)) {
+    if (IsA<HTMLAreaElement>(this)) {
       return;
     }
   }
@@ -488,8 +475,6 @@ void HTMLAnchorElementBase::HandleClick(MouseEvent& event) {
       link_relations_, GetDocument());
 
   LocalFrame* frame = window->GetFrame();
-  request.SetHasUserGesture(LocalFrame::HasTransientUserActivation(frame));
-
   NavigationPolicy navigation_policy = NavigationPolicyFromEvent(&event);
 
   // Respect the download attribute only if we can read the content, and the

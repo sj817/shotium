@@ -26,6 +26,8 @@
 
 #include "third_party/blink/renderer/core/url/url.h"
 
+#include <utility>
+
 #include "base/auto_reset.h"
 #include "base/check.h"
 #include "third_party/blink/renderer/core/url/dom_origin.h"

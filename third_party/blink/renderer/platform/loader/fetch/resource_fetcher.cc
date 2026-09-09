@@ -1029,15 +1029,12 @@ Resource* ResourceFetcher::CreateResourceForStaticData(
   // Most off-main-thread resource fetches use Resource::kRaw and don't reach
   // this point, but off-main-thread module fetches might.
   if (IsMainThread()) {
-    if (Resource* old_resource =
-            MemoryCache::Get()->ResourceForURL(url, cache_identifier)) {
+    Resource* old_resource =
+        MemoryCache::Get()->ResourceForURL(url, cache_identifier);
+    if (old_resource) {
       // There's no reason to re-parse if we saved the data from the previous
       // parse.
       if (params.Options().data_buffering_policy != kDoNotBufferData) {
-        if (url.ProtocolIsData()) {
-          // Touch the strong reference to update LRU on cache hit.
-          MemoryCache::Get()->SaveDataURIStrongReference(old_resource);
-        }
         return old_resource;
       }
       MemoryCache::Get()->Remove(old_resource);
@@ -1135,13 +1132,6 @@ Resource* ResourceFetcher::CreateResourceForStaticData(
   }
 
   AddToMemoryCacheIfNeeded(params, resource);
-  if (url.ProtocolIsData()) {
-    // Keep a strong reference to data URI resources so they survive GC across
-    // navigations. Data URIs are immutable, so caching is always safe.
-    if (IsMainThread()) {
-      MemoryCache::Get()->SaveDataURIStrongReference(resource);
-    }
-  }
   return resource;
 }
 
@@ -1330,7 +1320,8 @@ Resource* ResourceFetcher::RequestResource(FetchParameters& params,
   resource_request.SetFromOriginDirtyStyleSheet(
       params.IsFromOriginDirtyStyleSheet());
   TRACE_EVENT_BEGIN(TRACE_DISABLED_BY_DEFAULT("network"), "ResourceLoad",
-                    perfetto::Track(identifier), "url", resource_request.Url());
+                    perfetto::NamedTrack("BlinkResourceID", identifier), "url",
+                    resource_request.Url());
   absl::Cleanup record_times = [start = base::TimeTicks::Now(), &params] {
     base::TimeDelta elapsed = base::TimeTicks::Now() - start;
     base::UmaHistogramMicrosecondsTimes("Blink.Fetch.RequestResourceTime2",
@@ -1602,7 +1593,8 @@ Resource* ResourceFetcher::RequestResource(FetchParameters& params,
   if (resource->InspectorId() != identifier ||
       (!resource->StillNeedsLoad() && !resource->IsLoading())) {
     TRACE_EVENT_END(TRACE_DISABLED_BY_DEFAULT("network"),
-                    perfetto::Track(identifier), "outcome", "Fail");
+                    perfetto::NamedTrack("BlinkResourceID", identifier),
+                    "outcome", "Fail");
   }
   return resource;
 }
@@ -2963,10 +2955,10 @@ void ResourceFetcher::UpdateImagePrioritiesAndSpeculativeDecodes() {
               resource->GetResourceRequest().Priority());
     resource->DidChangePriority(computed_load_priority,
                                 resource_priority.intra_priority_value);
-    TRACE_EVENT_INSTANT(TRACE_DISABLED_BY_DEFAULT("network"),
-                        "ResourcePrioritySet",
-                        perfetto::Track(resource->InspectorId()), "data",
-                        CreateTracedValueWithPriority(computed_load_priority));
+    TRACE_EVENT_INSTANT(
+        TRACE_DISABLED_BY_DEFAULT("network"), "ResourcePrioritySet",
+        perfetto::NamedTrack("BlinkResourceID", resource->InspectorId()),
+        "data", CreateTracedValueWithPriority(computed_load_priority));
     DCHECK(!IsDetached());
     resource_load_observer_->DidChangePriority(
         resource->InspectorId(), computed_load_priority,
@@ -3592,10 +3584,10 @@ ResourceFetcher::ResourcePrepareHelper::ComputeLoadPriority(
 
 void ResourceFetcher::ResourcePrepareHelper::RecordTrace() {
   const ResourceRequest& resource_request = params_.GetResourceRequest();
-  TRACE_EVENT_INSTANT(TRACE_DISABLED_BY_DEFAULT("network"),
-                      "ResourcePrioritySet",
-                      perfetto::Track(resource_request.InspectorId()),
-                      "priority", resource_request.Priority());
+  TRACE_EVENT_INSTANT(
+      TRACE_DISABLED_BY_DEFAULT("network"), "ResourcePrioritySet",
+      perfetto::NamedTrack("BlinkResourceID", resource_request.InspectorId()),
+      "priority", resource_request.Priority());
 }
 
 }  // namespace blink

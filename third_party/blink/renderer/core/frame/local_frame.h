@@ -34,6 +34,7 @@
 
 #include "base/callback_list.h"
 #include "base/gtest_prod_util.h"
+#include "base/memory/raw_ptr.h"
 #include "base/time/default_tick_clock.h"
 #include "base/time/time.h"
 #include "base/unguessable_token.h"
@@ -206,6 +207,7 @@ class CORE_EXPORT LocalFrame final
   void Init(
       Frame* opener,
       const DocumentToken& document_token,
+      const InitiatorStateToken& initiator_state_token,
       std::unique_ptr<PolicyContainer> policy_container,
       const StorageKey& storage_key,
       ukm::SourceId document_ukm_source_id,
@@ -693,7 +695,7 @@ class CORE_EXPORT LocalFrame final
 
   // A helper that returns the initiator state token from the LocalFrame's
   // LocalDomWindow.
-  const base::UnguessableToken& GetInitiatorStateToken() const;
+  const InitiatorStateToken& GetInitiatorStateToken() const;
 
   // A helper that returns the document token from the LocalFrame's Document.
   DocumentToken GetDocumentToken() const;
@@ -975,7 +977,8 @@ class CORE_EXPORT LocalFrame final
 
   HistoryUserActivationState history_user_activation_state_;
 
-  InterfaceRegistry* const interface_registry_;
+  const raw_ptr<InterfaceRegistry, UnprotectedInRelease | DanglingUntriaged>
+      interface_registry_;
 
   mojom::blink::ViewportIntersectionState intersection_state_;
 

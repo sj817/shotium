@@ -5,7 +5,10 @@
 #include "third_party/blink/renderer/core/css/css_location_rule.h"
 
 #include "third_party/blink/renderer/core/css/css_markup.h"
+#include "third_party/blink/renderer/core/css/css_string_value.h"
+#include "third_party/blink/renderer/core/css/css_url_pattern_value.h"
 #include "third_party/blink/renderer/core/css/style_rule_location.h"
+#include "third_party/blink/renderer/platform/wtf/text/string_builder.h"
 
 namespace blink {
 
@@ -19,10 +22,17 @@ String CSSLocationRule::cssText() const {
   StringBuilder result;
   result.Append("@location ");
   SerializeIdentifier(location_rule_->GetName(), result);
-  // TODO(crbug.com/436805487): Serialize descriptors. There are also
-  // alternative spec proposals here, so better wait....
-  result.Append(" {\n}");
-  return result.ToString();
+  result.Append(" {");
+  AppendDescriptorIfNotEmpty(result, "pattern", location_rule_->GetPattern());
+  AppendDescriptorIfNotEmpty(result, "protocol", location_rule_->GetProtocol());
+  AppendDescriptorIfNotEmpty(result, "hostname", location_rule_->GetHostname());
+  AppendDescriptorIfNotEmpty(result, "port", location_rule_->GetPort());
+  AppendDescriptorIfNotEmpty(result, "pathname", location_rule_->GetPathname());
+  AppendDescriptorIfNotEmpty(result, "search", location_rule_->GetSearch());
+  AppendDescriptorIfNotEmpty(result, "hash", location_rule_->GetHash());
+  AppendDescriptorIfNotEmpty(result, "base-url", location_rule_->GetBaseUrl());
+  result.Append(" }");
+  return result.ReleaseString();
 }
 
 void CSSLocationRule::Reattach(StyleRuleBase* rule) {

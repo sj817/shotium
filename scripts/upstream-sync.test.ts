@@ -4,7 +4,45 @@ import {mkdtemp, mkdir, writeFile, readFile, rm} from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {execa} from 'execa';
-import {createPlan, applyPlan} from './upstream-sync.ts';
+import {createPlan, applyPlan, resolvePlan, revisePlan, adoptPlan, retirePlan} from './upstream-sync.ts';
+
+test('standalone vendor trees map into the slice and explicitly adopt new directories', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'shotium-vendor-test-'));
+  const git = (args: string[]) => execa('git', args, {cwd: dir});
+  try {
+    await git(['init']);
+    await git(['config', 'user.name', 'sync-test']);
+    await git(['config', 'user.email', 'sync-test@example.invalid']);
+    await git(['config', 'core.autocrlf', 'false']);
+    await writeFile(path.join(dir, 'native.cc'), 'old\n');
+    await git(['add', 'native.cc']); await git(['commit', '-m', 'vendor base']);
+    const base = (await git(['rev-parse', 'HEAD'])).stdout;
+    await writeFile(path.join(dir, 'native.cc'), 'new\n');
+    await mkdir(path.join(dir, 'include'));
+    await writeFile(path.join(dir, 'include/native.h'), 'header\n');
+    await git(['add', 'native.cc', 'include/native.h']); await git(['commit', '-m', 'vendor target']);
+    const target = (await git(['rev-parse', 'HEAD'])).stdout;
+    await git(['checkout', '-b', 'slice', base]);
+    await mkdir(path.join(dir, 'vendor'));
+    await writeFile(path.join(dir, 'vendor/native.cc'), 'old\n');
+    await git(['rm', 'native.cc']); await git(['add', 'vendor/native.cc']);
+    await git(['commit', '-m', 'vendor in slice']);
+    const out = path.join(dir, 'plan');
+    const plan = await createPlan(dir, base, target, ['vendor'], out, 'upstream', false, 'vendor');
+    assert.equal(plan.rows.find(r => r.path === 'vendor/native.cc')?.status, 'take-upstream');
+    const selection = path.join(dir, 'selection.json');
+    await writeFile(selection, JSON.stringify(['vendor/native.cc']));
+    assert.equal(await applyPlan(dir, out, selection), 1);
+    const decisions = path.join(dir, 'decisions.json');
+    await writeFile(decisions, JSON.stringify([{path: 'vendor/include/native.h', reason: 'Native dependency'}]));
+    assert.equal(await adoptPlan(dir, out, decisions), 1);
+    assert.equal(await readFile(path.join(dir, 'vendor/include/native.h'), 'utf8'), 'header\n');
+    await assert.rejects(createPlan(dir, base, target, ['outside'], path.join(dir, 'bad'), 'upstream', false, 'vendor'), /inside upstream prefix/);
+  } finally {
+    assert.ok(path.resolve(dir).startsWith(path.resolve(os.tmpdir()) + path.sep));
+    await rm(dir, {recursive: true, force: true});
+  }
+});
 
 test('real three-way merge preserves deletions and local changes, gates conflicts and dirty writes', async () => {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'shotium-sync-test-'));
@@ -45,6 +83,7 @@ test('real three-way merge preserves deletions and local changes, gates conflict
     assert.equal(await readFile(path.join(repo, 'css/plain'), 'utf8'), lines);
     const merged = await readFile(path.join(out, 'files/css/merge'), 'utf8');
     assert.match(merged, /local 1\n/); assert.match(merged, /upstream 18\n/);
+    assert.equal(merged, lines.replace('line 1\n', 'local 1\n').replace('line 18', 'upstream 18'));
     const selection = path.join(dir, 'selection.json');
     await writeFile(selection, JSON.stringify(['css/plain', 'css/merge']));
     await put('css/merge', 'concurrent edit');
@@ -56,8 +95,38 @@ test('real three-way merge preserves deletions and local changes, gates conflict
     await writeFile(path.join(out, 'files/css/plain'), 'updated\n');
     assert.equal(await applyPlan(repo, out, selection), 2);
     assert.equal(await readFile(path.join(repo, 'css/merge'), 'utf8'), merged);
+    const resolved = path.join(dir, 'resolved');
+    const decisions = path.join(dir, 'decisions.json');
+    await writeFile(resolved, 'reviewed merge\n');
+    await writeFile(decisions, JSON.stringify([{path: 'css/conflict', source: resolved, reason: 'Preserve local behavior with upstream fix'}]));
+    assert.equal(await resolvePlan(out, decisions), 1);
+    await writeFile(selection, JSON.stringify(['css/conflict']));
+    assert.equal(await applyPlan(repo, out, selection), 1);
+    assert.equal(await readFile(path.join(repo, 'css/conflict'), 'utf8'), 'reviewed merge\n');
+    await writeFile(resolved, 'corrected merge\n');
+    await put('css/conflict', 'concurrent correction\n');
+    await assert.rejects(revisePlan(repo, out, decisions), /Source differs from plan/);
+    await put('css/conflict', 'reviewed merge\n');
+    assert.equal(await revisePlan(repo, out, decisions), 1);
+    assert.equal(await readFile(path.join(repo, 'css/conflict'), 'utf8'), 'corrected merge\n');
     await writeFile(selection, JSON.stringify(['css/new']));
     await assert.rejects(applyPlan(repo, out, selection), /Not an eligible/);
+    await writeFile(decisions, JSON.stringify([{path: 'css/new', reason: 'Required new dependency'}]));
+    await put('css/new', 'untracked collaborator file');
+    await assert.rejects(adoptPlan(repo, out, decisions), /already exists/);
+    await rm(path.join(repo, 'css/new'));
+    assert.equal(await adoptPlan(repo, out, decisions), 1);
+    assert.equal(await readFile(path.join(repo, 'css/new'), 'utf8'), 'new dependency\n');
+    await writeFile(decisions, JSON.stringify([{path: 'css/gone', reason: 'Superseded by the new dependency'}]));
+    await put('css/gone', 'collaborator edit');
+    await assert.rejects(retirePlan(repo, out, decisions), /Not a clean upstream deletion/);
+    await put('css/gone', lines);
+    assert.equal(await retirePlan(repo, out, decisions), 1);
+    await assert.rejects(readFile(path.join(repo, 'css/gone')), {code: 'ENOENT'});
+    await writeFile(decisions, JSON.stringify([{path: 'css/cut', reason: 'Explicit native dependency review'}]));
+    await assert.rejects(adoptPlan(repo, out, decisions), /Not an eligible/);
+    assert.equal(await adoptPlan(repo, out, decisions, 'upstream', true), 1);
+    assert.equal(await readFile(path.join(repo, 'css/cut'), 'utf8'), 'upstream touched deleted component\n');
     await writeFile(selection, JSON.stringify(['../outside']));
     await assert.rejects(applyPlan(repo, out, selection));
     await git(['add', 'css']); await git(['commit', '-m', 'applied']);

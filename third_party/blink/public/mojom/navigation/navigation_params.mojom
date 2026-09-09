@@ -111,7 +111,7 @@ struct BeginNavigationParams {
 
   // A token identifying the state of the document that initiated the
   // navigation. This must be set on renderer-initiated navigations.
-  mojo_base.mojom.UnguessableToken? initiator_state_token;
+  blink.mojom.InitiatorStateToken? initiator_state_token;
 
   // A token identifying the document that initiated the navigation. This must
   // be set on renderer-initiated navigations.
@@ -385,6 +385,14 @@ struct OldPageInfo {
 struct IsolatedAppPermissionPolicyEntry {
   string feature;
   array<string> allowed_origins;
+};
+
+// Policy controlling script injection tracking and protections for a document.
+enum ScriptInjectionPolicy {
+  kNone,
+
+  // Prevents injected scripts from navigating the page without a user gesture.
+  kNavigationProtection,
 };
 
 // Used by commit IPC messages. Holds the parameters needed by the renderer to
@@ -733,4 +741,9 @@ struct CommitNavigationParams {
   // the renderer cannot independently determine if a frame is a MIME
   // handler (which requires browser-side state).
   bool is_secure_context_root = false;
+
+  // Policy controlling script injection tracking and protections for this
+  // document (e.g. preventing injected scripts from navigating the page without
+  // a user gesture).
+  ScriptInjectionPolicy script_injection_policy = kNone;
 };

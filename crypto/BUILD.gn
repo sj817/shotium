@@ -160,6 +160,7 @@ test("crypto_unittests") {
     "hmac_unittest.cc",
     "hpke_unittest.cc",
     "kdf_unittest.cc",
+    "kem_unittest.cc",
     "kex_unittest.cc",
     "keypair_unittest.cc",
     "obsolete/md5_unittest.cc",

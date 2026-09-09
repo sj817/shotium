@@ -64,6 +64,7 @@
 #include "third_party/blink/renderer/core/dom/focus_params.h"
 #include "third_party/blink/renderer/core/dom/id_target_observer.h"
 #include "third_party/blink/renderer/core/dom/invoker_data.h"
+#include "third_party/blink/renderer/core/dom/node-inl.h"
 #include "third_party/blink/renderer/core/dom/node_lists_node_data.h"
 #include "third_party/blink/renderer/core/dom/node_rare_data.h"
 #include "third_party/blink/renderer/core/dom/node_traversal.h"
@@ -1793,7 +1794,10 @@ void HTMLElement::ShowPopoverInternal(Element* invoker,
   original_document.AddToTopLayer(this);
   // Make the popover match `:popover-open` and remove `display:none` styling:
   GetPopoverData()->setVisibilityState(PopoverVisibilityState::kShowing);
-  SetPopoverInvoker(invoker);
+  // ShowPopoverInternal() doesn't know how this popover was invoked (e.g. JS
+  // showPopover() vs. command vs. interest). Default to kNone here; callers
+  // that are command or interest invokers will upgrade this after the call.
+  SetPopoverInvoker(invoker, PopoverInvokedVia::kNone);
   SetImplicitAnchor(invoker);
 
   PseudoStateChanged(CSSSelector::kPseudoPopoverOpen);
@@ -1874,11 +1878,13 @@ void HTMLElement::ShowPopoverInternal(Element* invoker,
   }
 }
 
-void HTMLElement::SetPopoverInvoker(Element* invoker) {
+void HTMLElement::SetPopoverInvoker(Element* invoker,
+                                    PopoverInvokedVia invoked_via) {
   if (Element* oldInvoker = GetPopoverData()->invoker()) {
     oldInvoker->GetInvokerData()->SetInvokedPopover(nullptr);
   }
   GetPopoverData()->setInvoker(invoker);
+  GetPopoverData()->setInvokedVia(invoked_via);
   if (invoker) {
     invoker->EnsureInvokerData().SetInvokedPopover(this);
   }
@@ -2207,6 +2213,15 @@ PopoverHideResult HTMLElement::HidePopoverInternal(
       CHECK_EQ(result, DispatchEventResult::kCanceledBeforeDispatch);
       return PopoverHideResult::kHidden;
     }
+
+    // The 'beforetoggle' event handler could have changed this popover, e.g. by
+    // changing its type, removing it from the document, or calling
+    // showPopover().
+    if (!IsPopoverReady(PopoverTriggerAction::kHide, exception_state,
+                        /*include_event_handler_text=*/true, &document)) {
+      return PopoverHideResult::kHidden;
+    }
+
     if (stack_containing_this && !stack_containing_this->empty() &&
         stack_top_ignoring_inspector(*stack_containing_this) != this) {
       CHECK(PopoverType() == PopoverValueType::kAuto ||
@@ -2220,14 +2235,13 @@ PopoverHideResult HTMLElement::HidePopoverInternal(
           this, document, focus_behavior,
           HidePopoverTransitionBehavior::kNoEventsNoWaiting,
           &popovers_held_open_by_inspector);
-    }
-
-    // The 'beforetoggle' event handler could have changed this popover, e.g. by
-    // changing its type, removing it from the document, or calling
-    // showPopover().
-    if (!IsPopoverReady(PopoverTriggerAction::kHide, exception_state,
-                        /*include_event_handler_text=*/true, &document)) {
-      return PopoverHideResult::kHidden;
+      // The 'beforetoggle' event handler (from the HideAllPopoversUntil call)
+      // could have changed this popover, e.g. by changing its type, removing it
+      // from the document, or calling showPopover().
+      if (!IsPopoverReady(PopoverTriggerAction::kHide, exception_state,
+                          /*include_event_handler_text=*/true, &document)) {
+        return PopoverHideResult::kHidden;
+      }
     }
 
     // If this is the target of an active interest invoker, closing the popover
@@ -2248,6 +2262,20 @@ PopoverHideResult HTMLElement::HidePopoverInternal(
     if (!IsPopoverReady(PopoverTriggerAction::kHide, exception_state,
                         /*include_event_handler_text=*/true, &document)) {
       return PopoverHideResult::kHidden;
+    }
+
+    if (stack_containing_this && !stack_containing_this->empty() &&
+        stack_top_ignoring_inspector(*stack_containing_this) != this) {
+      CHECK(PopoverType() == PopoverValueType::kAuto ||
+            PopoverType() == PopoverValueType::kHint);
+      hide_all_popovers_result = HideAllPopoversUntil(
+          this, document, focus_behavior,
+          HidePopoverTransitionBehavior::kNoEventsNoWaiting,
+          &popovers_held_open_by_inspector);
+      if (!IsPopoverReady(PopoverTriggerAction::kHide, exception_state,
+                          /*include_event_handler_text=*/true, &document)) {
+        return PopoverHideResult::kHidden;
+      }
     }
 
     // Queue the "closing" toggle event.
@@ -2292,11 +2320,11 @@ PopoverHideResult HTMLElement::HidePopoverInternal(
 
   // Remove this popover from the stack.
   if (PopoverType() != PopoverValueType::kManual) {
-    if (!hint_stack.empty() &&
-        stack_top_ignoring_inspector(hint_stack) == this) {
+    if (hint_stack.Contains(this)) {
       if (RuntimeEnabledFeatures::PopoverHintNewBehaviorEnabled()) {
         CHECK_NE(PopoverType(), PopoverValueType::kManual);
         CHECK_NE(PopoverType(), PopoverValueType::kNone);
+        DCHECK(!auto_stack.Contains(this));
       } else {
         CHECK_EQ(PopoverType(), PopoverValueType::kHint);
       }
@@ -2305,14 +2333,16 @@ PopoverHideResult HTMLElement::HidePopoverInternal(
           RuntimeEnabledFeatures::PopoverHintNewBehaviorEnabled()) {
         document.SetPopoverHintStackParent(nullptr);
       }
-    } else {
-      CHECK(!auto_stack.empty());
-      CHECK(auto_stack.Contains(this));
+    } else if (auto_stack.Contains(this)) {
+      if (RuntimeEnabledFeatures::PopoverHintNewBehaviorEnabled()) {
+        DCHECK_EQ(PopoverType(), PopoverValueType::kAuto);
+        DCHECK(!hint_stack.Contains(this));
+      }
       auto_stack.EraseAt(auto_stack.Find(this));
     }
   }
 
-  SetPopoverInvoker(nullptr);
+  SetPopoverInvoker(nullptr, PopoverInvokedVia::kNone);
 
   // Re-apply display:none, and stop matching `:popover-open`.
   GetPopoverData()->setVisibilityState(PopoverVisibilityState::kHidden);
@@ -2760,9 +2790,17 @@ void HTMLElement::HandlePopoverLightDismissForClick(
   }
 }
 
-void HTMLElement::InvokePopover(Element& invoker) {
+void HTMLElement::InvokePopover(Element& invoker,
+                                PopoverInvokedVia invoked_via) {
   CHECK(IsPopover());
-  ShowPopoverInternal(&invoker, /*exception_state=*/nullptr);
+  if (!popoverOpen()) {
+    ShowPopoverInternal(&invoker, /*exception_state=*/nullptr);
+    if (popoverOpen()) {
+      GetPopoverData()->setInvokedVia(invoked_via);
+    }
+  } else if (invoked_via >= GetPopoverData()->invokedVia()) {
+    SetPopoverInvoker(&invoker, invoked_via);
+  }
 }
 
 void HTMLElement::SetImplicitAnchor(Element* element) {
@@ -2807,7 +2845,7 @@ bool HTMLElement::IsValidBuiltinCommand(HTMLElement& invoker,
     CHECK(RuntimeEnabledFeatures::HTMLCommandForScrollCommandsEnabled());
     return true;
   }
-  if (command == CommandEventType::kToggleOverscroll) {
+  if (Element::IsOverscrollCommand(command)) {
     CHECK(RuntimeEnabledFeatures::OverscrollGesturesEnabled());
     return true;
   }
@@ -2828,6 +2866,26 @@ bool HTMLElement::HandleCommandInternal(HTMLElement& invoker,
     if (Element* container = GetOverscrollContainer()) {
       if (auto* tracker = container->GetOverscrollAreaTracker()) {
         tracker->ToggleArea(this);
+      }
+    }
+    return true;
+  }
+
+  if (command == CommandEventType::kShowOverscroll) {
+    CHECK(RuntimeEnabledFeatures::OverscrollGesturesEnabled());
+    if (Element* container = GetOverscrollContainer()) {
+      if (auto* tracker = container->GetOverscrollAreaTracker()) {
+        tracker->OpenArea(this);
+      }
+    }
+    return true;
+  }
+
+  if (command == CommandEventType::kHideOverscroll) {
+    CHECK(RuntimeEnabledFeatures::OverscrollGesturesEnabled());
+    if (Element* container = GetOverscrollContainer()) {
+      if (auto* tracker = container->GetOverscrollAreaTracker()) {
+        tracker->CloseArea(this);
       }
     }
     return true;
@@ -2876,7 +2934,12 @@ bool HTMLElement::HandleCommandInternal(HTMLElement& invoker,
   } else if (can_show) {
     // TODO(crbug.com/1121840) HandleCommandInternal is called for both
     // `popovertarget` and `commandfor`.
-    InvokePopover(invoker);
+    InvokePopover(invoker, PopoverInvokedVia::kCommand);
+    return true;
+  } else if (command == CommandEventType::kShowPopover && popoverOpen()) {
+    // A `show-popover` command invoker "upgrades" to a command invoker, so it
+    // persists if de-hovered/blurred.
+    SetPopoverInvoker(&invoker, PopoverInvokedVia::kCommand);
     return true;
   }
 
@@ -3040,9 +3103,16 @@ CommandEventType HTMLElement::GetCommandEventType(
   }
 
   // Overscroll gestures.
-  if (RuntimeEnabledFeatures::OverscrollGesturesEnabled() &&
-      EqualIgnoringAsciiCase(action, keywords::kToggleOverscroll)) {
-    return CommandEventType::kToggleOverscroll;
+  if (RuntimeEnabledFeatures::OverscrollGesturesEnabled()) {
+    if (EqualIgnoringAsciiCase(action, keywords::kToggleOverscroll)) {
+      return CommandEventType::kToggleOverscroll;
+    }
+    if (EqualIgnoringAsciiCase(action, keywords::kShowOverscroll)) {
+      return CommandEventType::kShowOverscroll;
+    }
+    if (EqualIgnoringAsciiCase(action, keywords::kHideOverscroll)) {
+      return CommandEventType::kHideOverscroll;
+    }
   }
 
   // V2 commands go below this point
@@ -3541,6 +3611,18 @@ void HTMLElement::AddHTMLLengthToStyle(HeapVector<CSSPropertyValue, 8>& style,
                                           unit);
 }
 
+void HTMLElement::AddHTMLPixelLengthToStyle(
+    HeapVector<CSSPropertyValue, 8>& style,
+    CSSPropertyID property_id,
+    const String& value) {
+  unsigned parsed_value;
+  if (!ParseHTMLNonNegativeInteger(value, parsed_value)) {
+    return;
+  }
+  AddPropertyToPresentationAttributeStyle(style, property_id, parsed_value,
+                                          CSSPrimitiveValue::UnitType::kPixels);
+}
+
 static Color ParseColorStringWithCrazyLegacyRules(const String& color_string) {
   // Per spec, only look at the first 128 digits of the string.
   const size_t kMaxColorLength = 128;
@@ -3995,21 +4077,10 @@ void HTMLElement::OnContainerTimingAttrChanged(
     return;
   }
 
-  if (had_container_timing && !has_container_timing) {
-    if (!RecalcSelfOrAncestorHasContainerTiming()) {
-      ClearSelfOrAncestorHasContainerTiming();
-      UpdateDescendantHasContainerTiming(false /* has_container_timing */);
-    }
-  } else if (!had_container_timing && has_container_timing) {
-    SetSelfOrAncestorHasContainerTiming();
-    UpdateDescendantHasContainerTiming(true /* has_container_timing */);
-  }
-
-  if (RuntimeEnabledFeatures::ContainerTimingPrepaintTraversalEnabled(
-          GetExecutionContext())) {
-    if (auto* layout_object = GetLayoutObject()) {
-      layout_object->MarkContainerTimingChanged();
-    }
+  // Mark the layout object dirty so the next pre-paint walk re-attributes the
+  // subtree through the ContainerTimingPaintAttributionTracker.
+  if (auto* layout_object = GetLayoutObject()) {
+    layout_object->MarkContainerTimingChanged();
   }
 }
 
@@ -4037,34 +4108,19 @@ void HTMLElement::OnContainerTimingIgnoreAttrChanged(
     return;
   }
   // Only this spelling's presence is tracked here. That is still correct when
-  // the element carries both spellings: the branches below either consult
-  // RecalcSelfOrAncestorHasContainerTiming(), which sees the other spelling
-  // through HasContainerTimingIgnoreAttribute(), or re-clear an already cleared
-  // subtree.
+  // the element carries both spellings: all this does is mark the subtree for
+  // re-attribution, and the pre-paint walk resolves the effective ignore state
+  // through HasContainerTimingIgnoreAttribute(), which sees both spellings.
   bool had_container_timing_ignore = !params.old_value.IsNull();
   bool has_container_timing_ignore = !params.new_value.IsNull();
   if (had_container_timing_ignore == has_container_timing_ignore) {
     return;
   }
 
-  if (had_container_timing_ignore && !has_container_timing_ignore) {
-    if (RecalcSelfOrAncestorHasContainerTiming()) {
-      SetSelfOrAncestorHasContainerTiming();
-      UpdateDescendantHasContainerTiming(true /* has_container_timing */);
-    }
-  } else if (!had_container_timing_ignore && has_container_timing_ignore &&
-             !FastHasAttribute(html_names::kContainertimingAttr)) {
-    // containertiming has precedence over containertimingignore, only unset
-    // the tree if the node has ignore only
-    ClearSelfOrAncestorHasContainerTiming();
-    UpdateDescendantHasContainerTiming(false /* has_container_timing */);
-  }
-
-  if (RuntimeEnabledFeatures::ContainerTimingPrepaintTraversalEnabled(
-          GetExecutionContext())) {
-    if (auto* layout_object = GetLayoutObject()) {
-      layout_object->MarkContainerTimingChanged();
-    }
+  // Mark the layout object dirty so the next pre-paint walk re-attributes the
+  // subtree through the ContainerTimingPaintAttributionTracker.
+  if (auto* layout_object = GetLayoutObject()) {
+    layout_object->MarkContainerTimingChanged();
   }
 }
 

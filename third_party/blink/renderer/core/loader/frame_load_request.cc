@@ -12,6 +12,7 @@
 #include "third_party/blink/renderer/core/events/current_input_event.h"
 #include "third_party/blink/renderer/core/fileapi/public_url_manager.h"
 #include "third_party/blink/renderer/core/frame/local_dom_window.h"
+#include "third_party/blink/renderer/core/frame/local_frame.h"
 #include "third_party/blink/renderer/core/frame/policy_container.h"
 #include "third_party/blink/renderer/core/html/forms/html_form_element.h"
 #include "third_party/blink/renderer/core/script_tools/script_tool_context.h"
@@ -93,9 +94,8 @@ FrameLoadRequest::FrameLoadRequest(LocalDOMWindow* origin_window,
   if (origin_window) {
     DCHECK(!resource_request_.RequestorOrigin());
     resource_request_.SetRequestorOrigin(origin_window->GetSecurityOrigin());
-    const base::UnguessableToken& initiator_state_token =
+    const InitiatorStateToken& initiator_state_token =
         origin_window->GetInitiatorStateToken();
-    CHECK(!initiator_state_token.is_empty());
     SetInitiatorStateToken(initiator_state_token);
     if (origin_window->document()) {
       SetInitiatorDocumentToken(origin_window->document()->Token());
@@ -110,6 +110,12 @@ FrameLoadRequest::FrameLoadRequest(LocalDOMWindow* origin_window,
     }
 
     SetReferrerForRequest(origin_window, resource_request_);
+
+    if (origin_window->GetFrame()) {
+      resource_request_.SetHasUserGesture(
+          resource_request_.HasUserGesture() ||
+          LocalFrame::HasTransientUserActivation(origin_window->GetFrame()));
+    }
 
     // CaptureSourceLocation(ExecutionContext*) used to capture the current
     // JS call stack in that context's V8 isolate. There is no JS stack to

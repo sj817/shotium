@@ -118,7 +118,8 @@ bool LayoutView::HitTest(const HitTestLocation& location,
                          HitTestResult& result) {
   NOT_DESTROYED();
   TRACE_EVENT0("blink", "LayoutView::HitTest");
-  if (HasSVGTextDescendants()) {
+  if (!RuntimeEnabledFeatures::SvgIgnoreOuterTransformsEnabled() &&
+      HasSVGTextDescendants()) {
     // This is necessary because SVG <text> might have obsolete geometry after
     // scale-only changes.  See crbug.com/1296089#c16
     auto it = svg_text_descendants_.find(this);
@@ -826,7 +827,8 @@ void LayoutView::UpdateHitTestResult(HitTestResult& result,
     if (const auto* layout_box = node->GetLayoutBox())
       adjusted_point -= layout_box->PhysicalLocation();
     if (IsScrollContainer()) {
-      adjusted_point += PhysicalOffset(PixelSnappedScrolledContentOffset());
+      adjusted_point +=
+          PhysicalOffset(GetScrollableArea()->PixelSnappedScrollOffset());
     }
     result.SetNodeAndPosition(node, adjusted_point);
   }
@@ -908,13 +910,13 @@ gfx::SizeF LayoutView::PaginationViewportSizeForMediaQueries() const {
   return size;
 }
 
-void LayoutView::WillBeDestroyed() {
+void LayoutView::WillBeDestroyed(const ComputedStyle* style) {
   NOT_DESTROYED();
   // TODO(wangxianzhu): This is a workaround of crbug.com/570706.
   // Should find and fix the root cause.
   if (PaintLayer* layer = Layer())
     layer->SetNeedsRepaint();
-  LayoutBlockFlow::WillBeDestroyed();
+  LayoutBlockFlow::WillBeDestroyed(style);
 }
 
 void LayoutView::UpdateFromStyle() {

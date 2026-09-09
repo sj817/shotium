@@ -6,6 +6,7 @@ component("internal") {
   sources = [
     "bcp47_known_subtags.h",
     "bcp47_parser.h",
+    "bcp47_subtags_reader.h",
     "immutable_string.cc",
     "immutable_string.h",
     "legacy_icu_converter.cc",
@@ -35,6 +36,7 @@ action("canonical_language_tags_gen") {
   args = rebase_path(outputs, root_build_dir)
   visibility = [
     ":*",
+    "//base:*",
     "//base/i18n/*",
   ]
 }
@@ -44,6 +46,7 @@ source_set("canonical_language_tags") {
   sources = [ "$root_gen_dir/base/i18n/internal/canonical_language_tags.inc" ]
   visibility = [
     ":*",
+    "//base:*",
     "//base/i18n/*",
   ]
 }

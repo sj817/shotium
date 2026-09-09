@@ -131,9 +131,6 @@ void InitializeCommon(Platform* platform, mojo::BinderMap* binders) {
   // These Initialize() methods for renderer extensions initialize strings which
   // must be done before calling CoreInitializer::Initialize() which is called
   // by GetBlinkInitializer().Initialize() below.
-#if defined(USE_BLINK_EXTENSIONS_CHROMEOS)
-  ChromeOSExtensions::Initialize();
-#endif
 #if defined(USE_BLINK_EXTENSIONS_WEBVIEW)
   WebViewExtensions::Initialize();
 #endif

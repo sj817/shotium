@@ -302,9 +302,7 @@ void BoxPainterBase::PaintNormalBoxShadow(
       ContouredRect rounded_fill_rect(
           FloatRoundedRect(fill_rect, border.GetRadii()),
           border.GetCornerCurvature());
-      if (RuntimeEnabledFeatures::ShadowContourFollowsBorderEnabled()) {
-        rounded_fill_rect.SetOriginRect(border.GetOriginRect());
-      }
+      rounded_fill_rect.SetOriginRect(border.GetOriginRect());
       ApplySpreadToShadowShape(rounded_fill_rect, shadow.Spread());
       context.FillContouredRect(rounded_fill_rect, Color::kBlack,
                                 auto_dark_mode);
@@ -475,9 +473,7 @@ void BoxPainterBase::PaintInsetBoxShadow(const PaintInfo& info,
         FloatRoundedRect(inner_rect, bounds.GetRadii()),
         bounds.GetCornerCurvature());
     ApplySpreadToShadowShape(inner_contoured_rect, -shadow.Spread());
-    if (RuntimeEnabledFeatures::ShadowContourFollowsBorderEnabled()) {
-      inner_contoured_rect.SetOriginRect(bounds.GetOriginRect());
-    }
+    inner_contoured_rect.SetOriginRect(bounds.GetOriginRect());
     if (inner_contoured_rect.IsEmpty()) {
       // |AutoDarkMode::Disabled()| is used because |shadow_color| has already
       // been adjusted for dark mode.
@@ -736,7 +732,7 @@ void DrawTiledBackground(
     const BackgroundImageGeometry& geometry,
     SkBlendMode op,
     RespectImageOrientationEnum respect_orientation,
-    ImagePaintTimingInfo paint_timing_info,
+    ReportPaintTiming report_paint_timing,
     const ImageNodeAnimationInfo* image_node_animation_info) {
   DCHECK(!geometry.TileSize().IsEmpty());
 
@@ -754,7 +750,7 @@ void DrawTiledBackground(
     auto image_auto_dark_mode = ImageClassifierHelper::GetImageAutoDarkMode(
         *frame, style, dest_rect, *single_tile_src);
     context.DrawImage(image, Image::kSyncDecode, image_auto_dark_mode,
-                      paint_timing_info, dest_rect, &*single_tile_src, op,
+                      report_paint_timing, dest_rect, &*single_tile_src, op,
                       respect_orientation, Image::kClampImageToSourceRect,
                       image_node_animation_info);
     return;
@@ -802,11 +798,11 @@ void DrawTiledBackground(
   // it into the snapped_dest_rect using phase from one_tile_rect and the
   // given repeat spacing. Note the phase is already scaled.
   context.DrawImageTiled(image, dest_rect, tiling_info, image_auto_dark_mode,
-                         paint_timing_info, op, respect_orientation,
+                         report_paint_timing, op, respect_orientation,
                          image_node_animation_info);
 }
 
-bool NotifyImageTimingOnWillDrawImage(
+void NotifyImageTimingOnWillDrawImage(
     Node* generating_node,
     const Image& image,
     const StyleImage& style_image,
@@ -819,30 +815,27 @@ bool NotifyImageTimingOnWillDrawImage(
   //  here that could have a non-null CachedImage.
   if (!generating_node || !style_image.CachedImage() ||
       (!style_image.IsImageResource() && !style_image.IsImageResourceSet())) {
-    return false;
+    return;
   }
 
   const gfx::Rect enclosing_rect = gfx::ToEnclosingRect(image_rect);
 
-  bool image_may_be_lcp_candidate =
-      PaintTimingDetector::NotifyBackgroundImagePaint(
-          *generating_node, image, style_image, current_paint_chunk_properties,
-          enclosing_rect);
-  return image_may_be_lcp_candidate;
+  PaintTimingDetector::NotifyBackgroundImagePaint(
+      *generating_node, image, style_image, current_paint_chunk_properties,
+      enclosing_rect);
 }
 
-ImagePaintTimingInfo ComputeImagePaintTimingInfo(Node* generating_node,
-                                                 const Image& image,
-                                                 const StyleImage& style_image,
-                                                 const GraphicsContext& context,
-                                                 const gfx::RectF& rect) {
-  bool image_may_be_lcp_candidate = NotifyImageTimingOnWillDrawImage(
+ReportPaintTiming ComputeReportPaintTiming(Node* generating_node,
+                                           const Image& image,
+                                           const StyleImage& style_image,
+                                           const GraphicsContext& context,
+                                           const gfx::RectF& rect) {
+  NotifyImageTimingOnWillDrawImage(
       generating_node, image, style_image,
       context.GetPaintController().CurrentPaintChunkProperties(), rect);
 
-  bool report_paint_timing = style_image.IsContentful();
-
-  return ImagePaintTimingInfo(image_may_be_lcp_candidate, report_paint_timing);
+  return style_image.IsContentful() ? ReportPaintTiming::kReport
+                                    : ReportPaintTiming::kDoNotReport;
 }
 
 inline bool CanUseBottomLayerFastPath(
@@ -989,8 +982,8 @@ inline bool PaintFastBottomLayer(const Document& document,
 
   context.DrawImageRRect(
       *image, Image::kSyncDecode, image_auto_dark_mode,
-      ComputeImagePaintTimingInfo(generating_node, *image, *info.image, context,
-                                  image_border.Rect()),
+      ComputeReportPaintTiming(generating_node, *image, *info.image, context,
+                               image_border.Rect()),
       image_border, src_rect, composite_op, info.respect_image_orientation,
       clamping_mode, &image_animation);
   return true;
@@ -1114,12 +1107,12 @@ void PaintFillLayerBackground(const Document& document,
         CSSImageAnimations::CreateImageNodeAnimationInfo(
             node, info.image ? info.image->CachedImage() : nullptr,
             style.ImageAnimation());
-    DrawTiledBackground(document.GetFrame(), context, style, *image, geometry,
-                        composite_op, info.respect_image_orientation,
-                        ComputeImagePaintTimingInfo(
-                            generating_node, *image, *info.image, context,
-                            gfx::RectF(geometry.SnappedDestRect())),
-                        &image_animation);
+    DrawTiledBackground(
+        document.GetFrame(), context, style, *image, geometry, composite_op,
+        info.respect_image_orientation,
+        ComputeReportPaintTiming(generating_node, *image, *info.image, context,
+                                 gfx::RectF(geometry.SnappedDestRect())),
+        &image_animation);
   }
 }
 

@@ -4,14 +4,18 @@
 
 #include "third_party/blink/renderer/core/paint/timing/paint_timing.h"
 
+#include <algorithm>
+#include <limits>
 #include <memory>
 #include <utility>
 
+#include "base/auto_reset.h"
 #include "base/check_deref.h"
 #include "base/feature_list.h"
 #include "base/metrics/histogram_functions.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/time/time.h"
+#include "third_party/blink/public/common/input/web_input_event.h"
 #include "third_party/blink/public/web/web_performance_metrics_for_reporting.h"
 #include "third_party/blink/renderer/core/dom/document.h"
 #include "third_party/blink/renderer/core/dom/frame_request_callback_collection.h"
@@ -25,6 +29,7 @@
 #include "third_party/blink/renderer/core/page/page.h"
 #include "third_party/blink/renderer/core/paint/timing/image_paint_timing_detector.h"
 #include "third_party/blink/renderer/core/paint/timing/largest_contentful_paint_manager.h"
+#include "third_party/blink/renderer/core/paint/timing/paint_timing_client.h"
 #include "third_party/blink/renderer/core/paint/timing/paint_timing_utils.h"
 #include "third_party/blink/renderer/core/paint/timing/text_paint_timing_detector.h"
 #include "third_party/blink/renderer/core/probe/core_probes.h"
@@ -184,13 +189,18 @@ void PaintTiming::DiscardPresentationCallbacks() {
   // There is no display presentation in the static renderer. Drain callbacks
   // to preserve the detectors' end-of-paint bookkeeping without queuing Web
   // Performance entries for a frame that will never be presented.
-  paint_timing_detector_->GetTextPaintTimingDetector().TakePaintTimingCallback();
-  paint_timing_detector_->GetImagePaintTimingDetector().TakePaintTimingCallback();
+  paint_timing_detector_->GetTextPaintTimingDetector()
+      .TakeTextRecordsOnPaintFinished();
+  paint_timing_detector_->GetImagePaintTimingDetector()
+      .TakeImageRecordsOnPaintFinished();
+  paint_timing_detector_->GetImagePaintTimingDetector()
+      .TakeAnimatedImageRecordsOnPaintFinished();
 }
 
 void PaintTiming::Trace(Visitor* visitor) const {
   visitor->Trace(paint_timing_detector_);
   visitor->Trace(largest_contentful_paint_manager_);
+  visitor->Trace(clients_);
   Supplement<Document>::Trace(visitor);
 }
 
@@ -204,6 +214,7 @@ PaintTiming::PaintTiming(Document& document)
     largest_contentful_paint_manager_ =
         MakeGarbageCollected<LargestContentfulPaintManager>(
             window);
+    AddClient(largest_contentful_paint_manager_);
   }
 }
 
@@ -309,28 +320,47 @@ void PaintTiming::OnRestoredFromBackForwardCache() {
 }
 
 void PaintTiming::NotifyPaintFinished() {
+  DOMWindowPerformance::performance(CHECK_DEREF(GetDocument()->domWindow()))
+      ->OnPaintFinished();
   paint_timing_detector_->NotifyPaintFinished();
-  // We should never be painting detached frames.
-  CHECK(GetFrame());
-  LocalDOMWindow* window = GetFrame()->DomWindow();
-  CHECK(window);
-  DOMWindowPerformance::performance(*window)->OnPaintFinished();
-  if (auto* heuristics = window->GetSoftNavigationHeuristics()) {
-    heuristics->OnPaintFinished();
-  }
+
+  ForEachClient([](PaintTimingClient* client) { client->OnPaintFinished(); });
 
   DiscardPresentationCallbacks();
 }
 
+void PaintTiming::NotifyInputEvent(WebInputEvent::Type type) {
+  // A single keyup event should be ignored. It could be caused by user actions
+  // such as refreshing via Ctrl+R.
+  if (type == WebInputEvent::Type::kMouseMove ||
+      type == WebInputEvent::Type::kMouseEnter ||
+      type == WebInputEvent::Type::kMouseLeave ||
+      type == WebInputEvent::Type::kKeyUp ||
+      WebInputEvent::IsPinchGestureEventType(type)) {
+    return;
+  }
+  OnInputOrScroll();
+}
+
+void PaintTiming::NotifyScroll(mojom::blink::ScrollType scroll_type) {
+  if (scroll_type != mojom::blink::ScrollType::kUser &&
+      scroll_type != mojom::blink::ScrollType::kCompositor) {
+    return;
+  }
+  OnInputOrScroll();
+}
+
 void PaintTiming::OnInputOrScroll() {
+  ForEachClient([](PaintTimingClient* client) { client->OnInputOrScroll(); });
+
   // `largest_contentful_paint_manager_` will be non-null as long as first input
   // has not occurred and this object wasn't created while detached (in which
   // case the associated frame cannot be targeted for input).
   if (!largest_contentful_paint_manager_) {
     return;
   }
-  // LCP stops recording on first input or scroll.
-  largest_contentful_paint_manager_->OnFirstInputOrScroll();
+
+  RemoveClient(largest_contentful_paint_manager_);
   largest_contentful_paint_manager_ = nullptr;
 
   // Notify the metrics layer of the timestamp so it can determine which records
@@ -340,6 +370,27 @@ void PaintTiming::OnInputOrScroll() {
       ->timingForReporting()
       ->SetFirstInputOrScrollNotifiedTimestamp(base::TimeTicks::Now());
   paint_timing::NotifyLoaderPerformanceTimingChanged(GetSupplementable());
+}
+
+void PaintTiming::AddClient(PaintTimingClient* client) {
+  CHECK(allow_client_modifications_);
+  DCHECK(!clients_.Contains(client));
+  clients_.push_back(client);
+}
+
+void PaintTiming::RemoveClient(PaintTimingClient* client) {
+  CHECK(allow_client_modifications_);
+  wtf_size_t count =
+      EraseIf(clients_, [&](const auto& c) { return c == client; });
+  CHECK_EQ(count, 1u);
+}
+
+void PaintTiming::ForEachClient(
+    base::FunctionRef<void(PaintTimingClient*)> callback) {
+  base::AutoReset<bool> scope(&allow_client_modifications_, false);
+  for (PaintTimingClient* client : clients_) {
+    callback(client);
+  }
 }
 
 }  // namespace blink

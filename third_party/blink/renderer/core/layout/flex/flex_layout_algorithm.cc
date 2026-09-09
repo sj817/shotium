@@ -37,7 +37,6 @@
 #include "third_party/blink/renderer/core/style/computed_style_constants.h"
 #include "third_party/blink/renderer/platform/heap/collection_support/clear_collection_scope.h"
 #include "third_party/blink/renderer/platform/instrumentation/use_counter.h"
-#include "third_party/blink/renderer/platform/runtime_enabled_features.h"
 #include "third_party/blink/renderer/platform/text/writing_mode.h"
 #include "third_party/blink/renderer/platform/text/writing_mode_utils.h"
 #include "third_party/blink/renderer/platform/wtf/vector.h"
@@ -519,8 +518,7 @@ void FlexLayoutAlgorithm::HandleOutOfFlowPositionedItems(
   // size information (e.g. any expanded rows, etc), so for center aligned
   // items, we could end up with an incorrect static position.
   if (InvolvedInBlockFragmentation(container_builder_)) [[unlikely]] {
-    should_process_block_end = !container_builder_.DidBreakSelf() &&
-                               !container_builder_.ShouldBreakInside();
+    should_process_block_end = !container_builder_.ShouldBreak();
     if (should_process_block_end) {
       // Recompute the total block size in case |total_intrinsic_block_size|
       // changed as a result of fragmentation.
@@ -1285,18 +1283,30 @@ const LayoutResult* FlexLayoutAlgorithm::LayoutInternal() {
       GetConstraintSpace(), Node(), BorderPadding(), total_intrinsic_block_size,
       container_builder_.InlineSize());
 
+  // Gap-decoration values must be assigned in placement order, which can
+  // differ from the geometric order `ApplyReversals` produces (e.g.
+  // `flex-direction: row-reverse` or `flex-wrap: wrap-reverse`). Run it before
+  // constructing the accumulator so it always sees `flex_lines` in final
+  // geometric order.
+  if (!IsBreakInside(GetBreakToken())) {
+    ApplyReversals(&flex_lines);
+  }
+
   std::optional<FlexGapAccumulator> gap_accumulator = std::nullopt;
-  if (RuntimeEnabledFeatures::CSSGapDecorationEnabled() &&
-      Style().HasGapRule() && !flex_lines.empty()) {
+  if (Style().HasGapRule() && !flex_lines.empty()) {
+    std::optional<GapGeometry::PlacementReversal> gap_placement_reversal;
+    if (is_wrap_reverse_ || is_reverse_direction_) {
+      gap_placement_reversal.emplace(is_wrap_reverse_, is_reverse_direction_);
+    }
     gap_accumulator = FlexGapAccumulator(
         gap_between_items_, gap_between_lines_, flex_lines.size(),
         flex_items_.size(), is_column_,
         container_builder_.BorderScrollbarPadding().block_start,
-        container_builder_.BorderScrollbarPadding().inline_start);
+        container_builder_.BorderScrollbarPadding().inline_start,
+        gap_placement_reversal);
   }
 
   if (!IsBreakInside(GetBreakToken())) {
-    ApplyReversals(&flex_lines);
     LayoutResult::EStatus status = GiveItemsFinalPositionAndSize(
         &flex_lines, &row_break_between_outputs, gap_accumulator,
         current_gap_data.effective_gap_between_lines,
@@ -1675,8 +1685,10 @@ LayoutUnit InitialContentPositionOffset(const StyleContentAlignmentData& data,
     case ContentPosition::kEnd:
       return free_space;
     case ContentPosition::kFlexEnd:
+    case ContentPosition::kFlowEnd:
       return is_reverse ? LayoutUnit() : free_space;
     case ContentPosition::kFlexStart:
+    case ContentPosition::kFlowStart:
     case ContentPosition::kNormal:
     case ContentPosition::kBaseline:
     case ContentPosition::kLastBaseline:
@@ -2054,8 +2066,9 @@ LayoutResult::EStatus FlexLayoutAlgorithm::GiveItemsFinalPositionAndSize(
             item_index_in_line == flex_line.item_indices.size() - 1;
 
         gap_accumulator->BuildGapsForCurrentItem(
-            *flex_lines, flex_line_idx, offset, is_first_item, is_last_item,
-            is_last_line, flex_line.cross_axis_offset, flex_line.LineCrossEnd(),
+            *flex_lines, flex_line_idx, item_index_in_line, offset,
+            is_first_item, is_last_item, is_last_line,
+            flex_line.cross_axis_offset, flex_line.LineCrossEnd(),
             container_main_end);
       }
 
@@ -2641,9 +2654,9 @@ FlexLayoutAlgorithm::GiveItemsFinalPositionAndSizeForFragmentation(
       }
 
       gap_accumulator->BuildGapsForCurrentItem(
-          *flex_lines, flex_line_idx, offset, is_first_item_in_line,
-          is_last_item_in_line, is_last_line, line_cross_start, line_cross_end,
-          container_main_end,
+          *flex_lines, flex_line_idx, flex_item_idx, offset,
+          is_first_item_in_line, is_last_item_in_line, is_last_line,
+          line_cross_start, line_cross_end, container_main_end,
           /*in_fragmentation=*/true);
 
       if (!is_column_ && is_last_item_in_line &&

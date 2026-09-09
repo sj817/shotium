@@ -60,6 +60,7 @@
 #include "third_party/blink/renderer/core/html/html_body_element.h"
 #include "third_party/blink/renderer/core/html/html_collection.h"
 #include "third_party/blink/renderer/core/html/html_element.h"
+#include "third_party/blink/renderer/core/html/html_frame_owner_element.h"
 #include "third_party/blink/renderer/core/html/html_html_element.h"
 #include "third_party/blink/renderer/core/html/html_plugin_element.h"
 #include "third_party/blink/renderer/core/html/html_script_element.h"
@@ -215,21 +216,24 @@ static String TryCanonicalizeString(const StringView& string,
                                            RecomputeMode::kRecomputeIfNeeded);
 }
 
-static inline void Insert(HTMLConstructionSiteTask& task) {
+static inline void Insert(HTMLConstructionSite::InsertionLocation location,
+                          Node* child) {
   // https://html.spec.whatwg.org/multipage/parsing.html#appropriate-place-for-inserting-a-node
   // 3. If the adjusted insertion location is inside a template element, let it
   // instead be inside the template element's template contents, after its last
   // child (if any).
-  if (auto* template_element = DynamicTo<HTMLTemplateElement>(*task.parent)) {
+  if (auto* template_element =
+          DynamicTo<HTMLTemplateElement>(*location.parent)) {
     auto* patch = template_element->GetPatch();
     if (patch && !patch->is_buffered()) {
-      patch->Apply(task);
+      patch->Apply(location);
     } else {
-      task.parent = template_element->InsertionTarget();
+      location.parent = template_element->InsertionTarget();
+      location.next_child = nullptr;
     }
     // If the Document was detached in the middle of parsing, The template
     // element won't be able to initialize its contents, so bail out.
-    if (!task.parent) {
+    if (!location.parent) {
       return;
     }
   }
@@ -237,22 +241,10 @@ static inline void Insert(HTMLConstructionSiteTask& task) {
   // https://html.spec.whatwg.org/C/#insert-a-foreign-element
   // 3.1, (3) Push (pop) an element queue
   CEReactionsScope reactions;
-  if (task.next_child) {
-    task.parent->ParserInsertBefore(task.child.Get(), *task.next_child);
+  if (location.next_child) {
+    location.parent->ParserInsertBefore(child, *location.next_child);
   } else {
-    task.parent->ParserAppendChild(task.child.Get());
-  }
-}
-
-static inline void ExecuteInsertTask(HTMLConstructionSiteTask& task) {
-  DCHECK_EQ(task.operation, HTMLConstructionSiteTask::kInsert);
-
-  Insert(task);
-  if (auto* child = DynamicTo<Element>(task.child.Get())) {
-    child->BeginParsingChildren();
-    if (task.self_closing) {
-      child->FinishParsingChildren();
-    }
+    location.parent->ParserAppendChild(child);
   }
 }
 
@@ -265,88 +257,21 @@ static inline unsigned TextFitsInContainer(const ContainerNode& node,
          !ShouldUseLengthLimit(node);
 }
 
-static inline void ExecuteInsertTextTask(HTMLConstructionSiteTask& task) {
-  DCHECK_EQ(task.operation, HTMLConstructionSiteTask::kInsertText);
-
-  // Merge text nodes into previous ones if possible:
-  // http://www.whatwg.org/specs/web-apps/current-work/multipage/tree-construction.html#insert-a-character
-  auto* new_text = To<Text>(task.child.Get());
-  Node* previous_child = task.next_child ? task.next_child->previousSibling()
-                                         : task.parent->lastChild();
-  if (auto* previous_text = DynamicTo<Text>(previous_child)) {
-    if (!RuntimeEnabledFeatures::SplitLargeTextNodesEnabled() ||
-        TextFitsInContainer(*task.parent,
-                            previous_text->length() + new_text->length())) {
-      previous_text->ParserAppendData(new_text->data());
-      return;
+// See https://github.com/whatwg/html/pull/12709
+// Direct children of the Document or disconnected nodes cannot be removed.
+// This state can change during parser operations, e.g. by iframe pagehide
+// events. Returns true if the child was removed.
+static inline bool RemoveChildIfValidForRemoval(ContainerNode* parent,
+                                                Node* child) {
+  auto* parent_doc = DynamicTo<Document>(parent);
+  if ((parent_doc && parent_doc->documentElement()) ||
+      child->ContainsIncludingHostElements(*parent)) {
+    if (child->parentNode()) {
+      child->parentNode()->ParserRemoveChild(*child);
     }
+    return true;
   }
-
-  Insert(task);
-}
-
-static inline void ExecuteReparentTask(HTMLConstructionSiteTask& task) {
-  DCHECK_EQ(task.operation, HTMLConstructionSiteTask::kReparent);
-
-  task.parent->ParserAppendChild(task.child);
-}
-
-static inline void ExecuteInsertAlreadyParsedChildTask(
-    HTMLConstructionSiteTask& task) {
-  DCHECK_EQ(task.operation,
-            HTMLConstructionSiteTask::kInsertAlreadyParsedChild);
-
-  // See https://github.com/whatwg/html/pull/12709
-  if (Document* parentDoc = DynamicTo<Document>(task.parent.Get())) {
-    if (parentDoc->documentElement()) {
-      if (task.child->parentNode()) {
-        task.child->parentNode()->ParserRemoveChild(*task.child);
-      }
-      return;
-    }
-  } else if (task.child->ContainsIncludingHostElements(*task.parent)) {
-    if (task.child->parentNode()) {
-      task.child->parentNode()->ParserRemoveChild(*task.child);
-    }
-    return;
-  }
-
-  Insert(task);
-}
-
-static inline void ExecuteTakeAllChildrenTask(HTMLConstructionSiteTask& task) {
-  DCHECK_EQ(task.operation, HTMLConstructionSiteTask::kTakeAllChildren);
-
-  task.parent->ParserTakeAllChildrenFrom(*task.OldParent());
-}
-
-void HTMLConstructionSite::ExecuteTask(HTMLConstructionSiteTask& task) {
-  DCHECK(task_queue_.empty());
-  if (task.operation == HTMLConstructionSiteTask::kInsert) {
-    ExecuteInsertTask(task);
-    return;
-  }
-
-  if (task.operation == HTMLConstructionSiteTask::kInsertText) {
-    ExecuteInsertTextTask(task);
-    return;
-  }
-
-  // All the cases below this point are only used by the adoption agency.
-
-  if (task.operation == HTMLConstructionSiteTask::kInsertAlreadyParsedChild) {
-    return ExecuteInsertAlreadyParsedChildTask(task);
-  }
-
-  if (task.operation == HTMLConstructionSiteTask::kReparent) {
-    return ExecuteReparentTask(task);
-  }
-
-  if (task.operation == HTMLConstructionSiteTask::kTakeAllChildren) {
-    return ExecuteTakeAllChildrenTask(task);
-  }
-
-  NOTREACHED();
+  return false;
 }
 
 // This is only needed for TextDocuments where we might have text nodes
@@ -395,15 +320,26 @@ void HTMLConstructionSite::FlushPendingText() {
   }
 
   const StringBuilder& string = pending_text_.string_builder;
+  if (string.empty() || !pending_text_.parent) {
+    pending_text_.Discard();
+    return;
+  }
+
+  InsertionLocation location = AdjustInsertionLocation(
+      {pending_text_.parent.Get(), pending_text_.next_child.Get()});
 
   if (!RuntimeEnabledFeatures::SplitLargeTextNodesEnabled()) {
-    HTMLConstructionSiteTask task(HTMLConstructionSiteTask::kInsertText);
-    task.parent = pending_text_.parent;
-    task.next_child = pending_text_.next_child;
-    task.child = Text::Create(
-        task.parent->GetDocument(),
+    Text* child = Text::Create(
+        location.parent->GetDocument(),
         TryCanonicalizeString(string, pending_text_.whitespace_mode));
-    QueueTask(task, false);
+    Node* previous_child = location.next_child
+                               ? location.next_child->previousSibling()
+                               : location.parent->lastChild();
+    if (auto* previous_text = DynamicTo<Text>(previous_child)) {
+      previous_text->ParserAppendData(child->data());
+    } else {
+      Insert(location, child);
+    }
     pending_text_.Discard();
     return;
   }
@@ -420,7 +356,7 @@ void HTMLConstructionSite::FlushPendingText() {
   unsigned current_position = 0;
   while (current_position < string.length()) {
     unsigned proposed_break_index = NextTextBreakPositionForContainer(
-        *pending_text_.parent, current_position, string.length(), length_limit);
+        *location.parent, current_position, string.length(), length_limit);
     unsigned break_index =
         FindBreakIndexBetween(string, current_position, proposed_break_index);
     DCHECK_LE(break_index, string.length());
@@ -443,29 +379,28 @@ void HTMLConstructionSite::FlushPendingText() {
 
     DCHECK_GT(break_index, current_position);
     DCHECK_EQ(break_index - current_position, substring.length());
-    HTMLConstructionSiteTask task(HTMLConstructionSiteTask::kInsertText);
-    task.parent = pending_text_.parent;
-    task.next_child = pending_text_.next_child;
-    task.child = Text::Create(task.parent->GetDocument(), std::move(substring));
-    QueueTask(task, false);
-    DCHECK_EQ(To<Text>(task.child.Get())->length(),
-              break_index - current_position);
+    Text* child =
+        Text::Create(location.parent->GetDocument(), std::move(substring));
+    Node* previous_child = location.next_child
+                               ? location.next_child->previousSibling()
+                               : location.parent->lastChild();
+    if (auto* previous_text = DynamicTo<Text>(previous_child)) {
+      if (TextFitsInContainer(*location.parent,
+                              previous_text->length() + child->length())) {
+        previous_text->ParserAppendData(child->data());
+      } else {
+        Insert(location, child);
+      }
+    } else {
+      Insert(location, child);
+    }
+    DCHECK_EQ(child->length(), break_index - current_position);
     current_position = break_index;
   }
   pending_text_.Discard();
 }
 
-void HTMLConstructionSite::QueueTask(HTMLConstructionSiteTask& task,
-                                     bool flush_pending_text) {
-  if (flush_pending_text) {
-    FlushPendingText();
-  }
-
-  AdjustInsertionLocation(task);
-  task_queue_.push_back(task);
-}
-
-void HTMLConstructionSite::AttachLater(InsertionLocation location,
+void HTMLConstructionSite::Attach(InsertionLocation location,
                                        Node* child,
                                        bool self_closing) {
   auto* element = DynamicTo<Element>(child);
@@ -474,56 +409,48 @@ void HTMLConstructionSite::AttachLater(InsertionLocation location,
   DCHECK(PluginContentIsAllowed(parser_content_policy_) ||
          !IsA<HTMLPlugInElement>(child));
 
-  HTMLConstructionSiteTask task(HTMLConstructionSiteTask::kInsert);
-  task.parent = location.parent;
-  task.next_child = location.next_child;
-  task.child = child;
-  task.self_closing = self_closing;
-
-  if (ShouldFosterParent()) {
-    FosterParent(task.child);
-    return;
-  }
-
   // Add as a sibling of the parent if we have reached the maximum depth
   // allowed.
-  if (open_elements_.StackDepth() > kMaximumHTMLParserDOMTreeDepth &&
-      task.parent->parentNode()) {
+  if (open_elements_.StackDepth() > kMaximumHTMLParserDOMTreeDepth + 1 &&
+      location.parent->parentNode()) {
     UseCounter::Count(OwnerDocumentForCurrentNode(),
                       WebFeature::kMaximumHTMLParserDOMTreeDepthHit);
-    task.parent = task.parent->parentNode();
+    location.parent = location.parent->parentNode();
   }
 
-  DCHECK(task.parent);
-  QueueTask(task, true);
+  DCHECK(location.parent);
+
+  FlushPendingText();
+  Insert(AdjustInsertionLocation(location), child);
+
+  if (auto* element_child = DynamicTo<Element>(child)) {
+    element_child->BeginParsingChildren();
+    if (self_closing) {
+      element_child->FinishParsingChildren();
+    }
+  }
 }
 
-void HTMLConstructionSite::ExecuteQueuedTasks() {
-  // This has no affect on pendingText, and we may have pendingText remaining
-  // after executing all other queued tasks.
-  const size_t size = task_queue_.size();
-  if (!size) {
-    return;
+void HTMLConstructionSite::AttachOrFosterParent(Node* child,
+                                                HTMLStackItem* item,
+                                                bool self_closing) {
+  const bool should_foster_parent = ShouldFosterParent();
+  const InsertionLocation location = CurrentInsertionLocation();
+
+  if (item) {
+    open_elements_.Push(item);
   }
 
-  // Fast path for when |size| is 1, which is the common case
-  if (size == 1) {
-    HTMLConstructionSiteTask task = task_queue_.front();
-    task_queue_.pop_back();
-    ExecuteTask(task);
-    return;
+  if (should_foster_parent) {
+    FosterParent(child);
+  } else {
+    Attach(location, child, self_closing);
   }
+}
 
-  // Copy the task queue into a local variable in case executeTask re-enters the
-  // parser.
-  TaskQueue queue;
-  queue.swap(task_queue_);
-
-  for (auto& task : queue) {
-    ExecuteTask(task);
-  }
-
-  // We might be detached now.
+void HTMLConstructionSite::AttachOrFosterParent(HTMLStackItem* item) {
+  DCHECK(item);
+  AttachOrFosterParent(item->GetNode(), item);
 }
 
 HTMLConstructionSite::HTMLConstructionSite(
@@ -563,9 +490,6 @@ HTMLConstructionSite::HTMLConstructionSite(
 }
 
 HTMLConstructionSite::~HTMLConstructionSite() {
-  // Depending on why we're being destroyed it might be OK to forget queued
-  // tasks, but currently we don't expect to.
-  DCHECK(task_queue_.empty());
   // Currently we assume that text will never be the last token in the document
   // and that we'll always queue some additional task to cause it to flush.
   DCHECK(pending_text_.IsEmpty());
@@ -580,7 +504,6 @@ void HTMLConstructionSite::Trace(Visitor* visitor) const {
   visitor->Trace(form_);
   visitor->Trace(open_elements_);
   visitor->Trace(active_formatting_elements_);
-  visitor->Trace(task_queue_);
   visitor->Trace(pending_text_);
   visitor->Trace(custom_element_registry_);
 }
@@ -610,10 +533,8 @@ void HTMLConstructionSite::InsertHTMLHtmlStartTagBeforeHTML(
     element = MakeGarbageCollected<HTMLHtmlElement>(*document_);
   }
   SetAttributes(element, token);
-  AttachLater(attachment_root_, element);
+  Attach(attachment_root_, element);
   open_elements_.PushHTMLHtmlElement(HTMLStackItem::Create(element, token));
-
-  ExecuteQueuedTasks();
   element->InsertedByParser();
 }
 
@@ -820,15 +741,12 @@ void HTMLConstructionSite::SetCompatibilityModeFromDoctype(
 
 void HTMLConstructionSite::ProcessEndOfFile() {
   DCHECK(CurrentNode());
-  Flush();
+  FlushPendingText();
   OpenElements()->PopAll();
 }
 
 void HTMLConstructionSite::FinishedParsing() {
-  // We shouldn't have any queued tasks but we might have pending text which we
-  // need to promote to tasks and execute.
-  DCHECK(task_queue_.empty());
-  Flush();
+  FlushPendingText();
   document_->FinishedParsing();
 }
 
@@ -841,7 +759,7 @@ void HTMLConstructionSite::InsertDoctype(AtomicHTMLToken* token) {
       StringImpl::Create8BitIfPossible(token->SystemIdentifier());
   auto* doctype = MakeGarbageCollected<DocumentType>(
       document_, token->GetName(), public_id, system_id);
-  AttachLater(attachment_root_, doctype);
+  Attach(attachment_root_, doctype);
 
   // DOCTYPE nodes are only processed when parsing fragments w/o
   // contextElements, which never occurs.  However, if we ever chose to support
@@ -866,8 +784,8 @@ namespace {
 ProcessingInstruction* CreateProcessingInstructionFromToken(
     AtomicHTMLToken* token,
     Document& document) {
-  UseCounter::CountWebDXFeature(
-      document, WebDXFeature::kDRAFT_HTMLProcessingInstructions);
+  UseCounter::CountWebDXFeature(document,
+                                WebDXFeature::kHtmlProcessingInstructions);
   return MakeGarbageCollected<ProcessingInstruction>(
       document, token->ProcessingInstructionTarget(),
       token->ProcessingInstructionData());
@@ -884,39 +802,39 @@ HTMLConstructionSite::CurrentInsertionLocation() {
              : InsertionLocation{CurrentNode(), nullptr};
 }
 
-void HTMLConstructionSite::AdjustInsertionLocation(
-    HTMLConstructionSiteTask& task) {
+HTMLConstructionSite::InsertionLocation
+HTMLConstructionSite::AdjustInsertionLocation(InsertionLocation location) {
   if (IsEmpty()) {
-    return;
+    return location;
   }
-  if (task.parent != open_elements_.RootNode() || !root_insertion_point_) {
-    return;
+  if (location.parent != open_elements_.RootNode() || !root_insertion_point_) {
+    return location;
   }
 
   CHECK(RuntimeEnabledFeatures::NewHTMLSettingMethodsEnabled());
-  task.parent = root_insertion_point_->target.Get();
-  task.next_child = root_insertion_point_->ref_node.Get();
+  location.parent = root_insertion_point_->target.Get();
+  location.next_child = root_insertion_point_->ref_node.Get();
+  return location;
 }
 
 void HTMLConstructionSite::InsertProcessingInstruction(AtomicHTMLToken* token) {
   DCHECK_EQ(token->GetType(), HTMLToken::kProcessingInstruction);
-  AttachLater(CurrentInsertionLocation(),
-              CreateProcessingInstructionFromToken(
-                  token, OwnerDocumentForCurrentNode()));
+  Attach(CurrentInsertionLocation(), CreateProcessingInstructionFromToken(
+                                         token, OwnerDocumentForCurrentNode()));
 }
 
 void HTMLConstructionSite::InsertProcessingInstructionOnDocument(
     AtomicHTMLToken* token) {
   DCHECK_EQ(token->GetType(), HTMLToken::kProcessingInstruction);
-  AttachLater(attachment_root_,
-              CreateProcessingInstructionFromToken(token, *document_));
+  Attach(attachment_root_,
+         CreateProcessingInstructionFromToken(token, *document_));
 }
 
 void HTMLConstructionSite::InsertProcessingInstructionOnHTMLHtmlElement(
     AtomicHTMLToken* token) {
   DCHECK_EQ(token->GetType(), HTMLToken::kProcessingInstruction);
-  AttachLater(open_elements_.RootNode(),
-              CreateProcessingInstructionFromToken(token, *document_));
+  Attach(open_elements_.RootNode(),
+         CreateProcessingInstructionFromToken(token, *document_));
 }
 
 void HTMLConstructionSite::InsertComment(AtomicHTMLToken* token) {
@@ -924,34 +842,34 @@ void HTMLConstructionSite::InsertComment(AtomicHTMLToken* token) {
   auto comment = token->Comment();
   Comment& comment_node =
       *Comment::Create(OwnerDocumentForCurrentNode(), comment);
-  AttachLater(CurrentInsertionLocation(), &comment_node);
+  Attach(CurrentInsertionLocation(), &comment_node);
 }
 
 void HTMLConstructionSite::InsertCommentOnDocument(AtomicHTMLToken* token) {
   DCHECK_EQ(token->GetType(), HTMLToken::kComment);
   DCHECK(document_);
-  AttachLater(attachment_root_, Comment::Create(*document_, token->Comment()));
+  Attach(attachment_root_, Comment::Create(*document_, token->Comment()));
 }
 
 void HTMLConstructionSite::InsertCommentOnHTMLHtmlElement(
     AtomicHTMLToken* token) {
   DCHECK_EQ(token->GetType(), HTMLToken::kComment);
   ContainerNode* parent = open_elements_.RootNode();
-  AttachLater(parent, Comment::Create(parent->GetDocument(), token->Comment()));
+  Attach(parent, Comment::Create(parent->GetDocument(), token->Comment()));
 }
 
 void HTMLConstructionSite::InsertHTMLHeadElement(AtomicHTMLToken* token) {
   DCHECK(!ShouldFosterParent());
   head_ = HTMLStackItem::Create(
       CreateElement(token, html_names::xhtmlNamespaceURI), token);
-  AttachLater(CurrentInsertionLocation(), head_->GetElement());
+  Attach(CurrentInsertionLocation(), head_->GetElement());
   open_elements_.PushHTMLHeadElement(head_);
 }
 
 void HTMLConstructionSite::InsertHTMLBodyElement(AtomicHTMLToken* token) {
   DCHECK(!ShouldFosterParent());
   Element* body = CreateElement(token, html_names::xhtmlNamespaceURI);
-  AttachLater(CurrentInsertionLocation(), body);
+  Attach(CurrentInsertionLocation(), body);
   open_elements_.PushHTMLBodyElement(HTMLStackItem::Create(body, token));
   if (document_) {
     document_->WillInsertBody();
@@ -971,8 +889,8 @@ void HTMLConstructionSite::InsertHTMLFormElement(
     UseCounter::Count(OwnerDocumentForCurrentNode(),
                       WebFeature::kDemotedFormElement);
   }
-  AttachLater(CurrentInsertionLocation(), form_element);
-  open_elements_.Push(HTMLStackItem::Create(form_element, token));
+  HTMLStackItem* item = HTMLStackItem::Create(form_element, token);
+  AttachOrFosterParent(item);
 }
 
 void HTMLConstructionSite::InsertHTMLTemplateElement(
@@ -1056,7 +974,8 @@ void HTMLConstructionSite::InsertHTMLTemplateElement(
     CHECK(RuntimeEnabledFeatures::DocumentPatchingEnabled());
     UseCounter::Count(OwnerDocumentForCurrentNode(), WebFeature::kHTMLPatching);
     template_element->SetPatch(patch);
-    if (!patch_target.empty() && !patch->is_buffered()) {
+    if (!patch_target.empty() && !patch->is_buffered() &&
+        !patch->IsExternal()) {
       return;
     }
 
@@ -1064,13 +983,13 @@ void HTMLConstructionSite::InsertHTMLTemplateElement(
     CHECK(RuntimeEnabledFeatures::DeclarativeFragmentEnabled());
   }
 
-  AttachLater(current_insertion_location, template_element);
+  Attach(current_insertion_location, template_element);
 }
 
 void HTMLConstructionSite::InsertHTMLElement(AtomicHTMLToken* token) {
   Element* element = CreateElement(token, html_names::xhtmlNamespaceURI);
-  AttachLater(CurrentInsertionLocation(), element);
-  open_elements_.Push(HTMLStackItem::Create(element, token));
+  HTMLStackItem* item = HTMLStackItem::Create(element, token);
+  AttachOrFosterParent(item);
 }
 
 void HTMLConstructionSite::InsertSelfClosingHTMLElementDestroyingToken(
@@ -1079,9 +998,8 @@ void HTMLConstructionSite::InsertSelfClosingHTMLElementDestroyingToken(
   // Normally HTMLElementStack is responsible for calling finishParsingChildren,
   // but self-closing elements are never in the element stack so the stack
   // doesn't get a chance to tell them that we're done parsing their children.
-  AttachLater(CurrentInsertionLocation(),
-              CreateElement(token, html_names::xhtmlNamespaceURI),
-              /*self_closing*/ true);
+  Element* element = CreateElement(token, html_names::xhtmlNamespaceURI);
+  AttachOrFosterParent(element, /*item=*/nullptr, /*self_closing=*/true);
   // FIXME: Do we want to acknowledge the token's self-closing flag?
   // http://www.whatwg.org/specs/web-apps/current-work/multipage/tokenization.html#acknowledge-self-closing-flag
 }
@@ -1129,10 +1047,12 @@ void HTMLConstructionSite::InsertScriptElement(AtomicHTMLToken* token) {
         OwnerDocumentForCurrentNode(), flags);
   }
   SetAttributes(element, token);
+  HTMLStackItem* item = HTMLStackItem::Create(element, token);
   if (is_scripting_content_allowed_) {
-    AttachLater(CurrentInsertionLocation(), element);
+    AttachOrFosterParent(item);
+  } else {
+    open_elements_.Push(item);
   }
-  open_elements_.Push(HTMLStackItem::Create(element, token));
 }
 
 void HTMLConstructionSite::InsertForeignElement(
@@ -1143,37 +1063,41 @@ void HTMLConstructionSite::InsertForeignElement(
   DVLOG(1) << "Not implemented.";
 
   Element* element = CreateElement(token, namespace_uri);
+  HTMLStackItem* item =
+      !token->SelfClosing()
+          ? HTMLStackItem::Create(element, token, namespace_uri)
+          : nullptr;
   if (is_scripting_content_allowed_ || !element->IsScriptElement()) {
-    AttachLater(CurrentInsertionLocation(), element, token->SelfClosing());
-  }
-  if (!token->SelfClosing()) {
-    open_elements_.Push(HTMLStackItem::Create(element, token, namespace_uri));
+    AttachOrFosterParent(element, item, token->SelfClosing());
+  } else if (item) {
+    open_elements_.Push(item);
   }
 }
 
 void HTMLConstructionSite::InsertTextNode(const StringView& string,
                                           WhitespaceMode whitespace_mode) {
-  HTMLConstructionSiteTask dummy_task(HTMLConstructionSiteTask::kInsert);
-  dummy_task.parent = CurrentNode();
+  InsertionLocation location;
+  location.parent = CurrentNode();
 
   if (ShouldFosterParent()) {
-    FindFosterSite(dummy_task);
+    FindFosterSite(location);
   }
 
-  AdjustInsertionLocation(dummy_task);
+  location = AdjustInsertionLocation(location);
   if (auto* template_element =
-          DynamicTo<HTMLTemplateElement>(*dummy_task.parent)) {
+          DynamicTo<HTMLTemplateElement>(*location.parent)) {
     // If the Document was detached in the middle of parsing, the template
     // element won't be able to initialize its contents.
     auto* patch = template_element->GetPatch();
     if (patch && !patch->is_buffered()) {
-      patch->Apply(dummy_task);
+      patch->Apply(location);
     } else {
-      dummy_task.parent = template_element->InsertionTarget();
+      location.parent = template_element->InsertionTarget();
+      location.next_child = nullptr;
     }
     // If the Document was detached in the middle of parsing, the template
     // element won't be able to initialize its contents, so bail out.
-    if (!dummy_task.parent) {
+    if (!location.parent) {
       return;
     }
   }
@@ -1184,20 +1108,23 @@ void HTMLConstructionSite::InsertTextNode(const StringView& string,
   // new text node "<table>a</table>b" In either case we have to flush the
   // pending text into the task queue before making more.
   if (!pending_text_.IsEmpty() &&
-      (pending_text_.parent != dummy_task.parent ||
-       pending_text_.next_child != dummy_task.next_child)) {
+      (pending_text_.parent != location.parent ||
+       pending_text_.next_child != location.next_child)) {
     FlushPendingText();
   }
-  pending_text_.Append(dummy_task.parent, dummy_task.next_child, string,
+  pending_text_.Append(location.parent, location.next_child, string,
                        whitespace_mode);
 }
 
 void HTMLConstructionSite::Reparent(HTMLStackItem* new_parent,
                                     HTMLStackItem* child) {
-  HTMLConstructionSiteTask task(HTMLConstructionSiteTask::kReparent);
-  task.parent = new_parent->GetNode();
-  task.child = child->GetNode();
-  QueueTask(task, true);
+  Node* child_node = child->GetNode();
+  ContainerNode* parent_node = new_parent->GetNode();
+  if (RemoveChildIfValidForRemoval(parent_node, child_node)) {
+    return;
+  }
+  InsertionLocation location = AdjustInsertionLocation({parent_node, nullptr});
+  location.parent->ParserAppendChild(child_node);
 }
 
 void HTMLConstructionSite::InsertAlreadyParsedChild(HTMLStackItem* new_parent,
@@ -1207,19 +1134,29 @@ void HTMLConstructionSite::InsertAlreadyParsedChild(HTMLStackItem* new_parent,
     return;
   }
 
-  HTMLConstructionSiteTask task(
-      HTMLConstructionSiteTask::kInsertAlreadyParsedChild);
-  task.parent = new_parent->GetNode();
-  task.child = child->GetNode();
-  QueueTask(task, true);
+  Node* child_node = child->GetNode();
+  ContainerNode* parent_node = new_parent->GetNode();
+  if (RemoveChildIfValidForRemoval(parent_node, child_node)) {
+    return;
+  }
+  InsertionLocation location = AdjustInsertionLocation({parent_node, nullptr});
+  Insert(location, child_node);
 }
 
 void HTMLConstructionSite::TakeAllChildren(HTMLStackItem* new_parent,
                                            HTMLStackItem* old_parent) {
-  HTMLConstructionSiteTask task(HTMLConstructionSiteTask::kTakeAllChildren);
-  task.parent = new_parent->GetNode();
-  task.child = old_parent->GetNode();
-  QueueTask(task, true);
+  InsertionLocation location =
+      AdjustInsertionLocation({new_parent->GetNode(), nullptr});
+  location.parent->ParserTakeAllChildrenFrom(
+      *To<ContainerNode>(old_parent->GetNode()));
+}
+
+void HTMLConstructionSite::RemoveNode(HTMLStackItem* child) {
+  if (Node* node = child->GetNode()) {
+    if (node->parentNode()) {
+      node->parentNode()->ParserRemoveChild(*node);
+    }
+  }
 }
 
 CreateElementFlags HTMLConstructionSite::GetCreateElementFlags() const {
@@ -1240,15 +1177,23 @@ Document& HTMLConstructionSite::OwnerDocumentForCurrentNode() {
   // be re-targeted to the .content() document of the template. This function is
   // used in those places. The spec needs to be updated to reflect this
   // behavior, and when that happens, a link to the spec should be placed here.
-  if (auto* template_element = DynamicTo<HTMLTemplateElement>(*CurrentNode())) {
+  ContainerNode* parent = CurrentNode();
+  while (auto* template_element = DynamicTo<HTMLTemplateElement>(parent)) {
+    if (auto* patch = template_element->GetPatch()) {
+      if (!patch->is_buffered()) {
+        parent = patch->parent();
+        continue;
+      }
+    }
     // If the Document was detached in the middle of parsing, The template
     // element won't be able to initialize its contents. Fallback to the
-    // current node's document in that case..
+    // current node's document in that case.
     if (auto* insertion_target = template_element->InsertionTarget()) {
       return insertion_target->GetDocument();
     }
+    return template_element->GetDocument();
   }
-  return CurrentNode()->GetDocument();
+  return parent->GetDocument();
 }
 
 // "look up a custom element definition" for a token
@@ -1303,7 +1248,9 @@ Element* HTMLConstructionSite::CreateElement(
   // document fragment, the custom element registry should be null.
   if (open_elements_.StackDepth() > 1) {
     if (auto* tmpl = DynamicTo<HTMLTemplateElement>(CurrentNode())) {
-      if (tmpl->IsShadowRootModeTemplate()) {
+      if (tmpl->GetPatch() && !tmpl->GetPatch()->is_buffered()) {
+        // Keep custom_element_registry_
+      } else if (tmpl->IsShadowRootModeTemplate()) {
         // For declarative shadow root templates, the insertion target is the
         // shadow root itself. Use the shadow root's registry so elements get
         // the correct tree scope registry (null for scoped-waiting, global
@@ -1510,15 +1457,13 @@ void HTMLConstructionSite::ReconstructTheActiveFormattingElements() {
   }
 
   unsigned unopen_entry_index = first_unopen_element_index;
-  DCHECK_LT(unopen_entry_index, active_formatting_elements_.size());
   for (; unopen_entry_index < active_formatting_elements_.size();
        ++unopen_entry_index) {
     HTMLFormattingElementList::Entry& unopened_entry =
         active_formatting_elements_.at(unopen_entry_index);
     HTMLStackItem* reconstructed =
         CreateElementFromSavedToken(unopened_entry.StackItem());
-    AttachLater(CurrentInsertionLocation(), reconstructed->GetNode());
-    open_elements_.Push(reconstructed);
+    AttachOrFosterParent(reconstructed);
     unopened_entry.ReplaceElement(reconstructed);
   }
 }
@@ -1541,10 +1486,10 @@ bool HTMLConstructionSite::InQuirksMode() {
   return in_quirks_mode_;
 }
 
-// Adjusts |task| to match the "adjusted insertion location" determined by the
-// foster parenting algorithm, laid out as the substeps of step 2 of
+// Adjusts |location| to match the "adjusted insertion location" determined by
+// the foster parenting algorithm, laid out as the substeps of step 2 of
 // https://html.spec.whatwg.org/C/#appropriate-place-for-inserting-a-node
-void HTMLConstructionSite::FindFosterSite(HTMLConstructionSiteTask& task) {
+void HTMLConstructionSite::FindFosterSite(InsertionLocation& location) {
   // 2.1
   HTMLStackItem* last_template =
       open_elements_.Topmost(html_names::HTMLTag::kTemplate);
@@ -1556,26 +1501,28 @@ void HTMLConstructionSite::FindFosterSite(HTMLConstructionSiteTask& task) {
   // 2.3
   if (last_template &&
       (!last_table || last_template->IsAboveItemInStack(last_table))) {
-    task.parent = last_template->GetElement();
+    location.parent = last_template->GetElement();
     return;
   }
 
   // 2.4
   if (!last_table) {
     // Fragment case
-    task.parent = open_elements_.RootNode();  // DocumentFragment
+    location.parent = open_elements_.RootNode();  // DocumentFragment
     return;
   }
 
   // 2.5
   if (ContainerNode* parent = last_table->GetElement()->parentNode()) {
-    task.parent = parent;
-    task.next_child = last_table->GetElement();
+    location.parent = parent;
+    if (!IsA<HTMLTemplateElement>(parent)) {
+      location.next_child = last_table->GetElement();
+    }
     return;
   }
 
   // 2.6, 2.7
-  task.parent = last_table->NextItemInStack()->GetNode();
+  location.parent = last_table->NextItemInStack()->GetNode();
 }
 
 bool HTMLConstructionSite::ShouldFosterParent() const {
@@ -1585,20 +1532,25 @@ bool HTMLConstructionSite::ShouldFosterParent() const {
 }
 
 void HTMLConstructionSite::FosterParent(Node* node) {
-  HTMLConstructionSiteTask task(HTMLConstructionSiteTask::kInsert);
-  FindFosterSite(task);
-  task.child = node;
-  DCHECK(task.parent);
-  QueueTask(task, true);
+  InsertionLocation location;
+  FindFosterSite(location);
+  DCHECK(location.parent);
+  FlushPendingText();
+  Insert(AdjustInsertionLocation(location), node);
+  if (auto* element_child = DynamicTo<Element>(node)) {
+    element_child->BeginParsingChildren();
+  }
 }
 
 void HTMLConstructionSite::FosterParentAlreadyParsedChild(Node* child) {
-  HTMLConstructionSiteTask task(
-      HTMLConstructionSiteTask::kInsertAlreadyParsedChild);
-  FindFosterSite(task);
-  task.child = child;
-  DCHECK(task.parent);
-  QueueTask(task, true);
+  InsertionLocation location;
+  FindFosterSite(location);
+  DCHECK(location.parent);
+  if (RemoveChildIfValidForRemoval(location.parent, child)) {
+    return;
+  }
+  FlushPendingText();
+  Insert(AdjustInsertionLocation(location), child);
 }
 
 void HTMLConstructionSite::PendingText::Trace(Visitor* visitor) const {

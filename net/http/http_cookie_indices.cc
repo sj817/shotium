@@ -9,7 +9,7 @@
 
 #include "base/containers/span.h"
 #include "base/pickle.h"
-#include "crypto/sha2.h"
+#include "crypto/hash.h"
 #include "net/cookies/parsed_cookie.h"
 #include "net/http/http_response_headers.h"
 #include "net/http/structured_headers.h"
@@ -37,12 +37,13 @@ std::optional<std::vector<std::string>> ParseCookieIndices(
   std::vector<std::string> cookie_names;
   cookie_names.reserve(list->size());
   for (const structured_headers::ParameterizedMember& member : *list) {
-    if (member.member_is_inner_list) {
+    const auto item_and_params = member.GetWithParamsIfItem();
+    if (!item_and_params.has_value()) {
       // Inner list not permitted here.
       return std::nullopt;
     }
 
-    const std::string* name = member.member[0].item.GetIfString();
+    const std::string* name = item_and_params->first.GetIfString();
     if (!name) {
       // Non-string items are not permitted here.
       return std::nullopt;
@@ -118,7 +119,7 @@ CookieIndicesHash HashCookieIndices(
     }
     pickle.WriteBool(false);
   }
-  return crypto::SHA256Hash(pickle.payload_bytes());
+  return crypto::hash::Sha256(pickle.payload_bytes());
 }
 
 }  // namespace net

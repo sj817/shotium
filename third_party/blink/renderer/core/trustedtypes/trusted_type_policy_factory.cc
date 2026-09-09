@@ -4,6 +4,8 @@
 
 #include "third_party/blink/renderer/core/trustedtypes/trusted_type_policy_factory.h"
 
+#include <iterator>
+
 #include "third_party/blink/public/mojom/use_counter/metrics/web_feature.mojom-blink.h"
 #include "third_party/blink/renderer/core/dom/document.h"
 #include "third_party/blink/renderer/core/dom/events/event.h"
@@ -39,10 +41,9 @@ struct AttributeTypeEntry {
 typedef Vector<AttributeTypeEntry> AttributeTypeVector;
 
 AttributeTypeVector BuildAttributeVector() {
-  const QualifiedName any_element(g_null_atom, g_star_atom, g_null_atom);
   const struct {
     const QualifiedName& element;
-    const QualifiedName attribute;
+    const QualifiedName& attribute;
     SpecificTrustedType type;
   } kTypeTable[] = {{html_names::kEmbedTag, html_names::kSrcAttr,
                      SpecificTrustedType::kScriptURL},
@@ -74,6 +75,7 @@ AttributeTypeVector BuildAttributeVector() {
   };
 
   AttributeTypeVector table;
+  table.ReserveInitialCapacity(std::size(kTypeTable));
   for (const auto& entry : kTypeTable) {
     // In legacy-Trusted-Types, we didn't record SVG elements properly in
     // this function. So we can now use this to retain the old behaviour, until
@@ -90,6 +92,7 @@ AttributeTypeVector BuildAttributeVector() {
     table.push_back(
         AttributeTypeEntry{entry.element, entry.attribute, entry.type});
   }
+
   return table;
 }
 

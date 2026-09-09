@@ -720,6 +720,8 @@
     // end
     "flex-start",
     "flex-end",
+    "flow-start",
+    "flow-end",
     // center
     "space-between",
     "space-around",
@@ -2152,5 +2154,9 @@
 
     // max-content-sizing
     "shrink-to-fit",
+
+    // overscroll-container-type
+    // "none", "auto", "overlay" already exist above
+    "push",
   ],
 }

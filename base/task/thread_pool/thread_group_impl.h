@@ -50,7 +50,7 @@ class BASE_EXPORT ThreadGroupImpl : public ThreadGroup {
       std::string_view thread_group_label,
       ThreadType thread_type_hint,
       TrackedRef<TaskTracker> task_tracker,
-      TrackedRef<Delegate> delegate,
+      TrackedRef<ThreadGroup::Delegate> delegate,
       bool monitor_worker_thread_priorities = false,
       ThreadPoolInstance::RecordLockContention record_lock_contention =
           ThreadPoolInstance::RecordLockContention::kDisabled);

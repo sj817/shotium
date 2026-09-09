@@ -37,7 +37,37 @@ pnpm upstream:sync apply --plan out/upstream-sync-css-next --selection out/selec
 
 该写入不是文件系统事务。如果写入时出现 IO 错误或并发编辑，命令报错并保留备份；需检查已写入范围后按备份恢复，不能在共享工作区无条件 reset。成功时备份目录有 receipt.json 记录写入路径与目标 SHA。
 
-冲突文件不能直接通过 apply：先在候选中解决并人工将修复写入源码，或在明确记录了修复的本地提交上重新生成计划。不要把所有候选写入后看到编译缺失就恢复整个旧浏览器模块。
+冲突文件先在独立候选中解决，再通过 `resolve` 登记原因和内容哈希，然后用选定路径应用。决策 JSON 格式为 `[{"path":"仓库相对路径","source":"已解决文件的绝对路径","reason":"保留哪些产品差异，接收哪些上游改动"}]`：
+
+```powershell
+pnpm upstream:sync resolve --plan out/upstream-sync-155 --decisions out/upstream-sync-155/decisions.json
+pnpm upstream:sync apply --plan out/upstream-sync-155 --selection out/upstream-sync-155/selection.json
+```
+
+`resolve` 会拒绝残留冲突标记，决策写入 manifest 的 resolution 字段。原 conflicts/ 文件仍保留作证据。ready.json/summary.md 是初始计划快照；后续状态以 manifest.json、conflicts.json 和各 backup 目录下的 receipt.json 为准。不要把所有候选写入后看到编译缺失就恢复整个旧浏览器模块。
+
+已经应用的自动合并文件若需要配套修正，使用相同决策格式执行 `pnpm upstream:sync revise --plan <计划目录> --decisions <决策文件>`。它只允许覆盖与 manifest 哈希完全一致的已应用文件，拒绝其他并发修改；先完整备份，再更新源码、候选和哈希，并在 `revision-<timestamp>/receipt.json` 记录原因及前后哈希。与 apply 一样，写入中断时应检查备份和实际写入范围，不能无条件重跑或 reset。
+
+经依赖审查确认必需的新增文件，使用 `pnpm upstream:sync adopt --plan <计划目录> --decisions <决策文件>`；决策格式为 `[{"path":"仓库相对路径","reason":"保留功能为什么需要它"}]`。只接收计划中 `new-file-review` 的普通文件，从固定上游对象读取，拒绝已有文件和符号链接父目录。新增内容及原因写入 manifest，`adoption-<timestamp>/` 保存意图和成功收据。新目录需要先用明确的 scope 生成独立计划；gitlink 和文件模式变化仍需单独审查。
+
+确认上游删除项的调用已经迁移后，以同样的 path/reason 格式执行 `pnpm upstream:sync retire --plan <计划目录> --decisions <决策文件>`。它只删除 `upstream-delete-review` 中未被本地修改的普通文件；先备份整批，再逐文件删除，记录前置意图和成功收据。它不递归删除目录，也不把“上游删除”当成“本地不用”的证明。
+
+如果编译发现保留功能新近依赖了以前裁掉的原生文件，先确认调用与依赖闭包，再以明确文件 scope 生成计划（不要加 `--retained-only`），用 `restore --plan <计划目录> --decisions <决策文件>` 从固定 target 恢复 `keep-deleted` 项。决策 reason 必须说明真实依赖。普通 adopt 仍拒绝此类文件，plan/apply 从不自动恢复本地删除。不能据此恢复 V8、浏览器进程或其他产品禁用模块，也不能调用硬编码旧基线的恢复脚本混入旧接口。
+
+同一计划的 CLI 写入命令由 `.operation.lock` 互斥保护。必须等上一命令结束再启动下一命令；命令中断后先核对进程、意图、收据和源码，不能盲目移除锁。所有计划应用结束之前不要提交，HEAD 变化会触发保护。
+
+## 直接维护的第三方源码
+
+Skia、ICU、Perfetto 使用各自上游仓库的基线与目标，不能用 Chromium 的 gitlink 当源码内容合并。先获取固定提交，再以 `--upstream-prefix` 将独立仓库根目录映射到本地路径：
+
+```powershell
+git fetch --depth=1 --filter=blob:none --no-tags --no-write-fetch-head --recurse-submodules=no https://skia.googlesource.com/skia.git 653397c6be15b87fe8f89a4492582fbb825f6da8 a3e5b88809bb6c178286d008805a1028ca3106f4
+pnpm upstream:sync plan --base 653397c6be15b87fe8f89a4492582fbb825f6da8 --target a3e5b88809bb6c178286d008805a1028ca3106f4 --scope third_party/skia --upstream-prefix third_party/skia --out out/upstream-sync-skia-next --remote https://skia.googlesource.com/skia.git --retained-only
+```
+
+后续仍使用 resolve/apply/revise/adopt/retire。adopt 的 `--remote` 也应指定对应第三方仓库。保留本地裁剪和直接源码修改，不生成需要日后重放的补丁队列。基线、目标、决策原因与最终验收状态要一起更新到同步记录中。
+
+全范围同步可加 `--retained-only`，避免为上游几十万个已裁剪文件逐个生成行；仍列出保留目录中的新增同级文件。完全新增目录不会自动接收，要从上游 GN/include/生成器依赖继续审查。本选项不会证明“所有需要的新文件已找到”。
 
 ## 首次实际运行
 

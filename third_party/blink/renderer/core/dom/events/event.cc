@@ -195,6 +195,7 @@ bool Event::IsClipboardEvent() const {
 }
 
 bool Event::IsBeforeTextInsertedEvent() const {
+  DCHECK(!RuntimeEnabledFeatures::CleanUpActivationBehaviorEnabled());
   return false;
 }
 
@@ -252,17 +253,17 @@ void Event::SetTarget(EventTarget* target) {
 
 void Event::ReceivedTarget() {}
 
-Element* Event::Retarget(Element* element) const {
-  if (!element) {
+Node* Event::Retarget(Node* node) const {
+  if (!node) {
     return nullptr;
   }
   if (EventTarget* current_target = currentTarget()) {
     if (auto* current_target_node = current_target->ToNode()) {
-      return &current_target_node->GetTreeScope().Retarget(*element);
+      return &current_target_node->GetTreeScope().Retarget(*node);
     }
   }
   // retarget against the topmost TreeScope if there isn't a current target.
-  return &element->GetDocument().Retarget(*element);
+  return &node->GetDocument().Retarget(*node);
 }
 
 void Event::SetUnderlyingEvent(const Event* ue) {

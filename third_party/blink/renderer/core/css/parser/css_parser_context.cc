@@ -152,6 +152,7 @@ bool CSSParserContext::operator==(const CSSParserContext& other) const {
          charset_ == other.charset_ && mode_ == other.mode_ &&
          is_html_document_ == other.is_html_document_ &&
          secure_context_mode_ == other.secure_context_mode_ &&
+         referrer_ == other.referrer_ &&
          resource_fetch_restriction_ == other.resource_fetch_restriction_;
 }
 

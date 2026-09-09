@@ -49,6 +49,7 @@
 #include "third_party/blink/renderer/core/paint/object_painter.h"
 #include "third_party/blink/renderer/core/paint/outline_painter.h"
 #include "third_party/blink/renderer/core/paint/paint_layer.h"
+#include "third_party/blink/renderer/platform/runtime_enabled_features.h"
 #include "third_party/blink/renderer/platform/wtf/size_assertions.h"
 #include "ui/gfx/geometry/quad_f.h"
 
@@ -110,14 +111,14 @@ LayoutInline* LayoutInline::CreateAnonymous(Document& document) {
   return layout_inline;
 }
 
-void LayoutInline::WillBeDestroyed() {
+void LayoutInline::WillBeDestroyed(const ComputedStyle* style) {
   NOT_DESTROYED();
   if (FirstInlineFragmentItemIndex()) {
     FragmentItems::LayoutObjectWillBeDestroyed(*this);
     ClearFirstInlineFragmentItemIndex();
   }
 
-  LayoutBoxModelObject::WillBeDestroyed();
+  LayoutBoxModelObject::WillBeDestroyed(style);
 }
 
 void LayoutInline::ClearFirstInlineFragmentItemIndex() {
@@ -193,8 +194,11 @@ bool LayoutInline::ComputeInitialShouldCreateBoxFragment(
     return true;
 
   if (style.HasBoxDecorationBackground() || style.MayHavePadding() ||
-      style.MayHaveMargin())
+      style.MayHaveMargin() ||
+      (style.TextBoxTrim() != ETextBoxTrim::kNone &&
+       RuntimeEnabledFeatures::TextBoxTrimOnInlineBoxEnabled())) {
     return true;
+  }
 
   if (style.AnchorName())
     return true;
@@ -428,11 +432,13 @@ void LayoutInline::QuadsForSelfInternal(Vector<gfx::QuadF>& quads,
                                         bool map_to_ancestor,
                                         BoxQuadType box_type) const {
   NOT_DESTROYED();
+  // Lazily allocated when the first quad is pushed.
   std::optional<gfx::Transform> mapping_to_ancestor;
   auto PushAncestorQuad = [&mapping_to_ancestor, &quads, ancestor, mode,
                            this](const PhysicalRect& rect) {
     if (!mapping_to_ancestor) {
-      mapping_to_ancestor.emplace(LocalToAncestorTransform(ancestor, mode));
+      gfx::Transform transform = LocalToAncestorTransform(ancestor, mode);
+      mapping_to_ancestor.emplace(transform);
     }
     quads.push_back(mapping_to_ancestor->MapQuad(gfx::QuadF(gfx::RectF(rect))));
   };
@@ -611,6 +617,8 @@ bool LayoutInline::NodeAtPoint(HitTestResult& result,
     if (target_fragment_idx != -1)
       target_fragment_idx += cursor.ContainerFragmentIndex();
 
+    PhysicalOffset lines_offset;
+
     for (; cursor; cursor.MoveToNextForSameLayoutObject()) {
       if (target_fragment_idx != -1 &&
           wtf_size_t(target_fragment_idx) != cursor.ContainerFragmentIndex())
@@ -622,11 +630,12 @@ bool LayoutInline::NodeAtPoint(HitTestResult& result,
       // BoxFragmentPainter::NodeAtPoint() takes an offset that is accumulated
       // up to the fragment itself. Compute this offset.
       const PhysicalOffset child_offset =
-          accumulated_offset + item.OffsetInContainerFragment();
+          accumulated_offset + item.OffsetInContainerFragment() - lines_offset;
+      const PhysicalOffset root_offset = accumulated_offset - lines_offset;
       InlinePaintContext inline_context;
       if (BoxFragmentPainter(cursor, item, *box_fragment, &inline_context)
-              .NodeAtPoint(result, hit_test_location, child_offset,
-                           accumulated_offset, phase)) {
+              .NodeAtPoint(result, hit_test_location, child_offset, root_offset,
+                           phase)) {
         return true;
       }
     }
@@ -768,6 +777,7 @@ bool LayoutInline::MapToVisualRectInAncestorSpaceInternal(
   NOT_DESTROYED();
   if (ancestor == this)
     return true;
+
 
   LayoutObject* container = Container();
   DCHECK_EQ(container, Parent());

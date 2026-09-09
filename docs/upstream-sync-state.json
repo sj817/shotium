@@ -11,14 +11,30 @@
   "scope": "All retained Chromium engine/build paths; preserve Shotium deletions and product behavior. Independently vendored dependencies require their own upstream baselines.",
   "planDirectory": "out/upstream-sync-155",
   "validation": {
-    "graph": "pending",
-    "windowsBinaryAndChecks": "pending",
-    "pixelComparison": "pending",
-    "sixPlatformExactSha": "pending",
+    "graph": "passed: GN and final shot/shot_c source-input check",
+    "windowsBinaryAndChecks": "passed: exe, dll, serve, net, 84 demos, node, daemon, daemon protocol, Bilibili; charset behavior unchanged",
+    "pixelComparison": "passed: basic/layout/paint/text, identical pixels and hashes against pre-sync binary",
+    "sixPlatformExactSha": "pending dispatch after integration commit",
     "release": "pending"
   },
   "dependencies": [
-    {"name": "skia", "baseline": "653397c6be15b87fe8f89a4492582fbb825f6da8", "status": "pending"},
-    {"name": "icu", "baseline": "8cc91d9b6ab9991802fd208ee03a69714fd0251c", "status": "pending"}
+    {
+      "baseline": "653397c6be15b87fe8f89a4492582fbb825f6da8",
+      "name": "skia",
+      "target": "a3e5b88809bb6c178286d008805a1028ca3106f4",
+      "status": "source synchronized; local Windows checks passed; six-platform validation pending"
+    },
+    {
+      "baseline": "8cc91d9b6ab9991802fd208ee03a69714fd0251c",
+      "name": "icu",
+      "target": "6ebb40c594776cc2c21ea14df85a2a89a328b364",
+      "status": "source synchronized; local Windows checks passed; six-platform validation pending"
+    },
+    {
+      "baseline": "71b477b75d53576fa40f8ba19897a50c83255e03",
+      "name": "perfetto",
+      "target": "fd896b1ad88899807bb128b7255deb5199dde54f",
+      "status": "source synchronized; local Windows checks passed; six-platform validation pending"
+    }
   ]
 }

@@ -80,6 +80,8 @@ const base::FeatureParam<bool> kDnsPlatformCancelPreviousAttemptOnRetry{
 
 BASE_FEATURE(kUseDnsHttpsSvcb, base::FEATURE_ENABLED_BY_DEFAULT);
 
+BASE_FEATURE(kUseDnsHttpsSvcbAddressHints, base::FEATURE_DISABLED_BY_DEFAULT);
+
 const base::FeatureParam<bool> kUseDnsHttpsSvcbEnforceSecureResponse{
     &kUseDnsHttpsSvcb, "UseDnsHttpsSvcbEnforceSecureResponse", false};
 
@@ -122,6 +124,10 @@ BASE_FEATURE(kHappyEyeballsV2,
 BASE_FEATURE(kHappyEyeballsV3, base::FEATURE_DISABLED_BY_DEFAULT);
 
 BASE_FEATURE(kEnableIntermediateDnsResults, base::FEATURE_DISABLED_BY_DEFAULT);
+BASE_FEATURE_PARAM(bool,
+                   kEnableIntermediateDnsResultsSortTransactionsIndividually,
+                   &kEnableIntermediateDnsResults,
+                   true);
 
 BASE_FEATURE(kAdjustIPv6FallbackTime, base::FEATURE_DISABLED_BY_DEFAULT);
 
@@ -178,9 +184,6 @@ BASE_FEATURE(kMaintainConnectionsOnIpv6TempAddrChange,
              base::FEATURE_ENABLED_BY_DEFAULT);
 
 BASE_FEATURE(kEnableTLS13EarlyData, base::FEATURE_DISABLED_BY_DEFAULT);
-
-BASE_FEATURE(kOnlyParseFirstContentDisposition,
-             base::FEATURE_ENABLED_BY_DEFAULT);
 
 BASE_FEATURE(kSplitCacheByIncludeCredentials,
              base::FEATURE_DISABLED_BY_DEFAULT);
@@ -285,8 +288,15 @@ BASE_FEATURE(kDeferConnectionTypeAtStartup, base::FEATURE_DISABLED_BY_DEFAULT);
 
 #if BUILDFLAG(IS_MAC)
 BASE_FEATURE(kTcpPortRandomizationMac, base::FEATURE_DISABLED_BY_DEFAULT);
-const base::FeatureParam<int> kTcpPortRandomizationReuseDelaySec{
-    &kTcpPortRandomizationMac, "reuse_delay_sec", 120};
+BASE_FEATURE_PARAM(int,
+                   kTcpPortRandomizationReuseDelaySec,
+                   &kTcpPortRandomizationMac,
+                   "reuse_delay_sec",
+                   120);
+BASE_FEATURE_PARAM(bool,
+                   kTcpPortRandomizationMacForLoopback,
+                   &kTcpPortRandomizationMac,
+                   false);
 #endif
 
 BASE_FEATURE(kAvoidEntryCreationForNoStore, base::FEATURE_DISABLED_BY_DEFAULT);
@@ -318,10 +328,6 @@ inline constexpr auto kMigrateSessionsOnNetworkChangeV2Default =
 #endif  // BUILDFLAG(IS_ANDROID)
 BASE_FEATURE(kMigrateSessionsOnNetworkChangeV2,
              kMigrateSessionsOnNetworkChangeV2Default);
-
-#if BUILDFLAG(IS_LINUX)
-BASE_FEATURE(kAddressTrackerLinuxIsProxied, base::FEATURE_ENABLED_BY_DEFAULT);
-#endif  // BUILDFLAG(IS_LINUX)
 
 // Enables binding of cookies to the port that originally set them by default.
 BASE_FEATURE(kEnablePortBoundCookies, base::FEATURE_DISABLED_BY_DEFAULT);

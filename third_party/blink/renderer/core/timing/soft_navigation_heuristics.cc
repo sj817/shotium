@@ -29,6 +29,7 @@
 #include "third_party/blink/renderer/core/layout/layout_view.h"
 #include "third_party/blink/renderer/core/page/page.h"
 #include "third_party/blink/renderer/core/paint/timing/largest_contentful_paint_calculator.h"
+#include "third_party/blink/renderer/core/paint/timing/paint_timing.h"
 #include "third_party/blink/renderer/core/paint/timing/paint_timing_detector.h"
 #include "third_party/blink/renderer/core/paint/timing/paint_timing_record.h"
 #include "third_party/blink/renderer/core/timing/dom_window_performance.h"
@@ -228,6 +229,9 @@ SoftNavigationHeuristics::SoftNavigationHeuristics(LocalDOMWindow* window)
       task_attribution_tracker_(
           scheduler::TaskAttributionTracker::From()) {
   CHECK(window->document());
+  PaintTimingDetector::From(*window->document())
+      .GetPaintTiming()
+      .AddClient(this);
   TextPaintTimingDetector* detector =
       &PaintTimingDetector::From(*window->document())
            .GetTextPaintTimingDetector();
@@ -274,6 +278,11 @@ void SoftNavigationHeuristics::Shutdown() {
   }
 
   interaction_id_to_context_.clear();
+
+  CHECK(window_->document());
+  PaintTimingDetector::From(*window_->document())
+      .GetPaintTiming()
+      .RemoveClient(this);
 }
 
 SoftNavigationContext*
@@ -478,9 +487,6 @@ void SoftNavigationHeuristics::MaybeCommitNavigationOrEmitSoftNavigation(
   context->OnSoftNavigationCommit(
       /*navigation_id=*/performance->NavigationId(),
       /*soft_navigation_slicing_time=*/base::TimeTicks::Now());
-  // For metrics reporting, FCP presentation feedback will is in a separate
-  // record, when the ICP is reported. Therefore, we can send this immediately,
-  // which helps with slicing CLS and INP based on soft_navigation_slicing_time.
   ReportSoftNavigationToMetrics(context);
 
   // Postpone emitting the entry if we're still waiting for FCP presentation
@@ -496,31 +502,40 @@ void SoftNavigationHeuristics::EmitSoftNavigation(
     SoftNavigationContext* context) {
   context->EmitSoftNavigation();
 
-  // Emitting the entry unblocks reporting the current ICP to metrics, so update
-  // metrics now.
+  // Emitting the entry unblocks reporting the current FCP and ICP to metrics,
+  // so update metrics now.
+  UpdateSoftFcpMetricsForContext(context);
   UpdateSoftLcpMetricsForContext(context);
 }
 
-void SoftNavigationHeuristics::InitializePaintTracking(ImageRecord* record) {
-  // TODO(crbug.com/454082771): This should also update the underlying LCP
-  // calculator's "largest pending image" like we do for hard navs.
-  MaybeSetContextOnFirstPaint(record);
+void SoftNavigationHeuristics::OnElementLastContentfulPaint(
+    ImageRecord* record) {
+  OnContentfulPaintImpl(record);
 }
 
-void SoftNavigationHeuristics::InitializePaintTracking(TextRecord* record) {
-  MaybeSetContextOnFirstPaint(record);
+void SoftNavigationHeuristics::OnElementLastContentfulPaint(
+    TextRecord* record,
+    bool was_previously_reported) {
+  OnContentfulPaintImpl(record);
 }
 
 template <IsDerivedFromPaintTimingRecord T>
-void SoftNavigationHeuristics::MaybeSetContextOnFirstPaint(T* record) const {
+void SoftNavigationHeuristics::OnContentfulPaintImpl(T* record) const {
   Node* node = record->GetNode();
-  CHECK(node);
+  // TODO(crbug.com/441914208, crbug.com/557111456): `node` can be null here,
+  // which is unexpected. Change this back to a CHECK when the root cause is
+  // understood and fixed.
+  if (!node) {
+    return;
+  }
+
   SoftNavigationContext* context =
       paint_attribution_tracker_->GetSoftNavigationContextForNode(node);
-  if (context && context->IsRecordingLargestContentfulPaint() &&
-      context->ShouldTrackForPaintTiming(*record)) {
-    record->SetSoftNavigationContext(context);
+  if (!context || !context->ShouldTrackForPaintTiming(*record)) {
+    return;
   }
+  record->SetSoftNavigationContext(context);
+  context->AddPaintedArea(record);
 }
 
 void SoftNavigationHeuristics::OnPaintFinished() {
@@ -542,7 +557,9 @@ void SoftNavigationHeuristics::OnInputOrScroll() {
 
 void SoftNavigationHeuristics::OnFramePresented(
     const HeapVector<Member<ImageRecord>>& image_records,
-    const HeapVector<Member<TextRecord>>& text_records) {
+    const HeapVector<Member<TextRecord>>& text_records,
+    const HeapVector<Member<ElementTimingInfo>>&,
+    const DOMPaintTimingInfo&) {
   // First, group the records by context, ignoring records that aren't needed.
   ContextToCandidatesMap candidates_per_context;
   GroupLcpCandidatesByContext(image_records, candidates_per_context);
@@ -655,6 +672,27 @@ void SoftNavigationHeuristics::ReportSoftNavigationToMetrics(
   // Count "successful soft nav" in histogram
   base::UmaHistogramEnumeration(kPageLoadInternalSoftNavigationOutcome,
                                 SoftNavigationOutcome::kSoftNavigationDetected);
+}
+
+void SoftNavigationHeuristics::UpdateSoftFcpMetricsForContext(
+    SoftNavigationContext* context) const {
+  CHECK(context->HasFirstContentfulPaint());
+  // Unlike LCP, which can receive continuous paint updates while subsequent
+  // navigations occur, FCP is a one-time metric for this committed context
+  // that must always be reported upon emission even if another interaction has
+  // started.
+  LocalFrame* frame = window_->GetFrame();
+  // We should not be running paint timing callbacks for detached frames.
+  CHECK(frame);
+  LocalFrameClient* frame_client = frame->Client();
+  CHECK(frame_client);
+  auto* loader = frame->Loader().GetDocumentLoader();
+  CHECK(loader);
+  base::TimeDelta first_contentful_paint =
+      loader->GetTiming().MonotonicTimeToPseudoWallTime(
+          context->FirstContentfulPaint());
+  frame_client->DidObserveSoftNavigationFirstContentfulPaint(
+      context->NavigationId().non_web_exposed_id, first_contentful_paint);
 }
 
 void SoftNavigationHeuristics::Trace(Visitor* visitor) const {

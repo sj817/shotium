@@ -51,6 +51,7 @@
 #include "third_party/blink/renderer/bindings/core/v8/v8_scroll_into_view_options.h"
 #include "third_party/blink/renderer/core/animation/document_animations.h"
 #include "third_party/blink/renderer/core/animation/document_timeline.h"
+#include "third_party/blink/renderer/core/css/container_query_list_controller.h"
 #include "third_party/blink/renderer/core/css/font_face_set_document.h"
 #include "third_party/blink/renderer/core/css/post_style_update_scope.h"
 #include "third_party/blink/renderer/core/css/properties/longhands.h"
@@ -144,6 +145,7 @@
 #include "third_party/blink/renderer/platform/graphics/graphics_context.h"
 #include "third_party/blink/renderer/platform/graphics/paint/cull_rect.h"
 #include "third_party/blink/renderer/platform/graphics/paint/drawing_recorder.h"
+#include "third_party/blink/renderer/platform/graphics/paint/ignore_paint_timing_scope.h"
 #include "third_party/blink/renderer/platform/graphics/paint/paint_controller.h"
 #include "third_party/blink/renderer/platform/graphics/paint/paint_record_builder.h"
 #include "third_party/blink/renderer/platform/graphics/static_bitmap_image.h"
@@ -215,6 +217,7 @@ void LogCursorSizeCounter(LocalFrame* frame, const ui::Cursor& cursor) {
 // flash between navigations. The delay should be small enough so that it won't
 // confuse users expecting a new page to appear after navigation and the omnibar
 // has updated the url display.
+
 
 }  // namespace
 
@@ -475,7 +478,16 @@ void LocalFrameView::SetLifecycleUpdatesThrottledForTesting(bool throttled) {
 }
 
 void LocalFrameView::FrameRectsChanged(const gfx::Rect& old_rect) {
-  PropagateFrameRects();
+  if (RuntimeEnabledFeatures::AvoidEmbeddedContentViewLocationEnabled() &&
+      LayoutSizeFixedToFrameSize() && Size() != old_rect.size()) {
+    SetLayoutSizeInternal(
+        Size(), {.should_suppress_events =
+                     is_being_auto_sized_ &&
+                     RuntimeEnabledFeatures::
+                         AutoSizeUsesScrollWidthForOverflowEnabled()});
+  }
+
+  FrameView::FrameRectsChanged(old_rect);
 
   if (DeprecatedFrameRect() != old_rect) {
     if (auto* layout_view = GetLayoutView())
@@ -881,9 +893,7 @@ void LocalFrameView::RunIntersectionObserverSteps() {
 
   ComputeIntersectionsContext context;
   UpdateViewportIntersectionsForSubtree(
-      IntersectionObservation::kConsumeScrollDelta |
-          IntersectionObservation::kUpdateTracking,
-      context);
+      {IntersectionObservation::kUpdateTracking}, context);
 
 #if DCHECK_IS_ON()
   DCHECK(was_dirty || !NeedsLayout());
@@ -894,14 +904,14 @@ void LocalFrameView::RunIntersectionObserverSteps() {
 void LocalFrameView::ForceUpdateViewportIntersections() {
   // IntersectionObserver targets in this frame (and its frame tree) need to
   // update; but we can't wait for a lifecycle update to run them, because a
-  // hidden frame won't run lifecycle updates. Force layout and run them now.
+  // hidden frame won't run lifecycle updates. Force pre-paint and run them now.
   DisallowThrottlingScope disallow_throttling(*this);
   UpdateAllLifecyclePhasesExceptPaint(
       DocumentUpdateReason::kIntersectionObservation);
   ComputeIntersectionsContext context;
   UpdateViewportIntersectionsForSubtree(
-      IntersectionObservation::kImplicitRootObserversNeedUpdate |
-          IntersectionObservation::kIgnoreDelay,
+      {IntersectionObservation::kImplicitRootObserversNeedUpdate,
+       IntersectionObservation::kIgnoreDelay},
       context);
 }
 
@@ -1102,7 +1112,16 @@ void LocalFrameView::ViewportSizeChanged() {
     // specially notified.
     if (GetFrame().IsOutermostMainFrame()) {
       if (auto* scrollable_area = layout_view->GetScrollableArea()) {
-        scrollable_area->ClampScrollOffsetAfterOverflowChange();
+        using ClampScope =
+            PaintLayerScrollableArea::DelayScrollOffsetClampScope;
+        if (auto_size_info_ &&
+            RuntimeEnabledFeatures::
+                AutoSizeUsesScrollWidthForOverflowEnabled() &&
+            ClampScope::ClampingIsDelayed()) {
+          ClampScope::SetNeedsClamp(scrollable_area);
+        } else {
+          scrollable_area->ClampScrollOffsetAfterOverflowChange();
+        }
         scrollable_area->EnqueueForSnapUpdateIfNeeded();
       }
     }
@@ -1289,7 +1308,7 @@ bool LocalFrameView::RunPostLayoutIntersectionObserverSteps() {
   DCHECK(Lifecycle().GetState() >= DocumentLifecycle::kPrePaintClean);
 
   ComputeIntersectionsContext context;
-  ComputePostLayoutIntersections(0, context);
+  ComputePostLayoutIntersections({}, context);
 
   bool needs_more_lifecycle_steps = false;
   ForAllNonThrottledLocalFrameViews(
@@ -1311,19 +1330,17 @@ bool LocalFrameView::RunPostLayoutIntersectionObserverSteps() {
 }
 
 void LocalFrameView::ComputePostLayoutIntersections(
-    unsigned parent_flags,
+    IntersectionObservation::ComputeFlags parent_flags,
     ComputeIntersectionsContext& context) {
   if (ShouldThrottleRendering())
     return;
 
-  unsigned flags = GetIntersectionObservationFlags(parent_flags) |
-                   IntersectionObservation::kPostLayoutDeliveryOnly;
+  auto flags = GetIntersectionObservationFlags(parent_flags);
+  flags.Put(IntersectionObservation::kPostLayoutDeliveryOnly);
 
   if (auto* controller =
           GetFrame().GetDocument()->GetIntersectionObserverController()) {
-    controller->ComputeIntersections(
-        flags, *this, accumulated_scroll_delta_since_last_intersection_update_,
-        context);
+    controller->ComputeIntersections(flags, *this, context);
   }
 
   for (Frame* child = frame_->Tree().FirstChild(); child;
@@ -1813,13 +1830,13 @@ bool LocalFrameView::UpdateAllLifecyclePhases(DocumentUpdateReason reason) {
                 DocumentLifecycle::kPaintClean);
     });
 
-    // A required intersection observation should run throttled frames to
-    // kLayoutClean.
+    // A required intersection observation should run throttled frames through
+    // kPrePaintClean.
     ForAllThrottledLocalFrameViews([](LocalFrameView& frame_view) {
       DCHECK(frame_view.intersection_observation_state_ != kRequired ||
              frame_view.IsDisplayLocked() ||
              frame_view.Lifecycle().GetState() >=
-                 DocumentLifecycle::kLayoutClean);
+                 DocumentLifecycle::kPrePaintClean);
     });
   }
 #endif
@@ -2101,6 +2118,9 @@ void LocalFrameView::UpdateLifecyclePhasesInternal(
   // RunPostLayoutSnapshotClientSteps must not run more than once.
   bool should_run_post_layout_snapshot_client_steps = true;
 
+  // Run native container query notifications once per lifecycle update.
+  bool should_run_container_query_list_steps = true;
+
   // Run style, layout, compositing and prepaint lifecycle phases and deliver
   // resize observations if required. Resize observer callbacks/delegates have
   // the potential to dirty layout (until loop limit is reached) and therefore
@@ -2230,6 +2250,30 @@ void LocalFrameView::UpdateLifecyclePhasesInternal(
       continue;
     }
 
+    // TODO(crbug.com/40887402): The spec PR has no termination rule, so a
+    // change listener that keeps changing its container's matches state would
+    // re-run these steps indefinitely without this flag (cf. ResizeObserver's
+    // depth limit).
+    // Therefore, limit them to at most once per lifecycle update for now.
+    // To be discussed with the CSSWG.
+    if (should_run_container_query_list_steps &&
+        RuntimeEnabledFeatures::ElementMatchContainerEnabled()) {
+      should_run_container_query_list_steps = false;
+      base::AutoReset<DocumentLifecycle::LifecycleState> saved_target_state(
+          &target_state_, DocumentLifecycle::kUninitialized);
+      ForAllNonThrottledLocalFrameViews(
+          [&needs_to_repeat_lifecycle](LocalFrameView& frame_view) {
+            bool result = frame_view.RunContainerQueryListSteps();
+            needs_to_repeat_lifecycle = needs_to_repeat_lifecycle || result;
+          });
+    }
+    if (needs_to_repeat_lifecycle) {
+      if (RuntimeEnabledFeatures::RunSnapshotPostLayoutStateStepsEnabled()) {
+        should_run_post_layout_snapshot_client_steps = true;
+      }
+      continue;
+    }
+
     break;
   }
 
@@ -2250,6 +2294,10 @@ void LocalFrameView::UpdateLifecyclePhasesInternal(
 #if DCHECK_IS_ON()
   DisallowLayoutInvalidationScope disallow_layout_invalidation(this);
 #endif
+
+  if (RuntimeEnabledFeatures::AvoidEmbeddedContentViewLocationEnabled()) {
+    PropagateFrameRectsRecursively();
+  }
 
   uint64_t dom_version = frame_->GetDocument()->DomTreeVersion();
   if (last_dom_stats_version_ != dom_version) {
@@ -2319,6 +2367,21 @@ bool LocalFrameView::RunResizeObserverSteps(
   return NotifyResizeObservers() || re_run_lifecycles;
 }
 
+bool LocalFrameView::RunContainerQueryListSteps() {
+  if (!RuntimeEnabledFeatures::ElementMatchContainerEnabled()) {
+    return false;
+  }
+  LocalDOMWindow* window = GetFrame().DomWindow();
+  if (!window) {
+    return false;
+  }
+  if (ContainerQueryListController* controller =
+          ContainerQueryListController::FromIfExists(*window)) {
+    return controller->NotifyChanges();
+  }
+  return false;
+}
+
 void LocalFrameView::ClearResizeObserverLimit() {
   ForAllNonThrottledLocalFrameViews([](LocalFrameView& frame_view) {
     ResizeObserverController* resize_controller =
@@ -2361,7 +2424,8 @@ bool LocalFrameView::RunStyleAndLayoutLifecyclePhases(
 
   EnqueueScrollEvents();
 
-  if (target_state == DocumentLifecycle::kPaintClean) {
+  if (!RuntimeEnabledFeatures::AvoidEmbeddedContentViewLocationEnabled() &&
+      target_state == DocumentLifecycle::kPaintClean) {
     ForAllNonThrottledLocalFrameViews([](LocalFrameView& frame_view) {
       frame_view.NotifyFrameRectsChangedIfNeeded();
     });
@@ -2441,13 +2505,12 @@ bool LocalFrameView::RunPrePaintLifecyclePhase(
             if (layout_view->ShouldCheckForPaintInvalidation()) {
               owner->SetShouldCheckForPaintInvalidation();
             }
-            if (layout_view->EffectiveAllowedTouchActionChanged() ||
-                layout_view->DescendantEffectiveAllowedTouchActionChanged()) {
-              owner->MarkDescendantEffectiveAllowedTouchActionChanged();
-            }
-            if (layout_view->BlockingWheelEventHandlerChanged() ||
-                layout_view->DescendantBlockingWheelEventHandlerChanged()) {
-              owner->MarkDescendantBlockingWheelEventHandlerChanged();
+            PrePaintSubtreeWalkReasons reasons =
+                CrossFramePrePaintSubtreeWalkReasons(base::Union(
+                    layout_view->GetPrePaintSubtreeWalkReasons(),
+                    layout_view->GetDescendantPrePaintSubtreeWalkReasons()));
+            if (!reasons.empty()) {
+              owner->SetDescendantNeedsPrePaintSubtreeWalk(reasons);
             }
           }
         }
@@ -2726,6 +2789,13 @@ void LocalFrameView::UpdateStyleAndLayout() {
     return;
   }
 
+  std::optional<PaintLayerScrollableArea::DelayScrollOffsetClampScope>
+      delay_scroll_offset_clamp_scope;
+  if (auto_size_info_ &&
+      RuntimeEnabledFeatures::AutoSizeUsesScrollWidthForOverflowEnabled()) {
+    delay_scroll_offset_clamp_scope.emplace();
+  }
+
   gfx::Size visual_viewport_size =
       GetScrollableArea()->VisibleContentRect(kExcludeScrollbars).size();
 
@@ -2741,13 +2811,23 @@ void LocalFrameView::UpdateStyleAndLayout() {
   // generated ::scroll-markers.
   frame_->GetDocument()->GetStyleEngine().UpdateCounters();
 
-  // Second pass: run autosize until it stabilizes
+  // Second pass: run autosize until it stabilizes.
   if (auto_size_info_) {
-    bool should_reset_for_layout = did_layout;
-    while (auto_size_info_->AutoSizeIfNeeded(should_reset_for_layout)) {
-      should_reset_for_layout = false;
+    bool should_reset_for_content = did_layout || needs_autosize_for_overflow_;
+    bool did_run_autosize_layout = false;
+    {
       base::AutoReset<bool> reset(&is_being_auto_sized_, true);
-      did_layout |= UpdateStyleAndLayoutInternal();
+      while (auto_size_info_->AutoSizeIfNeeded(should_reset_for_content)) {
+        should_reset_for_content = false;
+        did_layout |= UpdateStyleAndLayoutInternal();
+        did_run_autosize_layout = true;
+      }
+    }
+    // Suppress notifications during scroll-width autosizing, then report any
+    // stable size change.
+    if (did_run_autosize_layout && frame_->IsMainFrame() &&
+        RuntimeEnabledFeatures::AutoSizeUsesScrollWidthForOverflowEnabled()) {
+      frame_->GetChromeClient().ResizeAfterLayout();
     }
     // We may have a mismatch as we impose an additional min-content constraint
     // while auto-sizing, set the view as needing layout which will then fall
@@ -2767,6 +2847,11 @@ void LocalFrameView::UpdateStyleAndLayout() {
     base::AutoReset<bool> suppress(&suppress_adjust_view_size_, true);
     did_layout |= UpdateStyleAndLayoutInternal();
   }
+  delay_scroll_offset_clamp_scope.reset();
+
+  // Clear the overflow invalidation flag so changes caused by this sizing
+  // sequence do not trigger another measurement sequence.
+  needs_autosize_for_overflow_ = false;
 
 #if DCHECK_IS_ON()
   if (!Lifecycle().LifecyclePostponed() && !ShouldThrottleRendering()) {
@@ -3042,6 +3127,16 @@ gfx::Rect LocalFrameView::ConvertToContainingEmbeddedContentView(
 gfx::Rect LocalFrameView::ConvertFromContainingEmbeddedContentView(
     const gfx::Rect& parent_rect) const {
   if (ParentFrameView()) {
+    if (RuntimeEnabledFeatures::AvoidEmbeddedContentViewLocationEnabled()) {
+      auto* layout_object = GetLayoutEmbeddedContent();
+      if (!layout_object) {
+        return parent_rect;
+      }
+
+      return layout_object->EmbeddedContentFromBorderBox(ToEnclosingRect(
+          layout_object->AbsoluteToLocalRect(PhysicalRect(parent_rect))));
+    }
+
     gfx::Rect local_rect = parent_rect;
     local_rect.Offset(-DeprecatedLocation().OffsetFromOrigin());
     return local_rect;
@@ -3241,17 +3336,25 @@ void LocalFrameView::SetCursor(const ui::Cursor& cursor) {
   page->GetChromeClient().SetCursor(cursor, frame_);
 }
 
-void LocalFrameView::PropagateFrameRects() {
+void LocalFrameView::PropagateFrameRectsInternal() {
   TRACE_EVENT0("blink", "LocalFrameView::PropagateFrameRects");
-  if (LayoutSizeFixedToFrameSize())
-    SetLayoutSizeInternal(Size());
 
-  ForAllChildViewsAndPlugins([](EmbeddedContentView& view) {
-    auto* local_frame_view = DynamicTo<LocalFrameView>(view);
-    if (!local_frame_view || !local_frame_view->ShouldThrottleRendering()) {
-      view.PropagateFrameRects();
+  if (!RuntimeEnabledFeatures::AvoidEmbeddedContentViewLocationEnabled()) {
+    if (LayoutSizeFixedToFrameSize()) {
+      SetLayoutSizeInternal(
+          Size(), {.should_suppress_events =
+                       is_being_auto_sized_ &&
+                       RuntimeEnabledFeatures::
+                           AutoSizeUsesScrollWidthForOverflowEnabled()});
     }
-  });
+
+    ForAllChildViewsAndPlugins([](EmbeddedContentView& view) {
+      auto* local_frame_view = DynamicTo<LocalFrameView>(view);
+      if (!local_frame_view || !local_frame_view->ShouldThrottleRendering()) {
+        view.PropagateFrameRects();
+      }
+    });
+  }
 
   // To limit the number of Mojo communications, only notify the browser when
   // the rect's size changes, not when the position changes. The size needs to
@@ -3261,6 +3364,24 @@ void LocalFrameView::PropagateFrameRects() {
     frame_size_ = frame_size;
     GetFrame().GetLocalFrameHostRemote().FrameSizeChanged(frame_size);
   }
+}
+
+void LocalFrameView::PropagateFrameRectsRecursively(bool force) {
+  CHECK(RuntimeEnabledFeatures::AvoidEmbeddedContentViewLocationEnabled());
+  bool propagate = force || NeedsFrameRectPropagation();
+  if (propagate) {
+    PropagateFrameRects();
+  }
+  ForAllChildViewsAndPlugins([propagate](EmbeddedContentView& view) {
+    auto* local_frame_view = DynamicTo<LocalFrameView>(view);
+    if (local_frame_view && !local_frame_view->ShouldThrottleRendering()) {
+      // If the current frame view propagates, it will force descendant frame
+      // views to propagate as well.
+      local_frame_view->PropagateFrameRectsRecursively(propagate);
+    } else if (propagate) {
+      view.PropagateFrameRects();
+    }
+  });
 }
 
 void LocalFrameView::ZoomFactorChanged(float zoom_factor) {
@@ -3313,6 +3434,7 @@ void LocalFrameView::ScrollRectToVisibleInRemoteParent(
 }
 
 void LocalFrameView::NotifyFrameRectsChangedIfNeeded() {
+  CHECK(!RuntimeEnabledFeatures::AvoidEmbeddedContentViewLocationEnabled());
   if (root_layer_did_scroll_) {
     root_layer_did_scroll_ = false;
     PropagateFrameRects();
@@ -3481,6 +3603,15 @@ void LocalFrameView::PaintOutsideOfLifecycle(GraphicsContext& context,
 
   UpdateAllLifecyclePhasesExceptPaint(DocumentUpdateReason::kPrinting);
 
+  // Ignore paint timing while painting outside of the normal lifecycle (e.g.
+  // paint preview, printing, etc.), as it can change LCP and cause spurious
+  // element timings to be reported (see crbug.com/40838402 and
+  // crbug.com/547997751).
+  IgnorePaintTimingScope ignore_paint_timing;
+  if (base::FeatureList::IsEnabled(
+          features::kPaintTimingIngnoreOutOfLifecyclePaints)) {
+    IgnorePaintTimingScope::IncrementIgnoreDepth();
+  }
 
   ForAllNonThrottledLocalFrameViews([](LocalFrameView& frame_view) {
     frame_view.Lifecycle().AdvanceTo(DocumentLifecycle::kInPaint);
@@ -3748,7 +3879,7 @@ bool LocalFrameView::NeedsOcclusionTracking() const {
 }
 
 void LocalFrameView::UpdateViewportIntersectionsForSubtree(
-    unsigned parent_flags,
+    IntersectionObservation::ComputeFlags parent_flags,
     ComputeIntersectionsContext& context) {
   // TODO(dcheng): Since LocalFrameView tree updates are deferred, FrameViews
   // might still be in the LocalFrameView hierarchy even though the associated
@@ -3759,7 +3890,7 @@ void LocalFrameView::UpdateViewportIntersectionsForSubtree(
     return;
   }
 
-  unsigned flags = GetIntersectionObservationFlags(parent_flags);
+  auto flags = GetIntersectionObservationFlags(parent_flags);
   IntersectionObserverController* controller =
       GetFrame().GetDocument()->GetIntersectionObserverController();
   // Update anyway, even if the frame is display locked or throttled. If the
@@ -3767,13 +3898,7 @@ void LocalFrameView::UpdateViewportIntersectionsForSubtree(
   // degenerate "not intersecting" notification or schedule a delayed update
   // if needed.
   if (controller) {
-    controller->ComputeIntersections(
-        flags, *this, accumulated_scroll_delta_since_last_intersection_update_,
-        context);
-    if (flags & IntersectionObservation::kConsumeScrollDelta) {
-      accumulated_scroll_delta_since_last_intersection_update_ =
-          gfx::Vector2dF();
-    }
+    controller->ComputeIntersections(flags, *this, context);
   }
   intersection_observation_state_ = kNotNeeded;
 
@@ -3933,13 +4058,6 @@ void LocalFrameView::SetIntersectionObservationState(
   }
 }
 
-void LocalFrameView::UpdateIntersectionObservationStateOnScroll(
-    gfx::Vector2dF scroll_delta) {
-  accumulated_scroll_delta_since_last_intersection_update_ +=
-      gfx::Vector2dF(std::abs(scroll_delta.x()), std::abs(scroll_delta.y()));
-  SetIntersectionObservationState(kScrollAndVisibilityOnly);
-}
-
 void LocalFrameView::SetVisualViewportOrOverlayNeedsRepaint() {
   if (LocalFrameView* root = GetFrame().LocalFrameRoot().View())
     root->visual_viewport_or_overlay_needs_repaint_ = true;
@@ -3950,42 +4068,41 @@ bool LocalFrameView::VisualViewportOrOverlayNeedsRepaintForTesting() const {
   return visual_viewport_or_overlay_needs_repaint_;
 }
 
-unsigned LocalFrameView::GetIntersectionObservationFlags(
-    unsigned parent_flags) const {
-  unsigned flags =
-      parent_flags & (IntersectionObservation::kConsumeScrollDelta |
-                      IntersectionObservation::kUpdateTracking);
+IntersectionObservation::ComputeFlags
+LocalFrameView::GetIntersectionObservationFlags(
+    IntersectionObservation::ComputeFlags parent_flags) const {
+  constexpr IntersectionObservation::ComputeFlags kInheritedFlags = {
+      IntersectionObservation::kUpdateTracking,
+      // For observers with implicit roots, we need to check state on the
+      // whole local frame tree, as passed down from the parent.
+      IntersectionObservation::kImplicitRootObserversNeedUpdate,
+      // The kIgnoreDelay parameter is used to force computation in an OOPIF
+      // which is hidden in the parent document, thus not running lifecycle
+      // updates. It applies to the entire frame tree.
+      IntersectionObservation::kIgnoreDelay,
+  };
+  auto flags = base::Intersection(parent_flags, kInheritedFlags);
 
   const LocalFrame& target_frame = GetFrame();
   const Frame& root_frame = target_frame.Tree().Top();
   if (&root_frame == &target_frame ||
       target_frame.GetSecurityContext()->GetSecurityOrigin()->CanAccess(
           root_frame.GetSecurityContext()->GetSecurityOrigin())) {
-    flags |= IntersectionObservation::kReportImplicitRootBounds;
+    flags.Put(IntersectionObservation::kReportImplicitRootBounds);
   }
 
   if (!target_frame.IsLocalRoot() && !target_frame.OwnerLayoutObject())
-    flags |= IntersectionObservation::kAncestorFrameIsDetachedFromLayout;
+    flags.Put(IntersectionObservation::kAncestorFrameIsDetachedFromLayout);
 
   // Observers with explicit roots only need to be checked on the same frame,
   // since in this case target and root must be in the same document.
   if (intersection_observation_state_ != kNotNeeded) {
-    flags |= (IntersectionObservation::kExplicitRootObserversNeedUpdate |
-              IntersectionObservation::kImplicitRootObserversNeedUpdate);
+    flags.Put(IntersectionObservation::kExplicitRootObserversNeedUpdate);
+    flags.Put(IntersectionObservation::kImplicitRootObserversNeedUpdate);
     if (intersection_observation_state_ == kScrollAndVisibilityOnly) {
-      flags |= IntersectionObservation::kScrollAndVisibilityOnly;
+      flags.Put(IntersectionObservation::kScrollAndVisibilityOnly);
     }
   }
-
-  // For observers with implicit roots, we need to check state on the whole
-  // local frame tree, as passed down from the parent.
-  flags |= (parent_flags &
-            IntersectionObservation::kImplicitRootObserversNeedUpdate);
-
-  // The kIgnoreDelay parameter is used to force computation in an OOPIF which
-  // is hidden in the parent document, thus not running lifecycle updates. It
-  // applies to the entire frame tree.
-  flags |= (parent_flags & IntersectionObservation::kIgnoreDelay);
 
   return flags;
 }

@@ -459,6 +459,8 @@ MinMaxSizesResult BlockLayoutAlgorithm::ComputeMinMaxSizes(
     }
 
     MinMaxSizesFloatInput child_float_input;
+    child_float_input.constrained_inline_size =
+        float_input.constrained_inline_size;
     if (child.IsInline() || child.IsAnonymousBlockFlow()) {
       child_float_input.float_left_inline_size = float_left_inline_size;
       child_float_input.float_right_inline_size = float_right_inline_size;
@@ -863,7 +865,7 @@ inline const LayoutResult* BlockLayoutAlgorithm::Layout(
 
   PreviousInflowPosition previous_inflow_position = {
       LayoutUnit(), constraint_space.GetMarginStrut(),
-      is_resuming_ ? LayoutUnit() : ComputeInitialBlockStartAnnotationSpace(),
+      ComputeInitialBlockStartAnnotationSpace(),
       /* previous_sibling_block_end_annotation_space */ LayoutUnit(),
       /* self_collapsing_child_had_clearance */ false};
 
@@ -1427,9 +1429,12 @@ const LayoutResult* BlockLayoutAlgorithm::FinishLayout(
     const LayoutUnit annotation_space_start_offset =
         content_end_offset -
         previous_inflow_position->block_end_annotation_space;
-    const LayoutUnit container_end_offset = border_box_size.block_size -
-                                            Borders().block_end -
-                                            Scrollbar().block_end;
+    LayoutUnit container_end_offset = border_box_size.block_size -
+                                      Borders().block_end -
+                                      Scrollbar().block_end;
+    if (RuntimeEnabledFeatures::AnnotationSpaceForMultiColEnabled()) {
+      container_end_offset -= previously_consumed_block_size;
+    }
     const LayoutUnit available_space = std::max(
         LayoutUnit(), container_end_offset - annotation_space_start_offset);
     container_builder_.SetBlockEndAnnotationSpace(available_space);
@@ -1791,7 +1796,7 @@ void BlockLayoutAlgorithm::HandleFloat(
       child, child_break_token, ChildAvailableSize(),
       PercentageSizeForChild(child), origin_bfc_offset, constraint_space,
       Style(), FragmentainerCapacityForChildren(),
-      FragmentainerOffsetForChildren(), line_clamp_data_.ShouldHideForPaint());
+      FragmentainerOffsetForChildren(), line_clamp_data_.data.FloatState());
 
   if (!container_builder_.BfcBlockOffset()) {
     container_builder_.AddAdjoiningObjectTypes(
@@ -3630,7 +3635,8 @@ ConstraintSpace BlockLayoutAlgorithm::CreateConstraintSpaceForChild(
          container_builder_.ShouldTextBoxTrimNodeEnd()));
     if (RuntimeEnabledFeatures::AnnotationSpaceOnStartEnabled() &&
         GetConstraintSpace().ContainsAnnotations() &&
-        !GetConstraintSpace().IsInsideBalancedColumns() &&
+        (RuntimeEnabledFeatures::AnnotationSpaceForMultiColEnabled() ||
+         !GetConstraintSpace().IsInsideBalancedColumns()) &&
         previous_sibling_block_end_annotation_space > LayoutUnit()) {
       builder.SetPreviousSiblingBlockEndAnnotationSpace(
           previous_sibling_block_end_annotation_space);
@@ -3703,22 +3709,33 @@ ConstraintSpace BlockLayoutAlgorithm::CreateConstraintSpaceForChild(
     }
   }
 
-  const bool has_stretch =
-      IsHorizontalWritingMode(constraint_space.GetWritingMode())
-          ? child_style.Height().HasStretch() ||
-                child_style.MinHeight().HasStretch() ||
-                child_style.MaxHeight().HasStretch()
-          : child_style.Width().HasStretch() ||
-                child_style.MinWidth().HasStretch() ||
-                child_style.MaxWidth().HasStretch();
+  if (!constraint_space.IsNewFormattingContext()) {
+    if (Node().IsAnonymousBlockFlow()) {
+      // If we are anonymous propagate our "ignore-margins" flags to our child.
+      builder.SetIgnoreMarginsForStretch(
+          constraint_space.GetWritingDirection(),
+          constraint_space.IgnoreMarginsForStretch());
+    } else {
+      const bool has_stretch =
+          IsHorizontalWritingMode(constraint_space.GetWritingMode())
+              ? child_style.Height().HasStretch() ||
+                    child_style.MinHeight().HasStretch() ||
+                    child_style.MaxHeight().HasStretch()
+              : child_style.Width().HasStretch() ||
+                    child_style.MinWidth().HasStretch() ||
+                    child_style.MaxWidth().HasStretch();
 
-  if (has_stretch && !constraint_space.IsNewFormattingContext()) {
-    const LineLogicalBoxSides sides(BorderPadding().block_start == LayoutUnit(),
-                                    /* line_right */ false,
-                                    BorderPadding().block_end == LayoutUnit(),
-                                    /* line_left */ false);
-    builder.SetIgnoreMarginsForStretch(constraint_space.GetWritingMode(),
-                                       sides);
+      if (has_stretch || child.IsAnonymousBlockFlow() || child.IsInline()) {
+        // If we have no block start/end border-padding and don't establish a
+        // new formatting context, ignore margins for stretch sizing purposes.
+        builder.SetIgnoreMarginsForStretch(
+            constraint_space.GetWritingDirection(),
+            LogicalBoxSides(/*inline_start=*/false,
+                            /*inline_end=*/false,
+                            BorderPadding().block_start == LayoutUnit(),
+                            BorderPadding().block_end == LayoutUnit()));
+      }
+    }
   }
 
   return builder.ToConstraintSpace();
@@ -4129,20 +4146,24 @@ LogicalOffset BlockLayoutAlgorithm::AdjustSliderThumbInlineOffset(
 
 LayoutUnit BlockLayoutAlgorithm::ComputeInitialBlockStartAnnotationSpace()
     const {
+  if (is_resuming_) {
+    return LayoutUnit();
+  }
   LayoutUnit padding_start = container_builder_.Padding().block_start;
+  const ConstraintSpace& space = GetConstraintSpace();
   // Allow ruby annotations to overflow to the block-start margin if the
   // container has no block-start border.
   if (RuntimeEnabledFeatures::AnnotationSpaceOnStartEnabled() &&
-      GetConstraintSpace().ContainsAnnotations() &&
-      !GetConstraintSpace().IsNewFormattingContext() &&
-      !GetConstraintSpace().IsInsideBalancedColumns() &&
+      space.ContainsAnnotations() && !space.IsNewFormattingContext() &&
+      (RuntimeEnabledFeatures::AnnotationSpaceForMultiColEnabled() ||
+       !space.IsInsideBalancedColumns()) &&
       Borders().block_start == 0) {
-    MarginStrut margin_strut = GetConstraintSpace().GetMarginStrut();
-    margin_strut.Append(
-        ComputeMarginsForSelf(GetConstraintSpace(), Style()).block_start,
-        Style().HasMarginBlockStartQuirk());
-    return margin_strut.Sum() + padding_start +
-           GetConstraintSpace().PreviousSiblingBlockEndAnnotationSpace();
+    MarginStrut margin_strut = space.GetMarginStrut();
+    margin_strut.Append(ComputeMarginsForSelf(space, Style()).block_start,
+                        Style().HasMarginBlockStartQuirk());
+    LayoutUnit annotation_space = margin_strut.Sum() + padding_start;
+    annotation_space += space.PreviousSiblingBlockEndAnnotationSpace();
+    return annotation_space;
   }
   return padding_start;
 }

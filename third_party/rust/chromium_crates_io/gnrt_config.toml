@@ -343,6 +343,9 @@ group = 'test'
 allow_first_party_usage = false
 extra_kv = { allow_unsafe = true }
 
+[crate.extended]
+extra_kv = { allow_unsafe = false }
+
 [crate.fastbloom]
 extra_input_roots = ["../README.md"]
 extra_kv = { allow_unsafe = false }
@@ -368,6 +371,7 @@ ban_features = [
     # audited).
     'any_zlib',
 ]
+extra_input_roots = ["../README.md"]
 [crate.flate2.extra_kv]
 # Web tests (aka WPT tests, also formerly known as Layout Tests) require fast
 # PNG encoding and decoding even in Debug builds.  See
@@ -377,6 +381,7 @@ configs_to_add = [
     '//build/config/compiler:optimize',
     '//build/config/compiler:shot_rust_optimize_speed',
 ]
+multiversion_cleanup_bug = "https://crbug.com/556397749"
 allow_unsafe = true
 
 [crate.foldhash.extra_kv]
@@ -575,6 +580,9 @@ allow_unsafe = false
 [crate.jpeg-encoder]
 extra_kv = { allow_unsafe = true }
 
+[crate.jxl]
+extra_input_roots = ["util/dither_32x32.bin"]
+
 [crate.jxl.extra_kv]
 allow_unsafe = true
 # JXL decoding requires optimizations even in Debug builds for reasonable performance.
@@ -669,6 +677,8 @@ extra_kv = { allow_unsafe = false }
 [crate.minijinja]
 extra_kv = { allow_unsafe = true }
 
+# TODO: Remove multiple versions of the `miniz_oxide` crate:
+# miniz_oxide@0.8.9, miniz_oxide@0.9.1
 [crate.miniz_oxide.extra_kv]
 # Web tests (aka WPT tests, also formerly known as Layout Tests) require fast
 # PNG encoding and decoding even in Debug builds.  See
@@ -679,6 +689,7 @@ configs_to_add = [
     '//build/config/compiler:optimize',
     '//build/config/compiler:shot_rust_optimize_speed',
 ]
+multiversion_cleanup_bug = "https://crbug.com/556397749"
 
 [crate.moxcms]
 extra_kv = { allow_unsafe = true }
@@ -747,6 +758,7 @@ configs_to_add = [
     '//build/config/compiler:optimize',
     '//build/config/compiler:shot_rust_optimize_speed',
 ]
+multiversion_cleanup_bug = "https://crbug.com/556397749"
 
 [crate.postcard]
 group = 'test'
@@ -942,6 +954,18 @@ extra_kv = { allow_unsafe = false }
 
 [crate.symphonia-core.extra_kv]
 allow_unsafe = false
+
+[crate.symphonia-format-isomp4]
+extra_kv = { allow_unsafe = false }
+
+[crate.symphonia-format-mkv]
+extra_kv = { allow_unsafe = false }
+
+[crate.symphonia-format-ogg]
+extra_kv = { allow_unsafe = false }
+
+[crate.symphonia-format-riff]
+extra_kv = { allow_unsafe = false }
 
 [crate.symphonia-metadata.extra_kv]
 allow_unsafe = false

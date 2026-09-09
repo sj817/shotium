@@ -3,7 +3,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import hashlib
 import math
+import struct
 
 import json5_generator
 import template_expander
@@ -132,6 +134,11 @@ def _get_include_paths(properties):
     for property_ in properties:
         include_paths.update(property_.include_paths)
     return list(sorted(include_paths))
+
+
+def hash_name(name):
+    return struct.unpack('>I',
+                         hashlib.md5(name.encode('utf-8')).digest()[:4])[0]
 
 
 def _create_groups(properties):
@@ -547,6 +554,7 @@ class ComputedStyleBaseWriter(json5_generator.Writer):
 
     @template_expander.use_jinja(
         'core/style/templates/computed_style_base.h.tmpl',
+        filters={'hash_name': hash_name},
         tests={
             'in': lambda a, b: a in b
         })

@@ -5,8 +5,6 @@
 #include "third_party/blink/renderer/core/layout/inline/inline_box_state.h"
 
 #include "base/containers/adapters.h"
-#include "base/feature_list.h"
-#include "third_party/blink/public/common/features.h"
 #include "third_party/blink/renderer/core/layout/box_fragment_builder.h"
 #include "third_party/blink/renderer/core/layout/geometry/logical_offset.h"
 #include "third_party/blink/renderer/core/layout/geometry/logical_size.h"
@@ -136,11 +134,7 @@ void InlineBoxState::ComputeTextMetrics(const ComputedStyle& styleref,
   text_top = -text_metrics.ascent;
   text_height = text_metrics.LineHeight();
 
-  FontHeight emphasis_marks_outsets =
-      RuntimeEnabledFeatures::TextEmphasisAsRubyEnabled()
-          ? FontHeight::Empty()
-          : ComputeEmphasisMarkOutsets(styleref,
-                                       UsedFont(base_font, paint_scale));
+  FontHeight emphasis_marks_outsets = FontHeight::Empty();
   LayoutUnit line_height = styleref.ComputedLineHeightAsFixed(base_font);
   if (!styleref.LineHeight().IsFixed() && paint_scale != 1.0f) {
     line_height *= paint_scale;
@@ -278,9 +272,7 @@ bool InlineBoxState::CanAddTextOfStyle(const ComputedStyle& text_style) const {
     return false;
   DCHECK(style);
   if (style == &text_style ||
-      (base::FeatureList::IsEnabled(blink::features::kCSSFontComparisonFix)
-           ? base::ValuesEquivalent(style->GetFont(), text_style.GetFont())
-           : style->GetFont() == text_style.GetFont()) ||
+      base::ValuesEquivalent(style->GetFont(), text_style.GetFont()) ||
       style->GetFont()->PrimaryFont() == text_style.GetFont()->PrimaryFont()) {
     return true;
   }
@@ -297,7 +289,7 @@ InlineBoxState* InlineLayoutStateStack::OnBeginPlaceItems(
     const InlineNode& node,
     const LineInfo& line_info,
     FontBaseline baseline_type,
-    bool line_height_quirk,
+    LineHeightMode line_height_mode,
     bool should_scale_line_height,
     LogicalLineItems* line_box) {
   const ComputedStyle& line_style = line_info.LineStyle();
@@ -319,10 +311,14 @@ InlineBoxState* InlineLayoutStateStack::OnBeginPlaceItems(
         AddBoxFragmentPlaceholder(&box, text_block_scale, line_box,
                                   baseline_type);
       }
-      if (!line_height_quirk)
+      // For `kLineClampDisplacedEllipsis`, we reset all text metrics. The root
+      // inline box does need a strut, but `box.text_metrics` could be empty in
+      // quirks mode cases, so we fix this below.
+      if (line_height_mode == LineHeightMode::kNormal) {
         box.metrics = box.text_metrics;
-      else
+      } else {
         box.ResetTextMetrics();
+      }
       if (box.has_start_edge) {
         // Existing box states are wrapped before they were closed, and hence
         // they do not have start edges, unless 'box-decoration-break: clone'.
@@ -339,6 +335,7 @@ InlineBoxState* InlineLayoutStateStack::OnBeginPlaceItems(
   // Initialize the box state for the line box.
   InlineBoxState& line_box_state = LineBoxState();
   if (line_box_state.style != &line_style ||
+      line_height_mode == LineHeightMode::kLineClampDisplacedEllipsis ||
       (line_style.GetTextFit().Type() != TextFitType::kNone &&
        line_style.GetTextFit().Target() != TextFitTarget::kConsistent)) {
     line_box_state.ResetStyle(line_style, node.IsSvgText(),
@@ -349,7 +346,7 @@ InlineBoxState* InlineLayoutStateStack::OnBeginPlaceItems(
     // https://drafts.csswg.org/css2/visudet.html#strut
     TextFitBlockScale text_scale{line_info.TextFitScale(), nullptr};
     line_box_state.text_fit_scale = text_scale.TotalScale(*line_box_state.font);
-    if (!line_height_quirk) {
+    if (line_height_mode != LineHeightMode::kQuirk) {
       line_box_state.ComputeTextMetrics(line_style, *line_box_state.font,
                                         baseline_type, &text_scale);
       // If ::first-line has a smaller computed line-height than its containing
@@ -522,15 +519,31 @@ void InlineLayoutStateStack::AddBoxFragmentPlaceholder(
         text_scale.scaled_font ? text_scale.scaled_font : box->font.Get();
     if (const auto* font_data = font->PrimaryFont()) {
       const float scale = text_scale.paint_scale;
-      if (scale != 1.0f) {
+      if (is_svg_text_ || scale != 1.0f) [[unlikely]] {
         metrics = font_data->GetFontMetrics().GetFloatFontHeight(baseline_type);
+      } else {
+        metrics = font_data->GetFontMetrics().GetFontHeight(baseline_type);
+      }
+      if (!is_svg_text_ &&
+          RuntimeEnabledFeatures::TextBoxTrimOnInlineBoxEnabled()) {
+        const ComputedStyle& style = *box->style;
+        const bool should_apply_start = style.ShouldTextBoxTrimStart();
+        const bool should_apply_end = style.ShouldTextBoxTrimEnd();
+        if (should_apply_start || should_apply_end) [[unlikely]] {
+          bool should_apply_over = should_apply_start;
+          bool should_apply_under = should_apply_end;
+          if (style.IsFlippedLinesWritingMode()) [[unlikely]] {
+            should_apply_over = should_apply_end;
+            should_apply_under = should_apply_start;
+          }
+          InlineBoxState::AdjustEdges(style, *font, baseline_type,
+                                      should_apply_over, should_apply_under,
+                                      metrics);
+        }
+      }
+      if (scale != 1.0f) [[unlikely]] {
         metrics.ascent *= scale;
         metrics.descent *= scale;
-      } else {
-        metrics =
-            is_svg_text_
-                ? font_data->GetFontMetrics().GetFloatFontHeight(baseline_type)
-                : font_data->GetFontMetrics().GetFontHeight(baseline_type);
       }
     }
 

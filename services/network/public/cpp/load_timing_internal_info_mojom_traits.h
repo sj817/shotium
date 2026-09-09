@@ -14,6 +14,7 @@
 #include "net/http/alternate_protocol_usage.h"
 #include "net/http/http_connection_info.h"
 #include "net/socket/next_proto.h"
+#include "net/spdy/multiplexed_session_creation_initiator.h"
 #include "services/network/public/mojom/load_timing_internal_info.mojom-shared.h"
 
 namespace mojo {
@@ -101,6 +102,16 @@ struct COMPONENT_EXPORT(NETWORK_CPP_BASE)
 
 template <>
 struct COMPONENT_EXPORT(NETWORK_CPP_BASE)
+    EnumTraits<network::mojom::MultiplexedSessionCreationInitiator,
+               net::MultiplexedSessionCreationInitiator> {
+  static network::mojom::MultiplexedSessionCreationInitiator ToMojom(
+      net::MultiplexedSessionCreationInitiator initiator);
+  static net::MultiplexedSessionCreationInitiator FromMojom(
+      network::mojom::MultiplexedSessionCreationInitiator in);
+};
+
+template <>
+struct COMPONENT_EXPORT(NETWORK_CPP_BASE)
     StructTraits<network::mojom::LoadTimingInternalInfoDataView,
                  net::LoadTimingInternalInfo> {
   static std::optional<base::TimeDelta> max_stream_limit_pending_delay(
@@ -121,6 +132,8 @@ struct COMPONENT_EXPORT(NETWORK_CPP_BASE)
       const net::LoadTimingInternalInfo& info);
   static const std::optional<net::ResolutionDetails>& resolution_details(
       const net::LoadTimingInternalInfo& info);
+  static std::optional<net::MultiplexedSessionCreationInitiator>
+  session_creation_initiator(const net::LoadTimingInternalInfo& info);
   static bool Read(network::mojom::LoadTimingInternalInfoDataView data,
                    net::LoadTimingInternalInfo* info);
 };

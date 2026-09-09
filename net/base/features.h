@@ -77,6 +77,11 @@ NET_EXPORT extern const base::FeatureParam<bool>
 // are used (e.g. to connect via ECH) may be controlled by separate features.
 NET_EXPORT BASE_DECLARE_FEATURE(kUseDnsHttpsSvcb);
 
+// If enabled, HostResolver carries address hints (ipv4hint/ipv6hint) from
+// HTTPS DNS records in its results for consumption by the
+// ServiceEndpointRequest path.
+NET_EXPORT BASE_DECLARE_FEATURE(kUseDnsHttpsSvcbAddressHints);
+
 // Enables partial support for Structured DNS Errors
 // (draft-ietf-dnsop-structured-dns-error). When enabled, the Chrome DNS
 // resolver will indicate support for structured extended errors in outgoing DNS
@@ -148,6 +153,9 @@ NET_EXPORT BASE_DECLARE_FEATURE(kHappyEyeballsV3);
 // Note: If kHappyEyeballsV3 is enabled, this behavior is automatically active
 // regardless of this flag's state.
 NET_EXPORT BASE_DECLARE_FEATURE(kEnableIntermediateDnsResults);
+NET_EXPORT BASE_DECLARE_FEATURE_PARAM(
+    bool,
+    kEnableIntermediateDnsResultsSortTransactionsIndividually);
 
 // Feature to control the Happy Eyeballs slow timer (IPv6 fallback time).
 NET_EXPORT BASE_DECLARE_FEATURE(kAdjustIPv6FallbackTime);
@@ -211,15 +219,6 @@ NET_EXPORT BASE_DECLARE_FEATURE(kMaintainConnectionsOnIpv6TempAddrChange);
 
 // Enables TLS 1.3 early data.
 NET_EXPORT BASE_DECLARE_FEATURE(kEnableTLS13EarlyData);
-
-// When disabled, HttpContentDisposition incorrectly handles multiple
-// comma-delimited Content-Disposition lines, treating them all as a single
-// Content-Disposition string.
-//
-// This is a temporary escape valve in case the fix for
-// https://crbug.com/517466133 causes issues.
-// TODO(crbug.com/519218483): Remove this in late Q3/Q4 2026.
-NET_EXPORT BASE_DECLARE_FEATURE(kOnlyParseFirstContentDisposition);
 
 // Splits cache entries by the request's includeCredentials.
 NET_EXPORT BASE_DECLARE_FEATURE(kSplitCacheByIncludeCredentials);
@@ -357,8 +356,11 @@ NET_EXPORT BASE_DECLARE_FEATURE(kDeferConnectionTypeAtStartup);
 NET_EXPORT BASE_DECLARE_FEATURE(kTcpPortRandomizationMac);
 // How long (in seconds) to avoid reusing a recently-used ephemeral port for
 // the same peer. Defaults to 120 to match common NAT timeout values.
-NET_EXPORT extern const base::FeatureParam<int>
-    kTcpPortRandomizationReuseDelaySec;
+NET_EXPORT BASE_DECLARE_FEATURE_PARAM(int, kTcpPortRandomizationReuseDelaySec);
+// If enabled, port randomization applies even where the remote address is
+// the loopback address. See https://crbug.com/546919930 for context.
+NET_EXPORT BASE_DECLARE_FEATURE_PARAM(bool,
+                                      kTcpPortRandomizationMacForLoopback);
 #endif
 
 // Avoid creating cache entries for transactions that are most likely no-store.
@@ -376,13 +378,6 @@ NET_EXPORT BASE_DECLARE_FEATURE_PARAM(size_t, kMaxReportBodySizeKB);
 // false. This is needed as a workaround to set this value to true on Android
 // but not on WebView (until crbug.com/1430082 has been fixed).
 NET_EXPORT BASE_DECLARE_FEATURE(kMigrateSessionsOnNetworkChangeV2);
-
-#if BUILDFLAG(IS_LINUX)
-// AddressTrackerLinux will not run inside the network service in this
-// configuration, which will improve the Linux network service sandbox.
-// TODO(crbug.com/40220507): remove this.
-NET_EXPORT BASE_DECLARE_FEATURE(kAddressTrackerLinuxIsProxied);
-#endif  // BUILDFLAG(IS_LINUX)
 
 // Enables binding of cookies to the port that originally set them by default.
 NET_EXPORT BASE_DECLARE_FEATURE(kEnablePortBoundCookies);

@@ -120,13 +120,13 @@ void ListedElement::InsertedInto(ContainerNode& insertion_point) {
   }
 
   FieldSetAncestorsSetNeedsValidityCheck(&insertion_point,
-                                         StartingNodeType::IS_INSERTION_POINT);
+                                         StartingNodeType::kInsertionPoint);
   DisabledStateMightBeChanged();
 
   if (ClassSupportsStateRestore() && insertion_point.isConnected() &&
       !element.ContainingShadowRoot()) {
     element.GetDocument()
-        .GetFormController()
+        .EnsureFormController()
         .InvalidateStatefulFormControlList();
   }
 
@@ -135,7 +135,7 @@ void ListedElement::InsertedInto(ContainerNode& insertion_point) {
 
 void ListedElement::RemovedFrom(ContainerNode& insertion_point) {
   FieldSetAncestorsSetNeedsValidityCheck(&insertion_point,
-                                         StartingNodeType::IS_INSERTION_POINT);
+                                         StartingNodeType::kInsertionPoint);
   // Two values that might change as a result of being removed are
   // `ancestor_disabled_state_` and `data_list_ancestor_state_`. Both of
   // these values feed into the WillValidate cache. If this ListedElement is
@@ -177,7 +177,7 @@ void ListedElement::RemovedFrom(ContainerNode& insertion_point) {
       !element.ContainingShadowRoot() &&
       !insertion_point.ContainingShadowRoot()) {
     element.GetDocument()
-        .GetFormController()
+        .EnsureFormController()
         .InvalidateStatefulFormControlList();
   }
 
@@ -244,7 +244,7 @@ void ListedElement::FieldSetAncestorsSetNeedsValidityCheck(
     return;
   auto* field_set = Traversal<HTMLFieldSetElement>::FirstAncestorOrSelf(*node);
   if (!field_set) {
-    if (starting_type == StartingNodeType::IS_PARENT) {
+    if (starting_type == StartingNodeType::kParent) {
       may_have_fieldset_ancestor_ = false;
     }
     return;
@@ -554,7 +554,7 @@ void ListedElement::SetNeedsValidityCheck() {
     validity_is_dirty_ = true;
     FormOwnerSetNeedsValidityCheck();
     FieldSetAncestorsSetNeedsValidityCheck(element.parentNode(),
-                                           StartingNodeType::IS_PARENT);
+                                           StartingNodeType::kParent);
     element.PseudoStateChanged(CSSSelector::kPseudoValid);
     element.PseudoStateChanged(CSSSelector::kPseudoInvalid);
     element.PseudoStateChanged(CSSSelector::kPseudoUserValid);
@@ -646,7 +646,7 @@ void ListedElement::NotifyFormStateChanged() {
 
 void ListedElement::TakeStateAndRestore() {
   if (ClassSupportsStateRestore()) {
-    ToHTMLElement().GetDocument().GetFormController().RestoreControlStateFor(
+    ToHTMLElement().GetDocument().EnsureFormController().RestoreControlStateFor(
         *this);
   }
 }

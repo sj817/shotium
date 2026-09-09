@@ -11,6 +11,7 @@
 #include <string_view>
 #include <vector>
 
+#include "base/containers/extend.h"
 #include "base/containers/span.h"
 #include "base/containers/span_reader.h"
 #include "base/containers/to_vector.h"
@@ -25,6 +26,7 @@
 #include "crypto/hash.h"
 #include "crypto/keypair.h"
 #include "crypto/openssl_util.h"
+#include "crypto/sign.h"
 #include "net/base/hash_value.h"
 #include "net/cert/asn1_util.h"
 #include "net/cert/time_conversions.h"
@@ -531,6 +533,13 @@ bool CreateCertBuffersFromPKCS7Bytes(
 
 bssl::ParseCertificateOptions DefaultParseCertificateOptions() {
   bssl::ParseCertificateOptions options;
+  // It is sadly common for certificates to have serial numbers over 20 bytes,
+  // especially if the CA counted bytes before the leading zero byte is added
+  // in the INTEGER encoding.
+  //
+  // TODO(crbug.com/533048005): This option also allows non-integers, which is
+  // more problematic and less necessary. Remove this option once BoringSSL
+  // separates the two.
   options.allow_invalid_serial_numbers = true;
   return options;
 }
@@ -543,7 +552,7 @@ SHA256HashValue CalculateSha256SpkiHash(const CRYPTO_BUFFER* buffer) {
 
 bool SignatureVerifierInitWithCertificate(
     crypto::SignatureVerifier* verifier,
-    crypto::SignatureVerifier::SignatureAlgorithm signature_algorithm,
+    crypto::sign::SignatureKind signature_algorithm,
     base::span<const uint8_t> signature,
     const CRYPTO_BUFFER* certificate) {
   std::string_view cert_der = x509_util::CryptoBufferAsStringPiece(certificate);
@@ -694,10 +703,18 @@ std::vector<uint8_t> CreateMtcLandmarkGroupTrustAnchorID(
       CBB_add_asn1_oid_component(cbb.get(), 2) &&
       CBB_add_asn1_oid_component(cbb.get(), log_number) &&
       CBB_add_asn1_oid_component(cbb.get(), landmark_number));
-  // SAFETY: CBB_data(cbb) returns a pointer to the written data with length
-  // CBB_len(cbb).
-  return base::ToVector(UNSAFE_BUFFERS(
-      base::span<const uint8_t>(CBB_data(cbb.get()), CBB_len(cbb.get()))));
+  return base::ToVector(crypto::CbbAsSpan(cbb.get()));
+}
+
+std::vector<uint8_t> EncodeTlsRequestedTrustAnchorIDList(
+    std::vector<std::vector<uint8_t>> trust_anchor_ids) {
+  std::vector<uint8_t> result;
+  std::sort(trust_anchor_ids.begin(), trust_anchor_ids.end());
+  for (const auto& tai : trust_anchor_ids) {
+    result.emplace_back(base::checked_cast<uint8_t>(tai.size()));
+    base::Extend(result, tai);
+  }
+  return result;
 }
 
 }  // namespace net::x509_util

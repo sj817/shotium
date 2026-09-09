@@ -188,6 +188,7 @@
 #include "third_party/blink/renderer/core/event_type_names.h"
 #include "third_party/blink/renderer/core/events/before_unload_event.h"
 #include "third_party/blink/renderer/core/events/event_util.h"
+#include "third_party/blink/renderer/core/events/focus_event.h"
 #include "third_party/blink/renderer/core/events/hash_change_event.h"
 #include "third_party/blink/renderer/core/events/page_transition_event.h"
 #include "third_party/blink/renderer/core/events/visual_viewport_resize_event.h"
@@ -259,6 +260,7 @@
 #include "third_party/blink/renderer/core/html_element_type_helpers.h"
 #include "third_party/blink/renderer/core/html_names.h"
 #include "third_party/blink/renderer/core/input/event_handler.h"
+#include "third_party/blink/renderer/core/input/input_device_capabilities.h"
 #include "third_party/blink/renderer/core/input/touch_list.h"
 #include "third_party/blink/renderer/core/inspector/console_message.h"
 #include "third_party/blink/renderer/core/intersection_observer/element_intersection_observer_data.h"
@@ -310,7 +312,7 @@
 #include "third_party/blink/renderer/core/resize_observer/resize_observer_controller.h"
 #include "third_party/blink/renderer/core/resize_observer/resize_observer_entry.h"
 #include "third_party/blink/renderer/core/resize_observer/resize_observer_size.h"
-#include "third_party/blink/renderer/core/route_matching/route_map.h"
+#include "third_party/blink/renderer/core/route_matching/navigation_state.h"
 #include "third_party/blink/renderer/core/script/script_runner.h"
 #include "third_party/blink/renderer/core/scroll/scrollbar_theme.h"
 #include "third_party/blink/renderer/core/scroll/snap_event.h"
@@ -439,8 +441,6 @@ bool DefaultFaviconAllowedByCSP(const Document* document, const IconURL& icon) {
       ReportingDisposition::kSuppressReporting,
       ContentSecurityPolicy::CheckHeaderType::kCheckAll);
 }
-
-// The sampling rate for UKM.
 
 }  // namespace
 
@@ -1123,6 +1123,34 @@ void Document::ChildrenChanged(const ChildrenChange& change) {
   // frames when there's only a <head>, but such documents are pretty rare.
   if (document_element_ && !IsA<HTMLDocument>(this))
     BeginLifecycleUpdatesIfRenderingReady();
+}
+
+namespace {
+
+void HandleFrameOwnerInterestForFocusEvent(FocusEvent* focus_event,
+                                           HTMLFrameOwnerElement* owner,
+                                           Document& current_document) {
+  if (!owner || !focus_event) {
+    return;
+  }
+  // If focus transitioned to another element inside the same child document,
+  // the frame owner element does not lose focus/interest. This focus shift
+  // will be handled by the Element::DefaultEventHandler code.
+  if (focus_event->type() == event_type_names::kFocusout &&
+      focus_event->relatedTarget() && focus_event->relatedTarget()->ToNode() &&
+      &focus_event->relatedTarget()->ToNode()->GetDocument() ==
+          &current_document) {
+    return;
+  }
+  owner->HandleFocusEventsForInterestFor(focus_event);
+}
+
+}  // namespace
+
+void Document::DefaultEventHandler(Event& event) {
+  HandleFrameOwnerInterestForFocusEvent(DynamicTo<FocusEvent>(event),
+                                        LocalOwner(), *this);
+  Node::DefaultEventHandler(event);
 }
 
 bool Document::IsInMainFrame() const {
@@ -2129,7 +2157,7 @@ String Document::nodeName() const {
   return "#document";
 }
 
-FormController& Document::GetFormController() {
+FormController& Document::EnsureFormController() {
   if (!form_controller_) {
     form_controller_ = MakeGarbageCollected<FormController>(*this);
     HistoryItem* history_item = Loader() ? Loader()->GetHistoryItem() : nullptr;
@@ -2148,7 +2176,7 @@ DocumentState* Document::GetDocumentState() const {
 void Document::SetStateForNewControls(const Vector<String>& state_vector) {
   if (!state_vector.size() && !form_controller_)
     return;
-  GetFormController().SetStateForNewControls(state_vector);
+  EnsureFormController().SetStateForNewControls(state_vector);
 }
 
 LocalFrameView* Document::View() const {
@@ -2604,6 +2632,10 @@ void Document::UpdateStyle() {
   style_engine.UpdateStyleAndLayoutTree();
 
   LayoutView* layout_view = GetLayoutView();
+  if (View()->IsAutoSizeModeEnabled() &&
+      layout_view->NeedsScrollableOverflowRecalc()) {
+    View()->SetNeedsAutoSizeForOverflow();
+  }
   layout_view->RecalcScrollableOverflow();
 
 #if DCHECK_IS_ON()
@@ -4071,8 +4103,13 @@ bool Document::DispatchBeforeUnloadEvent(
     dom_window_->DispatchEvent(before_unload_event, this);
   }
 
-  if (!before_unload_event.defaultPrevented())
-    DefaultEventHandler(before_unload_event);
+  if (!before_unload_event.defaultPrevented()) {
+    if (RuntimeEnabledFeatures::CleanUpActivationBehaviorEnabled()) {
+      DefaultBeforeUnloadEventHandler(before_unload_event);
+    } else {
+      DefaultEventHandler(before_unload_event);
+    }
+  }
 
   bool cancelled_by_script = !before_unload_event.returnValue().empty() ||
                              before_unload_event.defaultPrevented();
@@ -4138,7 +4175,11 @@ bool Document::DispatchBeforeUnloadEvent(
   return false;
 }
 
-void Document::DispatchUnloadEvents(UnloadEventTimingInfo* unload_timing_info) {
+void Document::DefaultBeforeUnloadEventHandler(BeforeUnloadEvent&) {}
+
+void Document::DispatchUnloadEvents(
+    UnloadEventTimingInfo* unload_timing_info,
+    bool will_commit_new_document_in_this_frame) {
   TRACE_EVENT("blink", "Document::DispatchUnloadEvents",
               perfetto::Flow::FromPointer(this));
   base::ScopedUmaHistogramTimer histogram_timer(
@@ -4156,6 +4197,13 @@ void Document::DispatchUnloadEvents(UnloadEventTimingInfo* unload_timing_info) {
     return;
   }
 
+
+  if (!will_commit_new_document_in_this_frame && GetFrame() &&
+      !GetFrame()->IsMainFrame() &&
+      RuntimeEnabledFeatures::OmitSubframeDetachmentEventsOnRemovalEnabled()) {
+    load_event_progress_ = kUnloadEventHandled;
+    return;
+  }
 
   // Since we do not allow registering the unload event handlers in
   // fenced frames, it should not be fired by fencedframes.
@@ -4968,8 +5016,8 @@ bool Document::CanAcceptChild(const Node* new_child,
   if (num_elements > 1 || num_doctypes > 1) {
     exception_state.ThrowDOMException(
         DOMExceptionCode::kHierarchyRequestError,
-        UNSAFE_TODO(String::Format("Only one %s on document allowed.",
-                                   num_elements > 1 ? "element" : "doctype")));
+        StrCat({"Only one ", num_elements > 1 ? "element" : "doctype",
+                " on document allowed."}));
     return false;
   }
 
@@ -5192,9 +5240,11 @@ void Document::RemoveFocusedElementOfSubtree(Node& node,
       // up with the new node's position in the DOM.
       SetShouldUpdateSelectionAfterLayout(true);
     } else {
-      bool omit_blur_events =
-          RuntimeEnabledFeatures::OmitBlurEventOnElementRemovalEnabled();
-      ClearFocusedElement(omit_blur_events);
+      BlurEventBehavior blur_event_behavior =
+          RuntimeEnabledFeatures::OmitBlurEventOnElementRemovalEnabled()
+              ? BlurEventBehavior::kDropWhenRemoving
+              : BlurEventBehavior::kFire;
+      ClearFocusedElement(blur_event_behavior);
     }
   }
 }
@@ -5305,7 +5355,8 @@ bool Document::SetFocusedElement(Element* new_focused_element,
 
   // Remove focus from the existing focus node (if any)
   if (old_focused_element) {
-    old_focused_element->SetFocused(false, params.type);
+    old_focused_element->SetFocused(false, params.type,
+                                    params.blur_event_behavior);
     old_focused_element->SetHasFocusWithinUpToAncestor(
         false, ancestor, /*need_snap_container_search=*/true);
 
@@ -5314,7 +5365,7 @@ bool Document::SetFocusedElement(Element* new_focused_element,
     // Dispatch the blur event and let the node do any other blur related
     // activities (important for text fields)
     // If page lost focus, blur event will have already been dispatched
-    if (!params.omit_blur_events && GetPage() &&
+    if (params.blur_event_behavior == BlurEventBehavior::kFire && GetPage() &&
         (GetPage()->GetFocusController().IsFocused())) {
       old_focused_element->DispatchBlurEvent(new_focused_element, params.type,
                                              params.source_capabilities);
@@ -5480,10 +5531,10 @@ bool Document::SetFocusedElement(Element* new_focused_element,
   return !focus_change_blocked;
 }
 
-void Document::ClearFocusedElement(bool omit_blur_events) {
+void Document::ClearFocusedElement(BlurEventBehavior blur_event_behavior) {
   FocusParams params(SelectionBehaviorOnFocus::kNone,
                      mojom::blink::FocusType::kNone, nullptr);
-  params.omit_blur_events = omit_blur_events;
+  params.blur_event_behavior = blur_event_behavior;
   SetFocusedElement(nullptr, params);
 }
 
@@ -7225,15 +7276,6 @@ void Document::FinishedParsing() {
 
   if (IsInOutermostMainFrame() && !IsInitialEmptyDocument() &&
       Url().ProtocolIsInHttpFamily()) {
-    // Record histograms of SVGImage.
-    base::UmaHistogramCounts100(
-        "Blink.Layout.SVGImage.Count.InOutermostMainFrame",
-        data_->svg_image_processed_count_);
-    base::UmaHistogramMicrosecondsTimes(
-        "Blink.Layout.SVGImage.TotalTime.InOutermostMainFrame",
-        data_->accumulated_svg_image_elapsed_time_);
-
-
     // Record the total taken time by UseCounter.
     Loader()->GetUseCounter().ReportTotalTakenTime(GetFrame(),
                                                    /*did_commit_load=*/false);
@@ -7561,14 +7603,16 @@ ukm::UkmRecorder* Document::UkmRecorder() {
     Platform::Current()->GetBrowserInterfaceBroker()->GetInterface(
         factory.BindNewPipeAndPassReceiver());
     auto mojo_recorder = ukm::MojoUkmRecorder::Create(*factory);
-    if (WebTestSupport::IsRunningWebTest()) {
+    if (WebTestSupport::IsRunningWebTest() &&
+        WebTestSupport::CanRegisterUkmRecorderDelegateForWebTest()) {
       ukm::DelegatingUkmRecorder::Get()->AddDelegate(
           mojo_recorder->GetWeakPtr());
     }
     ukm_recorder_ = std::move(mojo_recorder);
   }
 
-  if (WebTestSupport::IsRunningWebTest()) {
+  if (WebTestSupport::IsRunningWebTest() &&
+        WebTestSupport::CanRegisterUkmRecorderDelegateForWebTest()) {
     return ukm::DelegatingUkmRecorder::Get();
   } else {
     return ukm_recorder_.get();
@@ -7579,17 +7623,10 @@ ukm::SourceId Document::UkmSourceID() const {
   return ukm_source_id_;
 }
 
-void Document::MaybeRecordSvgImageProcessingTime(
-    int data_change_count,
-    base::TimeDelta data_change_elapsed_time) const {
-  data_->svg_image_processed_count_ += data_change_count;
-  data_->accumulated_svg_image_elapsed_time_ += data_change_elapsed_time;
-}
-
 bool Document::AllowInlineEventHandler(Node* node,
                                        EventListener* listener,
                                        const String& context_url,
-                                       const OrdinalNumber& context_line) {
+                                       const TextPosition& context_position) {
   auto* element = DynamicTo<Element>(node);
   // HTML says that inline script needs browsing context to create its execution
   // environment.
@@ -7608,15 +7645,17 @@ bool Document::AllowInlineEventHandler(Node* node,
   if (!window->GetContentSecurityPolicyForCurrentWorld()->AllowInline(
           ContentSecurityPolicy::InlineType::kScriptAttribute, element,
           listener->ScriptBody(), String() /* nonce */, context_url,
-          context_line))
+          context_position)) {
     return false;
+  }
 
   if (!window->CanExecuteScripts(kNotAboutToExecuteScript))
     return false;
   if (node && node->GetDocument() != this &&
       !node->GetDocument().AllowInlineEventHandler(node, listener, context_url,
-                                                   context_line))
+                                                   context_position)) {
     return false;
+  }
 
   return true;
 }
@@ -9058,8 +9097,7 @@ void Document::InitializeRouteNavigationState() {
   if (RuntimeEnabledFeatures::RouteMatchingEnabled()) {
     // Set up a route map and navigation state now, and perform an active style
     // update right away, in case there are any @navigation rules.
-    auto& route_map = RouteMap::Ensure(*this);
-    route_map.EstablishNavigationStateFromActivation();
+    NavigationState::CreateFromActivation(*this);
   }
 }
 

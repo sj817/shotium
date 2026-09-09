@@ -490,7 +490,7 @@ void DisplayLockContext::UpgradeForcedScope(ForcedPhase old_phase,
     }
     if (!old_forced_info.is_forced(ForcedPhase::kPrePaint) &&
         forced_info_.is_forced(ForcedPhase::kPrePaint)) {
-      MarkAncestorsForPrePaintIfNeeded();
+      MarkForPrePaintIfNeeded();
     }
 
     // Used to also check document_->GetAgent().isolate()->InContext(),
@@ -596,7 +596,7 @@ void DisplayLockContext::Unlock() {
   // Now that we know we have a layout object, we should ensure that we can
   // reach the rest of the phases as well.
   MarkForLayoutIfNeeded();
-  MarkAncestorsForPrePaintIfNeeded();
+  MarkForPrePaintIfNeeded();
   MarkNeedsRepaint();
   MarkNeedsCullRectUpdate();
 
@@ -704,7 +704,7 @@ bool DisplayLockContext::MarkForLayoutIfNeeded() {
   return false;
 }
 
-bool DisplayLockContext::MarkAncestorsForPrePaintIfNeeded() {
+bool DisplayLockContext::MarkForPrePaintIfNeeded() {
   // TODO(vmpstr): We should add a compositing phase for proper bookkeeping.
   bool compositing_dirtied = MarkForCompositingUpdatesIfNeeded();
   bool visual_overflow_dirtied = MarkForVisualOverflowRecalcIfNeeded();
@@ -718,33 +718,15 @@ bool DisplayLockContext::MarkAncestorsForPrePaintIfNeeded() {
     // update, then ensure to mark self as needing the update. This sets up the
     // correct flags for PrePaint to recompute the necessary values and
     // propagate the information into the subtree.
-    if (needs_effective_allowed_touch_action_update_ ||
-        layout_object->EffectiveAllowedTouchActionChanged() ||
-        layout_object->DescendantEffectiveAllowedTouchActionChanged()) {
-      // Note that although the object itself should have up to date value, in
-      // order to force recalc of the whole subtree, we mark it as needing an
-      // update.
-      layout_object->MarkEffectiveAllowedTouchActionChanged();
+    PrePaintSubtreeWalkReasons reasons = pre_paint_subtree_walk_reasons_;
+    reasons.PutAll(layout_object->GetPrePaintSubtreeWalkReasons());
+    reasons.PutAll(layout_object->GetDescendantPrePaintSubtreeWalkReasons());
+    if (!reasons.empty()) {
+      layout_object->SetNeedsPrePaintSubtreeWalk(reasons);
     }
-    if (needs_blocking_wheel_event_handler_update_ ||
-        layout_object->BlockingWheelEventHandlerChanged() ||
-        layout_object->DescendantBlockingWheelEventHandlerChanged()) {
-      // Note that although the object itself should have up to date value, in
-      // order to force recalc of the whole subtree, we mark it as needing an
-      // update.
-      layout_object->MarkBlockingWheelEventHandlerChanged();
-    }
-    if (needs_soft_navigation_context_update_ ||
-        layout_object->SoftNavigationContextChanged() ||
-        layout_object->DescendantSoftNavigationContextChanged()) {
-      layout_object->MarkSoftNavigationContextChanged();
-    }
-    if (RuntimeEnabledFeatures::ContainerTimingPrepaintTraversalEnabled(
-            document_->GetExecutionContext()) &&
-        (needs_container_timing_context_update_ ||
-         layout_object->ContainerTimingChanged() ||
-         layout_object->DescendantContainerTimingChanged())) {
-      layout_object->MarkContainerTimingChanged();
+    if (RuntimeEnabledFeatures::ClearDisplayLockPrePaintFlagsEnabled()) {
+      needs_pre_paint_subtree_walk_ = false;
+      pre_paint_subtree_walk_reasons_.Clear();
     }
     return true;
   }
@@ -836,13 +818,14 @@ bool DisplayLockContext::IsElementDirtyForPrePaint() const {
   if (auto* layout_object = element_->GetLayoutObject()) {
     return PrePaintTreeWalk::ObjectRequiresPrePaint(*layout_object) ||
            PrePaintTreeWalk::ObjectRequiresTreeBuilderContext(*layout_object) ||
-           needs_prepaint_subtree_walk_ ||
-           needs_effective_allowed_touch_action_update_ ||
-           needs_blocking_wheel_event_handler_update_ ||
-           needs_soft_navigation_context_update_ ||
-           needs_container_timing_context_update_;
+           IsContextDirtyForPrePaint();
   }
   return false;
+}
+
+bool DisplayLockContext::IsContextDirtyForPrePaint() const {
+  return needs_pre_paint_subtree_walk_ ||
+         !pre_paint_subtree_walk_reasons_.empty();
 }
 
 void DisplayLockContext::DidMoveToNewDocument(Document& old_document) {

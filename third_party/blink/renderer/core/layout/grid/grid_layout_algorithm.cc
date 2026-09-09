@@ -201,8 +201,7 @@ const LayoutResult* GridLayoutAlgorithm::LayoutInternal() {
   // suppression. Hence, in such cases the total block size should be aligned
   // with the intrinsic block size after suppression, as this represents the
   // actual size of the subgrid once gap adjustments have been applied.
-  if (RuntimeEnabledFeatures::CSSGridGapSuppressionEnabled() &&
-      node.HasCachedPlacementData() &&
+  if (node.HasCachedPlacementData() &&
       !node.CachedPlacementData().HasStandaloneAxis(
           GridTrackSizingDirection::kForRows)) {
     container_builder_.SetFragmentsTotalBlockSize(intrinsic_block_size);
@@ -512,6 +511,9 @@ const GridLayoutSubtree* GridLayoutAlgorithm::ComputeGridGeometry(
   CompleteFinalBaselineAlignment(&grid_sizing_tree);
 
   *grid_items = &grid_sizing_tree.GetGridItems();
+
+  grid_sizing_tree.ReleaseTrackSizingData();
+
   return MakeGarbageCollected<GridLayoutSubtree>(
       grid_sizing_tree.FinalizeTree());
 }
@@ -943,8 +945,8 @@ void GridLayoutAlgorithm::ComputeGridItemBaselines(
     const GridSizingSubtree& sizing_subtree,
     GridTrackSizingDirection track_direction,
     SizingConstraint sizing_constraint,
-    bool is_track_sizing,
-    BaselineCollectionPhase phase) const {
+    BaselineCollectionPhase phase,
+    bool is_measure_after_layout) const {
   auto& layout_data = sizing_subtree.LayoutData();
 
   if (!layout_data.HasBaselines(track_direction)) {
@@ -1013,7 +1015,7 @@ void GridLayoutAlgorithm::ComputeGridItemBaselines(
     // the "layout" space (settings constraints in both axes).
     // This means the space is consistent for the phase we are in.
     const auto space =
-        is_track_sizing
+        phase == BaselineCollectionPhase::kBaselinesForTrackSizing
             ? CreateConstraintSpaceForMeasure(subgridded_item, track_direction)
             : CreateConstraintSpaceForLayout(subgridded_item,
                                              subgrid_layout_subtree);
@@ -1025,8 +1027,8 @@ void GridLayoutAlgorithm::ComputeGridItemBaselines(
       continue;
     }
 
-    const auto* result =
-        LayoutGridItemForMeasure(grid_item, space, sizing_constraint);
+    const auto* result = LayoutGridItemForMeasure(
+        grid_item, space, sizing_constraint, is_measure_after_layout);
 
     MeasureAndStoreItemBaseline(
         *result, grid_item, subgridded_item, space, track_direction,
@@ -1283,7 +1285,8 @@ void GridLayoutAlgorithm::ComputeBaselineAlignment(
     const GridSizingSubtree& sizing_subtree,
     const SubgriddedItemData& opt_subgrid_data,
     const std::optional<GridTrackSizingDirection>& opt_track_direction,
-    SizingConstraint sizing_constraint) const {
+    SizingConstraint sizing_constraint,
+    bool is_measure_after_layout) const {
   DCHECK(sizing_subtree.HasValidRootFor(Node()));
 
   auto& layout_data = sizing_subtree.LayoutData();
@@ -1314,10 +1317,10 @@ void GridLayoutAlgorithm::ComputeBaselineAlignment(
         } else {
           ComputeGridItemBaselines(
               layout_tree, sizing_subtree, track_direction, sizing_constraint,
-              /*is_track_sizing=*/opt_track_direction.has_value(),
               opt_track_direction.has_value()
                   ? BaselineCollectionPhase::kBaselinesForTrackSizing
-                  : BaselineCollectionPhase::kFinalBaselines);
+                  : BaselineCollectionPhase::kFinalBaselines,
+              is_measure_after_layout);
         }
       };
 
@@ -1329,20 +1332,22 @@ void GridLayoutAlgorithm::ComputeBaselineAlignment(
   }
 
   ComputeBaselineAlignmentForEachSubgrid(sizing_subtree, *this, layout_tree,
-                                         opt_track_direction,
-                                         sizing_constraint);
+                                         opt_track_direction, sizing_constraint,
+                                         is_measure_after_layout);
 }
 
 void GridLayoutAlgorithm::ResolveBaselinesInStandaloneAxes(
     const GridSizingSubtree& sizing_subtree,
     GridSizingTree* sizing_tree,
-    SizingConstraint sizing_constraint) const {
+    SizingConstraint sizing_constraint,
+    bool is_measure_after_layout) const {
   ForEachSubgrid(sizing_subtree, *this,
                  [&](const GridLayoutAlgorithm& subgrid_algorithm,
                      const GridSizingSubtree& subgrid_subtree,
                      const SubgriddedItemData& /*subgrid_data*/) {
                    subgrid_algorithm.ResolveBaselinesInStandaloneAxes(
-                       subgrid_subtree, sizing_tree, sizing_constraint);
+                       subgrid_subtree, sizing_tree, sizing_constraint,
+                       is_measure_after_layout);
                  });
 
   // If both axes are subgridded, this grid inherits all its baselines top-down
@@ -1358,8 +1363,8 @@ void GridLayoutAlgorithm::ResolveBaselinesInStandaloneAxes(
     if (!layout_data.HasSubgriddedAxis(track_direction)) {
       ComputeGridItemBaselines(
           layout_tree, sizing_subtree, track_direction, sizing_constraint,
-          /*is_track_sizing=*/false,
-          BaselineCollectionPhase::kBaselinesForStandaloneAxes);
+          BaselineCollectionPhase::kBaselinesForStandaloneAxes,
+          is_measure_after_layout);
     }
   }
 }
@@ -1757,10 +1762,7 @@ void GridLayoutAlgorithm::PlaceGridItems(
   // TODO(samomekarajr): This can be optimized to avoid building gap geometry
   // fully for different scenarios (e.g. if there are no gaps but there are
   // decorations).
-  if ((RuntimeEnabledFeatures::CSSGapDecorationEnabled() &&
-       Style().HasGapRule()) ||
-      (RuntimeEnabledFeatures::CSSGridGapSuppressionEnabled() &&
-       out_unfragmented_gap_geometry)) {
+  if (Style().HasGapRule() || out_unfragmented_gap_geometry) {
     gap_accumulator = GapAccumulator();
     gap_accumulator->BuildGapGeometry(*layout_data);
 
@@ -1868,8 +1870,7 @@ void GridLayoutAlgorithm::PlaceGridItems(
       // If `out_unfragmented_gap_geometry` is present we just want to record
       // the initial position of all gaps for the purposes of fragmentation.
       // Don't add these to the builder.
-      if (RuntimeEnabledFeatures::CSSGridGapSuppressionEnabled() &&
-          out_unfragmented_gap_geometry) {
+      if (out_unfragmented_gap_geometry) {
         *out_unfragmented_gap_geometry = gap_geometry;
       } else {
         container_builder_.SetGapGeometry(gap_geometry);
@@ -1921,6 +1922,8 @@ void GridLayoutAlgorithm::PlaceGridItemsForFragmentation(
     wtf_size_t* first_unprocessed_row_gap_idx) {
   DCHECK(grid_items_placement_data && row_offset_adjustments &&
          intrinsic_block_size && offset_in_stitched_container);
+  DCHECK(*offset_in_stitched_container == LayoutUnit() ||
+         IsBreakInside(GetBreakToken()));
 
   // TODO(ikilpatrick): Update `SetHasSeenAllChildren` and early exit if true.
   const auto& constraint_space = GetConstraintSpace();
@@ -2471,19 +2474,18 @@ void GridLayoutAlgorithm::PlaceGridItemsForFragmentation(
     MainGaps fragment_main_gaps = PlaceMainGaps();
 
     // Create gap geometry for this fragmentainer if we have gaps.
-    if ((RuntimeEnabledFeatures::CSSGapDecorationEnabled() &&
-         Style().HasGapRule()) &&
-        (!fragment_main_gaps.empty() ||
-         !full_gap_geometry->GetCrossGaps().empty())) {
-      // Update content block offsets for this fragmentainer.
-      // - Block start: Use the original gap geometry's start for the first
-      // fragment and zero for subsequent fragments.
-      // - Block end: Use the smaller of the fragmentainer space and the grid's
-      // remaining block size.
-      LayoutUnit fragment_block_start =
-          *offset_in_stitched_container > LayoutUnit()
-              ? full_gap_geometry->GetContentBlockStart()
-              : LayoutUnit();
+    if (Style().HasGapRule() && (!fragment_main_gaps.empty() ||
+                                 !full_gap_geometry->GetCrossGaps().empty())) {
+      // Translate the block-start from the stitched container into the current
+      // fragment, accounting for any cloned block-start decorations.
+      const LayoutUnit translated_block_start =
+          full_gap_geometry->GetContentBlockStart() -
+          *offset_in_stitched_container + cloned_block_start_decoration;
+      const LayoutUnit fragment_block_start =
+          std::max(cloned_block_start_decoration, translated_block_start);
+
+      // Use the smaller of the fragmentainer space and the grid's remaining
+      // block size for the block-end.
       LayoutUnit fragment_block_end =
           std::min(fragmentainer_space,
                    *intrinsic_block_size - *offset_in_stitched_container);
@@ -2526,9 +2528,7 @@ void GridLayoutAlgorithm::PlaceGridItemsForFragmentation(
                  max_item_block_end - cloned_block_start_decoration);
   }
 
-  if (RuntimeEnabledFeatures::CSSGridGapSuppressionEnabled()) {
-    PlaceGaps();
-  }
+  PlaceGaps();
 
   if (has_subsequent_children)
     container_builder_.SetHasSubsequentChildren();
@@ -2560,17 +2560,15 @@ void GridLayoutAlgorithm::PlaceOutOfFlowItems(
   HeapVector<Member<LayoutBox>> oofs;
   std::swap(oofs, oof_children);
 
-  bool should_process_block_end = true;
-  if (InvolvedInBlockFragmentation(container_builder_)) [[unlikely]] {
-    should_process_block_end = !container_builder_.DidBreakSelf() &&
-                               !container_builder_.ShouldBreakInside();
-  }
+  const bool should_process_block_end =
+      !InvolvedInBlockFragmentation(container_builder_) ||
+      !container_builder_.ShouldBreak();
 
   const auto& node = Node();
   const auto& container_style = Style();
   const auto& placement_data = node.CachedPlacementData();
   const bool is_absolute_container = node.IsAbsoluteContainer();
-  const bool is_fixed_container = node.IsAbsoluteContainer();
+  const bool is_fixed_container = node.IsFixedContainer();
 
   const LayoutUnit previous_consumed_block_size =
       GetBreakToken() ? GetBreakToken()->ConsumedBlockSize() : LayoutUnit();

@@ -15,7 +15,6 @@
 #include "third_party/blink/renderer/core/style/computed_style_constants.h"
 #include "third_party/blink/renderer/core/style/grid_enums.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
-#include "third_party/blink/renderer/platform/wtf/hash_set.h"
 #include "third_party/blink/renderer/platform/wtf/text/wtf_string.h"
 #include "third_party/blink/renderer/platform/wtf/vector.h"
 
@@ -23,6 +22,7 @@ namespace blink {
 
 class ComputedStyle;
 class PhysicalBoxFragment;
+class GapGeometry;
 
 // This bitmask indicates whether an intersection is blocked due to the presence
 // of a spanning item in one or both directions. When considering column gaps,
@@ -59,6 +59,77 @@ class CORE_EXPORT BlockedStatus {
 using MainGaps = Vector<MainGap>;
 using CrossGaps = Vector<CrossGap>;
 
+// Walks the gap decoration segments for a `MainGap` in a grid-lanes container.
+// Segments are formed by the intersections of the `MainGap` with the
+// `CrossGaps` (or items) in the adjacent lanes.
+//
+// This is different from `GapSegmentStateCursor`, which does not generate
+// segment geometry. That cursor only walks stored `GapSegmentStateRange`s in
+// the segment order produced by this class and returns the state for each
+// index.
+class GridLanesMainGapSegmentWalker {
+  STACK_ALLOCATED();
+
+ public:
+  struct Segment {
+    LayoutUnit end_offset;
+    wtf_size_t before_occupant_index;
+    wtf_size_t after_occupant_index;
+  };
+
+  GridLanesMainGapSegmentWalker(const GapGeometry& gap_geometry,
+                                wtf_size_t main_gap_index);
+
+  std::optional<const Segment> Next();
+  wtf_size_t IntersectionCapacity() const { return intersection_capacity_; }
+
+ private:
+  // Forward cursor over one side's contiguous `CrossGap` run.
+  class CrossGapRunCursor {
+   public:
+    CrossGapRunCursor() = default;
+    CrossGapRunCursor(wtf_size_t start,
+                      wtf_size_t inclusive_end,
+                      wtf_size_t cross_gap_count)
+        : start_(start), current_(start) {
+      CHECK_LE(start, inclusive_end);
+      CHECK_LT(inclusive_end, cross_gap_count);
+      end_ = inclusive_end + 1;
+    }
+
+    bool AtEnd() const { return current_ == end_; }
+    wtf_size_t Size() const { return end_ - start_; }
+    wtf_size_t CrossGapIndex() const {
+      CHECK(!AtEnd());
+      return current_;
+    }
+    wtf_size_t ConsumedCount() const { return current_ - start_; }
+    void Advance() {
+      CHECK(!AtEnd());
+      ++current_;
+    }
+
+   private:
+    wtf_size_t start_ = 0;
+    wtf_size_t current_ = 0;
+    wtf_size_t end_ = 0;
+  };
+
+  LayoutUnit CrossGapOffset(wtf_size_t index) const;
+  void SkipGapsAtOrBeforeContentStart();
+  void SkipRunAtOrBeforeContentStart(CrossGapRunCursor& run);
+  void ConsumeRunAtOffset(CrossGapRunCursor& run, LayoutUnit offset);
+
+  const GapGeometry& gap_geometry_;
+  GridTrackSizingDirection cross_direction_;
+  LayoutUnit content_start_;
+  LayoutUnit content_end_;
+  CrossGapRunCursor before_;
+  CrossGapRunCursor after_;
+  wtf_size_t intersection_capacity_ = 0;
+  bool finished_ = false;
+};
+
 // Gap geometry is used to determine gap locations for the purpose of painting
 // gap decorations.
 //
@@ -70,6 +141,37 @@ class CORE_EXPORT GapGeometry : public GarbageCollected<GapGeometry> {
     kGridLanes,
     kFlex,
     kMultiColumn,
+  };
+
+  // Describes how gap-decoration placement order differs from geometric
+  // paint order. Used by both flex (`flex-wrap: wrap-reverse` /
+  // reversed `flex-direction`) and grid-lanes (`track-reverse` /
+  // `fill-reverse`).
+  struct PlacementReversal {
+    PlacementReversal(bool reverse_main_assignment_order,
+                      bool reverse_within_owner)
+        : reverse_main_assignment_order(reverse_main_assignment_order),
+          reverse_within_owner(reverse_within_owner) {
+      CHECK(reverse_main_assignment_order || reverse_within_owner);
+    }
+
+    bool operator==(const PlacementReversal&) const = default;
+
+    // Reverses `MainGap` assignment. For flex, this also reverses the order
+    // of the owner groups (flex lines) that make up the axis-wide stitched
+    // `CrossGap` pattern. For grid-lanes, `CrossGap` patterns are always
+    // independent per lane, so this reverses only the `MainGap` sequence.
+    const bool reverse_main_assignment_order;
+    // Reverses `CrossGap` assignment within each owner (flex line / grid
+    // lane).
+    const bool reverse_within_owner;
+  };
+
+  // Describes a range of gap indices starting at index `start` and continuing
+  // for `count` indices.
+  struct GapIndexRange {
+    wtf_size_t start;
+    wtf_size_t count;
   };
 
   explicit GapGeometry(ContainerType container_type)
@@ -89,6 +191,11 @@ class CORE_EXPORT GapGeometry : public GarbageCollected<GapGeometry> {
         main_gaps_(std::move(new_main_gaps)),
         cross_gaps_(other.cross_gaps_),
         flex_cross_gap_sizes_(other.flex_cross_gap_sizes_),
+        fragmented_flex_cross_gap_decoration_indices_(
+            other.fragmented_flex_cross_gap_decoration_indices_),
+        fragmented_flex_cross_gap_count_(
+            other.fragmented_flex_cross_gap_count_),
+        gap_placement_reversal_(other.gap_placement_reversal_),
         content_inline_start_(other.content_inline_start_),
         content_inline_end_(other.content_inline_end_),
         content_block_start_(new_content_block_start),
@@ -102,6 +209,12 @@ class CORE_EXPORT GapGeometry : public GarbageCollected<GapGeometry> {
            block_gap_size_ == other.block_gap_size_ &&
            container_type_ == other.container_type_ &&
            main_gaps_ == other.main_gaps_ && cross_gaps_ == other.cross_gaps_ &&
+           flex_cross_gap_sizes_ == other.flex_cross_gap_sizes_ &&
+           fragmented_flex_cross_gap_decoration_indices_ ==
+               other.fragmented_flex_cross_gap_decoration_indices_ &&
+           fragmented_flex_cross_gap_count_ ==
+               other.fragmented_flex_cross_gap_count_ &&
+           gap_placement_reversal_ == other.gap_placement_reversal_ &&
            content_inline_start_ == other.content_inline_start_ &&
            content_inline_end_ == other.content_inline_end_ &&
            content_block_start_ == other.content_block_start_ &&
@@ -233,6 +346,29 @@ class CORE_EXPORT GapGeometry : public GarbageCollected<GapGeometry> {
     (*flex_cross_gap_sizes_)[index] = size;
   }
 
+  void AddFragmentedFlexCrossGapDecorationIndex(
+      wtf_size_t decoration_value_index,
+      wtf_size_t gap_slot_count) {
+    CHECK_LT(decoration_value_index, gap_slot_count);
+    if (fragmented_flex_cross_gap_decoration_indices_.empty()) {
+      fragmented_flex_cross_gap_count_ = gap_slot_count;
+    }
+    CHECK_EQ(fragmented_flex_cross_gap_count_, gap_slot_count);
+    fragmented_flex_cross_gap_decoration_indices_.push_back(
+        decoration_value_index);
+    CHECK_EQ(fragmented_flex_cross_gap_decoration_indices_.size(),
+             cross_gaps_.size());
+  }
+
+  bool HasFragmentedFlexCrossGapDecorationIndices() const {
+    return !fragmented_flex_cross_gap_decoration_indices_.empty();
+  }
+
+  wtf_size_t FragmentedFlexCrossGapCount() const {
+    CHECK(!fragmented_flex_cross_gap_decoration_indices_.empty());
+    return fragmented_flex_cross_gap_count_;
+  }
+
   // A lane boundary separates adjacent non-collapsed tracks. Maps a lane
   // boundary to its grid-axis offset:
   //   lane boundary 0            -> grid-axis content start
@@ -243,14 +379,57 @@ class CORE_EXPORT GapGeometry : public GarbageCollected<GapGeometry> {
   // boundaries are content edges.
   LayoutUnit GridAxisOffsetForLaneBoundary(wtf_size_t lane_boundary) const;
 
-  // Resets transient per-paint state. A cached `GapGeometry` can be reused
-  // across relayouts and repaints, so paint must not inherit state left behind
-  // by a previous paint. The flex cross-gap cursor is now a local paint-time
-  // variable (`main_gap_running_index` in GapDecorationsPainter), so only the
-  // multicol spanner-adjacent set needs clearing here.
-  void InitPaintState() const {
-    multicol_spanner_adjacent_intersections_.clear();
+  // Records how this container's placement order differs from geometric paint
+  // order.
+  void SetGapPlacementReversal(PlacementReversal reversal) {
+    gap_placement_reversal_.emplace(reversal);
   }
+
+  // Returns whether geometric (paint order) gap indices need to be mapped to
+  // decoration value assignments. This is always true for grid-lanes
+  // `CrossGap`s because each lane has an independent sequence. For flex, it is
+  // true for `CrossGap`s when `flex-direction` is reversed or `flex-wrap` is
+  // `wrap-reverse`, and for `MainGap`s only with `wrap-reverse`.
+  bool NeedsDecorationValueAssignmentMapping(
+      GridTrackSizingDirection track_direction) const;
+
+  // Describes this gap's position in the sequence used to assign decoration
+  // values. Main gaps and flex cross gaps use a container-wide sequence.
+  // Grid-lanes cross gaps use a separate sequence for each lane.
+  struct DecorationValueAssignment {
+    // Index of this gap in the resolved decoration value sequence.
+    wtf_size_t value_index;
+
+    // Number of gaps in that sequence. Used to resolve repeaters.
+    wtf_size_t gap_count;
+  };
+
+  // Gap decoration colors, styles, and widths can each contain a list of
+  // values. Returns the current gap's index in the resolved value sequences and
+  // the number of gap slots used to resolve each list. A gap slot represents
+  // one gap in an assignment sequence.
+  // * `fragment_relative_gap_index` is its index in this fragment's `MainGap`
+  // or `CrossGap` vector.
+  // * `stitched_gap_index` is its index in the complete container, in the order
+  // gaps are stored and painted.
+  // * `gap_slot_count` is the total number of gap slots used to resolve each
+  // decoration value list, including slots in other fragments. Grid-lanes
+  // cross gaps return the owning lane's local slot count instead.
+  // * `cross_gap_owner_index` identifies the flex line or grid lane that owns a
+  // cross gap.
+  DecorationValueAssignment DecorationValueAssignmentForGap(
+      GridTrackSizingDirection track_direction,
+      wtf_size_t fragment_relative_gap_index,
+      wtf_size_t stitched_gap_index,
+      wtf_size_t gap_slot_count,
+      std::optional<wtf_size_t> cross_gap_owner_index) const;
+
+  // Returns the decoration value index for a `CrossGap`.
+  // `stitched_gap_index` is the gap's index in the full container's flattened
+  // `CrossGap` list. `line_range` is its flex line's range in that list.
+  wtf_size_t DecorationValueIndexForCrossGap(wtf_size_t stitched_gap_index,
+                                             GapIndexRange line_range,
+                                             wtf_size_t gap_slot_count) const;
 
   void SetMainDirection(GridTrackSizingDirection direction) {
     main_direction_ = direction;
@@ -420,9 +599,6 @@ class CORE_EXPORT GapGeometry : public GarbageCollected<GapGeometry> {
   // container edge or a dangling interior endpoint with no visible crossing
   // decoration; https://github.com/w3c/csswg-drafts/issues/13697).
   LayoutUnit ComputeInsetEnd(const ComputedStyle& style,
-                             wtf_size_t gap_index,
-                             wtf_size_t intersection_index,
-                             const Vector<GapIntersection>& intersections,
                              bool is_cap_intersection,
                              bool is_column_gap,
                              bool is_main,
@@ -434,9 +610,6 @@ class CORE_EXPORT GapGeometry : public GarbageCollected<GapGeometry> {
   // container edge or a dangling interior endpoint with no visible crossing
   // decoration; https://github.com/w3c/csswg-drafts/issues/13697).
   LayoutUnit ComputeInsetStart(const ComputedStyle& style,
-                               wtf_size_t gap_index,
-                               wtf_size_t intersection_index,
-                               const Vector<GapIntersection>& intersections,
                                bool is_cap_intersection,
                                bool is_column_gap,
                                bool is_main,
@@ -445,6 +618,30 @@ class CORE_EXPORT GapGeometry : public GarbageCollected<GapGeometry> {
                                LayoutUnit cross_decoration_width) const;
 
  private:
+  // Returns whether a multicol cross-gap intersection is adjacent to a
+  // synthetic main gap that represents a spanner boundary.
+  bool IsMulticolSpannerBoundaryIntersection(wtf_size_t intersection_index,
+                                             bool is_main_gap) const;
+
+  // Returns the saved value index for a fragmented flex `CrossGap`.
+  wtf_size_t FragmentedFlexCrossGapDecorationValueIndexAt(
+      wtf_size_t cross_gap_index) const {
+    CHECK_LT(cross_gap_index,
+             fragmented_flex_cross_gap_decoration_indices_.size());
+    return fragmented_flex_cross_gap_decoration_indices_[cross_gap_index];
+  }
+
+  // Maps a `MainGap`'s index in geometric paint order to its decoration value
+  // index when placement reverses the main assignment sequence.
+  wtf_size_t DecorationValueIndexForReversedMainGap(
+      wtf_size_t stitched_gap_index,
+      wtf_size_t gap_slot_count) const;
+
+  // Returns one flex line's or grid lane's range in this geometry's flattened
+  // `CrossGap` list. `owner_index` identifies the main gap after the owner, or
+  // `main_gaps_.size()` for the trailing owner.
+  GapIndexRange CrossGapRangeForOwner(wtf_size_t owner_index) const;
+
   // Fills `intersections` for a main gap at `gap_index`. The list includes:
   // - container content start
   // - Intersections with cross gaps (container-specific)
@@ -568,6 +765,15 @@ class CORE_EXPORT GapGeometry : public GarbageCollected<GapGeometry> {
   // flex uses fragment-relative line indices.
   std::optional<Vector<LayoutUnit>> flex_cross_gap_sizes_;
 
+  // Index used to select the color, style, and width for each `CrossGap` in
+  // this fragmented flex geometry.
+  Vector<wtf_size_t> fragmented_flex_cross_gap_decoration_indices_;
+  wtf_size_t fragmented_flex_cross_gap_count_ = 0;
+
+  // Describes how gap placement order differs from geometric paint order.
+  // See `SetGapPlacementReversal`.
+  std::optional<PlacementReversal> gap_placement_reversal_;
+
   // These represent the offsets of the content where the gaps begin and end.
   // We use separate LayoutUnits instead of LogicalOffsets, since these are more
   // like "ranges" rather than points since we care about how "long" the content
@@ -580,21 +786,6 @@ class CORE_EXPORT GapGeometry : public GarbageCollected<GapGeometry> {
   // TODO(javiercon): Consider making this type a display agnostic type that
   // uses inline/block rather than rows/columns.
   GridTrackSizingDirection main_direction_ = kForRows;
-
-  // For multicol containers, this set tracks which intersection indices are
-  // considered to be spanner-adjacent "edges". These intersections are
-  // adjacent to spanner main gaps and need to be treated as edge
-  // intersections so that insets are applied correctly.
-  //
-  // This is mutable because it is populated at paint time (GapGeometry is const
-  // during paint) and `InitPaintState()` clears it before each paint so a
-  // cached GapGeometry never inherits stale entries across relayouts/repaints.
-  //
-  // TODO(javiercon): Lift this transient state up to the paint call and
-  // thread it through as an input/output param (as was done for the flex
-  // cross-gap cursor `main_gap_running_index`), so it no longer needs to be a
-  // mutable member reset via `InitPaintState()`.
-  mutable HashSet<wtf_size_t> multicol_spanner_adjacent_intersections_;
 };
 
 }  // namespace blink

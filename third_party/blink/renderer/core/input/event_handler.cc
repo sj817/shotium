@@ -231,10 +231,9 @@ const ComputedStyle* GetComputedStyleFromScrollbar(
       return nullptr;
     }
 
-    LayoutCustomScrollbarPart* scroll_corner_layout_object =
-        scrollable_area->ScrollCorner();
-    if (scroll_corner_layout_object) {
-      return scroll_corner_layout_object->Style();
+    if (const LayoutCustomScrollbarPart* scroll_corner_layout_object =
+            scrollable_area->ScrollCorner()) {
+      return &scroll_corner_layout_object->StyleRef();
     }
   }
 
@@ -415,10 +414,15 @@ HitTestResult EventHandler::HitTestResultAtLocation(
           if (hit_type & HitTestRequest::kHitTestVisualOverflow) {
             // Apply ancestor transforms to location rect
             PhysicalRect local_rect = location.BoundingBox();
+            MapCoordinatesFlags map_flags = {
+                MapCoordinatesMode::kTraverseDocumentBoundaries};
+            if (RuntimeEnabledFeatures::
+                    UsePaintGeometryForIntersectionEnabled()) {
+              map_flags.Put(MapCoordinatesMode::kUseGeometryMapper);
+            }
             PhysicalRect main_frame_rect =
                 frame_view->GetLayoutView()->LocalToAncestorRect(
-                    local_rect, main_view->GetLayoutView(),
-                    {MapCoordinatesMode::kTraverseDocumentBoundaries});
+                    local_rect, main_view->GetLayoutView(), map_flags);
             adjusted_location = HitTestLocation(main_frame_rect);
           } else {
             // Don't apply ancestor transforms to bounding box
@@ -432,7 +436,8 @@ HitTestResult EventHandler::HitTestResultAtLocation(
               frame_view->ConvertToRootFrame(location.Point())));
         }
         return main_frame.GetEventHandler().HitTestResultAtLocation(
-            adjusted_location, hit_type, stop_node, no_lifecycle_update);
+            adjusted_location, hit_type, stop_node, no_lifecycle_update,
+            std::move(hit_node_cb));
       }
     }
   }

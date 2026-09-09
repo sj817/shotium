@@ -8,7 +8,6 @@
 
 #include "include/core/SkBitmap.h"
 #include "include/core/SkBlendMode.h"
-#include "include/core/SkCPURecorder.h"
 #include "include/core/SkColorSpace.h"
 #include "include/core/SkData.h"
 #include "include/core/SkImage.h"
@@ -23,6 +22,7 @@
 #include "include/core/SkSize.h"
 #include "include/core/SkSurface.h"
 #include "include/core/SkTypes.h"
+#include "include/cpu/Recorder.h"
 #include "src/core/SkImageInfoPriv.h"
 #include "src/core/SkRectMemcpy.h"
 #include "src/image/SkImage_Base.h"
@@ -93,7 +93,6 @@ bool SkImage_Raster::getROPixels(SkBitmap* dst, CachingHint) const {
 sk_sp<SkSurface> SkImage_Raster::onMakeSurface(SkRecorder* recorder,
                                                const SkImageInfo& info) const {
     if (!recorder) {
-        // TODO(kjlubick) remove this after old SkImage::makeScaled(image info, sampling) API gone
         recorder = skcpu::Recorder::TODO();
     }
     const SkSurfaceProps* props = nullptr;

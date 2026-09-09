@@ -35,9 +35,9 @@
 
 namespace cc {
 namespace {
-base::AtomicSequenceNumber g_next_image_id;
-base::AtomicSequenceNumber g_next_image_content_id;
-base::AtomicSequenceNumber g_next_generator_client_id;
+base::AtomicSequenceNumberT<int64_t> g_next_image_id;
+base::AtomicSequenceNumberT<int64_t> g_next_image_content_id;
+base::AtomicSequenceNumberT<int64_t> g_next_generator_client_id;
 }  // namespace
 
 const PaintImage::Id PaintImage::kNonLazyStableId = -1;
@@ -80,8 +80,6 @@ bool PaintImage::IsSameForTesting(const PaintImage& other) const {
          id_ == other.id_ && animation_type_ == other.animation_type_ &&
          completion_state_ == other.completion_state_ &&
          is_multipart_ == other.is_multipart_;
-  // Do not check may_be_lcp_candidate_ as it should not affect any rendering
-  // operation, only metrics collection.
 }
 
 // static
@@ -434,7 +432,6 @@ std::string PaintImage::ToString() const {
       << " animation_type_: " << static_cast<int>(animation_type_)
       << " completion_state_: " << static_cast<int>(completion_state_)
       << " is_multipart_: " << is_multipart_
-      << " may_be_lcp_candidate_: " << may_be_lcp_candidate_
       << " has gainmap: " << HasGainmapInfo() << " is YUV: "
       << IsYuv(SkYUVAPixmapInfo::SupportedDataTypes::All(), AuxImage::kDefault);
   return str.str();

@@ -22,8 +22,8 @@ class FragmentParserConfig;
 class FragmentParserOptions;
 class SetHTMLUnsafeOptions;
 class String;
-class TrustedParserOptions;
-class V8UnionSetHTMLUnsafeOptionsOrTrustedParserOptions;
+class TrustedHTMLParserOptions;
+class V8UnionSetHTMLUnsafeOptionsOrTrustedHTMLParserOptions;
 
 class CORE_EXPORT FragmentParserConfig {
   STACK_ALLOCATED();
@@ -65,13 +65,14 @@ class CORE_EXPORT FragmentParserOptions {
       : run_scripts_(run_scripts) {}
   FragmentParserOptions(const FragmentParserOptions&) = default;
   FragmentParserOptions& operator=(const FragmentParserOptions&) = default;
-  explicit FragmentParserOptions(TrustedParserOptions* options);
+  explicit FragmentParserOptions(TrustedHTMLParserOptions* options);
   explicit FragmentParserOptions(SetHTMLUnsafeOptions* options);
 
   static FragmentParserOptions From(
-      const V8UnionSetHTMLUnsafeOptionsOrTrustedParserOptions* options);
+      const V8UnionSetHTMLUnsafeOptionsOrTrustedHTMLParserOptions* options);
 
   TrustMode trust_mode() const { return trust_mode_; }
+  bool IsTrusted() const { return trust_mode_ == TrustMode::kTrusted; }
   RunScripts run_scripts() const { return run_scripts_; }
 
  private:

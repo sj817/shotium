@@ -1392,8 +1392,8 @@ LayoutUnit ResolveFlowToleranceForGridLanes(const ComputedStyle& style,
                                             const LogicalSize& available_size) {
   return ResolveFlowToleranceLength(
              style, (style.GridLanesTrackSizingDirection() == kForColumns)
-                        ? available_size.block_size
-                        : available_size.inline_size)
+                        ? available_size.inline_size
+                        : available_size.block_size)
       .value_or(LayoutUnit(style.GetFontDescription().ComputedPixelSize()));
 }
 
@@ -1494,6 +1494,10 @@ BoxStrut ComputeBorders(const ConstraintSpace& constraint_space,
 
   if (node.IsTable()) {
     return To<TableNode>(node).GetTableBorders()->TableBorder();
+  }
+
+  if (node.IsTableSection() || node.IsTableRow()) {
+    return BoxStrut();
   }
 
   return ComputeBordersInternal(node.Style());

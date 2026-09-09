@@ -85,6 +85,7 @@ class CORE_EXPORT FrameLoader final {
   ~FrameLoader();
 
   void Init(const DocumentToken& document_token,
+            const InitiatorStateToken& initiator_state_token,
             std::unique_ptr<PolicyContainer> policy_container,
             const StorageKey& storage_key,
             ukm::SourceId document_ukm_source_id,

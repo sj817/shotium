@@ -65,6 +65,9 @@ BASE_FEATURE(kAndroidDesktopUASpoofAsChromeOS,
 
 // Gated prewarming of system fonts on Android to background threads.
 BASE_FEATURE(kAndroidSystemFontPrewarming, base::FEATURE_DISABLED_BY_DEFAULT);
+
+// Opens PDFs in iframe in standalone tabs on Android.
+BASE_FEATURE(kAndroidHandlePdfInIframe, base::FEATURE_DISABLED_BY_DEFAULT);
 #endif
 
 // Avoids copying ResourceRequest::TrustedParams when possible.
@@ -144,6 +147,15 @@ BASE_FEATURE(kBackForwardCacheDWCOnJavaScriptExecution,
 BASE_FEATURE(kBackForwardCachePauseMicrotasks,
              base::FEATURE_ENABLED_BY_DEFAULT);
 
+// When enabled, JavaScript network requests with "Cache-Control: no-store"
+// headers from domains specified in `kBackForwardCacheCCNSAllowedDomains` will
+// not disable Back/Forward cache.
+BASE_FEATURE(kBackForwardCacheCCNSAllowlist, base::FEATURE_DISABLED_BY_DEFAULT);
+BASE_FEATURE_PARAM(std::string,
+                   kBackForwardCacheCCNSAllowedDomains,
+                   &kBackForwardCacheCCNSAllowlist,
+                   "");
+
 // Enable background resource fetch in Blink. See https://crbug.com/1379780 for
 // more details.
 BASE_FEATURE(kBackgroundResourceFetch, base::FEATURE_ENABLED_BY_DEFAULT);
@@ -162,6 +174,10 @@ BASE_FEATURE_PARAM(bool,
                    &kBackgroundResourceFetch,
                    "background-code-cache-decoder-start",
                    true);
+BASE_FEATURE_PARAM(bool,
+                   kBackgroundResourceFetchSupportsWebUI,
+                   &kBackgroundResourceFetch,
+                   false);
 
 BASE_FEATURE(kRestrictBackgroundFetchFromServiceWorker,
              base::FEATURE_ENABLED_BY_DEFAULT);
@@ -236,9 +252,6 @@ BASE_FEATURE(kCaptureJSExecutionLocation, base::FEATURE_ENABLED_BY_DEFAULT);
 
 BASE_FEATURE(kClearSiteDataPrefetchPrerenderCache,
              base::FEATURE_ENABLED_BY_DEFAULT);
-
-// Fix for CSS font comparison logic.
-BASE_FEATURE(kCSSFontComparisonFix, base::FEATURE_ENABLED_BY_DEFAULT);
 
 // Enable legacy `dpr` client hint.
 BASE_FEATURE(kClientHintsDPR_DEPRECATED, base::FEATURE_ENABLED_BY_DEFAULT);
@@ -508,14 +521,10 @@ BASE_FEATURE_PARAM(base::TimeDelta,
 
 BASE_FEATURE(kDetectJSFrameworksOnWorker, base::FEATURE_ENABLED_BY_DEFAULT);
 
-BASE_FEATURE(kDetectZhVariants, base::FEATURE_ENABLED_BY_DEFAULT);
-
 // Improves the signal-to-noise ratio of network error related messages in the
 // DevTools Console.
 // See http://crbug.com/124534.
 BASE_FEATURE(kDevToolsImprovedNetworkError, base::FEATURE_DISABLED_BY_DEFAULT);
-
-BASE_FEATURE(kDevToolsWebMCPSupport, base::FEATURE_ENABLED_BY_DEFAULT);
 
 BASE_FEATURE(kDevToolsAdsPanel, base::FEATURE_ENABLED_BY_DEFAULT);
 
@@ -780,7 +789,7 @@ BASE_FEATURE_ENUM_PARAM(IsolateSandboxedIframesGrouping,
                         &isolated_sandboxed_iframes_grouping_types);
 
 #if BUILDFLAG(ENABLE_JXL_DECODER)
-BASE_FEATURE(kJXLImageFormat, base::FEATURE_DISABLED_BY_DEFAULT);
+BASE_FEATURE(kJXLImageFormat, base::FEATURE_ENABLED_BY_DEFAULT);
 #endif
 
 BASE_FEATURE(kKeepAliveInBrowserMigration, base::FEATURE_ENABLED_BY_DEFAULT);
@@ -1606,6 +1615,9 @@ BASE_FEATURE(kOriginAgentClusterDefaultEnabled,
 
 
 
+BASE_FEATURE(kPaintTimingIngnoreOutOfLifecyclePaints,
+             base::FEATURE_ENABLED_BY_DEFAULT);
+
 // Enables the use of the PaintCache for Path2D objects that are rasterized
 // out of process.  Has no effect when kCanvasOopRasterization is disabled.
 BASE_FEATURE(kPath2DPaintCache, base::FEATURE_DISABLED_BY_DEFAULT);
@@ -1688,7 +1700,7 @@ BASE_FEATURE_PARAM(base::TimeDelta,
 // non-immediate candidates on the renderer side (see the declaration in
 // features.h for details).
 BASE_FEATURE(kSpeculationRulesRendererSideHeuristics,
-             base::FEATURE_DISABLED_BY_DEFAULT);
+             base::FEATURE_ENABLED_BY_DEFAULT);
 
 BASE_FEATURE(kPreloadingHeuristicsMLModel, base::FEATURE_DISABLED_BY_DEFAULT);
 BASE_FEATURE_PARAM(int,
@@ -1858,8 +1870,6 @@ BASE_FEATURE_PARAM(bool,
                    "disable_resource_load",
                    false);
 
-BASE_FEATURE(kRustyBmpFeature, base::FEATURE_ENABLED_BY_DEFAULT);
-
 BASE_FEATURE(kRustyIcoFeature, base::FEATURE_DISABLED_BY_DEFAULT);
 
 BASE_FEATURE(kUnrestrictSpellingAndGrammarForTesting,
@@ -1960,6 +1970,13 @@ BASE_FEATURE(kServiceWorkerRaceNetworkRequestFallbackOnDisconnect,
 // ServiceWorker. For navigation requests, the pre-learned static response
 // header is returned in parallel with dispatching the network request.
 BASE_FEATURE(kServiceWorkerSyntheticResponse,
+             "ServiceWorkerSyntheticResponse",
+             base::FEATURE_DISABLED_BY_DEFAULT);
+
+// (crbug.com/539155958): When enabled, ServiceWorkerDatabase treats missing
+// next available ID metadata as database corruption if registrations exist on
+// disk, triggering database doom and clean recovery.
+BASE_FEATURE(kServiceWorkerDatabaseDoomOnMissingNextId,
              base::FEATURE_DISABLED_BY_DEFAULT);
 
 // Define the allowed websites to enable SyntheticResponse. Allowed urls are
@@ -2228,9 +2245,16 @@ BASE_FEATURE(kVisualRectMappingApplyLocalVisualViewportTransform,
 BASE_FEATURE(kWebBluetoothCancelConnect,
              base::FEATURE_ENABLED_BY_DEFAULT);
 
+BASE_FEATURE(kWebUIBypassMojoConnections, base::FEATURE_DISABLED_BY_DEFAULT);
+
 BASE_FEATURE(kWebRtcUseCaptureBeginTimestamp, base::FEATURE_ENABLED_BY_DEFAULT);
 
 BASE_FEATURE(kWebRtcPqcForDtls, base::FEATURE_ENABLED_BY_DEFAULT);
+
+// TODO(crbug.com/501209160): Remove this kill switch after confirming the
+// standards-compliant behavior does not cause regressions.
+BASE_FEATURE(kWebRtcSuppressDtlsStateChangeOnClose,
+             base::FEATURE_ENABLED_BY_DEFAULT);
 
 BASE_FEATURE(kWebRtcUseMediaThreadTypes, base::FEATURE_DISABLED_BY_DEFAULT);
 

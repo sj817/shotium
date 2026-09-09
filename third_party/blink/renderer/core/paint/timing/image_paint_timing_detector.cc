@@ -23,6 +23,7 @@
 #include "third_party/blink/renderer/core/paint/timing/largest_contentful_paint_manager.h"
 #include "third_party/blink/renderer/core/paint/timing/paint_timing.h"
 #include "third_party/blink/renderer/core/paint/timing/paint_timing_detector.h"
+#include "third_party/blink/renderer/core/paint/timing/paint_timing_client.h"
 #include "third_party/blink/renderer/core/paint/timing/paint_timing_utils.h"
 #include "third_party/blink/renderer/core/style/style_fetched_image.h"
 #include "third_party/blink/renderer/core/timing/dom_window_performance.h"
@@ -55,104 +56,13 @@ ImagePaintTimingDetector::ImagePaintTimingDetector(
     PaintTimingDetector* detector)
     : paint_timing_detector_(detector) {}
 
-OptionalPaintTimingDetectorCallback<ImageRecord>
-ImagePaintTimingDetector::TakePaintTimingCallback() {
-  viewport_size_ = std::nullopt;
-  if (!added_entry_in_latest_frame_)
-    return std::nullopt;
-
-  added_entry_in_latest_frame_ = false;
-  return BindOnce(
-      [](ImagePaintTimingDetector* self, uint32_t frame_index,
-         const base::TimeTicks& presentation_timestamp,
-         const DOMPaintTimingInfo& paint_timing_info,
-         HeapVector<Member<ImageRecord>>& settled_records) {
-        if (self) {
-          self->AssignPaintTimeToRegisteredQueuedRecords(
-              frame_index, presentation_timestamp, paint_timing_info,
-              settled_records);
-        }
-      },
-      WrapWeakPersistent(this), frame_index_++);
-}
-
 void ImagePaintTimingDetector::NotifyImageRemoved(
     const LayoutObject& object,
     const MediaTiming* media_timing) {
-  ImageRecord* record =
-      RemoveRecord(MediaRecordId::GenerateHash(&object, media_timing));
-  if (auto* manager = GetLargestContentfulPaintManager()) {
-    // Notify `manager` even if record is null so it can update the largest
-    // ignored image, if needed.
-    //
-    // TODO(crbug.com/449779010): When soft navs supports largest pending image,
-    // this will need to be updated to notify the relevant soft nav context.
-    manager->OnImageRemoved(record, object, media_timing);
-  }
-}
-
-void ImagePaintTimingDetector::StopRecordEntries() {
-  // Clear the records queued for presentation callback to ensure no new updates
-  // occur.
-  images_queued_for_paint_time_.clear();
-}
-
-void ImagePaintTimingDetector::AssignPaintTimeToRegisteredQueuedRecords(
-    uint32_t last_queued_frame_index,
-    const base::TimeTicks& presentation_timestamp,
-    const DOMPaintTimingInfo& paint_timing_info,
-    HeapVector<Member<ImageRecord>>& settled_records) {
-  while (!images_queued_for_paint_time_.empty()) {
-    QueuedImageRecordInfo* info = images_queued_for_paint_time_.front();
-    // Not ready for this frame yet - we're done with the queue for now.
-    if (info->frame_index > last_queued_frame_index) {
-      break;
-    }
-
-    ImageRecord* record = info->image_record;
-    images_queued_for_paint_time_.pop_front();
-
-    switch (info->presentation_reason) {
-      case PresentationReason::kFirstAnimatedFrame:
-        // `record` may have been queued multiple times for different frames,
-        // depending on timing between paint and presentation time.
-        if (!record->HasFirstAnimatedFrameTime()) {
-          record->SetFirstAnimatedFrameTime(presentation_timestamp);
-        }
-        break;
-      case PresentationReason::kSufficientlyLoaded: {
-        // `record` will be removed from `pending_images_` if the image was
-        // removed between painting it and running this callback, in which case
-        // we still want to set its paint time.
-        auto it = pending_images_.find(record->Hash());
-        if (it == pending_images_.end() && !record->WasNodeRemoved()) {
-          break;
-        }
-
-        CHECK(record->IsSufficientlyLoadedForReporting());
-
-        // Set paint time if it hasn't been set. Note for first video frame with
-        // ReportFirstFrameTimeAsRenderTime enabled, this will already be set.
-        if (!record->HasPaintTime()) {
-          record->SetPaintTime(presentation_timestamp, paint_timing_info);
-        }
-        settled_records.push_back(record);
-        if (it != pending_images_.end()) {
-          pending_images_.erase(it);
-        }
-        break;
-      }
-    }
-  }
-}
-
-void ImagePaintTimingDetector::QueueToMeasurePaintTime(
-    ImageRecord* record,
-    PresentationReason reason) {
-  images_queued_for_paint_time_.push_back(
-      MakeGarbageCollected<QueuedImageRecordInfo>(record, frame_index_,
-                                                  reason));
-  added_entry_in_latest_frame_ = true;
+  RemoveRecord(MediaRecordId::GenerateHash(&object, media_timing));
+  ForEachPaintTimingClient([&](PaintTimingClient* client) {
+    client->OnImageRemoved(object, media_timing);
+  });
 }
 
 void ImagePaintTimingDetector::NotifyInteractionTriggeredVideoSrcChange(
@@ -206,19 +116,16 @@ bool ImagePaintTimingDetector::RecordImage(
 
   // `record` will be non-null if the first paint for the image was recorded but
   // the image hasn't been "finalized" yet, i.e. the image wasn't sufficiently
-  // loaded the last time it was painted or the presentation time callback for
-  // the first paint after being sufficiently loaded is still pending.
-  ImageRecord* record = GetPendingImage(record_id_hash);
+  // loaded the last time it was painted.
+  auto it = pending_images_.find(record_id_hash);
+  ImageRecord* record = it == pending_images_.end() ? nullptr : it->value.Get();
 
   // Skip measuring content that was already fully measured.
   //  - `record` is null: we aren't actively measuring this content, but we
   //    need to check the historical `recorded_images_` set to see if this is
   //    new or old content.
-  //  - `record` is non-null: we are still actively measuring this content, but
-  //    if the record was (recently) marked as sufficiently loaded, then we're
-  //    just waiting for presentation time.
-  if ((!record && recorded_images_.Contains(record_id_hash)) ||
-      (record && record->IsSufficientlyLoadedForReporting())) {
+  //  - `record` is non-null: we are still actively measuring this content.
+  if (!record && recorded_images_.Contains(record_id_hash)) {
     return false;
   }
 
@@ -230,7 +137,7 @@ bool ImagePaintTimingDetector::RecordImage(
   // in that case.
   if (record && record->GetMediaTiming() != &media_timing &&
       media_timing.IsVideo()) {
-    NotifyImageRemoved(object, &media_timing);
+    NotifyImageRemoved(object, record->GetMediaTiming());
     record = nullptr;
   }
 
@@ -277,27 +184,15 @@ bool ImagePaintTimingDetector::RecordImage(
       return false;
     }
 
-    if (auto* manager = GetLargestContentfulPaintManager()) {
-      manager->InitializePaintTracking(record);
-    }
-
-    LocalDOMWindow* window = object.GetDocument().domWindow();
-    CHECK(window);
-    if (SoftNavigationHeuristics* heuristics =
-            window->GetSoftNavigationHeuristics()) {
-      heuristics->InitializePaintTracking(record);
-    }
+    ForEachPaintTimingClient([&](PaintTimingClient* client) {
+      client->OnElementFirstContentfulPaint(record);
+    });
 
     // Mark the image as recorded regardless of if this is needed for any
     // PaintTiming clients so the image isn't reconsidered as a candidate.
     recorded_images_.insert(record_id_hash);
 
-    if (!record->IsNeededForInteractionContentfulPaint() &&
-        !record->IsNeededForLargestContentfulPaint()) {
-      return false;
-    }
-    // Finally, we have at least one client that wants to track paints for this
-    // image, so set up future tracking.
+    // Finally, set up tracking future paints for this `record`.
     pending_images_.insert(record->Hash(), record);
   }
 
@@ -314,9 +209,9 @@ bool ImagePaintTimingDetector::RecordImage(
   // track a single paint time for animated images/videos.
   if (!is_video && media_timing.IsPaintedFirstFrame() &&
       !record->HasFirstAnimatedFrameTime()) {
-    // Note that if `record` is already queued for first animated frame time,
-    // this will get ignored in `AssignPaintTimeToRegisteredQueuedRecords()`.
-    QueueToMeasurePaintTime(record, PresentationReason::kFirstAnimatedFrame);
+    // Always measure the first frame time so it's available if this record is
+    // needed when it's sufficiently loaded.
+    animated_images_queued_for_first_frame_time_.push_back(record);
   }
 
   // Check if the image is ready to be reported to clients. For most media, we
@@ -329,6 +224,8 @@ bool ImagePaintTimingDetector::RecordImage(
     return false;
   }
 
+  // Mark the image as sufficiently loaded first since clients may depend on
+  // that for filtering.
   record->SetIsSufficientlyLoadedForReporting();
   if (is_video) {
     SetVideoFirstAnimatedFrameTime(record);
@@ -337,11 +234,24 @@ bool ImagePaintTimingDetector::RecordImage(
                                     : LoadTime(record_id_hash));
   }
 
-  if (SoftNavigationContext* context = record->GetSoftNavigationContext()) {
-    context->AddPaintedArea(record);
+  // Inform clients about the contentful paint and set up for measuring
+  // presentation time if any clients need the `record`.
+  ForEachPaintTimingClient([&](PaintTimingClient* client) {
+    client->OnElementLastContentfulPaint(record);
+  });
+
+  // Erase the record from `pending_images_` whether or not it's needed by
+  // clients since the record is now sufficiently loaded.
+  pending_images_.erase(record->Hash());
+
+  // No client needs this `record`, so no need to process any further.
+  if (!record->IsNeededForPaintTiming()) {
+    return false;
   }
 
-  QueueToMeasurePaintTime(record, PresentationReason::kSufficientlyLoaded);
+  // Queue the record for presentation time processing since at least one client
+  // needs this `record`.
+  images_queued_for_paint_time_.push_back(record);
   return true;
 }
 
@@ -366,6 +276,9 @@ void ImagePaintTimingDetector::NotifyBackgroundImageFinished(
 }
 
 void ImagePaintTimingDetector::ReportLargestIgnoredImage() {
+  // TODO(crbug.com/454082773): This is called on style change, so there's a
+  // window between style and paint where the image can be removed. We should
+  // defer this until paint time.
   auto* lcp_manager = GetLargestContentfulPaintManager();
   if (!lcp_manager) {
     return;
@@ -378,11 +291,16 @@ void ImagePaintTimingDetector::ReportLargestIgnoredImage() {
   // Trigger FCP if it's not already set.
   paint_timing_detector_->GetPaintTiming().MarkFirstImagePaint();
 
+  // Notify clients of the first and contentful paints and set up presentation
+  // feedback.
+  ForEachPaintTimingClient([&](PaintTimingClient* client) {
+    client->OnElementFirstContentfulPaint(record);
+    client->OnElementLastContentfulPaint(record);
+  });
   recorded_images_.insert(record->Hash());
-  pending_images_.insert(record->Hash(), record);
 
   CHECK(record->IsSufficientlyLoadedForReporting());
-  QueueToMeasurePaintTime(record, PresentationReason::kSufficientlyLoaded);
+  images_queued_for_paint_time_.push_back(record);
 }
 
 void ImagePaintTimingDetector::SetVideoFirstAnimatedFrameTime(
@@ -409,26 +327,18 @@ void ImagePaintTimingDetector::SetVideoFirstAnimatedFrameTime(
                        DOMPaintTimingInfo{dom_timestamp, dom_timestamp});
 }
 
-ImageRecord* ImagePaintTimingDetector::RemoveRecord(
-    MediaRecordIdHash record_id_hash) {
+void ImagePaintTimingDetector::RemoveRecord(MediaRecordIdHash record_id_hash) {
   recorded_images_.erase(record_id_hash);
   image_finished_times_.erase(record_id_hash);
-  auto it = pending_images_.find(record_id_hash);
-  if (it != pending_images_.end()) {
-    ImageRecord* record = it->value;
-    pending_images_.erase(it);
-    // Leave out `images_queued_for_paint_time_` intentionally because the null
-    // record can be removed in `AssignPaintTimeToRegisteredQueuedRecords`.
-    return record;
-  }
-  return nullptr;
+  pending_images_.erase(record_id_hash);
 }
 
 void ImagePaintTimingDetector::Trace(Visitor* visitor) const {
   visitor->Trace(paint_timing_detector_);
   visitor->Trace(pending_images_);
-  visitor->Trace(images_queued_for_paint_time_);
   visitor->Trace(background_image_finished_times_);
+  visitor->Trace(animated_images_queued_for_first_frame_time_);
+  visitor->Trace(images_queued_for_paint_time_);
 }
 
 LargestContentfulPaintManager*
@@ -472,20 +382,20 @@ base::TimeTicks ImagePaintTimingDetector::LoadTime(
   return it != image_finished_times_.end() ? it->value : base::TimeTicks();
 }
 
-ImagePaintTimingDetector::QueuedImageRecordInfo::QueuedImageRecordInfo(
-    ImageRecord* record,
-    uint32_t frame_index,
-    PresentationReason reason)
-    : image_record(record),
-      frame_index(frame_index),
-      presentation_reason(reason) {
-  CHECK(image_record);
-  CHECK_GT(frame_index, 0u);
+void ImagePaintTimingDetector::ForEachPaintTimingClient(
+    base::FunctionRef<void(PaintTimingClient*)> callback) {
+  paint_timing_detector_->GetPaintTiming().ForEachClient(std::move(callback));
 }
 
-void ImagePaintTimingDetector::QueuedImageRecordInfo::Trace(
-    Visitor* visitor) const {
-  visitor->Trace(image_record);
+HeapVector<Member<ImageRecord>>
+ImagePaintTimingDetector::TakeImageRecordsOnPaintFinished() {
+  viewport_size_ = std::nullopt;
+  return std::move(images_queued_for_paint_time_);
+}
+
+HeapVector<Member<ImageRecord>>
+ImagePaintTimingDetector::TakeAnimatedImageRecordsOnPaintFinished() {
+  return std::move(animated_images_queued_for_first_frame_time_);
 }
 
 }  // namespace blink

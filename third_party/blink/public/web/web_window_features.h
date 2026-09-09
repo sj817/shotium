@@ -46,6 +46,7 @@ struct WebWindowFeatures {
   bool height_set = false;
 
   bool is_popup = false;
+  bool always_on_top = false;
 
   bool resizable = true;
 

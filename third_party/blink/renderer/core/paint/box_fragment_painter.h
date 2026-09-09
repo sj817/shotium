@@ -80,6 +80,8 @@ class CORE_EXPORT BoxFragmentPainter : public BoxPainterBase {
 
   gfx::Rect VisualRect(const PhysicalOffset& paint_offset);
 
+  gfx::Vector2d PixelSnappedScrollOffset() const;
+
  protected:
   BoxPainterBase::FillLayerInfo GetFillLayerInfo(
       const Color&,
@@ -137,8 +139,6 @@ class CORE_EXPORT BoxFragmentPainter : public BoxPainterBase {
       InlineCursor* children,
       const PaintInfo&,
       const PhysicalOffset& paint_offset);
-
-  void PaintColumnRules(const PaintInfo&, const PhysicalOffset& paint_offset);
 
   void PaintInternal(const PaintInfo&);
   void PaintAllPhasesAtomically(const PaintInfo&);
@@ -318,6 +318,10 @@ class CORE_EXPORT BoxFragmentPainter : public BoxPainterBase {
 
   static bool ShouldHitTestCulledInlineAncestors(const HitTestContext& hit_test,
                                                  const FragmentItem& item);
+
+  // Returns the total offset of all overscroll area parents. This is used to
+  // shift content which is not within an overscroll area.
+  gfx::Vector2d PixelSnappedOverscrollOffset() const;
 
   const PhysicalBoxFragment& box_fragment_;
   const DisplayItemClient& display_item_client_;

@@ -162,18 +162,6 @@ BASE_EXPORT bool PreventExecuteMappingUnchecked(
 BASE_EXPORT void SetExtraNoExecuteAllowedPath(int path_key);
 #endif  // BUILDFLAG(IS_WIN)
 
-#if BUILDFLAG(IS_MAC)
-enum class DarwinUserDirectory {
-  kUser,
-  kUserCache,
-  kUserTemp,
-};
-
-// Returns the canonicalized path of a Darwin user directory, or empty FilePath
-// on failure.
-BASE_EXPORT FilePath GetDarwinUserDirectory(DarwinUserDirectory directory);
-#endif  // BUILDFLAG(IS_MAC)
-
 // Moves the given path, whether it's a file or a directory.
 // If a simple rename is not possible, such as in the case where the paths are
 // on different volumes, this will attempt to copy and delete. Returns
@@ -534,11 +522,6 @@ BASE_EXPORT bool CreateDirectoryAndGetError(const FilePath& full_path,
 // Backward-compatible convenience method for the above.
 BASE_EXPORT bool CreateDirectory(const FilePath& full_path);
 
-// Creates a directory exclusively. Unlike `CreateDirectory()`, this function
-// fails if the directory at the leaf path already exists or if any parent
-// directory does not exist.
-BASE_EXPORT File::Error CreateDirectoryExclusive(const FilePath& full_path);
-
 // Returns the file size, or std::nullopt on failure.
 BASE_EXPORT std::optional<int64_t> GetFileSize(const FilePath& file_path);
 
@@ -828,7 +811,6 @@ BASE_EXPORT std::optional<std::string> CopyFileToDownloadsCollection(
 
 #endif
 
-#if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
 // Returns whether the specified file name is a reserved name on Windows.
 // This includes names like "com2.zip" (which correspond to devices) and
 // desktop.ini and thumbs.db which have special meaning to the Windows shell.
@@ -836,7 +818,6 @@ BASE_EXPORT std::optional<std::string> CopyFileToDownloadsCollection(
 // reserved on Windows.
 BASE_EXPORT bool IsReservedNameOnWindows(
     const base::FilePath::StringType& filename);
-#endif
 
 // Internal --------------------------------------------------------------------
 

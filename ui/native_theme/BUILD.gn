@@ -150,6 +150,7 @@ test("native_theme_unittests") {
     "//skia",
     "//testing/gtest",
     "//ui/color",
+    "//ui/color:mixers",
     "//ui/gfx:test_support",
     "//ui/gfx/geometry",
   ]
@@ -171,6 +172,7 @@ test("native_theme_unittests") {
 
   if (is_win || is_linux) {
     sources += [ "native_theme_fluent_unittest.cc" ]
+    deps += [ "//skia:test_fonts" ]
   }
 
   if (is_android) {

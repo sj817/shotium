@@ -132,6 +132,7 @@ blink_core_sources_paint = [
   "paint_result.h",
   "pre_paint_disable_side_effects_scope.cc",
   "pre_paint_disable_side_effects_scope.h",
+  "pre_paint_subtree_walk_reasons.h",
   "pre_paint_tree_walk.cc",
   "pre_paint_tree_walk.h",
   "replaced_painter.cc",
@@ -205,6 +206,7 @@ blink_core_sources_paint = [
   "timing/media_record_id.h",
   "timing/paint_timing.cc",
   "timing/paint_timing_callbacks.h",
+  "timing/paint_timing_client.h",
   "timing/paint_timing_detector.cc",
   "timing/paint_timing_detector.h",
   "timing/paint_timing_record.cc",
@@ -268,6 +270,7 @@ blink_core_tests_paint = [
   "timing/largest_contentful_paint_calculator_test.cc",
   "timing/mock_paint_timing_callback_manager.h",
   "timing/mock_paint_timing_callback_manager.cc",
+  "timing/paint_timing_test.cc",
   "timing/paint_timing_test_base.h",
   "view_painter_test.cc",
 ]

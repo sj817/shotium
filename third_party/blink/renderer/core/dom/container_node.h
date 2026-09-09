@@ -47,7 +47,7 @@ class FragmentParserOptions;
 class GetHTMLOptions;
 class HTMLCollection;
 class RadioNodeList;
-class V8UnionSetHTMLUnsafeOptionsOrTrustedParserOptions;
+class V8UnionSetHTMLUnsafeOptionsOrTrustedHTMLParserOptions;
 class StyleRecalcContext;
 class WhitespaceAttacher;
 
@@ -392,13 +392,13 @@ class CORE_EXPORT ContainerNode : public Node {
 
   void appendHTMLUnsafe(
       const V8UnionStringOrTrustedHTML* html,
-      V8UnionSetHTMLUnsafeOptionsOrTrustedParserOptions* options,
+      V8UnionSetHTMLUnsafeOptionsOrTrustedHTMLParserOptions* options,
       ExceptionState& exception_state);
 
 
   void prependHTMLUnsafe(
       const V8UnionStringOrTrustedHTML* html,
-      V8UnionSetHTMLUnsafeOptionsOrTrustedParserOptions* options,
+      V8UnionSetHTMLUnsafeOptionsOrTrustedHTMLParserOptions* options,
       ExceptionState& exception_state);
 
   void InsertHTMLBefore(Node* ref_child,

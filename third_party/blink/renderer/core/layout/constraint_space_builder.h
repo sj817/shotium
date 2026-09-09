@@ -418,17 +418,22 @@ class CORE_EXPORT ConstraintSpaceBuilder final {
     }
   }
 
-  void SetIgnoreMarginsForStretch(WritingMode parent_mode,
-                                  LineLogicalBoxSides sides) {
-#if DCHECK_IS_ON()
-    DCHECK(!is_ignored_margins_set_);
-    is_ignored_margins_set_ = true;
-#endif
-    if (!sides.IsEmpty()) {
-      EnsureRareData()->ignore_margins_for_stretch =
-          PhysicalBoxSides(sides, parent_mode)
-              .ToLogical(space_.GetWritingDirection());
+  void SetIgnoreMarginsForStretch(WritingDirectionMode parent_writing_direction,
+                                  LogicalBoxSides sides) {
+    if (sides.IsEmpty()) {
+      return;
     }
+    const LogicalBoxSides converted =
+        sides.ToPhysical(parent_writing_direction)
+            .ToLogical(space_.GetWritingDirection());
+    space_.bitfields_.ignore_margins_for_stretch_inline_start =
+        converted.inline_start;
+    space_.bitfields_.ignore_margins_for_stretch_inline_end =
+        converted.inline_end;
+    space_.bitfields_.ignore_margins_for_stretch_block_start =
+        converted.block_start;
+    space_.bitfields_.ignore_margins_for_stretch_block_end =
+        converted.block_end;
   }
 
   void SetMarginStrut(const MarginStrut& margin_strut) {
@@ -636,6 +641,14 @@ class CORE_EXPORT ConstraintSpaceBuilder final {
     EnsureRareData()->SetGridLayoutSubtree(grid_layout_subtree);
   }
 
+  void SetIsLineClampClippedFloat() {
+#if DCHECK_IS_ON()
+    DCHECK(!is_line_clamp_clipped_float_set_);
+    is_line_clamp_clipped_float_set_ = true;
+#endif
+    space_.bitfields_.is_line_clamp_clipped_float = true;
+  }
+
   // Creates a new constraint space.
   const ConstraintSpace ToConstraintSpace() {
 #if DCHECK_IS_ON()
@@ -712,7 +725,7 @@ class CORE_EXPORT ConstraintSpaceBuilder final {
   bool is_table_row_data_set_ = false;
   bool is_table_section_data_set_ = false;
   bool is_grid_layout_subtree_set_ = false;
-  bool is_ignored_margins_set_ = false;
+  bool is_line_clamp_clipped_float_set_ = false;
 
   bool to_constraint_space_called_ = false;
 #endif

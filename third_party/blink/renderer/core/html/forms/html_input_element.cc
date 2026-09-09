@@ -931,7 +931,7 @@ void HTMLInputElement::ParseAttribute(
     // attribute. So, delay the SetChecked() call until
     // finishParsingChildren() is called if parsing is in progress.
     if ((!parsing_in_progress_ ||
-         !GetDocument().GetFormController().HasControlStates()) &&
+         !GetDocument().EnsureFormController().HasControlStates()) &&
         !dirty_checkedness_) {
       SetChecked(!value.IsNull());
       dirty_checkedness_ = false;
@@ -1120,6 +1120,7 @@ void HTMLInputElement::ResetImpl() {
   } else if (input_type_->GetValueMode() == ValueMode::kFilename) {
     SetNonDirtyValue(String());
     SetNeedsValidityCheck();
+    UpdateView();
   }
   SetChecked(FastHasAttribute(html_names::kCheckedAttr));
   dirty_checkedness_ = false;
@@ -1376,6 +1377,9 @@ void HTMLInputElement::SetValue(const String& value,
   if (!input_type_->CanSetValue(value))
     return;
 
+  const bool had_suggested_value =
+      RuntimeEnabledFeatures::FindIgnoreSuggestionFixEnabled() &&
+      !SuggestedValue().empty();
   // Clear the suggested value. Use the base class version to not trigger a view
   // update.
   TextControlElement::SetSuggestedValue(String());
@@ -1395,6 +1399,12 @@ void HTMLInputElement::SetValue(const String& value,
     input_type_->SetValue(sanitized_value, value_changed, event_behavior,
                           selection);
     input_type_view_->DidSetValue(sanitized_value, value_changed);
+
+    if (had_suggested_value && !value_changed) {
+      // The view may still render the just-cleared suggested value; force a
+      // resync to the committed value. crbug.com/553252820
+      input_type_view_->UpdateView();
+    }
 
     if (value_changed) {
       NotifyFormStateChanged();
@@ -1616,9 +1626,11 @@ void HTMLInputElement::DefaultEventHandler(Event& evt) {
     return;
   }
 
-  if (evt.IsBeforeTextInsertedEvent()) {
-    input_type_view_->HandleBeforeTextInsertedEvent(
-        static_cast<BeforeTextInsertedEvent&>(evt));
+  if (!RuntimeEnabledFeatures::CleanUpActivationBehaviorEnabled()) {
+    if (evt.IsBeforeTextInsertedEvent()) {
+      input_type_view_->HandleBeforeTextInsertedEvent(
+          static_cast<BeforeTextInsertedEvent&>(evt));
+    }
   }
 
   if (mouse_event && evt.type() == event_type_names::kMousedown) {
@@ -1631,6 +1643,14 @@ void HTMLInputElement::DefaultEventHandler(Event& evt) {
 
   if (!call_base_class_early && !evt.DefaultHandled())
     TextControlElement::DefaultEventHandler(evt);
+}
+
+String HTMLInputElement::FilterBeforeTextInserted(const String& text) {
+  CHECK(RuntimeEnabledFeatures::CleanUpActivationBehaviorEnabled());
+  if (input_type_view_) {
+    return input_type_view_->FilterBeforeTextInserted(text);
+  }
+  return text;
 }
 
 ShadowRoot* HTMLInputElement::EnsureShadowSubtree() {
@@ -2134,6 +2154,12 @@ void HTMLInputElement::ListAttributeTargetChanged() {
 
 bool HTMLInputElement::IsSteppable() const {
   return input_type_->IsSteppable();
+}
+
+bool HTMLInputElement::IsSwitch() const {
+  return RuntimeEnabledFeatures::HTMLSwitchAttributeEnabled() &&
+         FormControlType() == FormControlType::kInputCheckbox &&
+         FastHasAttribute(html_names::kSwitchAttr);
 }
 
 bool HTMLInputElement::IsButton() const {
@@ -2656,8 +2682,9 @@ bool HTMLInputElement::HandleCommandInternal(HTMLElement& invoker,
 }
 
 void HTMLInputElement::SetFocused(bool is_focused,
-                                  mojom::blink::FocusType focus_type) {
-  TextControlElement::SetFocused(is_focused, focus_type);
+                                  mojom::blink::FocusType focus_type,
+                                  BlurEventBehavior blur_event_behavior) {
+  TextControlElement::SetFocused(is_focused, focus_type, blur_event_behavior);
   if (input_type_) {
     input_type_->UpdateWheelEventRegistration(/*is_detaching=*/false);
   }

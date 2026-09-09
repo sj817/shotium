@@ -78,6 +78,9 @@ COMPONENT_EXPORT(NETWORK_CPP_FLAGS_AND_SWITCHES)
 BASE_DECLARE_FEATURE(kCorsNonWildcardRequestHeadersSupport);
 
 COMPONENT_EXPORT(NETWORK_CPP_FLAGS_AND_SWITCHES)
+BASE_DECLARE_FEATURE(kCorsPreflightCacheKeyTaintedOrigin);
+
+COMPONENT_EXPORT(NETWORK_CPP_FLAGS_AND_SWITCHES)
 BASE_DECLARE_FEATURE(kOmitCorsClientCert);
 
 COMPONENT_EXPORT(NETWORK_CPP_FLAGS_AND_SWITCHES)
@@ -177,6 +180,13 @@ BASE_DECLARE_FEATURE(kFrameAncestorsHeader);
 // https://fetch.spec.whatwg.org/#http-redirect-fetch
 COMPONENT_EXPORT(NETWORK_CPP_FLAGS_AND_SWITCHES)
 BASE_DECLARE_FEATURE(kUpdateRequestForCorsRedirect);
+
+// https://crbug.com/513518289
+// When enabled, CorsURLLoader handles CORS redirects in-place via
+// network_loader_->FollowRedirect() rather than restarting the request via
+// StartRequest().
+COMPONENT_EXPORT(NETWORK_CPP_FLAGS_AND_SWITCHES)
+BASE_DECLARE_FEATURE(kAvoidCorsURLLoaderRestartOnRedirect);
 
 COMPONENT_EXPORT(NETWORK_CPP_FLAGS_AND_SWITCHES)
 BASE_DECLARE_FEATURE(kBrowsingTopics);
@@ -313,10 +323,15 @@ BASE_DECLARE_FEATURE_PARAM(int, kDurableMessagesGlobalBufferSize);
 COMPONENT_EXPORT(NETWORK_CPP_FLAGS_AND_SWITCHES)
 BASE_DECLARE_FEATURE(kBypassRequestForbiddenHeadersCheck);
 
-// When enabled, the network service will prohibit modifications to the Origin
-// header in FollowRedirect.
+// When enabled, the network service will prohibit invalid modifications to the
+// Origin header in CorsURLLoader::FollowRedirect.
 COMPONENT_EXPORT(NETWORK_CPP_FLAGS_AND_SWITCHES)
-BASE_DECLARE_FEATURE(kBlockOriginHeaderModificationOnRedirect);
+BASE_DECLARE_FEATURE(kBlockInvalidOriginHeaderModificationOnRedirect);
+
+// When enabled, the network service will prohibit invalid Origin headers in
+// CorsURLLoader::StartRequest.
+COMPONENT_EXPORT(NETWORK_CPP_FLAGS_AND_SWITCHES)
+BASE_DECLARE_FEATURE(kBlockInvalidOriginHeader);
 
 // If enabled, the variations headers for allowlisted domains will be included
 // in the Reporting API uploads.
@@ -345,11 +360,6 @@ BASE_DECLARE_FEATURE(kDelayInitialDohProbeTimeout);
 COMPONENT_EXPORT(NETWORK_CPP_FLAGS_AND_SWITCHES)
 BASE_DECLARE_FEATURE_PARAM(base::TimeDelta, kDelayInitialDohProbeTimeoutParam);
 
-COMPONENT_EXPORT(NETWORK_CPP_FLAGS_AND_SWITCHES)
-BASE_DECLARE_FEATURE(kRestrictForbiddenSecurityHeaders);
-COMPONENT_EXPORT(NETWORK_CPP_FLAGS_AND_SWITCHES)
-BASE_DECLARE_FEATURE_PARAM(bool, kRestrictForbiddenSecurityHeadersDump);
-
 // When enabled, sending to a multicast address via Direct Sockets requires the
 // 'direct-sockets-multicast' Permissions Policy.
 COMPONENT_EXPORT(NETWORK_CPP_FLAGS_AND_SWITCHES)
@@ -362,6 +372,11 @@ BASE_DECLARE_FEATURE(kBrowserInitiatedFileUploadValidation);
 
 COMPONENT_EXPORT(NETWORK_CPP_FLAGS_AND_SWITCHES)
 BASE_DECLARE_FEATURE(kSafeRevalidation);
+
+// When enabled, binds URLLoaderFactory Mojo receiver to a high priority task
+// runner.
+COMPONENT_EXPORT(NETWORK_CPP_FLAGS_AND_SWITCHES)
+BASE_DECLARE_FEATURE(kBindURLLoaderFactoryToHighPriorityTaskRunner);
 
 }  // namespace network::features
 

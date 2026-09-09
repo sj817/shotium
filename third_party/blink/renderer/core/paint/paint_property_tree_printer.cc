@@ -186,6 +186,7 @@ void UpdateDebugNames(const LayoutObject& object,
                "PixelMovingFilterClip", object);
   SetDebugName(properties.OverflowControlsClip(), "OverflowControlsClip",
                object);
+  SetDebugName(properties.LineClampFloatClip(), "LineClampFloatClip", object);
   SetDebugName(properties.BackgroundClip(), "BackgroundClip", object);
   SetDebugName(properties.InnerBorderRadiusClip(), "InnerBorderRadiusClip",
                object);

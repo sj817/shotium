@@ -432,8 +432,8 @@ void PaintLayerScrollableArea::UpdateScrollOffset(
   // The ScrollOffsetTranslation paint property depends on the scroll offset.
   // (see: PaintPropertyTreeBuilder::UpdateScrollAndScrollTranslation).
   GetLayoutBox()->SetNeedsPaintPropertyUpdate();
-  frame_view->UpdateIntersectionObservationStateOnScroll(new_offset -
-                                                         scroll_offset_);
+  frame_view->SetIntersectionObservationState(
+      LocalFrameView::kScrollAndVisibilityOnly);
 
   scroll_offset_ = new_offset;
 
@@ -450,13 +450,15 @@ void PaintLayerScrollableArea::UpdateScrollOffset(
     // Update regions, scrolling may change the clip of a particular region.
     frame_view->UpdateDocumentDraggableRegions();
 
-    // As a performance optimization, the scroll offset of the root layer is
-    // not included in EmbeddedContentView's stored frame rect, so there is no
-    // reason to mark the FrameView as needing a geometry update here.
-    if (is_root_layer)
+    if (is_root_layer &&
+        !RuntimeEnabledFeatures::AvoidEmbeddedContentViewLocationEnabled()) {
+      // As a performance optimization, the scroll offset of the root layer is
+      // not included in EmbeddedContentView's stored frame rect, so there is no
+      // reason to mark the FrameView as needing a geometry update here.
       frame_view->SetRootLayerDidScroll();
-    else
+    } else {
       frame_view->SetNeedsUpdateGeometries();
+    }
   }
 
   if (scroll_type == mojom::blink::ScrollType::kUser ||
@@ -582,10 +584,6 @@ bool PaintLayerScrollableArea::BackgroundNeedsRepaintOnScroll() const {
     return true;
   }
   return false;
-}
-
-gfx::Vector2d PaintLayerScrollableArea::ScrollOffsetInt() const {
-  return SnapScrollOffsetToPhysicalPixels(scroll_offset_);
 }
 
 ScrollOffset PaintLayerScrollableArea::GetScrollOffset() const {
@@ -1791,12 +1789,11 @@ void PaintLayerScrollableArea::ComputeScrollbarExistence(
     if (h_mode == mojom::blink::ScrollbarMode::kAuto) {
       // Don't add auto scrollbars if the box contents aren't visible.
       needs_horizontal_scrollbar =
-          GetLayoutBox()->IsRooted() && HasHorizontalOverflow() &&
+          HasHorizontalOverflow() &&
           VisibleContentRect(kIncludeScrollbars).height();
     }
     if (v_mode == mojom::blink::ScrollbarMode::kAuto) {
-      needs_vertical_scrollbar = GetLayoutBox()->IsRooted() &&
-                                 HasVerticalOverflow() &&
+      needs_vertical_scrollbar = HasVerticalOverflow() &&
                                  VisibleContentRect(kIncludeScrollbars).width();
     }
   }
@@ -2007,12 +2004,12 @@ void PaintLayerScrollableArea::UpdateFocusDataForSnapAreas() {
   }
 
   for (auto& fragment : layout_box->PhysicalFragments()) {
-    if (auto* snap_areas = fragment.SnapAreas()) {
-      for (Element* snap_area : *snap_areas) {
+    for (const auto& item : fragment.SnapAreas()) {
+      if (auto* element = item.GetElementIfConsumed()) {
         cc::ElementId element_id =
-            CompositorElementIdFromDOMNodeId(snap_area->GetDomNodeId());
+            CompositorElementIdFromDOMNodeId(element->GetDomNodeId());
         container_data->UpdateSnapAreaFocus(id_to_index.at(element_id),
-                                            snap_area->HasFocusWithin());
+                                            element->HasFocusWithin());
       }
     }
   }
@@ -2310,7 +2307,7 @@ void PaintLayerScrollableArea::EnqueueForSnapUpdateIfNeeded() {
     // Enqueue ourselves for a snap update if we have any snap-areas, or if we
     // currently have snap-data (and it needs to be cleared).
     for (const auto& fragment : box->PhysicalFragments()) {
-      if (fragment.SnapAreas() || GetSnapContainerData()) {
+      if (!fragment.SnapAreas().empty() || GetSnapContainerData()) {
         box->GetFrameView()->AddPendingSnapUpdate(this);
         break;
       }

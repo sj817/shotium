@@ -5,7 +5,10 @@
 #ifndef THIRD_PARTY_BLINK_RENDERER_CORE_EXECUTION_CONTEXT_AGENT_H_
 #define THIRD_PARTY_BLINK_RENDERER_CORE_EXECUTION_CONTEXT_AGENT_H_
 
+#include <memory>
+
 #include "base/dcheck_is_on.h"
+#include "base/memory/raw_ptr.h"
 #include "base/memory/scoped_refptr.h"
 #include "base/unguessable_token.h"
 #include "third_party/blink/renderer/core/core_export.h"
@@ -44,14 +47,11 @@ class CORE_EXPORT Agent : public GarbageCollected<Agent>,
   Agent(const base::UnguessableToken& cluster_id, AgentType agent_type);
   virtual ~Agent();
 
-  const scoped_refptr<scheduler::EventLoop>& event_loop() const {
-    return event_loop_;
-  }
+  // The returned pointer is never null and will eventually be changed to a
+  // reference.
+  scheduler::EventLoop* event_loop() const { return event_loop_.get(); }
 
   void Trace(Visitor*) const override;
-
-  void AttachContext(ExecutionContext*);
-  void DetachContext(ExecutionContext*);
 
   const base::UnguessableToken& cluster_id() const { return cluster_id_; }
 
@@ -82,7 +82,6 @@ class CORE_EXPORT Agent : public GarbageCollected<Agent>,
   // Returns if this is a Window Agent or not.
   virtual bool IsWindowAgent() const;
 
-  virtual void Dispose();
   virtual void PerformMicrotaskCheckpoint();
 
 
@@ -97,7 +96,7 @@ class CORE_EXPORT Agent : public GarbageCollected<Agent>,
   // rejected_promises_ was a RejectedPromises: the per-agent queue of
   // unhandled promise rejections, drained at each microtask checkpoint.
   // Promises are a script construct and there is no script.
-  scoped_refptr<scheduler::EventLoop> event_loop_;
+  const std::unique_ptr<scheduler::EventLoop> event_loop_;
   const base::UnguessableToken cluster_id_;
   const AgentClusterKey agent_cluster_key_;
   const AgentType agent_type_;

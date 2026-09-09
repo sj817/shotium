@@ -8,6 +8,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "build/build_config.h"
+
 namespace mojo {
 namespace core {
 
@@ -22,13 +24,6 @@ struct Configuration {
   // relevant in multiprocess environments.
   bool is_broker_process = false;
 
-  // Forcibly disables the Mojo's ipcz-based implementation. This is an
-  // alternative to manual feature override for applications which don't use
-  // base::FeatureList.
-  //
-  // TODO(crbug.com/40058840): Remove this once dependents are gone.
-  bool disable_ipcz = false;
-
   // If |true|, this process will always attempt to allocate shared memory
   // directly rather than synchronously delegating to a broker process where
   // applicable.
@@ -37,6 +32,15 @@ struct Configuration {
   // which are otherwise sufficiently privileged to allocate named shared memory
   // objects.
   bool force_direct_shared_memory_allocation = false;
+
+#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
+  // If `true` and this process delegates shared memory allocation to the
+  // broker, unsafe regions (which never need a read-only handle) are still
+  // created directly in this process. That takes memfd_create(), ftruncate()
+  // and fcntl(F_ADD_SEALS), which must be permitted by the process's sandbox
+  // policy; only set this for process types where that is known to hold.
+  bool direct_unsafe_shared_memory_allocation = false;
+#endif
 
   // Maximum number of active memory mappings.
   size_t max_mapping_table_size = 1000000;

@@ -54,7 +54,7 @@
 #include "third_party/blink/renderer/core/html/custom/custom_element_registry.h"
 #include "third_party/blink/renderer/core/html/html_slot_element.h"
 #include "third_party/blink/renderer/core/html/parser/fragment_parser.h"
-#include "third_party/blink/renderer/core/trustedtypes/trusted_parser_options.h"
+#include "third_party/blink/renderer/core/trustedtypes/trusted_html_parser_options.h"
 #include "third_party/blink/renderer/core/trustedtypes/trusted_types_names.h"
 #include "third_party/blink/renderer/core/trustedtypes/trusted_types_util.h"
 #include "third_party/blink/renderer/platform/bindings/exception_state.h"
@@ -208,7 +208,7 @@ void ShadowRoot::setHTMLUnsafe(const V8UnionStringOrTrustedHTML* html,
 }
 
 void ShadowRoot::setHTMLUnsafe(const V8UnionStringOrTrustedHTML* html,
-                               TrustedParserOptions* options,
+                               TrustedHTMLParserOptions* options,
                                ExceptionState& exception_state) {
   UseCounter::Count(GetDocument(), WebFeature::kHTMLUnsafeMethods);
   FragmentParserOptions resolved_options(options);

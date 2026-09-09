@@ -187,7 +187,7 @@ void MultipleFieldsTemporalInputTypeView::DidBlurFromControl(
     return;
   EventQueueScope scope;
   // Remove focus ring by CSS "focus" pseudo-class.
-  GetElement().SetFocused(false, focus_type);
+  GetElement().SetFocused(false, focus_type, BlurEventBehavior::kFire);
 }
 
 void MultipleFieldsTemporalInputTypeView::DidFocusOnControl(
@@ -199,7 +199,7 @@ void MultipleFieldsTemporalInputTypeView::DidFocusOnControl(
     return;
   // Add focus ring by CSS "focus" pseudo-class.
   // FIXME: Setting the focus flag to non-focused element is too tricky.
-  GetElement().SetFocused(true, focus_type);
+  GetElement().SetFocused(true, focus_type, BlurEventBehavior::kFire);
 }
 
 void MultipleFieldsTemporalInputTypeView::EditControlValueChanged() {
@@ -410,12 +410,32 @@ void MultipleFieldsTemporalInputTypeView::HandleClickEvent(MouseEvent& event) {
   }
 }
 
+void MultipleFieldsTemporalInputTypeView::HandleDOMActivateEvent(Event& event) {
+  if (!RuntimeEnabledFeatures::
+          InputMultipleFieldsUIWithPointerChecksEnabled()) {
+    return;
+  }
+  if (GetElement().IsDisabledOrReadOnly() || !GetElement().GetLayoutObject()) {
+    return;
+  }
+  if (!DateTimeChooser::ShouldSubfieldsBeFocusable(
+          GetElement().GetDocument().GetFrame())) {
+    OpenPopupView();
+    event.SetDefaultHandled();
+  }
+}
+
 void MultipleFieldsTemporalInputTypeView::HandleFocusInEvent(
     Element* old_focused_element,
     mojom::blink::FocusType type) {
   DateTimeEditElement* edit = GetDateTimeEditElement();
   if (!edit || is_destroying_shadow_subtree_)
     return;
+  if (RuntimeEnabledFeatures::InputMultipleFieldsUIWithPointerChecksEnabled() &&
+      !DateTimeChooser::ShouldSubfieldsBeFocusable(
+          GetElement().GetDocument().GetFrame())) {
+    return;
+  }
   if (type == mojom::blink::FocusType::kBackward) {
     if (GetElement().GetDocument().GetPage())
       GetElement().GetDocument().GetPage()->GetFocusController().AdvanceFocus(
@@ -447,9 +467,7 @@ void MultipleFieldsTemporalInputTypeView::HandleKeydownEvent(
     KeyboardEvent& event) {
   if (!GetElement().IsFocused())
     return;
-  if (picker_indicator_is_visible_ &&
-      (!RuntimeEnabledFeatures::DisallowPickerForReadonlyInputsEnabled() ||
-       !GetElement().IsReadOnly()) &&
+  if (picker_indicator_is_visible_ && !GetElement().IsReadOnly() &&
       ((event.key() == keywords::kArrowDown && event.altKey()) ||
        event.key() == "F4" || event.key() == " ")) {
     OpenPopupView();

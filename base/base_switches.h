@@ -11,9 +11,6 @@
 
 namespace switches {
 
-// Delays execution of TaskPriority::BEST_EFFORT tasks until shutdown.
-inline constexpr char kDisableBestEffortTasks[] = "disable-best-effort-tasks";
-
 // Comma-separated list of feature names to disable. See also kEnableFeatures.
 inline constexpr char kDisableFeatures[] = "disable-features";
 

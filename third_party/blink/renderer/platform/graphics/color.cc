@@ -888,8 +888,8 @@ void Color::UnpremultiplyColor() {
   }
 }
 
-unsigned Color::GetHash() const {
-  unsigned result = HashInt(static_cast<uint8_t>(color_space_));
+uint32_t Color::GetHash() const {
+  uint32_t result = HashInt(static_cast<uint8_t>(color_space_));
   AddFloatToHash(result, param0_);
   AddFloatToHash(result, param1_);
   AddFloatToHash(result, param2_);
@@ -1116,11 +1116,11 @@ String Color::NameForLayoutTreeAsText() const {
   }
 
   if (!IsOpaque()) {
-    return String::Format("#%02X%02X%02X%02X", Red(), Green(), Blue(),
-                          AlphaAsInteger());
+    return Format("#{:02X}{:02X}{:02X}{:02X}", Red(), Green(), Blue(),
+                  AlphaAsInteger());
   }
 
-  return String::Format("#%02X%02X%02X", Red(), Green(), Blue());
+  return Format("#{:02X}{:02X}{:02X}", Red(), Green(), Blue());
 }
 
 bool Color::SetNamedColor(const String& name) {

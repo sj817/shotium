@@ -87,6 +87,8 @@ class NodeCloningData;
 class NodeList;
 class NodeListsNodeData;
 class QualifiedName;
+template <typename T>
+class RareDataUpdate;
 class RegisteredEventListener;
 class ScrollTimeline;
 class SVGQualifiedName;
@@ -99,7 +101,7 @@ class TextVisitor;
 class V8UnionNodeOrStringOrTrustedScript;
 class V8UnionStringOrTrustedHTML;
 class V8UnionStringOrTrustedScript;
-class V8UnionSetHTMLUnsafeOptionsOrTrustedParserOptions;
+class V8UnionSetHTMLUnsafeOptionsOrTrustedHTMLParserOptions;
 struct PhysicalRect;
 
 const int kElementNamespaceTypeShift = 5;
@@ -267,13 +269,13 @@ class CORE_EXPORT Node : public EventTarget {
   void remove();
 
   void beforeHTMLUnsafe(const V8UnionStringOrTrustedHTML* html,
-                        V8UnionSetHTMLUnsafeOptionsOrTrustedParserOptions*,
+                        V8UnionSetHTMLUnsafeOptionsOrTrustedHTMLParserOptions*,
                         ExceptionState&);
   void afterHTMLUnsafe(const V8UnionStringOrTrustedHTML* html,
-                       V8UnionSetHTMLUnsafeOptionsOrTrustedParserOptions*,
+                       V8UnionSetHTMLUnsafeOptionsOrTrustedHTMLParserOptions*,
                        ExceptionState&);
   void replaceWithHTMLUnsafe(const V8UnionStringOrTrustedHTML* html,
-                             V8UnionSetHTMLUnsafeOptionsOrTrustedParserOptions*,
+                             V8UnionSetHTMLUnsafeOptionsOrTrustedHTMLParserOptions*,
                              ExceptionState&);
   // NonDocumentTypeChildNode interface. These functions are only actually
   // web-exposed on  interfaces that include NonDocumentTypeChildNode in their
@@ -1164,17 +1166,6 @@ class CORE_EXPORT Node : public EventTarget {
   }
   void SetCachedDirectionality(TextDirection direction);
 
-  bool SelfOrAncestorHasContainerTiming() const {
-    return GetFlag(kSelfOrAncestorHasContainerTiming);
-  }
-  void SetSelfOrAncestorHasContainerTiming() {
-    SetFlag(kSelfOrAncestorHasContainerTiming);
-  }
-  void ClearSelfOrAncestorHasContainerTiming() {
-    ClearFlag(kSelfOrAncestorHasContainerTiming);
-  }
-  bool HasContainerTiming() const;
-
   void Trace(Visitor*) const override;
 
   bool HasNodePart() const { return GetFlag(kHasNodePart); }
@@ -1194,6 +1185,11 @@ class CORE_EXPORT Node : public EventTarget {
 
   // Defined in node-inl.h.
   ALWAYS_INLINE bool HasPseudoElements() const;
+
+  template <typename T>
+  void SetRareData(base::PassKey<RareDataUpdate<T>>, NodeRareData* new_data) {
+    data_ = new_data;
+  }
 
  private:
   enum NodeFlags : uint32_t {
@@ -1245,18 +1241,14 @@ class CORE_EXPORT Node : public EventTarget {
     // Bits indicating this Node is a NodePart or a ChildNodePart endpoint.
     kHasNodePart = 1u << 29,
 
-    // Indicate the node is in a hierarchy that needs to be considered for
-    // ContainerTiming events.
-    kSelfOrAncestorHasContainerTiming = 1u << 30,
-
     // Whether this node is an Element that is a shadow host.
     // Used to speed up GetShadowRoot(). This bit can be freed up if
     // GetShadowRoot() can be inlined by the compiler; see crbug.com/465839474.
-    kHasShadowRootFlag = 1u << 31,
+    kHasShadowRootFlag = 1u << 30,
 
     kDefaultNodeFlags = kIsFinishedParsingChildrenFlag,
 
-    // 0 bit(s) remaining.
+    // 1 bit(s) remaining.
   };
 
   ALWAYS_INLINE bool GetFlag(NodeFlags mask) const {
@@ -1347,15 +1339,6 @@ class CORE_EXPORT Node : public EventTarget {
 
   void InvalidateIfHasEffectiveAppearance() const;
 
-  // Use when calling RareData().EnsureFoo() to make sure the RareData pointer
-  // is updated if needed, as all Set...() and Ensure...() in RareData can
-  // return a new, reallocated data_.
-  template <class T>
-  T& UnpackAndRefresh(std::pair<std::reference_wrapper<T>, NodeRareData*>
-                          raredata_and_new_vec) {
-    data_ = raredata_and_new_vec.second;
-    return raredata_and_new_vec.first;
-  }
 
  private:
   static constexpr struct ParentNodeTag {
@@ -1407,8 +1390,6 @@ class CORE_EXPORT Node : public EventTarget {
   Member<Node> previous_;
   Member<Node> next_;
   Member<LayoutObject> layout_object_;
-
- protected:
   Member<NodeRareData> data_;
 };
 

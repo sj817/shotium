@@ -35,6 +35,11 @@ class CORE_EXPORT FontFaceDescriptors : public bindings::DictionaryBase {
   void setWeight(const String& value) { member_weight_ = value; has_weight_ = true; }
   String getWeightOr(const String& value) const { return has_weight_ ? member_weight_ : value; }
 
+  bool hasWidth() const { return has_width_; }
+  String width() const { return member_width_; }
+  void setWidth(const String& value) { member_width_ = value; has_width_ = true; }
+  String getWidthOr(const String& value) const { return has_width_ ? member_width_ : value; }
+
   bool hasStretch() const { return has_stretch_; }
   String stretch() const { return member_stretch_; }
   void setStretch(const String& value) { member_stretch_ = value; has_stretch_ = true; }
@@ -95,6 +100,8 @@ class CORE_EXPORT FontFaceDescriptors : public bindings::DictionaryBase {
   bool has_style_ = true;
   String member_weight_ = "normal";
   bool has_weight_ = true;
+  String member_width_;
+  bool has_width_ = false;
   String member_stretch_ = "normal";
   bool has_stretch_ = true;
   String member_unicode_range_ = "U+0-10FFFF";

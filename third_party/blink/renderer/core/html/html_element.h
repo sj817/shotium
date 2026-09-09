@@ -38,6 +38,8 @@
 
 namespace blink {
 
+enum class PopoverInvokedVia;
+
 struct AttributeTriggers;
 class AttachInternalsOptions;
 class Color;
@@ -333,7 +335,7 @@ class CORE_EXPORT HTMLElement : public Element {
                                         const Node& node);
   static void HandlePopoverLightDismissForClick(const Node& pointer_down_target,
                                                 const Node& pointer_up_target);
-  void InvokePopover(Element& invoker);
+  void InvokePopover(Element& invoker, PopoverInvokedVia invoked_via);
   void SetPopoverFocusOnShow();
   // This hides all visible popovers up to, but not including,
   // |endpoint|. If |endpoint| is nullptr, all popovers are hidden. Hiding
@@ -407,6 +409,10 @@ class CORE_EXPORT HTMLElement : public Element {
                             const String& value,
                             AllowPercentage = kAllowPercentageValues,
                             AllowZero = kAllowZeroValues);
+  // https://html.spec.whatwg.org/multipage/rendering.html#maps-to-the-pixel-length-property
+  void AddHTMLPixelLengthToStyle(HeapVector<CSSPropertyValue, 8>&,
+                                 CSSPropertyID,
+                                 const String& value);
   void AddHTMLColorToStyle(HeapVector<CSSPropertyValue, 8>&,
                            CSSPropertyID,
                            const String& color);
@@ -470,7 +476,7 @@ class CORE_EXPORT HTMLElement : public Element {
 
   void HandleKeypressEvent(KeyboardEvent&);
 
-  void SetPopoverInvoker(Element* invoker);
+  void SetPopoverInvoker(Element* invoker, PopoverInvokedVia invoked_via);
 
   // Attempts to hide a popover stack.  Hiding (some) popovers may be prevented
   // by the inspector. In that case, PopoverHideResult::kForceOpenedByInspector

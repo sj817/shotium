@@ -98,18 +98,17 @@ bool NewlineThenWhitespaceStringsTable::IsNewlineThenWhitespaces(
                              [](UChar ch) { return ch == ' '; });
 }
 
-WTF_EXPORT unsigned ComputeHashForWideString(base::span<const UChar> str) {
-  base::span<const char> bytes = base::as_chars(str);
+WTF_EXPORT uint32_t ComputeHashForWideString(base::span<const UChar> str) {
+  base::span<const uint8_t> bytes = base::as_bytes(str);
   if (ContainsOnlyLatin1(str)) {
-    using Reader = ConvertTo8BitHashReader;
-    return StringHasher::ComputeHashAndMaskTop8Bits<Reader>(
-        bytes.data(), bytes.size() / Reader::kCompressionFactor);
+    return StringHasher::ComputeHashAndMaskTop8Bits<ConvertTo8BitHashReader>(
+        bytes);
   } else {
-    return StringHasher::ComputeHashAndMaskTop8Bits(bytes.data(), bytes.size());
+    return StringHasher::ComputeHashAndMaskTop8Bits(bytes);
   }
 }
 
-NOINLINE unsigned StringImpl::HashSlowCase() const {
+NOINLINE uint32_t StringImpl::HashSlowCase() const {
   if (Is8Bit()) {
     // This is the common case, so we take the size penalty
     // of the inlining here.

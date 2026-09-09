@@ -1498,6 +1498,7 @@ base::expected<void, std::string> ShotRenderer::CreatePage(
       mojo::NullRemote());
   frame_->SetView(blink::MakeGarbageCollected<blink::LocalFrameView>(*frame_));
   frame_->Init(/*opener=*/nullptr, blink::DocumentToken(),
+               blink::InitiatorStateToken(),
                /*policy_container=*/nullptr, blink::StorageKey(),
                /*document_ukm_source_id=*/ukm::kInvalidSourceId,
                /*creator_base_url=*/blink::NullUrl());

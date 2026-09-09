@@ -163,12 +163,10 @@ bool IsEditableBoxEmpty(const Node* node) {
   if (!node) {
     return true;
   }
-  if (RuntimeEnabledFeatures::TextAreaEmptyPlaceholderBreakEnabled()) {
-    if (auto* text_control = EnclosingTextControl(node)) {
-      // We don't use `HasChildren()` for text controls because text controls
-      // may have placeholder break elements even for empty values.
-      return text_control->InnerEditorValue().empty();
-    }
+  if (auto* text_control = EnclosingTextControl(node)) {
+    // We don't use `HasChildren()` for text controls because text controls
+    // may have placeholder break elements even for empty values.
+    return text_control->InnerEditorValue().empty();
   }
   Element* root = RootEditableElement(*node);
   return !root || !root->HasChildren();
@@ -222,7 +220,15 @@ SelectionInFlatTree AdjustSelectionByUserSelect(
 
     if (!ShouldIgnoreNodeForCheckSelectable(enclosing_block, iter.GetNode()) &&
         IsNonSelectable(iter.GetNode())) {
-      new_start_pos = current_pos;
+      // A position inside content which is both non-selectable and
+      // non-editable has no canonical position, so clamping to it collapses
+      // the whole selection. Keeping the wider boundary is safe: readers of
+      // the range skip non-selectable content. See crbug.com/553831659.
+      const bool can_clamp_to_current_pos =
+          !RuntimeEnabledFeatures::
+              AvoidNonSelectableSelectionBoundaryEnabled() ||
+          CreateVisiblePosition(current_pos).IsNotNull();
+      new_start_pos = can_clamp_to_current_pos ? current_pos : anchor;
       break;
     }
   }
@@ -241,7 +247,11 @@ SelectionInFlatTree AdjustSelectionByUserSelect(
 
     if (!ShouldIgnoreNodeForCheckSelectable(enclosing_block, iter.GetNode()) &&
         IsNonSelectable(iter.GetNode())) {
-      new_end_pos = current_pos;
+      const bool can_clamp_to_current_pos =
+          !RuntimeEnabledFeatures::
+              AvoidNonSelectableSelectionBoundaryEnabled() ||
+          CreateVisiblePosition(current_pos).IsNotNull();
+      new_end_pos = can_clamp_to_current_pos ? current_pos : focus;
       break;
     }
   }
@@ -1228,8 +1238,7 @@ void SelectionController::UpdateSelectionForContextMenuEvent(
     const PhysicalOffset& position) {
   if (!Selection().IsAvailable())
     return;
-  if (mouse_down_was_single_click_on_caret_ || Selection().Contains(position) ||
-      hit_test_result.GetScrollbar() ||
+  if (Selection().Contains(position) || hit_test_result.GetScrollbar() ||
       // FIXME: In the editable case, word selection sometimes selects content
       // that isn't underneath the mouse.
       // If the selection is non-editable, we do word selection to make it
@@ -1247,6 +1256,10 @@ void SelectionController::UpdateSelectionForContextMenuEvent(
   base::AutoReset<bool> mouse_down_may_start_select_change(
       &mouse_down_may_start_select_, true);
 
+
+  if (mouse_down_was_single_click_on_caret_) {
+    return;
+  }
 
   if (!frame_->GetEditor().Behavior().ShouldSelectOnContextualMenuClick())
     return;

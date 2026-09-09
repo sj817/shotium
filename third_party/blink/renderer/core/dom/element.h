@@ -119,6 +119,7 @@ class ElementAnimations;
 class ElementInternals;
 class ElementIntersectionObserverData;
 class ExceptionState;
+class FocusEvent;
 class FocusOptions;
 class GetAnimationsOptions;
 class HTMLCanvasElement;
@@ -157,7 +158,7 @@ class StylePropertyMapReadOnly;
 class StyleRecalcContext;
 class StyleScopeData;
 class TextVisitor;
-class TrustedParserOptions;
+class TrustedHTMLParserOptions;
 class V8UnionBooleanOrScrollIntoViewOptions;
 class V8UnionCSSPseudoElementOrDocumentOrElementOrText;
 class V8UnionKeyframeAnimationOptionsOrUnrestrictedDouble;
@@ -207,6 +208,11 @@ enum class SelectionBehaviorOnFocus {
   kReset,
   kRestore,
   kNone,
+};
+
+enum class BlurEventBehavior {
+  kFire,
+  kDropWhenRemoving,
 };
 
 enum class FocusableState {
@@ -267,6 +273,8 @@ enum class CommandEventType {
   kPageInlineEnd,
   // Overscroll,
   kToggleOverscroll,
+  kShowOverscroll,
+  kHideOverscroll,
 };
 
 // Defaults for the `interestfor` API's `normal` value.
@@ -857,7 +865,7 @@ class CORE_EXPORT Element : public ContainerNode {
   using TinyBloomFilter = uint32_t;
   static TinyBloomFilter FilterForAttribute(
       const QualifiedName& attribute_name) {
-    return FilterForString(attribute_name.LocalNameUpper());
+    return attribute_name.BloomFilter();
   }
   static TinyBloomFilter FilterForString(const AtomicString& str) {
     unsigned hash = str.Hash();
@@ -1127,7 +1135,12 @@ class CORE_EXPORT Element : public ContainerNode {
   void Focus();
   void Focus(const FocusOptions*);
 
-  virtual void SetFocused(bool received, mojom::blink::FocusType);
+  void SetFocused(bool received, mojom::blink::FocusType focus_type) {
+    SetFocused(received, focus_type, BlurEventBehavior::kFire);
+  }
+  virtual void SetFocused(bool received,
+                          mojom::blink::FocusType,
+                          BlurEventBehavior);
   virtual void SetHasFocusWithinUpToAncestor(bool has_focus_within,
                                              Element* ancestor,
                                              bool need_snap_container_search);
@@ -1244,7 +1257,9 @@ class CORE_EXPORT Element : public ContainerNode {
   }
 
   static bool IsOverscrollCommand(CommandEventType command) {
-    return command == CommandEventType::kToggleOverscroll;
+    return command == CommandEventType::kToggleOverscroll ||
+           command == CommandEventType::kShowOverscroll ||
+           command == CommandEventType::kHideOverscroll;
   }
 
   // This allows customization of how Invoker Commands are handled, per element.
@@ -1348,6 +1363,14 @@ class CORE_EXPORT Element : public ContainerNode {
   // Lose interest immediately in all elements that currently have interest.
   static void LoseInterestInAllElements(Document&);
 
+  enum class InterestSource {
+    kHover,
+    kDeHover,
+    kFocus,
+    kBlur,
+  };
+  void HandleInterestForHoverOrFocus(InterestSource source);
+
   // Returns true if any of its (non-inclusive) flat tree descendants is
   // keyboard focusable. Note that this is quite slow, since it traverses the
   // entire subtree, and calls `IsKeyboardFocusableSlow()` on each element.
@@ -1406,7 +1429,7 @@ class CORE_EXPORT Element : public ContainerNode {
                      SetHTMLUnsafeOptions*,
                      ExceptionState&);
   void setHTMLUnsafe(const V8UnionStringOrTrustedHTML* html,
-                     TrustedParserOptions*,
+                     TrustedHTMLParserOptions*,
                      ExceptionState&);
 
   void setPointerCapture(PointerId, ExceptionState&);
@@ -1845,8 +1868,12 @@ class CORE_EXPORT Element : public ContainerNode {
   InterestInvokerTargetData& EnsureInterestInvokerTargetData();
   InterestInvokerTargetData* GetInterestInvokerTargetData() const;
   void HandlePointerEventsForInterestFor(const AtomicString& event_type);
+  void HandleFocusEventsForInterestFor(FocusEvent* focus_event);
 
   void DefaultEventHandler(Event&) override;
+
+  virtual String FilterBeforeTextInserted(const String& text);
+  virtual void NotifyEditableContentChanged();
 
   // Set on elements with scroll-target-group property to
   // collect HTMLAnchorElement scroll markers.
@@ -1886,14 +1913,6 @@ class CORE_EXPORT Element : public ContainerNode {
   void UpdateAncestorWithDirAuto(UpdateAncestorTraversal traversal);
   void AdjustDirectionalityIfNeededAfterChildrenChanged(
       const ChildrenChange& change);
-
-  void UpdateDescendantHasContainerTiming(bool has_container_timing);
-  void AdjustContainerTimingIfNeededAfterChildrenChanged(
-      const ChildrenChange& change);
-  bool ShouldAdjustContainerTimingForInsert(const ChildrenChange& change) const;
-  bool DoesChildContainerTimingNeedChange(const Node& node) const;
-
-  bool RecalcSelfOrAncestorHasContainerTiming() const;
 
   // True if this element carries the container timing ignore marker, either
   // spelled `containertimingignore` or with the deprecated dashed
@@ -2225,8 +2244,6 @@ class CORE_EXPORT Element : public ContainerNode {
                                    const StyleRecalcChange& child_change,
                                    const StyleRecalcContext&);
 
-  void MarkNonSlottedHostChildrenForStyleRecalc();
-
   void RebuildPseudoElementLayoutTree(PseudoId, WhitespaceAttacher&);
   void RebuildColumnLayoutTrees(WhitespaceAttacher&);
   void RebuildFirstLetterLayoutTree();
@@ -2526,13 +2543,6 @@ class CORE_EXPORT Element : public ContainerNode {
   // These schedule interest gained/lost events, for `interestfor` invokers.
   void ScheduleInterestGainedTask();
   void ScheduleInterestLostTask();
-  enum class InterestSource {
-    kHover,
-    kDeHover,
-    kFocus,
-    kBlur,
-  };
-  void HandleInterestForHoverOrFocus(InterestSource source);
   void ScheduleInterestChangesIfNeeded(InterestSource source);
 
   // Highlight pseudos inherit all properties from the corresponding highlight

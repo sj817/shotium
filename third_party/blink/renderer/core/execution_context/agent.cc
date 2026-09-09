@@ -6,7 +6,6 @@
 
 #include "third_party/blink/renderer/core/dom/document.h"
 #include "third_party/blink/renderer/core/dom/mutation_observer.h"
-#include "third_party/blink/renderer/core/execution_context/execution_context.h"
 
 namespace blink {
 
@@ -28,7 +27,7 @@ Agent::Agent(const base::UnguessableToken& cluster_id, AgentType agent_type)
 Agent::Agent(const base::UnguessableToken& cluster_id,
              const AgentClusterKey& agent_cluster_key,
              AgentType agent_type)
-    : event_loop_(base::AdoptRef(new scheduler::EventLoop(this))),
+    : event_loop_(std::unique_ptr<scheduler::EventLoop>(new scheduler::EventLoop(this))),
       cluster_id_(cluster_id),
       agent_cluster_key_(agent_cluster_key),
       agent_type_(agent_type) {}
@@ -37,14 +36,6 @@ Agent::~Agent() = default;
 
 void Agent::Trace(Visitor* visitor) const {
   Supplementable<Agent>::Trace(visitor);
-}
-
-void Agent::AttachContext(ExecutionContext* context) {
-  event_loop_->AttachScheduler(context->GetScheduler());
-}
-
-void Agent::DetachContext(ExecutionContext* context) {
-  event_loop_->DetachScheduler(context->GetScheduler());
 }
 
 bool Agent::IsCrossOriginIsolated() const {
@@ -107,10 +98,6 @@ bool Agent::IsWindowAgent() const {
 
 void Agent::PerformMicrotaskCheckpoint() {
   event_loop_->PerformMicrotaskCheckpoint();
-}
-
-void Agent::Dispose() {
-  // The RejectedPromises queue was disposed here.
 }
 
 }  // namespace blink

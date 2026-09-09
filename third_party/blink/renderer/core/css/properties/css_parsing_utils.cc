@@ -116,6 +116,7 @@
 #include "third_party/blink/renderer/platform/runtime_enabled_features.h"
 #include "third_party/blink/renderer/platform/wtf/hash_set.h"
 #include "third_party/blink/renderer/platform/wtf/text/atomic_string.h"
+#include "third_party/blink/renderer/platform/wtf/text/format.h"
 #include "third_party/blink/renderer/platform/wtf/text/ignoring_ascii_case_hash.h"
 #include "third_party/blink/renderer/platform/wtf/text/string_builder.h"
 #include "third_party/blink/renderer/platform/wtf/wtf_size_t.h"
@@ -2288,14 +2289,6 @@ CSSValue* ConsumeColorMixFunction(
       return nullptr;
     }
 
-    // If both values are literally zero (and not calc()) reject at parse time
-    if (p1 && p2 && p1->IsNumericLiteralValue() &&
-        To<CSSNumericLiteralValue>(p1)->ComputePercentage() == 0.0f &&
-        p2->IsNumericLiteralValue() &&
-        To<CSSNumericLiteralValue>(p2)->ComputePercentage() == 0.0) {
-      return nullptr;
-    }
-
     if (!stream.AtEnd()) {
       return nullptr;
     }
@@ -2371,7 +2364,7 @@ std::optional<Color> ParseQuirkyHexColor(CSSParserTokenStream& stream) {
       return std::nullopt;
     }
     if (token.GetType() == kNumberToken) {  // e.g. 112233
-      color = String::Format("%d", static_cast<int>(token.NumericValue()));
+      color = String::Number(static_cast<int>(token.NumericValue()));
     } else {  // e.g. 0001FF
       color = StrCat({String::Number(static_cast<int>(token.NumericValue())),
                       token.Value()});
@@ -4119,8 +4112,7 @@ bool ConsumeShorthandVia2Longhands(
   DCHECK_EQ(longhands.size(), 2u);
 
   auto local_context = CSSParserLocalContext(
-      CSSPropertyName(longhands[0]->PropertyID()), shorthand.id(),
-      /*custom_function_name=*/g_null_atom);
+      CSSPropertyName(longhands[0]->PropertyID()), shorthand.id());
 
   const CSSValue* start =
       ParseLonghand(longhands[0]->PropertyID(), context, local_context, stream);
@@ -4159,8 +4151,7 @@ bool ConsumeShorthandVia4Longhands(
   DCHECK_EQ(longhands.size(), 4u);
 
   auto local_context = CSSParserLocalContext(
-      CSSPropertyName(longhands[0]->PropertyID()), shorthand.id(),
-      /*custom_function_name=*/g_null_atom);
+      CSSPropertyName(longhands[0]->PropertyID()), shorthand.id());
 
   const CSSValue* top =
       ParseLonghand(longhands[0]->PropertyID(), context, local_context, stream);
@@ -4226,8 +4217,7 @@ bool ConsumeShorthandGreedilyViaLonghands(
   bool found_any = false;
   bool found_longhand;
   auto local_context =
-      CSSParserLocalContext(CSSPropertyName(shorthand.id()), shorthand.id(),
-                            /*custom_function_name=*/g_null_atom);
+      CSSParserLocalContext(CSSPropertyName(shorthand.id()), shorthand.id());
   do {
     found_longhand = false;
     for (size_t i = 0; i < shorthand.length(); ++i) {
@@ -4287,11 +4277,21 @@ bool IsBaselineKeyword(CSSValueID id) {
                       CSSValueID::kBaseline>(id);
 }
 
+namespace {
+
+bool IsFlowAlignmentKeyword(CSSValueID id) {
+  return RuntimeEnabledFeatures::CSSFlowStartAndEndEnabled() &&
+         IdentMatches<CSSValueID::kFlowStart, CSSValueID::kFlowEnd>(id);
+}
+
+}  // namespace
+
 bool IsSelfAlignmentKeyword(CSSValueID id) {
   return IdentMatches<CSSValueID::kStart, CSSValueID::kEnd, CSSValueID::kCenter,
                       CSSValueID::kSelfStart, CSSValueID::kSelfEnd,
                       CSSValueID::kFlexStart, CSSValueID::kFlexEnd,
-                      CSSValueID::kAnchorCenter>(id);
+                      CSSValueID::kAnchorCenter>(id) ||
+         IsFlowAlignmentKeyword(id);
 }
 
 bool IsSelfAlignmentOrLeftOrRightKeyword(CSSValueID id) {
@@ -4301,7 +4301,8 @@ bool IsSelfAlignmentOrLeftOrRightKeyword(CSSValueID id) {
 bool IsDefaultAlignmentKeyword(CSSValueID id) {
   return IdentMatches<CSSValueID::kStart, CSSValueID::kEnd, CSSValueID::kCenter,
                       CSSValueID::kSelfStart, CSSValueID::kSelfEnd,
-                      CSSValueID::kFlexStart, CSSValueID::kFlexEnd>(id);
+                      CSSValueID::kFlexStart, CSSValueID::kFlexEnd>(id) ||
+         IsFlowAlignmentKeyword(id);
 }
 
 bool IsDefaultAlignmentOrLeftOrRightKeyword(CSSValueID id) {
@@ -4310,7 +4311,8 @@ bool IsDefaultAlignmentOrLeftOrRightKeyword(CSSValueID id) {
 
 bool IsContentPositionKeyword(CSSValueID id) {
   return IdentMatches<CSSValueID::kStart, CSSValueID::kEnd, CSSValueID::kCenter,
-                      CSSValueID::kFlexStart, CSSValueID::kFlexEnd>(id);
+                      CSSValueID::kFlexStart, CSSValueID::kFlexEnd>(id) ||
+         IsFlowAlignmentKeyword(id);
 }
 
 bool IsContentPositionOrLeftOrRightKeyword(CSSValueID id) {
@@ -4351,7 +4353,7 @@ bool FontFamilyNeedsQuoting(const AtomicString& string) {
           ? IsCSSTokenizerIdentSequence(string)
           : IsCSSTokenizerIdentifier(string);
   return (IsCSSWideKeyword(string) || IsDefaultKeyword(string) ||
-          FontFamily::InferredTypeFor(string) ==
+          FontFamily::InferredTypeFor(string.ToAsciiLower()) ==
               FontFamily::Type::kGenericFamily ||
           !can_serialize_unquoted);
 }
@@ -5870,13 +5872,6 @@ CSSValue* ConsumeGapDecorationPropertyList(
     const CSSParserContext& context,
     CSSParserLocalContext& local_context,
     const CSSGapDecorationPropertyType property_type) {
-  // Consume single value if the Gap decoration feature flag is not
-  // enabled.
-  if (!RuntimeEnabledFeatures::CSSGapDecorationEnabled()) {
-    return ConsumeGapDecorationPropertyValue(stream, context, local_context,
-                                             property_type);
-  }
-
   if (stream.AtEnd()) {
     return nullptr;
   }
@@ -6257,14 +6252,6 @@ CSSValue* ConsumePaletteMixFunction(CSSParserTokenStream& stream,
     if (!palette1 || !palette2) {
       return nullptr;
     }
-    // If both values are literally zero (and not calc()) reject at parse time.
-    if (percentage1 && percentage2 && percentage1->IsNumericLiteralValue() &&
-        To<CSSNumericLiteralValue>(percentage1)->ComputePercentage() == 0.0f &&
-        percentage2->IsNumericLiteralValue() &&
-        To<CSSNumericLiteralValue>(percentage2)->ComputePercentage() == 0.0) {
-      return nullptr;
-    }
-
     if (!stream.AtEnd()) {
       return nullptr;
     }
@@ -8009,8 +7996,6 @@ bool ConsumeGapDecorationsRuleInsetCapJunctionShorthand(
     CSSParserTokenStream& stream,
     CSSValue*& rule_start_inset,
     CSSValue*& rule_end_inset) {
-  CHECK(RuntimeEnabledFeatures::CSSGapDecorationEnabled());
-
   rule_start_inset = nullptr;
   rule_end_inset = nullptr;
 
@@ -8040,8 +8025,6 @@ bool ConsumeGapDecorationsRuleInsetStartEndShorthand(
     CSSParserLocalContext& local_context,
     CSSParserTokenStream& stream,
     CSSValue*& rule_inset_value) {
-  CHECK(RuntimeEnabledFeatures::CSSGapDecorationEnabled());
-
   if (stream.Peek().Id() == CSSValueID::kOverlapJoin) {
     rule_inset_value = ConsumeIdent(stream);
     return true;
@@ -8065,8 +8048,6 @@ bool ConsumeGapDecorationsRuleInsetShorthand(
     CSSValue*& rule_inset_cap_end,
     CSSValue*& rule_inset_junction_start,
     CSSValue*& rule_inset_junction_end) {
-  CHECK(RuntimeEnabledFeatures::CSSGapDecorationEnabled());
-
   rule_inset_cap_start = nullptr;
   rule_inset_cap_end = nullptr;
   rule_inset_junction_start = nullptr;
@@ -8153,8 +8134,6 @@ bool ConsumeGapDecorationsRuleShorthand(bool important,
                                         CSSValueList*& rule_widths,
                                         CSSValueList*& rule_styles,
                                         CSSValueList*& rule_colors) {
-  CHECK(RuntimeEnabledFeatures::CSSGapDecorationEnabled());
-
   rule_widths = CSSValueList::CreateCommaSeparated();
   rule_styles = CSSValueList::CreateCommaSeparated();
   rule_colors = CSSValueList::CreateCommaSeparated();

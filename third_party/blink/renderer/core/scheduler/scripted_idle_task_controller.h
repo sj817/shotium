@@ -5,7 +5,7 @@
 #ifndef THIRD_PARTY_BLINK_RENDERER_CORE_SCHEDULER_SCRIPTED_IDLE_TASK_CONTROLLER_H_
 #define THIRD_PARTY_BLINK_RENDERER_CORE_SCHEDULER_SCRIPTED_IDLE_TASK_CONTROLLER_H_
 
-#include "base/feature_list.h"
+#include "base/memory/raw_ptr.h"
 #include "base/memory/ref_counted.h"
 #include "base/memory/scoped_refptr.h"
 #include "base/task/delayed_task_handle.h"
@@ -22,8 +22,6 @@
 #include "third_party/blink/renderer/platform/wtf/vector.h"
 
 namespace blink {
-
-CORE_EXPORT BASE_DECLARE_FEATURE(kRemoveCancelledScriptedIdleTasks);
 
 class IdleRequestOptions;
 class ScriptedIdleTaskController;
@@ -158,7 +156,7 @@ class CORE_EXPORT ScriptedIdleTaskController
   }
 
   // Not owned.
-  ThreadScheduler* scheduler_;
+  raw_ptr<ThreadScheduler, UnprotectedInRelease | DanglingUntriaged> scheduler_;
 
   // Pending `IdleTask`s.
   IdleTaskMap idle_tasks_;

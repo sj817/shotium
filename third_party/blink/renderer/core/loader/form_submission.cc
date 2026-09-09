@@ -176,7 +176,7 @@ inline FormSubmission::FormSubmission(
     WebFrameLoadType load_type,
     LocalDOMWindow* origin_window,
     const LocalFrameToken& initiator_frame_token,
-    const base::UnguessableToken& initiator_state_token,
+    const InitiatorStateToken& initiator_state_token,
     const DocumentToken& initiator_document_token,
     bool has_rel_opener,
     SourceLocation* source_location)
@@ -343,8 +343,6 @@ FormSubmission* FormSubmission::Create(HTMLFormElement* form,
     }
   }
   LocalFrame* form_local_frame = form->GetDocument().GetFrame();
-  resource_request->SetHasUserGesture(
-      LocalFrame::HasTransientUserActivation(form_local_frame));
   resource_request->SetFormSubmission(true);
 
   mojom::blink::TriggeringEventInfo triggering_event_info;

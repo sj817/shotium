@@ -38,6 +38,7 @@
 #include "base/auto_reset.h"
 #include "base/compiler_specific.h"
 #include "base/containers/heap_array.h"
+#include "base/memory/raw_ptr.h"
 #include "base/numerics/safe_conversions.h"
 #include "third_party/blink/renderer/core/css/style_engine.h"
 #include "third_party/blink/renderer/core/dom/cdata_section.h"
@@ -373,13 +374,13 @@ class PendingErrorCallback final : public XMLDocumentParser::PendingCallback {
   ~PendingErrorCallback() override { xmlFree(message_); }
 
   void Call(XMLDocumentParser* parser) override {
-    parser->HandleError(type_, reinterpret_cast<char*>(message_),
+    parser->HandleError(type_, reinterpret_cast<char*>(message_.get()),
                         GetTextPosition());
   }
 
  private:
   XMLErrors::ErrorType type_;
-  xmlChar* message_;
+  raw_ptr<xmlChar, UnprotectedInRelease | DanglingUntriaged> message_;
 };
 
 void XMLDocumentParser::PushCurrentNode(ContainerNode* n) {
@@ -1223,9 +1224,7 @@ void XMLDocumentParser::StartElementNs(
   CreateElementFlags flags =
       parsing_fragment_ ? CreateElementFlags::ByFragmentParser(document_)
                         : CreateElementFlags::ByParser(document_);
-  if (RuntimeEnabledFeatures::DOMParserXmlScriptAlreadyStartedEnabled() &&
-      document_->IsDOMParserDocument() &&
-      (q_name == html_names::kScriptTag || q_name == svg_names::kScriptTag)) {
+  if (ShouldMarkScriptAlreadyStarted()) {
     flags.SetAlreadyStarted(true);
   }
 
@@ -1948,6 +1947,24 @@ void XMLDocumentParser::CheckIfBlockingStyleSheetAdded() {
   added_pending_parser_blocking_stylesheet_ = false;
   waiting_for_stylesheets_ = true;
   PauseParsing();
+}
+
+bool XMLDocumentParser::ShouldMarkScriptAlreadyStarted() const {
+  if (!RuntimeEnabledFeatures::DOMParserXmlScriptAlreadyStartedEnabled()) {
+    return false;
+  }
+
+  // The cases below parse XML documents with "XML scripting support disabled":
+  // See:
+  // https://html.spec.whatwg.org/multipage/xhtml.html#xml-scripting-support-disabled
+  return
+      // DOMParser.parseFromString parses with XML scripting support disabled:
+      // See: https://html.spec.whatwg.org/#dom-domparser-parsefromstring
+      //      step 3, "Otherwise", step 1.
+      document_->IsDOMParserDocument() ||
+      // XMLHTTPRequest.responseXML parses with XML scripting support disabled:
+      // See: https://xhr.spec.whatwg.org/#document-response, step 6
+      document_->IsXHRDocument();
 }
 
 void XMLDocumentParser::ExecuteScriptsWaitingForResources() {

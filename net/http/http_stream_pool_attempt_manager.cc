@@ -1759,14 +1759,8 @@ bool HttpStreamPool::AttemptManager::CanUseTcpBasedProtocols() const {
 bool HttpStreamPool::AttemptManager::IsEchEnabled() const {
   SSLClientContext* ssl_client_context =
       pool()->stream_attempt_params()->ssl_client_context;
-  if (!ssl_client_context->config().ech_enabled) {
-    return false;
-  }
-  if (!ssl_client_context->ssl_config_service()) {
-    return true;
-  }
-  return ssl_client_context->ssl_config_service()->GetEchMode(
-             stream_key().destination().host()) != EchMode::kDisabled;
+  return ssl_client_context &&
+         ssl_client_context->IsEchEnabled(stream_key().destination().host());
 }
 
 base::DictValue HttpStreamPool::AttemptManager::GetTcpBasedAttemptSlotsAsValue()

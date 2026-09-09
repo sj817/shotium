@@ -8,21 +8,26 @@
 #include <array>
 #include <memory>
 
+#include "base/functional/function_ref.h"
 #include "base/gtest_prod_util.h"
 #include "base/time/time.h"
+#include "third_party/blink/public/common/input/web_input_event.h"
 #include "third_party/blink/public/web/web_performance_metrics_for_reporting.h"
 #include "third_party/blink/renderer/core/core_export.h"
 #include "third_party/blink/renderer/core/dom/document.h"
 #include "third_party/blink/renderer/core/paint/timing/paint_timing_callbacks.h"
 #include "third_party/blink/renderer/core/timing/animation_frame_timing_info.h"
+#include "third_party/blink/renderer/platform/heap/collection_support/heap_vector.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
 #include "third_party/blink/renderer/platform/supplementable.h"
 #include "third_party/blink/renderer/platform/wtf/functional.h"
 
 namespace blink {
+class AnimationFrameTimingInfo;
 struct DOMPaintTimingInfo;
 class LargestContentfulPaintManager;
 class LocalFrame;
+class PaintTimingClient;
 class PaintTimingDetector;
 
 // PaintTiming is responsible for tracking paint-related timings for a given
@@ -75,6 +80,8 @@ class CORE_EXPORT PaintTiming final : public GarbageCollected<PaintTiming>,
 
   void NotifyPaint(bool is_first_paint, bool text_painted, bool image_painted);
   void NotifyPaintFinished();
+  void NotifyInputEvent(WebInputEvent::Type);
+  void NotifyScroll(mojom::blink::ScrollType);
 
   // The getters below return monotonically-increasing seconds, or zero if the
   // given paint event has not yet occurred. See the comments for
@@ -140,8 +147,6 @@ class CORE_EXPORT PaintTiming final : public GarbageCollected<PaintTiming>,
   void OnRestoredFromBackForwardCache();
 
 
-  void OnInputOrScroll();
-
   void Trace(Visitor*) const override;
 
   // Returns the `LargestContentfulPaintManager` associated with this
@@ -159,8 +164,26 @@ class CORE_EXPORT PaintTiming final : public GarbageCollected<PaintTiming>,
   }
 
 
+  // Adds a `PaintTimingClient` to observe contentful paints. The client must
+  // not have been previously added.
+  void AddClient(PaintTimingClient*);
+
+  // Removes a previously added `PaintTimingClient`. The client must have been
+  // previously added.
+  void RemoveClient(PaintTimingClient*);
+
+  // Iterates over the `PaintTimingClient`s invoking the given function. Must
+  // not add or remove clients.
+  void ForEachClient(base::FunctionRef<void(PaintTimingClient*)>);
+
  private:
   friend class RecodingTimeAfterBackForwardCacheRestoreFrameCallback;
+
+  // Native bookkeeping clients; static screenshots have no display feedback.
+  HeapVector<Member<PaintTimingClient>> clients_;
+  bool allow_client_modifications_ = true;
+
+  void OnInputOrScroll();
 
   LocalFrame* GetFrame() const;
   void NotifyPaintTimingChanged();

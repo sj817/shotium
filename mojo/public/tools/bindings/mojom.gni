@@ -17,6 +17,7 @@ import("//build/rust/rust_static_library.gni")
 import("//build/toolchain/kythe.gni")
 import("//third_party/jinja2/jinja2.gni")
 import("//third_party/ply/ply.gni")
+
 declare_args() {
   # Indicates whether typemapping should be supported in this build
   # configuration. This may be disabled when building external projects which
@@ -198,6 +199,14 @@ template("_shot_compatible_mojom_source_set") {
 #       to a non-mojom ts type, including the converter type name and the import
 #       path for the converter.
 #
+#   rust_typemaps (optional)
+#       A list of typemaps to be applied to the generated Rust bindings for this
+#       mojom target.
+#
+#       Every typemap is a GN scope describing how one or more mojom types maps
+#       to a non-mojom Rust type, including the source file defining the
+#       conversion. See the Typemaps section below.
+#
 #   blink_cpp_typemaps (optional)
 #       Same as above, but for the Blink variant of generated C++ bindings.
 #
@@ -335,9 +344,9 @@ template("_shot_compatible_mojom_source_set") {
 #
 # Typemaps
 # ========
-# The cpp_typemaps and blink_cpp_typemaps each specify an optional list of
-# typemapping configurations. Each configuration is a GN scope with metadata
-# describing what and how to map.
+# The cpp_typemaps, blink_cpp_typemaps, and rust_typemaps each specify an
+# optional list of typemapping configurations. Each configuration is a GN scope
+# with metadata describing what and how to map.
 #
 # Typemap scope parameters:
 #   types
@@ -357,10 +366,14 @@ template("_shot_compatible_mojom_source_set") {
 #             The fully qualified name of a mojom type to be mapped. This is a
 #             string like "foo.mojom.Bar".
 #
-#         cpp (required)
+#         cpp (required for C++ typemaps)
 #             The fully qualified name of the C++ type to which the mojom type
 #             should be mapped in generated bindings. This is a string like
 #             "::base::Value" or "std::vector<::base::Value>".
+#
+#         rust (required for Rust typemaps)
+#             The name of the Rust type to which the mojom type should be mapped
+#             in generated bindings. This is a string like "MyCustomStruct".
 #
 #         copyable_pass_by_value (optional)
 #             A boolean value (default false) which effectively indicates
@@ -441,6 +454,11 @@ template("_shot_compatible_mojom_source_set") {
 #   traits_deps / traits_public_deps (optional)
 #       Any dependencies of sources in |traits_headers| or |traits_sources| must
 #       be listed here.
+#
+#   traits_file (optional)
+#       The relative path to a .rs source file defining From and TryFrom trait
+#       implementations for the Rust typemap. This file is included as a module
+#       inside the generated Rust crate.
 #
 template("mojom") {
   assert(
@@ -616,6 +634,7 @@ template("mojom") {
                       target_gen_dir) ]
   }
   build_metadata_target_name = "${target_name}__build_metadata"
+
   generated_file(build_metadata_target_name) {
     outputs = [ build_metadata_filename ]
     contents = build_metadata
@@ -635,6 +654,7 @@ template("mojom") {
   config("${parser_target_name}_inputs") {
     inputs = sources_list + [ build_metadata_filename ]
   }
+
   group("${parser_target_name}_deps") {
     public_configs = [ ":${parser_target_name}_inputs" ]
     public_deps = parser_deps
@@ -1547,6 +1567,7 @@ template("mojom") {
       }
 
       java_target_name = target_name + "_java"
+
       android_library(java_target_name) {
         forward_variables_from(invoker, [ "enable_bytecode_checks" ])
         deps = [

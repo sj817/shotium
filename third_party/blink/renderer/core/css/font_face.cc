@@ -261,7 +261,9 @@ FontFace::FontFace(ExecutionContext* context,
                         AtRuleDescriptorID::FontStyle);
   SetPropertyFromString(context, descriptors->weight(),
                         AtRuleDescriptorID::FontWeight);
-  SetPropertyFromString(context, descriptors->stretch(),
+  SetPropertyFromString(context,
+                        descriptors->hasWidth() ? descriptors->width()
+                                                : descriptors->stretch(),
                         AtRuleDescriptorID::FontStretch);
   SetPropertyFromString(context, descriptors->unicodeRange(),
                         AtRuleDescriptorID::UnicodeRange);

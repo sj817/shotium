@@ -63,6 +63,7 @@ struct HostResolverManager::JobKey {
   // multi-networking has been removed. Currently, this is used as a compat
   // layer between the two.
   handles::NetworkHandle GetTargetNetwork() const;
+  EchMode GetEchMode() const;
 
  private:
   // TODO(crbug.com/495684670): Make this public once the old way of doing
@@ -341,7 +342,7 @@ class HostResolverManager::Job : public PrioritizedDispatcher::Job,
   void OnIntermediateTransactionsComplete(
       std::optional<HostResolverDnsTask::SingleTransactionResults>
           single_transaction_results) override;
-  bool IsHappyEyeballsV3Enabled() const override;
+  bool ShouldSortTransactionsIndividually() const override;
   void AddTransactionTimeQueued(base::TimeDelta time_queued) override;
 
   // DnsTaskResultsManager::Delegate implementation:

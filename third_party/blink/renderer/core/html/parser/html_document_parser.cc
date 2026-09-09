@@ -508,8 +508,7 @@ void HTMLDocumentParser::PrepareToStopParsing() {
 
   DocumentParser::PrepareToStopParsing();
 
-  // We will not have a scriptRunner when parsing a DocumentFragment.
-  if (script_runner_) {
+  if (script_runner_ && !IsParsingFragment()) {
     GetDocument()->SetReadyState(Document::kInteractive);
   }
 
@@ -519,7 +518,9 @@ void HTMLDocumentParser::PrepareToStopParsing() {
     return;
   }
 
-  GetDocument()->OnPrepareToStopParsing();
+  if (!IsParsingFragment()) {
+    GetDocument()->OnPrepareToStopParsing();
+  }
 
   AttemptToRunDeferredScriptsAndEnd();
 
@@ -1155,7 +1156,7 @@ void HTMLDocumentParser::NotifyScriptLoaded() {
   DCHECK(script_runner_);
   DCHECK(!IsExecutingScript());
 
-  if (IsStopped()) {
+  if (IsStopped() || IsDetached()) {
     return;
   }
 
@@ -1648,34 +1649,6 @@ bool HTMLDocumentParser::ShouldPumpTokenizerNowForFinishAppend() const {
   return did_pump_tokenizer_
              ? features::kProcessHtmlDataImmediatelySubsequentChunks.Get()
              : features::kProcessHtmlDataImmediatelyFirstChunk.Get();
-}
-
-ALWAYS_INLINE bool HTMLDocumentParser::ShouldCheckTimeBudget(
-    NextTokenStatus next_token_status,
-    html_names::HTMLTag tag,
-    int newly_consumed_characters,
-    int tokens_parsed) const {
-  if (next_token_status == kHaveTokensAfterScript) {
-    // If we executed a script when parsing this token, then check the time
-    // budget again since script execution is slow.
-    return true;
-  }
-  if (newly_consumed_characters > 200) {
-    // Always update timer on tokens of more than 200 characters as they're
-    // often slow.
-    return true;
-  }
-
-  // <style>, <iframe> and <link> tags are slow to parse.
-  if (tag == html_names::HTMLTag::kStyle ||
-      tag == html_names::HTMLTag::kIFrame ||
-      tag == html_names::HTMLTag::kLink) {
-    return true;
-  }
-
-  // The token is probably fast to parse, only update the timer for 10% of
-  // those tokens.
-  return tokens_parsed % 10 == 0;
 }
 
 bool HTMLDocumentParser::ShouldSkipPreloadScan() {

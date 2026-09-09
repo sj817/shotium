@@ -63,6 +63,7 @@
 #include "third_party/blink/renderer/core/layout/layout_theme.h"
 #include "third_party/blink/renderer/core/layout/map_coordinates_flags.h"
 #include "third_party/blink/renderer/core/paint/compositing/compositing_reason_finder.h"
+#include "third_party/blink/renderer/core/paint/contoured_border_geometry.h"
 #include "third_party/blink/renderer/core/style/applied_text_decoration.h"
 #include "third_party/blink/renderer/core/style/basic_shapes.h"
 #include "third_party/blink/renderer/core/style/computed_style_constants.h"
@@ -81,11 +82,13 @@
 #include "third_party/blink/renderer/core/style/style_non_inherited_variables.h"
 #include "third_party/blink/renderer/core/style/style_ray.h"
 #include "third_party/blink/renderer/core/style/style_shape.h"
+#include "third_party/blink/renderer/core/style/superellipse.h"
 #include "third_party/blink/renderer/core/svg/svg_element.h"
 #include "third_party/blink/renderer/core/svg/svg_geometry_element.h"
 #include "third_party/blink/renderer/core/svg/svg_length_functions.h"
 #include "third_party/blink/renderer/platform/fonts/font.h"
 #include "third_party/blink/renderer/platform/fonts/font_selector.h"
+#include "third_party/blink/renderer/platform/geometry/contoured_rect.h"
 #include "third_party/blink/renderer/platform/geometry/length_functions.h"
 #include "third_party/blink/renderer/platform/geometry/path.h"
 #include "third_party/blink/renderer/platform/geometry/path_builder.h"
@@ -256,8 +259,7 @@ bool ComputedStyle::DiffAffectsContainerQueries(
   if (!old_style || !new_style) {
     return false;
   }
-  if (!base::ValuesEquivalent(old_style->ContainerName(),
-                              new_style->ContainerName()) ||
+  if (old_style->ContainerName() != new_style->ContainerName() ||
       old_style->ContainerType() != new_style->ContainerType()) {
     return true;
   }
@@ -327,8 +329,8 @@ bool ComputedStyle::NeedsReattachLayoutTree(const Element& element,
   if (!old_style->ScrollMarkerGroupEqual(*new_style)) {
     return true;
   }
-  if (old_style->IsInternalOverscrollArea() !=
-      new_style->IsInternalOverscrollArea()) {
+  if (old_style->EffectiveOverscrollContainerType() !=
+      new_style->EffectiveOverscrollContainerType()) {
     return true;
   }
   // We need to perform a reattach if a "display: layout(foo)" has changed to a
@@ -477,12 +479,9 @@ ComputedStyle::ComputeDifferenceIgnoringInheritedFirstLineStyle(
     }
     return Difference::kPseudoElementStyle;
   }
-  if (old_style.IsInternalOverscrollArea() !=
-      new_style.IsInternalOverscrollArea()) {
-    // TODO(crbug.com/447642032): Should we return kDescendantAffecting since
-    // descendants may move into or out of a newly declared or no longer
-    // declared overscroll area?
-    return Difference::kPseudoElementStyle;
+  if (old_style.EffectiveOverscrollContainerType() !=
+      new_style.EffectiveOverscrollContainerType()) {
+    return Difference::kDescendantAffecting;
   }
 
   if (new_style.HasAnyPseudoElementStyles() ||
@@ -743,6 +742,15 @@ bool ComputedStyle::InheritedEqualIncludingInheritedVariables(
   // pointer comparison, but yields many more MPC hits,
   // so it generally makes up for it.
   return ComputedStyleBase::InheritedEqualIncludingInheritedVariables(other);
+}
+
+ComputedStyle::InheritedPropertyHash
+ComputedStyle::FirstDifferingInheritedProperty(
+    const ComputedStyle& other) const {
+  // We use a by-value check that is a bit more expensive than
+  // pointer comparison, but yields many more MPC hits,
+  // so it generally makes up for it.
+  return ComputedStyleBase::FirstDifferingInheritedProperty(other);
 }
 
 StyleDifference ComputedStyle::VisualInvalidationDiff(
@@ -1384,6 +1392,17 @@ gfx::PointF GetStartingPointOfThePath(
   return PointForLengthPoint(offset_position, reference_box_size);
 }
 
+Path MakeContouredMotionPath(const ContouredRect& rect) {
+  PathBuilder builder;
+  builder.MoveTo(rect.TopLeftCorner().End());
+  builder.AddCorner(rect.TopRightCorner());
+  builder.AddCorner(rect.BottomRightCorner());
+  builder.AddCorner(rect.BottomLeftCorner());
+  builder.AddCorner(rect.TopLeftCorner());
+  builder.Close();
+  return builder.Finalize();
+}
+
 }  // namespace
 
 PointAndTangent ComputedStyle::CalculatePointAndTangentOnBasicShape(
@@ -1537,24 +1556,41 @@ void ComputedStyle::ApplyMotionPathTransform(float origin_x,
     }
   } else if (IsA<CoordBoxOffsetPathOperation>(offset_path)) {
     if (box && box->ContainingBlock()) {
-      BasicShapeInset* inset = MakeGarbageCollected<BasicShapeInset>();
-      inset->SetTop(Length::Fixed(0));
-      inset->SetBottom(Length::Fixed(0));
-      inset->SetLeft(Length::Fixed(0));
-      inset->SetRight(Length::Fixed(0));
       const ComputedStyle& style = box->ContainingBlock()->StyleRef();
-      inset->SetTopLeftRadius(style.BorderTopLeftRadius());
-      inset->SetTopRightRadius(style.BorderTopRightRadius());
-      inset->SetBottomRightRadius(style.BorderBottomRightRadius());
-      inset->SetBottomLeftRadius(style.BorderBottomLeftRadius());
       const gfx::RectF reference_box = GetReferenceBox(box, coord_box);
       const gfx::PointF offset_from_reference_box =
           GetOffsetFromContainingBlock(box) - reference_box.OffsetFromOrigin();
       const gfx::SizeF& reference_box_size = reference_box.size();
-      const gfx::PointF starting_point = GetStartingPointOfThePath(
-          offset_from_reference_box, position, reference_box_size);
-      path_position = CalculatePointAndTangentOnBasicShape(
-          *inset, starting_point, reference_box_size);
+      const bool has_ordinary_rounded_corners =
+          style.CornerTopLeftShape() == Superellipse::Round() &&
+          style.CornerTopRightShape() == Superellipse::Round() &&
+          style.CornerBottomRightShape() == Superellipse::Round() &&
+          style.CornerBottomLeftShape() == Superellipse::Round();
+      if (has_ordinary_rounded_corners) {
+        BasicShapeInset* inset = MakeGarbageCollected<BasicShapeInset>();
+        inset->SetTop(Length::Fixed(0));
+        inset->SetBottom(Length::Fixed(0));
+        inset->SetLeft(Length::Fixed(0));
+        inset->SetRight(Length::Fixed(0));
+        inset->SetTopLeftRadius(style.BorderTopLeftRadius());
+        inset->SetTopRightRadius(style.BorderTopRightRadius());
+        inset->SetBottomRightRadius(style.BorderBottomRightRadius());
+        inset->SetBottomLeftRadius(style.BorderBottomLeftRadius());
+        const gfx::PointF starting_point = GetStartingPointOfThePath(
+            offset_from_reference_box, position, reference_box_size);
+        path_position = CalculatePointAndTangentOnBasicShape(
+            *inset, starting_point, reference_box_size);
+      } else {
+        // Use the contoured border geometry so that the path follows
+        // corner-shape in addition to border-radius.
+        const ContouredRect contoured_rect =
+            ContouredBorderGeometry::ContouredBorder(
+                style,
+                PhysicalRect(PhysicalOffset(),
+                             PhysicalSize::FromSizeFRound(reference_box_size)));
+        path_position = CalculatePointAndTangentOnPath(
+            MakeContouredMotionPath(contoured_rect), 1);
+      }
       // `path_position.point` is now relative to the containing block.
       // Make it relative to the box.
       path_position.point -= offset_from_reference_box.OffsetFromOrigin();
@@ -2390,7 +2426,6 @@ Color ComputedStyle::VisitedDependentColor(const blink::Color& unvisited_color,
 blink::Color ComputedStyle::VisitedDependentGapColor(
     const StyleColor& gap_color,
     bool is_column_rule) const {
-  CHECK(RuntimeEnabledFeatures::CSSGapDecorationEnabled());
   blink::Color unvisited_gap_color;
 
   // `StyleColor::IsCurrentColor()` is used down the pipeline to determine if
@@ -2467,14 +2502,6 @@ blink::Color ComputedStyle::ResolvedColor(const StyleColor& color,
   blink::Color current_color =
       visited_link ? GetInternalVisitedCurrentColor() : GetCurrentColor();
   return color.Resolve(current_color, UsedColorScheme(), is_current_color);
-}
-
-bool ComputedStyle::ColumnRuleEquivalent(
-    const ComputedStyle& other_style) const {
-  return ColumnRuleStyle() == other_style.ColumnRuleStyle() &&
-         ColumnRuleWidth() == other_style.ColumnRuleWidth() &&
-         VisitedDependentColor(GetCSSPropertyColumnRuleColor()) ==
-             other_style.VisitedDependentColor(GetCSSPropertyColumnRuleColor());
 }
 
 TextEmphasisMark ComputedStyle::GetTextEmphasisMark() const {

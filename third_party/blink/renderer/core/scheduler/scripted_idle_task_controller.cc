@@ -83,9 +83,6 @@ void UpdateMaxIdleTasksCrashKey(size_t num_pending_idle_tasks) {
 
 }  // namespace
 
-BASE_FEATURE(kRemoveCancelledScriptedIdleTasks,
-             base::FEATURE_ENABLED_BY_DEFAULT);
-
 IdleTask::~IdleTask() {
   CHECK(!delayed_task_handle_.IsValid());
 }
@@ -392,8 +389,7 @@ void ScriptedIdleTaskController::OnCheckSchedulerIdleTaskIsCancelled() {
 
 void ScriptedIdleTaskController::CleanupSchedulerIdleTasks() {
   if (num_scheduler_idle_tasks_->data < idle_tasks_.size() ||
-      num_scheduler_idle_tasks_->data - idle_tasks_.size() <= 1000 ||
-      !base::FeatureList::IsEnabled(kRemoveCancelledScriptedIdleTasks)) {
+      num_scheduler_idle_tasks_->data - idle_tasks_.size() <= 1000) {
     return;
   }
 

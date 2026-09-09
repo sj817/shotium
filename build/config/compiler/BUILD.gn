@@ -911,6 +911,8 @@ config("compiler") {
   if (compiler_timing) {
     if (is_clang) {
       cflags += [ "-ftime-trace" ]
+      c_additional_outputs =
+          [ "{{target_out_dir}}/{{label_name}}/{{source_name_part}}.json" ]
       if (use_lld && is_mac) {
         ldflags += [ "-Wl,--time-trace" ]
       }
@@ -1815,10 +1817,7 @@ config("tot_warnings") {
   # Entries should generally require both is_clang and llvm_force_head_revision,
   # but may have additional constraints as well (e.g. only some OSes)
   if (is_clang && llvm_force_head_revision) {
-    cflags += [
-      # TODO(crbug.com/526996813): Figure out what to do about this.
-      "-Wno-stringop-overread",
-    ]
+    cflags += []
   }
 }
 
@@ -1923,6 +1922,13 @@ config("default_warnings") {
       # instead of having a global flag.
       "-Wno-psabi",
     ]
+
+    if (!is_wasm) {
+      cflags += [
+        # TODO(crbug.com/526996813): Figure out what to do about this.
+        "-Wno-stringop-overread",
+      ]
+    }
 
     cflags_cc += [
       # Disables for C++ only
@@ -2068,6 +2074,12 @@ config("default_clippy_lints") {
     # Lints disabled during the initial rollout period (when any objection
     # coming from a Chromium engineer would get a lint disabled):
     "-Aclippy::needless_return",
+
+    # TODO(crbug.com/534628766): Fix and re-enable.
+    "-Aclippy::chunks_exact_to_as_chunks",
+
+    # TODO(crbug.com/556789085): Fix and re-enable.
+    "-Aclippy::needless_range_loop",
   ]
 }
 

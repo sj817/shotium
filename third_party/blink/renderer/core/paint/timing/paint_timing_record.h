@@ -49,6 +49,11 @@ class CORE_EXPORT PaintTimingRecord
   Node* GetNode() const { return node_.Get(); }
   int NodeIdForTracing() const;
 
+  // Returns the `LayoutObject` this record was constructed with. This can
+  // differ from the record's node's `LayoutObject` if the node was removed from
+  // the DOM.
+  LayoutObject* GetLayoutObject() const { return layout_object_; }
+
   const gfx::RectF& RootVisualRect() const { return root_visual_rect_; }
 
   bool HasPaintTime() const { return !paint_time_.is_null(); }
@@ -79,6 +84,14 @@ class CORE_EXPORT PaintTimingRecord
   bool IsNeededForLargestContentfulPaint() const { return is_needed_for_lcp_; }
   void SetIsNeededForLargestContentfulPaint(bool value) {
     is_needed_for_lcp_ = value;
+  }
+
+  // Returns true iff this record is needed for Element Timing.
+  virtual bool IsNeededForElementTiming() const { return false; }
+
+  bool IsNeededForPaintTiming() const {
+    return IsNeededForLargestContentfulPaint() || IsNeededForElementTiming() ||
+           IsNeededForInteractionContentfulPaint();
   }
 
   // Returns whether or not the corresponding image or text was removed from the
@@ -118,12 +131,8 @@ class CORE_EXPORT TextRecord final : public PaintTimingRecord {
     return effective_visual_size_;
   }
 
-  uint32_t FrameIndex() const { return frame_index_; }
-  void SetFrameIndex(uint32_t index) { frame_index_ = index; }
-
 
  private:
-  uint32_t frame_index_ = 0;
   const uint64_t effective_visual_size_;
 };
 

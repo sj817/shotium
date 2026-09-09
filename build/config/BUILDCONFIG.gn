@@ -185,8 +185,11 @@ declare_args() {
   # the codebase which have been made manifestly safe.
   clang_unsafe_buffers_paths = ""
   clang_warning_suppression_file = ""
+  clang_raw_ptr_plugin_config_file = ""
   rust_clippy_conf_file = ""
 }
+
+import("//build/strict_deps_failures.gni")
 
 declare_args() {
   # Whether to enable strict deps checks. This ensures that your dependencies
@@ -445,9 +448,11 @@ if (current_os == "zos") {
 set_defaults("static_library") {
   configs = default_compiler_configs
 }
+
 set_defaults("source_set") {
   configs = default_compiler_configs
 }
+
 set_defaults("rust_library") {
   configs = default_compiler_configs
 }
@@ -523,9 +528,11 @@ if (is_fuchsia) {
   default_shared_library_configs +=
       [ "//build/config/fuchsia:rustc_no_pie_warning" ]
 }
+
 set_defaults("shared_library") {
   configs = default_shared_library_configs
 }
+
 set_defaults("loadable_module") {
   configs = default_shared_library_configs
 
@@ -616,6 +623,13 @@ foreach(_target_type,
         strict_deps = enable_strict_deps
       }
 
+      if (!defined(check_includes_strict)) {
+        _current_label = get_label_info(":$target_name", "label_no_toolchain")
+        check_includes_strict =
+            filter_include([ _current_label ],
+                           CHECK_INCLUDES_STRICT_ALLOWLIST) != []
+      }
+
       if (use_libcxx_modules && is_clang) {
         if (strict_deps) {
           configs += [ "//build/modules:strict_deps" ]
@@ -651,6 +665,9 @@ foreach(_target_type,
       if (_uses_cflags && clang_unsafe_buffers_paths != "") {
         inputs += [ clang_unsafe_buffers_paths ]
       }
+      if (_uses_cflags && clang_raw_ptr_plugin_config_file != "") {
+        inputs += [ clang_raw_ptr_plugin_config_file ]
+      }
     }
   }
 }
@@ -676,6 +693,7 @@ foreach(_target_type,
   template(_target_type) {
     # Alias "target_name" because it is clobbered by forward_variables_from().
     _target_name = target_name
+
     target(_target_type, _target_name) {
       forward_variables_from(invoker,
                              "*",
@@ -702,6 +720,9 @@ foreach(_target_type,
       }
       if (_uses_cflags && clang_unsafe_buffers_paths != "") {
         inputs += [ clang_unsafe_buffers_paths ]
+      }
+      if (_uses_cflags && clang_raw_ptr_plugin_config_file != "") {
+        inputs += [ clang_raw_ptr_plugin_config_file ]
       }
 
       if (!defined(deps)) {
@@ -744,6 +765,13 @@ foreach(_target_type,
 
       if (!defined(strict_deps)) {
         strict_deps = enable_strict_deps
+      }
+
+      if (!defined(check_includes_strict)) {
+        _current_label = get_label_info(":$target_name", "label_no_toolchain")
+        check_includes_strict =
+            filter_include([ _current_label ],
+                           CHECK_INCLUDES_STRICT_ALLOWLIST) != []
       }
 
       if (use_libcxx_modules && is_clang) {

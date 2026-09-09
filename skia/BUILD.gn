@@ -34,8 +34,8 @@ rust_static_library("bridge_rust_side") {
   deps = [
     ":path_bridge",
     "//third_party/rust/font_types/v0_12:lib",
-    "//third_party/rust/read_fonts/v0_41:lib",
-    "//third_party/rust/skrifa/v0_44:lib",
+    "//third_party/rust/read_fonts/v0_43:lib",
+    "//third_party/rust/skrifa/v0_46:lib",
   ]
   configs -= [ "//build/config/compiler:chromium_code" ]
   configs += [
@@ -201,6 +201,10 @@ config("skia_library_config") {
 source_set("skia_core_public_headers") {
   public = skia_core_public
   public += skia_pathops_public
+  public += skia_codec_public
+  public += skia_codec_rust_png_public
+  public += skia_encode_public
+  public += skia_encode_rust_png_public
 }
 
 component("skia") {
@@ -229,6 +233,7 @@ component("skia") {
     "ext/pmcolor_utils.h",
     "ext/rgba_to_yuva.h",
     "ext/skcms_ext.h",
+    "ext/skcolorspace_ext.h",
     "ext/skcolorspace_primaries.h",
     "ext/skcolorspace_trfn.h",
     "ext/skia_memory_dump_provider.h",
@@ -258,6 +263,7 @@ component("skia") {
     "ext/opacity_filter_canvas.cc",
     "ext/rgba_to_yuva.cc",
     "ext/skcms_ext.cc",
+    "ext/skcolorspace_ext.cc",
     "ext/skcolorspace_primaries.cc",
     "ext/skcolorspace_trfn.cc",
     "ext/skia_histogram.cc",
@@ -320,10 +326,6 @@ component("skia") {
   public += skia_effects_imagefilter_public
   public += skia_utils_chromium
   public += skia_discardable_memory_chromium
-  public += skia_codec_public
-  public += skia_codec_rust_png_public
-  public += skia_encode_public
-  public += skia_encode_rust_png_public
   public += skia_encode_webp_public
 
   # The imported Skia gni source paths are made absolute by gn.
@@ -857,6 +859,7 @@ template("skia_source_set") {
     }
   }
 }
+
 set_defaults("skia_source_set") {
   # Match the defaults for `source_set`
   # (as defined in `build/config/BUILDCONFIG.gn`).
@@ -927,6 +930,7 @@ if (current_cpu == "x86" || current_cpu == "x64") {
     }
     visibility = [ ":skia_opts" ]
   }
+
   skia_source_set("skia_opts_ml4") {
     sources = skia_opts.ml4_sources
     configs += [ ":skia_avx512_flags" ]
@@ -1039,6 +1043,7 @@ if (current_cpu == "x64") {
     }
     visibility = [ ":skcms" ]
   }
+
   skia_source_set("skcms_TransformSkx") {
     sources = skcms_TransformSkx
     configs += [
@@ -1052,6 +1057,7 @@ if (current_cpu == "x64") {
     sources = []
     visibility = [ ":skcms" ]
   }
+
   skia_source_set("skcms_TransformSkx") {
     sources = []
     visibility = [ ":skcms" ]

@@ -1345,6 +1345,7 @@ int HttpCache::Transaction::DoOpenOrCreateEntryComplete(int result) {
     case UPDATE:
       // There is no cache entry to update; proceed without caching.
       DCHECK(!partial_);
+      UpdateCacheEntryStatus(CacheEntryStatus::ENTRY_NOT_IN_CACHE);
       mode_ = NONE;
       TransitionToState(STATE_SEND_REQUEST);
       break;
@@ -1662,6 +1663,11 @@ int HttpCache::Transaction::DoCacheReadResponseComplete(int result) {
         TransitionToState(STATE_FINISH_HEADERS);
         return ERR_CACHE_MISS;
       }
+      if (IsUsingURLFromNoVarySearchCache()) {
+        return RestartWithoutNoVarySearchCache(
+            RestartCacheEntryAction::kErase,
+            NoVarySearchUseResult::kNotSuitable);
+      }
       DoneWithEntry(false);
       TransitionToState(STATE_SEND_REQUEST);
       return OK;
@@ -1685,6 +1691,11 @@ int HttpCache::Transaction::DoCacheReadResponseComplete(int result) {
       if (effective_load_flags_ & LOAD_ONLY_FROM_CACHE) {
         TransitionToState(STATE_FINISH_HEADERS);
         return ERR_CACHE_MISS;
+      }
+      if (IsUsingURLFromNoVarySearchCache()) {
+        return RestartWithoutNoVarySearchCache(
+            RestartCacheEntryAction::kErase,
+            NoVarySearchUseResult::kIncompleteBody);
       }
       DoneWithEntry(false);
       TransitionToState(STATE_SEND_REQUEST);
@@ -1730,6 +1741,10 @@ int HttpCache::Transaction::DoCacheReadResponseComplete(int result) {
       TransitionToState(STATE_FINISH_HEADERS);
       return ERR_CACHE_MISS;
     }
+    if (IsUsingURLFromNoVarySearchCache()) {
+      return RestartWithoutNoVarySearchCache(
+          RestartCacheEntryAction::kErase, NoVarySearchUseResult::kNotSuitable);
+    }
     DoneWithEntry(false);
     TransitionToState(STATE_SEND_REQUEST);
     return OK;
@@ -1772,6 +1787,12 @@ int HttpCache::Transaction::DoCacheReadResponseComplete(int result) {
         !range_requested_ && content_length &&
         content_length->InBytes() > std::numeric_limits<int32_t>::max()) {
       DCHECK(!partial_);
+
+      if (IsUsingURLFromNoVarySearchCache()) {
+        return RestartWithoutNoVarySearchCache(
+            RestartCacheEntryAction::kErase,
+            NoVarySearchUseResult::kIncompleteBody);
+      }
 
       // Doom the entry so that no other transaction gets added to this entry
       // and avoid a race of not being able to check this condition because
@@ -3131,6 +3152,11 @@ int HttpCache::Transaction::BeginExternallyConditionalizedRequest() {
     // The externally conditionalized request is not a validation request
     // for our existing cache entry. Proceed with caching disabled.
     UpdateCacheEntryStatusToOther(OtherStatusReason::kPreConditionalized);
+    if (IsUsingURLFromNoVarySearchCache()) {
+      return RestartWithoutNoVarySearchCache(
+          RestartCacheEntryAction::kDontErase,
+          NoVarySearchUseResult::kCouldntConditionalize);
+    }
     DoneWithEntry(true);
   }
 

@@ -25,7 +25,6 @@ class CORE_EXPORT SetHTMLUnsafeOptions : public bindings::DictionaryBase {
   SetHTMLUnsafeOptions() = default;
   ~SetHTMLUnsafeOptions() override = default;
 
-
   bool hasRunScripts() const { return has_run_scripts_; }
   bool runScripts() const { return member_run_scripts_; }
   void setRunScripts(bool value) { member_run_scripts_ = value; has_run_scripts_ = true; }

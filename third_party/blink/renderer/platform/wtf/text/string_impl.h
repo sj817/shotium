@@ -42,6 +42,7 @@
 #include "base/numerics/checked_math.h"
 #include "base/numerics/safe_conversions.h"
 #include "build/build_config.h"
+#include "partition_alloc/partition_alloc_constants.h"
 #include "third_party/blink/renderer/platform/wtf/allocator/allocator.h"
 #include "third_party/blink/renderer/platform/wtf/forward.h"
 #include "third_party/blink/renderer/platform/wtf/hash_map.h"
@@ -79,14 +80,13 @@ enum TextCaseSensitivity {
 // LChar to begin with. This ensures that the same code points
 // are hashed to the same value, even if someone called e.g.
 // Ensure16Bit() on the string at some point.
-WTF_EXPORT unsigned ComputeHashForWideString(base::span<const UChar> str);
+WTF_EXPORT uint32_t ComputeHashForWideString(base::span<const UChar> str);
 
 enum StripBehavior { kStripExtraWhiteSpace, kDoNotStripWhiteSpace };
 
 typedef bool (*CharacterMatchFunctionPtr)(UChar);
 typedef bool (*IsWhiteSpaceFunctionPtr)(UChar);
-typedef HashMap<wtf_size_t, StringImpl*, AlreadyHashedTraits>
-    StaticStringsTable;
+typedef HashMap<uint32_t, StringImpl*, AlreadyHashedTraits> StaticStringsTable;
 
 // You can find documentation about this class in this doc:
 // https://chromium.googlesource.com/chromium/src/+/HEAD/third_party/blink/renderer/platform/wtf/text/README.md
@@ -136,7 +136,7 @@ class WTF_EXPORT StringImpl {
   }
 
   enum StaticStringTag { kStaticString };
-  StringImpl(size_type length, wtf_size_t hash, StaticStringTag)
+  StringImpl(size_type length, uint32_t hash, StaticStringTag)
       : length_(length),
         hash_and_flags_(hash << kHashShift | LengthToAsciiFlags(length) |
                         kIs8Bit | kIsStatic) {}
@@ -245,28 +245,27 @@ class WTF_EXPORT StringImpl {
   // flags in the low bits because it makes them slightly more efficient to
   // access.  So, we shift left and right when setting and getting our hash
   // code.
-  void SetHash(wtf_size_t hash) const {
+  void SetHash(uint32_t hash) const {
     // Multiple clients assume that StringHasher is the canonical string
     // hash function.
-    DCHECK_EQ(
-        hash,
-        (Is8Bit() ? StringHasher::ComputeHashAndMaskTop8Bits(
-                        reinterpret_cast<const char*>(Span8().data()), length_)
-                  : ComputeHashForWideString(Span16())));
+    DCHECK_EQ(hash,
+              (Is8Bit() ? StringHasher::ComputeHashAndMaskTop8Bits(Span8())
+                        : ComputeHashForWideString(Span16())));
     DCHECK(hash);  // Verify that 0 is a valid sentinel hash value.
     SetHashRaw(hash);
   }
 
   bool HasHash() const { return GetHashRaw() != 0; }
 
-  wtf_size_t ExistingHash() const {
+  uint32_t ExistingHash() const {
     DCHECK(HasHash());
     return GetHashRaw();
   }
 
-  wtf_size_t GetHash() const {
-    if (wtf_size_t hash = GetHashRaw())
+  uint32_t GetHash() const {
+    if (uint32_t hash = GetHashRaw()) {
       return hash;
+    }
     return HashSlowCase();
   }
 
@@ -580,16 +579,16 @@ class WTF_EXPORT StringImpl {
     return flags;
   }
 
-  void SetHashRaw(unsigned hash_val) const {
+  void SetHashRaw(uint32_t hash_val) const {
     // Setting the hash is idempotent so fetch_or() is sufficient. DCHECK()
     // as a sanity check.
-    unsigned previous_value = hash_and_flags_.fetch_or(
+    uint32_t previous_value = hash_and_flags_.fetch_or(
         hash_val << kHashShift, std::memory_order_relaxed);
     DCHECK(((previous_value >> kHashShift) == 0) ||
            ((previous_value >> kHashShift) == hash_val));
   }
 
-  unsigned GetHashRaw() const {
+  uint32_t GetHashRaw() const {
     return hash_and_flags_.load(std::memory_order_relaxed) >> kHashShift;
   }
 
@@ -636,7 +635,7 @@ class WTF_EXPORT StringImpl {
       base::span<const CharType>,
       UCharPredicate,
       StripBehavior);
-  NOINLINE wtf_size_t HashSlowCase() const;
+  NOINLINE uint32_t HashSlowCase() const;
 
   void DestroyIfNeeded();
 
@@ -654,8 +653,7 @@ class WTF_EXPORT StringImpl {
   void AssertHashIsCorrect() {
     DCHECK(HasHash());
     DCHECK_EQ(ExistingHash(),
-              StringHasher::ComputeHashAndMaskTop8Bits(
-                  reinterpret_cast<const char*>(Span8().data()), length()));
+              StringHasher::ComputeHashAndMaskTop8Bits(Span8()));
   }
 #endif
 
@@ -667,6 +665,13 @@ class WTF_EXPORT StringImpl {
   const size_type length_;
   mutable std::atomic<uint32_t> hash_and_flags_;
 };
+
+// The maximum length of a 16-bit string such that its StringImpl allocation
+// (header plus character data) fits within
+// partition_alloc::MaxAllocationSize().
+inline constexpr wtf_size_t kStringMaxUCharLength = static_cast<wtf_size_t>(
+    (partition_alloc::MaxAllocationSize() - sizeof(StringImpl)) /
+    sizeof(UChar));
 
 template <>
 ALWAYS_INLINE base::span<LChar> StringImpl::Span<LChar>() const {

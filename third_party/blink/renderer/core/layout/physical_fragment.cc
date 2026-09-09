@@ -671,17 +671,15 @@ LogicalRect PhysicalFragment::ConvertChildToLogical(
 
 String PhysicalFragment::ToString() const {
   StringBuilder output;
-  output.AppendFormat("Type: '%d' Size: '%s'", Type(),
-                      Size().ToString().Ascii().c_str());
+  FormatTo(output, "Type: '{}' Size: '{}'", Type(), Size().ToString());
   switch (Type()) {
     case kFragmentBox:
-      output.AppendFormat(", BoxType: '%s'",
-                          StringForBoxType(*this).Ascii().c_str());
+      FormatTo(output, ", BoxType: '{}'", StringForBoxType(*this));
       break;
     case kFragmentLineBox:
       break;
   }
-  return output.ToString();
+  return output.ReleaseString();
 }
 
 String PhysicalFragment::DumpFragmentTree(
@@ -734,6 +732,15 @@ PhysicalFragment::StickyDescendants() const {
       Persistent<GCedHeapVector<SplitAxisItem<LayoutBoxModelObject>>>, empty,
       (MakeGarbageCollected<
           GCedHeapVector<SplitAxisItem<LayoutBoxModelObject>>>()));
+  return *empty;
+}
+
+const GCedHeapVector<SnapArea>& PhysicalFragment::SnapAreas() const {
+  if (propagated_data_ && propagated_data_->snap_areas) {
+    return *propagated_data_->snap_areas;
+  }
+  DEFINE_STATIC_LOCAL(Persistent<GCedHeapVector<SnapArea>>, empty,
+                      (MakeGarbageCollected<GCedHeapVector<SnapArea>>()));
   return *empty;
 }
 

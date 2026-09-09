@@ -63,6 +63,8 @@ class Attribute {
  public:
   Attribute(const QualifiedName& name, const AtomicString& value)
       : name_(name), value_(value) {}
+  Attribute(const QualifiedName& name, AtomicString&& value)
+      : name_(name), value_(std::move(value)) {}
   Attribute(QualifiedName&& name, AtomicString&& value)
       : name_(std::move(name)), value_(std::move(value)) {}
 
@@ -75,6 +77,8 @@ class Attribute {
   const AtomicString& NamespaceURI() const { return name_.NamespaceURI(); }
 
   const QualifiedName& GetName() const { return name_; }
+
+  uint32_t BloomFilter() const { return name_.BloomFilter(); }
 
   bool IsEmpty() const { return value_.empty(); }
   bool Matches(const QualifiedName&) const;

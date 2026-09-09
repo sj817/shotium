@@ -787,30 +787,28 @@ scoped_refptr<FontPalette> StyleBuilderConverterBase::ConvertPaletteMix(
 
     double alpha_multiplier;
     double normalized_percentage;
-    if (cssvalue::CSSColorMixValue::NormalizePercentages(
-            palette_mix_value->Percentage1(), palette_mix_value->Percentage2(),
-            normalized_percentage, alpha_multiplier, length_resolver)) {
-      double percentage1 = kMiddleStatePercentage;
-      double percentage2 = kMiddleStatePercentage;
-      if (palette_mix_value->Percentage1() &&
-          palette_mix_value->Percentage2()) {
-        percentage1 = palette_mix_value->Percentage1()->ComputePercentage(
-            length_resolver);
-        percentage2 = palette_mix_value->Percentage2()->ComputePercentage(
-            length_resolver);
-      } else if (palette_mix_value->Percentage1()) {
-        percentage1 = palette_mix_value->Percentage1()->ComputePercentage(
-            length_resolver);
-        percentage2 = kFinalStatePercentage - percentage1;
-      } else if (palette_mix_value->Percentage2()) {
-        percentage2 = palette_mix_value->Percentage2()->ComputePercentage(
-            length_resolver);
-        percentage1 = kFinalStatePercentage - percentage2;
-      }
-      return FontPalette::Mix(palette1, palette2, percentage1, percentage2,
-                              normalized_percentage, alpha_multiplier,
-                              color_space, hue_interpolation_method);
+    cssvalue::CSSColorMixValue::NormalizePercentages(
+        palette_mix_value->Percentage1(), palette_mix_value->Percentage2(),
+        normalized_percentage, alpha_multiplier, length_resolver);
+    double percentage1 = kMiddleStatePercentage;
+    double percentage2 = kMiddleStatePercentage;
+    if (palette_mix_value->Percentage1() && palette_mix_value->Percentage2()) {
+      percentage1 =
+          palette_mix_value->Percentage1()->ComputePercentage(length_resolver);
+      percentage2 =
+          palette_mix_value->Percentage2()->ComputePercentage(length_resolver);
+    } else if (palette_mix_value->Percentage1()) {
+      percentage1 =
+          palette_mix_value->Percentage1()->ComputePercentage(length_resolver);
+      percentage2 = kFinalStatePercentage - percentage1;
+    } else if (palette_mix_value->Percentage2()) {
+      percentage2 =
+          palette_mix_value->Percentage2()->ComputePercentage(length_resolver);
+      percentage1 = kFinalStatePercentage - percentage2;
     }
+    return FontPalette::Mix(palette1, palette2, percentage1, percentage2,
+                            normalized_percentage, alpha_multiplier,
+                            color_space, hue_interpolation_method);
   }
   return nullptr;
 }
@@ -2290,7 +2288,7 @@ ScopedCSSName* StyleBuilderConverter::ConvertCustomIdent(
   state.SetHasTreeScopedReference();
   return MakeGarbageCollected<ScopedCSSName>(
       ConvertCustomIdentUnscoped(state, value),
-      To<CSSCustomIdentValue>(value).GetTreeScope());
+      To<CSSCustomIdentValue>(value).GetPopulatedTreeScope());
 }
 
 AtomicString StyleBuilderConverter::ConvertNoneOrCustomIdentUnscoped(
@@ -2372,7 +2370,7 @@ StyleNameScope StyleBuilderConverter::ConvertNameScope(
     CHECK_EQ(scoped_keyword_value->GetValueID(), CSSValueID::kAll);
     state.SetHasTreeScopedReference();
     return StyleNameScope(StyleNameScope::Type::kAll,
-                          scoped_keyword_value->GetTreeScope(),
+                          scoped_keyword_value->GetPopulatedTreeScope(),
                           /* names */ nullptr);
   }
   if (const auto* identifier_value = DynamicTo<CSSIdentifierValue>(value)) {
@@ -2615,17 +2613,13 @@ template <typename T>
 GapDataList<T> ConvertGapDecorationDataList(const StyleResolverState& state,
                                             const CSSValue& value,
                                             bool for_visited_link = false) {
-  // The `value` will not be a list in two scenarios:
-  // 1. When using the legacy 'column-rule-*' properties.
-  // 2. When the fast parse path is taken (see
-  // CSSParserFastPaths::MaybeParseValue). In these cases, construct a
-  // GapDataList with a single Value.
+  // Single CSSValue inputs remain possible for compatibility and when the fast
+  // parse path is taken (see CSSParserFastPaths::MaybeParseValue). In these
+  // cases, construct a GapDataList with a single value.
   if (!IsA<CSSValueList>(value)) {
     return GapDataList<T>(
         ConvertGapDecorationPropertyValue<T>(state, value, for_visited_link));
   }
-  CHECK(RuntimeEnabledFeatures::CSSGapDecorationEnabled());
-
   // The CSS Gap Decorations API accepts a space separated list of values.
   // These values can be an auto repeater, an integer repeater, or a single
   // value.
@@ -2933,10 +2927,8 @@ StyleColor ResolveColorValueImpl(const CSSValue& value,
         ResolveColorValueImpl(color_mix_value->Color1(), context);
     const StyleColor style_color2 =
         ResolveColorValueImpl(color_mix_value->Color2(), context);
-    double alpha_multiplier = 0.0;
-    double mix_amount = 0.0;
-    // TODO(crbug.com/40238188): Not sure what is appropriate to return when
-    // both mix amounts are zero.
+    double alpha_multiplier;
+    double mix_amount;
     color_mix_value->NormalizePercentages(mix_amount, alpha_multiplier,
                                           context.length_resolver);
     const StyleColor::UnresolvedColorMix* unresolved_color_mix =
@@ -3824,20 +3816,14 @@ ScrollbarGutter StyleBuilderConverter::ConvertScrollbarGutter(
   return flags;
 }
 
-ScopedCSSNameList* StyleBuilderConverter::ConvertContainerName(
+Vector<AtomicString> StyleBuilderConverter::ConvertContainerName(
     StyleResolverState& state,
     const CSSValue& value) {
-  DCHECK(value.IsScopedValue());
-  if (IsA<CSSIdentifierValue>(value)) {
-    DCHECK_EQ(To<CSSIdentifierValue>(value).GetValueID(), CSSValueID::kNone);
-    return nullptr;
+  if (const auto* identifier_value = DynamicTo<CSSIdentifierValue>(value)) {
+    DCHECK_EQ(identifier_value->GetValueID(), CSSValueID::kNone);
+    return Vector<AtomicString>();
   }
-  DCHECK(value.IsBaseValueList());
-  HeapVector<Member<const ScopedCSSName>> names;
-  for (const Member<const CSSValue>& item : To<CSSValueList>(value)) {
-    names.push_back(ConvertNoneOrCustomIdent(state, *item));
-  }
-  return MakeGarbageCollected<ScopedCSSNameList>(std::move(names));
+  return ConvertNoneOrCustomIdentListUnscoped(state, value);
 }
 
 StyleIntrinsicLength StyleBuilderConverter::ConvertIntrinsicDimension(

@@ -74,8 +74,10 @@ skia_ports_fontmgr_empty_sources = [ "$_src/ports/SkFontMgr_custom_empty.cpp" ]
 skia_ports_fontmgr_fontconfig_public =
     [ "$_include/ports/SkFontMgr_fontconfig.h" ]
 
-skia_ports_fontmgr_fontconfig_sources =
-    [ "$_src/ports/SkFontMgr_fontconfig.cpp" ]
+skia_ports_fontmgr_fontconfig_sources = [
+  "$_src/ports/SkFontMgr_fontconfig.cpp",
+  "$_src/ports/SkFontMgr_fontconfig_priv.h",
+]
 
 skia_ports_fontmgr_fontations_public =
     [ "$_include/ports/SkFontMgr_Fontations.h" ]

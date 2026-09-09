@@ -28,6 +28,7 @@
 
 #include <memory>
 
+#include "base/memory/raw_ptr.h"
 #include "base/memory/scoped_refptr.h"
 #include "base/task/sequenced_task_runner.h"
 #include "base/task/single_thread_task_runner.h"
@@ -275,14 +276,6 @@ class CORE_EXPORT HTMLDocumentParser : public ScriptableDocumentParser,
   // called when data is available.
   bool ShouldPumpTokenizerNowForFinishAppend() const;
 
-  // Returns true if we should check the clock after parsing a token.
-  // We check the clock after parsing a token that's likely slow, or
-  // for 1 out of 10 fast tokens.
-  bool ShouldCheckTimeBudget(NextTokenStatus next_token_status,
-                             html_names::HTMLTag tag,
-                             int newly_consumed_characters,
-                             int tokens_parsed) const;
-
   bool ShouldSkipPreloadScan();
 
   // Check if preloads are allowed considering the presence of a preloader,
@@ -318,7 +311,7 @@ class CORE_EXPORT HTMLDocumentParser : public ScriptableDocumentParser,
   // take this preload data and send out the requests.
   scoped_refptr<PendingPreloads> pending_preloads_;
 
-  ThreadScheduler* scheduler_;
+  raw_ptr<ThreadScheduler, UnprotectedInRelease | DanglingUntriaged> scheduler_;
 
   // Set to true if PumpTokenizer() was called at least once.
   bool did_pump_tokenizer_ = false;

@@ -27,8 +27,8 @@
 #include "include/private/SkFloatingPoint.h"
 #include "include/private/SkTemplates.h"
 #include "include/private/SkTo.h"
-#include "src/core/SkBigPicture.h"
 #include "src/core/SkCanvasPriv.h"
+#include "src/core/SkPicturePriv.h"
 #include "src/core/SkRecord.h"
 #include "src/core/SkRecords.h"
 #include "src/text/GlyphRun.h"
@@ -57,7 +57,7 @@ SkDrawableList::~SkDrawableList() {
     fArray.reset();
 }
 
-SkBigPicture::SnapshotArray* SkDrawableList::newDrawableSnapshot() {
+SkSnapshotArray* SkDrawableList::newDrawableSnapshot() {
     const int count = fArray.size();
     if (0 == count) {
         return nullptr;
@@ -65,8 +65,13 @@ SkBigPicture::SnapshotArray* SkDrawableList::newDrawableSnapshot() {
     AutoTMalloc<const SkPicture*> pics(count);
     for (int i = 0; i < count; ++i) {
         pics[i] = fArray[i]->makePictureSnapshot().release();
+        if (pics[i]) continue;
+
+        // if pics[i] is null, then unref all previous pics and return nullptr
+        for (int j = 0; j < i; ++j) pics[j]->unref();
+        return nullptr;
     }
-    return new SkBigPicture::SnapshotArray(pics.release(), count);
+    return new SkSnapshotArray(pics.release(), count);
 }
 
 void SkDrawableList::append(SkDrawable* drawable) { *fArray.append() = SkRef(drawable); }

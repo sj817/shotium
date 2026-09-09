@@ -401,6 +401,47 @@ EVENT_TYPE(TCP_CONNECT)
 //   }
 EVENT_TYPE(TCP_CONNECT_ATTEMPT)
 
+// The bind attempt by the EphemeralPortRandomizer nested within
+// TCP_CONNECT_ATTEMPT. There may be multiple attempts to bind different ports
+// for some failure cases. Currently MacOS only.
+//
+// The START event will describe the settings before a port is picked:
+//
+//   {
+//     "remote_endpoint": <The remote endpoint, as a string>,
+//     "attempt": <The index of the attempt, as an integer>,
+//     "randomizer_range_first": <The lowest possible port, as an integer>,
+//     "randomizer_range_last": <The highest possible port, as an integer>,
+//     "randomizer_recent_ports_by_remote_endpoint_size":
+//       <The number of ports believed to be in use for the remote endpoint,
+//        as an integer>,
+//   }
+//
+// The END event will contain one of the following:
+//
+// On EphemeralPortRandomizer::PickPort exhaustion:
+//   {
+//   }
+//
+// On SockaddrStorage::ToSockAddr failure:
+//   {
+//     "local_address": <The local address, as a string>,
+//     "attempted_port": <The local port attempted for use, as an integer>,
+//   }
+//
+// On bind success:
+//   {
+//     "local_endpoint": <The local endpoint, as a string>,
+//   }
+//
+// On bind failure:
+//   {
+//     "attempted_local_endpoint":
+//       <The local endpoint attempted for use, as a string>,
+//     "os_error": <Integer error code the operating system returned>
+//   }
+EVENT_TYPE(TCP_RANDOMIZER_BIND_ATTEMPT)
+
 // The start/end of a TCP accept(). This corresponds with a call to
 // TCPServerSocket::Accept().
 //
@@ -2167,6 +2208,134 @@ EVENT_TYPE(QUIC_SESSION_POOL_JOB_STALE_HOST_RESOLUTION_MATCHED)
 //   }
 EVENT_TYPE(QUIC_SESSION_POOL_JOB_RESULT)
 
+// This event indicates that a QuicSessionPool::AsyncDnsJob settled. The
+// enclosing QUIC_SESSION_POOL_JOB event marks the lifetime of the job.
+//
+// The event parameters are:
+//   {
+//     "net_error": <Net error code the job settled with>,
+//     "attempt_count": <Number of attempts the job started>,
+//     "completion_reason": <"attempt_succeeded", "active_session",
+//                           "ip_pooling", or "failed">,
+//   }
+EVENT_TYPE(QUIC_SESSION_POOL_ASYNC_DNS_JOB_COMPLETE)
+
+// This event indicates that a connector of an AsyncDnsJob started an attempt.
+//
+// The event parameters are:
+//   {
+//     "attempt_id": <Job-wide identifier of the attempt>,
+//     "connector": <Stable name of the connector>,
+//     "ip_endpoint": <The IP endpoint the attempt connects to>,
+//     "address_family": <The address family of the IP endpoint>,
+//     "slot": <"primary" or "secondary", the slot of the connector>,
+//     "quic_version": <The QUIC version selected for the endpoint>,
+//     "metadata": <The endpoint metadata>,
+//     "resolution_in_flight": <True when DNS resolution had not finished>,
+//   }
+EVENT_TYPE(QUIC_SESSION_POOL_ASYNC_DNS_JOB_ATTEMPT_STARTED)
+
+// This event indicates that an attempt of an AsyncDnsJob failed.
+//
+// The event parameters are:
+//   {
+//     "attempt_id": <Job-wide identifier of the attempt>,
+//     "connector": <Stable name of the connector>,
+//     "slot": <"primary" or "secondary", the current slot of the connector>,
+//     "ip_endpoint": <The IP endpoint the attempt connected to>,
+//     "net_error": <Net error code the attempt failed with>,
+//   }
+EVENT_TYPE(QUIC_SESSION_POOL_ASYNC_DNS_JOB_ATTEMPT_FAILED)
+
+// This event indicates that an AsyncDnsJob armed its slow timer.
+//
+// The event parameters are:
+//   {
+//     "delay_ms": <The delay of the timer in milliseconds>,
+//   }
+EVENT_TYPE(QUIC_SESSION_POOL_ASYNC_DNS_JOB_SLOW_TIMER_ARMED)
+
+// This event indicates that the slow timer of an AsyncDnsJob fired.
+EVENT_TYPE(QUIC_SESSION_POOL_ASYNC_DNS_JOB_SLOW_TIMER_FIRED)
+
+// This event indicates that an AsyncDnsJob moved its connectors into the other
+// slot, so that the IPv6 side is the primary one.
+EVENT_TYPE(QUIC_SESSION_POOL_ASYNC_DNS_JOB_SLOTS_SWAPPED)
+
+// This event indicates that a connector settled an AsyncDnsJob, either by an
+// attempt succeeding or by finding an existing session through IP pooling.
+// The other connector is destroyed.
+//
+// The event parameters are:
+//   {
+//     "connector": <Stable name of the connector that settled the job>,
+//     "slot": <"primary" or "secondary", the slot of the connector that
+//              settled the job>,
+//     "completion_reason": <"attempt_succeeded" or "ip_pooling">,
+//     "attempt_id": <Identifier of the successful attempt, if there was one>,
+//     "ip_endpoint": <IP endpoint of the successful attempt, if there was
+//                     one>,
+//     "canceled_attempt_id": <Identifier of the other connector's canceled
+//                             attempt, if there was one>,
+//     "canceled_ip_endpoint": <IP endpoint of the other connector's canceled
+//                              attempt, if there was one>,
+//     "canceled_attempts": <List of dictionaries containing "attempt_id" and
+//                           "ip_endpoint" for all canceled attempts, if any>,
+//   }
+EVENT_TYPE(QUIC_SESSION_POOL_ASYNC_DNS_JOB_CONNECTOR_SETTLED_JOB)
+
+// This event indicates that an AsyncDnsJob received a partial resolver
+// update. The job acts on an update only when the endpoints are ready for the
+// cryptographic handshake.
+//
+// The event parameters are:
+//   {
+//     "endpoints_crypto_ready": <True when the endpoints are usable for the
+//                                cryptographic handshake>,
+//     "endpoint_count": <Number of service endpoints in the update>,
+//     "usable_endpoint_count": <Number of endpoints usable for QUIC, present
+//                               when endpoints_crypto_ready is true>,
+//   }
+EVENT_TYPE(QUIC_SESSION_POOL_ASYNC_DNS_JOB_SERVICE_ENDPOINTS_UPDATED)
+
+// This event indicates that the resolver request of an AsyncDnsJob finished.
+//
+// The event parameters are:
+//   {
+//     "net_error": <Net error code the resolution finished with>,
+//     "ignored_late_error": <True when the job kept going with a resolver
+//                            error because a connector already exists>,
+//   }
+EVENT_TYPE(QUIC_SESSION_POOL_ASYNC_DNS_JOB_SERVICE_ENDPOINT_REQUEST_FINISHED)
+
+// This event indicates that an AsyncDnsJob fired the host resolution signal of
+// its requests.
+//
+// The event parameters are:
+//   {
+//     "net_error": <Net error code the signal carried>,
+//   }
+EVENT_TYPE(QUIC_SESSION_POOL_ASYNC_DNS_JOB_HOST_RESOLUTION_SIGNALED)
+
+// This event indicates that an AsyncDnsJob held a failed session creation
+// result, because another attempt may still create a session.
+//
+// The event parameters are:
+//   {
+//     "net_error": <Net error code the held result carries>,
+//   }
+EVENT_TYPE(QUIC_SESSION_POOL_ASYNC_DNS_JOB_SESSION_CREATION_HELD)
+
+// This event indicates that an AsyncDnsJob fired the session creation signal
+// of its requests. ERR_IO_PENDING means the session was created and its
+// cryptographic handshake is still running.
+//
+// The event parameters are:
+//   {
+//     "net_error": <Net error code the signal carried>,
+//   }
+EVENT_TYPE(QUIC_SESSION_POOL_ASYNC_DNS_JOB_SESSION_CREATION_SIGNALED)
+
 // ------------------------------------------------------------------------
 // quic::QuicSession
 // ------------------------------------------------------------------------
@@ -3747,6 +3916,8 @@ EVENT_TYPE(CERT_VERIFY_PROC_INPUT_CERT)
 // The event parameters are:
 //   {
 //      "version_major": <The major version of the Chrome Root Store>
+//      "signer_set_timestamp": <Optionally, the timestamp of the SignerSet
+//                               in seconds since the unix epoch.>
 //      "mtc_metadata_update_time": <Optionally, the update time of the
 //                                   MtcMetadata in seconds since the unix
 //                                   epoch.>
@@ -3811,6 +3982,25 @@ EVENT_TYPE(CERT_VERIFY_PROC_PATH_BUILT)
 //    "path_builder_debug": <String - message sent from the path builder>
 // }
 EVENT_TYPE(CERT_VERIFY_PROC_PATH_BUILDER_DEBUG)
+
+// This event is created when cosigner policy is checked for a Merkle Tree
+// Certificate.
+// parameters:
+// {
+//    "is_valid": <True if policy was satisfied for any reason.>
+//    "reason": <String - reason why policy was or was not satisfied.>
+//    "verified_cosigners": <List of cosigner status, only lists
+//                           mirrors that had a valid cosignature.>
+// }
+//
+// Where each cosigner status is an object:
+// {
+//    "id": <String - cosigner ID>,
+//    "status": <Optionally, a string describing the status of considering this
+//               cosigner. Absent if cosigner policy evaluation concluded
+//               before considering this consigner.>
+// }
+EVENT_TYPE(CERT_MTC_COSIGNER_POLICY_CHECKED)
 
 // -----------------------------------------------------------------------------
 // FTP events.

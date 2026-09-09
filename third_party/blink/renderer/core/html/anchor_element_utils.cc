@@ -28,6 +28,7 @@
 #include "third_party/blink/renderer/platform/weborigin/security_origin.h"
 #include "third_party/blink/renderer/platform/weborigin/security_policy.h"
 #include "third_party/blink/renderer/platform/wtf/text/atomic_string.h"
+#include "third_party/blink/renderer/platform/wtf/text/format.h"
 #include "third_party/blink/renderer/platform/wtf/text/wtf_string.h"
 
 namespace blink {
@@ -74,15 +75,32 @@ bool ValidateDownloadAttributeLength(const String& download_attr,
     element->AddConsoleMessage(
         mojom::blink::ConsoleMessageSource::kRendering,
         mojom::blink::ConsoleMessageLevel::kError,
-        String::Format("Download attribute for anchor element is too long. "
-                       "Max: %d, given: %d",
-                       kMaxDownloadAttrLength, download_attr.length()));
+        Format("Download attribute for anchor element is too long. Max: {}, "
+               "given: {}",
+               kMaxDownloadAttrLength, download_attr.length()));
     return false;
   }
   return true;
 }
 
 }  // namespace
+
+void AnchorElementUtils::UpdateHref(Element& element,
+                                    const AtomicString& new_value) {
+  bool was_link = element.IsLink();
+  bool is_link = !new_value.IsNull();
+  element.SetIsLink(is_link);
+  if (!was_link && !is_link) {
+    return;
+  }
+  element.PseudoStateChanged(CSSSelector::kPseudoLink);
+  element.PseudoStateChanged(CSSSelector::kPseudoVisited);
+  element.PseudoStateChanged(CSSSelector::kPseudoLinkTo);
+  if (was_link != is_link) {
+    element.PseudoStateChanged(CSSSelector::kPseudoWebkitAnyLink);
+    element.PseudoStateChanged(CSSSelector::kPseudoAnyLink);
+  }
+}
 
 void AnchorElementUtils::HandleDownloadAttribute(Element* element,
                                                  const String& download_attr,
@@ -108,6 +126,7 @@ void AnchorElementUtils::HandleDownloadAttribute(Element* element,
   request.SetSuggestedFilename(download_attr);
   request.SetRequestContext(mojom::blink::RequestContextType::DOWNLOAD);
   request.SetRequestorOrigin(window->GetSecurityOrigin());
+  request.SetHasUserGesture(LocalFrame::HasTransientUserActivation(frame));
   network::mojom::ReferrerPolicy referrer_policy = request.GetReferrerPolicy();
 
   if (referrer_policy == network::mojom::ReferrerPolicy::kDefault) {

@@ -70,9 +70,9 @@ bool IsValidDocument(const Document& document) {
   return document.GetFrame() && document.GetFrame()->GetDocument() == &document;
 }
 
-String DispatchBeforeTextInsertedEvent(const String& text,
-                                       const SelectionInDomTree& selection,
-                                       EditingState* editing_state) {
+String FilterBeforeTextInserted(const String& text,
+                                const SelectionInDomTree& selection,
+                                EditingState* editing_state) {
   // We use SelectionForUndoStep because it is resilient to DOM
   // mutation.
   const SelectionForUndoStep& selection_as_undo_step =
@@ -81,13 +81,20 @@ String DispatchBeforeTextInsertedEvent(const String& text,
   if (!start_node || !RootEditableElement(*start_node))
     return text;
 
-  // Send BeforeTextInsertedEvent. The event handler will update text if
+  // Filter text before insertion. The element will update text if
   // necessary.
   const Document& document = start_node->GetDocument();
-  auto* evt = MakeGarbageCollected<BeforeTextInsertedEvent>(text);
-  RootEditableElement(*start_node)->DefaultEventHandler(*evt);
+  String filtered_text;
+  if (RuntimeEnabledFeatures::CleanUpActivationBehaviorEnabled()) {
+    filtered_text =
+        RootEditableElement(*start_node)->FilterBeforeTextInserted(text);
+  } else {
+    auto* evt = MakeGarbageCollected<BeforeTextInsertedEvent>(text);
+    RootEditableElement(*start_node)->DefaultEventHandler(*evt);
+    filtered_text = evt->GetText();
+  }
   if (IsValidDocument(document) && selection_as_undo_step.IsValidFor(document))
-    return evt->GetText();
+    return filtered_text;
   // editing/inserting/webkitBeforeTextInserted-removes-frame.html
   // and
   // editing/inserting/webkitBeforeTextInserted-disconnects-selection.html
@@ -104,7 +111,7 @@ DispatchEventResult DispatchTextInputEvent(LocalFrame* frame,
   if (!target)
     return DispatchEventResult::kCanceledBeforeDispatch;
 
-  // Send TextInputEvent. Unlike BeforeTextInsertedEvent, there is no need to
+  // Send TextInputEvent. Unlike FilterBeforeTextInserted, there is no need to
   // update text for TextInputEvent as it doesn't have the API to modify text.
   TextEvent* event = TextEvent::Create(frame->DomWindow(), text,
                                        kTextEventInputIncrementalInsertion);
@@ -160,11 +167,17 @@ bool CanAppendNewLineFeedToSelection(const SelectionInDomTree& selection,
     return false;
 
   const Document& document = element->GetDocument();
-  auto* event = MakeGarbageCollected<BeforeTextInsertedEvent>(String("\n"));
-  element->DefaultEventHandler(*event);
-  // event may invalidate frame or selection
+  String filtered_text;
+  if (RuntimeEnabledFeatures::CleanUpActivationBehaviorEnabled()) {
+    filtered_text = element->FilterBeforeTextInserted(String("\n"));
+  } else {
+    auto* event = MakeGarbageCollected<BeforeTextInsertedEvent>(String("\n"));
+    element->DefaultEventHandler(*event);
+    filtered_text = event->GetText();
+  }
+  // event/filtering may invalidate frame or selection
   if (IsValidDocument(document) && selection_as_undo_step.IsValidFor(document))
-    return event->GetText().length();
+    return filtered_text.length();
   // editing/inserting/webkitBeforeTextInserted-removes-frame.html
   // and
   // editing/inserting/webkitBeforeTextInserted-disconnects-selection.html
@@ -421,8 +434,8 @@ void TypingCommand::InsertText(
 
   String new_text = text;
   if (composition_type != kTextCompositionUpdate) {
-    new_text = DispatchBeforeTextInsertedEvent(
-        text, passed_selection_for_insertion, editing_state);
+    new_text = FilterBeforeTextInserted(text, passed_selection_for_insertion,
+                                        editing_state);
     if (editing_state->IsAborted())
       return;
     ABORT_EDITING_COMMAND_IF(
@@ -913,19 +926,14 @@ static SelectionForUndoStep AdjustSelectionForBackwardDelete(
     }
     return SelectionForUndoStep::From(selection);
   }
-  if (anchor.ComputeContainerNode() !=
-      selection.Focus().ComputeContainerNode()) {
+  const SelectionInDomTree& adjusted =
+      NarrowSelectionToBackwardDeletionUnit(selection);
+  if (adjusted == selection) {
     return SelectionForUndoStep::From(selection);
   }
-  if (anchor.ComputeOffsetInContainerNode() -
-          selection.Focus().ComputeOffsetInContainerNode() <=
-      1) {
-    return SelectionForUndoStep::From(selection);
-  }
-  const Position& end = selection.ComputeEndPosition();
+
   return SelectionForUndoStep::Builder()
-      .SetAnchorAndFocusAsBackwardSelection(
-          end, PreviousPositionOf(end, PositionMoveType::kBackwardDeletion))
+      .SetAnchorAndFocusAsBackwardSelection(adjusted.Anchor(), adjusted.Focus())
       .Build();
 }
 

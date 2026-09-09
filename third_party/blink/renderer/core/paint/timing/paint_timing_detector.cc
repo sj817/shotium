@@ -7,7 +7,6 @@
 #include "base/check_deref.h"
 #include "base/metrics/histogram_functions.h"
 #include "third_party/blink/public/common/features.h"
-#include "third_party/blink/public/common/input/web_input_event.h"
 #include "third_party/blink/public/common/performance/largest_contentful_paint_type.h"
 #include "third_party/blink/renderer/core/dom/document.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
@@ -130,23 +129,6 @@ void ReportImagePixelInaccuracy(HTMLImageElement* image_element) {
   }
 }
 
-const char* ScrollTypeToString(mojom::blink::ScrollType scroll_type) {
-  switch (scroll_type) {
-    case mojom::blink::ScrollType::kUser:
-      return "user";
-    case mojom::blink::ScrollType::kProgrammatic:
-      return "programmatic";
-    case mojom::blink::ScrollType::kClamping:
-      return "clamping";
-    case mojom::blink::ScrollType::kCompositor:
-      return "compositor";
-    case mojom::blink::ScrollType::kAnchoring:
-      return "anchoring";
-    case mojom::blink::ScrollType::kScrollStart:
-      return "scrollstart";
-  }
-}
-
 }  // namespace
 
 PaintTimingDetector::PaintTimingDetector(PaintTiming* paint_timing)
@@ -240,17 +222,11 @@ void PaintTimingDetector::NotifyFirstVideoFrame(
     const gfx::Rect& image_border) {
   if (NotifyImagePaint(object, intrinsic_size, media_timing,
                        current_paint_chunk_properties, image_border)) {
-    // crbug.com/434659231: Recording this as an LCP candidate and setting the
-    // presentation time (without ReportFirstFrameTimeAsRenderTime) depends on
-    // the next main frame, which we request here. This is flag-guarded for hard
-    // LCP, since it might move metrics; for soft navs, do this unconditionally
-    // since this is still experimental and we want accurate behavior for origin
-    // trial along with attributing video src changes (crbug.com/434215966).
-    if (RuntimeEnabledFeatures::RequestMainFrameAfterFirstVideoFrameEnabled() ||
-        !PaintTiming::From(object.GetDocument())
-             .GetLargestContentfulPaintManager()) {
-      object.GetFrameView()->ScheduleAnimation();
-    }
+    // crbug.com/434659231: Paint timing callbacks happen as part of paint, and
+    // since the first video frame notification happens outside of paint, this
+    // `media_timing` will not be considered until the next frame. Request a
+    // frame now to prevent delays in timing.
+    object.GetFrameView()->ScheduleAnimation();
   }
 }
 
@@ -276,54 +252,6 @@ void PaintTimingDetector::NotifyImageRemoved(
     const LayoutObject& object,
     const ImageResourceContent* cached_image) {
   image_paint_timing_detector_->NotifyImageRemoved(object, cached_image);
-}
-
-void PaintTimingDetector::OnInputOrScroll() {
-  LocalDOMWindow* window = DomWindow();
-  if (SoftNavigationHeuristics* heuristics =
-          window ? window->GetSoftNavigationHeuristics() : nullptr) {
-    heuristics->OnInputOrScroll();
-  }
-
-  if (did_notify_first_input_or_scroll_) {
-    return;
-  }
-  did_notify_first_input_or_scroll_ = true;
-
-  // Notify `PaintTiming` so it can shut down hard navigation LCP.
-  if (window) {
-    PaintTiming::From(CHECK_DEREF(window->document())).OnInputOrScroll();
-  }
-
-  // TODO(crbug.com/454082773): We should compare the presentation
-  // time to the input time to avoid ignoring candidates that were presented
-  // before this input arrived.
-  image_paint_timing_detector_->StopRecordEntries();
-}
-
-void PaintTimingDetector::NotifyInputEvent(WebInputEvent::Type type) {
-  // A single keyup event should be ignored. It could be caused by user actions
-  // such as refreshing via Ctrl+R.
-  if (type == WebInputEvent::Type::kMouseMove ||
-      type == WebInputEvent::Type::kMouseEnter ||
-      type == WebInputEvent::Type::kMouseLeave ||
-      type == WebInputEvent::Type::kKeyUp ||
-      WebInputEvent::IsPinchGestureEventType(type)) {
-    return;
-  }
-  OnInputOrScroll();
-}
-
-void PaintTimingDetector::NotifyScroll(mojom::blink::ScrollType scroll_type) {
-  // TODO(crbug.com/330709851): Remove once we're sure scroll restoration is
-  // handled properly for soft navs.
-  TRACE_EVENT("loading", "PaintTimingDetector::NotifyScroll", "type",
-              ScrollTypeToString(scroll_type));
-  if (scroll_type != mojom::blink::ScrollType::kUser &&
-      scroll_type != mojom::blink::ScrollType::kCompositor) {
-    return;
-  }
-  OnInputOrScroll();
 }
 
 void PaintTimingDetector::DidChangePerformanceTiming() {

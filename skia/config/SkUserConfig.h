@@ -144,6 +144,8 @@ SK_API void SkLog_FileLine(const char* file,
 #define SK_USE_SAFE_INSET_FOR_TEXTURE_SAMPLING
 
 
+#define SK_GANESH_LEGACY_MIXED_AA_CLIP_HANDLING
+
 ///////////////////////// Imported from BUILD.gn and skia_common.gypi
 
 /* In some places Skia can use static initializers for global initialization,

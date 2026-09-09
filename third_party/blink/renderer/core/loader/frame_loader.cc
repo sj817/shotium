@@ -220,6 +220,7 @@ void FrameLoader::Trace(Visitor* visitor) const {
 
 void FrameLoader::Init(
     const DocumentToken& document_token,
+    const InitiatorStateToken& initiator_state_token,
     std::unique_ptr<PolicyContainer> policy_container,
     const StorageKey& storage_key,
     ukm::SourceId document_ukm_source_id,
@@ -236,10 +237,7 @@ void FrameLoader::Init(
   }
   navigation_params->storage_key = storage_key;
   navigation_params->document_token = document_token;
-  // TODO(crbug.com/510258191): Plumb an initiator state token from the browser
-  // process when initializing a document following an IPC from the browser
-  // process.
-  navigation_params->initiator_state_token = base::UnguessableToken::Create();
+  navigation_params->initiator_state_token = initiator_state_token;
   navigation_params->frame_policy =
       frame_->Owner() ? frame_->Owner()->GetFramePolicy() : FramePolicy();
   navigation_params->document_ukm_source_id = document_ukm_source_id;
@@ -395,7 +393,8 @@ void FrameLoader::DispatchUnloadEventAndFillOldDocumentInfoIfNeeded(
       ScopedOldDocumentInfoForCommitCapturer::CurrentInfo();
   if (!old_document_info || !will_commit_new_document_in_this_frame ||
       !GetDocumentLoader()) {
-    frame_->GetDocument()->DispatchUnloadEvents(nullptr);
+    frame_->GetDocument()->DispatchUnloadEvents(
+        nullptr, will_commit_new_document_in_this_frame);
     return;
   }
   old_document_info->history_item = GetDocumentLoader()->GetHistoryItem();
@@ -409,7 +408,8 @@ void FrameLoader::DispatchUnloadEventAndFillOldDocumentInfoIfNeeded(
 
   base::ElapsedTimer elapsed_timer;
   frame_->GetDocument()->DispatchUnloadEvents(
-      &old_document_info->unload_timing_info);
+      &old_document_info->unload_timing_info,
+      will_commit_new_document_in_this_frame);
   old_document_info->total_lifecycle_events_processing_time_on_commit =
       std::max(
           old_document_info->total_lifecycle_events_processing_time_on_commit,
@@ -536,8 +536,21 @@ void FrameLoader::ProcessScrollForSameDocumentNavigation(
 
   // We need to scroll to the fragment whether or not a hash change occurred,
   // since the user might have scrolled since the previous navigation.
-  ProcessFragment(url, frame_load_type, kNavigationWithinSameDocument);
-  has_pending_cross_document_fragment_ = false;
+  if (url.HasFragmentIdentifier()) {
+    // If the same-document navigation explicitly navigates to a fragment, abort
+    // any pending cross-document text fragment and process the new fragment
+    // immediately.
+    has_pending_cross_document_fragment_ = false;
+    ProcessFragment(url, frame_load_type, kNavigationWithinSameDocument);
+  } else if (!has_pending_cross_document_fragment_ ||
+             (frame_->View() && frame_->GetPage() &&
+              frame_->GetPage()
+                  ->RelatedPagesMutationFromPreviousPageFinalized())) {
+    // Avoid prematurely processing a deferred cross-document text fragment
+    // until related pages state is finalized.
+    ProcessFragment(url, frame_load_type, kNavigationWithinSameDocument);
+    has_pending_cross_document_fragment_ = false;
+  }
 
   TakeObjectSnapshot();
 }
@@ -671,9 +684,6 @@ void FrameLoader::StartNavigation(FrameLoadRequest& request,
   TRACE_EVENT2("navigation", "FrameLoader::StartNavigation", "url",
                url.GetString().Utf8(), "load_type",
                static_cast<int>(frame_load_type));
-
-  resource_request.SetHasUserGesture(
-      LocalFrame::HasTransientUserActivation(frame_.Get()));
 
   if (!AllowRequestForThisFrame(request))
     return;
@@ -892,15 +902,6 @@ void FrameLoader::StartNavigation(FrameLoadRequest& request,
           ? CSPDisposition::DO_NOT_CHECK
           : CSPDisposition::CHECK;
 
-  // Mark this frame as initiator if the request has not specified an initiator.
-  base::UnguessableToken initiator_state_token =
-      request.GetInitiatorStateToken().is_empty()
-          ? frame_->GetInitiatorStateToken()
-          : request.GetInitiatorStateToken();
-  CHECK(!initiator_state_token.is_empty());
-  DocumentToken initiator_document_token =
-      request.GetInitiatorDocumentToken().value_or(
-          frame_->GetDocument()->Token());
   Client()->BeginNavigation(
       resource_request, request.GetRequestorBaseURL(), request.GetFrameType(),
       origin_window, nullptr /* document_loader */, navigation_type,
@@ -913,7 +914,7 @@ void FrameLoader::StartNavigation(FrameLoadRequest& request,
       request.Form(), should_check_main_world_csp, request.GetBlobURLToken(),
       request.GetInputStartTime(), request.GetCreationTime(),
       request.HrefTranslate().GetString(), request.GetInitiatorFrameToken(),
-      initiator_state_token, initiator_document_token,
+      request.GetInitiatorStateToken(), request.GetInitiatorDocumentToken(),
       request.GetSourceLocation(),
       request.IsContainerInitiated(),
       request.GetWindowFeatures().explicit_opener,

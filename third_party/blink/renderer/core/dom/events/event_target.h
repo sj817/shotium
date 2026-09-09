@@ -152,7 +152,12 @@ class CORE_EXPORT EventTarget : public ScriptWrappable {
                         bool use_capture = false);
   bool addEventListener(const AtomicString& event_type,
                         EventListener*,
-                        AddEventListenerOptionsResolved*);
+                        AddEventListenerOptionsResolved&);
+  // Deleted so that passing a pointer is a compile error rather than silently
+  // converting to `true` for the `use_capture` overload above.
+  bool addEventListener(const AtomicString&,
+                        EventListener*,
+                        AddEventListenerOptionsResolved*) = delete;
 
   bool removeEventListener(const AtomicString& event_type,
                            const EventListener*,
@@ -324,7 +329,7 @@ class CORE_EXPORT EventTarget : public ScriptWrappable {
 
   virtual bool AddEventListenerInternal(const AtomicString& event_type,
                                         EventListener*,
-                                        const AddEventListenerOptionsResolved*);
+                                        const AddEventListenerOptionsResolved&);
   bool RemoveEventListenerInternal(
       const AtomicString& event_type,
       const EventListener*,
@@ -347,7 +352,7 @@ class CORE_EXPORT EventTarget : public ScriptWrappable {
   LocalDOMWindow* ExecutingWindow();
   void SetDefaultAddEventListenerOptions(const AtomicString& event_type,
                                          EventListener*,
-                                         AddEventListenerOptionsResolved*);
+                                         AddEventListenerOptionsResolved&);
 
   RegisteredEventListener* GetAttributeRegisteredEventListener(
       const AtomicString& event_type);

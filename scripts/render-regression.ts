@@ -279,7 +279,6 @@ async function run(o: {shot: string; cases: string; baselines: string; artifacts
 
 async function updateBaselines(o: {baselineExecutable: string; baselineEngine: Engine; cases: string; baselines: string; timeoutMs: number; samplingIntervalMs: number; accept: boolean}): Promise<number> {
   if (!o.accept) throw new Error('Baseline replacement is intentional and destructive. Re-run with --accept after reviewing the pinned baseline executable.');
-  if (o.baselineEngine === 'shot') throw new Error('--baseline-engine must be headless-shell or system-chrome');
   const manifestPath = resolve(o.cases);
   const manifestRoot = path.dirname(manifestPath);
   const cases = readJson<Case[]>(manifestPath);
@@ -365,7 +364,7 @@ cli.command('run', 'render every case with the engine and compare it with the ba
     });
 cli.command('update-baselines', 'replace the baselines with renders from a pinned engine')
     .option('--baseline-executable <exe>', 'the engine that produces the baselines')
-    .option('--baseline-engine <name>', 'headless-shell or system-chrome', {default: 'headless-shell'})
+    .option('--baseline-engine <name>', 'headless-shell, system-chrome, or shot for before/after comparison', {default: 'headless-shell'})
     .option('--cases <file>', 'the case manifest', {default: 'tests/render/cases.json'})
     .option('--baselines <dir>', 'where the baselines go', {default: 'tests/render/baselines'})
     .option('--timeout-ms <ms>', 'per-render timeout', {default: 30000})
@@ -373,7 +372,7 @@ cli.command('update-baselines', 'replace the baselines with renders from a pinne
     .option('--accept', 'confirm the replacement')
     .action(async (options: Record<string, unknown>) => {
       if (!options.baselineExecutable) throw new Error('--baseline-executable is required');
-      if (!ENGINES.includes(options.baselineEngine as Engine)) throw new Error('--baseline-engine must be headless-shell or system-chrome');
+      if (!ENGINES.includes(options.baselineEngine as Engine)) throw new Error('--baseline-engine must be headless-shell, system-chrome or shot');
       process.exitCode = await updateBaselines({
         baselineExecutable: String(options.baselineExecutable), baselineEngine: options.baselineEngine as Engine, cases: String(options.cases),
         baselines: String(options.baselines), timeoutMs: Number(options.timeoutMs), samplingIntervalMs: Number(options.samplingIntervalMs), accept,

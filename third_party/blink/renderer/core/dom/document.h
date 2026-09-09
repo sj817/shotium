@@ -182,6 +182,7 @@ class Element;
 class ElementDataCache;
 class ElementIntersectionObserverData;
 class Event;
+class BeforeUnloadEvent;
 class EventListener;
 class ExceptionState;
 class FocusOptions;
@@ -249,6 +250,7 @@ class Text;
 class TransformSource;
 class TreeWalker;
 class TrustedHTML;
+class TrustedHTMLParserOptions;
 class V8DocumentReadyState;
 class V8UnionCSSPseudoElementOrDocumentOrElementOrText;
 class V8UnionBooleanOrImportNodeOptions;
@@ -705,7 +707,8 @@ class CORE_EXPORT Document : public ContainerNode,
 
   void EvaluateMediaQueryList();
 
-  FormController& GetFormController();
+  FormController& EnsureFormController();
+  FormController* GetFormController() const { return form_controller_.Get(); }
   DocumentState* GetDocumentState() const;
   void SetStateForNewControls(const Vector<String>&);
 
@@ -886,10 +889,12 @@ class CORE_EXPORT Document : public ContainerNode,
       bool& did_allow_navigation,
       base::TimeTicks& out_before_unload_dialog_opened_time,
       base::TimeTicks& out_before_unload_dialog_closed_time);
+  void DefaultBeforeUnloadEventHandler(BeforeUnloadEvent&);
 
   // Dispatches "pagehide", "visibilitychange" and "unload" events, if not
   // dispatched already. Fills `unload_timing_info` if present.
-  void DispatchUnloadEvents(UnloadEventTimingInfo* unload_timing_info);
+  void DispatchUnloadEvents(UnloadEventTimingInfo* unload_timing_info,
+                            bool will_commit_new_document_in_this_frame = true);
 
   void DispatchFreezeEvent();
 
@@ -1066,7 +1071,8 @@ class CORE_EXPORT Document : public ContainerNode,
   void SetLastFocusType(mojom::blink::FocusType last_focus_type);
   mojom::blink::FocusType LastFocusType() const { return last_focus_type_; }
   bool SetFocusedElement(Element*, const FocusParams&);
-  void ClearFocusedElement(bool omit_blur_events = false);
+  void ClearFocusedElement(
+      BlurEventBehavior blur_event_behavior = BlurEventBehavior::kFire);
   Element* FocusedElement() const { return focused_element_.Get(); }
   const FocusOptions* GetFocusOptions() const { return focus_options_.Get(); }
   void ClearFocusedElementIfNeeded();
@@ -1439,7 +1445,7 @@ class CORE_EXPORT Document : public ContainerNode,
   bool AllowInlineEventHandler(Node*,
                                EventListener*,
                                const String& context_url,
-                               const OrdinalNumber& context_line);
+                               const TextPosition& context_position);
 
   enum LoadEventProgress {
     kLoadEventNotRun,
@@ -1800,10 +1806,6 @@ class CORE_EXPORT Document : public ContainerNode,
   ukm::UkmRecorder* UkmRecorder();
   ukm::SourceId UkmSourceID() const;
 
-  void MaybeRecordSvgImageProcessingTime(
-      int data_change_count,
-      base::TimeDelta data_change_elapsed_time) const;
-
   scoped_refptr<base::SingleThreadTaskRunner> GetTaskRunner(TaskType);
 
   StylePropertyMapReadOnly* ComputedStyleMap(Element*);
@@ -1838,10 +1840,7 @@ class CORE_EXPORT Document : public ContainerNode,
     return slot_assignment_recalc_depth_;
   }
   bool IsInSlotAssignmentRecalc() const {
-    // Since we forbid recursive slot assignement recalc, the depth should be
-    // <= 1.
-    DCHECK_LE(slot_assignment_recalc_depth_, 1u);
-    return slot_assignment_recalc_depth_ == 1;
+    return slot_assignment_recalc_depth_ > 0;
   }
 
   bool IsVerticalScrollEnforced() const { return is_vertical_scroll_enforced_; }
@@ -2322,6 +2321,7 @@ class CORE_EXPORT Document : public ContainerNode,
   void BeginLifecycleUpdatesIfRenderingReady();
 
   void ChildrenChanged(const ChildrenChange&) override;
+  void DefaultEventHandler(Event&) override;
 
   String nodeName() const final;
   bool ChildTypeAllowed(NodeType) const final;

@@ -13,6 +13,7 @@
 #include "net/base/net_export.h"
 #include "net/dns/public/resolution_details.h"
 #include "net/http/alternate_protocol_usage.h"
+#include "net/spdy/multiplexed_session_creation_initiator.h"
 
 namespace net {
 
@@ -27,25 +28,7 @@ enum class SessionSource {
   kExisting = 1,
   kMaxValue = kExisting,
 };
-// LINT.ThenChange(//tools/metrics/histograms/metadata/enums.xml:NetworkSessionSource)
-
-// Classifies why a new QUIC session had to be created by checking if a session
-// already existed in the pool's all_sessions_ set.
-// Note: When kSessionExisted* is logged, it indicates that a session existed
-// in all_sessions_ but was excluded from active_sessions_ (most commonly
-// because it received a GOAWAY frame or is draining during IP address
-// migration). Granular breakdown of why the existing session could not be
-// reused is tracked in follow-up metrics.
-// LINT.IfChange(QuicSessionEstablishmentReason)
-enum class QuicSessionEstablishmentReason {
-  kUnknown = 0,
-  kNoSessionExisted = 1,
-  kSessionExistedButNotPreconnect = 2,
-  kSessionExistedAndWasPreconnect = 3,
-  kSessionExistedBoth = 4,
-  kMaxValue = kSessionExistedBoth,
-};
-// LINT.ThenChange(//tools/metrics/histograms/metadata/net/enums.xml:QuicSessionEstablishmentReason)
+// LINT.ThenChange(//tools/metrics/histograms/enums.xml:NetworkSessionSource)
 
 // Structure containing internal load timing information. This is similar to
 // LoadTimingInfo, but contains extra information which shouldn't be exposed to
@@ -84,17 +67,12 @@ struct NET_EXPORT LoadTimingInternalInfo {
   AdvertisedAltSvcState advertised_alt_svc_state =
       AdvertisedAltSvcState::kUnknown;
 
-  // Whether QUIC is enabled.
-
   // The details of the DNS resolution that established the connection used by
   // this request. Can be nullopt when no resolution was performed, or
   // resolution failed.
   std::optional<ResolutionDetails> resolution_details;
 
-  // The reason why the QUIC session used by this request was originally
-  // established. Populated for all requests that use a QUIC session.
-  std::optional<QuicSessionEstablishmentReason>
-      quic_session_establishment_reason;
+  std::optional<MultiplexedSessionCreationInitiator> session_creation_initiator;
 };
 
 }  // namespace net

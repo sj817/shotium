@@ -96,26 +96,23 @@ class DeprecatedCaseFoldingHash {
   STATIC_ONLY(DeprecatedCaseFoldingHash);
 
  public:
-  static unsigned GetHash(base::span<const UChar> span) {
-    base::span<const char> bytes = base::as_chars(span);
+  static uint32_t GetHash(base::span<const UChar> span) {
     return StringHasher::ComputeHashAndMaskTop8Bits<
-        CaseFoldingHashReader<UChar>>(bytes.data(), bytes.size());
+        CaseFoldingHashReader<UChar>>(base::as_bytes(span));
   }
 
-  static unsigned GetHash(StringImpl* str) {
+  static uint32_t GetHash(StringImpl* str) {
     if (str->Is8Bit())
       return GetHash(str->Span8());
     return GetHash(str->Span16());
   }
 
-  static unsigned GetHash(base::span<const LChar> span) {
-    base::span<const char> bytes = base::as_chars(span);
-    using Reader = CaseFoldingHashReader<LChar>;
-    return StringHasher::ComputeHashAndMaskTop8Bits<Reader>(
-        bytes.data(), bytes.size() * Reader::kExpansionFactor);
+  static uint32_t GetHash(base::span<const LChar> span) {
+    return StringHasher::ComputeHashAndMaskTop8Bits<
+        CaseFoldingHashReader<LChar>>(span);
   }
 
-  static inline unsigned GetHash(base::span<const char> span) {
+  static inline uint32_t GetHash(base::span<const char> span) {
     return GetHash(base::as_byte_span(span));
   }
 
@@ -134,7 +131,7 @@ class DeprecatedCaseFoldingHash {
     return blink::DeprecatedEqualIgnoringCaseAndNullity(a, b);
   }
 
-  static unsigned GetHash(const scoped_refptr<StringImpl>& key) {
+  static uint32_t GetHash(const scoped_refptr<StringImpl>& key) {
     return GetHash(key.get());
   }
 
@@ -143,8 +140,8 @@ class DeprecatedCaseFoldingHash {
     return Equal(a.get(), b.get());
   }
 
-  static unsigned GetHash(const String& key) { return GetHash(key.Impl()); }
-  static unsigned GetHash(const AtomicString& key) {
+  static uint32_t GetHash(const String& key) { return GetHash(key.Impl()); }
+  static uint32_t GetHash(const AtomicString& key) {
     return GetHash(key.Impl());
   }
   static bool Equal(const String& a, const String& b) {

@@ -9,6 +9,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <string_view>
+#include <vector>
 
 #include "base/containers/span.h"
 #include "base/notreached.h"
@@ -70,6 +71,14 @@ inline constexpr size_t DigestSizeForHashKind(HashKind k) {
   NOTREACHED();
 }
 
+// One-shot hashing. The returned vector will be of the corresponding digest
+// size for `kind`.
+[[nodiscard]] CRYPTO_EXPORT std::vector<uint8_t> Hash(
+    HashKind kind,
+    base::span<const uint8_t> data);
+[[nodiscard]] CRYPTO_EXPORT std::vector<uint8_t> Hash(HashKind kind,
+                                                      std::string_view data);
+
 // One-shot hashing. The passed-in digest span must be the correct size for the
 // digest; use DigestSizeForHashKind() if your HashKind is variable.
 CRYPTO_EXPORT void Hash(HashKind kind,
@@ -79,8 +88,8 @@ CRYPTO_EXPORT void Hash(HashKind kind,
                         std::string_view data,
                         base::span<uint8_t> digest);
 
-// A streaming hasher interface. Calling Finish() resets the hash context to the
-// initial state after computing the digest.
+// A streaming hasher interface. Instances cannot be reused after Finish() is
+// called, so you need one of these per hash you want to compute.
 class CRYPTO_EXPORT Hasher {
  public:
   explicit Hasher(HashKind kind);
