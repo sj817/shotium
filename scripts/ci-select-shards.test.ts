@@ -3,7 +3,7 @@ import test from 'node:test';
 import {changesNeedCompilation, shardCount} from './ci-select-shards.ts';
 
 test('warm documentation/version changes avoid duplicate runners; unknown inputs do not', () => {
-  assert.equal(changesNeedCompilation(['shotium/package.json', 'docs/release.md', 'shotium/README.md']), false);
+  assert.equal(changesNeedCompilation(['apps/demo/shotium/package.json', 'docs/release.md', 'apps/demo/shotium/README.md']), false);
   for (const file of ['DEPS', 'shot/BUILD.gn', 'shot/shot_renderer.cc', '.github/actions/macos-source/action.yml', 'scripts/build-engine.ts', 'third_party/blink/test.md']) {
     assert.equal(changesNeedCompilation([file]), true, file);
   }

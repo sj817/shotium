@@ -10,11 +10,10 @@ is the commands and the traps.
 
 ## Preconditions
 
-1. **The candidate is what you think it is.** `out/Shot/shotium.dll` and
-   `shotium/native/build/Release/shotium.node` must both be newer than the
+1. **The candidate is what you think it is.** `out/Shot/shotium.node` must be newer than the
    change (`/verify-engine` steps 0 and 2). `binding.ts` loads the local addon
    *before* any platform package, so an installed `@shotkit/` package is not
-   the risk -- a stale local `shotium.node` is. It wins silently, and you
+   the risk -- a stale local `shotium.node` is. An incompatible binding version is rejected, but a stale matching version still loads, and you
    measure the previous engine against the published one while believing you
    measured the change.
 2. **The baseline is an installed package**, not a checkout:

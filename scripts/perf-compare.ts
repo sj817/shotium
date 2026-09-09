@@ -1,6 +1,6 @@
 // Compare two installed shotium packages, including their real native
 // libraries, case by case. Run on an otherwise idle host, after building the
-// candidate and staging its DLL/.so:
+// candidate and packaging its native artifacts:
 //
 //   pnpm perf:compare BASELINE_PACKAGE CANDIDATE_PACKAGE OUTPUT.json
 //   Optional: --samples=20 --min-seconds=3 --max-seconds=8 --max-samples=1000 --filter=corpus
@@ -34,8 +34,8 @@ import {cac} from 'cac';
 import {calibrate, compare, type Bands, type Comparison, type Status} from './lib/perf-gate.ts';
 import {libraryName, root} from './lib/repo.ts';
 
-import type * as Shotium from '../shotium/src/index.ts';
-import type {CaptureStats, ScreenshotOptions} from '../shotium/src/types.ts';
+import type * as Shotium from '../apps/demo/shotium/src/index.ts';
+import type {CaptureStats, ScreenshotOptions} from '../apps/demo/shotium/src/types.ts';
 
 // Cases whose wall time is pinned to an external wait that no code in this
 // process can shorten: a server that sleeps 250 ms before answering, and a
@@ -119,7 +119,8 @@ async function worker(packagePath: string): Promise<void> {
   const addon = Object.keys(require.cache).find((p) => path.basename(p) === 'shotium.node');
   if (!addon) throw new Error('Could not identify the loaded native addon');
   const directory = info.enginePath ?? path.dirname(addon);
-  const library = path.join(directory, libraryName);
+  const direct = (require(addon) as {bindingVersion?: number}).bindingVersion === 1;
+  const library = direct ? addon : path.join(directory, libraryName);
   let daemonClient: Awaited<ReturnType<typeof shotium.daemon.connect>> | undefined;
   const daemonOptions = {name: `perf-${process.pid}`, cacheDir: null, resourceDir: directory, idleTimeoutMs: 60000};
   if (process.env.SHOT_PERF_DAEMON) daemonClient = await shotium.daemon.connect(daemonOptions);
@@ -366,6 +367,9 @@ interface Record_ extends Case {
 }
 
 async function main(baseline: string, candidate: string, output: string, o: Options): Promise<void> {
+  baseline = path.resolve(root, baseline);
+  candidate = path.resolve(root, candidate);
+  output = path.resolve(root, output);
   const samples = o.samples;
   if (!Number.isInteger(samples) || samples < 10) throw new Error('--samples must be an integer >= 10');
   // How long each side of a case keeps capturing past the minimum pairs. The
@@ -415,7 +419,7 @@ async function main(baseline: string, candidate: string, output: string, o: Opti
     node: process.version,
     host: {release: os.release(), cpu: os.cpus()[0]?.model, logicalCpus: os.cpus().length, totalMemory: os.totalmem(), freeMemory: os.freemem()},
     revision: execFileSync('git', ['rev-parse', 'HEAD'], {cwd: root, encoding: 'utf8'}).trim(),
-    sourceDiffSha256: hash(execFileSync('git', ['diff', '--', 'shot', 'cc', 'third_party/blink', 'shotium/native', 'patches', 'build'], {cwd: root})),
+    sourceDiffSha256: hash(execFileSync('git', ['diff', '--', 'shot', 'cc', 'third_party/blink', 'apps/demo/shotium/native', 'patches', 'build'], {cwd: root})),
     harnessSha256: hash(Buffer.concat([readFileSync(import.meta.filename), readFileSync(gateFile)])),
     fixtureManifestSha256: hash(readFileSync(path.join(root, 'shot/testdata/bilibili/manifest.json'))),
     requiredCases: matrix.map((c) => c.name),

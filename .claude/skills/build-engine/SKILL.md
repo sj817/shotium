@@ -1,11 +1,11 @@
 ---
 name: build-engine
-description: Build the shotium engine on the Windows development host (targets shot and shot_c into out/Shot), read the build log by error class, and iterate with the syntax-only checker instead of full rebuilds. Use for "build the engine", "the build failed", "does this compile", or after any change under shot/, third_party/blink, cc/, skia/ or the GN files. Does not cover Linux or macOS builds; those are dispatched through engine-linux.yml and engine-macos.yml.
+description: Build the shotium engine on the Windows development host (targets shot, shot_c and shot_node into out/Shot), read the build log by error class, and iterate with the syntax-only checker instead of full rebuilds. Use for "build the engine", "the build failed", "does this compile", or after any change under shot/, third_party/blink, cc/, skia/ or the GN files. Does not cover Linux or macOS builds; those are dispatched through engine-linux.yml and engine-macos.yml.
 ---
 
 # Build the engine
 
-The engine is built by one script into one directory. Everything else about
+The engine is built by one script into one directory. `shot_node` prepares a pinned, checksum-verified Node SDK and uses Node-API 8. Everything else about
 building here is about not being fooled by a stale binary, a leftover
 process, or a jumbo grouping that only fails on another platform.
 
@@ -38,7 +38,7 @@ process, or a jumbo grouping that only fails on another platform.
 ```bash
 pnpm -C scripts install                                                 # once per checkout
 pnpm build:engine --jobs 16 --log out/Shot/build.log                    # shotium.exe + .pak files
-pnpm build:engine --target shot_c --jobs 16 --log out/Shot/build.log    # shotium.dll, which the Node addon links
+pnpm build:engine --target shot_c --jobs 16 --log out/Shot/build.log    # independent C ABI library
 ```
 
 The entry point is `scripts/build-engine.ts` (TypeScript, `execa`,

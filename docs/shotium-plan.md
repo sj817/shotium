@@ -148,7 +148,7 @@ Chrome 用的壳。缓存、重定向、HTTP/2、TLS 全部在 `//net` 里。wor
 
 ### 第 3 组 · Node 层 — ✅ 完成
 
-`shotium/`:`index.js`、`lib/{protocol,worker,pool}.js`、`index.d.ts`、`README.md`。
+`apps/demo/shotium/`:`index.js`、`lib/{protocol,worker,pool}.js`、`index.d.ts`、`README.md`。
 `runtime.start()/stop()`、`on()` 五个事件、进程池 + 队列、`retry`、类型定义,全部落地。
 
 ### 第 4 组 · 常驻守护进程 — ✅ 完成
@@ -159,9 +159,9 @@ Chrome 用的壳。缓存、重定向、HTTP/2、TLS 全部在 `//net` 里。wor
 
 | # | 内容 | 落点 |
 |---|---|---|
-| 4.1 | 守护进程:池 + 监听 + 空闲退出 | `shotium/src/lib/daemon.ts`、`src/daemon_main.ts` |
-| 4.2 | 端点按配置取哈希(Windows 命名管道 / POSIX unix socket) | `shotium/src/lib/endpoint.ts` |
-| 4.3 | 客户端:连不上就拉起,一条连接多请求并发(带 `id`) | `shotium/src/lib/client.ts` |
+| 4.1 | 守护进程:池 + 监听 + 空闲退出 | `apps/demo/shotium/src/lib/daemon.ts`、`src/daemon_main.ts` |
+| 4.2 | 端点按配置取哈希(Windows 命名管道 / POSIX unix socket) | `apps/demo/shotium/src/lib/endpoint.ts` |
+| 4.3 | 客户端:连不上就拉起,一条连接多请求并发(带 `id`) | `apps/demo/shotium/src/lib/client.ts` |
 | 4.4 | ~~命令行 `shotium` / `shotium daemon start\|status\|stop`~~ 已从 npm 包里拿掉,改由 releases 页发二进制。npm 包只服务 node | — |
 | 4.5 | 检查:跨进程复用、并发、失败不致命、两种退出 | `tools/shot/daemon_check.cjs` |
 
@@ -190,14 +190,14 @@ playwright(各两档:`chrome-headless-shell` 与完整 headless Chrome)。六个
 
 第 6 组把 blink 放进调用方自己的进程:`shared_library("shot_c")` 导出一套 C
 接口,一个 Node-API addon 用它。当时这是进程池旁边的一条旁路;2026-08-27 之后
-它是唯一一条,`shotium/src/lib/engine.ts` 就是它的 JS 外壳。
+它是唯一一条,`apps/demo/shotium/src/lib/engine.ts` 就是它的 JS 外壳。
 
 | # | 内容 | 落点 |
 |---|---|---|
 | 6.1 | C 接口:八个函数,不透明指针,JSON 进字节出 | `shot/shot_api.h`、`shot_api.cc` |
 | 6.2 | 引擎线程:blink 一条线程,任何线程调用都排到它上面 | `shot/shot_api.cc` |
 | 6.3 | 导出裁剪(版本脚本 / exported_symbols_list) | `shot/shot_api.map`、`shot_api.exports` |
-| 6.4 | addon 与 JS 外壳,队列深度 1 | `shotium/native/binding.cc`、`shotium/src/lib/engine.ts` |
+| 6.4 | addon 与 JS 外壳,队列深度 1 | `apps/demo/shotium/native/binding.cc`、`apps/demo/shotium/src/lib/engine.ts` |
 | 6.5 | 检查:与可执行文件逐字节一致、并发串行化、只有一个引擎 | `tools/shot/node_check.cjs` |
 
 四个决定值得记下来:
@@ -206,7 +206,7 @@ playwright(各两档:`chrome-headless-shell` 与完整 headless Chrome)。六个
   都过不了另一套工具链。`std::string` 放在接缝上,布局就成了两边各自标准库的
   属性。所以:不透明指针、UTF-8、返回码,以及没有任何内存的所有权跨过去。
 - **请求走 JSON,不走结构体。** `ScreenshotOptions` 已经有一份线上格式,
-  `shotium/src/lib/request.ts` 生产它、`shot_request.cc` 消费它。再定义一个 C 结构
+  `apps/demo/shotium/src/lib/request.ts` 生产它、`shot_request.cc` 消费它。再定义一个 C 结构
   体等于给同一件事写第三种拼法,而第三种拼法总是先漂移的那一个;顺带也免掉了
   结构体布局的版本兼容问题。
 - **导出必须裁到只剩 `shot_*`。** 这个库链进了 PartitionAlloc 的 allocator
@@ -231,7 +231,7 @@ npm 上 `shotium` 这个名字拿不到,所以包名带上了 scope:`@shotkit/sh
 |---|---|---|
 | 7.1 | GN 输出名(`output_name`,两个 repack 的 `output`) | `shot/BUILD.gn` |
 | 7.2 | 六个平台包的装配 | `tools/shot/make_platform_package.cjs` |
-| 7.3 | 平台包的解析 | `shotium/src/lib/platform.ts` |
+| 7.3 | 平台包的解析 | `apps/demo/shotium/src/lib/platform.ts` |
 | 7.4 | CI 产出 `.tgz` 并挂到 draft release | `.github/workflows/engine-*.yml` |
 | 7.5 | 从 release 资产发布七个包 | `.github/workflows/npm-publish.yml` |
 

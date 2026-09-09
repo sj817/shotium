@@ -5,21 +5,15 @@
 // architecture. So each build produces a package of its own, and the main
 // package depends on all six as optionalDependencies with `os` and `cpu` set
 // -- npm then installs the one that matches and skips the other five. See
-// shotium/src/lib/platform.ts, which is the code that finds whichever one
+// apps/demo/shotium/src/lib/platform.ts, which is the code that finds whichever one
 // landed.
 //
 //   pnpm package:platform --build out/Shot --os win --arch x64 --dest dist/npm \
-//       --addon shotium/native/build/Release/shotium.node
+//       --addon out/Shot/shotium.node
 //
-// What ships is the shared library, the addon linked against it, and the two
-// resource packs. Not the executable: it is a second, independent copy of the
-// same engine (shot/BUILD.gn links shot_core into both the executable and the
-// shared library), and shipping both put 19.75 MB of duplicate engine in a
-// 40 MB download for a process-spawning path node has no reason to take. The
-// executable is what the standalone .7z archives on the releases page carry.
-//
-// --addon is therefore required. A package without one installs and then
-// cannot render: there is nothing else in it that node can call.
+// npm ships the self-contained Node addon, CLI and two resource packs.
+// The independent C ABI library remains a GitHub Release artifact.
+// --addon is required; Node never falls back to spawning the CLI.
 //
 // This script does not run npm. It writes a directory; the caller runs
 // `npm pack` or `npm publish` on it, because those need credentials and a
@@ -37,12 +31,12 @@ import {resolve} from './lib/repo.ts';
 // spellings npm and node use. `os` in a package.json is matched against
 // process.platform, which is `win32` and `darwin` and has been for long
 // enough that nothing is going to change it.
-const PLATFORMS: Record<string, {npmOs: string; library: string; extra: string[]}> = {
+const PLATFORMS: Record<string, {npmOs: string; executable: string; extra: string[]}> = {
   // The import library is a build input, not a run-time one: nothing that
   // installs this package links against the DLL, so it stays out.
-  win: {npmOs: 'win32', library: 'shotium.dll', extra: []},
-  mac: {npmOs: 'darwin', library: 'libshotium.dylib', extra: []},
-  linux: {npmOs: 'linux', library: 'libshotium.so', extra: []},
+  win: {npmOs: 'win32', executable: 'shotium.exe', extra: []},
+  mac: {npmOs: 'darwin', executable: 'shotium', extra: []},
+  linux: {npmOs: 'linux', executable: 'shotium', extra: []},
 };
 const ARCHES = ['x64', 'arm64'];
 const PAKS = ['shotium_data.pak', 'shotium_strings.pak'];
@@ -65,7 +59,7 @@ function main(args: {build: string; os: string; arch: string; dest: string; addo
   // installed together are seven packages that have to agree on a number, and
   // the only way to keep them agreeing is for six of them not to have an
   // opinion.
-  const mainPkg = JSON.parse(readFileSync(resolve('shotium', 'package.json'), 'utf8')) as {version: string; license?: string; engines?: unknown; repository?: unknown};
+  const mainPkg = JSON.parse(readFileSync(resolve('apps/demo/shotium', 'package.json'), 'utf8')) as {version: string; license?: string; engines?: unknown; repository?: unknown};
   // npmOs, not args.os: the package is named for process.platform, because
   // that is what npm matches its `os` field against and what the caller's
   // machine calls itself. The archives keep win/mac -- people read those.
@@ -76,8 +70,8 @@ function main(args: {build: string; os: string; arch: string; dest: string; addo
   rmSync(dest, {recursive: true, force: true});
   mkdirSync(dest, {recursive: true});
   const shipped: string[] = [];
-  copy(path.join(buildDir, platform.library), path.join(dest, platform.library), 0o755);
-  shipped.push(platform.library);
+  copy(path.join(buildDir, platform.executable), path.join(dest, platform.executable), 0o755);
+  shipped.push(platform.executable);
   for (const pak of PAKS) {
     copy(path.join(buildDir, pak), path.join(dest, pak), 0o644);
     shipped.push(pak);
@@ -115,7 +109,7 @@ function main(args: {build: string; os: string; arch: string; dest: string; addo
       `# ${name}\n\n` +
           `The shotium engine built for ${args.os}-${args.arch}.\n\n` +
           'This package is one of six, and holds bytes rather than code: the\n' +
-          'shared library behind the C ABI, the node addon linked against it,\n' +
+          'self-contained Node addon, standalone CLI,\n' +
           'and the two resource packs it reads.\n\n' +
           'Install [`@shotkit/shotium`](https://www.npmjs.com/package/' +
           '@shotkit/shotium) instead. It depends on all six and pnpm installs\n' +
@@ -127,11 +121,11 @@ function main(args: {build: string; os: string; arch: string; dest: string; addo
 
 const cli = cac('make-platform-package');
 cli.command('', 'assemble one @shotkit/shotium-<os>-<arch> package directory')
-    .option('--build <dir>', 'the build directory holding the library and the packs')
+    .option('--build <dir>', 'the build directory holding the engine and the packs')
     .option('--os <name>', 'win, mac or linux')
     .option('--arch <name>', 'x64 or arm64')
     .option('--dest <dir>', 'where the package directory goes')
-    .option('--addon <file>', 'the node addon linked against this build')
+    .option('--addon <file>', 'the GN-built Node addon from this build')
     .action((options: {build?: string; os?: string; arch?: string; dest?: string; addon?: string}) => {
       try {
         for (const required of ['build', 'os', 'arch', 'dest'] as const) {

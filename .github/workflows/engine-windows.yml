@@ -52,7 +52,7 @@ on:
         description: 'auto: one runner for a proven warm docs/version change, platform defaults otherwise; integer: explicit shard count'
         default: auto
 
-# GN, the SDK and node-gyp spell the 64-bit architecture x64; the names
+# GN and the Node SDK spell the 64-bit architecture x64; the names
 # people see spell it amd64. The build-directory cache is keyed by the GN
 # spelling so that renaming labels did not throw away six warm build
 # directories.
@@ -78,11 +78,11 @@ jobs:
       - uses: actions/checkout@v7
         with:
           sparse-checkout: |
-            shotium/package.json
+            apps/demo/shotium/package.json
             scripts
           sparse-checkout-cone-mode: false
       - id: version
-        run: echo "version=$(jq -r .version shotium/package.json)" >> "$GITHUB_OUTPUT"
+        run: echo "version=$(jq -r .version apps/demo/shotium/package.json)" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-node@v6
         with:
           node-version: 22
@@ -171,7 +171,7 @@ jobs:
         # onto the least-loaded shard, so the shards finish together; every
         # shard computes the same assignment from the same inputs.
         run: |
-          $objects = @(ninja -C out/Shot -t inputs shot shot_c | Where-Object { $_ -match '\.obj$' })
+          $objects = @(ninja -C out/Shot -t inputs shot shot_c shot_node | Where-Object { $_ -match '\.obj$' })
           $slice = @($objects | pnpm --silent build:shards slice --build-dir out/Shot --shards '${{ needs.meta.outputs.shard_count }}' --index '${{ matrix.shard }}')
           if ($LASTEXITCODE -ne 0) { throw "build:shards slice failed" }
           ($slice -join "`n") | Set-Content -NoNewline -Encoding ascii "$env:RUNNER_TEMP/slice.txt"
@@ -269,7 +269,7 @@ jobs:
         working-directory: src
         # The last slice, by the same assignment every shard computes.
         run: |
-          $objects = @(ninja -C out/Shot -t inputs shot shot_c | Where-Object { $_ -match '\.obj$' })
+          $objects = @(ninja -C out/Shot -t inputs shot shot_c shot_node | Where-Object { $_ -match '\.obj$' })
           $slice = @($objects | pnpm --silent build:shards slice --build-dir out/Shot --shards '${{ needs.meta.outputs.shard_count }}' --index '${{ needs.meta.outputs.final_shard }}')
           if ($LASTEXITCODE -ne 0) { throw "build:shards slice failed" }
           ($slice -join "`n") | Set-Content -NoNewline -Encoding ascii "$env:RUNNER_TEMP/slice.txt"
@@ -348,7 +348,7 @@ jobs:
         working-directory: src
           # pwsh, not bash: rm is Remove-Item, whose flags differ.
         run: |
-          foreach ($stale in 'out/Shot/shotium.exe', 'out/Shot/shotium.dll') {
+          foreach ($stale in 'out/Shot/shotium.exe', 'out/Shot/shotium.dll', 'out/Shot/shotium.node') {
             if (Test-Path $stale) { Remove-Item -Force $stale }
           }
 
@@ -366,7 +366,7 @@ jobs:
         # Diagnosis only, nothing is built: -d explain makes ninja say why each
         # dirty edge is dirty, and the root causes come first. This is how the
         # Linux job found LASTCHANGE, the Skia patches and angle_commit.h.
-        run: ninja -C out/Shot shot shot_c -n -d explain 2>&1 | Select-Object -First 120
+        run: ninja -C out/Shot shot shot_c shot_node -n -d explain 2>&1 | Select-Object -First 120
 
       - name: ninja
         shell: pwsh
@@ -374,12 +374,11 @@ jobs:
         continue-on-error: true
         timeout-minutes: 280   # leaves the job time to store what got built
         run: |
-          # shot_c is the same engine behind a C ABI, for shotium's node
-          # addon. It is a second link of the same 43 MB, which sounds like
+          # shot_c preserves the standalone C ABI; shot_node is the Node entry. It is a second link of the same 43 MB, which sounds like
           # doubling the job and is not: both links share the ThinLTO cache
           # this build directory already carries, so the second one reuses the
           # codegen the first one did and costs minutes rather than an hour.
-          ninja -C out/Shot shot shot_c -j ${{ github.event.inputs.jobs }}
+          ninja -C out/Shot shot shot_c shot_node -j ${{ github.event.inputs.jobs }}
 
       # What this build read: ninja's inputs and deps log, gn's build.ninja.d,
       # the jumbo source lists. `pnpm trim-tree plan` takes the six platforms'
@@ -451,7 +450,7 @@ jobs:
         # ninja is allowed to run out of time; the job is not allowed to call
         # that a success. Re-running picks up where this left off.
         run: |
-          foreach ($wanted in 'out/Shot/shotium.exe', 'out/Shot/shotium.dll') {
+          foreach ($wanted in 'out/Shot/shotium.exe', 'out/Shot/shotium.dll', 'out/Shot/shotium.node') {
             if (-not (Test-Path $wanted)) {
               throw "$wanted was not produced -- the build got further, but is not done. Run this workflow again; the cache carries the objects over."
             }
@@ -493,7 +492,7 @@ jobs:
           # name instead, so unpacking a newer build over an older one replaces
           # it in place rather than leaving two versioned directories side by
           # side.
-          $version = (Get-Content shotium/package.json -Raw | ConvertFrom-Json).version
+          $version = (Get-Content apps/demo/shotium/package.json -Raw | ConvertFrom-Json).version
           $stem = "shotium-windows-${{ inputs.arch }}"
           $archive = "$stem-v$version.7z"
           if (Test-Path dist) { Remove-Item -Recurse -Force dist }
@@ -503,7 +502,8 @@ jobs:
           # own: they are the same engine, the resource packs serve both, and
           # a caller who wants the addon should not have to work out which two
           # downloads go together.
-          Copy-Item out/Shot/shotium.exe,out/Shot/shotium.dll,out/Shot/shotium_data.pak,out/Shot/shotium_strings.pak "dist/$stem/"
+          pnpm package:c-abi --build out/Shot --os win --dest "dist/$stem"
+          if ($LASTEXITCODE -ne 0) { throw "C ABI packaging failed" }
           Get-ChildItem "dist/$stem" | Select-Object Name,Length
           # windows-2025 ships 7-Zip on PATH; fall back to its install path
           # rather than silently producing no archive if that ever changes.
@@ -563,40 +563,20 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "serve checks failed" }
           pnpm verify:net out/Shot/shotium.exe
           if ($LASTEXITCODE -ne 0) { throw "net checks failed" }
-          # The node addon, and the C ABI under it. Built here rather than
-          # taken from anywhere else, because the library it links against is
-          # the one this job has just produced -- an addon checked against a
-          # different build would be checking nothing.
-          #
-          # Before the node suites, not after: the addon is what they load. An
-          # A package-manager install carries the library and the addon and not the
-          # executable, so there is no second path for them to fall back to.
-          #
-          # node-gyp 13 and not 11, because this runner image ships Visual
-          # Studio 18 (2026) at "Microsoft Visual Studio\18\Enterprise", and
-          # every node-gyp before 13 stops at `unknown version "undefined"`
-          # and then reports that no Visual Studio is installed at all. 13 is
-          # the release that maps installationVersion 18 to VS2026 and its
-          # v145 toolset. Chromium's own build is unaffected -- it uses clang
-          # and only borrows the SDK and the CRT.
-          $env:SHOT_INCLUDE_DIR = "$PWD/shot"
-          $env:SHOT_LIB_DIR = "$PWD/out/Shot"
-          Push-Location shotium/native
-          pnpm dlx node-gyp@13 rebuild
-          Pop-Location
-          Copy-Item out/Shot/shotium.dll,out/Shot/shotium_data.pak,out/Shot/shotium_strings.pak `
-                    shotium/native/build/Release/
+          # The GN build already produced the self-contained Node addon.
           # The package is TypeScript, so what the check suites import is a
           # build output rather than a file in the tree. There is no frozen
           # lockfile -- see checks.yml for why it cannot carry the six
           # optionalDependencies yet.
-          Push-Location shotium
+          Push-Location apps/demo/shotium
           pnpm install --no-lockfile
           pnpm run build
           Pop-Location
           pnpm verify:node out/Shot/shotium.exe
           if ($LASTEXITCODE -ne 0) { throw "node checks failed" }
-          pnpm verify:bilibili --package shotium
+          pnpm verify:node-entry
+          if ($LASTEXITCODE -ne 0) { throw "Node entry checks failed" }
+          pnpm verify:bilibili --package apps/demo/shotium
           if ($LASTEXITCODE -ne 0) { throw "Bilibili regression checks failed" }
           pnpm verify:daemon out/Shot/shotium.exe
           if ($LASTEXITCODE -ne 0) { throw "daemon checks failed" }
@@ -611,44 +591,10 @@ jobs:
         if: success()
         shell: pwsh
         working-directory: src
-        # One of the six @shotkit/shotium-<os>-<arch> packages: the shared
-        # library, the addon linked against it, and the two resource packs, in
-        # a package npm can install. @shotkit/shotium depends on all six as
-        # optionalDependencies with os/cpu set, so an install pulls the one
-        # that matches and skips the rest. See scripts/make-platform-package.ts.
-        #
-        # Not the executable. It is a second, independent copy of the same
-        # engine -- shot_core is a source_set, so its objects link into both
-        # the executable and the library, and the two came out 22 KB apart with
-        # no reference between them -- and node has no use for it now that
-        # rendering is in-process. It still goes out in the .7z on the releases
-        # page, for using the engine without node.
-        #
-        # Which makes the addon the only thing in the package that node can
-        # call, so this fails rather than warns if there is not one. It used to
-        # warn and ship anyway, back when a package without an addon could
-        # still drive the worker pool; there is no pool to fall back to.
-        #
-        # On x64 the addon already exists: the checks step built it against
-        # this job's own library and proved it renders the same bytes as the
-        # executable. On arm64 the checks did not run -- this runner cannot
-        # execute an arm64 binary -- so it is cross-compiled here and ships
-        # having been checked by nothing but the compiler and the linker.
         run: |
           $arch = "${{ env.SHOT_CPU }}"
-          $addon = "shotium/native/build/Release/shotium.node"
-          if (-not (Test-Path $addon)) {
-            $env:SHOT_INCLUDE_DIR = "$PWD/shot"
-            $env:SHOT_LIB_DIR = "$PWD/out/Shot"
-            Push-Location shotium/native
-            pnpm dlx node-gyp@13 rebuild --arch=$arch
-            $built = $LASTEXITCODE -eq 0
-            Pop-Location
-            if (-not $built) { throw "the $arch addon did not cross-compile" }
-          }
-          if (-not (Test-Path $addon)) {
-            throw "no $addon -- the package would install and then be unable to render, since the addon is the only thing in it node can call"
-          }
+          $addon = "out/Shot/shotium.node"
+          if (-not (Test-Path $addon)) { throw "GN did not produce $addon" }
           pnpm package:platform `
             --build out/Shot --os win --arch $arch --dest dist/npm `
             --addon $addon
@@ -675,3 +621,11 @@ jobs:
           path: src/${{ env.SHOT_NPM_TARBALL }}
           if-no-files-found: error
           compression-level: 0
+
+  ffi:
+    needs: build
+    if: ${{ inputs.run_checks }}
+    uses: ./.github/workflows/check-ffi.yml
+    with:
+      runner: ${{ inputs.arch == 'arm64' && 'windows-11-arm' || 'windows-2025' }}
+      artifact: shotium-windows-${{ inputs.arch }}

@@ -1,6 +1,6 @@
 ---
 name: verify-engine
-description: Run every check that needs a built engine and report on the three-level status ladder: check-serve.ts, check-net.ts, check-node.ts, check-daemon.ts, check-daemon-protocol.ts, check-demos.ts reftests, check-bilibili.ts, tests/render. Use for "verify", "did the checks pass", "is it ready to release", and as the last step after any change to shot/, shotium/src, shotium/native or the Blink/Skia/cc code they depend on. CI's checks.yml does not run any of these.
+description: Run every check that needs a built engine and report on the three-level status ladder: check-serve.ts, check-net.ts, check-node.ts, check-daemon.ts, check-daemon-protocol.ts, check-demos.ts reftests, check-bilibili.ts, tests/render. Use for "verify", "did the checks pass", "is it ready to release", and as the last step after any change to shot/, apps/demo/shotium/src, apps/demo/shotium/native or the Blink/Skia/cc code they depend on. CI's checks.yml does not run any of these.
 ---
 
 # Verify the engine
@@ -43,48 +43,36 @@ All three print their own pass/fail counts.
 
 Three preconditions; missing any one produces a convincing false failure:
 
-1. **Rebuild the JS if `shotium/src` changed.** The scripts `require()`
-   `shotium/dist`, which is tsdown output:
+1. **Rebuild the JS if `apps/demo/shotium/src` changed.** The scripts `require()`
+   `apps/demo/shotium/dist`, which is tsdown output:
 
    ```bash
-   cd shotium && pnpm run build && pnpm run check:types
+   cd apps/demo/shotium && pnpm run build && pnpm run check:types
    ```
 
-2. **Rebuild the addon if the C ABI or `shotium.dll` changed.** `binding.gyp`
-   reads `SHOT_INCLUDE_DIR` (default `../../shot`) and `SHOT_LIB_DIR`
-   (default `../../out/Shot`):
+2. **Build the GN addon with the current core.**
 
    ```bash
-   cd shotium/native && SHOT_INCLUDE_DIR=$PWD/../../shot SHOT_LIB_DIR=$PWD/../../out/Shot pnpm dlx node-gyp@13 rebuild
-   cp ../../out/Shot/shotium.dll ../../out/Shot/shotium_data.pak ../../out/Shot/shotium_strings.pak build/Release/
+   pnpm build:engine --target shot_node --log out/Shot/node-build.log
    ```
 
-3. **Check the addon you just built is newer than the change.**
-   `shotium/src/lib/binding.ts` resolves `native/build/Release/shotium.node`
-   *first* and falls back to `@shotkit/shotium-win32-x64` (or the platform's
-   equivalent) only when the local build is absent. So the platform package
-   does not need moving -- and moving it fixes nothing. What does go wrong is
-   the reverse: a *stale* local addon silently wins, and any new ABI call
-   fails with `native.xxx is not a function`. If you see that after changing
-   `shot_api.h`, rebuild the addon (step 2); do not go looking for a package
-   in the way.
+   It uses the pinned SDK from `scripts/node-sdk.ts`; no node-gyp or engine DLL
+   is involved. `binding.ts` prefers `out/Shot/shotium.node` in a checkout,
+   checks its internal binding version, then uses the installed platform package.
+   Verify the addon timestamp and hash before attributing results to a source change.
 
-   ```powershell
-   Get-Item shotium/native/build/Release/shotium.node, out/Shot/shotium.dll |
-       Select-Object Name, Length, LastWriteTime
+3. **Run the native and daemon checks.**
+
+   ```bash
+   pnpm verify:node out/Shot/shotium.exe
+   pnpm verify:node-entry
+   pnpm verify:daemon out/Shot/shotium.exe
+   pnpm verify:daemon-protocol
    ```
 
-Then:
-
-```bash
-PATH="$PWD/out/Shot:$PATH" pnpm verify:node   out/Shot/shotium.exe
-PATH="$PWD/out/Shot:$PATH" pnpm verify:daemon out/Shot/shotium.exe
-pnpm verify:daemon-protocol
-```
-
-`PATH` must include `out/Shot`: the addon links `shotium.dll` and the loader
-reports `ERR_DLOPEN_FAILED` otherwise. `check-node.ts` exercises
-`require()` of the ESM package (needs Node 22.12+ or 20.19+), `screenshot()`
+`check-node-entry.ts` covers FIFO, failed requests, destroy with work in flight,
+Buffer lifetime, Worker termination, natural exit and `UV_THREADPOOL_SIZE=1`.
+`check-node.ts` exercises `require()` of the ESM package (needs Node 22.12+ or 20.19+), `screenshot()`
 returning `{image, stats}`, tiles, options validation, and `start()`/`stop()`
 semantics. `check-daemon.ts` spawns a detached daemon, connects, pipelines
 requests, and stops it. `check-daemon-protocol.ts` needs no engine and checks
@@ -96,7 +84,7 @@ When tiles, full-page rendering, the strip rasteriser or image decoding
 changed:
 
 ```bash
-pnpm verify:bilibili --package shotium
+pnpm verify:bilibili --package apps/demo/shotium
 ```
 
 Two real articles (41k and 46k CSS px tall), every tile, every photo and both

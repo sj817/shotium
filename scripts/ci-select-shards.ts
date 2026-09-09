@@ -5,10 +5,10 @@ import path from 'node:path';
 
 export function changesNeedCompilation(files: string[]): boolean {
   return files.some((file) => !(
-    file === 'shotium/package.json' ||
+    file === 'apps/demo/shotium/package.json' ||
     /^(README(?:\.zh)?\.md|CLAUDE\.md|AGENTS\.md|LICENSE)$/.test(file) ||
     file.startsWith('docs/') ||
-    (file.startsWith('shotium/') && file.endsWith('.md'))
+    (file.startsWith('apps/demo/shotium/') && file.endsWith('.md'))
   ));
 }
 

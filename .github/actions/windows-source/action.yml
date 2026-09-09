@@ -275,6 +275,11 @@ runs:
         }
         (Get-Item third_party/icu/shot/icudtl.dat).LastWriteTimeUtc = [DateTimeOffset]::FromUnixTimeSeconds($when).UtcDateTime
 
+    - name: prepare pinned Node SDK
+      shell: pwsh
+      working-directory: src
+      run: pnpm -C scripts exec tsx node-sdk.ts
+
     - name: gn gen
       shell: pwsh
       working-directory: src

@@ -24,7 +24,9 @@
 #include "base/win/scoped_handle.h"
 
 extern "C" {
-__declspec(dllexport) void* GetHandleVerifier();
+// Shot's final entry points select exports in GN. The CLI and C ABI keep
+// this export; the self-contained Node addon exposes only Node registration.
+void* GetHandleVerifier();
 
 void* GetHandleVerifier() {
   return base::win::internal::ScopedHandleVerifier::Get();

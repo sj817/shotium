@@ -1,7 +1,7 @@
 // Offline regressions for the two original Bilibili article reports.
 //
 //   pnpm verify:bilibili --fixtures-only        # the fixtures reference nothing on the network
-//   pnpm verify:bilibili --package shotium      # and the engine renders them whole
+//   pnpm verify:bilibili --package apps/demo/shotium      # and the engine renders them whole
 //
 // No browser, server or network is needed. The engine half loads the package
 // in this process and exercises screenshot() and screenshotTiles() on two
@@ -215,7 +215,7 @@ async function main(opts: {fixturesOnly: boolean; package: string}): Promise<num
 const cli = cac('check-bilibili');
 cli.command('', 'offline regressions for the two Bilibili article fixtures')
     .option('--fixtures-only', 'only check that the fixtures are complete and offline')
-    .option('--package <dir>', 'the package directory to load', {default: 'shotium'})
+    .option('--package <dir>', 'the package directory to load', {default: 'apps/demo/shotium'})
     .action(async (options: {fixturesOnly?: boolean; package: string}) => {
       try {
         process.exitCode = await main({fixturesOnly: options.fixturesOnly === true, package: options.package});

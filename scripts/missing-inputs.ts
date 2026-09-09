@@ -36,7 +36,7 @@ import {resolve, root} from './lib/repo.ts';
 // The two targets the engine workflows build. Anything not reachable from
 // them is not this project's problem -- the graph also carries Chromium's
 // tests, whose sources were deliberately cut.
-const TARGETS = ['shot', 'shot_c'];
+const TARGETS = ['shot', 'shot_c', 'shot_node'];
 
 function ninjaBinary(): string {
   for (const candidate of ['third_party/ninja/ninja', 'third_party/ninja/ninja.exe']) {

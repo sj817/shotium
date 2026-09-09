@@ -172,7 +172,7 @@ export class Engine {
     // teaching the engine a second way to look. See shot_api.h.
     engineOptions.resourceDir = resolved.resourceDir ?? binding.directory();
 
-    shared = native.create(JSON.stringify(engineOptions));
+    shared = native.create(engineOptions);
     sharedOptions = resolved;
     this.active = true;
     return this.status();
@@ -204,7 +204,7 @@ export class Engine {
         enginePath: binding.directory(),
       };
     }
-    const reported = JSON.parse(binding.load().status(shared)) as
+    const reported = binding.load().status(shared) as
         Omit<StartResult, 'running'|'enginePath'>;
     return {running: this.running, ...reported, enginePath: binding.directory()};
   }
@@ -309,29 +309,14 @@ export class Engine {
     // Chain onto the tail so that captures run one at a time. The catch keeps
     // one failure from poisoning everything queued behind it.
     const result = this.tail.catch(() => {}).then(
-        () => native.capture(handle, JSON.stringify(request)));
+        () => native.capture(handle, request));
     this.tail = result.catch(() => {});
 
-    let captured;
-    try {
-      captured = await result;
-    } catch (error) {
-      // The addon attaches the capture's statistics to the rejection as
-      // unparsed JSON, the same way it hands them back on success -- see
-      // NativeCapture. Parsing them here rather than leaving a string on the
-      // error is what makes `error.stats` the same CaptureStats a successful
-      // call returns, which is the whole point of attaching it: the failure is
-      // the case where the counters explain the most.
-      const withStats = error as Error&{stats?: string | CaptureStats};
-      if (typeof withStats.stats === 'string') {
-        withStats.stats = JSON.parse(withStats.stats) as CaptureStats;
-      }
-      throw error;
-    }
+    const captured = await result;
 
     return {
       image: request.path ? null : captured.image,
-      stats: parseStats(captured.stats),
+      stats: captured.stats ?? emptyStats(),
     };
   }
 
@@ -354,19 +339,10 @@ export class Engine {
 
     // The same queue as capture(): one renderer, one capture at a time.
     const result = this.tail.catch(() => {}).then(
-        () => native.captureTiles(handle, JSON.stringify(request)));
+        () => native.captureTiles(handle, request));
     this.tail = result.catch(() => {});
 
-    let captured;
-    try {
-      captured = await result;
-    } catch (error) {
-      const withStats = error as Error&{stats?: string | CaptureStats};
-      if (typeof withStats.stats === 'string') {
-        withStats.stats = JSON.parse(withStats.stats) as CaptureStats;
-      }
-      throw error;
-    }
+    const captured = await result;
 
     return {
       tiles: captured.tiles.map((tile) => ({
@@ -377,7 +353,7 @@ export class Engine {
         height: tile.height,
         ...(tile.path !== undefined ? {path: tile.path} : {}),
       })),
-      stats: parseStats(captured.stats),
+      stats: captured.stats ?? emptyStats(),
     };
   }
 }
@@ -410,11 +386,4 @@ function emptyStats(): CaptureStats {
   };
 }
 
-// The addon hands statistics over as unparsed JSON -- see NativeCapture -- so
-// this is where the string becomes an object. The daemon's client has them
-// parsed already, from its own response header, and uses emptyStats directly.
-function parseStats(json: string|undefined): CaptureStats {
-  return json ? JSON.parse(json) as CaptureStats : emptyStats();
-}
-
-export {emptyStats, parseStats, sharedHandle};
+export {emptyStats, sharedHandle};

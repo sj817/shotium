@@ -21,9 +21,9 @@
   才用，到时按需迁。
 - 真正常驻的是验证套件、性能工具、`tests/render`、构建循环和 CI 辅助，合计约 6,000 行。
   它们手写的部分主要是四样：PNG 解码与像素比较、进程调用与重试、本地 HTTP 服务、
-  `--serve` 协议帧。前三样各有一个库，第四样已经在 `shotium/src/lib/protocol.ts` 里，
+  `--serve` 协议帧。前三样各有一个库，第四样已经在 `apps/demo/shotium/src/lib/protocol.ts` 里，
   迁过去是复用而不是再写一遍。
-- 工作区暂时只收 `tools/shot`。根目录放 `pnpm-workspace.yaml` 会让 `shotium/` 和
+- 工作区暂时只收 `tools/shot`。根目录放 `pnpm-workspace.yaml` 会让 `apps/demo/shotium/` 和
   `apps/benchmark` 里的 `pnpm install` 变成安装整个工作区，而 shotium 因为六个平台包的版本
   钉在尚未发布的号上，进不了任何带 `--frozen-lockfile` 的工作区。两条都实测过，见第 6 节。
 - 本次已完成：`build.ps1` → `scripts/build-engine.ts`、`link_agent_skills.ps1` →
@@ -70,7 +70,7 @@ CI 直接调用的脚本（次数为 workflow 里出现的次数）：`make_plat
 | 像素比较、差异图 | 逐像素循环 + 手画红黑差异图 | `pixelmatch`（已用）；WPT 式 `maxDifference` 逐通道上限用 10 行循环即可 | `demo_check`、`tests/render`、`pixel_diff` |
 | JPEG / WebP 解码、缩放 | Pillow | `sharp` | `bilibili_check`、`node_perf_images`、`node_perf_report` |
 | 本地 HTTP 服务 | `http.server` + 手写重定向 handler | `node:http`（内置足够） | `net_check` |
-| `--serve` 协议帧 | Python 手写 4 字节长度前缀 | 直接 import `shotium/src/lib/protocol.ts` | `serve_check`、`bilibili_capture` |
+| `--serve` 协议帧 | Python 手写 4 字节长度前缀 | 直接 import `apps/demo/shotium/src/lib/protocol.ts` | `serve_check`、`bilibili_capture` |
 | 通配、递归找文件 | `os.walk`、`Get-ChildItem -Recurse` | `tinyglobby` | `charset_check`、`demo_check`、`tests/render` |
 | 命令行参数 | `argparse`、`param()` | `cac` | 全部 |
 | 并发限流 | `concurrent.futures` | `p-limit` / `p-map` | `check.py`、`ci_stamp_mtimes` |
@@ -173,7 +173,7 @@ CI 直接调用的脚本（次数为 workflow 里出现的次数）：`make_plat
 `checks.yml` 110、`benchmark.yml` 90。里面是 SDK 探测、gclient、缓存、`.7z` 打包、artifact 收集、
 npm 发布顺序、五段 `node -e` 的包检查。目标形状：每段变成 `tools/shot/ci_*.ts` 的一条命令，
 YAML 只剩 `run: pnpm ci:sdk`、`pnpm ci:package`、`pnpm release:collect` 这种一行；
-`checks.yml` 里五段 `node -e` 变成 `shotium/test/*.test.ts`。好处是本机能跑、有类型、
+`checks.yml` 里五段 `node -e` 变成 `apps/demo/shotium/test/*.test.ts`。好处是本机能跑、有类型、
 同一逻辑只在一处。
 
 ## 5. 运行方式
@@ -194,7 +194,7 @@ YAML 只剩 `run: pnpm ci:sdk`、`pnpm ci:package`、`pnpm release:collect` 这�
 `Scope: all N workspace projects`，安装的是工作区，该项目自己一个依赖都不装。
 子项目里放 `.npmrc` 写 `ignore-workspace=true` 不起作用（pnpm 9.15.9），只有命令行
 `--ignore-workspace` 有效。受影响的是 `checks.yml`、`benchmark.yml`、`perf-gate.yml`
-和三个 `engine-*.yml` 里所有在 `shotium/`、`apps/benchmark` 内执行的 `pnpm install`。
+和三个 `engine-*.yml` 里所有在 `apps/demo/shotium/`、`apps/benchmark` 内执行的 `pnpm install`。
 
 **约束二：shotium 进不了带 `--frozen-lockfile` 的工作区。** 它的六个平台包钉在本版本号上，
 版本号提交到 tag 之间这个号在 registry 上不存在。实测：普通 `pnpm install` 会静默跳过解析
@@ -213,8 +213,8 @@ lockfile 与 `package.json` 的 specifier 不一致而失败。所以工作区 l
    目录的三个文件），`cache-dependency-path` 改成根 lockfile，安装改成
    `pnpm install --frozen-lockfile --filter shotium-benchmark`。`benchmark.yml`、
    `perf-gate.yml` 同样。
-3. 所有在 `shotium/` 里的 `pnpm install` 加 `--ignore-workspace`（`checks.yml` 一处、
-   `engine-*.yml` 三处），`shotium/README.md` 和 `CLAUDE.md` 写明本机也要加。
+3. 所有在 `apps/demo/shotium/` 里的 `pnpm install` 加 `--ignore-workspace`（`checks.yml` 一处、
+   `engine-*.yml` 三处），`apps/demo/shotium/README.md` 和 `CLAUDE.md` 写明本机也要加。
 4. `apps/benchmark-site`、`apps/demo` 顺带并入，它们没有特殊安装需求。
 
 代价是 shotium 那一个 flag；收益是脚本和三个 app 共用一份 lockfile、`pnpm -r` 一次跑完

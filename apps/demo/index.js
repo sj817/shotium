@@ -2,7 +2,7 @@ import { once } from "node:events";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import express from "express";
-import shotium from "@shotkit/shotium";
+import shotium from "./shotium/dist/index.js";
 
 const demoDir = path.dirname(fileURLToPath(import.meta.url));
 const siteDir = path.resolve(demoDir, "..", "genshin-faruzan-profile-card");

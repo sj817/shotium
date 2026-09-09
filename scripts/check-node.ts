@@ -13,11 +13,8 @@
 //
 // The argument is the *executable*, which is what the other suites take and
 // what this one compares against -- it is not what the package loads. The
-// library, the addon and the resource packs are found where
-// shotium/src/lib/binding.ts looks for them, and the build directory the
-// executable sits in is where the packs are. PATH must contain that directory
-// (the addon links shotium.dll); without it the load fails with
-// ERR_DLOPEN_FAILED. Relative paths are resolved against the repository root.
+// GN addon is loaded from out/Shot in a checkout. An installed platform
+// package holds the addon and resource packs together; it needs no engine DLL.
 
 import assert from 'node:assert';
 import {execFileSync} from 'node:child_process';
@@ -31,7 +28,7 @@ import {cac} from 'cac';
 import {resolve} from './lib/repo.ts';
 import {Checks, sha256 as sha} from './lib/report.ts';
 
-import type * as Shotium from '../shotium/src/index.ts';
+import type * as Shotium from '../apps/demo/shotium/src/index.ts';
 
 type Package = typeof Shotium & {default: typeof Shotium};
 
@@ -47,7 +44,7 @@ async function main(exeArg: string): Promise<number> {
   // require() of an ES module: node builds the namespace and this is what the
   // caller sees. If the exports drift -- a rename, a default that is not the
   // same object as the names -- it shows up here and nowhere else.
-  const shotium = createRequire(import.meta.url)(resolve('shotium')) as Package;
+  const shotium = createRequire(import.meta.url)(resolve('apps/demo/shotium')) as Package;
 
   console.log(`shotium package, against ${exe}\n`);
   console.log('== what a CommonJS caller gets ==');
@@ -70,7 +67,7 @@ async function main(exeArg: string): Promise<number> {
   // node_modules next to the build under test, and running this suite against
   // the last release instead of the working tree is a failure that looks like
   // a code bug -- an entry point added since the release is "not a function".
-  const localAddon = resolve('shotium', 'native', 'build', 'Release', 'shotium.node');
+  const localAddon = resolve('out', 'Shot', 'shotium.node');
   check(!existsSync(localAddon) || path.resolve(came.enginePath || '') === path.dirname(localAddon),
         'and it is the addon built from this checkout', `${came.enginePath}`);
   const {image: first, stats} = await shotium.screenshot(request);

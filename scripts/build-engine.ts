@@ -1,4 +1,4 @@
-// Build //shot:shot or //shot:shot_c into out/Shot, absorbing the two failure
+// Build //shot:shot or //shot:shot_c / //shot:shot_node into out/Shot, absorbing the two failure
 // modes that are not build errors.
 //
 //   1. `gn gen` evaluates several Windows toolchain variants in parallel and
@@ -16,7 +16,7 @@
 // Usage (from anywhere in the repository):
 //
 //   pnpm build:engine                         # shot: shotium.exe
-//   pnpm build:engine --target shot_c         # shotium.dll, which the addon links
+//   pnpm build:engine --target shot_c         # independent C ABI library
 //   pnpm build:engine --jobs 16 --log out/Shot/build.log
 //   pnpm build:engine --gen-only             # does the graph still parse?
 //
@@ -41,6 +41,7 @@ import {execa} from 'execa';
 import pRetry, {AbortError} from 'p-retry';
 import pc from 'picocolors';
 
+import {prepareNodeSdk} from './node-sdk.ts';
 import {PRESETS, repack} from './icu-repack.ts';
 import {formatClasses} from './lib/ninja-log.ts';
 import {pruneStaleDepfiles} from './prune-stale-depfiles.ts';
@@ -55,7 +56,7 @@ const gn = path.join(
 const python = process.platform === 'win32' ? 'python' : 'python3';
 
 const cli = cac('build-engine')
-    .option('--target <name>', 'GN target: shot (shotium.exe) or shot_c (shotium.dll)', {default: 'shot'})
+    .option('--target <name>', 'GN target: shot (shotium.exe), shot_c (shotium.dll) or shot_node (shotium.node)', {default: 'shot'})
     .option('--jobs <n>', 'ninja -j; a positive integer', {default: 12})
     .option(
         '--log <path>',
@@ -190,14 +191,15 @@ async function ninja(): Promise<number> {
 }
 
 async function main(): Promise<number> {
-  if (!['shot', 'shot_c'].includes(target)) {
-    say(pc.red(`unknown target ${target}; expected shot or shot_c`));
+  if (!['shot', 'shot_c', 'shot_node'].includes(target)) {
+    say(pc.red(`unknown target ${target}; expected shot, shot_c or shot_node`));
     return 2;
   }
   if (!Number.isInteger(jobs) || jobs < 1) {
     say(pc.red(`--jobs takes a positive integer; got ${JSON.stringify(options.jobs)}`));
     return 2;
   }
+  if (target === 'shot_node') await prepareNodeSdk();
   if (!(await repackIcu())) return 1;
   if (!(await gnGen())) return 1;
   // A graph check after a cut wants the retry too -- running gn by hand is

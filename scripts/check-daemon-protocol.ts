@@ -14,10 +14,10 @@ import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 
-import {encodeFrame} from '../shotium/src/lib/protocol.ts';
+import {encodeFrame} from '../apps/demo/shotium/src/lib/protocol.ts';
 import {resolve} from './lib/repo.ts';
 
-import type * as Shotium from '../shotium/src/index.ts';
+import type * as Shotium from '../apps/demo/shotium/src/index.ts';
 
 const PROTOCOL_VERSION = 2;
 
@@ -77,7 +77,7 @@ async function fakeDaemon(endpoint: string, readStatus: () => Status) {
 }
 
 async function main(): Promise<void> {
-  const shotium = createRequire(import.meta.url)(resolve('shotium')) as typeof Shotium;
+  const shotium = createRequire(import.meta.url)(resolve('apps/demo/shotium')) as typeof Shotium;
   const oldEnvironmentEndpoint = process.env.SHOTIUM_ENDPOINT;
   delete process.env.SHOTIUM_ENDPOINT;
 

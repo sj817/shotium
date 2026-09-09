@@ -15,7 +15,7 @@
 //
 //   pnpm verify:daemon out/Shot/shotium.exe
 //
-// PATH must contain the build directory (the addon links shotium.dll).
+// The GN addon loads from out/Shot; it has no independent engine DLL dependency.
 // Relative paths are resolved against the repository root.
 
 import {execFileSync} from 'node:child_process';
@@ -30,7 +30,7 @@ import {cac} from 'cac';
 import {resolve, sleep} from './lib/repo.ts';
 import {Checks, sha256} from './lib/report.ts';
 
-import type * as Shotium from '../shotium/src/index.ts';
+import type * as Shotium from '../apps/demo/shotium/src/index.ts';
 
 const PROTOCOL_VERSION = 2;
 
@@ -41,8 +41,8 @@ async function main(exeArg: string): Promise<number> {
   // this.
   const buildDir = path.dirname(exe);
   const corpus = resolve('shot/testdata/render_corpus.html');
-  const entry = pathToFileURL(resolve('shotium/dist/index.js')).href;
-  const shotium = createRequire(import.meta.url)(resolve('shotium')) as typeof Shotium;
+  const entry = pathToFileURL(resolve('apps/demo/shotium/dist/index.js')).href;
+  const shotium = createRequire(import.meta.url)(resolve('apps/demo/shotium')) as typeof Shotium;
   const checks = new Checks();
   const check = checks.check.bind(checks);
 

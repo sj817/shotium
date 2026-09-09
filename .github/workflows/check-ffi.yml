@@ -1,0 +1,85 @@
+name: check-ffi
+
+on:
+  workflow_call:
+    inputs:
+      runner:
+        type: string
+        required: true
+      artifact:
+        type: string
+        required: true
+
+jobs:
+  examples:
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 9.15.9
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.25.3'
+          cache-dependency-path: apps/go/go.sum
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '8.0.x'
+      - uses: actions/setup-java@v6
+        with:
+          distribution: ${{ runner.os == 'Windows' && 'microsoft' || 'temurin' }}
+          java-version: '21'
+      - name: Rust toolchain
+        shell: bash
+        run: |
+          toolchain=stable
+          if [[ "$RUNNER_OS" == "Windows" && "$RUNNER_ARCH" == "ARM64" ]]; then toolchain=stable-aarch64-pc-windows-msvc; fi
+          rustup toolchain install "$toolchain" --profile minimal
+          rustup default "$toolchain"
+      - uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.artifact }}
+          path: out/ffi-archive
+      - uses: actions/download-artifact@v8
+        with:
+          name: npm-${{ inputs.artifact }}
+          path: out/ffi-npm
+      - name: tooling and archive extraction
+        shell: bash
+        env:
+          ARTIFACT: ${{ inputs.artifact }}
+        run: |
+          pnpm -C scripts install --frozen-lockfile
+          if ! command -v 7z >/dev/null; then
+            if [[ "$RUNNER_OS" == "macOS" ]]; then brew install sevenzip;
+            elif [[ "$RUNNER_OS" == "Linux" ]]; then sudo apt-get update && sudo apt-get install -y p7zip-full;
+            fi
+          fi
+          7z x out/ffi-archive/*.7z -oout/ffi-native
+          test -f "out/ffi-native/$ARTIFACT/shot_api.h"
+          test -f "out/ffi-native/$ARTIFACT/C_ABI.md"
+          pnpm -C apps/demo/shotium install --no-lockfile
+          pnpm -C apps/demo/shotium run build
+      - name: five language runtimes against the extracted Release
+        shell: bash
+        env:
+          ARTIFACT: ${{ inputs.artifact }}
+        run: pnpm verify:ffi --library-dir "out/ffi-native/$ARTIFACT"
+      - name: clean npm installation without the C ABI library
+        shell: bash
+        run: pnpm verify:delivery --platform-dir out/ffi-npm
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: ffi-evidence-${{ inputs.artifact }}
+          path: |
+            out/ffi-check/
+            out/delivery-check/report.json
+          if-no-files-found: warn

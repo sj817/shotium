@@ -268,7 +268,7 @@ GN 导出 9164 个目标，其中从 shot/shot_c 构建可达 2907 个。无可�
 | `scripts/` | 74 | 0 | 0 | 0 | T 维护工具 |
 | `services/` | 597 | 390 | 38 | 524 | K + A/B/C 服务契约 |
 | `shot/` | 642 | 31 | 1 | 6 | K/T 产品/夹具 |
-| `shotium/` | 21 | 1 | 0 | 0 | K/T API/addon/daemon |
+| `apps/demo/shotium/` | 21 | 1 | 0 | 0 | K/T API/addon/daemon |
 | `skia/` | 92 | 76 | 4 | 58 | K + B/C 绘图封装 |
 | `sql/` | 36 | 34 | 2 | 2 | A/B SQL依赖遗漏 |
 | `storage/` | 12 | 9 | 3 | 1 | B 浏览器存储类型 |

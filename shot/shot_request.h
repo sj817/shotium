@@ -11,6 +11,7 @@
 #include <string_view>
 
 #include "base/types/expected.h"
+#include "base/values.h"
 
 namespace shot {
 
@@ -117,6 +118,10 @@ struct ScreenshotRequest {
 // the sender may not. A request that states the field wins either way.
 base::expected<ScreenshotRequest, std::string> ParseScreenshotRequest(
     std::string_view json,
+    bool default_allow_file_access = false);
+
+base::expected<ScreenshotRequest, std::string> ReadScreenshotRequest(
+    const base::DictValue& dict,
     bool default_allow_file_access = false);
 
 }  // namespace shot

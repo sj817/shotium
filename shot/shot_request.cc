@@ -99,8 +99,12 @@ base::expected<ScreenshotRequest, std::string> ParseScreenshotRequest(
   if (!parsed) {
     return base::unexpected("request is not a JSON object");
   }
-  const base::DictValue& dict = *parsed;
+  return ReadScreenshotRequest(*parsed, default_allow_file_access);
+}
 
+base::expected<ScreenshotRequest, std::string> ReadScreenshotRequest(
+    const base::DictValue& dict,
+    bool default_allow_file_access) {
   if (dict.Find("pngCompression")) {
     return base::unexpected(
         "pngCompression was removed; PNG always uses the fast encoder");
@@ -313,11 +317,9 @@ base::expected<ScreenshotRequest, std::string> ParseScreenshotRequest(
     if (!height->has_value()) {
       return base::unexpected("tile.height is required");
     }
-    if (**height < kMinimumDimension ||
-        **height > kMaximumTileHeight) {
+    if (**height < kMinimumDimension || **height > kMaximumTileHeight) {
       return base::unexpected(
-          OutOfRange("tile.height", kMinimumDimension,
-                     kMaximumTileHeight));
+          OutOfRange("tile.height", kMinimumDimension, kMaximumTileHeight));
     }
     request.tile = Tile{**height};
   }
@@ -326,7 +328,8 @@ base::expected<ScreenshotRequest, std::string> ParseScreenshotRequest(
   // alternatives: silently dropping the field, or writing a JPEG whose
   // "transparent" areas came out black.
   if (request.quality.has_value() && request.type == "png") {
-    return base::unexpected("quality applies to jpeg and webp; png is lossless");
+    return base::unexpected(
+        "quality applies to jpeg and webp; png is lossless");
   }
   if (request.omit_background && request.type == "jpeg") {
     return base::unexpected(

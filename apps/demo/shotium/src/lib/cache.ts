@@ -211,10 +211,8 @@ export class Cache {
         continue;
       }
       const json = await native.cache(
-          this.handleFor(), /*clearing=*/ false, JSON.stringify({
-            cacheDir: dir,
-          }));
-      const listed = JSON.parse(json) as Array<Omit<CacheEntry, 'dir'>>;
+          this.handleFor(), /*clearing=*/ false, {cacheDir: dir});
+      const listed = json as Array<Omit<CacheEntry, 'dir'>>;
       for (const entry of listed) {
         entries.push({...entry, dir});
       }
@@ -277,8 +275,8 @@ export class Cache {
       if (patterns.length > 0) {
         const json = await native.cache(
             this.handleFor(), /*clearing=*/ false,
-            JSON.stringify({cacheDir: dir}));
-        const listed = JSON.parse(json) as Array<Omit<CacheEntry, 'dir'>>;
+            {cacheDir: dir});
+        const listed = json as Array<Omit<CacheEntry, 'dir'>>;
         const urls =
             listed.filter((entry) => matchesAny(entry.url, patterns))
                 .map((entry) => entry.url);
@@ -302,9 +300,9 @@ export class Cache {
       }
 
       const json = await native.cache(
-          this.handleFor(), /*clearing=*/ true, JSON.stringify(request));
+          this.handleFor(), /*clearing=*/ true, request);
       results.push({
-        ...(JSON.parse(json) as Omit<CacheClearResult, 'dir'>),
+        ...(json as Omit<CacheClearResult, 'dir'>),
         dir,
       });
     }

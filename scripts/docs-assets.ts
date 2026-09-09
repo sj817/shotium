@@ -31,7 +31,7 @@ import {pathToFileURL} from 'node:url';
 
 import {assetsDir, demoDir, findOnPath, isWindows, prepareWorkspace, repoRoot, requireWorkspaceModule, run, runDir} from './lib/docs-workspace.ts';
 
-import type * as Shotium from '../shotium/src/index.ts';
+import type * as Shotium from '../apps/demo/shotium/src/index.ts';
 
 const exe = isWindows ? '.exe' : '';
 const CLI_TRANSCRIPT = path.join(demoDir, 'cli-session.txt');

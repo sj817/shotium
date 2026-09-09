@@ -79,6 +79,8 @@ source_set("shot_core") {
     "shot_capture.h",
     "shot_capture_context.cc",
     "shot_capture_context.h",
+    "shot_engine.cc",
+    "shot_engine.h",
     "shot_fetch.cc",
     "shot_fetch.h",
     "shot_image_stream.cc",
@@ -197,6 +199,7 @@ executable("shot") {
 
   if (is_win) {
     deps += [ "//build/win:default_exe_manifest" ]
+    ldflags += [ "/EXPORT:GetHandleVerifier" ]
   }
 }
 
@@ -232,28 +235,57 @@ shared_library("shot_c") {
   # Three linkers, three spellings of the same instruction. Windows exports
   # nothing it was not asked to, so __declspec(dllexport) in shot_api.h is the
   # whole of it there.
+  if (is_win) {
+    ldflags += [ "/EXPORT:GetHandleVerifier" ]
+  }
   if (is_apple) {
     inputs = [ "shot_api.exports" ]
     ldflags += [
       "-Wl,-exported_symbols_list," +
           rebase_path("shot_api.exports", root_build_dir),
 
-      # And where the addon should look for it. The .node ships in the same
-      # directory as this library and is linked with `-rpath @loader_path`,
-      # which only resolves if the library's own install_name is @rpath-
-      # relative. ld64's default is the path it was handed on the command
-      # line -- `./libshotium.dylib` -- so dyld looks in the process's working
-      # directory and reports "Library not loaded: ./libshotium.dylib".
-      #
-      # GN's Apple toolchain passes -install_name itself, but only in a
-      # component build (build/toolchain/apple/toolchain.gni), and this is not
-      # one. Linux needs no equivalent: $ORIGIN on the .node's DT_RUNPATH is
-      # resolved against the .node, not against a name the library carries.
+      # Preserve an rpath-relative install name for existing C ABI clients.
+      # The Node entry now links the core itself and does not load this DSO.
       "-Wl,-install_name,@rpath/lib${output_name}.dylib",
     ]
   } else if (!is_win) {
     inputs = [ "shot_api.map" ]
     ldflags += [ "-Wl,--version-script=" +
                  rebase_path("shot_api.map", root_build_dir) ]
+  }
+}
+
+# The Node entry uses exactly the same toolchain and objects as the C adapter.
+# The Node SDK is prepared by scripts/node-sdk.ts before generation/building.
+shared_library("shot_node") {
+  output_name = "shotium"
+  output_extension = "node"
+  output_prefix_override = true
+  sources = [ "//apps/demo/shotium/native/binding.cc" ]
+  defines = [ "NAPI_VERSION=8" ]
+  include_dirs = [ "//out/node-sdk/node-v22.20.0/include/node" ]
+  deps = [ ":shot_core" ]
+  data_deps = [ ":shot_resources" ]
+  ldflags = shot_link_flags
+  if (is_win) {
+    sources += [ "//apps/demo/shotium/native/delay_load.cc" ]
+    libs = [
+      "//out/node-sdk/win-${current_cpu}/node-api.lib",
+      "delayimp.lib",
+    ]
+    ldflags += [ "/DELAYLOAD:node.exe" ]
+  } else if (is_apple) {
+    inputs = [ "shot_node.exports" ]
+    ldflags += [
+      "-Wl,-undefined,dynamic_lookup",
+      "-Wl,-exported_symbols_list," +
+          rebase_path("shot_node.exports", root_build_dir),
+    ]
+  } else {
+    inputs = [ "shot_node.map" ]
+    # Node-API is supplied by the executable that loads this addon.
+    configs -= [ "//build/config/compiler:no_unresolved_symbols" ]
+    ldflags += [ "-Wl,--version-script=" +
+                 rebase_path("shot_node.map", root_build_dir) ]
   }
 }

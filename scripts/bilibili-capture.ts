@@ -4,7 +4,7 @@
 //
 //   pnpm bilibili:capture shotium out/bilibili
 //
-// The first argument is the package directory to load (a checkout's shotium/,
+// The first argument is the package directory to load (a checkout's apps/demo/shotium/,
 // or an installed @shotkit/shotium); the second is where the images and
 // captures.json go. Relative paths are resolved against the repository root.
 
@@ -17,8 +17,8 @@ import {cac} from 'cac';
 
 import {libraryName, resolve} from './lib/repo.ts';
 
-import type * as Shotium from '../shotium/src/index.ts';
-import type {CaptureStats, ScreenshotTile} from '../shotium/src/types.ts';
+import type * as Shotium from '../apps/demo/shotium/src/index.ts';
+import type {CaptureStats, ScreenshotTile} from '../apps/demo/shotium/src/types.ts';
 
 export const FIXTURES = resolve('shot/testdata/bilibili');
 
@@ -98,7 +98,9 @@ export async function capture(packageDir: string, output: string): Promise<Captu
       }
       results.pages.push({id, fullPath, stats: full.stats, tileStats: tiled.stats, tiles, probes});
     }
-    const library = path.join(results.enginePath, libraryName);
+    const addon = path.join(results.enginePath, 'shotium.node');
+    const direct = (createRequire(import.meta.url)(addon) as {bindingVersion?: number}).bindingVersion === 1;
+    const library = direct ? addon : path.join(results.enginePath, libraryName);
     results.librarySha256 = createHash('sha256').update(readFileSync(library)).digest('hex');
     writeFileSync(path.join(output, 'captures.json'), JSON.stringify(results, null, 2));
   } finally {

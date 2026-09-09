@@ -1,6 +1,6 @@
 {
   "name": "@shotkit/shotium",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Static screenshots from a stripped Chromium: DOM, CSS, layout, paint, no JavaScript engine.",
   "keywords": [
     "screenshot",
@@ -14,7 +14,8 @@
   "bugs": "https://github.com/sj817/shotium/issues",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sj817/shotium.git"
+    "url": "git+https://github.com/sj817/shotium.git",
+    "directory": "apps/demo/shotium"
   },
   "type": "module",
   "packageManager": "pnpm@9.15.9",
@@ -31,20 +32,19 @@
     "dist/",
     "src/",
     "native/binding.cc",
-    "native/binding.gyp",
-    "native/stage_header.js",
+    "native/delay_load.cc",
     "README.md"
   ],
   "engines": {
     "node": ">=18"
   },
   "optionalDependencies": {
-    "@shotkit/shotium-darwin-arm64": "0.6.0",
-    "@shotkit/shotium-darwin-x64": "0.6.0",
-    "@shotkit/shotium-linux-arm64": "0.6.0",
-    "@shotkit/shotium-linux-x64": "0.6.0",
-    "@shotkit/shotium-win32-arm64": "0.6.0",
-    "@shotkit/shotium-win32-x64": "0.6.0"
+    "@shotkit/shotium-darwin-arm64": "0.7.0",
+    "@shotkit/shotium-darwin-x64": "0.7.0",
+    "@shotkit/shotium-linux-arm64": "0.7.0",
+    "@shotkit/shotium-linux-x64": "0.7.0",
+    "@shotkit/shotium-win32-arm64": "0.7.0",
+    "@shotkit/shotium-win32-x64": "0.7.0"
   },
   "scripts": {
     "build": "tsdown",

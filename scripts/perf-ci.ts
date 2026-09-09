@@ -69,8 +69,8 @@ async function stage(downloadArg: string, destinationArg: string): Promise<void>
   if (tarballs.length !== 1) throw new Error('Expected exactly one platform tarball');
   if (existsSync(destination)) throw new Error('Candidate destination must be new');
   mkdirSync(destination, {recursive: true});
-  copyFileSync(resolve('shotium/package.json'), path.join(destination, 'package.json'));
-  cpSync(resolve('shotium/dist'), path.join(destination, 'dist'), {recursive: true});
+  copyFileSync(resolve('apps/demo/shotium/package.json'), path.join(destination, 'package.json'));
+  cpSync(resolve('apps/demo/shotium/dist'), path.join(destination, 'dist'), {recursive: true});
   const platform = `${process.platform}-${process.arch}`;
   const platformDirectory = path.join(destination, 'node_modules/@shotkit', `shotium-${platform}`);
   mkdirSync(platformDirectory, {recursive: true});

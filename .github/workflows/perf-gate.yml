@@ -30,10 +30,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          sparse-checkout: shotium/package.json
+          sparse-checkout: apps/demo/shotium/package.json
           sparse-checkout-cone-mode: false
       - id: version
-        run: echo "version=$(jq -r .version shotium/package.json)" >> "$GITHUB_OUTPUT"
+        run: echo "version=$(jq -r .version apps/demo/shotium/package.json)" >> "$GITHUB_OUTPUT"
 
   resolve:
     name: "resolve: shotium-v${{ needs.meta.outputs.version }}"
@@ -91,7 +91,7 @@ jobs:
         working-directory: scripts
         run: pnpm install --frozen-lockfile
       - name: Build the candidate JavaScript
-        working-directory: shotium
+        working-directory: apps/demo/shotium
         run: |
           pnpm install --no-lockfile
           pnpm run build

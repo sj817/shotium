@@ -6,6 +6,7 @@
 
 <p align="center">
   <a href="https://www.npmjs.com/package/@shotkit/shotium"><img src="https://img.shields.io/npm/v/@shotkit/shotium.svg?label=npm" alt="npm package"></a>
+  <a href="https://chromium.googlesource.com/chromium/src/+/refs/tags/155.0.8048.0"><img src="https://img.shields.io/badge/chromium%20baseline-155.0.8048.0-4285F4?logo=googlechrome&logoColor=white" alt="Chromium baseline"></a>
   <a href="https://github.com/sj817/shotium/releases"><img src="https://img.shields.io/badge/platforms-win%20%7C%20mac%20%7C%20linux%20%C2%B7%20x64%20%7C%20arm64-4c8.svg" alt="supported platforms"></a>
   <a href="https://sj817.github.io/shotium/"><img src="https://img.shields.io/badge/benchmark-vs%20Puppeteer%20%26%20Playwright-orange.svg" alt="benchmarks"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-BSD--3--Clause-blue.svg" alt="license"></a>
@@ -20,19 +21,20 @@
        alt="终端录屏演示：安装 @shotkit/shotium 并在 Node.js 中调用 shotium 对 card.html 进行渲染截图，展示冷启动与预热后的渲染耗时、产物体积及最终登机牌效果。">
 </p>
 
-**shotium** 将 Blink 排版引擎、Skia 图形库以及 Chromium 的 `//net` 网络栈深度精简并编译为一个约 22 MB 的 npm 包。它严格遵循 Chromium 标准排版静态 HTML 和 CSS，通过 CPU 进行光栅化并在当前宿主进程内直接返回 PNG、JPEG 或 WebP 格式的图像数据。
+**shotium** 将 Blink 排版引擎、Skia 图形库以及 Chromium 的 `//net` 网络栈深度精简并编译为一个仅约 22 MB 的原生引擎。它严格遵循 Chromium 标准排版静态 HTML 和 CSS，通过 CPU 进行光栅化并在当前宿主进程内直接返回 PNG、JPEG 或 WebP 格式的图像数据。
 
-由于在底层构建中完全剥离了 V8 JavaScript 引擎、浏览器外壳（`//content`）、GPU 进程与 DevTools 协议，shotium 无需下载庞大的无头浏览器，消除了进程拉起、IPC 序列化通信及僵尸进程回收的全部开销。
+由于在底层构建中完全剥离了 V8 JavaScript 引擎、浏览器外壳（`//content`）、GPU 进程与 DevTools 远程协议，shotium 彻底消除了浏览器拉起耗时、IPC 序列化开销与孤儿僵尸进程。
 
 ---
 
 ## 核心优势
 
-- **极速渲染，性能大幅超越 Headless Chrome**：在 GitHub 标准 linux-x64 CI 环境下，从进程启动到生成首张 PNG 仅需 **53 ms**（Playwright headless shell 需 256 ms，headless Chrome 需 410~471 ms）；预热后单张截图延迟低至 **25 ms**（对比 123~157 ms）。（详见 [性能基准](#性能基准)）
-- **零额外依赖，开箱即用**：执行 `npm install` 自动拉取当前操作系统（Windows / macOS / Linux）与架构（x64 / arm64）对应的预编译动态库。引擎通过 Node-API 直接加载至当前进程，无需安装系统级浏览器或管理 WebSocket 管道，彻底告别浏览器崩溃导致的内存泄漏与僵尸进程。
-- **百分之百 Chromium CSS 渲染一致性**：完整支持 CSS Grid、Flexbox、`@font-face`、SVG、渐变、阴影、滤镜与 CSS 变量。排版引擎与 Chrome 保持完全一致；文本光栅化采用固定伽马曲线的灰度抗锯齿，确保同一文档在不同操作系统上输出的像素逐字节完全一致。
-- **极致的内存控制**：单实例活跃渲染时工作集内存仅占用约 **50 ~ 70 MiB**（私有内存约 40 MiB；相比之下 Headless 浏览器常态占用 650 MiB 至 1.3 GiB），空闲常驻守护进程的引擎内核仅占用约 **3 ~ 10 MiB**。
-- **灵活的部署形态**：支持常驻服务进程内嵌入（In-Process）、短任务与 CLI 专用的预热守护进程（Resident Daemon）、无 Node.js 依赖的独立单文件 CLI 工具，以及面向 Rust / Go / Python / C++ 的标准 C ABI。
+- **Chromium 155 基准渲染精度**：保留的 Blink DOM/CSS 排版引擎、Skia 图形库与 `//net` 网络栈深度同步至上游 Chromium **`155.0.8048.0`**。全面支持现代 CSS Grid、Flexbox、容器查询 (Container Queries)、`@font-face`、SVG、CSS 变量、阴影与渐变，保证 100% 对齐 Chrome 真实视觉呈现。
+- **可审计的跨引擎性能基准**：通过官方六平台自动化 CI 原生运行对比 Shotium、Puppeteer 与 Playwright 各变体。所有数据必须具备完整六平台分片与可核验凭证方可发布，异常与噪声单元格清晰标记（详见 [性能基准](#性能基准)）。
+- **零额外依赖，开箱即用**：`npm install @shotkit/shotium` 自动拉取当前操作系统（Windows / macOS / Linux）与架构（x64 / arm64）对应的预编译二进制扩展。引擎通过 Node-API 直接加载至宿主进程，无需配置无头浏览器，告别内存泄漏与僵尸进程。
+- **确定性文字排版与跨平台一致性**：排版引擎与 Chrome 保持完全一致；文本光栅化采用固定伽马曲线的灰度抗锯齿，确保同一文档在不同操作系统上输出的像素逐字节完全一致。
+- **透明可查的内存占用**：测试系统全程追踪完整进程树、物理 RSS 峰值与常驻漂移。单实例活跃渲染工作集仅约 **50 ~ 70 MB**（私有内存约 15 MB，远低于常规 Headless 浏览器的数百 MB 至数 GB）。
+- **多语言与多形态生态**：支持常驻服务进程内嵌入（Node.js `@shotkit/shotium`）、短任务毫秒响应的常驻守护进程（Resident Daemon）、面向 Shell 脚本与管道的单文件独立 CLI，以及面向 Rust / Go / C++ 的标准纯 C ABI；提供 Go、Python、Rust、C#、Java 源码示例，暂不单独发布语言包。
 
 ---
 
@@ -41,69 +43,35 @@
 ### 1. 安装
 
 ```bash
-# npm
-npm install @shotkit/shotium
-
-# pnpm / yarn / bun
+# Node.js / TypeScript 环境 (npm, pnpm, yarn, bun)
 pnpm add @shotkit/shotium
-yarn add @shotkit/shotium
-bun add @shotkit/shotium
 ```
 
-### 2. Node.js / TypeScript 代码示例
+### 2. Node.js 极速调用示例
 
-以下为演示录屏中实际运行的代码 [`docs/demo/card.mjs`](docs/demo/card.mjs)：
-
-<p align="center">
-  <img src="docs/assets/example-node.webp" width="820"
-       alt="Node.js 示例代码截图：引入 shotium 与 screenshot，启动引擎并对 card.html 执行截图，输出渲染耗时并安全退出。">
-</p>
-
-<details>
-<summary>展开查看完整代码</summary>
+无需繁琐的启动配置，直接调用 `screenshot()` 即可开箱即用：
 
 ```ts
-import { statSync } from 'node:fs';
-import shotium, { screenshot } from '@shotkit/shotium';
+import { writeFileSync } from 'node:fs';
+import { screenshot } from '@shotkit/shotium';
 
-// 启动引擎（单进程全局单例，幂等调用）
-shotium.start();
+// 直接截取在线 URL 或本地 HTML 文件；引擎在首次调用时自动启动
+const { image, stats } = await screenshot({
+  file: 'https://example.com',
+  viewport: { width: 1280, height: 720 },
+  type: 'png',
+});
 
-function shoot() {
-  return screenshot({
-    file: 'card.html',        // 支持 URL、本地相对/绝对路径或 file://
-    viewport: { width: 720, height: 380 },
-    scale: 2,                 // 设备像素比 (DPR)
-    type: 'png',
-    path: 'card.png',         // 指定输出文件路径；若为空则返回 image Buffer
-  });
-}
-
-// 首次调用包含引擎子系统与字体缓存预热，后续调用处于预热状态
-for (const pass of ['cold', 'warm']) {
-  const { render, total } = (await shoot()).stats.timing;
-  console.log(`${pass}  render ${render.toFixed(1)} ms  total ${total.toFixed(1)} ms`);
-}
-
-const kb = (statSync('card.png').size / 1024).toFixed(1);
-console.log(`card.png  1440x760  ${kb} KB`);
-
-// 优雅关闭引擎
-await shotium.stop();
+console.log(`渲染耗时: ${stats.timing.render.toFixed(1)}ms (总耗时: ${stats.timing.total.toFixed(1)}ms)`);
+writeFileSync('example.png', image!);
 ```
 
-</details>
-
-输入文件 [`docs/demo/card.html`](docs/demo/card.html) 经过 Blink 与 Skia 处理后输出的图像效果：
-
-<p align="center">
-  <img src="docs/assets/card.webp" width="620"
-       alt="渲染输出效果：由 shotium 渲染生成的高保真登机牌，右侧包含可直接扫码跳转 GitHub 主页的矢量二维码。">
-</p>
+> 📖 **想要查阅完整的 Node.js / TypeScript 开发手册？**
+> 请直接参阅 **[Node.js 专属文档 (`apps/demo/shotium/README.md`)](apps/demo/shotium/README.md)**，包含 Express/Fastify 服务端实战、动态 HTML 渲染方案、本地文件访问权限（`allowFileAccess`）、超长切片落盘以及完备的 TypeScript 类型参考。
 
 ### 3. 独立命令行工具 (CLI)
 
-在无需安装 Node.js 的生产环境或 Shell 脚本中，可以直接使用官方发布的独立可执行文件从文件路径、URL 或标准输入（`stdin`）读取内容：
+在无需安装 Node.js 的生产环境或 Shell 脚本中，可以直接使用官方发布的独立单文件可执行文件（从文件路径、URL 或标准输入 `stdin` 读取）：
 
 <p align="center">
   <img src="docs/assets/example-cli.webp" width="820"
@@ -114,36 +82,14 @@ await shotium.stop();
 
 ## 性能基准
 
-以下测试数据均采集自官方[六平台自动化 CI 基准测试](https://sj817.github.io/shotium/)。所有对比方案（shotium、Puppeteer、Playwright）均在完全相同的 GitHub Runner 硬件配置下执行相同场景，基准数据归档于 [`benchmark-results/`](benchmark-results/LATEST.md)。
+基准测试数据全部采集自官方[六平台自动化 CI 基准测试矩阵](https://sj817.github.io/shotium/)。Shotium 与 Puppeteer/Playwright 的 Chrome 及 headless-shell 变体在相同的 GitHub Runner 硬件配置上执行完全相同的测试场景。测试结果必须同时满足“六平台分片全量完成、凭证完备、无阻塞性框架或 Shotium 故障”方可录入排行榜。出现噪声或偶发失败的单元格会予以明确标注，避免由于个别竞品环境故障抹杀其他维度的真实对比。最新发布的基准报告与原始数据归档可从 [`benchmark-results/LATEST.md`](benchmark-results/LATEST.md) 获取。本文档遵循工程严谨原则，不在文档中固化未经核验的数值。
 
-下表记录了 0.3.3 版本在 `linux-x64` 环境下的中位数耗时（p50，单位：毫秒，数值越小越优）：
+### 基准测试原则与方法
 
-| 测试场景 | shotium | Playwright (headless shell) | Puppeteer (headless shell) | Playwright (Chrome) | Puppeteer (Chrome) |
-|---|--:|--:|--:|--:|--:|
-| 进程启动至首张 PNG 输出 | **53** | 256 | 282 | 410 | 471 |
-| 预热后单次截图耗时 | **25** | 123 | 132 | 波动过大 (noisy) | 157 |
-| 完整生命周期（启动-截图-退出） | **54** | 263 | 289 | 489 | 565 |
-| 4 并发在途请求（吞吐量/秒） | **128（20.7 req/s）** | 356（9.7 req/s）| 391（9.0 req/s）| 407（8.4 req/s）| 运行失败 |
-| 持续高压 4 并发（吞吐量/秒） | **165（19.7 req/s）** | 403（9.1 req/s）| 461（8.4 req/s）| 波动过大 (noisy) | 基础设施错误 |
-
-综合该平台上 10 项可比测试的几何平均值：Playwright headless shell 耗时约为 shotium 的 **3.6 倍**，Puppeteer headless shell 约为 **4.2 倍**，完整 Headless Chrome 约为 **4.8 ~ 6.3 倍**。
-
-在跨平台「启动 → 截图 → 关闭」端到端基准测试中，shotium 在所有支持平台中均取得第一：
-
-| 操作系统与架构 | shotium | 最优竞品表现 |
-|---|--:|--:|
-| **linux-x64** | **54 ms** | 263 ms（Playwright shell）|
-| **linux-arm64** | **73 ms** | 238 ms（Playwright shell）|
-| **darwin-arm64** | **98 ms** | 339 ms（Playwright shell）|
-| **win32-x64** | **112 ms** | 608 ms（Playwright shell）|
-| **darwin-x64** | **194 ms** | 1,053 ms（Playwright shell）|
-
-### 测试指标与方法说明
-
-- **严格对等比对**：仅当两个引擎在同一台 Runner 物理节点、相同测试用例与相同并发参数下均成功跑通时，才计算耗时比值；出现波动标记（`noisy`）的数据单独标注，不计入平均值。
-- **并发机制差异**：单个 shotium 引擎采用高效串行渲染设计，其并发指标通过单机多工作进程测试得出；浏览器竞品则使用单个浏览器实例内开启多个 Tab 页面的机制。
-- **平台兼容性约束**：Puppeteer 在 Linux 和 Windows 上暂无官方 arm64 预编译构建，Playwright 在 Windows arm64 环境下运行 x64 模拟构建，此类单元在基准报告中标记为 `n/a`。
-- **内存开销对比**：单实例引擎活跃渲染时工作集仅约 50 ~ 70 MiB（多工作进程并发测试峰值约 256 MiB），相较于 Headless 浏览器动辄数百 MiB 至数 GiB 的进程树具有压倒性轻量优势。
+- **严格对等比对**：仅当双方引擎在同一台物理 Runner、相同测试用例与相同并发参数下均完整运行成功时，才计算加速比；标记为 `noisy` 的波动数据予以单独标明，不纳入综合排行。
+- **并发调度机制**：测试平台向单个引擎实例发起等量并发请求。不同引擎遵循其真实的并发拓扑（Shotium 采用精简高效的串行队列，竞品采用浏览器内部多标签/多 Worker 机制），以此度量真实的业务吞吐表现。
+- **平台兼容性边界**：Puppeteer 暂无 Linux 和 Windows 的官方原生 arm64 构建，Playwright 在 Windows arm64 下运行 x64 模拟架构，此类单元在矩阵中如实标记为 `n/a`。
+- **内存真实遥测**：全程监控每个场景下的系统物理 RSS 与进程树占用，内存指标遵循与延迟指标同样严苛的准入审计门槛。
 
 > [!TIP]
 > **关于 PGO 优化与性能反馈**：
@@ -155,19 +101,19 @@ await shotium.stop();
 
 | 对比维度 | shotium | Puppeteer / Playwright | Satori (`@vercel/og`) | wkhtmltoimage |
 |---|---|---|---|---|
-| **排版引擎** | Chromium Blink + Skia | 完整 Chromium | 自研排版器 | QtWebKit（2023 年已归档）|
-| **CSS 特性支持** | Chrome 完整标准 CSS 支持 | Chrome 完整标准 CSS 支持 | Flexbox 等受限子集，不支持 Grid | 2012 年旧版 WebKit 标准 |
+| **排版引擎** | Chromium Blink 155 + Skia | 完整 Chromium | 自研排版器 | QtWebKit（2023 年已归档）|
+| **CSS 特性支持** | Chrome 155 完整现代标准 | Chrome 155 完整现代标准 | Flexbox 受限子集，不支持 Grid | 2012 年旧版 WebKit 标准 |
 | **输入源** | HTML 文件、URL、`stdin` | HTML 文件、URL | JSX 节点树 | HTML 文件、URL |
 | **JavaScript 支持** | 不执行（完全剥离 V8）| 支持执行 | 不适用 | 旧版 JavaScriptCore |
 | **进程运行模式** | 宿主进程内直接调用（Node-API / C ABI）| 独立进程 + IPC 通信 | 宿主进程内（WASM/JS）| 子进程调用 |
-| **分发与包体积** | 约 22 MB 独立包 | 需下载浏览器（> 100 MB）| 极小（纯 JS/WASM）| 需系统级安装包 |
-| **首图输出耗时 (linux-x64)** | **53 ms** | 256 ~ 471 ms | n/a | n/a |
+| **分发与包体积** | 约 22 MB 原生引擎 | 需下载浏览器（> 100 MB）| 极小（纯 JS/WASM）| 需系统级安装包 |
+| **首图输出耗时 (linux-x64)** | [详见实测基准](https://sj817.github.io/shotium/) | [详见实测基准](https://sj817.github.io/shotium/) | 不适用 | 不适用 |
 
 ### 选型建议
 
-- **选用 Headless 浏览器**：页面强依赖客户端 JavaScript 执行、数据水合（Hydration）或复杂的动态交互动作。
+- **选用 Headless 浏览器**：页面强依赖客户端 JavaScript 动态交互、前端 SPA 数据水合（Hydration）或复杂模拟点击操作。
 - **选用 Satori**：仅需简单的卡片布局、使用受限的 Flexbox 子集且生产环境严禁引入任何原生二进制扩展。
-- **选用 shotium**：输入源为服务端渲染（SSR）或静态 HTML 模板，追求与 Chrome 100% 像素级对齐的排版渲染效果，同时对系统吞吐量、响应延迟与内存占用有严苛要求。
+- **选用 shotium**：输入源为服务端渲染（SSR）或静态 HTML/CSS 模板，追求与 Chrome 100% 像素级对齐的排版渲染效果，同时对系统吞吐量、响应延迟与内存占用有严苛要求。
 
 ---
 
@@ -191,7 +137,7 @@ await shotium.stop();
 
 ---
 
-## 三种运行模式
+## 运行模式与架构拓扑
 
 ```mermaid
 flowchart TB
@@ -226,102 +172,53 @@ flowchart TB
 
 | 业务场景 | 推荐模式 | 选型理由 |
 |---|---|---|
-| **常驻 Web / API 服务**（Express、Fastify、NestJS）| [进程内引擎](#1-进程内引擎) | 零 IPC 通信开销，零进程启动耗时，单请求渲染延迟最低。|
-| **CLI 命令行工具、CI 流水线、Serverless 函数** | [常驻守护进程](#2-常驻守护进程) | 引擎子系统在后台保持预热，客户端连接仅需 2.3 ms，彻底消除冷启动。|
-| **非 Node.js 环境、自动化脚本与批处理** | [独立命令行工具](#3-独立命令行工具) 或 [C ABI 与 FFI 跨语言集成](#c-abi-与-ffi-跨语言集成) | 单文件便携分发，支持标准输入管道（`--stdin`）与常驻服务模式（`--serve`）。|
+| **常驻 Web / API 服务**（Express、Fastify、NestJS）| **进程内引擎** | 零 IPC 通信开销，零进程启动耗时，单请求渲染延迟最低。|
+| **CLI 命令行工具、CI 流水线、Serverless 函数** | **常驻守护进程** | 引擎子系统在后台保持预热，客户端建立连接仅需约 2 ms，彻底消除冷启动。|
+| **非 Node.js 环境、自动化脚本与批处理** | **独立命令行工具** 或 **C ABI / FFI 跨语言集成** | 单文件便携分发，支持标准输入管道（`--stdin`）与常驻服务模式（`--serve`）。|
 
 ---
 
-## 运行模式详解
+## 客户端与多语言生态
 
-### 1. 进程内引擎
+Shotium 的底层 C 核心支持多种主流语言与调用环境：
 
-引擎通过 Node-API 模块直接加载至当前 Node.js 进程，绑定 [`shot/shot_api.h`](shot/shot_api.h) 中定义的标准 C ABI。调用 `screenshot()` 即可在内存中直接获取编码后的图片 Buffer。
+### 1. Node.js & TypeScript (`@shotkit/shotium`)
+
+官方首发的 JavaScript / TypeScript SDK。既支持直接在主服务进程内无缝直调，也支持透明连接后台守护进程：
 
 ```ts
-import { writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import shotium, { screenshot } from '@shotkit/shotium';
 
-// 1. 初始化并启动引擎，返回磁盘缓存状态
-const { cacheDir, cacheActive } = shotium.start();
+// 常驻服务生命周期管理
+shotium.start({ cacheMaxBytes: 256 * 1024 * 1024 });
 
-// 2. 截取远程 URL 页面
-const res1 = await screenshot({
-  file: 'https://example.com',
+const { image } = await screenshot({
+  file: './report.html',
+  allowFileAccess: true, // 访问本地样式、字体与图片时必须开启
   viewport: { width: 1280, height: 720 },
-  type: 'webp',
-  quality: 85,
 });
 
-// 3. 截取动态生成的 HTML（需先落盘为临时文件）
-const html = `<div style="padding: 24px; background: #f6f8fa;"><h2>Invoice #1024</h2></div>`;
-const page = join(tmpdir(), 'invoice-1024.html');
-await writeFile(page, html);
-
-const res2 = await screenshot({
-  file: page,
-  viewport: { width: 600, height: 300 },
-});
-
-// 4. 请求高峰后主动回收内存：
-//    releaseMemory() 立即清理 Blink 堆、Skia 缓存与 PartitionAlloc 空闲链表；
-//    releaseWorkingSet: true 可进一步通知操作系统回收物理工作集内存。
+// 请求洪峰后主动释放非必要缓存
 shotium.releaseMemory({ releaseWorkingSet: true });
 
-// 5. 退出时安全终止引擎
+// 停机时安全清理
 await shotium.stop();
 ```
 
-#### 生命周期与设计特性
+👉 **[查阅完整的 Node.js 开发指南与 API 手册 (`apps/demo/shotium/README.md`)](apps/demo/shotium/README.md)**，包含：
+- 三种运行范式（开箱即用直接截图、常驻 Web 服务生命周期管理、常驻守护进程复用）；
+- 内存中动态 HTML 字符串的安全落盘渲染方案；
+- 本地子资源安全访问权限（`allowFileAccess`）；
+- 内存 Buffer 与零拷贝原子落盘（`path`）；
+- 超长页面切片（`screenshotTiles`）与 `{n}` 占位符流式落盘；
+- 缓存管理模块（`cache.getFiles()`、`cache.clear({ glob })`）；
+- 详尽完备的 TypeScript 类型定义与错误诊断上下文。
 
-- **单进程全局单例**：由于 Blink 依赖不可重置的进程级全局静态状态，同一个 Node.js 进程中所有 `Runtime` 实例与顶层 API 共享同一个底层引擎。
-- **`start()` 与 `stop()`**：`stop()` 会排空当前任务队列、标记 `running: false` 并释放工作集内存；之后再次调用 `start()` 可快速重新激活引擎，并完整保留已预热的磁盘缓存。
-- **配置固定原则**：引擎启动参数在首次调用 `start()` 时固化，后续使用不兼容配置调用 `start()` 将明确抛出异常。
-- **串行队列**：并发调用 `screenshot()` 时内部自动排队并按序渲染；如需提升并行能力，请通过 Node.js Worker 进程横向扩展。
-- **状态感知**：`start()` 与 `status()` 均返回 `{ running, cacheDir, cacheActive, enginePath }`。`enginePath` 标识当前已加载原生引擎所在的目录，首次加载前为 `null`。若缓存目录因权限问题无法读写，`cacheActive` 将为 `false`，引擎自动降级为无缓存模式平稳运行。
+---
 
-### 2. 常驻守护进程
+### 2. 独立命令行工具 (`shotium`)
 
-专为短生命周期的 CLI 任务、CI 流水线步骤和 Serverless 场景设计，避免每次调用都承担数十毫秒的冷启动开销。
-
-守护进程将渲染引擎托管在独立的后台进程中，通过高效的本地 IPC 端点（Windows 采用命名管道，类 Unix 系统采用 Unix 域套接字）提供服务。启动时会自动预热渲染一张空白页，客户端建立连接仅需约 2.3 ms，首个请求即可享受毫秒级预热响应。
-
-```ts
-import { daemon } from '@shotkit/shotium';
-
-// 1. 连接现有守护进程；若尚未启动则自动在后台拉起
-const client = await daemon.connect({
-  name: 'default',          // 可选：通过指定 name 隔离多个守护进程实例
-  idleTimeoutMs: 300000,    // 无活跃连接时自动退出超时（默认 5 分钟；0 为永不退出）
-  prewarm: true,            // 启动时是否自动渲染空白页完成预热（默认 true）
-});
-
-// 2. 发起截图请求
-const { image, stats } = await client.screenshot({
-  file: 'https://example.com',
-  viewport: { width: 1280, height: 720 },
-});
-
-// 3. 运维与内存管理
-const clientStatus = await client.status();
-await client.releaseMemory({ releaseWorkingSet: false });
-client.close();
-
-// 4. 进程级管理（可选）
-const daemonInfo = await daemon.status();
-console.log(`Daemon PID: ${daemonInfo.pid}, Uptime: ${daemonInfo.uptimeMs}ms, Served: ${daemonInfo.served}`);
-
-await daemon.stop();
-```
-
-- **请求多路复用**：单个客户端连接支持并发多路在途请求，每个数据包携带唯一 `id`，响应结果按完成先后顺序返回。
-- **独立实例隔离**：每个守护进程内部串行渲染；通过指定不同 `name` 参数可同时启动多个守护进程实现并行渲染。
-
-### 3. 独立命令行工具
-
-从 [GitHub Releases](https://github.com/sj817/shotium/releases) 下载对应平台的单文件可执行程序（`.7z` 压缩包仅 14~18 MB，解压即用，无任何外部运行时依赖）：
+从 [GitHub Releases](https://github.com/sj817/shotium/releases) 下载对应平台的单文件可执行程序（包含 CLI、动态库、C 头文件和资源包）：
 
 ```bash
 # 1. 指定视口尺寸截取远程 URL
@@ -340,301 +237,78 @@ shotium --file article.html --full-page --tile-height 8000 -o article-{n}.png
 shotium --serve --cache-dir /var/tmp/shotium-cache
 ```
 
-CLI 参数选项（`--selector`、`--scale`、`--omit-background`、`--wait-until`、`--timeout-ms`、`--user-agent`、`--cache-max-bytes` 等）与 API 配置项完全对应，执行 `shotium --help` 可查看完整参数列表。
+执行 `shotium --help` 可查看完整的命令行参数列表。
 
 ---
 
-## API 参考
 
-### `ScreenshotOptions`
+### 多语言示例与预编译 C ABI
 
-```ts
-interface ScreenshotOptions {
-  /** 目标地址（http/https/file 协议 URL）或本地文件绝对/相对路径 */
-  file: string;
+项目初期暂不发布 Go、Python、Rust、C#、Java 的 Shotium 语言包。统一提供 **C ABI + GitHub Release 预编译动态库**，有需求后再发布正式绑定包。压缩包包含动态库、`shot_api.h`、资源包与接入文档；已有 npm 包继续发布。
 
-  /** 输出图像格式（默认：'png'） */
-  type?: 'png' | 'jpeg' | 'webp';
+[通用下载与接入说明](apps/c-abi/README.md) · [Go](apps/go/README.md) · [Python](apps/python/README.md) · [Rust](apps/rust/README.md) · [C#](apps/csharp/README.md) · [Java](apps/java/README.md)
 
-  /** 视口尺寸配置（默认：1280x720） */
-  viewport?: { width?: number; height?: number };
+完整 npm 源码已迁至 [`apps/demo/shotium/`](apps/demo/shotium/README.md)，同步维护 npm 打包、加载路径和 CI；[应用目录](apps/README.md)提供所有示例入口。
 
-  /** 是否截取整个可滚动文档（整页截图） */
-  fullPage?: boolean;
+### 3. C ABI 与 FFI 跨语言集成 (`shot/shot_api.h`)
 
-  /** 截取首个匹配 CSS 选择器的 DOM 元素包围盒 */
-  selector?: string;
+针对 Rust、Go、Python、C++ 等支持 C FFI 的开发语言，shotium 在 [`shot/shot_api.h`](shot/shot_api.h) 中导出了纯 C 标准接口：
 
-  /** 指定裁剪区域（单位：CSS 像素） */
-  clip?: { x: number; y: number; width: number; height: number };
+```c
+#include "shot_api.h"
 
-  /** 图像压缩质量，取值范围 1~100（仅针对 jpeg 与 webp，默认：90） */
-  quality?: number;
+shot_engine* engine = NULL;
+shot_buffer* error = NULL;
+shot_engine_create("{}", &engine, &error);
 
-  /** 设备像素比 (DPR)，取值范围 0.01~8.0（默认：1.0） */
-  scale?: number;
+shot_buffer* png = NULL;
+shot_buffer* stats = NULL;  /* 可选参数；无需统计数据时可传入 NULL */
+shot_engine_capture(engine, "{\"file\":\"https://example.com\"}",
+                    &png, &stats, &error);
 
-  /** 是否保留透明通道而非填充白色背景（仅针对 png 与 webp，默认：false） */
-  omitBackground?: boolean;
+const uint8_t* data = shot_buffer_data(png);
+size_t size = shot_buffer_size(png);
 
-  /** 输出文件路径。指定后由引擎直接写入磁盘，返回值中的 image 为 null */
-  path?: string;
-
-  /** 页面导航与加载控制选项 */
-  pageGotoParams?: {
-    /** 导航超时时间，单位：毫秒（默认：30000） */
-    timeout?: number;
-    /**
-     * 等待策略：
-     * - 'load': DOM 解析完成且子资源加载完毕（默认）
-     * - 'networkidle': 额外等待直至连续 500 ms 内无任何在途网络请求
-     */
-    waitUntil?: 'load' | 'networkidle';
-  };
-
-  /** 是否允许加载 file:// 协议的本地子资源（默认：false） */
-  allowFileAccess?: boolean;
-
-  /** HTTP 缓存策略（默认：'default'） */
-  cache?: 'default' | 'reload' | 'no-store' | 'only-if-cached';
-
-  /** 附加请求头（仅发送至同源目标 URL） */
-  headers?: Record<string, string>;
-}
+/* 释放内存并销毁引擎 */
+shot_buffer_free(png);
+shot_buffer_free(stats);
+shot_engine_destroy(engine);
 ```
 
-> **参数约束说明**：`fullPage`、`selector` 与 `clip` 三者互斥，同时指定多个将抛出参数校验异常。
-
-#### `ScreenshotResult`
-
-```ts
-interface ScreenshotResult {
-  /** 编码后的图片二进制 Buffer；若配置了 path 参数且已落盘则为 null */
-  image: Buffer | null;
-  /** 本次截图任务的精细耗时分析与网络统计指标 */
-  stats: CaptureStats;
-}
-```
-
-#### 配置项细节补充
-
-- **`file` 格式规范**：支持 `https://example.com`、`./template.html`、`/absolute/path/index.html` 与 `file:///...`。动态 HTML 需先写入临时文件，暂不支持 `data:` URI。在 CLI 环境下请直接使用 `--stdin`。
-- **`cache` 策略语义**：与浏览器 Fetch API 保持一致：
-  - `default`：遵循标准的 HTTP 缓存控制头规则。
-  - `reload`：绕过现有缓存并发起网络请求，同时更新本地缓存。
-  - `no-store`：不读取缓存，亦不将响应内容写入缓存。
-  - `only-if-cached`：仅从本地磁盘缓存读取；若缓存未命中则直接报错，不发起网络请求。
-- **`headers` 同源限制**：为保障安全性，自定义 Headers（如 `Authorization`、`Cookie` 等）仅发送至主请求域名，不会泄露给跨域引用的静态资源（如 CDN 样式表、第三方字体或图片）。
+> **ABI 兼容性**：当前 ABI 版本为 **3**。ABI 3 新增 `shot_engine_capture_tiles()` 以及用于管理分片所有权的 `shot_tile_list_*` 接口。调用前可通过 `shot_abi_version()` 比对 `SHOT_ABI_VERSION`。
 
 ---
 
-### `screenshotTiles(options)`
+### 4. Python example / Python 示例
 
-同一次渲染，输出一叠图片而不是一张。`fullPage`、`selector`、`clip` 或视口原本会产生的区域，被横向切成每片至多 `tile.height` CSS 像素的若干块；文档只加载、布局、绘制一次，所有分片共享这一次结果。
-
-```ts
-import { screenshotTiles } from '@shotkit/shotium';
-
-// 1. 以 Buffer 形式返回，自上而下排列
-const { tiles, stats } = await screenshotTiles({
-  file: 'https://example.com/a-very-long-article',
-  fullPage: true,
-  tile: { height: 8000 },
-});
-
-for (const { image, y, height } of tiles) {
-  // image：该分片的 PNG Buffer
-  // y、height：该分片在文档中的位置，单位为 CSS 像素
-}
-
-// 2. 内存受控模式：每片编码完成即落盘，{n} 会被替换为从 1 开始的序号
-await screenshotTiles({
-  file: './report.html',
-  fullPage: true,
-  tile: { height: 4000 },
-  path: 'report-{n}.png',
-});
-```
-
-```ts
-interface ScreenshotTilesOptions extends ScreenshotOptions {
-  /** 每片最多多少 CSS 像素，最后一片是剩余部分。上限 32000。 */
-  tile: { height: number };
-}
-
-interface ScreenshotTilesResult {
-  /** 自上而下排列。相邻分片的 x 与 width 相同，每片从上一片结束处开始。 */
-  tiles: Array<{
-    image: Buffer | null;   // 指定 path 时为 null
-    x: number; y: number; width: number; height: number;
-    path?: string;          // 指定 path 时实际写出的文件
-  }>;
-  stats: CaptureStats;
-}
-```
-
-- **适用场景**：当图片的消费方需要分块时使用——聊天平台的图片尺寸上限、按页翻阅的查看器、打印排版。它本身并不是省内存的手段：普通的 `fullPage` 截图本来就按条带光栅化、编码完一行输出一行，页面再高成本也一样。
-- **`path` 才是内存受控模式**：指定 `path` 时每片编码完即写盘，图像内存始终维持在单片量级；不指定时所有分片以 `Buffer` 返回，已完成的分片会一直驻留内存直到 Promise 兑现。
-- **Blink 的绘制上限**：Blink 单轴最多绘制 32,767 CSS 像素。超过该高度的区域以及所有分片请求，都通过滚动布局视口、每次至多 32,000 像素分段绘制，`tile.height` 的上限正来源于此。
-- **各入口参数一致**：`daemon.screenshotTiles()`、`client.screenshotTiles()` 与 CLI 的 `--tile-height`，接受与 `screenshot()` 完全相同的区域、格式与缓存参数。
+使用 [ctypes 示例](apps/python/README.md)直接调用预编译动态库，无需 pip 安装 Shotium。暂不发布 Python SDK，有实际需求后再提供语言包。
 
 ---
 
-### `StartOptions`
+## 核心引擎通用参数规范
 
-```ts
-interface StartOptions {
-  /**
-   * HTTP 磁盘缓存目录路径。
-   * 默认位于 ~/.shotium/cache/<project-hash>；传入 null 则禁用磁盘缓存。
-   */
-  cacheDir?: string | null;
+Shotium 在 CLI 命令行、Node.js API 与 C ABI JSON 请求中共享相同的底层引擎配置参数：
 
-  /** 磁盘缓存容量上限，单位：字节（默认：256 MB） */
-  cacheMaxBytes?: number;
+| 参数含义 | CLI 参数 | Node.js 配置字段 | 说明 |
+|---|---|---|---|
+| 渲染目标 | `[url]` 或 `--file <path>` | `file: string` | 远程 URL（`https://`、`http://`）或本地文件路径。不支持 `data:` URL。 |
+| 标准输入 | `--stdin` | 不适用 | 直接从标准输入管道读取 HTML。 |
+| 视口尺寸 | `--width <px> --height <px>` | `viewport: { width, height }` | 页面排版视口（CSS 像素）。默认：`1280x720`。 |
+| 整页截图 | `--full-page` | `fullPage: boolean` | 截取整个可滚动的完整文档高度。 |
+| CSS 选择器 | `--selector <sel>` | `selector: string` | 截取匹配该选择器的首个 DOM 元素包围盒（内部由 `Document::querySelector` 计算）。 |
+| 裁剪区域 | `--clip <x,y,w,h>` | `clip: { x, y, width, height }` | 指定特定矩形裁剪区域（CSS 像素）。 |
+| 输出格式 | `--type <png\|jpeg\|webp>` | `type: 'png' \| 'jpeg' \| 'webp'` | 输出图片编码格式。默认：`png`。 |
+| 压缩质量 | `--quality <1-100>` | `quality: number` | 图片压缩质量（仅针对 `jpeg` 与 `webp`）。默认：`90`。 |
+| 设备像素比 | `--scale <dpr>` | `scale: number` | 设备像素比 (DPR，取值 0.01~8.0)。默认：`1.0`。 |
+| 透明背景 | `--omit-background` | `omitBackground: boolean` | 保留透明通道而非填充白色背景（仅支持 PNG/WebP）。 |
+| 输出文件 | `-o <path>` / `--output <path>` | `path: string` | 输出文件路径。指定后由底层原子写入磁盘。 |
+| 分片切片 | `--tile-height <px>` | `tile: { height: number }` | 将长页面切分为水平分片（每片至多 32,000 CSS 像素）。 |
+| 本地子资源 | `--allow-file-access` | `allowFileAccess: boolean` | 是否允许加载本地 `file://` 子资源（图片/字体/样式表）。默认：`false`。 |
+| 缓存策略 | `--cache <mode>` | `cache: CacheMode` | `'default'`、`'reload'`、`'no-store'` 或 `'only-if-cached'`。 |
+| 等待策略 | `--wait-until <mode>` | `pageGotoParams.waitUntil` | `'load'`（默认）或 `'networkidle'`（额外等待 500ms 静默无网络请求）。 |
+| 超时时间 | `--timeout-ms <ms>` | `pageGotoParams.timeout` | 导航与渲染超时（毫秒）。默认：`30000`。 |
 
-  /** 自定义 User-Agent 请求头 */
-  userAgent?: string;
-
-  /** 资源数据包 shotium_data.pak 与 shotium_strings.pak 所在目录（仅源码开发环境需指定） */
-  resourceDir?: string;
-}
-```
-
-#### `StartResult`
-
-```ts
-interface StartResult {
-  /** 引擎是否处于就绪运行状态 */
-  running: boolean;
-  /** 当前生效的磁盘缓存目录路径；禁用时为 null */
-  cacheDir: string | null;
-  /** 当前已加载原生引擎所在的目录；首次加载前为 null */
-  enginePath: string | null;
-  /** 磁盘缓存目录是否已成功初始化并激活使用 */
-  cacheActive: boolean;
-}
-```
-
----
-
-### `CaptureStats`
-
-每次截图均返回详尽的性能耗时拆解与网络指标统计：
-
-```ts
-interface CaptureStats {
-  requests: number;     // 页面触发的网络请求总数（含主文档）
-  fromCache: number;    // 由本地 HTTP 磁盘缓存命中的资源数
-  failed: number;       // 加载失败的子资源总数
-  bytes: number;        // 解码后的响应体数据总字节数
-  httpStatus: number;   // 主文档 HTTP 状态码（本地文件为 0）
-  finalUrl: string;     // 经历重定向后的最终生效 URL
-  timing: {
-    fetch: number;      // 主文档获取阶段耗时（DNS 解析、TCP 握手、TLS 协商与往返）
-    render: number;     // 核心渲染阶段耗时（HTML 解析、子资源、样式计算、排版与绘制）
-    setup: number;      // 页面与 Frame 初始化、文档对象挂载耗时
-    wait: number;       // DOM 解析等待、load 事件与子资源等待耗时
-    lifecycle: number;  // 裁剪区域计算、样式重算与生命周期更新耗时
-    paint: number;      // 提取 cc::PaintRecord 绘制指令耗时
-    raster: number;     // SkSurface 分配与 Skia 光栅化回放耗时
-    encode: number;     // 图像格式（PNG/JPEG/WebP）编码耗时
-    total: number;      // 本次截图端到端总墙钟耗时
-  };
-}
-```
-
-#### 耗时分布分析
-
-在无缓存的远程 HTTPS 请求中，`timing.fetch`（网络往返）占据绝大部分耗时；一旦命中本地磁盘缓存，网络阶段耗时将缩短至 1 ms 以内：
-
-| 场景分类 | `fetch` 阶段 | `render` 阶段 | `total` 总耗时 |
-|---|--:|--:|--:|
-| 本地文件（`file:` 或路径）| 0.2 ms | 20 ms | 25 ms |
-| HTTPS 远程页面（冷请求）| 321.1 ms | 16 ms | 350 ms |
-| HTTPS 远程页面（缓存命中）| 0.7 ms | 18 ms | 31 ms |
-
-- **`fromCache` 计数说明**：仅统计响应体完全来自本地磁盘缓存的资源；返回 `304 Not Modified` 的条件请求仍需经历网络往返。
-- **异常上下文捕获**：当截图发生异常或超时时，错误对象中会挂载 `error.stats`，包含出错前收集到的全部指标。
-
----
-
-### `daemon` 模块
-
-```ts
-import { daemon } from '@shotkit/shotium';
-
-// 1. 建立连接（按需拉起）
-const client = await daemon.connect({
-  name: 'custom-pool',      // 可选：指定实例名称实现隔离
-  idleTimeoutMs: 300000,    // 空闲退出超时时间（毫秒）
-  prewarm: true,            // 启动时是否自动执行预热渲染
-});
-
-// 2. 客户端操作
-const res = await client.screenshot({ file: 'https://example.com' });
-const { tiles } = await client.screenshotTiles({
-  file: './report.html',
-  fullPage: true,
-  tile: { height: 8000 },
-});
-const status = await client.status();
-await client.releaseMemory({ releaseWorkingSet: false });
-client.close();
-
-// 3. 守护进程运维管理
-const info: DaemonStatus = await daemon.status();
-await daemon.stop();
-```
-
-#### `DaemonStatus`
-
-```ts
-interface DaemonStatus {
-  pid: number;              // 守护进程系统的 PID
-  endpoint: string;         // 本地 IPC 路径或命名管道名称
-  cacheDir: string | null;  // 当前生效的磁盘缓存路径
-  warm: boolean;            // 预热渲染是否已完成
-  uptimeMs: number;         // 进程运行时长（毫秒）
-  connections: number;      // 当前处于连接状态的客户端数量
-  inFlight: number;         // 当前正在处理中的渲染任务数
-  served: number;           // 启动以来累计完成的渲染请求数
-  idleTimeoutMs: number;    // 配置的空闲自动退出超时时间
-  version: string;          // 底层渲染引擎版本号
-  protocolVersion: number;  // 本地守护进程通信协议版本
-  capabilities: ('screenshot' | 'tiles')[]; // 支持的操作
-}
-```
-
----
-
-### `cache` 模块
-
-shotium 的 HTTP 磁盘缓存支持跨进程共享并在引擎重启后持久化保留：
-
-```ts
-import { cache } from '@shotkit/shotium';
-
-// 1. 查询缓存路径
-cache.getDir();                     // 获取当前项目的缓存目录（绝对路径）
-cache.getDirs({ target: 'all' });   // 获取本机所有 shotium 缓存目录
-
-// 2. 遍历缓存条目
-const files = await cache.getFiles(); // [{ url, lastUsedMs, bytes, dir }, ...]
-
-// 3. 执行缓存淘汰并获取统计结果
-const result: CacheClearResult = await cache.clear({
-  glob: ['https://example.com/**'], // 支持按 URL glob 模式匹配
-  maxAge: 86400,                    // 清理超过 24 小时未访问的条目（秒）
-  maxSize: 64 * 1024 * 1024,        // 依据 LRU 算法将体积收缩至 64 MB 以内
-});
-
-console.log(`Removed: ${result.removed}, Bytes before: ${result.bytesBefore}, Bytes after: ${result.bytesAfter}`);
-```
-
-- **存储规范**：缓存统一保存在 `~/.shotium/cache/<project-hash>`，避免存放在系统重启即被清空的 `/tmp` 目录。
-- **数据完整性**：条目依据 URL Hash 命名并通过索引文件统一维护；请始终通过 `cache` API 进行清理，避免手动删除文件导致索引损坏。
-- **多进程安全**：内置文件锁与并发安全机制，支持多个进程同时读写同一个缓存目录。
+> **互斥约束**：`fullPage`、`selector` 与 `clip` 三者严格互斥，同时传入多个将抛出参数异常。
 
 ---
 
@@ -644,7 +318,7 @@ console.log(`Removed: ${result.removed}, Bytes before: ${result.bytesBefore}, By
 flowchart TB
     IN["HTML / CSS 输入<br/>URL · 本地路径 · stdin"]
     NET["Chromium //net 栈<br/>HTTPS · HTTP/2 · Brotli<br/>磁盘缓存 · Cookie"]
-    BLINK["Blink 排版内核<br/>DOM · CSSOM · 字体解析 · 图像解码"]
+    BLINK["Blink 排版内核 (Chromium 155)<br/>DOM · CSSOM · 字体解析 · 图像解码"]
     LIFE["布局与生命周期推进<br/>UpdateAllLifecyclePhases()"]
     REC["cc::PaintRecord 绘制指令集"]
     SKIA["Skia 图形引擎<br/>CPU 光栅化至 SkSurface"]
@@ -692,35 +366,6 @@ shotium.start({ resourceDir: '/path/to/out/Shot' });
 
 ---
 
-## C ABI 与 FFI 跨语言集成
-
-针对 C++、Rust、Go、Python 等开发语言，shotium 在 [`shot/shot_api.h`](shot/shot_api.h) 中导出了标准纯 C 接口：
-
-```c
-#include "shot_api.h"
-
-shot_engine* engine = NULL;
-shot_buffer* error = NULL;
-shot_engine_create("{}", &engine, &error);
-
-shot_buffer* png = NULL;
-shot_buffer* stats = NULL;  /* 可选参数；无需统计数据时可传入 NULL */
-shot_engine_capture(engine, "{"file":"https://example.com"}",
-                    &png, &stats, &error);
-
-const uint8_t* data = shot_buffer_data(png);
-size_t size = shot_buffer_size(png);
-
-/* 释放内存并销毁引擎 */
-shot_buffer_free(png);
-shot_buffer_free(stats);
-shot_engine_destroy(engine);
-```
-
-> **ABI 兼容性校验**：当前 ABI 版本为 **3**。ABI 3 新增 `shot_engine_capture_tiles()`，以及用于访问和管理所有权的 `shot_tile_list_count()`、`shot_tile_list_region()`、`shot_tile_list_path()`、`shot_tile_list_take_image()` 和 `shot_tile_list_free()` 接口。调用动态库前可通过 `shot_abi_version()` 比对头文件中的 `SHOT_ABI_VERSION` 确保兼容性。
-
----
-
 ## 源码构建
 
 ### 前置条件
@@ -735,7 +380,7 @@ shot_engine_destroy(engine);
 ### 构建步骤
 
 ```bash
-mkdir shotium-build && cd shotium-build
+mkdir shotium-build && cd apps/demo/shotium-build
 
 cat > .gclient <<'EOF'
 solutions = [{
@@ -752,10 +397,6 @@ gclient sync --nohooks --no-history
 gclient runhooks
 
 cd src
-
-# DEPS 管理的 Skia 同步完成后，应用 Shot 所需补丁
-git -C third_party/skia apply --verbose ../../patches/third_party_skia_parallel_blur.patch
-git -C third_party/skia apply --verbose ../../patches/third_party_skia_incremental_row_limit.patch
 
 # 重新打包精简版 ICU 数据文件（每个 checkout 先执行一次 pnpm -C scripts install）
 pnpm icu:repack third_party/icu/cast/icudtl.dat third_party/icu/shot/icudtl.dat --preset shot
@@ -779,15 +420,6 @@ pnpm verify:daemon out/Shot/shotium.exe  # 守护进程 IPC 与并发校验
 pnpm verify:demos  out/Shot/shotium.exe  # 视觉回归参考测试（84 例 reftest）
 ```
 
-基于本地编译的共享库重新构建 Node.js 扩展：
-
-```bash
-export SHOT_INCLUDE_DIR=$PWD/shot SHOT_LIB_DIR=$PWD/out/Shot
-npx node-gyp@13 rebuild -C shotium/native
-cp out/Shot/libshotium.so out/Shot/*.pak shotium/native/build/Release/
-npm --prefix shotium install && npm --prefix shotium run build
-```
-
 ---
 
 ## 文档素材生成
@@ -795,17 +427,24 @@ npm --prefix shotium install && npm --prefix shotium run build
 文档中的所有图片与演示动图均由 [`docs/demo/`](docs/demo) 目录下的源文件自动渲染生成，确保演示与代码实现完全一致：
 
 ```bash
-npm run docs:assets   # 重新生成 card.webp、example-node.webp、example-cli.webp
-npm run docs:demo     # 重新生成 demo.gif（基于 docs/demo.tape 自动化录制）
-npm run docs          # 运行上述全量素材生成
+pnpm run docs:assets   # 重新生成 card.webp、example-node.webp、example-cli.webp
+pnpm run docs:demo     # 重新生成 demo.gif（基于 docs/demo.tape 自动化录制）
+pnpm run docs          # 运行上述全量素材生成
 ```
-
-- `docs:assets`：通过 shotium 本身渲染 `card.html`，并使用 [freeze](https://github.com/charmbracelet/freeze) 与 ffmpeg 将 `card.mjs` 及终端会话固化为高质量代码图片。
-- `docs:demo`：使用 [vhs](https://github.com/charmbracelet/vhs) 配合 ttyd、ffmpeg 与 bash 录制 [`docs/demo.tape`](docs/demo.tape)。录制过程中会真实拉取发布的 npm 包并在干净环境中运行，保证展示效果真实可靠。
-- 命令行演示依赖 `shotium` 可执行文件（可通过 `SHOTIUM_CLI=...` 指定，或放置于 `out/Shot*` 目录下）；未检测到二进制文件时将自动复用已录制的 [`docs/demo/cli-session.txt`](docs/demo/cli-session.txt)。
 
 ---
 
-## 许可证
+## License
 
-本项目基于与 Chromium 上游完全一致的 **BSD-3-Clause** 开源许可证。详见 [LICENSE](LICENSE)。\n
+BSD-3-Clause，与上游 Chromium 保持一致。详见 [LICENSE](LICENSE)。
+
+### Node 原生入口
+
+Node-API addon 由 GN 与引擎核心一起构建：`pnpm build:engine --target shot_node`
+生成 `out/Shot/shotium.node`。截图请求和统计以对象跨越 Node 边界，渲染在引擎线程
+执行，通过 Node-API 兑现 Promise，不占用 libuv 工作线程等待渲染。
+公开的 `stop()` / `start()` 行为保持不变。
+
+npm 平台包包含独立 `.node`、CLI 和资源包。C ABI 动态库继续由 GitHub Release
+归档提供，Node 不加载该动态库。addon 构建需要完整源码和 `scripts/node-sdk.ts`
+准备的固定版本 SDK，不再使用 node-gyp。

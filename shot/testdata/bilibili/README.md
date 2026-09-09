@@ -14,7 +14,7 @@ are reproduction inputs, not assets shipped in the npm package.
 
 Run `python tools/shot/bilibili_check.py --fixtures-only` for resource integrity
 and complete offline dependency checks. After building the local Node package
-and addon, run `python tools/shot/bilibili_check.py --package shotium` to exercise
+and addon, run `python tools/shot/bilibili_check.py --package apps/demo/shotium` to exercise
 `screenshot()` and `screenshotTiles()` at 1440px, compare all tile pixels with the
 full capture with bounded antialiasing tolerance, and check every article photo
 and both footer QR codes against their original source pixels. Both

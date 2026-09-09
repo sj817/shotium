@@ -186,6 +186,11 @@ runs:
         done
         touch -t "$(date -u -d "@$when" +%Y%m%d%H%M.%S 2>/dev/null || date -u -r "$when" +%Y%m%d%H%M.%S)" third_party/icu/shot/icudtl.dat
 
+    - name: prepare pinned Node SDK
+      shell: bash
+      working-directory: src
+      run: pnpm -C scripts exec tsx node-sdk.ts
+
     - name: gn gen
       shell: bash
       working-directory: src

@@ -1478,7 +1478,7 @@ Windows 和 Linux 上**没有**四参数(未标注流量)的重载 —— 只有
 
 ### 20.5 出进程 + 并发(第 3 组)
 
-`shotium/` 是纯 JS:进程池、队列、`retry`、`on()` 事件、`.d.ts`。没有原生 addon
+`apps/demo/shotium/` 是纯 JS:进程池、队列、`retry`、`on()` 事件、`.d.ts`。没有原生 addon
 —— 要的是对外接口长成约定的 `ScreenshotOptions`,不是必须 `.node`,于是省掉 node-gyp 和多 ABI。
 
 一个 worker 一次只渲一张,这不是简化:blink 是绑在 worker 主线程上的进程级单例,协议允许并发

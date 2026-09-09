@@ -47,7 +47,7 @@ on:
         description: 'auto: one runner for a proven warm docs/version change, platform defaults otherwise; integer: explicit shard count'
         default: auto
 
-# GN, the SDK and node-gyp spell the 64-bit architecture x64; the names
+# GN and the Node SDK spell the 64-bit architecture x64; the names
 # people see spell it amd64. The build-directory cache is keyed by the GN
 # spelling so that renaming labels did not throw away six warm build
 # directories.
@@ -73,11 +73,11 @@ jobs:
       - uses: actions/checkout@v7
         with:
           sparse-checkout: |
-            shotium/package.json
+            apps/demo/shotium/package.json
             scripts
           sparse-checkout-cone-mode: false
       - id: version
-        run: echo "version=$(jq -r .version shotium/package.json)" >> "$GITHUB_OUTPUT"
+        run: echo "version=$(jq -r .version apps/demo/shotium/package.json)" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-node@v6
         with:
           node-version: 22
@@ -159,7 +159,7 @@ jobs:
         # onto the least-loaded shard, so the shards finish together; every
         # shard computes the same assignment from the same inputs.
         run: |
-          ninja -C out/Shot -t inputs shot shot_c | grep -E '\.o$' \
+          ninja -C out/Shot -t inputs shot shot_c shot_node | grep -E '\.o$' \
             | pnpm --silent build:shards slice --build-dir out/Shot \
                 --shards '${{ needs.meta.outputs.shard_count }}' --index '${{ matrix.shard }}' > /tmp/slice.txt
 
@@ -231,7 +231,7 @@ jobs:
         working-directory: src
         # The last slice, by the same assignment every shard computes.
         run: |
-          ninja -C out/Shot -t inputs shot shot_c | grep -E '\.o$' \
+          ninja -C out/Shot -t inputs shot shot_c shot_node | grep -E '\.o$' \
             | pnpm --silent build:shards slice --build-dir out/Shot \
                 --shards '${{ needs.meta.outputs.shard_count }}' --index '${{ needs.meta.outputs.final_shard }}' > /tmp/slice.txt
 
@@ -294,7 +294,7 @@ jobs:
         # does, pnpm restore:upstream --log takes this output and
         # puts those files back from the upstream baseline.
         run: |
-          if ! ninja -C out/Shot shot shot_c -n > /tmp/probe.txt 2>&1; then
+          if ! ninja -C out/Shot shot shot_c shot_node -n > /tmp/probe.txt 2>&1; then
             echo "=== ninja refused the graph ==="
             tail -40 /tmp/probe.txt
             echo
@@ -324,7 +324,7 @@ jobs:
         # fraction of a full one. `-d explain` makes ninja say why each dirty
         # edge is dirty; the root causes appear at the top, so a head of the
         # output is the whole answer. Diagnosis only: nothing is built here.
-        run: ninja -C out/Shot shot shot_c -n -d explain 2>&1 | head -120 || true
+        run: ninja -C out/Shot shot shot_c shot_node -n -d explain 2>&1 | head -120 || true
 
       - name: forget the previous binary
         # The build directory is restored from cache, so out/Shot still
@@ -335,7 +335,7 @@ jobs:
         # satisfy the check; the relink costs a couple of minutes.
         if: ${{ github.event.inputs.mode == 'build' }}
         working-directory: src
-        run: rm -f out/Shot/shotium out/Shot/libshotium.dylib
+        run: rm -f out/Shot/shotium out/Shot/libshotium.dylib out/Shot/shotium.node
 
       # A restored build directory can hold a depfile that names a file the
       # tree no longer has; ninja refuses to start on it ("missing and no
@@ -353,7 +353,7 @@ jobs:
         # -k 0: this platform is still being brought up, and each round costs
         # a runner-hour -- keep compiling past a failure so one log names every
         # broken translation unit, not just the first.
-        run: ninja -C out/Shot shot shot_c -j ${{ github.event.inputs.jobs }} -k 0
+        run: ninja -C out/Shot shot shot_c shot_node -j ${{ github.event.inputs.jobs }} -k 0
 
       # What this run read: ninja's inputs and deps log, gn's build.ninja.d,
       # the jumbo source lists. A probe exports the graph without the deps log.
@@ -407,14 +407,14 @@ jobs:
         if: ${{ github.event.inputs.mode == 'build' }}
         working-directory: src
         run: |
-          for wanted in out/Shot/shotium out/Shot/libshotium.dylib; do
+          for wanted in out/Shot/shotium out/Shot/libshotium.dylib out/Shot/shotium.node; do
             if [ ! -f "$wanted" ]; then
               echo "$wanted was not produced -- the build got further, but is not done."
               echo "Run this workflow again; the cache carries the objects over."
               exit 1
             fi
           done
-          ls -l out/Shot/shotium out/Shot/libshotium.dylib
+          ls -l out/Shot/shotium out/Shot/libshotium.dylib out/Shot/shotium.node
           file out/Shot/shotium out/Shot/libshotium.dylib
 
       - name: package
@@ -443,13 +443,12 @@ jobs:
           fi
           echo "using $sevenzip"
           version=$(python3 -c \
-            "import json;print(json.load(open('shotium/package.json'))['version'])")
+            "import json;print(json.load(open('apps/demo/shotium/package.json'))['version'])")
           stem="shotium-macos-${{ inputs.arch }}"
           archive="$stem-v$version.7z"
           rm -rf dist "$archive"
           mkdir -p "dist/$stem"
-          cp out/Shot/shotium out/Shot/libshotium.dylib \
-             out/Shot/shotium_data.pak out/Shot/shotium_strings.pak "dist/$stem/"
+          pnpm package:c-abi --build out/Shot --os mac --dest "dist/$stem"
           ls -l "dist/$stem"
           ( cd dist && "$sevenzip" a -t7z -mx=9 "../$archive" "$stem" )
           ls -l "$archive"
@@ -479,29 +478,16 @@ jobs:
         run: |
           pnpm verify:serve out/Shot/shotium
           pnpm verify:net out/Shot/shotium
-          # The node addon, and the C ABI under it. Built here rather than
-          # taken from anywhere else, because the library it links against is
-          # the one this job has just produced -- an addon checked against a
-          # different build would be checking nothing.
-          #
-          # Before the node suites, not after: the addon is what they load. An
-          # A package-manager install carries the library and the addon and not the
-          # executable, so there is no second path for them to fall back to.
-          ( cd shotium/native \
-            && SHOT_INCLUDE_DIR="$PWD/../../shot" \
-               SHOT_LIB_DIR="$PWD/../../out/Shot" \
-               pnpm dlx node-gyp@13 rebuild )
-          cp out/Shot/libshotium.dylib out/Shot/shotium_data.pak \
-             out/Shot/shotium_strings.pak shotium/native/build/Release/
-
+          # The GN build already produced the self-contained Node addon.
           # The package is TypeScript, so what the check suites import is a
           # build output rather than a file in the tree. There is no frozen
           # lockfile -- see checks.yml for why it cannot carry the six
           # optionalDependencies yet.
-          ( cd shotium && pnpm install --no-lockfile && pnpm run build )
+          ( cd apps/demo/shotium && pnpm install --no-lockfile && pnpm run build )
 
           pnpm verify:node out/Shot/shotium
-          pnpm verify:bilibili --package shotium
+          pnpm verify:node-entry
+          pnpm verify:bilibili --package apps/demo/shotium
           pnpm verify:daemon out/Shot/shotium
           pnpm verify:daemon-protocol
 
@@ -511,40 +497,10 @@ jobs:
       - name: npm platform package
         if: ${{ success() && github.event.inputs.mode == 'build' }}
         working-directory: src
-        # One of the six @shotkit/shotium-<os>-<arch> packages: the shared
-        # library, the addon linked against it, and the two resource packs, in
-        # a package npm can install. @shotkit/shotium depends on all six as
-        # optionalDependencies with os/cpu set, so an install pulls the one
-        # that matches and skips the rest. See
-        # scripts/make-platform-package.ts.
-        #
-        # Not the executable. It is a second, independent copy of the same
-        # engine -- shot_core is a source_set, so its objects link into both
-        # the executable and the library -- and node has no use for it now
-        # that rendering is in-process. It still goes out in the .7z on the
-        # releases page, for using the engine without node.
-        #
-        # Which makes the addon the only thing in the package that node can
-        # call. Both macOS runners are native, so the checks step has usually
-        # built one already; with run_checks off it has not, and this builds
-        # it rather than shipping a package that installs and cannot render.
         run: |
           arch="${{ env.SHOT_CPU }}"
-          addon="shotium/native/build/Release/shotium.node"
-          if [ ! -f "$addon" ]; then
-            ( cd shotium/native \
-              && SHOT_INCLUDE_DIR="$PWD/../../shot" \
-                 SHOT_LIB_DIR="$PWD/../../out/Shot" \
-                 pnpm dlx node-gyp@13 rebuild )
-            cp out/Shot/libshotium.dylib out/Shot/shotium_data.pak \
-               out/Shot/shotium_strings.pak shotium/native/build/Release/
-          fi
-          if [ ! -f "$addon" ]; then
-            echo "no $addon -- the package would install and then be unable"
-            echo "to render, since the addon is the only thing in it node can"
-            echo "call. Not shipping that."
-            exit 1
-          fi
+          addon="out/Shot/shotium.node"
+          test -f "$addon"
           pnpm package:platform \
             --build out/Shot --os mac --arch "$arch" --dest dist/npm \
             --addon "$addon"
@@ -561,3 +517,11 @@ jobs:
           path: src/${{ env.SHOT_NPM_TARBALL }}
           if-no-files-found: error
           compression-level: 0
+
+  ffi:
+    needs: build
+    if: ${{ inputs.mode == 'build' && inputs.run_checks }}
+    uses: ./.github/workflows/check-ffi.yml
+    with:
+      runner: ${{ inputs.arch == 'arm64' && 'macos-15' || 'macos-15-intel' }}
+      artifact: shotium-macos-${{ inputs.arch }}

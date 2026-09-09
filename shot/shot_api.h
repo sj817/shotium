@@ -18,9 +18,8 @@
 // This is the only header in shot/ with no chromium includes, and it must
 // stay that way -- a caller compiles it having never heard of //base.
 //
-// The immediate caller is shotium's node addon, which needs a shot in the same
-// process rather than in a child. It is not the only one this shape allows:
-// ctypes, cgo and libloading all read this file as-is.
+// ctypes, cgo and libloading all read this file as-is. The GN-built Node
+// addon shares the internal engine service and does not pass through this ABI.
 //
 //   shot_engine* engine = NULL;
 //   shot_buffer* error = NULL;
@@ -31,7 +30,7 @@
 //   }
 //   shot_buffer* png = NULL;
 //   shot_engine_capture(engine, "{\"file\":\"https://example.com\"}",
-//                       &png, &error);
+//                       &png, NULL, &error);
 //   ...
 //   shot_buffer_free(png);
 //   shot_engine_destroy(engine);
@@ -64,8 +63,8 @@ extern "C" {
 #define SHOT_ABI_VERSION 3
 
 // What the library was built as, which is not necessarily what the caller
-// compiled against -- a prebuilt addon and a prebuilt engine are shipped as
-// separate files and nothing stops them being separate versions. Check it
+// compiled against -- a C ABI client and this library can come from separate
+// versions. Check it
 // before shot_engine_create() and say so plainly if it does not match.
 SHOT_EXPORT int32_t shot_abi_version(void);
 
@@ -158,7 +157,7 @@ SHOT_EXPORT void shot_engine_destroy(shot_engine* engine);
 // One screenshot. Blocks until there is an answer.
 //
 // `request_json` is one ScreenshotOptions as it goes over shotium's wire --
-// the same object shotium/src/lib/request.ts builds and shot/shot_request.cc
+// the same object apps/demo/shotium/src/lib/request.ts builds and shot/shot_request.cc
 // parses, with no third spelling of it in between. `file` is required;
 // everything else has a default.
 //

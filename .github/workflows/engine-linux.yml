@@ -72,7 +72,7 @@ on:
         description: 'auto: one runner for a proven warm docs/version change, platform defaults otherwise; integer: explicit shard count'
         default: auto
 
-# GN, the SDK and node-gyp spell the 64-bit architecture x64; the names
+# GN and the Node SDK spell the 64-bit architecture x64; the names
 # people see spell it amd64. The build-directory cache is keyed by the GN
 # spelling so that renaming labels did not throw away six warm build
 # directories.
@@ -98,11 +98,11 @@ jobs:
       - uses: actions/checkout@v7
         with:
           sparse-checkout: |
-            shotium/package.json
+            apps/demo/shotium/package.json
             scripts
           sparse-checkout-cone-mode: false
       - id: version
-        run: echo "version=$(jq -r .version shotium/package.json)" >> "$GITHUB_OUTPUT"
+        run: echo "version=$(jq -r .version apps/demo/shotium/package.json)" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-node@v6
         with:
           node-version: 22
@@ -187,7 +187,7 @@ jobs:
         # onto the least-loaded shard, so the shards finish together; every
         # shard computes the same assignment from the same inputs.
         run: |
-          ninja -C out/Shot -t inputs shot shot_c | grep -E '\.o$' \
+          ninja -C out/Shot -t inputs shot shot_c shot_node | grep -E '\.o$' \
             | pnpm --silent build:shards slice --build-dir out/Shot \
                 --shards '${{ needs.meta.outputs.shard_count }}' --index '${{ matrix.shard }}' > /tmp/slice.txt
 
@@ -261,7 +261,7 @@ jobs:
         working-directory: src
         # The last slice, by the same assignment every shard computes.
         run: |
-          ninja -C out/Shot -t inputs shot shot_c | grep -E '\.o$' \
+          ninja -C out/Shot -t inputs shot shot_c shot_node | grep -E '\.o$' \
             | pnpm --silent build:shards slice --build-dir out/Shot \
                 --shards '${{ needs.meta.outputs.shard_count }}' --index '${{ needs.meta.outputs.final_shard }}' > /tmp/slice.txt
 
@@ -323,7 +323,7 @@ jobs:
         # pruning removed fails here in seconds. The edge count is the useful
         # output: it says how much of this platform is actually configured.
         run: |
-          ninja -C out/Shot shot shot_c -n > /tmp/probe.txt 2>&1 || {
+          ninja -C out/Shot shot shot_c shot_node -n > /tmp/probe.txt 2>&1 || {
             echo "=== ninja refused the graph ==="
             tail -40 /tmp/probe.txt
             exit 1
@@ -353,7 +353,7 @@ jobs:
         # fraction of a full one. `-d explain` makes ninja say why each dirty
         # edge is dirty; the root causes appear at the top, so a head of the
         # output is the whole answer. Diagnosis only: nothing is built here.
-        run: ninja -C out/Shot shot shot_c -n -d explain 2>&1 | head -120 || true
+        run: ninja -C out/Shot shot shot_c shot_node -n -d explain 2>&1 | head -120 || true
 
       - name: forget the previous binary
         # The build directory is restored from cache, so out/Shot still
@@ -364,7 +364,7 @@ jobs:
         # satisfy the check; the relink costs a couple of minutes.
         if: ${{ github.event.inputs.mode == 'build' }}
         working-directory: src
-        run: rm -f out/Shot/shotium out/Shot/libshotium.so
+        run: rm -f out/Shot/shotium out/Shot/libshotium.so out/Shot/shotium.node
 
       # A restored build directory can hold a depfile that names a file the
       # tree no longer has; ninja refuses to start on it ("missing and no
@@ -382,10 +382,10 @@ jobs:
         # -k 0: this platform is still being brought up, and each round costs
         # a runner-hour -- keep compiling past a failure so one log names every
         # broken translation unit, not just the first.
-        # shot_c is the same engine behind a C ABI, for shotium's node addon.
+        # shot_c preserves the C ABI; shot_node is the Node entry.
         # The second link shares this directory's ThinLTO cache with the first,
         # so it reuses that codegen and costs minutes rather than an hour.
-        run: ninja -C out/Shot shot shot_c -j ${{ github.event.inputs.jobs }} -k 0
+        run: ninja -C out/Shot shot shot_c shot_node -j ${{ github.event.inputs.jobs }} -k 0
 
       # What this run read: ninja's inputs and deps log, gn's build.ninja.d,
       # the jumbo source lists. A probe exports the graph without the deps log.
@@ -438,14 +438,14 @@ jobs:
         if: ${{ github.event.inputs.mode == 'build' }}
         working-directory: src
         run: |
-          for wanted in out/Shot/shotium out/Shot/libshotium.so; do
+          for wanted in out/Shot/shotium out/Shot/libshotium.so out/Shot/shotium.node; do
             if [ ! -f "$wanted" ]; then
               echo "$wanted was not produced -- the build got further, but is not done."
               echo "Run this workflow again; the cache carries the objects over."
               exit 1
             fi
           done
-          ls -l out/Shot/shotium out/Shot/libshotium.so
+          ls -l out/Shot/shotium out/Shot/libshotium.so out/Shot/shotium.node
 
       - name: checks
         # x64 only. The runner is x64 for both architectures now, so there is
@@ -462,22 +462,12 @@ jobs:
           pnpm verify:serve out/Shot/shotium
           pnpm verify:net out/Shot/shotium
 
-          # The node addon, and the C ABI under it. Built here rather than
-          # taken from anywhere else, because the library it links against is
-          # the one this job has just produced -- an addon checked against a
-          # different build would be checking nothing.
-          #
-          # Before the node suites, not after: the addon is what they load.
-          # A package-manager install carries the library and the addon and not the
-          # executable, so there is no second path for them to fall back to.
-          ( cd shotium/native             && SHOT_INCLUDE_DIR="$PWD/../../shot" SHOT_LIB_DIR="$PWD/../../out/Shot"                pnpm dlx node-gyp@13 rebuild )
-          cp out/Shot/libshotium.so out/Shot/shotium_data.pak out/Shot/shotium_strings.pak              shotium/native/build/Release/
-
+          # The GN build already produced the self-contained Node addon.
           # The package is TypeScript, so what the check suites import is a
           # build output rather than a file in the tree. There is no frozen
           # lockfile -- see checks.yml for why it cannot carry the six
           # optionalDependencies yet.
-          ( cd shotium && pnpm install --no-lockfile && pnpm run build )
+          ( cd apps/demo/shotium && pnpm install --no-lockfile && pnpm run build )
 
           # Under a backtrace if it dies. This build is is_official_build, and
           # an official build compiles CHECK() down to a bare trap with no
@@ -491,7 +481,7 @@ jobs:
           pnpm verify:node out/Shot/shotium || {
             status=$?
             echo "::group::check-node died with $status -- backtrace"
-            readelf -SW out/Shot/libshotium.so | grep -E 'symtab|dynsym' || true
+            readelf -SW out/Shot/shotium.node | grep -E 'symtab|dynsym' || true
             sudo apt-get update -qq && sudo apt-get install -y -qq gdb || true
             gdb -q -batch \
                 -ex 'set confirm off' \
@@ -501,9 +491,10 @@ jobs:
             echo "::endgroup::"
             exit "$status"
           }
-          pnpm verify:bilibili --package shotium
+          pnpm verify:node-entry
+          pnpm verify:bilibili --package apps/demo/shotium
           # The daemon runs here as well as on Windows because
-          # shotium/src/lib/endpoint.ts has two branches -- a named pipe on
+          # apps/demo/shotium/src/lib/endpoint.ts has two branches -- a named pipe on
           # Windows, a unix socket everywhere else -- and the Windows job
           # exercises exactly one of them.
           pnpm verify:daemon out/Shot/shotium
@@ -520,6 +511,7 @@ jobs:
           path: |
             src/out/Shot/shotium
             src/out/Shot/libshotium.so
+            src/out/Shot/shotium.node
           if-no-files-found: error
           compression-level: 6
 
@@ -564,9 +556,9 @@ jobs:
           # --strip-all removes .symtab and .strtab and leaves .dynsym alone,
           # which is the whole distinction that matters here. On the shared
           # library that is what keeps it loadable at all.
-          "$strip_binary" --strip-all out/Shot/shotium out/Shot/libshotium.so
+          "$strip_binary" --strip-all out/Shot/shotium out/Shot/libshotium.so out/Shot/shotium.node
           after=$(stat -c%s out/Shot/libshotium.so)
-          ls -l out/Shot/shotium out/Shot/libshotium.so
+          ls -l out/Shot/shotium out/Shot/libshotium.so out/Shot/shotium.node
           echo "libshotium.so: $before -> $after bytes"
           # A strip that silently did nothing would ship the same 70 MB and
           # look like it worked, so this fails rather than reports.
@@ -587,7 +579,7 @@ jobs:
         # place rather than leaving two versioned directories side by side.
         run: |
           version=$(python3 -c \
-            "import json;print(json.load(open('shotium/package.json'))['version'])")
+            "import json;print(json.load(open('apps/demo/shotium/package.json'))['version'])")
           stem="shotium-linux-${{ inputs.arch }}"
           archive="$stem-v$version.7z"
           rm -rf dist "$archive"
@@ -596,7 +588,7 @@ jobs:
           # they are the same engine, the resource packs serve both, and a
           # caller who wants the addon should not have to work out which two
           # downloads go together.
-          cp out/Shot/shotium out/Shot/libshotium.so              out/Shot/shotium_data.pak out/Shot/shotium_strings.pak "dist/$stem/"
+          pnpm package:c-abi --build out/Shot --os linux --dest "dist/$stem"
           ls -l "dist/$stem"
           ( cd dist && 7z a -t7z -mx=9 "../$archive" "$stem" )
           ls -l "$archive"
@@ -622,51 +614,10 @@ jobs:
       - name: npm platform package
         if: ${{ success() && github.event.inputs.mode == 'build' }}
         working-directory: src
-        # One of the six @shotkit/shotium-<os>-<arch> packages: the shared
-        # library, the addon linked against it, and the two resource packs, in
-        # a package npm can install. @shotkit/shotium depends on all six as
-        # optionalDependencies with os/cpu set, so an install pulls the one
-        # that matches and skips the rest. See
-        # scripts/make-platform-package.ts.
-        #
-        # Not the executable. It is a second, independent copy of the same
-        # engine -- shot_core is a source_set, so its objects link into both
-        # the executable and the library -- and node has no use for it now that
-        # rendering is in-process. Shipping it doubled the download. It still
-        # goes out in the .7z on the releases page, for using the engine
-        # without node.
-        #
-        # Which makes the addon the only thing in the package that node can
-        # call, so this step fails rather than warns if there is not one. It
-        # used to warn and ship anyway, back when a package without an addon
-        # could still drive the worker pool; there is no pool to fall back to.
-        #
-        # On x64 the addon already exists: the checks step built it against
-        # this job's own library and proved it renders the same bytes as the
-        # executable. On arm64 the checks did not run -- the runner cannot
-        # execute an arm64 binary -- so it is cross-compiled here and ships
-        # having been checked by nothing but the compiler and the linker.
-        # node-gyp compiles binding.cc with the system compiler rather than
-        # the one Chromium brought, which is why a second toolchain has to be
-        # installed for it and for nothing else.
         run: |
           arch="${{ env.SHOT_CPU }}"
-          addon="shotium/native/build/Release/shotium.node"
-          if [ ! -f "$addon" ] && [ "$arch" = arm64 ]; then
-            sudo apt-get update -qq
-            sudo apt-get install -y -qq g++-aarch64-linux-gnu
-            ( cd shotium/native \
-              && SHOT_INCLUDE_DIR="$PWD/../../shot" \
-                 SHOT_LIB_DIR="$PWD/../../out/Shot" \
-                 CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++ \
-                 pnpm dlx node-gyp@13 rebuild --arch=arm64 )
-          fi
-          if [ ! -f "$addon" ]; then
-            echo "no $addon -- the package would install and then be unable"
-            echo "to render, since the addon is the only thing in it node can"
-            echo "call. Not shipping that."
-            exit 1
-          fi
+          addon="out/Shot/shotium.node"
+          test -f "$addon"
           pnpm package:platform \
             --build out/Shot --os linux --arch "$arch" --dest dist/npm \
             --addon "$addon"
@@ -683,3 +634,11 @@ jobs:
           path: src/${{ env.SHOT_NPM_TARBALL }}
           if-no-files-found: error
           compression-level: 0
+
+  ffi:
+    needs: build
+    if: ${{ inputs.mode == 'build' && inputs.run_checks }}
+    uses: ./.github/workflows/check-ffi.yml
+    with:
+      runner: ${{ inputs.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
+      artifact: shotium-linux-${{ inputs.arch }}

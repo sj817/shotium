@@ -15,6 +15,7 @@
     "check-serve": "tsx check-serve.ts",
     "check-net": "tsx check-net.ts",
     "check-demos": "tsx check-demos.ts",
+    "check-node-entry": "tsx check-node-entry.ts",
     "check-node": "tsx check-node.ts",
     "check-daemon": "tsx check-daemon.ts",
     "check-daemon-protocol": "tsx check-daemon-protocol.ts",
@@ -59,7 +60,10 @@
     "deps-lock": "tsx deps-lock.ts",
     "prune-stale-depfiles": "tsx prune-stale-depfiles.ts",
     "build-shards": "tsx build-shards.ts",
-    "upstream-sync": "tsx upstream-sync.ts"
+    "upstream-sync": "tsx upstream-sync.ts",
+    "package-c-abi": "tsx package-c-abi.ts",
+    "check-ffi": "tsx check-ffi.ts",
+    "check-delivery": "tsx check-delivery.ts"
   },
   "dependencies": {
     "cac": "7.0.0",

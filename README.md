@@ -6,6 +6,7 @@
 
 <p align="center">
   <a href="https://www.npmjs.com/package/@shotkit/shotium"><img src="https://img.shields.io/npm/v/@shotkit/shotium.svg?label=npm" alt="npm version"></a>
+  <a href="https://chromium.googlesource.com/chromium/src/+/refs/tags/155.0.8048.0"><img src="https://img.shields.io/badge/chromium%20baseline-155.0.8048.0-4285F4?logo=googlechrome&logoColor=white" alt="Chromium baseline"></a>
   <a href="https://github.com/sj817/shotium/releases"><img src="https://img.shields.io/badge/platforms-win%20%7C%20mac%20%7C%20linux%20%C2%B7%20x64%20%7C%20arm64-4c8.svg" alt="supported platforms"></a>
   <a href="https://sj817.github.io/shotium/en/"><img src="https://img.shields.io/badge/benchmark-vs%20Puppeteer%20%26%20Playwright-orange.svg" alt="benchmarks"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-BSD--3--Clause-blue.svg" alt="license"></a>
@@ -20,7 +21,7 @@
        alt="Terminal recording demonstrating installation of @shotkit/shotium and running shotium in Node.js on card.html with cold and warm capture timings, followed by the rendered boarding pass.">
 </p>
 
-**shotium** strips Chromium down to its essential rendering pipeline — the Blink layout engine, Skia 2D graphics library, and `//net` network stack — packaged as a compact ~22 MB npm dependency. It lays out static HTML and CSS with 100% Chrome fidelity, rasterizes on the CPU, and delivers PNG, JPEG, or WebP buffers directly inside your host process.
+**shotium** strips Chromium down to its essential rendering pipeline — the Blink layout engine, Skia 2D graphics library, and `//net` network stack — packaged as a compact ~22 MB native engine. It lays out static HTML and CSS with 100% Chrome fidelity, rasterizes on the CPU, and delivers PNG, JPEG, or WebP buffers directly inside your host process.
 
 By stripping out the V8 JavaScript engine, the browser shell (`//content`), the GPU process, and the DevTools remote protocol, shotium eliminates browser startup latency, IPC serialization overhead, and orphaned background processes.
 
@@ -28,11 +29,12 @@ By stripping out the V8 JavaScript engine, the browser shell (`//content`), the 
 
 ## Key Highlights
 
+- **Chromium 155 Baseline Fidelity**: Retained Blink DOM/CSS layout, Skia rasterization, and `//net` stack are synchronized against upstream Chromium `155.0.8048.0`. Full support for modern CSS Grid, Flexbox, Container Queries, `@font-face`, SVG, CSS variables, and gradients with 100% Chrome rendering accuracy.
 - **Auditable Cross-Engine Benchmarks**: Native CI compares Shotium with Puppeteer and Playwright engine variants on six platforms; complete runs with complete evidence and no blocking harness or Shotium failure are publishable, while noisy or failed cells are labeled and excluded from rankings. (See [Benchmarks](#benchmarks))
-- **Zero External Dependencies**: `npm install` automatically downloads the native prebuilt binary for Windows, macOS, and Linux (x64 and arm64). The engine loads via Node-API directly into your host process — no child processes, no WebSockets, and no lingering zombie browsers.
-- **Full Chromium CSS Compatibility**: Complete support for CSS Grid, Flexbox, `@font-face`, SVG, gradients, box shadows, filters, and CSS variables. Typography uses deterministic grayscale antialiasing with a fixed gamma curve for byte-identical rendering across all platforms.
+- **Zero External Dependencies**: `npm install @shotkit/shotium` automatically downloads the native prebuilt binary for Windows, macOS, and Linux (x64 and arm64). The engine loads via Node-API directly into your host process — no child processes, no WebSockets, and no lingering zombie browsers.
+- **Deterministic Typography & Layout**: Typography uses deterministic grayscale antialiasing with a fixed gamma curve for byte-identical rendering across all operating systems.
 - **Auditable Memory Footprint**: The benchmark records the complete owned process tree, peak RSS, and resident memory drift for every engine variant; comparative memory figures are published only when the run passes the quality and evidence gates.
-- **Flexible Deployment Models**: In-process embedding for long-lived backend services, a pre-warmed resident daemon for CLI tools and CI pipelines, a standalone single-file binary for shell scripting, and a standard C ABI for Rust, Go, Python, and C++.
+- **Multi-Language & Multi-Mode Ecosystem**: In-process embedding via Node.js (`@shotkit/shotium`), a pre-warmed resident daemon for CLI tools and CI pipelines, a standalone single-file binary for shell scripting, a standard C ABI for Rust, Go, Python, and C++, with runnable examples and no separate language packages planned for now.
 
 ---
 
@@ -41,65 +43,29 @@ By stripping out the V8 JavaScript engine, the browser shell (`//content`), the 
 ### 1. Installation
 
 ```bash
-# npm
-npm install @shotkit/shotium
-
-# pnpm / yarn / bun
+# Node.js / TypeScript (npm, pnpm, yarn, bun)
 pnpm add @shotkit/shotium
-yarn add @shotkit/shotium
-bun add @shotkit/shotium
 ```
 
-### 2. Node.js / TypeScript Example
-
-The snippet below is [`docs/demo/card.mjs`](docs/demo/card.mjs), the exact script executed in the demo recording:
-
-<p align="center">
-  <img src="docs/assets/example-node.webp" width="820"
-       alt="Node.js code example: importing shotium and screenshot, initializing the engine, capturing card.html, logging render timings, and cleanly shutting down.">
-</p>
-
-<details>
-<summary>Click to view full source code</summary>
+### 2. Quick Node.js Example
 
 ```ts
-import { statSync } from 'node:fs';
-import shotium, { screenshot } from '@shotkit/shotium';
+import { writeFileSync } from 'node:fs';
+import { screenshot } from '@shotkit/shotium';
 
-// Initialize the engine (singleton per process; idempotent)
-shotium.start();
+// Renders URL or local HTML file directly; engine starts automatically on first use
+const { image, stats } = await screenshot({
+  file: 'https://example.com',
+  viewport: { width: 1280, height: 720 },
+  type: 'png',
+});
 
-function shoot() {
-  return screenshot({
-    file: 'card.html',        // Remote URL, local relative/absolute path, or file://
-    viewport: { width: 720, height: 380 },
-    scale: 2,                 // Device pixel ratio (DPR)
-    type: 'png',
-    path: 'card.png',         // Output file path; returns null buffer when path is set
-  });
-}
-
-// First call warms up subsystems and font caches; subsequent calls run warm
-for (const pass of ['cold', 'warm']) {
-  const { render, total } = (await shoot()).stats.timing;
-  console.log(`${pass}  render ${render.toFixed(1)} ms  total ${total.toFixed(1)} ms`);
-}
-
-const kb = (statSync('card.png').size / 1024).toFixed(1);
-console.log(`card.png  1440x760  ${kb} KB`);
-
-// Gracefully shut down the engine
-await shotium.stop();
+console.log(`Rendered in ${stats.timing.render.toFixed(1)}ms (total: ${stats.timing.total.toFixed(1)}ms)`);
+writeFileSync('example.png', image!);
 ```
 
-</details>
-
-Input document [`docs/demo/card.html`](docs/demo/card.html) rendered by Blink and Skia:
-
-<p align="center">
-  <img src="docs/assets/card.webp" width="620"
-       alt="Rendered output boarding pass card with scannable SVG QR code.">
-</p>
+> 📖 **Looking for comprehensive Node.js & TypeScript documentation?**
+> Check out the [Dedicated Node.js Documentation (`apps/demo/shotium/README.md`)](apps/demo/shotium/README.md) for full cookbook recipes, Express/Fastify integration, local file permissions (`allowFileAccess`), and complete TypeScript API reference.
 
 ### 3. Standalone CLI
 
@@ -133,12 +99,12 @@ Benchmark figures come from the official [six-platform CI benchmark suite](https
 
 | Feature / Metric | shotium | Puppeteer / Playwright | Satori (`@vercel/og`) | wkhtmltoimage |
 |---|---|---|---|---|
-| **Layout Engine** | Chromium Blink + Skia | Full Chromium | Custom Layout Engine | QtWebKit (archived 2023) |
-| **CSS Capabilities** | Full modern Chrome CSS | Full modern Chrome CSS | Limited subset (Flexbox only, no Grid) | 2012-era WebKit standard |
+| **Layout Engine** | Chromium Blink 155 + Skia | Full Chromium | Custom Layout Engine | QtWebKit (archived 2023) |
+| **CSS Capabilities** | Full modern Chrome CSS (155) | Full modern Chrome CSS | Limited subset (Flexbox only, no Grid) | 2012-era WebKit standard |
 | **Input Formats** | HTML file, URL, `stdin` | HTML file, URL | JSX element tree | HTML file, URL |
 | **JavaScript Execution** | Disabled (V8 removed) | Supported | N/A | Legacy JavaScriptCore |
 | **Execution Architecture** | In-process (Node-API / C ABI) | Separate browser process + IPC | In-process (WASM / JS) | Child process |
-| **Distribution Size** | ~22 MB standalone | Browser download (> 100 MB) | Minimal (pure JS / WASM) | Native OS package |
+| **Distribution Size** | ~22 MB native engine | Browser download (> 100 MB) | Minimal (pure JS / WASM) | Native OS package |
 | **First Image Latency (linux-x64)** | [See validated benchmark](https://sj817.github.io/shotium/en/) | [See validated benchmark](https://sj817.github.io/shotium/en/) | N/A | N/A |
 
 ### Technology Selection Guide
@@ -169,7 +135,7 @@ Benchmark figures come from the official [six-platform CI benchmark suite](https
 
 ---
 
-## Execution Modes
+## Execution Modes & Topology
 
 ```mermaid
 flowchart TB
@@ -204,102 +170,53 @@ flowchart TB
 
 | Use Case | Recommended Mode | Rationale |
 |---|---|---|
-| **Web & API Services** (Express, Fastify, NestJS) | [In-Process Engine](#1-in-process-engine) | Zero IPC overhead, zero startup latency, lowest per-request rendering time. |
-| **CLI Tools, CI Pipelines, Serverless Functions** | [Resident Daemon](#2-resident-daemon) | Keeps the engine pre-warmed in the background so clients avoid repeated engine starts. |
-| **Non-Node Environments & Shell Scripts** | [Standalone CLI](#3-standalone-cli) or [C ABI & FFI Integration](#c-abi-ffi-integration) | Single portable binary with pipeline support (`--stdin`) and resident service mode (`--serve`). |
+| **Web & API Services** (Express, Fastify, NestJS) | **In-Process Engine** | Zero IPC overhead, zero startup latency, lowest per-request rendering time. |
+| **CLI Tools, CI Pipelines, Serverless Functions** | **Resident Daemon** | Keeps the engine pre-warmed in the background so clients avoid repeated engine starts. |
+| **Non-Node Environments & Shell Scripts** | **Standalone CLI** or **C ABI & FFI** | Single portable binary with pipeline support (`--stdin`) and resident service mode (`--serve`). |
 
 ---
 
-## Detailed Usage
+## Language SDKs & Client Ecosystem
 
-### 1. In-Process Engine
+Shotium's native C core supports multiple programming languages and environments:
 
-Loads directly into the Node.js process via Node-API, bound to the C ABI defined in [`shot/shot_api.h`](shot/shot_api.h). Calling `screenshot()` resolves directly to an in-memory image buffer.
+### 1. Node.js & TypeScript (`@shotkit/shotium`)
+
+The official JavaScript/TypeScript package. It runs in-process via Node-API or connects transparently to a background daemon.
 
 ```ts
-import { writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import shotium, { screenshot } from '@shotkit/shotium';
 
-// 1. Initialize engine and inspect disk cache status
-const { cacheDir, cacheActive } = shotium.start();
+// In-process server lifecycle
+shotium.start({ cacheMaxBytes: 256 * 1024 * 1024 });
 
-// 2. Capture a remote URL
-const res1 = await screenshot({
-  file: 'https://example.com',
+const { image } = await screenshot({
+  file: './report.html',
+  allowFileAccess: true, // required for local subresources (CSS/images/fonts)
   viewport: { width: 1280, height: 720 },
-  type: 'webp',
-  quality: 85,
 });
 
-// 3. Capture dynamically assembled HTML via temporary file
-const html = `<div style="padding: 24px; background: #f6f8fa;"><h2>Invoice #1024</h2></div>`;
-const page = join(tmpdir(), 'invoice-1024.html');
-await writeFile(page, html);
-
-const res2 = await screenshot({
-  file: page,
-  viewport: { width: 600, height: 300 },
-});
-
-// 4. Proactive memory management after burst traffic:
-//    releaseMemory() clears Blink heap, Skia caches, and PartitionAlloc free lists;
-//    releaseWorkingSet: true requests OS-level physical memory trimming.
+// Periodic memory reclamation
 shotium.releaseMemory({ releaseWorkingSet: true });
 
-// 5. Cleanly shut down
+// Graceful shutdown
 await shotium.stop();
 ```
 
-#### Lifecycle & Behavioral Characteristics
+👉 **[Read the complete Node.js Documentation (`apps/demo/shotium/README.md`)](apps/demo/shotium/README.md)** for:
+- Three usage paradigms (Direct one-shot, In-process web services, Resident daemon).
+- In-memory HTML string rendering via temp files.
+- Local subresource security (`allowFileAccess`).
+- Atomic zero-copy disk writes via `path`.
+- Ultra-tall document slicing (`screenshotTiles`) with `{n}` streaming.
+- Cache management (`cache.getFiles()`, `cache.clear({ glob })`).
+- Comprehensive TypeScript type definitions and error diagnostics.
 
-- **Process-Wide Singleton**: Because Blink relies on immutable process-level global state, all `Runtime` instances and top-level functions in a process share the same underlying engine.
-- **`start()` & `stop()`**: `stop()` drains in-flight requests, sets `running: false`, and trims the working set. A subsequent `start()` reactivates the engine immediately while preserving warm disk cache entries.
-- **Immutable Configuration**: Startup options are locked on the first `start()` invocation; calling `start()` with conflicting options throws an explicit error.
-- **Serial Queue**: Concurrent `screenshot()` calls are queued and processed sequentially. Scale across worker processes for parallel rendering.
-- **Status Awareness**: `start()` and `status()` return `{ running, cacheDir, cacheActive, enginePath }`. `enginePath` identifies the directory the loaded native engine came from and is `null` before the first engine load. If the cache directory is inaccessible, `cacheActive` is `false` and the engine gracefully continues in no-cache mode.
+---
 
-### 2. Resident Daemon
+### 2. Standalone CLI (`shotium`)
 
-Designed for short-lived CLI tasks, CI job steps, and serverless handlers where eliminating repeated cold-start latency is essential.
-
-The daemon hosts the engine in a background process accessible via local IPC (named pipes on Windows, Unix domain sockets on POSIX). It pre-warms subsystems by rendering a blank document on boot, allowing clients to avoid repeated engine startup and use the warm capture path immediately.
-
-```ts
-import { daemon } from '@shotkit/shotium';
-
-// 1. Connect to an existing daemon or start one automatically
-const client = await daemon.connect({
-  name: 'default',          // Optional: isolate daemons by instance name
-  idleTimeoutMs: 300000,    // Inactivity timeout in ms (default 5 min; 0 = infinite)
-  prewarm: true,            // Automatically perform pre-warm render on startup
-});
-
-// 2. Perform screenshot capture
-const { image, stats } = await client.screenshot({
-  file: 'https://example.com',
-  viewport: { width: 1280, height: 720 },
-});
-
-// 3. Client cleanup and memory management
-const clientStatus = await client.status();
-await client.releaseMemory({ releaseWorkingSet: false });
-client.close();
-
-// 4. Process management (optional)
-const daemonInfo = await daemon.status();
-console.log(`Daemon PID: ${daemonInfo.pid}, Uptime: ${daemonInfo.uptimeMs}ms, Served: ${daemonInfo.served}`);
-
-await daemon.stop();
-```
-
-- **Multiplexed Requests**: A single connection supports multiple concurrent requests; each message includes a unique `id` and responses are returned as completed.
-- **Instance Isolation**: Each daemon instance renders serially; launch multiple daemons with distinct `name` values for parallel processing.
-
-### 3. Standalone CLI
-
-Download prebuilt platform binaries from [GitHub Releases](https://github.com/sj817/shotium/releases) (14–18 MB `.7z` archive, zero external runtime dependencies):
+Prebuilt standalone binaries are distributed on [GitHub Releases](https://github.com/sj817/shotium/releases) (CLI, shared library, C header and resource packs):
 
 ```bash
 # 1. Capture a URL with a custom viewport
@@ -318,302 +235,78 @@ shotium --file article.html --full-page --tile-height 8000 -o article-{n}.png
 shotium --serve --cache-dir /var/tmp/shotium-cache
 ```
 
-CLI flags (`--selector`, `--scale`, `--omit-background`, `--wait-until`, `--timeout-ms`, `--user-agent`, `--cache-max-bytes`, etc.) correspond directly to API options. Run `shotium --help` for the complete option reference.
+Run `shotium --help` for the complete list of command-line flags.
 
 ---
 
-## API Reference
 
-### `ScreenshotOptions`
+### Language examples and precompiled C ABI
 
-```ts
-interface ScreenshotOptions {
-  /** Target URL (http/https/file protocol) or local file path */
-  file: string;
+At this early stage, Shotium provides **a common C ABI and precompiled GitHub Release libraries**, rather than separate Go, Python, Rust, C# or Java packages. Dedicated bindings can be published when there is demand. Archives include the shared library, `shot_api.h`, resource packs and integration guide. The existing npm package continues to be published.
 
-  /** Output image format (default: 'png') */
-  type?: 'png' | 'jpeg' | 'webp';
+[Download and ABI guide](apps/c-abi/README.md) · [Go](apps/go/README.md) · [Python](apps/python/README.md) · [Rust](apps/rust/README.md) · [C#](apps/csharp/README.md) · [Java](apps/java/README.md)
 
-  /** Viewport dimensions (default: 1280x720) */
-  viewport?: { width?: number; height?: number };
+The complete npm package source now lives in [`apps/demo/shotium/`](apps/demo/shotium/README.md), with packaging, loading and CI updated together. See [apps](apps/README.md) for the full example index.
 
-  /** Capture full scrollable document */
-  fullPage?: boolean;
+### 3. C ABI & FFI Integration (`shot/shot_api.h`)
 
-  /** Capture bounding box of the first matching CSS selector */
-  selector?: string;
+For Rust, Go, Python, C++, or any language with C FFI support, shotium exports a clean C interface in [`shot/shot_api.h`](shot/shot_api.h):
 
-  /** Crop rectangle in CSS pixels */
-  clip?: { x: number; y: number; width: number; height: number };
+```c
+#include "shot_api.h"
 
-  /** Compression quality 1–100 (jpeg and webp only; default: 90) */
-  quality?: number;
+shot_engine* engine = NULL;
+shot_buffer* error = NULL;
+shot_engine_create("{}", &engine, &error);
 
-  /** Device scale factor (DPR) 0.01–8.0 (default: 1.0) */
-  scale?: number;
+shot_buffer* png = NULL;
+shot_buffer* stats = NULL;  /* Optional; pass NULL if metrics are not needed */
+shot_engine_capture(engine, "{\"file\":\"https://example.com\"}",
+                    &png, &stats, &error);
 
-  /** Preserve transparent alpha channel instead of white background (png/webp only; default: false) */
-  omitBackground?: boolean;
+const uint8_t* data = shot_buffer_data(png);
+size_t size = shot_buffer_size(png);
 
-  /** Output file path. When set, writes directly to disk and `image` buffer is null */
-  path?: string;
-
-  /** Navigation and load control */
-  pageGotoParams?: {
-    /** Navigation timeout in milliseconds (default: 30000) */
-    timeout?: number;
-    /**
-     * Wait condition:
-     * - 'load': DOM parsed and all subresources loaded (default)
-     * - 'networkidle': wait until no active network requests for at least 500 ms
-     */
-    waitUntil?: 'load' | 'networkidle';
-  };
-
-  /** Allow loading local file:// subresources (default: false) */
-  allowFileAccess?: boolean;
-
-  /** HTTP cache policy (default: 'default') */
-  cache?: 'default' | 'reload' | 'no-store' | 'only-if-cached';
-
-  /** Additional request headers (sent exclusively to same-origin requests) */
-  headers?: Record<string, string>;
-}
+/* Free memory buffers and destroy engine */
+shot_buffer_free(png);
+shot_buffer_free(stats);
+shot_engine_destroy(engine);
 ```
 
-> **Mutual Exclusion**: `fullPage`, `selector`, and `clip` are mutually exclusive. Specifying more than one will throw a validation error.
-
-#### `ScreenshotResult`
-
-```ts
-interface ScreenshotResult {
-  /** Encoded image buffer; null when `path` is specified and file is written */
-  image: Buffer | null;
-  /** Detailed timing breakdown and network statistics */
-  stats: CaptureStats;
-}
-```
-
-#### Parameter Details
-
-- **`file` Schemes**: Supports `https://example.com`, `./template.html`, `/absolute/path/index.html`, and `file:///...`. Dynamic markup must be saved to a file or supplied via `--stdin` in CLI mode; `data:` URLs are not accepted.
-- **`cache` Policy Semantics**: Follows the standard Fetch API specification:
-  - `default`: Standard HTTP caching rules.
-  - `reload`: Bypasses cache, fetches from origin, and updates cache.
-  - `no-store`: Completely bypasses cache reading and writing.
-  - `only-if-cached`: Reads exclusively from disk cache; fails immediately on cache miss without network access.
-- **`headers` Same-Origin Security**: Custom headers (e.g., `Authorization`, `Cookie`) are strictly sent to same-origin targets and are never forwarded to third-party assets (CDNs, fonts, cross-origin images).
+> **ABI Versioning**: Current ABI version is **3**. ABI 3 adds `shot_engine_capture_tiles()` and the `shot_tile_list_*` ownership API. Call `shot_abi_version()` to verify compatibility against `SHOT_ABI_VERSION`.
 
 ---
 
-### `screenshotTiles(options)`
+### 4. Python example / Python 示例
 
-The same capture delivered as a stack of images instead of one. The region that `fullPage`, `selector`, `clip` or the viewport would have produced is cut into horizontal tiles of at most `tile.height` CSS pixels each; the document is loaded, laid out and painted once for all of them.
-
-```ts
-import { screenshotTiles } from '@shotkit/shotium';
-
-// 1. Tiles returned as buffers, top to bottom
-const { tiles, stats } = await screenshotTiles({
-  file: 'https://example.com/a-very-long-article',
-  fullPage: true,
-  tile: { height: 8000 },
-});
-
-for (const { image, y, height } of tiles) {
-  // image: Buffer — a PNG of this tile
-  // y, height: where it sits in the document, in CSS pixels
-}
-
-// 2. Bounded-memory mode: each tile is written as it finishes,
-//    and {n} becomes the tile's 1-based index
-await screenshotTiles({
-  file: './report.html',
-  fullPage: true,
-  tile: { height: 4000 },
-  path: 'report-{n}.png',
-});
-```
-
-```ts
-interface ScreenshotTilesOptions extends ScreenshotOptions {
-  /** Most CSS pixels per tile; the last tile is what is left. Maximum 32000. */
-  tile: { height: number };
-}
-
-interface ScreenshotTilesResult {
-  /** Top to bottom. Consecutive tiles share x and width; each starts where the previous ended. */
-  tiles: Array<{
-    image: Buffer | null;   // null when `path` is specified
-    x: number; y: number; width: number; height: number;
-    path?: string;          // the file written, when `path` is specified
-  }>;
-  stats: CaptureStats;
-}
-```
-
-- **When to Use Tiles**: Reach for them when the consumer needs the page in pieces — a chat platform's image dimension limit, a viewer that pages, a printer. They are not a memory optimization in themselves: a plain `fullPage` capture already rasterizes in strips and encodes rows as they finish, so it costs the same however tall the page is.
-- **`path` Is the Bounded-Memory Mode**: With `path`, every encoded tile is written as it completes and image memory stays near a single tile. Without it, all tiles return as `Buffer`s and the finished ones stay resident until the promise resolves.
-- **Beyond Blink's Paint Limit**: Blink stops painting at 32,767 CSS pixels per axis. Regions taller than that — and every tiles request — are rendered by scrolling the layout viewport in windows of at most 32,000 pixels, which is where the `tile.height` ceiling comes from.
-- **Identical Options Everywhere**: `daemon.screenshotTiles()`, `client.screenshotTiles()` and the CLI's `--tile-height` accept the same region, format and cache options as `screenshot()`.
+Use the [ctypes example](apps/python/README.md) with a precompiled library; no Shotium pip package is needed. A separately published Python SDK is deferred until there is demand.
 
 ---
 
-### `StartOptions`
+## Core Engine Parameters & Options
 
-```ts
-interface StartOptions {
-  /**
-   * HTTP disk cache directory.
-   * Defaults to ~/.shotium/cache/<project-hash>; pass null to disable caching.
-   */
-  cacheDir?: string | null;
+Shotium's CLI flags, Node.js options, and C ABI JSON payloads share the same underlying engine parameters:
 
-  /** Maximum disk cache size in bytes (default: 256 MB) */
-  cacheMaxBytes?: number;
+| Parameter | CLI Flag | Node.js Option | Description |
+|---|---|---|---|
+| Target Input | `[url]` or `--file <path>` | `file: string` | URL (`https://`, `http://`, `file://`) or local filesystem path. |
+| Stdin Pipe | `--stdin` | N/A | Reads HTML input directly from `stdin`. |
+| Viewport | `--width <px> --height <px>` | `viewport: { width, height }` | Layout viewport in CSS pixels. Default: `1280x720`. |
+| Full Page | `--full-page` | `fullPage: boolean` | Capture the entire scrollable document height. |
+| CSS Selector | `--selector <sel>` | `selector: string` | Capture the bounding box of the matching element (via `Document::querySelector`). |
+| Clip Region | `--clip <x,y,w,h>` | `clip: { x, y, width, height }` | Specific rectangular crop region in CSS pixels. |
+| Image Format | `--type <png\|jpeg\|webp>` | `type: 'png' \| 'jpeg' \| 'webp'` | Image encoding format. Default: `png`. |
+| Quality | `--quality <1-100>` | `quality: number` | Compression quality for `jpeg` and `webp`. Default: `90`. |
+| Device Scale | `--scale <dpr>` | `scale: number` | Device pixel ratio (DPR, 0.01–8.0). Default: `1.0`. |
+| Transparent BG | `--omit-background` | `omitBackground: boolean` | Preserve transparent alpha background (PNG/WebP only). |
+| Output File | `-o <path>` / `--output <path>` | `path: string` | Direct atomic disk write destination. |
+| Tile Slicing | `--tile-height <px>` | `tile: { height: number }` | Slices tall pages into horizontal strips (up to 32,000 px each). |
+| Local Files | `--allow-file-access` | `allowFileAccess: boolean` | Allow reading local `file://` subresources (fonts/images/CSS). Default: `false`. |
+| HTTP Cache | `--cache <mode>` | `cache: CacheMode` | `'default'`, `'reload'`, `'no-store'`, or `'only-if-cached'`. |
+| Wait Policy | `--wait-until <mode>` | `pageGotoParams.waitUntil` | `'load'` (default) or `'networkidle'` (waits for 500ms quiet window). |
+| Timeout | `--timeout-ms <ms>` | `pageGotoParams.timeout` | Navigation and rendering timeout in ms. Default: `30000`. |
 
-  /** Custom User-Agent header */
-  userAgent?: string;
-
-  /** Directory containing shotium_data.pak and shotium_strings.pak (source checkouts) */
-  resourceDir?: string;
-}
-```
-
-#### `StartResult`
-
-```ts
-interface StartResult {
-  /** Whether the engine is initialized and running */
-  running: boolean;
-  /** Active cache directory path; null when caching is disabled */
-  cacheDir: string | null;
-  /** Directory the loaded native engine came from; null before the first load */
-  enginePath: string | null;
-  /** Whether the cache directory is actively in use */
-  cacheActive: boolean;
-}
-```
-
----
-
-### `CaptureStats`
-
-Each capture returns a fine-grained timing and network metric breakdown:
-
-```ts
-interface CaptureStats {
-  requests: number;     // Total resources requested (including root document)
-  fromCache: number;    // Resources served from HTTP disk cache
-  failed: number;       // Failed subresource requests
-  bytes: number;        // Total decoded response body bytes
-  httpStatus: number;   // HTTP status code of root document (0 for local files)
-  finalUrl: string;     // Final URL after resolving redirects
-  timing: {
-    fetch: number;      // Document fetch: DNS, TCP, TLS handshake, round trips
-    render: number;     // Core rendering: HTML parse, subresources, layout, paint
-    setup: number;      // Page/Frame initialization, document attachment
-    wait: number;       // DOM parse wait, load event, subresource resolution
-    lifecycle: number;  // Bounding box calculation, style recalculation, layout lifecycle
-    paint: number;      // cc::PaintRecord extraction
-    raster: number;     // SkSurface allocation and Skia rasterization replay
-    encode: number;     // Image encoding (PNG/JPEG/WebP)
-    total: number;      // Total wall-clock duration for capture
-  };
-}
-```
-
-#### Latency Breakdown
-
-For un-cached remote HTTPS requests, `timing.fetch` constitutes the majority of total latency; on disk cache hits, network latency drops below 1 ms:
-
-| Scenario | `fetch` Phase | `render` Phase | `total` Wall-Clock |
-|---|--:|--:|--:|
-| Local file (`file:` or path) | 0.2 ms | 20 ms | 25 ms |
-| HTTPS remote page (cold request) | 321.1 ms | 16 ms | 350 ms |
-| HTTPS remote page (cache hit) | 0.7 ms | 18 ms | 31 ms |
-
-- **`fromCache` Semantics**: Only counts responses whose body is served directly from disk. Conditional requests returning `304 Not Modified` still incur network round-trip latency.
-- **Error Diagnostics**: On capture failure or timeout, the thrown error object contains `error.stats` with all metrics collected up to the point of failure.
-
----
-
-### `daemon` Module
-
-```ts
-import { daemon } from '@shotkit/shotium';
-
-// 1. Establish connection (auto-spawns daemon if needed)
-const client = await daemon.connect({
-  name: 'custom-pool',      // Optional: isolate daemons by instance name
-  idleTimeoutMs: 300000,    // Idle timeout before auto-exit (ms)
-  prewarm: true,            // Pre-warm rendering on daemon boot
-});
-
-// 2. Client operations
-const res = await client.screenshot({ file: 'https://example.com' });
-const { tiles } = await client.screenshotTiles({
-  file: './report.html',
-  fullPage: true,
-  tile: { height: 8000 },
-});
-const status = await client.status();
-await client.releaseMemory({ releaseWorkingSet: false });
-client.close();
-
-// 3. Process management
-const info: DaemonStatus = await daemon.status();
-await daemon.stop();
-```
-
-#### `DaemonStatus`
-
-```ts
-interface DaemonStatus {
-  pid: number;              // Process ID of the daemon
-  endpoint: string;         // Socket path or named pipe identifier
-  cacheDir: string | null;  // Active disk cache path
-  warm: boolean;            // Whether startup pre-warm has finished
-  uptimeMs: number;         // Uptime in milliseconds
-  connections: number;      // Active client connection count
-  inFlight: number;         // Requests currently being rendered
-  served: number;           // Total requests completed since startup
-  idleTimeoutMs: number;    // Configured idle timeout duration
-  version: string;          // Core engine version string
-  protocolVersion: number;  // Local daemon wire protocol generation
-  capabilities: ('screenshot' | 'tiles')[]; // Supported operations
-}
-```
-
----
-
-### `cache` Module
-
-The HTTP disk cache is shared across processes and persists across engine restarts:
-
-```ts
-import { cache } from '@shotkit/shotium';
-
-// 1. Query cache directories
-cache.getDir();                     // Current project's cache path (absolute)
-cache.getDirs({ target: 'all' });   // All shotium cache directories on machine
-
-// 2. List cache entries
-const files = await cache.getFiles(); // [{ url, lastUsedMs, bytes, dir }, ...]
-
-// 3. Evict cache entries and retrieve results
-const result: CacheClearResult = await cache.clear({
-  glob: ['https://example.com/**'], // URL glob pattern matching
-  maxAge: 86400,                    // Evict entries unused for > 24 hours (seconds)
-  maxSize: 64 * 1024 * 1024,        // Trim total size to within 64 MB via LRU
-});
-
-console.log(`Removed: ${result.removed}, Bytes before: ${result.bytesBefore}, Bytes after: ${result.bytesAfter}`);
-```
-
-- **Storage Location**: Located under `~/.shotium/cache/<project-hash>`, avoiding temporary OS `/tmp` paths that are wiped on reboot.
-- **Index Integrity**: Entries are keyed by URL hash and managed via an index file; always evict via the `cache` API rather than manual file deletion.
-- **Multi-Process Concurrency**: Built-in file locking ensures safe concurrent access across multiple processes.
+> **Mutual Exclusion**: `fullPage`, `selector`, and `clip` are mutually exclusive.
 
 ---
 
@@ -623,7 +316,7 @@ console.log(`Removed: ${result.removed}, Bytes before: ${result.bytesBefore}, By
 flowchart TB
     IN["HTML / CSS Input<br/>URL · Local Path · stdin"]
     NET["Chromium //net Stack<br/>HTTPS · HTTP/2 · Brotli<br/>Disk Cache · Cookies"]
-    BLINK["Blink Layout Engine<br/>DOM · CSSOM · Fonts · Image Decoders"]
+    BLINK["Blink Layout Engine (Chromium 155)<br/>DOM · CSSOM · Fonts · Image Decoders"]
     LIFE["Layout & Lifecycle Update<br/>UpdateAllLifecyclePhases()"]
     REC["cc::PaintRecord Instruction Stream"]
     SKIA["Skia Graphics Engine<br/>CPU Rasterization to SkSurface"]
@@ -671,35 +364,6 @@ shotium.start({ resourceDir: '/path/to/out/Shot' });
 
 ---
 
-## C ABI & FFI Integration
-
-For C++, Rust, Go, Python, or any language supporting C FFI, shotium exports a clean C interface in [`shot/shot_api.h`](shot/shot_api.h):
-
-```c
-#include "shot_api.h"
-
-shot_engine* engine = NULL;
-shot_buffer* error = NULL;
-shot_engine_create("{}", &engine, &error);
-
-shot_buffer* png = NULL;
-shot_buffer* stats = NULL;  /* Optional; pass NULL if metrics are not needed */
-shot_engine_capture(engine, "{"file":"https://example.com"}",
-                    &png, &stats, &error);
-
-const uint8_t* data = shot_buffer_data(png);
-size_t size = shot_buffer_size(png);
-
-/* Free memory buffers and destroy engine */
-shot_buffer_free(png);
-shot_buffer_free(stats);
-shot_engine_destroy(engine);
-```
-
-> **ABI Versioning**: Current ABI version is **3**. ABI 3 adds `shot_engine_capture_tiles()` plus the `shot_tile_list_count()`, `shot_tile_list_region()`, `shot_tile_list_path()`, `shot_tile_list_take_image()`, and `shot_tile_list_free()` access and ownership API. Call `shot_abi_version()` to verify compatibility against `SHOT_ABI_VERSION`.
-
----
-
 ## Building from Source
 
 ### Prerequisites
@@ -714,7 +378,7 @@ shot_engine_destroy(engine);
 ### Build Steps
 
 ```bash
-mkdir shotium-build && cd shotium-build
+mkdir shotium-build && cd apps/demo/shotium-build
 
 cat > .gclient <<'EOF'
 solutions = [{
@@ -731,10 +395,6 @@ gclient sync --nohooks --no-history
 gclient runhooks
 
 cd src
-
-# Apply Shot's Skia changes after the DEPS-managed checkout is synced
-git -C third_party/skia apply --verbose ../../patches/third_party_skia_parallel_blur.patch
-git -C third_party/skia apply --verbose ../../patches/third_party_skia_incremental_row_limit.patch
 
 # Repack stripped ICU data tables (once per checkout: pnpm -C scripts install)
 pnpm icu:repack third_party/icu/cast/icudtl.dat third_party/icu/shot/icudtl.dat --preset shot
@@ -758,15 +418,6 @@ pnpm verify:daemon out/Shot/shotium.exe  # Daemon IPC and concurrency tests
 pnpm verify:demos  out/Shot/shotium.exe  # Visual regression reftests (84 cases)
 ```
 
-To compile the Node.js native addon against a local shared library build:
-
-```bash
-export SHOT_INCLUDE_DIR=$PWD/shot SHOT_LIB_DIR=$PWD/out/Shot
-pnpm dlx node-gyp@13 rebuild -C shotium/native
-cp out/Shot/libshotium.so out/Shot/*.pak shotium/native/build/Release/
-pnpm --dir shotium install --no-lockfile && pnpm --dir shotium run build
-```
-
 ---
 
 ## Documentation Assets
@@ -779,12 +430,21 @@ pnpm run docs:demo     # Regenerate demo.gif (recorded via docs/demo.tape)
 pnpm run docs          # Run full asset generation suite
 ```
 
-- `docs:assets`: Renders `card.html` via shotium, using [freeze](https://github.com/charmbracelet/freeze) and ffmpeg to freeze `card.mjs` and terminal sessions into crisp code graphics.
-- `docs:demo`: Records [`docs/demo.tape`](docs/demo.tape) using [vhs](https://github.com/charmbracelet/vhs) (with ttyd, ffmpeg, and bash). Runs clean installation and real captures on a published package.
-- The CLI demonstration uses `shotium` (configured via `SHOTIUM_CLI=...` or located in `out/Shot*`); if no binary is found, it automatically falls back to [`docs/demo/cli-session.txt`](docs/demo/cli-session.txt).
-
 ---
 
 ## License
 
-BSD-3-Clause, matching upstream Chromium. See [LICENSE](LICENSE).\n
+BSD-3-Clause, matching upstream Chromium. See [LICENSE](LICENSE).
+
+### Node native entry
+
+The Node-API addon is built by GN with the engine core: `pnpm build:engine
+--target shot_node` produces `out/Shot/shotium.node`. Screenshot requests and
+statistics cross the Node boundary as objects. Rendering stays on the engine
+thread and completes Promises through Node-API; captures do not occupy libuv
+workers while waiting for rendering. Public `stop()`/`start()` behavior is unchanged.
+
+The npm platform packages contain the self-contained `.node`, CLI and resource
+packs. The independent C ABI library remains available in GitHub Release
+archives; Node does not load it. Building the addon requires the full source
+checkout and the pinned SDK prepared by `scripts/node-sdk.ts`, not node-gyp.

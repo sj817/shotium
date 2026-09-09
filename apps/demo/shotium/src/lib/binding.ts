@@ -3,6 +3,8 @@ import {createRequire} from 'node:module';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
+import type {CaptureStats, CacheEntry, CacheClearResult} from '../types.js';
+import type {WireRequest} from './request.js';
 import * as platformPackage from './platform.js';
 
 // A .node addon is a CommonJS artefact: there is no ESM loader for one.
@@ -20,13 +22,7 @@ export type Engine = unknown;
 /** One capture's answer, as the addon hands it over. */
 export interface NativeCapture {
   image: Buffer;
-  /**
-   * CaptureStats as JSON, unparsed. The addon carries JSON between the engine
-   * and this layer without reading it -- anything it understood would be a
-   * third opinion about the shape, and the third opinion is the one that
-   * drifts. Undefined when the engine reported none.
-   */
-  stats?: string;
+  stats?: CaptureStats;
 }
 
 /** One tile of a tiles capture, as the addon hands it over. */
@@ -43,58 +39,31 @@ export interface NativeTile {
 /** A tiles capture's answer: the tiles in document order, and the stats. */
 export interface NativeTiles {
   tiles: NativeTile[];
-  stats?: string;
+  stats?: CaptureStats;
 }
 
-/** What native/binding.cc exports. See shot/shot_api.h for the C ABI. */
+/** Internal versioned Node-API contract; independent of the public C ABI. */
 export interface NativeBinding {
-  create(optionsJson: string): Engine;
+  bindingVersion: number;
+  create(options: Record<string, unknown>): Engine;
   destroy(engine: Engine): void;
   purge(engine: Engine, releaseWorkingSet: boolean): void;
-  status(engine: Engine): string;
-  capture(engine: Engine, requestJson: string): Promise<NativeCapture>;
-  captureTiles(engine: Engine, requestJson: string): Promise<NativeTiles>;
-  /**
-   * List or clear a cache directory. `engine` is nullable and that is the
-   * interface: with one, the operation runs on the engine's thread and borrows
-   * the backend it already holds; without one, the library opens the directory
-   * itself. Resolves to JSON.
-   */
-  cache(engine: Engine|null, clearing: boolean, optionsJson: string):
-      Promise<string>;
+  status(engine: Engine): {cacheDir: string|null; cacheActive: boolean};
+  capture(engine: Engine, request: WireRequest): Promise<NativeCapture>;
+  captureTiles(engine: Engine, request: WireRequest): Promise<NativeTiles>;
+  cache(engine: Engine|null, clearing: boolean, options: Record<string, unknown>):
+      Promise<Array<Omit<CacheEntry, 'dir'>>|Omit<CacheClearResult, 'dir'>>;
 }
 
-// Where the addon and the library beside it live, in the order they are tried.
-//
-// The local build first, and that order is the whole point. The platform
-// package is what ships -- the .node sits next to the shared library it is
-// linked against, which is the whole reason the two travel in one package
-// rather than two -- and native/build/Release is where node-gyp puts a build
-// from this checkout. The two were assumed never to coexist. They do: a
-// checkout that has ever run `pnpm install` has the published platform
-// package for its own platform sitting in node_modules, at whatever version
-// the manifest pins.
-//
-// With the published one first, every local check ran against the last
-// release rather than against the working tree, silently, and a check of a
-// newly added entry point failed with "not a function" while the code under
-// test was correct. There is no version in the failure to notice, because
-// both halves of the published package agree with each other -- the ABI check
-// in native/binding.cc compares the addon against the library beside it, and
-// those two shipped together.
-//
-// A checkout that wants to test the published engine can delete its local
-// build, which is a thing someone does on purpose. The reverse -- a checkout
-// that means to test its own build and does not -- is not something anyone
-// would think to check for.
-//
-// Both paths are relative to this file's build output, which is one directory
-// below the package root.
+// GN's output is authoritative in a checkout. Installed packages only use
+// their platform dependency; there is no stale node-gyp fallback.
 function* candidates(): Generator<string> {
   // Resolve the platform package only when the local build is absent. In a
   // checkout, package resolution can traverse a large pnpm tree even though
   // its result will never be loaded.
-  yield path.join(HERE, '..', 'native', 'build', 'Release', 'shotium.node');
+  if (fs.existsSync(path.join(HERE, '..', '..', '..', '..', 'shot', 'BUILD.gn'))) {
+    yield path.join(HERE, '..', '..', '..', '..', 'out', 'Shot', 'shotium.node');
+  }
   const dir = platformPackage.packageDir();
   if (dir) {
     yield path.join(dir, 'shotium.node');
@@ -123,7 +92,11 @@ export function load(): NativeBinding {
     // broken installation, and the loader's own message -- a missing
     // dependency, an architecture mismatch -- says more than anything that
     // could be substituted for it.
-    binding = require(candidate) as NativeBinding;
+    const loaded = require(candidate) as NativeBinding;
+    if (loaded.bindingVersion !== 1) {
+      throw new Error(`shotium: incompatible native binding at ${candidate}; rebuild shot_node or reinstall matching platform packages`);
+    }
+    binding = loaded;
     loadedFrom = path.dirname(candidate);
     return binding;
   }

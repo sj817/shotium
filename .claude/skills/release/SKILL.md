@@ -1,6 +1,6 @@
 ---
 name: release
-description: Publish a shotium release to npm and GitHub Releases in the order publish.yml enforces: bump the seven version lines in shotium/package.json, push and wait for checks, dispatch the six engine builds on that exact commit, tag, watch publish.yml, verify all seven packages on the registry, then write bilingual release notes. Manual invocation only; run as /release <version>.
+description: Publish a shotium release to npm and GitHub Releases in the order publish.yml enforces: bump the seven version lines in apps/demo/shotium/package.json, push and wait for checks, dispatch the six engine builds on that exact commit, tag, watch publish.yml, verify all seven packages on the registry, then write bilingual release notes. Manual invocation only; run as /release <version>.
 disable-model-invocation: true
 argument-hint: "<version>"
 arguments: [version]
@@ -18,13 +18,13 @@ a README change made in between.
 
 ## 1. Bump the version
 
-The only source of truth is `shotium/package.json`, and it holds the version
+The only source of truth is `apps/demo/shotium/package.json`, and it holds the version
 seven times: `version`, plus the six self-referencing pins under
 `optionalDependencies`. Everything else (the `.7z` names, the platform
 package tarball names, the release title) is derived from it at build time.
 
 ```bash
-git --no-optional-locks grep -n '"<previous version>"' -- shotium/package.json   # exactly 7 lines
+git --no-optional-locks grep -n '"<previous version>"' -- apps/demo/shotium/package.json   # exactly 7 lines
 ```
 
 Edit all seven to `$version`. `checks.yml` fails if the pins and `version`
@@ -38,7 +38,7 @@ uses a literal version in one fixture.
 Commit and push only that file:
 
 ```bash
-git add shotium/package.json
+git add apps/demo/shotium/package.json
 git commit -m "release: v$version"
 git push
 SHA=$(git rev-parse HEAD)

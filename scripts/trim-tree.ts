@@ -121,7 +121,7 @@ async function exportGraph(buildDirArg: string, outArg: string): Promise<number>
   // buffer: false -- the deps log of a full build is over 100 MB, which is
   // execa's default maxBuffer, and it would kill ninja at that point even
   // though the output goes to a file.
-  await execa(ninja, ['-C', buildDir, '-t', 'inputs', 'shot', 'shot_c'],
+  await execa(ninja, ['-C', buildDir, '-t', 'inputs', 'shot', 'shot_c', 'shot_node'],
               {cwd: root, stdout: {file: path.join(out, 'inputs.txt')}, stderr: 'inherit', buffer: false});
 
   // ninja -t deps: the deps log, i.e. what the compiler reported reading. Only
@@ -138,7 +138,7 @@ async function exportGraph(buildDirArg: string, outArg: string): Promise<number>
   // through a phony ".inputs" edge on the order-only side, so a tree trimmed
   // from `-t inputs` alone passes gn gen and fails `ninja -n`. The dot output
   // is only mined for its node labels.
-  const dot = await execa(ninja, ['-C', buildDir, '-t', 'graph', 'shot', 'shot_c'], {cwd: root, stderr: 'inherit', maxBuffer: 1 << 30});
+  const dot = await execa(ninja, ['-C', buildDir, '-t', 'graph', 'shot', 'shot_c', 'shot_node'], {cwd: root, stderr: 'inherit', maxBuffer: 1 << 30});
   const nodes = new Set<string>();
   for (const m of dot.stdout.matchAll(/label="([^"]*)"/g)) nodes.add(m[1].replace(/\\\\/g, '/'));
   await writeFile(path.join(out, 'graph.txt'), [...nodes].sort().join('\n') + '\n');
@@ -278,7 +278,7 @@ const whitelist = [
   'package.json',
   '.claude/', '.github/', 'apps/', 'benchmark-results/', 'bootstrap/', 'build_overrides/',
   'buildtools/', 'build/args/', 'build/config/shot_build.gni', 'docs/', 'scripts/',
-  'shot/', 'shotium/', 'tests/', 'tools/shot/',
+  'shot/', 'apps/demo/shotium/', 'tests/', 'tools/shot/',
   // .sha1 stamps the dsymutil_mac_* gclient hooks download by; no build reads them.
   'tools/clang/dsymutil/',
 ];

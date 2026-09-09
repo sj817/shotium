@@ -74,7 +74,7 @@ WebP bytes.
 
 It ships as the npm package `@shotkit/shotium` (TypeScript, ESM) plus six
 platform packages `@shotkit/shotium-{win32,darwin,linux}-{x64,arm64}` that
-carry the native engine (~22 MB each). The same engine is also a standalone
+carry the Node addon, CLI and resource packs. The same engine is also a standalone
 executable (`shotium.exe`) and a C ABI (`shotium.dll` / `libshotium.so` /
 `libshotium.dylib`) for Rust, Go, Python and C++ callers.
 
@@ -90,7 +90,7 @@ changes belong in those source files; there is no dependency patch replay.
 
 ```text
 chromium/                      # this repo; upstream Chromium layout with most of it removed
-├── shot/                      # the engine: one source_set, an executable and a shared library
+├── shot/                      # the engine: one source_set, an executable, a C library and a Node addon
 │   ├── shot_api.h             # the C ABI -- the only header with no Chromium includes
 │   ├── main.cc                # CLI entry point; also the --serve resident worker
 │   ├── shot_server.{h,cc}     # --serve: length-prefixed JSON/bytes framing over stdin/stdout
@@ -110,7 +110,7 @@ chromium/                      # this repo; upstream Chromium layout with most o
 │   ├── BUILD.gn               # targets shot_core, shot (exe), shot_c (dll), shot_resources
 │   ├── VERSION / BRANDING     # moved here from chrome/
 │   └── testdata/              # render corpus, reftest demos, offline Bilibili fixtures
-├── shotium/                   # npm package @shotkit/shotium
+├── apps/demo/shotium/         # npm package @shotkit/shotium
 │   ├── src/index.ts           # public API: Runtime, screenshot(), screenshotTiles(), daemon, cache
 │   ├── src/types.ts           # every published type; adding an option means adding it here
 │   ├── src/daemon_main.ts     # entry point of the detached daemon process
@@ -124,7 +124,7 @@ chromium/                      # this repo; upstream Chromium layout with most o
 │   ├── src/lib/request.ts     # ScreenshotOptions -> wire request (viewport flattened)
 │   ├── src/lib/cache.ts       # cache API and the URL glob matcher
 │   ├── src/lib/config.ts      # StartOptions with defaults filled in
-│   ├── native/                # Node-API addon (binding.cc, binding.gyp); links shotium.dll
+│   ├── native/                # GN-built Node-API entry (binding.cc); directly links shot_core
 │   ├── test/consumer.ts       # compiles against the published .d.ts through the exports map
 │   └── dist/                  # tsdown output; what npm publishes, never committed
 ├── apps/benchmark/            # six-platform harness vs Puppeteer/Playwright (own pnpm workspace)
@@ -237,26 +237,26 @@ PartitionAlloc's `malloc`/`free` on purpose, which is why Linux builds set
 one process cannot tell each other's pointers apart; fontconfig's `free()` of a
 `realpath()` string trapped in `FreeInUnknownRoot`).
 
-### The npm package (`shotium/`)
+### The npm package (`apps/demo/shotium/`)
 
 - **Zero runtime dependencies.** The glob matcher in `cache.ts` is thirty lines
   for that reason.
 - **The JS layer is a transport, not a translation.** Field names in
   `ScreenshotOptions` are the wire field names; `shot_request.h` mirrors them.
-  The addon carries `CaptureStats` JSON through without parsing it. Anything
+  The addon converts objects without defining another set of field defaults;
+  `ReadScreenshotRequest` and `StatsToValue` are shared with JSON adapters. Anything
   the JS layer has to rename is somewhere a bug can hide.
 - **Loading the package must not start the engine.** `checks.yml` asserts
   `runtime.running === false` after `require()`.
 - **Options are validated before the engine is touched** (`toRequest()`), and
   a bad request rejects with a `TypeError` without starting anything.
-- **Engine discovery order** (`binding.ts`): `native/build/Release/shotium.node`
-  first, then the platform package for this `os`/`cpu`. Local-first is
-  deliberate (`49546216e6eb`): the other order made every local check silently
-  exercise the published engine, and made package resolution walk a large pnpm
-  tree for a result that was never loaded. So the failure to remember is the
-  opposite of the obvious one -- a stale local addon shadows the package, and
-  `native.xxx is not a function` on a new ABI call means the local build is
-  behind, not that a package is in the way. See `/verify-engine`.
+- **Engine discovery order** (`binding.ts`): `out/Shot/shotium.node` in a
+  checkout, then the platform package. The internal `bindingVersion` is checked
+  before use; an incompatible local addon is an error, never a silent fallback.
+  `pnpm build:engine --target shot_node` uses the pinned Node SDK and Node-API 8.
+  Node requests and stats use native objects, the C ABI and daemon keep JSON.
+  The addon calls the shared `EngineService`, whose non-nestable task queue
+  serializes Blink work; TSFN delivers completion without a libuv waiting worker.
 - **The daemon** (`daemon.ts`, `client.ts`, `endpoint.ts`) is a detached
   `node dist/daemon_main.js <base64 config>` process speaking the `--serve`
   framing over a socket whose address is a hash of the wire generation and the
@@ -313,11 +313,12 @@ Local builds are Windows-only; Linux and macOS are built by CI.
 ```bash
 pnpm -C scripts install                                                 # once per checkout
 pnpm build:engine --jobs 16 --log out/Shot/build.log                    # shotium.exe
-pnpm build:engine --target shot_c --jobs 16 --log out/Shot/build.log    # shotium.dll (the addon links this)
+pnpm build:engine --target shot_c --jobs 16 --log out/Shot/build.log    # independent C ABI library
+pnpm build:engine --target shot_node --jobs 16 --log out/Shot/node-build.log # Node addon
 ```
 
 Output: `out/Shot/shotium.exe`, `out/Shot/shotium.dll`, `out/Shot/shotium_data.pak`,
-`out/Shot/shotium_strings.pak`. GN target names are still `shot` and `shot_c`.
+`out/Shot/shotium_strings.pak`. GN targets are `shot`, `shot_c` and `shot_node`. The Node addon is `out/Shot/shotium.node`.
 
 - `scripts/build-engine.ts` regenerates the ICU data set, runs `gn gen`,
   then ninja with the output in the log file. It
@@ -369,16 +370,16 @@ Output: `out/Shot/shotium.exe`, `out/Shot/shotium.dll`, `out/Shot/shotium_data.p
 |---|---|---|---|
 | Worker protocol | `pnpm verify:serve out/Shot/shotium.exe` | exe | `--serve` framing, two renders on one process byte-identical, worker == CLI bytes, `allowFileAccess` gate |
 | Network stack | `pnpm verify:net out/Shot/shotium.exe` | exe | http fetch, redirects, disk cache shared across processes, `networkidle`, http bytes == file bytes |
-| Node addon | `PATH="$PWD/out/Shot:$PATH" pnpm verify:node out/Shot/shotium.exe` | dll + addon | `require()` of the ESM package, `screenshot()`, `{image, stats}` shape, tiles |
-| Daemon | `PATH="$PWD/out/Shot:$PATH" pnpm verify:daemon out/Shot/shotium.exe` | dll + addon | spawn, connect, pipeline, stop |
+| Node addon | `pnpm verify:node out/Shot/shotium.exe` | addon + resources | `require()` of the ESM package, `screenshot()`, `{image, stats}` shape, tiles |
+| Daemon | `pnpm verify:daemon out/Shot/shotium.exe` | addon + resources | spawn, connect, pipeline, stop |
 | Daemon wire | `pnpm verify:daemon-protocol` | none | generation isolation and negotiation |
 | Reftests | `pnpm verify:demos out/Shot/shotium.exe` | exe | 84 pairs in `shot/testdata/demos`: page vs `-ref` page byte-identical (62 pass, 1 fuzzy, 21 smoke) |
-| Bilibili fixtures | `pnpm verify:bilibili --package shotium` | addon | two whole articles, every tile, every photo, both QR codes |
+| Bilibili fixtures | `pnpm verify:bilibili --package apps/demo/shotium` | addon | two whole articles, every tile, every photo, both QR codes |
 | Pixel regression | `pnpm render run --shot out/Shot/shotium.exe` | baselines | decoded-pixel equality against a locally generated baseline |
 | Acceptance run | `pnpm accept --skip-build` | exe | Binary size, then renders `shot/testdata/render_corpus.html` at 1248x1320 and pixel-diffs it against the Chrome oracle `shot/testdata/out/oracle.png`, region by region. Without `--skip-build` it starts a full build first |
 
-- `PATH` must contain `out/Shot` for the Node checks: the addon links
-  `shotium.dll`, and without it you get `ERR_DLOPEN_FAILED`.
+- Node checks load `out/Shot/shotium.node` directly. No separate engine DLL
+  is required. Run `pnpm verify:node-entry` for thread-pool and shutdown checks.
 - The reftest suite has no golden images on purpose: cutting Blink rarely
   fails to compile, it fails by laying out slightly differently, and a suite
   of stored PNGs would either need re-blessing after every cut or drown in
@@ -391,12 +392,12 @@ Output: `out/Shot/shotium.exe`, `out/Shot/shotium.dll`, `out/Shot/shotium_data.p
   run with a pre-change binary. If you did not generate baselines before
   changing the engine, use `check-demos.ts` for pixel evidence and say so.
 - CI's `checks.yml` never touches an engine, and it is path-filtered: it runs
-  only for pushes to `main` and pull requests touching `shotium/`,
+  only for pushes to `main` and pull requests touching `apps/demo/shotium/`,
   `shot/testdata/bilibili/`, `scripts/` or `apps/benchmark/`.
   A change confined to `shot/`, Blink, `docs/` or `.claude/` produces no run at
   all, so waiting for it to go green is waiting for something that will never
   appear. The four scripts above run only in the manually dispatched
-  `engine-*.yml` workflows. Changing the public shape of `shotium/src`
+  `engine-*.yml` workflows. Changing the public shape of `apps/demo/shotium/src`
   without running `check-node.ts` and `check-daemon.ts` locally has shipped
   broken checks before.
 
@@ -445,14 +446,14 @@ Output: `out/Shot/shotium.exe`, `out/Shot/shotium.dll`, `out/Shot/shotium_data.p
   output against identifiers found at call sites. Run it; inferred naming
   rules have produced code that looked right and broke hundreds of files.
 
-**TypeScript (`shotium/src`, `apps/benchmark/src`)**
+**TypeScript (`apps/demo/shotium/src`, `apps/benchmark/src`)**
 
 - ESM, strict TypeScript, no runtime dependencies in the package.
   `pnpm run build` (tsdown) then `pnpm run check:types`.
 - New options go in `types.ts` with a doc comment, in `shot_request.h` under
   the same name, in `toRequest()` validation, and in the README API reference.
-- Do not add a third opinion about a shape: the addon passes JSON through, and
-  the C++ side parses `ScreenshotOptions` by the same field names.
+- Do not add a third opinion about a shape: the addon converts native values,
+  and shared C++ readers validate the same fields as the JSON adapters.
 - No `npx`; use `pnpm dlx` or `node_modules/.bin`. The package manager is
   pinned (`packageManager` in `package.json`).
 
@@ -544,7 +545,7 @@ Output: `out/Shot/shotium.exe`, `out/Shot/shotium.dll`, `out/Shot/shotium_data.p
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `checks.yml` | push to `main` and PRs, path-filtered to `shotium/`, `shot/testdata/bilibili/`, `scripts/`, `apps/benchmark/`; dispatch | The engine-less half: package builds, types, `require()` does not start the engine, option validation, daemon wire, harness syntax + unit tests, six platform packages consistent, tarball contents, `scripts/` typechecks and its tests pass, Bilibili fixtures offline. ~40 s, expected always green. An engine-only change produces no run at all, which is not the same as a pass |
+| `checks.yml` | push to `main` and PRs, path-filtered to `apps/`, `shot/testdata/bilibili/`, `scripts/`; dispatch | The engine-less half: package builds, types, `require()` does not start the engine, option validation, daemon wire, harness syntax + unit tests, six platform packages consistent, tarball contents, `scripts/` typechecks and its tests pass, Bilibili fixtures offline. ~40 s, expected always green. An engine-only change produces no run at all, which is not the same as a pass |
 | `engine-windows.yml` | dispatch (`arch` = amd64 or arm64, `jobs`, `run_checks`, `shards`) | depot_tools, SDK, `gclient sync`, timestamp restore, cached `out/`, `gn gen`, `ninja`, package `.7z`, node platform package, run the check suites. Cold ~4 h, warm ~25 min |
 | `engine-linux.yml`, `engine-macos.yml` | dispatch (`mode` = probe or build, `arch`, `jobs`, `run_checks`, `shards`) | Same, plus `probe` = `gn gen` + `ninja -n` only. Probe green is level 1 of 3, not success |
 | `benchmark.yml` | dispatch (`shotium_version`, `profile`, `commit_results`, `seed`) | 30-job `platform x shard` matrix against Puppeteer/Playwright; commits aggregated results to `benchmark-results/` |
@@ -607,7 +608,7 @@ Output: `out/Shot/shotium.exe`, `out/Shot/shotium.dll`, `out/Shot/shotium_data.p
   named `<workflow>: <inputs>`. Artifacts and release archives carry the
   same platform id (`shotium-linux-arm64-v0.4.0.7z`, `npm-shotium-macos-amd64`,
   `graph-windows-amd64`). The version comes from a `meta` job that reads
-  `shotium/package.json`, because a job name can read another job's outputs
+  `apps/demo/shotium/package.json`, because a job name can read another job's outputs
   but not a file. Two things keep the old spelling on purpose: npm package
   names (`@shotkit/shotium-win32-x64`) because npm matches them against
   `process.platform`, with `publish.yml` holding the map; and the
@@ -631,7 +632,7 @@ Output: `out/Shot/shotium.exe`, `out/Shot/shotium.dll`, `out/Shot/shotium_data.p
 The order is enforced by `publish.yml`, which looks up engine artifacts by the
 tag's commit:
 
-1. Bump the version in `shotium/package.json`: `version` plus the six
+1. Bump the version in `apps/demo/shotium/package.json`: `version` plus the six
    `optionalDependencies` pins (7 lines). Nothing else hard-codes it.
 2. Push, wait for `checks.yml`.
 3. Dispatch six engine builds on that exact commit (`mode=build` for Linux and
@@ -647,6 +648,8 @@ tag's commit:
    `Publishing to ...` without `(dry-run)` is the evidence, not the 404.
 7. Write real release notes: English half on top, Chinese half below, each
    complete; material comes from commit bodies.
+
+The engine workflows also call `check-ffi.yml` on a native runner for each of the six platforms. It exercises all five language demos against the extracted C ABI archive and checks a clean npm installation without the shared library. Run `pnpm verify:ffi` and `pnpm verify:delivery --platform-dir <tarball-directory>` locally; `pnpm package:c-abi --os win --dest <directory>` stages the header, guide, libraries and resources.
 
 Full procedure: `/release`.
 
@@ -689,7 +692,6 @@ Procedure: `/perf-compare`; methodology: `docs/performance.md`.
 | `SHOT_FETCH_BUDGET_MB`, `SHOT_FETCH_CONCURRENCY` | `shot_fetch.cc` | Response-body memory budget and parallel fetch limit |
 | `SHOT_STRIP_ROWS`, `SHOT_STRIP_BUDGET_MB`, `SHOT_STRIP_MARGIN`, `SHOT_SINGLE_STRIP` | image stream | Strip raster geometry; tuning knobs, not configuration |
 | `SHOT_RASTER_THREADS`, `SHOT_STREAM_PNG`, `SHOT_DISCARD_ENCODED`, `SHOT_DUMP_OPS`, `SHOT_RECLAIM`, `SHOT_PROFILE_WAIT` | image stream / renderer | Experiments; read the `getenv` site before relying on one |
-| `SHOT_INCLUDE_DIR`, `SHOT_LIB_DIR` | `shotium/native/binding.gyp` | Where the addon finds `shot_api.h` and `shotium.dll` (defaults: `../../shot`, `../../out/Shot`) |
 | `CHROMIUM_WIN_SDK_VERSION` | `build/vs_toolchain.py` | Windows SDK directory; pair with `win_ntddi_version` in args |
 | `DEPOT_TOOLS_WIN_TOOLCHAIN=0`, `DEPOT_TOOLS_UPDATE=0` | depot_tools | Use the local Visual Studio; do not self-update |
 
@@ -698,7 +700,7 @@ Procedure: `/perf-compare`; methodology: `docs/performance.md`.
 | File | Read it when |
 |---|---|
 | `README.md`, `README.zh.md` | You need the public API or the marketing numbers (their source is the 0.3.3 linux-x64 CI run) |
-| `shotium/README.md` | The package's API reference; keep it in step with `types.ts` |
+| `apps/demo/shotium/README.md` | The package's API reference; keep it in step with `types.ts` |
 | `docs/shotium-plan.md` | Decisions (section 0), architecture (1), network stack choice (2), public interface contract (4), explicit non-goals (5) |
 | `docs/upstream-sync.md` | Baseline hash, why merge is impossible, the four-bucket replay, the deliberate disagreements table, post-sync checks |
 | `docs/cut-progress.md` | 1,800 lines of what was removed and why; sections 8 (V8 removal), 11 (restore vs cut), 14 (driving Blink directly), 17 (size composition), 20 (making it usable), 21 (CI) |

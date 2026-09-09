@@ -15,6 +15,7 @@
 #include "base/files/file_util.h"
 #include "base/logging.h"
 #include "base/logging/logging_settings.h"
+#include "base/strings/utf_string_conversions.h"
 #include "build/build_config.h"
 #include "shot/shot_capture.h"
 #include "shot/shot_options.h"
@@ -43,9 +44,9 @@ namespace {
 // to render more than one document without paying to start a process each time.
 // Both go through Capture(), so neither can drift from the other.
 //
-// Node does not use either of them any more. It loads shot_c into its own
-// process through a Node-API addon, which is the same Capture() again --
-// node_check.cjs asserts the images match byte for byte. --serve is for a
+// Node uses a GN-built Node-API addon and the shared engine service, reaching
+// the same Capture(). check-node.ts compares the images byte for byte.
+// --serve is for a
 // caller that wants a resident renderer and is not node.
 int Main(int argc, const char** argv) {
   base::AtExitManager at_exit;
@@ -196,6 +197,26 @@ int Main(int argc, const char** argv) {
 
 }  // namespace
 
+#if BUILDFLAG(IS_WIN)
+int wmain(int argc, const wchar_t** argv) {
+  // Preserve the CRT's original argument order while converting UTF-16 paths.
+  // CommandLine::argv() groups switches before positional values, which is
+  // incompatible with ParseShotOptions' separate "--width 800" arguments.
+  // SAFETY: argc is the CRT-provided element count for argv.
+  const auto wide_args =
+      UNSAFE_BUFFERS(base::span(argv, static_cast<size_t>(argc)));
+  std::vector<std::string> utf8;
+  for (const auto* argument : wide_args) {
+    utf8.push_back(base::WideToUTF8(argument));
+  }
+  std::vector<const char*> pointers;
+  for (const auto& argument : utf8) {
+    pointers.push_back(argument.c_str());
+  }
+  return Main(argc, pointers.data());
+}
+#else
 int main(int argc, const char** argv) {
   return Main(argc, argv);
 }
+#endif
