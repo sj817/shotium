@@ -22,6 +22,12 @@ The desktop goal still contains the obsolete blocked source-cut objective: `crea
 - [ccache-action](https://github.com/hendrikmuhs/ccache-action) supports Linux/macOS/Windows and recommends sccache for stable Windows support. It caches compiler results, not the whole downloaded build environment.
 - GitHub's [cache reference](https://docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching) documents branch visibility and eviction. [Storage beyond the included limit can incur charges](https://github.blog/changelog/2025-11-20-github-actions-cache-size-can-now-exceed-10-gb-per-repository/); do not raise paid limits as an implicit optimization.
 
+### Toolchain-cache experiment
+
+The next bounded experiment uses official `actions/cache/restore` and `save` in the Linux source action for `third_party/llvm-build`, `third_party/rust-toolchain` and `.gcs_entries`. These trees contain no tracked repository files. Both Linux architectures use x64 host compilers, so they share one key. The exact key includes DEPS and toolchain updater files; there is no partial-key fallback. Normal gclient sync/hooks still run. gclient's implementation stores extracted-package hash receipts inside the trees and the installed object list in `.gcs_entries`; restoring only binaries without those receipts would not reliably avoid download work.
+
+Measure one cache fill and one exact-key hit on Linux x64 with all checks enabled before extending to other hosts. Include save/restore time and compressed bytes in the comparison; do not assume a downloaded-environment cache pays for itself. Keep the existing object cache and its content-fingerprint state. Current final Windows auto run 34292386470 succeeded: it selected one runner from its prior cache and ninja executed exactly two mandatory link edges after restoring the fingerprint state.
+
 ## Release
 
 - v0.5.0: commit `442edbe7a9c346e66b07dc49871d1b8def3b32c2`.

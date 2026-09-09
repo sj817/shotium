@@ -105,12 +105,35 @@ runs:
         EOF
         cat .gclient
 
+    - name: restore the downloaded compiler toolchains
+      id: toolchains
+      uses: actions/cache/restore@v6
+      with:
+        # Both Linux targets use the same x64 host tools. Include GCS receipt
+        # files with the extracted trees so gclient can verify and reuse them.
+        # No prefix fallback: changed dependency definitions start a fresh cache.
+        path: |
+          src/third_party/llvm-build
+          src/third_party/rust-toolchain
+          .gcs_entries
+        key: toolchains-linux-x64-v1-${{ hashFiles('src/DEPS', 'src/tools/clang/scripts/update.py', 'src/tools/rust/update_rust.py') }}
+
     - name: gclient sync
       shell: bash
       run: |
         gclient sync --nohooks --no-history --shallow --verbose
         gclient runhooks
         df -h /
+
+    - name: save the downloaded compiler toolchains
+      if: steps.toolchains.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v6
+      with:
+        path: |
+          src/third_party/llvm-build
+          src/third_party/rust-toolchain
+          .gcs_entries
+        key: ${{ steps.toolchains.outputs.cache-primary-key }}
 
     - name: build dependencies
       shell: bash
