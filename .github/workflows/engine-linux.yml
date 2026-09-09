@@ -303,7 +303,9 @@ jobs:
           # nullglob: with every shard failed before it could upload, the
           # loop runs zero times and ninja below simply builds everything.
           shopt -s nullglob
-          for tarball in "$GITHUB_WORKSPACE"/shards/*/shard.tar; do
+          # download-artifact v8 flattens a single matching artifact.
+          for tarball in "$GITHUB_WORKSPACE"/shards/shard.tar "$GITHUB_WORKSPACE"/shards/*/shard.tar; do
+            [ -f "$tarball" ] || continue
             dir="${tarball%/shard.tar}/out"
             mkdir -p "$dir"
             tar -C "$dir" -xf "$tarball"

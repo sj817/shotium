@@ -325,7 +325,8 @@ jobs:
         # One shard at a time, deleting each as it goes: the runner's disk
         # holds the build directory plus one unpacked shard, not plus all.
         run: |
-          foreach ($tarball in Get-ChildItem "$env:GITHUB_WORKSPACE/shards/*/shard.tar") {
+          # download-artifact v8 flattens a single matching artifact.
+          foreach ($tarball in Get-ChildItem "$env:GITHUB_WORKSPACE/shards" -Recurse -File -Filter shard.tar) {
             $dir = Join-Path $tarball.DirectoryName 'out'
             New-Item -ItemType Directory -Force $dir | Out-Null
             tar -C $dir -xf $tarball.FullName

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "status": "in_progress",
+  "status": "complete",
   "releaseVersion": "0.6.0",
-  "completedBaseline": "c0bba1026178fe2a8b441fead7928b697a801c1e",
+  "completedBaseline": "c099bd180a2db0fa6a313d43653529ba02665c84",
   "target": {
     "repository": "https://chromium.googlesource.com/chromium/src",
     "commit": "c099bd180a2db0fa6a313d43653529ba02665c84",
@@ -14,27 +14,27 @@
     "graph": "passed: GN and final shot/shot_c source-input check",
     "windowsBinaryAndChecks": "passed: exe, dll, serve, net, 84 demos, node, daemon, daemon protocol, Bilibili; charset behavior unchanged",
     "pixelComparison": "passed: basic/layout/paint/text, identical pixels and hashes against pre-sync binary",
-    "sixPlatformExactSha": "first CI at 1e25a9bf414e2f6b45c77a0ea8ffc1fe6f420bed exposed a PartitionAlloc jumbo header-check collision and Windows SDK minimum gate; both corrected, final same-SHA CI pending",
-    "release": "pending"
+    "sixPlatformExactSha": "passed: all six builds at 07ac95e4a85dad12bc7fd8029c5ca229e3e38d9f; see upstream-sync-0.6.0-validation.md",
+    "release": "published v0.6.0: workflow 34339033452; seven npm versions/integrities and six GitHub assets verified"
   },
   "dependencies": [
     {
-      "baseline": "653397c6be15b87fe8f89a4492582fbb825f6da8",
+      "baseline": "a3e5b88809bb6c178286d008805a1028ca3106f4",
       "name": "skia",
       "target": "a3e5b88809bb6c178286d008805a1028ca3106f4",
-      "status": "source synchronized; local Windows checks passed; six-platform validation pending"
+      "status": "complete: six-platform validation and 0.6.0 publication verified"
     },
     {
-      "baseline": "8cc91d9b6ab9991802fd208ee03a69714fd0251c",
+      "baseline": "6ebb40c594776cc2c21ea14df85a2a89a328b364",
       "name": "icu",
       "target": "6ebb40c594776cc2c21ea14df85a2a89a328b364",
-      "status": "source synchronized; local Windows checks passed; six-platform validation pending"
+      "status": "complete: six-platform validation and 0.6.0 publication verified"
     },
     {
-      "baseline": "71b477b75d53576fa40f8ba19897a50c83255e03",
+      "baseline": "fd896b1ad88899807bb128b7255deb5199dde54f",
       "name": "perfetto",
       "target": "fd896b1ad88899807bb128b7255deb5199dde54f",
-      "status": "source synchronized; local Windows checks passed; six-platform validation pending"
+      "status": "complete: six-platform validation and 0.6.0 publication verified"
     }
   ]
 }

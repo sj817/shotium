@@ -12,8 +12,12 @@
 已解决，Skia、ICU、Perfetto 已按独立基线同步源码。Windows EXE/DLL、GN、
 源码输入、网络、Node/daemon、84 个渲染用例和离线 Bilibili 检查通过。
 basic/layout/paint/text 四组与升级前二进制的像素及哈希完全一致。
-旧编码输入行为保持原状（同步文档装载仍按 UTF-8）；六平台 CI 和发布待完成。
-不恢复被裁剪的浏览器功能，已验收基线仍保持旧值。
+旧编码输入行为保持原状（同步文档装载仍按 UTF-8）。六平台 CI 已在
+`07ac95e4a85dad12bc7fd8029c5ca229e3e38d9f` 全部通过，0.6.0 已发布，
+七个 npm 包及六个 GitHub 二进制附件已核对。不恢复被裁剪的浏览器功能。
+各平台执行了其工作流支持的检查；交叉编译不等于原生设备运行验收。
+
+发布证据与 CI 分片问题记录见 [0.6.0 验收记录](upstream-sync-0.6.0-validation.md)。
 
 具体源码决策见 [155 同步记录](upstream-sync-decisions-155.json)。这份记录包括
 固定上游提交、保留产品差异的原因以及新增/退役路径，不是补丁重放队列。
@@ -35,18 +39,17 @@ ICU、Skia、Perfetto 现在由本仓直接维护。更新它们时按各目录 
 同步的一切都从这四行开始。**每次同步完成后改这里,这是唯一的记录点。**
 
 ```
-UPSTREAM_BASE    c0bba1026178fe2a8b441fead7928b697a801c1e
-UPSTREAM_POS     refs/heads/main@{#1680169}
-UPSTREAM_DATE    2026-08-15
-CHROME_VERSION   153.0.8010.0
+UPSTREAM_BASE    c099bd180a2db0fa6a313d43653529ba02665c84
+UPSTREAM_POS     refs/heads/main@{#1694285}
+UPSTREAM_DATE    2026-09-09
+CHROME_VERSION   155.0.8048.0
 ```
 
-这四行不是随手抄的,树里有两处独立的佐证,对不上就说明记错了:
+基线来自固定上游提交及其 `Cr-Commit-Position`，并由同步决策记录与六平台
+验收共同确认。`build/util/LASTCHANGE` 可能记录本仓提交，旧分支的 merge-base
+也不会随切片同步推进；它们不能作为本轮已同步版本的证据。
 
-- `build/util/LASTCHANGE` —— gclient 写的,内容就是
-  `c0bba1026178...-refs/heads/main@{#1680169}`
-- `git merge-base codex/shot-engine-round1 upstream/main` —— 那条分支是唯一
-  还带着上游血缘的,它的 merge-base 正是 `c0bba102`
+以下为 2026-08-26 的历史调研，统计不代表当前仓库：
 
 截至 2026-08-26,上游比这个基线**领先 9,130 个提交**。
 
