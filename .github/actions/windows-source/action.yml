@@ -184,12 +184,35 @@ runs:
         target_os = ["win"]
         '@ | Out-File -FilePath .gclient -Encoding ascii
 
+    - name: restore the downloaded compiler toolchains
+      id: toolchains
+      uses: actions/cache/restore@v6
+      with:
+        # Cache the host compiler trees, including GCS receipt
+        # files with the extracted trees so gclient can verify and reuse them.
+        # No prefix fallback: changed dependency definitions start a fresh cache.
+        path: |
+          src/third_party/llvm-build
+          src/third_party/rust-toolchain
+          .gcs_entries
+        key: toolchains-windows-x64-v1-${{ hashFiles('src/DEPS', 'src/tools/clang/scripts/update.py', 'src/tools/rust/update_rust.py') }}
+
     - name: gclient sync
       shell: pwsh
       run: |
         gclient sync --nohooks --no-history --shallow --verbose
         gclient runhooks
         Get-PSDrive -PSProvider FileSystem | Select-Object Name,Used,Free
+
+    - name: save the downloaded compiler toolchains
+      if: steps.toolchains.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v6
+      with:
+        path: |
+          src/third_party/llvm-build
+          src/third_party/rust-toolchain
+          .gcs_entries
+        key: ${{ steps.toolchains.outputs.cache-primary-key }}
 
     - name: restore the build directory
       if: inputs.restore-cache == 'true'
