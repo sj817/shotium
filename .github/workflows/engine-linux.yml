@@ -406,7 +406,7 @@ jobs:
 
       - name: save the build directory
         if: ${{ always() && github.event.inputs.mode == 'build' }}
-        uses: actions/cache/save@v6
+        uses: ./actions/.github/actions/save-build-cache
         with:
           path: src/out/Shot
           key: out-shot-linux-${{ env.SHOT_CPU }}-${{ github.run_id }}

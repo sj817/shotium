@@ -67,9 +67,10 @@ const gh = (args: string[]): Promise<{stdout: string}> => execa('gh', args, {std
 async function findRun(target: Target, ref: string, repo: string, after: number): Promise<string> {
   for (let attempt = 0; attempt < 30; attempt++) {
     const {stdout} = await gh(['run', 'list', '-R', repo, '--workflow', target.workflow,
-      '--branch', ref, '--limit', '5', '--json', 'databaseId,createdAt,event']);
-    const runs = JSON.parse(stdout) as {databaseId: number; createdAt: string; event: string}[];
-    const mine = runs.filter((r) => r.event === 'workflow_dispatch' && Date.parse(r.createdAt) >= after);
+      '--branch', ref, '--limit', '5', '--json', 'databaseId,createdAt,event,displayTitle']);
+    const runs = JSON.parse(stdout) as {databaseId: number; createdAt: string; event: string; displayTitle: string}[];
+    const mine = runs.filter((r) => r.event === 'workflow_dispatch' && Date.parse(r.createdAt) >= after &&
+      r.displayTitle.startsWith(`${target.workflow.replace('.yml', '')}: ${target.arch} `));
     if (mine.length > 0) return String(mine[0].databaseId);
     await sleep(4000);
   }

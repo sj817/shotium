@@ -400,7 +400,7 @@ jobs:
 
       - name: save the build directory
         if: always()
-        uses: actions/cache/save@v6
+        uses: ./actions/.github/actions/save-build-cache
         with:
           path: src/out/Shot
           key: out-shot-windows-${{ env.SHOT_CPU }}-${{ github.run_id }}

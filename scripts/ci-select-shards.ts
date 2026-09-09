@@ -41,8 +41,8 @@ async function main(): Promise<void> {
         const result = await api(`actions/caches?key=${prefix}&ref=${encodeURIComponent(branch!)}&sort=created_at&direction=desc&per_page=1`);
         if (result.actions_caches.length) { caches = result.actions_caches; break; }
       }
-      const runId = caches[0]?.key.slice(prefix.length);
-      if (runId && /^\d+$/.test(runId)) {
+      const runId = caches[0]?.key.slice(prefix.length).match(/^(\d+)(?:-retry)?$/)?.[1];
+      if (runId) {
         const run = await api(`actions/runs/${runId}`);
         if (run.conclusion === 'success') {
           const comparison = await api(`compare/${run.head_sha}...${sha}`);
