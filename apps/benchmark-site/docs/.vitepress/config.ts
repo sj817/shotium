@@ -10,7 +10,7 @@ import {defineConfig, type Plugin} from 'vitepress';
  * it into dist so the deployed site reads the very same files. The site's
  * source never embeds a snapshot of any result.
  */
-const benchmarkResults = fileURLToPath(new URL('../../../../benchmark-results', import.meta.url));
+const benchmarkResults = fileURLToPath(new URL('../../../docs/benchmarks', import.meta.url));
 
 function serveBenchmarkResults(): Plugin {
   return {

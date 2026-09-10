@@ -1873,7 +1873,7 @@ Python 7.4%),让全树 ripgrep 超时,让每次上游同步多看几万个文件
 
 ### 22.1 判断标准只有一个:图
 
-工具是 `scripts/trim-tree.ts`(`export` / `plan` / `apply`)。每个引擎构建结束
+工具是 `scripts/tree/trim-tree.ts`(`export` / `plan` / `apply`)。每个引擎构建结束
 后 `pnpm graph:export` 把它读过的东西写成一个目录,CI 作为 `graph-<os>-<arch>`
 上传;mac 的图在 Windows 宿主上算不出来,这是必须走 CI 的原因。一个图由六份
 记录组成,少一份就会漏一类文件:
@@ -1904,7 +1904,7 @@ DEPS 条目                320 →     53        hooks    53 → 14
 .gitmodules              258 →     39        gitlink 110 → 38
 ```
 
-DEPS 由 `scripts/prune-deps.ts` 剪:一个条目留下,当且仅当它路径下有文件出现
+DEPS 由 `scripts/tree/prune-deps.ts` 剪:一个条目留下,当且仅当它路径下有文件出现
 在某个平台的图里、它是工具链(depot_tools、ninja、clang、rust、libc++ 一家、
 buildtools、Linux sysroot、dsymutil),或某个保留的 hook 需要它。`.gitmodules`
 和索引里的 gitlink 跟着 DEPS 走——两边不一致时 gclient 静默不拉取(第 21 节)。
@@ -1925,7 +1925,7 @@ buildtools、Linux sysroot、dsymutil),或某个保留的 hook 需要它。`.git
 4. **depfile。** grit 打包时读的每个资源只记在动作的 depfile 里。更麻烦的是
    反方向:一个热构建目录里过期的 depfile 指向已删文件时,ninja 在开工前就
    拒绝(`missing and no known rule to make it`)——CI 的缓存目录全是这样。
-   所以有了 `pnpm depfiles:prune`,`build-engine.ts` 和三个 engine workflow
+   所以有了 `pnpm depfiles:prune`,`build/engine.ts` 和三个 engine workflow
    在 ninja 之前都跑一次。资源 ID 分配器的 `default_resource_ids.d` 是唯一
    故意跳过的:它列出 `resource_ids.spec` 里恰好存在的每个 `.grd`,而分配器
    本来就跳过不存在的(`grit/tool/update_resource_ids/reader.py`)。
@@ -1955,7 +1955,7 @@ ENOTFOUND`,步骤却是绿的。看 `upload the build graph` 的日志,不看它
 - **jumbo 单元**是 GN 在 gen 时写的,从不删。热目录里 2,801 个单元有 807 个
   属于早就切掉的 target,它们的 `#include` 列表点名了 929 个没人编译的 `.cc`。
 
-修法在 `trim-tree.ts` 的两头:`export` 只收图里可达的 jumbo 单元;`plan` 读
+修法在 `tree/trim-tree.ts` 的两头:`export` 只收图里可达的 jumbo 单元;`plan` 读
 `deps.txt` 时只算目标是 `graph.txt` 节点的条目,并跳过 `(STALE)`。全量构建下
 可达的 deps 条目覆盖活着的 jumbo 源的 100%(9,586 / 9,586),所以 CI 那六个
 没过滤的 `jumbo.txt` 可以直接不用。验证还是编译器:保留文件里仍然提到这
@@ -2142,7 +2142,7 @@ workflow 还没有这一步。留作下一项。
 改成:`shards` 是分片总数而不是"额外的 job 数",meta 把 0..N-2 交给 matrix,
 `build` job 领第 N-1 片,N 片就是 N 台机器。它和分片同时开工、同样 setup、编
 自己那一片,然后等其他分片的产物。GitHub 没有"等某个 artifact"的原语,
-`scripts/ci-await-shards.ts` 轮询本次 run 的 artifact 列表。
+`scripts/ci/await-shards.ts` 轮询本次 run 的 artifact 列表。
 
 等待的退出条件是故意放宽的:所有分片 job 都结束了而某个产物始终没出现(分片
 挂了、上传失败),它打印出来然后返回 0,让最终 job 自己把缺的编出来——这正是
@@ -2198,7 +2198,7 @@ Linux 冷构建 34050536087 的最终 job 时间线,和设计一模一样:setup 
 - tar 的默认 posix 格式把 mtime 截到秒;要 `--format=pax`。
 - 在 mtime 打戳之后才写出来的文件也得给内容相符的时间:打过补丁的 Skia/ICU
   源取"依赖版本"和"最后改 `patches/` 的提交"里较晚的一个,重打包的
-  `icudtl.dat` 取 ICU 版本、`scripts/icu-repack.ts`、`patches/` 三者最晚。少了
+  `icudtl.dat` 取 ICU 版本、`scripts/build/icu-repack.ts`、`patches/` 三者最晚。少了
   这一步,每次热构建都要重编 `SkCodec.h` 底下 26 个对象、重链 249 个库。
 - 构建目录缓存只对**写它的那条分支**和默认分支可见。11 个缓存全在特性分支
   上、`main` 上一个都没有,所以每开一条新分支六个平台全是冷的。合完动引擎的

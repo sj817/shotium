@@ -25,7 +25,7 @@ startup cases, 3 memory-release/restart cases, 7 queue/multi-process cases,
 both localized Bilibili articles, the existing benchmark corpus, PNG/JPEG/WebP,
 full-page, selector, clip, alpha, file output and scale 0.5/1/1.5/2/4/8 paths.
 The two whole articles and the new tile API have no successful npm equivalent;
-run `check-bilibili.ts` separately to validate their full output, every tile,
+run `verify/bilibili.ts` separately to validate their full output, every tile,
 every article photo and both footer QR codes. A rejected npm capture is never counted as a fast baseline.
 
 Five warmups precede each resident case. Both versions run in alternating AB/BA

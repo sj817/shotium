@@ -232,7 +232,7 @@ gclient sync -D --no-history
 CI 产物 `graph-<os>-<arch>`),然后 `pnpm trim-tree plan --graph <dir>...` 算出
 上游新带进来的、任何构建都不打开的文件,`pnpm trim-tree apply` 删掉,
 `pnpm prune-deps --inputs <plan>/untracked-inputs.txt` 同步剪 DEPS / hooks /
-`.gitmodules` / gitlink。规则全在 `scripts/trim-tree.ts` 里,不靠人记。
+`.gitmodules` / gitlink。规则全在 `scripts/tree/trim-tree.ts` 里,不靠人记。
 删完对每个热构建目录跑一次 `pnpm depfiles:prune`:ninja 会拒绝在一个
 depfile 指向已删文件的目录里开工。
 
@@ -257,7 +257,7 @@ missing and no known rule to make it
 `gn gen` 抓不到这个 —— GN 从没打开过那个文件,它只是把路径抄了过去。
 `ninja -n` 也抓不到 —— 它走同一张图,但遇到第一个缺失就放弃,不会列全。
 抓得到的是问 ninja 要输入集然后逐个 stat,也就是
-`pnpm missing-inputs`(`scripts/missing-inputs.ts`)。
+`pnpm missing-inputs`(`scripts/build/missing-inputs.ts`)。
 
 一个构建目录只回答一个平台。要回答 Linux 就对着一个 Linux 的 out/ 跑 ——
 给非宿主平台 `gn gen` 在任何宿主上都能跑,分钟级,比构建便宜得多。

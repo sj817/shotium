@@ -146,7 +146,7 @@ function rebuildIndex(resultsRoot: string): any[] {
 
 export function aggregateResults(options: Record<string, any>) {
   const input = path.resolve(options.input);
-  const resultsRoot = path.resolve(options.resultsRoot || path.join(APP_ROOT, '..', '..', 'benchmark-results'));
+  const resultsRoot = path.resolve(options.resultsRoot || path.join(APP_ROOT, '..', 'docs', 'benchmarks'));
   const summaries = findSummaries(input);
   const summaryValues = [...summaries.values()].map((file) => readJson(file));
   const exactVersion = /^\d+\.\d+\.\d+(?:[-+].+)?$/;
