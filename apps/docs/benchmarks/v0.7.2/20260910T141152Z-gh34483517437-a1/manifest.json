@@ -1,0 +1,455 @@
+{
+  "schema_version": 1,
+  "generated_utc": "2026-09-10T14:11:52.000Z",
+  "status": "complete",
+  "quality_status": "noisy",
+  "evidence_status": "complete",
+  "publishable": true,
+  "shotium_version": "0.7.2",
+  "profile": "full",
+  "seed": "236879439c28b39f0754873ab48d0b5b562f3f10",
+  "run_id": "34483517437",
+  "run_attempt": 1,
+  "run_url": "https://github.com/sj817/shotium/actions/runs/34483517437",
+  "source_sha": "236879439c28b39f0754873ab48d0b5b562f3f10",
+  "platforms": [
+    {
+      "platform": "linux-x64",
+      "missing": false,
+      "status": "fail",
+      "quality_status": "pass",
+      "shards_complete": true,
+      "summary_sha256": "503cff621f3c181a8c069c2e2504f247c12e8c9c701b54d1f80700193750845e",
+      "permanent_sha256": {
+        "summary.json": "503cff621f3c181a8c069c2e2504f247c12e8c9c701b54d1f80700193750845e",
+        "samples.jsonl": "b90ad761dac772f4078fe86239880f438771137a7817b55b95c44a9f8e79f220",
+        "quality.json": "0727da94928268b18f7e9b645a0de5f1e7bf2106d374c431dc7bf60f68c66977",
+        "failures.json": "ccbf53e2801af0b3717ae244f72cf04e56c6a599e6af1cc614cb9e6f7c2d49c8"
+      },
+      "artifact_error": null,
+      "evidence_complete": true,
+      "artifacts": [
+        {
+          "shard": "parallel",
+          "name": "benchmark-evidence-linux-amd64-parallel-34483517437-a1",
+          "sha256": "2d25272375d9fc9c855c49323314656e6155bbcb8f213353c6edf6ec2db6b64a",
+          "run_url": "https://github.com/sj817/shotium/actions/runs/34483517437",
+          "uploaded": true,
+          "actions_artifact_id": "10154969919",
+          "actions_artifact_url": "https://github.com/sj817/shotium/actions/runs/34483517437/artifacts/10154969919",
+          "actions_artifact_digest": "d95ba66c7bf5d9c667c8ce1f94adbb42ed50caa35e1aef2818b5fd8332d3f5f6"
+        },
+        {
+          "shard": "resident",
+          "name": "benchmark-evidence-linux-amd64-resident-34483517437-a1",
+          "sha256": "f349b4c2df88ecf7399868054509a5a6c00f8e8ca6b687a7532754ec472cda60",
+          "run_url": "https://github.com/sj817/shotium/actions/runs/34483517437",
+          "uploaded": true,
+          "actions_artifact_id": "10154782805",
+          "actions_artifact_url": "https://github.com/sj817/shotium/actions/runs/34483517437/artifacts/10154782805",
+          "actions_artifact_digest": "49ad3f960cb3d10899da17872340be5dba711f1809bf4db134d2f63eba20e3ee"
+        },
+        {
+          "shard": "resilience",
+          "name": "benchmark-evidence-linux-amd64-resilience-34483517437-a1",
+          "sha256": "cffb7d3d1f7031522fa7b99ae74898831266a7e14af1ea31546babf3ff91e6a5",
+          "run_url": "https://github.com/sj817/shotium/actions/runs/34483517437",
+          "uploaded": true,
+          "actions_artifact_id": "10155402966",
+          "actions_artifact_url": "https://github.com/sj817/shotium/actions/runs/34483517437/artifacts/10155402966",
+          "actions_artifact_digest": "d1eb1491f7b20df5e8a4bd18e0fc8ad817a4befc1b6d99ec7028c5c4203d2dea"
+        },
+        {
+          "shard": "startup",
+          "name": "benchmark-evidence-linux-amd64-startup-34483517437-a1",
+          "sha256": "31a01a066f77eb7c08382df48ac6f0640ca95e16893f900d91d5708c69afeabc",
+          "run_url": "https://github.com/sj817/shotium/actions/runs/34483517437",
+          "uploaded": true,
+          "actions_artifact_id": "10155200616",
+          "actions_artifact_url": "https://github.com/sj817/shotium/actions/runs/34483517437/artifacts/10155200616",
+          "actions_artifact_digest": "372679dbfecb230fbba7a89ee3d4d2034e4bc5e2aa2e7485cb15f8c62965e1b2"
+        },
+        {
+          "shard": "throughput",
+          "name": "benchmark-evidence-linux-amd64-throughput-34483517437-a1",
+          "sha256": "663321135bcab7fe036e6361a33f55c6abe134322557829087df7718010a4963",
+          "run_url": "https://github.com/sj817/shotium/actions/runs/34483517437",
+          "uploaded": true,
+          "actions_artifact_id": "10154954769",
+          "actions_artifact_url": "https://github.com/sj817/shotium/actions/runs/34483517437/artifacts/10154954769",
+          "actions_artifact_digest": "a06ec79839f7545c351991fb8b5e3d4c7b60f01d53ea1936653a88cd4d856923"
+        }
+      ],
+      "artifact": {
+        "kind": "sharded-evidence-index",
+        "sha256": "558319d746a278c139695ba52ec7d3cf895d886943528d3e67396814f69285de",
+        "uploaded": true
+      }
+    },
+    {
+      "platform": "linux-arm64",
+      "missing": false,
+      "status": "pass",
+      "quality_status": "pass",
+      "shards_complete": true,
+      "summary_sha256": "d1710c0d883f8f18f60d7f24a81f16ab4dd81501317ff1b97d48ce35919ccb12",
+      "permanent_sha256": {
+        "summary.json": "d1710c0d883f8f18f60d7f24a81f16ab4dd81501317ff1b97d48ce35919ccb12",
+        "samples.jsonl": "dc03ca05c328ea0cd2d24c4ad6c7932e1329dd400dd10c578d923eb0abd58b5d",
+        "quality.json": "d5b67246db026f6296f6b328d6cbfe71c3baa5e14ddab13d8bc13033ca997a3c",
+        "failures.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+      },
+      "artifact_error": null,
+      "evidence_complete": true,
+      "artifacts": [
+        {
+          "shard": "parallel",
+          "name": "benchmark-evidence-linux-arm64-parallel-34483517437-a1",
+          "sha256": "8a70faa228920f39ae69c844a6826a0e9a816efb84f74e1d7b4fb3494b92cd19",
+          "run_url": "https://github.com/sj817/shotium/actions/runs/34483517437",
+          "uploaded": true,
+          "actions_artifact_id": "10154810220",
+          "actions_artifact_url": "https://github.com/sj817/shotium/actions/runs/34483517437/artifacts/10154810220",
+          "actions_artifact_digest": "7b4a09cb2ca0547fd0f0f46e1ceea542606f6c04f8b187f6047e378dadb0cc6c"
+        },
+        {
+          "shard": "resident",
+          "name": "benchmark-evidence-linux-arm64-resident-34483517437-a1",
+          "sha256": "b7ae28f574886c5806f625be8037e3e69e225dd4a250d60f6cbd56e03ed1587c",
+          "run_url": "https://github.com/sj817/shotium/actions/runs/34483517437",
+          "uploaded": true,
+          "actions_artifact_id": "10154714335",
+          "actions_artifact_url": "https://github.com/sj817/shotium/actions/runs/34483517437/artifacts/10154714335",
+          "actions_artifact_digest": "6958ef3d7ef7a87227a594aad5129f2dadaca2df965cd415654179b0aa2cb421"
+        },
+        {
+          "shard": "resilience",
+          "name": "benchmark-evidence-linux-arm64-resilience-34483517437-a1",
+          "sha256": "875dc0ddfe2d2d095c786d6f6cea24896355a5f251a38b77df50cc16ea89b6e1",
+          "run_url": "https://github.com/sj817/shotium/actions/runs/34483517437",
+          "uploaded": true,
+          "actions_artifact_id": "10155026657",
+          "actions_artifact_url": "https://github.com/sj817/shotium/actions/runs/34483517437/artifacts/10155026657",
+          "actions_artifact_digest": "ad71b4ae060a406483b2af92fa5dd20ff9dccec0469b345435b9c280b1e8f4bc"
+        },
+        {
+          "shard": "startup",
+          "name": "benchmark-evidence-linux-arm64-startup-34483517437-a1",
+          "sha256": "b0e77c7423a27f2e59906bd3b80dff0279cad71c617ef5c42c87b43337e76802",
+          "run_url": "https://github.com/sj817/shotium/actions/runs/34483517437",
+          "uploaded": true,
+          "actions_artifact_id": "10154968083",
+          "actions_artifact_url": "https://github.com/sj817/shotium/actions/runs/34483517437/artifacts/10154968083",
+          "actions_artifact_digest": "b16cbffa29b349addab77bd6bc405369e60328d1efed1f9c5b5f42a98b23a5c3"
+        },
+        {
+          "shard": "throughput",
+          "name": "benchmark-evidence-linux-arm64-throughput-34483517437-a1",
+          "sha256": "72e101fb47e12417f799495bd07594b71e819841e7d5f6c71b3d41f0e2ac23c4",
+          "run_url": "https://github.com/sj817/shotium/actions/runs/34483517437",
+          "uploaded": true,
+          "actions_artifact_id": "10154812095",
+          "actions_artifact_url": "https://github.com/sj817/shotium/actions/runs/34483517437/artifacts/10154812095",
+          "actions_artifact_digest": "0c66a70b7c9e1dd50c8ba91339ab504a3eba8beea01e7db3b38f0d51695290f3"
+        }
+      ],
+      "artifact": {
+        "kind": "sharded-evidence-index",
+        "sha256": "4d71df4e36e3d12e5362297aac237620f6ce0f5d21572c5ba573ecca6a220ac5",
+        "uploaded": true
+      }
+    },
+    {
+      "platform": "win32-x64",
+      "missing": false,
+      "status": "fail",
+      "quality_status": "noisy",
+      "shards_complete": true,
+      "summary_sha256": "cc0dc8407f9766c29c6f205664fc23a7878a20b23372129fb0462c3b7e7ee29c",
+      "permanent_sha256": {
+        "summary.json": "cc0dc8407f9766c29c6f205664fc23a7878a20b23372129fb0462c3b7e7ee29c",
+        "samples.jsonl": "777b631e623aebe32789237c0b42861e0d1e93f761144f045e0f60ceb17c9974",
+        "quality.json": "7c04b535b659ada6d64b72b28ae56f31e0b314cf68115e746cbc02cb6ae7a908",
+        "failures.json": "431fb0bb5e849c5985362f273b89defb93e028fdd75ac74c64f0ece6e31fbd05"
+      },
+      "artifact_error": null,
+      "evidence_complete": true,
+      "artifacts": [
+        {
+          "shard": "parallel",
+          "name": "benchmark-evidence-windows-amd64-parallel-34483517437-a1",
+          "sha256": "62e1b31ee6b0794b2f60e3d329133d3b693c0aa56a3d662f499b7281e54f234a",
+          "run_url": "https://github.com/sj817/shotium/actions/runs/34483517437",
+          "uploaded": true,
+          "actions_artifact_id": "10155107937",
+          "actions_artifact_url": "https://github.com/sj817/shotium/actions/runs/34483517437/artifacts/10155107937",
+          "actions_artifact_digest": "7ccd86522e83f8a9406458a7e094fd5009fcf9782f9c4e3ab48f59313d50f4b7"
+        },
+        {
+          "shard": "resident",
+          "name": "benchmark-evidence-windows-amd64-resident-34483517437-a1",
+          "sha256": "a16f3d55a09969f1698e05c34bd751887822e473fa4dbbe582545f917a1482a8",
+          "run_url": "https://github.com/sj817/shotium/actions/runs/34483517437",
+          "uploaded": true,
+          "actions_artifact_id": "10154954894",
+          "actions_artifact_url": "https://github.com/sj817/shotium/actions/runs/34483517437/artifacts/10154954894",
+          "actions_artifact_digest": "6337ccded946c181147aabdb3b688d5c0bbad45b1a5513c5ce8d08b7d4673333"
+        },
+        {
+          "shard": "resilience",
+          "name": "benchmark-evidence-windows-amd64-resilience-34483517437-a1",
+          "sha256": "08723253f23b7efee93ad807a0f92b17ff81fce8eba525c92de32fc7bb8ad673",
+          "run_url": "https://github.com/sj817/shotium/actions/runs/34483517437",
+          "uploaded": true,
+          "actions_artifact_id": "10155543847",
+          "actions_artifact_url": "https://github.com/sj817/shotium/actions/runs/34483517437/artifacts/10155543847",
+          "actions_artifact_digest": "42bcb51e6a2413eaf26b995d9db6282e0b5f7583e0023b914aa89903e3fc382a"
+        },
+        {
+          "shard": "startup",
+          "name": "benchmark-evidence-windows-amd64-startup-34483517437-a1",
+          "sha256": "ae85bf88f0cceac972b841e053e27fda45c143d9b623ddcbdd6edbc50423c7a7",
+          "run_url": "https://github.com/sj817/shotium/actions/runs/34483517437",
+          "uploaded": true,
+          "actions_artifact_id": "10155951477",
+          "actions_artifact_url": "https://github.com/sj817/shotium/actions/runs/34483517437/artifacts/10155951477",
+          "actions_artifact_digest": "b05d42d36fe46a010654e736f15fe2f9769e9e6f8cf24f41e845fb9dd036c09a"
+        },
+        {
+          "shard": "throughput",
+          "name": "benchmark-evidence-windows-amd64-throughput-34483517437-a1",
+          "sha256": "c49ce196d6ab10d0bffb38655764fe1665b86e5061eb16b45746ec5547ff853c",
+          "run_url": "https://github.com/sj817/shotium/actions/runs/34483517437",
+          "uploaded": true,
+          "actions_artifact_id": "10155321820",
+          "actions_artifact_url": "https://github.com/sj817/shotium/actions/runs/34483517437/artifacts/10155321820",
+          "actions_artifact_digest": "dd9c634d39e5217c8520569f338a1bd15bbb67307d0cabed3f3bc669c8364e71"
+        }
+      ],
+      "artifact": {
+        "kind": "sharded-evidence-index",
+        "sha256": "9476e5a31dcb7fc0bbc99d7d878660372de2a961d0f2a4ce2a9810557a3eed17",
+        "uploaded": true
+      }
+    },
+    {
+      "platform": "win32-arm64",
+      "missing": false,
+      "status": "pass",
+      "quality_status": "pass",
+      "shards_complete": true,
+      "summary_sha256": "2742ccd4ff2c330cd1025fcf17a42e79649a87dbb7cdcc5dc724347694fe60bd",
+      "permanent_sha256": {
+        "summary.json": "2742ccd4ff2c330cd1025fcf17a42e79649a87dbb7cdcc5dc724347694fe60bd",
+        "samples.jsonl": "92bfcf34d604d0e66a9ef50ca725db215da7c8e7438372e24a7a53c68b917196",
+        "quality.json": "4e034a909d40442b40033b1adaaaa2128f393ddacf2144a5f224e27275e91d5f",
+        "failures.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+      },
+      "artifact_error": null,
+      "evidence_complete": true,
+      "artifacts": [
+        {
+          "shard": "parallel",
+          "name": "benchmark-evidence-windows-arm64-parallel-34483517437-a1",
+          "sha256": "e90d17bfc316e222771ee8d1196d37e69043cfd983e28afebb9e28cda4568955",
+          "run_url": "https://github.com/sj817/shotium/actions/runs/34483517437",
+          "uploaded": true,
+          "actions_artifact_id": "10154959700",
+          "actions_artifact_url": "https://github.com/sj817/shotium/actions/runs/34483517437/artifacts/10154959700",
+          "actions_artifact_digest": "838b381f98f9c20dd548955b452bbe195b6b30c02d0b42da5dfb9bc133bf869c"
+        },
+        {
+          "shard": "resident",
+          "name": "benchmark-evidence-windows-arm64-resident-34483517437-a1",
+          "sha256": "af14c37f496fec521bacd8829d4f9175c5e6d2a8166e3c2cd7aa8c0fdce44816",
+          "run_url": "https://github.com/sj817/shotium/actions/runs/34483517437",
+          "uploaded": true,
+          "actions_artifact_id": "10155182975",
+          "actions_artifact_url": "https://github.com/sj817/shotium/actions/runs/34483517437/artifacts/10155182975",
+          "actions_artifact_digest": "5cc0e7e9e022394b51640971cf409ec2562963efc7c4c2d29b03f59c86a568d7"
+        },
+        {
+          "shard": "resilience",
+          "name": "benchmark-evidence-windows-arm64-resilience-34483517437-a1",
+          "sha256": "a7be374f5b612971f80ebab2531df8df55dbf24ed1860f4fac2c9e20f785941c",
+          "run_url": "https://github.com/sj817/shotium/actions/runs/34483517437",
+          "uploaded": true,
+          "actions_artifact_id": "10154988720",
+          "actions_artifact_url": "https://github.com/sj817/shotium/actions/runs/34483517437/artifacts/10154988720",
+          "actions_artifact_digest": "55b76853e29df3bbefa822a04edcfd208de73e42a7891e545851fec56956f9b8"
+        },
+        {
+          "shard": "startup",
+          "name": "benchmark-evidence-windows-arm64-startup-34483517437-a1",
+          "sha256": "680229570975b889d57c3e636ce4fbc127f0a41435561cbc6a8eed1fe8ce8b11",
+          "run_url": "https://github.com/sj817/shotium/actions/runs/34483517437",
+          "uploaded": true,
+          "actions_artifact_id": "10154984183",
+          "actions_artifact_url": "https://github.com/sj817/shotium/actions/runs/34483517437/artifacts/10154984183",
+          "actions_artifact_digest": "ea875000e4fd548d431a2647fb0eeed9df17396dcb206e79160301c83b771a6e"
+        },
+        {
+          "shard": "throughput",
+          "name": "benchmark-evidence-windows-arm64-throughput-34483517437-a1",
+          "sha256": "f920b50e3c598c1fc4079897f6ad4681afe4567a3f457b60bcba932f8a23e086",
+          "run_url": "https://github.com/sj817/shotium/actions/runs/34483517437",
+          "uploaded": true,
+          "actions_artifact_id": "10154991125",
+          "actions_artifact_url": "https://github.com/sj817/shotium/actions/runs/34483517437/artifacts/10154991125",
+          "actions_artifact_digest": "ad50ba30359aa24113079c8bfa9780b4ed28f0fee579900ceba105a3035f12cf"
+        }
+      ],
+      "artifact": {
+        "kind": "sharded-evidence-index",
+        "sha256": "91c895ba042331e80ca28aefd0dbb24d35dfcf4ebe44b872f1f5bceba69b89a8",
+        "uploaded": true
+      }
+    },
+    {
+      "platform": "darwin-x64",
+      "missing": false,
+      "status": "fail",
+      "quality_status": "noisy",
+      "shards_complete": true,
+      "summary_sha256": "6cc60daff796670072eb1a275e972333c7d7c3adbc5c6d70a1c0072d7c0b8a42",
+      "permanent_sha256": {
+        "summary.json": "6cc60daff796670072eb1a275e972333c7d7c3adbc5c6d70a1c0072d7c0b8a42",
+        "samples.jsonl": "a3f8ff84207b1eb8acfd7e24e52b8a3e9c4df3e6d2fc0ef193431a81862a7bc7",
+        "quality.json": "43532ff0eea323084f16d3e9dbe4b6e6f9dd1b5df75ceb6ca9e1b4f2bd9535f4",
+        "failures.json": "40cfe89ccc309aba3e5dca45c025026a578f622353200ee3db5ac2d28b95ccd8"
+      },
+      "artifact_error": null,
+      "evidence_complete": true,
+      "artifacts": [
+        {
+          "shard": "parallel",
+          "name": "benchmark-evidence-macos-amd64-parallel-34483517437-a1",
+          "sha256": "5da68d12312f8b0e9752e43f8d543e625633a65b2133ec5b6fbfb6a08d9d9db4",
+          "run_url": "https://github.com/sj817/shotium/actions/runs/34483517437",
+          "uploaded": true,
+          "actions_artifact_id": "10156180598",
+          "actions_artifact_url": "https://github.com/sj817/shotium/actions/runs/34483517437/artifacts/10156180598",
+          "actions_artifact_digest": "99ddb32d6ecf137348eccbfce87a0c840fad47a06092a902de83a1d51d73c52f"
+        },
+        {
+          "shard": "resident",
+          "name": "benchmark-evidence-macos-amd64-resident-34483517437-a1",
+          "sha256": "aa720f504bbc0dad59796c3b59a309a8dc37dc2374e5f07327e403f9fada70ca",
+          "run_url": "https://github.com/sj817/shotium/actions/runs/34483517437",
+          "uploaded": true,
+          "actions_artifact_id": "10154929408",
+          "actions_artifact_url": "https://github.com/sj817/shotium/actions/runs/34483517437/artifacts/10154929408",
+          "actions_artifact_digest": "2c414f9b56d6737ef60b1f0e70755a71d605faefd06d4ab923daf1cef9ebb3ed"
+        },
+        {
+          "shard": "resilience",
+          "name": "benchmark-evidence-macos-amd64-resilience-34483517437-a1",
+          "sha256": "b23087ea6a64ebd7b33a34e5a84deca78707e9f1d8b09452a66578c19b92d4ab",
+          "run_url": "https://github.com/sj817/shotium/actions/runs/34483517437",
+          "uploaded": true,
+          "actions_artifact_id": "10156156312",
+          "actions_artifact_url": "https://github.com/sj817/shotium/actions/runs/34483517437/artifacts/10156156312",
+          "actions_artifact_digest": "79c28ff6312931f3021866b84b04438a34700f2efbcbe9387cd9a241491b96e8"
+        },
+        {
+          "shard": "startup",
+          "name": "benchmark-evidence-macos-amd64-startup-34483517437-a1",
+          "sha256": "8f0dfc83a9bcf073c651fadf1883df72466aebf3aa7a6888b6f398e73a223670",
+          "run_url": "https://github.com/sj817/shotium/actions/runs/34483517437",
+          "uploaded": true,
+          "actions_artifact_id": "10155424377",
+          "actions_artifact_url": "https://github.com/sj817/shotium/actions/runs/34483517437/artifacts/10155424377",
+          "actions_artifact_digest": "fa11d383779cf8712de00a7aaf1aa682d3df5099247ebcda87b7c5d44ec18781"
+        },
+        {
+          "shard": "throughput",
+          "name": "benchmark-evidence-macos-amd64-throughput-34483517437-a1",
+          "sha256": "1410ec214542273d7b376ecab8a48012d214463ceb63ca4d664157ae7e8dab1e",
+          "run_url": "https://github.com/sj817/shotium/actions/runs/34483517437",
+          "uploaded": true,
+          "actions_artifact_id": "10155318476",
+          "actions_artifact_url": "https://github.com/sj817/shotium/actions/runs/34483517437/artifacts/10155318476",
+          "actions_artifact_digest": "38c700b3d220dc170b6122e57a585326f9435687f67059802c8cdb5c7693c6c4"
+        }
+      ],
+      "artifact": {
+        "kind": "sharded-evidence-index",
+        "sha256": "ddb7544fbaa4f3d1b366a01828b61f500753b7044432b7374646349eaf2991ef",
+        "uploaded": true
+      }
+    },
+    {
+      "platform": "darwin-arm64",
+      "missing": false,
+      "status": "fail",
+      "quality_status": "noisy",
+      "shards_complete": true,
+      "summary_sha256": "0bde984ef66f0fe2c894bb6510b2fa00ea4b8a48912ff676f950ed0970125de8",
+      "permanent_sha256": {
+        "summary.json": "0bde984ef66f0fe2c894bb6510b2fa00ea4b8a48912ff676f950ed0970125de8",
+        "samples.jsonl": "5445776ea8c5c5047d46e935526fd54bfbbbfe369e718d1f20c9954d498fd5d5",
+        "quality.json": "14ac3b0a8dfb9294e05814f837b84910617cc7871cad8d54540fb9502fea02e3",
+        "failures.json": "68cb4fe9188463853468619cd935ddb598be943208a3e399e2f5d14c47de33b8"
+      },
+      "artifact_error": null,
+      "evidence_complete": true,
+      "artifacts": [
+        {
+          "shard": "parallel",
+          "name": "benchmark-evidence-macos-arm64-parallel-34483517437-a1",
+          "sha256": "187ebb9e25f9c408207e30aa29ba2d6da766aaad0a82ce9bd765a96524667cb2",
+          "run_url": "https://github.com/sj817/shotium/actions/runs/34483517437",
+          "uploaded": true,
+          "actions_artifact_id": "10155466257",
+          "actions_artifact_url": "https://github.com/sj817/shotium/actions/runs/34483517437/artifacts/10155466257",
+          "actions_artifact_digest": "276fb5048234d2d79bca2397c0a37838aa1ff55c266eb7b754dc698eaad3742a"
+        },
+        {
+          "shard": "resident",
+          "name": "benchmark-evidence-macos-arm64-resident-34483517437-a1",
+          "sha256": "e77805ed9858ee3978a6141d1bcfada422f7a0980a0db39270f0294bd6a941b8",
+          "run_url": "https://github.com/sj817/shotium/actions/runs/34483517437",
+          "uploaded": true,
+          "actions_artifact_id": "10154794842",
+          "actions_artifact_url": "https://github.com/sj817/shotium/actions/runs/34483517437/artifacts/10154794842",
+          "actions_artifact_digest": "d0da34a86ab43c074422b4cb891dec76b965b04ceba630c7ff57a1336f6349cd"
+        },
+        {
+          "shard": "resilience",
+          "name": "benchmark-evidence-macos-arm64-resilience-34483517437-a1",
+          "sha256": "cd5d626bdec0a92682e22c5850606c04a24024260e3e905e36233406d22da9d9",
+          "run_url": "https://github.com/sj817/shotium/actions/runs/34483517437",
+          "uploaded": true,
+          "actions_artifact_id": "10156082817",
+          "actions_artifact_url": "https://github.com/sj817/shotium/actions/runs/34483517437/artifacts/10156082817",
+          "actions_artifact_digest": "c91739ff486cc31ccb0f867b82bf46208a57792bb49aefd7010dfc170fabe591"
+        },
+        {
+          "shard": "startup",
+          "name": "benchmark-evidence-macos-arm64-startup-34483517437-a1",
+          "sha256": "3b060493dd5fe1ef2f27d0b96c91cf5fd1406e01eeeec394fa7fec7c2cae1f4b",
+          "run_url": "https://github.com/sj817/shotium/actions/runs/34483517437",
+          "uploaded": true,
+          "actions_artifact_id": "10155253172",
+          "actions_artifact_url": "https://github.com/sj817/shotium/actions/runs/34483517437/artifacts/10155253172",
+          "actions_artifact_digest": "73ed9a370c261a78d0ee06be43a75a7d842aff9f50b4cb8bedc0564b73f40156"
+        },
+        {
+          "shard": "throughput",
+          "name": "benchmark-evidence-macos-arm64-throughput-34483517437-a1",
+          "sha256": "2a905c16930f07d756b36c017278fbbcc2fa6bbc29ff8a87cfa795a1030eb8a9",
+          "run_url": "https://github.com/sj817/shotium/actions/runs/34483517437",
+          "uploaded": true,
+          "actions_artifact_id": "10155145903",
+          "actions_artifact_url": "https://github.com/sj817/shotium/actions/runs/34483517437/artifacts/10155145903",
+          "actions_artifact_digest": "124c015e6bf5623d1ea9ef5761a3a79eda0f5ab3d80017bf5a9ad84d8ce70aa9"
+        }
+      ],
+      "artifact": {
+        "kind": "sharded-evidence-index",
+        "sha256": "ea5cdc08ece6e554a5586c3e45db168a12f6c078fb1e7b3937f4923a539ad173",
+        "uploaded": true
+      }
+    }
+  ]
+}
