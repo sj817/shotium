@@ -1593,6 +1593,20 @@ base::expected<void, std::string> ShotRenderer::RenderDocument(
   base::ScopedClosureRunner decide_reclaim(base::BindOnce(
       [](ShotRenderer* self, const bool* large, const size_t* peak) {
         self->reclaim_after_render_ = *large || *peak > kSmallCaptureBytes;
+        // And what this page fetched, carried to the next capture's collection
+        // decision below. A large capture collected its own page on the way
+        // out, so it starts the count over; every other capture leaves its
+        // page to be collected by the next one, and this is what says how much
+        // is waiting. Stats are read here rather than where they are used
+        // because this runs on every exit path, including the failures that
+        // return before the raster.
+        const CaptureStats* stats = CaptureContext::Current()
+                                        ? &CaptureContext::Current()->stats()
+                                        : nullptr;
+        const size_t fetched =
+            stats ? static_cast<size_t>(std::max<int64_t>(stats->bytes, 0)) : 0;
+        self->uncollected_external_bytes_ =
+            *large ? 0 : self->uncollected_external_bytes_ + fetched;
       },
       base::Unretained(this), base::Unretained(&large_capture),
       base::Unretained(&peak_raster_bytes)));
@@ -1657,8 +1671,22 @@ base::expected<void, std::string> ShotRenderer::RenderDocument(
     // omitted in the other: with collection disabled during captures and no
     // allocation happening between them, this call is the only thing that ever
     // reclaims anything.
-    if (used > kSmallCaptureBytes) {
+    //
+    // The heap size alone is the wrong measure of "how much is waiting",
+    // because the largest thing a page holds is often not in the heap. A web
+    // font is the clearest case: a FontFace keeps a FontCustomPlatformData
+    // keeps an SkTypeface keeps the font's bytes, and those bytes are Skia's
+    // allocation, not cppgc's. A 10 MB font leaves a heap of 1.3 MB, so
+    // twenty captures of the same page left twenty fonts alive and 400 MB of
+    // private commit, all of it released the moment anything collected -- the
+    // idle purge, which is why a resident worker between bursts looked fine
+    // and a worker under a burst did not. `uncollected_external_bytes_` is
+    // what those pages fetched, so the sum is the whole of what a collection
+    // here would return rather than the part cppgc happens to own.
+    if (used + uncollected_external_bytes_ > kSmallCaptureBytes) {
       const base::TimeTicks gc_started = base::TimeTicks::Now();
+      const size_t external = uncollected_external_bytes_;
+      uncollected_external_bytes_ = 0;
       thread_state->heap().ForceGarbageCollectionSlow(
           "shot", "between captures",
           cppgc::Heap::StackState::kMayContainHeapPointers);
@@ -1670,7 +1698,8 @@ base::expected<void, std::string> ShotRenderer::RenderDocument(
         LOG(INFO) << "shot: profile gc_between="
                   << (base::TimeTicks::Now() - gc_started).InMillisecondsF()
                   << " used_before_kb=" << (used >> 10)
-                  << " used_after_kb=" << (after >> 10);
+                  << " used_after_kb=" << (after >> 10)
+                  << " external_kb=" << (external >> 10);
       }
     }
   }

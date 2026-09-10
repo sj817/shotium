@@ -223,6 +223,10 @@ class ShotRenderer {
   // whose freed spans are cheaper to keep warm for the next request than to
   // decommit and fault back in.
   bool reclaim_after_render_ = true;
+  // Body bytes fetched by the captures that have been torn down since the last
+  // collection, which is what the cppgc heap size does not see; see the
+  // between-captures collection in RenderDocument().
+  size_t uncollected_external_bytes_ = 0;
   // The bitmap a capture that ImageStream::IsSmall() rasters into, kept from
   // one capture to the next so that the same size need not be allocated and
   // faulted in again, and the strip surfaces its raster threads use, kept
