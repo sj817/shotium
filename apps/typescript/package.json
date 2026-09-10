@@ -15,7 +15,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/sj817/shotium.git",
-    "directory": "apps/demo/shotium"
+    "directory": "apps/typescript"
   },
   "type": "module",
   "packageManager": "pnpm@9.15.9",
@@ -33,7 +33,8 @@
     "src/",
     "native/binding.cc",
     "native/delay_load.cc",
-    "README.md"
+    "README.md",
+    "README.zh.md"
   ],
   "engines": {
     "node": ">=18"

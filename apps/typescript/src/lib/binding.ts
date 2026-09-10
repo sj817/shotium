@@ -61,8 +61,8 @@ function* candidates(): Generator<string> {
   // Resolve the platform package only when the local build is absent. In a
   // checkout, package resolution can traverse a large pnpm tree even though
   // its result will never be loaded.
-  if (fs.existsSync(path.join(HERE, '..', '..', '..', '..', 'shot', 'BUILD.gn'))) {
-    yield path.join(HERE, '..', '..', '..', '..', 'out', 'Shot', 'shotium.node');
+  if (fs.existsSync(path.join(HERE, '..', '..', '..', 'shot', 'BUILD.gn'))) {
+    yield path.join(HERE, '..', '..', '..', 'out', 'Shot', 'shotium.node');
   }
   const dir = platformPackage.packageDir();
   if (dir) {

@@ -157,7 +157,7 @@ SHOT_EXPORT void shot_engine_destroy(shot_engine* engine);
 // One screenshot. Blocks until there is an answer.
 //
 // `request_json` is one ScreenshotOptions as it goes over shotium's wire --
-// the same object apps/demo/shotium/src/lib/request.ts builds and shot/shot_request.cc
+// the same object apps/typescript/src/lib/request.ts builds and shot/shot_request.cc
 // parses, with no third spelling of it in between. `file` is required;
 // everything else has a default.
 //
