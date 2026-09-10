@@ -580,7 +580,7 @@ async function main() {
       browser_launch_policy: 'package-default-except-linux-sandbox',
       image_correctness: 'pixelmatch-threshold-0.1; exact-rgba-retained-as-diagnostic',
       warmup_policy: 'three-fixed-warmups; latency-and-rss-variation-recorded-not-gated',
-      default_page_policy: 'new-page',
+      default_page_policy: 'new-page; puppeteer-pages-created-as-their-own-window',
       default_cache_policy: 'disabled-or-no-store',
       reuse_page_scenario_is_separate: true,
     },

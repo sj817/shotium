@@ -147,6 +147,7 @@ class ChromeEngine {
   attached: boolean;
   profileDir: string | null;
   screenshotTimeoutSupported: boolean;
+  ownWindowPerPage: boolean;
 
   constructor({
     name,
@@ -155,6 +156,7 @@ class ChromeEngine {
     reusePage = false,
     profileDir = null,
     screenshotTimeoutSupported = false,
+    ownWindowPerPage = false,
   }) {
     this.name = name;
     this.launchHook = launch;
@@ -166,6 +168,26 @@ class ChromeEngine {
     this.attached = false;
     this.profileDir = profileDir;
     this.screenshotTimeoutSupported = screenshotTimeoutSupported;
+    this.ownWindowPerPage = ownWindowPerPage;
+  }
+
+  // Chrome's own headless mode puts every `newPage()` in the same window as a
+  // background tab, and only the front tab renders: hidden pages report
+  // `visibilityState: hidden`, never run a requestAnimationFrame callback, and
+  // keep an empty or stale compositor surface. That is what this harness's
+  // Puppeteer Chrome evidence failures were -- blank PNGs, frames that differ
+  // from the same fixture's first capture, and readiness waits that reach the
+  // 30-second ceiling. On two cores, 554 concurrent captures as tabs produced
+  // one blank PNG, three differing frames and six readiness timeouts, against
+  // none in 560 captures as windows; one `parallel` cell measured a 27.4-second
+  // slowest capture as tabs and 1.75 seconds as windows, with no higher mean.
+  // Playwright's pages and Chrome's headless shell are already visible without
+  // being asked, so this removes an asymmetry between the adapters rather than
+  // giving Puppeteer something the others do not have, and `type: 'window'` is
+  // the package's own public page option, not a benchmark-only Chrome flag.
+  async newPage() {
+    return this.ownWindowPerPage ?
+      await this.context.newPage({type: 'window'}) : await this.context.newPage();
   }
 
   async launch() {
@@ -179,7 +201,7 @@ class ChromeEngine {
 
   async shot(url, {timeoutMs = 30_000, fullPage = false} = {}) {
     const page = this.reusePage && this.idlePages.length ? this.idlePages.pop() :
-      await this.context.newPage();
+      await this.newPage();
     let cacheSession = null;
     try {
       if (!this.reusePage) {
@@ -224,6 +246,7 @@ async function puppeteerDefinition(name, headless, options) {
     name,
     reusePage: options.reusePage,
     profileDir: options.profileDir || null,
+    ownWindowPerPage: true,
     launch: async () => {
       // Import inside the timed launch hook, matching Shotium's cold-start
       // contract instead of preloading only the competitor wrapper.

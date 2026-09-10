@@ -18,7 +18,8 @@ async function warmPuppeteer(name, url, evidenceFile) {
     defaultViewport: {...VIEWPORT, deviceScaleFactor: 1},
     protocolTimeout: BROWSER_OPERATION_TIMEOUT_MS,
   });
-  const page = await browser.newPage();
+  // Same page model the measured clients use against this resident host.
+  const page = await browser.newPage({type: 'window'});
   await page.goto(url, {waitUntil: 'load', timeout: BROWSER_OPERATION_TIMEOUT_MS});
   await waitForVisualReady(page);
   writeEvidence(evidenceFile, await page.screenshot({type: 'png'}));
