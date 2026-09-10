@@ -51,7 +51,7 @@ def main():
     try:
         image, stats, error = ptr(), ptr(), ptr()
         request = {"file": str(args.input.resolve()), "allowFileAccess": True,
-                   "width": 800, "height": 600, "type": "png"}
+                   "width": 720, "height": 380, "type": "png"}
         status = lib.shot_engine_capture(engine, json.dumps(request).encode(), C.byref(image), C.byref(stats), C.byref(error))
         # Copy bytes before freeing their native owners, including failure stats.
         try:

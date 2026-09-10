@@ -72,7 +72,7 @@ func run() error {
 		return fmt.Errorf("create failed (%d): %s", status, strings.TrimRight(string(read(failure)), "\x00"))
 	}
 	defer destroy(engine)
-	request, err := json.Marshal(map[string]any{"file": input, "allowFileAccess": true, "width": 800, "height": 600, "type": "png"})
+	request, err := json.Marshal(map[string]any{"file": input, "allowFileAccess": true, "width": 720, "height": 380, "type": "png"})
 	if err != nil {
 		return err
 	}

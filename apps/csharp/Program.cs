@@ -17,7 +17,7 @@ try
     if (status != 0) throw new InvalidOperationException($"create failed ({status}): {message}");
     try
     {
-        var request = JsonSerializer.Serialize(new { file = Path.GetFullPath(args[1]), allowFileAccess = true, width = 800, height = 600, type = "png" });
+        var request = JsonSerializer.Serialize(new { file = Path.GetFullPath(args[1]), allowFileAccess = true, width = 720, height = 380, type = "png" });
         status = Shotium.shot_engine_capture(engine, request, out var image, out var stats, out error);
         try
         {

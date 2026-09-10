@@ -51,7 +51,7 @@ public class ShotiumDemo {
         try {
             PointerByReference image = new PointerByReference(), stats = new PointerByReference();
             String request = json.toJson(Map.of("file", Path.of(args[1]).toAbsolutePath().normalize().toString(),
-                "allowFileAccess", true, "width", 800, "height", 600, "type", "png"));
+                "allowFileAccess", true, "width", 720, "height", 380, "type", "png"));
             status = api.shot_engine_capture(engine.getValue(), request, image, stats, error);
             try {
                 if (stats.getValue() != null) System.out.println(text(stats.getValue()));

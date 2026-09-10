@@ -95,7 +95,7 @@ fn run() -> Result<(), Box<dyn Error>> {
     }
     let engine = Engine(&api, handle);
     let request = CString::new(
-        json!({"file": input, "allowFileAccess": true, "width": 800, "height": 600, "type": "png"})
+        json!({"file": input, "allowFileAccess": true, "width": 720, "height": 380, "type": "png"})
             .to_string(),
     )?;
     let (mut image, mut stats, mut error) = (ptr::null_mut(), ptr::null_mut(), ptr::null_mut());

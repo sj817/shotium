@@ -1,0 +1,7 @@
+$ shotium card.html --width 720 --height 380 --scale 2 -o card.png
+$ shotium https://example.com --full-page --type webp --quality 85 -o page.webp
+$ cat card.html | shotium --stdin --width 720 --height 380 -o piped.png
+$ du -h card.png page.webp piped.png
+276K	card.png
+12K	page.webp
+88K	piped.png
