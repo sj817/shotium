@@ -1,7 +1,7 @@
 // why: ninja's whole notion of "up to date" is three things -- the outputs,
 // .ninja_log (when each output was built, by which command) and .ninja_deps
 // (which headers each object read, and the object's mtime at the time).
-// build-shards.ts moves that state between build directories on different
+// build/shards.ts moves that state between build directories on different
 // machines, which means reading and writing both files exactly and knowing
 // how ninja turns a file's mtime into the integer it stores. Nothing else in
 // the repository should need to; keep the format knowledge here.

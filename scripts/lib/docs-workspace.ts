@@ -1,8 +1,8 @@
-// Shared plumbing for the two README asset generators, docs-demo.ts and
-// docs-assets.ts.
+// Shared plumbing for the two README asset generators, docs/demo.ts and
+// docs/assets.ts.
 //
 // Both of them need the same thing: a throwaway directory that looks like a
-// user's project -- docs/demo/*.html and docs/demo/card.mjs beside a
+// user's project -- apps/demo-card/*.html and apps/demo-card/card.mjs beside a
 // package.json -- so that what the README shows is a real install of the
 // published package rather than a checkout rendering itself.
 
@@ -15,13 +15,13 @@ import which from 'which';
 import {root} from './repo.ts';
 
 export const repoRoot = root;
-export const demoDir = path.join(root, 'docs', 'demo');
-export const assetsDir = path.join(root, 'docs', 'assets');
-export const runDir = path.join(root, 'docs', '.demo-run');
+export const demoDir = path.join(root, 'apps', 'demo-card');
+export const assetsDir = path.join(root, 'apps', 'docs', 'assets');
+export const runDir = path.join(root, 'apps', 'demo-card', '.demo-run');
 export const isWindows = process.platform === 'win32';
 
 // The sources copied into the sandbox. card.mjs is also the file frozen into
-// docs/assets/example-node.webp, so the code in the README and the code in
+// apps/docs/assets/example-node.webp, so the code in the README and the code in
 // the demo cannot drift apart.
 const SOURCES = ['card.html', 'card.mjs'];
 
@@ -55,7 +55,7 @@ export function findOnPath(command: string): string | null {
   return which.sync(command, {nothrow: true});
 }
 
-// Rebuilds docs/.demo-run from docs/demo. `install` adds the published
+// Rebuilds apps/demo-card/.demo-run from apps/demo-card. `install` adds the published
 // package now: docs-assets needs the module immediately; docs-demo wants the
 // install to happen on camera instead, so it passes false.
 export function prepareWorkspace({install}: {install: boolean}): string {

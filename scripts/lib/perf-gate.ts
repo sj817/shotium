@@ -4,7 +4,7 @@
 //
 // The percentile is the numpy one (linear interpolation on (n - 1) * p), kept
 // as four lines rather than a library's because every recorded result and
-// every verdict in benchmark-results/ was produced by exactly this
+// every verdict in apps/docs/benchmarks/ was produced by exactly this
 // definition, and a library that interpolates differently would move them.
 
 export interface Distribution {

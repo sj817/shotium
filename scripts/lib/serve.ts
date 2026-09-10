@@ -1,6 +1,6 @@
 // A client for `shotium --serve`, for the check suites.
 //
-// The framing is the package's own (apps/demo/shotium/src/lib/protocol.ts): a 4-byte
+// The framing is the package's own (apps/typescript/src/lib/protocol.ts): a 4-byte
 // little-endian length and that many bytes, in both directions. Importing it
 // rather than restating it is the point -- the Python suites each carried
 // their own copy of the four-byte header, and three copies of a wire format
@@ -14,7 +14,7 @@ import {execa} from 'execa';
 
 type Subprocess = ReturnType<typeof execa>;
 
-import {encodeRequest, FrameReader} from '../../apps/demo/shotium/src/lib/protocol.ts';
+import {encodeRequest, FrameReader} from '../../apps/typescript/src/lib/protocol.ts';
 
 export interface Header {
   ok?: boolean;
