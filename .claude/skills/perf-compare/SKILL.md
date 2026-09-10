@@ -1,11 +1,15 @@
 ---
 name: perf-compare
-description: Compare a locally built candidate against a published npm version of shotium with scripts/perf-compare.ts, render the report with perf-images.ts and perf-report.ts, and avoid the measurements that lie: remote URLs (network and cache), the process sampler's own load, a stale local addon that silently wins over the package. Use for "is this faster", "did we regress", "how much did it improve", or the PR performance gate.
+description: >-
+  Compare a locally built shotium candidate with a published npm baseline and
+  report performance or memory changes. Use for regression questions, measured
+  optimisation claims and the performance gate; control binary provenance,
+  fixture/cache conditions and measurement overhead.
 ---
 
 # Candidate vs published npm
 
-The methodology is in `docs/performance.md`; read it first. This skill
+The methodology is in `apps/docs/performance.md`; read it first. This skill
 is the commands and the traps.
 
 ## Preconditions
@@ -43,7 +47,7 @@ pnpm perf:report result.json --platform win32-x64 --output report.md
   scales 0.5 to 8), HTTP/cache cases, fresh-process startup, memory
   release/restart, queue and multi-process cases, daemon cases,
   failure/recovery, and a 1000-pair soak. The two whole articles and the
-  tiles API have no working npm equivalent before 0.3.4; `check-bilibili.ts`
+  tiles API have no working npm equivalent before 0.3.4; `scripts/verify/bilibili.ts`
   validates their output separately.
 - Stopping is budget-driven, not count-driven: at least 20 pairs and 3 s per
   side per case, then until the p50 and mean ratios are known to within 2%
@@ -75,8 +79,8 @@ pnpm perf:report result.json --platform win32-x64 --output report.md
 `perf-gate.yml` runs the same comparison on six platforms. It
 is dispatched with `baseline_version` (an exact published version) and
 `build_runs` (JSON mapping the six npm platforms to successful engine build
-run IDs at the current SHA). `scripts/perf-ci.ts` drives it;
-`scripts/lib/perf-gate.ts` decides pass/fail; `scripts/perf-gate.test.ts` is its
+run IDs at the current SHA). `scripts/perf/ci.ts` drives it;
+`scripts/lib/perf-gate.ts` decides pass/fail; `scripts/lib/perf-gate.test.ts` is its
 unit test and runs in `checks.yml` on every push. Change the test before
 changing a threshold.
 

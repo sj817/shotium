@@ -1,14 +1,19 @@
 ---
 name: cut-component
-description: Remove a component, directory, third-party library, Rust crate or GN target from this Chromium slice and prove the removal is complete: find live callers (git grep plus gn path, never grep counts), decide restore-vs-cut by actual dependencies, delete the DEPS entry with the checkout, then gn gen, missing-inputs.ts, check-syntax.ts, jumbo verification, and the engine checks. Also for the reverse question, "should X be restored or cut". Triggers: cut, remove, delete, trim, "is this still used", shrink the binary, restore X.
+description: >-
+  Assess or carry out a scoped Chromium component removal or restoration.
+  Use for dependency-cutting, unused-component audits and restore-versus-cut
+  decisions. Trace live callers and platform build inputs, then verify any
+  authorised removal through graph, compilation and runtime checks.
 ---
 
 # Cut a component
 
-This is a one-time slice of Chromium, not a branch that will rebase. Anything
-without a live caller today is deleted outright, without preserving upstream
-shape and without asking first. The only question is "does anything use it
-now", never "does upstream have it".
+This is a Chromium slice whose upstream changes are replayed. Decide from live
+dependencies rather than preserving upstream shape for a future rebase.
+An audit or "is this used?" request authorises investigation; only perform a
+removal within the requested implementation scope. Preserve unrelated work.
+For a requested cut, remove the complete dependency closure and verify it.
 
 ## 1. Find the callers
 
@@ -92,7 +97,7 @@ Rules:
 - Restoring an `#include` line is not restoring a component:
   `pnpm restore:includes` only re-adds includes whose header exists on disk
   today.
-- The full decision record is `docs/cut-progress.md` section 11 (and 8.8
+- The full decision record is `apps/docs/cut-progress.md` section 11 (and 8.8
   for the V8-removal round).
 
 ## 3. Delete
@@ -103,7 +108,7 @@ Rules:
   `find_*.py`) were deleted once those rounds were over; `git log -- tools/shot`
   has them if a whole subtree ever needs the same treatment again.
 - For files no build reads at all, `pnpm trim-tree plan` (with the six
-  platforms' graph exports) is the authority; see `scripts/trim-tree.ts`.
+  platforms' graph exports) is the authority; see `scripts/tree/trim-tree.ts`.
 - **DEPS-fetched directories (most of `third_party/`) need their DEPS entry
   removed in the same change**, or CI's `gclient sync` restores the
   directory. `.gitmodules` is a separate file that git reads and gclient
@@ -118,7 +123,7 @@ Rules:
   files.
 - Cuts that change a behaviour rather than delete one (a feature default, an
   added parameter) go into the disagreements table in
-  `docs/upstream-sync.md`, so sync replays them by meaning.
+  `apps/docs/upstream-sync.md`, so sync replays them by meaning.
 
 ## 4. Prove it is gone
 
@@ -141,14 +146,14 @@ In order; no step substitutes for the next:
    timestamp; older merge limits leave stale units in `gen/`).
 5. Linux graph in a second out directory (`import("//build/args/shot-linux.gn")`,
    `use_sysroot = false`, `host_toolchain = "//build/toolchain/linux:clang_x64"`),
-   ~30 s, then `pnpm missing-inputs` against it; `pnpm probe:platform`
-   does this and stubs missing directories so one pass lists every gap. One
-   out directory answers for one platform. macOS only through
-   `engine-macos.yml` in `probe` mode.
+   then `pnpm missing-inputs` against it; `pnpm probe:platform`
+   can expose gaps with stubs, which are diagnostic aids, not proof that the
+   real graph or build passes. One out directory answers for one platform.
+   macOS only through `engine-macos.yml` in `probe` mode.
 6. `/verify-engine`, including the acceptance run
    (`pnpm accept --skip-build`). No region of the corpus may move
    against the Chrome oracle; a rendering difference from a cut is a bug unless
-   it is documented in `docs/cut-progress.md` section 8.6.
+   it is documented in `apps/docs/cut-progress.md` section 8.6.
 
 Report on the three-level ladder. A green Linux probe is level 1 of 3 and
 has been followed by real compile failures (MPRIS includes,
@@ -161,6 +166,6 @@ not image contribution (ThinLTO already dropped the unreachable: 3.4 MB of
 Skia Graphite bitcode was 162 KB in the image), and `optimize_for_size` on
 Windows was a no-op until `build/config/compiler/BUILD.gn` was fixed to apply
 `-Os` inside the `is_win` branch. Measure with `pnpm size:report`
-(`--by-object <name>`) and the method in `docs/cut-progress.md` section 17
+(`--by-object <name>`) and the method in `apps/docs/cut-progress.md` section 17
 before planning a size cut; what remains in the image is mostly statically
 reachable, and the large remaining items are data (ICU), not code.

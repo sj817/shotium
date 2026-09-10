@@ -1,6 +1,9 @@
 ---
 name: build-engine
-description: Build the shotium engine on the Windows development host (targets shot, shot_c and shot_node into out/Shot), read the build log by error class, and iterate with the syntax-only checker instead of full rebuilds. Use for "build the engine", "the build failed", "does this compile", or after any change under shot/, third_party/blink, cc/, skia/ or the GN files. Does not cover Linux or macOS builds; those are dispatched through engine-linux.yml and engine-macos.yml.
+description: >-
+  Build or troubleshoot the Windows shotium engine in out/Shot. Use for
+  compilation requests and C++ or GN changes affecting the engine. Covers
+  log diagnosis and the syntax-check loop; Linux and macOS builds use CI.
 ---
 
 # Build the engine
@@ -11,69 +14,62 @@ process, or a jumbo grouping that only fails on another platform.
 
 ## Before starting
 
-1. **Kill leftover build processes, twice.** Stopping a background task ends
-   the shell, not `ninja` or the `clang-cl` tree it spawned. Three ninjas
-   writing one output directory once put 112 compilers on the machine and
-   froze it.
+1. **Check who owns an existing build.** Inspect process IDs, parent processes,
+   command lines and logs for `out/Shot`. Do not start a second writer there.
+   If another session is building, coordinate with it or wait. Stopping a
+   background shell may leave its children running; after cancelling your own
+   build, recheck that specific process tree. Stop only processes owned by this
+   task or confirmed abandoned within the user's authorised scope, never all
+   `ninja`, compiler or linker processes by name.
 
-   ```powershell
-   Get-Process -Name ninja,clang-cl,rustc,lld-link -EA SilentlyContinue | Stop-Process -Force
-   Get-Process -Name ninja,clang-cl,rustc,lld-link -EA SilentlyContinue | Stop-Process -Force
-   ```
+2. **The output directory is `out/Shot`.** The script hard-codes it. Binaries
+   in experimental sibling directories are not substitutes for the intended
+   build's artifacts.
 
-   The second pass catches compilers that were still starting when the first
-   ran.
-
-2. **The output directory is `out/Shot`.** The script hard-codes it. The
-   twenty-odd sibling directories under `out/` are experiments from earlier
-   phases; their binaries are old (some still carry the pre-rename `shot.exe`)
-   and a check run against one proves nothing.
-
-3. **Check for a lock or another build.** `git --no-optional-locks status --short`
-   shows whether someone else is mid-edit in the shared tree; a running
-   `ninja` from another session shows up in step 1.
+3. **Inspect the working tree.** Use `git --no-optional-locks status --short`
+   and the relevant diffs to preserve concurrent edits. Git status does not
+   identify a running build, and an index lock alone does not prove that a Git
+   writer is abandoned.
 
 ## Build
 
 ```bash
-pnpm -C scripts install                                                 # once per checkout
-pnpm build:engine --jobs 16 --log out/Shot/build.log                    # shotium.exe + .pak files
-pnpm build:engine --target shot_c --jobs 16 --log out/Shot/build.log    # independent C ABI library
+pnpm -C scripts install --frozen-lockfile                          # once per checkout
+pnpm build:engine --log out/Shot/build.log                          # shotium.exe + .pak files
+pnpm build:engine --target shot_c --log out/Shot/c-build.log         # independent C ABI library
+pnpm build:engine --target shot_node --log out/Shot/node-build.log    # Node addon
 ```
 
-The entry point is `scripts/build-engine.ts` (TypeScript, `execa`,
+The entry point is `scripts/build/engine.ts` (TypeScript, `execa`,
 `p-retry`, `cac`); `pnpm build:engine` forwards to it from the repository
 root, and a relative `--log` is resolved against the repository root -- the
 forward runs a second pnpm, which overwrites `INIT_CWD`, so the directory you
 typed the command in is not recoverable.
-Run it in the background and read the log. Expectations:
-
-| Situation | Duration |
-|---|---|
-| First build into `out/Shot` (~5,800 steps) | ~50 minutes at `--jobs 16` |
-| Incremental, only `shot/` touched | a few minutes, mostly link |
-| Incremental touching Blink core headers | tens of minutes (jumbo TUs recompile) |
+Run it in the background and read the log. Use the current run's commands,
+exit status and artifacts as evidence. Historical build counts and timings
+depend on the source, cache, target and host; do not treat them as estimates
+for an unmeasured checkout.
 
 What the script does that you must not duplicate by hand:
 
 - Runs `gn gen out/Shot` first, so ninja rarely triggers its own regen.
 - Retries `PermissionError: [Errno 13] Permission denied: 'environment.x64'`.
-  That is several toolchain variants racing to write the same file, not a
-  configuration error; the retry always wins.
+  Concurrent toolchain variants can race to write that file. If retries still
+  fail, inspect the final error rather than assuming the build recovered.
 - Retries the ninja invocation once for the case where ninja regenerated
   anyway and hit the same race.
-- Regenerates `third_party/icu/shot/icudtl.dat` from the cast data set
-  (`pnpm icu:repack`), because `third_party/icu` is a DEPS checkout
-  that gclient can reset.
+- Regenerates `third_party/icu/shot/icudtl.dat` from the tracked cast data set
+  (`pnpm icu:repack`), preserving an unchanged output. ICU is maintained
+  directly in this repository, not as a separate DEPS checkout.
 
 The log's first `ninja: Entering directory` line must say `out/Shot`.
 
 ### Parallelism
 
-- `--jobs` defaults to 12 in the script. 16 is the last value that completed a
-  full build on this host. 24 hit `LLVM ERROR: out of memory` in the
-  `blink/renderer/core` jumbo TUs (template-heavy `Vector<>` instantiations),
-  and doing so while a `gn gen` ran in parallel made it worse.
+- Start with the script's default `--jobs` value. Blink core jumbo units can
+  exhaust memory at a parallelism that works for smaller sources; measure the
+  current host before increasing it. Avoid overlapping generation or builds
+  that compete for the same memory or output directory.
 - Measure the phase you are about to run, not one you measured earlier:
   `Get-Process clang-cl | Measure-Object WorkingSet64 -Sum`, then choose `j`
   so that peak-per-compiler x `j` stays under half of free memory. ninja is
@@ -157,8 +153,8 @@ matcher, regress both Blink core and Skia.
 
 ## Other platforms
 
-- **Linux GN configuration** reproduces locally in ~30 seconds, with errors
-  identical to CI's. Use a separate out directory with:
+- **Linux GN configuration** can expose platform-specific graph problems
+  locally. Use a separate out directory with:
 
   ```gn
   import("//build/args/shot-linux.gn")
@@ -167,24 +163,26 @@ matcher, regress both Blink core and Skia.
   ```
 
   `shot-linux.gn` imports `shot.gn` and sets `target_os`, Ozone headless and
-  the allocator-shim setting; `scripts/probe-platform-graph.ts` writes
+  the allocator-shim setting; `scripts/tree/probe-platform-graph.ts` writes
   this same args file and additionally stubs every missing directory so one
   run lists every gap.
 
-  When the only remaining complaints are `cxxbridge.exe` /
-  `*_build_script.exe` "Input to targets not generated by a dependency", the
-  graph is done; that suffix comes from the Windows host and is not a target
-  problem. Run `pnpm missing-inputs` against that directory too; one out
-  directory answers for one platform.
+  Complaints involving host `cxxbridge.exe` / `*_build_script.exe` can reflect
+  cross-host probe limitations. Report them as unresolved diagnostics rather
+  than calling a failed probe green. A graph produced with stubs is diagnostic
+  evidence only; the real platform build still has to pass. Run
+  `pnpm missing-inputs` against the probe directory too.
 - **macOS** cannot be cross-generated (`BUILDCONFIG.gn` asserts the host is
   mac or linux). Batch several fixes before dispatching `engine-macos.yml`,
-  and use `mode=probe` first: it reports graph errors in ~15 minutes without
-  a build.
-- **CI runners** build with `-j 4` and about 1.2 GB per Blink layout TU; the
-  Windows job needs `CHROMIUM_WIN_SDK_VERSION` to follow the runner image.
+  and use `mode=probe` first to check the graph without a build.
+- **CI runners** use the jobs and sharding inputs in the current workflows.
+  Read those values and the current runner capacity before tuning parallelism.
+  The Windows job needs `CHROMIUM_WIN_SDK_VERSION` to follow the runner image.
 
 ## After it builds
 
-A binary is level 2 of 3. Record the timestamp and size of
-`out/Shot/shotium.exe` (and `shotium.dll` if `shot_c` was built), then run
-`/verify-engine`. Do not report success before the checks pass.
+A successful build of the affected targets is level 2 of 3. Record the source
+state, successful build result and artifact identities for `shotium.exe`,
+`shotium.dll` and/or `shotium.node`, according to the targets built. A timestamp
+alone is not proof that an artifact contains the change. Follow `/verify-engine`
+and report the checks that actually passed against those artifacts.

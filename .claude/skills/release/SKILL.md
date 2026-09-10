@@ -1,6 +1,9 @@
 ---
 name: release
-description: Publish a shotium release to npm and GitHub Releases in the order publish.yml enforces: bump the seven version lines in apps/demo/shotium/package.json, push and wait for checks, dispatch the six engine builds on that exact commit, tag, watch publish.yml, verify all seven packages on the registry, then write bilingual release notes. Manual invocation only; run as /release <version>.
+description: >-
+  Publish an explicitly requested shotium release to npm and GitHub Releases.
+  Align the version commit, six platform builds and tag, verify publication,
+  and write bilingual release notes. Invoke manually with /release and a version.
 disable-model-invocation: true
 argument-hint: "<version>"
 arguments: [version]
@@ -18,13 +21,13 @@ a README change made in between.
 
 ## 1. Bump the version
 
-The only source of truth is `apps/demo/shotium/package.json`, and it holds the version
+The only source of truth is `apps/typescript/package.json`, and it holds the version
 seven times: `version`, plus the six self-referencing pins under
 `optionalDependencies`. Everything else (the `.7z` names, the platform
 package tarball names, the release title) is derived from it at build time.
 
 ```bash
-git --no-optional-locks grep -n '"<previous version>"' -- apps/demo/shotium/package.json   # exactly 7 lines
+git --no-optional-locks grep -n '"<previous version>"' -- apps/typescript/package.json   # exactly 7 lines
 ```
 
 Edit all seven to `$version`. `checks.yml` fails if the pins and `version`
@@ -38,7 +41,7 @@ uses a literal version in one fixture.
 Commit and push only that file:
 
 ```bash
-git add apps/demo/shotium/package.json
+git add apps/typescript/package.json
 git commit -m "release: v$version"
 git push
 SHA=$(git rev-parse HEAD)
@@ -91,7 +94,7 @@ gh run watch -R sj817/shotium "$RUN"
 
 `publish.yml` publishes the six platform packages first, then
 `@shotkit/shotium`, and only then creates a non-draft GitHub release with the
-six `.7z` archives attached (the `.tgz` files belong to the registry). Never
+six `.7z` archives plus five independent language-source ZIPs and their SHA256 files attached (the `.tgz` files belong to the registry). Never
 create a draft release by hand: a draft creates no git tag until it is
 undrafted, and its `targetCommitish` is frozen at creation, which is how
 v0.1.0 ended up on npm with no tag in git.

@@ -1,53 +1,63 @@
 ---
 name: verify-engine
-description: Run every check that needs a built engine and report on the three-level status ladder: check-serve.ts, check-net.ts, check-node.ts, check-daemon.ts, check-daemon-protocol.ts, check-demos.ts reftests, check-bilibili.ts, tests/render. Use for "verify", "did the checks pass", "is it ready to release", and as the last step after any change to shot/, apps/demo/shotium/src, apps/demo/shotium/native or the Blink/Skia/cc code they depend on. CI's checks.yml does not run any of these.
+description: >-
+  Verify shotium rendering, native APIs, daemon behaviour and delivery against
+  freshly built artifacts. Use for engine verification, release readiness or
+  changes to the runtime and its bindings. Distinguish graph checks, successful
+  compilation and runtime evidence; package-only CI does not verify the engine.
 ---
 
 # Verify the engine
 
-`checks.yml` never touches an engine, and it is path-filtered: a change
-confined to `shot/`, Blink, `docs/` or `.claude/` produces no run at all, so
-neither its green nor its absence says anything here. The checks below are what
-actually establish that the engine works, and they run in CI only in
-the manually dispatched `engine-*.yml` workflows. The public JS API has
-changed shape before with CI fully green and every one of these scripts
-broken; that is why this is a skill and not a footnote.
+`checks.yml` does not use an engine binary. It runs package/tooling checks,
+`verify:daemon-protocol` and `verify:bilibili --fixtures-only`; its path filters
+include `apps/**`, `shot/testdata/bilibili/**`, `scripts/**` and its own workflow.
+Thus `apps/docs/` can trigger it, while an engine-only change may not. Neither
+a green package check nor an absent run establishes engine correctness.
+Runtime checks run in `engine-*.yml`, with delivery checks in `check-ffi.yml`;
+inspect their conditions and skipped steps before reporting platform coverage.
 
 ## 0. Confirm the binary is the one you think it is
 
 ```powershell
-Get-Item out/Shot/shotium.exe, out/Shot/shotium.dll | Select-Object Name, Length, LastWriteTime
-git --no-optional-locks log -1 --format='%h %ci' -- shot/
+Get-Item out/Shot/shotium.exe | Select-Object Name, Length, LastWriteTime
+git --no-optional-locks status --short
 ```
 
-The binary's timestamp must be later than the last source change you intend
-to verify. Results from `out/ShotWip` or any other directory are void.
+Record the successful build command/result and the intended source state,
+including uncommitted changes. Inspect the addon and/or shared library too
+when the checks need them. Timestamps and hashes identify artifacts but do
+not by themselves prove the source they contain. Use the intended artifacts
+in `out/Shot`, not an experimental sibling directory.
 
-## 1. Engine-side checks (Python, `shotium.exe` only)
+## 1. Engine-side checks (TypeScript, `shotium.exe` only)
 
 ```powershell
 pnpm verify:serve out/Shot/shotium.exe
 pnpm verify:net   out/Shot/shotium.exe
 pnpm verify:demos out/Shot/shotium.exe
+pnpm verify:charset out/Shot/shotium.exe
 ```
 
 | Script | Sections | What a failure means |
 |---|---|---|
 | `pnpm verify:serve` | `--serve` framing; two renders on one process are byte-identical; worker output equals CLI output; `allowFileAccess` actually gates subresources; refused requests are reported, not silently empty | The resident-worker contract is broken, or rendering is nondeterministic within a process |
 | `pnpm verify:net` | http fetch, redirect following and limits, disk cache shared across two worker processes, `networkidle`, and the strongest one: the same document over http and from disk renders to identical bytes | `//net` integration or the loader changed what reaches Blink |
-| `pnpm verify:demos` | 84 reftest pairs in `shot/testdata/demos`: each `NAME.html` must render byte-identical to `NAME-ref.html`; pages without a `-ref` are smoke tests (renders, more than one colour, identical on a second run); WPT-style `fuzzy` meta allows a declared tolerance | A layout or paint feature regressed. Expected: 62 pass, 1 fuzzy, 21 smoke |
+| `pnpm verify:demos` | Reftests in `shot/testdata/demos`: each `NAME.html` is compared with `NAME-ref.html`; pages without a reference are smoke tests; WPT-style `fuzzy` meta allows a declared tolerance | A layout or paint feature regressed; report the current pass/fuzzy/smoke counts rather than a historical expected count |
+| `pnpm verify:charset` | Legacy CJK and single-byte encodings must render consistently with their UTF-8 equivalents | Encoding conversion or ICU data changes altered the document |
 
-All three print their own pass/fail counts.
+The scripts print their own pass/fail counts.
 
 ## 2. Node-side checks (need the addon)
 
 Three preconditions; missing any one produces a convincing false failure:
 
-1. **Rebuild the JS if `apps/demo/shotium/src` changed.** The scripts `require()`
-   `apps/demo/shotium/dist`, which is tsdown output:
+1. **Rebuild the JS if `apps/typescript/src` changed.** The scripts `require()`
+   `apps/typescript/dist`, which is tsdown output:
 
    ```bash
-   cd apps/demo/shotium && pnpm run build && pnpm run check:types
+   pnpm -C apps/typescript build
+   pnpm -C apps/typescript check:types
    ```
 
 2. **Build the GN addon with the current core.**
@@ -56,7 +66,7 @@ Three preconditions; missing any one produces a convincing false failure:
    pnpm build:engine --target shot_node --log out/Shot/node-build.log
    ```
 
-   It uses the pinned SDK from `scripts/node-sdk.ts`; no node-gyp or engine DLL
+   It uses the pinned SDK from `scripts/build/node-sdk.ts`; no node-gyp or engine DLL
    is involved. `binding.ts` prefers `out/Shot/shotium.node` in a checkout,
    checks its internal binding version, then uses the installed platform package.
    Verify the addon timestamp and hash before attributing results to a source change.
@@ -70,12 +80,12 @@ Three preconditions; missing any one produces a convincing false failure:
    pnpm verify:daemon-protocol
    ```
 
-`check-node-entry.ts` covers FIFO, failed requests, destroy with work in flight,
+`scripts/verify/node-entry.ts` covers FIFO, failed requests, destroy with work in flight,
 Buffer lifetime, Worker termination, natural exit and `UV_THREADPOOL_SIZE=1`.
-`check-node.ts` exercises `require()` of the ESM package (needs Node 22.12+ or 20.19+), `screenshot()`
+`scripts/verify/node.ts` exercises `require()` of the ESM package (needs Node 22.12+ or 20.19+), `screenshot()`
 returning `{image, stats}`, tiles, options validation, and `start()`/`stop()`
-semantics. `check-daemon.ts` spawns a detached daemon, connects, pipelines
-requests, and stops it. `check-daemon-protocol.ts` needs no engine and checks
+semantics. `scripts/verify/daemon.ts` spawns a detached daemon, connects, pipelines
+requests, and stops it. `scripts/verify/daemon-protocol.ts` needs no engine and checks
 that wire generations are isolated and negotiated.
 
 ## 3. Whole-page fixtures
@@ -84,7 +94,7 @@ When tiles, full-page rendering, the strip rasteriser or image decoding
 changed:
 
 ```bash
-pnpm verify:bilibili --package apps/demo/shotium
+pnpm verify:bilibili --package apps/typescript
 ```
 
 Two real articles (41k and 46k CSS px tall), every tile, every photo and both
@@ -97,10 +107,10 @@ proves the fixtures are complete.
 pnpm render run --shot out/Shot/shotium.exe
 ```
 
-`tests/render/baselines/` is gitignored. Without a manifest the run fails with
+`apps/test/render/baselines/` is gitignored. Without a manifest the run fails with
 `Missing baseline manifest`; baselines must be generated with a *pre-change*
 binary via `pnpm render update-baselines --accept`. If you did not do that before
-building, skip this step, use `check-demos.ts` as the pixel evidence, and say
+building, skip this step, use `scripts/verify/demos.ts` as the pixel evidence, and say
 which one you used. Thresholds default to exact decoded-pixel equality; a
 changed SHA-256 with identical pixels is an encoder difference, not a
 regression. Relax a per-case threshold only after looking at the generated
@@ -117,32 +127,50 @@ Reports the binary size, renders `shot/testdata/render_corpus.html` at
 `shot/testdata/out/oracle.png`, and then breaks the difference down region by
 region -- a whole-image percentage cannot tell "antialiasing is a shade
 different everywhere" from "one element is missing". A region that moved is
-either an intended rendering change (document it in `docs/cut-progress.md`
+either an intended rendering change (document it in `apps/docs/cut-progress.md`
 section 8.6, where the known differences are listed) or a regression.
 
-`--skip-build` is not optional here: without it the script's first act is
-`pnpm build:engine`, which is the ~50-minute build you have just finished.
+Use `--skip-build` to check the artifacts just built; without it the script
+starts `pnpm build:engine` again.
 
-## 6. Report
+## 6. C ABI and package delivery
+
+When the ABI, language demos or packaging changes, validate the relevant
+delivery as well:
+
+```powershell
+pnpm verify:ffi --library-dir out/Shot
+pnpm verify:delivery --platform-dir <directory-containing-platform-tarball>
+```
+
+The FFI check needs the shared library, resource packs and the language tools.
+The delivery check needs the staged platform tarball; it checks a clean npm
+installation without relying on the checkout's addon or shared library.
+Report missing prerequisites or omitted languages rather than implying full
+delivery coverage. See `check-ffi.yml` for native platform conditions.
+
+## 7. Report
 
 Three levels, and only the third is "success":
 
 1. **Graph passes**: `gn gen` + `ninja -n` (CI probe). Nothing compiled.
-2. **Compiles**: a binary exists.
-3. **Binary + checks pass**: everything above is green against a fresh binary.
+2. **Compiles**: the affected targets built successfully from the intended source.
+3. **Binary + checks pass**: the required checks passed against those artifacts.
 
 Report in this shape, with the script's own wording for any failure rather
 than a paraphrase:
 
 | Item | Result |
 |---|---|
-| Binary | `out/Shot/shotium.exe`, size, timestamp |
-| serve_check | N passed / M failed |
-| net_check | N passed / M failed |
-| demo_check | pass / fuzzy / smoke counts, failures by name |
-| node_check | N passed / M failed |
-| daemon_check | N passed / M failed |
-| bilibili_check | ran / skipped (why) |
-| tests/render | ran / skipped (no baselines) |
+| Artifacts | Source state, successful build result, relevant artifact paths and identities |
+| verify:serve | N passed / M failed |
+| verify:net | N passed / M failed |
+| verify:demos | pass / fuzzy / smoke counts, failures by name |
+| verify:charset | N passed / M failed |
+| verify:node / verify:node-entry | Results for each command |
+| verify:daemon / verify:daemon-protocol | Results for each command |
+| verify:bilibili | ran / skipped (why) |
+| apps/test/render | ran / skipped (no baselines) |
+| verify:ffi / verify:delivery | Coverage and results, or skipped (why) |
 
 If a check was skipped, say so in the table; do not fold it into "all green".
