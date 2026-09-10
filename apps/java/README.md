@@ -18,38 +18,42 @@ Demonstrates rendering HTML via the shotium C ABI directly from Java using JNA; 
 
 ## Get the files
 
-This demo is distributed as `shotium-java-example-v<version>.zip` on the [Releases page](https://github.com/sj817/shotium/releases), identical to `apps/java` in the repository; download the matching platform archive from the same release and extract it into `native/`:
+This example is packaged as [`shotium-example-java.7z`](https://github.com/sj817/shotium/releases/latest/download/shotium-example-java.7z). Extract it alongside the matching native C ABI package `shotium-c-abi-<platform>.7z`:
 
 ```bash
-# Linux / macOS, from this directory
-version=v0.7.0
-platform=linux-amd64        # linux-arm64, macos-amd64, or macos-arm64
-curl -fLO "https://github.com/sj817/shotium/releases/download/$version/shotium-$platform-$version.7z"
-7z x "shotium-$platform-$version.7z" -onative
+# Linux / macOS (example: linux-amd64, requires 7z or 7zz)
+curl -fLO https://github.com/sj817/shotium/releases/latest/download/shotium-example-java.7z
+curl -fLO https://github.com/sj817/shotium/releases/latest/download/shotium-c-abi-linux-amd64.7z
+
+7z x shotium-example-java.7z
+7z x shotium-c-abi-linux-amd64.7z -oshotium-example-java/native
+cd shotium-example-java
 ```
 
 ```powershell
-# Windows PowerShell, from this directory
-$version = 'v0.7.0'
-$platform = 'windows-amd64'   # or windows-arm64
-curl.exe -fLO "https://github.com/sj817/shotium/releases/download/$version/shotium-$platform-$version.7z"
-7z x "shotium-$platform-$version.7z" -onative
+# Windows PowerShell (example: windows-amd64)
+curl.exe -fLO https://github.com/sj817/shotium/releases/latest/download/shotium-example-java.7z
+curl.exe -fLO https://github.com/sj817/shotium/releases/latest/download/shotium-c-abi-windows-amd64.7z
+
+7z x shotium-example-java.7z
+7z x shotium-c-abi-windows-amd64.7z -oshotium-example-java\native
+Set-Location shotium-example-java
 ```
 
-Extraction yields `native/shotium-<platform>/` containing the shared library, `shot_api.h`, and the two `.pak` resource files; keep these files together from the matching release
+> Integrity check: Download [`SHA256SUMS`](https://github.com/sj817/shotium/releases/latest/download/SHA256SUMS) and run `sha256sum --check --ignore-missing SHA256SUMS`; native libraries reside in `native/shotium-c-abi-<platform>/`, containing the shared library, headers, and `.pak` resource files
 
 ## Run
 
 ```bash
 mvn package dependency:copy-dependencies
-java -cp "target/classes:target/dependency/*" ShotiumDemo native/shotium-linux-amd64 card.html card.png
+java -cp "target/classes:target/dependency/*" ShotiumDemo native/shotium-c-abi-linux-amd64 card.html card.png
 ```
 
 On Windows, use a semicolon `;` as the classpath separator:
 
 ```powershell
 mvn package dependency:copy-dependencies
-java -cp "target/classes;target/dependency/*" ShotiumDemo native/shotium-windows-amd64 card.html card.png
+java -cp "target/classes;target/dependency/*" ShotiumDemo native/shotium-c-abi-windows-amd64 card.html card.png
 ```
 
 Positional arguments are `<library-dir> <input.html> <output.png>`, where `<library-dir>` is also passed to the engine as `resourceDir`; the program renders `card.html` at 720×380, prints capture statistics JSON to stdout, and writes `card.png` (pixel-identical to output from the `shotium` CLI)
@@ -64,7 +68,7 @@ Certain Windows JDK launchers convert command-line arguments through the active 
 
 ```json
 {
-  "libraryDir": "native/shotium-windows-amd64",
+  "libraryDir": "native/shotium-c-abi-windows-amd64",
   "input": "示例/card.html",
   "output": "截图.png"
 }

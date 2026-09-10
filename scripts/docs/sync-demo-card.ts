@@ -1,6 +1,6 @@
 // apps/demo-card/card.html is the one page every C ABI demo renders, and the
 // same page the README assets are made from. Each language directory carries
-// its own copy so that a language ZIP is self-contained; this keeps the copies
+// its own copy so that a language 7z archive is self-contained; this keeps the copies
 // identical to the source. `--check` is what CI runs, so an edit to the source
 // without a re-sync fails the checks job instead of shipping five stale pages.
 import {createHash} from 'node:crypto';

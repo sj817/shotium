@@ -24,7 +24,7 @@ The engine runs directly within the host process, rendering documents on a dedic
 ### Key Highlights
 
 - **Ultra-Fast & Low Latency**: Warm captures in ~13 ms, cold start in ~59 ms—no external browser process launch or DevTools Protocol handshake delay
-- **Ultra-Lean Footprint**: Download size as small as ~11 MB (compressed), unpacks to ~32 MB for the single native engine (~64 MB for full suite), reducing footprint by over 85% compared to stock Chromium
+- **Focused Downloads**: CLI, C ABI and language examples ship separately; download only the delivery and platform you need. New archive sizes come from the actual Release assets
 - **Zero CDP Overhead**: Operates without V8, multi-process IPC, or JSON-RPC serialization, directly driving Blink via in-process Node-API and C ABI bindings
 - **Production-Ready Resilience**: Built-in streaming tile rasterisation (`screenshotTiles`), daemon process pool for short-lived workflows (`daemon`), and explicit GC memory reclaim
 
@@ -67,7 +67,44 @@ npm install @shotkit/shotium   # or npm, yarn, bun; automatically installs prebu
 
 #### Standalone CLI / C Shared Libraries / Demos
 
-Precompiled native binaries, C shared libraries, and standalone runnable example projects for Windows, macOS, and Linux are available directly on **[GitHub Releases](https://github.com/sj817/shotium/releases)**. Extract and run—no local C++ build environment or Chromium checkout required
+Download prebuilt binaries for your target platform from **[GitHub Releases](https://github.com/sj817/shotium/releases)**. Extracted top-level directory names have no version suffix:
+
+| Category | Attachment naming pattern | Platforms / Languages | Contents |
+|---|---|---|---|
+| **CLI** | `shotium-cli-<platform>.7z` | win / linux / macos (x64 / arm64) | Standalone executable, two `.pak` resources, and license |
+| **C ABI** | `shotium-c-abi-<platform>.7z` | win / linux / macos (x64 / arm64) | Shared library, `.pak` resources, `shot_api.h`, ABI guides, and import library (Windows) |
+| **Examples** | `shotium-example-<language>.7z` | go / python / rust / csharp / java | Complete source projects, page template, dependency manifests, and integrity manifests (no native binaries) |
+| **Checksums** | [`SHA256SUMS`](https://github.com/sj817/shotium/releases/latest/download/SHA256SUMS) | All 17 `.7z` archives | Standard SHA-256 checksum manifest sorted by filename |
+
+> Platforms: `windows-amd64`, `windows-arm64`, `linux-amd64`, `linux-arm64`, `macos-amd64`, `macos-arm64`. Multi-language examples load native libraries from `native/shotium-c-abi-<platform>/` after downloading the matching C ABI archive
+
+<details>
+<summary><b>Download and verify the standalone CLI (Quickstart)</b></summary>
+
+```bash
+# Linux / macOS (example: linux-amd64, requires 7z or 7zz)
+curl -fLO https://github.com/sj817/shotium/releases/latest/download/shotium-cli-linux-amd64.7z
+curl -fLO https://github.com/sj817/shotium/releases/latest/download/SHA256SUMS
+
+# Optional checksum verification and extraction
+sha256sum --check --ignore-missing SHA256SUMS
+7z x shotium-cli-linux-amd64.7z
+./shotium-cli-linux-amd64/shotium --help
+```
+
+```powershell
+# Windows PowerShell (example: windows-amd64)
+curl.exe -fLO https://github.com/sj817/shotium/releases/latest/download/shotium-cli-windows-amd64.7z
+curl.exe -fLO https://github.com/sj817/shotium/releases/latest/download/SHA256SUMS
+
+# Checksum verification and extraction
+$expected = (Get-Content SHA256SUMS | Select-String "shotium-cli-windows-amd64.7z").Line.Split(" ")[0]
+if ((Get-FileHash shotium-cli-windows-amd64.7z -Algorithm SHA256).Hash.ToLower() -ne $expected) { throw "SHA256 mismatch" }
+7z x shotium-cli-windows-amd64.7z
+.\shotium-cli-windows-amd64\shotium.exe --help
+```
+
+</details>
 
 ## Usage
 
@@ -123,7 +160,7 @@ await stop();
 
 ### Command line
 
-Release archives include the standalone CLI tool `shotium` (`shotium.exe` on Windows), which runs without Node.js or browser installations:
+`shotium-cli-<platform>.7z` contains only the license, two `.pak` resources and the standalone CLI tool `shotium` (`shotium.exe` on Windows), which runs without Node.js or browser installations:
 
 <p align="center">
   <img src="apps/docs/assets/example-cli.webp" width="820"
@@ -151,7 +188,7 @@ shotium --serve --cache-dir /var/tmp/shotium-cache
 
 ### C ABI and other languages
 
-Release archives provide cross-platform shared libraries (`libshotium.so`, `libshotium.dylib`, or `shotium.dll`) alongside the standard C header `shot_api.h`. The interface follows standard C conventions:
+`shotium-c-abi-<platform>.7z` provides cross-platform shared libraries (`libshotium.so`, `libshotium.dylib`, or `shotium.dll`) alongside the standard C header `shot_api.h`. The interface follows standard C conventions:
 
 ```c
 // 1. Create engine singleton
@@ -170,7 +207,7 @@ shot_buffer_free(&image);
 shot_engine_destroy(engine);
 ```
 
-Complete, runnable example projects rendering the identical 720×380 reference boarding pass are available as standalone ZIP downloads in GitHub Releases:
+Complete, runnable example projects rendering the identical 720×380 reference boarding pass are available as `shotium-example-<language>.7z` downloads in GitHub Releases:
 - [Go Demo (purego)](apps/go/README.md)
 - [Python Demo (ctypes)](apps/python/README.md)
 - [Rust Demo (libloading)](apps/rust/README.md)
@@ -272,8 +309,7 @@ flowchart TB
 | **CSS support** | Chrome 155 standard | Chrome standard | Flexbox subset, no Grid | 2012-era WebKit |
 | **Input formats** | File, URL, stdin | File, URL | JSX / Virtual DOM tree | File, URL |
 | **JavaScript** | No (pure static rendering) | Yes (full execution) | N/A | Legacy JavaScriptCore |
-| **Process model** | In-process, or resident worker | Separate browser process + IPC | Pure JS in-process | Child process per capture |
-| **Distribution & Installed Size** | ~11 MB compressed / ~32 MB single binary (~64 MB full unpacked) | Full Chromium browser download and unpack (400+ MB) | Pure JS / WASM (tens of KB) | OS package dependencies (~100 MB) |
+| **Distribution & Installed Size** | CLI / C ABI standalone packages (~11 MB compressed / ~32 MB unpacked) | Full Chromium browser download and unpack (400+ MB) | Pure JS / WASM (tens of KB) | OS package dependencies (~100 MB) |
 
 - **Choose a headless browser (Puppeteer / Playwright)**: When pages require client-side JavaScript execution, dynamic interaction, authentication, or complex single-page app (SPA) hydration
 - **Choose Satori**: When simple Flexbox cards suffice in edge runtime environments where native binaries cannot execute
@@ -285,13 +321,13 @@ Shotium is continuously tested against mainstream headless browser solutions acr
 
 | Engine Solution | Cold Start (p50) | Warm Snapshot (p50) | Throughput (c=1) | Download Size (Compressed) | Installed Size (Unpacked) |
 |:---|---:|---:|---:|---:|---:|
-| **Shotium** | **59 ms** | **13.4 ms** | **24.3 / sec** | **~11 MB** | **~32 MB** (full suite ~64 MB) |
+| **Shotium** | **59 ms** | **13.4 ms** | **24.3 / sec** | **~11 MB** | **~32 MB** |
 | Puppeteer (headless-shell) | 652 ms (11.0×) | 133.2 ms (9.9×) | 5.6 / sec | ~130 MB | ~380 MB |
 | Playwright (headless-shell) | 781 ms (13.2×) | 128.4 ms (9.6×) | 5.9 / sec | ~130 MB | ~390 MB |
 | Puppeteer (Chrome full browser) | 887 ms (15.0×) | 165.3 ms (12.3×) | 4.6 / sec | ~170 MB | ~450 MB |
 | Playwright (Chrome full browser) | 971 ms (16.5×) | 154.7 ms (11.5×) | 5.0 / sec | ~170 MB | ~480 MB |
 
-> Note: Size metrics are measured on the smallest platform target (macOS arm64 / Linux arm64). Shotium's standalone native engine binary is ~32 MB, and the complete unpacked suite (including standalone CLI, C ABI shared library, and resource packs) is ~64 MB. Comparative browsers include Chromium binaries and bundled multimedia/SwiftShader dependencies
+> Note: Shotium sizes measured on the smallest platform builds (macOS arm64 / Linux arm64), ~32 MB for a single executable/shared library; comparative browser figures include full Chromium binaries and multimedia dependencies
 
 - **[Interactive Benchmark Explorer (VitePress)](https://sj817.github.io/shotium/en/)**: Explore per-platform scores, cold-start latency, concurrency throughput, and memory consumption
 - **[Immutable Benchmark Archive](apps/docs/benchmarks/README.md)**: Contains complete raw samples; latest findings are summarized in [`LATEST.md`](apps/docs/benchmarks/LATEST.md)
@@ -393,4 +429,3 @@ Community integrations:
 ## License
 
 BSD-3-Clause, matching upstream Chromium. See [LICENSE](LICENSE)
-

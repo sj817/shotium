@@ -29,7 +29,7 @@ const require = createRequire(import.meta.url);
 // swc, lightningcss all publish darwin-arm64 and win32-x64.
 //
 // The release archives and CI artifacts spell it windows/linux/macos and
-// amd64/arm64 instead -- shotium-macos-arm64-v0.4.0.7z -- and that is not
+// amd64/arm64 instead -- shotium-cli-macos-arm64.7z -- and that is not
 // going to change either. They are downloaded by people, and that is what
 // people call the machines. So the two spellings do differ, in the one place
 // where each is right: the registry gets node's, the download page gets the

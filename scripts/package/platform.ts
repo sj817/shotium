@@ -27,7 +27,8 @@ import {cac} from 'cac';
 
 import {resolve} from '../lib/repo.ts';
 
-// os as this script and the release archives spell it, mapped to the two
+// This script uses win/linux/mac; public Release archives use windows/linux/macos.
+// Map the script values to the two
 // spellings npm and node use. `os` in a package.json is matched against
 // process.platform, which is `win32` and `darwin` and has been for long
 // enough that nothing is going to change it.
@@ -62,7 +63,8 @@ function main(args: {build: string; os: string; arch: string; dest: string; addo
   const mainPkg = JSON.parse(readFileSync(resolve('apps/typescript', 'package.json'), 'utf8')) as {version: string; license?: string; engines?: unknown; repository?: unknown};
   // npmOs, not args.os: the package is named for process.platform, because
   // that is what npm matches its `os` field against and what the caller's
-  // machine calls itself. The archives keep win/mac -- people read those.
+  // machine calls itself. Public Release archives use their separate,
+  // human-facing windows/linux/macos and amd64/arm64 names.
   const name = `@shotkit/shotium-${platform.npmOs}-${args.arch}`;
   const buildDir = resolve(args.build);
   const dest = resolve(args.dest, `shotium-${args.os}-${args.arch}`);

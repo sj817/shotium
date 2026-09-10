@@ -487,46 +487,46 @@ jobs:
           # Decompression costs about half a second, once, when the user
           # unpacks. It is not on any per-render path.
           #
-          # The archive holds exactly one directory, named for the platform and
-          # the architecture and nothing else. The version lives in the file
-          # name instead, so unpacking a newer build over an older one replaces
-          # it in place rather than leaving two versioned directories side by
-          # side.
+          # Independent CLI and C ABI packages have stable archive/root names;
+          # version identity belongs to the Release tag and build provenance.
           $version = (Get-Content apps/typescript/package.json -Raw | ConvertFrom-Json).version
           $stem = "shotium-windows-${{ inputs.arch }}"
-          $archive = "$stem-v$version.7z"
-          if (Test-Path dist) { Remove-Item -Recurse -Force dist }
-          if (Test-Path $archive) { Remove-Item -Force $archive }
-          New-Item -ItemType Directory "dist/$stem" | Out-Null
-          # shotium.dll ships beside shotium.exe rather than in an archive of its
-          # own: they are the same engine, the resource packs serve both, and
-          # a caller who wants the addon should not have to work out which two
-          # downloads go together.
-          pnpm package:c-abi --build out/Shot --os win --dest "dist/$stem"
+          $cliStem = "shotium-cli-windows-${{ inputs.arch }}"
+          $abiStem = "shotium-c-abi-windows-${{ inputs.arch }}"
+          $stage = [IO.Path]::GetFullPath((Join-Path (Get-Location) 'dist'))
+          if ([IO.Path]::GetDirectoryName($stage) -ne (Get-Location).Path) { throw "Unexpected staging path: $stage" }
+          if (Test-Path -LiteralPath $stage) { Remove-Item -LiteralPath $stage -Recurse -Force }
+          foreach ($archive in "$cliStem.7z", "$abiStem.7z") {
+            if (Test-Path -LiteralPath $archive) { Remove-Item -LiteralPath $archive -Force }
+          }
+          pnpm package:cli --build out/Shot --os win --dest "dist/$cliStem"
+          if ($LASTEXITCODE -ne 0) { throw "CLI packaging failed" }
+          pnpm package:c-abi --build out/Shot --os win --dest "dist/$abiStem"
           if ($LASTEXITCODE -ne 0) { throw "C ABI packaging failed" }
-          Get-ChildItem "dist/$stem" | Select-Object Name,Length
-          # windows-2025 ships 7-Zip on PATH; fall back to its install path
-          # rather than silently producing no archive if that ever changes.
           $sevenzip = (Get-Command 7z -ErrorAction SilentlyContinue).Source
           if (-not $sevenzip) { $sevenzip = "$env:ProgramFiles\7-Zip\7z.exe" }
-          if (-not (Test-Path $sevenzip)) { throw "no 7z on this runner" }
+          if (-not (Test-Path -LiteralPath $sevenzip)) { throw "no 7z on this runner" }
           Push-Location dist
-          & $sevenzip a -t7z -mx=9 "../$archive" $stem
-          $code = $LASTEXITCODE
-          Pop-Location
-          if ($code -ne 0) { throw "7z failed with $code" }
-          Get-Item $archive |
-              Select-Object Name,@{n='MB';e={[math]::Round($_.Length/1MB,2)}}
+          try {
+            foreach ($packageStem in $cliStem, $abiStem) {
+              & $sevenzip a -t7z -mx=9 "../$packageStem.7z" $packageStem
+              if ($LASTEXITCODE -ne 0) { throw "7z failed for $packageStem" }
+            }
+          } finally { Pop-Location }
+          Get-Item "$cliStem.7z", "$abiStem.7z" | Select-Object Name,Length
           "SHOT_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          "SHOT_STEM=$stem"       | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          "SHOT_ARCHIVE=$archive" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "SHOT_STEM=$stem" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "SHOT_CLI_ARCHIVE=$cliStem.7z" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "SHOT_C_ABI_ARCHIVE=$abiStem.7z" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: upload
         if: success()
         uses: actions/upload-artifact@v7
         with:
           name: ${{ env.SHOT_STEM }}
-          path: src/${{ env.SHOT_ARCHIVE }}
+          path: |
+            src/${{ env.SHOT_CLI_ARCHIVE }}
+            src/${{ env.SHOT_C_ABI_ARCHIVE }}
           if-no-files-found: error
           # upload-artifact always wraps what it is handed in a zip and only
           # lets you pick a deflate level; no switch turns the wrapper off.

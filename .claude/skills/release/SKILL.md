@@ -23,8 +23,9 @@ a README change made in between.
 
 The only source of truth is `apps/typescript/package.json`, and it holds the version
 seven times: `version`, plus the six self-referencing pins under
-`optionalDependencies`. Everything else (the `.7z` names, the platform
-package tarball names, the release title) is derived from it at build time.
+`optionalDependencies`. npm platform tarball names, the release title and
+example manifests derive their version from it. Public `.7z` filenames and
+top-level directories are stable and do not contain the version.
 
 ```bash
 git --no-optional-locks grep -n '"<previous version>"' -- apps/typescript/package.json   # exactly 7 lines
@@ -75,10 +76,30 @@ gh run list -R sj817/shotium --commit "$SHA"
 - With unchanged C++ the compile caches hit and all six finish in about
   25 minutes; cold builds take 1 to 4 hours (Windows arm64 and macOS arm64
   are the slow ones).
-- Each run uploads the `.7z` and the npm platform package as artifacts; the
-  release step is not part of these workflows any more.
+- Each run uploads two separate archives, `shotium-cli-<platform>.7z` and
+  `shotium-c-abi-<platform>.7z`, in the existing `shotium-<platform>` artifact;
+  the npm platform tarball remains a separate artifact. The release step is
+  not part of these workflows.
 
-Do not tag until all six show `completed success` for `$SHA`.
+Do not tag until all six show `completed success` for `$SHA`, including the
+five-language FFI and npm delivery jobs. A run with `run_checks=false` is not
+release evidence. Inspect the collected `ffi-evidence-shotium-<platform>`
+reports and ensure each names the CLI and C ABI artifacts it exercised.
+
+Before tagging, dispatch `publish.yml` with `dry_run=true` against this same
+commit and wait for success. It collects 12 native archives, packages the five
+examples and generates/verifies one `SHA256SUMS` before any npm dry run:
+
+```bash
+gh workflow run publish.yml -R sj817/shotium --ref main -f dry_run=true
+# Select the newly dispatched run at $SHA and inspect its conclusion/artifacts.
+```
+
+Check the `release-attachments` artifact: exactly 17 `.7z` files and
+`SHA256SUMS`, with the six CLI, six C ABI and five example names from
+[the artifact contract](../../../apps/docs/agent-reference.md#release-artifacts).
+Rehearsal needs the real six-platform artifacts; synthetic checksum fixtures
+or a local Windows package alone do not satisfy this gate.
 
 ## 3. Tag
 
@@ -94,13 +115,19 @@ gh run watch -R sj817/shotium "$RUN"
 
 `publish.yml` publishes the six platform packages first, then
 `@shotkit/shotium`, and only then creates a non-draft GitHub release with the
-six `.7z` archives plus five independent language-source ZIPs and their SHA256 files attached (the `.tgz` files belong to the registry). Never
+17 `.7z` archives (6 CLI, 6 C ABI, 5 source examples) and one `SHA256SUMS`:
+18 uploaded assets, plus two automatic GitHub source archives, for 20 items.
+Names are `shotium-cli-<platform>.7z`, `shotium-c-abi-<platform>.7z` and
+`shotium-example-<language>.7z`. The checksum file uses filename-sorted SHA256,
+two spaces and archive basenames; it excludes itself, npm tarballs and the
+automatic source archives. Missing, duplicate or mismatched files stop release.
+The `.tgz` files belong to the registry. Never
 create a draft release by hand: a draft creates no git tag until it is
 undrafted, and its `targetCommitish` is frozen at creation, which is how
 v0.1.0 ended up on npm with no tag in git.
 
 `workflow_dispatch` with `dry_run=true` rehearses the whole thing against a
-ref and publishes nothing; use it if the workflow itself changed.
+ref and publishes nothing; complete this rehearsal before tagging.
 
 ## 4. Verify the registry
 
@@ -117,11 +144,17 @@ publish job log: a `Publishing to https://registry.npmjs.org/` line **without**
 `(dry-run)`. The `+ @shotkit/...@$version` line is printed by dry runs too and
 proves nothing.
 
-Then install from a clean directory and run the README example once.
+Then install from a clean directory and run the README example once. Download
+the 18 Release attachments into an empty directory and run
+`pnpm package:checksums --dir <download-directory> --check`; inspect the archive
+roots and isolated CLI/C ABI contents. The public guides use
+`releases/latest/download/<fixed-name>` and show selected-file verification,
+so end users do not need all 17 archives.
 
 ## 5. Release notes
 
-The release is created with install instructions and provenance only. Add
+The release is created with install instructions, archive categories/counts,
+checksum guidance and provenance. Add
 the changelog by hand:
 
 - Two complete halves: English on top, Chinese below. Each half has its own

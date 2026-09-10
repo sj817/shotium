@@ -71,7 +71,7 @@ Read [the C ABI header](../../shot/shot_api.h),
   the JSON adapters; do not introduce independent names or default values.
 - Update `apps/typescript/README.md` and `README.zh.md` with public API changes,
   and the two `apps/c-abi/README*` guides when the C contract changes. The latter
-  are shipped as `C_ABI.md` and `C_ABI.zh.md` in engine archives.
+  are shipped as `C_ABI.md` and `C_ABI.zh.md` in C ABI and language example archives.
 - [binding.ts](../typescript/src/lib/binding.ts) tries the checkout's
   `out/Shot/shotium.node` before an installed platform package. A matching
   binding version does not prove that an old addon contains today's source.
@@ -160,15 +160,53 @@ build loop. Read the affected workflow and source action for CI changes.
   the actual run/cache keys; do not infer a compiler regression from an old
   warm-versus-cold timing. Keep cache population within the requested CI work.
 - [checks.yml](../../.github/workflows/checks.yml) runs package/harness/tooling
-  checks without an engine. Its filters include `apps/**`,
-  `shot/testdata/bilibili/**`, `scripts/**` and its own workflow path.
-  It runs `verify:daemon-protocol` and `verify:bilibili --fixtures-only`.
+  checks without an engine, including packaging tests and actual example
+  compression/extraction. Its filters include the release workflows, root
+  READMEs, agent instructions and skills; consult the workflow for the exact
+  list. It also runs `verify:daemon-protocol` and `verify:bilibili --fixtures-only`.
 - `engine-*.yml` build native artifacts and run engine checks according to
   their conditions; `check-ffi.yml` validates native delivery. Inspect the
   architecture, mode, `run_checks`, step outcomes and artifact SHA before
   calling a platform verified. A probe or skipped step is not a runtime pass.
 - Read failures with `gh run view -R sj817/shotium <id> --log-failed`.
   Publishing is covered by the [release skill](../../.claude/skills/release/SKILL.md).
+
+## Release artifacts
+
+- Platforms use windows/linux/macos and amd64/arm64. Stable names and archive
+  roots are `shotium-cli-<platform>`, `shotium-c-abi-<platform>` and
+  `shotium-example-<language>`, each compressed as real `.7z`.
+- CLI contains only its executable, two resource packs and license. C ABI
+  contains the shared library, resources, header, English/Chinese guides and
+  license; Windows also includes the import library. Examples contain tracked
+  source/dependency/lock files, the page, docs and `manifest.json`, without
+  native binaries. That manifest retains version, commit and file hashes.
+- `pnpm package:cli` and `pnpm package:c-abi` stage separate empty directories;
+  `--check` validates the exact file set of an extracted delivery.
+  `pnpm package:examples` compresses and extracts all five examples to check
+  their manifests. `SHOTIUM_SEVENZIP` can select a local 7-Zip executable.
+- Engine workflows retain the internal `shotium-<platform>` artifact IDs,
+  each containing its CLI and C ABI archives. Native checks and five-language
+  checks must pass on all six platforms at the version commit.
+- The publisher collects those artifact directories separately, then runs
+  `pnpm package:checksums --collect dist/engine --dir dist/release` after
+  generating examples. One `SHA256SUMS` covers exactly 17 archives: 6 CLI,
+  6 C ABI and 5 examples (go/python/rust/csharp/java). Lines are sorted by
+  filename with lowercase SHA256, two spaces, basename and LF. Missing,
+  duplicate, unexpected or tampered files stop publication; recheck with
+  `pnpm package:checksums --dir dist/release --check` before upload.
+- Upload exactly 18 assets; GitHub adds two automatic source archives for
+  20 items on the Release page. The checksum list excludes itself, npm
+  tarballs and those source archives. No per-archive checksum files.
+- User download URLs use `releases/latest/download/<fixed-name>`; guides show
+  how to check just selected attachments from `SHA256SUMS`. Native examples
+  use `native/shotium-c-abi-<platform>/`, a required ABI check and an optional
+  `releases/download/<tag>/` base for a matching historical release.
+- The split starts with the next normal release. Preserve existing v0.7.0
+  assets and historical measurements. Do not infer new sizes from old bundles.
+  The seven npm packages retain their existing names, versions, contents and
+  runtime contracts. Rehearse `publish.yml` with `dry_run=true` on the final
+  commit before tagging; a packaging change does not itself authorize release.
 
 ## Tests and measurements
 

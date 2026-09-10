@@ -8,7 +8,7 @@
   },
   "scripts": {
     "check:types": "tsc --noEmit",
-    "test": "tsx --test build/*.test.ts ci/*.test.ts lib/*.test.ts tree/*.test.ts"
+    "test": "tsx --test build/*.test.ts ci/*.test.ts lib/*.test.ts package/*.test.ts tree/*.test.ts"
   },
   "dependencies": {
     "cac": "7.0.0",

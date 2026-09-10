@@ -11,8 +11,9 @@ description: >-
 
 `checks.yml` does not use an engine binary. It runs package/tooling checks,
 `verify:daemon-protocol` and `verify:bilibili --fixtures-only`; its path filters
-include `apps/**`, `shot/testdata/bilibili/**`, `scripts/**` and its own workflow.
-Thus `apps/docs/` can trigger it, while an engine-only change may not. Neither
+include apps, tooling, release workflows, root READMEs and agent instructions;
+inspect the workflow for the complete list. It also runs packaging unit tests
+and actual example 7z round trips. An engine-only change may not trigger it. Neither
 a green package check nor an absent run establishes engine correctness.
 Runtime checks run in `engine-*.yml`, with delivery checks in `check-ffi.yml`;
 inspect their conditions and skipped steps before reporting platform coverage.
@@ -139,11 +140,27 @@ When the ABI, language demos or packaging changes, validate the relevant
 delivery as well:
 
 ```powershell
-pnpm verify:ffi --library-dir out/Shot
+pnpm verify:ffi --cli out/Shot/shotium.exe --library-dir out/Shot
 pnpm verify:delivery --platform-dir <directory-containing-platform-tarball>
 ```
 
-The FFI check needs the shared library, resource packs and the language tools.
+The FFI check needs the shared library, resource packs, a separate CLI and the
+language tools. `--cli` defaults to the local `out/Shot` executable; delivery CI
+must pass the extracted CLI explicitly, never assume it is inside the C ABI
+package. For example on Windows:
+
+```powershell
+pnpm package:cli --os win --dest out/ffi-native/shotium-cli-windows-amd64 --check
+pnpm package:c-abi --os win --dest out/ffi-native/shotium-c-abi-windows-amd64 --check
+pnpm verify:ffi --cli out/ffi-native/shotium-cli-windows-amd64/shotium.exe --library-dir out/ffi-native/shotium-c-abi-windows-amd64 --source-dir out/language-sources/shotium-example-python --languages python
+```
+
+Repeat the source delivery check for go, python, rust, csharp and java after
+extracting their `shotium-example-<language>.7z` files. On Linux/macOS use
+`shotium` without `.exe` and the matching platform directories. Keep the ABI
+version check. Before release, validate all six platforms and run
+`pnpm package:checksums --dir dist/release --check` for the complete 17-archive
+set and single `SHA256SUMS`; see the engineering reference for the contract.
 The delivery check needs the staged platform tarball; it checks a clean npm
 installation without relying on the checkout's addon or shared library.
 Report missing prerequisites or omitted languages rather than implying full

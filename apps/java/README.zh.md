@@ -18,38 +18,42 @@
 
 ## 获取文件
 
-本示例可在 [Releases 页面](https://github.com/sj817/shotium/releases) 下载 `shotium-java-example-v<version>.zip`，与源码仓库中的 `apps/java` 结构相同；下载对应平台的引擎压缩包并解压至本目录下的 `native/`：
+本示例源码独立打包为 [`shotium-example-java.7z`](https://github.com/sj817/shotium/releases/latest/download/shotium-example-java.7z)，解压后结合对应平台的原生动态库 `shotium-c-abi-<平台>.7z` 即可运行：
 
 ```bash
-# Linux / macOS，在本目录执行
-version=v0.7.0
-platform=linux-amd64        # 亦可为 linux-arm64、macos-amd64、macos-arm64
-curl -fLO "https://github.com/sj817/shotium/releases/download/$version/shotium-$platform-$version.7z"
-7z x "shotium-$platform-$version.7z" -onative
+# Linux / macOS（以 linux-amd64 为例，需要 7z 或 7zz）
+curl -fLO https://github.com/sj817/shotium/releases/latest/download/shotium-example-java.7z
+curl -fLO https://github.com/sj817/shotium/releases/latest/download/shotium-c-abi-linux-amd64.7z
+
+7z x shotium-example-java.7z
+7z x shotium-c-abi-linux-amd64.7z -oshotium-example-java/native
+cd shotium-example-java
 ```
 
 ```powershell
-# Windows PowerShell，在本目录执行
-$version = 'v0.7.0'
-$platform = 'windows-amd64'   # 或 windows-arm64
-curl.exe -fLO "https://github.com/sj817/shotium/releases/download/$version/shotium-$platform-$version.7z"
-7z x "shotium-$platform-$version.7z" -onative
+# Windows PowerShell（以 windows-amd64 为例）
+curl.exe -fLO https://github.com/sj817/shotium/releases/latest/download/shotium-example-java.7z
+curl.exe -fLO https://github.com/sj817/shotium/releases/latest/download/shotium-c-abi-windows-amd64.7z
+
+7z x shotium-example-java.7z
+7z x shotium-c-abi-windows-amd64.7z -oshotium-example-java\native
+Set-Location shotium-example-java
 ```
 
-解压后在 `native/shotium-<platform>/` 目录中包含动态库、`shot_api.h` 以及两个 `.pak` 资源包文件；请确保动态库与资源包同版本且位于同一目录
+> 完整性校验：可下载 [`SHA256SUMS`](https://github.com/sj817/shotium/releases/latest/download/SHA256SUMS) 并执行 `sha256sum --check --ignore-missing SHA256SUMS` 校验；原生动态库解压位于 `native/shotium-c-abi-<平台>/`，包含动态库、头文件与 `.pak` 资源包
 
 ## 运行
 
 ```bash
 mvn package dependency:copy-dependencies
-java -cp "target/classes:target/dependency/*" ShotiumDemo native/shotium-linux-amd64 card.html card.png
+java -cp "target/classes:target/dependency/*" ShotiumDemo native/shotium-c-abi-linux-amd64 card.html card.png
 ```
 
 Windows 环境下类路径分隔符为分号 `;`：
 
 ```powershell
 mvn package dependency:copy-dependencies
-java -cp "target/classes;target/dependency/*" ShotiumDemo native/shotium-windows-amd64 card.html card.png
+java -cp "target/classes;target/dependency/*" ShotiumDemo native/shotium-c-abi-windows-amd64 card.html card.png
 ```
 
 命令行参数依次为 `<动态库目录> <输入 HTML 路径> <输出 PNG 路径>`，其中动态库目录会同时传入引擎作为 `resourceDir`；程序会将 `card.html` 渲染为 720×380 的图像，把性能统计指标以 JSON 打印到标准输出，并生成 `card.png`，其渲染输出与 `shotium` CLI 命令行完全一致
@@ -64,7 +68,7 @@ java -cp "target/classes;target/dependency/*" ShotiumDemo native/shotium-windows
 
 ```json
 {
-  "libraryDir": "native/shotium-windows-amd64",
+  "libraryDir": "native/shotium-c-abi-windows-amd64",
   "input": "示例/card.html",
   "output": "截图.png"
 }
@@ -149,4 +153,3 @@ try {
 ## 许可证
 
 本项目遵循与上游 Chromium 一致的 BSD-3-Clause 开源协议，详情参见 [LICENSE](../../LICENSE)
-

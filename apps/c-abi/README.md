@@ -4,11 +4,11 @@ English · [简体中文](./README.zh.md)
 
 Cross-platform native C shared library powered by Chromium's static rendering architecture, accessed through standard C header `shot_api.h`
 
-[![C ABI version](https://img.shields.io/badge/C%20ABI-v3-blue.svg?logo=c&logoColor=white)](shot_api.h) [![platforms](https://img.shields.io/badge/platforms-win%20%7C%20mac%20%7C%20linux%20%C2%B7%20x64%20%7C%20arm64-4c8.svg)](https://github.com/sj817/shotium/releases) [![license](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](../../LICENSE)
+[![C ABI version](https://img.shields.io/badge/C%20ABI-v3-blue.svg?logo=c&logoColor=white)](../../shot/shot_api.h) [![platforms](https://img.shields.io/badge/platforms-win%20%7C%20mac%20%7C%20linux%20%C2%B7%20x64%20%7C%20arm64-4c8.svg)](https://github.com/sj817/shotium/releases) [![license](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](../../LICENSE)
 
 The shared library interface powering language integrations: `shotium.dll`, `libshotium.so`, or `libshotium.dylib`, accessible through the C header `shot_api.h`
 
-This document is distributed as `C_ABI.md` within release archives and language demo packages; it documents the package layout, memory ownership and lifecycle contracts, and the JSON schemas for engine configuration and capture requests; note that `shot_api.h` serves as the authoritative interface definition
+This document is distributed as `C_ABI.md` within C ABI archives and language demo packages; it documents the package layout, memory ownership and lifecycle contracts, and the JSON schemas for engine configuration and capture requests; note that `shot_api.h` serves as the authoritative interface definition
 
 ## Table of Contents
 
@@ -20,11 +20,10 @@ This document is distributed as `C_ABI.md` within release archives and language 
 
 ## Archive layout
 
-Each release provides prebuilt archives per platform: `shotium-<os>-<arch>-v<version>.7z`, where `<os>` is `windows`, `linux`, or `macos`, and `<arch>` is `amd64` or `arm64`; select the architecture matching the host runtime process loading the library; extracting the archive yields:
+Each release provides prebuilt archives per platform: `shotium-c-abi-<os>-<arch>.7z`, where `<os>` is `windows`, `linux`, or `macos`, and `<arch>` is `amd64` or `arm64`; select the architecture matching the host runtime process loading the library; extracting the archive yields:
 
 | File | Purpose |
 |---|---|
-| `shotium` / `shotium.exe` | Standalone CLI utility |
 | `libshotium.so` / `libshotium.dylib` / `shotium.dll` | C ABI shared library |
 | `shotium.dll.lib` | Windows import library (for compile-time linking; demos load by dynamic path) |
 | `shot_api.h` | C interface header |
@@ -35,6 +34,30 @@ Each release provides prebuilt archives per platform: `shotium-<os>-<arch>-v<ver
 Ensure the library binary and both `.pak` files are kept in the same directory from the matching release; pass this directory path as `resourceDir` during engine initialization; because shared libraries cannot reliably locate their own directory across all operating systems (e.g. on Linux, module path lookups typically resolve to the host executable), the host application must explicitly specify the resource directory
 
 Linux binaries are compiled against glibc (musl environments such as Alpine are not supported out of the box); font rendering relies on system fonts; ensure required font packages (e.g., Fontconfig, DejaVu, Noto) are installed in container environments
+
+The top-level directory inside the archive is `shotium-c-abi-<platform>/` (extract directly to your project's `native/` directory):
+
+```bash
+# Linux / macOS (example: linux-amd64, requires 7z or 7zz)
+curl -fLO https://github.com/sj817/shotium/releases/latest/download/shotium-c-abi-linux-amd64.7z
+curl -fLO https://github.com/sj817/shotium/releases/latest/download/SHA256SUMS
+
+# Verify checksum and extract to native/
+sha256sum --check --ignore-missing SHA256SUMS
+7z x shotium-c-abi-linux-amd64.7z -onative
+```
+
+```powershell
+# Windows PowerShell (example: windows-amd64)
+curl.exe -fLO https://github.com/sj817/shotium/releases/latest/download/shotium-c-abi-windows-amd64.7z
+curl.exe -fLO https://github.com/sj817/shotium/releases/latest/download/SHA256SUMS
+
+# Verify checksum and extract to native/
+$expected = (Get-Content SHA256SUMS | Select-String "shotium-c-abi-windows-amd64.7z").Line.Split(" ")[0]
+if ((Get-FileHash shotium-c-abi-windows-amd64.7z -Algorithm SHA256).Hash.ToLower() -ne $expected) { throw "SHA256 mismatch" }
+7z x shotium-c-abi-windows-amd64.7z -onative
+```
+
 
 ## Lifecycle
 
@@ -136,7 +159,7 @@ shot_status shot_cache_clear(shot_engine* engine, const char* clear_json, shot_b
 | `allowFileAccess` | boolean | `false` | Default file access policy for local file URLs (`file://`). Requests explicitly specifying `allowFileAccess` override this value |
 
 ```json
-{"resourceDir": "/opt/shotium/shotium-linux-amd64", "cacheDir": "/var/cache/shotium", "cacheMaxBytes": 268435456}
+{"resourceDir": "/opt/shotium/native/shotium-c-abi-linux-amd64", "cacheDir": "/var/cache/shotium", "cacheMaxBytes": 268435456}
 ```
 
 ## Capture request
@@ -263,9 +286,8 @@ int main(void) {
 
 ## Language demos
 
-Runnable demo implementations are provided across five languages using generic foreign function interfaces without custom wrapper packages: [Go](../go/README.md) (purego), [Python](../python/README.md) (ctypes), [Rust](../rust/README.md) (libloading), [C#](../csharp/README.md) (P/Invoke), and [Java](../java/README.md) (JNA); each demo is distributed as an independent archive on the release page, rendering the standard `card.html` at 720×380 with pixel-identical output
+Runnable demo implementations are provided across five languages using generic foreign function interfaces without custom wrapper packages: [Go](https://github.com/sj817/shotium/blob/main/apps/go/README.md) (purego), [Python](https://github.com/sj817/shotium/blob/main/apps/python/README.md) (ctypes), [Rust](https://github.com/sj817/shotium/blob/main/apps/rust/README.md) (libloading), [C#](https://github.com/sj817/shotium/blob/main/apps/csharp/README.md) (P/Invoke), and [Java](https://github.com/sj817/shotium/blob/main/apps/java/README.md) (JNA); each demo is distributed as `shotium-example-<language>.7z` (go, python, rust, csharp or java) on the release page, with sources and a version/commit/file-hash manifest but no native library, rendering the standard `card.html` at 720×380 with pixel-identical output
 
 ## License
 
 BSD-3-Clause, matching upstream Chromium. See [LICENSE](../../LICENSE)
-

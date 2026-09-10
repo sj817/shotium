@@ -9,7 +9,7 @@
 # expected to always be green.
 #
 # What it deliberately does NOT do is claim the engine works. That claim is made
-# by scripts/check-{serve,net,node,daemon,demos,bilibili}.ts against a real
+# by scripts/verify/{serve,net,node,daemon,demos,bilibili}.ts against a real
 # binary, and the engine-* workflows are where those run.
 
 name: checks
@@ -22,12 +22,28 @@ on:
       - 'shot/testdata/bilibili/**'
       - 'scripts/**'
       - '.github/workflows/checks.yml'
+      - '.github/workflows/engine-*.yml'
+      - '.github/workflows/check-ffi.yml'
+      - '.github/workflows/publish.yml'
+      - '.claude/skills/**'
+      - 'package.json'
+      - 'README*.md'
+      - 'CLAUDE.md'
+      - 'AGENTS.md'
   pull_request:
     paths:
       - 'apps/**'
       - 'shot/testdata/bilibili/**'
       - 'scripts/**'
       - '.github/workflows/checks.yml'
+      - '.github/workflows/engine-*.yml'
+      - '.github/workflows/check-ffi.yml'
+      - '.github/workflows/publish.yml'
+      - '.claude/skills/**'
+      - 'package.json'
+      - 'README*.md'
+      - 'CLAUDE.md'
+      - 'AGENTS.md'
   workflow_dispatch:
 
 jobs:
@@ -65,7 +81,7 @@ jobs:
 
       - name: repository scripts typecheck
         working-directory: scripts
-        # scripts/ is where new tooling goes, in TypeScript (CLAUDE.md rule 11).
+        # scripts/ is where new tooling goes, in TypeScript (see CLAUDE.md).
         # Its lockfile is committed, so this is the one install here that can
         # be frozen.
         run: |
@@ -166,12 +182,15 @@ jobs:
       - name: Bilibili fixtures are complete and offline
         run: pnpm verify:bilibili --fixtures-only
 
-      - name: repository script unit tests
-        run: pnpm scripts:test
+      - name: repository script unit tests and Release packaging
+        run: |
+          if ! command -v 7z >/dev/null; then sudo apt-get update && sudo apt-get install -y p7zip-full; fi
+          pnpm scripts:test
+          pnpm package:examples --dest out/release-examples-check
 
       - name: the language demos carry the shared card page
         # apps/demo-card/card.html is the source; each language directory keeps
-        # a copy so its ZIP is self-contained. An edit without `pnpm demo:sync`
+        # a copy so its 7z archive is self-contained. An edit without `pnpm demo:sync`
         # would ship five stale pages.
         run: pnpm demo:sync --check
 

@@ -427,10 +427,8 @@ jobs:
         # from the official build, 7z or 7za from p7zip), so the binary is
         # looked up rather than assumed, and installed if the image has none.
         #
-        # The archive holds exactly one directory, named for the platform and
-        # the architecture and nothing else. The version lives in the file name
-        # instead, so unpacking a newer build over an older one replaces it in
-        # place rather than leaving two versioned directories side by side.
+        # CLI and C ABI are independent deliveries. Each archive and its root
+        # directory have a stable name; the Release tag identifies the version.
         run: |
           sevenzip=$(command -v 7zz || command -v 7z || command -v 7za || true)
           if [ -z "$sevenzip" ]; then
@@ -445,17 +443,19 @@ jobs:
           version=$(python3 -c \
             "import json;print(json.load(open('apps/typescript/package.json'))['version'])")
           stem="shotium-macos-${{ inputs.arch }}"
-          archive="$stem-v$version.7z"
-          rm -rf dist "$archive"
-          mkdir -p "dist/$stem"
-          pnpm package:c-abi --build out/Shot --os mac --dest "dist/$stem"
-          ls -l "dist/$stem"
-          ( cd dist && "$sevenzip" a -t7z -mx=9 "../$archive" "$stem" )
-          ls -l "$archive"
+          cli_stem="shotium-cli-macos-${{ inputs.arch }}"
+          abi_stem="shotium-c-abi-macos-${{ inputs.arch }}"
+          rm -rf dist "$cli_stem.7z" "$abi_stem.7z"
+          pnpm package:cli --build out/Shot --os mac --dest "dist/$cli_stem"
+          pnpm package:c-abi --build out/Shot --os mac --dest "dist/$abi_stem"
+          for package_stem in "$cli_stem" "$abi_stem"; do
+            ( cd dist && "$sevenzip" a -t7z -mx=9 "../$package_stem.7z" "$package_stem" )
+          done
           {
             echo "SHOT_VERSION=$version"
             echo "SHOT_STEM=$stem"
-            echo "SHOT_ARCHIVE=$archive"
+            echo "SHOT_CLI_ARCHIVE=$cli_stem.7z"
+            echo "SHOT_C_ABI_ARCHIVE=$abi_stem.7z"
           } >> "$GITHUB_ENV"
 
       - name: upload
@@ -463,7 +463,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: ${{ env.SHOT_STEM }}
-          path: src/${{ env.SHOT_ARCHIVE }}
+          path: |
+            src/${{ env.SHOT_CLI_ARCHIVE }}
+            src/${{ env.SHOT_C_ABI_ARCHIVE }}
           if-no-files-found: error
           # upload-artifact always wraps what it is handed in a zip and only
           # exposes a deflate level; no switch turns the wrapper off. 0 stores

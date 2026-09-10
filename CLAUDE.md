@@ -163,7 +163,9 @@ Only run the publishing procedure when a release is requested.
   uses established libraries, and has a root `pnpm` alias. Keep the package's
   zero-dependency rule separate from tooling, which uses libraries.
 - Update public API documentation in both English and Chinese with behaviour
-  changes. The C ABI guides ship in release archives. Change the shared card
+  changes. C ABI guides ship in C ABI and example archives, never in CLI
+  archives. Follow the [release artifact contract](apps/docs/agent-reference.md#release-artifacts).
+  Change the shared card
   in `apps/demo-card/card.html` and sync its copies.
 - Use [the engineering reference](apps/docs/agent-reference.md) for test
   conventions and build caveats, and [the docs index](apps/docs/README.md)

@@ -57,16 +57,21 @@ jobs:
           ARTIFACT: ${{ inputs.artifact }}
         run: |
           pnpm -C scripts install --frozen-lockfile
-          if ! command -v 7z >/dev/null; then
+          sevenzip=$(command -v 7zz || command -v 7z || command -v 7za || true)
+          if [ -z "$sevenzip" ]; then
             if [[ "$RUNNER_OS" == "macOS" ]]; then brew install sevenzip;
             elif [[ "$RUNNER_OS" == "Linux" ]]; then sudo apt-get update && sudo apt-get install -y p7zip-full;
             fi
+            sevenzip=$(command -v 7zz || command -v 7z || command -v 7za || true)
           fi
-          7z x out/ffi-archive/*.7z -oout/ffi-native
-          pnpm package:examples --dest out/language-examples
-          for archive in out/language-examples/*.zip; do 7z x "$archive" -oout/language-sources; done
-          test -f "out/ffi-native/$ARTIFACT/shot_api.h"
-          test -f "out/ffi-native/$ARTIFACT/C_ABI.md"
+          [ -n "$sevenzip" ] || { echo "7-Zip is required" >&2; exit 1; }
+          for archive in out/ffi-archive/*.7z; do "$sevenzip" x "$archive" -oout/ffi-native; done
+          pnpm package:examples --dest out/language-examples --sevenzip "$sevenzip"
+          for archive in out/language-examples/*.7z; do "$sevenzip" x "$archive" -oout/language-sources; done
+          platform=${ARTIFACT#shotium-}
+          case "$RUNNER_OS" in Windows) os=win;; Linux) os=linux;; macOS) os=mac;; esac
+          pnpm package:cli --os "$os" --dest "out/ffi-native/shotium-cli-$platform" --check
+          pnpm package:c-abi --os "$os" --dest "out/ffi-native/shotium-c-abi-$platform" --check
           pnpm -C apps/typescript install --no-lockfile
           pnpm -C apps/typescript run build
       - name: five language runtimes against the extracted Release
@@ -74,10 +79,12 @@ jobs:
         env:
           ARTIFACT: ${{ inputs.artifact }}
         run: |
-          version=$(node -p "require('./apps/typescript/package.json').version")
+          platform=${ARTIFACT#shotium-}
+          cli="out/ffi-native/shotium-cli-$platform/shotium"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then cli="$cli.exe"; fi
           for language in go python rust csharp java; do
-            pnpm verify:ffi --library-dir "out/ffi-native/$ARTIFACT" \
-              --source-dir "out/language-sources/shotium-$language-example-v$version" \
+            pnpm verify:ffi --cli "$cli" --library-dir "out/ffi-native/shotium-c-abi-$platform" \
+              --source-dir "out/language-sources/shotium-example-$language" \
               --languages "$language" --output "out/ffi-check/$language"
           done
       - name: clean npm installation without the C ABI library

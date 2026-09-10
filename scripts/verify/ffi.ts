@@ -1,12 +1,12 @@
 // Exercise the shipped C ABI from five real language runtimes, including failure
-// stats and Unicode paths. Compare bytes against the CLI from that same delivery.
+// stats and Unicode paths. Compare bytes against the separately supplied CLI from that same build.
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync} from 'node:fs';
 import path from 'node:path';
 import {cac} from 'cac';
 import {execa} from 'execa';
-import {resolve} from '../lib/repo.ts';
+import {exeName, resolve} from '../lib/repo.ts';
 
 // The page every demo renders, at the viewport its README and the recorded CLI
 // session use. The demos hard-code the same viewport, which is what makes
@@ -15,6 +15,7 @@ const FIXTURE = 'apps/demo-card/card.html';
 const VIEWPORT = ['--width', '720', '--height', '380'];
 
 interface Options {
+  cli: string;
   libraryDir: string;
   output: string;
   languages: string;
@@ -38,14 +39,14 @@ async function main(options: Options): Promise<void> {
   const library = path.join(directory, win ? 'shotium.dll' : process.platform === 'darwin' ? 'libshotium.dylib' : 'libshotium.so');
   const run = (command: string, args: string[], cwd?: string) => execa(command, args, {cwd, timeout: 300000, env: {DOTNET_NOLOGO: '1'}});
   const baseline = path.join(output, 'cli.png');
-  await run(path.join(directory, `shotium${suffix}`), ['--file', fixture, ...VIEWPORT, '-o', baseline]);
+  await run(resolve(options.cli), ['--file', fixture, ...VIEWPORT, '-o', baseline]);
   const hash = (file: string) => createHash('sha256').update(readFileSync(file)).digest('hex');
   const expected = hash(baseline);
   const results: {language: string; imageSha256: string; failureStats: boolean}[] = [];
   const languages = options.languages.split(',');
   if (options.sourceDir && languages.length !== 1) throw new Error('--source-dir applies to exactly one --languages entry');
   for (const language of languages) {
-    // A demo lives in apps/<language>; an extracted language ZIP is that same
+    // A demo lives in apps/<language>; an extracted language 7z archive is that same
     // directory under another name, which is all --source-dir points at.
     const source = (...parts: string[]) => options.sourceDir ? resolve(options.sourceDir, ...parts) : resolve('apps', language, ...parts);
     let command: string;
@@ -103,14 +104,15 @@ async function main(options: Options): Promise<void> {
     results.push({language, imageSha256: expected, failureStats: true});
     console.log(`PASS ${language}: CLI-identical image, Unicode input, capture error and failure stats`);
   }
-  writeFileSync(path.join(output, 'report.json'), JSON.stringify({platform: process.platform, arch: process.arch, library, librarySha256: hash(library), results}, null, 2) + '\n');
+  writeFileSync(path.join(output, 'report.json'), JSON.stringify({platform: process.platform, arch: process.arch, cli: resolve(options.cli), cliSha256: hash(resolve(options.cli)), library, librarySha256: hash(library), results}, null, 2) + '\n');
 }
 
 const cli = cac('pnpm verify:ffi');
 cli.command('', 'verify C ABI language demos; paths resolve against the repository root')
+    .option('--cli <file>', 'CLI executable from the same build, separate from the C ABI directory', {default: 'out/Shot/' + exeName})
     .option('--library-dir <dir>', 'extracted C ABI delivery or engine build', {default: 'out/Shot'})
     .option('--output <dir>', 'evidence directory', {default: 'out/ffi-check'})
-    .option('--source-dir <dir>', 'one language demo directory, such as an extracted language ZIP (default apps/<language>)')
+    .option('--source-dir <dir>', 'one language demo directory, such as an extracted language 7z archive (default apps/<language>)')
     .option('--languages <list>', 'comma-separated language list', {default: 'python,go,rust,csharp,java'})
     .option('--maven <command>', 'Maven executable', {default: process.platform === 'win32' ? 'mvn.cmd' : 'mvn'})
     .action(async (options: Options) => {

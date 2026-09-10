@@ -4,11 +4,11 @@
 
 基于 Chromium 静态渲染架构的跨平台原生 C 动态库，统一通过标准 C 头文件 `shot_api.h` 提供底层调用支持
 
-[![C ABI version](https://img.shields.io/badge/C%20ABI-v3-blue.svg?logo=c&logoColor=white)](shot_api.h) [![platforms](https://img.shields.io/badge/platforms-win%20%7C%20mac%20%7C%20linux%20%C2%B7%20x64%20%7C%20arm64-4c8.svg)](https://github.com/sj817/shotium/releases) [![license](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](../../LICENSE)
+[![C ABI version](https://img.shields.io/badge/C%20ABI-v3-blue.svg?logo=c&logoColor=white)](../../shot/shot_api.h) [![platforms](https://img.shields.io/badge/platforms-win%20%7C%20mac%20%7C%20linux%20%C2%B7%20x64%20%7C%20arm64-4c8.svg)](https://github.com/sj817/shotium/releases) [![license](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](../../LICENSE)
 
 shotium 为所有编程语言提供跨平台的原生 C 动态库：`shotium.dll`（Windows）、`libshotium.so`（Linux）或 `libshotium.dylib`（macOS），统一通过标准 C 头文件 `shot_api.h` 进行调用
 
-本文档随各平台 Release 发布包（作为 `C_ABI.zh.md`）及各语言示例包分发，假设读者已解压当前运行环境对应的发布文件；内容涵盖发布包目录结构、生命周期约束、内存所有权隔离原则、状态码定义及 JSON 协议规范；接口签名及数据结构请以 `shot_api.h` 头文件为最终准则
+本文档随各平台 C ABI 发布包（作为 `C_ABI.zh.md`）及各语言示例包分发，假设读者已解压当前运行环境对应的发布文件；内容涵盖发布包目录结构、生命周期约束、内存所有权隔离原则、状态码定义及 JSON 协议规范；接口签名及数据结构请以 `shot_api.h` 头文件为最终准则
 
 ## 目录
 
@@ -20,13 +20,12 @@ shotium 为所有编程语言提供跨平台的原生 C 动态库：`shotium.dll
 
 ## 压缩包布局
 
-每个版本按平台发布独立压缩包 `shotium-<os>-<arch>-v<version>.7z`（`<os>` 为 `windows`、`linux` 或 `macos`；`<arch>` 为 `amd64` 或 `arm64`），选择时请务必对应**运行宿主进程的 CPU 架构**，而非仅看操作系统架构；解压后包含以下文件：
+每个版本按平台发布独立压缩包 `shotium-c-abi-<os>-<arch>.7z`（`<os>` 为 `windows`、`linux` 或 `macos`；`<arch>` 为 `amd64` 或 `arm64`），选择时请务必对应**运行宿主进程的 CPU 架构**，而非仅看操作系统架构；解压后包含以下文件：
 
 | 文件 | 说明 |
 |---|---|
-| `shotium` / `shotium.exe` | 独立 CLI 命令行工具；示例程序可用其产物进行字节级比对 |
 | `libshotium.so` / `libshotium.dylib` / `shotium.dll` | C ABI 原生动态库 |
-| `shotium.dll.lib` | （仅 Windows）供编译期静态链接使用；动态加载方案无需此文件 |
+| `shotium.dll.lib` | （仅 Windows）供编译期链接动态库使用；动态加载方案无需此文件 |
 | `shot_api.h` | C 接口头文件 |
 | `shotium_data.pak`、`shotium_strings.pak` | 引擎初始化所需的资源包 |
 | `C_ABI.md`、`C_ABI.zh.md` | C ABI 使用规范说明文档 |
@@ -35,6 +34,30 @@ shotium 为所有编程语言提供跨平台的原生 C 动态库：`shotium.dll
 动态库与两个 `.pak` 资源文件必须保持在同一目录下且版本严格匹配；创建引擎时需将该所在目录作为 `resourceDir` 参数传入；动态库自身无法可靠隐式定位资源包（例如在 Linux 上动态模块解析可能回退至主可执行文件路径），因此必须由调用方显式指定
 
 Linux 版本依赖 glibc 运行时，不支持 musl libc；页面文字渲染依赖系统字体，在极简容器镜像中请确保安装基础字体包（如 Fontconfig 与常用 TrueType 字体）
+
+包内顶层目录为 `shotium-c-abi-<平台>/`（解压后可直接置于工程 `native/` 目录下）：
+
+```bash
+# Linux / macOS（以 linux-amd64 为例，需要 7z 或 7zz）
+curl -fLO https://github.com/sj817/shotium/releases/latest/download/shotium-c-abi-linux-amd64.7z
+curl -fLO https://github.com/sj817/shotium/releases/latest/download/SHA256SUMS
+
+# 校验并解压至 native/ 目录
+sha256sum --check --ignore-missing SHA256SUMS
+7z x shotium-c-abi-linux-amd64.7z -onative
+```
+
+```powershell
+# Windows PowerShell（以 windows-amd64 为例）
+curl.exe -fLO https://github.com/sj817/shotium/releases/latest/download/shotium-c-abi-windows-amd64.7z
+curl.exe -fLO https://github.com/sj817/shotium/releases/latest/download/SHA256SUMS
+
+# 校验并解压至 native/ 目录
+$expected = (Get-Content SHA256SUMS | Select-String "shotium-c-abi-windows-amd64.7z").Line.Split(" ")[0]
+if ((Get-FileHash shotium-c-abi-windows-amd64.7z -Algorithm SHA256).Hash.ToLower() -ne $expected) { throw "SHA256 校验不匹配" }
+7z x shotium-c-abi-windows-amd64.7z -onative
+```
+
 
 ## 生命周期
 
@@ -135,7 +158,7 @@ shot_status shot_cache_clear(shot_engine* engine, const char* clear_json, shot_b
 | `allowFileAccess` | boolean | `false` | 全局是否默认允许加载本地 `file:` 子资源（单次请求可覆盖此配置） |
 
 ```json
-{"resourceDir": "/opt/shotium/shotium-linux-amd64", "cacheDir": "/var/cache/shotium", "cacheMaxBytes": 268435456}
+{"resourceDir": "/opt/shotium/native/shotium-c-abi-linux-amd64", "cacheDir": "/var/cache/shotium", "cacheMaxBytes": 268435456}
 ```
 
 ## 截图请求
@@ -261,9 +284,10 @@ int main(void) {
 
 ## 多语言示例
 
-五个可运行示例分别通过各语言的通用 FFI 加载原生动态库，无需额外中间封装包：[Go](../go/README.zh.md)（purego）、[Python](../python/README.zh.md)（ctypes）、[Rust](../rust/README.zh.md)（libloading）、[C#](../csharp/README.zh.md)（P/Invoke）、[Java](../java/README.zh.md)（JNA）；每个示例在发布页各提供独立 ZIP，均以 720×380 规格渲染同一个 `card.html`，输出与 CLI 命令行工具逐字节一致
+五个可运行示例分别通过各语言的通用 FFI 加载原生动态库，无需额外中间封装包：[Go](https://github.com/sj817/shotium/blob/main/apps/go/README.zh.md)（purego）、[Python](https://github.com/sj817/shotium/blob/main/apps/python/README.zh.md)（ctypes）、[Rust](https://github.com/sj817/shotium/blob/main/apps/rust/README.zh.md)（libloading）、[C#](https://github.com/sj817/shotium/blob/main/apps/csharp/README.zh.md)（P/Invoke）、[Java](https://github.com/sj817/shotium/blob/main/apps/java/README.zh.md)（JNA）；每个示例在发布页各提供独立 7z 压缩包，均以 720×380 规格渲染同一个 `card.html`，输出与 CLI 命令行工具逐字节一致
+
+示例附件统一命名为 `shotium-example-<语言>.7z`（`go`、`python`、`rust`、`csharp`、`java`），包含源码及版本、提交、文件哈希清单，不内置原生库；另下载同一 Release 的 C ABI 包，并使用统一的 `SHA256SUMS` 校验
 
 ## 许可证
 
 本项目遵循与上游 Chromium 一致的 BSD-3-Clause 开源协议，详情参见 [LICENSE](../../LICENSE)
-

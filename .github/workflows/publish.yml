@@ -86,8 +86,8 @@
 # workflow_dispatch remains, for rehearsal only. It publishes nothing unless
 # dry_run is turned off, it never creates a release, and it reads the version
 # from the tree rather than from a tag. A dry run does not authenticate, so it
-# proves the tarballs and the versions and nothing about the trust
-# configuration.
+# proves tarballs, versions, the 17 archives and SHA256SUMS, but nothing
+# about the trust configuration.
 
 name: publish
 run-name: "publish: ${{ github.ref_name }}${{ inputs.dry_run && ' dry run' || '' }}"
@@ -229,15 +229,15 @@ jobs:
         # produced it, and a run names one commit, so nothing built from
         # another tree can arrive here by accident.
         #
-        # Two artifacts per platform. The .tgz is what npm publishes; the .7z
-        # is the standalone engine, which goes on the release for people who
-        # want the binary without npm.
+        # Two package artifacts per platform: the npm .tgz and an artifact holding
+        # separate CLI/C ABI .7z archives. The FFI evidence artifact proves the
+        # extracted deliveries were exercised by all five language runtimes.
         #
         # All six, by name, rather than a glob over what happens to be there: a
         # missing architecture must stop the run, not produce a main package
         # pointing at a platform package that was never published.
         run: |
-          mkdir -p dist/npm dist/archive
+          mkdir -p dist/npm dist/release
 
           gh run list --repo "$GITHUB_REPOSITORY" --commit "$GITHUB_SHA" \
             --status success --limit 100 --json databaseId,name \
@@ -246,32 +246,40 @@ jobs:
           echo "engine runs that succeeded at $GITHUB_SHA:"
           sed 's/^/  /' /tmp/runs.txt
 
-          # The artifact name says which run holds it; the runs themselves are
-          # indistinguishable from here, since one workflow file builds both
-          # architectures and the arch is an input rather than part of the run
-          # name. So ask each run in turn and take the first that has it.
-          fetch() {
-            for run in $(cat /tmp/runs.txt); do
-              if gh run download "$run" --repo "$GITHUB_REPOSITORY" \
-                   --name "$1" --dir "$2" >/dev/null 2>&1; then
-                echo "  $1 <- run $run"
-                return 0
-              fi
-            done
-            echo "  $1 -- NOT FOUND at this commit"
-            return 1
-          }
-
+          # Keep each platform separate until the checked file set is merged.
+          # Evidence comes from the same successful run as both deliveries;
+          # a successful build with run_checks=false is not publishable.
           fail=0
-          # npm platform id : engine artifact id. They differ: npm matches
-          # process.platform and process.arch, the engine artifacts are
-          # named for people (windows/linux/macos, amd64/arm64).
           for pair in win32-x64:windows-amd64 win32-arm64:windows-arm64 \
                       darwin-x64:macos-amd64 darwin-arm64:macos-arm64 \
                       linux-x64:linux-amd64 linux-arm64:linux-arm64; do
             engine=${pair##*:}
-            fetch "npm-shotium-$engine" dist/npm     || fail=1
-            fetch "shotium-$engine"     dist/archive || fail=1
+            found=0
+            for run in $(cat /tmp/runs.txt); do
+              names=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run/artifacts" \
+                --paginate --jq '.artifacts[] | select(.expired == false) | .name')
+              if printf '%s\n' "$names" | grep -Fxq "shotium-$engine" &&
+                 printf '%s\n' "$names" | grep -Fxq "npm-shotium-$engine" &&
+                 printf '%s\n' "$names" | grep -Fxq "ffi-evidence-shotium-$engine"; then
+                gh run download "$run" --repo "$GITHUB_REPOSITORY" \
+                  --name "npm-shotium-$engine" --dir dist/npm
+                gh run download "$run" --repo "$GITHUB_REPOSITORY" \
+                  --name "shotium-$engine" --dir "dist/engine/$engine"
+                gh run download "$run" --repo "$GITHUB_REPOSITORY" \
+                  --name "ffi-evidence-shotium-$engine" --dir "dist/evidence/$engine"
+                for language in go python rust csharp java; do
+                  test -f "dist/evidence/$engine/ffi-check/$language/report.json"
+                done
+                test -f "dist/evidence/$engine/delivery-check/report.json"
+                echo "  $engine and delivery evidence <- run $run"
+                found=1
+                break
+              fi
+            done
+            if [ "$found" = 0 ]; then
+              echo "  $engine -- NOT FOUND with delivery evidence at this commit"
+              fail=1
+            fi
           done
 
           if [ "$fail" = 1 ]; then
@@ -296,7 +304,7 @@ jobs:
             fi
           done
 
-          ls -l dist/npm dist/archive
+          ls -l dist/npm dist/release
 
       - name: every tarball names this repository
         env:
@@ -331,12 +339,13 @@ jobs:
         run: |
           pnpm -C scripts install --frozen-lockfile
           if ! command -v 7z >/dev/null; then sudo apt-get update && sudo apt-get install -y p7zip-full; fi
-          pnpm package:examples --dest dist/examples
+          pnpm package:examples --dest dist/release
+          pnpm package:checksums --collect dist/engine --dir dist/release
 
       - uses: actions/upload-artifact@v7
         with:
-          name: language-examples
-          path: dist/examples/
+          name: release-attachments
+          path: dist/release/
           if-no-files-found: error
 
       - name: publish
@@ -400,15 +409,19 @@ jobs:
             echo
             echo "---"
             echo
-            echo "### 🚀 独立可执行文件 / Standalone Binaries"
-            echo "- **English**: The attached \`.7z\` archives contain the standalone engine (executables, shared libraries, and resource packs) for environments without Node.js. If you are using \`@shotkit/shotium\` via npm/pnpm/yarn/bun, platform dependencies are installed automatically and you do not need to download these archives manually."
-            echo "- **简体中文**：下方附加的 \`.7z\` 压缩包为独立引擎二进制文件（包含单文件命令行工具、共享库及资源包），适用于无 Node.js 的运行环境。若通过 npm/pnpm/yarn/bun 安装使用，包管理器会自动下载对应的预编译平台依赖，无需手动下载此处的附件。"
+            echo "### CLI and C ABI / 独立命令行与动态库"
+            echo "- **English**: Download \`shotium-cli-<platform>.7z\` for the CLI, or \`shotium-c-abi-<platform>.7z\` for the shared library, header and guides. Each archive includes its own resource packs. npm installs its platform package automatically."
+            echo "- **简体中文**：命令行用户下载 \`shotium-cli-<平台>.7z\`；语言集成下载 \`shotium-c-abi-<平台>.7z\`，其中包含动态库、头文件和接入说明。两类包各自包含资源文件；npm 用户由包管理器自动安装平台依赖。"
             echo
             echo "---"
             echo
             echo "### Language examples / 语言示例"
-            echo "Download one language ZIP (go, python, rust, csharp or java) plus the native archive for your platform. Each ZIP is independent and includes source, documentation and a fixture; no repository clone is needed."
-            echo "只下载自己语言的 ZIP 和对应平台引擎压缩包。每个语言包独立包含源码、文档和示例页面，无需克隆仓库。"
+            echo "Download \`shotium-example-<language>.7z\` (go, python, rust, csharp or java) and the matching C ABI platform archive. Example sources contain no native binaries. Archive and root-directory names are stable across releases."
+            echo "下载 \`shotium-example-<语言>.7z\` 和对应平台的 C ABI 包。示例包含源码、文档和页面，不内置原生库；附件名和解压目录不带版本号。"
+            echo
+            echo "### SHA256 verification / 校验"
+            echo "One \`SHA256SUMS\` covers all 17 archives (6 CLI, 6 C ABI, 5 examples). Verify the selected downloads against it; downloading every archive is unnecessary."
+            echo "统一的 \`SHA256SUMS\` 覆盖全部 17 个压缩包（6 个 CLI、6 个 C ABI、5 个示例），只需校验自己下载的附件。发布共 18 个上传附件，另有 GitHub 自动生成的两个源码包。"
             echo
             echo "### 📝 验证与来源 / Provenance"
             echo "- Commit: \`${GITHUB_SHA}\`"
@@ -421,12 +434,13 @@ jobs:
           # neither of which says which is current. They were on the v0.1.0
           # release only because that is where the engine workflows staged
           # them for publishing, which is now what artifacts are for.
+          pnpm package:checksums --dir dist/release --check
           gh release create "$TAG" \
             --repo "$GITHUB_REPOSITORY" \
             --title "$TAG" \
             --target "$GITHUB_SHA" \
             --notes-file /tmp/notes.md \
-            dist/archive/*.7z dist/examples/*.zip dist/examples/*.sha256
+            dist/release/*.7z dist/release/SHA256SUMS
 
       - name: dispatch the published-version benchmark
         if: ${{ env.RELEASE == 'true' && env.DRY_RUN != 'true' }}

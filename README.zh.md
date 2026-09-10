@@ -24,7 +24,7 @@ shotium 提取了 Chromium 中将 HTML/CSS 转化为像素的核心能力：由 
 ### 核心特性
 
 - **极速低延迟**：单张渲染低至 13 ms，冷启动仅 59 ms，无需等待外部浏览器拉起与 DevTools 协议握手
-- **极致轻量分发**：下载体积仅 ~11 MB（压缩后），解压运行单二进制仅 ~32 MB（完整套件安装 ~64 MB），较完整 Chromium 削减超 85% 体积
+- **按需分发**：CLI、C ABI 与语言示例分别打包，只下载需要的用途和平台；新包体积以实际发布附件为准
 - **零 CDP 协议开销**：剥离 V8 与外部 IPC，直接通过 Node-API / C ABI 嵌入宿主进程调用 Blink 核心渲染流水线
 - **高弹性与生产就绪**：内置流式长图分片（`screenshotTiles`）、短生命周期常驻守护进程（`daemon`）及显式 GC 内存控制
 
@@ -67,7 +67,44 @@ npm install @shotkit/shotium   # 或 npm、yarn、bun；自动安装适配当前
 
 #### 独立 CLI / C 动态库 / 各语言示例
 
-所有平台（Windows / macOS / Linux）预编译的原生二进制程序、C 动态库与各语言独立示例项目，均可在 **[GitHub Releases](https://github.com/sj817/shotium/releases)** 直接下载，解压即用，无需在本地配置编译工具链或拉取 Chromium 源码
+在 **[GitHub Releases](https://github.com/sj817/shotium/releases)** 按需下载对应平台的预编译产物，包内解压顶层目录均不带版本后缀：
+
+| 类别 | 附件命名格式 | 包含平台 / 语言 | 包含内容 |
+|---|---|---|---|
+| **CLI** | `shotium-cli-<平台>.7z` | win / linux / macos (x64 / arm64) | 独立可执行文件、两份 `.pak` 核心资源及许可证 |
+| **C ABI** | `shotium-c-abi-<平台>.7z` | win / linux / macos (x64 / arm64) | 动态链接库、`.pak` 资源、`shot_api.h` 头文件、接口指南及导入库（Windows） |
+| **示例** | `shotium-example-<语言>.7z` | go / python / rust / csharp / java | 完整源码工程、页面模板、工程依赖清单及校验清单（不含原生库） |
+| **校验清单** | [`SHA256SUMS`](https://github.com/sj817/shotium/releases/latest/download/SHA256SUMS) | 全部 17 个 `.7z` 压缩包 | 标准 SHA-256 校验列表，按文件名排序 |
+
+> 平台标识为 `windows-amd64`、`windows-arm64`、`linux-amd64`、`linux-arm64`、`macos-amd64`、`macos-arm64`；多语言示例通过下载对应平台的 `shotium-c-abi-<平台>.7z` 并解压至 `native/` 目录下即可一键运行
+
+<details>
+<summary><b>下载并校验独立 CLI（Linux / macOS / Windows 快速上手）</b></summary>
+
+```bash
+# Linux / macOS（以 linux-amd64 为例，需要 7z 或 7zz）
+curl -fLO https://github.com/sj817/shotium/releases/latest/download/shotium-cli-linux-amd64.7z
+curl -fLO https://github.com/sj817/shotium/releases/latest/download/SHA256SUMS
+
+# 可选完整性校验并解压
+sha256sum --check --ignore-missing SHA256SUMS
+7z x shotium-cli-linux-amd64.7z
+./shotium-cli-linux-amd64/shotium --help
+```
+
+```powershell
+# Windows PowerShell（以 windows-amd64 为例）
+curl.exe -fLO https://github.com/sj817/shotium/releases/latest/download/shotium-cli-windows-amd64.7z
+curl.exe -fLO https://github.com/sj817/shotium/releases/latest/download/SHA256SUMS
+
+# 校验并解压
+$expected = (Get-Content SHA256SUMS | Select-String "shotium-cli-windows-amd64.7z").Line.Split(" ")[0]
+if ((Get-FileHash shotium-cli-windows-amd64.7z -Algorithm SHA256).Hash.ToLower() -ne $expected) { throw "SHA256 校验不匹配" }
+7z x shotium-cli-windows-amd64.7z
+.\shotium-cli-windows-amd64\shotium.exe --help
+```
+
+</details>
 
 ## 用法
 
@@ -123,7 +160,7 @@ await stop();
 
 ### 命令行 (CLI)
 
-发布包包含开箱即用的独立可执行文件 `shotium`（Windows 上为 `shotium.exe`），无需安装 Node.js 或任何浏览器依赖：
+`shotium-cli-<平台>.7z` 仅包含许可证、两个 `.pak` 资源及独立可执行文件 `shotium`（Windows 上为 `shotium.exe`），无需安装 Node.js 或任何浏览器依赖：
 
 <p align="center">
   <img src="apps/docs/assets/example-cli.webp" width="820"
@@ -151,7 +188,7 @@ shotium --serve --cache-dir /var/tmp/shotium-cache
 
 ### C ABI 与其他语言
 
-发布包提供跨平台的 C 动态库（`shotium.dll` / `libshotium.so` / `libshotium.dylib`）及标准 C 头文件 `shot_api.h`。接口遵循简洁的 C 契约，支持在任意支持 FFI 的编程语言中调用：
+`shotium-c-abi-<平台>.7z` 提供跨平台的 C 动态库（`shotium.dll` / `libshotium.so` / `libshotium.dylib`）及标准 C 头文件 `shot_api.h`。接口遵循简洁的 C 契约，支持在任意支持 FFI 的编程语言中调用：
 
 ```c
 // 1. 初始化引擎单例
@@ -170,7 +207,7 @@ shot_buffer_free(&image);
 shot_engine_destroy(engine);
 ```
 
-每个支持语言的示例工程均已打包为独立 ZIP 在 Release 中分发，渲染完全一致的 720×380 登机牌卡片：
+每个支持语言的示例工程均已打包为 `shotium-example-<语言>.7z` 在 Release 中分发，渲染完全一致的 720×380 登机牌卡片：
 - [Go 示例 (purego)](apps/go/README.zh.md)
 - [Python 示例 (ctypes)](apps/python/README.zh.md)
 - [Rust 示例 (libloading)](apps/rust/README.zh.md)
@@ -273,7 +310,7 @@ flowchart TB
 | **输入来源** | 本地文件、URL、标准输入 (stdin) | 本地文件、URL | JSX / 虚拟 DOM 树 | 本地文件、URL |
 | **JavaScript 执行** | 否（纯静态排版） | 是（完整执行） | 不适用 | 旧版 JavaScriptCore |
 | **进程与内存模型** | 宿主进程内嵌入，或轻量守护进程 | 独立浏览器子进程 + IPC 通信 | 纯 JS 进程内运算 | 每次独立启动子进程 |
-| **分发与安装体积** | 压缩包 ~11 MB / 单引擎 ~32 MB（完整解压安装 ~64 MB） | 需下载并解压完整 Chromium（400+ MB） | 纯 JS / WASM（数十 KB） | 操作系统依赖包（~100 MB） |
+| **分发与安装体积** | CLI / C ABI 独立按需分发（压缩包 ~11 MB / 单引擎 ~32 MB） | 需下载并解压完整 Chromium（400+ MB） | 纯 JS / WASM（数十 KB） | 操作系统依赖包（~100 MB） |
 
 - **选择无头浏览器（Puppeteer/Playwright）**：当页面依赖客户端 JS 动态渲染、用户交互、登录态或复杂 SPA 页面时
 - **选择 Satori**：当只需极简 Flexbox 卡片、在无原生二进制运行权限的 Edge 边缘函数环境时
@@ -285,13 +322,13 @@ Shotium 在官方持续集成环境中，跨 6 大平台架构与主流无头浏
 
 | 引擎方案 | 冷启动首张 (p50) | 预热截图 (p50) | 吞吐量 (单并发) | 下载体积 (压缩后) | 安装体积 (压缩前) |
 |:---|---:|---:|---:|---:|---:|
-| **Shotium** | **59 ms** | **13.4 ms** | **24.3 张/秒** | **~11 MB** | **~32 MB**（完整套件 ~64 MB） |
+| **Shotium** | **59 ms** | **13.4 ms** | **24.3 张/秒** | **~11 MB** | **~32 MB** |
 | Puppeteer (headless-shell) | 652 ms (11.0×) | 133.2 ms (9.9×) | 5.6 张/秒 | ~130 MB | ~380 MB |
 | Playwright (headless-shell) | 781 ms (13.2×) | 128.4 ms (9.6×) | 5.9 张/秒 | ~130 MB | ~390 MB |
 | Puppeteer (Chrome 完整浏览器) | 887 ms (15.0×) | 165.3 ms (12.3×) | 4.6 张/秒 | ~170 MB | ~450 MB |
 | Playwright (Chrome 完整浏览器) | 971 ms (16.5×) | 154.7 ms (11.5×) | 5.0 张/秒 | ~170 MB | ~480 MB |
 
-> 注：体积数据以最小平台构建（macOS arm64 / Linux arm64）为基准口径；Shotium 单执行文件/共享库约 32 MB，包含独立 CLI、C ABI 动态库及资源包的完整解压套件约 64 MB。对比浏览器包含 Chromium 二进制及配套多媒体编解码运行时
+> 注：Shotium 体积取最小平台构建（macOS arm64 / Linux arm64），单执行文件/共享库约 32 MB；对比浏览器方案包含 Chromium 二进制及完整多媒体运行时
 
 - **[交互式基准看板（VitePress）](https://sj817.github.io/shotium/)**：浏览各平台得分、冷启动耗时、并发吞吐与内存消耗曲线
 - **[历史基准测试数据归档](apps/docs/benchmarks/README.zh.md)**：包含每次基准运行的完整原始样本，最新测试结论参见 [`LATEST.md`](apps/docs/benchmarks/LATEST.md)
