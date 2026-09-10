@@ -42,6 +42,7 @@
 #include "shot/shot_platform.h"
 #include "shot/shot_renderer.h"
 #include "third_party/blink/public/platform/web_runtime_features.h"
+#include "skia/ext/font_utils.h"
 #include "skia/ext/legacy_display_globals.h"
 #include "third_party/blink/public/platform/platform.h"
 #include "third_party/blink/public/platform/scheduler/web_thread_scheduler.h"
@@ -56,7 +57,6 @@
 #include <dwrite.h>
 #include <wrl/client.h>
 
-#include "skia/ext/font_utils.h"
 #include "third_party/skia/include/core/SkFontMgr.h"
 #include "third_party/blink/public/platform/web_string.h"
 #include "third_party/blink/public/web/win/web_font_rendering.h"
@@ -365,6 +365,34 @@ base::expected<std::unique_ptr<ShotRuntime>, std::string> ShotRuntime::Create(
   // So: grayscale antialiasing, fixed gamma, no pixel geometry, everywhere.
   skia::LegacyDisplayGlobals::SetCachedParams(
       kUnknown_SkPixelGeometry, SK_GAMMA_CONTRAST, SK_GAMMA_EXPONENT);
+
+  // Colour bitmap glyphs, which are PNGs inside the font file.
+  //
+  // Every typeface blink instantiates outside Windows and macOS is built by
+  // Fontations -- SkTypeface_Factory hands the fontconfig match to
+  // SkFontMgr_New_Fontations_Empty, and WebFontTypefaceFactory routes CBDT/CBLC
+  // and sbix web fonts there on every platform including Windows. Fontations
+  // reads a colour strike out of the font and then asks Skia to decode it:
+  //
+  //   SkImages::DeferredFromEncodedData(png_data)   // SkTypeface_fontations
+  //
+  // which goes through SkCodecs' registry, and that registry starts empty.
+  // Nothing else in this process fills it: blink decodes page images with its
+  // own decoders, and the browser call that registers one for fonts --
+  // gfx::InitializeFonts -- lives in code shot does not link.
+  //
+  // Unregistered, the decode returns null and Fontations' scaler gives up on
+  // the glyph after its advance is already set, so the glyph occupies its
+  // width and draws nothing. The only complaint is an SkASSERTF that is
+  // compiled out of a release build. Noto Color Emoji as Debian and Ubuntu
+  // ship it is CBDT/CBLC, so on those hosts every emoji in a page came out as
+  // a blank of the right size -- reported against the Linux package, silent
+  // on Windows because DirectWrite draws Segoe UI Emoji's COLR glyphs itself.
+  //
+  // The registration is upstream's own and must happen before any rasterising
+  // thread exists; it is not thread safe.
+  skia::InitializeFontRendering();
+
 #if BUILDFLAG(IS_WIN)
   blink::WebFontRendering::SetAntialiasedTextEnabled(true);
   blink::WebFontRendering::SetLCDTextEnabled(false);
