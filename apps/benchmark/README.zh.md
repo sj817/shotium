@@ -1,0 +1,64 @@
+# 六平台基准测试
+
+[English](README.md)
+
+本工程是 Shotium 的标准化跨平台性能与韧性评测套件。套件评估 Shotium 以及在当前测试宿主上具备原生二进制支持的各主流浏览器自动化方案。对于目标平台无原生二进制支持的竞品记录为 `n/a`；而在受支持平台上发生的安装或启动异常则严格归类为失败。
+
+应用采用标准、简洁的目录结构：
+
+```text
+apps/benchmark/
+├─ src/       TypeScript CLI、引擎、生命周期与聚合逻辑
+├─ test/      通过 tsx 执行的 TypeScript 单元测试
+├─ schema/    永久结果的 JSON Schema
+└─ fixtures/  共用的静态渲染语料与资源
+```
+
+```bash
+pnpm install --frozen-lockfile
+pnpm run benchmark -- --shotium-version 0.3.2 --profile smoke --output ./out --seed local-check
+```
+
+如需仅运行一个场景分片，可追加 `--shard startup`、`--shard throughput`、`--shard parallel`、`--shard resident` 或 `--shard resilience`。省略该选项（或传入 `--shard all`）时，仍按本机单任务方式运行全部场景：
+
+```bash
+pnpm run benchmark -- --shotium-version 0.3.2 --profile full --shard throughput --output ./out --seed local-check
+```
+
+分片边界固定为：`startup` 包含冷启动、冷启动稳定后首张截图和生命周期；`throughput` 包含暖机和批量；`parallel` 单独包含并发场景；`resident` 包含常驻客户端和页面复用；`resilience` 包含故障及浸泡测试。
+
+CI 会展开为 30 个 `平台 x 场景分片` 矩阵任务。每个分片仍在同一台原生 runner 上以平衡顺序测试所有可用引擎，因此同一场景内的比较仍是同机比较。五个分片会先合并为一个平台结果，再聚合六个平台；runner 信息保留在各分片中，不会汇总不同分片或不同平台的原始耗时。需要跨分片汇总时，只对同一 runner 内测得的同测试项相对比率做几何聚合。
+
+如需在同一台机器上直接比较源码构建的可执行文件，可运行：
+
+```bash
+pnpm run benchmark:native -- --baseline-executable /path/to/headless_shell --baseline-engine headless-shell --shot-executable /path/to/shotium --iterations 5 --warmup-iterations 1 --output ./out-native
+```
+
+JSON/CSV 报告包含原始样本、经过校验的 PNG 元数据、可执行文件 SHA-256/版本，以及同机 `基线 p50 / Shot p50` 比率。被测目标包含五个引擎配置变体：Shotium 原生引擎，以及由 Puppeteer 与 Playwright 分别驱动的完整 Chrome 和 headless shell。
+
+每个质量通过的平台还会单独生成几何平均综合排名。只有 Shotium 与对比引擎在同一场景、同一并发度下均为“通过”且允许排名的测试项才会参与；归一化相对耗时越低越好。报告会列出覆盖数和单项胜出次数，并且绝不跨平台混排。只有覆盖本平台全部可比项的引擎才会获得正式名次；部分覆盖仍展示成绩，但会明确标记为不授予名次。失败、波动、缺分片或缺证据的平台保留诊断数据，但不生成正式名次或首位排名。
+
+测试设计专注于一个明确收窄的问题域：各开箱即用引擎变体在使用其标准浏览器二进制时，执行静态 HTML/CSS 页面截图任务的综合表现。测试不代表通用的 JavaScript 交互或动态自动化能力。所有引擎均接受完全相同的并发请求、视口大小、缓存配置、渲染语料、PNG 输出格式与超时控制；测试如实反映各实现底层的进程拓扑与资源消耗差异。
+
+如需仅重新生成某次归档的 Markdown/CSV 展示层（包括旧的四分片归档），可运行：
+
+```bash
+pnpm run render-report -- --result-directory ../../apps/docs/benchmarks/v0.3.2/<归档目录>
+```
+
+该命令读取已归档的 manifest 和各平台 summary，只替换 `report.md`、`report.zh-CN.md`、`summary.csv`，以及已有索引对应的 `LATEST.md`；不会修改原始样本、质量记录、失败证据或 manifest。报告顶部会链接到 [VitePress 基准站点](https://sj817.github.io/shotium/)。
+
+### 详细度量规则与环境隔离
+
+- **测试规模**：`full` 配置包含 7 次冷启动重复、1/2/4 并发阶梯、20 次生命周期循环，以及 1000 次请求连续浸泡（或 10 分钟上限）
+- **预热与采样**：非冷启动单元固定预热 3 次；预热延迟变异系数（CV）与进程树 RSS 漂移作为引擎诊断数据记录；主机稳定性检测在每个分片起始阶段采样 5 秒空载 CPU（同时运行进程采样器），动态门限设定为 `max(25%, 空载 p95 + 10%)`；采样器 CPU 占用严格限制在单核 20% 以内，实测采样间隔记入 `observed_mean_period_ms`
+- **重试与限时**：单测试单元若在 6 秒内未等到静默主机则标记为 `noisy` 并重试一次（最多等待 15 秒）；分片执行若耗尽分配的时间预算即停止调度后续单元，并保留已生成的测试结果与现场证据
+- **图像判定**：导航与截图统一配置 30 秒超时上限；Puppeteer/Playwright 适配器在 `load` 后等待网络和两帧渲染后触发截图，以对齐 Shotium 内部严格的 paint-clean 生命周期；渲染正确性校验基于 Pixelmatch 算法（感知阈值 `0.1`），过滤不可见的 GPU 舍入误差，同时精准捕获图块缺失或合成异常
+- **数据留存**：常驻场景复用稳定引擎宿主测量多个客户端请求；顺序批量与并发场景在稳定实例上收集 7 轮样本；代码库仅提交精简的汇总结果，渲染 PNG、控制台日志与细粒度时间线在 CI 中保留 90 天
+
+使用 `benchmark` GitHub Actions workflow 测试已发布的精确语义版本或 npm dist-tag。GitHub Release 创建后，发布流程会以精确发布版本触发同一基准测试。
+
+手动定向诊断时，可以把 `platform_filter` 设为一个原生平台、把 `shard_filter` 设为一个场景分片，或同时指定两者。两个输入均保持 `all` 时仍执行完整的 30 任务。任何带筛选的运行都会上传对应分片的数值结果和 Actions 详细证据，但会明确跳过平台合并、仓库聚合和结果提交，绝不会把局部诊断伪装成完整归档。
+
+在同一 runner 系列积累至少五次可比的 full 结果之前，基准仅记录数据，不设置武断的性能回归阈值；后续阈值策略需单独制定和评审。
