@@ -108,7 +108,7 @@ toolkit_views = false
 
 # ---------------------------------------------------------------------------
 # Size. Everything below was chosen from measured bytes, not from the
-# dependency graph -- see section 17 of docs/cut-progress.md for the table and
+# dependency graph -- see section 17 of apps/docs/cut-progress.md for the table and
 # tools/shot/size_report.py for how it was produced.
 # ---------------------------------------------------------------------------
 

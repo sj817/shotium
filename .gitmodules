@@ -7,9 +7,6 @@
 [submodule "third_party/libc++abi/src"]
 	path = third_party/libc++abi/src
 	url = https://chromium.googlesource.com/external/github.com/llvm/llvm-project/libcxxabi
-[submodule "third_party/libunwind/src"]
-	path = third_party/libunwind/src
-	url = https://chromium.googlesource.com/external/github.com/llvm/llvm-project/libunwind
 [submodule "third_party/llvm-libc/src"]
 	path = third_party/llvm-libc/src
 	url = https://chromium.googlesource.com/external/github.com/llvm/llvm-project/libc
@@ -74,10 +71,6 @@
 [submodule "third_party/material_color_utilities/src"]
 	path = third_party/material_color_utilities/src
 	url = https://chromium.googlesource.com/external/github.com/material-foundation/material-color-utilities
-[submodule "third_party/microsoft_dxheaders/src"]
-	path = third_party/microsoft_dxheaders/src
-	url = https://chromium.googlesource.com/external/github.com/microsoft/DirectX-Headers
-	gclient-condition = checkout_win
 [submodule "third_party/nasm"]
 	path = third_party/nasm
 	url = https://chromium.googlesource.com/chromium/deps/nasm

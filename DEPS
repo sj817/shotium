@@ -502,10 +502,6 @@ vars = {
   # Three lines of non-changing comments so that
   # the commit queue can handle CLs rolling feed
   # and whatever else without interference from each other.
-  'libunwind_revision':    'a8be4de7dec999dafd1857f3516a7f87ffbe0b22',
-  # Three lines of non-changing comments so that
-  # the commit queue can handle CLs rolling feed
-  # and whatever else without interference from each other.
   'clang_format_revision':    '70510081984cfcdb14a15b3e08dfe9776dc7ed37',
   # Three lines of non-changing comments so that
   # the commit queue can handle CLs rolling feed
@@ -926,10 +922,6 @@ deps = {
     Var('chromium_git') +
     '/external/github.com/llvm/llvm-project/libcxxabi.git' + '@' +
     Var('libcxxabi_revision'),
-  'src/third_party/libunwind/src':
-    Var('chromium_git') +
-    '/external/github.com/llvm/llvm-project/libunwind.git' + '@' +
-    Var('libunwind_revision'),
   'src/third_party/llvm-libc/src':
     Var('chromium_git') +
     '/external/github.com/llvm/llvm-project/libc.git' + '@' +
@@ -1029,11 +1021,6 @@ deps = {
 
   'src/third_party/material_color_utilities/src': {
       'url': Var('chromium_git') + '/external/github.com/material-foundation/material-color-utilities.git' + '@' + '5b3618b16fdc3825e21d5679bafd144662088ea1',
-  },
-
-  'src/third_party/microsoft_dxheaders/src': {
-    'url': Var('chromium_git') + '/external/github.com/microsoft/DirectX-Headers.git' + '@' + '07b94cba474be6cdfd934febdbd0b21ca0524187',
-    'condition': 'checkout_win',
   },
 
   'src/third_party/nasm': {
