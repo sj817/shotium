@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - apps/benchmark-site/**
-      - benchmark-results/**
+      - apps/docs/benchmarks/**
       - .github/workflows/benchmark-site.yml
   workflow_dispatch:
 

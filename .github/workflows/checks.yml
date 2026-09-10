@@ -42,10 +42,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          sparse-checkout: apps/demo/shotium/package.json
+          sparse-checkout: apps/typescript/package.json
           sparse-checkout-cone-mode: false
       - id: version
-        run: echo "version=$(jq -r .version apps/demo/shotium/package.json)" >> "$GITHUB_OUTPUT"
+        run: echo "version=$(jq -r .version apps/typescript/package.json)" >> "$GITHUB_OUTPUT"
 
   package:
     name: "check-package: shotium-v${{ needs.meta.outputs.version }}"
@@ -73,7 +73,7 @@ jobs:
           pnpm run check:types
 
       - name: the build tooling
-        working-directory: apps/demo/shotium
+        working-directory: apps/typescript
         # No frozen lockfile here, and it has to be. The six
         # platform packages are optionalDependencies pinned to this version,
         # and that version does not exist on the registry until a release is
@@ -85,13 +85,13 @@ jobs:
         run: pnpm install --no-lockfile
 
       - name: build
-        working-directory: apps/demo/shotium
+        working-directory: apps/typescript
         # Everything below is checked against dist/, because dist/ is what npm
         # publishes. Nothing a caller loads is committed to this repository.
         run: pnpm run build
 
       - name: types
-        working-directory: apps/demo/shotium
+        working-directory: apps/typescript
         # Two things at once. That src/ typechecks -- tsdown emits declarations
         # without running the checker, so a green build says nothing about
         # that. And that test/consumer.ts compiles: it imports the package by
@@ -101,7 +101,7 @@ jobs:
         run: pnpm run check:types
 
       - name: the package loads
-        working-directory: apps/demo/shotium
+        working-directory: apps/typescript
         # Loading it must not start anything. Blink starts once per process and
         # cannot be restarted, so an import that started the engine would spend
         # the one start a caller gets -- and it would do it on a machine that
@@ -127,7 +127,7 @@ jobs:
           '
 
       - name: options are validated before the engine is touched
-        working-directory: apps/demo/shotium
+        working-directory: apps/typescript
         # toRequest() is the only check that can be made without an engine, and
         # it has to happen first -- on this runner there is no addon to load, so
         # a request that reached the engine would fail with "no engine for this
@@ -169,8 +169,14 @@ jobs:
       - name: repository script unit tests
         run: pnpm scripts:test
 
+      - name: the language demos carry the shared card page
+        # apps/demo-card/card.html is the source; each language directory keeps
+        # a copy so its ZIP is self-contained. An edit without `pnpm demo:sync`
+        # would ship five stale pages.
+        run: pnpm demo:sync --check
+
       - name: the six platform packages are declared consistently
-        working-directory: apps/demo/shotium
+        working-directory: apps/typescript
         # The list of six exists twice: in optionalDependencies, which is what
         # the package manager installs, and in the lookup table that goes looking for them
         # afterwards. A rename that touches one and not the other installs
@@ -211,7 +217,7 @@ jobs:
           '
 
       - name: the tarball holds what it should and nothing else
-        working-directory: apps/demo/shotium
+        working-directory: apps/typescript
         # `npm pack --dry-run` is the only way to see what `files` actually
         # resolves to. It runs prepack, so it also demonstrates that a publish
         # from a clean checkout builds the package rather than shipping
@@ -233,14 +239,14 @@ jobs:
             const names = entry.files.map((f) => f.path).sort();
             const missing = ["dist/index.js", "dist/index.d.ts",
                              "dist/daemon_main.js",
-                             "package.json", "README.md"]
+                             "package.json", "README.md", "README.zh.md"]
                 .filter((f) => !names.includes(f));
             if (missing.length) {
               throw new Error("not in the tarball: " + missing.join(" "));
             }
             const strays = names.filter(
                 (f) => !/^(dist|src|native)\//.test(f) &&
-                       !["package.json", "README.md"].includes(f));
+                       !["package.json", "README.md", "README.zh.md"].includes(f));
             if (strays.length) {
               throw new Error("unexpected in the tarball: " + strays.join(" "));
             }

@@ -67,7 +67,7 @@ runs:
       uses: actions/checkout@v7
       with:
         path: src
-        # Read by scripts/ci-stamp-mtimes.ts, which needs the commit that
+        # Read by scripts/ci/stamp-mtimes.ts, which needs the commit that
         # last touched each file for the build cache to be worth anything.
         fetch-depth: 0
         submodules: false
@@ -185,7 +185,7 @@ runs:
         # and ninja then redoes the data assembly, the ICU library and every
         # library that links it. Use the latest ICU source or repack-script commit.
         when=$(git log -1 --format=%ct -- third_party/icu)
-        for f in scripts/icu-repack.ts; do
+        for f in scripts/build/icu-repack.ts; do
           t=$(git log -1 --format=%ct -- "$f"); [ "$t" -gt "$when" ] && when=$t
         done
         touch -t "$(date -u -d "@$when" +%Y%m%d%H%M.%S 2>/dev/null || date -u -r "$when" +%Y%m%d%H%M.%S)" third_party/icu/shot/icudtl.dat
@@ -193,7 +193,7 @@ runs:
     - name: prepare pinned Node SDK
       shell: bash
       working-directory: src
-      run: pnpm -C scripts exec tsx node-sdk.ts
+      run: pnpm build:node-sdk
 
     - name: gn gen
       shell: bash

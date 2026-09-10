@@ -28,7 +28,7 @@
 # ---------------------------------------------------------------------------
 # The release procedure, which this workflow is only the last step of:
 #
-#   1. Bump the version in apps/demo/shotium/package.json. SEVEN lines: `version`, and
+#   1. Bump the version in apps/typescript/package.json. SEVEN lines: `version`, and
 #      the six optionalDependencies that pin the platform packages to it. They
 #      must match exactly -- checks.yml fails the build if they do not.
 #   2. Commit and push. Wait for checks.yml.
@@ -77,8 +77,8 @@
 # statement, in a public transparency log, that these bytes came out of this
 # workflow at this commit. It needs every package.json to carry a `repository`
 # that matches this repository, case for case, or the publish fails outright.
-# The six platform manifests inherit theirs from apps/demo/shotium/package.json in
-# scripts/make-platform-package.ts, so a platform tarball built before that
+# The six platform manifests inherit theirs from apps/typescript/package.json in
+# scripts/package/platform.ts, so a platform tarball built before that
 # field existed cannot be published from here. Rebuild it rather than reaching
 # for --no-provenance; an unattested engine binary is the one package in the
 # seven where the attestation is worth something.
@@ -115,10 +115,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          sparse-checkout: apps/demo/shotium/package.json
+          sparse-checkout: apps/typescript/package.json
           sparse-checkout-cone-mode: false
       - id: version
-        run: echo "version=$(jq -r .version apps/demo/shotium/package.json)" >> "$GITHUB_OUTPUT"
+        run: echo "version=$(jq -r .version apps/typescript/package.json)" >> "$GITHUB_OUTPUT"
 
   publish:
     name: "publish: shotium-v${{ needs.meta.outputs.version }}"
@@ -168,7 +168,7 @@ jobs:
         # tree. Deciding that once, here, keeps every step below from having to
         # ask which one it is.
         run: |
-          version=$(node -p "require('./apps/demo/shotium/package.json').version")
+          version=$(node -p "require('./apps/typescript/package.json').version")
           if [ "$EVENT" = "push" ]; then
             tag="$REF_NAME"
             dry_run=false
@@ -194,16 +194,16 @@ jobs:
         # catches a tag pushed before the version bump was committed.
         run: |
           if [ "v$VERSION" != "$TAG" ]; then
-            echo "apps/demo/shotium/package.json is $VERSION, the tag is $TAG"
+            echo "apps/typescript/package.json is $VERSION, the tag is $TAG"
             echo "the tag must be pushed after the version bump, not before"
             exit 1
           fi
           echo "publishing $VERSION"
 
       - name: build the main package
-        working-directory: apps/demo/shotium
+        working-directory: apps/typescript
         # The package is TypeScript and dist/ is not committed, so until this
-        # runs there is nothing to publish. `npm publish ./apps/demo/shotium` would run
+        # runs there is nothing to publish. `npm publish ./apps/typescript` would run
         # prepack and build it anyway -- but it would do that after the six
         # platform packages were already public, and a build failure has to
         # land before anything is irreversible rather than between the sixth
@@ -327,6 +327,18 @@ jobs:
           fi
           echo "all six name $REPO"
 
+      - name: package language examples
+        run: |
+          pnpm -C scripts install --frozen-lockfile
+          if ! command -v 7z >/dev/null; then sudo apt-get update && sudo apt-get install -y p7zip-full; fi
+          pnpm package:examples --dest dist/examples
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: language-examples
+          path: dist/examples/
+          if-no-files-found: error
+
       - name: publish
         # --access public because the scope is new and npm defaults a scoped
         # package to restricted, which would publish successfully and install
@@ -342,7 +354,7 @@ jobs:
             npm publish "$tarball" $flags
           done
           echo "--- shotium"
-          npm publish ./apps/demo/shotium $flags
+          npm publish ./apps/typescript $flags
 
       - name: the packages are actually there
         if: ${{ env.DRY_RUN != 'true' }}
@@ -394,6 +406,10 @@ jobs:
             echo
             echo "---"
             echo
+            echo "### Language examples / 语言示例"
+            echo "Download one language ZIP (go, python, rust, csharp or java) plus the native archive for your platform. Each ZIP is independent and includes source, documentation and a fixture; no repository clone is needed."
+            echo "只下载自己语言的 ZIP 和对应平台引擎压缩包。每个语言包独立包含源码、文档和示例页面，无需克隆仓库。"
+            echo
             echo "### 📝 验证与来源 / Provenance"
             echo "- Commit: \`${GITHUB_SHA}\`"
             echo "- Verified with npm provenance / 已通过 npm 官方签名与 Provenance 溯源验证。"
@@ -410,7 +426,7 @@ jobs:
             --title "$TAG" \
             --target "$GITHUB_SHA" \
             --notes-file /tmp/notes.md \
-            dist/archive/*.7z
+            dist/archive/*.7z dist/examples/*.zip dist/examples/*.sha256
 
       - name: dispatch the published-version benchmark
         if: ${{ env.RELEASE == 'true' && env.DRY_RUN != 'true' }}

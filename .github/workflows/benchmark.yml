@@ -380,7 +380,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     concurrency:
-      group: benchmark-results-main
+      group: apps/docs/benchmarks-main
       cancel-in-progress: false
     permissions:
       contents: write
@@ -437,7 +437,7 @@ jobs:
         run: >-
           pnpm run aggregate --
           --input "${{ runner.temp }}/benchmark-input"
-          --results-root "${{ github.workspace }}/benchmark-results"
+          --results-root "${{ github.workspace }}/apps/docs/benchmarks"
           --shotium-version "${{ needs.resolve.outputs.archive_version || inputs.shotium_version }}"
           --profile "${{ inputs.profile }}"
           --seed "${{ inputs.seed || inputs.source_sha || github.sha }}"
@@ -470,7 +470,7 @@ jobs:
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add benchmark-results
+          git add apps/docs/benchmarks
           git commit -m "bench(results): v${VERSION} gh${GITHUB_RUN_ID}-a${GITHUB_RUN_ATTEMPT} [skip ci]"
           for attempt in 1 2 3; do
             git push origin HEAD:main && exit 0
@@ -483,7 +483,7 @@ jobs:
             pnpm --dir .benchmark-source/apps/benchmark install --frozen-lockfile
             pnpm --dir .benchmark-source/apps/benchmark run aggregate -- \
               --input "${RUNNER_TEMP}/benchmark-input" \
-              --results-root "${GITHUB_WORKSPACE}/benchmark-results" \
+              --results-root "${GITHUB_WORKSPACE}/apps/docs/benchmarks" \
               --shotium-version "${VERSION}" \
               --profile "${{ inputs.profile }}" \
               --seed "${{ inputs.seed || inputs.source_sha || github.sha }}" \
@@ -493,7 +493,7 @@ jobs:
               --run-url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
               --source-sha "${{ inputs.source_sha || github.sha }}" \
               --allow-existing true
-            git add benchmark-results/index.json benchmark-results/LATEST.md
+            git add apps/docs/benchmarks/index.json apps/docs/benchmarks/LATEST.md
             git commit --amend --no-edit
           done
 

@@ -63,15 +63,23 @@ jobs:
             fi
           fi
           7z x out/ffi-archive/*.7z -oout/ffi-native
+          pnpm package:examples --dest out/language-examples
+          for archive in out/language-examples/*.zip; do 7z x "$archive" -oout/language-sources; done
           test -f "out/ffi-native/$ARTIFACT/shot_api.h"
           test -f "out/ffi-native/$ARTIFACT/C_ABI.md"
-          pnpm -C apps/demo/shotium install --no-lockfile
-          pnpm -C apps/demo/shotium run build
+          pnpm -C apps/typescript install --no-lockfile
+          pnpm -C apps/typescript run build
       - name: five language runtimes against the extracted Release
         shell: bash
         env:
           ARTIFACT: ${{ inputs.artifact }}
-        run: pnpm verify:ffi --library-dir "out/ffi-native/$ARTIFACT"
+        run: |
+          version=$(node -p "require('./apps/typescript/package.json').version")
+          for language in go python rust csharp java; do
+            pnpm verify:ffi --library-dir "out/ffi-native/$ARTIFACT" \
+              --source-dir "out/language-sources/shotium-$language-example-v$version" \
+              --languages "$language" --output "out/ffi-check/$language"
+          done
       - name: clean npm installation without the C ABI library
         shell: bash
         run: pnpm verify:delivery --platform-dir out/ffi-npm

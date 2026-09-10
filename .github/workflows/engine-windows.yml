@@ -78,11 +78,11 @@ jobs:
       - uses: actions/checkout@v7
         with:
           sparse-checkout: |
-            apps/demo/shotium/package.json
+            apps/typescript/package.json
             scripts
           sparse-checkout-cone-mode: false
       - id: version
-        run: echo "version=$(jq -r .version apps/demo/shotium/package.json)" >> "$GITHUB_OUTPUT"
+        run: echo "version=$(jq -r .version apps/typescript/package.json)" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-node@v6
         with:
           node-version: 22
@@ -95,14 +95,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           SHOT_PLATFORM: windows
           SHOT_SHARDS: ${{ inputs.shards }}
-        run: pnpm -C scripts exec tsx ci-select-shards.ts
+        run: pnpm ci:select-shards
 
   # Sharding. ninja's idea of "up to date" is the outputs plus .ninja_log and
   # .ninja_deps, and N runners that ran the same gn gen share one graph. So
   # each shard builds every Nth object of the graph (with whatever generated
   # files and host tools that needs), tars what it built with its two logs,
   # and the final job transplants the tars into its own build directory
-  # (scripts/build-shards.ts merge) and finds only the link left to do.
+  # (scripts/build/shards.ts merge) and finds only the link left to do.
   # Measured on Linux amd64: 73 minutes cold as one job, 47 as four shards
   # plus the final job; a warm run 18 minutes.
   #
@@ -492,7 +492,7 @@ jobs:
           # name instead, so unpacking a newer build over an older one replaces
           # it in place rather than leaving two versioned directories side by
           # side.
-          $version = (Get-Content apps/demo/shotium/package.json -Raw | ConvertFrom-Json).version
+          $version = (Get-Content apps/typescript/package.json -Raw | ConvertFrom-Json).version
           $stem = "shotium-windows-${{ inputs.arch }}"
           $archive = "$stem-v$version.7z"
           if (Test-Path dist) { Remove-Item -Recurse -Force dist }
@@ -568,7 +568,7 @@ jobs:
           # build output rather than a file in the tree. There is no frozen
           # lockfile -- see checks.yml for why it cannot carry the six
           # optionalDependencies yet.
-          Push-Location apps/demo/shotium
+          Push-Location apps/typescript
           pnpm install --no-lockfile
           pnpm run build
           Pop-Location
@@ -576,7 +576,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "node checks failed" }
           pnpm verify:node-entry
           if ($LASTEXITCODE -ne 0) { throw "Node entry checks failed" }
-          pnpm verify:bilibili --package apps/demo/shotium
+          pnpm verify:bilibili --package apps/typescript
           if ($LASTEXITCODE -ne 0) { throw "Bilibili regression checks failed" }
           pnpm verify:daemon out/Shot/shotium.exe
           if ($LASTEXITCODE -ne 0) { throw "daemon checks failed" }

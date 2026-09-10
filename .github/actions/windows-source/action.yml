@@ -269,7 +269,7 @@ runs:
         # and ninja then redoes the data assembly, the ICU library and every
         # library that links it. Use the latest ICU source or repack-script commit.
         $when = [long](git log -1 --format=%ct -- third_party/icu)
-        foreach ($f in @('scripts/icu-repack.ts')) {
+        foreach ($f in @('scripts/build/icu-repack.ts')) {
           $t = [long](git log -1 --format=%ct -- $f)
           if ($t -gt $when) { $when = $t }
         }
@@ -278,7 +278,7 @@ runs:
     - name: prepare pinned Node SDK
       shell: pwsh
       working-directory: src
-      run: pnpm -C scripts exec tsx node-sdk.ts
+      run: pnpm build:node-sdk
 
     - name: gn gen
       shell: pwsh

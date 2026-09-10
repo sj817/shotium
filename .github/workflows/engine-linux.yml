@@ -98,11 +98,11 @@ jobs:
       - uses: actions/checkout@v7
         with:
           sparse-checkout: |
-            apps/demo/shotium/package.json
+            apps/typescript/package.json
             scripts
           sparse-checkout-cone-mode: false
       - id: version
-        run: echo "version=$(jq -r .version apps/demo/shotium/package.json)" >> "$GITHUB_OUTPUT"
+        run: echo "version=$(jq -r .version apps/typescript/package.json)" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-node@v6
         with:
           node-version: 22
@@ -115,14 +115,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           SHOT_PLATFORM: linux
           SHOT_SHARDS: ${{ inputs.shards }}
-        run: pnpm -C scripts exec tsx ci-select-shards.ts
+        run: pnpm ci:select-shards
 
   # Sharding. ninja's idea of "up to date" is the outputs plus .ninja_log and
   # .ninja_deps, and N runners that ran the same gn gen share one graph. So
   # each shard builds every Nth object of the graph (with whatever generated
   # files and host tools that needs), tars what it built with its two logs,
   # and the final job transplants the tars into its own build directory
-  # (scripts/build-shards.ts merge) and finds only the link left to do.
+  # (scripts/build/shards.ts merge) and finds only the link left to do.
   # Measured on Linux amd64: 73 minutes cold as one job, 47 as four shards
   # plus the final job; a warm run 18 minutes. A compiler cache in front of
   # the final job was measured first and lost: every sccache hit still
@@ -467,7 +467,7 @@ jobs:
           # build output rather than a file in the tree. There is no frozen
           # lockfile -- see checks.yml for why it cannot carry the six
           # optionalDependencies yet.
-          ( cd apps/demo/shotium && pnpm install --no-lockfile && pnpm run build )
+          ( cd apps/typescript && pnpm install --no-lockfile && pnpm run build )
 
           # Under a backtrace if it dies. This build is is_official_build, and
           # an official build compiles CHECK() down to a bare trap with no
@@ -487,14 +487,14 @@ jobs:
                 -ex 'set confirm off' \
                 -ex run \
                 -ex 'thread apply all bt 40' \
-                --args node scripts/node_modules/tsx/dist/cli.mjs scripts/check-node.ts out/Shot/shotium || true
+                --args node scripts/node_modules/tsx/dist/cli.mjs scripts/verify/node.ts out/Shot/shotium || true
             echo "::endgroup::"
             exit "$status"
           }
           pnpm verify:node-entry
-          pnpm verify:bilibili --package apps/demo/shotium
+          pnpm verify:bilibili --package apps/typescript
           # The daemon runs here as well as on Windows because
-          # apps/demo/shotium/src/lib/endpoint.ts has two branches -- a named pipe on
+          # apps/typescript/src/lib/endpoint.ts has two branches -- a named pipe on
           # Windows, a unix socket everywhere else -- and the Windows job
           # exercises exactly one of them.
           pnpm verify:daemon out/Shot/shotium
@@ -579,7 +579,7 @@ jobs:
         # place rather than leaving two versioned directories side by side.
         run: |
           version=$(python3 -c \
-            "import json;print(json.load(open('apps/demo/shotium/package.json'))['version'])")
+            "import json;print(json.load(open('apps/typescript/package.json'))['version'])")
           stem="shotium-linux-${{ inputs.arch }}"
           archive="$stem-v$version.7z"
           rm -rf dist "$archive"
