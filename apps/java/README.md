@@ -1,61 +1,151 @@
-# Java C ABI demo
+# shotium Java demo
 
-This is a source example, **not a published Shotium language package**. It loads the precompiled shared library directly in the host process. / 这是源码示例，不发布独立语言包；直接加载预编译 C ABI 动态库。
+English · [简体中文](./README.zh.md)
 
-## Prepare / 准备
+[![Java](https://img.shields.io/badge/Java-17+-ED8B00?logo=openjdk&logoColor=white)](https://openjdk.org/) [![JNA](https://img.shields.io/badge/FFI-JNA%205.17-blue.svg)](https://github.com/java-native-access/jna) [![platforms](https://img.shields.io/badge/platforms-win%20%7C%20mac%20%7C%20linux%20%C2%B7%20x64%20%7C%20arm64-4c8.svg)](https://github.com/sj817/shotium/releases) [![license](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](../../LICENSE)
 
-JDK 17+ and Maven 3.9+; JNA 5.17.0 and Gson 2.13.1 are pinned in pom.xml. / 首次构建由 Maven 下载固定版本的通用 FFI 和 JSON 依赖，不是 Shotium Java 包。
+Demonstrates rendering HTML via the shotium C ABI directly from Java using JNA; this project is a standalone runnable demo, not a published Maven artifact
 
-Follow the [shared download and ABI guide](../c-abi/README.md) to extract the matching Release into `apps/native/`. Keep the library and both `.pak` files from the same release. The language runtime and native library must use the same architecture. On macOS, substitute `shotium-macos-arm64` or `shotium-macos-amd64` for the Linux directory below.
+## Table of Contents
 
-先按通用文档下载并完整解压对应平台的 Release；动态库与资源包必须同版本，宿主进程与库架构一致。macOS 请替换目录名。无需 Node，也无需自行编译 Chromium。
+[Requirements](#requirements) · [Get the files](#get-the-files) · [Run](#run) · [Unicode on Windows](#unicode-paths-on-windows) · [How it works](#how-it-works) · [Java notes](#java-notes) · [See also](#see-also) · [License](#license)
 
-## Run / 运行
+## Requirements
 
-Start in the repository root. / 从仓库根目录执行。
+- JDK 17 or newer and Maven 3.9 or newer (JNA 5.17.0 and Gson 2.13.1 are pinned in `pom.xml`)
+- 7-Zip (`7z`) to extract release packages
+- Prebuilt engine binary matching target JVM architecture (reported by `java -XshowSettings:properties -version` as `os.arch`)
 
-Linux / macOS:
+## Get the files
+
+This demo is distributed as `shotium-java-example-v<version>.zip` on the [Releases page](https://github.com/sj817/shotium/releases), identical to `apps/java` in the repository; download the matching platform archive from the same release and extract it into `native/`:
 
 ```bash
-mvn -f apps/java/pom.xml package dependency:copy-dependencies
-java -cp "apps/java/target/classes:apps/java/target/dependency/*" ShotiumDemo apps/native/shotium-linux-amd64 apps/fixtures/hello.html java.png
+# Linux / macOS, from this directory
+version=v0.7.0
+platform=linux-amd64        # linux-arm64, macos-amd64, or macos-arm64
+curl -fLO "https://github.com/sj817/shotium/releases/download/$version/shotium-$platform-$version.7z"
+7z x "shotium-$platform-$version.7z" -onative
 ```
-
-Windows PowerShell:
 
 ```powershell
-mvn -f apps/java/pom.xml package dependency:copy-dependencies
-java -cp "apps/java/target/classes;apps/java/target/dependency/*" ShotiumDemo apps/native/shotium-windows-amd64 apps/fixtures/hello.html java.png
+# Windows PowerShell, from this directory
+$version = 'v0.7.0'
+$platform = 'windows-amd64'   # or windows-arm64
+curl.exe -fLO "https://github.com/sj817/shotium/releases/download/$version/shotium-$platform-$version.7z"
+7z x "shotium-$platform-$version.7z" -onative
 ```
 
-Arguments: `<library-dir> <input.html> <output.png>`. The first argument also becomes `resourceDir`. The example renders at 800×600, explicitly permits local input, prints capture stats and writes PNG bytes. For a locally built engine, substitute `out/Shot` (Go: `../../out/Shot` after changing directory).
+Extraction yields `native/shotium-<platform>/` containing the shared library, `shot_api.h`, and the two `.pak` resource files; keep these files together from the matching release
 
-参数分别为动态库目录、输入 HTML、输出 PNG。示例显式设置资源目录、本地文件权限和 800×600 视口，打印统计并保存 PNG。使用本机构建时替换为 `out/Shot`（Go 切换目录后为 `../../out/Shot`）。
+## Run
 
-### Unicode paths / Unicode 路径
+```bash
+mvn package dependency:copy-dependencies
+java -cp "target/classes:target/dependency/*" ShotiumDemo native/shotium-linux-amd64 card.html card.png
+```
 
-Some Windows JDK launchers replace command-line characters outside the system code page before Java receives them. For Unicode paths, save this as UTF-8 `java-config.json` (without a BOM) and pass `--config java-config.json`. Keep the config filename itself in ASCII. Paths in the JSON resolve against the working directory.
+On Windows, use a semicolon `;` as the classpath separator:
 
-部分 Windows JDK 启动器会提前替换系统代码页以外的命令行字符。包含中文等 Unicode 路径时，把以下配置保存为无 BOM 的 UTF-8 `java-config.json`，通过配置文件传入；配置文件自身路径使用 ASCII。JSON 中的相对路径以当前工作目录为基准。
+```powershell
+mvn package dependency:copy-dependencies
+java -cp "target/classes;target/dependency/*" ShotiumDemo native/shotium-windows-amd64 card.html card.png
+```
+
+Positional arguments are `<library-dir> <input.html> <output.png>`, where `<library-dir>` is also passed to the engine as `resourceDir`; the program renders `card.html` at 720×380, prints capture statistics JSON to stdout, and writes `card.png` (pixel-identical to output from the `shotium` CLI)
+
+Providing a nonexistent input file demonstrates the error handling flow: exit code is 1, stderr outputs `capture failed (2): ...`, statistics are still reported, and no output image is generated
+
+When testing against local engine build artifacts, specify `../../out/Shot` as the library directory
+
+## Unicode paths on Windows
+
+Certain Windows JDK launchers convert command-line arguments through the active ANSI code page before `main(String[] args)` receives them, potentially corrupting non-ASCII paths; to handle arbitrary Unicode file paths, specify arguments in a UTF-8 JSON file (without BOM) and pass it via `--config`, with relative paths inside resolving against the current working directory
 
 ```json
 {
-  "libraryDir": "apps/native/shotium-windows-amd64",
-  "input": "apps/fixtures/中文页面.html",
+  "libraryDir": "native/shotium-windows-amd64",
+  "input": "示例/card.html",
   "output": "截图.png"
 }
 ```
 
 ```powershell
-java -cp "apps/java/target/classes;apps/java/target/dependency/*" ShotiumDemo --config java-config.json
+java -cp "target/classes;target/dependency/*" ShotiumDemo --config java-config.json
 ```
 
-On Linux/macOS, use `:` instead of `;` in the classpath and the matching library directory. / Linux/macOS 使用对应动态库目录，并把 classpath 分隔符换成 `:`。
+## How it works
 
-## Failures and ownership / 错误与所有权
+`src/main/java/ShotiumDemo.java` demonstrates the complete invocation lifecycle:
 
-Replace the input with a nonexistent file: the program must exit nonzero, print `capture failed (2)` and any available failure statistics, and write no image. ABI mismatches are rejected before engine creation. JNA loads the absolute library path with UTF-8 string encoding. SizeT uses Native.SIZE_T_SIZE, including on Windows. Every result is freed in finally; the proxy is kept alive until JVM shutdown. / size_t 按指针宽度映射，不能用 Windows 的 C long 替代。
+```java
+public interface Api extends Library {
+    int shot_abi_version();
+    int shot_engine_create(String options, PointerByReference engine, PointerByReference error);
+    int shot_engine_capture(Pointer engine, String request, PointerByReference image, PointerByReference stats, PointerByReference error);
+    void shot_engine_destroy(Pointer engine);
+    Pointer shot_buffer_data(Pointer buffer);
+    SizeT shot_buffer_size(Pointer buffer);     // size_t, pointer-sized on every platform
+    void shot_buffer_free(Pointer buffer);
+}
 
-输入不存在的文件可验证失败路径：非零退出码、错误原因和可用失败统计，不产生图片。每个进程只能创建一次引擎；重复截图复用它，销毁后不能重建。动态库保持加载直到进程退出。
+api = Native.load(directory.resolve("libshotium.so").toString(), Api.class, Map.of(Library.OPTION_STRING_ENCODING, "UTF-8"));
+if (api.shot_abi_version() != 3) {
+    throw new IllegalStateException("C ABI mismatch");
+}
 
-The examples use only capture functions; the shared guide also documents file output, tiles, cache operations and memory release. The shipped `shot_api.h` is the authoritative API. / 文件输出、分片、缓存等见通用文档，完整接口以同包头文件为准。
+PointerByReference engine = new PointerByReference();
+PointerByReference error = new PointerByReference();
+int status = api.shot_engine_create(gson.toJson(Map.of("resourceDir", directory.toString())), engine, error);
+try {
+    if (status != 0) {
+        throw new IllegalStateException("create failed: " + text(error.getValue()));
+    }
+} finally {
+    api.shot_buffer_free(error.getValue());
+}
+
+try {
+    PointerByReference image = new PointerByReference();
+    PointerByReference stats = new PointerByReference();
+    String request = gson.toJson(Map.of(
+        "file", input,
+        "allowFileAccess", true,
+        "width", 720,
+        "height", 380,
+        "type", "png"
+    ));
+    status = api.shot_engine_capture(engine.getValue(), request, image, stats, error);
+    try {
+        if (stats.getValue() != null) {
+            System.out.println(text(stats.getValue())); // present on failure too
+        }
+        if (status != 0) {
+            throw new IllegalStateException("capture failed (" + status + "): " + text(error.getValue()));
+        }
+        Files.write(Path.of(args[2]), bytes(image.getValue()));
+    } finally {
+        api.shot_buffer_free(image.getValue());
+        api.shot_buffer_free(stats.getValue());
+        api.shot_buffer_free(error.getValue());
+    }
+} finally {
+    api.shot_engine_destroy(engine.getValue());
+}
+```
+
+## Java notes
+
+- `size_t` must not be mapped directly to Java `long`: on 64-bit Windows, C `long` remains 32 bits; subclassing `IntegerType` with `Native.SIZE_T_SIZE` ensures correct pointer-width integer mapping across all platforms
+- Set `Library.OPTION_STRING_ENCODING` to UTF-8 so JNA avoids falling back to platform-default character sets for JSON strings
+- The `bytes()` helper uses `Pointer.getByteArray` to copy memory before invoking `shot_buffer_free()`; never wrap engine buffer pointers in JNA `Memory` instances, as JNA will attempt JVM garbage collection on them
+- The `Api` proxy instance is referenced in a static field to remain loaded throughout the JVM lifecycle
+- Operations are enclosed in `finally` blocks to guarantee all native buffers and engine instances are freed even on failure
+
+## See also
+
+Complete ownership contracts, request options, performance statistics, tiling, and cache maintenance APIs are detailed in the [C ABI Guide](../c-abi/README.md); the C header `shot_api.h` serves as the authoritative interface specification
+
+## License
+
+BSD-3-Clause, matching upstream Chromium. See [LICENSE](../../LICENSE)

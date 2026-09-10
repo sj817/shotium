@@ -1,41 +1,108 @@
-# Go C ABI demo
+# shotium Go demo
 
-This is a source example, **not a published Shotium language package**. It loads the precompiled shared library directly in the host process. / 这是源码示例，不发布独立语言包；直接加载预编译 C ABI 动态库。
+English · [简体中文](./README.zh.md)
 
-## Prepare / 准备
+[![Go](https://img.shields.io/badge/Go-1.23+-00ADD8?logo=go&logoColor=white)](https://go.dev/) [![purego](https://img.shields.io/badge/FFI-purego%20(no%20cgo)-blue.svg)](https://github.com/ebitengine/purego) [![platforms](https://img.shields.io/badge/platforms-win%20%7C%20mac%20%7C%20linux%20%C2%B7%20x64%20%7C%20arm64-4c8.svg)](https://github.com/sj817/shotium/releases) [![license](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](../../LICENSE)
 
-Go 1.23+ and purego v0.9.1 (go.mod/go.sum). No C compiler or cgo is required. / 不需要 C 编译器，首次运行会下载纯 Go FFI 依赖。
+Demonstrates rendering HTML via the shotium C ABI directly from Go using purego without cgo; this project is a standalone runnable demo, not a published Go package
 
-Follow the [shared download and ABI guide](../c-abi/README.md) to extract the matching Release into `apps/native/`. Keep the library and both `.pak` files from the same release. The language runtime and native library must use the same architecture. On macOS, substitute `shotium-macos-arm64` or `shotium-macos-amd64` for the Linux directory below.
+## Table of Contents
 
-先按通用文档下载并完整解压对应平台的 Release；动态库与资源包必须同版本，宿主进程与库架构一致。macOS 请替换目录名。无需 Node，也无需自行编译 Chromium。
+[Requirements](#requirements) · [Get the files](#get-the-files) · [Run](#run) · [How it works](#how-it-works) · [Go notes](#go-notes) · [See also](#see-also) · [License](#license)
 
-## Run / 运行
+## Requirements
 
-Start in the repository root. / 从仓库根目录执行。
+- Go 1.23 or newer (no C compiler required; the shared library is loaded dynamically at runtime via [purego](https://github.com/ebitengine/purego))
+- 7-Zip (`7z`) to extract release packages
+- Prebuilt engine binary matching target runtime architecture (`go env GOOS GOARCH`)
 
-Linux / macOS:
+## Get the files
+
+This demo is distributed as `shotium-go-example-v<version>.zip` on the [Releases page](https://github.com/sj817/shotium/releases), identical to `apps/go` in the repository; download the matching platform archive from the same release and extract it into `native/`:
 
 ```bash
-cd apps/go
-go run . ../native/shotium-linux-amd64 ../fixtures/hello.html go.png
+# Linux / macOS, from this directory
+version=v0.7.0
+platform=linux-amd64        # linux-arm64, macos-amd64, or macos-arm64
+curl -fLO "https://github.com/sj817/shotium/releases/download/$version/shotium-$platform-$version.7z"
+7z x "shotium-$platform-$version.7z" -onative
 ```
-
-Windows PowerShell:
 
 ```powershell
-cd apps/go
-go run . ../native/shotium-windows-amd64 ../fixtures/hello.html go.png
+# Windows PowerShell, from this directory
+$version = 'v0.7.0'
+$platform = 'windows-amd64'   # or windows-arm64
+curl.exe -fLO "https://github.com/sj817/shotium/releases/download/$version/shotium-$platform-$version.7z"
+7z x "shotium-$platform-$version.7z" -onative
 ```
 
-Arguments: `<library-dir> <input.html> <output.png>`. The first argument also becomes `resourceDir`. The example renders at 800×600, explicitly permits local input, prints capture stats and writes PNG bytes. For a locally built engine, substitute `out/Shot` (Go: `../../out/Shot` after changing directory).
+Extraction yields `native/shotium-<platform>/` containing the shared library, `shot_api.h`, and the two `.pak` resource files; keep these files together from the matching release
 
-参数分别为动态库目录、输入 HTML、输出 PNG。示例显式设置资源目录、本地文件权限和 800×600 视口，打印统计并保存 PNG。使用本机构建时替换为 `out/Shot`（Go 切换目录后为 `../../out/Shot`）。
+## Run
 
-## Failures and ownership / 错误与所有权
+```bash
+go run -mod=readonly . native/shotium-linux-amd64 card.html card.png
+```
 
-Replace the input with a nonexistent file: the program must exit nonzero, print `capture failed (2)` and any available failure statistics, and write no image. ABI mismatches are rejected before engine creation. The Unix loader uses dlopen with RTLD_LOCAL; Windows uses LoadLibrary. purego maps the C functions, and defer frees all result buffers and destroys the engine. / 两个平台加载器对应系统动态加载接口，defer 释放返回缓冲区与引擎。
+The positional arguments are `<library-dir> <input.html> <output.png>`, where `<library-dir>` is also passed to the engine as `resourceDir`; the program renders `card.html` at 720×380, prints capture statistics JSON to stdout, and writes `card.png` (pixel-identical to output from the `shotium` CLI)
 
-输入不存在的文件可验证失败路径：非零退出码、错误原因和可用失败统计，不产生图片。每个进程只能创建一次引擎；重复截图复用它，销毁后不能重建。动态库保持加载直到进程退出。
+Providing a nonexistent input file demonstrates the error handling flow: exit code is 1, stderr outputs `capture failed (2): ...`, statistics are still reported, and no output image is generated
 
-The examples use only capture functions; the shared guide also documents file output, tiles, cache operations and memory release. The shipped `shot_api.h` is the authoritative API. / 文件输出、分片、缓存等见通用文档，完整接口以同包头文件为准。
+When testing against local engine build artifacts, specify `../../out/Shot` as the library directory
+
+## How it works
+
+`main.go` demonstrates the complete invocation lifecycle:
+
+```go
+handle, _ := loadLibrary(filepath.Join(dir, "libshotium.so")) // kept mapped for the process lifetime
+purego.RegisterLibFunc(&abi, handle, "shot_abi_version")
+purego.RegisterLibFunc(&create, handle, "shot_engine_create")
+purego.RegisterLibFunc(&capture, handle, "shot_engine_capture")
+purego.RegisterLibFunc(&free, handle, "shot_buffer_free")
+// ... shot_engine_destroy, shot_buffer_data, shot_buffer_size
+
+if abi() != 3 {
+	return fmt.Errorf("C ABI mismatch")
+}
+
+var engine, failure uintptr
+status := create(`{"resourceDir":"…"}`, &engine, &failure)
+defer free(failure)
+if status != 0 {
+	return errors.New(read(failure))
+}
+defer destroy(engine)
+
+var image, stats, err uintptr
+status = capture(engine, `{"file":"…","width":720,"height":380}`, &image, &stats, &err)
+defer free(image)
+defer free(stats)
+defer free(err)
+
+if stats != 0 {
+	fmt.Println(read(stats)) // present on failure too
+}
+if status != 0 {
+	return errors.New(read(err))
+}
+
+os.WriteFile("card.png", read(image), 0644)
+```
+
+The `read()` helper copies native buffer memory into a Go-managed byte slice before the deferred `shot_buffer_free()` executes
+
+## Go notes
+
+- `load_windows.go` and `load_unix.go` select platform loading mechanisms via build tags: `syscall.LoadLibrary` on Windows and `purego.Dlopen` on Unix/macOS; handles remain loaded for the entire process lifetime
+- Every `shot_buffer*` returned by the C ABI must be released with `shot_buffer_free()`, never by the Go garbage collector or standard libc `free`; deferred free calls run after data copying is complete
+- `go.sum` pins dependency versions to guarantee repeatable builds across environments
+- The example is organized as a `main` package; production integrations can factor out `RegisterLibFunc` definitions and buffer helpers into a reusable package
+
+## See also
+
+Complete ownership contracts, request options, performance statistics, tiling, and cache maintenance APIs are detailed in the [C ABI Guide](../c-abi/README.md); the C header `shot_api.h` serves as the authoritative interface specification
+
+## License
+
+BSD-3-Clause, matching upstream Chromium. See [LICENSE](../../LICENSE)

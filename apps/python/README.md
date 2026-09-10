@@ -1,39 +1,109 @@
-# Python C ABI demo
+# shotium Python demo
 
-This is a source example, **not a published Shotium language package**. It loads the precompiled shared library directly in the host process. / 这是源码示例，不发布独立语言包；直接加载预编译 C ABI 动态库。
+English · [简体中文](./README.zh.md)
 
-## Prepare / 准备
+[![Python](https://img.shields.io/badge/Python-3.9+-3776AB?logo=python&logoColor=white)](https://python.org/) [![ctypes](https://img.shields.io/badge/FFI-ctypes%20(zero%20deps)-blue.svg)](https://docs.python.org/3/library/ctypes.html) [![platforms](https://img.shields.io/badge/platforms-win%20%7C%20mac%20%7C%20linux%20%C2%B7%20x64%20%7C%20arm64-4c8.svg)](https://github.com/sj817/shotium/releases) [![license](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](../../LICENSE)
 
-Python 3.9+; standard-library ctypes, no pip dependencies. / 仅需 Python 标准库。
+Demonstrates rendering HTML via the shotium C ABI directly from Python using the standard library `ctypes` module; this project is a standalone runnable demo, not a published package
 
-Follow the [shared download and ABI guide](../c-abi/README.md) to extract the matching Release into `apps/native/`. Keep the library and both `.pak` files from the same release. The language runtime and native library must use the same architecture. On macOS, substitute `shotium-macos-arm64` or `shotium-macos-amd64` for the Linux directory below.
+## Table of Contents
 
-先按通用文档下载并完整解压对应平台的 Release；动态库与资源包必须同版本，宿主进程与库架构一致。macOS 请替换目录名。无需 Node，也无需自行编译 Chromium。
+[Requirements](#requirements) · [Get the files](#get-the-files) · [Run](#run) · [How it works](#how-it-works) · [Python notes](#python-notes) · [See also](#see-also) · [License](#license)
 
-## Run / 运行
+## Requirements
 
-Start in the repository root. / 从仓库根目录执行。
+- Python 3.9 or newer (standard library only; no third-party dependencies required)
+- 7-Zip (`7z`) to extract release packages
+- Prebuilt engine binary matching target Python interpreter architecture
 
-Linux / macOS:
+## Get the files
+
+This demo is distributed as `shotium-python-example-v<version>.zip` on the [Releases page](https://github.com/sj817/shotium/releases), identical to `apps/python` in the repository; download the matching platform archive from the same release and extract it into `native/`:
 
 ```bash
-python3 apps/python/screenshot.py apps/native/shotium-linux-amd64 apps/fixtures/hello.html python.png
+# Linux / macOS, from this directory
+version=v0.7.0
+platform=linux-amd64        # linux-arm64, macos-amd64, or macos-arm64
+curl -fLO "https://github.com/sj817/shotium/releases/download/$version/shotium-$platform-$version.7z"
+7z x "shotium-$platform-$version.7z" -onative
 ```
-
-Windows PowerShell:
 
 ```powershell
-python apps/python/screenshot.py apps/native/shotium-windows-amd64 apps/fixtures/hello.html python.png
+# Windows PowerShell, from this directory
+$version = 'v0.7.0'
+$platform = 'windows-amd64'   # or windows-arm64
+curl.exe -fLO "https://github.com/sj817/shotium/releases/download/$version/shotium-$platform-$version.7z"
+7z x "shotium-$platform-$version.7z" -onative
 ```
 
-Arguments: `<library-dir> <input.html> <output.png>`. The first argument also becomes `resourceDir`. The example renders at 800×600, explicitly permits local input, prints capture stats and writes PNG bytes. For a locally built engine, substitute `out/Shot` (Go: `../../out/Shot` after changing directory).
+Extraction yields `native/shotium-<platform>/` containing the shared library, `shot_api.h`, and the two `.pak` resource files; keep these files together from the matching release
 
-参数分别为动态库目录、输入 HTML、输出 PNG。示例显式设置资源目录、本地文件权限和 800×600 视口，打印统计并保存 PNG。使用本机构建时替换为 `out/Shot`（Go 切换目录后为 `../../out/Shot`）。
+## Run
 
-## Failures and ownership / 错误与所有权
+```bash
+python3 screenshot.py native/shotium-linux-amd64 card.html card.png
+```
 
-Replace the input with a nonexistent file: the program must exit nonzero, print `capture failed (2)` and any available failure statistics, and write no image. ABI mismatches are rejected before engine creation. ctypes declares every argument and return type, including pointer-sized `size_t`. Native bytes are copied before `shot_buffer_free`; the engine is destroyed in `finally`. / 显式声明函数签名，复制后释放缓冲区，finally 销毁引擎。
+On Windows, the interpreter executable is typically `python`; positional arguments are `<library-dir> <input.html> <output.png>`, where `<library-dir>` is also passed to the engine as `resourceDir`; the script renders `card.html` at 720×380, prints capture statistics JSON to stdout, and writes `card.png` (pixel-identical to output from the `shotium` CLI)
 
-输入不存在的文件可验证失败路径：非零退出码、错误原因和可用失败统计，不产生图片。每个进程只能创建一次引擎；重复截图复用它，销毁后不能重建。动态库保持加载直到进程退出。
+Providing a nonexistent input file demonstrates the error handling flow: exit code is 1, stderr outputs `capture failed (2): ...`, statistics are still reported, and no output image is generated
 
-The examples use only capture functions; the shared guide also documents file output, tiles, cache operations and memory release. The shipped `shot_api.h` is the authoritative API. / 文件输出、分片、缓存等见通用文档，完整接口以同包头文件为准。
+When testing against local engine build artifacts, specify `../../out/Shot` as the library directory
+
+## How it works
+
+`screenshot.py` demonstrates the complete invocation lifecycle:
+
+```python
+lib = ctypes.CDLL(str(directory / "libshotium.so"))   # stays loaded for the process lifetime
+ptr, out = ctypes.c_void_p, ctypes.POINTER(ctypes.c_void_p)
+lib.shot_abi_version.restype = ctypes.c_int32
+lib.shot_engine_create.argtypes = [ctypes.c_char_p, out, out]
+lib.shot_engine_capture.argtypes = [ptr, ctypes.c_char_p, out, out, out]
+lib.shot_buffer_size.restype = ctypes.c_size_t
+lib.shot_buffer_data.restype = ptr
+# ... shot_engine_destroy, shot_buffer_free
+
+if lib.shot_abi_version() != 3:
+    raise RuntimeError("C ABI mismatch")
+
+engine = ptr()
+error = ptr()
+if lib.shot_engine_create(json.dumps({"resourceDir": str(directory)}).encode(), byref(engine), byref(error)):
+    raise RuntimeError(take(error))          # take() copies the bytes, then frees the buffer
+
+try:
+    image = ptr()
+    stats = ptr()
+    error = ptr()
+    request = {
+        "file": str(input.resolve()),
+        "allowFileAccess": True,
+        "width": 720,
+        "height": 380,
+    }
+    status = lib.shot_engine_capture(engine, json.dumps(request).encode(), byref(image), byref(stats), byref(error))
+    data, statistics, message = take(image), take(stats), take(error)
+    print(statistics)                        # present on failure too
+    if status:
+        raise RuntimeError(f"capture failed ({status}): {message}")
+    output.write_bytes(data)
+finally:
+    lib.shot_engine_destroy(engine)
+```
+
+## Python notes
+
+- Explicitly declare `argtypes` and `restype` for every C function before invoking it; without explicit signatures, `ctypes` treats pointer types as 32-bit integers on 64-bit Windows (`shot_buffer_size` must return `ctypes.c_size_t`)
+- The `take()` helper uses `ctypes.string_at` with `shot_buffer_size` to copy native buffer memory into a Python `bytes` object before calling `shot_buffer_free()`; native memory is never transferred to Python's memory allocator
+- Engine destruction is enclosed in a `finally` block to ensure engine background threads are joined and cleaned up even if exceptions are raised
+- Input paths should be resolved to absolute paths before serialization into JSON, preventing ambiguity with the engine's internal working directory
+
+## See also
+
+Complete ownership contracts, request options, performance statistics, tiling, and cache maintenance APIs are detailed in the [C ABI Guide](../c-abi/README.md); the C header `shot_api.h` serves as the authoritative interface specification
+
+## License
+
+BSD-3-Clause, matching upstream Chromium. See [LICENSE](../../LICENSE)
+

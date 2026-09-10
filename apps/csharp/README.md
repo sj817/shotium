@@ -1,39 +1,139 @@
-# C# / .NET C ABI demo
+# shotium C# demo
 
-This is a source example, **not a published Shotium language package**. It loads the precompiled shared library directly in the host process. / 这是源码示例，不发布独立语言包；直接加载预编译 C ABI 动态库。
+English · [简体中文](./README.zh.md)
 
-## Prepare / 准备
+[![.NET](https://img.shields.io/badge/.NET-8.0+-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/) [![P/Invoke](https://img.shields.io/badge/FFI-P%2FInvoke%20(zero%20deps)-blue.svg)](https://learn.microsoft.com/dotnet/standard/native-interop/pinvoke) [![platforms](https://img.shields.io/badge/platforms-win%20%7C%20mac%20%7C%20linux%20%C2%B7%20x64%20%7C%20arm64-4c8.svg)](https://github.com/sj817/shotium/releases) [![license](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](../../LICENSE)
 
-.NET 8 SDK or newer with the .NET 8 runtime; no NuGet dependencies. / .NET 8 SDK 与运行时，不需要额外 NuGet 包。
+Demonstrates rendering HTML via the shotium C ABI directly from .NET using P/Invoke with no third-party NuGet dependencies; this project is a standalone runnable demo, not a published package
 
-Follow the [shared download and ABI guide](../c-abi/README.md) to extract the matching Release into `apps/native/`. Keep the library and both `.pak` files from the same release. The language runtime and native library must use the same architecture. On macOS, substitute `shotium-macos-arm64` or `shotium-macos-amd64` for the Linux directory below.
+## Table of Contents
 
-先按通用文档下载并完整解压对应平台的 Release；动态库与资源包必须同版本，宿主进程与库架构一致。macOS 请替换目录名。无需 Node，也无需自行编译 Chromium。
+[Requirements](#requirements) · [Get the files](#get-the-files) · [Run](#run) · [How it works](#how-it-works) · [.NET notes](#net-notes) · [See also](#see-also) · [License](#license)
 
-## Run / 运行
+## Requirements
 
-Start in the repository root. / 从仓库根目录执行。
+- .NET SDK 8.0 or newer (targeting `net8.0` with no external package references)
+- 7-Zip (`7z`) to extract release packages
+- Prebuilt engine binary matching target .NET runtime architecture (reported by `dotnet --info` as `RID`)
 
-Linux / macOS:
+## Get the files
+
+This demo is distributed as `shotium-csharp-example-v<version>.zip` on the [Releases page](https://github.com/sj817/shotium/releases), identical to `apps/csharp` in the repository; download the matching platform archive from the same release and extract it into `native/`:
 
 ```bash
-dotnet run --project apps/csharp/ShotiumDemo.csproj -c Release -- apps/native/shotium-linux-amd64 apps/fixtures/hello.html csharp.png
+# Linux / macOS, from this directory
+version=v0.7.0
+platform=linux-amd64        # linux-arm64, macos-amd64, or macos-arm64
+curl -fLO "https://github.com/sj817/shotium/releases/download/$version/shotium-$platform-$version.7z"
+7z x "shotium-$platform-$version.7z" -onative
 ```
-
-Windows PowerShell:
 
 ```powershell
-dotnet run --project apps/csharp/ShotiumDemo.csproj -c Release -- apps/native/shotium-windows-amd64 apps/fixtures/hello.html csharp.png
+# Windows PowerShell, from this directory
+$version = 'v0.7.0'
+$platform = 'windows-amd64'   # or windows-arm64
+curl.exe -fLO "https://github.com/sj817/shotium/releases/download/$version/shotium-$platform-$version.7z"
+7z x "shotium-$platform-$version.7z" -onative
 ```
 
-Arguments: `<library-dir> <input.html> <output.png>`. The first argument also becomes `resourceDir`. The example renders at 800×600, explicitly permits local input, prints capture stats and writes PNG bytes. For a locally built engine, substitute `out/Shot` (Go: `../../out/Shot` after changing directory).
+Extraction yields `native/shotium-<platform>/` containing the shared library, `shot_api.h`, and the two `.pak` resource files; keep these files together from the matching release
 
-参数分别为动态库目录、输入 HTML、输出 PNG。示例显式设置资源目录、本地文件权限和 800×600 视口，打印统计并保存 PNG。使用本机构建时替换为 `out/Shot`（Go 切换目录后为 `../../out/Shot`）。
+## Run
 
-## Failures and ownership / 错误与所有权
+```bash
+dotnet run -c Release -- native/shotium-linux-amd64 card.html card.png
+```
 
-Replace the input with a nonexistent file: the program must exit nonzero, print `capture failed (2)` and any available failure statistics, and write no image. ABI mismatches are rejected before engine creation. P/Invoke uses cdecl, UTF-8 strings, IntPtr handles and nuint lengths. NativeLibrary resolves the explicit file; finally blocks free every native result. / 使用 cdecl、UTF-8、指针宽度长度，finally 释放资源。
+Positional arguments are `<library-dir> <input.html> <output.png>`, where `<library-dir>` is also passed to the engine as `resourceDir`; the program renders `card.html` at 720×380, prints capture statistics JSON to stdout, and writes `card.png` (pixel-identical to output from the `shotium` CLI)
 
-输入不存在的文件可验证失败路径：非零退出码、错误原因和可用失败统计，不产生图片。每个进程只能创建一次引擎；重复截图复用它，销毁后不能重建。动态库保持加载直到进程退出。
+Providing a nonexistent input file demonstrates the error handling flow: exit code is 1, stderr outputs `capture failed (2): ...`, statistics are still reported, and no output image is generated
 
-The examples use only capture functions; the shared guide also documents file output, tiles, cache operations and memory release. The shipped `shot_api.h` is the authoritative API. / 文件输出、分片、缓存等见通用文档，完整接口以同包头文件为准。
+When testing against local engine build artifacts, specify `../../out/Shot` as the library directory
+
+## How it works
+
+`Program.cs` demonstrates the complete invocation lifecycle; P/Invoke declarations target `shotium`, resolved dynamically to the library path via `SetDllImportResolver`:
+
+```csharp
+var library = NativeLibrary.Load(Path.Combine(directory, "libshotium.so")); // kept loaded for process lifetime
+NativeLibrary.SetDllImportResolver(typeof(Shotium).Assembly, (name, _, _) => name == "shotium" ? library : IntPtr.Zero);
+
+if (Shotium.shot_abi_version() != 3)
+{
+    throw new InvalidOperationException("C ABI mismatch");
+}
+
+var status = Shotium.shot_engine_create(JsonSerializer.Serialize(new { resourceDir = directory }), out var engine, out var error);
+var message = Shotium.TakeText(error); // copies data, then calls shot_buffer_free
+if (status != 0)
+{
+    throw new InvalidOperationException($"create failed ({status}): {message}");
+}
+
+try
+{
+    var request = JsonSerializer.Serialize(new
+    {
+        file = Path.GetFullPath(args[1]),
+        allowFileAccess = true,
+        width = 720,
+        height = 380,
+        type = "png"
+    });
+    status = Shotium.shot_engine_capture(engine, request, out var image, out var stats, out error);
+    try
+    {
+        if (stats != IntPtr.Zero)
+        {
+            Console.WriteLine(Shotium.Text(stats)); // present on failure too
+        }
+        if (status != 0)
+        {
+            throw new InvalidOperationException($"capture failed ({status}): {Shotium.Text(error)}");
+        }
+        File.WriteAllBytes(args[2], Shotium.Bytes(image));
+    }
+    finally
+    {
+        Shotium.shot_buffer_free(image);
+        Shotium.shot_buffer_free(stats);
+        Shotium.shot_buffer_free(error);
+    }
+}
+finally
+{
+    Shotium.shot_engine_destroy(engine);
+}
+
+static class Shotium
+{
+    [DllImport("shotium", CallingConvention = CallingConvention.Cdecl)]
+    internal static extern int shot_engine_capture(
+        IntPtr engine,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string request,
+        out IntPtr image,
+        out IntPtr stats,
+        out IntPtr error);
+
+    [DllImport("shotium", CallingConvention = CallingConvention.Cdecl)]
+    internal static extern nuint shot_buffer_size(IntPtr buffer);
+    // ... shot_abi_version, shot_engine_create, shot_engine_destroy, shot_buffer_data, shot_buffer_free
+}
+```
+
+## .NET notes
+
+- String arguments require explicit `UnmanagedType.LPUTF8Str` marshalling; the engine expects UTF-8 encoding, whereas default .NET string marshalling on Windows uses ANSI
+- `shot_buffer_size` returns `size_t`, represented in C# as `nuint`; native handles and pointers are typed as `IntPtr`; the calling convention is `CallingConvention.Cdecl` across all platforms
+- The `Bytes()` helper uses `Marshal.Copy` to copy native memory into a managed byte array before releasing the buffer; native memory must only be freed via `shot_buffer_free()` (calling `Marshal.FreeHGlobal` corrupts the native heap)
+- The library handle returned by `NativeLibrary.Load` is kept loaded for the process lifetime and never passed to `NativeLibrary.Free`, ensuring engine worker threads and thread-local storage remain intact
+- Enclosing operations in `finally` blocks guarantees all native buffers and engine instances are freed even if an exception occurs during capture
+
+## See also
+
+Complete ownership contracts, request options, performance statistics, tiling, and cache maintenance APIs are detailed in the [C ABI Guide](../c-abi/README.md); the C header `shot_api.h` serves as the authoritative interface specification
+
+## License
+
+BSD-3-Clause, matching upstream Chromium. See [LICENSE](../../LICENSE)
+

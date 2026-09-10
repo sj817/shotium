@@ -1,39 +1,112 @@
-# Rust C ABI demo
+# shotium Rust demo
 
-This is a source example, **not a published Shotium language package**. It loads the precompiled shared library directly in the host process. / 这是源码示例，不发布独立语言包；直接加载预编译 C ABI 动态库。
+English · [简体中文](./README.zh.md)
 
-## Prepare / 准备
+[![Rust](https://img.shields.io/badge/Rust-1.85+-orange?logo=rust&logoColor=white)](https://rust-lang.org/) [![libloading](https://img.shields.io/badge/FFI-libloading-blue.svg)](https://crates.io/crates/libloading) [![platforms](https://img.shields.io/badge/platforms-win%20%7C%20mac%20%7C%20linux%20%C2%B7%20x64%20%7C%20arm64-4c8.svg)](https://github.com/sj817/shotium/releases) [![license](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](../../LICENSE)
 
-Rust 1.85+ and Cargo; pinned libloading/serde_json, committed Cargo.lock. This crate has publish=false. / 示例 crate 禁止发布，不需要编译引擎。
+Demonstrates rendering HTML via the shotium C ABI directly from Rust using `libloading` with RAII encapsulation for native handles; this project is a standalone runnable example crate (`publish = false`), not a published crate on crates.io
 
-Follow the [shared download and ABI guide](../c-abi/README.md) to extract the matching Release into `apps/native/`. Keep the library and both `.pak` files from the same release. The language runtime and native library must use the same architecture. On macOS, substitute `shotium-macos-arm64` or `shotium-macos-amd64` for the Linux directory below.
+## Table of Contents
 
-先按通用文档下载并完整解压对应平台的 Release；动态库与资源包必须同版本，宿主进程与库架构一致。macOS 请替换目录名。无需 Node，也无需自行编译 Chromium。
+[Requirements](#requirements) · [Get the files](#get-the-files) · [Run](#run) · [How it works](#how-it-works) · [Rust notes](#rust-notes) · [See also](#see-also) · [License](#license)
 
-## Run / 运行
+## Requirements
 
-Start in the repository root. / 从仓库根目录执行。
+- Rust 1.85 or newer and Cargo (`libloading` and `serde_json` are pinned in `Cargo.lock`)
+- 7-Zip (`7z`) to extract release packages
+- Prebuilt engine binary matching target host architecture (as reported by `rustc -vV`)
 
-Linux / macOS:
+## Get the files
+
+This demo is distributed as `shotium-rust-example-v<version>.zip` on the [Releases page](https://github.com/sj817/shotium/releases), identical to `apps/rust` in the repository; download the matching platform archive from the same release and extract it into `native/`:
 
 ```bash
-cargo run --manifest-path apps/rust/Cargo.toml --release --locked -- apps/native/shotium-linux-amd64 apps/fixtures/hello.html rust.png
+# Linux / macOS, from this directory
+version=v0.7.0
+platform=linux-amd64        # linux-arm64, macos-amd64, or macos-arm64
+curl -fLO "https://github.com/sj817/shotium/releases/download/$version/shotium-$platform-$version.7z"
+7z x "shotium-$platform-$version.7z" -onative
 ```
-
-Windows PowerShell:
 
 ```powershell
-cargo run --manifest-path apps/rust/Cargo.toml --release --locked -- apps/native/shotium-windows-amd64 apps/fixtures/hello.html rust.png
+# Windows PowerShell, from this directory
+$version = 'v0.7.0'
+$platform = 'windows-amd64'   # or windows-arm64
+curl.exe -fLO "https://github.com/sj817/shotium/releases/download/$version/shotium-$platform-$version.7z"
+7z x "shotium-$platform-$version.7z" -onative
 ```
 
-Arguments: `<library-dir> <input.html> <output.png>`. The first argument also becomes `resourceDir`. The example renders at 800×600, explicitly permits local input, prints capture stats and writes PNG bytes. For a locally built engine, substitute `out/Shot` (Go: `../../out/Shot` after changing directory).
+Extraction yields `native/shotium-<platform>/` containing the shared library, `shot_api.h`, and the two `.pak` resource files; keep these files together from the matching release
 
-参数分别为动态库目录、输入 HTML、输出 PNG。示例显式设置资源目录、本地文件权限和 800×600 视口，打印统计并保存 PNG。使用本机构建时替换为 `out/Shot`（Go 切换目录后为 `../../out/Shot`）。
+## Run
 
-## Failures and ownership / 错误与所有权
+```bash
+cargo run --release --locked -- native/shotium-linux-amd64 card.html card.png
+```
 
-Replace the input with a nonexistent file: the program must exit nonzero, print `capture failed (2)` and any available failure statistics, and write no image. ABI mismatches are rejected before engine creation. RAII guards free native buffers and destroy the engine, including early error returns. The library stays mapped for the process lifetime. / RAII 保证错误提前返回时仍释放资源，动态库保留到进程退出。
+Positional arguments are `<library-dir> <input.html> <output.png>`, where `<library-dir>` is also passed to the engine as `resourceDir`; the program renders `card.html` at 720×380, prints capture statistics JSON to stdout, and writes `card.png` (pixel-identical to output from the `shotium` CLI)
 
-输入不存在的文件可验证失败路径：非零退出码、错误原因和可用失败统计，不产生图片。每个进程只能创建一次引擎；重复截图复用它，销毁后不能重建。动态库保持加载直到进程退出。
+Providing a nonexistent input file demonstrates the error handling flow: exit code is 1, stderr outputs `capture failed (2): ...`, statistics are still reported, and no output image is generated
 
-The examples use only capture functions; the shared guide also documents file output, tiles, cache operations and memory release. The shipped `shot_api.h` is the authoritative API. / 文件输出、分片、缓存等见通用文档，完整接口以同包头文件为准。
+When testing against local engine build artifacts, specify `../../out/Shot` as the library directory
+
+## How it works
+
+`src/main.rs` demonstrates the complete invocation lifecycle, encapsulating native resource handles via RAII to ensure deterministic cleanup on error or early return:
+
+```rust
+struct Buffer<'a>(&'a Api, Handle); // Drop → shot_buffer_free
+struct Engine<'a>(&'a Api, Handle); // Drop → shot_engine_destroy
+
+let library = ManuallyDrop::new(unsafe { Library::new(directory.join("libshotium.so"))? });
+let abi = unsafe { library.get::<unsafe extern "C" fn() -> i32>(b"shot_abi_version\0")? };
+if unsafe { abi() } != 3 {
+    return Err("C ABI mismatch".into());
+}
+
+let api = Api {
+    create: *library.get(b"shot_engine_create\0")?,
+    /* capture, destroy, data, size, free... */
+    _library: library,
+};
+
+let (mut handle, mut error) = (ptr::null_mut(), ptr::null_mut());
+let status = unsafe { (api.create)(options.as_ptr(), &mut handle, &mut error) };
+let error = Buffer(&api, error);
+if status != 0 {
+    return Err(error.text().into());
+}
+let engine = Engine(&api, handle);
+
+let (mut image, mut stats, mut error) = (ptr::null_mut(), ptr::null_mut(), ptr::null_mut());
+let status = unsafe { (api.capture)(engine.1, request.as_ptr(), &mut image, &mut stats, &mut error) };
+let image = Buffer(&api, image);
+let stats = Buffer(&api, stats);
+let error = Buffer(&api, error);
+
+if !stats.1.is_null() {
+    println!("{}", stats.text()); // present on failure too
+}
+if status != 0 {
+    return Err(format!("capture failed ({status}): {}", error.text()).into());
+}
+
+fs::write("card.png", image.bytes())?;
+```
+
+## Rust notes
+
+- `Library` is wrapped in `ManuallyDrop` to prevent `dlclose`; the engine maintains background threads and thread-local state; unloading the library while these threads are active causes undefined behavior
+- `Buffer::bytes()` constructs a byte slice bounded by the lifetime of `Buffer` using `shot_buffer_data` and `shot_buffer_size`; the `Drop` implementation calls `shot_buffer_free()`, never Rust's memory allocator
+- Leveraging Rust's lexical scoping and variable declaration order, `Engine` is dropped only after all `Buffer` instances borrowing `Api` have been dropped
+- The input path is converted to an absolute path without calling `canonicalize()`, allowing nonexistent file paths to reach the engine and verify C ABI error handling and diagnostic stats
+- Dynamic library loading triggers library initialization routines; ensure only trusted, architecture-compatible binaries are loaded
+
+## See also
+
+Complete ownership contracts, request options, performance statistics, tiling, and cache maintenance APIs are detailed in the [C ABI Guide](../c-abi/README.md); the C header `shot_api.h` serves as the authoritative interface specification
+
+## License
+
+BSD-3-Clause, matching upstream Chromium. See [LICENSE](../../LICENSE)
+
