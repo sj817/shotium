@@ -95,7 +95,7 @@ async function main(): Promise<void> {
   assert(derived.endpoint.includes(expectedKey), `configuration endpoint omitted protocol generation: ${derived.endpoint}`);
 
   const endpoint = fakeEndpoint('legacy');
-  let advertised: Status = {version: '0.4.0'};
+  let advertised: Status = {version: '0.7.4'};
   const fake = await fakeDaemon(endpoint, () => advertised);
   try {
     await assert.rejects(shotium.daemon.connect({endpoint}), /wire protocol legacy\/unversioned .* requires 2/);
