@@ -199,7 +199,21 @@ build loop. Read the affected workflow and source action for CI changes.
   which runs the package suites (`verify:node`, `node-entry`,
   `bilibili --package`, `daemon`, `daemon-protocol`) against the linux-amd64
   engine. A package-only PR meets a real engine in minutes; `engine.yml`
-  does not listen to `pull_request` itself.
+  does not listen to `pull_request` itself. Its `preview` job then
+  assembles the six platform packages from the node archives
+  (`pnpm package:platform --from-archive`), publishes all seven packages
+  to pkg.pr.new (one comment per PR, updated on every push; the pkg.pr.new
+  GitHub App must be installed on the repository), and installs the main
+  package from the preview URL in a clean directory to render
+  `apps/demo-card/card.html` as the smoke test. Pull requests from forks
+  get the engine and the contract suite, not the preview.
+- [refresh.yml](../../.github/workflows/refresh.yml) re-uploads, on the
+  first of each month and on dispatch, the engine, evidence and
+  build-directory artifacts of `main`'s current fingerprint so a quiet
+  stretch never lets them expire. An expired engine costs one build of
+  that platform at the next push or release, so this is a convenience;
+  GitHub pauses schedules after 60 days without repository activity, and
+  a dispatch does the same job.
 - [checks.yml](../../.github/workflows/checks.yml) runs package/harness/tooling
   checks without an engine, including packaging tests and actual example
   compression/extraction, and the fingerprint/artifact tests on every
