@@ -14,7 +14,7 @@ import {
   SHARD_IDS,
   currentPlatformId,
 } from './constants.ts';
-import {packageVersions, probeEngine} from './engines.ts';
+import {measureWindowInset, packageVersions, probeEngine} from './engines.ts';
 import {benchmarkDaemonName} from './daemon-name.ts';
 import {ProductError, isProductError} from './errors.ts';
 import {startFixtureServer, loadCases} from './fixtures.ts';
@@ -373,6 +373,32 @@ async function main() {
     progress(`warning: the idle floor pushed the CPU gate past ${SETTLE.cpuLimitMax}%; ` +
       'this runner is too loud for the host CPU check to mean much');
   }
+  const probes = [];
+  for (const engine of ENGINE_IDS) probes.push(await probeEngine(engine));
+  // Playwright pages take the viewport from their window, not from emulation
+  // (see `playwrightLaunchArgs`), so each shard measures how much of a headless
+  // window the browser's own chrome takes and opens windows that much larger.
+  // Measured once here, outside the timed regions. Without a reading the
+  // engine would capture the wrong size in every cell, so it does not run.
+  const windowInsets = {};
+  for (const probe of probes) {
+    if (probe.status !== 'pass' || !probe.engine.startsWith('playwright-')) continue;
+    try {
+      const inset = await measureWindowInset(probe.engine);
+      windowInsets[probe.engine] = {width: inset.width, height: inset.height};
+      probe.window_inset = inset;
+      progress(`  ${probe.engine}: headless window ${inset.window.width}x${inset.window.height}, ` +
+        `tab container ${inset.container.width}x${inset.container.height}, ` +
+        `inset ${inset.width}x${inset.height}`);
+    } catch (error) {
+      probe.window_inset = null;
+      probe.status = 'infra-error';
+      probe.reason = `window inset probe failed: ${String(error?.stack || error)}`;
+      progress(`  ${probe.engine}: window inset probe failed, engine skipped: ${String(error)}`);
+    }
+  }
+  const runnable = probes.filter((probe) => probe.status === 'pass').map((probe) => probe.engine);
+
   const config = {
     shard,
     profile,
@@ -384,6 +410,7 @@ async function main() {
     telemetryDirectory,
     tempProfileDirectory,
     daemonIdentity: {runId: benchmarkRunId, platform},
+    windowInsets,
     stability: {
       cpu_limit: stability.cpu_limit,
       idle_cpu_p50: stability.idle_cpu_p50,
@@ -392,10 +419,6 @@ async function main() {
   };
   const configFile = path.join(artifactDirectory, 'run-config.json');
   writeJson(configFile, config);
-
-  const probes = [];
-  for (const engine of ENGINE_IDS) probes.push(await probeEngine(engine));
-  const runnable = probes.filter((probe) => probe.status === 'pass').map((probe) => probe.engine);
   const rows = [];
   const quality = [];
   const failures = [];
@@ -577,10 +600,12 @@ async function main() {
       output: 'png',
       wait_until: 'load',
       visual_readiness: 'fonts-ready-and-two-animation-frames-or-native-paint-clean',
-      browser_launch_policy: 'package-default-except-linux-sandbox',
+      browser_launch_policy: 'package-default-except-linux-sandbox; ' +
+        'playwright-window-size-viewport-plus-measured-inset-and-device-scale-factor-1',
       image_correctness: 'pixelmatch-threshold-0.1; exact-rgba-retained-as-diagnostic',
       warmup_policy: 'three-fixed-warmups; latency-and-rss-variation-recorded-not-gated',
-      default_page_policy: 'new-page; puppeteer-pages-created-as-their-own-window',
+      default_page_policy: 'new-page; puppeteer-pages-created-as-their-own-window; ' +
+        'playwright-viewport-from-the-window-not-emulated',
       default_cache_policy: 'disabled-or-no-store',
       reuse_page_scenario_is_separate: true,
     },

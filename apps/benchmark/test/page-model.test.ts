@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {createEngine} from '../src/engines.ts';
+import {PLAYWRIGHT_CONTEXT_OPTIONS, createEngine, playwrightLaunchArgs} from '../src/engines.ts';
 
 function recordingContext(requests: any[]) {
   return {
@@ -36,4 +36,21 @@ test('Playwright captures keep the package default page model', async () => {
   engine.context = recordingContext(requests);
   await engine.shot('about:blank');
   assert.deepEqual(requests, [undefined]);
+});
+
+// Playwright pages take the viewport from their window: a context viewport
+// makes Playwright size every page's headless window to the viewport as if it
+// had no chrome, the tab container comes out smaller, and on macOS a page
+// re-attached after a sibling tab closes shrinks to it, so the next capture
+// resizes the widget while copying and can come back tiled. The window is
+// opened at the viewport plus the measured inset instead, and no page is
+// emulated or resized.
+test('Playwright windows are opened at the viewport plus the measured inset', () => {
+  assert.deepEqual(playwrightLaunchArgs({width: 0, height: 87}),
+      ['--window-size=1280,807', '--force-device-scale-factor=1']);
+  assert.deepEqual(playwrightLaunchArgs({width: 16, height: 95}),
+      ['--window-size=1296,815', '--force-device-scale-factor=1']);
+  assert.deepEqual(playwrightLaunchArgs(null),
+      ['--window-size=1280,720', '--force-device-scale-factor=1']);
+  assert.deepEqual(PLAYWRIGHT_CONTEXT_OPTIONS, {viewport: null});
 });

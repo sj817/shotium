@@ -116,6 +116,14 @@
   },
   "$defs": {
     "status": {"enum": ["pass", "fail", "noisy", "n/a", "infra-error"]},
+    "size": {
+      "type": "object",
+      "required": ["width", "height"],
+      "properties": {
+        "width": {"type": "integer", "minimum": 1},
+        "height": {"type": "integer", "minimum": 1}
+      }
+    },
     "distribution": {
       "oneOf": [
         {"type": "null"},
@@ -211,7 +219,17 @@
         "architectures": {"type": "array", "items": {"type": "string", "minLength": 1}},
         "sha256": {"type": "string"},
         "binary_version": {"type": ["string", "null"]},
-        "binaries": {"type": "array"}
+        "binaries": {"type": "array"},
+        "window_inset": {
+          "type": ["object", "null"],
+          "required": ["width", "height", "window", "container"],
+          "properties": {
+            "width": {"type": "integer", "minimum": 0},
+            "height": {"type": "integer", "minimum": 0},
+            "window": {"$ref": "#/$defs/size"},
+            "container": {"$ref": "#/$defs/size"}
+          }
+        }
       },
       "additionalProperties": true,
       "allOf": [

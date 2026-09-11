@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {createRequire} from 'node:module';
 import {execa} from 'execa';
+import {PNG} from 'pngjs';
 import {isNativeBinary} from './binary-architecture.ts';
 import {BROWSER_OPERATION_TIMEOUT_MS, VIEWPORT, currentPlatformId} from './constants.ts';
 
@@ -272,8 +273,39 @@ async function puppeteerDefinition(name, headless, options) {
   });
 }
 
+// Playwright pages take the viewport from their window instead of from device
+// emulation. With a context viewport, Playwright sizes every new page's
+// headless window to the viewport as if the window had no chrome, but Chrome's
+// own headless mode keeps its tab strip and toolbar (macOS: 87 px; Windows:
+// 16 x 95 px with the frame borders), so the tab container is smaller than the
+// viewport. Emulation sizes the page's widget to the viewport anyway, and on
+// macOS a page re-attached to the container after a sibling tab closes shrinks
+// back to it; the next `Page.captureScreenshot` grows the widget while it
+// copies, and the copy sometimes lands on the pre-resize frame, which Chromium
+// tiles to the requested size (rows 633-719 repeat rows 0-86). Every recurring
+// playwright-chrome evidence failure on macOS was that frame, and it needs two
+// or more pages. Growing each page's window over CDP removed it but cost two
+// window resizes per capture, because Playwright shrinks the window again for
+// every page: playwright-chrome latency rose 70-85% on the Intel macOS runner.
+// A window whose content area already is the viewport needs no emulation and
+// nothing per page: the widget is created at the viewport, nothing resizes at
+// screenshot time, and the fixtures render byte-identically to the emulated
+// viewport. `--force-device-scale-factor=1` stands in for the context's
+// `deviceScaleFactor: 1`, which Playwright rejects without a viewport. The
+// inset is measured once per shard by `measureWindowInset`.
+export function playwrightLaunchArgs(windowInset = null) {
+  const inset = windowInset || {width: 0, height: 0};
+  return [
+    `--window-size=${VIEWPORT.width + inset.width},${VIEWPORT.height + inset.height}`,
+    '--force-device-scale-factor=1',
+  ];
+}
+
+export const PLAYWRIGHT_CONTEXT_OPTIONS = Object.freeze({viewport: null});
+
 async function playwrightDefinition(name, channel, options) {
   const policy = competitorChromiumPolicy();
+  const args = playwrightLaunchArgs(options.windowInset);
   return new ChromeEngine({
     name,
     reusePage: options.reusePage,
@@ -282,14 +314,13 @@ async function playwrightDefinition(name, channel, options) {
     launch: async () => {
       // Keep package loading inside the same timed region as Shotium.
       const {chromium} = await import('playwright');
-      const newContext = (browser) => browser.newContext({viewport: VIEWPORT, deviceScaleFactor: 1});
       if (options.profileDir) {
         const context = await chromium.launchPersistentContext(options.profileDir, {
           headless: true,
           channel,
           chromiumSandbox: policy.playwrightChromiumSandbox,
-          viewport: VIEWPORT,
-          deviceScaleFactor: 1,
+          args,
+          ...PLAYWRIGHT_CONTEXT_OPTIONS,
         });
         return {browser: context.browser(), context};
       }
@@ -297,16 +328,61 @@ async function playwrightDefinition(name, channel, options) {
         headless: true,
         channel,
         chromiumSandbox: policy.playwrightChromiumSandbox,
+        args,
       });
-      return {browser, context: await newContext(browser)};
+      return {browser, context: await browser.newContext(PLAYWRIGHT_CONTEXT_OPTIONS)};
     },
     connect: async (endpoint) => {
       const {chromium} = await import('playwright');
-      const newContext = (browser) => browser.newContext({viewport: VIEWPORT, deviceScaleFactor: 1});
       const browser = await chromium.connect(endpoint.wsEndpoint);
-      return {browser, context: await newContext(browser)};
+      return {browser, context: await browser.newContext(PLAYWRIGHT_CONTEXT_OPTIONS)};
     },
   });
+}
+
+// Measures how much of a Playwright headless window the browser's own chrome
+// takes, in CSS pixels: a window opened at the viewport minus the size of a
+// capture of its page, which without emulation is the tab container. Runs
+// once per shard, outside every timed region, and needs no fixture.
+//
+// `Page.captureScreenshot` fails with "Unable to capture screenshot" while the
+// new page has not presented a frame yet, which a macOS arm64 runner hit on the
+// first attempt, so the probe waits for a painted frame and retries: the whole
+// shard's Playwright engines depend on this reading.
+export async function measureWindowInset(name, {attempts = 3} = {}) {
+  const engine: any = await createEngine(name);
+  await engine.launch();
+  try {
+    const page = await engine.context.newPage();
+    const session = await engine.context.newCDPSession(page);
+    try {
+      const {bounds} = await session.send('Browser.getWindowForTarget');
+      let lastError;
+      for (let attempt = 1; attempt <= attempts; attempt += 1) {
+        try {
+          await page.goto('about:blank', {waitUntil: 'load'});
+          await waitForVisualReady(page, BROWSER_OPERATION_TIMEOUT_MS);
+          const {data} = await session.send('Page.captureScreenshot', {format: 'png'});
+          const container = PNG.sync.read(Buffer.from(data, 'base64'));
+          return {
+            width: Math.max(0, bounds.width - container.width),
+            height: Math.max(0, bounds.height - container.height),
+            window: {width: bounds.width, height: bounds.height},
+            container: {width: container.width, height: container.height},
+          };
+        } catch (error) {
+          lastError = error;
+          await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
+        }
+      }
+      throw lastError;
+    } finally {
+      await session.detach().catch(() => {});
+      await page.close().catch(() => {});
+    }
+  } finally {
+    await engine.close();
+  }
 }
 
 export async function createEngine(name, options = {}) {
