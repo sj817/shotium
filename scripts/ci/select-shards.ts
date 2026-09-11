@@ -1,16 +1,25 @@
-// Warm release/documentation runs need one runner, not N copies of source sync.
-// This only selects parallelism: ninja and all existing checks still run.
+// How many runners an engine build gets, and which saved build directory
+// they all start from.
+//
+// why: a cold build of this tree needs four shards to finish inside the job
+// limit; a warm one -- the build directory saved by the previous run, with
+// nothing changed since -- needs one, and three more would each pay the
+// full source setup to compile nothing. The build directories are
+// artifacts named build-dir-<platform>, and each carries a marker naming
+// the engine fingerprint it was saved at. If a marker for this run's
+// fingerprint exists beside a blob, nothing needs compiling: one runner,
+// which restores that blob and relinks. Otherwise the newest trusted blob
+// is the warm start and the platform default decides the shard count.
+//
+// This only selects parallelism and the starting point: ninja and all the
+// checks still run. Anything that goes wrong here -- no token, an API
+// hiccup, no artifact yet -- falls back to a cold-shaped run, which is
+// slower and never wrong.
 import {appendFileSync} from 'node:fs';
 import path from 'node:path';
 
-export function changesNeedCompilation(files: string[]): boolean {
-  return files.some((file) => !(
-    file === 'apps/typescript/package.json' ||
-    /^(README(?:\.zh)?\.md|CLAUDE\.md|AGENTS\.md|LICENSE)$/.test(file) ||
-    file.startsWith('apps/docs/') ||
-    (file.startsWith('apps/typescript/') && file.endsWith('.md'))
-  ));
-}
+import {platforms} from '../lib/platforms.ts';
+import {environment, findBuildDir} from './engine-artifacts.ts';
 
 export function shardCount(requested: string, platform: string, cpu: string): number {
   if (requested === 'auto') return platform === 'windows' ? 4 : platform === 'linux' ? (cpu === 'arm64' ? 3 : 4) : (cpu === 'arm64' ? 3 : 2);
@@ -18,50 +27,49 @@ export function shardCount(requested: string, platform: string, cpu: string): nu
   return Number(requested);
 }
 
-async function main(): Promise<void> {
-  const {GITHUB_REPOSITORY: repo, GITHUB_REF: ref, GITHUB_SHA: sha, GH_TOKEN: token,
-    GITHUB_OUTPUT: output, SHOT_PLATFORM: platform = '', SHOT_CPU: cpu = '', SHOT_SHARDS: requested = 'auto'} = process.env;
-  let count = shardCount(requested, platform, cpu);
-  if (!['windows', 'linux', 'macos'].includes(platform) || !['x64', 'arm64'].includes(cpu)) throw new Error('invalid platform/cpu');
-  if (requested === 'auto') {
-    try {
-      const api = async (route: string) => {
-        const response = await fetch(`https://api.github.com/repos/${repo}${route ? `/${route}` : ''}`, {
-          headers: {Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json'},
-          signal: AbortSignal.timeout(20_000),
-        });
-        if (!response.ok) throw new Error(`GitHub API ${response.status}`);
-        return response.json();
-      };
-      const prefix = `out-shot-${platform}-${cpu}-`;
-      // Match the branch visibility and newest-first order used by cache restore.
-      const repository = await api('');
-      let caches: {key: string}[] = [];
-      for (const branch of [...new Set([ref, `refs/heads/${repository.default_branch}`])]) {
-        const result = await api(`actions/caches?key=${prefix}&ref=${encodeURIComponent(branch!)}&sort=created_at&direction=desc&per_page=1`);
-        if (result.actions_caches.length) { caches = result.actions_caches; break; }
-      }
-      const runId = caches[0]?.key.slice(prefix.length).match(/^(\d+)(?:-retry)?$/)?.[1];
-      if (runId) {
-        const run = await api(`actions/runs/${runId}`);
-        if (run.conclusion === 'success') {
-          const comparison = await api(`compare/${run.head_sha}...${sha}`);
-          const files = comparison.files as {filename: string; previous_filename?: string}[] | undefined;
-          // GitHub truncates this list at 300. Unknown history stays parallel.
-          if (['ahead', 'identical'].includes(comparison.status) && files && files.length < 300 &&
-              !changesNeedCompilation(files.flatMap((f) => [f.filename, ...(f.previous_filename ? [f.previous_filename] : [])]))) {
-            count = 1;
-            console.log(`Warm cache ${caches[0].key}; no engine input changes: one runner.`);
-          }
-        }
-      }
-    } catch (error) {
-      console.log(`Could not prove warm cache; retaining ${count} shards: ${String(error)}`);
-    }
+export interface Selection {
+  count: number;
+  buildDirRunId: number | null;
+  reason: string;
+}
+
+export async function select(options: {
+  requested: string; platform: string; cpu: string; fingerprint: string | undefined;
+  lookup: (label: string, fingerprint: string | undefined) => Promise<{runId: number; exact: boolean} | null>;
+}): Promise<Selection> {
+  const target = platforms.find((p) => p.os === options.platform && p.cpu === options.cpu);
+  if (!target) throw new Error(`invalid platform/cpu ${options.platform}/${options.cpu}`);
+  const count = shardCount(options.requested, options.platform, options.cpu);
+  let dir: {runId: number; exact: boolean} | null = null;
+  try {
+    dir = await options.lookup(target.label, options.fingerprint);
+  } catch (error) {
+    return {count, buildDirRunId: null, reason: `could not look up a build directory; ${count} shard(s) from nothing: ${String(error)}`};
   }
-  console.log(`Selected ${count} shard(s) for ${platform}-${cpu}.`);
+  if (!dir) return {count, buildDirRunId: null, reason: `no saved build directory for ${target.label}; ${count} shard(s) from nothing`};
+  if (dir.exact && options.requested === 'auto') {
+    return {count: 1, buildDirRunId: dir.runId, reason: `run ${dir.runId} saved a build directory at this fingerprint: one runner, nothing to compile`};
+  }
+  return {count, buildDirRunId: dir.runId, reason: `warm start from run ${dir.runId}; ${count} shard(s)`};
+}
+
+export function outputs(selection: Selection): string {
+  const {count, buildDirRunId} = selection;
+  return `count=${count}\nfinal=${count - 1}\nlist=${JSON.stringify(Array.from({length: count - 1}, (_, i) => i))}\nbuild_dir_run_id=${buildDirRunId ?? ''}\n`;
+}
+
+async function main(): Promise<void> {
+  const {GITHUB_OUTPUT: output, SHOT_PLATFORM: platform = '', SHOT_CPU: cpu = '', SHOT_SHARDS: requested = 'auto', SHOT_FINGERPRINT: fingerprint} = process.env;
+  const selection = await select({
+    requested, platform, cpu, fingerprint: fingerprint || undefined,
+    lookup: async (label, fp) => {
+      const {api, currentRunId} = environment();
+      return findBuildDir(api, label, fp, currentRunId);
+    },
+  });
+  console.log(`${selection.reason}.`);
   if (!output) throw new Error('GITHUB_OUTPUT is required');
-  appendFileSync(output, `count=${count}\nfinal=${count - 1}\nlist=${JSON.stringify(Array.from({length: count - 1}, (_, i) => i))}\n`);
+  appendFileSync(output, outputs(selection));
 }
 
 if (process.argv[1] && path.basename(process.argv[1]) === 'select-shards.ts') {

@@ -34,4 +34,8 @@ test('jobs: only shard jobs count, and only "completed" ends the wait', () => {
   // A prefix that matches nothing is a naming drift, and the caller fails on
   // it rather than assuming the shards are done.
   assert.deepEqual(matchingJobs(jobs, 'compile: shotium-linux-arm64'), []);
+  // Called from engine.yml, the caller's job name comes first.
+  const nested = jobs.map((job) => ({...job, name: `linux (amd64) / ${job.name}`}));
+  assert.equal(matchingJobs(nested, prefix).length, 3);
+  assert.deepEqual(unfinishedJobs(nested, prefix), ['linux (amd64) / compile: shotium-linux-amd64-v0.4.0 1/4']);
 });

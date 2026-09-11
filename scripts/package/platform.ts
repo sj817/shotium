@@ -10,6 +10,13 @@
 //
 //   pnpm package:platform --build out/Shot --os win --arch x64 --dest dist/npm \
 //       --addon out/Shot/shotium.node
+//   pnpm package:platform --from-archive dist/node/shotium-node-windows-amd64.7z \
+//       --os win --arch x64 --dest dist/npm
+//
+// The second form is what ships. The engine job archives the addon and its
+// packs without a version (pnpm package:node); publish.yml, the previews and
+// check-ffi turn that archive into the package for the version at hand, so
+// the version bump commit does not need the engine rebuilt.
 //
 // npm ships the Node addon and the two resource packs it reads. The CLI
 // executable and the C ABI library are GitHub Release artifacts: the addon
@@ -23,11 +30,14 @@
 // registry and this needs neither. Relative paths are resolved against the
 // repository root.
 
-import {chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync} from 'node:fs';
+import {chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync} from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 
 import {cac} from 'cac';
+import {execa} from 'execa';
 
+import {verifyNativeDelivery, type NativeOS} from '../lib/release-artifacts.ts';
 import {resolve} from '../lib/repo.ts';
 
 // This script uses win/linux/mac; public Release archives use windows/linux/macos.
@@ -122,18 +132,49 @@ function main(args: {build: string; os: string; arch: string; dest: string; addo
   process.stdout.write(`${name}@${manifest.version}\n  ${dest}\n${shipped.map((f) => `  ${f}`).join('\n')}\n  ${(bytes / (1024 * 1024)).toFixed(1)} MB unpacked\n`);
 }
 
+// Extract a shotium-node-<platform>.7z and check it is exactly the node
+// delivery before anything is copied out of it.
+async function extractNodeArchive(archive: string, osName: NativeOS, sevenzip: string): Promise<{dir: string; cleanup: () => void}> {
+  const temporary = mkdtempSync(path.join(os.tmpdir(), 'shotium-node-archive-'));
+  const cleanup = () => rmSync(temporary, {recursive: true, force: true});
+  try {
+    await execa(sevenzip, ['x', resolve(archive), `-o${temporary}`, '-y'], {stdio: ['ignore', 'ignore', 'inherit']});
+    const entries = readdirSync(temporary, {withFileTypes: true});
+    if (entries.length !== 1 || !entries[0].isDirectory()) throw new Error(`${archive} must contain exactly one directory`);
+    const dir = path.join(temporary, entries[0].name);
+    await verifyNativeDelivery('node', osName, dir);
+    return {dir, cleanup};
+  } catch (error) {
+    cleanup();
+    throw error;
+  }
+}
+
 const cli = cac('pnpm package:platform');
 cli.command('', 'assemble one @pixel.js/shotium-<os>-<arch> package directory')
     .option('--build <dir>', 'the build directory holding the packs')
+    .option('--addon <file>', 'the GN-built Node addon from this build')
+    .option('--from-archive <file>', 'a shotium-node-<platform>.7z from an engine artifact, instead of --build/--addon')
+    .option('--sevenzip <command>', '7-Zip executable, for --from-archive', {default: process.env.SHOTIUM_SEVENZIP || '7z'})
     .option('--os <name>', 'win, mac or linux')
     .option('--arch <name>', 'x64 or arm64')
     .option('--dest <dir>', 'where the package directory goes')
-    .option('--addon <file>', 'the GN-built Node addon from this build')
-    .action((options: {build?: string; os?: string; arch?: string; dest?: string; addon?: string}) => {
+    .action(async (options: {build?: string; os?: string; arch?: string; dest?: string; addon?: string; fromArchive?: string; sevenzip: string}) => {
       try {
-        for (const required of ['build', 'os', 'arch', 'dest'] as const) {
+        for (const required of ['os', 'arch', 'dest'] as const) {
           if (!options[required]) throw new Error(`--${required} is required`);
         }
+        if (options.fromArchive) {
+          if (options.build || options.addon) throw new Error('--from-archive replaces --build and --addon');
+          const {dir, cleanup} = await extractNodeArchive(options.fromArchive, options.os as NativeOS, options.sevenzip);
+          try {
+            main({build: dir, addon: path.join(dir, 'shotium.node'), os: options.os!, arch: options.arch!, dest: options.dest!});
+          } finally {
+            cleanup();
+          }
+          return;
+        }
+        if (!options.build) throw new Error('--build is required (or --from-archive)');
         main(options as {build: string; os: string; arch: string; dest: string; addon?: string});
       } catch (error) {
         console.error(error instanceof Error ? error.message : String(error));
