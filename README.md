@@ -13,8 +13,8 @@
 </p>
 
 <p align="center">
-  <img src="apps/docs/assets/demo.gif" width="820"
-       alt="Terminal recording: installing @pixel.js/shotium, running card.mjs with cold and warm capture timings, then the rendered boarding pass">
+  <img src="apps/docs/assets/hero.svg" width="820"
+       alt="shotium against Puppeteer with Chrome, 1,000 screenshots at concurrency 4 on linux-x64: the wall time of the batch and the peak memory of each engine, drawn as two bar cards">
 </p>
 
 shotium extracts the core rendering pipeline from Chromium: Blink for DOM parsing, CSS styling, layout and painting, Skia for CPU rasterisation and image encoding, and `//net` for resource fetching and HTTP caching. It strips out all unnecessary browser shell components: V8, the `//content` layer, multi-process architecture, compositor, GPU process, and DevTools

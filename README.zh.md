@@ -13,8 +13,8 @@
 </p>
 
 <p align="center">
-  <img src="apps/docs/assets/demo.gif" width="820"
-       alt="终端录屏：安装 @pixel.js/shotium，运行 card.mjs 得到冷启动与预热后的截图耗时，最后是渲染出的登机牌">
+  <img src="apps/docs/assets/hero.zh.svg" width="820"
+       alt="shotium 与 Puppeteer + Chrome 在 linux-x64 上并发 4、连续 1000 张截图的对比：整批总耗时与各自的内存峰值，两张柱状卡片">
 </p>
 
 shotium 提取了 Chromium 中将 HTML/CSS 转化为像素的核心能力：由 Blink 负责 DOM 解析、样式计算、排版与绘制，由 Skia 负责光栅化与图像编码，由 `//net` 负责资源拉取与磁盘缓存；彻底剥离了浏览器外壳（`//content`）、V8 引擎、多进程架构、Compositor 合成器、GPU 进程以及 DevTools 等与静态渲染无关的组件

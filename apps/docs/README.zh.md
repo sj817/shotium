@@ -21,7 +21,7 @@
 
 ## 素材
 
-`assets/` 存放根 README 嵌入的图片：`demo.gif`、`card.webp`、`example-node.webp`、`example-cli.webp`。它们由 `pnpm docs:assets` 与 `pnpm docs:demo` 从 [apps/demo-card](../demo-card/README.zh.md) 生成，不手工编辑。
+`assets/` 存放根 README 嵌入的图片：开头的两张对比卡片 `hero.svg`、`hero.zh.svg`，由 `pnpm docs:hero` 从 `benchmarks/` 下最新一份归档画出；`card.webp`、`example-node.webp`、`example-cli.webp` 由 `pnpm docs:assets` 从 [apps/demo-card](../demo-card/README.zh.md) 生成。`demo.gif` 是 `pnpm docs:demo` 用同一张卡片录的终端演示，README 不再嵌入它。这些文件都不手工编辑。
 
 ## 基准测试
 
