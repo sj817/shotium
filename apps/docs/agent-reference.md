@@ -187,7 +187,10 @@ build loop. Read the affected workflow and source action for CI changes.
   conditional step. The build directory is restored from the artifact
   `ci:select-shards` chose -- the one saved at this very fingerprint, which
   means one runner and nothing to compile, or else the newest -- and saved
-  again after ninja whether or not it finished. There is no build-directory
+  again after ninja, finished or not, as long as gn generated it; a job
+  cancelled before that saves nothing, `ci:select-shards` ignores blobs
+  under 1 MB, and an artifact that does not unpack to a build directory is
+  a cold start, not a failure. There is no build-directory
   entry in the Actions cache any more (its 10 GB quota, seven-day eviction
   and per-branch visibility all produced cold builds); only the compiler
   toolchains stay there.
