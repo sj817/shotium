@@ -106,11 +106,11 @@ must write a new result file: keep earlier failures and uncertainty, and do not
 select only the best run.
 
 The `perf-gate` workflow runs the full matrix on all six
-published native platforms. First build all six with the engine workflows at
-the same source SHA. Dispatch the performance workflow at that SHA with an exact
-npm baseline version and a `build_runs` JSON object mapping `linux-x64`,
-`linux-arm64`, `win32-x64`, `win32-arm64`, `darwin-x64`, and `darwin-arm64` to their
-successful build run IDs. Preflight rejects different SHAs, missing/expired
+published native platforms. Dispatch it at the ref to measure with an exact
+npm baseline version; the candidates are the `engine-<platform>-<fingerprint>`
+artifacts for that tree's engine fingerprint, which `engine.yml` has built
+or found (a `fingerprint` input overrides the computed one). Preflight
+rejects a platform with no engine and evidence at that fingerprint, expired
 artifacts and incomplete platform coverage. This workflow neither publishes npm
 packages nor commits benchmark reports. Every platform must pass the article,
 performance and pixel checks; a green static check is not this acceptance gate.

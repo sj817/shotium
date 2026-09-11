@@ -77,9 +77,12 @@ pnpm perf:report result.json --platform win32-x64 --output report.md
 ## The CI gate
 
 `perf-gate.yml` runs the same comparison on six platforms. It
-is dispatched with `baseline_version` (an exact published version) and
-`build_runs` (JSON mapping the six npm platforms to successful engine build
-run IDs at the current SHA). `scripts/perf/ci.ts` drives it;
+is dispatched with `baseline_version` (an exact published version) and,
+optionally, `fingerprint`; empty means the fingerprint of the dispatched
+ref, and the six candidate engines are the `engine-<platform>-<fingerprint>`
+artifacts with evidence -- whatever `engine.yml` built or found. If one is
+missing the resolve job says which; `engine.yml` is the fix, there are no
+run ids to paste. `scripts/perf/ci.ts` drives it;
 `scripts/lib/perf-gate.ts` decides pass/fail; `scripts/lib/perf-gate.test.ts` is its
 unit test and runs in `checks.yml` on every push. Change the test before
 changing a threshold.

@@ -1,3 +1,8 @@
+# The paired performance comparison, candidate against a published
+# baseline, on all six platforms. The candidate engines are the artifacts
+# at this tree's fingerprint -- whatever engine.yml built or found for it --
+# so there is nothing to dispatch first and no run ids to paste: if the
+# engines are missing, resolve says so and engine.yml is the fix.
 name: perf-gate
 run-name: "perf-gate: candidate vs v${{ inputs.baseline_version }}"
 
@@ -7,11 +12,12 @@ on:
       baseline_version:
         description: Exact published npm version
         required: true
-        default: '0.4.0'
+        default: '0.7.3'
         type: string
-      build_runs:
-        description: 'JSON mapping all six npm platforms to successful engine build run IDs at this SHA'
-        required: true
+      fingerprint:
+        description: 'engine fingerprint to measure; empty computes it from this ref'
+        required: false
+        default: ''
         type: string
 
 permissions:
@@ -52,11 +58,16 @@ jobs:
       - name: repository scripts
         working-directory: scripts
         run: pnpm install --frozen-lockfile
+      - id: fingerprint
+        env:
+          FROM_INPUT: ${{ inputs.fingerprint }}
+        run: |
+          if [ -n "$FROM_INPUT" ]; then echo "fingerprint=$FROM_INPUT" >> "$GITHUB_OUTPUT"; else pnpm ci:fingerprint --output; fi
       - id: plan
-        name: Require all six exact-SHA native builds
+        name: Require all six engines with evidence at this fingerprint
         env:
           GH_TOKEN: ${{ github.token }}
-          BUILD_RUNS: ${{ inputs.build_runs }}
+          FINGERPRINT: ${{ steps.fingerprint.outputs.fingerprint }}
           BASELINE_VERSION: ${{ inputs.baseline_version }}
         run: pnpm perf:ci plan
       - uses: actions/upload-artifact@v7
@@ -101,12 +112,33 @@ jobs:
           name: ${{ matrix.target.artifactName }}
           run-id: ${{ matrix.target.runId }}
           github-token: ${{ github.token }}
-          path: out/performance/download
+          path: out/performance/engine
+      - name: The npm platform package, from the engine's node archive
+        env:
+          LABEL: ${{ matrix.target.label }}
+          PACKAGE_OS: ${{ matrix.target.packageOs }}
+          CPU: ${{ matrix.target.cpu }}
+        # The same assembly publish.yml does, so the candidate is the package
+        # a user would install for this engine.
+        run: |
+          sevenzip=$(command -v 7zz || command -v 7z || command -v 7za || true)
+          if [ -z "$sevenzip" ]; then
+            if [[ "$RUNNER_OS" == "macOS" ]]; then brew install --quiet sevenzip;
+            elif [[ "$RUNNER_OS" == "Linux" ]]; then sudo apt-get update && sudo apt-get install -y p7zip-full;
+            fi
+            sevenzip=$(command -v 7zz || command -v 7z || command -v 7za || true)
+          fi
+          [ -n "$sevenzip" ] || { echo "7-Zip is required" >&2; exit 1; }
+          pnpm package:platform --from-archive "out/performance/engine/shotium-node-$LABEL.7z" \
+            --os "$PACKAGE_OS" --arch "$CPU" --dest out/performance/stage --sevenzip "$sevenzip"
+          mkdir -p out/performance/download
+          ( cd "out/performance/stage/shotium-$PACKAGE_OS-$CPU" && npm pack --pack-destination ../../download )
       - name: Install both immutable candidates
         env:
           BASELINE_VERSION: ${{ inputs.baseline_version }}
+          FINGERPRINT: ${{ matrix.target.fingerprint }}
         run: |
-          npm install --prefix out/performance/baseline --ignore-scripts --no-audit --no-fund "@shotkit/shotium@$BASELINE_VERSION"
+          npm install --prefix out/performance/baseline --ignore-scripts --no-audit --no-fund "@pixel.js/shotium@$BASELINE_VERSION"
           pnpm perf:ci stage out/performance/download out/performance/candidate
       - name: Validate the two real long articles
         run: pnpm verify:bilibili --package out/performance/candidate
@@ -114,7 +146,7 @@ jobs:
         id: performance
         run: >-
           pnpm perf:compare
-          out/performance/baseline/node_modules/@shotkit/shotium
+          out/performance/baseline/node_modules/@pixel.js/shotium
           out/performance/candidate
           out/performance/result.json --samples=100 --calibrate --check
       - name: Independently compare every rendered case
