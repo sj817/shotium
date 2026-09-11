@@ -1,7 +1,7 @@
 // Render the complete six-platform acceptance report from perf-compare
 // results, without selecting the best run.
 //
-//   pnpm perf:report out/evidence/performance-*/result.json --output out/performance-acceptance.md
+//   pnpm perf:report out/evidence/performance-*/out/performance/result.json --output out/performance-acceptance.md
 //   pnpm perf:report ... --platform linux-x64 --platform win32-x64
 //
 // Exits 1 unless every platform in scope passed and every result came from

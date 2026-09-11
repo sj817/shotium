@@ -189,7 +189,8 @@ jobs:
       - name: Require complete results on all six platforms
         shell: bash
         run: |
-          pnpm perf:report out/evidence/performance-*/result.json --output out/performance-acceptance.md
+          # Article evidence makes the uploaded artifact paths relative to the repository root.
+          pnpm perf:report out/evidence/performance-*/out/performance/result.json --output out/performance-acceptance.md
           test '${{ needs.platform.result }}' = success
       - uses: actions/upload-artifact@v7
         if: always()
