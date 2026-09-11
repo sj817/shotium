@@ -1,0 +1,3282 @@
+[
+  {
+    "shard": "startup",
+    "engine": "shotium",
+    "scenario": "cold",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 60.437,
+      "dispatch_to_launch_ms": 1729,
+      "measurement_started_epoch_ms": 1789096290285,
+      "measurement_completed_epoch_ms": 1789096290380,
+      "cold_start_to_png_ms": 95,
+      "measurement_wall_time_ms": 95,
+      "determinism": {
+        "compared": 1,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 1,
+        "measurement_span_ms": 0,
+        "peak_retained_evidence_bytes": 74861
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "startup",
+    "engine": "shotium",
+    "scenario": "cold",
+    "repeat": 2,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "noisy",
+    "settle": {
+      "stable": false,
+      "phase": "preflight-system",
+      "system": {
+        "stable": false,
+        "cpu_limit": 43,
+        "samples": [
+          {
+            "at": "2026-09-11T03:11:33.842Z",
+            "cpu_percent": 71.55297532656023,
+            "available_bytes": 13414748160
+          },
+          {
+            "at": "2026-09-11T03:11:35.203Z",
+            "cpu_percent": 39.91534781008465,
+            "available_bytes": 13416730624
+          },
+          {
+            "at": "2026-09-11T03:11:36.559Z",
+            "cpu_percent": 37.08402279830851,
+            "available_bytes": 13426491392
+          },
+          {
+            "at": "2026-09-11T03:11:37.928Z",
+            "cpu_percent": 44.244207429201914,
+            "available_bytes": 13418881024
+          },
+          {
+            "at": "2026-09-11T03:11:39.268Z",
+            "cpu_percent": 18.96615158204562,
+            "available_bytes": 13418962944
+          }
+        ]
+      }
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": []
+    }
+  },
+  {
+    "shard": "startup",
+    "engine": "shotium",
+    "scenario": "cold",
+    "repeat": 2,
+    "attempt": 2,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 33.291,
+      "dispatch_to_launch_ms": 1579,
+      "measurement_started_epoch_ms": 1789096304885,
+      "measurement_completed_epoch_ms": 1789096304949,
+      "cold_start_to_png_ms": 64,
+      "measurement_wall_time_ms": 64,
+      "determinism": {
+        "compared": 1,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 1,
+        "measurement_span_ms": 0,
+        "peak_retained_evidence_bytes": 74861
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "startup",
+    "engine": "shotium",
+    "scenario": "cold",
+    "repeat": 3,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 41.985,
+      "dispatch_to_launch_ms": 1615,
+      "measurement_started_epoch_ms": 1789096313789,
+      "measurement_completed_epoch_ms": 1789096313865,
+      "cold_start_to_png_ms": 76,
+      "measurement_wall_time_ms": 76,
+      "determinism": {
+        "compared": 1,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 1,
+        "measurement_span_ms": 0,
+        "peak_retained_evidence_bytes": 74861
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "startup",
+    "engine": "shotium",
+    "scenario": "cold",
+    "repeat": 4,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 38.24,
+      "dispatch_to_launch_ms": 1667,
+      "measurement_started_epoch_ms": 1789096322940,
+      "measurement_completed_epoch_ms": 1789096323009,
+      "cold_start_to_png_ms": 69,
+      "measurement_wall_time_ms": 69,
+      "determinism": {
+        "compared": 1,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 1,
+        "measurement_span_ms": 0,
+        "peak_retained_evidence_bytes": 74861
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "startup",
+    "engine": "shotium",
+    "scenario": "cold",
+    "repeat": 5,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 33.918,
+      "dispatch_to_launch_ms": 1573,
+      "measurement_started_epoch_ms": 1789096331999,
+      "measurement_completed_epoch_ms": 1789096332064,
+      "cold_start_to_png_ms": 65,
+      "measurement_wall_time_ms": 65,
+      "determinism": {
+        "compared": 1,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 1,
+        "measurement_span_ms": 0,
+        "peak_retained_evidence_bytes": 74861
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "startup",
+    "engine": "shotium",
+    "scenario": "cold",
+    "repeat": 6,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 35.169,
+      "dispatch_to_launch_ms": 1594,
+      "measurement_started_epoch_ms": 1789096339544,
+      "measurement_completed_epoch_ms": 1789096339611,
+      "cold_start_to_png_ms": 67,
+      "measurement_wall_time_ms": 67,
+      "determinism": {
+        "compared": 1,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 1,
+        "measurement_span_ms": 0,
+        "peak_retained_evidence_bytes": 74861
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "startup",
+    "engine": "shotium",
+    "scenario": "cold",
+    "repeat": 7,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 35.259,
+      "dispatch_to_launch_ms": 1649,
+      "measurement_started_epoch_ms": 1789096347128,
+      "measurement_completed_epoch_ms": 1789096347196,
+      "cold_start_to_png_ms": 68,
+      "measurement_wall_time_ms": 68,
+      "determinism": {
+        "compared": 1,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 1,
+        "measurement_span_ms": 0,
+        "peak_retained_evidence_bytes": 74861
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "startup",
+    "engine": "shotium",
+    "scenario": "cold-settled",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "noisy",
+    "settle": {
+      "stable": false,
+      "phase": "preflight-system",
+      "system": {
+        "stable": false,
+        "cpu_limit": 43,
+        "samples": [
+          {
+            "at": "2026-09-11T03:12:30.500Z",
+            "cpu_percent": 67.03056768558952,
+            "available_bytes": 13510889472
+          },
+          {
+            "at": "2026-09-11T03:12:31.859Z",
+            "cpu_percent": 40.69183559605728,
+            "available_bytes": 13514948608
+          },
+          {
+            "at": "2026-09-11T03:12:33.212Z",
+            "cpu_percent": 49.12603495860166,
+            "available_bytes": 13520285696
+          },
+          {
+            "at": "2026-09-11T03:12:34.566Z",
+            "cpu_percent": 44.49404761904761,
+            "available_bytes": 13523177472
+          },
+          {
+            "at": "2026-09-11T03:12:35.906Z",
+            "cpu_percent": 40.2243884495126,
+            "available_bytes": 13511966720
+          }
+        ]
+      }
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": []
+    }
+  },
+  {
+    "shard": "startup",
+    "engine": "shotium",
+    "scenario": "cold-settled",
+    "repeat": 1,
+    "attempt": 2,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 32.914,
+      "dispatch_to_launch_ms": 1578,
+      "warmups": 3,
+      "latency_ms": [
+        31.008,
+        13.258,
+        11.762
+      ],
+      "rss_bytes": [
+        185520128,
+        185520128,
+        185520128
+      ],
+      "latency_cv": 0.57325,
+      "rss_drift": 0,
+      "warmup_latency_stable": false,
+      "warmup_rss_stable": true,
+      "readiness_gate": "fixed-warmups-plus-host-cpu",
+      "system": {
+        "stable": true,
+        "cpu_limit": 43,
+        "samples": [
+          {
+            "at": "2026-09-11T03:12:43.894Z",
+            "cpu_percent": 26.573088092933205,
+            "available_bytes": 13358829568
+          },
+          {
+            "at": "2026-09-11T03:12:45.229Z",
+            "cpu_percent": 17.43580200967622,
+            "available_bytes": 13383372800
+          },
+          {
+            "at": "2026-09-11T03:12:46.577Z",
+            "cpu_percent": 31.574022084970988,
+            "available_bytes": 13389033472
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1789096366577,
+      "measurement_completed_epoch_ms": 1789096366590,
+      "measurement_wall_time_ms": 12.452,
+      "determinism": {
+        "compared": 1,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 0,
+        "measurement_span_ms": 0,
+        "peak_retained_evidence_bytes": 74861
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "startup",
+    "engine": "shotium",
+    "scenario": "cold-settled",
+    "repeat": 2,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "noisy",
+    "settle": {
+      "stable": false,
+      "launch_ms": 34.773,
+      "dispatch_to_launch_ms": 3030,
+      "warmups": 3,
+      "latency_ms": [
+        32.261,
+        13.086,
+        12.115
+      ],
+      "rss_bytes": [
+        193417216,
+        193417216,
+        193417216
+      ],
+      "latency_cv": 0.59316,
+      "rss_drift": 0,
+      "warmup_latency_stable": false,
+      "warmup_rss_stable": true,
+      "readiness_gate": "fixed-warmups-plus-host-cpu",
+      "system": {
+        "stable": false,
+        "cpu_limit": 43,
+        "samples": [
+          {
+            "at": "2026-09-11T03:12:58.871Z",
+            "cpu_percent": 54.72263868065967,
+            "available_bytes": 13020946432
+          },
+          {
+            "at": "2026-09-11T03:13:00.222Z",
+            "cpu_percent": 51.127682793743176,
+            "available_bytes": 13148626944
+          },
+          {
+            "at": "2026-09-11T03:13:01.578Z",
+            "cpu_percent": 60.915946293912086,
+            "available_bytes": 13057044480
+          },
+          {
+            "at": "2026-09-11T03:13:02.925Z",
+            "cpu_percent": 42.544585401728256,
+            "available_bytes": 13142077440
+          },
+          {
+            "at": "2026-09-11T03:13:04.317Z",
+            "cpu_percent": 59.48482060717571,
+            "available_bytes": 13107957760
+          }
+        ]
+      },
+      "determinism": {
+        "compared": 0,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 8,
+        "measurement_span_ms": 5950,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": 579228801.114
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "startup",
+    "engine": "shotium",
+    "scenario": "cold-settled",
+    "repeat": 2,
+    "attempt": 2,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 31.023,
+      "dispatch_to_launch_ms": 1607,
+      "warmups": 3,
+      "latency_ms": [
+        30.459,
+        12.809,
+        13.508
+      ],
+      "rss_bytes": [
+        186462208,
+        186462208,
+        186462208
+      ],
+      "latency_cv": 0.5281,
+      "rss_drift": 0,
+      "warmup_latency_stable": false,
+      "warmup_rss_stable": true,
+      "readiness_gate": "fixed-warmups-plus-host-cpu",
+      "system": {
+        "stable": true,
+        "cpu_limit": 43,
+        "samples": [
+          {
+            "at": "2026-09-11T03:13:14.163Z",
+            "cpu_percent": 31.004366812227076,
+            "available_bytes": 13112283136
+          },
+          {
+            "at": "2026-09-11T03:13:15.519Z",
+            "cpu_percent": 16.494082840236686,
+            "available_bytes": 13151416320
+          },
+          {
+            "at": "2026-09-11T03:13:16.858Z",
+            "cpu_percent": 32.53909158600149,
+            "available_bytes": 13149192192
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1789096396858,
+      "measurement_completed_epoch_ms": 1789096396871,
+      "measurement_wall_time_ms": 12.149,
+      "determinism": {
+        "compared": 1,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 0,
+        "measurement_span_ms": 0,
+        "peak_retained_evidence_bytes": 74861
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "startup",
+    "engine": "shotium",
+    "scenario": "cold-settled",
+    "repeat": 3,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "noisy",
+    "settle": {
+      "stable": false,
+      "launch_ms": 34.327,
+      "dispatch_to_launch_ms": 1760,
+      "warmups": 3,
+      "latency_ms": [
+        36.995,
+        12.726,
+        17.503
+      ],
+      "rss_bytes": [
+        187252736,
+        187252736,
+        187252736
+      ],
+      "latency_cv": 0.57375,
+      "rss_drift": 0,
+      "warmup_latency_stable": false,
+      "warmup_rss_stable": true,
+      "readiness_gate": "fixed-warmups-plus-host-cpu",
+      "system": {
+        "stable": false,
+        "cpu_limit": 43,
+        "samples": [
+          {
+            "at": "2026-09-11T03:13:26.570Z",
+            "cpu_percent": 72.00388161086852,
+            "available_bytes": 13065220096
+          },
+          {
+            "at": "2026-09-11T03:13:28.094Z",
+            "cpu_percent": 67.85023730005273,
+            "available_bytes": 13125591040
+          },
+          {
+            "at": "2026-09-11T03:13:29.491Z",
+            "cpu_percent": 79.34073107049609,
+            "available_bytes": 13052985344
+          },
+          {
+            "at": "2026-09-11T03:13:30.868Z",
+            "cpu_percent": 51.951087933824844,
+            "available_bytes": 13128417280
+          }
+        ]
+      },
+      "determinism": {
+        "compared": 0,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 8,
+        "measurement_span_ms": 6161,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": 576746210.359
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "startup",
+    "engine": "shotium",
+    "scenario": "cold-settled",
+    "repeat": 3,
+    "attempt": 2,
+    "concurrency": 1,
+    "status": "noisy",
+    "settle": {
+      "stable": false,
+      "launch_ms": 33.205,
+      "dispatch_to_launch_ms": 1638,
+      "warmups": 3,
+      "latency_ms": [
+        32.828,
+        12.273,
+        12.042
+      ],
+      "rss_bytes": [
+        187785216,
+        187785216,
+        187785216
+      ],
+      "latency_cv": 0.62657,
+      "rss_drift": 0,
+      "warmup_latency_stable": false,
+      "warmup_rss_stable": true,
+      "readiness_gate": "fixed-warmups-plus-host-cpu",
+      "system": {
+        "stable": false,
+        "cpu_limit": 43,
+        "samples": [
+          {
+            "at": "2026-09-11T03:13:43.632Z",
+            "cpu_percent": 27.313656828414207,
+            "available_bytes": 13091594240
+          },
+          {
+            "at": "2026-09-11T03:13:44.989Z",
+            "cpu_percent": 17.148080438756853,
+            "available_bytes": 13140631552
+          },
+          {
+            "at": "2026-09-11T03:13:46.345Z",
+            "cpu_percent": 54.29773226042429,
+            "available_bytes": 13137018880
+          },
+          {
+            "at": "2026-09-11T03:13:47.772Z",
+            "cpu_percent": 55.45337502299063,
+            "available_bytes": 13082415104
+          }
+        ]
+      },
+      "determinism": {
+        "compared": 0,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 8,
+        "measurement_span_ms": 5662,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": 628285869.592
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "startup",
+    "engine": "shotium",
+    "scenario": "cold-settled",
+    "repeat": 4,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "noisy",
+    "settle": {
+      "stable": false,
+      "launch_ms": 33.185,
+      "dispatch_to_launch_ms": 1710,
+      "warmups": 3,
+      "latency_ms": [
+        33.493,
+        15.225,
+        18.022
+      ],
+      "rss_bytes": [
+        184410112,
+        184410112,
+        184410112
+      ],
+      "latency_cv": 0.44229,
+      "rss_drift": 0,
+      "warmup_latency_stable": false,
+      "warmup_rss_stable": true,
+      "readiness_gate": "fixed-warmups-plus-host-cpu",
+      "system": {
+        "stable": false,
+        "cpu_limit": 43,
+        "samples": [
+          {
+            "at": "2026-09-11T03:13:59.938Z",
+            "cpu_percent": 51.454898157129,
+            "available_bytes": 13097992192
+          },
+          {
+            "at": "2026-09-11T03:14:01.291Z",
+            "cpu_percent": 39.62976276060388,
+            "available_bytes": 13133422592
+          },
+          {
+            "at": "2026-09-11T03:14:02.691Z",
+            "cpu_percent": 70.97130242825607,
+            "available_bytes": 13040664576
+          },
+          {
+            "at": "2026-09-11T03:14:04.054Z",
+            "cpu_percent": 42.527101475031095,
+            "available_bytes": 13144248320
+          }
+        ]
+      },
+      "determinism": {
+        "compared": 0,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 8,
+        "measurement_span_ms": 5992,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": 602693788.019
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "startup",
+    "engine": "shotium",
+    "scenario": "cold-settled",
+    "repeat": 4,
+    "attempt": 2,
+    "concurrency": 1,
+    "status": "noisy",
+    "settle": {
+      "stable": false,
+      "launch_ms": 34.414,
+      "dispatch_to_launch_ms": 1655,
+      "warmups": 3,
+      "latency_ms": [
+        34.77,
+        12.203,
+        11.985
+      ],
+      "rss_bytes": [
+        185720832,
+        185720832,
+        185720832
+      ],
+      "latency_cv": 0.66619,
+      "rss_drift": 0,
+      "warmup_latency_stable": false,
+      "warmup_rss_stable": true,
+      "readiness_gate": "fixed-warmups-plus-host-cpu",
+      "system": {
+        "stable": false,
+        "cpu_limit": 43,
+        "samples": [
+          {
+            "at": "2026-09-11T03:14:15.645Z",
+            "cpu_percent": 26.526526526526528,
+            "available_bytes": 13119131648
+          },
+          {
+            "at": "2026-09-11T03:14:17.046Z",
+            "cpu_percent": 45.832592855873465,
+            "available_bytes": 13144395776
+          },
+          {
+            "at": "2026-09-11T03:14:18.443Z",
+            "cpu_percent": 56.416637042303584,
+            "available_bytes": 13086224384
+          },
+          {
+            "at": "2026-09-11T03:14:19.854Z",
+            "cpu_percent": 39.870573431601656,
+            "available_bytes": 13141118976
+          }
+        ]
+      },
+      "determinism": {
+        "compared": 0,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 8,
+        "measurement_span_ms": 6159,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": 639443799.406
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "startup",
+    "engine": "shotium",
+    "scenario": "cold-settled",
+    "repeat": 5,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "noisy",
+    "settle": {
+      "stable": false,
+      "launch_ms": 36.746,
+      "dispatch_to_launch_ms": 1731,
+      "warmups": 3,
+      "latency_ms": [
+        32.15,
+        16.115,
+        13.052
+      ],
+      "rss_bytes": [
+        185774080,
+        185774080,
+        185774080
+      ],
+      "latency_cv": 0.50183,
+      "rss_drift": 0,
+      "warmup_latency_stable": false,
+      "warmup_rss_stable": true,
+      "readiness_gate": "fixed-warmups-plus-host-cpu",
+      "system": {
+        "stable": false,
+        "cpu_limit": 43,
+        "samples": [
+          {
+            "at": "2026-09-11T03:14:32.515Z",
+            "cpu_percent": 46.1,
+            "available_bytes": 13127585792
+          },
+          {
+            "at": "2026-09-11T03:14:33.873Z",
+            "cpu_percent": 33.86666666666667,
+            "available_bytes": 13169364992
+          },
+          {
+            "at": "2026-09-11T03:14:35.256Z",
+            "cpu_percent": 58.650487221915796,
+            "available_bytes": 13100941312
+          },
+          {
+            "at": "2026-09-11T03:14:36.637Z",
+            "cpu_percent": 43.163636363636364,
+            "available_bytes": 13158264832
+          }
+        ]
+      },
+      "determinism": {
+        "compared": 0,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 8,
+        "measurement_span_ms": 6165,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": 624202392.696
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "startup",
+    "engine": "shotium",
+    "scenario": "cold-settled",
+    "repeat": 5,
+    "attempt": 2,
+    "concurrency": 1,
+    "status": "noisy",
+    "settle": {
+      "stable": false,
+      "launch_ms": 33.439,
+      "dispatch_to_launch_ms": 1732,
+      "warmups": 3,
+      "latency_ms": [
+        33.595,
+        12.677,
+        13.063
+      ],
+      "rss_bytes": [
+        186302464,
+        186302464,
+        186302464
+      ],
+      "latency_cv": 0.60506,
+      "rss_drift": 0,
+      "warmup_latency_stable": false,
+      "warmup_rss_stable": true,
+      "readiness_gate": "fixed-warmups-plus-host-cpu",
+      "system": {
+        "stable": false,
+        "cpu_limit": 43,
+        "samples": [
+          {
+            "at": "2026-09-11T03:14:47.781Z",
+            "cpu_percent": 51.4798641436196,
+            "available_bytes": 13117161472
+          },
+          {
+            "at": "2026-09-11T03:14:49.139Z",
+            "cpu_percent": 41.9746276889134,
+            "available_bytes": 13160435712
+          },
+          {
+            "at": "2026-09-11T03:14:50.516Z",
+            "cpu_percent": 46.5915288129431,
+            "available_bytes": 13091110912
+          },
+          {
+            "at": "2026-09-11T03:14:51.934Z",
+            "cpu_percent": 44.87086213168425,
+            "available_bytes": 13131919360
+          }
+        ]
+      },
+      "determinism": {
+        "compared": 0,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 8,
+        "measurement_span_ms": 6023,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": 580900986.244
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "startup",
+    "engine": "shotium",
+    "scenario": "cold-settled",
+    "repeat": 6,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "noisy",
+    "settle": {
+      "stable": false,
+      "launch_ms": 34.63,
+      "dispatch_to_launch_ms": 1715,
+      "warmups": 3,
+      "latency_ms": [
+        31.699,
+        12.55,
+        11.848
+      ],
+      "rss_bytes": [
+        186548224,
+        186548224,
+        186548224
+      ],
+      "latency_cv": 0.60237,
+      "rss_drift": 0,
+      "warmup_latency_stable": false,
+      "warmup_rss_stable": true,
+      "readiness_gate": "fixed-warmups-plus-host-cpu",
+      "system": {
+        "stable": false,
+        "cpu_limit": 43,
+        "samples": [
+          {
+            "at": "2026-09-11T03:15:04.232Z",
+            "cpu_percent": 48.449999999999996,
+            "available_bytes": 13116542976
+          },
+          {
+            "at": "2026-09-11T03:15:05.590Z",
+            "cpu_percent": 43.805071030390216,
+            "available_bytes": 13160292352
+          },
+          {
+            "at": "2026-09-11T03:15:06.957Z",
+            "cpu_percent": 59.514616657473795,
+            "available_bytes": 13089013760
+          },
+          {
+            "at": "2026-09-11T03:15:08.297Z",
+            "cpu_percent": 33.89113644722324,
+            "available_bytes": 13163053056
+          },
+          {
+            "at": "2026-09-11T03:15:09.642Z",
+            "cpu_percent": 30.988023952095805,
+            "available_bytes": 13171736576
+          }
+        ]
+      },
+      "determinism": {
+        "compared": 0,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 8,
+        "measurement_span_ms": 5780,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": 675418424.399
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "startup",
+    "engine": "shotium",
+    "scenario": "cold-settled",
+    "repeat": 6,
+    "attempt": 2,
+    "concurrency": 1,
+    "status": "noisy",
+    "settle": {
+      "stable": false,
+      "launch_ms": 33.295,
+      "dispatch_to_launch_ms": 1694,
+      "warmups": 3,
+      "latency_ms": [
+        31.365,
+        12.083,
+        12.629
+      ],
+      "rss_bytes": [
+        186142720,
+        186142720,
+        186142720
+      ],
+      "latency_cv": 0.58731,
+      "rss_drift": 0,
+      "warmup_latency_stable": false,
+      "warmup_rss_stable": true,
+      "readiness_gate": "fixed-warmups-plus-host-cpu",
+      "system": {
+        "stable": false,
+        "cpu_limit": 43,
+        "samples": [
+          {
+            "at": "2026-09-11T03:15:19.078Z",
+            "cpu_percent": 53.0552861299709,
+            "available_bytes": 13129945088
+          },
+          {
+            "at": "2026-09-11T03:15:20.441Z",
+            "cpu_percent": 45.76515015285021,
+            "available_bytes": 13167075328
+          },
+          {
+            "at": "2026-09-11T03:15:21.793Z",
+            "cpu_percent": 58.91116424498804,
+            "available_bytes": 13158289408
+          },
+          {
+            "at": "2026-09-11T03:15:23.181Z",
+            "cpu_percent": 40.529606472968005,
+            "available_bytes": 13158387712
+          }
+        ]
+      },
+      "determinism": {
+        "compared": 0,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 8,
+        "measurement_span_ms": 5670,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": 642069848.243
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "startup",
+    "engine": "shotium",
+    "scenario": "cold-settled",
+    "repeat": 7,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "noisy",
+    "settle": {
+      "stable": false,
+      "launch_ms": 34.023,
+      "dispatch_to_launch_ms": 1690,
+      "warmups": 3,
+      "latency_ms": [
+        31.199,
+        12.135,
+        12.147
+      ],
+      "rss_bytes": [
+        185905152,
+        185905152,
+        185905152
+      ],
+      "latency_cv": 0.59497,
+      "rss_drift": 0,
+      "warmup_latency_stable": false,
+      "warmup_rss_stable": true,
+      "readiness_gate": "fixed-warmups-plus-host-cpu",
+      "system": {
+        "stable": false,
+        "cpu_limit": 43,
+        "samples": [
+          {
+            "at": "2026-09-11T03:15:35.498Z",
+            "cpu_percent": 39.97042878265155,
+            "available_bytes": 13132849152
+          },
+          {
+            "at": "2026-09-11T03:15:36.880Z",
+            "cpu_percent": 44.13657490168037,
+            "available_bytes": 13173768192
+          },
+          {
+            "at": "2026-09-11T03:15:38.250Z",
+            "cpu_percent": 50.827040632865874,
+            "available_bytes": 13185486848
+          },
+          {
+            "at": "2026-09-11T03:15:39.606Z",
+            "cpu_percent": 23.436921938586757,
+            "available_bytes": 13159702528
+          }
+        ]
+      },
+      "determinism": {
+        "compared": 0,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 8,
+        "measurement_span_ms": 5656,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": 689287881.288
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "startup",
+    "engine": "shotium",
+    "scenario": "cold-settled",
+    "repeat": 7,
+    "attempt": 2,
+    "concurrency": 1,
+    "status": "noisy",
+    "settle": {
+      "stable": false,
+      "launch_ms": 34.378,
+      "dispatch_to_launch_ms": 1678,
+      "warmups": 3,
+      "latency_ms": [
+        31.888,
+        13.519,
+        12.197
+      ],
+      "rss_bytes": [
+        185729024,
+        185729024,
+        185729024
+      ],
+      "latency_cv": 0.57323,
+      "rss_drift": 0,
+      "warmup_latency_stable": false,
+      "warmup_rss_stable": true,
+      "readiness_gate": "fixed-warmups-plus-host-cpu",
+      "system": {
+        "stable": false,
+        "cpu_limit": 43,
+        "samples": [
+          {
+            "at": "2026-09-11T03:15:51.607Z",
+            "cpu_percent": 53.80513814832768,
+            "available_bytes": 13136150528
+          },
+          {
+            "at": "2026-09-11T03:15:52.963Z",
+            "cpu_percent": 44.10284070478245,
+            "available_bytes": 13185744896
+          },
+          {
+            "at": "2026-09-11T03:15:54.317Z",
+            "cpu_percent": 59.764619345347555,
+            "available_bytes": 13169082368
+          },
+          {
+            "at": "2026-09-11T03:15:55.685Z",
+            "cpu_percent": 38.08815324530407,
+            "available_bytes": 13158957056
+          },
+          {
+            "at": "2026-09-11T03:15:57.048Z",
+            "cpu_percent": 54.25609312477264,
+            "available_bytes": 13170741248
+          }
+        ]
+      },
+      "determinism": {
+        "compared": 0,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 9,
+        "measurement_span_ms": 7849,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": -184094192.909
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "startup",
+    "engine": "shotium",
+    "scenario": "lifecycle",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "cycles": 4,
+      "measurement_started_epoch_ms": 1789096569467,
+      "measurement_completed_epoch_ms": 1789096579674,
+      "measurement_wall_time_ms": 414.522,
+      "determinism": {
+        "compared": 4,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 9,
+        "measurement_span_ms": 8989,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": 1225582266.66
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "startup",
+    "engine": "shotium",
+    "scenario": "lifecycle",
+    "repeat": 2,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "cycles": 4,
+      "measurement_started_epoch_ms": 1789096588420,
+      "measurement_completed_epoch_ms": 1789096598364,
+      "measurement_wall_time_ms": 408.307,
+      "determinism": {
+        "compared": 4,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 10,
+        "measurement_span_ms": 8535,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": 374310280.882
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "startup",
+    "engine": "shotium",
+    "scenario": "lifecycle",
+    "repeat": 3,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "cycles": 4,
+      "measurement_started_epoch_ms": 1789096605591,
+      "measurement_completed_epoch_ms": 1789096614941,
+      "measurement_wall_time_ms": 383.852,
+      "determinism": {
+        "compared": 4,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 9,
+        "measurement_span_ms": 8193,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": 1373417349.295
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "startup",
+    "engine": "shotium",
+    "scenario": "lifecycle",
+    "repeat": 4,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "cycles": 4,
+      "measurement_started_epoch_ms": 1789096622195,
+      "measurement_completed_epoch_ms": 1789096631616,
+      "measurement_wall_time_ms": 388.352,
+      "determinism": {
+        "compared": 4,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 10,
+        "measurement_span_ms": 8334,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": 1822413536.816
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "startup",
+    "engine": "shotium",
+    "scenario": "lifecycle",
+    "repeat": 5,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "noisy",
+    "settle": {
+      "stable": false,
+      "phase": "preflight-system",
+      "system": {
+        "stable": false,
+        "cpu_limit": 43,
+        "samples": [
+          {
+            "at": "2026-09-11T03:17:14.588Z",
+            "cpu_percent": 60.84840055632823,
+            "available_bytes": 13301067776
+          },
+          {
+            "at": "2026-09-11T03:17:15.941Z",
+            "cpu_percent": 30.194924604634053,
+            "available_bytes": 13136793600
+          },
+          {
+            "at": "2026-09-11T03:17:17.291Z",
+            "cpu_percent": 32.273065476190474,
+            "available_bytes": 12921421824
+          },
+          {
+            "at": "2026-09-11T03:17:18.649Z",
+            "cpu_percent": 34.586046511627906,
+            "available_bytes": 12511559680
+          },
+          {
+            "at": "2026-09-11T03:17:19.985Z",
+            "cpu_percent": 33.92167677881964,
+            "available_bytes": 12683714560
+          }
+        ]
+      }
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": []
+    }
+  },
+  {
+    "shard": "startup",
+    "engine": "shotium",
+    "scenario": "lifecycle",
+    "repeat": 5,
+    "attempt": 2,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "cycles": 4,
+      "measurement_started_epoch_ms": 1789096645734,
+      "measurement_completed_epoch_ms": 1789096654642,
+      "measurement_wall_time_ms": 373.708,
+      "determinism": {
+        "compared": 4,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 10,
+        "measurement_span_ms": 7702,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": 2481591178.246
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "throughput",
+    "engine": "shotium",
+    "scenario": "warm",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "noisy",
+    "settle": {
+      "stable": false,
+      "phase": "preflight-system",
+      "system": {
+        "stable": false,
+        "cpu_limit": 43,
+        "samples": [
+          {
+            "at": "2026-09-11T03:13:52.783Z",
+            "cpu_percent": 22.853434504792332,
+            "available_bytes": 12852731904
+          },
+          {
+            "at": "2026-09-11T03:13:54.188Z",
+            "cpu_percent": 48.00872885979269,
+            "available_bytes": 12846047232
+          },
+          {
+            "at": "2026-09-11T03:13:55.555Z",
+            "cpu_percent": 46.621135873472326,
+            "available_bytes": 12852826112
+          },
+          {
+            "at": "2026-09-11T03:13:56.926Z",
+            "cpu_percent": 43.10154525386313,
+            "available_bytes": 12847947776
+          },
+          {
+            "at": "2026-09-11T03:13:58.296Z",
+            "cpu_percent": 38.78504672897196,
+            "available_bytes": 12845408256
+          }
+        ]
+      }
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": []
+    }
+  },
+  {
+    "shard": "throughput",
+    "engine": "shotium",
+    "scenario": "warm",
+    "repeat": 1,
+    "attempt": 2,
+    "concurrency": 1,
+    "status": "noisy",
+    "settle": {
+      "stable": false,
+      "launch_ms": 34.727,
+      "dispatch_to_launch_ms": 1809,
+      "warmups": 3,
+      "latency_ms": [
+        35.199,
+        12.81,
+        12.557
+      ],
+      "rss_bytes": [
+        212668416,
+        212668416,
+        212668416
+      ],
+      "latency_cv": 0.64392,
+      "rss_drift": 0,
+      "warmup_latency_stable": false,
+      "warmup_rss_stable": true,
+      "readiness_gate": "fixed-warmups-plus-host-cpu",
+      "system": {
+        "stable": false,
+        "cpu_limit": 43,
+        "samples": [
+          {
+            "at": "2026-09-11T03:14:05.335Z",
+            "cpu_percent": 48.3983983983984,
+            "available_bytes": 12910583808
+          },
+          {
+            "at": "2026-09-11T03:14:06.716Z",
+            "cpu_percent": 46.125133309633846,
+            "available_bytes": 12964532224
+          },
+          {
+            "at": "2026-09-11T03:14:08.090Z",
+            "cpu_percent": 54.19888509260924,
+            "available_bytes": 12898717696
+          },
+          {
+            "at": "2026-09-11T03:14:09.456Z",
+            "cpu_percent": 13.649581970192656,
+            "available_bytes": 12969328640
+          }
+        ]
+      },
+      "determinism": {
+        "compared": 0,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 8,
+        "measurement_span_ms": 5955,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": 652203697.466
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "throughput",
+    "engine": "shotium",
+    "scenario": "warm",
+    "repeat": 2,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 34.122,
+      "dispatch_to_launch_ms": 1678,
+      "warmups": 3,
+      "latency_ms": [
+        32.287,
+        12.35,
+        12.43
+      ],
+      "rss_bytes": [
+        191115264,
+        191115264,
+        191115264
+      ],
+      "latency_cv": 0.6039,
+      "rss_drift": 0,
+      "warmup_latency_stable": false,
+      "warmup_rss_stable": true,
+      "readiness_gate": "fixed-warmups-plus-host-cpu",
+      "system": {
+        "stable": true,
+        "cpu_limit": 43,
+        "samples": [
+          {
+            "at": "2026-09-11T03:14:20.558Z",
+            "cpu_percent": 24.23654871546292,
+            "available_bytes": 12938207232
+          },
+          {
+            "at": "2026-09-11T03:14:21.932Z",
+            "cpu_percent": 16.939488688615047,
+            "available_bytes": 12993171456
+          },
+          {
+            "at": "2026-09-11T03:14:23.301Z",
+            "cpu_percent": 42.62593198763411,
+            "available_bytes": 12998160384
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1789096463301,
+      "measurement_completed_epoch_ms": 1789096463352,
+      "tinybench": {
+        "aborted": false,
+        "critical": 3.182446305284264,
+        "df": 3,
+        "hz": 81.54821176138663,
+        "latency": {
+          "aad": 0.2621250000004238,
+          "critical": 3.182446305284264,
+          "df": 3,
+          "mad": 0.205000000000382,
+          "max": 12.646500000000742,
+          "mean": 12.271025000000236,
+          "min": 11.781299999999646,
+          "moe": 0.5840302211058986,
+          "p50": 12.328150000000278,
+          "p75": 12.476475000000619,
+          "p99": 12.639699000000737,
+          "p995": 12.643099500000739,
+          "p999": 12.645819900000742,
+          "rme": 4.759424914429621,
+          "samples": [
+            11.781299999999646,
+            12.236499999999978,
+            12.419800000000578,
+            12.646500000000742
+          ],
+          "sd": 0.36703225448683985,
+          "sem": 0.18351612724341992,
+          "variance": 0.13471267583369237
+        },
+        "max": 12.646500000000742,
+        "mean": 12.271025000000236,
+        "min": 11.781299999999646,
+        "moe": 0.5840302211058986,
+        "p75": 12.476475000000619,
+        "p99": 12.639699000000737,
+        "p995": 12.643099500000739,
+        "p999": 12.645819900000742,
+        "period": 12.271025000000236,
+        "rme": 4.759424914429621,
+        "runtime": "node",
+        "runtimeVersion": "24.20.0",
+        "samples": [
+          11.781299999999646,
+          12.236499999999978,
+          12.419800000000578,
+          12.646500000000742
+        ],
+        "sd": 0.36703225448683985,
+        "sem": 0.18351612724341992,
+        "throughput": {
+          "aad": 1.7532838379979445,
+          "critical": 3.182446305284264,
+          "df": 3,
+          "mad": 1.3247267259629538,
+          "max": 84.88027637018241,
+          "mean": 81.54821176138663,
+          "min": 79.07326137666084,
+          "moe": 3.932470095111689,
+          "p50": 81.11965464935165,
+          "p75": 82.51210521398566,
+          "p99": 84.78554952393455,
+          "p995": 84.83291294705847,
+          "p999": 84.87080368555763,
+          "rme": 4.822264045002306,
+          "samples": [
+            79.07326137666084,
+            80.51659447011654,
+            81.72271482858675,
+            84.88027637018241
+          ],
+          "sd": 2.4713504756275415,
+          "sem": 1.2356752378137708,
+          "variance": 6.107573173384476
+        },
+        "totalTime": 49.084100000000944,
+        "variance": 0.13471267583369237
+      },
+      "measurement_wall_time_ms": 50.74,
+      "determinism": {
+        "compared": 4,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 0,
+        "measurement_span_ms": 0,
+        "peak_retained_evidence_bytes": 299444
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "throughput",
+    "engine": "shotium",
+    "scenario": "warm",
+    "repeat": 3,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "noisy",
+    "settle": {
+      "stable": false,
+      "launch_ms": 37.2,
+      "dispatch_to_launch_ms": 1759,
+      "warmups": 3,
+      "latency_ms": [
+        33.646,
+        12.356,
+        12.308
+      ],
+      "rss_bytes": [
+        190025728,
+        190025728,
+        190025728
+      ],
+      "latency_cv": 0.63312,
+      "rss_drift": 0,
+      "warmup_latency_stable": false,
+      "warmup_rss_stable": true,
+      "readiness_gate": "fixed-warmups-plus-host-cpu",
+      "system": {
+        "stable": false,
+        "cpu_limit": 43,
+        "samples": [
+          {
+            "at": "2026-09-11T03:14:34.873Z",
+            "cpu_percent": 45.445736434108525,
+            "available_bytes": 13047951360
+          },
+          {
+            "at": "2026-09-11T03:14:36.237Z",
+            "cpu_percent": 46.42166344294004,
+            "available_bytes": 13086732288
+          },
+          {
+            "at": "2026-09-11T03:14:37.653Z",
+            "cpu_percent": 48.56564913571166,
+            "available_bytes": 13085982720
+          },
+          {
+            "at": "2026-09-11T03:14:39.017Z",
+            "cpu_percent": 31.874120956399437,
+            "available_bytes": 13089681408
+          }
+        ]
+      },
+      "determinism": {
+        "compared": 0,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 8,
+        "measurement_span_ms": 6680,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": -300665869.06
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "throughput",
+    "engine": "shotium",
+    "scenario": "warm",
+    "repeat": 3,
+    "attempt": 2,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 33.607,
+      "dispatch_to_launch_ms": 1661,
+      "warmups": 3,
+      "latency_ms": [
+        31.691,
+        12.025,
+        13.815
+      ],
+      "rss_bytes": [
+        187973632,
+        187973632,
+        187973632
+      ],
+      "latency_cv": 0.56705,
+      "rss_drift": 0,
+      "warmup_latency_stable": false,
+      "warmup_rss_stable": true,
+      "readiness_gate": "fixed-warmups-plus-host-cpu",
+      "system": {
+        "stable": true,
+        "cpu_limit": 43,
+        "samples": [
+          {
+            "at": "2026-09-11T03:14:49.892Z",
+            "cpu_percent": 24.237881059470265,
+            "available_bytes": 13054021632
+          },
+          {
+            "at": "2026-09-11T03:14:51.262Z",
+            "cpu_percent": 19.03636363636364,
+            "available_bytes": 13105438720
+          },
+          {
+            "at": "2026-09-11T03:14:52.605Z",
+            "cpu_percent": 35.64993564993565,
+            "available_bytes": 13100199936
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1789096492606,
+      "measurement_completed_epoch_ms": 1789096492654,
+      "tinybench": {
+        "aborted": false,
+        "critical": 3.182446305284264,
+        "df": 3,
+        "hz": 85.35939703969468,
+        "latency": {
+          "aad": 0.3938499999999294,
+          "critical": 3.182446305284264,
+          "df": 3,
+          "mad": 0.28765000000021246,
+          "max": 12.42699999999968,
+          "mean": 11.732250000000022,
+          "min": 11.249899999999798,
+          "moe": 0.8304992928870494,
+          "p50": 11.626050000000305,
+          "p75": 11.975650000000087,
+          "p99": 12.408945999999696,
+          "p995": 12.417972999999687,
+          "p999": 12.425194599999681,
+          "rme": 7.0787725533213814,
+          "samples": [
+            11.249899999999798,
+            11.426900000000387,
+            11.825200000000223,
+            12.42699999999968
+          ],
+          "sd": 0.521925093603656,
+          "sem": 0.260962546801828,
+          "variance": 0.2724058033331851
+        },
+        "max": 12.42699999999968,
+        "mean": 11.732250000000022,
+        "min": 11.249899999999798,
+        "moe": 0.8304992928870494,
+        "p75": 11.975650000000087,
+        "p99": 12.408945999999696,
+        "p995": 12.417972999999687,
+        "p999": 12.425194599999681,
+        "period": 11.732250000000022,
+        "rme": 7.0787725533213814,
+        "runtime": "node",
+        "runtimeVersion": "24.20.0",
+        "samples": [
+          11.249899999999798,
+          11.426900000000387,
+          11.825200000000223,
+          12.42699999999968
+        ],
+        "sd": 0.521925093603656,
+        "sem": 0.260962546801828,
+        "throughput": {
+          "aad": 2.841841843397521,
+          "critical": 3.182446305284264,
+          "df": 3,
+          "mad": 2.162256551258359,
+          "max": 88.88967901937066,
+          "mean": 85.35939703969468,
+          "min": 80.46994447574039,
+          "moe": 5.9280682886786495,
+          "p50": 86.03898233183385,
+          "p75": 87.85701881495298,
+          "p99": 88.84837261119395,
+          "p995": 88.86902581528231,
+          "p999": 88.88554837855298,
+          "rme": 6.944833837007916,
+          "samples": [
+            80.46994447574039,
+            84.56516591685394,
+            87.51279874681376,
+            88.88967901937066
+          ],
+          "sd": 3.7254789052279955,
+          "sem": 1.8627394526139978,
+          "variance": 13.879193073298785
+        },
+        "totalTime": 46.92900000000009,
+        "variance": 0.2724058033331851
+      },
+      "measurement_wall_time_ms": 48.571,
+      "determinism": {
+        "compared": 4,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 0,
+        "measurement_span_ms": 0,
+        "peak_retained_evidence_bytes": 299444
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "throughput",
+    "engine": "shotium",
+    "scenario": "warm",
+    "repeat": 4,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "noisy",
+    "settle": {
+      "stable": false,
+      "launch_ms": 34.944,
+      "dispatch_to_launch_ms": 1752,
+      "warmups": 3,
+      "latency_ms": [
+        32.675,
+        14.035,
+        12.135
+      ],
+      "rss_bytes": [
+        190681088,
+        190681088,
+        190681088
+      ],
+      "latency_cv": 0.57864,
+      "rss_drift": 0,
+      "warmup_latency_stable": false,
+      "warmup_rss_stable": true,
+      "readiness_gate": "fixed-warmups-plus-host-cpu",
+      "system": {
+        "stable": false,
+        "cpu_limit": 43,
+        "samples": [
+          {
+            "at": "2026-09-11T03:15:03.886Z",
+            "cpu_percent": 52.35470941883767,
+            "available_bytes": 13066395648
+          },
+          {
+            "at": "2026-09-11T03:15:05.261Z",
+            "cpu_percent": 49.97333333333333,
+            "available_bytes": 13100834816
+          },
+          {
+            "at": "2026-09-11T03:15:06.620Z",
+            "cpu_percent": 63.06797528171574,
+            "available_bytes": 13034512384
+          },
+          {
+            "at": "2026-09-11T03:15:08.000Z",
+            "cpu_percent": 33.23631071493542,
+            "available_bytes": 13100826624
+          }
+        ]
+      },
+      "determinism": {
+        "compared": 0,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 8,
+        "measurement_span_ms": 5984,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": 595532499.772
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "throughput",
+    "engine": "shotium",
+    "scenario": "warm",
+    "repeat": 4,
+    "attempt": 2,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 32.918,
+      "dispatch_to_launch_ms": 1647,
+      "warmups": 3,
+      "latency_ms": [
+        34.22,
+        11.976,
+        11.743
+      ],
+      "rss_bytes": [
+        190902272,
+        190902272,
+        190902272
+      ],
+      "latency_cv": 0.66848,
+      "rss_drift": 0,
+      "warmup_latency_stable": false,
+      "warmup_rss_stable": true,
+      "readiness_gate": "fixed-warmups-plus-host-cpu",
+      "system": {
+        "stable": true,
+        "cpu_limit": 43,
+        "samples": [
+          {
+            "at": "2026-09-11T03:15:18.862Z",
+            "cpu_percent": 28.07953443258972,
+            "available_bytes": 13059993600
+          },
+          {
+            "at": "2026-09-11T03:15:20.217Z",
+            "cpu_percent": 16.35393671817513,
+            "available_bytes": 13115895808
+          },
+          {
+            "at": "2026-09-11T03:15:21.559Z",
+            "cpu_percent": 33.74493180980465,
+            "available_bytes": 13115281408
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1789096521560,
+      "measurement_completed_epoch_ms": 1789096521608,
+      "tinybench": {
+        "aborted": false,
+        "critical": 3.182446305284264,
+        "df": 3,
+        "hz": 86.1676292430499,
+        "latency": {
+          "aad": 0.4931499999999005,
+          "critical": 3.182446305284264,
+          "df": 3,
+          "mad": 0.06974999999965803,
+          "max": 12.618199999999888,
+          "mean": 11.631900000000087,
+          "min": 11.230400000000373,
+          "moe": 1.0502208542715248,
+          "p50": 11.339500000000044,
+          "p75": 11.681974999999738,
+          "p99": 12.580750999999882,
+          "p995": 12.599475499999885,
+          "p999": 12.614455099999887,
+          "rme": 9.02879885720748,
+          "samples": [
+            11.230400000000373,
+            11.309100000000399,
+            11.369899999999689,
+            12.618199999999888
+          ],
+          "sd": 0.6600085302477501,
+          "sem": 0.33000426512387504,
+          "variance": 0.4356112599997952
+        },
+        "max": 12.618199999999888,
+        "mean": 11.631900000000087,
+        "min": 11.230400000000373,
+        "moe": 1.0502208542715248,
+        "p75": 11.681974999999738,
+        "p99": 12.580750999999882,
+        "p995": 12.599475499999885,
+        "p999": 12.614455099999887,
+        "period": 11.631900000000087,
+        "rme": 9.02879885720748,
+        "runtime": "node",
+        "runtimeVersion": "24.20.0",
+        "samples": [
+          11.230400000000373,
+          11.309100000000399,
+          11.369899999999689,
+          12.618199999999888
+        ],
+        "sd": 0.6600085302477501,
+        "sem": 0.33000426512387504,
+        "throughput": {
+          "aad": 3.458511487955633,
+          "critical": 3.182446305284264,
+          "df": 3,
+          "mad": 0.5462511217942918,
+          "max": 89.04402336514877,
+          "mean": 86.1676292430499,
+          "min": 79.25060626713865,
+          "moe": 7.3721320008657445,
+          "p50": 88.1879436699561,
+          "p75": 88.5792805050512,
+          "p99": 89.02543365074487,
+          "p995": 89.03472850794682,
+          "p999": 89.04216439370839,
+          "rme": 8.555570189904424,
+          "samples": [
+            79.25060626713865,
+            87.9515211215602,
+            88.424366218352,
+            89.04402336514877
+          ],
+          "sd": 4.632996942399156,
+          "sem": 2.316498471199578,
+          "variance": 21.464660668279933
+        },
+        "totalTime": 46.52760000000035,
+        "variance": 0.4356112599997952
+      },
+      "measurement_wall_time_ms": 48.146,
+      "determinism": {
+        "compared": 4,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 0,
+        "measurement_span_ms": 0,
+        "peak_retained_evidence_bytes": 299444
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "throughput",
+    "engine": "shotium",
+    "scenario": "warm",
+    "repeat": 5,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "noisy",
+    "settle": {
+      "stable": false,
+      "phase": "preflight-system",
+      "system": {
+        "stable": false,
+        "cpu_limit": 43,
+        "samples": [
+          {
+            "at": "2026-09-11T03:15:25.855Z",
+            "cpu_percent": 72.79053583855254,
+            "available_bytes": 13228969984
+          },
+          {
+            "at": "2026-09-11T03:15:27.223Z",
+            "cpu_percent": 32.481617647058826,
+            "available_bytes": 13247737856
+          },
+          {
+            "at": "2026-09-11T03:15:28.588Z",
+            "cpu_percent": 43.97424103035878,
+            "available_bytes": 13247123456
+          },
+          {
+            "at": "2026-09-11T03:15:29.939Z",
+            "cpu_percent": 37.63559477845192,
+            "available_bytes": 13244268544
+          },
+          {
+            "at": "2026-09-11T03:15:31.289Z",
+            "cpu_percent": 35.776744186046514,
+            "available_bytes": 13242699776
+          }
+        ]
+      }
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": []
+    }
+  },
+  {
+    "shard": "throughput",
+    "engine": "shotium",
+    "scenario": "warm",
+    "repeat": 5,
+    "attempt": 2,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 33.604,
+      "dispatch_to_launch_ms": 1735,
+      "warmups": 3,
+      "latency_ms": [
+        32.602,
+        13.404,
+        11.912
+      ],
+      "rss_bytes": [
+        190382080,
+        190382080,
+        190382080
+      ],
+      "latency_cv": 0.59768,
+      "rss_drift": 0,
+      "warmup_latency_stable": false,
+      "warmup_rss_stable": true,
+      "readiness_gate": "fixed-warmups-plus-host-cpu",
+      "system": {
+        "stable": true,
+        "cpu_limit": 43,
+        "samples": [
+          {
+            "at": "2026-09-11T03:15:38.131Z",
+            "cpu_percent": 44.68704512372635,
+            "available_bytes": 13043310592
+          },
+          {
+            "at": "2026-09-11T03:15:39.490Z",
+            "cpu_percent": 16.198224852071004,
+            "available_bytes": 13098827776
+          },
+          {
+            "at": "2026-09-11T03:15:40.845Z",
+            "cpu_percent": 32.857926494788806,
+            "available_bytes": 13097406464
+          },
+          {
+            "at": "2026-09-11T03:15:42.207Z",
+            "cpu_percent": 16.666666666666664,
+            "available_bytes": 13071773696
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1789096542208,
+      "measurement_completed_epoch_ms": 1789096542258,
+      "tinybench": {
+        "aborted": false,
+        "critical": 3.182446305284264,
+        "df": 3,
+        "hz": 82.63728542126418,
+        "latency": {
+          "aad": 0.7443749999999909,
+          "critical": 3.182446305284264,
+          "df": 3,
+          "mad": 0.5245500000000902,
+          "max": 13.587400000000343,
+          "mean": 12.165125000000216,
+          "min": 11.18249999999989,
+          "moe": 1.6559426224725362,
+          "p50": 11.945300000000316,
+          "p75": 12.57055000000014,
+          "p99": 13.546726000000335,
+          "p995": 13.567063000000338,
+          "p999": 13.583332600000343,
+          "rme": 13.61221214309353,
+          "samples": [
+            11.18249999999989,
+            11.65900000000056,
+            12.231600000000071,
+            13.587400000000343
+          ],
+          "sd": 1.0406727803846627,
+          "sem": 0.5203363901923314,
+          "variance": 1.0829998358335444
+        },
+        "max": 13.587400000000343,
+        "mean": 12.165125000000216,
+        "min": 11.18249999999989,
+        "moe": 1.6559426224725362,
+        "p75": 12.57055000000014,
+        "p99": 13.546726000000335,
+        "p995": 13.567063000000338,
+        "p999": 13.583332600000343,
+        "period": 12.165125000000216,
+        "rme": 13.61221214309353,
+        "runtime": "node",
+        "runtimeVersion": "24.20.0",
+        "samples": [
+          11.18249999999989,
+          11.65900000000056,
+          12.231600000000071,
+          13.587400000000343
+        ],
+        "sd": 1.0406727803846627,
+        "sem": 0.5203363901923314,
+        "throughput": {
+          "aad": 4.960759989700524,
+          "critical": 3.182446305284264,
+          "df": 3,
+          "mad": 3.83499422469896,
+          "max": 89.42544153811846,
+          "mean": 82.63728542126418,
+          "min": 73.59759777440678,
+          "moe": 10.807463545738997,
+          "p50": 83.76305118626576,
+          "p75": 86.68434734738783,
+          "p99": 89.31579777048924,
+          "p995": 89.37061965430385,
+          "p999": 89.41447716135553,
+          "rme": 13.078192840731948,
+          "samples": [
+            73.59759777440678,
+            81.75545308872054,
+            85.77064928381095,
+            89.42544153811846
+          ],
+          "sd": 6.79192200527867,
+          "sem": 3.395961002639335,
+          "variance": 46.130204525788635
+        },
+        "totalTime": 48.660500000000866,
+        "variance": 1.0829998358335444
+      },
+      "measurement_wall_time_ms": 50.463,
+      "determinism": {
+        "compared": 4,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 0,
+        "measurement_span_ms": 0,
+        "peak_retained_evidence_bytes": 299444
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "throughput",
+    "engine": "shotium",
+    "scenario": "batch",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "noisy",
+    "settle": {
+      "stable": false,
+      "launch_ms": 32.128,
+      "dispatch_to_launch_ms": 1628,
+      "warmups": 3,
+      "latency_ms": [
+        30.563,
+        11.937,
+        11.615
+      ],
+      "rss_bytes": [
+        189763584,
+        189763584,
+        189763584
+      ],
+      "latency_cv": 0.60138,
+      "rss_drift": 0,
+      "warmup_latency_stable": false,
+      "warmup_rss_stable": true,
+      "readiness_gate": "fixed-warmups-plus-host-cpu",
+      "system": {
+        "stable": false,
+        "cpu_limit": 43,
+        "samples": [
+          {
+            "at": "2026-09-11T03:15:52.627Z",
+            "cpu_percent": 22.57257257257257,
+            "available_bytes": 13053009920
+          },
+          {
+            "at": "2026-09-11T03:15:54.005Z",
+            "cpu_percent": 33.13488372093023,
+            "available_bytes": 13107851264
+          },
+          {
+            "at": "2026-09-11T03:15:55.345Z",
+            "cpu_percent": 57.31488138030194,
+            "available_bytes": 13101666304
+          },
+          {
+            "at": "2026-09-11T03:15:56.767Z",
+            "cpu_percent": 34.57387420915519,
+            "available_bytes": 13066072064
+          }
+        ]
+      },
+      "determinism": {
+        "compared": 0,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 8,
+        "measurement_span_ms": 5439,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": 673879645.081
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "throughput",
+    "engine": "shotium",
+    "scenario": "batch",
+    "repeat": 1,
+    "attempt": 2,
+    "concurrency": 1,
+    "status": "noisy",
+    "settle": {
+      "stable": false,
+      "launch_ms": 35.424,
+      "dispatch_to_launch_ms": 1659,
+      "warmups": 3,
+      "latency_ms": [
+        30.149,
+        11.823,
+        11.488
+      ],
+      "rss_bytes": [
+        189665280,
+        189665280,
+        189665280
+      ],
+      "latency_cv": 0.59924,
+      "rss_drift": 0,
+      "warmup_latency_stable": false,
+      "warmup_rss_stable": true,
+      "readiness_gate": "fixed-warmups-plus-host-cpu",
+      "system": {
+        "stable": false,
+        "cpu_limit": 43,
+        "samples": [
+          {
+            "at": "2026-09-11T03:16:09.299Z",
+            "cpu_percent": 31.0562015503876,
+            "available_bytes": 13054095360
+          },
+          {
+            "at": "2026-09-11T03:16:10.660Z",
+            "cpu_percent": 18.97407611693326,
+            "available_bytes": 13108936704
+          },
+          {
+            "at": "2026-09-11T03:16:12.005Z",
+            "cpu_percent": 55.52660960178638,
+            "available_bytes": 13109362688
+          },
+          {
+            "at": "2026-09-11T03:16:13.372Z",
+            "cpu_percent": 44.77945281965383,
+            "available_bytes": 13072822272
+          },
+          {
+            "at": "2026-09-11T03:16:14.727Z",
+            "cpu_percent": 53.398764085786986,
+            "available_bytes": 13104631808
+          }
+        ]
+      },
+      "determinism": {
+        "compared": 0,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 9,
+        "measurement_span_ms": 7856,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": -151829283.086
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "parallel",
+    "engine": "shotium",
+    "scenario": "parallel",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 35.266,
+      "dispatch_to_launch_ms": 1926,
+      "warmups": 3,
+      "latency_ms": [
+        34.99,
+        13.12,
+        12.907
+      ],
+      "rss_bytes": [
+        211337216,
+        211337216,
+        211337216
+      ],
+      "latency_cv": 0.62385,
+      "rss_drift": 0,
+      "warmup_latency_stable": false,
+      "warmup_rss_stable": true,
+      "readiness_gate": "fixed-warmups-plus-host-cpu",
+      "system": {
+        "stable": true,
+        "cpu_limit": 73,
+        "samples": [
+          {
+            "at": "2026-09-11T03:10:49.132Z",
+            "cpu_percent": 47.8176527643065,
+            "available_bytes": 12781285376
+          },
+          {
+            "at": "2026-09-11T03:10:50.506Z",
+            "cpu_percent": 19.415900486749592,
+            "available_bytes": 12837314560
+          },
+          {
+            "at": "2026-09-11T03:10:51.894Z",
+            "cpu_percent": 36.69116329091235,
+            "available_bytes": 13037015040
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1789096251895,
+      "measurement_completed_epoch_ms": 1789096255939,
+      "measurement_wall_time_ms": 4044.382,
+      "determinism": {
+        "compared": 98,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 1,
+        "measurement_span_ms": 0,
+        "peak_retained_evidence_bytes": 15113651
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "parallel",
+    "engine": "shotium",
+    "scenario": "parallel",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 2,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 36.827,
+      "dispatch_to_launch_ms": 1861,
+      "warmups": 3,
+      "latency_ms": [
+        36.687,
+        12.434,
+        12.982
+      ],
+      "rss_bytes": [
+        187908096,
+        187908096,
+        187908096
+      ],
+      "latency_cv": 0.6689,
+      "rss_drift": 0,
+      "warmup_latency_stable": false,
+      "warmup_rss_stable": true,
+      "readiness_gate": "fixed-warmups-plus-host-cpu",
+      "system": {
+        "stable": true,
+        "cpu_limit": 73,
+        "samples": [
+          {
+            "at": "2026-09-11T03:11:11.717Z",
+            "cpu_percent": 47.69529354682193,
+            "available_bytes": 13071286272
+          },
+          {
+            "at": "2026-09-11T03:11:13.119Z",
+            "cpu_percent": 43.53062629043359,
+            "available_bytes": 13104398336
+          },
+          {
+            "at": "2026-09-11T03:11:14.566Z",
+            "cpu_percent": 54.16888888888889,
+            "available_bytes": 13061918720
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1789096274567,
+      "measurement_completed_epoch_ms": 1789096278679,
+      "measurement_wall_time_ms": 4112.279,
+      "determinism": {
+        "compared": 98,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 1,
+        "measurement_span_ms": 0,
+        "peak_retained_evidence_bytes": 15113651
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "parallel",
+    "engine": "shotium",
+    "scenario": "parallel",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 4,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 37.135,
+      "dispatch_to_launch_ms": 1784,
+      "warmups": 3,
+      "latency_ms": [
+        33.876,
+        12.974,
+        12.801
+      ],
+      "rss_bytes": [
+        188973056,
+        188973056,
+        188973056
+      ],
+      "latency_cv": 0.60945,
+      "rss_drift": 0,
+      "warmup_latency_stable": false,
+      "warmup_rss_stable": true,
+      "readiness_gate": "fixed-warmups-plus-host-cpu",
+      "system": {
+        "stable": true,
+        "cpu_limit": 73,
+        "samples": [
+          {
+            "at": "2026-09-11T03:11:33.199Z",
+            "cpu_percent": 18.904507998061078,
+            "available_bytes": 13087092736
+          },
+          {
+            "at": "2026-09-11T03:11:34.647Z",
+            "cpu_percent": 27.243301564466822,
+            "available_bytes": 13120495616
+          },
+          {
+            "at": "2026-09-11T03:11:36.072Z",
+            "cpu_percent": 59.12923765272758,
+            "available_bytes": 13068656640
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1789096296072,
+      "measurement_completed_epoch_ms": 1789096300236,
+      "measurement_wall_time_ms": 4163.688,
+      "determinism": {
+        "compared": 98,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 1,
+        "measurement_span_ms": 0,
+        "peak_retained_evidence_bytes": 15113651
+      },
+      "rss_slope_bytes_per_minute": null
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "resident",
+    "engine": "shotium",
+    "scenario": "resident",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "warmups": 3,
+      "latency_ms": [
+        308,
+        76,
+        139
+      ],
+      "rss_bytes": [
+        300564480,
+        299319296,
+        299974656
+      ],
+      "latency_cv": 0.68815,
+      "rss_drift": 0.00415,
+      "warmup_latency_stable": false,
+      "warmup_rss_stable": true,
+      "readiness_gate": "fixed-warmups-plus-host-cpu",
+      "system": {
+        "stable": true,
+        "cpu_limit": 74,
+        "samples": [
+          {
+            "at": "2026-09-11T03:11:22.237Z",
+            "cpu_percent": 50.775193798449614,
+            "available_bytes": 13123514368
+          },
+          {
+            "at": "2026-09-11T03:11:23.607Z",
+            "cpu_percent": 57.260839642119755,
+            "available_bytes": 13218115584
+          },
+          {
+            "at": "2026-09-11T03:11:25.014Z",
+            "cpu_percent": 55.16734093416697,
+            "available_bytes": 13204819968
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1789096285015,
+      "measurement_completed_epoch_ms": 1789096302239,
+      "measurement_wall_time_ms": 2486,
+      "determinism": {
+        "compared": 7,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 7,
+        "measurement_span_ms": 14608,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": 101579381.763
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "resilience",
+    "engine": "shotium",
+    "scenario": "faults",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "status": "noisy",
+    "settle": {
+      "stable": false,
+      "launch_ms": 34.784,
+      "dispatch_to_launch_ms": 1777,
+      "warmups": 3,
+      "latency_ms": [
+        34.326,
+        13.209,
+        14.805
+      ],
+      "rss_bytes": [
+        212365312,
+        212365312,
+        212365312
+      ],
+      "latency_cv": 0.56585,
+      "rss_drift": 0,
+      "warmup_latency_stable": false,
+      "warmup_rss_stable": true,
+      "readiness_gate": "fixed-warmups-plus-host-cpu",
+      "system": {
+        "stable": false,
+        "cpu_limit": 45,
+        "samples": [
+          {
+            "at": "2026-09-11T03:10:49.995Z",
+            "cpu_percent": 50.849150849150845,
+            "available_bytes": 12896186368
+          },
+          {
+            "at": "2026-09-11T03:10:51.420Z",
+            "cpu_percent": 44.709229948426106,
+            "available_bytes": 12939386880
+          },
+          {
+            "at": "2026-09-11T03:10:52.793Z",
+            "cpu_percent": 58.772855133614634,
+            "available_bytes": 13124046848
+          },
+          {
+            "at": "2026-09-11T03:10:54.141Z",
+            "cpu_percent": 45.411072282508734,
+            "available_bytes": 13182001152
+          }
+        ]
+      },
+      "determinism": {
+        "compared": 0,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 8,
+        "measurement_span_ms": 6044,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": 660254496.758
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "resilience",
+    "engine": "shotium",
+    "scenario": "faults",
+    "repeat": 1,
+    "attempt": 2,
+    "concurrency": 1,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 33.931,
+      "dispatch_to_launch_ms": 1651,
+      "warmups": 3,
+      "latency_ms": [
+        32.269,
+        12.156,
+        12.086
+      ],
+      "rss_bytes": [
+        190640128,
+        190640128,
+        190640128
+      ],
+      "latency_cv": 0.61753,
+      "rss_drift": 0,
+      "warmup_latency_stable": false,
+      "warmup_rss_stable": true,
+      "readiness_gate": "fixed-warmups-plus-host-cpu",
+      "system": {
+        "stable": true,
+        "cpu_limit": 45,
+        "samples": [
+          {
+            "at": "2026-09-11T03:11:06.233Z",
+            "cpu_percent": 24.2,
+            "available_bytes": 13180153856
+          },
+          {
+            "at": "2026-09-11T03:11:07.606Z",
+            "cpu_percent": 29.887805775243702,
+            "available_bytes": 13317234688
+          },
+          {
+            "at": "2026-09-11T03:11:08.960Z",
+            "cpu_percent": 33.81203417560443,
+            "available_bytes": 13314510848
+          }
+        ]
+      },
+      "determinism": {
+        "compared": 0,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 9,
+        "measurement_span_ms": 7044,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": 1904255602.075
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "resilience",
+    "engine": "shotium",
+    "scenario": "soak",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 4,
+    "status": "noisy",
+    "settle": {
+      "stable": false,
+      "launch_ms": 34.815,
+      "dispatch_to_launch_ms": 1692,
+      "warmups": 3,
+      "latency_ms": [
+        33.204,
+        15.168,
+        14.931
+      ],
+      "rss_bytes": [
+        187215872,
+        187215872,
+        187215872
+      ],
+      "latency_cv": 0.49676,
+      "rss_drift": 0,
+      "warmup_latency_stable": false,
+      "warmup_rss_stable": true,
+      "readiness_gate": "fixed-warmups-plus-host-cpu",
+      "system": {
+        "stable": false,
+        "cpu_limit": 45,
+        "samples": [
+          {
+            "at": "2026-09-11T03:11:21.076Z",
+            "cpu_percent": 48.01587301587302,
+            "available_bytes": 13262893056
+          },
+          {
+            "at": "2026-09-11T03:11:22.428Z",
+            "cpu_percent": 47.204745640841274,
+            "available_bytes": 13306880000
+          },
+          {
+            "at": "2026-09-11T03:11:23.763Z",
+            "cpu_percent": 64.812058057313,
+            "available_bytes": 13302931456
+          },
+          {
+            "at": "2026-09-11T03:11:25.194Z",
+            "cpu_percent": 42.80721118469463,
+            "available_bytes": 13300039680
+          }
+        ]
+      },
+      "determinism": {
+        "compared": 0,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 8,
+        "measurement_span_ms": 5620,
+        "peak_retained_evidence_bytes": 0
+      },
+      "rss_slope_bytes_per_minute": 691446448.361
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  },
+  {
+    "shard": "resilience",
+    "engine": "shotium",
+    "scenario": "soak",
+    "repeat": 1,
+    "attempt": 2,
+    "concurrency": 4,
+    "status": "pass",
+    "settle": {
+      "stable": true,
+      "launch_ms": 33.412,
+      "dispatch_to_launch_ms": 1602,
+      "warmups": 3,
+      "latency_ms": [
+        32.171,
+        12.226,
+        12.014
+      ],
+      "rss_bytes": [
+        190562304,
+        190562304,
+        190562304
+      ],
+      "latency_cv": 0.61567,
+      "rss_drift": 0,
+      "warmup_latency_stable": false,
+      "warmup_rss_stable": true,
+      "readiness_gate": "fixed-warmups-plus-host-cpu",
+      "system": {
+        "stable": true,
+        "cpu_limit": 45,
+        "samples": [
+          {
+            "at": "2026-09-11T03:11:35.382Z",
+            "cpu_percent": 24.939349830179523,
+            "available_bytes": 13275361280
+          },
+          {
+            "at": "2026-09-11T03:11:36.759Z",
+            "cpu_percent": 25.009304056568666,
+            "available_bytes": 13315674112
+          },
+          {
+            "at": "2026-09-11T03:11:38.099Z",
+            "cpu_percent": 43.20247182842603,
+            "available_bytes": 13310926848
+          }
+        ]
+      },
+      "measurement_started_epoch_ms": 1789096298099,
+      "requested_soak_iterations": 1000,
+      "completed_soak_iterations": 1000,
+      "succeeded_soak_iterations": 1000,
+      "failed_soak_iterations": 0,
+      "failure_rate": 0,
+      "soak_stop_reason": "iteration-limit",
+      "measurement_completed_epoch_ms": 1789096339492,
+      "measurement_wall_time_ms": 41392.815,
+      "determinism": {
+        "compared": 1000,
+        "differing": 0
+      },
+      "rss_adjustment": {
+        "method": "subtract-retained-png-output-bytes",
+        "slope_method": "ordinary-least-squares",
+        "slope_minimum_samples": 3,
+        "slope_minimum_span_ms": 1000,
+        "measurement_samples": 13,
+        "measurement_span_ms": 38240,
+        "peak_retained_evidence_bytes": 153926271
+      },
+      "rss_slope_bytes_per_minute": 40949702.161
+    },
+    "cleanup": {
+      "force_killed": false,
+      "remaining": [],
+      "leftover_profiles": [],
+      "profile_cleanup_errors": []
+    }
+  }
+]
