@@ -10,7 +10,7 @@
 // batch, and the peak RSS of each engine's process tree. Both cells must
 // have passed and be ranking-eligible; a noisy or failed cell is refused
 // rather than drawn, because a picture with no error bars has to come from
-// a measurement the archive itself trusts. The multiplier is rounded down.
+// a measurement the archive itself trusts. The multiplier keeps one decimal.
 // The archive, platform, versions and metrics are written into the image,
 // so the picture cannot outlive its source unnoticed.
 //
@@ -142,9 +142,9 @@ export function figures(summary: PlatformSummary, against: string): Figures {
   };
 }
 
-// Rounded down: "4×" for 4.3 and for 4.9. The exact values sit on the bars.
+// One decimal, as measured: "4.2×" for 4.22, "8.7×" for 8.67.
 export function multiplier(theirs: number, ours: number): string {
-  return `${Math.floor(theirs / ours)}×`;
+  return `${(theirs / ours).toFixed(1)}×`;
 }
 
 export function seconds(value: number): string {

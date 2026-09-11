@@ -66,10 +66,10 @@ test('a cell the archive does not trust is refused, not drawn', () => {
   assert.throws(() => figures(summary(), 'chrome'), /unknown competitor/);
 });
 
-test('the multiplier rounds down and the values keep their precision', () => {
-  assert.equal(multiplier(179.8, 41.5), '4×');
-  assert.equal(multiplier(3_111_129_415, 359_902_391), '8×');
-  assert.equal(multiplier(9.99, 1), '9×');
+test('the multiplier keeps one decimal and the values keep their precision', () => {
+  assert.equal(multiplier(179.8, 41.5), '4.3×');
+  assert.equal(multiplier(3_111_129_415, 359_902_391), '8.6×');
+  assert.equal(multiplier(9.99, 1), '10.0×');
   assert.equal(seconds(41.502), '41.5 s');
   assert.equal(seconds(179.8), '180 s');
   assert.equal(bytes(359_902_391), '360 MB');
@@ -79,7 +79,7 @@ test('the multiplier rounds down and the values keep their precision', () => {
 test('both cards carry the numbers, the multipliers and the source line', () => {
   const f = figures(summary(), 'puppeteer-chrome');
   const en = render(f, 'en');
-  for (const expected of ['1,000 captures', '4×', 'faster', '41.5 s', '180 s', 'Memory peak', '8×', '360 MB', '3.1 GB',
+  for (const expected of ['1,000 captures', '4.3×', 'faster', '41.5 s', '180 s', 'Memory peak', '8.6×', '360 MB', '3.1 GB',
     'shotium 0.7.2 vs Puppeteer 25.8.0 + Chrome 152.0.7977.42', 'linux-x64', 'concurrency 4']) {
     assert.ok(en.includes(expected), `English card lacks ${expected}`);
   }
