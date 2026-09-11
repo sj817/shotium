@@ -21,7 +21,7 @@ Most design documents are written in Chinese; the code comments and CLAUDE.md ar
 
 ## Assets
 
-`assets/` holds the images the root README embeds: `demo.gif`, `card.webp`, `example-node.webp` and `example-cli.webp`. They are generated from [apps/demo-card](../demo-card/README.md) by `pnpm docs:assets` and `pnpm docs:demo`, not edited by hand.
+`assets/` holds the images the root README embeds: `hero.svg` and `hero.zh.svg`, the two comparison cards at the top, drawn by `pnpm docs:hero` from the newest archive under `benchmarks/`; and `card.webp`, `example-node.webp` and `example-cli.webp`, generated from [apps/demo-card](../demo-card/README.md) by `pnpm docs:assets`. `demo.gif` is the terminal recording `pnpm docs:demo` makes from the same card; the README no longer embeds it. None of them is edited by hand.
 
 ## Benchmarks
 

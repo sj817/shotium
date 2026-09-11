@@ -13,8 +13,8 @@
 </p>
 
 <p align="center">
-  <img src="apps/docs/assets/demo.gif" width="820"
-       alt="Terminal recording: installing @pixel.js/shotium, running card.mjs with cold and warm capture timings, then the rendered boarding pass">
+  <img src="apps/docs/assets/hero.svg" width="820"
+       alt="shotium against Puppeteer with Chrome, 1,000 screenshots at concurrency 4 on linux-x64: the wall time of the batch and the peak memory of each engine, drawn as two bar cards">
 </p>
 
 shotium extracts the core rendering pipeline from Chromium: Blink for DOM parsing, CSS styling, layout and painting, Skia for CPU rasterisation and image encoding, and `//net` for resource fetching and HTTP caching. It strips out all unnecessary browser shell components: V8, the `//content` layer, multi-process architecture, compositor, GPU process, and DevTools
@@ -23,7 +23,7 @@ The engine runs directly within the host process, rendering documents on a dedic
 
 ### Key Highlights
 
-- **Ultra-Fast & Low Latency**: Warm captures in ~13 ms, cold start in ~59 ms—no external browser process launch or DevTools Protocol handshake delay
+- **Ultra-Fast & Low Latency**: Warm captures in ~14 ms, cold start in ~56 ms—no external browser process launch or DevTools Protocol handshake delay
 - **Focused Downloads**: CLI, C ABI and language examples ship separately; download only the delivery and platform you need. New archive sizes come from the actual Release assets
 - **Zero CDP Overhead**: Operates without V8, multi-process IPC, or JSON-RPC serialization, directly driving Blink via in-process Node-API and C ABI bindings
 - **Production-Ready Resilience**: Built-in streaming tile rasterisation (`screenshotTiles`), daemon process pool for short-lived workflows (`daemon`), and explicit GC memory reclaim
@@ -341,11 +341,11 @@ Shotium is continuously tested against mainstream headless browser solutions acr
 
 | Engine Solution | Cold Start (p50) | Warm Snapshot (p50) | Throughput (c=1) | Download Size (Compressed) | Installed Size (Unpacked) |
 |:---|---:|---:|---:|---:|---:|
-| **Shotium** | **59 ms** | **13.4 ms** | **24.3 / sec** | **~11 MB** | **~32 MB** |
-| Puppeteer (headless-shell) | 652 ms (11.0×) | 133.2 ms (9.9×) | 5.6 / sec | ~130 MB | ~380 MB |
-| Playwright (headless-shell) | 781 ms (13.2×) | 128.4 ms (9.6×) | 5.9 / sec | ~130 MB | ~390 MB |
-| Puppeteer (Chrome full browser) | 887 ms (15.0×) | 165.3 ms (12.3×) | 4.6 / sec | ~170 MB | ~450 MB |
-| Playwright (Chrome full browser) | 971 ms (16.5×) | 154.7 ms (11.5×) | 5.0 / sec | ~170 MB | ~480 MB |
+| **Shotium** | **56 ms** | **13.7 ms** | **24.5 / sec** | **~11 MB** | **~32 MB** |
+| Puppeteer (headless-shell) | 567 ms (10.1×) | 133.1 ms (9.7×) | 5.5 / sec | ~130 MB | ~380 MB |
+| Playwright (headless-shell) | 698 ms (12.5×) | 128.8 ms (9.4×) | 5.8 / sec | ~130 MB | ~390 MB |
+| Puppeteer (Chrome full browser) | 813 ms (14.5×) | 183.1 ms (13.4×) | 4.0 / sec | ~170 MB | ~450 MB |
+| Playwright (Chrome full browser) | 934 ms (16.7×) | 153.0 ms (11.2×) | 5.0 / sec | ~170 MB | ~480 MB |
 
 > Note: Shotium sizes measured on the smallest platform builds (macOS arm64 / Linux arm64), ~32 MB for a single executable/shared library; comparative browser figures include full Chromium binaries and multimedia dependencies
 
@@ -359,7 +359,7 @@ Shotium is continuously tested against mainstream headless browser solutions acr
 
 Shotium is purposefully optimized for high-throughput, server-side "HTML/CSS to pixel" rendering. In traditional headless browsers, the vast majority of CPU cycles, latency, and memory footprint are consumed by V8 VM instantiation, script evaluation, and DevTools Protocol JSON-RPC round-trips. Running untrusted client-side JavaScript also introduces severe attack surfaces
 
-By stripping V8, Shotium achieves ~13 ms warm captures, a 59 ms cold start, and deterministic layout fidelity. For dynamic content, render your data into HTML server-side (via SSR or templates in Node.js, Go, Python, etc.) and pass the ready HTML to Shotium for pure layout and rasterisation
+By stripping V8, Shotium achieves ~14 ms warm captures, a 56 ms cold start, and deterministic layout fidelity. For dynamic content, render your data into HTML server-side (via SSR or templates in Node.js, Go, Python, etc.) and pass the ready HTML to Shotium for pure layout and rasterisation
 </details>
 
 <details>

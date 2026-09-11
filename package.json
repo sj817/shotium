@@ -87,6 +87,7 @@
 
     "docs:assets": "pnpm -C scripts exec tsx docs/assets.ts",
     "docs:demo": "pnpm -C scripts exec tsx docs/demo.ts",
+    "docs:hero": "pnpm -C scripts exec tsx docs/hero.ts",
     "demo:sync": "pnpm -C scripts exec tsx docs/sync-demo-card.ts",
     "skills:link": "pnpm -C scripts exec tsx docs/link-agent-skills.ts"
   }

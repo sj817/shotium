@@ -192,6 +192,27 @@ the changelog by hand:
 - Chinese paragraphs must not be soft-wrapped: GitHub renders the line
   breaks as spaces.
 
+## 6. Refresh the README cards
+
+The release run dispatches `benchmark.yml` for the published version; it
+lands as `bench(results): v$version …` on `main` about half an hour later,
+with a new archive under `apps/docs/benchmarks/v$version/`. The two
+comparison cards at the top of the READMEs are drawn from that archive's
+linux-x64 soak cells and carry the version in their footer, so they go
+stale with every release:
+
+```bash
+git pull
+pnpm docs:hero          # newest publishable archive; refuses noisy or failed cells
+git add apps/docs/assets/hero.svg apps/docs/assets/hero.zh.svg
+git commit -m "docs: redraw the README cards from the v$version benchmark"
+```
+
+If the linux-x64 cells were rejected as noisy, keep the previous cards
+(the footer still names the archive they came from) rather than drawing
+from another platform without saying so. While there, check that the
+benchmark table in both READMEs still says what that archive says.
+
 ## Redoing a release
 
 Cheap when C++ did not change: the six builds hit their caches and finish in
