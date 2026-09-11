@@ -24,7 +24,7 @@ async function nativeFixture(directory: string): Promise<{build: string; sourceR
   const build = path.join(directory, 'build'), sourceRoot = path.join(directory, 'source');
   await mkdir(build, {recursive: true});
   for (const name of ['shotium', 'shotium.exe', 'shotium.dll', 'shotium.dll.lib',
-    'libshotium.so', 'libshotium.dylib', 'shotium_data.pak', 'shotium_strings.pak']) {
+    'libshotium.so', 'libshotium.dylib', 'shotium.node', 'shotium_data.pak', 'shotium_strings.pak']) {
     await writeFile(path.join(build, name), 'native fixture: ' + name);
   }
   for (const name of ['LICENSE', 'shot/shot_api.h', 'apps/c-abi/README.md', 'apps/c-abi/README.zh.md']) {
@@ -42,11 +42,13 @@ test('all six native platforms: real 7z extraction preserves isolated contents a
   const fixture = await nativeFixture(directory);
   for (const platform of releasePlatforms) {
     const os = platform.startsWith('windows') ? 'win' : platform.startsWith('macos') ? 'mac' : 'linux';
-    for (const kind of ['cli', 'c-abi'] as const) {
+    for (const kind of ['cli', 'c-abi', 'node'] as const) {
       const stem = 'shotium-' + kind + '-' + platform;
       const dest = path.join(directory, stem);
       const expected = kind === 'cli'
         ? [os === 'win' ? 'shotium.exe' : 'shotium', 'shotium_data.pak', 'shotium_strings.pak', 'LICENSE']
+        : kind === 'node'
+        ? ['shotium.node', 'shotium_data.pak', 'shotium_strings.pak', 'LICENSE']
         : [os === 'win' ? 'shotium.dll' : os === 'mac' ? 'libshotium.dylib' : 'libshotium.so',
           ...(os === 'win' ? ['shotium.dll.lib'] : []),
           'shotium_data.pak', 'shotium_strings.pak', 'shot_api.h', 'C_ABI.md', 'C_ABI.zh.md', 'LICENSE'];

@@ -48,12 +48,16 @@ export function missingArtifacts(expected: string[], present: Iterable<string>):
 
 // A shard job that has not reached "completed" may still upload. Anything
 // else -- success, failure, cancelled -- is as done as it will ever be.
+//
+// The prefix is looked for anywhere in the name, not only at the start:
+// when engine.yml calls this workflow, GitHub names the jobs
+// "linux (amd64) / compile: shotium-linux-amd64-<fp> 0/4", caller first.
 export function unfinishedJobs(jobs: Job[], prefix: string): string[] {
-  return jobs.filter((job) => job.name.startsWith(prefix) && job.status !== 'completed').map((job) => job.name);
+  return jobs.filter((job) => job.name.includes(prefix) && job.status !== 'completed').map((job) => job.name);
 }
 
 export function matchingJobs(jobs: Job[], prefix: string): string[] {
-  return jobs.filter((job) => job.name.startsWith(prefix)).map((job) => job.name);
+  return jobs.filter((job) => job.name.includes(prefix)).map((job) => job.name);
 }
 
 async function api<T>(url: string, token: string): Promise<T> {
@@ -149,7 +153,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === import.meta.filename) {
   cli.command('', 'wait for this run\'s other compile shards to upload their artifacts')
     .option('--prefix <p>', 'artifact name prefix; indices 0 .. shards-2 are appended')
     .option('--shards <n>', 'slices this run was split into, this job included')
-    .option('--job-prefix <p>', 'name prefix of the shard jobs to watch')
+    .option('--job-prefix <p>', 'the shard jobs to watch: their names contain this (the calling job may precede it)')
     .option('--repo <owner/name>', 'repository', {default: process.env.GITHUB_REPOSITORY ?? ''})
     .option('--run-id <id>', 'workflow run', {default: process.env.GITHUB_RUN_ID ?? ''})
     .option('--timeout <minutes>', 'give up after this long', {default: '240'})

@@ -13,13 +13,18 @@ export const releaseArchives = [
   ...releaseLanguages.map(language => 'shotium-example-' + language + '.7z'),
 ].sort();
 
-export type NativeKind = 'cli' | 'c-abi';
+// `node` is the third delivery: the addon and its packs, version-free, from
+// which publish.yml and the previews assemble the npm platform package for
+// whatever version they are shipping. It is a CI artifact, not a Release
+// attachment.
+export type NativeKind = 'cli' | 'c-abi' | 'node';
 export type NativeOS = 'win' | 'linux' | 'mac';
 const resources = ['shotium_data.pak', 'shotium_strings.pak'];
 
 export function nativeFiles(kind: NativeKind, os: NativeOS): string[] {
   if (!['win', 'linux', 'mac'].includes(os)) throw new Error('--os must be win, linux or mac');
   if (kind === 'cli') return [os === 'win' ? 'shotium.exe' : 'shotium', ...resources, 'LICENSE'];
+  if (kind === 'node') return ['shotium.node', ...resources, 'LICENSE'];
   if (kind !== 'c-abi') throw new Error('unknown native delivery kind');
   return [
     ...(os === 'win' ? ['shotium.dll', 'shotium.dll.lib'] : [os === 'mac' ? 'libshotium.dylib' : 'libshotium.so']),
@@ -55,7 +60,7 @@ export async function stageNativeDelivery(options: {
     } else {
       await copyFile(input.source, output);
     }
-    const executable = ['shotium', 'shotium.exe', 'shotium.dll', 'libshotium.so', 'libshotium.dylib'].includes(input.name);
+    const executable = ['shotium', 'shotium.exe', 'shotium.dll', 'libshotium.so', 'libshotium.dylib', 'shotium.node'].includes(input.name);
     await chmod(output, executable ? 0o755 : 0o644);
   }
   return files;
