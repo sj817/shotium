@@ -51,6 +51,12 @@ Also note, for a follow-up commit *after* the release:
 the `baseline_version` default, and `pnpm verify:daemon-protocol`
 uses a literal version in one fixture.
 
+For a post-release rehearsal against that same published runtime, dispatch
+`perf-gate.yml` with `-f acceptance=identical-runtime`. This requires matching
+runtime files, a complete matrix, pixels and no measured regression; it does
+not claim a speedup. The default `improvement` mode still requires faster engine
+cases. See `.claude/skills/perf-compare/SKILL.md` for the acceptance boundaries.
+
 Commit and push only that file, as a PR or directly, and wait for
 `checks.yml`:
 

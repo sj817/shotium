@@ -114,3 +114,28 @@ rejects a platform with no engine and evidence at that fingerprint, expired
 artifacts and incomplete platform coverage. This workflow neither publishes npm
 packages nor commits benchmark reports. Every platform must pass the article,
 performance and pixel checks; a green static check is not this acceptance gate.
+
+The default `acceptance=improvement` keeps the faster-per-engine-case rule.
+For a release pipeline rehearsal whose installed runtime is unchanged, explicitly
+select `acceptance=identical-runtime`:
+
+```sh
+gh workflow run perf-gate.yml -R sj817/shotium --ref main -f baseline_version=0.7.4 -f acceptance=identical-runtime
+```
+
+This mode requires byte-identical main and native package manifests, every file
+under `dist/`, and all files in the native package (including both resource
+packs). It snapshots them before and after the unchanged full sampling matrix,
+and binds each worker's actual loaded addon, resource directory and bundle to
+those snapshots. Main-package source and documentation files are outside this
+runtime identity. Missing files, changed bytes, incomplete sampling, errors,
+measured `slower` cases or failed pixels reject the release validation. Timing
+ties and `unproven` results are retained as such; none become improvement claims.
+The report labels this as **identical-runtime release acceptance**, and still
+shows the separate, unchanged improvement verdicts. It is unsuitable for a
+candidate with any changed runtime file or manifest; use improvement for that.
+
+The same explicit `--acceptance identical-runtime` option must be passed to both
+`perf:compare` and `perf:report` for a local run. Old results without runtime
+snapshots cannot qualify retroactively. `scripts/ci/performance-acceptance.test.ts`
+covers the policy's refusals and the independent report's evidence requirements.

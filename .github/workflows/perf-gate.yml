@@ -4,7 +4,7 @@
 # so there is nothing to dispatch first and no run ids to paste: if the
 # engines are missing, resolve says so and engine.yml is the fix.
 name: perf-gate
-run-name: "perf-gate: candidate vs v${{ inputs.baseline_version }}"
+run-name: "perf-gate (${{ inputs.acceptance }}): candidate vs v${{ inputs.baseline_version }}"
 
 on:
   workflow_dispatch:
@@ -19,6 +19,14 @@ on:
         required: false
         default: ''
         type: string
+      acceptance:
+        description: 'improvement requires faster engine cases; identical-runtime validates an unchanged release'
+        required: true
+        default: improvement
+        type: choice
+        options:
+          - improvement
+          - identical-runtime
 
 permissions:
   contents: read
@@ -145,11 +153,13 @@ jobs:
         run: pnpm verify:bilibili --package out/performance/candidate
       - name: Complete paired performance matrix
         id: performance
+        env:
+          ACCEPTANCE: ${{ inputs.acceptance }}
         run: >-
           pnpm perf:compare
           out/performance/baseline/node_modules/@pixel.js/shotium
           out/performance/candidate
-          out/performance/result.json --samples=100 --calibrate --check
+          out/performance/result.json --samples=100 --calibrate --check --acceptance "$ACCEPTANCE"
       - name: Independently compare every rendered case
         if: always() && steps.performance.outcome != 'skipped'
         run: pnpm perf:images out/performance/result.json
@@ -167,7 +177,7 @@ jobs:
           retention-days: 90
 
   acceptance:
-    name: "gate: shotium-v${{ needs.meta.outputs.version }}"
+    name: "gate (${{ inputs.acceptance }}): shotium-v${{ needs.meta.outputs.version }}"
     if: always()
     needs: [meta, resolve, platform]
     runs-on: ubuntu-24.04
@@ -188,9 +198,11 @@ jobs:
           path: out/evidence
       - name: Require complete results on all six platforms
         shell: bash
+        env:
+          ACCEPTANCE: ${{ inputs.acceptance }}
         run: |
           # Article evidence makes the uploaded artifact paths relative to the repository root.
-          pnpm perf:report out/evidence/performance-*/out/performance/result.json --output out/performance-acceptance.md
+          pnpm perf:report out/evidence/performance-*/out/performance/result.json --output out/performance-acceptance.md --acceptance "$ACCEPTANCE"
           test '${{ needs.platform.result }}' = success
       - uses: actions/upload-artifact@v7
         if: always()
