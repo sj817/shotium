@@ -18,7 +18,7 @@ const FP = 'd234ab93f5f87385';
 let nextId = 1;
 function record(name: string, run: number, extra: Partial<ArtifactRecord & {head: number; at: string}> = {}): ArtifactRecord {
   return {
-    id: nextId++, name, size_in_bytes: 1, expired: extra.expired ?? false,
+    id: nextId++, name, size_in_bytes: extra.size_in_bytes ?? 400_000_000, expired: extra.expired ?? false,
     created_at: extra.at ?? `2026-09-${String(run % 28 + 1).padStart(2, '0')}T00:00:00Z`,
     workflow_run: {id: run, repository_id: REPO, head_repository_id: extra.head ?? REPO, head_branch: 'main', head_sha: 'abc'},
   };
@@ -95,6 +95,10 @@ test('the build directory: exact when its marker shares the run, otherwise the n
   assert.deepEqual([other?.runId, other?.exact], [2, false]);
   assert.equal(await findBuildDir(api([]), 'windows-arm64', FP), null);
   assert.equal((await findBuildDir(api(records), 'windows-arm64', undefined))?.runId, 2, 'without a fingerprint, the newest');
+  // A cancelled job saves a tar of nothing; it must neither be chosen nor
+  // shadow the real one.
+  const junk = [...records, record(n.buildDir, 3, {at: '2026-09-03T00:00:00Z', size_in_bytes: 173})];
+  assert.equal((await findBuildDir(api(junk), 'windows-arm64', undefined))?.runId, 2);
 });
 
 test('status lists what to build per OS, and --force builds everything', async () => {

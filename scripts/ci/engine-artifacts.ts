@@ -52,6 +52,12 @@ export type Api = (route: string, init?: {method?: 'GET' | 'DELETE'}) => Promise
 
 export const RETENTION_DAYS = 90;
 
+// A build directory that fits in less than this is not one: a job that
+// was cancelled or failed before gn gen still ran the "save" step once and
+// uploaded a tar of nothing, and every job after it restored that nothing
+// and then saved its own. Anything smaller is junk to prune, never a start.
+export const MIN_BUILD_DIR_BYTES = 1_000_000;
+
 /** The workflows that produce engine artifacts. A trusted upload from any other file is still not an engine. */
 export const PRODUCERS = new Set([
   '.github/workflows/engine-windows.yml', '.github/workflows/engine-linux.yml', '.github/workflows/engine-macos.yml',
@@ -125,7 +131,7 @@ export interface BuildDir {
 // was saved at, which is what decides between one shard and several.
 export async function findBuildDir(api: Api, label: string, fingerprint: string | undefined, currentRunId?: number): Promise<BuildDir | null> {
   const {buildDir, marker} = names(label, fingerprint ?? '');
-  const blobs = (await listByName(api, buildDir)).filter((r) => trusted(r, currentRunId));
+  const blobs = (await listByName(api, buildDir)).filter((r) => trusted(r, currentRunId) && r.size_in_bytes >= MIN_BUILD_DIR_BYTES);
   if (blobs.length === 0) return null;
   const markers = fingerprint ? (await listByName(api, marker)).filter((r) => trusted(r, currentRunId)) : [];
   const exact = blobs.find((b) => markers.some((m) => m.workflow_run!.id === b.workflow_run!.id));
@@ -338,7 +344,9 @@ cli.command('provenance', 'write provenance.json for an engine artifact')
     }, null, 2) + '\n');
   });
 
-cli.command('prune', 'delete all but the newest N trusted artifacts with this name')
+// Keeps the newest N usable blobs; older usable ones and every junk blob
+// (see MIN_BUILD_DIR_BYTES) go, so that junk never crowds out a warm start.
+cli.command('prune', 'delete all but the newest N usable trusted artifacts with this name')
   .option('--name <name>', 'artifact name')
   .option('--keep <n>', 'how many to keep', {default: '3'})
   .action(async (options: {name?: string; keep: string}) => {
@@ -347,11 +355,13 @@ cli.command('prune', 'delete all but the newest N trusted artifacts with this na
     const keep = Number(options.keep);
     if (!Number.isInteger(keep) || keep < 1) fail('--keep must be a positive integer');
     const records = (await listByName(api, name)).filter((r) => trusted(r));
-    for (const record of records.slice(keep)) {
+    const usable = records.filter((r) => r.size_in_bytes >= MIN_BUILD_DIR_BYTES);
+    const junk = records.filter((r) => r.size_in_bytes < MIN_BUILD_DIR_BYTES);
+    for (const record of [...usable.slice(keep), ...junk]) {
       await api(`actions/artifacts/${record.id}`, {method: 'DELETE'});
-      console.log(`deleted ${name} from run ${record.workflow_run!.id} (${record.created_at})`);
+      console.log(`deleted ${name} from run ${record.workflow_run!.id} (${record.created_at}, ${record.size_in_bytes} bytes)`);
     }
-    console.log(`${name}: kept ${Math.min(keep, records.length)} of ${records.length}`);
+    console.log(`${name}: kept ${Math.min(keep, usable.length)} of ${usable.length} usable; removed ${junk.length} junk`);
   });
 
 // What refresh.yml re-uploads so nothing expires: engine and evidence at
