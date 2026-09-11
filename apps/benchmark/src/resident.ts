@@ -1,6 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import {ShotiumEngine, competitorChromiumPolicy, waitForVisualReady} from './engines.ts';
+import {
+  PLAYWRIGHT_CONTEXT_OPTIONS,
+  ShotiumEngine,
+  competitorChromiumPolicy,
+  playwrightLaunchArgs,
+  waitForVisualReady,
+} from './engines.ts';
 import {BROWSER_OPERATION_TIMEOUT_MS, VIEWPORT} from './constants.ts';
 
 function writeEvidence(file, image) {
@@ -31,17 +37,19 @@ async function warmPuppeteer(name, url, evidenceFile) {
   };
 }
 
-async function warmPlaywright(name, url, evidenceFile) {
+async function warmPlaywright(name, url, evidenceFile, windowInset) {
   const {chromium} = await import('playwright');
   const channel = name === 'playwright-shell' ? 'chromium-headless-shell' : 'chromium';
   const policy = competitorChromiumPolicy();
+  // The clients' contexts have no viewport; the host's window size gives it.
   const server = await chromium.launchServer({
     headless: true,
     channel,
     chromiumSandbox: policy.playwrightChromiumSandbox,
+    args: playwrightLaunchArgs(windowInset),
   });
   const browser = await chromium.connect(server.wsEndpoint());
-  const context = await browser.newContext({viewport: VIEWPORT, deviceScaleFactor: 1});
+  const context = await browser.newContext(PLAYWRIGHT_CONTEXT_OPTIONS);
   const page = await context.newPage();
   await page.goto(url, {waitUntil: 'load', timeout: BROWSER_OPERATION_TIMEOUT_MS});
   await waitForVisualReady(page);
@@ -64,6 +72,7 @@ export async function startResident(name, url, {
   workers = 4,
   daemonName = 'benchmark',
   evidenceFile = null,
+  windowInset = null,
 } = {}) {
   if (name === 'shotium') {
     const engine = new ShotiumEngine({mode: 'daemon', workers, daemonName});
@@ -78,6 +87,6 @@ export async function startResident(name, url, {
     };
   }
   if (name.startsWith('puppeteer-')) return warmPuppeteer(name, url, evidenceFile);
-  if (name.startsWith('playwright-')) return warmPlaywright(name, url, evidenceFile);
+  if (name.startsWith('playwright-')) return warmPlaywright(name, url, evidenceFile, windowInset);
   throw new Error(`resident mode is unavailable for ${name}`);
 }

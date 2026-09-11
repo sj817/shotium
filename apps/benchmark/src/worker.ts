@@ -346,6 +346,7 @@ async function runResident(samples) {
     workers: concurrency,
     daemonName: daemonName('resident'),
     evidenceFile: hostEvidenceFile,
+    windowInset: config.windowInsets?.[engineName] || null,
   });
   try {
     const deadline = Date.now() + SETTLE.timeoutMs;
@@ -450,6 +451,7 @@ async function runBrowserProcessExit(samples) {
     workers: concurrency,
     daemonName: daemonName('process-exit'),
     evidenceFile: preconditionFile,
+    windowInset: config.windowInsets?.[engineName] || null,
   });
   const token = `${engineName}-process-exit-${repeat}-${attempt}-${process.pid}`;
   let interrupted;
@@ -517,6 +519,7 @@ async function runBrowserProcessExit(samples) {
     workers: concurrency,
     daemonName: daemonName('process-exit-recovered'),
     evidenceFile: recoveryFile,
+    windowInset: config.windowInsets?.[engineName] || null,
   });
   try {
     const clientFilePath = path.join(sampleDirectory,

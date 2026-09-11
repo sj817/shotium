@@ -375,13 +375,11 @@ async function main() {
   }
   const probes = [];
   for (const engine of ENGINE_IDS) probes.push(await probeEngine(engine));
-  const runnable = probes.filter((probe) => probe.status === 'pass').map((probe) => probe.engine);
-  // Playwright sizes a headless window to the viewport as if the window had no
-  // chrome; where Chrome's own headless mode keeps its tab strip and toolbar
-  // (macOS: 87 px) the tab container is shorter, every re-attached page shrinks
-  // to it, and screenshots that grow the widget while copying sometimes return
-  // the pre-resize frame tiled to the viewport. Measured once here, outside the
-  // timed regions, and applied to each page's window by the engine adapter.
+  // Playwright pages take the viewport from their window, not from emulation
+  // (see `playwrightLaunchArgs`), so each shard measures how much of a headless
+  // window the browser's own chrome takes and opens windows that much larger.
+  // Measured once here, outside the timed regions. Without a reading the
+  // engine would capture the wrong size in every cell, so it does not run.
   const windowInsets = {};
   for (const probe of probes) {
     if (probe.status !== 'pass' || !probe.engine.startsWith('playwright-')) continue;
@@ -394,11 +392,12 @@ async function main() {
         `inset ${inset.width}x${inset.height}`);
     } catch (error) {
       probe.window_inset = null;
-      probe.window_inset_error = String(error?.stack || error);
-      progress(`  ${probe.engine}: window inset probe failed, pages keep the package window ` +
-        `bounds: ${String(error)}`);
+      probe.status = 'infra-error';
+      probe.reason = `window inset probe failed: ${String(error?.stack || error)}`;
+      progress(`  ${probe.engine}: window inset probe failed, engine skipped: ${String(error)}`);
     }
   }
+  const runnable = probes.filter((probe) => probe.status === 'pass').map((probe) => probe.engine);
 
   const config = {
     shard,
@@ -601,11 +600,12 @@ async function main() {
       output: 'png',
       wait_until: 'load',
       visual_readiness: 'fonts-ready-and-two-animation-frames-or-native-paint-clean',
-      browser_launch_policy: 'package-default-except-linux-sandbox',
+      browser_launch_policy: 'package-default-except-linux-sandbox; ' +
+        'playwright-window-size-viewport-plus-measured-inset-and-device-scale-factor-1',
       image_correctness: 'pixelmatch-threshold-0.1; exact-rgba-retained-as-diagnostic',
       warmup_policy: 'three-fixed-warmups; latency-and-rss-variation-recorded-not-gated',
       default_page_policy: 'new-page; puppeteer-pages-created-as-their-own-window; ' +
-        'playwright-windows-grown-by-the-measured-headless-chrome-inset',
+        'playwright-viewport-from-the-window-not-emulated',
       default_cache_policy: 'disabled-or-no-store',
       reuse_page_scenario_is_separate: true,
     },

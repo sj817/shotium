@@ -149,7 +149,6 @@ class ChromeEngine {
   profileDir: string | null;
   screenshotTimeoutSupported: boolean;
   ownWindowPerPage: boolean;
-  windowInset: {width: number; height: number} | null;
 
   constructor({
     name,
@@ -159,7 +158,6 @@ class ChromeEngine {
     profileDir = null,
     screenshotTimeoutSupported = false,
     ownWindowPerPage = false,
-    windowInset = null,
   }) {
     this.name = name;
     this.launchHook = launch;
@@ -172,7 +170,6 @@ class ChromeEngine {
     this.profileDir = profileDir;
     this.screenshotTimeoutSupported = screenshotTimeoutSupported;
     this.ownWindowPerPage = ownWindowPerPage;
-    this.windowInset = windowInset;
   }
 
   // Chrome's own headless mode puts every `newPage()` in the same window as a
@@ -203,53 +200,18 @@ class ChromeEngine {
     this.attached = true;
   }
 
-  // Playwright sizes a headless window to the viewport as if the window had no
-  // chrome, and Chrome's own headless mode on macOS keeps its tab strip and
-  // toolbar, so the tab container is shorter than the viewport. Emulation
-  // sizes a page's widget to the viewport anyway, but each time a sibling tab
-  // closes and the page is re-attached to the container it shrinks back, and
-  // the next `Page.captureScreenshot` has to grow it again while copying.
-  // The copy sometimes lands on the pre-resize frame, which Chromium tiles to
-  // the requested size: rows 633-719 repeat rows 0-86. Every recurring
-  // playwright-chrome evidence failure on macOS is that frame, and it needs
-  // two or more pages. Growing the window by the container's measured inset
-  // keeps the container at the viewport, so nothing resizes; 1,000 concurrent
-  // captures on macOS arm64 produced no tiled frame against one to eight with
-  // the shipped bounds. The inset is measured once per shard by
-  // `measureWindowInset`, and is zero where headless windows have no chrome.
-  hasWindowInset() {
-    return Boolean(this.windowInset && (this.windowInset.width || this.windowInset.height));
-  }
-
-  async fitWindow(session) {
-    if (!this.hasWindowInset()) return;
-    const {windowId} = await session.send('Browser.getWindowForTarget');
-    await session.send('Browser.setWindowBounds', {
-      windowId,
-      bounds: {
-        width: VIEWPORT.width + this.windowInset.width,
-        height: VIEWPORT.height + this.windowInset.height,
-      },
-    });
-  }
-
   async shot(url, {timeoutMs = 30_000, fullPage = false} = {}) {
-    const reused = this.reusePage && this.idlePages.length > 0;
-    const page = reused ? this.idlePages.pop() : await this.newPage();
-    let session = null;
+    const page = this.reusePage && this.idlePages.length ? this.idlePages.pop() :
+      await this.newPage();
+    let cacheSession = null;
     try {
-      if (!reused) {
-        const disableCache = !this.reusePage;
-        const cacheOverCdp = disableCache && typeof page.setCacheEnabled !== 'function';
-        if (disableCache && !cacheOverCdp) await page.setCacheEnabled(false);
-        if ((cacheOverCdp || this.hasWindowInset()) &&
-            typeof this.context.newCDPSession === 'function') {
-          session = await this.context.newCDPSession(page);
-          await this.fitWindow(session);
-          if (cacheOverCdp) {
-            await session.send('Network.enable');
-            await session.send('Network.setCacheDisabled', {cacheDisabled: true});
-          }
+      if (!this.reusePage) {
+        if (typeof page.setCacheEnabled === 'function') {
+          await page.setCacheEnabled(false);
+        } else if (typeof this.context.newCDPSession === 'function') {
+          cacheSession = await this.context.newCDPSession(page);
+          await cacheSession.send('Network.enable');
+          await cacheSession.send('Network.setCacheDisabled', {cacheDisabled: true});
         }
       }
       await page.goto(url, {waitUntil: 'load', timeout: timeoutMs});
@@ -258,7 +220,7 @@ class ChromeEngine {
       if (this.screenshotTimeoutSupported) screenshotOptions.timeout = timeoutMs;
       return {image: Buffer.from(await page.screenshot(screenshotOptions)), stats: null};
     } finally {
-      if (session) await session.detach().catch(() => {});
+      if (cacheSession) await cacheSession.detach().catch(() => {});
       if (this.reusePage) this.idlePages.push(page);
       else await page.close().catch(() => {});
     }
@@ -311,25 +273,54 @@ async function puppeteerDefinition(name, headless, options) {
   });
 }
 
+// Playwright pages take the viewport from their window instead of from device
+// emulation. With a context viewport, Playwright sizes every new page's
+// headless window to the viewport as if the window had no chrome, but Chrome's
+// own headless mode keeps its tab strip and toolbar (macOS: 87 px; Windows:
+// 16 x 95 px with the frame borders), so the tab container is smaller than the
+// viewport. Emulation sizes the page's widget to the viewport anyway, and on
+// macOS a page re-attached to the container after a sibling tab closes shrinks
+// back to it; the next `Page.captureScreenshot` grows the widget while it
+// copies, and the copy sometimes lands on the pre-resize frame, which Chromium
+// tiles to the requested size (rows 633-719 repeat rows 0-86). Every recurring
+// playwright-chrome evidence failure on macOS was that frame, and it needs two
+// or more pages. Growing each page's window over CDP removed it but cost two
+// window resizes per capture, because Playwright shrinks the window again for
+// every page: playwright-chrome latency rose 70-85% on the Intel macOS runner.
+// A window whose content area already is the viewport needs no emulation and
+// nothing per page: the widget is created at the viewport, nothing resizes at
+// screenshot time, and the fixtures render byte-identically to the emulated
+// viewport. `--force-device-scale-factor=1` stands in for the context's
+// `deviceScaleFactor: 1`, which Playwright rejects without a viewport. The
+// inset is measured once per shard by `measureWindowInset`.
+export function playwrightLaunchArgs(windowInset = null) {
+  const inset = windowInset || {width: 0, height: 0};
+  return [
+    `--window-size=${VIEWPORT.width + inset.width},${VIEWPORT.height + inset.height}`,
+    '--force-device-scale-factor=1',
+  ];
+}
+
+export const PLAYWRIGHT_CONTEXT_OPTIONS = Object.freeze({viewport: null});
+
 async function playwrightDefinition(name, channel, options) {
   const policy = competitorChromiumPolicy();
+  const args = playwrightLaunchArgs(options.windowInset);
   return new ChromeEngine({
     name,
     reusePage: options.reusePage,
     profileDir: options.profileDir || null,
     screenshotTimeoutSupported: true,
-    windowInset: options.windowInset || null,
     launch: async () => {
       // Keep package loading inside the same timed region as Shotium.
       const {chromium} = await import('playwright');
-      const newContext = (browser) => browser.newContext({viewport: VIEWPORT, deviceScaleFactor: 1});
       if (options.profileDir) {
         const context = await chromium.launchPersistentContext(options.profileDir, {
           headless: true,
           channel,
           chromiumSandbox: policy.playwrightChromiumSandbox,
-          viewport: VIEWPORT,
-          deviceScaleFactor: 1,
+          args,
+          ...PLAYWRIGHT_CONTEXT_OPTIONS,
         });
         return {browser: context.browser(), context};
       }
@@ -337,37 +328,30 @@ async function playwrightDefinition(name, channel, options) {
         headless: true,
         channel,
         chromiumSandbox: policy.playwrightChromiumSandbox,
+        args,
       });
-      return {browser, context: await newContext(browser)};
+      return {browser, context: await browser.newContext(PLAYWRIGHT_CONTEXT_OPTIONS)};
     },
     connect: async (endpoint) => {
       const {chromium} = await import('playwright');
-      const newContext = (browser) => browser.newContext({viewport: VIEWPORT, deviceScaleFactor: 1});
       const browser = await chromium.connect(endpoint.wsEndpoint);
-      return {browser, context: await newContext(browser)};
+      return {browser, context: await browser.newContext(PLAYWRIGHT_CONTEXT_OPTIONS)};
     },
   });
 }
 
-// Measures how far a Playwright headless window's tab container falls short
-// of the viewport, in CSS pixels. A single page hides it: emulation has sized
-// the widget to the viewport and clearing emulation restores that size. A page
-// that was a background tab and is re-attached when its sibling closes takes
-// the container's size, and a capture without emulation then reports it. This
-// runs once per shard, outside every timed region, and needs no fixture.
+// Measures how much of a Playwright headless window the browser's own chrome
+// takes, in CSS pixels: a window opened at the viewport minus the size of a
+// capture of its page, which without emulation is the tab container. Runs
+// once per shard, outside every timed region, and needs no fixture.
 export async function measureWindowInset(name) {
   const engine: any = await createEngine(name);
   await engine.launch();
   try {
-    const first = await engine.context.newPage();
-    const second = await engine.context.newPage();
-    await second.close();
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    const session = await engine.context.newCDPSession(first);
+    const page = await engine.context.newPage();
+    const session = await engine.context.newCDPSession(page);
     try {
       const {bounds} = await session.send('Browser.getWindowForTarget');
-      await session.send('Emulation.clearDeviceMetricsOverride');
-      await new Promise((resolve) => setTimeout(resolve, 500));
       const {data} = await session.send('Page.captureScreenshot', {format: 'png'});
       const container = PNG.sync.read(Buffer.from(data, 'base64'));
       return {
@@ -378,7 +362,7 @@ export async function measureWindowInset(name) {
       };
     } finally {
       await session.detach().catch(() => {});
-      await first.close().catch(() => {});
+      await page.close().catch(() => {});
     }
   } finally {
     await engine.close();
