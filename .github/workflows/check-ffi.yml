@@ -1,3 +1,13 @@
+# The engine, exercised the way users receive it: the five language demos
+# against the extracted CLI and C ABI archives, and a clean npm install of
+# the platform package assembled from the node archive -- the same
+# `package:platform --from-archive` path publish.yml takes, so what this
+# checks is what ships. Runs on the architecture the engine is for, which
+# for arm64 Windows and Linux is the only place the binary ever executes.
+#
+# The evidence artifact carries the engine's fingerprint, and it is uploaded
+# only on success: publish.yml treats an engine as usable when the run that
+# built it also produced this evidence.
 name: check-ffi
 
 on:
@@ -6,7 +16,16 @@ on:
       runner:
         type: string
         required: true
+      platform:
+        description: 'public platform label: windows-amd64 ... macos-arm64'
+        type: string
+        required: true
       artifact:
+        description: 'the engine artifact of this run: engine-<platform>-<fingerprint>'
+        type: string
+        required: true
+      evidence:
+        description: 'what to call the evidence: ffi-evidence-<platform>-<fingerprint>'
         type: string
         required: true
 
@@ -47,14 +66,10 @@ jobs:
         with:
           name: ${{ inputs.artifact }}
           path: out/ffi-archive
-      - uses: actions/download-artifact@v8
-        with:
-          name: npm-${{ inputs.artifact }}
-          path: out/ffi-npm
       - name: tooling and archive extraction
         shell: bash
         env:
-          ARTIFACT: ${{ inputs.artifact }}
+          PLATFORM: ${{ inputs.platform }}
         run: |
           pnpm -C scripts install --frozen-lockfile
           sevenzip=$(command -v 7zz || command -v 7z || command -v 7za || true)
@@ -68,18 +83,27 @@ jobs:
           for archive in out/ffi-archive/*.7z; do "$sevenzip" x "$archive" -oout/ffi-native; done
           pnpm package:examples --dest out/language-examples --sevenzip "$sevenzip"
           for archive in out/language-examples/*.7z; do "$sevenzip" x "$archive" -oout/language-sources; done
-          platform=${ARTIFACT#shotium-}
+          platform=$PLATFORM
           case "$RUNNER_OS" in Windows) os=win;; Linux) os=linux;; macOS) os=mac;; esac
+          cpu=${platform#*-}; [ "$cpu" = amd64 ] && cpu=x64
           pnpm package:cli --os "$os" --dest "out/ffi-native/shotium-cli-$platform" --check
           pnpm package:c-abi --os "$os" --dest "out/ffi-native/shotium-c-abi-$platform" --check
+          pnpm package:node --os "$os" --dest "out/ffi-native/shotium-node-$platform" --check
+          # The npm platform package, from the node archive, exactly as
+          # publish.yml assembles it; then packed so verify:delivery installs
+          # the tarball a user would get.
+          pnpm package:platform --from-archive "out/ffi-archive/shotium-node-$platform.7z" \
+            --os "$os" --arch "$cpu" --dest out/ffi-npm-stage --sevenzip "$sevenzip"
+          mkdir -p out/ffi-npm
+          ( cd "out/ffi-npm-stage/shotium-$os-$cpu" && npm pack --pack-destination ../../ffi-npm )
           pnpm -C apps/typescript install --no-lockfile
           pnpm -C apps/typescript run build
       - name: five language runtimes against the extracted Release
         shell: bash
         env:
-          ARTIFACT: ${{ inputs.artifact }}
+          PLATFORM: ${{ inputs.platform }}
         run: |
-          platform=${ARTIFACT#shotium-}
+          platform=$PLATFORM
           cli="out/ffi-native/shotium-cli-$platform/shotium"
           if [[ "$RUNNER_OS" == "Windows" ]]; then cli="$cli.exe"; fi
           for language in go python rust csharp java; do
@@ -90,19 +114,21 @@ jobs:
       - name: clean npm installation without the CLI or the C ABI library
         shell: bash
         env:
-          ARTIFACT: ${{ inputs.artifact }}
+          PLATFORM: ${{ inputs.platform }}
         # The reference render comes from the CLI extracted above; the npm
         # package no longer carries one, and the check asserts that.
         run: |
-          platform=${ARTIFACT#shotium-}
+          platform=$PLATFORM
           cli="out/ffi-native/shotium-cli-$platform/shotium"
           if [[ "$RUNNER_OS" == "Windows" ]]; then cli="$cli.exe"; fi
           pnpm verify:delivery --platform-dir out/ffi-npm --cli "$cli"
       - uses: actions/upload-artifact@v7
-        if: always()
+        if: success()
         with:
-          name: ffi-evidence-${{ inputs.artifact }}
+          name: ${{ inputs.evidence }}
           path: |
             out/ffi-check/
             out/delivery-check/report.json
-          if-no-files-found: warn
+          if-no-files-found: error
+          retention-days: 90
+          overwrite: true

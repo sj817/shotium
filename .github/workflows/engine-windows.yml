@@ -49,20 +49,44 @@ on:
         type: boolean
         default: true
       shards:
-        description: 'auto: one runner for a proven warm docs/version change, platform defaults otherwise; integer: explicit shard count'
+        description: 'auto: one runner when a build directory saved at this fingerprint exists, platform defaults otherwise; integer: explicit shard count'
+        default: auto
+
+  # engine.yml calls this for every architecture it finds missing at the
+  # current fingerprint; the dispatch above stays for building one platform
+  # by hand. Both declare the same inputs, because every step below reads
+  # `inputs.*` -- never `github.event.inputs`, which under workflow_call is
+  # the caller's event and would silently skip every conditional step.
+  workflow_call:
+    inputs:
+      arch:
+        type: string
+        required: true
+      fingerprint:
+        description: 'the engine fingerprint the artifacts are named after; computed here when empty'
+        type: string
+        default: ''
+      jobs:
+        type: string
+        default: '4'
+      run_checks:
+        type: boolean
+        default: true
+      shards:
+        type: string
         default: auto
 
 # GN and the Node SDK spell the 64-bit architecture x64; the names
-# people see spell it amd64. The build-directory cache is keyed by the GN
-# spelling so that renaming labels did not throw away six warm build
-# directories.
+# people see spell it amd64. The build-directory artifacts are named with
+# the public spelling; the toolchain cache keeps the GN one.
 env:
   SHOT_CPU: ${{ inputs.arch == 'arm64' && 'arm64' || 'x64' }}
 
 jobs:
-  # Every job name below carries the package version. A job name can
-  # read an earlier job's outputs but not a file, so one small job
-  # reads package.json first.
+  # Every job name below carries the engine fingerprint, and every artifact
+  # is named after it. A job name can read an earlier job's outputs but not
+  # a file, so one small job computes it first, along with how many shards
+  # to use and which saved build directory to start from.
   meta:
     permissions:
       contents: read
@@ -70,20 +94,20 @@ jobs:
     name: "resolve: shotium-windows-${{ inputs.arch }}"
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.version.outputs.version }}
+      fingerprint: ${{ steps.fingerprint.outputs.fingerprint }}
       compile_shards: ${{ steps.shards.outputs.list }}
       shard_count: ${{ steps.shards.outputs.count }}
       final_shard: ${{ steps.shards.outputs.final }}
+      build_dir_run_id: ${{ steps.shards.outputs.build_dir_run_id }}
     steps:
+      # A blobless sparse checkout: `git ls-tree` reads trees, which it has,
+      # and the fingerprint reads nothing else.
       - uses: actions/checkout@v7
         with:
           sparse-checkout: |
             package.json
-            apps/typescript/package.json
             scripts
           sparse-checkout-cone-mode: false
-      - id: version
-        run: echo "version=$(jq -r .version apps/typescript/package.json)" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-node@v6
         with:
           node-version: 22
@@ -91,11 +115,24 @@ jobs:
         with:
           version: 9.15.9
       - run: pnpm -C scripts install --frozen-lockfile
+      - id: fingerprint
+        env:
+          FROM_CALLER: ${{ inputs.fingerprint }}
+        # The caller computed it for the tree it is building; a dispatch
+        # computes it here. Either way it names every artifact of this run.
+        run: |
+          if [ -n "$FROM_CALLER" ]; then
+            echo "fingerprint=$FROM_CALLER" >> "$GITHUB_OUTPUT"
+            echo "$FROM_CALLER (from the caller)"
+          else
+            pnpm ci:fingerprint --output
+          fi
       - id: shards
         env:
           GH_TOKEN: ${{ github.token }}
           SHOT_PLATFORM: windows
           SHOT_SHARDS: ${{ inputs.shards }}
+          SHOT_FINGERPRINT: ${{ steps.fingerprint.outputs.fingerprint }}
         run: pnpm ci:select-shards
 
   # Sharding. ninja's idea of "up to date" is the outputs plus .ninja_log and
@@ -120,7 +157,7 @@ jobs:
   # the final job's own gn gen would write them newer than the objects and
   # ninja would rebuild everything below them.
   compile:
-    name: "compile: shotium-windows-${{ inputs.arch }}-v${{ needs.meta.outputs.version }} ${{ matrix.shard }}/${{ needs.meta.outputs.shard_count }}"
+    name: "compile: shotium-windows-${{ inputs.arch }}-${{ needs.meta.outputs.fingerprint }} ${{ matrix.shard }}/${{ needs.meta.outputs.shard_count }}"
     needs: meta
     if: needs.meta.outputs.shard_count != '1'
     runs-on: windows-2025
@@ -160,7 +197,8 @@ jobs:
         with:
           arch: ${{ inputs.arch }}
           cpu: ${{ env.SHOT_CPU }}
-          restore-cache: 'true'
+          platform: windows-${{ inputs.arch }}
+          build-dir-run-id: ${{ needs.meta.outputs.build_dir_run_id }}
 
       - name: this shard's slice of the objects
         shell: pwsh
@@ -223,7 +261,7 @@ jobs:
           compression-level: 1
 
   build:
-    name: "build: shotium-windows-${{ inputs.arch }}-v${{ needs.meta.outputs.version }}"
+    name: "build: shotium-windows-${{ inputs.arch }}-${{ needs.meta.outputs.fingerprint }}"
     # Deliberately not `needs: compile`. This job builds the last slice
     # itself and waits for the others' artifacts below, so its setup runs
     # while they compile instead of after them. A shard that fails is not
@@ -236,8 +274,8 @@ jobs:
                            # "save the cache" step still gets to run
 
     permissions:
-      contents: write  # the release step creates and uploads to a draft release
-      actions: write   # so the run can delete the cache entries it supersedes
+      contents: read
+      actions: write   # so the run can prune the build-directory artifacts it supersedes
 
     env:
       DEPOT_TOOLS_WIN_TOOLCHAIN: '0'   # use the runner's Visual Studio; Google's
@@ -262,7 +300,8 @@ jobs:
         with:
           arch: ${{ inputs.arch }}
           cpu: ${{ env.SHOT_CPU }}
-          restore-cache: 'true'
+          platform: windows-${{ inputs.arch }}
+          build-dir-run-id: ${{ needs.meta.outputs.build_dir_run_id }}
 
       - name: this job's slice of the objects
         if: ${{ needs.meta.outputs.shard_count != '1' }}
@@ -308,7 +347,7 @@ jobs:
           pnpm --silent ci:await-shards `
             --prefix 'shard-windows-${{ inputs.arch }}-' `
             --shards '${{ needs.meta.outputs.shard_count }}' `
-            --job-prefix 'compile: shotium-windows-${{ inputs.arch }}-v${{ needs.meta.outputs.version }}'
+            --job-prefix 'compile: shotium-windows-${{ inputs.arch }}-${{ needs.meta.outputs.fingerprint }}'
           if ($LASTEXITCODE -ne 0) { throw "waiting for the shards failed" }
 
       - name: download the shards
@@ -379,7 +418,7 @@ jobs:
           # doubling the job and is not: both links share the ThinLTO cache
           # this build directory already carries, so the second one reuses the
           # codegen the first one did and costs minutes rather than an hour.
-          ninja -C out/Shot shot shot_c shot_node -j ${{ github.event.inputs.jobs }}
+          ninja -C out/Shot shot shot_c shot_node -j ${{ inputs.jobs }}
 
       # What this build read: ninja's inputs and deps log, gn's build.ninja.d,
       # the jumbo source lists. `pnpm trim-tree plan` takes the six platforms'
@@ -399,51 +438,47 @@ jobs:
           path: graph
           if-no-files-found: warn
 
+      - name: pack the build directory
+        if: always()
+        shell: bash
+        working-directory: src
+        # The build directory is what makes the next run warm, so it is
+        # saved whether or not ninja finished. It goes to an artifact rather
+        # than the Actions cache: the cache is 10 GB for the whole repository
+        # and evicts whatever went unused for seven days, and an entry
+        # written on a branch was invisible to every other branch -- both of
+        # which turned warm builds cold. An artifact is visible repository-
+        # wide for 90 days. The marker uploaded after "did the build finish"
+        # says which fingerprint this directory is complete at, which is how
+        # select-shards knows the next run at that fingerprint needs one
+        # runner and no compiling.
+        run: |
+          tar --format=pax -cf - out/Shot | zstd -T0 -3 --long=27 -o "$RUNNER_TEMP/build-dir.tar.zst"
+          ls -l "$RUNNER_TEMP/build-dir.tar.zst"
+
       - name: save the build directory
         if: always()
-        uses: ./actions/.github/actions/save-build-cache
+        uses: actions/upload-artifact@v7
         with:
-          path: src/out/Shot
-          key: out-shot-windows-${{ env.SHOT_CPU }}-${{ github.run_id }}
+          name: build-dir-windows-${{ inputs.arch }}
+          path: ${{ runner.temp }}/build-dir.tar.zst
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 90
+          overwrite: true
 
       - name: drop the build directories this one replaces
         if: always()
-        shell: pwsh
+        continue-on-error: true
+        shell: bash
+        working-directory: src
         env:
           GH_TOKEN: ${{ github.token }}
-        # A repository gets 10 GB of Actions cache in total, evicted least
-        # recently used, and one Chromium build directory is 6.1 GB before
-        # compression. Saving a new entry every run and never removing the old
-        # ones means the budget is full after three or four runs, and eviction
-        # then starts taking entries that are still wanted -- including,
-        # eventually, the one this run just wrote.
-        #
-        # So the run that writes a build directory removes the older ones it
-        # supersedes. Keeping one spare is deliberate: if this run's entry is
-        # somehow unusable, the previous one is still there to restore from.
-        #
-        # Failing here must not fail the job. The cache is an optimisation; a
-        # build that finished is still a build that finished.
-        run: |
-          $keep = 2
-          try {
-            $stale = gh cache list --repo ${{ github.repository }} --ref "${{ github.ref }}" `
-                       --key "out-shot-windows-${{ env.SHOT_CPU }}-" --limit 100 `
-                       --sort created_at --order desc --json id,key,sizeInBytes |
-                     ConvertFrom-Json
-          } catch {
-            Write-Output "could not list caches: $_"
-            exit 0
-          }
-          if (-not $stale) { exit 0 }
-          $freed = 0
-          foreach ($entry in $stale | Select-Object -Skip $keep) {
-            Write-Output ("deleting {0} ({1:N0} bytes)" -f $entry.key, $entry.sizeInBytes)
-            gh cache delete $entry.id --repo ${{ github.repository }} 2>&1 | Out-Null
-            $freed += $entry.sizeInBytes
-          }
-          Write-Output ("kept {0}, freed {1:N2} GB" -f
-                        [math]::Min($keep, $stale.Count), ($freed / 1GB))
+        # Artifact storage is not metered on a public repository, but a list
+        # that only grows is slow to search. Three per platform: this run's
+        # and two to fall back on. Never fatal: a build that finished is
+        # still a build that finished.
+        run: pnpm ci:engine-artifacts prune --name build-dir-windows-${{ inputs.arch }} --keep 3
 
       - name: did the build finish
         shell: pwsh
@@ -458,6 +493,22 @@ jobs:
           }
           Get-Item out/Shot/shotium.exe,out/Shot/shotium.dll |
             Select-Object Name,Length,LastWriteTime
+
+      - name: mark the build directory as complete at this fingerprint
+        # Only after "did the build finish": an exact marker is how the next
+        # run at this fingerprint knows it may use one runner, and a build
+        # that ran out of time must not say that.
+        shell: bash
+        working-directory: src
+        run: pnpm ci:engine-artifacts marker --platform windows-${{ inputs.arch }} --fingerprint ${{ needs.meta.outputs.fingerprint }} --out "$RUNNER_TEMP/build-dir.json"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: build-dir-windows-${{ inputs.arch }}-${{ needs.meta.outputs.fingerprint }}
+          path: ${{ runner.temp }}/build-dir.json
+          if-no-files-found: error
+          retention-days: 90
+          overwrite: true
 
 
       - name: package
@@ -490,60 +541,68 @@ jobs:
           #
           # Independent CLI and C ABI packages have stable archive/root names;
           # version identity belongs to the Release tag and build provenance.
-          $version = (Get-Content apps/typescript/package.json -Raw | ConvertFrom-Json).version
-          $stem = "shotium-windows-${{ inputs.arch }}"
           $cliStem = "shotium-cli-windows-${{ inputs.arch }}"
           $abiStem = "shotium-c-abi-windows-${{ inputs.arch }}"
+          $nodeStem = "shotium-node-windows-${{ inputs.arch }}"
           $stage = [IO.Path]::GetFullPath((Join-Path (Get-Location) 'dist'))
           if ([IO.Path]::GetDirectoryName($stage) -ne (Get-Location).Path) { throw "Unexpected staging path: $stage" }
           if (Test-Path -LiteralPath $stage) { Remove-Item -LiteralPath $stage -Recurse -Force }
-          foreach ($archive in "$cliStem.7z", "$abiStem.7z") {
+          foreach ($archive in "$cliStem.7z", "$abiStem.7z", "$nodeStem.7z") {
             if (Test-Path -LiteralPath $archive) { Remove-Item -LiteralPath $archive -Force }
           }
           pnpm package:cli --build out/Shot --os win --dest "dist/$cliStem"
           if ($LASTEXITCODE -ne 0) { throw "CLI packaging failed" }
           pnpm package:c-abi --build out/Shot --os win --dest "dist/$abiStem"
           if ($LASTEXITCODE -ne 0) { throw "C ABI packaging failed" }
+          # The addon delivery carries no version: publish.yml and the
+          # previews turn it into the npm platform package for whatever
+          # version they ship (pnpm package:platform --from-archive).
+          pnpm package:node --build out/Shot --os win --dest "dist/$nodeStem"
+          if ($LASTEXITCODE -ne 0) { throw "node packaging failed" }
+          pnpm ci:engine-artifacts provenance --platform "windows-${{ inputs.arch }}" `
+            --fingerprint "${{ needs.meta.outputs.fingerprint }}" --out dist/provenance.json
+          if ($LASTEXITCODE -ne 0) { throw "provenance failed" }
           $sevenzip = (Get-Command 7z -ErrorAction SilentlyContinue).Source
           if (-not $sevenzip) { $sevenzip = "$env:ProgramFiles\7-Zip\7z.exe" }
           if (-not (Test-Path -LiteralPath $sevenzip)) { throw "no 7z on this runner" }
           Push-Location dist
           try {
-            foreach ($packageStem in $cliStem, $abiStem) {
+            foreach ($packageStem in $cliStem, $abiStem, $nodeStem) {
               & $sevenzip a -t7z -mx=9 "../$packageStem.7z" $packageStem
               if ($LASTEXITCODE -ne 0) { throw "7z failed for $packageStem" }
             }
           } finally { Pop-Location }
-          Get-Item "$cliStem.7z", "$abiStem.7z" | Select-Object Name,Length
-          "SHOT_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          "SHOT_STEM=$stem" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Get-Item "$cliStem.7z", "$abiStem.7z", "$nodeStem.7z" | Select-Object Name,Length
           "SHOT_CLI_ARCHIVE=$cliStem.7z" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "SHOT_C_ABI_ARCHIVE=$abiStem.7z" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "SHOT_NODE_ARCHIVE=$nodeStem.7z" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-      - name: upload
+      - name: upload the engine
         if: success()
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ env.SHOT_STEM }}
+          name: engine-windows-${{ inputs.arch }}-${{ needs.meta.outputs.fingerprint }}
           path: |
             src/${{ env.SHOT_CLI_ARCHIVE }}
             src/${{ env.SHOT_C_ABI_ARCHIVE }}
+            src/${{ env.SHOT_NODE_ARCHIVE }}
+            src/dist/provenance.json
           if-no-files-found: error
           # upload-artifact always wraps what it is handed in a zip and only
           # lets you pick a deflate level; no switch turns the wrapper off.
           # Level 0 stores the .7z as-is; anything higher spends CI time
           # re-compressing data that is already compressed and gives back
-          # nothing. The release step below is where a download is the .7z
-          # itself.
+          # nothing.
           compression-level: 0
+          retention-days: 90
+          overwrite: true
 
       - name: checks
         # x64 only, for the reason the Linux job gives: this runner is x64 and
         # cannot execute an arm64 binary, so asking would fail on a host
         # limitation and read as a broken engine. An arm64 artifact ships
         # checked by nothing but the compiler and the linker.
-        if: success() && github.event.inputs.run_checks == 'true'
-             && inputs.arch == 'amd64'
+        if: success() && inputs.run_checks && inputs.arch == 'amd64'
         shell: pwsh
         working-directory: src
         # In the order they cost: protocol and geometry first because they are
@@ -588,45 +647,12 @@ jobs:
           pnpm verify:demos out/Shot/shotium.exe
           if ($LASTEXITCODE -ne 0) { throw "reftests failed" }
 
-      - name: npm platform package
-        if: success()
-        shell: pwsh
-        working-directory: src
-        run: |
-          $arch = "${{ env.SHOT_CPU }}"
-          $addon = "out/Shot/shotium.node"
-          if (-not (Test-Path $addon)) { throw "GN did not produce $addon" }
-          pnpm package:platform `
-            --build out/Shot --os win --arch $arch --dest dist/npm `
-            --addon $addon
-          if ($LASTEXITCODE -ne 0) { throw "platform package failed" }
-          Push-Location "dist/npm/shotium-win-$arch"
-          npm pack --pack-destination ..
-          $packed = $LASTEXITCODE
-          Pop-Location
-          if ($packed -ne 0) { throw "npm pack failed with $packed" }
-          $tgz = Get-ChildItem dist/npm/*.tgz | Select-Object -First 1
-          if (-not $tgz) { throw "npm pack produced no tarball" }
-          Get-Item $tgz.FullName |
-            Select-Object Name,@{n='MB';e={[math]::Round($_.Length/1MB,2)}}
-          # Relative to src/, which is this step's working directory: one value
-          # that upload-artifact accepts.
-          "SHOT_NPM_TARBALL=dist/npm/$($tgz.Name)" |
-            Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-
-      - name: upload the npm package
-        if: success()
-        uses: actions/upload-artifact@v7
-        with:
-          name: npm-shotium-windows-${{ inputs.arch }}
-          path: src/${{ env.SHOT_NPM_TARBALL }}
-          if-no-files-found: error
-          compression-level: 0
-
   ffi:
-    needs: build
+    needs: [meta, build]
     if: ${{ inputs.run_checks }}
     uses: ./.github/workflows/check-ffi.yml
     with:
       runner: ${{ inputs.arch == 'arm64' && 'windows-11-arm' || 'windows-2025' }}
-      artifact: shotium-windows-${{ inputs.arch }}
+      platform: windows-${{ inputs.arch }}
+      artifact: engine-windows-${{ inputs.arch }}-${{ needs.meta.outputs.fingerprint }}
+      evidence: ffi-evidence-windows-${{ inputs.arch }}-${{ needs.meta.outputs.fingerprint }}

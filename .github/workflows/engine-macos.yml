@@ -44,20 +44,47 @@ on:
         type: boolean
         default: true
       shards:
-        description: 'auto: one runner for a proven warm docs/version change, platform defaults otherwise; integer: explicit shard count'
+        description: 'auto: one runner when a build directory saved at this fingerprint exists, platform defaults otherwise; integer: explicit shard count'
+        default: auto
+
+  # engine.yml calls this for every architecture it finds missing at the
+  # current fingerprint; the dispatch above stays for building one platform
+  # by hand. Both declare the same inputs, because every step below reads
+  # `inputs.*` -- never `github.event.inputs`, which under workflow_call is
+  # the caller's event and would silently skip every conditional step.
+  workflow_call:
+    inputs:
+      mode:
+        type: string
+        default: build
+      arch:
+        type: string
+        required: true
+      fingerprint:
+        description: 'the engine fingerprint the artifacts are named after; computed here when empty'
+        type: string
+        default: ''
+      jobs:
+        type: string
+        default: '3'
+      run_checks:
+        type: boolean
+        default: true
+      shards:
+        type: string
         default: auto
 
 # GN and the Node SDK spell the 64-bit architecture x64; the names
-# people see spell it amd64. The build-directory cache is keyed by the GN
-# spelling so that renaming labels did not throw away six warm build
-# directories.
+# people see spell it amd64. The build-directory artifacts are named with
+# the public spelling; the toolchain cache keeps the GN one.
 env:
   SHOT_CPU: ${{ inputs.arch == 'arm64' && 'arm64' || 'x64' }}
 
 jobs:
-  # Every job name below carries the package version. A job name can
-  # read an earlier job's outputs but not a file, so one small job
-  # reads package.json first.
+  # Every job name below carries the engine fingerprint, and every artifact
+  # is named after it. A job name can read an earlier job's outputs but not
+  # a file, so one small job computes it first, along with how many shards
+  # to use and which saved build directory to start from.
   meta:
     permissions:
       contents: read
@@ -65,20 +92,20 @@ jobs:
     name: "resolve: shotium-macos-${{ inputs.arch }}"
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.version.outputs.version }}
+      fingerprint: ${{ steps.fingerprint.outputs.fingerprint }}
       compile_shards: ${{ steps.shards.outputs.list }}
       shard_count: ${{ steps.shards.outputs.count }}
       final_shard: ${{ steps.shards.outputs.final }}
+      build_dir_run_id: ${{ steps.shards.outputs.build_dir_run_id }}
     steps:
+      # A blobless sparse checkout: `git ls-tree` reads trees, which it has,
+      # and the fingerprint reads nothing else.
       - uses: actions/checkout@v7
         with:
           sparse-checkout: |
             package.json
-            apps/typescript/package.json
             scripts
           sparse-checkout-cone-mode: false
-      - id: version
-        run: echo "version=$(jq -r .version apps/typescript/package.json)" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-node@v6
         with:
           node-version: 22
@@ -86,11 +113,24 @@ jobs:
         with:
           version: 9.15.9
       - run: pnpm -C scripts install --frozen-lockfile
+      - id: fingerprint
+        env:
+          FROM_CALLER: ${{ inputs.fingerprint }}
+        # The caller computed it for the tree it is building; a dispatch
+        # computes it here. Either way it names every artifact of this run.
+        run: |
+          if [ -n "$FROM_CALLER" ]; then
+            echo "fingerprint=$FROM_CALLER" >> "$GITHUB_OUTPUT"
+            echo "$FROM_CALLER (from the caller)"
+          else
+            pnpm ci:fingerprint --output
+          fi
       - id: shards
         env:
           GH_TOKEN: ${{ github.token }}
           SHOT_PLATFORM: macos
           SHOT_SHARDS: ${{ inputs.shards }}
+          SHOT_FINGERPRINT: ${{ steps.fingerprint.outputs.fingerprint }}
         run: pnpm ci:select-shards
 
   # Sharding. ninja's idea of "up to date" is the outputs plus .ninja_log and
@@ -115,7 +155,7 @@ jobs:
   # the final job's own gn gen would write them newer than the objects and
   # ninja would rebuild everything below them.
   compile:
-    name: "compile: shotium-macos-${{ inputs.arch }}-v${{ needs.meta.outputs.version }} ${{ matrix.shard }}/${{ needs.meta.outputs.shard_count }}"
+    name: "compile: shotium-macos-${{ inputs.arch }}-${{ needs.meta.outputs.fingerprint }} ${{ matrix.shard }}/${{ needs.meta.outputs.shard_count }}"
     needs: meta
     if: inputs.mode == 'build' && needs.meta.outputs.shard_count != '1'
     runs-on: ${{ inputs.arch == 'arm64' && 'macos-15' || 'macos-15-intel' }}
@@ -149,7 +189,8 @@ jobs:
         with:
           arch: ${{ inputs.arch }}
           cpu: ${{ env.SHOT_CPU }}
-          restore-cache: 'true'
+          platform: macos-${{ inputs.arch }}
+          build-dir-run-id: ${{ needs.meta.outputs.build_dir_run_id }}
 
       - name: this shard's slice of the objects
         working-directory: src
@@ -192,7 +233,7 @@ jobs:
           compression-level: 1
 
   build:
-    name: "${{ inputs.mode }}: shotium-macos-${{ inputs.arch }}-v${{ needs.meta.outputs.version }}"
+    name: "${{ inputs.mode }}: shotium-macos-${{ inputs.arch }}-${{ needs.meta.outputs.fingerprint }}"
     # Deliberately not `needs: compile`. This job builds the last slice
     # itself and waits for the others' artifacts below, so its setup runs
     # while they compile instead of after them. A shard that fails is not
@@ -204,8 +245,8 @@ jobs:
     timeout-minutes: 350
 
     permissions:
-      contents: write  # the release step creates and uploads to a draft release
-      actions: write   # so the run can delete the cache entries it supersedes
+      contents: read
+      actions: write   # so the run can prune the build-directory artifacts it supersedes
 
     env:
       DEPOT_TOOLS_UPDATE: '0'
@@ -225,7 +266,8 @@ jobs:
         with:
           arch: ${{ inputs.arch }}
           cpu: ${{ env.SHOT_CPU }}
-          restore-cache: 'true'
+          platform: macos-${{ inputs.arch }}
+          build-dir-run-id: ${{ needs.meta.outputs.build_dir_run_id }}
 
       - name: this job's slice of the objects
         if: ${{ inputs.mode == 'build' && needs.meta.outputs.shard_count != '1' }}
@@ -255,7 +297,7 @@ jobs:
           pnpm --silent ci:await-shards \
             --prefix 'shard-macos-${{ inputs.arch }}-' \
             --shards '${{ needs.meta.outputs.shard_count }}' \
-            --job-prefix 'compile: shotium-macos-${{ inputs.arch }}-v${{ needs.meta.outputs.version }}'
+            --job-prefix 'compile: shotium-macos-${{ inputs.arch }}-${{ needs.meta.outputs.fingerprint }}'
 
       - name: download the shards
         if: ${{ inputs.mode == 'build' && needs.meta.outputs.shard_count != '1' }}
@@ -287,7 +329,7 @@ jobs:
           df -h /
 
       - name: probe
-        if: ${{ github.event.inputs.mode == 'probe' }}
+        if: ${{ inputs.mode == 'probe' }}
         working-directory: src
         # `ninja -n` resolves the entire graph and names every edge it would
         # run, without compiling anything, so a BUILD.gn that references a file
@@ -310,7 +352,7 @@ jobs:
           echo "probe clean -- re-run this workflow with mode: build"
 
       - name: probe log
-        if: ${{ always() && github.event.inputs.mode == 'probe' }}
+        if: ${{ always() && inputs.mode == 'probe' }}
         uses: actions/upload-artifact@v7
         with:
           name: probe-macos-${{ inputs.arch }}
@@ -318,7 +360,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: why is the restored build directory dirty
-        if: ${{ github.event.inputs.mode == 'build' }}
+        if: ${{ inputs.mode == 'build' }}
         working-directory: src
         # The cache restores ~300 MB of objects, yet recent runs re-ran nearly
         # every CXX edge they had already built -- a cached run should be a
@@ -334,7 +376,7 @@ jobs:
         # a success, and ship yesterday's build as today's artifact. It
         # did, once. Deleting it first means only this run's link can
         # satisfy the check; the relink costs a couple of minutes.
-        if: ${{ github.event.inputs.mode == 'build' }}
+        if: ${{ inputs.mode == 'build' }}
         working-directory: src
         run: rm -f out/Shot/shotium out/Shot/libshotium.dylib out/Shot/shotium.node
 
@@ -342,19 +384,19 @@ jobs:
       # tree no longer has; ninja refuses to start on it ("missing and no
       # known rule to make it"). Dropping the depfile makes the action rerun.
       - name: drop depfiles that name deleted files
-        if: ${{ github.event.inputs.mode == 'build' }}
+        if: ${{ inputs.mode == 'build' }}
         working-directory: src
         run: pnpm depfiles:prune out/Shot
 
       - name: ninja
-        if: ${{ github.event.inputs.mode == 'build' }}
+        if: ${{ inputs.mode == 'build' }}
         working-directory: src
         continue-on-error: true
         timeout-minutes: 280
         # -k 0: this platform is still being brought up, and each round costs
         # a runner-hour -- keep compiling past a failure so one log names every
         # broken translation unit, not just the first.
-        run: ninja -C out/Shot shot shot_c shot_node -j ${{ github.event.inputs.jobs }} -k 0
+        run: ninja -C out/Shot shot shot_c shot_node -j ${{ inputs.jobs }} -k 0
 
       # What this run read: ninja's inputs and deps log, gn's build.ninja.d,
       # the jumbo source lists. A probe exports the graph without the deps log.
@@ -376,36 +418,50 @@ jobs:
           path: graph
           if-no-files-found: warn
 
+      - name: pack the build directory
+        if: always() && inputs.mode == 'build'
+        shell: bash
+        working-directory: src
+        # The build directory is what makes the next run warm, so it is
+        # saved whether or not ninja finished. It goes to an artifact rather
+        # than the Actions cache: the cache is 10 GB for the whole repository
+        # and evicts whatever went unused for seven days, and an entry
+        # written on a branch was invisible to every other branch -- both of
+        # which turned warm builds cold. An artifact is visible repository-
+        # wide for 90 days. The marker uploaded after "did the build finish"
+        # says which fingerprint this directory is complete at, which is how
+        # select-shards knows the next run at that fingerprint needs one
+        # runner and no compiling.
+        run: |
+          tar --format=pax -cf - out/Shot | zstd -T0 -3 --long=27 -o "$RUNNER_TEMP/build-dir.tar.zst"
+          ls -l "$RUNNER_TEMP/build-dir.tar.zst"
+
       - name: save the build directory
-        if: ${{ always() && github.event.inputs.mode == 'build' }}
-        uses: ./actions/.github/actions/save-build-cache
+        if: always() && inputs.mode == 'build'
+        uses: actions/upload-artifact@v7
         with:
-          path: src/out/Shot
-          key: out-shot-macos-${{ env.SHOT_CPU }}-${{ github.run_id }}
+          name: build-dir-macos-${{ inputs.arch }}
+          path: ${{ runner.temp }}/build-dir.tar.zst
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 90
+          overwrite: true
 
       - name: drop the build directories this one replaces
-        if: ${{ always() && github.event.inputs.mode == 'build' }}
+        if: always() && inputs.mode == 'build'
+        continue-on-error: true
+        shell: bash
+        working-directory: src
         env:
           GH_TOKEN: ${{ github.token }}
-        # The repository gets 10 GB of Actions cache in total and one build
-        # directory is several GB, so entries that are no longer wanted have to
-        # go or they evict the one that is. Never fatal: this is an
-        # optimisation, and a finished build is still finished.
-        run: |
-          prefix="out-shot-macos-${{ env.SHOT_CPU }}-"
-          # .[2:] keeps the newest two: this run's entry, and one spare to fall
-          # back on if this run's turns out to be unusable.
-          ids=$(gh cache list --repo "${{ github.repository }}" --ref "${{ github.ref }}" \
-                  --key "$prefix" --limit 100 \
-                  --sort created_at --order desc \
-                  --json id --jq '.[2:][].id' 2>/dev/null || true)
-          for id in $ids; do
-            echo "deleting cache entry $id"
-            gh cache delete "$id" --repo "${{ github.repository }}" || true
-          done
+        # Artifact storage is not metered on a public repository, but a list
+        # that only grows is slow to search. Three per platform: this run's
+        # and two to fall back on. Never fatal: a build that finished is
+        # still a build that finished.
+        run: pnpm ci:engine-artifacts prune --name build-dir-macos-${{ inputs.arch }} --keep 3
 
       - name: did the build finish
-        if: ${{ github.event.inputs.mode == 'build' }}
+        if: ${{ inputs.mode == 'build' }}
         working-directory: src
         run: |
           for wanted in out/Shot/shotium out/Shot/libshotium.dylib out/Shot/shotium.node; do
@@ -418,8 +474,26 @@ jobs:
           ls -l out/Shot/shotium out/Shot/libshotium.dylib out/Shot/shotium.node
           file out/Shot/shotium out/Shot/libshotium.dylib
 
+      - name: mark the build directory as complete at this fingerprint
+        # Only after "did the build finish": an exact marker is how the next
+        # run at this fingerprint knows it may use one runner, and a build
+        # that ran out of time must not say that.
+        if: ${{ inputs.mode == 'build' }}
+        shell: bash
+        working-directory: src
+        run: pnpm ci:engine-artifacts marker --platform macos-${{ inputs.arch }} --fingerprint ${{ needs.meta.outputs.fingerprint }} --out "$RUNNER_TEMP/build-dir.json"
+
+      - uses: actions/upload-artifact@v7
+        if: ${{ inputs.mode == 'build' }}
+        with:
+          name: build-dir-macos-${{ inputs.arch }}-${{ needs.meta.outputs.fingerprint }}
+          path: ${{ runner.temp }}/build-dir.json
+          if-no-files-found: error
+          retention-days: 90
+          overwrite: true
+
       - name: package
-        if: ${{ success() && github.event.inputs.mode == 'build' }}
+        if: ${{ success() && inputs.mode == 'build' }}
         working-directory: src
         # .7z like the other two platforms, rather than the tar.xz this job used
         # to produce. It is the same LZMA2 either way, so the only thing that
@@ -441,42 +515,50 @@ jobs:
             exit 1
           fi
           echo "using $sevenzip"
-          version=$(python3 -c \
-            "import json;print(json.load(open('apps/typescript/package.json'))['version'])")
-          stem="shotium-macos-${{ inputs.arch }}"
           cli_stem="shotium-cli-macos-${{ inputs.arch }}"
           abi_stem="shotium-c-abi-macos-${{ inputs.arch }}"
-          rm -rf dist "$cli_stem.7z" "$abi_stem.7z"
+          node_stem="shotium-node-macos-${{ inputs.arch }}"
+          rm -rf dist "$cli_stem.7z" "$abi_stem.7z" "$node_stem.7z"
           pnpm package:cli --build out/Shot --os mac --dest "dist/$cli_stem"
           pnpm package:c-abi --build out/Shot --os mac --dest "dist/$abi_stem"
-          for package_stem in "$cli_stem" "$abi_stem"; do
+          # The addon delivery carries no version: publish.yml and the
+          # previews turn it into the npm platform package for whatever
+          # version they ship (pnpm package:platform --from-archive).
+          pnpm package:node --build out/Shot --os mac --dest "dist/$node_stem"
+          pnpm ci:engine-artifacts provenance --platform "macos-${{ inputs.arch }}" \
+            --fingerprint "${{ needs.meta.outputs.fingerprint }}" --out dist/provenance.json
+          for package_stem in "$cli_stem" "$abi_stem" "$node_stem"; do
             ( cd dist && "$sevenzip" a -t7z -mx=9 "../$package_stem.7z" "$package_stem" )
           done
           {
-            echo "SHOT_VERSION=$version"
-            echo "SHOT_STEM=$stem"
             echo "SHOT_CLI_ARCHIVE=$cli_stem.7z"
             echo "SHOT_C_ABI_ARCHIVE=$abi_stem.7z"
+            echo "SHOT_NODE_ARCHIVE=$node_stem.7z"
           } >> "$GITHUB_ENV"
 
-      - name: upload
-        if: ${{ success() && github.event.inputs.mode == 'build' }}
+      - name: upload the engine
+        if: ${{ success() && inputs.mode == 'build' }}
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ env.SHOT_STEM }}
+          name: engine-macos-${{ inputs.arch }}-${{ needs.meta.outputs.fingerprint }}
           path: |
             src/${{ env.SHOT_CLI_ARCHIVE }}
             src/${{ env.SHOT_C_ABI_ARCHIVE }}
+            src/${{ env.SHOT_NODE_ARCHIVE }}
+            src/dist/provenance.json
           if-no-files-found: error
           # upload-artifact always wraps what it is handed in a zip and only
-          # exposes a deflate level; no switch turns the wrapper off. 0 stores
-          # the .7z as-is instead of re-compressing compressed bytes. The
-          # release step below is where a download is the .7z itself.
+          # lets you pick a deflate level; no switch turns the wrapper off.
+          # Level 0 stores the .7z as-is; anything higher spends CI time
+          # re-compressing data that is already compressed and gives back
+          # nothing.
           compression-level: 0
+          retention-days: 90
+          overwrite: true
 
       - name: checks
-        if: ${{ success() && github.event.inputs.mode == 'build'
-                && github.event.inputs.run_checks == 'true' }}
+        if: ${{ success() && inputs.mode == 'build'
+                && inputs.run_checks }}
         working-directory: src
         run: |
           pnpm verify:serve out/Shot/shotium
@@ -497,34 +579,12 @@ jobs:
           pnpm verify:charset out/Shot/shotium
           pnpm verify:demos out/Shot/shotium
 
-      - name: npm platform package
-        if: ${{ success() && github.event.inputs.mode == 'build' }}
-        working-directory: src
-        run: |
-          arch="${{ env.SHOT_CPU }}"
-          addon="out/Shot/shotium.node"
-          test -f "$addon"
-          pnpm package:platform \
-            --build out/Shot --os mac --arch "$arch" --dest dist/npm \
-            --addon "$addon"
-          ( cd "dist/npm/shotium-mac-$arch" && npm pack --pack-destination .. )
-          tarball=$(ls dist/npm/*.tgz | head -1)
-          ls -l "$tarball"
-          echo "SHOT_NPM_TARBALL=$tarball" >> "$GITHUB_ENV"
-
-      - name: upload the npm package
-        if: ${{ success() && github.event.inputs.mode == 'build' }}
-        uses: actions/upload-artifact@v7
-        with:
-          name: npm-shotium-macos-${{ inputs.arch }}
-          path: src/${{ env.SHOT_NPM_TARBALL }}
-          if-no-files-found: error
-          compression-level: 0
-
   ffi:
-    needs: build
+    needs: [meta, build]
     if: ${{ inputs.mode == 'build' && inputs.run_checks }}
     uses: ./.github/workflows/check-ffi.yml
     with:
       runner: ${{ inputs.arch == 'arm64' && 'macos-15' || 'macos-15-intel' }}
-      artifact: shotium-macos-${{ inputs.arch }}
+      platform: macos-${{ inputs.arch }}
+      artifact: engine-macos-${{ inputs.arch }}-${{ needs.meta.outputs.fingerprint }}
+      evidence: ffi-evidence-macos-${{ inputs.arch }}-${{ needs.meta.outputs.fingerprint }}

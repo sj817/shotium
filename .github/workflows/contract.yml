@@ -1,0 +1,70 @@
+# The suites that load the TypeScript package against a real engine.
+#
+# They used to run only inside the engine build, and the engine is now built
+# only when the engine changes; this is where a change to the package alone
+# meets a binary. preview.yml runs it for every pull request and publish.yml
+# for every release, both after engine.yml has made sure the engine at the
+# tree's fingerprint exists. Linux amd64, because it is the cheapest runner
+# and these suites are about the package, not the platform -- the
+# platform-specific delivery is check-ffi's job, on all six.
+
+name: contract
+
+on:
+  workflow_call:
+    inputs:
+      fingerprint:
+        description: 'the engine fingerprint to test against'
+        type: string
+        required: true
+
+jobs:
+  contract:
+    name: "contract: @pixel.js/shotium against linux-amd64 ${{ inputs.fingerprint }}"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 9.15.9
+      - run: pnpm -C scripts install --frozen-lockfile
+
+      - name: the engine at this fingerprint
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FINGERPRINT: ${{ inputs.fingerprint }}
+        # The CLI and the addon, laid out the way a local build leaves them
+        # in out/Shot, which is where the package's addon discovery looks
+        # when shot/BUILD.gn is present.
+        run: |
+          pnpm ci:engine-artifacts download --name "engine-linux-amd64-$FINGERPRINT" --dir dist/engine
+          command -v 7z >/dev/null || { sudo apt-get update && sudo apt-get install -y p7zip-full; }
+          7z x dist/engine/shotium-cli-linux-amd64.7z -odist/extract
+          7z x dist/engine/shotium-node-linux-amd64.7z -odist/extract
+          mkdir -p out/Shot
+          cp dist/extract/shotium-cli-linux-amd64/shotium dist/extract/shotium-cli-linux-amd64/*.pak out/Shot/
+          cp dist/extract/shotium-node-linux-amd64/shotium.node out/Shot/
+          chmod +x out/Shot/shotium out/Shot/shotium.node
+          ls -l out/Shot
+          cat dist/engine/provenance.json
+
+      - name: build the package
+        working-directory: apps/typescript
+        run: |
+          pnpm install --no-lockfile
+          pnpm run build
+
+      - name: the package against the engine
+        run: |
+          pnpm verify:node out/Shot/shotium
+          pnpm verify:node-entry
+          pnpm verify:bilibili --package apps/typescript
+          pnpm verify:daemon out/Shot/shotium
+          pnpm verify:daemon-protocol

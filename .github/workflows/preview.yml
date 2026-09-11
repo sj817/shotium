@@ -1,0 +1,55 @@
+# Every pull request, against a real engine.
+#
+# This is the pull-request entry point: engine.yml builds whichever of the
+# six engines the PR's tree does not have yet (usually none -- a change to
+# the TypeScript package, the docs or the scripts keeps the fingerprint
+# and reuses what main built), then contract.yml exercises the TypeScript
+# package against the linux-amd64 engine. A PR that changes the engine
+# waits for the build; a PR that does not is done in a few minutes.
+#
+# engine.yml itself does not listen to pull_request: two entry points for
+# one event would build the same fingerprint twice.
+
+name: preview
+run-name: "preview: ${{ github.event.pull_request.title }}"
+
+on:
+  pull_request:
+    # Only the paths that neither the engine nor the package reads. The
+    # TypeScript package is deliberately not here: its changes are what
+    # the contract job exists for.
+    paths-ignore:
+      - 'apps/docs/**'
+      - 'apps/benchmark/**'
+      - 'apps/benchmark-site/**'
+      - 'apps/demo-express/**'
+      - 'apps/demo-hello/**'
+      - 'apps/demo-genshin-card/**'
+      - 'README.md'
+      - 'README.zh.md'
+      - 'CLAUDE.md'
+      - 'AGENTS.md'
+      - 'AUTHORS'
+      - '.claude/**'
+      - '.agents/**'
+      - 'scripts/docs/**'
+      - '.github/workflows/benchmark.yml'
+      - '.github/workflows/benchmark-site.yml'
+
+concurrency:
+  group: preview-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  actions: write   # engine.yml prunes the build-directory artifacts it supersedes
+
+jobs:
+  engine:
+    uses: ./.github/workflows/engine.yml
+
+  contract:
+    needs: engine
+    uses: ./.github/workflows/contract.yml
+    with:
+      fingerprint: ${{ needs.engine.outputs.fingerprint }}

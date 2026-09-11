@@ -1,0 +1,265 @@
+# Builds whichever of the six engines the current tree does not have yet.
+#
+# The engines are content-addressed. resolve computes the fingerprint of the
+# tracked files the build reads (scripts/ci/fingerprint.ts) and asks the
+# artifacts API which platforms already have engine-<platform>-<fingerprint>
+# with evidence from the same run; only the missing ones are built, each by
+# its own engine-<os>.yml. A push that changes documentation, the TypeScript
+# package, the benchmark or the workflows around the build therefore costs
+# one small job and no compiling, and a release tag reuses whatever `main`
+# built last -- publish.yml calls this workflow rather than expecting six
+# manual dispatches.
+#
+# Who calls it:
+#
+#   push to main         when a path the build reads changed (paths-ignore is
+#                        generated from the fingerprint rules, and checked
+#                        against them by scripts/ci/fingerprint.test.ts)
+#   preview.yml          for every pull request, before publishing a preview
+#   publish.yml          for every release, before publishing anything
+#   workflow_dispatch    to force a rebuild: force=true ignores what exists
+#
+# Nested reusable workflows: this file calls engine-<os>.yml, which calls
+# check-ffi.yml. With preview.yml or publish.yml on top that is four levels,
+# GitHub's maximum. There is no room for another layer.
+
+name: engine
+run-name: "engine: ${{ github.event_name == 'workflow_dispatch' && (inputs.force && 'forced rebuild' || 'build what is missing') || github.ref_name }}"
+
+on:
+  push:
+    branches: [main]
+    # Generated: pnpm ci:fingerprint --paths-ignore. A commit touching only
+    # these paths does not change the fingerprint, so a run would only
+    # confirm that nothing needs building.
+    paths-ignore:
+      - 'apps/benchmark/**'
+      - 'apps/benchmark-site/**'
+      - 'apps/docs/**'
+      - 'apps/test/**'
+      - 'apps/demo-express/**'
+      - 'apps/demo-hello/**'
+      - 'apps/demo-genshin-card/**'
+      - 'apps/demo-card/*.md'
+      - 'apps/demo-card/*.mjs'
+      - 'apps/demo-card/*.txt'
+      - 'apps/demo-card/*.tape'
+      - 'apps/typescript/src/**'
+      - 'apps/typescript/test/**'
+      - 'apps/typescript/*.md'
+      - 'apps/typescript/*.json'
+      - 'apps/typescript/*.ts'
+      - 'apps/go/*.md'
+      - 'apps/python/*.md'
+      - 'apps/rust/*.md'
+      - 'apps/csharp/*.md'
+      - 'apps/java/*.md'
+      - 'README.md'
+      - 'README.zh.md'
+      - 'CLAUDE.md'
+      - 'AGENTS.md'
+      - 'AUTHORS'
+      - '.clang-format'
+      - '.rustfmt.toml'
+      - '.claude/**'
+      - '.agents/**'
+      - '.github/.gitignore'
+      - '.github/workflows/checks.yml'
+      - '.github/workflows/engine.yml'
+      - '.github/workflows/preview.yml'
+      - '.github/workflows/publish.yml'
+      - '.github/workflows/refresh.yml'
+      - '.github/workflows/benchmark.yml'
+      - '.github/workflows/benchmark-site.yml'
+      - '.github/workflows/perf-gate.yml'
+      - 'scripts/docs/**'
+      - 'scripts/perf/**'
+      - 'scripts/tree/**'
+      - 'scripts/ci/fingerprint.ts'
+      - 'scripts/ci/engine-artifacts.ts'
+      - 'scripts/ci/dispatch-engines.ts'
+      - 'scripts/lib/perf-gate.ts'
+      - 'scripts/lib/docs-workspace.ts'
+      - 'scripts/**/*.test.ts'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'rebuild every target even when artifacts exist at this fingerprint'
+        type: boolean
+        default: false
+      targets:
+        description: 'all, or a comma-separated subset: windows-amd64,windows-arm64,linux-amd64,linux-arm64,macos-amd64,macos-arm64'
+        default: all
+      shards:
+        description: 'auto, or an explicit shard count for every platform'
+        default: auto
+      jobs:
+        description: 'ninja -j; empty keeps each platform its default (4, or 3 on macOS)'
+        default: ''
+  workflow_call:
+    inputs:
+      force:
+        type: boolean
+        default: false
+      targets:
+        type: string
+        default: all
+      shards:
+        type: string
+        default: auto
+    outputs:
+      fingerprint:
+        description: the engine fingerprint of the tree that was built or found
+        value: ${{ jobs.resolve.outputs.fingerprint }}
+      complete:
+        description: '"true" once all requested targets exist at the fingerprint'
+        value: ${{ jobs.gate.outputs.complete }}
+
+# github.workflow is the caller's name when called, so a preview and a
+# publish of the same ref never share a group; two pushes to the same branch
+# do, and only a pull request's run gives way to a newer push.
+concurrency:
+  group: engine-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+  actions: write   # the build jobs prune the build-directory artifacts they supersede
+
+jobs:
+  resolve:
+    name: "resolve: engine"
+    runs-on: ubuntu-latest
+    outputs:
+      fingerprint: ${{ steps.fingerprint.outputs.fingerprint }}
+      windows: ${{ steps.status.outputs.windows }}
+      linux: ${{ steps.status.outputs.linux }}
+      macos: ${{ steps.status.outputs.macos }}
+      windows_count: ${{ steps.status.outputs.windows_count }}
+      linux_count: ${{ steps.status.outputs.linux_count }}
+      macos_count: ${{ steps.status.outputs.macos_count }}
+      missing: ${{ steps.status.outputs.missing }}
+      complete: ${{ steps.status.outputs.complete }}
+    steps:
+      # A blobless sparse checkout is enough: the fingerprint reads trees,
+      # not files.
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: |
+            package.json
+            scripts
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 9.15.9
+      - run: pnpm -C scripts install --frozen-lockfile
+      - id: fingerprint
+        run: pnpm ci:fingerprint --output --explain
+      - id: status
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FORCE: ${{ inputs.force }}
+          TARGETS: ${{ inputs.targets || 'all' }}
+        run: |
+          flags=""
+          [ "$FORCE" = "true" ] && flags="--force"
+          pnpm ci:engine-artifacts status --fingerprint "${{ steps.fingerprint.outputs.fingerprint }}" \
+            --targets "$TARGETS" $flags --output --summary
+
+  # One job per OS, fanned out over the architectures resolve found missing.
+  # The `if` guards the empty matrix: fromJSON('[]') is a hard error, not a
+  # skip. `with:` may only name inputs the callee declares, and '' does not
+  # fall back to the callee's default, hence the explicit jobs values.
+  windows:
+    name: "windows"
+    needs: resolve
+    if: needs.resolve.outputs.windows_count != '0'
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ${{ fromJSON(needs.resolve.outputs.windows) }}
+    uses: ./.github/workflows/engine-windows.yml
+    with:
+      arch: ${{ matrix.arch }}
+      fingerprint: ${{ needs.resolve.outputs.fingerprint }}
+      shards: ${{ inputs.shards || 'auto' }}
+      jobs: ${{ inputs.jobs || '4' }}
+      run_checks: true
+
+  linux:
+    name: "linux"
+    needs: resolve
+    if: needs.resolve.outputs.linux_count != '0'
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ${{ fromJSON(needs.resolve.outputs.linux) }}
+    uses: ./.github/workflows/engine-linux.yml
+    with:
+      mode: build
+      arch: ${{ matrix.arch }}
+      fingerprint: ${{ needs.resolve.outputs.fingerprint }}
+      shards: ${{ inputs.shards || 'auto' }}
+      jobs: ${{ inputs.jobs || '4' }}
+      run_checks: true
+
+  macos:
+    name: "macos"
+    needs: resolve
+    if: needs.resolve.outputs.macos_count != '0'
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ${{ fromJSON(needs.resolve.outputs.macos) }}
+    uses: ./.github/workflows/engine-macos.yml
+    with:
+      mode: build
+      arch: ${{ matrix.arch }}
+      fingerprint: ${{ needs.resolve.outputs.fingerprint }}
+      shards: ${{ inputs.shards || 'auto' }}
+      jobs: ${{ inputs.jobs || '3' }}
+      run_checks: true
+
+  # One status for the callers and the branch protection to read. A skipped
+  # build job is fine (nothing was missing); a failed or cancelled one is
+  # not; and whatever ran, the artifacts must all be there at the end.
+  gate:
+    name: "engine: ${{ needs.resolve.outputs.fingerprint }}"
+    needs: [resolve, windows, linux, macos]
+    if: always()
+    runs-on: ubuntu-latest
+    outputs:
+      complete: ${{ steps.status.outputs.complete }}
+    steps:
+      - name: every build that ran succeeded
+        env:
+          RESOLVE: ${{ needs.resolve.result }}
+          RESULTS: ${{ needs.windows.result }} ${{ needs.linux.result }} ${{ needs.macos.result }}
+        run: |
+          [ "$RESOLVE" = success ] || { echo "resolve: $RESOLVE"; exit 1; }
+          for r in $RESULTS; do
+            case "$r" in success|skipped) ;; *) echo "a build job ended as $r"; exit 1;; esac
+          done
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: |
+            package.json
+            scripts
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 9.15.9
+      - run: pnpm -C scripts install --frozen-lockfile
+      - id: status
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGETS: ${{ inputs.targets || 'all' }}
+        run: |
+          pnpm ci:engine-artifacts status --fingerprint "${{ needs.resolve.outputs.fingerprint }}" \
+            --targets "$TARGETS" --require-complete --output --summary

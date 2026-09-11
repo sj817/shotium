@@ -17,9 +17,12 @@ inputs:
   cpu:
     description: GN target_cpu, x64 or arm64
     required: true
-  restore-cache:
-    description: restore out/Shot from the Actions cache (every job does; a run on a branch only sees its own branch and the default one)
-    default: 'true'
+  platform:
+    description: the public platform label, windows-amd64 ... macos-arm64, which names the build-directory artifact
+    required: true
+  build-dir-run-id:
+    description: the run whose build-dir-<platform> artifact to start from (ci:select-shards found it); empty restores from the Actions cache instead
+    default: ''
 
 runs:
   using: composite
@@ -102,11 +105,10 @@ runs:
         "C:\depot_tools" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
     # Deliberately not cached: depot_tools, the gclient git cache, and the
-    # synced working copies. Not because they are cheap -- the sync is 15 to
-    # 30 minutes -- but because the 10 GB the repository gets is shared by
-    # everything, and the build directory is worth about four hours of it.
-    # Anything else put in that budget competes with the one entry that
-    # matters, and loses the comparison while still evicting it.
+    # synced working copies. The build directory no longer competes for the
+    # 10 GB Actions cache (it travels as an artifact), so caching these is
+    # now a question of whether a few minutes per job are worth the entries;
+    # measure before adding any.
 
     - name: windows sdk
       shell: pwsh
@@ -215,23 +217,47 @@ runs:
         key: ${{ steps.toolchains.outputs.cache-primary-key }}
 
     - name: restore the build directory
-      if: inputs.restore-cache == 'true'
-      uses: actions/cache/restore@v6
+      if: inputs.build-dir-run-id != ''
+      uses: actions/download-artifact@v8
       # This is what makes a killed run useful to the next one. ninja is
       # already incremental; all it needs is its output directory back, so
-      # the cache is the build directory itself rather than a compiler cache
-      # in front of it. (sccache was here first and could not be used: it
-      # talks to the retired v1 Actions cache API, which now answers 400.)
+      # what travels is the build directory itself rather than a compiler
+      # cache in front of it. (sccache was here first and could not be used:
+      # it talks to the retired v1 Actions cache API, which now answers 400.)
       #
-      # The key carries the platform because a matrix would otherwise have
-      # every target restoring whichever build directory happened to be
-      # newest, which is worse than starting cold: ninja would rebuild
-      # everything anyway and the wrong entry would be the one kept.
+      # It travels as an artifact, not an Actions cache entry. The cache is
+      # 10 GB for the whole repository, evicts anything unused for seven
+      # days, and an entry written on a branch is invisible to every other
+      # branch; all three turned warm builds cold. The artifact is the one
+      # ci:select-shards chose: the newest one this repository saved for
+      # this platform, or the one saved at this very fingerprint.
       #
-      # Excluding anything from this path is a trap worth naming. The .pdb
+      # Excluding anything from the tarball is a trap worth naming. The .pdb
       # files are 13% of the directory and look like debug baggage under
       # symbol_level = 0, but dropping them makes ninja redo 757 CXX edges,
       # not just the links -- measured, not assumed.
+      with:
+        name: build-dir-${{ inputs.platform }}
+        run-id: ${{ inputs.build-dir-run-id }}
+        github-token: ${{ github.token }}
+        path: ${{ runner.temp }}/build-dir
+
+    - name: unpack the build directory
+      if: inputs.build-dir-run-id != ''
+      shell: bash
+      working-directory: src
+      run: |
+        zstd -d -T0 --long=27 -c "$RUNNER_TEMP/build-dir/build-dir.tar.zst" | tar --format=pax -xf -
+        rm -f "$RUNNER_TEMP/build-dir/build-dir.tar.zst"
+        du -sh out/Shot
+
+    - name: restore the build directory from the Actions cache
+      if: inputs.build-dir-run-id == ''
+      uses: actions/cache/restore@v6
+      # Transitional: the first runs after the switch to artifacts have no
+      # build-dir-<platform> artifact yet, so they start from the cache
+      # entries the previous workflows wrote. Remove once every platform has
+      # saved one.
       with:
         path: src/out/Shot
         key: out-shot-windows-${{ inputs.cpu }}-${{ github.run_id }}
