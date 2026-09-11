@@ -344,7 +344,12 @@ async function playwrightDefinition(name, channel, options) {
 // takes, in CSS pixels: a window opened at the viewport minus the size of a
 // capture of its page, which without emulation is the tab container. Runs
 // once per shard, outside every timed region, and needs no fixture.
-export async function measureWindowInset(name) {
+//
+// `Page.captureScreenshot` fails with "Unable to capture screenshot" while the
+// new page has not presented a frame yet, which a macOS arm64 runner hit on the
+// first attempt, so the probe waits for a painted frame and retries: the whole
+// shard's Playwright engines depend on this reading.
+export async function measureWindowInset(name, {attempts = 3} = {}) {
   const engine: any = await createEngine(name);
   await engine.launch();
   try {
@@ -352,14 +357,25 @@ export async function measureWindowInset(name) {
     const session = await engine.context.newCDPSession(page);
     try {
       const {bounds} = await session.send('Browser.getWindowForTarget');
-      const {data} = await session.send('Page.captureScreenshot', {format: 'png'});
-      const container = PNG.sync.read(Buffer.from(data, 'base64'));
-      return {
-        width: Math.max(0, bounds.width - container.width),
-        height: Math.max(0, bounds.height - container.height),
-        window: {width: bounds.width, height: bounds.height},
-        container: {width: container.width, height: container.height},
-      };
+      let lastError;
+      for (let attempt = 1; attempt <= attempts; attempt += 1) {
+        try {
+          await page.goto('about:blank', {waitUntil: 'load'});
+          await waitForVisualReady(page, BROWSER_OPERATION_TIMEOUT_MS);
+          const {data} = await session.send('Page.captureScreenshot', {format: 'png'});
+          const container = PNG.sync.read(Buffer.from(data, 'base64'));
+          return {
+            width: Math.max(0, bounds.width - container.width),
+            height: Math.max(0, bounds.height - container.height),
+            window: {width: bounds.width, height: bounds.height},
+            container: {width: container.width, height: container.height},
+          };
+        } catch (error) {
+          lastError = error;
+          await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
+        }
+      }
+      throw lastError;
     } finally {
       await session.detach().catch(() => {});
       await page.close().catch(() => {});
