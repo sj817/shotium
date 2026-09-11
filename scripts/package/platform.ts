@@ -11,9 +11,12 @@
 //   pnpm package:platform --build out/Shot --os win --arch x64 --dest dist/npm \
 //       --addon out/Shot/shotium.node
 //
-// npm ships the self-contained Node addon, CLI and two resource packs.
-// The independent C ABI library remains a GitHub Release artifact.
-// --addon is required; Node never falls back to spawning the CLI.
+// npm ships the Node addon and the two resource packs it reads. The CLI
+// executable and the C ABI library are GitHub Release artifacts: the addon
+// is a complete copy of the engine and node never spawns the executable, so
+// a second copy in the package was 41 MB that nothing loaded. The command
+// line for a machine that only has npm is apps/typescript/src/cli.ts.
+// --addon is required; a package without one cannot render.
 //
 // This script does not run npm. It writes a directory; the caller runs
 // `npm pack` or `npm publish` on it, because those need credentials and a
@@ -32,12 +35,12 @@ import {resolve} from '../lib/repo.ts';
 // spellings npm and node use. `os` in a package.json is matched against
 // process.platform, which is `win32` and `darwin` and has been for long
 // enough that nothing is going to change it.
-const PLATFORMS: Record<string, {npmOs: string; executable: string; extra: string[]}> = {
+const PLATFORMS: Record<string, {npmOs: string; extra: string[]}> = {
   // The import library is a build input, not a run-time one: nothing that
   // installs this package links against the DLL, so it stays out.
-  win: {npmOs: 'win32', executable: 'shotium.exe', extra: []},
-  mac: {npmOs: 'darwin', executable: 'shotium', extra: []},
-  linux: {npmOs: 'linux', executable: 'shotium', extra: []},
+  win: {npmOs: 'win32', extra: []},
+  mac: {npmOs: 'darwin', extra: []},
+  linux: {npmOs: 'linux', extra: []},
 };
 const ARCHES = ['x64', 'arm64'];
 const PAKS = ['shotium_data.pak', 'shotium_strings.pak'];
@@ -45,10 +48,10 @@ const PAKS = ['shotium_data.pak', 'shotium_strings.pak'];
 function copy(from: string, to: string, mode?: number): void {
   if (!existsSync(from)) throw new Error(`missing build output: ${from}`);
   copyFileSync(from, to);
-  // npm preserves the executable bit through pack and publish, so this is
-  // what makes the engine spawnable on the machine that installs it. It is
-  // set here rather than trusted from the build directory because a file
-  // that arrives over an artifact download has lost it.
+  // npm preserves the mode through pack and publish. It is set here rather
+  // than trusted from the build directory because a file that arrives over
+  // an artifact download has lost it, and a package whose modes depend on
+  // the route the bytes took is a diff nobody wants to explain.
   if (mode !== undefined) chmodSync(to, mode);
 }
 
@@ -72,8 +75,6 @@ function main(args: {build: string; os: string; arch: string; dest: string; addo
   rmSync(dest, {recursive: true, force: true});
   mkdirSync(dest, {recursive: true});
   const shipped: string[] = [];
-  copy(path.join(buildDir, platform.executable), path.join(dest, platform.executable), 0o755);
-  shipped.push(platform.executable);
   for (const pak of PAKS) {
     copy(path.join(buildDir, pak), path.join(dest, pak), 0o644);
     shipped.push(pak);
@@ -111,8 +112,8 @@ function main(args: {build: string; os: string; arch: string; dest: string; addo
       `# ${name}\n\n` +
           `The shotium engine built for ${args.os}-${args.arch}.\n\n` +
           'This package is one of six, and holds bytes rather than code: the\n' +
-          'self-contained Node addon, standalone CLI,\n' +
-          'and the two resource packs it reads.\n\n' +
+          'Node addon and the two resource packs it reads. The standalone CLI\n' +
+          'and the C ABI library are on the GitHub releases page, not here.\n\n' +
           'Install [`@pixel.js/shotium`](https://www.npmjs.com/package/' +
           '@pixel.js/shotium) instead. It depends on all six and pnpm installs\n' +
           'whichever matches the machine.\n');
@@ -123,7 +124,7 @@ function main(args: {build: string; os: string; arch: string; dest: string; addo
 
 const cli = cac('pnpm package:platform');
 cli.command('', 'assemble one @pixel.js/shotium-<os>-<arch> package directory')
-    .option('--build <dir>', 'the build directory holding the engine and the packs')
+    .option('--build <dir>', 'the build directory holding the packs')
     .option('--os <name>', 'win, mac or linux')
     .option('--arch <name>', 'x64 or arm64')
     .option('--dest <dir>', 'where the package directory goes')

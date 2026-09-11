@@ -87,9 +87,17 @@ jobs:
               --source-dir "out/language-sources/shotium-example-$language" \
               --languages "$language" --output "out/ffi-check/$language"
           done
-      - name: clean npm installation without the C ABI library
+      - name: clean npm installation without the CLI or the C ABI library
         shell: bash
-        run: pnpm verify:delivery --platform-dir out/ffi-npm
+        env:
+          ARTIFACT: ${{ inputs.artifact }}
+        # The reference render comes from the CLI extracted above; the npm
+        # package no longer carries one, and the check asserts that.
+        run: |
+          platform=${ARTIFACT#shotium-}
+          cli="out/ffi-native/shotium-cli-$platform/shotium"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then cli="$cli.exe"; fi
+          pnpm verify:delivery --platform-dir out/ffi-npm --cli "$cli"
       - uses: actions/upload-artifact@v7
         if: always()
         with:
