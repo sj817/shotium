@@ -53,3 +53,79 @@ jobs:
     uses: ./.github/workflows/contract.yml
     with:
       fingerprint: ${{ needs.engine.outputs.fingerprint }}
+
+  # The seven npm packages, installable from this PR: pkg.pr.new publishes
+  # the six platform packages assembled from the engines at this fingerprint
+  # and the main package, rewriting its optionalDependencies to the preview
+  # URLs, and comments the install line on the PR. One smoke install renders
+  # the demo card with what it published. Needs the pkg.pr.new GitHub App
+  # on the repository; forks cannot use it, so they skip this job.
+  preview:
+    name: "preview: pkg.pr.new"
+    needs: [engine, contract]
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      # A full checkout: pkg-pr-new reads the git metadata of the commit.
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 9.15.9
+      - run: pnpm -C scripts install --frozen-lockfile
+
+      - name: the six engines at this fingerprint
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FINGERPRINT: ${{ needs.engine.outputs.fingerprint }}
+        run: |
+          command -v 7z >/dev/null || { sudo apt-get update && sudo apt-get install -y p7zip-full; }
+          pnpm ci:engine-artifacts download-set --fingerprint "$FINGERPRINT" \
+            --engine-dir dist/engine --node-dir dist/node --evidence-dir dist/evidence
+          for plat in windows-amd64 windows-arm64 linux-amd64 linux-arm64 macos-amd64 macos-arm64; do
+            case "$plat" in windows-*) os=win;; linux-*) os=linux;; macos-*) os=mac;; esac
+            cpu=${plat#*-}; [ "$cpu" = amd64 ] && cpu=x64
+            pnpm package:platform --from-archive "dist/node/$plat/shotium-node-$plat.7z" \
+              --os "$os" --arch "$cpu" --dest dist/npm
+          done
+          ls dist/npm
+
+      - name: build the main package
+        working-directory: apps/typescript
+        run: |
+          pnpm install --no-lockfile
+          pnpm run build
+
+      - name: publish the preview
+        # Directories, not tarballs: only then does pkg-pr-new rewrite the
+        # main package's optionalDependencies to the six preview URLs.
+        run: |
+          node scripts/node_modules/pkg-pr-new/bin/cli.js publish \
+            --comment=update --packageManager=npm --no-template --previewVersion \
+            --json dist/preview.json ./dist/npm/* ./apps/typescript
+          node -e 'const m = require("./dist/preview.json"); console.log(m.packages.map((p) => `${p.name} -> ${p.url}`).join("\n"))'
+
+      - name: install the preview and render once
+        # What a reader of the PR comment would do, on the platform this
+        # runner is: install the main package from its preview URL, which
+        # pulls the linux-x64 platform package from its own, and render.
+        run: |
+          url=$(node -e 'console.log(require("./dist/preview.json").packages.find((p) => p.name === "@pixel.js/shotium").url)')
+          dir=$(mktemp -d)
+          cd "$dir"
+          echo '{"private":true}' > package.json
+          npm install --no-audit --no-fund "$url"
+          ls node_modules/@pixel.js
+          node -e '
+            const {screenshot} = require("@pixel.js/shotium");
+            screenshot({file: process.argv[1], allowFileAccess: true, viewport: {width: 720, height: 380}}).then(({image}) => {
+              if (image.subarray(0, 4).toString("hex") !== "89504e47") throw new Error("not a PNG");
+              console.log(`preview renders: ${image.length} bytes`);
+            });
+          ' "$GITHUB_WORKSPACE/apps/demo-card/card.html"

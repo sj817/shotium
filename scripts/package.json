@@ -32,6 +32,7 @@
     "@types/pixelmatch": "5.2.6",
     "@types/pngjs": "6.0.5",
     "@types/which": "3.0.4",
+    "pkg-pr-new": "0.0.88",
     "typescript": "5.9.2"
   }
 }

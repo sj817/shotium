@@ -66,6 +66,9 @@ importers:
       '@types/which':
         specifier: 3.0.4
         version: 3.0.4
+      pkg-pr-new:
+        specifier: 0.0.88
+        version: 0.0.88
       typescript:
         specifier: 5.9.2
         version: 5.9.2
@@ -478,6 +481,10 @@ packages:
     resolution: {integrity: sha512-1wrVzJ2STrpmONHKBy228LM1b84msXDUoAzVEl0R8Mz4Ce6EPr+IVtxm8+yvrqLYMHswREkjYFaMxnyGnaY3Ng==}
     hasBin: true
 
+  pkg-pr-new@0.0.88:
+    resolution: {integrity: sha512-Xc6PMJ2gher0WZP+rtjefFk26hIb7V1PTLL30bmy1Z2vsRmSvqiss7Ag1XUdyplTGYzIlFNJp4L3vMNmK44N6g==}
+    hasBin: true
+
   pngjs@7.0.0:
     resolution: {integrity: sha512-LKWqWJRhstyYo9pGvgor/ivk2w94eSjE3RGVuzLGlr3NmD8bf7RcYGze1mNdEHRP6TRP6rMuDHk5t44hnTRyow==}
     engines: {node: '>=14.19.0'}
@@ -851,6 +858,8 @@ snapshots:
   pixelmatch@7.1.0:
     dependencies:
       pngjs: 7.0.0
+
+  pkg-pr-new@0.0.88: {}
 
   pngjs@7.0.0: {}
 
