@@ -325,10 +325,11 @@ cli.command('provenance', 'write provenance.json for an engine artifact')
   .action((options: {platform?: string; fingerprint?: string; out?: string; toolchain?: string[]}) => {
     const platform = platformByLabel(options.platform ?? fail('--platform is required'));
     const out = resolve(options.out ?? fail('--out is required'));
-    const toolchain = Object.fromEntries((options.toolchain ?? []).map((kv) => {
-      const at = kv.indexOf('=');
-      return at < 0 ? [kv, ''] : [kv.slice(0, at), kv.slice(at + 1)];
-    }));
+    // cac hands an absent array option over as the string "undefined";
+    // only key=value pairs count.
+    const toolchain = Object.fromEntries((options.toolchain ?? [])
+      .filter((kv): kv is string => typeof kv === 'string' && kv.includes('='))
+      .map((kv) => [kv.slice(0, kv.indexOf('=')), kv.slice(kv.indexOf('=') + 1)]));
     mkdirSync(path.dirname(out), {recursive: true});
     writeFileSync(out, JSON.stringify({
       ...stamp(platform.label, options.fingerprint ?? fail('--fingerprint is required')),
@@ -386,9 +387,13 @@ if (process.argv[1] && path.resolve(process.argv[1]) === import.meta.filename) {
     console.error('usage: pnpm ci:engine-artifacts <status|find|download|download-set|marker|provenance|prune|refresh-plan>');
     process.exitCode = 2;
   } else {
-    await cli.runMatchedCommand().catch((error: unknown) => {
+    // marker and provenance are synchronous and return nothing to chain on;
+    // await handles both them and the promises the API commands return.
+    try {
+      await cli.runMatchedCommand();
+    } catch (error) {
       console.error(pc.red(error instanceof Error ? error.message : String(error)));
       process.exitCode = 1;
-    });
+    }
   }
 }
