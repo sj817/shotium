@@ -1,0 +1,72 @@
+# Re-uploads the engine artifacts of main's current fingerprint and every
+# platform's newest build directory once a month, so a quiet stretch never
+# lets them expire (90 days).
+#
+# An expired engine costs one build of that platform at the next push or
+# release; an expired build directory costs a cold one. Both heal on their
+# own, so this is a convenience rather than a guard. GitHub stops schedules
+# after 60 days without repository activity; a dispatch does the same.
+name: refresh
+run-name: "refresh: ${{ github.event_name }}"
+
+on:
+  schedule:
+    - cron: '23 4 1 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      plan: ${{ steps.plan.outputs.plan }}
+      count: ${{ steps.plan.outputs.count }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: |
+            package.json
+            scripts
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 9.15.9
+      - run: pnpm -C scripts install --frozen-lockfile
+      - id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          fp=$(pnpm --silent ci:fingerprint)
+          pnpm ci:engine-artifacts refresh-plan --fingerprint "$fp" --output
+          echo "count=$(node -e 'const fs=require("fs"); const out=fs.readFileSync(process.env.GITHUB_OUTPUT,"utf8"); const m=/^plan=(.*)$/m.exec(out); console.log(m ? JSON.parse(m[1]).length : 0)')" >> "$GITHUB_OUTPUT"
+
+  refresh:
+    needs: plan
+    if: needs.plan.outputs.count != '0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        item: ${{ fromJSON(needs.plan.outputs.plan) }}
+    name: "refresh: ${{ matrix.item.name }}"
+    steps:
+      - name: download
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run download "${{ matrix.item.run_id }}" -R "$GITHUB_REPOSITORY" -n "${{ matrix.item.name }}" -D artifact
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.item.name }}
+          path: artifact/
+          compression-level: 0
+          retention-days: 90
+          overwrite: true
