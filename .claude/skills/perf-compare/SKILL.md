@@ -87,6 +87,16 @@ run ids to paste. `scripts/perf/ci.ts` drives it;
 unit test and runs in `checks.yml` on every push. Change the test before
 changing a threshold.
 
+The default `acceptance=improvement` retains that strict improvement objective.
+For an unchanged-runtime release rehearsal, explicitly dispatch with
+`-f acceptance=identical-runtime`. This is release validation: all runtime files
+must match before and after a full matrix, workers must load those exact files,
+and no case may error or measure slower. Pixel/article checks still apply. Ties
+and uncertain timings remain visible and do not prove an improvement. Changed
+runtime files cannot use this mode. Locally, pass `--acceptance identical-runtime`
+to both `perf:compare` and `perf:report`; see `apps/docs/performance.md` for the
+snapshot scope and `scripts/ci/performance-acceptance.test.ts` for refusal tests.
+
 Six-platform *competitor* benchmarks (Puppeteer, Playwright) are a different
 harness, `apps/benchmark`, dispatched through `benchmark.yml`; see its README
 for shards and for what does and does not fail a run.

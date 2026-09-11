@@ -4,7 +4,7 @@
 //
 //   pnpm perf:compare BASELINE_PACKAGE CANDIDATE_PACKAGE OUTPUT.json
 //   Optional: --samples=20 --min-seconds=3 --max-seconds=8 --max-samples=1000 --filter=corpus
-//             --calibrate --check
+//             --calibrate --check --acceptance=improvement|identical-runtime
 //
 // Every case takes at least --samples pairs and goes on until each side has
 // spent --min-seconds capturing, up to --max-samples pairs: a 3 ms case gets
@@ -15,6 +15,9 @@
 // unless every case is accepted: faster for engine cases, not slower for the
 // two pinned to an external wait. A filtered run is diagnostic and can never
 // pass the complete matrix gate.
+// --acceptance=identical-runtime instead validates a release with identical
+// runtime files, complete sampling and no measured regression. Per-case
+// improvement verdicts remain unchanged and are reported separately.
 //
 // Each side runs in a forked worker (this file, `worker` mode) so the two
 // packages never share a process: Blink is a process-wide singleton.
@@ -22,7 +25,7 @@
 
 import {execFileSync, fork, type ChildProcess} from 'node:child_process';
 import {createHash} from 'node:crypto';
-import {copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync, createReadStream} from 'node:fs';
+import {copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync, createReadStream} from 'node:fs';
 import http from 'node:http';
 import {createRequire} from 'node:module';
 import type {AddressInfo} from 'node:net';
@@ -33,6 +36,7 @@ import {cac} from 'cac';
 
 import {calibrate, compare, type Bands, type Comparison, type Status} from '../lib/perf-gate.ts';
 import {libraryName, root} from '../lib/repo.ts';
+import {acceptanceMode, assessAcceptance, assertLoadedRuntime, snapshotRuntime, type AcceptanceMode, type LoadedRuntime, type RuntimeSnapshot} from './acceptance.ts';
 
 import type * as Shotium from '../../apps/typescript/src/index.ts';
 import type {CaptureStats, ScreenshotOptions} from '../../apps/typescript/src/types.ts';
@@ -128,7 +132,7 @@ async function worker(packagePath: string): Promise<void> {
   // Send readiness before reading/hash-checking the native artifacts. Hashing
   // 50 MB is verification work, not package startup work.
   const metadata = () => ({
-    startMs, importAndStartMs, library,
+    startMs, importAndStartMs, library: realpathSync(library), addon: realpathSync(addon), resourceDirectory: realpathSync(directory),
     librarySha256: hash(readFileSync(library)),
     addonSha256: hash(readFileSync(addon)),
     bundleSha256: hash(readFileSync(path.join(packagePath, 'dist/index.js'))),
@@ -353,6 +357,7 @@ interface Options {
   shard: string;
   calibrate: boolean;
   check: boolean;
+  acceptance: AcceptanceMode;
 }
 
 interface Record_ extends Case {
@@ -412,23 +417,27 @@ async function main(baseline: string, candidate: string, output: string, o: Opti
     throw new Error('No benchmark cases matched');
   }
   const gateFile = path.join(import.meta.dirname, '..', 'lib', 'perf-gate.ts');
+  const acceptanceFile = path.join(import.meta.dirname, 'acceptance.ts');
   const result = {
     startedUtc: new Date().toISOString(),
     platform: process.platform,
     arch: process.arch,
     node: process.version,
     host: {release: os.release(), cpu: os.cpus()[0]?.model, logicalCpus: os.cpus().length, totalMemory: os.totalmem(), freeMemory: os.freemem()},
-    revision: execFileSync('git', ['rev-parse', 'HEAD'], {cwd: root, encoding: 'utf8'}).trim(),
-    sourceDiffSha256: hash(execFileSync('git', ['diff', '--', 'shot', 'cc', 'third_party/blink', 'apps/typescript/native', 'patches', 'build'], {cwd: root})),
-    harnessSha256: hash(Buffer.concat([readFileSync(import.meta.filename), readFileSync(gateFile)])),
+    revision: execFileSync('git', ['--no-optional-locks', 'rev-parse', 'HEAD'], {cwd: root, encoding: 'utf8'}).trim(),
+    sourceDiffSha256: hash(execFileSync('git', ['--no-optional-locks', 'diff', '--', 'shot', 'cc', 'third_party/blink', 'apps/typescript/native', 'patches', 'build'], {cwd: root})),
+    harnessSha256: hash(Buffer.concat([readFileSync(import.meta.filename), readFileSync(gateFile), readFileSync(acceptanceFile)])),
     fixtureManifestSha256: hash(readFileSync(path.join(root, 'shot/testdata/bilibili/manifest.json'))),
     requiredCases: matrix.map((c) => c.name),
     selectedCases: selected.map((c) => c.name),
     shard,
     complete: false,
     status: 'running' as 'running' | 'pass' | 'not-passed',
+    acceptanceMode: o.acceptance,
+    acceptance: {status: 'running', issues: [] as string[]},
+    runtimeIdentity: {} as Record<string, {before?: RuntimeSnapshot; after?: RuntimeSnapshot}>,
     calibration: {tolerance: calibrate([]) as Bands, source: 'floor', cases: [] as Record_[]},
-    metadata: {} as Record<string, {librarySha256: string}>,
+    metadata: {} as Record<string, LoadedRuntime>,
     cases: [] as Record_[],
     sampling: {minimumPairs: samples, minSeconds, maxPairs: maxSamples, precision, maxSeconds},
     method: `Serial AB/BA pairs; five warmups except fresh processes; all samples retained. At least ${samples} pairs per case, continuing until each side has captured for ${minSeconds} s, then until the p50 and mean ratio intervals are within ±${precision * 100}% or ${maxSeconds} s per side, up to ${maxSamples} pairs. A cold start's processStartMs is recorded, not judged. Per-metric paired bootstrap 99% intervals of candidate/baseline for p50, mean and p95. p50 and mean are judged against a body band [1, 1 + primary] and p95 against a tail band [1, 1 + tail], each the noise an A/A calibration of the candidate against itself showed on that statistic (floored at 2%). faster: the mean's whole interval under 1, or p50's under 1 with the mean inside the body band, and no metric slower. equivalent: p50 and mean intervals inside the body band, neither under 1. slower: some interval past its band. unproven: otherwise (p50 or mean straddles the body band). p95 only makes a case slower, when its whole interval is past the tail band. Engine cases are accepted only when faster; cases pinned to an external wait when faster or equivalent. Fresh process startup includes import; OS file cache is not flushed. Multi-process wall includes IPC and verification of the batch; per-process capture wall excludes hashing. No claim about unlisted inputs or machines.`,
@@ -442,6 +451,7 @@ async function main(baseline: string, candidate: string, output: string, o: Opti
   mkdirSync(sources, {recursive: true});
   copyFileSync(import.meta.filename, path.join(sources, path.basename(import.meta.filename)));
   copyFileSync(gateFile, path.join(sources, 'perf-gate.ts'));
+  copyFileSync(acceptanceFile, path.join(sources, 'acceptance.ts'));
 
   const send = async <T = Row>(child: Child, command: Partial<Command>): Promise<T> => {
     const response = receive<T & {error?: string}>(child);
@@ -501,8 +511,9 @@ async function main(baseline: string, candidate: string, output: string, o: Opti
   // Checks that the library behind `label` is the one this run started with,
   // and records it. Skipped while calibrating: both sides are the candidate
   // then, and writing that under `baseline` would misdescribe the run.
-  const noteMetadata = (label: string, metadata: {librarySha256: string}) => {
+  const noteMetadata = (label: string, metadata: LoadedRuntime) => {
     if (!recordMetadata) return;
+    if (o.acceptance === 'identical-runtime') assertLoadedRuntime(result.runtimeIdentity[label].before!, metadata);
     if (result.metadata[label] && result.metadata[label].librarySha256 !== metadata.librarySha256) {
       throw new Error('Native library changed during measurement');
     }
@@ -523,7 +534,7 @@ async function main(baseline: string, candidate: string, output: string, o: Opti
           for (let i = 0; i < (item.concurrency || 1); i++) {
             const child = await spawn(label, item);
             pools[label].push(child);
-            noteMetadata(label, await send<{librarySha256: string}>(child, {metadata: true}));
+            noteMetadata(label, await send<LoadedRuntime>(child, {metadata: true}));
             if (item.prime) await send(child, {request: item.prime});
           }
         }
@@ -562,7 +573,7 @@ async function main(baseline: string, candidate: string, output: string, o: Opti
             const child = await spawn(label, item);
             try {
               value = {...await capture([child], item), ...child.ready} as unknown as Record<string, number> & Row;
-              noteMetadata(label, await send<{librarySha256: string}>(child, {metadata: true}));
+              noteMetadata(label, await send<LoadedRuntime>(child, {metadata: true}));
             } finally {
               await close(child);
             }
@@ -603,6 +614,14 @@ async function main(baseline: string, candidate: string, output: string, o: Opti
     return record;
   };
   try {
+    if (o.acceptance === 'identical-runtime') {
+      for (const [label, directory] of Object.entries(packages)) result.runtimeIdentity[label] = {before: snapshotRuntime(directory)};
+      save();
+      if (result.runtimeIdentity.baseline.before!.sha256 !== result.runtimeIdentity.candidate.before!.sha256) {
+        throw new Error('identical-runtime requires identical manifests, bundles, native addon and resources; use improvement for changed runtime files');
+      }
+      console.log(`Runtime identity: ${result.runtimeIdentity.baseline.before!.sha256}`);
+    }
     if (calibrating) {
       // The candidate against itself: every true ratio is 1, so how far the
       // worst statistic strays above 1 is this machine's noise. The band the
@@ -625,9 +644,26 @@ async function main(baseline: string, candidate: string, output: string, o: Opti
     result.complete = !o.filter && result.cases.length === matrix.filter((c) => shard === 'all' || c.group === shard).length &&
         result.cases.every((c) => !['running', 'error'].includes(c.status));
     result.status = result.complete && result.cases.every((c) => c.accepted) ? 'pass' : 'not-passed';
+    if (o.acceptance === 'identical-runtime') {
+      for (const [label, directory] of Object.entries(packages)) result.runtimeIdentity[label].after = snapshotRuntime(directory);
+    }
+    const issues = o.acceptance === 'identical-runtime' ? assessAcceptance(result, o.acceptance) :
+        result.status === 'pass' ? [] : ['Every case must meet the improvement gate'];
+    if (o.acceptance === 'identical-runtime' && calibrating &&
+        (result.calibration.cases.length !== CALIBRATION_CASES.length || result.calibration.cases.some((c) => ['running', 'error'].includes(c.status)))) {
+      issues.push('Calibration did not complete successfully');
+    }
+    result.acceptance = {status: issues.length ? 'not-passed' : 'pass', issues};
     result.finishedUtc = new Date().toISOString();
     save();
-    if (o.check && result.status !== 'pass') process.exitCode = 1;
+    console.log(`${o.acceptance} acceptance: ${result.acceptance.status}; improvement: ${result.status}`);
+    for (const issue of issues) console.error(issue);
+    if (o.check && issues.length) process.exitCode = 1;
+  } catch (error) {
+    result.acceptance = {status: 'not-passed', issues: [(error as Error).message]};
+    result.status = 'not-passed';
+    save();
+    throw error;
   } finally {
     for (const child of children) child.kill();
     server.closeAllConnections();
@@ -657,7 +693,8 @@ if (process.argv[2] === 'worker') {
       .option('--filter <regex>', 'only cases whose name matches (diagnostic; never passes the gate)')
       .option('--shard <name>', 'one case group: render, network, startup, lifecycle, parallel, soak, daemon, resilience', {default: 'all'})
       .option('--calibrate', 'time the candidate against itself first and read the noise band off that')
-      .option('--check', 'exit non-zero unless every case is accepted')
+      .option('--acceptance <mode>', 'improvement (default) or identical-runtime release validation', {default: 'improvement'})
+      .option('--check', 'exit non-zero unless the selected acceptance policy passes')
       .action(async (baseline: string, candidate: string, output: string, options: Record<string, unknown>) => {
         try {
           await main(baseline, candidate, output, {
@@ -670,6 +707,7 @@ if (process.argv[2] === 'worker') {
             shard: String(options.shard),
             calibrate: options.calibrate === true,
             check: options.check === true,
+            acceptance: acceptanceMode(options.acceptance),
           });
         } catch (error) {
           console.error(error);
