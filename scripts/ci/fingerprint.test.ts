@@ -6,6 +6,7 @@
 // paths-ignore list engine.yml carries is checked against them on the real
 // tree, in both directions.
 import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
 import test from 'node:test';
 
 import {execa} from 'execa';
@@ -92,6 +93,16 @@ test('engine.yml paths-ignore and the deny rules agree on every tracked file', a
   const idle = globs.filter((g) => !files.some((file) => g.re.test(file))).map((g) => g.glob);
   // Globs for files this PR series adds later are fine; a glob that matches
   // nothing at all otherwise is a typo.
-  const pending = ['.github/workflows/engine.yml', '.github/workflows/preview.yml', '.github/workflows/refresh.yml', '.agents/**'];
+  const pending = ['.github/workflows/refresh.yml', '.agents/**'];
   assert.deepEqual(idle.filter((glob) => !pending.includes(glob)), []);
+});
+
+// engine.yml carries the list verbatim; `pnpm ci:fingerprint --paths-ignore`
+// regenerates it, and this is what notices when someone edits one side.
+test('engine.yml carries exactly the generated paths-ignore block', async () => {
+  const yml = await readFile(resolve('.github/workflows/engine.yml'), 'utf8');
+  const block = /\n    paths-ignore:\n((?:      - '[^\n]*'\n)+)/.exec(yml);
+  assert.ok(block, 'engine.yml has a paths-ignore block');
+  const entries = block![1].trim().split('\n').map((line) => line.trim().replace(/^- '(.*)'$/, '$1'));
+  assert.deepEqual(entries, PATHS_IGNORE);
 });

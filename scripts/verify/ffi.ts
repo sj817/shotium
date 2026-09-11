@@ -6,6 +6,7 @@ import {copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync} from '
 import path from 'node:path';
 import {cac} from 'cac';
 import {execa} from 'execa';
+import {globSync} from 'tinyglobby';
 import {exeName, resolve} from '../lib/repo.ts';
 
 // The page every demo renders, at the viewport its README and the recorded CLI
@@ -38,6 +39,9 @@ async function main(options: Options): Promise<void> {
   const suffix = win ? '.exe' : '';
   const library = path.join(directory, win ? 'shotium.dll' : process.platform === 'darwin' ? 'libshotium.dylib' : 'libshotium.so');
   const run = (command: string, args: string[], cwd?: string) => execa(command, args, {cwd, timeout: 300000, env: {DOTNET_NOLOGO: '1'}});
+  // Builds stream to the log: a demo that compiles to the wrong place says
+  // so in its own output, which a captured pipe would swallow.
+  const build = (command: string, args: string[], cwd?: string) => execa(command, args, {cwd, timeout: 300000, env: {DOTNET_NOLOGO: '1'}, stdio: 'inherit'});
   const baseline = path.join(output, 'cli.png');
   await run(resolve(options.cli), ['--file', fixture, ...VIEWPORT, '-o', baseline]);
   const hash = (file: string) => createHash('sha256').update(readFileSync(file)).digest('hex');
@@ -58,17 +62,24 @@ async function main(options: Options): Promise<void> {
         break;
       case 'go':
         command = path.join(output, `go-demo${suffix}`);
-        await run('go', ['build', '-mod=readonly', '-o', command, '.'], source());
+        await build('go', ['build', '-mod=readonly', '-o', command, '.'], source());
         break;
       case 'rust':
-        await run('cargo', ['build', '--release', '--locked', '--manifest-path', source('Cargo.toml')]);
+        await build('cargo', ['build', '--release', '--locked', '--manifest-path', source('Cargo.toml')]);
         command = source('target', 'release', `shotium-demo${suffix}`);
         break;
-      case 'csharp':
-        await run('dotnet', ['build', source('ShotiumDemo.csproj'), '-c', 'Release', '--nologo']);
+      case 'csharp': {
+        await build('dotnet', ['build', source('ShotiumDemo.csproj'), '-c', 'Release', '--nologo']);
         command = 'dotnet';
-        args = [source('bin', 'Release', 'net8.0', 'ShotiumDemo.dll')];
+        // Newer SDKs put a runtime identifier into the output path
+        // (bin/linux-arm64/Release/net8.0/); older ones do not. Find it.
+        const built = globSync('bin/**/Release/net8.0/ShotiumDemo.dll', {cwd: source(), absolute: true});
+        if (built.length !== 1) {
+          throw new Error(`csharp: expected one built ShotiumDemo.dll, found ${built.length}; bin holds ${globSync('**/*', {cwd: source('bin'), onlyFiles: true}).join(', ') || 'nothing'}`);
+        }
+        args = [built[0]];
         break;
+      }
       case 'java':
         if (win) {
           // mvn.cmd re-parses its arguments through cmd.exe; hand them over via

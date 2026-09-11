@@ -19,11 +19,17 @@
 # repository's front page. npm also has no unpublish worth relying on, so the
 # irreversible half goes first and the reversible half confirms it.
 #
-# The bytes come from workflow artifacts, not from release assets. An artifact
-# belongs to a run and a run belongs to a commit, so asking for the artifacts
-# at $GITHUB_SHA cannot return a binary built from a different tree. Release
-# assets carry no such link -- anything uploaded under a tag looks like it
-# belongs to that tag.
+# The bytes come from workflow artifacts named after the engine fingerprint
+# -- a hash of every tracked file the six native builds read
+# (scripts/ci/fingerprint.ts) -- not from release assets and not from "the
+# run on this commit". The engine job below calls engine.yml, which builds
+# whichever platform has no engine-<platform>-<fingerprint> artifact yet
+# and otherwise reuses what an earlier run built; the artifacts it hands
+# on are version-free, and the npm platform packages are assembled here
+# with the version being released. So the version bump, a README edit or a
+# benchmark change never costs a rebuild, and a tag never needs anything
+# dispatched by hand first. Release assets are still never a source: they
+# carry no link to the tree they came from.
 #
 # ---------------------------------------------------------------------------
 # The release procedure, which this workflow is only the last step of:
@@ -31,19 +37,12 @@
 #   1. Bump the version in apps/typescript/package.json. SEVEN lines: `version`, and
 #      the six optionalDependencies that pin the platform packages to it. They
 #      must match exactly -- checks.yml fails the build if they do not.
-#   2. Commit and push. Wait for checks.yml.
-#   3. Run the six engine workflows against that commit. This is the slow part
-#      and it comes before the tag for a reason: the version is stamped into
-#      the platform tarballs, both in the filename and in the package.json
-#      inside, so a tarball built before step 1 carries the old version and is
-#      useless. Artifacts from an earlier commit cannot be reused across a
-#      version bump.
-#   4. All six green -- `git tag vX.Y.Z && git push origin vX.Y.Z`.
-#   5. This runs.
-#
-# Step 3 before step 4 is the one part of that order people get wrong, and the
-# failure is late: everything looks fine until the collect step below reports
-# a platform missing at this commit.
+#   2. Commit, push, merge. Wait for checks.yml; if the engine changed,
+#      engine.yml builds it on main in the background.
+#   3. Rehearse: dispatch this workflow with dry_run on. It reuses or builds
+#      the engines, runs the package suites against one, and publishes
+#      nothing.
+#   4. `git tag vX.Y.Z && git push origin vX.Y.Z`. This runs.
 # ---------------------------------------------------------------------------
 #
 # Publishing order within the job is also not cosmetic. @pixel.js/shotium
@@ -128,9 +127,26 @@ jobs:
       - id: version
         run: echo "version=$(jq -r .version apps/typescript/package.json)" >> "$GITHUB_OUTPUT"
 
+  # The six engines at this tree's fingerprint: reused when they exist,
+  # built here when they do not. Either way the tag waits for nothing
+  # dispatched by hand.
+  engine:
+    uses: ./.github/workflows/engine.yml
+    permissions:
+      contents: read
+      actions: write
+
+  # The TypeScript package against a real engine, before anything is
+  # published: the same suites a pull request runs, on the tagged tree.
+  contract:
+    needs: engine
+    uses: ./.github/workflows/contract.yml
+    with:
+      fingerprint: ${{ needs.engine.outputs.fingerprint }}
+
   publish:
     name: "publish: shotium-v${{ needs.meta.outputs.version }}"
-    needs: meta
+    needs: [meta, engine, contract]
     runs-on: ubuntu-latest
     permissions:
       # The OIDC token. Without it npm has nothing to check and falls back to
@@ -138,9 +154,11 @@ jobs:
       id-token: write
       # Creating the release at the end.
       contents: write
-      # Reading artifacts that belong to the engine runs, which are other
-      # workflows' runs. contents:write does not cover that.
-      actions: write
+      # Reading artifacts that belong to other runs. contents:write does not
+      # cover that.
+      actions: read
+    env:
+      FINGERPRINT: ${{ needs.engine.outputs.fingerprint }}
     steps:
       - uses: actions/checkout@v7
 
@@ -248,91 +266,46 @@ jobs:
             console.log("ok: " + shim.name + "@" + shim.version + " -> " + main.name + "@" + main.version);
           '
 
-      - name: collect the engine artifacts for this commit
+      - name: the engine artifacts at this tree's fingerprint
         env:
           GH_TOKEN: ${{ github.token }}
-        # Every engine run that succeeded at this exact commit, and the
-        # artifacts belonging to it. Not "the most recent run" and not a
-        # release's assets: an artifact is reachable only through the run that
-        # produced it, and a run names one commit, so nothing built from
-        # another tree can arrive here by accident.
+        # Six engines and their evidence, by fingerprint rather than by
+        # commit, from whichever trusted run built them (this one, if the
+        # engine job above had to). The node archives become the npm
+        # platform packages here, with the version being released; the
+        # CLI and C ABI archives go to the Release as they are.
         #
-        # Two package artifacts per platform: the npm .tgz and an artifact holding
-        # separate CLI/C ABI .7z archives. The FFI evidence artifact proves the
-        # extracted deliveries were exercised by all five language runtimes.
-        #
-        # All six, by name, rather than a glob over what happens to be there: a
-        # missing architecture must stop the run, not produce a main package
-        # pointing at a platform package that was never published.
+        # All six, by name, rather than a glob over what happens to be
+        # there: a missing architecture must stop the run, not produce a
+        # main package pointing at a platform package that was never
+        # published. download-set refuses an incomplete set.
         run: |
           mkdir -p dist/npm dist/release
-
-          gh run list --repo "$GITHUB_REPOSITORY" --commit "$GITHUB_SHA" \
-            --status success --limit 100 --json databaseId,name \
-            -q '.[] | select(.name | startswith("engine-")) | .databaseId' \
-            > /tmp/runs.txt
-          echo "engine runs that succeeded at $GITHUB_SHA:"
-          sed 's/^/  /' /tmp/runs.txt
-
-          # Keep each platform separate until the checked file set is merged.
-          # Evidence comes from the same successful run as both deliveries;
-          # a successful build with run_checks=false is not publishable.
-          fail=0
-          for pair in win32-x64:windows-amd64 win32-arm64:windows-arm64 \
-                      darwin-x64:macos-amd64 darwin-arm64:macos-arm64 \
-                      linux-x64:linux-amd64 linux-arm64:linux-arm64; do
-            engine=${pair##*:}
-            found=0
-            for run in $(cat /tmp/runs.txt); do
-              names=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run/artifacts" \
-                --paginate --jq '.artifacts[] | select(.expired == false) | .name')
-              if printf '%s\n' "$names" | grep -Fxq "shotium-$engine" &&
-                 printf '%s\n' "$names" | grep -Fxq "npm-shotium-$engine" &&
-                 printf '%s\n' "$names" | grep -Fxq "ffi-evidence-shotium-$engine"; then
-                gh run download "$run" --repo "$GITHUB_REPOSITORY" \
-                  --name "npm-shotium-$engine" --dir dist/npm
-                gh run download "$run" --repo "$GITHUB_REPOSITORY" \
-                  --name "shotium-$engine" --dir "dist/engine/$engine"
-                gh run download "$run" --repo "$GITHUB_REPOSITORY" \
-                  --name "ffi-evidence-shotium-$engine" --dir "dist/evidence/$engine"
-                for language in go python rust csharp java; do
-                  test -f "dist/evidence/$engine/ffi-check/$language/report.json"
-                done
-                test -f "dist/evidence/$engine/delivery-check/report.json"
-                echo "  $engine and delivery evidence <- run $run"
-                found=1
-                break
-              fi
-            done
-            if [ "$found" = 0 ]; then
-              echo "  $engine -- NOT FOUND with delivery evidence at this commit"
-              fail=1
-            fi
+          if ! command -v 7z >/dev/null; then sudo apt-get update && sudo apt-get install -y p7zip-full; fi
+          pnpm ci:engine-artifacts download-set --fingerprint "$FINGERPRINT" \
+            --engine-dir dist/engine --node-dir dist/node --evidence-dir dist/evidence
+          for plat in windows-amd64 windows-arm64 linux-amd64 linux-arm64 macos-amd64 macos-arm64; do
+            case "$plat" in windows-*) os=win;; linux-*) os=linux;; macos-*) os=mac;; esac
+            cpu=${plat#*-}; [ "$cpu" = amd64 ] && cpu=x64
+            pnpm package:platform --from-archive "dist/node/$plat/shotium-node-$plat.7z" \
+              --os "$os" --arch "$cpu" --dest dist/npm-stage
+            ( cd "dist/npm-stage/shotium-$os-$cpu" && npm pack --pack-destination ../../npm )
           done
 
-          if [ "$fail" = 1 ]; then
-            echo
-            echo "Something this tag needs was not built at $GITHUB_SHA."
-            echo "The engine workflows have to run against the commit the tag"
-            echo "points at, after the version bump: the version is stamped"
-            echo "into the tarball, so an older build carries the wrong one."
-            exit 1
-          fi
-
-          # The filenames, too, and not just the artifacts. An artifact named
-          # for a platform can still hold a tarball built at the wrong version
-          # if someone dispatched the engine workflow against an older tree.
+          # The filenames, too, and not just the packages: the version in
+          # the tarball is the one being released, by construction, but the
+          # publish step below names the files, so they had better exist.
           for plat in win32-x64 win32-arm64 darwin-x64 darwin-arm64 \
                       linux-x64 linux-arm64; do
             f="dist/npm/pixel.js-shotium-$plat-$VERSION.tgz"
             if [ ! -f "$f" ]; then
-              echo "$f is missing -- the artifact holds:"
+              echo "$f is missing -- the staging holds:"
               ls dist/npm
               exit 1
             fi
           done
 
-          ls -l dist/npm dist/release
+          ls -l dist/npm dist/engine/* dist/node/*
 
       - name: every tarball names this repository
         env:
@@ -463,9 +436,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         # Last, and only because npm got there first. --target pins it to the
-        # commit the tag is on, which is also the commit every artifact above
-        # came from and the commit npm's provenance attests to; all three agree
-        # by construction rather than by anyone checking.
+        # commit the tag is on, which is the commit npm's provenance attests
+        # to. The engines may predate it: they were built from a tree with
+        # the same fingerprint, which is the same engine inputs, and the
+        # notes say which runs built them.
         #
         # Not a draft. A draft release does not create the tag -- but the tag
         # already exists here, because it is what started this run, so there is
@@ -501,7 +475,12 @@ jobs:
             echo
             echo "### 📝 验证与来源 / Provenance"
             echo "- Commit: \`${GITHUB_SHA}\`"
-            echo "- Verified with npm provenance / 已通过 npm 官方签名与 Provenance 溯源验证。"
+            echo "- Engine fingerprint / 引擎指纹: \`${FINGERPRINT}\` -- the hash of every tracked file the native builds read; the engines were built by / 引擎构建自:"
+            for plat in windows-amd64 windows-arm64 linux-amd64 linux-arm64 macos-amd64 macos-arm64; do
+              run=$(jq -r .run_id "dist/node/$plat/provenance.json")
+              echo "  - $plat: https://github.com/$GITHUB_REPOSITORY/actions/runs/$run"
+            done
+            echo "- npm provenance attests the publish run (this one), which packaged the engines above / npm Provenance 证明的是本次发布运行，它打包了上面的引擎。"
           } > /tmp/notes.md
 
           # The .7z archives and not the .tgz files. A platform package's home
