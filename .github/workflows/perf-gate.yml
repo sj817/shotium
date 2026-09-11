@@ -74,6 +74,7 @@ jobs:
         with:
           name: performance-plan
           path: performance-plan.json
+          if-no-files-found: error
 
   platform:
     name: "measure: shotium-${{ matrix.target.label }}-v${{ needs.meta.outputs.version }}"

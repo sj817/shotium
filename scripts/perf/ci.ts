@@ -39,7 +39,7 @@ async function plan(): Promise<void> {
       fingerprint,
     });
   }
-  writeFileSync('performance-plan.json', JSON.stringify(matrix, null, 2));
+  writeFileSync(resolve('performance-plan.json'), JSON.stringify(matrix, null, 2));
   appendFileSync(process.env.GITHUB_OUTPUT!, `matrix=${JSON.stringify(matrix)}\n`);
 }
 
@@ -55,7 +55,9 @@ async function stage(downloadArg: string, destinationArg: string): Promise<void>
   const platformDirectory = path.join(destination, 'node_modules/@pixel.js', `shotium-${platform}`);
   mkdirSync(platformDirectory, {recursive: true});
   const tarball = path.join(download, tarballs[0]);
-  await execa('tar', ['-xzf', tarball, '--strip-components=1', '-C', platformDirectory], {windowsHide: true});
+  // Keep native paths out of tar's arguments: GNU tar treats drive letters
+  // as remote hosts, and MSYS tar does not accept backslash paths for -C.
+  await execa('tar', ['-xzf', '-', '--strip-components=1'], {cwd: platformDirectory, inputFile: tarball, windowsHide: true});
   const manifest = JSON.parse(readFileSync(path.join(platformDirectory, 'package.json'), 'utf8')) as {name: string};
   if (manifest.name !== `@pixel.js/shotium-${platform}`) throw new Error('Wrong platform artifact');
   writeFileSync(path.join(destination, 'provenance.json'), JSON.stringify({
