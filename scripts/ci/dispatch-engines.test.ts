@@ -1,38 +1,22 @@
-// The six dispatches differ from each other in exactly two ways -- the
-// workflow file and whether the platform needs `mode=build` to compile
-// anything -- and getting the second one wrong produces a green run that
-// built nothing, which is the failure this project has a rule about.
+// One dispatch carries everything engine.yml needs to know; a wrong flag
+// name is a run that builds nothing and looks green, which is the failure
+// this project has a rule about.
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import {TARGETS, dispatchArgs, selectTargets} from './dispatch-engines.ts';
+import {dispatchArgs, WORKFLOW} from './dispatch-engines.ts';
 
-test('targets: six of them, one per platform and architecture', () => {
-  assert.equal(TARGETS.length, 6);
-  assert.deepEqual(TARGETS.map((t) => t.id).sort(), [
-    'linux-amd64', 'linux-arm64', 'macos-amd64', 'macos-arm64', 'windows-amd64', 'windows-arm64',
+test('the command line names engine.yml and every input it declares', () => {
+  assert.equal(WORKFLOW, 'engine.yml');
+  assert.deepEqual(dispatchArgs({ref: 'main', repo: 'sj817/shotium', force: false, targets: 'all', shards: 'auto', jobs: ''}), [
+    'workflow', 'run', 'engine.yml', '-R', 'sj817/shotium', '--ref', 'main',
+    '-f', 'force=false', '-f', 'targets=all', '-f', 'shards=auto', '-f', 'jobs=',
   ]);
-  // Linux and macOS default to probe, which compiles nothing and produces no
-  // artifact; Windows has no such input.
-  assert.deepEqual(TARGETS.filter((t) => t.build).map((t) => t.id).sort(),
-    ['linux-amd64', 'linux-arm64', 'macos-amd64', 'macos-arm64']);
+  assert.deepEqual(dispatchArgs({ref: 'my-branch', repo: 'sj817/shotium', force: true, targets: 'windows-amd64,linux-arm64', shards: '1', jobs: '3'}).slice(-8), [
+    '-f', 'force=true', '-f', 'targets=windows-amd64,linux-arm64', '-f', 'shards=1', '-f', 'jobs=3',
+  ]);
 });
 
-test('--only picks a subset and rejects a name that is not a target', () => {
-  assert.deepEqual(selectTargets('windows-amd64,linux-arm64').map((t) => t.id), ['windows-amd64', 'linux-arm64']);
-  assert.equal(selectTargets(undefined).length, 6);
-  assert.throws(() => selectTargets('windows-x64'), /unknown target/);
-});
-
-test('the command line carries mode=build only where the workflow has it', () => {
-  const win = TARGETS.find((t) => t.id === 'windows-arm64')!;
-  const mac = TARGETS.find((t) => t.id === 'macos-amd64')!;
-  assert.deepEqual(dispatchArgs(win, 'main', 'sj817/shotium', true, 'auto'), [
-    'workflow', 'run', 'engine-windows.yml', '-R', 'sj817/shotium', '--ref', 'main',
-    '-f', 'arch=arm64', '-f', 'run_checks=true', '-f', 'shards=auto',
-  ]);
-  assert.deepEqual(dispatchArgs(mac, 'my-branch', 'sj817/shotium', false, '1'), [
-    'workflow', 'run', 'engine-macos.yml', '-R', 'sj817/shotium', '--ref', 'my-branch',
-    '-f', 'arch=amd64', '-f', 'mode=build', '-f', 'run_checks=false', '-f', 'shards=1',
-  ]);
+test('a target that is not a platform is refused before anything is sent', () => {
+  assert.throws(() => dispatchArgs({ref: 'main', repo: 'sj817/shotium', force: false, targets: 'windows-x64', shards: 'auto', jobs: ''}), /unknown platform windows-x64/);
 });

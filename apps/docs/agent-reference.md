@@ -156,20 +156,65 @@ build loop. Read the affected workflow and source action for CI changes.
   `scripts/build/shards.ts`, `scripts/lib/ninja-state.ts` and
   `scripts/ci/await-shards.ts` before changing that protocol. The final job also
   compiles a shard; assuming it only links changes the scheduling semantics.
-- Cache visibility depends on the ref that created it. Diagnose misses from
-  the actual run/cache keys; do not infer a compiler regression from an old
-  warm-versus-cold timing. Keep cache population within the requested CI work.
+- The engines are content-addressed. `pnpm ci:fingerprint`
+  (`scripts/ci/fingerprint.ts`) hashes `git ls-tree -r HEAD` over every
+  tracked file the native builds read -- unknown paths count; documentation,
+  the TypeScript package, benchmarks, demos and the consuming workflows are
+  excluded by explicit rules, and `PATHS_IGNORE` mirrors them as the
+  `paths-ignore` of `engine.yml`. Every engine artifact is named after the
+  fingerprint: `engine-<platform>-<fp>` (`shotium-cli-<platform>.7z`,
+  `shotium-c-abi-<platform>.7z`, the version-free
+  `shotium-node-<platform>.7z`, `provenance.json`),
+  `ffi-evidence-<platform>-<fp>` (from `check-ffi.yml`, on success only),
+  `build-dir-<platform>` (the ninja output directory, tar.zst) with a
+  `build-dir-<platform>-<fp>` marker written only after a finished build.
+  All keep for 90 days. `scripts/ci/engine-artifacts.ts` is the one lookup:
+  it trusts an artifact only when the run that made it ran from this
+  repository's code (or is the current run), pairs an engine only with
+  evidence from the same run, and accepts only runs of the workflows that
+  build engines.
+- [engine.yml](../../.github/workflows/engine.yml) is the orchestrator: on
+  push to `main`, on `workflow_dispatch` (`force`, `targets`) and as a
+  reusable workflow from `preview.yml` and `publish.yml`. Its `resolve` job
+  computes the fingerprint and calls `engine-<os>.yml` only for the
+  architectures with no artifact yet; a tree that changed nothing the build
+  reads costs one small job. `pnpm ci:dispatch-engines --force` is the
+  manual rebuild for what the fingerprint cannot see (a runner image, a
+  toolchain the image supplies). The `resolve` job summary names the run
+  each platform's engine comes from.
+- `engine-<os>.yml` read every input as `inputs.*`; under `workflow_call`
+  `github.event.inputs` is the caller's event and would skip every
+  conditional step. The build directory is restored from the artifact
+  `ci:select-shards` chose -- the one saved at this very fingerprint, which
+  means one runner and nothing to compile, or else the newest -- and saved
+  again after ninja, finished or not, as long as gn generated it; a job
+  cancelled before that saves nothing, `ci:select-shards` ignores blobs
+  under 1 MB, and an artifact that does not unpack to a build directory is
+  a cold start, not a failure. There is no build-directory
+  entry in the Actions cache any more (its 10 GB quota, seven-day eviction
+  and per-branch visibility all produced cold builds); only the compiler
+  toolchains stay there.
+- [preview.yml](../../.github/workflows/preview.yml) is the pull-request
+  entry point: `engine.yml`, then [contract.yml](../../.github/workflows/contract.yml),
+  which runs the package suites (`verify:node`, `node-entry`,
+  `bilibili --package`, `daemon`, `daemon-protocol`) against the linux-amd64
+  engine. A package-only PR meets a real engine in minutes; `engine.yml`
+  does not listen to `pull_request` itself.
 - [checks.yml](../../.github/workflows/checks.yml) runs package/harness/tooling
   checks without an engine, including packaging tests and actual example
-  compression/extraction. Its filters include the release workflows, root
-  READMEs, agent instructions and skills; consult the workflow for the exact
-  list. It also runs `verify:daemon-protocol` and `verify:bilibili --fixtures-only`.
+  compression/extraction, and the fingerprint/artifact tests on every
+  change under `.github/`. It also runs `verify:daemon-protocol` and
+  `verify:bilibili --fixtures-only`.
 - `engine-*.yml` build native artifacts and run engine checks according to
-  their conditions; `check-ffi.yml` validates native delivery. Inspect the
-  architecture, mode, `run_checks`, step outcomes and artifact SHA before
-  calling a platform verified. A probe or skipped step is not a runtime pass.
+  their conditions; `check-ffi.yml` validates native delivery, assembling
+  the npm platform package from the node archive the way `publish.yml`
+  does. Inspect the architecture, mode, `run_checks`, step outcomes and
+  the fingerprint before calling a platform verified. A probe or skipped
+  step is not a runtime pass.
 - Read failures with `gh run view -R sj817/shotium <id> --log-failed`.
-  Publishing is covered by the [release skill](../../.claude/skills/release/SKILL.md).
+  Publishing is covered by the [release skill](../../.claude/skills/release/SKILL.md);
+  `publish.yml` calls `engine.yml` itself and takes the engines by
+  fingerprint, so a tag needs nothing dispatched first.
 
 ## Release artifacts
 
@@ -185,10 +230,14 @@ build loop. Read the affected workflow and source action for CI changes.
   `--check` validates the exact file set of an extracted delivery.
   `pnpm package:examples` compresses and extracts all five examples to check
   their manifests. `SHOTIUM_SEVENZIP` can select a local 7-Zip executable.
-- Engine workflows retain the internal `shotium-<platform>` artifact IDs,
-  each containing its CLI and C ABI archives. Native checks and five-language
-  checks must pass on all six platforms at the version commit.
-- The publisher collects those artifact directories separately, then runs
+- Engine workflows upload `engine-<platform>-<fingerprint>`, each containing
+  its CLI, C ABI and node archives plus `provenance.json`. Native checks and
+  five-language checks must have passed on all six platforms at that
+  fingerprint: the evidence artifact from the same run is what makes an
+  engine publishable.
+- The publisher downloads those (`pnpm ci:engine-artifacts download-set`),
+  assembles the six npm platform packages from the node archives at the
+  release version (`pnpm package:platform --from-archive`), then runs
   `pnpm package:checksums --collect dist/engine --dir dist/release` after
   generating examples. One `SHA256SUMS` covers exactly 17 archives: 6 CLI,
   6 C ABI and 5 examples (go/python/rust/csharp/java). Lines are sorted by

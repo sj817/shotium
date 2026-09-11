@@ -1,15 +1,17 @@
-// Validate exact-SHA engine artifacts before placing them in an npm-shaped
-// candidate installation. Never substitute a release binary for a missing
-// build.
+// Find the six engine artifacts for the tree under test and stage one of
+// them as an npm-shaped candidate installation. Never substitute a release
+// binary for a missing build.
 //
-//   pnpm perf:ci plan                       # in performance-regression.yml's resolve job
+//   pnpm perf:ci plan                       # in perf-gate.yml's resolve job
 //   pnpm perf:ci stage <download> <dest>    # in each platform job
 //
-// `plan` reads BUILD_RUNS (a JSON object of platform -> engine run id) and
-// BASELINE_VERSION from the environment, checks each run against the GitHub
-// API, and writes performance-plan.json plus the job matrix to GITHUB_OUTPUT.
-// `stage` unpacks the one downloaded platform tarball into a directory shaped
-// like an installed @pixel.js/shotium.
+// `plan` reads FINGERPRINT (the engine fingerprint of the tree, see
+// scripts/ci/fingerprint.ts) and BASELINE_VERSION from the environment,
+// resolves each platform's engine-<platform>-<fingerprint> artifact with
+// the same trust rules publish.yml applies (scripts/ci/engine-artifacts.ts),
+// and writes performance-plan.json plus the job matrix to GITHUB_OUTPUT.
+// `stage` unpacks the one downloaded platform tarball into a directory
+// shaped like an installed @pixel.js/shotium.
 
 import {createHash} from 'node:crypto';
 import {appendFileSync, copyFileSync, cpSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync} from 'node:fs';
@@ -18,46 +20,24 @@ import path from 'node:path';
 import {cac} from 'cac';
 import {execa} from 'execa';
 
+import {environment, findEngineSet} from '../ci/engine-artifacts.ts';
+import {platforms} from '../lib/platforms.ts';
 import {resolve} from '../lib/repo.ts';
 
-// npm platform id, runner, engine workflow, artifact label. The label is the
-// platform id the engine workflows put on their artifacts and job names
-// (windows/linux/macos, amd64/arm64); npm keeps process.platform's spelling.
-const targets: Array<[string, string, 'linux' | 'windows' | 'macos', string]> = [
-  ['linux-x64', 'ubuntu-24.04', 'linux', 'linux-amd64'], ['linux-arm64', 'ubuntu-24.04-arm', 'linux', 'linux-arm64'],
-  ['win32-x64', 'windows-2025', 'windows', 'windows-amd64'], ['win32-arm64', 'windows-11-arm', 'windows', 'windows-arm64'],
-  ['darwin-x64', 'macos-15-intel', 'macos', 'macos-amd64'], ['darwin-arm64', 'macos-15', 'macos', 'macos-arm64'],
-];
-
 async function plan(): Promise<void> {
-  const runs = JSON.parse(process.env.BUILD_RUNS ?? '{}') as Record<string, string | number>;
-  const expected = targets.map(([platform]) => platform).sort();
-  if (JSON.stringify(Object.keys(runs).sort()) !== JSON.stringify(expected)) throw new Error('All six build run IDs are required');
+  const fingerprint = process.env.FINGERPRINT ?? '';
+  if (!/^[0-9a-f]{16}$/.test(fingerprint)) throw new Error('FINGERPRINT must be the 16-hex engine fingerprint');
   if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(process.env.BASELINE_VERSION ?? '')) throw new Error('Baseline must be an exact npm version');
-  const api = async (suffix: string) => {
-    const response = await fetch(`https://api.github.com/repos/${process.env.GITHUB_REPOSITORY}/${suffix}`, {
-      headers: {authorization: `Bearer ${process.env.GH_TOKEN}`, accept: 'application/vnd.github+json'},
-      signal: AbortSignal.timeout(30000),
-    });
-    if (!response.ok) throw new Error(`GitHub ${response.status}: ${suffix}`);
-    return response.json() as Promise<Record<string, unknown>>;
-  };
+  const {api, currentRunId} = environment();
   const matrix = [];
-  for (const [platform, runner, workflowOs, label] of targets) {
-    const runId = String(runs[platform]);
-    if (!/^\d+$/.test(runId)) throw new Error(`Invalid run ID for ${platform}`);
-    const run = await api(`actions/runs/${runId}`) as {path: string; head_sha: string; status: string; conclusion: string};
-    if (run.path !== `.github/workflows/engine-${workflowOs}.yml`) {
-      throw new Error(`${platform}: artifact must come from the matching engine build workflow`);
-    }
-    if (run.head_sha !== process.env.GITHUB_SHA || run.status !== 'completed' || run.conclusion !== 'success') {
-      throw new Error(`${platform}: build must be successful at this workflow SHA ${process.env.GITHUB_SHA}; got ${run.head_sha}/${run.conclusion}`);
-    }
-    const artifactName = `npm-shotium-${label}`;
-    const artifacts = await api(`actions/runs/${runId}/artifacts?per_page=100`) as {artifacts: Array<{name: string; expired: boolean; id: number; digest?: string}>};
-    const matching = artifacts.artifacts.filter((a) => a.name === artifactName && !a.expired);
-    if (matching.length !== 1) throw new Error(`${platform}: exact build artifact missing or ambiguous`);
-    matrix.push({platform, label, runner, runId, artifactName, artifactId: matching[0].id, artifactDigest: matching[0].digest, sourceSha: run.head_sha});
+  for (const target of platforms) {
+    const set = await findEngineSet(api, fingerprint, target.label, currentRunId);
+    if (!set) throw new Error(`${target.label}: no engine with evidence at ${fingerprint}; run engine.yml first`);
+    matrix.push({
+      platform: target.npm, label: target.label, runner: target.nativeRunner, packageOs: target.packageOs, cpu: target.cpu,
+      runId: set.runId, artifactName: set.engine.name, artifactId: set.engine.id, sourceSha: set.engine.workflow_run!.head_sha,
+      fingerprint,
+    });
   }
   writeFileSync('performance-plan.json', JSON.stringify(matrix, null, 2));
   appendFileSync(process.env.GITHUB_OUTPUT!, `matrix=${JSON.stringify(matrix)}\n`);
@@ -79,13 +59,13 @@ async function stage(downloadArg: string, destinationArg: string): Promise<void>
   const manifest = JSON.parse(readFileSync(path.join(platformDirectory, 'package.json'), 'utf8')) as {name: string};
   if (manifest.name !== `@pixel.js/shotium-${platform}`) throw new Error('Wrong platform artifact');
   writeFileSync(path.join(destination, 'provenance.json'), JSON.stringify({
-    sourceSha: process.env.GITHUB_SHA, platform,
+    sourceSha: process.env.GITHUB_SHA, fingerprint: process.env.FINGERPRINT ?? null, platform,
     tarballSha256: createHash('sha256').update(readFileSync(tarball)).digest('hex'),
   }, null, 2));
 }
 
 const cli = cac('pnpm perf:ci');
-cli.command('plan', 'check the six engine runs and write the job matrix')
+cli.command('plan', 'find the six engine artifacts at FINGERPRINT and write the job matrix')
     .action(() => plan().catch((error) => {
       console.error(error);
       process.exitCode = 1;

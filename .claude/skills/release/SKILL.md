@@ -2,8 +2,8 @@
 name: release
 description: >-
   Publish an explicitly requested shotium release to npm and GitHub Releases.
-  Align the version commit, six platform builds and tag, verify publication,
-  and write bilingual release notes. Invoke manually with /release and a version.
+  Bump the version, rehearse, tag, verify publication, and write bilingual
+  release notes. Invoke manually with /release and a version.
 disable-model-invocation: true
 argument-hint: "<version>"
 arguments: [version]
@@ -19,13 +19,16 @@ publisher bound to `sj817/shotium` + `publish.yml` on npmjs.com before the
 first release under a new name; a dry run cannot check that. The six old
 platform packages `@shotkit/shotium-<os>-<arch>` are not published any more.
 
-`publish.yml` finds the six engine artifacts by the commit the tag points at
-(`gh run list --commit "$GITHUB_SHA"`). That single fact fixes the order of
-everything below: the engine builds must run on the version-bump commit,
-and the tag must point at that same commit. A commit after the tag, or a
-build on an earlier commit, fails the collect step with
-`NOT FOUND at this commit`, and a whole batch was redone in August 2026 for
-a README change made in between.
+The engines are not built for the release. `publish.yml` calls
+`engine.yml`, which computes the fingerprint of the tree -- a hash of every
+tracked file the six native builds read, `pnpm ci:fingerprint` -- and
+reuses the `engine-<platform>-<fingerprint>` artifacts an earlier run made
+(usually the push to `main` that last changed the engine), building only
+what is missing. The npm platform tarballs are assembled at publish time
+from those version-free artifacts, so the version bump, a README edit or a
+benchmark commit never costs a build, and nothing has to be dispatched by
+hand before tagging. `scripts/ci/engine-artifacts.ts` is the lookup;
+`apps/docs/agent-reference.md#build-and-ci` describes the artifacts.
 
 ## 1. Bump the version
 
@@ -48,7 +51,8 @@ Also note, for a follow-up commit *after* the release:
 the `baseline_version` default, and `pnpm verify:daemon-protocol`
 uses a literal version in one fixture.
 
-Commit and push only that file:
+Commit and push only that file, as a PR or directly, and wait for
+`checks.yml`:
 
 ```bash
 git add apps/typescript/package.json
@@ -56,48 +60,26 @@ git commit -m "release: v$version"
 git push
 SHA=$(git rev-parse HEAD)
 # GitHub takes a few seconds to create the run, and `--limit 1` without
-# `--commit` returns the *previous* run in that window -- which `gh run watch`
-# reports as an instant success, sending you on to the engine builds on the
-# strength of an older release. Select by commit, and wait for it to exist.
+# `--commit` returns the *previous* run in that window. Select by commit,
+# and wait for it to exist.
 run_id() { gh run list -R sj817/shotium --workflow "$1" --commit "$2" --json databaseId --jq '.[0].databaseId'; }
 until RUN=$(run_id checks.yml "$SHA") && [ -n "$RUN" ]; do sleep 5; done
 gh run watch -R sj817/shotium "$RUN"
 ```
 
-## 2. Six engine builds on this commit
+If the engine changed since the last build, `engine.yml` started on that
+push too (`gh run list -R sj817/shotium --workflow engine.yml --commit "$SHA"`);
+the rehearsal below waits for the same artifacts either way.
 
-```bash
-SHA=$(git rev-parse HEAD)
-# The six dispatches, with mode=build where the workflow has that input.
-# --dry-run prints them without sending; --wait polls until all six finish.
-pnpm ci:dispatch-engines --ref main
-gh run list -R sj817/shotium --commit "$SHA"
-```
+## 2. Rehearse
 
-- `shards` defaults to `auto` (Windows 4+4, Linux 4+3, macOS 2+3). That is
-  the number of slices, and the final job takes the last one, so the six
-  dispatches above are 20 jobs in total -- exactly the free plan's
-  concurrency. Dispatch all six at once. `-f shards=1` is the old single job.
-- `mode` defaults to `probe` on Linux and macOS. A probe run is
-  `gn gen` + `ninja -n`, compiles nothing, and produces no artifact.
-- `run_checks` defaults to true; leave it. The run is not green unless the
-  check suites passed against the binary it built.
-- With unchanged C++ the compile caches hit and all six finish in about
-  25 minutes; cold builds take 1 to 4 hours (Windows arm64 and macOS arm64
-  are the slow ones).
-- Each run uploads two separate archives, `shotium-cli-<platform>.7z` and
-  `shotium-c-abi-<platform>.7z`, in the existing `shotium-<platform>` artifact;
-  the npm platform tarball remains a separate artifact. The release step is
-  not part of these workflows.
-
-Do not tag until all six show `completed success` for `$SHA`, including the
-five-language FFI and npm delivery jobs. A run with `run_checks=false` is not
-release evidence. Inspect the collected `ffi-evidence-shotium-<platform>`
-reports and ensure each names the CLI and C ABI artifacts it exercised.
-
-Before tagging, dispatch `publish.yml` with `dry_run=true` against this same
-commit and wait for success. It collects 12 native archives, packages the five
-examples and generates/verifies one `SHA256SUMS` before any npm dry run:
+Dispatch `publish.yml` with `dry_run=true` against the commit and wait for
+success. Its `engine` job reuses or builds the six engines (25 minutes
+warm, 1 to 4 hours cold, nothing at all when they exist), `contract` runs
+the package suites against the linux-amd64 engine, and `publish` downloads
+the six engines with their FFI evidence, assembles the six platform
+tarballs at `$version`, packages the five examples and generates/verifies
+one `SHA256SUMS` before any npm dry run:
 
 ```bash
 gh workflow run publish.yml -R sj817/shotium --ref main -f dry_run=true
@@ -112,14 +94,18 @@ six `@pixel.js/shotium-<os>-<arch>` tarballs, `./apps/typescript`, then
 Check the `release-attachments` artifact: exactly 17 `.7z` files and
 `SHA256SUMS`, with the six CLI, six C ABI and five example names from
 [the artifact contract](../../../apps/docs/agent-reference.md#release-artifacts).
-Rehearsal needs the real six-platform artifacts; synthetic checksum fixtures
-or a local Windows package alone do not satisfy this gate.
+The `resolve: engine` job summary names the run each platform's engine
+came from; `provenance.json` beside each node archive says the same.
+
+A forced rebuild (`pnpm ci:dispatch-engines --force --wait`) is for a
+runner image or toolchain change the fingerprint cannot see, or an
+artifact under suspicion; it is not part of a normal release.
 
 ## 3. Tag
 
 ```bash
 git tag -a v$version -m "v$version"
-git push origin v$version
+git push origin refs/tags/v$version
 TAG_SHA=$(git rev-parse "v$version^{commit}")
 # Same reason as step 1: never `--limit 1` right after a push.
 run_id() { gh run list -R sj817/shotium --workflow "$1" --commit "$2" --json databaseId --jq '.[0].databaseId'; }
@@ -142,8 +128,9 @@ create a draft release by hand: a draft creates no git tag until it is
 undrafted, and its `targetCommitish` is frozen at creation, which is how
 v0.1.0 ended up on npm with no tag in git.
 
-`workflow_dispatch` with `dry_run=true` rehearses the whole thing against a
-ref and publishes nothing; complete this rehearsal before tagging.
+The release notes record the engine fingerprint and link the run that
+built each platform's engine. npm provenance attests the publish run,
+which assembled the packages from those engines.
 
 ## 4. Verify the registry
 
@@ -215,9 +202,9 @@ benchmark table in both READMEs still says what that archive says.
 
 ## Redoing a release
 
-Cheap when C++ did not change: the six builds hit their caches and finish in
-25 minutes. If anything must change after the tag, delete the tag and the
-release, fix, and start again from step 1 with the same version if nothing
-was published, or the next patch version if any of the eight packages
-reached the registry (npm does not allow republishing a version, and the
-shim must carry the same number as what it depends on).
+If anything must change after the tag, delete the tag and the release,
+fix, and start again from step 1 with the same version if nothing was
+published, or the next patch version if any of the eight packages reached
+the registry (npm does not allow republishing a version, and the shim must
+carry the same number as what it depends on). The engines are not rebuilt
+unless the fix touched an engine input; the fingerprint decides.
