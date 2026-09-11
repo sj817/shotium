@@ -1,5 +1,5 @@
 import { statSync } from 'node:fs';
-import shotium, { screenshot } from '@shotkit/shotium';
+import shotium, { screenshot } from '@pixel.js/shotium';
 
 // One engine per process: Blink's process-wide statics
 // cannot be re-initialised, so start() is idempotent.

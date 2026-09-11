@@ -2,7 +2,7 @@
 
 shotium renders static HTML/CSS to PNG, JPEG and WebP using a slice of Chromium:
 Blink for DOM/layout/paint, Skia for rasterisation, and `//net` for resources.
-It ships a CLI, a C ABI and the `@shotkit/shotium` Node package.
+It ships a CLI, a C ABI and the `@pixel.js/shotium` Node package.
 
 This is the shared entry point for coding agents; `AGENTS.md` points here.
 Read the task-specific references below when needed. Commands, source paths

@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/@shotkit/shotium"><img src="https://img.shields.io/npm/v/@shotkit/shotium.svg?label=npm" alt="npm version"></a> <a href="https://chromium.googlesource.com/chromium/src/+/refs/tags/155.0.8048.0"><img src="https://img.shields.io/badge/chromium%20baseline-155.0.8048.0-4285F4?logo=googlechrome&logoColor=white" alt="Chromium baseline"></a> <a href="https://github.com/sj817/shotium/releases"><img src="https://img.shields.io/badge/platforms-win%20%7C%20mac%20%7C%20linux%20%C2%B7%20x64%20%7C%20arm64-4c8.svg" alt="supported platforms"></a> <a href="https://sj817.github.io/shotium/en/"><img src="https://img.shields.io/badge/benchmark-vs%20Puppeteer%20%26%20Playwright-orange.svg" alt="benchmarks"></a> <a href="LICENSE"><img src="https://img.shields.io/badge/license-BSD--3--Clause-blue.svg" alt="license"></a>
+  <a href="https://www.npmjs.com/package/@pixel.js/shotium"><img src="https://img.shields.io/npm/v/@pixel.js/shotium.svg?label=npm" alt="npm version"></a> <a href="https://chromium.googlesource.com/chromium/src/+/refs/tags/155.0.8048.0"><img src="https://img.shields.io/badge/chromium%20baseline-155.0.8048.0-4285F4?logo=googlechrome&logoColor=white" alt="Chromium baseline"></a> <a href="https://github.com/sj817/shotium/releases"><img src="https://img.shields.io/badge/platforms-win%20%7C%20mac%20%7C%20linux%20%C2%B7%20x64%20%7C%20arm64-4c8.svg" alt="supported platforms"></a> <a href="https://sj817.github.io/shotium/en/"><img src="https://img.shields.io/badge/benchmark-vs%20Puppeteer%20%26%20Playwright-orange.svg" alt="benchmarks"></a> <a href="LICENSE"><img src="https://img.shields.io/badge/license-BSD--3--Clause-blue.svg" alt="license"></a>
 </p>
 
 <p align="center">
@@ -14,7 +14,7 @@
 
 <p align="center">
   <img src="apps/docs/assets/demo.gif" width="820"
-       alt="Terminal recording: installing @shotkit/shotium, running card.mjs with cold and warm capture timings, then the rendered boarding pass">
+       alt="Terminal recording: installing @pixel.js/shotium, running card.mjs with cold and warm capture timings, then the rendered boarding pass">
 </p>
 
 shotium extracts the core rendering pipeline from Chromium: Blink for DOM parsing, CSS styling, layout and painting, Skia for CPU rasterisation and image encoding, and `//net` for resource fetching and HTTP caching. It strips out all unnecessary browser shell components: V8, the `//content` layer, multi-process architecture, compositor, GPU process, and DevTools
@@ -62,8 +62,27 @@ The engine runs directly within the host process, rendering documents on a dedic
 #### Node.js / TypeScript
 
 ```bash
-npm install @shotkit/shotium   # or npm, yarn, bun; automatically installs prebuilt binary for current platform
+npm install @pixel.js/shotium   # or npm, yarn, bun; automatically installs prebuilt binary for current platform
 ```
+
+<details>
+<summary><b>Legacy package name <code>@shotkit/shotium</code> (still published during the transition)</b></summary>
+
+Since 0.7.3, `@shotkit/shotium` is a compatibility alias of `@pixel.js/shotium`: both are published at the same version, and installing the old name brings in `@pixel.js/shotium` and its platform package. Existing projects need no change and keep receiving every release. The six old platform packages `@shotkit/shotium-<os>-<arch>` stay at 0.7.2 and are not updated.
+
+To move to the canonical name:
+
+```bash
+npm uninstall @shotkit/shotium
+npm install @pixel.js/shotium
+```
+
+```diff
+- import { screenshot } from '@shotkit/shotium';
++ import { screenshot } from '@pixel.js/shotium';
+```
+
+</details>
 
 #### Standalone CLI / C Shared Libraries / Demos
 
@@ -110,11 +129,11 @@ if ((Get-FileHash shotium-cli-windows-amd64.7z -Algorithm SHA256).Hash.ToLower()
 
 ### Node.js / TypeScript
 
-Install `@shotkit/shotium` and import it directly into your project:
+Install `@pixel.js/shotium` and import it directly into your project:
 
 ```ts
 import { writeFileSync } from 'node:fs';
-import { screenshot, screenshotTiles, start, stop, purgeMemory } from '@shotkit/shotium';
+import { screenshot, screenshotTiles, start, stop, purgeMemory } from '@pixel.js/shotium';
 
 // -------------------------------------------------------------
 // 1. Basic screenshot: only file path or URL required, everything else has sane defaults
@@ -151,10 +170,9 @@ await stop();
 > **Short-lived tasks (CLI tools / CI scripts / Serverless)?**
 > Use the built-in daemon client to eliminate cold-start overhead:
 > ```ts
-> import { DaemonClient } from '@shotkit/shotium/daemon';
+> import { daemon } from '@pixel.js/shotium';
 > 
-> const client = new DaemonClient();
-> const { image } = await client.screenshot({ file: 'page.html', fullPage: true });
+> const { image } = await daemon.screenshot({ file: 'page.html', fullPage: true });
 > ```
 > For complete options (CSS selector targeting, styles injection, wait policies, custom headers), refer to the [TypeScript SDK Guide](apps/typescript/README.md)
 
@@ -185,6 +203,8 @@ shotium --serve --cache-dir /var/tmp/shotium-cache
 ```
 
 > Run `shotium --help` to list all available options and defaults
+
+> **No executable installed?** `npx @pixel.js/shotium <same flags>` runs the same engine through the Node addon in the npm package. It is the fallback, not the CLI: every invocation pays a Node start-up and an addon load that the executable does not, and `--serve` is not available. For anything that runs often, download `shotium-cli-<platform>.7z`
 
 ### C ABI and other languages
 
@@ -386,7 +406,7 @@ The repository contains a minimal slice of Chromium required to build the engine
 shotium/
 ├── shot/                      # Engine core: C++ sources, shot_api.h interface, GN configs, and test corpus
 ├── apps/
-│   ├── typescript/            # Official Node.js / TypeScript SDK (npm: @shotkit/shotium)
+│   ├── typescript/            # Official Node.js / TypeScript SDK (npm: @pixel.js/shotium)
 │   ├── c-abi/                 # Cross-language C ABI specification and contract guide
 │   ├── go/                    # Go example project (purego, no cgo)
 │   ├── python/                # Python example project (standard library ctypes)

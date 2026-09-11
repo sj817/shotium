@@ -21,7 +21,7 @@ is the commands and the traps.
    measure the previous engine against the published one while believing you
    measured the change.
 2. **The baseline is an installed package**, not a checkout:
-   `npm pack`/`npm install @shotkit/shotium@<version>` into a scratch
+   `npm pack`/`npm install @pixel.js/shotium@<version>` into a scratch
    directory, and pass that directory as `BASELINE_PACKAGE`.
 3. **Nothing else is running.** No build, no render checks, no other
    benchmark on the same host. The harness compares two engines on one

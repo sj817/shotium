@@ -29,7 +29,7 @@ pnpm docs:assets   # card.webp, example-node.webp, example-cli.webp (needs freez
 pnpm docs:demo     # demo.gif (needs vhs, ttyd, ffmpeg and bash)
 ```
 
-Both commands initialize a temporary `.demo-run/` environment with the published `@shotkit/shotium` npm package, ensuring documentation recordings reflect production package behavior rather than in-tree artifacts. This directory is gitignored.
+Both commands initialize a temporary `.demo-run/` environment with the published `@pixel.js/shotium` npm package, ensuring documentation recordings reflect production package behavior rather than in-tree artifacts. This directory is gitignored.
 
 Render the card manually via CLI:
 

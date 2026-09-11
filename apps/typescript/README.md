@@ -1,12 +1,12 @@
-# @shotkit/shotium
+# @pixel.js/shotium
 
 English · [简体中文](./README.zh.md)
 
 Static HTML/CSS rendering engine extracted from Chromium: DOM layout, styling, and painting without browser overhead or JavaScript execution
 
-[![npm version](https://img.shields.io/npm/v/@shotkit/shotium.svg?label=npm)](https://www.npmjs.com/package/@shotkit/shotium) [![Chromium baseline](https://img.shields.io/badge/chromium-155.0.8048.0-4285F4?logo=googlechrome&logoColor=white)](https://chromium.googlesource.com/chromium/src/+/refs/tags/155.0.8048.0) [![platforms](https://img.shields.io/badge/platforms-win%20%7C%20mac%20%7C%20linux%20%C2%B7%20x64%20%7C%20arm64-4c8.svg)](https://github.com/sj817/shotium/releases) [![license](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](https://github.com/sj817/shotium/blob/main/LICENSE)
+[![npm version](https://img.shields.io/npm/v/@pixel.js/shotium.svg?label=npm)](https://www.npmjs.com/package/@pixel.js/shotium) [![Chromium baseline](https://img.shields.io/badge/chromium-155.0.8048.0-4285F4?logo=googlechrome&logoColor=white)](https://chromium.googlesource.com/chromium/src/+/refs/tags/155.0.8048.0) [![platforms](https://img.shields.io/badge/platforms-win%20%7C%20mac%20%7C%20linux%20%C2%B7%20x64%20%7C%20arm64-4c8.svg)](https://github.com/sj817/shotium/releases) [![license](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](https://github.com/sj817/shotium/blob/main/LICENSE)
 
-`@shotkit/shotium` is the official Node.js SDK for [shotium](https://github.com/sj817/shotium). It extracts the core layout and painting capabilities from Chromium: Blink for DOM, styling, and layout, Skia for CPU rasterisation and encoding, and `//net` for HTTP fetching and disk caching. All browser-shell overhead—V8, the compositor, GPU processes, and DevTools—has been completely removed. Documents are rendered directly within the calling Node.js process on a dedicated engine thread, returning raw PNG, JPEG, or WebP byte buffers without spawning browser subprocesses, managing WebSocket connections, or risking process leaks
+`@pixel.js/shotium` is the official Node.js SDK for [shotium](https://github.com/sj817/shotium). It extracts the core layout and painting capabilities from Chromium: Blink for DOM, styling, and layout, Skia for CPU rasterisation and encoding, and `//net` for HTTP fetching and disk caching. All browser-shell overhead—V8, the compositor, GPU processes, and DevTools—has been completely removed. Documents are rendered directly within the calling Node.js process on a dedicated engine thread, returning raw PNG, JPEG, or WebP byte buffers without spawning browser subprocesses, managing WebSocket connections, or risking process leaks
 
 The package has **zero runtime dependencies**. The engine binary is distributed via six platform packages automatically resolved by npm via `optionalDependencies` (supporting Windows, macOS, and Linux on both x64 and arm64 architectures)
 
@@ -22,17 +22,40 @@ The package has **zero runtime dependencies**. The engine binary is distributed 
 ## Install
 
 ```bash
-pnpm add @shotkit/shotium
-# or: npm install @shotkit/shotium · yarn add @shotkit/shotium · bun add @shotkit/shotium
+pnpm add @pixel.js/shotium
+# or: npm install @pixel.js/shotium · yarn add @pixel.js/shotium · bun add @pixel.js/shotium
 ```
+
+<details>
+<summary><b>Legacy package name <code>@shotkit/shotium</code> (still published during the transition)</b></summary>
+
+Since 0.7.3, `@shotkit/shotium` is a compatibility alias of `@pixel.js/shotium`: both are published at the same version, and installing the old name brings in `@pixel.js/shotium` and its platform package. Existing projects need no change and keep receiving every release. The six old platform packages `@shotkit/shotium-<os>-<arch>` stay at 0.7.2 and are not updated.
+
+To move to the canonical name:
+
+```bash
+npm uninstall @shotkit/shotium
+npm install @pixel.js/shotium
+```
+
+```diff
+- import { screenshot } from '@shotkit/shotium';
++ import { screenshot } from '@pixel.js/shotium';
+```
+
+</details>
 
 Requires Node.js 18 or newer. The package is native ESM with comprehensive TypeScript declarations:
 
-- In ESM environments, import directly: `import { screenshot } from '@shotkit/shotium'`
-- Supported synchronously via `require('@shotkit/shotium')` in Node.js 20.19 and 22.12 or newer
-- In earlier CommonJS environments, use dynamic import: `const { screenshot } = await import('@shotkit/shotium')`
+- In ESM environments, import directly: `import { screenshot } from '@pixel.js/shotium'`
+- Supported synchronously via `require('@pixel.js/shotium')` in Node.js 20.19 and 22.12 or newer
+- In earlier CommonJS environments, use dynamic import: `const { screenshot } = await import('@pixel.js/shotium')`
 
 Importing the package does not trigger native engine initialisation. No native code runs until the first `screenshot()` call or an explicit `start()`
+
+### Command line
+
+The package has a `bin`: `npx @pixel.js/shotium https://example.com --width 1280 --height 720 -o out.png` takes the same flags as the standalone `shotium` executable (`--help` lists them) and renders through the addon. It is the fallback for a machine that has only Node: every invocation pays a Node start-up and an addon load, and `--serve` is not offered. For anything that runs often, use the executable from [`shotium-cli-<platform>.7z`](https://github.com/sj817/shotium/releases)
 
 ## Usage
 
@@ -40,7 +63,7 @@ Importing the package does not trigger native engine initialisation. No native c
 
 ```ts
 import { writeFileSync } from 'node:fs';
-import { screenshot } from '@shotkit/shotium';
+import { screenshot } from '@pixel.js/shotium';
 
 // Only URL or file path is required; other options have sensible defaults
 const { image } = await screenshot({ file: 'https://example.com' });
@@ -52,7 +75,7 @@ writeFileSync('example.png', image!);
 `screenshot()` and `screenshotTiles()` automatically initialise the engine on first invocation using default settings: a persistent HTTP disk cache under `~/.shotium/cache` and the default User-Agent. For standalone scripts and one-off tasks, no extra configuration is required:
 
 ```ts
-import { screenshot } from '@shotkit/shotium';
+import { screenshot } from '@pixel.js/shotium';
 
 const { image } = await screenshot({ file: 'https://example.com', fullPage: true, type: 'webp', quality: 85 });
 ```
@@ -63,7 +86,7 @@ In long-running Web and API services, initialise the engine during application b
 
 ```ts
 import express from 'express';
-import shotium, { screenshot } from '@shotkit/shotium';
+import shotium, { screenshot } from '@pixel.js/shotium';
 
 const app = express();
 
@@ -99,7 +122,7 @@ process.on('SIGTERM', async () => {
 For short-lived CLI commands or CI pipeline steps, starting Blink on every invocation adds significant cold-start overhead. The `daemon` module maintains a background daemon process, accessible over a Windows named pipe or a Unix Domain Socket, which is automatically spawned on first use:
 
 ```ts
-import { daemon } from '@shotkit/shotium';
+import { daemon } from '@pixel.js/shotium';
 
 // Single invocation: connect (or spawn), capture, and disconnect
 const { image } = await daemon.screenshot({
@@ -135,7 +158,7 @@ The engine does not accept `data:` URLs as the main document. To render dynamic 
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { screenshot, type ScreenshotOptions } from '@shotkit/shotium';
+import { screenshot, type ScreenshotOptions } from '@pixel.js/shotium';
 
 export async function renderHtml(html: string, options: Omit<ScreenshotOptions, 'file'> = {}) {
   const dir = mkdtempSync(join(tmpdir(), 'shotium-'));
@@ -171,7 +194,7 @@ await screenshot({ file: 'https://example.com', path: './output.png' });
 Single images are constrained by codec dimensions: up to 65,535 pixels per side for PNG and JPEG, and 16,383 pixels for WebP. `screenshotTiles()` loads and lays out the document once, slicing the rendered output into horizontal strips up to `tile.height` CSS pixels. When `path` contains `{n}`, each tile is written to disk as soon as it is encoded, keeping peak memory capped around the size of a single tile:
 
 ```ts
-import { screenshotTiles } from '@shotkit/shotium';
+import { screenshotTiles } from '@pixel.js/shotium';
 
 const { tiles } = await screenshotTiles({
   file: './long-article.html',
@@ -190,7 +213,7 @@ When `path` is omitted, each tile object contains its own `image: Buffer`
 The engine uses Chromium's integrated disk cache, defaulting to `~/.shotium/cache/<project-hash>`. All processes pointing to the same cache directory share cached resources across `stop()` cycles:
 
 ```ts
-import { cache } from '@shotkit/shotium';
+import { cache } from '@pixel.js/shotium';
 
 cache.getDir();                                  // Current project's cache directory
 cache.getDirs({ target: 'all' });                // All cache directories under ~/.shotium/cache
@@ -225,7 +248,7 @@ import shotium, {
   runtime, Runtime,                     // the shared instance and its class
   daemon,                               // the resident engine
   cache, Cache,                         // the HTTP cache
-} from '@shotkit/shotium';
+} from '@pixel.js/shotium';
 ```
 
 The default export is the same set of functions on one object plus a live `running` getter. Every type below is exported as well: `ScreenshotOptions`, `ScreenshotTilesOptions`, `ScreenshotResult`, `ScreenshotTilesResult`, `ScreenshotTile`, `TileOptions`, `Viewport`, `Clip`, `PageGotoParams`, `CacheMode`, `CaptureStats`, `CaptureTiming`, `StartOptions`, `StartResult`, `ReleaseMemoryOptions`, `DaemonOptions`, `DaemonStatus`, `DaemonCapability`, `DaemonClient`, `CacheTarget`, `CacheEntry`, `CacheClearOptions`, `CacheClearResult`

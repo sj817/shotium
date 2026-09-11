@@ -223,7 +223,7 @@ playwright(各两档:`chrome-headless-shell` 与完整 headless Chrome)。六个
 
 ### 第 7 组 · 发版形态
 
-npm 上 `shotium` 这个名字拿不到,所以包名带上了 scope:`@shotkit/shotium`。产物
+npm 上 `shotium` 这个名字拿不到,所以包名带上了 scope:`@shotkit/shotium`(0.7.3 起迁到 `@pixel.js/shotium`,旧名以兼容别名继续发布)。产物
 的名字跟着一起对齐了,构建出来的可执行文件从 `shot.exe` 改成 `shotium.exe`,
 共享库、两个 `.pak`、压缩包同理 —— 解开一个归档里只有一个名字,不是两个。
 

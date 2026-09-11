@@ -1,12 +1,12 @@
-# @shotkit/shotium
+# @pixel.js/shotium
 
 [English](./README.md) · 简体中文
 
 基于 Chromium 深度裁剪的静态网页渲染引擎：保留 Blink 排版、Skia 绘制与网络栈，剥离 V8 引擎与浏览器外壳，专为高性能服务端截图设计
 
-[![npm version](https://img.shields.io/npm/v/@shotkit/shotium.svg?label=npm)](https://www.npmjs.com/package/@shotkit/shotium) [![Chromium baseline](https://img.shields.io/badge/chromium-155.0.8048.0-4285F4?logo=googlechrome&logoColor=white)](https://chromium.googlesource.com/chromium/src/+/refs/tags/155.0.8048.0) [![platforms](https://img.shields.io/badge/platforms-win%20%7C%20mac%20%7C%20linux%20%C2%B7%20x64%20%7C%20arm64-4c8.svg)](https://github.com/sj817/shotium/releases) [![license](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](https://github.com/sj817/shotium/blob/main/LICENSE)
+[![npm version](https://img.shields.io/npm/v/@pixel.js/shotium.svg?label=npm)](https://www.npmjs.com/package/@pixel.js/shotium) [![Chromium baseline](https://img.shields.io/badge/chromium-155.0.8048.0-4285F4?logo=googlechrome&logoColor=white)](https://chromium.googlesource.com/chromium/src/+/refs/tags/155.0.8048.0) [![platforms](https://img.shields.io/badge/platforms-win%20%7C%20mac%20%7C%20linux%20%C2%B7%20x64%20%7C%20arm64-4c8.svg)](https://github.com/sj817/shotium/releases) [![license](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](https://github.com/sj817/shotium/blob/main/LICENSE)
 
-`@shotkit/shotium` 是 [shotium](https://github.com/sj817/shotium) 专为 Node.js 提供的官方 SDK；shotium 从 Chromium 源码中深度剥离出核心静态渲染能力：保留负责 DOM/CSS 排版与绘制的 Blink、负责 CPU 栅格化与图像编码的 Skia 以及网络栈 `//net`，彻底移除了 V8 引擎、浏览器外壳、GPU 进程及 DevTools；页面直接在当前 Node.js 宿主进程内的专用引擎线程上完成排版与绘制，并返回 PNG、JPEG 或 WebP 字节流——无需拉起庞大的无头浏览器，无 WebSocket 协议损耗，亦无子进程僵尸泄漏风险
+`@pixel.js/shotium` 是 [shotium](https://github.com/sj817/shotium) 专为 Node.js 提供的官方 SDK；shotium 从 Chromium 源码中深度剥离出核心静态渲染能力：保留负责 DOM/CSS 排版与绘制的 Blink、负责 CPU 栅格化与图像编码的 Skia 以及网络栈 `//net`，彻底移除了 V8 引擎、浏览器外壳、GPU 进程及 DevTools；页面直接在当前 Node.js 宿主进程内的专用引擎线程上完成排版与绘制，并返回 PNG、JPEG 或 WebP 字节流——无需拉起庞大的无头浏览器，无 WebSocket 协议损耗，亦无子进程僵尸泄漏风险
 
 本包自身具备**零运行时依赖（0 dependencies）**特性；原生引擎通过 6 个平台架构包分发，`npm install` 时通过 `optionalDependencies` 自动按需拉取：涵盖 Windows、macOS 与 Linux 的 x64 及 arm64 架构
 
@@ -22,17 +22,40 @@
 ## 安装
 
 ```bash
-npm install @shotkit/shotium
-# 或：pnpm add @shotkit/shotium · yarn add @shotkit/shotium · bun add @shotkit/shotium
+npm install @pixel.js/shotium
+# 或：pnpm add @pixel.js/shotium · yarn add @pixel.js/shotium · bun add @pixel.js/shotium
 ```
+
+<details>
+<summary><b>旧包名 <code>@shotkit/shotium</code>（过渡期继续发布）</b></summary>
+
+从 0.7.3 起，`@shotkit/shotium` 是 `@pixel.js/shotium` 的兼容别名：两者同版本号同步发布，安装旧名会自动带上 `@pixel.js/shotium` 及对应平台包。已有项目无需改动即可继续收到每一个新版本。旧的六个 `@shotkit/shotium-<os>-<arch>` 平台包停留在 0.7.2，不再更新。
+
+切换到正式包名：
+
+```bash
+npm uninstall @shotkit/shotium
+npm install @pixel.js/shotium
+```
+
+```diff
+- import { screenshot } from '@shotkit/shotium';
++ import { screenshot } from '@pixel.js/shotium';
+```
+
+</details>
 
 运行环境要求 Node.js 18 或更高版本，本包提供原生 ESM 输出并附带完整 TypeScript 类型声明：
 
-- 在支持 ESM 的 Node.js 环境中直接通过 `import { screenshot } from '@shotkit/shotium'` 导入
-- Node.js 20.19 与 22.12 及更高版本原生支持 `require('@shotkit/shotium')` 同步加载 ES 模块
-- 早期 CommonJS 环境可使用动态导入 `const { screenshot } = await import('@shotkit/shotium')`
+- 在支持 ESM 的 Node.js 环境中直接通过 `import { screenshot } from '@pixel.js/shotium'` 导入
+- Node.js 20.19 与 22.12 及更高版本原生支持 `require('@pixel.js/shotium')` 同步加载 ES 模块
+- 早期 CommonJS 环境可使用动态导入 `const { screenshot } = await import('@pixel.js/shotium')`
 
 导入本包不会触发原生引擎初始化，在首次调用 `screenshot()` 或显式执行 `start()` 之前不会执行任何原生 Native 逻辑
+
+### 命令行
+
+本包带有 `bin`：`npx @pixel.js/shotium https://example.com --width 1280 --height 720 -o out.png` 接受与独立可执行文件 `shotium` 相同的参数（`--help` 列出全部），通过 Node 插件完成渲染。它是只有 Node 环境时的兜底：每次调用都要多付一次 Node 启动与插件加载的开销，且不提供 `--serve`。经常运行的场景请使用 [`shotium-cli-<平台>.7z`](https://github.com/sj817/shotium/releases) 里的可执行文件
 
 ## 用法
 
@@ -40,7 +63,7 @@ npm install @shotkit/shotium
 
 ```ts
 import { writeFileSync } from 'node:fs';
-import { screenshot } from '@shotkit/shotium';
+import { screenshot } from '@pixel.js/shotium';
 
 // 仅需传入 URL 或文件路径，其余参数均有默认值
 const { image } = await screenshot({ file: 'https://example.com' });
@@ -52,7 +75,7 @@ writeFileSync('example.png', image!);
 在简单脚本或一次性任务中，直接调用 `screenshot()` 或 `screenshotTiles()` 即可；引擎在首次调用时以默认配置自动启动（包括启用位于 `~/.shotium/cache` 的持久化 HTTP 缓存与默认 User-Agent）：
 
 ```ts
-import { screenshot } from '@shotkit/shotium';
+import { screenshot } from '@pixel.js/shotium';
 
 const { image } = await screenshot({ file: 'https://example.com', fullPage: true, type: 'webp', quality: 85 });
 ```
@@ -63,7 +86,7 @@ const { image } = await screenshot({ file: 'https://example.com', fullPage: true
 
 ```ts
 import express from 'express';
-import shotium, { screenshot } from '@shotkit/shotium';
+import shotium, { screenshot } from '@pixel.js/shotium';
 
 const app = express();
 
@@ -99,7 +122,7 @@ process.on('SIGTERM', async () => {
 对于频繁短生命周期运行的 CLI 工具或 CI 任务，若每次进程执行都重新初始化 Blink 将带来显著冷启动开销；`daemon` 模块提供了常驻后台守护进程支持，在 Windows 平台通过命名管道（Named Pipe）、类 Unix 平台通过 Unix Domain Socket 进行 IPC 通信，首次调用时可自动拉起守护进程并按需复用：
 
 ```ts
-import { daemon } from '@shotkit/shotium';
+import { daemon } from '@pixel.js/shotium';
 
 // 单次调用：自动连接（或拉起守护进程）、完成截图并断开
 const { image } = await daemon.screenshot({
@@ -135,7 +158,7 @@ await daemon.stop({ name: 'batch' });
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { screenshot, type ScreenshotOptions } from '@shotkit/shotium';
+import { screenshot, type ScreenshotOptions } from '@pixel.js/shotium';
 
 export async function renderHtml(html: string, options: Omit<ScreenshotOptions, 'file'> = {}) {
   const dir = mkdtempSync(join(tmpdir(), 'shotium-'));
@@ -171,7 +194,7 @@ await screenshot({ file: 'https://example.com', path: './output.png' });
 单张图像受编码格式限制（PNG 与 JPEG 单边最大 65,535 像素，WebP 为 16,383 像素）；`screenshotTiles()` 在单次文档解析与排版的基础上，将目标区域切分为高度不超过 `tile.height`（CSS 像素）的多个水平分片；若 `path` 包含 `{n}` 占位符，各分片将在编码完成后立即流式写入磁盘，峰值图像内存占用始终维持在单个分片量级：
 
 ```ts
-import { screenshotTiles } from '@shotkit/shotium';
+import { screenshotTiles } from '@pixel.js/shotium';
 
 const { tiles } = await screenshotTiles({
   file: './long-article.html',
@@ -190,7 +213,7 @@ for (const tile of tiles) console.log(tile.path, tile.y, tile.height);
 引擎集成 Chromium 的底层磁盘缓存，默认位于 `~/.shotium/cache/<project-hash>`，使用同一缓存目录的所有进程可共享缓存并在 `stop()` 后持续生效：
 
 ```ts
-import { cache } from '@shotkit/shotium';
+import { cache } from '@pixel.js/shotium';
 
 cache.getDir();                                  // 当前项目的缓存目录
 cache.getDirs({ target: 'all' });                // ~/.shotium/cache 下的所有缓存目录
@@ -225,7 +248,7 @@ import shotium, {
   runtime, Runtime,                     // 共享实例及其类
   daemon,                               // 常驻引擎
   cache, Cache,                         // HTTP 缓存
-} from '@shotkit/shotium';
+} from '@pixel.js/shotium';
 ```
 
 默认导出是同一组函数组成的一个对象，外加一个实时的 `running` getter；下文所有类型同样导出：`ScreenshotOptions`、`ScreenshotTilesOptions`、`ScreenshotResult`、`ScreenshotTilesResult`、`ScreenshotTile`、`TileOptions`、`Viewport`、`Clip`、`PageGotoParams`、`CacheMode`、`CaptureStats`、`CaptureTiming`、`StartOptions`、`StartResult`、`ReleaseMemoryOptions`、`DaemonOptions`、`DaemonStatus`、`DaemonCapability`、`DaemonClient`、`CacheTarget`、`CacheEntry`、`CacheClearOptions`、`CacheClearResult`

@@ -41,7 +41,7 @@ Sleep 1s
 Show
 
 # 1. Install. Two packages: the JS wrapper and one prebuilt platform binary.
-Type "npm install @shotkit/shotium" Enter
+Type "npm install @pixel.js/shotium" Enter
 Sleep 800ms
 Hide
 Sleep 15s

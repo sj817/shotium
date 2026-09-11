@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/@shotkit/shotium"><img src="https://img.shields.io/npm/v/@shotkit/shotium.svg?label=npm" alt="npm version"></a> <a href="https://chromium.googlesource.com/chromium/src/+/refs/tags/155.0.8048.0"><img src="https://img.shields.io/badge/chromium%20baseline-155.0.8048.0-4285F4?logo=googlechrome&logoColor=white" alt="Chromium baseline"></a> <a href="https://github.com/sj817/shotium/releases"><img src="https://img.shields.io/badge/platforms-win%20%7C%20mac%20%7C%20linux%20%C2%B7%20x64%20%7C%20arm64-4c8.svg" alt="supported platforms"></a> <a href="https://sj817.github.io/shotium/"><img src="https://img.shields.io/badge/benchmark-vs%20Puppeteer%20%26%20Playwright-orange.svg" alt="benchmarks"></a> <a href="LICENSE"><img src="https://img.shields.io/badge/license-BSD--3--Clause-blue.svg" alt="license"></a>
+  <a href="https://www.npmjs.com/package/@pixel.js/shotium"><img src="https://img.shields.io/npm/v/@pixel.js/shotium.svg?label=npm" alt="npm version"></a> <a href="https://chromium.googlesource.com/chromium/src/+/refs/tags/155.0.8048.0"><img src="https://img.shields.io/badge/chromium%20baseline-155.0.8048.0-4285F4?logo=googlechrome&logoColor=white" alt="Chromium baseline"></a> <a href="https://github.com/sj817/shotium/releases"><img src="https://img.shields.io/badge/platforms-win%20%7C%20mac%20%7C%20linux%20%C2%B7%20x64%20%7C%20arm64-4c8.svg" alt="supported platforms"></a> <a href="https://sj817.github.io/shotium/"><img src="https://img.shields.io/badge/benchmark-vs%20Puppeteer%20%26%20Playwright-orange.svg" alt="benchmarks"></a> <a href="LICENSE"><img src="https://img.shields.io/badge/license-BSD--3--Clause-blue.svg" alt="license"></a>
 </p>
 
 <p align="center">
@@ -14,7 +14,7 @@
 
 <p align="center">
   <img src="apps/docs/assets/demo.gif" width="820"
-       alt="终端录屏：安装 @shotkit/shotium，运行 card.mjs 得到冷启动与预热后的截图耗时，最后是渲染出的登机牌">
+       alt="终端录屏：安装 @pixel.js/shotium，运行 card.mjs 得到冷启动与预热后的截图耗时，最后是渲染出的登机牌">
 </p>
 
 shotium 提取了 Chromium 中将 HTML/CSS 转化为像素的核心能力：由 Blink 负责 DOM 解析、样式计算、排版与绘制，由 Skia 负责光栅化与图像编码，由 `//net` 负责资源拉取与磁盘缓存；彻底剥离了浏览器外壳（`//content`）、V8 引擎、多进程架构、Compositor 合成器、GPU 进程以及 DevTools 等与静态渲染无关的组件
@@ -62,8 +62,27 @@ shotium 提取了 Chromium 中将 HTML/CSS 转化为像素的核心能力：由 
 #### Node.js / TypeScript
 
 ```bash
-npm install @shotkit/shotium   # 或 npm、yarn、bun；自动安装适配当前系统的原生预编译包
+npm install @pixel.js/shotium   # 或 npm、yarn、bun；自动安装适配当前系统的原生预编译包
 ```
+
+<details>
+<summary><b>旧包名 <code>@shotkit/shotium</code>（过渡期继续发布）</b></summary>
+
+从 0.7.3 起，`@shotkit/shotium` 是 `@pixel.js/shotium` 的兼容别名：两者同版本号同步发布，安装旧名会自动带上 `@pixel.js/shotium` 及对应平台包。已有项目无需改动即可继续收到每一个新版本。旧的六个 `@shotkit/shotium-<os>-<arch>` 平台包停留在 0.7.2，不再更新。
+
+切换到正式包名：
+
+```bash
+npm uninstall @shotkit/shotium
+npm install @pixel.js/shotium
+```
+
+```diff
+- import { screenshot } from '@shotkit/shotium';
++ import { screenshot } from '@pixel.js/shotium';
+```
+
+</details>
 
 #### 独立 CLI / C 动态库 / 各语言示例
 
@@ -110,11 +129,11 @@ if ((Get-FileHash shotium-cli-windows-amd64.7z -Algorithm SHA256).Hash.ToLower()
 
 ### Node.js / TypeScript
 
-安装 `@shotkit/shotium` 后即可在项目中直接引入：
+安装 `@pixel.js/shotium` 后即可在项目中直接引入：
 
 ```ts
 import { writeFileSync } from 'node:fs';
-import { screenshot, screenshotTiles, start, stop, purgeMemory } from '@shotkit/shotium';
+import { screenshot, screenshotTiles, start, stop, purgeMemory } from '@pixel.js/shotium';
 
 // -------------------------------------------------------------
 // 1. 基础截图：仅需传入 URL 或文件路径，其余参数均有默认值
@@ -151,10 +170,9 @@ await stop();
 > **短生命周期任务（CLI / CI 脚本 / Serverless）？**
 > 推荐使用内置的常驻守护进程模块，免除重复冷启动耗时：
 > ```ts
-> import { DaemonClient } from '@shotkit/shotium/daemon';
+> import { daemon } from '@pixel.js/shotium';
 > 
-> const client = new DaemonClient();
-> const { image } = await client.screenshot({ file: 'page.html', fullPage: true });
+> const { image } = await daemon.screenshot({ file: 'page.html', fullPage: true });
 > ```
 > 完整选项参数（CSS 选择器、等待策略、自定义请求头等）请参阅 [TypeScript SDK 完整指南](apps/typescript/README.zh.md)
 
@@ -185,6 +203,8 @@ shotium --serve --cache-dir /var/tmp/shotium-cache
 ```
 
 > 运行 `shotium --help` 可查看完整的命令行参数与选项列表
+
+> **没有装可执行文件？** `npx @pixel.js/shotium <相同参数>` 会通过 npm 包里的 Node 插件运行同一个引擎。它只是兜底，不是 CLI 本体：每次调用都要多付一次 Node 启动与插件加载的开销，且不支持 `--serve`。经常运行的场景请下载 `shotium-cli-<平台>.7z`
 
 ### C ABI 与其他语言
 
@@ -387,7 +407,7 @@ Shotium 会自动检测并优先匹配系统已安装的 Noto Sans / Serif CJK �
 shotium/
 ├── shot/                      # 引擎核心：C++ 源码、shot_api.h 接口、GN 构建配置与测试语料
 ├── apps/
-│   ├── typescript/            # 官方 Node.js / TypeScript SDK（npm: @shotkit/shotium）
+│   ├── typescript/            # 官方 Node.js / TypeScript SDK（npm: @pixel.js/shotium）
 │   ├── c-abi/                 # 跨语言 C ABI 规范指南与契约说明
 │   ├── go/                    # Go 示例工程（基于 purego，无 cgo）
 │   ├── python/                # Python 示例工程（基于标准库 ctypes）

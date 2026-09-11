@@ -52,7 +52,7 @@ third_party/rust/target/
 /apps/typescript/native/build
 /apps/typescript/prebuilds
 
-# Where the platform packager assembles the six @shotkit/shotium-<os>-<arch>
+# Where the platform packager assembles the six @pixel.js/shotium-<os>-<arch>
 # packages, and where `npm pack` leaves their tarballs. Every byte in there
 # came out of a build directory.
 /dist
@@ -74,7 +74,7 @@ node_modules
 
 # The sandbox that the docs recording scripts rebuild from apps/demo-card before
 # recording: a copy of the demo sources plus a real
-# `npm install @shotkit/shotium`. Only what lands in apps/docs/assets is kept.
+# `npm install @pixel.js/shotium`. Only what lands in apps/docs/assets is kept.
 /apps/demo-card/.demo-run
 /apps/demo-card/.demo-terminal.gif
 
