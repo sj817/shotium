@@ -14,7 +14,7 @@ import {
   SHARD_IDS,
   currentPlatformId,
 } from './constants.ts';
-import {packageVersions, probeEngine} from './engines.ts';
+import {measureWindowInset, packageVersions, probeEngine} from './engines.ts';
 import {benchmarkDaemonName} from './daemon-name.ts';
 import {ProductError, isProductError} from './errors.ts';
 import {startFixtureServer, loadCases} from './fixtures.ts';
@@ -373,6 +373,33 @@ async function main() {
     progress(`warning: the idle floor pushed the CPU gate past ${SETTLE.cpuLimitMax}%; ` +
       'this runner is too loud for the host CPU check to mean much');
   }
+  const probes = [];
+  for (const engine of ENGINE_IDS) probes.push(await probeEngine(engine));
+  const runnable = probes.filter((probe) => probe.status === 'pass').map((probe) => probe.engine);
+  // Playwright sizes a headless window to the viewport as if the window had no
+  // chrome; where Chrome's own headless mode keeps its tab strip and toolbar
+  // (macOS: 87 px) the tab container is shorter, every re-attached page shrinks
+  // to it, and screenshots that grow the widget while copying sometimes return
+  // the pre-resize frame tiled to the viewport. Measured once here, outside the
+  // timed regions, and applied to each page's window by the engine adapter.
+  const windowInsets = {};
+  for (const probe of probes) {
+    if (probe.status !== 'pass' || !probe.engine.startsWith('playwright-')) continue;
+    try {
+      const inset = await measureWindowInset(probe.engine);
+      windowInsets[probe.engine] = {width: inset.width, height: inset.height};
+      probe.window_inset = inset;
+      progress(`  ${probe.engine}: headless window ${inset.window.width}x${inset.window.height}, ` +
+        `tab container ${inset.container.width}x${inset.container.height}, ` +
+        `inset ${inset.width}x${inset.height}`);
+    } catch (error) {
+      probe.window_inset = null;
+      probe.window_inset_error = String(error?.stack || error);
+      progress(`  ${probe.engine}: window inset probe failed, pages keep the package window ` +
+        `bounds: ${String(error)}`);
+    }
+  }
+
   const config = {
     shard,
     profile,
@@ -384,6 +411,7 @@ async function main() {
     telemetryDirectory,
     tempProfileDirectory,
     daemonIdentity: {runId: benchmarkRunId, platform},
+    windowInsets,
     stability: {
       cpu_limit: stability.cpu_limit,
       idle_cpu_p50: stability.idle_cpu_p50,
@@ -392,10 +420,6 @@ async function main() {
   };
   const configFile = path.join(artifactDirectory, 'run-config.json');
   writeJson(configFile, config);
-
-  const probes = [];
-  for (const engine of ENGINE_IDS) probes.push(await probeEngine(engine));
-  const runnable = probes.filter((probe) => probe.status === 'pass').map((probe) => probe.engine);
   const rows = [];
   const quality = [];
   const failures = [];
@@ -580,7 +604,8 @@ async function main() {
       browser_launch_policy: 'package-default-except-linux-sandbox',
       image_correctness: 'pixelmatch-threshold-0.1; exact-rgba-retained-as-diagnostic',
       warmup_policy: 'three-fixed-warmups; latency-and-rss-variation-recorded-not-gated',
-      default_page_policy: 'new-page; puppeteer-pages-created-as-their-own-window',
+      default_page_policy: 'new-page; puppeteer-pages-created-as-their-own-window; ' +
+        'playwright-windows-grown-by-the-measured-headless-chrome-inset',
       default_cache_policy: 'disabled-or-no-store',
       reuse_page_scenario_is_separate: true,
     },

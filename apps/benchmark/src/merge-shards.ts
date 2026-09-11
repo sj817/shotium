@@ -197,6 +197,10 @@ function mergeEngines(shards: ShardResult[]): any[] {
     };
     const reasons = records.filter((entry) => entry.engine.reason).map((entry) =>
       `${entry.shard}: ${entry.engine.reason}`);
+    // Each shard measures the headless window inset itself; keep every reading.
+    const windowInsets = Object.fromEntries(records
+        .filter((entry) => entry.engine.window_inset !== undefined)
+        .map((entry) => [entry.shard, entry.engine.window_inset]));
     return {
       ...representative,
       status,
@@ -204,6 +208,7 @@ function mergeEngines(shards: ShardResult[]): any[] {
         identityChanged ? 'engine binary identity differs between scenario shards' :
         reasons.length ? [...new Set(reasons)].join('; ') : representative.reason || null,
       shard_statuses: Object.fromEntries(records.map((entry) => [entry.shard, entry.engine.status])),
+      ...(Object.keys(windowInsets).length ? {window_insets: windowInsets} : {}),
     };
   });
 }

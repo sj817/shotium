@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {createRequire} from 'node:module';
 import {execa} from 'execa';
+import {PNG} from 'pngjs';
 import {isNativeBinary} from './binary-architecture.ts';
 import {BROWSER_OPERATION_TIMEOUT_MS, VIEWPORT, currentPlatformId} from './constants.ts';
 
@@ -148,6 +149,7 @@ class ChromeEngine {
   profileDir: string | null;
   screenshotTimeoutSupported: boolean;
   ownWindowPerPage: boolean;
+  windowInset: {width: number; height: number} | null;
 
   constructor({
     name,
@@ -157,6 +159,7 @@ class ChromeEngine {
     profileDir = null,
     screenshotTimeoutSupported = false,
     ownWindowPerPage = false,
+    windowInset = null,
   }) {
     this.name = name;
     this.launchHook = launch;
@@ -169,6 +172,7 @@ class ChromeEngine {
     this.profileDir = profileDir;
     this.screenshotTimeoutSupported = screenshotTimeoutSupported;
     this.ownWindowPerPage = ownWindowPerPage;
+    this.windowInset = windowInset;
   }
 
   // Chrome's own headless mode puts every `newPage()` in the same window as a
@@ -199,18 +203,53 @@ class ChromeEngine {
     this.attached = true;
   }
 
+  // Playwright sizes a headless window to the viewport as if the window had no
+  // chrome, and Chrome's own headless mode on macOS keeps its tab strip and
+  // toolbar, so the tab container is shorter than the viewport. Emulation
+  // sizes a page's widget to the viewport anyway, but each time a sibling tab
+  // closes and the page is re-attached to the container it shrinks back, and
+  // the next `Page.captureScreenshot` has to grow it again while copying.
+  // The copy sometimes lands on the pre-resize frame, which Chromium tiles to
+  // the requested size: rows 633-719 repeat rows 0-86. Every recurring
+  // playwright-chrome evidence failure on macOS is that frame, and it needs
+  // two or more pages. Growing the window by the container's measured inset
+  // keeps the container at the viewport, so nothing resizes; 1,000 concurrent
+  // captures on macOS arm64 produced no tiled frame against one to eight with
+  // the shipped bounds. The inset is measured once per shard by
+  // `measureWindowInset`, and is zero where headless windows have no chrome.
+  hasWindowInset() {
+    return Boolean(this.windowInset && (this.windowInset.width || this.windowInset.height));
+  }
+
+  async fitWindow(session) {
+    if (!this.hasWindowInset()) return;
+    const {windowId} = await session.send('Browser.getWindowForTarget');
+    await session.send('Browser.setWindowBounds', {
+      windowId,
+      bounds: {
+        width: VIEWPORT.width + this.windowInset.width,
+        height: VIEWPORT.height + this.windowInset.height,
+      },
+    });
+  }
+
   async shot(url, {timeoutMs = 30_000, fullPage = false} = {}) {
-    const page = this.reusePage && this.idlePages.length ? this.idlePages.pop() :
-      await this.newPage();
-    let cacheSession = null;
+    const reused = this.reusePage && this.idlePages.length > 0;
+    const page = reused ? this.idlePages.pop() : await this.newPage();
+    let session = null;
     try {
-      if (!this.reusePage) {
-        if (typeof page.setCacheEnabled === 'function') {
-          await page.setCacheEnabled(false);
-        } else if (typeof this.context.newCDPSession === 'function') {
-          cacheSession = await this.context.newCDPSession(page);
-          await cacheSession.send('Network.enable');
-          await cacheSession.send('Network.setCacheDisabled', {cacheDisabled: true});
+      if (!reused) {
+        const disableCache = !this.reusePage;
+        const cacheOverCdp = disableCache && typeof page.setCacheEnabled !== 'function';
+        if (disableCache && !cacheOverCdp) await page.setCacheEnabled(false);
+        if ((cacheOverCdp || this.hasWindowInset()) &&
+            typeof this.context.newCDPSession === 'function') {
+          session = await this.context.newCDPSession(page);
+          await this.fitWindow(session);
+          if (cacheOverCdp) {
+            await session.send('Network.enable');
+            await session.send('Network.setCacheDisabled', {cacheDisabled: true});
+          }
         }
       }
       await page.goto(url, {waitUntil: 'load', timeout: timeoutMs});
@@ -219,7 +258,7 @@ class ChromeEngine {
       if (this.screenshotTimeoutSupported) screenshotOptions.timeout = timeoutMs;
       return {image: Buffer.from(await page.screenshot(screenshotOptions)), stats: null};
     } finally {
-      if (cacheSession) await cacheSession.detach().catch(() => {});
+      if (session) await session.detach().catch(() => {});
       if (this.reusePage) this.idlePages.push(page);
       else await page.close().catch(() => {});
     }
@@ -279,6 +318,7 @@ async function playwrightDefinition(name, channel, options) {
     reusePage: options.reusePage,
     profileDir: options.profileDir || null,
     screenshotTimeoutSupported: true,
+    windowInset: options.windowInset || null,
     launch: async () => {
       // Keep package loading inside the same timed region as Shotium.
       const {chromium} = await import('playwright');
@@ -307,6 +347,42 @@ async function playwrightDefinition(name, channel, options) {
       return {browser, context: await newContext(browser)};
     },
   });
+}
+
+// Measures how far a Playwright headless window's tab container falls short
+// of the viewport, in CSS pixels. A single page hides it: emulation has sized
+// the widget to the viewport and clearing emulation restores that size. A page
+// that was a background tab and is re-attached when its sibling closes takes
+// the container's size, and a capture without emulation then reports it. This
+// runs once per shard, outside every timed region, and needs no fixture.
+export async function measureWindowInset(name) {
+  const engine: any = await createEngine(name);
+  await engine.launch();
+  try {
+    const first = await engine.context.newPage();
+    const second = await engine.context.newPage();
+    await second.close();
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    const session = await engine.context.newCDPSession(first);
+    try {
+      const {bounds} = await session.send('Browser.getWindowForTarget');
+      await session.send('Emulation.clearDeviceMetricsOverride');
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      const {data} = await session.send('Page.captureScreenshot', {format: 'png'});
+      const container = PNG.sync.read(Buffer.from(data, 'base64'));
+      return {
+        width: Math.max(0, bounds.width - container.width),
+        height: Math.max(0, bounds.height - container.height),
+        window: {width: bounds.width, height: bounds.height},
+        container: {width: container.width, height: container.height},
+      };
+    } finally {
+      await session.detach().catch(() => {});
+      await first.close().catch(() => {});
+    }
+  } finally {
+    await engine.close();
+  }
 }
 
 export async function createEngine(name, options = {}) {

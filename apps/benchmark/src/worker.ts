@@ -669,6 +669,7 @@ async function runEngineScenario(samples) {
     reusePage: scenario === 'reuse-page',
     profileDir: path.join(config.tempProfileDirectory,
         `${engineName}.${scenario}.r${repeat}.a${attempt}`),
+    windowInset: config.windowInsets?.[engineName] || null,
   });
   const quality: Record<string, any> = {stable: true};
   try {
