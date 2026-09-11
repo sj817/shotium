@@ -257,7 +257,7 @@ jobs:
             const [entry] = JSON.parse(raw.slice(at));
             const names = entry.files.map((f) => f.path).sort();
             const missing = ["dist/index.js", "dist/index.d.ts",
-                             "dist/daemon_main.js",
+                             "dist/daemon_main.js", "dist/cli.js",
                              "package.json", "README.md", "README.zh.md"]
                 .filter((f) => !names.includes(f));
             if (missing.length) {

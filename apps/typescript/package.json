@@ -21,6 +21,9 @@
   "packageManager": "pnpm@9.15.9",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "shotium": "./dist/cli.js"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
