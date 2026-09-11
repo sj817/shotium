@@ -570,7 +570,7 @@ jobs:
           pnpm package:node --build out/Shot --os win --dest "dist/$nodeStem"
           if ($LASTEXITCODE -ne 0) { throw "node packaging failed" }
           pnpm ci:engine-artifacts provenance --platform "windows-${{ inputs.arch }}" `
-            --fingerprint "${{ needs.meta.outputs.fingerprint }}" --out dist/provenance.json
+            --fingerprint "${{ needs.meta.outputs.fingerprint }}" --out provenance.json
           if ($LASTEXITCODE -ne 0) { throw "provenance failed" }
           $sevenzip = (Get-Command 7z -ErrorAction SilentlyContinue).Source
           if (-not $sevenzip) { $sevenzip = "$env:ProgramFiles\7-Zip\7z.exe" }
@@ -596,7 +596,7 @@ jobs:
             src/${{ env.SHOT_CLI_ARCHIVE }}
             src/${{ env.SHOT_C_ABI_ARCHIVE }}
             src/${{ env.SHOT_NODE_ARCHIVE }}
-            src/dist/provenance.json
+            src/provenance.json
           if-no-files-found: error
           # upload-artifact always wraps what it is handed in a zip and only
           # lets you pick a deflate level; no switch turns the wrapper off.

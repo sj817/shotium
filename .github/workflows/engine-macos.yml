@@ -536,7 +536,7 @@ jobs:
           # version they ship (pnpm package:platform --from-archive).
           pnpm package:node --build out/Shot --os mac --dest "dist/$node_stem"
           pnpm ci:engine-artifacts provenance --platform "macos-${{ inputs.arch }}" \
-            --fingerprint "${{ needs.meta.outputs.fingerprint }}" --out dist/provenance.json
+            --fingerprint "${{ needs.meta.outputs.fingerprint }}" --out provenance.json
           for package_stem in "$cli_stem" "$abi_stem" "$node_stem"; do
             ( cd dist && "$sevenzip" a -t7z -mx=9 "../$package_stem.7z" "$package_stem" )
           done
@@ -555,7 +555,7 @@ jobs:
             src/${{ env.SHOT_CLI_ARCHIVE }}
             src/${{ env.SHOT_C_ABI_ARCHIVE }}
             src/${{ env.SHOT_NODE_ARCHIVE }}
-            src/dist/provenance.json
+            src/provenance.json
           if-no-files-found: error
           # upload-artifact always wraps what it is handed in a zip and only
           # lets you pick a deflate level; no switch turns the wrapper off.

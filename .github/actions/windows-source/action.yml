@@ -250,7 +250,7 @@ runs:
       # start, not a failed job: the run that saved it may have been
       # cancelled mid-way. ci:select-shards already ignores tiny blobs.
       run: |
-        if zstd -d -T0 --long=27 -c "$RUNNER_TEMP/build-dir/build-dir.tar.zst" | tar --format=pax -xf - && [ -f out/Shot/build.ninja ]; then
+        if zstd -d -T0 --long=27 -c "$RUNNER_TEMP/build-dir/build-dir.tar.zst" | tar -xf - && [ -f out/Shot/build.ninja ]; then
           du -sh out/Shot
         else
           echo "::warning::build-dir-${{ inputs.platform }} from run ${{ inputs.build-dir-run-id }} is unusable; starting cold"
