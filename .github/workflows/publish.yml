@@ -141,6 +141,9 @@ jobs:
   contract:
     needs: engine
     uses: ./.github/workflows/contract.yml
+    permissions:
+      contents: read
+      actions: read
     with:
       fingerprint: ${{ needs.engine.outputs.fingerprint }}
 
@@ -154,9 +157,9 @@ jobs:
       id-token: write
       # Creating the release at the end.
       contents: write
-      # Reading artifacts that belong to other runs. contents:write does not
-      # cover that.
-      actions: read
+      # Read artifacts from other runs and dispatch the published-version
+      # benchmark after creating the release.
+      actions: write
     env:
       FINGERPRINT: ${{ needs.engine.outputs.fingerprint }}
     steps:
