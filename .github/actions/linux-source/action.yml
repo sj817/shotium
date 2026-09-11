@@ -20,7 +20,7 @@ inputs:
     description: the public platform label, windows-amd64 ... macos-arm64, which names the build-directory artifact
     required: true
   build-dir-run-id:
-    description: the run whose build-dir-<platform> artifact to start from (ci:select-shards found it); empty restores from the Actions cache instead
+    description: the run whose build-dir-<platform> artifact to start from (ci:select-shards found it); empty starts a cold build
     default: ''
 
 runs:
@@ -181,19 +181,6 @@ runs:
           rm -rf out/Shot
         fi
         rm -f "$RUNNER_TEMP/build-dir/build-dir.tar.zst"
-
-    - name: restore the build directory from the Actions cache
-      if: inputs.build-dir-run-id == ''
-      uses: actions/cache/restore@v6
-      # Transitional: the first runs after the switch to artifacts have no
-      # build-dir-<platform> artifact yet, so they start from the cache
-      # entries the previous workflows wrote. Remove once every platform has
-      # saved one.
-      with:
-        path: src/out/Shot
-        key: out-shot-linux-${{ inputs.cpu }}-${{ github.run_id }}
-        restore-keys: |
-          out-shot-linux-${{ inputs.cpu }}-
 
     - name: make source timestamps content-faithful
       shell: bash
