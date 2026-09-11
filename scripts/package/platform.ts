@@ -1,6 +1,6 @@
-// Assembles one of the six @shotkit/shotium-<os>-<arch> packages.
+// Assembles one of the six @pixel.js/shotium-<os>-<arch> packages.
 //
-// The engine cannot ship inside @shotkit/shotium itself: it is a Chromium
+// The engine cannot ship inside @pixel.js/shotium itself: it is a Chromium
 // build, 42 MB, and there is a different one for every platform and
 // architecture. So each build produces a package of its own, and the main
 // package depends on all six as optionalDependencies with `os` and `cpu` set
@@ -65,7 +65,7 @@ function main(args: {build: string; os: string; arch: string; dest: string; addo
   // that is what npm matches its `os` field against and what the caller's
   // machine calls itself. Public Release archives use their separate,
   // human-facing windows/linux/macos and amd64/arm64 names.
-  const name = `@shotkit/shotium-${platform.npmOs}-${args.arch}`;
+  const name = `@pixel.js/shotium-${platform.npmOs}-${args.arch}`;
   const buildDir = resolve(args.build);
   const dest = resolve(args.dest, `shotium-${args.os}-${args.arch}`);
 
@@ -94,10 +94,10 @@ function main(args: {build: string; os: string; arch: string; dest: string; addo
   const manifest: Record<string, unknown> = {
     name,
     version: mainPkg.version,
-    description: `The shotium engine for ${args.os}-${args.arch}. Installed by @shotkit/shotium; not useful on its own.`,
+    description: `The shotium engine for ${args.os}-${args.arch}. Installed by @pixel.js/shotium; not useful on its own.`,
     // os and cpu are the whole point of this package. npm skips an optional
     // dependency whose os/cpu do not match the machine, which is how one
-    // install of @shotkit/shotium pulls one engine instead of six.
+    // install of @pixel.js/shotium pulls one engine instead of six.
     os: [platform.npmOs],
     cpu: [args.arch],
     files: [...shipped].sort(),
@@ -113,8 +113,8 @@ function main(args: {build: string; os: string; arch: string; dest: string; addo
           'This package is one of six, and holds bytes rather than code: the\n' +
           'self-contained Node addon, standalone CLI,\n' +
           'and the two resource packs it reads.\n\n' +
-          'Install [`@shotkit/shotium`](https://www.npmjs.com/package/' +
-          '@shotkit/shotium) instead. It depends on all six and pnpm installs\n' +
+          'Install [`@pixel.js/shotium`](https://www.npmjs.com/package/' +
+          '@pixel.js/shotium) instead. It depends on all six and pnpm installs\n' +
           'whichever matches the machine.\n');
 
   const bytes = shipped.reduce((total, file) => total + statSync(path.join(dest, file)).size, 0);
@@ -122,7 +122,7 @@ function main(args: {build: string; os: string; arch: string; dest: string; addo
 }
 
 const cli = cac('pnpm package:platform');
-cli.command('', 'assemble one @shotkit/shotium-<os>-<arch> package directory')
+cli.command('', 'assemble one @pixel.js/shotium-<os>-<arch> package directory')
     .option('--build <dir>', 'the build directory holding the engine and the packs')
     .option('--os <name>', 'win, mac or linux')
     .option('--arch <name>', 'x64 or arm64')

@@ -61,7 +61,7 @@ export interface Daemon {
 /**
  * The engine, and its lifecycle, in this process.
  *
- *     import shotium from '@shotkit/shotium';
+ *     import shotium from '@pixel.js/shotium';
  *
  *     shotium.start();
  *     const {image, stats} = await shotium.screenshot({

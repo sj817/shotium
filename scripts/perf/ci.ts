@@ -9,7 +9,7 @@
 // BASELINE_VERSION from the environment, checks each run against the GitHub
 // API, and writes performance-plan.json plus the job matrix to GITHUB_OUTPUT.
 // `stage` unpacks the one downloaded platform tarball into a directory shaped
-// like an installed @shotkit/shotium.
+// like an installed @pixel.js/shotium.
 
 import {createHash} from 'node:crypto';
 import {appendFileSync, copyFileSync, cpSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync} from 'node:fs';
@@ -72,12 +72,12 @@ async function stage(downloadArg: string, destinationArg: string): Promise<void>
   copyFileSync(resolve('apps/typescript/package.json'), path.join(destination, 'package.json'));
   cpSync(resolve('apps/typescript/dist'), path.join(destination, 'dist'), {recursive: true});
   const platform = `${process.platform}-${process.arch}`;
-  const platformDirectory = path.join(destination, 'node_modules/@shotkit', `shotium-${platform}`);
+  const platformDirectory = path.join(destination, 'node_modules/@pixel.js', `shotium-${platform}`);
   mkdirSync(platformDirectory, {recursive: true});
   const tarball = path.join(download, tarballs[0]);
   await execa('tar', ['-xzf', tarball, '--strip-components=1', '-C', platformDirectory], {windowsHide: true});
   const manifest = JSON.parse(readFileSync(path.join(platformDirectory, 'package.json'), 'utf8')) as {name: string};
-  if (manifest.name !== `@shotkit/shotium-${platform}`) throw new Error('Wrong platform artifact');
+  if (manifest.name !== `@pixel.js/shotium-${platform}`) throw new Error('Wrong platform artifact');
   writeFileSync(path.join(destination, 'provenance.json'), JSON.stringify({
     sourceSha: process.env.GITHUB_SHA, platform,
     tarballSha256: createHash('sha256').update(readFileSync(tarball)).digest('hex'),

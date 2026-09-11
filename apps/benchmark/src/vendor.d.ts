@@ -1,3 +1,3 @@
-declare module '@shotkit/shotium';
-declare module '@shotkit/shotium-*';
+declare module '@pixel.js/shotium';
+declare module '@pixel.js/shotium-*';
 declare module 'wait-on';

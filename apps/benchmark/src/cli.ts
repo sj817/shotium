@@ -86,7 +86,7 @@ async function gitRevision() {
 }
 
 async function cleanupOwnedShotiumEndpoints(profile) {
-  const shotium = await import('@shotkit/shotium');
+  const shotium = await import('@pixel.js/shotium');
   const names = [
     ...Array.from({length: profile.repeats}, (_, index) => benchmarkDaemonName({
       runId: benchmarkRunId, platform, scenario: 'resident', repeat: index + 1,

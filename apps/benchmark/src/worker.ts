@@ -556,7 +556,7 @@ async function runFaults(engine, samples) {
     if (!rejected) throw new Error(`${engineName} accepted fault case ${fault.name}`);
   }
   if (engineName === 'shotium') {
-    const shotium = await import('@shotkit/shotium');
+    const shotium = await import('@pixel.js/shotium');
     let rejected = false;
     try {
       await shotium.screenshot({});

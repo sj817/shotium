@@ -67,14 +67,14 @@ export function prepareWorkspace({install}: {install: boolean}): string {
       path.join(runDir, 'package.json'),
       `${JSON.stringify({name: 'shotium-demo', private: true, type: 'module', packageManager: 'pnpm@9.15.9'}, null, 2)}\n`);
   if (install) {
-    console.log('> pnpm add @shotkit/shotium');
-    run('pnpm', ['add', '--save-exact', '--no-lockfile', '@shotkit/shotium'], {cwd: runDir});
+    console.log('> pnpm add @pixel.js/shotium');
+    run('pnpm', ['add', '--save-exact', '--no-lockfile', '@pixel.js/shotium'], {cwd: runDir});
   }
   return runDir;
 }
 
 export function requireWorkspaceModule(): string {
-  const entry = path.join(runDir, 'node_modules', '@shotkit', 'shotium', 'dist', 'index.js');
-  if (!existsSync(entry)) throw new Error(`@shotkit/shotium is not installed in ${runDir}`);
+  const entry = path.join(runDir, 'node_modules', '@pixel.js', 'shotium', 'dist', 'index.js');
+  if (!existsSync(entry)) throw new Error(`@pixel.js/shotium is not installed in ${runDir}`);
   return entry;
 }

@@ -21,14 +21,14 @@ async function main(platformDirectory: string): Promise<void> {
   writeFileSync(path.join(temporary, 'package.json'), '{"private":true}');
   await execa(npm, ['install', '--ignore-scripts', '--no-audit', '--no-fund', mainTarball, tarballs[0]!], {cwd: temporary});
   const platform = `shotium-${process.platform}-${process.arch}`;
-  const platformPath = path.join(temporary, 'node_modules/@shotkit', platform);
+  const platformPath = path.join(temporary, 'node_modules/@pixel.js', platform);
   assert.equal(globSync(['**/*.dll', '**/*.so', '**/*.dylib'], {cwd: platformPath}).length, 0, 'npm platform package must not carry a C ABI library');
   const source = `
     const assert = require('node:assert/strict');
     const fs = require('node:fs');
     const path = require('node:path');
     const hash = bytes => require('node:crypto').createHash('sha256').update(bytes).digest('hex');
-    const shot = require('@shotkit/shotium');
+    const shot = require('@pixel.js/shotium');
     (async () => {
       assert.equal(shot.runtime.running, false);
       shot.start({cacheDir: null});

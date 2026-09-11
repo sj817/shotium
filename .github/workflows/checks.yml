@@ -218,7 +218,7 @@ jobs:
                 .map((f) => fs.readFileSync("dist/" + f, "utf8"))
                 .join("\n");
             const used = [...new Set(bundle.match(
-                /@shotkit\/shotium-[a-z0-9]+-[a-z0-9]+/g) || [])].sort();
+                /@pixel\.js\/shotium-[a-z0-9]+-[a-z0-9]+/g) || [])].sort();
             const declared = Object.keys(pkg.optionalDependencies || {}).sort();
             if (declared.join(",") !== used.join(",")) {
               throw new Error("optionalDependencies and the bundle disagree:\n  " +

@@ -37,8 +37,8 @@ function packageContentEvidence(manifestFile: string) {
 }
 
 export async function verifyConsumerInstall(expectedVersion, evidenceFile: string | null = null) {
-  const packageName = '@shotkit/shotium';
-  const platformName = `@shotkit/shotium-${currentPlatformId()}`;
+  const packageName = '@pixel.js/shotium';
+  const platformName = `@pixel.js/shotium-${currentPlatformId()}`;
   const main = manifest(packageName);
   const platform = manifest(platformName);
   if (main.version !== expectedVersion || platform.version !== expectedVersion) {

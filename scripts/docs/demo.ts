@@ -43,8 +43,8 @@ if (!findOnPath('bash')) {
 // install remains a real install while avoiding a long, network-bound pause
 // in the GIF.
 const warmWorkspace = prepareWorkspace({install: false});
-console.log('> warm npm cache for @shotkit/shotium');
-run('npm', ['install', '--no-audit', '--no-fund', '@shotkit/shotium'], {cwd: warmWorkspace});
+console.log('> warm npm cache for @pixel.js/shotium');
+run('npm', ['install', '--no-audit', '--no-fund', '@pixel.js/shotium'], {cwd: warmWorkspace});
 prepareWorkspace({install: false});
 rmSync(TERMINAL_OUTPUT, {force: true});
 

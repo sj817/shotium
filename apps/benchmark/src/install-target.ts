@@ -26,14 +26,14 @@ export async function resolveMainShotiumVersion(requested, timeoutMs = 600_000) 
   let lastError;
   while (Date.now() < deadline) {
     try {
-      return await registryView(`@shotkit/shotium@${requested}`);
+      return await registryView(`@pixel.js/shotium@${requested}`);
     } catch (error) {
       lastError = error;
       await sleep(Math.min(delay, Math.max(0, deadline - Date.now())));
       delay = Math.min(30_000, delay * 2);
     }
   }
-  throw new Error(`npm registry did not resolve @shotkit/shotium@${requested}: ${lastError}`);
+  throw new Error(`npm registry did not resolve @pixel.js/shotium@${requested}: ${lastError}`);
 }
 
 export async function resolveShotiumVersion(requested, timeoutMs = 600_000) {
@@ -42,8 +42,8 @@ export async function resolveShotiumVersion(requested, timeoutMs = 600_000) {
   let lastError;
   while (Date.now() < deadline) {
     try {
-      const version = await registryView(`@shotkit/shotium@${requested}`);
-      const platformPackage = `@shotkit/shotium-${currentPlatformId()}@${version}`;
+      const version = await registryView(`@pixel.js/shotium@${requested}`);
+      const platformPackage = `@pixel.js/shotium-${currentPlatformId()}@${version}`;
       const platformVersion = await registryView(platformPackage);
       if (platformVersion !== version) {
         throw new Error(`${platformPackage} resolved as ${platformVersion}`);
@@ -55,12 +55,12 @@ export async function resolveShotiumVersion(requested, timeoutMs = 600_000) {
       delay = Math.min(30_000, delay * 2);
     }
   }
-  throw new Error(`npm registry did not expose @shotkit/shotium@${requested} and its platform package: ${lastError}`);
+  throw new Error(`npm registry did not expose @pixel.js/shotium@${requested} and its platform package: ${lastError}`);
 }
 
 function installedVersion() {
   try {
-    const manifest = JSON.parse(fs.readFileSync(require.resolve('@shotkit/shotium/package.json'), 'utf8'));
+    const manifest = JSON.parse(fs.readFileSync(require.resolve('@pixel.js/shotium/package.json'), 'utf8'));
     return manifest.version;
   } catch {
     return null;
@@ -81,7 +81,7 @@ export async function ensureShotium(requested, {timeoutMs = 600_000, install = t
       'add',
       '--save-exact',
       '--no-lockfile',
-      `@shotkit/shotium@${version}`,
+      `@pixel.js/shotium@${version}`,
     ], {
       cwd: APP_ROOT,
       timeout: timeoutMs,
@@ -94,7 +94,7 @@ export async function ensureShotium(requested, {timeoutMs = 600_000, install = t
       fs.writeFileSync(manifestFile, originalManifest);
     }
   }
-  if (result.exitCode !== 0) throw new Error(`pnpm add @shotkit/shotium@${version} failed`);
+  if (result.exitCode !== 0) throw new Error(`pnpm add @pixel.js/shotium@${version} failed`);
   if (installedVersion() !== version) {
     throw new Error(`installed Shotium is ${installedVersion() || 'missing'}, expected ${version}`);
   }

@@ -83,7 +83,7 @@ export class ShotiumEngine {
   }
 
   async launch() {
-    this.module = await import('@shotkit/shotium');
+    this.module = await import('@pixel.js/shotium');
     if (this.mode === 'daemon') {
       await this.module.daemon.start(this.config);
       this.client = await this.module.daemon.connect(this.config);
@@ -94,7 +94,7 @@ export class ShotiumEngine {
   }
 
   async connect(endpoint) {
-    this.module = await import('@shotkit/shotium');
+    this.module = await import('@pixel.js/shotium');
     this.mode = 'daemon';
     this.daemonName = endpoint.daemonName;
     this.client = await this.module.daemon.connect({...this.config, failIfMissing: true});
@@ -353,7 +353,7 @@ function findFiles(root, predicate) {
 }
 
 function shotiumPlatformRoot() {
-  const platformPackage = `@shotkit/shotium-${currentPlatformId()}`;
+  const platformPackage = `@pixel.js/shotium-${currentPlatformId()}`;
   return path.dirname(require.resolve(`${platformPackage}/package.json`));
 }
 
@@ -506,7 +506,7 @@ export async function probeEngine(name) {
   }
   let binaryVersion = null;
   if (name === 'shotium') {
-    binaryVersion = JSON.parse(fs.readFileSync(require.resolve('@shotkit/shotium/package.json'), 'utf8')).version;
+    binaryVersion = JSON.parse(fs.readFileSync(require.resolve('@pixel.js/shotium/package.json'), 'utf8')).version;
   } else {
     const version = await execa(executable, ['--version'], {timeout: 10_000, reject: false});
     if (version.exitCode === 0) binaryVersion = (version.stdout || version.stderr).trim() || null;
@@ -538,7 +538,7 @@ export async function probeEngine(name) {
 
 export async function packageVersions() {
   const names = [
-    '@shotkit/shotium', 'puppeteer', 'playwright', 'tinybench', 'execa', 'systeminformation',
+    '@pixel.js/shotium', 'puppeteer', 'playwright', 'tinybench', 'execa', 'systeminformation',
     'ajv', 'pngjs', 'pixelmatch', 'wait-on', 'tsx', 'typescript',
   ];
   const versions = {};

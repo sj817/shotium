@@ -13,8 +13,8 @@ function result() {
     seed: 'schema-test',
     source_revision: null,
     install: {
-      main: {name: '@shotkit/shotium', version: '0.3.2', content_sha256: '1'.repeat(64), files: 1, bytes: 1},
-      platform: {name: '@shotkit/shotium-linux-x64', version: '0.3.2', content_sha256: '2'.repeat(64), files: 1, bytes: 1},
+      main: {name: '@pixel.js/shotium', version: '0.3.2', content_sha256: '1'.repeat(64), files: 1, bytes: 1},
+      platform: {name: '@pixel.js/shotium-linux-x64', version: '0.3.2', content_sha256: '2'.repeat(64), files: 1, bytes: 1},
       main_manifest_sha256: '0'.repeat(64),
       platform_manifest_sha256: 'a'.repeat(64),
       esm: true,
@@ -26,7 +26,7 @@ function result() {
       node: process.version, npm: null,
     },
     packages: {
-      '@shotkit/shotium': '0.3.2', tinybench: '1', execa: '1', systeminformation: '1',
+      '@pixel.js/shotium': '0.3.2', tinybench: '1', execa: '1', systeminformation: '1',
       pngjs: '1', pixelmatch: '1', 'wait-on': '1', ajv: '1', tsx: '1', typescript: '1',
     },
     engines: [{

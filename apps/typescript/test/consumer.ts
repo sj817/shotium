@@ -19,7 +19,7 @@ import shotium, {
   screenshotTiles,
   start as startEngine,
   stop as stopEngine,
-} from '@shotkit/shotium';
+} from '@pixel.js/shotium';
 import type {
   CacheEntry,
   CaptureStats,
@@ -31,7 +31,7 @@ import type {
   ScreenshotTilesResult,
   StartOptions,
   StartResult,
-} from '@shotkit/shotium';
+} from '@pixel.js/shotium';
 
 // The default export and the named ones are the same values, which is the
 // whole reason the default exists.

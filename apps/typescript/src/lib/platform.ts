@@ -35,12 +35,12 @@ const require = createRequire(import.meta.url);
 // where each is right: the registry gets node's, the download page gets the
 // reader's; publish.yml holds the six-line map between them.
 const PACKAGES: Readonly<Record<string, string>> = {
-  'win32-x64': '@shotkit/shotium-win32-x64',
-  'win32-arm64': '@shotkit/shotium-win32-arm64',
-  'darwin-x64': '@shotkit/shotium-darwin-x64',
-  'darwin-arm64': '@shotkit/shotium-darwin-arm64',
-  'linux-x64': '@shotkit/shotium-linux-x64',
-  'linux-arm64': '@shotkit/shotium-linux-arm64',
+  'win32-x64': '@pixel.js/shotium-win32-x64',
+  'win32-arm64': '@pixel.js/shotium-win32-arm64',
+  'darwin-x64': '@pixel.js/shotium-darwin-x64',
+  'darwin-arm64': '@pixel.js/shotium-darwin-arm64',
+  'linux-x64': '@pixel.js/shotium-linux-x64',
+  'linux-arm64': '@pixel.js/shotium-linux-arm64',
 };
 
 function packageName(
