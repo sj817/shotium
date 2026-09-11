@@ -337,15 +337,15 @@ flowchart TB
 
 ## Benchmarks
 
-Shotium is continuously tested against mainstream headless browser solutions across six platform architectures in standard GitHub Actions environments (measured on Linux x64 standard cloud runners with official default configurations):
+Linux x64 results from the [v0.7.4 CI archive](apps/docs/benchmarks/v0.7.4/20260911T182956Z-gh34628753598-a1/report.md). Cold start and warm capture report p50; throughput uses the parallel scenario at concurrency 1. All timing cells below passed the archive's quality checks. The throughput and hero-card soak figures each come from one measured batch; the archive retains the raw samples and results from all six platforms.
 
 | Engine Solution | Cold Start (p50) | Warm Snapshot (p50) | Throughput (c=1) | Download Size (Compressed) | Installed Size (Unpacked) |
 |:---|---:|---:|---:|---:|---:|
-| **Shotium** | **56 ms** | **13.7 ms** | **24.5 / sec** | **~11 MB** | **~32 MB** |
-| Puppeteer (headless-shell) | 567 ms (10.1×) | 133.1 ms (9.7×) | 5.5 / sec | ~130 MB | ~380 MB |
-| Playwright (headless-shell) | 698 ms (12.5×) | 128.8 ms (9.4×) | 5.8 / sec | ~130 MB | ~390 MB |
-| Puppeteer (Chrome full browser) | 813 ms (14.5×) | 183.1 ms (13.4×) | 4.0 / sec | ~170 MB | ~450 MB |
-| Playwright (Chrome full browser) | 934 ms (16.7×) | 153.0 ms (11.2×) | 5.0 / sec | ~170 MB | ~480 MB |
+| **Shotium** | **61 ms** | **13.6 ms** | **27.6 / sec** | **~11 MB** | **~32 MB** |
+| Puppeteer (headless-shell) | 615 ms (10.1×) | 133.3 ms (9.8×) | 6.0 / sec | ~130 MB | ~380 MB |
+| Playwright (headless-shell) | 780 ms (12.8×) | 150.2 ms (11.0×) | 6.7 / sec | ~130 MB | ~390 MB |
+| Puppeteer (Chrome full browser) | 880 ms (14.4×) | 190.1 ms (14.0×) | 4.9 / sec | ~170 MB | ~450 MB |
+| Playwright (Chrome full browser) | 968 ms (15.9×) | 176.7 ms (13.0×) | 5.5 / sec | ~170 MB | ~480 MB |
 
 > Note: Shotium sizes measured on the smallest platform builds (macOS arm64 / Linux arm64), ~32 MB for a single executable/shared library; comparative browser figures include full Chromium binaries and multimedia dependencies
 
