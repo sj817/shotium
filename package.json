@@ -61,6 +61,7 @@
     "perf:node-entry": "pnpm -C scripts exec tsx perf/node-entry.ts",
 
     "package:platform": "pnpm -C scripts exec tsx package/platform.ts",
+    "package:legacy": "pnpm -C scripts exec tsx package/legacy.ts",
     "package:cli": "pnpm -C scripts exec tsx package/cli.ts",
     "package:checksums": "pnpm -C scripts exec tsx package/checksums.ts",
     "package:c-abi": "pnpm -C scripts exec tsx package/c-abi.ts",

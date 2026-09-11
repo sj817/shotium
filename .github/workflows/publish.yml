@@ -1,4 +1,4 @@
-# Publishes the seven packages to npm, then announces them as a release.
+# Publishes the eight packages to npm, then announces them as a release.
 #
 # The tag is the trigger, not the product. Pushing `vX.Y.Z` starts this; there
 # is no button to press afterwards and no draft to remember to publish. That
@@ -46,10 +46,18 @@
 # a platform missing at this commit.
 # ---------------------------------------------------------------------------
 #
-# Publishing order within the job is also not cosmetic. @shotkit/shotium
+# Publishing order within the job is also not cosmetic. @pixel.js/shotium
 # declares the six as optionalDependencies pinned to its own version, so it
-# goes last: a registry that has the main package but not the platform package
-# it names hands out an install that cannot take a screenshot.
+# goes after them: a registry that has the main package but not the platform
+# package it names hands out an install that cannot take a screenshot. And
+# @shotkit/shotium, the package's previous name, goes last of all. It is a
+# shim that depends on @pixel.js/shotium at this exact version and re-exports
+# it (scripts/package/legacy.ts), published beside every release so that an
+# install pinned to the old name keeps receiving them. It is sent only once
+# the registry has been seen to serve the seven it depends on: a shim that
+# resolves before its target is the same broken install from the other side.
+# The six old platform packages, @shotkit/shotium-<os>-<arch>, stay at 0.7.2;
+# nothing depends on them any more.
 #
 # There is no npm token. This workflow authenticates by trusted publishing:
 # GitHub mints a short-lived OIDC token for the job, npm checks that its
@@ -67,7 +75,7 @@
 #     tell an unauthenticated caller from an unauthorised one. Changing the
 #     trigger, as this commit does, is safe for the same reason: the claim is
 #     about the file, not about how it started.
-#   - Each of the seven packages carries its own trusted publisher, set on
+#   - Each of the eight packages carries its own trusted publisher, set on
 #     npmjs.com under the package's settings, and npm has no way to configure
 #     one for a package that does not exist yet. Hence the 0.0.1 placeholders:
 #     publish once by hand, attach the publisher, and every version after that
@@ -86,8 +94,8 @@
 # workflow_dispatch remains, for rehearsal only. It publishes nothing unless
 # dry_run is turned off, it never creates a release, and it reads the version
 # from the tree rather than from a tag. A dry run does not authenticate, so it
-# proves tarballs, versions, the 17 archives and SHA256SUMS, but nothing
-# about the trust configuration.
+# proves tarballs, versions, the shim, the 17 archives and SHA256SUMS, but
+# nothing about the trust configuration.
 
 name: publish
 run-name: "publish: ${{ github.ref_name }}${{ inputs.dry_run && ' dry run' || '' }}"
@@ -220,6 +228,26 @@ jobs:
             console.log("ok");
           '
 
+      - name: the legacy shim, generated from the manifest just built
+        # @shotkit/shotium is the old name, kept as a package that depends on
+        # this version of @pixel.js/shotium and re-exports it. Generated here
+        # rather than committed, so its version and exports map cannot drift
+        # from the manifest they mirror; the generator refuses an exports map
+        # it does not know how to mirror.
+        run: |
+          pnpm -C scripts install --frozen-lockfile
+          pnpm package:legacy --dest dist/legacy/shotium
+          for f in package.json index.js index.d.ts README.md; do
+            test -f "dist/legacy/shotium/$f" || { echo "missing dist/legacy/shotium/$f"; exit 1; }
+          done
+          node -e '
+            const shim = require("./dist/legacy/shotium/package.json");
+            const main = require("./apps/typescript/package.json");
+            if (shim.version !== main.version) throw new Error("shim is " + shim.version + ", main is " + main.version);
+            if (shim.dependencies[main.name] !== main.version) throw new Error("shim does not pin " + main.name + "@" + main.version);
+            console.log("ok: " + shim.name + "@" + shim.version + " -> " + main.name + "@" + main.version);
+          '
+
       - name: collect the engine artifacts for this commit
         env:
           GH_TOKEN: ${{ github.token }}
@@ -296,7 +324,7 @@ jobs:
           # if someone dispatched the engine workflow against an older tree.
           for plat in win32-x64 win32-arm64 darwin-x64 darwin-arm64 \
                       linux-x64 linux-arm64; do
-            f="dist/npm/shotkit-shotium-$plat-$VERSION.tgz"
+            f="dist/npm/pixel.js-shotium-$plat-$VERSION.tgz"
             if [ ! -f "$f" ]; then
               echo "$f is missing -- the artifact holds:"
               ls dist/npm
@@ -313,7 +341,8 @@ jobs:
         # rejects a mismatch, after uploading. Six tarballs published and the
         # seventh refused is the worst outcome available here, so the check
         # happens before anything is sent -- and on the tarballs themselves,
-        # not on the tree, because the tree is not what gets published.
+        # not on the tree, because the tree is not what gets published. The
+        # shim is a directory, checked the same way.
         run: |
           fail=0
           for tarball in dist/npm/*.tgz; do
@@ -328,12 +357,17 @@ jobs:
               *)  echo "$tarball says $url, not $REPO"; fail=1 ;;
             esac
           done
+          url=$(node -p 'const r=require("./dist/legacy/shotium/package.json").repository;(r&&(r.url||r))||""')
+          case "$url" in
+            *"github.com/$REPO"*) ;;
+            *) echo "the legacy shim says '$url', not $REPO"; fail=1 ;;
+          esac
           if [ "$fail" = 1 ]; then
             echo "rebuild the engine workflows: the tarballs predate the" \
                  "repository field, and provenance will refuse them"
             exit 1
           fi
-          echo "all six name $REPO"
+          echo "all six tarballs and the shim name $REPO"
 
       - name: package language examples
         run: |
@@ -358,31 +392,71 @@ jobs:
             flags="$flags --dry-run"
             echo "=== dry run: nothing below becomes public ==="
           fi
-          for tarball in dist/npm/*.tgz; do
-            echo "--- $tarball"
-            npm publish "$tarball" $flags
+          # By name and in order, not a glob: the glob sorts the main tarball
+          # before darwin-*, and the main package must not go out before the
+          # six it points at.
+          for plat in win32-x64 win32-arm64 darwin-x64 darwin-arm64 \
+                      linux-x64 linux-arm64; do
+            echo "--- @pixel.js/shotium-$plat"
+            npm publish "dist/npm/pixel.js-shotium-$plat-$VERSION.tgz" $flags
           done
-          echo "--- shotium"
+          echo "--- @pixel.js/shotium"
           npm publish ./apps/typescript $flags
 
       - name: the packages are actually there
         if: ${{ env.DRY_RUN != 'true' }}
-        # Publication can precede CDN visibility by 15 minutes. Wait before
-        # declaring success; a timeout requires registry inspection, not blindly
-        # republishing already accepted immutable versions.
         run: |
-          for pkg in shotium-win32-x64 shotium-win32-arm64 \
-                     shotium-darwin-x64 shotium-darwin-arm64 \
-                     shotium-linux-x64 shotium-linux-arm64 shotium; do
-            url="https://registry.npmjs.org/@shotkit/$pkg/$VERSION"
-            for attempt in $(seq 1 45); do
-              code=$(curl -s -o /dev/null -w '%{http_code}' "$url")
-              [ "$code" = "200" ] && break
-              sleep 20
+          # Publication can precede CDN visibility by 15 minutes. Wait before
+          # declaring success; a timeout requires registry inspection, not blindly
+          # republishing already accepted immutable versions.
+          wait_for() {
+            for pkg in "$@"; do
+              url="https://registry.npmjs.org/$pkg/$VERSION"
+              for attempt in $(seq 1 45); do
+                code=$(curl -s -o /dev/null -w '%{http_code}' "$url")
+                [ "$code" = "200" ] && break
+                sleep 20
+              done
+              echo "$code  $pkg@$VERSION"
+              [ "$code" = "200" ] || { echo "Registry visibility timed out; inspect publication before retrying." >&2; exit 1; }
             done
-            echo "$code  @shotkit/$pkg@$VERSION"
-            [ "$code" = "200" ] || { echo "Registry visibility timed out; inspect publication before retrying." >&2; exit 1; }
-          done
+          }
+          wait_for @pixel.js/shotium-win32-x64 @pixel.js/shotium-win32-arm64 \
+                   @pixel.js/shotium-darwin-x64 @pixel.js/shotium-darwin-arm64 \
+                   @pixel.js/shotium-linux-x64 @pixel.js/shotium-linux-arm64 \
+                   @pixel.js/shotium
+
+      - name: publish the legacy name
+        # Last, and only now: the shim depends on @pixel.js/shotium at this
+        # version, and the step above is what proves the registry serves it.
+        run: |
+          flags="--access public"
+          if [ "$DRY_RUN" = "true" ]; then
+            flags="$flags --dry-run"
+            echo "=== dry run: nothing below becomes public ==="
+          fi
+          echo "--- @shotkit/shotium"
+          npm publish ./dist/legacy/shotium $flags
+
+      - name: the legacy name is actually there
+        if: ${{ env.DRY_RUN != 'true' }}
+        run: |
+          # Publication can precede CDN visibility by 15 minutes. Wait before
+          # declaring success; a timeout requires registry inspection, not blindly
+          # republishing already accepted immutable versions.
+          wait_for() {
+            for pkg in "$@"; do
+              url="https://registry.npmjs.org/$pkg/$VERSION"
+              for attempt in $(seq 1 45); do
+                code=$(curl -s -o /dev/null -w '%{http_code}' "$url")
+                [ "$code" = "200" ] && break
+                sleep 20
+              done
+              echo "$code  $pkg@$VERSION"
+              [ "$code" = "200" ] || { echo "Registry visibility timed out; inspect publication before retrying." >&2; exit 1; }
+            done
+          }
+          wait_for @shotkit/shotium
 
       - name: release
         if: ${{ env.RELEASE == 'true' && env.DRY_RUN != 'true' }}
@@ -398,14 +472,16 @@ jobs:
         # nothing left for a human to click.
         run: |
           {
-            echo "## @shotkit/shotium $VERSION"
+            echo "## @pixel.js/shotium $VERSION"
             echo
             echo "### 📦 安装 / Installation"
             echo
             echo '```bash'
             echo "# pnpm 9.15.9"
-            echo "pnpm add @shotkit/shotium@$VERSION"
+            echo "pnpm add @pixel.js/shotium@$VERSION"
             echo '```'
+            echo
+            echo "Also published as \`@shotkit/shotium@$VERSION\`, the previous name: a compatibility alias that depends on this package. Existing installs keep updating without changes. / 同时以旧包名 \`@shotkit/shotium@$VERSION\` 发布为兼容别名包，依赖本包；已有项目无需改动。"
             echo
             echo "---"
             echo
