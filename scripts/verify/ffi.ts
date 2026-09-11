@@ -6,6 +6,7 @@ import {copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync} from '
 import path from 'node:path';
 import {cac} from 'cac';
 import {execa} from 'execa';
+import {globSync} from 'tinyglobby';
 import {exeName, resolve} from '../lib/repo.ts';
 
 // The page every demo renders, at the viewport its README and the recorded CLI
@@ -38,6 +39,9 @@ async function main(options: Options): Promise<void> {
   const suffix = win ? '.exe' : '';
   const library = path.join(directory, win ? 'shotium.dll' : process.platform === 'darwin' ? 'libshotium.dylib' : 'libshotium.so');
   const run = (command: string, args: string[], cwd?: string) => execa(command, args, {cwd, timeout: 300000, env: {DOTNET_NOLOGO: '1'}});
+  // Builds stream to the log: a demo that compiles to the wrong place says
+  // so in its own output, which a captured pipe would swallow.
+  const build = (command: string, args: string[], cwd?: string) => execa(command, args, {cwd, timeout: 300000, env: {DOTNET_NOLOGO: '1'}, stdio: 'inherit'});
   const baseline = path.join(output, 'cli.png');
   await run(resolve(options.cli), ['--file', fixture, ...VIEWPORT, '-o', baseline]);
   const hash = (file: string) => createHash('sha256').update(readFileSync(file)).digest('hex');
@@ -58,16 +62,19 @@ async function main(options: Options): Promise<void> {
         break;
       case 'go':
         command = path.join(output, `go-demo${suffix}`);
-        await run('go', ['build', '-mod=readonly', '-o', command, '.'], source());
+        await build('go', ['build', '-mod=readonly', '-o', command, '.'], source());
         break;
       case 'rust':
-        await run('cargo', ['build', '--release', '--locked', '--manifest-path', source('Cargo.toml')]);
+        await build('cargo', ['build', '--release', '--locked', '--manifest-path', source('Cargo.toml')]);
         command = source('target', 'release', `shotium-demo${suffix}`);
         break;
       case 'csharp':
-        await run('dotnet', ['build', source('ShotiumDemo.csproj'), '-c', 'Release', '--nologo']);
+        await build('dotnet', ['build', source('ShotiumDemo.csproj'), '-c', 'Release', '--nologo']);
         command = 'dotnet';
         args = [source('bin', 'Release', 'net8.0', 'ShotiumDemo.dll')];
+        if (!existsSync(args[0])) {
+          throw new Error(`csharp: dotnet build produced no ${args[0]}; bin holds ${globSync('**/*', {cwd: source('bin'), onlyFiles: true}).join(', ') || 'nothing'}`);
+        }
         break;
       case 'java':
         if (win) {

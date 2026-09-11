@@ -450,6 +450,7 @@ jobs:
           if-no-files-found: warn
 
       - name: pack the build directory
+        id: pack
         if: always() && inputs.mode == 'build'
         shell: bash
         working-directory: src
@@ -463,12 +464,21 @@ jobs:
         # says which fingerprint this directory is complete at, which is how
         # select-shards knows the next run at that fingerprint needs one
         # runner and no compiling.
+        #
+        # Only a directory gn gen produced. A job cancelled during the source
+        # setup has nothing to save, and saving nothing once put a 173-byte
+        # tar in front of every real build directory of the platform.
         run: |
+          if [ ! -f out/Shot/build.ninja ]; then
+            echo "no build directory to save: out/Shot/build.ninja is missing"
+            exit 0
+          fi
           tar --format=pax -cf - out/Shot | zstd -T0 -3 --long=27 -o "$RUNNER_TEMP/build-dir.tar.zst"
           ls -l "$RUNNER_TEMP/build-dir.tar.zst"
+          echo "saved=true" >> "$GITHUB_OUTPUT"
 
       - name: save the build directory
-        if: always() && inputs.mode == 'build'
+        if: always() && steps.pack.outputs.saved == 'true'
         uses: actions/upload-artifact@v7
         with:
           name: build-dir-linux-${{ inputs.arch }}
@@ -479,7 +489,7 @@ jobs:
           overwrite: true
 
       - name: drop the build directories this one replaces
-        if: always() && inputs.mode == 'build'
+        if: always() && steps.pack.outputs.saved == 'true'
         continue-on-error: true
         shell: bash
         working-directory: src

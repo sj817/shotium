@@ -174,10 +174,17 @@ runs:
       if: inputs.build-dir-run-id != ''
       shell: bash
       working-directory: src
+      # An artifact that does not unpack to a build directory is a cold
+      # start, not a failed job: the run that saved it may have been
+      # cancelled mid-way. ci:select-shards already ignores tiny blobs.
       run: |
-        zstd -d -T0 --long=27 -c "$RUNNER_TEMP/build-dir/build-dir.tar.zst" | tar --format=pax -xf -
+        if zstd -d -T0 --long=27 -c "$RUNNER_TEMP/build-dir/build-dir.tar.zst" | tar --format=pax -xf - && [ -f out/Shot/build.ninja ]; then
+          du -sh out/Shot
+        else
+          echo "::warning::build-dir-${{ inputs.platform }} from run ${{ inputs.build-dir-run-id }} is unusable; starting cold"
+          rm -rf out/Shot
+        fi
         rm -f "$RUNNER_TEMP/build-dir/build-dir.tar.zst"
-        du -sh out/Shot
 
     - name: restore the build directory from the Actions cache
       if: inputs.build-dir-run-id == ''
