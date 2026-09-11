@@ -68,14 +68,18 @@ async function main(options: Options): Promise<void> {
         await build('cargo', ['build', '--release', '--locked', '--manifest-path', source('Cargo.toml')]);
         command = source('target', 'release', `shotium-demo${suffix}`);
         break;
-      case 'csharp':
+      case 'csharp': {
         await build('dotnet', ['build', source('ShotiumDemo.csproj'), '-c', 'Release', '--nologo']);
         command = 'dotnet';
-        args = [source('bin', 'Release', 'net8.0', 'ShotiumDemo.dll')];
-        if (!existsSync(args[0])) {
-          throw new Error(`csharp: dotnet build produced no ${args[0]}; bin holds ${globSync('**/*', {cwd: source('bin'), onlyFiles: true}).join(', ') || 'nothing'}`);
+        // Newer SDKs put a runtime identifier into the output path
+        // (bin/linux-arm64/Release/net8.0/); older ones do not. Find it.
+        const built = globSync('bin/**/Release/net8.0/ShotiumDemo.dll', {cwd: source(), absolute: true});
+        if (built.length !== 1) {
+          throw new Error(`csharp: expected one built ShotiumDemo.dll, found ${built.length}; bin holds ${globSync('**/*', {cwd: source('bin'), onlyFiles: true}).join(', ') || 'nothing'}`);
         }
+        args = [built[0]];
         break;
+      }
       case 'java':
         if (win) {
           // mvn.cmd re-parses its arguments through cmd.exe; hand them over via
