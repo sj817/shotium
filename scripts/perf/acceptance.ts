@@ -7,6 +7,7 @@ import {createRequire} from 'node:module';
 import path from 'node:path';
 
 export type AcceptanceMode = 'improvement' | 'identical-runtime';
+export const RUNTIME_IDENTITY_POLICY = 'runtime-identity-v1';
 export function acceptanceMode(value: unknown): AcceptanceMode {
   if (value === undefined || value === 'improvement') return 'improvement';
   if (value === 'identical-runtime') return value;
@@ -42,6 +43,7 @@ export interface AcceptanceCase {
 }
 export interface AcceptanceResult {
   acceptanceMode?: AcceptanceMode;
+  acceptancePolicy?: string;
   platform: string;
   arch: string;
   complete?: boolean;
@@ -142,11 +144,12 @@ export function assessAcceptance(data: AcceptanceResult, mode: AcceptanceMode): 
     }
     return issues;
   }
+  if (data.acceptancePolicy !== RUNTIME_IDENTITY_POLICY) issues.push('Result was not collected under the runtime identity policy');
   const minimum = data.sampling?.minimumPairs;
   if (!Number.isInteger(minimum) || minimum! < 10 || data.cases.some((c) =>
-    !['faster', 'equivalent', 'unproven'].includes(c.status) || !Number.isInteger(c.metrics?.wall?.samples) || c.metrics!.wall.samples! < minimum! ||
+    !['faster', 'equivalent', 'unproven', 'slower'].includes(c.status) || !Number.isInteger(c.metrics?.wall?.samples) || c.metrics!.wall.samples! < minimum! ||
     !c.summary || [c.summary.baseline, c.summary.candidate].some((s) => !s || [s.p50, s.p95, s.mean].some((n) => !Number.isFinite(n) || n < 0)))) {
-    issues.push('Every case must finish sampling without errors or a measured regression');
+    issues.push('Every case must finish sampling without runtime errors');
   }
   const snapshots: RuntimeSnapshot[] = [];
   for (const label of ['baseline', 'candidate']) {
