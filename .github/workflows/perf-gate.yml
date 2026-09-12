@@ -155,11 +155,16 @@ jobs:
         id: performance
         env:
           ACCEPTANCE: ${{ inputs.acceptance }}
-        run: >-
-          pnpm perf:compare
-          out/performance/baseline/node_modules/@pixel.js/shotium
-          out/performance/candidate
-          out/performance/result.json --samples=100 --calibrate --check --acceptance "$ACCEPTANCE"
+        run: |
+          # Identity validation uses the documented default sampling budget;
+          # improvement experiments retain the 100-pair minimum. Both run the
+          # complete matrix, calibration and the 1000-pair soak.
+          samples=100
+          if [ "$ACCEPTANCE" = identical-runtime ]; then samples=20; fi
+          pnpm perf:compare \
+            out/performance/baseline/node_modules/@pixel.js/shotium \
+            out/performance/candidate \
+            out/performance/result.json --samples="$samples" --calibrate --check --acceptance "$ACCEPTANCE"
       - name: Independently compare every rendered case
         if: always() && steps.performance.outcome != 'skipped'
         run: pnpm perf:images out/performance/result.json

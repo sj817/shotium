@@ -30,7 +30,8 @@ function result(snapshot: RuntimeSnapshot): AcceptanceResult {
     addonSha256: file('platform/shotium.node'), librarySha256: file('platform/shotium.node'), bundleSha256: file('package/dist/index.js'),
   };
   return {
-    acceptanceMode: 'identical-runtime', platform: process.platform, arch: process.arch, complete: true, shard: 'all',
+    acceptanceMode: 'identical-runtime', acceptancePolicy: 'runtime-identity-v1',
+    platform: process.platform, arch: process.arch, complete: true, shard: 'all',
     requiredCases: ['card', 'startup'], sampling: {minimumPairs: 20},
     cases: ['card', 'startup'].map((name) => ({
       name, class: 'engine', status: 'equivalent', accepted: false, metrics: {wall: {samples: 20}},
@@ -91,13 +92,14 @@ test('same runtime accepts a complete tie or uncertainty without relabelling tim
   }
 });
 
-test('release acceptance rejects changed runtime, missing evidence, incomplete sampling and slower cases', () => {
+test('release acceptance rejects changed runtime, missing evidence and incomplete sampling', () => {
   const temporary = mkdtempSync(path.join(os.tmpdir(), 'shot-perf-rejections-'));
   try {
     installation(temporary);
     const valid = result(snapshotRuntime(temporary));
     const changes: Array<[string, (data: AcceptanceResult) => void]> = [
       ['missing identity', (d) => { delete d.runtimeIdentity; }],
+      ['older acceptance policy', (d) => { delete d.acceptancePolicy; }],
       ['missing final snapshot', (d) => { delete d.runtimeIdentity!.candidate!.after; }],
       ['changed bytes', (d) => { d.runtimeIdentity!.candidate!.after!.files[0].sha256 = '0'.repeat(64); }],
       ['missing resource', (d) => { d.runtimeIdentity!.candidate!.before!.files = d.runtimeIdentity!.candidate!.before!.files.filter((f) => !f.path.endsWith('.pak')); }],
@@ -115,13 +117,30 @@ test('release acceptance rejects changed runtime, missing evidence, incomplete s
       ['missing measurements', (d) => { delete d.cases[0].metrics; }],
       ['missing timings', (d) => { delete d.cases[0].summary; }],
       ['runtime error', (d) => { d.cases[0].status = 'error'; }],
-      ['measured regression', (d) => { d.cases[0].status = 'slower'; }],
     ];
     for (const [name, change] of changes) {
       const data = structuredClone(valid);
       change(data);
       assert.ok(assessAcceptance(data, 'identical-runtime').length, name);
     }
+  } finally {
+    rmSync(temporary, {recursive: true, force: true});
+  }
+});
+
+test('an identical runtime can measure slower without turning that timing verdict into a pass', () => {
+  const temporary = mkdtempSync(path.join(os.tmpdir(), 'shot-perf-timing-'));
+  try {
+    installation(temporary);
+    const data = result(snapshotRuntime(temporary));
+    data.cases[0].status = 'slower';
+    data.cases[0].summary!.candidate = {p50: 1.028, p95: 2.06, mean: 1.14};
+    const original = structuredClone(data.cases);
+    assert.deepEqual(assessAcceptance(data, 'identical-runtime'), []);
+    assert.deepEqual(data.cases, original);
+    assert.equal(data.cases[0].accepted, false);
+    data.acceptanceMode = 'improvement';
+    assert.ok(assessAcceptance(data, 'improvement').length);
   } finally {
     rmSync(temporary, {recursive: true, force: true});
   }
@@ -143,7 +162,11 @@ test('the final report requires bound pixel evidence, provenance and every reque
     };
     save();
     assert.equal(report([file], output, platforms, 'identical-runtime'), true);
-    assert.match(readFileSync(output, 'utf8'), /通过此验收不表示性能提升/);
+    data.cases[0].status = 'slower';
+    save();
+    assert.equal(report([file], output, platforms, 'identical-runtime'), true);
+    assert.match(readFileSync(output, 'utf8'), /耗时诊断：1 项 slower/);
+    assert.match(readFileSync(output, 'utf8'), /✗ 更慢/);
     assert.equal(report([file], output, platforms), false);
     assert.equal(report([file], output, new Set([...platforms, 'missing-platform']), 'identical-runtime'), false);
     assert.throws(() => report([file, file], output, platforms, 'identical-runtime'), /Duplicate/);
