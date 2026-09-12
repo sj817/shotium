@@ -190,10 +190,9 @@ build loop. Read the affected workflow and source action for CI changes.
   again after ninja, finished or not, as long as gn generated it; a job
   cancelled before that saves nothing, `ci:select-shards` ignores blobs
   under 1 MB, and an artifact that does not unpack to a build directory is
-  a cold start, not a failure. There is no build-directory
-  entry in the Actions cache any more (its 10 GB quota, seven-day eviction
-  and per-branch visibility all produced cold builds); only the compiler
-  toolchains stay there.
+  a cold start, not a failure. When no build-directory artifact is selected,
+  the job starts cold. There is no Actions-cache fallback for build
+  directories; only the compiler toolchains use the Actions cache.
 - [preview.yml](../../.github/workflows/preview.yml) is the pull-request
   entry point: `engine.yml`, then [contract.yml](../../.github/workflows/contract.yml),
   which runs the package suites (`verify:node`, `node-entry`,
