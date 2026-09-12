@@ -16,8 +16,8 @@
 // two pinned to an external wait. A filtered run is diagnostic and can never
 // pass the complete matrix gate.
 // --acceptance=identical-runtime instead validates a release with identical
-// runtime files, complete sampling and no measured regression. Per-case
-// improvement verdicts remain unchanged and are reported separately.
+// runtime files and complete execution. Timing verdicts, including slower,
+// remain unchanged and are reported separately from runtime identity.
 //
 // Each side runs in a forked worker (this file, `worker` mode) so the two
 // packages never share a process: Blink is a process-wide singleton.
@@ -36,7 +36,7 @@ import {cac} from 'cac';
 
 import {calibrate, compare, type Bands, type Comparison, type Status} from '../lib/perf-gate.ts';
 import {libraryName, root} from '../lib/repo.ts';
-import {acceptanceMode, assessAcceptance, assertLoadedRuntime, snapshotRuntime, type AcceptanceMode, type LoadedRuntime, type RuntimeSnapshot} from './acceptance.ts';
+import {acceptanceMode, assessAcceptance, assertLoadedRuntime, RUNTIME_IDENTITY_POLICY, snapshotRuntime, type AcceptanceMode, type LoadedRuntime, type RuntimeSnapshot} from './acceptance.ts';
 
 import type * as Shotium from '../../apps/typescript/src/index.ts';
 import type {CaptureStats, ScreenshotOptions} from '../../apps/typescript/src/types.ts';
@@ -434,6 +434,7 @@ async function main(baseline: string, candidate: string, output: string, o: Opti
     complete: false,
     status: 'running' as 'running' | 'pass' | 'not-passed',
     acceptanceMode: o.acceptance,
+    acceptancePolicy: o.acceptance === 'identical-runtime' ? RUNTIME_IDENTITY_POLICY : 'improvement-v1',
     acceptance: {status: 'running', issues: [] as string[]},
     runtimeIdentity: {} as Record<string, {before?: RuntimeSnapshot; after?: RuntimeSnapshot}>,
     calibration: {tolerance: calibrate([]) as Bands, source: 'floor', cases: [] as Record_[]},

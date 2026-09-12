@@ -58,12 +58,13 @@ export function report(files: string[], output: string, platforms: Set<string> =
   const lines: string[] = [
     '# 本次候选构建与 npm 的完整矩阵验收', '',
     `验收模式：${mode}；范围：${[...platforms].sort().join(', ')}。` + (identical ?
-        '同源发布要求两侧全部运行文件在采样前后完全相同，实际加载路径与文件匹配，完整矩阵及像素通过，且没有测出的退步。等价或方向未定的计时原样保留；通过此验收不表示性能提升。' :
+        '同源发布要求两侧全部运行文件在采样前后完全相同，实际加载路径与文件匹配，完整矩阵及像素通过。耗时诊断独立保留，包括 slower；运行文件与功能验收不证明性能提升或无退步。' :
         '只有范围内的完整矩阵、逐项耗时和像素检查全部通过，才满足性能提升验收。倒退、未能确定方向、缺测和失败不会相互抵消。'), '',
   ];
   const seen = new Set<string>();
   const identities = new Set<string>();
   const passing = new Set<string>();
+  let slower = 0;
   for (const file of files) {
     const data = JSON.parse(readFileSync(file, 'utf8')) as Result;
     const platform = `${data.platform}-${data.arch}`;
@@ -85,6 +86,7 @@ export function report(files: string[], output: string, platforms: Set<string> =
         observed.size === required.size && [...required].every((r) => observed.has(r)) && cases.length === required.size;
     const accepted = cases.filter((c) => Boolean(c.accepted)).length;
     const counts = Object.fromEntries(['faster', 'equivalent', 'slower', 'unproven'].map((s) => [s, cases.filter((c) => c.status === s).length]));
+    slower += counts.slower;
     const external = cases.filter((c) => c.class === 'external').length;
     const calibration = data.calibration ?? {};
     const band = calibration.tolerance ?? 0;
@@ -157,6 +159,7 @@ export function report(files: string[], output: string, platforms: Set<string> =
   const missing = [...platforms].filter((p) => !seen.has(p)).sort();
   const allPassed = passing.size === platforms.size && [...platforms].every((p) => passing.has(p));
   lines.splice(4, 0, `**${identical ? '同源发布' : '性能提升'}验收：${allPassed && identities.size === 1 ? '通过' : '未通过'}。** 已验证通过 ${passing.size}/${platforms.size} 平台。缺少：${missing.join(', ') || '无'}。`);
+  if (identical) lines.splice(5, 0, `耗时诊断：${slower} 项 slower。各项统计判定与性能提升检查均保留在下面的表中。`, '');
   if (identities.size !== 1) lines.push('源码、工具或测试素材指纹不一致，不能合并验收。', '');
   lines.push(
       '新增长图和分片能力还须分别通过 `check-bilibili`。新进程测试包含导入和启动，但操作系统文件缓存未清空；有限矩阵不能证明任意输入、任意机器和每一次调用均不变慢。', '');

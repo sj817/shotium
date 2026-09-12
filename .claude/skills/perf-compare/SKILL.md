@@ -91,8 +91,11 @@ The default `acceptance=improvement` retains that strict improvement objective.
 For an unchanged-runtime release rehearsal, explicitly dispatch with
 `-f acceptance=identical-runtime`. This is release validation: all runtime files
 must match before and after a full matrix, workers must load those exact files,
-and no case may error or measure slower. Pixel/article checks still apply. Ties
-and uncertain timings remain visible and do not prove an improvement. Changed
+and every case must execute successfully. Pixel/article checks still apply.
+All timing verdicts, including `slower`, remain visible as diagnostics; identity
+acceptance makes no performance or non-regression claim. CI uses the documented
+20-pair minimum for identity validation, retaining 100 for improvement; both
+include the complete matrix, calibration and the 1000-pair soak. Changed
 runtime files cannot use this mode. Locally, pass `--acceptance identical-runtime`
 to both `perf:compare` and `perf:report`; see `apps/docs/performance.md` for the
 snapshot scope and `scripts/ci/performance-acceptance.test.ts` for refusal tests.

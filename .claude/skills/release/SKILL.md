@@ -53,8 +53,9 @@ uses a literal version in one fixture.
 
 For a post-release rehearsal against that same published runtime, dispatch
 `perf-gate.yml` with `-f acceptance=identical-runtime`. This requires matching
-runtime files, a complete matrix, pixels and no measured regression; it does
-not claim a speedup. The default `improvement` mode still requires faster engine
+runtime files, a complete successful matrix and pixels; timing verdicts remain
+separate diagnostics, including any `slower` cases. It makes no performance or
+non-regression claim. The default `improvement` mode still requires faster engine
 cases. See `.claude/skills/perf-compare/SKILL.md` for the acceptance boundaries.
 
 Commit and push only that file, as a PR or directly, and wait for
