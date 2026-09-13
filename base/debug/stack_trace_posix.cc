@@ -1082,6 +1082,11 @@ void StackTrace::OutputToStreamWithPrefixImpl(
   StreamBacktraceOutputHandler handler(os);
   ProcessBacktrace(addresses(), prefix_string, &handler);
 }
+#elif !defined(__UCLIBC__) && !defined(_AIX)
+void StackTrace::OutputToStreamWithPrefixImpl(std::ostream*,
+                                              cstring_view) const {
+  // No libc backtrace or symbolization backend is available.
+}
 #endif
 
 namespace internal {
