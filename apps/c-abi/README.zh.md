@@ -20,7 +20,7 @@ shotium 为所有编程语言提供跨平台的原生 C 动态库：`shotium.dll
 
 ## 压缩包布局
 
-每个版本按平台发布独立压缩包 `shotium-c-abi-<os>-<arch>.7z`（`<os>` 为 `windows`、`linux` 或 `macos`；`<arch>` 为 `amd64` 或 `arm64`），选择时请务必对应**运行宿主进程的 CPU 架构**，而非仅看操作系统架构；解压后包含以下文件：
+每个版本按平台发布独立压缩包 `shotium-c-abi-<os>-<arch>.7z`（`<os>` 为 `windows`、`linux` 或 `macos`；`<arch>` 为 `amd64` 或 `arm64`），Linux musl 构建在架构后追加 `-musl`。选择时请务必对应**运行宿主进程的 CPU 架构与 libc**，而非仅看操作系统架构；解压后包含以下文件：
 
 | 文件 | 说明 |
 |---|---|
@@ -33,7 +33,7 @@ shotium 为所有编程语言提供跨平台的原生 C 动态库：`shotium.dll
 
 动态库与两个 `.pak` 资源文件必须保持在同一目录下且版本严格匹配；创建引擎时需将该所在目录作为 `resourceDir` 参数传入；动态库自身无法可靠隐式定位资源包（例如在 Linux 上动态模块解析可能回退至主可执行文件路径），因此必须由调用方显式指定
 
-Linux 版本依赖 glibc 运行时，不支持 musl libc；页面文字渲染依赖系统字体，在极简容器镜像中请确保安装基础字体包（如 Fontconfig 与常用 TrueType 字体）
+Linux 分别提供 glibc 与 musl 压缩包：glibc 发行版使用 `linux-amd64` 或 `linux-arm64`，Alpine 使用对应的 `linux-*-musl` 包。CI 会拒绝仍依赖 libc 之外共享库的 Linux CLI、动态库或 Node 插件。字体发现仍读取宿主字体文件，极简容器需安装所需字体（如 DejaVu 或 Noto）
 
 包内顶层目录为 `shotium-c-abi-<平台>/`（解压后可直接置于工程 `native/` 目录下）：
 

@@ -167,6 +167,8 @@ xargs -a /tmp/ours.txt git log --oneline $OLD..$NEW --
 | 文件 | 分歧 | 为什么不能用别的办法 |
 |---|---|---|
 | legacy IPC / Mojo [Native] | 五个 Native 类型换为明确字段和枚举，旧 Channel/ParamTraits/native serializer 与紧急消息调度链完整删除 | 普通 Mojo 仍用于现有接口；net::HttpConnectionInfo 缓存数值、ECT 值域、RedirectInfo 字段、默认任务优先级不变。Shot 产品协议与 base::Pickle 缓存序列化保留；源码未集中编译 |
+| Linux Shot libc 与依赖闭包 | Shot 可选择 musl ABI；独立 musl 目标工具链切换 Clang/Rust triple 与 Alpine sysroot，host 工具保持 glibc；内置 Expat、libunwind 并关闭 GLib/NSS，Node 插件恢复 `--as-needed` | Linux 发布包要求除 libc 外不依赖非系统 DSO；公共 HTTPS 只使用编译进二进制的 Chrome Root Store，不读取宿主或企业证书库；glibc 与 musl 产物、缓存和 npm 包必须隔离 |
+| Linux Chrome Root Store | 当 Linux 关闭 NSS 时，`CreateSslSystemTrustStoreChromeRoot` 返回仅含 Chrome Root Store 的 trust store | 上游 Linux 默认组合总是 NSS，关闭后缺少工厂实现；Shot 没有宿主 CA 注入入口 |
 | XSLTProcessor | 保留 PI 驱动的原生 XSLT；删除脚本导入、参数、transformToDocument/Fragment、包装类和独占 helper/构造器 | XML/XSL 文件不需要 JS，仍须转换成截图。保留 stylesheet 参数默认值、同源读取、禁止写文件/网络、排序/编码和文档替换；空外部参数原本无效果。源码未集中编译 |
 | Origin Trial / RuntimeEnabledFeatures | 删除 token 与试验上下文链；生成器保留普通 feature、依赖/implied 和有效 context override | 无 token policy 注册者；XSLT 默认开启。内部 TestFeatureDependent/TestFeatureImplied 的 context override 传播与旧实现不同，见 out/cut-stage16-origin-generator/review.md；本批未编译 |
 | Sanitizer / Skeleton | 删除脚本净化 API 和默认关闭 Skeleton；普通 HTML parser 走原 sanitizer-null 路径 | 保留正常 DOM 插入、template patchfor 和声明式 Shadow DOM，不因上游 parser 改动恢复脚本净化链；本批未编译 |
@@ -228,7 +230,7 @@ gclient sync -D --no-history
 
 第 2 条是这次同步加进来的,因为第 1 条**证明不了**它。
 
-第 3 条之后还有一步:六个平台的引擎构建各自导出构建图(`pnpm graph:export`,
+第 3 条之后还有一步:八个平台的引擎构建各自导出构建图(`pnpm graph:export`,
 CI 产物 `graph-<os>-<arch>`),然后 `pnpm trim-tree plan --graph <dir>...` 算出
 上游新带进来的、任何构建都不打开的文件,`pnpm trim-tree apply` 删掉,
 `pnpm prune-deps --inputs <plan>/untracked-inputs.txt` 同步剪 DEPS / hooks /

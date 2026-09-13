@@ -1,4 +1,4 @@
-# Publishes the eight packages to npm, then announces them as a release.
+# Publishes the ten packages to npm, then announces them as a release.
 #
 # The tag is the trigger, not the product. Pushing `vX.Y.Z` starts this; there
 # is no button to press afterwards and no draft to remember to publish. That
@@ -20,7 +20,7 @@
 # irreversible half goes first and the reversible half confirms it.
 #
 # The bytes come from workflow artifacts named after the engine fingerprint
-# -- a hash of every tracked file the six native builds read
+# -- a hash of every tracked file the eight native builds read
 # (scripts/ci/fingerprint.ts) -- not from release assets and not from "the
 # run on this commit". The engine job below calls engine.yml, which builds
 # whichever platform has no engine-<platform>-<fingerprint> artifact yet
@@ -34,8 +34,8 @@
 # ---------------------------------------------------------------------------
 # The release procedure, which this workflow is only the last step of:
 #
-#   1. Bump the version in apps/typescript/package.json. SEVEN lines: `version`, and
-#      the six optionalDependencies that pin the platform packages to it. They
+#   1. Bump the version in apps/typescript/package.json. NINE lines: `version`, and
+#      the eight optionalDependencies that pin the platform packages to it. They
 #      must match exactly -- checks.yml fails the build if they do not.
 #   2. Commit, push, merge. Wait for checks.yml; if the engine changed,
 #      engine.yml builds it on main in the background.
@@ -46,14 +46,14 @@
 # ---------------------------------------------------------------------------
 #
 # Publishing order within the job is also not cosmetic. @pixel.js/shotium
-# declares the six as optionalDependencies pinned to its own version, so it
+# declares the eight as optionalDependencies pinned to its own version, so it
 # goes after them: a registry that has the main package but not the platform
 # package it names hands out an install that cannot take a screenshot. And
 # @shotkit/shotium, the package's previous name, goes last of all. It is a
 # shim that depends on @pixel.js/shotium at this exact version and re-exports
 # it (scripts/package/legacy.ts), published beside every release so that an
 # install pinned to the old name keeps receiving them. It is sent only once
-# the registry has been seen to serve the seven it depends on: a shim that
+# the registry has been seen to serve its nine-package dependency closure. A shim that
 # resolves before its target is the same broken install from the other side.
 # The six old platform packages, @shotkit/shotium-<os>-<arch>, stay at 0.7.2;
 # nothing depends on them any more.
@@ -74,7 +74,7 @@
 #     tell an unauthenticated caller from an unauthorised one. Changing the
 #     trigger, as this commit does, is safe for the same reason: the claim is
 #     about the file, not about how it started.
-#   - Each of the eight packages carries its own trusted publisher, set on
+#   - Each of the ten packages carries its own trusted publisher, set on
 #     npmjs.com under the package's settings, and npm has no way to configure
 #     one for a package that does not exist yet. Hence the 0.0.1 placeholders:
 #     publish once by hand, attach the publisher, and every version after that
@@ -84,16 +84,17 @@
 # statement, in a public transparency log, that these bytes came out of this
 # workflow at this commit. It needs every package.json to carry a `repository`
 # that matches this repository, case for case, or the publish fails outright.
-# The six platform manifests inherit theirs from apps/typescript/package.json in
+# The eight platform manifests inherit theirs from
+# apps/typescript/package.json in
 # scripts/package/platform.ts, so a platform tarball built before that
 # field existed cannot be published from here. Rebuild it rather than reaching
 # for --no-provenance; an unattested engine binary is the one package in the
-# seven where the attestation is worth something.
+# nine where the attestation is worth something.
 #
 # workflow_dispatch remains, for rehearsal only. It publishes nothing unless
 # dry_run is turned off, it never creates a release, and it reads the version
 # from the tree rather than from a tag. A dry run does not authenticate, so it
-# proves tarballs, versions, the shim, the 17 archives and SHA256SUMS, but
+# proves tarballs, versions, the shim, the 21 archives and SHA256SUMS, but
 # nothing about the trust configuration.
 
 name: publish
@@ -127,7 +128,7 @@ jobs:
       - id: version
         run: echo "version=$(jq -r .version apps/typescript/package.json)" >> "$GITHUB_OUTPUT"
 
-  # The six engines at this tree's fingerprint: reused when they exist,
+  # The eight engines at this tree's fingerprint: reused when they exist,
   # built here when they do not. Either way the tag waits for nothing
   # dispatched by hand.
   engine:
@@ -176,7 +177,7 @@ jobs:
       # empty credential instead of asking for an OIDC one.
       - uses: actions/setup-node@v7
         with:
-          node-version: '24'
+          node-version: '24.21.0'
 
       - name: an npm that can do this
         # Trusted publishing landed in npm 11.5.1. Node 24 ships something
@@ -184,7 +185,7 @@ jobs:
         # thing this repository controls, and the failure if it is too old is
         # an authentication error that says nothing about versions.
         run: |
-          pnpm add --global npm@latest
+          pnpm add --global npm@12.0.2
           echo "node $(node --version), npm $(npm --version)"
 
       - name: what this run is
@@ -233,10 +234,10 @@ jobs:
         working-directory: apps/typescript
         # The package is TypeScript and dist/ is not committed, so until this
         # runs there is nothing to publish. `npm publish ./apps/typescript` would run
-        # prepack and build it anyway -- but it would do that after the six
+        # prepack and build it anyway -- but it would do that after the eight
         # platform packages were already public, and a build failure has to
-        # land before anything is irreversible rather than between the sixth
-        # package and the seventh.
+        # land before anything is irreversible rather than between the eighth
+        # package and the ninth.
         run: |
           pnpm install --no-lockfile
           pnpm run build
@@ -272,13 +273,13 @@ jobs:
       - name: the engine artifacts at this tree's fingerprint
         env:
           GH_TOKEN: ${{ github.token }}
-        # Six engines and their evidence, by fingerprint rather than by
+        # Eight engines and their evidence, by fingerprint rather than by
         # commit, from whichever trusted run built them (this one, if the
         # engine job above had to). The node archives become the npm
         # platform packages here, with the version being released; the
         # CLI and C ABI archives go to the Release as they are.
         #
-        # All six, by name, rather than a glob over what happens to be
+        # All eight, by name, rather than a glob over what happens to be
         # there: a missing architecture must stop the run, not produce a
         # main package pointing at a platform package that was never
         # published. download-set refuses an incomplete set.
@@ -287,19 +288,26 @@ jobs:
           if ! command -v 7z >/dev/null; then sudo apt-get update && sudo apt-get install -y p7zip-full; fi
           pnpm ci:engine-artifacts download-set --fingerprint "$FINGERPRINT" \
             --engine-dir dist/engine --node-dir dist/node --evidence-dir dist/evidence
-          for plat in windows-amd64 windows-arm64 linux-amd64 linux-arm64 macos-amd64 macos-arm64; do
+          for plat in windows-amd64 windows-arm64 linux-amd64 linux-arm64 \
+                      linux-amd64-musl linux-arm64-musl macos-amd64 macos-arm64; do
             case "$plat" in windows-*) os=win;; linux-*) os=linux;; macos-*) os=mac;; esac
-            cpu=${plat#*-}; [ "$cpu" = amd64 ] && cpu=x64
+            case "$plat" in *-arm64|*-arm64-musl) cpu=arm64;; *) cpu=x64;; esac
+            libc_args=()
+            stage="shotium-$os-$cpu"
+            if [ "$os" = linux ]; then
+              case "$plat" in *-musl) libc=musl; stage="$stage-musl";; *) libc=glibc;; esac
+              libc_args=(--libc "$libc")
+            fi
             pnpm package:platform --from-archive "dist/node/$plat/shotium-node-$plat.7z" \
-              --os "$os" --arch "$cpu" --dest dist/npm-stage
-            ( cd "dist/npm-stage/shotium-$os-$cpu" && npm pack --pack-destination ../../npm )
+              --os "$os" --arch "$cpu" "${libc_args[@]}" --dest dist/npm-stage
+            ( cd "dist/npm-stage/$stage" && npm pack --pack-destination ../../npm )
           done
 
           # The filenames, too, and not just the packages: the version in
           # the tarball is the one being released, by construction, but the
           # publish step below names the files, so they had better exist.
           for plat in win32-x64 win32-arm64 darwin-x64 darwin-arm64 \
-                      linux-x64 linux-arm64; do
+                      linux-x64 linux-arm64 linux-x64-musl linux-arm64-musl; do
             f="dist/npm/pixel.js-shotium-$plat-$VERSION.tgz"
             if [ ! -f "$f" ]; then
               echo "$f is missing -- the staging holds:"
@@ -314,8 +322,8 @@ jobs:
         env:
           REPO: ${{ github.repository }}
         # Provenance compares package.json's repository against this one and
-        # rejects a mismatch, after uploading. Six tarballs published and the
-        # seventh refused is the worst outcome available here, so the check
+        # rejects a mismatch, after uploading. Eight tarballs published and the
+        # ninth refused is the worst outcome available here, so the check
         # happens before anything is sent -- and on the tarballs themselves,
         # not on the tree, because the tree is not what gets published. The
         # shim is a directory, checked the same way.
@@ -343,7 +351,7 @@ jobs:
                  "repository field, and provenance will refuse them"
             exit 1
           fi
-          echo "all six tarballs and the shim name $REPO"
+          echo "all eight tarballs and the shim name $REPO"
 
       - name: package language examples
         run: |
@@ -370,9 +378,9 @@ jobs:
           fi
           # By name and in order, not a glob: the glob sorts the main tarball
           # before darwin-*, and the main package must not go out before the
-          # six it points at.
+          # eight it points at.
           for plat in win32-x64 win32-arm64 darwin-x64 darwin-arm64 \
-                      linux-x64 linux-arm64; do
+                      linux-x64 linux-arm64 linux-x64-musl linux-arm64-musl; do
             echo "--- @pixel.js/shotium-$plat"
             npm publish "dist/npm/pixel.js-shotium-$plat-$VERSION.tgz" $flags
           done
@@ -400,6 +408,7 @@ jobs:
           wait_for @pixel.js/shotium-win32-x64 @pixel.js/shotium-win32-arm64 \
                    @pixel.js/shotium-darwin-x64 @pixel.js/shotium-darwin-arm64 \
                    @pixel.js/shotium-linux-x64 @pixel.js/shotium-linux-arm64 \
+                   @pixel.js/shotium-linux-x64-musl @pixel.js/shotium-linux-arm64-musl \
                    @pixel.js/shotium
 
       - name: publish the legacy name
@@ -473,13 +482,14 @@ jobs:
             echo "下载 \`shotium-example-<语言>.7z\` 和对应平台的 C ABI 包。示例包含源码、文档和页面，不内置原生库；附件名和解压目录不带版本号。"
             echo
             echo "### SHA256 verification / 校验"
-            echo "One \`SHA256SUMS\` covers all 17 archives (6 CLI, 6 C ABI, 5 examples). Verify the selected downloads against it; downloading every archive is unnecessary."
-            echo "统一的 \`SHA256SUMS\` 覆盖全部 17 个压缩包（6 个 CLI、6 个 C ABI、5 个示例），只需校验自己下载的附件。发布共 18 个上传附件，另有 GitHub 自动生成的两个源码包。"
+            echo "One \`SHA256SUMS\` covers all 21 archives (8 CLI, 8 C ABI, 5 examples). Verify the selected downloads against it; downloading every archive is unnecessary."
+            echo "统一的 \`SHA256SUMS\` 覆盖全部 21 个压缩包（8 个 CLI、8 个 C ABI、5 个示例），只需校验自己下载的附件。发布共 22 个上传附件，另有 GitHub 自动生成的两个源码包。"
             echo
             echo "### 📝 验证与来源 / Provenance"
             echo "- Commit: \`${GITHUB_SHA}\`"
             echo "- Engine fingerprint / 引擎指纹: \`${FINGERPRINT}\` -- the hash of every tracked file the native builds read; the engines were built by / 引擎构建自:"
-            for plat in windows-amd64 windows-arm64 linux-amd64 linux-arm64 macos-amd64 macos-arm64; do
+            for plat in windows-amd64 windows-arm64 linux-amd64 linux-arm64 \
+                        linux-amd64-musl linux-arm64-musl macos-amd64 macos-arm64; do
               run=$(jq -r .run_id "dist/node/$plat/provenance.json")
               echo "  - $plat: https://github.com/$GITHUB_REPOSITORY/actions/runs/$run"
             done

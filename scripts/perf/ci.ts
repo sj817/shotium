@@ -21,7 +21,7 @@ import {cac} from 'cac';
 import {execa} from 'execa';
 
 import {environment, findEngineSet} from '../ci/engine-artifacts.ts';
-import {platforms} from '../lib/platforms.ts';
+import {performancePlatforms} from '../lib/platforms.ts';
 import {resolve} from '../lib/repo.ts';
 
 async function plan(): Promise<void> {
@@ -30,11 +30,12 @@ async function plan(): Promise<void> {
   if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(process.env.BASELINE_VERSION ?? '')) throw new Error('Baseline must be an exact npm version');
   const {api, currentRunId} = environment();
   const matrix = [];
-  for (const target of platforms) {
+  for (const target of performancePlatforms) {
     const set = await findEngineSet(api, fingerprint, target.label, currentRunId);
     if (!set) throw new Error(`${target.label}: no engine with evidence at ${fingerprint}; run engine.yml first`);
     matrix.push({
       platform: target.npm, label: target.label, runner: target.nativeRunner, packageOs: target.packageOs, cpu: target.cpu,
+      libc: target.libc ?? '',
       runId: set.runId, artifactName: set.engine.name, artifactId: set.engine.id, sourceSha: set.engine.workflow_run!.head_sha,
       fingerprint,
     });

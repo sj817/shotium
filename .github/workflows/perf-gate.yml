@@ -127,6 +127,7 @@ jobs:
           LABEL: ${{ matrix.target.label }}
           PACKAGE_OS: ${{ matrix.target.packageOs }}
           CPU: ${{ matrix.target.cpu }}
+          LIBC: ${{ matrix.target.libc }}
         # The same assembly publish.yml does, so the candidate is the package
         # a user would install for this engine.
         run: |
@@ -138,10 +139,15 @@ jobs:
             sevenzip=$(command -v 7zz || command -v 7z || command -v 7za || true)
           fi
           [ -n "$sevenzip" ] || { echo "7-Zip is required" >&2; exit 1; }
+          libc_args=()
+          if [ -n "$LIBC" ]; then libc_args=(--libc "$LIBC"); fi
           pnpm package:platform --from-archive "out/performance/engine/shotium-node-$LABEL.7z" \
-            --os "$PACKAGE_OS" --arch "$CPU" --dest out/performance/stage --sevenzip "$sevenzip"
+            --os "$PACKAGE_OS" --arch "$CPU" "${libc_args[@]}" \
+            --dest out/performance/stage --sevenzip "$sevenzip"
+          stage="shotium-$PACKAGE_OS-$CPU"
+          if [ "$LIBC" = musl ]; then stage="$stage-musl"; fi
           mkdir -p out/performance/download
-          ( cd "out/performance/stage/shotium-$PACKAGE_OS-$CPU" && npm pack --pack-destination ../../download )
+          ( cd "out/performance/stage/$stage" && npm pack --pack-destination ../../download )
       - name: Install both immutable candidates
         env:
           BASELINE_VERSION: ${{ inputs.baseline_version }}

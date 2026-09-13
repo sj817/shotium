@@ -20,7 +20,7 @@ This document is distributed as `C_ABI.md` within C ABI archives and language de
 
 ## Archive layout
 
-Each release provides prebuilt archives per platform: `shotium-c-abi-<os>-<arch>.7z`, where `<os>` is `windows`, `linux`, or `macos`, and `<arch>` is `amd64` or `arm64`; select the architecture matching the host runtime process loading the library; extracting the archive yields:
+Each release provides prebuilt archives per platform: `shotium-c-abi-<os>-<arch>.7z`, where `<os>` is `windows`, `linux`, or `macos`, and `<arch>` is `amd64` or `arm64`. Linux musl builds append `-musl` after the architecture. Select the architecture and libc matching the host runtime process loading the library; extracting the archive yields:
 
 | File | Purpose |
 |---|---|
@@ -33,7 +33,7 @@ Each release provides prebuilt archives per platform: `shotium-c-abi-<os>-<arch>
 
 Ensure the library binary and both `.pak` files are kept in the same directory from the matching release; pass this directory path as `resourceDir` during engine initialization; because shared libraries cannot reliably locate their own directory across all operating systems (e.g. on Linux, module path lookups typically resolve to the host executable), the host application must explicitly specify the resource directory
 
-Linux binaries are compiled against glibc (musl environments such as Alpine are not supported out of the box); font rendering relies on system fonts; ensure required font packages (e.g., Fontconfig, DejaVu, Noto) are installed in container environments
+Linux has separate glibc and musl archives. Use `linux-amd64` or `linux-arm64` on glibc distributions, and the matching `linux-*-musl` archive on Alpine. CI rejects any Linux CLI, shared library or Node addon that retains a non-libc shared-library dependency. Font discovery still uses the host's font files; install the required fonts (for example DejaVu or Noto) in minimal containers
 
 The top-level directory inside the archive is `shotium-c-abi-<platform>/` (extract directly to your project's `native/` directory):
 

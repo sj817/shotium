@@ -8,7 +8,9 @@
 
 `@pixel.js/shotium` 是 [shotium](https://github.com/sj817/shotium) 专为 Node.js 提供的官方 SDK；shotium 从 Chromium 源码中深度剥离出核心静态渲染能力：保留负责 DOM/CSS 排版与绘制的 Blink、负责 CPU 栅格化与图像编码的 Skia 以及网络栈 `//net`，彻底移除了 V8 引擎、浏览器外壳、GPU 进程及 DevTools；页面直接在当前 Node.js 宿主进程内的专用引擎线程上完成排版与绘制，并返回 PNG、JPEG 或 WebP 字节流——无需拉起庞大的无头浏览器，无 WebSocket 协议损耗，亦无子进程僵尸泄漏风险
 
-本包自身具备**零运行时依赖（0 dependencies）**特性；原生引擎通过 6 个平台架构包分发，`npm install` 时通过 `optionalDependencies` 自动按需拉取：涵盖 Windows、macOS 与 Linux 的 x64 及 arm64 架构
+JavaScript 封装层具备**零 JavaScript 运行时依赖**特性。原生引擎通过 8 个可选平台包分发：覆盖 Windows 与 macOS 的 x64/arm64，以及 Linux x64/arm64 的 glibc 与 musl。npm 和 pnpm 会按当前操作系统、CPU 及 Linux libc 自动选择对应包；无后缀 Linux 包用于 Debian、Ubuntu、RHEL 等 glibc 发行版，`linux-*-musl` 用于 Alpine
+
+Linux 公网 HTTPS 使用编译进引擎的 Chrome Root Store。Linux 构建不会读取 NSS、宿主证书库或企业 CA 设置；私有 PKI 地址需要使用受公共根信任的证书链
 
 ## 目录
 

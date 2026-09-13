@@ -1,7 +1,7 @@
 # Every pull request, against a real engine.
 #
 # This is the pull-request entry point: engine.yml builds whichever of the
-# six engines the PR's tree does not have yet (usually none -- a change to
+# eight engines the PR's tree does not have yet (usually none -- a change to
 # the TypeScript package, the docs or the scripts keeps the fingerprint
 # and reuses what main built), then contract.yml exercises the TypeScript
 # package against the linux-amd64 engine. A PR that changes the engine
@@ -54,8 +54,8 @@ jobs:
     with:
       fingerprint: ${{ needs.engine.outputs.fingerprint }}
 
-  # The seven npm packages, installable from this PR: pkg.pr.new publishes
-  # the six platform packages assembled from the engines at this fingerprint
+  # The nine npm packages, installable from this PR: pkg.pr.new publishes
+  # the eight platform packages assembled from the engines at this fingerprint
   # and the main package, rewriting its optionalDependencies to the preview
   # URLs, and comments the install line on the PR. One smoke install renders
   # the demo card with what it published. Needs the pkg.pr.new GitHub App
@@ -80,7 +80,7 @@ jobs:
           version: 9.15.9
       - run: pnpm -C scripts install --frozen-lockfile
 
-      - name: the six engines at this fingerprint
+      - name: the eight engines at this fingerprint
         env:
           GH_TOKEN: ${{ github.token }}
           FINGERPRINT: ${{ needs.engine.outputs.fingerprint }}
@@ -88,11 +88,17 @@ jobs:
           command -v 7z >/dev/null || { sudo apt-get update && sudo apt-get install -y p7zip-full; }
           pnpm ci:engine-artifacts download-set --fingerprint "$FINGERPRINT" \
             --engine-dir dist/engine --node-dir dist/node --evidence-dir dist/evidence
-          for plat in windows-amd64 windows-arm64 linux-amd64 linux-arm64 macos-amd64 macos-arm64; do
+          for plat in windows-amd64 windows-arm64 linux-amd64 linux-arm64 \
+                      linux-amd64-musl linux-arm64-musl macos-amd64 macos-arm64; do
             case "$plat" in windows-*) os=win;; linux-*) os=linux;; macos-*) os=mac;; esac
-            cpu=${plat#*-}; [ "$cpu" = amd64 ] && cpu=x64
+            case "$plat" in *-arm64|*-arm64-musl) cpu=arm64;; *) cpu=x64;; esac
+            libc_args=()
+            if [ "$os" = linux ]; then
+              case "$plat" in *-musl) libc=musl;; *) libc=glibc;; esac
+              libc_args=(--libc "$libc")
+            fi
             pnpm package:platform --from-archive "dist/node/$plat/shotium-node-$plat.7z" \
-              --os "$os" --arch "$cpu" --dest dist/npm
+              --os "$os" --arch "$cpu" "${libc_args[@]}" --dest dist/npm
           done
           ls dist/npm
 
@@ -104,7 +110,7 @@ jobs:
 
       - name: publish the preview
         # Directories, not tarballs: only then does pkg-pr-new rewrite the
-        # main package's optionalDependencies to the six preview URLs.
+        # main package's optionalDependencies to the eight preview URLs.
         run: |
           node scripts/node_modules/pkg-pr-new/bin/cli.js publish \
             --comment=update --packageManager=npm --no-template --previewVersion \

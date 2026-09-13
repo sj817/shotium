@@ -256,7 +256,8 @@ shared_library("shot_c") {
 }
 
 # The Node entry uses exactly the same toolchain and objects as the C adapter.
-# The Node SDK is prepared by scripts/build/node-sdk.ts before generation/building.
+# The Node SDK is prepared by scripts/build/node-sdk.ts before
+# generation/building.
 shared_library("shot_node") {
   output_name = "shotium"
   output_extension = "node"
@@ -283,9 +284,16 @@ shared_library("shot_node") {
     ]
   } else {
     inputs = [ "shot_node.map" ]
+
     # Node-API is supplied by the executable that loads this addon.
     configs -= [ "//build/config/compiler:no_unresolved_symbols" ]
-    ldflags += [ "-Wl,--version-script=" +
-                 rebase_path("shot_node.map", root_build_dir) ]
+
+    # Dropping no_unresolved_symbols is required for Node-API, but that
+    # config also carried --as-needed. Restore it locally so optional
+    # Linux libraries do not become runtime dependencies of the addon.
+    ldflags += [
+      "-Wl,--as-needed",
+      "-Wl,--version-script=" + rebase_path("shot_node.map", root_build_dir),
+    ]
   }
 }

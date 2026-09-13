@@ -5,7 +5,7 @@
 // done -- source, DEPS, gn gen. That is 15% of a Windows run, paid a second
 // time for nothing. It now starts with the shards, builds the last slice
 // itself, and waits here for the others' artifacts, so a run costs one setup
-// instead of two and a six-platform dispatch is 20 jobs rather than 26.
+// instead of two and every target's final job overlaps its compile shards.
 //
 // GitHub has no "wait until an artifact exists" primitive, so this polls the
 // run's own artifact list. The exit is deliberately forgiving: when every

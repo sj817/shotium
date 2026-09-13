@@ -1,13 +1,7 @@
-# The engine, exercised the way users receive it: the five language demos
-# against the extracted CLI and C ABI archives, and a clean npm install of
-# the platform package assembled from the node archive -- the same
-# `package:platform --from-archive` path publish.yml takes, so what this
-# checks is what ships. Runs on the architecture the engine is for, which
-# for arm64 Windows and Linux is the only place the binary ever executes.
-#
-# The evidence artifact carries the engine's fingerprint, and it is uploaded
-# only on success: publish.yml treats an engine as usable when the run that
-# built it also produced this evidence.
+# Exercise the engine exactly as users receive it: five language examples,
+# the standalone CLI, the C ABI archive and a clean npm install. glibc,
+# Windows and macOS run directly on their native runners; musl runs in an
+# Alpine container on the matching native architecture.
 name: check-ffi
 
 on:
@@ -17,45 +11,52 @@ on:
         type: string
         required: true
       platform:
-        description: 'public platform label: windows-amd64 ... macos-arm64'
+        description: 'complete public label, including -musl when applicable'
         type: string
         required: true
       artifact:
-        description: 'the engine artifact of this run: engine-<platform>-<fingerprint>'
+        description: 'engine-<platform>-<fingerprint> from this run'
         type: string
         required: true
       evidence:
-        description: 'what to call the evidence: ffi-evidence-<platform>-<fingerprint>'
+        description: 'ffi-evidence-<platform>-<fingerprint>'
         type: string
         required: true
 
 jobs:
   examples:
     runs-on: ${{ inputs.runner }}
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
+        if: ${{ !endsWith(inputs.platform, '-musl') }}
         with:
           node-version: '22'
       - uses: pnpm/action-setup@v6
+        if: ${{ !endsWith(inputs.platform, '-musl') }}
         with:
           version: 9.15.9
       - uses: actions/setup-python@v7
+        if: ${{ !endsWith(inputs.platform, '-musl') }}
         with:
           python-version: '3.13'
       - uses: actions/setup-go@v7
+        if: ${{ !endsWith(inputs.platform, '-musl') }}
         with:
           go-version: '1.25.3'
           cache-dependency-path: apps/go/go.sum
       - uses: actions/setup-dotnet@v6
+        if: ${{ !endsWith(inputs.platform, '-musl') }}
         with:
           dotnet-version: '8.0.x'
       - uses: actions/setup-java@v6
+        if: ${{ !endsWith(inputs.platform, '-musl') }}
         with:
           distribution: ${{ runner.os == 'Windows' && 'microsoft' || 'temurin' }}
           java-version: '21'
       - name: Rust toolchain
+        if: ${{ !endsWith(inputs.platform, '-musl') }}
         shell: bash
         run: |
           toolchain=stable
@@ -66,7 +67,9 @@ jobs:
         with:
           name: ${{ inputs.artifact }}
           path: out/ffi-archive
-      - name: tooling and archive extraction
+
+      - name: tooling, archives and npm platform package
+        if: ${{ !endsWith(inputs.platform, '-musl') }}
         shell: bash
         env:
           PLATFORM: ${{ inputs.platform }}
@@ -83,45 +86,64 @@ jobs:
           for archive in out/ffi-archive/*.7z; do "$sevenzip" x "$archive" -oout/ffi-native; done
           pnpm package:examples --dest out/language-examples --sevenzip "$sevenzip"
           for archive in out/language-examples/*.7z; do "$sevenzip" x "$archive" -oout/language-sources; done
-          platform=$PLATFORM
+
           case "$RUNNER_OS" in Windows) os=win;; Linux) os=linux;; macOS) os=mac;; esac
-          cpu=${platform#*-}; [ "$cpu" = amd64 ] && cpu=x64
-          pnpm package:cli --os "$os" --dest "out/ffi-native/shotium-cli-$platform" --check
-          pnpm package:c-abi --os "$os" --dest "out/ffi-native/shotium-c-abi-$platform" --check
-          pnpm package:node --os "$os" --dest "out/ffi-native/shotium-node-$platform" --check
-          # The npm platform package, from the node archive, exactly as
-          # publish.yml assembles it; then packed so verify:delivery installs
-          # the tarball a user would get.
-          pnpm package:platform --from-archive "out/ffi-archive/shotium-node-$platform.7z" \
-            --os "$os" --arch "$cpu" --dest out/ffi-npm-stage --sevenzip "$sevenzip"
+          base=${PLATFORM%-musl}
+          cpu=${base#*-}; [ "$cpu" = amd64 ] && cpu=x64
+          libc_args=()
+          if [ "$os" = linux ]; then libc_args=(--libc glibc); fi
+          pnpm package:cli --os "$os" --dest "out/ffi-native/shotium-cli-$PLATFORM" --check
+          pnpm package:c-abi --os "$os" --dest "out/ffi-native/shotium-c-abi-$PLATFORM" --check
+          pnpm package:node --os "$os" --dest "out/ffi-native/shotium-node-$PLATFORM" --check
+          if [ "$os" = linux ]; then
+            sh scripts/ci/check-linux-deps.sh glibc \
+              "out/ffi-native/shotium-cli-$PLATFORM/shotium" \
+              "out/ffi-native/shotium-c-abi-$PLATFORM/libshotium.so" \
+              "out/ffi-native/shotium-node-$PLATFORM/shotium.node"
+          fi
+          pnpm package:platform --from-archive "out/ffi-archive/shotium-node-$PLATFORM.7z" \
+            --os "$os" --arch "$cpu" "${libc_args[@]}" --dest out/ffi-npm-stage --sevenzip "$sevenzip"
           mkdir -p out/ffi-npm
-          ( cd "out/ffi-npm-stage/shotium-$os-$cpu" && npm pack --pack-destination ../../ffi-npm )
+          (cd "out/ffi-npm-stage/shotium-$os-$cpu" && npm pack --pack-destination ../../ffi-npm)
           pnpm -C apps/typescript install --no-lockfile
           pnpm -C apps/typescript run build
-      - name: five language runtimes against the extracted Release
+
+      - name: five language runtimes against the extracted release
+        if: ${{ !endsWith(inputs.platform, '-musl') }}
         shell: bash
         env:
           PLATFORM: ${{ inputs.platform }}
         run: |
-          platform=$PLATFORM
-          cli="out/ffi-native/shotium-cli-$platform/shotium"
+          cli="out/ffi-native/shotium-cli-$PLATFORM/shotium"
           if [[ "$RUNNER_OS" == "Windows" ]]; then cli="$cli.exe"; fi
           for language in go python rust csharp java; do
-            pnpm verify:ffi --cli "$cli" --library-dir "out/ffi-native/shotium-c-abi-$platform" \
+            pnpm verify:ffi --cli "$cli" --library-dir "out/ffi-native/shotium-c-abi-$PLATFORM" \
               --source-dir "out/language-sources/shotium-example-$language" \
               --languages "$language" --output "out/ffi-check/$language"
           done
-      - name: clean npm installation without the CLI or the C ABI library
+
+      - name: clean npm installation
+        if: ${{ !endsWith(inputs.platform, '-musl') }}
         shell: bash
         env:
           PLATFORM: ${{ inputs.platform }}
-        # The reference render comes from the CLI extracted above; the npm
-        # package no longer carries one, and the check asserts that.
         run: |
-          platform=$PLATFORM
-          cli="out/ffi-native/shotium-cli-$platform/shotium"
+          cli="out/ffi-native/shotium-cli-$PLATFORM/shotium"
           if [[ "$RUNNER_OS" == "Windows" ]]; then cli="$cli.exe"; fi
           pnpm verify:delivery --platform-dir out/ffi-npm --cli "$cli"
+
+      - name: Alpine musl runtime, network, FFI and npm delivery
+        if: ${{ endsWith(inputs.platform, '-musl') }}
+        shell: bash
+        env:
+          PLATFORM: ${{ inputs.platform }}
+        run: |
+          docker run --rm \
+            --env PLATFORM \
+            --volume "$GITHUB_WORKSPACE:/work" \
+            --workdir /work \
+            alpine:3.22 sh scripts/ci/check-musl.sh
+
       - uses: actions/upload-artifact@v7
         if: success()
         with:

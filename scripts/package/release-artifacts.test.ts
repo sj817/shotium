@@ -37,7 +37,7 @@ async function nativeFixture(directory: string): Promise<{build: string; sourceR
 const sevenzip = process.env.SHOTIUM_SEVENZIP ||
   (process.platform === 'win32' ? 'C:/Program Files/7-Zip/7z.exe' : '7z');
 
-test('all six native platforms: real 7z extraction preserves isolated contents and stable roots', async t => {
+test('all eight native platforms: real 7z extraction preserves isolated contents and stable roots', async t => {
   const directory = await temporary(t);
   const fixture = await nativeFixture(directory);
   for (const platform of releasePlatforms) {
@@ -100,11 +100,11 @@ async function releaseFixture(t: TestContext): Promise<string> {
   return directory;
 }
 
-test('one standard, sorted SHA256SUMS covers exactly 17 fixed archive names', async t => {
+test('one standard, sorted SHA256SUMS covers exactly 21 fixed archive names', async t => {
   const directory = await releaseFixture(t);
-  assert.equal(releaseArchives.length, 17);
-  assert.equal(releaseArchives.filter(name => name.startsWith('shotium-cli-')).length, 6);
-  assert.equal(releaseArchives.filter(name => name.startsWith('shotium-c-abi-')).length, 6);
+  assert.equal(releaseArchives.length, 21);
+  assert.equal(releaseArchives.filter(name => name.startsWith('shotium-cli-')).length, 8);
+  assert.equal(releaseArchives.filter(name => name.startsWith('shotium-c-abi-')).length, 8);
   assert.deepEqual(releaseArchives.filter(name => name.startsWith('shotium-example-')), [
     'shotium-example-csharp.7z', 'shotium-example-go.7z', 'shotium-example-java.7z',
     'shotium-example-python.7z', 'shotium-example-rust.7z',
@@ -113,11 +113,11 @@ test('one standard, sorted SHA256SUMS covers exactly 17 fixed archive names', as
   const contents = await readFile(path.join(directory, 'SHA256SUMS'), 'utf8');
   assert.ok(contents.endsWith('\n'));
   const lines = contents.trimEnd().split('\n');
-  assert.equal(lines.length, 17);
+  assert.equal(lines.length, 21);
   assert.ok(lines.every(line => /^[0-9a-f]{64}  shotium-[a-z-0-9]+\.7z$/.test(line)));
   assert.deepEqual(lines.map(line => line.slice(66)), [...releaseArchives].sort());
   for (const line of lines) assert.equal(line.slice(0, 64), await sha256File(path.join(directory, line.slice(66))));
-  assert.equal((await readdir(directory)).length, 18);
+  assert.equal((await readdir(directory)).length, 22);
   await verifyReleaseChecksums(directory);
 });
 
@@ -147,7 +147,7 @@ test('duplicate, unordered, missing and malformed checksum entries are rejected'
   const cases: Array<[string, RegExp]> = [
     [contents + lines[0] + '\n', /duplicate/],
     [[...lines].reverse().join('\n') + '\n', /filename order/],
-    [lines.slice(1).join('\n') + '\n', /exactly the 17/],
+    [lines.slice(1).join('\n') + '\n', /exactly the 21/],
     [contents.replace('  shotium-', ' shotium-'), /invalid/],
     [contents.replace('  shotium-', '  dist/shotium-'), /invalid/],
     [contents.slice(0, -1), /newline/],
@@ -163,7 +163,7 @@ test('native artifact collection rejects incomplete inputs, wrong contents and d
   const directory = await temporary(t);
   const source = path.join(directory, 'artifacts'), dest = path.join(directory, 'release');
   await mkdir(source);
-  await assert.rejects(collectNativeArchives(source, dest), /six platform directories/);
+  await assert.rejects(collectNativeArchives(source, dest), /eight platform directories/);
   for (const platform of releasePlatforms) {
     await mkdir(path.join(source, platform));
     for (const kind of ['cli', 'c-abi']) {
@@ -177,6 +177,6 @@ test('native artifact collection rejects incomplete inputs, wrong contents and d
   assert.equal(existsSync(dest), false);
   await rm(extra);
   await collectNativeArchives(source, dest);
-  assert.equal((await readdir(dest)).length, 12);
+  assert.equal((await readdir(dest)).length, 16);
   await assert.rejects(collectNativeArchives(source, dest), /duplicate release archive/);
 });

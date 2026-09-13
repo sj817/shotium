@@ -1,10 +1,10 @@
-// Assembles one of the six @pixel.js/shotium-<os>-<arch> packages.
+// Assembles one of the eight @pixel.js/shotium native packages.
 //
 // The engine cannot ship inside @pixel.js/shotium itself: it is a Chromium
 // build, 42 MB, and there is a different one for every platform and
 // architecture. So each build produces a package of its own, and the main
-// package depends on all six as optionalDependencies with `os` and `cpu` set
-// -- npm then installs the one that matches and skips the other five. See
+// package depends on all eight as optionalDependencies with `os`, `cpu` and,
+// on Linux, `libc` set. npm installs only the matching engine. See
 // apps/typescript/src/lib/platform.ts, which is the code that finds whichever one
 // landed.
 //
@@ -53,6 +53,8 @@ const PLATFORMS: Record<string, {npmOs: string; extra: string[]}> = {
   linux: {npmOs: 'linux', extra: []},
 };
 const ARCHES = ['x64', 'arm64'];
+const LIBCS = ['glibc', 'musl'] as const;
+type LinuxLibc = typeof LIBCS[number];
 const PAKS = ['shotium_data.pak', 'shotium_strings.pak'];
 
 function copy(from: string, to: string, mode?: number): void {
@@ -65,22 +67,25 @@ function copy(from: string, to: string, mode?: number): void {
   if (mode !== undefined) chmodSync(to, mode);
 }
 
-function main(args: {build: string; os: string; arch: string; dest: string; addon?: string}): void {
+function main(args: {build: string; os: string; arch: string; dest: string; addon?: string; libc?: string}): void {
   const platform = PLATFORMS[args.os];
   if (!platform) throw new Error(`--os must be one of ${Object.keys(PLATFORMS).join(', ')}`);
   if (!ARCHES.includes(args.arch)) throw new Error(`--arch must be one of ${ARCHES.join(', ')}`);
-  // The version is the main package's, always. Seven packages that must be
-  // installed together are seven packages that have to agree on a number, and
-  // the only way to keep them agreeing is for six of them not to have an
-  // opinion.
+  if (args.os === 'linux' && !LIBCS.includes(args.libc as LinuxLibc)) throw new Error('--libc must be glibc or musl for Linux');
+  if (args.os !== 'linux' && args.libc) throw new Error('--libc is valid only with --os linux');
+  const libc = args.os === 'linux' ? args.libc as LinuxLibc : undefined;
+  const suffix = libc === 'musl' ? '-musl' : '';
+  // The version is the main package's, always. Nine packages that must be
+  // installed together have to agree on a number, and the only way to keep
+  // them agreeing is for the eight platform packages not to have an opinion.
   const mainPkg = JSON.parse(readFileSync(resolve('apps/typescript', 'package.json'), 'utf8')) as {version: string; license?: string; engines?: unknown; repository?: unknown};
   // npmOs, not args.os: the package is named for process.platform, because
   // that is what npm matches its `os` field against and what the caller's
   // machine calls itself. Public Release archives use their separate,
   // human-facing windows/linux/macos and amd64/arm64 names.
-  const name = `@pixel.js/shotium-${platform.npmOs}-${args.arch}`;
+  const name = `@pixel.js/shotium-${platform.npmOs}-${args.arch}${suffix}`;
   const buildDir = resolve(args.build);
-  const dest = resolve(args.dest, `shotium-${args.os}-${args.arch}`);
+  const dest = resolve(args.dest, `shotium-${args.os}-${args.arch}${suffix}`);
 
   rmSync(dest, {recursive: true, force: true});
   mkdirSync(dest, {recursive: true});
@@ -105,12 +110,13 @@ function main(args: {build: string; os: string; arch: string; dest: string; addo
   const manifest: Record<string, unknown> = {
     name,
     version: mainPkg.version,
-    description: `The shotium engine for ${args.os}-${args.arch}. Installed by @pixel.js/shotium; not useful on its own.`,
-    // os and cpu are the whole point of this package. npm skips an optional
-    // dependency whose os/cpu do not match the machine, which is how one
-    // install of @pixel.js/shotium pulls one engine instead of six.
+    description: `The shotium engine for ${args.os}-${args.arch}${libc ? ` (${libc})` : ''}. Installed by @pixel.js/shotium; not useful on its own.`,
+    // os, cpu and (on Linux) libc are the point of this package. npm skips an
+    // optional dependency whose constraints do not match the machine, which is
+    // how one install of @pixel.js/shotium pulls one engine instead of eight.
     os: [platform.npmOs],
     cpu: [args.arch],
+    ...(libc ? {libc: [libc]} : {}),
     files: [...shipped].sort(),
     license: mainPkg.license,
     engines: mainPkg.engines,
@@ -120,12 +126,12 @@ function main(args: {build: string; os: string; arch: string; dest: string; addo
   writeFileSync(
       path.join(dest, 'README.md'),
       `# ${name}\n\n` +
-          `The shotium engine built for ${args.os}-${args.arch}.\n\n` +
-          'This package is one of six, and holds bytes rather than code: the\n' +
+          `The shotium engine built for ${args.os}-${args.arch}${libc ? ` (${libc})` : ''}.\n\n` +
+          'This package is one of eight, and holds bytes rather than code: the\n' +
           'Node addon and the two resource packs it reads. The standalone CLI\n' +
           'and the C ABI library are on the GitHub releases page, not here.\n\n' +
           'Install [`@pixel.js/shotium`](https://www.npmjs.com/package/' +
-          '@pixel.js/shotium) instead. It depends on all six and pnpm installs\n' +
+          '@pixel.js/shotium) instead. It depends on all eight and pnpm installs\n' +
           'whichever matches the machine.\n');
 
   const bytes = shipped.reduce((total, file) => total + statSync(path.join(dest, file)).size, 0);
@@ -158,8 +164,9 @@ cli.command('', 'assemble one @pixel.js/shotium-<os>-<arch> package directory')
     .option('--sevenzip <command>', '7-Zip executable, for --from-archive', {default: process.env.SHOTIUM_SEVENZIP || '7z'})
     .option('--os <name>', 'win, mac or linux')
     .option('--arch <name>', 'x64 or arm64')
+    .option('--libc <name>', 'glibc or musl; required for Linux and rejected elsewhere')
     .option('--dest <dir>', 'where the package directory goes')
-    .action(async (options: {build?: string; os?: string; arch?: string; dest?: string; addon?: string; fromArchive?: string; sevenzip: string}) => {
+    .action(async (options: {build?: string; os?: string; arch?: string; libc?: string; dest?: string; addon?: string; fromArchive?: string; sevenzip: string}) => {
       try {
         for (const required of ['os', 'arch', 'dest'] as const) {
           if (!options[required]) throw new Error(`--${required} is required`);
@@ -168,14 +175,14 @@ cli.command('', 'assemble one @pixel.js/shotium-<os>-<arch> package directory')
           if (options.build || options.addon) throw new Error('--from-archive replaces --build and --addon');
           const {dir, cleanup} = await extractNodeArchive(options.fromArchive, options.os as NativeOS, options.sevenzip);
           try {
-            main({build: dir, addon: path.join(dir, 'shotium.node'), os: options.os!, arch: options.arch!, dest: options.dest!});
+            main({build: dir, addon: path.join(dir, 'shotium.node'), os: options.os!, arch: options.arch!, libc: options.libc, dest: options.dest!});
           } finally {
             cleanup();
           }
           return;
         }
         if (!options.build) throw new Error('--build is required (or --from-archive)');
-        main(options as {build: string; os: string; arch: string; dest: string; addon?: string});
+        main(options as {build: string; os: string; arch: string; libc?: string; dest: string; addon?: string});
       } catch (error) {
         console.error(error instanceof Error ? error.message : String(error));
         process.exitCode = 1;

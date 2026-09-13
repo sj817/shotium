@@ -16,8 +16,11 @@ inputs:
   cpu:
     description: GN target_cpu, x64 or arm64
     required: true
+  libc:
+    description: target C library, glibc or musl
+    required: true
   platform:
-    description: the public platform label, windows-amd64 ... macos-arm64, which names the build-directory artifact
+    description: the complete Linux public label, including -musl when applicable; names the build-directory artifact
     required: true
   build-dir-run-id:
     description: the run whose build-dir-<platform> artifact to start from (ci:select-shards found it); empty starts a cold build
@@ -112,7 +115,7 @@ runs:
       id: toolchains
       uses: actions/cache/restore@v6
       with:
-        # Both Linux targets use the same x64 host tools. Include GCS receipt
+        # All four Linux targets use the same x64 host tools. Include GCS receipt
         # files with the extracted trees so gclient can verify and reuse them.
         # No prefix fallback: changed dependency definitions start a fresh cache.
         path: |
@@ -143,23 +146,60 @@ runs:
       # --no-prompt because there is no terminal, --no-nacl because it is not
       # in this build graph.
       #
-      # These are host packages, and for x64 they are also what the compiler
-      # links against. arm64 links against debian_bullseye_arm64-sysroot
-      # instead, which gclient fetches because .gclient names arm64 in
-      # target_cpu -- so there is no install-sysroot.py step here; DEPS has
-      # already done it.
+      # These are host packages. glibc x64 also links against them; glibc
+      # arm64 uses Chromium's Debian sysroot, while both musl targets use the
+      # cached Alpine sysroot assembled below. DEPS already fetches the glibc
+      # arm64 sysroot because .gclient names arm64 in target_cpu.
       working-directory: src
       run: |
         sudo ./build/install-build-deps.sh --no-prompt --no-nacl || \
         sudo ./build/install-build-deps.sh --no-prompt
+
+    - name: restore the Alpine musl sysroot
+      if: inputs.libc == 'musl'
+      id: musl-sysroot
+      uses: actions/cache/restore@v6
+      with:
+        path: src/out/musl-sysroot
+        key: musl-sysroot-alpine-3.22-musl-1.2.5-r12-headers-6.14.2-r0-${{ inputs.arch }}-v1
+
+    - name: assemble the Alpine musl sysroot
+      if: inputs.libc == 'musl' && steps.musl-sysroot.outputs.cache-hit != 'true'
+      shell: bash
+      working-directory: src
+      run: |
+        case '${{ inputs.arch }}' in
+          amd64) alpine_arch=x86_64;;
+          arm64) alpine_arch=aarch64;;
+          *) echo 'unsupported musl architecture: ${{ inputs.arch }}' >&2; exit 1;;
+        esac
+        mkdir -p out/musl-sysroot
+        docker run --rm \
+          -v "$PWD/out/musl-sysroot:/sysroot" \
+          alpine:3.22 sh -euxc '
+            apk add --root /sysroot --arch "$1" --initdb --no-cache \
+              --no-scripts --keys-dir /etc/apk/keys \
+              --repositories-file /etc/apk/repositories \
+              musl-dev=1.2.5-r12 linux-headers=6.14.2-r0
+          ' -- "$alpine_arch"
+        test -f out/musl-sysroot/usr/include/stdio.h
+        test -f out/musl-sysroot/usr/lib/crt1.o
+        test -e "out/musl-sysroot/lib/ld-musl-$alpine_arch.so.1"
+
+    - name: cache the Alpine musl sysroot
+      if: inputs.libc == 'musl' && steps.musl-sysroot.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v6
+      with:
+        path: src/out/musl-sysroot
+        key: ${{ steps.musl-sysroot.outputs.cache-primary-key }}
 
     - name: restore the build directory
       if: inputs.build-dir-run-id != ''
       uses: actions/download-artifact@v8
       # See .github/actions/windows-source for why the build directory
       # itself travels, as an artifact, and why nothing is left out of it.
-      # The name carries the architecture as well as the platform: the two
-      # produce entirely different objects even from the same host.
+      # The complete label carries architecture and libc; every target keeps
+      # an independent build graph even when it shares the same host.
       with:
         name: build-dir-${{ inputs.platform }}
         run-id: ${{ inputs.build-dir-run-id }}
@@ -221,6 +261,11 @@ runs:
         {
           echo 'import("//build/args/shot-linux.gn")'
           echo 'target_cpu = "${{ inputs.cpu }}"'
+          if [ '${{ inputs.libc }}' = musl ]; then
+            echo 'is_shot_musl = true'
+            echo 'target_sysroot = "//out/musl-sysroot"'
+            echo 'custom_toolchain = "//build/toolchain/linux:clang_${{ inputs.cpu }}_musl"'
+          fi
         } > out/Shot/args.gn
         cat out/Shot/args.gn
         gn gen out/Shot

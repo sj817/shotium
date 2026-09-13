@@ -65,6 +65,10 @@ The engine runs directly within the host process, rendering documents on a dedic
 npm install @pixel.js/shotium   # or npm, yarn, bun; automatically installs prebuilt binary for current platform
 ```
 
+The JavaScript wrapper has no JavaScript runtime dependencies. Eight native packages cover Windows and macOS on x64/arm64 plus Linux on x64/arm64 with either glibc or musl. npm and pnpm select the package matching the current OS, CPU and Linux libc. Unsuffixed Linux packages target glibc distributions such as Debian, Ubuntu and RHEL; use the `linux-*-musl` artifacts on Alpine.
+
+Linux public HTTPS uses the Chrome Root Store compiled into the engine. Linux builds do not read NSS, the host certificate database or enterprise CA settings; private-PKI endpoints therefore require a publicly trusted certificate chain.
+
 <details>
 <summary><b>Legacy package name <code>@shotkit/shotium</code> (still published during the transition)</b></summary>
 
@@ -90,12 +94,12 @@ Download prebuilt binaries for your target platform from **[GitHub Releases](htt
 
 | Category | Attachment naming pattern | Platforms / Languages | Contents |
 |---|---|---|---|
-| **CLI** | `shotium-cli-<platform>.7z` | win / linux / macos (x64 / arm64) | Standalone executable, two `.pak` resources, and license |
-| **C ABI** | `shotium-c-abi-<platform>.7z` | win / linux / macos (x64 / arm64) | Shared library, `.pak` resources, `shot_api.h`, ABI guides, and import library (Windows) |
+| **CLI** | `shotium-cli-<platform>.7z` | Windows / macOS (amd64 / arm64); Linux glibc / musl (amd64 / arm64) | Standalone executable, two `.pak` resources, and license |
+| **C ABI** | `shotium-c-abi-<platform>.7z` | Windows / macOS (amd64 / arm64); Linux glibc / musl (amd64 / arm64) | Shared library, `.pak` resources, `shot_api.h`, ABI guides, and import library (Windows) |
 | **Examples** | `shotium-example-<language>.7z` | go / python / rust / csharp / java | Complete source projects, page template, dependency manifests, and integrity manifests (no native binaries) |
-| **Checksums** | [`SHA256SUMS`](https://github.com/sj817/shotium/releases/latest/download/SHA256SUMS) | All 17 `.7z` archives | Standard SHA-256 checksum manifest sorted by filename |
+| **Checksums** | [`SHA256SUMS`](https://github.com/sj817/shotium/releases/latest/download/SHA256SUMS) | All 21 `.7z` archives | Standard SHA-256 checksum manifest sorted by filename |
 
-> Platforms: `windows-amd64`, `windows-arm64`, `linux-amd64`, `linux-arm64`, `macos-amd64`, `macos-arm64`. Multi-language examples load native libraries from `native/shotium-c-abi-<platform>/` after downloading the matching C ABI archive
+> Platforms: `windows-amd64`, `windows-arm64`, `linux-amd64`, `linux-arm64`, `linux-amd64-musl`, `linux-arm64-musl`, `macos-amd64`, `macos-arm64`. The unsuffixed Linux names are glibc builds; the `-musl` names are Alpine-compatible builds. Multi-language examples load native libraries from `native/shotium-c-abi-<platform>/` after downloading the matching C ABI archive
 
 <details>
 <summary><b>Download and verify the standalone CLI (Quickstart)</b></summary>

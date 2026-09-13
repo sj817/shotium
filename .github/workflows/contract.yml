@@ -6,7 +6,7 @@
 # for every release, both after engine.yml has made sure the engine at the
 # tree's fingerprint exists. Linux amd64, because it is the cheapest runner
 # and these suites are about the package, not the platform -- the
-# platform-specific delivery is check-ffi's job, on all six.
+# platform-specific delivery is check-ffi's job, on all eight.
 
 name: contract
 

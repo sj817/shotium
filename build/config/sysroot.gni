@@ -5,6 +5,7 @@
 # This header file defines the "sysroot" variable which is the absolute path
 # of the sysroot. If no sysroot applies, the variable will be an empty string.
 
+import("//build/config/shot_build.gni")
 import("//build/toolchain/sysroot.gni")
 
 declare_args() {
@@ -22,7 +23,8 @@ declare_args() {
 
 if (sysroot == "") {
   if (current_os == target_os && current_cpu == target_cpu &&
-      target_sysroot != "") {
+      target_sysroot != "" &&
+      (!is_shot_musl || is_shot_musl_target_toolchain)) {
     sysroot = target_sysroot
   } else if (is_android) {
     import("//build/config/android/config.gni")

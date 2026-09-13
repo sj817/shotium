@@ -1,4 +1,4 @@
-// The engine fingerprint: a hash of every tracked file the six native builds
+// The engine fingerprint: a hash of every tracked file the eight native builds
 // depend on, and of nothing else.
 //
 // why: the engine artifacts used to be found by the commit they were built

@@ -199,8 +199,8 @@ build loop. Read the affected workflow and source action for CI changes.
   `bilibili --package`, `daemon`, `daemon-protocol`) against the linux-amd64
   engine. A package-only PR meets a real engine in minutes; `engine.yml`
   does not listen to `pull_request` itself. Its `preview` job then
-  assembles the six platform packages from the node archives
-  (`pnpm package:platform --from-archive`), publishes all seven packages
+  assembles the eight platform packages from the node archives
+  (`pnpm package:platform --from-archive`), publishes all nine packages
   to pkg.pr.new (one comment per PR, updated on every push; the pkg.pr.new
   GitHub App must be installed on the repository), and installs the main
   package from the preview URL in a clean directory to render
@@ -231,7 +231,7 @@ build loop. Read the affected workflow and source action for CI changes.
 
 ## Release artifacts
 
-- Platforms use windows/linux/macos and amd64/arm64. Stable names and archive
+- Platforms use windows/linux/macos and amd64/arm64; Linux musl adds a `-musl` suffix. Stable names and archive
   roots are `shotium-cli-<platform>`, `shotium-c-abi-<platform>` and
   `shotium-example-<language>`, each compressed as real `.7z`.
 - CLI contains only its executable, two resource packs and license. C ABI
@@ -245,20 +245,20 @@ build loop. Read the affected workflow and source action for CI changes.
   their manifests. `SHOTIUM_SEVENZIP` can select a local 7-Zip executable.
 - Engine workflows upload `engine-<platform>-<fingerprint>`, each containing
   its CLI, C ABI and node archives plus `provenance.json`. Native checks and
-  five-language checks must have passed on all six platforms at that
+  five-language checks must have passed on all eight platforms at that
   fingerprint: the evidence artifact from the same run is what makes an
   engine publishable.
 - The publisher downloads those (`pnpm ci:engine-artifacts download-set`),
-  assembles the six npm platform packages from the node archives at the
+  assembles the eight npm platform packages from the node archives at the
   release version (`pnpm package:platform --from-archive`), then runs
   `pnpm package:checksums --collect dist/engine --dir dist/release` after
-  generating examples. One `SHA256SUMS` covers exactly 17 archives: 6 CLI,
-  6 C ABI and 5 examples (go/python/rust/csharp/java). Lines are sorted by
+  generating examples. One `SHA256SUMS` covers exactly 21 archives: 8 CLI,
+  8 C ABI and 5 examples (go/python/rust/csharp/java). Lines are sorted by
   filename with lowercase SHA256, two spaces, basename and LF. Missing,
   duplicate, unexpected or tampered files stop publication; recheck with
   `pnpm package:checksums --dir dist/release --check` before upload.
-- Upload exactly 18 assets; GitHub adds two automatic source archives for
-  20 items on the Release page. The checksum list excludes itself, npm
+- Upload exactly 22 assets; GitHub adds two automatic source archives for
+  24 items on the Release page. The checksum list excludes itself, npm
   tarballs and those source archives. No per-archive checksum files.
 - User download URLs use `releases/latest/download/<fixed-name>`; guides show
   how to check just selected attachments from `SHA256SUMS`. Native examples
@@ -266,8 +266,9 @@ build loop. Read the affected workflow and source action for CI changes.
   `releases/download/<tag>/` base for a matching historical release.
 - The split starts with the next normal release. Preserve existing v0.7.0
   assets and historical measurements. Do not infer new sizes from old bundles.
-  The seven npm packages retain their existing names, versions, contents and
-  runtime contracts. Rehearse `publish.yml` with `dry_run=true` on the final
+  Existing non-Linux and glibc package names remain stable; the two musl
+  packages add a `-musl` suffix. All eight native packages share the main
+  package version. Rehearse `publish.yml` with `dry_run=true` on the final
   commit before tagging; a packaging change does not itself authorize release.
 
 ## Tests and measurements

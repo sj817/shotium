@@ -1,4 +1,4 @@
-# Builds //shot:shot on Linux for x64 or arm64, both on an x64 host.
+# Builds //shot:shot on Linux for x64/arm64 and glibc/musl, all on an x64 host.
 #
 # arm64 is cross-compiled, and not by preference. It was native at first, on
 # ubuntu-24.04-arm, which GitHub documents as the same machine as the x64
@@ -15,13 +15,14 @@
 # exists. Nothing in this fork can conjure a CIPD package that was never built,
 # so the fix is to build the way the package list assumes.
 #
-# Cross-compiling also settles the sysroot, which is the other half of the same
-# assumption: debian_bullseye_arm64-sysroot is gated on checkout_arm64, so
-# target_cpu in .gclient is what fetches it.
+# Cross-compiling also settles the glibc arm64 sysroot: the Debian sysroot is
+# gated on checkout_arm64, so target_cpu in .gclient is what fetches it. The
+# musl targets use per-architecture Alpine sysroots assembled and cached by
+# linux-source.
 #
-# The cost is real and worth stating: an x64 runner cannot execute an arm64
-# binary, so run_checks is ignored for that architecture. windows-arm64 is in
-# the same position for the same reason.
+# Compilation stays on x64, but check-ffi downloads the completed artifacts to
+# a native hosted runner for each architecture. arm64 therefore gets the same
+# runtime, FFI and npm delivery coverage after the cross build.
 #
 # This is deliberately a separate workflow from engine-windows.yml rather than
 # a matrix entry on it. The Windows build works; folding an unproven target
@@ -46,7 +47,7 @@
 # Discovering a one-line GN error costs half an hour this way instead of the
 # four it takes to reach the link step and fail there.
 name: engine-linux
-run-name: "engine-linux: ${{ inputs.arch }} ${{ inputs.mode }} (${{ inputs.shards }} shards)"
+run-name: "engine-linux: ${{ inputs.platform }} ${{ inputs.mode }} (${{ inputs.shards }} shards)"
 
 on:
   workflow_dispatch:
@@ -56,11 +57,11 @@ on:
         type: choice
         options: [probe, build]
         default: probe
-      arch:
-        description: 'amd64 (native) or arm64 (cross-compiled from this amd64 host)'
+      platform:
+        description: 'complete Linux target: architecture plus libc'
         type: choice
-        options: [amd64, arm64]
-        default: amd64
+        options: [linux-amd64, linux-arm64, linux-amd64-musl, linux-arm64-musl]
+        default: linux-amd64
       jobs:
         description: 'ninja -j (4 cores; blink layout TUs peak at ~1.2 GB each)'
         default: '4'
@@ -72,7 +73,7 @@ on:
         description: 'auto: one runner when a build directory saved at this fingerprint exists, platform defaults otherwise; integer: explicit shard count'
         default: auto
 
-  # engine.yml calls this for every architecture it finds missing at the
+  # engine.yml calls this for every complete Linux target it finds missing at the
   # current fingerprint; the dispatch above stays for building one platform
   # by hand. Both declare the same inputs, because every step below reads
   # `inputs.*` -- never `github.event.inputs`, which under workflow_call is
@@ -82,7 +83,7 @@ on:
       mode:
         type: string
         default: build
-      arch:
+      platform:
         type: string
         required: true
       fingerprint:
@@ -103,7 +104,9 @@ on:
 # people see spell it amd64. The build-directory artifacts are named with
 # the public spelling; the toolchain cache keeps the GN one.
 env:
-  SHOT_CPU: ${{ inputs.arch == 'arm64' && 'arm64' || 'x64' }}
+  SHOT_ARCH: ${{ contains(inputs.platform, 'arm64') && 'arm64' || 'amd64' }}
+  SHOT_CPU: ${{ contains(inputs.platform, 'arm64') && 'arm64' || 'x64' }}
+  SHOT_LIBC: ${{ endsWith(inputs.platform, '-musl') && 'musl' || 'glibc' }}
 
 jobs:
   # Every job name below carries the engine fingerprint, and every artifact
@@ -114,7 +117,7 @@ jobs:
     permissions:
       contents: read
       actions: read
-    name: "resolve: shotium-linux-${{ inputs.arch }}"
+    name: "resolve: shotium-${{ inputs.platform }}"
     runs-on: ubuntu-latest
     outputs:
       fingerprint: ${{ steps.fingerprint.outputs.fingerprint }}
@@ -153,7 +156,7 @@ jobs:
       - id: shards
         env:
           GH_TOKEN: ${{ github.token }}
-          SHOT_PLATFORM: linux
+          SHOT_TARGET: ${{ inputs.platform }}
           SHOT_SHARDS: ${{ inputs.shards }}
           SHOT_FINGERPRINT: ${{ steps.fingerprint.outputs.fingerprint }}
         run: pnpm ci:select-shards
@@ -164,7 +167,7 @@ jobs:
   # files and host tools that needs), tars what it built with its two logs,
   # and the final job transplants the tars into its own build directory
   # (scripts/build/shards.ts merge) and finds only the link left to do.
-  # Measured on Linux amd64: 73 minutes cold as one job, 47 as four shards
+  # Measured on Linux glibc amd64: 73 minutes cold as one job, 47 as four shards
   # plus the final job; a warm run 18 minutes. A compiler cache in front of
   # the final job was measured first and lost: every sccache hit still
   # preprocessed the unit, 1-2 s each, 20 minutes on the final job for
@@ -183,7 +186,7 @@ jobs:
   # the final job's own gn gen would write them newer than the objects and
   # ninja would rebuild everything below them.
   compile:
-    name: "compile: shotium-linux-${{ inputs.arch }}-${{ needs.meta.outputs.fingerprint }} ${{ matrix.shard }}/${{ needs.meta.outputs.shard_count }}"
+    name: "compile: shotium-${{ inputs.platform }}-${{ needs.meta.outputs.fingerprint }} ${{ matrix.shard }}/${{ needs.meta.outputs.shard_count }}"
     needs: meta
     if: inputs.mode == 'build' && needs.meta.outputs.shard_count != '1'
     runs-on: ubuntu-24.04
@@ -215,9 +218,10 @@ jobs:
       - name: source, DEPS, build directory, gn gen
         uses: ./actions/.github/actions/linux-source
         with:
-          arch: ${{ inputs.arch }}
+          arch: ${{ env.SHOT_ARCH }}
           cpu: ${{ env.SHOT_CPU }}
-          platform: linux-${{ inputs.arch }}
+          libc: ${{ env.SHOT_LIBC }}
+          platform: ${{ inputs.platform }}
           build-dir-run-id: ${{ needs.meta.outputs.build_dir_run_id }}
 
       - name: this shard's slice of the objects
@@ -254,7 +258,7 @@ jobs:
       - name: upload the shard
         uses: actions/upload-artifact@v7
         with:
-          name: shard-linux-${{ inputs.arch }}-${{ matrix.shard }}
+          name: shard-${{ inputs.platform }}-${{ matrix.shard }}
           path: shard.tar
           if-no-files-found: error
           retention-days: 1
@@ -263,7 +267,7 @@ jobs:
           compression-level: 1
 
   build:
-    name: "${{ inputs.mode }}: shotium-linux-${{ inputs.arch }}-${{ needs.meta.outputs.fingerprint }}"
+    name: "${{ inputs.mode }}: shotium-${{ inputs.platform }}-${{ needs.meta.outputs.fingerprint }}"
     # Deliberately not `needs: compile`. This job builds the last slice
     # itself and waits for the others' artifacts below, so its setup runs
     # while they compile instead of after them. A shard that fails is not
@@ -294,9 +298,10 @@ jobs:
       - name: source, DEPS, build directory, gn gen
         uses: ./actions/.github/actions/linux-source
         with:
-          arch: ${{ inputs.arch }}
+          arch: ${{ env.SHOT_ARCH }}
           cpu: ${{ env.SHOT_CPU }}
-          platform: linux-${{ inputs.arch }}
+          libc: ${{ env.SHOT_LIBC }}
+          platform: ${{ inputs.platform }}
           build-dir-run-id: ${{ needs.meta.outputs.build_dir_run_id }}
 
       - name: this job's slice of the objects
@@ -325,16 +330,16 @@ jobs:
         # uploading -- ninja below then builds whatever never arrived.
         run: |
           pnpm --silent ci:await-shards \
-            --prefix 'shard-linux-${{ inputs.arch }}-' \
+            --prefix 'shard-${{ inputs.platform }}-' \
             --shards '${{ needs.meta.outputs.shard_count }}' \
-            --job-prefix 'compile: shotium-linux-${{ inputs.arch }}-${{ needs.meta.outputs.fingerprint }}'
+            --job-prefix 'compile: shotium-${{ inputs.platform }}-${{ needs.meta.outputs.fingerprint }}'
 
       - name: download the shards
         if: ${{ inputs.mode == 'build' && needs.meta.outputs.shard_count != '1' }}
         continue-on-error: true   # no artifact at all is a slow build, not a failed one
         uses: actions/download-artifact@v8
         with:
-          pattern: shard-linux-${{ inputs.arch }}-*
+          pattern: shard-${{ inputs.platform }}-*
           path: shards
 
       - name: merge the shards into the build directory
@@ -384,7 +389,7 @@ jobs:
         # is the one worth having: pnpm restore:upstream --log
         # reads exactly this file and puts back whatever it names.
         with:
-          name: probe-linux-${{ inputs.arch }}
+          name: probe-${{ inputs.platform }}
           path: /tmp/probe.txt
           if-no-files-found: ignore
 
@@ -432,7 +437,7 @@ jobs:
 
       # What this run read: ninja's inputs and deps log, gn's build.ninja.d,
       # the jumbo source lists. A probe exports the graph without the deps log.
-      # `pnpm trim-tree plan` takes the six platforms' exports and computes
+      # `pnpm trim-tree plan` takes the eight platforms' exports and computes
       # which tracked files no build opens.
       - name: export the build graph
         if: always()
@@ -445,7 +450,7 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact@v7
         with:
-          name: graph-linux-${{ inputs.arch }}
+          name: graph-${{ inputs.platform }}
           path: graph
           if-no-files-found: warn
 
@@ -481,7 +486,7 @@ jobs:
         if: always() && steps.pack.outputs.saved == 'true'
         uses: actions/upload-artifact@v7
         with:
-          name: build-dir-linux-${{ inputs.arch }}
+          name: build-dir-${{ inputs.platform }}
           path: ${{ runner.temp }}/build-dir.tar.zst
           if-no-files-found: error
           compression-level: 0
@@ -499,7 +504,7 @@ jobs:
         # that only grows is slow to search. Three per platform: this run's
         # and two to fall back on. Never fatal: a build that finished is
         # still a build that finished.
-        run: pnpm ci:engine-artifacts prune --name build-dir-linux-${{ inputs.arch }} --keep 3
+        run: pnpm ci:engine-artifacts prune --name build-dir-${{ inputs.platform }} --keep 3
 
       - name: did the build finish
         if: ${{ inputs.mode == 'build' }}
@@ -521,27 +526,25 @@ jobs:
         if: ${{ inputs.mode == 'build' }}
         shell: bash
         working-directory: src
-        run: pnpm ci:engine-artifacts marker --platform linux-${{ inputs.arch }} --fingerprint ${{ needs.meta.outputs.fingerprint }} --out "$RUNNER_TEMP/build-dir.json"
+        run: pnpm ci:engine-artifacts marker --platform ${{ inputs.platform }} --fingerprint ${{ needs.meta.outputs.fingerprint }} --out "$RUNNER_TEMP/build-dir.json"
 
       - uses: actions/upload-artifact@v7
         if: ${{ inputs.mode == 'build' }}
         with:
-          name: build-dir-linux-${{ inputs.arch }}-${{ needs.meta.outputs.fingerprint }}
+          name: build-dir-${{ inputs.platform }}-${{ needs.meta.outputs.fingerprint }}
           path: ${{ runner.temp }}/build-dir.json
           if-no-files-found: error
           retention-days: 90
           overwrite: true
 
       - name: checks
-        # x64 only. The runner is x64 for both architectures now, so there is
-        # nothing here that can execute an arm64 binary; asking would fail on
-        # "cannot execute binary file" and read as a broken engine rather than
-        # a host that cannot run it. An arm64 artifact therefore ships checked
-        # by nothing but the compiler and the linker -- worth remembering
-        # before trusting one.
+        # These in-build checks are limited to glibc x64 because compilation
+        # runs on an x64 Ubuntu host. check-ffi below downloads every completed
+        # target to a matching native runner; musl executes inside Alpine there.
         if: ${{ success() && inputs.mode == 'build'
                 && inputs.run_checks
-                && inputs.arch == 'amd64' }}
+                && env.SHOT_ARCH == 'amd64'
+                && env.SHOT_LIBC == 'glibc' }}
         working-directory: src
         run: |
           pnpm verify:serve out/Shot/shotium
@@ -550,7 +553,7 @@ jobs:
           # The GN build already produced the self-contained Node addon.
           # The package is TypeScript, so what the check suites import is a
           # build output rather than a file in the tree. There is no frozen
-          # lockfile -- see checks.yml for why it cannot carry the six
+          # lockfile -- see checks.yml for why it cannot carry the eight
           # optionalDependencies yet.
           ( cd apps/typescript && pnpm install --no-lockfile && pnpm run build )
 
@@ -592,7 +595,7 @@ jobs:
         if: ${{ success() && inputs.mode == 'build' }}
         uses: actions/upload-artifact@v7
         with:
-          name: unstripped-linux-${{ inputs.arch }}
+          name: unstripped-${{ inputs.platform }}
           path: |
             src/out/Shot/shotium
             src/out/Shot/libshotium.so
@@ -661,9 +664,9 @@ jobs:
         # CLI and C ABI are independent deliveries. Each archive and its root
         # directory have a stable name; the Release tag identifies the version.
         run: |
-          cli_stem="shotium-cli-linux-${{ inputs.arch }}"
-          abi_stem="shotium-c-abi-linux-${{ inputs.arch }}"
-          node_stem="shotium-node-linux-${{ inputs.arch }}"
+          cli_stem="shotium-cli-${{ inputs.platform }}"
+          abi_stem="shotium-c-abi-${{ inputs.platform }}"
+          node_stem="shotium-node-${{ inputs.platform }}"
           rm -rf dist "$cli_stem.7z" "$abi_stem.7z" "$node_stem.7z"
           pnpm package:cli --build out/Shot --os linux --dest "dist/$cli_stem"
           pnpm package:c-abi --build out/Shot --os linux --dest "dist/$abi_stem"
@@ -671,7 +674,7 @@ jobs:
           # previews turn it into the npm platform package for whatever
           # version they ship (pnpm package:platform --from-archive).
           pnpm package:node --build out/Shot --os linux --dest "dist/$node_stem"
-          pnpm ci:engine-artifacts provenance --platform "linux-${{ inputs.arch }}" \
+          pnpm ci:engine-artifacts provenance --platform "${{ inputs.platform }}" \
             --fingerprint "${{ needs.meta.outputs.fingerprint }}" --out provenance.json
           for package_stem in "$cli_stem" "$abi_stem" "$node_stem"; do
             ( cd dist && 7z a -t7z -mx=9 "../$package_stem.7z" "$package_stem" )
@@ -686,7 +689,7 @@ jobs:
         if: ${{ success() && inputs.mode == 'build' }}
         uses: actions/upload-artifact@v7
         with:
-          name: engine-linux-${{ inputs.arch }}-${{ needs.meta.outputs.fingerprint }}
+          name: engine-${{ inputs.platform }}-${{ needs.meta.outputs.fingerprint }}
           path: |
             src/${{ env.SHOT_CLI_ARCHIVE }}
             src/${{ env.SHOT_C_ABI_ARCHIVE }}
@@ -707,7 +710,7 @@ jobs:
     if: ${{ inputs.mode == 'build' && inputs.run_checks }}
     uses: ./.github/workflows/check-ffi.yml
     with:
-      runner: ${{ inputs.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
-      platform: linux-${{ inputs.arch }}
-      artifact: engine-linux-${{ inputs.arch }}-${{ needs.meta.outputs.fingerprint }}
-      evidence: ffi-evidence-linux-${{ inputs.arch }}-${{ needs.meta.outputs.fingerprint }}
+      runner: ${{ contains(inputs.platform, 'arm64') && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
+      platform: ${{ inputs.platform }}
+      artifact: engine-${{ inputs.platform }}-${{ needs.meta.outputs.fingerprint }}
+      evidence: ffi-evidence-${{ inputs.platform }}-${{ needs.meta.outputs.fingerprint }}

@@ -8,7 +8,9 @@ Static HTML/CSS rendering engine extracted from Chromium: DOM layout, styling, a
 
 `@pixel.js/shotium` is the official Node.js SDK for [shotium](https://github.com/sj817/shotium). It extracts the core layout and painting capabilities from Chromium: Blink for DOM, styling, and layout, Skia for CPU rasterisation and encoding, and `//net` for HTTP fetching and disk caching. All browser-shell overhead—V8, the compositor, GPU processes, and DevTools—has been completely removed. Documents are rendered directly within the calling Node.js process on a dedicated engine thread, returning raw PNG, JPEG, or WebP byte buffers without spawning browser subprocesses, managing WebSocket connections, or risking process leaks
 
-The package has **zero runtime dependencies**. The engine binary is distributed via six platform packages automatically resolved by npm via `optionalDependencies` (supporting Windows, macOS, and Linux on both x64 and arm64 architectures)
+The JavaScript wrapper has **zero JavaScript runtime dependencies**. The engine binary is distributed through eight optional native packages: Windows and macOS on x64/arm64, plus Linux on x64/arm64 for both glibc and musl. npm and pnpm select the package matching the current OS, CPU and Linux libc. Unsuffixed Linux packages target glibc distributions such as Debian, Ubuntu and RHEL; `linux-*-musl` targets Alpine
+
+Linux public HTTPS uses the Chrome Root Store compiled into the engine. Linux builds do not read NSS, the host certificate database or enterprise CA settings; private-PKI endpoints therefore require a publicly trusted certificate chain
 
 ## Table of Contents
 

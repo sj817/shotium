@@ -1,24 +1,8 @@
-// How many runners an engine build gets, and which saved build directory
-// they all start from.
-//
-// why: a cold build of this tree needs four shards to finish inside the job
-// limit; a warm one -- the build directory saved by the previous run, with
-// nothing changed since -- needs one, and three more would each pay the
-// full source setup to compile nothing. The build directories are
-// artifacts named build-dir-<platform>, and each carries a marker naming
-// the engine fingerprint it was saved at. If a marker for this run's
-// fingerprint exists beside a blob, nothing needs compiling: one runner,
-// which restores that blob and relinks. Otherwise the newest trusted blob
-// is the warm start and the platform default decides the shard count.
-//
-// This only selects parallelism and the starting point: ninja and all the
-// checks still run. Anything that goes wrong here -- no token, an API
-// hiccup, no artifact yet -- falls back to a cold-shaped run, which is
-// slower and never wrong.
+// Select build parallelism and a platform-isolated warm build directory.
 import {appendFileSync} from 'node:fs';
 import path from 'node:path';
 
-import {platforms} from '../lib/platforms.ts';
+import {platformByLabel} from '../lib/platforms.ts';
 import {environment, findBuildDir} from './engine-artifacts.ts';
 
 export function shardCount(requested: string, platform: string, cpu: string): number {
@@ -29,18 +13,17 @@ export function shardCount(requested: string, platform: string, cpu: string): nu
 
 export interface Selection {
   count: number;
-  buildDirRunId: number | null;
+  buildDirRunId: number|null;
   reason: string;
 }
 
 export async function select(options: {
-  requested: string; platform: string; cpu: string; fingerprint: string | undefined;
-  lookup: (label: string, fingerprint: string | undefined) => Promise<{runId: number; exact: boolean} | null>;
+  requested: string; target: string; fingerprint: string|undefined;
+  lookup: (label: string, fingerprint: string|undefined) => Promise<{runId: number; exact: boolean}|null>;
 }): Promise<Selection> {
-  const target = platforms.find((p) => p.os === options.platform && p.cpu === options.cpu);
-  if (!target) throw new Error(`invalid platform/cpu ${options.platform}/${options.cpu}`);
-  const count = shardCount(options.requested, options.platform, options.cpu);
-  let dir: {runId: number; exact: boolean} | null = null;
+  const target = platformByLabel(options.target);
+  const count = shardCount(options.requested, target.os, target.cpu);
+  let dir: {runId: number; exact: boolean}|null = null;
   try {
     dir = await options.lookup(target.label, options.fingerprint);
   } catch (error) {
@@ -59,9 +42,9 @@ export function outputs(selection: Selection): string {
 }
 
 async function main(): Promise<void> {
-  const {GITHUB_OUTPUT: output, SHOT_PLATFORM: platform = '', SHOT_CPU: cpu = '', SHOT_SHARDS: requested = 'auto', SHOT_FINGERPRINT: fingerprint} = process.env;
+  const {GITHUB_OUTPUT: output, SHOT_TARGET: target = '', SHOT_SHARDS: requested = 'auto', SHOT_FINGERPRINT: fingerprint} = process.env;
   const selection = await select({
-    requested, platform, cpu, fingerprint: fingerprint || undefined,
+    requested, target, fingerprint: fingerprint || undefined,
     lookup: async (label, fp) => {
       const {api, currentRunId} = environment();
       return findBuildDir(api, label, fp, currentRunId);

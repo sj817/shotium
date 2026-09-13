@@ -4,9 +4,9 @@ import {resolve} from '../lib/repo.ts';
 import {collectNativeArchives, verifyReleaseChecksums, writeReleaseChecksums} from '../lib/release-artifacts.ts';
 
 const cli = cac('pnpm package:checksums');
-cli.command('', 'write or verify SHA256SUMS for 17 archives; paths resolve from the repository root')
+cli.command('', 'write or verify SHA256SUMS for 21 archives; paths resolve from the repository root')
     .option('--dir <dir>', 'directory containing only the Release attachments (required)')
-    .option('--collect <dir>', 'collect the six platform artifact directories before generating the list')
+    .option('--collect <dir>', 'collect the eight platform artifact directories before generating the list')
     .option('--check', 'verify the file set and hashes without writing')
     .action(async (options: {dir?: string; check?: boolean; collect?: string}) => {
       try {
@@ -18,7 +18,7 @@ cli.command('', 'write or verify SHA256SUMS for 17 archives; paths resolve from 
         }
         if (!options.check) await writeReleaseChecksums(directory);
         await verifyReleaseChecksums(directory);
-        console.log('Verified 17 archives and SHA256SUMS: ' + directory);
+        console.log('Verified 21 archives and SHA256SUMS: ' + directory);
       } catch (error) {
         console.error(error);
         process.exitCode = 1;

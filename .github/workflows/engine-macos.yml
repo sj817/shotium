@@ -128,7 +128,7 @@ jobs:
       - id: shards
         env:
           GH_TOKEN: ${{ github.token }}
-          SHOT_PLATFORM: macos
+          SHOT_TARGET: macos-${{ inputs.arch }}
           SHOT_SHARDS: ${{ inputs.shards }}
           SHOT_FINGERPRINT: ${{ steps.fingerprint.outputs.fingerprint }}
         run: pnpm ci:select-shards
@@ -400,7 +400,7 @@ jobs:
 
       # What this run read: ninja's inputs and deps log, gn's build.ninja.d,
       # the jumbo source lists. A probe exports the graph without the deps log.
-      # `pnpm trim-tree plan` takes the six platforms' exports and computes
+      # `pnpm trim-tree plan` takes the eight platforms' exports and computes
       # which tracked files no build opens. macOS is the one platform whose
       # graph cannot be generated on the development host.
       - name: export the build graph
@@ -576,7 +576,7 @@ jobs:
           # The GN build already produced the self-contained Node addon.
           # The package is TypeScript, so what the check suites import is a
           # build output rather than a file in the tree. There is no frozen
-          # lockfile -- see checks.yml for why it cannot carry the six
+          # lockfile -- see checks.yml for why it cannot carry the eight
           # optionalDependencies yet.
           ( cd apps/typescript && pnpm install --no-lockfile && pnpm run build )
 

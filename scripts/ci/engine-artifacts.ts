@@ -145,8 +145,8 @@ export async function findBuildDir(api: Api, label: string, fingerprint: string 
 export interface Status {
   fingerprint: string;
   platforms: Array<{label: string; runId: number | null}>;
-  /** Public architectures still to build, per OS: the matrices engine.yml fans out. */
-  build: Record<EngineOS, string[]>;
+  /** Complete targets still to build, per OS: libc is part of Linux identity. */
+  build: Record<EngineOS, Array<{label: string; arch: Platform['arch']; cpu: Platform['cpu']; libc?: Platform['libc']}>>;
   missing: string[];
   complete: boolean;
 }
@@ -157,7 +157,7 @@ export async function status(api: Api, fingerprint: string, targets: Platform[],
   for (const target of targets) {
     const set = force ? null : await findEngineSet(api, fingerprint, target.label, currentRunId);
     platforms.push({label: target.label, runId: set?.runId ?? null});
-    if (!set) build[target.os].push(target.arch);
+    if (!set) build[target.os].push({label: target.label, arch: target.arch, cpu: target.cpu, ...(target.libc ? {libc: target.libc} : {})});
   }
   const missing = platforms.filter((p) => p.runId === null).map((p) => p.label);
   return {fingerprint, platforms, build, missing, complete: missing.length === 0};
@@ -232,7 +232,7 @@ cli.command('status', 'which platforms already have an engine and evidence at th
     const {repo, api, currentRunId} = environment();
     const fingerprint = options.fingerprint ?? fail('--fingerprint is required');
     const result = await status(api, fingerprint, selectPlatforms(options.targets), options.force ?? false, currentRunId);
-    for (const p of result.platforms) console.log(`  ${p.label.padEnd(14)} ${p.runId === null ? pc.yellow('to build') : pc.green(`run ${p.runId}`)}`);
+    for (const p of result.platforms) console.log(`  ${p.label.padEnd(20)} ${p.runId === null ? pc.yellow('to build') : pc.green(`run ${p.runId}`)}`);
     if (options.output) output(statusOutputs(result));
     if (options.summary && process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, statusSummary(result, repo));
     if (options.requireComplete && !result.complete) fail(`no engine at ${fingerprint} for ${result.missing.join(', ')}`);
@@ -266,10 +266,10 @@ cli.command('download', 'download the newest trusted artifact with this name')
     await download(repo, runId, name, dir);
   });
 
-// Twelve downloads laid out the way publish.yml and check-ffi expect them:
+// Sixteen artifact downloads laid out the way publish.yml expects them:
 // the CLI and C ABI archives per platform for the Release, the node archive
 // and provenance per platform for the npm packages, and the evidence.
-cli.command('download-set', 'fetch engine and evidence artifacts for all six platforms at a fingerprint')
+cli.command('download-set', 'fetch engine and evidence artifacts for all eight platforms at a fingerprint')
   .option('--fingerprint <id>', 'the engine fingerprint')
   .option('--targets <list>', 'all, or comma-separated platform labels', {default: 'all'})
   .option('--engine-dir <dir>', 'CLI + C ABI archives go to <dir>/<label>/')
@@ -296,10 +296,12 @@ cli.command('download-set', 'fetch engine and evidence artifacts for all six pla
       const left = readdirSync(engine).sort();
       const expected = [`shotium-c-abi-${platform.label}.7z`, `shotium-cli-${platform.label}.7z`];
       if (left.join('\n') !== expected.join('\n')) fail(`${set.engine.name} holds ${left.join(', ')}; expected ${expected.join(', ')}`);
-      for (const report of [...releaseLanguages.map((l) => `ffi-check/${l}/report.json`), 'delivery-check/report.json']) {
+      const reports = [...releaseLanguages.map((l) => `ffi-check/${l}/report.json`), 'delivery-check/report.json'];
+      if (platform.os === 'linux') reports.push('ffi-check/dependencies/report.txt');
+      for (const report of reports) {
         if (!existsSync(path.join(evidence, report))) fail(`${set.evidence.name} lacks ${report}`);
       }
-      console.log(`${pc.cyan(platform.label.padEnd(14))} run ${set.runId}: engine, node, evidence`);
+      console.log(`${pc.cyan(platform.label.padEnd(20))} run ${set.runId}: engine, node, evidence`);
     }
   });
 

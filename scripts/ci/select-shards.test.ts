@@ -9,20 +9,19 @@ test('cold defaults retain platform concurrency, explicit input is bounded', () 
 });
 
 test('a build directory saved at this fingerprint means one runner; anything else keeps the default', async () => {
-  const exact = await select({requested: 'auto', platform: 'windows', cpu: 'x64', fingerprint: 'abc', lookup: async () => ({runId: 7, exact: true})});
+  const exact = await select({requested: 'auto', target: 'windows-amd64', fingerprint: 'abc', lookup: async () => ({runId: 7, exact: true})});
   assert.deepEqual([exact.count, exact.buildDirRunId], [1, 7]);
-  const warm = await select({requested: 'auto', platform: 'windows', cpu: 'x64', fingerprint: 'abc', lookup: async () => ({runId: 7, exact: false})});
+  const warm = await select({requested: 'auto', target: 'windows-amd64', fingerprint: 'abc', lookup: async () => ({runId: 7, exact: false})});
   assert.deepEqual([warm.count, warm.buildDirRunId], [4, 7]);
-  const cold = await select({requested: 'auto', platform: 'linux', cpu: 'arm64', fingerprint: 'abc', lookup: async () => null});
+  const cold = await select({requested: 'auto', target: 'linux-arm64-musl', fingerprint: 'abc', lookup: async () => null});
   assert.deepEqual([cold.count, cold.buildDirRunId], [3, null]);
-  // An explicit count is an instruction, even when nothing needs compiling.
-  const forced = await select({requested: '2', platform: 'windows', cpu: 'x64', fingerprint: 'abc', lookup: async () => ({runId: 7, exact: true})});
+  assert.match(cold.reason, /linux-arm64-musl/);
+  const forced = await select({requested: '2', target: 'windows-amd64', fingerprint: 'abc', lookup: async () => ({runId: 7, exact: true})});
   assert.deepEqual([forced.count, forced.buildDirRunId], [2, 7]);
-  // The lookup failing is a slow run, not a failed one.
-  const broken = await select({requested: 'auto', platform: 'macos', cpu: 'x64', fingerprint: undefined, lookup: async () => { throw new Error('503'); }});
+  const broken = await select({requested: 'auto', target: 'macos-amd64', fingerprint: undefined, lookup: async () => { throw new Error('503'); }});
   assert.deepEqual([broken.count, broken.buildDirRunId], [2, null]);
   assert.match(broken.reason, /503/);
-  await assert.rejects(select({requested: 'auto', platform: 'plan9', cpu: 'x64', fingerprint: undefined, lookup: async () => null}), /invalid platform/);
+  await assert.rejects(select({requested: 'auto', target: 'plan9-x64', fingerprint: undefined, lookup: async () => null}), /unknown platform/);
 });
 
 test('the outputs name every slice and the run to restore from', () => {

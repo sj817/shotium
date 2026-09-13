@@ -9,7 +9,7 @@
 // are spelled once.
 //
 //   pnpm ci:dispatch-engines                            # build what is missing on main
-//   pnpm ci:dispatch-engines --force --wait             # rebuild all six and wait
+//   pnpm ci:dispatch-engines --force --wait             # rebuild all eight and wait
 //   pnpm ci:dispatch-engines --only windows-amd64,linux-amd64 --ref my-branch
 //
 // The dispatch API does not return the run it created, so this finds the

@@ -130,7 +130,7 @@ jobs:
       - id: shards
         env:
           GH_TOKEN: ${{ github.token }}
-          SHOT_PLATFORM: windows
+          SHOT_TARGET: windows-${{ inputs.arch }}
           SHOT_SHARDS: ${{ inputs.shards }}
           SHOT_FINGERPRINT: ${{ steps.fingerprint.outputs.fingerprint }}
         run: pnpm ci:select-shards
@@ -421,7 +421,7 @@ jobs:
           ninja -C out/Shot shot shot_c shot_node -j ${{ inputs.jobs }}
 
       # What this build read: ninja's inputs and deps log, gn's build.ninja.d,
-      # the jumbo source lists. `pnpm trim-tree plan` takes the six platforms'
+      # the jumbo source lists. `pnpm trim-tree plan` takes the eight platforms'
       # exports and computes which tracked files no build opens.
       - name: export the build graph
         if: always()
@@ -608,10 +608,9 @@ jobs:
           overwrite: true
 
       - name: checks
-        # x64 only, for the reason the Linux job gives: this runner is x64 and
-        # cannot execute an arm64 binary, so asking would fail on a host
-        # limitation and read as a broken engine. An arm64 artifact ships
-        # checked by nothing but the compiler and the linker.
+        # The build host can run only x64 here. check-ffi below downloads each
+        # completed artifact to a matching native runner, so Windows arm64 gets
+        # the same runtime, FFI and npm delivery checks after this job.
         if: success() && inputs.run_checks && inputs.arch == 'amd64'
         shell: pwsh
         working-directory: src
@@ -636,7 +635,7 @@ jobs:
           # The GN build already produced the self-contained Node addon.
           # The package is TypeScript, so what the check suites import is a
           # build output rather than a file in the tree. There is no frozen
-          # lockfile -- see checks.yml for why it cannot carry the six
+          # lockfile -- see checks.yml for why it cannot carry the eight
           # optionalDependencies yet.
           Push-Location apps/typescript
           pnpm install --no-lockfile

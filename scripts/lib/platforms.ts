@@ -1,19 +1,14 @@
-// The six engine targets, in one place.
+// The eight native engine targets, in one place.
 //
-// why: perf/ci.ts, ci/dispatch-engines.ts, package/platform.ts and
-// publish.yml each kept their own six-row table -- public label, GN cpu,
-// npm suffix, runner -- and four copies of the same table are four places
-// for one of them to be wrong. Everything that needs a column reads it here.
-//
-// Two spellings coexist on purpose. The public one (windows-amd64) names
-// Release archives, CI artifacts and job names, and is what a person types.
-// The npm one (win32-x64) is process.platform-process.arch, which is what
-// npm matches a platform package's `os`/`cpu` fields against.
+// Public labels name Release archives, CI artifacts and build directories.
+// npm suffixes follow process.platform/process.arch; Linux adds a suffix only
+// for musl so the established glibc package names remain stable.
 
 export type EngineOS = 'windows' | 'linux' | 'macos';
+export type LinuxLibc = 'glibc' | 'musl';
 
 export interface Platform {
-  /** Public label: windows-amd64. Artifact names, archives, job names. */
+  /** Public label: windows-amd64, linux-amd64-musl. */
   label: string;
   os: EngineOS;
   /** Public architecture spelling. */
@@ -22,11 +17,13 @@ export interface Platform {
   cpu: 'x64' | 'arm64';
   /** The --os value the package scripts take. */
   packageOs: 'win' | 'linux' | 'mac';
-  /** process.platform-process.arch: the suffix of @pixel.js/shotium-<npm>. */
+  /** The suffix of @pixel.js/shotium-<npm>. */
   npm: string;
-  /** Where the engine is compiled. arm64 Windows and Linux cross-compile on x64 hosts. */
+  /** Present only on Linux, where the package manager must select a libc. */
+  libc?: LinuxLibc;
+  /** Where the engine is compiled. Linux arm64 cross-compiles on an x64 host. */
   buildRunner: string;
-  /** A hosted runner that can execute what was built. */
+  /** A hosted runner that can execute the architecture. */
   nativeRunner: string;
   /** The reusable workflow that builds it. */
   workflow: string;
@@ -37,9 +34,13 @@ export const platforms: readonly Platform[] = [
     buildRunner: 'windows-2025', nativeRunner: 'windows-2025', workflow: 'engine-windows.yml'},
   {label: 'windows-arm64', os: 'windows', arch: 'arm64', cpu: 'arm64', packageOs: 'win', npm: 'win32-arm64',
     buildRunner: 'windows-2025', nativeRunner: 'windows-11-arm', workflow: 'engine-windows.yml'},
-  {label: 'linux-amd64', os: 'linux', arch: 'amd64', cpu: 'x64', packageOs: 'linux', npm: 'linux-x64',
+  {label: 'linux-amd64', os: 'linux', arch: 'amd64', cpu: 'x64', packageOs: 'linux', npm: 'linux-x64', libc: 'glibc',
     buildRunner: 'ubuntu-24.04', nativeRunner: 'ubuntu-24.04', workflow: 'engine-linux.yml'},
-  {label: 'linux-arm64', os: 'linux', arch: 'arm64', cpu: 'arm64', packageOs: 'linux', npm: 'linux-arm64',
+  {label: 'linux-arm64', os: 'linux', arch: 'arm64', cpu: 'arm64', packageOs: 'linux', npm: 'linux-arm64', libc: 'glibc',
+    buildRunner: 'ubuntu-24.04', nativeRunner: 'ubuntu-24.04-arm', workflow: 'engine-linux.yml'},
+  {label: 'linux-amd64-musl', os: 'linux', arch: 'amd64', cpu: 'x64', packageOs: 'linux', npm: 'linux-x64-musl', libc: 'musl',
+    buildRunner: 'ubuntu-24.04', nativeRunner: 'ubuntu-24.04', workflow: 'engine-linux.yml'},
+  {label: 'linux-arm64-musl', os: 'linux', arch: 'arm64', cpu: 'arm64', packageOs: 'linux', npm: 'linux-arm64-musl', libc: 'musl',
     buildRunner: 'ubuntu-24.04', nativeRunner: 'ubuntu-24.04-arm', workflow: 'engine-linux.yml'},
   {label: 'macos-amd64', os: 'macos', arch: 'amd64', cpu: 'x64', packageOs: 'mac', npm: 'darwin-x64',
     buildRunner: 'macos-15-intel', nativeRunner: 'macos-15-intel', workflow: 'engine-macos.yml'},
@@ -48,6 +49,9 @@ export const platforms: readonly Platform[] = [
 ];
 
 export const platformLabels: readonly string[] = platforms.map((p) => p.label);
+
+/** v0.7.x has no musl packages, so the release performance gate stays on the six comparable targets. */
+export const performancePlatforms: readonly Platform[] = platforms.filter((p) => p.libc !== 'musl');
 
 export function platformByLabel(label: string): Platform {
   const platform = platforms.find((p) => p.label === label);

@@ -6,4 +6,19 @@ declare_args() {
   # Builds the single-process //shot renderer instead of Chromium. This lets
   # umbrella targets avoid generating interfaces with no Shot consumer.
   is_shot_build = false
+
+  # Build the Linux target against musl. Host tools stay on the runner's
+  # glibc so they can execute during a cross build.
+  is_shot_musl = false
 }
+
+declare_args() {
+  # Shot's custom musl target and its system-allocator variant keep this true.
+  # The x64 host toolchain overrides it so build-time executables use glibc.
+  is_shot_musl_target_toolchain = is_shot_musl
+}
+
+assert(!is_shot_musl || (is_shot_build && target_os == "linux"),
+       "is_shot_musl is valid only for a Linux Shot build")
+assert(!is_shot_musl_target_toolchain || is_shot_musl,
+       "the musl target toolchain requires is_shot_musl")

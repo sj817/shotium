@@ -7,9 +7,8 @@
 #   echo 'import("//build/args/shot-linux.gn")' > out/Shot/args.gn
 #   gn gen out/Shot
 #
-# Everything platform-neutral is in shot.gn; this file is only the two things
-# that are wrong to state anywhere else, because on Windows they are not merely
-# unnecessary but an error.
+# Everything platform-neutral is in shot.gn; this file contains Linux-only
+# choices that would be unnecessary or invalid on Windows.
 
 import("//build/args/shot.gn")
 
@@ -39,6 +38,18 @@ ozone_platform_headless = true
 # to. Turning the arg off is upstream's switch for that; the alternative is
 # vendoring a bus client that is never connected.
 use_dbus = false
+
+# The public Chrome Root Store is compiled into net. Shot does not expose
+# enterprise CA injection, so NSS and the host certificate database only
+# add runtime DSOs and host-specific behavior.
+use_nss_certs = false
+
+# GLib supplies desktop integration that this headless single-process
+# renderer never enters. The Generic message pump covers Shot's run loop.
+use_glib = false
+
+# Keep unwinding inside the binary instead of retaining libgcc_s.so.1.
+use_custom_libunwind = true
 
 # PartitionAlloc-Everywhere, off, and only here.
 #

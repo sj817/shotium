@@ -188,9 +188,9 @@ jobs:
         # would ship five stale pages.
         run: pnpm demo:sync --check
 
-      - name: the six platform packages are declared consistently
+      - name: the eight platform packages are declared consistently
         working-directory: apps/typescript
-        # The list of six exists twice: in optionalDependencies, which is what
+        # The list of eight exists twice: in optionalDependencies, which is what
         # the package manager installs, and in the lookup table that goes looking for them
         # afterwards. A rename that touches one and not the other installs
         # the engine and then reports that there is no engine for this
@@ -201,7 +201,7 @@ jobs:
         # in the build is exactly the failure this exists to catch.
         #
         # The version is pinned rather than ranged for the same class of
-        # reason: seven packages that must be installed together cannot be
+        # reason: nine packages that must be installed together cannot be
         # allowed to drift apart by a caret.
         run: |
           node -e '
@@ -212,21 +212,21 @@ jobs:
                 .map((f) => fs.readFileSync("dist/" + f, "utf8"))
                 .join("\n");
             const used = [...new Set(bundle.match(
-                /@pixel\.js\/shotium-[a-z0-9]+-[a-z0-9]+/g) || [])].sort();
+                /@pixel\.js\/shotium-(?:win32|darwin|linux)-(?:x64|arm64)(?:-musl)?/g) || [])].sort();
             const declared = Object.keys(pkg.optionalDependencies || {}).sort();
             if (declared.join(",") !== used.join(",")) {
               throw new Error("optionalDependencies and the bundle disagree:\n  " +
                   declared.join(" ") + "\n  " + used.join(" "));
             }
-            if (used.length !== 6) {
-              throw new Error(used.length + " platform packages, expected 6");
+            if (used.length !== 8) {
+              throw new Error(used.length + " platform packages, expected 8");
             }
             for (const [name, pin] of Object.entries(pkg.optionalDependencies)) {
               if (pin !== pkg.version) {
                 throw new Error(name + " is pinned to " + pin + ", not " + pkg.version);
               }
             }
-            console.log("ok: 6 platform packages at " + pkg.version);
+            console.log("ok: 8 platform packages at " + pkg.version);
           '
 
       - name: the tarball holds what it should and nothing else

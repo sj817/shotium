@@ -1,4 +1,4 @@
-# Builds whichever of the six engines the current tree does not have yet.
+# Builds whichever of the eight engines the current tree does not have yet.
 #
 # The engines are content-addressed. resolve computes the fingerprint of the
 # tracked files the build reads (scripts/ci/fingerprint.ts) and asks the
@@ -7,7 +7,7 @@
 # its own engine-<os>.yml. A push that changes documentation, the TypeScript
 # package, the benchmark or the workflows around the build therefore costs
 # one small job and no compiling, and a release tag reuses whatever `main`
-# built last -- publish.yml calls this workflow rather than expecting six
+# built last -- publish.yml calls this workflow rather than expecting eight
 # manual dispatches.
 #
 # Who calls it:
@@ -88,7 +88,7 @@ on:
         type: boolean
         default: false
       targets:
-        description: 'all, or a comma-separated subset: windows-amd64,windows-arm64,linux-amd64,linux-arm64,macos-amd64,macos-arm64'
+        description: 'all, or a comma-separated subset: windows-amd64,windows-arm64,linux-amd64,linux-arm64,linux-amd64-musl,linux-arm64-musl,macos-amd64,macos-arm64'
         default: all
       shards:
         description: 'auto, or an explicit shard count for every platform'
@@ -169,7 +169,7 @@ jobs:
           pnpm ci:engine-artifacts status --fingerprint "${{ steps.fingerprint.outputs.fingerprint }}" \
             --targets "$TARGETS" $flags --output --summary
 
-  # One job per OS, fanned out over the architectures resolve found missing.
+  # One job per OS, fanned out over complete targets. All eight target jobs can run concurrently.
   # The `if` guards the empty matrix: fromJSON('[]') is a hard error, not a
   # skip. `with:` may only name inputs the callee declares, and '' does not
   # fall back to the callee's default, hence the explicit jobs values.
@@ -180,10 +180,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: ${{ fromJSON(needs.resolve.outputs.windows) }}
+        target: ${{ fromJSON(needs.resolve.outputs.windows) }}
     uses: ./.github/workflows/engine-windows.yml
     with:
-      arch: ${{ matrix.arch }}
+      arch: ${{ matrix.target.arch }}
       fingerprint: ${{ needs.resolve.outputs.fingerprint }}
       shards: ${{ inputs.shards || 'auto' }}
       jobs: ${{ inputs.jobs || '4' }}
@@ -196,11 +196,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: ${{ fromJSON(needs.resolve.outputs.linux) }}
+        target: ${{ fromJSON(needs.resolve.outputs.linux) }}
     uses: ./.github/workflows/engine-linux.yml
     with:
       mode: build
-      arch: ${{ matrix.arch }}
+      platform: ${{ matrix.target.label }}
       fingerprint: ${{ needs.resolve.outputs.fingerprint }}
       shards: ${{ inputs.shards || 'auto' }}
       jobs: ${{ inputs.jobs || '4' }}
@@ -213,11 +213,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: ${{ fromJSON(needs.resolve.outputs.macos) }}
+        target: ${{ fromJSON(needs.resolve.outputs.macos) }}
     uses: ./.github/workflows/engine-macos.yml
     with:
       mode: build
-      arch: ${{ matrix.arch }}
+      arch: ${{ matrix.target.arch }}
       fingerprint: ${{ needs.resolve.outputs.fingerprint }}
       shards: ${{ inputs.shards || 'auto' }}
       jobs: ${{ inputs.jobs || '3' }}

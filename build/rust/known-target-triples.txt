@@ -17,6 +17,7 @@ aarch64-linux-android
 aarch64-pc-windows-msvc
 aarch64-unknown-fuchsia
 aarch64-unknown-linux-gnu
+aarch64-unknown-linux-musl
 arm64e-apple-ios
 arm-unknown-linux-gnueabi
 arm-unknown-linux-gnueabihf
@@ -41,5 +42,6 @@ x86_64-linux-android
 x86_64-pc-windows-msvc
 x86_64-unknown-fuchsia
 x86_64-unknown-linux-gnu
+x86_64-unknown-linux-musl
 powerpc64le-unknown-linux-gnu
 s390x-unknown-linux-gnu

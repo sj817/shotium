@@ -11,6 +11,7 @@ import path from 'node:path';
 import {cac} from 'cac';
 import {execa} from 'execa';
 import {globSync} from 'tinyglobby';
+import {packageName} from '../../apps/typescript/src/lib/platform.ts';
 import {exeName, resolve} from '../lib/repo.ts';
 
 async function main(platformDirectory: string, cli: string): Promise<void> {
@@ -24,8 +25,9 @@ async function main(platformDirectory: string, cli: string): Promise<void> {
   const mainTarball = globSync('*.tgz', {cwd: temporary, absolute: true})[0]!;
   writeFileSync(path.join(temporary, 'package.json'), '{"private":true}');
   await execa(npm, ['install', '--ignore-scripts', '--no-audit', '--no-fund', mainTarball, tarballs[0]!], {cwd: temporary});
-  const platform = `shotium-${process.platform}-${process.arch}`;
-  const platformPath = path.join(temporary, 'node_modules/@pixel.js', platform);
+  const packageIdentity = packageName();
+  assert.ok(packageIdentity, `unsupported delivery platform ${process.platform}-${process.arch}`);
+  const platformPath = path.join(temporary, 'node_modules', ...packageIdentity.split('/'));
   assert.equal(globSync(['**/*.dll', '**/*.so', '**/*.dylib'], {cwd: platformPath}).length, 0, 'npm platform package must not carry a C ABI library');
   assert.ok(!existsSync(path.join(platformPath, exeName)), 'npm platform package must not carry the CLI executable');
   const source = `
@@ -54,7 +56,7 @@ async function main(platformDirectory: string, cli: string): Promise<void> {
   const result = await execa(process.execPath, ['-e', source], {cwd: temporary, timeout: 30000, env: {
     SHOT_FIXTURE: fixture, SHOT_EXPECTED: createHash('sha256').update(readFileSync(cliPng)).digest('hex'), SHOT_PLATFORM: platformPath,
   }});
-  const report = {platform: process.platform, arch: process.arch, directory: temporary, ...JSON.parse(result.stdout)};
+  const report = {platform: process.platform, arch: process.arch, package: packageIdentity, directory: temporary, ...JSON.parse(result.stdout)};
   writeFileSync(path.join(output, 'report.json'), JSON.stringify(report, null, 2) + '\n');
   console.log('PASS clean npm delivery: capture, tiles, no CLI, no C ABI library');
 }

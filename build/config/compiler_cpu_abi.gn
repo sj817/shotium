@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/config/chromeos/args.gni")
+import("//build/config/shot_build.gni")
 import("//build/toolchain/toolchain.gni")
 
 if (current_cpu == "arm" || current_cpu == "arm64") {
@@ -49,8 +50,12 @@ if ((is_posix && !is_apple) || is_fuchsia) {
   # simplicity we always explicitly set the architecture.
   if (current_cpu == "x64") {
     if (is_clang && !is_android && !is_fuchsia && !is_chromeos_device) {
-      cpu_abi_cflags += [ "--target=x86_64-unknown-linux-gnu" ]
-      cpu_abi_ldflags += [ "--target=x86_64-unknown-linux-gnu" ]
+      _target_triple = "x86_64-unknown-linux-gnu"
+      if (is_shot_musl_target_toolchain) {
+        _target_triple = "x86_64-unknown-linux-musl"
+      }
+      cpu_abi_cflags += [ "--target=$_target_triple" ]
+      cpu_abi_ldflags += [ "--target=$_target_triple" ]
     } else {
       cpu_abi_cflags += [ "-m64" ]
       cpu_abi_ldflags += [ "-m64" ]
@@ -84,8 +89,12 @@ if ((is_posix && !is_apple) || is_fuchsia) {
     ]
   } else if (current_cpu == "arm64") {
     if (is_clang && !is_android && !is_fuchsia && !is_chromeos_device) {
-      cpu_abi_cflags += [ "--target=aarch64-linux-gnu" ]
-      cpu_abi_ldflags += [ "--target=aarch64-linux-gnu" ]
+      _target_triple = "aarch64-linux-gnu"
+      if (is_shot_musl_target_toolchain) {
+        _target_triple = "aarch64-unknown-linux-musl"
+      }
+      cpu_abi_cflags += [ "--target=$_target_triple" ]
+      cpu_abi_ldflags += [ "--target=$_target_triple" ]
     }
     if (target_os == "chromeos" && cros_target_cpu_arch != "" &&
         is_a_target_toolchain) {

@@ -105,15 +105,32 @@ test('status lists what to build per OS, and --force builds everything', async (
   const have = ['linux-amd64', 'macos-amd64', 'macos-arm64'];
   const records = have.flatMap((label, i) => [record(names(label, FP).engine, i + 1), record(names(label, FP).evidence, i + 1)]);
   const result = await status(api(records), FP, [...platforms], false);
-  assert.deepEqual(result.build, {windows: ['amd64', 'arm64'], linux: ['arm64'], macos: []});
-  assert.deepEqual(result.missing, ['windows-amd64', 'windows-arm64', 'linux-arm64']);
+  assert.deepEqual(result.build, {
+    windows: [
+      {label: 'windows-amd64', arch: 'amd64', cpu: 'x64'},
+      {label: 'windows-arm64', arch: 'arm64', cpu: 'arm64'},
+    ],
+    linux: [
+      {label: 'linux-arm64', arch: 'arm64', cpu: 'arm64', libc: 'glibc'},
+      {label: 'linux-amd64-musl', arch: 'amd64', cpu: 'x64', libc: 'musl'},
+      {label: 'linux-arm64-musl', arch: 'arm64', cpu: 'arm64', libc: 'musl'},
+    ],
+    macos: [],
+  });
+  assert.deepEqual(result.missing, [
+    'windows-amd64', 'windows-arm64', 'linux-arm64', 'linux-amd64-musl', 'linux-arm64-musl',
+  ]);
   assert.equal(result.complete, false);
   assert.equal(statusOutputs(result),
-    `fingerprint=${FP}\nwindows=["amd64","arm64"]\nwindows_count=2\nlinux=["arm64"]\nlinux_count=1\nmacos=[]\nmacos_count=0\n` +
-    'missing=windows-amd64,windows-arm64,linux-arm64\ncomplete=false\n');
+    `fingerprint=${FP}\n` +
+    'windows=[{"label":"windows-amd64","arch":"amd64","cpu":"x64"},{"label":"windows-arm64","arch":"arm64","cpu":"arm64"}]\n' +
+    'windows_count=2\n' +
+    'linux=[{"label":"linux-arm64","arch":"arm64","cpu":"arm64","libc":"glibc"},{"label":"linux-amd64-musl","arch":"amd64","cpu":"x64","libc":"musl"},{"label":"linux-arm64-musl","arch":"arm64","cpu":"arm64","libc":"musl"}]\n' +
+    'linux_count=3\nmacos=[]\nmacos_count=0\n' +
+    'missing=windows-amd64,windows-arm64,linux-arm64,linux-amd64-musl,linux-arm64-musl\ncomplete=false\n');
 
   const forced = await status(api(records), FP, [...platforms], true);
-  assert.equal(forced.missing.length, 6);
+  assert.equal(forced.missing.length, 8);
   const done = await status(api(records), FP, platforms.filter((p) => have.includes(p.label)), false);
   assert.deepEqual([done.complete, done.build], [true, {windows: [], linux: [], macos: []}]);
 });

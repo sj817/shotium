@@ -3,9 +3,10 @@ import {createHash} from 'node:crypto';
 import {constants, createReadStream} from 'node:fs';
 import {chmod, copyFile, mkdir, readFile, readdir, stat, writeFile} from 'node:fs/promises';
 import path from 'node:path';
+import {platforms} from './platforms.ts';
 import {root} from './repo.ts';
 
-export const releasePlatforms = ['windows-amd64', 'windows-arm64', 'linux-amd64', 'linux-arm64', 'macos-amd64', 'macos-arm64'] as const;
+export const releasePlatforms = platforms.map((platform) => platform.label);
 export const releaseLanguages = ['go', 'python', 'rust', 'csharp', 'java'] as const;
 export const checksumName = 'SHA256SUMS';
 export const releaseArchives = [
@@ -86,7 +87,7 @@ export async function collectNativeArchives(source: string, destination: string)
   const platforms = await readdir(source, {withFileTypes: true});
   if (platforms.some(entry => !entry.isDirectory()) ||
       platforms.map(entry => entry.name).sort().join('\n') !== [...releasePlatforms].sort().join('\n')) {
-    throw new Error('native artifact collection must contain exactly the six platform directories');
+    throw new Error('native artifact collection must contain exactly the eight platform directories');
   }
   const inputs: Array<{source: string; target: string}> = [];
   for (const platform of releasePlatforms) {
@@ -155,7 +156,7 @@ export async function verifyReleaseChecksums(directory: string): Promise<void> {
   });
   if (new Set(entries.map(entry => entry.name)).size !== entries.length) throw new Error('duplicate SHA256SUMS entry');
   if (entries.map(entry => entry.name).join('\n') !== releaseArchives.join('\n')) {
-    throw new Error('SHA256SUMS must list exactly the 17 release archives in filename order');
+    throw new Error('SHA256SUMS must list exactly the 21 release archives in filename order');
   }
   for (const entry of entries) {
     if (await sha256File(path.join(directory, entry.name)) !== entry.hash) throw new Error('checksum mismatch: ' + entry.name);

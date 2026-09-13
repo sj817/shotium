@@ -65,6 +65,10 @@ shotium 提取了 Chromium 中将 HTML/CSS 转化为像素的核心能力：由 
 npm install @pixel.js/shotium   # 或 npm、yarn、bun；自动安装适配当前系统的原生预编译包
 ```
 
+JavaScript 封装层没有 JavaScript 运行时依赖。8 个原生包覆盖 Windows 与 macOS 的 x64/arm64，以及 Linux x64/arm64 的 glibc 与 musl。npm 和 pnpm 会按当前操作系统、CPU 及 Linux libc 选择对应包。无后缀的 Linux 包用于 Debian、Ubuntu、RHEL 等 glibc 发行版；Alpine 使用 `linux-*-musl` 产物。
+
+Linux 公网 HTTPS 使用编译进引擎的 Chrome Root Store。Linux 构建不会读取 NSS、宿主证书库或企业 CA 设置；私有 PKI 地址需要使用受公共根信任的证书链。
+
 <details>
 <summary><b>旧包名 <code>@shotkit/shotium</code>（过渡期继续发布）</b></summary>
 
@@ -90,12 +94,12 @@ npm install @pixel.js/shotium
 
 | 类别 | 附件命名格式 | 包含平台 / 语言 | 包含内容 |
 |---|---|---|---|
-| **CLI** | `shotium-cli-<平台>.7z` | win / linux / macos (x64 / arm64) | 独立可执行文件、两份 `.pak` 核心资源及许可证 |
-| **C ABI** | `shotium-c-abi-<平台>.7z` | win / linux / macos (x64 / arm64) | 动态链接库、`.pak` 资源、`shot_api.h` 头文件、接口指南及导入库（Windows） |
+| **CLI** | `shotium-cli-<平台>.7z` | Windows / macOS（amd64 / arm64）；Linux glibc / musl（amd64 / arm64） | 独立可执行文件、两份 `.pak` 核心资源及许可证 |
+| **C ABI** | `shotium-c-abi-<平台>.7z` | Windows / macOS（amd64 / arm64）；Linux glibc / musl（amd64 / arm64） | 动态链接库、`.pak` 资源、`shot_api.h` 头文件、接口指南及导入库（Windows） |
 | **示例** | `shotium-example-<语言>.7z` | go / python / rust / csharp / java | 完整源码工程、页面模板、工程依赖清单及校验清单（不含原生库） |
-| **校验清单** | [`SHA256SUMS`](https://github.com/sj817/shotium/releases/latest/download/SHA256SUMS) | 全部 17 个 `.7z` 压缩包 | 标准 SHA-256 校验列表，按文件名排序 |
+| **校验清单** | [`SHA256SUMS`](https://github.com/sj817/shotium/releases/latest/download/SHA256SUMS) | 全部 21 个 `.7z` 压缩包 | 标准 SHA-256 校验列表，按文件名排序 |
 
-> 平台标识为 `windows-amd64`、`windows-arm64`、`linux-amd64`、`linux-arm64`、`macos-amd64`、`macos-arm64`；多语言示例通过下载对应平台的 `shotium-c-abi-<平台>.7z` 并解压至 `native/` 目录下即可一键运行
+> 平台标识为 `windows-amd64`、`windows-arm64`、`linux-amd64`、`linux-arm64`、`linux-amd64-musl`、`linux-arm64-musl`、`macos-amd64`、`macos-arm64`。无后缀 Linux 名称为 glibc 构建，`-musl` 名称为 Alpine 兼容构建；多语言示例下载对应平台的 `shotium-c-abi-<平台>.7z` 并解压至 `native/` 目录即可运行
 
 <details>
 <summary><b>下载并校验独立 CLI（Linux / macOS / Windows 快速上手）</b></summary>
