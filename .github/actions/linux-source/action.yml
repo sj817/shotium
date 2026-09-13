@@ -161,7 +161,7 @@ runs:
       uses: actions/cache/restore@v6
       with:
         path: src/out/musl-sysroot
-        key: musl-sysroot-alpine-3.22-musl-1.2.5-r12-headers-6.14.2-r0-${{ inputs.arch }}-v3
+        key: musl-sysroot-alpine-3.22-musl-1.2.5-r12-headers-6.14.2-r0-${{ inputs.arch }}-v4
 
     - name: assemble the Alpine musl sysroot
       if: inputs.libc == 'musl' && steps.musl-sysroot.outputs.cache-hit != 'true'
@@ -180,7 +180,7 @@ runs:
             # --keys-dir is relative to --root. alpine-keys keeps foreign
             # architecture keys under /usr/share; seed the matching set.
             install -d /sysroot/etc/apk/keys
-            cp /usr/share/apk/keys/"$1"/*.rsa.pub /sysroot/etc/apk/keys/
+            cp -L /usr/share/apk/keys/"$1"/*.rsa.pub /sysroot/etc/apk/keys/
             apk add --root /sysroot --arch "$1" --initdb --no-cache \
               --no-scripts --keys-dir /etc/apk/keys \
               --repositories-file /etc/apk/repositories \
