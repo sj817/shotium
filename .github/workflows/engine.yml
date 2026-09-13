@@ -169,7 +169,9 @@ jobs:
           pnpm ci:engine-artifacts status --fingerprint "${{ steps.fingerprint.outputs.fingerprint }}" \
             --targets "$TARGETS" $flags --output --summary
 
-  # One job per OS, fanned out over complete targets. All eight target jobs can run concurrently.
+  # One job per OS, fanned out over complete targets. Auto sharding budgets 20
+  # native jobs across a cold eight-target run, so every target starts compiling
+  # within the repository's hosted-runner limit.
   # The `if` guards the empty matrix: fromJSON('[]') is a hard error, not a
   # skip. `with:` may only name inputs the callee declares, and '' does not
   # fall back to the callee's default, hence the explicit jobs values.

@@ -6,7 +6,11 @@ import {platformByLabel} from '../lib/platforms.ts';
 import {environment, findBuildDir} from './engine-artifacts.ts';
 
 export function shardCount(requested: string, platform: string, cpu: string): number {
-  if (requested === 'auto') return platform === 'windows' ? 4 : platform === 'linux' ? (cpu === 'arm64' ? 3 : 4) : (cpu === 'arm64' ? 3 : 2);
+  // The repository has 20 concurrent hosted-runner slots. A cold all-platform
+  // run uses exactly that budget: Windows 3+2, Linux glibc 3+2, Linux musl
+  // 3+2, and macOS 2+3. This lets all eight targets compile in the first wave
+  // instead of allowing early matrix entries to occupy every slot.
+  if (requested === 'auto') return platform === 'macos' ? (cpu === 'arm64' ? 3 : 2) : (cpu === 'arm64' ? 2 : 3);
   if (!/^[1-9]\d*$/.test(requested) || Number(requested) > 20) throw new Error('shards must be auto or an integer from 1 to 20');
   return Number(requested);
 }
