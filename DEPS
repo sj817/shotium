@@ -502,6 +502,10 @@ vars = {
   # Three lines of non-changing comments so that
   # the commit queue can handle CLs rolling feed
   # and whatever else without interference from each other.
+  'libunwind_revision':    'a8be4de7dec999dafd1857f3516a7f87ffbe0b22',
+  # Three lines of non-changing comments so that
+  # the commit queue can handle CLs rolling feed
+  # and whatever else without interference from each other.
   'clang_format_revision':    '70510081984cfcdb14a15b3e08dfe9776dc7ed37',
   # Three lines of non-changing comments so that
   # the commit queue can handle CLs rolling feed
@@ -922,6 +926,12 @@ deps = {
     Var('chromium_git') +
     '/external/github.com/llvm/llvm-project/libcxxabi.git' + '@' +
     Var('libcxxabi_revision'),
+  'src/third_party/libunwind/src': {
+    'url': Var('chromium_git') +
+        '/external/github.com/llvm/llvm-project/libunwind.git' + '@' +
+        Var('libunwind_revision'),
+    'condition': 'checkout_linux',
+  },
   'src/third_party/llvm-libc/src':
     Var('chromium_git') +
     '/external/github.com/llvm/llvm-project/libc.git' + '@' +

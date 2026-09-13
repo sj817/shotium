@@ -38,6 +38,7 @@ ozone_platform_headless = true
 # to. Turning the arg off is upstream's switch for that; the alternative is
 # vendoring a bus client that is never connected.
 use_dbus = false
+use_gio = false
 
 # The public Chrome Root Store is compiled into net. Shot does not expose
 # enterprise CA injection, so NSS and the host certificate database only

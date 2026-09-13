@@ -161,7 +161,7 @@ runs:
       uses: actions/cache/restore@v6
       with:
         path: src/out/musl-sysroot
-        key: musl-sysroot-alpine-3.22-musl-1.2.5-r12-headers-6.14.2-r0-${{ inputs.arch }}-v1
+        key: musl-sysroot-alpine-3.22-musl-1.2.5-r12-headers-6.14.2-r0-${{ inputs.arch }}-v2
 
     - name: assemble the Alpine musl sysroot
       if: inputs.libc == 'musl' && steps.musl-sysroot.outputs.cache-hit != 'true'
@@ -182,9 +182,12 @@ runs:
               --repositories-file /etc/apk/repositories \
               musl-dev=1.2.5-r12 linux-headers=6.14.2-r0
           ' -- "$alpine_arch"
-        # apk runs as root in the container. Hand the files back to the runner
-        # before actions/cache archives them; apk's 0600 lock otherwise makes
-        # tar reject the entire cache save.
+        # apk creates root-owned package state and device nodes under --root.
+        # Neither belongs to the compiler sysroot: device nodes cannot be
+        # restored by an unprivileged runner, and apk's 0600 lock cannot be
+        # archived. Remove the pseudo-filesystems, then hand regular files back.
+        sudo rm -rf out/musl-sysroot/dev out/musl-sysroot/proc \
+                    out/musl-sysroot/run out/musl-sysroot/sys
         sudo chown -R "$(id -u):$(id -g)" out/musl-sysroot
         test -f out/musl-sysroot/usr/include/stdio.h
         test -f out/musl-sysroot/usr/lib/crt1.o
