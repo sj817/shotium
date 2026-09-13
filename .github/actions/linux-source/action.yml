@@ -205,6 +205,44 @@ runs:
         path: src/out/musl-sysroot
         key: ${{ steps.musl-sysroot.outputs.cache-primary-key }}
 
+    - name: expose compiler-rt to the musl target triple
+      if: inputs.libc == 'musl'
+      shell: bash
+      working-directory: src
+      run: |
+        case '${{ inputs.arch }}' in
+          amd64)
+            gnu_triple=x86_64-unknown-linux-gnu
+            musl_triple=x86_64-unknown-linux-musl
+            ;;
+          arm64)
+            gnu_triple=aarch64-unknown-linux-gnu
+            musl_triple=aarch64-unknown-linux-musl
+            ;;
+          *) echo 'unsupported musl architecture: ${{ inputs.arch }}' >&2; exit 1;;
+        esac
+
+        clang=third_party/llvm-build/Release+Asserts/bin/clang
+        resource_dir=$("$clang" --print-resource-dir)
+        gnu_runtime=$(realpath "$resource_dir/lib/$gnu_triple")
+        musl_runtime="$resource_dir/lib/$musl_triple"
+        test -f "$gnu_runtime/clang_rt.crtbegin.o"
+        test -f "$gnu_runtime/clang_rt.crtend.o"
+        test -f "$gnu_runtime/libclang_rt.builtins.a"
+        if [ ! -e "$musl_runtime" ]; then
+          ln -s "$gnu_runtime" "$musl_runtime"
+        fi
+
+        printf 'int main(void) { return 0; }\n' |
+          "$clang" --target="$musl_triple" --sysroot=out/musl-sysroot \
+            --rtlib=compiler-rt -fuse-ld=lld -pie -x c - \
+            -o out/musl-link-smoke
+        if readelf -d out/musl-link-smoke | grep -q libgcc; then
+          echo 'compiler-rt smoke binary unexpectedly depends on libgcc' >&2
+          exit 1
+        fi
+        rm out/musl-link-smoke
+
     - name: restore the build directory
       if: inputs.build-dir-run-id != ''
       uses: actions/download-artifact@v8

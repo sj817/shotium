@@ -1696,6 +1696,7 @@ config("libcxx_module") {
 config("runtime_library") {
   configs = []
   defines = []
+  ldflags = []
 
   # The order of this config is important: it must appear before
   # android:runtime_library.  This is to ensure libc++ appears before
@@ -1715,6 +1716,12 @@ config("runtime_library") {
     configs += [ "//build/config/clang:compiler_builtins" ]
   }
 
+  if (is_shot_musl_target_toolchain) {
+    # The Alpine sysroot has no GCC runtime. Use Chromium's compiler-rt for
+    # startup objects and compiler builtins without adding libgcc_s.so.1.
+    ldflags += [ "--rtlib=compiler-rt" ]
+  }
+
   # TODO(crbug.com/40570904): Come up with a better name for is POSIX + Fuchsia
   # configuration.
   if (is_posix || is_fuchsia) {
@@ -1723,7 +1730,7 @@ config("runtime_library") {
     if (use_custom_libunwind) {
       # Instead of using an unwind lib from the toolchain,
       # buildtools/third_party/libunwind will be built and used directly.
-      ldflags = [ "--unwindlib=none" ]
+      ldflags += [ "--unwindlib=none" ]
     }
   }
 
