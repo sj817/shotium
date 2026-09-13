@@ -338,6 +338,13 @@ config("compiler") {
   defines = []
   configs = []
 
+  if (is_shot_build && is_linux && is_a_target_toolchain) {
+    # Base's non-component Linux build exports a process-wide close() wrapper.
+    # Shot links Base into shared objects loaded with dlopen(), where RTLD_NEXT
+    # cannot reliably find libc. Shot never enables the ownership enforcement.
+    defines += [ "SHOT_DISABLE_FD_CLOSE_INTERPOSER=1" ]
+  }
+
   if (is_shot_musl_target_toolchain) {
     # Source-level libc compatibility paths need a marker that is also visible
     # to C targets. ANDROID_HOST_MUSL is reserved for libc++ configuration.
