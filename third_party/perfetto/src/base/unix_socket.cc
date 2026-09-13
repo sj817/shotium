@@ -743,12 +743,6 @@ ssize_t UnixSocketRaw::Receive(void* msg,
   int* fds = nullptr;
   uint32_t fds_len = 0;
 
-#if defined(SHOT_LIBC_MUSL) && defined(__clang__)
-// Alpine 3.22's CMSG_NXTHDR macro compares size_t with ptrdiff_t.
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wsign-compare"
-#endif
-
   if (max_files > 0) {
     for (cmsghdr* cmsg = CMSG_FIRSTHDR(&msg_hdr); cmsg;
          cmsg = CMSG_NXTHDR(&msg_hdr, cmsg)) {
@@ -761,10 +755,6 @@ ssize_t UnixSocketRaw::Receive(void* msg,
       }
     }
   }
-
-#if defined(SHOT_LIBC_MUSL) && defined(__clang__)
-#pragma clang diagnostic pop
-#endif
 
   if (msg_hdr.msg_flags & MSG_TRUNC || msg_hdr.msg_flags & MSG_CTRUNC) {
     for (size_t i = 0; fds && i < fds_len; ++i)

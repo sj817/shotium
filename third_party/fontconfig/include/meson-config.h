@@ -74,7 +74,9 @@
 
 #define HAVE_GETTEXT 1
 
+#if !defined(SHOT_LIBC_MUSL)
 #define HAVE_GNU_STRERROR_R 1
+#endif
 
 #define HAVE_INTEL_ATOMIC_PRIMITIVES 1
 
@@ -100,7 +102,9 @@
 
 #define HAVE_RANDOM 1
 
+#if !defined(SHOT_LIBC_MUSL)
 #define HAVE_RANDOM_R 1
+#endif
 
 #define HAVE_RAND_R 1
 

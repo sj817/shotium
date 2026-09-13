@@ -1782,6 +1782,11 @@ config("treat_warnings_as_errors") {
   } else {
     cflags = [ "-Werror" ]
 
+    if (is_clang && is_shot_musl_target_toolchain) {
+      # Alpine 3.22's CMSG_NXTHDR macro compares size_t with ptrdiff_t.
+      cflags += [ "-Wno-error=sign-compare" ]
+    }
+
     if (is_clang) {
       # gcc doesn't support this flag.
       cflags += [
