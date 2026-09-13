@@ -117,9 +117,11 @@ on:
 
 # github.workflow is the caller's name when called, so a preview and a
 # publish of the same ref never share a group; two pushes to the same branch
-# do, and only a pull request's run gives way to a newer push.
+# do, and only a pull request's run gives way to a newer push. A manual
+# fix-loop dispatch includes its commit so a new fix can start while GitHub
+# is still releasing the canceled dispatch for the previous commit.
 concurrency:
-  group: engine-${{ github.workflow }}-${{ github.ref }}
+  group: engine-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'workflow_dispatch' && github.sha || 'rolling' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
