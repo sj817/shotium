@@ -24,7 +24,7 @@ test('the native matrix has eight unique artifact and npm identities', () => {
 test('Linux runtime selection distinguishes glibc and musl without a dependency', () => {
   assert.equal(detectLinuxLibc({header: {glibcVersionRuntime: '2.39'}}), 'glibc');
   assert.equal(detectLinuxLibc({header: {}}), 'musl');
-  assert.equal(detectLinuxLibc(undefined), 'musl');
+  assert.equal(detectLinuxLibc(null), 'musl');
   assert.equal(packageName('linux', 'x64', 'glibc'), '@pixel.js/shotium-linux-x64');
   assert.equal(packageName('linux', 'x64', 'musl'), '@pixel.js/shotium-linux-x64-musl');
   assert.equal(packageName('linux', 'arm64', 'musl'), '@pixel.js/shotium-linux-arm64-musl');
