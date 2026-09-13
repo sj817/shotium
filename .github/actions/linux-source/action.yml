@@ -182,6 +182,10 @@ runs:
               --repositories-file /etc/apk/repositories \
               musl-dev=1.2.5-r12 linux-headers=6.14.2-r0
           ' -- "$alpine_arch"
+        # apk runs as root in the container. Hand the files back to the runner
+        # before actions/cache archives them; apk's 0600 lock otherwise makes
+        # tar reject the entire cache save.
+        sudo chown -R "$(id -u):$(id -g)" out/musl-sysroot
         test -f out/musl-sysroot/usr/include/stdio.h
         test -f out/musl-sysroot/usr/lib/crt1.o
         test -e "out/musl-sysroot/lib/ld-musl-$alpine_arch.so.1"

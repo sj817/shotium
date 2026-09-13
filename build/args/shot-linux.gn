@@ -44,9 +44,12 @@ use_dbus = false
 # add runtime DSOs and host-specific behavior.
 use_nss_certs = false
 
-# GLib supplies desktop integration that this headless single-process
-# renderer never enters. The Generic message pump covers Shot's run loop.
+# GLib and PangoCairo supply desktop integration and host text plumbing that
+# this headless Skia renderer never enters. Leaving PangoCairo on also makes
+# GN query the build host through pkg-config, which cannot describe a musl
+# target sysroot and would add a runtime DSO dependency to glibc builds.
 use_glib = false
+use_pangocairo = false
 
 # Keep unwinding inside the binary instead of retaining libgcc_s.so.1.
 use_custom_libunwind = true
