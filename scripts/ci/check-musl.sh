@@ -52,3 +52,4 @@ for language in go python rust csharp java; do
     --output "out/ffi-check/$language"
 done
 pnpm verify:delivery --platform-dir out/ffi-npm --cli "$cli"
+chmod -R a+rX out/ffi-check out/delivery-check
