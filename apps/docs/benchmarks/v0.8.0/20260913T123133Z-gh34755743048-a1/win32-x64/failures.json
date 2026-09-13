@@ -1,0 +1,74 @@
+[
+  {
+    "shard": "startup",
+    "engine": "playwright-chrome",
+    "scenario": "lifecycle",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "error": "Error: Error: PNG width 1264, expected 1280\n    at inspectPng (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\image.ts:13:11)\n    at <anonymous> (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\client-once.ts:58:17)\n    at runLifecycle (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\worker.ts:430:13)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async <anonymous> (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\worker.ts:797:13)"
+  },
+  {
+    "shard": "startup",
+    "engine": "playwright-chrome",
+    "scenario": "lifecycle",
+    "repeat": 2,
+    "attempt": 1,
+    "concurrency": 1,
+    "error": "Error: Error: PNG width 1264, expected 1280\n    at inspectPng (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\image.ts:13:11)\n    at <anonymous> (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\client-once.ts:58:17)\n    at runLifecycle (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\worker.ts:430:13)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async <anonymous> (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\worker.ts:797:13)"
+  },
+  {
+    "shard": "startup",
+    "engine": "playwright-chrome",
+    "scenario": "lifecycle",
+    "repeat": 3,
+    "attempt": 1,
+    "concurrency": 1,
+    "error": "Error: Error: PNG width 1264, expected 1280\n    at inspectPng (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\image.ts:13:11)\n    at <anonymous> (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\client-once.ts:58:17)\n    at runLifecycle (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\worker.ts:430:13)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async <anonymous> (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\worker.ts:797:13)"
+  },
+  {
+    "shard": "startup",
+    "engine": "playwright-chrome",
+    "scenario": "lifecycle",
+    "repeat": 4,
+    "attempt": 1,
+    "concurrency": 1,
+    "error": "Error: Error: PNG width 1264, expected 1280\n    at inspectPng (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\image.ts:13:11)\n    at <anonymous> (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\client-once.ts:58:17)\n    at runLifecycle (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\worker.ts:430:13)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async <anonymous> (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\worker.ts:797:13)"
+  },
+  {
+    "shard": "startup",
+    "engine": "playwright-chrome",
+    "scenario": "lifecycle",
+    "repeat": 5,
+    "attempt": 1,
+    "concurrency": 1,
+    "error": "Error: Error: PNG width 1264, expected 1280\n    at inspectPng (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\image.ts:13:11)\n    at <anonymous> (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\client-once.ts:58:17)\n    at runLifecycle (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\worker.ts:430:13)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async <anonymous> (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\worker.ts:797:13)"
+  },
+  {
+    "shard": "parallel",
+    "engine": "puppeteer-chrome",
+    "scenario": "parallel",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "error": "TargetCloseError: Protocol error (Page.captureScreenshot): Target closed\n    at CallbackRegistry.clear (D:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\.pnpm\\puppeteer-core@25.8.0\\node_modules\\puppeteer-core\\src\\common\\CallbackRegistry.ts:113:30)\n    at CdpCDPSession.onClosed (D:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\.pnpm\\puppeteer-core@25.8.0\\node_modules\\puppeteer-core\\src\\cdp\\CdpSession.ts:171:21)\n    at Connection.#onClose (D:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\.pnpm\\puppeteer-core@25.8.0\\node_modules\\puppeteer-core\\src\\cdp\\Connection.ts:279:15)\n    at WebSocket.<anonymous> (D:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\.pnpm\\puppeteer-core@25.8.0\\node_modules\\puppeteer-core\\src\\node\\NodeWebSocketTransport.ts:55:22)\n    at callListener (D:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\.pnpm\\ws@8.21.3\\node_modules\\ws\\lib\\event-target.js:290:14)\n    at WebSocket.onClose (D:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\.pnpm\\ws@8.21.3\\node_modules\\ws\\lib\\event-target.js:220:9)\n    at WebSocket.emit (node:events:514:28)\n    at WebSocket.emitClose (D:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\.pnpm\\ws@8.21.3\\node_modules\\ws\\lib\\websocket.js:279:10)\n    at Receiver.receiverOnFinish (D:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\.pnpm\\ws@8.21.3\\node_modules\\ws\\lib\\websocket.js:1228:20)\n    at Receiver.emit (node:events:514:28)\ncaused by: ProtocolError\n    at Callback.<instance_members_initializer> (D:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\.pnpm\\puppeteer-core@25.8.0\\node_modules\\puppeteer-core\\src\\common\\CallbackRegistry.ts:139:12)\n    at new Callback (D:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\.pnpm\\puppeteer-core@25.8.0\\node_modules\\puppeteer-core\\src\\common\\CallbackRegistry.ts:144:3)\n    at CallbackRegistry.create (D:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\.pnpm\\puppeteer-core@25.8.0\\node_modules\\puppeteer-core\\src\\common\\CallbackRegistry.ts:38:22)\n    at Connection._rawSend (D:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\.pnpm\\puppeteer-core@25.8.0\\node_modules\\puppeteer-core\\src\\cdp\\Connection.ts:179:22)\n    at CdpCDPSession.send (D:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\.pnpm\\puppeteer-core@25.8.0\\node_modules\\puppeteer-core\\src\\cdp\\CdpSession.ts:107:8)\n    at CdpPage._screenshot (D:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\.pnpm\\puppeteer-core@25.8.0\\node_modules\\puppeteer-core\\src\\cdp\\Page.ts:1198:52)\n    at CdpPage.screenshot (D:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\.pnpm\\puppeteer-core@25.8.0\\node_modules\\puppeteer-core\\src\\api\\Page.ts:2825:29)\n    at async CdpPage.<anonymous> (D:\\a\\shotium\\shotium\\apps\\benchmark\\node_modules\\.pnpm\\puppeteer-core@25.8.0\\node_modules\\puppeteer-core\\src\\util\\decorators.ts:139:14)\n    at async ChromeEngine.shot (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\engines.ts:221:34)\n    at async capture (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\worker.ts:251:18)"
+  },
+  {
+    "shard": "parallel",
+    "engine": "playwright-chrome",
+    "scenario": "parallel",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 2,
+    "error": "static PNG output perceptually differed from the first image for the same engine and case"
+  },
+  {
+    "shard": "resident",
+    "engine": "playwright-chrome",
+    "scenario": "resident",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "error": "Error: resident host close exceeded 10000ms\n    at Timeout.<anonymous> (D:\\a\\shotium\\shotium\\apps\\benchmark\\src\\worker.ts:78:41)\n    at listOnTimeout (node:internal/timers:685:17)\n    at process.processTimers (node:internal/timers:618:7)"
+  }
+]
