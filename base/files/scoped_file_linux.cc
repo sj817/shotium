@@ -64,11 +64,11 @@ void ScopedFDCloseTraits::Release(const ScopedFD& owner, int fd) {
 
 namespace subtle {
 
-#if !defined(COMPONENT_BUILD) && !defined(SHOT_DISABLE_FD_CLOSE_INTERPOSER)
+#if !defined(COMPONENT_BUILD)
 void EnableFDOwnershipEnforcement(bool enabled) {
   g_is_ownership_enforced = enabled;
 }
-#endif  // !COMPONENT_BUILD && !SHOT_DISABLE_FD_CLOSE_INTERPOSER
+#endif  // !defined(COMPONENT_BUILD)
 
 void ResetFDOwnership() {
   std::ranges::fill(g_is_fd_owned, false);
@@ -82,7 +82,7 @@ bool IsFDOwned(int fd) {
 
 }  // namespace base
 
-#if !defined(COMPONENT_BUILD) && !defined(SHOT_DISABLE_FD_CLOSE_INTERPOSER)
+#if !defined(COMPONENT_BUILD) && !defined(SHOT_LIBC_MUSL)
 using LibcCloseFuncPtr = int (*)(int);
 
 // Load the libc close symbol to forward to from the close wrapper.
@@ -113,4 +113,4 @@ __attribute__((visibility("default"), noinline)) int close(int fd) {
 }
 
 }       // extern "C"
-#endif  // !COMPONENT_BUILD && !SHOT_DISABLE_FD_CLOSE_INTERPOSER
+#endif  // !COMPONENT_BUILD && !SHOT_LIBC_MUSL
