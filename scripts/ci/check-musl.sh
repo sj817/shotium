@@ -11,6 +11,7 @@ esac
 apk add --no-cache \
   7zip build-base ca-certificates cargo dotnet8-sdk git go maven nodejs npm \
   openjdk21-jdk python3 rust
+git config --global --add safe.directory /work
 npm install --global pnpm@9.15.9
 
 export DOTNET_CLI_TELEMETRY_OPTOUT=1
