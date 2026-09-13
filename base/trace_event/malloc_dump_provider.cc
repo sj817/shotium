@@ -266,6 +266,10 @@ void ReportMallinfoStats(ProcessMemoryDump* pmd,
                          size_t* resident_size,
                          size_t* allocated_objects_size,
                          size_t* allocated_objects_count) {
+#if defined(SHOT_LIBC_MUSL)
+  // musl intentionally does not expose glibc's mallinfo ABI.
+  return;
+#else
 #if defined(__GLIBC__) && defined(__GLIBC_PREREQ)
 #if __GLIBC_PREREQ(2, 33)
 #define MALLINFO2_FOUND_IN_LIBC
@@ -293,6 +297,7 @@ void ReportMallinfoStats(ProcessMemoryDump* pmd,
                               MemoryAllocatorDump::kUnitsBytes,
                               total_allocated_size);
   }
+#endif
 }
 #endif
 

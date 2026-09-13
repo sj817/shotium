@@ -20,7 +20,7 @@
 #if BUILDFLAG(IS_APPLE)
 #include <crt_externs.h>
 #else
-extern char** environ;
+extern "C" char** environ;
 #endif
 #endif
 

@@ -338,6 +338,12 @@ config("compiler") {
   defines = []
   configs = []
 
+  if (is_shot_musl_target_toolchain) {
+    # Source-level libc compatibility paths need a marker that is also visible
+    # to C targets. ANDROID_HOST_MUSL is reserved for libc++ configuration.
+    defines += [ "SHOT_LIBC_MUSL=1" ]
+  }
+
   # System-specific flags. If your compiler flags apply to one of the
   # categories here, add it to the associated file to keep this shared config
   # smaller.

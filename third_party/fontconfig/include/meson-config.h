@@ -11,7 +11,9 @@
 
 #define CONFIGDIR "/etc/fonts/conf.d"
 
+#if !defined(SHOT_LIBC_MUSL)
 #define ENABLE_NLS 1
+#endif
 
 #define EXEEXT 
 
