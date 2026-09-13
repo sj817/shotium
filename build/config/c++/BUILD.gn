@@ -3,6 +3,7 @@ import("//build/config/c++/modules.gni")
 import("//build/config/chrome_build.gni")
 import("//build/config/compiler/compiler.gni")
 import("//build/config/dcheck_always_on.gni")
+import("//build/config/shot_build.gni")
 import("//buildtools/deps_revisions.gni")
 
 assert(use_custom_libcxx, "should only be used if use_custom_libcxx is set")
@@ -22,6 +23,12 @@ config("runtime_library") {
   # Fixed libc++ configuration macros are in
   # buildtools/third_party/libc++/__config_site. This config only has defines
   # that vary depending on gn args, and non-define flags.
+
+  if (is_shot_musl_target_toolchain) {
+    # __config_site uses this existing marker to select libc++'s musl API,
+    # ctype rune table, filesystem and mbstate_t implementations.
+    defines += [ "ANDROID_HOST_MUSL" ]
+  }
 
   if (!libcxx_is_shared) {
     # Don't leak any symbols on a static build.
