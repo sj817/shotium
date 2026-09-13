@@ -9,7 +9,7 @@ case "$PLATFORM" in
 esac
 
 apk add --no-cache \
-  7zip build-base ca-certificates cargo dotnet8-sdk go maven nodejs npm \
+  7zip build-base ca-certificates cargo dotnet8-sdk git go maven nodejs npm \
   openjdk21-jdk python3 rust
 npm install --global pnpm@9.15.9
 
