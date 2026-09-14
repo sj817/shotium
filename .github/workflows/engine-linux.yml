@@ -575,7 +575,7 @@ jobs:
                 -ex 'set confirm off' \
                 -ex run \
                 -ex 'thread apply all bt 40' \
-                --args node scripts/node_modules/tsx/dist/cli.mjs scripts/verify/node.ts out/Shot/shotium || true
+                --args pnpm -C scripts exec tsx verify/node.ts out/Shot/shotium || true
             echo "::endgroup::"
             exit "$status"
           }

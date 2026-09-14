@@ -55,6 +55,26 @@ struct NetworkConfig {
 // It must be created on, and used from, the thread that runs blink, and that
 // thread must have an IO message pump: net watches sockets through
 // base::CurrentIOThread.
+//
+// Brought up in two steps, because most of what it costs is paid for by
+// captures that never use it. A file: capture touches nothing in //net beyond
+// the MIME table, and the CLI's default is exactly that; yet building the
+// stack was 60% of the engine's start, and 10 of those milliseconds were the
+// network change notifier alone, which on Windows asks the OS for the
+// connection type synchronously and starts a DNS-configuration watcher. So:
+//
+//  * Create() records the configuration and, when a cache directory is
+//    configured, builds the context and opens the cache -- that is what makes
+//    `cacheActive` answerable at start(), and a caller who configured a cache
+//    has said they mean to fetch. Without one it builds nothing.
+//  * EnsureUp() finishes the job on the first http(s) request: the context if
+//    Create() left it, and the change notifier always. The notifier can come
+//    last because //net's observer lists are process globals that exist
+//    whether or not a notifier does; the resolver registered at build time
+//    is notified by a notifier created afterwards. Until one exists the
+//    connection type reads as CONNECTION_UNKNOWN, which //net's own
+//    kDeferConnectionTypeAtStartup documents as "connected, type not yet
+//    determined".
 class ShotNetwork {
  public:
   static base::expected<std::unique_ptr<ShotNetwork>, std::string> Create(
@@ -64,11 +84,18 @@ class ShotNetwork {
   ShotNetwork& operator=(const ShotNetwork&) = delete;
   ~ShotNetwork();
 
-  // The live context, or null when networking was never brought up. Global
-  // because the thing that needs it -- ShotURLLoader -- is constructed by
-  // blink's ResourceFetcher, several layers below anything that could have
-  // been handed a pointer.
+  // The live context, or null when it has not been built yet or networking
+  // was never configured. Does not build it: this is the question "is there
+  // one", and the callers that need one call EnsureUp(). Global because the
+  // thing that needs it -- ShotURLLoader -- is constructed by blink's
+  // ResourceFetcher, several layers below anything that could have been
+  // handed a pointer.
   static net::URLRequestContext* Get();
+
+  // The context, built now if it was not yet, with the change notifier up.
+  // The error is the one Create() would have reported had it built eagerly.
+  // Null with no error means there is no ShotNetwork in this process at all.
+  static base::expected<net::URLRequestContext*, std::string> EnsureUp();
 
   // The User-Agent every request carries. Exposed because blink also reports it
   // to the document (navigator.userAgent, and the UA client hints), and the two
@@ -102,6 +129,10 @@ class ShotNetwork {
  private:
   ShotNetwork();
 
+  // Builds the context from `config_`. Idempotent.
+  base::expected<void, std::string> BuildContext();
+
+  NetworkConfig config_;
   std::unique_ptr<net::NetworkChangeNotifier> network_change_notifier_;
   std::unique_ptr<net::URLRequestContext> context_;
 };

@@ -274,7 +274,7 @@ import shotium, {
 | `start(options?: StartOptions)` | `StartResult` | 初始化引擎实例；若引擎已在运行则安全复用；若传入选项与已初始化引擎配置冲突将抛出异常 |
 | `status()` | `StartResult` | 查询当前引擎实例的运行状态及配置参数 |
 | `stop()` | `Promise<void>` | 排空当前渲染队列，释放临时缓存内存并停止接收新请求；Blink 底层仍保持初始化状态，磁盘缓存予以保留；后续调用可直接复用该引擎实例 |
-| `releaseMemory(options?: ReleaseMemoryOptions)` | `void` | 主动触发 Blink 垃圾回收、清理 Skia 绘制缓存及分配器空闲列表；指定 `releaseWorkingSet: true` 时将请求操作系统收缩物理工作集（不影响磁盘数据） |
+| `releaseMemory(options?: ReleaseMemoryOptions)` | `void` | 主动触发 Blink 垃圾回收、清理 Skia 绘制缓存、清空引擎在截图之间保留的已解码 Web 字体（按字体字节寻址，上限 64 MB）及分配器空闲列表；指定 `releaseWorkingSet: true` 时将请求操作系统收缩物理工作集（不影响磁盘数据） |
 
 默认导出对象上的 `shotium.running` 属性（或 `status().running`）指示当前引擎是否处于就绪运行状态
 

@@ -358,6 +358,9 @@ void ShotFetch::Start(const GURL& url,
                       DoneCallback done) {
   done_ = std::move(done);
   result_.final_url = url;
+  if (CaptureContext* capture = CaptureContext::Current()) {
+    capture->NoteNetworkRequest();
+  }
 
   host_ = url.host();
   int& running = InFlightPerHost()[host_];
@@ -382,8 +385,16 @@ void ShotFetch::StartNow(const GURL& url,
     ++InFlightPerHost()[host_];
     holds_slot_ = true;
   }
-  net::URLRequestContext* context = ShotNetwork::Get();
+  // Brings the stack up on the first request that needs it; see ShotNetwork.
+  // A subresource is the first http(s) request of a file: document with
+  // remote images or fonts, which is why this is here and not only on the
+  // top-level fetch.
+  auto ensured = ShotNetwork::EnsureUp();
+  net::URLRequestContext* context = ensured.value_or(nullptr);
   if (!context) {
+    if (!ensured.has_value()) {
+      LOG(ERROR) << "shot: " << ensured.error();
+    }
     // Posting rather than calling: Start() promises the callback does not run
     // before it returns, and a caller that has not finished wiring itself up
     // would otherwise be re-entered here.

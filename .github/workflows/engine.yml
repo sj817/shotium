@@ -78,6 +78,7 @@ on:
       - 'scripts/ci/fingerprint.ts'
       - 'scripts/ci/engine-artifacts.ts'
       - 'scripts/ci/dispatch-engines.ts'
+      - 'scripts/ci/publish-preview.ts'
       - 'scripts/lib/perf-gate.ts'
       - 'scripts/lib/docs-workspace.ts'
       - 'scripts/**/*.test.ts'

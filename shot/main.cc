@@ -15,10 +15,13 @@
 #include "base/files/file_util.h"
 #include "base/logging.h"
 #include "base/logging/logging_settings.h"
+#include "base/process/process.h"
 #include "base/strings/utf_string_conversions.h"
 #include "build/build_config.h"
 #include "shot/shot_capture.h"
 #include "shot/shot_options.h"
+#include "shot/shot_profile.h"
+#include "shot/shot_renderer.h"
 #include "shot/shot_request.h"
 #include "shot/shot_runtime.h"
 #include "shot/shot_server.h"
@@ -48,6 +51,28 @@ namespace {
 // the same Capture(). check-node.ts compares the images byte for byte.
 // --serve is for a
 // caller that wants a resident renderer and is not node.
+// How a one-shot run ends once its image is written.
+//
+// Returning from main() tears the engine down: the frame is detached and the
+// heap collected, the scheduler shut down, the thread pool joined, blink's
+// and skia's statics destroyed, and a 43 MB image unmapped -- all of it for a
+// process whose only reader has its file already. So the process ends here
+// instead, with the output flushed, the way chrome's own renderers end: the
+// kernel reclaims what a destructor would have.
+//
+// Except with a disk cache. The simple backend writes its index on shutdown
+// and its entries from the thread pool, and an exit that gives neither the
+// chance costs the next process an index rebuild -- so a run that was asked
+// to cache takes the long way out.
+int Exit(const shot::ShotOptions& options, int code) {
+  if (!options.cache_dir.empty()) {
+    return code;
+  }
+  fflush(stdout);
+  fflush(stderr);
+  base::Process::TerminateCurrentProcessImmediately(code);
+}
+
 int Main(int argc, const char** argv) {
   base::AtExitManager at_exit;
   base::CommandLine::Init(argc, argv);
@@ -111,6 +136,16 @@ int Main(int argc, const char** argv) {
   }
 
   const bool serve = parsed->serve;
+  // SHOT_PROFILE=1 with --verbose: the one-shot path's split between
+  // bringing the engine up, the capture and the exit, after how long the
+  // process took to reach main() at all -- the loader mapping a 43 MB
+  // image, its static initialisers, the CRT.
+  if (shot::ProfileEnabled()) {
+    LOG(INFO) << "shot: profile process_to_main="
+              << (base::Time::Now() - base::Process::Current().CreationTime())
+                     .InMillisecondsF();
+  }
+  shot::ProfileStages stages("main");
 
   // Everything blink and //net need, brought up once. In --serve mode it stays
   // up for the life of the process and every request reuses it -- including the
@@ -126,17 +161,19 @@ int Main(int argc, const char** argv) {
     return shot::kCaptureExitCode;
   }
 
+  stages.Mark("runtime");
+
   if (serve) {
     return shot::RunServer(*runtime.value(), parsed->allow_file_access);
   }
 
-  // PrepareShot owns the temporary file that makes --stdin navigable, so it
-  // has to outlive the render that reads it.
   auto prepared = shot::PrepareShot(std::move(parsed).value());
   if (!prepared.has_value()) {
     LOG(ERROR) << "shot: " << prepared.error();
     return shot::kUsageExitCode;
   }
+  // One document, then exit: nothing after the image is for anyone.
+  (*runtime)->renderer().SetOneShot(true);
 
   shot::ScreenshotRequest request;
   request.file = prepared->target_url.spec();
@@ -156,6 +193,8 @@ int Main(int argc, const char** argv) {
   // A caller coming in over --serve has not, which is why this is a request
   // field and not a constant.
   request.allow_file_access = true;
+  // --stdin: the bytes go with the request rather than through a file.
+  request.document = std::move(prepared->document);
 
   if (prepared->options.tile_height > 0) {
     request.tile = shot::Tile{prepared->options.tile_height};
@@ -174,7 +213,9 @@ int Main(int argc, const char** argv) {
     for (const shot::DeliveredTile& tile : *tiles) {
       printf("%s\n", tile.path.c_str());
     }
-    return shot::kSuccessExitCode;
+    stages.Mark("capture");
+    stages.Finish();
+    return Exit(prepared->options, shot::kSuccessExitCode);
   }
 
   // The engine writes the file itself, a row at a time as it encodes, so the
@@ -182,17 +223,19 @@ int Main(int argc, const char** argv) {
   // the fallback for an engine that handed the bytes back instead.
   request.path = prepared->options.output_path.AsUTF8Unsafe();
   auto image = shot::Capture(**runtime, request);
+  stages.Mark("capture");
   if (!image.has_value()) {
     LOG(ERROR) << "shot: " << image.error();
     return shot::kCaptureExitCode;
   }
+  stages.Finish();
   if (!image->wrote_path &&
       !base::WriteFile(prepared->options.output_path, image->image)) {
     LOG(ERROR) << "shot: could not write "
                << prepared->options.output_path.AsUTF8Unsafe();
     return shot::kCaptureExitCode;
   }
-  return shot::kSuccessExitCode;
+  return Exit(prepared->options, shot::kSuccessExitCode);
 }
 
 }  // namespace

@@ -24,6 +24,7 @@
 #include "url/gurl.h"
 
 namespace blink {
+class AgentGroupScheduler;
 class Document;
 class LocalFrame;
 class LocalFrameView;
@@ -130,6 +131,13 @@ class ShotRenderer {
   // one time keeping either warm is the wrong call.
   void ReleaseRetained();
 
+  // Tells the renderer this process renders one document and exits. What
+  // that changes is the work done after the image is handed over for the
+  // sake of a next request that is never coming: the decommit of what the
+  // raster freed, and the deferred detach of the page. The one-shot CLI sets
+  // it; a resident worker and the library never do.
+  void SetOneShot(bool one_shot) { one_shot_ = one_shot; }
+
   // Renders `input` according to `request` and returns the encoded image --
   // in memory, or streamed into `request.path` when that is set, in which
   // case the tile carries the path and size and no bytes.
@@ -196,9 +204,9 @@ class ShotRenderer {
   base::expected<void, std::string> WaitForLoad(const std::string& wait_until,
                                                 base::TimeDelta timeout);
 
-  // One round of style, layout, prepaint and paint, with the split logged
-  // when profiling.
-  void RunLifecycle(blink::Document* document, int round);
+  // One round of style and layout, and with `paint` prepaint and paint too,
+  // with the split logged when profiling.
+  void RunLifecycle(blink::Document* document, int round, bool paint);
 
   // Turns cppgc's collection off for a capture, or back on. Idempotent.
   void SetGarbageCollection(bool enabled);
@@ -213,6 +221,12 @@ class ShotRenderer {
 
   blink::Persistent<blink::Page> page_;
   blink::Persistent<blink::LocalFrame> frame_;
+  // Shared by every page this renderer creates. A renderer makes one of
+  // these per agent cluster -- pages that may share script state -- and
+  // there is one cluster here, forever: each capture's page is torn down
+  // before the next one's is built. Its two task queues are what a fresh one
+  // costs per capture; the page's own scheduler is still per page.
+  blink::Persistent<blink::AgentGroupScheduler> agent_group_scheduler_;
   // Whether collection is disabled for the capture in progress; see
   // RenderDocument() and WaitForLoad(). Held as a flag rather than a scope
   // object because the scope is stack-only and WaitForLoad() lifts it.
@@ -237,6 +251,8 @@ class ShotRenderer {
   // Which page is attached, counting up from CreatePage(); what a deferred
   // TearDownIfStill() checks before detaching.
   uint64_t page_serial_ = 0;
+  // See SetOneShot().
+  bool one_shot_ = false;
   base::WeakPtrFactory<ShotRenderer> weak_factory_{this};
 };
 

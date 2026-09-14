@@ -17,14 +17,15 @@
 #include "net/http/http_transaction_factory.h"
 #include "net/url_request/url_request_context.h"
 #include "net/url_request/url_request_context_builder.h"
+#include "shot/shot_profile.h"
 
 namespace shot {
 namespace {
 
-// The one context, and the one User-Agent. Not owned here: ShotNetwork owns
-// both and clears these on the way out, so a use after teardown is a null
-// pointer rather than a dangling one.
-net::URLRequestContext* g_context = nullptr;
+// The process's one ShotNetwork, for the static accessors. Not owned here:
+// ShotRuntime owns it and the destructor clears this, so a use after
+// teardown is a null pointer rather than a dangling one.
+ShotNetwork* g_instance = nullptr;
 
 std::string& MutableUserAgent() {
   static base::NoDestructor<std::string> user_agent;
@@ -104,7 +105,7 @@ constexpr char kDefaultUserAgent[] =
 ShotNetwork::ShotNetwork() = default;
 
 ShotNetwork::~ShotNetwork() {
-  g_context = nullptr;
+  g_instance = nullptr;
   MutableUserAgent().clear();
   MutableCacheDir().clear();
   g_cache_active = false;
@@ -113,21 +114,33 @@ ShotNetwork::~ShotNetwork() {
 // static
 base::expected<std::unique_ptr<ShotNetwork>, std::string> ShotNetwork::Create(
     const NetworkConfig& config) {
-  if (g_context) {
+  if (g_instance) {
     return base::unexpected("the network stack is already up");
   }
 
   std::unique_ptr<ShotNetwork> network(new ShotNetwork());
-
-  // HostResolverManager registers as an IP-address and connection-type
-  // observer the moment it is built, and the answers it gets without a
-  // notifier are "unknown" forever -- which means a resolver that never
-  // flushes its cache when the machine changes networks. A resident worker can
-  // outlive a network change, so it gets a real notifier.
-  network->network_change_notifier_ = net::NetworkChangeNotifier::CreateIfNeeded();
-
+  network->config_ = config;
   MutableUserAgent() =
       config.user_agent.empty() ? kDefaultUserAgent : config.user_agent;
+  g_instance = network.get();
+
+  if (config.cache_dir.empty()) {
+    // Nothing to answer for at start(): the context is built by the first
+    // request that needs one. See the class comment.
+    return network;
+  }
+  if (auto built = network->BuildContext(); !built.has_value()) {
+    g_instance = nullptr;
+    return base::unexpected(built.error());
+  }
+  return network;
+}
+
+base::expected<void, std::string> ShotNetwork::BuildContext() {
+  if (context_) {
+    return base::ok();
+  }
+  ProfileStages stages("network");
 
   net::URLRequestContextBuilder builder;
   builder.set_user_agent(MutableUserAgent());
@@ -146,21 +159,21 @@ base::expected<std::unique_ptr<ShotNetwork>, std::string> ShotNetwork::Create(
   // decode it is worse than not asking. //third_party/brotli is in the tree.
   builder.set_enable_brotli(true);
 
-  if (config.cache_dir.empty()) {
+  if (config_.cache_dir.empty()) {
     builder.DisableHttpCache();
   } else {
-    if (!base::CreateDirectory(config.cache_dir)) {
+    if (!base::CreateDirectory(config_.cache_dir)) {
       return base::unexpected("could not create the cache directory " +
-                              config.cache_dir.AsUTF8Unsafe());
+                              config_.cache_dir.AsUTF8Unsafe());
     }
     net::URLRequestContextBuilder::HttpCacheParams params;
     // Pin the file-per-entry Simple cache independently of net's backend
     // experiments. SQL storage is not part of this engine.
     params.type = net::URLRequestContextBuilder::HttpCacheParams::DISK_SIMPLE;
-    params.path = config.cache_dir;
-    params.max_size = config.cache_max_bytes;
+    params.path = config_.cache_dir;
+    params.max_size = config_.cache_max_bytes;
     builder.EnableHttpCache(params);
-    MutableCacheDir() = config.cache_dir;
+    MutableCacheDir() = config_.cache_dir;
   }
 
   // Everything not named above is the builder's default, and the defaults are
@@ -169,11 +182,13 @@ base::expected<std::unique_ptr<ShotNetwork>, std::string> ShotNetwork::Create(
   // it), CertVerifier::CreateDefault over the platform trust store,
   // TransportSecurityState with the preloaded HSTS list, and the system DNS
   // resolver.
-  network->context_ = builder.Build();
-  if (!network->context_) {
+  //
+  // Built before the change notifier, deliberately: see the class comment.
+  context_ = builder.Build();
+  if (!context_) {
     return base::unexpected("could not build the URLRequestContext");
   }
-  g_context = network->context_.get();
+  stages.Mark("context");
 
   // The cache is opened here rather than on the first request that wants it.
   //
@@ -188,15 +203,39 @@ base::expected<std::unique_ptr<ShotNetwork>, std::string> ShotNetwork::Create(
   // had named a directory on purpose. With a default directory it is worth
   // one open at startup -- where the caller already agreed to pay for the
   // engine coming up -- so that start() can return the answer.
-  if (!config.cache_dir.empty()) {
-    g_cache_active = OpenCacheEagerly(network->context_.get());
+  if (!config_.cache_dir.empty()) {
+    g_cache_active = OpenCacheEagerly(context_.get());
+    stages.Mark("cache");
   }
-  return network;
+  return base::ok();
+}
+
+// static
+base::expected<net::URLRequestContext*, std::string> ShotNetwork::EnsureUp() {
+  if (!g_instance) {
+    return nullptr;
+  }
+  if (auto built = g_instance->BuildContext(); !built.has_value()) {
+    return base::unexpected(built.error());
+  }
+  // HostResolverManager registers as an IP-address and connection-type
+  // observer the moment it is built, and the answers it gets without a
+  // notifier are "unknown" forever -- which means a resolver that never
+  // flushes its cache when the machine changes networks. A resident worker can
+  // outlive a network change, so it gets a real notifier, from the first
+  // request that goes anywhere a network change could matter to.
+  if (!g_instance->network_change_notifier_) {
+    ProfileStages stages("network");
+    g_instance->network_change_notifier_ =
+        net::NetworkChangeNotifier::CreateIfNeeded();
+    stages.Mark("change_notifier");
+  }
+  return g_instance->context_.get();
 }
 
 // static
 net::URLRequestContext* ShotNetwork::Get() {
-  return g_context;
+  return g_instance ? g_instance->context_.get() : nullptr;
 }
 
 // static
@@ -216,10 +255,11 @@ bool ShotNetwork::CacheActive() {
 
 // static
 disk_cache::Backend* ShotNetwork::CacheBackend() {
-  if (!g_context) {
+  net::URLRequestContext* context = Get();
+  if (!context) {
     return nullptr;
   }
-  net::HttpTransactionFactory* factory = g_context->http_transaction_factory();
+  net::HttpTransactionFactory* factory = context->http_transaction_factory();
   if (!factory) {
     return nullptr;
   }

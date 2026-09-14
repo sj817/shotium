@@ -760,7 +760,7 @@ void ResourceLoader::DidReceiveResponse(
   data_pipe_completion_notifier_ = completion_notifier;
 }
 
-void ResourceLoader::DidReceiveDataForTesting(base::span<const char> data) {
+void ResourceLoader::DidReceiveData(base::span<const char> data) {
   DidReceiveDataImpl(data);
 }
 
@@ -950,10 +950,6 @@ void ResourceLoader::DidReceiveResponseInternal(
     HandleError(ResourceError::HttpError(response.CurrentRequestUrl()));
     return;
   }
-}
-
-void ResourceLoader::DidReceiveData(base::span<const char> data) {
-  DidReceiveDataImpl(data);
 }
 
 void ResourceLoader::DidReceiveDataImpl(

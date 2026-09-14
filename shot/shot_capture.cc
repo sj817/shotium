@@ -111,7 +111,13 @@ base::expected<RenderInput, std::string> ReadLocalDocument(const GURL& url) {
 base::expected<RenderInput, std::string> FetchDocument(
     const GURL& url,
     base::TimeDelta timeout) {
-  if (!ShotNetwork::Get()) {
+  // The first http(s) request in the process is what brings the network
+  // stack up; a file: capture never pays for it.
+  auto context = ShotNetwork::EnsureUp();
+  if (!context.has_value()) {
+    return base::unexpected(context.error());
+  }
+  if (!*context) {
     return base::unexpected(
         "the network stack is not up, so only file: URLs can be rendered");
   }
@@ -232,7 +238,17 @@ base::expected<void, std::string> WithDocument(
   const base::TimeTicks fetch_started = base::TimeTicks::Now();
   base::expected<RenderInput, std::string> input =
       base::unexpected(std::string());
-  if (url->SchemeIsFile()) {
+  if (request.document.has_value()) {
+    // Delivered by the caller. Counted as the one resource it is, the way a
+    // document read off the disk is, so that `requests` means the same thing
+    // whichever way the bytes arrived.
+    RenderInput delivered;
+    delivered.url = *url;
+    delivered.body = *request.document;
+    capture.RecordResource(/*from_cache=*/false, /*failed=*/false,
+                           static_cast<int64_t>(delivered.body.size()));
+    input = std::move(delivered);
+  } else if (url->SchemeIsFile()) {
     input = ReadLocalDocument(*url);
   } else if (IsNetworkScheme(*url)) {
     input = FetchDocument(*url, base::Milliseconds(request.timeout_ms));

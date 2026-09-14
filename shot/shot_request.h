@@ -107,6 +107,12 @@ struct ScreenshotRequest {
   // its caller that a document may read the filesystem it is being rendered on;
   // the CLI turns it on for the file it was pointed at.
   bool allow_file_access = false;
+
+  // The document itself, when the caller already has it: `file` is then the
+  // URL the bytes are rendered as, and nothing is read or fetched for the
+  // top-level document. Not on the wire -- neither parser sets it -- it is
+  // how the CLI's --stdin hands over what it read without a temporary file.
+  std::optional<std::string> document;
 };
 
 // Parses one request. The error is the message the caller sees, so it names the

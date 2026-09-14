@@ -6,13 +6,9 @@
 
 #include "base/files/file_path.h"
 #include "base/strings/string_util.h"
-#include "mojo/public/cpp/bindings/remote.h"
 #include "net/base/mime_util.h"
 #include "third_party/blink/public/common/mime_util/mime_util.h"
-#include "third_party/blink/public/common/thread_safe_browser_interface_broker_proxy.h"
-#include "third_party/blink/public/mojom/mime/mime_registry.mojom-blink.h"
 #include "third_party/blink/public/platform/file_path_conversion.h"
-#include "third_party/blink/public/platform/platform.h"
 #include "third_party/blink/renderer/platform/wtf/assertions.h"
 #include "third_party/blink/renderer/platform/wtf/text/character_visitor.h"
 #include "third_party/blink/renderer/platform/wtf/text/wtf_string.h"
@@ -20,17 +16,6 @@
 namespace blink {
 
 namespace {
-
-struct MimeRegistryPtrHolder {
- public:
-  MimeRegistryPtrHolder() {
-    Platform::Current()->GetBrowserInterfaceBroker()->GetInterface(
-        mime_registry.BindNewPipeAndPassReceiver());
-  }
-  ~MimeRegistryPtrHolder() = default;
-
-  mojo::Remote<mojom::blink::MimeRegistry> mime_registry;
-};
 
 template <typename CharType>
 std::string ToLowerASCIIInternal(base::span<const CharType> chars) {
@@ -53,17 +38,16 @@ std::string ToLowerASCIIOrEmpty(const String& str) {
 
 }  // namespace
 
-String MIMETypeRegistry::GetMIMETypeForExtension(const StringView& ext_view) {
-  // The sandbox restricts our access to the registry, so we need to proxy
-  // these calls over to the browser process.
-  DEFINE_STATIC_LOCAL(MimeRegistryPtrHolder, registry_holder, ());
-  String ext = ext_view.IsNull() ? g_empty_string : ext_view.ToString();
-  String mime_type;
-  if (!registry_holder.mime_registry->GetMimeTypeFromExtension(ext,
-                                                               &mime_type)) {
-    return String();
-  }
-  return mime_type;
+String MIMETypeRegistry::GetMIMETypeForExtension(const StringView& ext) {
+  // Upstream proxies this to the browser process over a [Sync] mojo call,
+  // because a sandboxed renderer cannot read the registry that the platform
+  // half of net's lookup consults. This process is not sandboxed and has no
+  // browser process: the same lookup, in the same thread, without the pipe
+  // -- which was a round trip to a thread-pool sequence, blocking the main
+  // thread, for every stylesheet a file: document links.
+  std::string mime_type;
+  net::GetMimeTypeFromExtension(StringViewToFilePath(ext).value(), &mime_type);
+  return String::FromUtf8(mime_type);
 }
 
 String MIMETypeRegistry::GetWellKnownMIMETypeForExtension(

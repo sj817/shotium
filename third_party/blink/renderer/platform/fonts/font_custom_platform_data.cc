@@ -32,7 +32,13 @@
 
 #include "third_party/blink/renderer/platform/fonts/font_custom_platform_data.h"
 
+#include <array>
+#include <optional>
+
 #include "base/containers/heap_array.h"
+#include "base/synchronization/lock.h"
+#include "base/thread_annotations.h"
+#include "crypto/hash.h"
 #include "base/logging.h"
 #include "build/build_config.h"
 #include "third_party/blink/renderer/platform/fonts/font_cache.h"
@@ -44,6 +50,7 @@
 #include "third_party/blink/renderer/platform/fonts/palette_interpolation.h"
 #include "third_party/blink/renderer/platform/fonts/web_font_decoder.h"
 #include "third_party/blink/renderer/platform/fonts/web_font_typeface_factory.h"
+#include "third_party/blink/renderer/platform/wtf/deque.h"
 #include "third_party/blink/renderer/platform/wtf/shared_buffer.h"
 #include "third_party/blink/renderer/platform/wtf/wtf_size_t.h"
 #include "third_party/skia/include/core/SkTypeface.h"
@@ -316,16 +323,117 @@ String FontCustomPlatformData::GetPostScriptNameOrFamilyNameForInspector()
   return String(base::as_byte_span(postscript_name));
 }
 
+namespace {
+
+// Decoded web fonts by content, kept across documents.
+//
+// A web font is decoded -- WOFF2 inflated, sanitised by OTS, wrapped in an
+// SkTypeface -- when the FontResource that fetched it is first used, and
+// the FontResource belongs to a document. A local file is never fresh
+// (FreshnessLifetime() returns zero for file: on desktop, so that an edited
+// file is seen), so the next document that uses the same file fetches and
+// decodes it again: 2.7 ms for a 63 KB Roboto on the development host, half
+// of what that page took to render, paid by every capture of a service that
+// renders one template with one font all day. The bytes are re-read either
+// way, which is what keeps an edited file honest; what this keeps is the
+// decode, keyed by what the bytes are rather than where they came from, so
+// a changed file is a miss. The typeface is immutable and refcounted and is
+// shared the way FontCache shares system typefaces.
+//
+// Bounded by decoded size, oldest out first, and cleared by an explicit
+// release of memory (ClearDecodedFontCache).
+class DecodedFontCache {
+ public:
+  struct Key {
+    std::array<uint8_t, crypto::hash::kSha256Size> digest;
+    size_t size = 0;
+    bool operator==(const Key&) const = default;
+  };
+  struct Entry {
+    Key key;
+    sk_sp<SkTypeface> typeface;
+    size_t decoded_size = 0;
+  };
+
+  static DecodedFontCache& Get() {
+    DEFINE_THREAD_SAFE_STATIC_LOCAL(DecodedFontCache, cache, ());
+    return cache;
+  }
+
+  static Key KeyFor(const SegmentedBuffer& buffer) {
+    Key key;
+    key.size = buffer.size();
+    crypto::hash::Hasher hasher(crypto::hash::HashKind::kSha256);
+    for (base::span<const char> segment : buffer) {
+      hasher.Update(base::as_bytes(segment));
+    }
+    hasher.Finish(key.digest);
+    return key;
+  }
+
+  std::optional<Entry> Find(const Key& key) {
+    base::AutoLock lock(lock_);
+    for (const Entry& entry : entries_) {
+      if (entry.key == key) {
+        return entry;
+      }
+    }
+    return std::nullopt;
+  }
+
+  void Insert(Entry entry) {
+    base::AutoLock lock(lock_);
+    if (entry.decoded_size > kMaxBytes) {
+      return;
+    }
+    while (!entries_.empty() && bytes_ + entry.decoded_size > kMaxBytes) {
+      bytes_ -= entries_.front().decoded_size;
+      entries_.pop_front();
+    }
+    bytes_ += entry.decoded_size;
+    entries_.push_back(std::move(entry));
+  }
+
+  void Clear() {
+    base::AutoLock lock(lock_);
+    entries_.clear();
+    bytes_ = 0;
+  }
+
+ private:
+  // Sixty-four megabytes of decoded font: a few CJK families, or a few
+  // hundred subsets.
+  static constexpr size_t kMaxBytes = 64u << 20;
+
+  base::Lock lock_;
+  Deque<Entry> entries_ GUARDED_BY(lock_);
+  size_t bytes_ GUARDED_BY(lock_) = 0;
+};
+
+}  // namespace
+
+// static
+void FontCustomPlatformData::ClearDecodedFontCache() {
+  DecodedFontCache::Get().Clear();
+}
+
 FontCustomPlatformData* FontCustomPlatformData::Create(
     SharedBuffer* buffer,
     String& ots_parse_message) {
   DCHECK(buffer);
+  const DecodedFontCache::Key key = DecodedFontCache::KeyFor(*buffer);
+  if (std::optional<DecodedFontCache::Entry> hit =
+          DecodedFontCache::Get().Find(key)) {
+    return Create(std::move(hit->typeface), hit->decoded_size);
+  }
   base::expected<DecodedWebFont, String> decode_result =
       DecodedWebFont::Create(buffer);
   if (!decode_result.has_value()) {
     ots_parse_message = std::move(decode_result).error();
     return nullptr;
   }
+  DecodedFontCache::Get().Insert(
+      {key, decode_result->sk_typeface, decode_result->decoded_size});
   return Create(std::move(decode_result->sk_typeface),
                 decode_result->decoded_size);
 }

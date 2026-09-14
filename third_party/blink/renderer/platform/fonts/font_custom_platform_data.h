@@ -62,6 +62,10 @@ class PLATFORM_EXPORT FontCustomPlatformData
                                         String& ots_parse_message);
   static FontCustomPlatformData* Create(sk_sp<SkTypeface>, size_t data_size);
 
+  // Drops the process-wide cache of decoded web fonts that Create(SharedBuffer*)
+  // consults; see the definition. For an explicit release of memory.
+  static void ClearDecodedFontCache();
+
   using PassKey = base::PassKey<FontCustomPlatformData>;
 
   FontCustomPlatformData(PassKey, sk_sp<SkTypeface>, size_t data_size);

@@ -20,14 +20,14 @@ PolicyContainer::PolicyContainer(
 
 // static
 std::unique_ptr<PolicyContainer> PolicyContainer::CreateEmpty() {
-  // Create a dummy PolicyContainerHost remote. All the messages will be
-  // ignored.
-  mojo::AssociatedRemote<mojom::blink::PolicyContainerHost> dummy_host;
-  std::ignore = dummy_host.BindNewEndpointAndPassDedicatedReceiver();
-  auto policies = mojom::blink::PolicyContainerPolicies::New();
-
-  return std::make_unique<PolicyContainer>(dummy_host.Unbind(),
-                                           std::move(policies));
+  // No host. Upstream binds a dummy PolicyContainerHost remote here -- a
+  // message pipe with nothing on the far end -- so that every update could be
+  // sent and ignored. The updates are skipped instead when there is nobody to
+  // send them to (see UpdateReferrerPolicy), which is the same outcome
+  // without a pipe per frame and a serialised message per policy.
+  return std::make_unique<PolicyContainer>(
+      mojo::NullAssociatedRemote(),
+      mojom::blink::PolicyContainerPolicies::New());
 }
 
 // static
@@ -51,8 +51,13 @@ void PolicyContainer::UpdateReferrerPolicy(
     const InitiatorStateToken& initiator_state_token) {
   policies_->referrer_policy = policy;
 
-  policy_container_host_remote_->SetReferrerPolicy(policy,
-                                                   initiator_state_token);
+  // The local policy is the one that matters here; the host is told when
+  // there is one. An empty container (CreateEmpty) has none, and a frame in
+  // a process with no browser -- shot's -- gets nothing but empty containers.
+  if (policy_container_host_remote_.is_bound()) {
+    policy_container_host_remote_->SetReferrerPolicy(policy,
+                                                     initiator_state_token);
+  }
 }
 
 const mojom::blink::PolicyContainerPolicies& PolicyContainer::GetPolicies()
@@ -67,8 +72,10 @@ void PolicyContainer::AddContentSecurityPolicies(
     policies_->content_security_policies.push_back(policy->Clone());
   }
 
-  policy_container_host_remote_->AddContentSecurityPolicies(
-      std::move(policies), initiator_state_token);
+  if (policy_container_host_remote_.is_bound()) {
+    policy_container_host_remote_->AddContentSecurityPolicies(
+        std::move(policies), initiator_state_token);
+  }
 }
 
 }  // namespace blink

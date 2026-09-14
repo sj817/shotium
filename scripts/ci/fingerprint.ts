@@ -56,7 +56,7 @@ export const DENY: readonly RegExp[] = [
   /^\.github\/\.gitignore$/,
   /^\.github\/workflows\/(checks|engine|preview|publish|refresh|benchmark|benchmark-site|perf-gate)\.yml$/,
   /^scripts\/(docs|perf|tree)\//,
-  /^scripts\/ci\/(fingerprint|engine-artifacts|dispatch-engines)\.ts$/,
+  /^scripts\/ci\/(fingerprint|engine-artifacts|dispatch-engines|publish-preview)\.ts$/,
   /^scripts\/lib\/(perf-gate|docs-workspace)\.ts$/,
   /^scripts\/.*\.test\.ts$/,
 ];
@@ -80,6 +80,7 @@ export const PATHS_IGNORE: readonly string[] = [
   '.github/workflows/benchmark-site.yml', '.github/workflows/perf-gate.yml',
   'scripts/docs/**', 'scripts/perf/**', 'scripts/tree/**',
   'scripts/ci/fingerprint.ts', 'scripts/ci/engine-artifacts.ts', 'scripts/ci/dispatch-engines.ts',
+  'scripts/ci/publish-preview.ts',
   'scripts/lib/perf-gate.ts', 'scripts/lib/docs-workspace.ts',
   'scripts/**/*.test.ts',
 ];

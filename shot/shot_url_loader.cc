@@ -14,7 +14,6 @@
 #include "base/run_loop.h"
 #include "base/task/single_thread_task_runner.h"
 #include "mojo/public/cpp/system/data_pipe.h"
-#include "mojo/public/cpp/system/string_data_source.h"
 #include "net/base/filename_util.h"
 #include "net/base/net_errors.h"
 #include "net/http/http_request_headers.h"
@@ -308,66 +307,45 @@ void ShotURLLoader::DeliverBody(blink::URLLoaderClient* client,
                                 const blink::WebURLResponse& response,
                                 std::string contents,
                                 FetchCharge charge) {
-  // The body goes down a mojo data pipe, which is how the network service
-  // delivers one. That is not ceremony: ResourceLoader::DidReceiveResponse only
-  // takes the streaming path -- the one that hands its Resource
-  // span<const char> chunks -- when the body arrives as a pipe. Handing it a
-  // SegmentedBuffer instead routes the body to the background-response path,
-  // and ImageResource::AppendData CHECKs that it is never called that way,
-  // because there is no BackgroundResponseProcessor for images. Every <img> in
-  // the corpus took the process down that way.
-  mojo::ScopedDataPipeProducerHandle producer;
-  mojo::ScopedDataPipeConsumerHandle consumer;
-  if (mojo::CreateDataPipe(nullptr, producer, consumer) != MOJO_RESULT_OK) {
-    client->DidFail(
-        blink::WebURLError(net::ERR_INSUFFICIENT_RESOURCES,
-                           blink::WebURL(response.CurrentRequestUrl())),
-        base::TimeTicks::Now(), 0, 0, 0);
-    NotifyCaptureProgress();
+  // The body is handed over directly, in one piece, on this thread.
+  //
+  // It used to go down a mojo data pipe, which is how the network service
+  // delivers one: a 64 KB shared buffer, a DataPipeProducer writing into it
+  // from a thread-pool sequence, a watcher waking this thread for every
+  // chunk, and blink copying each chunk out into its own segment -- with the
+  // whole body held here until the last chunk had gone, so every image in
+  // flight was resident twice. Between two ends in the same process that
+  // machinery transports nothing; it was there because ResourceLoader's
+  // streaming path is the one that takes the body as span chunks, and a
+  // SegmentedBuffer sent with the response goes to the background-response
+  // path instead, which ImageResource refuses. DidReceiveData() is that
+  // streaming path's entry, called directly: the response with no pipe, the
+  // body as one span, then the finish. blink's copy is the only one, made in
+  // one allocation rather than in 64 KB segments, and `contents` is freed
+  // when this function returns.
+  const int64_t size = static_cast<int64_t>(contents.size());
+  // Taken before the first call into the client, not after: either call may
+  // cancel the load -- a MIME type the resource refuses, a CORS failure --
+  // and cancelling resets ResourceLoader::loader_, which destroys this
+  // loader synchronously. A weak pointer obtained beforehand is how that is
+  // observed; reading weak_factory_ afterwards would read a freed object.
+  const base::WeakPtr<ShotURLLoader> self = weak_factory_.GetWeakPtr();
+  client->DidReceiveResponse(response, mojo::ScopedDataPipeConsumerHandle());
+  if (!self) {
     return;
   }
-
-  body_ = std::move(contents);
-  body_charge_ = std::move(charge);
-  const int64_t size = static_cast<int64_t>(body_.size());
-  client->DidReceiveResponse(response, std::move(consumer));
-
-  // DataPipeProducer owns the chunking and the writable-watcher loop, so a body
-  // larger than the pipe's capacity is written in as many passes as it takes
-  // rather than silently truncated. `body_` outlives the write -- it is a
-  // member and this loader is kept alive by blink until the load ends -- so the
-  // source may reference it instead of copying it.
-  body_producer_ = std::make_unique<mojo::DataPipeProducer>(std::move(producer));
-  body_producer_->Write(
-      std::make_unique<mojo::StringDataSource>(
-          base::span(body_),
-          mojo::StringDataSource::AsyncWritingMode::
-              STRING_STAYS_VALID_UNTIL_COMPLETION),
-      base::BindOnce(&ShotURLLoader::OnBodyWritten, weak_factory_.GetWeakPtr(),
-                     client, size));
-}
-
-void ShotURLLoader::OnBodyWritten(blink::URLLoaderClient* client,
-                                  int64_t size,
-                                  MojoResult result) {
-  // Dropping the producer closes the pipe, which is how the consumer learns
-  // the body is complete. DidFinishLoading has to come after that, not before.
-  body_producer_.reset();
-  // And with the write over, the copy this loader was holding for it. blink
-  // has its own by now; on a page of photographs, keeping ours until the
-  // loader happened to be destroyed meant every image in flight was resident
-  // twice.
-  body_.clear();
-  body_.shrink_to_fit();
-  // And the budget those bytes were counted against, which is only free
-  // now that they are gone.
-  body_charge_.Release();
-  if (result != MOJO_RESULT_OK) {
-    LOG(ERROR) << "shot: writing the response body failed (mojo result "
-               << result << ")";
-    NotifyCaptureProgress();
-    return;
+  if (size > 0) {
+    client->DidReceiveData(base::span(contents));
+    if (!self) {
+      return;
+    }
   }
+  // The bytes have reached blink; what they cost against the fetch budget is
+  // free again, and `contents` goes with this frame.
+  charge.Release();
+  // DidFinishLoading() destroys this loader too (HandleLoaderFinish resets
+  // loader_), so nothing below may touch a member: `charge` and `contents`
+  // are this frame's, and NotifyCaptureProgress() is a free function.
   client->DidFinishLoading(base::TimeTicks::Now(), size,
                            static_cast<uint64_t>(size), size);
   // After DidFinishLoading, not before: consuming the body is what can start

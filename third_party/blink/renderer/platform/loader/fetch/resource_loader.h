@@ -136,7 +136,10 @@ class PLATFORM_EXPORT ResourceLoader final
   void DidReceiveResponse(
       const WebURLResponse&,
       std::variant<mojo::ScopedDataPipeConsumerHandle, SegmentedBuffer>) override;
-  void DidReceiveDataForTesting(base::span<const char> data) override;
+  // One override for two interfaces: URLLoaderClient's direct delivery and
+  // ResponseBodyLoaderClient's chunk from a data pipe both land here, and
+  // both mean the same thing to the resource.
+  void DidReceiveData(base::span<const char> data) override;
   void DidReceiveTransferSizeUpdate(int transfer_size_diff) override;
   void DidFinishLoading(base::TimeTicks response_end_time,
                         int64_t encoded_data_length,
@@ -165,8 +168,7 @@ class PLATFORM_EXPORT ResourceLoader final
   // ResourceLoadSchedulerClient.
   void Run() override;
 
-  // ResponseBodyLoaderClient implementation.
-  void DidReceiveData(base::span<const char> data) override;
+  // ResponseBodyLoaderClient implementation; DidReceiveData() is above.
   void DidReceiveDecodedData(
       const String& data,
       std::unique_ptr<SecureStringDigest> digest) override;

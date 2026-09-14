@@ -51,6 +51,22 @@ CLI / --serve / C ABI / Node addon
 - Network work is split among `shot_url_loader.*`, `shot_network.*`,
   `shot_fetch.*` and `shot_cache.*`. Changes to fetching must preserve body
   budgets, redirect handling, cancellation and the file-access gate.
+  `ShotNetwork` is built lazily: with no cache directory nothing in `//net`
+  is created until the first http(s) request (`ShotNetwork::EnsureUp()`);
+  with one, the context and cache are opened at start so `cacheActive` is
+  answerable, and only the change notifier waits. Subresource bodies are
+  handed to blink directly (`URLLoaderClient::DidReceiveData`), not through
+  a mojo data pipe; keep that path synchronous and in one piece.
+- [shot_image_stream.cc](../../shot/shot_image_stream.cc) writes PNG itself:
+  each strip is compressed by the thread that rastered it (zlib level 1, Up
+  filter, Sub on a strip's first row) and the runs are concatenated into one
+  deflate stream. A `RowEncoder` that returns `SupportsBlocks()` must keep
+  `EncodeBlock()` thread-safe and `AppendBlock()` in row order.
+- The engine keeps decoded web fonts between captures, keyed by the font's
+  bytes (`FontCustomPlatformData::Create`, 64 MB, cleared by `PurgeMemory()`).
+  A changed file misses the cache; only the decode is shared.
+  See [performance-cut-audit.md](performance-cut-audit.md) for the measured
+  split behind these and the candidates that were measured and left alone.
 
 ## API changes
 
@@ -200,12 +216,25 @@ build loop. Read the affected workflow and source action for CI changes.
   engine. A package-only PR meets a real engine in minutes; `engine.yml`
   does not listen to `pull_request` itself. Its `preview` job then
   assembles the eight platform packages from the node archives
-  (`pnpm package:platform --from-archive`), publishes all nine packages
-  to pkg.pr.new (one comment per PR, updated on every push; the pkg.pr.new
-  GitHub App must be installed on the repository), and installs the main
-  package from the preview URL in a clean directory to render
-  `apps/demo-card/card.html` as the smoke test. Pull requests from forks
-  get the engine and the contract suite, not the preview.
+  (`pnpm package:platform --from-archive`) and publishes them with the
+  main package to pkg.pr.new (the pkg.pr.new GitHub App must be
+  installed on the repository), then installs the main package from its
+  preview URL in a clean directory to render `apps/demo-card/card.html`
+  as the smoke test. pkg.pr.new takes
+  one publish per workflow run (the server deletes the run's key after the
+  first) of at most ~99 MiB, and the eight platform packages are 130 MiB,
+  so `scripts/ci/publish-preview.ts` cuts them into batches: batch 0 goes
+  with the main package in the pull request's own publish, and each other
+  batch is published by a `workflow_dispatch` run of `preview.yml` itself
+  (its `publish-batch` job), fed by an artifact of the packed tarballs and
+  reporting its URLs back as an artifact, which the `preview` job waits for
+  and writes into the main package's `optionalDependencies` before its own
+  publish. The PR comment naming all nine packages is the script's, kept
+  as one comment per PR by a marker and rewritten on every push; every
+  publish runs with `--comment=off`, since pkg.pr.new's comment would name
+  one publish's packages. Nothing in a batch run is for hands. Pull
+  requests from forks get the engine and the contract suite, not the
+  preview.
 - [refresh.yml](../../.github/workflows/refresh.yml) re-uploads, on the
   first of each month and on dispatch, the engine, evidence and
   build-directory artifacts of `main`'s current fingerprint so a quiet

@@ -21,6 +21,7 @@
 #include "base/logging.h"
 #include "base/memory/discardable_memory_allocator.h"
 #include "base/memory/raw_ref.h"
+#include "base/no_destructor.h"
 #include "base/run_loop.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/stringprintf.h"
@@ -43,8 +44,10 @@
 #include "shot/shot_capture_context.h"
 #include "shot/shot_image_stream.h"
 #include "shot/shot_network.h"
+#include "shot/shot_profile.h"
 #include "shot/shot_url_loader.h"
 #include "skia/ext/legacy_display_globals.h"
+#include "third_party/blink/public/common/page/color_provider_color_maps.h"
 #include "third_party/blink/public/common/tokens/tokens.h"
 #include "third_party/blink/public/common/web_preferences/web_preferences.h"
 #include "third_party/blink/public/mojom/frame/frame.mojom-blink.h"
@@ -52,7 +55,6 @@
 #include "third_party/blink/renderer/core/dom/document.h"
 #include "third_party/blink/renderer/core/dom/document_lifecycle.h"
 #include "third_party/blink/renderer/core/dom/element.h"
-#include "third_party/blink/renderer/core/frame/frame_types.h"
 #include "third_party/blink/renderer/core/frame/local_dom_window.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
 #include "third_party/blink/renderer/core/frame/local_frame_view.h"
@@ -430,13 +432,6 @@ int EnvInt(const char* name, int fallback) {
   }
   int parsed = 0;
   return base::StringToInt(value, &parsed) ? parsed : fallback;
-}
-
-// Logs the lifecycle split (style / layout / prepaint+paint) and the heap size
-// per round. Needs --verbose too, which is what lets LOG(INFO) through.
-bool ProfileEnabled() {
-  static const bool enabled = EnvInt("SHOT_PROFILE", 0) != 0;
-  return enabled;
 }
 
 // Whether a freed PartitionAlloc span is decommitted rather than left
@@ -987,9 +982,12 @@ scoped_refptr<cc::DisplayItemList> BuildDisplayList(
   return list;
 }
 
-void DumpOps(const cc::PaintOpBuffer& buffer) {
-  std::map<std::string, int> histogram;
-  int total = 0;
+// Counts the ops in `buffer`, descending into nested records: a small
+// capture's list is one DrawRecordOp around the whole paint (see
+// BuildDisplayList), and a histogram of that alone says nothing.
+void CountOps(const cc::PaintOpBuffer& buffer,
+              std::map<std::string, int>& histogram,
+              int& total) {
   for (const cc::PaintOp& op : cc::PaintOpBuffer::Iterator(buffer)) {
     ++total;
     ++histogram[cc::PaintOpTypeToString(op.GetType())];
@@ -1014,10 +1012,20 @@ void DumpOps(const cc::PaintOpBuffer& buffer) {
         describe("SaveLayerFilters",
                  static_cast<const cc::SaveLayerFiltersOp&>(op).bounds);
         break;
+      case cc::PaintOpType::kDrawRecord:
+        CountOps(static_cast<const cc::DrawRecordOp&>(op).record.buffer(),
+                 histogram, total);
+        break;
       default:
         break;
     }
   }
+}
+
+void DumpOps(const cc::PaintOpBuffer& buffer) {
+  std::map<std::string, int> histogram;
+  int total = 0;
+  CountOps(buffer, histogram, total);
   std::string summary;
   for (const auto& [name, count] : histogram) {
     summary += name + "=" + base::NumberToString(count) + " ";
@@ -1076,8 +1084,16 @@ ShotRenderer::~ShotRenderer() {
 }
 
 void ShotRenderer::TearDown() {
-  if (frame_) {
-    frame_->Detach(blink::FrameDetachType::kRemove);
+  if (page_) {
+    // What IsolatedSVGDocumentHost::Shutdown() does, and for the same
+    // reason: WillBeDestroyed() detaches the main frame and then takes the
+    // page out of everything that still knows it. Detaching the frame alone
+    // -- which is what this did before -- left the Page in the scheduler's
+    // page list, holding its PageScheduler and through that its
+    // AgentGroupScheduler and their task queues, until the next collection;
+    // and with collection deferred between captures, a burst of small ones
+    // built up hundreds of dead pages for every policy update to walk.
+    page_->WillBeDestroyed();
   }
   frame_ = nullptr;
   page_ = nullptr;
@@ -1108,6 +1124,9 @@ void ShotRenderer::ReleaseRetained() {
   TearDown();
   small_bitmap_.reset();
   small_scratch_.clear();
+  // The next capture makes a new one; this one's queues go with the
+  // collection that follows a purge.
+  agent_group_scheduler_ = nullptr;
 }
 
 base::expected<void, std::string> ShotRenderer::WaitForLoad(
@@ -1121,7 +1140,10 @@ base::expected<void, std::string> ShotRenderer::WaitForLoad(
   const bool network_idle = (wait_until == "networkidle");
   const base::TimeTicks deadline = base::TimeTicks::Now() + timeout;
   base::TimeTicks quiet_since;
-  base::TimeTicks last_lifecycle;
+  // From the install rather than from nothing: the interval below is "how
+  // long since the tree was last looked at", and the parse was the last
+  // look. Null would make the first round's interval infinite.
+  base::TimeTicks last_lifecycle = base::TimeTicks::Now();
   base::TimeDelta slice = kPumpSliceAfterProgress;
   int rounds = 0;
   int lifecycles = 0;
@@ -1159,18 +1181,45 @@ base::expected<void, std::string> ShotRenderer::WaitForLoad(
     // declares, and a font found only after the sheet arrives loads after it
     // rather than beside it. Skipping the round saved 0.65 ms on a page with
     // one external sheet and cost 20 ms on the one with a web font.
+    // Not on the first round, though, when everything in flight is a local
+    // file. That round's purpose is to find the fonts an inline @font-face
+    // declares before the external stylesheet lands, so that the two are
+    // fetched side by side rather than one after the other -- which is
+    // worth a round trip over the network and nothing at all off the disk,
+    // where the sheet is in the very next task and the layout run ahead of
+    // it is simply run twice. A capture that has made no network request
+    // yet has nothing to overlap with; it waits for what is in flight and
+    // lays out once.
     const unsigned in_flight = document->Fetcher()->ActiveRequestCount();
+    const CaptureContext* capture = CaptureContext::Current();
+    const bool overlaps_network = !capture || capture->network_requested();
     const bool run_lifecycle =
-        rounds == 0 || in_flight == 0 ||
+        (rounds == 0 && (in_flight == 0 || overlaps_network)) ||
+        in_flight == 0 ||
         base::TimeTicks::Now() - last_lifecycle >= kLifecycleInterval;
+    // While something is still in flight, the round runs style and layout
+    // only. Layout is what discovers the requests a round is run to find --
+    // a font is fetched when shaping first needs it, a background image
+    // when style first resolves it -- and prepaint and paint discover
+    // nothing; they were run here anyway, and thrown away when the
+    // stylesheet or font they were waiting on landed. On a page with one
+    // external stylesheet that was a full paint of the unstyled page before
+    // the styled one. A browser does not paint before its render-blocking
+    // resources have arrived either. The one round that decides the
+    // document is loaded is a full one, so that the paint the capture takes
+    // is of the tree it checked, and so that what the post-lifecycle steps
+    // request -- a lazily loaded image entering the viewport -- is counted
+    // before the decision rather than after it.
+    const bool paint = in_flight == 0;
     if (run_lifecycle) {
-      RunLifecycle(document, rounds);
+      RunLifecycle(document, rounds, paint);
       last_lifecycle = base::TimeTicks::Now();
       ++lifecycles;
     }
 
     const unsigned active = document->Fetcher()->ActiveRequestCount();
-    const bool loaded = run_lifecycle && document->HasFinishedParsing() &&
+    const bool loaded = run_lifecycle && paint &&
+                        document->HasFinishedParsing() &&
                         document->IsLoadCompleted() && active == 0;
 
     // Park the images that have finished arriving: their bytes go to the
@@ -1305,14 +1354,21 @@ void ShotRenderer::SetGarbageCollection(bool enabled) {
   gc_disabled_ = !enabled;
 }
 
-void ShotRenderer::RunLifecycle(blink::Document* document, int round) {
+void ShotRenderer::RunLifecycle(blink::Document* document,
+                                int round,
+                                bool paint) {
   // SHOT_PROFILE=1 splits the lifecycle into style, layout and prepaint+paint
   // per round, which is how the cost of a slow page is attributed. Running the
   // phases separately costs a little more than one UpdateAllLifecyclePhases
   // would, so it is behind the flag rather than always on.
   if (!ProfileEnabled()) {
-    frame_->View()->UpdateAllLifecyclePhases(
-        blink::DocumentUpdateReason::kBeginMainFrame);
+    if (paint) {
+      frame_->View()->UpdateAllLifecyclePhases(
+          blink::DocumentUpdateReason::kBeginMainFrame);
+    } else {
+      frame_->View()->UpdateLifecycleToLayoutClean(
+          blink::DocumentUpdateReason::kBeginMainFrame);
+    }
     return;
   }
   const base::TimeTicks t0 = base::TimeTicks::Now();
@@ -1321,8 +1377,10 @@ void ShotRenderer::RunLifecycle(blink::Document* document, int round) {
   frame_->View()->UpdateLifecycleToLayoutClean(
       blink::DocumentUpdateReason::kBeginMainFrame);
   const base::TimeTicks t2 = base::TimeTicks::Now();
-  frame_->View()->UpdateAllLifecyclePhases(
-      blink::DocumentUpdateReason::kBeginMainFrame);
+  if (paint) {
+    frame_->View()->UpdateAllLifecyclePhases(
+        blink::DocumentUpdateReason::kBeginMainFrame);
+  }
   const base::TimeTicks t3 = base::TimeTicks::Now();
   const size_t used =
       cppgc::CollectStatistics(blink::ThreadState::Current()->heap_handle(),
@@ -1333,6 +1391,7 @@ void ShotRenderer::RunLifecycle(blink::Document* document, int round) {
             << " style=" << (t1 - t0).InMillisecondsF()
             << " layout=" << (t2 - t1).InMillisecondsF()
             << " prepaint+paint=" << (t3 - t2).InMillisecondsF()
+            << (paint ? "" : " (skipped)")
             << " parsed=" << document->HasFinishedParsing()
             << " loaded=" << document->IsLoadCompleted()
             << " active=" << document->Fetcher()->ActiveRequestCount();
@@ -1438,9 +1497,17 @@ base::expected<void, std::string> ShotRenderer::CreatePage(
   const base::TimeTicks page_started = base::TimeTicks::Now();
   auto* chrome_client = blink::MakeGarbageCollected<ChromeClient>();
   chrome_client->SetDeviceScaleFactor(static_cast<float>(request.scale));
-  page_ = blink::Page::CreateNonOrdinary(
-      *chrome_client, *scheduler->CreateAgentGroupScheduler(),
-      /*color_provider_colors=*/nullptr);
+  if (!agent_group_scheduler_) {
+    agent_group_scheduler_ = scheduler->CreateAgentGroupScheduler();
+  }
+  // The colour maps every page is built from -- the CSS system colours, the
+  // form-control palette -- computed once. Page builds its providers from
+  // these; handed nothing it would compute the defaults again, three
+  // providers' worth of colour mixing, for every capture.
+  static const base::NoDestructor<blink::ColorProviderColorMaps>
+      color_provider_colors(blink::ColorProviderColorMaps::CreateDefault());
+  page_ = blink::Page::CreateNonOrdinary(*chrome_client, *agent_group_scheduler_,
+                                         color_provider_colors.get());
   if (!page_) {
     return base::unexpected("could not create the page");
   }
@@ -1497,11 +1564,19 @@ base::expected<void, std::string> ShotRenderer::CreatePage(
       /*inheriting_agent_factory=*/nullptr, /*interface_registry=*/nullptr,
       mojo::NullRemote());
   frame_->SetView(blink::MakeGarbageCollected<blink::LocalFrameView>(*frame_));
+  const base::TimeTicks frame_created = base::TimeTicks::Now();
+  // Init() loads the initial empty document: a DocumentLoader, a
+  // LocalDOMWindow and a Document that ForceSynchronousDocumentInstall()
+  // shuts down a moment later to install the real one into the same window.
+  // The loader and the window are what the real document fetches and lives
+  // through, so the empty document is the price of having them; timed
+  // separately (SHOT_PROFILE) so that price is known rather than guessed.
   frame_->Init(/*opener=*/nullptr, blink::DocumentToken(),
                blink::InitiatorStateToken(),
                /*policy_container=*/nullptr, blink::StorageKey(),
                /*document_ukm_source_id=*/ukm::kInvalidSourceId,
                /*creator_base_url=*/blink::NullUrl());
+  const base::TimeTicks frame_initialized = base::TimeTicks::Now();
 
   const gfx::Size viewport(request.width, request.height);
   frame_->View()->Resize(viewport);
@@ -1522,7 +1597,11 @@ base::expected<void, std::string> ShotRenderer::CreatePage(
               << " settings="
               << (settings_applied - page_created).InMillisecondsF()
               << " frame="
-              << (base::TimeTicks::Now() - settings_applied).InMillisecondsF();
+              << (frame_created - settings_applied).InMillisecondsF()
+              << " initial_document="
+              << (frame_initialized - frame_created).InMillisecondsF()
+              << " viewport="
+              << (base::TimeTicks::Now() - frame_initialized).InMillisecondsF();
   }
   return base::ok();
 }
@@ -1546,8 +1625,9 @@ base::expected<EncodedTile, std::string> ShotRenderer::Render(
           &image));
   // What the raster freed -- strips, decoded images, display lists -- goes
   // back to the system now rather than at the next idle purge, so that a
-  // worker between requests is the size of a worker between requests.
-  if (reclaim_after_render_ && ReclaimEnabled()) {
+  // worker between requests is the size of a worker between requests. A
+  // process about to exit has no between-requests to be small in.
+  if (reclaim_after_render_ && !one_shot_ && ReclaimEnabled()) {
     ::partition_alloc::MemoryReclaimer::Instance()->ReclaimAll();
   }
   if (!rendered.has_value()) {
@@ -1564,7 +1644,7 @@ base::expected<void, std::string> ShotRenderer::RenderTiles(
     return base::unexpected("RenderTiles needs tile.height");
   }
   auto rendered = RenderDocument(input, request, sink);
-  if (reclaim_after_render_ && ReclaimEnabled()) {
+  if (reclaim_after_render_ && !one_shot_ && ReclaimEnabled()) {
     ::partition_alloc::MemoryReclaimer::Instance()->ReclaimAll();
   }
   return rendered;
@@ -1624,11 +1704,14 @@ base::expected<void, std::string> ShotRenderer::RenderDocument(
   // ResourceFetcher and everything they hold with it.
   base::ScopedClosureRunner tear_down(base::BindOnce(
       [](ShotRenderer* self, const bool* succeeded) {
-        if (*succeeded) {
+        if (*succeeded && !self->one_shot_) {
           self->TearDownWhenIdle();
-        } else {
+        } else if (!*succeeded) {
           self->TearDown();
         }
+        // A one-shot process that succeeded leaves the page attached: it is
+        // exiting, and detaching a frame nobody will look at again is work
+        // on the caller's clock.
       },
       base::Unretained(this), base::Unretained(&succeeded)));
   TearDown();

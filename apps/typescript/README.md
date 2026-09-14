@@ -274,7 +274,7 @@ Renders the region `fullPage`, `selector`, `clip` or the viewport would have pro
 | `start(options?: StartOptions)` | `StartResult` | Initialises the engine, or safely reuses the running instance. Throws if options conflict with the already initialised engine configuration |
 | `status()` | `StartResult` | Returns current engine operational status and configuration |
 | `stop()` | `Promise<void>` | Drains the capture queue, frees temporary caches, and stops accepting new requests. Underlying Blink remains initialised and disk cache is retained; subsequent calls safely reuse this engine instance |
-| `releaseMemory(options?: ReleaseMemoryOptions)` | `void` | Triggers Blink garbage collection, clears Skia raster caches, and trims allocator free lists. When `releaseWorkingSet: true` is set, requests the OS to reclaim physical memory pages (without modifying disk cache) |
+| `releaseMemory(options?: ReleaseMemoryOptions)` | `void` | Triggers Blink garbage collection, clears Skia raster caches and the decoded web fonts the engine keeps between captures (up to 64 MB, keyed by the font bytes), and trims allocator free lists. When `releaseWorkingSet: true` is set, requests the OS to reclaim physical memory pages (without modifying disk cache) |
 
 `shotium.running` on the default export (or `status().running`) indicates whether the engine is ready and accepting capture tasks
 

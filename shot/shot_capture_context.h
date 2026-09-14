@@ -126,12 +126,20 @@ class CaptureContext {
   void SetProgressCallback(base::RepeatingClosure callback);
   void NotifyProgress();
 
+  // Whether this capture has sent anything over the network yet: the
+  // document itself, or a subresource. ShotFetch says so as it starts. The
+  // load wait reads it to decide whether an early layout is worth running
+  // while requests are still in flight -- see ShotRenderer::WaitForLoad.
+  void NoteNetworkRequest() { network_requested_ = true; }
+  bool network_requested() const { return network_requested_; }
+
   CaptureStats& stats() { return stats_; }
   const CaptureStats& stats() const { return stats_; }
 
  private:
   CaptureStats stats_;
   base::RepeatingClosure progress_callback_;
+  bool network_requested_ = false;
   int load_flags_ = 0;
   net::HttpRequestHeaders extra_headers_;
   url::Origin headers_origin_;
