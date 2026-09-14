@@ -43,6 +43,7 @@
 #include "shot/shot_capture_context.h"
 #include "shot/shot_image_stream.h"
 #include "shot/shot_network.h"
+#include "shot/shot_profile.h"
 #include "shot/shot_url_loader.h"
 #include "skia/ext/legacy_display_globals.h"
 #include "third_party/blink/public/common/tokens/tokens.h"
@@ -430,13 +431,6 @@ int EnvInt(const char* name, int fallback) {
   }
   int parsed = 0;
   return base::StringToInt(value, &parsed) ? parsed : fallback;
-}
-
-// Logs the lifecycle split (style / layout / prepaint+paint) and the heap size
-// per round. Needs --verbose too, which is what lets LOG(INFO) through.
-bool ProfileEnabled() {
-  static const bool enabled = EnvInt("SHOT_PROFILE", 0) != 0;
-  return enabled;
 }
 
 // Whether a freed PartitionAlloc span is decommitted rather than left
@@ -987,9 +981,12 @@ scoped_refptr<cc::DisplayItemList> BuildDisplayList(
   return list;
 }
 
-void DumpOps(const cc::PaintOpBuffer& buffer) {
-  std::map<std::string, int> histogram;
-  int total = 0;
+// Counts the ops in `buffer`, descending into nested records: a small
+// capture's list is one DrawRecordOp around the whole paint (see
+// BuildDisplayList), and a histogram of that alone says nothing.
+void CountOps(const cc::PaintOpBuffer& buffer,
+              std::map<std::string, int>& histogram,
+              int& total) {
   for (const cc::PaintOp& op : cc::PaintOpBuffer::Iterator(buffer)) {
     ++total;
     ++histogram[cc::PaintOpTypeToString(op.GetType())];
@@ -1014,10 +1011,20 @@ void DumpOps(const cc::PaintOpBuffer& buffer) {
         describe("SaveLayerFilters",
                  static_cast<const cc::SaveLayerFiltersOp&>(op).bounds);
         break;
+      case cc::PaintOpType::kDrawRecord:
+        CountOps(static_cast<const cc::DrawRecordOp&>(op).record.buffer(),
+                 histogram, total);
+        break;
       default:
         break;
     }
   }
+}
+
+void DumpOps(const cc::PaintOpBuffer& buffer) {
+  std::map<std::string, int> histogram;
+  int total = 0;
+  CountOps(buffer, histogram, total);
   std::string summary;
   for (const auto& [name, count] : histogram) {
     summary += name + "=" + base::NumberToString(count) + " ";
@@ -1497,11 +1504,19 @@ base::expected<void, std::string> ShotRenderer::CreatePage(
       /*inheriting_agent_factory=*/nullptr, /*interface_registry=*/nullptr,
       mojo::NullRemote());
   frame_->SetView(blink::MakeGarbageCollected<blink::LocalFrameView>(*frame_));
+  const base::TimeTicks frame_created = base::TimeTicks::Now();
+  // Init() loads the initial empty document: a DocumentLoader, a
+  // LocalDOMWindow and a Document that ForceSynchronousDocumentInstall()
+  // shuts down a moment later to install the real one into the same window.
+  // The loader and the window are what the real document fetches and lives
+  // through, so the empty document is the price of having them; timed
+  // separately (SHOT_PROFILE) so that price is known rather than guessed.
   frame_->Init(/*opener=*/nullptr, blink::DocumentToken(),
                blink::InitiatorStateToken(),
                /*policy_container=*/nullptr, blink::StorageKey(),
                /*document_ukm_source_id=*/ukm::kInvalidSourceId,
                /*creator_base_url=*/blink::NullUrl());
+  const base::TimeTicks frame_initialized = base::TimeTicks::Now();
 
   const gfx::Size viewport(request.width, request.height);
   frame_->View()->Resize(viewport);
@@ -1522,7 +1537,11 @@ base::expected<void, std::string> ShotRenderer::CreatePage(
               << " settings="
               << (settings_applied - page_created).InMillisecondsF()
               << " frame="
-              << (base::TimeTicks::Now() - settings_applied).InMillisecondsF();
+              << (frame_created - settings_applied).InMillisecondsF()
+              << " initial_document="
+              << (frame_initialized - frame_created).InMillisecondsF()
+              << " viewport="
+              << (base::TimeTicks::Now() - frame_initialized).InMillisecondsF();
   }
   return base::ok();
 }

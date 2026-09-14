@@ -40,6 +40,7 @@
 #include "partition_alloc/tagging.h"
 #include "partition_alloc/thread_cache.h"
 #include "shot/shot_platform.h"
+#include "shot/shot_profile.h"
 #include "shot/shot_renderer.h"
 #include "third_party/blink/public/platform/web_runtime_features.h"
 #include "skia/ext/font_utils.h"
@@ -174,6 +175,9 @@ base::expected<std::unique_ptr<ShotRuntime>, std::string> ShotRuntime::Create(
     const NetworkConfig& network_config) {
   // Can't use make_unique: the constructor is private.
   std::unique_ptr<ShotRuntime> runtime(new ShotRuntime());
+  // SHOT_PROFILE=1 prints how long each step below took, which is how a slow
+  // start is attributed rather than guessed at.
+  ProfileStages stages("runtime");
 
   // PartitionAlloc's per-thread cache. The allocator shim builds its
   // partition with the cache off and leaves turning it on to the embedder:
@@ -227,12 +231,14 @@ base::expected<std::unique_ptr<ShotRuntime>, std::string> ShotRuntime::Create(
 #endif
   }();
   std::ignore = thread_cache_enabled;
+  stages.Mark("allocator");
 
   // ICU first: WTF's string and text code assumes it during static
   // initialisation of blink.
   if (!base::i18n::InitializeICU()) {
     return base::unexpected("could not initialize ICU");
   }
+  stages.Mark("icu");
 
   // The packed resources hold blink's user-agent stylesheet, which
   // ShotPlatform::GetDataResourceString hands back.
@@ -245,6 +251,7 @@ base::expected<std::unique_ptr<ShotRuntime>, std::string> ShotRuntime::Create(
       module_dir.AppendASCII("shotium_strings.pak"));
   ui::ResourceBundle::GetSharedInstance().AddDataPackFromPath(
       module_dir.AppendASCII("shotium_data.pak"), ui::kScaleFactorNone);
+  stages.Mark("resources");
 
   // The thread pool. base::ThreadPool::PostTask DCHECKs on an instance, and the
   // first caller is DiscardableSharedMemoryManager, which does its accounting
@@ -276,6 +283,7 @@ base::expected<std::unique_ptr<ShotRuntime>, std::string> ShotRuntime::Create(
   base::ThreadPoolInstance::Get()->Start({kMaxUnblockedTasks});
   runtime->shutdown_thread_pool_ = base::ScopedClosureRunner(
       base::BindOnce([] { base::ThreadPoolInstance::Get()->Shutdown(); }));
+  stages.Mark("thread_pool");
 
   // CPU image-filter passes are independent by scanline, but Skia's default
   // executor deliberately runs every task inline.
@@ -289,6 +297,7 @@ base::expected<std::unique_ptr<ShotRuntime>, std::string> ShotRuntime::Create(
   // means a message pipe. The pipe stays inside this process with nothing on
   // the far end, which is exactly what an empty policy container is for.
   mojo::core::Init();
+  stages.Mark("mojo");
 
   // blink's own scheduler, not a bare task executor.
   //
@@ -313,9 +322,11 @@ base::expected<std::unique_ptr<ShotRuntime>, std::string> ShotRuntime::Create(
   // scheduler builds its queues on whatever it is handed -- so an IO pump is a
   // strict superset of what a renderer's main thread runs on.
   blink::Platform::InitializeBlink();
+  stages.Mark("blink_static");
   runtime->main_thread_scheduler_ =
       blink::scheduler::WebThreadScheduler::CreateMainThreadScheduler(
           base::MessagePump::Create(base::MessagePumpType::IO));
+  stages.Mark("scheduler");
 
   // Discardable memory, which skia's raster step needs before it needs anything
   // else about the page: SkBlurMaskFilterImpl caches the nine-patch it builds
@@ -333,6 +344,7 @@ base::expected<std::unique_ptr<ShotRuntime>, std::string> ShotRuntime::Create(
       std::make_unique<discardable_memory::DiscardableSharedMemoryManager>();
   base::DiscardableMemoryAllocator::SetInstance(
       runtime->discardable_manager_.get());
+  stages.Mark("discardable");
 
   // ~MainThreadSchedulerImpl CHECKs that Shutdown() was called, so that it
   // cannot outlive the blink heap holding stale pointers into it.
@@ -392,6 +404,7 @@ base::expected<std::unique_ptr<ShotRuntime>, std::string> ShotRuntime::Create(
   // The registration is upstream's own and must happen before any rasterising
   // thread exists; it is not thread safe.
   skia::InitializeFontRendering();
+  stages.Mark("skia");
 
 #if BUILDFLAG(IS_WIN)
   blink::WebFontRendering::SetAntialiasedTextEnabled(true);
@@ -423,6 +436,7 @@ base::expected<std::unique_ptr<ShotRuntime>, std::string> ShotRuntime::Create(
     skia::OverrideDefaultSkFontMgr(
         SkFontMgr_New_DirectWrite(dwrite_factory.Get()));
   }
+  stages.Mark("dwrite");
 
   // The Windows shell fonts, which blink cannot ask for itself.
   //
@@ -453,6 +467,7 @@ base::expected<std::unique_ptr<ShotRuntime>, std::string> ShotRuntime::Create(
                   &blink::WebFontRendering::SetSmallCaptionFontMetrics);
   set_system_font(gfx::win::SystemFont::kStatus,
                   &blink::WebFontRendering::SetStatusFontMetrics);
+  stages.Mark("system_fonts");
 #endif
 
   // With RasterInducingScroll on, blink's paint conversion wraps each
@@ -467,6 +482,7 @@ base::expected<std::unique_ptr<ShotRuntime>, std::string> ShotRuntime::Create(
   mojo::BinderMap binders;
   blink::Initialize(runtime->platform_.get(), &binders,
                     runtime->main_thread_scheduler_.get());
+  stages.Mark("blink");
 
   // Last, because it is the only step that needs the thread to be finished:
   // URLRequestContextBuilder reads base::CurrentIOThread and posts to the
@@ -477,6 +493,7 @@ base::expected<std::unique_ptr<ShotRuntime>, std::string> ShotRuntime::Create(
     return base::unexpected(network.error());
   }
   runtime->network_ = std::move(network).value();
+  stages.Mark("network");
   runtime->renderer_ = std::make_unique<ShotRenderer>();
 
   return runtime;
@@ -489,10 +506,7 @@ ShotRenderer& ShotRuntime::renderer() {
 void ShotRuntime::PurgeMemory() {
   // SHOT_PROFILE=1 logs how long each stage below took, the same switch the
   // renderer's profile lines answer to.
-  static const bool profile = [] {
-    const char* value = std::getenv("SHOT_PROFILE");
-    return value && *value && *value != '0';
-  }();
+  const bool profile = ProfileEnabled();
   base::TimeTicks stage_started = base::TimeTicks::Now();
   std::array<double, 5> stage_ms = {};
   auto stage_done = [&](size_t index) {

@@ -15,10 +15,12 @@
 #include "base/files/file_util.h"
 #include "base/logging.h"
 #include "base/logging/logging_settings.h"
+#include "base/process/process.h"
 #include "base/strings/utf_string_conversions.h"
 #include "build/build_config.h"
 #include "shot/shot_capture.h"
 #include "shot/shot_options.h"
+#include "shot/shot_profile.h"
 #include "shot/shot_request.h"
 #include "shot/shot_runtime.h"
 #include "shot/shot_server.h"
@@ -111,6 +113,16 @@ int Main(int argc, const char** argv) {
   }
 
   const bool serve = parsed->serve;
+  // SHOT_PROFILE=1 with --verbose: the one-shot path's split between
+  // bringing the engine up, the capture and the exit, after how long the
+  // process took to reach main() at all -- the loader mapping a 43 MB
+  // image, its static initialisers, the CRT.
+  if (shot::ProfileEnabled()) {
+    LOG(INFO) << "shot: profile process_to_main="
+              << (base::Time::Now() - base::Process::Current().CreationTime())
+                     .InMillisecondsF();
+  }
+  shot::ProfileStages stages("main");
 
   // Everything blink and //net need, brought up once. In --serve mode it stays
   // up for the life of the process and every request reuses it -- including the
@@ -125,6 +137,8 @@ int Main(int argc, const char** argv) {
     LOG(ERROR) << "shot: " << runtime.error();
     return shot::kCaptureExitCode;
   }
+
+  stages.Mark("runtime");
 
   if (serve) {
     return shot::RunServer(*runtime.value(), parsed->allow_file_access);
@@ -174,6 +188,8 @@ int Main(int argc, const char** argv) {
     for (const shot::DeliveredTile& tile : *tiles) {
       printf("%s\n", tile.path.c_str());
     }
+    stages.Mark("capture");
+    stages.Finish();
     return shot::kSuccessExitCode;
   }
 
@@ -182,10 +198,12 @@ int Main(int argc, const char** argv) {
   // the fallback for an engine that handed the bytes back instead.
   request.path = prepared->options.output_path.AsUTF8Unsafe();
   auto image = shot::Capture(**runtime, request);
+  stages.Mark("capture");
   if (!image.has_value()) {
     LOG(ERROR) << "shot: " << image.error();
     return shot::kCaptureExitCode;
   }
+  stages.Finish();
   if (!image->wrote_path &&
       !base::WriteFile(prepared->options.output_path, image->image)) {
     LOG(ERROR) << "shot: could not write "

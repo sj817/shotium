@@ -91,6 +91,7 @@ source_set("shot_core") {
     "shot_options.h",
     "shot_platform.cc",
     "shot_platform.h",
+    "shot_profile.h",
     "shot_renderer.cc",
     "shot_renderer.h",
     "shot_request.cc",
