@@ -238,7 +238,17 @@ base::expected<void, std::string> WithDocument(
   const base::TimeTicks fetch_started = base::TimeTicks::Now();
   base::expected<RenderInput, std::string> input =
       base::unexpected(std::string());
-  if (url->SchemeIsFile()) {
+  if (request.document.has_value()) {
+    // Delivered by the caller. Counted as the one resource it is, the way a
+    // document read off the disk is, so that `requests` means the same thing
+    // whichever way the bytes arrived.
+    RenderInput delivered;
+    delivered.url = *url;
+    delivered.body = *request.document;
+    capture.RecordResource(/*from_cache=*/false, /*failed=*/false,
+                           static_cast<int64_t>(delivered.body.size()));
+    input = std::move(delivered);
+  } else if (url->SchemeIsFile()) {
     input = ReadLocalDocument(*url);
   } else if (IsNetworkScheme(*url)) {
     input = FetchDocument(*url, base::Milliseconds(request.timeout_ms));

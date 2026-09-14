@@ -144,8 +144,6 @@ int Main(int argc, const char** argv) {
     return shot::RunServer(*runtime.value(), parsed->allow_file_access);
   }
 
-  // PrepareShot owns the temporary file that makes --stdin navigable, so it
-  // has to outlive the render that reads it.
   auto prepared = shot::PrepareShot(std::move(parsed).value());
   if (!prepared.has_value()) {
     LOG(ERROR) << "shot: " << prepared.error();
@@ -170,6 +168,8 @@ int Main(int argc, const char** argv) {
   // A caller coming in over --serve has not, which is why this is a request
   // field and not a constant.
   request.allow_file_access = true;
+  // --stdin: the bytes go with the request rather than through a file.
+  request.document = std::move(prepared->document);
 
   if (prepared->options.tile_height > 0) {
     request.tile = shot::Tile{prepared->options.tile_height};

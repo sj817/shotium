@@ -12,6 +12,7 @@
 #include "base/files/file_util.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/stringprintf.h"
+#include "base/uuid.h"
 #include "build/build_config.h"
 #include "net/base/filename_util.h"
 #include "shot/shot_request.h"
@@ -396,19 +397,24 @@ base::expected<PreparedShot, std::string> PrepareShot(ShotOptions options) {
     if (!html.has_value()) {
       return base::unexpected(html.error());
     }
-    if (!prepared.stdin_temp_dir.CreateUniqueTempDir(
-            FILE_PATH_LITERAL("shot-stdin-"))) {
-      return base::unexpected("failed to create a temporary stdin directory");
+    // The URL the temporary file used to have, without the file: a unique
+    // name under the temporary directory, so that nothing relative resolves
+    // to a file that exists, which is what a temporary directory holding only
+    // this document gave the page. See PreparedShot.
+    base::FilePath temp_dir;
+    if (!base::GetTempDir(&temp_dir)) {
+      return base::unexpected("failed to locate the temporary directory");
     }
-    const base::FilePath html_path = prepared.stdin_temp_dir.GetPath().Append(
-        FILE_PATH_LITERAL("stdin.html"));
-    if (!base::WriteFile(html_path, html.value())) {
-      return base::unexpected("failed to write stdin HTML to a temporary file");
-    }
+    const base::FilePath html_path =
+        temp_dir
+            .AppendASCII("shot-stdin-" +
+                         base::Uuid::GenerateRandomV4().AsLowercaseString())
+            .AppendASCII("stdin.html");
     prepared.target_url = net::FilePathToFileURL(html_path);
     if (!prepared.target_url.is_valid()) {
       return base::unexpected("failed to create the stdin HTML file URL");
     }
+    prepared.document = std::move(html).value();
     return std::move(prepared);
   }
 

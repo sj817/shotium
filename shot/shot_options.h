@@ -10,7 +10,6 @@
 #include <vector>
 
 #include "base/files/file_path.h"
-#include "base/files/scoped_temp_dir.h"
 #include "base/time/time.h"
 #include "base/types/expected.h"
 #include "url/gurl.h"
@@ -65,12 +64,21 @@ struct ShotOptions {
   std::string user_agent;
 };
 
-// Owns any temporary file used to make stdin HTML navigable for as long as the
-// browser and renderer processes may need it.
+// The resolved input: the URL to render, and for --stdin the document itself.
+//
+// --stdin used to be made navigable by writing the bytes to a temporary file
+// and rendering that file's URL, which cost a directory, a file, a write and
+// a read back for a document the process already had in memory. The bytes now
+// go to the renderer directly, under a URL of the same shape as before -- a
+// file: URL in a unique temporary directory that is never created -- so that
+// what the document sees does not change: a file: origin, local resources
+// reachable by absolute path, and relative references resolving to a place
+// where nothing is, exactly as they did against the temporary directory.
 struct PreparedShot {
   ShotOptions options;
   GURL target_url;
-  base::ScopedTempDir stdin_temp_dir;
+  // Set for --stdin: the document, delivered rather than fetched.
+  std::optional<std::string> document;
 };
 
 base::expected<ShotOptions, std::string> ParseShotOptions(
