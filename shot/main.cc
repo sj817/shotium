@@ -21,6 +21,7 @@
 #include "shot/shot_capture.h"
 #include "shot/shot_options.h"
 #include "shot/shot_profile.h"
+#include "shot/shot_renderer.h"
 #include "shot/shot_request.h"
 #include "shot/shot_runtime.h"
 #include "shot/shot_server.h"
@@ -50,6 +51,28 @@ namespace {
 // the same Capture(). check-node.ts compares the images byte for byte.
 // --serve is for a
 // caller that wants a resident renderer and is not node.
+// How a one-shot run ends once its image is written.
+//
+// Returning from main() tears the engine down: the frame is detached and the
+// heap collected, the scheduler shut down, the thread pool joined, blink's
+// and skia's statics destroyed, and a 43 MB image unmapped -- all of it for a
+// process whose only reader has its file already. So the process ends here
+// instead, with the output flushed, the way chrome's own renderers end: the
+// kernel reclaims what a destructor would have.
+//
+// Except with a disk cache. The simple backend writes its index on shutdown
+// and its entries from the thread pool, and an exit that gives neither the
+// chance costs the next process an index rebuild -- so a run that was asked
+// to cache takes the long way out.
+int Exit(const shot::ShotOptions& options, int code) {
+  if (!options.cache_dir.empty()) {
+    return code;
+  }
+  fflush(stdout);
+  fflush(stderr);
+  base::Process::TerminateCurrentProcessImmediately(code);
+}
+
 int Main(int argc, const char** argv) {
   base::AtExitManager at_exit;
   base::CommandLine::Init(argc, argv);
@@ -149,6 +172,8 @@ int Main(int argc, const char** argv) {
     LOG(ERROR) << "shot: " << prepared.error();
     return shot::kUsageExitCode;
   }
+  // One document, then exit: nothing after the image is for anyone.
+  (*runtime)->renderer().SetOneShot(true);
 
   shot::ScreenshotRequest request;
   request.file = prepared->target_url.spec();
@@ -190,7 +215,7 @@ int Main(int argc, const char** argv) {
     }
     stages.Mark("capture");
     stages.Finish();
-    return shot::kSuccessExitCode;
+    return Exit(prepared->options, shot::kSuccessExitCode);
   }
 
   // The engine writes the file itself, a row at a time as it encodes, so the
@@ -210,7 +235,7 @@ int Main(int argc, const char** argv) {
                << prepared->options.output_path.AsUTF8Unsafe();
     return shot::kCaptureExitCode;
   }
-  return shot::kSuccessExitCode;
+  return Exit(prepared->options, shot::kSuccessExitCode);
 }
 
 }  // namespace

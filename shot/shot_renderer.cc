@@ -1585,8 +1585,9 @@ base::expected<EncodedTile, std::string> ShotRenderer::Render(
           &image));
   // What the raster freed -- strips, decoded images, display lists -- goes
   // back to the system now rather than at the next idle purge, so that a
-  // worker between requests is the size of a worker between requests.
-  if (reclaim_after_render_ && ReclaimEnabled()) {
+  // worker between requests is the size of a worker between requests. A
+  // process about to exit has no between-requests to be small in.
+  if (reclaim_after_render_ && !one_shot_ && ReclaimEnabled()) {
     ::partition_alloc::MemoryReclaimer::Instance()->ReclaimAll();
   }
   if (!rendered.has_value()) {
@@ -1603,7 +1604,7 @@ base::expected<void, std::string> ShotRenderer::RenderTiles(
     return base::unexpected("RenderTiles needs tile.height");
   }
   auto rendered = RenderDocument(input, request, sink);
-  if (reclaim_after_render_ && ReclaimEnabled()) {
+  if (reclaim_after_render_ && !one_shot_ && ReclaimEnabled()) {
     ::partition_alloc::MemoryReclaimer::Instance()->ReclaimAll();
   }
   return rendered;
@@ -1663,11 +1664,14 @@ base::expected<void, std::string> ShotRenderer::RenderDocument(
   // ResourceFetcher and everything they hold with it.
   base::ScopedClosureRunner tear_down(base::BindOnce(
       [](ShotRenderer* self, const bool* succeeded) {
-        if (*succeeded) {
+        if (*succeeded && !self->one_shot_) {
           self->TearDownWhenIdle();
-        } else {
+        } else if (!*succeeded) {
           self->TearDown();
         }
+        // A one-shot process that succeeded leaves the page attached: it is
+        // exiting, and detaching a frame nobody will look at again is work
+        // on the caller's clock.
       },
       base::Unretained(this), base::Unretained(&succeeded)));
   TearDown();
