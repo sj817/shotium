@@ -33,6 +33,7 @@
 #include "base/task/thread_pool/thread_pool_instance.h"
 #include "base/threading/simple_thread.h"
 #include "base/time/time.h"
+#include "base/timer/timer.h"
 #include "base/values.h"
 #include "net/disk_cache/backend_cleanup_tracker.h"
 #include "net/disk_cache/disk_cache.h"
@@ -132,6 +133,13 @@ base::expected<CacheOptions, std::string> ReadCacheOptions(
 }
 
 namespace {
+
+// How long the engine thread stays quiet before releasing scratch memory.
+constexpr base::TimeDelta kIdleBeforePurge = base::Seconds(2);
+
+// And how long before releasing working set pages back to the OS.
+constexpr base::TimeDelta kIdleBeforeTrim = base::Seconds(10);
+
 class EngineThread : public base::DelegateSimpleThread::Delegate {
  public:
   EngineThread() = default;
@@ -191,10 +199,60 @@ class EngineThread : public base::DelegateSimpleThread::Delegate {
     return true;
   }
 
+  void OnRequestStarted() {
+    active_requests_++;
+    idle_timer_.Stop();
+    purged_ = false;
+  }
+
+  void OnRequestFinished() {
+    if (active_requests_ > 0) {
+      active_requests_--;
+    }
+    if (active_requests_ == 0) {
+      ArmIdleTimer();
+    }
+  }
+
+  void ResetIdle() {
+    idle_timer_.Stop();
+    purged_ = true;
+  }
+
+  void PurgeAndArmTrim() {
+    purged_ = true;
+    if (active_requests_ == 0) {
+      ArmIdleTimer();
+    }
+  }
+
   bool default_allow_file_access() const { return options_.allow_file_access; }
   ShotRuntime& runtime() { return *runtime_; }
 
  private:
+  void ArmIdleTimer() {
+    if (!runtime_) {
+      return;
+    }
+    idle_timer_.Start(FROM_HERE,
+                      purged_ ? kIdleBeforeTrim : kIdleBeforePurge,
+                      base::BindOnce(&EngineThread::OnIdle,
+                                     base::Unretained(this)));
+  }
+
+  void OnIdle() {
+    if (!runtime_) {
+      return;
+    }
+    if (!purged_) {
+      runtime_->PurgeMemory();
+      purged_ = true;
+      ArmIdleTimer();
+      return;
+    }
+    runtime_->ReleaseWorkingSet();
+  }
+
   // base::DelegateSimpleThread::Delegate:
   void Run() override {
     // The three things main() does before anything else, done here for the
@@ -244,11 +302,15 @@ class EngineThread : public base::DelegateSimpleThread::Delegate {
       base::RunLoop run_loop;
       quit_ = run_loop.QuitClosure();
       task_runner_ = base::SingleThreadTaskRunner::GetCurrentDefault();
+      // Armed before the first request rather than after it, so that an engine
+      // that is started and not immediately used gives back what starting cost it.
+      ArmIdleTimer();
       // Everything above is what the waiting caller is waiting to see. The
       // signal is the release side of it: nothing here is read by another
       // thread before the wait returns.
       ready_.Signal();
       run_loop.Run();
+      idle_timer_.Stop();
     }
 
     // Both on this thread and in this order: the run loop is the task
@@ -268,6 +330,9 @@ class EngineThread : public base::DelegateSimpleThread::Delegate {
   raw_ptr<ShotRuntime> runtime_ = nullptr;
   scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
   base::RepeatingClosure quit_;
+  base::OneShotTimer idle_timer_;
+  bool purged_ = false;
+  int active_requests_ = 0;
 };
 
 std::atomic<bool>& EngineWasCreated() {
@@ -468,6 +533,7 @@ bool EngineService::Capture(ScreenshotRequest request,
   return impl_->thread.Post(base::BindOnce(
       [](Impl* impl, ScreenshotRequest request, bool tiles,
          EngineCompletion done) {
+        impl->thread.OnRequestStarted();
         EngineResult result;
         if (tiles && !request.tile) {
           result.status = EngineStatus::kUsage;
@@ -497,6 +563,7 @@ bool EngineService::Capture(ScreenshotRequest request,
           }
         }
         std::move(done).Run(std::move(result));
+        impl->thread.OnRequestFinished();
       },
       base::Unretained(impl_.get()), std::move(request), tiles,
       std::move(completion)));
@@ -506,10 +573,14 @@ bool EngineService::Cache(CacheOptions options,
                           bool clearing,
                           EngineCompletion completion) {
   return impl_->thread.Post(base::BindOnce(
-      [](CacheOptions options, bool clearing, EngineCompletion done) {
+      [](Impl* impl, CacheOptions options, bool clearing,
+         EngineCompletion done) {
+        impl->thread.OnRequestStarted();
         std::move(done).Run(RunCache(options, clearing, true));
+        impl->thread.OnRequestFinished();
       },
-      std::move(options), clearing, std::move(completion)));
+      base::Unretained(impl_.get()), std::move(options), clearing,
+      std::move(completion)));
 }
 EngineResult EngineService::CaptureSync(ScreenshotRequest request, bool tiles) {
   EngineResult result;
@@ -561,6 +632,9 @@ void EngineService::Purge(bool release) {
         impl->thread.runtime().PurgeMemory();
         if (release) {
           impl->thread.runtime().ReleaseWorkingSet();
+          impl->thread.ResetIdle();
+        } else {
+          impl->thread.PurgeAndArmTrim();
         }
       },
       base::Unretained(impl_.get()), release));
