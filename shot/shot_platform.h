@@ -9,7 +9,6 @@
 
 #include "base/memory/ref_counted_memory.h"
 #include "base/memory/scoped_refptr.h"
-#include "third_party/blink/public/common/thread_safe_browser_interface_broker_proxy.h"
 #include "third_party/blink/public/platform/platform.h"
 
 namespace shot {
@@ -18,20 +17,17 @@ namespace shot {
 //
 // blink::Platform has no pure virtual methods -- every hook has a default that
 // answers "not available" -- so an embedder only overrides what it genuinely
-// provides. shot provides two things.
+// provides. shot provides the packed data resources, because blink's
+// user-agent stylesheet is one of them: without it every document would lay
+// out with no default styles at all, which is not a smaller renderer, it is a
+// wrong one. And the locale, for the same reason (see DefaultLocale()).
 //
-// The packed data resources, because blink's user-agent stylesheet is one of
-// them. Without it every document would lay out with no default styles at all,
-// which is not a smaller renderer, it is a wrong one.
-//
-// And a browser interface broker that answers exactly one interface,
-// mojom::MimeRegistry. That one is not optional either: MIMETypeRegistry
-// proxies extension lookups to the browser because a sandboxed renderer cannot
-// read the registry, and with nothing on the far end every lookup returns
-// empty. CSSStyleSheetResource::CanUseSheet requires a file: stylesheet to have
-// an extension that maps to text/css, so an unanswered lookup means every
-// external stylesheet loaded over file: is fetched, parsed and then discarded --
-// silently, with the document laid out as though the author had written no CSS.
+// It used to provide a browser interface broker as well, answering exactly
+// one interface -- mojom::MimeRegistry -- because MIMETypeRegistry proxied
+// extension lookups to the browser over a synchronous mojo call. That lookup
+// now runs in-process (mime_type_registry.cc), so the broker stays at
+// blink's default, which drops every interface request on the floor: the
+// truthful answer for a process with no browser behind it.
 //
 // Everything else stays at the default. That is not a stub: the defaults are
 // blink's own statement of what an embedder without a browser process can do,
@@ -52,11 +48,6 @@ class ShotPlatform : public blink::Platform {
   scoped_refptr<base::RefCountedMemory> GetDataResourceBytes(
       int resource_id) override;
   blink::WebString DefaultLocale() override;
-  blink::ThreadSafeBrowserInterfaceBrokerProxy* GetBrowserInterfaceBroker()
-      override;
-
- private:
-  scoped_refptr<blink::ThreadSafeBrowserInterfaceBrokerProxy> broker_;
 };
 
 }  // namespace shot
