@@ -24,7 +24,9 @@
 #include "base/message_loop/message_pump_type.h"
 #include "base/observer_list.h"
 #include "base/path_service.h"
+#include "base/synchronization/condition_variable.h"
 #include "base/synchronization/lock.h"
+#include "base/thread_annotations.h"
 #include "base/task/thread_pool.h"
 #include "base/task/thread_pool/thread_pool_instance.h"
 #include "build/build_config.h"
@@ -74,52 +76,101 @@ namespace {
 // rendering thread borrows from the same queue while it waits, so the pool's
 // three-worker cap gives a large blur four-way parallelism without creating a
 // second set of threads in every CLI process or Node worker.
+//
+// Skia's own multi-threaded executor posts one pool task per work item and
+// has the waiting thread spin on borrow() until its group is done. Two things
+// are different here. A pool task drains the queue rather than taking one
+// item, and no more of them are posted than there are items or workers -- so
+// when the caller borrows an item, the task that was posted for it does not
+// wake a worker to find nothing. And a borrow that finds the queue empty
+// while items are still running waits for one of them to finish instead of
+// returning at once, which is what turns SkTaskGroup::wait()'s spin -- a
+// core burning lock/unlock until the last worker is done -- into a wait.
 class ShotSkiaExecutor final : public SkExecutor {
  public:
   ShotSkiaExecutor() : state_(base::MakeRefCounted<State>()) {}
   ~ShotSkiaExecutor() override = default;
 
   void add(std::function<void()> work) override {
-    state_->Add(std::move(work));
-    base::ThreadPool::PostTask(
-        FROM_HERE, {base::TaskPriority::USER_BLOCKING},
-        base::BindOnce(
-            [](scoped_refptr<State> state) { state->RunOne(); }, state_));
+    if (state_->Add(std::move(work))) {
+      base::ThreadPool::PostTask(
+          FROM_HERE, {base::TaskPriority::USER_BLOCKING},
+          base::BindOnce([](scoped_refptr<State> state) { state->Drain(); },
+                         state_));
+    }
   }
 
   void add(std::function<void()> work, int /*work_list*/) override {
     add(std::move(work));
   }
 
-  void borrow() override { state_->RunOne(); }
+  void borrow() override { state_->Borrow(); }
 
  private:
   class State : public base::RefCountedThreadSafe<State> {
    public:
-    void Add(std::function<void()> work) {
+    // Queues `work`; returns whether a pool task should be posted for it.
+    // At most one per item and never more than the pool has workers: the
+    // rest would find the queue drained by the tasks ahead of them.
+    bool Add(std::function<void()> work) {
       base::AutoLock lock(lock_);
       work_.push_back(std::move(work));
+      if (drainers_ < kMaxDrainers && drainers_ < work_.size()) {
+        ++drainers_;
+        return true;
+      }
+      return false;
     }
 
-    void RunOne() {
-      std::function<void()> work;
-      {
-        base::AutoLock lock(lock_);
-        if (work_.empty()) {
-          return;
-        }
-        work = std::move(work_.back());
-        work_.pop_back();
+    // A pool task: runs items until the queue is empty.
+    void Drain() {
+      base::AutoLock lock(lock_);
+      while (!work_.empty()) {
+        RunFrontLocked();
       }
-      work();
+      --drainers_;
+    }
+
+    // The waiting thread's turn: one item if there is one, otherwise a wait
+    // for the items in flight, so that a group's wait() loop sleeps rather
+    // than spins. Returns as soon as something has changed; the caller
+    // re-checks its own condition.
+    void Borrow() {
+      base::AutoLock lock(lock_);
+      if (!work_.empty()) {
+        RunFrontLocked();
+        return;
+      }
+      if (running_ > 0) {
+        finished_.Wait();
+      }
     }
 
    private:
     friend class base::RefCountedThreadSafe<State>;
     ~State() = default;
 
+    // Pops and runs the front item with the lock released around the work.
+    void RunFrontLocked() EXCLUSIVE_LOCKS_REQUIRED(lock_) {
+      std::function<void()> work = std::move(work_.front());
+      work_.pop_front();
+      ++running_;
+      {
+        base::AutoUnlock unlock(lock_);
+        work();
+      }
+      --running_;
+      finished_.Broadcast();
+    }
+
+    // The pool's foreground cap; see kMaxUnblockedTasks below.
+    static constexpr size_t kMaxDrainers = 3;
+
     base::Lock lock_;
-    std::deque<std::function<void()>> work_;
+    base::ConditionVariable finished_{&lock_};
+    std::deque<std::function<void()>> work_ GUARDED_BY(lock_);
+    size_t drainers_ GUARDED_BY(lock_) = 0;
+    size_t running_ GUARDED_BY(lock_) = 0;
   };
 
   scoped_refptr<State> state_;
