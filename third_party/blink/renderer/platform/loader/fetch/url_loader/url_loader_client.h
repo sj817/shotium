@@ -88,10 +88,14 @@ class BLINK_PLATFORM_EXPORT URLLoaderClient {
       const WebURLResponse&,
       std::variant<mojo::ScopedDataPipeConsumerHandle, SegmentedBuffer>) {}
 
-  // Called when a chunk of response data is received. |data_length| is the
-  // number of bytes pointed to by |data|. This is used only for testing to
-  // pass the data to the ResourceLoader.
-  virtual void DidReceiveDataForTesting(base::span<const char> data) {}
+  // Called with a chunk of response data delivered directly, for a loader
+  // that has the whole body in this process and no pipe to stream it down:
+  // after DidReceiveResponse() with a null body handle, and before
+  // DidFinishLoading(). Upstream only tests reach this; shot's in-process
+  // loader (shot/shot_url_loader.cc) delivers every file: and http(s) body
+  // this way, since a mojo data pipe between two ends on the same thread
+  // buys nothing but a copy and a chunked round trip.
+  virtual void DidReceiveData(base::span<const char> data) {}
 
   // Called when the number of bytes actually received from network including
   // HTTP headers is updated. |transfer_size_diff| is positive.

@@ -8,7 +8,6 @@
 #include <memory>
 #include <string>
 
-#include "mojo/public/cpp/system/data_pipe_producer.h"
 #include "shot/shot_fetch.h"
 #include "third_party/blink/renderer/platform/loader/fetch/url_loader/url_loader.h"
 #include "url/gurl.h"
@@ -72,28 +71,17 @@ class ShotURLLoader : public blink::URLLoader {
   void DeliverFile(const GURL& url, blink::URLLoaderClient* client);
   // The other half, once ShotFetch has the bytes.
   void OnFetched(blink::URLLoaderClient* client, FetchResult result);
-  // Common tail: hands the client the response and streams `contents` down a
-  // mojo data pipe. `charge` is what those bytes cost against the fetch
-  // budget, which this loader takes over for as long as it holds them; a
-  // file: body cost nothing and passes an empty one.
+  // Common tail: hands the client the response, the body and the finish, in
+  // that order and synchronously. `charge` is what those bytes cost against
+  // the fetch budget, which this loader takes over for as long as it holds
+  // them; a file: body cost nothing and passes an empty one.
   void DeliverBody(blink::URLLoaderClient* client,
                    const blink::WebURLResponse& response,
                    std::string contents,
                    FetchCharge charge);
-  void OnBodyWritten(blink::URLLoaderClient* client,
-                     int64_t size,
-                     MojoResult result);
 
   // Alive for the length of a network load; destroying it cancels the request.
   std::unique_ptr<ShotFetch> fetch_;
-  // Kept alive for the duration of the write; it owns the producer handle and
-  // the watcher that drives it.
-  std::unique_ptr<mojo::DataPipeProducer> body_producer_;
-  // Held because mojo::StringDataSource may outlive the call that started the
-  // write, and the bytes have to outlive it too.
-  std::string body_;
-  // What `body_` costs against the fetch budget, given back with the bytes.
-  FetchCharge body_charge_;
 
   base::WeakPtrFactory<ShotURLLoader> weak_factory_{this};
 };
