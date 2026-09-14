@@ -92,7 +92,8 @@ jobs:
   # pkg.pr.new takes one publish per run, so this job publishes the main
   # package with the first batch of platform packages and has the other
   # batches published by dispatched runs of this file (publish-batch below),
-  # then comments the install line on the PR. One smoke install renders the
+  # then keeps one comment on the PR naming all nine -- pkg.pr.new's own
+  # comment would name one publish's worth. One smoke install renders the
   # demo card with what was published. Needs the pkg.pr.new GitHub App on
   # the repository; forks cannot use it, so they skip this job.
   preview:
@@ -103,7 +104,8 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
-      actions: write   # dispatches publish-batch and reads its artifacts
+      actions: write        # dispatches publish-batch and reads its artifacts
+      pull-requests: write  # the comment naming the nine packages
     steps:
       # A full checkout: pkg-pr-new reads the git metadata of the commit.
       - uses: actions/checkout@v7
@@ -161,11 +163,12 @@ jobs:
       # Dispatches one publish-batch run per overflow batch on the PR branch,
       # waits for them, then makes this run's one publish: the main package
       # with batch 0, its other optionalDependencies rewritten to the URLs the
-      # batch runs reported. The smoke install below exercises that closure.
+      # batch runs reported -- and writes the PR comment. The smoke install
+      # below exercises that closure.
       - name: publish the preview
         env:
           GH_TOKEN: ${{ github.token }}
-        run: pnpm ci:publish-preview publish --branch "${{ github.head_ref }}"
+        run: pnpm ci:publish-preview publish --branch "${{ github.head_ref }}" --pr "${{ github.event.pull_request.number }}"
 
       - name: preview package manifest is restored
         run: |

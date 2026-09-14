@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
-  childRunName, createPublishBatches, MAX_BATCH_SIZE, MAX_NON_MULTIPART_PACKAGE_SIZE, mergeMetadata, previewVersion,
-  rewriteOptionalDependencies, type PreviewMetadata, type PreviewPackage,
+  childRunName, COMMENT_MARKER, createPublishBatches, MAX_BATCH_SIZE, MAX_NON_MULTIPART_PACKAGE_SIZE, mergeMetadata,
+  previewVersion, pullRequestComment, rewriteOptionalDependencies, type PreviewMetadata, type PreviewPackage,
 } from './publish-preview.ts';
 
 function packages(...sizes: number[]): PreviewPackage[] {
@@ -91,4 +91,15 @@ test('optionalDependencies get the children\'s URLs and keep the siblings of thi
     'fsevents': '2.3.3',
   });
   assert.throws(() => rewriteOptionalDependencies(manifest, children, []), /no child published it/);
+});
+
+test('the pull request comment carries the marker, the install line and every package', () => {
+  const packages = [{name: '@pixel.js/shotium'}, {name: '@pixel.js/shotium-linux-x64'}, {name: '@pixel.js/shotium-win32-x64'}];
+  const body = pullRequestComment('sj817/shotium', SHA, '28', packages, '34829468717');
+  assert.ok(body.startsWith(COMMENT_MARKER + '\n'));
+  assert.match(body, /^npm i https:\/\/pkg\.pr\.new\/sj817\/shotium\/@pixel\.js\/shotium@297882b$/m);
+  for (const pkg of packages) assert.ok(body.includes(`| \`${pkg.name}\` | \`npm i https://pkg.pr.new/sj817/shotium/${pkg.name}@297882b\` |`));
+  assert.ok(body.includes('`@28`'));
+  assert.ok(body.includes('https://github.com/sj817/shotium/actions/runs/34829468717'));
+  assert.ok(!body.includes(SHA), 'the comment uses the short commit throughout');
 });

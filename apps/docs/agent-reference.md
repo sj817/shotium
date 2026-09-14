@@ -217,10 +217,10 @@ build loop. Read the affected workflow and source action for CI changes.
   does not listen to `pull_request` itself. Its `preview` job then
   assembles the eight platform packages from the node archives
   (`pnpm package:platform --from-archive`) and publishes them with the
-  main package to pkg.pr.new (one comment per PR, updated on every push;
-  the pkg.pr.new GitHub App must be installed on the repository), then
-  installs the main package from its preview URL in a clean directory to
-  render `apps/demo-card/card.html` as the smoke test. pkg.pr.new takes
+  main package to pkg.pr.new (the pkg.pr.new GitHub App must be
+  installed on the repository), then installs the main package from its
+  preview URL in a clean directory to render `apps/demo-card/card.html`
+  as the smoke test. pkg.pr.new takes
   one publish per workflow run (the server deletes the run's key after the
   first) of at most ~99 MiB, and the eight platform packages are 130 MiB,
   so `scripts/ci/publish-preview.ts` cuts them into batches: batch 0 goes
@@ -229,8 +229,12 @@ build loop. Read the affected workflow and source action for CI changes.
   (its `publish-batch` job), fed by an artifact of the packed tarballs and
   reporting its URLs back as an artifact, which the `preview` job waits for
   and writes into the main package's `optionalDependencies` before its own
-  publish. Nothing in a batch run is for hands. Pull requests from forks
-  get the engine and the contract suite, not the preview.
+  publish. The PR comment naming all nine packages is the script's, kept
+  as one comment per PR by a marker and rewritten on every push; every
+  publish runs with `--comment=off`, since pkg.pr.new's comment would name
+  one publish's packages. Nothing in a batch run is for hands. Pull
+  requests from forks get the engine and the contract suite, not the
+  preview.
 - [refresh.yml](../../.github/workflows/refresh.yml) re-uploads, on the
   first of each month and on dispatch, the engine, evidence and
   build-directory artifacts of `main`'s current fingerprint so a quiet

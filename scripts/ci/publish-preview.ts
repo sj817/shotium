@@ -20,8 +20,13 @@
 // URLs back as an artifact of its own. When everything fits in one batch
 // there are no children and this is the original single publish.
 //
+// The comment on the pull request is written here too, not by pkg-pr-new:
+// its comment lists the packages of one publish, which would be the main
+// package and batch 0. Every publish runs with --comment=off and `publish`
+// keeps one comment, found again by a marker, that names all nine.
+//
 //   pnpm ci:publish-preview pack --sha <head sha>            # dist/preview/packed
-//   pnpm ci:publish-preview publish --branch <head branch>   # dist/preview.json
+//   pnpm ci:publish-preview publish --branch <head branch> --pr <number>
 //   pnpm ci:publish-preview child --batch <n> --incoming <dir>
 //
 // The tarballs carry the version pkg-pr-new's --previewVersion gives the main
@@ -46,6 +51,8 @@ export const MAX_NON_MULTIPART_PACKAGE_SIZE = 98 * 1024 * 1024;
 export const WORKFLOW = 'preview.yml';
 const MAIN_PACKAGE = '@pixel.js/shotium';
 const PREVIEW_URL_PREFIX = 'https://pkg.pr.new/';
+/** Marks the comment `publish` maintains, so the next push edits it instead of adding another. */
+export const COMMENT_MARKER = '<!-- shotium preview -->';
 const PLATFORM_PREFIX = `${MAIN_PACKAGE}-`;
 const NPM_DIR = path.join(root, 'dist', 'npm');
 const PREVIEW_DIR = path.join(root, 'dist', 'preview');
@@ -156,6 +163,40 @@ export function rewriteOptionalDependencies(
     optionalDependencies[name] = preview.url;
   }
   return optionalDependencies;
+}
+
+/**
+ * The pull request comment: the install line, then every package pinned to
+ * this commit. The commit is the seven-character form pkg.pr.new uses in its
+ * own comments -- its tarball route matches the commit key by prefix -- and
+ * `@<pull request number>`, which follows the latest publish, is mentioned
+ * rather than listed.
+ */
+export function pullRequestComment(
+    repo: string, sha: string, pr: string, packages: ReadonlyArray<{name: string}>, runId: string): string {
+  const short = sha.slice(0, 7);
+  const install = (name: string) => `npm i ${PREVIEW_URL_PREFIX}${repo}/${name}@${short}`;
+  return [
+    COMMENT_MARKER,
+    `### Preview of ${short}`,
+    '',
+    `The ${packages.length} packages of this pull request, on pkg.pr.new. The main package pulls the platform package for the machine it is installed on:`,
+    '',
+    '```sh',
+    install(MAIN_PACKAGE),
+    '```',
+    '',
+    '<details><summary>every package, pinned to this commit</summary>',
+    '',
+    '| package | install |',
+    '|---|---|',
+    ...packages.map(pkg => `| \`${pkg.name}\` | \`${install(pkg.name)}\` |`),
+    '',
+    '</details>',
+    '',
+    `\`@${pr}\` in place of the commit follows the latest preview of this pull request. Published by [run ${runId}](https://github.com/${repo}/actions/runs/${runId}).`,
+    '',
+  ].join('\n');
 }
 
 function formatMiB(bytes: number): string {
@@ -321,7 +362,22 @@ async function publishChildren(packed: PackedPreview, branch: string): Promise<P
   return metadata;
 }
 
-async function publish(branch: string): Promise<void> {
+async function commentOnPullRequest(repo: string, pr: string, body: string): Promise<void> {
+  const {stdout} = await gh(['api', `repos/${repo}/issues/${pr}/comments`, '--paginate',
+    '--jq', `.[] | select(.body | contains("${COMMENT_MARKER}")) | .id`]);
+  const [existing] = stdout.trim().split('\n').filter(Boolean);
+  const input = path.join(PREVIEW_DIR, 'comment.json');
+  await writeFile(input, JSON.stringify({body}));
+  if (existing) {
+    await gh(['api', '-X', 'PATCH', `repos/${repo}/issues/comments/${existing}`, '--input', input]);
+    console.log(`\nUpdated the preview comment on #${pr}`);
+  } else {
+    await gh(['api', '-X', 'POST', `repos/${repo}/issues/${pr}/comments`, '--input', input]);
+    console.log(`\nCommented the preview on #${pr}`);
+  }
+}
+
+async function publish(branch: string, pr: string): Promise<void> {
   const packed = await readPacked(PACKED_DIR);
   const children = await publishChildren(packed, branch);
   const childUrls = mergeMetadata(children, packed.batches.slice(1).flat());
@@ -333,7 +389,7 @@ async function publish(branch: string): Promise<void> {
     const optionalDependencies = rewriteOptionalDependencies(manifest, childUrls, alongside);
     await writeFile(MAIN_PACKAGE_JSON, JSON.stringify({...manifest, optionalDependencies}, null, 2) + '\n');
     console.log(`\nPublishing ${MAIN_PACKAGE} with batch 0 from this run:`);
-    await pkgPrNew(['--comment=update', '--previewVersion', '--json', metadataPath, MAIN_PACKAGE_DIR,
+    await pkgPrNew(['--comment=off', '--previewVersion', '--json', metadataPath, MAIN_PACKAGE_DIR,
       ...alongside.map(name => path.join(NPM_DIR, packed.packages.find(pkg => pkg.name === name)!.directory))]);
   } finally {
     await writeFile(MAIN_PACKAGE_JSON, original);
@@ -344,6 +400,8 @@ async function publish(branch: string): Promise<void> {
   await writeFile(path.join(root, 'dist', 'preview.json'), JSON.stringify({packages: combined}, null, 2) + '\n');
   console.log('\nPublished:');
   for (const entry of combined) console.log(`  ${entry.name.padEnd(42)} ${entry.url}`);
+  const {repo, runId} = environment();
+  await commentOnPullRequest(repo, pr, pullRequestComment(repo, packed.sha, pr, combined, runId));
 }
 
 async function child(batch: number, incoming: string): Promise<void> {
@@ -373,11 +431,12 @@ if (process.argv[1] && path.resolve(process.argv[1]) === import.meta.filename) {
       if (!options.sha) throw new Error('--sha is required');
       await pack(options.sha);
     });
-  cli.command('publish', 'dispatch the overflow batches, wait, then publish the main package with batch 0')
+  cli.command('publish', 'dispatch the overflow batches, wait, publish the main package with batch 0, comment')
     .option('--branch <name>', 'the pull request head branch, where the batch runs are dispatched')
-    .action(async (options: {branch?: string}) => {
-      if (!options.branch) throw new Error('--branch is required');
-      await publish(options.branch);
+    .option('--pr <number>', 'the pull request to comment on')
+    .action(async (options: {branch?: string; pr?: string}) => {
+      if (!options.branch || !options.pr) throw new Error('--branch and --pr are required');
+      await publish(options.branch, options.pr);
     });
   cli.command('child', 'publish one batch of tarballs from the parent run\'s artifact')
     .option('--batch <n>', 'batch index, 1 or more')
