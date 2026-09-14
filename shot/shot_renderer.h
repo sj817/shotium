@@ -24,6 +24,7 @@
 #include "url/gurl.h"
 
 namespace blink {
+class AgentGroupScheduler;
 class Document;
 class LocalFrame;
 class LocalFrameView;
@@ -213,6 +214,12 @@ class ShotRenderer {
 
   blink::Persistent<blink::Page> page_;
   blink::Persistent<blink::LocalFrame> frame_;
+  // Shared by every page this renderer creates. A renderer makes one of
+  // these per agent cluster -- pages that may share script state -- and
+  // there is one cluster here, forever: each capture's page is torn down
+  // before the next one's is built. Its two task queues are what a fresh one
+  // costs per capture; the page's own scheduler is still per page.
+  blink::Persistent<blink::AgentGroupScheduler> agent_group_scheduler_;
   // Whether collection is disabled for the capture in progress; see
   // RenderDocument() and WaitForLoad(). Held as a flag rather than a scope
   // object because the scope is stack-only and WaitForLoad() lifts it.

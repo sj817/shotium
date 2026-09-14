@@ -21,6 +21,7 @@
 #include "base/logging.h"
 #include "base/memory/discardable_memory_allocator.h"
 #include "base/memory/raw_ref.h"
+#include "base/no_destructor.h"
 #include "base/run_loop.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/stringprintf.h"
@@ -46,6 +47,7 @@
 #include "shot/shot_profile.h"
 #include "shot/shot_url_loader.h"
 #include "skia/ext/legacy_display_globals.h"
+#include "third_party/blink/public/common/page/color_provider_color_maps.h"
 #include "third_party/blink/public/common/tokens/tokens.h"
 #include "third_party/blink/public/common/web_preferences/web_preferences.h"
 #include "third_party/blink/public/mojom/frame/frame.mojom-blink.h"
@@ -53,7 +55,6 @@
 #include "third_party/blink/renderer/core/dom/document.h"
 #include "third_party/blink/renderer/core/dom/document_lifecycle.h"
 #include "third_party/blink/renderer/core/dom/element.h"
-#include "third_party/blink/renderer/core/frame/frame_types.h"
 #include "third_party/blink/renderer/core/frame/local_dom_window.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
 #include "third_party/blink/renderer/core/frame/local_frame_view.h"
@@ -1083,8 +1084,16 @@ ShotRenderer::~ShotRenderer() {
 }
 
 void ShotRenderer::TearDown() {
-  if (frame_) {
-    frame_->Detach(blink::FrameDetachType::kRemove);
+  if (page_) {
+    // What IsolatedSVGDocumentHost::Shutdown() does, and for the same
+    // reason: WillBeDestroyed() detaches the main frame and then takes the
+    // page out of everything that still knows it. Detaching the frame alone
+    // -- which is what this did before -- left the Page in the scheduler's
+    // page list, holding its PageScheduler and through that its
+    // AgentGroupScheduler and their task queues, until the next collection;
+    // and with collection deferred between captures, a burst of small ones
+    // built up hundreds of dead pages for every policy update to walk.
+    page_->WillBeDestroyed();
   }
   frame_ = nullptr;
   page_ = nullptr;
@@ -1115,6 +1124,9 @@ void ShotRenderer::ReleaseRetained() {
   TearDown();
   small_bitmap_.reset();
   small_scratch_.clear();
+  // The next capture makes a new one; this one's queues go with the
+  // collection that follows a purge.
+  agent_group_scheduler_ = nullptr;
 }
 
 base::expected<void, std::string> ShotRenderer::WaitForLoad(
@@ -1445,9 +1457,17 @@ base::expected<void, std::string> ShotRenderer::CreatePage(
   const base::TimeTicks page_started = base::TimeTicks::Now();
   auto* chrome_client = blink::MakeGarbageCollected<ChromeClient>();
   chrome_client->SetDeviceScaleFactor(static_cast<float>(request.scale));
-  page_ = blink::Page::CreateNonOrdinary(
-      *chrome_client, *scheduler->CreateAgentGroupScheduler(),
-      /*color_provider_colors=*/nullptr);
+  if (!agent_group_scheduler_) {
+    agent_group_scheduler_ = scheduler->CreateAgentGroupScheduler();
+  }
+  // The colour maps every page is built from -- the CSS system colours, the
+  // form-control palette -- computed once. Page builds its providers from
+  // these; handed nothing it would compute the defaults again, three
+  // providers' worth of colour mixing, for every capture.
+  static const base::NoDestructor<blink::ColorProviderColorMaps>
+      color_provider_colors(blink::ColorProviderColorMaps::CreateDefault());
+  page_ = blink::Page::CreateNonOrdinary(*chrome_client, *agent_group_scheduler_,
+                                         color_provider_colors.get());
   if (!page_) {
     return base::unexpected("could not create the page");
   }
