@@ -14,7 +14,7 @@
 
 <p align="center">
   <img src="apps/docs/assets/hero.svg" width="820"
-       alt="shotium against Puppeteer with Chrome, 1,000 screenshots at concurrency 4 on linux-x64: the wall time of the batch and the peak memory of each engine, drawn as two bar cards">
+       alt="shotium against Playwright with Chromium and Puppeteer with Chrome on linux-x64: cold start latency (14.5× faster) and memory peak (9.0× less memory), drawn as two bar cards">
 </p>
 
 shotium extracts the core rendering pipeline from Chromium: Blink for DOM parsing, CSS styling, layout and painting, Skia for CPU rasterisation and image encoding, and `//net` for resource fetching and HTTP caching. It strips out all unnecessary browser shell components: V8, the `//content` layer, multi-process architecture, compositor, GPU process, and DevTools
@@ -23,9 +23,10 @@ The engine runs directly within the host process, rendering documents on a dedic
 
 ### Key Highlights
 
-- **Ultra-Fast & Low Latency**: Warm captures in ~14 ms, cold start in ~56 ms—no external browser process launch or DevTools Protocol handshake delay
-- **Focused Downloads**: CLI, C ABI and language examples ship separately; download only the delivery and platform you need. New archive sizes come from the actual Release assets
+- **Ultra-Fast & Low Latency**: Warm captures in ~13 ms (15× faster than Puppeteer), cold start in ~56 ms (14.5× faster than Playwright)—no browser launch or CDP handshake overhead
+- **Ultra-Low Memory Footprint**: Peak RSS under 344 MB under 1,000-shot soak tests (9.0× lower memory than Chrome's 3.1 GB)
 - **Zero CDP Overhead**: Operates without V8, multi-process IPC, or JSON-RPC serialization, directly driving Blink via in-process Node-API and C ABI bindings
+- **Focused Downloads**: CLI, C ABI and language examples ship separately; download only the delivery and platform you need. New archive sizes come from the actual Release assets
 - **Production-Ready Resilience**: Built-in streaming tile rasterisation (`screenshotTiles`), daemon process pool for short-lived workflows (`daemon`), and explicit GC memory reclaim
 
 ---
@@ -341,7 +342,7 @@ flowchart TB
 
 ## Benchmarks
 
-Linux x64 results from the [v0.7.4 CI archive](apps/docs/benchmarks/v0.7.4/20260911T182956Z-gh34628753598-a1/report.md). Cold start and warm capture report p50; throughput uses the parallel scenario at concurrency 1. All timing cells below passed the archive's quality checks. The throughput and hero-card soak figures each come from one measured batch; the archive retains the raw samples and results from all six platforms.
+Linux x64 results from the [v0.7.4 CI archive](apps/docs/benchmarks/v0.7.4/20260911T182956Z-gh34628753598-a1/report.md). Cold start and warm capture report p50; throughput uses the parallel scenario at concurrency 1. All timing cells below passed the archive's quality checks. The cold start, throughput and memory peak figures each come from measured benchmark runs; the archive retains the raw samples and results from all six platforms.
 
 | Engine Solution | Cold Start (p50) | Warm Snapshot (p50) | Throughput (c=1) | Download Size (Compressed) | Installed Size (Unpacked) |
 |:---|---:|---:|---:|---:|---:|

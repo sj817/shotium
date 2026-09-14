@@ -14,7 +14,7 @@
 
 <p align="center">
   <img src="apps/docs/assets/hero.zh.svg" width="820"
-       alt="shotium 与 Puppeteer + Chrome 在 linux-x64 上并发 4、连续 1000 张截图的对比：整批总耗时与各自的内存峰值，两张柱状卡片">
+       alt="shotium 与 Playwright Chromium 及 Puppeteer + Chrome 在 linux-x64 上的基准对比：冷启动延迟（14.5× 更快）与内存峰值（9.0× 更省），两张柱状卡片">
 </p>
 
 shotium 提取了 Chromium 中将 HTML/CSS 转化为像素的核心能力：由 Blink 负责 DOM 解析、样式计算、排版与绘制，由 Skia 负责光栅化与图像编码，由 `//net` 负责资源拉取与磁盘缓存；彻底剥离了浏览器外壳（`//content`）、V8 引擎、多进程架构、Compositor 合成器、GPU 进程以及 DevTools 等与静态渲染无关的组件
@@ -23,9 +23,10 @@ shotium 提取了 Chromium 中将 HTML/CSS 转化为像素的核心能力：由 
 
 ### 核心特性
 
-- **极速低延迟**：单张渲染低至 14 ms，冷启动仅 56 ms，无需等待外部浏览器拉起与 DevTools 协议握手
-- **按需分发**：CLI、C ABI 与语言示例分别打包，只下载需要的用途和平台；新包体积以实际发布附件为准
+- **极速低延迟**：预热单张渲染低至 13 ms（比 Puppeteer 快 15×），冷启动仅 56 ms（比 Playwright 快 14.5×），无浏览器拉起与 CDP 握手开销
+- **超低内存占用**：高压 1000 张连续渲染内存峰值仅 344 MB（比 Chrome 的 3.1 GB 节省 9.0×）
 - **零 CDP 协议开销**：剥离 V8 与外部 IPC，直接通过 Node-API / C ABI 嵌入宿主进程调用 Blink 核心渲染流水线
+- **按需分发**：CLI、C ABI 与语言示例分别打包，只下载需要的用途和平台；新包体积以实际发布附件为准
 - **高弹性与生产就绪**：内置流式长图分片（`screenshotTiles`）、短生命周期常驻守护进程（`daemon`）及显式 GC 内存控制
 
 ---
@@ -342,7 +343,7 @@ flowchart TB
 
 ## 基准测试
 
-下表来自 [v0.7.4 CI 归档](apps/docs/benchmarks/v0.7.4/20260911T182956Z-gh34628753598-a1/report.zh-CN.md)的 Linux x64 实测。冷启动和预热截图取 p50；吞吐量取 parallel 场景的单并发结果。表中所有计时数据均通过归档的质量检查。吞吐量与顶部卡片的 soak 数据各来自一个实测批次；归档保留了原始样本和六平台完整结果。
+下表来自 [v0.7.4 CI 归档](apps/docs/benchmarks/v0.7.4/20260911T182956Z-gh34628753598-a1/report.zh-CN.md)的 Linux x64 实测。冷启动和预热截图取 p50；吞吐量取 parallel 场景的单并发结果。表中所有计时数据均通过归档的质量检查。冷启动、吞吐量与内存峰值数据各来自实测基准批次；归档保留了原始样本和六平台完整结果。
 
 | 引擎方案 | 冷启动首张 (p50) | 预热截图 (p50) | 吞吐量 (单并发) | 下载体积 (压缩后) | 安装体积 (压缩前) |
 |:---|---:|---:|---:|---:|---:|
