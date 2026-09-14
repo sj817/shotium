@@ -50,6 +50,7 @@
 #include "third_party/blink/public/platform/platform.h"
 #include "third_party/blink/public/platform/scheduler/web_thread_scheduler.h"
 #include "third_party/blink/public/web/blink.h"
+#include "third_party/blink/renderer/platform/fonts/font_custom_platform_data.h"
 #include "third_party/blink/renderer/platform/heap/thread_state.h"
 #include "third_party/skia/include/core/SkExecutor.h"
 #include "third_party/skia/include/core/SkGraphics.h"
@@ -587,8 +588,10 @@ void ShotRuntime::PurgeMemory() {
   stage_done(2);
 
   // Skia's own two, which are not memory consumers: the glyph raster cache and
-  // SkResourceCache's non-discardable half.
+  // SkResourceCache's non-discardable half. And the decoded web fonts kept
+  // across documents, which hold their typefaces outside every heap above.
   SkGraphics::PurgeAllCaches();
+  blink::FontCustomPlatformData::ClearDecodedFontCache();
   stage_done(3);
 
   // And the free lists underneath all of it. Everything above returns memory
