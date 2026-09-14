@@ -166,50 +166,42 @@ export function rewriteOptionalDependencies(
 }
 
 /**
- * The URL as a person should see it. pkg-pr-new reports the compact form,
- * pkg.pr.new/<package>@<seven characters>, when every package of the publish
- * is on npm with its repository field -- which is where the server finds
- * the owner and repository again -- and the long form with the full commit
- * when its registry lookup failed. The long form is kept, since the compact
- * one was not verified for that publish, but with the commit shortened:
- * the tarball route matches the commit key by prefix.
+ * The URL of a package as pkg.pr.new's own pull request comment shows it:
+ * the form its publish reported -- compact, pkg.pr.new/<package>@..., when
+ * every package of that publish was found on npm with its repository field,
+ * where the server looks the owner and repository up again; the long form
+ * with owner and repository otherwise -- at `@<pull request number>`, which
+ * the server resolves to the latest publish of this pull request.
  */
-export function displayUrl(url: string): string {
-  return url.replace(/@([0-9a-f]{7})[0-9a-f]{33}$/, '@$1');
+export function pullRequestUrl(url: string, pr: string): string {
+  const at = url.lastIndexOf('@');
+  if (at <= 0 || !/^[0-9a-f]{7,40}$/.test(url.slice(at + 1))) throw new Error(`not a pkg.pr.new commit URL: ${url}`);
+  return `${url.slice(0, at)}@${pr}`;
 }
 
 /**
- * The pull request comment: the install line, then every package pinned to
- * this commit, each at the URL its publish reported. `@<pull request
- * number>`, which follows the latest publish, is mentioned rather than listed.
+ * The pull request comment, laid out as pkg.pr.new lays out its own when a
+ * publish has more than four packages: one collapsible block per package
+ * with the install line, the main package first, and the commit last.
  */
 export function pullRequestComment(
     repo: string, sha: string, pr: string, packages: ReadonlyArray<{name: string; url: string}>, runId: string): string {
-  const short = sha.slice(0, 7);
-  const install = (name: string) => {
-    const pkg = packages.find(entry => entry.name === name);
-    if (!pkg) throw new Error(`${name} is not among the published packages`);
-    return `npm i ${displayUrl(pkg.url)}`;
-  };
-  return [
-    COMMENT_MARKER,
-    `### Preview of ${short}`,
+  const main = packages.find(pkg => pkg.name === MAIN_PACKAGE);
+  if (!main) throw new Error(`${MAIN_PACKAGE} is not among the published packages`);
+  const blocks = [main, ...packages.filter(pkg => pkg !== main)].map(pkg => [
+    `<details><summary><b>${pkg.name}</b></summary><p>`,
     '',
-    `The ${packages.length} packages of this pull request, on pkg.pr.new. The main package pulls the platform package for the machine it is installed on:`,
-    '',
-    '```sh',
-    install(MAIN_PACKAGE),
+    '```',
+    `npm i ${pullRequestUrl(pkg.url, pr)}`,
     '```',
     '',
-    '<details><summary>every package, pinned to this commit</summary>',
+    '</p></details>',
+  ].join('\n'));
+  return [
+    COMMENT_MARKER,
+    ...blocks,
     '',
-    '| package | install |',
-    '|---|---|',
-    ...packages.map(pkg => `| \`${pkg.name}\` | \`${install(pkg.name)}\` |`),
-    '',
-    '</details>',
-    '',
-    `\`@${pr}\` in place of the commit follows the latest preview of this pull request. Published by [run ${runId}](https://github.com/${repo}/actions/runs/${runId}).`,
+    `_commit: <a href="https://github.com/${repo}/actions/runs/${runId}"><code>${sha.slice(0, 7)}</code></a>_`,
     '',
   ].join('\n');
 }
@@ -287,7 +279,7 @@ async function packPackages(packages: PreviewPackage[], version: string): Promis
 // Compact URLs, the CLI's default, when it can: it looks every package of the
 // publish up on npm first and falls back to the long form for the whole
 // publish when one lookup fails, which a registry hiccup has done once. Both
-// forms are served; the comment shows whichever was reported (displayUrl).
+// forms are served; the comment shows whichever was reported (pullRequestUrl).
 async function pkgPrNew(args: string[]): Promise<void> {
   await execa('pnpm', ['-C', 'scripts', 'exec', 'pkg-pr-new', 'publish',
     '--packageManager=npm', '--no-template', ...args], {cwd: root, stdio: 'inherit'});
