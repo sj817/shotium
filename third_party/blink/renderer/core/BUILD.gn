@@ -1432,32 +1432,6 @@ blink_fuzzer_test("css_parser_fast_paths_fuzzer") {
   libfuzzer_options = [ "max_len=128" ]
 }
 
-css_properties("make_css_proto") {
-  script = "../build/scripts/core/css/parser/make_proto.py"
-  in_files = [ "css/css_value_keywords.json5" ]
-  other_inputs = [
-    "../build/scripts/core/css/parser/templates/css.proto.tmpl",
-    "../build/scripts/core/css/parser/templates/css_proto_converter_generated.h.tmpl",
-  ]
-  outputs = [
-    "$blink_core_output_dir/css/parser/css.proto",
-    "$blink_core_output_dir/css/parser/css_proto_converter_generated.h",
-  ]
-}
-
-blink_fuzzer_test("css_parser_proto_fuzzer") {
-  sources = [
-    "css/parser/css_parser_proto_fuzzer.cc",
-    "css/parser/css_proto_converter.cc",
-    "css/parser/css_proto_converter.h",
-  ]
-  deps = [
-    ":core",
-    ":css_proto",
-    "//third_party/libprotobuf-mutator",
-  ]
-  dict = "//third_party/blink/renderer/core/css/css.dict"
-}
 
 test("css_parser_fuzzer") {
   sources = [ "css/parser/css_parser_fuzzer.cc" ]
@@ -1489,11 +1463,7 @@ test("inspector_ghost_rules_fuzzer") {
   configs += [ "//build/config/compiler:no_exit_time_destructors" ]
 }
 
-proto_library("css_proto") {
-  sources = [ "$blink_core_output_dir/css/parser/css.proto" ]
-  proto_out_dir = "third_party/blink/renderer/core/css/parser"
-  proto_deps = [ ":make_css_proto" ]
-}
+
 
 # Builds a wire format proto to that is consumed from LCPP web_tests. Used in
 # third_party/blink/web_tests/http/tests/lcp_critical_path_predictor

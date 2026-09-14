@@ -19,7 +19,6 @@ src/third_party/google_benchmark/src
 src/third_party/libFuzzer/src
 src/third_party/fuzztest/src
 src/third_party/domato/src
-src/third_party/libprotobuf-mutator/src
 src/base/tracing/test/data
 src/third_party/webdriver/pylib
 src/third_party/webgl/src
