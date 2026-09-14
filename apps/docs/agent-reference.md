@@ -51,6 +51,22 @@ CLI / --serve / C ABI / Node addon
 - Network work is split among `shot_url_loader.*`, `shot_network.*`,
   `shot_fetch.*` and `shot_cache.*`. Changes to fetching must preserve body
   budgets, redirect handling, cancellation and the file-access gate.
+  `ShotNetwork` is built lazily: with no cache directory nothing in `//net`
+  is created until the first http(s) request (`ShotNetwork::EnsureUp()`);
+  with one, the context and cache are opened at start so `cacheActive` is
+  answerable, and only the change notifier waits. Subresource bodies are
+  handed to blink directly (`URLLoaderClient::DidReceiveData`), not through
+  a mojo data pipe; keep that path synchronous and in one piece.
+- [shot_image_stream.cc](../../shot/shot_image_stream.cc) writes PNG itself:
+  each strip is compressed by the thread that rastered it (zlib level 1, Up
+  filter, Sub on a strip's first row) and the runs are concatenated into one
+  deflate stream. A `RowEncoder` that returns `SupportsBlocks()` must keep
+  `EncodeBlock()` thread-safe and `AppendBlock()` in row order.
+- The engine keeps decoded web fonts between captures, keyed by the font's
+  bytes (`FontCustomPlatformData::Create`, 64 MB, cleared by `PurgeMemory()`).
+  A changed file misses the cache; only the decode is shared.
+  See [performance-cut-audit.md](performance-cut-audit.md) for the measured
+  split behind these and the candidates that were measured and left alone.
 
 ## API changes
 
