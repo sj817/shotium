@@ -108,27 +108,39 @@ jobs:
           pnpm install --no-lockfile
           pnpm run build
 
+      # Platform packages are published in deterministic size-bounded batches so a
+      # single pkg.pr.new request stays below its non-whitelist multipart threshold.
+      # The publisher then links those URLs into the main package and publishes one
+      # final PR comment. The smoke install below exercises that complete closure.
       - name: publish the preview
-        # Directories, not tarballs: only then does pkg-pr-new rewrite the
-        # main package's optionalDependencies to the eight preview URLs.
+        run: pnpm ci:publish-preview
+
+      - name: preview package manifest is restored
         run: |
-          node scripts/node_modules/pkg-pr-new/bin/cli.js publish \
-            --comment=update --packageManager=npm --no-template --previewVersion \
-            --json dist/preview.json ./dist/npm/* ./apps/typescript
-          node -e 'const m = require("./dist/preview.json"); console.log(m.packages.map((p) => `${p.name} -> ${p.url}`).join("\n"))'
+          if grep -q 'https://pkg.pr.new/' apps/typescript/package.json; then
+            echo 'preview URL leaked into apps/typescript/package.json'
+            exit 1
+          fi
+          git diff --exit-code -- apps/typescript/package.json
 
       - name: install the preview and render once
-        # What a reader of the PR comment would do, on the platform this
-        # runner is: install the main package from its preview URL, which
-        # pulls the linux-x64 platform package from its own, and render.
+        # What a reader of the PR comment would do, on the platform this runner is:
+        # install the main package from its preview URL, which pulls the matching
+        # platform preview package from its rewritten optionalDependencies.
         run: |
           url=$(node -e 'console.log(require("./dist/preview.json").packages.find((p) => p.name === "@pixel.js/shotium").url)')
           dir=$(mktemp -d)
           cd "$dir"
           echo '{"private":true}' > package.json
           npm install --no-audit --no-fund "$url"
-          ls node_modules/@pixel.js
           node -e '
+            const main = require("@pixel.js/shotium/package.json");
+            if (!main.version.startsWith("0.0.0-preview-")) throw new Error("main is not a preview: " + main.version);
+            const platform = Object.keys(main.optionalDependencies || {})
+              .find(name => name.includes("linux-x64"));
+            if (!platform) throw new Error("no linux-x64 optional dependency found");
+            const installed = require(platform + "/package.json");
+            if (!installed.version.startsWith("0.0.0-preview-")) throw new Error("native package is not a preview: " + installed.version);
             const {screenshot} = require("@pixel.js/shotium");
             screenshot({file: process.argv[1], allowFileAccess: true, viewport: {width: 720, height: 380}}).then(({image}) => {
               if (image.subarray(0, 4).toString("hex") !== "89504e47") throw new Error("not a PNG");

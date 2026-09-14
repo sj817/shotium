@@ -52,6 +52,7 @@
     "ci:await-shards": "pnpm -C scripts exec tsx ci/await-shards.ts",
     "ci:dispatch-engines": "pnpm -C scripts exec tsx ci/dispatch-engines.ts",
     "ci:engine-artifacts": "pnpm -C scripts exec tsx ci/engine-artifacts.ts",
+    "ci:publish-preview": "pnpm -C scripts exec tsx ci/publish-preview.ts",
     "ci:fingerprint": "pnpm -C scripts exec tsx ci/fingerprint.ts",
     "ci:select-shards": "pnpm -C scripts exec tsx ci/select-shards.ts",
     "ci:stamp-mtimes": "pnpm -C scripts exec tsx ci/stamp-mtimes.ts",
