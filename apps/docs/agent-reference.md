@@ -216,12 +216,20 @@ build loop. Read the affected workflow and source action for CI changes.
   engine. A package-only PR meets a real engine in minutes; `engine.yml`
   does not listen to `pull_request` itself. Its `preview` job then
   assembles the eight platform packages from the node archives
-  (`pnpm package:platform --from-archive`), publishes the eight platform packages in
-  size-bounded batches, then publishes the main package separately to pkg.pr.new
-  (one comment per PR, updated on every push; the pkg.pr.new GitHub App must be
-  installed on the repository), and installs the main package from the final
-  preview URL in a clean directory to render
-  `apps/demo-card/card.html` as the smoke test. Pull requests from forks
+  (`pnpm package:platform --from-archive`) and publishes them with the
+  main package to pkg.pr.new (one comment per PR, updated on every push;
+  the pkg.pr.new GitHub App must be installed on the repository), then
+  installs the main package from its preview URL in a clean directory to
+  render `apps/demo-card/card.html` as the smoke test. pkg.pr.new takes
+  one publish per workflow run (the server deletes the run's key after the
+  first) of at most ~99 MiB, and the eight platform packages are 130 MiB,
+  so `scripts/ci/publish-preview.ts` cuts them into batches: batch 0 goes
+  with the main package in the pull request's own publish, and each other
+  batch is published by a `workflow_dispatch` run of `preview.yml` itself
+  (its `publish-batch` job), fed by an artifact of the packed tarballs and
+  reporting its URLs back as an artifact, which the `preview` job waits for
+  and writes into the main package's `optionalDependencies` before its own
+  publish. Nothing in a batch run is for hands. Pull requests from forks
   get the engine and the contract suite, not the preview.
 - [refresh.yml](../../.github/workflows/refresh.yml) re-uploads, on the
   first of each month and on dispatch, the engine, evidence and

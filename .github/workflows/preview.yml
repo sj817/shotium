@@ -9,9 +9,18 @@
 #
 # engine.yml itself does not listen to pull_request: two entry points for
 # one event would build the same fingerprint twice.
+#
+# The same file also runs as a batch publisher when the preview job
+# dispatches it: pkg.pr.new accepts one publish per workflow run and at most
+# ~99 MiB in it, and the eight platform packages are 130 MiB, so the packages
+# that do not fit into the pull request's own publish are published by runs
+# of their own (scripts/ci/publish-preview.ts). It is this file rather than
+# one of its own because GitHub does not register a workflow_dispatch-only
+# workflow that exists only on a branch; the pull-request trigger keeps this
+# one registered, so the dispatch works before the change reaches main.
 
 name: preview
-run-name: "preview: ${{ github.event.pull_request.title }}"
+run-name: "${{ github.event_name == 'workflow_dispatch' && format('preview-publish: run {0} batch {1}', inputs.run, inputs.batch) || format('preview: {0}', github.event.pull_request.title) }}"
 
 on:
   pull_request:
@@ -35,40 +44,66 @@ on:
       - 'scripts/docs/**'
       - '.github/workflows/benchmark.yml'
       - '.github/workflows/benchmark-site.yml'
+  # Dispatched by the preview job of a pull request's run, once per batch of
+  # platform packages that did not fit into that run's own publish. Not for
+  # hands: the inputs name an artifact that only exists while the parent
+  # run is waiting.
+  workflow_dispatch:
+    inputs:
+      run:
+        description: 'the preview run that packed the packages and is waiting for this batch'
+        required: true
+        type: string
+      batch:
+        description: 'index into that run''s batches.json, 1 or more'
+        required: true
+        type: string
+      sha:
+        description: 'the pull request head commit the packages were assembled from'
+        required: true
+        type: string
 
+# A pull request's run gives way to a newer push. A batch run is keyed by
+# the run that dispatched it and its batch, so two batches of one preview
+# never cancel each other.
 concurrency:
-  group: preview-${{ github.ref }}
+  group: ${{ github.event_name == 'workflow_dispatch' && format('preview-publish-{0}-{1}', inputs.run, inputs.batch) || format('preview-{0}', github.ref) }}
   cancel-in-progress: true
 
 permissions:
   contents: read
-  actions: write   # engine.yml prunes the build-directory artifacts it supersedes
+  actions: write   # engine.yml prunes the build-directory artifacts it supersedes; preview dispatches its batch runs
 
 jobs:
   engine:
+    if: github.event_name == 'pull_request'
     uses: ./.github/workflows/engine.yml
 
   contract:
     needs: engine
+    if: github.event_name == 'pull_request'
     uses: ./.github/workflows/contract.yml
     with:
       fingerprint: ${{ needs.engine.outputs.fingerprint }}
 
-  # The nine npm packages, installable from this PR: pkg.pr.new publishes
-  # the eight platform packages assembled from the engines at this fingerprint
-  # and the main package, rewriting its optionalDependencies to the preview
-  # URLs, and comments the install line on the PR. One smoke install renders
-  # the demo card with what it published. Needs the pkg.pr.new GitHub App
-  # on the repository; forks cannot use it, so they skip this job.
+  # The nine npm packages, installable from this PR: the eight platform
+  # packages assembled from the engines at this fingerprint, and the main
+  # package with its optionalDependencies pointing at their preview URLs.
+  # pkg.pr.new takes one publish per run, so this job publishes the main
+  # package with the first batch of platform packages and has the other
+  # batches published by dispatched runs of this file (publish-batch below),
+  # then comments the install line on the PR. One smoke install renders the
+  # demo card with what was published. Needs the pkg.pr.new GitHub App on
+  # the repository; forks cannot use it, so they skip this job.
   preview:
     name: "preview: pkg.pr.new"
     needs: [engine, contract]
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
       contents: read
-      actions: read
+      actions: write   # dispatches publish-batch and reads its artifacts
     steps:
       # A full checkout: pkg-pr-new reads the git metadata of the commit.
       - uses: actions/checkout@v7
@@ -108,12 +143,29 @@ jobs:
           pnpm install --no-lockfile
           pnpm run build
 
-      # Platform packages are published in deterministic size-bounded batches so a
-      # single pkg.pr.new request stays below its non-whitelist multipart threshold.
-      # The publisher then links those URLs into the main package and publishes one
-      # final PR comment. The smoke install below exercises that complete closure.
+      # The tarballs, measured and cut into batches under the size one publish
+      # can carry. Batch 0 stays here; the others go to dispatched runs as an
+      # artifact of this run, named so the child can find it.
+      - name: pack the platform packages
+        id: pack
+        run: pnpm ci:publish-preview pack --sha "${{ github.event.pull_request.head.sha }}"
+      - name: the batches for the dispatched runs
+        if: steps.pack.outputs.children != '0'
+        uses: actions/upload-artifact@v7
+        with:
+          name: preview-packages-${{ github.run_id }}
+          path: dist/preview/packed
+          retention-days: 1
+          if-no-files-found: error
+
+      # Dispatches one publish-batch run per overflow batch on the PR branch,
+      # waits for them, then makes this run's one publish: the main package
+      # with batch 0, its other optionalDependencies rewritten to the URLs the
+      # batch runs reported. The smoke install below exercises that closure.
       - name: publish the preview
-        run: pnpm ci:publish-preview
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: pnpm ci:publish-preview publish --branch "${{ github.head_ref }}"
 
       - name: preview package manifest is restored
         run: |
@@ -147,3 +199,44 @@ jobs:
               console.log(`preview renders: ${image.length} bytes`);
             });
           ' "$GITHUB_WORKSPACE/apps/demo-card/card.html"
+
+  # One batch of platform packages, published from the artifact the preview
+  # job of the dispatching run uploaded, with the URLs reported back as an
+  # artifact for that job to pick up. Its pkg.pr.new key is this run's own,
+  # which is the whole point. The checkout is the packaged commit, not the
+  # branch head: pkg-pr-new takes the commit from git here, and the tarballs
+  # were assembled from that commit whatever the branch has moved to since.
+  publish-batch:
+    name: "publish: batch ${{ inputs.batch }} of run ${{ inputs.run }}"
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read   # the dispatching run's artifact
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.sha }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 9.15.9
+      - run: pnpm -C scripts install --frozen-lockfile
+
+      - name: the tarballs run ${{ inputs.run }} packed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run download "${{ inputs.run }}" -R "$GITHUB_REPOSITORY" -n "preview-packages-${{ inputs.run }}" -D dist/preview/incoming
+
+      - name: publish batch ${{ inputs.batch }}
+        run: pnpm ci:publish-preview child --batch "${{ inputs.batch }}" --incoming dist/preview/incoming
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: preview-batch-${{ inputs.run }}-${{ inputs.batch }}
+          path: dist/preview/batch-${{ inputs.batch }}.json
+          retention-days: 1
+          if-no-files-found: error
