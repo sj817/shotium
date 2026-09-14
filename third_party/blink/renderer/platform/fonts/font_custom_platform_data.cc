@@ -401,9 +401,9 @@ class DecodedFontCache {
   }
 
  private:
-  // Sixty-four megabytes of decoded font: a few CJK families, or a few
+  // Twenty-four megabytes of decoded font: a few CJK families, or a few
   // hundred subsets.
-  static constexpr size_t kMaxBytes = 64u << 20;
+  static constexpr size_t kMaxBytes = 24u << 20;
 
   base::Lock lock_;
   Deque<Entry> entries_ GUARDED_BY(lock_);
