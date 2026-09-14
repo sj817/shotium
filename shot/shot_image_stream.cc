@@ -31,6 +31,8 @@
 #include "base/synchronization/condition_variable.h"
 #include "base/synchronization/lock.h"
 #include "base/system/sys_info.h"
+#include "base/task/task_traits.h"
+#include "base/task/thread_pool.h"
 #include "base/thread_annotations.h"
 #include "base/threading/simple_thread.h"
 #include "cc/paint/decoded_draw_image.h"
@@ -64,7 +66,7 @@
 #include "third_party/skia/include/core/SkStream.h"
 #include "third_party/skia/include/core/SkSurface.h"
 #include "third_party/skia/include/encode/SkEncoder.h"
-#include "third_party/skia/include/encode/SkPngRustEncoder.h"
+#include "third_party/zlib/zlib.h"
 
 extern "C" {
 #include "jpeglib.h"
@@ -379,6 +381,14 @@ size_t EncodedCapacity(const SkPixmap& whole) {
   return raw + raw / 32 + static_cast<size_t>(whole.height()) + (1 << 20);
 }
 
+// A run of rows encoded on their own, by an encoder that can do that (see
+// RowEncoder::EncodeBlock). Opaque to everything but the encoder that made
+// it.
+class EncodedBlock {
+ public:
+  virtual ~EncodedBlock() = default;
+};
+
 // Takes the image's rows from the top down as they become final.
 class RowEncoder {
  public:
@@ -396,60 +406,332 @@ class RowEncoder {
   // The encoded image's size once Finish() has run, held or written.
   size_t written() const { return written_; }
 
+  // Block encoding: rows in independent runs, each of which any thread may
+  // encode, appended in order afterwards. An encoder that can returns true
+  // here; the stream then hands each raster thread's strip to EncodeBlock()
+  // on that thread, the moment it is rastered, and calls AppendBlock() in
+  // row order from the thread that owns the output. The two must agree with
+  // Append(): AppendBlock() of a block for rows [r, r + n) is Append(n) with
+  // the encoding already done. Not every format can -- JPEG's entropy coder
+  // and WebP's frame carry state from row to row -- and those say false.
+  virtual bool SupportsBlocks() const { return false; }
+  virtual base::expected<std::unique_ptr<EncodedBlock>, std::string>
+  EncodeBlock(int first_row, int rows) {
+    return base::unexpected("this encoder does not encode blocks");
+  }
+  virtual base::expected<void, std::string> AppendBlock(
+      std::unique_ptr<EncodedBlock> block) {
+    return base::unexpected("this encoder does not encode blocks");
+  }
+
  protected:
   size_t written_ = 0;
 };
 
-// PNG through skia's encoder, which takes rows incrementally and keeps
-// nothing of a row once it has been fed to the codec.
-class PngRowEncoder final : public RowEncoder {
+// PNG, written here: the container is four chunk types and the payload is
+// one zlib stream, and writing both is what lets the stream be produced by
+// several threads at once.
+//
+// It used to go through skia's Rust encoder, which took rows incrementally
+// and compressed them on the calling thread with miniz at level 1 -- and on
+// most pages that was the single largest cost of a capture: 3.5 ms of the 6
+// a simple 1280x720 page took, 8 of 13 on a page of gradients, with every
+// raster thread idle for the duration. A deflate stream does not have to be
+// produced by one thread. Each strip is compressed on the thread that
+// rastered it, as its own run of deflate blocks ending on a byte boundary
+// (a sync flush), and the runs are concatenated in row order: that is one
+// valid stream, the way pigz builds one, with the final empty block and the
+// Adler-32 -- combined from the runs' own -- appended at the end. Each run
+// starts with an empty window rather than the previous run's tail, which
+// costs a fraction of a percent on a 128-row strip and is what makes the
+// runs independent. The filter is Up, except on a run's first row, which
+// uses Sub so that a run reads only its own rows.
+//
+// Level 1 through //third_party/zlib, whose deflate_fast is the same
+// algorithm miniz's level 1 is, so the files are about the size they were;
+// chromium's zlib hashes and checksums with SIMD, which is most of why one
+// thread is already faster than before.
+class PngBlockEncoder final : public RowEncoder {
  public:
   static base::expected<std::unique_ptr<RowEncoder>, std::string> Make(
       const SkPixmap& whole,
+      bool opaque,
       base::File output) {
-    auto encoder =
-        base::WrapUnique(new PngRowEncoder(whole, std::move(output)));
-    // The same level gfx::PNGCodec::FastEncodeBGRASkBitmap uses, so a page
-    // that fits in one strip encodes to the same bytes it did before rows
-    // were streamed.
-    SkPngRustEncoder::Options options;
-    options.fCompressionLevel = SkPngRustEncoder::CompressionLevel::kLow;
-    encoder->encoder_ =
-        SkPngRustEncoder::Make(&encoder->stream_, encoder->src_, options);
-    if (!encoder->encoder_) {
-      return base::unexpected("could not start the png encoder");
+    if (whole.colorType() != kBGRA_8888_SkColorType &&
+        whole.colorType() != kRGBA_8888_SkColorType) {
+      return base::unexpected("the png encoder needs 32-bit pixels");
+    }
+    auto encoder = base::WrapUnique(
+        new PngBlockEncoder(whole, opaque, std::move(output)));
+    if (auto started = encoder->WriteHeader(); !started.has_value()) {
+      return base::unexpected(started.error());
     }
     return std::unique_ptr<RowEncoder>(std::move(encoder));
   }
 
+  bool SupportsBlocks() const override { return true; }
+
   base::expected<void, std::string> Append(int rows) override {
-    if (!encoder_->encodeRows(rows)) {
-      return base::unexpected("the encoder rejected the image's rows");
+    auto block = EncodeBlock(consumed_, rows);
+    if (!block.has_value()) {
+      return base::unexpected(block.error());
     }
-    consumed_ += rows;
+    return AppendBlock(std::move(*block));
+  }
+
+  // Any thread. Reads rows [first_row, first_row + rows) of the pixmap and
+  // nothing else of this object but its constants.
+  base::expected<std::unique_ptr<EncodedBlock>, std::string> EncodeBlock(
+      int first_row,
+      int rows) override {
+    if (rows <= 0 || first_row < 0 || first_row + rows > whole_.height()) {
+      return base::unexpected("png block rows are out of range");
+    }
+    auto block = std::make_unique<Block>();
+    block->first_row = first_row;
+    block->rows = rows;
+
+    z_stream stream = {};
+    if (deflateInit2(&stream, kLevel, Z_DEFLATED, /*windowBits=*/-15,
+                     /*memLevel=*/8, Z_DEFAULT_STRATEGY) != Z_OK) {
+      return base::unexpected("could not start the png deflate stream");
+    }
+    // The row being filtered, the unfiltered row above it, and the
+    // filtered scanline that goes to deflate: a filter byte and then the
+    // pixels, `bpp` bytes each.
+    const size_t pixel_bytes = static_cast<size_t>(whole_.width()) * bpp_;
+    const size_t row_bytes = 1 + pixel_bytes;
+    std::vector<uint8_t> rows_raw(2 * pixel_bytes);
+    base::span<uint8_t> current = base::span(rows_raw).first(pixel_bytes);
+    base::span<uint8_t> previous =
+        base::span(rows_raw).subspan(pixel_bytes, pixel_bytes);
+    std::vector<uint8_t> scanline(row_bytes);
+    // Unpremultiplied RGBA for an image with alpha, converted a row at a
+    // time; an opaque image's pixels are packed straight from the bitmap.
+    std::vector<uint8_t> unpremultiplied;
+    if (!opaque_) {
+      unpremultiplied.resize(static_cast<size_t>(whole_.width()) * 4);
+    }
+    // Compressed output, grown as deflate fills it. Sized for the block's
+    // pixels at the start; a block of noise needs slightly more than that
+    // and grows once.
+    block->deflate.resize(row_bytes * static_cast<size_t>(rows) / 2 + 1024);
+    stream.next_out = block->deflate.data();
+    stream.avail_out = static_cast<uInt>(block->deflate.size());
+    uLong adler = adler32(0L, Z_NULL, 0);
+
+    for (int row = 0; row < rows; ++row) {
+      PackRow(first_row + row, current, unpremultiplied);
+      // Sub on the block's first row, Up on the rest: the previous row is
+      // this block's own or does not exist.
+      FilterRow(row == 0, current, previous, scanline);
+      adler = adler32(adler, scanline.data(), static_cast<uInt>(row_bytes));
+      stream.next_in = scanline.data();
+      stream.avail_in = static_cast<uInt>(row_bytes);
+      // Sync-flush after the last row so that the run ends on a byte
+      // boundary, which is what lets the next run follow it.
+      const int flush = row + 1 == rows ? Z_SYNC_FLUSH : Z_NO_FLUSH;
+      for (;;) {
+        const int result = deflate(&stream, flush);
+        if (result != Z_OK && result != Z_BUF_ERROR) {
+          deflateEnd(&stream);
+          return base::unexpected("png deflate failed");
+        }
+        if (stream.avail_out != 0 && stream.avail_in == 0) {
+          break;
+        }
+        // Out of room: grow and continue where deflate stopped.
+        const size_t used = block->deflate.size() - stream.avail_out;
+        block->deflate.resize(block->deflate.size() * 2);
+        stream.next_out = base::span(block->deflate).subspan(used).data();
+        stream.avail_out = static_cast<uInt>(block->deflate.size() - used);
+      }
+      std::swap(current, previous);
+    }
+    block->deflate.resize(block->deflate.size() - stream.avail_out);
+    deflateEnd(&stream);
+    block->adler = static_cast<uint32_t>(adler);
+    block->raw_bytes = row_bytes * static_cast<size_t>(rows);
+    return std::unique_ptr<EncodedBlock>(std::move(block));
+  }
+
+  // The owning thread, in row order.
+  base::expected<void, std::string> AppendBlock(
+      std::unique_ptr<EncodedBlock> encoded) override {
+    auto* block = static_cast<Block*>(encoded.get());
+    if (block->first_row != consumed_) {
+      return base::unexpected("png blocks were appended out of order");
+    }
+    if (!WriteChunk("IDAT", block->deflate)) {
+      return base::unexpected("could not write the png data");
+    }
+    adler_ = adler32_combine(adler_, block->adler,
+                             static_cast<z_off_t>(block->raw_bytes));
+    consumed_ += block->rows;
     return base::ok();
   }
 
   int consumed_rows() const override { return consumed_; }
 
   base::expected<Bytes, std::string> Finish() override {
-    // Before Take(), not after: finishing a writer hands its bytes away and
-    // leaves it reporting nothing written, so reading the size afterwards
-    // told every caller the image was zero bytes long.
-    written_ = stream_.bytesWritten();
-    return stream_.Take();
+    if (consumed_ != whole_.height()) {
+      return base::unexpected("the png encoder did not receive every row");
+    }
+    // The stream's end: one final, empty, stored block (BFINAL set, LEN 0)
+    // and the checksum of everything the blocks compressed.
+    uint8_t tail[9] = {0x01, 0x00, 0x00, 0xFF, 0xFF};
+    WriteBigEndian(base::span(tail).subspan(5u, 4u),
+                   static_cast<uint32_t>(adler_));
+    if (!WriteChunk("IDAT", tail) || !WriteChunk("IEND", {})) {
+      return base::unexpected("could not finish the png");
+    }
+    written_ = writer_.size();
+    return writer_.Finish();
   }
 
  private:
-  PngRowEncoder(const SkPixmap& whole, base::File output)
-      : stream_(EncodedCapacity(whole), std::move(output)), src_(whole) {}
+  struct Block final : public EncodedBlock {
+    int first_row = 0;
+    int rows = 0;
+    std::vector<uint8_t> deflate;
+    uint32_t adler = 0;
+    size_t raw_bytes = 0;
+  };
 
+  // gfx::PNGCodec::FastEncodeBGRASkBitmap's level, and the Rust encoder's
+  // "low": a screenshot is encoded once and read many times, but by a
+  // pipeline that spends nothing on the file after this returns, and the
+  // difference between levels 1 and 6 is a third of the size for three
+  // times the work.
+  static constexpr int kLevel = 1;
+
+  PngBlockEncoder(const SkPixmap& whole, bool opaque, base::File output)
+      : whole_(whole),
+        opaque_(opaque),
+        bpp_(opaque ? 3 : 4),
+        bgra_(whole.colorType() == kBGRA_8888_SkColorType),
+        writer_(EncodedCapacity(whole), std::move(output)) {}
+
+  base::expected<void, std::string> WriteHeader() {
+    static constexpr uint8_t kSignature[8] = {0x89, 'P',  'N',  'G',
+                                              '\r', '\n', 0x1A, '\n'};
+    uint8_t ihdr[13] = {};
+    WriteBigEndian(base::span(ihdr).first(4u),
+                   static_cast<uint32_t>(whole_.width()));
+    WriteBigEndian(base::span(ihdr).subspan(4u, 4u),
+                   static_cast<uint32_t>(whole_.height()));
+    ihdr[8] = 8;                // bit depth
+    ihdr[9] = opaque_ ? 2 : 6;  // colour type: RGB, or RGBA
+    ihdr[10] = 0;               // deflate
+    ihdr[11] = 0;               // filter method 0
+    ihdr[12] = 0;               // no interlace
+    // The zlib header opens the first IDAT: CM 8, CINFO 7, FLEVEL "fastest",
+    // check bits so that the pair is a multiple of 31.
+    static constexpr uint8_t kZlibHeader[2] = {0x78, 0x01};
+    if (!writer_.Append(kSignature) || !WriteChunk("IHDR", ihdr) ||
+        !WriteChunk("IDAT", kZlibHeader)) {
+      return base::unexpected("could not write the png header");
+    }
+    return base::ok();
+  }
+
+  // One chunk: length, type, data, CRC over type and data.
+  bool WriteChunk(const char (&type)[5], base::span<const uint8_t> data) {
+    uint8_t head[8];
+    WriteBigEndian(base::span(head).first(4u),
+                   static_cast<uint32_t>(data.size()));
+    base::span(head).subspan(4u, 4u).copy_from(
+        base::as_byte_span(type).first(4u));
+    uLong crc = crc32(0L, Z_NULL, 0);
+    crc = crc32(crc, base::span(head).subspan(4u, 4u).data(), 4);
+    // Not for an empty chunk: crc32() with a null buffer hands back the
+    // initial value rather than the running one.
+    if (!data.empty()) {
+      crc = crc32(crc, data.data(), static_cast<uInt>(data.size()));
+    }
+    uint8_t tail[4];
+    WriteBigEndian(base::span(tail), static_cast<uint32_t>(crc));
+    return writer_.Append(head) && writer_.Append(data) &&
+           writer_.Append(tail);
+  }
+
+  static void WriteBigEndian(base::span<uint8_t> out, uint32_t value) {
+    out[0] = static_cast<uint8_t>(value >> 24);
+    out[1] = static_cast<uint8_t>(value >> 16);
+    out[2] = static_cast<uint8_t>(value >> 8);
+    out[3] = static_cast<uint8_t>(value);
+  }
+
+  // Row `y` of the pixmap as PNG wants it -- RGB, or unpremultiplied RGBA --
+  // into `out`, `bpp_` bytes a pixel.
+  void PackRow(int y,
+               base::span<uint8_t> out,
+               std::vector<uint8_t>& unpremultiplied) const {
+    const size_t width = static_cast<size_t>(whole_.width());
+    const uint8_t* source = nullptr;
+    if (opaque_) {
+      source = static_cast<const uint8_t*>(whole_.addr(0, y));
+    } else {
+      SkPixmap row;
+      const SkImageInfo info =
+          SkImageInfo::Make(static_cast<int>(width), 1,
+                            kRGBA_8888_SkColorType, kUnpremul_SkAlphaType);
+      if (!whole_.extractSubset(
+              &row, SkIRect::MakeXYWH(0, y, whole_.width(), 1)) ||
+          !row.readPixels(info, unpremultiplied.data(), width * 4)) {
+        std::ranges::fill(unpremultiplied, 0);
+      }
+      source = unpremultiplied.data();
+    }
+    // SAFETY: `source` addresses one row of the pixmap, or the row-sized
+    // buffer just filled, `width` pixels of four bytes each.
+    const base::span<const uint8_t> pixels =
+        UNSAFE_BUFFERS(base::span(source, width * 4));
+    // Pack: 4 bytes in, `bpp_` out, red first whichever way the bitmap has
+    // it.
+    const size_t r = opaque_ && bgra_ ? 2 : 0;
+    const size_t b = opaque_ && bgra_ ? 0 : 2;
+    for (size_t x = 0; x < width; ++x) {
+      const base::span<const uint8_t> in = pixels.subspan(x * 4, 4u);
+      base::span<uint8_t> px = out.subspan(x * bpp_, bpp_);
+      px[0] = in[r];
+      px[1] = in[1];
+      px[2] = in[b];
+      if (bpp_ == 4) {
+        px[3] = in[3];
+      }
+    }
+  }
+
+  // One packed row as a filtered scanline: the filter byte, then the row
+  // with Sub (`first`, against its own pixels) or Up (against `previous`)
+  // applied.
+  void FilterRow(bool first,
+                 base::span<const uint8_t> row,
+                 base::span<const uint8_t> previous,
+                 base::span<uint8_t> scanline) const {
+    base::span<uint8_t> out = scanline.subspan(1u);
+    if (first) {
+      scanline[0] = 1;
+      out.first(bpp_).copy_from(row.first(bpp_));
+      for (size_t i = bpp_; i < row.size(); ++i) {
+        out[i] = static_cast<uint8_t>(row[i] - row[i - bpp_]);
+      }
+    } else {
+      scanline[0] = 2;
+      for (size_t i = 0; i < row.size(); ++i) {
+        out[i] = static_cast<uint8_t>(row[i] - previous[i]);
+      }
+    }
+  }
+
+  const SkPixmap whole_;
+  const bool opaque_;
+  const size_t bpp_;
+  const bool bgra_;
+  Bytes::Writer writer_;
   int consumed_ = 0;
-  // SkEncoder keeps a reference to the pixmap it was made with, so this one
-  // lives here, before the encoder that refers to it.
-  BytesStream stream_;
-  SkPixmap src_;
-  std::unique_ptr<SkEncoder> encoder_;
+  uLong adler_ = 1;
 };
 
 // JPEG straight through libjpeg-turbo, a row at a time.
@@ -863,7 +1145,7 @@ base::expected<std::unique_ptr<RowEncoder>, std::string> MakeRowEncoder(
     int quality,
     base::File output) {
   if (request.type == "png") {
-    return PngRowEncoder::Make(whole, std::move(output));
+    return PngBlockEncoder::Make(whole, opaque, std::move(output));
   }
   if (request.type == "jpeg") {
     return JpegRowEncoder::Make(whole, quality, std::move(output));
@@ -1483,6 +1765,12 @@ struct SliceJob {
   // null for a large capture, whose surfaces are made and freed with it.
   raw_ptr<std::vector<SkBitmap>> scratch_cache = nullptr;
 
+  // The encoder, when it encodes blocks (RowEncoder::SupportsBlocks): a
+  // worker encodes its strip right after rastering it, into `blocks`, and
+  // the owning thread appends the blocks in order. Null otherwise, and the
+  // owning thread encodes each strip as it comes.
+  raw_ptr<RowEncoder> block_encoder = nullptr;
+
   int StripTop(int strip) const { return first_row + strip * strip_rows; }
   int StripBottom(int strip) const {
     return std::min(first_row + rows, StripTop(strip) + strip_rows);
@@ -1495,6 +1783,7 @@ struct SliceJob {
   int next GUARDED_BY(lock) = 0;
   int allowed GUARDED_BY(lock) = 0;
   std::vector<uint8_t> done GUARDED_BY(lock);
+  std::vector<std::unique_ptr<EncodedBlock>> blocks GUARDED_BY(lock);
   bool failed GUARDED_BY(lock) = false;
   std::string error GUARDED_BY(lock);
 };
@@ -1716,12 +2005,28 @@ class StripWorker {
       }
       const base::TimeTicks strip_started = base::TimeTicks::Now();
       auto rastered = RasterStrip(*job_, strip, scratch, reusable_scratch);
+      const base::TimeTicks strip_rastered = base::TimeTicks::Now();
+      // And encoded here, on this thread, while the others raster theirs.
+      std::unique_ptr<EncodedBlock> block;
+      if (rastered.has_value() && job_->block_encoder) {
+        auto encoded = job_->block_encoder->EncodeBlock(
+            job_->StripTop(strip),
+            job_->StripBottom(strip) - job_->StripTop(strip));
+        if (encoded.has_value()) {
+          block = std::move(*encoded);
+        } else {
+          rastered = base::unexpected(encoded.error());
+        }
+      }
       if (ProfileEnabled()) {
         LOG(INFO) << "shot: profile strip=" << strip << " slot=" << slot
                   << " start=+"
                   << (strip_started - job_->started).InMillisecondsF()
-                  << " dur="
-                  << (base::TimeTicks::Now() - strip_started).InMillisecondsF();
+                  << " raster="
+                  << (strip_rastered - strip_started).InMillisecondsF()
+                  << " encode="
+                  << (base::TimeTicks::Now() - strip_rastered)
+                         .InMillisecondsF();
       }
       base::AutoLock lock(job_->lock);
       if (!rastered.has_value()) {
@@ -1731,6 +2036,7 @@ class StripWorker {
         }
       } else {
         job_->done[strip] = 1;
+        job_->blocks[strip] = std::move(block);
       }
       job_->cv.Broadcast();
     }
@@ -1798,10 +2104,15 @@ class ImageStream::Impl {
     // answer the strips are trying to reproduce, so a page rendered both ways
     // and compared says whether they do. It is a reference, not an option --
     // it holds the whole image at once, which is the thing this class exists
-    // not to do.
+    // not to do. SHOT_STRIP_RASTER_PIXELS moves the line the other way, for
+    // measuring a small page in strips: on the demo card, whose shadows
+    // reach 100 rows, three strips of 200 rows each rastered 400 and the
+    // raster took as long as the whole image did.
     const bool one_strip =
         whole_image &&
-        (static_cast<int64_t>(whole.width()) * rows <= kStripRasterPixels ||
+        (static_cast<int64_t>(whole.width()) * rows <=
+             EnvInt("SHOT_STRIP_RASTER_PIXELS",
+                    static_cast<int>(kStripRasterPixels)) ||
          EnvInt("SHOT_SINGLE_STRIP", 0) != 0);
     // The paint's own reach, in the list's coordinates. Two things are
     // measured from it: the rows a strip rasters outside itself, which is a
@@ -1916,7 +2227,9 @@ class ImageStream::Impl {
         return base::unexpected(rastered.error());
       }
       const base::TimeTicks encode_started = base::TimeTicks::Now();
-      auto appended = encoder_->Append(rows);
+      auto appended = encoder_->SupportsBlocks()
+                          ? EncodeInBlocks(job.StripTop(0), rows)
+                          : encoder_->Append(rows);
       const base::TimeDelta encoding = base::TimeTicks::Now() - encode_started;
       if (!appended.has_value()) {
         return base::unexpected(appended.error());
@@ -1964,6 +2277,8 @@ class ImageStream::Impl {
     {
       base::AutoLock lock(job.lock);
       job.done.assign(static_cast<size_t>(job.strips), 0);
+      job.blocks.resize(static_cast<size_t>(job.strips));
+      job.block_encoder = encoder_->SupportsBlocks() ? encoder_.get() : nullptr;
       job.allowed = std::min(job.strips, lookahead);
       if (!bitmap_->CommitRows(job.StripTop(0),
                                job.StripBottom(job.allowed - 1))) {
@@ -1994,6 +2309,7 @@ class ImageStream::Impl {
 
     base::TimeDelta encoding;
     for (int strip = 0; strip < job.strips; ++strip) {
+      std::unique_ptr<EncodedBlock> block;
       {
         base::AutoLock lock(job.lock);
         while (!job.failed && !job.done[strip]) {
@@ -2004,10 +2320,15 @@ class ImageStream::Impl {
           base::AutoUnlock unlock(job.lock);
           return stop_pool(std::move(error));
         }
+        block = std::move(job.blocks[strip]);
       }
       const base::TimeTicks encode_started = base::TimeTicks::Now();
+      // Encoded on the worker already, or encoded here now: the time counted
+      // as "encode" is what the owning thread waited on the encoder for,
+      // either way.
       auto appended =
-          encoder_->Append(job.StripBottom(strip) - job.StripTop(strip));
+          block ? encoder_->AppendBlock(std::move(block))
+                : encoder_->Append(job.StripBottom(strip) - job.StripTop(strip));
       encoding += base::TimeTicks::Now() - encode_started;
       if (!appended.has_value()) {
         return stop_pool(appended.error());
@@ -2034,6 +2355,96 @@ class ImageStream::Impl {
 
     return account(encoding, threads);
   }
+
+  // Rows [first_row, first_row + rows), rastered on this thread as one
+  // strip, encoded as several blocks at once: the thread pool's workers
+  // take all but the first, this thread takes that one, and the blocks are
+  // appended in order as they finish. A small capture is the one whose
+  // encode was not overlapped with anything, and the one that most often is
+  // the whole capture.
+  base::expected<void, std::string> EncodeInBlocks(int first_row, int rows) {
+    // Blocks of at least kMinBlockRows: below that the deflate window's
+    // warm-up and a task's posting cost more than a thread saves. One block
+    // is the plain path.
+    constexpr int kMinBlockRows = 48;
+    const int workers = std::clamp(rows / kMinBlockRows, 1, kMaxEncodeBlocks);
+    if (workers == 1) {
+      return encoder_->Append(rows);
+    }
+    struct Shared {
+      base::Lock lock;
+      base::ConditionVariable done{&lock};
+      std::vector<std::unique_ptr<EncodedBlock>> blocks GUARDED_BY(lock);
+      std::vector<uint8_t> finished GUARDED_BY(lock);
+      std::string error GUARDED_BY(lock);
+    };
+    Shared shared;
+    {
+      base::AutoLock lock(shared.lock);
+      shared.blocks.resize(static_cast<size_t>(workers));
+      shared.finished.assign(static_cast<size_t>(workers), 0);
+    }
+    auto encode = [](RowEncoder* encoder, Shared* shared, int first_row,
+                     int rows, int workers, int index) {
+      const int top = first_row + rows * index / workers;
+      const int bottom = first_row + rows * (index + 1) / workers;
+      auto encoded = encoder->EncodeBlock(top, bottom - top);
+      base::AutoLock lock(shared->lock);
+      if (encoded.has_value()) {
+        shared->blocks[static_cast<size_t>(index)] = std::move(*encoded);
+      } else if (shared->error.empty()) {
+        shared->error = encoded.error();
+      }
+      shared->finished[static_cast<size_t>(index)] = 1;
+      shared->done.Broadcast();
+    };
+    // USER_BLOCKING: the capture is waiting on these. Unretained is sound
+    // because this frame outlives every task it posted: it waits for each
+    // block below before returning, on every path.
+    for (int index = 1; index < workers; ++index) {
+      base::ThreadPool::PostTask(
+          FROM_HERE, {base::TaskPriority::USER_BLOCKING},
+          base::BindOnce(encode, base::Unretained(encoder_.get()),
+                         base::Unretained(&shared), first_row, rows, workers,
+                         index));
+    }
+    encode(encoder_.get(), &shared, first_row, rows, workers, 0);
+    for (int index = 0; index < workers; ++index) {
+      std::unique_ptr<EncodedBlock> block;
+      {
+        base::AutoLock lock(shared.lock);
+        while (!shared.finished[static_cast<size_t>(index)]) {
+          shared.done.Wait();
+        }
+        block = std::move(shared.blocks[static_cast<size_t>(index)]);
+      }
+      if (!block) {
+        // Every task must still finish before `shared` goes away.
+        base::AutoLock lock(shared.lock);
+        for (int rest = index + 1; rest < workers; ++rest) {
+          while (!shared.finished[static_cast<size_t>(rest)]) {
+            shared.done.Wait();
+          }
+        }
+        return base::unexpected(shared.error);
+      }
+      if (auto appended = encoder_->AppendBlock(std::move(block));
+          !appended.has_value()) {
+        base::AutoLock lock(shared.lock);
+        for (int rest = index + 1; rest < workers; ++rest) {
+          while (!shared.finished[static_cast<size_t>(rest)]) {
+            shared.done.Wait();
+          }
+        }
+        return appended;
+      }
+    }
+    return base::ok();
+  }
+
+  // The thread pool's foreground workers plus this thread; see
+  // kMaxUnblockedTasks in shot_runtime.cc.
+  static constexpr int kMaxEncodeBlocks = 4;
 
   base::expected<Bytes, std::string> Finish() {
     if (next_row_ != bitmap_->pixmap().height()) {

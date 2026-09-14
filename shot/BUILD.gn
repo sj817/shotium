@@ -124,6 +124,11 @@ source_set("shot_core") {
     "//third_party/blink/renderer/core",
     "//third_party/blink/renderer/platform",
     "//third_party/libwebp",
+
+    # The PNG container and its deflate stream are written by
+    # shot_image_stream.cc itself, so that the raster threads can compress
+    # the strips they rastered.
+    "//third_party/zlib",
     "//ui/base",
 
     # display::ScreenInfo, which is how the page is told its device scale
