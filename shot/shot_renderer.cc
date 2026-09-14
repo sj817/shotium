@@ -1140,7 +1140,10 @@ base::expected<void, std::string> ShotRenderer::WaitForLoad(
   const bool network_idle = (wait_until == "networkidle");
   const base::TimeTicks deadline = base::TimeTicks::Now() + timeout;
   base::TimeTicks quiet_since;
-  base::TimeTicks last_lifecycle;
+  // From the install rather than from nothing: the interval below is "how
+  // long since the tree was last looked at", and the parse was the last
+  // look. Null would make the first round's interval infinite.
+  base::TimeTicks last_lifecycle = base::TimeTicks::Now();
   base::TimeDelta slice = kPumpSliceAfterProgress;
   int rounds = 0;
   int lifecycles = 0;
@@ -1178,18 +1181,45 @@ base::expected<void, std::string> ShotRenderer::WaitForLoad(
     // declares, and a font found only after the sheet arrives loads after it
     // rather than beside it. Skipping the round saved 0.65 ms on a page with
     // one external sheet and cost 20 ms on the one with a web font.
+    // Not on the first round, though, when everything in flight is a local
+    // file. That round's purpose is to find the fonts an inline @font-face
+    // declares before the external stylesheet lands, so that the two are
+    // fetched side by side rather than one after the other -- which is
+    // worth a round trip over the network and nothing at all off the disk,
+    // where the sheet is in the very next task and the layout run ahead of
+    // it is simply run twice. A capture that has made no network request
+    // yet has nothing to overlap with; it waits for what is in flight and
+    // lays out once.
     const unsigned in_flight = document->Fetcher()->ActiveRequestCount();
+    const CaptureContext* capture = CaptureContext::Current();
+    const bool overlaps_network = !capture || capture->network_requested();
     const bool run_lifecycle =
-        rounds == 0 || in_flight == 0 ||
+        (rounds == 0 && (in_flight == 0 || overlaps_network)) ||
+        in_flight == 0 ||
         base::TimeTicks::Now() - last_lifecycle >= kLifecycleInterval;
+    // While something is still in flight, the round runs style and layout
+    // only. Layout is what discovers the requests a round is run to find --
+    // a font is fetched when shaping first needs it, a background image
+    // when style first resolves it -- and prepaint and paint discover
+    // nothing; they were run here anyway, and thrown away when the
+    // stylesheet or font they were waiting on landed. On a page with one
+    // external stylesheet that was a full paint of the unstyled page before
+    // the styled one. A browser does not paint before its render-blocking
+    // resources have arrived either. The one round that decides the
+    // document is loaded is a full one, so that the paint the capture takes
+    // is of the tree it checked, and so that what the post-lifecycle steps
+    // request -- a lazily loaded image entering the viewport -- is counted
+    // before the decision rather than after it.
+    const bool paint = in_flight == 0;
     if (run_lifecycle) {
-      RunLifecycle(document, rounds);
+      RunLifecycle(document, rounds, paint);
       last_lifecycle = base::TimeTicks::Now();
       ++lifecycles;
     }
 
     const unsigned active = document->Fetcher()->ActiveRequestCount();
-    const bool loaded = run_lifecycle && document->HasFinishedParsing() &&
+    const bool loaded = run_lifecycle && paint &&
+                        document->HasFinishedParsing() &&
                         document->IsLoadCompleted() && active == 0;
 
     // Park the images that have finished arriving: their bytes go to the
@@ -1324,14 +1354,21 @@ void ShotRenderer::SetGarbageCollection(bool enabled) {
   gc_disabled_ = !enabled;
 }
 
-void ShotRenderer::RunLifecycle(blink::Document* document, int round) {
+void ShotRenderer::RunLifecycle(blink::Document* document,
+                                int round,
+                                bool paint) {
   // SHOT_PROFILE=1 splits the lifecycle into style, layout and prepaint+paint
   // per round, which is how the cost of a slow page is attributed. Running the
   // phases separately costs a little more than one UpdateAllLifecyclePhases
   // would, so it is behind the flag rather than always on.
   if (!ProfileEnabled()) {
-    frame_->View()->UpdateAllLifecyclePhases(
-        blink::DocumentUpdateReason::kBeginMainFrame);
+    if (paint) {
+      frame_->View()->UpdateAllLifecyclePhases(
+          blink::DocumentUpdateReason::kBeginMainFrame);
+    } else {
+      frame_->View()->UpdateLifecycleToLayoutClean(
+          blink::DocumentUpdateReason::kBeginMainFrame);
+    }
     return;
   }
   const base::TimeTicks t0 = base::TimeTicks::Now();
@@ -1340,8 +1377,10 @@ void ShotRenderer::RunLifecycle(blink::Document* document, int round) {
   frame_->View()->UpdateLifecycleToLayoutClean(
       blink::DocumentUpdateReason::kBeginMainFrame);
   const base::TimeTicks t2 = base::TimeTicks::Now();
-  frame_->View()->UpdateAllLifecyclePhases(
-      blink::DocumentUpdateReason::kBeginMainFrame);
+  if (paint) {
+    frame_->View()->UpdateAllLifecyclePhases(
+        blink::DocumentUpdateReason::kBeginMainFrame);
+  }
   const base::TimeTicks t3 = base::TimeTicks::Now();
   const size_t used =
       cppgc::CollectStatistics(blink::ThreadState::Current()->heap_handle(),
@@ -1352,6 +1391,7 @@ void ShotRenderer::RunLifecycle(blink::Document* document, int round) {
             << " style=" << (t1 - t0).InMillisecondsF()
             << " layout=" << (t2 - t1).InMillisecondsF()
             << " prepaint+paint=" << (t3 - t2).InMillisecondsF()
+            << (paint ? "" : " (skipped)")
             << " parsed=" << document->HasFinishedParsing()
             << " loaded=" << document->IsLoadCompleted()
             << " active=" << document->Fetcher()->ActiveRequestCount();

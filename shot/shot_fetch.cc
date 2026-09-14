@@ -358,6 +358,9 @@ void ShotFetch::Start(const GURL& url,
                       DoneCallback done) {
   done_ = std::move(done);
   result_.final_url = url;
+  if (CaptureContext* capture = CaptureContext::Current()) {
+    capture->NoteNetworkRequest();
+  }
 
   host_ = url.host();
   int& running = InFlightPerHost()[host_];

@@ -204,9 +204,9 @@ class ShotRenderer {
   base::expected<void, std::string> WaitForLoad(const std::string& wait_until,
                                                 base::TimeDelta timeout);
 
-  // One round of style, layout, prepaint and paint, with the split logged
-  // when profiling.
-  void RunLifecycle(blink::Document* document, int round);
+  // One round of style and layout, and with `paint` prepaint and paint too,
+  // with the split logged when profiling.
+  void RunLifecycle(blink::Document* document, int round, bool paint);
 
   // Turns cppgc's collection off for a capture, or back on. Idempotent.
   void SetGarbageCollection(bool enabled);
