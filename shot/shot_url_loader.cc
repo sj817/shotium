@@ -324,12 +324,13 @@ void ShotURLLoader::DeliverBody(blink::URLLoaderClient* client,
   // one allocation rather than in 64 KB segments, and `contents` is freed
   // when this function returns.
   const int64_t size = static_cast<int64_t>(contents.size());
+  // Taken before the first call into the client, not after: either call may
+  // cancel the load -- a MIME type the resource refuses, a CORS failure --
+  // and cancelling resets ResourceLoader::loader_, which destroys this
+  // loader synchronously. A weak pointer obtained beforehand is how that is
+  // observed; reading weak_factory_ afterwards would read a freed object.
+  const base::WeakPtr<ShotURLLoader> self = weak_factory_.GetWeakPtr();
   client->DidReceiveResponse(response, mojo::ScopedDataPipeConsumerHandle());
-  // DidReceiveResponse() may have cancelled the load -- a MIME type the
-  // resource refuses, a CORS failure -- in which case the client is gone
-  // with it; the loader is destroyed with the ResourceLoader, so a weak
-  // pointer to this is how that is observed.
-  base::WeakPtr<ShotURLLoader> self = weak_factory_.GetWeakPtr();
   if (!self) {
     return;
   }
@@ -342,6 +343,9 @@ void ShotURLLoader::DeliverBody(blink::URLLoaderClient* client,
   // The bytes have reached blink; what they cost against the fetch budget is
   // free again, and `contents` goes with this frame.
   charge.Release();
+  // DidFinishLoading() destroys this loader too (HandleLoaderFinish resets
+  // loader_), so nothing below may touch a member: `charge` and `contents`
+  // are this frame's, and NotifyCaptureProgress() is a free function.
   client->DidFinishLoading(base::TimeTicks::Now(), size,
                            static_cast<uint64_t>(size), size);
   // After DidFinishLoading, not before: consuming the body is what can start
