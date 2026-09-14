@@ -8,10 +8,6 @@ import getopt
 import sys
 import unittest
 
-try:
-  import grit.test_suite_all
-except ImportError:
-  pass
 from grit.tool import interface
 
 
@@ -41,4 +37,9 @@ class UnitTestTool(interface.Tool):
     # we don't clear this here, it will try to interpret grit.py args as unit
     # test modules to run.
     sys.argv = []
-    return grit.test_suite_all.main([])
+    try:
+      import grit.test_suite_all
+      return grit.test_suite_all.main([])
+    except ImportError:
+      print('grit unit tests not available (test dependencies pruned)')
+      return 1

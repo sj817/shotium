@@ -17,9 +17,7 @@ _SRC_MODULE_NAME = 'chromium_src'
 # Those are globally importable so they can potentially cause
 # conflicts in names.
 # TODO(crbug.com/488362708): Consider handling global imports through venv.
-_EXTRA_MODULES: typing.Dict[str, str] = {
-  'typ': 'third_party/catapult/third_party/typ'
-}
+_EXTRA_MODULES: typing.Dict[str, str] = {}
 
 
 def setup_extra_modules(chromium_src_path: pathlib.Path):

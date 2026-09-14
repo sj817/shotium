@@ -23,9 +23,6 @@
 [submodule "third_party/boringssl/src"]
 	path = third_party/boringssl/src
 	url = https://boringssl.googlesource.com/boringssl
-[submodule "third_party/catapult"]
-	path = third_party/catapult
-	url = https://chromium.googlesource.com/catapult
 [submodule "third_party/ced/src"]
 	path = third_party/ced/src
 	url = https://chromium.googlesource.com/external/github.com/google/compact_enc_det

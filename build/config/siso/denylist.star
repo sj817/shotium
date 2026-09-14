@@ -51,7 +51,6 @@ def __step_config(ctx, step_config):
         # web_tests/images/resources/ directory, making input tracking too complex.
         "third_party/blink/renderer/modules/webcodecs/fuzzer_seed_corpus/generate_image_corpus.py",
         "third_party/cast_core/public/src/build/chromium/cast_core_grpc_generator_wrapper.py",
-        "third_party/catapult/tracing/bin/generate_about_tracing_contents",
         "third_party/chromium-bidi/tools/build/scripts/compile_ts.py",
         "third_party/chromium-bidi/tools/build/scripts/rollup.py",
         # Requires JDK to run. Additionally, it dynamically parses .js_library

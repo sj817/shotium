@@ -368,10 +368,6 @@ vars = {
   # and whatever else without interference from each other.
   'ots_revision': '46bea9879127d0ff1c6601b078e2ce98e83fcd33',
   # Three lines of non-changing comments so that
-  # the commit queue can handle CLs rolling catapult
-  # and whatever else without interference from each other.
-  'catapult_revision': 'bc8f307a4d44148a31e34ab48c77d0834a404d20',
-  # Three lines of non-changing comments so that
   # the commit queue can handle CLs rolling CrossBench
   # and whatever else without interference from each other.
   'crossbench_revision': 'e64dab2ad45e3ddd838cbf02c6a9eed0c3c3c46b',
@@ -946,9 +942,6 @@ deps = {
 
   'src/third_party/boringssl/src':
     Var('boringssl_git') + '/boringssl.git' + '@' +  Var('boringssl_revision'),
-
-  'src/third_party/catapult':
-    Var('chromium_git') + '/catapult.git' + '@' + Var('catapult_revision'),
 
   'src/third_party/ced/src':
     Var('chromium_git') + '/external/github.com/google/compact_enc_det.git' + '@' + 'd127078cedef9c6642cbe592dacdd2292b50bb19',
