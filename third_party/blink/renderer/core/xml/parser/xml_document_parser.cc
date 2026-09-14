@@ -29,7 +29,6 @@
 #include <libxml/parser.h>
 #include <libxml/parserInternals.h>
 #include <libxml/xmlversion.h>
-#include <libxslt/xslt.h>
 
 #include <algorithm>
 #include <memory>
