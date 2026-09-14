@@ -340,10 +340,6 @@ vars = {
   # and whatever else without interference from each other.
   'fuchsia_version': 'version:33.20260903.4.1',
   # Three lines of non-changing comments so that
-  # the commit queue can handle CLs rolling googletest
-  # and whatever else without interference from each other.
-  'googletest_revision': '4fe3307fb2d9f86d19777c7eb0e4809e9694dde7',
-  # Three lines of non-changing comments so that
   # the commit queue can handle CLs rolling lss
   # and whatever else without interference from each other.
   'lss_revision': '29164a80da4d41134950d76d55199ea33fbb9613',
@@ -966,9 +962,6 @@ deps = {
 
   'src/third_party/ots/src':
     Var('chromium_git') + '/external/github.com/khaledhosny/ots.git' + '@' + Var('ots_revision'),
-
-  'src/third_party/googletest/src':
-    Var('chromium_git') + '/external/github.com/google/googletest.git' + '@' + Var('googletest_revision'),
 
   # TODO: crbug.com/431264806 - Switch to CIPD package for Windows builds.
   'src/third_party/gperf': {
