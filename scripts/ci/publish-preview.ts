@@ -166,16 +166,31 @@ export function rewriteOptionalDependencies(
 }
 
 /**
+ * The URL as a person should see it. pkg-pr-new reports the compact form,
+ * pkg.pr.new/<package>@<seven characters>, when every package of the publish
+ * is on npm with its repository field -- which is where the server finds
+ * the owner and repository again -- and the long form with the full commit
+ * when its registry lookup failed. The long form is kept, since the compact
+ * one was not verified for that publish, but with the commit shortened:
+ * the tarball route matches the commit key by prefix.
+ */
+export function displayUrl(url: string): string {
+  return url.replace(/@([0-9a-f]{7})[0-9a-f]{33}$/, '@$1');
+}
+
+/**
  * The pull request comment: the install line, then every package pinned to
- * this commit. The commit is the seven-character form pkg.pr.new uses in its
- * own comments -- its tarball route matches the commit key by prefix -- and
- * `@<pull request number>`, which follows the latest publish, is mentioned
- * rather than listed.
+ * this commit, each at the URL its publish reported. `@<pull request
+ * number>`, which follows the latest publish, is mentioned rather than listed.
  */
 export function pullRequestComment(
-    repo: string, sha: string, pr: string, packages: ReadonlyArray<{name: string}>, runId: string): string {
+    repo: string, sha: string, pr: string, packages: ReadonlyArray<{name: string; url: string}>, runId: string): string {
   const short = sha.slice(0, 7);
-  const install = (name: string) => `npm i ${PREVIEW_URL_PREFIX}${repo}/${name}@${short}`;
+  const install = (name: string) => {
+    const pkg = packages.find(entry => entry.name === name);
+    if (!pkg) throw new Error(`${name} is not among the published packages`);
+    return `npm i ${displayUrl(pkg.url)}`;
+  };
   return [
     COMMENT_MARKER,
     `### Preview of ${short}`,
@@ -269,12 +284,13 @@ async function packPackages(packages: PreviewPackage[], version: string): Promis
   }
 }
 
-// --no-compact: the short URL form needs every package to be resolvable on
-// npm, which the CLI checks with one registry request per package and gives
-// up on for the whole publish when one fails. The long form always works.
+// Compact URLs, the CLI's default, when it can: it looks every package of the
+// publish up on npm first and falls back to the long form for the whole
+// publish when one lookup fails, which a registry hiccup has done once. Both
+// forms are served; the comment shows whichever was reported (displayUrl).
 async function pkgPrNew(args: string[]): Promise<void> {
   await execa('pnpm', ['-C', 'scripts', 'exec', 'pkg-pr-new', 'publish',
-    '--packageManager=npm', '--no-template', '--no-compact', ...args], {cwd: root, stdio: 'inherit'});
+    '--packageManager=npm', '--no-template', ...args], {cwd: root, stdio: 'inherit'});
 }
 
 async function pack(sha: string): Promise<void> {
