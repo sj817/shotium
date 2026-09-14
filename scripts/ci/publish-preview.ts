@@ -167,11 +167,9 @@ export function rewriteOptionalDependencies(
 
 /**
  * The URL of a package as pkg.pr.new's own pull request comment shows it:
- * the form its publish reported -- compact, pkg.pr.new/<package>@..., when
- * every package of that publish was found on npm with its repository field,
- * where the server looks the owner and repository up again; the long form
- * with owner and repository otherwise -- at `@<pull request number>`, which
- * the server resolves to the latest publish of this pull request.
+ * the same form, compact or with owner and repository, at `@<pull request
+ * number>`, which the server resolves to the latest publish of this pull
+ * request.
  */
 export function pullRequestUrl(url: string, pr: string): string {
   const at = url.lastIndexOf('@');
@@ -276,13 +274,39 @@ async function packPackages(packages: PreviewPackage[], version: string): Promis
   }
 }
 
-// Compact URLs, the CLI's default, when it can: it looks every package of the
-// publish up on npm first and falls back to the long form for the whole
-// publish when one lookup fails, which a registry hiccup has done once. Both
-// forms are served; the comment shows whichever was reported (pullRequestUrl).
+// The CLI reports the long URL form for every publish that has a Linux
+// package in it: before choosing the compact form it validates each package's
+// npm manifest with zod-package-json 2, whose `libc` is a string, and the
+// Linux packages carry npm's `libc: ["glibc"]` array (scripts/package/
+// platform.ts). The server has no such rule -- its query-registry predates
+// the field -- and serves the compact form for all nine, so the comment
+// checks for it itself (compactUrls) rather than trusting this report.
 async function pkgPrNew(args: string[]): Promise<void> {
   await execa('pnpm', ['-C', 'scripts', 'exec', 'pkg-pr-new', 'publish',
     '--packageManager=npm', '--no-template', ...args], {cwd: root, stdio: 'inherit'});
+}
+
+/**
+ * The compact URL, pkg.pr.new/<package>@<commit>, for every package the
+ * server serves it for -- one HEAD each, at the commit just published -- and
+ * the reported URL for any it does not, which is a package not yet on npm
+ * with its repository field, where the server looks the owner and
+ * repository up.
+ */
+async function compactUrls(packages: ReadonlyArray<{name: string; url: string}>, sha: string): Promise<Array<{name: string; url: string}>> {
+  const result: Array<{name: string; url: string}> = [];
+  for (const pkg of packages) {
+    const compact = `${PREVIEW_URL_PREFIX}${pkg.name}@${sha.slice(0, 7)}`;
+    let served = false;
+    try {
+      served = (await fetch(compact, {method: 'HEAD'})).ok;
+    } catch (error) {
+      console.log(pc.yellow(`  ${compact}: ${(error as Error).message}`));
+    }
+    if (!served) console.log(pc.yellow(`  ${pkg.name}: the compact URL is not served; showing ${pkg.url}`));
+    result.push({name: pkg.name, url: served ? compact : pkg.url});
+  }
+  return result;
 }
 
 async function pack(sha: string): Promise<void> {
@@ -409,7 +433,7 @@ async function publish(branch: string, pr: string): Promise<void> {
   console.log('\nPublished:');
   for (const entry of combined) console.log(`  ${entry.name.padEnd(42)} ${entry.url}`);
   const {repo, runId} = environment();
-  await commentOnPullRequest(repo, pr, pullRequestComment(repo, packed.sha, pr, combined, runId));
+  await commentOnPullRequest(repo, pr, pullRequestComment(repo, packed.sha, pr, await compactUrls(combined, packed.sha), runId));
 }
 
 async function child(batch: number, incoming: string): Promise<void> {
