@@ -30,7 +30,7 @@
     "name": "text",
     "file": "cases/text.html",
     "resources": [
-      "../../shot/testdata/ahem.ttf"
+      "../../../shot/testdata/ahem.ttf"
     ],
     "width": 960,
     "height": 540,
