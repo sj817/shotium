@@ -40,6 +40,5 @@ component("metrics_cpp") {
 
   deps = [
     "//mojo/public/cpp/bindings",
-    "//third_party/metrics_proto",
   ]
 }
