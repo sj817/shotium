@@ -1878,7 +1878,6 @@ group("blink_platform_unittests_data") {
 
   data_deps = [
     "//testing/buildbot/filters:blink_platform_unittests",
-    "//third_party/hyphenation-patterns:test_data",
   ]
 }
 
