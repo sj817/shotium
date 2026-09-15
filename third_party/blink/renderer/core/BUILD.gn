@@ -342,7 +342,6 @@ component("core") {
 
     # ax::mojom::blink::Role is named by element behavior and internals.
     "//third_party/blink/renderer/platform/wtf",
-    "//third_party/re2",
     "//ui/accessibility:ax_enums_mojo_blink",
     "//ui/base",
     "//ui/base:ui_data_pack",
@@ -355,10 +354,6 @@ component("core") {
 
   if (is_mac) {
     public_deps += [ "//ui/gfx" ]
-  }
-
-  if (is_win) {
-    public_deps += [ "//third_party/re2" ]
   }
 
   deps = [
