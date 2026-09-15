@@ -140,7 +140,6 @@ class TextFragmentHandler;
 class URLLoader;
 class WebContentSettingsClient;
 class WebInputEventAttribution;
-class WindowControlsOverlayChangedDelegate;
 enum class BackForwardCacheAware;
 enum class MediaValueChange;
 struct WebScriptSource;
@@ -672,8 +671,6 @@ class CORE_EXPORT LocalFrame final
   void SetInitialFocus(bool reverse);
 
   void UpdateWindowControlsOverlay(const gfx::Rect& bounding_rect_in_dips);
-  void RegisterWindowControlsOverlayChangedDelegate(
-      WindowControlsOverlayChangedDelegate*);
   // For PWAs with display_overrides, these getters are information about the
   // titlebar bounds sent over from the browser via UpdateWindowControlsOverlay
   // in LocalMainFrame that are needed to persist the lifetime of the frame.
@@ -1020,8 +1017,6 @@ class CORE_EXPORT LocalFrame final
   // |layout_zoom_factor_| gets updated this way.
   gfx::Rect window_controls_overlay_rect_in_dips_;
   gfx::Rect window_controls_overlay_rect_;
-  WeakMember<WindowControlsOverlayChangedDelegate>
-      window_controls_overlay_changed_delegate_;
 
   // Indicate if the current document's color scheme was notified.
   bool notified_color_scheme_ = false;

@@ -134,7 +134,6 @@
 #include "third_party/blink/renderer/core/frame/smart_clip.h"
 #include "third_party/blink/renderer/core/frame/user_activation.h"
 #include "third_party/blink/renderer/core/frame/visual_viewport.h"
-#include "third_party/blink/renderer/core/frame/window_controls_overlay_changed_delegate.h"
 #include "third_party/blink/renderer/core/fullscreen/fullscreen.h"
 #include "third_party/blink/renderer/core/fullscreen/scoped_allow_fullscreen.h"
 #include "third_party/blink/renderer/core/html/canvas/html_canvas_element.h"
@@ -468,7 +467,6 @@ void LocalFrame::Trace(Visitor* visitor) const {
   visitor->Trace(post_layout_snapshot_clients_);
   visitor->Trace(saved_scroll_offsets_);
   visitor->Trace(browser_interface_broker_proxy_);
-  visitor->Trace(window_controls_overlay_changed_delegate_);
   Frame::Trace(visitor);
   Supplementable<LocalFrame>::Trace(visitor);
 }
@@ -2866,16 +2864,6 @@ void LocalFrame::UpdateWindowControlsOverlay(
       vars.RemoveVariable(var_to_remove);
     }
   }
-
-  if (fire_event && window_controls_overlay_changed_delegate_) {
-    window_controls_overlay_changed_delegate_->WindowControlsOverlayChanged(
-        window_controls_overlay_rect_);
-  }
-}
-
-void LocalFrame::RegisterWindowControlsOverlayChangedDelegate(
-    WindowControlsOverlayChangedDelegate* delegate) {
-  window_controls_overlay_changed_delegate_ = delegate;
 }
 
 HitTestResult LocalFrame::HitTestResultForVisualViewportPos(
