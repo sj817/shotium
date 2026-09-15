@@ -23,7 +23,6 @@ blink_core_sources_bindings_core_v8 = [
   "active_script_wrappable_creation_key.h",
   "sanitize_script_errors.h",
   "script_source_location_type.h",
-  "v8_accuracy_mode.h",
   "v8_add_event_listener_options.cc",
   "v8_add_event_listener_options.h",
   "v8_align_setting.h",
