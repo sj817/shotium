@@ -44,7 +44,6 @@
 #include "third_party/blink/public/platform/interface_registry.h"
 #include "third_party/blink/public/platform/platform.h"
 #include "third_party/blink/public/web/blink.h"
-#include "third_party/blink/renderer/controller/memory_saver_controller.h"
 #include "third_party/blink/renderer/core/animation/animation_clock.h"
 #include "third_party/blink/renderer/core/dom/document.h"
 #include "third_party/blink/renderer/core/execution_context/agent.h"
@@ -75,11 +74,6 @@
 
 #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
 #include "third_party/blink/renderer/controller/memory_usage_monitor_posix.h"
-#endif
-
-#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_ANDROID) || \
-    BUILDFLAG(IS_APPLE) || BUILDFLAG(IS_WIN)
-#include "third_party/blink/renderer/controller/highest_pmf_reporter.h"
 #endif
 
 // #if expression should match the one in InitializeCommon
@@ -267,9 +261,9 @@ void BlinkInitializer::RegisterInterfaces(mojo::BinderMap& binders) {
 }
 
 void BlinkInitializer::RegisterMemoryWatchers(Platform* platform) {
+#if BUILDFLAG(IS_ANDROID)
   scoped_refptr<base::SingleThreadTaskRunner> main_thread_task_runner =
       Thread::MainThread()->GetTaskRunner(MainThreadTaskRunnerRestricted());
-#if BUILDFLAG(IS_ANDROID)
   // Initialize CrashMemoryMetricsReporterImpl in order to assure that memory
   // allocation does not happen in OnOOMCallback.
   CrashMemoryMetricsReporterImpl::Instance();
@@ -278,17 +272,7 @@ void BlinkInitializer::RegisterMemoryWatchers(Platform* platform) {
   if (platform->IsUserLevelMemoryPressureSignalEnabled()) {
     UserLevelMemoryPressureSignalGenerator::Initialize(main_thread_task_runner);
   }
-#endif
-  MemorySaverController::Initialize();
 
-#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_ANDROID) || \
-    BUILDFLAG(IS_APPLE) || BUILDFLAG(IS_WIN)
-  // Start reporting the highest private memory footprint after the first
-  // navigation.
-  HighestPmfReporter::Initialize(main_thread_task_runner);
-#endif
-
-#if BUILDFLAG(IS_ANDROID)
   // Initialize PrivateMemoryFootprintProvider to start providing the value
   // for the browser process.
   PrivateMemoryFootprintProvider::Initialize(main_thread_task_runner);
