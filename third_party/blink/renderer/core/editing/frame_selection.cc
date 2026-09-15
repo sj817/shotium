@@ -33,8 +33,6 @@
 #include "base/trace_event/trace_event.h"
 #include "third_party/blink/public/common/features.h"
 #include "third_party/blink/public/mojom/scroll/scroll_into_view_params.mojom-blink.h"
-#include "third_party/blink/renderer/core/accessibility/blink_ax_event_intent.h"
-#include "third_party/blink/renderer/core/accessibility/scoped_blink_ax_event_intent.h"
 #include "third_party/blink/renderer/core/css/css_property_value_set.h"
 #include "third_party/blink/renderer/core/display_lock/display_lock_utilities.h"
 #include "third_party/blink/renderer/core/dom/character_data.h"
@@ -343,17 +341,6 @@ void FrameSelection::DidSetSelectionDeprecated(
   Document& current_document = GetDocument();
   const SetSelectionBy set_selection_by = options.GetSetSelectionBy();
 
-  // Provides details to accessibility about the selection change throughout the
-  // current call stack.
-  //
-  // If the selection is currently being modified via the "Modify" method, we
-  // should already have more detailed information on the stack than can be
-  // deduced in this method.
-  // Used to gate ScopedBlinkAXEventIntent construction on an active
-  // AXObjectCache; no accessibility tree exists to annotate events for
-  // anymore, so the intent is never emplaced.
-  std::optional<ScopedBlinkAXEventIntent> scoped_blink_ax_event_intent;
-
   if (!new_selection.IsNone() && !options.DoNotSetFocus()) {
     SetFocusedNodeIfNeeded();
     // |setFocusedNodeIfNeeded()| dispatches sync events "FocusOut" and
@@ -595,17 +582,7 @@ bool FrameSelection::Modify(SelectionModifyAlteration alter,
     return true;
   }
 
-  // Provides details to accessibility about the selection change throughout the
-  // current call stack.
   base::AutoReset<bool> is_being_modified_resetter(&is_being_modified_, true);
-  // Used to compute the PlatformWordBehavior passed to
-  // BlinkAXEventIntent::FromModifiedSelection() when building the
-  // accessibility event intent below; no AXObjectCache exists anymore so
-  // that call site is gone and this value is never consumed.
-  // Used to gate ScopedBlinkAXEventIntent construction on an active
-  // AXObjectCache; no accessibility tree exists to annotate events for
-  // anymore, so the intent is never emplaced.
-  std::optional<ScopedBlinkAXEventIntent> scoped_blink_ax_event_intent;
 
   // For MacOS only selection is directionless at the beginning.
   // Selection gets direction on extent.

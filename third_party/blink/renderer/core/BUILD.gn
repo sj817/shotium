@@ -14,7 +14,6 @@ import("//build/toolchain/toolchain.gni")
 import("//testing/libfuzzer/fuzzer_test.gni")
 import("//third_party/blink/renderer/build/scripts/scripts.gni")
 import("//third_party/blink/renderer/config.gni")
-import("//third_party/blink/renderer/core/accessibility/build.gni")
 import("//third_party/blink/renderer/core/animation/build.gni")
 import("//third_party/blink/renderer/core/clipboard/build.gni")
 import("//third_party/blink/renderer/core/core.gni")
@@ -279,7 +278,6 @@ component("core") {
   # deps section below. For unit tests, do the same thing in the "unit_tests"
   # component. If the directory contains sources that should be compiled with
   # extra optimization flags, see the "core_hot" target below.
-  sources += rebase_path(blink_core_sources_accessibility, "", "accessibility")
   sources += rebase_path(blink_core_sources_clipboard, "", "clipboard")
   sources += rebase_path(blink_core_sources_css, "", "css")
   sources += rebase_path(blink_core_sources_display_lock, "", "display_lock")
@@ -343,11 +341,9 @@ component("core") {
     "//third_party/blink/renderer/core/url_pattern",
     "//third_party/blink/renderer/platform",
 
-    # focusgroup_flags.h and the editing code are written in terms of
-    # ax::mojom::blink::Role / Command / InputEventType.
+    # ax::mojom::blink::Role is named by element behavior and internals.
     "//third_party/blink/renderer/platform/wtf",
     "//third_party/re2",
-    "//ui/accessibility:ax_base",
     "//ui/accessibility:ax_enums_mojo_blink",
     "//ui/base",
     "//ui/base:ui_data_pack",
@@ -1220,8 +1216,7 @@ source_set("unit_tests") {
   # If you create a new subdirectory 'foo' that contains unit tests, list them
   # in 'foo/build.gni' to define blink_core_tests_foo, and add any dependencies
   # in the deps section below.
-  sources = rebase_path(blink_core_tests_accessibility, "", "accessibility")
-  sources += rebase_path(blink_core_tests_animation, "", "animation")
+  sources = rebase_path(blink_core_tests_animation, "", "animation")
   sources += rebase_path(blink_core_tests_clipboard, "", "clipboard")
   sources += rebase_path(blink_core_tests_css, "", "css")
   sources += rebase_path(blink_core_tests_display_lock, "", "display_lock")
