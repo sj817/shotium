@@ -22,34 +22,3 @@ mojom_component("ax_enums_mojo") {
   output_prefix = "ui_accessibility_ax_mojom"
 }
 
-# The data types blink names directly, next to the enum vocabulary above.
-#
-# ui::AXEventIntent describes *why* a selection or text change happened (a
-# command, an input event type, a move direction) and blink's editing code
-# constructs one on every such change -- core/accessibility/blink_ax_event_intent
-# wraps it. ui::AXSerializationErrorFlag is three values reporting how a tree
-# serialization ran out of room; WebDocument still returns them.
-#
-# ax_enum_util is here because AXEventIntent::ToString() needs it. It is 2649
-# lines of enum-to-string tables and nothing else.
-component("ax_base") {
-  output_name = "ax_base"
-
-  sources = [
-    "ax_base_export.h",
-    "ax_enum_util.cc",
-    "ax_enum_util.h",
-    "ax_error_types.h",
-    "ax_mode.cc",
-    "ax_mode.h",
-    "ax_event_intent.cc",
-    "ax_event_intent.h",
-  ]
-
-  defines = [ "AX_BASE_IMPLEMENTATION" ]
-
-  public_deps = [
-    ":ax_enums_mojo",
-    "//base",
-  ]
-}
