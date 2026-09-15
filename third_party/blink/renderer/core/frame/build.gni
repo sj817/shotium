@@ -167,8 +167,6 @@ blink_core_sources_frame = [
   "viewport_data.h",
   "visual_viewport.cc",
   "visual_viewport.h",
-  "webdx_feature_tracing.cc",
-  "webdx_feature_tracing.h",
   "web_feature.h",
   "web_feature_forward.h",
   "universal_global_scope.cc",
