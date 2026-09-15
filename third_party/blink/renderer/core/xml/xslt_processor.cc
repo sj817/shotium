@@ -77,18 +77,7 @@ void AddXSLTConsoleWarning(Document& document, const String& message) {
 }  // namespace
 
 bool XSLTProcessor::IsXSLTEnabled(const ExecutionContext* context) {
-  if (base::CommandLine::ForCurrentProcess()->HasSwitch(
-          blink::switches::kXSLTEnabledPolicy)) {
-    return base::CommandLine::ForCurrentProcess()->GetSwitchValueASCII(
-               blink::switches::kXSLTEnabledPolicy) == "true";
-  }
-  if (auto* window = DynamicTo<LocalDOMWindow>(context)) {
-    if (window->document() && window->document()->IsCAPAlert() &&
-        RuntimeEnabledFeatures::EnableXSLTForCAPAlertsEnabled(context)) {
-      return true;
-    }
-  }
-  return RuntimeEnabledFeatures::XSLTEnabled(context);
+  return false;
 }
 
 void XSLTProcessor::ReportXSLTDisabled(Document& document) {
@@ -297,6 +286,16 @@ Document* XSLTProcessor::CreateDocumentFromSource(
   InjectXSLTWarningBanner(is_cap_alert_xslt, *document);
   return document;
 }
+
+bool XSLTProcessor::TransformToString(Node* source,
+                                      String& result_mime_type,
+                                      String& result_string,
+                                      String& result_encoding) {
+  return false;
+}
+
+void XSLTProcessor::ParseErrorFunc(void* user_data, const xmlError*) {}
+void XSLTProcessor::GenericErrorFunc(void* user_data, const char* msg, ...) {}
 
 void XSLTProcessor::Trace(Visitor* visitor) const {
   visitor->Trace(stylesheet_);

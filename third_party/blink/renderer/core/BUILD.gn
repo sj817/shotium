@@ -155,7 +155,6 @@ source_set("prerequisites") {
     "//third_party/icu",
     "//third_party/libwebp",
     "//third_party/libxml",
-    "//third_party/libxslt",
     "//third_party/ots",
     "//third_party/zlib",
 
@@ -1179,7 +1178,6 @@ target(core_generated_target_type, "core_generated") {
     "//third_party/blink/renderer/platform/wtf",
     "//third_party/libwebp",
     "//third_party/libxml",
-    "//third_party/libxslt",
     "//url",
   ]
 
