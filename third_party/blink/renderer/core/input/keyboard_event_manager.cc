@@ -27,7 +27,6 @@
 #include "third_party/blink/renderer/core/html/html_dialog_element.h"
 #include "third_party/blink/renderer/core/input/event_handling_util.h"
 #include "third_party/blink/renderer/core/input/input_device_capabilities.h"
-#include "third_party/blink/renderer/core/input/keyboard_shortcut_recorder.h"
 #include "third_party/blink/renderer/core/input/scroll_manager.h"
 #include "third_party/blink/renderer/core/keywords.h"
 #include "third_party/blink/renderer/core/page/focus_controller.h"
@@ -78,14 +77,12 @@ bool MapKeyCodeForScroll(int key_code,
       WebInputEvent::kControlKey | WebInputEvent::kAltKey;
   if ((modifiers & WebInputEvent::kKeyModifiers) == kTargetModifiers) {
     if (key_code == VKEY_UP) {
-      RecordKeyboardShortcutForAndroid(KeyboardShortcut::kScrollToTop);
       *scroll_direction =
           mojom::blink::ScrollDirection::kScrollUpIgnoringWritingMode;
       *scroll_granularity = ui::ScrollGranularity::kScrollByDocument;
       *scroll_use_uma = WebFeature::kScrollByKeyboardHomeEndKeys;
       return true;
     } else if (key_code == VKEY_DOWN) {
-      RecordKeyboardShortcutForAndroid(KeyboardShortcut::kScrollToBottom);
       *scroll_direction =
           mojom::blink::ScrollDirection::kScrollDownIgnoringWritingMode;
       *scroll_granularity = ui::ScrollGranularity::kScrollByDocument;
@@ -120,16 +117,6 @@ bool MapKeyCodeForScroll(int key_code,
 #endif  // BUILDFLAG(IS_MAC)
   }
 
-#if BUILDFLAG(IS_ANDROID)
-  switch (key_code) {
-    case VKEY_PRIOR:
-      RecordKeyboardShortcutForAndroid(KeyboardShortcut::kPageUp);
-      break;
-    case VKEY_NEXT:
-      RecordKeyboardShortcutForAndroid(KeyboardShortcut::kPageDown);
-      break;
-  }
-#endif
 
   switch (key_code) {
     case VKEY_LEFT:
