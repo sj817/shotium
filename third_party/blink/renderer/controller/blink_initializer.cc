@@ -71,9 +71,6 @@
 #include "third_party/blink/renderer/platform/fonts/font_cache.h"
 #endif
 
-#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
-#include "third_party/blink/renderer/controller/memory_usage_monitor_posix.h"
-#endif
 
 // #if expression should match the one in InitializeCommon
 #if !defined(ARCH_CPU_X86_64) && !defined(ARCH_CPU_ARM64) && BUILDFLAG(IS_WIN)
@@ -241,12 +238,7 @@ void BlinkInitializer::RegisterInterfaces(mojo::BinderMap& binders) {
       main_thread_task_runner);
 #endif
 
-#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
-  binders.Add<mojom::blink::MemoryUsageMonitorLinux>(
-      ConvertToBaseRepeatingCallback(
-          CrossThreadBindRepeating(&MemoryUsageMonitorPosix::Bind)),
-      main_thread_task_runner);
-#endif
+
 
   binders.Add<mojom::blink::DiskAllocator>(
       ConvertToBaseRepeatingCallback(

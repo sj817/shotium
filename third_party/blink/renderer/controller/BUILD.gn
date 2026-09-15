@@ -51,43 +51,17 @@ component("controller") {
     # object installed on the window. Both halves of that are JavaScript --
     # InspectorFrontendClient, the interface it implemented to talk back to
     # the inspector, no longer exists -- so there is nothing left for this
-    # class to bridge.
-    "memory_usage_monitor.cc",
-    "memory_usage_monitor.h",
   ]
 
-  if (is_linux || is_chromeos) {
-    sources += [
-      "memory_usage_monitor_posix.cc",
-      "memory_usage_monitor_posix.h",
-    ]
-    deps += [ "//third_party/blink/public/mojom:memory_usage_monitor_linux_mojo_bindings_blink" ]
-  }
   if (is_android) {
     sources += [
       "crash_memory_metrics_reporter_impl.cc",
       "crash_memory_metrics_reporter_impl.h",
-      "memory_usage_monitor_posix.cc",
-      "memory_usage_monitor_posix.h",
       "oom_intervention_impl.cc",
       "oom_intervention_impl.h",
       "private_memory_footprint_provider.cc",
       "private_memory_footprint_provider.h",
     ]
-    public_deps = [ "//third_party/blink/public/mojom:memory_usage_monitor_linux_mojo_bindings_blink" ]
-  }
-  if (is_win) {
-    sources += [
-      "memory_usage_monitor_win.cc",
-      "memory_usage_monitor_win.h",
-    ]
-  }
-  if (is_apple) {
-    sources += [
-      "memory_usage_monitor_mac.cc",
-      "memory_usage_monitor_mac.h",
-    ]
-    frameworks = [ "Foundation.framework" ]
   }
 
 
@@ -157,12 +131,8 @@ source_set("blink_unittests_sources") {
     "tests/run_all_tests.cc",
     "tests/thread_state_test_environment.h",
   ]
-  if (is_linux || is_chromeos) {
-    sources += [ "memory_usage_monitor_posix_test.cc" ]
-  }
   if (is_android) {
     sources += [
-      "memory_usage_monitor_posix_test.cc",
       "oom_intervention_impl_test.cc",
       "user_level_memory_pressure_signal_generator_test.cc",
     ]
