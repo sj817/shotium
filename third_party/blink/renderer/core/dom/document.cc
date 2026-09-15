@@ -52,10 +52,6 @@
 #include "mojo/public/cpp/bindings/pending_remote.h"
 #include "mojo/public/cpp/bindings/remote.h"
 #include "mojo/public/mojom/base/text_direction.mojom-blink.h"
-#include "net/base/schemeful_site.h"
-#include "services/metrics/public/cpp/delegating_ukm_recorder.h"
-#include "services/metrics/public/cpp/metrics_utils.h"
-#include "services/metrics/public/cpp/mojo_ukm_recorder.h"
 #include "services/metrics/public/cpp/ukm_recorder.h"
 #include "services/metrics/public/cpp/ukm_source_id.h"
 #include "services/network/public/cpp/web_sandbox_flags.h"
@@ -957,9 +953,6 @@ Document::~Document() {
   DCHECK(!ParentTreeScope());
 
   InstanceCounters::DecrementCounter(InstanceCounters::kDocumentCounter);
-  if (WebTestSupport::IsRunningWebTest() && ukm_recorder_) {
-    ukm::DelegatingUkmRecorder::Get()->RemoveDelegate(ukm_recorder_.get());
-  }
 }
 
 Range* Document::CreateRangeAdjustedToTreeScope(const TreeScope& tree_scope,
@@ -7598,25 +7591,7 @@ HTMLLinkElement* Document::LinkCanonical() const {
 }
 
 ukm::UkmRecorder* Document::UkmRecorder() {
-  if (!ukm_recorder_) {
-    mojo::Remote<ukm::mojom::UkmRecorderFactory> factory;
-    Platform::Current()->GetBrowserInterfaceBroker()->GetInterface(
-        factory.BindNewPipeAndPassReceiver());
-    auto mojo_recorder = ukm::MojoUkmRecorder::Create(*factory);
-    if (WebTestSupport::IsRunningWebTest() &&
-        WebTestSupport::CanRegisterUkmRecorderDelegateForWebTest()) {
-      ukm::DelegatingUkmRecorder::Get()->AddDelegate(
-          mojo_recorder->GetWeakPtr());
-    }
-    ukm_recorder_ = std::move(mojo_recorder);
-  }
-
-  if (WebTestSupport::IsRunningWebTest() &&
-        WebTestSupport::CanRegisterUkmRecorderDelegateForWebTest()) {
-    return ukm::DelegatingUkmRecorder::Get();
-  } else {
-    return ukm_recorder_.get();
-  }
+  return nullptr;
 }
 
 ukm::SourceId Document::UkmSourceID() const {

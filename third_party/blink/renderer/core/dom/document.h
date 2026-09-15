@@ -2845,9 +2845,8 @@ class CORE_EXPORT Document : public ContainerNode,
   UnassociatedListedElementsList unassociated_listed_elements_;
 
 
-  // |ukm_recorder_| and |source_id_| will allow objects that are part of
+  // |ukm_source_id_| will allow objects that are part of
   // the document to record UKM.
-  std::unique_ptr<ukm::UkmRecorder> ukm_recorder_;
   const int64_t ukm_source_id_;
 
 #if DCHECK_IS_ON()

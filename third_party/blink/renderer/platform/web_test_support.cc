@@ -67,9 +67,6 @@ bool WebTestSupport::IsRunningWebTest() {
   return g_is_running_web_test;
 }
 
-bool WebTestSupport::CanRegisterUkmRecorderDelegateForWebTest() {
-  return !g_is_running_single_process_web_test;
-}
 
 bool WebTestSupport::IsFontAntialiasingEnabledForTest() {
   return g_is_font_antialiasing_enabled;
