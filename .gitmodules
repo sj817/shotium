@@ -49,10 +49,6 @@
 	path = third_party/gperf
 	url = https://chromium.googlesource.com/chromium/deps/gperf
 	gclient-condition = checkout_win
-[submodule "third_party/libdrm/src"]
-	path = third_party/libdrm/src
-	url = https://chromium.googlesource.com/chromiumos/third_party/libdrm
-	gclient-condition = checkout_linux
 [submodule "third_party/expat/src"]
 	path = third_party/expat/src
 	url = https://chromium.googlesource.com/external/github.com/libexpat/libexpat

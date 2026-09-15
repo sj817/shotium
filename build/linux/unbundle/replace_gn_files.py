@@ -51,7 +51,6 @@ REPLACEMENTS = {
     'highway': 'third_party/highway/BUILD.gn',
     'icu': 'third_party/icu/BUILD.gn',
     'libaom': 'third_party/libaom/BUILD.gn',
-    'libdrm': 'third_party/libdrm/BUILD.gn',
     'libjpeg': 'third_party/libjpeg.gni',
     'libpng': 'third_party/libpng/BUILD.gn',
     'libsecret': 'third_party/libsecret/BUILD.gn',
