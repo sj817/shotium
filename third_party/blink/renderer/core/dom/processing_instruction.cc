@@ -80,20 +80,6 @@ bool ProcessingInstruction::IsXSL() const {
   return is_xsl_;
 }
 
-EventListener* ProcessingInstruction::EventListenerForXSLT() {
-  if (!listener_for_xslt_) {
-    return nullptr;
-  }
-
-  return listener_for_xslt_->ToEventListener();
-}
-
-void ProcessingInstruction::ClearEventListenerForXSLT() {
-  if (listener_for_xslt_) {
-    listener_for_xslt_->Detach();
-    listener_for_xslt_.Clear();
-  }
-}
 
 String ProcessingInstruction::nodeName() const {
   return target_;
@@ -542,7 +528,6 @@ void ProcessingInstruction::RemovePendingSheet() {
 
 void ProcessingInstruction::Trace(Visitor* visitor) const {
   visitor->Trace(sheet_);
-  visitor->Trace(listener_for_xslt_);
   CharacterData::Trace(visitor);
   ResourceClient::Trace(visitor);
 }
