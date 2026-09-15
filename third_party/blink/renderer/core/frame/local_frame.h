@@ -843,11 +843,6 @@ class CORE_EXPORT LocalFrame final
   friend class LocalFrameMojoHandler;
 
   FRIEND_TEST_ALL_PREFIXES(LocalFrameTest, CharacterIndexAtPointWithPinchZoom);
-  FRIEND_TEST_ALL_PREFIXES(WebFrameTest, SmartClipData);
-  FRIEND_TEST_ALL_PREFIXES(WebFrameTest, SmartClipDataWithPinchZoom);
-  FRIEND_TEST_ALL_PREFIXES(WebFrameTest,
-                           SmartClipReturnsEmptyStringsWhenUserSelectIsNone);
-  FRIEND_TEST_ALL_PREFIXES(WebFrameTest, SmartClipDoesNotCrashPositionReversed);
 
   // Frame protected overrides:
   bool DetachImpl(FrameDetachType) override;
@@ -898,11 +893,6 @@ class CORE_EXPORT LocalFrame final
       const gfx::Point& pos_in_viewport);
 
   bool ShouldThrottleDownload();
-
-  void ExtractSmartClipDataInternal(const gfx::Rect& rect_in_viewport,
-                                    String& clip_text,
-                                    String& clip_html,
-                                    gfx::Rect& clip_rect);
 
   void SetTitlebarAreaDocumentStyleEnvironmentVariables() const;
   void MaybeUpdateWindowControlsOverlayWithNewZoomLevel();

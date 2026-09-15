@@ -131,7 +131,6 @@
 #include "third_party/blink/renderer/core/frame/reporting_context.h"
 #include "third_party/blink/renderer/core/frame/root_frame_viewport.h"
 #include "third_party/blink/renderer/core/frame/settings.h"
-#include "third_party/blink/renderer/core/frame/smart_clip.h"
 #include "third_party/blink/renderer/core/frame/user_activation.h"
 #include "third_party/blink/renderer/core/frame/visual_viewport.h"
 #include "third_party/blink/renderer/core/fullscreen/fullscreen.h"
@@ -3067,95 +3066,6 @@ Frame* LocalFrame::GetProvisionalOwnerFrame() {
   return GetPage()->MainFrame();
 }
 
-namespace {
-
-static PositionWithAffinity PositionForSmartClipPoint(
-    const gfx::Point& contents_point,
-    const LocalFrame* frame) {
-  constexpr HitTestRequest::HitTestRequestType kRequest =
-      HitTestRequest::kMove | HitTestRequest::kReadOnly |
-      HitTestRequest::kActive | HitTestRequest::kIgnoreClipping;
-  HitTestLocation location(contents_point);
-  HitTestResult result(kRequest, location);
-  frame->GetDocument()->GetLayoutView()->HitTest(location, result);
-
-  Node* inner_node = result.InnerNode();
-  if (!inner_node) {
-    return PositionWithAffinity();
-  }
-
-  if (const auto* layout_box_flow =
-          DynamicTo<LayoutBlockFlow>(inner_node->GetLayoutObject());
-      layout_box_flow && !layout_box_flow->HasFragmentItems() &&
-      layout_box_flow->ChildrenInline()) {
-    // Here layout of inner_node may have out-of-flow children without inline
-    // children, we don't find closest child of |point| for out-of-flow
-    // children. See WebFrameTest.SmartClipData
-    return layout_box_flow->CreatePositionWithAffinity(0);
-  }
-
-  return PositionRespectingEditingBoundary(
-      frame->Selection().ComputeVisibleSelectionInDomTree().Start(), result);
-}
-
-// TODO(editing-dev): We should move |CreateMarkupInRect()| to
-// "core/editing/serializers/Serialization.cpp".
-String CreateMarkupInRect(LocalFrame* frame,
-                          const gfx::Point& start_point,
-                          const gfx::Point& end_point) {
-  PositionWithAffinity start_position_with_affinity;
-  PositionWithAffinity end_position_with_affinity;
-  if (RuntimeEnabledFeatures::PreventTextSelectionJumpEnabled()) {
-    start_position_with_affinity =
-        PositionForSmartClipPoint(start_point, frame);
-    end_position_with_affinity = PositionForSmartClipPoint(end_point, frame);
-  } else {
-    start_position_with_affinity =
-        PositionForContentsPointRespectingEditingBoundary(start_point, frame);
-    end_position_with_affinity =
-        PositionForContentsPointRespectingEditingBoundary(end_point, frame);
-  }
-  VisiblePosition start_visible_position =
-      CreateVisiblePosition(start_position_with_affinity);
-  VisiblePosition end_visible_position =
-      CreateVisiblePosition(end_position_with_affinity);
-
-  Position start_position = start_visible_position.DeepEquivalent();
-  Position end_position = end_visible_position.DeepEquivalent();
-
-  // document() will return null if -webkit-user-select is set to none.
-  if (!start_position.GetDocument() || !end_position.GetDocument()) {
-    return String();
-  }
-
-  const CreateMarkupOptions create_markup_options =
-      CreateMarkupOptions::Builder()
-          .SetShouldAnnotateForInterchange(true)
-          .SetShouldResolveUrls(ResolveUrls::kNonLocal)
-          .Build();
-  if (start_position.CompareTo(end_position) <= 0) {
-    return CreateMarkup(start_position, end_position, create_markup_options);
-  }
-  return CreateMarkup(end_position, start_position, create_markup_options);
-}
-
-}  // namespace
-
-void LocalFrame::ExtractSmartClipDataInternal(const gfx::Rect& rect_in_viewport,
-                                              String& clip_text,
-                                              String& clip_html,
-                                              gfx::Rect& clip_rect) {
-  // TODO(mahesh.ma): Check clip_data even after use-zoom-for-dsf is enabled.
-  SmartClipData clip_data = SmartClip(this).DataForRect(rect_in_viewport);
-  clip_text = clip_data.ClipData();
-  clip_rect = clip_data.RectInViewport();
-
-  gfx::Point start_point(rect_in_viewport.x(), rect_in_viewport.y());
-  gfx::Point end_point(rect_in_viewport.x() + rect_in_viewport.width(),
-                       rect_in_viewport.y() + rect_in_viewport.height());
-  clip_html = CreateMarkupInRect(this, View()->ViewportToFrame(start_point),
-                                 View()->ViewportToFrame(end_point));
-}
 
 // LocalFrame::CreateTextFragmentHandler() and BindTextFragmentReceiver()
 // removed in this cut -- see the comment on GetTextFragmentHandler()'s
