@@ -145,8 +145,6 @@ blink_core_sources_frame = [
   "settings_delegate.cc",
   "settings_delegate.h",
   "settings_string_converter.h",
-  "test_report_body.cc",
-  "test_report_body.h",
   "use_counter_impl.cc",
   "use_counter_impl.h",
   "user_activation.cc",
