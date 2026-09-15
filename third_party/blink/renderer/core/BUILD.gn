@@ -1266,7 +1266,6 @@ source_set("unit_tests") {
 
   deps = [
     ":core",
-    ":fuzztest_utils",
     ":unit_test_support",
     "//cc",
     "//mojo/public/cpp/system",
@@ -1284,7 +1283,6 @@ source_set("unit_tests") {
     "//third_party/blink/renderer/core:testing",
     "//third_party/blink/renderer/core:unit_test_support",
     "//third_party/blink/renderer/platform:test_support",
-    "//third_party/fuzztest",
     "//third_party/harfbuzz",
     "//ui/base/cursor",
     "//ui/base/cursor/mojom:cursor_type_blink",
@@ -1390,25 +1388,6 @@ source_set("unit_test_support") {
   ]
 }
 
-source_set("fuzztest_utils") {
-  testonly = true
-
-  sources = []
-
-  configs += [
-    ":blink_core_pch",
-    "//third_party/blink/renderer:config",
-    "//third_party/blink/renderer:inside_blink",
-  ]
-
-  deps = [
-    ":core",
-    ":unit_test_support",
-    "//testing/gtest",
-  ]
-
-  public_deps = [ "//third_party/fuzztest" ]
-}
 
 # Fuzzer for blink::StyleSheetContents
 blink_fuzzer_test("stylesheet_contents_fuzzer") {
@@ -1428,35 +1407,6 @@ blink_fuzzer_test("css_parser_fast_paths_fuzzer") {
 }
 
 
-test("css_parser_fuzzer") {
-  sources = [ "css/parser/css_parser_fuzzer.cc" ]
-  deps = [
-    ":core",
-    "//third_party/blink/renderer/platform:blink_fuzzer_test_support",
-    "//third_party/fuzztest:fuzztest_gtest_main",
-  ]
-  fuzztests = [ "CssParser.ParseSheetFuzzer" ]
-
-  # TODO(crbug.com/40031409): Fix code that adds exit-time destructors and
-  # enable the diagnostic by removing this line.
-  configs += [ "//build/config/compiler:no_exit_time_destructors" ]
-}
-
-test("inspector_ghost_rules_fuzzer") {
-  sources = []
-  deps = [
-    ":core",
-    ":testing",
-    ":unit_test_support",
-    "//third_party/blink/renderer/platform:blink_fuzzer_test_support",
-    "//third_party/fuzztest:fuzztest_gtest_main",
-  ]
-  fuzztests = [ "InspectorGhostRules.PopulateFuzzer" ]
-
-  # TODO(crbug.com/40031409): Fix code that adds exit-time destructors and
-  # enable the diagnostic by removing this line.
-  configs += [ "//build/config/compiler:no_exit_time_destructors" ]
-}
 
 
 

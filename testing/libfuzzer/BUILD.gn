@@ -171,21 +171,6 @@ source_set("fuzztest_init_support") {
   ]
 }
 
-# Contains a static initializer which will arrange for fuzztests to be
-# registered. Usually invoked from testing/test.gni
-source_set("confirm_fuzztest_init") {
-  sources = [ "confirm_fuzztest_init.cc" ]
-  testonly = true
-  deps = [
-    ":buildflags",
-    ":fuzztest_init_support",
-    "//third_party/fuzztest:init_fuzztest",
-  ]
-
-  # TODO(crbug.com/40031409): Fix code that adds exit-time destructors and
-  # enable the diagnostic by removing this line.
-  configs += [ "//build/config/compiler:no_exit_time_destructors" ]
-}
 
 if (build_with_chromium) {
   source_set("libfuzzer_base_wrappers") {
