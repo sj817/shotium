@@ -216,8 +216,6 @@ rust_static_library("xml_ffi") {
   ]
   cxx_bindings = [ crate_root ]
   deps = [
-    "//services/metrics/public/cpp:metrics_cpp",
-    "//services/metrics/public/mojom",
     "//third_party/blink/renderer/platform/wtf",
     "//third_party/rust/cxx/v1:lib",
     "//third_party/rust/xml/v1:lib",
