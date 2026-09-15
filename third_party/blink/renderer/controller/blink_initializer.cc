@@ -47,7 +47,6 @@
 #include "third_party/blink/renderer/core/animation/animation_clock.h"
 #include "third_party/blink/renderer/core/dom/document.h"
 #include "third_party/blink/renderer/core/execution_context/agent.h"
-#include "third_party/blink/renderer/core/frame/display_cutout_client_impl.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
 #include "third_party/blink/renderer/core/loader/loader_factory_for_frame.h"
 #include "third_party/blink/renderer/platform/disk_data_allocator.h"
@@ -280,11 +279,6 @@ void BlinkInitializer::RegisterMemoryWatchers(Platform* platform) {
 }
 
 void BlinkInitializer::InitLocalFrame(LocalFrame& frame) const {
-  if (RuntimeEnabledFeatures::DisplayCutoutAPIEnabled()) {
-    frame.GetInterfaceRegistry()->AddAssociatedInterface(
-        BindRepeating(&DisplayCutoutClientImpl::BindMojoReceiver,
-                      WrapWeakPersistent(&frame)));
-  }
   // DevToolsFrontendImpl::BindMojoRequest registration was here. It bound
   // the mojo interface for the DevTools frontend bridge; that class is gone
   // (see controller/BUILD.gn), so there is nothing left to bind.
