@@ -5,6 +5,7 @@
 #ifndef SHOT_SHOT_PLATFORM_H_
 #define SHOT_SHOT_PLATFORM_H_
 
+#include <memory>
 #include <string>
 
 #include "base/memory/ref_counted_memory.h"
@@ -29,9 +30,11 @@ namespace shot {
 // blink's default, which drops every interface request on the floor: the
 // truthful answer for a process with no browser behind it.
 //
-// Everything else stays at the default. That is not a stub: the defaults are
-// blink's own statement of what an embedder without a browser process can do,
-// and this binary is mostly exactly that.
+// Linux is the one exception to the "no browser process" defaults: Blink's
+// local() font lookup is expressed through WebSandboxSupport because Chrome's
+// renderer normally asks its browser-side font service. Shot is not sandboxed,
+// so its implementation performs the same Fontconfig lookup in-process and
+// gates it with the capture's existing allowFileAccess permission.
 class ShotPlatform : public blink::Platform {
  public:
   ShotPlatform();
@@ -40,6 +43,7 @@ class ShotPlatform : public blink::Platform {
   ~ShotPlatform() override;
 
   // blink::Platform:
+  blink::WebSandboxSupport* GetSandboxSupport() override;
   bool HasDataResource(int resource_id) const override;
   blink::WebData GetDataResource(
       int resource_id,
@@ -48,6 +52,9 @@ class ShotPlatform : public blink::Platform {
   scoped_refptr<base::RefCountedMemory> GetDataResourceBytes(
       int resource_id) override;
   blink::WebString DefaultLocale() override;
+
+ private:
+  std::unique_ptr<blink::WebSandboxSupport> sandbox_support_;
 };
 
 }  // namespace shot
