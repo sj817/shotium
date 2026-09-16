@@ -94,7 +94,6 @@ class LocalFrame;
 class LocalFrameView;
 class Node;
 class Page;
-class PopupOpeningObserver;
 class WebDragData;
 
 enum class FullscreenRequestType;
@@ -459,10 +458,6 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
 
   virtual void DidUpdateMaxSafeAreaInsets(
       const gfx::InsetsF& max_safe_area_insets) const {}
-
-  virtual void RegisterPopupOpeningObserver(PopupOpeningObserver*) = 0;
-  virtual void UnregisterPopupOpeningObserver(PopupOpeningObserver*) = 0;
-  virtual void NotifyPopupOpeningObservers() const = 0;
 
   virtual gfx::Vector2dF ElasticOverscroll() const { return gfx::Vector2dF(); }
 

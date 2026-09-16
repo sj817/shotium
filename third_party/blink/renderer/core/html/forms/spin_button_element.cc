@@ -109,8 +109,6 @@ void SpinButtonElement::DefaultEventHandler(Event& event) {
           frame->GetEventHandler().SetPointerCapture(
               PointerEventFactory::kMouseId, this);
           capturing_ = true;
-          if (Page* page = GetDocument().GetPage())
-            page->GetChromeClient().RegisterPopupOpeningObserver(this);
         }
       }
       event.SetDefaultHandled();
@@ -124,10 +122,6 @@ void SpinButtonElement::DefaultEventHandler(Event& event) {
 
   if (!event.DefaultHandled())
     HTMLDivElement::DefaultEventHandler(event);
-}
-
-void SpinButtonElement::WillOpenPopup() {
-  ReleaseCapture();
 }
 
 void SpinButtonElement::ForwardEvent(Event& event) {
@@ -182,8 +176,6 @@ void SpinButtonElement::ReleaseCapture(EventDispatch event_dispatch) {
     frame->GetEventHandler().ReleasePointerCapture(
         PointerEventFactory::kMouseId, this);
     capturing_ = false;
-    if (Page* page = GetDocument().GetPage())
-      page->GetChromeClient().UnregisterPopupOpeningObserver(this);
   }
   if (spin_button_owner_)
     spin_button_owner_->SpinButtonDidReleaseMouseCapture(event_dispatch);
