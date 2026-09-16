@@ -3293,7 +3293,6 @@ void LocalFrameView::SetCursor(const ui::Cursor& cursor) {
   if (!page || frame_->GetEventHandler().IsMousePositionUnknown())
     return;
   LogCursorSizeCounter(&GetFrame(), cursor);
-  page->GetChromeClient().SetCursor(cursor, frame_);
 }
 
 void LocalFrameView::PropagateFrameRectsInternal() {
@@ -3444,9 +3443,7 @@ gfx::PointF LocalFrameView::FrameToViewport(
 }
 
 gfx::Rect LocalFrameView::FrameToScreen(const gfx::Rect& rect) const {
-  if (auto* client = GetChromeClient())
-    return client->LocalRootToScreenDIPs(ConvertToRootFrame(rect), this);
-  return gfx::Rect();
+  return ConvertToRootFrame(rect);
 }
 
 gfx::Point LocalFrameView::SoonToBeRemovedUnscaledViewportToContents(

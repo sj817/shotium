@@ -296,11 +296,6 @@ void Page::CloseSoon() {
   if (auto* main_local_frame = DynamicTo<LocalFrame>(main_frame_.Get()))
     main_local_frame->Loader().StopAllLoaders(/*abort_client=*/true);
 
-  // If the client is a popup, immediately close the window. This preserves the
-  // previous behavior where we do the closing synchronously.
-  if (GetChromeClient().IsPopup()) {
-    return;
-  }
   // If the client is a WebView, post a task to close the window asynchronously.
   // This is because we could be called from deep in Javascript.  If we ask the
   // WebView to close now, the window could be closed before the JS finishes

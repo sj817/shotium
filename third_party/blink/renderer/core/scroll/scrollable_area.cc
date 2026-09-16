@@ -915,7 +915,7 @@ void ScrollableArea::ShowNonMacOverlayScrollbars() {
   // don't fade out overlay scrollbar for popup since we don't create
   // compositor for popup and thus they don't appear on hover so users without
   // a wheel can't scroll if they fade out.
-  if (time_until_disable.is_max() || GetChromeClient()->IsPopup()) {
+  if (time_until_disable.is_max()) {
     return;
   }
 

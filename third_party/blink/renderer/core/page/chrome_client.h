@@ -25,24 +25,13 @@
 
 #include <memory>
 
-#include "base/functional/callback.h"
-#include "base/gtest_prod_util.h"
 #include "base/time/time.h"
-#include "cc/paint/draw_image.h"
 #include "third_party/blink/public/common/dom_storage/session_storage_namespace_id.h"
-#include "third_party/blink/public/common/input/web_input_event.h"
-#include "third_party/blink/public/common/page/drag_operation.h"
 #include "third_party/blink/public/mojom/devtools/console_message.mojom-blink-forward.h"
-#include "third_party/blink/public/mojom/input/focus_type.mojom-blink-forward.h"
 #include "third_party/blink/renderer/core/core_export.h"
-#include "third_party/blink/renderer/core/dom/document.h"
 #include "third_party/blink/renderer/core/loader/frame_loader.h"
-#include "third_party/blink/renderer/core/loader/navigation_policy.h"
-#include "third_party/blink/renderer/core/scroll/scroll_types.h"
-#include "third_party/blink/renderer/core/style/computed_style_constants.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
 #include "third_party/blink/renderer/platform/wtf/forward.h"
-#include "third_party/blink/renderer/platform/wtf/functional.h"
 
 // To avoid conflicts with the CreateWindow macro from the Windows SDK...
 #undef CreateWindow
@@ -51,10 +40,6 @@ namespace display {
 struct ScreenInfo;
 struct ScreenInfos;
 }  // namespace display
-
-namespace ui {
-class Cursor;
-}
 
 namespace blink {
 
@@ -71,28 +56,15 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
   ChromeClient& operator=(const ChromeClient&) = delete;
   virtual ~ChromeClient() = default;
 
-
-  // Converts the scalar value from window coordinates to viewport scale.
-  virtual float WindowToViewportScalar(LocalFrame*,
-                                       const float value) const {
+  float WindowToViewportScalar(LocalFrame*, const float value) const {
     return value;
   }
-
-  virtual bool IsPopup() { return false; }
 
   virtual void ChromeDestroyed() {}
 
   // For non-composited WebViews that exist to contribute to a "parent" WebView
   // painting. This informs the client of the area that needs to be redrawn.
   virtual void InvalidateContainer() {}
-
-  // Converts the rect from local root coordinates (using the local root of the
-  // given LocalFrameView) to screen coordinates. Performs the visual viewport
-  // transform.
-  virtual gfx::Rect LocalRootToScreenDIPs(const gfx::Rect& r,
-                                          const LocalFrameView*) const {
-    return r;
-  }
 
   void ScheduleAnimation(const LocalFrameView* view,
                          cc::BeginMainFrameReason reason) {
@@ -144,19 +116,9 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
   virtual const display::ScreenInfo& GetOriginalScreenInfo(
       LocalFrame& frame) const = 0;
 
-  virtual void SetCursor(const ui::Cursor&, LocalFrame* local_root) {}
-  virtual void SetCursorOverridden(bool) {}
-
   virtual bool IsIsolatedSVGChromeClient() const { return false; }
 
   virtual void InstallSupplements(LocalFrame&);
-
-  virtual void RequestDecode(LocalFrame*,
-                             const cc::DrawImage& image,
-                             base::OnceCallback<void(bool)> callback,
-                             bool speculative) {
-    std::move(callback).Run(false);
-  }
 
   virtual void Trace(Visitor*) const;
 

@@ -2087,11 +2087,7 @@ WebInputEventResult EventHandler::ShowNonLocatedContextMenu(
   }
 
   frame_->View()->SetCursor(PointerCursor());
-  gfx::Point global_position =
-      view->GetChromeClient()
-          ->LocalRootToScreenDIPs(
-              gfx::Rect(location_in_root_frame, gfx::Size()), frame_->View())
-          .origin();
+  gfx::Point global_position = location_in_root_frame;
 
   // Use the focused node as the target for hover and active.
   HitTestRequest request(HitTestRequest::kActive);
