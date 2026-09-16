@@ -13,8 +13,6 @@ blink_core_sources_page = [
   "drag_data.cc",
   "drag_data.h",
   "event_with_hit_test_results.h",
-  "focus_changed_observer.cc",
-  "focus_changed_observer.h",
   "focus_controller.cc",
   "focus_controller.h",
   "focusgroup_controller_utils.cc",

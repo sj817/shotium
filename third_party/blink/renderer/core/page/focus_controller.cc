@@ -70,7 +70,6 @@
 #include "third_party/blink/renderer/core/layout/layout_object.h"
 #include "third_party/blink/renderer/core/layout/physical_box_fragment.h"
 #include "third_party/blink/renderer/core/page/chrome_client.h"
-#include "third_party/blink/renderer/core/page/focus_changed_observer.h"
 #include "third_party/blink/renderer/core/page/focusgroup_controller_utils.h"
 #include "third_party/blink/renderer/core/page/frame_tree.h"
 #include "third_party/blink/renderer/core/page/page.h"
@@ -1816,8 +1815,6 @@ void FocusController::SetFocusedFrame(Frame* frame, bool notify_embedder) {
   // as part of dispatching the focus event above. See https://crbug.com/570874.
   if (notify_embedder && focused_frame_ && focused_frame_->IsAttached())
     focused_frame_->DidFocus();
-
-  NotifyFocusChangedObservers();
 }
 
 void FocusController::FocusDocumentView(Frame* frame, bool notify_embedder) {
@@ -1932,8 +1929,6 @@ void FocusController::FocusHasChanged() {
     DispatchEventsOnWindowAndFocusedElement(focused_local_frame->GetDocument(),
                                             focused);
   }
-
-  NotifyFocusChangedObservers();
 }
 
 void FocusController::SetFocused(bool focused) {
@@ -2358,23 +2353,6 @@ void FocusController::SetActive(bool active) {
     ActiveHasChanged();
 }
 
-void FocusController::RegisterFocusChangedObserver(
-    FocusChangedObserver* observer) {
-  DCHECK(observer);
-  DCHECK(!focus_changed_observers_.Contains(observer));
-  focus_changed_observers_.insert(observer);
-}
-
-void FocusController::NotifyFocusChangedObservers() const {
-  // Since this eventually dispatches an event to the page, the page could add
-  // new observer, which would invalidate our iterators; so iterate over a copy
-  // of the observer list.
-  HeapHashSet<WeakMember<FocusChangedObserver>> observers =
-      focus_changed_observers_;
-  for (const auto& it : observers)
-    it->FocusedFrameChanged();
-}
-
 // static
 int FocusController::AdjustedTabIndex(const Element& element) {
   if (IsNonKeyboardFocusableShadowHost(element) ||
@@ -2394,7 +2372,6 @@ int FocusController::AdjustedTabIndex(const Element& element) {
 void FocusController::Trace(Visitor* visitor) const {
   visitor->Trace(page_);
   visitor->Trace(focused_frame_);
-  visitor->Trace(focus_changed_observers_);
 }
 
 }  // namespace blink

@@ -40,7 +40,6 @@ struct FocusParams;
 class ContainerNode;
 class Document;
 class Element;
-class FocusChangedObserver;
 class Frame;
 class HTMLFrameOwnerElement;
 class InputDeviceCapabilities;
@@ -121,8 +120,6 @@ class CORE_EXPORT FocusController final
 
   void UpdateFocusOnNavigationCommit(Frame*, bool was_focused);
 
-  void RegisterFocusChangedObserver(FocusChangedObserver*);
-
   static int AdjustedTabIndex(const Element&);
 
   void Trace(Visitor*) const;
@@ -138,8 +135,6 @@ class CORE_EXPORT FocusController final
       bool initial_focus,
       InputDeviceCapabilities* source_capabilities);
 
-  void NotifyFocusChangedObservers() const;
-
   void ActiveHasChanged();
   void FocusHasChanged();
 
@@ -149,7 +144,6 @@ class CORE_EXPORT FocusController final
   bool is_focused_;
   bool is_changing_focused_frame_;
   bool is_emulating_focus_;
-  HeapHashSet<WeakMember<FocusChangedObserver>> focus_changed_observers_;
 };
 
 }  // namespace blink
