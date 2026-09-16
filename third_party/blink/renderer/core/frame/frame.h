@@ -50,7 +50,6 @@
 #include "third_party/blink/renderer/core/core_export.h"
 #include "third_party/blink/renderer/core/frame/frame_lifecycle.h"
 #include "third_party/blink/renderer/core/frame/frame_view.h"
-#include "third_party/blink/renderer/core/frame/navigation_rate_limiter.h"
 #include "third_party/blink/renderer/core/frame/opened_frame_tracker.h"
 #include "third_party/blink/renderer/core/loader/frame_loader_types.h"
 #include "third_party/blink/renderer/core/page/frame_tree.h"
@@ -289,9 +288,6 @@ class CORE_EXPORT Frame : public GarbageCollected<Frame> {
     return embedding_token_;
   }
 
-  NavigationRateLimiter& navigation_rate_limiter() {
-    return navigation_rate_limiter_;
-  }
 
   // Called to get the opener's sandbox flags if any. This works with disowned
   // openers, i.e., even if WebFrame::Opener() is nullptr,
@@ -501,7 +497,6 @@ class CORE_EXPORT Frame : public GarbageCollected<Frame> {
 
   Member<LocalFrame> provisional_frame_;
 
-  NavigationRateLimiter navigation_rate_limiter_;
 
   // Sandbox flags inherited from an opener. It is always empty for child
   // frames.

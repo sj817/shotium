@@ -484,9 +484,6 @@ void LocalFrame::Navigate(FrameLoadRequest& request,
     element->CancelPendingLazyLoad();
   }
 
-  if (!navigation_rate_limiter().CanProceed()) {
-    return;
-  }
 
   TRACE_EVENT2("navigation", "LocalFrame::Navigate", "url",
                request.GetResourceRequest().Url().GetString().Utf8(),

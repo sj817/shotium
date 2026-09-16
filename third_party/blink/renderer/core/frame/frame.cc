@@ -90,7 +90,6 @@ void Frame::Trace(Visitor* visitor) const {
   visitor->Trace(first_child_);
   visitor->Trace(last_child_);
   visitor->Trace(provisional_frame_);
-  visitor->Trace(navigation_rate_limiter_);
   visitor->Trace(window_agent_factory_);
   visitor->Trace(opened_frame_tracker_);
 }
@@ -446,7 +445,6 @@ Frame::Frame(FrameClient* client,
       owner_(owner),
       client_(client),
       parent_(parent),
-      navigation_rate_limiter_(*this),
       window_agent_factory_(inheriting_agent_factory
                                 ? inheriting_agent_factory
                                 : MakeGarbageCollected<WindowAgentFactory>(
