@@ -289,12 +289,6 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
   virtual void DispatchViewportPropertiesDidChange(
       const ViewportDescription&) const {}
 
-  virtual bool DoubleTapToZoomEnabled() const { return false; }
-
-  virtual void EnablePreferredSizeChangedMode() {}
-
-  virtual void ZoomToFindInPageRect(const gfx::Rect&) {}
-
   virtual void ContentsSizeChanged(LocalFrame*, const gfx::Size&) const = 0;
   // Call during pinch gestures, or when page-scale changes on main-frame load.
   virtual void PageScaleFactorChanged() const {}
@@ -355,9 +349,6 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
                                         const FullscreenOptions* options,
                                         FullscreenRequestType) {}
 
-  virtual void AnimateDoubleTapZoom(const gfx::Point& point,
-                                    const gfx::Rect& rect) {}
-
   // The client keeps track of which touch/mousewheel event types have handlers,
   // and if they do, whether the handlers are passive and/or blocking. This
   // allows the client to know which optimizations can be used for the
@@ -376,12 +367,6 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
 
   // Allow overriding whether external popup menus are used.
   virtual bool UseExternalPopupMenus() const { return false; }
-
-  virtual void SetBrowserControlsState(float top_height,
-                                       float bottom_height,
-                                       bool shrinks_layout) {}
-  virtual void SetBrowserControlsShownRatio(float top_ratio,
-                                            float bottom_ratio) {}
 
   enum class UIElementType {
     kAlertDialog = 0,
