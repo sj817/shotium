@@ -7711,17 +7711,6 @@ void Element::Focus(const FocusParams& params) {
     return;
   }
 
-  if (GetDocument().FocusedElement() == this) {
-    ChromeClient& chrome_client = GetDocument().GetPage()->GetChromeClient();
-    if (GetDocument().GetFrame()->HasStickyUserActivation()) {
-      // Bring up the keyboard in the context of anything triggered by a user
-      // gesture. Since tracking that across arbitrary boundaries (eg.
-      // animations) is difficult, for now we match IE's heuristic and bring
-      // up the keyboard if there's been any gesture since load.
-      chrome_client.ShowVirtualKeyboardOnElementFocus(
-          *GetDocument().GetFrame());
-    }
-
   if (should_consume_user_activation) {
     // Fenced frames should consume user activation when attempting to pull
     // focus across a fenced boundary into itself.

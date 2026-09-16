@@ -436,9 +436,7 @@ LocalFrame* Page::DeprecatedLocalMainFrame() const {
   return To<LocalFrame>(main_frame_.Get());
 }
 
-void Page::DocumentDetached(Document* document) {
-  GetChromeClient().DocumentDetached(*document);
-}
+void Page::DocumentDetached(Document* document) {}
 
 bool Page::OpenedByDOM() const {
   return opened_by_dom_;
@@ -878,9 +876,6 @@ void Page::SetMaxSafeAreaInsets(LocalFrame* setter, gfx::Insets max_safe_area) {
 
   if (scaled_max_safe_area_insets_ != scaled_max_safe_area_insets) {
     scaled_max_safe_area_insets_ = scaled_max_safe_area_insets;
-
-    // Update Chrome client CC for MaxSafeAreaInsets change.
-    GetChromeClient().DidUpdateMaxSafeAreaInsets(scaled_max_safe_area_insets);
   }
 
   // When the SAI is changed when DynamicSafeAreaInsetsEnabled, the SAI for the

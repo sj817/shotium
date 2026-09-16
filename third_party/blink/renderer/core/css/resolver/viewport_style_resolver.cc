@@ -52,9 +52,7 @@ void ViewportStyleResolver::Reset() {
 }
 
 float ViewportStyleResolver::DeviceScaleZoom() const {
-  float zoom_factor_for_device_scale =
-      document_->GetPage()->GetChromeClient().ZoomFactorForViewportLayout();
-  return zoom_factor_for_device_scale ? zoom_factor_for_device_scale : 1;
+  return 1.0f;
 }
 
 ViewportDescription ViewportStyleResolver::ResolveViewportDescription(

@@ -66,17 +66,14 @@ float FrameScale(const LocalFrameView* frame_view) {
 
 gfx::Vector2dF FrameTranslation(const LocalFrameView* frame_view) {
   gfx::Point visual_viewport;
-  gfx::Vector2dF overscroll_offset;
   if (frame_view) {
     LocalFrameView* root_view = frame_view->GetFrame().LocalFrameRoot().View();
     if (root_view) {
       visual_viewport = gfx::ToFlooredPoint(
           root_view->GetPage()->GetVisualViewport().VisibleRect().origin());
-      overscroll_offset =
-          root_view->GetPage()->GetChromeClient().ElasticOverscroll();
     }
   }
-  return visual_viewport.OffsetFromOrigin() + overscroll_offset;
+  return visual_viewport.OffsetFromOrigin();
 }
 
 void UpdateWebMouseEventFromCoreMouseEvent(const MouseEvent& event,

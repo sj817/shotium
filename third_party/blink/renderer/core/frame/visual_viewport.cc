@@ -151,25 +151,9 @@ PaintPropertyChangeType VisualViewport::UpdatePaintPropertyNodesIfNeeded(
   DCHECK(transform_parent);
   DCHECK(scroll_parent);
 
-  {
-    const auto& device_emulation_transform =
-        GetChromeClient()->GetDeviceEmulationTransform();
-    if (!device_emulation_transform.IsIdentity()) {
-      TransformPaintPropertyNode::State state{{device_emulation_transform}};
-      state.in_subtree_of_page_scale = false;
-      if (!device_emulation_transform_node_) {
-        device_emulation_transform_node_ = TransformPaintPropertyNode::Create(
-            *transform_parent, std::move(state));
-        change = PaintPropertyChangeType::kNodeAddedOrRemoved;
-      } else {
-        change = std::max(change, device_emulation_transform_node_->Update(
-                                      *transform_parent, std::move(state)));
-      }
-      transform_parent = device_emulation_transform_node_.Get();
-    } else if (device_emulation_transform_node_) {
-      device_emulation_transform_node_ = nullptr;
-      change = PaintPropertyChangeType::kNodeAddedOrRemoved;
-    }
+  if (device_emulation_transform_node_) {
+    device_emulation_transform_node_ = nullptr;
+    change = PaintPropertyChangeType::kNodeAddedOrRemoved;
   }
 
   if (overscroll_type_ == OverscrollType::kTransform) {

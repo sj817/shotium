@@ -1650,9 +1650,7 @@ void LocalFrameView::PerformPostLayoutTasks(bool visual_viewport_size_changed) {
 }
 
 float LocalFrameView::InputEventsScaleFactor() const {
-  float page_scale = frame_->GetPage()->GetVisualViewport().Scale();
-  return page_scale *
-         frame_->GetPage()->GetChromeClient().InputEventsScaleForEmulation();
+  return frame_->GetPage()->GetVisualViewport().Scale();
 }
 
 void LocalFrameView::UpdateDocumentDraggableRegions() const {}

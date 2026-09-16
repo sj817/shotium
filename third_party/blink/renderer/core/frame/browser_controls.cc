@@ -109,8 +109,6 @@ float BrowserControls::BottomMinShownRatio() {
 }
 
 void BrowserControls::DidUpdateBrowserControls(bool update_safe_area_inset) {
-  page_->GetChromeClient().DidUpdateBrowserControls();
-
   Frame* main_frame = page_->MainFrame();
   if (!main_frame || !main_frame->IsLocalFrame() ||
       !main_frame->IsOutermostMainFrame()) {

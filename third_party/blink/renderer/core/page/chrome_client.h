@@ -44,8 +44,6 @@
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
 #include "third_party/blink/renderer/platform/wtf/forward.h"
 #include "third_party/blink/renderer/platform/wtf/functional.h"
-#include "ui/gfx/geometry/transform.h"
-#include "ui/gfx/geometry/vector2d_f.h"
 
 // To avoid conflicts with the CreateWindow macro from the Windows SDK...
 #undef CreateWindow
@@ -167,10 +165,6 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
   virtual void SetCursor(const ui::Cursor&, LocalFrame* local_root) = 0;
   virtual void SetCursorOverridden(bool) = 0;
 
-  // Returns the scale used to convert incoming input events while emulating
-  // device metics.
-  virtual float InputEventsScaleForEmulation() const { return 1; }
-
   virtual void ContentsSizeChanged(LocalFrame*, const gfx::Size&) const = 0;
   virtual void OutermostMainFrameScrollOffsetChanged() const = 0;
 
@@ -212,23 +206,6 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
 
   virtual bool IsIsolatedSVGChromeClient() const { return false; }
 
-  virtual gfx::Size MinimumWindowSize() const { return gfx::Size(100, 100); }
-
-
-  // Input method editor related functions.
-  virtual void ShowVirtualKeyboardOnElementFocus(LocalFrame&) {}
-
-  virtual gfx::Transform GetDeviceEmulationTransform() const {
-    return gfx::Transform();
-  }
-
-  virtual void DidUpdateBrowserControls() const {}
-
-  virtual void DidUpdateMaxSafeAreaInsets(
-      const gfx::InsetsF& max_safe_area_insets) const {}
-
-  virtual gfx::Vector2dF ElasticOverscroll() const { return gfx::Vector2dF(); }
-
   virtual void InstallSupplements(LocalFrame&);
 
   virtual void RequestDecode(LocalFrame*,
@@ -239,18 +216,6 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
   }
 
   virtual void Trace(Visitor*) const;
-  virtual void DocumentDetached(Document&) {}
-
-  // Return the user's zoom factor which is different from the typical usage
-  // of "zoom factor" in blink (e.g., |LocalFrame::LayoutZoomFactor()|) which
-  // includes CSS zoom and the device scale factor (if use-zoom-for-dsf is
-  // enabled). This only includes the zoom initiated by the user (ctrl +/-).
-  virtual double UserZoomFactor(LocalFrame* frame) const { return 1; }
-
-
-
-
-  virtual float ZoomFactorForViewportLayout() { return 1; }
 
  protected:
   ChromeClient() = default;
