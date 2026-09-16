@@ -1879,11 +1879,6 @@ BASE_FEATURE(kUnrestrictSpellingAndGrammarForTesting,
 BASE_FEATURE(kSafelistPaytoToRegisterProtocolHandler,
              base::FEATURE_DISABLED_BY_DEFAULT);
 
-BASE_FEATURE(kPausePagesPerBrowsingContextGroup,
-             base::FEATURE_DISABLED_BY_DEFAULT);
-
-BASE_FEATURE(kShowHudDisplayForPausedPages, base::FEATURE_ENABLED_BY_DEFAULT);
-
 // Controls script streaming for http and https scripts.
 BASE_FEATURE(kScriptStreaming, base::FEATURE_ENABLED_BY_DEFAULT);
 // Enables script streaming for non-http scripts.

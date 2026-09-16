@@ -1455,13 +1455,6 @@ BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kRustyIcoFeature);
 BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(
     kSafelistPaytoToRegisterProtocolHandler);
 
-// When enabled, only pages that belong to a certain browsing context group are
-// paused instead of all pages.
-BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kPausePagesPerBrowsingContextGroup);
-
-// Whether the HUD display is shown for paused pages.
-BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kShowHudDisplayForPausedPages);
-
 BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kScriptStreaming);
 BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kScriptStreamingForNonHTTP);
 

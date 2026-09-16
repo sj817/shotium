@@ -67,7 +67,6 @@
 #include "third_party/blink/renderer/core/page/focus_controller.h"
 #include "third_party/blink/renderer/core/page/page_animator.h"
 #include "third_party/blink/renderer/core/page/page_hidden_state.h"
-#include "third_party/blink/renderer/core/page/scoped_browsing_context_group_pauser.h"
 #include "third_party/blink/renderer/core/page/scoped_page_pauser.h"
 #include "third_party/blink/renderer/core/page/scrolling/top_document_root_scroller_controller.h"
 #include "third_party/blink/renderer/core/page/spatial_navigation_controller.h"
@@ -206,14 +205,7 @@ Page* Page::CreateOrdinary(
 
   OrdinaryPages().insert(page);
 
-  bool should_pause = false;
-  if (base::FeatureList::IsEnabled(
-          features::kPausePagesPerBrowsingContextGroup)) {
-    should_pause = ScopedBrowsingContextGroupPauser::IsActive(*page);
-  } else {
-    should_pause = ScopedPagePauser::IsActive();
-  }
-  if (should_pause) {
+  if (ScopedPagePauser::IsActive()) {
     page->SetPaused(true);
   }
 
@@ -1379,24 +1371,7 @@ const base::UnguessableToken& Page::BrowsingContextGroupToken() {
 
 void Page::UpdateBrowsingContextGroup(
     const base::UnguessableToken& browsing_context_group_token) {
-  if (browsing_context_group_token_ == browsing_context_group_token) {
-    return;
-  }
-
-  if (base::FeatureList::IsEnabled(
-          features::kPausePagesPerBrowsingContextGroup) &&
-      ScopedBrowsingContextGroupPauser::IsActive(*this)) {
-    CHECK(paused_);
-    SetPaused(false);
-  }
-
   browsing_context_group_token_ = browsing_context_group_token;
-
-  if (base::FeatureList::IsEnabled(
-          features::kPausePagesPerBrowsingContextGroup) &&
-      ScopedBrowsingContextGroupPauser::IsActive(*this)) {
-    SetPaused(true);
-  }
 }
 
 template class CORE_TEMPLATE_EXPORT Supplement<Page>;
