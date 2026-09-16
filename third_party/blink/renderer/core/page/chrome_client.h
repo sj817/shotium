@@ -89,27 +89,31 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
 
   // Converts the scalar value from window coordinates to viewport scale.
   virtual float WindowToViewportScalar(LocalFrame*,
-                                       const float value) const = 0;
+                                       const float value) const {
+    return value;
+  }
 
   virtual bool IsPopup() { return false; }
 
   virtual Element* GetPopupClientOwnerElement() { return nullptr; }
 
-  virtual void ChromeDestroyed() = 0;
+  virtual void ChromeDestroyed() {}
 
-  virtual void SetWindowRect(const gfx::Rect&, LocalFrame&) = 0;
-  virtual void MoveWindowTo(const gfx::Point&, LocalFrame&) = 0;
-  virtual void ResizeWindowTo(const gfx::Size&, LocalFrame&) = 0;
+  virtual void SetWindowRect(const gfx::Rect&, LocalFrame&) {}
+  virtual void MoveWindowTo(const gfx::Point&, LocalFrame&) {}
+  virtual void ResizeWindowTo(const gfx::Size&, LocalFrame&) {}
 
   // For non-composited WebViews that exist to contribute to a "parent" WebView
   // painting. This informs the client of the area that needs to be redrawn.
-  virtual void InvalidateContainer() = 0;
+  virtual void InvalidateContainer() {}
 
   // Converts the rect from local root coordinates (using the local root of the
   // given LocalFrameView) to screen coordinates. Performs the visual viewport
   // transform.
-  virtual gfx::Rect LocalRootToScreenDIPs(const gfx::Rect&,
-                                          const LocalFrameView*) const = 0;
+  virtual gfx::Rect LocalRootToScreenDIPs(const gfx::Rect& r,
+                                          const LocalFrameView*) const {
+    return r;
+  }
 
   void ScheduleAnimation(const LocalFrameView* view,
                          cc::BeginMainFrameReason reason) {
@@ -124,11 +128,11 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
   virtual void ScheduleAnimation(const LocalFrameView* view,
                                  cc::BeginMainFrameReason reason,
                                  base::TimeDelta delay,
-                                 bool urgent) = 0;
+                                 bool urgent) {}
 
   // This gives the rect of the top level window that the given LocalFrame is a
   // part of.
-  virtual gfx::Rect RootWindowRect(LocalFrame&) = 0;
+  virtual gfx::Rect RootWindowRect(LocalFrame&) { return gfx::Rect(); }
 
   // The LocalFrame pointer provides the ChromeClient with context about which
   // LocalFrame wants to create the new Page. Also, the newly created window
@@ -150,10 +154,10 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
                                    const String& message,
                                    unsigned line_number,
                                    const String& source_id,
-                                   const String& stack_trace) = 0;
+                                   const String& stack_trace) {}
 
-  virtual void CloseWindow() = 0;
-  virtual bool TabsToLinks() = 0;
+  virtual void CloseWindow() {}
+  virtual bool TabsToLinks() { return false; }
 
   virtual const display::ScreenInfo& GetScreenInfo(LocalFrame& frame) const = 0;
   virtual const display::ScreenInfos& GetScreenInfos(
@@ -162,15 +166,17 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
   virtual const display::ScreenInfo& GetOriginalScreenInfo(
       LocalFrame& frame) const = 0;
 
-  virtual void SetCursor(const ui::Cursor&, LocalFrame* local_root) = 0;
-  virtual void SetCursorOverridden(bool) = 0;
+  virtual void SetCursor(const ui::Cursor&, LocalFrame* local_root) {}
+  virtual void SetCursorOverridden(bool) {}
 
-  virtual void ContentsSizeChanged(LocalFrame*, const gfx::Size&) const = 0;
-  virtual void OutermostMainFrameScrollOffsetChanged() const = 0;
+  virtual void ContentsSizeChanged(LocalFrame*, const gfx::Size&) const {}
+  virtual void OutermostMainFrameScrollOffsetChanged() const {}
 
   virtual ColorChooser* OpenColorChooser(LocalFrame*,
                                          ColorChooserClient*,
-                                         const Color&) = 0;
+                                         const Color&) {
+    return nullptr;
+  }
 
   // This function is used for:
   //  - Mandatory date/time choosers if InputMultipleFieldsUI flag is not set
@@ -183,12 +189,16 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
   virtual DateTimeChooser* OpenDateTimeChooser(
       LocalFrame*,
       DateTimeChooserClient*,
-      const DateTimeChooserParameters&) = 0;
-  virtual void OpenTextDataListChooser(HTMLInputElement&) = 0;
+      const DateTimeChooserParameters&) {
+    return nullptr;
+  }
+  virtual void OpenTextDataListChooser(HTMLInputElement&) {}
 
   // Checks if there is an opened popup, called by LayoutMenuList::showPopUp().
-  virtual bool HasOpenedPopup() const = 0;
-  virtual PopupMenu* OpenPopupMenu(LocalFrame&, HTMLSelectElement&) = 0;
+  virtual bool HasOpenedPopup() const { return false; }
+  virtual PopupMenu* OpenPopupMenu(LocalFrame&, HTMLSelectElement&) {
+    return nullptr;
+  }
 
   // Allow overriding whether external popup menus are used.
   virtual bool UseExternalPopupMenus() const { return false; }
@@ -226,7 +236,9 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
                                      const WebWindowFeatures&,
                                      network::mojom::blink::WebSandboxFlags,
                                      const SessionStorageNamespaceId&,
-                                     bool& consumed_user_gesture) = 0;
+                                     bool& consumed_user_gesture) {
+    return nullptr;
+  }
 
  private:
   bool CanOpenUIElementIfDuringPageDismissal(Frame& main_frame,

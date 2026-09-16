@@ -46,32 +46,6 @@ ChromeClient& GetStaticEmptyChromeClientInstance() {
   return *chrome_client;
 }
 
-class EmptyPopupMenu : public PopupMenu {
- public:
-  void Show(ShowEventType) override {}
-  void Hide() override {}
-  void UpdateFromElement(UpdateReason) override {}
-  void DisconnectClient() override {}
-};
-
-PopupMenu* EmptyChromeClient::OpenPopupMenu(LocalFrame&, HTMLSelectElement&) {
-  return MakeGarbageCollected<EmptyPopupMenu>();
-}
-
-ColorChooser* EmptyChromeClient::OpenColorChooser(LocalFrame*,
-                                                  ColorChooserClient*,
-                                                  const Color&) {
-  return nullptr;
-}
-
-DateTimeChooser* EmptyChromeClient::OpenDateTimeChooser(
-    LocalFrame* frame,
-    DateTimeChooserClient*,
-    const DateTimeChooserParameters&) {
-  return nullptr;
-}
-
-void EmptyChromeClient::OpenTextDataListChooser(HTMLInputElement&) {}
 
 void EmptyLocalFrameClient::BeginNavigation(
     const ResourceRequest&,

@@ -92,46 +92,6 @@ class CORE_EXPORT EmptyChromeClient : public ChromeClient {
   EmptyChromeClient() = default;
   ~EmptyChromeClient() override = default;
 
-  // ChromeClient implementation.
-  void ChromeDestroyed() override {}
-  void SetWindowRect(const gfx::Rect&, LocalFrame&) override {}
-  void MoveWindowTo(const gfx::Point&, LocalFrame&) override {}
-  void ResizeWindowTo(const gfx::Size&, LocalFrame&) override {}
-  gfx::Rect RootWindowRect(LocalFrame&) override { return gfx::Rect(); }
-  void AddMessageToConsole(LocalFrame*,
-                           mojom::ConsoleMessageSource,
-                           mojom::ConsoleMessageLevel,
-                           const String&,
-                           unsigned,
-                           const String&,
-                           const String&) override {}
-  void CloseWindow() override {}
-  Page* CreateWindowDelegate(LocalFrame*,
-                             const FrameLoadRequest&,
-                             const AtomicString&,
-                             const WebWindowFeatures&,
-                             network::mojom::blink::WebSandboxFlags,
-                             const SessionStorageNamespaceId&,
-                             bool& consumed_user_gesture) override {
-    return nullptr;
-  }
-  bool HasOpenedPopup() const override { return false; }
-  PopupMenu* OpenPopupMenu(LocalFrame&, HTMLSelectElement&) override;
-
-  bool TabsToLinks() override { return false; }
-
-  void InvalidateContainer() override {}
-  void ScheduleAnimation(const LocalFrameView*,
-                         cc::BeginMainFrameReason reason,
-                         base::TimeDelta delay,
-                         bool urgent) override {}
-  gfx::Rect LocalRootToScreenDIPs(const gfx::Rect& r,
-                                  const LocalFrameView*) const override {
-    return r;
-  }
-  float WindowToViewportScalar(LocalFrame*, const float s) const override {
-    return s;
-  }
   const display::ScreenInfo& GetScreenInfo(LocalFrame&) const override {
     return empty_screen_infos_.current();
   }
@@ -141,19 +101,6 @@ class CORE_EXPORT EmptyChromeClient : public ChromeClient {
   const display::ScreenInfo& GetOriginalScreenInfo(LocalFrame&) const override {
     return empty_screen_infos_.current();
   }
-  void ContentsSizeChanged(LocalFrame*, const gfx::Size&) const override {}
-  ColorChooser* OpenColorChooser(LocalFrame*,
-                                 ColorChooserClient*,
-                                 const Color&) override;
-  DateTimeChooser* OpenDateTimeChooser(
-      LocalFrame* frame,
-      DateTimeChooserClient*,
-      const DateTimeChooserParameters&) override;
-  void OpenTextDataListChooser(HTMLInputElement&) override;
-  void SetCursor(const ui::Cursor&, LocalFrame* local_root) override {}
-  void SetCursorOverridden(bool) override {}
-  void InstallSupplements(LocalFrame&) override {}
-  void OutermostMainFrameScrollOffsetChanged() const override {}
 
  private:
   const display::ScreenInfos empty_screen_infos_{display::ScreenInfo()};
