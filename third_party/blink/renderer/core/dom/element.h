@@ -2122,7 +2122,6 @@ class CORE_EXPORT Element : public ContainerNode {
   }
 
  private:
-  friend class AXObject;
   friend class KeyboardEventManager;
   struct AffectedByPseudoStateChange;
   void DetachDescendantsNeedingReattachDuringSkip();

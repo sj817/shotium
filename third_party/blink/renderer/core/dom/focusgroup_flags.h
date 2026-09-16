@@ -109,16 +109,6 @@ CORE_EXPORT String FocusgroupFlagsToStringForTesting(FocusgroupFlags flags);
 // the empty sentinel and not explicitly opted out via kOptOut).
 CORE_EXPORT bool IsActualFocusgroup(const FocusgroupData& data);
 
-// Returns the minimum ARIA role that should be applied to an element with the
-// given focusgroup flags.
-CORE_EXPORT ax::mojom::blink::Role FocusgroupMinimumAriaRole(
-    const FocusgroupData& data);
-
-// Returns the implied ARIA role for an item inside a focusgroup owner whose
-// role was itself implied (i.e. generic container with no explicit role
-// attribute). Returns kUnknown if no mapping should be implied.
-CORE_EXPORT ax::mojom::blink::Role FocusgroupItemMinimumAriaRole(
-    const FocusgroupData& data);
 
 // Returns true if |token| is a recognized focusgroup attribute token.
 CORE_EXPORT bool IsValidFocusgroupToken(const AtomicString& token);

@@ -157,18 +157,6 @@ source_set("prerequisites") {
     "//third_party/libxml",
     "//third_party/ots",
     "//third_party/zlib",
-
-    # The baseline had //ui/accessibility/mojom:mojom_blink here. That whole
-    # directory is gone -- shot serves no accessibility tree to anyone -- but
-    # the *enums* survive it: element_internals and form behaviors include
-    # ui/accessibility/ax_enums.mojom-blink.h to name the roles and attributes
-    # that DOM and form controls carry. So the narrow edge goes back, not the
-    # broad one.
-    #
-    # This only ever failed a from-scratch build. In an incremental output
-    # directory the header was already on disk from an earlier configuration,
-    # which is exactly the class of bug that made a clean build worth doing.
-    "//ui/accessibility:ax_enums_mojo_blink",
     "//ui/base:features",
     "//ui/base/ime/mojom",
     "//ui/color",
@@ -338,9 +326,7 @@ component("core") {
     "//third_party/blink/renderer/core/url_pattern",
     "//third_party/blink/renderer/platform",
 
-    # ax::mojom::blink::Role is named by element behavior and internals.
     "//third_party/blink/renderer/platform/wtf",
-    "//ui/accessibility:ax_enums_mojo_blink",
     "//ui/base",
     "//ui/base:ui_data_pack",
     "//ui/base/cursor",

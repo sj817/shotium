@@ -36,7 +36,6 @@ class CORE_EXPORT HTMLSubmitButtonBehavior final : public ElementBehavior {
 
   // ElementBehavior overrides:
   bool HandleActivation(Event& event) override;
-  ax::mojom::blink::Role DefaultAriaRole() const override;
   const char* BehaviorName() const override;
 
   // Considers both the behavior's own disabled property and the element's

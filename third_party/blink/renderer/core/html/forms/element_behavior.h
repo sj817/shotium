@@ -8,7 +8,6 @@
 #include "third_party/blink/renderer/core/core_export.h"
 #include "third_party/blink/renderer/platform/bindings/script_wrappable.h"
 #include "third_party/blink/renderer/platform/heap/member.h"
-#include "ui/accessibility/ax_enums.mojom-blink-forward.h"
 
 namespace blink {
 
@@ -27,10 +26,6 @@ class CORE_EXPORT ElementBehavior : public ScriptWrappable {
   // Called when the custom element is activated. Returns true if the activation
   // was handled.
   virtual bool HandleActivation(Event& event);
-
-  // Returns the default ARIA role for accessibility. Subclasses must
-  // override this to provide appropriate roles (e.g., kButton).
-  virtual ax::mojom::blink::Role DefaultAriaRole() const = 0;
 
   // Returns the human-readable name of this behavior type
   // (e.g., "HTMLSubmitButtonBehavior"). Used for deduplication and error
