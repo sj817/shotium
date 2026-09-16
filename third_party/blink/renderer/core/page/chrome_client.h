@@ -28,8 +28,6 @@
 #include "base/functional/callback.h"
 #include "base/gtest_prod_util.h"
 #include "base/time/time.h"
-#include "cc/input/overscroll_behavior.h"
-#include "cc/metrics/begin_main_frame_metrics.h"
 #include "cc/paint/draw_image.h"
 #include "third_party/blink/public/common/dom_storage/session_storage_namespace_id.h"
 #include "third_party/blink/public/common/input/web_input_event.h"
@@ -51,11 +49,6 @@
 
 // To avoid conflicts with the CreateWindow macro from the Windows SDK...
 #undef CreateWindow
-
-namespace cc {
-struct ElementId;
-struct OverscrollBehavior;
-}  // namespace cc
 
 namespace display {
 struct ScreenInfo;
@@ -88,8 +81,6 @@ class WebDragData;
 struct DateTimeChooserParameters;
 struct FrameLoadRequest;
 struct WebWindowFeatures;
-
-using CompositorElementId = cc::ElementId;
 
 class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
  public:
@@ -155,18 +146,6 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
                      const SessionStorageNamespaceId&,
                      bool& consumed_user_gesture);
 
-  // Set the browser's behavior when overscroll happens, e.g. whether to glow
-  // or navigate. This may only be called for the main frame, and takes it as
-  // reference to make it clear that callers may only call this while a local
-  // main frame is present and the values do not persist between instances of
-  // local main frames.
-  virtual void SetOverscrollBehavior(LocalFrame& main_frame,
-                                     const cc::OverscrollBehavior&) = 0;
-
-  virtual bool ShouldReportDetailedMessageForSourceAndSeverity(
-      LocalFrame&,
-      mojom::blink::ConsoleMessageLevel log_level,
-      const String& source) = 0;
   virtual void AddMessageToConsole(LocalFrame*,
                                    mojom::ConsoleMessageSource,
                                    mojom::ConsoleMessageLevel,
@@ -174,11 +153,6 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
                                    unsigned line_number,
                                    const String& source_id,
                                    const String& stack_trace) = 0;
-
-  virtual bool CanOpenBeforeUnloadConfirmPanel() = 0;
-  bool OpenBeforeUnloadConfirmPanel(const String& message,
-                                    LocalFrame*,
-                                    bool is_reload);
 
   virtual void CloseWindow() = 0;
   virtual bool TabsToLinks() = 0;
@@ -281,8 +255,6 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
  protected:
   ChromeClient() = default;
 
-  virtual bool OpenBeforeUnloadConfirmPanelDelegate(LocalFrame*,
-                                                    bool is_reload) = 0;
   virtual Page* CreateWindowDelegate(LocalFrame*,
                                      const FrameLoadRequest&,
                                      const AtomicString& frame_name,

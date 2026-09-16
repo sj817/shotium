@@ -80,12 +80,5 @@ Page* ChromeClient::CreateWindow(
                               session_storage_namespace_id,
                               consumed_user_gesture);
 }
-
-bool ChromeClient::OpenBeforeUnloadConfirmPanel(const String& message,
-                                                LocalFrame* frame,
-                                                bool is_reload) {
-  DCHECK(frame);
-  return OpenBeforeUnloadConfirmPanelDelegate(frame, is_reload);
-}
 }  // namespace blink
 

@@ -4127,10 +4127,8 @@ bool Document::DispatchBeforeUnloadEvent(
 
   String text = before_unload_event.returnValue();
   RecordBeforeUnloadUse(BeforeUnloadUse::kShowDialog);
-  out_before_unload_dialog_opened_time = base::TimeTicks::Now();
-  did_allow_navigation =
-      chrome_client->OpenBeforeUnloadConfirmPanel(text, GetFrame(), is_reload);
-  out_before_unload_dialog_closed_time = base::TimeTicks::Now();
+  did_allow_navigation = true;
+  out_before_unload_dialog_closed_time = out_before_unload_dialog_opened_time;
   if (did_allow_navigation) {
     // Only record when a navigation occurs, since we want to understand
     // the impact of the before unload dialog on overall input to navigation.

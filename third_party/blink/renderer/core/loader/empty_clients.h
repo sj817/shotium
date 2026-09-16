@@ -98,14 +98,6 @@ class CORE_EXPORT EmptyChromeClient : public ChromeClient {
   void MoveWindowTo(const gfx::Point&, LocalFrame&) override {}
   void ResizeWindowTo(const gfx::Size&, LocalFrame&) override {}
   gfx::Rect RootWindowRect(LocalFrame&) override { return gfx::Rect(); }
-  void SetOverscrollBehavior(LocalFrame& frame,
-                             const cc::OverscrollBehavior&) override {}
-  bool ShouldReportDetailedMessageForSourceAndSeverity(
-      LocalFrame&,
-      mojom::blink::ConsoleMessageLevel,
-      const String&) override {
-    return false;
-  }
   void AddMessageToConsole(LocalFrame*,
                            mojom::ConsoleMessageSource,
                            mojom::ConsoleMessageLevel,
@@ -113,10 +105,6 @@ class CORE_EXPORT EmptyChromeClient : public ChromeClient {
                            unsigned,
                            const String&,
                            const String&) override {}
-  bool CanOpenBeforeUnloadConfirmPanel() override { return false; }
-  bool OpenBeforeUnloadConfirmPanelDelegate(LocalFrame*, bool) override {
-    return true;
-  }
   void CloseWindow() override {}
   Page* CreateWindowDelegate(LocalFrame*,
                              const FrameLoadRequest&,

@@ -3496,19 +3496,6 @@ void StyleResolver::PropagateStyleToViewport() {
       }
     }
 
-    if (overscroll_behavior_style) {
-      if (GetDocument().IsInOutermostMainFrame()) {
-        using OverscrollBehaviorType = cc::OverscrollBehavior::Type;
-        GetDocument().GetPage()->GetChromeClient().SetOverscrollBehavior(
-            *GetDocument().GetFrame(),
-            cc::OverscrollBehavior(
-                static_cast<OverscrollBehaviorType>(
-                    overscroll_behavior_style->OverscrollBehaviorX()),
-                static_cast<OverscrollBehaviorType>(
-                    overscroll_behavior_style->OverscrollBehaviorY())));
-      }
-    }
-
     EOverflow overflow_x = EOverflow::kAuto;
     EOverflow overflow_y = EOverflow::kAuto;
     EOverflowAnchor overflow_anchor = EOverflowAnchor::kAuto;
