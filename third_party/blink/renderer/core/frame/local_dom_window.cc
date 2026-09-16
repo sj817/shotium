@@ -1751,120 +1751,18 @@ void LocalDOMWindow::scrollToForTesting(double x, double y) const {
   scrollTo(x, y);
 }
 
-void LocalDOMWindow::moveBy(int x, int y) const {
-  if (!GetFrame() || !GetFrame()->IsOutermostMainFrame() ||
-      document()->IsPrerendering()) {
-    return;
-  }
+void LocalDOMWindow::moveBy(int x, int y) const {}
 
-  if (IsPictureInPictureWindow()) {
-    return;
-  }
-
-  LocalFrame* frame = GetFrame();
-  Page* page = frame->GetPage();
-  if (!page) {
-    return;
-  }
-
-  gfx::Rect window_rect = page->GetChromeClient().RootWindowRect(*frame);
-  window_rect.Offset(x, y);
-  if (base::FeatureList::IsEnabled(features::kMoveResizeWindowToIPCs)) {
-    page->GetChromeClient().MoveWindowTo(window_rect.origin(), *frame);
-  } else {
-    page->GetChromeClient().SetWindowRect(window_rect, *frame);
-  }
-}
-
-void LocalDOMWindow::moveTo(int x, int y) const {
-  if (!GetFrame() || !GetFrame()->IsOutermostMainFrame() ||
-      document()->IsPrerendering()) {
-    return;
-  }
-
-  if (IsPictureInPictureWindow()) {
-    return;
-  }
-
-  LocalFrame* frame = GetFrame();
-  Page* page = frame->GetPage();
-  if (!page) {
-    return;
-  }
-
-  if (base::FeatureList::IsEnabled(features::kMoveResizeWindowToIPCs)) {
-    page->GetChromeClient().MoveWindowTo(gfx::Point(x, y), *frame);
-  } else {
-    gfx::Rect window_rect = page->GetChromeClient().RootWindowRect(*frame);
-    window_rect.set_origin(gfx::Point(x, y));
-    page->GetChromeClient().SetWindowRect(window_rect, *frame);
-  }
-}
+void LocalDOMWindow::moveTo(int x, int y) const {}
 
 void LocalDOMWindow::resizeBy(int x,
                               int y,
-                              ExceptionState& exception_state) const {
-  if (!GetFrame() || !GetFrame()->IsOutermostMainFrame() ||
-      document()->IsPrerendering()) {
-    return;
-  }
-
-  if (IsPictureInPictureWindow()) {
-    if (!LocalFrame::ConsumeTransientUserActivation(GetFrame())) {
-      exception_state.ThrowDOMException(
-          DOMExceptionCode::kNotAllowedError,
-          "resizeBy() requires user activation in document picture-in-picture");
-      return;
-    }
-  }
-
-  LocalFrame* frame = GetFrame();
-  Page* page = frame->GetPage();
-  if (!page) {
-    return;
-  }
-
-  gfx::Rect fr = page->GetChromeClient().RootWindowRect(*frame);
-  gfx::Size dest(fr.width() + x, fr.height() + y);
-  if (base::FeatureList::IsEnabled(features::kMoveResizeWindowToIPCs)) {
-    page->GetChromeClient().ResizeWindowTo(dest, *frame);
-  } else {
-    page->GetChromeClient().SetWindowRect(gfx::Rect(fr.origin(), dest), *frame);
-  }
-}
+                              ExceptionState& exception_state) const {}
 
 void LocalDOMWindow::resizeTo(int width,
                               int height,
-                              ExceptionState& exception_state) const {
-  if (!GetFrame() || !GetFrame()->IsOutermostMainFrame() ||
-      document()->IsPrerendering()) {
-    return;
-  }
+                              ExceptionState& exception_state) const {}
 
-  if (IsPictureInPictureWindow()) {
-    if (!LocalFrame::ConsumeTransientUserActivation(GetFrame())) {
-      exception_state.ThrowDOMException(
-          DOMExceptionCode::kNotAllowedError,
-          "resizeTo() requires user activation in document picture-in-picture");
-      return;
-    }
-  }
-
-  LocalFrame* frame = GetFrame();
-  Page* page = frame->GetPage();
-  if (!page) {
-    return;
-  }
-
-  const gfx::Size dest(width, height);
-  if (base::FeatureList::IsEnabled(features::kMoveResizeWindowToIPCs)) {
-    page->GetChromeClient().ResizeWindowTo(dest, *frame);
-  } else {
-    gfx::Rect window_rect = page->GetChromeClient().RootWindowRect(*frame);
-    window_rect.set_size(dest);
-    page->GetChromeClient().SetWindowRect(window_rect, *frame);
-  }
-}
 
 void LocalDOMWindow::cancelAnimationFrame(int id) {
   document()->CancelAnimationFrame(id, FrameCallbackType::kWebExposed);

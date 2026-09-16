@@ -127,7 +127,7 @@ bool HTMLAnchorElementBase::IsKeyboardFocusableSlow(
     return HTMLElement::IsKeyboardFocusableSlow(update_behavior);
   }
 
-  if (IsLink() && !GetDocument().GetPage()->GetChromeClient().TabsToLinks())
+  if (IsLink())
     return false;
   return HTMLElement::IsKeyboardFocusableSlow(update_behavior);
 }

@@ -515,11 +515,6 @@ void LocalFrameView::SetLayoutOverflowSize(const gfx::Size& size) {
     return;
 
   layout_overflow_size_ = size;
-
-  Page* page = GetFrame().GetPage();
-  if (!page)
-    return;
-  page->GetChromeClient().ContentsSizeChanged(frame_.Get(), size);
 }
 
 void LocalFrameView::AdjustViewSize() {
@@ -3365,14 +3360,7 @@ void LocalFrameView::SetLayoutSizeInternal(const gfx::Size& size,
   document->LayoutViewportWasResized(options);
 }
 
-void LocalFrameView::DidChangeScrollOffset() {
-  if (GetFrame().IsOutermostMainFrame()) {
-    GetFrame()
-        .GetPage()
-        ->GetChromeClient()
-        .OutermostMainFrameScrollOffsetChanged();
-  }
-}
+void LocalFrameView::DidChangeScrollOffset() {}
 
 void LocalFrameView::ScrollRectToVisibleInRemoteParent(
     const PhysicalRect& rect_to_scroll,

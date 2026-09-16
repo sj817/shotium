@@ -278,12 +278,7 @@ class Page::CloseTaskHandler : public GarbageCollected<Page::CloseTaskHandler> {
   explicit CloseTaskHandler(WeakMember<Page> page) : page_(page) {}
   ~CloseTaskHandler() = default;
 
-  void DoDeferredClose() {
-    if (page_) {
-      CHECK(page_->MainFrame());
-      page_->GetChromeClient().CloseWindow();
-    }
-  }
+  void DoDeferredClose() {}
 
   void SetPage(Page* page) { page_ = page; }
 
@@ -304,7 +299,6 @@ void Page::CloseSoon() {
   // If the client is a popup, immediately close the window. This preserves the
   // previous behavior where we do the closing synchronously.
   if (GetChromeClient().IsPopup()) {
-    GetChromeClient().CloseWindow();
     return;
   }
   // If the client is a WebView, post a task to close the window asynchronously.

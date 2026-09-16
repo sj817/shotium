@@ -63,18 +63,11 @@ class ColorChooser;
 class ColorChooserClient;
 class DateTimeChooser;
 class DateTimeChooserClient;
-class Element;
-class Frame;
-class HTMLFormControlElement;
-class HTMLFormElement;
 class HTMLInputElement;
 class HTMLSelectElement;
-class KeyboardEvent;
 class LocalFrame;
 class LocalFrameView;
-class Node;
 class Page;
-class WebDragData;
 
 struct DateTimeChooserParameters;
 struct FrameLoadRequest;
@@ -95,13 +88,7 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
 
   virtual bool IsPopup() { return false; }
 
-  virtual Element* GetPopupClientOwnerElement() { return nullptr; }
-
   virtual void ChromeDestroyed() {}
-
-  virtual void SetWindowRect(const gfx::Rect&, LocalFrame&) {}
-  virtual void MoveWindowTo(const gfx::Point&, LocalFrame&) {}
-  virtual void ResizeWindowTo(const gfx::Size&, LocalFrame&) {}
 
   // For non-composited WebViews that exist to contribute to a "parent" WebView
   // painting. This informs the client of the area that needs to be redrawn.
@@ -146,7 +133,9 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
                      const WebWindowFeatures&,
                      network::mojom::blink::WebSandboxFlags,
                      const SessionStorageNamespaceId&,
-                     bool& consumed_user_gesture);
+                     bool& consumed_user_gesture) {
+    return nullptr;
+  }
 
   virtual void AddMessageToConsole(LocalFrame*,
                                    mojom::ConsoleMessageSource,
@@ -155,9 +144,6 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
                                    unsigned line_number,
                                    const String& source_id,
                                    const String& stack_trace) {}
-
-  virtual void CloseWindow() {}
-  virtual bool TabsToLinks() { return false; }
 
   virtual const display::ScreenInfo& GetScreenInfo(LocalFrame& frame) const = 0;
   virtual const display::ScreenInfos& GetScreenInfos(
@@ -168,9 +154,6 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
 
   virtual void SetCursor(const ui::Cursor&, LocalFrame* local_root) {}
   virtual void SetCursorOverridden(bool) {}
-
-  virtual void ContentsSizeChanged(LocalFrame*, const gfx::Size&) const {}
-  virtual void OutermostMainFrameScrollOffsetChanged() const {}
 
   virtual ColorChooser* OpenColorChooser(LocalFrame*,
                                          ColorChooserClient*,
@@ -203,17 +186,6 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
   // Allow overriding whether external popup menus are used.
   virtual bool UseExternalPopupMenus() const { return false; }
 
-  enum class UIElementType {
-    kPopup = 0,
-  };
-  virtual bool ShouldOpenUIElementDuringPageDismissal(
-      LocalFrame&,
-      UIElementType,
-      const String&,
-      Document::PageDismissalType) const {
-    return false;
-  }
-
   virtual bool IsIsolatedSVGChromeClient() const { return false; }
 
   virtual void InstallSupplements(LocalFrame&);
@@ -229,21 +201,6 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
 
  protected:
   ChromeClient() = default;
-
-  virtual Page* CreateWindowDelegate(LocalFrame*,
-                                     const FrameLoadRequest&,
-                                     const AtomicString& frame_name,
-                                     const WebWindowFeatures&,
-                                     network::mojom::blink::WebSandboxFlags,
-                                     const SessionStorageNamespaceId&,
-                                     bool& consumed_user_gesture) {
-    return nullptr;
-  }
-
- private:
-  bool CanOpenUIElementIfDuringPageDismissal(Frame& main_frame,
-                                             UIElementType,
-                                             const String& message);
 };
 
 }  // namespace blink

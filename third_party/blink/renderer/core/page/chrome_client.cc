@@ -21,20 +21,8 @@
 
 #include "third_party/blink/renderer/core/page/chrome_client.h"
 
-#include <algorithm>
-
-#include "third_party/blink/public/platform/platform.h"
 #include "third_party/blink/renderer/core/core_initializer.h"
-#include "third_party/blink/renderer/core/dom/document.h"
-#include "third_party/blink/renderer/core/dom/element.h"
-#include "third_party/blink/renderer/core/frame/frame_console.h"
-#include "third_party/blink/renderer/core/frame/local_dom_window.h"
-#include "third_party/blink/renderer/core/frame/local_frame.h"
-#include "third_party/blink/renderer/core/page/frame_tree.h"
-#include "third_party/blink/renderer/core/page/page.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
-#include "ui/display/screen_info.h"
-#include "ui/gfx/geometry/rect.h"
 
 namespace blink {
 
@@ -44,41 +32,6 @@ void ChromeClient::InstallSupplements(LocalFrame& frame) {
   CoreInitializer::GetInstance().InstallSupplements(frame);
 }
 
-bool ChromeClient::CanOpenUIElementIfDuringPageDismissal(
-    Frame& main_frame,
-    UIElementType ui_element_type,
-    const String& message) {
-  for (Frame* frame = &main_frame; frame;
-       frame = frame->Tree().TraverseNext()) {
-    auto* local_frame = DynamicTo<LocalFrame>(frame);
-    if (!local_frame)
-      continue;
-    Document::PageDismissalType dismissal =
-        local_frame->GetDocument()->PageDismissalEventBeingDispatched();
-    if (dismissal != Document::kNoDismissal) {
-      return ShouldOpenUIElementDuringPageDismissal(
-          *local_frame, ui_element_type, message, dismissal);
-    }
-  }
-  return true;
-}
-
-Page* ChromeClient::CreateWindow(
-    LocalFrame* frame,
-    const FrameLoadRequest& r,
-    const AtomicString& frame_name,
-    const WebWindowFeatures& features,
-    network::mojom::blink::WebSandboxFlags sandbox_flags,
-    const SessionStorageNamespaceId& session_storage_namespace_id,
-    bool& consumed_user_gesture) {
-  if (!CanOpenUIElementIfDuringPageDismissal(
-          frame->Tree().Top(), UIElementType::kPopup, g_empty_string)) {
-    return nullptr;
-  }
-
-  return CreateWindowDelegate(frame, r, frame_name, features, sandbox_flags,
-                              session_storage_namespace_id,
-                              consumed_user_gesture);
-}
 }  // namespace blink
+
 

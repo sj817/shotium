@@ -268,7 +268,7 @@ bool SVGAElement::IsURLAttribute(const Attribute& attribute) const {
 
 bool SVGAElement::IsKeyboardFocusableSlow(
     UpdateBehavior update_behavior) const {
-  if (IsLink() && !GetDocument().GetPage()->GetChromeClient().TabsToLinks()) {
+  if (IsLink()) {
     return false;
   }
   return SVGElement::IsKeyboardFocusableSlow(update_behavior);

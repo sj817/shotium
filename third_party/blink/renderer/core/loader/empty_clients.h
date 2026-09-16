@@ -31,57 +31,12 @@
 
 #include <memory>
 
-#include "base/notreached.h"
-#include "base/time/time.h"
-#include "cc/paint/paint_canvas.h"
-#include "cc/trees/paint_holding_reason.h"
-#include "mojo/public/cpp/bindings/pending_remote.h"
-#include "services/network/public/cpp/permissions_policy/permissions_policy_declaration.h"
 #include "third_party/blink/public/common/associated_interfaces/associated_interface_provider.h"
-#include "third_party/blink/public/common/scheduler/task_attribution_id.h"
-#include "third_party/blink/public/common/user_agent/user_agent_metadata.h"
-#include "third_party/blink/public/mojom/blob/blob_url_store.mojom-forward.h"
-#include "third_party/blink/public/mojom/frame/viewport_intersection_state.mojom-blink.h"
-#include "third_party/blink/public/mojom/input/focus_type.mojom-blink-forward.h"
-#include "third_party/blink/public/platform/browser_interface_broker_proxy.h"
 #include "third_party/blink/renderer/core/core_export.h"
 #include "third_party/blink/renderer/core/frame/local_frame_client.h"
 #include "third_party/blink/renderer/core/page/chrome_client.h"
-#include "third_party/blink/renderer/core/page/page.h"
-#include "third_party/blink/renderer/platform/cursors.h"
-#include "third_party/blink/renderer/platform/exported/wrapped_resource_request.h"
-#include "third_party/blink/renderer/platform/graphics/touch_action.h"
-#include "third_party/blink/renderer/platform/loader/fetch/resource_error.h"
-#include "third_party/blink/renderer/platform/loader/fetch/url_loader/url_loader.h"
-#include "third_party/blink/renderer/platform/loader/fetch/url_loader/url_loader_factory.h"
-#include "third_party/blink/renderer/platform/wtf/allocator/allocator.h"
-#include "third_party/blink/renderer/platform/wtf/forward.h"
-#include "ui/base/cursor/cursor.h"
 #include "ui/display/screen_info.h"
 #include "ui/display/screen_infos.h"
-#include "ui/gfx/geometry/point_f.h"
-#include "ui/gfx/geometry/rect.h"
-#include "ui/gfx/geometry/rect_f.h"
-
-/*
- This file holds empty Client stubs for use by WebCore.
-
- Viewless element needs to create a dummy Page->LocalFrame->FrameView tree for
- use in parsing or executing JavaScript. This tree depends heavily on Clients
- (usually provided by WebKit classes).
-
- This file was first created for SVGImage as it had no way to access the current
- Page (nor should it, since Images are not tied to a page). See
- http://bugs.webkit.org/show_bug.cgi?id=5971 for the original discussion about
- this file.
-
- Ideally, whenever you change a Client class, you should add a stub here.
- Brittle, yes. Unfortunate, yes. Hopefully temporary.
-*/
-
-namespace ui {
-class Cursor;
-}
 
 namespace blink {
 
