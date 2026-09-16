@@ -36,9 +36,6 @@
 #include "third_party/blink/renderer/core/layout/layout_object.h"
 #include "third_party/blink/renderer/core/page/frame_tree.h"
 #include "third_party/blink/renderer/core/page/page.h"
-#include "third_party/blink/renderer/core/page/scoped_page_pauser.h"
-#include "third_party/blink/renderer/core/probe/core_probes.h"
-#include "third_party/blink/renderer/core/timing/dom_window_performance.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
 #include "ui/display/screen_info.h"
 #include "ui/gfx/geometry/rect.h"
@@ -90,68 +87,11 @@ Page* ChromeClient::CreateWindow(
                               consumed_user_gesture);
 }
 
-template <typename Delegate>
-static bool OpenJavaScriptDialog(LocalFrame* frame,
-                                 const String& message,
-                                 const Delegate& delegate) {
-  DOMWindowPerformance::performance(*frame->DomWindow())->WillShowModalDialog();
-  // Suspend pages in case the client method runs a new event loop that would
-  // otherwise cause the load to continue while we're in the middle of
-  // executing JavaScript.
-  ScopedPagePauser pauser;
-  probe::WillRunJavaScriptDialog(frame);
-  bool result = delegate();
-  probe::DidRunJavaScriptDialog(frame);
-  return result;
-}
-
 bool ChromeClient::OpenBeforeUnloadConfirmPanel(const String& message,
                                                 LocalFrame* frame,
                                                 bool is_reload) {
   DCHECK(frame);
-  return OpenJavaScriptDialog(frame, message, [this, frame, is_reload]() {
-    return OpenBeforeUnloadConfirmPanelDelegate(frame, is_reload);
-  });
-}
-
-bool ChromeClient::OpenJavaScriptAlert(LocalFrame* frame,
-                                       const String& message) {
-  DCHECK(frame);
-  if (!CanOpenUIElementIfDuringPageDismissal(
-          frame->Tree().Top(), UIElementType::kAlertDialog, message)) {
-    return false;
-  }
-  return OpenJavaScriptDialog(frame, message, [this, frame, &message]() {
-    return OpenJavaScriptAlertDelegate(frame, message);
-  });
-}
-
-bool ChromeClient::OpenJavaScriptConfirm(LocalFrame* frame,
-                                         const String& message) {
-  DCHECK(frame);
-  if (!CanOpenUIElementIfDuringPageDismissal(
-          frame->Tree().Top(), UIElementType::kConfirmDialog, message)) {
-    return false;
-  }
-  return OpenJavaScriptDialog(frame, message, [this, frame, &message]() {
-    return OpenJavaScriptConfirmDelegate(frame, message);
-  });
-}
-
-bool ChromeClient::OpenJavaScriptPrompt(LocalFrame* frame,
-                                        const String& prompt,
-                                        const String& default_value,
-                                        String& result) {
-  DCHECK(frame);
-  if (!CanOpenUIElementIfDuringPageDismissal(
-          frame->Tree().Top(), UIElementType::kPromptDialog, prompt)) {
-    return false;
-  }
-  return OpenJavaScriptDialog(
-      frame, prompt, [this, frame, &prompt, &default_value, &result]() {
-        return OpenJavaScriptPromptDelegate(frame, prompt, default_value,
-                                            result);
-      });
+  return OpenBeforeUnloadConfirmPanelDelegate(frame, is_reload);
 }
 
 void ChromeClient::MouseDidMoveOverElement(LocalFrame& frame,
@@ -227,48 +167,5 @@ void ChromeClient::ClearToolTip(LocalFrame& frame) {
   UpdateTooltipUnderCursor(frame, String(), TextDirection::kLtr);
 }
 
-bool ChromeClient::Print(LocalFrame* frame) {
-  if (!CanOpenUIElementIfDuringPageDismissal(*frame->GetPage()->MainFrame(),
-                                             UIElementType::kPrintDialog,
-                                             g_empty_string)) {
-    return false;
-  }
-
-  if (frame->DomWindow()->IsSandboxed(
-          network::mojom::blink::WebSandboxFlags::kModals)) {
-    UseCounter::Count(frame->DomWindow(),
-                      WebFeature::kDialogInSandboxedContext);
-    frame->Console().AddMessage(MakeGarbageCollected<ConsoleMessage>(
-        mojom::blink::ConsoleMessageSource::kSecurity,
-        mojom::blink::ConsoleMessageLevel::kError,
-        frame->IsInFencedFrameTree()
-            ? "Ignored call to 'print()'. The document is in a fenced frame "
-              "tree."
-            : "Ignored call to 'print()'. The document is sandboxed, and the "
-              "'allow-modals' keyword is not set."));
-    return false;
-  }
-
-  // print() returns quietly during prerendering.
-  // https://wicg.github.io/nav-speculation/prerendering.html#patch-modals
-  if (frame->GetDocument()->IsPrerendering()) {
-    frame->Console().AddMessage(MakeGarbageCollected<ConsoleMessage>(
-        mojom::blink::ConsoleMessageSource::kJavaScript,
-        mojom::blink::ConsoleMessageLevel::kError,
-        "Ignored call to 'print()' during prerendering."));
-    return false;
-  }
-
-  DOMWindowPerformance::performance(*frame->DomWindow())->WillShowModalDialog();
-
-  // Suspend pages in case the client method runs a new event loop that would
-  // otherwise cause the load to continue while we're in the middle of
-  // executing JavaScript.
-  // TODO(crbug.com/956832): Remove this when it is safe to do so.
-  ScopedPagePauser pauser;
-
-  PrintDelegate(frame);
-  return true;
-}
-
 }  // namespace blink
+

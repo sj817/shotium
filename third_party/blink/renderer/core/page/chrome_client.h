@@ -259,13 +259,6 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
                                     bool is_reload);
 
   virtual void CloseWindow() = 0;
-
-  bool OpenJavaScriptAlert(LocalFrame*, const String&);
-  bool OpenJavaScriptConfirm(LocalFrame*, const String&);
-  bool OpenJavaScriptPrompt(LocalFrame*,
-                            const String& message,
-                            const String& default_value,
-                            String& result);
   virtual bool TabsToLinks() = 0;
 
   virtual const display::ScreenInfo& GetScreenInfo(LocalFrame& frame) const = 0;
@@ -318,8 +311,6 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
   virtual void ClearKeyboardTriggeredTooltip(LocalFrame&) = 0;
   void ClearToolTip(LocalFrame&);
 
-  bool Print(LocalFrame*);
-
   virtual ColorChooser* OpenColorChooser(LocalFrame*,
                                          ColorChooserClient*,
                                          const Color&) = 0;
@@ -369,11 +360,7 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
   virtual bool UseExternalPopupMenus() const { return false; }
 
   enum class UIElementType {
-    kAlertDialog = 0,
-    kConfirmDialog = 1,
-    kPromptDialog = 2,
-    kPrintDialog = 3,
-    kPopup = 4
+    kPopup = 0,
   };
   virtual bool ShouldOpenUIElementDuringPageDismissal(
       LocalFrame&,
@@ -442,13 +429,6 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
   virtual void ShowMouseOverURL(const HitTestResult&) = 0;
   virtual bool OpenBeforeUnloadConfirmPanelDelegate(LocalFrame*,
                                                     bool is_reload) = 0;
-  virtual bool OpenJavaScriptAlertDelegate(LocalFrame*, const String&) = 0;
-  virtual bool OpenJavaScriptConfirmDelegate(LocalFrame*, const String&) = 0;
-  virtual bool OpenJavaScriptPromptDelegate(LocalFrame*,
-                                            const String& message,
-                                            const String& default_value,
-                                            String& result) = 0;
-  virtual void PrintDelegate(LocalFrame*) = 0;
   virtual Page* CreateWindowDelegate(LocalFrame*,
                                      const FrameLoadRequest&,
                                      const AtomicString& frame_name,

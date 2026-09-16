@@ -1467,10 +1467,6 @@ void WindowPerformance::PageVisibilityChangedWithTimestamp(
                           visibility_change_timestamp);
 }
 
-void WindowPerformance::WillShowModalDialog() {
-  show_modal_dialog_timestamps_.push_back(base::TimeTicks::Now());
-}
-
 EventCounts* WindowPerformance::eventCounts() {
   if (!event_counts_) {
     event_counts_ = MakeGarbageCollected<EventCounts>();

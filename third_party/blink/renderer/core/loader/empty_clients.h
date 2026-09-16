@@ -145,18 +145,6 @@ class CORE_EXPORT EmptyChromeClient : public ChromeClient {
                              bool& consumed_user_gesture) override {
     return nullptr;
   }
-  bool OpenJavaScriptAlertDelegate(LocalFrame*, const String&) override {
-    return false;
-  }
-  bool OpenJavaScriptConfirmDelegate(LocalFrame*, const String&) override {
-    return false;
-  }
-  bool OpenJavaScriptPromptDelegate(LocalFrame*,
-                                    const String&,
-                                    const String&,
-                                    String&) override {
-    return false;
-  }
   bool HasOpenedPopup() const override { return false; }
   PopupMenu* OpenPopupMenu(LocalFrame&, HTMLSelectElement&) override;
 
@@ -193,7 +181,6 @@ class CORE_EXPORT EmptyChromeClient : public ChromeClient {
                                  TextDirection,
                                  const gfx::Rect&) override {}
   void ClearKeyboardTriggeredTooltip(LocalFrame&) override {}
-  void PrintDelegate(LocalFrame*) override {}
   ColorChooser* OpenColorChooser(LocalFrame*,
                                  ColorChooserClient*,
                                  const Color&) override;
