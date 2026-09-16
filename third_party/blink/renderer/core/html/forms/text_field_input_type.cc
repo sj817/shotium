@@ -78,7 +78,6 @@ class DataListIndicatorElement final : public HTMLDivElement {
     HTMLInputElement* host = HostInput();
     if (host && !host->IsDisabledOrReadOnly() &&
         !host->IsBaseAppearanceCombobox()) {
-      GetDocument().GetPage()->GetChromeClient().OpenTextDataListChooser(*host);
       event.SetDefaultHandled();
     }
   }
@@ -770,14 +769,7 @@ void TextFieldInputType::SubtreeHasChanged() {
   DidSetValueByUserEdit();
 }
 
-void TextFieldInputType::OpenPopupView() {
-  if (GetElement().IsDisabledOrReadOnly() ||
-      GetElement().IsBaseAppearanceCombobox()) {
-    return;
-  }
-  if (ChromeClient* chrome_client = GetChromeClient())
-    chrome_client->OpenTextDataListChooser(GetElement());
-}
+void TextFieldInputType::OpenPopupView() {}
 
 void TextFieldInputType::DidSetValueByUserEdit() {
   if (!GetElement().IsFocused())

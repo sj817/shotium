@@ -36,7 +36,6 @@
 #include "third_party/blink/public/mojom/input/focus_type.mojom-blink-forward.h"
 #include "third_party/blink/renderer/core/core_export.h"
 #include "third_party/blink/renderer/core/dom/document.h"
-#include "third_party/blink/renderer/core/html/forms/popup_menu.h"
 #include "third_party/blink/renderer/core/loader/frame_loader.h"
 #include "third_party/blink/renderer/core/loader/navigation_policy.h"
 #include "third_party/blink/renderer/core/scroll/scroll_types.h"
@@ -59,17 +58,10 @@ class Cursor;
 
 namespace blink {
 
-class ColorChooser;
-class ColorChooserClient;
-class DateTimeChooser;
-class DateTimeChooserClient;
-class HTMLInputElement;
-class HTMLSelectElement;
 class LocalFrame;
 class LocalFrameView;
 class Page;
 
-struct DateTimeChooserParameters;
 struct FrameLoadRequest;
 struct WebWindowFeatures;
 
@@ -154,37 +146,6 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
 
   virtual void SetCursor(const ui::Cursor&, LocalFrame* local_root) {}
   virtual void SetCursorOverridden(bool) {}
-
-  virtual ColorChooser* OpenColorChooser(LocalFrame*,
-                                         ColorChooserClient*,
-                                         const Color&) {
-    return nullptr;
-  }
-
-  // This function is used for:
-  //  - Mandatory date/time choosers if InputMultipleFieldsUI flag is not set
-  //  - Date/time choosers for types for which
-  //    LayoutTheme::SupportsCalendarPicker returns true, if
-  //    InputMultipleFieldsUI flag is set
-  //  - <datalist> UI for date/time input types regardless of
-  //    InputMultipleFieldsUI flag
-  // |LocalFrame| should not be null.
-  virtual DateTimeChooser* OpenDateTimeChooser(
-      LocalFrame*,
-      DateTimeChooserClient*,
-      const DateTimeChooserParameters&) {
-    return nullptr;
-  }
-  virtual void OpenTextDataListChooser(HTMLInputElement&) {}
-
-  // Checks if there is an opened popup, called by LayoutMenuList::showPopUp().
-  virtual bool HasOpenedPopup() const { return false; }
-  virtual PopupMenu* OpenPopupMenu(LocalFrame&, HTMLSelectElement&) {
-    return nullptr;
-  }
-
-  // Allow overriding whether external popup menus are used.
-  virtual bool UseExternalPopupMenus() const { return false; }
 
   virtual bool IsIsolatedSVGChromeClient() const { return false; }
 

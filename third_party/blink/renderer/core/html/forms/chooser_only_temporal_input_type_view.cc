@@ -80,13 +80,6 @@ AppearanceValue ChooserOnlyTemporalInputTypeView::AutoAppearance() const {
 }
 
 void ChooserOnlyTemporalInputTypeView::OpenPopupView() {
-  DateTimeChooserParameters parameters;
-  if (GetElement().SetupDateTimeChooserParameters(parameters)) {
-    Document& document = GetElement().GetDocument();
-    date_time_chooser_ =
-        document.GetPage()->GetChromeClient().OpenDateTimeChooser(
-            document.GetFrame(), this, parameters);
-  }
   GetElement().PseudoStateChanged(CSSSelector::kPseudoOpen);
 }
 

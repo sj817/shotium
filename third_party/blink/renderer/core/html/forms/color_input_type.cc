@@ -278,10 +278,6 @@ AppearanceValue ColorInputType::AutoAppearance() const {
 }
 
 void ColorInputType::OpenPopupView() {
-  ChromeClient* chrome_client = GetChromeClient();
-  Document& document = GetElement().GetDocument();
-  chooser_ = chrome_client->OpenColorChooser(document.GetFrame(), this,
-                                             ValueAsColor());
   if (GetElement().GetLayoutObject()) {
     // Invalidate paint to ensure that the focus ring is removed.
     GetElement().GetLayoutObject()->SetShouldDoFullPaintInvalidation();

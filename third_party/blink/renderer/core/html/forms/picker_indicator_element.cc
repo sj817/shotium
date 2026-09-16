@@ -132,8 +132,6 @@ void PickerIndicatorElement::OpenPopup() {
   DateTimeChooserParameters parameters;
   if (!picker_indicator_owner_->SetupDateTimeChooserParameters(parameters))
     return;
-  chooser_ = GetDocument().GetPage()->GetChromeClient().OpenDateTimeChooser(
-      GetDocument().GetFrame(), this, parameters);
   if (OwnerElement().GetLayoutObject()) {
     // Invalidate paint to ensure that the focus ring is removed.
     OwnerElement().GetLayoutObject()->SetShouldDoFullPaintInvalidation();
