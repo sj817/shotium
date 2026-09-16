@@ -51,7 +51,6 @@
 #include "third_party/blink/public/mojom/blob/blob_url_store.mojom-blink-forward.h"
 #include "third_party/blink/public/mojom/fenced_frame/fenced_frame.mojom-blink-forward.h"
 #include "third_party/blink/public/mojom/frame/triggering_event_info.mojom-blink-forward.h"
-#include "third_party/blink/public/platform/scheduler/web_scoped_virtual_time_pauser.h"
 #include "third_party/blink/public/platform/web_background_resource_fetch_assets.h"
 #include "third_party/blink/public/platform/web_content_settings_client.h"
 #include "third_party/blink/public/platform/web_effective_connection_type.h"
@@ -99,7 +98,6 @@ class ResourceResponse;
 class SourceLocation;
 class WebDedicatedWorkerHostFactoryClient;
 class URLLoader;
-struct JavaScriptFrameworkDetectionResult;
 
 namespace scheduler {
 class TaskAttributionId;
@@ -217,10 +215,6 @@ class CORE_EXPORT LocalFrameClient : public FrameClient {
   // propogates renderer loading behavior to the browser process for histograms.
   virtual void DidObserveLoadingBehavior(LoadingBehaviorFlag) {}
 
-  // propagates framework detection info to the browser process for histograms.
-  virtual void DidObserveJavaScriptFrameworks(
-      const JavaScriptFrameworkDetectionResult&) {}
-
   // Will be called when a sub resource load happens.
   virtual void DidObserveSubresourceLoad(
       const SubresourceLoadMetrics& subresource_load_metrics) {}
@@ -315,18 +309,9 @@ class CORE_EXPORT LocalFrameClient : public FrameClient {
   virtual scoped_refptr<WebBackgroundResourceFetchAssets>
   MaybeGetBackgroundResourceFetchAssets() = 0;
 
-  virtual void SetVirtualTimePauser(
-      WebScopedVirtualTimePauser virtual_time_pauser) {}
-
-  virtual String evaluateInInspectorOverlayForTesting(const String& script) = 0;
-
   virtual void DidChangeContents() {}
 
   virtual Frame* FindFrame(const AtomicString& name) const = 0;
-
-  virtual void OnOverlayPopupAdDetected() {}
-
-  virtual void OnLargeStickyAdDetected() {}
 
   virtual void FocusedElementChanged(Element* element) {}
 

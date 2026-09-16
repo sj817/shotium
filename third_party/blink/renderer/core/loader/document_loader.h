@@ -113,7 +113,6 @@ class HistoryItem;
 class LocalFrame;
 class LocalFrameClient;
 class MHTMLArchive;
-struct JavaScriptFrameworkDetectionResult;
 
 namespace mojom {
 enum class CommitResult : int32_t;
@@ -217,8 +216,6 @@ class CORE_EXPORT DocumentLoader : public GarbageCollected<DocumentLoader>,
 
   void DidChangePerformanceTiming();
   void DidObserveLoadingBehavior(LoadingBehaviorFlag);
-  void DidObserveJavaScriptFrameworks(
-      const JavaScriptFrameworkDetectionResult&);
 
   // https://html.spec.whatwg.org/multipage/history.html#url-and-history-update-steps
   void RunURLAndHistoryUpdateSteps(
