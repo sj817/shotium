@@ -319,3 +319,27 @@ runs:
         } > out/Shot/args.gn
         cat out/Shot/args.gn
         gn gen out/Shot
+
+    - name: invalidate stale runtime feature generation
+      shell: bash
+      working-directory: src
+      # Restored build directories predate the content stamp below. Generated
+      # files have wall-clock mtimes, while tracked inputs are deliberately
+      # stamped to their commit times, so an old generated header can otherwise
+      # look newer even when runtime_enabled_features.json5 changed. Keep a
+      # content hash beside the build graph and invalidate only this generator
+      # when its input bytes differ. The stamp then travels with the build-dir,
+      # so warm builds pay nothing after the first corrected run.
+      run: |
+        input=third_party/blink/renderer/platform/runtime_enabled_features.json5
+        stamp=out/Shot/ci-runtime-enabled-features.sha256
+        current=$(sha256sum "$input" | awk '{print $1}')
+        previous=''
+        [ -f "$stamp" ] && previous=$(cat "$stamp")
+        if [ "$current" != "$previous" ]; then
+          echo "runtime enabled features changed; invalidating generated cache"
+          rm -f \
+            out/Shot/gen/third_party/blink/renderer/platform/runtime_enabled_features.h \
+            out/Shot/gen/third_party/blink/renderer/platform/runtime_enabled_features.cc
+          printf '%s\n' "$current" > "$stamp"
+        fi

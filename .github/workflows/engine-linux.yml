@@ -258,7 +258,7 @@ jobs:
       - name: upload the shard
         uses: actions/upload-artifact@v7
         with:
-          name: shard-${{ inputs.platform }}-${{ matrix.shard }}
+          name: shard-${{ inputs.platform }}-${{ env.SHOT_LIBC }}-${{ matrix.shard }}
           path: shard.tar
           if-no-files-found: error
           retention-days: 1
@@ -330,7 +330,7 @@ jobs:
         # uploading -- ninja below then builds whatever never arrived.
         run: |
           pnpm --silent ci:await-shards \
-            --prefix 'shard-${{ inputs.platform }}-' \
+            --prefix 'shard-${{ inputs.platform }}-${{ env.SHOT_LIBC }}-' \
             --shards '${{ needs.meta.outputs.shard_count }}' \
             --job-prefix 'compile: shotium-${{ inputs.platform }}-${{ needs.meta.outputs.fingerprint }}'
 
@@ -339,7 +339,7 @@ jobs:
         continue-on-error: true   # no artifact at all is a slow build, not a failed one
         uses: actions/download-artifact@v8
         with:
-          pattern: shard-${{ inputs.platform }}-*
+          pattern: shard-${{ inputs.platform }}-${{ env.SHOT_LIBC }}-*
           path: shards
 
       - name: merge the shards into the build directory
