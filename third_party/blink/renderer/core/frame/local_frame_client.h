@@ -54,7 +54,6 @@
 #include "third_party/blink/public/platform/web_background_resource_fetch_assets.h"
 #include "third_party/blink/public/platform/web_content_settings_client.h"
 #include "third_party/blink/public/platform/web_effective_connection_type.h"
-#include "third_party/blink/public/platform/web_worker_fetch_context.h"
 #include "third_party/blink/public/web/web_frame_load_type.h"
 #include "third_party/blink/public/web/web_history_commit_type.h"
 #include "third_party/blink/public/web/web_navigation_params.h"
@@ -86,8 +85,6 @@ class ChildURLLoaderFactoryBundle;
 class DocumentLoader;
 class HTMLFormElement;
 class HTMLFrameOwnerElement;
-class HTMLMediaElement;
-class HTMLPlugInElement;
 class HistoryItem;
 class KURL;
 class LocalDOMWindow;
@@ -96,7 +93,6 @@ class ResourceError;
 class ResourceRequest;
 class ResourceResponse;
 class SourceLocation;
-class WebDedicatedWorkerHostFactoryClient;
 class URLLoader;
 
 namespace scheduler {
@@ -315,25 +311,7 @@ class CORE_EXPORT LocalFrameClient : public FrameClient {
 
   virtual void FocusedElementChanged(Element* element) {}
 
-  // Returns a new WebWorkerFetchContext for worklets.
-  virtual scoped_refptr<WebWorkerFetchContext> CreateWorkletFetchContext() {
-    return nullptr;
-  }
-
-  // Returns a new WebWorkerFetchContext for dedicated workers.
-  virtual scoped_refptr<WebWorkerFetchContext> CreateWorkerFetchContext(
-      WebDedicatedWorkerHostFactoryClient*) {
-    return nullptr;
-  }
-
-  virtual std::unique_ptr<WebContentSettingsClient>
-  CreateWorkerContentSettingsClient() {
-    return nullptr;
-  }
-
   virtual void SetMouseCapture(bool) {}
-
-  virtual void NotifyAutoscrollForSelectionInMainFrame(bool) {}
 
   // Specifies whether to disable DOM storage interfaces such as localStorage
   // and sessionStorage.
