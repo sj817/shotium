@@ -5595,15 +5595,6 @@ void Document::NotifyFocusedElementChanged(Element* old_focused_element,
 
   if (GetPage()) {
     SendFocusNotification(new_focused_element, focus_type);
-
-    Document* old_document =
-        old_focused_element ? &old_focused_element->GetDocument() : nullptr;
-    if (old_document && old_document != this && old_document->GetFrame())
-      old_document->GetFrame()->Client()->FocusedElementChanged(nullptr);
-
-    GetFrame()->Client()->FocusedElementChanged(new_focused_element);
-
-    GetPage()->GetChromeClient().SetKeyboardFocusURL(new_focused_element);
   }
 
   blink::NotifyPriorityScrollAnchorStatusChanged(old_focused_element,

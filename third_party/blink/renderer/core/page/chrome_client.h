@@ -125,17 +125,6 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
   virtual void MoveWindowTo(const gfx::Point&, LocalFrame&) = 0;
   virtual void ResizeWindowTo(const gfx::Size&, LocalFrame&) = 0;
 
-#if !BUILDFLAG(IS_ANDROID) && !BUILDFLAG(IS_IOS)
-  // Additional Windowing Controls API.
-  using WindowingControlsChangeCallback = base::OnceCallback<void(bool)>;
-  virtual void Minimize(LocalFrame&, WindowingControlsChangeCallback) = 0;
-  virtual void Maximize(LocalFrame&, WindowingControlsChangeCallback) = 0;
-  virtual void Restore(LocalFrame&, WindowingControlsChangeCallback) = 0;
-  virtual void SetResizable(bool resizable,
-                            LocalFrame&,
-                            WindowingControlsChangeCallback) = 0;
-#endif
-
   // For non-composited WebViews that exist to contribute to a "parent" WebView
   // painting. This informs the client of the area that needs to be redrawn.
   virtual void InvalidateContainer() = 0;
@@ -178,8 +167,6 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
 
   virtual bool CanTakeFocus(mojom::blink::FocusType) = 0;
   virtual void TakeFocus(mojom::blink::FocusType) = 0;
-
-  virtual void SetKeyboardFocusURL(Element*) {}
 
   // Returns true if the page should support drag regions via the app-region
   // CSS property.

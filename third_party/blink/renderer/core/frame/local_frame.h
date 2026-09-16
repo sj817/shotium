@@ -65,7 +65,6 @@
 #include "third_party/blink/public/mojom/script/script_evaluation_params.mojom-blink-forward.h"
 #include "third_party/blink/public/mojom/use_counter/metrics/web_feature.mojom-blink-forward.h"
 #include "third_party/blink/public/platform/task_type.h"
-#include "third_party/blink/public/platform/web_background_resource_fetch_assets.h"
 #include "third_party/blink/public/platform/web_content_settings_client.h"
 #include "third_party/blink/public/web/web_print_params.h"
 #include "third_party/blink/renderer/core/core_export.h"
@@ -490,9 +489,6 @@ class CORE_EXPORT LocalFrame final
   // For some tests, we use this method to create a URLLoader instead of using
   // GetURLLoaderFactory().
   std::unique_ptr<URLLoader> CreateURLLoaderForTesting();
-
-  scoped_refptr<WebBackgroundResourceFetchAssets>
-  MaybeGetBackgroundResourceFetchAssets();
 
   bool IsInert() const { return is_inert_; }
 

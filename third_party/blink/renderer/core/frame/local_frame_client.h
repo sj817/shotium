@@ -51,7 +51,6 @@
 #include "third_party/blink/public/mojom/blob/blob_url_store.mojom-blink-forward.h"
 #include "third_party/blink/public/mojom/fenced_frame/fenced_frame.mojom-blink-forward.h"
 #include "third_party/blink/public/mojom/frame/triggering_event_info.mojom-blink-forward.h"
-#include "third_party/blink/public/platform/web_background_resource_fetch_assets.h"
 #include "third_party/blink/public/platform/web_content_settings_client.h"
 #include "third_party/blink/public/platform/web_effective_connection_type.h"
 #include "third_party/blink/public/web/web_frame_load_type.h"
@@ -302,14 +301,9 @@ class CORE_EXPORT LocalFrameClient : public FrameClient {
   virtual std::unique_ptr<URLLoader> CreateURLLoaderForTesting() = 0;
   virtual blink::ChildURLLoaderFactoryBundle* GetLoaderFactoryBundle() = 0;
 
-  virtual scoped_refptr<WebBackgroundResourceFetchAssets>
-  MaybeGetBackgroundResourceFetchAssets() = 0;
-
   virtual void DidChangeContents() {}
 
   virtual Frame* FindFrame(const AtomicString& name) const = 0;
-
-  virtual void FocusedElementChanged(Element* element) {}
 
   virtual void SetMouseCapture(bool) {}
 
