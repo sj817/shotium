@@ -1655,22 +1655,7 @@ float LocalFrameView::InputEventsScaleFactor() const {
          frame_->GetPage()->GetChromeClient().InputEventsScaleForEmulation();
 }
 
-void LocalFrameView::UpdateDocumentDraggableRegions() const {
-  Document* document = frame_->GetDocument();
-  if (!document->HasDraggableRegions() ||
-      !frame_->GetPage()->GetChromeClient().SupportsDraggableRegions()) {
-    return;
-  }
-
-  Vector<DraggableRegionValue> new_regions;
-  CollectDraggableRegions(*(document->GetLayoutBox()), new_regions);
-  if (new_regions == document->DraggableRegions()) {
-    return;
-  }
-
-  document->SetDraggableRegions(new_regions);
-  frame_->GetPage()->GetChromeClient().DraggableRegionsChanged();
-}
+void LocalFrameView::UpdateDocumentDraggableRegions() const {}
 
 void LocalFrameView::DidAttachDocument() {
   Page* page = frame_->GetPage();

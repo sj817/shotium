@@ -556,16 +556,9 @@ void Frame::FocusPage(LocalFrame* originating_frame) {
   if (originating_frame &&
       (LocalFrame::HasTransientUserActivation(originating_frame) ||
        originating_frame->GetSettings()->GetAllowUnrestrictedWindowFocus())) {
-    // Ask the browser process to focus the page.
-    GetPage()->GetChromeClient().FocusPage();
-
     // Tattle on the frame that called |window.focus()|.
     originating_frame->GetLocalFrameHostRemote().DidCallFocus();
   }
-
-  // Always report the attempt to focus the page to the Chrome client for
-  // testing purposes (i.e. see WebViewTest.FocusExistingFrameOnNavigate()).
-  GetPage()->GetChromeClient().DidFocusPage();
 }
 
 void Frame::SetOpenerDoNotNotify(Frame* opener) {

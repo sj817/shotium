@@ -1250,16 +1250,6 @@ void FrameLoader::StopAllLoaders(bool abort_client) {
   TakeObjectSnapshot();
 }
 
-void FrameLoader::DidAccessInitialDocument() {
-  if (frame_->IsMainFrame() && !has_accessed_initial_document_) {
-    has_accessed_initial_document_ = true;
-    // Forbid script execution to prevent re-entering V8, since this is called
-    // from a binding security check.
-    ScriptForbiddenScope forbid_scripts;
-    frame_->GetPage()->GetChromeClient().DidAccessInitialMainDocument();
-  }
-}
-
 bool FrameLoader::DetachDocument() {
   TRACE_EVENT0("navigation", "FrameLoader::DetachDocument");
   base::ScopedUmaHistogramTimer histogram_timer(

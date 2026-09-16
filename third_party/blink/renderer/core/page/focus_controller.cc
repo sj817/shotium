@@ -2066,18 +2066,7 @@ bool FocusController::AdvanceFocusInDocumentOrder(
   Element* element =
       FindFocusableElementAcrossFocusScopes(type, scope, owner_map);
   if (!element) {
-    // We didn't find an element to focus, so we should try to pass focus to
-    // Chrome.
-    if ((!initial_focus || document->GetFrame()->IsFencedFrameRoot()) &&
-        page_->GetChromeClient().CanTakeFocus(type)) {
-      document->ClearFocusedElement();
-      document->SetSequentialFocusNavigationStartingPoint(nullptr);
-      SetFocusedFrame(nullptr);
-      page_->GetChromeClient().TakeFocus(type);
-      return true;
-    }
-
-    // Chrome doesn't want focus, so we should wrap focus.
+    // Focus wraps within the document.
     ScopedFocusNavigation doc_scope = ScopedFocusNavigation::CreateForDocument(
         *To<LocalFrame>(page_->MainFrame())->GetDocument(), owner_map);
     element = FindFocusableElementRecursively(type, doc_scope, owner_map);

@@ -1218,22 +1218,10 @@ void LocalFrame::DidChangeThemeColor(bool update_theme_color_cache) {
   if (update_theme_color_cache) {
     GetDocument()->UpdateThemeColorCache();
   }
-
-  std::optional<Color> color = GetDocument()->ThemeColor();
-  std::optional<SkColor> sk_color;
-  if (color) {
-    sk_color = color->Rgb();
-  }
-
-  GetPage()->GetChromeClient().DidChangeThemeColor(sk_color);
 }
 
 void LocalFrame::DidChangeBackgroundColor(SkColor4f background_color,
-                                          bool color_adjust) {
-  DCHECK(!Tree().Parent());
-  GetPage()->GetChromeClient().DidChangeBackgroundColor(background_color,
-                                                        color_adjust);
-}
+                                          bool color_adjust) {}
 
 LocalFrame& LocalFrame::LocalFrameRoot() const {
   const LocalFrame* cur_frame = this;

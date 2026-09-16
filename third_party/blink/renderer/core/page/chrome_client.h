@@ -143,31 +143,9 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
                                  base::TimeDelta delay,
                                  bool urgent) = 0;
 
-  // Tells the browser that another page has accessed the DOM of the initial
-  // empty document of a main frame.
-  virtual void DidAccessInitialMainDocument() = 0;
-
-  virtual void DidChangeThemeColor(std::optional<SkColor> theme_color) = 0;
-  virtual void DidChangeBackgroundColor(SkColor4f background_color,
-                                        bool color_adjust) = 0;
-
   // This gives the rect of the top level window that the given LocalFrame is a
   // part of.
   virtual gfx::Rect RootWindowRect(LocalFrame&) = 0;
-
-  virtual void FocusPage() = 0;
-  virtual void DidFocusPage() = 0;
-
-  virtual bool CanTakeFocus(mojom::blink::FocusType) = 0;
-  virtual void TakeFocus(mojom::blink::FocusType) = 0;
-
-  // Returns true if the page should support drag regions via the app-region
-  // CSS property.
-  virtual bool SupportsDraggableRegions() = 0;
-
-  // Sends the draggable regions defined by the app-region CSS property to the
-  // browser.
-  virtual void DraggableRegionsChanged() = 0;
 
   // The LocalFrame pointer provides the ChromeClient with context about which
   // LocalFrame wants to create the new Page. Also, the newly created window
