@@ -567,11 +567,6 @@ void TouchEventManager::UpdateTouchAttributeMapsForPointerDown(
     delayed_effective_touch_action_ =
         delayed_effective_touch_action_.value_or(TouchAction::kAuto) &
         effective_touch_action;
-  }
-  if (!delayed_effective_touch_action_) {
-    frame_->GetPage()->GetChromeClient().SetTouchAction(frame_,
-                                                        effective_touch_action);
-  }
   // Combine the current touch action sequence with the touch action
   // for the current finger press.
   current_touch_action_ &= effective_touch_action;
@@ -705,17 +700,7 @@ WebInputEventResult TouchEventManager::EnsureVerticalScrollIsPossible(
     *delayed_effective_touch_action_ &= TouchAction::kPanY;
   }
 
-  if (delayed_effective_touch_action_) {
-    // If 'touchstart' is preventDefault()-ed then we can proceed with reporting
-    // the effective 'touch-action'.
-    // TODO(ekaramad): This does not block horizontal scroll after enforcing
-    // vertical scrolling. We should ideally send the 'touch-action' to browser
-    // after the first 'touchmove' event has been dispatched.
-    // (https://crbug.com/844493).
-    frame_->GetPage()->GetChromeClient().SetTouchAction(
-        frame_, delayed_effective_touch_action_.value());
-    delayed_effective_touch_action_ = std::nullopt;
-  }
+  delayed_effective_touch_action_ = std::nullopt;
 
   // If the event was canceled the result is ignored to make sure vertical
   // scrolling is possible.

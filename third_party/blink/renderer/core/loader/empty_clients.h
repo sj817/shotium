@@ -164,12 +164,6 @@ class CORE_EXPORT EmptyChromeClient : public ChromeClient {
   void OpenTextDataListChooser(HTMLInputElement&) override;
   void SetCursor(const ui::Cursor&, LocalFrame* local_root) override {}
   void SetCursorOverridden(bool) override {}
-  void SetEventListenerProperties(LocalFrame*,
-                                  cc::EventListenerClass,
-                                  cc::EventListenerProperties) override {}
-  void SetHasScrollEventHandlers(LocalFrame*, bool) override {}
-  void SetNeedsLowLatencyInput(LocalFrame*, bool) override {}
-  void SetTouchAction(LocalFrame*, TouchAction) override {}
   void InstallSupplements(LocalFrame&) override {}
   void OutermostMainFrameScrollOffsetChanged() const override {}
 

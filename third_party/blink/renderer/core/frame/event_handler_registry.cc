@@ -12,39 +12,11 @@
 #include "third_party/blink/renderer/core/html/html_frame_owner_element.h"
 #include "third_party/blink/renderer/core/layout/layout_object.h"
 #include "third_party/blink/renderer/core/layout/layout_view.h"
-#include "third_party/blink/renderer/core/page/chrome_client.h"
 #include "third_party/blink/renderer/core/page/page.h"
 #include "third_party/blink/renderer/platform/heap/thread_state_scopes.h"
 #include "third_party/blink/renderer/platform/heap/visitor.h"
 
 namespace blink {
-
-namespace {
-
-cc::EventListenerProperties GetEventListenerProperties(bool has_blocking,
-                                                       bool has_passive) {
-  if (has_blocking && has_passive)
-    return cc::EventListenerProperties::kBlockingAndPassive;
-  if (has_blocking)
-    return cc::EventListenerProperties::kBlocking;
-  if (has_passive)
-    return cc::EventListenerProperties::kPassive;
-  return cc::EventListenerProperties::kNone;
-}
-
-LocalFrame* GetLocalFrameForTarget(EventTarget* target) {
-  LocalFrame* frame = nullptr;
-  if (Node* node = target->ToNode()) {
-    frame = node->GetDocument().GetFrame();
-  } else if (LocalDOMWindow* dom_window = target->ToLocalDOMWindow()) {
-    frame = dom_window->GetFrame();
-  } else {
-    NOTREACHED() << "Unexpected target type for event handler.";
-  }
-  return frame;
-}
-
-}  // namespace
 
 EventHandlerRegistry::EventHandlerRegistry(LocalFrame& frame) : frame_(frame) {}
 
@@ -234,65 +206,7 @@ void EventHandlerRegistry::DidRemoveAllEventHandlers(EventTarget& target) {
 void EventHandlerRegistry::NotifyHandlersChanged(
     EventTarget* target,
     EventHandlerClass handler_class,
-    bool has_active_handlers) {
-  LocalFrame* frame = GetLocalFrameForTarget(target);
-
-  // TODO(keishi): Added for crbug.com/1090687. Change to CHECK once bug is
-  // fixed.
-  if (!GetPage())
-    return;
-
-  switch (handler_class) {
-    case kScrollEvent:
-      GetPage()->GetChromeClient().SetHasScrollEventHandlers(
-          frame, has_active_handlers);
-      break;
-    case kWheelEventBlocking:
-    case kWheelEventPassive:
-      GetPage()->GetChromeClient().SetEventListenerProperties(
-          frame, cc::EventListenerClass::kMouseWheel,
-          GetEventListenerProperties(HasEventHandlers(kWheelEventBlocking),
-                                     HasEventHandlers(kWheelEventPassive)));
-      break;
-    case kTouchStartOrMoveEventBlockingLowLatency:
-      GetPage()->GetChromeClient().SetNeedsLowLatencyInput(frame,
-                                                           has_active_handlers);
-      [[fallthrough]];
-    case kTouchAction:
-    case kTouchStartOrMoveEventBlocking:
-    case kTouchStartOrMoveEventPassive:
-    case kPointerEvent:
-      GetPage()->GetChromeClient().SetEventListenerProperties(
-          frame, cc::EventListenerClass::kTouchStartOrMove,
-          GetEventListenerProperties(
-              HasEventHandlers(kTouchAction) ||
-                  HasEventHandlers(kTouchStartOrMoveEventBlocking) ||
-                  HasEventHandlers(kTouchStartOrMoveEventBlockingLowLatency),
-              HasEventHandlers(kTouchStartOrMoveEventPassive) ||
-                  HasEventHandlers(kPointerEvent)));
-      break;
-    case kPointerRawUpdateEvent:
-      GetPage()->GetChromeClient().SetEventListenerProperties(
-          frame, cc::EventListenerClass::kPointerRawUpdate,
-          GetEventListenerProperties(false,
-                                     HasEventHandlers(kPointerRawUpdateEvent)));
-      break;
-    case kTouchEndOrCancelEventBlocking:
-    case kTouchEndOrCancelEventPassive:
-      GetPage()->GetChromeClient().SetEventListenerProperties(
-          frame, cc::EventListenerClass::kTouchEndOrCancel,
-          GetEventListenerProperties(
-              HasEventHandlers(kTouchEndOrCancelEventBlocking),
-              HasEventHandlers(kTouchEndOrCancelEventPassive)));
-      break;
-#if DCHECK_IS_ON()
-    case kEventsForTesting:
-      break;
-#endif
-    default:
-      NOTREACHED();
-  }
-
+    bool /*has_active_handlers*/) {
   if (handler_class == kTouchStartOrMoveEventBlocking ||
       handler_class == kTouchStartOrMoveEventBlockingLowLatency) {
     if (auto* node = target->ToNode()) {

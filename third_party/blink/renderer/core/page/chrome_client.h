@@ -28,7 +28,6 @@
 #include "base/functional/callback.h"
 #include "base/gtest_prod_util.h"
 #include "base/time/time.h"
-#include "cc/input/event_listener_properties.h"
 #include "cc/input/overscroll_behavior.h"
 #include "cc/metrics/begin_main_frame_metrics.h"
 #include "cc/paint/draw_image.h"
@@ -44,7 +43,6 @@
 #include "third_party/blink/renderer/core/loader/navigation_policy.h"
 #include "third_party/blink/renderer/core/scroll/scroll_types.h"
 #include "third_party/blink/renderer/core/style/computed_style_constants.h"
-#include "third_party/blink/renderer/platform/graphics/touch_action.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
 #include "third_party/blink/renderer/platform/wtf/forward.h"
 #include "third_party/blink/renderer/platform/wtf/functional.h"
@@ -219,18 +217,6 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
       DateTimeChooserClient*,
       const DateTimeChooserParameters&) = 0;
   virtual void OpenTextDataListChooser(HTMLInputElement&) = 0;
-
-  // The client keeps track of which touch/mousewheel event types have handlers,
-  // and if they do, whether the handlers are passive and/or blocking. This
-  // allows the client to know which optimizations can be used for the
-  // associated event classes.
-  virtual void SetEventListenerProperties(LocalFrame*,
-                                          cc::EventListenerClass,
-                                          cc::EventListenerProperties) = 0;
-
-  virtual void SetHasScrollEventHandlers(LocalFrame*, bool) = 0;
-  virtual void SetNeedsLowLatencyInput(LocalFrame*, bool) = 0;
-  virtual void SetTouchAction(LocalFrame*, TouchAction) = 0;
 
   // Checks if there is an opened popup, called by LayoutMenuList::showPopUp().
   virtual bool HasOpenedPopup() const = 0;
