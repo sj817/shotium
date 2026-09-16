@@ -160,8 +160,6 @@ blink_core_sources_bindings_core_v8 = [
   "v8_interest_event_init.h",
   "v8_intersection_observer_init.cc",
   "v8_intersection_observer_init.h",
-  "v8_is_input_pending_options.cc",
-  "v8_is_input_pending_options.h",
   "v8_iteration_composite_operation.h",
   "v8_keyboard_event_init.cc",
   "v8_keyboard_event_init.h",
