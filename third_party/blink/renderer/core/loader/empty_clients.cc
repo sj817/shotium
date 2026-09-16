@@ -102,8 +102,6 @@ void EmptyLocalFrameClient::BeginNavigation(
     mojo::PendingReceiver<mojom::blink::NavigationResumeDeferredCommitListener>,
     std::optional<base::UnguessableToken> script_tool_invocation_id) {}
 
-void EmptyLocalFrameClient::DispatchWillSendSubmitEvent(HTMLFormElement*) {}
-
 LocalFrame* EmptyLocalFrameClient::CreateFrame(const AtomicString&,
                                                HTMLFrameOwnerElement*) {
   return nullptr;

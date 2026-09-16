@@ -131,7 +131,6 @@ class CORE_EXPORT LocalFrameClient : public FrameClient {
       bool should_skip_screenshot,
       base::UnguessableToken same_document_metrics_token,
       bool caused_by_ad) {}
-  virtual void DidFailAsyncSameDocumentCommit() {}
   virtual void DispatchDidOpenDocumentInputStream(const KURL&) {}
   virtual void DispatchDidReceiveTitle(const String&) = 0;
   virtual void DispatchDidCommitLoad(
@@ -178,17 +177,8 @@ class CORE_EXPORT LocalFrameClient : public FrameClient {
           resume_defer_commit_listener,
       std::optional<base::UnguessableToken> script_tool_invocation_id) = 0;
 
-  virtual void DispatchWillSendSubmitEvent(HTMLFormElement*) = 0;
-
   virtual void DidStartLoading() = 0;
   virtual void DidStopLoading() = 0;
-
-  virtual bool NavigateBackForward(
-      int offset,
-      base::TimeTicks actual_navigation_start,
-      std::optional<scheduler::TaskAttributionId> task_state_id) const = 0;
-
-  virtual void DidDispatchPingLoader(const KURL&) = 0;
 
   // Will be called when |PerformanceTiming| events are updated
   virtual void DidChangePerformanceTiming() {}
@@ -244,10 +234,6 @@ class CORE_EXPORT LocalFrameClient : public FrameClient {
   virtual String UserAgent() = 0;
   virtual std::optional<blink::UserAgentMetadata> UserAgentMetadata() = 0;
 
-  virtual String DoNotTrackValue() = 0;
-
-  virtual void TransitionToCommittedForNewPage() = 0;
-
   virtual LocalFrame* CreateFrame(const AtomicString& name,
                                   HTMLFrameOwnerElement*) = 0;
 
@@ -259,9 +245,6 @@ class CORE_EXPORT LocalFrameClient : public FrameClient {
 
   virtual void DidChangeScrollOffset() {}
 
-  // Immediately notifies the browser of a change in the current HistoryItem.
-  // Prefer DidUpdateCurrentHistoryItem().
-  virtual void NotifyCurrentHistoryItemChanged() {}
   // Notifies the browser of a change in the current HistoryItem on a timer,
   // allowing batching of updates.
   virtual void DidUpdateCurrentHistoryItem() {}

@@ -266,8 +266,6 @@ class CORE_EXPORT EmptyLocalFrameClient : public LocalFrameClient {
           mojom::blink::NavigationResumeDeferredCommitListener>,
       std::optional<base::UnguessableToken> script_tool_invocation_id) override;
 
-  void DispatchWillSendSubmitEvent(HTMLFormElement*) override;
-
   void DidStartLoading() override {}
   void DidStopLoading() override {}
 
@@ -279,17 +277,6 @@ class CORE_EXPORT EmptyLocalFrameClient : public LocalFrameClient {
     return blink::UserAgentMetadata();
   }
 
-  String DoNotTrackValue() override { return String(); }
-
-  void TransitionToCommittedForNewPage() override {}
-
-  bool NavigateBackForward(
-      int offset,
-      base::TimeTicks,
-      std::optional<scheduler::TaskAttributionId>) const override {
-    return false;
-  }
-  void DidDispatchPingLoader(const KURL&) override {}
   LocalFrame* CreateFrame(const AtomicString&, HTMLFrameOwnerElement*) override;
 
   // CreateWebMediaPlayer() and CreateRemotePlaybackClient() removed along with

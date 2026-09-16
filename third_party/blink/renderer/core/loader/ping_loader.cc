@@ -88,7 +88,6 @@ void PingLoader::SendLinkAuditPing(LocalFrame* frame,
   params.MutableOptions().initiator_info.name =
       fetch_initiator_type_names::kPing;
 
-  frame->Client()->DidDispatchPingLoader(ping_url);
   FetchUtils::LogFetchKeepAliveRequestMetric(
       params.GetResourceRequest().GetRequestContext(),
       FetchUtils::FetchKeepAliveRequestState::kTotal);
@@ -121,10 +120,6 @@ void PingLoader::SendViolationReport(ExecutionContext* execution_context,
   FetchParameters params(std::move(request), ResourceLoaderOptions());
   params.MutableOptions().initiator_info.name =
       fetch_initiator_type_names::kViolationreport;
-
-  auto* window = DynamicTo<LocalDOMWindow>(execution_context);
-  if (window && window->GetFrame())
-    window->GetFrame()->Client()->DidDispatchPingLoader(report_url);
 
   FetchUtils::LogFetchKeepAliveRequestMetric(
       params.GetResourceRequest().GetRequestContext(),

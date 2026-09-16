@@ -1359,8 +1359,6 @@ void FrameLoader::CommitDocumentLoader(DocumentLoader* document_loader,
 
   TakeObjectSnapshot();
 
-  Client()->TransitionToCommittedForNewPage();
-
   document_loader_->CommitNavigation();
 
   base::UmaHistogramTimes("Blink.CommitDocumentLoaderTime", timer.Elapsed());
