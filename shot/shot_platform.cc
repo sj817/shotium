@@ -5,6 +5,7 @@
 #include "shot/shot_platform.h"
 
 #include <memory>
+#include <optional>
 #include <string_view>
 #include <utility>
 
