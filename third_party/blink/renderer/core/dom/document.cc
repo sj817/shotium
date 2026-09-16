@@ -2921,14 +2921,6 @@ void Document::LayoutUpdated() {
   DCHECK(GetFrame());
   DCHECK(View());
 
-  // Plugins can run script inside layout which can detach the page.
-  // TODO(dcheng): Does it make sense to do any of this work if detached?
-  if (auto* frame = GetFrame()) {
-    if (frame->IsMainFrame()) {
-      frame->GetPage()->GetChromeClient().MainFrameLayoutUpdated();
-    }
-  }
-
   Markers().InvalidateRectsForAllTextMatchMarkers();
 }
 

@@ -1259,32 +1259,7 @@ void ScrollableArea::Trace(Visitor* visitor) const {
 void ScrollableArea::InjectScrollbarGestureScroll(
     ScrollOffset delta,
     ui::ScrollGranularity granularity,
-    WebInputEvent::Type gesture_type) const {
-  // All ScrollableArea's have a layout box, except for the VisualViewport.
-  // We shouldn't be injecting scrolls for the visual viewport scrollbar, since
-  // it is not hit-testable.
-  DCHECK(GetLayoutBox());
-
-  // Speculative fix for crash reports (crbug.com/1307510).
-  if (!GetLayoutBox() || !GetLayoutBox()->GetFrame())
-    return;
-
-  if (granularity == ui::ScrollGranularity::kScrollByPrecisePixel ||
-      granularity == ui::ScrollGranularity::kScrollByPixel) {
-    // Pixel-based deltas need to be scaled up by the input event scale factor,
-    // since the GSUs will be scaled down by that factor when being handled.
-    float scale = 1;
-    LocalFrameView* root_view =
-        GetLayoutBox()->GetFrame()->LocalFrameRoot().View();
-    if (root_view)
-      scale = root_view->InputEventsScaleFactor();
-    delta.Scale(scale);
-  }
-
-  GetChromeClient()->InjectScrollbarGestureScroll(
-      *GetLayoutBox()->GetFrame(), delta, granularity, GetScrollElementId(),
-      gesture_type);
-}
+    WebInputEvent::Type gesture_type) const {}
 
 ScrollableArea* ScrollableArea::GetForScrolling(const LayoutBox* layout_box) {
   if (!layout_box)

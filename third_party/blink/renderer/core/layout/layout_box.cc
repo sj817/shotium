@@ -1135,9 +1135,6 @@ void LayoutBox::UpdateAfterLayout() {
     // LocalFrameView with the new size.
     LocalFrame& frame = GetFrameView()->GetFrame();
     GetFrameView()->AdjustViewSize();
-    if (frame.IsMainFrame()) {
-      frame.GetChromeClient().ResizeAfterLayout();
-    }
     if (IsScrollContainer()) {
       auto* scrollable_area = GetScrollableArea();
       using ClampScope = PaintLayerScrollableArea::DelayScrollOffsetClampScope;

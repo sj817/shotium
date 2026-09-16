@@ -2823,12 +2823,6 @@ void LocalFrameView::UpdateStyleAndLayout() {
         did_run_autosize_layout = true;
       }
     }
-    // Suppress notifications during scroll-width autosizing, then report any
-    // stable size change.
-    if (did_run_autosize_layout && frame_->IsMainFrame() &&
-        RuntimeEnabledFeatures::AutoSizeUsesScrollWidthForOverflowEnabled()) {
-      frame_->GetChromeClient().ResizeAfterLayout();
-    }
     // We may have a mismatch as we impose an additional min-content constraint
     // while auto-sizing, set the view as needing layout which will then fall
     // through to the third-pass below.

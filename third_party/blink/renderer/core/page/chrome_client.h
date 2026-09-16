@@ -33,12 +33,10 @@
 #include "cc/metrics/begin_main_frame_metrics.h"
 #include "cc/paint/draw_image.h"
 #include "third_party/blink/public/common/dom_storage/session_storage_namespace_id.h"
-#include "third_party/blink/public/common/input/web_gesture_event.h"
 #include "third_party/blink/public/common/input/web_input_event.h"
 #include "third_party/blink/public/common/page/drag_operation.h"
 #include "third_party/blink/public/mojom/devtools/console_message.mojom-blink-forward.h"
 #include "third_party/blink/public/mojom/input/focus_type.mojom-blink-forward.h"
-#include "third_party/blink/public/mojom/scroll/scroll_into_view_params.mojom-blink.h"
 #include "third_party/blink/renderer/core/core_export.h"
 #include "third_party/blink/renderer/core/dom/document.h"
 #include "third_party/blink/renderer/core/html/forms/popup_menu.h"
@@ -60,7 +58,6 @@
 
 namespace cc {
 struct ElementId;
-class Layer;
 struct OverscrollBehavior;
 }  // namespace cc
 
@@ -81,7 +78,6 @@ class DateTimeChooser;
 class DateTimeChooserClient;
 class Element;
 class Frame;
-class FullscreenOptions;
 class HTMLFormControlElement;
 class HTMLFormElement;
 class HTMLInputElement;
@@ -95,11 +91,8 @@ class Node;
 class Page;
 class WebDragData;
 
-enum class FullscreenRequestType;
-
 struct DateTimeChooserParameters;
 struct FrameLoadRequest;
-struct ViewportDescription;
 struct WebWindowFeatures;
 
 using CompositorElementId = cc::ElementId;
@@ -190,36 +183,6 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
                      const SessionStorageNamespaceId&,
                      bool& consumed_user_gesture);
 
-  // For a scrollbar scroll action, injects a gesture event of |injected_type|
-  // to be dispatched at a later point in time. |injected_type| is required to
-  // be one of GestureScroll{Begin,Update,End}. If the main thread is currently
-  // handling an input event, the gesture will be dispatched immediately after
-  // the current event is finished being processed.
-  // If there is no input event being handled, the gesture is queued up
-  // on the main thread's input event queue.
-  // The dispatched gesture will scroll the ScrollableArea identified by
-  // |scrollable_area_element_id| by the given delta+granularity.
-  // See also InputHandlerProxy::InjectScrollbarGestureScroll() which may
-  // shortcut callers of this function for composited scrollbars.
-  virtual void InjectScrollbarGestureScroll(
-      LocalFrame& local_frame,
-      const gfx::Vector2dF& delta,
-      ui::ScrollGranularity granularity,
-      CompositorElementId scrollable_area_element_id,
-      WebInputEvent::Type injected_type) {}
-
-  // Finishes a ScrollIntoView for a focused editable element by performing a
-  // view-level reveal. That is, when an embedder requests to reveal a focused
-  // editable, the editable is first ScrollIntoView'ed in the layout tree to
-  // ensure it's visible in the outermost document but stops short of scrolling
-  // the outermost frame. This method will then perform a platform-specific
-  // reveal of the editable, e.g. by animating a scroll and zoom in to a
-  // legible scale. This should only be called in a WebView where the main
-  // frame is local and outermost.
-  virtual void FinishScrollFocusedEditableIntoView(
-      const gfx::RectF& caret_rect_in_root_frame,
-      mojom::blink::ScrollIntoViewParamsPtr params) {}
-
   // Set the browser's behavior when overscroll happens, e.g. whether to glow
   // or navigate. This may only be called for the main frame, and takes it as
   // reference to make it clear that callers may only call this while a local
@@ -258,26 +221,12 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
   virtual void SetCursor(const ui::Cursor&, LocalFrame* local_root) = 0;
   virtual void SetCursorOverridden(bool) = 0;
 
-  virtual void AutoscrollStart(const gfx::PointF& position, LocalFrame*) {}
-  virtual void AutoscrollFling(const gfx::Vector2dF& velocity, LocalFrame*) {}
-  virtual void AutoscrollEnd(LocalFrame*) {}
-
   // Returns the scale used to convert incoming input events while emulating
   // device metics.
   virtual float InputEventsScaleForEmulation() const { return 1; }
 
-  virtual void DispatchViewportPropertiesDidChange(
-      const ViewportDescription&) const {}
-
   virtual void ContentsSizeChanged(LocalFrame*, const gfx::Size&) const = 0;
-  // Call during pinch gestures, or when page-scale changes on main-frame load.
-  virtual void PageScaleFactorChanged() const {}
-  virtual float ClampPageScaleFactorToLimits(float scale) const {
-    return scale;
-  }
   virtual void OutermostMainFrameScrollOffsetChanged() const = 0;
-  virtual void ResizeAfterLayout() const {}
-  virtual void MainFrameLayoutUpdated() const {}
 
   void MouseDidMoveOverElement(LocalFrame&,
                                const HitTestLocation&,
@@ -315,17 +264,6 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
       DateTimeChooserClient*,
       const DateTimeChooserParameters&) = 0;
   virtual void OpenTextDataListChooser(HTMLInputElement&) = 0;
-
-
-  // Pass nullptr as the cc::Layer to detach the root layer.
-  virtual void EnterFullscreen(LocalFrame&,
-                               const FullscreenOptions*,
-                               FullscreenRequestType) {}
-  virtual void ExitFullscreen(LocalFrame&) {}
-  virtual void FullscreenElementChanged(Element* old_element,
-                                        Element* new_element,
-                                        const FullscreenOptions* options,
-                                        FullscreenRequestType) {}
 
   // The client keeps track of which touch/mousewheel event types have handlers,
   // and if they do, whether the handlers are passive and/or blocking. This

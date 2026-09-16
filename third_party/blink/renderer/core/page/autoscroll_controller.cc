@@ -159,7 +159,6 @@ void AutoscrollController::StopAutoscrollIfNeeded(LayoutObject* layout_object) {
 
   if (MiddleClickAutoscrollInProgress() && !horizontal_autoscroll_layout_box_ &&
       !vertical_autoscroll_layout_box_) {
-    page_->GetChromeClient().AutoscrollEnd(layout_object->GetFrame());
     autoscroll_type_ = kNoAutoscroll;
   }
 
@@ -328,7 +327,6 @@ void AutoscrollController::HandleMouseMoveForMiddleClickAutoscroll(
     view->SetCursor(MiddleClickAutoscrollCursor(velocity, can_scroll_vertically,
                                                 can_scroll_horizontally));
     page_->GetChromeClient().SetCursorOverridden(true);
-    page_->GetChromeClient().AutoscrollFling(velocity, frame);
   }
 }
 
@@ -354,7 +352,6 @@ void AutoscrollController::StopMiddleClickAutoscroll(LocalFrame* frame) {
   if (!MiddleClickAutoscrollInProgress())
     return;
 
-  page_->GetChromeClient().AutoscrollEnd(frame);
   autoscroll_type_ = kNoAutoscroll;
   page_->GetChromeClient().SetCursorOverridden(false);
   frame->LocalFrameRoot().GetEventHandler().UpdateCursor();
@@ -448,8 +445,6 @@ void AutoscrollController::StartMiddleClickAutoscroll(
         last_velocity_, can_scroll_vertically, can_scroll_horizontally));
   }
   page_->GetChromeClient().SetCursorOverridden(true);
-  page_->GetChromeClient().AutoscrollStart(
-      gfx::ScalePoint(position, 1 / frame->DevicePixelRatio()), frame);
 }
 
 void AutoscrollController::Animate() {

@@ -132,8 +132,6 @@ void FullscreenElementChanged(Document& document,
     // TODO(foolip): Synchronize hover state changes with animation frames.
     // https://crbug.com/668758
     frame->GetEventHandler().ScheduleHoverStateUpdate();
-    frame->GetChromeClient().FullscreenElementChanged(
-        old_element, new_element, new_options, new_request_type);
 
     // Update paint properties on the visual viewport since
     // user-input-scrollable bits will change based on fullscreen state.
@@ -854,8 +852,6 @@ void Fullscreen::ContinueRequestFullscreenAfterConditionsEnforcement(
 
   From(window).pending_requests_.push_back(
       MakeGarbageCollected<PendingRequest>(pending, request_type, options));
-  LocalFrame& frame = *window.GetFrame();
-  frame.GetChromeClient().EnterFullscreen(frame, options, request_type);
 
   // 6. If `error` is false, then consume user activation given `pendingDoc`’s
   // relevant global object.
@@ -1101,8 +1097,6 @@ void Fullscreen::ExitFullscreen(Document& doc,
       ContinueExitFullscreen(&doc, true /* resize */);
     } else {
       ++From(*top_level_doc.domWindow()).pending_exits_;
-      LocalFrame& frame = *doc.GetFrame();
-      frame.GetChromeClient().ExitFullscreen(frame);
     }
   } else {
     DCHECK(!ua_originated);

@@ -624,14 +624,6 @@ bool ScrollRectToVisible(const LayoutObject& layout_object,
       local_root_view->ScrollRectToVisibleInRemoteParent(*result.rect,
                                                          std::move(params));
     }
-  } else if (params->for_focused_editable) {
-    // If we're scrolling a focused editable into view, once we reach the main
-    // frame we need to perform an animated scroll and zoom to bring the
-    // editable into a legible size.
-    gfx::RectF caret_rect_in_root_frame(*result.rect);
-    DCHECK(!caret_rect_in_root_frame.IsEmpty());
-    local_root.GetPage()->GetChromeClient().FinishScrollFocusedEditableIntoView(
-        caret_rect_in_root_frame, std::move(params));
   }
 
   return result.did_scroll;

@@ -133,12 +133,6 @@ void ViewportData::UpdateViewportDescription() {
 
     viewport_fit_ = current_viewport_fit;
   }
-
-  if (document_->GetFrame()->IsMainFrame() &&
-      document_->GetPage()->GetVisualViewport().IsActiveViewport()) {
-    document_->GetPage()->GetChromeClient().DispatchViewportPropertiesDidChange(
-        GetViewportDescription());
-  }
 }
 
 void ViewportData::SetHasComplexSafeAreaConstraint(bool value) {
