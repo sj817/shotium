@@ -118,12 +118,6 @@ class CORE_EXPORT EmptyChromeClient : public ChromeClient {
   void DraggableRegionsChanged() override {}
   void SetOverscrollBehavior(LocalFrame& frame,
                              const cc::OverscrollBehavior&) override {}
-  void RegisterForCommitObservation(CommitObserver*) override {}
-  void UnregisterFromCommitObservation(CommitObserver*) override {}
-  void WillCommitCompositorFrame() override {}
-  std::unique_ptr<cc::ScopedPauseRendering> PauseRendering(
-      LocalFrame&) override;
-  std::optional<int> GetMaxRenderBufferBounds(LocalFrame& frame) const override;
   bool ShouldReportDetailedMessageForSourceAndSeverity(
       LocalFrame&,
       mojom::blink::ConsoleMessageLevel,
@@ -165,7 +159,6 @@ class CORE_EXPORT EmptyChromeClient : public ChromeClient {
   }
   bool HasOpenedPopup() const override { return false; }
   PopupMenu* OpenPopupMenu(LocalFrame&, HTMLSelectElement&) override;
-  DOMWindow* PagePopupWindowForTesting() const override { return nullptr; }
 
   bool TabsToLinks() override { return false; }
 
@@ -211,19 +204,12 @@ class CORE_EXPORT EmptyChromeClient : public ChromeClient {
   void OpenTextDataListChooser(HTMLInputElement&) override;
   void SetCursor(const ui::Cursor&, LocalFrame* local_root) override {}
   void SetCursorOverridden(bool) override {}
-  ui::Cursor LastSetCursorForTesting() const override {
-    return PointerCursor();
-  }
   void SetEventListenerProperties(LocalFrame*,
                                   cc::EventListenerClass,
                                   cc::EventListenerProperties) override {}
   void SetHasScrollEventHandlers(LocalFrame*, bool) override {}
   void SetNeedsLowLatencyInput(LocalFrame*, bool) override {}
-  void SetNeedsUnbufferedInputForDebugger(LocalFrame*, bool) override {}
-  void RequestUnbufferedInputEvents(LocalFrame*) override {}
   void SetTouchAction(LocalFrame*, TouchAction) override {}
-  int GetLayerTreeId(LocalFrame& frame) override { return 0; }
-  void SetCursorForPlugin(const ui::Cursor&, LocalFrame*) override {}
   void InstallSupplements(LocalFrame&) override {}
   void OutermostMainFrameScrollOffsetChanged() const override {}
 

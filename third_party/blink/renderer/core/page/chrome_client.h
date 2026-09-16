@@ -62,7 +62,6 @@ namespace cc {
 struct ElementId;
 class Layer;
 struct OverscrollBehavior;
-class ScopedPauseRendering;
 }  // namespace cc
 
 namespace display {
@@ -190,35 +189,6 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
   // browser.
   virtual void DraggableRegionsChanged() = 0;
 
-  // Notifies clients immediately before a newly committed main frame is pushed
-  // to the compositor thread.
-  struct CORE_EXPORT CommitObserver : public GarbageCollectedMixin {
-    virtual void WillCommitCompositorFrame() {}
-
-   protected:
-    virtual ~CommitObserver() = default;
-  };
-
-  virtual void RegisterForCommitObservation(CommitObserver*) = 0;
-  virtual void UnregisterFromCommitObservation(CommitObserver*) = 0;
-
-  virtual void WillCommitCompositorFrame() = 0;
-  virtual void RequestFrameWithoutVSyncFromRoot(LocalFrame& frame) {}
-
-  virtual std::unique_ptr<cc::ScopedPauseRendering> PauseRendering(
-      LocalFrame& main_frame) = 0;
-
-  // Returns the maximum bounds for buffers allocated for rasterization and
-  // compositing.
-  // Returns null if the compositing stack has not been initialized yet.
-  // |frame| must be a local frame.
-  virtual std::optional<int> GetMaxRenderBufferBounds(
-      LocalFrame& frame) const = 0;
-
-  virtual std::optional<bool> GetWebRTCPostQuantumKeyAgreement() const {
-    return std::nullopt;
-  }
-
   // The LocalFrame pointer provides the ChromeClient with context about which
   // LocalFrame wants to create the new Page. Also, the newly created window
   // should not be shown to the user until the ChromeClient of the newly
@@ -312,13 +282,6 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
   virtual void AutoscrollFling(const gfx::Vector2dF& velocity, LocalFrame*) {}
   virtual void AutoscrollEnd(LocalFrame*) {}
 
-  virtual ui::Cursor LastSetCursorForTesting() const = 0;
-  Node* LastSetTooltipNodeForTesting() const {
-    return last_mouse_over_node_.Get();
-  }
-
-  virtual void SetCursorForPlugin(const ui::Cursor&, LocalFrame*) = 0;
-
   // Returns the scale used to convert incoming input events while emulating
   // device metics.
   virtual float InputEventsScaleForEmulation() const { return 1; }
@@ -360,9 +323,6 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
                                          const gfx::Rect&) = 0;
   virtual void ClearKeyboardTriggeredTooltip(LocalFrame&) = 0;
   void ClearToolTip(LocalFrame&);
-  String GetLastToolTipTextForTesting() {
-    return current_tool_tip_text_for_test_;
-  }
 
   bool Print(LocalFrame*);
 
@@ -408,17 +368,13 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
 
   virtual void SetHasScrollEventHandlers(LocalFrame*, bool) = 0;
   virtual void SetNeedsLowLatencyInput(LocalFrame*, bool) = 0;
-  virtual void SetNeedsUnbufferedInputForDebugger(LocalFrame*, bool) = 0;
-  virtual void RequestUnbufferedInputEvents(LocalFrame*) = 0;
   virtual void SetTouchAction(LocalFrame*, TouchAction) = 0;
 
   // Checks if there is an opened popup, called by LayoutMenuList::showPopUp().
   virtual bool HasOpenedPopup() const = 0;
   virtual PopupMenu* OpenPopupMenu(LocalFrame&, HTMLSelectElement&) = 0;
-  virtual DOMWindow* PagePopupWindowForTesting() const = 0;
 
   // Allow overriding whether external popup menus are used.
-  virtual void SetUseExternalPopupMenus(bool) {}
   virtual bool UseExternalPopupMenus() const { return false; }
 
   virtual void SetBrowserControlsState(float top_height,
@@ -469,10 +425,6 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
                              bool speculative) {
     std::move(callback).Run(false);
   }
-
-  // A stable numeric Id for |frame|'s local root's compositor. For
-  // tracing/debugging purposes.
-  virtual int GetLayerTreeId(LocalFrame& frame) = 0;
 
   virtual void Trace(Visitor*) const;
   virtual void DocumentDetached(Document&) {}
@@ -531,9 +483,6 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
   WeakMember<Node> last_mouse_over_node_;
   PhysicalOffset last_tool_tip_point_;
   String last_tool_tip_text_;
-  // |last_tool_tip_text_| is kept even if ClearToolTip is called. This is for
-  // the tooltip text that is cleared when ClearToolTip is called.
-  String current_tool_tip_text_for_test_;
 
   FRIEND_TEST_ALL_PREFIXES(ChromeClientTest, UpdateTooltipUnderCursorFlood);
   FRIEND_TEST_ALL_PREFIXES(ChromeClientTest,

@@ -204,7 +204,6 @@ void ChromeClient::UpdateTooltipUnderCursor(LocalFrame& frame,
   last_tool_tip_point_ = location.Point();
   last_tool_tip_text_ = tool_tip;
   last_mouse_over_node_ = result.InnerNodeOrImageMapImage();
-  current_tool_tip_text_for_test_ = last_tool_tip_text_;
   UpdateTooltipUnderCursor(frame, tool_tip, tool_tip_direction);
 }
 
@@ -223,7 +222,6 @@ void ChromeClient::ElementFocusedFromKeypress(LocalFrame& frame,
 }
 
 void ChromeClient::ClearToolTip(LocalFrame& frame) {
-  current_tool_tip_text_for_test_ = String();
   // Do not check last_tool_tip_* and do not update them intentionally.
   // We don't want to show tooltips with same content after clearToolTip().
   UpdateTooltipUnderCursor(frame, String(), TextDirection::kLtr);
