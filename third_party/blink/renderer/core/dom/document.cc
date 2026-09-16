@@ -76,7 +76,6 @@
 #include "third_party/blink/public/platform/task_type.h"
 #include "third_party/blink/public/platform/web_content_settings_client.h"
 #include "third_party/blink/public/web/web_print_page_description.h"
-#include "third_party/blink/renderer/bindings/core/v8/v8_aria_notification_options.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_box_quad_options.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_caret_position_from_point_options.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_convert_coordinate_options.h"
@@ -6536,17 +6535,11 @@ void Document::PermissionServiceConnectionError() {
   data_->permission_service_.reset();
 }
 
-// fragmentDirective() -- window.location's ":~:" directive list, exposed to
+// Fragment directive API, currently used to feature detect text-fragments.
+// https://wicg.github.io/scroll-to-text-fragment/#feature-detectability
+// fragmentDirective() -- the object that used to be exposed to
 // script as document.fragmentDirective -- went with the FragmentDirective
 // class and the scroll-to-text feature behind it.
-
-void Document::ariaNotify(const String& announcement,
-                          const AriaNotificationOptions* options) {
-  DCHECK(RuntimeEnabledFeatures::AriaNotifyEnabled(GetExecutionContext()));
-
-  // Used to forward the announcement to the AXObjectCache; no accessibility
-  // tree exists to notify anymore.
-}
 
 static bool IsValidNameNonASCII(base::span<const LChar> characters) {
   if (!IsValidNameStart(characters[0]))

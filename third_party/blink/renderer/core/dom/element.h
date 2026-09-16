@@ -84,7 +84,6 @@ namespace blink {
 class AnchorPositionScrollData;
 class Animation;
 class AnimationTrigger;
-class AriaNotificationOptions;
 class Attr;
 class Attribute;
 class BoxQuadOptions;
@@ -635,9 +634,6 @@ class CORE_EXPORT Element : public ContainerNode {
   const AtomicString& ComputedRoleNoLifecycleUpdate();
   String computedName();
   String ComputedNameNoLifecycleUpdate();
-
-  void ariaNotify(const String& announcement,
-                  const AriaNotificationOptions* options);
 
   void DidMoveToNewDocument(Document&) override;
 

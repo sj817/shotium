@@ -144,7 +144,6 @@ namespace blink {
 
 class Agent;
 class AnimationClock;
-class AriaNotificationOptions;
 class Attr;
 class BoxQuadOptions;
 class CaretPosition;
@@ -1288,9 +1287,6 @@ class CORE_EXPORT Document : public ContainerNode,
   // Fragment directive API, currently used to feature detect text-fragments.
   // https://wicg.github.io/scroll-to-text-fragment/#feature-detectability
   // fragmentDirective() removed with the scroll-to-text-fragment feature.
-
-  void ariaNotify(const String& announcement,
-                  const AriaNotificationOptions* options);
 
   // The following implements the rule from HTML 4 for what valid names are.
   // To get this right for all the XML cases, we probably have to improve this

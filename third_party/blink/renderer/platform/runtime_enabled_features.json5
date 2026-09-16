@@ -614,15 +614,6 @@
       status: {"Win": "stable", "Mac": "stable", "Linux": "stable"},
     },
     {
-      name: "AriaNotify",
-      status: {"Android": "stable", "Win": "stable", "Mac": "stable", "Linux": "stable"},
-      implied_by: ["AriaNotifyV2"],
-    },
-    {
-      name: "AriaNotifyV2",
-      status: {"Android": "test", "Win": "test", "Mac": "test", "Linux": "test"},
-    },
-    {
       name: "AriaRowColIndexText",
       status: "stable",
     },

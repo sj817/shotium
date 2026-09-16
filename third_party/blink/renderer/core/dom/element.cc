@@ -39,7 +39,6 @@
 #include "third_party/blink/public/mojom/scroll/scroll_enums.mojom-blink.h"
 #include "third_party/blink/public/mojom/scroll/scroll_into_view_params.mojom-blink.h"
 #include "third_party/blink/public/web/web_autofill_state.h"
-#include "third_party/blink/renderer/bindings/core/v8/v8_aria_notification_options.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_box_quad_options.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_check_visibility_options.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_convert_coordinate_options.h"
@@ -3272,14 +3271,6 @@ String Element::computedName() {
 
 String Element::ComputedNameNoLifecycleUpdate() {
   return String();
-}
-
-void Element::ariaNotify(const String& announcement,
-                         const AriaNotificationOptions* options) {
-  DCHECK(RuntimeEnabledFeatures::AriaNotifyEnabled(GetExecutionContext()));
-
-  // Used to forward the announcement to the AXObjectCache; no accessibility
-  // tree exists to notify anymore.
 }
 
 bool Element::toggleAttribute(const AtomicString& qualified_name,
