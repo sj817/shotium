@@ -456,13 +456,6 @@ class CORE_EXPORT NodeRareData final : public GarbageCollected<NodeRareData> {
   }
   void SetAffectedByMultipleHas() { flags_.affected_by_multiple_has_ = true; }
 
-  bool HasBeenHeuristicCustomPasswordCSS() const {
-    return flags_.has_been_heuristic_custom_password_css_;
-  }
-  void SetHasBeenHeuristicCustomPasswordCSS() {
-    flags_.has_been_heuristic_custom_password_css_ = true;
-  }
-
   ContentData* GetAltContentData() const;
   [[nodiscard]] RareDataUpdate<void> SetAltContentData(
       ContentData* content_data);
@@ -730,12 +723,7 @@ class CORE_EXPORT NodeRareData final : public GarbageCollected<NodeRareData> {
     // and explicitly nullptr CustomElementRegistry.
     unsigned has_custom_element_registry_ : 1 = false;
 
-    // Whether this element is or has ever been identified as a custom
-    // password field via CSS -webkit-text-security heuristics.
-    // This is distinct from native passwords (<input type=password>).
-    unsigned has_been_heuristic_custom_password_css_ : 1 = false;
-
-    // 1 free bit in the second word (9 free bits overall).
+    // 2 free bits in the second word (10 free bits overall).
   };
   static_assert(sizeof(Flags) <= 8, "Flags struct should not exceed 64 bits");
 

@@ -48,7 +48,6 @@
 #include "third_party/blink/renderer/core/editing/text_affinity.h"
 #include "third_party/blink/renderer/core/editing/visible_position.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
-#include "third_party/blink/renderer/core/html/custom_password_heuristics.h"
 #include "third_party/blink/renderer/core/html/forms/html_input_element.h"
 #include "third_party/blink/renderer/core/html/forms/html_text_area_element.h"
 #include "third_party/blink/renderer/core/html/forms/text_control_inner_elements.h"
@@ -1117,14 +1116,6 @@ void TextControlElement::SetInnerEditorValue(const String& value) {
   // Add a placeholder <br> so that we can put the caret at the next line of
   // the last newline.
   AdjustPlaceholderBreakElement();
-
-  if (text_is_changed) {
-    MaybeSetHasBeenHeuristicCustomPasswordJS();
-
-    // Used to notify AXObjectCache that the text form control changed.
-    // AXObjectCache is gone (no accessibility tree in a screenshot
-    // renderer).
-  }
 }
 
 void TextControlElement::AppendTextOrBr(const String& value,
@@ -1579,21 +1570,6 @@ void TextControlElement::SetSkipNextSetValueAutoDiff(bool should_skip) {
 
 bool TextControlElement::ShouldSkipNextSetValueAutoDiff() const {
   return skip_next_set_value_auto_diff_;
-}
-
-bool TextControlElement::IsNativeOrHeuristicPassword() const {
-  return HTMLFormControlElementWithState::IsNativeOrHeuristicPassword() ||
-         HasBeenHeuristicCustomPasswordJS();
-}
-
-void TextControlElement::MaybeSetHasBeenHeuristicCustomPasswordJS() {
-  bool new_value = IsTextControl() && (has_been_heuristic_custom_password_js_ ||
-                                       IsLikelyJSCustomPasswordField(Value()));
-  if (new_value == has_been_heuristic_custom_password_js_) {
-    return;
-  }
-
-  has_been_heuristic_custom_password_js_ = new_value;
 }
 
 }  // namespace blink

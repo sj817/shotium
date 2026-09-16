@@ -417,8 +417,6 @@ void HTMLInputElement::InitializeTypeInParsing() {
 
   UpdateHasBeenPasswordField(new_type_name);
 
-  MaybeSetHasBeenHeuristicCustomPasswordJS();
-
   UpdateWillValidateCache();
 
   if (!default_value.IsNull())
@@ -651,8 +649,6 @@ void HTMLInputElement::UpdateType(const AtomicString& type_attribute_value) {
   }
 
   UpdateHasBeenPasswordField(new_type_name);
-
-  MaybeSetHasBeenHeuristicCustomPasswordJS();
 
   SetNeedsValidityCheck();
   if ((could_be_successful_submit_button || CanBeSuccessfulSubmitButton()) &&
@@ -1153,11 +1149,6 @@ void HTMLInputElement::UpdateHasBeenPasswordField(
   }
 
   has_been_password_field_ = new_value;
-}
-
-bool HTMLInputElement::IsNativeOrHeuristicPassword() const {
-  return TextControlElement::IsNativeOrHeuristicPassword() ||
-         HasBeenPasswordField();
 }
 
 void HTMLInputElement::MaybeSetHasBeenPasswordField() {

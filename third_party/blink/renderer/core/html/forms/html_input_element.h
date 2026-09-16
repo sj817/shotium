@@ -419,9 +419,6 @@ class CORE_EXPORT HTMLInputElement
  private:
   enum AutoCompleteSetting { kUninitialized, kOn, kOff };
 
-  // Element:
-  bool IsNativeOrHeuristicPassword() const override;
-
   void WillChangeForm() final;
   void DidChangeForm() final;
   InsertionNotificationRequest InsertedInto(ContainerNode&) override;

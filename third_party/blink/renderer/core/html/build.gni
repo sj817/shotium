@@ -44,8 +44,6 @@ blink_core_sources_html = [
   "custom/custom_state_set.h",
   "custom/element_internals.cc",
   "custom/element_internals.h",
-  "custom_password_heuristics.cc",
-  "custom_password_heuristics.h",
   "document_all_name_collection.cc",
   "document_all_name_collection.h",
   "document_name_collection.cc",
