@@ -160,9 +160,9 @@ source_set("prerequisites") {
 
     # The baseline had //ui/accessibility/mojom:mojom_blink here. That whole
     # directory is gone -- shot serves no accessibility tree to anyone -- but
-    # the *enums* survive it: the generated ax_utilities_* sources include
+    # the *enums* survive it: element_internals and form behaviors include
     # ui/accessibility/ax_enums.mojom-blink.h to name the roles and attributes
-    # that CSS and the DOM already carry. So the narrow edge goes back, not the
+    # that DOM and form controls carry. So the narrow edge goes back, not the
     # broad one.
     #
     # This only ever failed a from-scratch build. In an incremental output
@@ -924,24 +924,6 @@ make_names("make_core_generated_shadow_element_names") {
   output_dir = "$blink_core_output_dir/html/shadow"
 }
 
-code_generator("make_core_generated_ax_utilities") {
-  script = "../build/scripts/make_ax_utilities.py"
-  json_inputs = [ "html/aria_properties.json5" ]
-  templates = [
-    "../build/scripts/templates/ax_utilities_generated.h.tmpl",
-    "../build/scripts/templates/ax_utilities_generated_attributes.cc.tmpl",
-    "../build/scripts/templates/ax_utilities_generated_roles.cc.tmpl",
-    "../build/scripts/templates/ax_utilities_generated_naming.cc.tmpl",
-  ]
-  other_inputs = [ "../build/scripts/aria_properties.py" ]
-  outputs = [
-    "$blink_core_output_dir/accessibility/ax_utilities_generated.h",
-    "$blink_core_output_dir/accessibility/ax_utilities_generated_attributes.cc",
-    "$blink_core_output_dir/accessibility/ax_utilities_generated_roles.cc",
-    "$blink_core_output_dir/accessibility/ax_utilities_generated_naming.cc",
-  ]
-}
-
 make_names("make_core_generated_trusted_types_names") {
   in_files = [ "trustedtypes/trusted_types_names.json5" ]
   output_dir = "$blink_core_output_dir/trustedtypes"
@@ -1094,7 +1076,6 @@ blink_python_runner("make_core_generated_html_attribute_name_lookup_trie") {
 # target.
 targets_generating_sources = [
   ":make_core_generated_atrule_names",
-  ":make_core_generated_ax_utilities",
   ":make_core_generated_computed_style_base",
   ":make_core_generated_computed_style_initial_values",
   ":make_core_generated_css_primitive_value_unit_trie",
