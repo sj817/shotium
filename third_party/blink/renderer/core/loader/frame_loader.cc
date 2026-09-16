@@ -362,8 +362,6 @@ void FrameLoader::SaveScrollState() {
         visual_viewport.VisibleRect().OffsetFromOrigin());
     history_item->SetPageScaleFactor(visual_viewport.Scale());
   }
-
-  Client()->DidUpdateCurrentHistoryItem();
 }
 
 void FrameLoader::DispatchUnloadEventAndFillOldDocumentInfoIfNeeded(
@@ -443,10 +441,7 @@ void FrameLoader::FinishedParsing() {
 
   frame_->GetLocalFrameHostRemote().DidDispatchDOMContentLoadedEvent();
 
-  if (Client()) {
-    ScriptForbiddenScope forbid_scripts;
-    Client()->DispatchDidDispatchDOMContentLoadedEvent();
-  }
+
 
   // The URL's ":~:text=" directives were counted here so the load could be
   // held open until the text fragment had been matched and scrolled to.
@@ -692,8 +687,6 @@ void FrameLoader::StartNavigation(FrameLoadRequest& request,
   // always blocked here.
   if (frame_->IsMainFrame() && origin_window &&
       request.GetClientNavigationReason() != ClientNavigationReason::kReload &&
-      !frame_->Client()->AllowContentInitiatedDataUrlNavigations(
-          origin_window->Url()) &&
       (url.ProtocolIs("filesystem") ||
        (url.ProtocolIsData() &&
         network_utils::IsDataURLMimeTypeSupported(url)))) {
@@ -1571,8 +1564,6 @@ void FrameLoader::CancelClientNavigation(CancelNavigationReason reason) {
   // No navigation API listeners exist to inform of the cancellation.
 
   ClearClientNavigation();
-  Client()->AbortClientNavigation(reason ==
-                                  CancelNavigationReason::kNewNavigation);
 }
 
 void FrameLoader::DispatchDidClearDocumentOfWindowObject() {

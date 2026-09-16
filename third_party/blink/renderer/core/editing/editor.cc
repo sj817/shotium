@@ -404,12 +404,7 @@ EphemeralRange Editor::SelectedRange() {
       .ToNormalizedEphemeralRange();
 }
 
-void Editor::RespondToChangedContents(const Position& position) {
-  // Used to notify the AXObjectCache that editable text content changed; no
-  // accessibility tree exists to notify anymore.
-
-  frame_->Client()->DidChangeContents();
-}
+void Editor::RespondToChangedContents(const Position& position) {}
 
 void Editor::NotifyAccessibilityOfDeletionOrInsertionInTextField(
     const SelectionForUndoStep& changed_selection,

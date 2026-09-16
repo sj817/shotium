@@ -40,7 +40,6 @@
 #include "mojo/public/cpp/bindings/pending_associated_receiver.h"
 #include "mojo/public/cpp/bindings/pending_associated_remote.h"
 #include "mojo/public/cpp/bindings/pending_remote.h"
-#include "services/network/public/cpp/permissions_policy/permissions_policy_declaration.h"
 #include "services/network/public/mojom/content_security_policy.mojom-blink-forward.h"
 #include "services/network/public/mojom/web_sandbox_flags.mojom-blink-forward.h"
 #include "third_party/blink/public/common/tokens/tokens.h"
@@ -54,16 +53,11 @@
 #include "third_party/blink/public/web/web_history_commit_type.h"
 #include "third_party/blink/public/web/web_navigation_params.h"
 #include "third_party/blink/renderer/core/core_export.h"
-#include "third_party/blink/renderer/core/dom/icon_url.h"
 #include "third_party/blink/renderer/core/frame/frame_client.h"
 #include "third_party/blink/renderer/core/frame/frame_types.h"
-#include "third_party/blink/renderer/core/html/link_resource.h"
 #include "third_party/blink/renderer/core/loader/document_loader.h"
 #include "third_party/blink/renderer/core/loader/frame_loader_types.h"
 #include "third_party/blink/renderer/core/loader/navigation_policy.h"
-#include "third_party/blink/renderer/platform/loader/fetch/resource_load_priority.h"
-#include "third_party/blink/renderer/platform/loader/fetch/resource_loader_options.h"
-#include "third_party/blink/renderer/platform/network/content_security_policy_parsers.h"
 #include "third_party/blink/renderer/platform/weborigin/referrer.h"
 #include "third_party/blink/renderer/platform/wtf/forward.h"
 #include "third_party/blink/renderer/platform/wtf/vector.h"
@@ -78,19 +72,13 @@ class AssociatedInterfaceProvider;
 class DocumentLoader;
 class HTMLFormElement;
 class HTMLFrameOwnerElement;
-class HistoryItem;
 class KURL;
 class LocalDOMWindow;
 class LocalFrame;
-class ResourceError;
 class ResourceRequest;
 class ResourceResponse;
 class SourceLocation;
 class URLLoader;
-
-namespace scheduler {
-class TaskAttributionId;
-}  // namespace scheduler
 
 class CORE_EXPORT LocalFrameClient : public FrameClient {
  public:
@@ -120,28 +108,7 @@ class CORE_EXPORT LocalFrameClient : public FrameClient {
       const ResourceResponse&) {}
 
   virtual void DispatchDidHandleOnloadEvents() {}
-  virtual void DidFinishSameDocumentNavigation(
-      WebHistoryCommitType,
-      bool is_synchronously_committed,
-      mojom::blink::SameDocumentNavigationType,
-      bool is_client_redirect,
-      bool is_browser_initiated,
-      bool should_skip_screenshot,
-      base::UnguessableToken same_document_metrics_token,
-      bool caused_by_ad) {}
-  virtual void DispatchDidOpenDocumentInputStream(const KURL&) {}
-  virtual void DispatchDidReceiveTitle(const String&) {}
-  virtual void DispatchDidCommitLoad(
-      HistoryItem* item,
-      WebHistoryCommitType commit_type,
-      bool should_reset_browser_interface_broker,
-      const network::ParsedPermissionsPolicy& permissions_policy_header,
-      const blink::DocumentPolicyFeatureState& document_policy_header) {}
-  virtual void DispatchDidFailLoad(const ResourceError&,
-                                   WebHistoryCommitType) {}
-  virtual void DispatchDidDispatchDOMContentLoadedEvent() {}
   virtual void DispatchDidFinishLoad() {}
-  virtual void DispatchDidFinishLoadForPrinting() {}
 
   virtual void BeginNavigation(
       const ResourceRequest&,
@@ -191,20 +158,6 @@ class CORE_EXPORT LocalFrameClient : public FrameClient {
     return nullptr;
   }
 
-  virtual void DidChangeScrollOffset() {}
-
-  // Notifies the browser of a change in the current HistoryItem on a timer,
-  // allowing batching of updates.
-  virtual void DidUpdateCurrentHistoryItem() {}
-
-  // Called when a content-initiated, main frame navigation to a data URL is
-  // about to occur.
-  virtual bool AllowContentInitiatedDataUrlNavigations(const KURL&) {
-    return false;
-  }
-
-  virtual void DidChangeName(const String&) {}
-
   virtual WebContentSettingsClient* GetContentSettingsClient() {
     return nullptr;
   }
@@ -216,10 +169,6 @@ class CORE_EXPORT LocalFrameClient : public FrameClient {
     return nullptr;
   }
 
-  virtual void NotifyUserActivation() {}
-
-  virtual void AbortClientNavigation(bool for_new_navigation) {}
-
   virtual scoped_refptr<network::SharedURLLoaderFactory>
   GetURLLoaderFactory() {
     NOTREACHED();
@@ -228,13 +177,9 @@ class CORE_EXPORT LocalFrameClient : public FrameClient {
     return nullptr;
   }
 
-  virtual void DidChangeContents() {}
-
   virtual Frame* FindFrame(const AtomicString& name) const {
     return nullptr;
   }
-
-  virtual void SetMouseCapture(bool) {}
 
 };
 

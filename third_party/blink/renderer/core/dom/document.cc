@@ -1983,7 +1983,6 @@ void Document::DispatchDidReceiveTitle() {
     GetFrame()->GetLocalFrameHostRemote().UpdateTitle(shortened_title);
     GetFrame()->GetPage()->GetPageScheduler()->OnTitleOrFaviconUpdated();
   }
-  GetFrame()->Client()->DispatchDidReceiveTitle(title_);
 }
 
 void Document::setTitle(const String& title) {
@@ -3986,12 +3985,6 @@ bool Document::CheckCompletedInternal() {
     FetchDictionaryFromLinkHeader();
   } else if (loading_for_print_) {
     loading_for_print_ = false;
-    GetFrame()->Client()->DispatchDidFinishLoadForPrinting();
-    // Refresh the page when the print preview pops up.
-    // DispatchDidFinishLoadForPrinting could detach this frame
-    if (!GetFrame()) {
-      return false;
-    }
   }
 
   if (auto* view = View()) {

@@ -635,14 +635,7 @@ FormControlState ListedElement::SaveFormControlState() const {
 
 void ListedElement::RestoreFormControlState(const FormControlState& state) {}
 
-void ListedElement::NotifyFormStateChanged() {
-  Document& doc = ToHTMLElement().GetDocument();
-  // This can be called during fragment parsing as a result of option
-  // selection before the document is active (or even in a frame).
-  if (!doc.IsActive())
-    return;
-  doc.GetFrame()->Client()->DidUpdateCurrentHistoryItem();
-}
+void ListedElement::NotifyFormStateChanged() {}
 
 void ListedElement::TakeStateAndRestore() {
   if (ClassSupportsStateRestore()) {

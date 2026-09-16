@@ -982,10 +982,7 @@ void DocumentLoader::UpdateForSameDocumentNavigation(
   // it; HasStickyUserActivation is independent and stays.
 
 
-  GetLocalFrameClient().DidFinishSameDocumentNavigation(
-      commit_type, is_synchronously_committed, same_document_navigation_type,
-      is_client_redirect_, is_browser_initiated, should_skip_screenshot,
-      same_document_metrics_token, /*caused_by_ad=*/false);
+
   probe::DidNavigateWithinDocument(frame_, same_document_navigation_type);
 
   // If intercept() was called during this same-document navigation's
@@ -1041,8 +1038,6 @@ const KURL& DocumentLoader::UrlForHistory() const {
 
 void DocumentLoader::DidOpenDocumentInputStream(const KURL& url) {
   url_ = url;
-  // Let the browser know that we have done a document.open().
-  GetLocalFrameClient().DispatchDidOpenDocumentInputStream(url_);
 }
 
 void DocumentLoader::SetHistoryItemStateForCommit(
@@ -1273,12 +1268,10 @@ void DocumentLoader::LoadFailed(const ResourceError& error) {
   // - `window.stop()` calls `StopAllLoaders()` which calls `StopLoading()`.
   DCHECK(!IsA<HTMLObjectElement>(frame_->Owner()) || error.IsCancellation());
 
-  WebHistoryCommitType history_commit_type = LoadTypeToCommitType(load_type_);
   DCHECK_EQ(kCommitted, state_);
   if (frame_->GetDocument()->Parser())
     frame_->GetDocument()->Parser()->StopParsing();
   state_ = kSentDidFinishLoad;
-  GetLocalFrameClient().DispatchDidFailLoad(error, history_commit_type);
   GetFrameLoader().DidFinishNavigation(
       FrameLoader::NavigationFinishState::kFailure);
   DCHECK_EQ(kSentDidFinishLoad, state_);
@@ -3056,24 +3049,7 @@ void DocumentLoader::CommitNavigation() {
   DOMWindowPerformance::performance(*frame_->DomWindow())
       ->CreateNavigationTimingInstance(std::move(navigation_timing_info));
 
-  {
-    // Notify the browser process about the commit.
-    FrameNavigationDisabler navigation_disabler(*frame_);
-    if (commit_reason_ == CommitReason::kInitialization ||
-        IsJavaScriptURLOrXSLTCommitOrDiscard()) {
-      // Nothing to notify for initialization or replacement navigations.
-    } else {
-      GetLocalFrameClient().DispatchDidCommitLoad(
-          history_item_.Get(), LoadTypeToCommitType(load_type_),
-          previous_window != frame_->DomWindow(),
-          security_init.PermissionsPolicyHeader(),
-          document_policy_.feature_state);
-    }
-    // TODO(dgozman): make DidCreateScriptContext notification call currently
-    // triggered by installing new document happen here, after commit.
-  }
-  // Note: this must be called after DispatchDidCommitLoad() for
-  // metrics to be correctly sent to the browser process.
+
   if (commit_reason_ != CommitReason::kInitialization)
     use_counter_.DidCommitLoad(frame_);
   if (IsBackForwardOrRestore(load_type_)) {

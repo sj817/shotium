@@ -106,11 +106,6 @@ void FrameTree::SetName(const AtomicString& name,
     // TODO(dcheng): This comment is indicative of a problematic layering
     // violation. The browser should not be relying on the renderer to get this
     // correct; unique name calculation should be moved up into the browser.
-    if (name != name_) {
-      // TODO(lukasza): https://crbug.com/660485: Eventually we need to also
-      // support replication of name changes that originate in a *remote* frame.
-      To<LocalFrame>(this_frame_.Get())->Client()->DidChangeName(name);
-    }
   }
 
   // TODO(andypaicu): remove this once we have gathered the data

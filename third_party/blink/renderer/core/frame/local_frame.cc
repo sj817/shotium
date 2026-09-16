@@ -2419,7 +2419,6 @@ void LocalFrame::NotifyUserActivation(
   GetLocalFrameHostRemote().UpdateUserActivationState(
       mojom::blink::UserActivationUpdateType::kNotifyActivation,
       notification_type);
-  Client()->NotifyUserActivation();
   NotifyUserActivationInFrameTree(notification_type);
 }
 
