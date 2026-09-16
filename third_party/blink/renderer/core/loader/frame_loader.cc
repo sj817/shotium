@@ -195,7 +195,6 @@ ResourceRequest FrameLoader::ResourceRequestForReload(
 FrameLoader::FrameLoader(LocalFrame* frame)
     : frame_(frame),
       progress_tracker_(MakeGarbageCollected<ProgressTracker>(frame)),
-      dispatching_did_clear_window_object_in_main_world_(false),
       virtual_time_pauser_(
           frame_->GetFrameScheduler()->CreateWebScopedVirtualTimePauser(
               "FrameLoader",
@@ -447,11 +446,6 @@ void FrameLoader::FinishedParsing() {
   if (Client()) {
     ScriptForbiddenScope forbid_scripts;
     Client()->DispatchDidDispatchDOMContentLoadedEvent();
-  }
-
-  if (Client()) {
-    Client()->RunScriptsAtDocumentReady(
-        !document_loader_ || document_loader_->IsCommittedButEmpty());
   }
 
   // The URL's ":~:text=" directives were counted here so the load could be
@@ -1672,45 +1666,11 @@ void FrameLoader::CancelClientNavigation(CancelNavigationReason reason) {
                                   CancelNavigationReason::kNewNavigation);
 }
 
-void FrameLoader::DispatchDocumentElementAvailable() {
-  ScriptForbiddenScope forbid_scripts;
-
-  Client()->DocumentElementAvailable();
-}
-
-void FrameLoader::RunScriptsAtDocumentElementAvailable() {
-  Client()->RunScriptsAtDocumentElementAvailable();
-  // The frame might be detached at this point.
-}
-
 void FrameLoader::DispatchDidClearDocumentOfWindowObject() {
   if (state_ == State::kUninitialized)
     return;
 
-  LocalDOMWindow* window = frame_->DomWindow();
   probe::DidClearDocumentOfWindowObject(frame_.Get());
-  if (!window->CanExecuteScripts(kNotAboutToExecuteScript))
-    return;
-
-  if (dispatching_did_clear_window_object_in_main_world_)
-    return;
-  base::AutoReset<bool> in_did_clear_window_object(
-      &dispatching_did_clear_window_object_in_main_world_, true);
-  // We just cleared the document, not the entire window object, but for the
-  // embedder that's close enough.
-  Client()->DispatchDidClearWindowObjectInMainWorld(window);
-}
-
-void FrameLoader::DispatchDidClearWindowObjectInMainWorld() {
-  LocalDOMWindow* window = frame_->DomWindow();
-  if (!window->CanExecuteScripts(kNotAboutToExecuteScript))
-    return;
-
-  if (dispatching_did_clear_window_object_in_main_world_)
-    return;
-  base::AutoReset<bool> in_did_clear_window_object(
-      &dispatching_did_clear_window_object_in_main_world_, true);
-  Client()->DispatchDidClearWindowObjectInMainWorld(window);
 }
 
 network::mojom::blink::WebSandboxFlags

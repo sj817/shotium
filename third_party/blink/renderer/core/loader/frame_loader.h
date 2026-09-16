@@ -150,10 +150,7 @@ class CORE_EXPORT FrameLoader final {
   String UserAgent() const;
   std::optional<blink::UserAgentMetadata> UserAgentMetadata() const;
 
-  void DispatchDidClearWindowObjectInMainWorld();
   void DispatchDidClearDocumentOfWindowObject();
-  void DispatchDocumentElementAvailable();
-  void RunScriptsAtDocumentElementAvailable();
 
   // See content/browser/renderer_host/sandbox_flags.md
   // This contains the sandbox flags to commit for new documents.
@@ -315,7 +312,6 @@ class CORE_EXPORT FrameLoader final {
   enum class State { kUninitialized, kInitialized, kDetached };
   State state_ = State::kUninitialized;
 
-  bool dispatching_did_clear_window_object_in_main_world_;
   bool committing_navigation_ = false;
   bool has_accessed_initial_document_ = false;
 

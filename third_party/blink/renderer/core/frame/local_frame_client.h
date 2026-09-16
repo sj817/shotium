@@ -257,13 +257,6 @@ class CORE_EXPORT LocalFrameClient : public FrameClient {
   // gone: a static screenshot engine has no <video> to give a player to and no
   // device to cast to. The forwarding hooks in CoreInitializer went with them.
 
-  virtual void DidCommitDocumentReplacementNavigation(DocumentLoader*) = 0;
-  virtual void DispatchDidClearWindowObjectInMainWorld(LocalDOMWindow*) = 0;
-  virtual void DocumentElementAvailable() = 0;
-  virtual void RunScriptsAtDocumentElementAvailable() = 0;
-  virtual void RunScriptsAtDocumentReady(bool document_is_empty) = 0;
-  virtual void RunScriptsAtDocumentIdle() = 0;
-
   virtual void DidChangeScrollOffset() {}
 
   // Immediately notifies the browser of a change in the current HistoryItem.

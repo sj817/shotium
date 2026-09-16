@@ -1269,11 +1269,6 @@ void XMLDocumentParser::StartElementNs(
   auto* html_html_element = DynamicTo<HTMLHtmlElement>(new_element);
   if (html_html_element && is_first_element) {
     html_html_element->InsertedByParser();
-  } else if (!parsing_fragment_ && is_first_element &&
-             GetDocument()->GetFrame()) {
-    GetDocument()->GetFrame()->Loader().DispatchDocumentElementAvailable();
-    GetDocument()->GetFrame()->Loader().RunScriptsAtDocumentElementAvailable();
-    // runScriptsAtDocumentElementAvailable might have invalidated the document.
   }
 }
 

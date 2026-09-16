@@ -3945,19 +3945,6 @@ bool Document::CheckCompletedInternal() {
   if (!ShouldComplete())
     return false;
 
-  if (GetFrame() && !UnloadStarted()) {
-    GetFrame()->Client()->RunScriptsAtDocumentIdle();
-
-    // Injected scripts may have disconnected this frame.
-    if (!GetFrame())
-      return false;
-
-    // Check again, because runScriptsAtDocumentIdle() may have delayed the load
-    // event.
-    if (!ShouldComplete())
-      return false;
-  }
-
   // OK, completed. Fire load completion events as needed.
   SetReadyState(kComplete);
   const bool load_event_needed = LoadEventStillNeeded();

@@ -295,13 +295,6 @@ class CORE_EXPORT EmptyLocalFrameClient : public LocalFrameClient {
   // CreateWebMediaPlayer() and CreateRemotePlaybackClient() removed along with
   // the LocalFrameClient hooks they overrode.
 
-  void DidCommitDocumentReplacementNavigation(DocumentLoader*) override {}
-  void DispatchDidClearWindowObjectInMainWorld(LocalDOMWindow*) override {}
-  void DocumentElementAvailable() override {}
-  void RunScriptsAtDocumentElementAvailable() override {}
-  void RunScriptsAtDocumentReady(bool) override {}
-  void RunScriptsAtDocumentIdle() override {}
-
   AssociatedInterfaceProvider* GetRemoteNavigationAssociatedInterfaces()
       override;
 

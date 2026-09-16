@@ -3068,10 +3068,9 @@ void DocumentLoader::CommitNavigation() {
   {
     // Notify the browser process about the commit.
     FrameNavigationDisabler navigation_disabler(*frame_);
-    if (commit_reason_ == CommitReason::kInitialization) {
-      // There's no observers yet so nothing to notify.
-    } else if (IsJavaScriptURLOrXSLTCommitOrDiscard()) {
-      GetLocalFrameClient().DidCommitDocumentReplacementNavigation(this);
+    if (commit_reason_ == CommitReason::kInitialization ||
+        IsJavaScriptURLOrXSLTCommitOrDiscard()) {
+      // Nothing to notify for initialization or replacement navigations.
     } else {
       GetLocalFrameClient().DispatchDidCommitLoad(
           history_item_.Get(), LoadTypeToCommitType(load_type_),
