@@ -1394,10 +1394,6 @@ class CORE_EXPORT Document : public ContainerNode,
   void UpdateThemeColorCache();
   std::optional<Color> ThemeColor();
 
-  // Returns the HTMLLinkElement currently in use for the Web Manifest.
-  // Returns null if there is no such element.
-  HTMLLinkElement* LinkManifest() const;
-
   // Returns the HTMLLinkElement holding the canonical URL. Returns null if
   // there is no such element.
   HTMLLinkElement* LinkCanonical() const;

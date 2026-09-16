@@ -46,7 +46,7 @@ class LocalFrame;
 
 class CORE_EXPORT LinkResource : public GarbageCollected<LinkResource> {
  public:
-  enum LinkResourceType { kStyle, kManifest, kOther };
+  enum LinkResourceType { kStyle, kOther };
 
   explicit LinkResource(HTMLLinkElement*);
   LinkResource(const LinkResource&) = delete;

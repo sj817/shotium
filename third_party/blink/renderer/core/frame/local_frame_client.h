@@ -298,8 +298,6 @@ class CORE_EXPORT LocalFrameClient : public FrameClient {
 
   virtual WebContentSettingsClient* GetContentSettingsClient() = 0;
 
-  virtual void DispatchDidChangeManifest() {}
-
   unsigned BackForwardLength() override { return 0; }
 
   virtual AssociatedInterfaceProvider*
