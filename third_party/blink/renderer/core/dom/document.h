@@ -185,7 +185,6 @@ class BeforeUnloadEvent;
 class EventListener;
 class ExceptionState;
 class FocusOptions;
-class FocusedElementChangeObserver;
 class FontFaceSet;
 class FormController;
 class FrameCallback;
@@ -1104,9 +1103,6 @@ class CORE_EXPORT Document : public ContainerNode,
 
   void SetActiveElement(Element*);
   Element* GetActiveElement() const { return active_element_.Get(); }
-
-  void AddFocusedElementChangeObserver(FocusedElementChangeObserver*);
-  void RemoveFocusedElementChangeObserver(FocusedElementChangeObserver*);
 
   Element* HoverElement() const { return hover_element_.Get(); }
 
@@ -2542,9 +2538,6 @@ class CORE_EXPORT Document : public ContainerNode,
   Member<Element> document_element_;
   UserActionElementSet user_action_elements_;
   Member<RootScrollerController> root_scroller_controller_;
-
-  HeapHashSet<Member<FocusedElementChangeObserver>>
-      focused_element_change_observers_;
 
   double overscroll_accumulated_delta_x_ = 0;
   double overscroll_accumulated_delta_y_ = 0;
