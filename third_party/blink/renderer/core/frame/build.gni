@@ -101,8 +101,6 @@ blink_core_sources_frame = [
   "navigator_ua.h",
   "navigator_ua_data.cc",
   "navigator_ua_data.h",
-  "navigator_user_activation.cc",
-  "navigator_user_activation.h",
   "opened_frame_tracker.cc",
   "opened_frame_tracker.h",
   "page_dismissal_scope.cc",
