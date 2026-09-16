@@ -715,7 +715,6 @@ bool LocalFrame::DetachImpl(FrameDetachType type) {
   microtasks_pauser_.reset();
 
   DCHECK(!view_->IsAttached());
-  Client()->WillBeDetached();
 
   // TODO(crbug.com/729196): Trace why LocalFrameView::DetachFromLayout crashes.
   CHECK(!view_->IsAttached());

@@ -91,7 +91,6 @@ void ProgressTracker::ProgressStarted() {
   Reset();
   progress_value_ = kInitialLoadProgress;
   if (!frame_->IsLoading()) {
-    GetLocalFrameClient()->DidStartLoading();
     frame_->SetIsLoading(true);
     probe::FrameStartedLoading(frame_);
   }

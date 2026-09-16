@@ -176,15 +176,10 @@ void ResourceLoadObserverForFrame::DidReceiveResponse(
                                         ResourceMetrics(resource_url));
   }
 
-  LocalFrameClient* frame_client = frame->Client();
-
-  DCHECK(frame_client);
   if (response_source == ResponseSource::kFromMemoryCache) {
     ResourceRequest resource_request(resource->GetResourceRequest());
 
     if (!resource_request.Url().ProtocolIs(url::kDataScheme)) {
-      frame_client->DispatchDidLoadResourceFromMemoryCache(resource_request,
-                                                           response);
       auto scrub_null = [](const String& s) { return s ? s : g_empty_string; };
       frame->GetLocalFrameHostRemote().DidLoadResourceFromMemoryCache(
           resource_request.Url(), scrub_null(resource_request.HttpMethod()),

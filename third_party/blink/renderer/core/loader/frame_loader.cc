@@ -879,34 +879,6 @@ void FrameLoader::StartNavigation(FrameLoadRequest& request,
                                     request.GetClientNavigationReason(),
                                     request.GetNavigationPolicy());
   }
-
-  // TODO(crbug.com/896041): Instead of just bypassing the CSP for navigations
-  // from isolated world, ideally we should enforce the isolated world CSP by
-  // plumbing the correct CSP to the browser.
-  using CSPDisposition = network::mojom::CSPDisposition;
-  CSPDisposition should_check_main_world_csp =
-      ContentSecurityPolicy::ShouldBypassMainWorldDeprecated(origin_window)
-          ? CSPDisposition::DO_NOT_CHECK
-          : CSPDisposition::CHECK;
-
-  Client()->BeginNavigation(
-      resource_request, request.GetRequestorBaseURL(), request.GetFrameType(),
-      origin_window, nullptr /* document_loader */, navigation_type,
-      request.GetNavigationPolicy(), frame_load_type,
-      request.ForceHistoryPush(),
-      CalculateClientRedirectPolicy(
-          request.GetClientNavigationReason(), frame_load_type,
-          IsOnInitialEmptyDocument()) == ClientRedirectPolicy::kClientRedirect,
-      request.IsUnfencedTopNavigation(), request.GetTriggeringEventInfo(),
-      request.Form(), should_check_main_world_csp, request.GetBlobURLToken(),
-      request.GetInputStartTime(), request.GetCreationTime(),
-      request.HrefTranslate().GetString(), request.GetInitiatorFrameToken(),
-      request.GetInitiatorStateToken(), request.GetInitiatorDocumentToken(),
-      request.GetSourceLocation(),
-      request.IsContainerInitiated(),
-      request.GetWindowFeatures().explicit_opener,
-      request.TakeResumeDeferredCommitListener(),
-      request.GetScriptToolInvocationId());
 }
 
 static void FillStaticResponseIfNeeded(WebNavigationParams* params,
@@ -1398,12 +1370,8 @@ String FrameLoader::ApplyUserAgentOverride(const String& user_agent) const {
   probe::ApplyUserAgentOverride(probe::ToCoreProbeSink(frame_->GetDocument()),
                                 &user_agent_override);
 
-  if (Client()->UserAgentOverride().empty() && user_agent_override.empty()) {
-    return user_agent;
-  }
-
   if (user_agent_override.empty()) {
-    user_agent_override = user_agent;
+    return user_agent;
   }
 
   return user_agent_override;

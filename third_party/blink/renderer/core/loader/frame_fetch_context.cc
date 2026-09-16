@@ -410,7 +410,6 @@ void FrameFetchContext::PrepareRequest(
   request.SetStorageAccessApiStatus(
       document_->GetExecutionContext()->GetStorageAccessApiStatus());
 
-  GetLocalFrameClient()->DispatchFinalizeRequest(request);
   FrameScheduler* frame_scheduler = GetFrame()->GetFrameScheduler();
   if (!for_redirect && frame_scheduler) {
     virtual_time_pauser = frame_scheduler->CreateWebScopedVirtualTimePauser(
@@ -913,21 +912,7 @@ void FrameFetchContext::AddReducedAcceptLanguageIfNecessary(
   }
 }
 
-void FrameFetchContext::WillSendRequest(ResourceRequest& resource_request) {
-  // Set upstream url based on the request's redirect info.
-  KURL upstream_url;
-  if (resource_request.GetRedirectInfo().has_value()) {
-    upstream_url = KURL(resource_request.GetRedirectInfo()->previous_url);
-  }
-  std::optional<KURL> overriden_url =
-      GetLocalFrameClient()->DispatchWillSendRequest(
-          resource_request.Url(), resource_request.RequestorOrigin(),
-          resource_request.SiteForCookies(),
-          resource_request.GetRedirectInfo().has_value(), upstream_url);
-  if (overriden_url.has_value()) {
-    resource_request.SetUrl(overriden_url.value());
-  }
-}
+void FrameFetchContext::WillSendRequest(ResourceRequest& resource_request) {}
 
 void FrameFetchContext::PopulateResourceRequestBeforeCacheAccess(
     const ResourceLoaderOptions& options,
