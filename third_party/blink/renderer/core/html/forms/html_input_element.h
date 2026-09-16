@@ -39,7 +39,6 @@
 
 namespace blink {
 
-class AXObject;
 class ComputedStyleBuilder;
 class ExceptionState;
 class FileList;
@@ -296,10 +295,6 @@ class CORE_EXPORT HTMLInputElement
   bool NeedsToUpdateViewValue() const { return needs_to_update_view_value_; }
   void SetInnerEditorValue(const String&) override;
 
-  // For test purposes.
-  void SelectColorInColorChooser(const Color&);
-  void EndColorChooserForTesting();
-
   String DefaultToolTip() const override;
 
   // Type=file only: Text not in the button such as "No file chosen". The string
@@ -368,7 +363,6 @@ class CORE_EXPORT HTMLInputElement
   // checked separately in IsEmailVerificationSupported().
   bool IsEmailVerificationTokenField() const;
   void DispatchSimulatedEnter();
-  AXObject* PopupRootAXObject();
   void DidNotifySubtreeInsertionsToDocument() override;
 
   virtual void EnsureFallbackContent();

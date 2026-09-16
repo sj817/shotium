@@ -12,8 +12,6 @@
 
 namespace blink {
 
-class AXObject;
-
 // SelectType class is an abstraction of the MenuList behavior and the ListBox
 // behavior of HTMLSelectElement.
 class SelectType : public GarbageCollected<SelectType> {
@@ -79,7 +77,6 @@ class SelectType : public GarbageCollected<SelectType> {
   virtual void PopupDidHide();
   virtual bool PopupIsVisible() const;
   virtual PopupMenu* PopupForTesting() const;
-  virtual AXObject* PopupRootAXObject() const;
   virtual void ShowPicker();
 
   enum SkipDirection { kSkipBackwards = -1, kSkipForwards = 1 };

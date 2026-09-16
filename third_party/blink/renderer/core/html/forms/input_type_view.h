@@ -48,7 +48,6 @@ namespace blink {
 
 enum class DisabledChangedReason;
 
-class AXObject;
 class BeforeTextInsertedEvent;
 class ComputedStyle;
 class ComputedStyleBuilder;
@@ -159,7 +158,6 @@ class CORE_EXPORT InputTypeView : public GarbageCollectedMixin {
   // Updates the text in the placeholder, returning the Element representing the
   // placeholder. Returns null if there is no placeholder.
   virtual HTMLElement* UpdatePlaceholderText(bool is_suggested_value);
-  virtual AXObject* PopupRootAXObject();
   virtual void EnsureFallbackContent() {}
   virtual void EnsurePrimaryContent() {}
   virtual bool HasFallbackContent() const { return false; }

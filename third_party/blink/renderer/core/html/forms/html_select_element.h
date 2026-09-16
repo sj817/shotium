@@ -41,7 +41,6 @@
 
 namespace blink {
 
-class AXObject;
 class AutoscrollController;
 class ExceptionState;
 class HTMLHRElement;
@@ -282,13 +281,12 @@ class CORE_EXPORT HTMLSelectElement final
   void CloneNonAttributePropertiesFrom(const Element&,
                                        NodeCloningData&) override;
 
-  // InnerElement and PopupRootAXObject should be called only if UsesMenuList().
+  // InnerElement should be called only if UsesMenuList().
   // InnerElement is the in-page <div> element in the UA shadowroot for MenuList
   // rendering. It is excluded from the layout tree if the author sets
   // appearance:base-select on this <select> and provides their own child
   // <button>.
   Element& InnerElement() const;
-  AXObject* PopupRootAXObject() const;
 
   bool IsRichlyEditableForAccessibility() const override { return false; }
 

@@ -165,10 +165,6 @@ void PickerIndicatorElement::DetachLayoutTree(bool performing_reattach) {
   HTMLDivElement::DetachLayoutTree(performing_reattach);
 }
 
-AXObject* PickerIndicatorElement::PopupRootAXObject() const {
-  return chooser_ ? chooser_->RootAXObject(&OwnerElement()) : nullptr;
-}
-
 void PickerIndicatorElement::SetAXProperties() {
   if (!picker_indicator_owner_) {
     return;

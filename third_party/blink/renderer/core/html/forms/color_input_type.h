@@ -57,7 +57,6 @@ class ColorInputType final : public InputType,
   bool ShouldShowAlpha() const override;
   bool ShouldShowSuggestions() const override;
   Vector<mojom::blink::ColorSuggestionPtr> Suggestions() const override;
-  ColorChooserClient* GetColorChooserClient() override;
   bool TypeMismatchFor(const String&) const;
 
   bool SupportsBaseAppearance(Element::BaseAppearanceValue) const override;
@@ -81,7 +80,6 @@ class ColorInputType final : public InputType,
   void WarnIfValueIsInvalid(const String&) const override;
   void UpdateView() override;
   void ColorSpaceOrAlphaAttributeChanged() override;
-  AXObject* PopupRootAXObject() override;
 
   Color ValueAsColor() const;
   HTMLElement* ShadowColorSwatch() const;

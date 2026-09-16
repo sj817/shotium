@@ -297,7 +297,6 @@ class MenuListSelectType final : public SelectType {
   void PopupDidHide() override;
   bool PopupIsVisible() const override;
   PopupMenu* PopupForTesting() const override;
-  AXObject* PopupRootAXObject() const override;
   void ShowPicker() override;
 
   void DidMutateSubtree();
@@ -890,10 +889,6 @@ void MenuListSelectType::SetNativePopupIsVisible(bool popup_is_visible) {
 
 PopupMenu* MenuListSelectType::PopupForTesting() const {
   return popup_.Get();
-}
-
-AXObject* MenuListSelectType::PopupRootAXObject() const {
-  return popup_ ? popup_->PopupRootAXObject() : nullptr;
 }
 
 void MenuListSelectType::ShowPicker() {
@@ -2140,10 +2135,6 @@ bool SelectType::PopupIsVisible() const {
 }
 
 PopupMenu* SelectType::PopupForTesting() const {
-  NOTREACHED();
-}
-
-AXObject* SelectType::PopupRootAXObject() const {
   NOTREACHED();
 }
 

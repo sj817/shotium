@@ -1986,15 +1986,6 @@ void HTMLInputElement::AttributeChanged(
   }
 }
 
-void HTMLInputElement::SelectColorInColorChooser(const Color& color) {
-  if (ColorChooserClient* client = input_type_->GetColorChooserClient())
-    client->DidChooseColor(color);
-}
-
-void HTMLInputElement::EndColorChooserForTesting() {
-  input_type_view_->ClosePopupView();
-}
-
 HTMLDataListElement* HTMLInputElement::DataList() const {
   if (!has_non_empty_list_) {
     return nullptr;
@@ -2508,10 +2499,6 @@ void HTMLInputElement::AdjustStyle(ComputedStyleBuilder& builder) {
 
 void HTMLInputElement::DidNotifySubtreeInsertionsToDocument() {
   input_type_view_->ListAttributeTargetChanged();
-}
-
-AXObject* HTMLInputElement::PopupRootAXObject() {
-  return input_type_view_->PopupRootAXObject();
 }
 
 void HTMLInputElement::EnsureFallbackContent() {

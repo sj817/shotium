@@ -700,12 +700,6 @@ TextDirection MultipleFieldsTemporalInputTypeView::ComputedTextDirection() {
                                           : TextDirection::kLtr;
 }
 
-AXObject* MultipleFieldsTemporalInputTypeView::PopupRootAXObject() {
-  if (PickerIndicatorElement* picker = GetPickerIndicatorElement())
-    return picker->PopupRootAXObject();
-  return nullptr;
-}
-
 wtf_size_t MultipleFieldsTemporalInputTypeView::FocusedFieldIndex() const {
   return GetDateTimeEditElement()->FocusedFieldIndex();
 }

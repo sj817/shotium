@@ -437,14 +437,6 @@ Vector<mojom::blink::ColorSuggestionPtr> ColorInputType::Suggestions() const {
   return suggestions;
 }
 
-AXObject* ColorInputType::PopupRootAXObject() {
-  return chooser_ ? chooser_->RootAXObject(&GetElement()) : nullptr;
-}
-
-ColorChooserClient* ColorInputType::GetColorChooserClient() {
-  return this;
-}
-
 bool ColorInputType::SupportsBaseAppearance(
     Element::BaseAppearanceValue value) const {
   return RuntimeEnabledFeatures::AppearanceBaseEnabled() &&
