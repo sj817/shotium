@@ -30,10 +30,6 @@
 #include "third_party/blink/renderer/core/frame/frame_console.h"
 #include "third_party/blink/renderer/core/frame/local_dom_window.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
-#include "third_party/blink/renderer/core/inspector/console_message.h"
-#include "third_party/blink/renderer/core/layout/hit_test_location.h"
-#include "third_party/blink/renderer/core/layout/hit_test_result.h"
-#include "third_party/blink/renderer/core/layout/layout_object.h"
 #include "third_party/blink/renderer/core/page/frame_tree.h"
 #include "third_party/blink/renderer/core/page/page.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
@@ -42,9 +38,7 @@
 
 namespace blink {
 
-void ChromeClient::Trace(Visitor* visitor) const {
-  visitor->Trace(last_mouse_over_node_);
-}
+void ChromeClient::Trace(Visitor* visitor) const {}
 
 void ChromeClient::InstallSupplements(LocalFrame& frame) {
   CoreInitializer::GetInstance().InstallSupplements(frame);
@@ -93,79 +87,5 @@ bool ChromeClient::OpenBeforeUnloadConfirmPanel(const String& message,
   DCHECK(frame);
   return OpenBeforeUnloadConfirmPanelDelegate(frame, is_reload);
 }
-
-void ChromeClient::MouseDidMoveOverElement(LocalFrame& frame,
-                                           const HitTestLocation& location,
-                                           const HitTestResult& result) {
-  ShowMouseOverURL(result);
-
-  if (result.GetScrollbar())
-    ClearToolTip(frame);
-  else
-    UpdateTooltipUnderCursor(frame, location, result);
-}
-
-void ChromeClient::UpdateTooltipUnderCursor(LocalFrame& frame,
-                                            const HitTestLocation& location,
-                                            const HitTestResult& result) {
-  // First priority is a tooltip for element with "title" attribute.
-  TextDirection tool_tip_direction;
-  String tool_tip = result.Title(tool_tip_direction);
-
-  // Lastly, some elements provide default tooltip strings.  e.g. <input
-  // type="file" multiple> shows a tooltip for the selected filenames.
-  if (tool_tip.IsNull()) {
-    if (auto* element = DynamicTo<Element>(result.InnerNode())) {
-      tool_tip = element->DefaultToolTip();
-
-      // FIXME: We should obtain text direction of tooltip from
-      // ChromeClient or platform. As of October 2011, all client
-      // implementations don't use text direction information for
-      // ChromeClient::UpdateTooltipUnderCursor. We'll work on tooltip text
-      // direction during bidi cleanup in form inputs.
-      tool_tip_direction = TextDirection::kLtr;
-    }
-  }
-
-  if (last_tool_tip_point_ == location.Point() &&
-      last_tool_tip_text_ == tool_tip)
-    return;
-
-  // If a tooltip was displayed earlier, and mouse cursor moves over
-  // a different node with the same tooltip text, make sure the previous
-  // tooltip is unset, so that it does not get stuck positioned relative
-  // to the previous node).
-  // The ::UpdateTooltipUnderCursor overload, which is be called down the road,
-  // ensures a new tooltip to be displayed with the new context.
-  if (result.InnerNodeOrImageMapImage() != last_mouse_over_node_ &&
-      !last_tool_tip_text_.empty() && tool_tip == last_tool_tip_text_)
-    ClearToolTip(frame);
-
-  last_tool_tip_point_ = location.Point();
-  last_tool_tip_text_ = tool_tip;
-  last_mouse_over_node_ = result.InnerNodeOrImageMapImage();
-  UpdateTooltipUnderCursor(frame, tool_tip, tool_tip_direction);
-}
-
-void ChromeClient::ElementFocusedFromKeypress(LocalFrame& frame,
-                                              const Element* element) {
-  String tooltip_text = element->title();
-  if (tooltip_text.IsNull())
-    tooltip_text = element->DefaultToolTip();
-
-  LayoutObject* layout_object = element->GetLayoutObject();
-  if (layout_object) {
-    TextDirection tooltip_direction = layout_object->StyleRef().Direction();
-    UpdateTooltipFromKeyboard(frame, tooltip_text, tooltip_direction,
-                              element->BoundsInWidget());
-  }
-}
-
-void ChromeClient::ClearToolTip(LocalFrame& frame) {
-  // Do not check last_tool_tip_* and do not update them intentionally.
-  // We don't want to show tooltips with same content after clearToolTip().
-  UpdateTooltipUnderCursor(frame, String(), TextDirection::kLtr);
-}
-
 }  // namespace blink
 

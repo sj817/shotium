@@ -857,18 +857,10 @@ void LocalFrame::OnFirstPaint(bool text_painted, bool image_painted) {
 }
 
 void LocalFrame::OnFirstContentfulPaint(
-    const base::TimeTicks& presentation_time) {
-  if (IsOutermostMainFrame()) {
-    GetPage()->GetChromeClient().OnFirstContentfulPaint(presentation_time);
-  }
-}
+    const base::TimeTicks& presentation_time) {}
 
 void LocalFrame::OnLargestContentfulPaint(
-    const base::TimeTicks& presentation_time) {
-  if (IsOutermostMainFrame()) {
-    GetPage()->GetChromeClient().OnLargestContentfulPaint(presentation_time);
-  }
-}
+    const base::TimeTicks& presentation_time) {}
 
 bool LocalFrame::CanAccessEvent(
     const WebInputEventAttribution& attribution) const {

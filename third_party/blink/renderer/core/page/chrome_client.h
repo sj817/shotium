@@ -44,10 +44,8 @@
 #include "third_party/blink/renderer/core/loader/navigation_policy.h"
 #include "third_party/blink/renderer/core/scroll/scroll_types.h"
 #include "third_party/blink/renderer/core/style/computed_style_constants.h"
-#include "third_party/blink/renderer/platform/geometry/physical_offset.h"
 #include "third_party/blink/renderer/platform/graphics/touch_action.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
-#include "third_party/blink/renderer/platform/text/text_direction.h"
 #include "third_party/blink/renderer/platform/wtf/forward.h"
 #include "third_party/blink/renderer/platform/wtf/functional.h"
 #include "ui/gfx/geometry/transform.h"
@@ -82,8 +80,6 @@ class HTMLFormControlElement;
 class HTMLFormElement;
 class HTMLInputElement;
 class HTMLSelectElement;
-class HitTestLocation;
-class HitTestResult;
 class KeyboardEvent;
 class LocalFrame;
 class LocalFrameView;
@@ -206,25 +202,6 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
   virtual void ContentsSizeChanged(LocalFrame*, const gfx::Size&) const = 0;
   virtual void OutermostMainFrameScrollOffsetChanged() const = 0;
 
-  void MouseDidMoveOverElement(LocalFrame&,
-                               const HitTestLocation&,
-                               const HitTestResult&);
-  virtual void UpdateTooltipUnderCursor(LocalFrame&,
-                                        const String&,
-                                        TextDirection) = 0;
-  void ElementFocusedFromKeypress(LocalFrame&, const Element*);
-  // This function allows us to trigger a tooltip to show from a keypress. The
-  // tooltip will be positioned in the gfx::Rect passed by parameter. That rect
-  // corresponds to the focused element's bounds, which are in viewport
-  // coordinates at this point. They will be converted to enclosed DIPS before
-  // being passed to the browser process.
-  virtual void UpdateTooltipFromKeyboard(LocalFrame&,
-                                         const String&,
-                                         TextDirection,
-                                         const gfx::Rect&) = 0;
-  virtual void ClearKeyboardTriggeredTooltip(LocalFrame&) = 0;
-  void ClearToolTip(LocalFrame&);
-
   virtual ColorChooser* OpenColorChooser(LocalFrame*,
                                          ColorChooserClient*,
                                          const Color&) = 0;
@@ -315,21 +292,9 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
 
   virtual float ZoomFactorForViewportLayout() { return 1; }
 
-  // Called when a first contentful paint is observed. `presentation_time` is
-  // the renderer-side presentation timestamp of the paint.
-  virtual void OnFirstContentfulPaint(
-      const base::TimeTicks& presentation_time) {}
-
-  // Called when the outermost main frame's largest contentful paint candidate
-  // changed. `presentation_time` is the renderer-side presentation timestamp of
-  // the current candidate.
-  virtual void OnLargestContentfulPaint(
-      const base::TimeTicks& presentation_time) {}
-
  protected:
   ChromeClient() = default;
 
-  virtual void ShowMouseOverURL(const HitTestResult&) = 0;
   virtual bool OpenBeforeUnloadConfirmPanelDelegate(LocalFrame*,
                                                     bool is_reload) = 0;
   virtual Page* CreateWindowDelegate(LocalFrame*,
@@ -344,17 +309,6 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
   bool CanOpenUIElementIfDuringPageDismissal(Frame& main_frame,
                                              UIElementType,
                                              const String& message);
-  void UpdateTooltipUnderCursor(LocalFrame&,
-                                const HitTestLocation&,
-                                const HitTestResult&);
-
-  WeakMember<Node> last_mouse_over_node_;
-  PhysicalOffset last_tool_tip_point_;
-  String last_tool_tip_text_;
-
-  FRIEND_TEST_ALL_PREFIXES(ChromeClientTest, UpdateTooltipUnderCursorFlood);
-  FRIEND_TEST_ALL_PREFIXES(ChromeClientTest,
-                           UpdateTooltipUnderCursorEmptyString);
 };
 
 }  // namespace blink

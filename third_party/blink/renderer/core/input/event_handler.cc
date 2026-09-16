@@ -189,25 +189,6 @@ gfx::Point DetermineHotSpot(const Image& image,
   return gfx::Point();
 }
 
-// Returns whether the hit element contains a title and isn't a SVGUseElement or
-// part of an SVGUseElement.
-bool HasTitleAndNotSVGUseElement(const HitTestResult& hovered_node_result) {
-  Node* inner_node = hovered_node_result.InnerNode();
-  if (!inner_node) {
-    return false;
-  }
-  auto* element = DynamicTo<Element>(inner_node);
-  if (!element || element->title().IsNull()) {
-    return false;
-  }
-  ShadowRoot* containing_shadow_root = inner_node->ContainingShadowRoot();
-  if (IsA<SVGUseElement>(element) ||
-      (containing_shadow_root &&
-       IsA<SVGUseElement>(containing_shadow_root->host()))) {
-    return false;
-  }
-  return true;
-}
 
 // Get the entire style of scrollbar to get the cursor style of scrollbar
 const ComputedStyle* GetComputedStyleFromScrollbar(
@@ -1016,34 +997,12 @@ WebInputEventResult EventHandler::HandleMouseMoveEvent(
     const Vector<WebMouseEvent>& predicted_events) {
   TRACE_EVENT0("blink", "EventHandler::handleMouseMoveEvent");
   DCHECK(event.GetType() == WebInputEvent::Type::kMouseMove);
-  HitTestResult hovered_node_result;
-  HitTestLocation location;
-  WebInputEventResult result =
-      HandleMouseMoveOrLeaveEvent(event, coalesced_events, predicted_events,
-                                  &hovered_node_result, &location);
-
-  Page* page = frame_->GetPage();
-  if (!page)
-    return result;
-
-  // Should not convert the hit shadow element to its shadow host, so that
-  // tooltips in the shadow tree appear correctly.
-  if (!HasTitleAndNotSVGUseElement(hovered_node_result)) {
-    hovered_node_result.SetToShadowHostIfInUAShadowRoot();
-  }
-  page->GetChromeClient().MouseDidMoveOverElement(*frame_, location,
-                                                  hovered_node_result);
-
-  return result;
+  return HandleMouseMoveOrLeaveEvent(event, coalesced_events, predicted_events);
 }
 
 void EventHandler::HandleMouseLeaveEvent(const WebMouseEvent& event) {
   TRACE_EVENT0("blink", "EventHandler::handleMouseLeaveEvent");
   DCHECK(event.GetType() == WebInputEvent::Type::kMouseLeave);
-
-  Page* page = frame_->GetPage();
-  if (page)
-    page->GetChromeClient().ClearToolTip(*frame_);
 
   HandleMouseMoveOrLeaveEvent(event, Vector<WebMouseEvent>(),
                               Vector<WebMouseEvent>());

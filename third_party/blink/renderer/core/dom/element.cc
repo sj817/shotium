@@ -7722,47 +7722,6 @@ void Element::Focus(const FocusParams& params) {
           *GetDocument().GetFrame());
     }
 
-    // TODO(bebeaudr): We might want to move the following code into the
-    // HasStickyUserActivation condition above once https://crbug.com/1208874 is
-    // fixed.
-    //
-    // Trigger a tooltip to show for the newly focused element only when the
-    // focus was set resulting from a keyboard action.
-    //
-    // TODO(bebeaudr): To also trigger a tooltip when the |params_to_use.type|
-    // is kSpatialNavigation, we'll first have to ensure that the fake mouse
-    // move event fired by `SpatialNavigationController::DispatchMouseMoveEvent`
-    // does not lead to a cursor triggered tooltip update. The only tooltip
-    // update that there should be in that case is the one triggered from the
-    // spatial navigation keypress. This issue is tracked in
-    // https://crbug.com/1206446.
-    bool is_focused_from_keypress = false;
-    switch (params_to_use.type) {
-      case mojom::blink::FocusType::kScript:
-        if (GetDocument()
-                .GetFrame()
-                ->LocalFrameRoot()
-                .GetEventHandler()
-                .IsHandlingKeyEvent()) {
-          is_focused_from_keypress = true;
-        }
-        break;
-      case mojom::blink::FocusType::kForward:
-      case mojom::blink::FocusType::kBackward:
-      case mojom::blink::FocusType::kAccessKey:
-        is_focused_from_keypress = true;
-        break;
-      default:
-        break;
-    }
-
-    if (is_focused_from_keypress) {
-      chrome_client.ElementFocusedFromKeypress(*GetDocument().GetFrame(), this);
-    } else {
-      chrome_client.ClearKeyboardTriggeredTooltip(*GetDocument().GetFrame());
-    }
-  }
-
   if (should_consume_user_activation) {
     // Fenced frames should consume user activation when attempting to pull
     // focus across a fenced boundary into itself.
@@ -7961,10 +7920,6 @@ void Element::blur() {
     if (doc.GetPage()) {
       doc.GetPage()->GetFocusController().SetFocusedElement(nullptr,
                                                             doc.GetFrame());
-      if (doc.GetFrame()) {
-        doc.GetPage()->GetChromeClient().ClearKeyboardTriggeredTooltip(
-            *doc.GetFrame());
-      }
     } else {
       doc.ClearFocusedElement();
     }

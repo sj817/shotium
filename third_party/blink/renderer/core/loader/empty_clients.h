@@ -154,15 +154,6 @@ class CORE_EXPORT EmptyChromeClient : public ChromeClient {
     return empty_screen_infos_.current();
   }
   void ContentsSizeChanged(LocalFrame*, const gfx::Size&) const override {}
-  void ShowMouseOverURL(const HitTestResult&) override {}
-  void UpdateTooltipUnderCursor(LocalFrame&,
-                                const String&,
-                                TextDirection) override {}
-  void UpdateTooltipFromKeyboard(LocalFrame&,
-                                 const String&,
-                                 TextDirection,
-                                 const gfx::Rect&) override {}
-  void ClearKeyboardTriggeredTooltip(LocalFrame&) override {}
   ColorChooser* OpenColorChooser(LocalFrame*,
                                  ColorChooserClient*,
                                  const Color&) override;
