@@ -874,19 +874,7 @@ void LocalFrameView::RunIntersectionObserverSteps() {
 
   needs_update_delayed_intersection_ = false;
 
-  if (frame_->IsOutermostMainFrame()) {
-    // The overlay-interstitial and sticky ad detectors ran here, once per
-    // lifecycle update, and reported to UKM. Cut with the rest of ad tagging.
 
-    // Report the main frame's document intersection with itself.
-    LayoutObject* layout_object = GetLayoutView();
-    gfx::Rect main_frame_dimensions(ToRoundedSize(
-        To<LayoutBox>(layout_object)->ScrollableOverflowRect().size));
-    GetFrame().Client()->OnMainFrameRectangleChanged(main_frame_dimensions);
-    GetFrame().Client()->OnMainFrameViewportRectangleChanged(
-        gfx::Rect(frame_->GetOutermostMainFrameScrollPosition(),
-                  frame_->GetOutermostMainFrameSize()));
-  }
 
   TRACE_EVENT0("blink,benchmark",
                "LocalFrameView::UpdateViewportIntersectionsForSubtree");

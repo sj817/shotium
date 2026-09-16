@@ -34,6 +34,7 @@
 #include <memory>
 #include <optional>
 
+#include "base/notreached.h"
 #include "base/time/time.h"
 #include "base/unguessable_token.h"
 #include "mojo/public/cpp/bindings/pending_associated_receiver.h"
@@ -42,7 +43,6 @@
 #include "services/network/public/cpp/permissions_policy/permissions_policy_declaration.h"
 #include "services/network/public/mojom/content_security_policy.mojom-blink-forward.h"
 #include "services/network/public/mojom/web_sandbox_flags.mojom-blink-forward.h"
-#include "third_party/blink/public/common/loader/url_loader_factory_bundle.h"
 #include "third_party/blink/public/common/tokens/tokens.h"
 #include "third_party/blink/public/common/user_agent/user_agent_metadata.h"
 #include "third_party/blink/public/mojom/blob/blob_url_store.mojom-blink-forward.h"
@@ -75,7 +75,6 @@ class SharedURLLoaderFactory;
 namespace blink {
 
 class AssociatedInterfaceProvider;
-class ChildURLLoaderFactoryBundle;
 class DocumentLoader;
 class HTMLFormElement;
 class HTMLFrameOwnerElement;
@@ -102,21 +101,25 @@ class CORE_EXPORT LocalFrameClient : public FrameClient {
   // to. ContentCaptureManager and its only caller in LocalFrame are cut, so
   // nothing asks for the client any more.
 
-  virtual base::UnguessableToken GetDevToolsFrameToken() const = 0;
+  virtual base::UnguessableToken GetDevToolsFrameToken() const {
+    return base::UnguessableToken::Create();
+  }
 
-  virtual void WillBeDetached() = 0;
-  virtual void DispatchFinalizeRequest(ResourceRequest&) = 0;
+  virtual void WillBeDetached() {}
+  virtual void DispatchFinalizeRequest(ResourceRequest&) {}
   virtual std::optional<KURL> DispatchWillSendRequest(
       const KURL& requested_url,
       const scoped_refptr<const SecurityOrigin>& requestor_origin,
       const net::SiteForCookies& site_for_cookies,
       bool has_redirect_info,
-      const KURL& upstream_url) = 0;
+      const KURL& upstream_url) {
+    return std::nullopt;
+  }
   virtual void DispatchDidLoadResourceFromMemoryCache(
       const ResourceRequest&,
-      const ResourceResponse&) = 0;
+      const ResourceResponse&) {}
 
-  virtual void DispatchDidHandleOnloadEvents() = 0;
+  virtual void DispatchDidHandleOnloadEvents() {}
   virtual void DidFinishSameDocumentNavigation(
       WebHistoryCommitType,
       bool is_synchronously_committed,
@@ -127,17 +130,17 @@ class CORE_EXPORT LocalFrameClient : public FrameClient {
       base::UnguessableToken same_document_metrics_token,
       bool caused_by_ad) {}
   virtual void DispatchDidOpenDocumentInputStream(const KURL&) {}
-  virtual void DispatchDidReceiveTitle(const String&) = 0;
+  virtual void DispatchDidReceiveTitle(const String&) {}
   virtual void DispatchDidCommitLoad(
       HistoryItem* item,
       WebHistoryCommitType commit_type,
       bool should_reset_browser_interface_broker,
       const network::ParsedPermissionsPolicy& permissions_policy_header,
-      const blink::DocumentPolicyFeatureState& document_policy_header) = 0;
+      const blink::DocumentPolicyFeatureState& document_policy_header) {}
   virtual void DispatchDidFailLoad(const ResourceError&,
-                                   WebHistoryCommitType) = 0;
-  virtual void DispatchDidDispatchDOMContentLoadedEvent() = 0;
-  virtual void DispatchDidFinishLoad() = 0;
+                                   WebHistoryCommitType) {}
+  virtual void DispatchDidDispatchDOMContentLoadedEvent() {}
+  virtual void DispatchDidFinishLoad() {}
   virtual void DispatchDidFinishLoadForPrinting() {}
 
   virtual void BeginNavigation(
@@ -170,25 +173,23 @@ class CORE_EXPORT LocalFrameClient : public FrameClient {
       mojo::PendingReceiver<
           mojom::blink::NavigationResumeDeferredCommitListener>
           resume_defer_commit_listener,
-      std::optional<base::UnguessableToken> script_tool_invocation_id) = 0;
+      std::optional<base::UnguessableToken> script_tool_invocation_id) {}
 
-  virtual void DidStartLoading() = 0;
-  virtual void DidStopLoading() = 0;
+  virtual void DidStartLoading() {}
+  virtual void DidStopLoading() {}
 
-  virtual void DidCreateDocumentLoader(DocumentLoader*) = 0;
+  virtual void DidCreateDocumentLoader(DocumentLoader*) {}
 
-  virtual String UserAgentOverride() = 0;
-  virtual String UserAgent() = 0;
-  virtual std::optional<blink::UserAgentMetadata> UserAgentMetadata() = 0;
+  virtual String UserAgentOverride() { return ""; }
+  virtual String UserAgent() { return ""; }
+  virtual std::optional<blink::UserAgentMetadata> UserAgentMetadata() {
+    return blink::UserAgentMetadata();
+  }
 
   virtual LocalFrame* CreateFrame(const AtomicString& name,
-                                  HTMLFrameOwnerElement*) = 0;
-
-  // CreateWebMediaPlayer() and CreateRemotePlaybackClient() removed in this
-  // cut. Both had exactly one implementation, in the now-deleted
-  // modules/media, and both were reached only from HTMLMediaElement, which is
-  // gone: a static screenshot engine has no <video> to give a player to and no
-  // device to cast to. The forwarding hooks in CoreInitializer went with them.
+                                  HTMLFrameOwnerElement*) {
+    return nullptr;
+  }
 
   virtual void DidChangeScrollOffset() {}
 
@@ -204,35 +205,36 @@ class CORE_EXPORT LocalFrameClient : public FrameClient {
 
   virtual void DidChangeName(const String&) {}
 
-  // CreateServiceWorkerProvider() was here. WebServiceWorkerProvider is
-  // the renderer's handle to a service worker registration; a service
-  // worker is a script, and nothing can register one here.
-
-  virtual WebContentSettingsClient* GetContentSettingsClient() = 0;
+  virtual WebContentSettingsClient* GetContentSettingsClient() {
+    return nullptr;
+  }
 
   unsigned BackForwardLength() override { return 0; }
 
   virtual AssociatedInterfaceProvider*
-  GetRemoteNavigationAssociatedInterfaces() = 0;
+  GetRemoteNavigationAssociatedInterfaces() {
+    return nullptr;
+  }
 
   virtual void NotifyUserActivation() {}
 
   virtual void AbortClientNavigation(bool for_new_navigation) {}
 
   virtual scoped_refptr<network::SharedURLLoaderFactory>
-  GetURLLoaderFactory() = 0;
-  virtual std::unique_ptr<URLLoader> CreateURLLoaderForTesting() = 0;
-  virtual blink::ChildURLLoaderFactoryBundle* GetLoaderFactoryBundle() = 0;
+  GetURLLoaderFactory() {
+    NOTREACHED();
+  }
+  virtual std::unique_ptr<URLLoader> CreateURLLoaderForTesting() {
+    return nullptr;
+  }
 
   virtual void DidChangeContents() {}
 
-  virtual Frame* FindFrame(const AtomicString& name) const = 0;
+  virtual Frame* FindFrame(const AtomicString& name) const {
+    return nullptr;
+  }
 
   virtual void SetMouseCapture(bool) {}
-
-  // Specifies whether to disable DOM storage interfaces such as localStorage
-  // and sessionStorage.
-  virtual bool IsDomStorageDisabled() const { return false; }
 
 };
 
