@@ -99,6 +99,12 @@ class CaptureContext {
   // statistics.
   static CaptureContext* Current();
 
+  // Whether this capture may read or inspect resources from the host machine.
+  // The same request bit controls file: subresources and system-font local()
+  // lookup so there is one trust boundary rather than two overlapping ones.
+  void set_allow_file_access(bool allow) { allow_file_access_ = allow; }
+  bool allow_file_access() const { return allow_file_access_; }
+
   // net::LOAD_* for every request this capture makes. See CacheModeToLoadFlags.
   void set_load_flags(int flags) { load_flags_ = flags; }
   int load_flags() const { return load_flags_; }
@@ -140,6 +146,7 @@ class CaptureContext {
   CaptureStats stats_;
   base::RepeatingClosure progress_callback_;
   bool network_requested_ = false;
+  bool allow_file_access_ = false;
   int load_flags_ = 0;
   net::HttpRequestHeaders extra_headers_;
   url::Origin headers_origin_;
