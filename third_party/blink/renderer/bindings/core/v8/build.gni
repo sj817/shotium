@@ -82,7 +82,6 @@ blink_core_sources_bindings_core_v8 = [
   "v8_css_style_sheet_init.cc",
   "v8_css_style_sheet_init.h",
   "v8_direction_setting.h",
-  "v8_directive_type.h",
   "v8_document_ready_state.h",
   "v8_document_timeline_options.cc",
   "v8_document_timeline_options.h",
