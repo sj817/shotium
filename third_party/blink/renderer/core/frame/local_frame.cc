@@ -2371,9 +2371,7 @@ void LocalFrame::ResumeSubresourceLoading() {
   pause_handle_receivers_.Clear();
 }
 
-void LocalFrame::UpdateTaskTime(base::TimeDelta time) {
-  Client()->DidChangeCpuTiming(time);
-}
+void LocalFrame::UpdateTaskTime(base::TimeDelta time) {}
 
 void LocalFrame::UpdateBackForwardCacheDisablingFeatures(
     BlockingDetails details) {

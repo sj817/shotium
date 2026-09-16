@@ -152,11 +152,6 @@ class CORE_EXPORT UseCounterImpl final {
   void ClearMeasurementForTesting(WebFeature);
   void ClearMeasurementForTesting(WebDXFeature);
 
-  // Record total taken time by recording UseCounter metrics. This is only
-  // recorded in the outermost main frame, not initial empty document, and the
-  // URL is HTTP or HTTPS.
-  void ReportTotalTakenTime(const LocalFrame* frame, bool did_commit_load);
-
   void Trace(Visitor*) const;
 
  private:
@@ -194,10 +189,6 @@ class CORE_EXPORT UseCounterImpl final {
   UseCounterFeatureTracker feature_tracker_;
 
   HeapHashSet<Member<Observer>> observers_;
-
-  // Stores the total time taken by `DidObserveNewFeatureUsage()` for the
-  // measurement purpose.
-  base::TimeDelta total_taken_time_for_reporting_;
 };
 
 }  // namespace blink

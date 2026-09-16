@@ -42,11 +42,8 @@
 #include "services/network/public/cpp/permissions_policy/permissions_policy_declaration.h"
 #include "services/network/public/mojom/content_security_policy.mojom-blink-forward.h"
 #include "services/network/public/mojom/web_sandbox_flags.mojom-blink-forward.h"
-#include "third_party/blink/public/common/loader/loading_behavior_flag.h"
 #include "third_party/blink/public/common/loader/url_loader_factory_bundle.h"
-#include "third_party/blink/public/common/subresource_load_metrics.h"
 #include "third_party/blink/public/common/tokens/tokens.h"
-#include "third_party/blink/public/common/use_counter/use_counter_feature.h"
 #include "third_party/blink/public/common/user_agent/user_agent_metadata.h"
 #include "third_party/blink/public/mojom/blob/blob_url_store.mojom-blink-forward.h"
 #include "third_party/blink/public/mojom/fenced_frame/fenced_frame.mojom-blink-forward.h"
@@ -56,7 +53,6 @@
 #include "third_party/blink/public/web/web_frame_load_type.h"
 #include "third_party/blink/public/web/web_history_commit_type.h"
 #include "third_party/blink/public/web/web_navigation_params.h"
-#include "third_party/blink/public/web/web_performance_metrics_for_reporting.h"
 #include "third_party/blink/renderer/core/core_export.h"
 #include "third_party/blink/renderer/core/dom/icon_url.h"
 #include "third_party/blink/renderer/core/frame/frame_client.h"
@@ -65,7 +61,6 @@
 #include "third_party/blink/renderer/core/loader/document_loader.h"
 #include "third_party/blink/renderer/core/loader/frame_loader_types.h"
 #include "third_party/blink/renderer/core/loader/navigation_policy.h"
-#include "third_party/blink/renderer/core/timing/performance_timeline_entry_id_generator.h"
 #include "third_party/blink/renderer/platform/loader/fetch/resource_load_priority.h"
 #include "third_party/blink/renderer/platform/loader/fetch/resource_loader_options.h"
 #include "third_party/blink/renderer/platform/network/content_security_policy_parsers.h"
@@ -179,54 +174,6 @@ class CORE_EXPORT LocalFrameClient : public FrameClient {
 
   virtual void DidStartLoading() = 0;
   virtual void DidStopLoading() = 0;
-
-  // Will be called when |PerformanceTiming| events are updated
-  virtual void DidChangePerformanceTiming() {}
-
-  // Will be called when a user interaction is observed.
-  virtual void DidObserveUserInteraction(
-      base::TimeTicks max_event_start,
-      base::TimeTicks max_event_queued_main_thread,
-      base::TimeTicks max_event_processing_start,
-      base::TimeTicks max_event_commit_finish,
-      base::TimeTicks max_event_end,
-      PerformanceTimelineEntryIdInfo interaction_id,
-      PerformanceTimelineEntryIdInfo navigation_id) {}
-
-  // Will be called when |CpuTiming| events are updated
-  virtual void DidChangeCpuTiming(base::TimeDelta time) {}
-
-  // Will be called when a particular loading code path has been used. This
-  // propogates renderer loading behavior to the browser process for histograms.
-  virtual void DidObserveLoadingBehavior(LoadingBehaviorFlag) {}
-
-  // Will be called when a sub resource load happens.
-  virtual void DidObserveSubresourceLoad(
-      const SubresourceLoadMetrics& subresource_load_metrics) {}
-
-  // Will be called when a new UseCounterFeature has been observed in a frame.
-  // This propagates feature usage to the browser process for histograms.
-  virtual void DidObserveNewFeatureUsage(const UseCounterFeature&) {}
-
-  // A new soft navigation was observed.
-  virtual void DidObserveSoftNavigation(
-      SoftNavigationMetricsForReporting metrics) {}
-
-  // A new First Contentful Paint was observed for a soft navigation.
-  virtual void DidObserveSoftNavigationFirstContentfulPaint(
-      uint64_t performance_timeline_navigation_id,
-      base::TimeDelta first_contentful_paint) {}
-
-  // A new largest contentful paint candidate relating to the most recent
-  // soft navigation was observed. Also see DidObserveSoftNavigation().
-  virtual void DidObserveSoftLargestContentfulPaint(
-      const LargestContentfulPaintDetailsForReporting& lcp) {}
-
-  // Reports that visible elements in the frame shifted (bit.ly/lsm-explainer).
-  virtual void DidObserveLayoutShift(
-      double score,
-      bool after_input_or_scroll,
-      PerformanceTimelineEntryIdInfo navigation_id) {}
 
   virtual void DidCreateDocumentLoader(DocumentLoader*) = 0;
 

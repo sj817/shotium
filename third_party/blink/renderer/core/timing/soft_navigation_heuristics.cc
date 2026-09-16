@@ -585,115 +585,17 @@ void SoftNavigationHeuristics::OnFramePresented(
 }
 
 void SoftNavigationHeuristics::UpdateSoftLcpMetricsForContext(
-    SoftNavigationContext* context) {
-  // We only support updating metrics for the current URL, even if new paints
-  // associated with previous interactions are detected.
-  if (context != context_for_current_url_) {
-    return;
-  }
-
-  // LCP candidate information is updated before emitting the soft nav entry to
-  // buffer the most recent ICP candidate, in order to capture information at
-  // the relevant time. But we don't want to update metrics until the `context`
-  // is considered a soft nav.
-  if (!context->WasEmitted()) {
-    return;
-  }
-
-  LocalFrame* frame = window_->GetFrame();
-  // We should not be running paint timing callbacks for detached frames.
-  CHECK(frame);
-  LocalFrameClient* frame_client = frame->Client();
-  CHECK(frame_client);
-  WindowPerformance* performance = DOMWindowPerformance::performance(*window_);
-  CHECK(performance);
-  LargestContentfulPaintDetailsForReporting lcp =
-      performance->timingForReporting()
-          ->PopulateLargestContentfulPaintDetailsForReporting(
-              context->LatestLcpDetailsForUkm());
-  lcp.performance_timeline_navigation_id =
-      context->NavigationId().non_web_exposed_id;
-  CHECK(lcp.performance_timeline_navigation_id);
-  frame_client->DidObserveSoftLargestContentfulPaint(lcp);
-}
+    SoftNavigationContext* context) {}
 
 void SoftNavigationHeuristics::ReportSoftNavigationToMetrics(
     SoftNavigationContext* context) const {
-  LocalFrame* frame = window_->GetFrame();
-  // We should not be running paint timing callbacks for detached frames.
-  CHECK(frame);
-  auto* loader = frame->Loader().GetDocumentLoader();
-  // This should only be null if the frame was detached.
-  CHECK(loader);
-
-  CHECK_EQ(context->GetSoftNavigationHeuristics(), this);
-
-  if (LocalFrameClient* frame_client = frame->Client()) {
-#if BUILDFLAG(IS_FUCHSIA)
-    if (context->TimeOrigin() <= loader->GetTiming().ReferenceMonotonicTime()) {
-      LOG(ERROR) << "SoftNavigationHeuristics: TimeOrigin ("
-                 << context->TimeOrigin().since_origin().InMicroseconds()
-                 << " us) is less than or equal to ReferenceMonotonicTime ("
-                 << loader->GetTiming()
-                        .ReferenceMonotonicTime()
-                        .since_origin()
-                        .InMicroseconds()
-                 << " us). Early returning to avoid crash.";
-      return;
-    }
-#else
-    // If this CHECK_GT fails in a test, it's likely because the test simulates
-    // events with an impossibly small start_time, which is less than the
-    // initial reference time, which makes the duration appear negative.  In
-    // case you're using ui::test::EventGenerator directly, you may want to use
-    // the Kombucha API's SendKeyPress facility instead; if you must use the
-    // EventGeneratorDirectly, you may need to manually advance its internal
-    // clock to the real time (ui::Test::EventGenerator::AdvanceClock) before
-    // dispatching the event. See also crbug.com/490814752 and
-    // chrome/test/interaction/README.md for the Kombucha API.
-    CHECK_GT(context->TimeOrigin(),
-             loader->GetTiming().ReferenceMonotonicTime());
-#endif
-
-    blink::SoftNavigationMetricsForReporting metrics = {
-        .performance_timeline_navigation_id =
-            context->NavigationId().non_web_exposed_id,
-        .start_time = loader->GetTiming().MonotonicTimeToPseudoWallTime(
-            context->TimeOrigin()),
-        .soft_navigation_slicing_time = context->SoftNavigationSlicingTime(),
-        .navigation_type =
-            ToNavigationTypeForNavigationApi(context->NavigationType()),
-        .same_document_metrics_token = context->SameDocumentMetricsToken(),
-    };
-    // This notifies UKM about this soft navigation.
-    frame_client->DidObserveSoftNavigation(metrics);
-  }
-
   // Count "successful soft nav" in histogram
   base::UmaHistogramEnumeration(kPageLoadInternalSoftNavigationOutcome,
                                 SoftNavigationOutcome::kSoftNavigationDetected);
 }
 
 void SoftNavigationHeuristics::UpdateSoftFcpMetricsForContext(
-    SoftNavigationContext* context) const {
-  CHECK(context->HasFirstContentfulPaint());
-  // Unlike LCP, which can receive continuous paint updates while subsequent
-  // navigations occur, FCP is a one-time metric for this committed context
-  // that must always be reported upon emission even if another interaction has
-  // started.
-  LocalFrame* frame = window_->GetFrame();
-  // We should not be running paint timing callbacks for detached frames.
-  CHECK(frame);
-  LocalFrameClient* frame_client = frame->Client();
-  CHECK(frame_client);
-  auto* loader = frame->Loader().GetDocumentLoader();
-  CHECK(loader);
-  base::TimeDelta first_contentful_paint =
-      loader->GetTiming().MonotonicTimeToPseudoWallTime(
-          context->FirstContentfulPaint());
-  frame_client->DidObserveSoftNavigationFirstContentfulPaint(
-      context->NavigationId().non_web_exposed_id, first_contentful_paint);
-}
+    SoftNavigationContext* context) const {}
 
 void SoftNavigationHeuristics::Trace(Visitor* visitor) const {
   visitor->Trace(context_for_current_url_);

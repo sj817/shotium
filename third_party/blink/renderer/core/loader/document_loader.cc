@@ -817,18 +817,9 @@ void DocumentLoader::DispatchLcppFontPreloads(
   // are still fetched when style asks for them.
 }
 
-void DocumentLoader::DidChangePerformanceTiming() {
-  if (frame_ && state_ >= kCommitted) {
-    GetLocalFrameClient().DidChangePerformanceTiming();
-  }
-}
+void DocumentLoader::DidChangePerformanceTiming() {}
 
-void DocumentLoader::DidObserveLoadingBehavior(LoadingBehaviorFlag behavior) {
-  if (frame_) {
-    DCHECK_GE(state_, kCommitted);
-    GetLocalFrameClient().DidObserveLoadingBehavior(behavior);
-  }
-}
+void DocumentLoader::DidObserveLoadingBehavior(LoadingBehaviorFlag behavior) {}
 
 // static
 WebHistoryCommitType LoadTypeToCommitType(WebFrameLoadType type) {
@@ -3115,21 +3106,6 @@ void DocumentLoader::CreateParserPostCommit() {
     CountUse(WebFeature::kDocumentLoaderDeliveryTypeNavigationalPrefetch);
   }
 
-  // DidObserveLoadingBehavior() must be called after DispatchDidCommitLoad() is
-  // called for the metrics tracking logic to handle it properly.
-  LoadingBehaviorFlag loading_behavior = kLoadingBehaviorNone;
-  // Five kLoadingBehaviorServiceWorker* flags were computed here off the
-  // network provider: whether a controller was in charge, whether its fetch
-  // handler could be skipped, whether the main resource fell back to the
-  // network, and which race-network-request mode it used. Service workers are
-  // cut, so none of those behaviours can occur.
-  if (response_.FromSyntheticResponse()) {
-    loading_behavior |= kLoadingBehaviorServiceWorkerSyntheticResponse;
-  }
-  if (loading_behavior != kLoadingBehaviorNone) {
-    GetLocalFrameClient().DidObserveLoadingBehavior(loading_behavior);
-  }
-
   // Links with media values need more information (like viewport information).
   // This happens after the first chunk is parsed in HTMLDocumentParser.
   // Skip for MediaDocument: StopLoading() is called immediately after, which
@@ -3688,26 +3664,10 @@ bool DocumentLoader::IsForDiscard() const {
 }
 
 void DocumentLoader::UpdateSubresourceLoadMetrics(
-    const SubresourceLoadMetrics& subresource_load_metrics) {
-  base::ElapsedTimer timer;
-  GetLocalFrameClient().DidObserveSubresourceLoad(subresource_load_metrics);
-  if (base::TimeTicks::IsHighResolution()) {
-    total_taken_time_to_update_subresource_load_metrics_ += timer.Elapsed();
-  }
-}
+    const SubresourceLoadMetrics& subresource_load_metrics) {}
 
 const mojom::RendererContentSettingsPtr& DocumentLoader::GetContentSettings() {
   return content_settings_;
-}
-
-void DocumentLoader::ReportTotalTakenTimeToUpdateSubresourceLoadMetrics() {
-  if (Url().ProtocolIsInHttpFamily() && frame_->IsOutermostMainFrame() &&
-      ShouldEmitNewNavigationHistogram(navigation_type_)) {
-    base::UmaHistogramMicrosecondsTimes(
-        "Blink.DocumentLoader.TotalTakenTimeToUpdateSubresourceLoadMetrics2."
-        "OutermostMainFrame.NewNavigation.IsHTTPOrHTTPS",
-        total_taken_time_to_update_subresource_load_metrics_);
-  }
 }
 
 DEFINE_WEAK_IDENTIFIER_MAP(DocumentLoader)

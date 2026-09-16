@@ -98,10 +98,6 @@ class CORE_EXPORT ResponsivenessMetrics
 
   void CommitAllPendingPointerdowns();
 
-  // Metrics Reporting
-  void NotifyUserInteraction(LocalDOMWindow* window,
-                             const PerformanceEventTiming& entry);
-
   void RecordUserInteractionHistograms(UserInteractionType interaction_type,
                                        const PerformanceEventTiming& entry,
                                        uint64_t event_id);

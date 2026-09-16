@@ -7235,11 +7235,6 @@ void Document::FinishedParsing() {
 
   if (IsInOutermostMainFrame() && !IsInitialEmptyDocument() &&
       Url().ProtocolIsInHttpFamily()) {
-    // Record the total taken time by UseCounter.
-    Loader()->GetUseCounter().ReportTotalTakenTime(GetFrame(),
-                                                   /*did_commit_load=*/false);
-    // Record the total taken time by subresource load observer update.
-    Loader()->ReportTotalTakenTimeToUpdateSubresourceLoadMetrics();
     // Record the total taken time by resource load from memory cache.
     base::UmaHistogramMicrosecondsTimes(
         "Blink.MemoryCache.TotalTakenTimeForDidLoadResourceFromMemoryCache",

@@ -490,8 +490,6 @@ class CORE_EXPORT DocumentLoader : public GarbageCollected<DocumentLoader>,
   // Gets the content settings for the current {frame, navigation commit} tuple.
   const mojom::RendererContentSettingsPtr& GetContentSettings();
 
-  void ReportTotalTakenTimeToUpdateSubresourceLoadMetrics();
-
   bool IsInCommitDataForTesting() const { return in_commit_data_; }
 
  protected:
@@ -866,10 +864,6 @@ class CORE_EXPORT DocumentLoader : public GarbageCollected<DocumentLoader>,
   // the URL seems like a match. This matters for cross-origin navigations
   // (apart from error pages with the same precursor origin).
   bool force_new_document_sequence_number_ = false;
-
-  // Stores the total time taken by `UpdateSubresourceLoadMetrics()` for the
-  // measurement purpose.
-  base::TimeDelta total_taken_time_to_update_subresource_load_metrics_;
 
   // Special case for same-document navigations initiated by a cross-origin
   // frame: When a same-document navigation occurs in an iframe, we call

@@ -630,14 +630,6 @@ void LayoutShiftTracker::ReportShift(double score_delta,
     score_ += score_delta;
     if (weighted_score_delta > 0) {
       weighted_score_ += weighted_score_delta;
-      LocalDOMWindow* window = frame.DomWindow();
-      WindowPerformance* performance =
-          window ? DOMWindowPerformance::performance(*window) : nullptr;
-      PerformanceTimelineEntryIdInfo navigation_id =
-          performance ? performance->NavigationId()
-                      : PerformanceTimelineEntryIdInfo::kNone;
-      frame.Client()->DidObserveLayoutShift(
-          weighted_score_delta, observed_input_or_scroll_, navigation_id);
     }
   }
 

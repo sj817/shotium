@@ -539,7 +539,6 @@ void ResponsivenessMetrics::ReportToMetrics(PerformanceEventTiming* entry) {
   }
 
   UserInteractionType interaction_type = entry->InteractionType();
-  NotifyUserInteraction(window, *entry);
 
   // For Histogram and Tracing convenience, we only report "unique" interaction
   // durations. I.e. when keydown and keypress, or pointerup and click, report
@@ -563,34 +562,6 @@ void ResponsivenessMetrics::ReportToMetrics(PerformanceEventTiming* entry) {
     RecordUserInteractionTracing(window, interaction_type, *entry, event_id);
     RecordUserInteractionHistograms(interaction_type, *entry, event_id);
   }
-}
-
-void ResponsivenessMetrics::NotifyUserInteraction(
-    LocalDOMWindow* window,
-    const PerformanceEventTiming& entry) {
-  auto interaction_id = entry.GetInteractionIdInfo();
-  CHECK(interaction_id.has_value());
-  CHECK_NE(*interaction_id, PerformanceTimelineEntryIdInfo::kNone);
-
-  const auto* reporting_info = entry.GetEventTimingReportingInfo();
-  base::TimeTicks event_start = reporting_info->creation_time;
-  base::TimeTicks event_processing_start =
-      reporting_info->processing_start_time;
-  base::TimeTicks event_end = entry.GetEndTime();
-  base::TimeTicks event_queued_main_thread =
-      reporting_info->enqueued_to_main_thread_time;
-  base::TimeTicks event_commit_finish = reporting_info->commit_finish_time;
-  base::TimeDelta duration = event_end - event_start;
-
-  if (!event_start.is_null() && duration.InMilliseconds() >= 0) {
-    if (window->GetFrame()) {
-      window->GetFrame()->Client()->DidObserveUserInteraction(
-          event_start, event_queued_main_thread, event_processing_start,
-          event_commit_finish, event_end, *interaction_id,
-          DOMWindowPerformance::performance(*window)->NavigationId());
-    }
-  }
-
 }
 
 void ResponsivenessMetrics::RecordUserInteractionHistograms(
