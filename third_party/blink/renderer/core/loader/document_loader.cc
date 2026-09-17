@@ -120,7 +120,6 @@
 #include "third_party/blink/renderer/core/loader/frame_fetch_context.h"
 #include "third_party/blink/renderer/core/loader/frame_loader.h"
 #include "third_party/blink/renderer/core/loader/idleness_detector.h"
-#include "third_party/blink/renderer/core/loader/interactive_detector.h"
 #include "third_party/blink/renderer/core/loader/old_document_info_for_commit.h"
 #include "third_party/blink/renderer/core/loader/preload_helper.h"
 #include "third_party/blink/renderer/core/loader/progress_tracker.h"
@@ -2099,12 +2098,6 @@ void DocumentLoader::DidCommitNavigation() {
   // When a new navigation commits in the frame, subresource loading should be
   // resumed.
   frame_->ResumeSubresourceLoading();
-
-  Document* document = frame_->GetDocument();
-  InteractiveDetector* interactive_detector =
-      InteractiveDetector::From(*document);
-  if (interactive_detector)
-    interactive_detector->SetNavigationStartTime(GetTiming().NavigationStart());
 
   // DEVTOOLS_TIMELINE_TRACE_EVENT(...) was here.
 

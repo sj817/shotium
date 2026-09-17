@@ -46,8 +46,6 @@ blink_core_sources_loader = [
   "image_loader.h",
   "fetch_priority_attribute.cc",
   "fetch_priority_attribute.h",
-  "interactive_detector.cc",
-  "interactive_detector.h",
   "lazy_image_helper.cc",
   "lazy_image_helper.h",
   "link_load_parameters.cc",

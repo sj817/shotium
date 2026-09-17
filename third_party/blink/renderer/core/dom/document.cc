@@ -272,7 +272,6 @@
 #include "third_party/blink/renderer/core/loader/frame_loader.h"
 #include "third_party/blink/renderer/core/loader/http_refresh_scheduler.h"
 #include "third_party/blink/renderer/core/loader/idleness_detector.h"
-#include "third_party/blink/renderer/core/loader/interactive_detector.h"
 #include "third_party/blink/renderer/core/loader/lazy_image_helper.h"
 #include "third_party/blink/renderer/core/loader/no_state_prefetch_client.h"
 #include "third_party/blink/renderer/core/loader/pending_link_preload.h"
@@ -2121,13 +2120,6 @@ void Document::DidChangeVisibilityState() {
 
   if (IsPageVisible())
     GetDocumentAnimations().MarkAnimationsPending();
-
-
-  InteractiveDetector* interactive_detector = InteractiveDetector::From(*this);
-  if (interactive_detector) {
-    interactive_detector->OnPageHiddenChanged(hidden());
-  }
-
 }
 
 String Document::nodeName() const {

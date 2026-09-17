@@ -25,7 +25,6 @@
 #include "third_party/blink/renderer/core/loader/document_loader.h"
 #include "third_party/blink/renderer/core/loader/frame_loader.h"
 #include "third_party/blink/renderer/core/loader/idleness_detector.h"
-#include "third_party/blink/renderer/core/loader/interactive_detector.h"
 #include "third_party/blink/renderer/core/loader/mixed_content_checker.h"
 #include "third_party/blink/renderer/core/loader/preload_helper.h"
 #include "third_party/blink/renderer/core/loader/progress_tracker.h"
@@ -139,8 +138,6 @@ void ResourceLoadObserverForFrame::WillSendRequest(
       render_blocking_behavior, base::TimeTicks::Now());
   if (auto* idleness_detector = frame->GetIdlenessDetector())
     idleness_detector->OnWillSendRequest(document_->Fetcher());
-  if (auto* interactive_detector = InteractiveDetector::From(*document_))
-    interactive_detector->OnResourceLoadBegin(std::nullopt);
 }
 
 void ResourceLoadObserverForFrame::DidChangePriority(
@@ -292,9 +289,6 @@ void ResourceLoadObserverForFrame::DidFinishLoading(
   probe::DidFinishLoading(GetProbe(), identifier, document_loader_, finish_time,
                           encoded_data_length, decoded_body_length);
 
-  if (auto* interactive_detector = InteractiveDetector::From(*document_)) {
-    interactive_detector->OnResourceLoadEnd(finish_time);
-  }
   if (IdlenessDetector* idleness_detector = frame->GetIdlenessDetector()) {
     idleness_detector->OnDidLoadResource();
   }
@@ -319,11 +313,6 @@ void ResourceLoadObserverForFrame::DidFailLoading(
   // call, DevTools front-end relies on this.
   if (!is_internal_request) {
     frame->Console().DidFailLoading(document_loader_, identifier, error);
-  }
-  if (auto* interactive_detector = InteractiveDetector::From(*document_)) {
-    // We have not yet recorded load_finish_time. Pass nullopt here; we will
-    // call base::TimeTicks::Now() lazily when we need it.
-    interactive_detector->OnResourceLoadEnd(std::nullopt);
   }
   if (IdlenessDetector* idleness_detector = frame->GetIdlenessDetector()) {
     idleness_detector->OnDidLoadResource();

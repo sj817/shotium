@@ -22,14 +22,13 @@ class DocumentLoadTiming;
 class DocumentLoader;
 class DocumentParserTiming;
 class DocumentTiming;
-class InteractiveDetector;
 class PaintTiming;
 struct LargestContentfulPaintDetails;
 
 // This class serves as a bridge between blink and non-blink code for reading
 // performance data for non-web-exposed reporting purposes (e.g. UKM). This
 // class typically proxies reads to various parts of blink, e.g. getting data
-// from `PaintTiming` or `InteractiveDetector`, but some values are pushed and
+// from `PaintTiming`, but some values are pushed and
 // cached here. See WebPerformanceMetricsForReporting for usage outside of
 // blink.
 class CORE_EXPORT PerformanceTimingForReporting final
@@ -198,7 +197,6 @@ class CORE_EXPORT PerformanceTimingForReporting final
   const PaintTiming* GetPaintTiming() const;
   DocumentLoader* GetDocumentLoader() const;
   DocumentLoadTiming* GetDocumentLoadTiming() const;
-  InteractiveDetector* GetInteractiveDetector() const;
   std::optional<base::TimeDelta> MonotonicTimeToPseudoWallTime(
       const std::optional<base::TimeTicks>&) const;
 

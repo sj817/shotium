@@ -59,7 +59,6 @@ namespace blink {
 
 class AnimationFrameTimingInfo;
 class InteractionContentfulPaint;
-class InteractiveDetector;
 class LocalDOMWindow;
 class Node;
 class PerformanceSoftNavigation;
@@ -253,8 +252,7 @@ class CORE_EXPORT WindowPerformance final : public Performance,
   // Report buffered events with presentation time following their registered
   // order; stop as soon as seeing an event with pending presentation promise.
   void TryFlushEventTimingQueue();
-  void FlushEventTiming(InteractiveDetector* interactive_detector,
-                        Member<PerformanceEventTiming> event_timing_entry,
+  void FlushEventTiming(Member<PerformanceEventTiming> event_timing_entry,
                         PerformanceEventTiming* primary_entry);
 
   void TryReportAsFirstInputTiming(PerformanceEventTiming* event_timing_entry);
@@ -290,8 +288,6 @@ class CORE_EXPORT WindowPerformance final : public Performance,
   mutable Member<PerformanceTiming> timing_;
   mutable Member<PerformanceTimingForReporting> timing_for_reporting_;
   base::TimeTicks pending_pointer_down_start_time_;
-  std::optional<base::TimeDelta> pending_pointer_down_processing_time_;
-  std::optional<base::TimeDelta> pending_pointer_down_time_to_next_paint_;
 
   // Set to true when text selection causes scrolling in the page. Reset when
   // the mouse button is released and autoscroll stops. Used to ignore

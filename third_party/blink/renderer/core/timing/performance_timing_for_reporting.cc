@@ -13,7 +13,6 @@
 #include "third_party/blink/renderer/core/frame/local_frame.h"
 #include "third_party/blink/renderer/core/loader/document_load_timing.h"
 #include "third_party/blink/renderer/core/loader/document_loader.h"
-#include "third_party/blink/renderer/core/loader/interactive_detector.h"
 #include "third_party/blink/renderer/core/paint/timing/lcp_objects.h"
 #include "third_party/blink/renderer/core/paint/timing/paint_timing.h"
 #include "third_party/blink/renderer/core/timing/performance.h"
@@ -122,10 +121,6 @@ PerformanceTimingForReporting::BackForwardCacheRestore() const {
   if (!paint_timing)
     return {};
 
-  const InteractiveDetector* interactive_detector = GetInteractiveDetector();
-  if (!interactive_detector)
-    return {};
-
   Vector<base::TimeTicks> navigation_starts =
       load_timing->BackForwardCacheRestoreNavigationStarts();
   Vector<base::TimeTicks> first_paints =
@@ -136,11 +131,8 @@ PerformanceTimingForReporting::BackForwardCacheRestore() const {
           kRequestAnimationFramesToRecordAfterBackForwardCacheRestore>>
       request_animation_frames =
           paint_timing->RequestAnimationFramesAfterBackForwardCacheRestore();
-  Vector<std::optional<base::TimeDelta>> first_input_delays =
-      interactive_detector->GetFirstInputDelaysAfterBackForwardCacheRestore();
   DCHECK_EQ(navigation_starts.size(), first_paints.size());
   DCHECK_EQ(navigation_starts.size(), request_animation_frames.size());
-  DCHECK_EQ(navigation_starts.size(), first_input_delays.size());
 
   Vector<BackForwardCacheRestoreTiming> restore_timings(
       navigation_starts.size());
@@ -153,7 +145,7 @@ PerformanceTimingForReporting::BackForwardCacheRestore() const {
       restore_timings[i].request_animation_frames[j] =
           MonotonicTimeToIntegerMilliseconds(request_animation_frames[i][j]);
     }
-    restore_timings[i].first_input_delay = first_input_delays[i];
+    // first_input_delay stays unset: shotium has no InteractiveDetector.
   }
   return restore_timings;
 }
@@ -219,51 +211,31 @@ uint64_t PerformanceTimingForReporting::FirstEligibleToPaint() const {
   return MonotonicTimeToIntegerMilliseconds(timing->FirstEligibleToPaint());
 }
 
+// The first-input / first-scroll values below came from InteractiveDetector,
+// which shotium does not build: no user input ever reaches the page.
 std::optional<base::TimeDelta> PerformanceTimingForReporting::FirstInputDelay()
     const {
-  const InteractiveDetector* interactive_detector = GetInteractiveDetector();
-  if (!interactive_detector)
-    return std::nullopt;
-
-  return interactive_detector->GetFirstInputDelay();
+  return std::nullopt;
 }
 
 std::optional<base::TimeDelta>
 PerformanceTimingForReporting::FirstInputTimestamp() const {
-  const InteractiveDetector* interactive_detector = GetInteractiveDetector();
-  if (!interactive_detector)
-    return std::nullopt;
-
-  return MonotonicTimeToPseudoWallTime(
-      interactive_detector->GetFirstInputTimestamp());
+  return std::nullopt;
 }
 
 std::optional<base::TimeTicks>
 PerformanceTimingForReporting::FirstInputTimestampAsMonotonicTime() const {
-  const InteractiveDetector* interactive_detector = GetInteractiveDetector();
-  if (!interactive_detector)
-    return std::nullopt;
-
-  return interactive_detector->GetFirstInputTimestamp();
+  return std::nullopt;
 }
 
 std::optional<base::TimeDelta> PerformanceTimingForReporting::FirstScrollDelay()
     const {
-  const InteractiveDetector* interactive_detector = GetInteractiveDetector();
-  if (!interactive_detector)
-    return std::nullopt;
-
-  return interactive_detector->GetFirstScrollDelay();
+  return std::nullopt;
 }
 
 std::optional<base::TimeDelta>
 PerformanceTimingForReporting::FirstScrollTimestamp() const {
-  const InteractiveDetector* interactive_detector = GetInteractiveDetector();
-  if (!interactive_detector)
-    return std::nullopt;
-
-  return MonotonicTimeToPseudoWallTime(
-      interactive_detector->GetFirstScrollTimestamp());
+  return std::nullopt;
 }
 
 uint64_t PerformanceTimingForReporting::ParseStart() const {
@@ -420,13 +392,6 @@ DocumentLoadTiming* PerformanceTimingForReporting::GetDocumentLoadTiming()
     return nullptr;
 
   return &loader->GetTiming();
-}
-
-InteractiveDetector* PerformanceTimingForReporting::GetInteractiveDetector()
-    const {
-  if (!DomWindow() || !DomWindow()->document())
-    return nullptr;
-  return InteractiveDetector::From(*DomWindow()->document());
 }
 
 std::optional<base::TimeDelta>

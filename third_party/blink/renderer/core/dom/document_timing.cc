@@ -7,7 +7,6 @@
 #include "third_party/blink/renderer/core/dom/document.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
 #include "third_party/blink/renderer/core/loader/document_loader.h"
-#include "third_party/blink/renderer/core/loader/interactive_detector.h"
 #include "third_party/blink/renderer/platform/instrumentation/tracing/trace_event.h"
 
 namespace blink {
@@ -65,12 +64,6 @@ void DocumentTiming::MarkDomContentLoadedEventEnd() {
       "blink.user_timing,rail", "domContentLoadedEventEnd",
       document_timing_values_->dom_content_loaded_event_end, "frame",
       GetFrameIdForTracing(GetFrame()));
-  InteractiveDetector* interactive_detector(
-      InteractiveDetector::From(*document_));
-  if (interactive_detector) {
-    interactive_detector->OnDomContentLoadedEnd(
-        document_timing_values_->dom_content_loaded_event_end);
-  }
   NotifyDocumentTimingChanged();
 }
 
