@@ -140,11 +140,6 @@ DocumentInit& DocumentInit::ForInitialEmptyDocument(bool empty) {
   return *this;
 }
 
-DocumentInit& DocumentInit::ForPrerendering(bool is_prerendering) {
-  is_prerendering_ = is_prerendering;
-  return *this;
-}
-
 // static
 DocumentInit::Type DocumentInit::ComputeDocumentType(
     LocalFrame* frame,

@@ -37,14 +37,3 @@ struct PageLifecycleState {
 
 // Parameters to send with ActivatePrerenderedPage calls when we're activating a
 // prerendered page.
-struct PrerenderPageActivationParams {
-  // Tells the renderer whether this prerender activation comes with a sticky
-  // user activation.
-  blink.mojom.WasActivatedOption was_user_activated;
-
-  // Timestamp of the start of the activation navigation for use in
-  // PerformanceNavigationTiming. This is set only if this blink::WebViewImpl
-  // hosts a prerendered frame.
-  mojo_base.mojom.TimeTicks? activation_start;
-
-};

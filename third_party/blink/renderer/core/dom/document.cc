@@ -782,7 +782,6 @@ Document::Document(const DocumentInit& initializer,
       TreeScope(*this),
       token_(initializer.GetToken()),
       is_initial_empty_document_(initializer.IsInitialEmptyDocument()),
-      is_prerendering_(initializer.IsPrerendering()),
       is_for_discard_(initializer.IsForDiscard()),
       dom_window_(initializer.GetWindow()),
       execution_context_(initializer.GetExecutionContext()),
@@ -860,13 +859,6 @@ Document::Document(const DocumentInit& initializer,
   if (base::FeatureList::IsEnabled(features::kDelayAsyncScriptExecution) &&
       features::kDelayAsyncScriptExecutionDelayByDefaultParam.Get()) {
     script_runner_delayer_->Activate();
-  }
-  if (is_prerendering_ &&
-      GetPage()->ShouldPauseJavaScriptExecutionOnPrerender()) {
-    prerender_script_runner_delayer_ =
-        MakeGarbageCollected<ScriptRunnerDelayer>(
-            script_runner_, ScriptRunner::DelayReason::kPausedForPrerender);
-    prerender_script_runner_delayer_->Activate();
   }
   if (LocalFrame* frame = GetFrame()) {
     DCHECK(frame->GetPage());
@@ -2101,10 +2093,6 @@ V8VisibilityState Document::visibilityState() const {
 
 String Document::visibilityStateAsString() const {
   return visibilityState().AsString();
-}
-
-bool Document::prerendering() const {
-  return IsPrerendering();
 }
 
 bool Document::hidden() const {
@@ -4681,32 +4669,6 @@ void Document::ExecuteScriptsWaitingForResources() {
     parser->ExecuteScriptsWaitingForResources();
 }
 
-void Document::UnblockScriptExecutionForPrerenderActivation() {
-  CHECK(!IsScriptBlockedUntilPrerenderActivation());
-  ResumeBlockedScriptExecution();
-}
-
-void Document::UnblockScriptExecutionForPrerenderUpgrade() {
-  // The Page has already cleared should_pause_javascript_execution, so
-  // IsScriptBlockedUntilPrerenderActivation() returns false.
-  CHECK(!IsScriptBlockedUntilPrerenderActivation());
-  // The page should still be in prerendering state after upgrade.
-  CHECK(is_prerendering_);
-  ResumeBlockedScriptExecution();
-}
-
-void Document::ResumeBlockedScriptExecution() {
-  if (ScriptableDocumentParser* parser = GetScriptableDocumentParser()) {
-    parser->ExecuteScriptsWaitingForPrerenderActivation();
-  }
-
-  // TODO(https://crbug.com/42850021): Consider deactivating it later, because
-  // async scripts may not be critical for LCP.
-  if (prerender_script_runner_delayer_) {
-    prerender_script_runner_delayer_->Deactivate();
-  }
-}
-
 CSSStyleSheet& Document::ElementSheet() {
   if (!elem_sheet_)
     elem_sheet_ = CSSStyleSheet::CreateInline(*this, base_url_);
@@ -7168,12 +7130,6 @@ void Document::FinishedParsing() {
       if (GetFrame()->IsMainFrame() ||
           Loader()->HasLoadedNonInitialEmptyDocument()) {
         UpdateStyleAndLayoutTree();
-        if (base::FeatureList::IsEnabled(
-                features::kPrerender2EarlyDocumentLifecycleUpdate) &&
-            IsPrerendering() && GetFrame()->IsLocalRoot() &&
-            GetPage()->ShouldPreparePaintTreeOnPrerender()) {
-          View()->DryRunPaintingForPrerender();
-        }
       }
     }
 
@@ -8517,7 +8473,6 @@ void Document::Trace(Visitor* visitor) const {
   visitor->Trace(current_script_stack_);
   visitor->Trace(script_runner_);
   visitor->Trace(script_runner_delayer_);
-  visitor->Trace(prerender_script_runner_delayer_);
   visitor->Trace(lists_invalidated_at_document_);
   visitor->Trace(node_lists_);
   visitor->Trace(top_layer_elements_);
@@ -8630,11 +8585,6 @@ bool Document::IsFocusAllowed(FocusTrigger trigger,
     }
   }
 
-  // Allow focus during prerendering to match same-origin behavior.
-  if (frame->GetDocument() && frame->GetDocument()->IsPrerendering()) {
-    return true;
-  }
-
   WebFeature uma_type;
   bool sandboxed = dom_window_->IsSandboxed(
       network::mojom::blink::WebSandboxFlags::kNavigation);
@@ -8722,11 +8672,6 @@ bool Document::ChildrenCanHaveStyle() const {
   if (LayoutObject* view = GetLayoutView())
     return view->CanHaveChildren();
   return false;
-}
-
-bool Document::IsScriptBlockedUntilPrerenderActivation() const {
-  return is_prerendering_ &&
-         GetPage()->ShouldPauseJavaScriptExecutionOnPrerender();
 }
 
 mojom::blink::PreferredColorScheme Document::GetPreferredColorScheme() const {
@@ -8871,54 +8816,6 @@ void Document::SetFindInPageActiveMatchNode(Node* node) {
 
 const Node* Document::GetFindInPageActiveMatchNode() const {
   return find_in_page_active_match_node_;
-}
-
-void Document::ActivateForPrerendering(
-    const mojom::blink::PrerenderPageActivationParams& params) {
-  TRACE_EVENT("navigation", "Document::ActivateForPrerendering",
-              perfetto::Flow::FromPointer(this));
-  DCHECK(is_prerendering_);
-  is_prerendering_ = false;
-
-  if (DocumentLoader* loader = Loader()) {
-    loader->NotifyPrerenderingDocumentActivated(params);
-  }
-  UnblockScriptExecutionForPrerenderActivation();
-  Vector<base::OnceClosure> callbacks;
-  callbacks.swap(will_dispatch_prerenderingchange_callbacks_);
-  for (auto& callback : callbacks) {
-    std::move(callback).Run();
-  }
-
-  // https://wicg.github.io/nav-speculation/prerendering.html#prerendering-browsing-context-activate
-  // Step 8.3.4 "Fire an event named prerenderingchange at doc."
-  DispatchEvent(*Event::Create(event_type_names::kPrerenderingchange));
-
-  // Step 8.3.5 "For each steps in doc’s post-prerendering activation steps
-  // list:"
-  RunPostPrerenderingActivationSteps();
-}
-
-void Document::AddWillDispatchPrerenderingchangeCallback(
-    base::OnceClosure closure) {
-  DCHECK(is_prerendering_);
-  will_dispatch_prerenderingchange_callbacks_.push_back(std::move(closure));
-}
-
-void Document::AddPostPrerenderingActivationStep(base::OnceClosure callback) {
-  DCHECK(is_prerendering_);
-  post_prerendering_activation_callbacks_.push_back(std::move(callback));
-}
-
-void Document::RunPostPrerenderingActivationSteps() {
-  TRACE_EVENT("blink", "Document::RunPostPrerenderingActivationSteps",
-              perfetto::Flow::FromPointer(this), "deferred_callback",
-              post_prerendering_activation_callbacks_.size());
-
-  DCHECK(!is_prerendering_);
-  for (auto& callback : post_prerendering_activation_callbacks_)
-    std::move(callback).Run();
-  post_prerendering_activation_callbacks_.clear();
 }
 
 bool Document::InStyleRecalc() const {

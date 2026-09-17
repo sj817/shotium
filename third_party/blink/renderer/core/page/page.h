@@ -269,47 +269,6 @@ class CORE_EXPORT Page final : public GarbageCollected<Page>,
   bool IsOrdinary() const override;
   void OnSetPageFrozen(bool is_frozen) override;
 
-  void SetIsPrerendering(bool is_prerendering) {
-    is_prerendering_ = is_prerendering;
-  }
-  void SetPrerenderMetricSuffix(const String& suffix) {
-    prerender_metric_suffix_ = suffix;
-  }
-  void SetShouldWarmUpCompositorOnPrerender(
-      bool should_warm_up_compositor_on_prerender) {
-    should_warm_up_compositor_on_prerender_ =
-        should_warm_up_compositor_on_prerender;
-  }
-  void SetShouldPreparePaintTreeOnPrerender(
-      bool should_prepare_paint_tree_on_prerender) {
-    should_prepare_paint_tree_on_prerender_ =
-        should_prepare_paint_tree_on_prerender;
-  }
-  void SetShouldPauseJavaScriptExecutionOnPrerender(
-      bool should_pause_javascript_execution_on_prerender) {
-    should_pause_javascript_execution_on_prerender_ =
-        should_pause_javascript_execution_on_prerender;
-  }
-  bool IsPrerendering() const { return is_prerendering_; }
-  const String& PrerenderMetricSuffix() const {
-    return prerender_metric_suffix_;
-  }
-  bool ShouldWarmUpCompositorOnPrerender() const {
-    return should_warm_up_compositor_on_prerender_;
-  }
-  bool ShouldPreparePaintTreeOnPrerender() const {
-    return should_prepare_paint_tree_on_prerender_;
-  }
-  // Whether the trigger of this prerendering page wants to pause JavaScript
-  // execution until activation.
-  bool ShouldPauseJavaScriptExecutionOnPrerender() const {
-    return should_pause_javascript_execution_on_prerender_;
-  }
-
-  // Upgrades a prerender-until-script page to a full prerender by resuming
-  // JavaScript execution. The page remains in prerendering state.
-  void UpgradePrerenderUntilScriptToFullPrerender();
-
   WebScopedVirtualTimePauser& HistoryNavigationVirtualTimePauser() {
     return history_navigation_virtual_time_pauser_;
   }
@@ -499,23 +458,6 @@ class CORE_EXPORT Page final : public GarbageCollected<Page>,
 
   std::unique_ptr<PageScheduler> page_scheduler_;
 
-  // Whether the page is being prerendered by the Prerender2
-  // feature. See content/browser/preloading/prerender/README.md.
-  //
-  // This is ordinarily initialized by WebViewImpl immediately after creating
-  // this Page. Once initialized, it can only transition from true to false on
-  // prerender activation; it does not go from false to true.
-  bool is_prerendering_ = false;
-
-  // TODO(crbug.com/428500219): Do not flatten these params.
-  String prerender_metric_suffix_;
-  // If true, warms up compositor on `WebLocalFrameImpl::DidCommitLoad` if the
-  // page is under prerendering.
-  bool should_warm_up_compositor_on_prerender_ = false;
-  // If true, prepares the paint tree if the page is under prerendering.
-  bool should_prepare_paint_tree_on_prerender_ = false;
-  // If true, pauses JavaScript execution until the page is activated.
-  bool should_pause_javascript_execution_on_prerender_ = false;
 
   // Whether the the Page's main document is a Fenced Frame document. This is
   // only set for the MPArch implementation and is true when the corresponding

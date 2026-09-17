@@ -157,7 +157,6 @@
 #include "third_party/blink/renderer/core/loader/document_loader.h"
 #include "third_party/blink/renderer/core/loader/frame_load_request.h"
 #include "third_party/blink/renderer/core/loader/idleness_detector.h"
-#include "third_party/blink/renderer/core/loader/prerender_handle.h"
 #include "third_party/blink/renderer/core/page/chrome_client.h"
 #include "third_party/blink/renderer/core/page/focus_controller.h"
 #include "third_party/blink/renderer/core/page/page.h"
@@ -603,7 +602,7 @@ bool LocalFrame::NavigationShouldReplaceCurrentHistoryEntry(
 bool LocalFrame::ShouldMaintainTrivialSessionHistory() const {
   // This should be kept in sync with
   // NavigationControllerImpl::ShouldMaintainTrivialSessionHistory.
-  return GetDocument()->IsPrerendering() || IsInFencedFrameTree();
+  return IsInFencedFrameTree();
 }
 
 bool LocalFrame::DetachImpl(FrameDetachType type) {
@@ -2274,8 +2273,7 @@ void LocalFrame::ForceSynchronousDocumentInstall(const AtomicString& mime_type,
       DocumentInit::Create()
           .WithWindow(DomWindow(), nullptr)
           .WithTypeFrom(mime_type)
-          .WithURL(url)
-          .ForPrerendering(GetPage()->IsPrerendering()));
+          .WithURL(url));
   DCHECK_EQ(document, GetDocument());
   DocumentParser* parser = document->OpenForNavigation(
       kForceSynchronousParsing, mime_type, AtomicString("UTF-8"));

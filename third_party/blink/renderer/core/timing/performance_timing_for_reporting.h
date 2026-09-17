@@ -169,8 +169,6 @@ class CORE_EXPORT PerformanceTimingForReporting final
   uint64_t ParseBlockedOnScriptExecutionDuration() const;
   uint64_t ParseBlockedOnScriptExecutionFromDocumentWriteDuration() const;
 
-  // The start time of the prerender activation navigation.
-  std::optional<base::TimeDelta> PrerenderActivationStart() const;
 
   base::TimeDelta SystemFallbackFontTime() const;
   uint32_t SystemFallbackFontCount() const;

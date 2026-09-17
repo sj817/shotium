@@ -75,7 +75,6 @@ shot_mojom_platform_sources = [
   "permissions_policy/policy_value.mojom",
   "persistent_renderer_prefs.mojom",
   "preloading/anchor_element_interaction_host.mojom",
-  "prerender/prerender.mojom",
 
   "reporting/reporting.mojom",
   "scheduler/web_scheduler_tracked_feature.mojom",
@@ -130,7 +129,6 @@ shot_mojom_core_sources = [
 
   "page/page.mojom",
   "page/page_visibility_state.mojom",
-  "page/prerender_page_param.mojom",
   "page_state/page_state.mojom",
   "service_worker/service_worker_object.mojom",
 ]

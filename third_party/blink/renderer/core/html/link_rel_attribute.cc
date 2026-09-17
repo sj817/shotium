@@ -61,10 +61,6 @@ LinkRelAttribute::LinkRelAttribute(const String& rel) : LinkRelAttribute() {
       is_preconnect_ = true;
     } else if (link_type == "preload") {
       is_link_preload_ = true;
-    } else if (link_type == "prerender") {
-      is_link_prerender_ = true;
-    } else if (link_type == "next") {
-      is_link_next_ = true;
     } else if (link_type == "apple-touch-icon") {
       icon_type_ = mojom::blink::FaviconIconType::kTouchIcon;
     } else if (link_type == "apple-touch-icon-precomposed") {

@@ -325,18 +325,6 @@ uint64_t PerformanceTimingForReporting::
 }
 
 std::optional<base::TimeDelta>
-PerformanceTimingForReporting::PrerenderActivationStart() const {
-  DocumentLoadTiming* timing = GetDocumentLoadTiming();
-  if (!timing)
-    return std::nullopt;
-
-  base::TimeTicks activation_start = timing->ActivationStart();
-  if (activation_start.is_null())
-    return std::nullopt;
-
-  return timing->MonotonicTimeToZeroBasedDocumentTime(activation_start);
-}
-
 std::optional<base::TimeTicks> PerformanceTimingForReporting::UnloadStart()
     const {
   DocumentLoadTiming* timing = GetDocumentLoadTiming();

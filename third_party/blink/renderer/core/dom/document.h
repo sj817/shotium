@@ -383,8 +383,6 @@ class CORE_EXPORT Document : public ContainerNode,
   // document to cease to be the initial empty document.
   void OverrideIsInitialEmptyDocument() { is_initial_empty_document_ = false; }
 
-  bool IsPrerendering() const { return is_prerendering_; }
-
   bool HasDocumentPictureInPictureWindow() const;
 
   network::mojom::ReferrerPolicy GetReferrerPolicy() const;
@@ -419,7 +417,6 @@ class CORE_EXPORT Document : public ContainerNode,
   DEFINE_ATTRIBUTE_EVENT_LISTENER(securitypolicyviolation,
                                   kSecuritypolicyviolation)
   DEFINE_ATTRIBUTE_EVENT_LISTENER(visibilitychange, kVisibilitychange)
-  DEFINE_ATTRIBUTE_EVENT_LISTENER(prerenderingchange, kPrerenderingchange)
 
   ViewportData& GetViewportData() const { return *viewport_data_; }
 
@@ -574,8 +571,6 @@ class CORE_EXPORT Document : public ContainerNode,
   bool hidden() const;
   void DidChangeVisibilityState();
 
-  bool prerendering() const;
-
   bool wasDiscarded() const;
   void SetWasDiscarded(bool);
 
@@ -669,20 +664,6 @@ class CORE_EXPORT Document : public ContainerNode,
   bool IsScriptExecutionReady() const {
     return HaveScriptBlockingStylesheetsLoaded();
   }
-
-  // Returns true if the document is prerendering and its trigger asks it to
-  // block script execution until prerender activation, and turns false upon
-  // activation where we anyway no longer want to block script execution; see
-  // `UnblockScriptExecutionForPrerenderActivation`. Note that it never starts
-  // to block or unblock script execution in the middle of execution, since
-  // the field is set to true when initializing `this` instance and set to false
-  // only once (upon activation).
-  bool IsScriptBlockedUntilPrerenderActivation() const;
-
-  // Called when a prerender-until-script page is upgraded to a full prerender.
-  // Similar to UnblockScriptExecutionForPrerenderActivation(), but the page
-  // remains in prerendering state (document.prerendering stays true).
-  void UnblockScriptExecutionForPrerenderUpgrade();
 
 
   StyleEngine& GetStyleEngine() const {
@@ -1975,13 +1956,6 @@ class CORE_EXPORT Document : public ContainerNode,
   void SetFindInPageActiveMatchNode(Node*);
   const Node* GetFindInPageActiveMatchNode() const;
 
-  void ActivateForPrerendering(
-      const mojom::blink::PrerenderPageActivationParams& params);
-
-  void AddWillDispatchPrerenderingchangeCallback(base::OnceClosure);
-
-  void AddPostPrerenderingActivationStep(base::OnceClosure callback);
-
   class CORE_EXPORT PaintPreviewScope {
     STACK_ALLOCATED();
 
@@ -2386,8 +2360,6 @@ class CORE_EXPORT Document : public ContainerNode,
                                    mojom::blink::FocusType focus_type);
   void DisplayNoneChangedForFrame();
 
-  void RunPostPrerenderingActivationSteps();
-
   // Fetch the compression dictionary sent in the response header after the
   // document load completes.
   void FetchDictionaryFromLinkHeader();
@@ -2404,15 +2376,6 @@ class CORE_EXPORT Document : public ContainerNode,
 
 
 
-  // Called upon prerender activation.
-  // Note that not all prerendering pages block script execution; prerendering
-  // pages' triggers can determine whether or not to block scripts.
-  void UnblockScriptExecutionForPrerenderActivation();
-
-  // Resume script execution after either prerender activation or
-  // prerender-until-script upgrade.
-  void ResumeBlockedScriptExecution();
-
   // Mutable because the token is lazily-generated on demand if no token is
   // explicitly set.
   mutable std::optional<DocumentToken> token_;
@@ -2421,26 +2384,11 @@ class CORE_EXPORT Document : public ContainerNode,
 
   bool is_initial_empty_document_;
 
-  // Track the prerendering state.
-  // TODO(crbug.com/1169032): Update the flag on the prerendering activation.
-  // Also, we will merge the state into the lifecycle state eventually.
-  // TODO(bokan): This should eventually be based on the document loading-mode:
-  // https://github.com/jeremyroman/alternate-loading-modes/blob/main/prerendering-state.md#documentprerendering
-  bool is_prerendering_;
-
   // Tracks whether the current document was installed as the result of a
   // discard operation.
   // TODO(crbug.com/391949533): Explore combining this with
   // `is_initial_empty_document_`.
   const bool is_for_discard_;
-
-  // Callbacks to execute upon activation of a prerendered page, just before the
-  // prerenderingchange event is dispatched.
-  Vector<base::OnceClosure> will_dispatch_prerenderingchange_callbacks_;
-
-  // The callback list for post-prerendering activation step.
-  // https://wicg.github.io/nav-speculation/prerendering.html#document-post-prerendering-activation-steps-list
-  Vector<base::OnceClosure> post_prerendering_activation_callbacks_;
 
   bool evaluate_media_queries_on_style_recalc_ = false;
 
@@ -2621,13 +2569,6 @@ class CORE_EXPORT Document : public ContainerNode,
   // For other scheduling types, see ScriptLoader and HTMLParserScriptRunner.
   Member<ScriptRunner> script_runner_;
   Member<ScriptRunnerDelayer> script_runner_delayer_;
-
-  // Defers the script runner until prerender activation, triggered by
-  // prerender-until-script. See https://crbug.com/428500219 for details.
-  // There is another plan to allow other triggers to specify whether to delay
-  // async scripts during prerendering, so it is named as
-  // `prerender_script_runner_delayer_`.
-  Member<ScriptRunnerDelayer> prerender_script_runner_delayer_;
 
   HeapVector<Member<ScriptElementBase>> current_script_stack_;
 

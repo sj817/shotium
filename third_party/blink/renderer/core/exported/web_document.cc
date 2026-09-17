@@ -287,18 +287,8 @@ bool WebDocument::IsLoaded() {
   return !ConstUnwrap<Document>()->Parser();
 }
 
-bool WebDocument::IsPrerendering() {
-  return ConstUnwrap<Document>()->IsPrerendering();
-}
-
 bool WebDocument::HasDocumentPictureInPictureWindow() const {
   return ConstUnwrap<Document>()->HasDocumentPictureInPictureWindow();
-}
-
-void WebDocument::AddPostPrerenderingActivationStep(
-    base::OnceClosure callback) {
-  return Unwrap<Document>()->AddPostPrerenderingActivationStep(
-      std::move(callback));
 }
 
 void WebDocument::SetCookieManager(

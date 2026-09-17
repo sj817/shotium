@@ -340,7 +340,6 @@ struct SameSizeAsDocumentLoader
   bool is_secure_context_root;
   bool had_sticky_activation;
   bool is_browser_initiated;
-  bool is_prerendering;
   bool has_text_fragment_token;
   std::optional<String> internal_scroll_to_text_fragment;
   bool was_discarded;
@@ -2858,14 +2857,12 @@ void DocumentLoader::CommitNavigation() {
 
   WillCommitNavigation();
 
-  is_prerendering_ = frame_->GetPage()->IsPrerendering();
   Document* document = frame_->DomWindow()->InstallNewDocument(
       DocumentInit::Create()
           .WithWindow(frame_->DomWindow(), owner_document)
           .WithToken(token_)
           .ForInitialEmptyDocument(commit_reason_ ==
                                    CommitReason::kInitialization)
-          .ForPrerendering(is_prerendering_)
           .WithURL(Url())
           .WithTypeFrom(MimeType())
           .WithSrcdocDocument(loading_srcdoc_)
@@ -3467,36 +3464,6 @@ std::optional<String> DocumentLoader::TakeInternalScrollToTextFragment() {
   std::optional<String> result = std::move(internal_scroll_to_text_fragment_);
   internal_scroll_to_text_fragment_.reset();
   return result;
-}
-
-void DocumentLoader::NotifyPrerenderingDocumentActivated(
-    const mojom::blink::PrerenderPageActivationParams& params) {
-  DCHECK(!frame_->GetDocument()->IsPrerendering());
-  DCHECK(is_prerendering_);
-  is_prerendering_ = false;
-
-  // A prerendered document won't have user activation, but when it gets moved
-  // to the primary frame, the primary frame might have sticky user activation.
-  // In that case, propagate the sticky user activation to the activated
-  // prerendered document
-  bool had_sticky_activation =
-      params.was_user_activated == mojom::blink::WasActivatedOption::kYes;
-  if (frame_->IsMainFrame() && had_sticky_activation) {
-    DCHECK(!had_sticky_activation_);
-    had_sticky_activation_ = had_sticky_activation;
-
-    // Update Frame::had_sticky_user_activation_before_nav_. On regular
-    // navigation, this is updated on DocumentLoader::CommitNavigation, but
-    // that function is not called on prerender page activation.
-    DCHECK(!frame_->HadStickyUserActivationBeforeNavigation());
-    frame_->SetHadStickyUserActivationBeforeNavigation(had_sticky_activation);
-
-    // Unlike CommitNavigation, there's no need to call
-    // HadStickyUserActivationBeforeNavigationChanged here as the browser
-    // process already knows it.
-  }
-
-  GetTiming().SetActivationStart(*params.activation_start);
 }
 
 HashMap<KURL, EarlyHintsPreloadEntry>

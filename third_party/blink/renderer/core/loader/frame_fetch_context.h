@@ -124,7 +124,6 @@ class CORE_EXPORT FrameFetchContext final : public BaseFetchContext,
 
   bool StartSpeculativeImageDecode(Resource* resource) override;
 
-  bool IsPrerendering() const override;
 
   bool DoesLCPPHaveAnyHintData() override;
 

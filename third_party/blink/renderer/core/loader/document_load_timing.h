@@ -133,7 +133,6 @@ class CORE_EXPORT DocumentLoadTiming final {
   void MarkLoadEventStart();
   void MarkLoadEventEnd();
 
-  void SetActivationStart(base::TimeTicks);
 
   void SetCanRequestFromPreviousDocument(bool value) {
     document_load_timing_values_->can_request_from_previous_document = value;

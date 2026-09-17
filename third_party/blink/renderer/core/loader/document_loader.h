@@ -414,11 +414,6 @@ class CORE_EXPORT DocumentLoader : public GarbageCollected<DocumentLoader>,
     internal_scroll_to_text_fragment_ = text_fragment;
   }
 
-  // Notifies that the prerendering document this loader is working for is
-  // activated.
-  void NotifyPrerenderingDocumentActivated(
-      const mojom::blink::PrerenderPageActivationParams& params);
-
   HashMap<KURL, EarlyHintsPreloadEntry> GetEarlyHintsPreloadedResources();
 
   // An origin preconnected to via an Early Hints response, for the
@@ -740,17 +735,11 @@ class CORE_EXPORT DocumentLoader : public GarbageCollected<DocumentLoader>,
   bool is_secure_context_root_ = false;
 
 
-  // Whether this load request comes with a sticky user activation. For
-  // prerendered pages, this is initially false but could be updated on
-  // prerender page activation.
+  // Whether this load request comes with a sticky user activation.
   bool had_sticky_activation_ = false;
 
   // Whether this load request was initiated by the browser.
   const bool is_browser_initiated_ = false;
-
-  // Whether this loader committed a document in a prerendered page that has not
-  // yet been activated. This is only set after commit.
-  bool is_prerendering_ = false;
 
   // If true, the navigation loading this document should allow a text fragment
   // to invoke. This token may be instead consumed to pass this permission

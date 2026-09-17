@@ -53,8 +53,6 @@ class CORE_EXPORT LinkRelAttribute {
   bool IsPreconnect() const { return is_preconnect_; }
   bool IsLinkPrefetch() const { return is_link_prefetch_; }
   bool IsLinkPreload() const { return is_link_preload_; }
-  bool IsLinkPrerender() const { return is_link_prerender_; }
-  bool IsLinkNext() const { return is_link_next_; }
   bool IsManifest() const { return is_manifest_; }
   bool IsModulePreload() const { return is_module_preload_; }
   bool IsServiceWorker() const { return is_service_worker_; }
@@ -75,8 +73,6 @@ class CORE_EXPORT LinkRelAttribute {
   bool is_preconnect_ : 1 = false;
   bool is_link_prefetch_ : 1 = false;
   bool is_link_preload_ : 1 = false;
-  bool is_link_prerender_ : 1 = false;
-  bool is_link_next_ : 1 = false;
   bool is_manifest_ : 1 = false;
   bool is_module_preload_ : 1 = false;
   bool is_service_worker_ : 1 = false;

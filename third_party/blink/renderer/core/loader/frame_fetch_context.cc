@@ -237,7 +237,6 @@ struct FrameFetchContext::FrozenState final : GarbageCollected<FrozenState> {
               const String& user_agent,
               base::optional_ref<const UserAgentMetadata> user_agent_metadata,
               bool is_isolated_svg_chrome_client,
-              bool is_prerendering,
               const String& reduced_accept_language)
       : url(url),
         content_security_policy(content_security_policy),
@@ -248,7 +247,6 @@ struct FrameFetchContext::FrozenState final : GarbageCollected<FrozenState> {
         user_agent(user_agent),
         user_agent_metadata(user_agent_metadata.CopyAsOptional()),
         is_isolated_svg_chrome_client(is_isolated_svg_chrome_client),
-        is_prerendering(is_prerendering),
         reduced_accept_language(reduced_accept_language) {}
 
   const KURL url;
@@ -261,7 +259,6 @@ struct FrameFetchContext::FrozenState final : GarbageCollected<FrozenState> {
   const String user_agent;
   const std::optional<UserAgentMetadata> user_agent_metadata;
   const bool is_isolated_svg_chrome_client;
-  const bool is_prerendering;
   const String reduced_accept_language;
 
   void Trace(Visitor* visitor) const {
@@ -954,13 +951,6 @@ bool FrameFetchContext::StartSpeculativeImageDecode(Resource* resource) {
   return false;
 }
 
-bool FrameFetchContext::IsPrerendering() const {
-  if (GetResourceFetcherProperties().IsDetached()) {
-    return frozen_state_->is_prerendering;
-  }
-  return document_->IsPrerendering();
-}
-
 bool FrameFetchContext::DoesLCPPHaveAnyHintData() {
   if (GetResourceFetcherProperties().IsDetached()) {
     return false;
@@ -1233,7 +1223,7 @@ FetchContext* FrameFetchContext::Detach() {
       Url(), GetContentSecurityPolicy(), GetSiteForCookies(),
       GetTopFrameOrigin(), client_hints_prefs, GetDevicePixelRatio(),
       GetUserAgent(), GetUserAgentMetadata(), IsIsolatedSVGChromeClient(),
-      IsPrerendering(), GetReducedAcceptLanguage());
+      GetReducedAcceptLanguage());
   document_loader_ = nullptr;
   document_ = nullptr;
   return this;

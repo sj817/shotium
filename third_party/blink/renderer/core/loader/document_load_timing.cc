@@ -290,14 +290,6 @@ void DocumentLoadTiming::MarkCommitNavigationEnd() {
   NotifyDocumentTimingChanged();
 }
 
-void DocumentLoadTiming::SetActivationStart(base::TimeTicks activation_start) {
-  document_load_timing_values_->activation_start = activation_start;
-  TRACE_EVENT_MARK_WITH_TIMESTAMP1("blink.user_timing", "activationStart",
-                                   activation_start, "frame",
-                                   GetFrameIdForTracing(GetFrame()));
-  NotifyDocumentTimingChanged();
-}
-
 void DocumentLoadTiming::SetCriticalCHRestart(
     base::TimeTicks critical_ch_restart) {
   document_load_timing_values_->critical_ch_restart = critical_ch_restart;

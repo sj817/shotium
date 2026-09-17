@@ -42,7 +42,6 @@
 #include "third_party/blink/renderer/core/loader/link_loader_client.h"
 #include "third_party/blink/renderer/core/loader/pending_link_preload.h"
 #include "third_party/blink/renderer/core/loader/preload_helper.h"
-#include "third_party/blink/renderer/core/loader/prerender_handle.h"
 #include "third_party/blink/renderer/core/loader/resource/css_style_sheet_resource.h"
 #include "third_party/blink/renderer/core/loader/shared_dictionary_hint_type.h"
 #include "third_party/blink/renderer/core/page/viewport_description.h"
@@ -55,29 +54,6 @@
 
 namespace blink {
 
-
-namespace {
-
-// Decide the prerender type based on the link rel attribute. Returns
-// std::nullopt if the attribute doesn't indicate the prerender type.
-std::optional<mojom::blink::PrerenderTriggerType>
-PrerenderTriggerTypeFromRelAttribute(const LinkRelAttribute& rel_attribute,
-                                     Document& document) {
-  std::optional<mojom::blink::PrerenderTriggerType> trigger_type;
-  if (rel_attribute.IsLinkPrerender()) {
-    UseCounter::Count(document, WebFeature::kLinkRelPrerender);
-    trigger_type = mojom::blink::PrerenderTriggerType::kLinkRelPrerender;
-  }
-  if (rel_attribute.IsLinkNext()) {
-    UseCounter::Count(document, WebFeature::kLinkRelNext);
-    // Prioritize mojom::blink::PrerenderTriggerType::kLinkRelPrerender.
-    if (!trigger_type)
-      trigger_type = mojom::blink::PrerenderTriggerType::kLinkRelNext;
-  }
-  return trigger_type;
-}
-
-}  // namespace
 
 LinkLoader::LinkLoader(LinkLoaderClient* client) : client_(client) {
   DCHECK(client_);
@@ -125,14 +101,6 @@ bool LinkLoader::LoadLink(const LinkLoadParameters& params,
   }
   PreloadHelper::FetchCompressionDictionaryIfNeeded(params, document,
                                                     pending_preload_);
-
-  std::optional<mojom::blink::PrerenderTriggerType> trigger_type =
-      PrerenderTriggerTypeFromRelAttribute(params.rel, document);
-  if (trigger_type) {
-    // The previous prerender should already be aborted by Abort().
-    DCHECK(!prerender_);
-    prerender_ = PrerenderHandle::Create(document, params.href, *trigger_type);
-  }
   return true;
 }
 
@@ -182,10 +150,6 @@ void LinkLoader::LoadStylesheet(
 }
 
 void LinkLoader::Abort() {
-  if (prerender_) {
-    prerender_->Cancel();
-    prerender_.Clear();
-  }
   if (pending_preload_) {
     pending_preload_->Dispose();
     pending_preload_.Clear();
@@ -195,7 +159,6 @@ void LinkLoader::Abort() {
 void LinkLoader::Trace(Visitor* visitor) const {
   visitor->Trace(client_);
   visitor->Trace(pending_preload_);
-  visitor->Trace(prerender_);
 }
 
 }  // namespace blink
