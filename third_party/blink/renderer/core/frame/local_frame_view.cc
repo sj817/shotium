@@ -2765,13 +2765,11 @@ void LocalFrameView::UpdateStyleAndLayout() {
   // Second pass: run autosize until it stabilizes.
   if (auto_size_info_) {
     bool should_reset_for_content = did_layout || needs_autosize_for_overflow_;
-    bool did_run_autosize_layout = false;
     {
       base::AutoReset<bool> reset(&is_being_auto_sized_, true);
       while (auto_size_info_->AutoSizeIfNeeded(should_reset_for_content)) {
         should_reset_for_content = false;
         did_layout |= UpdateStyleAndLayoutInternal();
-        did_run_autosize_layout = true;
       }
     }
     // We may have a mismatch as we impose an additional min-content constraint

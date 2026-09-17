@@ -52,6 +52,7 @@
 #include "mojo/public/cpp/bindings/self_owned_receiver.h"
 #include "mojo/public/cpp/system/message_pipe.h"
 #include "services/network/public/cpp/features.h"
+#include "services/network/public/cpp/shared_url_loader_factory.h"
 #include "services/network/public/mojom/content_security_policy.mojom-blink.h"
 #include "services/network/public/mojom/source_location.mojom-blink.h"
 #include "skia/public/mojom/skcolor.mojom-blink.h"
@@ -2806,8 +2807,6 @@ void LocalFrame::UpdateWindowControlsOverlay(
   gfx::Rect window_controls_overlay_rect =
       gfx::ScaleToEnclosingRect(bounding_rect_in_dips, 1.0f / scale_factor);
 
-  bool fire_event =
-      (window_controls_overlay_rect != window_controls_overlay_rect_);
   is_window_controls_overlay_visible_ = !window_controls_overlay_rect.IsEmpty();
   window_controls_overlay_rect_ = window_controls_overlay_rect;
   window_controls_overlay_rect_in_dips_ = bounding_rect_in_dips;

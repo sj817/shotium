@@ -69,8 +69,7 @@ ProcessingInstruction::ProcessingInstruction(Document& document,
       loading_(false),
       alternate_(false),
       is_css_(false),
-      is_xsl_(false),
-      listener_for_xslt_(nullptr) {}
+      is_xsl_(false) {}
 
 ProcessingInstruction::~ProcessingInstruction() = default;
 

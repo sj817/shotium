@@ -16,18 +16,16 @@ XSLStyleSheet::XSLStyleSheet(XSLStyleSheet* parent_style_sheet,
       original_url_(original_url),
       final_url_(final_url),
       is_disabled_(false),
-      embedded_(false),
       parent_style_sheet_(parent_style_sheet) {}
 
 XSLStyleSheet::XSLStyleSheet(Node* parent_node,
                              const String& original_url,
                              const KURL& final_url,
-                             bool embedded)
+                             bool /*embedded*/)
     : owner_node_(parent_node),
       original_url_(original_url),
       final_url_(final_url),
       is_disabled_(false),
-      embedded_(embedded),
       parent_style_sheet_(nullptr) {}
 
 XSLStyleSheet::~XSLStyleSheet() = default;

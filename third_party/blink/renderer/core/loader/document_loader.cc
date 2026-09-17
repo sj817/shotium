@@ -378,7 +378,6 @@ struct SameSizeAsDocumentLoader
       HashMap<mojom::blink::PermissionName, mojom::blink::PermissionStatus>>
       initial_permission_statuses;
   bool force_new_document_sequence_number;
-  base::TimeDelta total_taken_time_to_update_subresource_load_metrics;
   TaskHandle cross_origin_parent_load_event_task;
   std::unique_ptr<base::UnguessableToken> sandbox_origin_token;
 };

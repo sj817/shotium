@@ -120,12 +120,6 @@
       depends_on: ["SensorExtraClasses"],
     },
     {
-      name: "AriaNotify",
-      permissions_policy_name: "aria-notify",
-      feature_default: "EnableForAll",
-      depends_on: ["AriaNotify"],
-    },
-    {
       name: "Autofill",
       permissions_policy_name: "autofill",
       depends_on: ["Autofill"],

@@ -567,6 +567,7 @@ void TouchEventManager::UpdateTouchAttributeMapsForPointerDown(
     delayed_effective_touch_action_ =
         delayed_effective_touch_action_.value_or(TouchAction::kAuto) &
         effective_touch_action;
+  }
   // Combine the current touch action sequence with the touch action
   // for the current finger press.
   current_touch_action_ &= effective_touch_action;

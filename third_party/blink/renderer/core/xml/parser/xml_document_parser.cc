@@ -1839,8 +1839,12 @@ xmlDocPtr XmlDocPtrForString(Document* document,
   // document results in good error messages.
   XMLDocumentParserScope scope(document, ErrorFunc, nullptr);
   XMLParserInput input(source);
+  // libxslt (which defined XSLT_PARSE_OPTIONS) is no longer built; these are
+  // the options that macro expanded to.
+  constexpr int kXsltParseOptions = XML_PARSE_NOENT | XML_PARSE_DTDLOAD |
+                                    XML_PARSE_DTDATTR | XML_PARSE_NOCDATA;
   return xmlReadMemory(input.Data(), input.size(), url.Latin1().c_str(),
-                       input.Encoding(), XSLT_PARSE_OPTIONS | XML_PARSE_HUGE);
+                       input.Encoding(), kXsltParseOptions | XML_PARSE_HUGE);
 }
 
 OrdinalNumber XMLDocumentParser::LineNumber() const {

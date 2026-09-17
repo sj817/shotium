@@ -73,8 +73,6 @@ class XSLStyleSheet final : public StyleSheet {
 
   HeapVector<Member<XSLStyleSheet>> children_;
 
-  bool embedded_;
-
   Member<XSLStyleSheet> parent_style_sheet_;
 };
 

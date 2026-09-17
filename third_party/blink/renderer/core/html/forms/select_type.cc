@@ -314,7 +314,6 @@ class MenuListSelectType final : public SelectType {
   void UnobserveTreeMutation();
 
   Member<PopupMenu> popup_;
-  bool is_popup_external_ = false;
   Member<PopupUpdater> popup_updater_;
   Member<const ComputedStyle> option_style_;
   Member<HTMLSlotElement> button_slot_;
@@ -783,18 +782,9 @@ void MenuListSelectType::ShowPopup(PopupMenu::ShowEventType type) {
     return;
   }
 
-  Document& document = select_->GetDocument();
-  if (!select_->GetLayoutObject())
-    return;
-
+  // ChromeClient::OpenPopupMenu is gone: shotium has no browser to host a
+  // native <select> popup, so the native picker can never become visible.
   SetNativePopupIsVisible(false);
-  return;
-
-  ObserveTreeMutation();
-
-  popup_->Show(type);
-  // Used to notify AXObjectCache that the menu list popup was shown.
-  // AXObjectCache is gone (no accessibility tree in a screenshot renderer).
 }
 
 void MenuListSelectType::HidePopup(SelectPopupHideBehavior behavior) {

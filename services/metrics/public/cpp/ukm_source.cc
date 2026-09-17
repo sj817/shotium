@@ -16,17 +16,6 @@
 
 namespace ukm {
 
-namespace {
-
-int32_t g_android_activity_type_state = -1;
-
-}  // namespace
-
-// static
-void UkmSource::SetAndroidActivityTypeState(int32_t activity_type) {
-  g_android_activity_type_state = activity_type;
-}
-
 UkmSource::NavigationData::NavigationData() = default;
 UkmSource::NavigationData::~NavigationData() = default;
 
@@ -59,7 +48,6 @@ UkmSource::NavigationData UkmSource::NavigationData::CopyWithSanitizedUrls(
 UkmSource::UkmSource(ukm::SourceId id, const GURL& url)
     : id_(id),
       type_(GetSourceIdType(id_)),
-      android_activity_type_state_(g_android_activity_type_state),
       creation_time_(base::TimeTicks::Now()) {
   if (!url.is_empty()) {
     navigation_data_.urls = {url};
@@ -70,7 +58,6 @@ UkmSource::UkmSource(ukm::SourceId id, const NavigationData& navigation_data)
     : id_(id),
       type_(GetSourceIdType(id_)),
       navigation_data_(navigation_data),
-      android_activity_type_state_(g_android_activity_type_state),
       creation_time_(base::TimeTicks::Now()) {
   DCHECK(type_ == SourceIdType::NAVIGATION_ID);
 }

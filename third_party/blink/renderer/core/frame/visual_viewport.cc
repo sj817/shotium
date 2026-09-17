@@ -443,6 +443,10 @@ bool VisualViewport::DidSetScaleOrLocation(float scale,
 
   bool values_changed = false;
 
+  // Only the trace event below still consumes this; the ChromeClient
+  // PageScaleFactorChanged() notification is gone.
+  bool notify_page_scale_factor_changed =
+      is_pinch_gesture_active_ != is_pinch_gesture_active;
   is_pinch_gesture_active_ = is_pinch_gesture_active;
   if (std::isfinite(scale)) {
     float clamped_scale = GetPage()
@@ -452,6 +456,7 @@ bool VisualViewport::DidSetScaleOrLocation(float scale,
     if (clamped_scale != scale_) {
       scale_ = clamped_scale;
       values_changed = true;
+      notify_page_scale_factor_changed = true;
       EnqueueResizeEvent();
     }
   }
