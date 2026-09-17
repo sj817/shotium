@@ -34,6 +34,7 @@
 #include "third_party/blink/renderer/core/clipboard/data_transfer_access_policy.h"
 #include "third_party/blink/renderer/core/clipboard/data_transfer_item.h"
 #include "third_party/blink/renderer/core/clipboard/data_transfer_item_list.h"
+#include "third_party/blink/renderer/core/dom/document.h"
 #include "third_party/blink/renderer/core/fileapi/file_list.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
 #include "third_party/blink/renderer/core/html/html_image_element.h"

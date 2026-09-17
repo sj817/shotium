@@ -296,7 +296,6 @@ uint64_t PerformanceTimingForReporting::
       cross_origin_isolated_capability_);
 }
 
-std::optional<base::TimeDelta>
 std::optional<base::TimeTicks> PerformanceTimingForReporting::UnloadStart()
     const {
   DocumentLoadTiming* timing = GetDocumentLoadTiming();

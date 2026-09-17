@@ -22,6 +22,7 @@
 
 #include "third_party/blink/renderer/core/svg/svg_a_element.h"
 
+#include "third_party/blink/public/common/input/web_pointer_properties.h"
 #include "third_party/blink/public/mojom/input/focus_type.mojom-blink.h"
 #include "third_party/blink/renderer/core/dom/attr.h"
 #include "third_party/blink/renderer/core/dom/attribute.h"

@@ -32,6 +32,7 @@
 
 #include "base/compiler_specific.h"
 #include "third_party/blink/public/common/features.h"
+#include "third_party/blink/public/common/input/web_pointer_properties.h"
 #include "third_party/blink/public/mojom/choosers/date_time_chooser.mojom-blink.h"
 #include "third_party/blink/public/mojom/input/focus_type.mojom-blink.h"
 #include "third_party/blink/public/mojom/scroll/scroll_into_view_params.mojom-blink.h"

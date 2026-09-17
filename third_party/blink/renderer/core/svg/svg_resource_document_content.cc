@@ -25,6 +25,8 @@
 #include "base/auto_reset.h"
 #include "base/notreached.h"
 #include "base/task/single_thread_task_runner.h"
+#include "third_party/blink/public/mojom/fetch/fetch_api_request.mojom-blink.h"
+#include "third_party/blink/renderer/core/dom/document.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
 #include "third_party/blink/renderer/core/loader/resource/svg_document_resource.h"
 #include "third_party/blink/renderer/core/page/page.h"
@@ -36,6 +38,7 @@
 #include "third_party/blink/renderer/core/svg/svg_svg_element.h"
 #include "third_party/blink/renderer/platform/instrumentation/use_counter.h"
 #include "third_party/blink/renderer/platform/loader/fetch/fetch_parameters.h"
+#include "third_party/blink/renderer/platform/runtime_enabled_features.h"
 #include "third_party/blink/renderer/platform/supplementable.h"
 
 namespace blink {

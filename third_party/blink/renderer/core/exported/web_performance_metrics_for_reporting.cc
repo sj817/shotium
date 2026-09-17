@@ -255,7 +255,6 @@ double WebPerformanceMetricsForReporting::
 }
 
 std::optional<base::TimeDelta>
-std::optional<base::TimeDelta>
 WebPerformanceMetricsForReporting::UserTimingMarkFullyLoaded() const {
   return private_->timingForReporting()->UserTimingMarkFullyLoaded();
 }
