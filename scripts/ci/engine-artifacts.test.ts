@@ -8,7 +8,7 @@ import test from 'node:test';
 
 import {platforms} from '../lib/platforms.ts';
 import {
-  type Api, type ArtifactRecord, findBuildDir, findEngineSet, listByName, names, status, statusOutputs, trusted,
+  type Api, type ArtifactRecord, findBuildDir, findBuildDirs, findEngineSet, listByName, names, pruneKeeps, status, statusOutputs, trusted,
 } from './engine-artifacts.ts';
 
 const REPO = 100;
@@ -16,11 +16,11 @@ const FORK = 200;
 const FP = 'd234ab93f5f87385';
 
 let nextId = 1;
-function record(name: string, run: number, extra: Partial<ArtifactRecord & {head: number; at: string}> = {}): ArtifactRecord {
+function record(name: string, run: number, extra: Partial<ArtifactRecord & {head: number; at: string; branch: string}> = {}): ArtifactRecord {
   return {
     id: nextId++, name, size_in_bytes: extra.size_in_bytes ?? 400_000_000, expired: extra.expired ?? false,
     created_at: extra.at ?? `2026-09-${String(run % 28 + 1).padStart(2, '0')}T00:00:00Z`,
-    workflow_run: {id: run, repository_id: REPO, head_repository_id: extra.head ?? REPO, head_branch: 'main', head_sha: 'abc'},
+    workflow_run: {id: run, repository_id: REPO, head_repository_id: extra.head ?? REPO, head_branch: extra.branch ?? 'main', head_sha: `sha${run}`},
   };
 }
 
@@ -57,7 +57,7 @@ test('listByName drops expired records and orders newest first', async () => {
 
 test('an engine counts only with evidence from the same trusted run', async () => {
   const n = names('linux-amd64', FP);
-  assert.deepEqual(n, {engine: `engine-linux-amd64-${FP}`, evidence: `ffi-evidence-linux-amd64-${FP}`, buildDir: 'build-dir-linux-amd64', marker: `build-dir-linux-amd64-${FP}`});
+  assert.deepEqual(n, {engine: `engine-linux-amd64-${FP}`, evidence: `ffi-evidence-linux-amd64-${FP}`, buildDir: 'build-dir-linux-amd64', marker: `build-dir-linux-amd64-${FP}`, index: 'build-index-linux-amd64'});
 
   // run 3: engine without evidence (run_checks=false); run 2: both, newer than run 1.
   const records = [
@@ -99,6 +99,50 @@ test('the build directory: exact when its marker shares the run, otherwise the n
   // shadow the real one.
   const junk = [...records, record(n.buildDir, 3, {at: '2026-09-03T00:00:00Z', size_in_bytes: 173})];
   assert.equal((await findBuildDir(api(junk), 'windows-arm64', undefined))?.runId, 2);
+});
+
+test('every usable build directory is a candidate, exact first, with the commit and branch that made it', async () => {
+  const n = names('linux-amd64', FP);
+  const records = [
+    record(n.buildDir, 1, {at: '2026-09-01T00:00:00Z', branch: 'feat/a'}), record(n.marker, 1, {at: '2026-09-01T00:00:00Z'}),
+    record(n.buildDir, 2, {at: '2026-09-02T00:00:00Z'}),
+    record(n.buildDir, 3, {at: '2026-09-03T00:00:00Z', size_in_bytes: 173}),
+    record(n.buildDir, 4, {at: '2026-09-04T00:00:00Z', head: FORK}),
+    record(n.buildDir, 5, {at: '2026-09-05T00:00:00Z', branch: 'feat/b'}),
+  ];
+  const stray = {5: '.github/workflows/checks.yml'};
+  const found = await findBuildDirs(api(records, stray), 'linux-amd64', FP);
+  assert.deepEqual(found.map((d) => [d.runId, d.exact, d.headSha, d.branch]), [[1, true, 'sha1', 'feat/a'], [2, false, 'sha2', 'main']]);
+  const none = await findBuildDirs(api(records, stray), 'linux-amd64', 'ffffffffffffffff');
+  assert.deepEqual(none.map((d) => [d.runId, d.exact]), [[2, false], [1, false]], 'no exact one: newest first');
+  assert.deepEqual(await findBuildDirs(api([]), 'linux-amd64', FP), []);
+});
+
+test('prune keeps the newest directory of the most recent branches and main, and drops junk and the rest', () => {
+  const n = names('linux-amd64', FP);
+  const records = [
+    record(n.buildDir, 1, {at: '2026-09-01T00:00:00Z'}),
+    record(n.buildDir, 2, {at: '2026-09-02T00:00:00Z', branch: 'feat/a'}),
+    record(n.buildDir, 3, {at: '2026-09-03T00:00:00Z'}),
+    record(n.buildDir, 4, {at: '2026-09-04T00:00:00Z', branch: 'feat/b'}),
+    record(n.buildDir, 5, {at: '2026-09-05T00:00:00Z', branch: 'feat/a'}),
+    record(n.buildDir, 6, {at: '2026-09-06T00:00:00Z', branch: 'feat/c'}),
+    record(n.buildDir, 7, {at: '2026-09-07T00:00:00Z', branch: 'feat/d', size_in_bytes: 173}),
+  ];
+  const runs = (list: ArtifactRecord[]) => list.map((r) => r.workflow_run!.id).sort((a, b) => a - b);
+  // Three branches: c (6), a (5), b (4); main's newest (3) rides along.
+  const three = pruneKeeps(records, 3);
+  assert.deepEqual([runs(three.keep), runs(three.drop)], [[3, 4, 5, 6], [1, 2, 7]]);
+  // Two: c and a, plus main.
+  const two = pruneKeeps(records, 2);
+  assert.deepEqual([runs(two.keep), runs(two.drop)], [[3, 5, 6], [1, 2, 4, 7]]);
+  // Main among the most recent needs no extra slot.
+  const recentMain = pruneKeeps([...records, record(n.buildDir, 8, {at: '2026-09-08T00:00:00Z'})], 2);
+  assert.deepEqual(runs(recentMain.keep), [6, 8]);
+  // No main at all: just the branches.
+  const noMain = pruneKeeps(records.filter((r) => r.workflow_run!.head_branch !== 'main'), 1);
+  assert.deepEqual([runs(noMain.keep), runs(noMain.drop)], [[6], [2, 4, 5, 7]]);
+  assert.deepEqual(pruneKeeps([], 3), {keep: [], drop: []});
 });
 
 test('status lists what to build per OS, and --force builds everything', async () => {
