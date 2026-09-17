@@ -154,9 +154,11 @@ ShotPlatform::ShotPlatform() {
 
 ShotPlatform::~ShotPlatform() = default;
 
+#if BUILDFLAG(IS_LINUX)
 blink::WebSandboxSupport* ShotPlatform::GetSandboxSupport() {
   return sandbox_support_.get();
 }
+#endif
 
 bool ShotPlatform::HasDataResource(int resource_id) const {
   return ui::ResourceBundle::GetSharedInstance().HasDataResource(resource_id);

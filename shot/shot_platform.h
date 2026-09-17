@@ -10,6 +10,7 @@
 
 #include "base/memory/ref_counted_memory.h"
 #include "base/memory/scoped_refptr.h"
+#include "build/build_config.h"
 #include "third_party/blink/public/platform/platform.h"
 
 namespace shot {
@@ -43,7 +44,9 @@ class ShotPlatform : public blink::Platform {
   ~ShotPlatform() override;
 
   // blink::Platform:
+#if BUILDFLAG(IS_LINUX)
   blink::WebSandboxSupport* GetSandboxSupport() override;
+#endif
   bool HasDataResource(int resource_id) const override;
   blink::WebData GetDataResource(
       int resource_id,
@@ -53,8 +56,10 @@ class ShotPlatform : public blink::Platform {
       int resource_id) override;
   blink::WebString DefaultLocale() override;
 
+#if BUILDFLAG(IS_LINUX)
  private:
   std::unique_ptr<blink::WebSandboxSupport> sandbox_support_;
+#endif
 };
 
 }  // namespace shot
