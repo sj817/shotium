@@ -2203,3 +2203,130 @@ Linux 冷构建 34050536087 的最终 job 时间线,和设计一模一样:setup 
 - 构建目录缓存只对**写它的那条分支**和默认分支可见。11 个缓存全在特性分支
   上、`main` 上一个都没有,所以每开一条新分支六个平台全是冷的。合完动引擎的
   PR 要在 `main` 上补派发一次。
+
+## 25. 链接器删不掉的 vtable：40.2 MB 里的第二层死代码
+
+§17 的结论是"留在镜像里的基本都是静态可达的"。这一节把"可达"再往下拆一层：
+可达是链接器说了算，而 lld 在这棵树上有一只手是被绑着的。
+
+### 25.1 方法：不猜，问链接器
+
+`pnpm size:report` 按 PDB 段贡献把字节归到 jumbo 单元，能说"谁占了字节"，说不了
+"为什么活着"。这一轮的工具链在 `out/size-analysis/`（不入库）：
+
+1. 从 `obj/shot/shot.ninja` 还原 rsp，带 `/MAP` 重链一次 —— ThinLTO cache 是热的，
+   `/opt:lldlto=0` 让后端只做 codegen，**3.7 秒**。
+2. `/lldsavetemps` 在 COFF 上不存 ThinLTO 的原生对象；真正的输入在
+   `thinlto-cache/` 里：先把 17,516 个条目的 atime 全部拨回 2020，重链，atime 变新的
+   2,428 个就是这次链接读过的。
+3. 每个对象 `dumpbin -SYMBOLS -RELOCATIONS` → 段级引用图（`cofgraph.py build`）。
+   根 = 非 COMDAT 段 + `wmain` + 导出；可达集 43.6 MB，镜像实际 42.0 MB，模型略保守。
+4. `cofgraph.py why|cut`、`boundary.py`（一次 cut 的活调用方，也就是要改的代码位置）、
+   `cutseg.py`（按 map 段拆 cut 的字节，`.bss` 不占文件）。
+
+### 25.2 发现：`-fwhole-program-vtables` 在 Windows 上只剩副作用
+
+`build/config/compiler/BUILD.gn` 在 ThinLTO 下给 cflags 加 `-fwhole-program-vtables`
+和 `-fsplit-lto-unit`，但对应的链接旗标只在 `!is_win` 时传。于是 Windows 上整程序
+去虚化从来没跑过，而类型测试的降级（LowerTypeTests）照样把**同一继承树的全部
+vtable 拼成一个全局**放进 `shotium.exe.lto.obj`：912 KB vtable 里 825 KB（90%）
+在 2–10 个 vtable 合成的段里，例如 `SkFontMgr_DirectWrite`+`SkFontMgr_Custom`+
+`SkOrderedFontMgr`。用到任何一个类，兄弟的 vtable 和它的全部虚函数就都留下。
+FreeType（0.50 MB）、ICU 的格式化/排序/转写（0.76 MB）、re2（0.16 MB）、perfetto
+的 tracing service（0.25 MB）、TLS 服务端握手，都是这么活下来的。按"每个 vtable
+单独回收"建模：43.6 → 41.4 MB。
+
+修法一行：`is_shot_build` 不加这两个旗标（Rust 保留 `-Clinker-plugin-lto=yes`，
+去掉 `-Zsplit-lto-unit`），六平台同一设置。
+
+### 25.3 同批的入口裁剪与数据裁剪
+
+用 `boundary.py` 找到每一刀的活调用方，全部改完再编：
+
+| 项 | 改动 | 模型（文件字节） |
+|---|---|---:|
+| 编辑命令栈 | `Node::DefaultEventHandler` 去掉 keyboard/textInput 分支；`EventHandler::Default{Keyboard,TextInput}EventHandler`、`Frame::SetTextDirection`、`Editor::SetBaseWritingDirection` 删；`FrameSelection` 不再调 `TypingCommand::CloseTyping*` | 0.47 MB |
+| `<select>` 键盘联想 | `TypeAhead` 整个删，三个宿主去基类；`String::StartsWithIgnoringCaseAndAccents` 删 —— ICU 排序的唯一用户 | 0.16 MB |
+| gainmap | Blink 不再提取 JPEG gainmap，cc 不再走 `DrawGainmapImage`，`skia_support_xmp=false` | 0.20 MB |
+| `ConvertToLocalTime` | 改 `base::Time`，`icu::TimeZone` 的最后调用者 | 0.09 MB |
+| ICU 数据 | 去 zone/、lang/、region/、curr/、coll/ | 1.97 MB（精确） |
+| HSTS 预加载表 | `include_transport_security_state_preload_list = false`（Cronet 的既有分支）；生成器 `net/tools/{transport_security_state_generator,huffman_trie}` 和 10.5 MB 的 JSON 按裁树规则只留 BUILD.gn | 0.77 MB（精确） |
+
+HSTS 的代价是页面写 `http://` 引用预加载域名（google.com、`.app`/`.dev` 整个顶级域）
+时不再在请求前改写成 https，而是发 http 等服务器 301，多一个往返；同进程内见过的
+Strict-Transport-Security 头照旧生效。一起省掉的还有每次冷构建都编一遍的宿主工具
+（连带宿主工具链的 BoringSSL）。
+
+两个没做：performance timeline（`GlobalPerformance::performance` 缠在
+EventDispatcher/EventTiming、SoftNavigationHeuristics、RenderBlockingMetricsReporter、
+DocumentLoader 里，约 30 处调用换 60–146 KB）；CJK 编码器（模型报 183 KB，
+`cutseg.py` 一拆 158 KB 在 `.bss`，真实 25 KB）。
+
+### 25.4 顺手撞见并修掉的：legacy charset 一个都没生效
+
+`pnpm verify:charset` 十一个用例全是 UNDECODED（CJK 和单字节一样）。原因是
+`LocalFrame::ForceSynchronousDocumentInstall` 把 "UTF-8" 当 header 编码传给
+`OpenForNavigation`，在 TextResourceDecoder 里压过 `<meta charset>`；上游这条路只
+给 SVG 图片和内部页用，写死没错，shot 拿它装顶层文档就把所有声明都关掉了。
+`shot_renderer.cc` 原来把 Content-Type 的 charset 塞进 `Settings` 的默认编码，那是
+优先级最低的一档，同样够不着。
+
+修法：多一个带 `encoding` 的重载，shot 把 Content-Type 的 charset 传进去（空就是空），
+上游三个重载原样不动。优先级从此是浏览器的：BOM > header charset > meta charset >
+CED 嗅探 > 顶级域默认（`.cn`→GBK、`.jp`→Shift_JIS）> Settings 默认。没有任何声明的
+页面行为也变了：以前一律 UTF-8，现在和 Chrome 一样嗅探，仍然是确定性的。
+
+顺带纠正一个错误的理由。`shot` 数据集本来打算连六张 CJK 转换表一起去掉，说明写的是
+"Blink 自己解码"；实际上 `wtf/text/encoding_tables.cc` 的解码表是运行时
+`ucnv_open("EUC-JP"|"windows-949"|"gb18030"|"big5-html")` 建的，而且 release 版
+缺表不是 U+FFFD：`ucnv_open` 失败只有 DCHECK，`ucnv_toUnicode` 拿着空指针什么都不写，
+循环把未初始化的 `UChar` 填进固定大小的表并写越界。写死 UTF-8 在的时候这条路没人走，
+修了就是堆损坏。所以六张表（853 KB）留下；编进 Blink 的 WHATWG 索引表（约 210 KB）
+要写生成器，树里 `.ucm` 源已经裁掉了，以后想省再做。`charset.ts` 改成 15 个用例
+（11 个 meta、2 个 header、header 压 meta、BOM 压 meta），必须全部 decoded。
+
+### 25.5 数字
+
+改动 78 个文件：49 个源/GN/脚本文件 +396/−1,180 行（不含本文档），外加 HSTS 生成器的
+25 个源文件和 4 个数据文件（10.5 MB JSON）整个删除。全量编译一次（3,514 步）、
+HSTS/charset 增量一次（230 步），都是 0 FAILED，`shotium.exe`、`shotium.dll`、
+`shotium.node` 都链接通过。
+
+| | 2026-09-17 | 2026-09-18 | 变化 |
+|---|---:|---:|---:|
+| `shotium.exe` | 42,199,552 B（40.24 MiB） | **36,905,472 B（35.20 MiB）** | −5,294,080（−12.5%） |
+| `.text` | 31,213,056 | 28,334,080 | −2,878,976 |
+| `.rdata` | 9,803,776 | 7,508,992 | −2,294,784 |
+| 内嵌 `icudtl.dat` | 4,368,256 | 3,255,792 | −1,112,464 |
+
+中间量：vtable + ICU 五棵树 + 入口裁剪先量到 36,826,112；随后 HSTS −0.77 MB、
+六张 CJK 转换表回来 +0.85 MB，两项抵消，多出 79 KB。
+
+按组件（前：`/MAP` 段表；后：PDB 段贡献表，`pnpm size:report`），变化超过 40 KB 的：
+
+| 组件 | 前 | 后 | 变化 | 为什么 |
+|---|---:|---:|---:|---|
+| `third_party/icu` | 6,372,176 | 4,293,453 | −2,078,723 | 数据 −1.11 MB；代码 1.9 → 1.0 MB，格式化/排序/转写随 vtable 一起走了 |
+| `shotium.exe.lto.obj`（合并的 vtable/RTTI） | 904,919 | 0 | −904,919 | 不再合并；活的 vtable 回到各自的对象里（Blink +0.33、`[* Linker *]` +0.38 就是这部分） |
+| `net/http` | 787,124 | 16,206 | −770,918 | HSTS 预加载表和 pin |
+| `third_party/perfetto` | 665,068 | 73,896 | −591,172 | tracing service、protos 只剩 track_event 的一点 |
+| `third_party/freetype` | 490,713 | 0 | −490,713 | 整个消失：只有 `SkFontMgr_Custom` 的 vtable 拖着它 |
+| `third_party/re2` | 195,157 | 135 | −195,022 | 整个消失 |
+| `third_party/expat` | 153,624 | 0 | −153,624 | `skia_support_xmp=false` |
+| `third_party/boringssl` | 1,246,288 | 1,171,836 | −74,452 | 服务端握手 |
+
+模型说 5.07 MB（vtable 2.2 + ICU 数据 1.97 + 入口裁剪 0.90），实测 5.37；再加 HSTS
+减 CJK 表，落在 5.29。
+
+验证（全部对着 `out/Shot` 里刚链接的三个产物）：`verify:charset` **15/15 DECODED**
+（对 09-17 的二进制跑同一脚本是 15 个 FAIL，检查是有牙的）；`verify:demos` 86/86
+（PASS 64 / FUZZY 1 / SMOKE 21）、`verify:serve`、`verify:net`、`verify:node`、
+`verify:node-entry`、`verify:daemon`、`verify:daemon-protocol` 全过；
+`pnpm accept --skip-build` 对 Chrome oracle 的差异 1.524%/可见 1.149%，产出的
+`render_corpus.png` 与改前**逐字节相同**。另外用改前的二进制副本把 86 个 demo 和
+65 张参考页、`render_corpus`、`features`（整页）、一页表单/日期/可编辑/JPEG 的补充页
+和两页 bilibili 夹具各渲染一遍，**156 页 156 页 SHA-256 相同**，0 页渲染失败——
+这批改动没有改变任何 UTF-8 页面的像素；变的只有 legacy charset 页面，从乱码变成字。
+HSTS 用一页 `http://github.com/...`、`http://www.google.com/...` 的图片冒烟：两张都
+经服务器重定向拿到并画出来了。Linux/macOS 只走 CI；vtable 旗标在那两个平台上真的
+做过 WPD（链接旗标只在 `!is_win` 传），性能要在 CI 基准上另看。

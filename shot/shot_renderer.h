@@ -88,8 +88,10 @@ struct RenderInput {
   std::string body;
   // What the parser is chosen by. "text/html" unless a server said otherwise.
   std::string mime_type = "text/html";
-  // From the Content-Type header, when there was one. Empty means the document
-  // has to declare its own encoding, exactly as in a browser.
+  // From the Content-Type header, when there was one. It reaches the parser as
+  // the header encoding, so a BOM still outranks it and it outranks <meta
+  // charset>. Empty means the document has to declare its own encoding or be
+  // sniffed, exactly as in a browser.
   std::string charset;
   // What the server answered, or 0 for a document that came off the disk and
   // had nobody to answer. Carried through to the caller's statistics: a

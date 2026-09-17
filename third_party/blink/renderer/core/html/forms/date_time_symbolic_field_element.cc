@@ -58,7 +58,6 @@ DateTimeSymbolicFieldElement::DateTimeSymbolicFieldElement(
       symbols_(symbols),
       visible_empty_value_(MakeVisibleEmptyValue(symbols)),
       selected_index_(-1),
-      type_ahead_(this),
       minimum_index_(minimum),
       maximum_index_(maximum) {
   DCHECK(!symbols.empty());
@@ -78,28 +77,8 @@ float DateTimeSymbolicFieldElement::MaximumWidth(const ComputedStyle& style) {
 
 void DateTimeSymbolicFieldElement::HandleKeyboardEvent(
     KeyboardEvent& keyboard_event) {
-  if (keyboard_event.type() != event_type_names::kKeypress)
-    return;
-
-  const UChar char_code = unicode::ToLower(keyboard_event.charCode());
-  if (char_code < ' ')
-    return;
-
-  keyboard_event.SetDefaultHandled();
-
-  if (Type() == DateTimeField::kAMPM) {
-    // Since AM/PM field has only 2 options, the type_ahead session should be
-    // reset to enable fast toggling between the options.
-    type_ahead_.ResetSession();
-  }
-
-  int index = type_ahead_.HandleEvent(keyboard_event, keyboard_event.charCode(),
-                                      TypeAhead::kMatchPrefix |
-                                          TypeAhead::kCycleFirstChar |
-                                          TypeAhead::kMatchIndex);
-  if (index < 0)
-    return;
-  SetValueAsInteger(index, kDispatchEvent);
+  // No keyboard event reaches a shotium document, and the type-ahead
+  // selection that used to run here was the last user of ICU collation.
 }
 
 bool DateTimeSymbolicFieldElement::HasValue() const {
@@ -173,18 +152,6 @@ String DateTimeSymbolicFieldElement::VisibleEmptyValue() const {
 
 String DateTimeSymbolicFieldElement::VisibleValue() const {
   return HasValue() ? symbols_[selected_index_] : VisibleEmptyValue();
-}
-
-int DateTimeSymbolicFieldElement::IndexOfSelectedOption() const {
-  return selected_index_;
-}
-
-int DateTimeSymbolicFieldElement::OptionCount() const {
-  return symbols_.size();
-}
-
-String DateTimeSymbolicFieldElement::OptionAtIndex(int index) const {
-  return symbols_[index];
 }
 
 }  // namespace blink

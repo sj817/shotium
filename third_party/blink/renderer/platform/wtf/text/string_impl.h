@@ -477,7 +477,6 @@ class WTF_EXPORT StringImpl {
   // match to ASCII characters. This function is rarely used to implement web
   // platform features.  See crbug.com/40476285.
   bool DeprecatedStartsWithIgnoringCase(const StringView&) const;
-  bool StartsWithIgnoringCaseAndAccents(const StringView&) const;
   bool StartsWithIgnoringAsciiCase(const StringView&) const;
 
   bool EndsWith(UChar) const;

@@ -1522,17 +1522,6 @@ base::expected<void, std::string> ShotRenderer::CreatePage(
   ApplyChromeWebPreferences(settings);
   settings.SetScriptEnabled(false);
 
-  // The encoding from the Content-Type header, where there was one. This is the
-  // *default* encoding rather than an override, so a document that declares its
-  // own -- a meta charset, or a byte order mark -- still wins, which is the
-  // wrong way round from the HTML spec's precedence but is the only lever
-  // ForceSynchronousDocumentInstall leaves: it takes a MIME type and bytes, and
-  // there is no DocumentLoader here to carry the header down.
-  if (!input.charset.empty()) {
-    settings.SetDefaultTextEncodingName(
-        blink::AtomicString(blink::String::FromUtf8(input.charset)));
-  }
-
   // The same setting --hide-scrollbars sets. A scrollbar is chrome around the
   // document rather than part of it, it is drawn in the platform's own style,
   // and it narrows the layout viewport -- so leaving it on would reflow every
@@ -1836,10 +1825,18 @@ base::expected<void, std::string> ShotRenderer::RenderDocument(
     // page whose <style> block is three megabytes, keeping it to the end of
     // the capture was three megabytes resident for no reader.
     std::string().swap(input.body);
+    // The charset from the Content-Type header goes in as exactly that, the
+    // header encoding, so TextResourceDecoder ranks it the way a browser does:
+    // below a byte order mark, above <meta charset>. With no header charset the
+    // decoder reads the BOM or the meta tag, then sniffs (CED), then falls back
+    // to the default encoding in Settings. Until 2026-09-18 the install path
+    // hardcoded UTF-8 as the header encoding and every declaration a page
+    // made was ignored (scripts/verify/charset.ts is the check).
     frame_->ForceSynchronousDocumentInstall(
         blink::AtomicString(blink::String::FromUtf8(
             input.mime_type.empty() ? "text/html" : input.mime_type)),
-        *data, blink::KURL(input.url));
+        *data, blink::KURL(input.url),
+        blink::AtomicString(blink::String::FromUtf8(input.charset)));
   }
 
   if (stats) {

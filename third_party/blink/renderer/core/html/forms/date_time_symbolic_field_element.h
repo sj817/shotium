@@ -27,14 +27,12 @@
 #define THIRD_PARTY_BLINK_RENDERER_CORE_HTML_FORMS_DATE_TIME_SYMBOLIC_FIELD_ELEMENT_H_
 
 #include "third_party/blink/renderer/core/html/forms/date_time_field_element.h"
-#include "third_party/blink/renderer/core/html/forms/type_ahead.h"
 
 namespace blink {
 
 // DateTimeSymbolicFieldElement represents non-numeric field of data time
 // format, such as: AM/PM, and month.
-class DateTimeSymbolicFieldElement : public DateTimeFieldElement,
-                                     public TypeAheadDataSource {
+class DateTimeSymbolicFieldElement : public DateTimeFieldElement {
  public:
   DateTimeSymbolicFieldElement(const DateTimeSymbolicFieldElement&) = delete;
   DateTimeSymbolicFieldElement& operator=(const DateTimeSymbolicFieldElement&) =
@@ -72,18 +70,12 @@ class DateTimeSymbolicFieldElement : public DateTimeFieldElement,
   int ValueForARIAValueNow() const final;
   String VisibleValue() const final;
 
-  // TypeAheadDataSource functions.
-  int IndexOfSelectedOption() const override;
-  int OptionCount() const override;
-  String OptionAtIndex(int index) const override;
-
   const Vector<String> symbols_;
 
   // We use AtomicString to share visible empty value among multiple
   // DateTimeEditElements in the page.
   const AtomicString visible_empty_value_;
   int selected_index_;
-  TypeAhead type_ahead_;
   const int minimum_index_;
   const int maximum_index_;
 };

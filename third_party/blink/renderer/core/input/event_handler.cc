@@ -2231,11 +2231,6 @@ WebInputEventResult EventHandler::KeyEvent(
   return keyboard_event_manager_->KeyEvent(initial_key_event);
 }
 
-void EventHandler::DefaultKeyboardEventHandler(KeyboardEvent* event) {
-  keyboard_event_manager_->DefaultKeyboardEventHandler(
-      event, mouse_event_manager_->MousePressNode());
-}
-
 bool EventHandler::DefaultTabEventHandler(KeyboardEvent* event) {
   return keyboard_event_manager_->DefaultTabEventHandler(event);
 }
@@ -2266,11 +2261,6 @@ bool EventHandler::HandleTextInputEvent(const String& text,
 
   target->DispatchEvent(*event);
   return event->DefaultHandled() || event->defaultPrevented();
-}
-
-void EventHandler::DefaultTextInputEventHandler(TextEvent* event) {
-  if (frame_->GetEditor().HandleTextEvent(event))
-    event->SetDefaultHandled();
 }
 
 void EventHandler::CapsLockStateMayHaveChanged() {

@@ -501,12 +501,6 @@ Vector<SkISize> ImageDecoder::GetSupportedDecodeSizes() const {
   return {};
 }
 
-bool ImageDecoder::GetGainmapInfoAndData(
-    SkGainmapInfo& out_gainmap_info,
-    scoped_refptr<SegmentReader>& out_gainmap_data) const {
-  return false;
-}
-
 gfx::Size ImageDecoder::DecodedSize() const {
   return Size();
 }

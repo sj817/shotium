@@ -476,10 +476,6 @@ class WTF_EXPORT String {
     return impl_ ? impl_->DeprecatedStartsWithIgnoringCase(prefix)
                  : prefix.empty();
   }
-  bool StartsWithIgnoringCaseAndAccents(const StringView& prefix) const {
-    return impl_ ? impl_->StartsWithIgnoringCaseAndAccents(prefix)
-                 : prefix.empty();
-  }
   bool StartsWithIgnoringAsciiCase(const StringView& prefix) const {
     return impl_ ? impl_->StartsWithIgnoringAsciiCase(prefix) : prefix.empty();
   }

@@ -1814,10 +1814,10 @@ static_library("test_support") {
     "//url",
   ]
 
-  deps = [
-    "//net/http:transport_security_state_unittest_data_default",
-    "//third_party/zlib",
-  ]
+  deps = [ "//third_party/zlib" ]
+  if (include_transport_security_state_preload_list) {
+    deps += [ "//net/http:transport_security_state_unittest_data_default" ]
+  }
 
   if (chrome_root_store_supported) {
     sources += [
@@ -2478,8 +2478,6 @@ target(_test_target_type, "net_unittests") {
     "//net/cert:root_store_proto_lite",
     "//net/dns:tests",
     "//net/dns/public:tests",
-    "//net/http:transport_security_state_unittest_data",
-    "//net/http:transport_security_state_unittest_data_default",
     "//net/third_party/uri_template:uri_template_tests",
     "//net/tools/huffman_trie:huffman_trie_generator_sources",
     "//testing/gmock",
@@ -2756,11 +2754,17 @@ target(_test_target_type, "net_unittests") {
   }
 
   # Include transport_security_state_generator tests.
-  if (host_toolchain == current_toolchain) {
+  if (include_transport_security_state_preload_list) {
     deps += [
-      "//net/tools/huffman_trie:huffman_trie_generator_test_sources",
-      "//net/tools/transport_security_state_generator:transport_security_state_generator_test_sources",
+      "//net/http:transport_security_state_unittest_data",
+      "//net/http:transport_security_state_unittest_data_default",
     ]
+    if (host_toolchain == current_toolchain) {
+      deps += [
+        "//net/tools/huffman_trie:huffman_trie_generator_test_sources",
+        "//net/tools/transport_security_state_generator:transport_security_state_generator_test_sources",
+      ]
+    }
   }
 
   # TODO(crbug.com/40031409): Fix code that adds exit-time destructors and

@@ -95,8 +95,7 @@ static const unsigned kMaxListItems = 100000;
 const int kDefaultListBoxSize = 4;
 
 HTMLSelectElement::HTMLSelectElement(Document& document)
-    : HTMLFormControlElementWithState(html_names::kSelectTag, document),
-      type_ahead_(this) {
+    : HTMLFormControlElementWithState(html_names::kSelectTag, document) {
   // Make sure SelectType is created after initializing |uses_menu_list_|.
   select_type_ = SelectType::Create(*this);
   SetHasCustomStyleCallbacks();
@@ -1100,7 +1099,6 @@ void HTMLSelectElement::DispatchBlurEvent(
     Element* new_focused_element,
     mojom::blink::FocusType type,
     InputDeviceCapabilities* source_capabilities) {
-  type_ahead_.ResetSession();
   select_type_->DidBlur();
   HTMLFormControlElementWithState::DispatchBlurEvent(new_focused_element, type,
                                                      source_capabilities);
@@ -1341,13 +1339,6 @@ void HTMLSelectElement::DefaultEventHandler(Event& event) {
     return;
   }
 
-  if (auto* keyboard_event = DynamicTo<KeyboardEvent>(event)) {
-    if (TypeAhead::ShouldHandleKeyboardEvent(*keyboard_event)) {
-      TypeAheadFind(*keyboard_event);
-      event.SetDefaultHandled();
-      return;
-    }
-  }
   HTMLFormControlElementWithState::DefaultEventHandler(event);
 }
 
@@ -1400,49 +1391,6 @@ HTMLOptionElement* HTMLSelectElement::LastSelectedOption() const {
     }
   }
   return nullptr;
-}
-
-int HTMLSelectElement::IndexOfSelectedOption() const {
-  return SelectedListIndex();
-}
-
-int HTMLSelectElement::OptionCount() const {
-  return GetListItems().size();
-}
-
-String HTMLSelectElement::OptionAtIndex(int index) const {
-  if (HTMLOptionElement* option = OptionAtListIndex(index)) {
-    if (!option->IsDisabledFormControl())
-      return option->DisplayLabel();
-  }
-  return String();
-}
-
-void HTMLSelectElement::TypeAheadFind(const KeyboardEvent& event) {
-  int index = type_ahead_.HandleEvent(
-      event, event.charCode(),
-      TypeAhead::kMatchPrefix | TypeAhead::kCycleFirstChar);
-  if (index < 0) {
-    return;
-  }
-
-  HTMLOptionElement* option_at_index = OptionAtListIndex(index);
-
-  const bool customizable_select_popup =
-      PickerIsPopover() && select_type_->PopupIsVisible();
-  const bool customizable_select_in_page =
-      !UsesMenuList() && IsAppearanceBase();
-
-  if (customizable_select_popup || customizable_select_in_page) {
-    option_at_index->Focus(FocusParams(FocusTrigger::kScript));
-    return;
-  }
-
-  SelectOption(option_at_index, kDeselectOtherOptionsFlag |
-                                    kMakeOptionDirtyFlag |
-                                    kDispatchInputAndChangeEventFlag);
-
-  select_type_->ListBoxOnChange();
 }
 
 void HTMLSelectElement::SelectOptionByAccessKey(HTMLOptionElement* option) {
@@ -1715,10 +1663,6 @@ void HTMLSelectElement::RemovedFrom(ContainerNode& insertion_point) {
   // has no computed style, so IsAppearanceBase() returns false.
   UpdateMutationObserver();
   HTMLFormControlElementWithState::RemovedFrom(insertion_point);
-}
-
-void HTMLSelectElement::ResetTypeAheadSessionForTesting() {
-  type_ahead_.ResetSession();
 }
 
 void HTMLSelectElement::CloneNonAttributePropertiesFrom(const Element& source,

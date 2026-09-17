@@ -156,16 +156,43 @@ enable_expensive_dchecks = false
 # V8 is gone: most of the collation tables, unit and number spellout data,
 # confusables, stringprep, character names, and the bulk of the currency,
 # language and region display names that only Intl ever read.
-# "shot" is not one of the nine sets the checkout ships. It is `cast` with the
-# six CJK converter tables removed by tools/shot/icu_repack.py, which rewrites
-# the package's table of contents in place of running ICU's data build. See
-# that script for why those six are unreachable; it is 853 KB and costs
-# nothing, because Blink decodes all six encodings itself.
+# "shot" is not one of the nine sets the checkout ships. It is `cast` with
+# 1.95 MB of items removed by scripts/build/icu-repack.ts, which rewrites the
+# package's table of contents in place of running ICU's data build: the
+# zone/, lang/, region/, curr/ and coll/ resource trees. That script documents,
+# per tree, which ICU service reads it and why that service has no caller in
+# this binary. The converter tables all stay: the 27 single-byte ones are what
+# TextCodecIcu decodes with, and the six CJK ones (853 KB) are what
+# wtf/text/encoding_tables.cc builds TextCodecCjk's index tables from at first
+# use -- a GBK or Shift_JIS page decodes through them.
 #
 # The directory is generated, not checked in -- third_party/icu is a DEPS
-# checkout, so gclient would discard it either way. scripts/build-engine.ts
+# checkout, so gclient would discard it either way. scripts/build/engine.ts
 # and the CI workflow both regenerate it before gn gen.
 icu_data_dir_override = "shot"
+
+# The HSTS preload list and its public-key pins: 0.77 MB of .rdata, plus a
+# host-toolchain generator (net/tools/transport_security_state_generator and
+# huffman_trie, with their own BoringSSL build) that ran on every cold build to
+# compress the 10.5 MB JSON into it. Cronet ships without the list, so
+# transport_security_state.cc already has the branch: DecodeHSTSPreload finds
+# nothing and IsBuildTimely is false. What that changes for a screenshot: an
+# http:// subresource on a preloaded host (google.com, github.com, every name
+# under the .app/.dev/.page TLDs) is requested over http and upgraded by the
+# server's redirect, one round trip later, rather than rewritten before the
+# request; a host with no port-80 listener at all is the only loss.
+# Strict-Transport-Security headers seen during a run still apply for the rest
+# of that process. Pins are never enforced; nothing here is a target for them.
+include_transport_security_state_preload_list = false
+
+# Skia's XMP parser has one consumer: the UltraHDR gainmap metadata of a
+# multi-picture JPEG. Blink's JPEG decoder no longer extracts that gainmap and
+# cc no longer draws one -- composing to SDR gives the gainmap a weight of
+# zero, so only the base image was ever visible. With XMP off, Skia also drops
+# SkDOM, SkXMLParser, the SVG canvas device and, on Windows and macOS, the
+# expat dependency; SK_CODEC_DECODES_JPEG_GAINMAPS is no longer defined, so
+# SkJpegMetadataDecoder::findGainmapImage compiles to an empty result.
+skia_support_xmp = false
 
 # JPEG XL. 2.82 MB across the jxl, jxl_transforms and jxl_rs Rust crates,
 # measured, for a format no page in the corpus uses and that ships disabled in

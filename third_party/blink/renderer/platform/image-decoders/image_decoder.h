@@ -259,13 +259,6 @@ class PLATFORM_EXPORT ImageDecoder {
   virtual gfx::Size Size() const;
   virtual Vector<SkISize> GetSupportedDecodeSizes() const;
 
-  // Check for the existence of a gainmap image. If one exists, extract the
-  // SkGainmapInfo rendering parameters, and a SegmentReader for the embedded
-  // gainmap image's encoded data, and return true.
-  virtual bool GetGainmapInfoAndData(
-      SkGainmapInfo& out_gainmap_info,
-      scoped_refptr<SegmentReader>& out_gainmap_data) const;
-
   // Decoders which downsample images should override this method to
   // return the actual decoded size.
   virtual gfx::Size DecodedSize() const;

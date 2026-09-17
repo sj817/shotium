@@ -75,8 +75,6 @@
 #include <math.h>
 #include <stdlib.h>
 #include <time.h>
-#include <unicode/basictz.h>
-#include <unicode/timezone.h>
 
 #include <algorithm>
 #include <array>
@@ -249,13 +247,18 @@ double DateToDaysFrom1970(int year, int month, int day) {
 }
 
 base::TimeDelta ConvertToLocalTime(base::Time time) {
-  double ms = time.InMillisecondsFSinceUnixEpoch();
-  std::unique_ptr<icu::TimeZone> timezone(icu::TimeZone::createDefault());
-  int32_t raw_offset, dst_offset;
-  UErrorCode status = U_ZERO_ERROR;
-  timezone->getOffset(ms, false, raw_offset, dst_offset, status);
-  DCHECK(U_SUCCESS(status));
-  return base::Milliseconds(ms + static_cast<double>(raw_offset + dst_offset));
+  // The local wall-clock fields read back as UTC are exactly "time since the
+  // UNIX epoch in the local time zone". base::Time asks the OS for the zone,
+  // which keeps icu::TimeZone, and with it ICU's zone data, out of the binary;
+  // this was its last caller. Exploded is millisecond-granular, which is all
+  // the form-control callers use.
+  base::Time::Exploded local;
+  time.LocalExplode(&local);
+  base::Time local_as_utc;
+  if (!base::Time::FromUTCExploded(local, &local_as_utc)) {
+    return time - base::Time::UnixEpoch();
+  }
+  return local_as_utc - base::Time::UnixEpoch();
 }
 
 }  // namespace blink

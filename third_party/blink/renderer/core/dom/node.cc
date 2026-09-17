@@ -3122,29 +3122,17 @@ void Node::DefaultEventHandler(Event& event) {
   if (event.RawTarget() != this) {
     return;
   }
+  // No keyboard or textInput event is ever dispatched here, so the default
+  // handlers that fed the editing command stack (typing, deletion, paste,
+  // spell checking, IME) are gone with their callers.
   const AtomicString& event_type = event.type();
-  if (event_type == event_type_names::kKeydown ||
-      event_type == event_type_names::kKeypress ||
-      event_type == event_type_names::kKeyup) {
-    if (auto* keyboard_event = DynamicTo<KeyboardEvent>(&event)) {
-      if (LocalFrame* frame = GetDocument().GetFrame()) {
-        frame->GetEventHandler().DefaultKeyboardEventHandler(keyboard_event);
-      }
-    }
-  } else if (event_type == event_type_names::kClick) {
+  if (event_type == event_type_names::kClick) {
     auto* ui_event = DynamicTo<UIEvent>(event);
     int detail = ui_event ? ui_event->detail() : 0;
     if (DispatchDOMActivateEvent(detail, event) !=
         DispatchEventResult::kNotCanceled)
       event.SetDefaultHandled();
 
-  } else if (event_type == event_type_names::kTextInput) {
-    if (event.HasInterface(event_interface_names::kTextEvent)) {
-      if (LocalFrame* frame = GetDocument().GetFrame()) {
-        frame->GetEventHandler().DefaultTextInputEventHandler(
-            To<TextEvent>(&event));
-      }
-    }
   } else if (RuntimeEnabledFeatures::MiddleClickAutoscrollEnabled() &&
              event_type == event_type_names::kMousedown &&
              IsA<MouseEvent>(event)) {

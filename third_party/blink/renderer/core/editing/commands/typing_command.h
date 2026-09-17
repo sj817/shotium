@@ -90,8 +90,6 @@ class CORE_EXPORT TypingCommand final : public CompositeEditCommand {
   static bool InsertLineBreak(Document&);
   static bool InsertParagraphSeparator(Document&);
   static bool InsertParagraphSeparatorInQuotedContent(Document&);
-  static void CloseTyping(LocalFrame*);
-  static void CloseTypingIfNeeded(LocalFrame*);
 
   // Normalizes CRLF and standalone CR to LF for consistent newline handling.
   static String NormalizeTextForInsertion(const String&);

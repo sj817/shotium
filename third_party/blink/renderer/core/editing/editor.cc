@@ -616,35 +616,6 @@ void Editor::Redo() {
   undo_stack_->Redo();
 }
 
-void Editor::SetBaseWritingDirection(
-    mojo_base::mojom::blink::TextDirection direction) {
-  Element* focused_element = GetFrame().GetDocument()->FocusedElement();
-  if (auto* text_control = ToTextControlOrNull(focused_element)) {
-    if (direction == mojo_base::mojom::blink::TextDirection::UNKNOWN_DIRECTION)
-      return;
-    text_control->setAttribute(
-        html_names::kDirAttr,
-        AtomicString(
-            direction == mojo_base::mojom::blink::TextDirection::LEFT_TO_RIGHT
-                ? "ltr"
-                : "rtl"));
-    text_control->DispatchInputEvent();
-    return;
-  }
-
-  auto* style =
-      MakeGarbageCollected<MutableCSSPropertyValueSet>(kHTMLQuirksMode);
-  style->ParseAndSetProperty(
-      CSSPropertyID::kDirection,
-      direction == mojo_base::mojom::blink::TextDirection::LEFT_TO_RIGHT ? "ltr"
-      : direction == mojo_base::mojom::blink::TextDirection::RIGHT_TO_LEFT
-          ? "rtl"
-          : "inherit",
-      /* important */ false, GetFrame().DomWindow()->GetSecureContextMode());
-  ApplyParagraphStyleToSelection(
-      style, InputEvent::InputType::kFormatSetBlockTextDirection);
-}
-
 void Editor::RevealSelectionAfterEditingOperation(
     const mojom::blink::ScrollAlignment& alignment) {
   if (prevent_reveal_selection_)

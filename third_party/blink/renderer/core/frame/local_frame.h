@@ -227,7 +227,6 @@ class CORE_EXPORT LocalFrame final
   void DidChangeVisibilityState() override;
   void HookBackForwardCacheEviction() override;
   void RemoveBackForwardCacheEviction() override;
-  void SetTextDirection(base::i18n::TextDirection direction) override;
   // This sets the is_inert_ flag and also recurses through this frame's
   // subtree, updating the inert bit on all descendant frames.
   void SetIsInert(bool) override;
@@ -530,6 +529,17 @@ class CORE_EXPORT LocalFrame final
   void ForceSynchronousDocumentInstall(const AtomicString& mime_type,
                                        const SegmentedBuffer& data,
                                        const KURL& url);
+  // The overloads above decode `data` as UTF-8 unconditionally, which is right
+  // for the SVG images and internal pages they were written for. shotium
+  // installs the top-level document this way too, and a top-level document
+  // has a Content-Type charset (`encoding`, empty when the server sent none),
+  // a possible BOM and a possible <meta charset>. This overload feeds
+  // `encoding` to the decoder as the HTTP header encoding, so the precedence
+  // is a browser's: BOM, then header, then <meta>, then detection.
+  void ForceSynchronousDocumentInstall(const AtomicString& mime_type,
+                                       const SegmentedBuffer& data,
+                                       const KURL& url,
+                                       const AtomicString& encoding);
 
   // Called when certain event listeners are added for the first time/last time,
   // making it possible/not possible to terminate the frame suddenly.

@@ -30,7 +30,6 @@
 
 #include "base/compiler_specific.h"
 #include "base/functional/callback.h"
-#include "base/i18n/string_search.h"
 #include "base/numerics/safe_conversions.h"
 #include "base/strings/string_view_util.h"
 #include "third_party/blink/renderer/platform/wtf/allocator/partitions.h"
@@ -973,21 +972,6 @@ bool StringImpl::DeprecatedStartsWithIgnoringCase(
                ? DeprecatedEqualIgnoringCase(split_chars, prefix.Span8())
                : DeprecatedEqualIgnoringCase(split_chars, prefix.Span16());
   });
-}
-
-bool StringImpl::StartsWithIgnoringCaseAndAccents(
-    const StringView& prefix) const {
-  std::u16string s = ToU16String();
-  std::u16string p = blink::ToU16String(prefix);
-  size_t match_index = 1U;
-
-  if (base::i18n::StringSearchIgnoringCaseAndAccents(
-          p, s, &match_index,
-          /*match_length=*/nullptr)) {
-    return match_index == 0U;
-  }
-
-  return false;
 }
 
 std::u16string StringImpl::ToU16String() const {

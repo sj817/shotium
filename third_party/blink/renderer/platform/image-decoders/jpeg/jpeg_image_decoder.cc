@@ -855,27 +855,9 @@ bool JPEGImageDecoder::SetSize(unsigned width, unsigned height) {
 }
 
 void JPEGImageDecoder::OnSetData(scoped_refptr<SegmentReader> data) {
-  // If we are decoding the gainmap image, replace `data` with the subset of
-  // `data` that corresponds to the gainmap image itself. This strategy is
-  // used because the underlying decoder is unaware of gainmap metadata, and
-  // because the gainmap image itself is is a self-contained JPEG image (see
-  // multi-picture format, also known as CIPA DC-007). This is in contrast with
-  // other decoders (e.g AVIF), which are aware of gainmap metadata.
-  if (data && aux_image_ == cc::AuxImage::kGainmap) {
-    auto base_image_data = data->GetAsSkData();
-    DCHECK(base_image_data);
-    auto base_metadata_decoder = SkJpegMetadataDecoder::Make(base_image_data);
-    if (auto [gainmap_image_data, _] =
-            base_metadata_decoder->findGainmapImage(base_image_data);
-        gainmap_image_data) {
-      data = SegmentReader::CreateFromSkData(std::move(gainmap_image_data));
-      data_ = data;
-    } else {
-      SetFailed();
-      return;
-    }
-  }
-
+  // The UltraHDR gainmap that may follow the base image in a multi-picture
+  // JPEG is never extracted: shotium composes to SDR, where the gainmap's
+  // weight is zero and only the base image shows.
   if (reader_) {
     reader_->SetData(std::move(data));
 
@@ -989,33 +971,6 @@ Vector<SkISize> JPEGImageDecoder::GetSupportedDecodeSizes() const {
   // has side effects of actually doing the decode.
   DCHECK(IsDecodedSizeAvailable());
   return supported_decode_sizes_;
-}
-
-bool JPEGImageDecoder::GetGainmapInfoAndData(
-    SkGainmapInfo& out_gainmap_info,
-    scoped_refptr<SegmentReader>& out_gainmap_data) const {
-  auto* metadata_decoder = reader_ ? reader_->GetMetadataDecoder() : nullptr;
-  if (!metadata_decoder) {
-    return false;
-  }
-
-  if (!metadata_decoder->mightHaveGainmapImage()) {
-    return false;
-  }
-
-  // TODO(crbug.com/356827770): This function will be removed once all decoders
-  // rely on ImageDecoder::aux_image_ to decode the gainmap, instead of
-  // extracting gainmap data.
-  auto base_image_data = data_->GetAsSkData();
-  DCHECK(base_image_data);
-  if (auto [ok, gainmap_info] =
-          metadata_decoder->findGainmapImage(base_image_data);
-      ok) {
-    out_gainmap_info = gainmap_info;
-    out_gainmap_data = data_;
-    return true;
-  }
-  return false;
 }
 
 bool JPEGImageDecoder::HasC2PAManifest() const {

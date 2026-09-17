@@ -32,7 +32,6 @@
 #include <optional>
 
 #include "base/check_op.h"
-#include "base/i18n/rtl.h"
 #include "base/unguessable_token.h"
 #include "mojo/public/cpp/bindings/pending_associated_receiver.h"
 #include "services/network/public/mojom/web_sandbox_flags.mojom-blink.h"
@@ -267,9 +266,6 @@ class CORE_EXPORT Frame : public GarbageCollected<Frame> {
   // itself is not within the dialog.
   virtual void SetIsInert(bool) = 0;
   void UpdateInertIfPossible();
-
-  // Changes the text direction of the selected input node.
-  virtual void SetTextDirection(base::i18n::TextDirection) = 0;
 
   virtual void SetInheritedEffectiveTouchAction(TouchAction) = 0;
   void UpdateInheritedEffectiveTouchActionIfPossible();

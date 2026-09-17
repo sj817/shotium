@@ -231,13 +231,11 @@ class CORE_EXPORT EventHandler final : public GarbageCollected<EventHandler> {
 
   bool HandleAccessKey(const WebKeyboardEvent&);
   WebInputEventResult KeyEvent(const WebKeyboardEvent&);
-  void DefaultKeyboardEventHandler(KeyboardEvent*);
   bool DefaultTabEventHandler(KeyboardEvent*);
 
   bool HandleTextInputEvent(const String& text,
                             Event* underlying_event = nullptr,
                             TextEventInputType = kTextEventInputKeyboard);
-  void DefaultTextInputEventHandler(TextEvent*);
 
 
   void CapsLockStateMayHaveChanged();  // Only called by FrameSelection

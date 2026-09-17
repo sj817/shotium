@@ -564,7 +564,7 @@ bool MenuListSelectType::ShouldOpenPopupForKeyPressEvent(
     const KeyboardEvent& event) {
   LayoutTheme& layout_theme = LayoutTheme::GetTheme();
   int key_code = event.keyCode();
-  return ((key_code == ' ' && !select_->type_ahead_.HasActiveSession(event)) ||
+  return (key_code == ' ' ||
           (layout_theme.PopsMenuByReturnKey() && key_code == '\r'));
 }
 

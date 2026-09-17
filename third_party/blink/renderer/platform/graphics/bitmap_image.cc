@@ -170,14 +170,6 @@ PaintImage BitmapImage::CreatePaintImage(
           .set_sync_animation_sequence_id(
               static_cast<PaintImage::AnimationSequenceId>(sync_sequence));
 
-  sk_sp<PaintImageGenerator> gainmap_generator;
-  SkGainmapInfo gainmap_info;
-  if (decoder_->CreateGainmapGenerator(gainmap_generator, gainmap_info)) {
-    DCHECK(gainmap_generator);
-    builder = builder.set_gainmap_paint_image_generator(
-        std::move(gainmap_generator), gainmap_info);
-  }
-
   return builder.TakePaintImage();
 }
 
