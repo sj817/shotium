@@ -1130,14 +1130,9 @@ void LayoutBox::UpdateAfterLayout() {
     // Unlike every other layer, the root PaintLayer takes its size from the
     // layout viewport size. The call to AdjustViewSize() will update the
     // frame's contents size, which will also update the page's minimum scale
-    // factor. The call to ResizeAfterLayout() will calculate the layout
-    // viewport size based on the page minimum scale factor, and then update the
-    // LocalFrameView with the new size.
-    LocalFrame& frame = GetFrameView()->GetFrame();
+    // factor. (Upstream then asked the ChromeClient to ResizeAfterLayout();
+    // shotium sizes the LocalFrameView itself.)
     GetFrameView()->AdjustViewSize();
-    if (frame.IsMainFrame()) {
-      frame.GetChromeClient().ResizeAfterLayout();
-    }
     if (IsScrollContainer()) {
       auto* scrollable_area = GetScrollableArea();
       using ClampScope = PaintLayerScrollableArea::DelayScrollOffsetClampScope;

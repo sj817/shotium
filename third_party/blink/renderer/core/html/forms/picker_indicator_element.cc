@@ -132,8 +132,6 @@ void PickerIndicatorElement::OpenPopup() {
   DateTimeChooserParameters parameters;
   if (!picker_indicator_owner_->SetupDateTimeChooserParameters(parameters))
     return;
-  chooser_ = GetDocument().GetPage()->GetChromeClient().OpenDateTimeChooser(
-      GetDocument().GetFrame(), this, parameters);
   if (OwnerElement().GetLayoutObject()) {
     // Invalidate paint to ensure that the focus ring is removed.
     OwnerElement().GetLayoutObject()->SetShouldDoFullPaintInvalidation();
@@ -163,10 +161,6 @@ bool PickerIndicatorElement::IsPickerVisible() const {
 void PickerIndicatorElement::DetachLayoutTree(bool performing_reattach) {
   ClosePopup();
   HTMLDivElement::DetachLayoutTree(performing_reattach);
-}
-
-AXObject* PickerIndicatorElement::PopupRootAXObject() const {
-  return chooser_ ? chooser_->RootAXObject(&OwnerElement()) : nullptr;
 }
 
 void PickerIndicatorElement::SetAXProperties() {

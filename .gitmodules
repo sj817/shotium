@@ -23,9 +23,6 @@
 [submodule "third_party/boringssl/src"]
 	path = third_party/boringssl/src
 	url = https://boringssl.googlesource.com/boringssl
-[submodule "third_party/catapult"]
-	path = third_party/catapult
-	url = https://chromium.googlesource.com/catapult
 [submodule "third_party/ced/src"]
 	path = third_party/ced/src
 	url = https://chromium.googlesource.com/external/github.com/google/compact_enc_det
@@ -48,17 +45,10 @@
 [submodule "third_party/ots/src"]
 	path = third_party/ots/src
 	url = https://chromium.googlesource.com/external/github.com/khaledhosny/ots
-[submodule "third_party/googletest/src"]
-	path = third_party/googletest/src
-	url = https://chromium.googlesource.com/external/github.com/google/googletest
 [submodule "third_party/gperf"]
 	path = third_party/gperf
 	url = https://chromium.googlesource.com/chromium/deps/gperf
 	gclient-condition = checkout_win
-[submodule "third_party/libdrm/src"]
-	path = third_party/libdrm/src
-	url = https://chromium.googlesource.com/chromiumos/third_party/libdrm
-	gclient-condition = checkout_linux
 [submodule "third_party/expat/src"]
 	path = third_party/expat/src
 	url = https://chromium.googlesource.com/external/github.com/libexpat/libexpat

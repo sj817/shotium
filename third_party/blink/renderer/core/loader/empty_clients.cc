@@ -30,13 +30,7 @@
 #include <memory>
 
 #include "base/task/single_thread_task_runner.h"
-#include "mojo/public/cpp/bindings/pending_remote.h"
 #include "third_party/blink/public/common/associated_interfaces/associated_interface_provider.h"
-#include "third_party/blink/public/platform/platform.h"
-#include "third_party/blink/renderer/core/frame/visual_viewport.h"
-#include "third_party/blink/renderer/core/html/forms/color_chooser.h"
-#include "third_party/blink/renderer/core/html/forms/date_time_chooser.h"
-#include "third_party/blink/renderer/core/html/forms/html_form_element.h"
 
 namespace blink {
 
@@ -44,86 +38,6 @@ ChromeClient& GetStaticEmptyChromeClientInstance() {
   DEFINE_STATIC_LOCAL(Persistent<ChromeClient>, chrome_client,
                       (MakeGarbageCollected<EmptyChromeClient>()));
   return *chrome_client;
-}
-
-class EmptyPopupMenu : public PopupMenu {
- public:
-  void Show(ShowEventType) override {}
-  void Hide() override {}
-  void UpdateFromElement(UpdateReason) override {}
-  void DisconnectClient() override {}
-};
-
-PopupMenu* EmptyChromeClient::OpenPopupMenu(LocalFrame&, HTMLSelectElement&) {
-  return MakeGarbageCollected<EmptyPopupMenu>();
-}
-
-ColorChooser* EmptyChromeClient::OpenColorChooser(LocalFrame*,
-                                                  ColorChooserClient*,
-                                                  const Color&) {
-  return nullptr;
-}
-
-DateTimeChooser* EmptyChromeClient::OpenDateTimeChooser(
-    LocalFrame* frame,
-    DateTimeChooserClient*,
-    const DateTimeChooserParameters&) {
-  return nullptr;
-}
-
-std::unique_ptr<cc::ScopedPauseRendering> EmptyChromeClient::PauseRendering(
-    LocalFrame&) {
-  return nullptr;
-}
-
-std::optional<int> EmptyChromeClient::GetMaxRenderBufferBounds(
-    LocalFrame& frame) const {
-  return std::nullopt;
-}
-
-void EmptyChromeClient::OpenTextDataListChooser(HTMLInputElement&) {}
-
-void EmptyLocalFrameClient::BeginNavigation(
-    const ResourceRequest&,
-    const KURL& requestor_base_url,
-    mojom::RequestContextFrameType,
-    LocalDOMWindow*,
-    DocumentLoader*,
-    WebNavigationType,
-    NavigationPolicy,
-    WebFrameLoadType,
-    mojom::blink::ForceHistoryPush,
-    bool,
-    // TODO(crbug.com/1315802): Refactor _unfencedTop handling.
-    bool,
-    mojom::blink::TriggeringEventInfo,
-    HTMLFormElement*,
-    network::mojom::CSPDisposition,
-    mojo::PendingRemote<mojom::blink::BlobURLToken>,
-    base::TimeTicks,
-    base::TimeTicks,
-    const String&,
-    const LocalFrameToken* initiator_frame_token,
-    const InitiatorStateToken& initiator_state_token,
-    const DocumentToken& initiator_document_token,
-    SourceLocation*,
-    bool is_container_initiated,
-    bool has_rel_opener,
-    mojo::PendingReceiver<mojom::blink::NavigationResumeDeferredCommitListener>,
-    std::optional<base::UnguessableToken> script_tool_invocation_id) {}
-
-void EmptyLocalFrameClient::DispatchWillSendSubmitEvent(HTMLFormElement*) {}
-
-LocalFrame* EmptyLocalFrameClient::CreateFrame(const AtomicString&,
-                                               HTMLFrameOwnerElement*) {
-  return nullptr;
-}
-
-// CreateWebMediaPlayer() and CreateRemotePlaybackClient() removed along with
-// the LocalFrameClient hooks they overrode.
-
-Frame* EmptyLocalFrameClient::FindFrame(const AtomicString& name) const {
-  return nullptr;
 }
 
 AssociatedInterfaceProvider*

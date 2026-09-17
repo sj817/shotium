@@ -219,9 +219,6 @@ class PLATFORM_EXPORT FetchContext : public GarbageCollected<FetchContext> {
   // //core/ad_tracker is deleted with V8, and no WebDocumentSubresourceFilter
   // is ever built -- so no request can carry an ad annotation.
 
-  // Returns if the request context is for prerendering or not.
-  virtual bool IsPrerendering() const { return false; }
-
   // Update SubresourceLoad metrics.
   virtual void UpdateSubresourceLoadMetrics(
       const SubresourceLoadMetrics& subresource_load_metrics) {}

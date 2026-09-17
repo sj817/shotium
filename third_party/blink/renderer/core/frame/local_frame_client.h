@@ -34,47 +34,13 @@
 #include <memory>
 #include <optional>
 
-#include "base/time/time.h"
+#include "base/notreached.h"
 #include "base/unguessable_token.h"
-#include "mojo/public/cpp/bindings/pending_associated_receiver.h"
-#include "mojo/public/cpp/bindings/pending_associated_remote.h"
-#include "mojo/public/cpp/bindings/pending_remote.h"
-#include "services/network/public/cpp/permissions_policy/permissions_policy_declaration.h"
-#include "services/network/public/mojom/content_security_policy.mojom-blink-forward.h"
-#include "services/network/public/mojom/web_sandbox_flags.mojom-blink-forward.h"
-#include "third_party/blink/public/common/loader/loading_behavior_flag.h"
-#include "third_party/blink/public/common/loader/url_loader_factory_bundle.h"
-#include "third_party/blink/public/common/subresource_load_metrics.h"
-#include "third_party/blink/public/common/tokens/tokens.h"
-#include "third_party/blink/public/common/use_counter/use_counter_feature.h"
 #include "third_party/blink/public/common/user_agent/user_agent_metadata.h"
-#include "third_party/blink/public/mojom/blob/blob_url_store.mojom-blink-forward.h"
-#include "third_party/blink/public/mojom/fenced_frame/fenced_frame.mojom-blink-forward.h"
-#include "third_party/blink/public/mojom/frame/triggering_event_info.mojom-blink-forward.h"
-#include "third_party/blink/public/platform/scheduler/web_scoped_virtual_time_pauser.h"
-#include "third_party/blink/public/platform/web_background_resource_fetch_assets.h"
 #include "third_party/blink/public/platform/web_content_settings_client.h"
-#include "third_party/blink/public/platform/web_effective_connection_type.h"
-#include "third_party/blink/public/platform/web_worker_fetch_context.h"
-#include "third_party/blink/public/web/web_frame_load_type.h"
-#include "third_party/blink/public/web/web_history_commit_type.h"
-#include "third_party/blink/public/web/web_navigation_params.h"
-#include "third_party/blink/public/web/web_performance_metrics_for_reporting.h"
 #include "third_party/blink/renderer/core/core_export.h"
-#include "third_party/blink/renderer/core/dom/icon_url.h"
 #include "third_party/blink/renderer/core/frame/frame_client.h"
-#include "third_party/blink/renderer/core/frame/frame_types.h"
-#include "third_party/blink/renderer/core/html/link_resource.h"
-#include "third_party/blink/renderer/core/loader/document_loader.h"
-#include "third_party/blink/renderer/core/loader/frame_loader_types.h"
-#include "third_party/blink/renderer/core/loader/navigation_policy.h"
-#include "third_party/blink/renderer/core/timing/performance_timeline_entry_id_generator.h"
-#include "third_party/blink/renderer/platform/loader/fetch/resource_load_priority.h"
-#include "third_party/blink/renderer/platform/loader/fetch/resource_loader_options.h"
-#include "third_party/blink/renderer/platform/network/content_security_policy_parsers.h"
-#include "third_party/blink/renderer/platform/weborigin/referrer.h"
 #include "third_party/blink/renderer/platform/wtf/forward.h"
-#include "third_party/blink/renderer/platform/wtf/vector.h"
 
 namespace network {
 class SharedURLLoaderFactory;
@@ -83,279 +49,56 @@ class SharedURLLoaderFactory;
 namespace blink {
 
 class AssociatedInterfaceProvider;
-class ChildURLLoaderFactoryBundle;
-class DocumentLoader;
-class HTMLFormElement;
+class Frame;
 class HTMLFrameOwnerElement;
-class HTMLMediaElement;
-class HTMLPlugInElement;
-class HistoryItem;
-class KURL;
-class LocalDOMWindow;
 class LocalFrame;
-class ResourceError;
-class ResourceRequest;
-class ResourceResponse;
-class SourceLocation;
-class WebDedicatedWorkerHostFactoryClient;
 class URLLoader;
-struct JavaScriptFrameworkDetectionResult;
-
-namespace scheduler {
-class TaskAttributionId;
-}  // namespace scheduler
 
 class CORE_EXPORT LocalFrameClient : public FrameClient {
  public:
   ~LocalFrameClient() override = default;
 
-  // GetWebContentCaptureClient() was here. It handed core the embedder's
-  // WebContentCaptureClient, which content capture streamed on-screen text
-  // to. ContentCaptureManager and its only caller in LocalFrame are cut, so
-  // nothing asks for the client any more.
-
-  virtual base::UnguessableToken GetDevToolsFrameToken() const = 0;
-
-  virtual void WillBeDetached() = 0;
-  virtual void DispatchFinalizeRequest(ResourceRequest&) = 0;
-  virtual std::optional<KURL> DispatchWillSendRequest(
-      const KURL& requested_url,
-      const scoped_refptr<const SecurityOrigin>& requestor_origin,
-      const net::SiteForCookies& site_for_cookies,
-      bool has_redirect_info,
-      const KURL& upstream_url) = 0;
-  virtual void DispatchDidLoadResourceFromMemoryCache(
-      const ResourceRequest&,
-      const ResourceResponse&) = 0;
-
-  virtual void DispatchDidHandleOnloadEvents() = 0;
-  virtual void DidFinishSameDocumentNavigation(
-      WebHistoryCommitType,
-      bool is_synchronously_committed,
-      mojom::blink::SameDocumentNavigationType,
-      bool is_client_redirect,
-      bool is_browser_initiated,
-      bool should_skip_screenshot,
-      base::UnguessableToken same_document_metrics_token,
-      bool caused_by_ad) {}
-  virtual void DidFailAsyncSameDocumentCommit() {}
-  virtual void DispatchDidOpenDocumentInputStream(const KURL&) {}
-  virtual void DispatchDidReceiveTitle(const String&) = 0;
-  virtual void DispatchDidCommitLoad(
-      HistoryItem* item,
-      WebHistoryCommitType commit_type,
-      bool should_reset_browser_interface_broker,
-      const network::ParsedPermissionsPolicy& permissions_policy_header,
-      const blink::DocumentPolicyFeatureState& document_policy_header) = 0;
-  virtual void DispatchDidFailLoad(const ResourceError&,
-                                   WebHistoryCommitType) = 0;
-  virtual void DispatchDidDispatchDOMContentLoadedEvent() = 0;
-  virtual void DispatchDidFinishLoad() = 0;
-  virtual void DispatchDidFinishLoadForPrinting() {}
-
-  virtual void BeginNavigation(
-      const ResourceRequest&,
-      const KURL& requestor_base_url,
-      mojom::RequestContextFrameType,
-      LocalDOMWindow* origin_window,
-      DocumentLoader*,
-      WebNavigationType,
-      NavigationPolicy,
-      WebFrameLoadType,
-      mojom::blink::ForceHistoryPush,
-      bool is_client_redirect,
-      // TODO(crbug.com/1315802): Refactor _unfencedTop handling.
-      bool is_unfenced_top_navigation,
-      mojom::blink::TriggeringEventInfo,
-      HTMLFormElement*,
-      network::mojom::CSPDisposition
-          should_check_main_world_content_security_policy,
-      mojo::PendingRemote<mojom::blink::BlobURLToken>,
-      base::TimeTicks input_start_time,
-      base::TimeTicks actual_navigation_start,
-      const String& href_translate,
-      const LocalFrameToken* initiator_frame_token,
-      const InitiatorStateToken& initiator_state_token,
-      const DocumentToken& initiator_document_token,
-      SourceLocation* source_location,
-      bool is_container_initiated,
-      bool has_rel_opener,
-      mojo::PendingReceiver<
-          mojom::blink::NavigationResumeDeferredCommitListener>
-          resume_defer_commit_listener,
-      std::optional<base::UnguessableToken> script_tool_invocation_id) = 0;
-
-  virtual void DispatchWillSendSubmitEvent(HTMLFormElement*) = 0;
-
-  virtual void DidStartLoading() = 0;
-  virtual void DidStopLoading() = 0;
-
-  virtual bool NavigateBackForward(
-      int offset,
-      base::TimeTicks actual_navigation_start,
-      std::optional<scheduler::TaskAttributionId> task_state_id) const = 0;
-
-  virtual void DidDispatchPingLoader(const KURL&) = 0;
-
-  // Will be called when |PerformanceTiming| events are updated
-  virtual void DidChangePerformanceTiming() {}
-
-  // Will be called when a user interaction is observed.
-  virtual void DidObserveUserInteraction(
-      base::TimeTicks max_event_start,
-      base::TimeTicks max_event_queued_main_thread,
-      base::TimeTicks max_event_processing_start,
-      base::TimeTicks max_event_commit_finish,
-      base::TimeTicks max_event_end,
-      PerformanceTimelineEntryIdInfo interaction_id,
-      PerformanceTimelineEntryIdInfo navigation_id) {}
-
-  // Will be called when |CpuTiming| events are updated
-  virtual void DidChangeCpuTiming(base::TimeDelta time) {}
-
-  // Will be called when a particular loading code path has been used. This
-  // propogates renderer loading behavior to the browser process for histograms.
-  virtual void DidObserveLoadingBehavior(LoadingBehaviorFlag) {}
-
-  // propagates framework detection info to the browser process for histograms.
-  virtual void DidObserveJavaScriptFrameworks(
-      const JavaScriptFrameworkDetectionResult&) {}
-
-  // Will be called when a sub resource load happens.
-  virtual void DidObserveSubresourceLoad(
-      const SubresourceLoadMetrics& subresource_load_metrics) {}
-
-  // Will be called when a new UseCounterFeature has been observed in a frame.
-  // This propagates feature usage to the browser process for histograms.
-  virtual void DidObserveNewFeatureUsage(const UseCounterFeature&) {}
-
-  // A new soft navigation was observed.
-  virtual void DidObserveSoftNavigation(
-      SoftNavigationMetricsForReporting metrics) {}
-
-  // A new First Contentful Paint was observed for a soft navigation.
-  virtual void DidObserveSoftNavigationFirstContentfulPaint(
-      uint64_t performance_timeline_navigation_id,
-      base::TimeDelta first_contentful_paint) {}
-
-  // A new largest contentful paint candidate relating to the most recent
-  // soft navigation was observed. Also see DidObserveSoftNavigation().
-  virtual void DidObserveSoftLargestContentfulPaint(
-      const LargestContentfulPaintDetailsForReporting& lcp) {}
-
-  // Reports that visible elements in the frame shifted (bit.ly/lsm-explainer).
-  virtual void DidObserveLayoutShift(
-      double score,
-      bool after_input_or_scroll,
-      PerformanceTimelineEntryIdInfo navigation_id) {}
-
-  virtual void DidCreateDocumentLoader(DocumentLoader*) = 0;
-
-  virtual String UserAgentOverride() = 0;
-  virtual String UserAgent() = 0;
-  virtual std::optional<blink::UserAgentMetadata> UserAgentMetadata() = 0;
-
-  virtual String DoNotTrackValue() = 0;
-
-  virtual void TransitionToCommittedForNewPage() = 0;
-
-  virtual LocalFrame* CreateFrame(const AtomicString& name,
-                                  HTMLFrameOwnerElement*) = 0;
-
-  // CreateWebMediaPlayer() and CreateRemotePlaybackClient() removed in this
-  // cut. Both had exactly one implementation, in the now-deleted
-  // modules/media, and both were reached only from HTMLMediaElement, which is
-  // gone: a static screenshot engine has no <video> to give a player to and no
-  // device to cast to. The forwarding hooks in CoreInitializer went with them.
-
-  virtual void DidCommitDocumentReplacementNavigation(DocumentLoader*) = 0;
-  virtual void DispatchDidClearWindowObjectInMainWorld(LocalDOMWindow*) = 0;
-  virtual void DocumentElementAvailable() = 0;
-  virtual void RunScriptsAtDocumentElementAvailable() = 0;
-  virtual void RunScriptsAtDocumentReady(bool document_is_empty) = 0;
-  virtual void RunScriptsAtDocumentIdle() = 0;
-
-  virtual void DidChangeScrollOffset() {}
-
-  // Immediately notifies the browser of a change in the current HistoryItem.
-  // Prefer DidUpdateCurrentHistoryItem().
-  virtual void NotifyCurrentHistoryItemChanged() {}
-  // Notifies the browser of a change in the current HistoryItem on a timer,
-  // allowing batching of updates.
-  virtual void DidUpdateCurrentHistoryItem() {}
-
-  // Called when a content-initiated, main frame navigation to a data URL is
-  // about to occur.
-  virtual bool AllowContentInitiatedDataUrlNavigations(const KURL&) {
-    return false;
+  virtual base::UnguessableToken GetDevToolsFrameToken() const {
+    return base::UnguessableToken::Create();
   }
 
-  virtual void DidChangeName(const String&) {}
+  virtual void DispatchDidHandleOnloadEvents() {}
+  virtual void DispatchDidFinishLoad() {}
 
-  // CreateServiceWorkerProvider() was here. WebServiceWorkerProvider is
-  // the renderer's handle to a service worker registration; a service
-  // worker is a script, and nothing can register one here.
+  virtual void DidStopLoading() {}
 
-  virtual WebContentSettingsClient* GetContentSettingsClient() = 0;
+  virtual String UserAgent() { return ""; }
+  virtual std::optional<blink::UserAgentMetadata> UserAgentMetadata() {
+    return blink::UserAgentMetadata();
+  }
 
-  virtual void DispatchDidChangeManifest() {}
+  virtual LocalFrame* CreateFrame(const AtomicString& name,
+                                  HTMLFrameOwnerElement*) {
+    return nullptr;
+  }
+
+  virtual WebContentSettingsClient* GetContentSettingsClient() {
+    return nullptr;
+  }
 
   unsigned BackForwardLength() override { return 0; }
 
   virtual AssociatedInterfaceProvider*
-  GetRemoteNavigationAssociatedInterfaces() = 0;
-
-  virtual void NotifyUserActivation() {}
-
-  virtual void AbortClientNavigation(bool for_new_navigation) {}
+  GetRemoteNavigationAssociatedInterfaces() {
+    return nullptr;
+  }
 
   virtual scoped_refptr<network::SharedURLLoaderFactory>
-  GetURLLoaderFactory() = 0;
-  virtual std::unique_ptr<URLLoader> CreateURLLoaderForTesting() = 0;
-  virtual blink::ChildURLLoaderFactoryBundle* GetLoaderFactoryBundle() = 0;
-
-  virtual scoped_refptr<WebBackgroundResourceFetchAssets>
-  MaybeGetBackgroundResourceFetchAssets() = 0;
-
-  virtual void SetVirtualTimePauser(
-      WebScopedVirtualTimePauser virtual_time_pauser) {}
-
-  virtual String evaluateInInspectorOverlayForTesting(const String& script) = 0;
-
-  virtual void DidChangeContents() {}
-
-  virtual Frame* FindFrame(const AtomicString& name) const = 0;
-
-  virtual void OnOverlayPopupAdDetected() {}
-
-  virtual void OnLargeStickyAdDetected() {}
-
-  virtual void FocusedElementChanged(Element* element) {}
-
-  // Returns a new WebWorkerFetchContext for worklets.
-  virtual scoped_refptr<WebWorkerFetchContext> CreateWorkletFetchContext() {
+  GetURLLoaderFactory() {
+    NOTREACHED();
+  }
+  virtual std::unique_ptr<URLLoader> CreateURLLoaderForTesting() {
     return nullptr;
   }
 
-  // Returns a new WebWorkerFetchContext for dedicated workers.
-  virtual scoped_refptr<WebWorkerFetchContext> CreateWorkerFetchContext(
-      WebDedicatedWorkerHostFactoryClient*) {
+  virtual Frame* FindFrame(const AtomicString& name) const {
     return nullptr;
   }
-
-  virtual std::unique_ptr<WebContentSettingsClient>
-  CreateWorkerContentSettingsClient() {
-    return nullptr;
-  }
-
-  virtual void SetMouseCapture(bool) {}
-
-  virtual void NotifyAutoscrollForSelectionInMainFrame(bool) {}
-
-  // Specifies whether to disable DOM storage interfaces such as localStorage
-  // and sessionStorage.
-  virtual bool IsDomStorageDisabled() const { return false; }
-
 };
 
 }  // namespace blink

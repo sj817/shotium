@@ -22,6 +22,7 @@
 
 #include "third_party/blink/renderer/core/svg/svg_a_element.h"
 
+#include "third_party/blink/public/common/input/web_pointer_properties.h"
 #include "third_party/blink/public/mojom/input/focus_type.mojom-blink.h"
 #include "third_party/blink/renderer/core/dom/attr.h"
 #include "third_party/blink/renderer/core/dom/attribute.h"
@@ -204,9 +205,7 @@ void SVGAElement::DefaultEventHandler(Event& event) {
               : mojom::blink::TriggeringEventInfo::kFromUntrustedEvent);
 
       Frame* target_frame =
-          frame->Tree()
-              .FindOrCreateFrameForNavigation(frame_request, target)
-              .frame;
+          frame->Tree().FindOrCreateFrameForNavigation(frame_request, target);
       if (!target_frame) {
         return;
       }
@@ -268,7 +267,7 @@ bool SVGAElement::IsURLAttribute(const Attribute& attribute) const {
 
 bool SVGAElement::IsKeyboardFocusableSlow(
     UpdateBehavior update_behavior) const {
-  if (IsLink() && !GetDocument().GetPage()->GetChromeClient().TabsToLinks()) {
+  if (IsLink()) {
     return false;
   }
   return SVGElement::IsKeyboardFocusableSlow(update_behavior);

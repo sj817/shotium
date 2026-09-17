@@ -1303,8 +1303,6 @@ const ComputedStyle* StyleResolver::StyleForViewport() {
   builder.SetOverflowX(EOverflow::kAuto);
   builder.SetOverflowY(EOverflow::kAuto);
 
-  GetDocument().GetStyleEngine().ApplyVisionDeficiencyStyle(builder);
-
   return builder.TakeStyle();
 }
 
@@ -3493,19 +3491,6 @@ void StyleResolver::PropagateStyleToViewport() {
           (body_y == EOverscrollBehavior::kAuto && document_y != body_y)) {
         UseCounter::Count(GetDocument(),
                           WebFeature::kOverscrollBehaviorWillBeFixed);
-      }
-    }
-
-    if (overscroll_behavior_style) {
-      if (GetDocument().IsInOutermostMainFrame()) {
-        using OverscrollBehaviorType = cc::OverscrollBehavior::Type;
-        GetDocument().GetPage()->GetChromeClient().SetOverscrollBehavior(
-            *GetDocument().GetFrame(),
-            cc::OverscrollBehavior(
-                static_cast<OverscrollBehaviorType>(
-                    overscroll_behavior_style->OverscrollBehaviorX()),
-                static_cast<OverscrollBehaviorType>(
-                    overscroll_behavior_style->OverscrollBehaviorY())));
       }
     }
 

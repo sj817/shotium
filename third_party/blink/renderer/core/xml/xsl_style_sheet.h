@@ -23,9 +23,6 @@
 #ifndef THIRD_PARTY_BLINK_RENDERER_CORE_XML_XSL_STYLE_SHEET_H_
 #define THIRD_PARTY_BLINK_RENDERER_CORE_XML_XSL_STYLE_SHEET_H_
 
-#include <libxml/tree.h>
-#include <libxslt/transform.h>
-
 #include "third_party/blink/renderer/core/css/style_sheet.h"
 #include "third_party/blink/renderer/core/dom/processing_instruction.h"
 #include "third_party/blink/renderer/platform/weborigin/kurl.h"
@@ -53,15 +50,7 @@ class XSLStyleSheet final : public StyleSheet {
     return parent_style_sheet_.Get();
   }
 
-  xmlDocPtr GetDocument();
-  xsltStylesheetPtr CompileStyleSheet();
-  xmlDocPtr LocateStylesheetSubResource(xmlDocPtr parent_doc,
-                                        const xmlChar* uri);
-
-  void ClearDocuments();
-
-  void MarkAsProcessed();
-  bool Processed() const { return processed_; }
+  void ClearDocuments() {}
 
   String type() const override { return "text/xml"; }
   bool disabled() const override { return is_disabled_; }
@@ -77,22 +66,12 @@ class XSLStyleSheet final : public StyleSheet {
   void Trace(Visitor*) const override;
 
  private:
-  void LoadChildSheets();
-  void LoadChildSheet(const String& href);
-
   Member<Node> owner_node_;
   String original_url_;
   KURL final_url_;
   bool is_disabled_;
 
   HeapVector<Member<XSLStyleSheet>> children_;
-
-  bool embedded_;
-  bool processed_;
-
-  xmlDocPtr stylesheet_doc_;
-  bool stylesheet_doc_taken_;
-  bool compilation_failed_;
 
   Member<XSLStyleSheet> parent_style_sheet_;
 };

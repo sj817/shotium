@@ -65,7 +65,6 @@
 #include "third_party/blink/public/mojom/script/script_evaluation_params.mojom-blink-forward.h"
 #include "third_party/blink/public/mojom/use_counter/metrics/web_feature.mojom-blink-forward.h"
 #include "third_party/blink/public/platform/task_type.h"
-#include "third_party/blink/public/platform/web_background_resource_fetch_assets.h"
 #include "third_party/blink/public/platform/web_content_settings_client.h"
 #include "third_party/blink/public/web/web_print_params.h"
 #include "third_party/blink/renderer/core/core_export.h"
@@ -140,7 +139,6 @@ class TextFragmentHandler;
 class URLLoader;
 class WebContentSettingsClient;
 class WebInputEventAttribution;
-class WindowControlsOverlayChangedDelegate;
 enum class BackForwardCacheAware;
 enum class MediaValueChange;
 struct WebScriptSource;
@@ -492,9 +490,6 @@ class CORE_EXPORT LocalFrame final
   // GetURLLoaderFactory().
   std::unique_ptr<URLLoader> CreateURLLoaderForTesting();
 
-  scoped_refptr<WebBackgroundResourceFetchAssets>
-  MaybeGetBackgroundResourceFetchAssets();
-
   bool IsInert() const { return is_inert_; }
 
 
@@ -672,8 +667,6 @@ class CORE_EXPORT LocalFrame final
   void SetInitialFocus(bool reverse);
 
   void UpdateWindowControlsOverlay(const gfx::Rect& bounding_rect_in_dips);
-  void RegisterWindowControlsOverlayChangedDelegate(
-      WindowControlsOverlayChangedDelegate*);
   // For PWAs with display_overrides, these getters are information about the
   // titlebar bounds sent over from the browser via UpdateWindowControlsOverlay
   // in LocalMainFrame that are needed to persist the lifetime of the frame.
@@ -846,11 +839,6 @@ class CORE_EXPORT LocalFrame final
   friend class LocalFrameMojoHandler;
 
   FRIEND_TEST_ALL_PREFIXES(LocalFrameTest, CharacterIndexAtPointWithPinchZoom);
-  FRIEND_TEST_ALL_PREFIXES(WebFrameTest, SmartClipData);
-  FRIEND_TEST_ALL_PREFIXES(WebFrameTest, SmartClipDataWithPinchZoom);
-  FRIEND_TEST_ALL_PREFIXES(WebFrameTest,
-                           SmartClipReturnsEmptyStringsWhenUserSelectIsNone);
-  FRIEND_TEST_ALL_PREFIXES(WebFrameTest, SmartClipDoesNotCrashPositionReversed);
 
   // Frame protected overrides:
   bool DetachImpl(FrameDetachType) override;
@@ -901,11 +889,6 @@ class CORE_EXPORT LocalFrame final
       const gfx::Point& pos_in_viewport);
 
   bool ShouldThrottleDownload();
-
-  void ExtractSmartClipDataInternal(const gfx::Rect& rect_in_viewport,
-                                    String& clip_text,
-                                    String& clip_html,
-                                    gfx::Rect& clip_rect);
 
   void SetTitlebarAreaDocumentStyleEnvironmentVariables() const;
   void MaybeUpdateWindowControlsOverlayWithNewZoomLevel();
@@ -1020,8 +1003,6 @@ class CORE_EXPORT LocalFrame final
   // |layout_zoom_factor_| gets updated this way.
   gfx::Rect window_controls_overlay_rect_in_dips_;
   gfx::Rect window_controls_overlay_rect_;
-  WeakMember<WindowControlsOverlayChangedDelegate>
-      window_controls_overlay_changed_delegate_;
 
   // Indicate if the current document's color scheme was notified.
   bool notified_color_scheme_ = false;

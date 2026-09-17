@@ -74,7 +74,6 @@ class SVGResource : public GarbageCollected<SVGResource> {
   virtual ~SVGResource();
 
   virtual void Load(Document&, CrossOriginAttributeValue) {}
-  virtual void LoadWithoutCSP(Document&) {}
 
   virtual bool IsLoading() const { return false; }
 
@@ -161,7 +160,6 @@ class ExternalSVGResourceDocumentContent final
       const CSSUrlRequestModifiers& modifiers);
 
   void Load(Document&, CrossOriginAttributeValue) override;
-  void LoadWithoutCSP(Document&) override;
 
   void Trace(Visitor*) const override;
 

@@ -29,8 +29,6 @@
 #include <optional>
 #include <utility>
 
-#include "third_party/blink/renderer/core/accessibility/blink_ax_event_intent.h"
-#include "third_party/blink/renderer/core/accessibility/scoped_blink_ax_event_intent.h"
 #include "third_party/blink/renderer/core/clipboard/data_transfer.h"
 #include "third_party/blink/renderer/core/dom/document.h"
 #include "third_party/blink/renderer/core/dom/document_fragment.h"
@@ -190,11 +188,6 @@ bool CompositeEditCommand::Apply() {
   // executing command same directional will be there.
   SetSelectionIsDirectional(frame->Selection().IsDirectional());
   GetUndoStep()->SetSelectionIsDirectional(SelectionIsDirectional());
-
-  // Provides details to accessibility about any text change caused by applying
-  // this command, throughout the current call stack.
-  ScopedBlinkAXEventIntent scoped_blink_ax_event_intent(
-      BlinkAXEventIntent::FromEditCommand(*this), &GetDocument());
 
   EditingState editing_state;
   EventQueueScope event_queue_scope;

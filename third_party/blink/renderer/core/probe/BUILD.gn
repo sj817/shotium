@@ -90,11 +90,6 @@ blink_core_sources("probe") {
     "//skia",
     "//third_party/blink/renderer/core:all_generators",
     "//third_party/blink/renderer/platform/wtf",
-
-    # core_probes.h reaches ax_enums.mojom-blink-forward.h through the core
-    # headers it instruments; probe does not depend on :prerequisites, so it
-    # needs the edge of its own.
-    "//ui/accessibility:ax_enums_mojo_blink",
   ]
 
   public_deps = [ ":instrumentation_probes" ]

@@ -127,7 +127,7 @@ bool HTMLAnchorElementBase::IsKeyboardFocusableSlow(
     return HTMLElement::IsKeyboardFocusableSlow(update_behavior);
   }
 
-  if (IsLink() && !GetDocument().GetPage()->GetChromeClient().TabsToLinks())
+  if (IsLink())
     return false;
   return HTMLElement::IsKeyboardFocusableSlow(update_behavior);
 }
@@ -385,7 +385,7 @@ void HTMLAnchorElementBase::NavigateToHyperlink(
   frame_request.SetInputStartTime(platform_time_stamp);
 
   Frame* target_frame =
-      frame->Tree().FindOrCreateFrameForNavigation(frame_request, target).frame;
+      frame->Tree().FindOrCreateFrameForNavigation(frame_request, target);
 
   // If hrefTranslate is enabled and set restrict processing it
   // to same frame or navigations with noopener set.

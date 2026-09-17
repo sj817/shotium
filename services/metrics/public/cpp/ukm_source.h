@@ -16,8 +16,6 @@
 
 namespace ukm {
 
-class Source;
-
 // Contains UKM URL data for a single source id.
 class METRICS_EXPORT UkmSource {
  public:
@@ -134,22 +132,11 @@ class METRICS_EXPORT UkmSource {
   // Sets the resolved URLs.
   void set_resolved_urls(const std::vector<GURL>& urls);
 
-  // Serializes the members of the class into the supplied proto.
-  void PopulateProto(Source* proto_source) const;
-
-  // Sets the current "android_activity_type" state.
-  static void SetAndroidActivityTypeState(int32_t android_activity_type);
-
  private:
   const ukm::SourceId id_;
   const ukm::SourceIdType type_;
 
   NavigationData navigation_data_;
-
-  // The type of the visible activity when the metric was collected. This is
-  // set automatically when the object is created and so represents the state
-  // when the metric was created.
-  const int32_t android_activity_type_state_ = -1;
 
   // When this object was created.
   const base::TimeTicks creation_time_;

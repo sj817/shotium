@@ -34,7 +34,6 @@
 
 #include "base/metrics/histogram_functions.h"
 #include "base/strings/strcat.h"
-#include "third_party/blink/public/common/features.h"
 #include "third_party/blink/public/mojom/frame/frame.mojom-blink.h"
 #include "third_party/blink/public/mojom/frame/frame_owner_properties.mojom-blink.h"
 #include "third_party/blink/renderer/core/buildflags.h"
@@ -90,7 +89,6 @@ void Frame::Trace(Visitor* visitor) const {
   visitor->Trace(first_child_);
   visitor->Trace(last_child_);
   visitor->Trace(provisional_frame_);
-  visitor->Trace(navigation_rate_limiter_);
   visitor->Trace(window_agent_factory_);
   visitor->Trace(opened_frame_tracker_);
 }
@@ -344,35 +342,6 @@ void Frame::RenderFallbackContent() {
       HTMLObjectElement::ErrorEventPolicy::kDispatch);
 }
 
-bool Frame::IsInFencedFrameTree() const {
-  DCHECK(!IsDetached());
-  if (!features::IsFencedFramesEnabled())
-    return false;
-
-  return GetPage() && GetPage()->IsMainFrameFencedFrameRoot();
-}
-
-bool Frame::IsFencedFrameRoot() const {
-  DCHECK(!IsDetached());
-  if (!features::IsFencedFramesEnabled())
-    return false;
-
-  return IsInFencedFrameTree() && IsMainFrame();
-}
-
-std::optional<blink::FencedFrame::DeprecatedFencedFrameMode>
-Frame::GetDeprecatedFencedFrameMode() const {
-  DCHECK(!IsDetached());
-
-  if (!features::IsFencedFramesEnabled())
-    return std::nullopt;
-
-  if (!IsInFencedFrameTree())
-    return std::nullopt;
-
-  return GetPage()->DeprecatedFencedFrameMode();
-}
-
 void Frame::SetOwner(FrameOwner* owner) {
   owner_ = owner;
   UpdateInertIfPossible();
@@ -446,7 +415,6 @@ Frame::Frame(FrameClient* client,
       owner_(owner),
       client_(client),
       parent_(parent),
-      navigation_rate_limiter_(*this),
       window_agent_factory_(inheriting_agent_factory
                                 ? inheriting_agent_factory
                                 : MakeGarbageCollected<WindowAgentFactory>(
@@ -558,16 +526,9 @@ void Frame::FocusPage(LocalFrame* originating_frame) {
   if (originating_frame &&
       (LocalFrame::HasTransientUserActivation(originating_frame) ||
        originating_frame->GetSettings()->GetAllowUnrestrictedWindowFocus())) {
-    // Ask the browser process to focus the page.
-    GetPage()->GetChromeClient().FocusPage();
-
     // Tattle on the frame that called |window.focus()|.
     originating_frame->GetLocalFrameHostRemote().DidCallFocus();
   }
-
-  // Always report the attempt to focus the page to the Chrome client for
-  // testing purposes (i.e. see WebViewTest.FocusExistingFrameOnNavigate()).
-  GetPage()->GetChromeClient().DidFocusPage();
 }
 
 void Frame::SetOpenerDoNotNotify(Frame* opener) {
@@ -659,19 +620,8 @@ bool Frame::IsFrameTreePathSameOrigin(const Frame* other) const {
 }
 
 bool Frame::AllowFocusWithoutUserActivation() {
-  if (!features::IsFencedFramesEnabled())
-    return true;
-
-  if (IsDetached()) {
-    return true;
-  }
-
-  if (!IsInFencedFrameTree())
-    return true;
-
-  // Inside a fenced frame tree, a frame can only request focus is its focus
-  // controller already has focus.
-  return GetPage()->GetFocusController().IsFocused();
+  // Only a frame inside a fenced frame tree was ever refused here.
+  return true;
 }
 
 // static

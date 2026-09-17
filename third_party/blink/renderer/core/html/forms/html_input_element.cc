@@ -32,6 +32,7 @@
 
 #include "base/compiler_specific.h"
 #include "third_party/blink/public/common/features.h"
+#include "third_party/blink/public/common/input/web_pointer_properties.h"
 #include "third_party/blink/public/mojom/choosers/date_time_chooser.mojom-blink.h"
 #include "third_party/blink/public/mojom/input/focus_type.mojom-blink.h"
 #include "third_party/blink/public/mojom/scroll/scroll_into_view_params.mojom-blink.h"
@@ -417,8 +418,6 @@ void HTMLInputElement::InitializeTypeInParsing() {
 
   UpdateHasBeenPasswordField(new_type_name);
 
-  MaybeSetHasBeenHeuristicCustomPasswordJS();
-
   UpdateWillValidateCache();
 
   if (!default_value.IsNull())
@@ -651,8 +650,6 @@ void HTMLInputElement::UpdateType(const AtomicString& type_attribute_value) {
   }
 
   UpdateHasBeenPasswordField(new_type_name);
-
-  MaybeSetHasBeenHeuristicCustomPasswordJS();
 
   SetNeedsValidityCheck();
   if ((could_be_successful_submit_button || CanBeSuccessfulSubmitButton()) &&
@@ -1153,11 +1150,6 @@ void HTMLInputElement::UpdateHasBeenPasswordField(
   }
 
   has_been_password_field_ = new_value;
-}
-
-bool HTMLInputElement::IsNativeOrHeuristicPassword() const {
-  return TextControlElement::IsNativeOrHeuristicPassword() ||
-         HasBeenPasswordField();
 }
 
 void HTMLInputElement::MaybeSetHasBeenPasswordField() {
@@ -1995,15 +1987,6 @@ void HTMLInputElement::AttributeChanged(
   }
 }
 
-void HTMLInputElement::SelectColorInColorChooser(const Color& color) {
-  if (ColorChooserClient* client = input_type_->GetColorChooserClient())
-    client->DidChooseColor(color);
-}
-
-void HTMLInputElement::EndColorChooserForTesting() {
-  input_type_view_->ClosePopupView();
-}
-
 HTMLDataListElement* HTMLInputElement::DataList() const {
   if (!has_non_empty_list_) {
     return nullptr;
@@ -2517,10 +2500,6 @@ void HTMLInputElement::AdjustStyle(ComputedStyleBuilder& builder) {
 
 void HTMLInputElement::DidNotifySubtreeInsertionsToDocument() {
   input_type_view_->ListAttributeTargetChanged();
-}
-
-AXObject* HTMLInputElement::PopupRootAXObject() {
-  return input_type_view_->PopupRootAXObject();
 }
 
 void HTMLInputElement::EnsureFallbackContent() {

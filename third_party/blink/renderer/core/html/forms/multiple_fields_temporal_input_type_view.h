@@ -115,7 +115,6 @@ class MultipleFieldsTemporalInputTypeView final
   void ListAttributeTargetChanged() final;
   void UpdateClearButtonVisibility() final;
   TextDirection ComputedTextDirection() final;
-  AXObject* PopupRootAXObject() final;
 
   DateTimeEditElement* GetDateTimeEditElement() const;
   // Similar to GetDateTimeEditElement(), but does not force creation.

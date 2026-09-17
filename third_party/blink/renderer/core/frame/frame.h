@@ -36,7 +36,6 @@
 #include "base/unguessable_token.h"
 #include "mojo/public/cpp/bindings/pending_associated_receiver.h"
 #include "services/network/public/mojom/web_sandbox_flags.mojom-blink.h"
-#include "third_party/blink/public/common/fenced_frame/redacted_fenced_frame_config.h"
 #include "third_party/blink/public/common/frame/user_activation_state.h"
 #include "third_party/blink/public/common/frame/user_activation_update_source.h"
 #include "third_party/blink/public/common/permissions_policy/document_policy_features.h"
@@ -50,7 +49,6 @@
 #include "third_party/blink/renderer/core/core_export.h"
 #include "third_party/blink/renderer/core/frame/frame_lifecycle.h"
 #include "third_party/blink/renderer/core/frame/frame_view.h"
-#include "third_party/blink/renderer/core/frame/navigation_rate_limiter.h"
 #include "third_party/blink/renderer/core/frame/opened_frame_tracker.h"
 #include "third_party/blink/renderer/core/loader/frame_loader_types.h"
 #include "third_party/blink/renderer/core/page/frame_tree.h"
@@ -289,9 +287,6 @@ class CORE_EXPORT Frame : public GarbageCollected<Frame> {
     return embedding_token_;
   }
 
-  NavigationRateLimiter& navigation_rate_limiter() {
-    return navigation_rate_limiter_;
-  }
 
   // Called to get the opener's sandbox flags if any. This works with disowned
   // openers, i.e., even if WebFrame::Opener() is nullptr,
@@ -400,20 +395,10 @@ class CORE_EXPORT Frame : public GarbageCollected<Frame> {
     provisional_frame_ = provisional_frame;
   }
 
-  // Returns false if fenced frames are disabled. Returns true if the
-  // feature is enabled and if `this` or any of its ancestor nodes is a
-  // fenced frame. Returns the value of Page::IsMainFrameFencedFrameRoot.
-  bool IsInFencedFrameTree() const;
-
-  // Returns false if fenced frames are disabled. Otherwise, returns true if
-  // this frame is the main frame of a fenced frame tree.
-  bool IsFencedFrameRoot() const;
-
-  // Returns the mode set on the fenced frame if the frame is inside a fenced
-  // frame tree. Otherwise returns `std::nullopt`. This should not be called
-  // on a detached frame.
-  std::optional<blink::FencedFrame::DeprecatedFencedFrameMode>
-  GetDeprecatedFencedFrameMode() const;
+  // Fenced frame trees do not exist in shotium (Page::IsMainFrameFencedFrameRoot
+  // is a constant false), so neither of these can ever be true.
+  bool IsInFencedFrameTree() const { return false; }
+  bool IsFencedFrameRoot() const { return false; }
 
   // Iterates through the frame owner's ancestor nodes and adjusts the offset.
   void DeprecatedAdjustOffsetByAncestorFrames(gfx::Point* origin_point);
@@ -501,7 +486,6 @@ class CORE_EXPORT Frame : public GarbageCollected<Frame> {
 
   Member<LocalFrame> provisional_frame_;
 
-  NavigationRateLimiter navigation_rate_limiter_;
 
   // Sandbox flags inherited from an opener. It is always empty for child
   // frames.

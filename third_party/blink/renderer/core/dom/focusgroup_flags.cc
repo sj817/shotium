@@ -18,7 +18,6 @@
 #include "third_party/blink/renderer/platform/wtf/text/strcat.h"
 #include "third_party/blink/renderer/platform/wtf/text/string_builder.h"
 #include "third_party/blink/renderer/platform/wtf/text/wtf_string.h"
-#include "ui/accessibility/ax_enums.mojom-blink.h"
 
 namespace blink::focusgroup {
 
@@ -40,32 +39,26 @@ struct FlagMapping {
 struct BehaviorMapping {
   const char* token;
   FocusgroupBehavior behavior;
-  ax::mojom::blink::Role aria_role;
   FocusgroupFlags default_flags;
 };
 
-// List of behavior flags and corresponding ARIA role mappings.
+// List of behavior flags.
 // This should be kept in sync with FocusgroupBehavior.
 constexpr BehaviorMapping kBehaviorMap[] = {
-    {"toolbar", FocusgroupBehavior::kToolbar, ax::mojom::blink::Role::kToolbar,
-     FocusgroupFlags::kInline},
-    {"tablist", FocusgroupBehavior::kTablist, ax::mojom::blink::Role::kTabList,
+    {"toolbar", FocusgroupBehavior::kToolbar, FocusgroupFlags::kInline},
+    {"tablist", FocusgroupBehavior::kTablist,
      FocusgroupFlags::kInline | FocusgroupFlags::kWrapInline},
     {"radiogroup", FocusgroupBehavior::kRadiogroup,
-     ax::mojom::blink::Role::kRadioGroup,
      FocusgroupFlags::kWrapInline | FocusgroupFlags::kWrapBlock},
-    {"listbox", FocusgroupBehavior::kListbox, ax::mojom::blink::Role::kListBox,
-     FocusgroupFlags::kBlock},
-    {"menu", FocusgroupBehavior::kMenu, ax::mojom::blink::Role::kMenu,
+    {"listbox", FocusgroupBehavior::kListbox, FocusgroupFlags::kBlock},
+    {"menu", FocusgroupBehavior::kMenu,
      FocusgroupFlags::kBlock | FocusgroupFlags::kWrapBlock},
-    {"menubar", FocusgroupBehavior::kMenubar, ax::mojom::blink::Role::kMenuBar,
+    {"menubar", FocusgroupBehavior::kMenubar,
      FocusgroupFlags::kInline | FocusgroupFlags::kWrapInline},
-    {"feed", FocusgroupBehavior::kFeed, ax::mojom::blink::Role::kFeed,
+    {"feed", FocusgroupBehavior::kFeed,
      FocusgroupFlags::kBlock | FocusgroupFlags::kItemControls},
-    {"grid", FocusgroupBehavior::kGrid, ax::mojom::blink::Role::kGrid,
-     FocusgroupFlags::kNone},
-    {"none", FocusgroupBehavior::kOptOut, ax::mojom::blink::Role::kUnknown,
-     FocusgroupFlags::kNone},
+    {"grid", FocusgroupBehavior::kGrid, FocusgroupFlags::kNone},
+    {"none", FocusgroupBehavior::kOptOut, FocusgroupFlags::kNone},
 };
 
 // Unified mapping of all recognized modifier tokens.
@@ -649,45 +642,6 @@ bool IsActualFocusgroup(const FocusgroupData& data) {
          (data.flags == FocusgroupFlags::kNone));
   return data.behavior != FocusgroupBehavior::kNoBehavior &&
          data.behavior != FocusgroupBehavior::kOptOut;
-}
-
-ax::mojom::blink::Role FocusgroupMinimumAriaRole(const FocusgroupData& data) {
-  // This function should not be called on non-focusgroups, including opted out
-  // elements.
-  CHECK(IsActualFocusgroup(data));
-  // Return appropriate role based on behavior token mapping.
-  for (const auto& behavior_mapping : kBehaviorMap) {
-    if (data.behavior == behavior_mapping.behavior) {
-      return behavior_mapping.aria_role;
-    }
-  }
-  NOTREACHED() << "Unmapped focusgroup behavior: "
-               << static_cast<int>(data.behavior);
-}
-
-ax::mojom::blink::Role FocusgroupItemMinimumAriaRole(
-    const FocusgroupData& data) {
-  switch (data.behavior) {
-    case FocusgroupBehavior::kTablist:
-      return ax::mojom::blink::Role::kTab;
-    case FocusgroupBehavior::kRadiogroup:
-      return ax::mojom::blink::Role::kRadioButton;
-    case FocusgroupBehavior::kListbox:
-      return ax::mojom::blink::Role::kListBoxOption;
-    case FocusgroupBehavior::kMenu:
-    case FocusgroupBehavior::kMenubar:
-      return ax::mojom::blink::Role::kMenuItem;
-    case FocusgroupBehavior::kFeed:
-      return ax::mojom::blink::Role::kArticle;
-    case FocusgroupBehavior::kToolbar:
-    case FocusgroupBehavior::kGrid:
-    case FocusgroupBehavior::kNoBehavior:
-    case FocusgroupBehavior::kOptOut:
-      return ax::mojom::blink::Role::kUnknown;  // No mapping.
-  }
-  NOTREACHED()
-      << "Unhandled FocusgroupBehavior in FocusgroupItemMinimumAriaRole: "
-      << static_cast<int>(data.behavior);
 }
 
 bool IsValidFocusgroupToken(const AtomicString& token) {

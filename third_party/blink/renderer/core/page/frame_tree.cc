@@ -28,8 +28,6 @@
 #include "third_party/blink/renderer/core/frame/local_frame_client.h"
 #include "third_party/blink/renderer/core/frame/local_frame_view.h"
 #include "third_party/blink/renderer/core/loader/frame_load_request.h"
-#include "third_party/blink/renderer/core/page/chrome_client.h"
-#include "third_party/blink/renderer/core/page/create_window.h"
 #include "third_party/blink/renderer/core/page/page.h"
 #include "third_party/blink/renderer/platform/instrumentation/use_counter.h"
 #include "third_party/blink/renderer/platform/runtime_enabled_features.h"
@@ -106,11 +104,6 @@ void FrameTree::SetName(const AtomicString& name,
     // TODO(dcheng): This comment is indicative of a problematic layering
     // violation. The browser should not be relying on the renderer to get this
     // correct; unique name calculation should be moved up into the browser.
-    if (name != name_) {
-      // TODO(lukasza): https://crbug.com/660485: Eventually we need to also
-      // support replication of name changes that originate in a *remote* frame.
-      To<LocalFrame>(this_frame_.Get())->Client()->DidChangeName(name);
-    }
   }
 
   // TODO(andypaicu): remove this once we have gathered the data
@@ -207,7 +200,7 @@ Frame* FrameTree::FindFrameByName(const AtomicString& name) const {
   return frame;
 }
 
-FrameTree::FindResult FrameTree::FindOrCreateFrameForNavigation(
+Frame* FrameTree::FindOrCreateFrameForNavigation(
     FrameLoadRequest& request,
     const AtomicString& name) const {
   // Named frame lookup should always be relative to a local frame.
@@ -241,31 +234,27 @@ FrameTree::FindResult FrameTree::FindOrCreateFrameForNavigation(
   // this point indicates that a user event modified the navigation policy
   // (e.g., a ctrl-click). Let the user's action override any target attribute.
   if (request.GetNavigationPolicy() != kNavigationPolicyCurrentTab)
-    return FindResult(current_frame, false);
+    return current_frame;
 
   const KURL& url = request.GetResourceRequest().Url();
   Frame* frame = FindFrameForNavigationInternal(name, url, &request);
-  bool new_window = false;
   if (!frame) {
-    frame = CreateNewWindow(*current_frame, request, name);
-    new_window = true;
-    // CreateNewWindow() might have modified NavigationPolicy.
-    // Set it back now that the new window is known to be the right one.
-    request.SetNavigationPolicy(kNavigationPolicyCurrentTab);
-  } else if (!current_frame->CanNavigate(*frame, url)) {
-    frame = nullptr;
+    // Upstream would ask ChromeClient::CreateWindow() for a new auxiliary
+    // browsing context here; shotium cannot open one.
+    return nullptr;
+  }
+  if (!current_frame->CanNavigate(*frame, url)) {
+    return nullptr;
   }
 
-  if (frame && !new_window) {
-    if (frame->GetPage() != current_frame->GetPage())
-      frame->FocusPage(current_frame);
+  if (frame->GetPage() != current_frame->GetPage())
+    frame->FocusPage(current_frame);
 
-    // Focusing can fire onblur, so check for detach.
-    if (!frame->GetPage())
-      frame = nullptr;
-  }
+  // Focusing can fire onblur, so check for detach.
+  if (!frame->GetPage())
+    return nullptr;
 
-  if (frame && !current_frame->IsDescendantOf(frame) && frame->Parent() &&
+  if (!current_frame->IsDescendantOf(frame) && frame->Parent() &&
       !current_frame->GetSecurityContext()
            ->GetSecurityOrigin()
            ->IsSameOriginWith(
@@ -274,7 +263,7 @@ FrameTree::FindResult FrameTree::FindOrCreateFrameForNavigation(
         current_frame->GetDocument(),
         WebFeature::kNonParentOriginInitiatedNavigationOfSubframe);
   }
-  return FindResult(frame, new_window);
+  return frame;
 }
 
 Frame* FrameTree::FindFrameForNavigationInternal(

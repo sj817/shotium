@@ -1020,10 +1020,6 @@ unsigned InputType::Width() const {
   return 0;
 }
 
-ColorChooserClient* InputType::GetColorChooserClient() {
-  return nullptr;
-}
-
 void InputType::ApplyStep(const Decimal& current,
                           const bool current_was_invalid,
                           double count,

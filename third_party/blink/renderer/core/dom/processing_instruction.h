@@ -56,22 +56,6 @@ class CORE_EXPORT ProcessingInstruction final : public CharacterData,
   void DidChangeData();
   bool IsLoading() const;
 
-  // For XSLT
-  class DetachableEventListener : public GarbageCollectedMixin {
-   public:
-    virtual ~DetachableEventListener() = default;
-    virtual EventListener* ToEventListener() = 0;
-    // Detach event listener from its processing instruction.
-    virtual void Detach() = 0;
-
-    void Trace(Visitor* visitor) const override {}
-  };
-
-  void SetEventListenerForXSLT(DetachableEventListener* listener) {
-    listener_for_xslt_ = listener;
-  }
-  EventListener* EventListenerForXSLT();
-  void ClearEventListenerForXSLT();
 
   const AtomicString& getAttribute(const AtomicString& name) {
     return GetAttributeValue(name);
@@ -143,7 +127,6 @@ class CORE_EXPORT ProcessingInstruction final : public CharacterData,
   bool is_css_;
   bool is_xsl_;
 
-  Member<DetachableEventListener> listener_for_xslt_;
   Vector<KeyValuePair<AtomicString, AtomicString>> attributes_;
   bool attributes_dirty_ = true;
 };

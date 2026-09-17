@@ -278,10 +278,6 @@ AppearanceValue ColorInputType::AutoAppearance() const {
 }
 
 void ColorInputType::OpenPopupView() {
-  ChromeClient* chrome_client = GetChromeClient();
-  Document& document = GetElement().GetDocument();
-  chooser_ = chrome_client->OpenColorChooser(document.GetFrame(), this,
-                                             ValueAsColor());
   if (GetElement().GetLayoutObject()) {
     // Invalidate paint to ensure that the focus ring is removed.
     GetElement().GetLayoutObject()->SetShouldDoFullPaintInvalidation();
@@ -435,14 +431,6 @@ Vector<mojom::blink::ColorSuggestionPtr> ColorInputType::Suggestions() const {
     }
   }
   return suggestions;
-}
-
-AXObject* ColorInputType::PopupRootAXObject() {
-  return chooser_ ? chooser_->RootAXObject(&GetElement()) : nullptr;
-}
-
-ColorChooserClient* ColorInputType::GetColorChooserClient() {
-  return this;
 }
 
 bool ColorInputType::SupportsBaseAppearance(

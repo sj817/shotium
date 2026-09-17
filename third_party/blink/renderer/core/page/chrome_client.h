@@ -25,86 +25,22 @@
 
 #include <memory>
 
-#include "base/functional/callback.h"
-#include "base/gtest_prod_util.h"
 #include "base/time/time.h"
-#include "cc/input/event_listener_properties.h"
-#include "cc/input/overscroll_behavior.h"
 #include "cc/metrics/begin_main_frame_metrics.h"
-#include "cc/paint/draw_image.h"
-#include "third_party/blink/public/common/dom_storage/session_storage_namespace_id.h"
-#include "third_party/blink/public/common/input/web_gesture_event.h"
-#include "third_party/blink/public/common/input/web_input_event.h"
-#include "third_party/blink/public/common/page/drag_operation.h"
 #include "third_party/blink/public/mojom/devtools/console_message.mojom-blink-forward.h"
-#include "third_party/blink/public/mojom/input/focus_type.mojom-blink-forward.h"
-#include "third_party/blink/public/mojom/scroll/scroll_into_view_params.mojom-blink.h"
 #include "third_party/blink/renderer/core/core_export.h"
-#include "third_party/blink/renderer/core/dom/document.h"
-#include "third_party/blink/renderer/core/html/forms/popup_menu.h"
-#include "third_party/blink/renderer/core/loader/frame_loader.h"
-#include "third_party/blink/renderer/core/loader/navigation_policy.h"
-#include "third_party/blink/renderer/core/scroll/scroll_types.h"
-#include "third_party/blink/renderer/core/style/computed_style_constants.h"
-#include "third_party/blink/renderer/platform/geometry/physical_offset.h"
-#include "third_party/blink/renderer/platform/graphics/touch_action.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
-#include "third_party/blink/renderer/platform/text/text_direction.h"
 #include "third_party/blink/renderer/platform/wtf/forward.h"
-#include "third_party/blink/renderer/platform/wtf/functional.h"
-#include "ui/gfx/geometry/transform.h"
-#include "ui/gfx/geometry/vector2d_f.h"
-
-// To avoid conflicts with the CreateWindow macro from the Windows SDK...
-#undef CreateWindow
-
-namespace cc {
-struct ElementId;
-class Layer;
-struct OverscrollBehavior;
-class ScopedPauseRendering;
-}  // namespace cc
 
 namespace display {
 struct ScreenInfo;
 struct ScreenInfos;
 }  // namespace display
 
-namespace ui {
-class Cursor;
-}
-
 namespace blink {
 
-class ColorChooser;
-class ColorChooserClient;
-class DateTimeChooser;
-class DateTimeChooserClient;
-class Element;
-class Frame;
-class FullscreenOptions;
-class HTMLFormControlElement;
-class HTMLFormElement;
-class HTMLInputElement;
-class HTMLSelectElement;
-class HitTestLocation;
-class HitTestResult;
-class KeyboardEvent;
 class LocalFrame;
 class LocalFrameView;
-class Node;
-class Page;
-class PopupOpeningObserver;
-class WebDragData;
-
-enum class FullscreenRequestType;
-
-struct DateTimeChooserParameters;
-struct FrameLoadRequest;
-struct ViewportDescription;
-struct WebWindowFeatures;
-
-using CompositorElementId = cc::ElementId;
 
 class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
  public:
@@ -112,41 +48,15 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
   ChromeClient& operator=(const ChromeClient&) = delete;
   virtual ~ChromeClient() = default;
 
+  float WindowToViewportScalar(LocalFrame*, const float value) const {
+    return value;
+  }
 
-  // Converts the scalar value from window coordinates to viewport scale.
-  virtual float WindowToViewportScalar(LocalFrame*,
-                                       const float value) const = 0;
-
-  virtual bool IsPopup() { return false; }
-
-  virtual Element* GetPopupClientOwnerElement() { return nullptr; }
-
-  virtual void ChromeDestroyed() = 0;
-
-  virtual void SetWindowRect(const gfx::Rect&, LocalFrame&) = 0;
-  virtual void MoveWindowTo(const gfx::Point&, LocalFrame&) = 0;
-  virtual void ResizeWindowTo(const gfx::Size&, LocalFrame&) = 0;
-
-#if !BUILDFLAG(IS_ANDROID) && !BUILDFLAG(IS_IOS)
-  // Additional Windowing Controls API.
-  using WindowingControlsChangeCallback = base::OnceCallback<void(bool)>;
-  virtual void Minimize(LocalFrame&, WindowingControlsChangeCallback) = 0;
-  virtual void Maximize(LocalFrame&, WindowingControlsChangeCallback) = 0;
-  virtual void Restore(LocalFrame&, WindowingControlsChangeCallback) = 0;
-  virtual void SetResizable(bool resizable,
-                            LocalFrame&,
-                            WindowingControlsChangeCallback) = 0;
-#endif
+  virtual void ChromeDestroyed() {}
 
   // For non-composited WebViews that exist to contribute to a "parent" WebView
   // painting. This informs the client of the area that needs to be redrawn.
-  virtual void InvalidateContainer() = 0;
-
-  // Converts the rect from local root coordinates (using the local root of the
-  // given LocalFrameView) to screen coordinates. Performs the visual viewport
-  // transform.
-  virtual gfx::Rect LocalRootToScreenDIPs(const gfx::Rect&,
-                                          const LocalFrameView*) const = 0;
+  virtual void InvalidateContainer() {}
 
   void ScheduleAnimation(const LocalFrameView* view,
                          cc::BeginMainFrameReason reason) {
@@ -161,143 +71,15 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
   virtual void ScheduleAnimation(const LocalFrameView* view,
                                  cc::BeginMainFrameReason reason,
                                  base::TimeDelta delay,
-                                 bool urgent) = 0;
+                                 bool urgent) {}
 
-  // Tells the browser that another page has accessed the DOM of the initial
-  // empty document of a main frame.
-  virtual void DidAccessInitialMainDocument() = 0;
-
-  virtual void DidChangeThemeColor(std::optional<SkColor> theme_color) = 0;
-  virtual void DidChangeBackgroundColor(SkColor4f background_color,
-                                        bool color_adjust) = 0;
-
-  // This gives the rect of the top level window that the given LocalFrame is a
-  // part of.
-  virtual gfx::Rect RootWindowRect(LocalFrame&) = 0;
-
-  virtual void FocusPage() = 0;
-  virtual void DidFocusPage() = 0;
-
-  virtual bool CanTakeFocus(mojom::blink::FocusType) = 0;
-  virtual void TakeFocus(mojom::blink::FocusType) = 0;
-
-  virtual void SetKeyboardFocusURL(Element*) {}
-
-  // Returns true if the page should support drag regions via the app-region
-  // CSS property.
-  virtual bool SupportsDraggableRegions() = 0;
-
-  // Sends the draggable regions defined by the app-region CSS property to the
-  // browser.
-  virtual void DraggableRegionsChanged() = 0;
-
-  // Notifies clients immediately before a newly committed main frame is pushed
-  // to the compositor thread.
-  struct CORE_EXPORT CommitObserver : public GarbageCollectedMixin {
-    virtual void WillCommitCompositorFrame() {}
-
-   protected:
-    virtual ~CommitObserver() = default;
-  };
-
-  virtual void RegisterForCommitObservation(CommitObserver*) = 0;
-  virtual void UnregisterFromCommitObservation(CommitObserver*) = 0;
-
-  virtual void WillCommitCompositorFrame() = 0;
-  virtual void RequestFrameWithoutVSyncFromRoot(LocalFrame& frame) {}
-
-  virtual std::unique_ptr<cc::ScopedPauseRendering> PauseRendering(
-      LocalFrame& main_frame) = 0;
-
-  // Returns the maximum bounds for buffers allocated for rasterization and
-  // compositing.
-  // Returns null if the compositing stack has not been initialized yet.
-  // |frame| must be a local frame.
-  virtual std::optional<int> GetMaxRenderBufferBounds(
-      LocalFrame& frame) const = 0;
-
-  virtual std::optional<bool> GetWebRTCPostQuantumKeyAgreement() const {
-    return std::nullopt;
-  }
-
-  // The LocalFrame pointer provides the ChromeClient with context about which
-  // LocalFrame wants to create the new Page. Also, the newly created window
-  // should not be shown to the user until the ChromeClient of the newly
-  // created Page has its show method called.
-  // The FrameLoadRequest parameter is only for ChromeClient to check if the
-  // request could be fulfilled. The ChromeClient should not load the request.
-  Page* CreateWindow(LocalFrame*,
-                     const FrameLoadRequest&,
-                     const AtomicString& frame_name,
-                     const WebWindowFeatures&,
-                     network::mojom::blink::WebSandboxFlags,
-                     const SessionStorageNamespaceId&,
-                     bool& consumed_user_gesture);
-
-  // For a scrollbar scroll action, injects a gesture event of |injected_type|
-  // to be dispatched at a later point in time. |injected_type| is required to
-  // be one of GestureScroll{Begin,Update,End}. If the main thread is currently
-  // handling an input event, the gesture will be dispatched immediately after
-  // the current event is finished being processed.
-  // If there is no input event being handled, the gesture is queued up
-  // on the main thread's input event queue.
-  // The dispatched gesture will scroll the ScrollableArea identified by
-  // |scrollable_area_element_id| by the given delta+granularity.
-  // See also InputHandlerProxy::InjectScrollbarGestureScroll() which may
-  // shortcut callers of this function for composited scrollbars.
-  virtual void InjectScrollbarGestureScroll(
-      LocalFrame& local_frame,
-      const gfx::Vector2dF& delta,
-      ui::ScrollGranularity granularity,
-      CompositorElementId scrollable_area_element_id,
-      WebInputEvent::Type injected_type) {}
-
-  // Finishes a ScrollIntoView for a focused editable element by performing a
-  // view-level reveal. That is, when an embedder requests to reveal a focused
-  // editable, the editable is first ScrollIntoView'ed in the layout tree to
-  // ensure it's visible in the outermost document but stops short of scrolling
-  // the outermost frame. This method will then perform a platform-specific
-  // reveal of the editable, e.g. by animating a scroll and zoom in to a
-  // legible scale. This should only be called in a WebView where the main
-  // frame is local and outermost.
-  virtual void FinishScrollFocusedEditableIntoView(
-      const gfx::RectF& caret_rect_in_root_frame,
-      mojom::blink::ScrollIntoViewParamsPtr params) {}
-
-  // Set the browser's behavior when overscroll happens, e.g. whether to glow
-  // or navigate. This may only be called for the main frame, and takes it as
-  // reference to make it clear that callers may only call this while a local
-  // main frame is present and the values do not persist between instances of
-  // local main frames.
-  virtual void SetOverscrollBehavior(LocalFrame& main_frame,
-                                     const cc::OverscrollBehavior&) = 0;
-
-  virtual bool ShouldReportDetailedMessageForSourceAndSeverity(
-      LocalFrame&,
-      mojom::blink::ConsoleMessageLevel log_level,
-      const String& source) = 0;
   virtual void AddMessageToConsole(LocalFrame*,
                                    mojom::ConsoleMessageSource,
                                    mojom::ConsoleMessageLevel,
                                    const String& message,
                                    unsigned line_number,
                                    const String& source_id,
-                                   const String& stack_trace) = 0;
-
-  virtual bool CanOpenBeforeUnloadConfirmPanel() = 0;
-  bool OpenBeforeUnloadConfirmPanel(const String& message,
-                                    LocalFrame*,
-                                    bool is_reload);
-
-  virtual void CloseWindow() = 0;
-
-  bool OpenJavaScriptAlert(LocalFrame*, const String&);
-  bool OpenJavaScriptConfirm(LocalFrame*, const String&);
-  bool OpenJavaScriptPrompt(LocalFrame*,
-                            const String& message,
-                            const String& default_value,
-                            String& result);
-  virtual bool TabsToLinks() = 0;
+                                   const String& stack_trace) {}
 
   virtual const display::ScreenInfo& GetScreenInfo(LocalFrame& frame) const = 0;
   virtual const display::ScreenInfos& GetScreenInfos(
@@ -306,243 +88,14 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
   virtual const display::ScreenInfo& GetOriginalScreenInfo(
       LocalFrame& frame) const = 0;
 
-  virtual void SetCursor(const ui::Cursor&, LocalFrame* local_root) = 0;
-  virtual void SetCursorOverridden(bool) = 0;
-
-  virtual void AutoscrollStart(const gfx::PointF& position, LocalFrame*) {}
-  virtual void AutoscrollFling(const gfx::Vector2dF& velocity, LocalFrame*) {}
-  virtual void AutoscrollEnd(LocalFrame*) {}
-
-  virtual ui::Cursor LastSetCursorForTesting() const = 0;
-  Node* LastSetTooltipNodeForTesting() const {
-    return last_mouse_over_node_.Get();
-  }
-
-  virtual void SetCursorForPlugin(const ui::Cursor&, LocalFrame*) = 0;
-
-  // Returns the scale used to convert incoming input events while emulating
-  // device metics.
-  virtual float InputEventsScaleForEmulation() const { return 1; }
-
-  virtual void DispatchViewportPropertiesDidChange(
-      const ViewportDescription&) const {}
-
-  virtual bool DoubleTapToZoomEnabled() const { return false; }
-
-  virtual void EnablePreferredSizeChangedMode() {}
-
-  virtual void ZoomToFindInPageRect(const gfx::Rect&) {}
-
-  virtual void ContentsSizeChanged(LocalFrame*, const gfx::Size&) const = 0;
-  // Call during pinch gestures, or when page-scale changes on main-frame load.
-  virtual void PageScaleFactorChanged() const {}
-  virtual float ClampPageScaleFactorToLimits(float scale) const {
-    return scale;
-  }
-  virtual void OutermostMainFrameScrollOffsetChanged() const = 0;
-  virtual void ResizeAfterLayout() const {}
-  virtual void MainFrameLayoutUpdated() const {}
-
-  void MouseDidMoveOverElement(LocalFrame&,
-                               const HitTestLocation&,
-                               const HitTestResult&);
-  virtual void UpdateTooltipUnderCursor(LocalFrame&,
-                                        const String&,
-                                        TextDirection) = 0;
-  void ElementFocusedFromKeypress(LocalFrame&, const Element*);
-  // This function allows us to trigger a tooltip to show from a keypress. The
-  // tooltip will be positioned in the gfx::Rect passed by parameter. That rect
-  // corresponds to the focused element's bounds, which are in viewport
-  // coordinates at this point. They will be converted to enclosed DIPS before
-  // being passed to the browser process.
-  virtual void UpdateTooltipFromKeyboard(LocalFrame&,
-                                         const String&,
-                                         TextDirection,
-                                         const gfx::Rect&) = 0;
-  virtual void ClearKeyboardTriggeredTooltip(LocalFrame&) = 0;
-  void ClearToolTip(LocalFrame&);
-  String GetLastToolTipTextForTesting() {
-    return current_tool_tip_text_for_test_;
-  }
-
-  bool Print(LocalFrame*);
-
-  virtual ColorChooser* OpenColorChooser(LocalFrame*,
-                                         ColorChooserClient*,
-                                         const Color&) = 0;
-
-  // This function is used for:
-  //  - Mandatory date/time choosers if InputMultipleFieldsUI flag is not set
-  //  - Date/time choosers for types for which
-  //    LayoutTheme::SupportsCalendarPicker returns true, if
-  //    InputMultipleFieldsUI flag is set
-  //  - <datalist> UI for date/time input types regardless of
-  //    InputMultipleFieldsUI flag
-  // |LocalFrame| should not be null.
-  virtual DateTimeChooser* OpenDateTimeChooser(
-      LocalFrame*,
-      DateTimeChooserClient*,
-      const DateTimeChooserParameters&) = 0;
-  virtual void OpenTextDataListChooser(HTMLInputElement&) = 0;
-
-
-  // Pass nullptr as the cc::Layer to detach the root layer.
-  virtual void EnterFullscreen(LocalFrame&,
-                               const FullscreenOptions*,
-                               FullscreenRequestType) {}
-  virtual void ExitFullscreen(LocalFrame&) {}
-  virtual void FullscreenElementChanged(Element* old_element,
-                                        Element* new_element,
-                                        const FullscreenOptions* options,
-                                        FullscreenRequestType) {}
-
-  virtual void AnimateDoubleTapZoom(const gfx::Point& point,
-                                    const gfx::Rect& rect) {}
-
-  // The client keeps track of which touch/mousewheel event types have handlers,
-  // and if they do, whether the handlers are passive and/or blocking. This
-  // allows the client to know which optimizations can be used for the
-  // associated event classes.
-  virtual void SetEventListenerProperties(LocalFrame*,
-                                          cc::EventListenerClass,
-                                          cc::EventListenerProperties) = 0;
-
-  virtual void SetHasScrollEventHandlers(LocalFrame*, bool) = 0;
-  virtual void SetNeedsLowLatencyInput(LocalFrame*, bool) = 0;
-  virtual void SetNeedsUnbufferedInputForDebugger(LocalFrame*, bool) = 0;
-  virtual void RequestUnbufferedInputEvents(LocalFrame*) = 0;
-  virtual void SetTouchAction(LocalFrame*, TouchAction) = 0;
-
-  // Checks if there is an opened popup, called by LayoutMenuList::showPopUp().
-  virtual bool HasOpenedPopup() const = 0;
-  virtual PopupMenu* OpenPopupMenu(LocalFrame&, HTMLSelectElement&) = 0;
-  virtual DOMWindow* PagePopupWindowForTesting() const = 0;
-
-  // Allow overriding whether external popup menus are used.
-  virtual void SetUseExternalPopupMenus(bool) {}
-  virtual bool UseExternalPopupMenus() const { return false; }
-
-  virtual void SetBrowserControlsState(float top_height,
-                                       float bottom_height,
-                                       bool shrinks_layout) {}
-  virtual void SetBrowserControlsShownRatio(float top_ratio,
-                                            float bottom_ratio) {}
-
-  enum class UIElementType {
-    kAlertDialog = 0,
-    kConfirmDialog = 1,
-    kPromptDialog = 2,
-    kPrintDialog = 3,
-    kPopup = 4
-  };
-  virtual bool ShouldOpenUIElementDuringPageDismissal(
-      LocalFrame&,
-      UIElementType,
-      const String&,
-      Document::PageDismissalType) const {
-    return false;
-  }
-
   virtual bool IsIsolatedSVGChromeClient() const { return false; }
-
-  virtual gfx::Size MinimumWindowSize() const { return gfx::Size(100, 100); }
-
-
-  // Input method editor related functions.
-  virtual void ShowVirtualKeyboardOnElementFocus(LocalFrame&) {}
-
-  virtual gfx::Transform GetDeviceEmulationTransform() const {
-    return gfx::Transform();
-  }
-
-  virtual void DidUpdateBrowserControls() const {}
-
-  virtual void DidUpdateMaxSafeAreaInsets(
-      const gfx::InsetsF& max_safe_area_insets) const {}
-
-  virtual void RegisterPopupOpeningObserver(PopupOpeningObserver*) = 0;
-  virtual void UnregisterPopupOpeningObserver(PopupOpeningObserver*) = 0;
-  virtual void NotifyPopupOpeningObservers() const = 0;
-
-  virtual gfx::Vector2dF ElasticOverscroll() const { return gfx::Vector2dF(); }
 
   virtual void InstallSupplements(LocalFrame&);
 
-  virtual void RequestDecode(LocalFrame*,
-                             const cc::DrawImage& image,
-                             base::OnceCallback<void(bool)> callback,
-                             bool speculative) {
-    std::move(callback).Run(false);
-  }
-
-  // A stable numeric Id for |frame|'s local root's compositor. For
-  // tracing/debugging purposes.
-  virtual int GetLayerTreeId(LocalFrame& frame) = 0;
-
   virtual void Trace(Visitor*) const;
-  virtual void DocumentDetached(Document&) {}
-
-  // Return the user's zoom factor which is different from the typical usage
-  // of "zoom factor" in blink (e.g., |LocalFrame::LayoutZoomFactor()|) which
-  // includes CSS zoom and the device scale factor (if use-zoom-for-dsf is
-  // enabled). This only includes the zoom initiated by the user (ctrl +/-).
-  virtual double UserZoomFactor(LocalFrame* frame) const { return 1; }
-
-
-
-
-  virtual float ZoomFactorForViewportLayout() { return 1; }
-
-  // Called when a first contentful paint is observed. `presentation_time` is
-  // the renderer-side presentation timestamp of the paint.
-  virtual void OnFirstContentfulPaint(
-      const base::TimeTicks& presentation_time) {}
-
-  // Called when the outermost main frame's largest contentful paint candidate
-  // changed. `presentation_time` is the renderer-side presentation timestamp of
-  // the current candidate.
-  virtual void OnLargestContentfulPaint(
-      const base::TimeTicks& presentation_time) {}
 
  protected:
   ChromeClient() = default;
-
-  virtual void ShowMouseOverURL(const HitTestResult&) = 0;
-  virtual bool OpenBeforeUnloadConfirmPanelDelegate(LocalFrame*,
-                                                    bool is_reload) = 0;
-  virtual bool OpenJavaScriptAlertDelegate(LocalFrame*, const String&) = 0;
-  virtual bool OpenJavaScriptConfirmDelegate(LocalFrame*, const String&) = 0;
-  virtual bool OpenJavaScriptPromptDelegate(LocalFrame*,
-                                            const String& message,
-                                            const String& default_value,
-                                            String& result) = 0;
-  virtual void PrintDelegate(LocalFrame*) = 0;
-  virtual Page* CreateWindowDelegate(LocalFrame*,
-                                     const FrameLoadRequest&,
-                                     const AtomicString& frame_name,
-                                     const WebWindowFeatures&,
-                                     network::mojom::blink::WebSandboxFlags,
-                                     const SessionStorageNamespaceId&,
-                                     bool& consumed_user_gesture) = 0;
-
- private:
-  bool CanOpenUIElementIfDuringPageDismissal(Frame& main_frame,
-                                             UIElementType,
-                                             const String& message);
-  void UpdateTooltipUnderCursor(LocalFrame&,
-                                const HitTestLocation&,
-                                const HitTestResult&);
-
-  WeakMember<Node> last_mouse_over_node_;
-  PhysicalOffset last_tool_tip_point_;
-  String last_tool_tip_text_;
-  // |last_tool_tip_text_| is kept even if ClearToolTip is called. This is for
-  // the tooltip text that is cleared when ClearToolTip is called.
-  String current_tool_tip_text_for_test_;
-
-  FRIEND_TEST_ALL_PREFIXES(ChromeClientTest, UpdateTooltipUnderCursorFlood);
-  FRIEND_TEST_ALL_PREFIXES(ChromeClientTest,
-                           UpdateTooltipUnderCursorEmptyString);
 };
 
 }  // namespace blink

@@ -255,11 +255,6 @@ double WebPerformanceMetricsForReporting::
 }
 
 std::optional<base::TimeDelta>
-WebPerformanceMetricsForReporting::PrerenderActivationStart() const {
-  return private_->timingForReporting()->PrerenderActivationStart();
-}
-
-std::optional<base::TimeDelta>
 WebPerformanceMetricsForReporting::UserTimingMarkFullyLoaded() const {
   return private_->timingForReporting()->UserTimingMarkFullyLoaded();
 }

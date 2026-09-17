@@ -27,14 +27,11 @@
 #include "third_party/blink/renderer/core/html/html_dialog_element.h"
 #include "third_party/blink/renderer/core/input/event_handling_util.h"
 #include "third_party/blink/renderer/core/input/input_device_capabilities.h"
-#include "third_party/blink/renderer/core/input/keyboard_shortcut_recorder.h"
 #include "third_party/blink/renderer/core/input/scroll_manager.h"
 #include "third_party/blink/renderer/core/keywords.h"
 #include "third_party/blink/renderer/core/page/focus_controller.h"
 #include "third_party/blink/renderer/core/page/focusgroup_controller.h"
 #include "third_party/blink/renderer/core/page/page.h"
-#include "third_party/blink/renderer/core/page/spatial_navigation.h"
-#include "third_party/blink/renderer/core/page/spatial_navigation_controller.h"
 #include "third_party/blink/renderer/platform/keyboard_codes.h"
 #include "third_party/blink/renderer/platform/windows_keyboard_codes.h"
 #include "ui/events/keycodes/dom/keycode_converter.h"
@@ -51,18 +48,6 @@ namespace {
 
 const int kVKeyProcessKey = 229;
 
-bool IsPageUpOrDownKeyEvent(int key_code, WebInputEvent::Modifiers modifiers) {
-  if (modifiers & WebInputEvent::kAltKey) {
-    // Alt-Up/Down should behave like PageUp/Down on Mac. (Note that Alt-keys
-    // on other platforms are suppressed due to isSystemKey being set.)
-    return key_code == VKEY_UP || key_code == VKEY_DOWN;
-  } else if (key_code == VKEY_PRIOR || key_code == VKEY_NEXT) {
-    return modifiers == WebInputEvent::kNoModifiers;
-  }
-
-  return false;
-}
-
 bool MapKeyCodeForScroll(int key_code,
                          WebInputEvent::Modifiers modifiers,
                          mojom::blink::ScrollDirection* scroll_direction,
@@ -78,14 +63,12 @@ bool MapKeyCodeForScroll(int key_code,
       WebInputEvent::kControlKey | WebInputEvent::kAltKey;
   if ((modifiers & WebInputEvent::kKeyModifiers) == kTargetModifiers) {
     if (key_code == VKEY_UP) {
-      RecordKeyboardShortcutForAndroid(KeyboardShortcut::kScrollToTop);
       *scroll_direction =
           mojom::blink::ScrollDirection::kScrollUpIgnoringWritingMode;
       *scroll_granularity = ui::ScrollGranularity::kScrollByDocument;
       *scroll_use_uma = WebFeature::kScrollByKeyboardHomeEndKeys;
       return true;
     } else if (key_code == VKEY_DOWN) {
-      RecordKeyboardShortcutForAndroid(KeyboardShortcut::kScrollToBottom);
       *scroll_direction =
           mojom::blink::ScrollDirection::kScrollDownIgnoringWritingMode;
       *scroll_granularity = ui::ScrollGranularity::kScrollByDocument;
@@ -120,16 +103,6 @@ bool MapKeyCodeForScroll(int key_code,
 #endif  // BUILDFLAG(IS_MAC)
   }
 
-#if BUILDFLAG(IS_ANDROID)
-  switch (key_code) {
-    case VKEY_PRIOR:
-      RecordKeyboardShortcutForAndroid(KeyboardShortcut::kPageUp);
-      break;
-    case VKEY_NEXT:
-      RecordKeyboardShortcutForAndroid(KeyboardShortcut::kPageDown);
-      break;
-  }
-#endif
 
   switch (key_code) {
     case VKEY_LEFT:
@@ -437,27 +410,21 @@ void KeyboardEventManager::DefaultKeyboardEventHandler(
       DefaultTabEventHandler(event);
     } else if (key == keywords::kEscape) {
       DefaultEscapeEventHandler(event);
-    } else if (key == keywords::kCapitalEnter) {
-      DefaultEnterEventHandler(event);
-    } else if (event->KeyEvent() &&
-               static_cast<int>(event->KeyEvent()->dom_key) == 0x00200310) {
-      // TODO(bokan): Cleanup magic numbers once https://crbug.com/949766 lands.
-      DefaultImeSubmitHandler(event);
-    } else {
+    } else if (key != keywords::kCapitalEnter &&
+               !(event->KeyEvent() &&
+                 static_cast<int>(event->KeyEvent()->dom_key) == 0x00200310)) {
+      // Enter and the IME submit key (see https://crbug.com/949766 for the
+      // magic number) were only consumed by spatial navigation, which shotium
+      // does not build; they still must not reach the scroll-key handler.
       DefaultNavigationKeyEventHandler(event, possible_focused_node);
     }
   } else if (event->type() == event_type_names::kKeypress) {
-    if (event->key() == keywords::kCapitalEnter) {
-      DefaultEnterEventHandler(event);
-    } else if (event->charCode() == ' ') {
+    if (event->charCode() == ' ') {
       DefaultSpaceEventHandler(event, possible_focused_node);
     }
   } else if (event->type() == event_type_names::kKeyup) {
     if (event->DefaultHandled())
       return;
-    if (event->key() == keywords::kCapitalEnter) {
-      DefaultEnterEventHandler(event);
-    }
     if (event->keyCode() == last_scrolling_keycode_) {
       if (scrollend_event_target_ && has_pending_scrollend_on_key_up_) {
         scrollend_event_target_->OnScrollFinished(/*enqueue_scrollend=*/true);
@@ -517,16 +484,6 @@ void KeyboardEventManager::DefaultNavigationKeyEventHandler(
     return;
   }
 
-  if (IsSpatialNavigationEnabled(frame_) &&
-      !frame_->GetDocument()->InDesignMode() &&
-      !IsPageUpOrDownKeyEvent(event->keyCode(), event->GetModifiers())) {
-    if (page->GetSpatialNavigationController().HandleArrowKeyboardEvent(
-            event)) {
-      event->SetDefaultHandled();
-      return;
-    }
-  }
-
   if (event->KeyEvent() && event->KeyEvent()->is_system_key)
     return;
 
@@ -571,10 +528,6 @@ bool KeyboardEventManager::DefaultTabEventHandler(KeyboardEvent* event) {
   if (!page) {
     return false;
   }
-  if (!page->TabKeyCyclesThroughElements()) {
-    return false;
-  }
-
   mojom::blink::FocusType focus_type = event->shiftKey()
                                            ? mojom::blink::FocusType::kBackward
                                            : mojom::blink::FocusType::kForward;
@@ -601,35 +554,9 @@ void KeyboardEventManager::DefaultEscapeEventHandler(KeyboardEvent* event) {
     return;
 
   Document& document = *frame_->GetDocument();
-  if (IsSpatialNavigationEnabled(frame_) && !document.InDesignMode()) {
-    page->GetSpatialNavigationController().HandleEscapeKeyboardEvent(event);
-  }
-
   Element::LoseInterestInAllElements(document);
 
   frame_->DomWindow()->closewatcher_stack()->EscapeKeyHandler(event);
-}
-
-void KeyboardEventManager::DefaultEnterEventHandler(KeyboardEvent* event) {
-  Page* page = frame_->GetPage();
-  if (!page)
-    return;
-
-  if (IsSpatialNavigationEnabled(frame_) &&
-      !frame_->GetDocument()->InDesignMode()) {
-    page->GetSpatialNavigationController().HandleEnterKeyboardEvent(event);
-  }
-}
-
-void KeyboardEventManager::DefaultImeSubmitHandler(KeyboardEvent* event) {
-  Page* page = frame_->GetPage();
-  if (!page)
-    return;
-
-  if (IsSpatialNavigationEnabled(frame_) &&
-      !frame_->GetDocument()->InDesignMode()) {
-    page->GetSpatialNavigationController().HandleImeSubmitKeyboardEvent(event);
-  }
 }
 
 static OverrideCapsLockState g_override_caps_lock_state;

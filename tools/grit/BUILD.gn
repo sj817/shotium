@@ -33,7 +33,6 @@ group("grit_python_unittests") {
   data = [
     "//testing/scripts/run_isolated_script_test.py",
     "//tools/grit/",
-    "//third_party/catapult/third_party/typ/",
     "//third_party/node/",
   ]
 }

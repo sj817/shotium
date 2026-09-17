@@ -155,10 +155,6 @@ dictionary SetHTMLUnsafeOptions {
     [RuntimeEnabled=ComputedAccessibilityInfo] readonly attribute DOMString? computedRole;
     [RuntimeEnabled=ComputedAccessibilityInfo] readonly attribute DOMString? computedName;
 
-    // ARIA Notify API
-    // https://github.com/WICG/aom/blob/gh-pages/notification-api.md
-    [RuntimeEnabled=AriaNotify,MeasureAs=AriaNotify] void ariaNotify(DOMString announcement, optional AriaNotificationOptions options = {});
-
     // Event handler attributes
     attribute EventHandler onbeforecopy;
     attribute EventHandler onbeforecut;

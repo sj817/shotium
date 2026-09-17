@@ -340,10 +340,6 @@ vars = {
   # and whatever else without interference from each other.
   'fuchsia_version': 'version:33.20260903.4.1',
   # Three lines of non-changing comments so that
-  # the commit queue can handle CLs rolling googletest
-  # and whatever else without interference from each other.
-  'googletest_revision': '4fe3307fb2d9f86d19777c7eb0e4809e9694dde7',
-  # Three lines of non-changing comments so that
   # the commit queue can handle CLs rolling lss
   # and whatever else without interference from each other.
   'lss_revision': '29164a80da4d41134950d76d55199ea33fbb9613',
@@ -368,10 +364,6 @@ vars = {
   # and whatever else without interference from each other.
   'ots_revision': '46bea9879127d0ff1c6601b078e2ce98e83fcd33',
   # Three lines of non-changing comments so that
-  # the commit queue can handle CLs rolling catapult
-  # and whatever else without interference from each other.
-  'catapult_revision': 'bc8f307a4d44148a31e34ab48c77d0834a404d20',
-  # Three lines of non-changing comments so that
   # the commit queue can handle CLs rolling CrossBench
   # and whatever else without interference from each other.
   'crossbench_revision': 'e64dab2ad45e3ddd838cbf02c6a9eed0c3c3c46b',
@@ -395,10 +387,6 @@ vars = {
   # the commit queue can handle CLs rolling devtools-frontend
   # and whatever else without interference from each other.
   'devtools_frontend_revision': '66cbff3fcf324246508e64bc8c1e4ad83ed147b3',
-  # Three lines of non-changing comments so that
-  # the commit queue can handle CLs rolling libprotobuf-mutator
-  # and whatever else without interference from each other.
-  'libprotobuf-mutator': 'c1c950eae0440c3808f2b8bd7c57d0c6a42c1a90',
   # Three lines of non-changing comments so that
   # the commit queue can handle CLs rolling android_sdk_build-tools_version
   # and whatever else without interference from each other.
@@ -947,9 +935,6 @@ deps = {
   'src/third_party/boringssl/src':
     Var('boringssl_git') + '/boringssl.git' + '@' +  Var('boringssl_revision'),
 
-  'src/third_party/catapult':
-    Var('chromium_git') + '/catapult.git' + '@' + Var('catapult_revision'),
-
   'src/third_party/ced/src':
     Var('chromium_git') + '/external/github.com/google/compact_enc_det.git' + '@' + 'd127078cedef9c6642cbe592dacdd2292b50bb19',
 
@@ -973,9 +958,6 @@ deps = {
 
   'src/third_party/ots/src':
     Var('chromium_git') + '/external/github.com/khaledhosny/ots.git' + '@' + Var('ots_revision'),
-
-  'src/third_party/googletest/src':
-    Var('chromium_git') + '/external/github.com/google/googletest.git' + '@' + Var('googletest_revision'),
 
   # TODO: crbug.com/431264806 - Switch to CIPD package for Windows builds.
   'src/third_party/gperf': {

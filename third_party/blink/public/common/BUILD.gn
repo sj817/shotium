@@ -126,7 +126,6 @@ source_set("headers") {
     "features.h",
     "fetch/fetch_api_request_headers_map.h",
     "fetch/fetch_api_request_headers_mojom_traits.h",
-    "frame/delegated_capability_request_token.h",
     "frame/fenced_frame_sandbox_flags.h",
     "frame/frame_owner_element_type.h",
     "frame/frame_owner_element_type_mojom_traits.h",
@@ -216,13 +215,11 @@ source_set("headers") {
     "unique_name/unique_name_helper.h",
     "use_counter/use_counter_feature.h",
     "use_counter/use_counter_feature_tracker.h",
-    "use_counter/webdx_feature_maps.h",
     "user_agent/user_agent_brand_version_type.h",
     "user_agent/user_agent_metadata.h",
     "view_source/rendering_preferences.h",
     "web_cache/web_cache_resource_type_stats.h",
     "web_preferences/web_preferences.h",
-    "widget/constants.h",
 
   ]
 

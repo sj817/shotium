@@ -532,9 +532,6 @@ BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kIntensiveWakeUpThrottling);
 BLINK_COMMON_EXPORT extern const char
     kIntensiveWakeUpThrottling_GracePeriodSeconds_Name[];
 
-// Don't require FCP for the page to turn interactive. Useful for testing.
-BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kInteractiveDetectorIgnoreFcp);
-
 BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kIsolateSandboxedIframes);
 enum class IsolateSandboxedIframesGrouping {
   // In this grouping, all isolated sandboxed iframes whose URLs share the same
@@ -1454,13 +1451,6 @@ BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kRustyIcoFeature);
 // https://html.spec.whatwg.org/multipage/system-state.html#safelisted-scheme
 BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(
     kSafelistPaytoToRegisterProtocolHandler);
-
-// When enabled, only pages that belong to a certain browsing context group are
-// paused instead of all pages.
-BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kPausePagesPerBrowsingContextGroup);
-
-// Whether the HUD display is shown for paused pages.
-BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kShowHudDisplayForPausedPages);
 
 BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kScriptStreaming);
 BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kScriptStreamingForNonHTTP);

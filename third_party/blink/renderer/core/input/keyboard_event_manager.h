@@ -68,8 +68,6 @@ class CORE_EXPORT KeyboardEventManager final
 
   void DefaultSpaceEventHandler(KeyboardEvent*, Node*);
   void DefaultEscapeEventHandler(KeyboardEvent*);
-  void DefaultEnterEventHandler(KeyboardEvent*);
-  void DefaultImeSubmitHandler(KeyboardEvent*);
   void DefaultNavigationKeyEventHandler(KeyboardEvent*, Node*);
 
   const Member<LocalFrame> frame_;

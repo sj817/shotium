@@ -136,11 +136,6 @@ class CORE_EXPORT FrameLoader final {
   // existence of the frame after StopAllLoaders() returns.
   void StopAllLoaders(bool abort_client);
 
-  // Notifies the client that the initial empty document has been accessed, and
-  // thus it is no longer safe to show a provisional URL above the document
-  // without risking a URL spoof. The client must not call back into JavaScript.
-  void DidAccessInitialDocument();
-
   DocumentLoader* GetDocumentLoader() const { return document_loader_.Get(); }
 
   void SetDefersLoading(LoaderFreezeMode mode);
@@ -150,10 +145,7 @@ class CORE_EXPORT FrameLoader final {
   String UserAgent() const;
   std::optional<blink::UserAgentMetadata> UserAgentMetadata() const;
 
-  void DispatchDidClearWindowObjectInMainWorld();
   void DispatchDidClearDocumentOfWindowObject();
-  void DispatchDocumentElementAvailable();
-  void RunScriptsAtDocumentElementAvailable();
 
   // See content/browser/renderer_host/sandbox_flags.md
   // This contains the sandbox flags to commit for new documents.
@@ -220,8 +212,6 @@ class CORE_EXPORT FrameLoader final {
   void Trace(Visitor*) const;
 
   void DidDropNavigation();
-
-  bool HasAccessedInitialDocument() { return has_accessed_initial_document_; }
 
   void SetIsNotOnInitialEmptyDocument() {
     // The "initial empty document" state can be false if the frame has loaded
@@ -315,9 +305,7 @@ class CORE_EXPORT FrameLoader final {
   enum class State { kUninitialized, kInitialized, kDetached };
   State state_ = State::kUninitialized;
 
-  bool dispatching_did_clear_window_object_in_main_world_;
   bool committing_navigation_ = false;
-  bool has_accessed_initial_document_ = false;
 
   // Enum to determine the frame's "initial empty document"-ness.
   // NOTE: we treat both the "initial about:blank document" and the

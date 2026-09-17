@@ -41,14 +41,10 @@
 namespace blink {
 
 class DataTransferItemList;
-class DragImage;
 class Element;
 class FileList;
-class FrameSelection;
 class LocalFrame;
 class Node;
-class PaintRecordBuilder;
-class PropertyTreeState;
 
 enum class DataTransferAccessPolicy;
 
@@ -109,16 +105,6 @@ class CORE_EXPORT DataTransfer final : public ScriptWrappable,
   void SetDragImageResource(ImageResourceContent*, const gfx::Point&);
   void SetDragImageElement(Node*, const gfx::Point&);
 
-  std::unique_ptr<DragImage> CreateDragImage(gfx::Point& drag_location,
-                                             float device_scale_factor,
-                                             LocalFrame*) const;
-  void DeclareAndWriteDragImage(Element*,
-                                const KURL& link_url,
-                                const KURL& image_url,
-                                const String& title);
-  void WriteURL(Node*, const KURL&, const String&);
-  void WriteSelection(const FrameSelection&);
-
   void SetAccessPolicy(DataTransferAccessPolicy);
   bool CanReadTypes() const;
   bool CanReadData() const;
@@ -140,22 +126,6 @@ class CORE_EXPORT DataTransfer final : public ScriptWrappable,
   DataTransferItemList* items();
 
   DataObject* GetDataObject() const;
-
-  // Clip to the visible area of the visual viewport.
-  static gfx::RectF ClipByVisualViewport(const gfx::RectF& rect_in_document,
-                                         const LocalFrame&);
-
-  // |layout_size| is the size of the image in layout pixels.
-  // |paint_offset| is the offset from the origin of the dragged object of the
-  // PaintRecordBuilder.
-  static std::unique_ptr<DragImage> CreateDragImageForFrame(
-      LocalFrame&,
-      float,
-      const gfx::SizeF& layout_size,
-      const gfx::Vector2dF& paint_offset,
-      PaintRecordBuilder&,
-      const PropertyTreeState&);
-  static std::unique_ptr<DragImage> NodeImage(LocalFrame&, Node&);
 
   void Trace(Visitor*) const override;
 

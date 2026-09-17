@@ -14,6 +14,7 @@
       "third_party/blink/renderer/core/frame/csp/content_security_policy.h",
       "third_party/blink/renderer/core/html/html_slot_element.h",
       "third_party/blink/renderer/core/loader/frame_loader_types.h",
+      "third_party/blink/renderer/core/loader/navigation_policy.h",
       "third_party/blink/renderer/core/page/chrome_client.h",
       "third_party/blink/renderer/core/probe/core_probes.h",
       "third_party/blink/renderer/platform/loader/fetch/resource.h",

@@ -37,10 +37,6 @@ component("display") {
     "display_switches.h",
     "display_util.cc",
     "display_util.h",
-    "headless/headless_screen_manager.cc",
-    "headless/headless_screen_manager.h",
-    "headless/headless_screen_util.cc",
-    "headless/headless_screen_util.h",
     "screen.cc",
     "screen.h",
     "screen_base.cc",
@@ -60,8 +56,6 @@ component("display") {
   if (is_mac) {
     sources += [
       "mac/screen_mac.mm",
-      "mac/screen_mac_headless.h",
-      "mac/screen_mac_headless.mm",
     ]
   }
 
@@ -256,7 +250,6 @@ test("display_unittests") {
     "display_layout_unittest.cc",
     "display_list_unittest.cc",
     "display_unittest.cc",
-    "headless/headless_screen_util_unittest.cc",
     "mojom/display_mojom_traits_unittest.cc",
     "mojom/screen_infos_mojom_traits_unittest.cc",
     "screen_unittest.cc",

@@ -714,7 +714,6 @@ if (current_toolchain == host_toolchain) {
     deps = [
       ":imageio_util",
       ":libwebp_webp",
-      "//third_party/libpng",
       "//third_party/zlib",
     ]
     configs += [ ":libwebp_public_config" ]

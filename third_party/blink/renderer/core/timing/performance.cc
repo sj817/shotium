@@ -59,7 +59,6 @@
 #include "third_party/blink/renderer/core/loader/document_loader.h"
 #include "third_party/blink/renderer/core/probe/core_probes.h"
 #include "third_party/blink/renderer/core/timing/back_forward_cache_restoration.h"
-#include "third_party/blink/renderer/core/timing/background_tracing_helper.h"
 #include "third_party/blink/renderer/core/timing/dom_window_performance.h"
 #include "third_party/blink/renderer/core/timing/interaction_contentful_paint.h"
 #include "third_party/blink/renderer/core/timing/largest_contentful_paint.h"
@@ -258,11 +257,6 @@ Performance::Performance(
       declarative_performance_observer_host_(context) {
   unix_at_zero_monotonic_ =
       GetUnixAtZeroMonotonic(base::DefaultClock::GetInstance());
-  // |context| may be null in tests.
-  if (context) {
-    background_tracing_helper_ =
-        MakeGarbageCollected<BackgroundTracingHelper>(context);
-  }
   // Initialize the map of dropped entry types only with those which could be
   // dropped (saves some unnecessary 0s).
   for (const auto type : kDroppableEntryTypes) {
@@ -980,7 +974,6 @@ void Performance::Trace(Visitor* visitor) const {
   // comment above NotifyObserversOfEntry()).
   visitor->Trace(deliver_observations_timer_);
   visitor->Trace(resource_timing_buffer_full_timer_);
-  visitor->Trace(background_tracing_helper_);
   visitor->Trace(performance_entries_flush_timer_);
   visitor->Trace(declarative_performance_observer_host_);
   EventTarget::Trace(visitor);

@@ -846,8 +846,6 @@ bool PointerEventManager::HandleScrollbarTouchDrag(const WebPointerEvent& event,
 
   if (event.GetType() == WebInputEvent::Type::kPointerDown) {
     captured_scrollbar_ = scrollbar;
-    frame_->GetPage()->GetChromeClient().SetTouchAction(frame_,
-                                                        TouchAction::kNone);
   }
 
   if (!captured_scrollbar_)
@@ -881,8 +879,6 @@ bool PointerEventManager::HandleResizerDrag(
               p, kResizerForTouch)) {
         resize_scrollable_area_ = layer->GetScrollableArea();
         resize_scrollable_area_->SetInResizeMode(true);
-        frame_->GetPage()->GetChromeClient().SetTouchAction(frame_,
-                                                            TouchAction::kNone);
         resize_position_to_size_transform_ =
             resize_scrollable_area_->InitializeResizeTransform(p);
         return true;

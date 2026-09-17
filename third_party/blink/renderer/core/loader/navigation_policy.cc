@@ -34,7 +34,6 @@
 #include "third_party/blink/public/common/input/web_keyboard_event.h"
 #include "third_party/blink/public/common/input/web_mouse_event.h"
 #include "third_party/blink/public/web/web_navigation_policy.h"
-#include "third_party/blink/public/web/web_window_features.h"
 #include "third_party/blink/renderer/core/events/current_input_event.h"
 #include "third_party/blink/renderer/core/events/gesture_event.h"
 #include "third_party/blink/renderer/core/events/keyboard_event.h"
@@ -158,37 +157,6 @@ NavigationPolicy NavigationPolicyFromEvent(const Event* event) {
   }
 
   return event_policy;
-}
-
-NavigationPolicy NavigationPolicyForCreateWindow(
-    const WebWindowFeatures& features) {
-  // If our default configuration was modified by a script or wasn't
-  // created by a user gesture, then show as a popup. Else, let this
-  // new window be opened as a toplevel window.
-  bool as_popup = features.is_popup || !features.resizable;
-  NavigationPolicy app_policy =
-      as_popup ? kNavigationPolicyNewPopup : kNavigationPolicyNewForegroundTab;
-  NavigationPolicy user_policy = NavigationPolicyFromCurrentEvent();
-
-  if (user_policy == kNavigationPolicyNewWindow &&
-      app_policy == kNavigationPolicyNewPopup) {
-    // User and app agree that we want a new window; let the app override the
-    // decorations.
-    return app_policy;
-  }
-
-  if (user_policy == kNavigationPolicyCurrentTab) {
-    // User doesn't want a specific policy, use app policy instead.
-    return app_policy;
-  }
-
-  if (user_policy == kNavigationPolicyDownload) {
-    // When the input event suggests a download, but the navigation was
-    // initiated by script, we should not override it.
-    return app_policy;
-  }
-
-  return user_policy;
 }
 
 STATIC_ASSERT_ENUM(kWebNavigationPolicyDownload, kNavigationPolicyDownload);

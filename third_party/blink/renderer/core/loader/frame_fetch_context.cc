@@ -84,7 +84,6 @@ BASE_FEATURE(kFastMemoryCacheWithDevTools, base::FEATURE_ENABLED_BY_DEFAULT);
 #include "third_party/blink/renderer/core/loader/frame_loader.h"
 #include "third_party/blink/renderer/core/loader/frame_resource_fetcher_properties.h"
 #include "third_party/blink/renderer/core/loader/idleness_detector.h"
-#include "third_party/blink/renderer/core/loader/interactive_detector.h"
 #include "third_party/blink/renderer/core/loader/loader_factory_for_frame.h"
 #include "third_party/blink/renderer/core/loader/mixed_content_checker.h"
 #include "third_party/blink/renderer/core/loader/resource/image_resource.h"
@@ -237,7 +236,6 @@ struct FrameFetchContext::FrozenState final : GarbageCollected<FrozenState> {
               const String& user_agent,
               base::optional_ref<const UserAgentMetadata> user_agent_metadata,
               bool is_isolated_svg_chrome_client,
-              bool is_prerendering,
               const String& reduced_accept_language)
       : url(url),
         content_security_policy(content_security_policy),
@@ -248,7 +246,6 @@ struct FrameFetchContext::FrozenState final : GarbageCollected<FrozenState> {
         user_agent(user_agent),
         user_agent_metadata(user_agent_metadata.CopyAsOptional()),
         is_isolated_svg_chrome_client(is_isolated_svg_chrome_client),
-        is_prerendering(is_prerendering),
         reduced_accept_language(reduced_accept_language) {}
 
   const KURL url;
@@ -261,7 +258,6 @@ struct FrameFetchContext::FrozenState final : GarbageCollected<FrozenState> {
   const String user_agent;
   const std::optional<UserAgentMetadata> user_agent_metadata;
   const bool is_isolated_svg_chrome_client;
-  const bool is_prerendering;
   const String reduced_accept_language;
 
   void Trace(Visitor* visitor) const {
@@ -410,7 +406,6 @@ void FrameFetchContext::PrepareRequest(
   request.SetStorageAccessApiStatus(
       document_->GetExecutionContext()->GetStorageAccessApiStatus());
 
-  GetLocalFrameClient()->DispatchFinalizeRequest(request);
   FrameScheduler* frame_scheduler = GetFrame()->GetFrameScheduler();
   if (!for_redirect && frame_scheduler) {
     virtual_time_pauser = frame_scheduler->CreateWebScopedVirtualTimePauser(
@@ -913,21 +908,7 @@ void FrameFetchContext::AddReducedAcceptLanguageIfNecessary(
   }
 }
 
-void FrameFetchContext::WillSendRequest(ResourceRequest& resource_request) {
-  // Set upstream url based on the request's redirect info.
-  KURL upstream_url;
-  if (resource_request.GetRedirectInfo().has_value()) {
-    upstream_url = KURL(resource_request.GetRedirectInfo()->previous_url);
-  }
-  std::optional<KURL> overriden_url =
-      GetLocalFrameClient()->DispatchWillSendRequest(
-          resource_request.Url(), resource_request.RequestorOrigin(),
-          resource_request.SiteForCookies(),
-          resource_request.GetRedirectInfo().has_value(), upstream_url);
-  if (overriden_url.has_value()) {
-    resource_request.SetUrl(overriden_url.value());
-  }
-}
+void FrameFetchContext::WillSendRequest(ResourceRequest& resource_request) {}
 
 void FrameFetchContext::PopulateResourceRequestBeforeCacheAccess(
     const ResourceLoaderOptions& options,
@@ -966,66 +947,7 @@ void FrameFetchContext::UpgradeResourceRequestForLoader(
 }
 
 bool FrameFetchContext::StartSpeculativeImageDecode(Resource* resource) {
-  CHECK(resource->GetType() == ResourceType::kImage);
-  if (!document_ || !document_->GetFrame()) {
-    return false;
-  }
-  ImageResource* image_resource = To<ImageResource>(resource);
-  if (image_resource->RequestedSpeculativeDecode()) {
-    return false;
-  }
-  Image* image = image_resource->GetContent()->GetImage();
-  if (IsA<SVGImage>(image)) {
-    return false;
-  }
-  if (!image_resource->GetContent()->CanBeSpeculativelyDecoded()) {
-    return false;
-  }
-  PaintImage paint_image = image->PaintImageForCurrentFrame();
-  if (paint_image) {
-    image_resource->OnRequestSpeculativeDecode();
-    SkM44 matrix;
-    gfx::Size image_size(image->width(), image->height());
-    gfx::SizeF content_size(image_resource->GetContent()->MaxSize());
-    // If LayoutImage has zero size, it might be waiting for intrinsic size
-    // info, so decode to the image intrinsic size; otherwise scale to content.
-    if (!content_size.IsZero()) {
-      if (content_size.IsEmpty()) {
-        // If one dimension is zero, preserve aspect ratio.
-        if (content_size.width() == 0.) {
-          content_size.set_width(image_size.width() *
-                                 (content_size.height() / image_size.height()));
-        } else {
-          content_size.set_height(image_size.height() *
-                                  (content_size.width() / image_size.width()));
-        }
-      }
-      matrix.setScale(content_size.width() / image_size.width(),
-                      content_size.height() / image_size.height());
-    }
-    cc::DrawImage draw_image(
-        paint_image, /*use_dark_mode=*/false,
-        SkIRect::MakeWH(image_size.width(), image_size.height()),
-        static_cast<cc::PaintFlags::FilterQuality>(
-            image_resource->GetContent()->MaxInterpolationQuality()),
-        matrix);
-    auto paint_image_id = image->paint_image_id();
-    TRACE_EVENT_INSTANT(
-        TRACE_DISABLED_BY_DEFAULT("loading"), "SpeculativeImageDecodeStarted",
-        "url", resource->Url().GetString().Utf8(), "image_id", paint_image_id);
-    document_->GetFrame()->GetChromeClient().RequestDecode(
-        document_->GetFrame(), draw_image, base::DoNothingAs<void(bool)>(),
-        /*speculative*/ true);
-    return true;
-  }
   return false;
-}
-
-bool FrameFetchContext::IsPrerendering() const {
-  if (GetResourceFetcherProperties().IsDetached()) {
-    return frozen_state_->is_prerendering;
-  }
-  return document_->IsPrerendering();
 }
 
 bool FrameFetchContext::DoesLCPPHaveAnyHintData() {
@@ -1300,7 +1222,7 @@ FetchContext* FrameFetchContext::Detach() {
       Url(), GetContentSecurityPolicy(), GetSiteForCookies(),
       GetTopFrameOrigin(), client_hints_prefs, GetDevicePixelRatio(),
       GetUserAgent(), GetUserAgentMetadata(), IsIsolatedSVGChromeClient(),
-      IsPrerendering(), GetReducedAcceptLanguage());
+      GetReducedAcceptLanguage());
   document_loader_ = nullptr;
   document_ = nullptr;
   return this;

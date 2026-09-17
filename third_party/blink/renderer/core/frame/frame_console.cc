@@ -73,26 +73,13 @@ void FrameConsole::ReportMessageToClient(
   if (source == mojom::blink::ConsoleMessageSource::kNetwork)
     return;
 
-  String url = location->Url();
-  String stack_trace;
   if (source == mojom::blink::ConsoleMessageSource::kConsoleApi) {
     if (!frame_->GetPage())
       return;
-    if (frame_->GetChromeClient()
-            .ShouldReportDetailedMessageForSourceAndSeverity(*frame_, level,
-                                                             url)) {
-      SourceLocation* full_location =
-          SourceLocation::CaptureWithFullStackTrace();
-      if (!full_location->IsUnknown())
-        stack_trace = full_location->ToString();
-    }
-  } else {
-    if (!location->IsUnknown() &&
-        frame_->GetChromeClient()
-            .ShouldReportDetailedMessageForSourceAndSeverity(*frame_, level,
-                                                             url))
-      stack_trace = location->ToString();
   }
+
+  String url = location->Url();
+  String stack_trace;
 
   frame_->GetChromeClient().AddMessageToConsole(
       frame_, source, level, message, location->LineNumber(), url, stack_trace);

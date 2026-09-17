@@ -372,11 +372,6 @@ void MouseEventManager::RecomputeMouseHoverStateIfNeeded() {
     return;
   }
 
-  // Don't dispatch a synthetic mouse move event if the mouse cursor is not
-  // visible to the user.
-  if (!frame_->GetPage()->IsCursorVisible())
-    return;
-
   WebPointerEvent::Button button = WebPointerProperties::Button::kNoButton;
   int modifiers = KeyboardEventManager::GetCurrentModifierState() |
                   WebInputEvent::kRelativeMotionEvent;

@@ -434,9 +434,6 @@ void RootScrollerController::ConsiderForImplicit(Node& node) {
 
   DCHECK(document_->GetFrame()->IsMainFrame());
 
-  if (document_->GetPage()->GetChromeClient().IsPopup())
-    return;
-
   auto* element = DynamicTo<Element>(node);
   if (!element)
     return;

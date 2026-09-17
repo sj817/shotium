@@ -39,7 +39,6 @@
 #include "third_party/blink/public/platform/platform.h"
 #include "third_party/blink/public/platform/web_drag_data.h"
 #include "third_party/blink/renderer/core/clipboard/clipboard_utilities.h"
-#include "third_party/blink/renderer/core/clipboard/dragged_isolated_file_system.h"
 #include "third_party/blink/renderer/core/execution_context/execution_context.h"
 #include "third_party/blink/renderer/platform/blob/blob_data.h"
 #include "third_party/blink/renderer/platform/file_metadata.h"
@@ -375,9 +374,6 @@ DataObject* DataObject::Create(ExecutionContext* context,
 
   data_object->SetFilesystemId(data.FilesystemId());
   data_object->SetSourceEffectAllowed(data.SourceEffectAllowed());
-
-  if (has_file_system)
-    DraggedIsolatedFileSystem::PrepareForDataObject(data_object);
 
   return data_object;
 }

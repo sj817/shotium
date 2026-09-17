@@ -69,7 +69,6 @@
 #include "third_party/blink/renderer/core/html/html_image_element.h"
 #include "third_party/blink/renderer/core/inspector/console_message.h"
 #include "third_party/blink/renderer/core/loader/document_loader.h"
-#include "third_party/blink/renderer/core/loader/interactive_detector.h"
 #include "third_party/blink/renderer/core/page/autoscroll_controller.h"
 #include "third_party/blink/renderer/core/page/chrome_client.h"
 #include "third_party/blink/renderer/core/page/page.h"
@@ -221,33 +220,6 @@ base::TimeDelta TotalNonOverlappingProcessingDuration(
     }
   }
   return processing_duration;
-}
-
-bool ShouldLogEvent(const Event& event) {
-  return event.type() == event_type_names::kPointerdown ||
-         event.type() == event_type_names::kPointerup ||
-         event.type() == event_type_names::kClick ||
-         event.type() == event_type_names::kKeydown ||
-         event.type() == event_type_names::kMousedown ||
-         event.type() == event_type_names::kMouseup;
-}
-
-void HandleInputDelay(LocalDOMWindow* window,
-                      const Event& event,
-                      base::TimeTicks processing_start) {
-  auto* pointer_event = DynamicTo<PointerEvent>(&event);
-  base::TimeTicks event_timestamp =
-      pointer_event ? pointer_event->OldestPlatformTimeStamp()
-                    : event.PlatformTimeStamp();
-
-  if (ShouldLogEvent(event) && event.isTrusted()) {
-    InteractiveDetector* interactive_detector =
-        InteractiveDetector::From(*window->document());
-    if (interactive_detector) {
-      interactive_detector->HandleForInputDelay(event, event_timestamp,
-                                                processing_start);
-    }
-  }
 }
 
 }  // namespace
@@ -582,8 +554,6 @@ PerformanceEventTiming* WindowPerformance::EventTimingProcessingStart(
   CHECK(DomWindow()->GetFrame());
   base::TimeTicks processing_start = base::TimeTicks::Now();
 
-  HandleInputDelay(DomWindow(), event, processing_start);
-
   const AtomicString& event_type = event.type();
 
   // Event Counts API.
@@ -816,9 +786,6 @@ void WindowPerformance::TryFlushEventTimingQueue() {
     return;
   }
   CHECK(DomWindow()->document());
-  InteractiveDetector* interactive_detector =
-      InteractiveDetector::From(*(DomWindow()->document()));
-
 
   bool tracing_enabled = TRACE_EVENT_CATEGORY_ENABLED("latency");
 
@@ -894,7 +861,7 @@ void WindowPerformance::TryFlushEventTimingQueue() {
       PerformanceEventTiming* primary_entry =
           add_result.stored_value->value.Get();
 
-      FlushEventTiming(interactive_detector, entry, primary_entry);
+      FlushEventTiming(entry, primary_entry);
 
       if (entry->GetInteractionIdInfo() !=
           PerformanceTimelineEntryIdInfo::kNone) {
@@ -1013,7 +980,6 @@ void WindowPerformance::TryFlushEventTimingQueue() {
 }
 
 void WindowPerformance::FlushEventTiming(
-    InteractiveDetector* interactive_detector,
     Member<PerformanceEventTiming> entry,
     PerformanceEventTiming* primary_entry) {
   CHECK(entry);
@@ -1031,9 +997,7 @@ void WindowPerformance::FlushEventTiming(
   base::TimeTicks event_creation_time = timings->creation_time;
   base::TimeTicks processing_start = timings->processing_start_time;
   base::TimeTicks processing_end = timings->processing_end_time;
-  base::TimeDelta processing_duration = processing_end - processing_start;
   base::TimeTicks event_end_time = entry->GetEndTime();
-  base::TimeDelta time_to_next_paint = event_end_time - processing_end;
 
   // event_creation_time might be null in certain tests.
   // CHECK(!event_creation_time.is_null());
@@ -1049,23 +1013,6 @@ void WindowPerformance::FlushEventTiming(
       8;
 
   entry->SetDuration(rounded_duration);
-
-  if (entry->name() == "pointerdown") {
-    pending_pointer_down_processing_time_ = processing_duration;
-    pending_pointer_down_time_to_next_paint_ = time_to_next_paint;
-  } else if (entry->name() == "pointerup") {
-    if (pending_pointer_down_time_to_next_paint_.has_value() &&
-        interactive_detector) {
-      interactive_detector->RecordInputEventTimingUMA(
-          pending_pointer_down_processing_time_.value(),
-          pending_pointer_down_time_to_next_paint_.value());
-    }
-  } else if ((entry->name() == "click" || entry->name() == "keydown" ||
-              entry->name() == "mousedown") &&
-             interactive_detector) {
-    interactive_detector->RecordInputEventTimingUMA(processing_duration,
-                                                    time_to_next_paint);
-  }
 
   TryReportAsFirstInputTiming(entry);
 
@@ -1465,10 +1412,6 @@ void WindowPerformance::PageVisibilityChangedWithTimestamp(
   }
   AddVisibilityStateEntry(GetPage()->IsPageVisible(),
                           visibility_change_timestamp);
-}
-
-void WindowPerformance::WillShowModalDialog() {
-  show_modal_dialog_timestamps_.push_back(base::TimeTicks::Now());
 }
 
 EventCounts* WindowPerformance::eventCounts() {

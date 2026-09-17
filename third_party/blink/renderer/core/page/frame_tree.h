@@ -71,16 +71,12 @@ class CORE_EXPORT FrameTree final {
   Frame* FindFrameByName(const AtomicString& name) const;
 
   // https://html.spec.whatwg.org/#the-rules-for-choosing-a-browsing-context-given-a-browsing-context-name
-  struct FindResult {
-    STACK_ALLOCATED();
-
-   public:
-    FindResult(Frame* f, bool is_new) : frame(f), new_window(is_new) {}
-    Frame* frame;
-    bool new_window;
-  };
-  FindResult FindOrCreateFrameForNavigation(FrameLoadRequest&,
-                                            const AtomicString& name) const;
+  // Upstream this could also create a new auxiliary browsing context through
+  // ChromeClient::CreateWindow(). shotium has no browser process to host a
+  // second window, so an unresolved name yields null and the navigation is
+  // dropped.
+  Frame* FindOrCreateFrameForNavigation(FrameLoadRequest&,
+                                        const AtomicString& name) const;
 
   unsigned ChildCount() const;
 

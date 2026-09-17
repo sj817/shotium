@@ -26,6 +26,7 @@
 #include "base/notreached.h"
 #include "third_party/blink/public/common/features_generated.h"
 #include "third_party/blink/public/common/switches.h"
+#include "third_party/blink/public/web/web_navigation_params.h"
 #include "third_party/blink/renderer/core/dom/document.h"
 #include "third_party/blink/renderer/core/dom/document_encoding_data.h"
 #include "third_party/blink/renderer/core/dom/document_init.h"
@@ -40,6 +41,7 @@
 #include "third_party/blink/renderer/core/html/html_frame_owner_element.h"
 #include "third_party/blink/renderer/core/html_names.h"
 #include "third_party/blink/renderer/core/inspector/console_message.h"
+#include "third_party/blink/renderer/core/loader/document_loader.h"
 #include "third_party/blink/renderer/core/xml/document_xslt.h"
 #include "third_party/blink/renderer/core/xml/parser/xml_document_parser.h"
 #include "third_party/blink/renderer/platform/weborigin/security_origin.h"
@@ -77,18 +79,7 @@ void AddXSLTConsoleWarning(Document& document, const String& message) {
 }  // namespace
 
 bool XSLTProcessor::IsXSLTEnabled(const ExecutionContext* context) {
-  if (base::CommandLine::ForCurrentProcess()->HasSwitch(
-          blink::switches::kXSLTEnabledPolicy)) {
-    return base::CommandLine::ForCurrentProcess()->GetSwitchValueASCII(
-               blink::switches::kXSLTEnabledPolicy) == "true";
-  }
-  if (auto* window = DynamicTo<LocalDOMWindow>(context)) {
-    if (window->document() && window->document()->IsCAPAlert() &&
-        RuntimeEnabledFeatures::EnableXSLTForCAPAlertsEnabled(context)) {
-      return true;
-    }
-  }
-  return RuntimeEnabledFeatures::XSLTEnabled(context);
+  return false;
 }
 
 void XSLTProcessor::ReportXSLTDisabled(Document& document) {
@@ -297,6 +288,16 @@ Document* XSLTProcessor::CreateDocumentFromSource(
   InjectXSLTWarningBanner(is_cap_alert_xslt, *document);
   return document;
 }
+
+bool XSLTProcessor::TransformToString(Node* source,
+                                      String& result_mime_type,
+                                      String& result_string,
+                                      String& result_encoding) {
+  return false;
+}
+
+void XSLTProcessor::ParseErrorFunc(void* user_data, const xmlError*) {}
+void XSLTProcessor::GenericErrorFunc(void* user_data, const char* msg, ...) {}
 
 void XSLTProcessor::Trace(Visitor* visitor) const {
   visitor->Trace(stylesheet_);

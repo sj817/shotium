@@ -52,6 +52,7 @@
 #include "mojo/public/cpp/bindings/self_owned_receiver.h"
 #include "mojo/public/cpp/system/message_pipe.h"
 #include "services/network/public/cpp/features.h"
+#include "services/network/public/cpp/shared_url_loader_factory.h"
 #include "services/network/public/mojom/content_security_policy.mojom-blink.h"
 #include "services/network/public/mojom/source_location.mojom-blink.h"
 #include "skia/public/mojom/skcolor.mojom-blink.h"
@@ -77,7 +78,6 @@
 #include "third_party/blink/public/platform/interface_registry.h"
 #include "third_party/blink/public/platform/platform.h"
 #include "third_party/blink/public/platform/url_conversion.h"
-#include "third_party/blink/public/platform/web_background_resource_fetch_assets.h"
 #include "third_party/blink/public/platform/web_content_settings_client.h"
 #include "third_party/blink/public/platform/web_string.h"
 #include "third_party/blink/public/platform/web_url_request.h"
@@ -131,10 +131,8 @@
 #include "third_party/blink/renderer/core/frame/reporting_context.h"
 #include "third_party/blink/renderer/core/frame/root_frame_viewport.h"
 #include "third_party/blink/renderer/core/frame/settings.h"
-#include "third_party/blink/renderer/core/frame/smart_clip.h"
 #include "third_party/blink/renderer/core/frame/user_activation.h"
 #include "third_party/blink/renderer/core/frame/visual_viewport.h"
-#include "third_party/blink/renderer/core/frame/window_controls_overlay_changed_delegate.h"
 #include "third_party/blink/renderer/core/fullscreen/fullscreen.h"
 #include "third_party/blink/renderer/core/fullscreen/scoped_allow_fullscreen.h"
 #include "third_party/blink/renderer/core/html/canvas/html_canvas_element.h"
@@ -160,7 +158,6 @@
 #include "third_party/blink/renderer/core/loader/document_loader.h"
 #include "third_party/blink/renderer/core/loader/frame_load_request.h"
 #include "third_party/blink/renderer/core/loader/idleness_detector.h"
-#include "third_party/blink/renderer/core/loader/prerender_handle.h"
 #include "third_party/blink/renderer/core/page/chrome_client.h"
 #include "third_party/blink/renderer/core/page/focus_controller.h"
 #include "third_party/blink/renderer/core/page/page.h"
@@ -468,7 +465,6 @@ void LocalFrame::Trace(Visitor* visitor) const {
   visitor->Trace(post_layout_snapshot_clients_);
   visitor->Trace(saved_scroll_offsets_);
   visitor->Trace(browser_interface_broker_proxy_);
-  visitor->Trace(window_controls_overlay_changed_delegate_);
   Frame::Trace(visitor);
   Supplementable<LocalFrame>::Trace(visitor);
 }
@@ -487,9 +483,6 @@ void LocalFrame::Navigate(FrameLoadRequest& request,
     element->CancelPendingLazyLoad();
   }
 
-  if (!navigation_rate_limiter().CanProceed()) {
-    return;
-  }
 
   TRACE_EVENT2("navigation", "LocalFrame::Navigate", "url",
                request.GetResourceRequest().Url().GetString().Utf8(),
@@ -610,7 +603,7 @@ bool LocalFrame::NavigationShouldReplaceCurrentHistoryEntry(
 bool LocalFrame::ShouldMaintainTrivialSessionHistory() const {
   // This should be kept in sync with
   // NavigationControllerImpl::ShouldMaintainTrivialSessionHistory.
-  return GetDocument()->IsPrerendering() || IsInFencedFrameTree();
+  return IsInFencedFrameTree();
 }
 
 bool LocalFrame::DetachImpl(FrameDetachType type) {
@@ -722,7 +715,6 @@ bool LocalFrame::DetachImpl(FrameDetachType type) {
   microtasks_pauser_.reset();
 
   DCHECK(!view_->IsAttached());
-  Client()->WillBeDetached();
 
   // TODO(crbug.com/729196): Trace why LocalFrameView::DetachFromLayout crashes.
   CHECK(!view_->IsAttached());
@@ -864,18 +856,10 @@ void LocalFrame::OnFirstPaint(bool text_painted, bool image_painted) {
 }
 
 void LocalFrame::OnFirstContentfulPaint(
-    const base::TimeTicks& presentation_time) {
-  if (IsOutermostMainFrame()) {
-    GetPage()->GetChromeClient().OnFirstContentfulPaint(presentation_time);
-  }
-}
+    const base::TimeTicks& presentation_time) {}
 
 void LocalFrame::OnLargestContentfulPaint(
-    const base::TimeTicks& presentation_time) {
-  if (IsOutermostMainFrame()) {
-    GetPage()->GetChromeClient().OnLargestContentfulPaint(presentation_time);
-  }
-}
+    const base::TimeTicks& presentation_time) {}
 
 bool LocalFrame::CanAccessEvent(
     const WebInputEventAttribution& attribution) const {
@@ -1225,22 +1209,10 @@ void LocalFrame::DidChangeThemeColor(bool update_theme_color_cache) {
   if (update_theme_color_cache) {
     GetDocument()->UpdateThemeColorCache();
   }
-
-  std::optional<Color> color = GetDocument()->ThemeColor();
-  std::optional<SkColor> sk_color;
-  if (color) {
-    sk_color = color->Rgb();
-  }
-
-  GetPage()->GetChromeClient().DidChangeThemeColor(sk_color);
 }
 
 void LocalFrame::DidChangeBackgroundColor(SkColor4f background_color,
-                                          bool color_adjust) {
-  DCHECK(!Tree().Parent());
-  GetPage()->GetChromeClient().DidChangeBackgroundColor(background_color,
-                                                        color_adjust);
-}
+                                          bool color_adjust) {}
 
 LocalFrame& LocalFrame::LocalFrameRoot() const {
   const LocalFrame* cur_frame = this;
@@ -2109,11 +2081,6 @@ std::unique_ptr<URLLoader> LocalFrame::CreateURLLoaderForTesting() {
   return Client()->CreateURLLoaderForTesting();
 }
 
-scoped_refptr<WebBackgroundResourceFetchAssets>
-LocalFrame::MaybeGetBackgroundResourceFetchAssets() {
-  return Client()->MaybeGetBackgroundResourceFetchAssets();
-}
-
 void LocalFrame::WasHidden() {
   if (hidden_) {
     return;
@@ -2307,8 +2274,7 @@ void LocalFrame::ForceSynchronousDocumentInstall(const AtomicString& mime_type,
       DocumentInit::Create()
           .WithWindow(DomWindow(), nullptr)
           .WithTypeFrom(mime_type)
-          .WithURL(url)
-          .ForPrerendering(GetPage()->IsPrerendering()));
+          .WithURL(url));
   DCHECK_EQ(document, GetDocument());
   DocumentParser* parser = document->OpenForNavigation(
       kForceSynchronousParsing, mime_type, AtomicString("UTF-8"));
@@ -2383,9 +2349,7 @@ void LocalFrame::ResumeSubresourceLoading() {
   pause_handle_receivers_.Clear();
 }
 
-void LocalFrame::UpdateTaskTime(base::TimeDelta time) {
-  Client()->DidChangeCpuTiming(time);
-}
+void LocalFrame::UpdateTaskTime(base::TimeDelta time) {}
 
 void LocalFrame::UpdateBackForwardCacheDisablingFeatures(
     BlockingDetails details) {
@@ -2453,7 +2417,6 @@ void LocalFrame::NotifyUserActivation(
   GetLocalFrameHostRemote().UpdateUserActivationState(
       mojom::blink::UserActivationUpdateType::kNotifyActivation,
       notification_type);
-  Client()->NotifyUserActivation();
   NotifyUserActivationInFrameTree(notification_type);
 }
 
@@ -2844,8 +2807,6 @@ void LocalFrame::UpdateWindowControlsOverlay(
   gfx::Rect window_controls_overlay_rect =
       gfx::ScaleToEnclosingRect(bounding_rect_in_dips, 1.0f / scale_factor);
 
-  bool fire_event =
-      (window_controls_overlay_rect != window_controls_overlay_rect_);
   is_window_controls_overlay_visible_ = !window_controls_overlay_rect.IsEmpty();
   window_controls_overlay_rect_ = window_controls_overlay_rect;
   window_controls_overlay_rect_in_dips_ = bounding_rect_in_dips;
@@ -2866,16 +2827,6 @@ void LocalFrame::UpdateWindowControlsOverlay(
       vars.RemoveVariable(var_to_remove);
     }
   }
-
-  if (fire_event && window_controls_overlay_changed_delegate_) {
-    window_controls_overlay_changed_delegate_->WindowControlsOverlayChanged(
-        window_controls_overlay_rect_);
-  }
-}
-
-void LocalFrame::RegisterWindowControlsOverlayChangedDelegate(
-    WindowControlsOverlayChangedDelegate* delegate) {
-  window_controls_overlay_changed_delegate_ = delegate;
 }
 
 HitTestResult LocalFrame::HitTestResultForVisualViewportPos(
@@ -3079,95 +3030,6 @@ Frame* LocalFrame::GetProvisionalOwnerFrame() {
   return GetPage()->MainFrame();
 }
 
-namespace {
-
-static PositionWithAffinity PositionForSmartClipPoint(
-    const gfx::Point& contents_point,
-    const LocalFrame* frame) {
-  constexpr HitTestRequest::HitTestRequestType kRequest =
-      HitTestRequest::kMove | HitTestRequest::kReadOnly |
-      HitTestRequest::kActive | HitTestRequest::kIgnoreClipping;
-  HitTestLocation location(contents_point);
-  HitTestResult result(kRequest, location);
-  frame->GetDocument()->GetLayoutView()->HitTest(location, result);
-
-  Node* inner_node = result.InnerNode();
-  if (!inner_node) {
-    return PositionWithAffinity();
-  }
-
-  if (const auto* layout_box_flow =
-          DynamicTo<LayoutBlockFlow>(inner_node->GetLayoutObject());
-      layout_box_flow && !layout_box_flow->HasFragmentItems() &&
-      layout_box_flow->ChildrenInline()) {
-    // Here layout of inner_node may have out-of-flow children without inline
-    // children, we don't find closest child of |point| for out-of-flow
-    // children. See WebFrameTest.SmartClipData
-    return layout_box_flow->CreatePositionWithAffinity(0);
-  }
-
-  return PositionRespectingEditingBoundary(
-      frame->Selection().ComputeVisibleSelectionInDomTree().Start(), result);
-}
-
-// TODO(editing-dev): We should move |CreateMarkupInRect()| to
-// "core/editing/serializers/Serialization.cpp".
-String CreateMarkupInRect(LocalFrame* frame,
-                          const gfx::Point& start_point,
-                          const gfx::Point& end_point) {
-  PositionWithAffinity start_position_with_affinity;
-  PositionWithAffinity end_position_with_affinity;
-  if (RuntimeEnabledFeatures::PreventTextSelectionJumpEnabled()) {
-    start_position_with_affinity =
-        PositionForSmartClipPoint(start_point, frame);
-    end_position_with_affinity = PositionForSmartClipPoint(end_point, frame);
-  } else {
-    start_position_with_affinity =
-        PositionForContentsPointRespectingEditingBoundary(start_point, frame);
-    end_position_with_affinity =
-        PositionForContentsPointRespectingEditingBoundary(end_point, frame);
-  }
-  VisiblePosition start_visible_position =
-      CreateVisiblePosition(start_position_with_affinity);
-  VisiblePosition end_visible_position =
-      CreateVisiblePosition(end_position_with_affinity);
-
-  Position start_position = start_visible_position.DeepEquivalent();
-  Position end_position = end_visible_position.DeepEquivalent();
-
-  // document() will return null if -webkit-user-select is set to none.
-  if (!start_position.GetDocument() || !end_position.GetDocument()) {
-    return String();
-  }
-
-  const CreateMarkupOptions create_markup_options =
-      CreateMarkupOptions::Builder()
-          .SetShouldAnnotateForInterchange(true)
-          .SetShouldResolveUrls(ResolveUrls::kNonLocal)
-          .Build();
-  if (start_position.CompareTo(end_position) <= 0) {
-    return CreateMarkup(start_position, end_position, create_markup_options);
-  }
-  return CreateMarkup(end_position, start_position, create_markup_options);
-}
-
-}  // namespace
-
-void LocalFrame::ExtractSmartClipDataInternal(const gfx::Rect& rect_in_viewport,
-                                              String& clip_text,
-                                              String& clip_html,
-                                              gfx::Rect& clip_rect) {
-  // TODO(mahesh.ma): Check clip_data even after use-zoom-for-dsf is enabled.
-  SmartClipData clip_data = SmartClip(this).DataForRect(rect_in_viewport);
-  clip_text = clip_data.ClipData();
-  clip_rect = clip_data.RectInViewport();
-
-  gfx::Point start_point(rect_in_viewport.x(), rect_in_viewport.y());
-  gfx::Point end_point(rect_in_viewport.x() + rect_in_viewport.width(),
-                       rect_in_viewport.y() + rect_in_viewport.height());
-  clip_html = CreateMarkupInRect(this, View()->ViewportToFrame(start_point),
-                                 View()->ViewportToFrame(end_point));
-}
 
 // LocalFrame::CreateTextFragmentHandler() and BindTextFragmentReceiver()
 // removed in this cut -- see the comment on GetTextFragmentHandler()'s

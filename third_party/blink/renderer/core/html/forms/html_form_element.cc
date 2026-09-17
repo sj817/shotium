@@ -356,7 +356,6 @@ void HTMLFormElement::PrepareForSubmission(const Event* event,
     if (!skip_validation && !ValidateInteractively()) {
       should_submit = false;
     } else {
-      frame->Client()->DispatchWillSendSubmitEvent(this);
       SubmitEventInit* submit_event_init = SubmitEventInit::Create();
       submit_event_init->setBubbles(true);
       submit_event_init->setCancelable(true);

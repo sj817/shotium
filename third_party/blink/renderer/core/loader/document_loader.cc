@@ -120,7 +120,6 @@
 #include "third_party/blink/renderer/core/loader/frame_fetch_context.h"
 #include "third_party/blink/renderer/core/loader/frame_loader.h"
 #include "third_party/blink/renderer/core/loader/idleness_detector.h"
-#include "third_party/blink/renderer/core/loader/interactive_detector.h"
 #include "third_party/blink/renderer/core/loader/old_document_info_for_commit.h"
 #include "third_party/blink/renderer/core/loader/preload_helper.h"
 #include "third_party/blink/renderer/core/loader/progress_tracker.h"
@@ -340,7 +339,6 @@ struct SameSizeAsDocumentLoader
   bool is_secure_context_root;
   bool had_sticky_activation;
   bool is_browser_initiated;
-  bool is_prerendering;
   bool has_text_fragment_token;
   std::optional<String> internal_scroll_to_text_fragment;
   bool was_discarded;
@@ -380,7 +378,6 @@ struct SameSizeAsDocumentLoader
       HashMap<mojom::blink::PermissionName, mojom::blink::PermissionStatus>>
       initial_permission_statuses;
   bool force_new_document_sequence_number;
-  base::TimeDelta total_taken_time_to_update_subresource_load_metrics;
   TaskHandle cross_origin_parent_load_event_task;
   std::unique_ptr<base::UnguessableToken> sandbox_origin_token;
 };
@@ -622,14 +619,9 @@ DocumentLoader::DocumentLoader(
 
   if (params_->fenced_frame_properties) {
     fenced_frame_properties_ = std::move(params_->fenced_frame_properties);
-    if (frame_->GetPage()) {
-      frame_->GetPage()->SetDeprecatedFencedFrameMode(
-          fenced_frame_properties_->mode());
-    }
   }
 
   frame_->SetAncestorOrSelfHasCSPEE(params_->ancestor_or_self_has_cspee);
-  frame_->Client()->DidCreateDocumentLoader(this);
 }
 
 std::unique_ptr<WebNavigationParams>
@@ -817,32 +809,9 @@ void DocumentLoader::DispatchLcppFontPreloads(
   // are still fetched when style asks for them.
 }
 
-void DocumentLoader::DidChangePerformanceTiming() {
-  if (frame_ && state_ >= kCommitted) {
-    GetLocalFrameClient().DidChangePerformanceTiming();
-  }
-}
+void DocumentLoader::DidChangePerformanceTiming() {}
 
-void DocumentLoader::DidObserveLoadingBehavior(LoadingBehaviorFlag behavior) {
-  if (frame_) {
-    DCHECK_GE(state_, kCommitted);
-    GetLocalFrameClient().DidObserveLoadingBehavior(behavior);
-  }
-}
-
-void DocumentLoader::DidObserveJavaScriptFrameworks(
-    const JavaScriptFrameworkDetectionResult& result) {
-  if (frame_) {
-    DCHECK_GE(state_, kCommitted);
-    GetLocalFrameClient().DidObserveJavaScriptFrameworks(result);
-    // InjectAutoSpeculationRules(result) was called here.
-  }
-}
-
-// InjectAutoSpeculationRules()/InjectSpeculationRulesFromString() were here.
-// They looked the page's URL and its detected JavaScript framework up in
-// AutoSpeculationRulesConfig and fed the resulting JSON to
-// SpeculationRuleSet::Parse. core/speculation_rules is cut.
+void DocumentLoader::DidObserveLoadingBehavior(LoadingBehaviorFlag behavior) {}
 
 // static
 WebHistoryCommitType LoadTypeToCommitType(WebFrameLoadType type) {
@@ -1005,10 +974,7 @@ void DocumentLoader::UpdateForSameDocumentNavigation(
   // it; HasStickyUserActivation is independent and stays.
 
 
-  GetLocalFrameClient().DidFinishSameDocumentNavigation(
-      commit_type, is_synchronously_committed, same_document_navigation_type,
-      is_client_redirect_, is_browser_initiated, should_skip_screenshot,
-      same_document_metrics_token, /*caused_by_ad=*/false);
+
   probe::DidNavigateWithinDocument(frame_, same_document_navigation_type);
 
   // If intercept() was called during this same-document navigation's
@@ -1064,8 +1030,6 @@ const KURL& DocumentLoader::UrlForHistory() const {
 
 void DocumentLoader::DidOpenDocumentInputStream(const KURL& url) {
   url_ = url;
-  // Let the browser know that we have done a document.open().
-  GetLocalFrameClient().DispatchDidOpenDocumentInputStream(url_);
 }
 
 void DocumentLoader::SetHistoryItemStateForCommit(
@@ -1296,12 +1260,10 @@ void DocumentLoader::LoadFailed(const ResourceError& error) {
   // - `window.stop()` calls `StopAllLoaders()` which calls `StopLoading()`.
   DCHECK(!IsA<HTMLObjectElement>(frame_->Owner()) || error.IsCancellation());
 
-  WebHistoryCommitType history_commit_type = LoadTypeToCommitType(load_type_);
   DCHECK_EQ(kCommitted, state_);
   if (frame_->GetDocument()->Parser())
     frame_->GetDocument()->Parser()->StopParsing();
   state_ = kSentDidFinishLoad;
-  GetLocalFrameClient().DispatchDidFailLoad(error, history_commit_type);
   GetFrameLoader().DidFinishNavigation(
       FrameLoader::NavigationFinishState::kFailure);
   DCHECK_EQ(kSentDidFinishLoad, state_);
@@ -2132,12 +2094,6 @@ void DocumentLoader::DidCommitNavigation() {
   // resumed.
   frame_->ResumeSubresourceLoading();
 
-  Document* document = frame_->GetDocument();
-  InteractiveDetector* interactive_detector =
-      InteractiveDetector::From(*document);
-  if (interactive_detector)
-    interactive_detector->SetNavigationStartTime(GetTiming().NavigationStart());
-
   // DEVTOOLS_TIMELINE_TRACE_EVENT(...) was here.
 
   // Needs to run before dispatching preloads, as it may evict the memory cache.
@@ -2889,14 +2845,12 @@ void DocumentLoader::CommitNavigation() {
 
   WillCommitNavigation();
 
-  is_prerendering_ = frame_->GetPage()->IsPrerendering();
   Document* document = frame_->DomWindow()->InstallNewDocument(
       DocumentInit::Create()
           .WithWindow(frame_->DomWindow(), owner_document)
           .WithToken(token_)
           .ForInitialEmptyDocument(commit_reason_ ==
                                    CommitReason::kInitialization)
-          .ForPrerendering(is_prerendering_)
           .WithURL(Url())
           .WithTypeFrom(MimeType())
           .WithSrcdocDocument(loading_srcdoc_)
@@ -3079,25 +3033,7 @@ void DocumentLoader::CommitNavigation() {
   DOMWindowPerformance::performance(*frame_->DomWindow())
       ->CreateNavigationTimingInstance(std::move(navigation_timing_info));
 
-  {
-    // Notify the browser process about the commit.
-    FrameNavigationDisabler navigation_disabler(*frame_);
-    if (commit_reason_ == CommitReason::kInitialization) {
-      // There's no observers yet so nothing to notify.
-    } else if (IsJavaScriptURLOrXSLTCommitOrDiscard()) {
-      GetLocalFrameClient().DidCommitDocumentReplacementNavigation(this);
-    } else {
-      GetLocalFrameClient().DispatchDidCommitLoad(
-          history_item_.Get(), LoadTypeToCommitType(load_type_),
-          previous_window != frame_->DomWindow(),
-          security_init.PermissionsPolicyHeader(),
-          document_policy_.feature_state);
-    }
-    // TODO(dgozman): make DidCreateScriptContext notification call currently
-    // triggered by installing new document happen here, after commit.
-  }
-  // Note: this must be called after DispatchDidCommitLoad() for
-  // metrics to be correctly sent to the browser process.
+
   if (commit_reason_ != CommitReason::kInitialization)
     use_counter_.DidCommitLoad(frame_);
   if (IsBackForwardOrRestore(load_type_)) {
@@ -3128,21 +3064,6 @@ void DocumentLoader::CreateParserPostCommit() {
   if (navigation_delivery_type_ ==
       network::mojom::NavigationDeliveryType::kNavigationalPrefetch) {
     CountUse(WebFeature::kDocumentLoaderDeliveryTypeNavigationalPrefetch);
-  }
-
-  // DidObserveLoadingBehavior() must be called after DispatchDidCommitLoad() is
-  // called for the metrics tracking logic to handle it properly.
-  LoadingBehaviorFlag loading_behavior = kLoadingBehaviorNone;
-  // Five kLoadingBehaviorServiceWorker* flags were computed here off the
-  // network provider: whether a controller was in charge, whether its fetch
-  // handler could be skipped, whether the main resource fell back to the
-  // network, and which race-network-request mode it used. Service workers are
-  // cut, so none of those behaviours can occur.
-  if (response_.FromSyntheticResponse()) {
-    loading_behavior |= kLoadingBehaviorServiceWorkerSyntheticResponse;
-  }
-  if (loading_behavior != kLoadingBehaviorNone) {
-    GetLocalFrameClient().DidObserveLoadingBehavior(loading_behavior);
   }
 
   // Links with media values need more information (like viewport information).
@@ -3533,36 +3454,6 @@ std::optional<String> DocumentLoader::TakeInternalScrollToTextFragment() {
   return result;
 }
 
-void DocumentLoader::NotifyPrerenderingDocumentActivated(
-    const mojom::blink::PrerenderPageActivationParams& params) {
-  DCHECK(!frame_->GetDocument()->IsPrerendering());
-  DCHECK(is_prerendering_);
-  is_prerendering_ = false;
-
-  // A prerendered document won't have user activation, but when it gets moved
-  // to the primary frame, the primary frame might have sticky user activation.
-  // In that case, propagate the sticky user activation to the activated
-  // prerendered document
-  bool had_sticky_activation =
-      params.was_user_activated == mojom::blink::WasActivatedOption::kYes;
-  if (frame_->IsMainFrame() && had_sticky_activation) {
-    DCHECK(!had_sticky_activation_);
-    had_sticky_activation_ = had_sticky_activation;
-
-    // Update Frame::had_sticky_user_activation_before_nav_. On regular
-    // navigation, this is updated on DocumentLoader::CommitNavigation, but
-    // that function is not called on prerender page activation.
-    DCHECK(!frame_->HadStickyUserActivationBeforeNavigation());
-    frame_->SetHadStickyUserActivationBeforeNavigation(had_sticky_activation);
-
-    // Unlike CommitNavigation, there's no need to call
-    // HadStickyUserActivationBeforeNavigationChanged here as the browser
-    // process already knows it.
-  }
-
-  GetTiming().SetActivationStart(*params.activation_start);
-}
-
 HashMap<KURL, EarlyHintsPreloadEntry>
 DocumentLoader::GetEarlyHintsPreloadedResources() {
   return early_hints_preloaded_resources_;
@@ -3703,26 +3594,10 @@ bool DocumentLoader::IsForDiscard() const {
 }
 
 void DocumentLoader::UpdateSubresourceLoadMetrics(
-    const SubresourceLoadMetrics& subresource_load_metrics) {
-  base::ElapsedTimer timer;
-  GetLocalFrameClient().DidObserveSubresourceLoad(subresource_load_metrics);
-  if (base::TimeTicks::IsHighResolution()) {
-    total_taken_time_to_update_subresource_load_metrics_ += timer.Elapsed();
-  }
-}
+    const SubresourceLoadMetrics& subresource_load_metrics) {}
 
 const mojom::RendererContentSettingsPtr& DocumentLoader::GetContentSettings() {
   return content_settings_;
-}
-
-void DocumentLoader::ReportTotalTakenTimeToUpdateSubresourceLoadMetrics() {
-  if (Url().ProtocolIsInHttpFamily() && frame_->IsOutermostMainFrame() &&
-      ShouldEmitNewNavigationHistogram(navigation_type_)) {
-    base::UmaHistogramMicrosecondsTimes(
-        "Blink.DocumentLoader.TotalTakenTimeToUpdateSubresourceLoadMetrics2."
-        "OutermostMainFrame.NewNavigation.IsHTTPOrHTTPS",
-        total_taken_time_to_update_subresource_load_metrics_);
-  }
 }
 
 DEFINE_WEAK_IDENTIFIER_MAP(DocumentLoader)

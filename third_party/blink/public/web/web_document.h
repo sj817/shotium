@@ -158,15 +158,10 @@ class BLINK_EXPORT WebDocument : public WebNode {
 
   bool IsLoaded();
 
-  // Returns true if the document is in prerendering.
-  bool IsPrerendering();
 
   // Returns true if the document has a Document Picture-in-Picture window.
   bool HasDocumentPictureInPictureWindow() const;
 
-  // Adds `callback` to the post-prerendering activation steps.
-  // https://wicg.github.io/nav-speculation/prerendering.html#document-post-prerendering-activation-steps-list
-  void AddPostPrerenderingActivationStep(base::OnceClosure callback);
 
   // Sets a cookie manager which can be used for this document.
   void SetCookieManager(

@@ -43,12 +43,10 @@ namespace blink {
 class Document;
 class LinkLoaderClient;
 class PendingLinkPreload;
-class PrerenderHandle;
 class Resource;
 class ResourceClient;
 
-// The LinkLoader can load link rel types icon, dns-prefetch, prefetch, and
-// prerender.
+// The LinkLoader can load link rel types icon, dns-prefetch and prefetch.
 class CORE_EXPORT LinkLoader final : public GarbageCollected<LinkLoader> {
  public:
   explicit LinkLoader(LinkLoaderClient*);
@@ -72,8 +70,6 @@ class CORE_EXPORT LinkLoader final : public GarbageCollected<LinkLoader> {
  private:
   Member<LinkLoaderClient> client_;
   Member<PendingLinkPreload> pending_preload_;
-
-  Member<PrerenderHandle> prerender_;
 };
 
 }  // namespace blink

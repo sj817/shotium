@@ -39,7 +39,6 @@
 #include "third_party/blink/public/mojom/scroll/scroll_enums.mojom-blink.h"
 #include "third_party/blink/public/mojom/scroll/scroll_into_view_params.mojom-blink.h"
 #include "third_party/blink/public/web/web_autofill_state.h"
-#include "third_party/blink/renderer/bindings/core/v8/v8_aria_notification_options.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_box_quad_options.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_check_visibility_options.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_convert_coordinate_options.h"
@@ -3273,14 +3272,6 @@ String Element::computedName() {
 
 String Element::ComputedNameNoLifecycleUpdate() {
   return String();
-}
-
-void Element::ariaNotify(const String& announcement,
-                         const AriaNotificationOptions* options) {
-  DCHECK(RuntimeEnabledFeatures::AriaNotifyEnabled(GetExecutionContext()));
-
-  // Used to forward the announcement to the AXObjectCache; no accessibility
-  // tree exists to notify anymore.
 }
 
 bool Element::toggleAttribute(const AtomicString& qualified_name,
@@ -7721,58 +7712,6 @@ void Element::Focus(const FocusParams& params) {
     return;
   }
 
-  if (GetDocument().FocusedElement() == this) {
-    ChromeClient& chrome_client = GetDocument().GetPage()->GetChromeClient();
-    if (GetDocument().GetFrame()->HasStickyUserActivation()) {
-      // Bring up the keyboard in the context of anything triggered by a user
-      // gesture. Since tracking that across arbitrary boundaries (eg.
-      // animations) is difficult, for now we match IE's heuristic and bring
-      // up the keyboard if there's been any gesture since load.
-      chrome_client.ShowVirtualKeyboardOnElementFocus(
-          *GetDocument().GetFrame());
-    }
-
-    // TODO(bebeaudr): We might want to move the following code into the
-    // HasStickyUserActivation condition above once https://crbug.com/1208874 is
-    // fixed.
-    //
-    // Trigger a tooltip to show for the newly focused element only when the
-    // focus was set resulting from a keyboard action.
-    //
-    // TODO(bebeaudr): To also trigger a tooltip when the |params_to_use.type|
-    // is kSpatialNavigation, we'll first have to ensure that the fake mouse
-    // move event fired by `SpatialNavigationController::DispatchMouseMoveEvent`
-    // does not lead to a cursor triggered tooltip update. The only tooltip
-    // update that there should be in that case is the one triggered from the
-    // spatial navigation keypress. This issue is tracked in
-    // https://crbug.com/1206446.
-    bool is_focused_from_keypress = false;
-    switch (params_to_use.type) {
-      case mojom::blink::FocusType::kScript:
-        if (GetDocument()
-                .GetFrame()
-                ->LocalFrameRoot()
-                .GetEventHandler()
-                .IsHandlingKeyEvent()) {
-          is_focused_from_keypress = true;
-        }
-        break;
-      case mojom::blink::FocusType::kForward:
-      case mojom::blink::FocusType::kBackward:
-      case mojom::blink::FocusType::kAccessKey:
-        is_focused_from_keypress = true;
-        break;
-      default:
-        break;
-    }
-
-    if (is_focused_from_keypress) {
-      chrome_client.ElementFocusedFromKeypress(*GetDocument().GetFrame(), this);
-    } else {
-      chrome_client.ClearKeyboardTriggeredTooltip(*GetDocument().GetFrame());
-    }
-  }
-
   if (should_consume_user_activation) {
     // Fenced frames should consume user activation when attempting to pull
     // focus across a fenced boundary into itself.
@@ -7971,10 +7910,6 @@ void Element::blur() {
     if (doc.GetPage()) {
       doc.GetPage()->GetFocusController().SetFocusedElement(nullptr,
                                                             doc.GetFrame());
-      if (doc.GetFrame()) {
-        doc.GetPage()->GetChromeClient().ClearKeyboardTriggeredTooltip(
-            *doc.GetFrame());
-      }
     } else {
       doc.ClearFocusedElement();
     }
@@ -8430,25 +8365,6 @@ bool Element::HasUndoStack() const {
 
 void Element::SetHasUndoStack(bool value) {
   EnsureRareData().SetHasUndoStack(value);
-}
-
-void Element::SetHasBeenHeuristicCustomPasswordCSS() {
-  if (HasBeenHeuristicCustomPasswordCSS()) {
-    return;
-  }
-
-  EnsureRareData().SetHasBeenHeuristicCustomPasswordCSS();
-}
-
-bool Element::IsNativeOrHeuristicPassword() const {
-  return HasBeenHeuristicCustomPasswordCSS();
-}
-
-bool Element::HasBeenHeuristicCustomPasswordCSS() const {
-  if (const NodeRareData* data = RareData()) {
-    return data->HasBeenHeuristicCustomPasswordCSS();
-  }
-  return false;
 }
 
 void Element::SetPseudoElementStylesChangeCounters(bool value) {

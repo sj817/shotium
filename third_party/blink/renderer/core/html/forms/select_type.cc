@@ -297,7 +297,6 @@ class MenuListSelectType final : public SelectType {
   void PopupDidHide() override;
   bool PopupIsVisible() const override;
   PopupMenu* PopupForTesting() const override;
-  AXObject* PopupRootAXObject() const override;
   void ShowPicker() override;
 
   void DidMutateSubtree();
@@ -315,7 +314,6 @@ class MenuListSelectType final : public SelectType {
   void UnobserveTreeMutation();
 
   Member<PopupMenu> popup_;
-  bool is_popup_external_ = false;
   Member<PopupUpdater> popup_updater_;
   Member<const ComputedStyle> option_style_;
   Member<HTMLSlotElement> button_slot_;
@@ -784,65 +782,9 @@ void MenuListSelectType::ShowPopup(PopupMenu::ShowEventType type) {
     return;
   }
 
-  Document& document = select_->GetDocument();
-  if (document.GetPage()->GetChromeClient().HasOpenedPopup())
-    return;
-  if (!select_->GetLayoutObject())
-    return;
-
-  gfx::Rect local_root_rect = select_->VisibleBoundsInLocalRoot();
-
-  if (document.GetFrame()->LocalFrameRoot().IsOutermostMainFrame()) {
-    gfx::Rect visual_viewport_rect =
-        document.GetPage()->GetVisualViewport().RootFrameToViewport(
-            local_root_rect);
-    visual_viewport_rect.Intersect(
-        gfx::Rect(document.GetPage()->GetVisualViewport().Size()));
-    if (visual_viewport_rect.IsEmpty())
-      return;
-  } else {
-    // TODO(bokan): If we're in a remote frame, we cannot access the active
-    // visual viewport. VisibleBoundsInLocalRoot will clip to the outermost
-    // main frame but if the user is pinch-zoomed this won't be accurate.
-    // https://crbug.com/840944.
-    if (local_root_rect.IsEmpty())
-      return;
-  }
-
-  // SetNativePopupIsVisible(true) will start matching :open, and we need to run
-  // a style update before we show the native popup because select:open rules in
-  // the UA sheet need to remove display:none from the UA popover which may be
-  // wrapping the <option>s.
-  // We also need to update style before calling OpenPopupMenu in order to avoid
-  // an expensive call to popup_->UpdateFromElement in DidRecalcStyle.
-  SetNativePopupIsVisible(true);
-  select_->GetDocument().UpdateStyleAndLayoutForNode(
-      select_, DocumentUpdateReason::kPagePopup);
-
-  ChromeClient& chrome_client = document.GetPage()->GetChromeClient();
-  if (!popup_) {
-    popup_ = chrome_client.OpenPopupMenu(*document.GetFrame(), *select_);
-    is_popup_external_ = chrome_client.UseExternalPopupMenus();
-  } else {
-    // There's an existing popup -- if switching between native and non-native
-    // UI, hide and destroy the existing popup, and create a new one.
-    bool popup_is_external = chrome_client.UseExternalPopupMenus();
-    if (is_popup_external_ != popup_is_external) {
-      popup_->Hide();
-      popup_ = chrome_client.OpenPopupMenu(*document.GetFrame(), *select_);
-      is_popup_external_ = popup_is_external;
-    }
-  }
-  if (!popup_) {
-    SetNativePopupIsVisible(false);
-    return;
-  }
-
-  ObserveTreeMutation();
-
-  popup_->Show(type);
-  // Used to notify AXObjectCache that the menu list popup was shown.
-  // AXObjectCache is gone (no accessibility tree in a screenshot renderer).
+  // ChromeClient::OpenPopupMenu is gone: shotium has no browser to host a
+  // native <select> popup, so the native picker can never become visible.
+  SetNativePopupIsVisible(false);
 }
 
 void MenuListSelectType::HidePopup(SelectPopupHideBehavior behavior) {
@@ -890,10 +832,6 @@ void MenuListSelectType::SetNativePopupIsVisible(bool popup_is_visible) {
 
 PopupMenu* MenuListSelectType::PopupForTesting() const {
   return popup_.Get();
-}
-
-AXObject* MenuListSelectType::PopupRootAXObject() const {
-  return popup_ ? popup_->PopupRootAXObject() : nullptr;
 }
 
 void MenuListSelectType::ShowPicker() {
@@ -2140,10 +2078,6 @@ bool SelectType::PopupIsVisible() const {
 }
 
 PopupMenu* SelectType::PopupForTesting() const {
-  NOTREACHED();
-}
-
-AXObject* SelectType::PopupRootAXObject() const {
   NOTREACHED();
 }
 

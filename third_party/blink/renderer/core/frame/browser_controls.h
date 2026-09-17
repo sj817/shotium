@@ -65,7 +65,6 @@ class CORE_EXPORT BrowserControls final
   cc::BrowserControlsState PermittedState() const { return permitted_state_; }
 
  private:
-  void DidUpdateBrowserControls(bool update_safe_area_inset);
   void ResetBaseline();
   float TopMinShownRatio();
   float BottomMinShownRatio();

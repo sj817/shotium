@@ -29,13 +29,11 @@
 
 #include "third_party/blink/renderer/core/core_export.h"
 #include "third_party/blink/renderer/core/html/html_div_element.h"
-#include "third_party/blink/renderer/core/page/popup_opening_observer.h"
 #include "third_party/blink/renderer/platform/timer.h"
 
 namespace blink {
 
-class CORE_EXPORT SpinButtonElement final : public HTMLDivElement,
-                                            public PopupOpeningObserver {
+class CORE_EXPORT SpinButtonElement final : public HTMLDivElement {
  public:
   enum UpDownState {
     kDown,
@@ -83,7 +81,6 @@ class CORE_EXPORT SpinButtonElement final : public HTMLDivElement,
   bool MatchesReadOnlyPseudoClass() const override;
   bool MatchesReadWritePseudoClass() const override;
   void DefaultEventHandler(Event&) override;
-  void WillOpenPopup() override;
   void DoStepAction(int);
   void StartRepeatingTimer();
   void StopRepeatingTimer();

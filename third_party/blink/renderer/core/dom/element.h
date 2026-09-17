@@ -84,7 +84,6 @@ namespace blink {
 class AnchorPositionScrollData;
 class Animation;
 class AnimationTrigger;
-class AriaNotificationOptions;
 class Attr;
 class Attribute;
 class BoxQuadOptions;
@@ -635,9 +634,6 @@ class CORE_EXPORT Element : public ContainerNode {
   const AtomicString& ComputedRoleNoLifecycleUpdate();
   String computedName();
   String ComputedNameNoLifecycleUpdate();
-
-  void ariaNotify(const String& announcement,
-                  const AriaNotificationOptions* options);
 
   void DidMoveToNewDocument(Document&) override;
 
@@ -2002,20 +1998,7 @@ class CORE_EXPORT Element : public ContainerNode {
   // }
   virtual bool IsRenderedInTopLayer() const { return false; }
 
-  // Returns whether this element is or has ever been identified as a custom
-  // password field via CSS -webkit-text-security heuristics.
-  // This is distinct from native passwords (<input type=password>).
-  bool HasBeenHeuristicCustomPasswordCSS() const;
-
-  // Latch the element as a custom password field via CSS -webkit-text-security
-  // heuristics.
-  void SetHasBeenHeuristicCustomPasswordCSS();
-
-
  protected:
-  // Returns true if this element is a native password field or has been
-  // identified as a custom password field via CSS or JS heuristics.
-  virtual bool IsNativeOrHeuristicPassword() const;
 
   bool HasElementFlag(ElementFlags mask) const;
   void SetElementFlag(ElementFlags, bool value = true);
@@ -2139,7 +2122,6 @@ class CORE_EXPORT Element : public ContainerNode {
   }
 
  private:
-  friend class AXObject;
   friend class KeyboardEventManager;
   struct AffectedByPseudoStateChange;
   void DetachDescendantsNeedingReattachDuringSkip();

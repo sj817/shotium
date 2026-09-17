@@ -123,7 +123,6 @@ source_set("blink_headers") {
     "platform/url_loader_throttle_provider.h",
     "platform/user_metrics_action.h",
     "platform/web_audio_source_provider.h",
-    "platform/web_background_resource_fetch_assets.h",
     "platform/web_blob_info.h",
     "platform/web_cache.h",
     "platform/web_callbacks.h",

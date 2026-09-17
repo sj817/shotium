@@ -160,11 +160,8 @@ interface CoreProbes {
   void PseudoElementDestroyed([Keep] PseudoElement*);
   void DidCreateAnimation(Document*, unsigned);
   void AnimationUpdated(Document*, Animation*);
-  void WindowOpen(ExecutionContext*, const KURL& url, const AtomicString& window_name, const WebWindowFeatures& window_features, bool user_gestrue);
   void ConsoleMessageAdded(ExecutionContext*, ConsoleMessage*);
   void InspectorIssueAdded(CoreProbeSink*, protocol::Audits::InspectorIssue*);
-  void WillRunJavaScriptDialog(LocalFrame* frame);
-  void DidRunJavaScriptDialog(LocalFrame* frame);
   void DocumentWriteFetchScript([Keep] Document*);
   void DidChangeViewport(LocalFrame* document);
   void BreakableLocation(ExecutionContext* context, const char* name);

@@ -195,16 +195,6 @@ template("mixed_test") {
       if (_rs_sources != []) {
         deps += [ ":${_rust_target_name}" ]
       }
-      if (defined(invoker.fuzztests)) {
-        deps += [
-          "//third_party/fuzztest",
-
-          # The following target contains a static initializer which
-          # will ensure that the code in base/test:test_support
-          # ends up calling through to fuzztest::InitFuzzTest.
-          "//testing/libfuzzer:confirm_fuzztest_init",
-        ]
-      }
     }
   }
 

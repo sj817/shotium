@@ -120,7 +120,6 @@
 #include "third_party/blink/renderer/core/page/scrolling/fragment_anchor.h"
 #include "third_party/blink/renderer/core/page/scrolling/snap_coordinator.h"
 #include "third_party/blink/renderer/core/page/scrolling/top_document_root_scroller_controller.h"
-#include "third_party/blink/renderer/core/page/spatial_navigation_controller.h"
 #include "third_party/blink/renderer/core/paint/cull_rect_updater.h"
 #include "third_party/blink/renderer/core/paint/frame_painter.h"
 #include "third_party/blink/renderer/core/paint/paint_info.h"
@@ -515,11 +514,6 @@ void LocalFrameView::SetLayoutOverflowSize(const gfx::Size& size) {
     return;
 
   layout_overflow_size_ = size;
-
-  Page* page = GetFrame().GetPage();
-  if (!page)
-    return;
-  page->GetChromeClient().ContentsSizeChanged(frame_.Get(), size);
 }
 
 void LocalFrameView::AdjustViewSize() {
@@ -874,19 +868,7 @@ void LocalFrameView::RunIntersectionObserverSteps() {
 
   needs_update_delayed_intersection_ = false;
 
-  if (frame_->IsOutermostMainFrame()) {
-    // The overlay-interstitial and sticky ad detectors ran here, once per
-    // lifecycle update, and reported to UKM. Cut with the rest of ad tagging.
 
-    // Report the main frame's document intersection with itself.
-    LayoutObject* layout_object = GetLayoutView();
-    gfx::Rect main_frame_dimensions(ToRoundedSize(
-        To<LayoutBox>(layout_object)->ScrollableOverflowRect().size));
-    GetFrame().Client()->OnMainFrameRectangleChanged(main_frame_dimensions);
-    GetFrame().Client()->OnMainFrameViewportRectangleChanged(
-        gfx::Rect(frame_->GetOutermostMainFrameScrollPosition(),
-                  frame_->GetOutermostMainFrameSize()));
-  }
 
   TRACE_EVENT0("blink,benchmark",
                "LocalFrameView::UpdateViewportIntersectionsForSubtree");
@@ -1650,27 +1632,10 @@ void LocalFrameView::PerformPostLayoutTasks(bool visual_viewport_size_changed) {
 }
 
 float LocalFrameView::InputEventsScaleFactor() const {
-  float page_scale = frame_->GetPage()->GetVisualViewport().Scale();
-  return page_scale *
-         frame_->GetPage()->GetChromeClient().InputEventsScaleForEmulation();
+  return frame_->GetPage()->GetVisualViewport().Scale();
 }
 
-void LocalFrameView::UpdateDocumentDraggableRegions() const {
-  Document* document = frame_->GetDocument();
-  if (!document->HasDraggableRegions() ||
-      !frame_->GetPage()->GetChromeClient().SupportsDraggableRegions()) {
-    return;
-  }
-
-  Vector<DraggableRegionValue> new_regions;
-  CollectDraggableRegions(*(document->GetLayoutBox()), new_regions);
-  if (new_regions == document->DraggableRegions()) {
-    return;
-  }
-
-  document->SetDraggableRegions(new_regions);
-  frame_->GetPage()->GetChromeClient().DraggableRegionsChanged();
-}
+void LocalFrameView::UpdateDocumentDraggableRegions() const {}
 
 void LocalFrameView::DidAttachDocument() {
   Page* page = frame_->GetPage();
@@ -1860,20 +1825,6 @@ bool LocalFrameView::UpdateAllLifecyclePhasesExceptPaint(
     DocumentUpdateReason reason) {
   return GetFrame().LocalFrameRoot().View()->UpdateLifecyclePhases(
       DocumentLifecycle::kPrePaintClean, reason);
-}
-
-void LocalFrameView::DryRunPaintingForPrerender() {
-  TRACE_EVENT("blink", "DryRunPaintingForPrerender");
-  CHECK(GetFrame().GetDocument()->IsPrerendering());
-  bool update_result =
-      GetFrame().LocalFrameRoot().View()->UpdateLifecyclePhases(
-          DocumentLifecycle::kPrePaintClean, DocumentUpdateReason::kPrerender);
-  if (!update_result) {
-    return;
-  }
-  std::optional<PaintController> paint_controller;
-  PaintTree(PaintBenchmarkMode::kNormal, paint_controller);
-  return;
 }
 
 bool LocalFrameView::UpdateLifecyclePhasesForPrinting() {
@@ -2814,20 +2765,12 @@ void LocalFrameView::UpdateStyleAndLayout() {
   // Second pass: run autosize until it stabilizes.
   if (auto_size_info_) {
     bool should_reset_for_content = did_layout || needs_autosize_for_overflow_;
-    bool did_run_autosize_layout = false;
     {
       base::AutoReset<bool> reset(&is_being_auto_sized_, true);
       while (auto_size_info_->AutoSizeIfNeeded(should_reset_for_content)) {
         should_reset_for_content = false;
         did_layout |= UpdateStyleAndLayoutInternal();
-        did_run_autosize_layout = true;
       }
-    }
-    // Suppress notifications during scroll-width autosizing, then report any
-    // stable size change.
-    if (did_run_autosize_layout && frame_->IsMainFrame() &&
-        RuntimeEnabledFeatures::AutoSizeUsesScrollWidthForOverflowEnabled()) {
-      frame_->GetChromeClient().ResizeAfterLayout();
     }
     // We may have a mismatch as we impose an additional min-content constraint
     // while auto-sizing, set the view as needing layout which will then fall
@@ -3333,7 +3276,6 @@ void LocalFrameView::SetCursor(const ui::Cursor& cursor) {
   if (!page || frame_->GetEventHandler().IsMousePositionUnknown())
     return;
   LogCursorSizeCounter(&GetFrame(), cursor);
-  page->GetChromeClient().SetCursor(cursor, frame_);
 }
 
 void LocalFrameView::PropagateFrameRectsInternal() {
@@ -3400,15 +3342,7 @@ void LocalFrameView::SetLayoutSizeInternal(const gfx::Size& size,
   document->LayoutViewportWasResized(options);
 }
 
-void LocalFrameView::DidChangeScrollOffset() {
-  GetFrame().Client()->DidChangeScrollOffset();
-  if (GetFrame().IsOutermostMainFrame()) {
-    GetFrame()
-        .GetPage()
-        ->GetChromeClient()
-        .OutermostMainFrameScrollOffsetChanged();
-  }
-}
+void LocalFrameView::DidChangeScrollOffset() {}
 
 void LocalFrameView::ScrollRectToVisibleInRemoteParent(
     const PhysicalRect& rect_to_scroll,
@@ -3492,9 +3426,7 @@ gfx::PointF LocalFrameView::FrameToViewport(
 }
 
 gfx::Rect LocalFrameView::FrameToScreen(const gfx::Rect& rect) const {
-  if (auto* client = GetChromeClient())
-    return client->LocalRootToScreenDIPs(ConvertToRootFrame(rect), this);
-  return gfx::Rect();
+  return ConvertToRootFrame(rect);
 }
 
 gfx::Point LocalFrameView::SoonToBeRemovedUnscaledViewportToContents(

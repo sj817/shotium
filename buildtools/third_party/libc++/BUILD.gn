@@ -422,7 +422,6 @@ target(libcxx_target_type, "libc++") {
   # need to explicitly depend on libc++.
   visibility = [
     "//build/config:common_deps",
-    "//third_party/catapult/devil",
   ]
   if (is_linux) {
     # This target packages libc++.so, so must have an explicit dependency on

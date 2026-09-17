@@ -456,6 +456,8 @@ base::expected<std::unique_ptr<ShotRuntime>, std::string> ShotRuntime::Create(
   // The registration is upstream's own and must happen before any rasterising
   // thread exists; it is not thread safe.
   skia::InitializeFontRendering();
+  // Bound Skia's internal bitmap/filter resource cache to 16MB.
+  SkGraphics::SetResourceCacheTotalByteLimit(16 * 1024 * 1024);
   stages.Mark("skia");
 
 #if BUILDFLAG(IS_WIN)

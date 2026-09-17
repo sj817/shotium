@@ -769,8 +769,6 @@ BASE_FEATURE(kIntensiveWakeUpThrottling, base::FEATURE_ENABLED_BY_DEFAULT);
 const char kIntensiveWakeUpThrottling_GracePeriodSeconds_Name[] =
     "grace_period_seconds";
 
-BASE_FEATURE(kInteractiveDetectorIgnoreFcp, base::FEATURE_DISABLED_BY_DEFAULT);
-
 // Allow process isolation of iframes with the 'sandbox' attribute set. Whether
 // or not such an iframe will be isolated may depend on options specified with
 // the attribute. Note: At present, only iframes with origin-restricted
@@ -1878,11 +1876,6 @@ BASE_FEATURE(kUnrestrictSpellingAndGrammarForTesting,
 // https://html.spec.whatwg.org/multipage/system-state.html#safelisted-scheme
 BASE_FEATURE(kSafelistPaytoToRegisterProtocolHandler,
              base::FEATURE_DISABLED_BY_DEFAULT);
-
-BASE_FEATURE(kPausePagesPerBrowsingContextGroup,
-             base::FEATURE_DISABLED_BY_DEFAULT);
-
-BASE_FEATURE(kShowHudDisplayForPausedPages, base::FEATURE_ENABLED_BY_DEFAULT);
 
 // Controls script streaming for http and https scripts.
 BASE_FEATURE(kScriptStreaming, base::FEATURE_ENABLED_BY_DEFAULT);

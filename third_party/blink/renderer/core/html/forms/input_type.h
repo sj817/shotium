@@ -331,9 +331,6 @@ class CORE_EXPORT InputType : public GarbageCollected<InputType> {
 
   virtual void DispatchSearchEvent();
 
-  // For test purpose
-  virtual ColorChooserClient* GetColorChooserClient();
-
  protected:
   InputType(Type type, HTMLInputElement& element)
       : type_(type), element_(element) {}

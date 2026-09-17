@@ -237,10 +237,6 @@ HTMLElement* InputTypeView::UpdatePlaceholderText(bool) {
   return nullptr;
 }
 
-AXObject* InputTypeView::PopupRootAXObject() {
-  return nullptr;
-}
-
 FormControlState InputTypeView::SaveFormControlState() const {
   String current_value = GetElement().Value();
   if (current_value == GetElement().DefaultValue())

@@ -40,7 +40,6 @@
 #include "third_party/blink/renderer/core/frame/frame_console.h"
 #include "third_party/blink/renderer/core/frame/local_dom_window.h"
 #include "third_party/blink/renderer/core/frame/local_frame_client.h"
-#include "third_party/blink/renderer/core/html/link_manifest.h"
 #include "third_party/blink/renderer/core/html_names.h"
 #include "third_party/blink/renderer/core/inspector/console_message.h"
 #include "third_party/blink/renderer/core/loader/link_loader.h"
@@ -282,9 +281,7 @@ LinkResource* HTMLLinkElement::LinkResourceToProcess() {
   }
 
   if (!link_) {
-    if (rel_attribute_.IsManifest()) {
-      link_ = MakeGarbageCollected<LinkManifest>(this);
-    } else {
+    if (!rel_attribute_.IsManifest()) {
       auto* link = MakeGarbageCollected<LinkStyle>(this);
       if (FastHasAttribute(html_names::kDisabledAttr)) {
         UseCounter::Count(GetDocument(), WebFeature::kHTMLLinkElementDisabled);

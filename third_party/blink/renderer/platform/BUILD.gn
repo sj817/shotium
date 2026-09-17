@@ -1215,7 +1215,6 @@ component("platform") {
     "//third_party/blink/renderer/platform/loader",
     "//third_party/blink/renderer/platform/network",
     "//third_party/blink/renderer/platform/scheduler",
-    "//third_party/fdlibm",
     "//ui/base",
     "//ui/base:ui_data_pack",
     "//ui/base/cursor",
@@ -1878,7 +1877,6 @@ group("blink_platform_unittests_data") {
 
   data_deps = [
     "//testing/buildbot/filters:blink_platform_unittests",
-    "//third_party/hyphenation-patterns:test_data",
   ]
 }
 

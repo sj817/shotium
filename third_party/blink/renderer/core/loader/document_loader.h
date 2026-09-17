@@ -113,7 +113,6 @@ class HistoryItem;
 class LocalFrame;
 class LocalFrameClient;
 class MHTMLArchive;
-struct JavaScriptFrameworkDetectionResult;
 
 namespace mojom {
 enum class CommitResult : int32_t;
@@ -217,8 +216,6 @@ class CORE_EXPORT DocumentLoader : public GarbageCollected<DocumentLoader>,
 
   void DidChangePerformanceTiming();
   void DidObserveLoadingBehavior(LoadingBehaviorFlag);
-  void DidObserveJavaScriptFrameworks(
-      const JavaScriptFrameworkDetectionResult&);
 
   // https://html.spec.whatwg.org/multipage/history.html#url-and-history-update-steps
   void RunURLAndHistoryUpdateSteps(
@@ -417,11 +414,6 @@ class CORE_EXPORT DocumentLoader : public GarbageCollected<DocumentLoader>,
     internal_scroll_to_text_fragment_ = text_fragment;
   }
 
-  // Notifies that the prerendering document this loader is working for is
-  // activated.
-  void NotifyPrerenderingDocumentActivated(
-      const mojom::blink::PrerenderPageActivationParams& params);
-
   HashMap<KURL, EarlyHintsPreloadEntry> GetEarlyHintsPreloadedResources();
 
   // An origin preconnected to via an Early Hints response, for the
@@ -492,8 +484,6 @@ class CORE_EXPORT DocumentLoader : public GarbageCollected<DocumentLoader>,
 
   // Gets the content settings for the current {frame, navigation commit} tuple.
   const mojom::RendererContentSettingsPtr& GetContentSettings();
-
-  void ReportTotalTakenTimeToUpdateSubresourceLoadMetrics();
 
   bool IsInCommitDataForTesting() const { return in_commit_data_; }
 
@@ -745,17 +735,11 @@ class CORE_EXPORT DocumentLoader : public GarbageCollected<DocumentLoader>,
   bool is_secure_context_root_ = false;
 
 
-  // Whether this load request comes with a sticky user activation. For
-  // prerendered pages, this is initially false but could be updated on
-  // prerender page activation.
+  // Whether this load request comes with a sticky user activation.
   bool had_sticky_activation_ = false;
 
   // Whether this load request was initiated by the browser.
   const bool is_browser_initiated_ = false;
-
-  // Whether this loader committed a document in a prerendered page that has not
-  // yet been activated. This is only set after commit.
-  bool is_prerendering_ = false;
 
   // If true, the navigation loading this document should allow a text fragment
   // to invoke. This token may be instead consumed to pass this permission
@@ -869,10 +853,6 @@ class CORE_EXPORT DocumentLoader : public GarbageCollected<DocumentLoader>,
   // the URL seems like a match. This matters for cross-origin navigations
   // (apart from error pages with the same precursor origin).
   bool force_new_document_sequence_number_ = false;
-
-  // Stores the total time taken by `UpdateSubresourceLoadMetrics()` for the
-  // measurement purpose.
-  base::TimeDelta total_taken_time_to_update_subresource_load_metrics_;
 
   // Special case for same-document navigations initiated by a cross-origin
   // frame: When a same-document navigation occurs in an iframe, we call

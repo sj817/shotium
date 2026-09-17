@@ -33,7 +33,6 @@
 
 #include "base/feature_list.h"
 #include "third_party/blink/public/common/features.h"
-#include "third_party/blink/renderer/core/accessibility/scoped_blink_ax_event_intent.h"
 #include "third_party/blink/renderer/core/css_value_keywords.h"
 #include "third_party/blink/renderer/core/dom/events/event_dispatch_forbidden_scope.h"
 #include "third_party/blink/renderer/core/dom/events/scoped_event_queue.h"
@@ -79,7 +78,6 @@ class DataListIndicatorElement final : public HTMLDivElement {
     HTMLInputElement* host = HostInput();
     if (host && !host->IsDisabledOrReadOnly() &&
         !host->IsBaseAppearanceCombobox()) {
-      GetDocument().GetPage()->GetChromeClient().OpenTextDataListChooser(*host);
       event.SetDefaultHandled();
     }
   }
@@ -771,14 +769,7 @@ void TextFieldInputType::SubtreeHasChanged() {
   DidSetValueByUserEdit();
 }
 
-void TextFieldInputType::OpenPopupView() {
-  if (GetElement().IsDisabledOrReadOnly() ||
-      GetElement().IsBaseAppearanceCombobox()) {
-    return;
-  }
-  if (ChromeClient* chrome_client = GetChromeClient())
-    chrome_client->OpenTextDataListChooser(GetElement());
-}
+void TextFieldInputType::OpenPopupView() {}
 
 void TextFieldInputType::DidSetValueByUserEdit() {
   if (!GetElement().IsFocused())
@@ -796,16 +787,10 @@ void TextFieldInputType::DidSetValueByUserEdit() {
 }
 
 void TextFieldInputType::SpinButtonStepDown() {
-  ScopedBlinkAXEventIntent intent(
-      BlinkAXEventIntent(ax::mojom::blink::Command::kSpinButtonDecrement),
-      &GetElement().GetDocument());
   StepUpFromLayoutObject(-1);
 }
 
 void TextFieldInputType::SpinButtonStepUp() {
-  ScopedBlinkAXEventIntent intent(
-      BlinkAXEventIntent(ax::mojom::blink::Command::kSpinButtonIncrement),
-      &GetElement().GetDocument());
   StepUpFromLayoutObject(1);
 }
 

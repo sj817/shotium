@@ -56,12 +56,6 @@ void HTMLHtmlElement::InsertedByParser() {
     return;
 
   GetDocument().Parser()->DocumentElementAvailable();
-  if (GetDocument().GetFrame()) {
-    GetDocument().GetFrame()->Loader().DispatchDocumentElementAvailable();
-    GetDocument().GetFrame()->Loader().RunScriptsAtDocumentElementAvailable();
-    // RunScriptsAtDocumentElementAvailable might have invalidated
-    // GetDocument().
-  }
 }
 
 void HTMLHtmlElement::AttachLayoutTree(AttachContext& context) {

@@ -44,11 +44,9 @@
 #include "third_party/blink/public/platform/interface_registry.h"
 #include "third_party/blink/public/platform/platform.h"
 #include "third_party/blink/public/web/blink.h"
-#include "third_party/blink/renderer/controller/memory_saver_controller.h"
 #include "third_party/blink/renderer/core/animation/animation_clock.h"
 #include "third_party/blink/renderer/core/dom/document.h"
 #include "third_party/blink/renderer/core/execution_context/agent.h"
-#include "third_party/blink/renderer/core/frame/display_cutout_client_impl.h"
 #include "third_party/blink/renderer/core/frame/local_frame.h"
 #include "third_party/blink/renderer/core/loader/loader_factory_for_frame.h"
 #include "third_party/blink/renderer/platform/disk_data_allocator.h"
@@ -73,14 +71,6 @@
 #include "third_party/blink/renderer/platform/fonts/font_cache.h"
 #endif
 
-#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
-#include "third_party/blink/renderer/controller/memory_usage_monitor_posix.h"
-#endif
-
-#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_ANDROID) || \
-    BUILDFLAG(IS_APPLE) || BUILDFLAG(IS_WIN)
-#include "third_party/blink/renderer/controller/highest_pmf_reporter.h"
-#endif
 
 // #if expression should match the one in InitializeCommon
 #if !defined(ARCH_CPU_X86_64) && !defined(ARCH_CPU_ARM64) && BUILDFLAG(IS_WIN)
@@ -248,12 +238,7 @@ void BlinkInitializer::RegisterInterfaces(mojo::BinderMap& binders) {
       main_thread_task_runner);
 #endif
 
-#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
-  binders.Add<mojom::blink::MemoryUsageMonitorLinux>(
-      ConvertToBaseRepeatingCallback(
-          CrossThreadBindRepeating(&MemoryUsageMonitorPosix::Bind)),
-      main_thread_task_runner);
-#endif
+
 
   binders.Add<mojom::blink::DiskAllocator>(
       ConvertToBaseRepeatingCallback(
@@ -267,9 +252,9 @@ void BlinkInitializer::RegisterInterfaces(mojo::BinderMap& binders) {
 }
 
 void BlinkInitializer::RegisterMemoryWatchers(Platform* platform) {
+#if BUILDFLAG(IS_ANDROID)
   scoped_refptr<base::SingleThreadTaskRunner> main_thread_task_runner =
       Thread::MainThread()->GetTaskRunner(MainThreadTaskRunnerRestricted());
-#if BUILDFLAG(IS_ANDROID)
   // Initialize CrashMemoryMetricsReporterImpl in order to assure that memory
   // allocation does not happen in OnOOMCallback.
   CrashMemoryMetricsReporterImpl::Instance();
@@ -278,17 +263,7 @@ void BlinkInitializer::RegisterMemoryWatchers(Platform* platform) {
   if (platform->IsUserLevelMemoryPressureSignalEnabled()) {
     UserLevelMemoryPressureSignalGenerator::Initialize(main_thread_task_runner);
   }
-#endif
-  MemorySaverController::Initialize();
 
-#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_ANDROID) || \
-    BUILDFLAG(IS_APPLE) || BUILDFLAG(IS_WIN)
-  // Start reporting the highest private memory footprint after the first
-  // navigation.
-  HighestPmfReporter::Initialize(main_thread_task_runner);
-#endif
-
-#if BUILDFLAG(IS_ANDROID)
   // Initialize PrivateMemoryFootprintProvider to start providing the value
   // for the browser process.
   PrivateMemoryFootprintProvider::Initialize(main_thread_task_runner);
@@ -296,11 +271,6 @@ void BlinkInitializer::RegisterMemoryWatchers(Platform* platform) {
 }
 
 void BlinkInitializer::InitLocalFrame(LocalFrame& frame) const {
-  if (RuntimeEnabledFeatures::DisplayCutoutAPIEnabled()) {
-    frame.GetInterfaceRegistry()->AddAssociatedInterface(
-        BindRepeating(&DisplayCutoutClientImpl::BindMojoReceiver,
-                      WrapWeakPersistent(&frame)));
-  }
   // DevToolsFrontendImpl::BindMojoRequest registration was here. It bound
   // the mojo interface for the DevTools frontend bridge; that class is gone
   // (see controller/BUILD.gn), so there is nothing left to bind.

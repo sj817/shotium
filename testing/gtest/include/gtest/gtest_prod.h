@@ -5,11 +5,11 @@
 #ifndef TESTING_GTEST_INCLUDE_GTEST_GTEST_PROD_H_
 #define TESTING_GTEST_INCLUDE_GTEST_GTEST_PROD_H_
 
-// The file/directory layout of Google Test is not yet considered stable. Until
-// it stabilizes, Chromium code will use forwarding headers in testing/gtest
-// and testing/gmock, instead of directly including files in
-// third_party/googletest.
-
-#include "third_party/googletest/src/googletest/include/gtest/gtest_prod.h"  // IWYU pragma: export
+// In this tree, Google Test is not built as part of the engine. Production
+// code only uses FRIEND_TEST from gtest_prod.h to declare unit-test friends.
+#ifndef FRIEND_TEST
+#define FRIEND_TEST(test_case_name, test_name) \
+  friend class test_case_name##_##test_name##_Test
+#endif
 
 #endif  // TESTING_GTEST_INCLUDE_GTEST_GTEST_PROD_H_

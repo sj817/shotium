@@ -35,6 +35,7 @@
 #include <memory>
 
 #include "base/trace_event/trace_event.h"
+#include "third_party/blink/public/common/input/web_input_event.h"
 #include "third_party/blink/public/mojom/fetch/fetch_api_request.mojom-blink.h"
 #include "third_party/blink/public/platform/platform.h"
 #include "third_party/blink/renderer/core/events/current_input_event.h"

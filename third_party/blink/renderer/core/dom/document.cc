@@ -52,10 +52,6 @@
 #include "mojo/public/cpp/bindings/pending_remote.h"
 #include "mojo/public/cpp/bindings/remote.h"
 #include "mojo/public/mojom/base/text_direction.mojom-blink.h"
-#include "net/base/schemeful_site.h"
-#include "services/metrics/public/cpp/delegating_ukm_recorder.h"
-#include "services/metrics/public/cpp/metrics_utils.h"
-#include "services/metrics/public/cpp/mojo_ukm_recorder.h"
 #include "services/metrics/public/cpp/ukm_recorder.h"
 #include "services/metrics/public/cpp/ukm_source_id.h"
 #include "services/network/public/cpp/web_sandbox_flags.h"
@@ -80,7 +76,6 @@
 #include "third_party/blink/public/platform/task_type.h"
 #include "third_party/blink/public/platform/web_content_settings_client.h"
 #include "third_party/blink/public/web/web_print_page_description.h"
-#include "third_party/blink/renderer/bindings/core/v8/v8_aria_notification_options.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_box_quad_options.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_caret_position_from_point_options.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_convert_coordinate_options.h"
@@ -149,7 +144,6 @@
 #include "third_party/blink/renderer/core/dom/events/scoped_event_queue.h"
 #include "third_party/blink/renderer/core/dom/flat_tree_traversal.h"
 #include "third_party/blink/renderer/core/dom/focus_params.h"
-#include "third_party/blink/renderer/core/dom/focused_element_change_observer.h"
 #include "third_party/blink/renderer/core/dom/focusgroup_flags.h"
 #include "third_party/blink/renderer/core/dom/geometry_utils.h"
 #include "third_party/blink/renderer/core/dom/layout_tree_builder_traversal.h"
@@ -278,7 +272,6 @@
 #include "third_party/blink/renderer/core/loader/frame_loader.h"
 #include "third_party/blink/renderer/core/loader/http_refresh_scheduler.h"
 #include "third_party/blink/renderer/core/loader/idleness_detector.h"
-#include "third_party/blink/renderer/core/loader/interactive_detector.h"
 #include "third_party/blink/renderer/core/loader/lazy_image_helper.h"
 #include "third_party/blink/renderer/core/loader/no_state_prefetch_client.h"
 #include "third_party/blink/renderer/core/loader/pending_link_preload.h"
@@ -301,7 +294,6 @@
 #include "third_party/blink/renderer/core/page/scrolling/root_scroller_controller.h"
 #include "third_party/blink/renderer/core/page/scrolling/snap_coordinator.h"
 #include "third_party/blink/renderer/core/page/scrolling/top_document_root_scroller_controller.h"
-#include "third_party/blink/renderer/core/page/spatial_navigation_controller.h"
 #include "third_party/blink/renderer/core/paint/paint_layer.h"
 #include "third_party/blink/renderer/core/paint/paint_layer_scrollable_area.h"
 #include "third_party/blink/renderer/core/paint/timing/paint_timing.h"
@@ -788,7 +780,6 @@ Document::Document(const DocumentInit& initializer,
       TreeScope(*this),
       token_(initializer.GetToken()),
       is_initial_empty_document_(initializer.IsInitialEmptyDocument()),
-      is_prerendering_(initializer.IsPrerendering()),
       is_for_discard_(initializer.IsForDiscard()),
       dom_window_(initializer.GetWindow()),
       execution_context_(initializer.GetExecutionContext()),
@@ -866,13 +857,6 @@ Document::Document(const DocumentInit& initializer,
   if (base::FeatureList::IsEnabled(features::kDelayAsyncScriptExecution) &&
       features::kDelayAsyncScriptExecutionDelayByDefaultParam.Get()) {
     script_runner_delayer_->Activate();
-  }
-  if (is_prerendering_ &&
-      GetPage()->ShouldPauseJavaScriptExecutionOnPrerender()) {
-    prerender_script_runner_delayer_ =
-        MakeGarbageCollected<ScriptRunnerDelayer>(
-            script_runner_, ScriptRunner::DelayReason::kPausedForPrerender);
-    prerender_script_runner_delayer_->Activate();
   }
   if (LocalFrame* frame = GetFrame()) {
     DCHECK(frame->GetPage());
@@ -957,9 +941,6 @@ Document::~Document() {
   DCHECK(!ParentTreeScope());
 
   InstanceCounters::DecrementCounter(InstanceCounters::kDocumentCounter);
-  if (WebTestSupport::IsRunningWebTest() && ukm_recorder_) {
-    ukm::DelegatingUkmRecorder::Get()->RemoveDelegate(ukm_recorder_.get());
-  }
 }
 
 Range* Document::CreateRangeAdjustedToTreeScope(const TreeScope& tree_scope,
@@ -1992,7 +1973,6 @@ void Document::DispatchDidReceiveTitle() {
     GetFrame()->GetLocalFrameHostRemote().UpdateTitle(shortened_title);
     GetFrame()->GetPage()->GetPageScheduler()->OnTitleOrFaviconUpdated();
   }
-  GetFrame()->Client()->DispatchDidReceiveTitle(title_);
 }
 
 void Document::setTitle(const String& title) {
@@ -2113,10 +2093,6 @@ String Document::visibilityStateAsString() const {
   return visibilityState().AsString();
 }
 
-bool Document::prerendering() const {
-  return IsPrerendering();
-}
-
 bool Document::hidden() const {
   return !IsPageVisible();
 }
@@ -2144,13 +2120,6 @@ void Document::DidChangeVisibilityState() {
 
   if (IsPageVisible())
     GetDocumentAnimations().MarkAnimationsPending();
-
-
-  InteractiveDetector* interactive_detector = InteractiveDetector::From(*this);
-  if (interactive_detector) {
-    interactive_detector->OnPageHiddenChanged(hidden());
-  }
-
 }
 
 String Document::nodeName() const {
@@ -2930,14 +2899,6 @@ void Document::LayoutUpdated() {
   DCHECK(GetFrame());
   DCHECK(View());
 
-  // Plugins can run script inside layout which can detach the page.
-  // TODO(dcheng): Does it make sense to do any of this work if detached?
-  if (auto* frame = GetFrame()) {
-    if (frame->IsMainFrame()) {
-      frame->GetPage()->GetChromeClient().MainFrameLayoutUpdated();
-    }
-  }
-
   Markers().InvalidateRectsForAllTextMatchMarkers();
 }
 
@@ -3108,7 +3069,6 @@ void Document::Shutdown() {
   // its match state. Scroll-to-text-fragment is gone; LocalFrame's accessor
   // now permanently returns nullptr, so this was unreachable.
 
-  GetPage()->DocumentDetached(this);
 
   probe::DocumentDetached(this);
 
@@ -3132,7 +3092,6 @@ void Document::Shutdown() {
                                 mojom::blink::FocusType::kNone);
   }
   sequential_focus_navigation_starting_point_ = nullptr;
-  focused_element_change_observers_.clear();
 
   DetachLayoutTree();
   layout_view_ = nullptr;
@@ -3955,19 +3914,6 @@ bool Document::CheckCompletedInternal() {
   if (!ShouldComplete())
     return false;
 
-  if (GetFrame() && !UnloadStarted()) {
-    GetFrame()->Client()->RunScriptsAtDocumentIdle();
-
-    // Injected scripts may have disconnected this frame.
-    if (!GetFrame())
-      return false;
-
-    // Check again, because runScriptsAtDocumentIdle() may have delayed the load
-    // event.
-    if (!ShouldComplete())
-      return false;
-  }
-
   // OK, completed. Fire load completion events as needed.
   SetReadyState(kComplete);
   const bool load_event_needed = LoadEventStillNeeded();
@@ -4017,12 +3963,6 @@ bool Document::CheckCompletedInternal() {
     FetchDictionaryFromLinkHeader();
   } else if (loading_for_print_) {
     loading_for_print_ = false;
-    GetFrame()->Client()->DispatchDidFinishLoadForPrinting();
-    // Refresh the page when the print preview pops up.
-    // DispatchDidFinishLoadForPrinting could detach this frame
-    if (!GetFrame()) {
-      return false;
-    }
   }
 
   if (auto* view = View()) {
@@ -4073,12 +4013,6 @@ bool Document::DispatchBeforeUnloadEvent(
   // the initial invocation. (See: https://crbug.com/40392560)
   if (ProcessingBeforeUnload())
     return false;
-
-  if (dom_window_->IsPictureInPictureWindow()) {
-    RecordBeforeUnloadUse(
-        BeforeUnloadUse::kNotSupportedInDocumentPictureInPicture);
-    return true;
-  }
 
   // Since we do not allow registering the beforeunload event handlers in
   // fenced frames, it should not be fired by fencedframes.
@@ -4158,10 +4092,8 @@ bool Document::DispatchBeforeUnloadEvent(
 
   String text = before_unload_event.returnValue();
   RecordBeforeUnloadUse(BeforeUnloadUse::kShowDialog);
-  out_before_unload_dialog_opened_time = base::TimeTicks::Now();
-  did_allow_navigation =
-      chrome_client->OpenBeforeUnloadConfirmPanel(text, GetFrame(), is_reload);
-  out_before_unload_dialog_closed_time = base::TimeTicks::Now();
+  did_allow_navigation = true;
+  out_before_unload_dialog_closed_time = out_before_unload_dialog_opened_time;
   if (did_allow_navigation) {
     // Only record when a navigation occurs, since we want to understand
     // the impact of the before unload dialog on overall input to navigation.
@@ -4728,32 +4660,6 @@ void Document::ExecuteScriptsWaitingForResources() {
     parser->ExecuteScriptsWaitingForResources();
 }
 
-void Document::UnblockScriptExecutionForPrerenderActivation() {
-  CHECK(!IsScriptBlockedUntilPrerenderActivation());
-  ResumeBlockedScriptExecution();
-}
-
-void Document::UnblockScriptExecutionForPrerenderUpgrade() {
-  // The Page has already cleared should_pause_javascript_execution, so
-  // IsScriptBlockedUntilPrerenderActivation() returns false.
-  CHECK(!IsScriptBlockedUntilPrerenderActivation());
-  // The page should still be in prerendering state after upgrade.
-  CHECK(is_prerendering_);
-  ResumeBlockedScriptExecution();
-}
-
-void Document::ResumeBlockedScriptExecution() {
-  if (ScriptableDocumentParser* parser = GetScriptableDocumentParser()) {
-    parser->ExecuteScriptsWaitingForPrerenderActivation();
-  }
-
-  // TODO(https://crbug.com/42850021): Consider deactivating it later, because
-  // async scripts may not be critical for LCP.
-  if (prerender_script_runner_delayer_) {
-    prerender_script_runner_delayer_->Deactivate();
-  }
-}
-
 CSSStyleSheet& Document::ElementSheet() {
   if (!elem_sheet_)
     elem_sheet_ = CSSStyleSheet::CreateInline(*this, base_url_);
@@ -5288,12 +5194,6 @@ void Document::HoveredElementDetached(Element& element) {
   hover_element_ =
       SkipDisplayNoneAncestorsOrReturnNullIfFlatTreeIsDirty(element);
 
-  // If the mouse cursor is not visible, do not clear existing
-  // hover effects on the ancestors of |element| and do not invoke
-  // new hover effects on any other element.
-  if (!GetPage()->IsCursorVisible())
-    return;
-
   if (GetFrame())
     GetFrame()->GetEventHandler().ScheduleHoverStateUpdate();
 }
@@ -5444,9 +5344,6 @@ bool Document::SetFocusedElement(Element* new_focused_element,
     if (params.type != mojom::blink::FocusType::kNone &&
         params.type != mojom::blink::FocusType::kScript)
       SetLastFocusType(params.type);
-
-    for (auto& observer : focused_element_change_observers_)
-      observer->DidChangeFocus();
 
     focused_element_->SetFocused(true, params.type);
     // Setting focus can cause the element to become detached (e.g. if an
@@ -5608,15 +5505,6 @@ void Document::NotifyFocusedElementChanged(Element* old_focused_element,
 
   if (GetPage()) {
     SendFocusNotification(new_focused_element, focus_type);
-
-    Document* old_document =
-        old_focused_element ? &old_focused_element->GetDocument() : nullptr;
-    if (old_document && old_document != this && old_document->GetFrame())
-      old_document->GetFrame()->Client()->FocusedElementChanged(nullptr);
-
-    GetFrame()->Client()->FocusedElementChanged(new_focused_element);
-
-    GetPage()->GetChromeClient().SetKeyboardFocusURL(new_focused_element);
   }
 
   blink::NotifyPriorityScrollAnchorStatusChanged(old_focused_element,
@@ -6543,17 +6431,11 @@ void Document::PermissionServiceConnectionError() {
   data_->permission_service_.reset();
 }
 
-// fragmentDirective() -- window.location's ":~:" directive list, exposed to
+// Fragment directive API, currently used to feature detect text-fragments.
+// https://wicg.github.io/scroll-to-text-fragment/#feature-detectability
+// fragmentDirective() -- the object that used to be exposed to
 // script as document.fragmentDirective -- went with the FragmentDirective
 // class and the scroll-to-text feature behind it.
-
-void Document::ariaNotify(const String& announcement,
-                          const AriaNotificationOptions* options) {
-  DCHECK(RuntimeEnabledFeatures::AriaNotifyEnabled(GetExecutionContext()));
-
-  // Used to forward the announcement to the AXObjectCache; no accessibility
-  // tree exists to notify anymore.
-}
 
 static bool IsValidNameNonASCII(base::span<const LChar> characters) {
   if (!IsValidNameStart(characters[0]))
@@ -7239,12 +7121,6 @@ void Document::FinishedParsing() {
       if (GetFrame()->IsMainFrame() ||
           Loader()->HasLoadedNonInitialEmptyDocument()) {
         UpdateStyleAndLayoutTree();
-        if (base::FeatureList::IsEnabled(
-                features::kPrerender2EarlyDocumentLifecycleUpdate) &&
-            IsPrerendering() && GetFrame()->IsLocalRoot() &&
-            GetPage()->ShouldPreparePaintTreeOnPrerender()) {
-          View()->DryRunPaintingForPrerender();
-        }
       }
     }
 
@@ -7276,11 +7152,6 @@ void Document::FinishedParsing() {
 
   if (IsInOutermostMainFrame() && !IsInitialEmptyDocument() &&
       Url().ProtocolIsInHttpFamily()) {
-    // Record the total taken time by UseCounter.
-    Loader()->GetUseCounter().ReportTotalTakenTime(GetFrame(),
-                                                   /*did_commit_load=*/false);
-    // Record the total taken time by subresource load observer update.
-    Loader()->ReportTotalTakenTimeToUpdateSubresourceLoadMetrics();
     // Record the total taken time by resource load from memory cache.
     base::UmaHistogramMicrosecondsTimes(
         "Blink.MemoryCache.TotalTakenTimeForDidLoadResourceFromMemoryCache",
@@ -7585,12 +7456,6 @@ static HTMLLinkElement* GetLinkElement(const Document* doc,
   return nullptr;
 }
 
-HTMLLinkElement* Document::LinkManifest() const {
-  return GetLinkElement(this, [](HTMLLinkElement& link_element) {
-    return link_element.RelAttribute().IsManifest();
-  });
-}
-
 HTMLLinkElement* Document::LinkCanonical() const {
   return GetLinkElement(this, [](HTMLLinkElement& link_element) {
     return link_element.RelAttribute().IsCanonical();
@@ -7598,25 +7463,7 @@ HTMLLinkElement* Document::LinkCanonical() const {
 }
 
 ukm::UkmRecorder* Document::UkmRecorder() {
-  if (!ukm_recorder_) {
-    mojo::Remote<ukm::mojom::UkmRecorderFactory> factory;
-    Platform::Current()->GetBrowserInterfaceBroker()->GetInterface(
-        factory.BindNewPipeAndPassReceiver());
-    auto mojo_recorder = ukm::MojoUkmRecorder::Create(*factory);
-    if (WebTestSupport::IsRunningWebTest() &&
-        WebTestSupport::CanRegisterUkmRecorderDelegateForWebTest()) {
-      ukm::DelegatingUkmRecorder::Get()->AddDelegate(
-          mojo_recorder->GetWeakPtr());
-    }
-    ukm_recorder_ = std::move(mojo_recorder);
-  }
-
-  if (WebTestSupport::IsRunningWebTest() &&
-        WebTestSupport::CanRegisterUkmRecorderDelegateForWebTest()) {
-    return ukm::DelegatingUkmRecorder::Get();
-  } else {
-    return ukm_recorder_.get();
-  }
+  return nullptr;
 }
 
 ukm::SourceId Document::UkmSourceID() const {
@@ -8617,7 +8464,6 @@ void Document::Trace(Visitor* visitor) const {
   visitor->Trace(current_script_stack_);
   visitor->Trace(script_runner_);
   visitor->Trace(script_runner_delayer_);
-  visitor->Trace(prerender_script_runner_delayer_);
   visitor->Trace(lists_invalidated_at_document_);
   visitor->Trace(node_lists_);
   visitor->Trace(top_layer_elements_);
@@ -8681,7 +8527,6 @@ void Document::Trace(Visitor* visitor) const {
   visitor->Trace(unassociated_listed_elements_);
   visitor->Trace(intrinsic_size_observer_);
   visitor->Trace(lazy_loaded_auto_sized_img_observer_);
-  visitor->Trace(focused_element_change_observers_);
   visitor->Trace(pending_link_header_preloads_);
   visitor->Trace(elements_needing_shadow_tree_);
 #if BUILDFLAG(IS_ANDROID)
@@ -8729,11 +8574,6 @@ bool Document::IsFocusAllowed(FocusTrigger trigger,
     if (frame->IsMainFrame() || LocalFrame::HasTransientUserActivation(frame)) {
       return true;
     }
-  }
-
-  // Allow focus during prerendering to match same-origin behavior.
-  if (frame->GetDocument() && frame->GetDocument()->IsPrerendering()) {
-    return true;
   }
 
   WebFeature uma_type;
@@ -8825,11 +8665,6 @@ bool Document::ChildrenCanHaveStyle() const {
   return false;
 }
 
-bool Document::IsScriptBlockedUntilPrerenderActivation() const {
-  return is_prerendering_ &&
-         GetPage()->ShouldPauseJavaScriptExecutionOnPrerender();
-}
-
 mojom::blink::PreferredColorScheme Document::GetPreferredColorScheme() const {
   return GetStyleEngine().GetPreferredColorScheme();
 }
@@ -8842,10 +8677,6 @@ void Document::ColorSchemeChanged() {
   UpdateForcedColors();
   GetStyleEngine().ColorSchemeChanged();
   MediaQueryAffectingValueChanged(MediaValueChange::kOther);
-}
-
-void Document::VisionDeficiencyChanged() {
-  GetStyleEngine().VisionDeficiencyChanged();
 }
 
 void Document::UpdateForcedColors() {
@@ -8978,54 +8809,6 @@ const Node* Document::GetFindInPageActiveMatchNode() const {
   return find_in_page_active_match_node_;
 }
 
-void Document::ActivateForPrerendering(
-    const mojom::blink::PrerenderPageActivationParams& params) {
-  TRACE_EVENT("navigation", "Document::ActivateForPrerendering",
-              perfetto::Flow::FromPointer(this));
-  DCHECK(is_prerendering_);
-  is_prerendering_ = false;
-
-  if (DocumentLoader* loader = Loader()) {
-    loader->NotifyPrerenderingDocumentActivated(params);
-  }
-  UnblockScriptExecutionForPrerenderActivation();
-  Vector<base::OnceClosure> callbacks;
-  callbacks.swap(will_dispatch_prerenderingchange_callbacks_);
-  for (auto& callback : callbacks) {
-    std::move(callback).Run();
-  }
-
-  // https://wicg.github.io/nav-speculation/prerendering.html#prerendering-browsing-context-activate
-  // Step 8.3.4 "Fire an event named prerenderingchange at doc."
-  DispatchEvent(*Event::Create(event_type_names::kPrerenderingchange));
-
-  // Step 8.3.5 "For each steps in doc’s post-prerendering activation steps
-  // list:"
-  RunPostPrerenderingActivationSteps();
-}
-
-void Document::AddWillDispatchPrerenderingchangeCallback(
-    base::OnceClosure closure) {
-  DCHECK(is_prerendering_);
-  will_dispatch_prerenderingchange_callbacks_.push_back(std::move(closure));
-}
-
-void Document::AddPostPrerenderingActivationStep(base::OnceClosure callback) {
-  DCHECK(is_prerendering_);
-  post_prerendering_activation_callbacks_.push_back(std::move(callback));
-}
-
-void Document::RunPostPrerenderingActivationSteps() {
-  TRACE_EVENT("blink", "Document::RunPostPrerenderingActivationSteps",
-              perfetto::Flow::FromPointer(this), "deferred_callback",
-              post_prerendering_activation_callbacks_.size());
-
-  DCHECK(!is_prerendering_);
-  for (auto& callback : post_prerendering_activation_callbacks_)
-    std::move(callback).Run();
-  post_prerendering_activation_callbacks_.clear();
-}
-
 bool Document::InStyleRecalc() const {
   return lifecycle_.GetState() == DocumentLifecycle::kInStyleRecalc ||
          style_engine_->InInterleavedStyleRecalc() ||
@@ -9053,18 +8836,6 @@ void Document::AddPendingLinkHeaderPreload(const PendingLinkPreload& preload) {
 void Document::RemovePendingLinkHeaderPreloadIfNeeded(
     const PendingLinkPreload& preload) {
   pending_link_header_preloads_.erase(&preload);
-}
-
-void Document::AddFocusedElementChangeObserver(
-    FocusedElementChangeObserver* observer) {
-  DCHECK(observer);
-  focused_element_change_observers_.insert(observer);
-}
-
-void Document::RemoveFocusedElementChangeObserver(
-    FocusedElementChangeObserver* observer) {
-  DCHECK(focused_element_change_observers_.Contains(observer));
-  focused_element_change_observers_.erase(observer);
 }
 
 void Document::WriteIntoTrace(perfetto::TracedValue ctx) const {

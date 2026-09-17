@@ -20,7 +20,6 @@
 #include "third_party/blink/renderer/core/events/message_event.h"
 #include "third_party/blink/renderer/core/execution_context/execution_context.h"
 #include "third_party/blink/renderer/core/execution_context/security_context.h"
-#include "third_party/blink/renderer/core/frame/coop_access_violation_report_body.h"
 #include "third_party/blink/renderer/core/frame/csp/content_security_policy.h"
 #include "third_party/blink/renderer/core/frame/frame.h"
 #include "third_party/blink/renderer/core/frame/frame_client.h"
@@ -317,7 +316,9 @@ void DOMWindow::Close(LocalDOMWindow* incumbent_window) {
   bool allow_scripts_to_close_windows =
       settings && settings->GetAllowScriptsToCloseWindows();
 
-  if (!page->OpenedByDOM() && !allow_scripts_to_close_windows) {
+  // Page::OpenedByDOM() is gone: nothing can open a page from the DOM, so
+  // every page counts as not opened by script.
+  if (!allow_scripts_to_close_windows) {
     if (GetFrame()->Client()->BackForwardLength() > 1) {
       active_document->domWindow()->GetFrameConsole()->AddMessage(
           MakeGarbageCollected<ConsoleMessage>(

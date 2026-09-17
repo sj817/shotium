@@ -4,7 +4,6 @@
 
 #include "ui/gfx/switches.h"
 
-#include "base/command_line.h"
 #include "build/build_config.h"
 
 namespace switches {
@@ -13,13 +12,6 @@ namespace switches {
 // sharpness, kerning, hinting and layout.
 const char kDisableFontSubpixelPositioning[] =
     "disable-font-subpixel-positioning";
-
-// Run in headless mode, i.e., without a UI or display server dependencies.
-const char kHeadless[] = "headless";
-
-// Headless screen info in the format: {0,0 800x600}{800,0 600x800}.
-// See //components/headless/screen_info/README.md for more details.
-const char kScreenInfo[] = "screen-info";
 
 #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
 // Which X11 display to connect to. Emulates the GTK+ "--display=" command line

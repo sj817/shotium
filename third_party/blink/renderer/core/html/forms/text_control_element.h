@@ -181,13 +181,6 @@ class CORE_EXPORT TextControlElement : public HTMLFormControlElementWithState {
   // For example, when value contains a bidirectional character.
   virtual bool IsAutoDirectionalityFormAssociated() const = 0;
 
-  // Returns whether this element is or has ever been identified as a custom
-  // password field via JS masking heuristics.
-  // This is distinct from native passwords (<input type=password>).
-  bool HasBeenHeuristicCustomPasswordJS() const {
-    return has_been_heuristic_custom_password_js_;
-  }
-
   // Set the value trimmed to the max length of the field and dispatch the input
   // and change events. If |value| is empty, the autofill state is always
   // set to WebAutofillState::kNotFilled.
@@ -249,9 +242,6 @@ class CORE_EXPORT TextControlElement : public HTMLFormControlElementWithState {
  protected:
   TextControlElement(const QualifiedName&, Document&);
 
-  // Element:
-  bool IsNativeOrHeuristicPassword() const override;
-
   void RemovedFrom(ContainerNode&) override;
   void DisconnectAllOpaqueRanges();
   virtual HTMLElement* UpdatePlaceholderText() = 0;
@@ -301,10 +291,6 @@ class CORE_EXPORT TextControlElement : public HTMLFormControlElementWithState {
   //      https://github.com/whatwg/html/issues/8133
   //      https://github.com/whatwg/html/issues/8089
   bool ReadOnlyPreventsConstraintValidation() const final { return true; }
-
-  // Checks the current value and latches as a custom password field if it
-  // matches JS masking heuristics (e.g. "••••a").
-  void MaybeSetHasBeenHeuristicCustomPasswordJS();
 
  private:
   // Used by ComputeSelection() to specify which values are needed.
@@ -424,8 +410,6 @@ class CORE_EXPORT TextControlElement : public HTMLFormControlElementWithState {
 
   // Indicate whether there is one scheduled selectionchange event.
   bool has_scheduled_selectionchange_event_ = false;
-
-  bool has_been_heuristic_custom_password_js_ = false;
 
   FRIEND_TEST_ALL_PREFIXES(TextControlElementTest, IndexForPosition);
   FRIEND_TEST_ALL_PREFIXES(HTMLTextAreaElementTest, ValueWithHardLineBreaks);

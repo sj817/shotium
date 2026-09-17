@@ -179,7 +179,6 @@ source_set("absl_full") {
     visibility = [
       # Used by some test executables, but not by anything that is a
       # part of Chrome.
-      "//third_party/fuzztest:*",
       "//third_party/webrtc/*",
 
       # GoogleTest doesn't actually need absl_full, but this makes gn check

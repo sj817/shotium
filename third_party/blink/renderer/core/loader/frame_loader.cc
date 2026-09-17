@@ -195,7 +195,6 @@ ResourceRequest FrameLoader::ResourceRequestForReload(
 FrameLoader::FrameLoader(LocalFrame* frame)
     : frame_(frame),
       progress_tracker_(MakeGarbageCollected<ProgressTracker>(frame)),
-      dispatching_did_clear_window_object_in_main_world_(false),
       virtual_time_pauser_(
           frame_->GetFrameScheduler()->CreateWebScopedVirtualTimePauser(
               "FrameLoader",
@@ -363,8 +362,6 @@ void FrameLoader::SaveScrollState() {
         visual_viewport.VisibleRect().OffsetFromOrigin());
     history_item->SetPageScaleFactor(visual_viewport.Scale());
   }
-
-  Client()->DidUpdateCurrentHistoryItem();
 }
 
 void FrameLoader::DispatchUnloadEventAndFillOldDocumentInfoIfNeeded(
@@ -444,15 +441,7 @@ void FrameLoader::FinishedParsing() {
 
   frame_->GetLocalFrameHostRemote().DidDispatchDOMContentLoadedEvent();
 
-  if (Client()) {
-    ScriptForbiddenScope forbid_scripts;
-    Client()->DispatchDidDispatchDOMContentLoadedEvent();
-  }
 
-  if (Client()) {
-    Client()->RunScriptsAtDocumentReady(
-        !document_loader_ || document_loader_->IsCommittedButEmpty());
-  }
 
   // The URL's ":~:text=" directives were counted here so the load could be
   // held open until the text fragment had been matched and scrolled to.
@@ -698,8 +687,6 @@ void FrameLoader::StartNavigation(FrameLoadRequest& request,
   // always blocked here.
   if (frame_->IsMainFrame() && origin_window &&
       request.GetClientNavigationReason() != ClientNavigationReason::kReload &&
-      !frame_->Client()->AllowContentInitiatedDataUrlNavigations(
-          origin_window->Url()) &&
       (url.ProtocolIs("filesystem") ||
        (url.ProtocolIsData() &&
         network_utils::IsDataURLMimeTypeSupported(url)))) {
@@ -892,34 +879,6 @@ void FrameLoader::StartNavigation(FrameLoadRequest& request,
                                     request.GetClientNavigationReason(),
                                     request.GetNavigationPolicy());
   }
-
-  // TODO(crbug.com/896041): Instead of just bypassing the CSP for navigations
-  // from isolated world, ideally we should enforce the isolated world CSP by
-  // plumbing the correct CSP to the browser.
-  using CSPDisposition = network::mojom::CSPDisposition;
-  CSPDisposition should_check_main_world_csp =
-      ContentSecurityPolicy::ShouldBypassMainWorldDeprecated(origin_window)
-          ? CSPDisposition::DO_NOT_CHECK
-          : CSPDisposition::CHECK;
-
-  Client()->BeginNavigation(
-      resource_request, request.GetRequestorBaseURL(), request.GetFrameType(),
-      origin_window, nullptr /* document_loader */, navigation_type,
-      request.GetNavigationPolicy(), frame_load_type,
-      request.ForceHistoryPush(),
-      CalculateClientRedirectPolicy(
-          request.GetClientNavigationReason(), frame_load_type,
-          IsOnInitialEmptyDocument()) == ClientRedirectPolicy::kClientRedirect,
-      request.IsUnfencedTopNavigation(), request.GetTriggeringEventInfo(),
-      request.Form(), should_check_main_world_csp, request.GetBlobURLToken(),
-      request.GetInputStartTime(), request.GetCreationTime(),
-      request.HrefTranslate().GetString(), request.GetInitiatorFrameToken(),
-      request.GetInitiatorStateToken(), request.GetInitiatorDocumentToken(),
-      request.GetSourceLocation(),
-      request.IsContainerInitiated(),
-      request.GetWindowFeatures().explicit_opener,
-      request.TakeResumeDeferredCommitListener(),
-      request.GetScriptToolInvocationId());
 }
 
 static void FillStaticResponseIfNeeded(WebNavigationParams* params,
@@ -1256,16 +1215,6 @@ void FrameLoader::StopAllLoaders(bool abort_client) {
   TakeObjectSnapshot();
 }
 
-void FrameLoader::DidAccessInitialDocument() {
-  if (frame_->IsMainFrame() && !has_accessed_initial_document_) {
-    has_accessed_initial_document_ = true;
-    // Forbid script execution to prevent re-entering V8, since this is called
-    // from a binding security check.
-    ScriptForbiddenScope forbid_scripts;
-    frame_->GetPage()->GetChromeClient().DidAccessInitialMainDocument();
-  }
-}
-
 bool FrameLoader::DetachDocument() {
   TRACE_EVENT0("navigation", "FrameLoader::DetachDocument");
   base::ScopedUmaHistogramTimer histogram_timer(
@@ -1365,8 +1314,6 @@ void FrameLoader::CommitDocumentLoader(DocumentLoader* document_loader,
 
   TakeObjectSnapshot();
 
-  Client()->TransitionToCommittedForNewPage();
-
   document_loader_->CommitNavigation();
 
   base::UmaHistogramTimes("Blink.CommitDocumentLoaderTime", timer.Elapsed());
@@ -1423,12 +1370,8 @@ String FrameLoader::ApplyUserAgentOverride(const String& user_agent) const {
   probe::ApplyUserAgentOverride(probe::ToCoreProbeSink(frame_->GetDocument()),
                                 &user_agent_override);
 
-  if (Client()->UserAgentOverride().empty() && user_agent_override.empty()) {
-    return user_agent;
-  }
-
   if (user_agent_override.empty()) {
-    user_agent_override = user_agent;
+    return user_agent;
   }
 
   return user_agent_override;
@@ -1533,85 +1476,6 @@ bool FrameLoader::ShouldClose(
     bool force_to_proceed,
     base::TimeTicks& out_before_unload_dialog_opened_time,
     base::TimeTicks& out_before_unload_dialog_closed_time) {
-  TRACE_EVENT("loading", "FrameLoader::ShouldClose", "is_reload", is_reload,
-              "force_to_proceed", force_to_proceed);
-  const base::TimeTicks before_unload_events_start = base::TimeTicks::Now();
-
-  Page* page = frame_->GetPage();
-  if (!page || !page->GetChromeClient().CanOpenBeforeUnloadConfirmPanel())
-    return true;
-
-  HeapVector<Member<LocalFrame>> descendant_frames;
-  for (Frame* child = frame_->Tree().FirstChild(); child;
-       child = child->Tree().TraverseNext(frame_.Get())) {
-    // FIXME: There is not yet any way to dispatch events to out-of-process
-    // frames.
-    if (auto* child_local_frame = DynamicTo<LocalFrame>(child))
-      descendant_frames.push_back(child_local_frame);
-  }
-
-  {
-    FrameNavigationDisabler navigation_disabler(*frame_);
-    bool did_allow_navigation = false;
-
-    // https://html.spec.whatwg.org/C/browsing-the-web.html#prompt-to-unload-a-document
-
-    // First deal with this frame.
-    IgnoreOpensDuringUnloadCountIncrementer ignore_opens_during_unload(
-        frame_->GetDocument());
-    if (!frame_->GetDocument()->DispatchBeforeUnloadEvent(
-            &page->GetChromeClient(), is_reload, force_to_proceed,
-            did_allow_navigation, out_before_unload_dialog_opened_time,
-            out_before_unload_dialog_closed_time)) {
-      // No navigation API listeners exist to inform of the cancellation.
-      return false;
-    }
-
-    // Then deal with descendent frames.
-    for (Member<LocalFrame>& descendant_frame : descendant_frames) {
-      if (!descendant_frame->Tree().IsDescendantOf(frame_.Get())) {
-        continue;
-      }
-
-      // There is some confusion in the spec around what counters should be
-      // incremented for a descendant browsing context:
-      // https://github.com/whatwg/html/issues/3899
-      //
-      // Here for implementation ease, we use the current spec behavior, which
-      // is to increment only the counter of the Document on which this is
-      // called, and that of the Document we are firing the beforeunload event
-      // on -- not any intermediate Documents that may be the parent of the
-      // frame being unloaded but is not root Document.
-      IgnoreOpensDuringUnloadCountIncrementer
-          ignore_opens_during_unload_descendant(
-              descendant_frame->GetDocument());
-      if (!descendant_frame->GetDocument()->DispatchBeforeUnloadEvent(
-              &page->GetChromeClient(), is_reload, force_to_proceed,
-              did_allow_navigation, out_before_unload_dialog_opened_time,
-              out_before_unload_dialog_closed_time)) {
-        // No navigation API listeners exist to inform of the cancellation.
-        return false;
-      }
-    }
-  }
-
-  // Now that none of the unloading frames canceled the BeforeUnload, tell each
-  // of them so they can advance to the appropriate load state.
-  frame_->GetDocument()->BeforeUnloadDoneWillUnload();
-  for (Member<LocalFrame>& descendant_frame : descendant_frames) {
-    if (!descendant_frame->Tree().IsDescendantOf(frame_.Get())) {
-      continue;
-    }
-    descendant_frame->GetDocument()->BeforeUnloadDoneWillUnload();
-  }
-
-  if (!is_reload) {
-    // Records only when a non-reload navigation occurs.
-    base::UmaHistogramMediumTimes(
-        "Navigation.OnBeforeUnloadTotalTime",
-        base::TimeTicks::Now() - before_unload_events_start);
-  }
-
   return true;
 }
 
@@ -1668,49 +1532,13 @@ void FrameLoader::CancelClientNavigation(CancelNavigationReason reason) {
   // No navigation API listeners exist to inform of the cancellation.
 
   ClearClientNavigation();
-  Client()->AbortClientNavigation(reason ==
-                                  CancelNavigationReason::kNewNavigation);
-}
-
-void FrameLoader::DispatchDocumentElementAvailable() {
-  ScriptForbiddenScope forbid_scripts;
-
-  Client()->DocumentElementAvailable();
-}
-
-void FrameLoader::RunScriptsAtDocumentElementAvailable() {
-  Client()->RunScriptsAtDocumentElementAvailable();
-  // The frame might be detached at this point.
 }
 
 void FrameLoader::DispatchDidClearDocumentOfWindowObject() {
   if (state_ == State::kUninitialized)
     return;
 
-  LocalDOMWindow* window = frame_->DomWindow();
   probe::DidClearDocumentOfWindowObject(frame_.Get());
-  if (!window->CanExecuteScripts(kNotAboutToExecuteScript))
-    return;
-
-  if (dispatching_did_clear_window_object_in_main_world_)
-    return;
-  base::AutoReset<bool> in_did_clear_window_object(
-      &dispatching_did_clear_window_object_in_main_world_, true);
-  // We just cleared the document, not the entire window object, but for the
-  // embedder that's close enough.
-  Client()->DispatchDidClearWindowObjectInMainWorld(window);
-}
-
-void FrameLoader::DispatchDidClearWindowObjectInMainWorld() {
-  LocalDOMWindow* window = frame_->DomWindow();
-  if (!window->CanExecuteScripts(kNotAboutToExecuteScript))
-    return;
-
-  if (dispatching_did_clear_window_object_in_main_world_)
-    return;
-  base::AutoReset<bool> in_did_clear_window_object(
-      &dispatching_did_clear_window_object_in_main_world_, true);
-  Client()->DispatchDidClearWindowObjectInMainWorld(window);
 }
 
 network::mojom::blink::WebSandboxFlags

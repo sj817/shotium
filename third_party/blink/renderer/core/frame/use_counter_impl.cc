@@ -42,8 +42,8 @@
 #include "third_party/blink/renderer/core/frame/local_frame.h"
 #include "third_party/blink/renderer/core/frame/local_frame_client.h"
 #include "third_party/blink/renderer/core/frame/settings.h"
-#include "third_party/blink/renderer/core/frame/webdx_feature_tracing.h"
 #include "third_party/blink/renderer/core/inspector/console_message.h"
+#include "third_party/blink/renderer/core/loader/document_loader.h"
 #include "third_party/blink/renderer/core/xml/xslt_processor.h"
 #include "third_party/blink/renderer/platform/instrumentation/tracing/trace_event.h"
 #include "third_party/blink/renderer/platform/weborigin/scheme_registry.h"
@@ -179,8 +179,6 @@ void UseCounterImpl::DidCommitLoad(const LocalFrame* frame) {
   if (context_ == kExtensionContext || context_ == kFileContext) {
     CountFeature(WebFeature::kPageVisits);
   }
-
-  ReportTotalTakenTime(frame, /*did_commit_load=*/true);
 }
 
 bool UseCounterImpl::IsCounted(CSSPropertyID unresolved_property,
@@ -236,8 +234,6 @@ void UseCounterImpl::Count(const UseCounterFeature& feature,
     if (ReportMeasurement(feature, source_frame))
       TraceMeasurement(feature);
   }
-
-  MaybeEmitWebDXFeatureTraceEvent(feature, source_frame);
 }
 
 void UseCounterImpl::Count(CSSPropertyID property,
@@ -324,21 +320,12 @@ bool UseCounterImpl::ReportMeasurement(const UseCounterFeature& feature,
   if (!frame || !frame->Client())
     return false;
 
-  base::ElapsedTimer timer;
-
-  auto* client = frame->Client();
-
   if (feature.type() == mojom::blink::UseCounterFeatureType::kWebFeature)
     NotifyFeatureCounted(static_cast<WebFeature>(feature.value()));
 
-  // Report to browser about observed event only when URL is HTTP/HTTPS or
-  // isolated-app://, as other URL schemes are filtered out in
-  // |MetricsWebContentsObserver::DoesTimingUpdateHaveError| anyway.
+  // In kDefaultContext, upstream reported to the browser process via
+  // DidObserveNewFeatureUsage, which is a no-op in Shotium headless engine.
   if (context_ == kDefaultContext) {
-    client->DidObserveNewFeatureUsage(feature);
-    if (base::TimeTicks::IsHighResolution()) {
-      total_taken_time_for_reporting_ += timer.Elapsed();
-    }
     return true;
   }
 
@@ -349,30 +336,6 @@ bool UseCounterImpl::ReportMeasurement(const UseCounterFeature& feature,
   }
 
   return false;
-}
-
-void UseCounterImpl::ReportTotalTakenTime(const LocalFrame* frame,
-                                          bool did_commit_load) {
-  if (!frame->IsOutermostMainFrame()) {
-    return;
-  }
-  const auto* document = frame->GetDocument();
-  if (document->IsInitialEmptyDocument() ||
-      !document->Url().ProtocolIsInHttpFamily()) {
-    return;
-  }
-
-  String suffix;
-  if (did_commit_load) {
-    suffix = ".DidCommitLoad";
-  } else if (document->HasFinishedParsing()) {
-    suffix = ".FinishedParsing";
-  }
-
-  base::UmaHistogramMicrosecondsTimes(
-      base::StrCat(
-          {"Blink.UseCounter.TotalTakenTimeForReporting2", suffix.Ascii()}),
-      total_taken_time_for_reporting_);
 }
 
 // Note that HTTPArchive tooling looks specifically for this event - see

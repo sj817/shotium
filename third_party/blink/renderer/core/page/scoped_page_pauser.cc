@@ -65,7 +65,6 @@ void ScopedPagePauser::SetPaused(Page* primary_page, bool paused) {
   HeapVector<Member<Page>> pages(Page::OrdinaryPages());
 
   for (const auto& page : pages) {
-    page->SetShowPausedHudOverlay(primary_page && page != primary_page);
     page->SetPaused(paused);
   }
 }
