@@ -609,18 +609,6 @@ TypingCommand* TypingCommand::LastTypingCommandIfStillOpenForTyping(
   return static_cast<TypingCommand*>(last_edit_command);
 }
 
-void TypingCommand::CloseTyping(LocalFrame* frame) {
-  if (TypingCommand* last_typing_command =
-          LastTypingCommandIfStillOpenForTyping(frame))
-    last_typing_command->CloseTyping();
-}
-
-void TypingCommand::CloseTypingIfNeeded(LocalFrame* frame) {
-  if (TypingCommand* last_typing_command =
-          LastTypingCommandIfStillOpenForTyping(frame))
-    last_typing_command->CloseTyping();
-}
-
 void TypingCommand::DoApply(EditingState* editing_state) {
   if (EndingSelection().IsNone() ||
       !EndingSelection().IsValidFor(GetDocument()))

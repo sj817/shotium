@@ -28,7 +28,6 @@
 
 #include <memory>
 
-#include "mojo/public/mojom/base/text_direction.mojom-blink-forward.h"
 #include "third_party/blink/public/mojom/webpreferences/web_preferences.mojom-blink.h"
 #include "third_party/blink/renderer/core/core_export.h"
 #include "third_party/blink/renderer/core/editing/commands/edit_command.h"
@@ -125,7 +124,6 @@ class CORE_EXPORT Editor final : public GarbageCollected<Editor> {
 
   UndoStack& GetUndoStack() const { return *undo_stack_; }
 
-  void SetBaseWritingDirection(mojo_base::mojom::blink::TextDirection);
 
   // smartInsertDeleteEnabled and selectTrailingWhitespaceEnabled are
   // mutually exclusive, meaning that enabling one will disable the other.

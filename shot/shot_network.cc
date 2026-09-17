@@ -180,8 +180,10 @@ base::expected<void, std::string> ShotNetwork::BuildContext() {
   // the ones a browser uses: an in-memory CookieMonster (a redirect chain that
   // sets a cookie and expects it back is ordinary, even with no script to read
   // it), CertVerifier::CreateDefault over the platform trust store,
-  // TransportSecurityState with the preloaded HSTS list, and the system DNS
-  // resolver.
+  // TransportSecurityState (without the preloaded HSTS list -- see
+  // include_transport_security_state_preload_list in build/args/shot.gn --
+  // so only Strict-Transport-Security headers seen in this process upgrade
+  // anything), and the system DNS resolver.
   //
   // Built before the change notifier, deliberately: see the class comment.
   context_ = builder.Build();

@@ -271,9 +271,9 @@ runs:
       shell: pwsh
       working-directory: src
       # args.gn asks for icu_data_dir_override = "shot", which is not one of
-      # the nine sets third_party/icu ships: it is `cast` with the six CJK
-      # converter tables removed, since Blink decodes those encodings itself.
-      # Generate this data from the directly tracked ICU cast data on each run.
+      # the nine sets third_party/icu ships: it is `cast` minus the resource
+      # trees scripts/build/icu-repack.ts documents. Generate this data from
+      # the directly tracked ICU cast data on each run.
       #
       # Failing here rather than falling back to `cast` is deliberate. A
       # missing input would stop gn gen anyway; what must not happen is the

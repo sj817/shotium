@@ -4,5 +4,8 @@
 
 import("//build/config/features.gni")
 
-# Skia needs XMP support for gainmap HDR image decoding in blink.
-skia_support_xmp = use_blink
+declare_args() {
+  # Skia needs XMP support for gainmap HDR image decoding in blink. An
+  # embedder that never draws a gainmap (build/args/shot.gn) turns it off.
+  skia_support_xmp = use_blink
+}

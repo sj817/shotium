@@ -206,8 +206,6 @@ blink_core_sources_html = [
   "forms/text_input_type.h",
   "forms/time_input_type.cc",
   "forms/time_input_type.h",
-  "forms/type_ahead.cc",
-  "forms/type_ahead.h",
   "forms/url_input_type.cc",
   "forms/url_input_type.h",
   "forms/validity_state.cc",

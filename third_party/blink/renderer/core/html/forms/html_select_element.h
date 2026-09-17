@@ -34,7 +34,6 @@
 #include "third_party/blink/renderer/core/html/forms/html_form_control_element_with_state.h"
 #include "third_party/blink/renderer/core/html/forms/html_selected_content_element.h"
 #include "third_party/blink/renderer/core/html/forms/option_list.h"
-#include "third_party/blink/renderer/core/html/forms/type_ahead.h"
 #include "third_party/blink/renderer/core/html/html_div_element.h"
 #include "third_party/blink/renderer/platform/wtf/vector.h"
 #include "third_party/blink/renderer/platform/bindings/v8_binding.h"
@@ -60,8 +59,7 @@ enum class SelectPopupHideBehavior {
 };
 
 class CORE_EXPORT HTMLSelectElement final
-    : public HTMLFormControlElementWithState,
-      private TypeAheadDataSource {
+    : public HTMLFormControlElementWithState {
   DEFINE_WRAPPERTYPEINFO();
 
  public:
@@ -273,8 +271,6 @@ class CORE_EXPORT HTMLSelectElement final
   void HidePopup(SelectPopupHideBehavior);
   PopupMenu* PopupForTesting() const;
 
-  void ResetTypeAheadSessionForTesting();
-
   bool HasNonInBodyInsertionMode() const override { return true; }
 
   void Trace(Visitor*) const override;
@@ -480,7 +476,6 @@ class CORE_EXPORT HTMLSelectElement final
     kResetReasonOthers
   };
   void ResetToDefaultSelection(ResetReason = kResetReasonOthers);
-  void TypeAheadFind(const KeyboardEvent&);
 
   bool IsOptionalFormControl() const override {
     return !IsRequiredFormControl();
@@ -522,11 +517,6 @@ class CORE_EXPORT HTMLSelectElement final
 
   void FinishParsingChildren() override;
 
-  // TypeAheadDataSource functions.
-  int IndexOfSelectedOption() const override;
-  int OptionCount() const override;
-  String OptionAtIndex(int index) const override;
-
   void UpdateUsesMenuList();
   // Apply changes to rendering as a result of attribute changes (multiple,
   // size).
@@ -565,7 +555,6 @@ class CORE_EXPORT HTMLSelectElement final
   HeapHashMap<Member<Node>, DescendantCounts> children_descendant_counts_map_;
 
   TreeOrderedList<HTMLSelectedContentElement> descendant_selectedcontents_;
-  TypeAhead type_ahead_;
   // list_items_ contains HTMLOptionElement, HTMLOptGroupElement, and
   // HTMLHRElement objects.
   mutable ListItems list_items_;

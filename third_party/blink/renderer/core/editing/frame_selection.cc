@@ -44,7 +44,6 @@
 #include "third_party/blink/renderer/core/dom/node_with_index.h"
 #include "third_party/blink/renderer/core/dom/text.h"
 #include "third_party/blink/renderer/core/editing/caret_display_item_client.h"
-#include "third_party/blink/renderer/core/editing/commands/typing_command.h"
 #include "third_party/blink/renderer/core/editing/editing_behavior.h"
 #include "third_party/blink/renderer/core/editing/editing_utilities.h"
 #include "third_party/blink/renderer/core/editing/editor.h"
@@ -296,11 +295,11 @@ bool FrameSelection::SetSelectionDeprecated(
     entered_bidi_run_ = false;
   }
 
-  // TODO(yosin): We should move to call |TypingCommand::closeTyping()| to
-  // |Editor| class.
-  if (options.ShouldCloseTyping())
-    TypingCommand::CloseTyping(frame_);
-
+  // Upstream closes the open TypingCommand here. No editing command is ever
+  // applied in shotium -- keyboard, text-input, drag-drop and execCommand
+  // entry points are gone -- so Editor::LastEditCommand() is always null and
+  // the call, the last reference into the editing command stack, went with
+  // them.
   if (options.ShouldClearTypingStyle())
     frame_->GetEditor().ClearTypingStyle();
 
@@ -465,12 +464,6 @@ void FrameSelection::NodeChildrenWillBeRemoved(ContainerNode& container) {
   }
 
   selection_editor_->NodeChildrenWillBeRemoved(container);
-
-  if (container.InActiveDocument()) {
-    // TODO(yosin): We should move to call
-    // |TypingCommand::CloseTypingIfNeeded()| to |Editor| class.
-    TypingCommand::CloseTypingIfNeeded(frame_);
-  }
 }
 
 void FrameSelection::NodeWillBeRemoved(Node& node) {
@@ -479,15 +472,6 @@ void FrameSelection::NodeWillBeRemoved(Node& node) {
   }
 
   selection_editor_->NodeWillBeRemoved(node);
-
-  // There can't be a selection inside a fragment, so if a fragment's node is
-  // being removed, the selection in the document that created the fragment
-  // needs no adjustment.
-  if (node.InActiveDocument()) {
-    // TODO(yosin): We should move to call
-    // |TypingCommand::CloseTypingIfNeeded()| to |Editor| class.
-    TypingCommand::CloseTypingIfNeeded(frame_);
-  }
 }
 
 void FrameSelection::DidChangeFocus() {

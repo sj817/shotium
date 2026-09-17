@@ -783,10 +783,23 @@ config("compiler") {
   if (!is_debug && use_thin_lto && is_a_target_toolchain) {
     assert(use_lld, "LTO is only supported with lld")
 
-    cflags += [
-      "-flto=thin",
-      "-fsplit-lto-unit",
-    ]
+    cflags += [ "-flto=thin" ]
+
+    # shot: no -fsplit-lto-unit and no -fwhole-program-vtables (below). The
+    # pair exists for whole-program devirtualisation and CFI. On Windows the
+    # matching linker flag is never passed, so devirtualisation never ran, but
+    # the type-test lowering still concatenates every vtable of a class
+    # hierarchy into one global in the split LTO unit; /OPT:REF then keeps a
+    # sibling class's vtable, and its virtual functions, because a base class
+    # is in use. Measured on shotium.exe 2026-09-17: 90% of vtable bytes sat
+    # in such groups and kept about 2.2 MB of otherwise dead code (FreeType,
+    # ICU formatting and collation, re2, the perfetto tracing service). Linux
+    # and macOS get the same setting so the six engine binaries are built the
+    # same way; they lose devirtualisation, which Chrome measured at about 1%
+    # of Speedometer, not any behaviour.
+    if (!is_shot_build) {
+      cflags += [ "-fsplit-lto-unit" ]
+    }
 
     if (thin_lto_enable_cache) {
       # Limit the size of the ThinLTO cache to the lesser of 10% of
@@ -883,7 +896,15 @@ config("compiler") {
 
     # TODO(crbug.com/40182783): investigate why this isn't effective on
     # arm32.
-    if (!is_android || current_cpu != "arm") {
+    if (is_shot_build) {
+      # Rust still takes part in ThinLTO; it only stops splitting its LTO
+      # unit, matching the C++ side above.
+      if (toolchain_supports_rust_thin_lto) {
+        rustflags += [ "-Clinker-plugin-lto=yes" ]
+      } else {
+        rustflags += [ "-Cembed-bitcode=no" ]
+      }
+    } else if (!is_android || current_cpu != "arm") {
       cflags += [ "-fwhole-program-vtables" ]
 
       if (toolchain_supports_rust_thin_lto) {

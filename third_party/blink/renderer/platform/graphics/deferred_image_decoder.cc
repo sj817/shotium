@@ -172,25 +172,6 @@ sk_sp<PaintImageGenerator> DeferredImageDecoder::CreateGenerator() {
   return generator;
 }
 
-bool DeferredImageDecoder::CreateGainmapGenerator(
-    sk_sp<PaintImageGenerator>& gainmap_generator,
-    SkGainmapInfo& gainmap_info) {
-  if (!gainmap_) {
-    return false;
-  }
-  std::vector<FrameMetadata> frames;
-
-  SkImageInfo gainmap_image_info =
-      SkImageInfo::Make(gainmap_->frame_generator->GetFullSize(),
-                        kN32_SkColorType, kOpaque_SkAlphaType);
-  gainmap_generator = DecodingImageGenerator::Create(
-      gainmap_->frame_generator, gainmap_image_info, gfx::HDRMetadata(),
-      gainmap_->data, frames, complete_frame_content_id_, all_data_received_,
-      gainmap_->can_decode_yuv, gainmap_->image_metadata);
-  gainmap_info = gainmap_->info;
-  return true;
-}
-
 scoped_refptr<SharedBuffer> DeferredImageDecoder::Data() {
   return parkable_image_ ? parkable_image_->Data() : nullptr;
 }
@@ -331,7 +312,6 @@ size_t DeferredImageDecoder::ByteSize() const {
 }
 
 void DeferredImageDecoder::ActivateLazyDecoding() {
-  ActivateLazyGainmapDecoding();
   if (frame_generator_)
     return;
 
@@ -353,59 +333,6 @@ void DeferredImageDecoder::ActivateLazyDecoding() {
   frame_generator_ = ImageFrameGenerator::Create(
       decoded_size, !is_single_frame, metadata_decoder_->GetColorBehavior(),
       cc::AuxImage::kDefault, metadata_decoder_->GetSupportedDecodeSizes());
-}
-
-void DeferredImageDecoder::ActivateLazyGainmapDecoding() {
-  // Early-out if we have excluded the possibility that this image has a
-  // gainmap, or if we have already created the gainmap frame generator.
-  if (!might_have_gainmap_ || gainmap_) {
-    return;
-  }
-
-  // Do not decode gainmaps until all data is received (spatially incrementally
-  // adding HDR to an image looks odd).
-  if (!all_data_received_) {
-    return;
-  }
-
-  // Attempt to extract the gainmap's data.
-  std::unique_ptr<Gainmap> gainmap(new Gainmap);
-  if (!metadata_decoder_->GetGainmapInfoAndData(gainmap->info, gainmap->data)) {
-    might_have_gainmap_ = false;
-    return;
-  }
-  DCHECK(gainmap->data);
-
-  // Extract metadata from the gainmap's data.
-  auto gainmap_metadata_decoder = ImageDecoder::Create(
-      gainmap->data, all_data_received_, ImageDecoder::kAlphaNotPremultiplied,
-      ImageDecoder::kDefaultBitDepth, ColorBehavior::kIgnore,
-      cc::AuxImage::kGainmap, Platform::GetMaxDecodedImageBytes());
-  if (!gainmap_metadata_decoder) {
-    DLOG(ERROR) << "Failed to create gainmap image decoder.";
-    might_have_gainmap_ = false;
-    return;
-  }
-
-  // Animated gainmap support does not exist.
-  if (gainmap_metadata_decoder->FrameCount() != 1) {
-    DLOG(ERROR) << "Animated gainmap images are not supported.";
-    might_have_gainmap_ = false;
-    return;
-  }
-  const bool kIsMultiFrame = false;
-
-  // Create the result frame generator and metadata.
-  gainmap->frame_generator = ImageFrameGenerator::Create(
-      gfx::SizeToSkISize(gainmap_metadata_decoder->DecodedSize()),
-      kIsMultiFrame, ColorBehavior::kIgnore, cc::AuxImage::kGainmap,
-      gainmap_metadata_decoder->GetSupportedDecodeSizes());
-
-  // Populate metadata and save to the `gainmap_` member.
-  gainmap->can_decode_yuv = gainmap_metadata_decoder->CanDecodeToYUV();
-  gainmap->image_metadata =
-      gainmap_metadata_decoder->MakeMetadataForDecodeAcceleration();
-  gainmap_ = std::move(gainmap);
 }
 
 void DeferredImageDecoder::PrepareLazyDecodedFrames() {

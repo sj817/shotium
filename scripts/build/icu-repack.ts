@@ -2,10 +2,10 @@
 //
 // third_party/icu ships nine prebuilt data sets and shot uses the smallest one
 // that still carries what a renderer needs (`cast`). None of the nine is the
-// set shot actually wants: `cast` keeps 1.9 MB of locale display names,
-// timezone bundles and CJK converter tables that nothing in this build ever
-// opens, and the sets that drop those (`flutter`, `flutter_desktop`) also drop
-// the single-byte legacy converters, which are 78 KB and do get used.
+// set shot actually wants: `cast` keeps 1.95 MB of locale, region, currency
+// and timezone display names and collation tables that nothing in this build
+// ever opens, and the sets that drop those (`flutter`, `flutter_desktop`) also
+// drop the legacy converters, which do get used.
 //
 // Rebuilding the data properly means running ICU's own data build, which
 // wants a POSIX toolchain and a source build of genrb. Removing items from a
@@ -121,24 +121,54 @@ export class Package {
   }
 }
 
-// The six ICU converter tables for the encodings Blink decodes itself.
+// Every converter table stays. The 27 single-byte ones (ISO-8859-2..16,
+// windows-1250..1258, KOI8, IBM866, macintosh; 78 KB together) are what
+// TextCodecIcu decodes with. The six CJK ones (big5-html, euc-jp-html,
+// euc-kr-html, gb18030, shift_jis-html, windows-936-2000; 853 KB) look unused
+// -- text_codec_icu.cc's ShouldSkipEncoding() yields every name that
+// TextCodecCjk::IsSupported() claims -- but TextCodecCjk is built on them:
+// wtf/text/encoding_tables.cc fills its index tables at first use with
+// ucnv_open("EUC-JP"), ucnv_open("windows-949"), ucnv_open("gb18030") and
+// ucnv_open("big5-html"). In a release build a missing converter there is not
+// a U+FFFD: the DCHECK on ucnv_open is compiled out, ucnv_toUnicode on a null
+// converter writes nothing, and the loop copies an uninitialised UChar into a
+// fixed-size array past its end. Dropping them was survivable only while
+// ForceSynchronousDocumentInstall hardcoded UTF-8 and no legacy charset ever
+// reached a decoder; since the Content-Type charset, the BOM and <meta
+// charset> are honoured (scripts/verify/charset.ts proves it), the tables are
+// load-bearing. The smaller alternative -- compiling the WHATWG index tables
+// into Blink, about 210 KB -- needs a generator the tree no longer carries
+// the .ucm sources for.
+
+// Five resource trees, 1.95 MB together, that no code path in shotium opens.
+// Each is reached through exactly one ICU service, and the final-link section
+// graph of shotium.exe (out/size-analysis, 2026-09-18) shows that service has
+// no live caller; the same holds for Linux and macOS, whose Blink uses
+// LocaleICU (udat/unum against the `<locale>.res` bundles kept here).
 //
-// TextCodecIcu enumerates ICU's converters at startup and registers what it
-// finds, but text_codec_icu.cc's ShouldSkipEncoding() drops every name that
-// TextCodecCjk::IsSupported() claims first, and text_codec_cjk.cc's
-// kSupportedCanonicalNames is exactly EUC-JP, Shift_JIS, EUC-KR, ISO-2022-JP,
-// GBK, gb18030, Big5 and Big5-HKSCS. So these tables are loaded by nothing:
-// Blink has its own decoder for each of them.
+//   zone/    time zone display names: TimeZoneNames, used by SimpleDateFormat
+//            for the z/v/V pattern fields only. Blink's date/time form
+//            controls format with short and medium patterns, which have no
+//            zone field, and blink::ConvertToLocalTime, the last caller of
+//            TimeZone::createDefault, now asks base::Time for the offset.
+//            Zone rules (zoneinfo64.res, metaZones, timezoneTypes) stay in
+//            the package.
+//   lang/    language, script and variant display names: uldn_* and
+//            Locale::getDisplayName. No caller outside ICU's own service
+//            registry, whose getDisplayName is never invoked.
+//   region/  country display names, same consumer.
+//   curr/    currency names and symbols: ucurr_* and NumberFormat currency
+//            styles. No caller.
+//   coll/    root collation tables: ucol_open / usearch_open, whose only
+//            reachable user was <select> keyboard type-ahead
+//            (StringImpl::StartsWithIgnoringCaseAndAccents), removed with it.
 //
-// They are 853 KB of the 932 KB of converters in the `cast` data set. The 27
-// single-byte tables that remain -- ISO-8859-2..16, windows-1250..1258, KOI8,
-// IBM866, macintosh -- are 78 KB together and are the ones TextCodecIcu really
-// does serve, which is why swapping to a filter that drops
-// conversion_mappings wholesale (`flutter_desktop`) is the wrong trade.
-const CJK_CONVERTERS = ['big5-html.cnv', 'euc-jp-html.cnv', 'euc-kr-html.cnv', 'gb18030.cnv', 'shift_jis-html.cnv', 'windows-936-2000.cnv'];
+// A dropped item that is looked up after all returns U_MISSING_RESOURCE_ERROR
+// at run time, so this list changes when one of those callers comes back.
+const UNOPENED_TREES = ['zone/', 'lang/', 'region/', 'curr/', 'coll/'];
 
 export const PRESETS: Record<string, {names: string[]; prefixes: string[]}> = {
-  shot: {names: CJK_CONVERTERS, prefixes: []},
+  shot: {names: [], prefixes: UNOPENED_TREES},
 };
 
 export interface RepackResult {

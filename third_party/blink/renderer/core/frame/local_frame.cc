@@ -989,38 +989,6 @@ void LocalFrame::RemoveBackForwardCacheEviction() {
   microtasks_pauser_.reset();
 }
 
-void LocalFrame::SetTextDirection(base::i18n::TextDirection direction) {
-  // The Editor::SetBaseWritingDirection() function checks if we can change
-  // the text direction of the selected node and updates its DOM "dir"
-  // attribute and its CSS "direction" property.
-  // So, we just call the function as Safari does.
-  Editor& editor = GetEditor();
-  if (!editor.CanEdit()) {
-    return;
-  }
-
-  switch (direction) {
-    case base::i18n::TextDirection::UNKNOWN_DIRECTION:
-      editor.SetBaseWritingDirection(
-          mojo_base::mojom::blink::TextDirection::UNKNOWN_DIRECTION);
-      break;
-
-    case base::i18n::TextDirection::LEFT_TO_RIGHT:
-      editor.SetBaseWritingDirection(
-          mojo_base::mojom::blink::TextDirection::LEFT_TO_RIGHT);
-      break;
-
-    case base::i18n::TextDirection::RIGHT_TO_LEFT:
-      editor.SetBaseWritingDirection(
-          mojo_base::mojom::blink::TextDirection::RIGHT_TO_LEFT);
-      break;
-
-    default:
-      NOTIMPLEMENTED();
-      break;
-  }
-}
-
 void LocalFrame::SetIsInert(bool inert) {
   if (is_inert_ == inert) {
     return;
@@ -2262,6 +2230,13 @@ void LocalFrame::ForceSynchronousDocumentInstall(const AtomicString& mime_type,
 void LocalFrame::ForceSynchronousDocumentInstall(const AtomicString& mime_type,
                                                  const SegmentedBuffer& data,
                                                  const KURL& url) {
+  ForceSynchronousDocumentInstall(mime_type, data, url, AtomicString("UTF-8"));
+}
+
+void LocalFrame::ForceSynchronousDocumentInstall(const AtomicString& mime_type,
+                                                 const SegmentedBuffer& data,
+                                                 const KURL& url,
+                                                 const AtomicString& encoding) {
   CHECK(GetDocument()->IsInitialEmptyDocument());
   DCHECK(GetPage());
 
@@ -2276,8 +2251,8 @@ void LocalFrame::ForceSynchronousDocumentInstall(const AtomicString& mime_type,
           .WithTypeFrom(mime_type)
           .WithURL(url));
   DCHECK_EQ(document, GetDocument());
-  DocumentParser* parser = document->OpenForNavigation(
-      kForceSynchronousParsing, mime_type, AtomicString("UTF-8"));
+  DocumentParser* parser =
+      document->OpenForNavigation(kForceSynchronousParsing, mime_type, encoding);
 
   // Some code creates a very large number of tiny chunks that show up in
   // |data|, such as InternalPopupMenu. Calling parser->AppendBytes() with
