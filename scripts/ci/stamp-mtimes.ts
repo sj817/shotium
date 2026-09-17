@@ -6,14 +6,15 @@
 // that produced it, and the entire build reruns -- which makes carrying a
 // build across several CI runs impossible.
 //
-// The fix is to give every source file the time of the revision it came from:
+// Compare input bytes with the state saved alongside the restored objects:
 //
-//   * files in the main repository get the time of the last commit that
-//     touched them, read in a single pass over the log. A commit that changes
-//     ten files then moves ten timestamps, and ninja rebuilds exactly those.
-//   * files in a DEPS-managed repository get that repository's HEAD commit
-//     time. A dependency moves as a unit -- when the pinned revision changes,
-//     every file in it is suspect anyway.
+//   * Git-tracked files and files in DEPS-managed source repositories retain
+//     their timestamp only when their content is unchanged. A branch switch,
+//     rollback or replayed upstream commit must invalidate changed sources
+//     even when their Git dates predate the cached objects. Unknown legacy
+//     sources are invalidated once; no objects or compiler caches are deleted.
+//   * runtime feature definitions and Blink generator helpers keep their
+//     existing content state so this migration preserves that prior fix.
 //   * downloads and hook outputs keep their prior timestamp when SHA-256 is
 //     unchanged. The fingerprint state travels inside the restored build cache.
 //     A DEPS hook-only edit must not invalidate an unchanged clang binary and
@@ -38,10 +39,11 @@ import {execaSync} from 'execa';
 import {globSync} from 'tinyglobby';
 
 import {resolve} from '../lib/repo.ts';
-import {InputMtimes} from '../lib/input-mtimes.ts';
+import {createSourceMtimes, InputMtimes} from '../lib/input-mtimes.ts';
+import {createRuntimeFeatureMtimes, isRuntimeFeatureInput} from '../lib/runtime-feature-mtimes.ts';
 
 function git(repo: string, ...args: string[]): string {
-  return execaSync('git', ['-C', repo, ...args], {maxBuffer: 1 << 30}).stdout;
+  return execaSync('git', ['--no-optional-locks', '-C', repo, ...args], {maxBuffer: 1 << 30}).stdout;
 }
 
 // The dependency list gclient wrote, as paths relative to the workspace. The
@@ -53,18 +55,6 @@ function readGclientEntries(workspace: string): string[] {
   const text = readFileSync(file, 'utf8');
   const start = text.indexOf('entries');
   return [...text.slice(start).matchAll(/^\s*['"]([^'"]+)['"]\s*:/gm)].map((m) => m[1]).sort();
-}
-
-// The last time each tracked path was touched, from one pass over the log.
-function fileTimesFromLog(repo: string): Map<string, number> {
-  const out = git(repo, 'log', '--format=@%ct', '--name-only', '--no-renames');
-  const times = new Map<string, number>();
-  let current: number | null = null;
-  for (const line of out.split(/\r?\n/)) {
-    if (line.startsWith('@')) current = Number(line.slice(1));
-    else if (line && current !== null && !times.has(line)) times.set(line, current);  // first seen == most recent
-  }
-  return times;
 }
 
 // Files under root, not descending into skipDirs, .git or out.
@@ -79,7 +69,7 @@ function main(workspaceArg: string, solutionName: string, outDir: string): numbe
   const solution = path.join(workspace, solutionName);
   const entries = readGclientEntries(workspace);
   // Directories that belong to a dependency, so the walk of the main
-  // repository does not stamp them with the wrong repository's time.
+  // repository does not classify them as untracked downloads.
   const depDirs = new Set(entries.filter((e) => e !== solutionName).map((e) => path.join(workspace, e)));
   const skip = new Set([...depDirs, path.join(solution, outDir)]);
   const counters = {stamped: 0, failed: 0};
@@ -92,15 +82,25 @@ function main(workspaceArg: string, solutionName: string, outDir: string): numbe
     }
   };
 
-  const times = fileTimesFromLog(solution);
+  const tracked = new Set(git(solution, 'ls-files', '-z').split('\0').filter(Boolean));
   const head = Number(git(solution, 'log', '-1', '--format=%ct').trim());
   const depsTime = Number(git(solution, 'log', '-1', '--format=%ct', '--', 'DEPS').trim());
-  const downloaded = new InputMtimes(path.join(solution, outDir, 'Shot', 'ci-input-mtimes.json'), depsTime, head);
-  console.log(`${solutionName}: ${times.size} tracked paths, head ${head}, DEPS ${depsTime}`);
+  const buildDir = path.join(solution, outDir, 'Shot');
+  const sources = createSourceMtimes(buildDir, head);
+  const downloaded = new InputMtimes(path.join(buildDir, 'ci-input-mtimes.json'), depsTime, head);
+  const runtimeFeatures = createRuntimeFeatureMtimes(buildDir, head);
+  console.log(`${solutionName}: ${tracked.size} tracked paths, head ${head}, DEPS ${depsTime}`);
   for (const file of walk(solution, skip)) {
     const rel = path.relative(solution, file).replace(/\\/g, '/');
-    let when = times.get(rel);
-    if (when === undefined) {
+    let when: number;
+    if (isRuntimeFeatureInput(rel)) {
+      // Used by Windows, macOS and Linux before gn gen and shard compilation.
+      // Stamping the inputs makes every dependent generator rerun, including
+      // public features and policy helpers, not just one generated header.
+      when = runtimeFeatures.time(file, rel);
+    } else if (tracked.has(rel)) {
+      when = sources.time(file, path.relative(workspace, file).replace(/\\/g, '/'));
+    } else {
       // Compare downloaded/generated bytes with the same cache as the objects.
       when = downloaded.time(file, path.relative(workspace, file).replace(/\\/g, '/'));
     }
@@ -117,22 +117,20 @@ function main(workspaceArg: string, solutionName: string, outDir: string): numbe
       }
       continue;
     }
-    let when: number;
-    try {
-      when = Number(git(repo, 'log', '-1', '--format=%ct').trim());
-    } catch {
-      continue;
+    for (const file of walk(repo, depDirs)) {
+      stamp(file, sources.time(file, path.relative(workspace, file).replace(/\\/g, '/')));
     }
-    for (const file of walk(repo, depDirs)) stamp(file, when);
   }
   if (counters.failed) throw new Error(`Failed to stamp ${counters.failed} input files`);
+  sources.save();
   downloaded.save();
+  runtimeFeatures.save();
   console.log(`stamped ${counters.stamped} files, ${counters.failed} failed`);
   return 0;
 }
 
 const cli = cac('pnpm ci:stamp-mtimes');
-cli.command('<workspace>', 'give every synced file the modification time of the revision it came from')
+cli.command('<workspace>', 'give synced inputs cache-relative, content-faithful modification times')
     .option('--solution <name>', 'the main checkout inside the workspace', {default: 'src'})
     .option('--out-dir <dir>', 'relative to the solution; left untouched', {default: 'out'})
     .action((workspace: string, options: {solution: string; outDir: string}) => {

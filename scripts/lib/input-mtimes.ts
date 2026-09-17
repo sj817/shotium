@@ -53,3 +53,12 @@ export class InputMtimes {
     writeFileSync(this.stateFile, JSON.stringify({version: 1, files: this.current}));
   }
 }
+
+// Git commit dates are not cache identities: the cache may have been built
+// on another branch or with source bytes older than the checked-out revision.
+// Unknown legacy sources must invalidate once, not inherit an old Git date.
+export function createSourceMtimes(buildDir: string, headTime: number): InputMtimes {
+  const log = path.join(buildDir, '.ninja_log');
+  const firstTime = Math.max(headTime, existsSync(log) ? statSync(log).mtimeMs / 1000 + 1 : headTime);
+  return new InputMtimes(path.join(buildDir, 'ci-source-inputs.json'), firstTime, headTime);
+}

@@ -201,6 +201,7 @@ base::expected<void, std::string> WithDocument(
   // scheme still reports the timings it did spend. It comes down when this
   // function returns, on every path including the failures.
   CaptureContext capture;
+  capture.set_allow_file_access(request.allow_file_access);
 
   int load_flags = 0;
   // The string was checked at parse time, so a failure here would mean the two

@@ -25,22 +25,17 @@
 //
 //   merge --build-dir out/Shot --shard <dir>...
 //         Copies every file of each unpacked shard into the build directory
-//         and writes one merged .ninja_log and .ninja_deps. The mtimes are
-//         what make ninja believe the transplant: an object is dirty when the
-//         file is newer than its deps record ("stored deps info out of date")
-//         or when the log's mtime is older than an input. A copy gets a new
-//         mtime, so a logged output is set back to its record and then read
-//         again exactly (statSync bigint; utimes takes a double and cannot
-//         place a nanosecond), and the value read is what goes into both
-//         logs. A file ninja did not produce keeps the shard's mtime, which
-//         predates the objects that read it.
+//         and writes one merged .ninja_log and .ninja_deps. Fresh compiled
+//         outputs replace old cached copies. Only byte-identical generated
+//         inputs may retain an older physical mtime to avoid dirtying their
+//         consumers. lib/shard-output.ts preserves Ninja's validation time
+//         independently of the physical mtime required by the deps log.
 //
 // Shards must come from the same commit and the same GN args as the final
 // directory: the log stores a hash of each command, and a different command
 // line is a rebuild, which is correct.
 
-import {existsSync, mkdirSync, readFileSync, statSync, utimesSync, writeFileSync} from 'node:fs';
-import {copyFile} from 'node:fs/promises';
+import {existsSync, readFileSync, statSync, writeFileSync} from 'node:fs';
 import path from 'node:path';
 
 import {cac} from 'cac';
@@ -49,9 +44,10 @@ import {glob} from 'tinyglobby';
 
 import {
   type DepsLog, type DepsRecord, type LogEntry, LOG_HEADER,
-  assignShards, formatDeps, formatLog, fromNinjaTime, parseDeps, parseLog, toNinjaTime,
+  assignShards, formatDeps, formatLog, parseDeps, parseLog, toNinjaTime,
 } from '../lib/ninja-state.ts';
 import {resolve as resolveInRepo} from '../lib/repo.ts';
+import {CI_INPUT_STATE, mergeShardOutput} from '../lib/shard-output.ts';
 
 const NINJA_STATE = ['.ninja_log', '.ninja_deps', '.ninja_lock'];
 
@@ -65,6 +61,7 @@ const NINJA_STATE = ['.ninja_log', '.ninja_deps', '.ninja_lock'];
 // travels. Response files are not excluded on purpose: the ones ninja writes
 // are harmless to carry, and the ones GN writes are inputs.
 const GN_TIME_EXCLUDED = [
+  ...CI_INPUT_STATE,
   '.ninja_*', '**/*.ninja', 'build.ninja.d', 'build.ninja.stamp', 'args.gn', '.landmines',
   '**/*.o', '**/*.obj', '**/*.pdb', '**/*.a', '**/*.lib', '**/*.rlib', '**/*.so', '**/*.dylib',
   '**/*.dll', '**/*.exe', '**/*.pak', 'thinlto-cache/**',
@@ -120,14 +117,6 @@ async function list(buildDir: string, sinceSeconds?: number): Promise<number> {
   return 0;
 }
 
-// Set a file's mtime as close to `wanted` (ns since 1970) as utimes allows,
-// then return what the file system actually recorded.
-function setMtime(file: string, wantedNs: bigint): bigint {
-  const seconds = Number(wantedNs / 1000000000n) + Number(wantedNs % 1000000000n) / 1e9;
-  utimesSync(file, seconds, seconds);
-  return mtimeNs(file);
-}
-
 async function merge(buildDir: string, shards: string[]): Promise<number> {
   const target = readState(buildDir);
   let logged = 0;
@@ -135,47 +124,36 @@ async function merge(buildDir: string, shards: string[]): Promise<number> {
   let kept = 0;
   for (const shard of shards) {
     const src = readState(shard);
-    const files = await glob('**/*', {cwd: shard, onlyFiles: true, dot: true, followSymbolicLinks: false, ignore: [...NINJA_STATE, 'sdk/**']});
+    const files = await glob('**/*', {cwd: shard, onlyFiles: true, dot: true, followSymbolicLinks: false, ignore: [...NINJA_STATE, ...CI_INPUT_STATE, 'sdk/**']});
     let fromShard = 0;
     for (const file of files) {
       const rel = file.replace(/\\/g, '/');
       const from = path.join(shard, rel);
       const to = path.join(buildDir, rel);
       const entry = src.entries.get(rel);
-      // Two shards often build the same thing (a buildflag header, the Rust
-      // standard library, a host tool) because both needed it. The copies are
-      // identical -- same graph, same sources -- but not the same age, and
-      // every consumer in a shard is newer than that shard's copy, so the
-      // oldest copy is the one every consumer agrees with. Keep it.
-      //
-      // For a logged output the log says which copy is older. For a gen-time
-      // file the file itself does: the final job's own gn gen ran after every
-      // shard, so its copy is the newest and loses; a cache-restored copy is
-      // the oldest and stays. Nothing here may depend on process memory --
-      // the workflow calls merge once per shard.
       const have = target.entries.get(rel);
-      if (entry && have && have.mtime <= entry.mtime) { kept++; continue; }
-      if (!entry && !have && existsSync(to) && mtimeNs(to) <= mtimeNs(from)) { kept++; continue; }
-      mkdirSync(path.dirname(to), {recursive: true});
-      await copyFile(from, to);
-      if (entry) {
-        const stamp = toNinjaTime(setMtime(to, fromNinjaTime(entry.mtime)));
-        target.entries.set(rel, {...entry, mtime: stamp});
-        const record = src.deps.records.get(rel);
-        if (record) target.deps.records.set(rel, {mtime: stamp, deps: record.deps});
-        logged++;
+      const result = mergeShardOutput(from, to,
+        {entry, deps: src.deps.records.get(rel)},
+        {entry: have, deps: target.deps.records.get(rel)},
+        !entry || rel.startsWith('gen/'));
+      if (result.entry) target.entries.set(rel, result.entry);
+      else target.entries.delete(rel);
+      if (result.deps) target.deps.records.set(rel, result.deps);
+      else target.deps.records.delete(rel);
+      if (result.copied) {
+        fromShard++;
+        if (entry) logged++;
+        else unlogged++;
       } else {
-        setMtime(to, mtimeNs(from));
-        unlogged++;
+        kept++;
       }
-      fromShard++;
     }
     console.log(`${pc.cyan(shard)}: ${fromShard} files, ${src.entries.size} log entries, ${src.deps.records.size} deps records`);
   }
   writeFileSync(path.join(buildDir, '.ninja_log'), formatLog(target.header, target.entries.values()));
   writeFileSync(path.join(buildDir, '.ninja_deps'), formatDeps(target.deps));
   console.log(`merged into ${buildDir}: ${logged} logged outputs and ${unlogged} other files copied, ` +
-    `${kept} older copies kept; now ${target.entries.size} log entries, ${target.deps.records.size} deps records`);
+    `${kept} existing copies kept; now ${target.entries.size} log entries, ${target.deps.records.size} deps records`);
   return 0;
 }
 
