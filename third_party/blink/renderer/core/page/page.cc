@@ -933,14 +933,6 @@ bool Page::IsOrdinary() const {
   return is_ordinary_;
 }
 
-void Page::SetIsMainFrameFencedFrameRoot() {
-  is_fenced_frame_tree_ = true;
-}
-
-bool Page::IsMainFrameFencedFrameRoot() const {
-  return is_fenced_frame_tree_;
-}
-
 void Page::Animate(base::TimeTicks monotonic_frame_begin_time) {
   GetAutoscrollController().Animate();
   Animator().ServiceScriptedAnimations(monotonic_frame_begin_time);

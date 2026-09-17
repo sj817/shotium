@@ -30,7 +30,6 @@
 #include "base/dcheck_is_on.h"
 #include "base/types/pass_key.h"
 #include "net/cookies/site_for_cookies.h"
-#include "third_party/blink/public/common/fenced_frame/redacted_fenced_frame_config.h"
 #include "third_party/blink/public/common/fingerprinting_protection/noise_token.h"
 #include "third_party/blink/public/common/page/color_provider_color_maps.h"
 #include "third_party/blink/public/mojom/devtools/inspector_issue.mojom-blink-forward.h"
@@ -293,18 +292,9 @@ class CORE_EXPORT Page final : public GarbageCollected<Page>,
   // Fully invalidate paint of all local frames in this page.
   void InvalidatePaint();
 
-  // Should be invoked when the main frame of this frame tree is a fenced frame.
-  void SetIsMainFrameFencedFrameRoot();
-  // Returns if the main frame of this frame tree is a fenced frame.
-  bool IsMainFrameFencedFrameRoot() const;
-
-  void SetDeprecatedFencedFrameMode(
-      blink::FencedFrame::DeprecatedFencedFrameMode mode) {
-    fenced_frame_mode_ = mode;
-  }
-  blink::FencedFrame::DeprecatedFencedFrameMode DeprecatedFencedFrameMode() {
-    return fenced_frame_mode_;
-  }
+  // shotium never hosts a fenced frame tree: the browser-side setter that
+  // marked a Page as one is gone, so this is a constant.
+  bool IsMainFrameFencedFrameRoot() const { return false; }
 
   // Returns the token uniquely identifying the browsing context group this page
   // lives in.
@@ -454,15 +444,6 @@ class CORE_EXPORT Page final : public GarbageCollected<Page>,
 
   std::unique_ptr<PageScheduler> page_scheduler_;
 
-
-  // Whether the the Page's main document is a Fenced Frame document. This is
-  // only set for the MPArch implementation and is true when the corresponding
-  // browser side FrameTree has the FrameTree::Type of kFencedFrame.
-  bool is_fenced_frame_tree_ = false;
-
-  // This tracks the mode that the fenced frame is set to.
-  blink::FencedFrame::DeprecatedFencedFrameMode fenced_frame_mode_ =
-      blink::FencedFrame::DeprecatedFencedFrameMode::kDefault;
 
   WebScopedVirtualTimePauser history_navigation_virtual_time_pauser_;
 

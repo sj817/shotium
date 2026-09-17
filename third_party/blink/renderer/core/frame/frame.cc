@@ -34,7 +34,6 @@
 
 #include "base/metrics/histogram_functions.h"
 #include "base/strings/strcat.h"
-#include "third_party/blink/public/common/features.h"
 #include "third_party/blink/public/mojom/frame/frame.mojom-blink.h"
 #include "third_party/blink/public/mojom/frame/frame_owner_properties.mojom-blink.h"
 #include "third_party/blink/renderer/core/buildflags.h"
@@ -343,35 +342,6 @@ void Frame::RenderFallbackContent() {
       HTMLObjectElement::ErrorEventPolicy::kDispatch);
 }
 
-bool Frame::IsInFencedFrameTree() const {
-  DCHECK(!IsDetached());
-  if (!features::IsFencedFramesEnabled())
-    return false;
-
-  return GetPage() && GetPage()->IsMainFrameFencedFrameRoot();
-}
-
-bool Frame::IsFencedFrameRoot() const {
-  DCHECK(!IsDetached());
-  if (!features::IsFencedFramesEnabled())
-    return false;
-
-  return IsInFencedFrameTree() && IsMainFrame();
-}
-
-std::optional<blink::FencedFrame::DeprecatedFencedFrameMode>
-Frame::GetDeprecatedFencedFrameMode() const {
-  DCHECK(!IsDetached());
-
-  if (!features::IsFencedFramesEnabled())
-    return std::nullopt;
-
-  if (!IsInFencedFrameTree())
-    return std::nullopt;
-
-  return GetPage()->DeprecatedFencedFrameMode();
-}
-
 void Frame::SetOwner(FrameOwner* owner) {
   owner_ = owner;
   UpdateInertIfPossible();
@@ -650,19 +620,8 @@ bool Frame::IsFrameTreePathSameOrigin(const Frame* other) const {
 }
 
 bool Frame::AllowFocusWithoutUserActivation() {
-  if (!features::IsFencedFramesEnabled())
-    return true;
-
-  if (IsDetached()) {
-    return true;
-  }
-
-  if (!IsInFencedFrameTree())
-    return true;
-
-  // Inside a fenced frame tree, a frame can only request focus is its focus
-  // controller already has focus.
-  return GetPage()->GetFocusController().IsFocused();
+  // Only a frame inside a fenced frame tree was ever refused here.
+  return true;
 }
 
 // static
