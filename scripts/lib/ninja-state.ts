@@ -8,8 +8,10 @@
 //
 // .ninja_log (v6): a header line, then tab-separated
 //   start_ms  end_ms  mtime  output  command_hash
-// where mtime is ninja's TimeStamp of the output right after the command
-// ran. A later line for the same output supersedes an earlier one.
+// where mtime is the build's validation timestamp, normally the command's
+// start time (restat/generator rules can differ), not the file's physical
+// mtime. Preserve it independently of .ninja_deps, which records physical
+// output mtimes. A later line for the same output supersedes an earlier one.
 //
 // .ninja_deps (version 4, little-endian): "# ninjadeps\n", int32 version,
 // then records each prefixed by a uint32 size. High bit clear: a path,
