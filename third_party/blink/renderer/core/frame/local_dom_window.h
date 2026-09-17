@@ -271,7 +271,6 @@ class CORE_EXPORT LocalDOMWindow final : public DOMWindow,
 
   void AcceptLanguagesChanged();
 
-  bool IsCrossSiteSubframeIncludingScheme() const;
 
   bool CrossOriginIsolatedCapability() const override;
   bool IsIsolatedContext() const override;
@@ -377,11 +376,6 @@ class CORE_EXPORT LocalDOMWindow final : public DOMWindow,
   // from this LocalFrame. This will be updated if the policies of the
   // LocalFrame change (e.g. Referrer policy, CSP).
   InitiatorStateToken initiator_state_token_;
-
-  // Tracks which document policy violation reports have already been sent in
-  // this document, to avoid reporting duplicates. The value stored comes
-  // from |DocumentPolicyViolationReport::MatchId()|.
-  mutable HashSet<unsigned> document_policy_violation_reports_sent_;
 
   // The storage key for this LocalDomWindow.
   BlinkStorageKey storage_key_;

@@ -32,7 +32,6 @@
 
 #include "base/command_line.h"
 #include "base/metrics/histogram_functions.h"
-#include "base/metrics/histogram_macros.h"
 #include "base/task/single_thread_task_runner.h"
 #include "base/trace_event/trace_id_helper.h"
 #include "base/trace_event/typed_macros.h"
@@ -41,7 +40,6 @@
 #include "net/storage_access_api/status.h"
 #include "third_party/blink/public/common/features.h"
 #include "third_party/blink/public/common/switches.h"
-#include "third_party/blink/public/mojom/devtools/inspector_issue.mojom-blink.h"
 #include "third_party/blink/public/mojom/frame/frame.mojom-blink.h"
 #include "third_party/blink/public/mojom/permissions_policy/policy_disposition.mojom-blink.h"
 #include "third_party/blink/public/platform/browser_interface_broker_proxy.h"
@@ -67,7 +65,6 @@
 #include "third_party/blink/renderer/core/execution_context/execution_context_lifecycle_observer.h"
 #include "third_party/blink/renderer/core/execution_context/window_agent.h"
 #include "third_party/blink/renderer/core/frame/csp/content_security_policy.h"
-#include "third_party/blink/renderer/core/frame/document_policy_violation_report_body.h"
 #include "third_party/blink/renderer/core/frame/dom_visual_viewport.h"
 #include "third_party/blink/renderer/core/frame/event_handler_registry.h"
 #include "third_party/blink/renderer/core/frame/frame_console.h"
@@ -75,9 +72,6 @@
 #include "third_party/blink/renderer/core/frame/local_frame_client.h"
 #include "third_party/blink/renderer/core/frame/local_frame_view.h"
 #include "third_party/blink/renderer/core/frame/navigator.h"
-#include "third_party/blink/renderer/core/frame/permissions_policy_violation_report_body.h"
-#include "third_party/blink/renderer/core/frame/report.h"
-#include "third_party/blink/renderer/core/frame/reporting_context.h"
 #include "third_party/blink/renderer/core/frame/settings.h"
 #include "third_party/blink/renderer/core/frame/viewport_data.h"
 #include "third_party/blink/renderer/core/frame/visual_viewport.h"
@@ -229,21 +223,6 @@ TrustedTypePolicyFactory* LocalDOMWindow::GetTrustedTypes() const {
         MakeGarbageCollected<TrustedTypePolicyFactory>(GetExecutionContext());
   }
   return trusted_types_.Get();
-}
-
-bool LocalDOMWindow::IsCrossSiteSubframeIncludingScheme() const {
-  if (!GetFrame()) {
-    return false;
-  }
-  if (GetFrame()->IsInFencedFrameTree()) {
-    return true;
-  }
-  return top()->GetFrame() &&
-         !top()
-              ->GetFrame()
-              ->GetSecurityContext()
-              ->GetSecurityOrigin()
-              ->IsSameSiteWith(GetSecurityContext().GetSecurityOrigin());
 }
 
 mojom::blink::V8CacheOptions LocalDOMWindow::GetV8CacheOptions() const {
@@ -461,44 +440,8 @@ void LocalDOMWindow::ReportPermissionsPolicyViolation(
     mojom::blink::PolicyDisposition disposition,
     const String& reporting_endpoint,
     const String& message) const {
-  if (disposition == mojom::blink::PolicyDisposition::kEnforce) {
-    const_cast<LocalDOMWindow*>(this)->CountPermissionsPolicyUsage(
-        feature, UseCounterImpl::PermissionsPolicyUsageType::kViolation);
-  }
-
-  if (!GetFrame()) {
-    return;
-  }
-
-  // Construct the permissions policy violation report.
-  bool is_isolated_context =
-      GetExecutionContext() && GetExecutionContext()->IsIsolatedContext();
-  const String& feature_name = GetNameForFeature(feature, is_isolated_context);
-  const String& disp_str =
-      (disposition == mojom::blink::PolicyDisposition::kReport ? "report"
-                                                               : "enforce");
-
-  PermissionsPolicyViolationReportBody* body =
-      MakeGarbageCollected<PermissionsPolicyViolationReportBody>(
-          feature_name, message, disp_str);
-
-  Report* report = MakeGarbageCollected<Report>(
-      ReportType::kPermissionsPolicyViolation, Url().GetString(), body);
-
-  // Send the permissions policy violation report to the specified endpoint,
-  // if one exists, as well as any ReportingObservers.
-  if (!reporting_endpoint.empty()) {
-    ReportingContext::From(this)->QueueReport(report, {reporting_endpoint});
-  } else {
-    ReportingContext::From(this)->QueueReport(report);
-  }
-
-  // TODO(iclelland): Report something different in report-only mode
-  if (disposition == mojom::blink::PolicyDisposition::kEnforce) {
-    GetFrame()->Console().AddMessage(MakeGarbageCollected<ConsoleMessage>(
-        mojom::blink::ConsoleMessageSource::kViolation,
-        mojom::blink::ConsoleMessageLevel::kError, body->message()));
-  }
+  // shotium has no ReportingObserver endpoint, no browser-side UMA/UKM sink
+  // and no DevTools; policy violations and feature use are not recorded.
 }
 
 void LocalDOMWindow::ReportPotentialPermissionsPolicyViolation(
@@ -507,103 +450,13 @@ void LocalDOMWindow::ReportPotentialPermissionsPolicyViolation(
     const String& reporting_endpoint,
     const String& message,
     const String& allow_attribute,
-    const String& src_attribute) const {
-  CHECK(GetFrame());
-
-  // Construct the potential permissions policy violation report.
-  bool is_isolated_context =
-      GetExecutionContext() && GetExecutionContext()->IsIsolatedContext();
-  const String& feature_name = GetNameForFeature(feature, is_isolated_context);
-  const String& disp_str =
-      (disposition == mojom::blink::PolicyDisposition::kReport ? "report"
-                                                               : "enforce");
-
-  PermissionsPolicyViolationReportBody* body =
-      MakeGarbageCollected<PermissionsPolicyViolationReportBody>(
-          feature_name, message, disp_str, allow_attribute, src_attribute);
-
-  Report* report = MakeGarbageCollected<Report>(
-      ReportType::kPotentialPermissionsPolicyViolation, Url().GetString(),
-      body);
-
-  // Send the potential permissions policy violation report to the specified
-  // endpoint if one exists, as well as any ReportingObservers.
-  if (!reporting_endpoint.empty()) {
-    ReportingContext::From(this)->QueueReport(report, {reporting_endpoint});
-  } else {
-    ReportingContext::From(this)->QueueReport(report);
-  }
-
-  if (disposition == mojom::blink::PolicyDisposition::kEnforce &&
-      !reporting_endpoint.empty()) {
-    GetFrame()->Console().AddMessage(MakeGarbageCollected<ConsoleMessage>(
-        mojom::blink::ConsoleMessageSource::kViolation,
-        mojom::blink::ConsoleMessageLevel::kError, body->message()));
-  }
-}
+    const String& src_attribute) const {}
 
 void LocalDOMWindow::ReportDocumentPolicyViolation(
     mojom::blink::DocumentPolicyFeature feature,
     mojom::blink::PolicyDisposition disposition,
     const String& message,
-    const String& source_file) const {
-  if (!GetFrame()) {
-    return;
-  }
-
-  // Construct the document policy violation report.
-  String feature_name(
-      GetDocumentPolicyFeatureInfoMap().at(feature).feature_name);
-  bool is_report_only = disposition == mojom::blink::PolicyDisposition::kReport;
-  const String& disp_str = is_report_only ? "report" : "enforce";
-  const DocumentPolicy* relevant_document_policy =
-      is_report_only ? GetSecurityContext().GetReportOnlyDocumentPolicy()
-                     : GetSecurityContext().GetDocumentPolicy();
-
-  DocumentPolicyViolationReportBody* body =
-      MakeGarbageCollected<DocumentPolicyViolationReportBody>(
-          feature_name, message, disp_str, source_file);
-
-  Report* report = MakeGarbageCollected<Report>(
-      ReportType::kDocumentPolicyViolation, Url().GetString(), body);
-
-  // Avoids sending duplicate reports, by comparing the generated MatchId.
-  // The match ids are not guaranteed to be unique.
-  // There are trade offs on storing full objects and storing match ids. Storing
-  // full objects takes more memory. Storing match id has the potential of hash
-  // collision. Since reporting is not a part critical system or have security
-  // concern, dropping a valid report due to hash collision seems a reasonable
-  // price to pay for the memory saving.
-  unsigned report_id = report->MatchId();
-  DCHECK(report_id);
-
-  if (document_policy_violation_reports_sent_.Contains(report_id)) {
-    return;
-  }
-  document_policy_violation_reports_sent_.insert(report_id);
-
-  // Send the document policy violation report to any ReportingObservers.
-  const std::optional<std::string> endpoint =
-      relevant_document_policy->GetFeatureEndpoint(feature);
-
-  if (is_report_only) {
-    UMA_HISTOGRAM_ENUMERATION("Blink.UseCounter.DocumentPolicy.ReportOnly",
-                              feature);
-  } else {
-    UMA_HISTOGRAM_ENUMERATION("Blink.UseCounter.DocumentPolicy.Enforced",
-                              feature);
-  }
-
-  ReportingContext::From(this)->QueueReport(
-      report, endpoint ? Vector<String>{endpoint->c_str()} : Vector<String>{});
-
-  // TODO(iclelland): Report something different in report-only mode
-  if (!is_report_only) {
-    GetFrame()->Console().AddMessage(MakeGarbageCollected<ConsoleMessage>(
-        mojom::blink::ConsoleMessageSource::kViolation,
-        mojom::blink::ConsoleMessageLevel::kError, body->message()));
-  }
-}
+    const String& source_file) const {}
 
 void LocalDOMWindow::AddConsoleMessageImpl(ConsoleMessage* console_message,
                                            bool discard_duplicates) {
@@ -652,42 +505,16 @@ LocalDOMWindow::GetAgentGroupSchedulerCompositorTaskRunner() {
   return frame_scheduler->GetAgentGroupScheduler()->CompositorTaskRunner();
 }
 
-void LocalDOMWindow::CountUse(mojom::WebFeature feature) {
-  if (!GetFrame()) {
-    return;
-  }
-  if (auto* loader = GetFrame()->Loader().GetDocumentLoader()) {
-    loader->CountUse(feature);
-  }
-}
+void LocalDOMWindow::CountUse(mojom::WebFeature feature) {}
 
-void LocalDOMWindow::CountWebDXFeature(mojom::blink::WebDXFeature feature) {
-  if (!GetFrame()) {
-    return;
-  }
-  if (auto* loader = GetFrame()->Loader().GetDocumentLoader()) {
-    loader->CountWebDXFeature(feature);
-  }
-}
+void LocalDOMWindow::CountWebDXFeature(mojom::blink::WebDXFeature feature) {}
 
 void LocalDOMWindow::CountPermissionsPolicyUsage(
     network::mojom::PermissionsPolicyFeature feature,
-    UseCounterImpl::PermissionsPolicyUsageType type) {
-  if (!GetFrame()) {
-    return;
-  }
-  if (auto* loader = GetFrame()->Loader().GetDocumentLoader()) {
-    loader->GetUseCounter().CountPermissionsPolicyUsage(feature, type,
-                                                        *GetFrame());
-  }
-}
+    UseCounterImpl::PermissionsPolicyUsageType type) {}
 
 void LocalDOMWindow::CountUseOnlyInCrossSiteIframe(
-    mojom::blink::WebFeature feature) {
-  if (IsCrossSiteSubframeIncludingScheme()) {
-    CountUse(feature);
-  }
-}
+    mojom::blink::WebFeature feature) {}
 
 bool LocalDOMWindow::HasInsecureContextInAncestors() const {
   for (Frame* parent = GetFrame()->Tree().Parent(); parent;
