@@ -231,10 +231,6 @@ class CORE_EXPORT Page final : public GarbageCollected<Page>,
 
   Deprecation& GetDeprecation() { return deprecation_; }
 
-  void SetWindowFeatures(const WebWindowFeatures& features) {
-    window_features_ = features;
-    always_on_top_ = features.always_on_top;
-  }
   const WebWindowFeatures& GetWindowFeatures() const {
     return window_features_;
   }

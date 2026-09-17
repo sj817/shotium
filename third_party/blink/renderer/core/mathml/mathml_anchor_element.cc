@@ -161,9 +161,7 @@ void MathMLAnchorElement::HandleClick(MouseEvent& event) {
           : mojom::blink::TriggeringEventInfo::kFromUntrustedEvent);
 
   if (Frame* target_frame =
-          frame->Tree()
-              .FindOrCreateFrameForNavigation(frame_request, target)
-              .frame) {
+          frame->Tree().FindOrCreateFrameForNavigation(frame_request, target)) {
     target_frame->Navigate(frame_request, WebFrameLoadType::kStandard);
   }
 }

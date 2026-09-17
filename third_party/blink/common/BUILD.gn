@@ -119,7 +119,6 @@ shot_compatible_source_set("common") {
     "crash_helpers.cc",
     "crash_helpers.h",
     "device_memory/approximated_device_memory.cc",
-    "dom_storage/session_storage_namespace_id.cc",
     "features.cc",
     "fenced_frame/redacted_fenced_frame_config.cc",
     "fetch/fetch_api_request_body_mojom_traits.cc",
@@ -202,7 +201,6 @@ shot_compatible_source_set("common") {
     "view_source/rendering_preferences.cc",
     "web_package/signed_exchange_consts.cc",
     "web_preferences/web_preferences.cc",
-    "widget/constants.cc",
 
   ]
 

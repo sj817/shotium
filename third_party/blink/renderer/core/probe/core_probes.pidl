@@ -160,7 +160,6 @@ interface CoreProbes {
   void PseudoElementDestroyed([Keep] PseudoElement*);
   void DidCreateAnimation(Document*, unsigned);
   void AnimationUpdated(Document*, Animation*);
-  void WindowOpen(ExecutionContext*, const KURL& url, const AtomicString& window_name, const WebWindowFeatures& window_features, bool user_gestrue);
   void ConsoleMessageAdded(ExecutionContext*, ConsoleMessage*);
   void InspectorIssueAdded(CoreProbeSink*, protocol::Audits::InspectorIssue*);
   void DocumentWriteFetchScript([Keep] Document*);

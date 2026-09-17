@@ -7,8 +7,6 @@ blink_core_sources_page = [
   "autoscroll_controller.h",
   "chrome_client.cc",
   "chrome_client.h",
-  "create_window.cc",
-  "create_window.h",
   "drag_data.cc",
   "drag_data.h",
   "event_with_hit_test_results.h",

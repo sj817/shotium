@@ -263,14 +263,8 @@ class CORE_EXPORT LocalDOMWindow final : public DOMWindow,
   bool offscreenBuffering() const;
   bool alwaysOnTop() const;
 
-  int outerHeight() const;
-  int outerWidth() const;
   int innerHeight() const;
   int innerWidth() const;
-  int screenX() const;
-  int screenY() const;
-  int screenLeft() const { return screenX(); }
-  int screenTop() const { return screenY(); }
   double scrollX() const;
   double scrollY() const;
   double pageXOffset() const { return scrollX(); }

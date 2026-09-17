@@ -221,7 +221,6 @@ source_set("headers") {
     "view_source/rendering_preferences.h",
     "web_cache/web_cache_resource_type_stats.h",
     "web_preferences/web_preferences.h",
-    "widget/constants.h",
 
   ]
 

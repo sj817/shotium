@@ -204,9 +204,7 @@ void SVGAElement::DefaultEventHandler(Event& event) {
               : mojom::blink::TriggeringEventInfo::kFromUntrustedEvent);
 
       Frame* target_frame =
-          frame->Tree()
-              .FindOrCreateFrameForNavigation(frame_request, target)
-              .frame;
+          frame->Tree().FindOrCreateFrameForNavigation(frame_request, target);
       if (!target_frame) {
         return;
       }

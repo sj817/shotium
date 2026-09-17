@@ -393,10 +393,8 @@ FormSubmission* FormSubmission::Create(HTMLFormElement* form,
     frame_request.SetExplicitOpener();
   }
 
-  Frame* target_frame =
-      form_local_frame->Tree()
-          .FindOrCreateFrameForNavigation(frame_request, target_or_base_target)
-          .frame;
+  Frame* target_frame = form_local_frame->Tree().FindOrCreateFrameForNavigation(
+      frame_request, target_or_base_target);
 
   // Apply replacement now, before any async steps, as the result may change.
   WebFrameLoadType load_type = WebFrameLoadType::kStandard;

@@ -26,15 +26,11 @@
 #include <memory>
 
 #include "base/time/time.h"
-#include "third_party/blink/public/common/dom_storage/session_storage_namespace_id.h"
+#include "cc/metrics/begin_main_frame_metrics.h"
 #include "third_party/blink/public/mojom/devtools/console_message.mojom-blink-forward.h"
 #include "third_party/blink/renderer/core/core_export.h"
-#include "third_party/blink/renderer/core/loader/frame_loader.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
 #include "third_party/blink/renderer/platform/wtf/forward.h"
-
-// To avoid conflicts with the CreateWindow macro from the Windows SDK...
-#undef CreateWindow
 
 namespace display {
 struct ScreenInfo;
@@ -45,10 +41,6 @@ namespace blink {
 
 class LocalFrame;
 class LocalFrameView;
-class Page;
-
-struct FrameLoadRequest;
-struct WebWindowFeatures;
 
 class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
  public:
@@ -80,26 +72,6 @@ class CORE_EXPORT ChromeClient : public GarbageCollected<ChromeClient> {
                                  cc::BeginMainFrameReason reason,
                                  base::TimeDelta delay,
                                  bool urgent) {}
-
-  // This gives the rect of the top level window that the given LocalFrame is a
-  // part of.
-  virtual gfx::Rect RootWindowRect(LocalFrame&) { return gfx::Rect(); }
-
-  // The LocalFrame pointer provides the ChromeClient with context about which
-  // LocalFrame wants to create the new Page. Also, the newly created window
-  // should not be shown to the user until the ChromeClient of the newly
-  // created Page has its show method called.
-  // The FrameLoadRequest parameter is only for ChromeClient to check if the
-  // request could be fulfilled. The ChromeClient should not load the request.
-  Page* CreateWindow(LocalFrame*,
-                     const FrameLoadRequest&,
-                     const AtomicString& frame_name,
-                     const WebWindowFeatures&,
-                     network::mojom::blink::WebSandboxFlags,
-                     const SessionStorageNamespaceId&,
-                     bool& consumed_user_gesture) {
-    return nullptr;
-  }
 
   virtual void AddMessageToConsole(LocalFrame*,
                                    mojom::ConsoleMessageSource,
