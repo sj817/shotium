@@ -183,8 +183,10 @@ build loop. Read the affected workflow and source action for CI changes.
   `shotium-node-<platform>.7z`, `provenance.json`),
   `ffi-evidence-<platform>-<fp>` (from `check-ffi.yml`, on success only),
   `build-dir-<platform>` (the ninja output directory, tar.zst) with a
-  `build-dir-<platform>-<fp>` marker written only after a finished build.
-  All keep for 90 days. `scripts/ci/engine-artifacts.ts` is the one lookup:
+  `build-dir-<platform>-<fp>` marker written only after a finished build
+  and a `build-index-<platform>` cost table (`scripts/lib/build-index.ts`:
+  source path -> milliseconds of the objects that read it, from the ninja
+  logs) saved beside every directory. All keep for 90 days. `scripts/ci/engine-artifacts.ts` is the one lookup:
   it trusts an artifact only when the run that made it ran from this
   repository's code (or is the current run), pairs an engine only with
   evidence from the same run, and accepts only runs of the workflows that
@@ -202,12 +204,20 @@ build loop. Read the affected workflow and source action for CI changes.
   `github.event.inputs` is the caller's event and would skip every
   conditional step. The build directory is restored from the artifact
   `ci:select-shards` chose -- the one saved at this very fingerprint, which
-  means one runner and nothing to compile, or else the newest -- and saved
-  again after ninja, finished or not, as long as gn generated it; a job
-  cancelled before that saves nothing, `ci:select-shards` ignores blobs
-  under 1 MB, and an artifact that does not unpack to a build directory is
-  a cold start, not a failure. When no build-directory artifact is selected,
-  the job starts cold. There is no Actions-cache fallback for build
+  means one runner and nothing to compile, or else the cheapest: for every
+  usable candidate it fetches that run's commit (trees only) and its build
+  index, diffs the engine inputs with `git diff-tree`, and prices the
+  change; the runner count is that price against the platform's default
+  share of a cold build, so a one-file fix gets one runner and a hot header
+  the full default. A change the index cannot price (GN, DEPS, generator
+  inputs, an incomplete directory, a commit GitHub no longer serves) keeps
+  the default count. The directory is saved again after ninja, finished or
+  not, as long as gn generated it; a job cancelled before that saves
+  nothing, `ci:select-shards` ignores blobs under 1 MB, and an artifact
+  that does not unpack to a build directory is a cold start, not a
+  failure. `ci:engine-artifacts prune` keeps the newest directory of the
+  three most recently active branches plus `main`'s, with their indexes.
+  When no build-directory artifact is selected, the job starts cold. There is no Actions-cache fallback for build
   directories; only the compiler toolchains use the Actions cache.
 - [preview.yml](../../.github/workflows/preview.yml) is the pull-request
   entry point: `engine.yml`, then [contract.yml](../../.github/workflows/contract.yml),

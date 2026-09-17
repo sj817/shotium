@@ -477,6 +477,30 @@ jobs:
           retention-days: 90
           overwrite: true
 
+      - name: index the build directory
+        if: always() && steps.pack.outputs.saved == 'true'
+        shell: bash
+        working-directory: src
+        # What the next run's ci:select-shards prices its change against:
+        # source path -> seconds of the objects that read it, folded out
+        # of the ninja logs (scripts/lib/build-index.ts). Saved with the
+        # directory whether or not the build finished; an incomplete
+        # directory says so and is not priced.
+        run: |
+          complete=false
+          if [ -f out/Shot/shotium.exe ] && [ -f out/Shot/shotium.dll ] && [ -f out/Shot/shotium.node ]; then complete=true; fi
+          pnpm ci:engine-artifacts build-index --platform windows-${{ inputs.arch }} --build-dir out/Shot --complete "$complete" --out "$RUNNER_TEMP/build-index.json"
+
+      - name: save the build index
+        if: always() && steps.pack.outputs.saved == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-index-windows-${{ inputs.arch }}
+          path: ${{ runner.temp }}/build-index.json
+          if-no-files-found: error
+          retention-days: 90
+          overwrite: true
+
       - name: drop the build directories this one replaces
         if: always() && steps.pack.outputs.saved == 'true'
         continue-on-error: true
@@ -485,10 +509,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         # Artifact storage is not metered on a public repository, but a list
-        # that only grows is slow to search. Three per platform: this run's
-        # and two to fall back on. Never fatal: a build that finished is
-        # still a build that finished.
-        run: pnpm ci:engine-artifacts prune --name build-dir-windows-${{ inputs.arch }} --keep 3
+        # that only grows is slow to search. The newest directory of each of
+        # the three most recently active branches, and main's, stay: a pull
+        # request keeps its own warm start without evicting main's, which is
+        # what the next branch forks from. The index follows the same
+        # decision. Never fatal: a build that finished is still a build that
+        # finished.
+        run: pnpm ci:engine-artifacts prune --name build-dir-windows-${{ inputs.arch }} --keep 3 --companion build-index-windows-${{ inputs.arch }}
 
       - name: did the build finish
         shell: pwsh

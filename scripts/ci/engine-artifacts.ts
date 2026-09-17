@@ -22,7 +22,8 @@
 //   pnpm ci:engine-artifacts download --name <n> --dir <d> [--run-id <r>]
 //   pnpm ci:engine-artifacts download-set --fingerprint <id> --engine-dir d1 --node-dir d2 --evidence-dir d3
 //   pnpm ci:engine-artifacts marker|provenance --platform <label> --fingerprint <id> --out <file>
-//   pnpm ci:engine-artifacts prune --name build-dir-linux-amd64 --keep 3
+//   pnpm ci:engine-artifacts build-index --platform <label> --build-dir out/Shot --complete true --out <file>
+//   pnpm ci:engine-artifacts prune --name build-dir-linux-amd64 --keep 3 [--companion build-index-linux-amd64]
 //   pnpm ci:engine-artifacts refresh-plan --fingerprint <id> --output
 
 import {appendFileSync, existsSync, mkdirSync, readdirSync, renameSync, writeFileSync} from 'node:fs';
@@ -33,6 +34,7 @@ import {execa} from 'execa';
 import pRetry from 'p-retry';
 import pc from 'picocolors';
 
+import {buildIndex} from '../lib/build-index.ts';
 import {type EngineOS, type Platform, platformByLabel, selectPlatforms} from '../lib/platforms.ts';
 import {releaseLanguages} from '../lib/release-artifacts.ts';
 import {resolve} from '../lib/repo.ts';
@@ -69,6 +71,8 @@ export const names = (label: string, fingerprint: string) => ({
   evidence: `ffi-evidence-${label}-${fingerprint}`,
   buildDir: `build-dir-${label}`,
   marker: `build-dir-${label}-${fingerprint}`,
+  /** The cost table lib/build-index.ts folds out of the saved directory's ninja logs. */
+  index: `build-index-${label}`,
 });
 
 export function trusted(record: ArtifactRecord, currentRunId?: number): boolean {
@@ -122,24 +126,56 @@ export interface BuildDir {
   runId: number;
   /** The blob was saved from a tree with this very fingerprint: nothing to compile, one runner. */
   exact: boolean;
+  /** The commit the run built; what ci:select-shards diffs the current tree against. */
+  headSha: string;
+  branch: string;
+  createdAt: string;
   blob: ArtifactRecord;
 }
 
-// The build directory is a warm start, not a product: the newest trusted
-// one is right even when it came from another branch, because ninja
-// rebuilds whatever differs. The marker beside it says which fingerprint it
-// was saved at, which is what decides between one shard and several.
-export async function findBuildDir(api: Api, label: string, fingerprint: string | undefined, currentRunId?: number): Promise<BuildDir | null> {
+// The build directories are warm starts, not products: any trusted one is
+// usable even when it came from another branch, because ci:stamp-mtimes
+// invalidates by content and ninja rebuilds whatever differs. Which one is
+// cheapest is ci:select-shards' question; this lists every usable
+// candidate, an exact one (its marker shares the run) first, then newest
+// first.
+export async function findBuildDirs(api: Api, label: string, fingerprint: string | undefined, currentRunId?: number): Promise<BuildDir[]> {
   const {buildDir, marker} = names(label, fingerprint ?? '');
   const blobs = (await listByName(api, buildDir)).filter((r) => trusted(r, currentRunId) && r.size_in_bytes >= MIN_BUILD_DIR_BYTES);
-  if (blobs.length === 0) return null;
+  if (blobs.length === 0) return [];
   const markers = fingerprint ? (await listByName(api, marker)).filter((r) => trusted(r, currentRunId)) : [];
   const exact = blobs.find((b) => markers.some((m) => m.workflow_run!.id === b.workflow_run!.id));
+  const found: BuildDir[] = [];
   for (const blob of exact ? [exact, ...blobs.filter((b) => b !== exact)] : blobs) {
-    if (!(await producedByEngineWorkflow(api, blob.workflow_run!.id))) continue;
-    return {runId: blob.workflow_run!.id, exact: blob === exact, blob};
+    const run = blob.workflow_run!;
+    if (!(await producedByEngineWorkflow(api, run.id))) continue;
+    found.push({runId: run.id, exact: blob === exact, headSha: run.head_sha, branch: run.head_branch, createdAt: blob.created_at, blob});
   }
-  return null;
+  return found;
+}
+
+/** The first usable build directory: the exact one when there is one, else the newest. */
+export async function findBuildDir(api: Api, label: string, fingerprint: string | undefined, currentRunId?: number): Promise<BuildDir | null> {
+  return (await findBuildDirs(api, label, fingerprint, currentRunId))[0] ?? null;
+}
+
+// Which saved directories to keep, by branch: the newest of each of the
+// `branches` most recently active branches, and always the default
+// branch's newest. Several open pull requests then each keep their own
+// warm start instead of evicting one another, and main's stays for the
+// next branch to fork from. Junk (see MIN_BUILD_DIR_BYTES) never survives.
+export function pruneKeeps(records: ArtifactRecord[], branches: number, defaultBranch = 'main'): {keep: ArtifactRecord[]; drop: ArtifactRecord[]} {
+  const usable = [...records].filter((r) => r.size_in_bytes >= MIN_BUILD_DIR_BYTES).sort(newestFirst);
+  const newestPerBranch = new Map<string, ArtifactRecord>();
+  for (const record of usable) {
+    const branch = record.workflow_run!.head_branch;
+    if (!newestPerBranch.has(branch)) newestPerBranch.set(branch, record);
+  }
+  const keep = [...newestPerBranch.values()].sort(newestFirst).slice(0, branches);
+  const main = newestPerBranch.get(defaultBranch);
+  if (main && !keep.includes(main)) keep.push(main);
+  const kept = new Set(keep);
+  return {keep, drop: records.filter((r) => !kept.has(r))};
 }
 
 export interface Status {
@@ -346,24 +382,53 @@ cli.command('provenance', 'write provenance.json for an engine artifact')
     }, null, 2) + '\n');
   });
 
-// Keeps the newest N usable blobs; older usable ones and every junk blob
-// (see MIN_BUILD_DIR_BYTES) go, so that junk never crowds out a warm start.
-cli.command('prune', 'delete all but the newest N usable trusted artifacts with this name')
+// See pruneKeeps for the policy. The companion is the build-index artifact
+// of the same runs: it is only meaningful next to its directory, so it
+// follows the same decision.
+cli.command('prune', 'keep the newest usable build directory of the N most recent branches (and main); delete the rest')
   .option('--name <name>', 'artifact name')
-  .option('--keep <n>', 'how many to keep', {default: '3'})
-  .action(async (options: {name?: string; keep: string}) => {
+  .option('--keep <n>', 'how many branches to keep a directory for', {default: '3'})
+  .option('--companion <name>', 'a small artifact to keep for exactly the same runs')
+  .action(async (options: {name?: string; keep: string; companion?: string}) => {
     const {api} = environment();
     const name = options.name ?? fail('--name is required');
     const keep = Number(options.keep);
     if (!Number.isInteger(keep) || keep < 1) fail('--keep must be a positive integer');
     const records = (await listByName(api, name)).filter((r) => trusted(r));
-    const usable = records.filter((r) => r.size_in_bytes >= MIN_BUILD_DIR_BYTES);
-    const junk = records.filter((r) => r.size_in_bytes < MIN_BUILD_DIR_BYTES);
-    for (const record of [...usable.slice(keep), ...junk]) {
+    const decision = pruneKeeps(records, keep);
+    for (const record of decision.drop) {
       await api(`actions/artifacts/${record.id}`, {method: 'DELETE'});
-      console.log(`deleted ${name} from run ${record.workflow_run!.id} (${record.created_at}, ${record.size_in_bytes} bytes)`);
+      console.log(`deleted ${name} from run ${record.workflow_run!.id} (${record.workflow_run!.head_branch}, ${record.created_at}, ${record.size_in_bytes} bytes)`);
     }
-    console.log(`${name}: kept ${Math.min(keep, usable.length)} of ${usable.length} usable; removed ${junk.length} junk`);
+    for (const record of decision.keep) console.log(`kept ${name} from run ${record.workflow_run!.id} (${record.workflow_run!.head_branch}, ${record.created_at})`);
+    if (options.companion) {
+      const runs = new Set(decision.keep.map((r) => r.workflow_run!.id));
+      for (const record of (await listByName(api, options.companion)).filter((r) => trusted(r) && !runs.has(r.workflow_run!.id))) {
+        await api(`actions/artifacts/${record.id}`, {method: 'DELETE'});
+        console.log(`deleted ${options.companion} from run ${record.workflow_run!.id}`);
+      }
+    }
+    console.log(`${name}: kept ${decision.keep.length}, removed ${decision.drop.length}`);
+  });
+
+// The table ci:select-shards prices the next change with; saved beside the
+// build directory whether or not the build finished, because an incomplete
+// directory is still a warm start -- it just says so, and is not priced.
+cli.command('build-index', 'fold the build directory ninja logs into a source-path cost table')
+  .option('--platform <label>', 'platform label')
+  .option('--build-dir <dir>', 'the build directory, relative to the repository root', {default: 'out/Shot'})
+  .option('--complete <bool>', 'whether this run produced all three products', {default: 'false'})
+  .option('--out <file>', 'where to write the JSON')
+  .action((options: {platform?: string; buildDir: string; complete: string; out?: string}) => {
+    const platform = platformByLabel(options.platform ?? fail('--platform is required'));
+    const out = resolve(options.out ?? fail('--out is required'));
+    const index = buildIndex(resolve(options.buildDir), {
+      platform: platform.label, headSha: process.env.GITHUB_SHA ?? '', runId: Number(process.env.GITHUB_RUN_ID ?? 0),
+      complete: options.complete === 'true',
+    });
+    mkdirSync(path.dirname(out), {recursive: true});
+    writeFileSync(out, JSON.stringify(index));
+    console.log(`${Object.keys(index.paths).length} source paths, ${(index.total_ms / 60_000).toFixed(1)} minutes of logged edges, complete=${index.complete}`);
   });
 
 // What refresh.yml re-uploads so nothing expires: engine and evidence at
@@ -386,7 +451,8 @@ cli.command('refresh-plan', 'list the artifacts a refresh run should download an
       plan.push({name: dir.blob.name, run_id: dir.runId});
       const {artifacts} = await api(`actions/runs/${dir.runId}/artifacts?per_page=100`) as {artifacts: ArtifactRecord[]};
       const prefix = `${names(platform.label, '').marker}`;
-      for (const marker of artifacts.filter((a) => !a.expired && a.name.startsWith(prefix))) plan.push({name: marker.name, run_id: dir.runId});
+      const index = names(platform.label, '').index;
+      for (const extra of artifacts.filter((a) => !a.expired && (a.name.startsWith(prefix) || a.name === index))) plan.push({name: extra.name, run_id: dir.runId});
     }
     for (const item of plan) console.log(`  ${item.name} from run ${item.run_id}`);
     if (options.output) output(`plan=${JSON.stringify(plan)}\n`);
@@ -396,7 +462,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === import.meta.filename) {
   cli.help();
   cli.parse(process.argv, {run: false});
   if (!cli.matchedCommand && !cli.options.help) {
-    console.error('usage: pnpm ci:engine-artifacts <status|find|download|download-set|marker|provenance|prune|refresh-plan>');
+    console.error('usage: pnpm ci:engine-artifacts <status|find|download|download-set|marker|provenance|build-index|prune|refresh-plan>');
     process.exitCode = 2;
   } else {
     // marker and provenance are synchronous and return nothing to chain on;
