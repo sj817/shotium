@@ -341,7 +341,6 @@ class CORE_EXPORT Page final : public GarbageCollected<Page>,
   // browser UI to build a "copy link to highlight" affordance for -- and its
   // tests went with it.
   friend class ScopedPagePauser;
-  class CloseTaskHandler;
 
   // SettingsDelegate overrides.
   void SettingsChanged(SettingsDelegate::ChangeType) override;
@@ -472,8 +471,6 @@ class CORE_EXPORT Page final : public GarbageCollected<Page>,
 
   // The information determining the browsing context group this page lives in.
   base::UnguessableToken browsing_context_group_token_;
-
-  Member<CloseTaskHandler> close_task_handler_;
 };
 
 extern template class CORE_EXTERN_TEMPLATE_EXPORT Supplement<Page>;
