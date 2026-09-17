@@ -16,8 +16,6 @@
 #include "base/apple/bridging.h"
 #include "base/apple/foundation_util.h"
 #include "base/apple/scoped_cftyperef.h"
-#include "base/check_deref.h"
-#include "base/command_line.h"
 #include "base/functional/bind.h"
 #include "base/i18n/rtl.h"
 #include "base/logging.h"
@@ -31,13 +29,11 @@
 #include "components/viz/common/resources/shared_image_format.h"
 #include "ui/display/display.h"
 #include "ui/display/display_change_notifier.h"
-#include "ui/display/mac/screen_mac_headless.h"
 #include "ui/display/util/display_util.h"
 #include "ui/gfx/geometry/point.h"
 #include "skia/ext/color_profile.h"
 #include "ui/gfx/mac/coordinate_conversion.h"
 #include "ui/gfx/native_ui_types.h"
-#include "ui/gfx/switches.h"
 
 extern "C" {
 Boolean CGDisplayUsesForceToGray(void);
@@ -606,13 +602,10 @@ gfx::NativeWindow Screen::GetWindowForView(gfx::NativeView native_view) {
 }
 
 Screen* CreateNativeScreen() {
-  const base::CommandLine& command_line =
-      CHECK_DEREF(base::CommandLine::ForCurrentProcess());
-
-  if (command_line.HasSwitch(switches::kHeadless)) {
-    return new ScreenMacHeadless;
-  }
-
+  // Upstream returns a ScreenMacHeadless here when --headless is passed, a
+  // virtual display list parsed from --screen-info by //components/headless.
+  // shotium never passes that switch and describes its screen through
+  // ShotRenderer's ScreenInfos, so the headless screen path is not built.
   return new ScreenMac;
 }
 
