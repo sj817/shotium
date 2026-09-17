@@ -33,17 +33,17 @@ hand before tagging. `scripts/ci/engine-artifacts.ts` is the lookup;
 ## 1. Bump the version
 
 The only source of truth is `apps/typescript/package.json`, and it holds the version
-seven times: `version`, plus the six self-referencing pins under
-`optionalDependencies` (`@pixel.js/shotium-<os>-<arch>`). npm platform tarball
+nine times: `version`, plus the eight self-referencing pins under
+`optionalDependencies` (`@pixel.js/shotium-<os>-<arch>[-musl]`). npm platform tarball
 names, the release title, the legacy shim and example manifests derive their
 version from it. Public `.7z` filenames and top-level directories are stable
 and do not contain the version.
 
 ```bash
-git --no-optional-locks grep -n '"<previous version>"' -- apps/typescript/package.json   # exactly 7 lines
+git --no-optional-locks grep -n '"<previous version>"' -- apps/typescript/package.json   # exactly 9 lines
 ```
 
-Edit all seven to `$version`. `checks.yml` fails if the pins and `version`
+Edit all nine to `$version`. `checks.yml` fails if the pins and `version`
 disagree.
 
 Also note, for a follow-up commit *after* the release:
@@ -209,9 +209,17 @@ benchmark table in both READMEs still says what that archive says.
 
 ## Redoing a release
 
-If anything must change after the tag, delete the tag and the release,
-fix, and start again from step 1 with the same version if nothing was
-published, or the next patch version if any of the eight packages reached
-the registry (npm does not allow republishing a version, and the shim must
-carry the same number as what it depends on). The engines are not rebuilt
-unless the fix touched an engine input; the fingerprint decides.
+If the publish job failed part-way (a transient `ENEEDAUTH` from the
+trusted-publishing token exchange took v0.10.0 down after seven of the
+ten packages were out), keep the version: the publish step skips every
+package version the registry already serves, so moving the tag to the
+fixing commit (or rerunning the same tag) finishes with the missing
+packages and creates the release. npm provenance then attests different
+commits for the two halves; say so in the notes.
+
+If the *bytes* of a published package must change, that version is spent:
+npm does not allow republishing a version, and the shim must carry the
+same number as what it depends on. Delete the tag and the release, fix,
+and start again from step 1 with the next patch version. The engines are
+not rebuilt unless the fix touched an engine input; the fingerprint
+decides.
