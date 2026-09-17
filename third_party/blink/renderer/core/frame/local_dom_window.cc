@@ -186,7 +186,6 @@ LocalDOMWindow::LocalDOMWindow(LocalFrame& frame, WindowAgent* agent)
       // ExecutionContext no longer holds one.
       ExecutionContext(agent),
       visualViewport_(MakeGarbageCollected<DOMVisualViewport>(this)),
-      should_print_when_finished_loading_(false),
       token_(frame.GetLocalFrameToken()),
       network_state_observer_(MakeGarbageCollected<NetworkStateObserver>(this)),
       closewatcher_stack_(
@@ -1279,24 +1278,6 @@ Element* LocalDOMWindow::frameElement() const {
   return DynamicTo<HTMLFrameOwnerElement>(GetFrame()->Owner());
 }
 
-void LocalDOMWindow::print() {
-  // Don't try to print if there's no frame attached anymore.
-  if (!GetFrame()) {
-    return;
-  }
-
-  if (GetFrame()->IsLoading()) {
-    should_print_when_finished_loading_ = true;
-    return;
-  }
-
-  CountUseOnlyInSameOriginIframe(WebFeature::kSameOriginIframeWindowPrint);
-  CountUseOnlyInCrossOriginIframe(WebFeature::kCrossOriginWindowPrint);
-
-  should_print_when_finished_loading_ = false;
-  GetFrame()->GetPage()->GetChromeClient().Print(GetFrame());
-}
-
 void LocalDOMWindow::stop() {
   if (!GetFrame()) {
     return;
@@ -1841,15 +1822,6 @@ void LocalDOMWindow::RemoveAllEventListeners() {
 }
 
 void LocalDOMWindow::FinishedLoading(FrameLoader::NavigationFinishState state) {
-  bool was_should_print_when_finished_loading =
-      should_print_when_finished_loading_;
-  should_print_when_finished_loading_ = false;
-
-  if (was_should_print_when_finished_loading &&
-      state == FrameLoader::NavigationFinishState::kSuccess) {
-    print();
-  }
-
   if (RuntimeEnabledFeatures::NavigationSourcePseudoClassEnabled()) {
     NavigationState::AttemptFinishNavigationAndDestroy(document_);
   }

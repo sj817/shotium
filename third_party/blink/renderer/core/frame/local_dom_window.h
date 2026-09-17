@@ -297,7 +297,6 @@ class CORE_EXPORT LocalDOMWindow final : public DOMWindow,
 
   DomSelection* getSelection();
 
-  void print();
   void stop();
 
   bool find(const String&,
@@ -557,8 +556,6 @@ class CORE_EXPORT LocalDOMWindow final : public DOMWindow,
 
   Member<Document> document_;
   Member<DOMVisualViewport> visualViewport_;
-
-  bool should_print_when_finished_loading_;
 
   mutable Member<Screen> screen_;
   mutable Member<BarProp> locationbar_;

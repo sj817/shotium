@@ -461,13 +461,6 @@ void PaintLayerScrollableArea::UpdateScrollOffset(
     }
   }
 
-  if (scroll_type == mojom::blink::ScrollType::kUser ||
-      scroll_type == mojom::blink::ScrollType::kCompositor) {
-    Page* page = frame->GetPage();
-    if (page)
-      page->GetChromeClient().ClearToolTip(*frame);
-  }
-
   InvalidatePaintForScrollOffsetChange();
 
   // Don't enqueue a scroll event yet for scroll reasons that are not about
