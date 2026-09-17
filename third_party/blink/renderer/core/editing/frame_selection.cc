@@ -247,17 +247,9 @@ void FrameSelection::MaybeNotifyEventHandlerForSelectionChange(
   if (!options.ShouldNotifySelectionControllerOfUnchangedSelection()) {
     return;
   }
-  if (LocalDOMWindow* window = frame_->DomWindow()) {
-    if (Event* current_event = window->CurrentEvent()) {
-      const AtomicString& type = current_event->type();
-      if (type == event_type_names::kMouseup ||
-          type == event_type_names::kClick ||
-          type == event_type_names::kPointerup ||
-          type == event_type_names::kTouchend) {
-        return;
-      }
-    }
-  }
+  // Upstream skipped the notification while a mouseup/click/pointerup/
+  // touchend was the window's current event; that state was only ever set
+  // by the bindings around a script event handler and no longer exists.
   NotifyEventHandlerForSelectionChange();
 }
 

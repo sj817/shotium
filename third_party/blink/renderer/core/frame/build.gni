@@ -5,8 +5,6 @@
 import("//third_party/blink/renderer/config.gni")
 
 blink_core_sources_frame = [
-  "bar_prop.cc",
-  "bar_prop.h",
   "browser_controls.cc",
   "browser_controls.h",
   "cached_permission_status.cc",
@@ -41,7 +39,6 @@ blink_core_sources_frame = [
   "embedded_content_view.h",
   "event_handler_registry.cc",
   "event_handler_registry.h",
-  "external.h",
   "permissions_policy_violation_report_body.cc",
   "permissions_policy_violation_report_body.h",
   "frame.cc",

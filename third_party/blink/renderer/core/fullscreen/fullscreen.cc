@@ -347,16 +347,6 @@ bool FullscreenIsSupported(const Document& document) {
   if (!frame)
     return false;
 
-  // Fullscreen is not currently supported in document pip.
-  // TODO(crbug.com/1402928): Figure out the correct way of handling fullscreen
-  // element in picture-in-picture window.
-  if (RuntimeEnabledFeatures::DocumentPictureInPictureAPIEnabled(
-          document.GetExecutionContext()) &&
-      frame->LocalFrameRoot().DomWindow() &&
-      frame->LocalFrameRoot().DomWindow()->IsPictureInPictureWindow()) {
-    return false;
-  }
-
   // Fullscreen is supported if there is no previously-established user
   // preference, security risk, or platform limitation.
   return !document.GetSettings() ||
@@ -759,12 +749,6 @@ void Fullscreen::EnforceRequestFullscreenConditions(
     return;
   }
 
-  // The algorithm is triggered by a fullscreen request capability delegation.
-  if (document.domWindow()->IsFullscreenRequestTokenActive()) {
-    std::move(callback).Run(RequestFullscreenError::kNone);
-    return;
-  }
-
   // The algorithm is triggered by a user-generated orientation change.
   if (ScopedAllowFullscreen::FullscreenAllowedReason() ==
       ScopedAllowFullscreen::kOrientationChange) {
@@ -863,7 +847,6 @@ void Fullscreen::ContinueRequestFullscreenAfterConditionsEnforcement(
   // without transient activation, which requires a permission service check.
   if ((request_type & FullscreenRequestType::kForCrossProcessDescendant) == 0) {
     LocalFrame::ConsumeTransientUserActivation(window.GetFrame());
-    window.ConsumeFullscreenRequestToken();
   }
 }
 

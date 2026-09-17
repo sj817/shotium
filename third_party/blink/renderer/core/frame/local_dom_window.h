@@ -34,7 +34,6 @@
 #include "services/metrics/public/cpp/ukm_source_id.h"
 #include "services/network/public/mojom/content_security_policy.mojom-blink.h"
 #include "services/network/public/mojom/storage_access_api.mojom-blink.h"
-#include "third_party/blink/public/common/frame/delegated_capability_request_token.h"
 #include "third_party/blink/public/common/frame/history_user_activation_state.h"
 #include "third_party/blink/public/common/tokens/tokens.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_scroll_result.h"
@@ -61,38 +60,19 @@
 
 namespace blink {
 
-class BarProp;
 class CSSStyleDeclaration;
 class CustomElementRegistry;
 class Document;
 class DocumentInit;
-class DomSelection;
 class DOMVisualViewport;
 class Element;
-class ExceptionState;
-class External;
 class FrameConsole;
 class LocalFrame;
-class MediaQueryList;
-class MessageEvent;
 class Navigator;
-class Screen;
 class ScrollToOptions;
-class SecurityOrigin;
 class SoftNavigationHeuristics;
-class SourceLocation;
-class StyleMedia;
 class TrustedTypePolicyFactory;
 class WindowAgent;
-
-namespace scheduler {
-class TaskAttributionInfo;
-}
-
-enum PageTransitionEventPersistence {
-  kPageTransitionEventNotPersisted = 0,
-  kPageTransitionEventPersisted = 1
-};
 
 // Note: if you're thinking of returning something DOM-related by reference,
 // please ping dcheng@chromium.org first. You probably don't want to do that.
@@ -111,14 +91,6 @@ class CORE_EXPORT LocalDOMWindow final : public DOMWindow,
       100 * 1024;  // 100kB
   static constexpr size_t kGuardrailsLargeImageThresholdBytes =
       200 * 1024;  // 200kB
-
-  class CORE_EXPORT EventListenerObserver : public GarbageCollectedMixin {
-   public:
-    virtual void DidAddEventListener(LocalDOMWindow*, const AtomicString&) = 0;
-    virtual void DidRemoveEventListener(LocalDOMWindow*,
-                                        const AtomicString&) = 0;
-    virtual void DidRemoveAllEventListeners(LocalDOMWindow*) = 0;
-  };
 
   LocalDOMWindow(LocalFrame&, WindowAgent*);
   ~LocalDOMWindow() override;
@@ -215,14 +187,6 @@ class CORE_EXPORT LocalDOMWindow final : public DOMWindow,
   void CountUse(mojom::WebFeature feature) final;
   void CountWebDXFeature(mojom::blink::WebDXFeature feature) final;
 
-  // Count |feature| only when this window is associated with a cross-origin
-  // iframe.
-  void CountUseOnlyInCrossOriginIframe(mojom::blink::WebFeature feature);
-
-  // Count |feature| only when this window is associated with a same-origin
-  // iframe with the outermost main frame.
-  void CountUseOnlyInSameOriginIframe(mojom::blink::WebFeature feature);
-
   // Count |feature| only when this window is associated with a cross-site
   // iframe. A "site" is a scheme and registrable domain.
   void CountUseOnlyInCrossSiteIframe(mojom::blink::WebFeature feature) override;
@@ -236,11 +200,6 @@ class CORE_EXPORT LocalDOMWindow final : public DOMWindow,
   // before any action is taken (e.g. creating new window) for all
   // same-origin navigations.
   bool AllowInlineJavascriptUrl(const KURL& url, Element* element);
-  String CheckAndGetJavascriptUrl(
-      const KURL& url,
-      Element* element,
-      network::mojom::CSPDisposition csp_disposition =
-          network::mojom::CSPDisposition::CHECK);
 
   Document* InstallNewDocument(const DocumentInit&);
 
@@ -250,94 +209,26 @@ class CORE_EXPORT LocalDOMWindow final : public DOMWindow,
   LocalDOMWindow* ToLocalDOMWindow() override;
 
   // Same-origin DOM Level 0
-  Screen* screen();
-  BarProp* locationbar();
-  BarProp* menubar();
-  BarProp* personalbar();
-  BarProp* scrollbars();
-  BarProp* statusbar();
-  BarProp* toolbar();
   Navigator* navigator();
-  Navigator* clientInformation() { return navigator(); }
 
-  bool offscreenBuffering() const;
-  bool alwaysOnTop() const;
-
-  int innerHeight() const;
-  int innerWidth() const;
   double scrollX() const;
   double scrollY() const;
-  double pageXOffset() const { return scrollX(); }
-  double pageYOffset() const { return scrollY(); }
 
   DOMVisualViewport* visualViewport();
-
-  const AtomicString& name() const;
-  void setName(const AtomicString&);
-
-  String status() const;
-  void setStatus(const String&);
-  String defaultStatus() const;
-  void setDefaultStatus(const String&);
-  String origin() const;
 
   // DOM Level 2 AbstractView Interface
   Document* document() const;
 
-  // CSSOM View Module
-  StyleMedia* styleMedia();
-
   // WebKit extensions
   double devicePixelRatio() const;
 
-  // This is the interface orientation in degrees. Some examples are:
-  //  0 is straight up; -90 is when the device is rotated 90 clockwise;
-  //  90 is when rotated counter clockwise.
-  int orientation() const;
-
-  DomSelection* getSelection();
-
-  void stop();
-
-  bool find(const String&,
-            bool case_sensitive,
-            bool backwards,
-            bool wrap,
-            bool whole_word,
-            bool search_in_frames,
-            bool show_dialog) const;
-
-  // FIXME: ScrollBehaviorSmooth is currently unsupported in VisualViewport.
-  // crbug.com/434497
-  void scrollBy(double x, double y) const;
-  void scrollBy(const ScrollToOptions*) const;
-  void scrollTo(double x, double y) const;
+  // Element::scrollTo() forwards to this for the document element.
   void scrollTo(const ScrollToOptions*) const;
-
-  void scrollByForTesting(double x, double y) const;
-  void scrollToForTesting(double x, double y) const;
-
-  void moveBy(int x, int y) const;
-  void moveTo(int x, int y) const;
-
-  void resizeBy(int x, int y, ExceptionState&) const;
-  void resizeTo(int width, int height, ExceptionState&) const;
-
-  MediaQueryList* matchMedia(const String&);
 
   // DOM Level 2 Style Interface
   CSSStyleDeclaration* getComputedStyle(
       Element*,
       const String& pseudo_elt = String()) const;
-
-  // WebKit animation extensions
-  // requestAnimationFrame()/webkitRequestAnimationFrame() took a script
-  // callback. cancelAnimationFrame() below stays: blink's own
-  // FrameCallbacks are still registered and cancelled through the document.
-  void cancelAnimationFrame(int id);
-
-  // https://html.spec.whatwg.org/C/#dom-originagentcluster
-  bool originAgentCluster() const;
 
   // Custom elements
   //
@@ -345,38 +236,16 @@ class CORE_EXPORT LocalDOMWindow final : public DOMWindow,
   CustomElementRegistry* customElements() const;
   CustomElementRegistry* MaybeCustomElements() const;
 
-  // Obsolete APIs
-  void captureEvents() {}
-  void releaseEvents() {}
-  External* external();
-
   DEFINE_ATTRIBUTE_EVENT_LISTENER(search, kSearch)
 
   DEFINE_ATTRIBUTE_EVENT_LISTENER(orientationchange, kOrientationchange)
 
-  void RegisterEventListenerObserver(EventListenerObserver*);
-
   void FrameDestroyed();
   void Reset();
-
-  Element* frameElement() const;
 
   FrameConsole* GetFrameConsole() const;
 
   void PrintErrorMessage(const String&) const;
-
-  void DispatchPostMessage(
-      MessageEvent* event,
-      scoped_refptr<const SecurityOrigin> intended_target_origin,
-      SourceLocation* location,
-      const base::UnguessableToken& source_agent_cluster_id,
-      scheduler::TaskAttributionInfo* task_state);
-
-  void DispatchMessageEventWithOriginCheck(
-      const SecurityOrigin* intended_target_origin,
-      MessageEvent*,
-      SourceLocation*,
-      const base::UnguessableToken& source_agent_cluster_id);
 
   // Events
   // EventTarget API
@@ -386,10 +255,6 @@ class CORE_EXPORT LocalDOMWindow final : public DOMWindow,
   DispatchEventResult DispatchEvent(Event&, EventTarget*);
 
   void FinishedLoading(FrameLoader::NavigationFinishState);
-
-  // Dispatch the (deprecated) orientationchange event to this DOMWindow and
-  // recurse on its child frames.
-  void SendOrientationChangeEvent();
 
   void EnqueueWindowEvent(Event&, TaskType);
   void EnqueueDocumentEvent(Event&, TaskType);
@@ -406,22 +271,7 @@ class CORE_EXPORT LocalDOMWindow final : public DOMWindow,
 
   void AcceptLanguagesChanged();
 
-  // https://dom.spec.whatwg.org/#dom-window-event
-  Event* CurrentEvent() const;
-  void SetCurrentEvent(Event*);
-
-  // Returns true if this window is cross-site to the outermost main frame.
-  // Defaults to false in a detached window. Note: This uses an outdated
-  // definition of "site" which only includes the registrable domain and not the
-  // scheme. IsCrossSiteSubframeIncludingScheme() uses HTML's definition of
-  // "site" as a registrable domain and scheme.
-  bool IsCrossSiteSubframe() const;
-
   bool IsCrossSiteSubframeIncludingScheme() const;
-
-  void DispatchPersistedPageshowEvent(base::TimeTicks navigation_start);
-
-  void DispatchPagehideEvent(PageTransitionEventPersistence persistence);
 
   bool CrossOriginIsolatedCapability() const override;
   bool IsIsolatedContext() const override;
@@ -443,52 +293,6 @@ class CORE_EXPORT LocalDOMWindow final : public DOMWindow,
     return initiator_state_token_;
   }
 
-  void DidReceiveUserActivation();
-
-  // Returns the state of the |payment_request_token_| in this document.
-  bool IsPaymentRequestTokenActive() const;
-
-  // Consumes the |payment_request_token_| if it was active in this document.
-  bool ConsumePaymentRequestToken();
-
-  // Returns the state of the |fullscreen_request_token_| in this document.
-  bool IsFullscreenRequestTokenActive() const;
-
-  // Consumes the |fullscreen_request_token_| if it was active in this document.
-  bool ConsumeFullscreenRequestToken();
-
-  // Returns the state of the |display_capture_request_token_| in this document.
-  bool IsDisplayCaptureRequestTokenActive() const;
-
-  // Consumes the |display_capture_request_token_| if it was active in this
-  // document.
-  bool ConsumeDisplayCaptureRequestToken();
-
-  // Returns the state of the |digital_credentials_create_token_| in this
-  // document.
-  bool IsDigitalCredentialsCreateTokenActive() const;
-
-  // Consumes the |digital_credentials_create_token_| if it was active in this
-  // document.
-  bool ConsumeDigitalCredentialsCreateToken();
-
-  // Activates the |digital_credentials_create_token_| for testing.
-  void ActivateDigitalCredentialsCreateTokenForTesting() {
-    digital_credentials_create_token_.Activate();
-  }
-
-  // Returns the state of the |digital_credentials_get_token_| in this document.
-  bool IsDigitalCredentialsGetTokenActive() const;
-
-  // Consumes the |digital_credentials_get_token_| if it was active in this
-  // document.
-  bool ConsumeDigitalCredentialsGetToken();
-
-  // Activates the |digital_credentials_get_token_| for testing.
-  void ActivateDigitalCredentialsGetTokenForTesting() {
-    digital_credentials_get_token_.Activate();
-  }
-
   // Called when a network request buffered an additional `num_bytes` while this
   // frame is in back-forward cache.
   void DidBufferLoadWhileInBackForwardCache(bool update_process_wide_count,
@@ -503,15 +307,6 @@ class CORE_EXPORT LocalDOMWindow final : public DOMWindow,
     return closewatcher_stack_.Get();
   }
 
-
-  // Is this a Document Picture in Picture window?
-  bool IsPictureInPictureWindow() const;
-
-  void set_is_picture_in_picture_window_for_testing(
-      bool is_picture_in_picture) {
-    is_picture_in_picture_window_ = is_picture_in_picture;
-  }
-
   // Sets the StorageAccessApiStatus. Calls to this method must not downgrade
   // the status.
   void SetStorageAccessApiStatus(net::StorageAccessApiStatus status);
@@ -519,8 +314,6 @@ class CORE_EXPORT LocalDOMWindow final : public DOMWindow,
   SoftNavigationHeuristics* GetSoftNavigationHeuristics() {
     return soft_navigation_heuristics_.Get();
   }
-
-  void requestResize(ExceptionState&);
 
  protected:
   // EventTarget overrides.
@@ -547,45 +340,13 @@ class CORE_EXPORT LocalDOMWindow final : public DOMWindow,
 
   void DispatchLoadEvent();
 
-  void SetIsPictureInPictureWindow();
-
-  // Return the viewport size including scrollbars.
-  gfx::Size GetViewportSize() const;
-
   void UpdateEventListenerCountsToDocumentForReuseIfNeeded();
 
   Member<Document> document_;
   Member<DOMVisualViewport> visualViewport_;
 
-  mutable Member<Screen> screen_;
-  mutable Member<BarProp> locationbar_;
-  mutable Member<BarProp> menubar_;
-  mutable Member<BarProp> personalbar_;
-  mutable Member<BarProp> scrollbars_;
-  mutable Member<BarProp> statusbar_;
-  mutable Member<BarProp> toolbar_;
   mutable Member<Navigator> navigator_;
-  mutable Member<StyleMedia> media_;
   mutable Member<CustomElementRegistry> custom_elements_;
-  Member<External> external_;
-
-
-  String status_;
-  String default_status_;
-
-  HeapHashSet<WeakMember<EventListenerObserver>> event_listener_observers_;
-
-  // Trackers for delegated payment, fullscreen, and display-capture requests.
-  // These are related to |Frame::user_activation_state_|.
-  DelegatedCapabilityRequestToken payment_request_token_;
-  DelegatedCapabilityRequestToken fullscreen_request_token_;
-  DelegatedCapabilityRequestToken display_capture_request_token_;
-  DelegatedCapabilityRequestToken digital_credentials_create_token_;
-  DelegatedCapabilityRequestToken digital_credentials_get_token_;
-
-  // https://dom.spec.whatwg.org/#window-current-event
-  // We represent the "undefined" value as nullptr.
-  Member<Event> current_event_;
 
   // The single TrustedTypePolicyFactory for this window.
   mutable Member<TrustedTypePolicyFactory> trusted_types_;
@@ -637,19 +398,9 @@ class CORE_EXPORT LocalDOMWindow final : public DOMWindow,
 
   Member<SoftNavigationHeuristics> soft_navigation_heuristics_;
 
-  // If set, this window is a Document Picture in Picture window.
-  // https://wicg.github.io/document-picture-in-picture/
-  bool is_picture_in_picture_window_ = false;
-
   // Records this window's Storage Access API status. It cannot be downgraded.
   net::StorageAccessApiStatus storage_access_api_status_ =
       net::StorageAccessApiStatus::kNone;
-
-  // Tracks whether this window has shown a payment request without a user
-  // activation. It cannot be revoked once set to true.
-  // TODO(crbug.com/1439565): Move this bit to a new payments-specific
-  // per-LocalDOMWindow class in the payments module.
-  bool had_activationless_payment_request_ = false;
 
   // Used to indicate if the DOM window is reused or not.
   bool is_dom_window_reused_ = false;
@@ -664,15 +415,6 @@ struct DowncastTraits<LocalDOMWindow> {
     return window.IsLocalDOMWindow();
   }
 };
-
-inline String LocalDOMWindow::status() const {
-  return status_;
-}
-
-inline String LocalDOMWindow::defaultStatus() const {
-  DCHECK(RuntimeEnabledFeatures::WindowDefaultStatusEnabled());
-  return default_status_;
-}
 
 }  // namespace blink
 

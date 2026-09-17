@@ -4036,12 +4036,6 @@ bool Document::DispatchBeforeUnloadEvent(
   if (ProcessingBeforeUnload())
     return false;
 
-  if (dom_window_->IsPictureInPictureWindow()) {
-    RecordBeforeUnloadUse(
-        BeforeUnloadUse::kNotSupportedInDocumentPictureInPicture);
-    return true;
-  }
-
   // Since we do not allow registering the beforeunload event handlers in
   // fenced frames, it should not be fired by fencedframes.
   DCHECK(!GetFrame() || !GetFrame()->IsInFencedFrameTree() ||

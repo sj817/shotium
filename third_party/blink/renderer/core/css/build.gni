@@ -753,8 +753,6 @@ blink_core_sources_css = [
   "style_image_cache.h",
   "style_invalidation_root.cc",
   "style_invalidation_root.h",
-  "style_media.cc",
-  "style_media.h",
   "style_property_serializer.cc",
   "style_property_serializer.h",
   "style_property_shorthand_custom.cc",
