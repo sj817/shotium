@@ -52,6 +52,8 @@ test('the runner count follows the priced work: a source file is one runner, a h
   assert.match(one.reason, /1 engine input\(s\) differ, about 1\.0 of 60\.0 compile minutes/);
   const two = await select({requested: 'auto', target: 'windows-amd64', fingerprint: 'abc', ...sources([candidate(7)], {sha7: ['shot/a.cc', 'shot/new.cc', 'shot/x.cc']})});
   assert.equal(two.count, 1, '1.5 minutes is still one runner');
+  const hot = await select({requested: 'auto', target: 'windows-amd64', fingerprint: 'abc', ...sources([candidate(7)], {sha7: ['shot/a.cc']}, {7: index(7, {paths: {'shot/a.cc': 400_000}})})});
+  assert.equal(hot.count, 2, 'more than a tenth of the build (6 of 60 minutes) is worth a second runner');
   const all = await select({requested: 'auto', target: 'windows-amd64', fingerprint: 'abc', ...sources([candidate(7)], {sha7: ['third_party/blink/renderer/core/dom/document.h']})});
   assert.deepEqual([all.count, all.buildDirRunId], [3, 7]);
   const docs = await select({requested: 'auto', target: 'windows-amd64', fingerprint: 'abc', ...sources([candidate(7)], {sha7: []})});

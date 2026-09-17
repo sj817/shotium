@@ -207,9 +207,9 @@ build loop. Read the affected workflow and source action for CI changes.
   means one runner and nothing to compile, or else the cheapest: for every
   usable candidate it fetches that run's commit (trees only) and its build
   index, diffs the engine inputs with `git diff-tree`, and prices the
-  change; the runner count is that price against the platform's default
-  share of a cold build, so a one-file fix gets one runner and a hot header
-  the full default. A change the index cannot price (GN, DEPS, generator
+  change; the runner count is one per tenth of a cold build that the price
+  is worth, capped at the platform default, so a one-file fix gets one
+  runner and a hot header the full default. A change the index cannot price (GN, DEPS, generator
   inputs, an incomplete directory, a commit GitHub no longer serves) keeps
   the default count. The directory is saved again after ninja, finished or
   not, as long as gn generated it; a job cancelled before that saves

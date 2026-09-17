@@ -82,15 +82,15 @@ test('pricing: known sources add up, unknown headers are free, new sources cost 
   assert.equal(estimate({...INDEX, complete: false}, []).ms, null);
 });
 
-test('runners: one per default-shard share of a cold build, never below one nor above the default', () => {
+test('runners: one per tenth of a cold build, never below one nor above the default', () => {
   assert.equal(shardsFor(0, INDEX, 3), 1);
   assert.equal(shardsFor(1, INDEX, 3), 1);
-  assert.equal(shardsFor(200_000, INDEX, 3), 1);
-  assert.equal(shardsFor(200_001, INDEX, 3), 2);
-  assert.equal(shardsFor(400_001, INDEX, 3), 3);
+  assert.equal(shardsFor(60_000, INDEX, 3), 1);
+  assert.equal(shardsFor(60_001, INDEX, 3), 2);
+  assert.equal(shardsFor(120_001, INDEX, 3), 3);
   assert.equal(shardsFor(5_000_000, INDEX, 3), 3);
-  assert.equal(shardsFor(300_000, INDEX, 2), 1);
-  assert.equal(shardsFor(300_001, INDEX, 2), 2);
+  assert.equal(shardsFor(60_000, INDEX, 2), 1);
+  assert.equal(shardsFor(60_001, INDEX, 2), 2);
   assert.equal(shardsFor(0, INDEX, 1), 1);
   assert.equal(shardsFor(100, {...INDEX, total_ms: 0}, 3), 3, 'a directory with no logged work cannot be priced against');
 });

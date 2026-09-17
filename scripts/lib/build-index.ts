@@ -103,10 +103,19 @@ export function estimate(index: BuildIndex, changed: readonly string[]): Estimat
   return {ms: unknown.length ? null : Math.min(ms, index.total_ms), unknown};
 }
 
-/** How many of the platform's default runners a priced change deserves: one per default-shard's share of a cold build. */
+// The work one runner takes before a second one pays for itself, as a
+// share of a cold build. An extra shard costs its own source setup and the
+// final job's download and merge -- six to eight minutes -- and a tenth of
+// the linux-amd64 build (59 of 593 logged edge-minutes, about 15 minutes of
+// wall clock on a four-core runner) is where splitting starts to win. The
+// share is platform-neutral where a minute is not: Windows runners log
+// slower edges, macOS arm64 faster ones.
+export const SHARD_SHARE = 0.1;
+
+/** How many runners a priced change deserves: one per SHARD_SHARE of a cold build, never more than the platform default. */
 export function shardsFor(priced: number, index: BuildIndex, defaultCount: number): number {
   if (defaultCount <= 1 || index.total_ms <= 0) return Math.max(1, defaultCount);
-  const perShard = index.total_ms / defaultCount;
+  const perShard = index.total_ms * SHARD_SHARE;
   return Math.min(defaultCount, Math.max(1, Math.ceil(priced / perShard)));
 }
 

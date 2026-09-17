@@ -8,7 +8,7 @@
 // is twenty runners for a one-line change. Both questions have the same
 // answer: price each candidate directory by what the current tree would
 // rebuild from it (lib/build-index.ts), start from the cheapest, and give
-// it as many runners as that work is worth.
+// it one runner per tenth of a cold build that the work is worth.
 //
 //   SHOT_TARGET=<label> SHOT_SHARDS=auto|N SHOT_FINGERPRINT=<id> pnpm ci:select-shards
 //
