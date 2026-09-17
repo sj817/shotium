@@ -68,7 +68,6 @@ class CORE_EXPORT SettingsDelegate {
     kScrollbarLayout,
     kColorScheme,
     kUniversalAccess,
-    kVisionDeficiency,
     kForcedColors,
     kFontScaleFactor,
     kAcceptLanguages,

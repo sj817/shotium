@@ -32,14 +32,10 @@
 #include "third_party/blink/public/web/blink.h"
 #include "third_party/blink/renderer/core/core_export.h"
 #include "third_party/blink/renderer/core/css/css_default_style_sheets.h"
-#include "third_party/blink/renderer/core/css/document_style_environment_variables.h"
-#include "third_party/blink/renderer/core/css/media_feature_overrides.h"
 #include "third_party/blink/renderer/core/css/style_change_reason.h"
 #include "third_party/blink/renderer/core/css/style_engine.h"
-#include "third_party/blink/renderer/core/css/vision_deficiency.h"
 #include "third_party/blink/renderer/core/dom/events/event.h"
 #include "third_party/blink/renderer/core/dom/node_rare_data.h"
-#include "third_party/blink/renderer/core/dom/visited_link_state.h"
 #include "third_party/blink/renderer/core/editing/drag_caret.h"
 #include "third_party/blink/renderer/core/editing/markers/document_marker_controller.h"
 #include "third_party/blink/renderer/core/frame/browser_controls.h"
@@ -50,7 +46,6 @@
 #include "third_party/blink/renderer/core/frame/local_frame_client.h"
 #include "third_party/blink/renderer/core/frame/local_frame_view.h"
 #include "third_party/blink/renderer/core/frame/navigator.h"
-#include "third_party/blink/renderer/core/frame/page_scale_constraints.h"
 #include "third_party/blink/renderer/core/frame/page_scale_constraints_set.h"
 #include "third_party/blink/renderer/core/frame/settings.h"
 #include "third_party/blink/renderer/core/frame/viewport_data.h"
@@ -71,7 +66,6 @@
 #include "third_party/blink/renderer/core/page/scrolling/top_document_root_scroller_controller.h"
 #include "third_party/blink/renderer/core/page/spatial_navigation_controller.h"
 #include "third_party/blink/renderer/core/paint/paint_layer_scrollable_area.h"
-#include "third_party/blink/renderer/core/preferences/preference_overrides.h"
 #include "third_party/blink/renderer/core/probe/core_probes.h"
 #include "third_party/blink/renderer/core/scroll/scrollbar_theme.h"
 #include "third_party/blink/renderer/core/scroll/scrollbar_theme_overlay_mobile.h"
@@ -90,7 +84,6 @@
 #include "third_party/skia/include/core/SkColor.h"
 #include "ui/color/color_provider.h"
 #include "ui/color/color_provider_utils.h"
-#include "ui/gfx/geometry/insets_conversions.h"
 
 namespace blink {
 
@@ -99,54 +92,6 @@ namespace {
 // recursive frameset pages can quickly bring the program to its knees
 // with exponential growth in the number of frames.
 const int kMaxNumberOfFrames = 1000;
-
-// It is possible to use a reduced frame limit for testing, but only two values
-// are permitted, the default or reduced limit.
-const int kTenFrames = 10;
-
-bool g_limit_max_frames_to_ten_for_testing = false;
-
-// static
-void SetSafeAreaEnvVariables(LocalFrame* frame,
-                             const gfx::InsetsF& safe_area_in_physical_px) {
-  gfx::InsetsF safe_area =
-      ScaleInsets(safe_area_in_physical_px, 1.0f / frame->LayoutZoomFactor());
-
-  DocumentStyleEnvironmentVariables& vars =
-      frame->GetDocument()->GetStyleEngine().EnsureEnvironmentVariables();
-  vars.SetVariable(UADefinedVariable::kSafeAreaInsetTop,
-                   StyleEnvironmentVariables::FormatFloatPx(safe_area.top()));
-  vars.SetVariable(UADefinedVariable::kSafeAreaInsetLeft,
-                   StyleEnvironmentVariables::FormatFloatPx(safe_area.left()));
-  vars.SetVariable(
-      UADefinedVariable::kSafeAreaInsetBottom,
-      StyleEnvironmentVariables::FormatFloatPx(safe_area.bottom()));
-  vars.SetVariable(UADefinedVariable::kSafeAreaInsetRight,
-                   StyleEnvironmentVariables::FormatFloatPx(safe_area.right()));
-}
-
-// static
-void SetSafeAreaMaxEnvVariables(
-    LocalFrame* frame,
-    const gfx::InsetsF& safe_area_max_in_physical_px) {
-  gfx::InsetsF safe_area_max = ScaleInsets(safe_area_max_in_physical_px,
-                                           1.0f / frame->LayoutZoomFactor());
-
-  DocumentStyleEnvironmentVariables& vars =
-      frame->GetDocument()->GetStyleEngine().EnsureEnvironmentVariables();
-  vars.SetVariable(
-      UADefinedVariable::kSafeAreaMaxInsetTop,
-      StyleEnvironmentVariables::FormatFloatPx(safe_area_max.top()));
-  vars.SetVariable(
-      UADefinedVariable::kSafeAreaMaxInsetLeft,
-      StyleEnvironmentVariables::FormatFloatPx(safe_area_max.left()));
-  vars.SetVariable(
-      UADefinedVariable::kSafeAreaMaxInsetBottom,
-      StyleEnvironmentVariables::FormatFloatPx(safe_area_max.bottom()));
-  vars.SetVariable(
-      UADefinedVariable::kSafeAreaMaxInsetRight,
-      StyleEnvironmentVariables::FormatFloatPx(safe_area_max.right()));
-}
 
 }  // namespace
 
@@ -164,10 +109,6 @@ Page::PageSet& Page::OrdinaryPages() {
   DEFINE_STATIC_LOCAL(Persistent<PageSetHolder>, pages,
                       (MakeGarbageCollected<PageSetHolder>()));
   return pages->Value();
-}
-
-void Page::InsertOrdinaryPageForTesting(Page* page) {
-  OrdinaryPages().insert(page);
 }
 
 HeapVector<Member<Page>> Page::RelatedPages() {
@@ -233,16 +174,12 @@ Page::Page(base::PassKey<Page>,
       global_root_scroller_controller_(
           MakeGarbageCollected<TopDocumentRootScrollerController>(*this)),
       visual_viewport_(MakeGarbageCollected<VisualViewport>(*this)),
-      opened_by_dom_(false),
-      tab_key_cycles_through_elements_(true),
       inspector_device_scale_factor_override_(1),
       lifecycle_state_(mojom::blink::PageLifecycleState::New()),
       is_ordinary_(is_ordinary),
-      is_cursor_visible_(true),
       subframe_count_(0),
       next_related_page_(this),
       prev_related_page_(this),
-      autoplay_flags_(0),
       browsing_context_group_token_(browsing_context_group_token) {
   DCHECK(!AllPages().Contains(this));
   AllPages().insert(this);
@@ -425,16 +362,6 @@ LocalFrame* Page::DeprecatedLocalMainFrame() const {
   return To<LocalFrame>(main_frame_.Get());
 }
 
-void Page::DocumentDetached(Document* document) {}
-
-bool Page::OpenedByDOM() const {
-  return opened_by_dom_;
-}
-
-void Page::SetOpenedByDOM() {
-  opened_by_dom_ = true;
-}
-
 SpatialNavigationController& Page::GetSpatialNavigationController() {
   if (!spatial_navigation_controller_) {
     spatial_navigation_controller_ =
@@ -496,17 +423,6 @@ void Page::ColorSchemeChanged() {
     }
 }
 
-void Page::EmulateForcedColors(bool is_dark_theme) {
-  emulated_forced_colors_provider_ =
-      WebTestSupport::IsRunningWebTest()
-          ? ui::CreateEmulatedForcedColorsColorProviderForTest()
-          : ui::CreateEmulatedForcedColorsColorProvider(is_dark_theme);
-}
-
-void Page::DisableEmulatedForcedColors() {
-  emulated_forced_colors_provider_.reset();
-}
-
 bool Page::UpdateColorProviders(
     const ColorProviderColorMaps& color_provider_colors) {
   // Color maps should not be empty as they are needed to create the color
@@ -539,19 +455,10 @@ bool Page::UpdateColorProviders(
   }
 
   if (did_color_provider_update) {
-    SetColorProviderColorMaps(color_provider_colors);
+    color_provider_colors_ = color_provider_colors;
   }
 
   return did_color_provider_update;
-}
-
-void Page::UpdateColorProvidersForTest() {
-  light_color_provider_ =
-      ui::CreateDefaultColorProviderForBlink(/*dark_mode=*/false);
-  dark_color_provider_ =
-      ui::CreateDefaultColorProviderForBlink(/*dark_mode=*/true);
-  forced_colors_color_provider_ =
-      ui::CreateEmulatedForcedColorsColorProviderForTest();
 }
 
 const ui::ColorProvider* Page::GetColorProviderForPainting(
@@ -563,9 +470,6 @@ const ui::ColorProvider* Page::GetColorProviderForPainting(
   CHECK(dark_color_provider_);
   CHECK(forced_colors_color_provider_);
   if (in_forced_colors) {
-    if (emulated_forced_colors_provider_) {
-      return emulated_forced_colors_provider_.get();
-    }
     return forced_colors_color_provider_.get();
   }
 
@@ -615,82 +519,12 @@ void Page::SetPaused(bool paused) {
   }
 }
 
-void Page::SetShowPausedHudOverlay(bool show_overlay) {
-  show_paused_hud_overlay_ = show_overlay;
-}
-
-void Page::SetDefaultPageScaleLimits(float min_scale, float max_scale) {
-  PageScaleConstraints new_defaults =
-      GetPageScaleConstraintsSet().DefaultConstraints();
-  new_defaults.minimum_scale = min_scale;
-  new_defaults.maximum_scale = max_scale;
-
-  if (new_defaults == GetPageScaleConstraintsSet().DefaultConstraints())
-    return;
-
-  GetPageScaleConstraintsSet().SetDefaultConstraints(new_defaults);
-  GetPageScaleConstraintsSet().ComputeFinalConstraints();
-  GetPageScaleConstraintsSet().SetNeedsReset(true);
-
-  if (!MainFrame() || !MainFrame()->IsLocalFrame())
-    return;
-
-  LocalFrameView* root_view = DeprecatedLocalMainFrame()->View();
-
-  if (!root_view)
-    return;
-
-  root_view->SetNeedsLayout();
-}
-
-void Page::SetUserAgentPageScaleConstraints(
-    const PageScaleConstraints& new_constraints) {
-  if (new_constraints == GetPageScaleConstraintsSet().UserAgentConstraints())
-    return;
-
-  GetPageScaleConstraintsSet().SetUserAgentConstraints(new_constraints);
-
-  if (!MainFrame() || !MainFrame()->IsLocalFrame())
-    return;
-
-  LocalFrameView* root_view = DeprecatedLocalMainFrame()->View();
-
-  if (!root_view)
-    return;
-
-  root_view->SetNeedsLayout();
-}
-
 void Page::SetPageScaleFactor(float scale) {
   GetVisualViewport().SetScale(scale);
 }
 
 float Page::PageScaleFactor() const {
   return GetVisualViewport().Scale();
-}
-
-void Page::AllVisitedStateChanged(bool invalidate_visited_link_hashes) {
-  for (const Page* page : OrdinaryPages()) {
-    for (Frame* frame = page->main_frame_; frame;
-         frame = frame->Tree().TraverseNext()) {
-      if (auto* main_local_frame = DynamicTo<LocalFrame>(frame))
-        main_local_frame->GetDocument()
-            ->GetVisitedLinkState()
-            .InvalidateStyleForAllLinks(invalidate_visited_link_hashes);
-    }
-  }
-}
-
-void Page::VisitedStateChanged(LinkHash link_hash) {
-  for (const Page* page : OrdinaryPages()) {
-    for (Frame* frame = page->main_frame_; frame;
-         frame = frame->Tree().TraverseNext()) {
-      if (auto* main_local_frame = DynamicTo<LocalFrame>(frame))
-        main_local_frame->GetDocument()
-            ->GetVisitedLinkState()
-            .InvalidateStyleForLink(link_hash);
-    }
-  }
 }
 
 void Page::SetVisibilityState(
@@ -745,10 +579,6 @@ void Page::SetVisibilityState(
   }
 }
 
-mojom::blink::PageVisibilityState Page::GetVisibilityState() const {
-  return lifecycle_state_->visibility;
-}
-
 bool Page::IsPageVisible() const {
   return lifecycle_state_->visibility ==
          mojom::blink::PageVisibilityState::kVisible;
@@ -777,23 +607,12 @@ void Page::OnSetPageFrozen(bool frozen) {
   }
 }
 
-bool Page::IsCursorVisible() const {
-  return is_cursor_visible_;
-}
-
 // static
 int Page::MaxNumberOfFrames() {
-  if (g_limit_max_frames_to_ten_for_testing) [[unlikely]] {
-    return kTenFrames;
-  }
   return kMaxNumberOfFrames;
 }
 
 // static
-void Page::SetMaxNumberOfFramesToTenForTesting(bool enabled) {
-  g_limit_max_frames_to_ten_for_testing = enabled;
-}
-
 #if DCHECK_IS_ON()
 void CheckFrameCountConsistency(int expected_frame_count, Frame* frame) {
   DCHECK_GE(expected_frame_count, 0);
@@ -817,68 +636,6 @@ int Page::SubframeCount() const {
   CheckFrameCountConsistency(subframe_count_ + 1, MainFrame());
 #endif
   return subframe_count_;
-}
-
-void Page::UpdateSafeAreaInsetWithBrowserControls(
-    const BrowserControls& browser_controls,
-    bool force_update) {
-  DCHECK(GetSettings().GetDynamicSafeAreaInsetsEnabled());
-
-  if (!DeprecatedLocalMainFrame()) {
-    return;
-  }
-
-  if (Fullscreen::HasFullscreenElements() && !force_update) {
-    LOG(WARNING) << "Attempt to set SAI with browser controls in fullscreen.";
-    return;
-  }
-
-  gfx::InsetsF new_scaled_safe_area(scaled_max_safe_area_insets_);
-
-  // The calculation is done in the unit of physical pixel.
-  if (scaled_max_safe_area_insets_.bottom() > 0) {
-    // Adjust the top / left / right is not needed, since they are set when
-    // display insets was received at |SetSafeArea()|.
-    float inset_bottom = scaled_max_safe_area_insets_.bottom();
-    int bottom_controls_full_height = browser_controls.BottomHeight();
-    float control_ratio = browser_controls.BottomShownRatio();
-
-    // As control_ratio decrease, safe_area_inset_bottom will be added to the
-    // web page to keep the bottom element out from the display cutout area.
-    float safe_area_inset_bottom = std::max(
-        0.f, inset_bottom - control_ratio * bottom_controls_full_height);
-
-    new_scaled_safe_area.set_bottom(safe_area_inset_bottom);
-  }
-
-  if (new_scaled_safe_area != applied_safe_area_insets_ || force_update) {
-    applied_safe_area_insets_ = new_scaled_safe_area;
-    SetSafeAreaEnvVariables(DeprecatedLocalMainFrame(), new_scaled_safe_area);
-  }
-}
-
-void Page::SetMaxSafeAreaInsets(LocalFrame* setter, gfx::Insets max_safe_area) {
-  // Update |scaled_max_safe_area_insets_| first.
-  float dsf = chrome_client_->GetScreenInfo(*setter).device_scale_factor;
-  gfx::InsetsF scaled_max_safe_area_insets =
-      ScaleInsets(gfx::InsetsF(max_safe_area), dsf);
-
-  if (scaled_max_safe_area_insets_ != scaled_max_safe_area_insets) {
-    scaled_max_safe_area_insets_ = scaled_max_safe_area_insets;
-  }
-
-  // When the SAI is changed when DynamicSafeAreaInsetsEnabled, the SAI for the
-  // main frame needs to be set per browser controls state.
-  if (GetSettings().GetDynamicSafeAreaInsetsEnabled() &&
-      setter->IsMainFrame()) {
-    // |scaled_max_safe_area_insets_| should be updated before
-    // UpdateSafeAreaInsetWithBrowserControls() is called.
-    UpdateSafeAreaInsetWithBrowserControls(GetBrowserControls(), true);
-  } else {
-    applied_safe_area_insets_ = scaled_max_safe_area_insets_;
-    SetSafeAreaEnvVariables(setter, scaled_max_safe_area_insets_);
-  }
-  SetSafeAreaMaxEnvVariables(setter, scaled_max_safe_area_insets_);
 }
 
 void Page::SettingsChanged(ChangeType change_type) {
@@ -1047,15 +804,6 @@ void Page::SettingsChanged(ChangeType change_type) {
         if (auto* local_frame = DynamicTo<LocalFrame>(frame)) {
           auto* window = local_frame->DomWindow();
           window->GetMutableSecurityOrigin()->GrantCrossAgentClusterAccess();
-        }
-      }
-      break;
-    }
-    case ChangeType::kVisionDeficiency: {
-      for (Frame* frame = MainFrame(); frame;
-           frame = frame->Tree().TraverseNext()) {
-        if (auto* local_frame = DynamicTo<LocalFrame>(frame)) {
-          local_frame->GetDocument()->VisionDeficiencyChanged();
         }
       }
       break;
@@ -1245,18 +993,6 @@ bool Page::IsOrdinary() const {
   return is_ordinary_;
 }
 
-void Page::AddAutoplayFlags(int32_t value) {
-  autoplay_flags_ |= value;
-}
-
-void Page::ClearAutoplayFlags() {
-  autoplay_flags_ = 0;
-}
-
-int32_t Page::AutoplayFlags() const {
-  return autoplay_flags_;
-}
-
 void Page::SetIsMainFrameFencedFrameRoot() {
   is_fenced_frame_tree_ = true;
 }
@@ -1265,88 +1001,9 @@ bool Page::IsMainFrameFencedFrameRoot() const {
   return is_fenced_frame_tree_;
 }
 
-void Page::SetMediaFeatureOverride(const AtomicString& media_feature,
-                                   const String& value) {
-  if (!media_feature_overrides_) {
-    if (value.empty())
-      return;
-    media_feature_overrides_ = std::make_unique<MediaFeatureOverrides>();
-  }
-
-  const Document* document = nullptr;
-  if (auto* local_frame = DynamicTo<LocalFrame>(MainFrame())) {
-    document = local_frame->GetDocument();
-  }
-
-  media_feature_overrides_->SetOverride(media_feature, value, document);
-  if (media_feature == "prefers-color-scheme" ||
-      media_feature == "forced-colors")
-    SettingsChanged(ChangeType::kColorScheme);
-  else
-    SettingsChanged(ChangeType::kMediaQuery);
-}
-
-void Page::ClearMediaFeatureOverrides() {
-  media_feature_overrides_.reset();
-  SettingsChanged(ChangeType::kMediaQuery);
-  SettingsChanged(ChangeType::kColorScheme);
-}
-
-void Page::SetPreferenceOverride(const AtomicString& media_feature,
-                                 const String& value) {
-  if (!preference_overrides_) {
-    if (value.empty()) {
-      return;
-    }
-    preference_overrides_ = std::make_unique<PreferenceOverrides>();
-  }
-
-  const Document* document = nullptr;
-  if (auto* local_frame = DynamicTo<LocalFrame>(MainFrame())) {
-    document = local_frame->GetDocument();
-  }
-
-  preference_overrides_->SetOverride(media_feature, value, document);
-  if (media_feature == "prefers-color-scheme") {
-    SettingsChanged(ChangeType::kColorScheme);
-  } else {
-    SettingsChanged(ChangeType::kMediaQuery);
-  }
-}
-
-void Page::ClearPreferenceOverrides() {
-  preference_overrides_.reset();
-  SettingsChanged(ChangeType::kMediaQuery);
-  SettingsChanged(ChangeType::kColorScheme);
-}
-
-void Page::SetVisionDeficiency(VisionDeficiency new_vision_deficiency) {
-  if (new_vision_deficiency != vision_deficiency_) {
-    vision_deficiency_ = new_vision_deficiency;
-    SettingsChanged(ChangeType::kVisionDeficiency);
-  }
-}
-
-void Page::SetPageLifecycleState(
-    mojom::blink::PageLifecycleStatePtr lifecycle_state) {
-  lifecycle_state_ = std::move(lifecycle_state);
-}
-
 void Page::Animate(base::TimeTicks monotonic_frame_begin_time) {
   GetAutoscrollController().Animate();
   Animator().ServiceScriptedAnimations(monotonic_frame_begin_time);
-}
-
-void Page::UpdateLifecycle(LocalFrame& root,
-                           WebLifecycleUpdate requested_update,
-                           DocumentUpdateReason reason) {
-  if (requested_update == WebLifecycleUpdate::kLayout) {
-    Animator().UpdateLifecycleToLayoutClean(root, reason);
-  } else if (requested_update == WebLifecycleUpdate::kPrePaint) {
-    Animator().UpdateAllLifecyclePhasesExceptPaint(root, reason);
-  } else {
-    Animator().UpdateAllLifecyclePhases(root, reason);
-  }
 }
 
 const base::UnguessableToken& Page::BrowsingContextGroupToken() {
@@ -1390,7 +1047,5 @@ void Page::UpgradePrerenderUntilScriptToFullPrerender() {
 static_assert(kMaxNumberOfFrames <
                   (1 << NodeRareData::kConnectedFrameCountBits),
               "Frame limit should fit in rare data count");
-static_assert(kTenFrames < kMaxNumberOfFrames,
-              "Reduced frame limit for testing should actually be lower");
 
 }  // namespace blink

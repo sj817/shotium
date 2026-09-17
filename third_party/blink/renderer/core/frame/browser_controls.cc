@@ -66,13 +66,11 @@ void BrowserControls::SetShownRatio(float top_ratio, float bottom_ratio) {
 
   top_shown_ratio_ = top_ratio;
   bottom_shown_ratio_ = bottom_ratio;
-  DidUpdateBrowserControls(false);
 }
 
 void BrowserControls::UpdateConstraintsAndState(
     cc::BrowserControlsState constraints,
     cc::BrowserControlsState current) {
-  bool changed = permitted_state_ != constraints;
   permitted_state_ = constraints;
 
   DCHECK(!(constraints == cc::BrowserControlsState::kShown &&
@@ -87,7 +85,6 @@ void BrowserControls::UpdateConstraintsAndState(
     top_shown_ratio_ = TopMinShownRatio();
     bottom_shown_ratio_ = BottomMinShownRatio();
   }
-  DidUpdateBrowserControls(changed);
 }
 
 void BrowserControls::SetParams(cc::BrowserControlsParams params) {
@@ -96,7 +93,6 @@ void BrowserControls::SetParams(cc::BrowserControlsParams params) {
   }
 
   params_ = params;
-  DidUpdateBrowserControls(true);
 }
 
 float BrowserControls::TopMinShownRatio() {
@@ -106,18 +102,6 @@ float BrowserControls::TopMinShownRatio() {
 float BrowserControls::BottomMinShownRatio() {
   return BottomHeight() ? params_.bottom_controls_min_height / BottomHeight()
                         : 0.f;
-}
-
-void BrowserControls::DidUpdateBrowserControls(bool update_safe_area_inset) {
-  Frame* main_frame = page_->MainFrame();
-  if (!main_frame || !main_frame->IsLocalFrame() ||
-      !main_frame->IsOutermostMainFrame()) {
-    return;
-  }
-
-  if (page_->GetSettings().GetDynamicSafeAreaInsetsEnabled()) {
-    page_->UpdateSafeAreaInsetWithBrowserControls(*this);
-  }
 }
 
 }  // namespace blink

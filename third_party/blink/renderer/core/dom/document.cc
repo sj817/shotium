@@ -3090,7 +3090,6 @@ void Document::Shutdown() {
   // its match state. Scroll-to-text-fragment is gone; LocalFrame's accessor
   // now permanently returns nullptr, so this was unreachable.
 
-  GetPage()->DocumentDetached(this);
 
   probe::DocumentDetached(this);
 
@@ -5241,12 +5240,6 @@ void Document::HoveredElementDetached(Element& element) {
     return;
   hover_element_ =
       SkipDisplayNoneAncestorsOrReturnNullIfFlatTreeIsDirty(element);
-
-  // If the mouse cursor is not visible, do not clear existing
-  // hover effects on the ancestors of |element| and do not invoke
-  // new hover effects on any other element.
-  if (!GetPage()->IsCursorVisible())
-    return;
 
   if (GetFrame())
     GetFrame()->GetEventHandler().ScheduleHoverStateUpdate();
@@ -8748,10 +8741,6 @@ void Document::ColorSchemeChanged() {
   UpdateForcedColors();
   GetStyleEngine().ColorSchemeChanged();
   MediaQueryAffectingValueChanged(MediaValueChange::kOther);
-}
-
-void Document::VisionDeficiencyChanged() {
-  GetStyleEngine().VisionDeficiencyChanged();
 }
 
 void Document::UpdateForcedColors() {

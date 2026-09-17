@@ -316,7 +316,9 @@ void DOMWindow::Close(LocalDOMWindow* incumbent_window) {
   bool allow_scripts_to_close_windows =
       settings && settings->GetAllowScriptsToCloseWindows();
 
-  if (!page->OpenedByDOM() && !allow_scripts_to_close_windows) {
+  // Page::OpenedByDOM() is gone: nothing can open a page from the DOM, so
+  // every page counts as not opened by script.
+  if (!allow_scripts_to_close_windows) {
     if (GetFrame()->Client()->BackForwardLength() > 1) {
       active_document->domWindow()->GetFrameConsole()->AddMessage(
           MakeGarbageCollected<ConsoleMessage>(

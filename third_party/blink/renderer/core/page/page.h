@@ -32,7 +32,6 @@
 #include "net/cookies/site_for_cookies.h"
 #include "third_party/blink/public/common/fenced_frame/redacted_fenced_frame_config.h"
 #include "third_party/blink/public/common/fingerprinting_protection/noise_token.h"
-#include "third_party/blink/public/common/metrics/document_update_reason.h"
 #include "third_party/blink/public/common/page/color_provider_color_maps.h"
 #include "third_party/blink/public/mojom/devtools/inspector_issue.mojom-blink-forward.h"
 #include "third_party/blink/public/mojom/frame/color_scheme.mojom-blink-forward.h"
@@ -40,10 +39,8 @@
 #include "third_party/blink/public/mojom/page/page_visibility_state.mojom-blink.h"
 #include "third_party/blink/public/platform/scheduler/web_agent_group_scheduler.h"
 #include "third_party/blink/public/platform/scheduler/web_scoped_virtual_time_pauser.h"
-#include "third_party/blink/public/web/web_lifecycle_update.h"
 #include "third_party/blink/public/web/web_window_features.h"
 #include "third_party/blink/renderer/core/core_export.h"
-#include "third_party/blink/renderer/core/css/vision_deficiency.h"
 #include "third_party/blink/renderer/core/frame/deprecation/deprecation.h"
 #include "third_party/blink/renderer/core/frame/settings_delegate.h"
 #include "third_party/blink/renderer/core/page/page_visibility_observer.h"
@@ -58,7 +55,6 @@
 #include "third_party/blink/renderer/platform/supplementable.h"
 #include "third_party/blink/renderer/platform/wtf/forward.h"
 #include "third_party/blink/renderer/platform/wtf/text/wtf_string.h"
-#include "ui/gfx/geometry/insets.h"
 
 namespace cc {
 class AnimationHost;
@@ -73,16 +69,12 @@ class AutoscrollController;
 class BrowserControls;
 class ChromeClient;
 class ConsoleMessageStorage;
-class Document;
 class DragCaret;
 class FocusController;
 class Frame;
 class LocalFrame;
-class MediaFeatureOverrides;
 class PageAnimator;
-struct PageScaleConstraints;
 class PageScaleConstraintsSet;
-class PreferenceOverrides;
 class ScopedPagePauser;
 class ScrollbarTheme;
 class Settings;
@@ -90,8 +82,6 @@ class SpatialNavigationController;
 class SVGDocumentResourceTracker;
 class TopDocumentRootScrollerController;
 class VisualViewport;
-
-typedef uint64_t LinkHash;
 
 // A Page roughly corresponds to a tab or popup window in a browser. It owns a
 // tree of frames (a blink::FrameTree). The root frame is called the main frame.
@@ -139,7 +129,6 @@ class CORE_EXPORT Page final : public GarbageCollected<Page>,
   // This set does not include Pages created for other, internal purposes
   // (SVGImages, inspector overlays, page popups etc.)
   static PageSet& OrdinaryPages();
-  static void InsertOrdinaryPageForTesting(Page*);
 
   // Returns pages related to the current browsing context (excluding the
   // current page).  See also
@@ -153,11 +142,8 @@ class CORE_EXPORT Page final : public GarbageCollected<Page>,
   static void PlatformColorsChanged();
   static void ColorSchemeChanged();
 
-  void EmulateForcedColors(bool is_dark_theme);
-  void DisableEmulatedForcedColors();
   bool UpdateColorProviders(
       const ColorProviderColorMaps& color_provider_colors);
-  void UpdateColorProvidersForTest();
   const ui::ColorProvider* GetColorProviderForPainting(
       mojom::blink::ColorScheme color_scheme,
       bool in_forced_colors) const;
@@ -166,11 +152,6 @@ class CORE_EXPORT Page final : public GarbageCollected<Page>,
   // creation of Non-ordiany pages from a main page.
   const ColorProviderColorMaps& GetColorProviderColorMaps() {
     return color_provider_colors_;
-  }
-
-  void SetColorProviderColorMaps(
-      const ColorProviderColorMaps& color_provider_colors) {
-    color_provider_colors_ = color_provider_colors;
   }
 
   void InitialStyleChanged();
@@ -198,26 +179,12 @@ class CORE_EXPORT Page final : public GarbageCollected<Page>,
   // coordinate/rely on the browser process to help dispatch/coordinate work.
   LocalFrame* DeprecatedLocalMainFrame() const;
 
-  void DocumentDetached(Document*);
-
   void Animate(base::TimeTicks monotonic_frame_begin_time);
-
-  // The |root| argument indicates a root LocalFrame from which to start
-  // performing the operation. See comment on WebWidget::UpdateLifecycle.
-  void UpdateLifecycle(LocalFrame& root,
-                       WebLifecycleUpdate requested_update,
-                       DocumentUpdateReason reason);
-
-  bool OpenedByDOM() const;
-  void SetOpenedByDOM();
 
   PageAnimator& Animator() { return *animator_; }
   ChromeClient& GetChromeClient() const {
     DCHECK(chrome_client_) << "No chrome client";
     return *chrome_client_;
-  }
-  void SetChromeClientForTesting(ChromeClient* chrome_client) {
-    chrome_client_ = chrome_client;
   }
   AutoscrollController& GetAutoscrollController() const {
     return *autoscroll_controller_;
@@ -249,13 +216,6 @@ class CORE_EXPORT Page final : public GarbageCollected<Page>,
   VisualViewport& GetVisualViewport();
   const VisualViewport& GetVisualViewport() const;
 
-  void SetTabKeyCyclesThroughElements(bool b) {
-    tab_key_cycles_through_elements_ = b;
-  }
-  bool TabKeyCyclesThroughElements() const {
-    return tab_key_cycles_through_elements_;
-  }
-
   // Pausing is used to implement the "Optionally, pause while waiting for
   // the user to acknowledge the message" step of simple dialog processing:
   // https://html.spec.whatwg.org/C/#simple-dialogs
@@ -270,9 +230,6 @@ class CORE_EXPORT Page final : public GarbageCollected<Page>,
   // https://wicg.github.io/page-lifecycle/#sec-lifecycle-states
   bool Frozen() const { return frozen_; }
 
-  bool ShowPausedHudOverlay() const { return show_paused_hud_overlay_; }
-  void SetShowPausedHudOverlay(bool show_overlay);
-
   void SetPageScaleFactor(float);
   float PageScaleFactor() const;
 
@@ -283,20 +240,12 @@ class CORE_EXPORT Page final : public GarbageCollected<Page>,
     inspector_device_scale_factor_override_ = override;
   }
 
-  static void AllVisitedStateChanged(bool invalidate_visited_link_hashes);
-  static void VisitedStateChanged(LinkHash visited_hash);
-
   void SetVisibilityState(mojom::blink::PageVisibilityState visibility_state,
                           bool is_initial_state);
-  mojom::blink::PageVisibilityState GetVisibilityState() const;
   bool IsPageVisible() const;
-
-  bool IsCursorVisible() const;
-  void SetIsCursorVisible(bool is_visible) { is_cursor_visible_ = is_visible; }
 
   // Don't allow more than a certain number of frames in a page.
   static int MaxNumberOfFrames();
-  static void SetMaxNumberOfFramesToTenForTesting(bool enabled);
 
   void IncrementSubframeCount() { ++subframe_count_; }
   void DecrementSubframeCount() {
@@ -304,32 +253,6 @@ class CORE_EXPORT Page final : public GarbageCollected<Page>,
     --subframe_count_;
   }
   int SubframeCount() const;
-
-  // Update the CSS safe-area-inset* environment variables in the main frame's
-  // document based on the stored |max_safe_area_insets| in the Page and the
-  // given |browser_controls|'s visible height.
-  //
-  // The new safe-area-inset* will not be applied to the CSS
-  // environment if a fullscreen element exists, unless |force_update|
-  // is true.
-  void UpdateSafeAreaInsetWithBrowserControls(
-      const BrowserControls& browser_controls,
-      bool force_update = false);
-
-  // Set the max safe-area-inset* from the browser and update the CSS
-  // environment variables for the main frame. If the setter is not a main
-  // frame, applies the same safe-area-inset* to the given |setter|'s document
-  // as well. The input |insets| is unscaled and in the size of dips.
-  void SetMaxSafeAreaInsets(LocalFrame* setter, gfx::Insets insets);
-
-  void SetDefaultPageScaleLimits(float min_scale, float max_scale);
-  void SetUserAgentPageScaleConstraints(
-      const PageScaleConstraints& new_constraints);
-
-#if DCHECK_IS_ON()
-  void SetIsPainting(bool painting) { is_painting_ = painting; }
-  bool IsPainting() const { return is_painting_; }
-#endif
 
   void DidCommitLoad(LocalFrame*);
 
@@ -345,11 +268,6 @@ class CORE_EXPORT Page final : public GarbageCollected<Page>,
   // PageScheduler::Delegate implementation.
   bool IsOrdinary() const override;
   void OnSetPageFrozen(bool is_frozen) override;
-
-  void AddAutoplayFlags(int32_t flags);
-  void ClearAutoplayFlags();
-
-  int32_t AutoplayFlags() const;
 
   void SetIsPrerendering(bool is_prerendering) {
     is_prerendering_ = is_prerendering;
@@ -392,23 +310,6 @@ class CORE_EXPORT Page final : public GarbageCollected<Page>,
   // JavaScript execution. The page remains in prerendering state.
   void UpgradePrerenderUntilScriptToFullPrerender();
 
-  void SetMediaFeatureOverride(const AtomicString& media_feature,
-                               const String& value);
-  const MediaFeatureOverrides* GetMediaFeatureOverrides() const {
-    return media_feature_overrides_.get();
-  }
-  void ClearMediaFeatureOverrides();
-
-  void SetPreferenceOverride(const AtomicString& media_feature,
-                             const String& value);
-  const PreferenceOverrides* GetPreferenceOverrides() const {
-    return preference_overrides_.get();
-  }
-  void ClearPreferenceOverrides();
-
-  void SetVisionDeficiency(VisionDeficiency new_vision_deficiency);
-  VisionDeficiency GetVisionDeficiency() const { return vision_deficiency_; }
-
   WebScopedVirtualTimePauser& HistoryNavigationVirtualTimePauser() {
     return history_navigation_virtual_time_pauser_;
   }
@@ -418,7 +319,6 @@ class CORE_EXPORT Page final : public GarbageCollected<Page>,
     return page_visibility_observer_set_;
   }
 
-  void SetPageLifecycleState(mojom::blink::PageLifecycleStatePtr);
   const mojom::blink::PageLifecycleStatePtr& GetPageLifecycleState() {
     return lifecycle_state_;
   }
@@ -544,7 +444,6 @@ class CORE_EXPORT Page final : public GarbageCollected<Page>,
   Deprecation deprecation_;
   WebWindowFeatures window_features_;
 
-  bool opened_by_dom_;
   // Set to true when window.close() has been called and the Page will be
   // destroyed. The browsing contexts in this page should no longer be
   // discoverable via JS.
@@ -552,15 +451,11 @@ class CORE_EXPORT Page final : public GarbageCollected<Page>,
   // this. However, this depends on resolving https://crbug.com/674641
   bool is_closing_;
 
-  bool tab_key_cycles_through_elements_;
-
   float inspector_device_scale_factor_override_;
 
   mojom::blink::PageLifecycleStatePtr lifecycle_state_;
 
   bool is_ordinary_;
-
-  bool is_cursor_visible_;
 
   // See Page::Paused and Page::Frozen for the detailed description of paused
   // and frozen state. The main distinction is that "frozen" state is
@@ -569,19 +464,8 @@ class CORE_EXPORT Page final : public GarbageCollected<Page>,
   // controlled from the renderer.
   bool paused_ = false;
   bool frozen_ = false;
-  bool show_paused_hud_overlay_ = false;
-
-#if DCHECK_IS_ON()
-  bool is_painting_ = false;
-#endif
 
   int subframe_count_;
-
-  // |max_safe_area_insets_| is coming from the display cutout client.
-  // |scaled_max_safe_area_insets_| has been scaled to the size of physical
-  // pixles.
-  gfx::InsetsF scaled_max_safe_area_insets_;
-  gfx::InsetsF applied_safe_area_insets_;
 
   // The light, dark and forced_colors mode ColorProviders corresponding to the
   // top-level web container this Page is associated with.
@@ -592,10 +476,6 @@ class CORE_EXPORT Page final : public GarbageCollected<Page>,
   // Caching the color provider colors for easy creation of non ordinary pages
   // who may depend on the main Page for colors.
   ColorProviderColorMaps color_provider_colors_;
-
-  // This provider is used when forced color emulation is enabled via DevTools,
-  // overriding the light, dark or forced colors color providers.
-  std::unique_ptr<ui::ColorProvider> emulated_forced_colors_provider_;
 
   // A circular, double-linked list of pages that are related to the current
   // browsing context.  See also RelatedPages method.
@@ -618,17 +498,6 @@ class CORE_EXPORT Page final : public GarbageCollected<Page>,
   WeakMember<Page> opener_;
 
   std::unique_ptr<PageScheduler> page_scheduler_;
-
-  // Overrides for various media features, set from DevTools.
-  std::unique_ptr<MediaFeatureOverrides> media_feature_overrides_;
-
-  // Overrides for user preference media features, set from Web Preferences API.
-  std::unique_ptr<PreferenceOverrides> preference_overrides_;
-
-  // Emulated vision deficiency, set from DevTools.
-  VisionDeficiency vision_deficiency_ = VisionDeficiency::kNoVisionDeficiency;
-
-  int32_t autoplay_flags_;
 
   // Whether the page is being prerendered by the Prerender2
   // feature. See content/browser/preloading/prerender/README.md.

@@ -1303,8 +1303,6 @@ const ComputedStyle* StyleResolver::StyleForViewport() {
   builder.SetOverflowX(EOverflow::kAuto);
   builder.SetOverflowY(EOverflow::kAuto);
 
-  GetDocument().GetStyleEngine().ApplyVisionDeficiencyStyle(builder);
-
   return builder.TakeStyle();
 }
 

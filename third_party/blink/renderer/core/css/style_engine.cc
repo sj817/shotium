@@ -55,7 +55,6 @@
 #include "third_party/blink/renderer/core/css/font_face.h"
 #include "third_party/blink/renderer/core/css/font_face_cache.h"
 #include "third_party/blink/renderer/core/css/invalidation/invalidation_set.h"
-#include "third_party/blink/renderer/core/css/media_feature_overrides.h"
 #include "third_party/blink/renderer/core/css/media_values.h"
 #include "third_party/blink/renderer/core/css/mixin_map.h"
 #include "third_party/blink/renderer/core/css/navigation_query.h"
@@ -79,7 +78,6 @@
 #include "third_party/blink/renderer/core/css/style_rule_font_palette_values.h"
 #include "third_party/blink/renderer/core/css/style_sheet_collection.h"
 #include "third_party/blink/renderer/core/css/style_sheet_contents.h"
-#include "third_party/blink/renderer/core/css/vision_deficiency.h"
 #include "third_party/blink/renderer/core/display_lock/display_lock_utilities.h"
 #include "third_party/blink/renderer/core/dom/document_lifecycle.h"
 #include "third_party/blink/renderer/core/dom/element.h"
@@ -117,7 +115,6 @@
 #include "third_party/blink/renderer/core/layout/list/layout_list_item.h"
 #include "third_party/blink/renderer/core/loader/render_blocking_resource_manager.h"
 #include "third_party/blink/renderer/core/page/page.h"
-#include "third_party/blink/renderer/core/preferences/preference_overrides.h"
 #include "third_party/blink/renderer/core/probe/core_probes.h"
 #include "third_party/blink/renderer/core/style/computed_style.h"
 #include "third_party/blink/renderer/core/style/filter_operations.h"
@@ -3160,44 +3157,6 @@ void StyleEngine::ApplyRuleSetChanges(
   }
 }
 
-void StyleEngine::LoadVisionDeficiencyFilter() {
-  VisionDeficiency old_vision_deficiency = vision_deficiency_;
-  vision_deficiency_ = GetDocument().GetPage()->GetVisionDeficiency();
-  if (vision_deficiency_ == old_vision_deficiency) {
-    return;
-  }
-
-  if (vision_deficiency_ == VisionDeficiency::kNoVisionDeficiency) {
-    vision_deficiency_filter_ = nullptr;
-  } else {
-    AtomicString url = CreateVisionDeficiencyFilterUrl(vision_deficiency_);
-    auto* css_uri_value = MakeGarbageCollected<cssvalue::CSSURIValue>(
-        *MakeGarbageCollected<CSSUrlData>(url));
-    SVGResource* svg_resource = css_uri_value->EnsureResourceReference();
-    // Note: The fact that we're using data: URLs here is an
-    // implementation detail. Emulating vision deficiencies should still
-    // work even if the Document's Content-Security-Policy disallows
-    // data: URLs.
-    svg_resource->LoadWithoutCSP(GetDocument());
-    vision_deficiency_filter_ =
-        MakeGarbageCollected<ReferenceFilterOperation>(url, svg_resource);
-  }
-}
-
-void StyleEngine::VisionDeficiencyChanged() {
-  MarkViewportStyleDirty();
-}
-
-void StyleEngine::ApplyVisionDeficiencyStyle(
-    ComputedStyleBuilder& layout_view_style_builder) {
-  LoadVisionDeficiencyFilter();
-  if (vision_deficiency_filter_) {
-    FilterOperations ops;
-    ops.Operations().push_back(vision_deficiency_filter_);
-    layout_view_style_builder.SetFilter(ops);
-  }
-}
-
 bool StyleEngine::EvaluateFunctionalMediaQuery(const MediaQuerySet& query_set) {
   bool result = EnsureMediaQueryEvaluator().Eval(
       query_set, &functional_media_query_result_flags_);
@@ -4345,50 +4304,6 @@ void StyleEngine::UpdateColorScheme() {
   preferred_contrast_ = settings->GetPreferredContrast();
   bool old_force_dark_mode_enabled = force_dark_mode_enabled_;
   force_dark_mode_enabled_ = settings->GetForceDarkModeEnabled();
-  bool media_feature_override_color_scheme = false;
-  bool media_feature_override_contrast = false;
-
-  // TODO(1479201): Should DevTools emulation use the WebPreferences API
-  // overrides?
-  if (const MediaFeatureOverrides* overrides =
-          GetDocument().GetPage()->GetMediaFeatureOverrides()) {
-    if (std::optional<ForcedColors> forced_color_override =
-            overrides->GetForcedColors()) {
-      forced_colors_ = forced_color_override.value();
-    }
-    if (std::optional<mojom::blink::PreferredColorScheme>
-            preferred_color_scheme_override =
-                overrides->GetPreferredColorScheme()) {
-      preferred_color_scheme_ = preferred_color_scheme_override.value();
-      media_feature_override_color_scheme = true;
-    }
-    if (std::optional<mojom::blink::PreferredContrast>
-            preferred_contrast_override = overrides->GetPreferredContrast()) {
-      preferred_contrast_ = preferred_contrast_override.value();
-      media_feature_override_contrast = true;
-    }
-  }
-
-  const PreferenceOverrides* preference_overrides =
-      GetDocument().GetPage()->GetPreferenceOverrides();
-  if (preference_overrides) {
-    if (!media_feature_override_color_scheme) {
-      std::optional<mojom::blink::PreferredColorScheme>
-          preferred_color_scheme_override =
-              preference_overrides->GetPreferredColorScheme();
-      if (preferred_color_scheme_override.has_value()) {
-        preferred_color_scheme_ = preferred_color_scheme_override.value();
-      }
-    }
-    if (!media_feature_override_contrast) {
-      std::optional<mojom::blink::PreferredContrast>
-          preferred_contrast_override =
-              preference_overrides->GetPreferredContrast();
-      if (preferred_contrast_override.has_value()) {
-        preferred_contrast_ = preferred_contrast_override.value();
-      }
-    }
-  }
 
   if (GetDocument().Printing()) {
     preferred_color_scheme_ = mojom::blink::PreferredColorScheme::kLight;
@@ -4583,8 +4498,7 @@ mojom::blink::ColorScheme StyleEngine::AdjustAboutBlankColorScheme(
   // See https://issues.chromium.org/issues/40190899
 
   const bool likely_user_initiated_aboutblank =
-      GetDocument().IsInMainFrame() && GetDocument().Url().IsAboutBlankUrl() &&
-      !GetDocument().GetPage()->OpenedByDOM();
+      GetDocument().IsInMainFrame() && GetDocument().Url().IsAboutBlankUrl();
   if (preferred_color_scheme_ == mojom::blink::PreferredColorScheme::kDark &&
       likely_user_initiated_aboutblank) {
     return mojom::blink::ColorScheme::kDark;
@@ -4711,7 +4625,6 @@ void StyleEngine::Trace(Visitor* visitor) const {
   visitor->Trace(dirty_tree_scopes_);
   visitor->Trace(active_tree_scopes_);
   visitor->Trace(resolver_);
-  visitor->Trace(vision_deficiency_filter_);
   visitor->Trace(viewport_resolver_);
   visitor->Trace(media_query_evaluator_);
   visitor->Trace(global_rule_set_);

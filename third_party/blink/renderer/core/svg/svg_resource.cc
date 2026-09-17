@@ -286,28 +286,6 @@ void ExternalSVGResourceDocumentContent::Load(
   target_ = ResolveTarget();
 }
 
-void ExternalSVGResourceDocumentContent::LoadWithoutCSP(Document& document) {
-  if (document_content_)
-    return;
-  // Loading SVG resources should not trigger script, see
-  // https://crbug.com/1196853 This could be allowed if DOMContentLoaded and
-  // other checkpoints were asynchronous per https://crbug.com/961428
-  ScriptForbiddenScope forbid_script;
-  ResourceLoaderOptions options;
-  options.initiator_info.name = fetch_initiator_type_names::kCSS;
-  FetchParameters params(ResourceRequest(url_), options);
-  params.SetContentSecurityCheck(
-      network::mojom::blink::CSPDisposition::DO_NOT_CHECK);
-  params.MutableResourceRequest().SetMode(
-      network::mojom::blink::RequestMode::kSameOrigin);
-  document_content_ = SVGResourceDocumentContent::Fetch(params, document);
-  if (!document_content_) {
-    return;
-  }
-  document_content_->AddObserver(this);
-  target_ = ResolveTarget();
-}
-
 void ExternalSVGResourceDocumentContent::ResourceNotifyFinished(
     SVGResourceDocumentContent* document_content) {
   DCHECK_EQ(document_content_, document_content);

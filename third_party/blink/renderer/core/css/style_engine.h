@@ -58,7 +58,6 @@
 #include "third_party/blink/renderer/core/css/style_invalidation_root.h"
 #include "third_party/blink/renderer/core/css/style_recalc_root.h"
 #include "third_party/blink/renderer/core/css/try_value_flips.h"
-#include "third_party/blink/renderer/core/css/vision_deficiency.h"
 #include "third_party/blink/renderer/core/dom/document.h"
 #include "third_party/blink/renderer/core/dom/element.h"
 #include "third_party/blink/renderer/core/layout/geometry/axis.h"
@@ -600,10 +599,6 @@ class CORE_EXPORT StyleEngine final : public GarbageCollected<StyleEngine>,
   void ApplyUserRuleSetChanges(const ActiveStyleSheetVector& old_style_sheets,
                                const ActiveStyleSheetVector& new_style_sheets);
 
-  void VisionDeficiencyChanged();
-  void ApplyVisionDeficiencyStyle(
-      ComputedStyleBuilder& layout_view_style_builder);
-
   void CollectMatchingUserRules(ElementRuleCollector&);
 
   void PropertyRegistryChanged();
@@ -833,8 +828,6 @@ class CORE_EXPORT StyleEngine final : public GarbageCollected<StyleEngine>,
 
   AncestorAnalysis AnalyzeInclusiveAncestor(const Node&);
   AncestorAnalysis AnalyzeExclusiveAncestor(const Node&);
-
-  void LoadVisionDeficiencyFilter();
 
   bool NeedsActiveStyleSheetUpdate() const {
     return tree_scopes_removed_ || document_scope_dirty_ ||
@@ -1122,8 +1115,6 @@ class CORE_EXPORT StyleEngine final : public GarbageCollected<StyleEngine>,
   // elements in the document with complex safe area constraints.
   bool needs_to_update_complex_safe_area_constraints_{false};
 
-  VisionDeficiency vision_deficiency_{VisionDeficiency::kNoVisionDeficiency};
-  Member<ReferenceFilterOperation> vision_deficiency_filter_;
 
   Member<StyleResolver> resolver_;
   Member<ViewportStyleResolver> viewport_resolver_;

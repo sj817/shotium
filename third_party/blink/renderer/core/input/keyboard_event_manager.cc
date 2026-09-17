@@ -558,10 +558,6 @@ bool KeyboardEventManager::DefaultTabEventHandler(KeyboardEvent* event) {
   if (!page) {
     return false;
   }
-  if (!page->TabKeyCyclesThroughElements()) {
-    return false;
-  }
-
   mojom::blink::FocusType focus_type = event->shiftKey()
                                            ? mojom::blink::FocusType::kBackward
                                            : mojom::blink::FocusType::kForward;
