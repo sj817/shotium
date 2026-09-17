@@ -73,7 +73,6 @@
 #include "third_party/blink/renderer/core/page/focusgroup_controller_utils.h"
 #include "third_party/blink/renderer/core/page/frame_tree.h"
 #include "third_party/blink/renderer/core/page/page.h"
-#include "third_party/blink/renderer/core/page/spatial_navigation.h"
 #include "third_party/blink/renderer/core/style/computed_style_constants.h"
 #include "third_party/blink/renderer/platform/runtime_enabled_features.h"
 #include "third_party/blink/renderer/platform/wtf/casting.h"
@@ -2009,8 +2008,7 @@ bool FocusController::AdvanceFocus(
                                          initial_focus, source_capabilities);
     }
     case mojom::blink::FocusType::kSpatialNavigation:
-      // Fallthrough - SpatialNavigation should use
-      // SpatialNavigationController.
+      // Fallthrough - spatial navigation is not built in shotium.
     default:
       NOTREACHED();
   }

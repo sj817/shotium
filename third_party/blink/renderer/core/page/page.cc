@@ -64,7 +64,6 @@
 #include "third_party/blink/renderer/core/page/page_hidden_state.h"
 #include "third_party/blink/renderer/core/page/scoped_page_pauser.h"
 #include "third_party/blink/renderer/core/page/scrolling/top_document_root_scroller_controller.h"
-#include "third_party/blink/renderer/core/page/spatial_navigation_controller.h"
 #include "third_party/blink/renderer/core/paint/paint_layer_scrollable_area.h"
 #include "third_party/blink/renderer/core/probe/core_probes.h"
 #include "third_party/blink/renderer/core/scroll/scrollbar_theme.h"
@@ -316,14 +315,6 @@ void Page::TakePropertiesForLocalMainFrameSwap(Page* old_page) {
 
 LocalFrame* Page::DeprecatedLocalMainFrame() const {
   return To<LocalFrame>(main_frame_.Get());
-}
-
-SpatialNavigationController& Page::GetSpatialNavigationController() {
-  if (!spatial_navigation_controller_) {
-    spatial_navigation_controller_ =
-        MakeGarbageCollected<SpatialNavigationController>(*this);
-  }
-  return *spatial_navigation_controller_;
 }
 
 SVGDocumentResourceTracker& Page::GetSVGDocumentResourceTracker() {
@@ -867,7 +858,6 @@ void Page::Trace(Visitor* visitor) const {
   visitor->Trace(console_message_storage_);
   visitor->Trace(global_root_scroller_controller_);
   visitor->Trace(visual_viewport_);
-  visitor->Trace(spatial_navigation_controller_);
   visitor->Trace(svg_document_resource_tracker_);
   visitor->Trace(main_frame_);
   visitor->Trace(previous_main_frame_for_local_swap_);

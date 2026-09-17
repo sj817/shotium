@@ -78,7 +78,6 @@ class PageScaleConstraintsSet;
 class ScopedPagePauser;
 class ScrollbarTheme;
 class Settings;
-class SpatialNavigationController;
 class SVGDocumentResourceTracker;
 class TopDocumentRootScrollerController;
 class VisualViewport;
@@ -191,7 +190,6 @@ class CORE_EXPORT Page final : public GarbageCollected<Page>,
   }
   DragCaret& GetDragCaret() const { return *drag_caret_; }
   FocusController& GetFocusController() const { return *focus_controller_; }
-  SpatialNavigationController& GetSpatialNavigationController();
   SVGDocumentResourceTracker& GetSVGDocumentResourceTracker();
 
   Settings& GetSettings() const { return *settings_; }
@@ -396,7 +394,6 @@ class CORE_EXPORT Page final : public GarbageCollected<Page>,
   const Member<TopDocumentRootScrollerController>
       global_root_scroller_controller_;
   const Member<VisualViewport> visual_viewport_;
-  Member<SpatialNavigationController> spatial_navigation_controller_;
   Member<SVGDocumentResourceTracker> svg_document_resource_tracker_;
 
   Deprecation deprecation_;
