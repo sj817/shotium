@@ -41,6 +41,7 @@
     "verify:daemon-protocol": "pnpm -C scripts exec tsx verify/daemon-protocol.ts",
     "verify:bilibili": "pnpm -C scripts exec tsx verify/bilibili.ts",
     "verify:charset": "pnpm -C scripts exec tsx verify/charset.ts",
+    "verify:fonts": "pnpm -C scripts exec tsx verify/fonts.ts",
     "verify:ffi": "pnpm -C scripts exec tsx verify/ffi.ts",
     "verify:delivery": "pnpm -C scripts exec tsx verify/delivery.ts",
     "render": "pnpm -C scripts exec tsx verify/render-regression.ts",

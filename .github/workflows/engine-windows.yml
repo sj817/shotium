@@ -680,6 +680,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "daemon protocol checks failed" }
           pnpm verify:charset out/Shot/shotium.exe
           if ($LASTEXITCODE -ne 0) { throw "charset checks failed" }
+          pnpm verify:fonts out/Shot/shotium.exe
+          if ($LASTEXITCODE -ne 0) { throw "font fallback checks failed" }
           pnpm verify:demos out/Shot/shotium.exe
           if ($LASTEXITCODE -ne 0) { throw "reftests failed" }
 

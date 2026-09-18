@@ -614,6 +614,7 @@ jobs:
           pnpm verify:daemon-protocol
 
           pnpm verify:charset out/Shot/shotium
+          pnpm verify:fonts out/Shot/shotium
           pnpm verify:demos out/Shot/shotium
 
   ffi:

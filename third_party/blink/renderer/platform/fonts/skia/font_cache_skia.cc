@@ -266,12 +266,19 @@ sk_sp<SkTypeface> FontCache::CreateTypeface(
   // TODO(fuchsia): Revisit this and other font code for Fuchsia.
 
   if (creation_params.CreationType() == kCreateFontByFciIdAndTtcIndex) {
-    if (Platform::Current()->GetSandboxSupport()) {
-      return SkTypeface_Factory::FromFontConfigInterfaceIdAndTtcIndex(
-          creation_params.FontconfigInterfaceId(), creation_params.TtcIndex());
+    // Chrome's sandboxed renderer cannot open font files, so with a
+    // WebSandboxSupport present it asks the browser's font service for the
+    // font behind an opaque fontconfig id. Shotium's ShotSandboxSupport
+    // matches system fallback fonts in-process, which yields the real file
+    // path and never assigns an id: going by id here opens "" and every
+    // fallback font -- CJK, emoji -- came back null. Open the path when there
+    // is one, as FontUniqueNameLookupLinux does for local().
+    if (!creation_params.Filename().empty()) {
+      return SkTypeface_Factory::FromFilenameAndTtcIndex(
+          creation_params.Filename(), creation_params.TtcIndex());
     }
-    return SkTypeface_Factory::FromFilenameAndTtcIndex(
-        creation_params.Filename().data(), creation_params.TtcIndex());
+    return SkTypeface_Factory::FromFontConfigInterfaceIdAndTtcIndex(
+        creation_params.FontconfigInterfaceId(), creation_params.TtcIndex());
   }
 #endif
 

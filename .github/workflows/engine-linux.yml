@@ -618,6 +618,12 @@ jobs:
           pnpm verify:charset out/Shot/shotium
           pnpm verify:demos out/Shot/shotium
 
+          # System font fallback: the runner image has no CJK font and no
+          # colour emoji font, and the check needs one of each -- the same
+          # two packages a Debian or Ubuntu host installs for them.
+          sudo apt-get update -qq && sudo apt-get install -y -qq fonts-noto-cjk fonts-noto-color-emoji
+          pnpm verify:fonts out/Shot/shotium
+
       - name: keep the symbols before stripping them
         if: ${{ success() && inputs.mode == 'build' }}
         uses: actions/upload-artifact@v7

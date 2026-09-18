@@ -38,6 +38,7 @@ pnpm verify:serve out/Shot/shotium.exe
 pnpm verify:net   out/Shot/shotium.exe
 pnpm verify:demos out/Shot/shotium.exe
 pnpm verify:charset out/Shot/shotium.exe
+pnpm verify:fonts out/Shot/shotium.exe
 ```
 
 | Script | Sections | What a failure means |
@@ -46,6 +47,7 @@ pnpm verify:charset out/Shot/shotium.exe
 | `pnpm verify:net` | http fetch, redirect following and limits, disk cache shared across two worker processes, `networkidle`, and the strongest one: the same document over http and from disk renders to identical bytes | `//net` integration or the loader changed what reaches Blink |
 | `pnpm verify:demos` | Reftests in `shot/testdata/demos`: each `NAME.html` is compared with `NAME-ref.html`; pages without a reference are smoke tests; WPT-style `fuzzy` meta allows a declared tolerance | A layout or paint feature regressed; report the current pass/fuzzy/smoke counts rather than a historical expected count |
 | `pnpm verify:charset` | Legacy CJK and single-byte encodings must render consistently with their UTF-8 equivalents | Encoding conversion or ICU data changes altered the document |
+| `pnpm verify:fonts` | CJK, Hangul and a colour emoji outside the page font must be drawn from a system font, not as the missing-glyph box or a blank; the emoji must carry colour. Needs a CJK and a colour emoji font on the host (Windows and macOS ship them; Linux: `fonts-noto-cjk fonts-noto-color-emoji`) | System font fallback cannot open the matched font (the Linux sandbox-support path), or colour bitmap glyphs are not decoded |
 
 The scripts print their own pass/fail counts.
 
@@ -184,6 +186,7 @@ than a paraphrase:
 | verify:net | N passed / M failed |
 | verify:demos | pass / fuzzy / smoke counts, failures by name |
 | verify:charset | N passed / M failed |
+| verify:fonts | N passed / M failed |
 | verify:node / verify:node-entry | Results for each command |
 | verify:daemon / verify:daemon-protocol | Results for each command |
 | verify:bilibili | ran / skipped (why) |
