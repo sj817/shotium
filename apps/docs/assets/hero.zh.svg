@@ -96,7 +96,7 @@
   <text x="24" y="47" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif">
     <tspan font-size="18" font-weight="700" fill="#ffffff">冷启动延迟</tspan>
     <tspan font-size="16" font-weight="400" fill="#64748b"> · </tspan>
-    <tspan font-size="28" font-weight="800" fill="url(#metricCyan)">14.6×</tspan>
+    <tspan font-size="28" font-weight="800" fill="url(#metricCyan)">14.7×</tspan>
     <tspan font-size="14" font-weight="500" fill="#94a3b8"> 更快</tspan>
   </text>
 
@@ -105,14 +105,14 @@
   <text x="50" y="92" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif" font-size="12" font-weight="600" fill="#f1f5f9">Shotium</text>
   <rect x="124" y="83" width="175" height="10" rx="5" fill="#1e222e" stroke="#2d3345" stroke-width="0.75"/>
   <rect x="124" y="83" width="12" height="10" rx="5" fill="url(#barCyan)"/>
-  <text x="371" y="92" text-anchor="end" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif" font-size="13" font-weight="700" fill="#38bdf8">67 ms</text>
+  <text x="371" y="92" text-anchor="end" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif" font-size="13" font-weight="700" fill="#38bdf8">66 ms</text>
 
   <!-- Row 2: Playwright -->
   <path d="M 34 118 L 25.77 113.25 A 9.5 9.5 0 0 1 42.23 113.25 Z" fill="#db4437"/><path d="M 34 118 L 42.23 113.25 A 9.5 9.5 0 0 1 34.00 127.50 Z" fill="#0f9d58"/><path d="M 34 118 L 34.00 127.50 A 9.5 9.5 0 0 1 25.77 113.25 Z" fill="#f4b400"/><circle cx="34" cy="118" r="4.3" fill="#ffffff"/><circle cx="34" cy="118" r="3.2" fill="#4285f4"/>
   <text x="50" y="122" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif" font-size="12" font-weight="500" fill="#a4adc0">Playwright</text>
   <rect x="124" y="113" width="175" height="10" rx="5" fill="#1e222e" stroke="#2d3345" stroke-width="0.75"/>
   <rect x="124" y="113" width="175" height="10" rx="5" fill="#44485a"/>
-  <text x="371" y="122" text-anchor="end" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif" font-size="13" font-weight="500" fill="#a4adc0">980 ms</text>
+  <text x="371" y="122" text-anchor="end" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif" font-size="13" font-weight="500" fill="#a4adc0">968 ms</text>
 </g>
 
 <!-- RIGHT CARD: MEMORY PEAK -->
@@ -132,7 +132,7 @@
   <text x="24" y="47" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif">
     <tspan font-size="18" font-weight="700" fill="#ffffff">内存峰值</tspan>
     <tspan font-size="16" font-weight="400" fill="#64748b"> · </tspan>
-    <tspan font-size="28" font-weight="800" fill="url(#metricIndigo)">12.0×</tspan>
+    <tspan font-size="28" font-weight="800" fill="url(#metricIndigo)">10.7×</tspan>
     <tspan font-size="14" font-weight="500" fill="#94a3b8"> 更省</tspan>
   </text>
 
@@ -140,8 +140,8 @@
   <circle cx="34" cy="88" r="9.5" fill="url(#lensGrad)"/><circle cx="34" cy="88" r="5.2" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-opacity="0.95"/><circle cx="34" cy="88" r="1.8" fill="#ffffff"/>
   <text x="50" y="92" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif" font-size="12" font-weight="600" fill="#f1f5f9">Shotium</text>
   <rect x="124" y="83" width="175" height="10" rx="5" fill="#1e222e" stroke="#2d3345" stroke-width="0.75"/>
-  <rect x="124" y="83" width="15" height="10" rx="5" fill="url(#barIndigo)"/>
-  <text x="371" y="92" text-anchor="end" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif" font-size="13" font-weight="700" fill="#c084fc">263 MB</text>
+  <rect x="124" y="83" width="16" height="10" rx="5" fill="url(#barIndigo)"/>
+  <text x="371" y="92" text-anchor="end" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif" font-size="13" font-weight="700" fill="#c084fc">292 MB</text>
 
   <!-- Row 2: Chrome -->
   <path d="M 34 118 L 25.77 113.25 A 9.5 9.5 0 0 1 42.23 113.25 Z" fill="#db4437"/><path d="M 34 118 L 42.23 113.25 A 9.5 9.5 0 0 1 34.00 127.50 Z" fill="#0f9d58"/><path d="M 34 118 L 34.00 127.50 A 9.5 9.5 0 0 1 25.77 113.25 Z" fill="#f4b400"/><circle cx="34" cy="118" r="4.3" fill="#ffffff"/><circle cx="34" cy="118" r="3.2" fill="#4285f4"/>
@@ -153,5 +153,5 @@
 
 <!-- FOOTERS -->
 <text x="410" y="167" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif" font-size="11" fill="#717a8c">GitHub Actions linux-x64 · 冷启动 p50 对比 Playwright Chromium；高压 1000 张连续测试对比 Chrome 进程树内存峰值</text>
-<text x="410" y="182" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif" font-size="11" fill="#717a8c">shotium 0.11.1 vs Playwright + Chromium &amp; Puppeteer + Chrome · 全部引擎与平台的数据见下方基准一节</text>
+<text x="410" y="182" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif" font-size="11" fill="#717a8c">shotium 0.11.2 vs Playwright + Chromium &amp; Puppeteer + Chrome · 全部引擎与平台的数据见下方基准一节</text>
 </svg>
