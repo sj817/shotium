@@ -25,7 +25,6 @@
 #include "base/strings/strcat.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_util.h"
-#include "base/strings/string_view_util.h"
 #include "base/strings/stringprintf.h"
 #include "base/strings/utf_string_conversions.h"
 #include "build/build_config.h"
@@ -454,85 +453,6 @@ bool WriteRootCppFile(const RootStore& root_store,
   return true;
 }
 
-// Returns true if file was correctly written, false otherwise.
-bool WriteEvCppFile(const RootStore& root_store,
-                    const base::FilePath cpp_path) {
-  // There should be at least one EV root.
-  CHECK_GT(root_store.trust_anchors_size(), 0);
-
-  std::string string_to_write =
-      "// This file is auto-generated, DO NOT EDIT.\n\n"
-      "static const EVMetadata kEvRootCaMetadata[] = {\n";
-
-  for (auto& anchor : root_store.trust_anchors()) {
-    // Every trust anchor at this point should have a DER.
-    CHECK(!anchor.der().empty());
-    if (anchor.ev_policy_oids_size() == 0) {
-      // The same input file is used for the Chrome Root Store and EV enabled
-      // certificates. Skip anchors that have no EV policy OIDs when generating
-      // the EV include file.
-      continue;
-    }
-
-    std::string sha256_hash =
-        std::string(base::as_string_view(crypto::hash::Sha256(anchor.der())));
-
-    // Begin struct. Assumed type of EVMetadata:
-    //
-    // struct EVMetadata {
-    //  static const size_t kMaxOIDsPerCA = 2;
-    //  SHA256HashValue fingerprint;
-    //  const std::string_view policy_oids[kMaxOIDsPerCA];
-    // };
-    string_to_write += "    {\n";
-    string_to_write += "        {{";
-
-    int wrap_count = 0;
-    for (auto c : sha256_hash) {
-      if (wrap_count != 0) {
-        if (wrap_count % 11 == 0) {
-          string_to_write += ",\n          ";
-        } else {
-          string_to_write += ", ";
-        }
-      }
-      base::StringAppendF(&string_to_write, "0x%02x", static_cast<uint8_t>(c));
-      wrap_count++;
-    }
-
-    string_to_write += "}},\n";
-    string_to_write += "        {\n";
-
-    // struct expects exactly two policy oids, and we can only support 1 or 2
-    // policy OIDs. These checks will need to change if we ever merge the EV and
-    // Chrome Root Store textprotos.
-    const int kMaxPolicyOids = 2;
-    int oids_size = anchor.ev_policy_oids_size();
-    std::string hexencode_hash = base::HexEncode(sha256_hash);
-    if (oids_size > kMaxPolicyOids) {
-      PLOG(ERROR) << hexencode_hash << " has too many OIDs!";
-      return false;
-    }
-    for (int i = 0; i < kMaxPolicyOids; i++) {
-      std::string oid;
-      if (i < oids_size) {
-        oid = anchor.ev_policy_oids(i);
-      }
-      base::StrAppend(&string_to_write, {"            \"", oid, "\",\n"});
-    }
-
-    // End struct
-    string_to_write += "        },\n";
-    string_to_write += "    },\n";
-  }
-  string_to_write += "};\n";
-  if (!base::WriteFile(cpp_path, string_to_write)) {
-    PLOG(ERROR) << "Error writing cpp include file";
-    return false;
-  }
-  return true;
-}
-
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -548,24 +468,20 @@ int main(int argc, char** argv) {
   base::FilePath proto_path = command_line.GetSwitchValuePath("write-proto");
   base::FilePath root_store_cpp_path =
       command_line.GetSwitchValuePath("write-cpp-root-store");
-  base::FilePath ev_roots_cpp_path =
-      command_line.GetSwitchValuePath("write-cpp-ev-roots");
   base::FilePath root_store_path =
       command_line.GetSwitchValuePath("root-store");
   base::FilePath certs_path = command_line.GetSwitchValuePath("certs");
   base::FilePath additional_certs_path =
       command_line.GetSwitchValuePath("additional-certs");
 
-  if ((proto_path.empty() && root_store_cpp_path.empty() &&
-       ev_roots_cpp_path.empty()) ||
+  if ((proto_path.empty() && root_store_cpp_path.empty()) ||
       root_store_path.empty() || command_line.HasSwitch("help")) {
     std::cerr << "Usage: root_store_tool "
               << "--root-store=TEXTPROTO_FILE "
               << "[--certs=CERTS_FILE] "
               << "[--additional-certs=ADDITIONAL_CERTS_FILE] "
               << "[--write-proto=PROTO_FILE] "
-              << "[--write-cpp-root-store=CPP_FILE] "
-              << "[--write-cpp-ev-roots=CPP_FILE] " << std::endl;
+              << "[--write-cpp-root-store=CPP_FILE] " << std::endl;
     return 1;
   }
 
@@ -595,11 +511,6 @@ int main(int argc, char** argv) {
   if (!root_store_cpp_path.empty() &&
       !WriteRootCppFile(*root_store, root_store_cpp_path)) {
     PLOG(ERROR) << "Error writing root store C++ include file";
-    return 1;
-  }
-  if (!ev_roots_cpp_path.empty() &&
-      !WriteEvCppFile(*root_store, ev_roots_cpp_path)) {
-    PLOG(ERROR) << "Error writing EV roots C++ include file";
     return 1;
   }
 

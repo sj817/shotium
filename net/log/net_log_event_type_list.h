@@ -3941,7 +3941,6 @@ EVENT_TYPE(CERT_VERIFY_PROC_ADDITIONAL_CERT)
 // CertVerifyProcBuiltin.
 // The BEGIN phase contains the following information:
 // {
-//      "is_ev_attempt": <True if this is an EV verification attempt.>
 //      "is_qwac_attempt": <True if this is a QWAC verification attempt.>
 //      "is_network_time_attempt": <True if this attempt used the network time.>
 //      "network_time_value": <Int - time in milliseconds since the unix epoch,
