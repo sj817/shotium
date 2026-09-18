@@ -35,7 +35,6 @@
 #include "net/cert/ct_policy_enforcer.h"
 #include "net/cert/ct_policy_status.h"
 #include "net/cert/ct_verifier.h"
-#include "net/cert/ev_root_ca_metadata.h"
 #include "net/cert/internal/cert_issuer_source_aia.h"
 #include "net/cert/internal/revocation_checker.h"
 #include "net/cert/internal/system_trust_store.h"
@@ -96,7 +95,6 @@ constexpr uint16_t kCqrpMaxMtcLogNumber = 5;
 
 DEFINE_CERT_ERROR_ID(kCtRequirementsNotMet,
                      "Path does not meet CT requirements");
-DEFINE_CERT_ERROR_ID(kPathLacksEVPolicy, "Path does not have an EV policy");
 DEFINE_CERT_ERROR_ID(kPathLacksQwacPolicy, "Path does not have QWAC policies");
 DEFINE_CERT_ERROR_ID(kChromeRootConstraintsFailed,
                      "Path does not satisfy CRS constraints");
@@ -269,33 +267,6 @@ RevocationPolicy NoRevocationChecking() {
   return policy;
 }
 
-// Gets the set of policy OIDs in |cert| that are recognized as EV OIDs for some
-// root.
-void GetEVPolicyOids(const EVRootCAMetadata* ev_metadata,
-                     const bssl::ParsedCertificate* cert,
-                     std::set<bssl::der::Input>* oids) {
-  oids->clear();
-
-  if (!cert->has_policy_oids())
-    return;
-
-  for (const bssl::der::Input& oid : cert->policy_oids()) {
-    if (ev_metadata->IsEVPolicyOID(oid)) {
-      oids->insert(oid);
-    }
-  }
-}
-
-// Returns true if |cert| could be an EV certificate, based on its policies
-// extension. A return of false means it definitely is not an EV certificate,
-// whereas a return of true means it could be EV.
-bool IsEVCandidate(const EVRootCAMetadata* ev_metadata,
-                   const bssl::ParsedCertificate* cert) {
-  std::set<bssl::der::Input> oids;
-  GetEVPolicyOids(ev_metadata, cert, &oids);
-  return !oids.empty();
-}
-
 bool IsSelfSignedCertOnLocalNetwork(const X509Certificate* cert,
                                     const std::string& hostname) {
   if (!base::FeatureList::IsEnabled(
@@ -427,13 +398,6 @@ class CertVerifyProcTrustStore {
   bssl::TrustStoreCollection trust_store_;
 };
 
-// Enum for whether path building is attempting to verify a certificate as EV or
-// as DV.
-enum class VerificationType {
-  kEV,  // Extended Validation
-  kDV,  // Domain Validation
-};
-
 class PathBuilderDelegateDataImpl : public bssl::CertPathBuilderDelegateData {
  public:
   ~PathBuilderDelegateDataImpl() override = default;
@@ -475,14 +439,12 @@ class PathBuilderDelegateImpl : public bssl::SimplePathBuilderDelegate {
       const CTPolicyEnforcer* ct_policy_enforcer,
       const RequireCTDelegate* require_ct_delegate,
       CertNetFetcher* net_fetcher,
-      VerificationType verification_type,
       int flags,
       const CertVerifyProcTrustStore* trust_store,
       const std::vector<net::CertVerifyProc::CertificateWithConstraints>&
           additional_constraints,
       std::string_view stapled_leaf_ocsp_response,
       std::string_view sct_list_from_tls_extension,
-      const EVRootCAMetadata* ev_metadata,
       base::TimeTicks deadline,
       base::Time current_time,
       bool* checked_revocation_for_some_path,
@@ -497,13 +459,11 @@ class PathBuilderDelegateImpl : public bssl::SimplePathBuilderDelegate {
         ct_policy_enforcer_(ct_policy_enforcer),
         require_ct_delegate_(require_ct_delegate),
         net_fetcher_(net_fetcher),
-        verification_type_(verification_type),
         flags_(flags),
         trust_store_(trust_store),
         additional_constraints_(additional_constraints),
         stapled_leaf_ocsp_response_(stapled_leaf_ocsp_response),
         sct_list_from_tls_extension_(sct_list_from_tls_extension),
-        ev_metadata_(ev_metadata),
         deadline_(deadline),
         current_time_(current_time),
         checked_revocation_for_some_path_(checked_revocation_for_some_path),
@@ -599,15 +559,6 @@ class PathBuilderDelegateImpl : public bssl::SimplePathBuilderDelegate {
     //               minimally be checked with the CRLSet.
     if (!path->IsValid()) {
       return;
-    }
-
-    // If EV was requested the certificate must chain to a recognized EV root
-    // and have one of its recognized EV policy OIDs.
-    if (verification_type_ == VerificationType::kEV) {
-      if (!ConformsToEVPolicy(path)) {
-        path->errors.GetErrorsForCert(0)->AddError(kPathLacksEVPolicy);
-        return;
-      }
     }
 
     // Select an appropriate revocation policy for this chain based on the
@@ -1062,27 +1013,6 @@ class PathBuilderDelegateImpl : public bssl::SimplePathBuilderDelegate {
     return NoRevocationChecking();
   }
 
-  // Returns true if |path| chains to an EV root, and the chain conforms to
-  // one of its EV policy OIDs. When building paths all candidate EV policy
-  // OIDs were requested, so it is just a matter of testing each of the
-  // policies the chain conforms to.
-  bool ConformsToEVPolicy(const bssl::CertPathBuilderResultPath* path) {
-    const bssl::ParsedCertificate* root = path->GetTrustedCert();
-    if (!root) {
-      return false;
-    }
-
-    SHA256HashValue root_fingerprint = crypto::hash::Sha256(root->der_cert());
-
-    for (const bssl::der::Input& oid : path->user_constrained_policy_set) {
-      if (ev_metadata_->HasEVPolicyOID(root_fingerprint, oid)) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
   bool IsDeadlineExpired() override {
     return !deadline_.is_null() && base::TimeTicks::Now() > deadline_;
   }
@@ -1101,14 +1031,12 @@ class PathBuilderDelegateImpl : public bssl::SimplePathBuilderDelegate {
   raw_ptr<const CTPolicyEnforcer> ct_policy_enforcer_;
   raw_ptr<const RequireCTDelegate> require_ct_delegate_;
   raw_ptr<CertNetFetcher> net_fetcher_;
-  const VerificationType verification_type_;
   const int flags_;
   raw_ptr<const CertVerifyProcTrustStore> trust_store_;
   raw_ref<const std::vector<net::CertVerifyProc::CertificateWithConstraints>>
       additional_constraints_;
   const std::string_view stapled_leaf_ocsp_response_;
   const std::string_view sct_list_from_tls_extension_;
-  raw_ptr<const EVRootCAMetadata> ev_metadata_;
   base::TimeTicks deadline_;
   base::Time current_time_;
   raw_ptr<bool> checked_revocation_for_some_path_;
@@ -1497,15 +1425,11 @@ scoped_refptr<X509Certificate> CreateVerifiedCertChain(
 }
 
 // Describes the parameters for a single path building attempt. Path building
-// may be re-tried with different parameters for EV and for accepting SHA1
-// certificates.
+// may be re-tried with the system time when the network time attempt fails.
 struct BuildPathAttempt {
-  BuildPathAttempt(VerificationType verification_type,
-                   bool use_system_time)
-      : verification_type(verification_type),
-        use_system_time(use_system_time) {}
+  explicit BuildPathAttempt(bool use_system_time)
+      : use_system_time(use_system_time) {}
 
-  VerificationType verification_type;
   bool use_system_time;
 };
 
@@ -1519,7 +1443,6 @@ bssl::CertPathBuilder::Result TryBuildPath(
     const bssl::der::GeneralizedTime& der_verification_time,
     base::Time current_time,
     base::TimeTicks deadline,
-    VerificationType verification_type,
     int flags,
     std::string_view ocsp_response,
     std::string_view sct_list,
@@ -1528,25 +1451,20 @@ bssl::CertPathBuilder::Result TryBuildPath(
     const CTPolicyEnforcer* ct_policy_enforcer,
     const RequireCTDelegate* require_ct_delegate,
     CertNetFetcher* net_fetcher,
-    const EVRootCAMetadata* ev_metadata,
     bool* checked_revocation,
     const NetLogWithSource& net_log) {
   // Path building will require candidate paths to conform to at least one of
-  // the policies in |user_initial_policy_set|.
-  std::set<bssl::der::Input> user_initial_policy_set;
-
-  if (verification_type == VerificationType::kEV) {
-    GetEVPolicyOids(ev_metadata, target.get(), &user_initial_policy_set);
-    // TODO(crbug.com/40479281): netlog user_initial_policy_set.
-  } else {
-    user_initial_policy_set = {bssl::der::Input(bssl::kAnyPolicyOid)};
-  }
+  // the policies in |user_initial_policy_set|. Only DV is verified here: EV
+  // status is a browser UI signal that shot never reads, so the EV policy
+  // set and the extra EV path-building attempt are not built.
+  std::set<bssl::der::Input> user_initial_policy_set = {
+      bssl::der::Input(bssl::kAnyPolicyOid)};
 
   PathBuilderDelegateImpl path_builder_delegate(
       *target, hostname, crl_set, ct_verifier, ct_policy_enforcer,
-      require_ct_delegate, net_fetcher, verification_type, flags, trust_store,
-      additional_constraints, ocsp_response, sct_list, ev_metadata, deadline,
-      current_time, checked_revocation, net_log);
+      require_ct_delegate, net_fetcher, flags, trust_store,
+      additional_constraints, ocsp_response, sct_list, deadline, current_time,
+      checked_revocation, net_log);
 
   std::optional<CertIssuerSourceAia> aia_cert_issuer_source;
 
@@ -1588,7 +1506,6 @@ int AssignVerifyResult(
     X509Certificate* input_cert,
     const std::string& hostname,
     const bssl::CertPathBuilderResultPath* best_path_possibly_invalid,
-    VerificationType verification_type,
     bool checked_revocation_for_some_path,
     CertVerifyProcTrustStore* trust_store,
     CertVerifyResult* verify_result) {
@@ -1635,10 +1552,6 @@ int AssignVerifyResult(
       }
     }
 #endif
-  }
-
-  if (path_is_valid && (verification_type == VerificationType::kEV)) {
-    verify_result->cert_status |= CERT_STATUS_IS_EV;
   }
 
   // TODO(eroman): Add documentation for the meaning of
@@ -1780,9 +1693,6 @@ int CertVerifyProcBuiltin::VerifyInternal(X509Certificate* input_cert,
   CertVerifyProcTrustStore trust_store(system_trust_store_.get(),
                                        &additional_trust_store_);
 
-  // Get the global dependencies.
-  const EVRootCAMetadata* ev_metadata = EVRootCAMetadata::GetInstance();
-
   // This boolean tracks whether online revocation checking was performed for
   // *any* of the built paths, and not just the final path returned (used for
   // setting output flag CERT_STATUS_REV_CHECKING_ENABLED).
@@ -1795,16 +1705,11 @@ int CertVerifyProcBuiltin::VerifyInternal(X509Certificate* input_cert,
   // Attempts are enqueued into |attempts| and drained in FIFO order.
   std::vector<BuildPathAttempt> attempts;
 
-  // First try EV validation. Can skip this if the leaf certificate has no
-  // chance of verifying as EV (lacks an EV policy).
-  if (IsEVCandidate(ev_metadata, target.get()))
-    attempts.emplace_back(VerificationType::kEV, !custom_time_available);
-
-  // Next try DV validation.
-  attempts.emplace_back(VerificationType::kDV, !custom_time_available);
+  // DV validation, with the network time first when one is available.
+  attempts.emplace_back(!custom_time_available);
 
   bssl::CertPathBuilder::Result result;
-  BuildPathAttempt cur_attempt(VerificationType::kDV, true);
+  BuildPathAttempt cur_attempt(true);
 
   // Iterate over |attempts| until there are none left to try, or an attempt
   // succeeded.
@@ -1814,9 +1719,6 @@ int CertVerifyProcBuiltin::VerifyInternal(X509Certificate* input_cert,
     net_log.BeginEvent(
         NetLogEventType::CERT_VERIFY_PROC_PATH_BUILD_ATTEMPT, [&] {
           base::DictValue results;
-          if (cur_attempt.verification_type == VerificationType::kEV) {
-            results.Set("is_ev_attempt", true);
-          }
           results.Set("is_network_time_attempt", !cur_attempt.use_system_time);
           if (!cur_attempt.use_system_time) {
             results.Set(
@@ -1838,10 +1740,9 @@ int CertVerifyProcBuiltin::VerifyInternal(X509Certificate* input_cert,
         cur_attempt.use_system_time ? der_verification_system_time
                                     : der_verification_custom_time,
         cur_attempt.use_system_time ? base::Time::Now() : custom_time, deadline,
-        cur_attempt.verification_type, flags, ocsp_response, sct_list,
-        crl_set(), ct_verifier_.get(), ct_policy_enforcer_.get(),
-        require_ct_delegate_.get(), net_fetcher_.get(), ev_metadata,
-        &checked_revocation_for_some_path, net_log);
+        flags, ocsp_response, sct_list, crl_set(), ct_verifier_.get(),
+        ct_policy_enforcer_.get(), require_ct_delegate_.get(),
+        net_fetcher_.get(), &checked_revocation_for_some_path, net_log);
 
     net_log.EndEvent(NetLogEventType::CERT_VERIFY_PROC_PATH_BUILD_ATTEMPT,
                      [&] { return NetLogPathBuilderResult(result); });
@@ -1865,10 +1766,10 @@ int CertVerifyProcBuiltin::VerifyInternal(X509Certificate* input_cert,
   const bssl::CertPathBuilderResultPath* best_path_possibly_invalid =
       result.GetBestPathPossiblyInvalid();
 
-  int error = AssignVerifyResult(
-      input_cert, hostname, best_path_possibly_invalid,
-      cur_attempt.verification_type, checked_revocation_for_some_path,
-      &trust_store, verify_result);
+  int error = AssignVerifyResult(input_cert, hostname,
+                                 best_path_possibly_invalid,
+                                 checked_revocation_for_some_path,
+                                 &trust_store, verify_result);
   if (error == OK) {
     LogNameNormalizationMetrics(".Builtin", verify_result->verified_cert.get(),
                                 verify_result->is_issued_by_known_root);
