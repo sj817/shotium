@@ -1,7 +1,18 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-09-17T23:33:49.843Z",
+  "generated_utc": "2026-09-18T07:28:34.905Z",
   "results": [
+    {
+      "path": "v0.11.1/20260918T072833Z-gh35316367536-a1",
+      "shotium_version": "0.11.1",
+      "generated_utc": "2026-09-18T07:28:33.000Z",
+      "status": "complete",
+      "quality_status": "noisy",
+      "evidence_status": "complete",
+      "publishable": true,
+      "run_id": "35316367536",
+      "source_sha": "8a4c6cf601d293d6e269dccca6c514e8f31e376f"
+    },
     {
       "path": "v0.11.0/20260917T233348Z-gh35284053415-a1",
       "shotium_version": "0.11.0",
