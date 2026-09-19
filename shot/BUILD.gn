@@ -213,6 +213,21 @@ executable("shot") {
   if (is_win) {
     deps += [ "//build/win:default_exe_manifest" ]
     ldflags += [ "/EXPORT:GetHandleVerifier" ]
+
+    # Chrome's delay-load list. The loader then maps kernel32 and ntdll before
+    # main() and everything else on first call, which is worth exactly the
+    # libraries a run never calls: dbghelp, ws2_32, iphlpapi, shlwapi,
+    # shell32, ole32, crypt32, dwmapi and secur32 stay unloaded through a
+    # file: capture. DirectWrite, GDI and user32 are used by every capture and
+    # only move from before main() into the runtime's dwrite and system_fonts
+    # stages -- process_to_main fell from 44 to 29 ms and those two rose by
+    # the same 15 -- so the whole-process saving is the unused nine, 2-4 ms
+    # of a 90 ms one-shot. Not for the shared library or the addon: their
+    # host has these loaded already.
+    configs += [
+      "//build/config/win:delayloads",
+      "//build/config/win:delayloads_not_for_child_dll",
+    ]
   }
 }
 

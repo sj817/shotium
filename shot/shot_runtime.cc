@@ -59,14 +59,19 @@
 
 #if BUILDFLAG(IS_WIN)
 #include <dwrite.h>
+#include <windows.h>
 #include <wrl/client.h>
 
+#include <algorithm>
+#include <string_view>
+
+#include "base/numerics/safe_conversions.h"
+#include "base/strings/string_util_win.h"
+#include "base/win/scoped_hdc.h"
 #include "third_party/skia/include/core/SkFontMgr.h"
 #include "third_party/blink/public/platform/web_string.h"
 #include "third_party/blink/public/web/win/web_font_rendering.h"
 #include "third_party/skia/include/ports/SkTypeface_win.h"
-#include "ui/gfx/font.h"
-#include "ui/gfx/system_fonts_win.h"
 #endif
 
 namespace shot {
@@ -501,26 +506,53 @@ base::expected<std::unique_ptr<ShotRuntime>, std::string> ShotRuntime::Create(
   // process reads NONCLIENTMETRICS, puts it in RendererPreferences and the
   // renderer calls these three from
   // WebViewImpl::UpdateFontRenderingFromRendererPrefs. shot has no browser
-  // process and no WebView, so it reads the same NONCLIENTMETRICS through
-  // gfx::win::GetSystemFont and tells blink directly.
+  // process and no WebView, so it reads the same NONCLIENTMETRICS and tells
+  // blink directly.
+  //
+  // Read here rather than through gfx::win::GetSystemFont, which answers the
+  // same question -- a face name and a height -- by way of a GDI font mapping
+  // and a skia typeface for each of the five shell fonts, none of which
+  // anything here goes on to use: 1.7 ms of every process start, against
+  // 0.7 for the two calls below, most of that the first user32 call's own
+  // connection to the window manager. What gfx does with the numbers is kept:
+  // Windows reports the heights at the system DPI, and blink wants CSS pixels,
+  // so the height is divided back down by that scale. A DPI-unaware process
+  // sees both at 96, and the ratio still holds.
   //
   // Before this, every document using `font-family: system-ui` crashed in
   // FontCache::GetFontPlatformData on the null AtomicString. Nothing in the
   // corpus used it, so nothing had ever asked; it is one of the commonest
   // families on the real web, which is how bringing up HTTP found it.
-  const auto set_system_font = [](gfx::win::SystemFont which,
-                                  void (*setter)(const blink::WebString&,
-                                                 int32_t)) {
-    const gfx::Font& font = gfx::win::GetSystemFont(which);
-    setter(blink::WebString::FromUtf8(font.GetFontName()),
-           static_cast<int32_t>(font.GetFontSize()));
-  };
-  set_system_font(gfx::win::SystemFont::kMenu,
-                  &blink::WebFontRendering::SetMenuFontMetrics);
-  set_system_font(gfx::win::SystemFont::kSmallCaption,
-                  &blink::WebFontRendering::SetSmallCaptionFontMetrics);
-  set_system_font(gfx::win::SystemFont::kStatus,
-                  &blink::WebFontRendering::SetStatusFontMetrics);
+  {
+    NONCLIENTMETRICSW metrics = {};
+    metrics.cbSize = sizeof(metrics);
+    CHECK(::SystemParametersInfoW(SPI_GETNONCLIENTMETRICS, metrics.cbSize,
+                                  &metrics, 0));
+    const double system_scale = [] {
+      base::win::ScopedGetDC screen_dc(nullptr);
+      return ::GetDeviceCaps(screen_dc, LOGPIXELSY) / 96.0;
+    }();
+    const auto set_system_font = [system_scale](
+                                     const LOGFONTW& logfont,
+                                     void (*setter)(const blink::WebString&,
+                                                    int32_t)) {
+      // Negative is a character height, positive a cell height; the shell
+      // reports character heights, and either way the magnitude is what
+      // GDI's mapping would have handed back as the em size.
+      const int32_t height = std::max(
+          1, base::ClampRound<int32_t>(std::abs(logfont.lfHeight) /
+                                       system_scale));
+      setter(blink::WebString(std::u16string_view(
+                 base::as_u16cstr(logfont.lfFaceName))),
+             height);
+    };
+    set_system_font(metrics.lfMenuFont,
+                    &blink::WebFontRendering::SetMenuFontMetrics);
+    set_system_font(metrics.lfSmCaptionFont,
+                    &blink::WebFontRendering::SetSmallCaptionFontMetrics);
+    set_system_font(metrics.lfStatusFont,
+                    &blink::WebFontRendering::SetStatusFontMetrics);
+  }
   stages.Mark("system_fonts");
 #endif
 

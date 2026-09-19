@@ -305,6 +305,15 @@ class EngineThread : public base::DelegateSimpleThread::Delegate {
       // Armed before the first request rather than after it, so that an engine
       // that is started and not immediately used gives back what starting cost it.
       ArmIdleTimer();
+      // The first thing the loop runs, and behind the signal below rather than
+      // in front of it: a caller who starts the engine and comes back later
+      // finds a process that has rendered once, and one who submits at once
+      // waits for the same work in the queue that it would have paid inside
+      // its own request.
+      task_runner_->PostTask(FROM_HERE,
+                             base::BindOnce(
+                                 [](ShotRuntime* runtime) { WarmUp(*runtime); },
+                                 base::Unretained(runtime_.get())));
       // Everything above is what the waiting caller is waiting to see. The
       // signal is the release side of it: nothing here is read by another
       // thread before the wait returns.

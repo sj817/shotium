@@ -400,6 +400,11 @@ int RunServer(ShotRuntime& runtime, bool default_allow_file_access) {
     return kUsageExitCode;
   }
 
+  // Before the reader starts, so that the first request finds a process that
+  // has already rendered once. The supervisor's first frame waits in the pipe
+  // meanwhile; it would have waited for the same work inside its own request.
+  WarmUp(runtime);
+
   base::RunLoop run_loop;
   RequestHandler handler(runtime, std::move(output), default_allow_file_access,
                          run_loop.QuitClosure());

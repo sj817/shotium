@@ -26,6 +26,7 @@
 #include "shot/shot_capture_context.h"
 #include "shot/shot_fetch.h"
 #include "shot/shot_network.h"
+#include "shot/shot_profile.h"
 #include "shot/shot_renderer.h"
 #include "shot/shot_runtime.h"
 #include "url/gurl.h"
@@ -388,6 +389,44 @@ base::expected<CaptureResult, std::string> CaptureAndDeliver(
   result->image = Bytes();
   result->wrote_path = true;
   return result;
+}
+
+void WarmUp(ShotRuntime& runtime) {
+  const base::TimeTicks started = base::TimeTicks::Now();
+  ScreenshotRequest request;
+  // A file: URL that is never read: `document` supplies the bytes, the way
+  // --stdin does, and the URL only gives the page an origin.
+  request.file = "file:///shot-warm-up/warm-up.html";
+  // Text in the two generic families, bold and regular, with one CJK
+  // ideograph that goes through system font fallback; a flex row and a grid,
+  // the two layout algorithms most pages start with; a rounded box with a
+  // gradient and a shadow, for skia's first blur; an inline image, for the
+  // first decode; and no subresources, so nothing waits on anything.
+  request.document =
+      "<!doctype html><meta charset=utf-8>"
+      "<body style=\"margin:8px;font:14px/1.4 sans-serif\">"
+      "<div style=\"display:flex;gap:4px;align-items:center\">"
+      "<p style=\"margin:0\">Warm <b>up</b> 预热</p>"
+      "<p style=\"margin:0;font:italic 12px serif\">Warm <b>up</b></p></div>"
+      "<div style=\"display:grid;grid-template-columns:1fr 1fr;gap:4px\">"
+      "<div style=\"height:16px;border-radius:6px;border:1px solid #888;"
+      "background:linear-gradient(90deg,#36c,#3c6);"
+      "box-shadow:0 2px 6px rgba(0,0,0,.3)\"></div>"
+      "<img width=16 height=16 src=\"data:image/png;base64,"
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YA"
+      "AAAASUVORK5CYII=\"></div>";
+  request.width = 160;
+  request.height = 80;
+  CaptureStats stats;
+  auto result = Capture(runtime, request, &stats);
+  if (!result.has_value()) {
+    // Not fatal: the first real request pays what this would have.
+    LOG(WARNING) << "shot: warm-up render failed: " << result.error();
+  }
+  if (ProfileEnabled()) {
+    LOG(INFO) << "shot: profile warm_up="
+              << (base::TimeTicks::Now() - started).InMillisecondsF();
+  }
 }
 
 }  // namespace shot

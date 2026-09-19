@@ -67,6 +67,19 @@ CLI / --serve / C ABI / Node addon
   A changed file misses the cache; only the decode is shared.
   See [performance-cut-audit.md](performance-cut-audit.md) for the measured
   split behind these and the candidates that were measured and left alone.
+- The resident entry points (`--serve`, `EngineService`) render a built-in
+  document once at start (`WarmUp()` in `shot_capture.cc`) so the process's
+  one-time layout, shaping, raster-thread and encoder costs -- 7-15 ms, and
+  not returned by the idle purge -- are paid before the first request rather
+  than by it. The one-shot CLI does not; it would pay them twice. A request
+  submitted before the warm-up finishes waits behind it in the queue. What
+  remains on a first request is per typeface: about a millisecond for each
+  face the page uses that the warm-up did not.
+- Encoder settings are chosen for time over bytes: JPEG uses the standard
+  Huffman tables (`optimize_coding` off, 5-10% larger files for 35% less
+  encode time) and lossy WebP uses libwebp method 2 (3-4% larger than method
+  3 at the same PSNR, for a third of the encode time). Changing either
+  changes output bytes, so paired-image checks must compare decoded pixels.
 
 ## API changes
 

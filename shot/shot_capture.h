@@ -101,6 +101,21 @@ base::expected<std::vector<DeliveredTile>, std::string> CaptureTiles(
     const ScreenshotRequest& request,
     CaptureStats* out_stats = nullptr);
 
+// Renders a small built-in document once and throws the image away.
+//
+// A process's first capture costs 7-15 ms more than its second, whatever the
+// page: the first typeface, the first shaping, the first line layout, the
+// raster threads starting, and the encoder's first block all pay something
+// once, none of it in a place that could be paid earlier -- and the idle
+// purge, which drops the font and shaping caches, brings back under a
+// millisecond of it. This is that first capture, done at start-up by the
+// resident entry points, where the process is otherwise waiting for its
+// first request. A one-shot process does not call it: it would pay the same
+// milliseconds twice.
+//
+// Requires a live ShotRuntime on this thread.
+void WarmUp(ShotRuntime& runtime);
+
 }  // namespace shot
 
 #endif  // SHOT_SHOT_CAPTURE_H_

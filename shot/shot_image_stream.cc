@@ -857,15 +857,15 @@ class JpegRowEncoder final : public RowEncoder {
     jpeg_set_defaults(&info_);
     jpeg_set_quality(&info_, quality, TRUE);
     // The defaults leave chroma at 4:2:0, which is what skia's encoder and
-    // every browser screenshot use. Huffman optimisation is a second pass
-    // over every coefficient, buffered whole -- three bytes a pixel -- so a
-    // small image takes the smaller file and a large one the smaller
-    // process. Measured: 10% smaller files at 1440 x 40944, for 177 MB.
-    info_.optimize_coding =
-        static_cast<int64_t>(whole_.width()) * whole_.height() <=
-                kSmallCapturePixels
-            ? TRUE
-            : FALSE;
+    // every browser screenshot use, and the standard Huffman tables. Optimised
+    // tables are a second pass over every coefficient, buffered whole --
+    // three bytes a pixel, 177 MB for a 1440 x 40944 page -- and on the
+    // images that could afford the buffer they were measured at 35-38% of the
+    // encode for 5-10% smaller files: 0.9 -> 0.55 ms on an 800 x 450 card,
+    // 2.3 -> 1.5 ms on a 1280 x 720 page of photographs, the decoded pixels
+    // the same either way. The time is what a screenshot pays for on every
+    // capture; the bytes it pays for once.
+    info_.optimize_coding = FALSE;
     jpeg_start_compress(&info_, TRUE);
     return true;
   }
@@ -956,11 +956,20 @@ class WebpLossyRowEncoder final : public RowEncoder {
                           static_cast<float>(quality_))) {
       return base::unexpected("could not configure the WebP encoder");
     }
-    // The settings skia's encoder picks for lossy, plus libwebp's own second
-    // thread, which skia leaves off: the encoder's analysis and its filtering
-    // then overlap, for the same bytes out.
+    // Lossy, with libwebp's own second thread, which skia leaves off: the
+    // encoder's analysis and its filtering then overlap, for the same bytes
+    // out.
+    //
+    // Method 2 rather than skia's 3. From 3 up libwebp chooses each
+    // macroblock's mode by rate-distortion search, and that search was the
+    // whole encode: an 800 x 450 card took 16-18 ms to encode at 3 and 6.5-8
+    // at 2, a 1280 x 720 page of photographs 21 ms less, for files 3-4%
+    // larger at the same PSNR (47.7 -> 47.4 dB on the card, 37.53 -> 37.49
+    // on the photographs) -- the two decode to within a third of a level of
+    // each other on average. Methods 1 and 0 save little more time and cost
+    // 12-16% of the bytes; 4 costs what 3 does.
     config.lossless = 0;
-    config.method = 3;
+    config.method = 2;
     config.thread_level = 1;
     Bytes::Writer writer(EncodedCapacity(whole_), std::move(output_));
     picture_.writer = &WriteWebp;
