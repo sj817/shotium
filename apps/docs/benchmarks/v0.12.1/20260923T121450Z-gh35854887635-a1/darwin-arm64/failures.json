@@ -1,0 +1,47 @@
+[
+  {
+    "shard": "startup",
+    "engine": "playwright-chrome",
+    "scenario": "lifecycle",
+    "repeat": 1,
+    "attempt": 1,
+    "concurrency": 1,
+    "error": "Error: Error: PNG height 633, expected 720\n    at inspectPng (/Users/runner/work/shotium/shotium/apps/benchmark/src/image.ts:16:11)\n    at <anonymous> (/Users/runner/work/shotium/shotium/apps/benchmark/src/client-once.ts:58:17)\n    at runLifecycle (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:430:13)\n    at async <anonymous> (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:797:13)"
+  },
+  {
+    "shard": "startup",
+    "engine": "playwright-chrome",
+    "scenario": "lifecycle",
+    "repeat": 2,
+    "attempt": 1,
+    "concurrency": 1,
+    "error": "Error: Error: PNG height 633, expected 720\n    at inspectPng (/Users/runner/work/shotium/shotium/apps/benchmark/src/image.ts:16:11)\n    at <anonymous> (/Users/runner/work/shotium/shotium/apps/benchmark/src/client-once.ts:58:17)\n    at runLifecycle (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:430:13)\n    at async <anonymous> (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:797:13)"
+  },
+  {
+    "shard": "startup",
+    "engine": "playwright-chrome",
+    "scenario": "lifecycle",
+    "repeat": 3,
+    "attempt": 1,
+    "concurrency": 1,
+    "error": "Error: Error: PNG height 633, expected 720\n    at inspectPng (/Users/runner/work/shotium/shotium/apps/benchmark/src/image.ts:16:11)\n    at <anonymous> (/Users/runner/work/shotium/shotium/apps/benchmark/src/client-once.ts:58:17)\n    at runLifecycle (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:430:13)\n    at async <anonymous> (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:797:13)"
+  },
+  {
+    "shard": "startup",
+    "engine": "playwright-chrome",
+    "scenario": "lifecycle",
+    "repeat": 4,
+    "attempt": 1,
+    "concurrency": 1,
+    "error": "Error: Error: PNG height 633, expected 720\n    at inspectPng (/Users/runner/work/shotium/shotium/apps/benchmark/src/image.ts:16:11)\n    at <anonymous> (/Users/runner/work/shotium/shotium/apps/benchmark/src/client-once.ts:58:17)\n    at runLifecycle (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:430:13)\n    at async <anonymous> (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:797:13)"
+  },
+  {
+    "shard": "startup",
+    "engine": "playwright-chrome",
+    "scenario": "lifecycle",
+    "repeat": 5,
+    "attempt": 1,
+    "concurrency": 1,
+    "error": "Error: Error: PNG height 633, expected 720\n    at inspectPng (/Users/runner/work/shotium/shotium/apps/benchmark/src/image.ts:16:11)\n    at <anonymous> (/Users/runner/work/shotium/shotium/apps/benchmark/src/client-once.ts:58:17)\n    at runLifecycle (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:430:13)\n    at async <anonymous> (/Users/runner/work/shotium/shotium/apps/benchmark/src/worker.ts:797:13)"
+  }
+]
