@@ -114,6 +114,14 @@ export interface ScreenshotOptions {
   /** Capture the whole document rather than the viewport. */
   fullPage?: boolean;
   /**
+   * Enlarge the layout viewport to contain the selected fullPage, selector or
+   * clip region before painting. Viewport-relative CSS such as `vh`, media
+   * queries and fixed backgrounds uses the larger size. Enabled by default
+   * for region captures; false preserves the original viewport. Automatic
+   * expansion falls back for oversized or non-converging layouts.
+   */
+  expandViewport?: boolean;
+  /**
    * Capture the box of the first element matching this CSS selector. Resolved
    * inside the renderer with Document::querySelector -- there is no JavaScript
    * engine, so nothing is injected into the page.

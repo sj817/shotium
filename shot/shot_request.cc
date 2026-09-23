@@ -139,6 +139,12 @@ base::expected<ScreenshotRequest, std::string> ReadScreenshotRequest(
   }
   request.full_page = full_page->value_or(false);
 
+  auto expand_viewport = ReadBool(dict, "expandViewport");
+  if (!expand_viewport.has_value()) {
+    return base::unexpected(expand_viewport.error());
+  }
+  request.expand_viewport = *expand_viewport;
+
   auto selector = ReadString(dict, "selector");
   if (!selector.has_value()) {
     return base::unexpected(selector.error());
@@ -348,6 +354,11 @@ base::expected<ScreenshotRequest, std::string> ReadScreenshotRequest(
   if (request.full_page && !request.selector.empty()) {
     return base::unexpected(
         "fullPage and selector both choose a region; use one");
+  }
+  if (request.expand_viewport == true && !request.full_page &&
+      request.selector.empty() && !request.clip.has_value()) {
+    return base::unexpected(
+        "expandViewport needs fullPage, selector or clip");
   }
 
   return request;

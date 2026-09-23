@@ -64,6 +64,10 @@ struct ScreenshotRequest {
 
   std::string type = "png";  // png | jpeg | webp
   bool full_page = false;
+  // Enlarge the layout viewport for region captures by default. Explicit true
+  // requires expansion to succeed; the default may fall back for large or
+  // viewport-dependent pages. False preserves the caller's layout viewport.
+  std::optional<bool> expand_viewport;
   std::string selector;
   std::optional<int> quality;  // 1-100, jpeg/webp only
   double scale = 1.0;

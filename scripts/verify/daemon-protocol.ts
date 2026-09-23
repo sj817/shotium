@@ -19,7 +19,7 @@ import {resolve} from '../lib/repo.ts';
 
 import type * as Shotium from '../../apps/typescript/src/index.ts';
 
-const PROTOCOL_VERSION = 2;
+const PROTOCOL_VERSION = 3;
 
 function frame(value: unknown) {
   return encodeFrame(Buffer.from(Buffer.isBuffer(value) ? value : JSON.stringify(value)));
@@ -98,7 +98,7 @@ async function main(): Promise<void> {
   let advertised: Status = {version: '0.7.4'};
   const fake = await fakeDaemon(endpoint, () => advertised);
   try {
-    await assert.rejects(shotium.daemon.connect({endpoint}), /wire protocol legacy\/unversioned .* requires 2/);
+    await assert.rejects(shotium.daemon.connect({endpoint}), /wire protocol legacy\/unversioned .* requires 3/);
 
     advertised = {version: 'future', protocolVersion: PROTOCOL_VERSION, capabilities: ['screenshot']};
     process.env.SHOTIUM_ENDPOINT = endpoint;

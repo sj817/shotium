@@ -327,6 +327,7 @@ import shotium, {
 | `quality` | `number` (1-100) | `90` | 图像编码质量（仅适用于 `jpeg` 与 `webp`） |
 | `scale` | `number` (0.01-8) | `1` | 设备像素比（Device Scale Factor / DPR） |
 | `fullPage` | `boolean` | `false` | 是否渲染整个文档完整内容而非仅视口区域 |
+| `expandViewport` | `boolean` | 区域截图默认自动开启 | 在绘制 `fullPage`、`selector` 或 `clip` 截图前，把排版视口扩大到覆盖截图区域；固定背景因此可覆盖整张截图 |
 | `selector` | `string` | 无 | 截取匹配指定 CSS 选择器的首个元素包围盒（通过内部 DOM 解析，不注入任何脚本） |
 | `clip` | `{ x, y, width, height }` | 无 | 指定裁切矩形区域（CSS 像素） |
 | `omitBackground` | `boolean` | `false` | 是否保留透明背景通道（设置为 `true` 时不绘制默认白色底色；`jpeg` 格式不支持） |
@@ -338,6 +339,8 @@ import shotium, {
 | `headers` | `Record<string, string>` | 无 | 随主文档及同源子资源发送的自定义 HTTP 请求头（不会泄露给第三方跨域资源） |
 
 `fullPage`、`selector`、`clip` 三者互斥；传入未知选项字段将被严格拦截校验，而非静默忽略
+
+区域截图默认自动扩大排版视口，与 Puppeteer 的 `fullPage: true, captureBeyondViewport: false` 类似：`background-attachment: fixed` 会覆盖截图区域。`vh`、媒体查询和排版也可能变化。如果所需视口单边超过 32,767 CSS 像素，或三轮排版后截图区域仍持续增长，自动模式会回退到原视口。设置 `expandViewport: false` 或命令行 `--no-expand-viewport` 可始终使用原视口；显式设置 `expandViewport: true` 或 `--expand-viewport` 则要求扩视口成功，否则返回错误。
 
 `ScreenshotTilesOptions` 继承自 `ScreenshotOptions`，新增 `tile: { height: number }` 配置（单个分片高度最大 32,000 CSS 像素）
 
@@ -454,6 +457,8 @@ export interface ScreenshotOptions {
   type?: 'png' | 'jpeg' | 'webp';
   /** 是否截取整个文档内容 */
   fullPage?: boolean;
+  /** 将排版视口扩大到覆盖 fullPage、selector 或 clip 截图区域 */
+  expandViewport?: boolean;
   /** 截取匹配指定 CSS 选择器的首个元素（内部 DOM 解析，无 JS 注入） */
   selector?: string;
   /** 图像质量（1-100，仅 jpeg 与 webp），默认 90 */
@@ -667,4 +672,3 @@ export interface CacheClearResult {
 ## 许可证
 
 本项目遵循与上游 Chromium 一致的 BSD-3-Clause 开源协议，详情参见 [LICENSE](https://github.com/sj817/shotium/blob/main/LICENSE)
-

@@ -32,7 +32,7 @@ import {Checks, sha256} from '../lib/report.ts';
 
 import type * as Shotium from '../../apps/typescript/src/index.ts';
 
-const PROTOCOL_VERSION = 2;
+const PROTOCOL_VERSION = 3;
 
 async function main(exeArg: string): Promise<number> {
   const exe = resolve(exeArg);
@@ -97,6 +97,19 @@ process.stdout.write(JSON.stringify({bytes: image.length, elapsedMs: Date.now() 
   check(started.protocolVersion === PROTOCOL_VERSION && started.capabilities.includes('screenshot') && started.capabilities.includes('tiles'),
         'and advertises the wire generation and operations it speaks', `v${started.protocolVersion}: ${started.capabilities.join(', ')}`);
   check(started.warm === true, 'that prewarmed before it took the first request');
+
+  checks.section('viewport expansion reaches the daemon');
+  const oversized = {
+    file: resolve('shot/testdata/selector_oversized.html'),
+    viewport: {width: 400, height: 300},
+    selector: '#oversized',
+    allowFileAccess: true,
+  };
+  const {image: ordinaryElement} = await client.screenshot({...oversized, expandViewport: false});
+  const {image: expandedElement} = await client.screenshot(oversized);
+  check(ordinaryElement!.readUInt32BE(16) === 800 && expandedElement!.readUInt32BE(16) === 800 &&
+            !ordinaryElement!.equals(expandedElement!),
+        'default expansion changes viewport-relative CSS through the daemon');
 
   checks.section('tiles travel as one header and several frames');
   // The one reply shape that is not "header, payload": the client has to read

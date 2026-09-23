@@ -168,6 +168,22 @@ base::expected<ShotOptions, std::string> ParseShotOptions(
       options.full_page = true;
       continue;
     }
+    if (!positional_only && argument == "--expand-viewport") {
+      if (options.expand_viewport == false) {
+        return base::unexpected(
+            "--expand-viewport and --no-expand-viewport conflict");
+      }
+      options.expand_viewport = true;
+      continue;
+    }
+    if (!positional_only && argument == "--no-expand-viewport") {
+      if (options.expand_viewport == true) {
+        return base::unexpected(
+            "--expand-viewport and --no-expand-viewport conflict");
+      }
+      options.expand_viewport = false;
+      continue;
+    }
     if (!positional_only && argument == "--omit-background") {
       options.omit_background = true;
       continue;
@@ -385,6 +401,11 @@ base::expected<ShotOptions, std::string> ParseShotOptions(
   if (options.output_path.empty()) {
     return base::unexpected("output path must not be empty");
   }
+  if (options.expand_viewport == true && !options.full_page &&
+      options.selector.empty()) {
+    return base::unexpected(
+        "--expand-viewport needs --full-page or --selector");
+  }
   return options;
 }
 
@@ -457,6 +478,8 @@ Options:
   --scale N             Device scale factor, 0.01-8 (default: 1)
   --full-page           Capture the whole document, not just the viewport
   --selector CSS        Capture only the first element matching CSS
+  --expand-viewport     Require viewport expansion for region captures
+  --no-expand-viewport  Keep the original viewport for region captures
   --tile-height N       Write the capture as tiles of at most N CSS pixels
                         each, numbered into --output: page-{n}.png, or
                         page-1.png, page-2.png ... when {n} is not given

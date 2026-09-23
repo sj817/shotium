@@ -16,6 +16,7 @@ export interface WireRequest {
   file: string;
   type?: 'png'|'jpeg'|'webp';
   fullPage?: boolean;
+  expandViewport?: boolean;
   selector?: string;
   quality?: number;
   scale?: number;
@@ -42,6 +43,7 @@ const WIRE_FIELDS = new Set([
   'file',
   'type',
   'fullPage',
+  'expandViewport',
   'selector',
   'quality',
   'scale',
@@ -115,6 +117,16 @@ function toWire(options: ScreenshotOptions): WireRequest {
       throw new TypeError(`shotium: unknown option "${key}"`);
     }
     request[key] = value;
+  }
+
+  if (request.expandViewport !== undefined &&
+      typeof request.expandViewport !== 'boolean') {
+    throw new TypeError('shotium: expandViewport must be a boolean');
+  }
+  if (request.expandViewport && !request.fullPage && !request.selector &&
+      !request.clip) {
+    throw new TypeError(
+        'shotium: expandViewport needs fullPage, selector or clip');
   }
 
   // The viewport is flattened because the worker takes width and height at the

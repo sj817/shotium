@@ -327,6 +327,7 @@ The cache management API operates independently of the engine lifecycle and does
 | `quality` | `number` 1-100 | `90` | `jpeg` and `webp` only |
 | `scale` | `number` 0.01-8 | `1` | Device scale factor |
 | `fullPage` | `boolean` | `false` | Capture the whole document rather than the viewport |
+| `expandViewport` | `boolean` | automatic for region captures | Before painting a `fullPage`, `selector` or `clip` capture, grow the layout viewport to contain it; fixed backgrounds can then cover the whole captured region |
 | `selector` | `string` | none | Capture the box of the first element matching this CSS selector, resolved with `Document::querySelector`; nothing is injected into the page |
 | `clip` | `{ x, y, width, height }` | none | A region of the document in CSS pixels |
 | `omitBackground` | `boolean` | `false` | Keep the alpha channel instead of painting the white backdrop. Rejected for `jpeg` |
@@ -338,6 +339,8 @@ The cache management API operates independently of the engine lifecycle and does
 | `headers` | `Record<string, string>` | none | Extra request headers, sent with the document and with subresources same-origin with it, never to third-party origins |
 
 `fullPage`, `selector` and `clip` are mutually exclusive. Unknown fields are rejected rather than ignored
+
+Region captures expand the layout viewport by default, comparable to Puppeteer's `fullPage: true, captureBeyondViewport: false`: `background-attachment: fixed` then covers the captured region. This can also change `vh`, media queries and layout. Automatic expansion falls back to the original viewport when the required size exceeds 32,767 CSS pixels per side or the region keeps growing after three layout passes. Set `expandViewport: false` or use CLI `--no-expand-viewport` to keep the original viewport. Explicit `expandViewport: true` or `--expand-viewport` requires expansion and reports an error in those fallback cases.
 
 `ScreenshotTilesOptions` is `ScreenshotOptions` plus `tile: { height: number }`, at most 32000 CSS pixels
 
@@ -458,6 +461,8 @@ export interface ScreenshotOptions {
   type?: 'png' | 'jpeg' | 'webp';
   /** Capture entire document scroll height rather than the viewport */
   fullPage?: boolean;
+  /** Grow the layout viewport to contain a fullPage, selector or clip capture */
+  expandViewport?: boolean;
   /** Capture bounding box of the first matching CSS selector */
   selector?: string;
   /** Compression quality 1-100 (jpeg and webp only), default 90 */
@@ -671,4 +676,3 @@ export interface CacheClearResult {
 ## License
 
 BSD-3-Clause, matching upstream Chromium. See [LICENSE](https://github.com/sj817/shotium/blob/main/LICENSE)
-

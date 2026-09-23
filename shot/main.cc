@@ -181,6 +181,7 @@ int Main(int argc, const char** argv) {
   request.height = prepared->options.height;
   request.scale = prepared->options.scale;
   request.full_page = prepared->options.full_page;
+  request.expand_viewport = prepared->options.expand_viewport;
   request.selector = prepared->options.selector;
   request.type = prepared->options.type;
   request.quality = prepared->options.quality;

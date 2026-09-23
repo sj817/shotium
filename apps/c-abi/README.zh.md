@@ -173,6 +173,7 @@ shot_status shot_cache_clear(shot_engine* engine, const char* clear_json, shot_b
 | `quality` | integer (1-100) | `90` | 图像编码质量（仅适用于 `jpeg` 与 `webp`） |
 | `scale` | number (0.01-8) | `1` | 设备像素比（DPR） |
 | `fullPage` | boolean | `false` | 是否截取整个文档完整内容而非仅当前视口 |
+| `expandViewport` | boolean | 区域截图默认自动开启 | 绘制前将排版视口扩大到覆盖 `fullPage`、`selector` 或 `clip` 区域；固定背景可覆盖整张截图，视口相关排版也可能变化。`false` 保持原视口；显式 `true` 遇到单边超过 32,767 CSS 像素或三轮排版仍不收敛时返回错误，自动模式则回退到原视口 |
 | `selector` | string | 无 | 截取匹配指定 CSS 选择器的首个元素包围盒 |
 | `clip` | `{x, y, width, height}` | 无 | 指定裁切矩形区域（CSS 像素） |
 | `omitBackground` | boolean | `false` | 是否保留透明背景（`jpeg` 格式不支持） |

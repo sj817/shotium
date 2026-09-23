@@ -252,6 +252,7 @@ All three entry points share a unified configuration model. The Node.js column c
 | Input | `file` | `URL_OR_PATH`, `--file PATH`, `--stdin` | `file` | required |
 | Viewport | `viewport.width`, `viewport.height` | `--width N --height N` | `width`, `height` | 1280 × 720 |
 | Whole document | `fullPage` | `--full-page` | `fullPage` | off |
+| Expand layout viewport to capture | `expandViewport` | `--no-expand-viewport` to disable | `expandViewport` | on for region captures |
 | Format | `type` | `--type png\|jpeg\|webp` | `type` | `png` |
 | Quality | `quality` | `--quality N` | `quality` | 90 |
 | Device scale | `scale` | `--scale N` | `scale` | 1 |

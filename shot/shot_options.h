@@ -46,6 +46,7 @@ struct ShotOptions {
   // parsed straight into a ScreenshotRequest so that the command line can go on
   // reporting its own errors with its own flag names.
   bool full_page = false;
+  std::optional<bool> expand_viewport;
   std::string selector;
   // --tile-height: the region in tiles of at most this many CSS pixels, one
   // file each. 0 is one image.

@@ -1533,8 +1533,9 @@ base::expected<void, std::string> ShotRenderer::CreatePage(
     // Chrome's Page.captureScreenshot(captureBeyondViewport=true) sets
     // record_whole_document, which WebViewImpl maps to this setting. It keeps
     // the caller's layout viewport intact while retaining display items beyond
-    // it, so selector/clip/fullPage do not re-run media queries or change vw/vh
-    // merely because a larger output region was requested.
+    // it. Region captures may still resize the viewport after their bounds
+    // are known; this setting also supports large-page fallback and the
+    // explicit expandViewport=false path.
     settings.SetMainFrameClipsContent(false);
   }
 
@@ -1878,6 +1879,68 @@ base::expected<void, std::string> ShotRenderer::RenderDocument(
   auto capture = ResolveCaptureRect(request);
   if (!capture.has_value()) {
     return base::unexpected(capture.error());
+  }
+
+  if ((request.full_page || !request.selector.empty() ||
+       request.clip.has_value()) &&
+      request.expand_viewport != false) {
+    // Puppeteer's fullPage capture can resize the layout viewport before
+    // painting when captureBeyondViewport is false. A fixed background is
+    // sized and clipped to that viewport, so retaining the original viewport
+    // leaves the rest of a full-page or element capture uncovered. Re-resolve
+    // after each resize because vh and media queries can change the region.
+    const gfx::Size original_size = view->Size();
+    bool expansion_unavailable = false;
+    for (int pass = 0; pass < 3; ++pass) {
+      const gfx::Size current = view->Size();
+      const int width = std::max(current.width(), capture->right());
+      const int height = std::max(current.height(), capture->bottom());
+      if (width == current.width() && height == current.height()) {
+        break;
+      }
+      if (width > kMaximumDimension || height > kMaximumDimension) {
+        if (request.expand_viewport == true) {
+          return base::unexpected(
+              "expandViewport needs a viewport larger than 32767 CSS pixels");
+        }
+        expansion_unavailable = true;
+        break;
+      }
+      const gfx::Size grown(width, height);
+      view->Resize(grown);
+      page_->GetVisualViewport().SetSize(grown);
+      if (!view->UpdateAllLifecyclePhases(
+              blink::DocumentUpdateReason::kBeginMainFrame)) {
+        return base::unexpected(
+            "the document did not reach a painted state after viewport resize");
+      }
+      capture = ResolveCaptureRect(request);
+      if (!capture.has_value()) {
+        return base::unexpected(capture.error());
+      }
+    }
+    if (expansion_unavailable || capture->right() > view->Size().width() ||
+        capture->bottom() > view->Size().height()) {
+      if (request.expand_viewport == true) {
+        return base::unexpected(
+            "expandViewport did not settle after three layout passes");
+      }
+      // Auto expansion is best effort. Revert any intermediate resize so a
+      // viewport-dependent document still paints with its original layout.
+      if (view->Size() != original_size) {
+        view->Resize(original_size);
+        page_->GetVisualViewport().SetSize(original_size);
+        if (!view->UpdateAllLifecyclePhases(
+                blink::DocumentUpdateReason::kBeginMainFrame)) {
+          return base::unexpected(
+              "the document did not reach a painted state after viewport resize");
+        }
+        capture = ResolveCaptureRect(request);
+        if (!capture.has_value()) {
+          return base::unexpected(capture.error());
+        }
+      }
+    }
   }
 
   // Style, layout, prepaint and paint -- where anything still needs them. The

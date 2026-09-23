@@ -174,6 +174,7 @@ shot_status shot_cache_clear(shot_engine* engine, const char* clear_json, shot_b
 | `quality` | integer 1-100 | `90` | Encoding quality (`jpeg` and `webp` only) |
 | `scale` | number 0.01-8 | `1` | Device scale factor |
 | `fullPage` | boolean | `false` | Capture the complete scrollable document |
+| `expandViewport` | boolean | automatic for region captures | Grow the layout viewport to contain a `fullPage`, `selector` or `clip` region before painting; fixed backgrounds can cover the whole capture, while viewport-relative layout may change. `false` keeps the original viewport; explicit `true` fails if expansion exceeds 32,767 CSS pixels or does not settle after three passes. Automatic mode falls back to the original viewport in those cases |
 | `selector` | string | none | Clip capture to the bounding box of the first matching CSS selector |
 | `clip` | `{x, y, width, height}` | none | Specific document clip rectangle in CSS pixels |
 | `omitBackground` | boolean | `false` | Preserve transparent background (not supported for `jpeg`) |

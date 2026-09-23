@@ -37,6 +37,8 @@ Options:
   --height N            Viewport height in CSS pixels (default: 720)
   --scale N             Device scale factor, 0.01-8 (default: 1)
   --full-page           Capture the whole document, not just the viewport
+  --expand-viewport     Require viewport expansion for region captures
+  --no-expand-viewport  Keep the original viewport for region captures
   --selector CSS        Capture only the first element matching CSS
   --tile-height N       Write the capture as tiles of at most N CSS pixels
                         each, numbered into --output: page-{n}.png, or
@@ -100,6 +102,8 @@ const OPTIONS = {
   'serve': {type: 'boolean'},
   'allow-file-access': {type: 'boolean'},
   'full-page': {type: 'boolean'},
+  'expand-viewport': {type: 'boolean'},
+  'no-expand-viewport': {type: 'boolean'},
   'omit-background': {type: 'boolean'},
   'verbose': {type: 'boolean'},
   'file': {type: 'string'},
@@ -154,6 +158,11 @@ function parse(argv: string[]): Parsed|'help' {
   };
   if (type !== undefined) options.type = type;
   if (values['full-page']) options.fullPage = true;
+  if (values['expand-viewport'] && values['no-expand-viewport']) {
+    throw new UsageError('--expand-viewport and --no-expand-viewport conflict');
+  }
+  if (values['expand-viewport']) options.expandViewport = true;
+  if (values['no-expand-viewport']) options.expandViewport = false;
   if (values.selector !== undefined) options.selector = values.selector;
   const quality = integer('quality', values.quality);
   if (quality !== undefined) options.quality = quality;

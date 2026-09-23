@@ -176,6 +176,9 @@ async function main(exeArg: string, opts: {corpus: string; features: string; wid
     const above = rgb(image, 50, Math.floor(32767 / 4) - 2);
     checks.check(sameRgb(above, WHITE), 'with the rows either side of the paint limit intact', `(${above.join(', ')})`);
   }
+  [header] = await ask({fullPage: true, expandViewport: true, scale: 0.25}, tall);
+  checks.check(header.ok === false && err(header).includes('larger than 32767'),
+               'explicit expansion rejects a viewport beyond the engine limit', err(header));
 
   checks.section('tiles');
   proc.send({...tall, fullPage: true, tile: {height: 8000}});
@@ -318,7 +321,7 @@ async function main(exeArg: string, opts: {corpus: string; features: string; wid
   checks.section('selectors beyond the viewport');
   const oversizedGeometry = {file: path.join(path.dirname(features), 'selector_oversized.html'), width: 400, height: 300, allowFileAccess: true};
   let oversized: Buffer;
-  [header, oversized] = await ask({selector: '#oversized'}, oversizedGeometry);
+  [header, oversized] = await ask({selector: '#oversized', expandViewport: false}, oversizedGeometry);
   checks.check(header.ok === true, 'an oversized selector renders', err(header));
   checks.check(sizeIs(oversized, 800, 600), "and uses the element's full 800x600 box", size(oversized));
   {
@@ -326,6 +329,10 @@ async function main(exeArg: string, opts: {corpus: string; features: string; wid
     checks.check(sameRgb(rgb(image, 100, 100), [0x00, 0xcc, 0x00]), 'content inside the original viewport is present', `(${pixel(image, 100, 100).join(', ')})`);
     checks.check(sameRgb(rgb(image, 300, 100), [0xcc, 0x00, 0x00]), 'and 50vw stayed 200px instead of reflowing to 400px', `(${pixel(image, 300, 100).join(', ')})`);
   }
+  [header, oversized] = await ask({selector: '#oversized'}, oversizedGeometry);
+  checks.check(header.ok === true && sizeIs(oversized, 800, 600) &&
+                   sameRgb(rgb(decodePng(oversized), 300, 100), [0x00, 0xcc, 0x00]),
+               'default selector capture expands the layout viewport', err(header));
 
   const centeredGeometry = {file: path.join(path.dirname(features), 'selector_centered.html'), width: 400, height: 300, allowFileAccess: true};
   let centered: Buffer;
@@ -337,6 +344,64 @@ async function main(exeArg: string, opts: {corpus: string; features: string; wid
     checks.check(sameRgb(rgb(image, 0, 0), BLUE) && sameRgb(rgb(image, 799, 599), BLUE), 'and both far corners were painted',
                  `(${pixel(image, 0, 0).join(', ')}) / (${pixel(image, 799, 599).join(', ')})`);
   }
+
+  checks.section('fixed backgrounds use the captured region as viewport by default');
+  const fixedBackground = fixture(
+      'fixed_background_expand.html',
+      '<style>html,body{margin:0}body{width:200px;transform:scale(2);transform-origin:0 0;' +
+      'background:linear-gradient(#f00,#f00) fixed;background-size:cover}' +
+      '#container{height:450px}</style><div id="container"></div>');
+  const fixedGeometry = {file: fixedBackground, width: 400, height: 300, allowFileAccess: true};
+  let fixedDefault: Buffer;
+  [header, fixedDefault] = await ask({selector: '#container'}, fixedGeometry);
+  checks.check(header.ok === true && sizeIs(fixedDefault, 400, 900), 'default selector capture keeps the full element', err(header));
+  checks.check(sameRgb(rgb(decodePng(fixedDefault), 10, 700), RED), 'fixed background covers the selected element by default');
+  let fixedOriginal: Buffer;
+  [header, fixedOriginal] = await ask({selector: '#container', expandViewport: false}, fixedGeometry);
+  checks.check(header.ok === true && sizeIs(fixedOriginal, 400, 900) &&
+                   sameRgb(rgb(decodePng(fixedOriginal), 10, 700), WHITE),
+               'expandViewport=false preserves the original viewport', err(header));
+  let fixedExpanded: Buffer;
+  [header, fixedExpanded] = await ask({selector: '#container', expandViewport: true}, fixedGeometry);
+  checks.check(header.ok === true && fixedExpanded.equals(fixedDefault),
+               'explicit expansion matches the default selector capture', err(header));
+  const fixedFullPage = fixture(
+      'fixed_background_full_page.html',
+      '<style>html,body{margin:0}body{background:linear-gradient(#f00,#f00) fixed;' +
+      'background-size:cover}#container{height:900px}</style><div id="container"></div>');
+  [header, payload] = await ask(
+      {file: fixedFullPage, fullPage: true},
+      {width: 400, height: 300, allowFileAccess: true});
+  checks.check(header.ok === true && sizeIs(payload, 400, 900) &&
+                   sameRgb(rgb(decodePng(payload), 10, 700), RED),
+               'default fullPage capture also covers the document', err(header));
+  [header, payload] = await ask(
+      {file: fixedFullPage, clip: {x: 0, y: 0, width: 400, height: 900}},
+      {width: 400, height: 300, allowFileAccess: true});
+  checks.check(header.ok === true && sizeIs(payload, 400, 900) &&
+                   sameRgb(rgb(decodePng(payload), 10, 700), RED),
+               'default clip capture also expands the viewport', err(header));
+  const fixedCli = resolve('shot/testdata/out/fixed_background_expand.png');
+  await execa(exe, ['--file', fixedBackground, '--width', '400', '--height', '300', '--selector', '#container', '--output', fixedCli]);
+  checks.check(readFileSync(fixedCli).equals(fixedDefault), 'the CLI and worker agree on default expansion');
+  await execa(exe, ['--file', fixedBackground, '--width', '400', '--height', '300', '--selector', '#container', '--no-expand-viewport', '--output', fixedCli]);
+  checks.check(readFileSync(fixedCli).equals(fixedOriginal), 'the CLI and worker agree on disabled expansion');
+  rmSync(fixedCli, {force: true});
+  const growingPage = fixture(
+      'viewport_growth_fallback.html',
+      '<style>html,body{margin:0}#container{height:calc(100vh + 100px);background:red}</style>' +
+      '<div id="container"></div>');
+  const growingGeometry = {file: growingPage, width: 400, height: 300, allowFileAccess: true};
+  let growingFallback: Buffer;
+  [header, growingFallback] = await ask({fullPage: true}, growingGeometry);
+  checks.check(header.ok === true, 'automatic expansion handles a viewport-dependent document', err(header));
+  let growingOriginal: Buffer;
+  [header, growingOriginal] = await ask({fullPage: true, expandViewport: false}, growingGeometry);
+  checks.check(header.ok === true && growingFallback.equals(growingOriginal),
+               'and falls back to the original viewport when layout keeps growing', err(header));
+  [header] = await ask({fullPage: true, expandViewport: true}, growingGeometry);
+  checks.check(header.ok === false && err(header).includes('did not settle'),
+               'explicit expansion reports a non-converging layout', err(header));
 
   let scaled: Buffer;
   [header, scaled] = await ask({scale: 2}, geometry);

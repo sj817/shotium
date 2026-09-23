@@ -18,7 +18,7 @@ const HEADER_BYTES = 4;
 // cannot safely talk to the previous daemon increments it. Derived endpoints
 // include the generation, while callers that choose an exact endpoint get a
 // status handshake instead.
-const DAEMON_PROTOCOL_VERSION = 2;
+const DAEMON_PROTOCOL_VERSION = 3;
 const DAEMON_CAPABILITIES = [
   'screenshot',
   'tiles',

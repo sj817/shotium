@@ -25,6 +25,7 @@ import path from 'node:path';
 
 import {cac} from 'cac';
 
+import {decodePng, rgb, sameRgb} from '../lib/png.ts';
 import {resolve} from '../lib/repo.ts';
 import {Checks, sha256 as sha} from '../lib/report.ts';
 
@@ -90,6 +91,19 @@ async function main(exeArg: string): Promise<number> {
   checks.section('the geometry options reach the engine');
   const {image: clipped} = await shotium.screenshot({file: features, viewport: {width: 400, height: 300}, clip: {x: 40, y: 60, width: 200, height: 120}, allowFileAccess: true});
   check(clipped!.readUInt32BE(16) === 200 && clipped!.readUInt32BE(20) === 120, 'clip arrives as a 200x120 image', `${clipped!.readUInt32BE(16)}x${clipped!.readUInt32BE(20)}`);
+  const expandedRequest = {
+    file: resolve('shot/testdata/selector_oversized.html'),
+    viewport: {width: 400, height: 300},
+    selector: '#oversized',
+    allowFileAccess: true,
+  };
+  const {image: expanded} = await shotium.screenshot(expandedRequest);
+  check(expanded!.readUInt32BE(16) === 800 && expanded!.readUInt32BE(20) === 600 &&
+            sameRgb(rgb(decodePng(expanded!), 300, 100), [0, 204, 0]),
+        'default expansion reaches the addon and updates viewport-relative layout');
+  const {image: unexpanded} = await shotium.screenshot({...expandedRequest, expandViewport: false});
+  check(sameRgb(rgb(decodePng(unexpanded!), 300, 100), [204, 0, 0]),
+        'expandViewport=false preserves viewport-relative layout through the addon');
 
   const writtenDir = mkdtempSync(path.join(os.tmpdir(), 'shot-node-check-path-'));
   const written = path.join(writtenDir, 'image.png');
