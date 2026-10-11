@@ -10,6 +10,8 @@
 
 JavaScript 封装层具备**零 JavaScript 运行时依赖**特性。原生引擎通过 8 个可选平台包分发：覆盖 Windows 与 macOS 的 x64/arm64，以及 Linux x64/arm64 的 glibc 与 musl。npm 和 pnpm 会按当前操作系统、CPU 及 Linux libc 自动选择对应包；无后缀 Linux 包用于 Debian、Ubuntu、RHEL 等 glibc 发行版，`linux-*-musl` 用于 Alpine
 
+CPU 绘制支持空透明元素的 `backdrop-filter`，包括 `pointer-events: none`，以及 CSS 3D 深度排序和 `backface-visibility: hidden`；相交平面会先切分再绘制。大面积背景模糊需要临时图像缓冲，内存开销取决于滤镜区域。相交面的共享边缘可能与 Chrome 的 GPU 绘制存在一像素差异。
+
 Linux 公网 HTTPS 使用编译进引擎的 Chrome Root Store。Linux 构建不会读取 NSS、宿主证书库或企业 CA 设置；私有 PKI 地址需要使用受公共根信任的证书链
 
 ## 目录

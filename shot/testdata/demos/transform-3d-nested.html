@@ -1,0 +1,15 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Nested 3D contexts stay inside flat planes and rotated scenes reverse depth</title>
+<style>
+html,body{margin:0;background:white}
+.scene{position:absolute;top:0;width:100px;height:80px;transform-style:preserve-3d}
+.plane{position:absolute;left:10px;top:10px;width:80px;height:60px}
+.near{background:blue;transform:translateZ(50px)}.far{background:red;transform:translateZ(-50px)}
+.inner{width:100px;height:80px;transform-style:preserve-3d}
+</style>
+<div class=scene style="left:0"><div style="transform:translateZ(50px)"><div class=inner><div class="plane near"></div><div class="plane far"></div></div></div><div class=plane style="background:green"></div></div>
+<div class=scene style="left:100px"><div style="transform:translateZ(50px)"><div class=inner><div class="plane near" style="transform:translateZ(-1000px)"></div><div class="plane far" style="transform:translateZ(-2000px)"></div></div></div><div class=plane style="background:green"></div></div>
+<div class=scene style="left:200px;transform:rotateY(180deg)"><div class="plane near"></div><div class="plane far"></div></div>
+<div class=scene style="left:300px"><div class="plane near" style="z-index:0"></div><div class="plane far" style="z-index:999"></div></div>
+<div class=scene style="left:0;top:100px"><div style="width:100px;height:80px;transform:translateZ(50px) rotateY(60deg)"><div class=inner><div class="plane near"></div><div class="plane far"></div></div></div><div class=plane style="background:green"></div></div>

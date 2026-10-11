@@ -1,0 +1,19 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Backface visibility, delegated nodes, winding and accumulated transforms</title>
+<style>
+html,body{margin:0;background:white}
+.box{position:absolute;top:10px;width:40px;height:40px;background:green;backface-visibility:hidden}
+.child{width:40px;height:40px;background:blue}
+</style>
+<div class=box style="left:10px;transform:rotateY(180deg)"></div>
+<div class=box style="left:60px;transform:rotateY(180deg);backface-visibility:visible"></div>
+<div class=box style="left:110px;transform:rotateY(0deg)"></div>
+<div class=box style="left:160px;transform:rotateX(180deg)"></div>
+<div class=box style="left:210px;transform:scaleX(-1)"></div>
+<div class=box style="left:260px;transform:rotateY(180deg)"><div class=child></div></div>
+<div class=box style="left:310px;transform:rotateY(180deg);transform-style:preserve-3d"><div class=child style="transform:rotateY(180deg);backface-visibility:hidden"></div></div>
+<div class=box style="left:10px;top:80px;rotate:y 180deg"></div>
+<div class=box style="left:60px;top:80px;transform:rotateY(180deg);transform-style:preserve-3d"><div class=child style="transform:translateZ(1px)"></div></div>
+<div class=box style="left:110px;top:80px;transform:scaleX(0)"></div>
+<div class=box style="left:160px;top:80px;transform:perspective(200px) rotateY(150deg)"></div>

@@ -19,6 +19,8 @@
 
 shotium 提取了 Chromium 中将 HTML/CSS 转化为像素的核心能力：由 Blink 负责 DOM 解析、样式计算、排版与绘制，由 Skia 负责光栅化与图像编码，由 `//net` 负责资源拉取与磁盘缓存；彻底剥离了浏览器外壳（`//content`）、V8 引擎、多进程架构、Compositor 合成器、GPU 进程以及 DevTools 等与静态渲染无关的组件
 
+CPU 绘制支持空透明元素的 `backdrop-filter`、包含相交平面的 CSS 3D 深度排序，以及 `backface-visibility: hidden`。大面积背景模糊会分配临时图像缓冲，相交面的共享边缘可能与 Chrome 的 GPU 绘制存在一像素差异。详见 [Windows 体积、内存及像素验证记录](apps/docs/benchmarks/experiments/20261011T030349Z-cpu-css-effects/report.zh-CN.md)。
+
 引擎直接运行在宿主调用方进程内，通过专有串行渲染线程完成页面排版绘制，并直接输出 PNG、JPEG 或 WebP 图像数据。排版引擎严格基于 Chromium 155 标准，渲染效果与原生 Chrome 保持一致；文字渲染采用灰度抗锯齿与固定伽马值，确保在同构环境下拥有完全确定性的像素级输出
 
 ### 核心特性

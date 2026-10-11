@@ -1,0 +1,960 @@
+{
+  "measuredAt": "2026-10-11T03:03:49.571Z",
+  "identities": {
+    "baseline": {
+      "file": "out/GpuResearch/current-baseline/shotium.exe",
+      "bytes": 36867584,
+      "sha256": "25cdd01905b8097158f55550971204fa14b219b29b24ac23deef796df07f4350"
+    },
+    "candidate": {
+      "file": "out/GpuResearch/candidate/shotium.exe",
+      "bytes": 36910080,
+      "sha256": "303159ab08571f89c55104442bf265c9165e3a8aa34daddff53e9a584ccae50a"
+    }
+  },
+  "method": "Windows x64, five alternating AB/BA pairs; fresh CLI --serve per case, three renders per worker; median OS lifetime peak working set and private bytes after rendering. No timing or whole-matrix performance claim.",
+  "summaries": [
+    {
+      "case": "card",
+      "size": "800x450",
+      "baseline": {
+        "idleWorkingMiB": 28.39,
+        "peakWorkingMiB": 38.64,
+        "privateAfterMiB": 13.92
+      },
+      "candidate": {
+        "idleWorkingMiB": 28.4,
+        "peakWorkingMiB": 38.68,
+        "privateAfterMiB": 13.85
+      },
+      "deltaPeakWorkingMiB": 0.04,
+      "deltaPrivateAfterMiB": -0.07
+    },
+    {
+      "case": "corpus",
+      "size": "1280x720",
+      "baseline": {
+        "idleWorkingMiB": 28.38,
+        "peakWorkingMiB": 45.34,
+        "privateAfterMiB": 21.34
+      },
+      "candidate": {
+        "idleWorkingMiB": 28.4,
+        "peakWorkingMiB": 45.42,
+        "privateAfterMiB": 21.32
+      },
+      "deltaPeakWorkingMiB": 0.08,
+      "deltaPrivateAfterMiB": -0.02
+    },
+    {
+      "case": "backdrop",
+      "size": "400x200",
+      "baseline": {
+        "idleWorkingMiB": 28.39,
+        "peakWorkingMiB": 30.62,
+        "privateAfterMiB": 8.84
+      },
+      "candidate": {
+        "idleWorkingMiB": 28.39,
+        "peakWorkingMiB": 30.85,
+        "privateAfterMiB": 8.84
+      },
+      "deltaPeakWorkingMiB": 0.23,
+      "deltaPrivateAfterMiB": 0
+    },
+    {
+      "case": "depth",
+      "size": "400x200",
+      "baseline": {
+        "idleWorkingMiB": 28.38,
+        "peakWorkingMiB": 30.98,
+        "privateAfterMiB": 9.12
+      },
+      "candidate": {
+        "idleWorkingMiB": 28.4,
+        "peakWorkingMiB": 31.06,
+        "privateAfterMiB": 9.09
+      },
+      "deltaPeakWorkingMiB": 0.08,
+      "deltaPrivateAfterMiB": -0.03
+    },
+    {
+      "case": "backdrop-large",
+      "size": "1600x900",
+      "baseline": {
+        "idleWorkingMiB": 28.38,
+        "peakWorkingMiB": 38.47,
+        "privateAfterMiB": 14.96
+      },
+      "candidate": {
+        "idleWorkingMiB": 28.4,
+        "peakWorkingMiB": 65.94,
+        "privateAfterMiB": 25.96
+      },
+      "deltaPeakWorkingMiB": 27.47,
+      "deltaPrivateAfterMiB": 11
+    }
+  ],
+  "runs": [
+    {
+      "round": 0,
+      "side": "baseline",
+      "cases": [
+        {
+          "case": "card",
+          "size": "800x450",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.4,
+            "privateMiB": 7.59,
+            "peakWorkingMiB": 28.51
+          },
+          "after": {
+            "workingMiB": 36.93,
+            "privateMiB": 13.93,
+            "peakWorkingMiB": 38.65
+          },
+          "imageSha256": "43B107D6DCB900AF0E0040BF6745AC42898B30906030D10F89FA9A57E71AB59F"
+        },
+        {
+          "case": "corpus",
+          "size": "1280x720",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.38,
+            "privateMiB": 7.61,
+            "peakWorkingMiB": 28.49
+          },
+          "after": {
+            "workingMiB": 43.72,
+            "privateMiB": 21.35,
+            "peakWorkingMiB": 45.5
+          },
+          "imageSha256": "0C728002F2841EC81823A6ADD833E00F77AE7DA63516ECBF4C9D5CE8DD20878D"
+        },
+        {
+          "case": "backdrop",
+          "size": "400x200",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.39,
+            "privateMiB": 7.59,
+            "peakWorkingMiB": 28.49
+          },
+          "after": {
+            "workingMiB": 29.82,
+            "privateMiB": 8.84,
+            "peakWorkingMiB": 30.62
+          },
+          "imageSha256": "23570BA723F474C2AB8D84C4285563FDFA688EAF7A52C0C9356AC3E95706B053"
+        },
+        {
+          "case": "depth",
+          "size": "400x200",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.38,
+            "privateMiB": 7.61,
+            "peakWorkingMiB": 28.49
+          },
+          "after": {
+            "workingMiB": 30.16,
+            "privateMiB": 9.14,
+            "peakWorkingMiB": 30.96
+          },
+          "imageSha256": "230D1AC25249846ABCBBD64B377DF46F59852CBF09B33B38883DC09547544AA6"
+        },
+        {
+          "case": "backdrop-large",
+          "size": "1600x900",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.38,
+            "privateMiB": 7.61,
+            "peakWorkingMiB": 28.49
+          },
+          "after": {
+            "workingMiB": 35.66,
+            "privateMiB": 14.98,
+            "peakWorkingMiB": 38.56
+          },
+          "imageSha256": "F64D9B34E205035CD5E71E204C5C00E0AE00BF20AD054BA79286487A9F8D0C27"
+        }
+      ]
+    },
+    {
+      "round": 0,
+      "side": "candidate",
+      "cases": [
+        {
+          "case": "card",
+          "size": "800x450",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.39,
+            "privateMiB": 7.52,
+            "peakWorkingMiB": 28.51
+          },
+          "after": {
+            "workingMiB": 37.03,
+            "privateMiB": 13.89,
+            "peakWorkingMiB": 38.67
+          },
+          "imageSha256": "43B107D6DCB900AF0E0040BF6745AC42898B30906030D10F89FA9A57E71AB59F"
+        },
+        {
+          "case": "corpus",
+          "size": "1280x720",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.4,
+            "privateMiB": 7.54,
+            "peakWorkingMiB": 28.52
+          },
+          "after": {
+            "workingMiB": 43.78,
+            "privateMiB": 21.32,
+            "peakWorkingMiB": 45.42
+          },
+          "imageSha256": "0C728002F2841EC81823A6ADD833E00F77AE7DA63516ECBF4C9D5CE8DD20878D"
+        },
+        {
+          "case": "backdrop",
+          "size": "400x200",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.39,
+            "privateMiB": 7.53,
+            "peakWorkingMiB": 28.51
+          },
+          "after": {
+            "workingMiB": 29.98,
+            "privateMiB": 8.84,
+            "peakWorkingMiB": 30.86
+          },
+          "imageSha256": "E8E4320862A68EB1C568906F4E09FD8C0F63646D815E92A6B90EDCCC51709E9A"
+        },
+        {
+          "case": "depth",
+          "size": "400x200",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.4,
+            "privateMiB": 7.59,
+            "peakWorkingMiB": 28.52
+          },
+          "after": {
+            "workingMiB": 30.26,
+            "privateMiB": 9.13,
+            "peakWorkingMiB": 31.08
+          },
+          "imageSha256": "0588A5E36B48EC75A1D28095E352B0DE19478C8BCC5E5CDAED9C4B5987B85998"
+        },
+        {
+          "case": "backdrop-large",
+          "size": "1600x900",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.4,
+            "privateMiB": 7.55,
+            "peakWorkingMiB": 28.52
+          },
+          "after": {
+            "workingMiB": 46.93,
+            "privateMiB": 25.96,
+            "peakWorkingMiB": 65.96
+          },
+          "imageSha256": "D3721900E29685BE5855663BDE1A5115A82FA77B589C89DD249B1C58880D00F0"
+        }
+      ]
+    },
+    {
+      "round": 1,
+      "side": "candidate",
+      "cases": [
+        {
+          "case": "card",
+          "size": "800x450",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.4,
+            "privateMiB": 7.54,
+            "peakWorkingMiB": 28.52
+          },
+          "after": {
+            "workingMiB": 36.96,
+            "privateMiB": 13.83,
+            "peakWorkingMiB": 38.68
+          },
+          "imageSha256": "43B107D6DCB900AF0E0040BF6745AC42898B30906030D10F89FA9A57E71AB59F"
+        },
+        {
+          "case": "corpus",
+          "size": "1280x720",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.41,
+            "privateMiB": 7.54,
+            "peakWorkingMiB": 28.52
+          },
+          "after": {
+            "workingMiB": 43.42,
+            "privateMiB": 20.86,
+            "peakWorkingMiB": 45.6
+          },
+          "imageSha256": "0C728002F2841EC81823A6ADD833E00F77AE7DA63516ECBF4C9D5CE8DD20878D"
+        },
+        {
+          "case": "backdrop",
+          "size": "400x200",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.39,
+            "privateMiB": 7.57,
+            "peakWorkingMiB": 28.51
+          },
+          "after": {
+            "workingMiB": 29.99,
+            "privateMiB": 9.11,
+            "peakWorkingMiB": 30.86
+          },
+          "imageSha256": "E8E4320862A68EB1C568906F4E09FD8C0F63646D815E92A6B90EDCCC51709E9A"
+        },
+        {
+          "case": "depth",
+          "size": "400x200",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.4,
+            "privateMiB": 7.56,
+            "peakWorkingMiB": 28.52
+          },
+          "after": {
+            "workingMiB": 30.27,
+            "privateMiB": 9.09,
+            "peakWorkingMiB": 31.09
+          },
+          "imageSha256": "0588A5E36B48EC75A1D28095E352B0DE19478C8BCC5E5CDAED9C4B5987B85998"
+        },
+        {
+          "case": "backdrop-large",
+          "size": "1600x900",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.4,
+            "privateMiB": 7.56,
+            "peakWorkingMiB": 28.51
+          },
+          "after": {
+            "workingMiB": 47.2,
+            "privateMiB": 26.27,
+            "peakWorkingMiB": 65.93
+          },
+          "imageSha256": "D3721900E29685BE5855663BDE1A5115A82FA77B589C89DD249B1C58880D00F0"
+        }
+      ]
+    },
+    {
+      "round": 1,
+      "side": "baseline",
+      "cases": [
+        {
+          "case": "card",
+          "size": "800x450",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.38,
+            "privateMiB": 7.59,
+            "peakWorkingMiB": 28.48
+          },
+          "after": {
+            "workingMiB": 36.91,
+            "privateMiB": 13.92,
+            "peakWorkingMiB": 38.63
+          },
+          "imageSha256": "43B107D6DCB900AF0E0040BF6745AC42898B30906030D10F89FA9A57E71AB59F"
+        },
+        {
+          "case": "corpus",
+          "size": "1280x720",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.39,
+            "privateMiB": 7.6,
+            "peakWorkingMiB": 28.5
+          },
+          "after": {
+            "workingMiB": 43.8,
+            "privateMiB": 21.3,
+            "peakWorkingMiB": 45.15
+          },
+          "imageSha256": "0C728002F2841EC81823A6ADD833E00F77AE7DA63516ECBF4C9D5CE8DD20878D"
+        },
+        {
+          "case": "backdrop",
+          "size": "400x200",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.39,
+            "privateMiB": 7.61,
+            "peakWorkingMiB": 28.5
+          },
+          "after": {
+            "workingMiB": 29.82,
+            "privateMiB": 8.85,
+            "peakWorkingMiB": 30.62
+          },
+          "imageSha256": "23570BA723F474C2AB8D84C4285563FDFA688EAF7A52C0C9356AC3E95706B053"
+        },
+        {
+          "case": "depth",
+          "size": "400x200",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.38,
+            "privateMiB": 7.61,
+            "peakWorkingMiB": 28.48
+          },
+          "after": {
+            "workingMiB": 30.16,
+            "privateMiB": 9.12,
+            "peakWorkingMiB": 30.99
+          },
+          "imageSha256": "230D1AC25249846ABCBBD64B377DF46F59852CBF09B33B38883DC09547544AA6"
+        },
+        {
+          "case": "backdrop-large",
+          "size": "1600x900",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.38,
+            "privateMiB": 7.57,
+            "peakWorkingMiB": 28.49
+          },
+          "after": {
+            "workingMiB": 35.66,
+            "privateMiB": 14.93,
+            "peakWorkingMiB": 37.92
+          },
+          "imageSha256": "F64D9B34E205035CD5E71E204C5C00E0AE00BF20AD054BA79286487A9F8D0C27"
+        }
+      ]
+    },
+    {
+      "round": 2,
+      "side": "baseline",
+      "cases": [
+        {
+          "case": "card",
+          "size": "800x450",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.38,
+            "privateMiB": 7.6,
+            "peakWorkingMiB": 28.49
+          },
+          "after": {
+            "workingMiB": 36.92,
+            "privateMiB": 13.93,
+            "peakWorkingMiB": 38.64
+          },
+          "imageSha256": "43B107D6DCB900AF0E0040BF6745AC42898B30906030D10F89FA9A57E71AB59F"
+        },
+        {
+          "case": "corpus",
+          "size": "1280x720",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.38,
+            "privateMiB": 7.61,
+            "peakWorkingMiB": 28.49
+          },
+          "after": {
+            "workingMiB": 43.79,
+            "privateMiB": 21.35,
+            "peakWorkingMiB": 45.17
+          },
+          "imageSha256": "0C728002F2841EC81823A6ADD833E00F77AE7DA63516ECBF4C9D5CE8DD20878D"
+        },
+        {
+          "case": "backdrop",
+          "size": "400x200",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.39,
+            "privateMiB": 7.6,
+            "peakWorkingMiB": 28.5
+          },
+          "after": {
+            "workingMiB": 29.82,
+            "privateMiB": 8.84,
+            "peakWorkingMiB": 30.64
+          },
+          "imageSha256": "23570BA723F474C2AB8D84C4285563FDFA688EAF7A52C0C9356AC3E95706B053"
+        },
+        {
+          "case": "depth",
+          "size": "400x200",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.38,
+            "privateMiB": 7.57,
+            "peakWorkingMiB": 28.48
+          },
+          "after": {
+            "workingMiB": 30.16,
+            "privateMiB": 9.1,
+            "peakWorkingMiB": 30.97
+          },
+          "imageSha256": "230D1AC25249846ABCBBD64B377DF46F59852CBF09B33B38883DC09547544AA6"
+        },
+        {
+          "case": "backdrop-large",
+          "size": "1600x900",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.38,
+            "privateMiB": 7.59,
+            "peakWorkingMiB": 28.49
+          },
+          "after": {
+            "workingMiB": 35.66,
+            "privateMiB": 14.96,
+            "peakWorkingMiB": 38.97
+          },
+          "imageSha256": "F64D9B34E205035CD5E71E204C5C00E0AE00BF20AD054BA79286487A9F8D0C27"
+        }
+      ]
+    },
+    {
+      "round": 2,
+      "side": "candidate",
+      "cases": [
+        {
+          "case": "card",
+          "size": "800x450",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.39,
+            "privateMiB": 7.55,
+            "peakWorkingMiB": 28.51
+          },
+          "after": {
+            "workingMiB": 37.03,
+            "privateMiB": 13.98,
+            "peakWorkingMiB": 38.68
+          },
+          "imageSha256": "43B107D6DCB900AF0E0040BF6745AC42898B30906030D10F89FA9A57E71AB59F"
+        },
+        {
+          "case": "corpus",
+          "size": "1280x720",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.39,
+            "privateMiB": 7.54,
+            "peakWorkingMiB": 28.51
+          },
+          "after": {
+            "workingMiB": 43.77,
+            "privateMiB": 21.3,
+            "peakWorkingMiB": 45.62
+          },
+          "imageSha256": "0C728002F2841EC81823A6ADD833E00F77AE7DA63516ECBF4C9D5CE8DD20878D"
+        },
+        {
+          "case": "backdrop",
+          "size": "400x200",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.4,
+            "privateMiB": 7.52,
+            "peakWorkingMiB": 28.52
+          },
+          "after": {
+            "workingMiB": 29.99,
+            "privateMiB": 8.84,
+            "peakWorkingMiB": 30.85
+          },
+          "imageSha256": "E8E4320862A68EB1C568906F4E09FD8C0F63646D815E92A6B90EDCCC51709E9A"
+        },
+        {
+          "case": "depth",
+          "size": "400x200",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.4,
+            "privateMiB": 7.53,
+            "peakWorkingMiB": 28.52
+          },
+          "after": {
+            "workingMiB": 30.25,
+            "privateMiB": 9.09,
+            "peakWorkingMiB": 31.06
+          },
+          "imageSha256": "0588A5E36B48EC75A1D28095E352B0DE19478C8BCC5E5CDAED9C4B5987B85998"
+        },
+        {
+          "case": "backdrop-large",
+          "size": "1600x900",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.39,
+            "privateMiB": 7.53,
+            "peakWorkingMiB": 28.51
+          },
+          "after": {
+            "workingMiB": 46.9,
+            "privateMiB": 25.96,
+            "peakWorkingMiB": 66.95
+          },
+          "imageSha256": "D3721900E29685BE5855663BDE1A5115A82FA77B589C89DD249B1C58880D00F0"
+        }
+      ]
+    },
+    {
+      "round": 3,
+      "side": "candidate",
+      "cases": [
+        {
+          "case": "card",
+          "size": "800x450",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.4,
+            "privateMiB": 7.54,
+            "peakWorkingMiB": 28.52
+          },
+          "after": {
+            "workingMiB": 36.98,
+            "privateMiB": 13.85,
+            "peakWorkingMiB": 38.71
+          },
+          "imageSha256": "43B107D6DCB900AF0E0040BF6745AC42898B30906030D10F89FA9A57E71AB59F"
+        },
+        {
+          "case": "corpus",
+          "size": "1280x720",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.4,
+            "privateMiB": 7.54,
+            "peakWorkingMiB": 28.51
+          },
+          "after": {
+            "workingMiB": 43.91,
+            "privateMiB": 21.38,
+            "peakWorkingMiB": 45.38
+          },
+          "imageSha256": "0C728002F2841EC81823A6ADD833E00F77AE7DA63516ECBF4C9D5CE8DD20878D"
+        },
+        {
+          "case": "backdrop",
+          "size": "400x200",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.39,
+            "privateMiB": 7.54,
+            "peakWorkingMiB": 28.51
+          },
+          "after": {
+            "workingMiB": 29.99,
+            "privateMiB": 8.86,
+            "peakWorkingMiB": 30.85
+          },
+          "imageSha256": "E8E4320862A68EB1C568906F4E09FD8C0F63646D815E92A6B90EDCCC51709E9A"
+        },
+        {
+          "case": "depth",
+          "size": "400x200",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.39,
+            "privateMiB": 7.53,
+            "peakWorkingMiB": 28.51
+          },
+          "after": {
+            "workingMiB": 30.25,
+            "privateMiB": 9.06,
+            "peakWorkingMiB": 31.02
+          },
+          "imageSha256": "0588A5E36B48EC75A1D28095E352B0DE19478C8BCC5E5CDAED9C4B5987B85998"
+        },
+        {
+          "case": "backdrop-large",
+          "size": "1600x900",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.4,
+            "privateMiB": 7.55,
+            "peakWorkingMiB": 28.52
+          },
+          "after": {
+            "workingMiB": 46.04,
+            "privateMiB": 25.08,
+            "peakWorkingMiB": 65.94
+          },
+          "imageSha256": "D3721900E29685BE5855663BDE1A5115A82FA77B589C89DD249B1C58880D00F0"
+        }
+      ]
+    },
+    {
+      "round": 3,
+      "side": "baseline",
+      "cases": [
+        {
+          "case": "card",
+          "size": "800x450",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.39,
+            "privateMiB": 7.59,
+            "peakWorkingMiB": 28.5
+          },
+          "after": {
+            "workingMiB": 36.91,
+            "privateMiB": 13.92,
+            "peakWorkingMiB": 38.63
+          },
+          "imageSha256": "43B107D6DCB900AF0E0040BF6745AC42898B30906030D10F89FA9A57E71AB59F"
+        },
+        {
+          "case": "corpus",
+          "size": "1280x720",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.38,
+            "privateMiB": 7.58,
+            "peakWorkingMiB": 28.49
+          },
+          "after": {
+            "workingMiB": 43.38,
+            "privateMiB": 20.97,
+            "peakWorkingMiB": 45.34
+          },
+          "imageSha256": "0C728002F2841EC81823A6ADD833E00F77AE7DA63516ECBF4C9D5CE8DD20878D"
+        },
+        {
+          "case": "backdrop",
+          "size": "400x200",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.39,
+            "privateMiB": 7.59,
+            "peakWorkingMiB": 28.5
+          },
+          "after": {
+            "workingMiB": 29.82,
+            "privateMiB": 8.84,
+            "peakWorkingMiB": 30.61
+          },
+          "imageSha256": "23570BA723F474C2AB8D84C4285563FDFA688EAF7A52C0C9356AC3E95706B053"
+        },
+        {
+          "case": "depth",
+          "size": "400x200",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.38,
+            "privateMiB": 7.61,
+            "peakWorkingMiB": 28.49
+          },
+          "after": {
+            "workingMiB": 30.16,
+            "privateMiB": 9.13,
+            "peakWorkingMiB": 30.98
+          },
+          "imageSha256": "230D1AC25249846ABCBBD64B377DF46F59852CBF09B33B38883DC09547544AA6"
+        },
+        {
+          "case": "backdrop-large",
+          "size": "1600x900",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.38,
+            "privateMiB": 7.59,
+            "peakWorkingMiB": 28.49
+          },
+          "after": {
+            "workingMiB": 35.97,
+            "privateMiB": 15.27,
+            "peakWorkingMiB": 38.38
+          },
+          "imageSha256": "F64D9B34E205035CD5E71E204C5C00E0AE00BF20AD054BA79286487A9F8D0C27"
+        }
+      ]
+    },
+    {
+      "round": 4,
+      "side": "baseline",
+      "cases": [
+        {
+          "case": "card",
+          "size": "800x450",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.39,
+            "privateMiB": 7.58,
+            "peakWorkingMiB": 28.5
+          },
+          "after": {
+            "workingMiB": 36.93,
+            "privateMiB": 13.92,
+            "peakWorkingMiB": 38.65
+          },
+          "imageSha256": "43B107D6DCB900AF0E0040BF6745AC42898B30906030D10F89FA9A57E71AB59F"
+        },
+        {
+          "case": "corpus",
+          "size": "1280x720",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.38,
+            "privateMiB": 7.59,
+            "peakWorkingMiB": 28.49
+          },
+          "after": {
+            "workingMiB": 43.85,
+            "privateMiB": 21.34,
+            "peakWorkingMiB": 45.61
+          },
+          "imageSha256": "0C728002F2841EC81823A6ADD833E00F77AE7DA63516ECBF4C9D5CE8DD20878D"
+        },
+        {
+          "case": "backdrop",
+          "size": "400x200",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.38,
+            "privateMiB": 7.58,
+            "peakWorkingMiB": 28.49
+          },
+          "after": {
+            "workingMiB": 29.83,
+            "privateMiB": 8.84,
+            "peakWorkingMiB": 30.64
+          },
+          "imageSha256": "23570BA723F474C2AB8D84C4285563FDFA688EAF7A52C0C9356AC3E95706B053"
+        },
+        {
+          "case": "depth",
+          "size": "400x200",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.38,
+            "privateMiB": 7.59,
+            "peakWorkingMiB": 28.49
+          },
+          "after": {
+            "workingMiB": 30.16,
+            "privateMiB": 9.11,
+            "peakWorkingMiB": 30.99
+          },
+          "imageSha256": "230D1AC25249846ABCBBD64B377DF46F59852CBF09B33B38883DC09547544AA6"
+        },
+        {
+          "case": "backdrop-large",
+          "size": "1600x900",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.38,
+            "privateMiB": 7.59,
+            "peakWorkingMiB": 28.49
+          },
+          "after": {
+            "workingMiB": 35.66,
+            "privateMiB": 14.96,
+            "peakWorkingMiB": 38.47
+          },
+          "imageSha256": "F64D9B34E205035CD5E71E204C5C00E0AE00BF20AD054BA79286487A9F8D0C27"
+        }
+      ]
+    },
+    {
+      "round": 4,
+      "side": "candidate",
+      "cases": [
+        {
+          "case": "card",
+          "size": "800x450",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.4,
+            "privateMiB": 7.55,
+            "peakWorkingMiB": 28.52
+          },
+          "after": {
+            "workingMiB": 37,
+            "privateMiB": 13.85,
+            "peakWorkingMiB": 38.78
+          },
+          "imageSha256": "43B107D6DCB900AF0E0040BF6745AC42898B30906030D10F89FA9A57E71AB59F"
+        },
+        {
+          "case": "corpus",
+          "size": "1280x720",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.39,
+            "privateMiB": 7.52,
+            "peakWorkingMiB": 28.51
+          },
+          "after": {
+            "workingMiB": 43.78,
+            "privateMiB": 21.36,
+            "peakWorkingMiB": 45.01
+          },
+          "imageSha256": "0C728002F2841EC81823A6ADD833E00F77AE7DA63516ECBF4C9D5CE8DD20878D"
+        },
+        {
+          "case": "backdrop",
+          "size": "400x200",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.4,
+            "privateMiB": 7.56,
+            "peakWorkingMiB": 28.52
+          },
+          "after": {
+            "workingMiB": 29.98,
+            "privateMiB": 8.84,
+            "peakWorkingMiB": 30.84
+          },
+          "imageSha256": "E8E4320862A68EB1C568906F4E09FD8C0F63646D815E92A6B90EDCCC51709E9A"
+        },
+        {
+          "case": "depth",
+          "size": "400x200",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.39,
+            "privateMiB": 7.52,
+            "peakWorkingMiB": 28.51
+          },
+          "after": {
+            "workingMiB": 30.25,
+            "privateMiB": 9.08,
+            "peakWorkingMiB": 30.98
+          },
+          "imageSha256": "0588A5E36B48EC75A1D28095E352B0DE19478C8BCC5E5CDAED9C4B5987B85998"
+        },
+        {
+          "case": "backdrop-large",
+          "size": "1600x900",
+          "renders": 3,
+          "idle": {
+            "workingMiB": 28.4,
+            "privateMiB": 7.57,
+            "peakWorkingMiB": 28.52
+          },
+          "after": {
+            "workingMiB": 46.95,
+            "privateMiB": 25.98,
+            "peakWorkingMiB": 65.87
+          },
+          "imageSha256": "D3721900E29685BE5855663BDE1A5115A82FA77B589C89DD249B1C58880D00F0"
+        }
+      ]
+    }
+  ]
+}

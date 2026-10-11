@@ -1,0 +1,10 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Reference: inner depth is flattened before the outer scene is sorted</title>
+<style>html,body{margin:0;background:white}.plane{position:absolute;top:10px;width:80px;height:60px}</style>
+<div class=plane style="left:10px;background:blue"></div>
+<div class=plane style="left:110px;background:blue"></div>
+<div class=plane style="left:210px;background:red"></div>
+<div class=plane style="left:310px;background:blue"></div>
+<div class=plane style="left:10px;top:110px;background:green"></div>
+<div class=plane style="left:30px;top:110px;width:40px;background:blue"></div>

@@ -19,6 +19,8 @@
 
 shotium extracts the core rendering pipeline from Chromium: Blink for DOM parsing, CSS styling, layout and painting, Skia for CPU rasterisation and image encoding, and `//net` for resource fetching and HTTP caching. It strips out all unnecessary browser shell components: V8, the `//content` layer, multi-process architecture, compositor, GPU process, and DevTools
 
+The CPU renderer supports empty transparent `backdrop-filter` elements, CSS 3D depth ordering with intersecting planes, and `backface-visibility: hidden`. Large backdrop blurs allocate temporary image buffers; shared intersection edges can differ by one pixel from Chrome's GPU renderer. See the [Windows size, memory and rendering checks](apps/docs/benchmarks/experiments/20261011T030349Z-cpu-css-effects/report.zh-CN.md).
+
 The engine runs directly within the host process, rendering documents on a dedicated serial worker thread and returning PNG, JPEG, or WebP byte buffers. The layout engine is based on Chromium 155, matching Chrome's layout fidelity; fonts are rasterised with grayscale antialiasing and fixed gamma, ensuring deterministic, pixel-identical output within the same environment
 
 ### Key Highlights

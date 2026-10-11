@@ -31,6 +31,30 @@ ICU、Skia、Perfetto 现在由本仓直接维护。更新它们时按各目录 
 原 ICU 功能裁剪、Skia 并行模糊/逐行解码限制、Perfetto trace processor 开关均已
 保留在对应源码中。外部依赖的其他 DEPS 条目仍按本文同步。
 
+### CPU 绘制差异：背景滤镜和 CSS 3D（2026-10-11）
+
+`BoxFragmentPainter` 为可见的空透明 backdrop-filter 元素保留一个空绘制
+记录；转换时将滤镜输出范围纳入裁剪判断。不要恢复成“没有背景就没有绘制
+记录”，否则毛玻璃在空元素或 `pointer-events:none` 下会静默消失。
+
+`PaintChunksToCcLayer` 在 CPU 上按 Blink 的 rendering context ID 整理平面，
+保留平面内部的 opacity、filter、mask 和嵌套上下文，再按深度绘制。新增的
+`paint_chunk_3d_order` 只移植 viz DrawPolygon/BspTree 的几何排序和切分思路，
+复用现有 `cc::MathUtil::MapClippedQuad3d`；不引入 viz service、cc layers、
+ANGLE、Ganesh 或 GPU 进程。排序使用未压平的矩阵，回放平面记录必须使用
+压平的投影矩阵，防止嵌套 3D 内容从倾斜的平面中突出。
+
+背面判断沿 paint offset/scroll 节点的委托关系找到实际的 transform 节点，
+用累计矩阵的 `IsBackFaceVisible()` 判断。不能只检查投影后的 2D 矩阵或
+矩阵单个分量，否则继承的隐藏背面、独立 rotate 或透视会判断错误。
+
+同步时保留这些 CPU 行为，并运行 `backdrop-*`、`transform-3d-*` reftests。
+其中三个相交平面的参考图只对 SVG 抗锯齿的两条内部斜边声明有限容差；
+其余深度、可见性、嵌套压平和空元素滤镜均用实际颜色和位置对照。
+独立 Chrome 对照在 opacity 区域有一个色阶的舍入差异，三平面的共享
+对角线有一像素的边界归属差异；[恢复记录](benchmarks/experiments/20261011T030349Z-cpu-css-effects/report.zh-CN.md)
+保留了明确限制位置的像素检查结果。
+
 > 这棵树不是 Chromium 的一个分支,是它的一份切片。所以同步不是 merge,
 > 而是「按记录的基线重放上游的差异」。这份文档是那个记录,以及那套动作。
 

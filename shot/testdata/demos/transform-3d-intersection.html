@@ -1,0 +1,12 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Intersecting planes exchange occlusion across the intersection</title>
+<style>
+html,body{margin:0;background:white}
+.scene{position:absolute;left:0;top:0;width:200px;height:140px;transform-style:preserve-3d}
+.plane{position:absolute;left:20px;top:20px;width:160px;height:80px}
+.blue{background:blue;transform:rotateY(60deg)}.red{background:red;transform:rotateY(-60deg)}
+.alpha .blue{background:rgba(0,0,255,.5)}.alpha .red{background:rgba(255,0,0,.5)}
+</style>
+<div class=scene><div class="plane blue"></div><div class="plane red"></div></div>
+<div class="scene alpha" style="left:200px"><div class="plane blue"></div><div class="plane red"></div></div>

@@ -1,0 +1,151 @@
+{
+  "recordedAt": "2026-10-11T03:08:27.401Z",
+  "platform": "win32-x64",
+  "head": "09f73aa01e036945cea8fd899b780af4d4f3f7ab",
+  "scope": "Local, uncommitted CPU CSS restoration. Focused size and memory diagnostic; no full performance gate or other-platform claim.",
+  "baselineConstruction": "Rebuilt the current tree after replacing only the three modified C++/GN files with their HEAD versions. New helper files remained on disk but were excluded by the baseline BUILD.gn. Unrelated edits were identical on both sides. Restored and hash-checked the candidate sources, then rebuilt CLI, Node addon and C ABI DLL.",
+  "runtime": [
+    {
+      "file": "out/Shot/shotium.exe",
+      "bytes": 36910080,
+      "modifiedAt": "2026-10-11T02:53:54.575Z",
+      "sha256": "303159ab08571f89c55104442bf265c9165e3a8aa34daddff53e9a584ccae50a"
+    },
+    {
+      "file": "out/Shot/shotium.dll",
+      "bytes": 36913664,
+      "modifiedAt": "2026-10-11T02:58:37.408Z",
+      "sha256": "29f86f861396bbbf1fc66ce4ce03b135cdde173c5e9fb12cc88d75e22156c69d"
+    },
+    {
+      "file": "out/Shot/shotium.node",
+      "bytes": 36925952,
+      "modifiedAt": "2026-10-11T02:56:43.079Z",
+      "sha256": "96b29bfd6aa499fef68392b2067f2b1bf03456b8e53871d86af05eceb7970c12"
+    },
+    {
+      "file": "out/Shot/shotium_data.pak",
+      "bytes": 35545,
+      "modifiedAt": "2026-09-17T19:07:39.187Z",
+      "sha256": "fd69980096dda87a0754a38e162f1e94d82abf3e2a0fca005068489bfef80be3"
+    },
+    {
+      "file": "out/Shot/shotium_strings.pak",
+      "bytes": 2908,
+      "modifiedAt": "2026-09-17T19:07:38.774Z",
+      "sha256": "8b04cc03a699039d27f1c5f6a098a05daccb11373dd70263389e8b834f576df4"
+    }
+  ],
+  "ownedSource": [
+    {
+      "path": "third_party/blink/renderer/platform/BUILD.gn",
+      "sha256": "a8dce2cf46c6f083f0ffab18cb68297e475043af0e2f17232f1e1c41fa201892"
+    },
+    {
+      "path": "third_party/blink/renderer/core/paint/box_fragment_painter.cc",
+      "sha256": "2afddd572b1e83ccc3fcc23d3d04d89ceb98d3927a995a97163a9922df0d9d48"
+    },
+    {
+      "path": "third_party/blink/renderer/platform/graphics/compositing/paint_chunks_to_cc_layer.cc",
+      "sha256": "42c753497e042a3db5e9a0a5b95b2223145941c66e122f25f54a6600b6003653"
+    }
+  ],
+  "preservedUnrelatedSource": [
+    {
+      "file": ".gitignore",
+      "sha256": "4bfda9557c8255bed906be9e089cd57acc68895a4065b5294e5ba0fb8e2e8f95"
+    },
+    {
+      "file": "third_party/blink/renderer/core/page/page.cc",
+      "sha256": "6a26fd7fe05f327ae9ece71ca01b0552a48d84d3caa50d3f16ff0ef26a44fc90"
+    }
+  ],
+  "evidenceFiles": [
+    {
+      "file": "out/Shot/args.gn",
+      "sha256": "3de3cdbb30346690c1e4fe0f4e053101e765751d2325f9dcdca100f1c9f284e2"
+    },
+    {
+      "file": "out/GpuResearch/paired-memory.ts",
+      "sha256": "15a374b5ab35c93bc27598abcd3e7978ee5a8eba69629a015d8dfde68c2be474"
+    },
+    {
+      "file": "out/GpuResearch/measure.ps1",
+      "sha256": "35f478a7221cc4d323bde9ff253b970c246dc5c6d9a0cf97bb7e5f31d30e86d5"
+    },
+    {
+      "file": "out/GpuResearch/backdrop-large.html",
+      "sha256": "0f5de8dbd42d40f9f04abe8bb5261170b0b1875d460daf69654349bc92bd96d6"
+    },
+    {
+      "file": "third_party/blink/renderer/platform/graphics/compositing/paint_chunk_3d_order.cc",
+      "sha256": "6cd5a00811aa25d03c2a2db57cbe2846993b6dd6c17151a0c7f9ea247ed7a2dd"
+    },
+    {
+      "file": "third_party/blink/renderer/platform/graphics/compositing/paint_chunk_3d_order.h",
+      "sha256": "5c56bbb03b4914c957be98994d584d541cad6d1ea010b5da961af881801260a7"
+    },
+    {
+      "file": "shot/testdata/demos/backdrop-filter.html",
+      "sha256": "e0e8a59c758a16bf0a1c6b86b5081e750879d2cce4cf2f3ec642e61b3da6f3d0"
+    },
+    {
+      "file": "shot/testdata/demos/backdrop-filter-ref.html",
+      "sha256": "3681d93caf5a957132abdeff8df3ba0239488c77e901d6ab96f68bcc422e4b89"
+    },
+    {
+      "file": "shot/testdata/demos/backdrop-empty.html",
+      "sha256": "4f3a7b4f364ba0a532cb05fd04f2fb1271fe61b0cce7da51e8b648231ecf379d"
+    },
+    {
+      "file": "shot/testdata/demos/backdrop-empty-ref.html",
+      "sha256": "efcf1339088fdedb66b5e0316fa933813f5145d50bfa29fca832b3d1a361069f"
+    },
+    {
+      "file": "shot/testdata/demos/transform-3d-backface.html",
+      "sha256": "d43c0da22609ca94b620888cc44e56ed7994280c0113ddeeb7ac3ea08939c5ec"
+    },
+    {
+      "file": "shot/testdata/demos/transform-3d-backface-ref.html",
+      "sha256": "82c3bb67135c99dc98256aff21996d0110773ae1afc8d1514d99beae372bf9cb"
+    },
+    {
+      "file": "shot/testdata/demos/transform-3d-depth.html",
+      "sha256": "71d50a5c3c1c2f17193e7727c322da549009915e0b0ee8b874f3f67c82173fd2"
+    },
+    {
+      "file": "shot/testdata/demos/transform-3d-depth-ref.html",
+      "sha256": "7d99687868d536b9b647e535ef97bc1b7b2fa2fd51a155c68ce6fc6ebb4c7437"
+    },
+    {
+      "file": "shot/testdata/demos/transform-3d-intersection.html",
+      "sha256": "4a76a58baa1b7a7e2639fa1a1bf83668f697af2c404a9f6ede67233d485d5198"
+    },
+    {
+      "file": "shot/testdata/demos/transform-3d-intersection-ref.html",
+      "sha256": "57f8ff8271f54aaab2b59c5a0ff4189f7fd43f2f92cb8ef7462ab87da7a50823"
+    },
+    {
+      "file": "shot/testdata/demos/transform-3d-nested.html",
+      "sha256": "84268f12e011be57fc007095a849a29ca8a404c9dbd0b61d41234f31a65c1b9a"
+    },
+    {
+      "file": "shot/testdata/demos/transform-3d-nested-ref.html",
+      "sha256": "34768a58ef6cc3a5a26ab6f3df864973624c0bf8dfdd284d6399e242fd32bea8"
+    },
+    {
+      "file": "shot/testdata/demos/transform-3d-intersection-three.html",
+      "sha256": "ca490de59ba9e972fadf730f1d23784d99a23f3d8a8dda76bd431f5274583035"
+    },
+    {
+      "file": "shot/testdata/demos/transform-3d-intersection-three-ref.html",
+      "sha256": "f3f0e5de13ae42a56722eb3857fcf86789c62457e0408f984d2d362cb63a52d7"
+    }
+  ],
+  "successfulBuildLogs": [
+    "out/Shot/css-effects-current-baseline-build.log",
+    "out/Shot/css-effects-final-build.log",
+    "out/Shot/css-effects-final-node-build.log",
+    "out/Shot/css-effects-final-c-build.log"
+  ]
+}

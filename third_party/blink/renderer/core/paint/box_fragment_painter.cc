@@ -1317,6 +1317,19 @@ void BoxFragmentPainter::PaintBoxDecorationBackgroundWithRect(
   if (!box_decoration_data.ShouldPaint() &&
       (!box_fragment_.IsTable() ||
        !TablePainter(box_fragment_).WillCheckColumnBackgrounds())) {
+    // A backdrop filter draws the pixels behind this box even when its own
+    // background and contents are transparent. Keep a display item so the
+    // CPU paint-chunk conversion enters the effect, including for boxes which
+    // do not record hit-test data (for example pointer-events: none).
+    if (box_fragment_.Style().HasNonInitialBackdropFilter() &&
+        IsVisibleToPaint(box_fragment_, box_fragment_.Style()) &&
+        !DrawingRecorder::UseCachedDrawingIfPossible(
+            paint_info.context, background_client,
+            DisplayItem::kBoxDecorationBackground)) {
+      DrawingRecorder recorder(paint_info.context, background_client,
+                               DisplayItem::kBoxDecorationBackground,
+                               visual_rect);
+    }
     return;
   }
 

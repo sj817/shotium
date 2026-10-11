@@ -10,6 +10,8 @@ Static HTML/CSS rendering engine extracted from Chromium: DOM layout, styling, a
 
 The JavaScript wrapper has **zero JavaScript runtime dependencies**. The engine binary is distributed through eight optional native packages: Windows and macOS on x64/arm64, plus Linux on x64/arm64 for both glibc and musl. npm and pnpm select the package matching the current OS, CPU and Linux libc. Unsuffixed Linux packages target glibc distributions such as Debian, Ubuntu and RHEL; `linux-*-musl` targets Alpine
 
+The CPU renderer supports `backdrop-filter` on empty transparent elements, including `pointer-events: none`, and CSS 3D depth ordering and `backface-visibility: hidden`. Intersecting planes are split before drawing. Large backdrop blurs need temporary image buffers, so their memory cost depends on the filtered area. Shared intersection edges can differ by one pixel from Chrome's GPU rendering.
+
 Linux public HTTPS uses the Chrome Root Store compiled into the engine. Linux builds do not read NSS, the host certificate database or enterprise CA settings; private-PKI endpoints therefore require a publicly trusted certificate chain
 
 ## Table of Contents

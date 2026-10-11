@@ -687,6 +687,8 @@ component("platform") {
     "graphics/color_space_profile_data.h",
     "graphics/compositing/chunk_to_layer_mapper.cc",
     "graphics/compositing/chunk_to_layer_mapper.h",
+    "graphics/compositing/paint_chunk_3d_order.cc",
+    "graphics/compositing/paint_chunk_3d_order.h",
     "graphics/compositing/paint_chunks_to_cc_layer.cc",
     "graphics/compositing/paint_chunks_to_cc_layer.h",
     "graphics/compositing_reasons.cc",

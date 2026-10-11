@@ -1,0 +1,283 @@
+{
+  "schema_version": 1,
+  "engine": {
+    "identity": "source-build-shot",
+    "engine": "shot",
+    "executable": "D:\\Github\\chromium\\out\\Shot\\shotium.exe",
+    "binary_bytes": 36910080,
+    "binary_sha256": "303159ab08571f89c55104442bf265c9165e3a8aa34daddff53e9a584ccae50a",
+    "file_version": null
+  },
+  "baseline_engine": {
+    "identity": "source-build-shot",
+    "engine": "shot",
+    "executable_name": "shotium.exe",
+    "binary_bytes": 36867584,
+    "binary_sha256": "25cdd01905b8097158f55550971204fa14b219b29b24ac23deef796df07f4350",
+    "file_version": null
+  },
+  "passed": true,
+  "failures": 0,
+  "results": [
+    {
+      "name": "basic",
+      "passed": true,
+      "limits": {
+        "max_changed_fraction": 0,
+        "max_channel_delta": 0
+      },
+      "capture": {
+        "engine": "shot",
+        "input": "file:///D:/Github/chromium/apps/test/render/cases/basic.html",
+        "output": "D:\\Github\\chromium\\out\\GpuResearch\\final-pixel-regression\\basic.actual.png",
+        "viewport_width": 800,
+        "viewport_height": 600,
+        "scale": 1,
+        "png": {
+          "path": "D:\\Github\\chromium\\out\\GpuResearch\\final-pixel-regression\\basic.actual.png",
+          "width": 800,
+          "height": 600,
+          "bytes": 37387,
+          "sha256": "9247000ebb7cd2f84155260274651197e8e18767c00cf700473cc0a096272cad"
+        },
+        "measurement": {
+          "stdout": "",
+          "peak_rss_bytes": 43638784,
+          "peak_threads": 12,
+          "wall_time_ms": 162.62,
+          "peak_processes": 2,
+          "process_names": [
+            "conhost.exe",
+            "shotium.exe"
+          ],
+          "processes_seen": 2,
+          "exit_code": 0,
+          "stderr": "",
+          "sample_count": 2,
+          "timed_out": false,
+          "requested_sample_interval_ms": 10,
+          "observed_mean_sample_period_ms": 81.31
+        }
+      },
+      "diff": {
+        "dimensions_match": true,
+        "expected": {
+          "path": "D:\\Github\\chromium\\out\\GpuResearch\\before\\baselines\\basic.png",
+          "width": 800,
+          "height": 600,
+          "bytes": 37387,
+          "sha256": "9247000ebb7cd2f84155260274651197e8e18767c00cf700473cc0a096272cad"
+        },
+        "actual": {
+          "path": "D:\\Github\\chromium\\out\\GpuResearch\\final-pixel-regression\\basic.actual.png",
+          "width": 800,
+          "height": 600,
+          "bytes": 37387,
+          "sha256": "9247000ebb7cd2f84155260274651197e8e18767c00cf700473cc0a096272cad"
+        },
+        "exact_sha256_match": true,
+        "changed_pixels": 0,
+        "changed_fraction": 0,
+        "max_channel_delta": 0,
+        "mean_absolute_channel_delta": 0,
+        "root_mean_square_channel_delta": 0,
+        "diff_path": null
+      }
+    },
+    {
+      "name": "layout",
+      "passed": true,
+      "limits": {
+        "max_changed_fraction": 0,
+        "max_channel_delta": 0
+      },
+      "capture": {
+        "engine": "shot",
+        "input": "file:///D:/Github/chromium/apps/test/render/cases/layout.html",
+        "output": "D:\\Github\\chromium\\out\\GpuResearch\\final-pixel-regression\\layout.actual.png",
+        "viewport_width": 1024,
+        "viewport_height": 768,
+        "scale": 1,
+        "png": {
+          "path": "D:\\Github\\chromium\\out\\GpuResearch\\final-pixel-regression\\layout.actual.png",
+          "width": 1024,
+          "height": 768,
+          "bytes": 47247,
+          "sha256": "089e4f68be4746182c78e183fdfe853e370cfd0318bfa40580fd4e5d76989ee4"
+        },
+        "measurement": {
+          "stderr": "",
+          "wall_time_ms": 188.809,
+          "processes_seen": 2,
+          "timed_out": false,
+          "peak_rss_bytes": 47669248,
+          "process_names": [
+            "conhost.exe",
+            "shotium.exe"
+          ],
+          "sample_count": 2,
+          "peak_threads": 11,
+          "exit_code": 0,
+          "stdout": "",
+          "peak_processes": 2,
+          "requested_sample_interval_ms": 10,
+          "observed_mean_sample_period_ms": 94.405
+        }
+      },
+      "diff": {
+        "dimensions_match": true,
+        "expected": {
+          "path": "D:\\Github\\chromium\\out\\GpuResearch\\before\\baselines\\layout.png",
+          "width": 1024,
+          "height": 768,
+          "bytes": 47247,
+          "sha256": "089e4f68be4746182c78e183fdfe853e370cfd0318bfa40580fd4e5d76989ee4"
+        },
+        "actual": {
+          "path": "D:\\Github\\chromium\\out\\GpuResearch\\final-pixel-regression\\layout.actual.png",
+          "width": 1024,
+          "height": 768,
+          "bytes": 47247,
+          "sha256": "089e4f68be4746182c78e183fdfe853e370cfd0318bfa40580fd4e5d76989ee4"
+        },
+        "exact_sha256_match": true,
+        "changed_pixels": 0,
+        "changed_fraction": 0,
+        "max_channel_delta": 0,
+        "mean_absolute_channel_delta": 0,
+        "root_mean_square_channel_delta": 0,
+        "diff_path": null
+      }
+    },
+    {
+      "name": "paint",
+      "passed": true,
+      "limits": {
+        "max_changed_fraction": 0,
+        "max_channel_delta": 0
+      },
+      "capture": {
+        "engine": "shot",
+        "input": "file:///D:/Github/chromium/apps/test/render/cases/paint.html",
+        "output": "D:\\Github\\chromium\\out\\GpuResearch\\final-pixel-regression\\paint.actual.png",
+        "viewport_width": 900,
+        "viewport_height": 640,
+        "scale": 1,
+        "png": {
+          "path": "D:\\Github\\chromium\\out\\GpuResearch\\final-pixel-regression\\paint.actual.png",
+          "width": 900,
+          "height": 640,
+          "bytes": 363453,
+          "sha256": "bfe1de4fd84e34cf2d58ccab372e3b653f699614ceb7dd467ef7ffdaf92d2461"
+        },
+        "measurement": {
+          "stdout": "",
+          "peak_rss_bytes": 61886464,
+          "process_names": [
+            "conhost.exe",
+            "shotium.exe"
+          ],
+          "timed_out": false,
+          "wall_time_ms": 197.735,
+          "processes_seen": 2,
+          "stderr": "",
+          "exit_code": 0,
+          "sample_count": 3,
+          "peak_threads": 15,
+          "peak_processes": 2,
+          "requested_sample_interval_ms": 10,
+          "observed_mean_sample_period_ms": 65.912
+        }
+      },
+      "diff": {
+        "dimensions_match": true,
+        "expected": {
+          "path": "D:\\Github\\chromium\\out\\GpuResearch\\before\\baselines\\paint.png",
+          "width": 900,
+          "height": 640,
+          "bytes": 363453,
+          "sha256": "bfe1de4fd84e34cf2d58ccab372e3b653f699614ceb7dd467ef7ffdaf92d2461"
+        },
+        "actual": {
+          "path": "D:\\Github\\chromium\\out\\GpuResearch\\final-pixel-regression\\paint.actual.png",
+          "width": 900,
+          "height": 640,
+          "bytes": 363453,
+          "sha256": "bfe1de4fd84e34cf2d58ccab372e3b653f699614ceb7dd467ef7ffdaf92d2461"
+        },
+        "exact_sha256_match": true,
+        "changed_pixels": 0,
+        "changed_fraction": 0,
+        "max_channel_delta": 0,
+        "mean_absolute_channel_delta": 0,
+        "root_mean_square_channel_delta": 0,
+        "diff_path": null
+      }
+    },
+    {
+      "name": "text",
+      "passed": true,
+      "limits": {
+        "max_changed_fraction": 0,
+        "max_channel_delta": 0
+      },
+      "capture": {
+        "engine": "shot",
+        "input": "file:///D:/Github/chromium/apps/test/render/cases/text.html",
+        "output": "D:\\Github\\chromium\\out\\GpuResearch\\final-pixel-regression\\text.actual.png",
+        "viewport_width": 960,
+        "viewport_height": 540,
+        "scale": 1,
+        "png": {
+          "path": "D:\\Github\\chromium\\out\\GpuResearch\\final-pixel-regression\\text.actual.png",
+          "width": 960,
+          "height": 540,
+          "bytes": 47799,
+          "sha256": "89499cf82416b10306b730abc4a908900af4ef5a943ecc19e062d0e8ea377d0f"
+        },
+        "measurement": {
+          "processes_seen": 2,
+          "exit_code": 0,
+          "wall_time_ms": 160.398,
+          "peak_rss_bytes": 41197568,
+          "timed_out": false,
+          "peak_processes": 2,
+          "peak_threads": 9,
+          "sample_count": 3,
+          "process_names": [
+            "conhost.exe",
+            "shotium.exe"
+          ],
+          "stdout": "",
+          "stderr": "",
+          "requested_sample_interval_ms": 10,
+          "observed_mean_sample_period_ms": 53.466
+        }
+      },
+      "diff": {
+        "dimensions_match": true,
+        "expected": {
+          "path": "D:\\Github\\chromium\\out\\GpuResearch\\before\\baselines\\text.png",
+          "width": 960,
+          "height": 540,
+          "bytes": 47799,
+          "sha256": "89499cf82416b10306b730abc4a908900af4ef5a943ecc19e062d0e8ea377d0f"
+        },
+        "actual": {
+          "path": "D:\\Github\\chromium\\out\\GpuResearch\\final-pixel-regression\\text.actual.png",
+          "width": 960,
+          "height": 540,
+          "bytes": 47799,
+          "sha256": "89499cf82416b10306b730abc4a908900af4ef5a943ecc19e062d0e8ea377d0f"
+        },
+        "exact_sha256_match": true,
+        "changed_pixels": 0,
+        "changed_fraction": 0,
+        "max_channel_delta": 0,
+        "mean_absolute_channel_delta": 0,
+        "root_mean_square_channel_delta": 0,
+        "diff_path": null
+      }
+    }
+  ]
+}

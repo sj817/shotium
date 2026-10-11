@@ -1,0 +1,15 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Three intersecting planes require multiple cuts</title>
+<!-- SVG antialiases the two diagonal edges; depth cut edges are hard clips. -->
+<meta name="fuzzy" content="maxDifference=128;totalPixels=0-160">
+<style>
+html,body{margin:0;background:white}
+.scene{width:200px;height:200px;transform-style:preserve-3d}
+.plane{position:absolute;left:20px;top:20px;width:160px;height:160px}
+</style>
+<div class=scene>
+<div class=plane style="background:blue;transform:rotateY(60deg)"></div>
+<div class=plane style="background:red;transform:rotateY(-60deg)"></div>
+<div class=plane style="background:green;transform:rotateX(60deg)"></div>
+</div>

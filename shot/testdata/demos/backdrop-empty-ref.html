@@ -1,0 +1,16 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Reference: inverted colours in the unmasked portions of each box</title>
+<style>
+html,body{margin:0;background:white}
+.bg{position:absolute;top:10px;width:100px;height:80px;background:red}
+.bg.b{left:140px;background:blue}.bg.c{left:270px;background:green}
+.glass{position:absolute;left:20px;top:10px;width:60px;height:40px;background:cyan}
+.b .glass{width:30px;background:yellow}.c .glass{width:30px;background:rgb(255,127,255)}
+</style>
+<div class=bg style="left:10px"><div class=glass></div></div>
+<div class="bg b"><div class=glass></div></div>
+<div class="bg c"><div class=glass></div></div>
+<div class=bg style="left:10px;top:110px"></div>
+<div class=bg style="left:140px;top:110px"></div>
+<div class=bg style="left:270px;top:110px"></div>

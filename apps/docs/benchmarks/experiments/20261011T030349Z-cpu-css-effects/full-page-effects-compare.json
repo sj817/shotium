@@ -1,0 +1,24 @@
+{
+  "dimensions_match": true,
+  "expected": {
+    "path": "D:\\Github\\chromium\\out\\GpuResearch\\full-page-effects-ref.png",
+    "width": 400,
+    "height": 40000,
+    "bytes": 304916,
+    "sha256": "b2ab9baa681c89af4c4b9c7d3fc1a3b66f1736401a30446a998a0545e4f1bf9a"
+  },
+  "actual": {
+    "path": "D:\\Github\\chromium\\out\\GpuResearch\\full-page-effects.png",
+    "width": 400,
+    "height": 40000,
+    "bytes": 304916,
+    "sha256": "b2ab9baa681c89af4c4b9c7d3fc1a3b66f1736401a30446a998a0545e4f1bf9a"
+  },
+  "exact_sha256_match": true,
+  "changed_pixels": 0,
+  "changed_fraction": 0,
+  "max_channel_delta": 0,
+  "mean_absolute_channel_delta": 0,
+  "root_mean_square_channel_delta": 0,
+  "diff_path": null
+}

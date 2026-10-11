@@ -1,0 +1,31 @@
+{
+  "candidate": {
+    "identity": "source-build-shot",
+    "engine": "shot",
+    "executable": "D:\\Github\\chromium\\out\\Shot\\shotium.exe",
+    "binary_bytes": 36910080,
+    "binary_sha256": "303159ab08571f89c55104442bf265c9165e3a8aa34daddff53e9a584ccae50a",
+    "file_version": null
+  },
+  "baseline": {
+    "identity": "source-build-headless-shell-baseline",
+    "engine": "headless-shell",
+    "executable_name": "chrome-headless-shell.exe",
+    "binary_bytes": 211223552,
+    "binary_sha256": "ce4635cd0e5dc0e21494542a701f347e91c1f1d821970578d97ed8df4ced50ef",
+    "file_version": null
+  },
+  "ordinaryThresholdCheckPassed": false,
+  "ordinaryThresholdFailures": [
+    "transform-3d-intersection-three"
+  ],
+  "spatialCheckPassed": true,
+  "exactImages": 12,
+  "totalImages": 14,
+  "spatialLimits": [
+    "transform-3d-depth: x=210..289, y=110..169, maximum channel delta 1",
+    "transform-3d-intersection-three: x=y, x=100..139, maximum 40 changed pixels",
+    "All other pixels must match exactly"
+  ],
+  "checkerSha256": "9320b8a5967dfb73743bf83e612b7a7aa854c2254b5aa658bf6fd96be04dfc06"
+}

@@ -8,4 +8,6 @@ Ratios are strictly computed against runs on identical runner hardware specifica
 
 The `legacy/` directory archives historical local benchmark measurements outside the canonical evaluation pipeline, preserved solely for auditing references in earlier releases.
 
+The `experiments/` directory retains focused local measurements with source and binary provenance. These records are outside the published CI series, are not added to its index or rankings, and state their own validation scope. The [2026-10-11 CPU CSS restoration](experiments/20261011T030349Z-cpu-css-effects/report.zh-CN.md) records paired Windows size and memory measurements.
+
 The initial benchmark series is observational. Regression gates remain disabled until at least five comparable full runs have been collected across the same runner family; any future gating threshold will be introduced through separate review.

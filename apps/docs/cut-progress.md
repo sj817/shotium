@@ -406,6 +406,13 @@ ES module / classic script 的处理方式是**让脚本执行成为一个明确
 | 字体外部内存记账删除 | `SimpleFontData` / `FontCustomPlatformData` 原本把 FreeType/SkData 的分配量报给 V8 驱动堆增长启发式。cppgc 没有对应钩子，**如实删掉而不是伪造一个数字** |
 | `performance.mark()` 丢掉 `detail` 字段 | 时间线条目本身不受影响 |
 | 任务归因（task attribution）失效 | 装载它的是 `V8PerIsolateData`。`From()` 如实返回 null，所有调用方本来就判空 |
+| 空透明元素的 backdrop-filter 恢复 CPU 绘制（2026-10-11） | 毛玻璃现在会改变背后的像素，包括 `pointer-events:none`、裁剪及遮罩；`visibility:hidden`、`display:none` 和 `opacity:0` 保持不可见。原先声称“没有 compositor 时为 no-op”的 demo 已改为真实模糊对照 |
+| CSS 3D 深度排序及 backface-visibility 恢复 CPU 绘制（2026-10-11） | `preserve-3d` 的近面遮挡远面，相交面切分后排序，共面保留绘制顺序；flat/opacity/mask 等分组及嵌套上下文独立处理。隐藏背面不会绘制。只恢复几何与 CPU 回放，不恢复整套 GPU 或 V8 |
+
+这三项恢复的 Windows CLI 配对构建增量为 41.5 KiB，资源 PAK 不变。
+普通卡片/综合样例的峰值工作集差为 +0.04 / +0.08 MiB；1200×650、
+`blur(20px)` 的空毛玻璃实际执行后，峰值增加 27.47 MiB。测量方法、原始
+样本和验证范围见 [CPU CSS 恢复记录](benchmarks/experiments/20261011T030349Z-cpu-css-effects/report.zh-CN.md)。
 
 ### 8.7 `EventLoop` 的微任务队列是真的重写了，不是摘掉
 

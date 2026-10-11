@@ -13,6 +13,7 @@
 #include "cc/paint/display_item_list.h"
 #include "cc/paint/paint_op_buffer.h"
 #include "cc/paint/render_surface_filters.h"
+#include "third_party/blink/renderer/platform/graphics/compositing/paint_chunk_3d_order.h"
 #include "third_party/blink/renderer/platform/graphics/graphics_context.h"
 #include "third_party/blink/renderer/platform/graphics/paint/display_item_list.h"
 #include "third_party/blink/renderer/platform/graphics/paint/drawing_display_item.h"
@@ -24,6 +25,7 @@
 #include "third_party/blink/renderer/platform/graphics/paint/scroll_paint_property_node.h"
 #include "third_party/blink/renderer/platform/graphics/paint/scrollbar_display_item.h"
 #include "third_party/blink/renderer/platform/wtf/allocator/allocator.h"
+#include "third_party/skia/include/core/SkPathBuilder.h"
 #include "ui/gfx/geometry/point_conversions.h"
 #include "ui/gfx/geometry/rect.h"
 #include "ui/gfx/geometry/rect_conversions.h"
@@ -47,6 +49,108 @@ class PaintOpBufferExt : public cc::PaintOpBuffer {
     return offset;
   }
 };
+
+// GeometryMapper's projection is intentionally flat. Sorting and backface
+// visibility need the z component which the compositor used to consume.
+gfx::Transform UnflattenedTransformToAncestor(
+    const TransformPaintPropertyNode& source,
+    const TransformPaintPropertyNode& ancestor) {
+  HeapVector<Member<const TransformPaintPropertyNode>, 16> path;
+  for (const auto* node = &source; node != &ancestor;
+       node = node->UnaliasedParent()) {
+    CHECK(node);
+    path.push_back(node);
+  }
+  gfx::Transform transform;
+  for (const auto& node : base::Reversed(path)) {
+    if (node->FlattensInheritedTransform()) {
+      transform.Flatten();
+    }
+    transform.PreConcat(node->MatrixWithOriginApplied());
+  }
+  return transform;
+}
+
+bool HasHiddenBackface(const TransformPaintPropertyNode& transform) {
+  if (!transform.IsBackfaceHidden()) {
+    return false;
+  }
+  // Paint-offset/scroll nodes delegate visibility. Testing their flattened
+  // screen matrix would reveal the contents of a hidden, flipped ancestor.
+  const auto* node = &transform;
+  while (node->DelegatesToParentForBackface() && !node->IsRoot()) {
+    node = node->UnaliasedParent();
+  }
+  return UnflattenedTransformToAncestor(*node, TransformPaintPropertyNode::Root())
+      .IsBackFaceVisible();
+}
+
+gfx::Rect DrawableBoundsIncludingEffects(const PaintChunk& chunk) {
+  gfx::RectF bounds(chunk.drawable_bounds);
+  const auto state = chunk.properties.Unalias();
+  for (const auto* effect = &state.Effect(); !effect->IsRoot();
+       effect = effect->UnaliasedParent()) {
+    gfx::RectF effect_bounds;
+    if (effect->BackdropFilter()) {
+      effect_bounds =
+          gfx::SkRectToRectF(effect->BackdropFilterBounds().getBounds());
+    } else if (effect->HasReferenceFilter() && effect->Filter()) {
+      effect_bounds = gfx::RectF(effect->FilterOutputBounds());
+    } else {
+      continue;
+    }
+    GeometryMapper::SourceToDestinationRect(
+        effect->LocalTransformSpace().Unalias(), state.Transform(),
+        effect_bounds);
+    bounds.Union(effect_bounds);
+  }
+  return gfx::ToEnclosingRect(bounds);
+}
+
+// Outermost 3D context below the conversion's layer state. When converting an
+// individual plane we ignore the containing context, but still sort a nested
+// context which starts below a flattening boundary.
+const TransformPaintPropertyNode* RenderingContextRoot(
+    const TransformPaintPropertyNode& transform,
+    const TransformPaintPropertyNode& layer_transform) {
+  const TransformPaintPropertyNode* root = nullptr;
+  unsigned containing_context = layer_transform.RenderingContextId();
+  for (const auto* node = &transform; node && node != &layer_transform;
+       node = node->UnaliasedParent()) {
+    if (node->HasRenderingContext() &&
+        node->RenderingContextId() != containing_context) {
+      root = node;
+    }
+  }
+  return root;
+}
+
+struct DepthPlane {
+  DISALLOW_NEW();
+
+  DepthPlane(const PaintArtifact& artifact,
+             const PaintChunk& chunk,
+             const TransformPaintPropertyNode& transform)
+      : transform(&transform), chunks(artifact, chunk) {}
+
+  void Trace(Visitor* visitor) const {
+    visitor->Trace(transform);
+    visitor->Trace(chunks);
+  }
+
+  Member<const TransformPaintPropertyNode> transform;
+  PaintChunkSubset chunks;
+  PaintRecord record;
+};
+
+}  // namespace
+}  // namespace blink
+
+// Only unused slots are cleared, after their records and subsets are destroyed.
+WTF_ALLOW_CLEAR_UNUSED_SLOTS_WITH_MEM_FUNCTIONS(blink::DepthPlane)
+
+namespace blink {
+namespace {
 
 // In a ConversionContext's property state switching function (e.g.
 // SwitchToClip), if a scroll translation switch is needed to finish the switch,
@@ -214,14 +318,16 @@ class ConversionContext {
   //   Output: End_C4 End_C3 End_C2 End_C1
   void Convert(const PaintChunkSubset& chunks,
                const gfx::Rect* additional_cull_rect = nullptr,
-               const ChunkTransformFilter* keep_transform = nullptr) {
-    auto chunk_it = chunks.begin();
-    Convert(chunk_it, chunks.end(), additional_cull_rect, keep_transform);
-    CHECK(chunk_it == chunks.end());
-  }
+               const ChunkTransformFilter* keep_transform = nullptr);
 
  private:
   bool HasDrawing(PaintChunkIterator, const PropertyTreeState&) const;
+  void Convert3DContext(const PaintChunkSubset&,
+                        PaintChunkIterator begin,
+                        PaintChunkIterator end,
+                        const TransformPaintPropertyNode& context_root,
+                        const gfx::Rect* additional_cull_rect,
+                        const ChunkTransformFilter* keep_transform);
 
   // Adjust the translation of the whole display list relative to layer offset.
   // It's only called if we actually paint anything.
@@ -1144,6 +1250,148 @@ bool ConversionContext<Result>::HasDrawing(
 
 template <typename Result>
 void ConversionContext<Result>::Convert(
+    const PaintChunkSubset& chunks,
+    const gfx::Rect* additional_cull_rect,
+    const ChunkTransformFilter* keep_transform) {
+  auto chunk_it = chunks.begin();
+  const auto& layer_transform = chunk_to_layer_mapper_.LayerState().Transform();
+  while (chunk_it != chunks.end()) {
+    const auto* root = RenderingContextRoot(
+        chunk_it->properties.Transform().Unalias(), layer_transform);
+    auto end = chunk_it;
+    do {
+      ++end;
+    } while (end != chunks.end() &&
+             RenderingContextRoot(end->properties.Transform().Unalias(),
+                                  layer_transform) == root);
+    if (root && !RuntimeEnabledFeatures::RasterInducingScrollEnabled()) {
+      Convert3DContext(chunks, chunk_it, end, *root, additional_cull_rect,
+                       keep_transform);
+      chunk_it = end;
+    } else {
+      Convert(chunk_it, end, additional_cull_rect, keep_transform);
+      CHECK(chunk_it == end);
+    }
+  }
+}
+
+template <typename Result>
+void ConversionContext<Result>::Convert3DContext(
+    const PaintChunkSubset& chunks,
+    PaintChunkIterator begin,
+    PaintChunkIterator end,
+    const TransformPaintPropertyNode& context_root,
+    const gfx::Rect* additional_cull_rect,
+    const ChunkTransformFilter* keep_transform) {
+  HeapVector<DepthPlane> planes;
+  const ClipPaintPropertyNode* common_clip = nullptr;
+  const EffectPaintPropertyNode* common_effect = nullptr;
+  for (auto it = begin; it != end; ++it) {
+    const auto state = it->properties.Unalias();
+    if (it->effectively_invisible || HasHiddenBackface(state.Transform()) ||
+        (keep_transform && !(*keep_transform)(state.Transform()))) {
+      continue;
+    }
+    const auto* plane_transform = &state.Transform();
+    while (plane_transform->RenderingContextId() !=
+           context_root.RenderingContextId()) {
+      plane_transform = plane_transform->UnaliasedParent();
+      CHECK(plane_transform);
+    }
+    if (planes.empty() || planes.back().transform != plane_transform) {
+      planes.emplace_back(chunks.GetPaintArtifact(), *it, *plane_transform);
+    } else {
+      planes.back().chunks.Merge(
+          PaintChunkSubset(chunks.GetPaintArtifact(), *it));
+    }
+    common_clip = common_clip
+                      ? &common_clip->LowestCommonAncestor(state.Clip()).Unalias()
+                      : &state.Clip();
+    common_effect =
+        common_effect
+            ? &common_effect->LowestCommonAncestor(state.Effect()).Unalias()
+            : &state.Effect();
+  }
+  if (planes.empty()) {
+    return;
+  }
+
+  // Keep a shared opacity/filter/clip around the whole scene. Each flattened
+  // plane records its own descendants and effects as one unit, so sorting
+  // cannot interleave the pieces of an opacity group or a mask.
+  const auto& destination = chunk_to_layer_mapper_.LayerState().Transform();
+  std::vector<PaintChunk3DPlane> geometry;
+  geometry.reserve(planes.size());
+  for (auto& plane : planes) {
+    PropertyTreeState plane_state(*plane.transform, *common_clip, *common_effect);
+    ChunkToLayerMapper mapper(plane_state, gfx::Vector2dF());
+    gfx::Rect bounds;
+    for (const auto& chunk : plane.chunks) {
+      mapper.SwitchToChunk(chunk);
+      bounds.Union(mapper.MapVisualRect(DrawableBoundsIncludingEffects(chunk)));
+    }
+    geometry.push_back(
+        {gfx::RectF(bounds),
+         UnflattenedTransformToAncestor(*plane.transform, destination)});
+    PaintOpBufferExt buffer;
+    ConversionContext<PaintOpBufferExt>(plane_state, gfx::Vector2dF(), buffer)
+        .Convert(plane.chunks);
+    plane.record = buffer.ReleaseAsRecord();
+  }
+
+  TranslateForLayerOffsetOnce();
+  CHECK(!SwitchToEffect(*common_effect));
+  CHECK(!SwitchToClip(*common_clip));
+  CHECK(!SwitchToTransform(destination));
+  PropertyTreeState output_state(destination, *common_clip, *common_effect);
+  for (const auto& fragment : OrderPaintChunk3DPlanes(geometry)) {
+    const wtf_size_t plane_index =
+        base::checked_cast<wtf_size_t>(fragment.plane_index);
+    gfx::RectF bounds;
+    SkPathBuilder clip;
+    for (wtf_size_t i = 0; i < fragment.vertices.size(); ++i) {
+      const auto& vertex = fragment.vertices[i];
+      if (!i) {
+        clip.moveTo(vertex.x(), vertex.y());
+        bounds = gfx::RectF(vertex.x(), vertex.y(), 0, 0);
+      } else {
+        clip.lineTo(vertex.x(), vertex.y());
+        bounds.UnionEvenIfEmpty(gfx::RectF(vertex.x(), vertex.y(), 0, 0));
+      }
+    }
+    clip.close();
+    gfx::Rect visual_rect = chunk_to_layer_mapper_.MapVisualRectFromState(
+        gfx::ToEnclosingRect(bounds), output_state);
+    if (additional_cull_rect &&
+        !additional_cull_rect->Intersects(visual_rect)) {
+      continue;
+    }
+    result_.StartPaint();
+    push<cc::SaveOp>();
+    if (fragment.split) {
+      // Internal intersections must not blend the same translucent plane
+      // twice at its cut edge. Original shape edges retain their own AA.
+      push<cc::ClipPathOp>(clip.detach(), SkClipOp::kIntersect,
+                           /*antialias=*/false);
+    }
+    // The plane has already been depth sorted. Replay only its projected x/y
+    // matrix: carrying z into a nested record lets that record's own 3D
+    // context escape this flattened plane when its parent is tilted.
+    gfx::Transform projection = geometry[plane_index].transform;
+    projection.Flatten();
+    push<cc::ConcatOp>(gfx::TransformToSkM44(projection));
+    push<cc::DrawRecordOp>(planes[plane_index].record);
+    push<cc::RestoreOp>();
+    result_.EndPaintOfUnpaired(visual_rect);
+    UpdateEffectBounds(bounds, destination);
+  }
+  // HeapVector's backing is GC managed. Release the ref-counted records now
+  // rather than retaining all of this scene's pictures until the next GC.
+  planes.clear();
+}
+
+template <typename Result>
+void ConversionContext<Result>::Convert(
     PaintChunkIterator& chunk_it,
     PaintChunkIterator end_chunk,
     const gfx::Rect* additional_cull_rect,
@@ -1155,6 +1403,9 @@ void ConversionContext<Result>::Convert(
     }
 
     PropertyTreeState chunk_state = chunk.properties.Unalias();
+    if (HasHiddenBackface(chunk_state.Transform())) {
+      continue;
+    }
     if (keep_transform && !(*keep_transform)(chunk_state.Transform())) {
       continue;
     }
@@ -1167,7 +1418,8 @@ void ConversionContext<Result>::Convert(
 
     if (additional_cull_rect) {
       gfx::Rect chunk_visual_rect =
-          chunk_to_layer_mapper_.MapVisualRect(chunk.drawable_bounds);
+          chunk_to_layer_mapper_.MapVisualRect(
+              DrawableBoundsIncludingEffects(chunk));
       if (additional_cull_rect &&
           !additional_cull_rect->Intersects(chunk_visual_rect)) {
         continue;

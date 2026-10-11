@@ -1,0 +1,138 @@
+[
+  {
+    "name": "backdrop-filter",
+    "pass": true,
+    "kind": "diff",
+    "moved": 0,
+    "worst": 0,
+    "bbox": null,
+    "total": 80000
+  },
+  {
+    "name": "backdrop-filter-ref",
+    "pass": true,
+    "kind": "diff",
+    "moved": 0,
+    "worst": 0,
+    "bbox": null,
+    "total": 80000
+  },
+  {
+    "name": "backdrop-empty",
+    "pass": true,
+    "kind": "diff",
+    "moved": 0,
+    "worst": 0,
+    "bbox": null,
+    "total": 80000
+  },
+  {
+    "name": "backdrop-empty-ref",
+    "pass": true,
+    "kind": "diff",
+    "moved": 0,
+    "worst": 0,
+    "bbox": null,
+    "total": 80000
+  },
+  {
+    "name": "transform-3d-backface",
+    "pass": true,
+    "kind": "diff",
+    "moved": 0,
+    "worst": 0,
+    "bbox": null,
+    "total": 80000
+  },
+  {
+    "name": "transform-3d-backface-ref",
+    "pass": true,
+    "kind": "diff",
+    "moved": 0,
+    "worst": 0,
+    "bbox": null,
+    "total": 80000
+  },
+  {
+    "name": "transform-3d-depth",
+    "pass": true,
+    "kind": "diff",
+    "moved": 4800,
+    "worst": 1,
+    "bbox": [
+      210,
+      110,
+      290,
+      170
+    ],
+    "total": 80000
+  },
+  {
+    "name": "transform-3d-depth-ref",
+    "pass": true,
+    "kind": "diff",
+    "moved": 0,
+    "worst": 0,
+    "bbox": null,
+    "total": 80000
+  },
+  {
+    "name": "transform-3d-intersection",
+    "pass": true,
+    "kind": "diff",
+    "moved": 0,
+    "worst": 0,
+    "bbox": null,
+    "total": 80000
+  },
+  {
+    "name": "transform-3d-intersection-ref",
+    "pass": true,
+    "kind": "diff",
+    "moved": 0,
+    "worst": 0,
+    "bbox": null,
+    "total": 80000
+  },
+  {
+    "name": "transform-3d-nested",
+    "pass": true,
+    "kind": "diff",
+    "moved": 0,
+    "worst": 0,
+    "bbox": null,
+    "total": 80000
+  },
+  {
+    "name": "transform-3d-nested-ref",
+    "pass": true,
+    "kind": "diff",
+    "moved": 0,
+    "worst": 0,
+    "bbox": null,
+    "total": 80000
+  },
+  {
+    "name": "transform-3d-intersection-three",
+    "pass": true,
+    "kind": "diff",
+    "moved": 39,
+    "worst": 255,
+    "bbox": [
+      101,
+      101,
+      140,
+      140
+    ],
+    "total": 80000
+  },
+  {
+    "name": "transform-3d-intersection-three-ref",
+    "pass": true,
+    "kind": "diff",
+    "moved": 0,
+    "worst": 0,
+    "bbox": null,
+    "total": 80000
+  }
+]
