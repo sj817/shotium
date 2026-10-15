@@ -188,6 +188,13 @@ DecodingImageGenerator::GetEncodedDataStream() const {
 }
 
 bool DecodingImageGenerator::DiscardEncodedData() {
+  // A live DeferredImageDecoder can return this generator again, including
+  // through MemoryCache's strong references to data URI images. Finishing a
+  // capture does not make those resources unreachable. Keep the source while
+  // the decoder or another generator still owns the frame generator.
+  if (!frame_generator_->HasOneRef()) {
+    return false;
+  }
   scoped_refptr<SegmentReader> data;
   {
     base::AutoLock lock(data_lock_);

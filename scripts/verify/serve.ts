@@ -120,6 +120,36 @@ async function main(exeArg: string, opts: {corpus: string; features: string; wid
   checks.check(sha256(payload) === denied, 'and matches the refused render, so the request still wins');
   await permissive.close(30_000);
 
+  checks.section('cached data URI images survive repeated captures');
+  // These opaque 16x16 red PNG and green lossless WebP images stay in Blink's
+  // data URI cache after the page is collected. A large capture exercises
+  // encoded-data release; alternating whole images and tiles must still be
+  // able to decode both resources on later captures in this same worker.
+  const cachedImages = fixture('cached_data_images.html',
+      '<!doctype html><style>html,body{margin:0;background:#fff}' +
+      'body{width:400px;height:12000px}' +
+      'img{position:absolute;top:16px;width:64px;height:64px;image-rendering:pixelated}</style>' +
+      '<img style="left:16px" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAK0lEQVR4AaXBAQEAAAiDMKR/5xuC7QYjkEgiiSSSSCKJJJJIIokkkkgiiR5YbQIeTyCVoAAAAABJRU5ErkJggg==">' +
+      '<img style="left:96px" src="data:image/webp;base64,UklGRhwAAABXRUJQVlA4TA8AAAAvD8ADAAfQ/4j+ByKi/wEA">');
+  const cachedRequest = {file: cachedImages, width: 400, height: 200, fullPage: true};
+  for (let i = 0; i < 4; i++) {
+    if (i % 2) {
+      proc.send({...cachedRequest, tile: {height: 2000}});
+      const result = await proc.recvTiles();
+      header = result[0];
+      payload = result[1][0] ?? Buffer.alloc(0);
+    } else {
+      [header, payload] = await proc.ask(cachedRequest);
+    }
+    checks.check(header.ok === true, `cached-image capture ${i + 1} renders`, err(header));
+    if (header.ok === true && payload.length > 0) {
+      const image = decodePng(payload);
+      const png = rgb(image, 32, 32), webp = rgb(image, 112, 32);
+      checks.check(sameRgb(png, RED), `capture ${i + 1} keeps the cached PNG`, `(${png.join(', ')})`);
+      checks.check(sameRgb(webp, GREEN), `capture ${i + 1} keeps the cached WebP`, `(${webp.join(', ')})`);
+    }
+  }
+
   // features.html states its own geometry, so these are exact.
   checks.section('capture geometry');
   const geometry = {file: features, width: 400, height: 300, allowFileAccess: true};
