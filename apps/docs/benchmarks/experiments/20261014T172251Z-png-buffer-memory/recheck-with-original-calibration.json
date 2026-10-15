@@ -1,0 +1,169 @@
+{
+  "method": "Apply the A/A bands measured before the original matrix to the independent follow-up samples. Raw follow-up JSON retains its stricter uncalibrated 2% verdicts.",
+  "calibrationResultSha256": "de41eced386f2f45cf5917c2955b8a3c261eb55b96f54da1f91c695c3bee53d9",
+  "tolerance": {
+    "primary": 0.02575476802223916,
+    "tail": 0.14177954217617117
+  },
+  "cases": [
+    {
+      "name": "scale-0.5-png",
+      "originalStatus": "unproven",
+      "comparison": {
+        "summary": {
+          "baseline": {
+            "p50": 1.5256,
+            "p95": 2.4301050000000006,
+            "mean": 1.6386783999999999
+          },
+          "candidate": {
+            "p50": 1.5343,
+            "p95": 2.4214550000000004,
+            "mean": 1.6358063666666631
+          }
+        },
+        "ratios": {
+          "p50": 1.0057026743576298,
+          "mean": 0.998247347781397,
+          "p95": 0.9964404830243959
+        },
+        "intervals": {
+          "p50": {
+            "lo": 0.9882127418573248,
+            "hi": 1.0213312508768713
+          },
+          "mean": {
+            "lo": 0.9849110291459694,
+            "hi": 1.011879143127431
+          },
+          "p95": {
+            "lo": 0.9396610301930161,
+            "hi": 1.0474004338823224
+          }
+        },
+        "verdicts": {
+          "p50": "equivalent",
+          "mean": "equivalent",
+          "p95": "equivalent"
+        },
+        "upper99": 1.043403358657016,
+        "tolerance": {
+          "primary": 0.02575476802223916,
+          "tail": 0.14177954217617117
+        },
+        "status": "equivalent",
+        "samples": 3000,
+        "throughput": {
+          "baseline": 610.2478680380483,
+          "candidate": 611.3192981622472
+        }
+      }
+    },
+    {
+      "name": "many-resources-default-png",
+      "originalStatus": "unproven",
+      "comparison": {
+        "summary": {
+          "baseline": {
+            "p50": 34.46655,
+            "p95": 67.61445,
+            "mean": 42.56649499999999
+          },
+          "candidate": {
+            "p50": 34.5336,
+            "p95": 67.044795,
+            "mean": 42.588099749999984
+          }
+        },
+        "ratios": {
+          "p50": 1.001945364418545,
+          "mean": 1.000507552947453,
+          "p95": 0.9915749518039412
+        },
+        "intervals": {
+          "p50": {
+            "lo": 0.9596378619840571,
+            "hi": 1.0616518372007155
+          },
+          "mean": {
+            "lo": 0.9402095823687194,
+            "hi": 1.0610048874755236
+          },
+          "p95": {
+            "lo": 0.9485595858414076,
+            "hi": 1.0487791977704997
+          }
+        },
+        "verdicts": {
+          "p50": "uncertain",
+          "mean": "uncertain",
+          "p95": "equivalent"
+        },
+        "upper99": 1.0608098709608866,
+        "tolerance": {
+          "primary": 0.02575476802223916,
+          "tail": 0.14177954217617117
+        },
+        "status": "unproven",
+        "samples": 400,
+        "throughput": {
+          "baseline": 23.492655432400536,
+          "candidate": 23.480737714765034
+        }
+      }
+    },
+    {
+      "name": "many-resources-reload-png",
+      "originalStatus": "unproven",
+      "comparison": {
+        "summary": {
+          "baseline": {
+            "p50": 41.53005,
+            "p95": 71.694215,
+            "mean": 48.977965749999974
+          },
+          "candidate": {
+            "p50": 41.08755,
+            "p95": 71.340725,
+            "mean": 48.223700000000015
+          }
+        },
+        "ratios": {
+          "p50": 0.9893450645978032,
+          "mean": 0.984599896331955,
+          "p95": 0.995069476665586
+        },
+        "intervals": {
+          "p50": {
+            "lo": 0.9457328398850733,
+            "hi": 1.0258291650170694
+          },
+          "mean": {
+            "lo": 0.9401922465132125,
+            "hi": 1.029063021180398
+          },
+          "p95": {
+            "lo": 0.9621530431846859,
+            "hi": 1.0254431395646946
+          }
+        },
+        "verdicts": {
+          "p50": "uncertain",
+          "mean": "uncertain",
+          "p95": "equivalent"
+        },
+        "upper99": 1.0284254838760494,
+        "tolerance": {
+          "primary": 0.02575476802223916,
+          "tail": 0.14177954217617117
+        },
+        "status": "unproven",
+        "samples": 400,
+        "throughput": {
+          "baseline": 20.417344507616683,
+          "candidate": 20.736691709678016
+        }
+      }
+    }
+  ]
+}

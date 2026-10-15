@@ -103,6 +103,15 @@ class PLATFORM_EXPORT PaintControllerPersistentData
 
   void InvalidateAllForTesting();
 
+  // A detached view cannot reuse its display items. Release their ref-counted
+  // paint records now instead of retaining raster caches until the next GC.
+  void Dispose() {
+    current_paint_artifact_->clear();
+    current_subsequences_.map.clear();
+    current_subsequences_.tree.clear();
+    cache_is_all_invalid_ = true;
+  }
+
   bool ClientCacheIsValid(const DisplayItemClient&) const;
 
   wtf_size_t GetSubsequenceIndex(DisplayItemClientId) const;

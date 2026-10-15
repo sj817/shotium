@@ -91,6 +91,20 @@ base::span<const uint8_t> Bytes::span() const {
   return base::span(heap_).first(size_);
 }
 
+void Bytes::TrimExcess() {
+  // A small PNG can occupy only a fraction of its writer's initial buffer.
+  // Node keeps that allocation alive with the returned Buffer, potentially
+  // across hundreds of captures. Bound the copy and require meaningful slack
+  // so nearly full buffers and large encoded images keep their cheap handoff.
+  constexpr size_t kMaxCopyBytes = 1u << 20;
+  constexpr size_t kMinExcessBytes = 16u << 10;
+  if (!pages_ && !heap_.empty() && heap_.size() <= kMaxCopyBytes &&
+      heap_.capacity() - heap_.size() >= kMinExcessBytes &&
+      heap_.capacity() > heap_.size() + heap_.size() / 4) {
+    heap_.shrink_to_fit();
+  }
+}
+
 Bytes::Writer::Writer(size_t capacity) {
   if (capacity == 0) {
     return;

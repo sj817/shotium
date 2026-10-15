@@ -1,0 +1,132 @@
+[
+  {
+    "name": "serve",
+    "args": [
+      "verify:serve",
+      "out/Shot/shotium.exe"
+    ],
+    "exitCode": 0,
+    "log": "out\\memory-20261015-direct\\verify-serve.log"
+  },
+  {
+    "name": "net",
+    "args": [
+      "verify:net",
+      "out/Shot/shotium.exe"
+    ],
+    "exitCode": 0,
+    "log": "out\\memory-20261015-direct\\verify-net.log"
+  },
+  {
+    "name": "demos",
+    "args": [
+      "verify:demos",
+      "out/Shot/shotium.exe"
+    ],
+    "exitCode": 0,
+    "log": "out\\memory-20261015-direct\\verify-demos.log"
+  },
+  {
+    "name": "charset",
+    "args": [
+      "verify:charset",
+      "out/Shot/shotium.exe"
+    ],
+    "exitCode": 0,
+    "log": "out\\memory-20261015-direct\\verify-charset.log"
+  },
+  {
+    "name": "fonts",
+    "args": [
+      "verify:fonts",
+      "out/Shot/shotium.exe"
+    ],
+    "exitCode": 0,
+    "log": "out\\memory-20261015-direct\\verify-fonts.log"
+  },
+  {
+    "name": "node",
+    "args": [
+      "verify:node",
+      "out/Shot/shotium.exe"
+    ],
+    "exitCode": 0,
+    "log": "out\\memory-20261015-direct\\verify-node.log"
+  },
+  {
+    "name": "node-entry",
+    "args": [
+      "verify:node-entry"
+    ],
+    "exitCode": 0,
+    "log": "out\\memory-20261015-direct\\verify-node-entry.log"
+  },
+  {
+    "name": "daemon",
+    "args": [
+      "verify:daemon",
+      "out/Shot/shotium.exe"
+    ],
+    "exitCode": 0,
+    "log": "out\\memory-20261015-direct\\verify-daemon.log"
+  },
+  {
+    "name": "daemon-protocol",
+    "args": [
+      "verify:daemon-protocol"
+    ],
+    "exitCode": 0,
+    "log": "out\\memory-20261015-direct\\verify-daemon-protocol.log"
+  },
+  {
+    "name": "bilibili",
+    "args": [
+      "verify:bilibili",
+      "--package",
+      "apps/typescript"
+    ],
+    "exitCode": 0,
+    "log": "out\\memory-20261015-direct\\verify-bilibili.log"
+  },
+  {
+    "name": "ffi",
+    "args": [
+      "verify:ffi",
+      "--cli",
+      "out/Shot/shotium.exe",
+      "--library-dir",
+      "out/Shot",
+      "--languages",
+      "python"
+    ],
+    "exitCode": 0,
+    "log": "out\\memory-20261015-direct\\verify-ffi.log"
+  },
+  {
+    "name": "accept",
+    "args": [
+      "accept",
+      "--skip-build"
+    ],
+    "exitCode": 0,
+    "log": "out\\memory-20261015-direct\\verify-accept.log"
+  },
+  {
+    "name": "matrix-pixels",
+    "args": [
+      "perf:images",
+      "out/memory-20261015-direct/full-matrix.json"
+    ],
+    "exitCode": 0,
+    "log": "out\\memory-20261015-direct\\verify-matrix-pixels.log"
+  },
+  {
+    "name": "final-matrix-pixels",
+    "args": [
+      "perf:images",
+      "out/memory-20261015-direct/full-final.json"
+    ],
+    "exitCode": 0,
+    "log": "out/memory-20261015-direct/verify-final-pixels-console.log"
+  }
+]

@@ -80,7 +80,6 @@
 #include "third_party/blink/renderer/platform/runtime_enabled_features.h"
 #include "third_party/blink/renderer/platform/scheduler/public/agent_group_scheduler.h"
 #include "third_party/blink/renderer/platform/scheduler/public/frame_scheduler.h"
-#include "third_party/blink/renderer/platform/web_test_support.h"
 #include "third_party/skia/include/core/SkColor.h"
 #include "ui/color/color_provider.h"
 #include "ui/color/color_provider_utils.h"
@@ -394,11 +393,10 @@ bool Page::UpdateColorProviders(
   if (!ui::IsRendererColorMappingEquivalent(
           forced_colors_color_provider_.get(),
           color_provider_colors.forced_colors_map)) {
-    forced_colors_color_provider_ =
-        WebTestSupport::IsRunningWebTest()
-            ? ui::CreateEmulatedForcedColorsColorProviderForTest()
-            : ui::CreateColorProviderFromRendererColorMap(
-                  color_provider_colors.forced_colors_map);
+    // Shotium never enters Blink's WebTest mode. Keep the production color map
+    // for forced-colors pages without linking the WebTest-only color mixer.
+    forced_colors_color_provider_ = ui::CreateColorProviderFromRendererColorMap(
+        color_provider_colors.forced_colors_map);
     did_color_provider_update = true;
   }
 

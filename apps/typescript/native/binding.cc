@@ -273,6 +273,7 @@ napi_value Image(napi_env env, shot::Bytes bytes) {
     }
     return value;
   }
+  owned->TrimExcess();
   auto status = napi_create_external_buffer(env, owned->size(),
                                             const_cast<uint8_t*>(owned->data()),
                                             FreeImage, owned.get(), &value);

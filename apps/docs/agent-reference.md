@@ -61,7 +61,21 @@ CLI / --serve / C ABI / Node addon
   each strip is compressed by the thread that rastered it (zlib level 1, Up
   filter, Sub on a strip's first row) and the runs are concatenated into one
   deflate stream. A `RowEncoder` that returns `SupportsBlocks()` must keep
-  `EncodeBlock()` thread-safe and `AppendBlock()` in row order.
+  `EncodeBlock()` thread-safe and `AppendBlock()` in row order. The block's
+  pixmap is borrowed only until `EncodeBlock()` returns; padded PNG strips
+  are encoded directly from their worker surface without an output bitmap.
+- Disposing a `LocalFrameView` releases its current paint artifact's records.
+  The captured cc display lists retain their own references and can still be
+  rastered after page teardown. Do not leave these records alive until GC:
+  their picture shaders can retain a new raster cache entry on every capture.
+  The idle teardown drains dead-picture cache invalidations so the next
+  capture's first raster does not inherit that cleanup work.
+- Before exposing encoded bytes as a Node Buffer, `Bytes::TrimExcess()` may
+  shrink heap-backed storage when the output is at most 1 MiB and unused
+  capacity is at least 16 KiB and greater than one quarter of its size.
+  The bounded copy avoids retaining the encoder's spare capacity for the
+  lifetime of each returned Buffer. Larger and page-backed outputs stay in
+  place; the Buffer finalizer still owns and frees the original `Bytes`.
 - The engine keeps decoded web fonts between captures, keyed by the font's
   bytes (`FontCustomPlatformData::Create`, 64 MB, cleared by `PurgeMemory()`).
   A changed file misses the cache; only the decode is shared.

@@ -1,0 +1,51 @@
+{
+  "result_sha256": "e06b4bc2114224e9f1ef9a35987df8e1765c32fabf27bd8266af4c2156da3cb3",
+  "status": "pass",
+  "checks": [
+    {
+      "name": "scale-0.5-png",
+      "status": "pass",
+      "dimensions": [
+        400,
+        225
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "many-resources-default-png",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "many-resources-reload-png",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    }
+  ]
+}

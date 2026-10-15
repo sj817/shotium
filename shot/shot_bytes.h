@@ -44,6 +44,10 @@ class Bytes {
   const uint8_t* data() const { return span().data(); }
   size_t size() const { return size_; }
   bool empty() const { return size_ == 0; }
+  // Before a long-lived owner takes the bytes, discard substantial unused
+  // vector capacity. Large outputs stay in place; page-backed outputs have
+  // already released their committed tail in Writer::Finish().
+  void TrimExcess();
   // So that anything taking a span -- base::WriteFile, a frame writer --
   // takes these.
   operator base::span<const uint8_t>() const { return span(); }  // NOLINT

@@ -98,6 +98,7 @@
 #include "third_party/skia/include/core/SkGraphics.h"
 #include "third_party/skia/include/core/SkRect.h"
 #include "third_party/skia/include/core/SkSurfaceProps.h"
+#include "third_party/skia/src/core/SkResourceCache.h"
 #include "ui/display/screen_info.h"
 #include "ui/display/screen_infos.h"
 #include "ui/gfx/geometry/rect.h"
@@ -543,6 +544,19 @@ void LogMemoryStage(const char* stage) {
       mb(SkGraphics::GetFontCacheUsed()), mb(discardable),
       blink::ParkableImageManager::Instance().Size(),
       mb(blink::ImageDecodingStore::Instance().MemoryUsageInBytes()));
+  if (EnvInt("SHOT_PROFILE_CACHE", 0) != 0) {
+    std::map<std::string, size_t> categories;
+    SkResourceCache::VisitAll(
+        [](const SkResourceCache::Rec& rec, void* context) {
+          auto& totals = *static_cast<std::map<std::string, size_t>*>(context);
+          totals[rec.getCategory()] += rec.bytesUsed();
+        },
+        &categories);
+    for (const auto& [category, bytes] : categories) {
+      LOG(INFO) << "shot: cache " << stage << " " << category << " kb="
+                << (bytes >> 10);
+    }
+  }
 }
 
 namespace {
@@ -1118,6 +1132,10 @@ void ShotRenderer::TearDownIfStill(uint64_t serial) {
   // in and put its own up; that one is not ours to touch.
   if (serial == page_serial_) {
     TearDown();
+    // Releasing paint records posts picture-cache invalidations. Process
+    // them while idle so the next capture's first raster does not pay for
+    // removing the previous page's cached pixels. Live entries stay cached.
+    SkResourceCache::CheckMessages();
   }
 }
 

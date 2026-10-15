@@ -1,0 +1,172 @@
+{
+  "recordedUtc": "2026-10-14T17:47:16.109Z",
+  "platform": "win32-x64",
+  "node": "v22.22.2",
+  "host": {
+    "release": "10.0.26300",
+    "cpu": "Intel(R) Core(TM) i9-14900KF",
+    "logicalCpus": 32,
+    "totalMemory": 68463702016,
+    "freeMemory": 29745868800
+  },
+  "revision": "b4678c135a652cbd52843e2c73289f40d284a8d9",
+  "sourceDiffSha256": "a6ffba329340037e9d5d3697560a7b9ce4b44f267a700dfab6168a6ca9a7afa0",
+  "scope": "Local Windows x64 PNG memory experiment. No publish, no all-platform claim, no full performance gate pass. Two multi-resource HTTP timing cases remain uncertain.",
+  "baselineConstruction": "Built the original working tree with pnpm build:engine, preserving its pre-existing .gitignore and page.cc changes; copied the CLI and packs before changing shot_image_stream.cc. Node comparison independently installed npm @pixel.js/shotium@0.12.2.",
+  "builds": [
+    {
+      "target": "shot baseline",
+      "command": "pnpm build:engine --log out/Shot/memory-baseline-cli.log",
+      "exitCode": 0
+    },
+    {
+      "target": "shot",
+      "command": "pnpm build:engine --target shot --log out/Shot/memory-png-growth-cli.log",
+      "exitCode": 0
+    },
+    {
+      "target": "shot_node",
+      "command": "pnpm build:engine --target shot_node --log out/Shot/memory-png-growth-node.log",
+      "exitCode": 0
+    },
+    {
+      "target": "shot_c",
+      "command": "pnpm build:engine --target shot_c --log out/Shot/memory-png-growth-c.log",
+      "exitCode": 0
+    }
+  ],
+  "artifacts": [
+    {
+      "file": "out/memory-20261015/baseline/shotium.exe",
+      "bytes": 36910080,
+      "sha256": "303159ab08571f89c55104442bf265c9165e3a8aa34daddff53e9a584ccae50a"
+    },
+    {
+      "file": "out/Shot/shotium.exe",
+      "bytes": 36910080,
+      "sha256": "c4e91b300d1de06d0ec62f57e82afcc1e86f564e35f9e57ecfe1d167eb2b4302"
+    },
+    {
+      "file": "out/Shot/shotium.node",
+      "bytes": 36925952,
+      "sha256": "8d4a835e83f2a4a02d9e8b9112595cc082d647e819468bbd4a9409dca13440e9"
+    },
+    {
+      "file": "out/Shot/shotium.dll",
+      "bytes": 36913664,
+      "sha256": "b26bac130d657ba15105d9566bd615b1882936b8bebe00b3cf748e9381bedefa"
+    },
+    {
+      "file": "out/Shot/shotium_data.pak",
+      "bytes": 35545,
+      "sha256": "fd69980096dda87a0754a38e162f1e94d82abf3e2a0fca005068489bfef80be3"
+    },
+    {
+      "file": "out/Shot/shotium_strings.pak",
+      "bytes": 2908,
+      "sha256": "8b04cc03a699039d27f1c5f6a098a05daccb11373dd70263389e8b834f576df4"
+    }
+  ],
+  "benchmarkNativeMetadata": {
+    "baseline": {
+      "startMs": 23.4731,
+      "importAndStartMs": 31.5954,
+      "library": "D:\\Github\\chromium\\out\\memory-20261015\\npm-baseline\\node_modules\\@pixel.js\\shotium-win32-x64\\shotium.node",
+      "addon": "D:\\Github\\chromium\\out\\memory-20261015\\npm-baseline\\node_modules\\@pixel.js\\shotium-win32-x64\\shotium.node",
+      "resourceDirectory": "D:\\Github\\chromium\\out\\memory-20261015\\npm-baseline\\node_modules\\@pixel.js\\shotium-win32-x64",
+      "librarySha256": "f89255a1a450e1d10673c7f9eefeafc04a77648e3cde0f4e37ce430f4f1d712e",
+      "addonSha256": "f89255a1a450e1d10673c7f9eefeafc04a77648e3cde0f4e37ce430f4f1d712e",
+      "bundleSha256": "e4acbd20f9fe53abcbb28bb25fe95832c97edb2f0ac530553c7a7eb8b5cad54d",
+      "packageVersion": "0.12.2"
+    },
+    "candidate": {
+      "startMs": 23.4851,
+      "importAndStartMs": 31.6148,
+      "library": "D:\\Github\\chromium\\out\\Shot\\shotium.node",
+      "addon": "D:\\Github\\chromium\\out\\Shot\\shotium.node",
+      "resourceDirectory": "D:\\Github\\chromium\\out\\Shot",
+      "librarySha256": "8d4a835e83f2a4a02d9e8b9112595cc082d647e819468bbd4a9409dca13440e9",
+      "addonSha256": "8d4a835e83f2a4a02d9e8b9112595cc082d647e819468bbd4a9409dca13440e9",
+      "bundleSha256": "e4acbd20f9fe53abcbb28bb25fe95832c97edb2f0ac530553c7a7eb8b5cad54d",
+      "packageVersion": "0.12.2"
+    }
+  },
+  "runtimeEnvironment": "No SHOT_SINGLE_STRIP, SHOT_STREAM_PNG, SHOT_RECLAIM, SHOT_PROFILE, SHOT_VERBOSE, SHOT_STRIP_BUDGET_MB, SHOT_STRIP_ROWS, SHOT_STRIP_MARGIN or SHOT_RASTER_THREADS overrides in the host. Probe children set SHOT_PROFILE and --verbose; timing workers disable profiling.",
+  "archiveFiles": [
+    {
+      "file": "block-paired.json.gz",
+      "bytes": 55601,
+      "sha256": "f5ab1d22af9765f7f0a70c2eb5cd3a9fb831d71c28a6fad44d6dec76412598f0"
+    },
+    {
+      "file": "build-and-check-logs.json.gz",
+      "bytes": 11133,
+      "sha256": "fb533dd83fb5ff5c133d29191073f0b6a2f9c488d585db6e1c9325ef6ab27028"
+    },
+    {
+      "file": "candidate-engine.patch",
+      "bytes": 3525,
+      "sha256": "a6ffba329340037e9d5d3697560a7b9ce4b44f267a700dfab6168a6ca9a7afa0"
+    },
+    {
+      "file": "growth-noise.json.gz",
+      "bytes": 2726,
+      "sha256": "cd01450171ddef424d3e35e01e8f9d104ca23efb17b64468059ab90fd9a886e9"
+    },
+    {
+      "file": "harness-sources.json.gz",
+      "bytes": 22995,
+      "sha256": "c6692614d78363edfc821d27e5f0f9791dfa8854f6a96f52aaf0efab23e2579e"
+    },
+    {
+      "file": "memory-evidence.json.gz",
+      "bytes": 471824,
+      "sha256": "ad4a7943cd4c16c4402140640221c3c80ce857bb78e5073809278b0ca1ecf490"
+    },
+    {
+      "file": "memory.json",
+      "bytes": 286268,
+      "sha256": "1d836dfb5bda46656843f721cf80bebb3ae1024371d935b4b3a062295cb527e7"
+    },
+    {
+      "file": "png-matrix.json.gz",
+      "bytes": 1991368,
+      "sha256": "340f5c41c129fc4cd54f50fe90b1ad2b0cd0440a409c6148ae5636700feb52c0"
+    },
+    {
+      "file": "png-matrix.pixels.json",
+      "bytes": 7761,
+      "sha256": "12d88a851e8bcbf7e23f24f6c60d7349f8211a3b3a7d5a68dde106bfbbe10089"
+    },
+    {
+      "file": "png-recheck.json.gz",
+      "bytes": 346153,
+      "sha256": "06874bf3d4c7035743324a416360151c36593cdfbd1066eaa3b3471698ed7cc0"
+    },
+    {
+      "file": "png-recheck.pixels.json",
+      "bytes": 902,
+      "sha256": "a12e932583a932b1cfa363208ae42d2ecdad2ffb115668c9b5ee89f548a48a81"
+    },
+    {
+      "file": "preexisting.patch",
+      "bytes": 1728,
+      "sha256": "58c7b51333b10733fba6c5ae47f6ba0ee3b4a1de900899975d43764020bec4d1"
+    },
+    {
+      "file": "recheck-with-original-calibration.json",
+      "bytes": 4487,
+      "sha256": "05e09d151c211258ef039d707a6fc33827aa100ca02ee28e404d42ad53a66c27"
+    },
+    {
+      "file": "summary.json",
+      "bytes": 62653,
+      "sha256": "60177d8592fdb46c85aecc775bd2438020b09749f819e40ee0f88c23eee17ac9"
+    },
+    {
+      "file": "verification.json",
+      "bytes": 2521,
+      "sha256": "20a377440809422e2334e4844caa38f3183254c48a0597736553c62cd3088a0e"
+    }
+  ]
+}

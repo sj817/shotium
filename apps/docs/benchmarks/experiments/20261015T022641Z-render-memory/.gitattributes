@@ -1,0 +1,4 @@
+# Preserve the original bytes recorded in provenance.json.
+* -text whitespace=cr-at-eol
+# Archived unified diffs contain space-prefixed empty context lines.
+*.patch whitespace=-blank-at-eol,-blank-at-eof

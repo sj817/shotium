@@ -1,0 +1,1626 @@
+{
+  "result_sha256": "203657f19d10ce92700e9a257fcf267c09c320dbd458fd33c5431f677f8a4a17",
+  "status": "pass",
+  "checks": [
+    {
+      "name": "card-png",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "corpus-png",
+      "status": "pass",
+      "dimensions": [
+        1248,
+        1320
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "corpus-scale2-png",
+      "status": "pass",
+      "dimensions": [
+        2496,
+        2640
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "corpus-clip-png",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "card-jpeg",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "corpus-jpeg",
+      "status": "pass",
+      "dimensions": [
+        1248,
+        1320
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "corpus-scale2-jpeg",
+      "status": "pass",
+      "dimensions": [
+        2496,
+        2640
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "corpus-clip-jpeg",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "card-webp",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "corpus-webp",
+      "status": "pass",
+      "dimensions": [
+        1248,
+        1320
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "corpus-scale2-webp",
+      "status": "pass",
+      "dimensions": [
+        2496,
+        2640
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "corpus-clip-webp",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "features-alpha",
+      "status": "pass",
+      "dimensions": [
+        400,
+        300
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "bili-1415-viewport",
+      "status": "pass",
+      "dimensions": [
+        1440,
+        900
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "bili-1415-clip-png",
+      "status": "pass",
+      "dimensions": [
+        1440,
+        12000
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "bili-1415-clip-jpeg",
+      "status": "pass",
+      "dimensions": [
+        1440,
+        12000
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "bili-1415-clip-webp",
+      "status": "pass",
+      "dimensions": [
+        1440,
+        12000
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "bili-8828-viewport",
+      "status": "pass",
+      "dimensions": [
+        1440,
+        900
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "bili-8828-clip-png",
+      "status": "pass",
+      "dimensions": [
+        1440,
+        12000
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "bili-8828-clip-jpeg",
+      "status": "pass",
+      "dimensions": [
+        1440,
+        12000
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "bili-8828-clip-webp",
+      "status": "pass",
+      "dimensions": [
+        1440,
+        12000
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "standard-simple-png",
+      "status": "pass",
+      "dimensions": [
+        1280,
+        720
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "standard-simple-jpeg",
+      "status": "pass",
+      "dimensions": [
+        1280,
+        720
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "standard-simple-webp",
+      "status": "pass",
+      "dimensions": [
+        1280,
+        720
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "standard-css-heavy-png",
+      "status": "pass",
+      "dimensions": [
+        1280,
+        720
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "standard-css-heavy-jpeg",
+      "status": "pass",
+      "dimensions": [
+        1280,
+        720
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "standard-css-heavy-webp",
+      "status": "pass",
+      "dimensions": [
+        1280,
+        720
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "standard-flex-png",
+      "status": "pass",
+      "dimensions": [
+        1280,
+        720
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "standard-flex-jpeg",
+      "status": "pass",
+      "dimensions": [
+        1280,
+        720
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "standard-flex-webp",
+      "status": "pass",
+      "dimensions": [
+        1280,
+        720
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "standard-grid-png",
+      "status": "pass",
+      "dimensions": [
+        1280,
+        720
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "standard-grid-jpeg",
+      "status": "pass",
+      "dimensions": [
+        1280,
+        720
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "standard-grid-webp",
+      "status": "pass",
+      "dimensions": [
+        1280,
+        720
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "standard-text-png",
+      "status": "pass",
+      "dimensions": [
+        1280,
+        720
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "standard-text-jpeg",
+      "status": "pass",
+      "dimensions": [
+        1280,
+        720
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "standard-text-webp",
+      "status": "pass",
+      "dimensions": [
+        1280,
+        720
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "standard-fonts-png",
+      "status": "pass",
+      "dimensions": [
+        1280,
+        720
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "standard-fonts-jpeg",
+      "status": "pass",
+      "dimensions": [
+        1280,
+        720
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "standard-fonts-webp",
+      "status": "pass",
+      "dimensions": [
+        1280,
+        720
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "standard-images-png",
+      "status": "pass",
+      "dimensions": [
+        1280,
+        720
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "standard-images-jpeg",
+      "status": "pass",
+      "dimensions": [
+        1280,
+        720
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "standard-images-webp",
+      "status": "pass",
+      "dimensions": [
+        1280,
+        720
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "standard-gradient-png",
+      "status": "pass",
+      "dimensions": [
+        1280,
+        720
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "standard-gradient-jpeg",
+      "status": "pass",
+      "dimensions": [
+        1280,
+        720
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "standard-gradient-webp",
+      "status": "pass",
+      "dimensions": [
+        1280,
+        720
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "standard-filter-png",
+      "status": "pass",
+      "dimensions": [
+        1280,
+        720
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "standard-filter-jpeg",
+      "status": "pass",
+      "dimensions": [
+        1280,
+        720
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "standard-filter-webp",
+      "status": "pass",
+      "dimensions": [
+        1280,
+        720
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "standard-long-page-png",
+      "status": "pass",
+      "dimensions": [
+        1280,
+        4312
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "standard-long-page-jpeg",
+      "status": "pass",
+      "dimensions": [
+        1280,
+        4312
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "standard-long-page-webp",
+      "status": "pass",
+      "dimensions": [
+        1280,
+        4312
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "output-file-png",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "selector-png",
+      "status": "pass",
+      "dimensions": [
+        730,
+        306
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "scale-0.5-png",
+      "status": "pass",
+      "dimensions": [
+        400,
+        225
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "scale-1.5-png",
+      "status": "pass",
+      "dimensions": [
+        1200,
+        675
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "scale-4-png",
+      "status": "pass",
+      "dimensions": [
+        3200,
+        1800
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "scale-8-png",
+      "status": "pass",
+      "dimensions": [
+        6400,
+        3600
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "output-file-jpeg",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "selector-jpeg",
+      "status": "pass",
+      "dimensions": [
+        730,
+        306
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "scale-0.5-jpeg",
+      "status": "pass",
+      "dimensions": [
+        400,
+        225
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "scale-1.5-jpeg",
+      "status": "pass",
+      "dimensions": [
+        1200,
+        675
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "scale-4-jpeg",
+      "status": "pass",
+      "dimensions": [
+        3200,
+        1800
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "scale-8-jpeg",
+      "status": "pass",
+      "dimensions": [
+        6400,
+        3600
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "output-file-webp",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "selector-webp",
+      "status": "pass",
+      "dimensions": [
+        730,
+        306
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "scale-0.5-webp",
+      "status": "pass",
+      "dimensions": [
+        400,
+        225
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "scale-1.5-webp",
+      "status": "pass",
+      "dimensions": [
+        1200,
+        675
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "scale-4-webp",
+      "status": "pass",
+      "dimensions": [
+        3200,
+        1800
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "scale-8-webp",
+      "status": "pass",
+      "dimensions": [
+        6400,
+        3600
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "lifecycle-purge",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "lifecycle-purge-working-set",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "lifecycle-restart",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "queue-1",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "queue-2",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "queue-4",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "queue-16",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "processes-1",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "processes-2",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "processes-4",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "startup-png",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "startup-jpeg",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "startup-webp",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "soak-1000",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "daemon-png-buffer",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "daemon-png-file",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "daemon-jpeg-buffer",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "daemon-jpeg-file",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "daemon-webp-buffer",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "daemon-webp-file",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "daemon-queue-4",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "daemon-reconnect",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "recovery-missing-file",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "recovery-missing-selector",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "recovery-invalid-options",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "recovery-timeout",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "http-remote-page",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "http-missing-resource",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "http-redirect",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "http-slow",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "http-networkidle",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "cache-default",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "cache-reload",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "cache-no-store",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "cache-only-if-cached",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "many-resources-default-png",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "many-resources-default-webp",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "many-resources-reload-png",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    },
+    {
+      "name": "many-resources-reload-webp",
+      "status": "pass",
+      "dimensions": [
+        800,
+        450
+      ],
+      "mean_channel_error": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fraction_channels_error_above_16": 0
+    }
+  ]
+}

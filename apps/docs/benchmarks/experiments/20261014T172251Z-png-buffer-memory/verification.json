@@ -1,0 +1,123 @@
+[
+  {
+    "name": "matrix-pixels",
+    "exitCode": 0,
+    "log": "out/memory-20261015/verify-matrix-pixels.log",
+    "args": [
+      "perf:images",
+      "out/memory-20261015/png-matrix.json"
+    ]
+  },
+  {
+    "name": "recheck-pixels",
+    "exitCode": 0,
+    "log": "out/memory-20261015/verify-recheck-pixels.log",
+    "args": [
+      "perf:images",
+      "out/memory-20261015/png-recheck.json"
+    ]
+  },
+  {
+    "name": "serve",
+    "exitCode": 0,
+    "log": "out/memory-20261015/verify-serve.log",
+    "args": [
+      "verify:serve",
+      "out/Shot/shotium.exe"
+    ]
+  },
+  {
+    "name": "net",
+    "exitCode": 0,
+    "log": "out/memory-20261015/verify-net.log",
+    "args": [
+      "verify:net",
+      "out/Shot/shotium.exe"
+    ]
+  },
+  {
+    "name": "demos",
+    "exitCode": 0,
+    "log": "out/memory-20261015/verify-demos.log",
+    "args": [
+      "verify:demos",
+      "out/Shot/shotium.exe"
+    ]
+  },
+  {
+    "name": "charset",
+    "exitCode": 0,
+    "log": "out/memory-20261015/verify-charset.log",
+    "args": [
+      "verify:charset",
+      "out/Shot/shotium.exe"
+    ]
+  },
+  {
+    "name": "fonts",
+    "exitCode": 0,
+    "log": "out/memory-20261015/verify-fonts.log",
+    "args": [
+      "verify:fonts",
+      "out/Shot/shotium.exe"
+    ]
+  },
+  {
+    "name": "node",
+    "exitCode": 0,
+    "log": "out/memory-20261015/verify-node.log",
+    "args": [
+      "verify:node",
+      "out/Shot/shotium.exe"
+    ]
+  },
+  {
+    "name": "node-entry",
+    "exitCode": 0,
+    "log": "out/memory-20261015/verify-node-entry.log",
+    "args": [
+      "verify:node-entry"
+    ]
+  },
+  {
+    "name": "daemon",
+    "exitCode": 0,
+    "log": "out/memory-20261015/verify-daemon.log",
+    "args": [
+      "verify:daemon",
+      "out/Shot/shotium.exe"
+    ]
+  },
+  {
+    "name": "daemon-protocol",
+    "exitCode": 0,
+    "log": "out/memory-20261015/verify-daemon-protocol.log",
+    "args": [
+      "verify:daemon-protocol"
+    ]
+  },
+  {
+    "name": "bilibili",
+    "exitCode": 0,
+    "log": "out/memory-20261015/verify-bilibili.log",
+    "args": [
+      "verify:bilibili",
+      "--package",
+      "apps/typescript"
+    ]
+  },
+  {
+    "name": "ffi-python",
+    "exitCode": 0,
+    "log": "out/memory-20261015/verify-ffi-python.log",
+    "args": [
+      "verify:ffi",
+      "--cli",
+      "out/Shot/shotium.exe",
+      "--library-dir",
+      "out/Shot",
+      "--languages",
+      "python"
+    ]
+  }
+]

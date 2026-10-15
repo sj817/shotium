@@ -433,6 +433,10 @@ void LocalFrameView::Dispose() {
 
   layout_shift_tracker_->Dispose();
 
+  if (paint_controller_persistent_data_) {
+    paint_controller_persistent_data_->Dispose();
+  }
+
 #if DCHECK_IS_ON()
   has_been_disposed_ = true;
 #endif

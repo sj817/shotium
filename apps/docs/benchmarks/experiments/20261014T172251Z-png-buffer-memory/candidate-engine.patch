@@ -1,0 +1,64 @@
+diff --git a/shot/shot_image_stream.cc b/shot/shot_image_stream.cc
+index 57d59e68b1c9..5ccc487b3ffa 100644
+--- a/shot/shot_image_stream.cc
++++ b/shot/shot_image_stream.cc
+@@ -512,10 +512,13 @@ class PngBlockEncoder final : public RowEncoder {
+     if (!opaque_) {
+       unpremultiplied.resize(static_cast<size_t>(whole_.width()) * 4);
+     }
+-    // Compressed output, grown as deflate fills it. Sized for the block's
+-    // pixels at the start; a block of noise needs slightly more than that
+-    // and grows once.
+-    block->deflate.resize(row_bytes * static_cast<size_t>(rows) / 2 + 1024);
++    // Most screenshot strips compress to a few KB. Sizing this from the raw
++    // pixels zero-filled and retained hundreds of KB per in-flight block,
++    // even after resize() reduced its size. Start small and grow only when
++    // deflate actually fills the buffer; noisy images still have no size cap.
++    const size_t pixel_capacity =
++        row_bytes * static_cast<size_t>(rows) / 2 + 1024;
++    block->deflate.resize(std::min(size_t{64} << 10, pixel_capacity));
+     stream.next_out = block->deflate.data();
+     stream.avail_out = static_cast<uInt>(block->deflate.size());
+     uLong adler = adler32(0L, Z_NULL, 0);
+@@ -540,9 +543,11 @@ class PngBlockEncoder final : public RowEncoder {
+         if (stream.avail_out != 0 && stream.avail_in == 0) {
+           break;
+         }
+-        // Out of room: grow and continue where deflate stopped.
++        // Once the small buffer fills, jump to the pixel-based estimate.
++        // Noise must not pay for doubling through every intermediate size.
+         const size_t used = block->deflate.size() - stream.avail_out;
+-        block->deflate.resize(block->deflate.size() * 2);
++        block->deflate.resize(
++            std::max(block->deflate.size() * 2, pixel_capacity));
+         stream.next_out = base::span(block->deflate).subspan(used).data();
+         stream.avail_out = static_cast<uInt>(block->deflate.size() - used);
+       }
+diff --git a/third_party/blink/renderer/core/page/page.cc b/third_party/blink/renderer/core/page/page.cc
+index 510aeaeb5e33..1cba5f5fd09e 100644
+--- a/third_party/blink/renderer/core/page/page.cc
++++ b/third_party/blink/renderer/core/page/page.cc
+@@ -80,7 +80,6 @@
+ #include "third_party/blink/renderer/platform/runtime_enabled_features.h"
+ #include "third_party/blink/renderer/platform/scheduler/public/agent_group_scheduler.h"
+ #include "third_party/blink/renderer/platform/scheduler/public/frame_scheduler.h"
+-#include "third_party/blink/renderer/platform/web_test_support.h"
+ #include "third_party/skia/include/core/SkColor.h"
+ #include "ui/color/color_provider.h"
+ #include "ui/color/color_provider_utils.h"
+@@ -394,11 +393,10 @@ bool Page::UpdateColorProviders(
+   if (!ui::IsRendererColorMappingEquivalent(
+           forced_colors_color_provider_.get(),
+           color_provider_colors.forced_colors_map)) {
+-    forced_colors_color_provider_ =
+-        WebTestSupport::IsRunningWebTest()
+-            ? ui::CreateEmulatedForcedColorsColorProviderForTest()
+-            : ui::CreateColorProviderFromRendererColorMap(
+-                  color_provider_colors.forced_colors_map);
++    // Shotium never enters Blink's WebTest mode. Keep the production color map
++    // for forced-colors pages without linking the WebTest-only color mixer.
++    forced_colors_color_provider_ = ui::CreateColorProviderFromRendererColorMap(
++        color_provider_colors.forced_colors_map);
+     did_color_provider_update = true;
+   }
+ 

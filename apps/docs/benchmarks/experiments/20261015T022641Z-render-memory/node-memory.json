@@ -1,0 +1,401 @@
+{
+  "method": "Plain Node worker, no tsx loader in measured PID; native profile high-water counters include the Node host. 35 screenshots per process, three processes per side per fixture, alternating AB/BA.",
+  "samples": [
+    {
+      "fixture": "simple",
+      "repeat": 0,
+      "side": "baseline",
+      "beforeImportRssMiB": 53.55859375,
+      "peakWorkingSetMiB": 101.9,
+      "peakPrivateMiB": 48.4,
+      "nodePeakRssMiB": 101.921875,
+      "afterCaptures": {
+        "rss": 104644608,
+        "heapTotal": 7962624,
+        "heapUsed": 5433024,
+        "external": 2314455,
+        "arrayBuffers": 16655,
+        "peakRssKiB": 104368
+      },
+      "addon": "D:\\Github\\chromium\\out\\memory-20261015\\npm-baseline\\node_modules\\@pixel.js\\shotium-win32-x64\\shotium.node",
+      "addonSha256": "f89255a1a450e1d10673c7f9eefeafc04a77648e3cde0f4e37ce430f4f1d712e",
+      "hashes": [
+        "d67408ef08904b0c48c1c00325975197635493c75d4d9aa2daff9c74a2b86411"
+      ]
+    },
+    {
+      "fixture": "simple",
+      "repeat": 0,
+      "side": "candidate",
+      "beforeImportRssMiB": 53.6015625,
+      "peakWorkingSetMiB": 98.5,
+      "peakPrivateMiB": 45.5,
+      "nodePeakRssMiB": 98.45703125,
+      "afterCaptures": {
+        "rss": 103055360,
+        "heapTotal": 7438336,
+        "heapUsed": 5671648,
+        "external": 4561392,
+        "arrayBuffers": 16655,
+        "peakRssKiB": 100820
+      },
+      "addon": "D:\\Github\\chromium\\out\\Shot\\shotium.node",
+      "addonSha256": "fc9c05f015bfcc149e7635d943c77dc89ce117f92837fc63abaef3b9ad9ca71d",
+      "hashes": [
+        "d67408ef08904b0c48c1c00325975197635493c75d4d9aa2daff9c74a2b86411"
+      ]
+    },
+    {
+      "fixture": "grid",
+      "repeat": 0,
+      "side": "baseline",
+      "beforeImportRssMiB": 53.7109375,
+      "peakWorkingSetMiB": 103,
+      "peakPrivateMiB": 48.3,
+      "nodePeakRssMiB": 103,
+      "afterCaptures": {
+        "rss": 106258432,
+        "heapTotal": 7962624,
+        "heapUsed": 5488376,
+        "external": 2992966,
+        "arrayBuffers": 16655,
+        "peakRssKiB": 105472
+      },
+      "addon": "D:\\Github\\chromium\\out\\memory-20261015\\npm-baseline\\node_modules\\@pixel.js\\shotium-win32-x64\\shotium.node",
+      "addonSha256": "f89255a1a450e1d10673c7f9eefeafc04a77648e3cde0f4e37ce430f4f1d712e",
+      "hashes": [
+        "67bd3bba93396cd1adc105a682d2f422bfddf7c2272f8ffe81565089d7d5b7da"
+      ]
+    },
+    {
+      "fixture": "grid",
+      "repeat": 0,
+      "side": "candidate",
+      "beforeImportRssMiB": 53.625,
+      "peakWorkingSetMiB": 98.7,
+      "peakPrivateMiB": 44,
+      "nodePeakRssMiB": 98.66015625,
+      "afterCaptures": {
+        "rss": 102932480,
+        "heapTotal": 7438336,
+        "heapUsed": 5704320,
+        "external": 5346512,
+        "arrayBuffers": 16655,
+        "peakRssKiB": 101028
+      },
+      "addon": "D:\\Github\\chromium\\out\\Shot\\shotium.node",
+      "addonSha256": "fc9c05f015bfcc149e7635d943c77dc89ce117f92837fc63abaef3b9ad9ca71d",
+      "hashes": [
+        "67bd3bba93396cd1adc105a682d2f422bfddf7c2272f8ffe81565089d7d5b7da"
+      ]
+    },
+    {
+      "fixture": "card",
+      "repeat": 0,
+      "side": "baseline",
+      "beforeImportRssMiB": 53.55859375,
+      "peakWorkingSetMiB": 149,
+      "peakPrivateMiB": 93.3,
+      "nodePeakRssMiB": 148.95703125,
+      "afterCaptures": {
+        "rss": 102887424,
+        "heapTotal": 7962624,
+        "heapUsed": 5488296,
+        "external": 3294961,
+        "arrayBuffers": 16655,
+        "peakRssKiB": 152532
+      },
+      "addon": "D:\\Github\\chromium\\out\\memory-20261015\\npm-baseline\\node_modules\\@pixel.js\\shotium-win32-x64\\shotium.node",
+      "addonSha256": "f89255a1a450e1d10673c7f9eefeafc04a77648e3cde0f4e37ce430f4f1d712e",
+      "hashes": [
+        "43b107d6dcb900af0e0040bf6745ac42898b30906030d10f89fa9a57e71ab59f"
+      ]
+    },
+    {
+      "fixture": "card",
+      "repeat": 0,
+      "side": "candidate",
+      "beforeImportRssMiB": 53.6953125,
+      "peakWorkingSetMiB": 106.2,
+      "peakPrivateMiB": 49.5,
+      "nodePeakRssMiB": 106.21875,
+      "afterCaptures": {
+        "rss": 103473152,
+        "heapTotal": 7438336,
+        "heapUsed": 5664632,
+        "external": 6520937,
+        "arrayBuffers": 16655,
+        "peakRssKiB": 108768
+      },
+      "addon": "D:\\Github\\chromium\\out\\Shot\\shotium.node",
+      "addonSha256": "fc9c05f015bfcc149e7635d943c77dc89ce117f92837fc63abaef3b9ad9ca71d",
+      "hashes": [
+        "43b107d6dcb900af0e0040bf6745ac42898b30906030d10f89fa9a57e71ab59f"
+      ]
+    },
+    {
+      "fixture": "simple",
+      "repeat": 1,
+      "side": "candidate",
+      "beforeImportRssMiB": 53.71875,
+      "peakWorkingSetMiB": 98.2,
+      "peakPrivateMiB": 45.2,
+      "nodePeakRssMiB": 98.2265625,
+      "afterCaptures": {
+        "rss": 102948864,
+        "heapTotal": 7438336,
+        "heapUsed": 5675728,
+        "external": 4561392,
+        "arrayBuffers": 16655,
+        "peakRssKiB": 100584
+      },
+      "addon": "D:\\Github\\chromium\\out\\Shot\\shotium.node",
+      "addonSha256": "fc9c05f015bfcc149e7635d943c77dc89ce117f92837fc63abaef3b9ad9ca71d",
+      "hashes": [
+        "d67408ef08904b0c48c1c00325975197635493c75d4d9aa2daff9c74a2b86411"
+      ]
+    },
+    {
+      "fixture": "simple",
+      "repeat": 1,
+      "side": "baseline",
+      "beforeImportRssMiB": 53.65234375,
+      "peakWorkingSetMiB": 101.6,
+      "peakPrivateMiB": 47.8,
+      "nodePeakRssMiB": 101.55859375,
+      "afterCaptures": {
+        "rss": 105074688,
+        "heapTotal": 7962624,
+        "heapUsed": 5477448,
+        "external": 2654900,
+        "arrayBuffers": 16655,
+        "peakRssKiB": 103996
+      },
+      "addon": "D:\\Github\\chromium\\out\\memory-20261015\\npm-baseline\\node_modules\\@pixel.js\\shotium-win32-x64\\shotium.node",
+      "addonSha256": "f89255a1a450e1d10673c7f9eefeafc04a77648e3cde0f4e37ce430f4f1d712e",
+      "hashes": [
+        "d67408ef08904b0c48c1c00325975197635493c75d4d9aa2daff9c74a2b86411"
+      ]
+    },
+    {
+      "fixture": "grid",
+      "repeat": 1,
+      "side": "candidate",
+      "beforeImportRssMiB": 53.6484375,
+      "peakWorkingSetMiB": 98.5,
+      "peakPrivateMiB": 43.8,
+      "nodePeakRssMiB": 98.4765625,
+      "afterCaptures": {
+        "rss": 102928384,
+        "heapTotal": 7438336,
+        "heapUsed": 5653248,
+        "external": 5346512,
+        "arrayBuffers": 16655,
+        "peakRssKiB": 100840
+      },
+      "addon": "D:\\Github\\chromium\\out\\Shot\\shotium.node",
+      "addonSha256": "fc9c05f015bfcc149e7635d943c77dc89ce117f92837fc63abaef3b9ad9ca71d",
+      "hashes": [
+        "67bd3bba93396cd1adc105a682d2f422bfddf7c2272f8ffe81565089d7d5b7da"
+      ]
+    },
+    {
+      "fixture": "grid",
+      "repeat": 1,
+      "side": "baseline",
+      "beforeImportRssMiB": 53.70703125,
+      "peakWorkingSetMiB": 103,
+      "peakPrivateMiB": 48.5,
+      "nodePeakRssMiB": 102.96875,
+      "afterCaptures": {
+        "rss": 105701376,
+        "heapTotal": 7962624,
+        "heapUsed": 5471480,
+        "external": 2721403,
+        "arrayBuffers": 16655,
+        "peakRssKiB": 105440
+      },
+      "addon": "D:\\Github\\chromium\\out\\memory-20261015\\npm-baseline\\node_modules\\@pixel.js\\shotium-win32-x64\\shotium.node",
+      "addonSha256": "f89255a1a450e1d10673c7f9eefeafc04a77648e3cde0f4e37ce430f4f1d712e",
+      "hashes": [
+        "67bd3bba93396cd1adc105a682d2f422bfddf7c2272f8ffe81565089d7d5b7da"
+      ]
+    },
+    {
+      "fixture": "card",
+      "repeat": 1,
+      "side": "candidate",
+      "beforeImportRssMiB": 53.71875,
+      "peakWorkingSetMiB": 106.2,
+      "peakPrivateMiB": 49.6,
+      "nodePeakRssMiB": 106.2421875,
+      "afterCaptures": {
+        "rss": 103497728,
+        "heapTotal": 7438336,
+        "heapUsed": 5683096,
+        "external": 6520937,
+        "arrayBuffers": 16655,
+        "peakRssKiB": 108792
+      },
+      "addon": "D:\\Github\\chromium\\out\\Shot\\shotium.node",
+      "addonSha256": "fc9c05f015bfcc149e7635d943c77dc89ce117f92837fc63abaef3b9ad9ca71d",
+      "hashes": [
+        "43b107d6dcb900af0e0040bf6745ac42898b30906030d10f89fa9a57e71ab59f"
+      ]
+    },
+    {
+      "fixture": "card",
+      "repeat": 1,
+      "side": "baseline",
+      "beforeImportRssMiB": 53.5390625,
+      "peakWorkingSetMiB": 149.1,
+      "peakPrivateMiB": 93.4,
+      "nodePeakRssMiB": 149.12109375,
+      "afterCaptures": {
+        "rss": 103063552,
+        "heapTotal": 7962624,
+        "heapUsed": 5475624,
+        "external": 3294961,
+        "arrayBuffers": 16655,
+        "peakRssKiB": 152700
+      },
+      "addon": "D:\\Github\\chromium\\out\\memory-20261015\\npm-baseline\\node_modules\\@pixel.js\\shotium-win32-x64\\shotium.node",
+      "addonSha256": "f89255a1a450e1d10673c7f9eefeafc04a77648e3cde0f4e37ce430f4f1d712e",
+      "hashes": [
+        "43b107d6dcb900af0e0040bf6745ac42898b30906030d10f89fa9a57e71ab59f"
+      ]
+    },
+    {
+      "fixture": "simple",
+      "repeat": 2,
+      "side": "baseline",
+      "beforeImportRssMiB": 53.57421875,
+      "peakWorkingSetMiB": 101.2,
+      "peakPrivateMiB": 47.4,
+      "nodePeakRssMiB": 101.2109375,
+      "afterCaptures": {
+        "rss": 105123840,
+        "heapTotal": 7962624,
+        "heapUsed": 5463416,
+        "external": 2654900,
+        "arrayBuffers": 16655,
+        "peakRssKiB": 103640
+      },
+      "addon": "D:\\Github\\chromium\\out\\memory-20261015\\npm-baseline\\node_modules\\@pixel.js\\shotium-win32-x64\\shotium.node",
+      "addonSha256": "f89255a1a450e1d10673c7f9eefeafc04a77648e3cde0f4e37ce430f4f1d712e",
+      "hashes": [
+        "d67408ef08904b0c48c1c00325975197635493c75d4d9aa2daff9c74a2b86411"
+      ]
+    },
+    {
+      "fixture": "simple",
+      "repeat": 2,
+      "side": "candidate",
+      "beforeImportRssMiB": 53.7109375,
+      "peakWorkingSetMiB": 98.3,
+      "peakPrivateMiB": 45.3,
+      "nodePeakRssMiB": 98.29296875,
+      "afterCaptures": {
+        "rss": 102879232,
+        "heapTotal": 7438336,
+        "heapUsed": 5666624,
+        "external": 4561392,
+        "arrayBuffers": 16655,
+        "peakRssKiB": 100652
+      },
+      "addon": "D:\\Github\\chromium\\out\\Shot\\shotium.node",
+      "addonSha256": "fc9c05f015bfcc149e7635d943c77dc89ce117f92837fc63abaef3b9ad9ca71d",
+      "hashes": [
+        "d67408ef08904b0c48c1c00325975197635493c75d4d9aa2daff9c74a2b86411"
+      ]
+    },
+    {
+      "fixture": "grid",
+      "repeat": 2,
+      "side": "baseline",
+      "beforeImportRssMiB": 53.5859375,
+      "peakWorkingSetMiB": 103.1,
+      "peakPrivateMiB": 48.4,
+      "nodePeakRssMiB": 103.1015625,
+      "afterCaptures": {
+        "rss": 106217472,
+        "heapTotal": 7962624,
+        "heapUsed": 5476600,
+        "external": 2811924,
+        "arrayBuffers": 16655,
+        "peakRssKiB": 105576
+      },
+      "addon": "D:\\Github\\chromium\\out\\memory-20261015\\npm-baseline\\node_modules\\@pixel.js\\shotium-win32-x64\\shotium.node",
+      "addonSha256": "f89255a1a450e1d10673c7f9eefeafc04a77648e3cde0f4e37ce430f4f1d712e",
+      "hashes": [
+        "67bd3bba93396cd1adc105a682d2f422bfddf7c2272f8ffe81565089d7d5b7da"
+      ]
+    },
+    {
+      "fixture": "grid",
+      "repeat": 2,
+      "side": "candidate",
+      "beforeImportRssMiB": 53.58984375,
+      "peakWorkingSetMiB": 98.7,
+      "peakPrivateMiB": 44,
+      "nodePeakRssMiB": 98.67578125,
+      "afterCaptures": {
+        "rss": 102871040,
+        "heapTotal": 7438336,
+        "heapUsed": 5688616,
+        "external": 5346512,
+        "arrayBuffers": 16655,
+        "peakRssKiB": 101044
+      },
+      "addon": "D:\\Github\\chromium\\out\\Shot\\shotium.node",
+      "addonSha256": "fc9c05f015bfcc149e7635d943c77dc89ce117f92837fc63abaef3b9ad9ca71d",
+      "hashes": [
+        "67bd3bba93396cd1adc105a682d2f422bfddf7c2272f8ffe81565089d7d5b7da"
+      ]
+    },
+    {
+      "fixture": "card",
+      "repeat": 2,
+      "side": "baseline",
+      "beforeImportRssMiB": 53.69921875,
+      "peakWorkingSetMiB": 151.6,
+      "peakPrivateMiB": 96.1,
+      "nodePeakRssMiB": 151.59375,
+      "afterCaptures": {
+        "rss": 102162432,
+        "heapTotal": 7962624,
+        "heapUsed": 5435808,
+        "external": 2426429,
+        "arrayBuffers": 16655,
+        "peakRssKiB": 155232
+      },
+      "addon": "D:\\Github\\chromium\\out\\memory-20261015\\npm-baseline\\node_modules\\@pixel.js\\shotium-win32-x64\\shotium.node",
+      "addonSha256": "f89255a1a450e1d10673c7f9eefeafc04a77648e3cde0f4e37ce430f4f1d712e",
+      "hashes": [
+        "43b107d6dcb900af0e0040bf6745ac42898b30906030d10f89fa9a57e71ab59f"
+      ]
+    },
+    {
+      "fixture": "card",
+      "repeat": 2,
+      "side": "candidate",
+      "beforeImportRssMiB": 53.578125,
+      "peakWorkingSetMiB": 106.3,
+      "peakPrivateMiB": 49.7,
+      "nodePeakRssMiB": 106.26171875,
+      "afterCaptures": {
+        "rss": 103550976,
+        "heapTotal": 7438336,
+        "heapUsed": 5677872,
+        "external": 6520937,
+        "arrayBuffers": 16655,
+        "peakRssKiB": 108812
+      },
+      "addon": "D:\\Github\\chromium\\out\\Shot\\shotium.node",
+      "addonSha256": "fc9c05f015bfcc149e7635d943c77dc89ce117f92837fc63abaef3b9ad9ca71d",
+      "hashes": [
+        "43b107d6dcb900af0e0040bf6745ac42898b30906030d10f89fa9a57e71ab59f"
+      ]
+    }
+  ]
+}

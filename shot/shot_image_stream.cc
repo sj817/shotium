@@ -129,9 +129,9 @@ constexpr int kDitherPeriod = 8;
 constexpr int kMaxStripMargin = 1024;
 
 // An image up to this many pixels is a small capture -- see
-// ImageStream::IsSmall. Its bitmap is kept whole and reused, its raster
-// threads keep their strip surfaces, and its decoded images stay until the
-// last strip is encoded.
+// ImageStream::IsSmall. Its backing bitmap, when needed, is kept and reused,
+// its raster threads keep their strip surfaces, and its decoded images stay
+// until the last strip is encoded.
 constexpr int64_t kSmallCapturePixels = 4 * 1000 * 1000;
 
 // An image up to this many pixels is rastered as one strip, on the calling
@@ -235,6 +235,13 @@ bool ProfileEnabled() {
 // committed rows are always one contiguous window.
 class WindowedBitmap {
  public:
+  // Block encoders need the dimensions before they need any pixels. A slice
+  // rastered into padded strip surfaces can supply those pixels directly.
+  static std::unique_ptr<WindowedBitmap> Describe(const SkImageInfo& info) {
+    return base::WrapUnique(
+        new WindowedBitmap(info, 0, 0, info.minRowBytes()));
+  }
+
   static std::unique_ptr<WindowedBitmap> Create(const SkImageInfo& info,
                                               SkBitmap* reusable) {
     if (reusable && ImageStream::IsSmall(info.width(), info.height())) {
@@ -394,13 +401,15 @@ class RowEncoder {
  public:
   virtual ~RowEncoder() = default;
   // The next `rows` rows of the pixmap are final.
-  virtual base::expected<void, std::string> Append(int rows) = 0;
+  virtual base::expected<void, std::string> Append(int rows) {
+    return base::unexpected("this encoder requires explicit pixel blocks");
+  }
   // Every row has been appended; produce the file -- or, when the encoder
   // was given an open file, write the rest of it there and return nothing.
   virtual base::expected<Bytes, std::string> Finish() = 0;
   // How many rows, from the top, the encoder is finished with: rows below
-  // this may be released. PNG and JPEG have consumed a row by the time
-  // Append() returns; lossy WebP may hold one back; lossless WebP reads the
+  // this may be released. JPEG consumes rows in Append(), PNG in
+  // AppendBlock(); lossy WebP may hold one back, and lossless WebP reads the
   // whole picture at once and consumes nothing until Finish().
   virtual int consumed_rows() const = 0;
   // The encoded image's size once Finish() has run, held or written.
@@ -410,13 +419,13 @@ class RowEncoder {
   // encode, appended in order afterwards. An encoder that can returns true
   // here; the stream then hands each raster thread's strip to EncodeBlock()
   // on that thread, the moment it is rastered, and calls AppendBlock() in
-  // row order from the thread that owns the output. The two must agree with
-  // Append(): AppendBlock() of a block for rows [r, r + n) is Append(n) with
-  // the encoding already done. Not every format can -- JPEG's entropy coder
-  // and WebP's frame carry state from row to row -- and those say false.
+  // row order from the thread that owns the output. The supplied pixmap holds
+  // only that block, at its first_row in the output. Its storage must survive
+  // EncodeBlock(), but is no longer needed by AppendBlock(). JPEG's entropy
+  // coder and WebP's frame carry state from row to row and cannot do this.
   virtual bool SupportsBlocks() const { return false; }
   virtual base::expected<std::unique_ptr<EncodedBlock>, std::string>
-  EncodeBlock(int first_row, int rows) {
+  EncodeBlock(int first_row, const SkPixmap& pixels) {
     return base::unexpected("this encoder does not encode blocks");
   }
   virtual base::expected<void, std::string> AppendBlock(
@@ -471,20 +480,15 @@ class PngBlockEncoder final : public RowEncoder {
 
   bool SupportsBlocks() const override { return true; }
 
-  base::expected<void, std::string> Append(int rows) override {
-    auto block = EncodeBlock(consumed_, rows);
-    if (!block.has_value()) {
-      return base::unexpected(block.error());
-    }
-    return AppendBlock(std::move(*block));
-  }
-
-  // Any thread. Reads rows [first_row, first_row + rows) of the pixmap and
-  // nothing else of this object but its constants.
+  // Any thread. The supplied pixels can belong to a worker's strip surface;
+  // first_row is their destination in the output, not their address here.
   base::expected<std::unique_ptr<EncodedBlock>, std::string> EncodeBlock(
       int first_row,
-      int rows) override {
-    if (rows <= 0 || first_row < 0 || first_row + rows > whole_.height()) {
+      const SkPixmap& pixels) override {
+    const int rows = pixels.height();
+    if (rows <= 0 || first_row < 0 || first_row + rows > whole_.height() ||
+        pixels.width() != whole_.width() ||
+        pixels.colorType() != whole_.colorType() || !pixels.addr()) {
       return base::unexpected("png block rows are out of range");
     }
     auto block = std::make_unique<Block>();
@@ -512,16 +516,19 @@ class PngBlockEncoder final : public RowEncoder {
     if (!opaque_) {
       unpremultiplied.resize(static_cast<size_t>(whole_.width()) * 4);
     }
-    // Compressed output, grown as deflate fills it. Sized for the block's
-    // pixels at the start; a block of noise needs slightly more than that
-    // and grows once.
-    block->deflate.resize(row_bytes * static_cast<size_t>(rows) / 2 + 1024);
+    // Most screenshot strips compress to a few KB. Sizing this from the raw
+    // pixels zero-filled and retained hundreds of KB per in-flight block,
+    // even after resize() reduced its size. Start small and grow only when
+    // deflate actually fills the buffer; noisy images still have no size cap.
+    const size_t pixel_capacity =
+        row_bytes * static_cast<size_t>(rows) / 2 + 1024;
+    block->deflate.resize(std::min(size_t{64} << 10, pixel_capacity));
     stream.next_out = block->deflate.data();
     stream.avail_out = static_cast<uInt>(block->deflate.size());
     uLong adler = adler32(0L, Z_NULL, 0);
 
     for (int row = 0; row < rows; ++row) {
-      PackRow(first_row + row, current, unpremultiplied);
+      PackRow(pixels, row, current, unpremultiplied);
       // Sub on the block's first row, Up on the rest: the previous row is
       // this block's own or does not exist.
       FilterRow(row == 0, current, previous, scanline);
@@ -540,9 +547,11 @@ class PngBlockEncoder final : public RowEncoder {
         if (stream.avail_out != 0 && stream.avail_in == 0) {
           break;
         }
-        // Out of room: grow and continue where deflate stopped.
+        // Once the small buffer fills, jump to the pixel-based estimate.
+        // Noise must not pay for doubling through every intermediate size.
         const size_t used = block->deflate.size() - stream.avail_out;
-        block->deflate.resize(block->deflate.size() * 2);
+        block->deflate.resize(
+            std::max(block->deflate.size() * 2, pixel_capacity));
         stream.next_out = base::span(block->deflate).subspan(used).data();
         stream.avail_out = static_cast<uInt>(block->deflate.size() - used);
       }
@@ -664,41 +673,45 @@ class PngBlockEncoder final : public RowEncoder {
 
   // Row `y` of the pixmap as PNG wants it -- RGB, or unpremultiplied RGBA --
   // into `out`, `bpp_` bytes a pixel.
-  void PackRow(int y,
+  void PackRow(const SkPixmap& pixels,
+               int y,
                base::span<uint8_t> out,
                std::vector<uint8_t>& unpremultiplied) const {
     const size_t width = static_cast<size_t>(whole_.width());
     const uint8_t* source = nullptr;
     if (opaque_) {
-      source = static_cast<const uint8_t*>(whole_.addr(0, y));
+      source = static_cast<const uint8_t*>(pixels.addr(0, y));
     } else {
       SkPixmap row;
       const SkImageInfo info =
           SkImageInfo::Make(static_cast<int>(width), 1,
                             kRGBA_8888_SkColorType, kUnpremul_SkAlphaType);
-      if (!whole_.extractSubset(
+      if (!pixels.extractSubset(
               &row, SkIRect::MakeXYWH(0, y, whole_.width(), 1)) ||
           !row.readPixels(info, unpremultiplied.data(), width * 4)) {
         std::ranges::fill(unpremultiplied, 0);
       }
       source = unpremultiplied.data();
+      out.copy_from(unpremultiplied);
+      return;
     }
     // SAFETY: `source` addresses one row of the pixmap, or the row-sized
     // buffer just filled, `width` pixels of four bytes each.
-    const base::span<const uint8_t> pixels =
+    const base::span<const uint8_t> source_pixels =
         UNSAFE_BUFFERS(base::span(source, width * 4));
-    // Pack: 4 bytes in, `bpp_` out, red first whichever way the bitmap has
-    // it.
-    const size_t r = opaque_ && bgra_ ? 2 : 0;
-    const size_t b = opaque_ && bgra_ ? 0 : 2;
-    for (size_t x = 0; x < width; ++x) {
-      const base::span<const uint8_t> in = pixels.subspan(x * 4, 4u);
-      base::span<uint8_t> px = out.subspan(x * bpp_, bpp_);
-      px[0] = in[r];
-      px[1] = in[1];
-      px[2] = in[b];
-      if (bpp_ == 4) {
-        px[3] = in[3];
+    // Opaque rows are always RGB. Keep the strides and channel order fixed
+    // inside each loop so the compiler can vectorize the 4-to-3 byte pack.
+    if (bgra_) {
+      for (size_t x = 0; x < width; ++x) {
+        out[3 * x] = source_pixels[4 * x + 2];
+        out[3 * x + 1] = source_pixels[4 * x + 1];
+        out[3 * x + 2] = source_pixels[4 * x];
+      }
+    } else {
+      for (size_t x = 0; x < width; ++x) {
+        out[3 * x] = source_pixels[4 * x];
+        out[3 * x + 1] = source_pixels[4 * x + 1];
+        out[3 * x + 2] = source_pixels[4 * x + 2];
       }
     }
   }
@@ -1779,6 +1792,7 @@ struct SliceJob {
   // the owning thread appends the blocks in order. Null otherwise, and the
   // owning thread encodes each strip as it comes.
   raw_ptr<RowEncoder> block_encoder = nullptr;
+  bool encode_from_scratch = false;
 
   int StripTop(int strip) const { return first_row + strip * strip_rows; }
   int StripBottom(int strip) const {
@@ -1810,20 +1824,21 @@ void DrawSlice(const SliceJob& job, SkCanvas* canvas, int top) {
   job.list->Raster(canvas, job.images);
 }
 
-// Rasters strip `strip` into the bitmap. `scratch` is the caller's padded
-// surface, made on first use and sized for the tallest strip.
-// `scratch` is the caller's padded surface, made on first use and sized for
-// the tallest strip; `reusable_scratch`, when given, is where a small one
-// lives from one capture to the next.
-base::expected<void, std::string> RasterStrip(const SliceJob& job,
-                                              int strip,
-                                              sk_sp<SkSurface>& scratch,
-                                              SkBitmap* reusable_scratch) {
+// Returns the strip's pixels, valid until the caller next uses `scratch`.
+// Block encoders read the padded surface directly; other encoders need the
+// rows copied into their shared bitmap. `reusable_scratch` keeps a small
+// surface between captures.
+base::expected<SkPixmap, std::string> RasterStrip(
+    const SliceJob& job,
+    int strip,
+    sk_sp<SkSurface>& scratch,
+    SkBitmap* reusable_scratch) {
   const int y0 = job.StripTop(strip);
   const int y1 = job.StripBottom(strip);
   const SkPixmap& whole = job.bitmap->pixmap();
   SkPixmap target;
-  if (!whole.extractSubset(&target,
+  if (!job.encode_from_scratch &&
+      !whole.extractSubset(&target,
                            SkIRect::MakeLTRB(0, y0, whole.width(), y1))) {
     return base::unexpected("could not address the image's rows");
   }
@@ -1841,7 +1856,7 @@ base::expected<void, std::string> RasterStrip(const SliceJob& job,
   // rows outside it on either side, whatever the paint's reach, and is drawn
   // straight into the image like a page with no reach at all, not through a
   // surface padded by that reach, cleared, drawn and copied for nothing.
-  if (top == y0 && bottom == y1 && phase == 0) {
+  if (!job.encode_from_scratch && top == y0 && bottom == y1 && phase == 0) {
     std::unique_ptr<SkCanvas> canvas = SkCanvas::MakeRasterDirect(
         target.info(), target.writable_addr(), target.rowBytes(), &job.props);
     if (!canvas) {
@@ -1849,7 +1864,7 @@ base::expected<void, std::string> RasterStrip(const SliceJob& job,
     }
     canvas->clear(SK_ColorTRANSPARENT);
     DrawSlice(job, canvas.get(), y0);
-    return base::ok();
+    return target;
   }
 
   if (!scratch) {
@@ -1887,12 +1902,20 @@ base::expected<void, std::string> RasterStrip(const SliceJob& job,
   if (!scratch->peekPixels(&source)) {
     return base::unexpected("could not read the strip surface");
   }
+  if (job.encode_from_scratch) {
+    if (!source.extractSubset(
+            &target, SkIRect::MakeXYWH(0, phase + y0 - top, whole.width(),
+                                      y1 - y0))) {
+      return base::unexpected("could not address the strip's pixels");
+    }
+    return target;
+  }
   // Same colour and alpha type on both sides, so this is a row copy.
   if (!source.readPixels(target.info(), target.writable_addr(),
                          target.rowBytes(), 0, phase + y0 - top)) {
     return base::unexpected("could not copy a strip into the image");
   }
-  return base::ok();
+  return target;
 }
 
 // The threads the strips are rastered on, kept rather than started for each
@@ -2019,8 +2042,7 @@ class StripWorker {
       std::unique_ptr<EncodedBlock> block;
       if (rastered.has_value() && job_->block_encoder) {
         auto encoded = job_->block_encoder->EncodeBlock(
-            job_->StripTop(strip),
-            job_->StripBottom(strip) - job_->StripTop(strip));
+            job_->StripTop(strip), *rastered);
         if (encoded.has_value()) {
           block = std::move(*encoded);
         } else {
@@ -2029,6 +2051,9 @@ class StripWorker {
       }
       if (ProfileEnabled()) {
         LOG(INFO) << "shot: profile strip=" << strip << " slot=" << slot
+                  << " scratch_kb="
+                  << (scratch ? scratch->imageInfo().computeMinByteSize() >> 10
+                              : 0)
                   << " start=+"
                   << (strip_started - job_->started).InMillisecondsF()
                   << " raster="
@@ -2074,11 +2099,13 @@ class ImageStream::Impl {
   Impl(std::unique_ptr<WindowedBitmap> bitmap,
        std::unique_ptr<RowEncoder> encoder,
        const SkSurfaceProps& props,
+       SkBitmap* reusable_bitmap,
        std::vector<SkBitmap>* reusable_scratch,
        ImageStreamStats* stats)
       : bitmap_(std::move(bitmap)),
         encoder_(std::move(encoder)),
         props_(props),
+        reusable_bitmap_(reusable_bitmap),
         reusable_scratch_(reusable_scratch),
         stats_(stats) {}
 
@@ -2090,7 +2117,7 @@ class ImageStream::Impl {
       int device_top,
       int rows,
       const base::flat_set<cc::PaintImage::Id>& keep_encoded) {
-    const SkPixmap& whole = bitmap_->pixmap();
+    const SkPixmap whole = bitmap_->pixmap();
     if (device_top != next_row_ || rows <= 0 ||
         device_top + rows > whole.height()) {
       return base::unexpected("slices must tile the image from the top down");
@@ -2100,7 +2127,6 @@ class ImageStream::Impl {
     SliceJob job;
     job.started = started;
     job.list = std::move(list);
-    job.bitmap = bitmap_.get();
     job.props = props_;
     job.cull_rect = cull_rect;
     job.scale = scale;
@@ -2138,6 +2164,33 @@ class ImageStream::Impl {
     job.strip_rows =
         one_strip ? rows : StripRowsFor(job.margin, whole.rowBytes());
     job.strips = (rows + job.strip_rows - 1) / job.strip_rows;
+    const bool uses_scratch =
+        job.margin != 0 ||
+        (job.device_origin + job.first_row) % kDitherPeriod != 0;
+    job.block_encoder = encoder_->SupportsBlocks() ? encoder_.get() : nullptr;
+    job.encode_from_scratch =
+        job.block_encoder && job.strips > 1 && uses_scratch;
+    if (job.encode_from_scratch) {
+      // The worker can encode its surface before drawing the next strip.
+      // Keeping a second copy in the output bitmap would only add a copy
+      // and a full image (or committed window) to the live pixel buffers.
+      if (bitmap_->pixmap().addr()) {
+        bitmap_ = WindowedBitmap::Describe(whole.info());
+      }
+      if (reusable_bitmap_) {
+        reusable_bitmap_->reset();
+      }
+    } else if (!bitmap_->pixmap().addr()) {
+      bitmap_ = WindowedBitmap::Create(whole.info(), reusable_bitmap_);
+      if (!bitmap_) {
+        return base::unexpected("could not allocate the image's bitmap");
+      }
+    }
+    job.bitmap = bitmap_.get();
+    const bool keep_small_buffers =
+        bitmap_->retained() ||
+        (job.encode_from_scratch && ImageStream::IsSmall(whole.width(),
+                                                       whole.height()));
 
     DecodedImages images(stats_);
     job.images = &images;
@@ -2148,9 +2201,9 @@ class ImageStream::Impl {
     // list that owns the images is released anyway. So a single-strip image
     // skips the map: walking the paint to index every image, only to answer
     // "strip 0" for each of them, is work a small capture pays for nothing.
-    // So does a kept bitmap of several strips: nothing is released before
-    // the whole image is encoded, so there is nothing for the map to time.
-    if (job.strips > 1 && !bitmap_->retained()) {
+    // Small captures also keep their decoded images through the last strip,
+    // so there is nothing for the map to time.
+    if (job.strips > 1 && !keep_small_buffers) {
       base::flat_map<cc::PaintImage::Id, int> last_strips;
       std::map<cc::PaintImage::Id, std::vector<cc::PaintImage>> encoded_sources;
       scoped_refptr<cc::DiscardableImageMap> map =
@@ -2212,6 +2265,8 @@ class ImageStream::Impl {
                   << " margin=" << job.margin
                   << " strip_rows=" << job.strip_rows
                   << " strips=" << job.strips << " threads=" << threads
+                  << " direct_png=" << job.encode_from_scratch
+                  << " window_kb=" << (bitmap_->peak_bytes() >> 10)
                   << " raster="
                   << (base::TimeTicks::Now() - started - encoding)
                          .InMillisecondsF()
@@ -2231,13 +2286,13 @@ class ImageStream::Impl {
         return base::unexpected("could not commit memory for the image's rows");
       }
       sk_sp<SkSurface> scratch;
-      if (auto rastered = RasterStrip(job, 0, scratch, /*reusable_scratch=*/nullptr);
-          !rastered.has_value()) {
+      auto rastered = RasterStrip(job, 0, scratch, /*reusable_scratch=*/nullptr);
+      if (!rastered.has_value()) {
         return base::unexpected(rastered.error());
       }
       const base::TimeTicks encode_started = base::TimeTicks::Now();
       auto appended = encoder_->SupportsBlocks()
-                          ? EncodeInBlocks(job.StripTop(0), rows)
+                          ? EncodeInBlocks(job.StripTop(0), *rastered)
                           : encoder_->Append(rows);
       const base::TimeDelta encoding = base::TimeTicks::Now() - encode_started;
       if (!appended.has_value()) {
@@ -2254,9 +2309,8 @@ class ImageStream::Impl {
     // surface per thread when a margin or dither-phase correction needs one.
     const int64_t strip_bytes =
         static_cast<int64_t>(whole.rowBytes()) * job.strip_rows;
-    const bool uses_scratch =
-        job.margin != 0 ||
-        (job.device_origin + job.first_row) % kDitherPeriod != 0;
+    // Keep the scheduling budget conservative for direct block encoding:
+    // removing its bitmap must not silently increase raster concurrency.
     const int64_t per_thread =
         strip_bytes +
         (uses_scratch ? static_cast<int64_t>(whole.rowBytes()) *
@@ -2287,16 +2341,16 @@ class ImageStream::Impl {
       base::AutoLock lock(job.lock);
       job.done.assign(static_cast<size_t>(job.strips), 0);
       job.blocks.resize(static_cast<size_t>(job.strips));
-      job.block_encoder = encoder_->SupportsBlocks() ? encoder_.get() : nullptr;
       job.allowed = std::min(job.strips, lookahead);
-      if (!bitmap_->CommitRows(job.StripTop(0),
+      if (!job.encode_from_scratch &&
+          !bitmap_->CommitRows(job.StripTop(0),
                                job.StripBottom(job.allowed - 1))) {
         return base::unexpected("could not commit memory for the image's rows");
       }
     }
 
-    // A kept bitmap keeps its strip surfaces too, one per thread slot.
-    if (bitmap_->retained() && reusable_scratch_) {
+    // Small captures keep strip surfaces, even without an output bitmap.
+    if (keep_small_buffers && reusable_scratch_) {
       if (reusable_scratch_->size() < static_cast<size_t>(threads)) {
         reusable_scratch_->resize(static_cast<size_t>(threads));
       }
@@ -2351,7 +2405,8 @@ class ImageStream::Impl {
       }
       base::AutoLock lock(job.lock);
       if (job.allowed < job.strips) {
-        if (!bitmap_->CommitRows(job.StripTop(job.allowed),
+        if (!job.encode_from_scratch &&
+            !bitmap_->CommitRows(job.StripTop(job.allowed),
                                  job.StripBottom(job.allowed))) {
           base::AutoUnlock unlock(job.lock);
           return stop_pool("could not commit memory for the image's rows");
@@ -2371,14 +2426,20 @@ class ImageStream::Impl {
   // appended in order as they finish. A small capture is the one whose
   // encode was not overlapped with anything, and the one that most often is
   // the whole capture.
-  base::expected<void, std::string> EncodeInBlocks(int first_row, int rows) {
+  base::expected<void, std::string> EncodeInBlocks(int first_row,
+                                                 const SkPixmap& pixels) {
     // Blocks of at least kMinBlockRows: below that the deflate window's
     // warm-up and a task's posting cost more than a thread saves. One block
     // is the plain path.
     constexpr int kMinBlockRows = 48;
+    const int rows = pixels.height();
     const int workers = std::clamp(rows / kMinBlockRows, 1, kMaxEncodeBlocks);
     if (workers == 1) {
-      return encoder_->Append(rows);
+      auto encoded = encoder_->EncodeBlock(first_row, pixels);
+      if (!encoded.has_value()) {
+        return base::unexpected(encoded.error());
+      }
+      return encoder_->AppendBlock(std::move(*encoded));
     }
     struct Shared {
       base::Lock lock;
@@ -2393,11 +2454,14 @@ class ImageStream::Impl {
       shared.blocks.resize(static_cast<size_t>(workers));
       shared.finished.assign(static_cast<size_t>(workers), 0);
     }
-    auto encode = [](RowEncoder* encoder, Shared* shared, int first_row,
-                     int rows, int workers, int index) {
-      const int top = first_row + rows * index / workers;
-      const int bottom = first_row + rows * (index + 1) / workers;
-      auto encoded = encoder->EncodeBlock(top, bottom - top);
+    auto encode = [](RowEncoder* encoder, Shared* shared, const SkPixmap& pixels,
+                     int first_row, int workers, int index) {
+      const int top = pixels.height() * index / workers;
+      const int bottom = pixels.height() * (index + 1) / workers;
+      SkPixmap block_pixels;
+      CHECK(pixels.extractSubset(
+          &block_pixels, SkIRect::MakeXYWH(0, top, pixels.width(), bottom - top)));
+      auto encoded = encoder->EncodeBlock(first_row + top, block_pixels);
       base::AutoLock lock(shared->lock);
       if (encoded.has_value()) {
         shared->blocks[static_cast<size_t>(index)] = std::move(*encoded);
@@ -2414,10 +2478,10 @@ class ImageStream::Impl {
       base::ThreadPool::PostTask(
           FROM_HERE, {base::TaskPriority::USER_BLOCKING},
           base::BindOnce(encode, base::Unretained(encoder_.get()),
-                         base::Unretained(&shared), first_row, rows, workers,
+                         base::Unretained(&shared), pixels, first_row, workers,
                          index));
     }
-    encode(encoder_.get(), &shared, first_row, rows, workers, 0);
+    encode(encoder_.get(), &shared, pixels, first_row, workers, 0);
     for (int index = 0; index < workers; ++index) {
       std::unique_ptr<EncodedBlock> block;
       {
@@ -2470,7 +2534,8 @@ class ImageStream::Impl {
   std::unique_ptr<WindowedBitmap> bitmap_;
   std::unique_ptr<RowEncoder> encoder_;
   const SkSurfaceProps props_;
-  // The caller's kept strip surfaces, used only while `bitmap_` is kept too.
+  const raw_ptr<SkBitmap> reusable_bitmap_;
+  // The caller's kept strip surfaces, used only for small captures.
   const raw_ptr<std::vector<SkBitmap>> reusable_scratch_;
   const raw_ptr<ImageStreamStats> stats_;
   int next_row_ = 0;
@@ -2491,16 +2556,18 @@ base::expected<std::unique_ptr<ImageStream>, std::string> ImageStream::Create(
     base::File output,
     SkBitmap* reusable_bitmap,
     std::vector<SkBitmap>* reusable_scratch) {
+  const SkImageInfo info = SkImageInfo::MakeN32Premul(width, height);
   std::unique_ptr<WindowedBitmap> bitmap =
-      WindowedBitmap::Create(SkImageInfo::MakeN32Premul(width, height),
-                             reusable_bitmap);
+      request.type == "png" ? WindowedBitmap::Describe(info)
+                            : WindowedBitmap::Create(info, reusable_bitmap);
   if (!bitmap) {
     return base::unexpected("could not reserve a " +
                             base::NumberToString(width) + "x" +
                             base::NumberToString(height) + " bitmap");
   }
-  // The encoder sees the whole image as one pixmap, opaque when the caller
-  // promised it, so that PNG writes RGB and WebP skips the alpha plane.
+  // PNG only needs the image description here; each block supplies its pixels.
+  // Other encoders see one contiguous pixmap. Mark it opaque when promised,
+  // so that PNG writes RGB and WebP skips the alpha plane.
   SkPixmap whole = bitmap->pixmap();
   if (opaque) {
     whole.reset(whole.info().makeAlphaType(kOpaque_SkAlphaType), whole.addr(),
@@ -2515,7 +2582,7 @@ base::expected<std::unique_ptr<ImageStream>, std::string> ImageStream::Create(
   }
   auto stream = base::WrapUnique(new ImageStream(nullptr));
   stream->impl_ = std::make_unique<Impl>(std::move(bitmap), std::move(*encoder),
-                                         props, reusable_scratch,
+                                         props, reusable_bitmap, reusable_scratch,
                                          &stream->stats_);
   return stream;
 }

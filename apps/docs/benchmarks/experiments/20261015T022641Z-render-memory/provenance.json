@@ -1,0 +1,295 @@
+{
+  "recordedUtc": "2026-10-15T04:58:31.810Z",
+  "platform": "win32-x64",
+  "node": "v22.22.2",
+  "host": {
+    "release": "10.0.26300",
+    "cpu": "Intel(R) Core(TM) i9-14900KF",
+    "logicalCpus": 32,
+    "totalMemory": 68463702016,
+    "freeMemory": 28476784640
+  },
+  "revision": "b4678c135a652cbd52843e2c73289f40d284a8d9",
+  "sourceDiffSha256": "467886d81efda4cfc8149a1f50abc4c82a800c34a75a9f7098e9e036da32c721",
+  "scope": "Local Windows x64. No publication or other-platform build. See report for complete timing verdicts and unresolved cases.",
+  "baselineConstruction": "CLI baseline is the successful preceding PNG-buffer candidate, C4E91B...; it includes the earlier 64 KiB compression buffer optimization and the pre-existing page.cc change. Copied the executable and resource packs before this round. Node baseline is the independently installed published npm 0.12.2 package.",
+  "finalBuilds": [
+    {
+      "command": "pnpm build:engine --jobs 2 --log out/Shot/memory-idle-cache-cli.log",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm build:engine --jobs 2 --target shot_node --log out/Shot/memory-idle-cache-node.log",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm build:engine --jobs 2 --target shot_c --log out/Shot/memory-idle-cache-c.log",
+      "exitCode": 0
+    }
+  ],
+  "failedAttempt": "The initial v2 build at default -j 12 exhausted system commit. Its log is retained. The same sources built successfully with --jobs 2; no build overlapped performance or memory measurements.",
+  "artifacts": [
+    {
+      "file": "out/memory-20261015-direct/baseline/shotium.exe",
+      "bytes": 36910080,
+      "sha256": "c4e91b300d1de06d0ec62f57e82afcc1e86f564e35f9e57ecfe1d167eb2b4302"
+    },
+    {
+      "file": "out/memory-20261015-direct/baseline/shotium_data.pak",
+      "bytes": 35545,
+      "sha256": "fd69980096dda87a0754a38e162f1e94d82abf3e2a0fca005068489bfef80be3"
+    },
+    {
+      "file": "out/memory-20261015-direct/baseline/shotium_strings.pak",
+      "bytes": 2908,
+      "sha256": "8b04cc03a699039d27f1c5f6a098a05daccb11373dd70263389e8b834f576df4"
+    },
+    {
+      "file": "out/Shot/shotium.exe",
+      "bytes": 36915200,
+      "sha256": "a848b5c8731b89ed431cfa104f91e5bc30040c1e34219ac8b6ecc735068de4d8"
+    },
+    {
+      "file": "out/Shot/shotium.node",
+      "bytes": 36931584,
+      "sha256": "fc9c05f015bfcc149e7635d943c77dc89ce117f92837fc63abaef3b9ad9ca71d"
+    },
+    {
+      "file": "out/Shot/shotium.dll",
+      "bytes": 36919296,
+      "sha256": "87f9f74febf7b6eb15b52196d60ee2c80b2800820348f0ad5610c5ac19fb59be"
+    },
+    {
+      "file": "out/Shot/shotium_data.pak",
+      "bytes": 35545,
+      "sha256": "fd69980096dda87a0754a38e162f1e94d82abf3e2a0fca005068489bfef80be3"
+    },
+    {
+      "file": "out/Shot/shotium_strings.pak",
+      "bytes": 2908,
+      "sha256": "8b04cc03a699039d27f1c5f6a098a05daccb11373dd70263389e8b834f576df4"
+    }
+  ],
+  "benchmarkNativeMetadata": {
+    "baseline": {
+      "startMs": 28.0938,
+      "importAndStartMs": 35.8945,
+      "library": "D:\\Github\\chromium\\out\\memory-20261015\\npm-baseline\\node_modules\\@pixel.js\\shotium-win32-x64\\shotium.node",
+      "addon": "D:\\Github\\chromium\\out\\memory-20261015\\npm-baseline\\node_modules\\@pixel.js\\shotium-win32-x64\\shotium.node",
+      "resourceDirectory": "D:\\Github\\chromium\\out\\memory-20261015\\npm-baseline\\node_modules\\@pixel.js\\shotium-win32-x64",
+      "librarySha256": "f89255a1a450e1d10673c7f9eefeafc04a77648e3cde0f4e37ce430f4f1d712e",
+      "addonSha256": "f89255a1a450e1d10673c7f9eefeafc04a77648e3cde0f4e37ce430f4f1d712e",
+      "bundleSha256": "e4acbd20f9fe53abcbb28bb25fe95832c97edb2f0ac530553c7a7eb8b5cad54d",
+      "packageVersion": "0.12.2"
+    },
+    "candidate": {
+      "startMs": 23.4905,
+      "importAndStartMs": 32.1827,
+      "library": "D:\\Github\\chromium\\out\\Shot\\shotium.node",
+      "addon": "D:\\Github\\chromium\\out\\Shot\\shotium.node",
+      "resourceDirectory": "D:\\Github\\chromium\\out\\Shot",
+      "librarySha256": "fc9c05f015bfcc149e7635d943c77dc89ce117f92837fc63abaef3b9ad9ca71d",
+      "addonSha256": "fc9c05f015bfcc149e7635d943c77dc89ce117f92837fc63abaef3b9ad9ca71d",
+      "bundleSha256": "e4acbd20f9fe53abcbb28bb25fe95832c97edb2f0ac530553c7a7eb8b5cad54d",
+      "packageVersion": "0.12.2"
+    }
+  },
+  "noiseFixture": {
+    "generator": "paired.ts, xorshift seed 817",
+    "measuredDirectory": "out/memory-20261015",
+    "generatedDirectory": "out/memory-20261015-direct",
+    "byteIdentical": true,
+    "files": [
+      {
+        "file": "noise.html",
+        "sha256": "412d8fa4065d6aac2f2bb226dc66fbab09253941c0198f9a2d1d117f1319b33a",
+        "bytes": 66
+      },
+      {
+        "file": "noise.png",
+        "sha256": "39580d77e95dfd1e7192e0b306a64d7c6767120175f215c2b3404b82753fedec",
+        "bytes": 3152888
+      }
+    ]
+  },
+  "previousCandidate": {
+    "name": "V3",
+    "nativeMetadata": {
+      "startMs": 33.6212,
+      "importAndStartMs": 46.0437,
+      "library": "D:\\Github\\chromium\\out\\Shot\\shotium.node",
+      "addon": "D:\\Github\\chromium\\out\\Shot\\shotium.node",
+      "resourceDirectory": "D:\\Github\\chromium\\out\\Shot",
+      "librarySha256": "33b42bb1a28534a663755a99154de4472fcecb08b78291b31e233a2a368406a2",
+      "addonSha256": "33b42bb1a28534a663755a99154de4472fcecb08b78291b31e233a2a368406a2",
+      "bundleSha256": "e4acbd20f9fe53abcbb28bb25fe95832c97edb2f0ac530553c7a7eb8b5cad54d",
+      "packageVersion": "0.12.2"
+    },
+    "sourceDiffSha256": "6c4d12c0ceae92ff602b14e754d95e5c9cc56f580ff7f6aa01b57ceb4ced5f86",
+    "patch": "v3-engine.patch",
+    "note": "Full default-budget matrix completed, but a later real-card CLI run showed a regression. Follow-up isolation showed process/run variation and deferred cache cleanup. V4 drains invalidations during existing idle teardown. All V3 samples, including the slower run, remain archived."
+  },
+  "environment": "Performance workers have profiling disabled and no raster, GC or cache-budget overrides. CLI memory workers enable SHOT_PROFILE and --verbose. Node memory workers additionally enable SHOT_VERBOSE; SHOT_PROFILE_CACHE=1 is used only in the separate cache diagnostic.",
+  "archiveFiles": [
+    {
+      "file": "build-and-check-logs.json.gz",
+      "bytes": 60390,
+      "sha256": "d348246d68b0b5e28d50c3190ef8891bafe2d743a51b3b63e533103da52f2a79"
+    },
+    {
+      "file": "cache-v2-card.json.gz",
+      "bytes": 2084,
+      "sha256": "856d77555a0c945f8fc095acbbb54d1eb847947cb2325a1f2c087082b125cb34"
+    },
+    {
+      "file": "candidate-engine.patch",
+      "bytes": 30940,
+      "sha256": "467886d81efda4cfc8149a1f50abc4c82a800c34a75a9f7098e9e036da32c721"
+    },
+    {
+      "file": "dispose-isolation.json.gz",
+      "bytes": 14716,
+      "sha256": "2bf869ac0469c59b5226df13d283945cd9fe03184de6c741b06f2be29758e394"
+    },
+    {
+      "file": "final-checks.json.gz",
+      "bytes": 226,
+      "sha256": "77b13b728c2a68095281e574dd3bdc818d7d59ffc50ac581959b51b7420568c6"
+    },
+    {
+      "file": "finish-idle.json.gz",
+      "bytes": 502,
+      "sha256": "8136324c056c6971ac73568df5a615130f6722ca7bb6e5c22ddde3b8c007cef5"
+    },
+    {
+      "file": "full-final-frozen.json.gz",
+      "bytes": 22000,
+      "sha256": "92762743084a249962fb109f1e2064dce37fcaff2947c14bed2935b64e093160"
+    },
+    {
+      "file": "full-final.json.gz",
+      "bytes": 3016355,
+      "sha256": "6633fd6b83dfaa086afd7de61366d3024c7829981a8d94b71561296f3ab72ace"
+    },
+    {
+      "file": "full-final.pixels.json",
+      "bytes": 27572,
+      "sha256": "301a59a4ce576188e0223f9f8d686b011994feb42d2c77e23e3659e06b294047"
+    },
+    {
+      "file": "full-matrix.json.gz",
+      "bytes": 6042739,
+      "sha256": "468933040c5719fd8c60b9f0221e3fb0df5c883937d5af6c937d28d9dbbf08c4"
+    },
+    {
+      "file": "full-matrix.pixels.json",
+      "bytes": 27572,
+      "sha256": "a31175d4409484fc682a955a688094f7404647024609daca1050156636fed062"
+    },
+    {
+      "file": "harness-and-candidate-sources.json.gz",
+      "bytes": 198917,
+      "sha256": "31ce23075e4920416b59fbcb8fb25342ca81ba727af0105ab68c96664b6a9eb2"
+    },
+    {
+      "file": "isolation-combined-stages.json.gz",
+      "bytes": 89773,
+      "sha256": "d60a6108833cea046d6fd390c9376332639301e62e9557c53e60a830b2806451"
+    },
+    {
+      "file": "isolation-direct-v1-base.json.gz",
+      "bytes": 20951,
+      "sha256": "5b8e7d5b92cf2351781a4b0a88089442c8c2c21b286d493306b813aa79906486"
+    },
+    {
+      "file": "isolation-dispose-stages.json.gz",
+      "bytes": 91212,
+      "sha256": "fa32024d408976abe7a6886b87196d982628e454e869efd52e65fce86b1379e1"
+    },
+    {
+      "file": "isolation-pack-v3-v2.json.gz",
+      "bytes": 20826,
+      "sha256": "3cfcc9118087d00e8da492aa96acc9b6b30dab6c0c00e84e74ed1f336d82ceed"
+    },
+    {
+      "file": "memory-evidence.json.gz",
+      "bytes": 3872175,
+      "sha256": "3e1ccd8e9bb3f51e0a85e068bb0eaf900085bec78e5bbbbbe524f1f317fb0001"
+    },
+    {
+      "file": "memory.json",
+      "bytes": 437671,
+      "sha256": "0ec66c78bb30acdf85707430e7e9758cd5dc82ecdba04a1ac07825f160d219e1"
+    },
+    {
+      "file": "node-memory.json",
+      "bytes": 13189,
+      "sha256": "d37d31d061c2b75b41260b9dab3f705d0688375dc56489327cfb60a5f6bc0749"
+    },
+    {
+      "file": "pack-quick.json.gz",
+      "bytes": 41417,
+      "sha256": "a26b1851f6da17399459bf9e8db5948b04f2a99e9164a883b32dd3cec3b919f0"
+    },
+    {
+      "file": "paired-final.json.gz",
+      "bytes": 48045,
+      "sha256": "373324662b33c9570dfcb21892b835f7e3d788b2087c5cacd0a497307fc79aa5"
+    },
+    {
+      "file": "paired-idle-confirm.json.gz",
+      "bytes": 304936,
+      "sha256": "f077785461ec8d106eacec70d19922292cd50d038f7e81ec6611fb0348912876"
+    },
+    {
+      "file": "paired-idle-repeat.json.gz",
+      "bytes": 393094,
+      "sha256": "c14001593e6d30b1140c2402cc5d8d1a218ed7e5137d34ecb9bf2075621d7513"
+    },
+    {
+      "file": "paired-idle-scale.json.gz",
+      "bytes": 44679,
+      "sha256": "4c08150e369d4c7225a2ad1ca4d5b3b5897353d0631921f792a87801c1551fd6"
+    },
+    {
+      "file": "paired-pack-confirm.json.gz",
+      "bytes": 44090,
+      "sha256": "de49fbdd7608a165ba60c633b718c58cfdcd23261592993b7495a8dd46f82d98"
+    },
+    {
+      "file": "paired-recheck.json.gz",
+      "bytes": 43165,
+      "sha256": "c5adfcc0dedc8bfca4639da3f3dd2b5e6369f1efb177a3f2c3cde2ae8a5fe6f9"
+    },
+    {
+      "file": "paired-v1.json.gz",
+      "bytes": 58178,
+      "sha256": "f316a7b52f332bd68b991858b7362d2f2dcabdc60b024c7e1268774e57bf8d7d"
+    },
+    {
+      "file": "preexisting.patch",
+      "bytes": 1728,
+      "sha256": "58c7b51333b10733fba6c5ae47f6ba0ee3b4a1de900899975d43764020bec4d1"
+    },
+    {
+      "file": "summary.json",
+      "bytes": 197985,
+      "sha256": "b1cb6df8ad294614dfb97abc9c274b4f341b1c1e65487bb6d83f015a0c210004"
+    },
+    {
+      "file": "timings.zh-CN.md",
+      "bytes": 19110,
+      "sha256": "d4b39c7764b7b6d55d1eacd1bf3b816410cc45e2f7763aebef2fdb237634517a"
+    },
+    {
+      "file": "v3-engine.patch",
+      "bytes": 30475,
+      "sha256": "6c4d12c0ceae92ff602b14e754d95e5c9cc56f580ff7f6aa01b57ceb4ced5f86"
+    },
+    {
+      "file": "verification.json",
+      "bytes": 2692,
+      "sha256": "3a63c4e0a48d4576986da8ea89fc4a04ed3e0a1e9205254a13e1112481b8f5f9"
+    }
+  ]
+}
