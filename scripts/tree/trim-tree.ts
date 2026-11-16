@@ -289,10 +289,12 @@ const foreignPlatforms = new Set([
   'android', 'fuchsia', 'ios', 'chromeos', 'cros', 'lacros', 'cast', 'nacl', 'aix', 'zos',
 ]);
 
-// Kept beside anything kept, in every ancestor directory: licences, and the
-// nested .gitignore files that hide the DEPS checkouts (third_party/.gitignore
-// is why `git status` does not list third_party/llvm-build).
-const licenceFile = /^(LICENSE|LICENCE|COPYING|NOTICE|PATENTS|README\.chromium|\.gitignore)(\.[A-Za-z0-9_-]+)?$/i;
+// Kept beside anything kept, in every ancestor directory: licences, the
+// README.shotium.md that records which upstream revision a source slice
+// (ICU, Skia, the former DEPS checkouts) was cut from, and the nested
+// .gitignore files that hide the DEPS checkouts (third_party/.gitignore is why
+// `git status` does not list third_party/llvm-build).
+const licenceFile = /^(LICENSE|LICENCE|COPYING|NOTICE|PATENTS|README\.chromium|README\.shotium|\.gitignore)(\.[A-Za-z0-9_-]+)?$/i;
 
 function matchesWhitelist(file: string, extra: string[]): boolean {
   for (const entry of [...whitelist, ...extra]) {

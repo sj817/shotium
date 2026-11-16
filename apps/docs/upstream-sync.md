@@ -31,6 +31,18 @@ ICU、Skia、Perfetto 现在由本仓直接维护。更新它们时按各目录 
 原 ICU 功能裁剪、Skia 并行模糊/逐行解码限制、Perfetto trace processor 开关均已
 保留在对应源码中。外部依赖的其他 DEPS 条目仍按本文同步。
 
+0.12.4 之后，另外 18 个原 DEPS 检出也改成本仓维护的源码切片，只保留八个平台
+构建图读到的文件（734 MiB → 57 MiB）：boringssl、expat、harfbuzz、libc++、
+libc++abi、llvm-libc、compiler-rt、ots、quiche、nasm、freetype、highway、
+libwebp、libjpeg_turbo、wuffs、material_color_utilities、fontconfig、gperf。
+上游版本记在各自的 README.shotium.md；升级时用
+`pnpm upstream:sync plan --upstream-prefix <目录> --retained-only` 只比对保留的
+文件。DEPS 里对应的 `*_revision` 变量已无人引用，按 prune-deps 的约定保留。
+libc++、libc++abi、llvm-libc、compiler-rt 与 `third_party/llvm-build` 的 clang
+版本绑定，换编译器时要一起升级。仍由 DEPS 拉取的 git 依赖只剩 depot_tools
+（gclient hooks 调它下载 rc.exe/dsymutil）、re2、ced、lss、emoji-segmenter、
+libunwind、libdrm，以及 CIPD/GCS 的工具链包。
+
 ### CPU 绘制差异：背景滤镜和 CSS 3D（2026-10-11）
 
 `BoxFragmentPainter` 为可见的空透明 backdrop-filter 元素保留一个空绘制

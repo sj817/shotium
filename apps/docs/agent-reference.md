@@ -191,6 +191,10 @@ build loop. Read the affected workflow and source action for CI changes.
 - ICU, Skia and Perfetto are tracked source slices; their `README.shotium.md`
   files describe the provenance. ICU data is generated from the tracked cast
   data. Do not reintroduce a separate checkout or patch replay for these trees.
+  The same holds for the eighteen former DEPS checkouts listed in
+  `apps/docs/upstream-sync.md`: they keep only the files an engine build
+  reads, and a build that needs another file takes it from upstream at the
+  revision their `README.shotium.md` records.
 - Preserve the `LASTCHANGE` pin and content-faithful mtimes when changing warm
   builds. Otherwise a source-identical checkout can rebuild many dependencies.
   Relevant code is in DEPS, `scripts/ci/stamp-mtimes.ts` and

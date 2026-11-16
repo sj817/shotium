@@ -50,9 +50,10 @@ and workflow behaviour must agree with the current checkout.
   it must not start the engine, and invalid options must reject before native
   initialisation. Keep option names and defaults consistent across the TS,
   native and JSON interfaces.
-- Chromium, ICU, Skia and Perfetto changes are maintained in their source
-  files. For dependencies still fetched by DEPS, remove the DEPS and
-  `.gitmodules` entries with an authorised removal of that checkout.
+- Chromium, ICU, Skia, Perfetto and the vendored third-party slices (each
+  with a `README.shotium.md`) are maintained in their source files. For
+  dependencies still fetched by DEPS, remove the DEPS and `.gitmodules`
+  entries with an authorised removal of that checkout.
 - A search with no matches does not prove code is unused. Use scoped `rg`
   for navigation; use `git --no-optional-locks grep`, GN dependency paths
   and the supported platforms' build inputs for removal decisions.
