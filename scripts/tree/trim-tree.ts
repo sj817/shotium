@@ -281,6 +281,12 @@ const whitelist = [
   'shot/', 
   // .sha1 stamps the dsymutil_mac_* gclient hooks download by; no build reads them.
   'tools/clang/dsymutil/',
+  // Linux and macOS compile with -isystem on libc++abi's headers
+  // (build/config/c++/BUILD.gn) and list them in the libc++ module map, and a
+  // -MMD depfile leaves system headers out; Windows does not use libc++abi.
+  // So no platform's graph records cxxabi.h, and every Linux and macOS
+  // compile needs it.
+  'third_party/libc++abi/src/include/',
 ];
 
 // Rule 8. A path under build/ with one of these as a directory name belongs to
