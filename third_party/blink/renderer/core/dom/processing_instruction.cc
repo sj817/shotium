@@ -40,7 +40,6 @@
 #include "third_party/blink/renderer/core/svg/graphics/svg_image.h"
 #include "third_party/blink/renderer/core/svg/graphics/svg_image_chrome_client.h"
 #include "third_party/blink/renderer/core/xml/document_xslt.h"
-#include "third_party/blink/renderer/core/xml/parser/xml_document_parser.h"  // for parseAttributes()
 #include "third_party/blink/renderer/core/xml/parser/xml_document_parser_rs.h"  // for parseAttributesRust()
 #include "third_party/blink/renderer/core/xml/xsl_style_sheet.h"
 #include "third_party/blink/renderer/core/xml/xslt_processor.h"
@@ -146,11 +145,7 @@ void ProcessingInstruction::ProcessAttributesIfNeeded() {
   // ### make sure this gets called when adding from javascript
   bool attrs_ok;
   HashMap<String, String> attrs;
-  if (RuntimeEnabledFeatures::XMLParsingRustEnabled()) {
-    attrs = blink::ParseAttributesRust(data_, attrs_ok);
-  } else {
-    attrs = blink::ParseAttributes(data_, attrs_ok);
-  }
+  attrs = blink::ParseAttributesRust(data_, attrs_ok);
   if (!attrs_ok) {
     return;
   }

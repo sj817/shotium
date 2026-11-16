@@ -245,7 +245,6 @@ class StyleEngine;
 class StylePropertyMapReadOnly;
 class StyleResolver;
 class Text;
-class TransformSource;
 class TreeWalker;
 class TrustedHTML;
 class TrustedHTMLParserOptions;
@@ -1341,11 +1340,6 @@ class CORE_EXPORT Document : public ContainerNode,
   void PopCurrentScript(ScriptElementBase*);
   bool IsCurrentScriptStackEmpty() const {
     return current_script_stack_.empty();
-  }
-
-  void SetTransformSource(std::unique_ptr<TransformSource>);
-  TransformSource* GetTransformSource() const {
-    return transform_source_.get();
   }
 
   void IncDOMTreeVersion() {
@@ -2571,8 +2565,6 @@ class CORE_EXPORT Document : public ContainerNode,
   Member<ScriptRunnerDelayer> script_runner_delayer_;
 
   HeapVector<Member<ScriptElementBase>> current_script_stack_;
-
-  std::unique_ptr<TransformSource> transform_source_;
 
   String xml_encoding_;
   String xml_version_{"1.0"};

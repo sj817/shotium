@@ -106,11 +106,11 @@ static std::unique_ptr<base::SampleVector> GetRttHistogram(
   return histogram;
 }
 
-#if defined(ENABLE_BUILT_IN_DNS)
+// Upstream sizes the cache by ENABLE_BUILT_IN_DNS (100 entries on iOS). shot
+// builds without the built-in resolver but still caches system-resolver
+// answers here, and a resident worker can see far more than 100 hosts, so it
+// keeps the desktop size: dropping the stub resolver must not cost a lookup.
 constexpr size_t kDefaultCacheSize = 1000;
-#else
-constexpr size_t kDefaultCacheSize = 100;
-#endif
 
 std::unique_ptr<HostCache> CreateHostCache(bool enable_caching) {
   if (enable_caching) {

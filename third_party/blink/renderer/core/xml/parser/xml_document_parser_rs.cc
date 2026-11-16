@@ -53,7 +53,6 @@
 #include "third_party/blink/renderer/core/loader/frame_loader.h"
 #include "third_party/blink/renderer/core/svg/graphics/svg_image.h"
 #include "third_party/blink/renderer/core/xml/parser/xhtml_subset.h"
-#include "third_party/blink/renderer/core/xml/parser/xml_document_parser.h"
 #include "third_party/blink/renderer/core/xmlns_names.h"
 #include "third_party/blink/renderer/platform/runtime_enabled_features.h"
 #include "third_party/blink/renderer/platform/wtf/text/strcat.h"
@@ -61,6 +60,14 @@
 
 namespace blink {
 namespace {
+
+// Moved here from the libxml XMLDocumentParser's header, which is no longer
+// built; this parser is its only user.
+inline bool IsCAPAlertNamespace(StringView uri) {
+  return !uri.IsNull() &&
+         (uri == "urn:oasis:names:tc:emergency:cap" ||
+          uri.starts_with("urn:oasis:names:tc:emergency:cap:"));
+}
 
 inline String RustStrToWtfString(rust::Str str) {
   return String::FromUtf8(base::RustStrToStringView(str));

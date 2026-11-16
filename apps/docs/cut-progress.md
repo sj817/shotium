@@ -2337,3 +2337,31 @@ HSTS/charset 增量一次（230 步），都是 0 FAILED，`shotium.exe`、`shot
 HSTS 用一页 `http://github.com/...`、`http://www.google.com/...` 的图片冒烟：两张都
 经服务器重定向拿到并画出来了。Linux/macOS 只走 CI；vtable 旗标在那两个平台上真的
 做过 WPD（链接旗标只在 `!is_win` 传），性能要在 CI 基准上另看。
+
+## 26. 性能不许退的一轮：内置 DNS 与 Blink 的 libxml（2026-11-16）
+
+约束：性能优先，任何裁剪都不能让渲染变慢。所以 `-O2` 不动（8 月 28 日为常驻性能从
+`-Os` 改回来的取舍不变），也不做「省体积但某些机器变慢」的项：simdutf 少带几套 SIMD
+实现、Windows 改用系统 UCRT（静态 UCRT 的 0.34 MB 大多是 pow/atan2/cosh 这类数学函数，
+换成系统 DLL 之后不同 Windows 版本可能算出不同的浮点结果，像素会随宿主漂移）。
+
+做了两项，都只删运行时本来就不走的代码：
+
+| 改动 | Windows 实测 |
+|---|---|
+| `enable_built_in_dns = use_blink && !is_shot_build`：DnsClient 以前被创建但 `insecure_dns_mode` 默认 kDisabled、也没有 DoH 配置，从不解析；系统解析器和 HostCache 不变，缓存仍 1000 条 | −111 KB（DnsTransaction、DoH 提供方表等） |
+| Blink 所有 XML 文档交给 Rust 解析器，删 libxml 版 `XMLDocumentParser`；XSLT 早就是空实现，XML 片段解析只有脚本和粘贴编辑能到 | −256 KB（libxml 整个离开 Windows/mac 镜像；Linux 的 fontconfig 仍用它） |
+
+shotium.exe 36,915,200 → 36,487,680 字节（−418 KB，−1.2%）。`net/dns` 的 0.41 MB 里大头
+（HostResolverManager、系统解析、配置变更监听）仍在用，所以 DNS 只省了预估的四分之一。
+
+证据：verify serve/net（含真实 https）/demos 92/charset 15/fonts 3、node/node-entry/
+daemon/daemon-protocol、bilibili 全通过；96 个测试页整页渲染与改动前二进制逐字节相同，
+6 个 XHTML/XML 样例（实体、CJK、内联 SVG/MathML、xml-stylesheet、GBK 声明、格式错误）
+逐像素相同；perf:compare 对 npm 0.12.4 跑完整矩阵 114 项：87 等价、27 未定、0 变慢
+（噪声带 ±3.14%）。
+
+剩下不改行为、不掉性能的大项只有 tracing：名字里带 perfetto/TrackEvent/trace_event 的
+符号约 0.52 MB，另有内联在各 TRACE_EVENT 调用点的分支；关掉还会省掉运行时的类别检查。
+但 `enable_base_tracing` 这个开关已不在树里，要先恢复桩实现，再修 Blink/net 里约 370 处
+直接使用 perfetto 类型的地方。

@@ -23,11 +23,13 @@
 #include "third_party/blink/renderer/core/dom/document_fragment.h"
 
 #include "third_party/blink/renderer/core/dom/document.h"
+#include "third_party/blink/renderer/core/dom/element.h"
 #include "third_party/blink/renderer/core/dom/node_cloning_data.h"
+#include "third_party/blink/renderer/core/dom/text.h"
 #include "third_party/blink/renderer/core/dom/tree_scope.h"
 #include "third_party/blink/renderer/core/execution_context/agent.h"
 #include "third_party/blink/renderer/core/html/parser/html_document_parser.h"
-#include "third_party/blink/renderer/core/xml/parser/xml_document_parser.h"
+#include "third_party/blink/renderer/core/html_names.h"
 #include "third_party/blink/renderer/platform/bindings/exception_state.h"
 
 namespace blink {
@@ -84,8 +86,24 @@ bool DocumentFragment::ParseXML(const String& source,
                                 Element* context_element,
                                 ExceptionState& exception_state,
                                 ParserContentPolicy parser_content_policy) {
-  return XMLDocumentParser::ParseDocumentFragment(
-      source, this, context_element, parser_content_policy, exception_state);
+  // XML fragment parsing (innerHTML, insertAdjacentHTML or
+  // createContextualFragment on an XML document, and pasting into one) is
+  // reached only from script and editing, neither of which this build has.
+  // The libxml parser that implemented it is no longer built into Blink, and
+  // the Rust parser has no fragment entry point upstream yet
+  // (https://crbug.com/441911594). Keep the script/style text shortcut the
+  // libxml path had, and report anything else as not well-formed, which
+  // CreateFragmentForMarkup turns into a SyntaxError.
+  if (!source.length()) {
+    return true;
+  }
+  if (context_element &&
+      (context_element->HasLocalName(html_names::kScriptTag.LocalName()) ||
+       context_element->HasLocalName(html_names::kStyleTag.LocalName()))) {
+    ParserAppendChild(GetDocument().createTextNode(source));
+    return true;
+  }
+  return false;
 }
 
 void DocumentFragment::ForgetChildren() {

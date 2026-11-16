@@ -23,8 +23,6 @@
 #ifndef THIRD_PARTY_BLINK_RENDERER_CORE_XML_XSLT_PROCESSOR_H_
 #define THIRD_PARTY_BLINK_RENDERER_CORE_XML_XSLT_PROCESSOR_H_
 
-#include <libxml/parserInternals.h>
-
 #include "base/types/pass_key.h"
 #include "third_party/blink/renderer/core/dom/document.h"
 #include "third_party/blink/renderer/core/dom/node.h"
@@ -63,9 +61,6 @@ class XSLTProcessor final : public GarbageCollected<XSLTProcessor> {
                                      const String& source_mime_type,
                                      Node* source_node,
                                      LocalFrame*);
-
-  static void ParseErrorFunc(void* user_data, const xmlError*);
-  static void GenericErrorFunc(void* user_data, const char* msg, ...);
 
   // Only for libXSLT callbacks
   XSLStyleSheet* XslStylesheet() const { return stylesheet_.Get(); }

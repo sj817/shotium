@@ -167,7 +167,6 @@
 #include "third_party/blink/renderer/core/dom/slot_assignment_recalc_forbidden_scope.h"
 #include "third_party/blink/renderer/core/dom/static_node_list.h"
 #include "third_party/blink/renderer/core/dom/text_diff_range.h"
-#include "third_party/blink/renderer/core/dom/transform_source.h"
 #include "third_party/blink/renderer/core/dom/tree_walker.h"
 #include "third_party/blink/renderer/core/dom/user_action_element_traversal.h"
 #include "third_party/blink/renderer/core/dom/visited_link_state.h"
@@ -321,7 +320,6 @@
 #include "third_party/blink/renderer/core/timing/window_performance.h"
 #include "third_party/blink/renderer/core/trustedtypes/trusted_html.h"
 #include "third_party/blink/renderer/core/trustedtypes/trusted_types_util.h"
-#include "third_party/blink/renderer/core/xml/parser/xml_document_parser.h"
 #include "third_party/blink/renderer/core/xml/parser/xml_document_parser_rs.h"
 #include "third_party/blink/renderer/core/xml_names.h"
 #include "third_party/blink/renderer/core/xmlns_names.h"
@@ -1720,7 +1718,8 @@ void Document::SetContentLanguage(const AtomicString& language) {
 
 void Document::setXMLVersion(const String& version,
                              ExceptionState& exception_state) {
-  if (!XMLDocumentParser::SupportsXMLVersion(version)) {
+  // The only version either XML parser accepts.
+  if (version != "1.0") {
     exception_state.ThrowDOMException(
         DOMExceptionCode::kNotSupportedError,
         StrCat({"This document does not support the XML version '", version,
@@ -3200,13 +3199,12 @@ DocumentParser* Document::CreateParser() {
     }
   }
 
-  // FIXME: this should probably pass the frame instead
-  if (RuntimeEnabledFeatures::XMLParsingRustEnabled()) {
-    data_->using_rust_xml_parser_ = true;
-    return MakeGarbageCollected<XMLDocumentParserRs>(*this, View());
-  } else {
-    return MakeGarbageCollected<XMLDocumentParser>(*this, View());
-  }
+  // Upstream still parses XML documents in a frame with libxml unless
+  // XMLParsingRust is on, because only libxml feeds XSLT. XSLT is a no-op in
+  // this build (core/xml/document_xslt.cc), so the Rust parser takes every
+  // XML document and libxml is not linked into Blink at all.
+  data_->using_rust_xml_parser_ = true;
+  return MakeGarbageCollected<XMLDocumentParserRs>(*this, View());
 }
 
 bool Document::IsFrameSet() const {
@@ -6807,10 +6805,6 @@ void Document::PopCurrentScript(ScriptElementBase* script) {
   DCHECK(!current_script_stack_.empty());
   DCHECK_EQ(current_script_stack_.back(), script);
   current_script_stack_.pop_back();
-}
-
-void Document::SetTransformSource(std::unique_ptr<TransformSource> source) {
-  transform_source_ = std::move(source);
 }
 
 String Document::designMode() const {
