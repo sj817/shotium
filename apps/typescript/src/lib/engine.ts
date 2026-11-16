@@ -85,8 +85,9 @@ function conflictingOption(
  * There is one renderer and there is no way to have two. Blink is a
  * process-wide singleton: it is initialised once, there is no path to a second
  * one, and `worker_threads` do not change that because they share the process.
- * So captures are serialised however many callers there are, and a program
- * that wants four at once wants four processes.
+ * So documents are laid out one at a time however many callers there are;
+ * only the raster of one overlaps the layout of the next (below), and a
+ * program that wants four renders at once wants four processes.
  *
  * The queue is the engine's, not this object's. Every capture is handed to
  * the native side as soon as it is asked for: the addon answers through a
