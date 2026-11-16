@@ -16,6 +16,7 @@
 | [upstream-sync-0.6.0-validation.md](upstream-sync-0.6.0-validation.md) | Chromium 155.0.8048.0 版本同步的完整验收记录（包含机器可读的配置状态与路径决策文件） |
 | [performance.md](performance.md) | 基准性能对比测试方法论：测量环境控制、采样收敛条件与判定准则 |
 | [performance-cut-audit.md](performance-cut-audit.md) | 2026-09-14 截图链路审计：实测阶段拆分、删掉或重构的部分（并行 PNG 编码、推迟首轮布局、解码字体缓存、按需建网络栈）以及量过之后没有动的候选 |
+| [cold-start-and-concurrency.md](cold-start-and-concurrency.md) | 2026-11-16：冷启动和空闲后回暖的耗时拆分、保留已解码字体的空闲回收、`start()` 不再等预热，以及光栅流水线的吞吐与内存实测 |
 | [scripts-to-typescript.md](scripts-to-typescript.md) | 自动化脚本工程化演化记录：手写脚本迁移至 TypeScript 工具链的背景与架构约定 |
 
 大部分设计文档用中文写成；代码注释与 CLAUDE.md 是英文。

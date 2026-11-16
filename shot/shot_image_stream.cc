@@ -1998,7 +1998,11 @@ class RasterPool {
   }
 
   Worker worker_{this};
-  // Only ever grown, and only by Start(), on the one thread that captures.
+  // Only ever grown, and only by Start(), on whichever thread is rastering:
+  // the engine thread, or the renderer's raster lane for a capture handed to
+  // it. Never both at once -- the renderer drains the lane before rastering
+  // anywhere else (ShotRenderer::DrainRaster) -- and that wait orders one
+  // thread's growth before the other's.
   std::vector<std::unique_ptr<base::DelegateSimpleThread>> threads_;
   base::Lock lock_;
   base::ConditionVariable wake_{&lock_};

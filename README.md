@@ -327,7 +327,7 @@ flowchart TB
 - **No JavaScript execution**: V8 is completely omitted from the build, and `<script>` tags are ignored. Input documents must be pre-rendered static HTML (e.g., SSR output, template engine results, or static markup)
 - **No multi-process sandbox**: Chromium's multi-process sandbox was removed alongside the browser shell. Services rendering untrusted URLs must validate requests and guard against SSRF at the application layer before reaching the engine. Local `file:` subresource access is disabled by default
 - **No `data:` URL as the main document**: Main documents must be supplied as local files, stdin streams, or HTTP(S) URLs
-- **Single engine instance per process**: Blink maintains process-wide global state and cannot be re-initialised. Captures are processed serially via an internal worker queue; multi-core parallelism is achieved via multiple processes or multiple named daemon instances
+- **Single engine instance per process**: Blink maintains process-wide global state and cannot be re-initialised. Captures are queued in the engine and laid out one at a time, while the previous viewport-sized capture rasterises on a separate thread; multi-core parallelism beyond that is achieved via multiple processes or multiple named daemon instances
 
 ## Tool selection guide
 
@@ -398,7 +398,7 @@ Shotium will automatically discover the installed system fonts and render crisp,
 <details>
 <summary><b>Q3: What is the recommended architecture for high-concurrency production setups?</b></summary>
 
-Because Blink's layout and style engine relies on process-global state, Shotium uses a dedicated serial worker thread per process to guarantee safety and determinism
+Because Blink's layout and style engine relies on process-global state, Shotium lays out one document at a time on a dedicated engine thread per process, which keeps it safe and deterministic. Rasterisation is not tied to that thread: a viewport-sized capture is rasterised and encoded on a separate raster thread while the next document is being laid out, so submitting requests concurrently instead of one after another raises a single process's throughput by roughly 1.2–2× with identical output
 
 For production deployments requiring high QPS:
 1. **Multi-Worker Processes**: In Node.js, use `cluster` or worker processes to instantiate multiple Shotium workers across CPU cores

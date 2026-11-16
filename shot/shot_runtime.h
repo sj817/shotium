@@ -70,7 +70,13 @@ class ShotRuntime {
   //
   // Must be called on the rendering thread, and not while a capture is in
   // flight: it collects blink's heap, which is only safe between documents.
-  void PurgeMemory();
+  //
+  // kIdle is what a quiet spell asks for, and keeps the caches whose rebuild
+  // is the first cost of the next request -- the glyph cache and the decoded
+  // web fonts, both bounded. kAll is an explicit request for memory back and
+  // keeps nothing. See the definition for the measurement behind the split.
+  enum class PurgeScope { kIdle, kAll };
+  void PurgeMemory(PurgeScope scope = PurgeScope::kAll);
 
   // Gives the pages themselves back, which PurgeMemory() deliberately does
   // not. Everything it frees is decommitted address space; the working set

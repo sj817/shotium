@@ -163,10 +163,13 @@ SHOT_EXPORT void shot_engine_destroy(shot_engine* engine);
 //
 //   {"file":"https://example.com","type":"png","width":1280,"height":720}
 //
-// Safe to call from any thread and from several at once, but not parallel in
-// any useful sense: the calls are serialised onto the engine's thread, because
-// blink renders one document at a time. A caller who wants two screenshots at
-// once wants two processes, which is what shotium's pool is.
+// Safe to call from any thread and from several at once. The calls are queued
+// onto the engine's thread, because blink lays out one document at a time;
+// what overlaps is the raster -- a viewport-sized capture is rastered and
+// encoded on the engine's raster lane while the next document is laid out,
+// so callers who keep more than one request in flight get more captures a
+// second than one calling in a loop. A caller who wants more than that wants
+// more processes.
 //
 // Exactly one of `*out_image` and `*out_error` is set. A request that names a
 // `path` for the engine to write itself sets an empty image rather than the

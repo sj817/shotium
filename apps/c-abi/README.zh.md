@@ -70,7 +70,7 @@ if ((Get-FileHash shotium-c-abi-windows-amd64.7z -Algorithm SHA256).Hash.ToLower
 由于底层 Blink 依赖进程级全局状态，调用方必须遵循以下架构规则：
 
 - **单进程单一引擎实例**：整个进程生命周期中仅能创建一次引擎实例，一旦销毁即无法再次创建；若尝试发起第二次 `shot_engine_create()` 调用，无论前一实例是否已被销毁，均返回 `SHOT_ERR_STATE` 错误；进程内所有截图任务共享同一引擎实例，若需并发多核渲染，请在系统层部署多进程架构
-- **线程安全与调用串行化**：`shot_engine_capture()` 支持跨线程并发调用，所有截图任务均由内部工作队列排队串行分发给引擎线程执行；对于具有主事件循环的宿主语言运行时，建议在独立工作线程中发起调用以避免阻塞事件循环
+- **线程安全的调用分发**：`shot_engine_capture()` 支持跨线程并发调用，所有截图任务在引擎线程上排队，同一时刻只排版一个文档；视口大小截图的光栅化与编码在独立光栅线程上进行，与下一个文档的排版并行，因此多线程并发调用每秒完成的截图数多于单线程循环调用；对于具有主事件循环的宿主语言运行时，建议在独立工作线程中发起调用以避免阻塞事件循环
 - **静态渲染与协议约束**：渲染文档不执行任何 JavaScript；主文档不支持 `data:` 协议，请将其保存为本地文件或通过 HTTP(S) URL 访问
 
 ## 缓冲区与所有权
@@ -229,7 +229,7 @@ shot_status shot_cache_clear(shot_engine* engine, const char* clear_json, shot_b
 ## 状态与内存管理
 
 - `shot_engine_status(engine, &json, &error)` 查询引擎当前状态，返回类似 `{"cacheDir": "..." | null, "cacheActive": true}`；若配置了缓存目录但 `cacheActive` 为 `false`，表明指定目录无法写入或打开失败，此时引擎将自动降级为无缓存模式继续运行（支持多进程共享同一缓存目录）
-- `shot_engine_purge(engine, release_working_set)` 主动释放 Blink 堆内存、清理 Skia 绘制缓存及分配器空闲列表；当 `release_working_set` 为非零时，将请求操作系统回收进程物理工作集内存；建议在一批密集渲染任务完成后调用，避免在单次任务间频繁触发
+- `shot_engine_purge(engine, release_working_set)` 主动释放 Blink 堆内存、清理 Skia 绘制缓存、截图之间保留的已解码 Web 字体及分配器空闲列表；当 `release_working_set` 为非零时，将请求操作系统回收进程物理工作集内存；建议在一批密集渲染任务完成后调用，避免在单次任务间频繁触发。引擎在 2 秒没有请求后会自行释放内存，但这种自动释放会保留已解码的 Web 字体和字形缓存，使下一张截图不变慢；只有本函数会清空这两项
 
 ## HTTP 缓存管理
 

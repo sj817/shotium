@@ -20,6 +20,7 @@
 #include "base/functional/callback_helpers.h"
 #include "base/logging.h"
 #include "base/memory/discardable_memory_allocator.h"
+#include "base/memory/raw_ptr.h"
 #include "base/memory/raw_ref.h"
 #include "base/no_destructor.h"
 #include "base/run_loop.h"
@@ -1095,6 +1096,11 @@ base::expected<void, std::string> CheckImageSize(
 ShotRenderer::ShotRenderer() = default;
 
 ShotRenderer::~ShotRenderer() {
+  // A capture still rastering is delivered before anything it reads -- the
+  // bitmap here, blink's image sources, skia -- goes away. The lane's thread
+  // is joined with it.
+  DrainRaster();
+  raster_lane_.reset();
   TearDown();
 }
 
@@ -1140,6 +1146,8 @@ void ShotRenderer::TearDownIfStill(uint64_t serial) {
 }
 
 void ShotRenderer::ReleaseRetained() {
+  // The bitmap may be the lane's until its capture is out.
+  DrainRaster();
   TearDown();
   small_bitmap_.reset();
   small_scratch_.clear();
@@ -1615,6 +1623,325 @@ base::expected<void, std::string> ShotRenderer::CreatePage(
   return base::ok();
 }
 
+struct ShotRenderer::RasterJob {
+  // A run of slices painted at one scroll position.
+  struct Window {
+    int top;
+    int bottom;
+    size_t first_slice;
+    size_t end_slice;
+  };
+  struct PreparedWindow {
+    Window window;
+    int offset;
+    scoped_refptr<cc::DisplayItemList> list;
+  };
+
+  // The caller's request, less the document it delivered.
+  ScreenshotRequest request;
+  gfx::Rect region;
+  std::vector<gfx::Rect> slices;
+  std::vector<PreparedWindow> prepared_windows;
+  size_t window_count = 0;
+  bool tiled = false;
+  bool scrolled = false;
+  bool opaque = true;
+  double scale = 1.0;
+  SkSurfaceProps surface_props;
+  int width_px = 0;
+  int height_px = 0;
+  StagedOutput direct_output;
+  // The renderer's, borrowed for as long as this job rasters. Only one
+  // thread rasters at a time (see DrainRaster), so only one job holds them.
+  raw_ptr<SkBitmap> small_bitmap = nullptr;
+  raw_ptr<std::vector<SkBitmap>> small_scratch = nullptr;
+};
+
+// static
+void ShotRenderer::RunOnLane(std::unique_ptr<RasterJob> job,
+                             RenderDone done,
+                             bool reclaim_after,
+                             base::WaitableEvent* lane_idle) {
+  CaptureStats spent;
+  size_t peak_raster_bytes = 0;
+  EncodedTile image;
+  auto rastered = RasterPrepared(
+      *job,
+      base::BindRepeating(
+          [](EncodedTile* out,
+             EncodedTile tile) -> base::expected<void, std::string> {
+            *out = std::move(tile);
+            return base::ok();
+          },
+          &image),
+      &spent, &peak_raster_bytes);
+  // The lists, the stream and an undelivered output go here, on the lane.
+  job.reset();
+  if ((reclaim_after || peak_raster_bytes > kSmallCaptureBytes) &&
+      ReclaimEnabled()) {
+    ::partition_alloc::MemoryReclaimer::Instance()->ReclaimAll();
+  }
+  RasterOutcome outcome{
+      rastered.has_value()
+          ? base::expected<EncodedTile, std::string>(std::move(image))
+          : base::unexpected(rastered.error()),
+      spent.raster, spent.encode};
+  std::move(done).Run(std::move(outcome));
+  // After `done`, so captures are delivered in the order they were handed
+  // over: the next one cannot start rastering before this one is answered.
+  lane_idle->Signal();
+}
+
+void ShotRenderer::DrainRaster() {
+  lane_idle_.Wait();
+}
+
+void ShotRenderer::RenderPipelined(RenderInput& input,
+                                   const ScreenshotRequest& request,
+                                   RenderDone done) {
+  EncodedTile image;
+  auto rendered = RenderDocument(
+      input, request,
+      base::BindRepeating(
+          [](EncodedTile* out,
+             EncodedTile tile) -> base::expected<void, std::string> {
+            *out = std::move(tile);
+            return base::ok();
+          },
+          &image),
+      &done);
+  if (!done) {
+    // Handed over: the lane answers.
+    return;
+  }
+  // Finished here, so the same tail Render() has.
+  if (reclaim_after_render_ && !one_shot_ && ReclaimEnabled()) {
+    ::partition_alloc::MemoryReclaimer::Instance()->ReclaimAll();
+  }
+  RasterOutcome outcome{
+      rendered.has_value()
+          ? base::expected<EncodedTile, std::string>(std::move(image))
+          : base::unexpected(rendered.error()),
+      base::TimeDelta(), base::TimeDelta()};
+  // After the capture before it, which may still be on the lane: a request
+  // that failed before its paint would otherwise overtake it.
+  DrainRaster();
+  std::move(done).Run(std::move(outcome));
+}
+
+// static
+base::expected<void, std::string> ShotRenderer::RasterPrepared(
+    RasterJob& job,
+    const TileSink& sink,
+    CaptureStats* stats,
+    size_t* peak_raster_bytes) {
+  auto rows_px = [&job](int css_y) {
+    return static_cast<int>(std::lround((css_y - job.region.y()) * job.scale));
+  };
+  auto account = [&](const ImageStreamStats& s, const gfx::Rect& what) {
+    *peak_raster_bytes = std::max(*peak_raster_bytes,
+                                  s.peak_window_bytes + s.peak_decoded_bytes);
+    if (stats) {
+      stats->raster += s.raster;
+      stats->encode += s.encode;
+    }
+    LOG(INFO) << "shot: raster " << what.ToString() << " strips=" << s.strips
+              << " threads=" << s.threads
+              << " window_kb=" << (s.peak_window_bytes >> 10)
+              << " decoded_kb=" << (s.peak_decoded_bytes >> 10)
+              << " decode_ms=" << s.decode.InMillisecondsF();
+  };
+  // Tiles are staged beside their paths and installed together at the end.
+  std::vector<StagedOutput> staged_outputs;
+  staged_outputs.reserve(job.tiled ? job.slices.size() : 0);
+  std::vector<EncodedTile> staged_tiles;
+  if (job.tiled && !job.request.path.empty()) {
+    staged_tiles.reserve(job.slices.size());
+  }
+  // A plain screenshot's stream is made here rather than before the paint:
+  // it is the raster's, and the reusable bitmap it may take belongs to
+  // whichever thread is rastering, which for a handed-over capture is the
+  // lane rather than the thread that painted.
+  std::unique_ptr<ImageStream> whole;
+  if (!job.tiled) {
+    auto stream = ImageStream::Create(
+        job.width_px, job.height_px, job.request, job.opaque, job.surface_props,
+        job.direct_output.TakeFile(), job.small_bitmap, job.small_scratch);
+    if (!stream.has_value()) {
+      return base::unexpected(stream.error());
+    }
+    whole = std::move(*stream);
+  }
+
+  // The page is gone, so an image's compressed bytes have exactly one
+  // remaining reader: the slices below. Each slice may drop an image once its
+  // last strip is encoded, unless a later slice -- further down this window or
+  // in the next one, since the windows overlap at their seam -- draws it
+  // again. Walked backwards so that each slice sees the union of what follows.
+  std::vector<base::flat_set<cc::PaintImage::Id>> drawn_after(
+      job.slices.size());
+  if (job.slices.size() > 1) {
+    base::flat_set<cc::PaintImage::Id> later;
+    for (size_t w = job.prepared_windows.size(); w-- > 0;) {
+      const RasterJob::PreparedWindow& prepared = job.prepared_windows[w];
+      scoped_refptr<cc::DiscardableImageMap> map =
+          prepared.list->GenerateDiscardableImageMap(cc::ScrollOffsetMap());
+      const int reach = PaintReadAround(*prepared.list);
+      for (size_t i = prepared.window.end_slice;
+           i-- > prepared.window.first_slice;) {
+        drawn_after[i] = later;
+        if (!map || map->empty()) {
+          continue;
+        }
+        const gfx::Rect& slice = job.slices[i];
+        // One row of slack, as the stream's own query allows for a slice
+        // boundary that falls inside a device pixel. And the paint's reach,
+        // because the map answers with where an image is: an image a slice
+        // above draws is needed by this one if what this one draws is a shadow
+        // of it.
+        gfx::Rect painted(slice.x(), slice.y() - prepared.offset, slice.width(),
+                          slice.height() + 1);
+        painted.Outset(reach);
+        for (const cc::DrawImage* draw :
+             map->GetDiscardableImagesInRect(painted)) {
+          later.insert(draw->paint_image().stable_id());
+        }
+      }
+    }
+  }
+
+  for (RasterJob::PreparedWindow& prepared : job.prepared_windows) {
+    const RasterJob::Window& window = prepared.window;
+    const int offset = prepared.offset;
+    scoped_refptr<cc::DisplayItemList> list = std::move(prepared.list);
+
+    for (size_t i = window.first_slice; i < window.end_slice; ++i) {
+      const gfx::Rect& slice = job.slices[i];
+      if (job.tiled) {
+        const int top_px = rows_px(slice.y());
+        const int bottom_px = rows_px(slice.bottom());
+        const int tile_px = bottom_px - top_px;
+        if (auto size = CheckImageSize(job.width_px, tile_px, job.request,
+                                       /*tiled=*/true);
+            !size.has_value()) {
+          return base::unexpected(size.error());
+        }
+        // Tiles are numbered in the order they are delivered, which is slice
+        // order.
+        const std::string output_path =
+            job.request.path.empty() ? std::string()
+                                     : OutputPath(job.request.path, i + 1);
+        auto output = OpenOutput(output_path);
+        if (!output.has_value()) {
+          return base::unexpected(output.error());
+        }
+        auto stream = ImageStream::Create(
+            job.width_px, tile_px, job.request, job.opaque, job.surface_props,
+            output->TakeFile(), job.small_bitmap, job.small_scratch);
+        if (!stream.has_value()) {
+          return base::unexpected(stream.error());
+        }
+        // Use the same CSS origin and global device grid as the whole image.
+        // A tile-local row y therefore samples global row top_px + y, whose
+        // CSS coordinate is region.y() + (top_px + y) / scale.
+        const gfx::Rect cull_rect(job.region.x(), job.region.y() - offset,
+                                  job.region.width(), job.region.height());
+        if (auto added = (*stream)->AddSlice(list, cull_rect, job.scale,
+                                             /*device_origin=*/top_px,
+                                             /*device_top=*/0, tile_px,
+                                             drawn_after[i]);
+            !added.has_value()) {
+          return base::unexpected(added.error());
+        }
+        auto encoded = (*stream)->Finish();
+        account((*stream)->stats(), slice);
+        if (!encoded.has_value()) {
+          return base::unexpected(encoded.error());
+        }
+        EncodedTile tile;
+        tile.region = slice;
+        tile.bytes = std::move(*encoded);
+        tile.size = (*stream)->stats().encoded_bytes;
+        if (!job.request.path.empty()) {
+          tile.path = output_path;
+          staged_outputs.push_back(std::move(*output));
+          staged_tiles.push_back(std::move(tile));
+        } else {
+          if (auto delivered = sink.Run(std::move(tile));
+              !delivered.has_value()) {
+            return base::unexpected(delivered.error());
+          }
+        }
+        continue;
+      }
+      // Into the whole image's rows for this slice. The list is placed as the
+      // whole region would be, so that a device row maps to the same CSS row
+      // whichever slice drew it -- there is no seam to hide.
+      const int top_px = rows_px(slice.y());
+      const int bottom_px = rows_px(slice.bottom());
+      const gfx::Rect cull_rect(job.region.x(), job.region.y() - offset,
+                                job.region.width(), job.region.height());
+      if (auto added = whole->AddSlice(list, cull_rect, job.scale,
+                                       /*device_origin=*/0, top_px,
+                                       bottom_px - top_px, drawn_after[i]);
+          !added.has_value()) {
+        return base::unexpected(added.error());
+      }
+    }
+    list = nullptr;
+  }
+  if (job.scrolled || job.tiled) {
+    LOG(INFO) << "shot: banded " << job.region.ToString() << " into "
+              << job.window_count << " window(s), " << job.slices.size()
+              << (job.tiled ? " tile(s)" : " slice(s)");
+  }
+  if (job.tiled) {
+    if (job.request.path.empty()) {
+      return base::ok();
+    }
+    auto committed = CommitOutputs(staged_outputs);
+    if (!committed.has_value()) {
+      return base::unexpected(committed.error());
+    }
+    for (EncodedTile& tile : staged_tiles) {
+      if (auto delivered = sink.Run(std::move(tile)); !delivered.has_value()) {
+        const bool restored = RollBackOutputs(*committed);
+        return base::unexpected(
+            delivered.error() +
+            (restored ? std::string()
+                      : "; restoring previous outputs failed"));
+      }
+    }
+    FinishOutputs(*committed);
+    return base::ok();
+  }
+  auto encoded = whole->Finish();
+  account(whole->stats(), job.region);
+  const size_t encoded_bytes = whole->stats().encoded_bytes;
+  whole.reset();
+  if (!encoded.has_value()) {
+    return base::unexpected(encoded.error());
+  }
+  LogMemoryStage("encoded");
+  EncodedTile tile;
+  tile.region = job.region;
+  tile.bytes = std::move(*encoded);
+  tile.size = encoded_bytes;
+  if (!job.request.path.empty()) {
+    // The bytes are in the file already; the tile carries the path instead.
+    tile.path = job.request.path;
+  }
+  if (auto delivered = sink.Run(std::move(tile)); !delivered.has_value()) {
+    // `direct_output` deletes the file on the way out: a capture that
+    // reports an error does not leave an image behind that looks like a
+    // success.
+    return base::unexpected(delivered.error());
+  }
+  // The file is whole and delivered; it is the caller's now.
+  job.direct_output.temporary_path = base::FilePath();
+  return base::ok();
+}
+
 base::expected<EncodedTile, std::string> ShotRenderer::Render(
     RenderInput& input,
     const ScreenshotRequest& request) {
@@ -1662,7 +1989,8 @@ base::expected<void, std::string> ShotRenderer::RenderTiles(
 base::expected<void, std::string> ShotRenderer::RenderDocument(
     RenderInput& input,
     const ScreenshotRequest& request,
-    const TileSink& sink) {
+    const TileSink& sink,
+    RenderDone* pipeline) {
   // Three things decided on the way out, in the order the runners below
   // unwind. Whether this capture succeeded; whether it was large -- a big
   // image, a big download or a big heap -- in which case its page was torn
@@ -2031,12 +2359,7 @@ base::expected<void, std::string> ShotRenderer::RenderDocument(
     slices.emplace_back(region.x(), y, region.width(),
                         std::min(slice_height, region.bottom() - y));
   }
-  struct Window {
-    int top;
-    int bottom;
-    size_t first_slice;
-    size_t end_slice;
-  };
+  using Window = RasterJob::Window;
   std::vector<Window> windows;
   if (!scrolled) {
     windows.push_back({0, region.bottom(), 0, slices.size()});
@@ -2072,20 +2395,10 @@ base::expected<void, std::string> ShotRenderer::RenderDocument(
   // The one line between a small capture and a large one, drawn where the
   // strips are; see ImageStream::IsSmall.
   const bool small_capture = ImageStream::IsSmall(width_px, height_px);
-  auto rows_px = [&](int css_y) {
-    return static_cast<int>(std::lround((css_y - region.y()) * scale));
-  };
-  // Tiles are staged beside their paths and installed together at the end.
   // A plain screenshot streams straight into its path; `direct_output` holds
   // that file, and deletes it on any early return until the image is whole.
-  std::vector<StagedOutput> staged_outputs;
-  staged_outputs.reserve(tiled ? slices.size() : 0);
-  std::vector<EncodedTile> staged_tiles;
-  if (tiled && !request.path.empty()) {
-    staged_tiles.reserve(slices.size());
-  }
+  // The stream over it is made with the raster, in RasterPrepared().
   StagedOutput direct_output;
-  std::unique_ptr<ImageStream> whole;
   if (!tiled) {
     if (auto size =
             CheckImageSize(width_px, height_px, request, /*tiled=*/false);
@@ -2097,33 +2410,9 @@ base::expected<void, std::string> ShotRenderer::RenderDocument(
       return base::unexpected(output.error());
     }
     direct_output = std::move(*output);
-    auto stream = ImageStream::Create(width_px, height_px, request, opaque,
-                                      surface_props, direct_output.TakeFile(),
-                                      &small_bitmap_, &small_scratch_);
-    if (!stream.has_value()) {
-      return base::unexpected(stream.error());
-    }
-    whole = std::move(*stream);
   }
-  auto account = [&](const ImageStreamStats& s, const gfx::Rect& what) {
-    peak_raster_bytes = std::max(peak_raster_bytes,
-                                 s.peak_window_bytes + s.peak_decoded_bytes);
-    if (stats) {
-      stats->raster += s.raster;
-      stats->encode += s.encode;
-    }
-    LOG(INFO) << "shot: raster " << what.ToString() << " strips=" << s.strips
-              << " threads=" << s.threads
-              << " window_kb=" << (s.peak_window_bytes >> 10)
-              << " decoded_kb=" << (s.peak_decoded_bytes >> 10)
-              << " decode_ms=" << s.decode.InMillisecondsF();
-  };
 
-  struct PreparedWindow {
-    Window window;
-    int offset;
-    scoped_refptr<cc::DisplayItemList> list;
-  };
+  using PreparedWindow = RasterJob::PreparedWindow;
   std::vector<PreparedWindow> prepared_windows;
   prepared_windows.reserve(windows.size());
 
@@ -2235,176 +2524,69 @@ base::expected<void, std::string> ShotRenderer::RenderDocument(
   }
   LogMemoryStage("detached");
 
-  // The page is gone, so an image's compressed bytes have exactly one
-  // remaining reader: the slices below. Each slice may drop an image once its
-  // last strip is encoded, unless a later slice -- further down this window or
-  // in the next one, since the windows overlap at their seam -- draws it
-  // again. Walked backwards so that each slice sees the union of what follows.
-  std::vector<base::flat_set<cc::PaintImage::Id>> drawn_after(slices.size());
-  if (slices.size() > 1) {
-    base::flat_set<cc::PaintImage::Id> later;
-    for (size_t w = prepared_windows.size(); w-- > 0;) {
-      const PreparedWindow& prepared = prepared_windows[w];
-      scoped_refptr<cc::DiscardableImageMap> map =
-          prepared.list->GenerateDiscardableImageMap(cc::ScrollOffsetMap());
-      const int reach = PaintReadAround(*prepared.list);
-      for (size_t i = prepared.window.end_slice;
-           i-- > prepared.window.first_slice;) {
-        drawn_after[i] = later;
-        if (!map || map->empty()) {
-          continue;
-        }
-        const gfx::Rect& slice = slices[i];
-        // One row of slack, as the stream's own query allows for a slice
-        // boundary that falls inside a device pixel. And the paint's reach,
-        // because the map answers with where an image is: an image a slice
-        // above draws is needed by this one if what this one draws is a shadow
-        // of it.
-        gfx::Rect painted(slice.x(), slice.y() - prepared.offset, slice.width(),
-                          slice.height() + 1);
-        painted.Outset(reach);
-        for (const cc::DrawImage* draw :
-             map->GetDiscardableImagesInRect(painted)) {
-          later.insert(draw->paint_image().stable_id());
-        }
-      }
-    }
-  }
-
-  for (PreparedWindow& prepared : prepared_windows) {
-    const Window& window = prepared.window;
-    const int offset = prepared.offset;
-    scoped_refptr<cc::DisplayItemList> list = std::move(prepared.list);
-
-    for (size_t i = window.first_slice; i < window.end_slice; ++i) {
-      const gfx::Rect& slice = slices[i];
-      if (tiled) {
-        const int top_px = rows_px(slice.y());
-        const int bottom_px = rows_px(slice.bottom());
-        const int tile_px = bottom_px - top_px;
-        if (auto size =
-                CheckImageSize(width_px, tile_px, request, /*tiled=*/true);
-            !size.has_value()) {
-          return base::unexpected(size.error());
-        }
-        // Tiles are numbered in the order they are delivered, which is slice
-        // order.
-        const std::string output_path =
-            request.path.empty() ? std::string()
-                                 : OutputPath(request.path, i + 1);
-        auto output = OpenOutput(output_path);
-        if (!output.has_value()) {
-          return base::unexpected(output.error());
-        }
-        auto stream = ImageStream::Create(width_px, tile_px, request, opaque,
-                                          surface_props, output->TakeFile(),
-                                          &small_bitmap_, &small_scratch_);
-        if (!stream.has_value()) {
-          return base::unexpected(stream.error());
-        }
-        // Use the same CSS origin and global device grid as the whole image.
-        // A tile-local row y therefore samples global row top_px + y, whose
-        // CSS coordinate is region.y() + (top_px + y) / scale.
-        const gfx::Rect cull_rect(region.x(), region.y() - offset,
-                                  region.width(), region.height());
-        if (auto added = (*stream)->AddSlice(list, cull_rect, scale,
-                                             /*device_origin=*/top_px,
-                                             /*device_top=*/0, tile_px,
-                                             drawn_after[i]);
-            !added.has_value()) {
-          return base::unexpected(added.error());
-        }
-        auto encoded = (*stream)->Finish();
-        account((*stream)->stats(), slice);
-        if (!encoded.has_value()) {
-          return base::unexpected(encoded.error());
-        }
-        EncodedTile tile;
-        tile.region = slice;
-        tile.bytes = std::move(*encoded);
-        tile.size = (*stream)->stats().encoded_bytes;
-        if (!request.path.empty()) {
-          tile.path = output_path;
-          staged_outputs.push_back(std::move(*output));
-          staged_tiles.push_back(std::move(tile));
-        } else {
-          if (auto delivered = sink.Run(std::move(tile));
-              !delivered.has_value()) {
-            return base::unexpected(delivered.error());
-          }
-        }
-        continue;
-      }
-      // Into the whole image's rows for this slice. The list is placed as the
-      // whole region would be, so that a device row maps to the same CSS row
-      // whichever slice drew it -- there is no seam to hide.
-      const int top_px = rows_px(slice.y());
-      const int bottom_px = rows_px(slice.bottom());
-      const gfx::Rect cull_rect(region.x(), region.y() - offset, region.width(),
-                                region.height());
-      if (auto added = whole->AddSlice(list, cull_rect, scale,
-                                       /*device_origin=*/0, top_px,
-                                       bottom_px - top_px, drawn_after[i]);
-          !added.has_value()) {
-        return base::unexpected(added.error());
-      }
-    }
-    list = nullptr;
-  }
+  // Everything from here on reads only the lists and the geometry, so it is
+  // packaged and either rastered now or handed to the lane.
   if (stats) {
     stats->lifecycle += scrolling;
   }
-  if (scrolled || tiled) {
-    LOG(INFO) << "shot: banded " << region.ToString() << " into "
-              << windows.size() << " window(s), " << slices.size()
-              << (tiled ? " tile(s)" : " slice(s)");
-  }
-  if (tiled) {
-    if (request.path.empty()) {
-      succeeded = true;
-      return base::ok();
+  auto job = std::make_unique<RasterJob>();
+  job->request = request;
+  // The caller's document has been parsed and has no reader in the raster.
+  job->request.document.reset();
+  job->region = region;
+  job->slices = std::move(slices);
+  job->prepared_windows = std::move(prepared_windows);
+  job->window_count = windows.size();
+  job->tiled = tiled;
+  job->scrolled = scrolled;
+  job->opaque = opaque;
+  job->scale = scale;
+  job->surface_props = surface_props;
+  job->width_px = width_px;
+  job->height_px = height_px;
+  job->direct_output = std::move(direct_output);
+  job->small_bitmap = &small_bitmap_;
+  job->small_scratch = &small_scratch_;
+
+  if (pipeline && *pipeline && !one_shot_ && !tiled &&
+      job->prepared_windows.size() == 1 && small_capture && overlap_probe_ &&
+      overlap_probe_.Run()) {
+    // One capture on the lane at a time. Waiting here rather than queueing
+    // behind it keeps at most one painted list waiting for pixels, and costs
+    // nothing when the lane is the faster half.
+    const base::TimeTicks waited_from = base::TimeTicks::Now();
+    lane_idle_.Wait();
+    if (ProfileEnabled()) {
+      LOG(INFO) << "shot: profile lane_wait="
+                << (base::TimeTicks::Now() - waited_from).InMillisecondsF();
     }
-    auto committed = CommitOutputs(staged_outputs);
-    if (!committed.has_value()) {
-      return base::unexpected(committed.error());
+    lane_idle_.Reset();
+    if (!raster_lane_) {
+      raster_lane_ = std::make_unique<base::Thread>("ShotRasterLane");
+      CHECK(raster_lane_->Start());
     }
-    for (EncodedTile& tile : staged_tiles) {
-      if (auto delivered = sink.Run(std::move(tile)); !delivered.has_value()) {
-        const bool restored = RollBackOutputs(*committed);
-        return base::unexpected(
-            delivered.error() +
-            (restored ? std::string()
-                      : "; restoring previous outputs failed"));
-      }
-    }
-    FinishOutputs(*committed);
+    // A large capture -- by download or heap, since the image is small --
+    // had its page collected above; what its raster frees is decommitted on
+    // the lane once the image is out, the way Render() does it after a
+    // capture finished here.
+    raster_lane_->task_runner()->PostTask(
+        FROM_HERE,
+        base::BindOnce(&ShotRenderer::RunOnLane, std::move(job),
+                       std::move(*pipeline),
+                       large_capture && ReclaimEnabled(),
+                       base::Unretained(&lane_idle_)));
     succeeded = true;
     return base::ok();
   }
-  auto encoded = whole->Finish();
-  account(whole->stats(), region);
-  const size_t encoded_bytes = whole->stats().encoded_bytes;
-  whole.reset();
-  if (!encoded.has_value()) {
-    return base::unexpected(encoded.error());
+
+  // Finished here. The reusable bitmap and the raster threads may still be
+  // the lane's, rastering an earlier capture.
+  DrainRaster();
+  auto rastered = RasterPrepared(*job, sink, stats, &peak_raster_bytes);
+  job.reset();
+  if (!rastered.has_value()) {
+    return base::unexpected(rastered.error());
   }
-  LogMemoryStage("encoded");
-  EncodedTile tile;
-  tile.region = region;
-  tile.bytes = std::move(*encoded);
-  tile.size = encoded_bytes;
-  if (!request.path.empty()) {
-    // The bytes are in the file already; the tile carries the path instead.
-    tile.path = request.path;
-  }
-  if (auto delivered = sink.Run(std::move(tile)); !delivered.has_value()) {
-    // `direct_output` deletes the file on the way out: a capture that
-    // reports an error does not leave an image behind that looks like a
-    // success.
-    return base::unexpected(delivered.error());
-  }
-  // The file is whole and delivered; it is the caller's now.
-  direct_output.temporary_path = base::FilePath();
   succeeded = true;
   return base::ok();
 }

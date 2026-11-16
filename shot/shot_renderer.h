@@ -13,6 +13,8 @@
 #include "base/files/file_path.h"
 #include "base/functional/callback.h"
 #include "base/memory/weak_ptr.h"
+#include "base/synchronization/waitable_event.h"
+#include "base/threading/thread.h"
 #include "base/time/time.h"
 #include "base/types/expected.h"
 #include "shot/shot_bytes.h"
@@ -158,15 +160,94 @@ class ShotRenderer {
                                                 const ScreenshotRequest& request,
                                                 const TileSink& sink);
 
+  // What a pipelined capture reports when it is finished. `raster` and
+  // `encode` are what the raster lane spent, for the caller's statistics; a
+  // capture that finished on the calling thread already counted its own into
+  // the capture's context and reports zero here.
+  struct RasterOutcome {
+    base::expected<EncodedTile, std::string> tile;
+    base::TimeDelta raster;
+    base::TimeDelta encode;
+  };
+  using RenderDone = base::OnceCallback<void(RasterOutcome)>;
+
+  // Render(), with its raster allowed to overlap the next capture.
+  //
+  // A capture spends about half its time in blink -- parse, style, layout,
+  // paint -- and half rastering and encoding what paint recorded, and only
+  // the first half needs this thread. Once the display list exists the page
+  // can go: the list owns everything its pixels need. So a capture that is
+  // one image, painted in one window and small enough for the reusable bitmap
+  // hands its list to the raster lane and returns, and this thread is free to
+  // start the next document while the lane rasters this one. Under a queue
+  // that is up to twice the captures per second from one process, for the
+  // memory of one more small bitmap and display list rather than of a second
+  // engine.
+  //
+  // Only when there is a next document to start. With nothing queued behind
+  // it the lane overlaps nothing and only adds a thread hop to the caller's
+  // wait -- measured at 1-3% on a stream of small captures awaited one at a
+  // time -- so the capture rasters here, exactly as Render() would. What is
+  // queued is the caller's to say: see SetOverlapProbe().
+  //
+  // `done` runs exactly once: on the raster lane when the capture was handed
+  // over, or on this thread before returning when it was not -- nothing
+  // waiting, a tiles request, a large or scrolled capture, a one-shot
+  // process, or a failure before the paint. In the second case only after
+  // the lane is idle: a capture that fails before it is painted is quicker
+  // than the raster of the one before it, and answers leave in the order the
+  // captures came in. One capture rasters at a time: a
+  // capture ready to hand over waits here for the previous one to finish, so
+  // there is never more than one painted list waiting for pixels.
+  void RenderPipelined(RenderInput& input,
+                       const ScreenshotRequest& request,
+                       RenderDone done);
+
+  // Answers "is another capture already waiting for this thread", asked at
+  // the moment a painted capture could be handed over. Without one, nothing
+  // is handed over.
+  void SetOverlapProbe(base::RepeatingCallback<bool()> probe) {
+    overlap_probe_ = std::move(probe);
+  }
+
+  // Returns once nothing is rastering on the lane. Everything that touches
+  // the reusable bitmap, the raster threads or the caches the raster reads
+  // from outside the lane calls this first.
+  void DrainRaster();
+
  private:
+  // What is left of a capture once its paint is recorded: the lists, the
+  // geometry, the output. Built on this thread, rastered on whichever thread
+  // runs RasterPrepared().
+  struct RasterJob;
+
+  // The second half of RenderDocument(): images out of the prepared lists,
+  // into `sink`. Touches no blink object, so it can run on the raster lane.
+  static base::expected<void, std::string> RasterPrepared(
+      RasterJob& job,
+      const TileSink& sink,
+      CaptureStats* stats,
+      size_t* peak_raster_bytes);
+
+  // The lane's half of a handed-over capture.
+  static void RunOnLane(std::unique_ptr<RasterJob> job,
+                        RenderDone done,
+                        bool reclaim_after,
+                        base::WaitableEvent* lane_idle);
+
   // Everything Render() and RenderTiles() share: page, document, waiting,
   // lifecycle, then the region in strips through an ImageStream -- one for
   // the whole image, or one per tile. Tiles go to `sink`; a plain screenshot
   // is one tile.
+  //
+  // With `pipeline` set, a capture that qualifies (see RenderPipelined) is
+  // handed to the raster lane once painted, `*pipeline` moving with it; the
+  // call then returns success and `*pipeline` is null.
   base::expected<void, std::string> RenderDocument(
       RenderInput& input,
       const ScreenshotRequest& request,
-      const TileSink& sink);
+      const TileSink& sink,
+      RenderDone* pipeline = nullptr);
 
   // Scrolls the layout viewport to `top` and re-runs the lifecycle. Returns
   // the offset actually reached, which is clamped by the document's scrollable
@@ -255,6 +336,14 @@ class ShotRenderer {
   uint64_t page_serial_ = 0;
   // See SetOneShot().
   bool one_shot_ = false;
+  // Where handed-over captures raster, one at a time; started by the first.
+  // `lane_idle_` is signalled while nothing is on it: reset by the thread
+  // that hands a capture over, signalled by the lane when that capture is
+  // delivered.
+  std::unique_ptr<base::Thread> raster_lane_;
+  base::RepeatingCallback<bool()> overlap_probe_;
+  base::WaitableEvent lane_idle_{base::WaitableEvent::ResetPolicy::MANUAL,
+                                 base::WaitableEvent::InitialState::SIGNALED};
   base::WeakPtrFactory<ShotRenderer> weak_factory_{this};
 };
 

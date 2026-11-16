@@ -4,6 +4,8 @@
 
 #include "shot/shot_capture.h"
 
+#include <algorithm>
+#include <optional>
 #include <utility>
 
 #include "base/check.h"
@@ -13,11 +15,14 @@
 #include "base/functional/callback_helpers.h"
 #include "base/functional/function_ref.h"
 #include "base/logging.h"
+#include "base/memory/ref_counted.h"
 #include "base/run_loop.h"
 #include "base/strings/strcat.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_util.h"
+#include "base/synchronization/lock.h"
 #include "base/task/single_thread_task_runner.h"
+#include "base/thread_annotations.h"
 #include "base/time/time.h"
 #include "net/base/filename_util.h"
 #include "net/base/mime_util.h"
@@ -389,6 +394,152 @@ base::expected<CaptureResult, std::string> CaptureAndDeliver(
   result->image = Bytes();
   result->wrote_path = true;
   return result;
+}
+
+namespace {
+
+// Where the two halves of a pipelined capture meet: this thread's, which
+// fetched, laid out and painted, and the raster's, which may finish on the
+// lane before this thread has even unwound or long after. Whichever arrives
+// second delivers, so the caller hears once, with everything.
+class PipelinedCapture : public base::RefCountedThreadSafe<PipelinedCapture> {
+ public:
+  PipelinedCapture(std::string path, base::TimeTicks started, CaptureDone done)
+      : path_(std::move(path)), started_(started), done_(std::move(done)) {}
+
+  PipelinedCapture(const PipelinedCapture&) = delete;
+  PipelinedCapture& operator=(const PipelinedCapture&) = delete;
+
+  // This thread's half. `rendering` is whether the renderer was reached: a
+  // request that failed before it -- an unreadable file, a fetch that timed
+  // out -- has no raster half coming.
+  void MainFinished(base::expected<void, std::string> main,
+                    const CaptureStats& stats,
+                    bool rendering) {
+    std::optional<Halves> both;
+    {
+      base::AutoLock lock(lock_);
+      main_ = std::move(main);
+      stats_ = stats;
+      remaining_ -= rendering ? 1 : 2;
+      if (remaining_ > 0) {
+        return;
+      }
+      both.emplace(TakeLocked());
+    }
+    Deliver(std::move(*both));
+  }
+
+  void RasterFinished(ShotRenderer::RasterOutcome outcome) {
+    std::optional<Halves> both;
+    {
+      base::AutoLock lock(lock_);
+      raster_.emplace(std::move(outcome));
+      if (--remaining_ > 0) {
+        return;
+      }
+      both.emplace(TakeLocked());
+    }
+    Deliver(std::move(*both));
+  }
+
+ private:
+  friend class base::RefCountedThreadSafe<PipelinedCapture>;
+  ~PipelinedCapture() = default;
+
+  struct Halves {
+    base::expected<void, std::string> main;
+    CaptureStats stats;
+    std::optional<ShotRenderer::RasterOutcome> raster;
+  };
+
+  Halves TakeLocked() EXCLUSIVE_LOCKS_REQUIRED(lock_) {
+    return Halves{std::move(main_), stats_, std::move(raster_)};
+  }
+
+  // Both halves are in, taken out from under the lock.
+  void Deliver(Halves both) {
+    CaptureStats stats = both.stats;
+    const std::optional<ShotRenderer::RasterOutcome>& raster = both.raster;
+    base::expected<CaptureResult, std::string> result =
+        base::unexpected(std::string());
+    if (!both.main.has_value()) {
+      result = base::unexpected(both.main.error());
+    } else if (!both.raster.has_value()) {
+      result = base::unexpected("the capture ended without an image");
+    } else if (!both.raster->tile.has_value()) {
+      result = base::unexpected(both.raster->tile.error());
+    } else {
+      EncodedTile& tile = *both.raster->tile;
+      CaptureResult captured;
+      captured.image = std::move(tile.bytes);
+      captured.size = tile.size;
+      captured.wrote_path = !tile.path.empty();
+      result = std::move(captured);
+    }
+    if (raster.has_value()) {
+      stats.raster += raster->raster;
+      stats.encode += raster->encode;
+    }
+    // To the moment the image was ready, which for a handed-over capture is
+    // on the lane, after this thread had moved on. `render` keeps its
+    // meaning -- everything that was not fetching the document or encoding
+    // it -- measured the same way.
+    stats.total = base::TimeTicks::Now() - started_;
+    stats.render =
+        std::max(base::TimeDelta(), stats.total - stats.fetch - stats.encode);
+
+    // CaptureAndDeliver()'s last step: a `path` the engine did not stream
+    // into itself.
+    if (result.has_value() && !path_.empty() && !result->wrote_path) {
+      if (!base::WriteFile(base::FilePath::FromUTF8Unsafe(path_),
+                           result->image)) {
+        result = base::unexpected("could not write " + path_);
+      } else {
+        result->image = Bytes();
+        result->wrote_path = true;
+      }
+    }
+    std::move(done_).Run(std::move(result), std::move(stats));
+  }
+
+  const std::string path_;
+  const base::TimeTicks started_;
+  CaptureDone done_;
+
+  base::Lock lock_;
+  int remaining_ GUARDED_BY(lock_) = 2;
+  base::expected<void, std::string> main_ GUARDED_BY(lock_);
+  CaptureStats stats_ GUARDED_BY(lock_);
+  std::optional<ShotRenderer::RasterOutcome> raster_ GUARDED_BY(lock_);
+};
+
+}  // namespace
+
+void CaptureAndDeliverPipelined(ShotRuntime& runtime,
+                                const ScreenshotRequest& request,
+                                CaptureDone done) {
+  auto pending = base::MakeRefCounted<PipelinedCapture>(
+      request.path, base::TimeTicks::Now(), std::move(done));
+  CaptureStats stats;
+  bool rendering = false;
+  auto main = WithDocument(
+      runtime, request, &stats,
+      [&](RenderInput& input,
+          CaptureContext&) -> base::expected<void, std::string> {
+        rendering = true;
+        // Its outcome, success or failure, arrives through the callback.
+        runtime.renderer().RenderPipelined(
+            input, request,
+            base::BindOnce(&PipelinedCapture::RasterFinished, pending));
+        return base::ok();
+      });
+  if (!rendering) {
+    // Failed before there was a document to render. Answered here, so after
+    // whatever the lane is still rastering, to keep answers in request order.
+    runtime.renderer().DrainRaster();
+  }
+  pending->MainFinished(std::move(main), stats, rendering);
 }
 
 void WarmUp(ShotRuntime& runtime) {

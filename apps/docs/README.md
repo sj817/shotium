@@ -16,6 +16,7 @@ The design records of the engine, the images the READMEs embed, and the benchmar
 | [upstream-sync-0.6.0-validation.md](upstream-sync-0.6.0-validation.md) | Validation and acceptance log for the Chromium 155.0.8048.0 sync, accompanied by machine-readable state and decision records |
 | [performance.md](performance.md) | A/B benchmarking methodology: environment isolation, adaptive sampling stopping rules, and metric interpretation |
 | [performance-cut-audit.md](performance-cut-audit.md) | The 2026-09-14 audit of the capture path: measured phase split, what was cut or restructured (parallel PNG, deferred first layout, decoded-font cache, lazy network stack) and the candidates measured and left alone |
+| [cold-start-and-concurrency.md](cold-start-and-concurrency.md) | 2026-11-16: where cold start and post-idle time go, the idle purge that keeps decoded fonts, `start()` no longer waiting for the warm-up, and the pipelined raster lane with its throughput and memory measurements |
 | [scripts-to-typescript.md](scripts-to-typescript.md) | Repository automation migration history: replacing ad-hoc scripts with typed tooling and standard libraries |
 
 Most design documents are written in Chinese; the code comments and CLAUDE.md are in English.
