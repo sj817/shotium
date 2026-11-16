@@ -441,7 +441,7 @@ async function main(baseline: string, candidate: string, output: string, o: Opti
     metadata: {} as Record<string, LoadedRuntime>,
     cases: [] as Record_[],
     sampling: {minimumPairs: samples, minSeconds, maxPairs: maxSamples, precision, maxSeconds},
-    method: `Serial AB/BA pairs; five warmups except fresh processes; all samples retained. At least ${samples} pairs per case, continuing until each side has captured for ${minSeconds} s, then until the p50 and mean ratio intervals are within ±${precision * 100}% or ${maxSeconds} s per side, up to ${maxSamples} pairs. A cold start's processStartMs is recorded, not judged. Per-metric paired bootstrap 99% intervals of candidate/baseline for p50, mean and p95. p50 and mean are judged against a body band [1, 1 + primary] and p95 against a tail band [1, 1 + tail], each the noise an A/A calibration of the candidate against itself showed on that statistic (floored at 2%). faster: the mean's whole interval under 1, or p50's under 1 with the mean inside the body band, and no metric slower. equivalent: p50 and mean intervals inside the body band, neither under 1. slower: some interval past its band. unproven: otherwise (p50 or mean straddles the body band). p95 only makes a case slower, when its whole interval is past the tail band. Engine cases are accepted only when faster; cases pinned to an external wait when faster or equivalent. Fresh process startup includes import; OS file cache is not flushed. Multi-process wall includes IPC and verification of the batch; per-process capture wall excludes hashing. No claim about unlisted inputs or machines.`,
+    method: `Serial AB/BA pairs; five warmups except fresh processes; all samples retained. At least ${samples} pairs per case, continuing until each side has captured for ${minSeconds} s, then until the p50 and mean ratio intervals are within ±${precision * 100}% or ${maxSeconds} s per side, up to ${maxSamples} pairs. A cold start is judged on import to first image (firstImageMs) and on import alone; its start(), first capture and processStartMs are recorded, not judged. Per-metric paired bootstrap 99% intervals of candidate/baseline for p50, mean and p95. p50 and mean are judged against a body band [1, 1 + primary] and p95 against a tail band [1, 1 + tail], each the noise an A/A calibration of the candidate against itself showed on that statistic (floored at 2%). faster: the mean's whole interval under 1, or p50's under 1 with the mean inside the body band, and no metric slower. equivalent: p50 and mean intervals inside the body band, neither under 1. slower: some interval past its band. unproven: otherwise (p50 or mean straddles the body band). p95 only makes a case slower, when its whole interval is past the tail band. Engine cases are accepted only when faster; cases pinned to an external wait when faster or equivalent. Fresh process startup includes import; OS file cache is not flushed. Multi-process wall includes IPC and verification of the batch; per-process capture wall excludes hashing. No claim about unlisted inputs or machines.`,
     finishedUtc: undefined as string | undefined,
   };
   const save = () => {
@@ -574,6 +574,12 @@ async function main(baseline: string, candidate: string, output: string, o: Opti
             const child = await spawn(label, item);
             try {
               value = {...await capture([child], item), ...child.ready} as unknown as Record<string, number> & Row;
+              // What a caller waits for: require(), start() and the first
+              // capture. Where the engine does its one-time work -- inside
+              // start() or ahead of the first capture -- moves time between
+              // `startMs` and `wall` without changing this sum.
+              value.firstImageMs = value.importAndStartMs + value.wall;
+              value.importMs = value.importAndStartMs - value.startMs;
               noteMetadata(label, await send<LoadedRuntime>(child, {metadata: true}));
             } finally {
               await close(child);
@@ -589,16 +595,19 @@ async function main(baseline: string, candidate: string, output: string, o: Opti
         if (i >= 0 && i % 25 === 24) save();
       }
       record.count = rows.baseline.length;
-      const metrics = item.cold ? ['wall', 'startMs', 'importAndStartMs', 'processStartMs'] : ['wall'];
+      const metrics = item.cold ? ['wall', 'firstImageMs', 'importMs', 'startMs', 'importAndStartMs', 'processStartMs'] : ['wall'];
       record.metrics = Object.fromEntries(metrics.map((key) => [
         key, compare(rows.baseline.map((v) => v[key]), rows.candidate.map((v) => v[key]), {tolerance, minimumSamples: samples}),
       ]));
-      record.summary = record.metrics.wall.summary;
-      // A cold start is judged on the capture, the engine's start and the
-      // import together with it. processStartMs is recorded beside them and
-      // not judged: it is node's own process starting on this OS, the same
-      // binary and the same 110 ms on both sides.
-      const judged = metrics.filter((key) => key !== 'processStartMs');
+      record.summary = record.metrics[item.cold ? 'firstImageMs' : 'wall'].summary;
+      // A cold start is judged on the time to its first image and on the
+      // import alone (a caller may import without rendering). Its parts --
+      // the first capture, start() -- are recorded beside them and not
+      // judged: the engine's warm-up runs behind start() and ahead of the
+      // first capture, so moving one-time work between the two would make
+      // one look slower while the caller waits less. processStartMs is node's
+      // own process starting on this OS, the same binary on both sides.
+      const judged = item.cold ? ['firstImageMs', 'importMs'] : metrics;
       record.status = worstVerdict(judged.map((key) => record.metrics![key].status));
       record.accepted = accepted(item, record.status);
       record.capturesPerSample = (item.concurrency || 1) * (item.batch || 1);
