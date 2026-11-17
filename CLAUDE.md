@@ -12,6 +12,13 @@ and workflow behaviour must agree with the current checkout.
 
 - Keep changes within the requested task and follow the surrounding code.
   Preserve unrelated edits, including files already staged by someone else.
+- Temporary files -- logs, scratch scripts, drafts, downloads, intermediate
+  output -- go under `temp/` at the repository root (gitignored) or a
+  session scratch directory, never elsewhere in the tree. Delete one-off
+  scripts when the task is done; a script worth keeping is a
+  `scripts/<group>/` command with a root alias. Do not commit work logs,
+  progress notes or audit write-ups: the reasoning and measurements behind
+  a change belong in its commit message and pull request.
 - Use `git --no-optional-locks` for read-only Git commands. Before editing,
   inspect the relevant diff; before committing, inspect both staged and
   unstaged changes with `git --no-optional-locks status --short`.
@@ -169,10 +176,10 @@ Only run the publishing procedure when a release is requested.
   Change the shared card
   in `apps/demo-card/card.html` and sync its copies.
 - Use [the engineering reference](apps/docs/agent-reference.md) for test
-  conventions and build caveats, and [the docs index](apps/docs/README.md)
-  for design history. Historical plans and `shot/README.md` can predate the
-  current architecture; verify executable facts against source and manifests.
-- Keep measured results in the benchmark archive with their provenance.
+  conventions and build caveats. Design history is in `git log`; verify
+  executable facts against source and manifests.
+- Keep CI benchmark results in the benchmark archive. A local measurement
+  goes in the commit message or pull request that relies on it, not a file.
   Put machine-specific paths, SDK versions and local preferences in
   `CLAUDE.local.md` (gitignored). Keep this entry point concise and remove
   obsolete or conflicting instructions when updating it.

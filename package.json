@@ -6,7 +6,7 @@
   "//5": "There is deliberately no pnpm-workspace.yaml here: one at the root makes",
   "//6": "`pnpm install` inside apps/typescript/ and apps/benchmark install the",
   "//7": "workspace instead of that project, and both are installed standalone by",
-  "//8": "CI. The path to a real workspace is in apps/docs/scripts-to-typescript.md.",
+  "//8": "CI.",
   "//9": "This file also keeps the TypeScript compiler from walking above the",
   "//10": "repository root when resolving package.json files, and makes it emit",
   "//11": "ES modules under the default module=\"NodeNext\" configuration in",

@@ -14,7 +14,7 @@
     "graph": "passed: GN and final shot/shot_c source-input check",
     "windowsBinaryAndChecks": "passed: exe, dll, serve, net, 84 demos, node, daemon, daemon protocol, Bilibili; charset behavior unchanged",
     "pixelComparison": "passed: basic/layout/paint/text, identical pixels and hashes against pre-sync binary",
-    "sixPlatformExactSha": "passed: all six builds at 07ac95e4a85dad12bc7fd8029c5ca229e3e38d9f; see upstream-sync-0.6.0-validation.md",
+    "sixPlatformExactSha": "passed: all six builds at 07ac95e4a85dad12bc7fd8029c5ca229e3e38d9f; record in git log -- apps/docs/upstream-sync-0.6.0-validation.md",
     "release": "published v0.6.0: workflow 34339033452; seven npm versions/integrities and six GitHub assets verified"
   },
   "dependencies": [

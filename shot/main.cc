@@ -37,9 +37,8 @@ namespace {
 // It used to start with content::ContentMain: a browser main loop, a render
 // process, a sandbox, an aura WindowTreeHost, a ui::Compositor and viz. All of
 // that existed to be a *browser*; none of it is required to turn markup into
-// pixels. See docs/cut-progress.md section 14, and
-// core/svg/graphics/isolated_svg_document_host.cc for the same shape inside
-// blink itself.
+// pixels. core/svg/graphics/isolated_svg_document_host.cc has the same shape
+// inside blink itself.
 //
 // There are two ways in. The command line renders one document and exits, which
 // is what this was. --serve keeps the process alive and answers requests off

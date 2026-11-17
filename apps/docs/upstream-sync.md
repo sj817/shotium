@@ -17,10 +17,11 @@ basic/layout/paint/text 四组与升级前二进制的像素及哈希完全一�
 七个 npm 包及六个 GitHub 二进制附件已核对。不恢复被裁剪的浏览器功能。
 各平台执行了其工作流支持的检查；交叉编译不等于原生设备运行验收。
 
-发布证据与 CI 分片问题记录见 [0.6.0 验收记录](upstream-sync-0.6.0-validation.md)。
-
-具体源码决策见 [155 同步记录](upstream-sync-decisions-155.json)。这份记录包括
-固定上游提交、保留产品差异的原因以及新增/退役路径，不是补丁重放队列。
+0.6.0 的发布证据、CI 分片问题记录，以及逐路径的源码决策（固定上游提交、
+保留产品差异的原因、新增/退役路径）只留在提交历史里：
+`git log -- apps/docs/upstream-sync-0.6.0-validation.md apps/docs/upstream-sync-decisions-155.json`。
+决策文件是那一轮 `pnpm upstream:sync` 的输入，不是补丁重放队列；下一轮按
+[批量同步工具](upstream-sync-tool.md) 重新生成。
 
 下方旧统计与 `out/ShotWip` 命令属于历史记录；执行时以当前 CLAUDE.md、
 build-engine/verify-engine 流程为准，Windows 构建入口为
@@ -242,7 +243,7 @@ git diff --diff-filter=A --name-only $OLD $NEW | grep -E '^(base|build|cc|net|th
 ```
 
 一个一个看要不要。默认答案是**不要** —— 这棵树的默认动作是删,不是加。
-见 `docs/cut-progress.md`。
+判据见 [cut-component](../../.claude/skills/cut-component/SKILL.md)。
 
 ### 4.6 上游已经删掉的
 

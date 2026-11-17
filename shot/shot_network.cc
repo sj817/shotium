@@ -95,7 +95,7 @@ bool OpenCacheEagerly(net::URLRequestContext* context) {
 // there is nothing here that a real Chrome would report differently -- and
 // nothing that identifies the host. The milestone is written out rather than
 // read from chrome/VERSION because //chrome is not in this binary's dependency
-// graph at all; docs/cut-progress.md has the version this tree was cut from.
+// graph at all.
 constexpr char kDefaultUserAgent[] =
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, "
     "like Gecko) Chrome/153.0.0.0 Safari/537.36";

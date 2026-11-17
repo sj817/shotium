@@ -130,8 +130,20 @@ Reports the binary size, renders `shot/testdata/render_corpus.html` at
 `shot/testdata/out/oracle.png`, and then breaks the difference down region by
 region -- a whole-image percentage cannot tell "antialiasing is a shade
 different everywhere" from "one element is missing". A region that moved is
-either an intended rendering change (document it in `apps/docs/cut-progress.md`
-section 8.6, where the known differences are listed) or a regression.
+either an intended rendering change, listed below, or a regression. A change
+that moves pixels on purpose adds its row here in the same commit.
+
+Known intended differences from Chrome:
+
+| Change | Effect |
+|---|---|
+| External `<script src>` is never fetched | Content a script would inject is absent; nothing would run it anyway |
+| The XML tree viewer is gone (it ran `documentxmltreeviewer.js`) | An unstyled `.xml` document renders with the default XML rules |
+| MHTML declarative Shadow DOM reconstruction is gone | It was implemented by running inline JS |
+| `<input pattern>` compiles with ICU regex | `v`-flag set notation fails to compile, so the pattern applies no constraint, as Chrome does on a compile failure |
+| `performance.mark()` drops `detail`; task attribution returns null; font memory is not reported to a heap-growth heuristic | No pixel effect |
+| `backdrop-filter` on empty transparent elements paints on the CPU | It blurs what is behind it, also under `pointer-events: none`, clips and masks; `visibility: hidden`, `display: none` and `opacity: 0` stay invisible |
+| CSS 3D depth sorting and `backface-visibility: hidden` paint on the CPU | Near faces hide far ones, intersecting planes are split and sorted, coplanar ones keep paint order. Shared intersection edges can differ by one pixel from Chrome's GPU raster |
 
 Use `--skip-build` to check the artifacts just built; without it the script
 starts `pnpm build:engine` again.

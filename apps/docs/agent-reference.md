@@ -103,8 +103,6 @@ CLI / --serve / C ABI / Node addon
   idle purge (`PurgeScope::kIdle`) keeps it and the Skia glyph cache;
   re-decoding sixty WOFF2 subsets was 68 ms of a 246 ms first capture after a
   pause. Only an explicit release (`kAll`) clears them.
-  See [performance-cut-audit.md](performance-cut-audit.md) for the measured
-  split behind these and the candidates that were measured and left alone.
 - The resident entry points (`--serve`, `EngineService`) render a built-in
   document once at start (`WarmUp()` in `shot_capture.cc`) so the process's
   one-time layout, shaping, raster-thread and encoder costs -- 7-15 ms, and
@@ -189,9 +187,11 @@ and CI. Keep reusable code in `scripts/lib/` and tests next to the module.
   `pnpm install --no-lockfile` in CI because its optional platform packages may
   be pinned to an unpublished version; do not use `--no-optional` to hide that
   issue, since the package build also needs a native bundler dependency.
-- There is no root pnpm workspace. Consult
-  [the tooling migration record](scripts-to-typescript.md) before changing
-  project boundaries or install semantics.
+- There is no root pnpm workspace on purpose: a root `pnpm-workspace.yaml`
+  makes `pnpm install` inside `apps/typescript/` or `apps/benchmark/` install
+  the workspace instead of that project, and CI installs each standalone.
+  Keep `scripts/`, `apps/typescript/` and `apps/benchmark/` as separate
+  projects with their own lockfiles.
 
 ## Build and CI
 

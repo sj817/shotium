@@ -19,7 +19,8 @@ namespace shot {
 //
 // The field names mirror shotium's public ScreenshotOptions exactly, so that
 // the JS layer is a transport and not a translation: anything it has to rename
-// is somewhere a bug can hide. See docs/shotium-plan.md section 4.
+// is somewhere a bug can hide. See ScreenshotOptions in
+// apps/typescript/src/types.ts.
 //
 // Two fields have no counterpart in ScreenshotOptions as it stands -- `width`
 // and `height`. A screenshot needs a viewport and ScreenshotOptions has no way

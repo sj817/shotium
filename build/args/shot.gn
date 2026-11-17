@@ -108,8 +108,8 @@ toolkit_views = false
 
 # ---------------------------------------------------------------------------
 # Size. Everything below was chosen from measured bytes, not from the
-# dependency graph -- see section 17 of apps/docs/cut-progress.md for the table and
-# tools/shot/size_report.py for how it was produced.
+# dependency graph; `pnpm size:report` (scripts/build/size-report.ts) is how
+# they are measured.
 # ---------------------------------------------------------------------------
 
 # The largest lever by a wide margin, and it deletes no code at all: full

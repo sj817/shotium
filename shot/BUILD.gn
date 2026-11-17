@@ -55,8 +55,7 @@ repack("shot_strings") {
 # worker is already its own process. shot does not start a browser. It
 # builds a blink Page with an EmptyChromeClient, installs one document into it
 # synchronously, runs the document lifecycle to paint-clean and replays the
-# resulting cc::PaintRecord onto a CPU SkSurface. See shot_renderer.h and
-# docs/cut-progress.md section 14.
+# resulting cc::PaintRecord onto a CPU SkSurface. See shot_renderer.h.
 #
 # `inside_blink` is required: shot_renderer.cc uses blink's internal types
 # (Page, LocalFrame, LocalFrameView) rather than the public Web* API, because
